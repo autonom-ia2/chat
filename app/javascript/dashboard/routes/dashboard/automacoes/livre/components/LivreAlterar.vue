@@ -107,6 +107,12 @@ const frase = computed(() => {
   return fraseDaCondicao(rascunho.value, props.catalogo, t);
 });
 
+// G9 (#2707): "quem cuida do card" só existe com gatilho de card.
+const doCard = computed(
+  () =>
+    props.catalogo.gatilhos.find(item => item.tipo === alvo.value?.gatilho)
+      ?.alvo === 'Crm::Card'
+);
 const gatilhosDoSeletor = computed(
   () => props.gatilhos || props.catalogo.gatilhos
 );
@@ -219,7 +225,10 @@ const nativoPronto = campo => {
   if (campo.peca === 'envio_do_retorno') return envioPronto(valor);
   if (campo.peca === 'destinatarios')
     return Boolean(
-      valor?.responsavel || valor?.times?.length || valor?.pessoas?.length
+      valor?.responsavel ||
+        valor?.responsavel_do_card ||
+        valor?.times?.length ||
+        valor?.pessoas?.length
     );
   // G15: a agente de IA escolhida.
   if (campo.peca === 'agente_de_ia') return Number.isInteger(valor);
@@ -399,6 +408,7 @@ defineExpose({ abrir, fechar });
         <LivreDestinatarios
           v-else-if="campo.peca === 'destinatarios'"
           :rotulo="$t(campo.rotulo)"
+          :do-card="doCard"
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"

@@ -165,14 +165,6 @@ class Autonomia::Automacao::Receita
     valido ? [] : [texto(:destino_invalido, passo: id, destino: destino)]
   end
 
-  def destinatarios_de_fora(passo)
-    para = passo['para'].to_h
-    times = Array(para['times']) - @conta.teams.where(id: para['times']).pluck(:id)
-    pessoas = Array(para['pessoas']) - @conta.users.where(id: para['pessoas']).pluck(:id)
-    times.map { |time| texto(:time_de_fora, passo: passo['id'], id: time) } +
-      pessoas.map { |pessoa| texto(:pessoa_de_fora, passo: passo['id'], id: pessoa) }
-  end
-
   # O caminho que não vale ali já diz o que corrigir; o valor fora só aparece depois.
   def problemas_da_condicao(id, condicao, no_gatilho: false, na_espera: false)
     lidos = ::Autonomia::Automacao::Condicao.caminhos(condicao).flat_map do |caminho|
@@ -259,6 +251,8 @@ class Autonomia::Automacao::Receita
   def parametros(acao)
     acao.split(' ', 2).last.split('/').filter_map { |segmento| segmento.delete_prefix(':') if segmento.start_with?(':') }
   end
+
+  def destinatarios_de_fora(passo) = ::Autonomia::Automacao::PassoDeAviso.problemas_ao_salvar(@conta, passo, @receita.dig('gatilho', 'tipo'))
 
   def texto(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", **valores)
 end

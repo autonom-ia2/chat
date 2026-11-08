@@ -159,7 +159,9 @@ const itemDaUrl = chave => {
       : null;
   }
   const passo = acharPasso(r.passos, chave);
-  return passo ? { tipo: 'passo', valor: passo } : null;
+  return passo
+    ? { tipo: 'passo', gatilho: r.gatilho?.tipo, valor: passo }
+    : null;
 };
 
 const abrirDaUrl = async () => {
@@ -190,6 +192,7 @@ const escolherPasso = entrada => {
   const passo = novoPasso(entrada, novoId(receita.value.passos), t);
   passoNovo.value = {
     tipo: 'passo',
+    gatilho: receita.value.gatilho?.tipo,
     novo: true,
     listaId,
     indice,

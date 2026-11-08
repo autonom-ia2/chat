@@ -35,10 +35,15 @@ module Autonomia::Automacao::Gatilhos
     Entrada.new(tipo: 'card.reuniao_marcada', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.reuniao_remarcada', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.reuniao_cancelada', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
+    Entrada.new(tipo: 'card.responsavel_mudou', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.parado', alvo: CARD, origem: :tempo, parametros: %w[etapa_id dias]),
     Entrada.new(tipo: 'card.data', alvo: CARD, origem: :tempo, parametros: DA_DATA),
     Entrada.new(tipo: 'contato.data', alvo: CONTATO, origem: :tempo, parametros: DA_DATA)
   ].index_by(&:tipo).freeze
+
+  # G9 (#2707): o responsável do card mudou. Não é atividade do CRM (a Lista do CRM grava só o dono novo), então vem
+  # do próprio card (Crm::CardAvisaAutomacao), com o responsável anterior na marca (marca_da_troca).
+  TROCA = 'card.responsavel_mudou'.freeze
 
   # O evento do emissor do CRM (Crm::Webhooks::Emitter) e os gatilhos que ele pode disparar. O card criado já nasce
   # numa etapa: conta como "entrou" nela, venha da tela, da API, da IA ou de uma automação.
@@ -49,7 +54,8 @@ module Autonomia::Automacao::Gatilhos
     Events::Types::CRM_CARD_LOST => %w[card.perdido],
     Events::Types::CRM_MEETING_SCHEDULED => %w[card.reuniao_marcada],
     Events::Types::CRM_MEETING_RESCHEDULED => %w[card.reuniao_remarcada],
-    Events::Types::CRM_MEETING_CANCELED => %w[card.reuniao_cancelada]
+    Events::Types::CRM_MEETING_CANCELED => %w[card.reuniao_cancelada],
+    TROCA => [TROCA]
   }.freeze
 
   # Os gatilhos de reunião (G12): só neles a receita lê `reuniao.*`, a reunião da atividade que disparou.
@@ -114,6 +120,23 @@ module Autonomia::Automacao::Gatilhos
   def atividade_da_marca(marca)
     tipo, pedaco, id = marca.to_s.split(':', 3)
     Integer(id, 10, exception: false) if tipo.present? && pedaco == ATIVIDADE && id
+  end
+
+  # A troca de responsável (G9): o card, o responsável anterior (0 quando não havia) e o instante em µs. A troca e a
+  # volta são dois fatos, e a mesma troca repetida pelo despacho tem a mesma marca.
+  def marca_da_troca(card_id, anterior_id, instante) = "#{TROCA}:#{card_id}:#{anterior_id.to_i}:#{instante.utc.iso8601(6)}"
+
+  # O responsável anterior numa marca de marca_da_troca; nil em outra marca ou quando não havia responsável.
+  def anterior_da_marca(marca)
+    tipo, _card, anterior = marca.to_s.split(':', 4)
+    id = Integer(anterior.to_s, 10, exception: false)
+    id if tipo == TROCA && id&.positive?
+  end
+
+  # Quem cuidava do card antes da troca que abriu a execução, da conta dela; nil sem anterior ou se saiu da conta.
+  def anterior(execucao)
+    id = anterior_da_marca(execucao.evento)
+    id && execucao.account.users.find_by(id: id)
   end
 
   # Parado: o instante em que o card entrou na etapa. Se ele sair e voltar, o instante muda e conta de novo.

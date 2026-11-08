@@ -15,6 +15,7 @@
 # - `card_mudou` (lote 4, #2682): o card mudou (etapa, situação, campo, valor, responsável). Quem espera nele confere
 #   agora: o campo preenchido pelo corretor é visto na hora, não no fim do prazo.
 # - `acordar_execucao` (lote 4): o gatilho da execução aberta aconteceu de novo (Partida); ela confere agora.
+# - `responsavel_mudou` (G9, #2707): o responsável do card mudou; segue pelo mesmo EventoDoCardJob do evento do card.
 #
 # O gate é a flag do motor, lida da conta: conta sem o motor só lê a conta. Com o motor, uma consulta pela conta e pelo
 # tipo do gatilho; não há cache, porque a lista muda a cada automação ligada ou desligada, e uma lista velha ligaria o
@@ -115,6 +116,18 @@ module Autonomia::Automacao::Escuta
     registrar_erro("não acordou Crm::Card=#{card&.id}", e)
   end
 
+  # G9 (#2707): o responsável do card mudou (Crm::CardAvisaAutomacao). Só enfileira com automação assinante no funil
+  # do card; a marca, feita aqui, leva o responsável anterior e o instante (Gatilhos.marca_da_troca).
+  def responsavel_mudou(card, anterior_id)
+    tipo = ::Autonomia::Automacao::Gatilhos::TROCA
+    return unless assinante?(card.account, tipo, { pipeline_id: card.pipeline_id })
+
+    marca = ::Autonomia::Automacao::Gatilhos.marca_da_troca(card.id, anterior_id, Time.current)
+    enfileirar_evento_do_card({ account_id: card.account_id, card_id: card.id, marca: marca }, tipo)
+  rescue StandardError => e
+    registrar_erro("não ouviu a troca de responsável Crm::Card=#{card&.id}", e)
+  end
+
   def acordar_execucao(execucao)
     reservar(execucao) if execucao.estado == 'esperando' && esperando_condicao?(execucao)
   rescue StandardError => e
@@ -159,7 +172,7 @@ module Autonomia::Automacao::Escuta
 
     mudou = dados[:changed_attributes].to_h.with_indifferent_access
     ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD.fetch(evento, []).each do |tipo|
-      marca = ::Autonomia::Automacao::Gatilhos.marca_da_atividade(tipo, dados[:activity_id])
+      marca = dados[:marca] || ::Autonomia::Automacao::Gatilhos.marca_da_atividade(tipo, dados[:activity_id])
       cada_automacao(card, tipo, dados_do_card(tipo, card, mudou)) { |definicao| partir(definicao, card, tipo, evento: marca) }
     end
   end

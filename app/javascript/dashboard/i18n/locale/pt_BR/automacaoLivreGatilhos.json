@@ -13,6 +13,7 @@
       "CARD_REUNIAO_MARCADA": "Quando uma reunião é marcada",
       "CARD_REUNIAO_REMARCADA": "Quando uma reunião é remarcada",
       "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada",
+      "CARD_RESPONSAVEL_MUDOU": "Quando muda quem cuida do card",
       "CARD_PARADO": "Quando o card fica parado numa etapa",
       "CARD_DATA": "Perto de uma data do card",
       "CONTATO_DATA": "Perto de uma data do contato"
@@ -58,6 +59,7 @@
       "CARD_REUNIAO_MARCADA": "Quando uma reunião é marcada num card de {funil}",
       "CARD_REUNIAO_REMARCADA": "Quando uma reunião é remarcada num card de {funil}",
       "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada num card de {funil}",
+      "CARD_RESPONSAVEL_MUDOU": "Quando muda quem cuida de um card de {funil}",
       "CARD_PARADO": "Quando o card fica {dias} dias parado em {etapa}",
       "CARD_DATA": "{dias} dias {quando} de {campo} do card, a partir das {hora}h",
       "CONTATO_DATA": "{dias} dias {quando} de {campo} do contato, a partir das {hora}h"

@@ -608,6 +608,7 @@ en:
         fixo: 'Step %{passo}: %{campo} must be %{valor}.'
         mensagem_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the filter of the "message created" trigger.'
         reuniao_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the meeting triggers (scheduled, rescheduled, canceled).'
+        troca_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the trigger "When the card owner changes".'
         resposta_so_na_espera: 'Step %{passo}: %{caminho} only exists in the condition of a "wait until" step.'
         valor_fora_do_alvo: 'Step %{passo}: %{caminho} cannot be read from what this trigger starts on (conversation, card or contact).'
         operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'
@@ -620,6 +621,7 @@ en:
         modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility and with these variables."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
+        responsavel_do_card_sem_card: 'Step %{passo}: "whoever owns the card" only works when the trigger is a card trigger.'
         gatilho_desligado: 'Card and time triggers are off for this account.'
         reunioes_desligadas: 'Meetings are off in this installation, so the meeting triggers cannot be used.'
         etapa_de_fora: 'Trigger: stage %{id} is not from this account.'

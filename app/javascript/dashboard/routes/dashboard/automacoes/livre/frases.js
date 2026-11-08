@@ -219,6 +219,7 @@ const fraseDoTexto = (partes, catalogo, t) => {
 const quemAvisar = (para, t) => {
   const quem = [
     para?.responsavel && t(`${P}.RESPONSAVEL`),
+    para?.responsavel_do_card && t(`${P}.RESPONSAVEL_DO_CARD`),
     para?.times?.length &&
       t(`${P}.TIMES`, { n: para.times.length }, para.times.length),
     para?.pessoas?.length &&

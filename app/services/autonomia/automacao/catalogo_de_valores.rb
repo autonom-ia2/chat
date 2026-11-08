@@ -9,13 +9,14 @@ module Autonomia::Automacao::CatalogoDeValores
   # O que a receita lê do alvo, para o editor mostrar como chip. Os atributos entram pela base mais a chave. A `base`
   # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499). A resposta durante a espera
   # (G11) vem marcada `so_na_espera`: o editor só a oferece na condição do "esperar até". A reunião (G12) vem com
-  # `so_nos_gatilhos`: o editor só a oferece nos gatilhos de reunião.
+  # `so_nos_gatilhos`: o editor só a oferece nos gatilhos de reunião. O responsável anterior (G9), só na troca de
+  # responsável.
   def todos
     valores = ::Autonomia::Automacao::Valores
     campos = (valores::CAMPOS.keys + valores::AGENDA.keys + valores::RESPOSTA.keys).map do |caminho|
       { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho),
         **do_protegido(caminho), 'so_na_espera' => (true if valores.da_resposta?(caminho)),
-        'so_nos_gatilhos' => (::Autonomia::Automacao::Gatilhos::DE_REUNIAO if valores.da_reuniao?(caminho)) }.compact
+        'so_nos_gatilhos' => valores.so_nos_gatilhos(caminho) }.compact
     end
     atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
       { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base) }

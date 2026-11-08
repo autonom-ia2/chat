@@ -163,6 +163,22 @@
       ]
     },
     {
+      "tipo": "card.responsavel_mudou",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_RESPONSAVEL_MUDOU",
+      "grupo": "card",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "funil_id",
+          "peca": "funil",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
+        }
+      ]
+    },
+    {
       "tipo": "card.parado",
       "alvo": "Crm::Card",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_PARADO",
@@ -436,6 +452,11 @@
       "frase": "AUTOMACAO_LIVRE.VALORES.CARD_RESPONSAVEL_ID"
     },
     {
+      "caminho": "card.responsavel_nome",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_RESPONSAVEL_NOME"
+    },
+    {
       "caminho": "card.time_id",
       "base": "card",
       "frase": "AUTOMACAO_LIVRE.VALORES.CARD_TIME_ID"
@@ -468,6 +489,22 @@
         "card.reuniao_marcada",
         "card.reuniao_remarcada",
         "card.reuniao_cancelada"
+      ]
+    },
+    {
+      "caminho": "gatilho.responsavel_anterior_id",
+      "base": "gatilho",
+      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_RESPONSAVEL_ANTERIOR_ID",
+      "so_nos_gatilhos": [
+        "card.responsavel_mudou"
+      ]
+    },
+    {
+      "caminho": "gatilho.responsavel_anterior_nome",
+      "base": "gatilho",
+      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_RESPONSAVEL_ANTERIOR_NOME",
+      "so_nos_gatilhos": [
+        "card.responsavel_mudou"
       ]
     },
     {

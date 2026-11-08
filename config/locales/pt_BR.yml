@@ -1101,6 +1101,7 @@ pt_BR:
         fixo: 'Passo %{passo}: %{campo} tem de ser %{valor}.'
         mensagem_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no filtro do gatilho "mensagem criada".'
         reuniao_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe nos gatilhos de reunião (marcada, remarcada, cancelada).'
+        troca_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no gatilho "Quando muda quem cuida do card".'
         resposta_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até".'
         valor_fora_do_alvo: 'Passo %{passo}: %{caminho} não dá para ler naquilo em que este gatilho começa (conversa, card ou contato).'
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'
@@ -1113,6 +1114,7 @@ pt_BR:
         modelo_indisponivel: "Passo %{passo}: nenhuma caixa do WhatsApp oficial tem o modelo %{nome} aprovado, de utilidade e com estas variáveis."
         time_de_fora: "Passo %{passo}: o time %{id} não é desta conta."
         pessoa_de_fora: "Passo %{passo}: a pessoa %{id} não é desta conta."
+        responsavel_do_card_sem_card: 'Passo %{passo}: "quem cuida do card" só vale quando o gatilho é de card.'
         gatilho_desligado: 'Os gatilhos de card e de tempo estão desligados nesta conta.'
         reunioes_desligadas: 'As reuniões estão desligadas nesta instalação, e os gatilhos de reunião não podem ser usados.'
         etapa_de_fora: 'Gatilho: a etapa %{id} não é desta conta.'

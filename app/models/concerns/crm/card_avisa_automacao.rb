@@ -10,10 +10,24 @@ module Crm::CardAvisaAutomacao
   LIDAS_PELA_AUTOMACAO = %w[title stage_id pipeline_id status value_cents owner_id team_id lost_reason custom_attributes].freeze
 
   included do
-    after_update_commit :avisar_automacao_livre, if: -> { saved_changes.keys.intersect?(LIDAS_PELA_AUTOMACAO) }
+    after_update :dono_anterior_na_transacao, if: :saved_change_to_owner_id?
+    after_rollback { @dono_anterior_na_transacao = nil }
+    after_update_commit :avisar_automacao_livre, if: -> { saved_changes.keys.intersect?(LIDAS_PELA_AUTOMACAO) || @dono_anterior_na_transacao }
   end
 
   private
 
-  def avisar_automacao_livre = ::Autonomia::Automacao::Escuta.card_mudou(self)
+  # A troca de responsável (G9, #2707) é também um gatilho: vai com o responsável anterior. Guardado dentro da
+  # transação, no primeiro save que troca: no commit, `saved_changes` é só o do último save.
+  def dono_anterior_na_transacao
+    @dono_anterior_na_transacao ||= [saved_changes['owner_id'].first]
+  end
+
+  def avisar_automacao_livre
+    anterior = @dono_anterior_na_transacao&.first
+    trocou = @dono_anterior_na_transacao && anterior != owner_id
+    @dono_anterior_na_transacao = nil
+    ::Autonomia::Automacao::Escuta.card_mudou(self)
+    ::Autonomia::Automacao::Escuta.responsavel_mudou(self, anterior) if trocou
+  end
 end

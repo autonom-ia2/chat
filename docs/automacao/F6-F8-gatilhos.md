@@ -71,7 +71,7 @@ Nada muda na Partida, no Executor nem na varredura.
 | `conversa.responsavel_trocado` | conversa | evento | `ASSIGNEE_CHANGED` | — | `responsavel:<conversa>:<timestamp>` |
 | `conversa.time_trocado` | conversa | evento | `TEAM_CHANGED` | — | `time:<conversa>:<timestamp>` |
 | `card.criado` | card | evento | atividade `create` (Creator e CardNaEtapa) | `funil_id` (opcional) | `atividade:<activity id>` |
-| `card.responsavel_trocado` | card | evento | atividade `update` com `owner_id` (tipo próprio no `EVENT_MAP`) | — | `atividade:<activity id>` |
+| `card.responsavel_mudou` (G9, #2707) | card | evento | o próprio card (`Crm::CardAvisaAutomacao`, `owner_id` mudou): a Lista do CRM grava a atividade `update` só com o dono novo, então a troca não sai da atividade | `funil_id` (opcional) | `card.responsavel_mudou:<card>:<anterior ou 0>:<instante µs>` |
 | `conversa.etiqueta_posta` / `.etiqueta_tirada` | conversa | evento | `CONVERSATION_UPDATED` com `label_list` em `changed_attributes` | `etiqueta` | `etiqueta:<conversa>:<etiqueta>:<timestamp>` |
 | `contato.etiqueta_posta` / `.etiqueta_tirada` | contato | evento | `CONTACT_UPDATED` com as etiquetas mudando | `etiqueta` | `etiqueta:<contato>:<etiqueta>:<timestamp>` |
 | `card.entrou_na_etapa` | card | evento | atividade `move` (Mover) e `create` (CardNaEtapa) | `etapa_id` | `atividade:<activity id>` |
@@ -83,7 +83,7 @@ Nada muda na Partida, no Executor nem na varredura.
 | `recorrente` | card ou contato | tempo | relógio no fuso da conta | `frequencia`, `dia`, `hora`, `alvo`, filtros | `recorrente:<ocorrência local>:<alvo>` |
 
 **Valores do evento**, que só o filtro do gatilho lê:
-- troca de responsável: `evento.responsavel_anterior_id` e `evento.responsavel_novo_id`;
+- troca de responsável do card (G9, feito): `gatilho.responsavel_anterior_id` e `gatilho.responsavel_anterior_nome`, lidos da marca e válidos em qualquer passo desse gatilho; quem cuida agora é `card.responsavel_id` e `card.responsavel_nome`;
 - troca de time: `evento.time_anterior_id` e `evento.time_novo_id`;
 - saiu da etapa: `evento.etapa_para_id`;
 - mensagem que falhou: `evento.erro`. É o código do canal, nunca o texto, que pode trazer dado do cliente.

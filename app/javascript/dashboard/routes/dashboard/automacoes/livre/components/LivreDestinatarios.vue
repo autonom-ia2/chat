@@ -2,12 +2,15 @@
 import Switch from 'dashboard/components-next/switch/Switch.vue';
 import LivreMarcar from './LivreMarcar.vue';
 
-// #2486 — quem o "avisar" chama: quem cuida da conversa, times e pessoas. O
-// motor confere, na hora, quem enxerga a conversa; aqui só se escolhe.
+// #2486 — quem o "avisar" chama: quem cuida da conversa, quem cuida do card
+// (G9, #2707), times e pessoas. O motor confere, na hora, quem enxerga a
+// conversa; aqui só se escolhe.
 const props = defineProps({
   rotulo: { type: String, required: true },
   modelValue: { type: Object, default: () => ({}) },
   opcoes: { type: Object, required: true },
+  // Fora de gatilho de card a chave some; fica visível se já marcada, para desligar.
+  doCard: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -37,6 +40,21 @@ const mudar = (chave, valor) => {
         :model-value="Boolean(modelValue?.responsavel)"
         :aria-label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.RESPONSAVEL')"
         @update:model-value="valor => mudar('responsavel', valor)"
+      />
+    </label>
+    <label
+      v-if="doCard || modelValue?.responsavel_do_card"
+      class="flex items-center justify-between gap-3 cursor-pointer min-h-11"
+    >
+      <span class="text-[0.9375rem] text-n-slate-12">
+        {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.RESPONSAVEL_DO_CARD') }}
+      </span>
+      <Switch
+        data-responsavel-do-card
+        class="mx-1.5 scale-[1.4]"
+        :model-value="Boolean(modelValue?.responsavel_do_card)"
+        :aria-label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.RESPONSAVEL_DO_CARD')"
+        @update:model-value="valor => mudar('responsavel_do_card', valor)"
       />
     </label>
     <LivreMarcar

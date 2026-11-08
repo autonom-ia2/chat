@@ -13,6 +13,7 @@
       "CARD_REUNIAO_MARCADA": "When a meeting is scheduled",
       "CARD_REUNIAO_REMARCADA": "When a meeting is rescheduled",
       "CARD_REUNIAO_CANCELADA": "When a meeting is canceled",
+      "CARD_RESPONSAVEL_MUDOU": "When the card owner changes",
       "CARD_PARADO": "When the card is stuck in a stage",
       "CARD_DATA": "Around a card date",
       "CONTATO_DATA": "Around a contact date"
@@ -58,6 +59,7 @@
       "CARD_REUNIAO_MARCADA": "When a meeting is scheduled on a {funil} card",
       "CARD_REUNIAO_REMARCADA": "When a meeting is rescheduled on a {funil} card",
       "CARD_REUNIAO_CANCELADA": "When a meeting is canceled on a {funil} card",
+      "CARD_RESPONSAVEL_MUDOU": "When the owner of a card in {funil} changes",
       "CARD_PARADO": "When the card is stuck in {etapa} for {dias} days",
       "CARD_DATA": "{dias} days {quando} the card {campo}, from {hora}h",
       "CONTATO_DATA": "{dias} days {quando} the contact {campo}, from {hora}h"

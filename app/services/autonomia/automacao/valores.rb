@@ -35,13 +35,18 @@ class Autonomia::Automacao::Valores
     'card.status' => ->(card) { card.status },
     'card.valor' => ->(card) { card.value_cents.to_d / 100 },
     'card.responsavel_id' => ->(card) { card.owner_id },
+    'card.responsavel_nome' => ->(card) { card.owner&.name },
     'card.time_id' => ->(card) { card.team_id },
     'card.dias_na_etapa' => ->(card) { card.entered_stage_at && ((Time.current - card.entered_stage_at) / 1.day).floor },
     'card.motivo_da_perda' => ->(card) { card.lost_reason },
     # G12: a reunião da atividade que disparou o gatilho de reunião (Contexto#reuniao). O início sai no fuso da reunião,
     # o mesmo do convite que o cliente recebeu.
     'reuniao.inicio' => ->(reuniao) { ::Autonomia::Automacao::Valores.inicio_da_reuniao(reuniao) },
-    'reuniao.link_da_reuniao' => ->(reuniao) { reuniao.online_meeting_url }
+    'reuniao.link_da_reuniao' => ->(reuniao) { reuniao.online_meeting_url },
+    # G9 (#2707): quem era o responsável antes da troca que disparou o gatilho, lido da marca da execução. No ensaio, sem
+    # execução, vazio.
+    'gatilho.responsavel_anterior_id' => ->(execucao) { ::Autonomia::Automacao::Gatilhos.anterior_da_marca(execucao.evento) },
+    'gatilho.responsavel_anterior_nome' => ->(execucao) { ::Autonomia::Automacao::Gatilhos.anterior(execucao)&.name }
   }.freeze
 
   # G12: o link da agenda (LinkDaAgenda) de quem cuida: o responsável do card ou a pessoa da conversa. Vale em qualquer
@@ -119,32 +124,19 @@ class Autonomia::Automacao::Valores
     'card.atributos' => 'card_attribute'
   }.freeze
 
+  # Onde cada valor existe na receita (LugarDoValor): a mensagem, a resposta, a reunião e a troca de responsável.
+  extend ::Autonomia::Automacao::LugarDoValor
+
   class << self
     def caminho_valido?(caminho)
       [CAMPOS, MENSAGEM, RESPOSTA, AGENDA].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present?
     end
-
-    def da_reuniao?(caminho) = caminho.to_s.start_with?('reuniao.')
 
     # "10/11/2026 às 09:00", no fuso e no idioma da reunião e da conta.
     def inicio_da_reuniao(reuniao)
       inicio = reuniao.starts_at.in_time_zone(ActiveSupport::TimeZone[reuniao.timezone.to_s] || Time.zone)
       formato = I18n.t('autonomia.automacao.valores.inicio_da_reuniao', locale: reuniao.account.locale.presence || I18n.default_locale)
       inicio.strftime(formato)
-    end
-
-    def da_mensagem?(caminho) = MENSAGEM.key?(caminho.to_s)
-
-    def da_resposta?(caminho) = RESPOSTA.key?(caminho.to_s)
-
-    # O valor que só existe num lugar da receita: a mensagem no filtro do gatilho dela (`mensagem`: a receita está lá);
-    # a resposta no "esperar até" (`na_espera`); a reunião nos gatilhos de reunião (`gatilho`). Devolve a chave da
-    # frase do salvar, ou nil.
-    def fora_do_lugar(caminho, mensagem:, na_espera:, gatilho: nil)
-      return :mensagem_so_no_gatilho if da_mensagem?(caminho) && !mensagem
-      return :reuniao_so_no_gatilho if da_reuniao?(caminho) && !::Autonomia::Automacao::Gatilhos.de_reuniao?(gatilho)
-
-      :resposta_so_na_espera if da_resposta?(caminho) && !na_espera
     end
 
     # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.

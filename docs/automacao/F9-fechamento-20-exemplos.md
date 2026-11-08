@@ -130,7 +130,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G6 | Gatilhos de **tempo**: parado há X dias; N dias antes/depois de uma data do card ou do contato (vencimento, aniversário, próxima revisão, data da festa) | F6 | **Fechada** (#2611) | Motor | 1, 5, 6, 13, 18 |
 | G7 | **Recorrente** com filtro (todo dia 1º, toda segunda 8h, quinta 9h), **uma execução por registro do filtro** (contato ou card), nunca uma execução sem alvo (decisão da Automação, 06/11) | F8 | Em PR (F8 PR3b) | Gatilhos | 7, 8, 9, 16, 17, 20 |
 | G8 | Gatilho **mensagem que falhou** na entrega | F8 | A fazer (F8 PR2d) | Gatilhos | 1, 19 |
-| G9 | Gatilho **troca de responsável** (do card e da conversa), com o anterior marcado como ausente | F8 | A fazer (F8 PR2d); "ausente" não é valor que a receita lê | Gatilhos | 17 |
+| G9 | Gatilho **troca de responsável** (do card e da conversa), com o anterior marcado como ausente | F8 | Card feito (#2707): `card.responsavel_mudou`, com o anterior e o nome de quem cuida, e o "avisar" ao responsável do card. A conversa fica para quando um exemplo pedir; "ausente" é a G23 | Gatilhos | 17 |
 | G10 | Gatilho **etiqueta posta/tirada** | F8 | A fazer (F8 PR2d) | Gatilhos | — |
 | G11 | **Esperar a resposta** de alguém: "até o cliente responder" e "até a equipe responder", com prazo | F3/F4 | **Fechada** (#2592): `conversa.equipe_respondeu` e `conversa.cliente_respondeu` no "esperar até"; lote 4 (#2682): `conversa.responsavel_respondeu` (a Fernanda, o Carlos), `gatilho.repetiu` (a 2ª falta do ex. 4) e o card que muda acorda a espera (ex. 12) | Motor | 1, 2, 10, 12, 15, 17, 19, 20 |
 | G12 | Gatilho **reunião marcada / remarcada / cancelada** e o **link da agenda** do responsável no texto | F8 | A fazer; o link da agenda não é valor da receita | Gatilhos | 1, 2, 3, 4, 5, 6, 9, 11, 15, 16, 18, 20 |
@@ -188,7 +188,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 14 | Documentação para emitir | 🟡 G5 (entrou em "Documentação") | extrair ✅, escrever ✅, etiqueta ✅, mover ✅, avisar ✅ | G1, G3, G5, G13, G20 | Não |
 | 15 | Cliente grande | 🟡 G5 (card criado) + ⛔ G27 (valor mudou) | se com etiqueta ✅, atribuir ✅, etiqueta ✅, prioridade ✅, resumir ✅, mensagem ✅ | G3, G5, G11, G12, G15, G27 | Não |
 | 16 | Reconquistar | ⛔ G7 (dia 1º, perdidos há 11 meses) | etiqueta ✅, decidir ✅, escrever ✅ | G3, G4, G7, G12, G14, G16, G18 | Não |
-| 17 | Vendedora de férias | ⛔ G9 (troca de responsável) | resumir ✅, mensagem ✅, etiqueta ✅ | G7 (toda manhã, por card com a etiqueta), G9, G11, G15, G16, G23 | Não |
+| 17 | Vendedora de férias | 🟡 G9 ✅ (troca de responsável, #2707) + G23 (ausente) | resumir ✅, mensagem ✅, etiqueta ✅, avisar o responsável do card ✅ | G7 (toda manhã, por card com a etiqueta), G11, G15, G16, G23 | Não |
 | 18 | Seleção de candidatos | ✅ mensagem na caixa de vagas | decidir ✅, etiqueta ✅, avisar ✅ | G1, G4, G5, G6, G12, G15, G20, G25 | Não |
 | 19 | Cliente que sumiu do WhatsApp | ⛔ G8 (mensagem falhou) | etiqueta ✅, extrair ✅ (telefone), escrever ✅, avisar ✅ | G1, G2, G3, G8, G11, G19 | Não |
 | 20 | Venda fechada no sistema da empresa | 🟡 G5 (card ganho) | extrair ✅, decidir ✅, mover ✅, etiqueta ✅, avisar ✅ | G1, G2 (boas-vindas e "Dicas do mês" por e-mail), G5, G7 (todo mês, por contato com a etiqueta), G11, G12, G13 | Não |

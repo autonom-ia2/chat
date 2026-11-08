@@ -2,13 +2,34 @@
 # pessoa (Nota): o sino, o push e o e-mail são os da menção, pela preferência de cada uma. Nunca menciona o time
 # inteiro: só pessoas, conferidas uma a uma.
 #
-# Para quem: o responsável da conversa, os times (aberto pessoa a pessoa) e as pessoas escolhidas, só da conta. Fica
-# só quem enxerga a conversa (D5), perguntado à política da conversa para cada pessoa: função personalizada e
-# administrador mudam a resposta, e não basta estar na caixa. Quem não enxerga sai, com o motivo no registro
+# Para quem: o responsável da conversa, o responsável do card (G9, #2707: quem cuida do card não é sempre quem atende
+# a conversa; lido do alvo da execução, porque o "resumir" entrega aqui com a conversa; sem card, ninguém), os times
+# (aberto pessoa a pessoa) e as pessoas escolhidas, só da conta. Fica só quem enxerga a conversa (D5), perguntado à
+# política da conversa para cada pessoa: função personalizada e administrador mudam a resposta, e não basta estar na
+# caixa. Quem não enxerga sai, com o motivo no registro
 # (`fora`), e a lista vazia pula o passo. O texto, com os valores, só chega a quem passou. No card, é a conversa
 # principal dele (NaConversa).
 class Autonomia::Automacao::PassoDeAviso
   include ::Autonomia::Automacao::NaConversa
+
+  # Ao salvar: os times e as pessoas são da conta; "quem cuida do card" (G9) só com gatilho de card, porque fora dele o
+  # aviso sairia para ninguém, calado. Vale para o "avisar" e para o aviso do "resumir".
+  def self.problemas_ao_salvar(conta, passo, gatilho)
+    para = passo['para'].to_h
+    de_fora(passo['id'], :time_de_fora, Array(para['times']) - conta.teams.where(id: para['times']).pluck(:id)) +
+      de_fora(passo['id'], :pessoa_de_fora, Array(para['pessoas']) - conta.users.where(id: para['pessoas']).pluck(:id)) +
+      sem_card(passo['id'], para, gatilho)
+  end
+
+  def self.de_fora(id, chave, ids) = ids.map { |fora| problema(chave, passo: id, id: fora) }
+
+  def self.sem_card(id, para, gatilho)
+    return [] if !para['responsavel_do_card'] || ::Autonomia::Automacao::Gatilhos.alvo(gatilho) == ::Autonomia::Automacao::Gatilhos::CARD
+
+    [problema(:responsavel_do_card_sem_card, passo: id)]
+  end
+
+  def self.problema(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", **valores)
 
   def executar
     return sem_conversa if @conversa.nil?
@@ -67,6 +88,7 @@ class Autonomia::Automacao::PassoDeAviso
     times = Array(para['times'])
     [
       (@conversa.assignee_id if para['responsavel']),
+      (::Autonomia::Automacao::Contexto.de(@execucao.alvo).card&.owner_id if para['responsavel_do_card']),
       *(times.any? ? TeamMember.joins(:team).where(teams: { account_id: @conversa.account_id, id: times }).pluck(:user_id) : []),
       *Array(para['pessoas'])
     ]
