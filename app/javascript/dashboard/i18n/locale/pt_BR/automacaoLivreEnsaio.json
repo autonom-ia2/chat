@@ -39,6 +39,7 @@
         "IA_EXTRAIR": "Gravaria: {lista}.",
         "IA_ESCREVER_MENSAGEM": "Sairia para o cliente.",
         "IA_ESCREVER_SUGESTAO": "Ficaria como sugestão para a equipe revisar e mandar.",
+        "IA_ESCREVER_GUARDAR": "O texto ficaria guardado para os passos seguintes.",
         "IA_RESUMIR_NOTA": "Ficaria numa nota privada.",
         "IA_RESUMIR_AVISAR": "Avisaria a equipe.",
         "ONDE": {

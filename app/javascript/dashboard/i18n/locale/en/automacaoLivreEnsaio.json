@@ -39,6 +39,7 @@
         "IA_EXTRAIR": "Would save: {lista}.",
         "IA_ESCREVER_MENSAGEM": "Would go to the customer.",
         "IA_ESCREVER_SUGESTAO": "Would stay as a suggestion for the team to review and send.",
+        "IA_ESCREVER_GUARDAR": "The text would be kept for the next steps.",
         "IA_RESUMIR_NOTA": "Would stay in a private note.",
         "IA_RESUMIR_AVISAR": "Would notify the team.",
         "ONDE": {

@@ -1053,6 +1053,7 @@ pt_BR:
         modelo_de_propaganda: "A janela estava fechada, e o modelo escolhido é de propaganda. A automação só manda modelo de utilidade. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_mudou: "A janela estava fechada, e o modelo desta caixa pede outras variáveis do que as do passo. Escolha o modelo de novo. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_faltou_valor: "A janela estava fechada, e um valor que o modelo pede estava vazio nesta conversa. A mensagem não foi mandada, e a automação parou nesta conversa."
+        modelo_texto_longo: "A janela estava fechada, e o modelo com os valores no lugar passou dos 1024 caracteres que o WhatsApp aceita. A mensagem não foi mandada, e a automação parou nesta conversa."
         laco_suspeito: "O outro lado respondeu depressa demais muitas vezes seguidas, como um robô. A automação parou nesta conversa."
         mensagens_desligadas: "Mensagem e aviso estão desligados nesta conta. Nada foi mandado."
         ninguem_para_avisar: "Ninguém que enxerga esta conversa estava na lista do aviso."
@@ -1066,6 +1067,10 @@ pt_BR:
         ia_nao_configurada: 'Esta conta não tem chave de IA própria. Cadastre nas integrações para os passos de IA rodarem.'
         ia_recusou: 'O provedor de IA recusou este pedido.'
         nada_para_ler: 'Não havia nada na conversa para a IA ler. A IA não foi chamada.'
+        anexo_grande_demais: 'Um anexo da conversa era grande demais para a IA. A IA não foi chamada.'
+        anexo_fora_do_formato: 'Um anexo da conversa estava num formato que a IA não lê. A IA não foi chamada.'
+        anexo_sem_leitura: 'Um anexo da conversa não pôde ser lido (áudio sem transcrição ou arquivo que não chegou). A IA não foi chamada.'
+        modelo_sem_imagem: 'A IA deste passo não vê foto nem PDF. A IA não foi chamada.'
         resposta_fora_do_schema: 'A IA respondeu num formato que a automação não usa. Nada foi feito.'
         tipo_desconhecido: 'O motor da automação não conhece este tipo de passo. A automação parou aqui sem fazê-lo.'
         agente_sumiu: 'A agente de IA escolhida não existe mais. A conversa ficou como estava.'
@@ -1093,6 +1098,9 @@ pt_BR:
         acao_fora: 'Passo %{passo}: %{acao} não pode ser passo de automação.'
         caminho_faltando: 'Passo %{passo}: a ação precisa de %{campo}.'
         valor_desconhecido: 'Passo %{passo}: a automação não sabe ler %{caminho}.'
+        texto_da_ia_no_gatilho: 'Passo %{passo}: %{caminho} é o texto de um passo de IA, e no "Só se" do gatilho nenhum passo rodou ainda. Use esse dado num passo depois dele.'
+        texto_da_ia_sem_passo: 'Passo %{passo}: %{caminho} precisa apontar um passo "Escrever" ou "Resumir" desta automação.'
+        texto_da_ia_depois: 'Passo %{passo}: %{caminho} aponta um passo de IA que nunca roda antes deste (vem depois, ou está noutro galho do mesmo passo). Ponha o passo que escreve antes do que lê.'
         valor_de_venda: 'Passo %{passo}: só quem vê os valores de venda pode ler %{caminho}. Peça a permissão ou tire esse valor.'
         corpo: 'Passo %{passo}: %{problema}'
         forma_nao_cabe: 'Passo %{passo}: o campo %{campo} não aceita texto montado nem data calculada.'
