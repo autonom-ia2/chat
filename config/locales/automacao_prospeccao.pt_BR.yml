@@ -11,6 +11,7 @@ pt_BR:
         prospeccao_sem_whatsapp: 'A conta não tem WhatsApp ligado para conferir os números. Nada foi buscado.'
         prospeccao_sem_chave_google: 'A busca pelo Google não está configurada na Prospecção desta conta. Nada foi buscado.'
         busca_falhou_paga: 'A busca desta execução falhou depois de chamar o Google. Para não pagar de novo, ela não foi repetida.'
+        busca_interrompida: 'A busca desta execução parou no meio da chamada ao Google. Para não pagar de novo, ela não foi repetida.'
         busca_sem_resposta: 'A busca de empresas não respondeu. A automação tenta de novo.'
         busca_recusada: 'A Prospecção recusou a busca como ela está salva. Abra a busca na Prospecção e confira.'
         conferencia_no_prazo: 'Passaram 2 horas e alguns números não foram conferidos. Os cards saíram só para quem já tinha WhatsApp conferido.'

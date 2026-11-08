@@ -11,6 +11,7 @@ en:
         prospeccao_sem_whatsapp: 'The account has no WhatsApp connected to check the numbers. Nothing was searched.'
         prospeccao_sem_chave_google: 'Google search is not set up in this account''s Prospecting. Nothing was searched.'
         busca_falhou_paga: 'This run''s search failed after calling Google. It was not repeated, so it is not paid twice.'
+        busca_interrompida: 'This run''s search stopped in the middle of the call to Google. It was not repeated, so it is not paid twice.'
         busca_sem_resposta: 'The company search did not answer. The automation will try again.'
         busca_recusada: 'Prospecting refused the search as it is saved. Open the search in Prospecting and check it.'
         conferencia_no_prazo: '2 hours passed and some numbers were not checked. Cards were created only for companies with a checked WhatsApp.'

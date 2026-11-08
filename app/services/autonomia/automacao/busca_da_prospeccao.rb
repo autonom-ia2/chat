@@ -79,12 +79,20 @@ class Autonomia::Automacao::BuscaDaProspeccao
   end
 
   # O que impede a busca antes de pagar: sem WhatsApp para conferir, sem a chave do Google, ou a busca desta execução já
-  # falhou depois de pagar.
+  # ficou no meio ou falhou depois de pagar.
   def impedimento_da_busca
     return 'prospeccao_sem_whatsapp' unless Prospecting::WhatsappVerifier.available_for?(@conta)
     return 'prospeccao_sem_chave_google' unless provedor_pronto?
 
+    return 'busca_interrompida' if interrompida?
+
     'busca_falhou_paga' if falhou_paga?
+  end
+
+  # A busca desta execução que ficou no meio (o processo caiu durante a chamada ao Google: deploy, falta de memória). O
+  # SearchRunner não chegou a gravar o status nem as chamadas pagas, então não dá para saber se pagou: para, sem repetir.
+  def interrompida?
+    da_execucao_em(Prospecting::Search.pending).exists?
   end
 
   # Sem a chave do Google o SearchRunner recusa antes de chamar (ProviderError): não é passageiro, tentar de novo não
@@ -145,6 +153,8 @@ class Autonomia::Automacao::BuscaDaProspeccao
   end
 
   # Cada lote ganha as etiquetas logo depois de enviado: se um lote seguinte falhar, os cards já criados ficam com elas.
+  # Limite conhecido: se o processo cair entre o envio e a etiqueta, a volta acha os cards como "existing" e não etiqueta
+  # (card que já existia é empresa já prospectada). Esses contatos ficam fora da campanha da etiqueta.
   def enviar(ids, etapa)
     envio = Prospecting::CrmCardBatch.new(account: @conta, user: @account_user.user, lead_ids: ids, pipeline_id: etapa.pipeline_id,
                                           stage_id: etapa.id, leads_scope: Prospecting::Visibility.new(@account_user).leads(

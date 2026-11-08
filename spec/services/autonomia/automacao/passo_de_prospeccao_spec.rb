@@ -246,6 +246,19 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
       expect(buscas_da(execucao).count).to eq(1)
     end
 
+    it 'a busca que ficou no meio (processo caiu na chamada ao Google) não é repetida' do
+      origem
+      execucao = execucao_da_conta
+      Autonomia::Prospecting::Search.create!(account: account, query: 'x', location: 'y', provider: 'mock', requested_limit: 3,
+                                             status: :pending,
+                                             metadata: { 'automacao' => { 'execucao_id' => execucao.id, 'passo' => 'p1' } })
+
+      resultado = rodar(execucao)
+
+      expect([resultado.tipo, resultado.motivo]).to eq([:permanente, 'busca_interrompida'])
+      expect(buscas_da(execucao).count).to eq(1)
+    end
+
     it 'a fila da conferência que falha não perde a busca paga: espera e segue no prazo' do
       origem
       execucao = execucao_da_conta
