@@ -291,6 +291,13 @@
         "WON": "Seguro ativo",
         "LOST": "Não fechou"
       }
+    },
+    "SELECAO": {
+      "SITUACOES": {
+        "GANHO": "Fechou o seguro",
+        "PERDIDO": "Não fechou"
+      },
+      "FECHADO_ENTRE": "Fechou ou não fechou entre"
     }
   }
 }

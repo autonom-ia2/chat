@@ -8,6 +8,9 @@
 # permissão), o job solta a marca `read_old_at` (Painel#ler_antigos!): o botão volta e o dono pode tentar de novo. O
 # mesmo quando o perfil, a conexão ou o anúncio não existem mais (`not_found`), ou quando a leitura do anúncio falha
 # antes de chegar aos comentários (AdManagement::Error).
+#
+# Anúncio nas duas redes com uma só lida (#2522): os comentários da rede que leu vão para a fila, e a falha da outra
+# segue a mesma regra (tenta de novo ou solta a marca). Pôr na fila de novo não repete nada: o motor tem a reserva.
 class Crm::MetaAds::ComentariosIa::LerAntigosJob < ApplicationJob
   # A Meta não respondeu à leitura dos comentários.
   class MetaIndisponivel < StandardError; end
@@ -37,14 +40,24 @@ class Crm::MetaAds::ComentariosIa::LerAntigosJob < ApplicationJob
 
     lido = ler(account, alvo)
     if lido[:status] == 'ready'
-      return enfileirar_antigos(account, alvo.to_h.stringify_keys, care, Crm::MetaAds::ComentariosIa::Fonte.que_esperam(account, lido))
+      enfileirar_antigos(account, alvo.to_h.stringify_keys, care, Crm::MetaAds::ComentariosIa::Fonte.que_esperam(account, lido))
     end
-    raise MetaIndisponivel if lido[:status] == PASSAGEIRO
+    falha = falha_de(lido)
+    return if falha.nil?
+    raise MetaIndisponivel if falha == PASSAGEIRO
 
-    self.class.soltar!(account_id, alvo, lido[:status])
+    self.class.soltar!(account_id, alvo, falha)
   end
 
   private
+
+  # O que faltou na leitura: a rede que não leu (#2522) ou, sem o status por rede, o da leitura. nil: tudo lido. Com
+  # mais de uma rede faltando, a Meta fora do ar vem antes: a recusa de uma não corta a nova tentativa da outra.
+  def falha_de(lido)
+    falhas = lido[:status_das_redes].to_h.values.reject { |status| status == 'ready' }
+    falhas = [lido[:status]] if falhas.empty? && lido[:status] != 'ready'
+    falhas.include?(PASSAGEIRO) ? PASSAGEIRO : falhas.first
+  end
 
   def ler(account, alvo)
     fonte = Crm::MetaAds::ComentariosIa::Fonte.do_alvo(account, alvo)

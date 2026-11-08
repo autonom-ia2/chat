@@ -1337,6 +1337,11 @@
       "RESULT": {
         "WON": "Implantado"
       }
+    },
+    "SELECAO": {
+      "SITUACOES": {
+        "GANHO": "Plano implantado"
+      }
     }
   }
 }

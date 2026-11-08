@@ -1337,6 +1337,11 @@
       "RESULT": {
         "WON": "Implemented"
       }
+    },
+    "SELECAO": {
+      "SITUACOES": {
+        "GANHO": "Plan implemented"
+      }
     }
   }
 }
