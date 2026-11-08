@@ -157,6 +157,30 @@ describe('gatilho recorrente', () => {
     expect(ultimo(comData)).toEqual({ ...base, frequencia: 'diaria' });
   });
 
+  // G39: o aviso do "uma vez só" não fala do dia 29 a 31 nem da vez anterior.
+  it('uma vez só tem o aviso dele, na conta e na seleção', () => {
+    const conta = montar({
+      tipo: 'conta.recorrente',
+      frequencia: 'uma_vez',
+      hora: 9,
+    });
+    expect(conta.text()).toContain(
+      'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_UMA_VEZ_CONTA'
+    );
+    const contatos = montar({
+      tipo: 'contato.recorrente',
+      frequencia: 'uma_vez',
+      hora: 9,
+      selecao: {},
+    });
+    expect(contatos.text()).toContain(
+      'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_UMA_VEZ'
+    );
+    expect(contatos.text()).not.toContain(
+      'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_UMA_VEZ_CONTA'
+    );
+  });
+
   it('a frase da data única mostra o dia por extenso no formato do Brasil', () => {
     const t = (chave, valores) =>
       valores ? `${chave} ${Object.values(valores).join(' ')}` : chave;

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import LivreSelecao from './LivreSelecao.vue';
+import { mostraNaFrequencia } from '../recorrente';
 
 // #2499 — o gatilho no "Alterar": o seletor, agrupado quando há mais de um
 // grupo (conversa e mensagem, card do funil), e o que o gatilho escolhido pede
@@ -47,28 +48,25 @@ const pedePeca = (item, peca) =>
 
 const entrada = computed(() => entradaDo(props.modelValue?.tipo));
 const pede = peca => pedePeca(entrada.value, peca);
-// O dia da semana só no semanal; o do mês, só no mensal; a data, só no "uma
-// vez" (#2681).
-const DIA_DA_FREQUENCIA = {
-  dia_da_semana: 'semanal',
-  dia_do_mes: 'mensal',
-  data: 'uma_vez',
-};
 const parametros = computed(() =>
-  (entrada.value?.parametros || []).filter(
-    parametro =>
-      !DIA_DA_FREQUENCIA[parametro.nome] ||
-      DIA_DA_FREQUENCIA[parametro.nome] === props.modelValue?.frequencia
+  (entrada.value?.parametros || []).filter(parametro =>
+    mostraNaFrequencia(parametro.nome, props.modelValue?.frequencia)
   )
 );
 // O aviso de mover a etapa vale para "entrou" e "saiu da etapa". O "parado na
 // etapa" pede a etapa, mas é de tempo (pede os dias) e tem o aviso dele.
 const deEtapa = computed(() => pede('etapa') && !pede('dias'));
 const avisoDeTempo = computed(() => {
-  if (pede('frequencia'))
+  if (pede('frequencia')) {
+    // G39: o "uma vez só" não tem dia 29 a 31 nem vez anterior.
+    if (props.modelValue?.frequencia === 'uma_vez')
+      return pede('selecao')
+        ? 'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_UMA_VEZ'
+        : 'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_UMA_VEZ_CONTA';
     return pede('selecao')
       ? 'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO'
       : 'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_CONTA';
+  }
   if (pede('campo')) return 'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_DATA';
   if (pede('dias')) return 'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_PARADO';
   return null;

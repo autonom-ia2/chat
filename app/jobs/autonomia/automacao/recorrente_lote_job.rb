@@ -16,6 +16,8 @@ class Autonomia::Automacao::RecorrenteLoteJob < ApplicationJob
 
     tipo = definicao.versao_ativa.receita.dig('gatilho', 'tipo')
     instante = Time.zone.parse(ocorrencia)
+    return if outra_data?(definicao, instante)
+
     erro = alvos(definicao, instante, ids).filter_map { |alvo| comecar(definicao, alvo, tipo, instante) }.first
     raise erro if erro
   end
@@ -27,6 +29,13 @@ class Autonomia::Automacao::RecorrenteLoteJob < ApplicationJob
     return unless definicao&.ativa && definicao.versao_ativa
 
     definicao if ::Autonomia::Automacao::Gatilhos.recorrente?(definicao.versao_ativa.receita.dig('gatilho', 'tipo'))
+  end
+
+  # A data única (G39) trocada entre a varredura e o lote: a ocorrência enfileirada é da data antiga e não dispara; a
+  # nova roda no dia dela, com a marca dela.
+  def outra_data?(definicao, instante)
+    data = definicao.versao_ativa.receita.dig('gatilho', 'data')
+    data.present? && instante.in_time_zone(::Autonomia::Automacao::Tempo.fuso(definicao.account)).to_date.iso8601 != data
   end
 
   def alvos(definicao, instante, ids)

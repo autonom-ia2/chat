@@ -16,9 +16,9 @@
       "CARD_PARADO": "Quando o card fica parado numa etapa",
       "CARD_DATA": "Perto de uma data do card",
       "CONTATO_DATA": "Perto de uma data do contato",
-      "CARD_RECORRENTE": "Todo dia, semana ou mês, em cards",
-      "CONTATO_RECORRENTE": "Todo dia, semana ou mês, em contatos",
-      "CONTA_RECORRENTE": "Todo dia, semana ou mês, na conta"
+      "CARD_RECORRENTE": "Numa data ou de tempo em tempo, em cards",
+      "CONTATO_RECORRENTE": "Numa data ou de tempo em tempo, em contatos",
+      "CONTA_RECORRENTE": "Numa data ou de tempo em tempo, na conta"
     },
     "ORIGEM": {
       "CONVERSA": "Da conversa",
@@ -114,6 +114,8 @@
       "DIA_DO_MES": "Dia {dia}",
       "AVISO": "Roda na hora escolhida, no fuso da conta, uma vez em cada card ou contato escolhido. No dia 29, 30 ou 31, os meses mais curtos usam o último dia. Se estiver desligada na hora, aquela vez não roda depois. Enquanto a vez anterior ainda estiver rodando (esperando), a nova não começa.",
       "AVISO_CONTA": "Roda na hora escolhida, no fuso da conta, uma vez só (não em cada card ou contato). Cabem só esperar e disparar campanha. No dia 29, 30 ou 31, os meses mais curtos usam o último dia. Se estiver desligada na hora, aquela vez não roda depois. Enquanto a vez anterior ainda estiver rodando (esperando), a nova não começa.",
+      "AVISO_UMA_VEZ": "Roda uma vez só, no dia e na hora escolhidos, no fuso da conta, em cada card ou contato escolhido. Se estiver desligada na hora, não roda depois. Mudar só a hora depois que rodou não manda de novo.",
+      "AVISO_UMA_VEZ_CONTA": "Roda uma vez só, no dia e na hora escolhidos, no fuso da conta (não em cada card ou contato). Cabem só esperar e disparar campanha. Se estiver desligada na hora, não roda depois. Mudar só a hora depois que rodou não manda de novo.",
       "CARDS": "nos cards escolhidos",
       "CONTATOS": "nos contatos escolhidos",
       "CONTA": "na conta",

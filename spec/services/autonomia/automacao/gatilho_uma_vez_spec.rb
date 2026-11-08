@@ -80,6 +80,39 @@ RSpec.describe 'Automação livre: gatilho numa data única', :automacao_motor d
       expect(execucoes.count).to eq(2)
     end
 
+    # O lote enfileirado para uma data e rodado depois que a pessoa trocou a data (a fila atrasou) não dispara: a nova
+    # data roda no dia dela, com a marca dela.
+    it 'o lote da data antiga que roda depois da troca de data não dispara', :aggregate_failures do
+      definicao = ligar
+      travel_to(fuso.local(2026, 11, 26, 9, 1)) do
+        definicao.salvar_versao!(receita: { 'gatilho' => gatilho(data: '2026-11-28'), 'passos' => [esperar_passo('p1')] }, autor: admin)
+        instante = fuso.local(2026, 11, 26, 9).utc.iso8601
+        Autonomia::Automacao::RecorrenteLoteJob.perform_now(definicao.id, [account.id], instante)
+      end
+      expect(execucoes.count).to eq(0)
+
+      varrer_em(fuso.local(2026, 11, 28, 9, 5))
+      expect(execucoes.pluck(:evento)).to eq(['recorrente:2026-11-28:conta.recorrente'])
+    end
+
+    # No contato, a data nova é outra ocorrência para cada contato da seleção, inclusive quem já recebeu na antiga.
+    it 'no contato, trocar a data roda de novo em cada contato, na nova data', :aggregate_failures do
+      create(:label, account: account, title: 'ja-comprou')
+      contato = create(:contact, account: account).tap { |c| c.update!(label_list: ['ja-comprou']) }
+      selecao = { 'etiqueta' => 'ja-comprou' }
+      definicao = ligar(gatilho(tipo: 'contato.recorrente', selecao: selecao))
+      varrer_em(fuso.local(2026, 11, 26, 9, 5))
+      concluir_todas
+
+      travel_to(fuso.local(2026, 11, 26, 10)) do
+        receita = { 'gatilho' => gatilho(tipo: 'contato.recorrente', data: '2026-11-28', selecao: selecao), 'passos' => [esperar_passo('p1')] }
+        definicao.salvar_versao!(receita: receita, autor: admin)
+      end
+      varrer_em(fuso.local(2026, 11, 28, 9, 5))
+      esperado = %w[2026-11-26 2026-11-28].map { |dia| "recorrente:#{dia}:contato.recorrente:#{contato.id}" }
+      expect(execucoes.order(:id).pluck(:evento)).to eq(esperado)
+    end
+
     # A janela é de 1 dia: sem varredura no dia (uma pane longa), a data não roda depois.
     it 'a data que ficou mais de 1 dia sem varredura não roda depois' do
       ligar
@@ -127,6 +160,14 @@ RSpec.describe 'Automação livre: gatilho numa data única', :automacao_motor d
         expect(problemas(gatilho(data: '2026-11-25'))).to be_present
         expect(problemas(gatilho(data: '2026-11-26', hora: 11))).to be_empty
         expect(problemas(gatilho(data: '2026-12-01'))).to be_empty
+      end
+    end
+
+    it 'recusa a data que já passou também no contato' do
+      create(:label, account: account, title: 'ja-comprou')
+      travel_to(fuso.local(2026, 11, 26, 10)) do
+        expect(problemas(gatilho(tipo: 'contato.recorrente', data: '2026-11-25', selecao: { 'etiqueta' => 'ja-comprou' })))
+          .to eq([I18n.t('autonomia.automacao.receita.data_passada', data: I18n.l(Date.new(2026, 11, 25)))])
       end
     end
   end
