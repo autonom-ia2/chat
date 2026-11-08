@@ -177,7 +177,7 @@ module FechamentoAutomacao::Lacunas
     # Os passos de IA leem a foto, o PDF e o áudio da conversa (`le: anexos`, #2669).
     'G20' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('anexos') },
     # Fechada com prova (#2706): o passo existe no esquema e chega pela porta da ação; o ponta a ponta do exemplo 9 está
-    # em spec/fechamento/automacao/g21_prospeccao_spec.rb.
+    # em spec/fechamento/automacao/exemplo_09_prospeccao_semanal_spec.rb.
     'G21' => -> { passo?('prospeccao') && Autonomia::Automacao::PassoDeAcao::PROPRIOS.key?('prospeccao') },
     'G22' => nil,
     'G23' => nil,
