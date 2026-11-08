@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import AgenteGaveta from '../AgenteGaveta.vue';
 import { relativeTime } from 'dashboard/routes/dashboard/campaigns/metaAds/metaAdsHelpers';
 import AvisoRedeQueFaltou from 'dashboard/routes/dashboard/campaigns/metaAds/comentariosIa/AvisoRedeQueFaltou.vue';
+import { leituraDosComentarios } from '../../composables/useAgentesDoPost';
 
 // #2469 (PR 3a do #2436) — "Comentários" do cartão do post, em três grupos: no privado (#2481: quem recebeu da IA no
 // privado, com o comentário que abriu a conversa e o "Ver conversa", só as conversas que a pessoa vê), esperando você e
@@ -30,8 +31,13 @@ const enviados = computed(() => comentarios.value.results?.sent || 0);
 // A Meta não deixou ler (sem permissão, fora do ar): esperando e não respondo ficam sem número, nunca zero. No anúncio
 // nas duas redes com uma só lida (#2522), os números são os da rede que leu, e o aviso diz qual faltou.
 const leu = computed(() => comentarios.value.status === 'ready');
+// #2522: "esperando" vazio com uma rede de fora também é não ter lido (os dela podem estar esperando): sem número.
+const naoLeuEsperando = computed(
+  () => leituraDosComentarios(comentarios.value).esperando === null
+);
 const numero = chave => {
   if (chave === 'respondidos') return enviados.value;
+  if (chave === 'esperando' && naoLeuEsperando.value) return '–';
   return leu.value ? (comentarios.value[chave] || []).length : '–';
 };
 const lista = computed(() => comentarios.value[props.grupo] || []);
@@ -130,7 +136,7 @@ const alvo = computed(() =>
         </ol>
       </div>
       <p
-        v-else-if="!leu"
+        v-else-if="!leu || (grupo === 'esperando' && naoLeuEsperando)"
         data-sem-leitura
         role="alert"
         class="m-0 text-sm leading-6 text-n-slate-12"

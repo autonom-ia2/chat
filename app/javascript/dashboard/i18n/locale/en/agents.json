@@ -2840,7 +2840,8 @@
         "ERRO": "I couldn't read it right now.",
         "SEM_ACESSO": "No access to this post or ad.",
         "SUMIU": "No longer in the account.",
-        "SEM_LEITURA": "Couldn't read the comments right now"
+        "SEM_LEITURA": "Couldn't read the comments right now",
+        "FALTOU_REDE": "Missing the {rede} comments: I couldn't read them."
       },
       "CRIAR": {
         "TITULO": "Create agent",
