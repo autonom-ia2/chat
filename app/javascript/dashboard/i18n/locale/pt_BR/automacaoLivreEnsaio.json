@@ -39,6 +39,7 @@
         "IA_EXTRAIR": "Gravaria: {lista}.",
         "IA_ESCREVER_MENSAGEM": "Sairia para o cliente.",
         "IA_ESCREVER_SUGESTAO": "Ficaria como sugestão para a equipe revisar e mandar.",
+        "IA_ESCREVER_GUARDAR": "O texto ficaria guardado para os passos seguintes.",
         "IA_RESUMIR_NOTA": "Ficaria numa nota privada.",
         "IA_RESUMIR_AVISAR": "Avisaria a equipe.",
         "ONDE": {
@@ -61,7 +62,11 @@
       "CONTATO_SEM_EMAIL": "Não sairia: o contato não tem e-mail.",
       "CONTATO_NAO_RECEBE": "Não sairia: o contato pediu para não receber mensagens.",
       "EMAIL_BLOQUEADO": "Não sairia: o e-mail do contato está bloqueado nesta conta (devolução, reclamação ou descadastro).",
-      "CAIXA_DE_EMAIL_INDISPONIVEL": "Não sairia: a caixa de e-mail escolhida não existe mais."
+      "CAIXA_DE_EMAIL_INDISPONIVEL": "Não sairia: a caixa de e-mail escolhida não existe mais.",
+      "RECORRENTE_CARDS": "Pegaria {total} card agora | Pegaria {total} cards agora",
+      "RECORRENTE_CONTATOS": "Pegaria {total} contato agora | Pegaria {total} contatos agora",
+      "RECORRENTE_CONTA": "Roda 1 vez em cada ocorrência, na conta",
+      "RECORRENTE_SEM_ACESSO": "Você não vê os contatos da conta, e a contagem não aparece aqui."
     },
     "HISTORICO": {
       "TITULO": "O que aconteceu",
@@ -91,6 +96,7 @@
       "PASSO_SUMIU": "Um passo que não está nesta versão",
       "SEGUIU_POR": "Seguiu por: {ramo}",
       "ESPERA_ATE": "Espera até {quando}",
+      "CONVERSA_PRINCIPAL": "Abriu uma conversa, que virou a principal do card",
       "TENTATIVA": "Tentativa {n}",
       "IA": "IA: US$ {valor}",
       "IA_MENOS_DE": "IA: menos de US$ {valor}",

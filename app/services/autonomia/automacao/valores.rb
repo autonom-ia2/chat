@@ -42,7 +42,7 @@ class Autonomia::Automacao::Valores
     # o mesmo do convite que o cliente recebeu.
     'reuniao.inicio' => ->(reuniao) { ::Autonomia::Automacao::Valores.inicio_da_reuniao(reuniao) },
     'reuniao.link_da_reuniao' => ->(reuniao) { reuniao.online_meeting_url }
-  }.freeze
+  }.merge(::Autonomia::Automacao::Ausencia::VALORES).freeze
 
   # G12: o link da agenda (LinkDaAgenda) de quem cuida: o responsável do card ou a pessoa da conversa. Vale em qualquer
   # gatilho com card ou conversa: vai no texto para o cliente marcar, quando ainda não há reunião. A página da reunião
@@ -52,19 +52,28 @@ class Autonomia::Automacao::Valores
     'conversa.link_da_agenda' => ->(conversa) { conversa.assignee }
   }.freeze
 
-  # G11: a resposta que chegou durante o "esperar até" (Resposta). Só existe na condição dele, onde há a janela da
-  # espera (`espera`); o salvar recusa no resto. Sem a janela, ou sem conversa (card sem conversa principal), lê
-  # false: nunca "respondeu", e "diferente de true" não vira resposta.
-  RESPOSTA = {
-    'conversa.cliente_respondeu' => ->(conversa, espera) { ::Autonomia::Automacao::Resposta.cliente?(conversa, espera) },
-    'conversa.equipe_respondeu' => ->(conversa, espera) { ::Autonomia::Automacao::Resposta.equipe?(conversa, espera) }
-  }.freeze
+  # G11: a resposta que chegou durante o "esperar até" (Resposta::VALORES). Só existe na condição dele, onde há a janela
+  # da espera (`espera`); o salvar recusa no resto. Sem a janela, ou sem conversa (card sem conversa principal), lê
+  # false: nunca "respondeu", e "diferente de true" não vira resposta. O cliente responde de qualquer conversa dele
+  # (#2680: o e-mail abre outra), então a resposta dele sai do contato, nas conversas que `quem` vê, e vale também no
+  # alvo contato.
+  RESPOSTA = ::Autonomia::Automacao::Resposta::VALORES
+  RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu'.freeze
+
+  # A última mensagem que a execução mandou ao cliente (#2680): o texto e a situação (Envio).
+  ENVIO = ::Autonomia::Automacao::Envio::VALORES
+
+  # #2679: o texto que um passo de IA ("escrever", "resumir") desta execução produziu: `ia.<id do passo>`. Vale em
+  # qualquer alvo: fica na execução, não no alvo. O salvar confere que o id é de um passo que escreve (Receita); antes de
+  # ele rodar, ou num caminho em que ele não rodou, lê vazio, e o passo pula com `faltou_valor`.
+  IA = 'ia.'.freeze
+  PASSOS_QUE_ESCREVEM = %w[escrever resumir].freeze
 
   # O que cada alvo alcança, pelas pontes do Contexto.
   BASES_DO_ALVO = {
-    'Conversation' => %w[conversa contato],
-    'Crm::Card' => %w[card conversa contato reuniao],
-    'Contact' => %w[contato]
+    'Conversation' => %w[conversa contato envio],
+    'Crm::Card' => %w[card conversa contato reuniao envio],
+    'Contact' => %w[contato envio]
   }.freeze
 
   # A mensagem que disparou o gatilho, para o filtro separar a do cliente da resposta da equipe e da nota.
@@ -90,14 +99,9 @@ class Autonomia::Automacao::Valores
     'mensagem.primeira' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'conversa.iniciada_por' => { 'opcoes' => %w[cliente equipe], 'operadores' => %w[igual diferente] },
     'conversa.cliente_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] }
-  }.freeze
-
-  ATRIBUTOS = {
-    'conversa.atributos' => ->(conversa) { conversa.custom_attributes },
-    'contato.atributos' => ->(contato) { contato.custom_attributes },
-    'card.atributos' => ->(card) { card.custom_attributes }
-  }.freeze
+    'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'envio.situacao' => { 'opcoes' => ::Autonomia::Automacao::Envio::SITUACOES.values, 'operadores' => %w[igual diferente] }
+  }.merge(::Autonomia::Automacao::Ausencia::FECHADOS).freeze
 
   # Os valores que pedem permissão para ler (#2597): a pergunta é a mesma do resto do CRM, feita a quem salva a receita
   # e a quem ligou a automação. O dono de um card não ganha, pela automação, o valor dos cards alheios: `ve?`, não
@@ -107,17 +111,18 @@ class Autonomia::Automacao::Valores
     'card.valor' => ::Crm::ValorDeVenda
   }.freeze
 
-  # O modelo do atributo personalizado de cada base, para conferir ao salvar que a chave existe na conta.
-  MODELOS = {
-    'conversa.atributos' => 'conversation_attribute',
-    'contato.atributos' => 'contact_attribute',
-    'card.atributos' => 'card_attribute'
-  }.freeze
+  # Os atributos personalizados (`contato.atributos.placa`) ficam em Valores::Atributos.
+  MODELOS = ::Autonomia::Automacao::Valores::Atributos::MODELOS
 
   class << self
     def caminho_valido?(caminho)
-      [CAMPOS, MENSAGEM, RESPOSTA, AGENDA].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present?
+      [CAMPOS, MENSAGEM, RESPOSTA, AGENDA, ENVIO].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? || da_ia?(caminho)
     end
+
+    def da_ia?(caminho) = caminho.to_s.start_with?(IA) && caminho.to_s.length > IA.length
+
+    # "ia.p3" => "p3".
+    def passo_da_ia(caminho) = caminho.to_s.delete_prefix(IA)
 
     def da_reuniao?(caminho) = caminho.to_s.start_with?('reuniao.')
 
@@ -144,7 +149,10 @@ class Autonomia::Automacao::Valores
 
     # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.
     def no_alvo?(caminho, alvo_type)
-      da_mensagem?(caminho) || BASES_DO_ALVO.fetch(alvo_type, []).include?(caminho.to_s.split('.', 2).first)
+      return true if da_mensagem?(caminho) || da_ia?(caminho)
+      return true if BASES_DO_ALVO.fetch(alvo_type, []).include?(caminho.to_s.split('.', 2).first)
+
+      caminho.to_s == RESPOSTA_DO_CONTATO && BASES_DO_ALVO.fetch(alvo_type, []).include?('contato')
     end
 
     def fechado(caminho) = FECHADOS[caminho.to_s]
@@ -164,26 +172,12 @@ class Autonomia::Automacao::Valores
       regra.nil? || regra.ve?(account_user)
     end
 
-    # O atributo da conta que o caminho lê existe? Caminho que não é atributo responde true.
-    def atributo_definido?(caminho, conta)
-      base, chave = atributo(caminho)
-      base.nil? || conta.custom_attribute_definitions.exists?(attribute_model: MODELOS.fetch(base), attribute_key: chave)
-    end
+    def atributo_definido?(caminho, conta) = ::Autonomia::Automacao::Valores::Atributos.definido?(caminho, conta)
 
-    # O caminho lê um atributo do tipo data da conta? A data calculada no corpo (G16) só parte de um deles: os CAMPOS
-    # não têm data.
-    def data?(caminho, conta)
-      base, chave = atributo(caminho)
-      base.present? && conta.custom_attribute_definitions.exists?(attribute_model: MODELOS.fetch(base), attribute_key: chave,
-                                                                  attribute_display_type: :date)
-    end
+    def data?(caminho, conta) = ::Autonomia::Automacao::Valores::Atributos.data?(caminho, conta)
 
-    # "contato.atributos.placa" => ["contato.atributos", "placa"]. A chave do atributo pode ter ponto.
-    def atributo(caminho)
-      base = ATRIBUTOS.keys.find { |prefixo| caminho.to_s.start_with?("#{prefixo}.") }
-      chave = base && caminho.to_s.delete_prefix("#{base}.")
-      [base, chave] if chave.present?
-    end
+    # "contato.atributos.placa" => ["contato.atributos", "placa"].
+    def atributo(caminho) = ::Autonomia::Automacao::Valores::Atributos.do_caminho(caminho)
   end
 
   # `alvo`: a conversa, o card ou o contato da execução (ou um Contexto já montado). `quem`: a pessoa com cujas
@@ -203,7 +197,7 @@ class Autonomia::Automacao::Valores
   def falta_da_agenda = (@por_da_agenda if @vazios.any? && @vazios.all? { |caminho| AGENDA.key?(caminho) })
 
   def ler(caminho)
-    valor = lido(caminho)
+    valor = self.class.da_ia?(caminho) ? @contexto.texto_da_ia(self.class.passo_da_ia(caminho)) : lido(caminho)
     @vazios << caminho.to_s if valor.blank?
     valor
   end
@@ -219,13 +213,15 @@ class Autonomia::Automacao::Valores
     base, chave = self.class.atributo(caminho)
     raise ArgumentError, "caminho desconhecido: #{caminho}" unless base
 
-    do_objeto(caminho) { |objeto| ATRIBUTOS.fetch(base).call(objeto).to_h[chave] }
+    do_objeto(caminho) { |objeto| ::Autonomia::Automacao::Valores::Atributos.ler(base, chave, objeto) }
   end
 
-  def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave)
+  def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave) || ENVIO.key?(chave)
 
   def do_campo(chave)
-    do_objeto(chave) { |objeto| CAMPOS.key?(chave) ? CAMPOS[chave].call(objeto) : link_da_agenda(objeto, AGENDA[chave].call(objeto)) }
+    return do_objeto(chave) { |objeto| link_da_agenda(objeto, AGENDA[chave].call(objeto)) } if AGENDA.key?(chave)
+
+    do_objeto(chave) { |objeto| (CAMPOS[chave] || ENVIO[chave]).call(objeto) }
   end
 
   def link_da_agenda(objeto, pessoa)
@@ -237,7 +233,7 @@ class Autonomia::Automacao::Valores
   # A página de agendamento em que a reunião do gatilho foi marcada, quando veio de uma.
   def pagina_da_reuniao = @contexto.reuniao&.metadata.to_h['booking_profile_id']
 
-  def resposta(caminho) = !@espera.nil? && do_objeto(caminho) { |conversa| RESPOSTA.fetch(caminho.to_s).call(conversa, @espera) } == true
+  def resposta(caminho) = !@espera.nil? && RESPOSTA.fetch(caminho.to_s).call(@contexto, @espera, @quem) == true
 
   # A pessoa só é buscada quando o caminho pede permissão.
   def permitido?(caminho) = !PROTEGIDOS.key?(caminho.to_s) || self.class.pode_ler?(caminho, account_user)
@@ -245,7 +241,7 @@ class Autonomia::Automacao::Valores
   def account_user
     return @account_user if defined?(@account_user)
 
-    @account_user = @quem && @contexto.alvo.account.account_users.find_by(user_id: @quem.id)
+    @account_user = @quem && @contexto.conta.account_users.find_by(user_id: @quem.id)
   end
 
   def do_objeto(caminho)
@@ -260,6 +256,7 @@ class Autonomia::Automacao::Valores
     when 'contato' then @contexto.contato
     when 'card' then @contexto.card
     when 'reuniao' then @contexto.reuniao
+    when 'envio' then @contexto.ultimo_envio
     end
   end
 end

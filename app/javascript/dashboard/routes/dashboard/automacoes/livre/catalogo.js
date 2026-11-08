@@ -3,6 +3,7 @@
 // a condição lê e cada passo com os campos e a peça da tela de cada campo.
 import { ref } from 'vue';
 import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
+import { todosOsPassos } from './receita';
 
 const catalogo = ref(null);
 let carregando = null;
@@ -174,16 +175,60 @@ export const comPermissoes = (dados, podeLer) => {
 };
 
 // G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião.
-export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
+// #2680: com a caixa da conversa nova, o contato alcança a conversa que ela
+// abre; e "o cliente respondeu" sai do contato, então vale onde há contato.
+const RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu';
+export const doAlvoDoGatilho = (
+  dados,
+  tipoDoGatilho,
+  comConversaNova = false
+) => {
   const alvo = dados?.gatilhos?.find(item => item.tipo === tipoDoGatilho)?.alvo;
-  const bases = alvo && dados.alvos?.[alvo];
-  if (!bases) return dados;
+  const doAlvo = alvo && dados.alvos?.[alvo];
+  if (!doAlvo) return dados;
+  const bases = comConversaNova
+    ? [...new Set([...doAlvo, 'conversa'])]
+    : doAlvo;
+  const alcanca = item =>
+    !item.base ||
+    bases.includes(item.base) ||
+    (item.caminho === RESPOSTA_DO_CONTATO && bases.includes('contato'));
   return {
     ...dados,
     valores: dados.valores.filter(
       item =>
-        (!item.base || bases.includes(item.base)) &&
+        alcanca(item) &&
         (!item.so_nos_gatilhos || item.so_nos_gatilhos.includes(tipoDoGatilho))
     ),
   };
+};
+
+// #2679 — o texto que um "escrever" ou "resumir" da receita produz vira um dado
+// que os passos seguintes leem (`ia.<id>`). O rótulo diz qual: a instrução do
+// "escrever", ou "Resumo da IA"; dois iguais levam o id junto (comChaveSeRepetido).
+// Antes de o passo rodar, o dado está vazio e o passo que o lê pula.
+const CABE_NO_ROTULO = 40;
+const rotuloDoTexto = (passo, t) => {
+  if (passo.tipo === 'resumir')
+    return t('AUTOMACAO_LIVRE.IA.TEXTO_DA_IA.RESUMIR');
+  const letras = Array.from((passo.instrucao || '').trim());
+  const curta =
+    letras.length > CABE_NO_ROTULO
+      ? `${letras.slice(0, CABE_NO_ROTULO).join('').trimEnd()}…`
+      : letras.join('');
+  return curta
+    ? t('AUTOMACAO_LIVRE.IA.TEXTO_DA_IA.ESCREVER', { instrucao: curta })
+    : t('AUTOMACAO_LIVRE.IA.TEXTO_DA_IA.ESCREVER_SEM_INSTRUCAO');
+};
+
+export const comTextosDaIa = (dados, passos, t) => {
+  if (!dados?.valores) return dados;
+  const textos = todosOsPassos(passos)
+    .filter(passo => ['escrever', 'resumir'].includes(passo.tipo))
+    .map(passo => ({
+      caminho: `ia.${passo.id}`,
+      chave: passo.id,
+      rotulo: rotuloDoTexto(passo, t),
+    }));
+  return { ...dados, valores: [...dados.valores, ...textos] };
 };

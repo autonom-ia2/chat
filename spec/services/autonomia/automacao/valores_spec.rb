@@ -32,9 +32,10 @@ RSpec.describe Autonomia::Automacao::Valores do
     formas = [[:incoming, false], [:outgoing, false], [:outgoing, true], [:template, false]]
 
     # `mensagem.primeira` e `conversa.iniciada_por` dependem das mensagens gravadas: primeira_mensagem_spec. A resposta
-    # durante a espera (G11): resposta_spec.
+    # durante a espera (G11): resposta_spec. A situação do envio (#2680): envio_spec.
     expect(described_class::FECHADOS.keys)
-      .to match_array(described_class::MENSAGEM.keys + described_class::RESPOSTA.keys + ['conversa.iniciada_por'])
+      .to match_array(described_class::MENSAGEM.keys + described_class::RESPOSTA.keys + ['conversa.iniciada_por', 'envio.situacao'] +
+                      Autonomia::Automacao::Ausencia::FECHADOS.keys)
     described_class::FECHADOS.slice('mensagem.tipo', 'mensagem.privada').each do |caminho, fechado|
       expect(formas.map { |forma| lido.call(caminho, *forma) }.uniq).to match_array(fechado['opcoes'])
     end
@@ -95,6 +96,32 @@ RSpec.describe Autonomia::Automacao::Valores do
       expect(described_class.no_alvo?('contato.nome', 'Crm::Card')).to be(true)
       expect(described_class.no_alvo?('conversa.status', 'Contact')).to be(false)
       expect(described_class.no_alvo?('mensagem.tipo', 'Conversation')).to be(true)
+    end
+  end
+
+  # G23 (#2737): o "ausente até" de quem cuida, na conta da execução. Passou a data, volta a ser presente.
+  describe 'responsável ausente' do
+    let(:agente) { create(:user, account: account, role: :agent) }
+
+    def ausente!(ate) = agente.account_users.find_by(account: account).update!(ausente_ate: ate)
+
+    it 'na conversa: verdadeiro enquanto o ausente até não passou', :aggregate_failures do
+      expect(valores.ler('conversa.responsavel_ausente')).to be(false)
+
+      conversa.update!(assignee: agente)
+      ausente!(3.days.from_now)
+      expect(described_class.new(alvo: conversa.reload, quem: nil).ler('conversa.responsavel_ausente')).to be(true)
+
+      ausente!(1.minute.ago)
+      expect(described_class.new(alvo: conversa.reload, quem: nil).ler('conversa.responsavel_ausente')).to be(false)
+    end
+
+    it 'só lê a ausência na conta da execução' do
+      outra = create(:account)
+      create(:account_user, account: outra, user: agente, ausente_ate: 3.days.from_now)
+      conversa.update!(assignee: agente)
+
+      expect(described_class.new(alvo: conversa.reload, quem: nil).ler('conversa.responsavel_ausente')).to be(false)
     end
   end
 end

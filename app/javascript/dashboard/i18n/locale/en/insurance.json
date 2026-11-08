@@ -65,6 +65,7 @@
       },
       "FAILURES": {
         "CREDENTIAL_REJECTED": "AGGER rejected this login. Check the brokerage's user and password on the portal and connect again — the password may have changed or access may have been revoked.",
+        "SESSIONS_FULL": "Every user slot of the brokerage on AGGER is taken. Sign in to AGGER and disconnect a user who is not working. The connection comes back on its own within an hour and a half, or right away if you click Reconnect.",
         "SESSION_LOST": "The AGGER session dropped and we are opening a new one. Your password is correct and does not need to change.",
         "PORTAL_UNAVAILABLE": "AGGER did not respond. The portal is unavailable, not your access; we will retry on our own.",
         "PORTAL_TIMEOUT": "AGGER took too long to respond. It is not a problem with your access; we will retry on our own.",

@@ -8,15 +8,15 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | No catálogo | 706 |
 | Sem corpo | 204 |
 | Com corpo | 502 |
-| Com corpo e formato completo | 413 (82,3%) |
-| Com corpo e formato incompleto | 89 |
+| Com corpo e formato completo | 414 (82,5%) |
+| Com corpo e formato incompleto | 88 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 17 de 208 |
-| Leituras cruas tipadas | 214 de 308 |
+| Campos aninhados com vocabulário | 17 de 210 |
+| Leituras cruas tipadas | 214 de 307 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 75 |
+| leitura crua sem tipo | 74 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -79,7 +79,6 @@ Uma ação pode ter mais de um motivo.
 - `POST conversations/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/conversations_controller.rb:52); params inteiro repassado a ::Conversations::FilterService.new
 - `POST crm/booking_invites/:id/deliver` — leitura crua sem tipo: text (repassada a ::Crm::BookingV2::InviteDeliverer.new)
 - `POST crm/booking_pages/:id/test_invite` — leitura crua sem tipo: phone (repassada a ::Crm::BookingV2::TestInvite.new)
-- `POST crm/cards/:card_id/contact` — leitura crua sem tipo: contact
 - `POST crm/cards/:id/close` — leitura crua sem tipo: result (repassada a ::Crm::Cards::Closer.new)
 - `POST crm/cards/bulk` — leitura crua sem tipo: action_name, bulk_action
 - `POST crm/meetings/:id/sync` — leitura crua sem tipo: force
@@ -175,7 +174,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/cards#close` result — repassada a ::Crm::Cards::Closer.new
 - `api/v1/accounts/crm/cards/bulk#create` action_name — o código não converte nem compara o valor
 - `api/v1/accounts/crm/cards/bulk#create` bulk_action — o código não converte nem compara o valor
-- `api/v1/accounts/crm/cards/contacts#create` contact — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meetings#suggest_times` date — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meetings#suggest_times` duration_minutes — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meetings#sync` force — o código não converte nem compara o valor
