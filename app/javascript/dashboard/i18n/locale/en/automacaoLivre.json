@@ -66,7 +66,9 @@
       "CONVERSA_LINK_DA_AGENDA": "Booking link of the conversation assignee (at step time)",
       "AGENDA_DA_PAGINA": "Booking link: {titulo}",
       "REUNIAO_INICIO": "Meeting date and time",
-      "REUNIAO_LINK_DA_REUNIAO": "Meeting call link"
+      "REUNIAO_LINK_DA_REUNIAO": "Meeting call link",
+      "ENVIO_TEXTO": "Text of the last message the automation sent",
+      "ENVIO_SITUACAO": "Status of the last message the automation sent"
     },
     "PASSOS": {
       "ESPERAR": "Wait for a while",

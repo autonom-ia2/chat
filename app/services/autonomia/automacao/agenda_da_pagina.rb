@@ -25,16 +25,8 @@ class Autonomia::Automacao::AgendaDaPagina
 
     def caminho?(caminho) = !pagina_id(caminho).nil?
 
-    # Para a Receita: nil quando o caminho não é de página (segue a conferência de sempre); senão as frases do problema,
-    # vazio quando pode salvar. A página vale em qualquer alvo: o que conta é a página e quem salva.
-    def problemas(id, caminho, conta:, account_user:)
-      return unless caminho?(caminho)
-
-      chave = problema_ao_salvar(caminho, conta: conta, account_user: account_user)
-      chave ? [I18n.t("autonomia.automacao.receita.#{chave}", passo: id, caminho: caminho)] : []
-    end
-
-    # A chave da frase do problema ao salvar, ou nil.
+    # A chave da frase do problema ao salvar (a Receita, por Valores.problema_de_leitura), ou nil. A página vale em
+    # qualquer alvo: o que conta é a página e quem salva.
     def problema_ao_salvar(caminho, conta:, account_user:)
       return :agenda_so_na_instalacao if account_user.nil?
       return :agenda_sem_permissao unless account_user.permission_granted?(PERMISSAO)

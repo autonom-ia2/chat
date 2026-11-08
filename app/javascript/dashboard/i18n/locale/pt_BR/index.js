@@ -3,6 +3,7 @@ import relationships from './relationships.json';
 import richMessage from './richMessage.json';
 import conversaCanal from './conversaCanal.json';
 import prospecting from './prospecting.json';
+import prospectingAchar from './prospectingAchar.json';
 import advancedFilters from './advancedFilters.json';
 import agentBots from './agentBots.json';
 import agentMgmt from './agentMgmt.json';
@@ -89,6 +90,7 @@ export default {
   ...richMessage,
   ...conversaCanal,
   ...prospecting,
+  ...prospectingAchar,
   ...advancedFilters,
   ...agentBots,
   ...agentMgmt,

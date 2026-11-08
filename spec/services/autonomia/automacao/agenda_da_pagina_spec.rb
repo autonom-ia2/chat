@@ -128,6 +128,22 @@ RSpec.describe Autonomia::Automacao::AgendaDaPagina, :automacao_motor do
     end
   end
 
+  describe 'a Receita ao salvar' do
+    def problemas(quem)
+      ligar_motor(account)
+      ligar_mensagens(account)
+      account.enable_features!('automacao_gatilhos')
+      receita = { 'gatilho' => { 'tipo' => 'card.ganho' }, 'passos' => [mensagem_passo('m1', 'Marque: ', { '$valor' => caminho })] }
+      Autonomia::Automacao::Receita.new(receita, conta: account, account_user: quem && na_conta(quem)).problemas
+    end
+
+    it 'aceita para quem vê o agendamento e recusa, com a frase, sem a permissão ou sem pessoa', :aggregate_failures do
+      expect(problemas(admin)).to eq([])
+      expect(problemas(agente)).to eq([I18n.t('autonomia.automacao.receita.agenda_sem_permissao', passo: 'm1', caminho: caminho)])
+      expect(problemas(nil)).to eq([I18n.t('autonomia.automacao.receita.agenda_so_na_instalacao', passo: 'm1', caminho: caminho)])
+    end
+  end
+
   describe 'no passo de mensagem' do
     # Liga com a página usável (o salvar confere); o bloco muda o mundo antes de o passo rodar.
     def preparar(quem)

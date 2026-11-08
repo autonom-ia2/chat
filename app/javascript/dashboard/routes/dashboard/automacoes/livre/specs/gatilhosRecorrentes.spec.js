@@ -86,6 +86,8 @@ describe('gatilho recorrente', () => {
       hora: 8,
     });
     expect(conta.find('[data-parametro="selecao"]').exists()).toBe(false);
+    // #2680: a conta não tem com quem abrir conversa; o card e o contato têm.
+    expect(conta.find('[data-parametro="conversa_nova"]').exists()).toBe(false);
     expect(conta.text()).toContain(
       'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_CONTA'
     );
@@ -102,13 +104,14 @@ describe('gatilho recorrente', () => {
       'frequencia',
       'hora',
       'selecao',
+      'conversa_nova',
     ]);
     expect(
       nomes(montar({ ...base, frequencia: 'semanal', dia_da_semana: 1 }))
     ).toContain('dia_da_semana');
     expect(
       nomes(montar({ ...base, frequencia: 'mensal', dia_do_mes: 5 }))
-    ).toEqual(['frequencia', 'dia_do_mes', 'hora', 'selecao']);
+    ).toEqual(['frequencia', 'dia_do_mes', 'hora', 'selecao', 'conversa_nova']);
   });
 
   it('trocar a frequência troca o dia: segunda no semanal, e o do mês sai', () => {

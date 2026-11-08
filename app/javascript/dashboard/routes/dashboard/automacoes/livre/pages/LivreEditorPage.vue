@@ -102,7 +102,8 @@ const catalogoDoAlvo = computed(() =>
     comTextosDaIa(
       doAlvoDoGatilho(
         comPermissoes(catalogo.value, podeLerValor.value),
-        receita.value.gatilho?.tipo
+        receita.value.gatilho?.tipo,
+        Boolean(receita.value.gatilho?.conversa_nova)
       ),
       receita.value.passos,
       t
@@ -611,7 +612,10 @@ onMounted(() => {
               :receita-do-teste="receitaDoSalvar"
               :custos="custos"
               :gatilhos="gatilhos"
-              :escolhas-do-gatilho="escolhasDoGatilho"
+              :escolhas-do-gatilho="{
+                ...escolhasDoGatilho,
+                caixas: opcoes.caixaDaConversa,
+              }"
               @salvar="salvar"
               @tirar="tirar"
               @close="fecharPainel('alterar')"
