@@ -5,6 +5,7 @@
       "CONVERSA_ABERTA": "When a conversation is reopened",
       "CONVERSA_RESOLVIDA": "When a conversation is resolved",
       "MENSAGEM_CRIADA": "When a message arrives",
+      "MENSAGEM_FALHOU": "When a message to the client fails",
       "CARD_CRIADO": "When a card is created",
       "CARD_ENTROU_NA_ETAPA": "When the card enters a stage",
       "CARD_SAIU_DA_ETAPA": "When the card leaves a stage",

@@ -32,6 +32,12 @@
       }
     },
     {
+      "tipo": "mensagem.falhou",
+      "alvo": "Conversation",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.MENSAGEM_FALHOU",
+      "grupo": "conversa"
+    },
+    {
       "tipo": "card.criado",
       "alvo": "Crm::Card",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_CRIADO",

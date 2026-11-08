@@ -213,7 +213,18 @@ module FechamentoAutomacao::Lacunas
     'G40' => -> { valor?('conversa.responsavel_respondeu') },
     # Do exemplo 10 (#2678), ainda sem dono: a instrução no resumir ("o que já foi prometido") e avisar o responsável
     # quando a agente de IA atende a conversa.
-    'G41' => nil
+    'G41' => nil,
+    # Achadas com a G8 (#2637, 08/11). G42: no mesmo fluxo, "se o envio falhou" (ex. 1, passo 3: o WhatsApp recusou e o
+    # cliente tem e-mail, manda por e-mail); a recusa chega depois, pelo canal, e o fluxo já seguiu. Fica com a F7.
+    'G42' => nil,
+    # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7). Fica
+    # com a Gatilhos, depois do lote 3 (#2689), que traz a porta da frente da conversa nova.
+    'G43' => nil,
+    # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
+    # (passo 2, "manda por e-mail o mesmo conteúdo").
+    'G53' => nil,
+    # G54: esperar a entrega da mensagem (passo 5, "Chegou: tira a etiqueta e grava uma nota").
+    'G54' => nil
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".
