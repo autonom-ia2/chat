@@ -193,13 +193,15 @@ module FechamentoAutomacao::Lacunas
     'G31' => nil,
     # G32: a reunião marcada como condição do "esperar até", no meio da execução.
     'G32' => nil,
-    # Achadas no exemplo 7 (auditoria dos termos, 07/11), ainda sem desenho; G33 e G34 são do lote 3 (#2680).
-    # G35: o público da campanha com exclusão ("todos os outros", "perguntou e não comprou").
-    'G35' => nil,
-    # G36: o filtro "respondeu à campanha X" no gatilho da mensagem.
-    'G36' => nil,
-    # G37: o gatilho que roda uma vez, numa data ("a quinta antes da Black Friday"), não toda semana.
-    'G37' => nil
+    # Achadas no exemplo 7 (auditoria dos termos, 07/11); G33 e G34 são do lote 3 (#2680), G35 e G36 da F7 (#2688).
+    # Fecham com o lote 5 (#2686: a exclusão e o "respondeu à campanha") e com o PR do exemplo 7 da G14 (#2681, parte 4:
+    # a data única); a G14 liga as sondas e o spec do exemplo 7 no PR dela.
+    # G37: o público da campanha com exclusão ("todos os outros", "perguntou e não comprou").
+    'G37' => nil,
+    # G38: o filtro "respondeu à campanha X" no gatilho da mensagem.
+    'G38' => nil,
+    # G39: o gatilho que roda uma vez, numa data ("a quinta antes da Black Friday"), não toda semana.
+    'G39' => nil
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".
