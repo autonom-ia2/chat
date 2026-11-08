@@ -198,14 +198,16 @@ class Autonomia::Automacao::Receita
 
   # Caminho que a automação não sabe ler, ou atributo que a conta não tem. O atributo apagado depois de salvar chega
   # vazio no motor, com o motivo no registro. A resposta (G11) só existe na condição do "esperar até": fora dele não há
-  # o começo da espera, e ela leria sempre vazio.
-  def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false)
+  # o começo da espera, e ela leria sempre vazio. Na ação (`acao`: :caminho ou :corpo), a automação de conversa não usa
+  # o card para agir (#2716): nenhum `card.*` no caminho e nenhum `card.id` no corpo. Copiar um campo do card é ler.
+  def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false, acao: nil)
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
 
     fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera, gatilho: @receita.dig('gatilho', 'tipo'))
     return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
+    return [texto(:card_da_conversa_so_le, passo: id, caminho: caminho)] if age_no_card?(caminho, acao)
 
     Array(valores.problema_de_leitura(caminho, conta: @conta, account_user: @account_user)).map { |chave| texto(chave, passo: id, caminho: caminho) }
   end
@@ -218,10 +220,11 @@ class Autonomia::Automacao::Receita
   end
 
   # #2499: `card.*` num gatilho de conversa não tem de onde ler. Gatilho desconhecido o esquema já recusou.
-  def no_alvo_do_gatilho?(caminho)
-    alvo = ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
-    alvo.nil? || ::Autonomia::Automacao::Valores.no_alvo?(caminho, alvo)
-  end
+  def no_alvo_do_gatilho?(caminho) = alvo_do_gatilho.nil? || ::Autonomia::Automacao::Valores.no_alvo?(caminho, alvo_do_gatilho)
+
+  def alvo_do_gatilho = ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
+
+  def age_no_card?(caminho, acao) = acao && ::Autonomia::Automacao::CardDaConversa.age?(caminho, acao, alvo_do_gatilho)
 
   def mensagem_no_gatilho?(no_gatilho) = no_gatilho && @receita.dig('gatilho', 'tipo') == ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM
 
@@ -230,7 +233,7 @@ class Autonomia::Automacao::Receita
     faltando = parametros(passo['acao']).reject { |nome| valores[nome].present? }
                                         .map { |nome| texto(:caminho_faltando, passo: passo['id'], campo: nome) }
     lidos = valores.values.filter_map { |valor| valor['$valor'] if valor.is_a?(Hash) }
-    faltando + lidos.flat_map { |caminho| problemas_do_caminho(passo['id'], caminho) }
+    faltando + lidos.flat_map { |caminho| problemas_do_caminho(passo['id'], caminho, acao: :caminho) }
   end
 
   # O formato confere o corpo com um exemplo no lugar de cada valor calculado (Corpo.exemplo): chave fora do formato e
@@ -239,7 +242,7 @@ class Autonomia::Automacao::Receita
     corpo = passo['corpo'].to_h
     exemplo = ::Autonomia::Automacao::Corpo.exemplo(passo['acao'], corpo)
     conferencia = ::Autonomia::Guide::Formatos::Conferencia.new(passo['acao'], exemplo, conta: @conta)
-    calculo = ::Autonomia::Automacao::ProblemasDoCorpo.new(passo, conta: @conta) { |caminho| problemas_do_caminho(passo['id'], caminho) }
+    calculo = ::Autonomia::Automacao::ProblemasDoCorpo.new(passo, conta: @conta) { |lido| problemas_do_caminho(passo['id'], lido, acao: :corpo) }
     calculo.problemas +
       conferencia.problemas_em_texto.map { |problema| texto(:corpo, passo: passo['id'], problema: problema) } +
       regras_da_lista(passo['id'], passo['acao'], conferencia.valores)

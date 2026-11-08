@@ -380,3 +380,29 @@ ainda sem mensagem, e "quem começou" não sai do gatilho: sai da primeira mensa
   `VALOR_DA_MENSAGEM`).
 - A Boas-vindas (F5, #2526) passa para `mensagem.criada` com `mensagem.primeira = true` e
   `conversa.iniciada_por = cliente`, num PR da F5 depois deste.
+
+## 15. A conversa lê o card dela, e a mensagem diz se tem anexo (#2716)
+
+Achado na auditoria dos exemplos 14 e 18 (Issue #2716). O 14 confere, a cada
+documento que chega, que o card da conversa está em "Documentação"; sem isso, a IA roda (e cobra) em toda mensagem da
+conta. O 18 só começa com o currículo, em PDF ou foto.
+
+- `card.*` vale no gatilho de conversa (`Valores::BASES_DO_ALVO`). O card é o assunto atual da conversa, a mesma regra
+  do selo da lista (`Crm::Cards::ConversationCardFinder`: o aberto antes do encerrado, depois o foco mais recente).
+  Mora em `Autonomia::Automacao::CardDaConversa`.
+- Só para ler: no filtro do gatilho, no "Só se", na condição da espera, nos textos e copiando um campo dele no corpo
+  de uma ação (o título do card num atributo da conversa). O que apontaria a ação para o card o salvar recusa
+  (`card_da_conversa_so_le`): `card.*` no caminho e `card.id` no corpo. Mexer no card é o passo "em outro registro"
+  (G18). O `Contexto` não muda: os passos continuam sem card na conversa. O card lido é o da hora do passo: um card
+  criado pelo passo "card" num passo anterior já aparece.
+- Ler o card pede a chave de funis (`crm_manage_pipelines` ou `crm_admin`), como o gatilho de card: o salvar recusa sem
+  ela (`sem_funil`), e a automação pausa (`sem_permissao_funil`) quando quem ligou a perde, em vez de ler vazio e
+  deixar o "Só se" falso em silêncio. A pausa olha a versão ativa e a das execuções em andamento (cada uma segue a
+  versão em que começou). Ao rodar, sem card na conversa ou sem ver o card (`Crm::CardPolicy#show?`), lê
+  vazio.
+- O editor oferece os valores do card no gatilho de conversa só a quem tem a chave de funis (`doAlvoDoGatilho`).
+- `mensagem.tem_anexo` (sim ou não, só no filtro de `mensagem.criada`): a mensagem traz foto, PDF, áudio ou outro
+  arquivo. Os canais gravam o anexo junto com a mensagem, antes do evento (WhatsApp e `Messages::MessageBuilder`).
+- Provas: `spec/fechamento/automacao/exemplo_14_documentos_passo_2_spec.rb`,
+  `spec/fechamento/automacao/exemplo_18_curriculo_comeco_spec.rb` e
+  `spec/services/autonomia/automacao/card_da_conversa_spec.rb`.

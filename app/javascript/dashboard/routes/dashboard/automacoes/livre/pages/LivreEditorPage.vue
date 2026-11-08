@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useMapGetter } from 'dashboard/composables/store';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -79,12 +80,14 @@ const avisoDeLigada = computed(() => {
 });
 
 // O "Alterar" só oferece o valor que o alvo do gatilho alcança (#2499) e que
-// a pessoa pode ler (#2597).
+// a pessoa pode ler (#2597). O card da conversa, só com a chave de funis (#2716).
 const podeLerValor = usePodeLerValor();
+const { canManagePipelines } = useCrmPermissions();
 const catalogoDoAlvo = computed(() =>
   doAlvoDoGatilho(
     comPermissoes(catalogo.value, podeLerValor.value),
-    receita.value.gatilho?.tipo
+    receita.value.gatilho?.tipo,
+    canManagePipelines.value
   )
 );
 

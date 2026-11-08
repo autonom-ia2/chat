@@ -25,7 +25,7 @@ class Autonomia::Automacao::Acesso
 
     return 'quem_ligou_sem_permissao' unless @account_user.permission_granted?(PERMISSAO)
 
-    'sem_permissao_funil' if gatilho_de_card? && !mexe_no_funil?
+    'sem_permissao_funil' if !mexe_no_funil? && (gatilho_de_card? || le_o_card?)
   end
 
   # O alvo é uma conversa, um card ou um contato (#2499). No card, valem o próprio card e a conversa principal dele, em
@@ -50,6 +50,14 @@ class Autonomia::Automacao::Acesso
 
   def gatilho_de_card?
     ::Autonomia::Automacao::Gatilhos.do_card?(@chave_gatilho || @definicao.versao_ativa&.receita&.dig('gatilho', 'tipo'))
+  end
+
+  # A automação de conversa que lê o card (#2716) pede a mesma pergunta do gatilho de card. Sem ela, pausa com o motivo,
+  # em vez de ler o card vazio e deixar o "Só se" falso em silêncio. Vale a versão ativa e a das execuções em andamento:
+  # cada uma segue a versão em que começou.
+  def le_o_card?
+    ids = [@definicao.versao_ativa_id, *@definicao.execucoes.abertas.distinct.pluck(:versao_id)].compact.uniq
+    ::Autonomia::Automacao::Versao.where(id: ids).any? { |versao| ::Autonomia::Automacao::CardDaConversa.le?(versao.receita) }
   end
 
   # A mesma pergunta para outra pessoa da conta (quem o passo "avisar" menciona, F4).

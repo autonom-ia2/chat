@@ -174,15 +174,19 @@ export const comPermissoes = (dados, podeLer) => {
 };
 
 // G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião.
-export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
+// #2716: o card da conversa (gatilho de conversa) só para quem tem a chave de
+// funis (`podeLerCard`), a mesma pergunta que o salvar faz.
+export const doAlvoDoGatilho = (dados, tipoDoGatilho, podeLerCard = false) => {
   const alvo = dados?.gatilhos?.find(item => item.tipo === tipoDoGatilho)?.alvo;
   const bases = alvo && dados.alvos?.[alvo];
   if (!bases) return dados;
+  const semCard = alvo === 'Conversation' && !podeLerCard;
   return {
     ...dados,
     valores: dados.valores.filter(
       item =>
         (!item.base || bases.includes(item.base)) &&
+        !(semCard && item.base === 'card') &&
         (!item.so_nos_gatilhos || item.so_nos_gatilhos.includes(tipoDoGatilho))
     ),
   };

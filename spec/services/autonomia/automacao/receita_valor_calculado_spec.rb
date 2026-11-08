@@ -44,8 +44,10 @@ RSpec.describe Autonomia::Automacao::Receita do
 
   it 'confere cada caminho lido como confere os do caminho da ação', :aggregate_failures do
     expect(problemas(atributo({ '$valor' => 'contato.apelido' }))).to eq([frase(:valor_desconhecido, caminho: 'contato.apelido')])
-    expect(problemas(atributo({ '$texto' => ['oi ', { '$valor' => 'card.titulo' }] })))
-      .to eq([frase(:valor_fora_do_alvo, caminho: 'card.titulo')])
+    # #2716: o gatilho de conversa lê o card dela, mas o id do card não entra na ação.
+    expect(problemas(atributo({ '$texto' => ['oi ', { '$valor' => 'card.titulo' }] }))).to eq([])
+    expect(problemas(atributo({ '$texto' => ['card ', { '$valor' => 'card.id' }] })))
+      .to eq([frase(:card_da_conversa_so_le, caminho: 'card.id')])
     expect(problemas(atributo(data({ '$valor' => 'conversa.atributos.sumiu' }))))
       .to eq([frase(:atributo_inexistente, caminho: 'conversa.atributos.sumiu')])
   end
