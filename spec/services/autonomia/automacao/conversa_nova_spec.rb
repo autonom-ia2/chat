@@ -160,6 +160,13 @@ RSpec.describe Autonomia::Automacao::ConversaNova, :automacao_motor do
       expect(problemas(gatilho('conversa.criada'))).to eq([I18n.t('autonomia.automacao.receita.conversa_nova_sem_alvo')])
     end
 
+    # G7 (#2635): o recorrente da conta roda sem card nem contato; não há com quem abrir conversa.
+    it 'recusa no recorrente da conta e aceita no recorrente de card e de contato', :aggregate_failures do
+      expect(problemas(gatilho('conta.recorrente'))).to eq([I18n.t('autonomia.automacao.receita.conversa_nova_sem_alvo')])
+      expect(problemas(gatilho('card.recorrente'))).to eq([])
+      expect(problemas(gatilho('contato.recorrente'))).to eq([])
+    end
+
     it 'recusa caixa de outra conta ou de canal que não começa conversa', :aggregate_failures do
       de_fora = create_crm_whatsapp_api_inbox(account: create(:account))
       email = create(:channel_email, account: account).inbox

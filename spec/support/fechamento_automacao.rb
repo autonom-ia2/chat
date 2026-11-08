@@ -202,6 +202,15 @@ module FechamentoAutomacao::Lacunas
     'G35' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('card') },
     # A IA lê as notas internas da conversa (`le: notas`, #2679): exemplo 5, passo 1.
     'G36' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('notas') },
+    # Achadas no exemplo 7 (auditoria dos termos, 07/11); G33 e G34 são do lote 3 (#2680), G35 e G36 da F7 (#2688).
+    # Fecham com o lote 5 (#2686: a exclusão e o "respondeu à campanha") e com o PR do exemplo 7 da G14 (#2681, parte 4:
+    # a data única); a G14 liga as sondas e o spec do exemplo 7 no PR dela.
+    # G37: o público da campanha com exclusão ("todos os outros", "perguntou e não comprou").
+    'G37' => nil,
+    # G38: o filtro "respondeu à campanha X" no gatilho da mensagem.
+    'G38' => nil,
+    # G39: o gatilho que roda uma vez, numa data ("a quinta antes da Black Friday"), não toda semana.
+    'G39' => nil,
     # Do exemplo 10 (#2678), fora do lote 2: esperar só a pessoa que atende a conversa (a Fernanda), não a equipe inteira.
     'G40' => -> { valor?('conversa.responsavel_respondeu') },
     # Do exemplo 10 (#2678), ainda sem dono: a instrução no resumir ("o que já foi prometido") e avisar o responsável

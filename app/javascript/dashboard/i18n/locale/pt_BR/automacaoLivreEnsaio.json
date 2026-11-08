@@ -62,7 +62,11 @@
       "CONTATO_SEM_EMAIL": "Não sairia: o contato não tem e-mail.",
       "CONTATO_NAO_RECEBE": "Não sairia: o contato pediu para não receber mensagens.",
       "EMAIL_BLOQUEADO": "Não sairia: o e-mail do contato está bloqueado nesta conta (devolução, reclamação ou descadastro).",
-      "CAIXA_DE_EMAIL_INDISPONIVEL": "Não sairia: a caixa de e-mail escolhida não existe mais."
+      "CAIXA_DE_EMAIL_INDISPONIVEL": "Não sairia: a caixa de e-mail escolhida não existe mais.",
+      "RECORRENTE_CARDS": "Pegaria {total} card agora | Pegaria {total} cards agora",
+      "RECORRENTE_CONTATOS": "Pegaria {total} contato agora | Pegaria {total} contatos agora",
+      "RECORRENTE_CONTA": "Roda 1 vez em cada ocorrência, na conta",
+      "RECORRENTE_SEM_ACESSO": "Você não vê os contatos da conta, e a contagem não aparece aqui."
     },
     "HISTORICO": {
       "TITULO": "O que aconteceu",

@@ -25,11 +25,14 @@ module Autonomia::Automacao::ConversaNova
   def da_execucao(execucao) = caixa(execucao.account, caixa_id(execucao.versao&.receita))
 
   # Ao salvar: a caixa é da conta e de um canal que começa conversa, o gatilho tem alvo que pode não ter conversa (card
-  # ou contato), e quem salva (`account_user`; nil no catálogo) pode começar conversa nela.
+  # ou contato: a conversa já existe, e a conta do recorrente, G7, não tem com quem falar), e quem salva
+  # (`account_user`; nil no catálogo) pode começar conversa nela.
+  ALVOS = [::Autonomia::Automacao::Gatilhos::CARD, ::Autonomia::Automacao::Gatilhos::CONTATO].freeze
+
   def problemas_ao_salvar(conta, gatilho, account_user)
     id = gatilho.to_h.dig('conversa_nova', 'caixa_id')
     return [] if id.nil?
-    return [frase(:conversa_nova_sem_alvo)] if ::Autonomia::Automacao::Gatilhos.alvo(gatilho['tipo']) == 'Conversation'
+    return [frase(:conversa_nova_sem_alvo)] unless ALVOS.include?(::Autonomia::Automacao::Gatilhos.alvo(gatilho['tipo']))
 
     escolhida = caixa(conta, id)
     return [frase(:conversa_nova_caixa_invalida, id: id)] if escolhida.nil?

@@ -129,4 +129,28 @@ describe('frase do gatilho com a conversa nova', () => {
     );
     expect(fraseDoGatilho(gatilho, catalogo, t, {})).toBe('CARD_CRIADO');
   });
+
+  // G7 (#2635): o recorrente de card também pode abrir a conversa.
+  it('no recorrente de card, diz a caixa depois do quando', () => {
+    const recorrente = {
+      tipo: 'card.recorrente',
+      alvo: 'Crm::Card',
+      frase: 'CARD_RECORRENTE',
+      parametros: [{ nome: 'frequencia', peca: 'frequencia' }],
+    };
+    const gatilho = {
+      tipo: 'card.recorrente',
+      frequencia: 'diaria',
+      hora: 8,
+      conversa_nova: { caixa_id: 7 },
+    };
+
+    expect(
+      fraseDoGatilho(gatilho, { gatilhos: [recorrente] }, t, {
+        caixa: { 7: 'WhatsApp oficial' },
+      })
+    ).toBe(
+      'AUTOMACAO_LIVRE.CONVERSA_NOVA.NA_FRASE AUTOMACAO_LIVRE.GATILHO_RECORRENTE.FRASE.DIARIA  | 8 | AUTOMACAO_LIVRE.GATILHO_RECORRENTE.CARDS | WhatsApp oficial'
+    );
+  });
 });

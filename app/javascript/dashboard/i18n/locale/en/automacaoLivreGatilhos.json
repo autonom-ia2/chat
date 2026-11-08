@@ -15,7 +15,10 @@
       "CARD_REUNIAO_CANCELADA": "When a meeting is canceled",
       "CARD_PARADO": "When the card is stuck in a stage",
       "CARD_DATA": "Around a card date",
-      "CONTATO_DATA": "Around a contact date"
+      "CONTATO_DATA": "Around a contact date",
+      "CARD_RECORRENTE": "Every day, week or month, on cards",
+      "CONTATO_RECORRENTE": "Every day, week or month, on contacts",
+      "CONTA_RECORRENTE": "Every day, week or month, on the account"
     },
     "ORIGEM": {
       "CONVERSA": "From the conversation",
@@ -52,6 +55,10 @@
       "CAMPO": "Date field",
       "QUANDO": "Before or after the date",
       "HORA": "From what time",
+      "FREQUENCIA": "How often",
+      "DIA_DA_SEMANA": "Day of the week",
+      "DIA_DO_MES": "Day of the month",
+      "SELECAO": "Which ones",
       "REPETE": "Repeats"
     },
     "GRUPOS_DO_GATILHO": {
@@ -98,6 +105,54 @@
       "SEM_CAMPO": "There is no date field here. Create one in Settings › Custom attributes.",
       "HORA": "{hora}h",
       "ERRO_CAMPOS": "Could not load the date fields. Close and open it again."
+    },
+    "GATILHO_RECORRENTE": {
+      "DIARIA": "Every day",
+      "SEMANAL": "Every week",
+      "MENSAL": "Every month",
+      "DIAS_DA_SEMANA": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      },
+      "DIA_DO_MES": "Day {dia}",
+      "AVISO": "Runs at the chosen time, in the account time zone, once on each card or contact chosen. On day 29, 30 or 31, shorter months use the last day. If it is off at that time, that time does not run later. While the previous time is still running (waiting), the new one does not start.",
+      "AVISO_CONTA": "Runs at the chosen time, in the account time zone, only once (not on each card or contact). Only wait and send campaign fit here. On day 29, 30 or 31, shorter months use the last day. If it is off at that time, that time does not run later. While the previous time is still running (waiting), the new one does not start.",
+      "CARDS": "on the chosen cards",
+      "CONTATOS": "on the chosen contacts",
+      "CONTA": "on the account",
+      "FRASE": {
+        "DIARIA": "Every day at {hora}h, {alvo}",
+        "SEMANAL": "Every {dia} at {hora}h, {alvo}",
+        "MENSAL": "Every month on day {dia}, at {hora}h, {alvo}"
+      }
+    },
+    "SELECAO": {
+      "DICA_CARD": "Choose at least one condition. It runs on every card that matches all of them.",
+      "DICA_CONTATO": "Choose at least one condition. It runs on every contact that matches all of them.",
+      "QUALQUER": "Any",
+      "FUNIL": "Pipeline",
+      "ETAPA": "Stage",
+      "SITUACAO": "Status",
+      "SITUACOES": {
+        "ABERTO": "Open",
+        "GANHO": "Won",
+        "PERDIDO": "Lost"
+      },
+      "RESPONSAVEL": "Owner",
+      "FECHADO_ENTRE": "Won or lost between",
+      "FECHADO_DE": "From how many days ago",
+      "FECHADO_ATE": "To how many days ago",
+      "E": "and",
+      "DIAS_ATRAS": "days ago",
+      "ETIQUETA": "Has the label",
+      "SEM_ETIQUETA": "Does not have the label",
+      "ATRIBUTO": "Contact field equal to",
+      "VALOR": "Value"
     }
   }
 }

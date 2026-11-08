@@ -62,7 +62,11 @@
       "CONTATO_SEM_EMAIL": "Would not go out: the contact has no e-mail.",
       "CONTATO_NAO_RECEBE": "Would not go out: the contact asked not to receive messages.",
       "EMAIL_BLOQUEADO": "Would not go out: the contact's e-mail is blocked in this account (bounce, complaint or unsubscribe).",
-      "CAIXA_DE_EMAIL_INDISPONIVEL": "Would not go out: the chosen e-mail inbox no longer exists."
+      "CAIXA_DE_EMAIL_INDISPONIVEL": "Would not go out: the chosen e-mail inbox no longer exists.",
+      "RECORRENTE_CARDS": "Would run on {total} card now | Would run on {total} cards now",
+      "RECORRENTE_CONTATOS": "Would run on {total} contact now | Would run on {total} contacts now",
+      "RECORRENTE_CONTA": "Runs once at each occurrence, on the account",
+      "RECORRENTE_SEM_ACESSO": "You cannot see the contacts of this account, so the count does not show here."
     },
     "HISTORICO": {
       "TITULO": "What happened",

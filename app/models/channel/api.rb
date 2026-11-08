@@ -36,7 +36,10 @@ class Channel::Api < ApplicationRecord
 
   # Caixas provisionadas pelo conector WhatsApp API removem a sessão/app no motor
   # externo ao serem apagadas. Best-effort: nunca bloqueia a exclusão da caixa.
-  before_destroy :cleanup_waha_remote, if: :waha_provider?
+  # O provisionamento que falhou desfaz o lado remoto por conta própria (#2478): só ele sabe se a sessão nasceu ali.
+  attr_accessor :skip_waha_remote_cleanup
+
+  before_destroy :cleanup_waha_remote, if: -> { waha_provider? && !skip_waha_remote_cleanup }
 
   def name
     'API'
@@ -80,10 +83,19 @@ class Channel::Api < ApplicationRecord
     # Cada chamada isolada: falha ao remover um App NÃO impede remover os demais ou a sessão.
     safe_waha_call { client.delete_app(app_id) } if app_id.present?
     safe_waha_call { client.delete_app(phone_numbers_app_id) } if phone_numbers_app_id.present?
+    # Caixas duplicadas de antes do #2478 dividem a sessão: apagar uma não derruba o número das outras.
+    return true if session_shared?(session)
+
     safe_waha_call { client.delete_session(session) }
     # O número sai do IP da Webshare (#1516).
     safe_waha_call { WhatsappProxy::Assignment.where(session_name: session).delete_all }
     true
+  end
+
+  def session_shared?(session)
+    Channel::Api.joins(:inbox).where.not(id: id)
+                .where("channel_api.additional_attributes ->> 'provider' = 'waha'")
+                .exists?(["channel_api.additional_attributes ->> 'session' = ?", session])
   end
 
   def safe_waha_call

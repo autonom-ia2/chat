@@ -158,6 +158,9 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G34 | **Resposta em outra conversa do contato** (a do e-mail) e **a mensagem mandada como valor** (`envio.texto`, `envio.situacao`) | G11 | **Fechada** (#2680): o ramo "se o envio falhou, manda por e-mail o mesmo texto" monta sem a G8 | Motor | 1, 19 |
 | G35 | A **IA lê o card** (`le: card`): título, etapa, funil, status, motivo da perda e campos; o valor só com a permissão (#2597) | F7 | Em PR (#2679): só se quem ligou vê o card | F7 | 12, 13, 15 |
 | G36 | A **IA lê as notas internas** da conversa (`le: notas`), como a nota do mecânico | F7 | Em PR (#2679) | F7 | 5 |
+| G37 | **Público da campanha com exclusão**: "a mesma campanha para todos os outros" e "perguntou na Black e não comprou" | F6 | A fazer: o público do passo campanha só soma etiquetas (`PassoDeCampanha`), sem "menos quem tem a etiqueta X" (achado no exemplo 7, 07/11; G33 e G34 são do lote 3, #2680, G35 e G36 da F7, #2688; fecha com o lote 5, #2686) | Gatilhos | 7 |
+| G38 | **Respondeu à campanha X** como filtro do gatilho da mensagem | F6 | A fazer: os valores da receita não têm campanha; `mensagem.criada` pega toda mensagem da conta (achado no exemplo 7, 07/11; fecha com o lote 5, #2686) | Gatilhos | 7 |
+| G39 | **Gatilho numa data única** ("a quinta antes da Black Friday, às 9h") | F6 | A fazer: o recorrente (G7) repete toda semana ou todo mês; não há "uma vez, nesta data" (achado no exemplo 7, 07/11; fecha com o PR do exemplo 7 da G14, #2681 parte 4) | Gatilhos | 7 |
 | G40 | **Esperar só a pessoa que atende** a conversa ("espera a Fernanda até 30 min"), não a equipe inteira | F8 | Em PR: `conversa.responsavel_respondeu` (lote 4, #2682) | Motor | 10 |
 | G41 | **Instrução no resumir** ("o que já foi prometido") e **avisar o responsável quando a agente de IA atende** a conversa | F7 | A fazer: o resumir tem texto fixo (`passo_de_resumir.rb`); o avisar vai a quem atende a conversa, e com a agente de IA ninguém é avisado (achado no exemplo 10, #2678) | F7 | 10 |
 
@@ -185,7 +188,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 4 | Aluno que começa a faltar | 🟡 G5 (entrou em "Faltou") | se com etiqueta do contato ✅, etiqueta pôr/tirar ✅, escrever ✅, decidir ✅, avisar ✅, esperar 30 dias ✅ | G1, G3, G4, G5, G12, G15, G25, G28 (a IA escreve a pergunta e manda pelo modelo) | Não |
 | 5 | Revisão do carro | 🟡 G5 (card ganho) | extrair ✅ (contato), etiqueta ✅, mover ✅ | G1, G3, G5, G6, G12, G16, G19, G28 (lembrete da IA pelo modelo), G36 (nota do mecânico: `g35_g36_ia_le_card_e_nota_spec.rb`) | Não |
 | 6 | Aniversário | ⛔ G6 (data de nascimento do contato) | escrever ✅, etiqueta ✅, decidir ✅, extrair ✅, avisar ✅ | G1, G4, G6, G12, G14, G16, G25, G33 | Não |
-| 7 | Black Friday | ⛔ G7 (quinta 9h) | decidir ✅, extrair ✅ (card), etiqueta ✅, mensagem ✅ (na janela) | G5, G7, G14, G15 | Não |
+| 7 | Black Friday | 🟡 G7 (toda quinta 9h, #2635); ⛔ G39 (só a quinta antes da Black) | decidir ✅, extrair ✅ (card), etiqueta ✅, mensagem ✅ (na janela), disparar campanha ✅ (G14) | G5, G7, G14, G15, G37, G38, G39 | Não |
 | 8 | Funcionário novo no plano | ✅ mensagem do RH (1ª); ⛔ G24 (2ª) | decidir ✅, mensagem ao RH ✅ | G1, G4, G5, G7, G13, G17, G20, G22, G24, G27 | Não |
 | 9 | Prospecção semanal | ⛔ G7 (segunda 8h) | decidir ✅, etiqueta ✅, mover ✅, resumir ✅ | G3, G4, G7, G12, G14, G21 | Não |
 | 10 | **Cliente bravo** | ✅ mensagem do cliente | decidir ✅, atribuir ✅, prioridade ✅, etiqueta ✅, resumir+avisar ✅, mensagem ✅, o mesmo resumo à dona sem outra ida à IA ✅ (G28) | G40 (passo 6: esperar só a Fernanda), G41 (passo 4: a instrução no resumir; passo 7: avisar com a agente de IA atendendo) | Não (#2678: voltou a pendente) |
@@ -223,6 +226,18 @@ G11 → G4 → G12 → G14. G16, G17, G18 e G20 destravam os exemplos mais longo
 - **Nota do "decidir" em toda mensagem normal: decidido.** O "decidir" deixa uma nota privada com o caminho e o porquê
   (F7.4), mas não no "nenhum se aplica" (#2578, PR #2589). Com o gatilho em toda mensagem do cliente, a mensagem normal
   não ganha nota. O spec confere isso.
+
+### 6.3 Notas do exemplo 6
+
+- **"Fim do mês" na data calculada (#2705).** `exemplo_06_fim_do_mes_spec.rb` prova só a parte da data dos passos 5 e
+  10. O exemplo inteiro segue pendente pelas outras lacunas (`pendentes_spec.rb`).
+- **Fonte.** O texto completo do termo não está no repositório. O spec segue o resumo da auditoria dos termos de 07/11
+  (#2678, exemplo 6, passos 5 e 10). No passo 5, "não pode agora"
+  grava no card o presente até o fim do mês que vem (`$data` hoje + 1 mês, `fim_do: "mes"`). No passo 10, o gatilho
+  de data do card (`card.data`) dispara nesse dia, e não no anterior.
+- **O que fica para depois.** No passo 10, o spec põe a etiqueta "saudade" no lugar de fechar o card e pôr na campanha
+  "Saudade", e não confere o "sem marcar". Fechar o card entra com a G25, a campanha com a G14, e o "sem marcar"
+  (reunião marcada como condição) com a G32. Quando entrarem, o passo 10 troca a etiqueta por elas.
 
 ## 7. Os 5 itens "a conferir" (Parte A do #2570)
 

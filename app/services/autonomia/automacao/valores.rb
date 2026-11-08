@@ -241,7 +241,7 @@ class Autonomia::Automacao::Valores
   def account_user
     return @account_user if defined?(@account_user)
 
-    @account_user = @quem && @contexto.alvo.account.account_users.find_by(user_id: @quem.id)
+    @account_user = @quem && @contexto.conta.account_users.find_by(user_id: @quem.id)
   end
 
   def do_objeto(caminho)
