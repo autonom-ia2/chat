@@ -45,7 +45,7 @@ class Autonomia::Automacao::Valores
     # o mesmo do convite que o cliente recebeu.
     'reuniao.inicio' => ->(reuniao) { ::Autonomia::Automacao::ValoresDaReuniao.inicio(reuniao) },
     'reuniao.link_da_reuniao' => ->(reuniao) { reuniao.online_meeting_url }
-  }.freeze
+  }.merge(::Autonomia::Automacao::Ausencia::VALORES).freeze
 
   # Os valores que leem outros registros além do alvo: só os que quem ligou a automação vê (ValoresDaReuniao).
   # #2710: a página de agendamento põe a reunião no card aberto do funil e, sem ele (o card já ganho), cria outro: quem
@@ -116,7 +116,7 @@ class Autonomia::Automacao::Valores
     'card.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'contato.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'envio.situacao' => { 'opcoes' => ::Autonomia::Automacao::Envio::SITUACOES.values, 'operadores' => %w[igual diferente] }
-  }.freeze
+  }.merge(::Autonomia::Automacao::Ausencia::FECHADOS).freeze
 
   # Os valores que pedem permissão para ler (#2597): a pergunta é a mesma do resto do CRM, feita a quem salva a receita
   # e a quem ligou a automação. O dono de um card não ganha, pela automação, o valor dos cards alheios: `ve?`, não

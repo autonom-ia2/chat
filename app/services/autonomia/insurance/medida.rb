@@ -231,7 +231,8 @@ class Autonomia::Insurance::Medida
   # POR FERRAMENTA, não por conta inteira: a linha de outra ferramenta assíncrona com um `quote_id` no
   # handle não é cotação de seguro, e somá-la cobraria a corretora por outra coisa.
   def escopo
-    linhas = Run.where(slug: self.class.slug, created_at: inicio..fim)
+    # #1430: só as nativas — uma consulta HTTP com o mesmo nome não é cotação.
+    linhas = Run.nativas.where(slug: self.class.slug, created_at: inicio..fim)
     conta ? linhas.where(account_id: conta.id) : linhas
   end
 

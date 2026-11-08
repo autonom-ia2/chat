@@ -18,12 +18,21 @@
 #
 # O TTL é a rede de segurança para um job que morreu no meio; o caminho normal sempre solta. Nunca levanta: é um sinal
 # de cortesia, e a entrega segue sem ele.
+#
+# QUEM LIGA A MARCA (`marcar?`): a flag `agente_so_informa` ou a `agente_ferramenta_em_segundo_plano` (#1430). Na segunda,
+# o resultado da consulta que chega por evento espera o turno que desistiu dela terminar de postar o "estou consultando"
+# (`Operate::EventoJob`); sem a marca, a resposta podia sair antes da promessa. Quem lê para a IA de Atribuição confere
+# a `agente_so_informa` por conta própria.
 module Autonomia::Agents::Operate::TurnoEmCurso
   CHAVE = 'autonomia:turno_em_curso:%<conversa>d'.freeze
   # A maior pausa entre dois pedaços é 30 s (clamp do ChunkedDeliveryJob); renovada a cada pedaço.
   TTL_DA_CADEIA = 2.minutes
 
   module_function
+
+  def marcar?(account)
+    ::Autonomia::Agents::AgenteSoInforma.ligada?(account) || ::Autonomia::Agents::Tools::ConsultaNoTurno.ligada?(account)
+  end
 
   # O teto real de um turno, das configurações: a maior janela de debounce, a maior espera do assunto, a maior chamada de
   # IA (a Lia: RODADAS_DA_LIA rodadas, cada uma com as rodadas de ferramenta do especialista e mais uma chamada, a mesma

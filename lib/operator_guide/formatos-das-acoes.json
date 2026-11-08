@@ -62,8 +62,8 @@
     "completo": true,
     "controller": "api/v1/accounts/agents#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/agents_controller.rb:35",
-      "app/controllers/api/v1/accounts/agents_controller.rb:60"
+      "app/controllers/api/v1/accounts/agents_controller.rb:36",
+      "app/controllers/api/v1/accounts/agents_controller.rb:61"
     ],
     "sem_corpo": true
   },
@@ -1303,6 +1303,7 @@
   },
   "PATCH agents/:id": {
     "campos": {
+      "ausente_ate": {},
       "auto_offline": {},
       "availability": {},
       "custom_role_id": {
@@ -1324,12 +1325,12 @@
     },
     "origem": [
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:10",
-      "app/controllers/api/v1/accounts/agents_controller.rb:91",
+      "app/controllers/api/v1/accounts/agents_controller.rb:92",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:83",
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:77",
-      "app/controllers/api/v1/accounts/agents_controller.rb:60",
-      "app/controllers/api/v1/accounts/agents_controller.rb:75"
+      "app/controllers/api/v1/accounts/agents_controller.rb:61",
+      "app/controllers/api/v1/accounts/agents_controller.rb:76"
     ],
     "sem_corpo": false
   },
@@ -8627,11 +8628,11 @@
     "origem": [
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:4",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:68",
-      "app/controllers/api/v1/accounts/agents_controller.rb:95",
+      "app/controllers/api/v1/accounts/agents_controller.rb:96",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:83",
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:77",
-      "app/controllers/api/v1/accounts/agents_controller.rb:70"
+      "app/controllers/api/v1/accounts/agents_controller.rb:71"
     ],
     "sem_corpo": false
   },
@@ -8646,8 +8647,8 @@
       "leitura crua sem tipo: emails"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/agents_controller.rb:41",
-      "app/controllers/api/v1/accounts/agents_controller.rb:42"
+      "app/controllers/api/v1/accounts/agents_controller.rb:42",
+      "app/controllers/api/v1/accounts/agents_controller.rb:43"
     ],
     "sem_corpo": false
   },
@@ -20949,6 +20950,7 @@
   },
   "PUT agents/:id": {
     "campos": {
+      "ausente_ate": {},
       "auto_offline": {},
       "availability": {},
       "custom_role_id": {
@@ -20970,12 +20972,12 @@
     },
     "origem": [
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:10",
-      "app/controllers/api/v1/accounts/agents_controller.rb:91",
+      "app/controllers/api/v1/accounts/agents_controller.rb:92",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:83",
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:77",
-      "app/controllers/api/v1/accounts/agents_controller.rb:60",
-      "app/controllers/api/v1/accounts/agents_controller.rb:75"
+      "app/controllers/api/v1/accounts/agents_controller.rb:61",
+      "app/controllers/api/v1/accounts/agents_controller.rb:76"
     ],
     "sem_corpo": false
   },

@@ -28,7 +28,8 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
   def update
     ActiveRecord::Base.transaction do
       @agent.update!(agent_params.slice(:name).compact)
-      @agent.current_account_user.update!(agent_params.slice(*account_user_attributes).compact)
+      # #2737 G23: o "ausente até" vazio limpa a ausência, por isso não passa pelo compact.
+      @agent.current_account_user.update!(agent_params.slice(*account_user_attributes).compact.merge(agent_params.slice(:ausente_ate)))
     end
   end
 
@@ -84,7 +85,7 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
   end
 
   def allowed_agent_params
-    [:name, :email, :role, :availability, :auto_offline]
+    [:name, :email, :role, :availability, :auto_offline, :ausente_ate]
   end
 
   def agent_params
