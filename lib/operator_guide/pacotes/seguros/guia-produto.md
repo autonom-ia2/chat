@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (248 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (250 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -2606,6 +2606,30 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Toque em Escrever, embaixo da caixa de e-mail no menu; 2. Em Para quem, procure o contato ou, se não achar, crie no cartão Criar contato com nome e e-mail; 3. Escreva o assunto e a mensagem; pelo + dá para pôr um modelo de e-mail das Campanhas, anexo, emoji ou ditar; 4. Clique em Enviar mensagem.
 - gotchas: o e-mail sai pela caixa de onde você tocou em Escrever, mesmo que um rascunho de outra caixa tenha ficado guardado; o contato novo pela caixa de e-mail precisa de e-mail; se o contato já tem conversa nessa caixa, a tela oferece continuar aquela conversa, com o histórico e o Re: do assunto.
 - nav_target: `inbox_dashboard`
+
+### Achar empresas na Prospeccao nova e mandar para o funil
+- intent: Como acho empresas para vender?; Como mando as empresas para o funil?; O que quer dizer Chame primeiro?; Como tiro uma empresa da lista?; Com quem eu falo na empresa?; Como troco o dono que apareceu?; Por que algumas empresas ficam de fora?; Onde vejo o mapa?
+- onde_fica: Barra lateral > Prospeccao > Achar empresas
+- rota: `autonomia_prospecting_achar` - `/app/accounts/:accountId/autonomia/prospecting/achar`
+- gate: feature flag `prospeccao_nova`; papel `administrator` ou `prospecting_view` ou `prospecting_manage`
+- cobre: autonomia_prospecting_achar_nova
+- perfil: buscar e mandar para o funil exige administrador ou funcao com Editar prospeccao; mandar para o funil exige tambem poder criar cards no CRM. Quem tem so Ver prospeccao nao busca nem manda: quem abre Achar empresas vai para Buscas com o aviso de acesso so para ver, e ali ve as proprias buscas (as da equipe so com Ver buscas de todos). Atendente sem funcao nao ve o menu Prospeccao.
+- pre_requisitos: Prospeccao ligada na conta pelo suporte; chaves do Google da plataforma configuradas pelo suporte; um funil de vender no CRM
+- passos: 1. Abra Prospeccao > Achar empresas; 2. Em O que?, escreva o tipo de empresa e, em Onde?, escolha o lugar na lista; 3. Se quiser, use Alterar para mudar distancia, quantas e quais empresas; 4. Clique em Achar empresas e espere a lista se completar; 5. Desligue as que nao quer; 6. Toque numa empresa para ver por que chamar, com quem falar e o contato; 7. Clique em Continuar e confira o funil, a etapa e com quem fica; 8. Clique em Mandar para o funil e, no fim, em Ver o funil.
+- gotchas: a lista ja vem na ordem de quem chamar primeiro, pelo modo geral (empresa bem estruturada); a presenca fraca fica em Mais ajustes, e os filtros escolhidos la aparecem na frase Como vamos procurar como + N ajustes; o dono e o WhatsApp chegam aos poucos depois da busca, e a conferencia de WhatsApp so existe com sessao de WhatsApp na conta; ficam de fora as que ja estao num funil, as que nao querem ser contatadas e as fechadas no cadastro do governo, sempre com o motivo; as marcadas como Nao serve ficam em Tiradas da lista, com o motivo, e contam em voce tirou; o que voce desliga nao vai, mas pode religar; a empresa ja mandada pela gaveta aparece como voce ja mandou e nao e mandada de novo; Falar com outra pessoa so aparece quando a pesquisa achou outro socio, e Usar esta pessoa troca o dono e o contato da empresa (contato que ja era seu fica com o nome que voce deu); so aparecem funis de vender; nesta fase o card fica com quem mandou; o mapa so aparece com a chave de mapa da plataforma, e o pino tem a cor da chance; desligar a funcao Prospeccao nova na conta volta para as telas de antes.
+- nav_target: `autonomia_prospecting_achar`
+
+### Ver, abrir e apagar as suas buscas da Prospeccao nova
+- intent: Onde vejo as buscas que ja fiz?; Como abro uma busca antiga?; Como apago uma busca?; Por que nao consigo apagar a busca de outra pessoa?; Como baixo a planilha da busca?
+- onde_fica: Barra lateral > Prospeccao > Buscas
+- rota: `autonomia_prospecting_achar_buscas` - `/app/accounts/:accountId/autonomia/prospecting/achar/buscas`
+- gate: feature flag `prospeccao_nova`; papel `administrator` ou `prospecting_view` ou `prospecting_manage`
+- cobre: autonomia_prospecting_achar_busca
+- perfil: o agente com funcao ve so as proprias buscas; administrador ou funcao com Ver buscas de todos ve todas, com o nome de quem fez. Baixar planilha exige Editar prospeccao.
+- pre_requisitos: ter feito ao menos uma busca
+- passos: 1. Abra Prospeccao > Buscas; 2. Clique numa busca para abrir a lista dela; 3. No menu da busca, use Baixar planilha ou Apagar.
+- gotchas: cada pessoa apaga so as buscas que ela fez, inclusive o administrador; busca antiga sem dono registrado nao pode ser apagada pela tela nova; apagar a busca nao apaga as empresas nem os cards ja criados; Buscar de novo faz uma busca nova, sem aproveitar o resultado guardado, e a busca antiga continua na lista; Ver mais traz as buscas mais antigas.
+- nav_target: `autonomia_prospecting_achar_buscas`
 
 ### Abrir Relacionamentos
 - intent: Onde ficam contatos e empresas?; Como configuro campos personalizados?; Onde estão os segmentos?
