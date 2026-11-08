@@ -41,6 +41,10 @@
         "ad_not_found": "Não achei este anúncio na sua conta de anúncios.",
         "meta_unavailable": "A Meta não respondeu agora."
       },
+      "PARTIAL": {
+        "instagram": "Estes são só os comentários do Facebook. Não consegui ler os do Instagram:",
+        "facebook": "Estes são só os comentários do Instagram. Não consegui ler os do Facebook:"
+      },
       "NO_ACCESS": "Você não tem acesso ao cuidado dos comentários deste post.",
       "SAVE_ERROR": "Não consegui guardar agora. Tente de novo.",
       "OFF_READONLY": {

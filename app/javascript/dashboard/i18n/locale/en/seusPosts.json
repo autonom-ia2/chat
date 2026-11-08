@@ -166,7 +166,7 @@
       },
       "SIDE": {
         "BOOSTED": "Had an ad: only “{name}” is without the ad.",
-        "INSTAGRAM": "Times shown, likes and comments are without ads. People who saw it, saves and shares may include ads."
+        "INSTAGRAM": "Times shown is without ads. People who saw it, likes, comments, saves and shares may include ads."
       },
       "COMMENTS": {
         "TITLE": "Comments",

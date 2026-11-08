@@ -110,6 +110,15 @@ const painelStatus = computed(() =>
     ? painel.value.status
     : null
 );
+// #2522: no anúncio nas duas redes, a lista pode vir só da rede que leu (`network_status` do Painel). A tela diz qual
+// rede faltou e por quê, para nenhum comentário sumir em silêncio.
+const redesQueFaltaram = computed(() =>
+  painel.value?.status === 'ready'
+    ? Object.entries(painel.value.network_status || {})
+        .filter(([, status]) => status !== 'ready')
+        .map(([rede, status]) => ({ rede, status }))
+    : []
+);
 
 const focusHeading = async () => {
   await nextTick();
@@ -330,6 +339,33 @@ const openInbox = path => {
         </p>
         <Button
           v-if="canRetry(painelStatus)"
+          icon="i-lucide-refresh-cw"
+          :label="$t(`${KEY}.SCREEN.RETRY`)"
+          :is-loading="carregando"
+          class="!min-h-11 !rounded-xl"
+          @click="carregar"
+        />
+      </div>
+      <div
+        v-for="falta in redesQueFaltaram"
+        :key="falta.rede"
+        role="status"
+        data-ia-rede-faltou
+        :data-network="falta.rede"
+        class="flex flex-col items-start gap-3 rounded-2xl bg-n-amber-2 p-5 ring-1 ring-inset ring-n-amber-6"
+      >
+        <p
+          class="m-0 flex items-start gap-2 text-sm font-medium leading-6 text-n-amber-12"
+        >
+          <span
+            class="i-lucide-triangle-alert mt-1 size-4 shrink-0"
+            aria-hidden="true"
+          />
+          {{ $t(`${KEY}.SCREEN.PARTIAL.${falta.rede}`) }}
+          {{ problemText(falta.status) }}
+        </p>
+        <Button
+          v-if="canRetry(falta.status)"
           icon="i-lucide-refresh-cw"
           :label="$t(`${KEY}.SCREEN.RETRY`)"
           :is-loading="carregando"

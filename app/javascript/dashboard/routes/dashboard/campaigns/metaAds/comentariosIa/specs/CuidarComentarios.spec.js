@@ -535,4 +535,55 @@ describe('CuidarComentarios (#2212)', () => {
     await flushPromises();
     expect(wrapper.find('[data-ia-painel-problem]').exists()).toBe(false);
   });
+
+  // #2522: no anúncio nas duas redes, a falha numa não esconde a outra. A lista é a da rede que leu, e a tela diz qual
+  // rede faltou e por quê.
+  it('anúncio nas duas redes com o Facebook sem login: a lista do Instagram e o aviso do Facebook', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({
+        care: 'on',
+        para_quem: 'x',
+        network: 'both',
+        status: 'ready',
+        network_status: { instagram: 'ready', facebook: 'needs_login' },
+      }),
+    });
+    const wrapper = await montar({ origin: 'anuncio' });
+
+    const avisos = wrapper.findAll('[data-ia-rede-faltou]');
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0].attributes('data-network')).toBe('facebook');
+    expect(avisos[0].text()).toContain(
+      'Estes são só os comentários do Instagram'
+    );
+    expect(avisos[0].text()).toContain('Entre de novo na Meta');
+    expect(avisos[0].find('button').exists()).toBe(false);
+    expect(wrapper.find('[data-ia-painel-problem]').exists()).toBe(false);
+    expect(wrapper.find('[data-ia-on]').exists()).toBe(true);
+  });
+
+  it('rede que faltou por Meta fora do ar: o aviso oferece tentar de novo; as duas lidas, sem aviso', async () => {
+    ComentariosIaAPI.getCuidado
+      .mockResolvedValueOnce({
+        data: painel({
+          care: 'on',
+          status: 'ready',
+          network_status: { instagram: 'meta_unavailable', facebook: 'ready' },
+        }),
+      })
+      .mockResolvedValueOnce({
+        data: painel({
+          care: 'on',
+          status: 'ready',
+          network_status: { instagram: 'ready', facebook: 'ready' },
+        }),
+      });
+    const wrapper = await montar({ origin: 'anuncio' });
+
+    const aviso = wrapper.find('[data-ia-rede-faltou]');
+    expect(aviso.text()).toContain('Estes são só os comentários do Facebook');
+    await aviso.find('button').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-ia-rede-faltou]').exists()).toBe(false);
+  });
 });

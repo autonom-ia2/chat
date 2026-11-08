@@ -73,6 +73,43 @@ RSpec.describe Crm::MetaAds::ComentariosIa::LerAntigosJob do
     expect(care.reload.read_old_at).to be_nil
   end
 
+  describe 'anúncio nas duas redes com uma só lida (#2522)' do
+    def lido_parcial(falha)
+      { status: 'ready', linhas: [linha('1', dias: 3)], escondidas: [], status_das_redes: { 'instagram' => 'ready', 'facebook' => falha } }
+    end
+
+    def na_fila
+      enqueued_jobs.select { |job| job['job_class'] == 'Crm::MetaAds::ComentariosIa::CuidarJob' }.map { |job| job['arguments'].first['comment_id'] }
+    end
+
+    it 'põe na fila os da rede que leu e solta o "Ler e mandar" pela rede que faltou (sem login)' do
+      allow(fonte).to receive(:ler).and_return(lido_parcial('needs_login'))
+
+      described_class.perform_now(account.id, alvo)
+
+      expect(na_fila).to eq(%w[1])
+      expect(care.reload.read_old_at).to be_nil
+    end
+
+    it 'a rede que faltou por Meta fora do ar: tenta de novo e, esgotado, solta' do
+      allow(fonte).to receive(:ler).and_return(lido_parcial('meta_unavailable'))
+
+      perform_enqueued_jobs(only: described_class) { described_class.perform_later(account.id, alvo) }
+
+      expect(fonte).to have_received(:ler).exactly(described_class::TENTATIVAS).times
+      expect(care.reload.read_old_at).to be_nil
+    end
+
+    it 'as duas redes leram: põe na fila e mantém a marca' do
+      allow(fonte).to receive(:ler).and_return(lido_parcial('ready'))
+
+      described_class.perform_now(account.id, alvo)
+
+      expect(na_fila).to eq(%w[1])
+      expect(care.reload.read_old_at).to be_present
+    end
+  end
+
   it 'solta mesmo o cuidado que não passaria na validação de hoje' do
     care.update_column(:message, 'ã' * 600) # rubocop:disable Rails/SkipsModelValidations
     allow(fonte).to receive(:ler).and_return({ status: 'needs_permission', linhas: [], escondidas: [] })

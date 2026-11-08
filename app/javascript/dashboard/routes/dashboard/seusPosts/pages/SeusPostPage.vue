@@ -183,10 +183,10 @@ const resumo = computed(() => {
   return t(`SEUS_POSTS.POST.SUMMARY.${nivel}`, { times: vezes });
 });
 
-// Os números do post em quatro quadros, como o detalhe de anúncio, e os outros numa linha curta embaixo. No
-// Instagram, vezes, curtidas e comentários são sem anúncio; pessoas, salvaram e compartilharam podem incluir. Na
-// Página, só as vezes se separam: o resto inclui o anúncio quando houve. O Facebook não conta quem salvou: no lugar,
-// cliques no post.
+// Os números do post em quatro quadros, como o detalhe de anúncio, e os outros numa linha curta embaixo. Só as vezes
+// se separam do anúncio: o resto pode incluir. No Instagram, curtidas e comentários também seguem marcados como "pode
+// incluir anúncio", como no cartão de Seus posts, até haver chamada real num post impulsionado (#2522). Na Página, o
+// resto inclui o anúncio quando houve. O Facebook não conta quem salvou: no lugar, cliques no post.
 const QUADROS = [
   ['apareceu', 'VIEWS'],
   ['pessoas', 'PEOPLE'],
@@ -204,11 +204,8 @@ const OUTROS = {
   ],
 };
 const SEM_INSIGHTS = ['curtidas', 'comentarios'];
-const podeTerAnuncio = chave => {
-  if (chave === 'apareceu') return false;
-  if (rede.value === 'instagram') return chave === 'pessoas';
-  return post.value.podeTerAnuncio;
-};
+const podeTerAnuncio = chave =>
+  chave !== 'apareceu' && post.value.podeTerAnuncio;
 const quadros = computed(() =>
   QUADROS.filter(
     ([chave]) => !post.value.semInsights || SEM_INSIGHTS.includes(chave)
