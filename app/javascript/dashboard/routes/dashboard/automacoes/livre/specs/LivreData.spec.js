@@ -51,10 +51,10 @@ const montar = (modelValue, atributos = ATRIBUTOS) =>
             '<div data-escolha :data-valor="modelValue"><button v-for="o in options" :key="o.value" :data-opcao="o.value" @click="$emit(\'update:modelValue\', o.value)">{{ o.label }}</button></div>',
         },
         Input: {
-          props: ['modelValue', 'type', 'message'],
+          props: ['modelValue', 'type', 'message', 'messageType'],
           emits: ['update:modelValue'],
           template:
-            '<input :type="type" :value="modelValue" :data-mensagem="message" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+            '<input :type="type" :value="modelValue" :data-mensagem="message" :data-tipo="messageType" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
       },
     },
@@ -156,18 +156,23 @@ describe('LivreData', () => {
     expect(wrapper.find('[data-data-frase]').exists()).toBe(true);
   });
 
-  it('o número que não vale ganha a mensagem; o válido e o vazio, não', async () => {
+  // A borda vermelha do Input vem do tipo "error": só o número que não vale a
+  // ganha (#2705; antes, o campo ficava vermelho com qualquer número).
+  it('o número que não vale ganha a mensagem e o vermelho; o válido e o vazio, não', async () => {
     const wrapper = montar(null);
     await escolher(wrapper, 'data-data-modo', 'hoje');
     const numero = () => wrapper.find('[data-data-numero]');
     expect(numero().attributes('data-mensagem')).toBeFalsy();
+    expect(numero().attributes('data-tipo')).toBe('info');
 
     await numero().setValue('-3');
     expect(numero().attributes('data-mensagem')).toBe(
       'AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.NUMERO_INVALIDO(3650)'
     );
+    expect(numero().attributes('data-tipo')).toBe('error');
     await numero().setValue('12');
     expect(numero().attributes('data-mensagem')).toBeFalsy();
+    expect(numero().attributes('data-tipo')).toBe('info');
   });
 
   it('campo de data apagado da conta: continua na escolha, marcado, com o aviso', () => {

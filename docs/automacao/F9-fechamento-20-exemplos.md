@@ -218,6 +218,18 @@ G11 → G4 → G12 → G14. G16, G17, G18 e G20 destravam os exemplos mais longo
   (F7.4), mas não no "nenhum se aplica" (#2578, PR #2589). Com o gatilho em toda mensagem do cliente, a mensagem normal
   não ganha nota. O spec confere isso.
 
+### 6.3 Notas do exemplo 6
+
+- **"Fim do mês" na data calculada (#2705).** `exemplo_06_fim_do_mes_spec.rb` prova só a parte da data dos passos 5 e
+  10. O exemplo inteiro segue pendente pelas outras lacunas (`pendentes_spec.rb`).
+- **Fonte.** O texto completo do termo não está no repositório. O spec segue o resumo da auditoria dos termos de 07/11
+  (#2678, exemplo 6, passos 5 e 10). No passo 5, "não pode agora"
+  grava no card o presente até o fim do mês que vem (`$data` hoje + 1 mês, `fim_do: "mes"`). No passo 10, o gatilho
+  de data do card (`card.data`) dispara nesse dia, e não no anterior.
+- **O que fica para depois.** No passo 10, o spec põe a etiqueta "saudade" no lugar de fechar o card e pôr na campanha
+  "Saudade", e não confere o "sem marcar". Fechar o card entra com a G25, a campanha com a G14, e o "sem marcar"
+  (reunião marcada como condição) com a G32. Quando entrarem, o passo 10 troca a etiqueta por elas.
+
 ## 7. Os 5 itens "a conferir" (Parte A do #2570)
 
 Provados contra o texto do aceite, na main `4bd7168c0f`.

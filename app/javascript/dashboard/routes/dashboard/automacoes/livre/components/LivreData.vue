@@ -257,7 +257,7 @@ const frase = computed(() => {
                   })
                 : ''
             "
-            message-type="error"
+            :message-type="numeroInvalido ? 'error' : 'info'"
             :label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.NUMERO')"
             :aria-describedby="ids.zero"
             @update:model-value="novo => mudar('numero', String(novo ?? ''))"
