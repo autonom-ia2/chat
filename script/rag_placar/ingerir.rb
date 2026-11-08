@@ -18,6 +18,9 @@ end
 
 conta = Account.create!(name: "Placar #{tipo} #{Time.current.to_i}")
 Autonomia::Agents::Fase2.ligar!(conta)
+# RAG_FLAGS=rag_corte_por_estrutura,... liga as flags na conta da rodada: mede o mesmo código com e sem a mudança.
+flags = ENV.fetch('RAG_FLAGS', '').split(',').map(&:strip).reject(&:empty?)
+conta.enable_features!(*flags) if flags.any?
 agente = Autonomia::Agents::Agent.create!(account: conta, name: 'Placar', agent_type: 'support', status: :active,
                                           human_card: "Agente da régua do RAG (#{tipo}).")
 

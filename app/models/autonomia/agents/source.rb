@@ -140,6 +140,9 @@ module Autonomia
       # #1426 (t4e) — o PDF grande dividido em seções por faixa de páginas ([{ 'paginas' => [ini, fim], 'texto' }]), posto
       # pelo Processors::Pdf só durante a leitura. O Ingestor corta cada seção à parte e grava as páginas em cada trecho.
       attr_accessor :secoes
+      # #1431 (F1) — os blocos do material (título com nível, parágrafo, página), postos pelo processor só durante a leitura,
+      # com a flag rag_corte_por_estrutura. Com eles, o Ingestor corta por seção (Knowledge::CortePorSecao), não pelo Chunker.
+      attr_accessor :blocos
       # #1426 (t4e) — o índice por seção desta leitura (Knowledge::ResumoPorSecao), gravado pelo mark_ready! com o "pronto".
       attr_accessor :resumo_por_secao
       # #1426 — o texto desta leitura veio de OCR (PDF escaneado), posto pelo Processors::PdfOcr. Só em memória, lido pela

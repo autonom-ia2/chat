@@ -114,12 +114,13 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
   end
 
   def paragrafos(pagina)
-    linhas = pagina[:linhas]
-    linhas.each_with_index.map do |atual, indice|
-      next atual[:texto] if indice.zero?
+    grupos(pagina).map { |linhas| linhas.pluck(:texto).join("\n") }.join("\n\n")
+  end
 
-      "#{quebra?(linhas[indice - 1], atual, pagina) ? "\n\n" : "\n"}#{atual[:texto]}"
-    end.join
+  # As linhas da página agrupadas por parágrafo (a mesma quebra do texto).
+  def grupos(pagina)
+    linhas = pagina[:linhas]
+    linhas.slice_when { |anterior, atual| quebra?(anterior, atual, pagina) }.to_a
   end
 
   # A fonte que cobre mais texto no documento (por caracteres: muitos rótulos curtos em negrito não a tornam a do corpo).

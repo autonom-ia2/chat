@@ -52,6 +52,8 @@ module Autonomia
         # trechos levam as páginas dela (o `char_span` de cada trecho continua sendo o tamanho dele). Sem seções, o texto
         # inteiro vai ao Chunker, como antes.
         def trechos(text)
+          return trechos_por_secao if @source.respond_to?(:blocos) && @source.blocos.present?
+
           secoes = @source.respond_to?(:secoes) ? @source.secoes : nil
           return Chunker.new(text, source_type: @source.source_type).chunks_with_metadata if secoes.blank?
 
@@ -59,6 +61,11 @@ module Autonomia
             Chunker.new(secao['texto'], source_type: @source.source_type).chunks_with_metadata
                    .map { |entry| entry.merge(paginas: secao['paginas']) }
           end
+        end
+
+        # #1431 (F1) — o processor leu os blocos do formato: corte por seção, cada trecho com o caminho e as páginas.
+        def trechos_por_secao
+          CortePorSecao.new(@source.blocos, documento: File.basename(@source.reference.to_s, '.*').presence).trechos
         end
 
         # Apaga os entries antigos da fonte e cria os novos numa transação (re-sync idempotente).
@@ -127,6 +134,7 @@ module Autonomia
             chunk_index: index,
             doc: doc_metadata
           }.merge(entry[:paginas] ? { paginas: entry[:paginas] } : {})
+            .merge(chunk_meta.slice(:caminho, :secao_id))
         end
 
         # Sub-hash da classificação do documento (B2.3), com chaves de string (jsonb) e à prova de nil.

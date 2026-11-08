@@ -9,6 +9,7 @@ module Autonomia
         class Pdf < Base
           include PdfOcr
           include PdfParagrafos
+          include PdfBlocos
 
           # Abaixo deste tamanho (após strip) a extração é "quase vazia" (PDF escaneado / só imagem):
           # vale tentar OCR em vez de marcar a fonte como falha por texto ausente.
@@ -51,6 +52,7 @@ module Autonomia
               next ocr_fallback(text, path, paginas) if @ocr && text.strip.length < OCR_MIN_CHARS
 
               registrar_secoes(textos)
+              registrar_blocos(paginas)
               text
             end
             registrar_paginas_de_fora
@@ -101,6 +103,15 @@ module Autonomia
               inicio = (indice * PAGINAS_POR_SECAO) + 1
               { 'paginas' => [inicio, inicio + grupo.size - 1], 'texto' => grupo.join }
             end
+          end
+
+          # #1431 (F1) — com a flag rag_corte_por_estrutura, os blocos do PDF (PdfBlocos) para o corte por seção. Só no
+          # material da base que já sai em parágrafos; a Lia fica como está. PDF escaneado (OCR) não chega aqui.
+          def registrar_blocos(paginas)
+            return unless em_paragrafos? && !agente_protegido? && @source.respond_to?(:blocos=)
+            return unless @source.account&.feature_enabled?('rag_corte_por_estrutura')
+
+            @source.blocos = blocos_em_paragrafos(paginas)
           end
 
           # O que ficou de fora desta leitura vai para o log e para o material (Source#paginas_de_fora, gravado pelo

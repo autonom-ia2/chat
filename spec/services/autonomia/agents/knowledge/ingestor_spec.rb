@@ -138,6 +138,42 @@ RSpec.describe Autonomia::Agents::Knowledge::Ingestor do
     end
   end
 
+  # #1431 (F1) — o processor entregou blocos (flag rag_corte_por_estrutura): o corte é por seção, e não pelo Chunker.
+  describe '#perform with the blocks the processor read' do
+    let(:blocos) do
+      [{ tipo: :titulo, nivel: 1, texto: 'COBERTURAS', pagina: 3 },
+       { tipo: :paragrafo, texto: 'A cobertura basica protege o veiculo contra colisao, incendio e roubo total. ' * 4, pagina: 3 },
+       { tipo: :titulo, nivel: 1, texto: 'ASSISTENCIA 24 HORAS', pagina: 9 },
+       { tipo: :paragrafo, texto: 'O guincho atende ate duzentos quilometros da residencia do segurado. ' * 4, pagina: 9 }]
+    end
+
+    before do
+      allow(processor).to receive(:extract) do
+        source.blocos = blocos
+        blocos.pluck(:texto).join("\n\n")
+      end
+    end
+
+    it 'cuts by section, with the path and the pages on every piece', :aggregate_failures do
+      source.update!(reference: 'condicoes-gerais.pdf')
+      run!
+
+      guincho = source.reload.knowledge_entries.order(:chunk_index).last
+      expect(guincho.content).to start_with("condicoes-gerais › ASSISTENCIA 24 HORAS\n\n")
+      expect(guincho.metadata).to include('paginas' => [9, 9], 'section_heading' => 'ASSISTENCIA 24 HORAS',
+                                          'material_type' => 'secao')
+      expect(guincho.metadata['caminho']).to eq(['condicoes-gerais', 'ASSISTENCIA 24 HORAS'])
+      expect(guincho.metadata['secao_id']).to be_present
+    end
+
+    it 'leaves the document name out of the path when the material has none' do
+      source.update!(reference: nil)
+      run!
+
+      expect(source.reload.knowledge_entries.order(:chunk_index).last.content).to start_with("ASSISTENCIA 24 HORAS\n\n")
+    end
+  end
+
   it 'leaves the pages out of the metadata when the material has no sections' do
     run!
 
