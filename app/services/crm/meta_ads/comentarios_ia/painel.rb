@@ -88,7 +88,8 @@ class Crm::MetaAds::ComentariosIa::Painel
     lido = @fonte.ler
     return cuidado_payload.merge(status: lido[:status], unanswered: 0, older: 0, to_see: [], hidden: []) unless lido[:status] == 'ready'
 
-    cuidado_payload.merge(lista(lido))
+    # #2522: no anúncio nas duas redes, a lista pode ser só a da rede que leu: a tela avisa qual faltou.
+    cuidado_payload.merge(lista(lido), network_status: lido[:status_das_redes])
   end
 
   # escrita (#2458): { temas:, assunto_proibido:, tom: } do passo 2, só os que vieram: o que não veio fica como estava.

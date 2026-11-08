@@ -4,7 +4,7 @@
 # aviso dele à Gestão IA): a chamada é paga na chave da conta, e a Gestão IA mostra.
 #
 # - Só "decidir", "escrever" e "resumir". O "extrair" fica fora: gravar é o que ele faz, e o teste não grava (D6).
-# - O texto que vai à IA é o da execução: o `consulta` de cada passo e a mesma leitura (`le`).
+# - O texto que vai à IA é o da execução: o `consulta` de cada passo e a mesma leitura (`le`), com os anexos (G20).
 # - As conversas são escolhidas aqui, nunca pela tela: as que o ensaio diz que entrariam, entre as que quem pede
 #   enxerga. Sem nenhuma, as mais recentes que ela enxerga, com o aviso. Gatilho que não é de conversa (card) também
 #   vai às recentes, com o aviso próprio.
@@ -12,10 +12,10 @@
 #   (abrir e ler), sem nova tentativa. O 1º pedido escolhe as candidatas, roda a primeira e devolve os ids; os seguintes
 #   mandam `conversa_id`, que vale só se quem pede enxerga a conversa (como o "Ensaiar em outra conversa"); fora disso,
 #   RecordNotFound, sem chamar a IA. Assim a lista não muda entre os pedidos.
-# - A IA lê o que o passo declara em `le`, da conversa escolhida, que quem pede enxerga. O esquema da receita não aceita
-#   `card` em `le`: o card, o valor dele e o formulário do anúncio nunca vão à IA de uma automação. Se `card` entrar na
-#   lista (o gatilho de card da F6 querendo ler o card), o teste passa a ler como quem pede, junto: Crm::CardPolicy,
-#   Crm::ValorDeVenda.ve_o_card? e, sem Crm::AnuncioDeOrigem.ve_no_contexto?, só a data do formulário (Funções, C2).
+# - A IA lê o que o passo declara em `le`, da conversa escolhida, que quem pede enxerga. Com `card` (#2679), o card da
+#   conversa vai só se quem pede o vê (Crm::CardPolicy, ComIa.ve_o_card?), o valor só com a chave dele (#2597), e o
+#   anúncio de origem nunca, como no passo de verdade: só a data do formulário (Funções, C2). O card é o da conversa
+#   escolhida: no gatilho de card, o passo de verdade lê o card do gatilho, que costuma ser esse mesmo.
 #
 # O texto da conversa e a resposta nunca vão para o log. Sem teto de uso: o "até 3" é o tamanho do teste (D6).
 class Autonomia::Automacao::TestarPasso
@@ -90,19 +90,30 @@ class Autonomia::Automacao::TestarPasso
     return base.merge(motivo: 'nada_para_ler') if estado.vazio?
 
     consulta = classe.consulta(@passo, estado)
+    anexos = estado.anexos&.partes(modelo: consulta[:modelo]) || []
     resposta, custo = ia(classe, consulta[:modelo]).perguntar(instrucoes: consulta[:instrucoes], entrada: consulta[:entrada],
-                                                              schema: consulta[:schema], tempo: TEMPO)
+                                                              schema: consulta[:schema], tempo: TEMPO, anexos: anexos)
     base.merge(resultado: para_tela(resposta)).merge(com_valores ? { custo_usd: custo['custo_usd'] } : {})
-  rescue ::Autonomia::Automacao::PassoDeIa::Falha => e
+  rescue ::Autonomia::Automacao::PassoDeIa::Falha, ::Autonomia::Automacao::AnexosDaConversa::Recusa => e
     base.merge(motivo: e.motivo)
   end
 
   # O valor do card só com a chave de quem pede (#2597), a mesma regra do Valores. O anúncio de origem nunca (#2558),
   # como no passo de verdade (ComIa).
+  # Com `le: anexos` (G20), os anexos da conversa, como no passo de verdade.
   def leitura(conversa)
-    ::Autonomia::Decisores::Estado.new(conversation: conversa, leituras: ::Autonomia::Automacao::ComIa.leituras(@passo),
+    leituras = ::Autonomia::Automacao::ComIa.leituras(@passo)
+    estado = estado_de(conversa, leituras)
+    estado = estado_de(conversa, leituras - ['card']) if leituras.include?('card') && estado.card && !ve_o_card?(estado.card)
+    ::Autonomia::Automacao::AnexosDaConversa.leitura(estado, @passo, conversa)
+  end
+
+  def estado_de(conversa, leituras)
+    ::Autonomia::Decisores::Estado.new(conversation: conversa, leituras: leituras, motivo_da_perda: true,
                                        valor_do_card: ::Autonomia::Automacao::Valores.pode_ler?('card.valor', @account_user))
   end
+
+  def ve_o_card?(card) = ::Autonomia::Automacao::ComIa.ve_o_card?(@usuario, card)
 
   def para_tela(resposta)
     case @passo['tipo']

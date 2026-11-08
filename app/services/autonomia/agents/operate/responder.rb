@@ -451,9 +451,9 @@ module Autonomia
         end
 
         # #2154: a cadeia de pedaços assume a marca do turno (Operate::TurnoEmCurso), ANTES de ser agendada: renova com o
-        # TTL da cadeia, só se a marca ainda é deste turno. Só com a flag.
+        # TTL da cadeia, só se a marca ainda é deste turno. Só com a marca ligada (`TurnoEmCurso.marcar?`).
         def passar_o_turno_a_cadeia
-          return unless agente_so_informa?
+          return unless ::Autonomia::Agents::Operate::TurnoEmCurso.marcar?(@conversation.account)
 
           ::Autonomia::Agents::Operate::TurnoEmCurso.renovar(@conversation.id, @reply_to_message_id)
           @turno_segue = true

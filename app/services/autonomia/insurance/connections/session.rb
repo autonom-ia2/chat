@@ -24,14 +24,39 @@
 #     seria um login;
 #   - guardar a sessão em UM lugar é o que faz `session_expires_at` significar alguma coisa.
 #
-# CONCORRÊNCIA: o caminho feliz não pega lock (a sessão viva é lida direto). Só quem precisa ABRIR
-# entra no `with_lock` e RECHECA lá dentro — duas cotações que começam juntas fazem um login só, e a
+# CONCORRÊNCIA: o caminho feliz não pega trava (a sessão viva é lida direto). Só quem precisa ABRIR
+# pega a trava do login e RECHECA lá dentro — duas cotações que começam juntas fazem um login só, e a
 # segunda encontra a sessão que a primeira acabou de gravar. Isso é economia de login, e NÃO
-# serialização de cotação: quem já tem sessão viva não passa por lock nenhum.
+# serialização de cotação: quem já tem sessão viva não passa por trava nenhuma.
+#
+# A TRAVA DO LOGIN MORA NO REDIS, NÃO NA LINHA (auditoria da conexão, 05/11/2026, achado 11). Era um
+# `with_lock` em volta do login, e o login leva até 60 s (`Http::READ_TIMEOUT`). Quem esperava a linha
+# caía no `statement_timeout` de 14 s com `QueryCanceled`, e a cotação gastava uma tentativa. Agora quem
+# não pegou a trava não segura conexão de banco: olha a linha de meio em meio segundo até a sessão do
+# outro aparecer, ou até a trava ser solta e ele mesmo poder abrir.
 class Autonomia::Insurance::Connections::Session
-  def initialize(connection, connector: ::Autonomia::Insurance::Connector.client)
+  # Maior que a seção crítica inteira: login de até 65 s no conector (abrir + ler), mais a gravação da
+  # sessão, que pode esperar a linha até o `statement_timeout` de 14 s. A trava vence sozinha se o
+  # processo que a pegou morrer, mas nunca no meio de um login vivo — se vencesse, o `unlock` de quem a
+  # pegou apagaria a trava do seguinte.
+  TRAVA_DO_LOGIN = 95.seconds
+  ESPERA_ENTRE_OLHADAS = 0.5
+  # Quanto tempo a recusa de um login fica visível para quem estava esperando por ele.
+  RECUSA_VISIVEL = 30.seconds
+
+  # `espera:` é o máximo que este chamador aguarda o login de OUTRO processo. Job aguarda a trava inteira;
+  # requisição web passa menos (o Rack::Timeout corta em 15 s).
+  def initialize(connection, connector: ::Autonomia::Insurance::Connector.client, espera: TRAVA_DO_LOGIN)
     @connection = connection
     @connector = connector
+    @espera = espera
+    @reusada = false
+  end
+
+  # A sessão entregue ao bloco do último `with_fresh_session` já estava gravada (e não acabou de nascer)?
+  # O Sync usa para não renovar uma sessão recém-aberta quando o portal a recusa no payload.
+  def sessao_reusada?
+    @reusada
   end
 
   # -> Hash da sessão. Levanta Connector::Error quando não dá para abrir (o chamador traduz em
@@ -51,8 +76,14 @@ class Autonomia::Insurance::Connections::Session
   #
   # (Correção de 11/09/2026: aqui se lia também "ou substituída por um login feito fora daqui".
   # Medido e falso: login da mesma conta não substitui nem invalida a sessão anterior.)
-  def renew!
-    @connection.forget_session!
+  #
+  # `recusada` é a sessão que o portal recusou. Só ELA é esquecida, e dentro da trava da linha: entre a
+  # recusa e aqui, outro processo pode ter aberto uma sessão nova, e apagá-la custaria mais um login
+  # (achado 12). A trava da linha aqui é curta — não há chamada ao portal dentro dela.
+  def renew!(recusada = @connection.session)
+    @connection.with_lock do
+      @connection.forget_session! if @connection.session == recusada
+    end
     resolve!
   end
 
@@ -72,12 +103,21 @@ class Autonomia::Insurance::Connections::Session
   #
   # UMA tentativa, não um laço: se o login novo também for recusado, o problema é a credencial, e
   # insistir só multiplica login no portal.
+  #
+  # SÓ RENOVA SESSÃO REUSADA (achado 5). Antes, a renovação valia sempre que houvesse sessão gravada —
+  # inclusive uma já vencida, que não foi usada: o `resolve!` fazia o login, o portal recusava, e o
+  # `renew!` fazia OUTRO login igual. Agora o erro do próprio login sobe direto, e uma sessão que acabou
+  # de nascer também não é renovada (o portal devolveria a mesma, porque compartilha a sessão da conta).
   def with_fresh_session
-    yield resolve!
-  rescue ::Autonomia::Insurance::Connector::Error => e
-    raise unless e.kind == :auth_required && @connection.session.present?
+    @reusada = @connection.session_live?
+    session = resolve!
+    begin
+      yield session
+    rescue ::Autonomia::Insurance::Connector::Error => e
+      raise unless e.kind == :auth_required && @reusada
 
-    yield renew!
+      yield renew!(session)
+    end
   end
 
   # A SESSÃO QUE JÁ ESTÁ VIVA, e nenhuma outra — para quem roda DENTRO DO TURNO, com o modelo
@@ -94,17 +134,90 @@ class Autonomia::Insurance::Connections::Session
 
   private
 
-  # O RECHECK dentro do lock é o que faz duas chamadas concorrentes gerarem UM login: a segunda
-  # entra, encontra a sessão que a primeira acabou de gravar, e não abre outra.
+  # O RECHECK dentro da trava é o que faz duas chamadas concorrentes gerarem UM login: a segunda
+  # espera, encontra a sessão que a primeira acabou de gravar, e não abre outra.
   #
-  # (Correção de 04/09/2026: este comentário afirmava que `return` dentro do `with_lock` dispararia
-  # ROLLBACK e descartaria a sessão. Medido no Rails 7.2.3.1 desta aplicação — não dispara, o dado
-  # persiste. Era regra de Rails antigo repetida sem conferir. O estilo sem `return` aqui é
-  # preferência de leitura, não requisito de correção.)
+  # Quem espera desiste depois de `@espera` (no máximo o tempo em que a trava do outro vence sozinha).
+  #
+  # RECUSA RECENTE VALE PARA TODOS. Se um login desta conexão foi recusado nos últimos `RECUSA_VISIVEL`
+  # ("Sessões lotadas", portal fora), quem chega relança o mesmo erro em vez de tentar o seu: cada um que
+  # tentasse seria mais um login recusado em sequência, justamente o que o recuo do healthcheck existe
+  # para evitar. A checagem vem antes da trava e de novo dentro dela, porque a recusa pode ter sido
+  # gravada entre uma e outra.
+  #
+  # A espera esgotada leva a causa `:espera_do_login`: não é notícia do portal, e o Sync não apaga o
+  # diagnóstico por ela.
   def open_under_lock!
-    @connection.with_lock do
-      open! unless @connection.session_live?
+    inicio = Time.current
+    loop do
+      return if @connection.reload.session_live?
+
+      relancar_recusa_recente!
+      return abrir_com_trava! if trava.lock(chave_da_trava, TRAVA_DO_LOGIN.to_i)
+
+      if Time.current > inicio + @espera
+        raise ::Autonomia::Insurance::Connector::Error.new(:timeout, 'session opening elsewhere did not finish', {},
+                                                           causa: :espera_do_login)
+      end
+
+      sleep(ESPERA_ENTRE_OLHADAS)
     end
+  end
+
+  def abrir_com_trava!
+    return if @connection.reload.session_live?
+
+    relancar_recusa_recente!
+    abrir_registrando_recusa!
+  ensure
+    trava.unlock(chave_da_trava)
+  end
+
+  # Só a recusa do NOSSO login é gravada. A relançada acima não regrava: regravar renovaria o prazo da
+  # chave a cada chamador, e a recusa nunca venceria.
+  def abrir_registrando_recusa!
+    open!
+  rescue ::Autonomia::Insurance::Connector::Error => e
+    registrar_recusa!(e)
+    raise
+  end
+
+  # Só o `kind` e a mensagem do conector (já sem credencial) e os `details` da falha classificada.
+  def registrar_recusa!(erro)
+    ::Redis::Alfred.set(chave_da_recusa, { kind: erro.kind, message: erro.message, details: erro.details.to_h,
+                                           credencial: impressao_da_credencial, at: Time.current.iso8601 }.to_json,
+                        ex: RECUSA_VISIVEL.to_i)
+  end
+
+  # A recusa vale para a MESMA credencial. O corretor que erra a senha e corrige em seguida precisa ter a
+  # senha nova testada, não receber a recusa da antiga. A impressão sai do texto CIFRADO (nunca da senha):
+  # credencial salva de novo é cifrada de novo e muda a impressão.
+  def impressao_da_credencial
+    cifrado = "#{@connection.ciphertext_for(:username)}|#{@connection.ciphertext_for(:password)}"
+    Digest::SHA256.hexdigest(cifrado).first(16)
+  end
+
+  # A chave vence sozinha em `RECUSA_VISIVEL`; existir é ser recente.
+  def relancar_recusa_recente!
+    bruto = ::Redis::Alfred.get(chave_da_recusa)
+    return if bruto.blank?
+
+    recusa = JSON.parse(bruto)
+    return unless recusa['credencial'] == impressao_da_credencial
+
+    raise ::Autonomia::Insurance::Connector::Error.new(recusa['kind'].to_sym, recusa['message'], recusa['details'].to_h)
+  end
+
+  def chave_da_recusa
+    "autonomia:insurance:connection:#{@connection.id}:login_recusado"
+  end
+
+  def trava
+    @trava ||= ::Redis::LockManager.new
+  end
+
+  def chave_da_trava
+    "autonomia:insurance:connection:#{@connection.id}:login"
   end
 
   def open!

@@ -6,7 +6,8 @@
 #   #2454; Fonte.que_esperam), para bater com o número de comentários que a Meta mostra;
 # - `private_window`: desses, os que ainda cabem no privado (até Cuidar::JANELA, 7 dias). Sem a data, não cabe.
 #
-# A leitura é a da Fonte, ao vivo na Meta, como o Painel. Leitura que não ficou pronta devolve só o status dela.
+# A leitura é a da Fonte, ao vivo na Meta, como o Painel. Leitura que não ficou pronta devolve só o status dela. No
+# anúncio nas duas redes com uma só lida (#2522), os números são os da rede que leu e `network_status` diz qual faltou.
 class Crm::MetaAds::ComentariosIa::Resumo
   # alvo: os ids para achar a Fonte de novo (Fonte.do_alvo), quando ela não vem pronta.
   def initialize(account:, alvo:, fonte: nil)
@@ -22,7 +23,8 @@ class Crm::MetaAds::ComentariosIa::Resumo
     return { status: lido[:status] } unless lido[:status] == 'ready'
 
     linhas = Crm::MetaAds::ComentariosIa::Fonte.que_esperam(@account, lido)
-    { status: 'ready', waiting: linhas.size, private_window: linhas.count { |linha| cabe_no_privado?(linha) } }
+    { status: 'ready', waiting: linhas.size, private_window: linhas.count { |linha| cabe_no_privado?(linha) },
+      network_status: lido[:status_das_redes] }.compact
   end
 
   private

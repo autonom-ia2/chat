@@ -139,7 +139,7 @@ class Autonomia::Agents::ConferenciaDaFala
   def sem_cotacao_viva?
     return false if @conversa.blank?
 
-    !::Autonomia::Agents::ToolRun.for_conversation(@conversa)
+    !::Autonomia::Agents::ToolRun.nativas.for_conversation(@conversa) # #1430: a HTTP homônima não é cotação
                                  .where(slug: ::Autonomia::Insurance::ResultadoDaCotacao.cotacao.slug)
                                  .active.exists?
   end

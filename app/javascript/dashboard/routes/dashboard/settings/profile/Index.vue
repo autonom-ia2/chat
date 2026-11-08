@@ -11,6 +11,7 @@ import { parseBoolean } from '@chatwoot/utils';
 import UserProfilePicture from './UserProfilePicture.vue';
 import UserBasicDetails from './UserBasicDetails.vue';
 import MessageSignature from './MessageSignature.vue';
+import PerfilAusencia from './PerfilAusencia.vue';
 import FontSize from './FontSize.vue';
 import UserLanguageSelect from './UserLanguageSelect.vue';
 import ChangePassword from './ChangePassword.vue';
@@ -31,6 +32,7 @@ import {
 export default {
   components: {
     MessageSignature,
+    PerfilAusencia,
     SectionLayout,
     FontSize,
     UserLanguageSelect,
@@ -282,6 +284,13 @@ export default {
         :message-signature="messageSignature"
         @update-signature="updateSignature"
       />
+    </SectionLayout>
+    <SectionLayout
+      with-border
+      :title="$t('AUSENCIA.PERFIL.TITULO')"
+      :description="$t('AUSENCIA.PERFIL.NOTA')"
+    >
+      <PerfilAusencia />
     </SectionLayout>
     <SectionLayout
       with-border
