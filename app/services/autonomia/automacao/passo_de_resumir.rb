@@ -7,6 +7,9 @@
 #
 # O resumo fica também na execução (ComIa#guardar, #2679): um passo seguinte manda "o mesmo resumo" como `ia.<passo>`,
 # sem outra ida à IA.
+#
+# G42 (#2721): lê também o que a própria execução mandou ao cliente (EnviosDaExecucao): o e-mail em conversa própria, o
+# modelo recusado (marcado como não entregue) e as respostas nessas conversas, só das que quem ligou vê.
 class Autonomia::Automacao::PassoDeResumir
   include ::Autonomia::Automacao::ComIa
 
@@ -15,6 +18,7 @@ class Autonomia::Automacao::PassoDeResumir
   INSTRUCOES = <<~TEXTO.freeze
     Resuma a conversa para a equipe de atendimento, em português, em até %<linhas>d linhas curtas. Responda só com JSON no schema.
     Diga o que o cliente quer e em que pé está. Só o que está escrito: nunca invente.
+    Em automation_sends estão as mensagens que esta automação mandou ao cliente; com not_delivered, o canal recusou e ela não chegou.
   TEXTO
   SCHEMA = {
     name: 'automacao_resumir',
@@ -50,6 +54,11 @@ class Autonomia::Automacao::PassoDeResumir
   private
 
   def aviso? = self.class.fala_com_gente?(@passo)
+
+  def leitura(**)
+    envios = ::Autonomia::Automacao::EnviosDaExecucao.new(execucao: @execucao, conversa: @conversa, leituras: @passo['le'])
+    ::Autonomia::Automacao::LeituraDaExecucao.new(super, envios)
+  end
 
   # O que pula sem pagar a IA: ninguém para avisar, ou nada para ler.
   def antes_da_ia(aviso, estado) = aviso&.ninguem_para_avisar || (nada_para_ler if estado.vazio?)
