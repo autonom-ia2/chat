@@ -51,11 +51,12 @@ class Crm::MetaAds::ComentariosIa::LerAntigosJob < ApplicationJob
 
   private
 
-  # A leitura que não ficou pronta, ou a primeira rede que faltou numa leitura pronta (#2522). nil: tudo lido.
+  # O que faltou na leitura: a rede que não leu (#2522) ou, sem o status por rede, o da leitura. nil: tudo lido. Com
+  # mais de uma rede faltando, a Meta fora do ar vem antes: a recusa de uma não corta a nova tentativa da outra.
   def falha_de(lido)
-    return lido[:status] unless lido[:status] == 'ready'
-
-    lido[:status_das_redes].to_h.values.find { |status| status != 'ready' }
+    falhas = lido[:status_das_redes].to_h.values.reject { |status| status == 'ready' }
+    falhas = [lido[:status]] if falhas.empty? && lido[:status] != 'ready'
+    falhas.include?(PASSAGEIRO) ? PASSAGEIRO : falhas.first
   end
 
   def ler(account, alvo)

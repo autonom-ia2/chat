@@ -100,6 +100,16 @@ RSpec.describe Crm::MetaAds::ComentariosIa::LerAntigosJob do
       expect(care.reload.read_old_at).to be_nil
     end
 
+    it 'nenhuma rede leu, uma sem login e outra com a Meta fora do ar: tenta de novo antes de soltar' do
+      allow(fonte).to receive(:ler).and_return({ status: 'needs_login', linhas: [], escondidas: [],
+                                                 status_das_redes: { 'instagram' => 'needs_login', 'facebook' => 'meta_unavailable' } })
+
+      perform_enqueued_jobs(only: described_class) { described_class.perform_later(account.id, alvo) }
+
+      expect(fonte).to have_received(:ler).exactly(described_class::TENTATIVAS).times
+      expect(care.reload.read_old_at).to be_nil
+    end
+
     it 'as duas redes leram: põe na fila e mantém a marca' do
       allow(fonte).to receive(:ler).and_return(lido_parcial('ready'))
 

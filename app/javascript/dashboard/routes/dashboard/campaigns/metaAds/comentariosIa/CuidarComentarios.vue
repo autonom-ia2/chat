@@ -111,14 +111,22 @@ const painelStatus = computed(() =>
     : null
 );
 // #2522: no anúncio nas duas redes, a lista pode vir só da rede que leu (`network_status` do Painel). A tela diz qual
-// rede faltou e por quê, para nenhum comentário sumir em silêncio.
-const redesQueFaltaram = computed(() =>
-  painel.value?.status === 'ready'
-    ? Object.entries(painel.value.network_status || {})
-        .filter(([, status]) => status !== 'ready')
-        .map(([rede, status]) => ({ rede, status }))
-    : []
-);
+// rede faltou e por quê, para nenhum comentário sumir em silêncio. Desligado e sem poder ligar, a tela não mostra lista
+// nem número: sem aviso. O motivo da rede só quando a tela conhece o código; o genérico ("não consegui ler o anúncio")
+// diria o contrário do aviso.
+const redesQueFaltaram = computed(() => {
+  if (painel.value?.status !== 'ready' || (!on.value && !props.canManage))
+    return [];
+  return Object.entries(painel.value.network_status || {})
+    .filter(([, status]) => status !== 'ready')
+    .map(([rede, status]) => ({
+      rede,
+      status,
+      motivo: MOTIVOS.includes(status)
+        ? t(`${KEY}.SCREEN.PROBLEM.${status}`)
+        : '',
+    }));
+});
 
 const focusHeading = async () => {
   await nextTick();
@@ -362,7 +370,7 @@ const openInbox = path => {
             aria-hidden="true"
           />
           {{ $t(`${KEY}.SCREEN.PARTIAL.${falta.rede}`) }}
-          {{ problemText(falta.status) }}
+          {{ falta.motivo }}
         </p>
         <Button
           v-if="canRetry(falta.status)"
