@@ -8,6 +8,8 @@ mkdir -p "$pasta"
 curl -fsSL -o "$pasta/pdf-real2.pdf" https://www.mapfre.com.br/media/cg_residencial_3-0.pdf
 # XLSX da Prefeitura de Curitiba: Tabela de Custos Unitários da SMOP, abril/2022 (gabarito xlsx-real.yml).
 curl -fsSL -o "$pasta/xlsx-real.xlsx" https://mid.curitiba.pr.gov.br/2024/00443250.xlsx
-# PDF Suhai: Condição Geral do seguro auto, 74 páginas (gabaritos pdf.yml e perguntas-suhai.yml). A URL pública ainda
-# não foi registrada aqui; quando for, entra nesta lista.
+# PDF Suhai: Condições Gerais do seguro auto, versão 09/2026, 74 páginas (gabaritos pdf.yml e perguntas-suhai.yml).
+# Conferido em 08/11/2026: todas as âncoras dos dois gabaritos estão no texto. A versão 12/2025 (76 páginas) NÃO serve:
+# perde 5 âncoras.
+curl -fsSL -o "$pasta/pdf.pdf" https://suhaiseguradora.com/wp-content/uploads/2026/10/CG-GERAL-AUTO-2026-09-CG-completa-SITE.pdf
 ls -l "$pasta"
