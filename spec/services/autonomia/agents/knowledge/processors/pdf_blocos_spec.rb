@@ -148,7 +148,8 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       let(:pdf) { pdf_com([prazo_curto, *(2..4).map { |numero| pagina_simples(numero) }]) }
 
       def bordas(numero)
-        [['Voltar ao sumario', 815, 'F1', 10], ['Condicoes Gerais - Versao 3.0.', 20, 'F1', 8], [numero.to_s, 20, 'F1', 8, 540]]
+        [['Voltar ao sumario', 815, 'F1', 10],
+         ["Clausula #{numero}", 800, 'F1', 10, 300], ['Condicoes Gerais - Versao 3.0.', 20, 'F1', 8], [numero.to_s, 20, 'F1', 8, 540]]
       end
 
       def prazo_curto
@@ -184,6 +185,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
         textos = blocos_gravados.pluck(:texto).join("\n")
 
         expect([textos.scan('Voltar ao sumario').size, textos.scan('Condicoes Gerais - Versao 3.0.').size]).to eq([0, 1])
+        expect(textos).to include('Clausula 1', 'Clausula 2', 'Clausula 3', 'Clausula 4')
       end
     end
 

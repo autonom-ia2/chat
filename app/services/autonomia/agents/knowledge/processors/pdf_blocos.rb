@@ -69,8 +69,12 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
     { tipo: :titulo, letra: grupo.first[:letra], texto: grupo.pluck(:texto).join(' '), pagina: numero }
   end
 
-  # Os itens do parágrafo: cada um termina na linha que para antes da margem direita.
+  # Os itens do parágrafo: cada um termina na linha que para antes da margem direita. No texto alinhado à esquerda quase
+  # toda linha para antes dela e cada linha viraria item, cortado no meio da frase: com menos de um terço das linhas
+  # chegando à margem, o parágrafo é um item só.
   def itens_do_grupo(grupo, pagina)
+    return [grupo.pluck(:texto).join("\n")] if grupo.count { |linha| !antes_da_margem?(linha, pagina) } * 3 < grupo.size
+
     grupo.slice_after { |linha| antes_da_margem?(linha, pagina) }.map { |linhas| linhas.pluck(:texto).join("\n") }
   end
 
@@ -129,14 +133,15 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
     corridas.include?(chave) && (chave.last == :alto || !vistas.add?(chave))
   end
 
-  # [texto sem o número no fim, altura, :alto ou :pe] da linha na borda da folha; nil no meio da folha.
+  # [texto, altura, :alto ou :pe] da linha na borda da folha; nil no meio da folha. No pé, sem o número da página no fim;
+  # no alto, o texto inteiro ("CLÁUSULA 5" e "CLÁUSULA 6" no topo são títulos diferentes).
   def chave_da_borda(pagina, indice)
     linha = pagina[:linhas][indice]
     borda = borda(pagina, linha[:y])
     return if borda.nil?
 
     palavras = linha[:texto].split
-    palavras = palavras[0...-1] if palavras.last == palavras.last.to_i.to_s
+    palavras = palavras[0...-1] if borda == :pe && palavras.last == palavras.last.to_i.to_s
     [palavras.join(' '), linha[:y].round, borda] if palavras.any?
   end
 

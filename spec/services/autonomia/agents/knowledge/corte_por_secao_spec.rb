@@ -171,7 +171,19 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
                 { tipo: :paragrafo, texto: [abertura, longo, itens[2]].join("\n"), itens: [abertura, longo, itens[2]], pagina: 7 }]
       de_item = cortar(blocos, maximo: 500).select { |trecho| trecho[:metadata][:material_type] == 'item' }
 
-      expect(de_item.map { |trecho| trecho[:metadata].key?(:trecho_da_secao) }).to include(false)
+      cruza = de_item.find { |trecho| trecho[:text].include?('a) O segurado perde') }
+      expect(cruza[:metadata]).not_to have_key(:trecho_da_secao)
+    end
+
+    it 'carries the opening only inside its paragraph, and never joins a short item to the next opening', :aggregate_failures do
+      depois = { tipo: :paragrafo, texto: "Carencia\n#{'A carencia vale da data da contratacao do seguro. ' * 3}".strip,
+                 itens: ['Carencia', ('A carencia vale da data da contratacao do seguro. ' * 3).strip], pagina: 8 }
+      outra = { tipo: :paragrafo, texto: "Nota\nOutra lista:", itens: ['Nota', 'Outra lista:'], pagina: 8 }
+      de_item = cortar([titulo('2. EXCLUSOES', 1, 7), exclusoes, outra, depois]).select { |trecho| trecho[:metadata][:material_type] == 'item' }
+      corpos = de_item.map { |trecho| trecho[:text].split("\n\n", 2).last }
+
+      expect(corpos.find { |corpo| corpo.include?('A carencia vale') }).to start_with("Carencia\nA carencia vale")
+      expect(corpos).to include('Nota')
     end
 
     it 'gives no item pieces to a short section' do

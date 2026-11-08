@@ -16,7 +16,7 @@
 #   de item serve só para achar: leva em `trecho_da_secao` o índice do trecho da seção que o contém, e é este que a busca
 #   devolve (Retriever); quem lê o material inteiro o ignora (KnowledgeEntry.do_material). O item curto (o termo antes da
 #   definição) entra no seguinte, e a abertura mais recente da seção, a linha que termina em dois-pontos ("estarão
-#   excluídas da cobertura:"), vai junto de cada item seguinte, para o item não perder o sentido. A tabela entra no trecho
+#   excluídas da cobertura:"), vai junto de cada item seguinte do mesmo parágrafo, para o item não perder o sentido. A tabela entra no trecho
 #   da seção com as fileiras já com o cabeçalho de cada coluna, e a maior que o máximo divide entre fileiras.
 # Nada aqui lê o texto da pessoa: a estrutura vem do formato.
 class Autonomia::Agents::Knowledge::CortePorSecao
@@ -146,14 +146,15 @@ class Autonomia::Agents::Knowledge::CortePorSecao
     item.except(:nucleo).merge(metadata: metadata)
   end
 
-  # [abertura, item]: cada item com a abertura mais recente da seção. A abertura não vira item (está no trecho da seção), e
-  # a fileira da tabela vai sem ela (tem o cabeçalho).
+  # [abertura, item]: cada item com a abertura do mesmo parágrafo. A abertura não vira item (está no trecho da seção), e a
+  # fileira da tabela vai sem ela (tem o cabeçalho).
   def com_aberturas(itens)
     abertura = nil
     itens.each_with_object([]) do |item, lista|
-      next abertura = item[:texto] if item[:abertura]
+      next abertura = item.slice(:texto, :paragrafo) if item[:abertura]
 
-      lista << [item[:fileira] ? nil : abertura, item]
+      do_paragrafo = abertura && abertura[:paragrafo] == item[:paragrafo] && !item[:fileira]
+      lista << [do_paragrafo ? abertura[:texto] : nil, item]
     end
   end
 
@@ -161,11 +162,12 @@ class Autonomia::Agents::Knowledge::CortePorSecao
   # marcados é um item só.
   def unidades(secao)
     longa = tamanho(secao.paragrafos) > ITENS_ACIMA
-    secao.paragrafos.flat_map do |paragrafo|
-      next paragrafo[:itens].map { |texto| { texto: texto, pagina: paragrafo[:pagina], fileira: true } } if paragrafo[:tipo] == :tabela
+    secao.paragrafos.each_with_index.flat_map do |paragrafo, indice|
+      base = { pagina: paragrafo[:pagina], paragrafo: indice }
+      next paragrafo[:itens].map { |texto| base.merge(texto: texto, fileira: true) } if paragrafo[:tipo] == :tabela
       next [] unless longa
 
-      (paragrafo[:itens] || [paragrafo[:texto]]).map { |texto| { texto: texto, pagina: paragrafo[:pagina], abertura: abertura?(texto) } }
+      (paragrafo[:itens] || [paragrafo[:texto]]).map { |texto| base.merge(texto: texto, abertura: abertura?(texto)) }
     end
   end
 
@@ -173,16 +175,20 @@ class Autonomia::Agents::Knowledge::CortePorSecao
     texto.end_with?(ABRE_LISTA) && texto.length <= MAXIMO_DA_ABERTURA
   end
 
-  # O item curto entra no começo do seguinte, uma vez só; o último fica, mesmo curto. A fileira de tabela e a abertura
-  # não se juntam.
+  # O item curto entra no começo do seguinte do mesmo parágrafo, uma vez só; o último fica, mesmo curto. A fileira de
+  # tabela e a abertura não se juntam, nem o item curto à abertura seguinte (ele viraria abertura).
   def juntar_curtos(unidades)
     guardado = nil
     unidades.each_with_index.filter_map do |unidade, indice|
       unidade = unidade.merge(texto: "#{guardado[:texto]}\n#{unidade[:texto]}") if guardado
-      juntar = guardado.nil? && curto?(unidade) && indice < unidades.size - 1
+      juntar = guardado.nil? && juntavel?(unidade, unidades[indice + 1])
       guardado = juntar ? unidade : nil
       unidade unless juntar
     end
+  end
+
+  def juntavel?(unidade, seguinte)
+    curto?(unidade) && seguinte.present? && seguinte[:paragrafo] == unidade[:paragrafo] && !seguinte[:abertura]
   end
 
   def curto?(unidade)

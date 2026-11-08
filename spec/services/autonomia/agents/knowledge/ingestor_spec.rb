@@ -166,6 +166,31 @@ RSpec.describe Autonomia::Agents::Knowledge::Ingestor do
       expect(guincho.metadata['secao_id']).to be_present
     end
 
+    # PR 1b: o trecho de item aponta para o chunk_index do trecho da seção; o vetor vazio no meio não pode deslocá-lo, e o
+    # "N trechos" do material não conta item.
+    context 'with item pieces' do
+      let(:fileiras) { (1..4).map { |n| "Prazo: #{n * 15} dias | % do premio: #{n * 10}%" } }
+      let(:blocos) do
+        [{ tipo: :titulo, nivel: 1, texto: 'COBERTURAS', pagina: 3 },
+         { tipo: :paragrafo, texto: 'A cobertura basica protege o veiculo contra colisao, incendio e roubo total. ' * 4, pagina: 3 },
+         { tipo: :titulo, nivel: 1, texto: 'PRAZO CURTO', pagina: 9 },
+         { tipo: :tabela, texto: fileiras.join("\n"), itens: fileiras, pagina: 9 }]
+      end
+
+      it 'keeps the pointer of every item on its section piece, even after an empty vector', :aggregate_failures do
+        allow(embedder).to receive(:embed_batch) { |chunks| chunks.each_with_index.map { |_, indice| indice.zero? ? [] : fake_vector } }
+
+        count = run!
+        entries = source.reload.knowledge_entries.order(:chunk_index).to_a
+        itens = entries.select { |entry| entry.metadata['material_type'] == 'item' }
+
+        expect(itens.size).to eq(4)
+        pai = ->(item) { entries.find { |e| e.chunk_index == item.metadata['trecho_da_secao'] } }
+        expect(itens).to all(satisfy { |item| pai.call(item)&.content&.include?(item.content.split("\n\n", 2).last) })
+        expect(count).to eq(1)
+      end
+    end
+
     # A chave `paginas` é a seção de 25 páginas do material grande: o ResumoPorSecao agrupa por ela (chamada paga por
     # seção) e o Revisor reconhece o material grande por ela. PDF pequeno não a recebe só por ter sido cortado por seção.
     it 'gives a small PDF no `paginas`, so the summary by section and the Reviewer see a small material' do

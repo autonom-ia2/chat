@@ -39,7 +39,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::PdfTabelas do
       include Autonomia::Agents::Knowledge::Processors::PdfParagrafos
       include Autonomia::Agents::Knowledge::Processors::PdfBlocos
       include Autonomia::Agents::Knowledge::Processors::PdfTabelas
-      public :faixas_de_tabela, :bloco_da_tabela
+      public :faixas_de_tabela, :bloco_da_tabela, :itens_do_grupo
     end.new
   end
 
@@ -89,11 +89,11 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::PdfTabelas do
     bloco = leitor.bloco_da_tabela({ cabecalho: linhas[1..2], linhas: linhas[3..9] }, pagina(linhas), 60)
 
     expect(bloco[:itens]).to eq(
-      ['Invalidez: Discriminacao | % SOBRE: CAPITAL',
+      ['Discriminacao | % SOBRE: CAPITAL',
        'Invalidez: PARCIAL | Surdez total incuravel de um dos ouvidos | % SOBRE: 20',
-       'Invalidez: Mudez incuravel | % SOBRE: 50',
-       'Invalidez: Perda total da visao de um olho, quando ja nao tiver a outra vista | % SOBRE: 70',
-       'Invalidez: Surdez total incuravel de ambos os ouvidos | % SOBRE: 40']
+       'Mudez incuravel | % SOBRE: 50',
+       'Perda total da visao de um olho, quando ja nao tiver a outra vista | % SOBRE: 70',
+       'Surdez total incuravel de ambos os ouvidos | % SOBRE: 40']
     )
   end
 
@@ -109,6 +109,53 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::PdfTabelas do
     linhas = (0..4).map { |n| linha(700 - (n * 12), celula('palavras do texto', 54, 300), celula('justificado', 310, 540)) }
 
     expect(leitor.faixas_de_tabela(pagina(linhas))).to eq([])
+  end
+
+  it 'does not read numbered clauses or a marked list running to the margin as a table' do
+    linhas = %w[5.1.5. 5.1.6. 5.1.7. 5.1.8.].each_with_index.map do |numero, indice|
+      linha(700 - (indice * 12), celula(numero, 54, 80), celula('Texto da clausula que segue ate a margem direita', 120, 540))
+    end
+
+    expect(leitor.faixas_de_tabela(pagina(linhas))).to eq([])
+  end
+
+  it 'leaves the last short line of the introduction paragraph out of the header' do
+    linhas = [corrida(700, 'O premio retido no cancelamento segue a tabela abaixo, conforme o plano que foi contratado'),
+              corrida(688, 'pelo segurado:', 200),
+              *[['1 a 15', '13%'], ['16 a 30', '20%'], ['31 a 45', '27%']].each_with_index.map do |(prazo, taxa), indice|
+                linha(676 - (indice * 20), celula(prazo, 50, 85), celula(taxa, 150, 170))
+              end]
+
+    expect(leitor.faixas_de_tabela(pagina(linhas))).to eq([[2, 2, 4]])
+  end
+
+  it 'leaves a short bold title right above the table out of the header' do
+    linhas = [linha(698, celula('Tabela 2 - Prazos', 60, 150, 'F2')),
+              *[['1 a 15', '13%'], ['16 a 30', '20%'], ['31 a 45', '27%']].each_with_index.map do |(prazo, taxa), indice|
+                linha(686 - (indice * 20), celula(prazo, 50, 85), celula(taxa, 150, 170))
+              end,
+              corrida(600, 'Texto do contrato que vai ate a margem direita da pagina, como todo paragrafo.')]
+
+    expect(leitor.faixas_de_tabela(pagina(linhas))).to eq([[1, 1, 3]])
+  end
+
+  it 'gives a cell the title of its own column, even when the row has an empty column' do
+    linhas = [linha(680, celula('Prazo', 50, 80, 'F2'), celula('% do premio', 150, 200, 'F2'), celula('Obs', 300, 330, 'F2')),
+              linha(660, celula('1 a 15', 50, 80), celula('13%', 150, 170), celula('sem carencia', 300, 360)),
+              linha(640, celula('16 a 30', 50, 85), celula('carencia de 3 dias', 300, 380))]
+    bloco = leitor.bloco_da_tabela({ cabecalho: [], linhas: linhas }, pagina(linhas), 1)
+
+    expect(bloco[:itens].last).to eq('Prazo: 16 a 30 | Obs: carencia de 3 dias')
+  end
+
+  it 'keeps a left aligned paragraph as one item, and splits a justified list where a line stops before the margin' do
+    soltas = (0..5).map { |indice| corrida(700 - (indice * 12), "linha de texto alinhado a esquerda #{indice}", 300 + (indice * 30)) }
+    lista = [corrida(600, 'a) Quaisquer bens ou acessorios instalados no veiculo, mesmo em decorrencia'),
+             corrida(588, 'de sinistro coberto;', 200), corrida(576, 'b) Custos relativos a blindagem do veiculo segurado, salvo'),
+             corrida(564, 'contratacao especifica;', 220)]
+    folha = pagina([*soltas, *lista])
+
+    expect([leitor.itens_do_grupo(soltas, folha).size, leitor.itens_do_grupo(lista, folha).size]).to eq([1, 2])
   end
 
   it 'needs three lines of two or more cells to be a table' do

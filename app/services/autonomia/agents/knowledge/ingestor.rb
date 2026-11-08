@@ -40,10 +40,11 @@ module Autonomia
 
           contents = entries.pluck(:text)
           vectors = Autonomia::Agents::EmbeddingService.new(account: @account, model: @model).embed_batch(contents)
-          pairs = entries.zip(vectors).select { |_, vector| vector.present? }
-          raise EmptyExtraction, 'empty_embeddings' if pairs.empty?
+          raise EmptyExtraction, 'empty_embeddings' if vectors.none?(&:present?)
 
-          replace_knowledge(pairs.map(&:first), pairs.map(&:last))
+          # #1431 (PR 1b) — o vetor vazio é pulado no replace_knowledge sem renumerar: o chunk_index fica o índice da
+          # lista, que é para onde aponta o `trecho_da_secao` do trecho de item.
+          replace_knowledge(entries, vectors)
         end
 
         private
@@ -92,7 +93,8 @@ module Autonomia
               next if vector.blank?
 
               create_entry(entry, vector, index)
-              count += 1
+              # O "N trechos" do material (chunk_count) conta o material, não os trechos de item (só para a busca).
+              count += 1 unless entry.dig(:metadata, :material_type) == 'item'
             end
           end
           count

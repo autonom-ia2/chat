@@ -3,7 +3,8 @@
 # lida como texto corrido, a fileira de cinco planos lado a lado não dizia de que plano era cada número, e a linha certa
 # da tabela de invalidez sumia diluída na tabela inteira. Só geometria (posição, letra, fonte); nada lê o texto.
 # - célula: os trechos da linha separados por mais de GAP_DE_CELULA letras. O espaço entre palavras do texto justificado
-#   é menor, e o parágrafo não vira tabela;
+#   é menor, e o parágrafo não vira tabela. Linha de duas células cuja segunda vai até a margem é item marcado (a cláusula
+#   "5.1.5.  Restabelecido o pagamento…", o "•" do texto corrido), não fileira;
 # - tabela: MIN_LINHAS_DA_TABELA ou mais linhas de duas células ou mais, com até MAX_LINHAS_SOLTAS linhas de uma célula
 #   seguidas entre elas (a célula que quebra em duas linhas, o rótulo de um grupo de fileiras), sem distância de mais de
 #   LONGE espaços normais entre duas linhas (o rodapé no pé da folha não entra na tabela de cima);
@@ -12,7 +13,9 @@
 # - cabeçalho: as linhas curtas logo acima da tabela, sem espaço de parágrafo, e as primeiras fileiras fora da fonte do
 #   corpo (o negrito do cabeçalho). Sem essa diferença de fonte, nenhuma fileira: tomar a primeira por cabeçalho dava
 #   rótulo errado ("70: 50") na tabela que continua sem cabeçalho e na lista com marcador ("•");
-# - coluna de cada pedaço do cabeçalho: a célula da fileira com o centro mais perto. O pedaço que cobre LARGA células ou
+# - coluna de cada pedaço do cabeçalho: a célula com o centro mais perto na fileira de mais células (a de referência), e
+#   cada célula de cada fileira leva o título da coluna de referência mais perto dela; a coluna vazia numa fileira não
+#   empresta o título à vizinha. O pedaço que cobre LARGA células ou
 #   mais (palavras de colunas diferentes que o leitor juntou num trecho só) é dividido por palavra, cada uma na posição
 #   proporcional dentro do trecho.
 # Limites conhecidos: a tabela que continua na página seguinte não repete o cabeçalho lá; a célula que quebra em linhas
@@ -45,12 +48,17 @@ module Autonomia::Agents::Knowledge::Processors::PdfTabelas
   # [[acima, primeira, ultima]]: os índices do cabeçalho de cima, da primeira e da última linha de cada tabela.
   def faixas_de_tabela(pagina)
     linhas = pagina[:linhas]
-    com_celulas = linhas.each_index.select { |indice| celulas(linhas[indice]).size > 1 }
+    com_celulas = linhas.each_index.select { |indice| linha_de_tabela?(linhas[indice], pagina) }
     grupos = com_celulas.slice_when do |anterior, seguinte|
       seguinte - anterior > MAX_LINHAS_SOLTAS + 1 || longe?(linhas, anterior, seguinte, pagina)
     end
     grupos.select { |grupo| grupo.size >= MIN_LINHAS_DA_TABELA }
           .map { |grupo| [acima_da_tabela(linhas, grupo.first, pagina), grupo.first, grupo.last] }
+  end
+
+  def linha_de_tabela?(linha, pagina)
+    quantas = celulas(linha).size
+    quantas > 2 || (quantas == 2 && antes_da_margem?(linha, pagina))
   end
 
   # Alguma das linhas entre as duas (índices) está a mais de LONGE espaços normais da seguinte.
@@ -59,18 +67,25 @@ module Autonomia::Agents::Knowledge::Processors::PdfTabelas
   end
 
   # Sobe pelas linhas de uma célula coladas à tabela (sem espaço de parágrafo): o cabeçalho de uma célula só ("% SOBRE",
-  # "Invalidez"). Para na linha cheia de parágrafo (da esquerda do corpo até a margem), no título de letra maior e na
-  # legenda (linha mais larga que LEGENDA da largura do corpo): a legenda repetida em cada fileira diluía a fileira, e o
-  # título da tabela já vai no caminho do trecho.
+  # "Invalidez"). Para na linha cheia de parágrafo (da esquerda do corpo até a margem), no título (letra maior, ou fora da
+  # fonte do corpo: "Tabela 2 – Prazos" em negrito) e na legenda (linha mais larga que LEGENDA da largura do corpo): a
+  # legenda repetida em cada fileira diluía a fileira, e o título da tabela já vai no caminho do trecho. Também não sobe
+  # pela última linha de um parágrafo (a linha de cima é cheia e está no espaço normal): ela é o fim do texto de introdução.
   def acima_da_tabela(linhas, primeira, pagina)
     acima = primeira
-    acima -= 1 while acima.positive? && cabecalho_acima?(linhas[acima - 1], linhas[acima], pagina)
+    acima -= 1 while acima.positive? && cabecalho_acima?(linhas[acima - 1], linhas[acima], pagina) &&
+                     !fim_de_paragrafo?(linhas, acima - 1, pagina)
     acima
+  end
+
+  def fim_de_paragrafo?(linhas, indice, pagina)
+    de_cima = linhas[indice - 1]
+    indice.positive? && cheia?(de_cima, pagina) && !separado?(de_cima, linhas[indice], pagina[:normal])
   end
 
   def cabecalho_acima?(linha, de_baixo, pagina)
     celulas(linha).size == 1 && !cheia?(linha, pagina) && !letra_maior?(linha, pagina) && !legenda?(linha, pagina) &&
-      !separado?(linha, de_baixo, pagina[:normal])
+      linha[:fonte].include?(pagina[:fonte_do_corpo]) && !separado?(linha, de_baixo, pagina[:normal])
   end
 
   def legenda?(linha, pagina)
@@ -89,13 +104,18 @@ module Autonomia::Agents::Knowledge::Processors::PdfTabelas
   # { tipo: :tabela, texto:, itens:, pagina: }: cada item é uma fileira com o cabeçalho de cada coluna, e o texto (para o
   # trecho da seção) são os itens, um por linha.
   def bloco_da_tabela(pedaco, pagina, numero)
-    fileiras = pedaco[:linhas].slice_when { |de_cima, de_baixo| de_cima[:y] - de_baixo[:y] > pagina[:normal] * MESMA_FILEIRA }.to_a
+    fileiras = fileiras_da_tabela(pedaco[:linhas], pagina)
     de_cabecalho = fileiras_de_cabecalho(fileiras, pagina)
-    linhas_do_cabecalho = pedaco[:cabecalho] + fileiras.first(de_cabecalho).flatten
-    pedacos = linhas_do_cabecalho.flat_map { |linha| celulas(linha) }
+    pedacos = (pedaco[:cabecalho] + fileiras.first(de_cabecalho).flatten).flat_map { |linha| celulas(linha) }
     dados = fileiras.drop(de_cabecalho).map { |fileira| celulas_da_fileira(fileira) }
-    itens = dados.map { |celulas| item_da_fileira(celulas, pedacos) }
+    referencia = dados.max_by(&:size) || []
+    titulos = titulos_das_colunas(pedacos, referencia)
+    itens = dados.map { |celulas| item_da_fileira(celulas, referencia, titulos) }
     { tipo: :tabela, texto: itens.join("\n"), itens: itens, pagina: numero }
+  end
+
+  def fileiras_da_tabela(linhas, pagina)
+    linhas.slice_when { |de_cima, de_baixo| de_cima[:y] - de_baixo[:y] > pagina[:normal] * MESMA_FILEIRA }.to_a
   end
 
   # As primeiras fileiras fora da fonte do corpo; com a tabela toda fora dela, nenhuma.
@@ -128,12 +148,20 @@ module Autonomia::Agents::Knowledge::Processors::PdfTabelas
     { x: [coluna[:x], celula[:x]].min, fim: [coluna[:fim], celula[:fim]].max, texto: "#{coluna[:texto]} #{celula[:texto]}" }
   end
 
-  def item_da_fileira(celulas, pedacos)
-    por_celula = pedacos.flat_map { |pedaco| divididos(pedaco, celulas) }.group_by { |pedaco| mais_perto(pedaco, celulas) }
-    celulas.each_with_index.map do |celula, indice|
-      titulo = por_celula.fetch(indice, []).pluck(:texto).join(' ')
+  # { índice da coluna de referência => título }.
+  def titulos_das_colunas(pedacos, referencia)
+    return {} if referencia.empty?
+
+    por_coluna = pedacos.flat_map { |pedaco| divididos(pedaco, referencia) }.group_by { |pedaco| mais_perto(pedaco, referencia) }
+    por_coluna.transform_values { |doscabecalho| doscabecalho.pluck(:texto).join(' ') }
+  end
+
+  def item_da_fileira(celulas, referencia, titulos)
+    rotuladas = celulas.map do |celula|
+      titulo = titulos[mais_perto(celula, referencia)].to_s
       titulo.empty? ? celula[:texto] : "#{titulo}: #{celula[:texto]}"
-    end.join(ENTRE_CELULAS)
+    end
+    rotuladas.join(ENTRE_CELULAS)
   end
 
   # O pedaço do cabeçalho sobre LARGA células ou mais vira uma palavra por pedaço, na posição proporcional ao lugar dela

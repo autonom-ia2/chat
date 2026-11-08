@@ -123,6 +123,23 @@ RSpec.describe Autonomia::Agents::Retriever do
       expect(result.first.neighbor_distance.to_f).to be < 0.01
     end
 
+    it 'gives back the item itself when its section piece is not in the scope' do
+      item = entry(1, "Exclusoes\n\na) bens instalados no veiculo;", vector, { 'material_type' => 'item', 'trecho_da_secao' => 7 })
+
+      expect(described_class.new(agent: agent).retrieve('o som do carro tem cobertura?').map(&:id)).to eq([item.id])
+    end
+
+    it 'keeps the closer distance when the section piece also came on its own', :aggregate_failures do
+      meio = Array.new(1536) { |indice| indice < 1100 ? 0.01 : -0.01 }
+      secao = entry(0, "Exclusoes\n\na) bens instalados no veiculo;", meio, { 'material_type' => 'secao' })
+      entry(1, "Exclusoes\n\na) bens instalados no veiculo;", vector, { 'material_type' => 'item', 'trecho_da_secao' => 0 })
+
+      result = described_class.new(agent: agent).retrieve('o som do carro tem cobertura?')
+
+      expect(result.map(&:id)).to eq([secao.id])
+      expect(result.first.neighbor_distance.to_f).to be < 0.01
+    end
+
     it 'gives back the item itself when it has no section piece to point to' do
       item = entry(0, "Perda de direitos\n\na) agravar o risco", vector, { 'material_type' => 'item' })
 
