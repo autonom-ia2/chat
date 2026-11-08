@@ -220,12 +220,11 @@ module FechamentoAutomacao::Lacunas
     # Da auditoria dos termos (07/11, #2716 PR2): a espera para quando chega anexo, não qualquer resposta (exemplo 14,
     # passo 5: um "já mando" não pode zerar os 2 dias).
     'G46' => nil,
-    # Link da agenda de uma página escolhida (ex. 20).
+    # Link da agenda de uma página escolhida (ex. 20): os passos 5 e 8 pedem duas agendas, a da implantação e a do
+    # treinamento; o `card.link_da_agenda` dá um link só.
     'G44' => nil,
-    # Do exemplo 20, passo 6: a reunião marcada pela página depois do ganho entra no card que já existe do contato, não
-    # num card novo (booker.rb:157).
-    'G51' => nil,
-    # Do exemplo 20, passo 9: campanha de e-mail como passo (a G14 cobre só WhatsApp).
+    # Do exemplo 20, passo 9 (termo à risca: "coloca o cliente na campanha de e-mail"): pôr o contato numa campanha de
+    # e-mail. A G14 cobre só WhatsApp; etiqueta + G7 + G2 é adaptar, não conta.
     'G52' => nil
   }.freeze
 
