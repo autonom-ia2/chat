@@ -15,6 +15,7 @@ class CampaignJourney::AudienceWriter
   Columns = Struct.new(:headers, :types)
   NO_COLUMNS = Columns.new([].freeze, {}.freeze).freeze
   Error = Class.new(StandardError)
+  MAX_NAME = 255
   # Options every audience written here carries; a caller never sets them through options:.
   RESERVED_OPTIONS = %w[default_country flow create_companies source].freeze
 
@@ -47,11 +48,18 @@ class CampaignJourney::AudienceWriter
     @columns = columns
   end
 
-  # The audience named name, saved with its rows and its channels recounted from the contacts. An empty list is
-  # refused (Error 'no_rows'): an audience with nobody is never saved. The transaction joins the caller's one when
-  # there is one (no requires_new), so a failure of the caller after this also undoes the audience.
+  # The audience named name (stripped, up to 255 characters), saved with its rows and its channels recounted from the
+  # contacts. A person repeated keeps only their first row, in the order given. Refused before anything is written:
+  # a blank name (Error 'name_required'), an empty list (Error 'no_rows'), and a row whose contact is not of this
+  # account (Error 'foreign_contact'). The transaction joins the caller's one when there is one (no requires_new),
+  # so a failure of the caller after this also undoes the audience.
   def perform(name, rows)
+    name = name.to_s.strip.first(MAX_NAME)
+    raise Error, 'name_required' if name.blank?
     raise Error, 'no_rows' if rows.empty?
+
+    rows = rows.uniq(&:contact_id)
+    raise Error, 'foreign_contact' unless own_contacts?(rows)
 
     records = rows.map { |row| self.class.row_attributes(row) }
 
@@ -63,6 +71,11 @@ class CampaignJourney::AudienceWriter
   end
 
   private
+
+  # One query: every contact of the rows (already unique) belongs to this account.
+  def own_contacts?(rows)
+    @account.contacts.where(id: rows.map(&:contact_id)).count == rows.size
+  end
 
   def create_audience(name, records)
     now = Time.current

@@ -75,6 +75,27 @@ RSpec.describe CampaignJourney::AudienceWriter do
       .to include('whatsapp' => { 'enabled' => false, 'count' => 0 }, 'email' => { 'enabled' => true, 'count' => 1 })
   end
 
+  it 'refuses a contact of another account before writing anything' do
+    stranger = create(:contact, account: create(:account), phone_number: '+5511911112222')
+
+    expect { writer.perform('Leads', [row(mobile), row(stranger)]) }.to raise_error(described_class::Error, 'foreign_contact')
+    expect(account.campaign_imports.count).to eq(0)
+  end
+
+  it 'keeps the first row of a person repeated, in order' do
+    audience = writer.perform('Leads', [row(mobile, company_name: 'Primeira'), row(only_email), row(mobile, company_name: 'Segunda')])
+
+    expect(audience).to have_attributes(total_rows: 2, valid_rows: 2, imported_contacts_count: 2)
+    expect(audience.campaign_import_rows.order(:row_number).pluck(:contact_id, :company_name))
+      .to eq([[mobile.id, 'Primeira'], [only_email.id, nil]])
+  end
+
+  it 'asks for a name and keeps it stripped, up to 255 characters' do
+    expect { writer.perform('  ', [row(mobile)]) }.to raise_error(described_class::Error, 'name_required')
+
+    expect(writer.perform(" #{'a' * 300} ", [row(mobile)]).name).to eq('a' * 255)
+  end
+
   it 'refuses an option the writer sets itself, naming it' do
     expect { writer(options: { 'source' => 'outra', 'flow' => 'x' }) }
       .to raise_error(ArgumentError, 'reserved option: source, flow')
