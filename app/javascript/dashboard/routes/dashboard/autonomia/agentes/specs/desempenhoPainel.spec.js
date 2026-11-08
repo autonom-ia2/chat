@@ -346,6 +346,8 @@ describe('DesempenhoPage', () => {
     );
     expect(wrapper.find('[data-kpi]').exists()).toBe(false);
     expect(wrapper.find('[data-aviso-demo]').exists()).toBe(false);
+    // #2719 — só o suporte liga a leitura: nem quem gerencia recebe botão.
+    expect(wrapper.find('[data-acao-estado]').exists()).toBe(false);
     wrapper
       .findAll('[data-exportar]')
       .forEach(botao => expect(botao.attributes('disabled')).toBeDefined());
@@ -580,14 +582,18 @@ describe('EstadoDoPainel', () => {
     expect(wrapper.emitted('acao')[0]).toEqual([variante]);
   });
 
-  it('whoever only sees gets no button to turn reading on', () => {
-    const wrapper = montar({
-      variante: 'leitura_desligada',
-      podeGerenciar: false,
-    });
-    expect(wrapper.text()).toContain('LEITURA_DESLIGADA_SEM_ACESSO');
-    expect(wrapper.find('[data-acao-estado]').exists()).toBe(false);
-  });
+  it.each([true, false])(
+    'with reading off, nobody gets a button to turn it on (podeGerenciar %s, #2719)',
+    podeGerenciar => {
+      const wrapper = montar({ variante: 'leitura_desligada', podeGerenciar });
+      expect(wrapper.get('[data-frase]').text()).toBe(
+        podeGerenciar
+          ? 'AGENTS.DESEMPENHO.ESTADO.LEITURA_DESLIGADA'
+          : 'AGENTS.DESEMPENHO.ESTADO.LEITURA_DESLIGADA_SEM_ACESSO'
+      );
+      expect(wrapper.find('[data-acao-estado]').exists()).toBe(false);
+    }
+  );
 
   it('with the key refused, whoever only sees is asked to call the admin and can go to the numbers (#2301)', () => {
     const wrapper = montar({

@@ -17,6 +17,7 @@ const doAutoteste = salvo =>
         quando: salvo.quando,
         feitas: salvo.feitas || 0,
         total: salvo.total || 0,
+        naoJulgadas: salvo.nao_julgadas || 0,
         doMaterial: salvo.do_material || 0,
         deFora: salvo.de_fora || 0,
         certasDoMaterial: salvo.certas_do_material || 0,

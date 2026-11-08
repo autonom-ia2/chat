@@ -273,7 +273,6 @@ const exportar = async formato => {
 
 const aoEstado = variante => {
   if (variante === 'sem_conversas') periodo.value = 'tudo';
-  else if (variante === 'leitura_desligada') trocar({ estado: undefined });
   else if (['sem_ia', 'chave_recusada'].includes(variante) && ehAdmin.value) {
     router.push({
       name: 'settings_applications_integration',
