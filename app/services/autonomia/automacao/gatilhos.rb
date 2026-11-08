@@ -7,8 +7,9 @@
 # instante do despacho com microssegundos, nunca o segundo: reabrir e resolver no mesmo segundo são dois fatos. O card
 # usa o id da atividade (Crm::Activity), que nasce no mesmo commit da mudança.
 #
-# Os parâmetros (`etapa_id`, `funil_id`) são opcionais ou obrigatórios pelo esquema da receita; o evento traz o valor
-# dele, e o gatilho só casa quando cada parâmetro escolhido bate com o do evento.
+# Os parâmetros (`etapa_id`, `funil_id`, `pagina_id`) são opcionais ou obrigatórios pelo esquema da receita; o evento traz
+# o valor dele, e o gatilho só casa quando cada parâmetro escolhido bate com o do evento. A página de agendamento (G32)
+# separa "a reunião da renovação" das outras reuniões do mesmo funil.
 #
 # Os de tempo (#2499, PR3) não vêm de evento: a varredura (TempoJob) acha os alvos da janela pelos parâmetros (`dias`,
 # a data de um campo, a hora) e a marca é o próprio fato ("parado desde tal instante", "a data do campo vale tal dia").
@@ -32,9 +33,9 @@ module Autonomia::Automacao::Gatilhos
     Entrada.new(tipo: 'card.saiu_da_etapa', alvo: CARD, origem: :evento, parametros: %w[etapa_id]),
     Entrada.new(tipo: 'card.ganho', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.perdido', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
-    Entrada.new(tipo: 'card.reuniao_marcada', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
-    Entrada.new(tipo: 'card.reuniao_remarcada', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
-    Entrada.new(tipo: 'card.reuniao_cancelada', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
+    Entrada.new(tipo: 'card.reuniao_marcada', alvo: CARD, origem: :evento, parametros: %w[funil_id pagina_id]),
+    Entrada.new(tipo: 'card.reuniao_remarcada', alvo: CARD, origem: :evento, parametros: %w[funil_id pagina_id]),
+    Entrada.new(tipo: 'card.reuniao_cancelada', alvo: CARD, origem: :evento, parametros: %w[funil_id pagina_id]),
     Entrada.new(tipo: 'card.parado', alvo: CARD, origem: :tempo, parametros: %w[etapa_id dias]),
     Entrada.new(tipo: 'card.data', alvo: CARD, origem: :tempo, parametros: DA_DATA),
     Entrada.new(tipo: 'contato.data', alvo: CONTATO, origem: :tempo, parametros: DA_DATA)

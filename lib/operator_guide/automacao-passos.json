@@ -125,6 +125,12 @@
           "peca": "funil",
           "obrigatorio": false,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
+        },
+        {
+          "nome": "pagina_id",
+          "peca": "pagina",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.PAGINA_ID"
         }
       ]
     },
@@ -142,6 +148,12 @@
           "peca": "funil",
           "obrigatorio": false,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
+        },
+        {
+          "nome": "pagina_id",
+          "peca": "pagina",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.PAGINA_ID"
         }
       ]
     },
@@ -159,6 +171,12 @@
           "peca": "funil",
           "obrigatorio": false,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
+        },
+        {
+          "nome": "pagina_id",
+          "peca": "pagina",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.PAGINA_ID"
         }
       ]
     },
@@ -461,6 +479,31 @@
       "caminho": "card.motivo_da_perda",
       "base": "card",
       "frase": "AUTOMACAO_LIVRE.VALORES.CARD_MOTIVO_DA_PERDA"
+    },
+    {
+      "caminho": "card.tem_reuniao_marcada",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_TEM_REUNIAO_MARCADA",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
     },
     {
       "caminho": "reuniao.inicio",

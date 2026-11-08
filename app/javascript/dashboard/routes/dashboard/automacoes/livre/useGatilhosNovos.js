@@ -2,6 +2,8 @@ import { computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import { BOOKING_V2_FEATURE } from 'dashboard/routes/dashboard/settings/booking/constants';
 import { useEscolhasDosGatilhos } from './useEscolhasDosGatilhos';
 
 // #2499 — os gatilhos que o editor oferece, pelo próprio catálogo: o que pede
@@ -15,12 +17,15 @@ import { useEscolhasDosGatilhos } from './useEscolhasDosGatilhos';
 const LEITURAS = [
   { pecas: ['etapa', 'funil'], erro: 'GATILHO_DO_CARD.ERRO_FUNIS' },
   { pecas: ['campo'], erro: 'GATILHO_DE_TEMPO.ERRO_CAMPOS' },
+  { pecas: ['pagina'], erro: 'GATILHO_DE_REUNIAO.ERRO_PAGINAS' },
 ];
 
 export function useGatilhosNovos(isCloudFeatureEnabled, catalogo) {
   const { t } = useI18n();
   const { canManagePipelines } = useCrmPermissions();
   const { escolhas, carregar } = useEscolhasDosGatilhos();
+  const veAgendamento = usePermissionGranted('agendamento_view');
+  const mexeNoAgendamento = usePermissionGranted('agendamento_manage');
 
   // G12: o de reunião (`reunioes`) só com as reuniões da instalação ligadas.
   const liberado = item =>
@@ -29,8 +34,26 @@ export function useGatilhosNovos(isCloudFeatureEnabled, catalogo) {
     (!item.reunioes ||
       window.globalConfig?.CRM_CALENDAR_MEETINGS_ENABLED === 'true');
 
+  // G32: a página de agendamento só com o agendamento novo da conta e para
+  // quem pode ler as páginas (a mesma regra da API); sem isso o filtro some e
+  // o gatilho vale para qualquer página.
+  const lePaginas = computed(
+    () =>
+      isCloudFeatureEnabled(BOOKING_V2_FEATURE) &&
+      (veAgendamento.value || mexeNoAgendamento.value)
+  );
+  const semPaginaSeNaoLe = item =>
+    lePaginas.value || !(item.parametros || []).some(p => p.peca === 'pagina')
+      ? item
+      : {
+          ...item,
+          parametros: item.parametros.filter(p => p.peca !== 'pagina'),
+        };
+
   const gatilhos = computed(() =>
-    catalogo.value ? catalogo.value.gatilhos.filter(liberado) : null
+    catalogo.value
+      ? catalogo.value.gatilhos.filter(liberado).map(semPaginaSeNaoLe)
+      : null
   );
   // As peças que os gatilhos oferecidos pedem (etapa, funil, campo...).
   const pecasPedidas = computed(() => [

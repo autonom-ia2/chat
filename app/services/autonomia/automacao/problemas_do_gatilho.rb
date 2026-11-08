@@ -1,6 +1,6 @@
 # O que a Receita confere no gatilho de card e no de tempo (#2499): a flag da F6 (o de card pede também o CRM; o de
 # reunião, G12, também as reuniões da instalação, com frase própria) e que a
-# etapa, o funil e o campo de data escolhidos são da conta. O esquema já conferiu os tipos e quais parâmetros cada
+# etapa, o funil, a página de agendamento (G32) e o campo de data escolhidos são da conta. O esquema já conferiu os tipos e quais parâmetros cada
 # gatilho traz; aqui fica o que só o banco responde.
 class Autonomia::Automacao::ProblemasDoGatilho
   Gatilhos = ::Autonomia::Automacao::Gatilhos
@@ -18,7 +18,7 @@ class Autonomia::Automacao::ProblemasDoGatilho
     desligado = Gatilhos.desligado(@tipo, @conta)
     return [texto(desligado)] if desligado
 
-    [*etapa_de_fora, *funil_de_fora, *parado_sem_dias, *campo_de_fora]
+    [*etapa_de_fora, *funil_de_fora, *pagina_de_fora, *parado_sem_dias, *campo_de_fora]
   end
 
   private
@@ -31,6 +31,12 @@ class Autonomia::Automacao::ProblemasDoGatilho
   def funil_de_fora
     funil = @gatilho['funil_id']
     funil && !@conta.crm_pipelines.exists?(id: funil) ? [texto(:funil_de_fora, id: funil)] : []
+  end
+
+  # G32: a página de agendamento do gatilho de reunião, das novas (as que o editor lista).
+  def pagina_de_fora
+    pagina = @gatilho['pagina_id']
+    pagina && !@conta.crm_agent_booking_profiles.new_pages.exists?(id: pagina) ? [texto(:pagina_de_fora, id: pagina)] : []
   end
 
   def parado_sem_dias

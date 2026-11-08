@@ -1,16 +1,17 @@
 import { computed, ref } from 'vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import AttributeAPI from 'dashboard/api/attributes';
+import CrmBookingPagesAPI from 'dashboard/api/crmBookingPages';
 import { semAtributosInternosDoWhatsapp } from 'dashboard/helper/atributosInternosDoWhatsapp';
 
 // #2499 — o que os campos do gatilho de card mostram: os funis e as etapas de
 // cada funil (agrupadas pelo funil), das mesmas APIs que o CRM usa. Os nomes
 // também servem à frase do gatilho ("Quando o card entra em Orçamento").
-const comNome = lista =>
-  (lista || []).map(item => ({ value: item.id, label: item.name }));
+const comNome = (lista, nome = 'name') =>
+  (lista || []).map(item => ({ value: item.id, label: item[nome] }));
 
-const porId = lista =>
-  Object.fromEntries((lista || []).map(item => [item.id, item.name]));
+const porId = (lista, nome = 'name') =>
+  Object.fromEntries((lista || []).map(item => [item.id, item[nome]]));
 
 // O nome do funil de cada etapa, só quando a conta tem mais de um funil: aí a
 // frase diz também o funil ("..., no funil Vendas"), porque etapas de funis
@@ -56,6 +57,8 @@ export function useEscolhasDosGatilhos() {
   const funis = ref([]);
   const etapasPorFunil = ref({});
   const definicoes = ref([]);
+  // G32: as páginas de agendamento, para o filtro dos gatilhos de reunião.
+  const paginas = ref([]);
 
   const carregarFunis = async () => {
     const { data } = await CrmKanbanAPI.getPipelines();
@@ -74,17 +77,24 @@ export function useEscolhasDosGatilhos() {
     definicoes.value = semAtributosInternosDoWhatsapp(data || []);
   };
 
+  const carregarPaginas = async () => {
+    const { data } = await CrmBookingPagesAPI.get();
+    paginas.value = data.payload || [];
+  };
+
   // Só o que as peças pedem. Sem peças, os funis (como sempre foi).
   const carregar = async (pecas = PECAS_DO_FUNIL) => {
     const leituras = [];
     if (pecas.some(peca => PECAS_DO_FUNIL.includes(peca)))
       leituras.push(carregarFunis());
     if (pecas.includes('campo')) leituras.push(carregarCampos());
+    if (pecas.includes('pagina')) leituras.push(carregarPaginas());
     await Promise.all(leituras);
   };
 
   const escolhas = computed(() => ({
     funis: comNome(funis.value),
+    paginas: comNome(paginas.value, 'title'),
     etapas: funis.value.map(funil => ({
       label: funil.name,
       options: comNome(etapasPorFunil.value[funil.id]),
@@ -98,6 +108,7 @@ export function useEscolhasDosGatilhos() {
         Object.fromEntries(lista.map(item => [item.value, item.label]))
       ),
       funil: porId(funis.value),
+      pagina: porId(paginas.value, 'title'),
       etapa: porId(Object.values(etapasPorFunil.value).flat()),
       funilDaEtapa: funilDaEtapa(funis.value, etapasPorFunil.value),
     },

@@ -42,7 +42,8 @@
       "CAMPO": "Campo de data",
       "QUANDO": "Antes ou depois da data",
       "HORA": "A partir de que hora",
-      "REPETE": "Repete"
+      "REPETE": "Repete",
+      "PAGINA_ID": "Página de agendamento"
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversa e mensagem",
@@ -64,6 +65,7 @@
       "CONTATO_DATA": "{dias} dias {quando} de {campo} do contato, a partir das {hora}h"
     },
     "GATILHO_NO_FUNIL": "{frase}, no funil {funil}",
+    "GATILHO_NA_PAGINA": "{frase}, pela página {pagina}",
     "GATILHO_NAO_DISPARA": "Não dispara quando vários cards são arquivados de uma vez, quando a etapa é apagada ou quando outro sistema muda a etapa.",
     "GATILHO_DO_CARD": {
       "TODOS_OS_FUNIS": "Todos os funis",
@@ -88,6 +90,11 @@
       "SEM_CAMPO": "Não há campo de data aqui. Crie um em Configurações › Atributos personalizados.",
       "HORA": "{hora}h",
       "ERRO_CAMPOS": "Não consegui carregar os campos de data. Feche e abra de novo."
+    },
+    "GATILHO_DE_REUNIAO": {
+      "QUALQUER_PAGINA": "Qualquer página",
+      "PAGINA_SEM_NOME": "uma página de agendamento",
+      "ERRO_PAGINAS": "Não consegui carregar as páginas de agendamento. Feche e abra de novo."
     }
   }
 }

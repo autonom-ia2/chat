@@ -92,13 +92,24 @@ module Autonomia::Automacao::Escuta
     account = registro.account
     return unless ::Autonomia::Automacao::Motor.ligado?(account)
 
-    esperando_pela_conversa(account, conversa_ids).includes(:versao).find_each do |execucao|
+    acordar_quem_espera(esperando_pela_conversa(account, conversa_ids))
+  rescue StandardError => e
+    registrar_erro("não acordou #{registro.class.name}=#{registro&.id}", e)
+  end
+
+  # G32: a reunião do card foi marcada, remarcada ou cancelada. Quem espera no próprio card ("esperar até ter reunião
+  # marcada") confere a condição agora, em vez de no fim do prazo.
+  def acordar_o_card(card)
+    esperando = ::Autonomia::Automacao::Execucao.where(account_id: card.account_id, estado: 'esperando', alvo: card)
+    acordar_quem_espera(esperando)
+  end
+
+  def acordar_quem_espera(execucoes)
+    execucoes.includes(:versao).find_each do |execucao|
       reservar(execucao) if esperando_condicao?(execucao)
     rescue StandardError => e
       registrar_erro("não acordou execucao=#{execucao.id}", e)
     end
-  rescue StandardError => e
-    registrar_erro("não acordou #{registro.class.name}=#{registro&.id}", e)
   end
 
   # Quem espera pela conversa: a execução dela e a do card cuja conversa principal é ela (G11: a resposta do cliente
@@ -138,20 +149,29 @@ module Autonomia::Automacao::Escuta
     return unless card
 
     mudou = dados[:changed_attributes].to_h.with_indifferent_access
-    ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD.fetch(evento, []).each do |tipo|
+    tipos = ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD.fetch(evento, [])
+    tipos.each do |tipo|
       marca = ::Autonomia::Automacao::Gatilhos.marca_da_atividade(tipo, dados[:activity_id])
-      cada_automacao(card, tipo, dados_do_card(tipo, card, mudou)) { |definicao| partir(definicao, card, tipo, evento: marca) }
+      cada_automacao(card, tipo, dados_do_card(tipo, card, mudou, dados[:activity_id])) { |definicao| partir(definicao, card, tipo, evento: marca) }
     end
+    acordar_o_card(card) if tipos.any? { |tipo| ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo) }
   end
 
   # A etapa de onde o card saiu ou para onde entrou, e o funil, para os parâmetros do gatilho. O card criado traz a
-  # etapa em que nasceu (stage_id); o movido, as duas pontas.
-  def dados_do_card(tipo, card, mudou)
+  # etapa em que nasceu (stage_id); o movido, as duas pontas. A reunião (G32) traz também a página de agendamento.
+  def dados_do_card(tipo, card, mudou, atividade_id = nil)
     case tipo
     when 'card.entrou_na_etapa' then { 'etapa_id' => mudou[:to_stage_id] || mudou[:stage_id] || card.stage_id }
     when 'card.saiu_da_etapa' then { 'etapa_id' => mudou[:from_stage_id] }
-    else { 'funil_id' => mudou[:pipeline_id] || card.pipeline_id }
+    else { 'funil_id' => mudou[:pipeline_id] || card.pipeline_id, **pagina_da_reuniao(tipo, card, atividade_id) }
     end
+  end
+
+  def pagina_da_reuniao(tipo, card, atividade_id)
+    return {} unless ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo)
+
+    reuniao = ::Autonomia::Automacao::ReuniaoDaAtividade
+    { 'pagina_id' => reuniao.pagina(reuniao.de(card, atividade_id)) }
   end
 
   # O emissor do CRM pergunta antes de despachar (#2499): a conta tem automação ligada com um gatilho que o evento
@@ -161,15 +181,28 @@ module Autonomia::Automacao::Escuta
   #
   # Roda no after_commit do card: um erro aqui não pode quebrar o pedido de quem moveu o card, nem perder o evento. Em
   # erro, despacha assim mesmo (o job assíncrono decide) e loga só a classe.
-  def assinante?(account, evento, mudou = {})
-    tipos = ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD[evento]
-    return false if tipos.blank? || account.blank? || !::Autonomia::Automacao::Motor.gatilhos?(account)
+  # A reunião (G32) assina também quando há execução esperando no próprio card: ela acorda para conferir a condição.
+  def assinante?(account, evento, mudou = {}, card_id: nil)
+    tipos = tipos_ligados(account, evento)
+    return false if tipos.blank?
+    return true if espera_no_card?(account, tipos, card_id)
 
     mudou = mudou.to_h.with_indifferent_access
     automacoes_do_gatilho(account.id, tipos).where(tipos.map { |tipo| gatilho_casa_sql(tipo, mudou) }.join(' OR ')).exists?
   rescue StandardError => e
     registrar_erro("gate do emissor falhou evento=#{evento} conta=#{account&.id}; despacha assim mesmo", e)
     true
+  end
+
+  # Os gatilhos que o evento dispara, só com a conta e a flag ligada.
+  def tipos_ligados(account, evento)
+    tipos = ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD[evento]
+    tipos if tipos.present? && account.present? && ::Autonomia::Automacao::Motor.gatilhos?(account)
+  end
+
+  def espera_no_card?(account, tipos, card_id)
+    card_id.present? && tipos.any? { |tipo| ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo) } &&
+      ::Autonomia::Automacao::Execucao.exists?(account_id: account.id, estado: 'esperando', alvo_type: 'Crm::Card', alvo_id: card_id)
   end
 
   # "tipo = X AND (parâmetro vazio OR parâmetro = valor do evento)", com os valores escapados.

@@ -1,0 +1,21 @@
+# A reunião de uma atividade do card (G12, G32): a atividade de reunião marcada, remarcada ou cancelada guarda o id da
+# reunião no payload. Sempre presa ao card e à conta (parecer da Funções, G12), nunca só pelo id.
+#
+# Quem usa: o Contexto, para a reunião do gatilho que a receita lê (`reuniao.*`) e para quem atende ela (avisar); a
+# Escuta, para a página de agendamento em que ela foi marcada (o filtro `pagina_id` dos gatilhos de reunião, G32).
+module Autonomia::Automacao::ReuniaoDaAtividade
+  # A página de agendamento fica na reunião marcada por ela (Crm::BookingV2::Booker).
+  PAGINA = 'booking_profile_id'.freeze
+
+  module_function
+
+  def de(card, atividade_id)
+    atividade = atividade_id && ::Crm::Activity.find_by(id: atividade_id, account_id: card.account_id, card_id: card.id)
+    reuniao_id = atividade&.payload.to_h['meeting_id']
+    reuniao_id && card.account.crm_meetings.find_by(id: reuniao_id, card_id: card.id)
+  end
+
+  # O id da página em que a reunião foi marcada; nil quando foi marcada na tela. A IA marca pela página
+  # (o Booker grava o id), então a reunião dela tem a página.
+  def pagina(reuniao) = reuniao&.metadata.to_h[PAGINA]
+end

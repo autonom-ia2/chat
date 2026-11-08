@@ -42,7 +42,8 @@
       "CAMPO": "Date field",
       "QUANDO": "Before or after the date",
       "HORA": "From what time",
-      "REPETE": "Repeats"
+      "REPETE": "Repeats",
+      "PAGINA_ID": "Booking page"
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversation and message",
@@ -64,6 +65,7 @@
       "CONTATO_DATA": "{dias} days {quando} the contact {campo}, from {hora}h"
     },
     "GATILHO_NO_FUNIL": "{frase}, in the {funil} pipeline",
+    "GATILHO_NA_PAGINA": "{frase}, from the {pagina} page",
     "GATILHO_NAO_DISPARA": "Does not trigger when many cards are archived at once, when the stage is deleted or when another system changes the stage.",
     "GATILHO_DO_CARD": {
       "TODOS_OS_FUNIS": "All pipelines",
@@ -88,6 +90,11 @@
       "SEM_CAMPO": "There is no date field here. Create one in Settings › Custom attributes.",
       "HORA": "{hora}h",
       "ERRO_CAMPOS": "Could not load the date fields. Close and open it again."
+    },
+    "GATILHO_DE_REUNIAO": {
+      "QUALQUER_PAGINA": "Any page",
+      "PAGINA_SEM_NOME": "a booking page",
+      "ERRO_PAGINAS": "Could not load the booking pages. Close and open again."
     }
   }
 }

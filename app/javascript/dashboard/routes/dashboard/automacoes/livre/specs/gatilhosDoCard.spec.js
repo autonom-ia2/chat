@@ -152,10 +152,12 @@ describe('gatilhos de card', () => {
     ]);
     // E aí lê os funis e as etapas, agrupadas pelo funil.
     expect(comTudo.escolhasDoGatilho.value.etapas).toEqual(ESCOLHAS.etapas);
-    // Sem gatilho de data oferecido, os campos de data não são lidos.
+    // Sem gatilho de data oferecido, os campos de data não são lidos; sem o de
+    // reunião, nem as páginas de agendamento.
     expect(comTudo.escolhasDoGatilho.value.nomes).toEqual({
       ...ESCOLHAS.nomes,
       campo: { 'Crm::Card': {}, Contact: {} },
+      pagina: {},
     });
   });
 

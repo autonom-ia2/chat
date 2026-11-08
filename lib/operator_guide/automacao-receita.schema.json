@@ -16,6 +16,7 @@
         },
         "etapa_id": { "type": "integer", "description": "Só em card.entrou_na_etapa e card.saiu_da_etapa, onde é obrigatória: a etapa do funil (id)." },
         "funil_id": { "type": "integer", "description": "Só em card.criado, card.ganho, card.perdido e nos de reunião, opcional: limita ao funil (id). Sem ele, vale qualquer funil." },
+        "pagina_id": { "type": "integer", "description": "Só nos de reunião, opcional: limita à reunião marcada por esta página de agendamento (id), como a da renovação. Sem ele, vale qualquer reunião; com ele, a reunião marcada na tela, sem página, não dispara; a que a IA marca pela página conta como dessa página." },
         "dias": { "type": "integer", "minimum": 0, "maximum": 365, "description": "Só nos de tempo, obrigatório: em card.parado, os dias parado na etapa (pelo menos 1); em card.data e contato.data, quantos dias antes ou depois da data (0 = no dia)." },
         "campo": { "type": "string", "minLength": 1, "maxLength": 255, "description": "Só em card.data e contato.data, obrigatório: a chave do atributo personalizado de tipo data (do card ou do contato)." },
         "quando": { "enum": ["antes", "depois"], "description": "Só em card.data e contato.data, obrigatório: antes (a data ainda vai chegar) ou depois (a data já passou)." },
@@ -36,6 +37,10 @@
         {
           "if": { "properties": { "tipo": { "enum": ["card.criado", "card.ganho", "card.perdido", "card.reuniao_marcada", "card.reuniao_remarcada", "card.reuniao_cancelada"] } } },
           "else": { "not": { "required": ["funil_id"] } }
+        },
+        {
+          "if": { "properties": { "tipo": { "enum": ["card.reuniao_marcada", "card.reuniao_remarcada", "card.reuniao_cancelada"] } } },
+          "else": { "not": { "required": ["pagina_id"] } }
         },
         {
           "if": { "properties": { "tipo": { "enum": ["card.parado", "card.data", "contato.data"] } } },
@@ -233,7 +238,8 @@
       "properties": {
         "responsavel": { "type": "boolean" },
         "times": { "$ref": "#/definitions/ids" },
-        "pessoas": { "$ref": "#/definitions/ids" }
+        "pessoas": { "$ref": "#/definitions/ids" },
+        "da_reuniao": { "type": "boolean", "description": "Só nos gatilhos de reunião (G32): quem atende a reunião do gatilho." }
       }
     },
     "condicao": {
@@ -287,7 +293,7 @@
           "type": "object",
           "additionalProperties": false,
           "required": ["id", "tipo", "condicao", "prazo"],
-          "description": "Espera a condição ficar verdadeira, até o prazo; vencido, segue pelo se_vencer e depois continua. Para esperar a resposta de alguém, a condição lê conversa.cliente_respondeu ou conversa.equipe_respondeu (igual a true): a resposta que chegou durante esta espera. Esses dois valores só valem aqui.",
+          "description": "Espera a condição ficar verdadeira, até o prazo; vencido, segue pelo se_vencer e depois continua. Para esperar a resposta de alguém, a condição lê conversa.cliente_respondeu ou conversa.equipe_respondeu (igual a true): a resposta que chegou durante esta espera. Esses dois valores só valem aqui. Para \"não marcou em N dias\", a condição lê card.tem_reuniao_marcada (igual a true): o card tem reunião marcada e ainda por vir; a espera confere de novo quando uma reunião do card é marcada, remarcada ou cancelada. card.tem_reuniao_marcada vale também no se, em qualquer gatilho com card.",
           "properties": {
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "esperar_ate" },
@@ -376,7 +382,8 @@
               "properties": {
                 "responsavel": { "type": "boolean" },
                 "times": { "$ref": "#/definitions/ids" },
-                "pessoas": { "$ref": "#/definitions/ids" }
+                "pessoas": { "$ref": "#/definitions/ids" },
+                "da_reuniao": { "type": "boolean", "description": "Só nos gatilhos de reunião (G32): quem atende a reunião do gatilho (a pessoa da página de agendamento, ou quem marcou na tela)." }
               }
             }
           }

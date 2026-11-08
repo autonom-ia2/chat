@@ -191,8 +191,9 @@ module FechamentoAutomacao::Lacunas
     'G30' => nil,
     # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando".
     'G31' => nil,
-    # G32: a reunião marcada como condição do "esperar até", no meio da execução.
-    'G32' => nil
+    # G32 (#2703): a reunião marcada como condição do "esperar até", no meio da execução; prova ponta a ponta em
+    # spec/fechamento/automacao/g32_reuniao_spec.rb.
+    'G32' => -> { valor?('card.tem_reuniao_marcada') }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

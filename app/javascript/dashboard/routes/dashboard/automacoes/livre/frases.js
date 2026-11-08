@@ -41,12 +41,25 @@ const chaveDaFrase = (entrada, gatilho) => {
     : `AUTOMACAO_LIVRE.GATILHO_COM.${chave}`;
 };
 
-export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
+// G32: a página de agendamento entra só como fim da frase ("..., pela página
+// Renovação"), como o "repete": ela é opcional e não muda a frase do funil.
+const FIM_DA_FRASE = ['repete', 'pagina'];
+// Sem o nome (página que a pessoa não lê ou que saiu), a frase diz que há
+// filtro de página em vez de parecer "qualquer reunião".
+const comPagina = (frase, gatilho, t, nomes) => {
+  if (!gatilho?.pagina_id) return frase;
+  const pagina =
+    nomes.pagina?.[gatilho.pagina_id] ||
+    t('AUTOMACAO_LIVRE.GATILHO_DE_REUNIAO.PAGINA_SEM_NOME');
+  return t('AUTOMACAO_LIVRE.GATILHO_NA_PAGINA', { frase, pagina });
+};
+
+const fraseSemPagina = (gatilho, catalogo, t, nomes) => {
   const entrada = catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo);
   if (!entrada) return t(`${P}.FALTA_GATILHO`);
   // #2678: o "repete" é opcional e entra só como fim da frase ("..., todo ano").
   const parametros = (entrada.parametros || []).filter(
-    item => item.peca !== 'repete'
+    item => !FIM_DA_FRASE.includes(item.peca)
   );
   const escolhidos = Object.fromEntries(
     parametros.map(item => [
@@ -68,6 +81,9 @@ export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
     ? t('AUTOMACAO_LIVRE.GATILHO_NO_FUNIL', { frase, funil })
     : frase;
 };
+
+export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) =>
+  comPagina(fraseSemPagina(gatilho, catalogo, t, nomes), gatilho, t, nomes);
 
 // "Status da conversa", ou "Campo personalizado do contato: placa".
 export const fraseDoValor = (caminho, catalogo, t) => {

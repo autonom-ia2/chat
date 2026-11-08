@@ -103,6 +103,14 @@ const funis = computed(() => [
   { value: '', label: t('AUTOMACAO_LIVRE.GATILHO_DO_CARD.TODOS_OS_FUNIS') },
   ...(props.escolhas.funis || []),
 ]);
+// G32: a página de agendamento da reunião ("a reunião da renovação").
+const paginas = computed(() => [
+  {
+    value: '',
+    label: t('AUTOMACAO_LIVRE.GATILHO_DE_REUNIAO.QUALQUER_PAGINA'),
+  },
+  ...(props.escolhas.paginas || []),
+]);
 
 // Trocar o tipo apaga o que o anterior pedia (etapa, funil), mas mantém os
 // filtros: o painel mostra o que entra e o que sai deles.
@@ -207,6 +215,14 @@ const mudar = (nome, valor) => {
           {{ $t('AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.SEM_CAMPO') }}
         </p>
       </template>
+      <ChoiceSelect
+        v-else-if="parametro.peca === 'pagina'"
+        data-pagina
+        :model-value="modelValue?.[parametro.nome] ?? ''"
+        :aria-label="$t(parametro.frase)"
+        :options="paginas"
+        @update:model-value="valor => mudar(parametro.nome, valor)"
+      />
       <ChoiceSelect
         v-else
         :model-value="modelValue?.[parametro.nome] ?? ''"

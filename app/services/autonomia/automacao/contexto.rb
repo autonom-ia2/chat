@@ -94,9 +94,6 @@ class Autonomia::Automacao::Contexto
   private
 
   def reuniao_da_atividade
-    atividade_id = ::Autonomia::Automacao::Gatilhos.atividade_da_marca(@execucao.evento)
-    atividade = atividade_id && ::Crm::Activity.find_by(id: atividade_id, account_id: card.account_id, card_id: card.id)
-    reuniao_id = atividade&.payload.to_h['meeting_id']
-    reuniao_id && card.account.crm_meetings.find_by(id: reuniao_id, card_id: card.id)
+    ::Autonomia::Automacao::ReuniaoDaAtividade.de(card, ::Autonomia::Automacao::Gatilhos.atividade_da_marca(@execucao.evento))
   end
 end
