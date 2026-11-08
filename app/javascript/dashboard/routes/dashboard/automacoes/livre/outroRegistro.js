@@ -5,10 +5,12 @@
 // frase da linha e o "pronto" da peça do painel. A régua de verdade é a do
 // servidor (Autonomia::Automacao::EmOutroRegistro).
 import {
+  OUTRO_REGISTRO,
   RAIZ,
   acharPasso,
   galhosDe,
   idDaLista,
+  naMesmaExecucao,
   registroPronto,
 } from './receita';
 
@@ -16,7 +18,7 @@ export { registroPronto };
 
 const O = 'AUTOMACAO_LIVRE.OUTRO_REGISTRO';
 
-export const TIPO = 'em_outro_registro';
+export const TIPO = OUTRO_REGISTRO;
 export const LIGACOES = ['contato_do_campo', 'cards_do_contato'];
 export const USOS = ['conversa', 'contato'];
 export const SITUACOES = ['open', 'won', 'lost'];
@@ -55,6 +57,17 @@ export const alvoDaLista = (passos, listaId) => {
   if (!dono) return null;
   if (dono.tipo === TIPO) return alvoDoRamo(dono);
   return alvoDaLista(passos, listaDoPasso(passos, dono.id));
+};
+
+// Os passos da execução em que a lista roda (#2679 × G18): dentro do ramo do
+// "em outro registro", os do ramo (a execução filha); fora, os da receita sem
+// os ramos dele. É de onde vêm os textos da IA que o passo pode ler.
+export const passosDaExecucao = (passos, listaId) => {
+  if (!listaId || listaId === RAIZ) return naMesmaExecucao(passos);
+  const dono = acharPasso(passos, listaId.slice(0, listaId.lastIndexOf(':')));
+  if (!dono) return naMesmaExecucao(passos);
+  if (dono.tipo === TIPO) return naMesmaExecucao(dono.passos || []);
+  return passosDaExecucao(passos, listaDoPasso(passos, dono.id));
 };
 
 // `campo`: o nome do campo que guarda o contato, já em palavras.

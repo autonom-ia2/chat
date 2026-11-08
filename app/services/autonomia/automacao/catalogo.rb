@@ -52,8 +52,10 @@ module Autonomia::Automacao::Catalogo
                        'para_do_retorno' => 'quem_recebe_retorno', 'envio_do_retorno' => 'envio_do_retorno',
                        # G18 (#2671): onde roda o "em outro registro".
                        'registro_ligado' => 'registro_ligado' }.freeze
-  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar" e a caixa do "email" (G2).
-  PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email' }.freeze
+  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2) e a
+  # etapa do "card" (G4).
+  PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email',
+                          'etapa_id' => 'etapa' }.freeze
 
   module_function
 
@@ -116,13 +118,15 @@ module Autonomia::Automacao::Catalogo
       next if tipo == 'acao' || declarado['nativos_fora_do_editor'].to_h.key?(tipo)
 
       { 'tipo' => tipo, 'grupo' => declarado.dig('nativos', tipo, 'grupo'), 'requer' => declarado.dig('nativos', tipo, 'requer'),
-        'frase' => chave('PASSOS', tipo), 'campos' => campos_nativos(forma) }.compact
+        'funil' => declarado.dig('nativos', tipo, 'funil'), 'frase' => chave('PASSOS', tipo),
+        'campos' => campos_nativos(forma, declarado.dig('nativos', tipo, 'peca')) }.compact
     end
   end
 
-  def campos_nativos(forma)
+  # `peca` no yml (a campanha, G14): uma peça só mostra o passo inteiro.
+  def campos_nativos(forma, peca_do_passo = nil)
     forma['properties'].except('id', 'tipo').map do |nome, propriedade|
-      peca = PECAS_DO_ESQUEMA[propriedade['$ref'].to_s.split('/').last] || PECAS_SEM_DEFINICAO[nome]
+      peca = peca_do_passo || PECAS_DO_ESQUEMA[propriedade['$ref'].to_s.split('/').last] || PECAS_SEM_DEFINICAO[nome]
       { 'nome' => nome, 'peca' => peca,
         'obrigatorio' => forma['required'].include?(nome), 'rotulo' => chave('CAMPOS', nome) }
     end

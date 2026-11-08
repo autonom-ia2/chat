@@ -32,6 +32,11 @@ const LEITURAS = [
   'conversa',
   'contato',
   'empresa',
+  // #2414 G20: a foto, o PDF e o áudio que o cliente mandou.
+  'anexos',
+  // #2679: o card e as notas internas da conversa.
+  'card',
+  'notas',
 ];
 const opcoesDeLeitura = computed(() =>
   LEITURAS.map(valor => ({
@@ -67,7 +72,7 @@ const opcoesDeDestino = valores =>
       label: t(`${I}.DESTINOS.${valor.toUpperCase()}`),
     }))
   );
-const opcoesDoEscrever = opcoesDeDestino(['mensagem', 'sugestao']);
+const opcoesDoEscrever = opcoesDeDestino(['mensagem', 'sugestao', 'guardar']);
 const opcoesDoResumir = opcoesDeDestino(['nota', 'avisar']);
 
 const lista = computed(() =>

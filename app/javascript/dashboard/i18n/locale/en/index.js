@@ -29,6 +29,7 @@ import automacaoLivreGatilhos from './automacaoLivreGatilhos.json';
 import automacaoLivreIa from './automacaoLivreIa.json';
 import automacaoLivreReceitas from './automacaoLivreReceitas.json';
 import automacaoLivreEnsaio from './automacaoLivreEnsaio.json';
+import automacaoLivreCampanha from './automacaoLivreCampanha.json';
 import automacaoLivreRetorno from './automacaoLivreRetorno.json';
 import automacaoLivreOutroRegistro from './automacaoLivreOutroRegistro.json';
 import brandKits from './brandKits.json';
@@ -117,6 +118,7 @@ export default {
     ...automacaoLivreIa.AUTOMACAO_LIVRE,
     ...automacaoLivreReceitas.AUTOMACAO_LIVRE,
     ...automacaoLivreEnsaio.AUTOMACAO_LIVRE,
+    ...automacaoLivreCampanha.AUTOMACAO_LIVRE,
     ...automacaoLivreRetorno.AUTOMACAO_LIVRE,
     ...automacaoLivreOutroRegistro.AUTOMACAO_LIVRE,
   },

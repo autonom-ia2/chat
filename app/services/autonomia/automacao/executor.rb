@@ -24,15 +24,17 @@ class Autonomia::Automacao::Executor
   TENTATIVAS = 3
   # Espera antes da 2ª e da 3ª tentativa de um erro passageiro (F3.6).
   INTERVALOS = [1.minute, 5.minutes].freeze
-  UNIDADES = { 'minutos' => :minutes, 'horas' => :hours, 'dias' => :days }.freeze
 
   Cadeia = ::Autonomia::Automacao::Cadeia
   Execucao = ::Autonomia::Automacao::Execucao
+  Duracao = ::Autonomia::Automacao::Duracao
   # Passos que falam com gente (F4): só com a flag da F4.
   NATIVOS = { 'mensagem' => ::Autonomia::Automacao::PassoDeMensagem, 'avisar' => ::Autonomia::Automacao::PassoDeAviso,
-              'email' => ::Autonomia::Automacao::PassoDeEmail }.freeze
+              'email' => ::Autonomia::Automacao::PassoDeEmail, 'campanha' => ::Autonomia::Automacao::PassoDeCampanha }.freeze
   # Os passos de IA (F7, #2500); com eles vem a parada fora da janela (F4.4, #2573), que vale também para a mensagem.
   include ::Autonomia::Automacao::IaNoExecutor
+  # O "criar card" (G4).
+  include ::Autonomia::Automacao::CardNoExecutor
 
   # Chamado pelo AvancarJob com a marca de quem reservou a execução (Partida ou VarreduraJob). A execução lida antes
   # da troca guarda o `due_at` da espera, que o "esperar até" usa como prazo.
@@ -91,6 +93,7 @@ class Autonomia::Automacao::Executor
     when *NATIVOS.keys then passo_nativo(passo, NATIVOS.fetch(passo['tipo']))
     when *IA.keys then passo_de_ia(passo, IA.fetch(passo['tipo']))
     when 'ia_assumir' then passo_nativo(passo, ::Autonomia::Automacao::PassoDeIaAssumir, mensagem: false)
+    when 'card' then passo_de_card(passo)
     when 'parar' then encerrar(passo['id'], 'concluida', nil, 'ok')
     # Tipo que este motor não conhece (versão salva por um código mais novo, defeito): falha com registro, nunca fecha
     # como "concluida" sem ter feito nada.
@@ -147,13 +150,13 @@ class Autonomia::Automacao::Executor
   def esperar(passo)
     return @roteiro.seguinte(passo['id']) if @retomando
 
-    aguardar(passo, Time.current + duracao(passo['duracao']))
+    aguardar(passo, Time.current + Duracao.de(passo['duracao']))
   end
 
   def esperar_ate(passo)
     espera = janela_da_espera(passo)
     return cumprida(passo) if condicao?(passo['condicao'], valores(espera: espera))
-    return aguardar(passo, espera.begin + duracao(passo['prazo'])) unless @retomando
+    return aguardar(passo, espera.begin + Duracao.de(passo['prazo'])) unless @retomando
     return aguardar(passo, @execucao.due_at, registrar: false) if @execucao.due_at&.future?
 
     registrar(passo['id'], 'pulado', 'prazo_vencido')
@@ -163,7 +166,7 @@ class Autonomia::Automacao::Executor
   # A janela do "esperar até", para a resposta que chegou durante ele (G11): na primeira conferência, de agora em diante;
   # ao retomar, do começo (o prazo gravado menos a duração dele, na versão em que a execução entrou) até o prazo. A
   # execução foi lida antes da troca, com o `due_at` da espera. Resposta depois do prazo não conta: o prazo venceu.
-  def janela_da_espera(passo) = @retomando && @execucao.due_at ? ((@execucao.due_at - duracao(passo['prazo']))..@execucao.due_at) : (Time.current..)
+  def janela_da_espera(passo) = Duracao.janela(passo['prazo'], (@execucao.due_at if @retomando))
 
   def cumprida(passo) = registrar(passo['id'], 'ok').then { @roteiro.seguinte(passo['id']) }
 
@@ -260,10 +263,6 @@ class Autonomia::Automacao::Executor
 
   # `lidos`: o "esperar até" lê com o começo da espera, para a resposta que chegou durante ela (G11).
   def condicao?(condicao, lidos = valores) = ::Autonomia::Automacao::Condicao.new(condicao, lidos).verdadeira?
-
-  def duracao(duracao)
-    duracao['valor'].public_send(UNIDADES.fetch(duracao['unidade']))
-  end
 
   # Lido do banco a cada reconferência: o alvo pode ter sido apagado no meio da rodada.
   def alvo = (@alvo ||= @execucao.alvo_type.constantize.find_by(id: @execucao.alvo_id))

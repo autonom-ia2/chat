@@ -3,6 +3,7 @@
 // etiqueta entra, porque vai pelo nome; pessoa, time e caixa ficam no "Alterar".
 import { entradaDoPasso, lerCampo } from './catalogo';
 import { comColchetes } from './texto';
+import { fraseDaCampanha } from './campanha';
 import { fraseDoRetorno } from './retorno';
 import {
   TIPO as EM_OUTRO_REGISTRO,
@@ -47,7 +48,10 @@ const chaveDaFrase = (entrada, gatilho) => {
 export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
   const entrada = catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo);
   if (!entrada) return t(`${P}.FALTA_GATILHO`);
-  const parametros = entrada.parametros || [];
+  // #2678: o "repete" é opcional e entra só como fim da frase ("..., todo ano").
+  const parametros = (entrada.parametros || []).filter(
+    item => item.peca !== 'repete'
+  );
   const escolhidos = Object.fromEntries(
     parametros.map(item => [
       item.peca,
@@ -58,7 +62,11 @@ export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
     valor => valor !== undefined && valor !== null && valor !== ''
   );
   if (!parametros.length || !completo) return t(entrada.frase);
-  const frase = t(chaveDaFrase(entrada, gatilho), escolhidos);
+  const base = t(chaveDaFrase(entrada, gatilho), escolhidos);
+  const frase =
+    gatilho.repete === 'todo_ano'
+      ? t('AUTOMACAO_LIVRE.GATILHO_TODO_ANO', { frase: base })
+      : base;
   const funil = nomes.funilDaEtapa?.[gatilho.etapa_id];
   return funil
     ? t('AUTOMACAO_LIVRE.GATILHO_NO_FUNIL', { frase, funil })
@@ -71,7 +79,8 @@ export const fraseDoValor = (caminho, catalogo, t) => {
   const fixo = valores.find(
     item => item.caminho === caminho && !item.atributos
   );
-  if (fixo) return t(fixo.frase);
+  // #2679: o texto da IA (comTextosDaIa) chega com o rótulo pronto, sem frase.
+  if (fixo) return fixo.rotulo || t(fixo.frase);
   const base = valores.find(
     item => item.atributos && caminho?.startsWith(`${item.caminho}.`)
   );
@@ -269,7 +278,7 @@ const FRASE_DA_IA = {
     }),
   escrever: (passo, t) =>
     t(
-      `${P}.ESCREVER_${passo.destino === 'mensagem' ? 'MENSAGEM' : 'SUGESTAO'}${
+      `${P}.ESCREVER_${(passo.destino || 'sugestao').toUpperCase()}${
         escrito(passo.instrucao) ? '' : '_SEM_INSTRUCAO'
       }`,
       { instrucao: curto(escrito(passo.instrucao)) }
@@ -310,6 +319,7 @@ export const fraseDoPasso = (passo, catalogo, t) => {
       texto: fraseDoTexto(passo.texto, catalogo, t),
     });
   if (FRASE_DA_IA[passo.tipo]) return FRASE_DA_IA[passo.tipo](passo, t);
+  if (passo.tipo === 'campanha') return fraseDaCampanha(passo, t);
   if (passo.tipo === 'retorno')
     return fraseDoRetorno(passo, t, {
       quando: fraseDaDuracao(passo.daqui, catalogo, t),

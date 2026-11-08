@@ -42,10 +42,12 @@ class Autonomia::Automacao::PassoDeIa
 
   # [a resposta já conferida pelo schema, o custo para o registro]. Levanta Falha. `tempo` menor é para quem chama
   # dentro da requisição web, que o Rack::Timeout corta aos 15 s (o Testar).
-  def perguntar(instrucoes:, entrada:, schema:, tempo: TEMPO)
+  # `anexos` (G20): as partes que vão junto da entrada (AnexosDaConversa#partes), com a regra deles.
+  def perguntar(instrucoes:, entrada:, schema:, tempo: TEMPO, anexos: [])
     custos = []
+    regra = anexos.empty? ? REGRA : "#{REGRA} #{::Autonomia::Automacao::AnexosDaConversa::REGRA}"
     resposta = medindo(custos) do
-      cliente.create(model: @modelo, instructions: "#{REGRA}\n\n#{instrucoes}", input: entrada.to_json, schema: schema,
+      cliente.create(model: @modelo, instructions: "#{regra}\n\n#{instrucoes}", input: entrada_com(entrada, anexos), schema: schema,
                      reasoning_effort: ESFORCO, timeout: tempo)
     end
     [conferida(resposta[:text], schema), custo(custos)]
@@ -58,6 +60,12 @@ class Autonomia::Automacao::PassoDeIa
   end
 
   private
+
+  def entrada_com(entrada, anexos)
+    return entrada.to_json if anexos.empty?
+
+    [{ role: 'user', content: [{ type: 'input_text', text: entrada.to_json }, *anexos] }]
+  end
 
   def cliente
     raise Falha.new(:permanente, 'ia_nao_configurada') unless configurada?

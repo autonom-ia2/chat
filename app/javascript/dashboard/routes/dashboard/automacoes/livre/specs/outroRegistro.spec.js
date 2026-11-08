@@ -3,6 +3,7 @@ import {
   alvoDoRamo,
   fraseDoOutroRegistro,
   listaDoPasso,
+  passosDaExecucao,
 } from '../outroRegistro';
 import { doAlvoDoGatilho, novoPasso } from '../catalogo';
 import { falta, galhosDe, inserirPasso } from '../receita';
@@ -141,5 +142,34 @@ describe('doAlvoDoGatilho dentro do ramo', () => {
         item => item.caminho
       )
     ).toEqual(['conversa.status']);
+  });
+});
+
+// #2679 × G18: o texto da IA só passa entre passos da mesma execução.
+describe('passosDaExecucao', () => {
+  const escrever = id => ({ id, tipo: 'escrever', destino: 'guardar' });
+  const se = (id, entao) => ({ id, tipo: 'se', entao });
+  const receita = [
+    escrever('p1'),
+    outro(DO_CAMPO, [escrever('p3'), se('p4', [mensagem('p5')])]),
+    mensagem('p6'),
+  ];
+  const ids = passos => passos.map(passo => passo.id);
+
+  it('fora do ramo, a receita sem os passos de dentro dele', () => {
+    expect(ids(passosDaExecucao(receita, 'raiz'))).toEqual(['p1', 'p2', 'p6']);
+  });
+
+  it('dentro do ramo, mesmo dentro de um "se", só os passos do ramo', () => {
+    expect(ids(passosDaExecucao(receita, 'p4:entao'))).toEqual([
+      'p3',
+      'p4',
+      'p5',
+    ]);
+    expect(ids(passosDaExecucao(receita, 'p2:passos'))).toEqual([
+      'p3',
+      'p4',
+      'p5',
+    ]);
   });
 });

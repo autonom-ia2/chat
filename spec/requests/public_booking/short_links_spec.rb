@@ -291,7 +291,10 @@ RSpec.describe 'PublicBooking short links and link preview', type: :request do
       expect(meta('og:description')).to eq('30 min · Vídeo no WhatsApp · Escolha o melhor horário para você')
       expect(meta('og:url')).to eq("https://chat.exemplo.com/b/#{invite.code}")
       expect(meta('og:image')).to start_with("https://chat.exemplo.com/book/#{profile.slug}/preview/")
-      ['Zuleica', 'Pacheco', '987650001', '8765', 'zuleica@example.com'].each { |secret| expect(response.body).not_to include(secret) }
+      # A casca do painel traz assets com hash no nome: trecho curto de dígitos casa por acaso (#2690).
+      # Por isso só valores que um hash não forma: palavras inteiras, telefone com DDD e e-mail.
+      secrets = ['Zuleica', 'Pacheco', '+5511987650001', '11987650001', '98765-0001', 'zuleica@example.com']
+      secrets.each { |secret| expect(response.body).not_to include(secret) }
     end
 
     it 'dá prévia neutra para código desconhecido, convite cancelado ou vencido e página pausada' do

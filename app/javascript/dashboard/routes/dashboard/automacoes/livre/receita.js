@@ -91,6 +91,17 @@ export const todosOsPassos = (passos = []) =>
     ...galhosDe(passo).flatMap(galho => todosOsPassos(galho.passos || [])),
   ]);
 
+// G18: os passos que rodam na mesma execução: o ramo do "em outro registro"
+// roda numa execução filha, no registro ligado.
+export const OUTRO_REGISTRO = 'em_outro_registro';
+export const naMesmaExecucao = (passos = []) =>
+  passos.flatMap(passo => [
+    passo,
+    ...(passo.tipo === OUTRO_REGISTRO
+      ? []
+      : galhosDe(passo).flatMap(galho => naMesmaExecucao(galho.passos || []))),
+  ]);
+
 export const acharPasso = (passos, id) =>
   todosOsPassos(passos).find(passo => passo.id === id) || null;
 
