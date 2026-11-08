@@ -39,11 +39,12 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
       post "/api/v1/accounts/#{account.id}/campaign_journey/campaigns",
            params: { campaign_import_id: audience.id, channel: 'email',
                      campaign: { title: 'Manutenção', delivery_mode: 'ses', sender_identity_id: identity.id,
-                                 from_email: 'ola@clinica.com.br', **(aberta ? { aberta: true } : {}) } },
+                                 from_email: 'ola@clinica.com.br' } },
            headers: headers, as: :json
     end
     campanha = EmailCampaign.find(response.parsed_body['id'])
-    campanha.update!(subject: 'Hora da manutenção', body_html: '<p>Oi</p><a href="{{ unsubscribe_url }}">Sair</a>')
+    # Até o PR-B (#2414) nem a tela nem a API criam a aberta: o teste a liga direto no banco.
+    campanha.update!(subject: 'Hora da manutenção', body_html: '<p>Oi</p><a href="{{ unsubscribe_url }}">Sair</a>', aberta: aberta)
     campanha
   end
 
@@ -71,7 +72,6 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
 
   it 'aberta: quem entra no Público depois do primeiro envio recebe, uma vez, e a campanha segue enviando' do
     campanha = criar(aberta: true)
-    expect(response.parsed_body['aberta']).to be(true)
 
     mandar(campanha)
     expect(enviados).to eq(['ana@alfa.com.br'])
@@ -124,7 +124,20 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
     expect(enviados).to eq(['bia@beta.com.br'])
   end
 
-  # O pedido da fechada é o que a tela manda hoje (sem `aberta`): até o PR-B, nenhuma campanha nasce aberta pela tela.
+  it 'até o PR-B a API não cria campanha aberta, nem pedindo' do
+    perform_enqueued_jobs(only: envio) do
+      post "/api/v1/accounts/#{account.id}/campaign_journey/campaigns",
+           params: { campaign_import_id: audience.id, channel: 'email',
+                     campaign: { title: 'Manutenção', delivery_mode: 'ses', sender_identity_id: identity.id,
+                                 from_email: 'ola@clinica.com.br', aberta: true } },
+           headers: headers, as: :json
+    end
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['aberta']).to be(false)
+    expect(EmailCampaign.find(response.parsed_body['id'])).not_to be_aberta
+  end
+
   it 'fechada (como hoje): fecha em enviada, e quem entra depois não recebe' do
     campanha = criar(aberta: false)
     expect(response.parsed_body['aberta']).to be(false)
@@ -225,9 +238,9 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
     let(:campanha) do
       created = CampaignJourney::EmailCampaignCreator.new(
         account: account, campaign_import: audience,
-        attributes: { title: 'Manutenção', delivery_mode: 'direct_inbox', sender_inbox_id: caixa.id, aberta: true }
+        attributes: { title: 'Manutenção', delivery_mode: 'direct_inbox', sender_inbox_id: caixa.id }
       ).perform
-      created.update!(subject: 'Oi', body_html: '<p>Oi</p>', status: :sending)
+      created.update!(subject: 'Oi', body_html: '<p>Oi</p>', status: :sending, aberta: true)
       created
     end
     let(:motor) { EmailCampaigns::DirectInbox::DeliveryEngine }

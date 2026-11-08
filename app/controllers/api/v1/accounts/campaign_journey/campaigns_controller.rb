@@ -126,8 +126,7 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
 
   def email_params
     params.require(:campaign).permit(
-      :title, :delivery_mode, :sender_identity_id, :sender_inbox_id, :from_name, :from_email, :reply_to_inbox_id, :subject, :preheader,
-      :aberta
+      :title, :delivery_mode, :sender_identity_id, :sender_inbox_id, :from_name, :from_email, :reply_to_inbox_id, :subject, :preheader
     ).to_h
   end
 end

@@ -55,8 +55,7 @@ class CampaignJourney::EmailCampaignCreator
       name: @attributes[:title].to_s.strip, delivery_mode: delivery_mode, sender_identity: identity,
       sender_inbox: sender_inbox, from_name: @attributes[:from_name].presence, from_email: @attributes[:from_email].presence,
       reply_to_inbox_id: @attributes[:reply_to_inbox_id].presence, subject: @attributes[:subject].presence,
-      preheader: @attributes[:preheader].presence, ses_configuration_set: identity&.ses_configuration_set, status: :draft,
-      aberta: ActiveModel::Type::Boolean.new.cast(@attributes[:aberta]) || false
+      preheader: @attributes[:preheader].presence, ses_configuration_set: identity&.ses_configuration_set, status: :draft
     }
   end
 
