@@ -31,7 +31,7 @@ class Crm::MetaAdsLeadForm < ApplicationRecord
 
   # O marco ao salvar um destino (#2285). Nasce quando o formulário passa a ter destino (ou ainda não tinha marco);
   # trocar de funil mantém o marco, porque o formulário já mandava gente para algum lugar. Destino num funil arquivado
-  # não mandava ninguém (o webhook ignora): aí o marco nasce de novo.
+  # não mandava ninguém (o webhook ignora): aí o marco nasce de novo. Chamar antes de gravar o destino novo: lê o anterior.
   def next_destination_set_at
     destination? && pipeline&.active? && destination_set_at ? destination_set_at : Time.current
   end

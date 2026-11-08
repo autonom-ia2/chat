@@ -4,7 +4,8 @@
 # Lê desde o mais recente entre: as últimas WINDOW, o destino salvo (destination_set_at) e a Página voltar a receber
 # nesta conta (leadgen_receiving_since). Assim só traz o que o webhook traria: quem preencheu antes de salvar o destino
 # (sem "trazer quem já preencheu") ou com a Página parada fica de fora. Marco nulo (linha de antes do #2285) não chega
-# aqui: o scope reconcilable o deixa de fora até o destino ser salvo de novo.
+# aqui: o scope reconcilable o deixa de fora até o destino ser salvo de novo. Exceção conhecida: funil arquivado e
+# reativado sem salvar o destino de novo relê as 48 h, inclusive quem preencheu com o funil fechado.
 #
 # A janela cobre bem mais que o intervalo entre rodadas (1 hora): Meta fora do ar agora, a próxima rodada relê as mesmas
 # horas. Por isso a queda não tenta de novo aqui; só fica no log. Recusa da Meta (token, permissão) vai ao rastreador,

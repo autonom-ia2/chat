@@ -10,6 +10,7 @@ class Crm::MetaAds::LeadForms::PastLeads
   # A trava da contagem sai no fim do CountPastJob (ensure); o prazo só vale se o processo morrer no meio. Maior que
   # 500 páginas lidas no pior caso, para não pedir uma segunda contagem com a primeira ainda rodando.
   COUNTING_TTL = 2.hours
+  KNOWN_BATCH = 1000
 
   # Monta a leitura com o token da Página tirado da conexão da conta. nil quando a conta não tem conexão com token
   # próprio. Recusa da Meta sobe como Error; queda, como Unavailable. since: desde quando ler; sem ele, os
@@ -82,8 +83,11 @@ class Crm::MetaAds::LeadForms::PastLeads
 
   private
 
+  # Em lotes: o "trazer quem já preencheu" lê até 50 mil leads, e um IN só passaria perto do limite de binds do Postgres.
   def new_leads(rows)
-    known = Crm::MetaAdsLead.where(account_id: @account.id, leadgen_id: rows.map { |lead| lead['id'].to_s }).pluck(:leadgen_id).to_set
+    known = rows.map { |lead| lead['id'].to_s }.each_slice(KNOWN_BATCH).with_object(Set.new) do |ids, set|
+      set.merge(Crm::MetaAdsLead.where(account_id: @account.id, leadgen_id: ids).pluck(:leadgen_id))
+    end
     rows.reject { |lead| known.include?(lead['id'].to_s) }
   end
 
