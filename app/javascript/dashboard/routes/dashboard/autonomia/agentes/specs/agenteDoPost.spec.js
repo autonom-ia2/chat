@@ -553,6 +553,61 @@ describe('#2469 · os comentários do post em Agentes', () => {
       expect(noBody('[data-respondidos] [data-nenhum]')).not.toBeNull();
     });
 
+    // #2522: anúncio nas duas redes com uma só lida: os números da rede que leu e o aviso da que faltou, sem
+    // "tentar de novo" (a gaveta não relê).
+    it('Comentários do anúncio com o Facebook sem login: a lista do Instagram e o aviso do Facebook', async () => {
+      rota.query = { gaveta: 'comentarios', grupo: 'esperando' };
+      const base = detalhe().comentarios;
+      await pagina(
+        detalhe({
+          kind: 'ad',
+          network: 'both',
+          comentarios: {
+            ...base,
+            network_status: { instagram: 'ready', facebook: 'needs_login' },
+          },
+        })
+      );
+
+      const avisos = todosNoBody(
+        '[data-gaveta-comentarios] [data-ia-rede-faltou]'
+      );
+      expect(avisos.map(aviso => aviso.dataset.network)).toEqual(['facebook']);
+      expect(avisos[0].querySelector('button')).toBeNull();
+      expect(noBody('[data-sem-leitura]')).toBeNull();
+      expect(todosNoBody('[data-lista] [data-comentario]')).toHaveLength(2);
+    });
+
+    it('Comentários do anúncio com uma rede faltando, em "Respondidos": sem aviso (o número vem do banco)', async () => {
+      rota.query = { gaveta: 'comentarios', grupo: 'respondidos' };
+      const base = detalhe().comentarios;
+      await pagina(
+        detalhe({
+          kind: 'ad',
+          network: 'both',
+          comentarios: {
+            ...base,
+            network_status: { instagram: 'ready', facebook: 'needs_login' },
+          },
+        })
+      );
+
+      expect(noBody('[data-respondidos]')).not.toBeNull();
+      expect(noBody('[data-ia-rede-faltou]')).toBeNull();
+    });
+
+    it('Comentários com as duas redes lidas: sem aviso', async () => {
+      rota.query = { gaveta: 'comentarios', grupo: 'esperando' };
+      const base = detalhe().comentarios;
+      await pagina(
+        detalhe({
+          comentarios: { ...base, network_status: { instagram: 'ready' } },
+        })
+      );
+
+      expect(noBody('[data-ia-rede-faltou]')).toBeNull();
+    });
+
     it('Comentários sem leitura da Meta: esperando e não respondo sem número, com o aviso', async () => {
       rota.query = { gaveta: 'comentarios', grupo: 'esperando' };
       await pagina(

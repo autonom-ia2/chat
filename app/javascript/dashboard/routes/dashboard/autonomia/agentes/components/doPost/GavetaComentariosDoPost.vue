@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgenteGaveta from '../AgenteGaveta.vue';
 import { relativeTime } from 'dashboard/routes/dashboard/campaigns/metaAds/metaAdsHelpers';
+import AvisoRedeQueFaltou from 'dashboard/routes/dashboard/campaigns/metaAds/comentariosIa/AvisoRedeQueFaltou.vue';
 
 // #2469 (PR 3a do #2436) — "Comentários" do cartão do post, em três grupos: no privado (#2481: quem recebeu da IA no
 // privado, com o comentário que abriu a conversa e o "Ver conversa", só as conversas que a pessoa vê), esperando você e
@@ -26,7 +27,8 @@ const GRUPOS = ['respondidos', 'esperando', 'nao_respondo'];
 
 const comentarios = computed(() => props.detalhe.comentarios || {});
 const enviados = computed(() => comentarios.value.results?.sent || 0);
-// A Meta não deixou ler (sem permissão, fora do ar): esperando e não respondo ficam sem número, nunca zero.
+// A Meta não deixou ler (sem permissão, fora do ar): esperando e não respondo ficam sem número, nunca zero. No anúncio
+// nas duas redes com uma só lida (#2522), os números são os da rede que leu, e o aviso diz qual faltou.
 const leu = computed(() => comentarios.value.status === 'ready');
 const numero = chave => {
   if (chave === 'respondidos') return enviados.value;
@@ -68,6 +70,11 @@ const alvo = computed(() =>
         </button>
       </div>
 
+      <!-- "Respondidos" vem do banco, não da leitura da Meta: o aviso só onde o número é o da rede que leu. -->
+      <AvisoRedeQueFaltou
+        v-if="leu && grupo !== 'respondidos'"
+        :network-status="comentarios.network_status"
+      />
       <div
         v-if="grupo === 'respondidos'"
         data-respondidos
