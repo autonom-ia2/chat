@@ -95,7 +95,7 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
     ::CampaignJourney::DraftCleanup.link_email(Current.account, draft_id: params[:draft_id], email_campaign: campaign)
     {
       id: campaign.id, title: campaign.name, channel: ::CampaignJourney::EmailCampaignCreator::CHANNEL, status: campaign.status,
-      delivery_mode: campaign.delivery_mode, reply_to_inbox_id: campaign.reply_to_inbox_id,
+      delivery_mode: campaign.delivery_mode, reply_to_inbox_id: campaign.reply_to_inbox_id, aberta: campaign.aberta,
       recipients_count: campaign.email_campaign_recipients.pending.count,
       suppressed_count: campaign.email_campaign_recipients.suppressed.count
     }
@@ -126,7 +126,8 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
 
   def email_params
     params.require(:campaign).permit(
-      :title, :delivery_mode, :sender_identity_id, :sender_inbox_id, :from_name, :from_email, :reply_to_inbox_id, :subject, :preheader
+      :title, :delivery_mode, :sender_identity_id, :sender_inbox_id, :from_name, :from_email, :reply_to_inbox_id, :subject, :preheader,
+      :aberta
     ).to_h
   end
 end

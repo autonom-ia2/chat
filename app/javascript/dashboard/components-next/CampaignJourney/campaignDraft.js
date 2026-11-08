@@ -25,6 +25,8 @@ export const emptyDraft = () => ({
   fromName: '',
   fromEmail: '',
   replyInboxId: null,
+  // #2717: true = campanha aberta, quem entrar no público depois também recebe.
+  emailAberta: false,
   emailCampaignId: null,
   // Identity of the e-mail (#1076): null = the default one.
   brandKitId: null,

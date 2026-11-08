@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_760000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_810000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -3741,6 +3741,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_760000) do
     t.bigint "reply_to_inbox_id"
     t.jsonb "brand_identity", default: {}, null: false
     t.jsonb "ai_quality_warnings", default: [], null: false
+    t.boolean "aberta", default: false, null: false
     t.index ["account_id", "status", "scheduled_at"], name: "idx_email_campaigns_account_status_scheduled"
     t.index ["account_id"], name: "index_email_campaigns_on_account_id"
     t.index ["reply_to_inbox_id"], name: "index_email_campaigns_on_reply_to_inbox_id"

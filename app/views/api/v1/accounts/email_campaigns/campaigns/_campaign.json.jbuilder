@@ -16,6 +16,8 @@ json.reply_to_inbox_id campaign.reply_to_inbox_id
 # #2237: o endereço de resposta que o envio de fato usa; a revisão e a jornada mostram este.
 json.reply_to_address EmailCampaigns::ReplyTo.for(campaign)
 json.status campaign.status
+# #2717: quem entrar no Público depois do primeiro envio também recebe.
+json.aberta campaign.aberta
 json.scheduled_at campaign.scheduled_at
 json.sent_at campaign.sent_at
 json.ai_status campaign.ai_status

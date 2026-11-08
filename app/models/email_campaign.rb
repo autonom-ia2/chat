@@ -3,6 +3,7 @@
 # Table name: email_campaigns
 #
 #  id                      :bigint           not null, primary key
+#  aberta                  :boolean          default(FALSE), not null
 #  ai_completed_at         :datetime
 #  ai_error                :string
 #  ai_generation_token     :string
@@ -120,8 +121,9 @@ class EmailCampaign < ApplicationRecord
     subject.present? && body_html.present? && sender_ready? && sendable_recipients?
   end
 
+  # A campanha aberta (#2717) pode começar com a lista vazia: quem entrar no Público depois recebe.
   def sendable_recipients?
-    email_campaign_recipients.exists? && EmailCampaigns::PreflightDecision.new.campaign_allowed?(self)
+    (aberta? || email_campaign_recipients.exists?) && EmailCampaigns::PreflightDecision.new.campaign_allowed?(self)
   end
 
   def sender_ready?
@@ -247,7 +249,8 @@ class EmailCampaign < ApplicationRecord
 
   def finalize!
     with_delivery_lock do
-      return unless sending?
+      # A campanha aberta (#2717) segue enviando para quem entrar depois; não fecha sozinha.
+      return if !sending? || aberta?
       return if recipient_import_active? || email_campaign_recipients.pending.exists?
       # Another worker may own an optimistic claim but not have reached the provider.
       # An ambiguous claim without a persisted receipt requires operator review.

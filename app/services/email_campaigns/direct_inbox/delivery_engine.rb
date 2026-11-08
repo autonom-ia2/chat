@@ -5,16 +5,29 @@ module EmailCampaigns
     # respeitando o teto diário da caixa e com auto-pausa por falhas. Sem SES.
     class DeliveryEngine
       TIMEZONE = 'America/Sao_Paulo'.freeze
+      CHAIN_KEY = 'email_campaigns:direct_inbox:next_tick:%<campaign_id>d'.freeze
+      # The scheduled tick may be lost (worker crash): the key expires a little after its time.
+      CHAIN_GRACE = 10.minutes
 
       def initialize(campaign)
         @campaign = campaign
         @inbox = campaign.sender_inbox
       end
 
-      def tick
+      # Each tick schedules the next one with a token (#2717); a scheduled tick whose token is no longer the
+      # campaign's latest belongs to a duplicated chain and stops, so the human rhythm holds with one chain.
+      def tick(token = nil)
         EmailCampaigns::Reputation::CampaignDeliveryLock.synchronize(@campaign.id) do
-          deliver_tick if @campaign.reload.sending?
+          deliver_tick if chain_turn?(token) && @campaign.reload.sending?
         end
+      end
+
+      def self.tick_scheduled?(campaign)
+        Redis::Alfred.get(chain_key(campaign.id)).present?
+      end
+
+      def self.chain_key(campaign_id)
+        format(CHAIN_KEY, campaign_id: campaign_id)
       end
 
       private
@@ -38,11 +51,22 @@ module EmailCampaigns
       end
 
       def next_pending
-        @campaign.email_campaign_recipients.pending.order(:id).first
+        CampaignJourney::CampanhaAberta.a_enviar(@campaign).order(:id).first
       end
 
       def no_pending?
-        !@campaign.email_campaign_recipients.pending.exists?
+        !CampaignJourney::CampanhaAberta.a_enviar(@campaign).exists?
+      end
+
+      def chain_turn?(token)
+        return true if token.nil?
+
+        # Runs under the campaign delivery lock, like reschedule: read and delete do not interleave with another tick.
+        key = self.class.chain_key(@campaign.id)
+        return false unless Redis::Alfred.get(key) == token
+
+        Redis::Alfred.delete(key)
+        true
       end
 
       def finalize
@@ -50,7 +74,9 @@ module EmailCampaigns
       end
 
       def reschedule(seconds)
-        TickJob.set(wait: seconds.seconds).perform_later(@campaign.id)
+        token = SecureRandom.uuid
+        Redis::Alfred.set(self.class.chain_key(@campaign.id), token, ex: (seconds.seconds + CHAIN_GRACE).to_i)
+        TickJob.set(wait: seconds.seconds).perform_later(@campaign.id, token)
       end
 
       def random_interval

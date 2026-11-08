@@ -28,15 +28,18 @@ module EmailCampaigns
       @campaign.mark_sending! if @campaign.scheduled?
       sender = EmailCampaigns::Ses::Sender.new(@campaign.sender_identity)
 
-      @campaign.email_campaign_recipients.pending.find_each(batch_size: BATCH_SIZE) do |recipient|
+      last_seen = 0
+      CampaignJourney::CampanhaAberta.a_enviar(@campaign).find_each(batch_size: BATCH_SIZE) do |recipient|
         break unless @campaign.reload.sending?
         break if @campaign.recipient_import_active? || @admission.park_if_blocked!
 
         deliver_one(recipient, sender)
+        last_seen = recipient.id
         sleep(SEND_INTERVAL) if SEND_INTERVAL.positive?
       end
 
       @campaign.finalize! if @campaign.reload.sending? && no_pending?
+      CampaignJourney::CampanhaAberta.depois_do_lote(@campaign, last_seen)
     end
 
     def eligible?

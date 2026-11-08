@@ -20,7 +20,8 @@ class EmailCampaigns::Presentation::SendReadiness
   def send_checks(eligible)
     {
       subject: @campaign.subject.present?, content: @campaign.body_html.present?,
-      sender: @campaign.sender_ready?, recipients: eligible.positive?,
+      # A campanha aberta (#2717) pode sair com a lista vazia: quem entrar no Público depois recebe.
+      sender: @campaign.sender_ready?, recipients: @campaign.aberta? || eligible.positive?,
       import: !@campaign.recipient_import_active?, hygiene: EmailCampaigns::PreflightDecision.new.campaign_allowed?(@campaign),
       provider: EmailCampaigns::Guardrail.protection(@campaign.account, delivery_mode: @campaign.delivery_mode).nil?
     }

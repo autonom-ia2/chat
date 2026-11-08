@@ -1,7 +1,8 @@
 # E-mail recipients of a journey campaign come from its audience (#999, PRD §8.6 and N2): one
 # email_campaign_recipients row per eligible audience contact, with contact_id. Written when the
 # draft is created and synced again when it is scheduled or sent, up to the first send
-# (CampaignJourney::EmailAudienceGate). Everything after that is the email engine of today (§6.9): suppression and
+# (CampaignJourney::EmailAudienceGate). An open campaign (#2717) keeps syncing after it, while sending or paused
+# (CampaignJourney::CampanhaAberta). Everything after that is the email engine of today (§6.9): suppression and
 # opt-out at send time, hygiene preflight, reputation, readiness, direct inbox limits.
 #
 # Who is eligible is CampaignJourney::AudienceContacts (the row brought the contact's current
@@ -60,11 +61,20 @@ class CampaignJourney::EmailAudienceRecipients
   private
 
   def syncable?
-    @link.present? && (@campaign.draft? || @campaign.scheduled?) && !@campaign.email_campaign_recipients.where.not(sent_at: nil).exists?
+    @link.present? && (before_first_send? || open_and_running?)
+  end
+
+  def before_first_send?
+    (@campaign.draft? || @campaign.scheduled?) && !@campaign.email_campaign_recipients.where.not(sent_at: nil).exists?
+  end
+
+  def open_and_running?
+    @campaign.aberta? && (@campaign.sending? || @campaign.paused?)
   end
 
   def remove_stale(eligible)
-    EmailCampaignRecipient.where(id: stale_recipients(eligible).map(&:id)).delete_all
+    # Only a pending row never sent: an open campaign syncs while it sends (#2717).
+    EmailCampaignRecipient.where(id: stale_recipients(eligible).map(&:id), status: :pending, sent_at: nil).delete_all
   end
 
   # Pending, never sent, without events (the events subquery is limited to this campaign).

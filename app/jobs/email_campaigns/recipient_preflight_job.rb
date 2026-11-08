@@ -52,6 +52,7 @@ class EmailCampaigns::RecipientPreflightJob < ApplicationJob
     campaign.refresh_counters! if @counter_refresh_needed
     continuation = @lease.advance(token, cursor)
     ActiveRecord.after_all_transactions_commit { self.class.perform_later(campaign.id, *continuation) } if continuation
+    CampaignJourney::CampanhaAberta.depois_da_checagem(campaign) unless continuation
   end
 
   def check_transaction!(config)

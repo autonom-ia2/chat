@@ -175,3 +175,30 @@ describe('EmailJourneyStep sender (#2237)', () => {
     );
   });
 });
+
+// #2717: who receives. Closed (today's e-mail) by default; open keeps following the audience.
+describe('EmailJourneyStep who receives (#2717)', () => {
+  const modeChoice = wrapper =>
+    wrapper
+      .findAllComponents({ name: 'ChoiceSelect' })
+      .find(choice => choice.attributes('data-test') === 'email-audience-mode');
+
+  it('starts closed and turns the open campaign on when chosen', async () => {
+    const wrapper = montar({ title: 'Manutenção' });
+    const choice = modeChoice(wrapper);
+
+    expect(choice.props('modelValue')).toBe('fechada');
+    expect(choice.props('options').map(option => option.label)).toEqual([
+      'Only who is in the audience now',
+      'Also whoever joins the audience later',
+    ]);
+    await choice.vm.$emit('update:modelValue', 'aberta');
+    expect(wrapper.emitted('update').at(-1)).toEqual([{ emailAberta: true }]);
+  });
+
+  it('says that removing someone only stops an e-mail not sent yet', () => {
+    expect(montar().text()).toContain(
+      'Removing someone from the audience only stops an e-mail that has not gone out yet.'
+    );
+  });
+});
