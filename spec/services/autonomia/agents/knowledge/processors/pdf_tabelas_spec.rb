@@ -192,6 +192,17 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::PdfTabelas do
     expect(leitor.faixas_de_tabela(pagina(linhas))).to eq([])
   end
 
+  it 'does not take a ragged paragraph above a two cell list as its header' do
+    lista = %w[Guincho Chaveiro Pneu].each_with_index.map do |texto, indice|
+      linha(640 - (indice * 12), celula('•', 18, 22.5), celula("#{texto} ate o limite do plano;", 37, 200)).merge(letra: 9.0)
+    end
+    linhas = [corrida(706, 'Texto do contrato que vai ate a margem direita.'),
+              linha(676, celula('A assistencia cobre os servicos abaixo', 54, 260)),
+              linha(664, celula('em todo o territorio nacional,', 54, 190)), linha(652, celula('no plano:', 54, 80)), *lista]
+
+    expect(leitor.faixas_de_tabela(pagina(linhas))).to eq([])
+  end
+
   it 'reads two columns as a table when the short lines above head both columns' do
     linhas = [corrida(720, 'Texto do contrato que vai ate a margem direita.'), linha(690, celula('Prazo', 55, 80)),
               linha(684, celula('% do premio retido', 140, 220)),

@@ -53,7 +53,23 @@ As 9 erradas, por camada:
 - 5 são de busca (uma delas, a do Uruguai, é limite conhecido). A ligadura lida errado pelo leitor de PDF
   ("especifjcação") segue na Issue #2765, fora deste PR.
 
+## Depois do tester e da revisão (head 5adff0ecf5)
+
+O tester (32 cenários, 28 passaram) achou 3 casos de código, corrigidos com teste antes:
+- lista com marcador em letra 9 lida como tabela;
+- cláusula numerada curta lida como tabela;
+- o rodapé sumia quando a 1ª página era o sumário.
+
+A revisão dessas correções achou mais um: a linha curta de introdução acima de uma lista de duas células passava como
+cabeçalho, e a lista virava tabela. No Suhai isso acontecia de verdade, na lista de documentos do sinistro ("• |
+Boletim de Ocorrência…"). Agora o cabeçalho de cima precisa cobrir as duas colunas, e essa lista sai como lista.
+
+Busca nos 2 PDFs no head final: hit@12 igual (Suhai 0,93; Mapfre 0,875, a Mapfre idêntica em tudo). No Suhai, 4
+perguntas mudaram de posição dentro do top 12 (hit@1 0,52 → 0,48; MRR 0,65 → 0,62). As 4 foram respondidas de novo
+no head final: 4/4 certas, como antes. A rodada inteira de resposta não foi repetida (teto da etapa).
+
 ## Gasto
 
-Resposta + juiz: US$ 0,95 (Suhai 0,41 + 0,04; Mapfre 0,41 + 0,06 + 0,02 + 0,01). Embeddings das ingestões e das
-rodadas só de busca da etapa: abaixo de US$ 0,05. Total da etapa ≈ US$ 1,00 do teto de US$ 1,16.
+Resposta + juiz: US$ 1,00 (Suhai 0,41 + 0,04 + 0,05 das 4 de conferência; Mapfre 0,41 + 0,06 + 0,02 + 0,01).
+Embeddings das ingestões e das rodadas só de busca da etapa: abaixo de US$ 0,06. Total da etapa ≈ US$ 1,06 do teto de
+US$ 1,16.

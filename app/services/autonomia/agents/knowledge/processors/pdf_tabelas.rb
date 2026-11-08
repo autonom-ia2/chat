@@ -71,9 +71,15 @@ module Autonomia::Agents::Knowledge::Processors::PdfTabelas
       cabecalho_sobre_colunas?(linhas[acima...primeira], da_tabela)
   end
 
+  # Cada linha de cima fica em cima da coluna mais perto dela (o título da coluna), e elas cobrem mais de uma coluna. O
+  # fim curto de um parágrafo irregular acima da lista não fica em cima do marcador.
   def cabecalho_sobre_colunas?(de_cima, da_tabela)
     referencia = da_tabela.map { |linha| celulas(linha) }.max_by(&:size)
-    de_cima.flat_map { |linha| celulas(linha) }.map { |pedaco| mais_perto(pedaco, referencia) }.uniq.size > 1
+    colunas = de_cima.flat_map { |linha| celulas(linha) }.map do |pedaco|
+      coluna = mais_perto(pedaco, referencia)
+      sobrepoe?(pedaco, referencia[coluna]) ? coluna : nil
+    end
+    colunas.all? && colunas.uniq.size > 1
   end
 
   def linha_de_tabela?(linha, pagina)
