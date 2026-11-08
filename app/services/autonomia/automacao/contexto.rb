@@ -61,7 +61,8 @@ class Autonomia::Automacao::Contexto
     return unless @execucao
 
     ids = @execucao.registros.where(resultado: 'ok').where("dados ? 'mensagem_id'").pluck(Arel.sql("dados->>'mensagem_id'"))
-    ::Message.where(account_id: @execucao.account_id, id: ids, private: false, message_type: :outgoing).order(id: :desc).first
+    # reorder: a Message ordena por created_at no default_scope, e o order só desempataria.
+    ::Message.where(account_id: @execucao.account_id, id: ids, private: false, message_type: :outgoing).reorder(id: :desc).first
   end
 
   # "conversa", "card" ou "contato": a base dos caminhos do Valores que o alvo tem sem ponte.
