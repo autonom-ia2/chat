@@ -25,7 +25,9 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     15 => ['Cliente grande, atendimento de dono', 'G27 (card atualizado com valor acima de R$ 50 mil), G3, G5, G11, G12, G15, G35'],
     16 => ['Reconquistar quem foi para o concorrente', 'G7 (todo dia 1º), G3, G4, G12, G14, G16, G18'],
     17 => ['Vendedora de férias, cliente bem cuidado', 'G9 (troca de responsável), G7, G11, G15, G16, G23'],
-    18 => ['Seleção de candidatos sem planilha', 'G4, G20 (ler o currículo e criar o card), G1, G5, G6, G12, G15, G25'],
+    # O 18 tem spec próprio à risca (exemplo_18_selecao_de_candidatos_spec.rb); esperam a G49 (gatilho), a G18 (passos
+    # 4 e 6, no card da seleção) e a G32 (passo 8, antes da reunião).
+    18 => ['Seleção de candidatos sem planilha', 'G49 (mensagem com anexo), G18, G32, G4, G20, G1, G5, G6, G12, G15, G25'],
     19 => ['Cliente que sumiu do WhatsApp', 'G8 (mensagem que falhou), G1, G2, G3, G11, G19, G28'],
     20 => ['Venda fechada já entra no sistema da empresa', 'G5 (card ganho), G1, G2, G7, G11, G12, G13']
   }

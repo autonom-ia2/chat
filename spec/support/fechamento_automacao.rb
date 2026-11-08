@@ -214,7 +214,10 @@ module FechamentoAutomacao::Lacunas
     'G41' => nil,
     # Do exemplo 12, passo 3 (#2650): "espera até a Ana responder ou o campo ser preenchido". O "esperar até" acorda com a
     # conversa, o contato e a reunião; o campo do card preenchido só conta quando o prazo vence.
-    'G48' => nil
+    'G48' => nil,
+    # Do exemplo 18, gatilho (#2650): "mensagem com currículo (PDF ou foto)". Os filtros do mensagem.criada leem só tipo,
+    # privada e primeira; sem "tem anexo", cada mensagem da candidata roda a seleção de novo.
+    'G49' => nil
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

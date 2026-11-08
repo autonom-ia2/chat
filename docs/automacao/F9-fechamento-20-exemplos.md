@@ -162,6 +162,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G40 | **Esperar só a pessoa que atende** a conversa ("espera a Fernanda até 30 min"), não a equipe inteira | F8 | Em PR: `conversa.responsavel_respondeu` (lote 4, #2682) | Motor | 10 |
 | G41 | **Instrução no resumir** ("o que já foi prometido") e **avisar o responsável quando a agente de IA atende** a conversa | F7 | A fazer: o resumir tem texto fixo (`passo_de_resumir.rb`); o avisar vai a quem atende a conversa, e com a agente de IA ninguém é avisado (achado no exemplo 10, #2678) | F7 | 10 |
 | G48 | **Campo do card mudado acorda o "esperar até"** ("espera até a Ana responder ou o campo ser preenchido") | novo | A fazer: o "esperar até" acorda com a conversa, o contato e a reunião (Escuta#acordar); o campo do card preenchido só é lido quando o prazo vence (achado no exemplo 12, passo 3) | Motor | 12 |
+| G49 | **Gatilho de mensagem com anexo** ("mensagem com currículo, PDF ou foto") | novo | A fazer: os filtros do `mensagem.criada` leem só `mensagem.tipo`, `mensagem.privada` e `mensagem.primeira`; sem "tem anexo", cada mensagem da candidata roda a seleção de novo (achado no exemplo 18) | Gatilhos | 18 |
 
 ### 5.1 A sonda de cada lacuna
 
@@ -198,7 +199,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 15 | Cliente grande | 🟡 G5 (card criado) + ⛔ G27 (valor mudou) | se com etiqueta ✅, atribuir ✅, etiqueta ✅, prioridade ✅, resumir ✅, mensagem ✅ | G3, G5, G11, G12, G15, G27, G35 (a IA resume o motivo da perda: `g35_g36_ia_le_card_e_nota_spec.rb`) | Não |
 | 16 | Reconquistar | ⛔ G7 (dia 1º, perdidos há 11 meses) | etiqueta ✅, decidir ✅, escrever ✅ | G3, G4, G7, G12, G14, G16, G18 | Não |
 | 17 | Vendedora de férias | ⛔ G9 (troca de responsável) | resumir ✅, mensagem ✅, etiqueta ✅ | G7 (toda manhã, por card com a etiqueta), G9, G11, G15, G16, G23 | Não |
-| 18 | Seleção de candidatos | ✅ mensagem na caixa de vagas | decidir ✅, etiqueta ✅, avisar ✅ | G1, G4, G5, G6, G12, G15, G20, G25 | Não |
+| 18 | Seleção de candidatos | ✅ mensagem na caixa de vagas | decidir ✅, etiqueta ✅, avisar ✅ | G1, G4, G5, G6, G12, G15, G20, G25, G18 (passos 4 e 6), G32 (passo 8), G49 (gatilho). Spec à risca: `exemplo_18_selecao_de_candidatos_spec.rb` | Não |
 | 19 | Cliente que sumiu do WhatsApp | ⛔ G8 (mensagem falhou) | etiqueta ✅, extrair ✅ (telefone), escrever ✅, avisar ✅ | G1, G2, G3, G8, G11, G19, G28 (o recado da IA pelo modelo) | Não |
 | 20 | Venda fechada no sistema da empresa | 🟡 G5 (card ganho) | extrair ✅, decidir ✅, mover ✅, etiqueta ✅, avisar ✅ | G1, G2 (boas-vindas e "Dicas do mês" por e-mail), G5, G7 (todo mês, por contato com a etiqueta), G11, G12, G13 | Não |
 
