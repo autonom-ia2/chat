@@ -51,6 +51,14 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
     execucao
   end
 
+  # Função com a Prospecção e o criar card, sem contact_manage: na tela, não põe etiqueta no contato.
+  def agente_sem_contato
+    agente = create(:user, account: account, role: :agent)
+    funcao = create(:custom_role, account: account, permissions: %w[automation_manage prospecting_manage crm_view crm_manage_cards])
+    account.account_users.find_by(user: agente).update!(custom_role: funcao)
+    agente
+  end
+
   def rodar(execucao, passo = buscar, por: dona)
     acesso = Autonomia::Automacao::Acesso.new(execucao.automacao.reload)
     expect(acesso.usuario).to eq(por)
@@ -96,6 +104,13 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
 
     context 'with o gatilho da conta (conta.recorrente, G7)' do
       before { allow(Autonomia::Automacao::PassoDeCampanha).to receive(:gatilho_da_conta?).and_return(true) }
+
+      it 'com etiquetas, recusa a função que cria card mas não muda contato (sem contact_manage)', :aggregate_failures do
+        agente = agente_sem_contato
+
+        expect(problemas(buscar, quem: agente)).to include(frase(:prospeccao_sem_permissao))
+        expect(problemas(buscar.merge('etiquetas' => []), quem: agente)).not_to include(frase(:prospeccao_sem_permissao))
+      end
 
       it 'aceita o buscar pronto' do
         expect(problemas(buscar)).to be_empty
@@ -266,6 +281,14 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
       allow(execucao).to receive(:alvo).and_return(conversa)
 
       expect(rodar(execucao).motivo).to eq('prospeccao_so_sem_alvo')
+      expect(buscas_da(execucao)).to be_empty
+    end
+
+    it 'quem ligou sem o mudar contato pausa antes de buscar e etiquetar', :aggregate_failures do
+      agente = agente_sem_contato
+      execucao = execucao_da_conta(por: agente)
+
+      expect(rodar(execucao, por: agente).motivo).to eq('quem_ligou_sem_permissao_prospeccao')
       expect(buscas_da(execucao)).to be_empty
     end
 

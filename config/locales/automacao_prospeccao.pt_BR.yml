@@ -4,7 +4,7 @@ pt_BR:
     automacao:
       motivos:
         prospeccao_desligada: 'A Prospecção está desligada nesta conta. Nada foi feito.'
-        quem_ligou_sem_permissao_prospeccao: 'Quem ligou a automação não pode mais usar a Prospecção ou criar card no CRM. Assuma e religue.'
+        quem_ligou_sem_permissao_prospeccao: 'Quem ligou a automação não pode mais usar a Prospecção, criar card no CRM ou, com etiquetas, editar contato. Assuma e religue.'
         prospeccao_so_sem_alvo: 'Esta automação roda em cada conversa, card ou contato, então faria uma busca paga a cada vez. Buscar empresas só vale numa automação recorrente. Nada foi buscado.'
         sem_lead_da_prospeccao: 'Este contato não veio da Prospecção. Não há empresa para marcar como "não quer ser contatada".'
         busca_sumiu: 'A busca escolhida não existe mais no histórico da Prospecção. Nada foi buscado.'
@@ -17,6 +17,6 @@ pt_BR:
         etapa_fora_do_alcance: 'Quem ligou a automação não alcança mais o funil escolhido, ou o CRM está desligado. Nenhum card foi criado.'
       receita:
         prospeccao_desligada: 'Passo %{passo}: a Prospecção está desligada nesta conta.'
-        prospeccao_sem_permissao: 'Passo %{passo}: para usar este passo você precisa da permissão de usar a Prospecção e, para buscar, da de criar card no CRM.'
+        prospeccao_sem_permissao: 'Passo %{passo}: para usar este passo você precisa da permissão de usar a Prospecção e, para buscar, da de criar card no CRM e, com etiquetas, da de editar contato.'
         prospeccao_so_sem_alvo: 'Passo %{passo}: buscar empresas só vale numa automação recorrente. Num gatilho de conversa, card ou contato, cada execução faria uma busca paga.'
         prospeccao_busca_de_fora: 'Passo %{passo}: a busca %{id} não está no histórico da Prospecção que você vê.'

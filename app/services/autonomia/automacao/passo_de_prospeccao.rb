@@ -9,7 +9,8 @@
 #   porta do botão do lead). A recusa veta o número nas buscas e nas campanhas futuras (ConsentVeto).
 #
 # Age como quem ligou, conferido a cada rodada, com a régua das telas da Prospecção: o módulo ligado na conta e a chave
-# dele (prospecting_manage); para buscar, também criar card (Crm::CardPolicy#create?), como o "Enviar ao CRM" da tela.
+# dele (prospecting_manage); para buscar, também criar card (Crm::CardPolicy#create?), como o "Enviar ao CRM" da tela, e,
+# com etiquetas, mudar contato (ContactPolicy#update?, contact_manage na função), como pôr etiqueta na tela do contato.
 # Sem a chave, a automação pausa (`sem_acesso`), como nos outros passos. O lead segue o que quem ligou enxerga
 # (Visibility): o agente só alcança as buscas e os leads dele. O funil é o do envio da tela (CrmCardBatch: só funil que
 # quem ligou vê, com CardPolicy#create? como o Prospecting::BaseController#authorize_crm_card_create!).
@@ -26,7 +27,7 @@ class Autonomia::Automacao::PassoDeProspeccao
     return [frase(:prospeccao_desligada, passo: id)] if conta && !::Autonomia::Prospecting::Config.enabled?(conta)
 
     buscar = passo['faz'] == 'buscar'
-    lista = account_user && !pode?(account_user, buscar: buscar) ? [frase(:prospeccao_sem_permissao, passo: id)] : []
+    lista = account_user && !pode?(account_user, passo) ? [frase(:prospeccao_sem_permissao, passo: id)] : []
     buscar ? lista + problemas_da_busca(passo, receita.dig('gatilho', 'tipo'), conta, account_user) : lista
   end
 
@@ -49,10 +50,17 @@ class Autonomia::Automacao::PassoDeProspeccao
     escopo.find_by(id: id)
   end
 
-  def self.pode?(account_user, buscar:)
+  def self.pode?(account_user, passo)
     return false unless account_user&.permission_granted?(CHAVE)
+    return true unless passo['faz'] == 'buscar'
 
-    !buscar || ::Autonomia::Automacao::PassoDeCard.cria_card?(account_user)
+    ::Autonomia::Automacao::PassoDeCard.cria_card?(account_user) && (Array(passo['etiquetas']).empty? || muda_contato?(account_user))
+  end
+
+  # A pergunta da tela do contato para pôr etiqueta: não depende do contato (no EE, contact_manage para quem tem função).
+  def self.muda_contato?(account_user)
+    contexto = { user: account_user.user, account: account_user.account, account_user: account_user }
+    ContactPolicy.new(contexto, ::Contact.new(account: account_user.account)).update?
   end
 
   def self.frase(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", **valores)
@@ -68,11 +76,10 @@ class Autonomia::Automacao::PassoDeProspeccao
   def executar
     return pulado('prospeccao_desligada') unless ::Autonomia::Prospecting::Config.enabled?(@conta)
 
-    buscar = @passo['faz'] == 'buscar'
     return Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_permissao_prospeccao', dados: {}) unless
-      self.class.pode?(@acesso.account_user, buscar: buscar)
+      self.class.pode?(@acesso.account_user, @passo)
 
-    buscar ? buscar_empresas : recusar
+    @passo['faz'] == 'buscar' ? buscar_empresas : recusar
   end
 
   private
