@@ -51,6 +51,15 @@ RSpec.describe Autonomia::Automacao::Receita do
     expect(problemas(*passos)).to eq([])
   end
 
+  # G41 (#2752): a instrução do resumir é opcional; quando vem, é texto de 1 a 2000 caracteres, como a do escrever.
+  it 'aceita o resumir com instrução e recusa a instrução vazia no esquema', :aggregate_failures do
+    com = resumir('nota').merge('instrucao' => 'Inclua o que a equipe já prometeu.')
+
+    expect(described_class.esquema_valido?(receita(com))).to be(true)
+    expect(described_class.esquema_valido?(receita(com.merge('instrucao' => '')))).to be(false)
+    expect(described_class.esquema_valido?(receita(com.merge('instrucao' => 'x' * 2001)))).to be(false)
+  end
+
   it 'recusa o caminho sem nome à vista no esquema' do
     sem_nome = decidir([caminho('Sinistro', 'sinistro'), caminho('Cotação', 'cotacao').except('nome')])
 

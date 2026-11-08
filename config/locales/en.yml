@@ -566,6 +566,7 @@ en:
         ninguem_para_avisar: "Nobody who can see this conversation was on the alert list."
         retorno_sem_responsavel: "The follow-up was not created: it was for the owner, and no one owns this yet."
         sem_conversa: "The card has no main conversation. Nothing was sent."
+        sem_responsavel: "The AI agent is handling this conversation, and its card has no owner (or there is no card). No one was alerted."
         texto_vazio: "The text came out blank after it was built. The message was not sent."
         dado_ausente: 'The AI did not find any of the requested data in the conversation. Nothing was saved.'
         ia_chave_recusada: "The AI provider refused the account's key. Check the AI key in the integrations."

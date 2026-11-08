@@ -150,7 +150,7 @@ const ROTULO_DA_CAIXA =
       maxlength="2000"
       :class="ROTULO_DA_CAIXA"
       :value="modelValue || ''"
-      @input="evento => emit('update:modelValue', evento.target.value)"
+      @input="evento => emit('update:modelValue', evento.target.value || null)"
     />
   </div>
 

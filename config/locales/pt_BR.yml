@@ -1059,6 +1059,7 @@ pt_BR:
         ninguem_para_avisar: "Ninguém que enxerga esta conversa estava na lista do aviso."
         retorno_sem_responsavel: "O retorno não foi criado: ele era para o responsável, e ninguém é responsável aqui."
         sem_conversa: "O card não tem conversa principal. Nada foi mandado."
+        sem_responsavel: "A agente de IA atende esta conversa, e o card dela não tem responsável (ou não há card). Ninguém foi avisado."
         texto_vazio: "O texto ficou em branco depois de montado. A mensagem não foi mandada."
         dado_ausente: 'A IA não achou na conversa nenhum dos dados pedidos. Nada foi gravado.'
         ia_chave_recusada: 'O provedor de IA recusou a chave da conta. Confira a chave de IA nas integrações.'
