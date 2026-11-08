@@ -219,8 +219,8 @@
     "controller": "api/v1/accounts/autonomia/prospecting/searches#destroy",
     "modelo": "Autonomia::Prospecting::Search",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:93",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:94"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:92",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:93"
     ],
     "sem_corpo": true
   },
@@ -3847,9 +3847,9 @@
     "envelope": "search",
     "modelo": "Autonomia::Prospecting::Search",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:75",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:139",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:76"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:73",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:122",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:74"
     ],
     "sem_corpo": false
   },
@@ -12162,7 +12162,7 @@
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:51",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:110"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:109"
     ],
     "sem_corpo": false
   },
@@ -23531,9 +23531,9 @@
     "envelope": "search",
     "modelo": "Autonomia::Prospecting::Search",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:75",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:139",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:76"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:73",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:122",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:74"
     ],
     "sem_corpo": false
   },
