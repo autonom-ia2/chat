@@ -402,7 +402,16 @@ conta. O 18 só começa com o currículo, em PDF ou foto.
   vazio.
 - O editor oferece os valores do card no gatilho de conversa só a quem tem a chave de funis (`doAlvoDoGatilho`).
 - `mensagem.tem_anexo` (sim ou não, só no filtro de `mensagem.criada`): a mensagem traz foto, PDF, áudio ou outro
-  arquivo. Os canais gravam o anexo junto com a mensagem, antes do evento (WhatsApp e `Messages::MessageBuilder`).
+  arquivo. Lê o anexo no instante do evento `mensagem.criada`. Valem os canais que gravam o anexo junto com a mensagem:
+  WhatsApp Cloud (`Whatsapp::IncomingMessageBaseService`), o conector WAHA/Híbrido e a API e o widget
+  (`messages#create` → `Messages::MessageBuilder`). **Limite conhecido:** o e-mail cria a mensagem e só depois anexa os
+  arquivos (`MailboxHelper`, `messages.create!` e depois `save!`), então ali o filtro lê `false`. Mudar a ordem do
+  e-mail é outro PR, no código do Chatwoot.
+- Cuidado conhecido (parecer da qualidade): uma execução aberta de versão antiga que lê o card pausa a automação
+  inteira quando quem ligou perde a chave, mesmo com a versão ativa sem card. É de propósito: a execução segue a versão
+  em que começou.
+- Decisão da Automação: id fixo de card numa ação de uma automação de conversa continua permitido. Age com os direitos
+  de quem ligou, como a pessoa faria à mão.
 - Provas: `spec/fechamento/automacao/exemplo_14_documentos_passo_2_spec.rb`,
   `spec/fechamento/automacao/exemplo_18_curriculo_comeco_spec.rb` e
   `spec/services/autonomia/automacao/card_da_conversa_spec.rb`.
