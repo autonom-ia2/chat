@@ -204,9 +204,11 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
 
       def open_session(**) = raise(Autonomia::Insurance::Connector::Error.new(@kind, 'boom'))
     end
-    record = connection
-    expect(described_class.new(record, connector: stub.new(:timeout)).call.status).to eq('offline')
-    expect(described_class.new(record, connector: stub.new(:protocol)).call.status).to eq('degraded')
+    # Uma conexão por erro: a recusa de um login fica visível por 30 s para a mesma credencial, e a
+    # segunda chamada na mesma linha herdaria a primeira (`Session::RECUSA_VISIVEL`).
+    expect(described_class.new(connection, connector: stub.new(:timeout)).call.status).to eq('offline')
+    outra = Autonomia::Insurance::Connection.create!(account: create(:account), username: 'c@x.com', password: 'segredo')
+    expect(described_class.new(outra, connector: stub.new(:protocol)).call.status).to eq('degraded')
   end
 
   it 'never raises: unknown status, non-hash payload and unexpected errors all become degraded' do
@@ -361,6 +363,11 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
         .tap { |dobro| allow(dobro).to receive(:connection_status) { respostas.shift } }
     end
 
+    # A renovação vale para sessão REUSADA, que é o caso do 1.1: o portal recusou o que guardamos.
+    def conexao_com_sessao_guardada
+      connection.tap { |conexao| conexao.store_session!({ 'token' => 'guardada' }, expires_at: 3.hours.from_now) }
+    end
+
     it 'renova a sessão e usa o resultado da segunda tentativa' do
       # Arrange
       connector = connector_que_perde_a_sessao(
@@ -368,7 +375,7 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
       )
 
       # Act
-      result = described_class.new(connection, connector: connector, scan_capabilities: false).call
+      result = described_class.new(conexao_com_sessao_guardada, connector: connector, scan_capabilities: false).call
 
       # Assert
       expect(result.status).to eq('ready')
@@ -384,7 +391,7 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
       )
 
       # Act
-      result = described_class.new(connection, connector: connector, scan_capabilities: false).call
+      result = described_class.new(conexao_com_sessao_guardada, connector: connector, scan_capabilities: false).call
 
       # Assert
       expect(result.status).not_to eq('auth_required')
@@ -398,10 +405,25 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
       )
 
       # Act
-      described_class.new(connection, connector: connector, scan_capabilities: false).call
+      described_class.new(conexao_com_sessao_guardada, connector: connector, scan_capabilities: false).call
 
       # Assert
       expect(connector).to have_received(:connection_status).twice
+    end
+
+    # Revisão do Bloco C: uma sessão que acabou de nascer e já voltou recusada não melhora com outro
+    # login — o portal devolveria a mesma. Um login só.
+    it 'não renova uma sessão aberta nesta mesma sincronização' do
+      # Arrange — nada guardado: o Sync abre a sessão, e o portal a recusa no payload
+      connector = connector_que_perde_a_sessao(depois: { 'status' => 'ready' })
+
+      # Act
+      result = described_class.new(connection, connector: connector, scan_capabilities: false).call
+
+      # Assert
+      expect(connector).to have_received(:open_session).once
+      expect(connector).to have_received(:connection_status).once
+      expect(result.last_failure['cause']).to eq('session_lost')
     end
   end
 
@@ -438,6 +460,58 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
       # Assert
       expect(conexao.reload.metadata['commission_percent']).to eq(12.5)
     end
+  end
+
+  # Achado 9 da auditoria (05/11/2026): resposta de falha não traz `session_expires_at`, e gravar nil
+  # fazia placa, CEP, atividade e proposta perderem a sessão viva até o próximo login.
+  describe 'o prazo da sessão' do
+    it 'não é apagado por uma resposta que não traz o prazo' do
+      # Arrange — sessão viva gravada; o portal responde degraded sem prazo
+      conexao = connection
+      prazo = 2.hours.from_now.change(usec: 0)
+      conexao.store_session!({ 'token' => 'viva' }, expires_at: prazo)
+      connector = connector_answering({ 'status' => 'degraded', 'reason' => 'algo' })
+
+      # Act
+      described_class.new(conexao, connector: connector, scan_capabilities: false).call
+
+      # Assert
+      expect(conexao.reload.session_expires_at).to eq(prazo)
+      expect(conexao.session_live?).to be(true)
+    end
+
+    it 'é trocado quando a resposta traz um prazo novo' do
+      # Arrange
+      conexao = connection
+      conexao.store_session!({ 'token' => 'viva' }, expires_at: 2.hours.from_now)
+      novo = 3.hours.from_now.change(usec: 0)
+      connector = connector_answering({ 'status' => 'ready', 'session_expires_at' => novo.utc.iso8601 })
+
+      # Act
+      described_class.new(conexao, connector: connector, scan_capabilities: false).call
+
+      # Assert
+      expect(conexao.reload.session_expires_at).to eq(novo)
+    end
+  end
+
+  # Revisão do Bloco C: a tela (espera de 10 s) que esgota a espera pelo login de outro processo não
+  # apaga o diagnóstico que estava gravado — ele ainda é o fato mais recente.
+  it 'mantém o diagnóstico quando só esgotou a espera pelo login de outro processo' do
+    # Arrange
+    conexao = connection
+    conexao.update!(status: 'offline', metadata: { 'last_failure' => { 'cause' => 'sessions_full', 'actor' => 'broker' } })
+    Redis::LockManager.new.lock("autonomia:insurance:connection:#{conexao.id}:login", 95)
+    sync = described_class.new(conexao, connector: Autonomia::Insurance::Connector::Mock.new, espera_do_login: 0.seconds)
+
+    # Act
+    sync.call
+
+    # Assert
+    expect(conexao.reload.status).to eq('offline')
+    expect(conexao.last_failure).to eq('cause' => 'sessions_full', 'actor' => 'broker')
+  ensure
+    Redis::LockManager.new.unlock("autonomia:insurance:connection:#{conexao.id}:login")
   end
 
   # Achados do revisor em 05/09/2026. Os tres sao regressoes possiveis, nao hipoteses.
