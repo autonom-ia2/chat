@@ -198,8 +198,12 @@ const fraseDoAnuncio = anuncio =>
           </p>
         </article>
       </div>
-      <div class="grid items-start gap-4 xl:grid-cols-[1.45fr_1fr]">
+      <div
+        class="grid items-start gap-4"
+        :class="{ 'xl:grid-cols-[1.45fr_1fr]': !origem.anuncios_ocultos }"
+      >
         <CartaoDoPainel
+          v-if="!origem.anuncios_ocultos"
           data-por-anuncio
           :titulo="fmt.t(`${NS}.POR_ANUNCIO`)"
           :descricao="fmt.t(`${NS}.POR_ANUNCIO_DESCRICAO`)"

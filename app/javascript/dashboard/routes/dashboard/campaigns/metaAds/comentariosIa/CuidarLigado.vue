@@ -2,8 +2,9 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
-import { intlLocale } from '../metaAdsHelpers';
+import { intlLocale, relativeTime } from '../metaAdsHelpers';
 import { linhaDoResultado } from './redes';
+import MaterialDoPost from 'dashboard/routes/dashboard/autonomia/agentes/components/doPost/MaterialDoPost.vue';
 
 // Comentários que viram cliente (#2212): o post depois de ligado. O selo, o resultado (quem recebeu no privado e quem
 // respondeu), "Esperando você" com o que a IA deixou com você, "Chegaram antes de você ligar" com o "Ler e mandar", e
@@ -17,6 +18,8 @@ const props = defineProps({
   started: { type: String, default: null },
   canManage: { type: Boolean, default: false },
   busy: { type: Boolean, default: false },
+  // #2520: sem a tela do post por dentro (Seus posts sem seus_posts_comentarios), sem o "Ver no post".
+  canReply: { type: Boolean, default: true },
 });
 
 const emit = defineEmits([
@@ -35,12 +38,14 @@ const format = value =>
   new Intl.NumberFormat(intlLocale(locale.value)).format(value);
 const handle = item =>
   item.network === 'facebook' ? item.author : `@${item.author}`;
+// Há quanto tempo a pessoa espera (#2519): "há 3 horas", no idioma da tela.
+const quando = item => relativeTime(item.created_time, locale.value);
 // "Esperando você" sempre; "Escondi" só quando escondi algum. As perguntas que chegaram antes de ligar ficam num grupo
 // próprio, com "Ler e mandar": quem disse "Agora não" depois de ligar ainda pode voltar atrás. O que a IA já leu depois
 // de ligar e não era o caso (`skipped`) fica em "Esperando você": não é antigo nem volta para a fila.
 const BEFORE_KINDS = ['waiting', 'older'];
 // Pedem atenção do dono: a reclamação e o privado que pode ter saído (conferir no direct antes de responder).
-const ALERT_KINDS = ['complaint', 'unsure'];
+const ALERT_KINDS = ['complaint', 'unsure', 'not_caught'];
 const toSee = computed(() => props.data.to_see || []);
 const hidden = computed(() =>
   (props.data.hidden || []).map(item => ({ ...item, kind: 'hidden' }))
@@ -89,6 +94,26 @@ const startedText = computed(() => {
       <span class="i-lucide-check mt-0.5 size-4 shrink-0" aria-hidden="true" />
       {{ startedText }}
     </p>
+    <!-- #2487: logo depois de ligar, o material só deste post em destaque, com o aviso de que ele leva minutos para ser lido. -->
+    <section
+      v-if="started === 'new' && canManage && data.writes && data.care_id"
+      data-ia-anexar-agora
+      class="flex flex-col gap-3 rounded-2xl bg-n-blue-2 p-4 ring-1 ring-inset ring-n-blue-6 sm:p-5"
+    >
+      <h3
+        class="m-0 flex items-center gap-2 text-base font-semibold text-n-slate-12"
+      >
+        <span
+          class="i-lucide-paperclip size-5 shrink-0 text-n-blue-11"
+          aria-hidden="true"
+        />
+        {{ t('AGENTS.AGENTE_DO_POST.SABE.MATERIAL.ANEXAR_AGORA') }}
+      </h3>
+      <p class="m-0 text-sm leading-6 text-n-slate-12">
+        {{ t('AGENTS.AGENTE_DO_POST.SABE.MATERIAL.AVISO_AGORA') }}
+      </p>
+      <MaterialDoPost :care-id="data.care_id" pode-mudar sem-texto />
+    </section>
 
     <span
       data-ia-badge
@@ -212,8 +237,13 @@ const startedText = computed(() => {
       >
         <div class="flex min-w-0 flex-1 flex-col gap-1">
           <p class="m-0 text-base leading-6 text-n-slate-12">
-            <span class="block text-sm font-semibold text-n-slate-11">
-              {{ handle(item) }}
+            <span
+              class="flex flex-wrap gap-x-2 text-sm font-semibold text-n-slate-11"
+            >
+              <span>{{ handle(item) }}</span>
+              <span v-if="quando(item)" data-ia-quando class="font-normal">
+                {{ quando(item) }}
+              </span>
             </span>
             {{ item.text }}
           </p>
@@ -239,7 +269,7 @@ const startedText = computed(() => {
           @click="emit('inbox', item.conversation_path)"
         />
         <Button
-          v-else-if="item.kind !== 'hidden'"
+          v-else-if="item.kind !== 'hidden' && canReply"
           data-ia-reply-comment
           variant="faded"
           color="slate"

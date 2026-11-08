@@ -44,7 +44,7 @@ class Crm::MetaAds::ComentariosIa::Anuncio
     FLAGS.any? { |network, flag| post_id(network).present? && account.feature_enabled?(flag) }
   end
 
-  # O alvo só com ids (Painel, Fonte.do_alvo, LerAntigosJob e ResumoJob).
+  # O alvo só com ids (Painel, Fonte.do_alvo e LerAntigosJob).
   def alvo
     { 'kind' => 'ad', 'ad_id' => @ad_id, 'networks' => redes.keys, 'post_ids' => redes.values.pluck(:post_id) }
   end

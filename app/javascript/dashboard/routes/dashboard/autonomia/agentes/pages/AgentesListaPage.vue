@@ -32,6 +32,9 @@ import AgenteBotao from '../components/AgenteBotao.vue';
 import AgenteErro from '../components/AgenteErro.vue';
 import AgenteConfirmacao from '../components/AgenteConfirmacao.vue';
 import AgenteOutroSistemaCartao from '../components/AgenteOutroSistemaCartao.vue';
+import AgentePostCartao from '../components/AgentePostCartao.vue';
+import CriarTipoDeAgente from '../components/criar/CriarTipoDeAgente.vue';
+import { useAgentesDoPost } from '../composables/useAgentesDoPost';
 
 // #1181 — lista nova de Agentes (protótipo T01 e T02), atrás da flag autonomia_agents_journey.
 // T01 (nenhum agente): herói navy com a pergunta, os três modelos e "Do meu jeito".
@@ -55,6 +58,19 @@ const router = useRouter();
 const podeGerenciar = useCanManage('autonomia_manage');
 const { podeConectarCanal } = usePermissoesDaJornada();
 const semana = useNumerosDaSemana();
+// #2469 (PR 3a do #2436): o cuidado de cada post ou anúncio vira um cartão no fim da lista, com o filtro "Posts e
+// anúncios" quando há pelo menos um. Ligado conta à parte ("N cuidando de post ou anúncio"); pausado soma nos parados.
+const doPost = useAgentesDoPost();
+const filtro = ref('todos');
+const FILTROS = ['todos', 'posts'];
+const rotaDoPost = (cuidado, grupo = '') => ({
+  name: 'autonomia_post_comments',
+  params: { careId: cuidado.id },
+  query: grupo ? { gaveta: 'comentarios', grupo } : {},
+});
+const hrefDoPost = (cuidado, grupo) =>
+  router.resolve(rotaDoPost(cuidado, grupo)).href;
+const abrirPost = (cuidado, grupo) => router.push(rotaDoPost(cuidado, grupo));
 const ocupacao = useCanaisOcupados();
 // A API de robôs só deixa o administrador criar, mudar e apagar (AgentBotPolicy).
 const { isAdmin } = useAdmin();
@@ -125,7 +141,8 @@ const contagem = computed(() => {
   return {
     ...daPlataforma,
     atendendo: daPlataforma.atendendo + outrosAtendendo.value.length,
-    parados: daPlataforma.parados + outrosParados.value.length,
+    parados:
+      daPlataforma.parados + outrosParados.value.length + doPost.pausados.value,
   };
 });
 const vazia = computed(
@@ -133,7 +150,8 @@ const vazia = computed(
     !carregando.value &&
     !falhou.value &&
     !agentes.value.length &&
-    !outrosSistemas.value.length
+    !outrosSistemas.value.length &&
+    !doPost.cuidados.value.length
 );
 const leiturasDosCartoes = computed(
   () =>
@@ -154,6 +172,13 @@ const contagemTexto = computed(() => {
   const { atendendo, naEquipe, ajudando, parados } = contagem.value;
   return [
     t('AGENTS.JORNADA.LISTA.CONTAGEM_ATENDENDO', { n: atendendo }, atendendo),
+    doPost.cuidando.value
+      ? t(
+          'AGENTS.AGENTE_DO_POST.CONTAGEM',
+          { n: doPost.cuidando.value },
+          doPost.cuidando.value
+        )
+      : '',
     naEquipe
       ? t('AGENTS.JORNADA.LISTA.CONTAGEM_NA_EQUIPE', { n: naEquipe }, naEquipe)
       : '',
@@ -221,6 +246,28 @@ const usarCopiloto = () =>
 
 const abrirPaginaCriar = () =>
   router.push({ name: 'autonomia_agents_builder' });
+// #2469: com o cuidado dos comentários na conta, "Criar agente" pergunta antes o tipo (atender conversas ou cuidar dos
+// comentários de um post ou anúncio). Sem ele, ou sem nem o Seus posts nem Anúncios (de onde vem o "Qual post?"), a
+// criação de hoje. #2479: o passo 1 do cuidado aberto daqui volta para Agentes (?de=agentes).
+const criandoTipo = ref(false);
+const criarAgente = () => {
+  if (doPost.comPosts.value || doPost.comAnuncios.value)
+    criandoTipo.value = true;
+  else abrirPaginaCriar();
+};
+const DE_AGENTES = { de: 'agentes' };
+const cuidarDoPost = post =>
+  router.push({
+    name: 'seus_posts_cuidar',
+    params: { postId: post.id },
+    query: { perfil: post.perfil, ...DE_AGENTES },
+  });
+const cuidarDoAnuncio = anuncio =>
+  router.push({
+    name: 'campaigns_meta_ads_cuidar',
+    params: { adId: anuncio.id },
+    query: DE_AGENTES,
+  });
 
 const abrirAgente = agente =>
   router.push({
@@ -331,6 +378,7 @@ const excluir = async () => {
 
 onMounted(() => {
   carregar();
+  doPost.carregar();
   if (porCaixa.value) store.dispatch('agentBots/get');
   relogioDasLeituras = setTimeout(() => {
     esperaVencida.value = true;
@@ -453,7 +501,7 @@ onBeforeUnmount(() => {
               tamanho="lg"
               icone="i-lucide-plus"
               class="hidden md:inline-flex"
-              @click="abrirPaginaCriar"
+              @click="criarAgente"
             >
               {{ t('AGENTS.JORNADA.LISTA.CRIAR') }}
             </AgenteBotao>
@@ -500,12 +548,36 @@ onBeforeUnmount(() => {
         />
 
         <template v-else>
+          <div
+            v-if="doPost.cuidados.value.length"
+            data-filtro
+            role="group"
+            :aria-label="t('AGENTS.AGENTE_DO_POST.FILTRO')"
+            class="flex flex-wrap gap-2"
+          >
+            <button
+              v-for="chave in FILTROS"
+              :key="chave"
+              type="button"
+              :data-filtro-chip="chave"
+              :aria-pressed="filtro === chave"
+              class="px-4 text-sm font-medium border-0 rounded-full min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+              :class="
+                filtro === chave
+                  ? 'bg-n-slate-12 text-n-solid-1'
+                  : 'bg-n-alpha-2 text-n-slate-12 hover:bg-n-alpha-1'
+              "
+              @click="filtro = chave"
+            >
+              {{ t(`AGENTS.AGENTE_DO_POST.${chave.toUpperCase()}`) }}
+            </button>
+          </div>
           <ul
             :aria-label="t('AGENTS.JORNADA.LISTA.SEUS_AGENTES')"
             class="grid grid-cols-1 gap-4 p-0 m-0 list-none sm:grid-cols-2 lg:grid-cols-3"
           >
             <template
-              v-for="{ tipo, agente } in lista"
+              v-for="{ tipo, agente } in filtro === 'posts' ? [] : lista"
               :key="`${tipo}-${agente.id}`"
             >
               <AgenteOutroSistemaCartao
@@ -531,6 +603,14 @@ onBeforeUnmount(() => {
                 @excluir="pedirExclusao"
               />
             </template>
+            <AgentePostCartao
+              v-for="cuidado in doPost.cuidados.value"
+              :key="`post-${cuidado.id}`"
+              :cuidado="cuidado"
+              :href="hrefDoPost(cuidado)"
+              :href-esperando="hrefDoPost(cuidado, 'esperando')"
+              @abrir="abrirPost"
+            />
           </ul>
           <p v-if="podeGerenciar" class="flex flex-wrap gap-2 m-0">
             <AgenteBotao
@@ -561,7 +641,7 @@ onBeforeUnmount(() => {
             tamanho="xl"
             bloco
             icone="i-lucide-plus"
-            @click="abrirPaginaCriar"
+            @click="criarAgente"
           >
             {{ t('AGENTS.JORNADA.LISTA.CRIAR') }}
           </AgenteBotao>
@@ -577,6 +657,15 @@ onBeforeUnmount(() => {
       :carregando="excluindo"
       @confirmar="excluir"
       @fechada="aoFecharConfirmacao"
+    />
+    <CriarTipoDeAgente
+      v-if="criandoTipo"
+      :com-posts="doPost.comPosts.value"
+      :com-anuncios="doPost.comAnuncios.value"
+      @fechar="criandoTipo = false"
+      @atender="abrirPaginaCriar"
+      @post="cuidarDoPost"
+      @anuncio="cuidarDoAnuncio"
     />
   </div>
 </template>

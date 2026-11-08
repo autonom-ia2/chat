@@ -6,7 +6,9 @@
 # - entrada (pasta nil): volta e é reaberta, só se estava numa pasta. Saindo do Spam, o remetente volta a chegar nesta
 #   caixa ("Não é spam").
 # Resolver usa o status da conversa, como o botão Resolver; reabrir é o "Reabrir" do painel (ConversaCanal::ReabrirComoPessoa:
-# o robô sai do nome e o agente fica com a conversa). Os eventos e a atividade são os de sempre.
+# o robô sai do nome e o agente fica com a conversa). Os eventos são os de sempre. A atividade da reabertura também; a de
+# Spam e Lixeira diz quem moveu e para onde (ConversaCanal::AtividadeDaPasta, #2616), quando a pasta
+# muda ou a conversa é resolvida.
 class ConversaCanal::MoverParaPasta
   class Recusa < StandardError; end
 
@@ -20,16 +22,18 @@ class ConversaCanal::MoverParaPasta
     raise Recusa, I18n.t('conversa_canal.pastas.so_email') unless @conversation.inbox&.email?
     raise Recusa, I18n.t('conversa_canal.pastas.pasta_invalida') if @pasta && ConversaCanal::PastaDoEmail::PASTAS.exclude?(@pasta)
 
-    ActiveRecord::Base.transaction do
-      anterior = ConversaCanal::PastaDoEmail.find_by(conversation_id: @conversation.id)&.pasta
-      @pasta ? mover : restaurar
-      ajustar_remetente(anterior)
-      ajustar_status(anterior)
-    end
+    ConversaCanal::AtividadeDaPasta.com_autor(@pasta && @user) { ActiveRecord::Base.transaction { trocar_pasta } }
     @pasta
   end
 
   private
+
+  def trocar_pasta
+    anterior = ConversaCanal::PastaDoEmail.find_by(conversation_id: @conversation.id)&.pasta
+    @pasta ? mover : restaurar
+    ajustar_remetente(anterior)
+    ajustar_status(anterior)
+  end
 
   # Upsert pela conversa: dois toques ao mesmo tempo gravam a mesma linha, sem esbarrar no índice único (era 500).
   def mover
@@ -60,9 +64,15 @@ class ConversaCanal::MoverParaPasta
   # Voltar para a Entrada só reabre a conversa que estava numa pasta: na Entrada, resolvida, ela fica como está.
   def ajustar_status(anterior)
     if @pasta
-      @conversation.update!(status: :resolved) unless @conversation.resolved?
+      resolver = !@conversation.resolved?
+      @conversation.update!(status: :resolved) if resolver
+      registrar_atividade if resolver || anterior != @pasta
     elsif anterior.present? && @conversation.resolved?
       ConversaCanal::ReabrirComoPessoa.new(conversation: @conversation, user: @user).perform
     end
+  end
+
+  def registrar_atividade
+    ConversaCanal::AtividadeDaPasta.registrar!(@conversation, "moveu_#{@pasta}", user_name: @user.name)
   end
 end

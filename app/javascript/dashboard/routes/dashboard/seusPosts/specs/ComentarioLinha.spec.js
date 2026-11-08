@@ -106,6 +106,36 @@ describe('ComentarioLinha', () => {
     expect(wrapper.emitted('responder')).toBeUndefined();
   });
 
+  // #2543: a Meta conta o privado em bytes. 600 letras com acento são 1200 bytes: avisa e não manda.
+  it('privado com acento acima de 1000 bytes avisa e não sai, mesmo com menos de 1000 letras', async () => {
+    const wrapper = montar(comentario());
+
+    await abrirMais(wrapper, 'privado');
+    await wrapper.find('textarea').setValue('ã'.repeat(600));
+
+    expect(wrapper.find('[data-seus-posts-longo-demais]').text()).toBe(
+      ptBR.SEUS_POSTS.POST.COMMENTS.ERRORS.text_too_long
+    );
+    expect(wrapper.find('textarea').attributes('aria-invalid')).toBe('true');
+    expect(
+      wrapper.find('[data-seus-posts-enviar]').attributes('disabled')
+    ).toBeDefined();
+    await wrapper.find('form').trigger('submit');
+    expect(wrapper.emitted('privado')).toBeUndefined();
+
+    await wrapper.find('textarea').setValue('ã'.repeat(500));
+    expect(wrapper.find('[data-seus-posts-longo-demais]').exists()).toBe(false);
+  });
+
+  it('a resposta pública não usa a régua do privado', async () => {
+    const wrapper = montar(comentario());
+
+    await wrapper.find('[data-seus-posts-acao]').trigger('click');
+    await wrapper.find('textarea').setValue('ã'.repeat(600));
+
+    expect(wrapper.find('[data-seus-posts-longo-demais]').exists()).toBe(false);
+  });
+
   it('abrir leva o foco ao campo; cancelar volta aos botões da linha', async () => {
     const wrapper = montar(comentario(), {}, true);
 

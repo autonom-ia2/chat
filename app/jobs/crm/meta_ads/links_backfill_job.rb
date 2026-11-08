@@ -32,10 +32,16 @@ class Crm::MetaAds::LinksBackfillJob < ApplicationJob
 
   private
 
-  # Gravar um toque atualiza a conversa: quem teve toque na janela tem updated_at dentro dela.
+  # Gravar um toque atualiza a conversa: quem teve toque na janela tem updated_at dentro dela. A conversa do privado de
+  # um comentário de anúncio (#2521) entra pela linha do privado.
   def candidates(connection)
-    Conversation.where(account_id: connection.account_id)
-                .where(updated_at: WINDOW.ago..)
-                .where("conversations.additional_attributes ?| array['campaign_touches', 'campaign']")
+    scope = Conversation.where(account_id: connection.account_id).where(updated_at: WINDOW.ago..)
+    scope.where("conversations.additional_attributes ?| array['campaign_touches', 'campaign']")
+         .or(scope.where(id: comment_conversation_ids(connection)))
+  end
+
+  def comment_conversation_ids(connection)
+    Crm::MetaAdsCommentAction.where(account_id: connection.account_id, action: 'private_reply')
+                             .where.not(ad_id: [nil, '']).where.not(conversation_id: nil).select(:conversation_id)
   end
 end

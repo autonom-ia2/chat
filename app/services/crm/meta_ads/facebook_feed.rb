@@ -5,16 +5,17 @@
 #   porque ligar o post ao anúncio pede outra chamada à Meta, e quem precisa liga do seu lado.
 # - O payload leva só ids, nunca o texto nem o nome de quem comentou: o evento passa pelo EventDispatcherJob, cujos
 #   argumentos o Sidekiq guarda em claro no Redis e o ActiveJob escreve no log. Quem consome lê o comentário por
-#   Crm::MetaAds::FacebookComments#comment (3 chamadas à Graph: permissões, token da Página e o comentário). Aqui,
-#   nenhuma.
+#   Crm::MetaAds::ComentariosIa::Rede::ComentariosDaPagina#comment (1 chamada à Graph, com o token da caixa da Página,
+#   #2587). Aqui, nenhuma.
 # - Só `item` comment com `verb` add. Edição, remoção, ocultação, curtida e post novo ficam de fora.
 # - O eco da própria Página (as respostas que ela publica) não é comentário de cliente. Sem leitura na Graph aqui, o
 #   eco é reconhecido só pelo `from.id` do webhook (= id da Página).
 # - Uma vez por conta dona da Página (Crm::MetaAdsPage, #2195) com a flag `meta_ads_comentarios_facebook`. A Página
-#   entra nessa tabela quando alguém da conta abre a aba Facebook pela primeira vez: antes disso, não há evento.
+#   entra nessa tabela quando alguém da conta abre a aba Facebook pela primeira vez, ou quando liga um cuidado de
+#   Facebook (AssinarFeedJob, #2520): antes disso, não há evento.
 #   Página sem dono nesta stack é ignorada (a outra stack recebe o mesmo corpo).
-# - Aqui não se confere conexão ativa nem `pages_read_user_content`: o evento sai mesmo assim, só com ids. Esse filtro é
-#   do consumidor, por FacebookComments#comment, que só lê com a leitura concedida e em Página da conta (nil se não).
+# - Aqui não se confere conexão ativa nem `pages_read_user_content`: o evento sai mesmo assim, só com ids. O consumidor
+#   lê com o token da caixa dessa Página, só em post dela, e a Meta recusa o token sem a leitura concedida.
 # - O mesmo comentário de novo em DEDUP (webhook reenviado) não sai duas vezes. Erro numa conta não tira o evento das
 #   outras: vai ao rastreador e solta a chave. Quem consome não deve contar com entrega única.
 # - `inbox_id`: a caixa do Messenger dessa Página na conta, se houver.

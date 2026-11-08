@@ -73,12 +73,13 @@ class Crm::MetaAds::Panel::ResponseTime
   private
 
   # O início de cada conversa é o menor toque dela no período, com ou sem anúncio (não o Cohort#touches, que
-  # guarda o primeiro toque com anúncio).
+  # guarda o primeiro toque com anúncio), sem as conversas de comentário de anúncio de fora (#2521), como a coorte.
   def starts
     return given_starts unless @starts.nil?
 
-    Crm::MetaAdLink.where(account_id: @account_id, touched_at: @range).group(:conversation_id)
-                   .select('conversation_id, MIN(touched_at) AS started_at')
+    links = Crm::MetaAdLink.where(account_id: @account_id, touched_at: @range)
+    Crm::MetaAds::Panel::OutsideAds.counted_links(@account_id, links).group(:conversation_id)
+                                   .select('conversation_id, MIN(touched_at) AS started_at')
   end
 
   def given_starts

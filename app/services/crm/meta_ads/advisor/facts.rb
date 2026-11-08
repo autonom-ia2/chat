@@ -187,7 +187,8 @@ class Crm::MetaAds::Advisor::Facts
   end
 
   def confidence
-    Crm::MetaAds::Links::Stats.new(@connection, since: cohort_start).payload[:confidence].slice(:conversations, :ad, :ad_name, :unknown)
+    Crm::MetaAds::Links::Stats.new(@connection, since: cohort_start, upto: report.range.end)
+                              .payload[:confidence].slice(:conversations, :ad, :ad_name, :unknown)
   end
 
   def cohort_start

@@ -669,6 +669,7 @@
         "SEND_TEST_TOO_MANY": "Up to 5 e-mails per test.",
         "SEND_TEST_SUPPRESSED": "{email} does not receive e-mails from this account. Use another address.",
         "SEND_TEST_RATE_LIMITED": "Too many test emails for this campaign. Try again in an hour",
+        "SEND_TEST_NO_SUBJECT": "Add the subject in Email details.",
         "SAVE_TEMPLATE": "Save as template",
         "SAVE_TEMPLATE_NAME_LABEL": "Template name",
         "SAVE_TEMPLATE_NAME_PLACEHOLDER": "e.g. Live invite",

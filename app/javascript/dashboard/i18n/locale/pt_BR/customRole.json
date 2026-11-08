@@ -211,7 +211,7 @@
           "NAME": "Automações",
           "HINT": "Regras de automação",
           "LEVEL_VIEW": "Vê as regras.",
-          "LEVEL_MANAGE": "Cria e altera regras."
+          "LEVEL_MANAGE": "Cria e altera regras. Regra com webhook ou transcrição por e-mail pede também Integrações. Automação com gatilho de card do funil pede também Gerenciar funis e automações do CRM."
         },
         "SCHEDULING": {
           "NAME": "Agendamento",
@@ -324,7 +324,7 @@
       "CONVERSATION_PARTICIPATING_MANAGE": "Vê as conversas em que participa, mesmo atribuídas a outra pessoa.",
       "CRM_MOVE_CARDS": "Arrasta cards entre etapas sem editar o resto.",
       "CRM_VIEW_REPORTS": "Painel do funil e custo de IA.",
-      "CRM_MANAGE_PIPELINES": "Etapas, automações e caixas do funil.",
+      "CRM_MANAGE_PIPELINES": "Etapas, automações e caixas do funil. Mexer nas automações da etapa também pede a permissão das regras automáticas.",
       "CRM_MANAGE_AI": "Configura e aceita sugestões da IA. Gera custo.",
       "CRM_EXPORT": "Baixa a lista com dados de clientes.",
       "CRM_DELETE_CARDS": "Arquiva cards, um a um ou vários de uma vez.",

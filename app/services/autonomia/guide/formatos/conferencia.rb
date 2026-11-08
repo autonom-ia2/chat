@@ -69,10 +69,15 @@ class Autonomia::Guide::Formatos::Conferencia
 
     [
       "Não executei #{@acao}: o corpo não bate com o formato da ação.",
-      *problemas.map { |problema| "- #{em_texto(problema)}" },
+      *problemas_em_texto.map { |problema| "- #{problema}" },
       ::Autonomia::Guide::Formatos.resumo_para_o_modelo(@acao),
       'Monte o corpo de novo com este formato e tente uma vez.'
     ].compact.join("\n")
+  end
+
+  # Os problemas em frases curtas, para quem não é o modelo ler (a receita da Automação livre, #2414).
+  def problemas_em_texto
+    problemas.map { |problema| em_texto(problema) }
   end
 
   # Chaves enviadas que o formato não lista. No formato parcial não bloqueiam:

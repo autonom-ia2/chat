@@ -52,8 +52,10 @@ class ConversaCanal::LeitorDeOpenGraph
     @url = url
   end
 
-  # => { 'url', 'title', 'description', 'site_name', 'image_source' } ou nil quando a página não tem título.
-  # `image_source` é o endereço da og:image na página; quem grava baixa a imagem e não o guarda.
+  # => { 'url', 'final_url', 'title', 'description', 'site_name', 'image_source' } ou nil quando a página não tem título.
+  # `image_source` é o endereço da og:image na página; quem grava baixa a imagem e não o guarda. `final_url` é o
+  # endereço lido de fato, depois dos redirecionamentos (#1775: a IA diz de que site veio o texto, não o do link enviado,
+  # que pode ser um redirecionador).
   def ler
     return unless self.class.endereco_permitido?(@url)
 
@@ -76,6 +78,7 @@ class ConversaCanal::LeitorDeOpenGraph
 
     {
       'url' => @url,
+      'final_url' => url_final.presence,
       'title' => titulo,
       'description' => limpo(meta(doc, 'og:description') || meta(doc, 'description'), DESCRICAO_MAX),
       'site_name' => limpo(meta(doc, 'og:site_name'), SITE_MAX),

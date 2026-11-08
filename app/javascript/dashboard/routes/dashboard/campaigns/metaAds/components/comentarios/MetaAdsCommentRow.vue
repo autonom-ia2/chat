@@ -2,6 +2,7 @@
 import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { onClickOutside } from '@vueuse/core';
+import { privadoLongoDemais } from 'dashboard/helper/privadoDoInstagram';
 import { relativeTime } from '../../metaAdsHelpers';
 
 // Anúncios da Meta (#2196 Instagram, #2197 Facebook): um comentário do anúncio, com as respostas recuadas. As ações
@@ -96,10 +97,15 @@ const open = async kind => {
   field.value?.focus();
 };
 
+// O privado conta em bytes, como a Meta (#2543): a caixa não corta por letras; passou, a linha avisa e o botão espera.
+const tooLong = computed(
+  () => composer.value === 'private' && privadoLongoDemais(text.value.trim())
+);
+
 // Falha mantém a caixa aberta com o texto: a pessoa tenta de novo sem redigitar.
 const send = async () => {
   const message = text.value.trim();
-  if (!message || sending.value) return;
+  if (!message || sending.value || tooLong.value) return;
   sending.value = true;
   const ok =
     composer.value === 'private'
@@ -407,10 +413,22 @@ const DANGER =
             ref="field"
             v-model="text"
             rows="3"
-            maxlength="1000"
+            :maxlength="composer === 'private' ? undefined : 1000"
+            :aria-invalid="tooLong || undefined"
+            :aria-describedby="
+              tooLong ? `comment-${comment.id}-too-long` : undefined
+            "
             class="mb-0 h-auto min-h-24 w-full resize-y rounded-lg border-0 bg-n-solid-1 p-2.5 text-sm text-n-slate-12 ring-1 ring-inset ring-n-weak focus:outline-none focus:ring-2 focus:ring-n-brand"
             @keydown.esc="close"
           />
+          <p
+            v-if="tooLong"
+            :id="`comment-${comment.id}-too-long`"
+            data-ad-comment-too-long
+            class="m-0 text-sm text-n-ruby-11"
+          >
+            {{ $t(`${KEY}.ERRORS.TEXT_TOO_LONG`) }}
+          </p>
           <div class="flex flex-wrap items-center justify-end gap-2">
             <button
               type="button"
@@ -422,7 +440,7 @@ const DANGER =
             <button
               type="submit"
               data-ad-comment-send
-              :disabled="!text.trim() || sending"
+              :disabled="!text.trim() || sending || tooLong"
               class="inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-lg border-0 bg-n-brand px-4 text-sm font-medium text-white hover:bg-n-brand/90 disabled:opacity-50"
             >
               <span

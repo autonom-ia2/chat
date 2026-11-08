@@ -62,6 +62,48 @@ describe('#ComentariosIaAPI', () => {
     );
   });
 
+  // #2458: with the AI writing the replies, step 2 sends its fields only when they came.
+  it('sends the step 2 fields when the AI writes the replies', () => {
+    comentariosIa.saveCuidado(post, {
+      message: 'Oi!',
+      paraQuem: 'Quem pedir o link',
+      phrases: ['Te mandei no privado!'],
+      status: 'on',
+      escrita: {
+        temas: ['link'],
+        assuntoProibido: 'reembolso',
+        tom: '',
+      },
+    });
+    comentariosIa.previa(post, {
+      paraQuem: 'Quem pedir o link',
+      escrita: { assuntoProibido: 'reembolso', tom: 'formal' },
+    });
+
+    expect(axiosMock.put).toHaveBeenCalledWith(
+      `${postBase}/cuidado`,
+      {
+        message: 'Oi!',
+        para_quem: 'Quem pedir o link',
+        phrases: ['Te mandei no privado!'],
+        status: 'on',
+        temas: ['link'],
+        assunto_proibido: 'reembolso',
+        tom: '',
+      },
+      { params: { perfil: 'instagram-7' } }
+    );
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      `${postBase}/cuidado/previa`,
+      {
+        para_quem: 'Quem pedir o link',
+        assunto_proibido: 'reembolso',
+        tom: 'formal',
+      },
+      { params: { perfil: 'instagram-7' } }
+    );
+  });
+
   it('queues reading the older comments', () => {
     comentariosIa.lerAntigos(post);
 
@@ -69,6 +111,30 @@ describe('#ComentariosIaAPI', () => {
       `${postBase}/cuidado/ler_antigos`,
       null,
       { params: { perfil: 'instagram-7' } }
+    );
+  });
+
+  it('asks the photo reading of the step 1 and saves the owner correction (#2454)', () => {
+    comentariosIa.foto(post);
+    comentariosIa.corrigirFoto(post, 'Bolo de cenoura');
+    comentariosIa.foto(ad);
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      `${postBase}/cuidado/foto`,
+      null,
+      { params: { perfil: 'instagram-7' } }
+    );
+    expect(axiosMock.put).toHaveBeenCalledWith(
+      `${postBase}/cuidado/foto`,
+      { correction: 'Bolo de cenoura' },
+      { params: { perfil: 'instagram-7' } }
+    );
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      `${adBase}/cuidado/foto`,
+      null,
+      {
+        params: {},
+      }
     );
   });
 

@@ -14,11 +14,23 @@ class Messages::Instagram::BaseMessageBuilder < Messages::Messenger::MessageBuil
     ActiveRecord::Base.transaction do
       build_message
     end
+    attribute_ad_referral
   rescue StandardError => e
     handle_error(e)
   end
 
   private
+
+  # Anúncio de clique para o Direct (#2521): na mensagem nova ou no postback, fora da transação, como no WhatsApp.
+  def attribute_ad_referral
+    return if @outgoing_echo || @message.nil?
+
+    referral = @messaging[:referral] || message[:referral] || @messaging.dig(:postback, :referral)
+    referral = Crm::MetaAds::MessagingReferral.with_click_time(referral, @messaging[:timestamp])
+    source = Crm::MetaAds::MessagingReferral::INSTAGRAM_SOURCE
+    Crm::MetaAds::MessagingReferral.attribute_message!(@conversation, referral, source: source, event_id: message_identifier,
+                                                                                new_conversation: @new_conversation.present?)
+  end
 
   def attachments
     @messaging[:message][:attachments] || {}
@@ -134,6 +146,7 @@ class Messages::Instagram::BaseMessageBuilder < Messages::Messenger::MessageBuil
   end
 
   def build_conversation
+    @new_conversation = true
     @contact_inbox ||= contact.contact_inboxes.find_by!(source_id: message_source_id)
     Conversation.create!(conversation_params.merge(
                            contact_inbox_id: @contact_inbox.id,

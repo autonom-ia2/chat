@@ -24,18 +24,58 @@ class Crm::MetaAds::Creation::Media
   VIDEO_BOXES = %w[ftyp moov wide mdat free skip].freeze
 
   def upload!(file)
-    type = file.content_type.to_s
-    return image!(file) if IMAGE_TYPES.include?(type) && image_bytes?(file)
-    return video!(file) if VIDEO_TYPES.include?(type) && video_bytes?(file)
+    case self.class.kind!(file)
+    when 'image' then image!(file)
+    else video!(file)
+    end
+  end
 
-    raise Crm::MetaAds::Creation::Error, 'invalid_media'
+  # 'image' ou 'video', pelo tipo que o navegador diz e pelo começo do arquivo; outra coisa é `invalid_media`. O
+  # tamanho passa do limite: `media_too_large`. Também usada pela mídia do post (Crm::MetaAds::Creation::PostMedia).
+  def self.kind!(file)
+    kind = detected_kind(file)
+    raise Crm::MetaAds::Creation::Error, 'invalid_media' unless kind
+    raise Crm::MetaAds::Creation::Error, 'media_too_large' if file.size > (kind == 'image' ? IMAGE_MAX_BYTES : VIDEO_MAX_BYTES)
+
+    kind
+  end
+
+  def self.detected_kind(file)
+    type = file.content_type.to_s
+    return 'image' if IMAGE_TYPES.include?(type) && image_bytes?(file)
+
+    'video' if VIDEO_TYPES.include?(type) && video_bytes?(file)
+  end
+
+  def self.head(file, size)
+    File.open(file.path, 'rb') { |io| io.read(size).to_s }
+  end
+
+  def self.image_bytes?(file)
+    start = head(file, PNG_START.bytesize)
+    start.start_with?(JPEG_START) || start == PNG_START
+  end
+
+  def self.video_bytes?(file)
+    VIDEO_BOXES.include?(head(file, 8).byteslice(4, 4))
+  end
+
+  # O endereço da plataforma, para o armazenamento em disco montar a URL. Sem ele, a Meta receberia um endereço que não
+  # alcança: falha antes de guardar o vídeo, e o erro vai para o rastreador (é configuração, não escolha da pessoa).
+  def self.frontend_host!
+    ENV.fetch('FRONTEND_URL', '').presence || raise(ArgumentError, 'FRONTEND_URL vazio: o vídeo do anúncio não teria endereço')
+  end
+
+  # Endereço direto do armazenamento (no S3, assinado e com prazo), que a Meta lê sem login.
+  def self.public_url(blob, host)
+    ActiveStorage::Current.set(url_options: { host: host }) do
+      blob.url(expires_in: VIDEO_URL_TTL)
+    end
   end
 
   private
 
   def image!(file)
-    raise Crm::MetaAds::Creation::Error, 'media_too_large' if file.size > IMAGE_MAX_BYTES
-
     result = @client.upload_image(@connection.ad_account_id, Base64.strict_encode64(File.binread(file.path)))
     raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok
 
@@ -46,42 +86,14 @@ class Crm::MetaAds::Creation::Media
   end
 
   def video!(file)
-    raise Crm::MetaAds::Creation::Error, 'media_too_large' if file.size > VIDEO_MAX_BYTES
-
-    host = frontend_host!
+    host = self.class.frontend_host!
 
     blob = ActiveStorage::Blob.create_and_upload!(io: File.open(file.path), filename: file.original_filename.presence || 'video.mp4',
                                                   content_type: file.content_type)
     ActiveStorage::PurgeJob.set(wait: VIDEO_KEEP).perform_later(blob)
-    result = @client.upload_video(@connection.ad_account_id, public_url(blob, host))
+    result = @client.upload_video(@connection.ad_account_id, self.class.public_url(blob, host))
     raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok && result.data['id'].present?
 
     { kind: 'video', video_id: result.data['id'].to_s }
-  end
-
-  def head(file, size)
-    File.open(file.path, 'rb') { |io| io.read(size).to_s }
-  end
-
-  def image_bytes?(file)
-    start = head(file, PNG_START.bytesize)
-    start.start_with?(JPEG_START) || start == PNG_START
-  end
-
-  def video_bytes?(file)
-    VIDEO_BOXES.include?(head(file, 8).byteslice(4, 4))
-  end
-
-  # O endereço da plataforma, para o armazenamento em disco montar a URL. Sem ele, a Meta receberia um endereço que não
-  # alcança: falha antes de guardar o vídeo, e o erro vai para o rastreador (é configuração, não escolha da pessoa).
-  def frontend_host!
-    ENV.fetch('FRONTEND_URL', '').presence || raise(ArgumentError, 'FRONTEND_URL vazio: o vídeo do anúncio não teria endereço')
-  end
-
-  # Endereço direto do armazenamento (no S3, assinado e com prazo), que a Meta lê sem login.
-  def public_url(blob, host)
-    ActiveStorage::Current.set(url_options: { host: host }) do
-      blob.url(expires_in: VIDEO_URL_TTL)
-    end
   end
 end

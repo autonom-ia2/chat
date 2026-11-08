@@ -77,7 +77,8 @@ module Autonomia
       def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
                      trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
                      operador: nil, max_rodadas: 1, max_segundos: nil, feature: 'agente_resposta',
-                     fixos: [], contexto_do_turno: nil, memoria: nil, prova: false)
+                     fixos: [], contexto_do_turno: nil, memoria: nil, prova: false, formato: FormatoDoComentario::CONVERSA,
+                     care_id: nil)
         @agent = agent
         # #1428 (parte 3, entrega B): a PROVA DO AJUSTE. Nenhuma ferramenta vai ao modelo (nem a busca na web, nem
         # especialista ou ajudante): sem `tools`, o ResponsesClient faz uma chamada só e nada pode ser executado. Teto
@@ -87,7 +88,11 @@ module Autonomia
         @memoria = memoria
         # Regra do sistema para ESTE turno, repassada ao PromptBuilder (#1669: a equipe escreveu na conversa). nil:
         # nada muda.
-        @contexto_do_turno = contexto_do_turno
+        # #2458: a resposta a um comentário de post (FormatoDoComentario; formato desconhecido é ArgumentError). Na
+        # conversa (padrão), nada muda; no comentário, a regra do formato vai junto da regra do turno e nenhuma
+        # ferramenta vai ao modelo.
+        # #2487: e o cuidado do comentário (`care_id`), para a busca ler também o material só daquele post ou anúncio.
+        guardar_o_turno(formato, contexto_do_turno, care_id)
         @query = query.to_s
         # Quando a query composta embute contexto ANTES da pergunta real (ex.: copiloto chat com
         # transcrição), o truncamento do Retriever (que preserva o começo) cortaria a pergunta fora
@@ -177,6 +182,13 @@ module Autonomia
       end
 
       private
+
+      # O formato da resposta, a regra do turno e o cuidado do comentário, conferidos juntos (FormatoDoComentario).
+      def guardar_o_turno(formato, contexto_do_turno, care_id)
+        @formato = FormatoDoComentario.conferido(formato)
+        @contexto_do_turno = FormatoDoComentario.contexto_do_turno(contexto_do_turno, @formato)
+        @care_id = FormatoDoComentario.cuidado_conferido(care_id, @formato)
+      end
 
       # #1479: a interação pedida pelo modelo; o endereço do link precisa ser um dos que o dono autorizou
       # (`Interacao::Enderecos.do_dono`): a instrução e a base, e a saída de ferramenta dentro de um endereço delas. O
@@ -306,9 +318,11 @@ module Autonomia
         # C3 (custo): agente declarado SEM base (`with_knowledge=false` explícito) pula o retrieval
         # inteiro — não paga embedding por mensagem nem usa entries residuais de uma base antiga.
         # Default histórico preservado: chave ausente = COM base (retrieval roda normalmente).
-        return [] if @agent.knowledge_disabled?
+        return [] if @agent.knowledge_disabled? && @care_id.nil?
 
-        com_fixos(Retriever.new(agent: @agent).retrieve(@retrieval_query, top_k: Config::ANSWER_TOP_K))
+        # #2487: o turno normal chama a busca como sempre; só a resposta a um comentário passa o cuidado.
+        retriever = @care_id ? Retriever.new(agent: @agent, care_id: @care_id) : Retriever.new(agent: @agent)
+        com_fixos(retriever.retrieve(@retrieval_query, top_k: Config::ANSWER_TOP_K))
       rescue Autonomia::Agents::Retriever::RetrievalError
         # #14 — falha de INFRA. Operate (instrução-dirigido): NÃO silencia o bot — degrada p/ [] e
         # segue pela instrução. Fluxo GATEADO (Guia/copiloto): re-levanta → `answer` faz handoff seguro.
@@ -386,7 +400,7 @@ module Autonomia
       end
 
       def answer_tools
-        return if @prova
+        return if @prova || FormatoDoComentario.comentario?(@formato)
 
         tools = []
         tools.concat(Array(Crm::Ai::WebSearch.tools)) if web_search_permitida?

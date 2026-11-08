@@ -10,7 +10,7 @@ class Autonomia::Agents::Material::Problemas
 
   def initialize(agent)
     @agent = agent
-    @fontes = agent.sources.knowledge_sources.order(:id).to_a
+    @fontes = agent.sources.da_agente.knowledge_sources.order(:id).to_a
     @por_id = @fontes.index_by(&:id)
   end
 

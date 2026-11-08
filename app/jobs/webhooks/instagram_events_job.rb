@@ -15,7 +15,9 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   # Autonom.ia (operate), que só materializa em inbox com agente ativo + flag on.
   # `:message_edit`: o cliente editou a mensagem (#2113, Instagram::MessageEditService). Só chega com o campo de edição
   # inscrito no app da Meta (ver Channel::Instagram#subscribe).
-  SUPPORTED_EVENTS = [:message, :read, :postback, :reaction, :message_edit].freeze
+  # `:referral` (#2521): clique num anúncio do Direct de quem já tinha conversa; fica por último, porque a mensagem com
+  # referral é `:message`.
+  SUPPORTED_EVENTS = [:message, :read, :postback, :reaction, :message_edit, :referral].freeze
   TEST_EVENT_FIELD = 'messages'.freeze
   COMMENT_FIELDS = %w[comments mentions].freeze
   COMMENT_JOB = 'Webhooks::InstagramCommentJob'.freeze
@@ -83,7 +85,8 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
 
   def process_messages(entry)
     messages(entry).each do |messaging|
-      Rails.logger.info("Instagram Events Job Messaging: #{messaging}")
+      # Só o tipo e os ids: o `messaging` inteiro traz o texto e, no anúncio (#2521), links assinados da Meta.
+      Rails.logger.info("Instagram Events Job Messaging: event=#{event_name(messaging).inspect} mid=#{messaging.dig(:message, :mid)}")
 
       instagram_id = instagram_id(messaging)
       channel = find_channel(instagram_id)
@@ -206,6 +209,14 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   rescue StandardError => e
     Rails.logger.warn("[autonomia][operate] ig_reaction_failed #{e.class}")
     nil
+  end
+
+  # Erro aqui não pode parar os outros eventos do lote: fica no log e no rastreador, como no Messenger.
+  def referral(messaging, _channel)
+    Crm::MetaAds::MessagingReferralJob.enqueue_for('instagram', messaging.to_h.deep_stringify_keys)
+  rescue StandardError => e
+    Rails.logger.warn("[#{self.class.name}] referral não enfileirado: #{e.class}")
+    ChatwootExceptionTracker.new(e).capture_exception
   end
 
   def message_edit(messaging, channel)

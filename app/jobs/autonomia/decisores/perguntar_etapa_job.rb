@@ -79,6 +79,7 @@ class Autonomia::Decisores::PerguntarEtapaJob < ApplicationJob
   end
 
   def seguir(decisao, marca)
+    # A extração dos campos escreve texto livre no card e na decisão: sem o anúncio de origem (#2558).
     estado = Autonomia::Decisores::Estado.new(card: card, conversation: decisao.conversation, leituras: decisao.decisor.leituras_efetivas)
     Autonomia::Decisores::Seguimento.new(decisao: decisao, marca: marca, estado: estado).perform do
       Crm::StageAutomations::StepSequence.new(card: card, actor: ator, execution: @execution, automation_context: espera['automation_context'])

@@ -205,11 +205,23 @@ Rails.application.routes.draw do
           get 'seus_posts/cuidados', to: 'seus_posts_cuidado#cuidados'
           put 'seus_posts/cuidados', to: 'seus_posts_cuidado#mudar_todos'
           get 'seus_posts/posts/:post_id/cuidado', to: 'seus_posts_cuidado#show'
+          get 'seus_posts/posts/:post_id/cuidado/post', to: 'seus_posts_cuidado#ler_post'
           put 'seus_posts/posts/:post_id/cuidado', to: 'seus_posts_cuidado#update'
           post 'seus_posts/posts/:post_id/cuidado/previa', to: 'seus_posts_cuidado#previa'
           post 'seus_posts/posts/:post_id/cuidado/rascunho', to: 'seus_posts_cuidado#rascunho'
+          post 'seus_posts/posts/:post_id/cuidado/foto', to: 'seus_posts_cuidado#foto'
+          put 'seus_posts/posts/:post_id/cuidado/foto', to: 'seus_posts_cuidado#corrigir_foto'
           post 'seus_posts/posts/:post_id/cuidado/ler_antigos', to: 'seus_posts_cuidado#ler_antigos'
           get 'seus_posts/posts/:post_id/resumo', to: 'seus_posts_cuidado#resumo'
+          # O cuidado de cada post ou anúncio como cartão em Agentes (#2469, PR 3a do #2436).
+          get 'agentes_do_post', to: 'agentes_do_post#index'
+          get 'agentes_do_post/anuncios', to: 'agentes_do_post#anuncios'
+          get 'agentes_do_post/:id', to: 'agentes_do_post#show'
+          put 'agentes_do_post/:id/estado', to: 'agentes_do_post#estado'
+          post 'agentes_do_post/:id/testar', to: 'agentes_do_post#testar'
+          get 'agentes_do_post/:id/materiais', to: 'agentes_do_post_materiais#index'
+          post 'agentes_do_post/:id/materiais', to: 'agentes_do_post_materiais#create'
+          delete 'agentes_do_post/:id/materiais/:material_id', to: 'agentes_do_post_materiais#destroy'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
             post :ensaio, on: :member
@@ -436,6 +448,9 @@ Rails.application.routes.draw do
               get 'ads/:ad_id/management', to: 'meta_ads_ad_management#show'
               post 'ads/:ad_id/status', to: 'meta_ads_ad_management#status'
               get :pages, to: 'meta_ads_ad_management#pages'
+              # Login único (#2338): a Página vem do mesmo login dos Anúncios.
+              get :paginas, to: 'meta_ads_pagina#index'
+              post :pagina, to: 'meta_ads_pagina#create'
               # Destino (#2338): ligar a página do site sem sair de Anúncios.
               get :site_pages, to: 'meta_ads_site_pages#index'
               post :site_pages, to: 'meta_ads_site_pages#create'
@@ -443,6 +458,8 @@ Rails.application.routes.draw do
               get :boost_posts, to: 'meta_ads_creation#boost_posts'
               post :media, to: 'meta_ads_creation#media'
               post :ads, to: 'meta_ads_creation#create'
+              post :post_media, to: 'meta_ads_creation#post_media'
+              post :posts, to: 'meta_ads_creation#publish'
               get 'ads/:ad_id/budget', to: 'meta_ads_creation#budget'
               patch 'ads/:ad_id/budget', to: 'meta_ads_creation#update_budget'
               get :paused_ads, to: 'meta_ads_creation#paused'
@@ -469,6 +486,8 @@ Rails.application.routes.draw do
               put 'ads/:ad_id/cuidado', to: 'meta_ads_cuidado#update'
               post 'ads/:ad_id/cuidado/previa', to: 'meta_ads_cuidado#previa'
               post 'ads/:ad_id/cuidado/ler_antigos', to: 'meta_ads_cuidado#ler_antigos'
+              post 'ads/:ad_id/cuidado/foto', to: 'meta_ads_cuidado#foto'
+              put 'ads/:ad_id/cuidado/foto', to: 'meta_ads_cuidado#corrigir_foto'
               get 'ads/:ad_id/resumo', to: 'meta_ads_cuidado#resumo'
             end
             # Formulários dos anúncios (#2195): Páginas, formulários e para onde vai quem preenche.
@@ -710,6 +729,24 @@ Rails.application.routes.draw do
             resources :guide_memorias, only: [:index, :update, :destroy]
             # #935 — o Guia volta sozinho: as vigias ("me avisa se…") e os avisos de cada pessoa.
             resources :vigias, only: [:index, :show, :create, :update, :destroy]
+            # #2414 F5 — a Automação livre pelo editor: o catálogo de passos, as automações, ligar, desligar, o histórico
+            # e o ensaio (#2498: o da coleção é o da automação ainda não salva).
+            resources :automacoes, only: [:index, :show, :create, :update] do
+              get :passos, on: :collection
+              post :ensaio, on: :collection, action: :ensaio_novo
+              # #2500 C2: o "Testar este passo" e os custos da IA.
+              post :testar_passo, on: :collection, to: 'automacoes_ia#testar_passo'
+              get :custos, on: :collection, to: 'automacoes_ia#custos'
+              # G15: as agentes de IA do passo "Passar para a agente de IA".
+              get :agentes_de_ia, on: :collection, to: 'automacoes_ia#agentes_de_ia'
+              member do
+                post :ligar
+                post :desligar
+                get :historico
+                post :ensaio
+                get :custos, to: 'automacoes_ia#custos_da_automacao'
+              end
+            end
             resources :avisos, only: [:index, :update]
             # #943 — o que o Guia deixou sem desfazer. Fora de `guide/`, de propósito: é a leitura da vigia padrão.
             get 'pendencias_do_guia', to: 'pendencias_do_guia#index'
@@ -889,6 +926,11 @@ Rails.application.routes.draw do
               resource :participants, only: [:show, :create, :update, :destroy]
               resource :direct_uploads, only: [:create]
               resource :draft_messages, only: [:show, :update, :destroy]
+              # #2215: o comentário do Instagram de onde a conversa nasceu, e as ações nele.
+              resource :comentario, only: [:show, :destroy], controller: 'comentario' do
+                post :responder
+                post :esconder
+              end
             end
             member do
               post :mute
@@ -959,6 +1001,7 @@ Rails.application.routes.draw do
               resources :conversations, only: [:index]
               resources :contact_inboxes, only: [:create]
               resources :labels, only: [:create, :index]
+              patch 'labels/alterar', to: 'alterar_etiquetas#update', as: :alterar_etiquetas # fork chat#2461: pôr/tirar uma a uma
               resources :notes
               resource :opt_out, only: [:create, :destroy]
               resource :customer, only: [:create, :destroy]

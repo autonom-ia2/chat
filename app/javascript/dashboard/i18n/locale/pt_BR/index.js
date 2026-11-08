@@ -25,6 +25,13 @@ import painelDoContato from './painelDoContato.json';
 import listaDeConversas from './listaDeConversas.json';
 import metaAdsOrganico from './metaAdsOrganico.json';
 import funcoesDaEquipe from './funcoesDaEquipe.json';
+import automacaoLivre from './automacaoLivre.json';
+import automacaoLivreGatilhos from './automacaoLivreGatilhos.json';
+import automacaoLivreIa from './automacaoLivreIa.json';
+import automacaoLivreReceitas from './automacaoLivreReceitas.json';
+import automacaoLivreEnsaio from './automacaoLivreEnsaio.json';
+import automacaoLivreCampanha from './automacaoLivreCampanha.json';
+import automacaoLivreRetorno from './automacaoLivreRetorno.json';
 import brandKits from './brandKits.json';
 import booking from './booking.json';
 import resultJourney from './resultJourney.json';
@@ -104,6 +111,17 @@ export default {
   ...listaDeConversas,
   ...metaAdsOrganico,
   ...funcoesDaEquipe,
+  // Automação livre (#2569): um namespace, um arquivo por área. As áreas não
+  // repetem chave entre si (automacaoLivrePorArea.spec.js confere).
+  AUTOMACAO_LIVRE: {
+    ...automacaoLivre.AUTOMACAO_LIVRE,
+    ...automacaoLivreGatilhos.AUTOMACAO_LIVRE,
+    ...automacaoLivreIa.AUTOMACAO_LIVRE,
+    ...automacaoLivreReceitas.AUTOMACAO_LIVRE,
+    ...automacaoLivreEnsaio.AUTOMACAO_LIVRE,
+    ...automacaoLivreCampanha.AUTOMACAO_LIVRE,
+    ...automacaoLivreRetorno.AUTOMACAO_LIVRE,
+  },
   ...brandKits,
   ...booking,
   ...resultJourney,

@@ -71,7 +71,8 @@ module Autonomia
       has_many :inboxes, through: :agent_inboxes
       # Revisor v2: só as fontes APROVADAS pela IA Revisora alimentam o Construtor (resumos) e o
       # retrieval do Testar/Operar. needs_resend/needs_review ficam de fora.
-      has_many :accepted_sources, -> { accepted }, class_name: 'Autonomia::Agents::Source',
+      # #2487: e só as do agente: o material só de um post ou anúncio (care_id) não é do agente.
+      has_many :accepted_sources, -> { accepted.da_agente }, class_name: 'Autonomia::Agents::Source',
                                   foreign_key: :autonomia_agent_id
       # Fase F: eventos de operação (replied/handed_off). delete_all = limpeza barata e
       # imutável ao destruir o agente; o Analytics consulta por autonomia_agent_id direto.
@@ -240,9 +241,12 @@ module Autonomia
       # lista do deploy (`QuoteAgent::Builder.ferramentas_mantidas`); para os demais, `native_tool_slugs`.
       # Quem monta o catálogo do turno (`Tools::Registry.for_agent`) lê daqui.
       # A agenda (#1196) liga junto com a escolha da página (`config['booking_page_id']`): escolher a página é ligar.
+      # O mapa e o contato da página (#1479 F3) ligam do mesmo jeito, com a flag da conta (`CartaoDaPagina.com_cartoes`).
       def ferramentas_nativas
         ::Autonomia::Insurance::QuoteAgent::Builder.ferramentas_mantidas(self) ||
-          ::Autonomia::Agents::Tools::Native::Agenda.com_agenda(self, native_tool_slugs)
+          ::Autonomia::Agents::Tools::Native::CartaoDaPagina.com_cartoes(
+            self, ::Autonomia::Agents::Tools::Native::Agenda.com_agenda(self, native_tool_slugs)
+          )
       end
 
       # Aplica config gerada pelo Construtor (token-guarded — análogo a ai_guarded_update do

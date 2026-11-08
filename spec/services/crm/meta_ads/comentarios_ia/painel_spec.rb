@@ -12,8 +12,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     create(:crm_meta_ads_comment_care, account: account, target_kind: 'post', target_id: '1790', offer: nil, para_quem: 'Quem pedir o e-book')
   end
 
-  def linha(id, dias: 1)
-    { id: id, network: 'instagram', author: "pessoa#{id}", text: "texto #{id}", momento: dias.days.ago, inbox_id: inbox.id, post_id: '1790' }
+  def linha(id, dias: 1, momento: dias.days.ago)
+    { id: id, network: 'instagram', author: "pessoa#{id}", text: "texto #{id}", momento: momento, inbox_id: inbox.id, post_id: '1790' }
   end
 
   def acao(comment_id, action, conversation: nil)
@@ -48,7 +48,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
       .to eq([%w[1 complaint], %w[2 failed], %w[3 skipped], %w[4 waiting], %w[5 older]])
     expect(payload[:to_see].first[:conversation_path]).to start_with("/app/accounts/#{account.id}/conversations/")
     expect(payload[:hidden].pluck(:id)).to eq(%w[6])
-    expect(payload).to include(care: 'on', para_quem: 'Quem pedir o e-book', unanswered: 4, older: 1, private_available: true)
+    expect(payload).to include(care: 'on', care_id: care.id, para_quem: 'Quem pedir o e-book', unanswered: 4, older: 1,
+                               private_available: true)
+  end
+
+  it 'sem cuidado gravado, care_id nulo: a tela do passo 1 só anexa depois de ligar (#2487)' do
+    care.destroy!
+
+    expect(painel.payload).to include(care: 'off', care_id: nil)
   end
 
   it 'recebeu no privado e respondeu, pelas conversas que nasceram do cuidado; não era o caso, pelo que a IA leu' do
@@ -105,11 +112,13 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     expect(sem_ver.payload[:to_see].first[:conversation_path]).to be_nil
   end
 
-  it 'no Facebook, o privado ainda não está liberado (pages_messaging, F4)' do
+  it 'no Facebook, o privado só está liberado na conta com a flag (#2613)' do
     facebook = described_class.new(account: account, alvo: alvo.merge('networks' => ['facebook']), fonte: fonte, conversation_access: ve_tudo,
                                    viewer: admin)
-
     expect(facebook.payload[:private_available]).to be(false)
+
+    account.enable_features!('meta_ads_comentarios_privado_facebook')
+    expect(facebook.payload[:private_available]).to be(true)
   end
 
   it 'no Facebook, a pergunta que era o caso fica com o dono (no_private), não como "não se aplica"' do
@@ -166,15 +175,52 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
   describe 'chegaram antes de ligar' do
     before { care.update!(started_at: 2.days.ago) }
 
-    it 'só é "antes" o que chegou antes de ligar; o que chegou depois e a IA ainda não leu não fica com o dono' do
-      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 3), linha('2', dias: 1), linha('3', dias: 1),
-                                                                           linha('4', dias: 9)], escondidas: [] })
+    it 'só é "antes" o que chegou antes de ligar; o que chegou depois e a IA ainda não leu fica na fila dela, até 10 min' do
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 3), linha('2', momento: 9.minutes.ago),
+                                                                           linha('3', dias: 1), linha('4', dias: 9)], escondidas: [] })
       acao('3', 'ai_seen')
 
       payload = painel.payload
 
       expect(payload[:to_see].map { |item| [item[:id], item[:kind]] }).to eq([%w[1 waiting], %w[3 skipped], %w[4 older]])
       expect(payload).to include(unanswered: 1, older: 1)
+    end
+
+    # #2519: nada some em silêncio. O evento pode não ter chegado (ou o job, morrido): sem nenhuma ação da IA em 10 min,
+    # o comentário vem para o dono, com o selo de que a IA não o pegou.
+    it 'chegou depois de ligar e a IA não fez nada em 10 min: fica com o dono (not_caught)' do
+      chegou = 11.minutes.ago
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', momento: chegou), linha('2', momento: 9.minutes.ago),
+                                                                           linha('3', momento: 2.hours.ago)], escondidas: [] })
+      acao('3', 'ai_seen')
+
+      to_see = painel.payload[:to_see]
+      expect(to_see.map { |item| [item[:id], item[:kind]] }).to eq([%w[1 not_caught], %w[3 skipped]])
+      # A tela mostra há quanto tempo a pessoa espera ("há 11 minutos").
+      expect(to_see.first[:created_time]).to eq(chegou.iso8601)
+    end
+
+    it 'o que a pessoa já respondeu, escondeu ou apagou pela plataforma não é "não vi a tempo"' do
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', momento: 1.hour.ago), linha('2', momento: 1.hour.ago)],
+                                                 escondidas: [] })
+      Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: '1', action: 'reply', actor: 'user',
+                                        user: admin)
+
+      expect(painel.payload[:to_see].map { |item| [item[:id], item[:kind]] }).to eq([%w[2 not_caught]])
+    end
+
+    # #2454: "Os N que já estão aqui" do Ligar conta também as respostas de cliente, só com a flag meta_ads_comentarios_ia.
+    it 'as respostas de cliente entram no "Ler e mandar" só com a flag meta_ads_comentarios_ia' do
+      respostas = [linha('1a', dias: 3).merge(parent_id: '1'), linha('2a', dias: 1).merge(parent_id: '2')]
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 3), linha('2', momento: 5.minutes.ago)], escondidas: [],
+                                                 respostas_que_esperam: respostas })
+
+      expect(painel.payload).to include(unanswered: 1, older: 0)
+
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
+      payload = described_class.new(account: account.reload, alvo: alvo, fonte: fonte, conversation_access: ve_tudo, viewer: admin).payload
+      expect(payload).to include(unanswered: 2, older: 0)
+      expect(payload[:to_see].pluck(:id)).to eq(%w[1])
     end
 
     it 'cuidado pausado: o que chegou depois de ligar e a IA não leu fica com o dono (paused), não some' do
@@ -206,6 +252,18 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
   describe '#salvar!' do
     let(:alvo_novo) { alvo.merge('post_id' => '1791') }
     let(:corpo) { { message: 'Oi', para_quem: 'Quem pedir', phrases: ['Te chamei'], status: 'on', user: nil } }
+
+    # #2520: o Facebook só manda o comentário com o `feed` da Página assinado; o Instagram não precisa.
+    it 'ligar um cuidado do Facebook assina o feed da Página; o do Instagram não' do
+      account.enable_features!('meta_ads_comentarios_facebook')
+      pagina = create(:channel_facebook_page, account: account, page_id: '555')
+      alvo_fb = { 'kind' => 'post', 'perfil' => "facebook-#{pagina.inbox.id}", 'post_id' => '555_1', 'networks' => ['facebook'],
+                  'inbox_id' => pagina.inbox.id }
+      facebook = described_class.new(account: account, alvo: alvo_fb, fonte: fonte, conversation_access: ve_tudo, viewer: admin)
+
+      expect { facebook.salvar!(**corpo) }.to have_enqueued_job(Crm::MetaAds::ComentariosIa::AssinarFeedJob).with(account.id, '555')
+      expect { painel.salvar!(**corpo) }.not_to have_enqueued_job(Crm::MetaAds::ComentariosIa::AssinarFeedJob)
+    end
 
     it 'duas abas ligando o mesmo post ao mesmo tempo: a segunda relê o cuidado e aplica por cima, sem erro' do
       aba1 = described_class.new(account: account, alvo: alvo_novo, fonte: fonte, conversation_access: ve_tudo, viewer: admin)

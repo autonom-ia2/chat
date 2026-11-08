@@ -88,19 +88,19 @@ RSpec.describe Crm::MetaAds::LeadForms::Importer do
     expect(card.metadata['meta_lead_form']['fields']).to include(include('key' => 'phone_number', 'value' => '11 98765-1201'))
   end
 
-  it 'sem nome, telefone com DDI nem e-mail: o card nasce com o nome do formulário' do
+  it 'sem nome, telefone com DDI nem e-mail: o card nasce com "Lead" e o id, sem o nome do formulário (#2562)' do
     lead_sem_contato = lead(name: '', phone: '11 98765-1201', email: '')
 
     expect(importer.import(lead_sem_contato)).to eq(:created)
-    expect(account.crm_cards.last.title).to eq('Orçamento de verão')
+    expect(account.crm_cards.last.title).to eq('Lead L1')
   end
 
   # O título vai à IA (Decisor, IA de etapa) e a quem não vê o contato: telefone e e-mail nunca entram nele.
-  it 'sem nome, com telefone e e-mail: o título é o nome do formulário, sem telefone nem e-mail' do
+  it 'sem nome, com telefone e e-mail: o título é "Lead" e o id, sem telefone nem e-mail' do
     importer.import(lead(name: ''))
 
     card = account.crm_cards.last
-    expect(card.title).to eq('Orçamento de verão')
+    expect(card.title).to eq('Lead L1')
     expect(card.contact.phone_number).to eq('+5511987651201')
     decisor = build(:autonomia_decisor, account: account)
     estado = Autonomia::Decisores::Estado.new(card: card, leituras: %w[card contato])
@@ -109,19 +109,19 @@ RSpec.describe Crm::MetaAds::LeadForms::Importer do
     end)
   end
 
-  it 'nome que é um e-mail: título e contato ficam sem ele, e o título é o nome do formulário' do
+  it 'nome que é um e-mail: título e contato ficam sem ele, e o título é "Lead" e o id' do
     importer.import(lead(name: 'mariana@example.com'))
 
     card = account.crm_cards.last
-    expect(card.title).to eq('Orçamento de verão')
+    expect(card.title).to eq('Lead L1')
     expect(card.contact.name.to_s).not_to include('mariana@example.com')
   end
 
-  it 'nome que é um telefone: título e contato ficam sem ele, e o título é o nome do formulário' do
+  it 'nome que é um telefone: título e contato ficam sem ele, e o título é "Lead" e o id' do
     importer.import(lead(name: '(11) 98765-1201'))
 
     card = account.crm_cards.last
-    expect(card.title).to eq('Orçamento de verão')
+    expect(card.title).to eq('Lead L1')
     expect(card.contact.name.to_s).not_to include('98765-1201')
   end
 
