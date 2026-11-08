@@ -155,6 +155,7 @@
       "CAMPOS": "What to look for",
       "TROCAR": "Replace what was already filled in",
       "INSTRUCAO": "What the AI should write",
+      "INSTRUCAO_DO_RESUMO": "What else the summary should include (optional)",
       "DESTINO": "Where it goes",
       "LINHAS": "Summary length (lines)",
       "ETAPA_ID": "In which stage the card starts",

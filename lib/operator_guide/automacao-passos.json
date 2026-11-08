@@ -1095,7 +1095,7 @@
           "nome": "instrucao",
           "peca": "instrucao",
           "obrigatorio": false,
-          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.INSTRUCAO"
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.INSTRUCAO_DO_RESUMO"
         },
         {
           "nome": "linhas",

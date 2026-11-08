@@ -155,6 +155,7 @@
       "CAMPOS": "O que procurar",
       "TROCAR": "Trocar o que já estava preenchido",
       "INSTRUCAO": "O que a IA deve escrever",
+      "INSTRUCAO_DO_RESUMO": "O que mais o resumo deve trazer (opcional)",
       "DESTINO": "Para onde vai",
       "LINHAS": "Tamanho do resumo (linhas)",
       "ETAPA_ID": "Em qual etapa o card nasce",
