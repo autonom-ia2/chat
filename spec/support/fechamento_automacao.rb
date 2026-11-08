@@ -217,9 +217,9 @@ module FechamentoAutomacao::Lacunas
     'G39' => nil,
     # Do exemplo 10 (#2678), fora do lote 2: esperar só a pessoa que atende a conversa (a Fernanda), não a equipe inteira.
     'G40' => -> { valor?('conversa.responsavel_respondeu') },
-    # Do exemplo 10 (#2678), ainda sem dono: a instrução no resumir ("o que já foi prometido") e avisar o responsável
-    # quando a agente de IA atende a conversa.
-    'G41' => nil,
+    # Do exemplo 10 (#2678, #2752): a instrução no resumir ("o que já foi prometido") e avisar o responsável quando a
+    # agente de IA atende a conversa (o dono do card; sem ele, o passo pula com sem_responsavel).
+    'G41' => -> { campo_do_passo?('resumir', 'instrucao') && I18n.exists?('autonomia.automacao.motivos.sem_responsavel', :pt_BR) },
     # Do exemplo 1, passo 12 (#2721): o resumo lê tudo o que a execução tentou, até o e-mail em conversa própria. Fica
     # com a F7 (#2763); sem ela, o exemplo 1 segue pendente.
     'G42' => nil,

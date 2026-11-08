@@ -543,6 +543,7 @@
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "resumir" },
             "le": { "$ref": "#/definitions/leituras" },
+            "instrucao": { "$ref": "#/definitions/instrucao", "description": "Opcional (G41): o que o resumo deve trazer além do de sempre (por exemplo, o que a equipe já prometeu). Vai junto do texto fixo, sem trocá-lo." },
             "linhas": { "type": "integer", "minimum": 1, "maximum": 10 },
             "destino": { "$ref": "#/definitions/destino_resumir" }
           }

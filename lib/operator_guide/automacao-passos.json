@@ -1282,6 +1282,12 @@
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.LE"
         },
         {
+          "nome": "instrucao",
+          "peca": "instrucao",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.INSTRUCAO_DO_RESUMO"
+        },
+        {
           "nome": "linhas",
           "peca": "numero",
           "obrigatorio": false,
