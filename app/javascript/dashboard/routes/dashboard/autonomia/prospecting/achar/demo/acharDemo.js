@@ -582,4 +582,12 @@ export const PORTA = {
   'como-procurar-modelos': { ...PADRAO, painel: 'como', modelos: true },
   'mais-ajustes': { ...PADRAO, painel: 'mais', modelos: true },
   'porta-pouco-vistas': { ...PADRAO, primeiro: 'pouco' },
+  // Pedido em uma frase (#2696): o campo aparece em todos os estados da porta,
+  // menos sem a IA da conta.
+  'porta-sem-ia': PADRAO,
+  'porta-frase-erro': PADRAO,
+  'porta-frase-nao-entendeu': PADRAO,
 };
+
+// Pedido em uma frase (#2696): a resposta da IA na demonstração.
+export { FRASE_ENTENDIDA, FRASE_NAO_ENTENDIDA } from './acharFraseDemo';

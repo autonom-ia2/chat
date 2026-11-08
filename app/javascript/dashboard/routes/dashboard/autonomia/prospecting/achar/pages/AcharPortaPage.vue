@@ -5,6 +5,7 @@ import { useDebounceFn } from '@vueuse/core';
 import Button from 'dashboard/components-next/button/Button.vue';
 import AcharHeroi from '../components/AcharHeroi.vue';
 import AcharOndeCampo from '../components/AcharOndeCampo.vue';
+import AcharFraseCampo from '../components/AcharFraseCampo.vue';
 import AcharLinhaFrase from '../components/AcharLinhaFrase.vue';
 import AcharBuscaCartao from '../components/AcharBuscaCartao.vue';
 import AcharRodape from '../components/AcharRodape.vue';
@@ -73,6 +74,8 @@ const ultimasDoPapel = computed(() =>
 );
 const googlePronto = ref(true);
 const emTeste = ref(false);
+// Pedido em uma frase (#2696): só com a IA da conta ligada.
+const iaPronta = ref(false);
 const ondeCampo = ref(null);
 
 const escolherLugar = async sugestao => {
@@ -111,6 +114,21 @@ const procurarLugares = useDebounceFn(async texto => {
 watch(ondeTexto, texto => {
   if (!congelado.value) procurarLugares(texto);
 });
+
+// O que a IA entendeu da frase preenche os campos; o que ela não disse fica
+// como estava. O lugar volta a ser texto: as sugestões do Google aparecem e a
+// pessoa confere (uma sugestão só vale sozinha, como digitado à mão).
+const usarFrase = ({ oQue: entendido, onde, ajustes, primeiro }) => {
+  if (entendido) oQue.value = entendido;
+  if (onde) {
+    congelado.value = false;
+    lugar.value = null;
+    sugestoes.value = [];
+    ondeTexto.value = onde;
+    procurarLugares(onde);
+  }
+  como.value = { ...como.value, ajustes, primeiro };
+};
 
 const alterarLugar = () => {
   lugar.value = null;
@@ -244,6 +262,7 @@ const carregar = async () => {
     ultimas.value = dados.ultimas;
     googlePronto.value = dados.googlePronto;
     emTeste.value = dados.emTeste;
+    iaPronta.value = dados.iaPronta === true;
     modelos.value = dados.modelos || [];
     preencher({ dados, preenchido: dados.preenchido });
   } catch {
@@ -300,6 +319,11 @@ watch(demo, carregar);
             data-cartao-porta
             @submit.prevent="achar"
           >
+            <AcharFraseCampo
+              v-if="iaPronta"
+              :interpretar="texto => fonte.interpretar(texto)"
+              @entendeu="usarFrase"
+            />
             <div class="grid grid-cols-1 gap-4 md:grid-cols-[2fr_3fr]">
               <div class="flex flex-col gap-1.5">
                 <label

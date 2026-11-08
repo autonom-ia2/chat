@@ -801,6 +801,8 @@ Rails.application.routes.draw do
               resources :searches, only: [:index, :show, :create, :update, :destroy] do
                 get :location_suggestions, on: :collection
                 get :location_details, on: :collection
+                # Pedido em uma frase (#2696): a IA da conta preenche os campos; não cria a busca.
+                post :interpret, on: :collection, controller: :search_interpretations, action: :create
                 get :export, on: :member
               end
               resources :leads, only: [:index, :show, :update] do

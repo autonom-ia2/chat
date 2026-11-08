@@ -14,6 +14,12 @@ class AutonomiaProspectingAPI extends ApiClient {
     return axios.get(`${this.url}/searches/${searchId}`);
   }
 
+  // Pedido em uma frase (#2696): a IA da conta devolve o quê, onde e os
+  // ajustes; não cria a busca.
+  interpretSearch(text) {
+    return axios.post(`${this.url}/searches/interpret`, { text });
+  }
+
   getLocationSuggestions(query) {
     return axios.get(`${this.url}/searches/location_suggestions`, {
       params: { query },

@@ -42,6 +42,16 @@
     },
     "PORTA": {
       "TITULO": "Que empresas você quer achar?",
+      "FRASE": {
+        "ROTULO": "Escreva o que você procura",
+        "PLACEHOLDER": "Ex.: padarias perto da Paulista com nota boa",
+        "BOTAO": "Preencher os campos",
+        "BOTAO_OCUPADO": "Lendo…",
+        "CONFIRA": "Pronto. Confira os campos abaixo antes de buscar.",
+        "NAO_ENTENDEU": "Não entendemos. Escreva de outro jeito ou preencha os campos abaixo.",
+        "ERRO": "A IA não respondeu agora. Preencha os campos abaixo.",
+        "SEM_IA": "A IA da conta não está ligada. Preencha os campos abaixo."
+      },
       "O_QUE": {
         "ROTULO": "O quê?",
         "PLACEHOLDER": "Ex.: escritórios"
