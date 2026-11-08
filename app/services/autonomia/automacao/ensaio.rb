@@ -244,7 +244,7 @@ class Autonomia::Automacao::Ensaio
     end
     chave = ::Autonomia::Automacao::Receita::NENHUM
     nenhum = { chave: chave, passos: caminho(@roteiro.entrar(passo, chave), valores) }
-    no(passo, 'decidir', ramos: caminhos << nenhum)
+    no(passo, 'decidir', anexos(passo, ::Autonomia::Automacao::PassoDeDecidir), ramos: caminhos << nenhum)
   end
 
   # O que a IA faria, só com o que a receita diz. O passo que manda mensagem ou aviso (regras da F4) sem a mensagem
@@ -253,7 +253,17 @@ class Autonomia::Automacao::Ensaio
     classe = ::Autonomia::Automacao::IaNoExecutor::IA.fetch(passo['tipo'])
     return no(passo, 'mensagens_desligadas') if classe.fala_com_gente?(passo) && !::Autonomia::Automacao::Motor.mensagens?(@conta)
 
-    no(passo, "ia_#{passo['tipo']}", classe.ensaiar(passo))
+    no(passo, "ia_#{passo['tipo']}", classe.ensaiar(passo).merge(anexos(passo, classe)))
+  end
+
+  # G20: com `le: anexos`, quantos anexos desta conversa a IA leria, ou o motivo de o passo pular, como o motor. Não
+  # baixa nada nem chama a IA.
+  def anexos(passo, classe)
+    return {} unless ::Autonomia::Automacao::AnexosDaConversa.le?(passo)
+
+    lidos = ::Autonomia::Automacao::AnexosDaConversa.new(@conversa)
+    motivo = lidos.motivo(modelo: classe::MODELO)
+    motivo ? { anexos_motivo: motivo } : { anexos: lidos.quantos }
   end
 
   def condicao?(condicao, valores)

@@ -141,7 +141,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G17 | **Criar contato** (o amigo indicado, o funcionário novo) e **importar em lote** ligado à empresa | novo | `POST contacts` fora da lista; importação não é passo | F2 | 8, 11 |
 | G18 | **Agir ou ler em outro registro ligado** ao alvo (o card do João avisa a Maria, que indicou; a resposta lê o motivo da perda no card antigo do mesmo contato). "Para cada card com etiqueta X" é da G7 | F8 / novo | O passo age só no alvo da execução | Motor | 11, 16 |
 | G19 | **Nota no contato** (não na conversa) | F3 (ação) | `contacts/notes` fora da lista | F2 | 5, 19 |
-| G20 | Passos de IA **lendo anexo** (PDF, foto do currículo, documento) pelo leitor de mídia | F7 | O `Estado` dos passos de IA não usa `com_midia`; só a IA de assunto lê | F7 | 3, 8, 14, 18 |
+| G20 | Passos de IA **lendo anexo** (PDF, foto do currículo, documento) | F7 | Em PR (#2669): `le: anexos` — foto e PDF vão como estão ao modelo do passo, áudio pela transcrição; o que passa do limite do provedor pula com motivo | F7 | 3, 8, 14, 18 |
 | G21 | **Prospecção**: rodar busca salva e conferência de WhatsApp como passo | novo | Sem passo | F5 | 9 |
 | G22 | **Avisar quem não está na conversa** (o RH da empresa cliente por mensagem; a equipe quando o alvo não tem conversa) | F4 | O "avisar" é nota com menção na conversa do alvo; card sem conversa pula com `sem_conversa` | F1 | 8 |
 | G23 | Condição sobre **disponibilidade de uma pessoa** (a responsável voltou de férias) | F8 | Não é valor da receita | Motor | 17 |
@@ -164,7 +164,7 @@ o RSpec acusa ("Expected pending … to fail", com a instrução do que fazer), 
 e sai da lista. A sonda roda antes do `pending`: sonda quebrada (classe renomeada) é erro vermelho, nunca pendente.
 
 A frente que fecha uma lacuna ajusta a sonda no mesmo PR se o nome que deu for outro (ex.: o passo se chama
-`criar_retorno`, não `retorno`). Sonda vazia (G16, G18, G20, G22, G23, G24) é lacuna que nenhuma pergunta simples
+`criar_retorno`, não `retorno`). Sonda vazia (G16, G18, G22, G23, G24) é lacuna que nenhuma pergunta simples
 responde: a frente troca a sonda pela prova.
 
 ## 6. Os 20 exemplos: o que existe e o que falta
@@ -175,7 +175,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 |---|---|---|---|---|---|
 | 1 | Renovação do seguro | ⛔ G6 (30 dias antes do vencimento) | mover card ✅, etiqueta ✅, extrair ✅, decidir ✅, avisar ✅, resumir ✅ | G1, G2, G3, G6, G8, G11, G12 | Não |
 | 2 | Lead do anúncio | ✅ G5 (card criado), ⛔ G29 ("pelo formulário de um anúncio") | etiqueta ✅, mensagem pelo modelo ✅ (G1), esperar a resposta ✅ (G11), retorno ✅ (G3), passar para a agente de IA ✅ (G15), decidir ✅, link da agenda ✅ (G12), mover ✅, resumir/avisar ✅, extrair ✅, etiqueta da campanha ✅ (G14) | G29, G30, G31, G32 | Não |
-| 3 | Pós-procedimento da clínica | 🟡 G5 (entrou em "Atendida") | extrair ✅, escrever ✅, decidir ✅, etiqueta ✅, prioridade ✅, avisar ✅, mover ✅ | G1, G2 (e-mail no lugar da campanha "Manutenção"), G3, G5, G12, G16 (data do card), G20 | Não |
+| 3 | Pós-procedimento da clínica | ✅ G5 (entrou em "Atendida") | extrair ✅, escrever ✅, decidir ✅ (lendo a foto, G20), etiqueta ✅, prioridade ✅, avisar ✅, retorno ✅, e-mail no lugar da campanha "Manutenção" ✅, mover ✅ | G28 (os cuidados pelo modelo aprovado, fora da janela: lote 2 #2679); spec em `exemplo_03_pos_procedimento_spec.rb` (#2669) | Não |
 | 4 | Aluno que começa a faltar | 🟡 G5 (entrou em "Faltou") | se com etiqueta do contato ✅, etiqueta pôr/tirar ✅, escrever ✅, decidir ✅, avisar ✅, esperar 30 dias ✅ | G1, G3, G4, G5, G12, G15, G25 | Não |
 | 5 | Revisão do carro | 🟡 G5 (card ganho) | extrair ✅ (contato), etiqueta ✅, mover ✅ | G1, G3, G5, G6, G12, G16, G19 | Não |
 | 6 | Aniversário | ⛔ G6 (data de nascimento do contato) | escrever ✅, etiqueta ✅, decidir ✅, extrair ✅, avisar ✅ | G1, G4, G6, G12, G14, G16, G25 | Não |

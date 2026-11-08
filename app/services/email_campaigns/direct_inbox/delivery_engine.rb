@@ -6,7 +6,7 @@ module EmailCampaigns
     class DeliveryEngine
       TIMEZONE = 'America/Sao_Paulo'.freeze
       CHAIN_KEY = 'email_campaigns:direct_inbox:next_tick:%<campaign_id>d'.freeze
-      # The scheduled tick may be lost (worker crash): the key expires a little after its time.
+      # The key only marks the newest chain; it expires a little after its tick's time, so it never outlives the chain.
       CHAIN_GRACE = 10.minutes
 
       def initialize(campaign)
@@ -14,7 +14,7 @@ module EmailCampaigns
         @inbox = campaign.sender_inbox
       end
 
-      # Each tick schedules the next one with a token (#2717); a scheduled tick whose token is no longer the
+      # Each tick schedules the next one with a token (#2722); a scheduled tick whose token is no longer the
       # campaign's latest belongs to a duplicated chain and stops, so the human rhythm holds with one chain.
       def tick(token = nil)
         EmailCampaigns::Reputation::CampaignDeliveryLock.synchronize(@campaign.id) do
@@ -22,6 +22,7 @@ module EmailCampaigns
         end
       end
 
+      # A campanha aberta (#2717) só acorda o envio quando não há tick agendado (CampaignJourney::CampanhaAberta).
       def self.tick_scheduled?(campaign)
         Redis::Alfred.get(chain_key(campaign.id)).present?
       end
@@ -62,10 +63,12 @@ module EmailCampaigns
         return true if token.nil?
 
         # Runs under the campaign delivery lock, like reschedule: read and delete do not interleave with another tick.
+        # Only a newer chain stops this tick. With no key (expired by a late queue, or the chain ended) it goes on.
         key = self.class.chain_key(@campaign.id)
-        return false unless Redis::Alfred.get(key) == token
+        latest = Redis::Alfred.get(key)
+        return false if latest.present? && latest != token
 
-        Redis::Alfred.delete(key)
+        Redis::Alfred.delete(key) if latest.present?
         true
       end
 

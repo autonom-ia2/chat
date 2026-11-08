@@ -32,6 +32,8 @@ const LEITURAS = [
   'conversa',
   'contato',
   'empresa',
+  // #2414 G20: a foto, o PDF e o áudio que o cliente mandou.
+  'anexos',
 ];
 const opcoesDeLeitura = computed(() =>
   LEITURAS.map(valor => ({
