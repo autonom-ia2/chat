@@ -15188,19 +15188,39 @@
   },
   "POST crm/cards/:card_id/contact": {
     "campos": {
-      "contact": {
-        "obrigatorio": true
+      "additional_attributes": {
+        "campos": {
+          "city": {},
+          "country": {}
+        },
+        "tipo": "lista_de_objetos"
+      },
+      "custom_attributes": {
+        "tipo": "objeto_livre"
+      },
+      "email": {
+        "padrao_do_texto": "\\A[^@\\s]+@[^@\\s]+\\z",
+        "tipo": "string",
+        "unico": true
+      },
+      "name": {
+        "tipo": "string"
+      },
+      "phone_number": {
+        "padrao_do_texto": "\\A\\+[1-9]\\d{1,14}\\z",
+        "tipo": "string",
+        "unico": true
       }
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/crm/cards/contacts#create",
+    "corpo_plano": true,
+    "envelope": "contact",
     "modelo": "Contact",
-    "motivos": [
-      "leitura crua sem tipo: contact"
-    ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards/contacts_controller.rb:12",
-      "app/controllers/api/v1/accounts/crm/cards/contacts_controller.rb:40",
+      "app/controllers/api/v1/accounts/crm/cards/contacts_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/cards/contacts_controller.rb:42",
       "app/controllers/api/v1/accounts/crm/cards/contacts_controller.rb:13"
     ],
     "sem_corpo": false
