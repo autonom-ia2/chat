@@ -27,7 +27,7 @@ require 'rails_helper'
 # docs/automacao/F9-fechamento-20-exemplos.md.
 #
 # O que ainda não monta, cada um no exemplo do passo, escrito como o termo pede:
-# - Gatilho (G49): o filtro da mensagem só lê tipo, privada e primeira; "com currículo" (com anexo) não existe, e cada
+# - Gatilho (G45): o filtro da mensagem só lê tipo, privada e primeira; "com currículo" (com anexo) não existe, e cada
 #   mensagem da candidata roda a seleção de novo.
 # - Passo 4 (G18): o link da agenda que a receita lê na conversa é o da pessoa dela (`conversa.link_da_agenda`). A conversa
 #   da caixa de vagas não tem pessoa: quem atende é a agente de IA (passo 7, que pula com uma pessoa no nome). O link de
@@ -367,7 +367,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 18: seleção de candidatos sem plan
 
   # O gatilho é "mensagem com currículo": a pergunta depois do currículo não é currículo, e a seleção não roda de novo.
   it 'gatilho: a pergunta depois do currículo não roda a seleção outra vez', :aggregate_failures do
-    pending 'G49: o filtro da mensagem não sabe se ela tem anexo'
+    pending 'G45: o filtro da mensagem não sabe se ela tem anexo'
     perfil('nao_atende', 'mora longe')
     candidata_manda_o_curriculo
 
