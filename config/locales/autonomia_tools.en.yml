@@ -1,0 +1,5 @@
+en:
+  activerecord:
+    attributes:
+      autonomia/agents/tool:
+        endpoint_url: "Address"

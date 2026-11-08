@@ -51,6 +51,34 @@ RSpec.describe Autonomia::Agents::Tool do
     expect(tool.errors[:endpoint_url]).to be_present
   end
 
+  # #1430: a tela ensina a pôr {{cep}} no endereço, e o executor monta o endereço com o valor. O cadastro
+  # validava o texto cru, com as chaves, e recusava todo endereço com informação ("Endpoint url inválida").
+  describe 'endereço com o que o agente preenche' do
+    let(:base) { { account: account, agent: agent, name: 'CEP', slug: 'cep' } }
+
+    it 'aceita {{variável}} no caminho e na query' do
+      tool = described_class.new(base.merge(endpoint_url: 'https://viacep.com.br/ws/{{cep}}/json/?f={{ formato }}'))
+
+      expect(tool).to be_valid
+    end
+
+    it 'continua recusando o que o executor recusaria, com a variável vazia' do
+      tool = described_class.new(base.merge(endpoint_url: 'https://{{host}}/x'))
+
+      expect(tool).not_to be_valid
+      expect(tool.errors[:endpoint_url]).to be_present
+    end
+
+    it 'recusa modelo que não fecha, com o nome do campo em português' do
+      tool = described_class.new(base.merge(endpoint_url: 'https://viacep.com.br/ws/{{cep/json/'))
+
+      I18n.with_locale(:pt_BR) do
+        expect(tool).not_to be_valid
+        expect(tool.errors.full_messages.join).to eq('Endereço não é válido')
+      end
+    end
+  end
+
   # O MESMO DEFEITO QUE DEIXOU UM AGENTE MUDO EM PRODUÇÃO, por outro caminho.
   #
   # Em 08/09/2026 uma ferramenta NATIVA com um parâmetro opcional derrubou a chamada inteira à

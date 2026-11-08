@@ -127,14 +127,16 @@ class Autonomia::Agents::Tool < ApplicationRecord
     }
   end
 
+  # O endereço é validado como o executor o usa: com cada {{ }} vazio (HttpExecutor#endereco_do_cadastro). O texto cru,
+  # com as chaves, não é um URI e recusava todo endereço com informação preenchida pelo agente (#1430).
   def validate_endpoint_url
-    uri = URI.parse(endpoint_url.to_s)
+    uri = URI.parse(Liquid::Template.parse(endpoint_url.to_s, error_mode: :strict).render({}))
     errors.add(:endpoint_url, 'deve usar HTTPS') unless uri.is_a?(URI::HTTPS)
     errors.add(:endpoint_url, 'deve possuir host') if uri.host.blank?
     errors.add(:endpoint_url, 'não pode apontar para localhost') if uri.host.to_s.match?(/\Alocalhost\z|\.local\z/i)
     errors.add(:endpoint_url, 'não pode usar IP direto') if ip_host?(uri.host)
-  rescue URI::InvalidURIError
-    errors.add(:endpoint_url, 'inválida')
+  rescue URI::InvalidURIError, Liquid::Error
+    errors.add(:endpoint_url, 'não é válido')
   end
 
   def ip_host?(host)
