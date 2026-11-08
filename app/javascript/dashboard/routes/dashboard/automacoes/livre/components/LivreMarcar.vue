@@ -36,7 +36,7 @@ const alternar = valor =>
         type="button"
         :aria-pressed="marcado(opcao.value)"
         :aria-disabled="bloqueada(opcao.value) || undefined"
-        class="inline-flex items-center gap-2 px-3 text-sm font-medium border rounded-xl min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        class="inline-flex items-center gap-2 px-3 text-sm font-medium border text-start rounded-xl min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
         :class="{
           'border-n-blue-8 bg-n-blue-3 text-n-blue-11': marcado(opcao.value),
           'border-n-weak bg-n-solid-1 text-n-slate-11':
@@ -47,7 +47,7 @@ const alternar = valor =>
         @click="alternar(opcao.value)"
       >
         <span
-          class="size-4"
+          class="size-4 shrink-0"
           :class="marcado(opcao.value) ? 'i-lucide-check' : 'i-lucide-plus'"
           aria-hidden="true"
         />
