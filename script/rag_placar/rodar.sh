@@ -16,6 +16,8 @@ apagar_chave() {
   "$AMBIENTE" runner "InstallationConfig.where(name: 'CAPTAIN_OPEN_AI_API_KEY').delete_all" >/dev/null 2>&1 || true
 }
 trap apagar_chave EXIT
+# Uma rodada morta à força (kill -9) não passa pelo trap: a chave dela sai aqui, antes da nova.
+apagar_chave
 
 # A chave vai por variável de ambiente só para o processo do runner; o código Ruby não a imprime.
 RAG_PLACAR_CHAVE=$(grep -m1 '^OPENAI_API_KEY=' "$SEGREDOS" | cut -d= -f2-) \

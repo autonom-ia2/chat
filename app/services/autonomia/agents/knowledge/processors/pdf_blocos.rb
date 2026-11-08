@@ -96,13 +96,15 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
 
   # Sumário: a maioria das linhas termina num número depois da linha de pontos, e esses números são páginas do documento,
   # crescendo de cima para baixo. Uma tabela de valores (percentuais, preços, prazos) também termina em número, mas sem a
-  # linha de pontos, e muitas vezes os números não crescem assim.
+  # linha de pontos, e muitas vezes os números não crescem assim. A ordem vale só nas linhas com pontos: o rodapé que
+  # termina no número da página ("Processo SUSEP nº … – Versão 3.0. 2") não tem pontos e não conta.
   def sumario?(pagina)
     linhas = pagina[:linhas]
     numeradas = linhas.select { |linha| numero_no_fim(linha[:texto]) }
+    com_pontos = numeradas.select { |linha| com_linha_de_pontos?(linha[:texto]) }
     linhas.size >= MIN_LINHAS_DO_SUMARIO && numeradas.size >= linhas.size * FRACAO_DO_SUMARIO &&
-      numeradas.count { |linha| com_linha_de_pontos?(linha[:texto]) } >= numeradas.size * FRACAO_DO_SUMARIO &&
-      paginas_do_documento?(numeradas.map { |linha| numero_no_fim(linha[:texto]) }, pagina[:total_de_paginas])
+      com_pontos.size >= numeradas.size * FRACAO_DO_SUMARIO &&
+      paginas_do_documento?(com_pontos.map { |linha| numero_no_fim(linha[:texto]) }, pagina[:total_de_paginas])
   end
 
   # Os números crescem de cima para baixo e nenhum passa do total de páginas.

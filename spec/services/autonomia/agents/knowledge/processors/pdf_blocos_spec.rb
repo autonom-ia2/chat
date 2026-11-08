@@ -20,7 +20,8 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
   let(:corpo2) { 'conforme as condicoes desta apolice e os limites contratados pelo segurado na proposta.' }
   let(:pdf) { pdf_com([sumario, coberturas, tabela, assistencia, percentuais, planos]) }
 
-  # [texto, y, fonte, tamanho]: F1 Helvetica, F2 Helvetica-Bold.
+  # [texto, y, fonte, tamanho]: F1 Helvetica, F2 Helvetica-Bold. O sumário tem rodapé que termina no número da página
+  # (só nesta página, então o PdfParagrafos não o tira como rodapé corrido): ele não pode impedir o sumário de sair.
   def sumario
     [["Sumario#{' ' * 1}", topo, 'F2', 10],
      ["1. OBJETIVO DO SEGURO #{'.' * 70} 2", topo - 26.4, 'F1', 10],
@@ -28,6 +29,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
      ["3. FRANQUIA #{'.' * 84} 3", topo - 52.8, 'F1', 10],
      ["4. EXCLUSOES #{'.' * 82} 3", topo - 66, 'F1', 10],
      ["9. TABELA DE INVALIDEZ #{'.' * 68} 3", topo - 79.2, 'F1', 10],
+     ['Condicoes Gerais Auto - Processo SUSEP 15414.004192/2004-71 - Versao 3.0. 1', 40, 'F1', 8],
      ['1', 25.9, 'F1', 10]]
   end
 
