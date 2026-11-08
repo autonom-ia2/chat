@@ -219,6 +219,17 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 10 (#2678), ainda sem dono: a instrução no resumir ("o que já foi prometido") e avisar o responsável
     # quando a agente de IA atende a conversa.
     'G41' => nil,
+    # Do exemplo 1, passo 12 (#2721): o resumo lê tudo o que a execução tentou, até o e-mail em conversa própria. Fica
+    # com a F7 (#2763); sem ela, o exemplo 1 segue pendente.
+    'G42' => nil,
+    # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7). Fica
+    # com a Gatilhos, depois do lote 3 (#2689), que traz a porta da frente da conversa nova.
+    'G43' => nil,
+    # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
+    # (passo 2, "manda por e-mail o mesmo conteúdo").
+    'G53' => nil,
+    # G54: esperar a entrega da mensagem (passo 5, "Chegou: tira a etiqueta e grava uma nota"); fechada pela G34.
+    'G54' => -> { valor?('envio.situacao') },
     # Do exemplo 5, passo 8 (#2703): o card que a página de agendamento cria para a reunião (card do serviço já ganho)
     # nasce sem conversa, e a mensagem do gatilho de reunião nele pula com `sem_conversa`. Caminho escolhido: o Booker
     # liga ao card novo a conversa do contato na caixa da página, quando ela existe. A frente dona troca o nil pela sonda.
