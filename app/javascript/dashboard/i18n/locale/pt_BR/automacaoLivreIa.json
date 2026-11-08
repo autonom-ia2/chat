@@ -8,7 +8,9 @@
         "CONVERSA": "Canal, caixa, etiquetas e status da conversa",
         "CONTATO": "Nome e campos do contato (nunca e-mail ou telefone)",
         "EMPRESA": "Nome e campos da empresa",
-        "ANEXOS": "Fotos, PDFs e áudios que o cliente mandou"
+        "ANEXOS": "Fotos, PDFs e áudios que o cliente mandou",
+        "CARD": "O card: título, etapa, funil, status e campos",
+        "NOTAS": "As notas internas da conversa (no texto ao cliente, a IA pode repetir o que elas dizem)"
       },
       "CAMINHO": {
         "NOME": "Nome do caminho",
@@ -31,8 +33,14 @@
       "DESTINOS": {
         "MENSAGEM": "Mandar ao cliente",
         "SUGESTAO": "Deixar como sugestão para a equipe revisar",
+        "GUARDAR": "Só guardar, para um passo seguinte usar",
         "NOTA": "Nota na conversa",
         "AVISAR": "Avisar a equipe"
+      },
+      "TEXTO_DA_IA": {
+        "ESCREVER": "Texto da IA: “{instrucao}”",
+        "ESCREVER_SEM_INSTRUCAO": "Texto da IA (passo sem instrução)",
+        "RESUMIR": "Resumo da IA"
       },
       "DESTINO_GRAVAR": {
         "CONTATO_NOME": "Nome do contato",

@@ -8,9 +8,7 @@
 #
 # #2499 (F6): cada caminho começa pela base (`conversa`, `contato` ou `card`), lida do alvo pelas pontes do Contexto.
 # A base que o alvo não alcança (card num gatilho de contato) o salvar recusa; a ponte vazia ao rodar (card sem
-# conversa) chega como valor vazio.
-#
-# #2716: o gatilho de conversa lê o card da conversa, só para ler (CardDaConversa).
+# conversa) chega como valor vazio. O card da conversa (#2716) é só para ler: CardDaConversa.
 class Autonomia::Automacao::Valores
   # `conversa.id` é o número que a pessoa vê (#123) e o que as rotas da conversa recebem, não o id do banco.
   CAMPOS = {
@@ -62,6 +60,12 @@ class Autonomia::Automacao::Valores
     'conversa.equipe_respondeu' => ->(conversa, espera) { ::Autonomia::Automacao::Resposta.equipe?(conversa, espera) }
   }.freeze
 
+  # #2679: o texto que um passo de IA ("escrever", "resumir") desta execução produziu: `ia.<id do passo>`. Vale em
+  # qualquer alvo: fica na execução, não no alvo. O salvar confere que o id é de um passo que escreve (Receita); antes de
+  # ele rodar, ou num caminho em que ele não rodou, lê vazio, e o passo pula com `faltou_valor`.
+  IA = 'ia.'.freeze
+  PASSOS_QUE_ESCREVEM = %w[escrever resumir].freeze
+
   # O que cada alvo alcança, pelas pontes do Contexto. O card da conversa (#2716) só para ler: CardDaConversa.
   BASES_DO_ALVO = {
     'Conversation' => %w[conversa contato card],
@@ -79,8 +83,7 @@ class Autonomia::Automacao::Valores
     'mensagem.privada' => ->(mensagem) { mensagem.private? },
     # A mensagem é a primeira de verdade da conversa (#2527)? A nota e a atividade nunca são.
     'mensagem.primeira' => ->(mensagem) { ::Autonomia::Automacao::PrimeiraMensagem.primeira?(mensagem) },
-    # A mensagem traz arquivo (foto, PDF, áudio...)? O currículo do exemplo 18, o documento do 14 (#2716).
-    'mensagem.tem_anexo' => ->(mensagem) { mensagem.attachments.exists? }
+    'mensagem.tem_anexo' => ->(mensagem) { mensagem.attachments.exists? } # foto, PDF, áudio... (#2716)
   }.freeze
 
   # O gatilho cuja mensagem o filtro lê.
@@ -121,8 +124,13 @@ class Autonomia::Automacao::Valores
 
   class << self
     def caminho_valido?(caminho)
-      [CAMPOS, MENSAGEM, RESPOSTA, AGENDA].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present?
+      [CAMPOS, MENSAGEM, RESPOSTA, AGENDA].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? || da_ia?(caminho)
     end
+
+    def da_ia?(caminho) = caminho.to_s.start_with?(IA) && caminho.to_s.length > IA.length
+
+    # "ia.p3" => "p3".
+    def passo_da_ia(caminho) = caminho.to_s.delete_prefix(IA)
 
     def da_reuniao?(caminho) = caminho.to_s.start_with?('reuniao.')
 
@@ -149,7 +157,7 @@ class Autonomia::Automacao::Valores
 
     # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.
     def no_alvo?(caminho, alvo_type)
-      da_mensagem?(caminho) || BASES_DO_ALVO.fetch(alvo_type, []).include?(caminho.to_s.split('.', 2).first)
+      da_mensagem?(caminho) || da_ia?(caminho) || BASES_DO_ALVO.fetch(alvo_type, []).include?(caminho.to_s.split('.', 2).first)
     end
 
     def fechado(caminho) = FECHADOS[caminho.to_s]
@@ -208,7 +216,7 @@ class Autonomia::Automacao::Valores
   def falta_da_agenda = (@por_da_agenda if @vazios.any? && @vazios.all? { |caminho| AGENDA.key?(caminho) })
 
   def ler(caminho)
-    valor = lido(caminho)
+    valor = self.class.da_ia?(caminho) ? @contexto.texto_da_ia(self.class.passo_da_ia(caminho)) : lido(caminho)
     @vazios << caminho.to_s if valor.blank?
     valor
   end
@@ -258,12 +266,8 @@ class Autonomia::Automacao::Valores
     objeto && yield(objeto)
   end
 
-  # O card da conversa (#2716), quando o alvo é uma conversa.
-  def card_da_conversa
-    return @card_da_conversa if defined?(@card_da_conversa)
-
-    @card_da_conversa = ::Autonomia::Automacao::CardDaConversa.ler(@contexto.alvo, account_user)
-  end
+  # O card da conversa (#2716), quando o alvo é uma conversa. Buscado uma vez: a lista guarda também a resposta vazia.
+  def card_da_conversa = (@card_da_conversa ||= [::Autonomia::Automacao::CardDaConversa.ler(@contexto.alvo, account_user)]).first
 
   # A ponte vazia (card sem conversa, conversa sem contato) lê vazio.
   def da_base(caminho)

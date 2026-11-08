@@ -28,12 +28,13 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
   # também para (o executor confere `ativa`).
   #
   # Sem callback de propósito: a execução órfã (alvo apagado) não passa no `belongs_to`, e desligar não pode falhar por
-  # ela. Leva a finalizada_em junto, como o CHECK pede.
+  # ela. Leva a finalizada_em junto, como o CHECK pede, e apaga os textos da IA (Execucao::AO_TERMINAR).
   def desligar!
     transaction do
       update!(ativa: false)
       agora = Time.current
-      execucoes.abertas.update_all(estado: 'parada', travada_em: nil, finalizada_em: agora, updated_at: agora) # rubocop:disable Rails/SkipsModelValidations
+      execucoes.abertas.update_all(estado: 'parada', travada_em: nil, finalizada_em: agora, updated_at: agora, # rubocop:disable Rails/SkipsModelValidations
+                                   **::Autonomia::Automacao::Execucao::AO_TERMINAR)
     end
   end
 
