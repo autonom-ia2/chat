@@ -465,9 +465,13 @@ const montar = ({
       autonomia_insurance_enabled: true,
       features: { crm_booking_v2: agendamento },
     })),
-    // Todas as flags de conta ligadas, menos a jornada dos agentes quando a variante pede o menu antigo.
+    // Todas as flags de conta ligadas, menos a jornada dos agentes quando a variante pede o menu antigo. A Prospecção
+    // nova (prospeccao_nova, #2692) fica desligada: o retrato abaixo é o menu de hoje no main, com a Prospecção de
+    // antes; o menu dela com a flag tem spec próprio (prospecting/achar/specs/acharMenu.spec.js).
     'accounts/isFeatureEnabledonAccount': ref(
-      (_id, flag) => jornadas || flag !== 'autonomia_agents_journey'
+      (_id, flag) =>
+        flag !== 'prospeccao_nova' &&
+        (jornadas || flag !== 'autonomia_agents_journey')
     ),
     'inboxes/getInboxes': ref([]),
     'labels/getLabelsOnSidebar': ref([]),

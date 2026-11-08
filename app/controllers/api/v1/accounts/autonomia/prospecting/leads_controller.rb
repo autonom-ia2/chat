@@ -3,6 +3,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   before_action :authorize_crm_owner_choice!, only: [:create_crm_card, :create_crm_cards], if: :chosen_owner_id
 
   def index
+    return render_queue if params[:view] == 'queue'
+
     leads = filtered_leads_scope.includes(*lead_preloads).order(created_at: :desc).limit(100)
     render json: { payload: leads.map { |lead| lead_payload(lead) } }
   end
@@ -141,6 +143,14 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   end
 
   private
+
+  # A fila "Para chamar" (#2697, view=queue): os leads que a pessoa vê e ainda não foram tratados, na ordem da chance
+  # (ParaChamar). Cada um leva o nome de quem fez a busca de onde ele veio (found_by_name, "Achada por").
+  def render_queue
+    leads = ::Autonomia::Prospecting::ParaChamar.new(account: Current.account, user: Current.user).leads(leads_scope)
+                                                .includes(*lead_preloads, search: :user)
+    render json: { payload: leads.map { |lead| lead_payload(lead).merge(found_by_name: lead.search&.user&.name) } }
+  end
 
   def filtered_leads_scope
     scope = if params[:list_id].blank?

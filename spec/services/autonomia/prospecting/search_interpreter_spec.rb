@@ -86,6 +86,25 @@ RSpec.describe Autonomia::Prospecting::SearchInterpreter do
     expect(Rails.logger).to have_received(:warn).with("[autonomia][prospecting][frase] account_id=#{account.id} reason=OpenSSL::SSL::SSLError")
   end
 
+  it 'resposta cortada no teto de saída vira ai_failed, com o motivo no log e sem o texto' do
+    allow(Rails.logger).to receive(:warn)
+    allow(client).to receive(:create).and_return({ text: '{"understood": true, "what": "pad', usage: {}, incomplete_reason: 'max_output_tokens' })
+
+    expect { interpret }.to raise_error(described_class::Error) { |error| expect(error.code).to eq('ai_failed') }
+    expect(Rails.logger).to have_received(:warn)
+      .with("[autonomia][prospecting][frase] account_id=#{account.id} reason=incomplete: max_output_tokens")
+  end
+
+  it 'resposta cortada sem texto nenhum (empty_response do cliente) também loga o motivo' do
+    allow(Rails.logger).to receive(:warn)
+    allow(client).to receive(:create)
+      .and_raise(Crm::Ai::ResponsesClient::Error.new('empty_response', incomplete_reason: 'max_output_tokens'))
+
+    expect { interpret }.to raise_error(described_class::Error) { |error| expect(error.code).to eq('ai_failed') }
+    expect(Rails.logger).to have_received(:warn)
+      .with("[autonomia][prospecting][frase] account_id=#{account.id} reason=incomplete: max_output_tokens")
+  end
+
   it 'o prazo total vai ao cliente (total_timeout), sem Timeout aqui, e o estouro vira ai_failed' do
     allow(Timeout).to receive(:timeout).and_call_original
     allow(client).to receive(:create)

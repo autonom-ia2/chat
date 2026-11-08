@@ -71,6 +71,22 @@ class AutonomiaProspectingAPI extends ApiClient {
     return axios.get(`${this.url}/leads`, { params });
   }
 
+  // A fila "Para chamar" (#2697): os leads ainda não tratados, na ordem da
+  // chance, cada um com quem achou (found_by_name).
+  getQueue() {
+    return axios.get(`${this.url}/leads`, { params: { view: 'queue' } });
+  }
+
+  // "Depois" da fila (#2697): some da fila de quem pediu até amanhã. O DELETE
+  // é o "Desfazer".
+  postponeQueueLead(leadId) {
+    return axios.post(`${this.url}/leads/${leadId}/queue_postponement`);
+  }
+
+  resumeQueueLead(leadId) {
+    return axios.delete(`${this.url}/leads/${leadId}/queue_postponement`);
+  }
+
   createLeadContact(leadId) {
     return axios.post(`${this.url}/leads/${leadId}/contact`);
   }

@@ -1,7 +1,7 @@
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { sendInBatches, CRM_BATCH_SIZE } from '../../utils/crmSend';
-import { buscaDoPayload, empresaDoLead } from './acharLead';
+import { buscaDoPayload, cartaoDaFila, empresaDoLead } from './acharLead';
 import {
   ajustesDosFiltros,
   montarPedido,
@@ -321,8 +321,18 @@ const fonteDemo = ({ estado, carregarDemo, atraso, usuarioId }) => {
     },
     async fila() {
       const demo = await dados();
+      if (estado === 'fila-erro') throw new Error('demo');
       if (ESTADOS_SEM_FILA.includes(estado)) return { cartoes: [], fim: null };
       return { cartoes: demo.FILA, fim: demo.FIM_DO_DIA };
+    },
+    async voltarNaoServe() {
+      await esperar(atraso);
+    },
+    async depois() {
+      await esperar(atraso);
+    },
+    async desfazerDepois() {
+      await esperar(atraso);
     },
     async configuracoes() {
       return { padrao: null };
@@ -474,6 +484,10 @@ const fonteApi = ({ api, crm, usuarioId, usuarioNome }) => ({
   async descartar({ id, motivo }) {
     await api.discardLeads({ leadIds: [id], reason: motivo });
   },
+  // O "Desfazer" do "Não serve" da fila (#2697): o lead volta a new_lead.
+  async voltarNaoServe({ id }) {
+    await api.updateLead(id, { status: 'new_lead' });
+  },
   async naoQuer({ id }) {
     await api.refuseLeadConsent(id);
   },
@@ -516,9 +530,18 @@ const fonteApi = ({ api, crm, usuarioId, usuarioNome }) => ({
       });
     }
   },
-  // A fila "Para chamar" pede leads#index com view=queue (v4, fase 5).
+  // A fila "Para chamar" (#2697): leads#index com view=queue, no mesmo
+  // formato da demonstração. O fim do dia sai da própria passada pela fila
+  // (useFilaParaChamar), então o servidor não manda `fim`.
   async fila() {
-    return { cartoes: [], fim: null };
+    const { data } = await api.getQueue();
+    return { cartoes: (data.payload || []).map(cartaoDaFila), fim: null };
+  },
+  async depois({ id }) {
+    await api.postponeQueueLead(id);
+  },
+  async desfazerDepois({ id }) {
+    await api.resumeQueueLead(id);
   },
   async configuracoes() {
     const { data } = await api.getSettings();

@@ -29,4 +29,28 @@ RSpec.describe Crm::Ai::ResponsesClient do
 
     expect(sent_body['max_output_tokens']).to eq(600)
   end
+
+  describe 'resposta cortada (status incomplete, #2696)' do
+    def respond_with(body)
+      stub_request(:post, url).to_return(body: body.to_json, headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'devolve o motivo junto do texto parcial' do
+      respond_with(status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' }, output_text: '{"a":', output: [])
+
+      expect(client.create(**params)).to include(text: '{"a":', incomplete_reason: 'max_output_tokens')
+    end
+
+    it 'sem texto, o empty_response leva o motivo' do
+      respond_with(status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' }, output: [])
+
+      expect { client.create(**params) }.to raise_error(described_class::Error, 'empty_response') { |error|
+        expect(error.incomplete_reason).to eq('max_output_tokens')
+      }
+    end
+
+    it 'resposta completa não ganha a chave nova' do
+      expect(client.create(**params)).not_to have_key(:incomplete_reason)
+    end
+  end
 end

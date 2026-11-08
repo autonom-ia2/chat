@@ -2,7 +2,8 @@
   "PROSPECTING_ACHAR": {
     "MENU": {
       "ACHAR": "Find businesses",
-      "BUSCAS": "Searches"
+      "BUSCAS": "Searches",
+      "FILA": "To call"
     },
     "COMUM": {
       "ALTERAR": "Change",
@@ -380,7 +381,12 @@
         "VOLTAM": "{n} comes back tomorrow. | {n} come back tomorrow.",
         "NAO_SERVE": "{n} not a fit. | {n} not a fit."
       },
-      "POSSIVEL": "May be the owner: {nome}"
+      "POSSIVEL": "May be the owner: {nome}",
+      "CARREGANDO": "Opening the businesses to call…",
+      "ERRO": "We could not open the businesses to call. Try again.",
+      "ERRO_ACAO": "We could not save it. Try again.",
+      "MANDOU": "Done. {nome} is in the {funil} pipeline.",
+      "ETAPA_E_DONO": "It went to the {etapa} stage, with {pessoa}."
     },
     "MOTIVOS": {
       "OUTRO": "Other reason",

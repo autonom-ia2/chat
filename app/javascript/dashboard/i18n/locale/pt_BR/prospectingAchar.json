@@ -2,7 +2,8 @@
   "PROSPECTING_ACHAR": {
     "MENU": {
       "ACHAR": "Achar empresas",
-      "BUSCAS": "Buscas"
+      "BUSCAS": "Buscas",
+      "FILA": "Para chamar"
     },
     "COMUM": {
       "ALTERAR": "Alterar",
@@ -380,7 +381,12 @@
         "VOLTAM": "{n} volta amanhã. | {n} voltam amanhã.",
         "NAO_SERVE": "{n} não serve. | {n} não servem."
       },
-      "POSSIVEL": "Pode ser o dono: {nome}"
+      "POSSIVEL": "Pode ser o dono: {nome}",
+      "CARREGANDO": "Abrindo as empresas para chamar…",
+      "ERRO": "Não deu para abrir as empresas para chamar. Tente de novo.",
+      "ERRO_ACAO": "Não deu para guardar. Tente de novo.",
+      "MANDOU": "Pronto. {nome} está no funil {funil}.",
+      "ETAPA_E_DONO": "Foi para a etapa {etapa}, com {pessoa}."
     },
     "MOTIVOS": {
       "OUTRO": "Outro motivo",

@@ -26,12 +26,18 @@ class Autonomia::Prospecting::SearchInterpreter
     def status = STATUS.fetch(code)
   end
 
+  # A resposta da IA veio cortada; a mensagem é o motivo que a OpenAI mandou.
+  class Incomplete < StandardError; end
+
   FEATURE = 'prospeccao_frase'.freeze
   MODEL = Crm::Ai::Config::MODEL_SUMMARY
   EFFORT = 'low'.freeze
   # O `timeout` do HTTParty vale por operação (abrir, escrever, ler), não para a chamada inteira. PRAZO_TOTAL é o
   # `total_timeout:` do ResponsesClient: corta só a ida HTTP inteira antes dos 15 s do rack-timeout de produção, sem
   # envolver o registro de uso no banco.
+  # O PRAZO_TOTAL cobre também as novas tentativas do cliente e as esperas entre elas (`sleep` do with_timeout_guard).
+  # Com TIMEOUT 10 e PRAZO_TOTAL 12, na prática cabe uma tentativa só: mesmo que `max_retries` subisse, a segunda
+  # tentativa seria cortada pelo prazo total. Por isso o cliente nasce com `max_retries: 0`.
   TIMEOUT = 10
   PRAZO_TOTAL = 12
   # Teto de saída (raciocínio 'low' + o JSON do schema). No eval de 08/11 a média foi ~116 tokens por pedido.
@@ -101,17 +107,26 @@ class Autonomia::Prospecting::SearchInterpreter
   # Qualquer quebra da chamada (inclusive rede fora de ResponsesClient::NETWORK_ERRORS, como OpenSSL::SSL::SSLError, e o
   # prazo total do cliente) vira ai_failed. O log leva só a classe: a mensagem pode trazer o texto da pessoa ou a URL.
   # A credencial é resolvida antes (`client`), fora deste rescue: conta sem IA continua ai_not_configured.
+  # Resposta cortada pela OpenAI (status incomplete, por exemplo no teto max_output_tokens) também é ai_failed, mas o log
+  # diz o motivo ("incomplete: max_output_tokens"), para não parecer erro de rede. Só o motivo; nunca o texto.
   def ask(ai_client)
     response = ai_client.create(model: MODEL, instructions: INSTRUCTIONS, input: { pedido: @text }.to_json, schema: self.class.schema,
                                 reasoning_effort: EFFORT, timeout: TIMEOUT, total_timeout: PRAZO_TOTAL,
                                 max_output_tokens: MAX_OUTPUT_TOKENS)
+    raise Incomplete, response[:incomplete_reason] if response[:incomplete_reason].present?
+
     parsed = JSON.parse(response[:text])
     raise JSON::ParserError, 'not_an_object' unless parsed.is_a?(Hash)
 
     parsed
   rescue StandardError => e
-    Rails.logger.warn("[autonomia][prospecting][frase] account_id=#{@account.id} reason=#{e.class.name}")
+    Rails.logger.warn("[autonomia][prospecting][frase] account_id=#{@account.id} reason=#{log_reason(e)}")
     raise Error, 'ai_failed'
+  end
+
+  def log_reason(error)
+    reason = error.is_a?(Incomplete) ? error.message : error.try(:incomplete_reason)
+    reason.present? ? "incomplete: #{reason}" : error.class.name
   end
 
   def client

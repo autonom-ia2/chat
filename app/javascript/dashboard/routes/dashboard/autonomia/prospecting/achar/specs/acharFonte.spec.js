@@ -8,7 +8,8 @@ import {
   podeApagarBusca,
 } from '../utils/acharPapeis';
 import { fraseDaPessoa } from '../composables/useGavetaDaLista';
-import { soNaDemo } from '../acharRoutes';
+import { acharRoutes } from '../acharRoutes';
+import { ROTAS } from '../utils/acharRotas';
 
 const carregarDemo = () => Promise.resolve(demoDados);
 
@@ -352,12 +353,14 @@ describe('"Apagar" só na busca de quem está logado', () => {
   });
 });
 
-describe('rota da fila "Para chamar" (fase 5)', () => {
-  it('fora da demonstração leva para as buscas', () => {
-    expect(soNaDemo({ query: {}, params: { accountId: '3' } })).toEqual({
-      name: 'autonomia_prospecting_achar_buscas',
-      params: { accountId: '3' },
-    });
+describe('rota da fila "Para chamar" (fase 5, #2697)', () => {
+  it('abre fora da demonstração, com os mesmos guardas e a flag das outras telas novas', () => {
+    const fila = acharRoutes.find(rota => rota.name === ROTAS.FILA);
+    const porta = acharRoutes.find(rota => rota.name === ROTAS.PORTA);
+
+    expect(fila.beforeEnter).toBe(porta.beforeEnter);
+    expect(fila.meta).toEqual(porta.meta);
+    expect(fila.meta.featureFlag).toBe('prospeccao_nova');
   });
 });
 
