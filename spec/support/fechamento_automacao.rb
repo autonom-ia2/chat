@@ -187,9 +187,10 @@ module FechamentoAutomacao::Lacunas
     # O texto da IA vira valor entre passos (`ia.<passo>`, #2679): fora da janela, a "mensagem" o leva no modelo aprovado
     # (exemplo 3, passo 2); o "mesmo resumo" não vai outra vez à IA (exemplo 10, passo 6).
     'G28' => -> { valor?('ia.cuidados') },
-    # Achadas no exemplo 2 (07/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
-    # G29: a origem do card do formulário (anúncio, formulário) como valor da receita, no filtro do gatilho e nos passos.
-    'G29' => nil,
+    # Achadas no exemplo 2 (07/11). As ainda sem desenho ficam nil: a frente dona troca pela sonda quando escolher o caminho.
+    # G29 (#2702): de onde o card veio e o anúncio do formulário, valores da receita. Ponta a ponta em
+    # spec/fechamento/automacao/g29_origem_do_card_spec.rb.
+    'G29' => -> { valor?('card.origem') && valor?('card.anuncio') },
     # G30: o responsável por um anúncio (o corretor daquele anúncio), para o retorno e o link da agenda.
     'G30' => nil,
     # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando".

@@ -32,7 +32,12 @@
       "TRUE": "sim",
       "FALSE": "não",
       "CLIENTE": "o cliente",
-      "EQUIPE": "a equipe"
+      "EQUIPE": "a equipe",
+      "FORMULARIO_DE_ANUNCIO": "um formulário de anúncio",
+      "CONVERSA": "uma conversa",
+      "AGENDA": "a agenda",
+      "PROSPECCAO": "a prospecção",
+      "OUTRO": "outro lugar"
     },
     "OPERADOR_DA_MENSAGEM": {
       "IGUAL": "é",

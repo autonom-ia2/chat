@@ -210,10 +210,14 @@ const emLista = (nomes, t) =>
         ultimo: nomes[nomes.length - 1],
       })
     : nomes[0];
-const fraseDasEtiquetas = (passo, entrada, t) => {
+// #2702 G29: a etiqueta com o nome de um dado ({ $valor }) sai pelo nome dele,
+// entre colchetes, como no texto da mensagem.
+const fraseDasEtiquetas = (passo, entrada, catalogo, t) => {
   const chave = `${P}.${ETIQUETAS_DE[entrada.nome]}`;
-  const [por, tirar] = ['por', 'tirar'].map(
-    nome => lerCampo(passo, entrada, nome) || []
+  const nomeDaEtiqueta = item =>
+    item?.$valor ? comColchetes(fraseDoValor(item.$valor, catalogo, t)) : item;
+  const [por, tirar] = ['por', 'tirar'].map(nome =>
+    (lerCampo(passo, entrada, nome) || []).map(nomeDaEtiqueta)
   );
   if (por.length && tirar.length)
     return t(`${chave}.POR_E_TIRAR`, {
@@ -351,7 +355,8 @@ export const fraseDoPasso = (passo, catalogo, t) => {
       mensagem: passo.envio && fraseDoTexto(passo.envio.mensagem, catalogo, t),
     });
   if (passo.tipo !== 'acao') return t(entrada.frase);
-  if (ETIQUETAS_DE[entrada.nome]) return fraseDasEtiquetas(passo, entrada, t);
+  if (ETIQUETAS_DE[entrada.nome])
+    return fraseDasEtiquetas(passo, entrada, catalogo, t);
   return [t(entrada.frase), ...resumoDaAcao(passo, entrada, t)].join(' · ');
 };
 

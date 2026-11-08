@@ -34,7 +34,7 @@ RSpec.describe Autonomia::Automacao::Valores do
     # `mensagem.primeira` e `conversa.iniciada_por` dependem das mensagens gravadas: primeira_mensagem_spec. A resposta
     # durante a espera (G11): resposta_spec.
     expect(described_class::FECHADOS.keys)
-      .to match_array(described_class::MENSAGEM.keys + described_class::RESPOSTA.keys + ['conversa.iniciada_por'])
+      .to match_array(described_class::MENSAGEM.keys + described_class::RESPOSTA.keys + ['conversa.iniciada_por', 'card.origem'])
     described_class::FECHADOS.slice('mensagem.tipo', 'mensagem.privada').each do |caminho, fechado|
       expect(formas.map { |forma| lido.call(caminho, *forma) }.uniq).to match_array(fechado['opcoes'])
     end
@@ -80,6 +80,18 @@ RSpec.describe Autonomia::Automacao::Valores do
     # "Valor maior que 0" separa o card com valor; "está vazio" nunca casa no card.
     it 'o card sem valor lê zero' do
       expect(described_class.new(alvo: novo_card, quem: funil_admin).ler('card.valor')).to eq(0)
+    end
+
+    # G29 (#2702): de onde o card veio e o anúncio do formulário. O grupo de cada source: origem_do_card_spec.
+    it 'lê a origem do card e o nome do anúncio do formulário', :aggregate_failures do
+      lead = novo_card(source: Crm::MetaAds::LeadForms::Importer::SOURCE,
+                       metadata: { 'meta_lead_form' => { 'ad_name' => 'Apartamento Jardim', 'form_name' => 'Visita' } })
+      da_conversa = novo_card(source: 'Channel::Whatsapp')
+
+      expect(described_class.new(alvo: lead, quem: nil).ler('card.origem')).to eq('formulario_de_anuncio')
+      expect(described_class.new(alvo: lead, quem: nil).ler('card.anuncio')).to eq('Apartamento Jardim')
+      expect(described_class.new(alvo: da_conversa, quem: nil).ler('card.origem')).to eq('conversa')
+      expect(described_class.new(alvo: da_conversa, quem: nil).ler('card.anuncio')).to be_nil
     end
 
     it 'lê vazio quando a ponte falta: card sem conversa, contato sem card' do
