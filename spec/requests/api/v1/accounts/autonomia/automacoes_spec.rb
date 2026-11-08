@@ -402,6 +402,18 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
     end
 
+    # G4: o passo "criar card" é passo de funil, como a ação de card.
+    it 'recusa salvar o passo "criar card" pela API direta' do
+      account.enable_features!('automacao_gatilhos')
+      _, etapa = create_crm_pipeline(account: account, user: admin)
+      criar_card = { id: 'p1', tipo: 'card', etapa_id: etapa.id }
+
+      post base, params: { nome: 'x', receita: receita.merge(passos: [criar_card]) }, headers: montador.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
+    end
+
     it 'recusa salvar por cima com passo de card, e confere a versão antes' do
       automacao = create(:autonomia_automacao, account: account)
       automacao.salvar_versao!(receita: receita.deep_stringify_keys, autor: admin)

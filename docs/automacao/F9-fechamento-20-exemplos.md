@@ -110,10 +110,10 @@ conversa e do contato), os passos esperar, esperar até, se e parar, a ação da
 (etiquetas, atributos, contato, empresa, conversa, atribuição, card alterar e mover, etapa, agente na caixa), mensagem
 ao cliente dentro da janela, aviso à equipe pelo sino e os quatro passos de IA.
 
-**Placar em 06/11 (main `74b6e48766` + #2639): 1 de 20 inteiros (ex. 13).** Lacunas fechadas: G1, G2, G5, G6, G11, G16. Exemplo só conta inteiro e com spec verde; parcial não conta.
+**Placar em 07/11, depois da auditoria dos termos (#2678): 0 de 20 inteiros.** O ex. 10 e o ex. 13 voltaram a pendente pela G28 (lote 2, #2679): no 10, os passos 4, 6 e 7 montam só aproximados; no 13, o resumo da festa (a IA não lê o card) e o extrair que grava no card em 2 passos. Os specs próprios deles seguem rodando os passos que montam, e o 13 agora fecha a festa (card ganho) antes dos passos de data. Base: a auditoria dos termos de 07/11 (Issue #2678). Lacunas fechadas: G1, G2, G3, G4, G5, G6, G11, G14, G16. Exemplo só conta inteiro e com spec verde; parcial não conta.
 
-Com isso, **só o exemplo 10 (cliente bravo) roda quase inteiro**: os passos 1 a 7. O passo 8 (card no quadro "Melhorias")
-depende da G4; o 2 (tirar da agente de IA) roda desde a G15. Os outros 19 começam por um gatilho
+Com a G4 (#2628), **o exemplo 10 (cliente bravo) roda inteiro**: o passo 8 (card no quadro "Melhorias") roda desde a
+G4; o 2 (tirar da agente de IA), desde a G15. Os outros 19 começam por um gatilho
 ou dependem de um passo que ainda não existe na main.
 
 ## 5. Lacunas: o que falta, por fase
@@ -125,9 +125,9 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G1 | Mandar pelo **modelo aprovado do WhatsApp** fora da janela de 24 h | F4 (F4b) | **Fechada** (#2586): campo `modelo` do passo "mensagem" | F1 | 1, 2, 3, 4, 5, 6, 8, 11, 13, 14, 18, 19, 20 |
 | G2 | Mandar **e-mail** ao contato (pela caixa de e-mail da conta) | F4 / F8.2 | **Fechada** (#2601) | F1 | 1, 3, 12, 13, 19, 20 |
 | G3 | **Criar retorno** para a equipe (com e sem envio automático) | F6 "Retorno" | **Fechada** (#2629): passo `retorno`, prova em `g3_criar_retorno_spec.rb` | F2 | 1, 2, 3, 4, 5, 9, 12, 14, 15, 16, 19 |
-| G4 | **Criar card** num funil/etapa para a conversa ou o contato (e "abrir card de retenção", "card no quadro X") | F6 | `POST crm/cards` fora da lista; o `CardNaEtapa` (F1.4) só existe nas Regras | F2 | 4, 6, 8, 9, 10, 11, 16, 18 |
+| G4 | **Criar card** num funil/etapa para a conversa ou o contato (e "abrir card de retenção", "card no quadro X") | F6 | **Fechada** (#2628): passo `card` (`etapa_id`), com a criação do `CardNaEtapa` (`CardNovo`); pede a chave de funis | F2 | 4, 6, 8, 9, 10, 11, 16, 18 |
 | G5 | Gatilhos do **card**: criado, entrou/saiu da etapa, ganho, perdido (atualizado e campo mudou ficam na G27) | F6 | **Fechada** (#2554) | Gatilhos | 2, 3, 4, 5, 7, 8, 11, 12, 13, 14, 15, 18, 20 |
-| G6 | Gatilhos de **tempo**: parado há X dias; N dias antes/depois de uma data do card ou do contato (vencimento, aniversário, próxima revisão, data da festa) | F6 | **Fechada** (#2611) | Motor | 1, 5, 6, 13, 18 |
+| G6 | Gatilhos de **tempo**: parado há X dias; N dias antes/depois de uma data do card ou do contato (vencimento, aniversário, próxima revisão, data da festa) | F6 | **Fechada** (#2611). Em PR (#2678): a data do card também no card ganho (antes só o aberto) e a opção "todo ano" (dia e mês) para aniversário | Motor | 1, 5, 6, 13, 18 |
 | G7 | **Recorrente** com filtro (todo dia 1º, toda segunda 8h, quinta 9h), **uma execução por registro do filtro** (contato ou card), nunca uma execução sem alvo (decisão da Automação, 06/11) | F8 | Em PR (F8 PR3b) | Gatilhos | 7, 8, 9, 16, 17, 20 |
 | G8 | Gatilho **mensagem que falhou** na entrega | F8 | A fazer (F8 PR2d) | Gatilhos | 1, 19 |
 | G9 | Gatilho **troca de responsável** (do card e da conversa), com o anterior marcado como ausente | F8 | A fazer (F8 PR2d); "ausente" não é valor que a receita lê | Gatilhos | 17 |
@@ -135,7 +135,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G11 | **Esperar a resposta** de alguém: "até o cliente responder" e "até a equipe responder", com prazo | F3/F4 | **Fechada** (#2592): `conversa.equipe_respondeu` e `conversa.cliente_respondeu` no "esperar até" | Motor | 1, 2, 10, 12, 15, 17, 19, 20 |
 | G12 | Gatilho **reunião marcada / remarcada / cancelada** e o **link da agenda** do responsável no texto | F8 | A fazer; o link da agenda não é valor da receita | Gatilhos | 1, 2, 3, 4, 5, 6, 9, 11, 15, 16, 18, 20 |
 | G13 | **Webhook de saída** e gravar a resposta no card; recusa vira caminho "deu erro" | F8 | A fazer (F6/F8 PR4) | Gatilhos | 8, 14, 20 |
-| G14 | **Campanhas**: pôr e tirar o contato de uma campanha, montar e disparar campanha para quem tem uma etiqueta | novo | Sem passo | F5 | 2, 6, 7, 9, 12, 16 |
+| G14 | **Campanhas**: pôr e tirar o contato de uma campanha, montar e disparar campanha para quem tem uma etiqueta | novo | **Fechada** (#2630): passo `campanha` com `disparar` (pela Campanha da tela, só em gatilho da conta, `conta.recorrente` da G7) e `nao_receber`; pôr/tirar = etiqueta do público; e-mail dos ex. 3 e 20 pela G2 | F5 | 2, 3, 6, 7, 9, 12, 16, 20 |
 | G15 | **Passar a conversa para a agente de IA** e tirar dela | F3 (ação) | **Em PR** (G15): passo próprio "Passar para a agente de IA" (`ia_assumir`), pela Atribuição do CRM; `assignee_type` proibido no atribuir. Tirar = atribuir à pessoa (provado no exemplo 10, passo 2) | F7 | 2, 4, 7, 10, 15, 17, 18 |
 | G16 | **Valor calculado no corpo** da ação (gravar "hoje + 6 meses", "indicado por {nome}", motivo da perda no texto) | F3/F4 | **Fechada** (#2593 motor, #2639 editor): `$valor`, `$texto` e `$data` no corpo da ação | Motor | 3, 5, 6, 11, 13, 16, 17 |
 | G17 | **Criar contato** (o amigo indicado, o funcionário novo) e **importar em lote** ligado à empresa | novo | `POST contacts` fora da lista; importação não é passo | F2 | 8, 11 |
@@ -149,7 +149,11 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G25 | **Fechar card** como ganho/perdido/resolvido com motivo | F6 (ação) | `PATCH crm/cards` aceita `lost_reason`, mas não muda o status; a conferir qual rota ganha/perde | F2 | 4, 6, 12, 18 |
 | G26 | **Aplicar SLA** à conversa | F3 (nativo) | Fora do catálogo do Guia (termo, nota da seção dos exemplos) | F2 | — |
 | G27 | Gatilho **card atualizado / campo mudou** (o valor passou de R$ 50 mil no 15; o card ficou completo no 8) | F6 | A fazer: a lista de gatilhos só tem card criado, etapa, ganho, perdido e reunião | Gatilhos | 8, 15 |
-| G28 | O **"escrever" manda pelo modelo aprovado** fora da janela (os cuidados do procedimento no dia seguinte), com o texto da IA como variável do modelo | F7 | Aberta (#2674): o "escrever" com destino mensagem para fora da janela (#2573); o modelo é só do passo "mensagem" (G1) | F7 | 3 |
+| G28 | **Texto da IA como valor e a IA lendo o card** (o mesmo resumo em dois passos, o texto da IA no modelo aprovado, o resumo da festa com os dados do card) | F7 | A fazer: lote 2 (#2679, absorve #2674) | F7 | 3, 4, 5, 10, 13, 19 |
+| G29 | **Origem do card do formulário** na receita: o gatilho filtra "card criado pelo formulário de um anúncio" e o passo lê o nome do anúncio (etiqueta com o nome dele) | F6 | A fazer: o formulário grava `source` e `metadata.meta_lead_form` (anúncio, formulário, campanha) no card, mas nenhum caminho de `Valores` lê isso; o filtro só tem o funil (achado no exemplo 2, 07/11) | Gatilhos | 2 |
+| G30 | **Responsável por anúncio**: o corretor responsável por aquele anúncio (retorno para ele, link da agenda dele) | F6 | A fazer: o card do formulário ganha o dono pela regra do `Crm::Cards::Creator`, que não olha o anúncio. A Atribuição (`Crm::Entrega`) liga funil e etapa a pessoa (a fixa ou quem cuida do funil), nunca anúncio; nenhum cadastro liga anúncio a pessoa (achado no exemplo 2, 07/11) | F2 | 2 |
+| G31 | **Decidir a cada resposta**: voltar a esperar e decidir de novo enquanto a IA diz "ainda conversando" | F3/F7 | A fazer: a receita não tem laço; cada passo roda uma vez por execução (achado no exemplo 2, 07/11) | Motor | 2 |
+| G32 | **Esperar a reunião ser marcada** no meio da execução ("visita marcada: move o card e avisa") | F8 | A fazer: a reunião marcada é gatilho (G12), mas não é condição do "esperar até"; o `Resposta` só lê mensagem (achado no exemplo 2, 07/11) | Motor | 2 |
 
 ### 5.1 A sonda de cada lacuna
 
@@ -170,18 +174,18 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | # | Exemplo | Começa | Passos que já rodam na main | Faltam | Roda hoje |
 |---|---|---|---|---|---|
 | 1 | Renovação do seguro | ⛔ G6 (30 dias antes do vencimento) | mover card ✅, etiqueta ✅, extrair ✅, decidir ✅, avisar ✅, resumir ✅ | G1, G2, G3, G6, G8, G11, G12 | Não |
-| 2 | Lead do anúncio | 🟡 G5 (card criado pelo formulário) | etiqueta ✅, decidir ✅, extrair ✅, mover ✅, resumir/avisar ✅ | G1, G3, G5, G11, G12, G14, G15 | Não |
-| 3 | Pós-procedimento da clínica | ✅ G5 (entrou em "Atendida") | extrair ✅, escrever ✅, decidir ✅ (lendo a foto, G20), etiqueta ✅, prioridade ✅, avisar ✅, retorno ✅, e-mail no lugar da campanha "Manutenção" ✅, mover ✅ | G28 (os cuidados pelo modelo aprovado, fora da janela); spec em `exemplo_03_pos_procedimento_spec.rb` (#2669) | Não |
+| 2 | Lead do anúncio | ✅ G5 (card criado), ⛔ G29 ("pelo formulário de um anúncio") | etiqueta ✅, mensagem pelo modelo ✅ (G1), esperar a resposta ✅ (G11), retorno ✅ (G3), passar para a agente de IA ✅ (G15), decidir ✅, link da agenda ✅ (G12), mover ✅, resumir/avisar ✅, extrair ✅, etiqueta da campanha ✅ (G14) | G29, G30, G31, G32 | Não |
+| 3 | Pós-procedimento da clínica | ✅ G5 (entrou em "Atendida") | extrair ✅, escrever ✅, decidir ✅ (lendo a foto, G20), etiqueta ✅, prioridade ✅, avisar ✅, retorno ✅, e-mail no lugar da campanha "Manutenção" ✅, mover ✅ | G28 (os cuidados pelo modelo aprovado, fora da janela: lote 2 #2679); spec em `exemplo_03_pos_procedimento_spec.rb` (#2669) | Não |
 | 4 | Aluno que começa a faltar | 🟡 G5 (entrou em "Faltou") | se com etiqueta do contato ✅, etiqueta pôr/tirar ✅, escrever ✅, decidir ✅, avisar ✅, esperar 30 dias ✅ | G1, G3, G4, G5, G12, G15, G25 | Não |
 | 5 | Revisão do carro | 🟡 G5 (card ganho) | extrair ✅ (contato), etiqueta ✅, mover ✅ | G1, G3, G5, G6, G12, G16, G19 | Não |
 | 6 | Aniversário | ⛔ G6 (data de nascimento do contato) | escrever ✅, etiqueta ✅, decidir ✅, extrair ✅, avisar ✅ | G1, G4, G6, G12, G14, G16, G25 | Não |
 | 7 | Black Friday | ⛔ G7 (quinta 9h) | decidir ✅, extrair ✅ (card), etiqueta ✅, mensagem ✅ (na janela) | G5, G7, G14, G15 | Não |
 | 8 | Funcionário novo no plano | ✅ mensagem do RH (1ª); ⛔ G24 (2ª) | decidir ✅, mensagem ao RH ✅ | G1, G4, G5, G7, G13, G17, G20, G22, G24, G27 | Não |
 | 9 | Prospecção semanal | ⛔ G7 (segunda 8h) | decidir ✅, etiqueta ✅, mover ✅, resumir ✅ | G3, G4, G7, G12, G14, G21 | Não |
-| 10 | **Cliente bravo** | ✅ mensagem do cliente | decidir ✅, atribuir ✅, prioridade ✅, etiqueta ✅, resumir+avisar ✅, mensagem ✅ | G4 (passo 8) | **Parcial: passos 1–7** |
+| 10 | **Cliente bravo** | ✅ mensagem do cliente | decidir ✅, atribuir ✅, prioridade ✅, etiqueta ✅, mensagem ✅, tirar da agente de IA ✅ (G15), card no quadro ✅ (G4); resumir 🟡 (passo 4: o resumir não aceita a instrução "o que já foi prometido"), esperar a Fernanda 🟡 (passo 6: vale qualquer pessoa da equipe, e o aviso refaz o resumo em vez de mandar o mesmo), avisar o responsável 🟡 (passo 7: com a agente de IA atendendo, ninguém é avisado) | G28 (texto da IA guardado entre passos, instrução no resumir); sem código ainda: esperar uma pessoa específica, responsável quando a IA atende | **Parcial: passos 1–3, 5 e 8** (`exemplo_10_cliente_bravo_spec.rb`) |
 | 11 | Indicação que vira presente | ✅ mensagem do cliente | decidir ✅, extrair ✅, mensagem a Maria ✅ | G1, G4, G5, G12, G16, G17, G18 | Não |
 | 12 | Visita que aconteceu | 🟡 G5 (entrou em "Visita feita") | mensagem ✅ (na janela), decidir ✅, extrair ✅, mover ✅, etiqueta ✅, avisar ✅ | G2, G3, G5, G11, G14, G25 | Não |
-| 13 | Festa do contrato ao depoimento | ✅ G5 (card ganho) + ✅ G6 (datas da festa) | e-mail ✅ (G2), modelo fora da janela ✅ (G1), data calculada ✅ (G16), extrair → copiar ao card (2 passos) ✅, resumir/avisar ✅, decidir ✅, etiqueta ✅ | — | **Sim** (`exemplo_13_festa_do_contrato_spec.rb`) |
+| 13 | Festa do contrato ao depoimento | ✅ G5 (card ganho) + ✅ G6 (datas da festa, com o card ganho, #2678) | e-mail ✅ (G2), modelo fora da janela ✅ (G1), data calculada ✅ (G16), extrair → copiar ao card (2 passos) ✅, resumir/avisar ✅, decidir ✅, etiqueta ✅ | G28 (passo 5: a IA não lê o card; passo 3: o extrair grava no card em 2 passos) | **Parcial** (`exemplo_13_festa_do_contrato_spec.rb`, card ganho antes dos passos de data) |
 | 14 | Documentação para emitir | 🟡 G5 (entrou em "Documentação") | extrair ✅, escrever ✅, etiqueta ✅, mover ✅, avisar ✅ | G1, G3, G5, G13, G20 | Não |
 | 15 | Cliente grande | 🟡 G5 (card criado) + ⛔ G27 (valor mudou) | se com etiqueta ✅, atribuir ✅, etiqueta ✅, prioridade ✅, resumir ✅, mensagem ✅ | G3, G5, G11, G12, G15, G27 | Não |
 | 16 | Reconquistar | ⛔ G7 (dia 1º, perdidos há 11 meses) | etiqueta ✅, decidir ✅, escrever ✅ | G3, G4, G7, G12, G14, G16, G18 | Não |
