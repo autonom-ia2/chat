@@ -1,3 +1,4 @@
+import { ref } from 'vue';
 import { config, flushPromises, mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import ptBR from 'dashboard/i18n/locale/pt_BR/prospectingAchar.json';
@@ -6,6 +7,7 @@ import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import AcharConfiraPage from '../pages/AcharConfiraPage.vue';
 import { criarFonte } from '../utils/acharFonte';
 import { textosDoPronto } from '../utils/acharConfiraEstados';
+import { folhaNova, useFolhaDaLista } from '../composables/useFolhaDaLista';
 import { LIMITE_DO_PUBLICO } from '../composables/useDonoDaLista';
 
 // #2695 (F3b) — "Guardar para mandar mensagem" pela API: as empresas viram um
@@ -235,6 +237,47 @@ describe('AcharConfiraPage: guardar para mandar mensagem', () => {
     wrapper.unmount();
   });
 
+  it('contato apagado no meio: a folha diz isso e que os contatos criados ficaram gravados', async () => {
+    AutonomiaProspectingAPI.createAudience.mockRejectedValueOnce({
+      response: {
+        data: { code: 'prospecting.audience.foreign_contact', left_out: [] },
+      },
+    });
+    const wrapper = await abrir();
+
+    await guardar(wrapper);
+
+    expect(wrapper.find('[data-pronto]').exists()).toBe(false);
+    expect(wrapper.text()).toContain(
+      ptBR.PROSPECTING_ACHAR.FOLHA.ERRO_LISTA_CONTATO_APAGADO
+    );
+    expect(wrapper.text()).toContain(
+      'Os contatos criados até aqui ficaram gravados.'
+    );
+    wrapper.unmount();
+  });
+
+  it('na demonstração, "Criar a mensagem" abre a Nova campanha sem o Público de exemplo', async () => {
+    rota.params = { accountId: '1', searchId: 'demo' };
+    rota.query = { demo: 'folha-lista' };
+    const wrapper = await abrir();
+
+    await wrapper.find('[data-principal-folha]').trigger('click');
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-pronto]').exists()).toBe(true);
+    });
+    await wrapper.find('[data-rodape] button').trigger('click');
+    await flushPromises();
+
+    expect(AutonomiaProspectingAPI.createAudience).not.toHaveBeenCalled();
+    expect(push).toHaveBeenLastCalledWith({
+      name: 'campaigns_journey_new',
+      params: { accountId: '1' },
+      query: {},
+    });
+    wrapper.unmount();
+  });
+
   it('com os Públicos desligados, a folha só oferece o funil', async () => {
     window.globalConfig = {};
     const wrapper = await abrir();
@@ -343,5 +386,50 @@ describe('fonte do Público', () => {
     expect(detalhes).toContain(
       '1 é a mesma pessoa de outra empresa da lista: entrou uma vez só.'
     );
+  });
+});
+
+// #2695 r2: o "ficou de fora" de uma recusa do Público não pode sobrar na folha
+// quando, depois, o envio ao funil falha.
+describe('folha: erro do Público e depois do funil', () => {
+  it('a falha do envio ao funil não mostra o "ficou de fora" da recusa anterior', async () => {
+    const folha = ref(folhaNova('lista'));
+    const fonte = ref({
+      guardarLista: vi.fn().mockRejectedValue(
+        Object.assign(new Error('publico'), {
+          codigo: 'prospecting.audience.no_rows',
+          fora: [{ id: 1, motivo: 'opt_out' }],
+        })
+      ),
+      mandarParaFunil: vi
+        .fn()
+        .mockResolvedValue({ created: [], existing: [], failed: [] }),
+    });
+    const acoes = useFolhaDaLista({
+      demo: ref(null),
+      estado: ref(''),
+      fonte,
+      mudarEstado: vi.fn(),
+      contaId: ref(1),
+      usuarioId: ref(7),
+      escolhidas: ref([{ id: 1, nome: 'Empresa 1', temContato: true }]),
+      destino: ref({ funil: { id: 3 }, etapa: { id: 31 } }),
+      pessoaId: ref('voce'),
+      pessoaNome: ref('Você'),
+      donoId: ref(null),
+      nomeLista: ref('Escritórios'),
+      folha,
+      pronto: ref(null),
+      subpainel: ref(null),
+      trocar: vi.fn(),
+    });
+
+    await acoes.guardarDaFolha();
+    expect(folha.value.foraDoErro).toEqual([{ id: 1, motivo: 'opt_out' }]);
+
+    await acoes.mandarDaFolha();
+
+    expect(folha.value.erro).toBe('funil');
+    expect(folha.value.foraDoErro).toEqual([]);
   });
 });

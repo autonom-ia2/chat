@@ -7,8 +7,9 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadAudiencesController < Api::
   before_action :authorize_campaign_manage!
 
   def create
+    permitted = params.permit(:name, lead_ids: [])
     result = ::Autonomia::Prospecting::AudienceFromLeads.new(
-      account: Current.account, user: Current.user, lead_ids: params.permit(lead_ids: [])[:lead_ids], name: params[:name].to_s,
+      account: Current.account, user: Current.user, lead_ids: permitted[:lead_ids], name: permitted[:name].to_s,
       leads_scope: leads_scope
     ).perform
     render json: { payload: audience_payload(result) }, status: :created

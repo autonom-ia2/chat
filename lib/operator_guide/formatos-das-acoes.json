@@ -11964,7 +11964,7 @@
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/prospecting/lead_audiences_controller.rb:9",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lead_audiences_controller.rb:11"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lead_audiences_controller.rb:10"
     ],
     "sem_corpo": false
   },

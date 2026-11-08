@@ -274,6 +274,7 @@
       "ERRO_LISTA": "We could not save the list.",
       "ERRO_LISTA_NINGUEM": "None of these can receive messages: they asked not to, or have no mobile or e-mail.",
       "ERRO_LISTA_DEMAIS": "Save up to {max} companies at a time. Turn some off and try again.",
+      "ERRO_LISTA_CONTATO_APAGADO": "A contact was deleted while the list was being saved. The contacts created so far were kept. Try again.",
       "NAO_VAO_LINK": "Why {n} is not going | Why {n} are not going",
       "TENTAR": "Try again",
       "VAO": "{n} companies will go",

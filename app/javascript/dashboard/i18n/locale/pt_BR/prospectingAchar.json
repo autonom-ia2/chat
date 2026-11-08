@@ -274,6 +274,7 @@
       "ERRO_LISTA": "Não deu para guardar a lista.",
       "ERRO_LISTA_NINGUEM": "Nenhuma destas pode receber mensagem: pediram para não receber ou não têm celular nem e-mail.",
       "ERRO_LISTA_DEMAIS": "Guarde até {max} empresas por vez. Desligue algumas e tente de novo.",
+      "ERRO_LISTA_CONTATO_APAGADO": "Um contato foi apagado enquanto a lista era guardada. Os contatos criados até aqui ficaram gravados. Tente de novo.",
       "NAO_VAO_LINK": "Por que {n} não vai | Por que {n} não vão",
       "TENTAR": "Tentar de novo",
       "VAO": "Vão {n} empresas",

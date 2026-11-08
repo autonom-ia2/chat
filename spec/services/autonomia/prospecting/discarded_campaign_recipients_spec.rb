@@ -3,7 +3,7 @@ require 'rails_helper'
 # Descarte tira da campanha em andamento (decisão de 26/09): a campanha da API do WhatsApp resolve o público quando
 # começa e guarda os destinatários. Lead descartado depois disso sai dos pendentes da campanha que recebeu o segmento da
 # lista dele, com o motivo 'discarded', no job que o descarte já enfileira. A campanha não termina com falhas por isso.
-RSpec.describe Autonomia::Prospecting::DiscardedCampaignRecipients do
+RSpec.describe Autonomia::Prospecting::DiscardedCampaignRecipients, :legacy_prospecting_segment do
   let(:account) { create(:account) }
   let(:admin) { create(:user, :administrator, account: account) }
   let(:inbox) { create_whatsapp_api_inbox(account: account) }

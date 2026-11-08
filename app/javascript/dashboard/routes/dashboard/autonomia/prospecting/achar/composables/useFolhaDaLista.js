@@ -14,11 +14,14 @@ const VOLTA_DO_SUBPAINEL = {
 };
 
 // Recusas do Público com frase própria na folha, em vez de "não deu": ninguém
-// pode receber mensagem (a folha diz também quem ficou de fora e por quê) e
-// empresas demais de uma vez.
+// pode receber mensagem (a folha diz também quem ficou de fora e por quê),
+// empresas demais de uma vez e um contato apagado enquanto a lista era
+// guardada (os contatos criados até ali ficaram gravados). O código vem do
+// servidor pela fonte (acharFonte.js, guardarLista).
 const ERRO_DO_PUBLICO = {
   'prospecting.audience.no_rows': 'lista_ninguem',
   'prospecting.audience.too_many_leads': 'lista_demais',
+  'prospecting.audience.foreign_contact': 'lista_contato_apagado',
 };
 
 export const folhaNova = (escolha = null, mostrarFora = false) => ({
@@ -61,6 +64,7 @@ export function useFolhaDaLista({
     folha.value = {
       ...folha.value,
       erro: null,
+      foraDoErro: [],
       enviando: { feitas: 0, total: ids.length },
     };
     const resumo = await fonte.value.mandarParaFunil({
@@ -131,7 +135,12 @@ export function useFolhaDaLista({
       folha.value = { ...folha.value, erro: 'lista_demais', foraDoErro: [] };
       return;
     }
-    folha.value = { ...folha.value, guardando: true, erro: null };
+    folha.value = {
+      ...folha.value,
+      guardando: true,
+      erro: null,
+      foraDoErro: [],
+    };
     try {
       const guardado = await fonte.value.guardarLista({
         nome: nomeLista.value,

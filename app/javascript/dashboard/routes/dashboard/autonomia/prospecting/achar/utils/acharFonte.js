@@ -78,7 +78,8 @@ const doPublico = ({ audience = {}, left_out: fora = [] }) => ({
   fora: fora.map(item => ({ id: item.lead_id, motivo: item.reason_code })),
 });
 
-// O id do Público de exemplo da demonstração: nada é gravado.
+// O id do Público de exemplo da demonstração: nada é gravado, e "Criar a
+// mensagem" não o leva para a Nova campanha (AcharConfiraPage).
 const PUBLICO_DA_DEMO = 9001;
 
 const comDias = search => ({
@@ -440,7 +441,9 @@ const fonteApi = ({ api, crm, usuarioId, usuarioNome }) => ({
     salvarArquivo(data, `prospeccao-${id}.xlsx`);
   },
   // "Guardar para mandar mensagem" (#2695): as empresas viram um Público de
-  // Campanhas. Na recusa, o erro leva o código do servidor e quem ficou de fora.
+  // Campanhas. Na recusa, o erro leva o código do servidor (no_rows,
+  // too_many_leads, foreign_contact...; a folha escolhe a frase em
+  // useFolhaDaLista) e quem ficou de fora.
   async guardarLista({ nome, ids }) {
     try {
       const { data } = await api.createAudience({ leadIds: ids, name: nome });

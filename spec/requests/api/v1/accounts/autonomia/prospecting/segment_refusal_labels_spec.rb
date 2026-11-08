@@ -5,7 +5,7 @@ require 'rails_helper'
 # como recusado depois de receber a etiqueta perde a etiqueta no job da Prospecção (SegmentRefusalSyncJob), que a
 # recusa enfileira depois de gravada. A resposta da recusa não depende da etiqueta. O contato que outro lead elegível da
 # lista ainda alcança fica com ela.
-RSpec.describe 'Autonomia prospecting refusal after segment', type: :request do
+RSpec.describe 'Autonomia prospecting refusal after segment', :legacy_prospecting_segment, type: :request do
   let(:account) { create(:account) }
   let(:admin) { create(:user, :administrator, account: account) }
   let(:base_url) { "/api/v1/accounts/#{account.id}/autonomia/prospecting" }

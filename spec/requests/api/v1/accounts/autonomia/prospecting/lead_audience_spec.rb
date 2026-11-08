@@ -149,13 +149,43 @@ RSpec.describe 'Autonomia prospecting lead audience', type: :request do
                                             'error' => I18n.t('autonomia.prospecting.audience.errors.no_leads'))
   end
 
-  it 'lead_ids de tipo inválido (objeto, lista, booleano, texto que não é número) responde 422 no_leads, não 500' do
-    [[{ 'id' => 1 }], [[1]], true, ['0x1A', 'abc', '-3']].each do |invalid|
+  it 'lead_ids de tipo inválido (objeto, lista, booleano) responde 422 no_leads, não 500' do
+    [[{ 'id' => 1 }], [[1]], true].each do |invalid|
       save_audience(invalid)
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['code']).to eq('prospecting.audience.no_leads')
     end
+  end
+
+  it 'só textos que não são número: 422 no_rows, com cada um em left_out como não encontrado' do
+    save_audience(%w[0x1A abc -3])
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['code']).to eq('prospecting.audience.no_rows')
+    expect(response.parsed_body['left_out'].to_h { |item| [item['lead_id'], item['reason_code']] })
+      .to eq('0x1A' => 'not_found', 'abc' => 'not_found', '-3' => 'not_found')
+  end
+
+  it 'id inválido junto de um válido não some: o válido entra e o inválido sai como não encontrado' do
+    lead = create_lead(1)
+
+    save_audience([lead.id, 'abc'])
+
+    expect(response).to have_http_status(:created)
+    expect(response.parsed_body.dig('payload', 'entered_lead_ids')).to eq([lead.id])
+    expect(left_out_reasons).to eq('abc' => 'not_found')
+  end
+
+  it 'o teto conta o pedido como veio, antes de tirar os ids inválidos' do
+    stub_const('Autonomia::Prospecting::AudienceFromLeads::MAX_LEADS', 2)
+    lead = create_lead(1)
+
+    save_audience([lead.id, 'abc', 'xyz'])
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['code']).to eq('prospecting.audience.too_many_leads')
+    expect(lead.reload.contact_id).to be_nil
   end
 
   it 'acima do teto responde 422 com o máximo na frase' do
@@ -180,6 +210,7 @@ RSpec.describe 'Autonomia prospecting lead audience', type: :request do
     payload = response.parsed_body['payload']
     expect(payload['entered_lead_ids']).to eq([first.id])
     expect(left_out_reasons).to eq(same.id => 'same_contact')
+    expect(same.reload.contact_id).to eq(first.reload.contact_id)
     expect(payload['left_out'].first['message']).to eq(I18n.t('autonomia.prospecting.audience.left_out.same_contact'))
     expect(payload.dig('audience', 'count')).to eq(1)
   end
@@ -204,6 +235,7 @@ RSpec.describe 'Autonomia prospecting lead audience', type: :request do
     expect(lead.reload.contact_id).to be_nil
   end
 
+  # Isolamento por lead é decisão (comentário do AudienceFromLeads): um lead ruim não derruba os outros.
   it 'falha inesperada de um lead vai para o tracker e vira unexpected_error, sem derrubar os outros' do
     broken = create_lead(1)
     good = create_lead(2)

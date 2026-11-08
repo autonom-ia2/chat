@@ -51,4 +51,5 @@ module LegacyProspectingSegment
   end
 end
 
-RSpec.configure { |config| config.include LegacyProspectingSegment }
+# Só nos specs da manutenção, marcados com :legacy_prospecting_segment.
+RSpec.configure { |config| config.include LegacyProspectingSegment, :legacy_prospecting_segment }
