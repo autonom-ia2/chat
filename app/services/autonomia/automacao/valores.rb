@@ -52,15 +52,12 @@ class Autonomia::Automacao::Valores
     'conversa.link_da_agenda' => ->(conversa) { conversa.assignee }
   }.freeze
 
-  # G11: a resposta que chegou durante o "esperar até" (Resposta). Só existe na condição dele, onde há a janela da
-  # espera (`espera`); o salvar recusa no resto. Sem a janela, ou sem conversa (card sem conversa principal), lê
+  # G11: a resposta que chegou durante o "esperar até" (Resposta::VALORES). Só existe na condição dele, onde há a janela
+  # da espera (`espera`); o salvar recusa no resto. Sem a janela, ou sem conversa (card sem conversa principal), lê
   # false: nunca "respondeu", e "diferente de true" não vira resposta. O cliente responde de qualquer conversa dele
   # (#2680: o e-mail abre outra), então a resposta dele sai do contato, nas conversas que `quem` vê, e vale também no
   # alvo contato.
-  RESPOSTA = {
-    'conversa.cliente_respondeu' => ->(contexto, espera, quem) { ::Autonomia::Automacao::Resposta.cliente?(contexto.contato, espera, quem) },
-    'conversa.equipe_respondeu' => ->(contexto, espera, _quem) { ::Autonomia::Automacao::Resposta.equipe_na?(contexto.conversa, espera) }
-  }.freeze
+  RESPOSTA = ::Autonomia::Automacao::Resposta::VALORES
   RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu'.freeze
 
   # A última mensagem que a execução mandou ao cliente (#2680): o texto e a situação (Envio).
@@ -106,12 +103,6 @@ class Autonomia::Automacao::Valores
     'envio.situacao' => { 'opcoes' => ::Autonomia::Automacao::Envio::SITUACOES.values, 'operadores' => %w[igual diferente] }
   }.freeze
 
-  ATRIBUTOS = {
-    'conversa.atributos' => ->(conversa) { conversa.custom_attributes },
-    'contato.atributos' => ->(contato) { contato.custom_attributes },
-    'card.atributos' => ->(card) { card.custom_attributes }
-  }.freeze
-
   # Os valores que pedem permissão para ler (#2597): a pergunta é a mesma do resto do CRM, feita a quem salva a receita
   # e a quem ligou a automação. O dono de um card não ganha, pela automação, o valor dos cards alheios: `ve?`, não
   # `ve_o_card?`. Sem a permissão, o salvar recusa e a execução lê vazio. Cada regra responde `ve?(account_user)` e diz
@@ -120,12 +111,8 @@ class Autonomia::Automacao::Valores
     'card.valor' => ::Crm::ValorDeVenda
   }.freeze
 
-  # O modelo do atributo personalizado de cada base, para conferir ao salvar que a chave existe na conta.
-  MODELOS = {
-    'conversa.atributos' => 'conversation_attribute',
-    'contato.atributos' => 'contact_attribute',
-    'card.atributos' => 'card_attribute'
-  }.freeze
+  # Os atributos personalizados (`contato.atributos.placa`) ficam em Valores::Atributos.
+  MODELOS = ::Autonomia::Automacao::Valores::Atributos::MODELOS
 
   class << self
     def caminho_valido?(caminho)
@@ -185,26 +172,12 @@ class Autonomia::Automacao::Valores
       regra.nil? || regra.ve?(account_user)
     end
 
-    # O atributo da conta que o caminho lê existe? Caminho que não é atributo responde true.
-    def atributo_definido?(caminho, conta)
-      base, chave = atributo(caminho)
-      base.nil? || conta.custom_attribute_definitions.exists?(attribute_model: MODELOS.fetch(base), attribute_key: chave)
-    end
+    def atributo_definido?(caminho, conta) = ::Autonomia::Automacao::Valores::Atributos.definido?(caminho, conta)
 
-    # O caminho lê um atributo do tipo data da conta? A data calculada no corpo (G16) só parte de um deles: os CAMPOS
-    # não têm data.
-    def data?(caminho, conta)
-      base, chave = atributo(caminho)
-      base.present? && conta.custom_attribute_definitions.exists?(attribute_model: MODELOS.fetch(base), attribute_key: chave,
-                                                                  attribute_display_type: :date)
-    end
+    def data?(caminho, conta) = ::Autonomia::Automacao::Valores::Atributos.data?(caminho, conta)
 
-    # "contato.atributos.placa" => ["contato.atributos", "placa"]. A chave do atributo pode ter ponto.
-    def atributo(caminho)
-      base = ATRIBUTOS.keys.find { |prefixo| caminho.to_s.start_with?("#{prefixo}.") }
-      chave = base && caminho.to_s.delete_prefix("#{base}.")
-      [base, chave] if chave.present?
-    end
+    # "contato.atributos.placa" => ["contato.atributos", "placa"].
+    def atributo(caminho) = ::Autonomia::Automacao::Valores::Atributos.do_caminho(caminho)
   end
 
   # `alvo`: a conversa, o card ou o contato da execução (ou um Contexto já montado). `quem`: a pessoa com cujas
@@ -240,7 +213,7 @@ class Autonomia::Automacao::Valores
     base, chave = self.class.atributo(caminho)
     raise ArgumentError, "caminho desconhecido: #{caminho}" unless base
 
-    do_objeto(caminho) { |objeto| ATRIBUTOS.fetch(base).call(objeto).to_h[chave] }
+    do_objeto(caminho) { |objeto| ::Autonomia::Automacao::Valores::Atributos.ler(base, chave, objeto) }
   end
 
   def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave) || ENVIO.key?(chave)

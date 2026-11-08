@@ -21,6 +21,13 @@
 module Autonomia::Automacao::Resposta
   module_function
 
+  # Os valores que a condição do "esperar até" lê (Valores::RESPOSTA). Cada um recebe o Contexto da execução, a janela
+  # da espera e quem ligou, e trata o vazio (sem contato, sem conversa) como "não respondeu".
+  VALORES = {
+    'conversa.cliente_respondeu' => ->(contexto, espera, quem) { cliente?(contexto.contato, espera, quem) },
+    'conversa.equipe_respondeu' => ->(contexto, espera, _quem) { equipe_na?(contexto.conversa, espera) }
+  }.freeze
+
   # Em qualquer conversa do contato na conta que `quem` (quem ligou) vê, pelo filtro da lista de conversas (#2680): o
   # e-mail da automação abre uma conversa nova, e a resposta chega nela. A resposta numa caixa que quem ligou não abre
   # não decide o ramo (parecer da Funções). Sem contato, ou sem quem ligou, nunca respondeu.
