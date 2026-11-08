@@ -8,6 +8,8 @@ import AgenteBotao from '../AgenteBotao.vue';
 // ("Testar de novo"). Em palavras: quantas acertou, sem nota nem percentual. A lista das perguntas fica recolhida.
 // Estados: nunca (ainda não rodou), rodando, pronto e parado (não terminou: "Não consegui terminar o teste agora", com
 // tentar de novo; o resultado anterior, se houver, continua valendo).
+// #2444: o item que o juiz não consegue julgar fica fora da conta, e a tela diz quantos; sem pergunta do material que deu
+// para julgar, texto próprio (nunca "acertou 0 de 0").
 const props = defineProps({
   autoteste: { type: Object, required: true },
   nome: { type: String, required: true },
@@ -69,6 +71,9 @@ const botao = computed(() => {
       <span v-else-if="parado" data-parado class="text-n-amber-11">
         {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.PARADO') }}
       </span>
+      <span v-else-if="!autoteste.doMaterial" data-resultado>
+        {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.SEM_DO_MATERIAL') }}
+      </span>
       <span v-else data-resultado>
         {{
           t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.ACERTOU', {
@@ -99,6 +104,19 @@ const botao = computed(() => {
               autoteste.deFora
             )
           : t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.FORA_ERRO', { nome })
+      }}
+    </p>
+    <p
+      v-if="!rodando && autoteste.naoJulgadas"
+      data-nao-julgadas
+      class="m-0 text-sm text-n-slate-11"
+    >
+      {{
+        t(
+          'AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.NAO_JULGADAS',
+          { n: autoteste.naoJulgadas },
+          autoteste.naoJulgadas
+        )
       }}
     </p>
     <details v-if="!rodando && temResultado" data-perguntas>

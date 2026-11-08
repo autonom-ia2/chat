@@ -99,6 +99,9 @@ export const MOCK_CAPABILITIES = Object.freeze([
 // continua não sendo culpa do corretor.)
 export const FAILURE_CAUSES = Object.freeze({
   CREDENTIAL_REJECTED: 'credential_rejected',
+  // Todas as vagas de usuário da corretora no portal estão ocupadas ("Sessões lotadas"). A ação é
+  // dela — liberar uma vaga —, mas não é senha: a tela pede a vaga, nunca a troca de senha.
+  SESSIONS_FULL: 'sessions_full',
   SESSION_LOST: 'session_lost',
   PORTAL_UNAVAILABLE: 'portal_unavailable',
   PORTAL_TIMEOUT: 'portal_timeout',

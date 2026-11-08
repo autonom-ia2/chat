@@ -66,6 +66,7 @@
       }
     },
     "valor": {
+      "description": "Um valor do alvo, da lista fechada. \"ia.<id>\" (#2679): o texto que o passo \"escrever\" ou \"resumir\" com esse id produziu nesta execução; antes dele rodar, vazio.",
       "type": "object",
       "additionalProperties": false,
       "required": ["$valor"],
@@ -178,10 +179,10 @@
       ]
     },
     "leituras": {
-      "description": "O que a IA lê do alvo (F7), da lista fechada do Decisor. E-mail e telefone do contato nunca vão. Sem a lista, as mensagens recentes do cliente.",
+      "description": "O que a IA lê do alvo (F7), da lista fechada do Decisor. E-mail e telefone do contato nunca vão. Sem a lista, as mensagens recentes do cliente. \"anexos\" (G20): a foto, o PDF e a transcrição do áudio que o cliente mandou nas últimas mensagens da conversa. \"card\" (#2679): o card do alvo (no gatilho de conversa, o card da conversa), com título, etapa, funil, status e campos; o valor só quando quem ligou pode vê-lo. \"notas\" (#2679): as notas internas recentes da conversa.",
       "type": "array",
       "uniqueItems": true,
-      "items": { "enum": ["mensagens_recentes", "mensagens_com_respostas", "ultima_mensagem", "conversa", "contato", "empresa"] }
+      "items": { "enum": ["mensagens_recentes", "mensagens_com_respostas", "ultima_mensagem", "conversa", "contato", "empresa", "anexos", "card", "notas"] }
     },
     "instrucao": { "type": "string", "minLength": 1, "maxLength": 2000 },
     "caminhos": {
@@ -217,7 +218,10 @@
         }
       }
     },
-    "destino_escrever": { "enum": ["mensagem", "sugestao"] },
+    "destino_escrever": {
+      "description": "mensagem: o texto sai ao cliente. sugestao: vira nota para a equipe revisar. guardar (#2679): só fica guardado, para um passo seguinte ler como {\"$valor\": \"ia.<id deste passo>\"} (por exemplo, numa mensagem com modelo aprovado, para sair fora da janela).",
+      "enum": ["mensagem", "sugestao", "guardar"]
+    },
     "agente_de_ia": { "type": "integer", "minimum": 1, "description": "O id da agente de IA da conta (G15)." },
     "destino_resumir": {
       "oneOf": [
