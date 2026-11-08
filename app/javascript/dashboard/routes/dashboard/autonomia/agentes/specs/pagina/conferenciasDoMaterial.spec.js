@@ -331,7 +331,7 @@ describe('AutotesteDoMaterial', () => {
       'Bia acertou 7 de 8 perguntas sobre o seu material.'
     );
     expect(no(wrapper, '[data-fora]').text()).toContain(
-      'disse que não sabia e passou para a equipe'
+      'não inventou resposta'
     );
     expect(no(wrapper, '[data-testar-de-novo]').text()).toBe('Testar de novo');
     expect(no(wrapper, '[data-aviso-amostra]').text()).toBe(
@@ -343,11 +343,46 @@ describe('AutotesteDoMaterial', () => {
     const wrapper = montar(autoteste({ deFora: 1, certasDeFora: 1 }));
 
     expect(no(wrapper, '[data-fora]').text()).toBe(
-      'Na pergunta que não está no material, Bia disse que não sabia e passou para a equipe.'
+      'Na pergunta que não está no material, Bia não inventou resposta.'
     );
     expect(no(wrapper, '[data-perguntas] summary').text()).toBe(
       'Ver a pergunta'
     );
+  });
+
+  it('item que o juiz não conseguiu julgar: diz quantos ficaram de fora da conta', () => {
+    const wrapper = montar(
+      autoteste({ doMaterial: 7, certasDoMaterial: 7, naoJulgadas: 1 })
+    );
+
+    expect(no(wrapper, '[data-resultado]').text()).toBe(
+      'Bia acertou 7 de 7 perguntas sobre o seu material.'
+    );
+    expect(no(wrapper, '[data-nao-julgadas]').text()).toBe(
+      '1 pergunta do teste não deu para julgar e ficou de fora da conta.'
+    );
+  });
+
+  it('nenhuma pergunta do material deu para julgar: texto próprio, nunca "0 de 0"', () => {
+    const wrapper = montar(
+      autoteste({
+        doMaterial: 0,
+        certasDoMaterial: 0,
+        naoJulgadas: 8,
+        resultados: [],
+      })
+    );
+
+    expect(no(wrapper, '[data-resultado]').text()).toBe(
+      'Neste teste, nenhuma pergunta sobre o seu material deu para julgar. Teste de novo.'
+    );
+    expect(no(wrapper, '[data-nao-julgadas]').text()).toBe(
+      '8 perguntas do teste não deram para julgar e ficaram de fora da conta.'
+    );
+  });
+
+  it('sem item fora da conta, não fala disso', () => {
+    expect(no(montar(autoteste()), '[data-nao-julgadas]').exists()).toBe(false);
   });
 
   it('inventou numa de fora: aviso âmbar', () => {
@@ -416,6 +451,7 @@ describe('useConferenciasDoMaterial', () => {
           resposta([VAZIO], {
             estado: 'pronto',
             do_material: 8,
+            nao_julgadas: 1,
             de_fora: 2,
             certas_do_material: 8,
             certas_de_fora: 2,
@@ -438,6 +474,7 @@ describe('useConferenciasDoMaterial', () => {
       estado: 'pronto',
       doMaterial: 8,
       certasDeFora: 2,
+      naoJulgadas: 1,
     });
 
     await vi.advanceTimersByTimeAsync(RELEITURA_DO_AUTOTESTE_MS * 3);
