@@ -8,8 +8,10 @@
 # - As esperas andam com o relógio adiantado e a varredura do motor.
 module FechamentoAutomacao
   OPENAI = 'https://api.openai.com/v1/responses'.freeze
-  # Os jobs que o caminho de produção enfileira entre o evento e a saída.
-  JOBS = [EventDispatcherJob, Autonomia::Automacao::AvancarJob, SendReplyJob].freeze
+  # Os jobs que o caminho de produção enfileira entre o evento e a saída. Os do webhook de cada canal (FechamentoAutomacao::
+  # Canais) gravam a mensagem do cliente como em produção.
+  JOBS = [Webhooks::WhatsappEventsJob, Webhooks::InstagramEventsJob, EventDispatcherJob, Autonomia::Automacao::AvancarJob,
+          SendReplyJob].freeze
   LIMITE_DE_JOBS = 60
 
   Chamada = Data.define(:metodo, :host, :caminho, :corpo)
@@ -172,9 +174,10 @@ module FechamentoAutomacao::Lacunas
     'G17' => -> { acao?('POST contacts') },
     'G18' => nil,
     'G19' => -> { acao?('POST contacts/:contact_id/notes') },
-    'G20' => nil,
-    # Fechada no motor (#2706): o passo existe no esquema e chega pela porta da ação. O ponta a ponta do exemplo 9 espera
-    # o conta.recorrente da G7 (#2652).
+    # Os passos de IA leem a foto, o PDF e o áudio da conversa (`le: anexos`, #2669).
+    'G20' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('anexos') },
+    # Fechada com prova (#2706): o passo existe no esquema e chega pela porta da ação; o ponta a ponta do exemplo 9 está
+    # em spec/fechamento/automacao/g21_prospeccao_spec.rb.
     'G21' => -> { passo?('prospeccao') && Autonomia::Automacao::PassoDeAcao::PROPRIOS.key?('prospeccao') },
     'G22' => nil,
     'G23' => nil,
@@ -183,9 +186,9 @@ module FechamentoAutomacao::Lacunas
     'G26' => -> { passo?('sla') },
     # "Card criado ou atualizado com valor acima de R$ 50 mil" (15) e "card completo" (8, passo 8): só o card criado é a G5.
     'G27' => -> { gatilho?('card.atualizado', 'card.campo_mudou', 'card.valor_mudou') },
-    # G28 (#2674, absorvida pelo lote 2 #2679): o texto da IA vira valor entre passos e a IA lê o card. Segura o 10 e o 13
-    # (#2678) e os 4, 5 e 19. A frente do lote 2 troca o nil pela sonda.
-    'G28' => nil,
+    # O texto da IA vira valor entre passos (`ia.<passo>`, #2679): fora da janela, a "mensagem" o leva no modelo aprovado
+    # (exemplo 3, passo 2); o "mesmo resumo" não vai outra vez à IA (exemplo 10, passo 6).
+    'G28' => -> { valor?('ia.cuidados') },
     # Achadas no exemplo 2 (07/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
     # G29: a origem do card do formulário (anúncio, formulário) como valor da receita, no filtro do gatilho e nos passos.
     'G29' => nil,
@@ -194,7 +197,25 @@ module FechamentoAutomacao::Lacunas
     # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando".
     'G31' => nil,
     # G32: a reunião marcada como condição do "esperar até", no meio da execução.
-    'G32' => nil
+    'G32' => nil,
+    # A IA lê o card (`le: card`, #2679): exemplo 13, passo 5; exemplo 15, passo 9.
+    'G35' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('card') },
+    # A IA lê as notas internas da conversa (`le: notas`, #2679): exemplo 5, passo 1.
+    'G36' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('notas') },
+    # Achadas no exemplo 7 (auditoria dos termos, 07/11); G33 e G34 são do lote 3 (#2680), G35 e G36 da F7 (#2688).
+    # Fecham com o lote 5 (#2686: a exclusão e o "respondeu à campanha") e com o PR do exemplo 7 da G14 (#2681, parte 4:
+    # a data única); a G14 liga as sondas e o spec do exemplo 7 no PR dela.
+    # G37: o público da campanha com exclusão ("todos os outros", "perguntou e não comprou").
+    'G37' => nil,
+    # G38: o filtro "respondeu à campanha X" no gatilho da mensagem.
+    'G38' => nil,
+    # G39: o gatilho que roda uma vez, numa data ("a quinta antes da Black Friday"), não toda semana.
+    'G39' => nil,
+    # Do exemplo 10 (#2678), fora do lote 2: esperar só a pessoa que atende a conversa (a Fernanda), não a equipe inteira.
+    'G40' => -> { valor?('conversa.responsavel_respondeu') },
+    # Do exemplo 10 (#2678), ainda sem dono: a instrução no resumir ("o que já foi prometido") e avisar o responsável
+    # quando a agente de IA atende a conversa.
+    'G41' => nil
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

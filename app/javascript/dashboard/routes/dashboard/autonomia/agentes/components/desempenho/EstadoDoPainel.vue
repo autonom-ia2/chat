@@ -5,8 +5,8 @@ import AgenteBotao from '../AgenteBotao.vue';
 import { VARIANTES } from '../../utils/desempenhoEstados';
 
 // #2226 (ESPEC 2.11) — o componente único dos estados vazios e intermediários do painel: uma frase e
-// um botão. Nunca mostra zero no lugar de "não sei". Quando o botão exige quem gerencia (ligar a
-// leitura, conectar a chave, dizer o resultado), quem só vê recebe a frase própria e, se houver, um
+// um botão. Nunca mostra zero no lugar de "não sei". Quando o botão exige quem gerencia (conectar a
+// chave, dizer o resultado), quem só vê recebe a frase própria e, se houver, um
 // botão que não muda nada. "Conferência abaixo do aceitável" é uma faixa, sem botão.
 // Decisão 2 do Rodrigo: sem a chave de IA do cliente, o estado pede para conectar a chave.
 const props = defineProps({

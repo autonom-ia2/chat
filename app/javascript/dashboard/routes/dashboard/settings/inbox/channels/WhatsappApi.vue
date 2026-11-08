@@ -34,12 +34,15 @@ const errorMessageFor = code => {
     invalid_phone: 'INVALID_PHONE',
     integration_not_configured: 'NOT_CONFIGURED',
     account_token_missing: 'NOT_CONFIGURED',
+    phone_in_use_elsewhere: 'PHONE_IN_USE_ELSEWHERE',
+    engine_unavailable: 'ENGINE_UNAVAILABLE',
   };
   const key = known[code];
   return key ? tk(`ERROR.${key}`) : tk('ERROR.GENERIC');
 };
 
 const createChannel = async () => {
+  if (isCreating.value) return;
   v$.value.$touch();
   if (v$.value.$invalid) return;
 
@@ -137,6 +140,7 @@ const createChannel = async () => {
       <div class="w-full mt-4">
         <NextButton
           :is-loading="isCreating"
+          :disabled="isCreating"
           type="submit"
           solid
           blue

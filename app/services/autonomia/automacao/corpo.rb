@@ -5,12 +5,15 @@
 # - `{"$data": {"de": "hoje", "mais": {"valor": 6, "unidade": "meses"}}}`, ou `"de": {"$valor": "<atributo de data>"}`.
 #   Sai "AAAA-MM-DD", o que a tela grava num atributo do tipo data (attributeDate) e no campo de data do card. "Hoje" é
 #   o dia da execução no fuso da conta, nunca o do salvar. Mês e ano pelo calendário: 31/01 + 1 mês = 28/02.
+#   `"fim_do": "mes"` leva ao último dia do mês da data já somada (#2705).
 #
 # Valor lido vazio: o corpo inteiro não sai, e o passo pula com o motivo. Nunca grava "indicado por " pela metade.
 class Autonomia::Automacao::Corpo
   FORMAS = %w[$valor $texto $data].freeze
   HOJE = 'hoje'.freeze
   UNIDADES = { 'dias' => :days, 'semanas' => :weeks, 'meses' => :months, 'anos' => :years }.freeze
+  # "fim_do": o último dia do período da data já somada (exemplo 6: "até o fim do mês").
+  FIM_DO = { 'mes' => :end_of_month }.freeze
   # O corpo pronto, ou o motivo de não sair (faltou_valor, data_invalida).
   Montado = Struct.new(:corpo, :motivo, keyword_init: true)
   Pula = Class.new(StandardError)
@@ -116,10 +119,12 @@ class Autonomia::Automacao::Corpo
   # `$texto`, o pedaço segue a regra do texto da mensagem (Texto): false conta como vazio, e a ação pula.
   def vazio?(valor) = valor.nil? || (valor.is_a?(String) && valor.strip.empty?) || (valor.respond_to?(:empty?) && valor.empty?)
 
+  # O "fim do" (#2705) vem depois da soma: hoje + 1 mês, no fim do mês, é o último dia do mês que vem.
   def data(forma)
     base = forma['de'] == HOJE ? hoje : lida(forma['de']['$valor'])
     mais = forma['mais']
-    (mais ? base.advance(UNIDADES.fetch(mais['unidade']) => mais['valor']) : base).iso8601
+    dia = mais ? base.advance(UNIDADES.fetch(mais['unidade']) => mais['valor']) : base
+    (forma['fim_do'] ? dia.public_send(FIM_DO.fetch(forma['fim_do'])) : dia).iso8601
   end
 
   # O dia de hoje no fuso que a tela grava na conta (#954), o mesmo do extrair e do Guia.

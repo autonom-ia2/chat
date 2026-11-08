@@ -78,6 +78,44 @@ RSpec.describe Autonomia::Insurance::Connections::Session do
       expect(tentativas).to eq(2)
     end
 
+    # Achado 5 da auditoria (05/11/2026): com a sessão gravada JÁ VENCIDA, o próprio login era recusado
+    # e a renovação fazia outro login igual. Um login por chamada.
+    it 'does not log in twice when the login itself is refused' do
+      # Arrange — sessão gravada e vencida; o portal recusa a credencial
+      vencida = Autonomia::Insurance::Connection.create!(account: renew_account, username: 'v@x.com', password: 'segredo')
+      vencida.store_session!({ 'multicalculoToken' => 'velha' }, expires_at: 1.hour.ago)
+      recusa = counting_connector
+      def recusa.open_session(**)
+        @logins += 1
+        raise Autonomia::Insurance::Connector::Error.new(:auth_required, 'credential rejected')
+      end
+      rodou = false
+
+      # Act / Assert
+      expect do
+        described_class.new(vencida, connector: recusa).with_fresh_session { rodou = true }
+      end.to raise_error(an_object_having_attributes(kind: :auth_required))
+      expect(recusa.logins).to eq(1)
+      expect(rodou).to be(false)
+    end
+
+    it 'does not renew a session that was just opened: the portal would hand back the same one' do
+      # Arrange — nada guardado; abre, e o portal recusa a sessão recém-aberta
+      nova = Autonomia::Insurance::Connection.create!(account: renew_account, username: 'n@x.com', password: 'segredo')
+      connector = counting_connector
+      tentativas = 0
+
+      # Act / Assert
+      expect do
+        described_class.new(nova, connector: connector).with_fresh_session do
+          tentativas += 1
+          raise Autonomia::Insurance::Connector::Error.new(:auth_required, '403')
+        end
+      end.to raise_error(Autonomia::Insurance::Connector::Error)
+      expect(tentativas).to eq(1)
+      expect(connector.logins).to eq(1)
+    end
+
     it 'does not renew for an error that has nothing to do with the session' do
       # Arrange — portal fora do ar não vira login novo
       tentativas = 0
@@ -261,6 +299,180 @@ RSpec.describe Autonomia::Insurance::Connections::Session do
     expect(connector.logins).to eq(2)
     expect(renewed['multicalculoToken']).to eq('token-2')
     expect(record.reload.session['multicalculoToken']).to eq('token-2')
+  end
+
+  # Achado 12: entre a recusa e a renovação, outro processo pode ter aberto uma sessão nova. Só a
+  # sessão RECUSADA é esquecida; a nova é reusada, sem login a mais.
+  it 'keeps the session another process opened meanwhile, instead of forgetting it' do
+    # Arrange — a recusada era token-1; outro processo já gravou token-2
+    record = connection
+    connector = counting_connector
+    recusada = described_class.new(record, connector: connector).resolve!
+    Autonomia::Insurance::Connection.find(record.id)
+                                    .store_session!({ 'multicalculoToken' => 'do-outro' }, expires_at: 3.hours.from_now)
+
+    # Act
+    renovada = described_class.new(record, connector: connector).renew!(recusada)
+
+    # Assert
+    expect(renovada['multicalculoToken']).to eq('do-outro')
+    expect(connector.logins).to eq(1)
+  end
+
+  # Achado 11: o login (até 60 s) não segura mais trava de linha. Quem chega enquanto outro processo
+  # abre a sessão espera fora do banco e usa a sessão dele.
+  describe 'a trava do login' do
+    let(:chave) { "autonomia:insurance:connection:#{record.id}:login" }
+    let(:record) { connection }
+
+    after do
+      Redis::LockManager.new.unlock(chave)
+      Redis::Alfred.delete("autonomia:insurance:connection:#{record.id}:login_recusado")
+    end
+
+    it 'waits for the session another process is opening and does not log in again' do
+      # Arrange — outro processo segura a trava e grava a sessão enquanto este espera
+      Redis::LockManager.new.lock(chave, 95)
+      connector = counting_connector
+      sessao = described_class.new(record, connector: connector)
+      allow(sessao).to receive(:sleep) do
+        Autonomia::Insurance::Connection.find(record.id)
+                                        .store_session!({ 'multicalculoToken' => 'do-outro' }, expires_at: 3.hours.from_now)
+      end
+
+      # Act
+      resultado = sessao.resolve!
+
+      # Assert
+      expect(resultado['multicalculoToken']).to eq('do-outro')
+      expect(connector.logins).to eq(0)
+    end
+
+    it 'opens the session itself once the other process lets go without one' do
+      # Arrange — o outro processo solta a trava sem gravar sessão (o login dele falhou)
+      Redis::LockManager.new.lock(chave, 95)
+      connector = counting_connector
+      sessao = described_class.new(record, connector: connector)
+      allow(sessao).to receive(:sleep) { Redis::LockManager.new.unlock(chave) }
+
+      # Act
+      resultado = sessao.resolve!
+
+      # Assert
+      expect(resultado['multicalculoToken']).to eq('token-1')
+      expect(connector.logins).to eq(1)
+    end
+
+    it 'gives up with a timeout when the other process never finishes' do
+      # Arrange — o outro processo continua segurando a trava (a do MockRedis vence com o `travel`,
+      # então ela é pega de novo a cada olhada)
+      Redis::LockManager.new.lock(chave, 95)
+      sessao = described_class.new(record, connector: counting_connector)
+      allow(sessao).to receive(:sleep) do
+        travel(30.seconds)
+        Redis::LockManager.new.lock(chave, 95)
+      end
+
+      # Act / Assert
+      expect { sessao.resolve! }.to raise_error(an_object_having_attributes(kind: :timeout))
+    end
+
+    it 'inherits the refusal of the login it waited for, instead of trying its own' do
+      # Arrange — o outro processo tenta, o portal recusa ("Sessões lotadas"), e ele solta a trava
+      Redis::LockManager.new.lock(chave, 95)
+      connector = counting_connector
+      sessao = described_class.new(record, connector: connector)
+      outro = described_class.new(Autonomia::Insurance::Connection.find(record.id), connector: counting_connector)
+      allow(sessao).to receive(:sleep) do
+        Redis::LockManager.new.unlock(chave)
+        lotadas = Autonomia::Insurance::Connector::Error.new(:unavailable, 'sessions full',
+                                                             { 'failure' => { 'cause' => 'sessions_full' } })
+        outro.send(:registrar_recusa!, lotadas)
+        Redis::LockManager.new.lock(chave, 95)
+      end
+
+      # Act / Assert
+      expect { sessao.resolve! }.to raise_error(an_object_having_attributes(kind: :unavailable))
+      expect(connector.logins).to eq(0)
+    end
+
+    it 'inherits a refusal from the last seconds even when the lock is already free' do
+      # Arrange — o outro processo foi recusado e já soltou a trava; este chega logo depois
+      outro = described_class.new(Autonomia::Insurance::Connection.find(record.id), connector: counting_connector)
+      outro.send(:registrar_recusa!, Autonomia::Insurance::Connector::Error.new(:unavailable, 'sessions full'))
+      connector = counting_connector
+
+      # Act / Assert — sem login novo
+      expect { described_class.new(record, connector: connector).resolve! }
+        .to raise_error(an_object_having_attributes(kind: :unavailable))
+      expect(connector.logins).to eq(0)
+    end
+
+    it 'tests a new password instead of inheriting the refusal of the old one' do
+      # Arrange — recusa com a senha antiga; o corretor salva a senha nova logo em seguida
+      outro = described_class.new(Autonomia::Insurance::Connection.find(record.id), connector: counting_connector)
+      outro.send(:registrar_recusa!, Autonomia::Insurance::Connector::Error.new(:auth_required, 'credential rejected'))
+      record.update!(password: 'senha-nova')
+      connector = counting_connector
+
+      # Act
+      resultado = described_class.new(record, connector: connector).resolve!
+
+      # Assert
+      expect(resultado['multicalculoToken']).to eq('token-1')
+      expect(connector.logins).to eq(1)
+    end
+
+    it 'tries again once the refusal is old' do
+      # Arrange — recusa gravada há mais de `RECUSA_VISIVEL` (o MockRedis vence a chave com o `travel`)
+      outro = described_class.new(Autonomia::Insurance::Connection.find(record.id), connector: counting_connector)
+      outro.send(:registrar_recusa!, Autonomia::Insurance::Connector::Error.new(:unavailable, 'velha'))
+      travel(described_class::RECUSA_VISIVEL + 1.second)
+      connector = counting_connector
+
+      # Act
+      resultado = described_class.new(record, connector: connector).resolve!
+
+      # Assert
+      expect(resultado['multicalculoToken']).to eq('token-1')
+      expect(connector.logins).to eq(1)
+    end
+
+    it 'does not extend the refusal when it only relays it' do
+      # Arrange
+      outro = described_class.new(Autonomia::Insurance::Connection.find(record.id), connector: counting_connector)
+      outro.send(:registrar_recusa!, Autonomia::Insurance::Connector::Error.new(:unavailable, 'sessions full'))
+      chave_recusa = "autonomia:insurance:connection:#{record.id}:login_recusado"
+      gravada = Redis::Alfred.get(chave_recusa)
+
+      # Act
+      expect { described_class.new(record, connector: counting_connector).resolve! }.to raise_error(Autonomia::Insurance::Connector::Error)
+
+      # Assert — a recusa continua a mesma, com o prazo de antes
+      expect(Redis::Alfred.get(chave_recusa)).to eq(gravada)
+    end
+
+    it 'waits only as long as the caller allows (the web request passes a short wait)' do
+      # Arrange
+      Redis::LockManager.new.lock(chave, 95)
+      sessao = described_class.new(record, connector: counting_connector, espera: 10.seconds)
+      allow(sessao).to receive(:sleep) { travel(6.seconds) }
+
+      # Act / Assert — dois cochilos de 6 s passam dos 10 s
+      expect { sessao.resolve! }.to raise_error(an_object_having_attributes(kind: :timeout, causa: :espera_do_login))
+    end
+
+    it 'releases the lock even when the login fails' do
+      # Arrange
+      recusa = counting_connector
+      def recusa.open_session(**) = raise(Autonomia::Insurance::Connector::Error.new(:unavailable, 'portal fora'))
+
+      # Act
+      expect { described_class.new(record, connector: recusa).resolve! }.to raise_error(Autonomia::Insurance::Connector::Error)
+
+      # Assert
+      expect(Redis::LockManager.new.lock(chave, 1)).to be(true)
+    end
   end
 
   it 'refuses to open a session without credentials' do

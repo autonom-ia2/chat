@@ -1,9 +1,10 @@
 # #1431 (F0) — o juiz do PLACAR da resposta (só dev/test, pela rake). Mesma saída do juiz do autoteste do material
-# (Material::JuizDoAutoteste: um veredito por índice, válido para a origem, ou nil), com outra régua: aquele é estrito
-# ("sem ser generoso", "errado se falta o fato") e, na revisão manual da linha de base, errou de 3% a 15% por formato,
-# sempre para o lado de reprovar resposta boa. Este julga pelo objetivo (a resposta atende o cliente com o que o material
-# diz, sem inventar?), com exemplos, e recebe os trechos que o agente usou. Calibração em
-# docs/audit/2026-10-31-rag-v2-f0/linha-de-base-formatos.md. É a base proposta para corrigir o juiz do autoteste (#2444).
+# (Material::JuizDoAutoteste: um veredito por índice, válido para a origem, ou nil). O juiz do autoteste antigo era
+# estrito ("sem ser generoso", "errado se falta o fato") e, na revisão manual da linha de base, errou de 3% a 15% por
+# formato, sempre para o lado de reprovar resposta boa. Este julga pelo objetivo (a resposta atende o cliente com o que o
+# material diz, sem inventar?), com exemplos, e recebe os trechos que o agente usou. Calibração em
+# docs/audit/2026-10-31-rag-v2-f0/linha-de-base-formatos.md. O juiz do autoteste passou a esta régua no #2444, com as
+# regras do dono e a saída `nao_se_aplica` a mais; este fica como estava, para a régua do placar não mudar.
 class Autonomia::Agents::JuizDoPlacar
   FEATURE = 'agente_placar_juiz'.freeze
   MODELO = Crm::Ai::Config::MODEL_CLASSIFY
