@@ -15,7 +15,7 @@ import { useEscolhasDosGatilhos } from './useEscolhasDosGatilhos';
 // campos de data, quando algum pede o campo.
 // O que cada leitura traz, pelas peças que a pedem, e o aviso se ela falhar.
 const LEITURAS = [
-  { pecas: ['etapa', 'funil'], erro: 'GATILHO_DO_CARD.ERRO_FUNIS' },
+  { pecas: ['etapa', 'funil', 'selecao'], erro: 'GATILHO_DO_CARD.ERRO_FUNIS' },
   { pecas: ['campo'], erro: 'GATILHO_DE_TEMPO.ERRO_CAMPOS' },
   { pecas: ['pagina'], erro: 'GATILHO_DE_REUNIAO.ERRO_PAGINAS' },
 ];

@@ -82,6 +82,7 @@
       "CAIXA_PESSOAS": "Add people to an inbox",
       "CONTATO_ETIQUETAS": "Add or remove a contact label",
       "CONTATO_ALTERAR": "Update the contact",
+      "CONTATO_NOTA": "Add a note to the contact",
       "EMPRESA_ALTERAR": "Update the contact's company",
       "ETIQUETA_CRIAR": "Create a label",
       "ETIQUETA_ALTERAR": "Change a label",
@@ -128,6 +129,7 @@
       "EMAIL": "Email",
       "PHONE_NUMBER": "Phone",
       "COMPANY_ID": "Company",
+      "CONTENT": "Note text",
       "DESCRIPTION": "Description",
       "DOMAIN": "Website",
       "TITLE": "Label name",
@@ -359,6 +361,7 @@
       "ATRIBUTO_CALCULADO": "{nome}: {valor}",
       "DATA_MAIS": "{de} + {n} {unidade}",
       "DATA_MENOS": "{de} − {n} {unidade}",
+      "DATA_FIM_DO_MES": "{data}, at the end of the month",
       "DATA": {
         "PERGUNTA": "Which date to save?",
         "DIA": "A set day",
@@ -374,6 +377,9 @@
         "SENTIDO": "After or before",
         "DEPOIS": "after",
         "ANTES": "before",
+        "FIM": "Which day of that month?",
+        "FIM_DIA": "The day worked out",
+        "FIM_MES": "The last day of the month",
         "GRAVA": "Saves: {valor}",
         "CAMPO_APAGADO": "This date field was deleted from the account. Pick another one: as it is, Save all will not accept it.",
         "NUMERO_INVALIDO": "Use a whole number from 0 to {teto}."

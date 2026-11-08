@@ -82,6 +82,7 @@
       "CAIXA_PESSOAS": "Pôr pessoas numa caixa",
       "CONTATO_ETIQUETAS": "Pôr ou tirar etiqueta do contato",
       "CONTATO_ALTERAR": "Atualizar o contato",
+      "CONTATO_NOTA": "Deixar nota no contato",
       "EMPRESA_ALTERAR": "Atualizar a empresa do contato",
       "ETIQUETA_CRIAR": "Criar uma etiqueta",
       "ETIQUETA_ALTERAR": "Mudar uma etiqueta",
@@ -128,6 +129,7 @@
       "EMAIL": "E-mail",
       "PHONE_NUMBER": "Telefone",
       "COMPANY_ID": "Empresa",
+      "CONTENT": "Texto da nota",
       "DESCRIPTION": "Descrição",
       "DOMAIN": "Site",
       "TITLE": "Nome da etiqueta",
@@ -359,6 +361,7 @@
       "ATRIBUTO_CALCULADO": "{nome}: {valor}",
       "DATA_MAIS": "{de} + {n} {unidade}",
       "DATA_MENOS": "{de} − {n} {unidade}",
+      "DATA_FIM_DO_MES": "{data}, no fim do mês",
       "DATA": {
         "PERGUNTA": "Que data gravar?",
         "DIA": "Um dia certo",
@@ -374,6 +377,9 @@
         "SENTIDO": "Depois ou antes",
         "DEPOIS": "depois",
         "ANTES": "antes",
+        "FIM": "Que dia desse mês?",
+        "FIM_DIA": "O próprio dia calculado",
+        "FIM_MES": "O último dia do mês",
         "GRAVA": "Grava: {valor}",
         "CAMPO_APAGADO": "Este campo de data foi apagado da conta. Escolha outro: assim, o Salvar tudo não aceita.",
         "NUMERO_INVALIDO": "Use um número inteiro de 0 a {teto}."

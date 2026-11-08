@@ -27,6 +27,8 @@ module Autonomia::Automacao::Tempo
 
   # Quem acha os alvos de cada gatilho de tempo.
   def busca(tipo)
+    return Autonomia::Automacao::Tempo::Recorrente if Autonomia::Automacao::Gatilhos.recorrente?(tipo)
+
     { 'card.parado' => Autonomia::Automacao::Tempo::Parado, 'card.data' => Autonomia::Automacao::Tempo::Data,
       'contato.data' => Autonomia::Automacao::Tempo::Data,
       'card.antes_da_reuniao' => Autonomia::Automacao::Tempo::AntesDaReuniao }.fetch(tipo)

@@ -3,7 +3,8 @@
 #
 # GET    meta_ads_connection/ads/:ad_id/instagram_comments?after=          → comentários (Crm::MetaAds::InstagramComments).
 #        Ver: administrador ou `meta_ads_view`, e ver a caixa do Instagram (InboxPolicy#show?). Sem ver a caixa,
-#        `status: not_inbox_member` e nenhum comentário (#2358).
+#        `status: not_inbox_member` e nenhum comentário (#2358). No `needs_login`, o `inbox_id` vai só a quem vê a caixa
+#        ou tem `integration_manage` (SeusPosts::Caixa#id_para_quem_age, #2365).
 # POST   .../instagram_comments/:comment_id/reply          content=        → responder em público.
 # POST   .../instagram_comments/:comment_id/hide           hidden=         → ocultar ou mostrar de novo.
 # POST   .../instagram_comments/:comment_id/private_reply  content=        → responder no privado (Private Reply).
@@ -105,7 +106,10 @@ class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Acco
 
   def comments
     @comments ||= ::Crm::MetaAds::InstagramComments.new(
-      @connection, inbox_access: ->(inbox) { inbox.present? && Pundit.policy!(pundit_user, inbox).show? }, can_manage: policy.update?
+      @connection,
+      inbox_access: ->(inbox) { inbox.present? && Pundit.policy!(pundit_user, inbox).show? },
+      can_manage: policy.update?,
+      inbox_id_for: ->(inbox) { SeusPosts::Caixa.new(inbox: inbox, viewer: pundit_user).id_para_quem_age }
     )
   end
 

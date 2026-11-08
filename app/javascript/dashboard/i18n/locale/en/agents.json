@@ -2092,9 +2092,8 @@
       "ESTADO": {
         "SEM_CONVERSAS": "{nome} didn't talk to anyone in this period.",
         "SEM_CONVERSAS_BOTAO": "See another period",
-        "LEITURA_DESLIGADA": "Turn on conversation reading to see what people talk about.",
-        "LEITURA_DESLIGADA_BOTAO": "Turn on",
-        "LEITURA_DESLIGADA_SEM_ACESSO": "Conversation reading is off. Whoever runs the account can turn it on.",
+        "LEITURA_DESLIGADA": "The numbers show up once conversation reading is turned on for this account. To turn it on, talk to support.",
+        "LEITURA_DESLIGADA_SEM_ACESSO": "The numbers show up once conversation reading is turned on for this account. To turn it on, someone needs to talk to support.",
         "LENDO": "The AI reads the conversations from the last 30 days in the automatic reading, which runs once a day. The numbers show up when it finishes.",
         "TETO": "The last reading stopped at the daily AI spending limit. The rest goes into the next reading.",
         "TETO_BOTAO": "See what we have",
@@ -2842,7 +2841,8 @@
         "ERRO": "I couldn't read it right now.",
         "SEM_ACESSO": "No access to this post or ad.",
         "SUMIU": "No longer in the account.",
-        "SEM_LEITURA": "Couldn't read the comments right now"
+        "SEM_LEITURA": "Couldn't read the comments right now",
+        "FALTOU_REDE": "Missing the {rede} comments: I couldn't read them."
       },
       "CRIAR": {
         "TITULO": "Create agent",
