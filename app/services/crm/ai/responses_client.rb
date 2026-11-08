@@ -358,6 +358,7 @@ module Crm
             model: model,
             response_id: payload['id'],
             error_code: 'empty_response',
+            error_type: incomplete && "incomplete_#{incomplete}",
             error_message: 'empty_response',
             started_at: started_at
           )
@@ -373,8 +374,7 @@ module Crm
           tools_used: used
         }
         # Só quando a resposta veio cortada (#2696): o texto pode ser um pedaço. Sem corte, o hash é o de antes.
-        result[:incomplete_reason] = incomplete if incomplete
-        result
+        incomplete ? result.merge(incomplete_reason: incomplete) : result
       end
 
       def incomplete_reason(payload)
