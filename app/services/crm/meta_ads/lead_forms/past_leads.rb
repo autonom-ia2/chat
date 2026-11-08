@@ -12,8 +12,9 @@ class Crm::MetaAds::LeadForms::PastLeads
   COUNTING_TTL = 2.hours
 
   # Monta a leitura com o token da Página tirado da conexão da conta. nil quando a conta não tem conexão com token
-  # próprio. Recusa da Meta sobe como Error; queda, como Unavailable.
-  def self.for(account:, page_id:, form_id:, form_name:)
+  # próprio. Recusa da Meta sobe como Error; queda, como Unavailable. window: até quando olhar para trás (a
+  # reconciliação do #2285 lê só as últimas horas).
+  def self.for(account:, page_id:, form_id:, form_name:, window: WINDOW)
     connection = Crm::MetaAdsConnection.active.find_by(account_id: account.id)
     return unless connection&.own_token?
 
@@ -22,7 +23,8 @@ class Crm::MetaAds::LeadForms::PastLeads
     token = result.data.to_h['access_token']
     raise Crm::MetaAds::LeadForms::Error, 'meta_refused' if token.blank?
 
-    new(account: account, page: { 'id' => page_id.to_s, 'access_token' => token }, form: { 'id' => form_id.to_s, 'name' => form_name })
+    new(account: account, page: { 'id' => page_id.to_s, 'access_token' => token }, form: { 'id' => form_id.to_s, 'name' => form_name },
+        window: window)
   end
 
   def self.check!(result)
@@ -52,10 +54,11 @@ class Crm::MetaAds::LeadForms::PastLeads
     [*cache_key(account_id, form_id), 'counting']
   end
 
-  def initialize(account:, page:, form:)
+  def initialize(account:, page:, form:, window: WINDOW)
     @account = account
     @page = page
     @form = form
+    @window = window
   end
 
   def count!
@@ -86,7 +89,7 @@ class Crm::MetaAds::LeadForms::PastLeads
 
   def read
     list = []
-    result, truncated = client.each_form_lead(@form['id'], since: WINDOW.ago) { |batch| list.concat(batch) }
+    result, truncated = client.each_form_lead(@form['id'], since: @window.ago) { |batch| list.concat(batch) }
     self.class.check!(result)
     [list.select { |lead| lead.is_a?(Hash) && lead['id'].present? }, truncated]
   end

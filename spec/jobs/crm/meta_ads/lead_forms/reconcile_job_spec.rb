@@ -1,0 +1,115 @@
+require 'rails_helper'
+
+# Reconciliação de um formulário (#2285): lead que o webhook não trouxe entra sozinho; quem já entrou não duplica.
+# Queda da Meta fica para a próxima rodada; recusa vai ao rastreador. A trava da rodada sempre sai.
+RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
+  let(:account) { create(:account) }
+  let(:admin) { create(:user, account: account, role: :administrator) }
+  let(:pipeline_and_stage) { create_crm_pipeline(account: account, user: admin) }
+  let(:pipeline) { pipeline_and_stage.first }
+  let(:stage) { pipeline_and_stage.last }
+  let(:json) { { 'Content-Type' => 'application/json' } }
+  let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+  let(:lock_key) { Crm::MetaAds::LeadForms::ReconcileScheduleJob.lock_key(form.id) }
+  let!(:form) do
+    Crm::MetaAdsLeadForm.create!(account: account, page_id: '104882', form_id: '9001', form_name: 'Orçamento',
+                                 pipeline: pipeline, stage: stage)
+  end
+
+  before do
+    allow(Rails).to receive(:cache).and_return(cache)
+    cache.write(lock_key, true)
+    account.enable_features!('meta_ads_formularios')
+    create_meta_ads_insights_connection(account)
+    Crm::MetaAdsPage.create!(account: account, page_id: '104882', leadgen_receiving: true)
+    stub_request(:get, meta_graph_url('104882')).with(query: { fields: 'access_token' })
+                                                .to_return(status: 200, headers: json, body: { access_token: 'page-token' }.to_json)
+    stub_request(:get, meta_graph_url('9001')).with(query: { fields: Meta::AdsGraphClient::LEAD_FORM_QUESTION_FIELDS })
+                                              .to_return(status: 200, headers: json, body: { id: '9001', questions: [] }.to_json)
+  end
+
+  def lead(id, name, phone)
+    { id: id, created_time: 1.hour.ago.iso8601, form_id: '9001',
+      field_data: [{ name: 'full_name', values: [name] }, { name: 'phone_number', values: [phone] }] }
+  end
+
+  def stub_leads(status: 200, leads: [lead('L1', 'Ana', '+5511987650001')])
+    error_code = status == 400 ? 100 : 1
+    body = status == 200 ? { data: leads } : meta_graph_error(error_code)
+    stub_request(:get, meta_graph_url('9001/leads')).with(query: hash_including({}))
+                                                    .to_return(status: status, headers: json, body: body.to_json)
+  end
+
+  it 'traz para o destino o lead que o webhook não trouxe, lendo só as últimas 48 h' do
+    stub_leads
+    since = nil
+
+    freeze_time do
+      since = 48.hours.ago.to_i
+      described_class.perform_now(form.id)
+    end
+
+    expect(account.crm_cards.where(stage: stage).pluck(:title)).to eq(['Ana'])
+    filtering = [{ field: 'time_created', operator: 'GREATER_THAN', value: since }].to_json
+    expect(a_request(:get, meta_graph_url('9001/leads')).with(query: hash_including('filtering' => filtering))).to have_been_made.once
+  end
+
+  it 'lead que já entrou pelo webhook não duplica; só o que faltava vira card' do
+    stub_leads
+    described_class.perform_now(form.id)
+    stub_leads(leads: [lead('L1', 'Ana', '+5511987650001'), lead('L2', 'Bia', '+5511987650002')])
+
+    described_class.perform_now(form.id)
+
+    expect(account.crm_cards.order(:id).pluck(:title)).to eq(%w[Ana Bia])
+    expect(Crm::MetaAdsLead.where(account: account).pluck(:leadgen_id)).to contain_exactly('L1', 'L2')
+  end
+
+  it 'solta a trava da rodada no fim' do
+    stub_leads
+
+    described_class.perform_now(form.id)
+
+    expect(cache.exist?(lock_key)).to be(false)
+  end
+
+  it 'Meta fora do ar: não cria card, não vai ao rastreador e solta a trava (a próxima rodada relê)' do
+    stub_leads(status: 500)
+    allow(ChatwootExceptionTracker).to receive(:new)
+
+    expect { described_class.perform_now(form.id) }.not_to raise_error
+
+    expect(account.crm_cards.count).to eq(0)
+    expect(ChatwootExceptionTracker).not_to have_received(:new)
+    expect(cache.exist?(lock_key)).to be(false)
+  end
+
+  it 'Meta recusa ler: vai ao rastreador com o form_id e o código' do
+    stub_leads(status: 400)
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+    described_class.perform_now(form.id)
+
+    expect(ChatwootExceptionTracker).to have_received(:new)
+      .with(having_attributes(message: include('form_id=9001').and(include('code=meta_refused'))), account: account)
+    expect(cache.exist?(lock_key)).to be(false)
+  end
+
+  it 'Página parada depois do agendamento: não chama a Meta e solta a trava' do
+    Crm::MetaAdsPage.find_by(account: account).update!(leadgen_receiving: false)
+
+    described_class.perform_now(form.id)
+
+    expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+    expect(cache.exist?(lock_key)).to be(false)
+  end
+
+  it 'conta sem a flag: não chama a Meta' do
+    account.disable_features!('meta_ads_formularios')
+
+    described_class.perform_now(form.id)
+
+    expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+  end
+end

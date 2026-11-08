@@ -14,6 +14,14 @@ class Crm::MetaAdsLeadForm < ApplicationRecord
   validates :page_id, :form_id, presence: true
   validates :form_id, uniqueness: { scope: :account_id }
 
+  # Os que a reconciliação relê (#2285): destino num funil ativo, na Página que a conta está recebendo.
+  scope :reconcilable, lambda {
+    receiving = Crm::MetaAdsPage.leadgen_receiving
+                                .where('crm_meta_ads_pages.account_id = crm_meta_ads_lead_forms.account_id')
+                                .where('crm_meta_ads_pages.page_id = crm_meta_ads_lead_forms.page_id')
+    joins(:pipeline).merge(Crm::Pipeline.active).where.not(stage_id: nil).where(receiving.arel.exists)
+  }
+
   def destination?
     pipeline_id.present? && stage_id.present?
   end
