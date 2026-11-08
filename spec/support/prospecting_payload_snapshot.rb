@@ -5,7 +5,7 @@ module ProspectingPayloadSnapshot
   FIXTURE = 'prospecting/legacy_engine_payloads.json'.freeze
   FROZEN_AT = Time.zone.parse('2026-09-25 12:00:00 UTC')
   VOLATILE_KEYS = %w[id created_at updated_at contact_id crm_card_id scoring_profile_id cached_from_search_id crm_pipeline_id
-                     crm_stage_id company_profile_id].freeze
+                     crm_stage_id company_profile_id user_id user_name].freeze
 
   module_function
 

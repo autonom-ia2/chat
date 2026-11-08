@@ -29,7 +29,10 @@
       "CONFIRMAR": "Confirmar",
       "APAGAR": "Apagar",
       "USAR_ESCOLHA": "Usar esta escolha",
-      "ESCOLHER": "Escolher"
+      "ESCOLHER": "Escolher",
+      "PRONTO": "Pronto",
+      "SEPARADOR": " · ",
+      "ERRO_BUSCAR_DE_NOVO": "Não deu para buscar de novo. Tente daqui a pouco."
     },
     "CHANCE": {
       "PRIMEIRO": "Chame primeiro",
@@ -62,7 +65,8 @@
         "ROTULO": "Como vamos procurar",
         "TEXTO": "Até {km} km · até {n} empresas · {quais}",
         "MELHORES": "as melhores para você primeiro",
-        "POUCO": "as que aparecem pouco no Google primeiro"
+        "POUCO": "as que aparecem pouco no Google primeiro",
+        "AJUSTES": "+ {n} ajuste | + {n} ajustes"
       },
       "ULTIMAS": {
         "TITULO": "Suas últimas buscas",
@@ -75,11 +79,13 @@
       "FALTA": {
         "O_QUE": "Escreva o que você quer achar.",
         "ONDE": "Escreva o bairro ou a cidade.",
-        "TOCAR": "Escolha o lugar certo na lista."
+        "TOCAR": "Escolha o lugar certo na lista.",
+        "PROCURANDO": "Espere achar o lugar.",
+        "EXISTA": "Escreva outro bairro ou cidade."
       },
       "ERRO": "Não deu para começar a busca.",
       "TESTE": "Esta conta está em teste. As empresas da lista são de exemplo.",
-      "SO_VER": "Você pode ver as buscas da equipe, mas não fazer novas."
+      "SO_VER": "Seu acesso à Prospecção é só para ver: você não faz busca nova."
     },
     "COMO_PROCURAR": {
       "TITULO": "Como procurar",
@@ -99,14 +105,13 @@
       "MAIS_AJUSTES": "Mais ajustes",
       "SEU": "Criado por você",
       "QUAIS": {
-        "TITULO": "Quais empresas",
-        "TODAS": "Todas da região"
+        "TITULO": "Quais empresas?",
+        "TODAS": "Todas"
       }
     },
     "CONFIRA": {
       "BUSCANDO": "Procurando {oQue} em {lugar}…",
       "TITULO": "{oQue} · {lugar}",
-      "FATO": "{achadas} achadas · {vao} vão · {fora} ficam de fora",
       "MUDAR_PEDIDO": "Alterar a busca",
       "PROGRESSO": "Conferindo as empresas: {feitos} de {total}",
       "PROGRESSO_DICA": "Pode sair. Quando voltar, estará tudo aqui.",
@@ -117,7 +122,8 @@
         "MEDIA": "Chance média ({n})",
         "POUCA": "Pouca chance ({n})",
         "FORA": "Ficam de fora ({n})",
-        "PRIMEIRO": "Chame primeiro"
+        "PRIMEIRO": "Chame primeiro",
+        "TIRADAS": "Tiradas da lista ({n})"
       },
       "TIRAR_ESTAS": "Tirar estas",
       "TIROU": "Tiramos {n} empresas.",
@@ -140,8 +146,9 @@
         "NO_FUNIL": "Já está no funil {funil}",
         "NO_FUNIL_SEM_NOME": "Já está no funil",
         "NAO_QUER": "Não quer receber mensagem",
-        "TIROU": "Você tirou em outra busca",
-        "FECHOU": "Empresa fechada"
+        "FECHOU": "Empresa fechada",
+        "TIRADA": "Tirada da lista",
+        "TIRADA_MOTIVO": "Tirada da lista: {motivo}"
       },
       "VAZIA": "Não achamos nenhuma empresa aqui.",
       "CORTE_VAZIO": "Nenhuma empresa com WhatsApp nesta busca.",
@@ -155,22 +162,27 @@
       "TODAS_FORA": "Escolha ao menos uma empresa",
       "CONTINUAR": "Continuar com {n}",
       "LEITURA": {
-        "TITULO": "Empresas desta busca",
         "VAZIA": "Esta busca não trouxe empresas.",
         "VOLTAR": "Voltar para suas buscas"
       },
       "VAZIA_LONGE": "Procurar mais longe",
-      "FATO_SEM_FORA": "{achadas} achadas · {vao} vão",
       "BUSCANDO_DICA": "Leva menos de 1 minuto.",
       "MANDADA": "Já está no funil {funil}",
-      "FATO_CONFERINDO": "{achadas} achadas",
       "CONTINUAR_CONFERINDO": "Continuar",
       "DESLIGUE": "Desligue as que não quer.",
       "MAPA": {
         "VER": "Ver no mapa",
         "ROTULO": "Mapa das empresas achadas",
         "VOLTAR": "Voltar para a lista"
-      }
+      },
+      "FATOS": {
+        "ACHADAS": "{n} achada | {n} achadas",
+        "VAO": "{n} vai | {n} vão",
+        "TIROU": "{n} você tirou",
+        "FORA": "{n} fica de fora | {n} ficam de fora",
+        "MANDOU": "{n} você já mandou"
+      },
+      "MANDADA_SEM_NOME": "Já está num funil"
     },
     "GAVETA": {
       "ROTULO": "Empresa {nome}",
@@ -212,7 +224,18 @@
       "PROCURANDO_DE_NOVO": "Estamos procurando o dono de novo. Ele aparece aqui quando acharmos.",
       "POSSIVEL": "Pode ser o dono",
       "NO_FUNIL_SELO": "Já está no funil",
-      "OUTRA_PESSOA": "Falar com outra pessoa"
+      "OUTRA_PESSOA": "Falar com outra pessoa",
+      "OUTRAS": {
+        "TITULO": "Com quem mais dá para falar?",
+        "USAR": "Usar esta pessoa",
+        "USAR_ROTULO": "Usar {nome}",
+        "FEITO": "Pronto. Agora você fala com {nome}.",
+        "FEITO_DIVIDIDO": "Agora você fala com {nome}. O contato desta empresa é o mesmo de {outra}, então o nome dele não mudou.",
+        "FEITO_DIVIDIDO_SEM_NOME": "Agora você fala com {nome}. O contato desta empresa é o mesmo de outra empresa, então o nome dele não mudou.",
+        "FEITO_MANTIDO": "Agora você fala com {nome}. O contato desta empresa já existia com outro nome e ficou como estava.",
+        "ERRO": "Não deu para trocar a pessoa."
+      },
+      "ERRO_PROCURAR": "Não deu para buscar o dono de novo."
     },
     "FOLHA": {
       "TITULO": "O que fazer com as {n} empresas?",
@@ -227,11 +250,9 @@
       "PARA_ONDE": "Funil {funil}, etapa {etapa}",
       "ESCOLHA_FUNIL": "Escolha o funil",
       "COM_QUEM": "Com quem fica: {pessoa}",
-      "FORA_LINK": "Por que {n} ficam de fora",
       "FORA_MOTIVOS": {
         "NO_FUNIL": "{n} já está no funil | {n} já estão no funil",
         "NAO_QUER": "{n} não quer receber mensagem | {n} não querem receber mensagem",
-        "TIROU": "{n} tirada em outra busca | {n} tiradas em outra busca",
         "FECHOU": "{n} empresa fechada | {n} empresas fechadas",
         "SEM_CONTATO": "{n} não tem celular nem e-mail | {n} não têm celular nem e-mail",
         "VOCE_TIROU": "{n} você tirou",
@@ -249,14 +270,14 @@
       "NINGUEM": "Nenhuma destas pode receber mensagem",
       "ERRO_FUNIL": "Não deu para mandar. Nenhuma entrou.",
       "ERRO_LISTA": "Não deu para guardar a lista.",
-      "NAO_VAO_LINK": "Por que {n} fica de fora | Por que {n} ficam de fora",
+      "NAO_VAO_LINK": "Por que {n} não vai | Por que {n} não vão",
       "TENTAR": "Tentar de novo",
       "VAO": "Vão {n} empresas",
       "NAO_ENTRAM_LINK": "Por que {n} não entra | Por que {n} não entram",
       "DICA_FUNIL": "Escolha o funil."
     },
     "PARA_ONDE_PAINEL": {
-      "TITULO": "Para onde vão",
+      "TITULO": "Para onde elas vão?",
       "FUNIL": "Funil",
       "ETAPA": "Etapa"
     },
@@ -275,13 +296,16 @@
         "TITULO": "Pronto. A lista para mensagem está guardada.",
         "DETALHE": "{nome} · {n} empresas",
         "ESCREVER": "Criar a mensagem"
-      }
+      },
+      "NENHUMA_NOVA": "Nenhuma empresa nova entrou no funil {funil}.",
+      "FALHARAM": "{n} empresa não entrou no funil. | {n} empresas não entraram no funil.",
+      "FALHARAM_O_QUE_FAZER": "Elas continuam na lista."
     },
     "BUSCAS": {
       "TITULO": "Suas buscas",
       "FEITA_POR": "Feita por {pessoa}",
       "VAZIO": "Você ainda não fez nenhuma busca.",
-      "VAZIO_SO_VER": "Ainda não há buscas da equipe.",
+      "VAZIO_SO_VER": "Quando a equipe buscar empresas, elas aparecem no funil.",
       "VER_FUNIL": "Ver o funil",
       "ERRO": "Não deu para abrir suas buscas.",
       "TITULO_EQUIPE": "Buscas da equipe",
@@ -291,7 +315,11 @@
       "APAGAR_TITULO": "Apagar esta busca?",
       "APAGAR_TEXTO": "As empresas que já foram para o funil continuam lá.",
       "APAGADA": "Pronto. A busca foi apagada.",
-      "APAGAR": "Apagar"
+      "APAGAR": "Apagar",
+      "ERRO_APAGAR": "Não deu para apagar esta busca.",
+      "ERRO_BAIXAR": "Não deu para baixar a planilha.",
+      "VER_MAIS": "Ver mais",
+      "ERRO_VER_MAIS": "Não deu para trazer mais buscas."
     },
     "FILA": {
       "TITULO": "Para chamar",

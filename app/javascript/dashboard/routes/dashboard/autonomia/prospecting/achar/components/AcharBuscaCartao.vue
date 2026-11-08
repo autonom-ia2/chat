@@ -29,9 +29,13 @@ const acoes = computed(() =>
 </script>
 
 <template>
+  <!-- D7 (crítica r5): o cartão com o menu aberto fica com a borda azul. -->
   <li
-    class="flex flex-col gap-3 p-5 transition border shadow-sm rounded-2xl border-n-weak bg-n-solid-1 hover:border-n-blue-6"
-    :class="props.compacto ? '' : 'sm:flex-row sm:items-center'"
+    class="flex flex-col gap-3 p-5 transition border shadow-sm rounded-2xl bg-n-solid-1"
+    :class="[
+      props.compacto ? '' : 'sm:flex-row sm:items-center',
+      maisAberto ? 'border-n-blue-6' : 'border-n-weak hover:border-n-blue-6',
+    ]"
     data-busca
   >
     <button

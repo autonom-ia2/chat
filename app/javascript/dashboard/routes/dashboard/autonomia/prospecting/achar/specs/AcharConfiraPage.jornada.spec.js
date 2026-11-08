@@ -30,7 +30,10 @@ vi.mock('dashboard/composables/store', async () => {
 });
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
-  return { useCanManage: () => computed(() => true) };
+  return {
+    useCanManage: () => computed(() => true),
+    usePermissionGranted: () => computed(() => false),
+  };
 });
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('../../composables/useLeadLiveUpdates', () => ({
@@ -51,6 +54,10 @@ const abrir = async query => {
 describe('AcharConfiraPage na demonstração', () => {
   beforeEach(() => {
     push.mockClear();
+  });
+  // Um teste que falha antes do unmount não deixa a gaveta para o próximo.
+  afterEach(() => {
+    document.body.innerHTML = '';
   });
 
   it('J1: lista com 2 tiradas e "Continuar" leva à folha', async () => {
@@ -101,6 +108,67 @@ describe('AcharConfiraPage na demonstração', () => {
     expect(wrapper.findAll('[data-empresa]').length).toBeGreaterThan(0);
     expect(wrapper.find('[role="switch"]').exists()).toBe(false);
     expect(wrapper.find('[data-rodape]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('P1: "Falar com outra pessoa" lista os outros sócios e "Usar esta pessoa" troca com quem falar', async () => {
+    const wrapper = await abrir({ demo: 'gaveta', empresa: '1' });
+
+    document.querySelector('[data-outra-pessoa]').click();
+    expect(push).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        query: expect.objectContaining({
+          demo: 'gaveta-outra-pessoa',
+          empresa: 1,
+        }),
+      })
+    );
+    await flushPromises();
+
+    const socios = document.querySelectorAll('[data-socio]');
+    expect([...socios].map(item => item.textContent)).toEqual([
+      expect.stringContaining('Pedro Henrique Dias'),
+      expect.stringContaining('Luiza Souza'),
+    ]);
+    expect(document.body.textContent).not.toContain('Maria Souza');
+
+    document.querySelector('[data-usar-pessoa]').click();
+    await vi.waitFor(() => {
+      expect(document.querySelector('[data-recado-pessoa]')).not.toBeNull();
+    });
+    expect(
+      document.querySelector('[data-recado-pessoa]').textContent
+    ).toContain('GAVETA.OUTRAS.FEITO');
+    // Pedro virou com quem falar: na lista dos outros, agora está a Maria.
+    document.querySelector('[data-outra-pessoa]').click();
+    await flushPromises();
+    const outros = [...document.querySelectorAll('[data-socio]')].map(
+      item => item.textContent
+    );
+    expect(outros.join(' ')).toContain('Maria Souza');
+    expect(outros.join(' ')).not.toContain('Pedro Henrique Dias');
+    wrapper.unmount();
+  });
+
+  it('P1: sem outro sócio, "Falar com outra pessoa" não aparece', async () => {
+    const wrapper = await abrir({ demo: 'gaveta', empresa: '4' });
+
+    expect(document.querySelector('[data-dono]')).not.toBeNull();
+    expect(document.querySelector('[data-outra-pessoa]')).toBeNull();
+    wrapper.unmount();
+  });
+
+  it('P2: depois de mandar, a gaveta mostra com quem falar, só o nome', async () => {
+    const wrapper = await abrir({ demo: 'gaveta-mandou', empresa: '1' });
+
+    expect(document.querySelector('[data-mandou]')).not.toBeNull();
+    expect(
+      document.querySelector('[data-quem-decide] [data-dono]')
+    ).not.toBeNull();
+    expect(document.querySelector('[data-outra-pessoa]')).toBeNull();
+    expect(
+      document.querySelector('[data-principal-gaveta]').textContent
+    ).toContain('CHAMAR_WHATSAPP');
     wrapper.unmount();
   });
 });

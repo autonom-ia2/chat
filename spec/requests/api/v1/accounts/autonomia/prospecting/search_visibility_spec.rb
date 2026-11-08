@@ -106,6 +106,21 @@ RSpec.describe 'Autonomia prospecting search visibility', type: :request do
       get "#{base_path}/searches/#{other_search.id}/export", params: { format: 'csv' }, headers: auth_headers(admin)
       expect(response).to have_http_status(:ok)
     end
+
+    # Cada pessoa apaga só as buscas que fez, inclusive o administrador (#2693).
+    it 'o administrador não exclui a busca de outra pessoa (404)' do
+      delete "#{base_path}/searches/#{other_search.id}", headers: auth_headers(admin)
+
+      expect(response).to have_http_status(:not_found)
+      expect(Autonomia::Prospecting::Search.exists?(other_search.id)).to be(true)
+    end
+
+    it 'a lista diz quem fez cada busca' do
+      get "#{base_path}/searches", headers: auth_headers(admin)
+
+      payload = response.parsed_body['payload'].index_by { |search| search['id'] }
+      expect(payload[other_search.id].slice('user_id', 'user_name')).to eq('user_id' => other_agent.id, 'user_name' => other_agent.name)
+    end
   end
 
   describe 'leads da busca de outro agente' do

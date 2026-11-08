@@ -308,7 +308,7 @@ RSpec.describe Account do
       # #2499 F6: automacao_gatilhos depois dela, 26 (1 << 25 = 33554432), contra a main 45e251027e; Orquestração confirma.
       # #2613: meta_ads_comentarios_privado_facebook depois dela, 27 (1 << 26 = 67108864), dada pela Orquestração (05/11).
       # #2338: anuncios_login_unico depois dela, 28 (1 << 27 = 134217728), dada pela Orquestração (06/11).
-      # #2692 (protótipo): prospeccao_nova depois dela, 29 (1 << 28 = 268435456), PROVISÓRIA, não reservada.
+      # #2693: prospeccao_nova depois dela, 29 (1 << 28 = 268435456), dada pela Orquestração.
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
         feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,

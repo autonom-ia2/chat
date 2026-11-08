@@ -12,11 +12,15 @@ import AcharEscolhaCartao from './AcharEscolhaCartao.vue';
 // Fora deste protótipo: o mapa de "Desenhar a área" e "Salvar como modelo".
 // Rodada 4: "Limpar ajustes" sobe para o lado do título e o rodapé tem
 // "Cancelar". Rodada 5: "Quem vem primeiro" voltou para cá (decisão do
-// Rodrigo: a presença fraca nunca no caminho principal). Na demonstração, ele
-// já abre.
+// Rodrigo: a presença fraca nunca no caminho principal).
+// D4 (crítica r5): uma saída só no topo (a seta), cada ajuste já mostra a
+// escolha (sem abrir e fechar), "Limpar ajustes" é um link no fim da lista e
+// o rodapé diz "Pronto" (a raiz é que diz "Usar esta escolha").
+// O rascunho começa pelo que já estava escolhido (`ajustes`): reabrir o painel
+// e tocar "Pronto" não apaga nada (revisão 2 da F1).
 const props = defineProps({
   primeiro: { type: String, default: 'melhores' },
-  abrirPrimeiro: { type: Boolean, default: false },
+  ajustes: { type: Object, default: null },
 });
 const emit = defineEmits(['aplicar', 'close']);
 
@@ -32,17 +36,14 @@ const VAZIO = {
   mostraHorario: false,
   primeiro: 'melhores',
 };
-const rascunho = ref({ ...VAZIO, primeiro: props.primeiro });
-const abertas = ref(new Set(props.abrirPrimeiro ? ['primeiro'] : []));
+const rascunho = ref({
+  ...VAZIO,
+  ...(props.ajustes || {}),
+  primeiro: props.primeiro,
+});
 
 const mudar = (campo, valor) => {
   rascunho.value = { ...rascunho.value, [campo]: valor };
-};
-const alternarSecao = id => {
-  const novo = new Set(abertas.value);
-  if (novo.has(id)) novo.delete(id);
-  else novo.add(id);
-  abertas.value = novo;
 };
 
 const opcoes = (prefixo, chaves) =>
@@ -74,122 +75,96 @@ const TITULOS = {
 
 <template>
   <AcharPainel :titulo="$t(`${NS}.TITULO`)" voltar @close="emit('close')">
-    <template #topo>
-      <div class="flex items-center justify-between gap-3">
-        <h2 class="m-0 text-xl font-semibold text-n-slate-12">
-          {{ $t(`${NS}.TITULO`) }}
-        </h2>
-        <Button
-          :label="$t(`${NS}.LIMPAR`)"
-          variant="link"
-          size="sm"
-          class="!min-h-11 shrink-0"
-          data-limpar
-          @click="rascunho = { ...VAZIO }"
-        />
-      </div>
-    </template>
     <section
       v-for="secao in SECOES"
       :key="secao"
-      class="flex flex-col border-b border-n-weak"
+      class="flex flex-col gap-3 pb-5 border-b border-n-weak"
       :data-secao="secao"
     >
-      <button
-        type="button"
-        class="flex items-center justify-between gap-2 text-base font-semibold text-start min-h-12 text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-        :aria-expanded="abertas.has(secao)"
-        @click="alternarSecao(secao)"
-      >
+      <h3 class="m-0 text-base font-semibold text-n-slate-12">
         {{ $t(TITULOS[secao]) }}
-        <span
-          class="transition-transform i-lucide-chevron-down size-5 text-n-slate-11"
-          :class="{ 'rotate-180': abertas.has(secao) }"
-          aria-hidden="true"
+      </h3>
+      <ChoiceSelect
+        v-if="secao === 'nota'"
+        :model-value="rascunho.nota"
+        :options="NOTAS"
+        :aria-label="$t(TITULOS.nota)"
+        @update:model-value="mudar('nota', $event)"
+      />
+      <ChoiceSelect
+        v-else-if="secao === 'avaliacoes'"
+        :model-value="rascunho.avaliacoes"
+        :options="AVALIACOES"
+        :aria-label="$t(TITULOS.avaliacoes)"
+        @update:model-value="mudar('avaliacoes', $event)"
+      />
+      <div
+        v-else-if="secao === 'site' || secao === 'fotos'"
+        role="radiogroup"
+        class="grid grid-cols-3 gap-2"
+      >
+        <AcharEscolhaCartao
+          v-for="opcao in TEM_OU_NAO"
+          :key="opcao.id"
+          :titulo="$t(`${NS}.${opcao.chave}`)"
+          :escolhido="rascunho[secao] === opcao.id"
+          @escolher="mudar(secao, opcao.id)"
         />
-      </button>
-      <div v-if="abertas.has(secao)" class="flex flex-col gap-3 pb-4">
-        <ChoiceSelect
-          v-if="secao === 'nota'"
-          :model-value="rascunho.nota"
-          :options="NOTAS"
-          :aria-label="$t(TITULOS.nota)"
-          @update:model-value="mudar('nota', $event)"
-        />
-        <ChoiceSelect
-          v-else-if="secao === 'avaliacoes'"
-          :model-value="rascunho.avaliacoes"
-          :options="AVALIACOES"
-          :aria-label="$t(TITULOS.avaliacoes)"
-          @update:model-value="mudar('avaliacoes', $event)"
-        />
-        <div
-          v-else-if="secao === 'site' || secao === 'fotos'"
-          role="radiogroup"
-          class="grid grid-cols-3 gap-2"
-        >
-          <AcharEscolhaCartao
-            v-for="opcao in TEM_OU_NAO"
-            :key="opcao.id"
-            :titulo="$t(`${NS}.${opcao.chave}`)"
-            :escolhido="rascunho[secao] === opcao.id"
-            @escolher="mudar(secao, opcao.id)"
-          />
-        </div>
-        <div
-          v-else-if="secao === 'primeiro'"
-          role="radiogroup"
-          class="grid gap-3"
-          data-quem-primeiro
-        >
-          <AcharEscolhaCartao
-            :titulo="$t(`${NS}.PRIMEIRO.MELHORES`)"
-            :escolhido="rascunho.primeiro === 'melhores'"
-            @escolher="mudar('primeiro', 'melhores')"
-          />
-          <AcharEscolhaCartao
-            :titulo="$t(`${NS}.PRIMEIRO.POUCO`)"
-            :texto="$t(`${NS}.PRIMEIRO.POUCO_TEXTO`)"
-            :escolhido="rascunho.primeiro === 'pouco'"
-            @escolher="mudar('primeiro', 'pouco')"
-          />
-        </div>
-        <template v-else>
-          <div class="flex items-center justify-between gap-3">
-            <span class="text-base text-n-slate-12">
-              {{ $t(`${NS}.HORARIO.ABERTA`) }}
-            </span>
-            <AudienceListSwitch
-              :on="rascunho.aberta"
-              :label="$t(`${NS}.HORARIO.ABERTA`)"
-              @toggle="mudar('aberta', !rascunho.aberta)"
-            />
-          </div>
-          <div class="flex items-center justify-between gap-3">
-            <span class="text-base text-n-slate-12">
-              {{ $t(`${NS}.HORARIO.MOSTRA`) }}
-            </span>
-            <AudienceListSwitch
-              :on="rascunho.mostraHorario"
-              :label="$t(`${NS}.HORARIO.MOSTRA`)"
-              @toggle="mudar('mostraHorario', !rascunho.mostraHorario)"
-            />
-          </div>
-        </template>
       </div>
+      <div
+        v-else-if="secao === 'primeiro'"
+        role="radiogroup"
+        class="grid gap-3"
+        data-quem-primeiro
+      >
+        <AcharEscolhaCartao
+          :titulo="$t(`${NS}.PRIMEIRO.MELHORES`)"
+          :escolhido="rascunho.primeiro === 'melhores'"
+          @escolher="mudar('primeiro', 'melhores')"
+        />
+        <AcharEscolhaCartao
+          :titulo="$t(`${NS}.PRIMEIRO.POUCO`)"
+          :texto="$t(`${NS}.PRIMEIRO.POUCO_TEXTO`)"
+          :escolhido="rascunho.primeiro === 'pouco'"
+          @escolher="mudar('primeiro', 'pouco')"
+        />
+      </div>
+      <template v-else>
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-base text-n-slate-12">
+            {{ $t(`${NS}.HORARIO.ABERTA`) }}
+          </span>
+          <AudienceListSwitch
+            :on="rascunho.aberta"
+            :label="$t(`${NS}.HORARIO.ABERTA`)"
+            @toggle="mudar('aberta', !rascunho.aberta)"
+          />
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-base text-n-slate-12">
+            {{ $t(`${NS}.HORARIO.MOSTRA`) }}
+          </span>
+          <AudienceListSwitch
+            :on="rascunho.mostraHorario"
+            :label="$t(`${NS}.HORARIO.MOSTRA`)"
+            @toggle="mudar('mostraHorario', !rascunho.mostraHorario)"
+          />
+        </div>
+      </template>
     </section>
+    <Button
+      :label="$t(`${NS}.LIMPAR`)"
+      variant="link"
+      class="self-start !min-h-11 !px-0"
+      data-limpar
+      @click="rascunho = { ...VAZIO }"
+    />
     <template #rodape>
       <Button
-        :label="$t('PROSPECTING_ACHAR.COMUM.USAR_ESCOLHA')"
+        :label="$t('PROSPECTING_ACHAR.COMUM.PRONTO')"
         class="!min-h-12 !rounded-xl !text-base"
         data-aplicar
         @click="emit('aplicar', rascunho)"
-      />
-      <Button
-        :label="$t('PROSPECTING_ACHAR.COMUM.CANCELAR')"
-        variant="link"
-        class="!min-h-11 justify-center"
-        @click="emit('close')"
       />
     </template>
   </AcharPainel>

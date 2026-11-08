@@ -29,7 +29,10 @@
       "CONFIRMAR": "Confirm",
       "APAGAR": "Delete",
       "USAR_ESCOLHA": "Use this choice",
-      "ESCOLHER": "Choose"
+      "ESCOLHER": "Choose",
+      "PRONTO": "Done",
+      "SEPARADOR": " · ",
+      "ERRO_BUSCAR_DE_NOVO": "Couldn't search again. Try again in a moment."
     },
     "CHANCE": {
       "PRIMEIRO": "Call first",
@@ -62,7 +65,8 @@
         "ROTULO": "How we will search",
         "TEXTO": "Up to {km} km · up to {n} businesses · {quais}",
         "MELHORES": "the best for you first",
-        "POUCO": "the ones barely on Google first"
+        "POUCO": "the ones barely on Google first",
+        "AJUSTES": "+ {n} filter | + {n} filters"
       },
       "ULTIMAS": {
         "TITULO": "Your latest searches",
@@ -75,11 +79,13 @@
       "FALTA": {
         "O_QUE": "Write what you want to find.",
         "ONDE": "Write the neighborhood or city.",
-        "TOCAR": "Pick the right place on the list."
+        "TOCAR": "Pick the right place on the list.",
+        "PROCURANDO": "Wait while we find the place.",
+        "EXISTA": "Type another neighborhood or city."
       },
       "ERRO": "We could not start the search.",
       "TESTE": "This account is in test mode. The businesses on the list are examples.",
-      "SO_VER": "You can see your team's searches, but not make new ones."
+      "SO_VER": "Your Prospecting access is view-only: you can't start a new search."
     },
     "COMO_PROCURAR": {
       "TITULO": "How to search",
@@ -99,14 +105,13 @@
       "MAIS_AJUSTES": "More settings",
       "SEU": "Created by you",
       "QUAIS": {
-        "TITULO": "Which businesses",
-        "TODAS": "All in the area"
+        "TITULO": "Which businesses?",
+        "TODAS": "All"
       }
     },
     "CONFIRA": {
       "BUSCANDO": "Looking for {oQue} in {lugar}…",
       "TITULO": "{oQue} · {lugar}",
-      "FATO": "{achadas} found · {vao} going · {fora} left out",
       "MUDAR_PEDIDO": "Change the search",
       "PROGRESSO": "Checking the companies: {feitos} of {total}",
       "PROGRESSO_DICA": "You can leave. Everything will be here when you come back.",
@@ -117,7 +122,8 @@
         "MEDIA": "Some chance ({n})",
         "POUCA": "Low chance ({n})",
         "FORA": "Left out ({n})",
-        "PRIMEIRO": "Call first"
+        "PRIMEIRO": "Call first",
+        "TIRADAS": "Taken off the list ({n})"
       },
       "TIRAR_ESTAS": "Take these out",
       "TIROU": "We took out {n} businesses.",
@@ -140,8 +146,9 @@
         "NO_FUNIL": "Already in the {funil} pipeline",
         "NO_FUNIL_SEM_NOME": "Already in a pipeline",
         "NAO_QUER": "Does not want messages",
-        "TIROU": "You took it out in another search",
-        "FECHOU": "Business closed"
+        "FECHOU": "Business closed",
+        "TIRADA": "Taken off the list",
+        "TIRADA_MOTIVO": "Taken off the list: {motivo}"
       },
       "VAZIA": "We found no companies here.",
       "CORTE_VAZIO": "No business with WhatsApp in this search.",
@@ -155,22 +162,27 @@
       "TODAS_FORA": "Choose at least one business",
       "CONTINUAR": "Continue with {n}",
       "LEITURA": {
-        "TITULO": "Businesses in this search",
         "VAZIA": "This search did not bring businesses.",
         "VOLTAR": "Back to your searches"
       },
       "VAZIA_LONGE": "Look farther",
-      "FATO_SEM_FORA": "{achadas} found · {vao} going",
       "BUSCANDO_DICA": "Takes less than 1 minute.",
       "MANDADA": "Already in the {funil} pipeline",
-      "FATO_CONFERINDO": "{achadas} found",
       "CONTINUAR_CONFERINDO": "Continue",
       "DESLIGUE": "Turn off the ones you do not want.",
       "MAPA": {
         "VER": "See on map",
         "ROTULO": "Map of the companies found",
         "VOLTAR": "Back to the list"
-      }
+      },
+      "FATOS": {
+        "ACHADAS": "{n} found | {n} found",
+        "VAO": "{n} going | {n} going",
+        "TIROU": "{n} you removed",
+        "FORA": "{n} stays out | {n} stay out",
+        "MANDOU": "{n} you already sent"
+      },
+      "MANDADA_SEM_NOME": "Already in a pipeline"
     },
     "GAVETA": {
       "ROTULO": "Business {nome}",
@@ -212,7 +224,18 @@
       "PROCURANDO_DE_NOVO": "We're looking for the owner again. They show up here when we find them.",
       "POSSIVEL": "May be the owner",
       "NO_FUNIL_SELO": "Already in the pipeline",
-      "OUTRA_PESSOA": "Talk to someone else"
+      "OUTRA_PESSOA": "Talk to someone else",
+      "OUTRAS": {
+        "TITULO": "Who else can you talk to?",
+        "USAR": "Use this person",
+        "USAR_ROTULO": "Use {nome}",
+        "FEITO": "Done. Now you talk to {nome}.",
+        "FEITO_DIVIDIDO": "Now you talk to {nome}. This business shares its contact with {outra}, so the contact name did not change.",
+        "FEITO_DIVIDIDO_SEM_NOME": "Now you talk to {nome}. This business shares its contact with another business, so the contact name did not change.",
+        "FEITO_MANTIDO": "Now you talk to {nome}. This business already had a contact with another name, and it stayed as it was.",
+        "ERRO": "We could not change the person."
+      },
+      "ERRO_PROCURAR": "We could not look for the owner again."
     },
     "FOLHA": {
       "TITULO": "What to do with the {n} companies?",
@@ -227,11 +250,9 @@
       "PARA_ONDE": "{funil} pipeline, {etapa} stage",
       "ESCOLHA_FUNIL": "Choose the pipeline",
       "COM_QUEM": "Who keeps them: {pessoa}",
-      "FORA_LINK": "Why {n} are left out",
       "FORA_MOTIVOS": {
         "NO_FUNIL": "{n} is already in the pipeline | {n} are already in the pipeline",
         "NAO_QUER": "{n} doesn't want messages | {n} don't want messages",
-        "TIROU": "{n} removed in another search | {n} removed in another search",
         "FECHOU": "{n} business closed | {n} businesses closed",
         "SEM_CONTATO": "{n} has no mobile or e-mail | {n} have no mobile or e-mail",
         "VOCE_TIROU": "{n} you removed",
@@ -249,14 +270,14 @@
       "NINGUEM": "None of these can receive messages",
       "ERRO_FUNIL": "Could not send. None went in.",
       "ERRO_LISTA": "We could not save the list.",
-      "NAO_VAO_LINK": "Why {n} is left out | Why {n} are left out",
+      "NAO_VAO_LINK": "Why {n} is not going | Why {n} are not going",
       "TENTAR": "Try again",
       "VAO": "{n} companies will go",
       "NAO_ENTRAM_LINK": "Why {n} does not go in | Why {n} do not go in",
       "DICA_FUNIL": "Choose the pipeline."
     },
     "PARA_ONDE_PAINEL": {
-      "TITULO": "Where they go",
+      "TITULO": "Where do they go?",
       "FUNIL": "Pipeline",
       "ETAPA": "Stage"
     },
@@ -275,13 +296,16 @@
         "TITULO": "Done. The message list is saved.",
         "DETALHE": "{nome} · {n} businesses",
         "ESCREVER": "Create the message"
-      }
+      },
+      "NENHUMA_NOVA": "No new company entered the {funil} pipeline.",
+      "FALHARAM": "{n} company didn't get into the pipeline. | {n} companies didn't get into the pipeline.",
+      "FALHARAM_O_QUE_FAZER": "They are still on the list."
     },
     "BUSCAS": {
       "TITULO": "Your searches",
       "FEITA_POR": "Made by {pessoa}",
       "VAZIO": "You have not made any search yet.",
-      "VAZIO_SO_VER": "There are no team searches yet.",
+      "VAZIO_SO_VER": "When the team searches for businesses, they show up in the pipeline.",
       "VER_FUNIL": "See the pipeline",
       "ERRO": "We could not open your searches.",
       "TITULO_EQUIPE": "Team searches",
@@ -291,7 +315,11 @@
       "APAGAR_TITULO": "Delete this search?",
       "APAGAR_TEXTO": "The companies already in the pipeline stay there.",
       "APAGADA": "Done. The search was deleted.",
-      "APAGAR": "Delete"
+      "APAGAR": "Delete",
+      "ERRO_APAGAR": "We could not delete this search.",
+      "ERRO_BAIXAR": "We could not download the spreadsheet.",
+      "VER_MAIS": "See more",
+      "ERRO_VER_MAIS": "Couldn't load more searches."
     },
     "FILA": {
       "TITULO": "To call",

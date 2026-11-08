@@ -31,4 +31,13 @@ describe('menu Prospecção com a flag prospeccao_nova', () => {
       'settings_prospecting_index',
     ]);
   });
+
+  it('a lista logo depois de buscar marca "Achar empresas"; aberta pelas buscas, marca "Buscas"', () => {
+    const [achar, buscas] = montar({ novaOn: true, podeBuscar: true })[0]
+      .children;
+
+    expect(achar.activeOn).toContain('autonomia_prospecting_achar_nova');
+    expect(buscas.activeOn).toContain('autonomia_prospecting_achar_busca');
+    expect(buscas.activeOn).not.toContain('autonomia_prospecting_achar_nova');
+  });
 });

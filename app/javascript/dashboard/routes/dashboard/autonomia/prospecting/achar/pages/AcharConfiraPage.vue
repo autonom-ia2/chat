@@ -15,15 +15,16 @@ import AcharParaOndePainel from '../components/AcharParaOndePainel.vue';
 import AcharPronto from '../components/AcharPronto.vue';
 import { useAcharTela } from '../composables/useAcharTela';
 import { useListaDaBusca } from '../composables/useListaDaBusca';
-import { useFolhaDaLista, folhaNova } from '../composables/useFolhaDaLista';
+import { useFolhaDaLista } from '../composables/useFolhaDaLista';
+import { useSobreDaLista } from '../composables/useSobreDaLista';
 import { useGavetaDaLista } from '../composables/useGavetaDaLista';
+import { useRepetirBusca } from '../composables/useRepetirBusca';
 import { ROTAS } from '../utils/acharRotas';
+import { diaEMes } from '../utils/acharQuando';
 import {
   ESTADOS_LEITURA,
-  SOBRE_A_LISTA,
-  comoMandada,
+  contasDaLista,
   ehEstadoDaLista,
-  empresaPadraoDaGaveta,
   grupoAbre,
   grupoEmFoco,
   naoVao,
@@ -35,7 +36,7 @@ import { escolherDestino, lerUltimoDestino } from '../utils/destinoPronto';
 // (T1d), a folha "O que fazer com as {n}?" (F1) e o pronto (T2/T3) por cima.
 // A pessoa só tira quem não quer ("Vai / Não vai") e continua. Quem só vê (ou
 // não tem destino) vê a mesma lista em leitura, sem interruptor nem rodapé.
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const {
   route,
   router,
@@ -52,8 +53,6 @@ const {
 
 const NS = 'PROSPECTING_ACHAR.CONFIRA';
 // Na demo, "buscando" e "Mandando…" ficam um tempo na tela antes de andar.
-const ESPERA_DA_DEMO = 9000;
-const ENVIO_PARADO_EM = 9;
 const MIN_PARA_NOME = 20;
 
 const carregando = ref(true);
@@ -71,6 +70,8 @@ const destino = ref(null);
 const pessoaId = ref('voce');
 const nomeLista = ref('');
 const enviandoUma = ref(false);
+// A frase depois de "Usar esta pessoa" (P1); some ao fechar ou trocar de empresa.
+const recado = ref('');
 const destacada = ref(null);
 // Último estado da lista na demo: fechar o que está por cima volta a ele.
 const estadoDaLista = ref(null);
@@ -98,6 +99,7 @@ const {
   visiveis,
   grupos,
   deFora,
+  tiradasDaLista,
   primeiro,
   primeiroId,
   escolhidas,
@@ -126,11 +128,16 @@ const empresaDaGaveta = computed(() =>
     ? empresas.value.find(empresa => empresa.id === gaveta.value.id)
     : null
 );
-const naoVaoDaBusca = computed(() => {
-  const mandadas = elegiveis.value.filter(empresa => empresa.mandada).length;
-  const tiradas = elegiveis.value.length - escolhidas.value.length - mandadas;
-  return naoVao(empresas.value, tiradas, mandadas);
-});
+const contas = computed(() =>
+  contasDaLista({
+    empresas: empresas.value,
+    elegiveis: elegiveis.value,
+    escolhidas: escolhidas.value,
+  })
+);
+const naoVaoDaBusca = computed(() =>
+  naoVao(empresas.value, contas.value.tiradas)
+);
 const entramLista = computed(
   () => escolhidas.value.filter(empresa => empresa.temContato).length
 );
@@ -141,16 +148,6 @@ const semContatoLista = computed(
 const grupoComecaFechado = chave =>
   !grupoAbre(estadoDaLista.value || estado.value, chave);
 const oQueNaFrase = computed(() => busca.value?.oQue.toLowerCase() || '');
-let relogioDaDemo = null;
-const pararRelogioDaDemo = () => {
-  if (relogioDaDemo) clearTimeout(relogioDaDemo);
-  relogioDaDemo = null;
-};
-const andarDepois = proximo => {
-  pararRelogioDaDemo();
-  relogioDaDemo = setTimeout(() => mudarEstado(proximo), ESPERA_DA_DEMO);
-};
-
 const tirarPouca = () => {
   const { n, desfazer } = tirarPoucaDaLista();
   aviso.value = { texto: t(`${NS}.TIROU`, { n }), desfazer };
@@ -166,31 +163,8 @@ const aplicarLista = dados => {
   nomeLista.value = t('PROSPECTING_ACHAR.FOLHA.NOME_LISTA', {
     oQue: dados.busca.oQue,
     lugar: dados.busca.lugar.split(',')[0],
-    data: new Date().toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-    }),
+    data: diaEMes(new Date(), locale.value),
   });
-};
-
-const carregarLista = async () => {
-  pararRelogio();
-  carregando.value = true;
-  erro.value = false;
-  try {
-    const dados = await fonte.value.busca(route.params.searchId);
-    aplicarLista(dados);
-    if (ehEstadoDaLista(estado.value)) estadoDaLista.value = estado.value;
-    if (estado.value === 'buscando') {
-      andarDepois('chegando');
-      return;
-    }
-  } catch (falha) {
-    // O título continua quando a busca é conhecida (rodada 2).
-    if (falha?.busca) busca.value = falha.busca;
-    erro.value = true;
-  }
-  carregando.value = false;
 };
 
 const carregarDestino = async () => {
@@ -233,63 +207,58 @@ const {
   escolhidas,
   destino,
   pessoaId,
+  pessoaNome,
   nomeLista,
   folha,
   pronto,
   subpainel,
+  trocar,
 });
 
 // --- O que vai por cima da lista, pelo estado da demonstração.
-const aplicarSobre = () => {
-  const sobre = SOBRE_A_LISTA[estado.value] || {};
-  const mandada = Number(route.query.mandada);
-  if (mandada) trocar(mandada, item => comoMandada(item, pessoaNome.value));
-  if (sobre.pessoa) pessoaId.value = sobre.pessoa;
-  subpainel.value = sobre.subpainel || null;
-  pararRelogioDaDemo();
-  gaveta.value = null;
-  folha.value = null;
-  pronto.value = null;
-  if (sobre.gaveta) {
-    const pedida = Number(route.query.empresa);
-    const empresa =
-      empresas.value.find(item => item.id === pedida) ||
-      empresaPadraoDaGaveta(sobre.empresa, {
-        deFora: deFora.value,
-        elegiveis: elegiveis.value,
-      });
-    gaveta.value = empresa ? { id: empresa.id, passo: sobre.gaveta } : null;
-  }
-  if ('folha' in sobre) {
-    folha.value = folhaNova(sobre.folha, Boolean(sobre.mostrarFora));
-    if (sobre.enviar) enviar();
-    if (sobre.enviandoParado) {
-      folha.value = {
-        ...folha.value,
-        enviando: {
-          feitas: Math.min(ENVIO_PARADO_EM, escolhidas.value.length),
-          total: escolhidas.value.length,
-        },
-      };
-      andarDepois('pronto');
+const { aplicarSobre, andarDepois, pararRelogioDaDemo } = useSobreDaLista({
+  demo,
+  estado,
+  route,
+  mudarEstado,
+  trocar,
+  pessoaNome,
+  pessoaId,
+  subpainel,
+  gaveta,
+  folha,
+  pronto,
+  empresas,
+  deFora,
+  elegiveis,
+  escolhidas,
+  entramLista,
+  enviar,
+});
+
+const carregarLista = async () => {
+  pararRelogio();
+  carregando.value = true;
+  erro.value = false;
+  try {
+    const dados = await fonte.value.busca(route.params.searchId);
+    aplicarLista(dados);
+    if (ehEstadoDaLista(estado.value)) estadoDaLista.value = estado.value;
+    if (estado.value === 'buscando') {
+      andarDepois('chegando');
+      return;
     }
+  } catch (falha) {
+    // O título continua quando a busca é conhecida (rodada 2).
+    if (falha?.busca) busca.value = falha.busca;
+    erro.value = true;
   }
-  if (sobre.pronto === 'funil') {
-    const n = sobre.uma ? 1 : escolhidas.value.length - (sobre.jaEstavam || 0);
-    pronto.value = {
-      tipo: 'funil',
-      n,
-      jaEstavam: sobre.jaEstavam || 0,
-      nome: escolhidas.value[0]?.nome,
-    };
-  }
-  if (sobre.pronto === 'lista') {
-    pronto.value = { tipo: 'lista', n: entramLista.value };
-  }
+  carregando.value = false;
 };
 
 // --- Ações da página.
 const abrirEmpresa = empresa => {
+  recado.value = '';
   destacada.value = empresa.id;
   if (demo.value) {
     mudarEstado(leitura.value ? 'gaveta-leitura' : 'gaveta', {
@@ -304,24 +273,34 @@ const voltarParaAListaDaDemo = () =>
     estadoDaLista.value || (leitura.value ? 'leitura' : 'confira-tirou')
   );
 const fecharGaveta = () => {
+  recado.value = '';
   if (demo.value) voltarParaAListaDaDemo();
   else gaveta.value = null;
 };
-const { mudarPasso, mandarUma, marcarFora, chamar, verNoFunil } =
-  useGavetaDaLista({
-    demo,
-    route,
-    router,
-    fonte,
-    mudarEstado,
-    gaveta,
-    empresaDaGaveta,
-    destino,
-    enviandoUma,
-    aviso,
-    trocar,
-    fecharGaveta,
-  });
+const {
+  mudarPasso,
+  mandarUma,
+  marcarFora,
+  chamar,
+  verNoFunil,
+  usarPessoa,
+  procurarDono,
+  usandoPessoa,
+} = useGavetaDaLista({
+  demo,
+  route,
+  router,
+  fonte,
+  mudarEstado,
+  gaveta,
+  empresaDaGaveta,
+  destino,
+  enviandoUma,
+  aviso,
+  recado,
+  trocar,
+  fecharGaveta,
+});
 
 const voltarParaLista = () => {
   if (demo.value) voltarParaAListaDaDemo();
@@ -337,12 +316,11 @@ const voltarParaBuscas = () =>
   irPara(ROTAS.BUSCAS, { estado: 'buscas-so-ver' });
 const tentarDeNovo = () =>
   demo.value ? mudarEstado('confira') : carregarLista();
-const buscarDeNovo = () =>
-  demo.value ? mudarEstado('buscando') : carregarLista();
-const procurarDeNovo = () => {
-  aviso.value = { texto: t('PROSPECTING_ACHAR.GAVETA.PROCURANDO_DE_NOVO') };
-  fecharGaveta();
-};
+const { buscarDeNovo, procurarMaisLonge, maisLonge } = useRepetirBusca({
+  busca,
+  fonte,
+  irPara,
+});
 
 const textosPronto = computed(() =>
   textosDoPronto(t, {
@@ -361,6 +339,18 @@ const iniciar = async () => {
 
 onMounted(iniciar);
 onBeforeUnmount(pararRelogioDaDemo);
+// A mesma página serve a busca aberta e a nova (BUSCA e NOVA): trocar de
+// busca no endereço recarrega a lista. Na demonstração quem manda é o estado.
+watch(
+  () => route.params.searchId,
+  (novo, antigo) => {
+    if (demo.value || !novo || novo === antigo) return;
+    gaveta.value = null;
+    folha.value = null;
+    pronto.value = null;
+    carregarLista();
+  }
+);
 watch(estado, async (novo, antigo) => {
   if (novo === antigo) return;
   if (ehEstadoDaLista(novo) && novo !== estadoDaLista.value) {
@@ -402,11 +392,11 @@ watch(estado, async (novo, antigo) => {
 
         <template v-else>
           <AcharConfiraCabecalho
+            v-if="busca"
             :busca="busca"
             :carregando="carregando"
             :leitura="leitura"
-            :achadas="empresas.length"
-            :vao="escolhidas.length"
+            :contas="contas"
             :conferindo="Boolean(progresso)"
             @mudar-pedido="mudarPedido"
           />
@@ -461,9 +451,9 @@ watch(estado, async (novo, antigo) => {
               :texto="
                 $t(`${NS}.VAZIA`, { oQue: oQueNaFrase, lugar: busca.lugar })
               "
-              :botao="$t(`${NS}.VAZIA_LONGE`)"
+              :botao="maisLonge ? $t(`${NS}.VAZIA_LONGE`) : ''"
               :link="$t(`${NS}.MUDAR_PEDIDO`)"
-              @acao="buscarDeNovo"
+              @acao="procurarMaisLonge"
               @link="mudarPedido"
             />
 
@@ -495,6 +485,7 @@ watch(estado, async (novo, antigo) => {
                   :primeiro="primeiro"
                   :grupos="grupos"
                   :de-fora="deFora"
+                  :tiradas="tiradasDaLista"
                   :nao-vai="naoVai"
                   :leitura="leitura"
                   :pesquisa-ligada="pesquisaLigada"
@@ -531,13 +522,15 @@ watch(estado, async (novo, antigo) => {
       v-if="empresaDaGaveta && !subpainel"
       :empresa="empresaDaGaveta"
       :primeiro="empresaDaGaveta.id === primeiroId"
-      :leitura="leitura"
+      :leitura="leitura || Boolean(empresaDaGaveta.fora)"
       :pode-funil="permissoes.funil"
       :passo="gaveta.passo"
       :destino="destino"
       :pessoa="pessoaNome"
       :pode-trocar-pessoa="podeTrocarPessoa"
       :enviando="enviandoUma"
+      :usando-pessoa="usandoPessoa"
+      :recado="recado"
       @close="fecharGaveta"
       @passo="mudarPasso"
       @mandar="mandarUma"
@@ -547,7 +540,8 @@ watch(estado, async (novo, antigo) => {
       @ver-no-funil="verNoFunil"
       @alterar-destino="abrirSubpainel('destino')"
       @alterar-pessoa="abrirSubpainel('pessoa')"
-      @procurar-de-novo="procurarDeNovo"
+      @procurar-de-novo="procurarDono"
+      @usar-pessoa="usarPessoa"
     />
 
     <AcharFolhaEnvio
@@ -562,6 +556,7 @@ watch(estado, async (novo, antigo) => {
       :pessoa="pessoaNome"
       :pode-trocar-pessoa="podeTrocarPessoa"
       :nao-vao="naoVaoDaBusca"
+      :mandadas="contas.mandadas"
       :sem-contato-lista="semContatoLista"
       :entram-lista="entramLista"
       :enviando="folha.enviando"

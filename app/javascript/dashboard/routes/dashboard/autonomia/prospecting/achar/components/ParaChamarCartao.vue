@@ -95,7 +95,11 @@ const blocos = computed(() => [
         {{ empresa.nome }}
       </h2>
       <p class="m-0 text-base text-n-slate-11">
-        {{ [empresa.categoria, empresa.bairro].filter(Boolean).join(' · ') }}
+        {{
+          [empresa.categoria, empresa.bairro]
+            .filter(Boolean)
+            .join($t('PROSPECTING_ACHAR.COMUM.SEPARADOR'))
+        }}
       </p>
     </div>
     <ul class="flex flex-col gap-4 p-0 m-0 list-none">

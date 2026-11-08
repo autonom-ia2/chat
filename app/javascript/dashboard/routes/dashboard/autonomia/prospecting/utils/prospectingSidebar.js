@@ -10,12 +10,14 @@ const SETTINGS_ROUTES = [
 ];
 
 // #2692 — com a flag prospeccao_nova (protótipo), o menu abre as telas novas:
-// "Achar empresas" (só quem busca), "Suas buscas" e "Para chamar" (a fila).
+// "Achar empresas" (só quem busca) e "Suas buscas". "Para chamar" (a fila) é
+// fase 5: fora do menu, e a rota só abre na demonstração.
 // Configurações saem do menu lateral e continuam em Configurações da conta.
 const ACHAR_ROUTES = [
   'autonomia_prospecting_achar',
   'autonomia_prospecting_achar_buscas',
   'autonomia_prospecting_achar_busca',
+  'autonomia_prospecting_achar_nova',
   'autonomia_prospecting_para_chamar',
 ];
 
@@ -34,7 +36,11 @@ const acharItems = ({ podeBuscar, t, accountScopedRoute }) => [
               name: 'Prospecting Achar',
               label: t('PROSPECTING_ACHAR.MENU.ACHAR'),
               to: accountScopedRoute('autonomia_prospecting_achar'),
-              activeOn: ['autonomia_prospecting_achar'],
+              // A lista logo depois de buscar também marca "Achar empresas".
+              activeOn: [
+                'autonomia_prospecting_achar',
+                'autonomia_prospecting_achar_nova',
+              ],
             },
           ]
         : []),

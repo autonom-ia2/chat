@@ -8,8 +8,17 @@ import AcharEstado from '../components/AcharEstado.vue';
 import AcharRodape from '../components/AcharRodape.vue';
 import AcharFaixaDoMenu from '../components/AcharFaixaDoMenu.vue';
 import { useAcharTela } from '../composables/useAcharTela';
-import { fatoDaBusca } from '../utils/acharQuando';
+import {
+  fatoDaBusca,
+  feitaPorDaBusca,
+  tituloDaBusca,
+} from '../utils/acharQuando';
 import { ROTAS } from '../utils/acharRotas';
+import {
+  buscasVisiveis,
+  ehDaEquipe,
+  podeApagarBusca,
+} from '../utils/acharPapeis';
 
 // #2692 — T4, "Suas buscas" (v4): um cartão por busca com "Abrir" explícito.
 // Quem só vê abre e lê; não há rodapé para ele. Com "Ver buscas de todos", o
@@ -17,8 +26,16 @@ import { ROTAS } from '../utils/acharRotas';
 // "Mais" (só Editar) com "Buscar de novo", "Baixar planilha" e "Apagar", que
 // pede confirmação. Na demonstração nada é apagado nem baixado.
 const { t } = useI18n();
-const { route, router, demo, fonte, permissoes, irPara, mudarEstado } =
-  useAcharTela();
+const {
+  route,
+  router,
+  demo,
+  fonte,
+  permissoes,
+  irPara,
+  mudarEstado,
+  usuarioId,
+} = useAcharTela();
 
 const NS = 'PROSPECTING_ACHAR.BUSCAS';
 const carregando = ref(true);
@@ -26,20 +43,28 @@ const erro = ref(false);
 const buscas = ref([]);
 const menuDe = ref(null);
 const apagando = ref(null);
+// "Ver mais": o servidor manda uma página por vez (meta.has_more).
+const pagina = ref(1);
+const temMais = ref(false);
+const carregandoMais = ref(false);
+// A paginação do servidor é por posição: depois de apagar, a próxima página
+// começa adiantada e pularia buscas. Aí "Ver mais" relê da página 1 até a
+// próxima, sem repetir nenhuma.
+const apagadas = ref(0);
 
 // Quem só vê está sempre nas buscas da equipe, também com a lista vazia; o
 // mesmo papel tem sempre o mesmo título (rodada 3).
-const daEquipe = computed(
-  () =>
-    permissoes.value.verTodas &&
-    (!permissoes.value.buscar || buscas.value.some(busca => busca.feitaPor))
+// "Buscas da equipe" só quando há busca de outra pessoa (feitaPorId diferente
+// do usuário), com a mesma regra na demonstração e na API.
+const daEquipe = computed(() =>
+  ehDaEquipe({
+    buscas: buscas.value,
+    usuarioId: usuarioId.value,
+    permissoes: permissoes.value,
+  })
 );
-const feitaPor = busca => {
-  if (!daEquipe.value) return '';
-  return t(`${NS}.FEITA_POR`, {
-    pessoa: busca.feitaPor || t('PROSPECTING_ACHAR.COMUM.VOCE'),
-  });
-};
+const feitaPor = busca =>
+  daEquipe.value ? feitaPorDaBusca(t, busca, usuarioId.value) : '';
 
 const temRodape = computed(
   () =>
@@ -52,11 +77,23 @@ const avisoSoVer = computed(
   () => route.query.aviso === 'so-ver' && !permissoes.value.buscar
 );
 
+const lerPagina = async numero => {
+  const lida = await fonte.value.buscas(numero);
+  pagina.value = numero;
+  temMais.value = lida.temMais;
+  return buscasVisiveis({
+    buscas: lida.buscas,
+    usuarioId: usuarioId.value,
+    verTodas: permissoes.value.verTodas,
+  });
+};
+
 const carregar = async () => {
   carregando.value = true;
   erro.value = false;
   try {
-    buscas.value = await fonte.value.buscas();
+    buscas.value = await lerPagina(1);
+    apagadas.value = 0;
   } catch {
     erro.value = true;
   }
@@ -66,6 +103,61 @@ const carregar = async () => {
   apagando.value = demo.value === 'apagar' ? buscas.value[0] : null;
 };
 
+const juntarSemRepetir = (lista, mais) => {
+  const jaTem = new Set(lista.map(busca => busca.id));
+  return [...lista, ...mais.filter(busca => !jaTem.has(busca.id))];
+};
+const lerAte = async ultima => {
+  const paginas = Array.from({ length: ultima }, (_, indice) => indice + 1);
+  return paginas.reduce(
+    async (lidas, numero) =>
+      juntarSemRepetir(await lidas, await lerPagina(numero)),
+    Promise.resolve([])
+  );
+};
+
+const verMais = async () => {
+  carregandoMais.value = true;
+  try {
+    const proxima = pagina.value + 1;
+    buscas.value = apagadas.value
+      ? await lerAte(proxima)
+      : juntarSemRepetir(buscas.value, await lerPagina(proxima));
+    apagadas.value = 0;
+  } catch {
+    useAlert(t(`${NS}.ERRO_VER_MAIS`));
+  } finally {
+    carregandoMais.value = false;
+  }
+};
+
+const podeApagar = busca =>
+  podeApagarBusca({
+    busca,
+    usuarioId: usuarioId.value,
+    demo: Boolean(demo.value),
+  });
+
+const baixar = async busca => {
+  try {
+    await fonte.value.baixarBusca(busca.id);
+    if (demo.value) useAlert(t('PROSPECTING_ACHAR.COMUM.DEMO_NAO_GRAVA'));
+  } catch {
+    useAlert(t(`${NS}.ERRO_BAIXAR`));
+  }
+};
+
+// A mesma busca de novo, sem cache: uma busca nova no servidor, aberta na rota
+// da busca nova (a de agora fica guardada como estava).
+const buscarDeNovo = async busca => {
+  try {
+    const { searchId } = await fonte.value.repetirBusca({ busca });
+    await irPara(ROTAS.NOVA, { params: { searchId }, estado: 'buscando' });
+  } catch {
+    useAlert(t('PROSPECTING_ACHAR.COMUM.ERRO_BUSCAR_DE_NOVO'));
+  }
+};
+
 const agirNaBusca = (busca, acao) => {
   menuDe.value = null;
   if (acao === 'apagar') {
@@ -73,13 +165,21 @@ const agirNaBusca = (busca, acao) => {
     return;
   }
   if (acao === 'buscarDeNovo') {
-    irPara(ROTAS.BUSCA, { params: { searchId: busca.id }, estado: 'buscando' });
+    buscarDeNovo(busca);
     return;
   }
-  useAlert(t('PROSPECTING_ACHAR.COMUM.DEMO_NAO_GRAVA'));
+  baixar(busca);
 };
-const confirmarApagar = () => {
-  buscas.value = buscas.value.filter(busca => busca.id !== apagando.value.id);
+const confirmarApagar = async () => {
+  const { id } = apagando.value;
+  try {
+    await fonte.value.apagarBusca(id);
+  } catch {
+    useAlert(t(`${NS}.ERRO_APAGAR`));
+    return;
+  }
+  buscas.value = buscas.value.filter(busca => busca.id !== id);
+  apagadas.value += 1;
   apagando.value = null;
   useAlert(t(`${NS}.APAGADA`));
 };
@@ -151,17 +251,27 @@ watch(demo, carregar);
           <AcharBuscaCartao
             v-for="busca in buscas"
             :key="busca.id"
-            :titulo="`${busca.oQue} · ${busca.lugar}`"
+            :titulo="tituloDaBusca(t, busca)"
             :fato="fatoDaBusca(t, busca)"
             :feita-por="feitaPor(busca)"
             :com-mais="permissoes.buscar"
-            :pode-apagar="!busca.feitaPor"
+            :pode-apagar="podeApagar(busca)"
             :mais-aberto="menuDe === busca.id"
             @abrir="abrir(busca)"
             @mais="menuDe = menuDe === busca.id ? null : busca.id"
             @acao="agirNaBusca(busca, $event)"
           />
         </ul>
+        <Button
+          v-if="temMais && !carregando && !erro"
+          :label="$t(`${NS}.VER_MAIS`)"
+          :is-loading="carregandoMais"
+          slate
+          faded
+          class="!min-h-12 !rounded-xl !text-base self-center"
+          data-ver-mais
+          @click="verMais"
+        />
 
         <AcharRodape
           v-if="temRodape"
@@ -188,7 +298,7 @@ watch(demo, carregar);
           {{ $t(`${NS}.APAGAR_TITULO`) }}
         </h2>
         <p class="m-0 text-base text-n-slate-11">
-          {{ apagando.oQue }} · {{ apagando.lugar }}
+          {{ tituloDaBusca(t, apagando) }}
         </p>
         <p class="m-0 text-base text-n-slate-12">
           {{ $t(`${NS}.APAGAR_TEXTO`) }}

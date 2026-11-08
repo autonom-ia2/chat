@@ -2,7 +2,11 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import { useLeadLiveUpdates } from '../../composables/useLeadLiveUpdates';
 import { CHANCES } from '../utils/acharChance';
 import { empresaDoLead } from '../utils/acharLead';
-import { temNoNome } from '../utils/acharConfiraEstados';
+import {
+  atualizarDaBusca,
+  ehBarrada,
+  temNoNome,
+} from '../utils/acharConfiraEstados';
 
 // #2692 — a lista da busca (v4, T1): os grupos por chance, quem fica de fora, os
 // cortes leves ("Só com WhatsApp", nome) e a seleção "Vai / Não vai". A seleção
@@ -52,7 +56,13 @@ export const useListaDaBusca = ({
       ),
     })).filter(grupo => grupo.empresas.length)
   );
-  const deFora = computed(() => empresas.value.filter(empresa => empresa.fora));
+  // "Ficam de fora" é só quem o sistema barra; a que a pessoa deu "Não serve"
+  // nesta busca some da lista e conta em "você tirou".
+  const deFora = computed(() => empresas.value.filter(ehBarrada));
+  // As tiradas ("Não serve", agora ou antes): fora da lista, num grupo próprio.
+  const tiradasDaLista = computed(() =>
+    empresas.value.filter(empresa => empresa.fora && !ehBarrada(empresa))
+  );
   // A mandada pela gaveta já está no funil: sai das que vão (rodada 4).
   const escolhidas = computed(() =>
     elegiveis.value.filter(
@@ -152,7 +162,7 @@ export const useListaDaBusca = ({
   useLeadLiveUpdates(lead => {
     if (!guardaSelecao()) return;
     if (empresas.value.some(empresa => empresa.id === lead.id)) {
-      trocar(lead.id, () => empresaDoLead(lead));
+      trocar(lead.id, antiga => atualizarDaBusca(antiga, empresaDoLead(lead)));
     }
   });
   onBeforeUnmount(pararRelogio);
@@ -166,6 +176,7 @@ export const useListaDaBusca = ({
     visiveis,
     grupos,
     deFora,
+    tiradasDaLista,
     primeiro,
     primeiroId,
     conferindoWhatsapp,

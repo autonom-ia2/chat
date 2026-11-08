@@ -1,6 +1,9 @@
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useCanManage } from 'dashboard/composables/useCanManage';
+import {
+  useCanManage,
+  usePermissionGranted,
+} from 'dashboard/composables/useCanManage';
 import { useMapGetter } from 'dashboard/composables/store';
 import { criarFonte, demoPedido } from '../utils/acharFonte';
 import { papelValido, permissoesDoPapel } from '../utils/acharPapeis';
@@ -14,11 +17,22 @@ export const useAcharTela = () => {
   const route = useRoute();
   const router = useRouter();
   const demo = computed(() => demoPedido(route.query));
-  const papel = computed(() => papelValido(route.query.papel, demo.value));
-  const fonte = computed(() => criarFonte({ demo: demo.value }));
+  // O &papel= do endereço é da demonstração; fora dela, as permissões vêm da
+  // conta e o endereço não é lido.
+  const papel = computed(() =>
+    demo.value ? papelValido(route.query.papel, demo.value) : null
+  );
   const contaId = useMapGetter('getCurrentAccountId');
   const usuario = useMapGetter('getCurrentUser');
+  const usuarioId = computed(() => usuario.value?.id);
+  const fonte = computed(() =>
+    criarFonte({ demo: demo.value, usuarioId: usuarioId.value })
+  );
   const podeBuscarNaConta = useCanManage('prospecting_manage');
+  // Espelho de Visibility#all_searches?: administrador ou "Ver buscas de todos".
+  const veTodasNoServidor = usePermissionGranted(
+    'prospecting_view_all_searches'
+  );
   const ajustes = ref(null);
 
   // Fora da demonstração: Editar busca e escolhe; mandar ao funil é o que o
@@ -31,7 +45,7 @@ export const useAcharTela = () => {
       funil: podeBuscarNaConta.value && ajustes.value?.podeFunil === true,
       lista: false,
       trocarDono: false,
-      verTodas: false,
+      verTodas: veTodasNoServidor.value,
     };
   });
 
@@ -82,6 +96,6 @@ export const useAcharTela = () => {
     irPara,
     mudarEstado,
     contaId,
-    usuarioId: computed(() => usuario.value?.id),
+    usuarioId,
   };
 };

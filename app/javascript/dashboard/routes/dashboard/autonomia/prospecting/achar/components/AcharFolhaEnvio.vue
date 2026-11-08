@@ -29,6 +29,9 @@ const props = defineProps({
   pessoa: { type: String, required: true },
   podeTrocarPessoa: { type: Boolean, default: false },
   naoVao: { type: Array, default: () => [] },
+  // P3 (crítica r5): a empresa já mandada pela gaveta não "fica de fora": tem
+  // linha própria, fora do "Por que {n} não vão".
+  mandadas: { type: Number, default: 0 },
   semContatoLista: { type: Number, default: 0 },
   nomeLista: { type: String, default: '' },
   entramLista: { type: Number, default: 0 },
@@ -81,11 +84,9 @@ const OPCOES = {
 const CHAVES_FORA = {
   no_funil: 'NO_FUNIL',
   nao_quer: 'NAO_QUER',
-  tirou: 'TIROU',
   fechou: 'FECHOU',
   voce_tirou: 'VOCE_TIROU',
   sem_contato: 'SEM_CONTATO',
-  voce_mandou: 'VOCE_MANDOU',
 };
 const enviando = computed(() => Boolean(props.enviando));
 
@@ -196,13 +197,6 @@ watch(
       />
     </div>
 
-    <AcharEstado
-      v-if="erro"
-      faixa
-      tom="erro"
-      :texto="$t(erro === 'lista' ? `${NS}.ERRO_LISTA` : `${NS}.ERRO_FUNIL`)"
-    />
-
     <div
       v-if="escolhaFinal === 'funil'"
       class="flex flex-col gap-3"
@@ -311,8 +305,22 @@ watch(
         </li>
       </ul>
     </section>
+    <p
+      v-if="escolhaFinal === 'funil' && mandadas"
+      class="m-0 text-base text-n-slate-11"
+      data-ja-mandou
+    >
+      {{ $t(`${NS}.FORA_MOTIVOS.VOCE_MANDOU`, { n: mandadas }, mandadas) }}
+    </p>
 
     <template #rodape>
+      <!-- D9 (crítica r5): o erro fica logo acima do botão, não no meio. -->
+      <AcharEstado
+        v-if="erro"
+        faixa
+        tom="erro"
+        :texto="$t(erro === 'lista' ? `${NS}.ERRO_LISTA` : `${NS}.ERRO_FUNIL`)"
+      />
       <p
         v-if="botao.dica"
         class="m-0 text-sm text-center text-n-slate-11"

@@ -10,7 +10,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
   before_action -> { check_permission_granted!('prospecting_manage') }, only: [:export]
 
   def index
-    ordered_scope = visible_searches_scope.order(created_at: :desc)
+    ordered_scope = visible_searches_scope.includes(:user).order(created_at: :desc)
     total_count = ordered_scope.count
     searches = ordered_scope.offset((page - 1) * per_page).limit(per_page)
 
@@ -90,8 +90,9 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     send_leads_export(by_priority_position(leads_for_search(search), scoring), scoring: scoring, filename: "busca-#{search.id}")
   end
 
+  # Cada pessoa apaga só as buscas que ela fez, inclusive quem vê as de todos (decisão do Rodrigo, #2693).
   def destroy
-    search = visible_searches_scope.find(params[:id])
+    search = visible_searches_scope.where(user_id: Current.user.id).find(params[:id])
     search.destroy!
 
     render json: { payload: { id: search.id } }
@@ -198,6 +199,9 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       search.metadata.to_h['search_filters'] || search.metadata.to_h['filters'] || {}
     payload['advanced_filters'] = search.metadata.to_h['advanced_filters'] || {}
     payload['sort_key'] = search.metadata.to_h['sort_key']
+    # Quem fez a busca (#2693): a tela mostra "Feita por" e só oferece "Apagar" na busca da própria pessoa.
+    payload['user_id'] = search.user_id
+    payload['user_name'] = search.user&.name
     payload['score_mode'] = search.metadata.to_h['score_mode']
     payload['scoring_profile_id'] = search.metadata.to_h['scoring_profile_id']
     payload['preset_id'] = search.metadata.to_h['preset_id']

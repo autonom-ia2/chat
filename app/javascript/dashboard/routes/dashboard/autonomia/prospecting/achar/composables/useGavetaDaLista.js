@@ -1,11 +1,41 @@
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
-import { PASSO_DA_GAVETA } from '../utils/acharConfiraEstados';
+import {
+  MOTIVO_NAO_SERVE,
+  PASSO_DA_GAVETA,
+  atualizarDaBusca,
+  marcarEnviadas,
+} from '../utils/acharConfiraEstados';
+
+// P1 (crítica r5): uma frase leiga para cada desfecho de adopt_owner
+// (contact_outcome). Só "updated" afirma que o contato virou a pessoa.
+const FRASE_DO_RESULTADO = {
+  updated: 'FEITO',
+  shared_with_other_lead: 'FEITO_DIVIDIDO',
+  kept_existing_contact: 'FEITO_MANTIDO',
+};
+
+// WhatsApp quando pedido e há link; senão o telefone. Sem nenhum dos dois,
+// não há o que abrir (a tela nem mostra o botão: podeChamar).
+export const enderecoParaChamar = (empresa, tipo) => {
+  if (tipo === 'whatsapp' && empresa.whatsappUrl) return empresa.whatsappUrl;
+  return empresa.telefone ? `tel:${empresa.telefone}` : '';
+};
+
+export const fraseDaPessoa = (t, { resultado, nome, outra }) => {
+  const NS = 'PROSPECTING_ACHAR.GAVETA.OUTRAS';
+  const chave = FRASE_DO_RESULTADO[resultado] || 'FEITO';
+  if (chave === 'FEITO_DIVIDIDO' && !outra) {
+    return t(`${NS}.FEITO_DIVIDIDO_SEM_NOME`, { nome });
+  }
+  return t(`${NS}.${chave}`, { nome, outra });
+};
 
 // #2692 — as ações da gaveta da empresa (T1d): mandar uma, "Não serve" / "Não
-// quer", usar o contato, chamar e ver no funil. Saiu de AcharConfiraPage.vue
-// para a página caber na trava de tamanho (#677). Na demonstração, cada passo
-// vira um estado ?demo= (mudarEstado).
+// quer", falar com outra pessoa (P1 da crítica r5), chamar e ver no funil.
+// Saiu de AcharConfiraPage.vue para a página caber na trava de tamanho (#677).
+// Na demonstração, cada passo vira um estado ?demo= (mudarEstado).
 export function useGavetaDaLista({
   demo,
   route,
@@ -17,14 +47,12 @@ export function useGavetaDaLista({
   destino,
   enviandoUma,
   aviso,
+  recado,
   trocar,
   fecharGaveta,
 }) {
   const { t } = useI18n();
-
-  // Na lista, a empresa mandada pela gaveta deixa o "Vai" e diz onde está.
-  const marcarMandada = id =>
-    trocar(id, item => ({ ...item, mandada: destino.value?.funil.nome }));
+  const usandoPessoa = ref('');
 
   const mudarPasso = passo => {
     if (demo.value) {
@@ -48,7 +76,12 @@ export function useGavetaDaLista({
       useAlert(t('PROSPECTING_ACHAR.FOLHA.ERRO_FUNIL'));
       return;
     }
-    marcarMandada(gaveta.value.id);
+    // Na lista, a empresa mandada deixa o "Vai" e diz onde está; ao reabrir a
+    // gaveta, "Mandar / Não serve / Não quer" não voltam (noFunil).
+    marcarEnviadas(trocar, resumo, {
+      destino: destino.value,
+      pessoa: t('PROSPECTING_ACHAR.COMUM.VOCE'),
+    });
     mudarPasso('mandou');
   };
 
@@ -64,7 +97,9 @@ export function useGavetaDaLista({
     const naoQuer = acao === 'naoQuer';
     trocar(empresa.id, item => ({
       ...item,
-      fora: { motivo: naoQuer ? 'nao_quer' : 'tirou' },
+      fora: naoQuer
+        ? { motivo: 'nao_quer' }
+        : { motivo: MOTIVO_NAO_SERVE, razao: motivo || '' },
     }));
     aviso.value = {
       texto: t(
@@ -79,16 +114,51 @@ export function useGavetaDaLista({
     fecharGaveta();
   };
 
+  const voltarParaVer = () => {
+    if (demo.value)
+      mudarEstado(PASSO_DA_GAVETA.ver, { empresa: gaveta.value.id });
+    else gaveta.value = { ...gaveta.value, passo: 'ver' };
+  };
+
+  // "Usar esta pessoa": o sócio vira com quem falar e a gaveta volta ao
+  // começo, com a frase do que aconteceu com o contato.
+  const usarPessoa = async nome => {
+    const empresa = empresaDaGaveta.value;
+    usandoPessoa.value = nome;
+    try {
+      const resposta = await fonte.value.usarPessoa({ empresa, nome });
+      trocar(empresa.id, antiga => atualizarDaBusca(antiga, resposta.empresa));
+      recado.value = fraseDaPessoa(t, { ...resposta, nome });
+      voltarParaVer();
+    } catch {
+      useAlert(t('PROSPECTING_ACHAR.GAVETA.OUTRAS.ERRO'));
+    } finally {
+      usandoPessoa.value = '';
+    }
+  };
+
+  // "Buscar de novo" do dono não achado: pede a pesquisa de novo e fecha.
+  const procurarDono = async () => {
+    const empresa = empresaDaGaveta.value;
+    try {
+      const nova = await fonte.value.procurarDono({ empresa });
+      trocar(empresa.id, antiga => atualizarDaBusca(antiga, nova));
+    } catch {
+      useAlert(t('PROSPECTING_ACHAR.GAVETA.ERRO_PROCURAR'));
+      return;
+    }
+    aviso.value = { texto: t('PROSPECTING_ACHAR.GAVETA.PROCURANDO_DE_NOVO') };
+    fecharGaveta();
+  };
+
   const chamar = tipo => {
     const empresa = empresaDaGaveta.value;
     if (demo.value || !empresa) {
       useAlert(t('PROSPECTING_ACHAR.COMUM.DEMO_WHATSAPP'));
       return;
     }
-    const endereco =
-      tipo === 'whatsapp' && empresa.whatsappUrl
-        ? empresa.whatsappUrl
-        : `tel:${empresa.telefone}`;
+    const endereco = enderecoParaChamar(empresa, tipo);
+    if (!endereco) return;
     window.open(endereco, '_blank', 'noopener');
   };
 
@@ -104,11 +174,13 @@ export function useGavetaDaLista({
   };
 
   return {
-    marcarMandada,
     mudarPasso,
     mandarUma,
     marcarFora,
     chamar,
     verNoFunil,
+    usarPessoa,
+    procurarDono,
+    usandoPessoa,
   };
 }

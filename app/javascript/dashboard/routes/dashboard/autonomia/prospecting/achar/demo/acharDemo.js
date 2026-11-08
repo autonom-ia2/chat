@@ -295,6 +295,18 @@ const pontoDe = id => ({
   longitude: CENTRO.lng + (((id * 53) % 21) - 10) * 0.0014,
 });
 
+// Os outros sócios achados na pesquisa, sem o dono atual ("Falar com outra
+// pessoa"). Quem não tem outro sócio não mostra o botão.
+const OUTROS_SOCIOS = {
+  1: [
+    { nome: 'Pedro Henrique Dias', cargo: 'sócio' },
+    { nome: 'Luiza Souza', cargo: 'sócia' },
+  ],
+  2: [{ nome: 'Beatriz Lima', cargo: 'sócia' }],
+  3: [{ nome: 'Paulo Traço', cargo: 'sócio' }],
+  5: [{ nome: 'Rafael Ferraz', cargo: 'sócio' }],
+};
+
 const empresaBase = (linha, indice) => {
   const [nome, categoria, bairro, prioridade, porque, dono, whatsapp, contato] =
     linha;
@@ -310,7 +322,7 @@ const empresaBase = (linha, indice) => {
     chance: chance(prioridade),
     porque,
     dono: { estado: dono[0], nome: dono[1], cargo: dono[2] },
-    socios: dono[1] ? [{ nome: 'Pedro Henrique Dias', cargo: 'sócio' }] : [],
+    socios: OUTROS_SOCIOS[id] || [],
     whatsapp,
     whatsappUrl: null,
     telefone: telefoneDe(id, whatsapp),
@@ -445,6 +457,7 @@ export const BUSCAS = [
     noFunil: 4,
     diasAtras: 1,
     feitaPor: 'Lucas Andrade',
+    feitaPorId: 7,
   },
   {
     id: 'demo-academias',
@@ -454,6 +467,7 @@ export const BUSCAS = [
     noFunil: 9,
     diasAtras: 3,
     feitaPor: 'Paula Ribeiro',
+    feitaPorId: 8,
   },
   {
     id: 'demo-oficinas',
@@ -472,6 +486,7 @@ export const BUSCAS = [
     noFunil: 0,
     diasAtras: 9,
     feitaPor: 'Diego Martins',
+    feitaPorId: 9,
   },
 ];
 

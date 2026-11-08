@@ -27,7 +27,10 @@ vi.mock('dashboard/composables/store', async () => {
 });
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
-  return { useCanManage: () => computed(() => true) };
+  return {
+    useCanManage: () => computed(() => true),
+    usePermissionGranted: () => computed(() => false),
+  };
 });
 
 const botao = wrapper => wrapper.find('[data-principal]');

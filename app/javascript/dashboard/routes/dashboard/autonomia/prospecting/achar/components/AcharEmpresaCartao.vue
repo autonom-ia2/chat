@@ -70,14 +70,17 @@ const whats = computed(() => WHATS[props.empresa.whatsapp] || WHATS.sem);
 
 const textoDeFora = computed(() => {
   if (!fora.value) return '';
+  // "Tirada da lista" não diz quando nem onde: o descarte é do lead inteiro.
+  const tirada = fora.value.razao ? 'TIRADA_MOTIVO' : 'TIRADA';
   const chaves = {
     no_funil: fora.value.funil ? 'NO_FUNIL' : 'NO_FUNIL_SEM_NOME',
     nao_quer: 'NAO_QUER',
-    tirou: 'TIROU',
+    nao_serve: tirada,
     fechou: 'FECHOU',
   };
   return t(`${NS}.FORA.${chaves[fora.value.motivo]}`, {
     funil: fora.value.funil,
+    motivo: fora.value.razao,
   });
 });
 </script>
@@ -118,7 +121,11 @@ const textoDeFora = computed(() => {
           </span>
         </span>
         <span class="text-sm text-n-slate-11">
-          {{ [empresa.categoria, empresa.bairro].filter(Boolean).join(' · ') }}
+          {{
+            [empresa.categoria, empresa.bairro]
+              .filter(Boolean)
+              .join($t('PROSPECTING_ACHAR.COMUM.SEPARADOR'))
+          }}
         </span>
         <span
           v-if="fora"
@@ -147,7 +154,11 @@ const textoDeFora = computed(() => {
           data-mandada
         >
           <span class="i-lucide-check size-4" aria-hidden="true" />
-          {{ $t(`${NS}.MANDADA`, { funil: empresa.mandada }) }}
+          {{
+            empresa.noFunil?.funil
+              ? $t(`${NS}.MANDADA`, { funil: empresa.noFunil.funil })
+              : $t(`${NS}.MANDADA_SEM_NOME`)
+          }}
         </span>
         <span
           v-if="!fora && (pesquisaLigada || whatsappLigado)"

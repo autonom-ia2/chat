@@ -13,7 +13,13 @@ import AcharEstado from '../components/AcharEstado.vue';
 import AcharComoProcurarPainel from '../components/AcharComoProcurarPainel.vue';
 import AcharMaisAjustesPainel from '../components/AcharMaisAjustesPainel.vue';
 import { useAcharTela } from '../composables/useAcharTela';
-import { fatoDaBusca } from '../utils/acharQuando';
+import {
+  fatoDaBusca,
+  feitaPorDaBusca,
+  tituloDaBusca,
+} from '../utils/acharQuando';
+import { buscasVisiveis, ehDaEquipe } from '../utils/acharPapeis';
+import { filtrosDosAjustes } from '../utils/acharPedido';
 import { ROTAS } from '../utils/acharRotas';
 
 // #2692 — T0, a porta (v4): "O quê?" e "Onde?", a linha-frase "Como vamos
@@ -22,7 +28,7 @@ import { ROTAS } from '../utils/acharRotas';
 // Rodada 2: o botão diz sempre "Achar empresas"; o que falta (um por vez) vai
 // numa linha acima dele, no rodapé, e o botão fica desligado até resolver.
 const { t } = useI18n();
-const { demo, papel, fonte, permissoes, irPara } = useAcharTela();
+const { demo, fonte, permissoes, irPara, usuarioId } = useAcharTela();
 
 const NS = 'PROSPECTING_ACHAR.PORTA';
 const IDEIAS = ['RESTAURANTES', 'ESCRITORIOS', 'ACADEMIAS'];
@@ -38,17 +44,32 @@ const congelado = ref(false);
 const como = ref({ km: 3, quais: 'todas', n: 20, primeiro: 'melhores' });
 // Qual painel está aberto por cima: "Como procurar" (como) ou "Mais ajustes".
 const painel = ref(null);
+// O rascunho de "Como procurar" vive enquanto a pessoa anda entre os dois
+// painéis; só some quando ela fecha "Como procurar" (cancela) ou usa a escolha.
+const rascunhoComo = ref(null);
 const modelos = ref([]);
 const ocupado = ref(false);
 const erro = ref(false);
 const ultimas = ref([]);
-// A gestora vê as últimas da equipe; os outros, só as próprias (rodada 3).
-const daEquipe = computed(() => papel.value === 'gestora');
+// Com "Ver buscas de todos" vêm as últimas da equipe; sem, só as próprias
+// (rodada 3). A regra é a mesma na demonstração e na API: o dono (user_id).
+const ULTIMAS_NA_PORTA = 3;
+const visiveis = computed(() =>
+  buscasVisiveis({
+    buscas: ultimas.value,
+    usuarioId: usuarioId.value,
+    verTodas: permissoes.value.verTodas,
+  })
+);
+const daEquipe = computed(() =>
+  ehDaEquipe({
+    buscas: visiveis.value,
+    usuarioId: usuarioId.value,
+    permissoes: permissoes.value,
+  })
+);
 const ultimasDoPapel = computed(() =>
-  (daEquipe.value
-    ? ultimas.value
-    : ultimas.value.filter(b => !b.feitaPor)
-  ).slice(0, 3)
+  visiveis.value.slice(0, ULTIMAS_NA_PORTA)
 );
 const googlePronto = ref(true);
 const emTeste = ref(false);
@@ -109,11 +130,10 @@ const falta = computed(() => {
 const rotuloDoBotao = computed(() =>
   ocupado.value ? t(`${NS}.BOTAO_OCUPADO`) : t(`${NS}.BOTAO`)
 );
-// Rodada 3: quando o próprio campo já avisa (procurando ou lugar não achado),
-// o rodapé só mostra o botão desligado, sem repetir.
+// D2 (crítica r5): todo botão desligado diz o motivo numa linha acima dele,
+// também enquanto procura o lugar e quando o lugar não foi achado.
 const dica = computed(() => {
   if (!falta.value || ocupado.value) return '';
-  if (['PROCURANDO', 'EXISTA'].includes(falta.value)) return '';
   return t(`${NS}.FALTA.${falta.value}`);
 });
 
@@ -143,7 +163,7 @@ const achar = async () => {
       lugar: lugar.value,
       como: como.value,
     });
-    await irPara(ROTAS.BUSCA, { params: { searchId }, estado: 'buscando' });
+    await irPara(ROTAS.NOVA, { params: { searchId }, estado: 'buscando' });
   } catch {
     erro.value = true;
   } finally {
@@ -151,14 +171,50 @@ const achar = async () => {
   }
 };
 
+const abrirComo = () => {
+  rascunhoComo.value = { ...como.value };
+  painel.value = 'como';
+};
+const fecharComo = () => {
+  rascunhoComo.value = null;
+  painel.value = null;
+};
 const salvarComo = novo => {
   como.value = { ...como.value, ...novo };
-  painel.value = null;
+  fecharComo();
 };
+const abrirAjustes = rascunho => {
+  rascunhoComo.value = rascunho;
+  painel.value = 'mais';
+};
+// "Pronto" volta a "Como procurar" com os ajustes no rascunho; quem confirma
+// tudo é o "Usar esta escolha" de lá. "Voltar" volta sem os ajustes novos.
 const aplicarAjustes = ajustes => {
-  como.value = { ...como.value, ajustes, primeiro: ajustes.primeiro };
-  painel.value = null;
+  rascunhoComo.value = {
+    ...(rascunhoComo.value || como.value),
+    ajustes,
+    primeiro: ajustes.primeiro,
+  };
+  painel.value = 'como';
 };
+// "+ 2 ajustes" na frase: os filtros de "Mais ajustes" que vão ao servidor.
+const nAjustes = computed(
+  () => Object.keys(filtrosDosAjustes(como.value.ajustes)).length
+);
+const fraseComo = computed(() =>
+  [
+    t(`${NS}.COMO.TEXTO`, {
+      km: como.value.km,
+      n: como.value.n,
+      quais: quaisTexto.value,
+    }),
+    nAjustes.value
+      ? t(`${NS}.COMO.AJUSTES`, { n: nAjustes.value }, nAjustes.value)
+      : '',
+  ]
+    .filter(Boolean)
+    .join(t('PROSPECTING_ACHAR.COMUM.SEPARADOR'))
+);
 
 const abrirBusca = busca =>
   irPara(ROTAS.BUSCA, { params: { searchId: busca.id }, estado: 'confira' });
@@ -305,16 +361,10 @@ watch(demo, carregar);
               icone="i-lucide-compass"
               tom="violeta"
               :rotulo="$t(`${NS}.COMO.ROTULO`)"
-              :texto="
-                $t(`${NS}.COMO.TEXTO`, {
-                  km: como.km,
-                  n: como.n,
-                  quais: quaisTexto,
-                })
-              "
+              :texto="fraseComo"
               pode-alterar
               alterar-embaixo
-              @alterar="painel = 'como'"
+              @alterar="abrirComo"
             />
           </form>
         </AcharHeroi>
@@ -348,16 +398,9 @@ watch(demo, carregar);
               v-for="busca in ultimasDoPapel"
               :key="busca.id"
               compacto
-              :titulo="`${busca.oQue} · ${busca.lugar}`"
+              :titulo="tituloDaBusca($t, busca)"
               :fato="fatoDaBusca($t, busca)"
-              :feita-por="
-                daEquipe
-                  ? $t('PROSPECTING_ACHAR.BUSCAS.FEITA_POR', {
-                      pessoa:
-                        busca.feitaPor || $t('PROSPECTING_ACHAR.COMUM.VOCE'),
-                    })
-                  : ''
-              "
+              :feita-por="daEquipe ? feitaPorDaBusca($t, busca, usuarioId) : ''"
               @abrir="abrirBusca(busca)"
             />
           </ul>
@@ -377,16 +420,16 @@ watch(demo, carregar);
     </main>
     <AcharComoProcurarPainel
       v-if="painel === 'como'"
-      :como="como"
+      :como="rascunhoComo || como"
       :modelos="modelos"
       @salvar="salvarComo"
-      @mais-ajustes="painel = 'mais'"
-      @close="painel = null"
+      @mais-ajustes="abrirAjustes"
+      @close="fecharComo"
     />
     <AcharMaisAjustesPainel
       v-if="painel === 'mais'"
-      :primeiro="como.primeiro"
-      :abrir-primeiro="Boolean(demo)"
+      :primeiro="(rascunhoComo || como).primeiro"
+      :ajustes="(rascunhoComo || como).ajustes"
       @aplicar="aplicarAjustes"
       @close="painel = 'como'"
     />

@@ -1,42 +1,52 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 
 // #2692 — o cabeçalho da lista (v4, T1): "{o quê} · {lugar}" e a linha de
 // fatos. Rodada 2: enquanto procura, a frase usa o termo em minúscula
 // ("Procurando escritórios em…"); sem empresas, a linha de fatos some (o vazio
-// já fala). Rodada 3: a linha conta quem pode ir e quem fica de fora (a mesma
-// fonte do botão); depois de tirar alguma, "{vão} vão · {não vão} não vão".
-// Enquanto procura, uma frase diz quanto leva.
+// já fala). Enquanto procura, uma frase diz quanto leva.
+// P3 (crítica r5): contas separadas, que fecham nas achadas — "20 achadas ·
+// 13 vão · 2 você tirou · 4 ficam de fora · 1 você já mandou". Conta zerada
+// não aparece. Enquanto confere, e para quem só lê, só "{achadas} achadas"
+// (D10: quem só lê vê o mesmo título da busca).
 const props = defineProps({
-  busca: { type: Object, default: null },
+  // A página só mostra o cabeçalho com a busca conhecida (v-if lá).
+  busca: { type: Object, required: true },
   carregando: { type: Boolean, default: false },
   leitura: { type: Boolean, default: false },
-  achadas: { type: Number, default: 0 },
-  vao: { type: Number, default: 0 },
+  contas: {
+    type: Object,
+    default: () => ({ achadas: 0, vao: 0, tiradas: 0, fora: 0, mandadas: 0 }),
+  },
   conferindo: { type: Boolean, default: false },
 });
 const emit = defineEmits(['mudarPedido']);
 
+const { t } = useI18n();
 const NS = 'PROSPECTING_ACHAR.CONFIRA';
-const oQueNaFrase = computed(() => props.busca?.oQue.toLowerCase() || '');
-// Rodada 4: um par só, antes e depois de tirar: "{vão} vão · {fora} ficam de
-// fora". Enquanto confere, só "{achadas} achadas" (o resto ainda não é final).
-const fato = computed(() => {
-  const { achadas, vao, conferindo } = props;
-  if (conferindo) return { chave: 'FATO_CONFERINDO', valores: { achadas } };
-  const fora = achadas - vao;
-  if (!fora) return { chave: 'FATO_SEM_FORA', valores: { achadas, vao } };
-  return { chave: 'FATO', valores: { achadas, vao, fora } };
+const oQueNaFrase = computed(() => props.busca.oQue.toLowerCase());
+const ORDEM = [
+  ['achadas', 'ACHADAS'],
+  ['vao', 'VAO'],
+  ['tiradas', 'TIROU'],
+  ['fora', 'FORA'],
+  ['mandadas', 'MANDOU'],
+];
+const fatos = computed(() => {
+  const fato = ([campo, chave]) =>
+    t(`${NS}.FATOS.${chave}`, { n: props.contas[campo] }, props.contas[campo]);
+  if (props.conferindo || props.leitura) return fato(ORDEM[0]);
+  return ORDEM.filter(([campo]) => campo === 'achadas' || props.contas[campo])
+    .map(fato)
+    .join(t('PROSPECTING_ACHAR.COMUM.SEPARADOR'));
 });
+const achadas = computed(() => props.contas.achadas);
 </script>
 
 <template>
-  <header
-    v-if="busca"
-    class="flex flex-col gap-3 md:flex-row md:items-start"
-    data-cabecalho
-  >
+  <header class="flex flex-col gap-3 md:flex-row md:items-start" data-cabecalho>
     <div class="flex flex-col flex-1 min-w-0 gap-1">
       <h1
         v-if="carregando"
@@ -61,23 +71,10 @@ const fato = computed(() => {
         <h1
           class="m-0 text-2xl font-bold tracking-tight break-words md:text-[2rem] md:leading-tight text-n-slate-12"
         >
-          {{
-            leitura
-              ? $t(`${NS}.LEITURA.TITULO`)
-              : $t(`${NS}.TITULO`, { oQue: busca.oQue, lugar: busca.lugar })
-          }}
+          {{ $t(`${NS}.TITULO`, { oQue: busca.oQue, lugar: busca.lugar }) }}
         </h1>
-        <p
-          v-if="leitura || achadas"
-          class="m-0 text-base text-n-slate-11"
-          data-fatos
-        >
-          <template v-if="leitura">
-            {{ $t(`${NS}.TITULO`, { oQue: busca.oQue, lugar: busca.lugar }) }}
-          </template>
-          <template v-else>
-            {{ $t(`${NS}.${fato.chave}`, fato.valores) }}
-          </template>
+        <p v-if="achadas" class="m-0 text-base text-n-slate-11" data-fatos>
+          {{ fatos }}
         </p>
       </template>
     </div>

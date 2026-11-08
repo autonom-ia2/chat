@@ -12,6 +12,7 @@ import AcharParaOndePainel from '../components/AcharParaOndePainel.vue';
 import AcharEmpresaGaveta from '../components/AcharEmpresaGaveta.vue';
 import ParaChamarCartao from '../components/ParaChamarCartao.vue';
 import ParaChamarFim from '../components/ParaChamarFim.vue';
+import AcharBarra from '../components/AcharBarra.vue';
 import { useAcharTela } from '../composables/useAcharTela';
 import { escolherDestino } from '../utils/destinoPronto';
 import { ROTAS } from '../utils/acharRotas';
@@ -84,9 +85,6 @@ const temRodape = computed(
     !carregando.value &&
     (fase.value === 'fim' ? cartoes.value.length > 0 : Boolean(atual.value))
 );
-const largura = computed(() => ({
-  width: `${Math.round(((indice.value + 1) / Math.max(cartoes.value.length, 1)) * 100)}%`,
-}));
 
 const ESTADOS = {
   'fila-sucesso': { fase: 'sucesso' },
@@ -273,9 +271,17 @@ watch(demo, carregar);
                 })
               }}
             </span>
-            <div class="h-1 overflow-hidden rounded-full bg-n-slate-4">
-              <div class="h-full rounded-full bg-n-teal-9" :style="largura" />
-            </div>
+            <AcharBarra
+              :valor="indice + 1"
+              :total="cartoes.length"
+              :rotulo="
+                $t(`${NS}.CONTADOR`, {
+                  atual: indice + 1,
+                  total: cartoes.length,
+                })
+              "
+              tom="verde"
+            />
           </div>
 
           <AcharEstado

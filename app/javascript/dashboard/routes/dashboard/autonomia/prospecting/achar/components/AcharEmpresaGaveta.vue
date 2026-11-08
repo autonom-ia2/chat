@@ -5,6 +5,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import AcharPainel from './AcharPainel.vue';
 import AcharLinhaFrase from './AcharLinhaFrase.vue';
 import AcharMotivos from './AcharMotivos.vue';
+import AcharOutrasPessoas from './AcharOutrasPessoas.vue';
 import { seloDe } from '../utils/acharChance';
 
 // #2692 — T1d, a gaveta da empresa (v4): tudo da empresa e uma ação principal,
@@ -23,6 +24,10 @@ const props = defineProps({
   destino: { type: Object, default: null },
   pessoa: { type: String, required: true },
   enviando: { type: Boolean, default: false },
+  // P1 (crítica r5): o sócio que está virando com quem falar e a frase do
+  // que aconteceu depois (os três desfechos de adopt_owner).
+  usandoPessoa: { type: String, default: '' },
+  recado: { type: String, default: '' },
 });
 const emit = defineEmits([
   'close',
@@ -35,6 +40,7 @@ const emit = defineEmits([
   'alterarDestino',
   'alterarPessoa',
   'procurarDeNovo',
+  'usarPessoa',
 ]);
 
 const { t } = useI18n();
@@ -58,19 +64,26 @@ const rotuloChamar = computed(() =>
     : t('PROSPECTING_ACHAR.COMUM.LIGAR')
 );
 
+// Sem telefone nem WhatsApp não há "Ligar" (seria um tel: vazio).
+const podeChamar = computed(() =>
+  Boolean(props.empresa.telefone || props.empresa.whatsappUrl)
+);
+const acaoChamar = computed(() =>
+  podeChamar.value ? { rotulo: rotuloChamar.value, acao: 'chamar' } : null
+);
+const acaoVerNoFunil = computed(() => ({
+  rotulo: t('PROSPECTING_ACHAR.COMUM.VER_NO_FUNIL'),
+  acao: 'verNoFunil',
+}));
+
+// O botão grande; null quando não sobra nada a fazer (quem só lê, sem telefone).
 const principal = computed(() => {
-  if (props.passo === 'mandou')
-    return { rotulo: rotuloChamar.value, acao: 'chamar' };
-  if (props.empresa.noFunil) {
-    return {
-      rotulo: t('PROSPECTING_ACHAR.COMUM.VER_NO_FUNIL'),
-      acao: 'verNoFunil',
-    };
-  }
+  if (props.passo === 'mandou') return acaoChamar.value || acaoVerNoFunil.value;
+  if (props.empresa.noFunil) return acaoVerNoFunil.value;
   if (props.podeFunil && !props.leitura) {
     return { rotulo: t(`${NS}.MANDAR`), acao: 'abrirMandar' };
   }
-  return { rotulo: rotuloChamar.value, acao: 'chamar' };
+  return acaoChamar.value;
 });
 
 const agir = acao => {
@@ -112,8 +125,24 @@ const copiarCnpj = async () => {
 
 const dono = computed(() => props.empresa.dono);
 // Rodada 5: "Não serve" e "Não quer" são subpainel; a seta do topo volta.
+// P1 (crítica r5): "Falar com outra pessoa" também.
 const emMotivo = computed(() =>
-  ['nao-serve', 'nao-quer'].includes(props.passo)
+  ['nao-serve', 'nao-quer', 'outra-pessoa'].includes(props.passo)
+);
+// P2 (crítica r5): todo estado em que o principal é "Chamar no WhatsApp" (ou
+// "Ligar") mostra com quem falar, também depois de mandar. Depois de mandar e
+// para quem só lê, é só o nome, sem botão.
+const mostraComQuemFalar = computed(
+  () =>
+    dono.value.estado !== 'desligada' &&
+    (!props.empresa.noFunil || principal.value?.acao === 'chamar')
+);
+const comAcaoNoDono = computed(
+  () => !props.leitura && props.passo !== 'mandou'
+);
+// Só há "Falar com outra pessoa" quando a pesquisa achou outro sócio.
+const outraPessoa = computed(
+  () => comAcaoNoDono.value && (props.empresa.socios || []).length > 0
 );
 // Empresa no funil (já estava ou acabou de ir) nunca mostra "Não serve"/"Não quer".
 const temMais = computed(
@@ -147,7 +176,11 @@ const textoDoDono = computed(() => {
         {{ empresa.nome }}
       </h2>
       <p class="m-0 text-sm text-n-slate-11">
-        {{ [empresa.categoria, empresa.endereco].filter(Boolean).join(' · ') }}
+        {{
+          [empresa.categoria, empresa.endereco]
+            .filter(Boolean)
+            .join($t('PROSPECTING_ACHAR.COMUM.SEPARADOR'))
+        }}
       </p>
     </template>
 
@@ -157,6 +190,13 @@ const textoDoDono = computed(() => {
         @escolher="(motivo, texto) => emit('naoServe', texto || motivo)"
       />
     </template>
+
+    <AcharOutrasPessoas
+      v-else-if="passo === 'outra-pessoa'"
+      :socios="empresa.socios || []"
+      :usando="usandoPessoa"
+      @usar="emit('usarPessoa', $event)"
+    />
 
     <section
       v-else-if="passo === 'nao-quer'"
@@ -224,7 +264,10 @@ const textoDoDono = computed(() => {
         }}
       </p>
 
-      <section v-if="!empresa.noFunil" class="flex flex-col gap-2">
+      <section
+        v-if="!empresa.noFunil && passo !== 'mandou'"
+        class="flex flex-col gap-2"
+      >
         <h3 class="m-0 text-sm font-semibold text-n-slate-11">
           {{ $t(`${NS}.POR_QUE`) }}
         </h3>
@@ -241,7 +284,7 @@ const textoDoDono = computed(() => {
       </section>
 
       <section
-        v-if="dono.estado !== 'desligada' && !empresa.noFunil"
+        v-if="mostraComQuemFalar"
         class="flex flex-col gap-2"
         data-quem-decide
       >
@@ -249,28 +292,40 @@ const textoDoDono = computed(() => {
           {{ $t(`${NS}.QUEM_DECIDE`) }}
         </h3>
         <p
+          v-if="recado"
+          role="status"
+          class="px-4 py-3 m-0 text-base border border-solid rounded-2xl border-n-teal-6 bg-n-teal-2 text-n-slate-12"
+          data-recado-pessoa
+        >
+          {{ recado }}
+        </p>
+        <p
           v-if="dono.estado === 'procurando'"
           class="flex items-center gap-2 m-0 text-base text-n-slate-11"
         >
           <span class="i-lucide-loader-circle size-4 animate-spin" />
           {{ $t('PROSPECTING_ACHAR.CONFIRA.DONO.PROCURANDO') }}
         </p>
+        <!-- D6 (crítica r5): sem ação, sem borda; a linha fica como texto. -->
         <div
           v-else-if="dono.nome"
-          class="flex flex-wrap items-center gap-2 p-4 border rounded-2xl border-n-weak"
+          class="flex flex-wrap items-center gap-2"
+          :class="{
+            'p-4 border border-solid rounded-2xl border-n-weak': outraPessoa,
+          }"
         >
           <span class="text-base font-semibold text-n-slate-12" data-dono>
             {{ textoDoDono }}
           </span>
           <Button
-            v-if="!leitura"
+            v-if="outraPessoa"
             :label="$t(`${NS}.OUTRA_PESSOA`)"
             slate
             faded
             size="sm"
             class="!min-h-11 !rounded-xl ms-auto"
             data-outra-pessoa
-            @click="emit('procurarDeNovo')"
+            @click="emit('passo', 'outra-pessoa')"
           />
         </div>
         <div v-else class="flex flex-col gap-1" data-sem-dono>
@@ -278,7 +333,7 @@ const textoDoDono = computed(() => {
             {{ $t(`${NS}.SEM_DONO`) }}
           </p>
           <Button
-            v-if="!leitura"
+            v-if="comAcaoNoDono"
             :label="$t(`${NS}.PROCURAR_DE_NOVO`)"
             variant="link"
             class="self-start !min-h-11 !px-0"
@@ -414,6 +469,7 @@ const textoDoDono = computed(() => {
       </template>
       <div v-else class="flex items-stretch gap-2">
         <Button
+          v-if="principal"
           :label="principal.rotulo"
           class="flex-1 !h-auto !min-h-12 !whitespace-normal !rounded-xl !py-2 !text-base"
           data-principal-gaveta
@@ -435,7 +491,7 @@ const textoDoDono = computed(() => {
             role="menu"
             class="absolute bottom-full end-0 z-10 flex flex-col w-64 gap-0.5 p-1 m-0 mb-2 list-none border shadow-lg rounded-xl border-n-weak bg-n-solid-1"
           >
-            <li v-if="principal.acao !== 'chamar'" role="none">
+            <li v-if="podeChamar && principal?.acao !== 'chamar'" role="none">
               <button
                 type="button"
                 role="menuitem"

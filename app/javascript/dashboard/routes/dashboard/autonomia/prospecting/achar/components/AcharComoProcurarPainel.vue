@@ -83,7 +83,7 @@ const mudar = (campo, valor) => {
       type="button"
       class="flex items-center self-start gap-1.5 px-1 text-sm font-medium min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
       data-mais-ajustes
-      @click="emit('maisAjustes')"
+      @click="emit('maisAjustes', rascunho)"
     >
       <span class="i-lucide-sliders-horizontal size-4" aria-hidden="true" />
       {{ $t(`${NS}.MAIS_AJUSTES`) }}

@@ -2,6 +2,8 @@ import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { sendInBatches, CRM_BATCH_SIZE } from '../../utils/crmSend';
 import { buscaDoPayload, empresaDoLead } from './acharLead';
+import { montarPedido, pedidoDeNovo, pedidoSalvoDe } from './acharPedido';
+import { demoPedido } from './acharRotas';
 
 // #2692 — de onde a Prospecção nova lê (molde: agentes/utils/desempenhoFonte.js).
 // A tela recebe sempre o mesmo formato (acharLead.js), venha de onde vier:
@@ -15,13 +17,9 @@ const CARREGAR_DEMO = import.meta.env.DEV
   ? () => import('../demo/acharDemo.js')
   : null;
 
-export const demoPedido = (
-  query = {},
-  permitida = Boolean(import.meta.env.DEV)
-) => {
-  const valor = query?.demo;
-  return permitida && typeof valor === 'string' && valor ? valor : null;
-};
+// Quem decide se o ?demo= vale mora em acharRotas.js (a rota da fila também
+// usa, sem puxar a fonte para o pacote das rotas).
+export { demoPedido };
 
 const esperar = ms =>
   new Promise(resolve => {
@@ -31,46 +29,6 @@ const esperar = ms =>
 const UM_DIA = 24 * 60 * 60 * 1000;
 const diasDesde = data =>
   data ? Math.max(0, Math.floor((Date.now() - new Date(data)) / UM_DIA)) : 0;
-
-const KM = 1000;
-// "Quais empresas?" vira os filtros que o motor já entende (advancedLeadFilters).
-const FILTROS_DE = {
-  todas: {},
-  conhecidas: { rating_min: '4', reviews_min: '20' },
-  telefone: { has_phone: 'yes' },
-  abertas: { open_now: 'yes' },
-};
-
-export const montarPedido = ({ oQue, lugar, como }) => {
-  const centro =
-    lugar.latitude && lugar.longitude
-      ? { lat: Number(lugar.latitude), lng: Number(lugar.longitude) }
-      : null;
-  const raio = como.km * KM;
-  return {
-    query: oQue.trim(),
-    requested_limit: como.n,
-    location: lugar.rotulo,
-    radius: raio,
-    area_type: 'radius',
-    area_config: {
-      center: centro,
-      label: lugar.rotulo,
-      place_id: lugar.placeId,
-      radius: raio,
-    },
-    metadata: {
-      location_place_id: lugar.placeId,
-      location_latitude: lugar.latitude,
-      location_longitude: lugar.longitude,
-      location_label: lugar.rotulo,
-      filters: { auto_expand_radius: true },
-      // A tela nova ordena sempre pelo modo geral (decisão do Rodrigo, 07/11).
-      score_mode: 'general',
-      advanced_filters: FILTROS_DE[como.quais] || {},
-    },
-  };
-};
 
 const ESTADOS_SEM_BUSCAS = ['buscas-vazio', 'buscas-so-ver-vazio'];
 const ESTADOS_SEM_FILA = ['fila-vazia', 'fila-vazia-so-ver'];
@@ -84,8 +42,40 @@ const comTiradas = estado =>
     prefixo => estado === prefixo || estado.startsWith(`${prefixo}-`)
   );
 
-const fonteDemo = ({ estado, carregarDemo, atraso }) => {
+// Na demonstração, a 2ª empresa tem o contato dividido com outra e a 5ª já
+// tinha contato com outro nome; as outras trocam o contato.
+const RESULTADO_DA_DEMO = {
+  2: 'shared_with_other_lead',
+  5: 'kept_existing_contact',
+};
+
+const salvarArquivo = (blob, nome) => {
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = nome;
+  link.click();
+  URL.revokeObjectURL(link.href);
+};
+
+// O resumo do envio ao funil, igual na demonstração e na API: quem entrou
+// (created) e quem já estava (existing) com o card; quem falhou com o motivo.
+const doEnvio = ({ created = [], existing = [], failed = [] }) => ({
+  created: created.map(item => ({ id: item.lead_id, cardId: item.card_id })),
+  existing: existing.map(item => ({ id: item.lead_id, cardId: item.card_id })),
+  failed: failed.map(item => ({ id: item.lead_id, motivo: item.reason_code })),
+});
+
+const comDias = search => ({
+  ...buscaDoPayload(search),
+  diasAtras: diasDesde(search.created_at),
+});
+
+const fonteDemo = ({ estado, carregarDemo, atraso, usuarioId }) => {
   const dados = () => carregarDemo();
+  // Na demonstração, a busca sem "feitaPor" é de quem está vendo a tela: ela
+  // ganha o id do usuário, e a tela usa a mesma regra da API (feitaPorId).
+  const comDono = busca =>
+    busca.feitaPor ? busca : { ...busca, feitaPorId: usuarioId };
 
   return {
     usaDemo: true,
@@ -94,7 +84,7 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
       const primeira = estado === 'porta-primeira';
       return {
         lugarSalvo: primeira ? null : demo.LUGAR_SALVO,
-        ultimas: primeira ? [] : demo.BUSCAS,
+        ultimas: primeira ? [] : demo.BUSCAS.map(comDono),
         googlePronto: estado !== 'porta-sem-google',
         emTeste: estado === 'porta-teste',
         preenchido: demo.PORTA[estado] || demo.PORTA.porta,
@@ -124,6 +114,13 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
         ...demo.BUSCAS[0],
         noFunil: demo.NUMEROS.jaNoFunil,
         googleParou: false,
+        // Busca por raio de 3 km: "Procurar mais longe" aparece.
+        pedido: pedidoSalvoDe({
+          query: demo.BUSCAS[0].oQue,
+          location: demo.BUSCAS[0].lugar,
+          radius: 3000,
+          area_type: 'radius',
+        }),
       };
       if (estado === 'confira-erro') {
         throw Object.assign(new Error('demo'), { busca });
@@ -153,15 +150,22 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
     async buscas() {
       const demo = await dados();
       if (estado === 'buscas-erro') throw new Error('demo');
-      if (ESTADOS_SEM_BUSCAS.includes(estado)) return [];
+      const nada = { buscas: [], temMais: false };
+      if (ESTADOS_SEM_BUSCAS.includes(estado)) return nada;
       // "buscas" é a de quem só vê as próprias; com "Ver buscas de todos"
       // (buscas-equipe, só Ver) vêm as da equipe.
       // Quem só vê não faz busca: só aparecem as de outras pessoas (rodada 3).
-      if (estado === 'buscas') return demo.BUSCAS.filter(b => !b.feitaPor);
+      const todas = demo.BUSCAS.map(comDono);
+      const dele = busca => busca.feitaPorId === usuarioId;
+      if (estado === 'buscas') return { ...nada, buscas: todas.filter(dele) };
       if (estado.startsWith('buscas-so-ver')) {
-        return demo.BUSCAS.filter(busca => busca.feitaPor);
+        return { ...nada, buscas: todas.filter(busca => !dele(busca)) };
       }
-      return demo.BUSCAS;
+      return { ...nada, buscas: todas };
+    },
+    async repetirBusca() {
+      await esperar(atraso);
+      return { searchId: 'demo' };
     },
     async funis() {
       const demo = await dados();
@@ -188,15 +192,51 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
           }),
         Promise.resolve()
       );
-      if (estado === 'folha-erro') {
-        return { created: [], existing: [], failed: ids };
-      }
-      return { created: ids, existing: [], failed: [] };
+      const resposta =
+        estado === 'folha-erro'
+          ? { failed: ids.map(id => ({ lead_id: id, reason_code: 'demo' })) }
+          : { created: ids.map(id => ({ lead_id: id, card_id: 9000 + id })) };
+      return doEnvio(resposta);
     },
     async descartar() {
       await esperar(atraso);
     },
     async naoQuer() {
+      await esperar(atraso);
+    },
+    // "Usar esta pessoa": a demonstração não grava. Cada empresa devolve um
+    // dos três desfechos do servidor (RESULTADO_DA_DEMO), para dar para ver as
+    // três frases.
+    async usarPessoa({ empresa, nome }) {
+      await esperar(atraso);
+      const socio = empresa.socios.find(item => item.nome === nome);
+      const resultado = RESULTADO_DA_DEMO[empresa.id] || 'updated';
+      return {
+        empresa: {
+          ...empresa,
+          dono: { estado: 'confirmado', nome, cargo: socio?.cargo || '' },
+          socios: [
+            ...empresa.socios.filter(item => item.nome !== nome),
+            ...(empresa.dono.nome
+              ? [{ nome: empresa.dono.nome, cargo: empresa.dono.cargo }]
+              : []),
+          ],
+        },
+        resultado,
+        outra: resultado === 'shared_with_other_lead' ? 'Lima Contábil' : null,
+      };
+    },
+    async procurarDono({ empresa }) {
+      await esperar(atraso);
+      return {
+        ...empresa,
+        dono: { estado: 'procurando', nome: '', cargo: '' },
+      };
+    },
+    async apagarBusca() {
+      await esperar(atraso);
+    },
+    async baixarBusca() {
       await esperar(atraso);
     },
     async guardarLista({ nome, ids }) {
@@ -230,20 +270,19 @@ const pipelineComEtapas = async (crm, pipeline) => {
   };
 };
 
-const fonteApi = ({ api, crm }) => ({
+const fonteApi = ({ api, crm, usuarioId }) => ({
   usaDemo: false,
   async porta() {
     const [{ data: ajustes }, { data: buscas }] = await Promise.all([
       api.getSettings(),
       api.getSearches({ page: 1 }),
     ]);
-    const lista = (buscas.payload || []).map(search => ({
-      ...buscaDoPayload(search),
-      diasAtras: diasDesde(search.created_at),
-    }));
-    const ultima = (buscas.payload || []).find(
-      search => search.location_place_id
-    );
+    const payload = buscas.payload || [];
+    // O lugar salvo é o da última busca da própria pessoa; quem não fez
+    // nenhuma ainda fica com o da última da equipe.
+    const comLugar = payload.filter(search => search.location_place_id);
+    const ultima =
+      comLugar.find(search => search.user_id === usuarioId) || comLugar[0];
     return {
       lugarSalvo: ultima
         ? {
@@ -253,7 +292,8 @@ const fonteApi = ({ api, crm }) => ({
             longitude: ultima.location_longitude,
           }
         : null,
-      ultimas: lista.slice(0, 3),
+      // A tela escolhe quais mostrar (as próprias ou as da equipe).
+      ultimas: payload.map(comDias),
       googlePronto:
         ajustes.payload?.platform_google_places_configured !== false,
       emTeste: ajustes.payload?.mock_provider === true,
@@ -290,12 +330,20 @@ const fonteApi = ({ api, crm }) => ({
       tiradas: [],
     };
   },
-  async buscas() {
-    const { data } = await api.getSearches({ page: 1 });
-    return (data.payload || []).map(search => ({
-      ...buscaDoPayload(search),
-      diasAtras: diasDesde(search.created_at),
-    }));
+  async buscas(pagina = 1) {
+    const { data } = await api.getSearches({ page: pagina });
+    return {
+      buscas: (data.payload || []).map(comDias),
+      temMais: data.meta?.has_more === true,
+    };
+  },
+  // A busca salva de novo, sem cache (fresh): "Buscar de novo" e "Procurar
+  // mais longe" (o raio dobra, até o teto).
+  async repetirBusca({ busca, maisLonge = false }) {
+    const { data } = await api.createSearch(
+      pedidoDeNovo(busca.pedido, { maisLonge })
+    );
+    return { searchId: data.payload?.search?.id };
   },
   async funis() {
     const { data } = await crm.getPipelines();
@@ -319,17 +367,36 @@ const fonteApi = ({ api, crm }) => ({
         }),
       onProgresso
     );
-    return {
-      created: resumo.created.map(item => item.lead_id ?? item),
-      existing: resumo.existing.map(item => item.lead_id ?? item),
-      failed: resumo.failed.map(item => item.lead_id ?? item),
-    };
+    return doEnvio(resumo);
   },
   async descartar({ id, motivo }) {
     await api.discardLeads({ leadIds: [id], reason: motivo });
   },
   async naoQuer({ id }) {
     await api.refuseLeadConsent(id);
+  },
+  // Um dos outros sócios vira com quem falar (adopt_owner, #680). O servidor
+  // devolve o lead e o que aconteceu com o contato (contact_outcome).
+  async usarPessoa({ empresa, nome }) {
+    const { data } = await api.adoptOwner(empresa.id, nome);
+    return {
+      empresa: empresaDoLead(data.payload),
+      resultado: data.contact_outcome,
+      outra: data.shared_lead_name || null,
+    };
+  },
+  // "Buscar de novo" do dono não achado: a pesquisa de empresa e decisor de
+  // novo (force), em fila; o lead volta com a pesquisa andando.
+  async procurarDono({ empresa }) {
+    const { data } = await api.researchLead(empresa.id, { force: true });
+    return empresaDoLead(data.payload?.lead);
+  },
+  async apagarBusca(id) {
+    await api.deleteSearch(id);
+  },
+  async baixarBusca(id) {
+    const { data } = await api.exportSearch(id, { format: 'xlsx' });
+    salvarArquivo(data, `prospeccao-${id}.xlsx`);
   },
   // O Público a partir de empresas é backend novo (v4, fase 3). Até lá o cartão
   // "Guardar para mandar mensagem" não aparece fora da demonstração.
@@ -361,7 +428,8 @@ export const criarFonte = ({
   api = AutonomiaProspectingAPI,
   crm = CrmKanbanAPI,
   atraso = 400,
+  usuarioId = null,
 } = {}) =>
   demo && carregarDemo
-    ? fonteDemo({ estado: demo, carregarDemo, atraso })
-    : fonteApi({ api, crm });
+    ? fonteDemo({ estado: demo, carregarDemo, atraso, usuarioId })
+    : fonteApi({ api, crm, usuarioId });

@@ -12,6 +12,7 @@ export const SOBRE_A_LISTA = {
   'gaveta-sem-dono': { gaveta: 'ver', empresa: 'sem_dono' },
   'gaveta-nao-serve': { gaveta: 'nao-serve' },
   'gaveta-nao-quer': { gaveta: 'nao-quer' },
+  'gaveta-outra-pessoa': { gaveta: 'outra-pessoa' },
   folha: { folha: null },
   'folha-funil': { folha: 'funil' },
   'folha-funil-agente': { folha: 'funil', semTrocar: true },
@@ -37,6 +38,7 @@ export const PASSO_DA_GAVETA = {
   mandou: 'gaveta-mandou',
   'nao-serve': 'gaveta-nao-serve',
   'nao-quer': 'gaveta-nao-quer',
+  'outra-pessoa': 'gaveta-outra-pessoa',
 };
 
 export const ESTADOS_LEITURA = ['leitura', 'leitura-vazia', 'gaveta-leitura'];
@@ -44,6 +46,9 @@ export const ESTADOS_LEITURA = ['leitura', 'leitura-vazia', 'gaveta-leitura'];
 // Que grupos da lista abrem em cada estado. Por padrão todos abrem, menos
 // "Ficam de fora". `confira-grupos` e `confira-fora` fecham os de cima para os
 // grupos de baixo caberem na tela.
+// Sem estado da demonstração, "Ficam de fora" e "Tiradas da lista" começam
+// fechados.
+const GRUPOS_FECHADOS = ['fora', 'tiradas'];
 const GRUPOS_ABERTOS = {
   'confira-grupos': ['media', 'pouca'],
   'confira-fora': ['fora'],
@@ -51,7 +56,7 @@ const GRUPOS_ABERTOS = {
 export const grupoAbre = (estado, chave) =>
   GRUPOS_ABERTOS[estado]
     ? GRUPOS_ABERTOS[estado].includes(chave)
-    : chave !== 'fora';
+    : !GRUPOS_FECHADOS.includes(chave);
 
 export const ehEstadoDaLista = estado => !SOBRE_A_LISTA[estado];
 
@@ -82,16 +87,39 @@ const contarPor = (itens, chave) =>
     )
   ).map(([motivo, n]) => ({ motivo, n }));
 
+// "Não serve" (o lead descartado, nesta busca ou antes): conta em "você
+// tirou", não em "ficam de fora" (que é só quem o sistema barra).
+import { MOTIVO_NAO_SERVE } from './acharLead';
+
+export { MOTIVO_NAO_SERVE };
+
+// Barrada pelo sistema: no funil, não quer ou fechou.
+export const ehBarrada = empresa =>
+  Boolean(empresa.fora) && empresa.fora.motivo !== MOTIVO_NAO_SERVE;
+
+// As contas da lista (P3 da crítica r5), que fecham sempre nas achadas:
+// achadas = vão + você tirou + ficam de fora + você já mandou. "Ficam de fora"
+// é só quem o sistema barra (no funil, não quer, fechou); a empresa mandada
+// tem conta própria; "Não serve" nesta busca soma em "você tirou".
+export const contasDaLista = ({ empresas, elegiveis, escolhidas }) => {
+  const mandadas = elegiveis.filter(empresa => empresa.mandada).length;
+  const barradas = empresas.filter(ehBarrada).length;
+  const naoServem = empresas.length - elegiveis.length - barradas;
+  return {
+    achadas: empresas.length,
+    vao: escolhidas.length,
+    tiradas: elegiveis.length - escolhidas.length - mandadas + naoServem,
+    fora: barradas,
+    mandadas,
+  };
+};
+
 // Por que {n} da busca não vão: os motivos do sistema (no funil, não quer,
-// fechou) e as que a própria pessoa tirou. A soma com as escolhidas dá as
-// achadas (rodada 2: a conta fecha).
-export const naoVao = (empresas, tiradas = 0, mandadas = 0) => [
-  ...contarPor(
-    empresas.filter(empresa => empresa.fora),
-    empresa => empresa.fora.motivo
-  ),
+// fechou) e as que a própria pessoa tirou. A mandada pela gaveta não entra:
+// ela foi, e a folha a mostra à parte.
+export const naoVao = (empresas, tiradas = 0) => [
+  ...contarPor(empresas.filter(ehBarrada), empresa => empresa.fora.motivo),
   ...(tiradas ? [{ motivo: 'voce_tirou', n: tiradas }] : []),
-  ...(mandadas ? [{ motivo: 'voce_mandou', n: mandadas }] : []),
 ];
 
 // Das escolhidas, quem não pode entrar na lista de mensagem: sem celular nem
@@ -99,6 +127,14 @@ export const naoVao = (empresas, tiradas = 0, mandadas = 0) => [
 export const foraDaLista = escolhidas => {
   const sem = escolhidas.filter(empresa => !empresa.temContato).length;
   return sem ? [{ motivo: 'sem_contato', n: sem }] : [];
+};
+
+// O título de T2: quantas novas entraram (nenhuma, uma ou várias).
+const tituloDoFunil = (t, { pronto, base }) => {
+  const NS = 'PROSPECTING_ACHAR.PRONTO';
+  if (!pronto.n) return t(`${NS}.NENHUMA_NOVA`, base);
+  if (pronto.n === 1) return t(`${NS}.UMA`, { ...base, nome: pronto.nome });
+  return t(`${NS}.VARIAS`, { ...base, n: pronto.n });
 };
 
 // Título e detalhes de T2 (funil) e T3 (lista guardada).
@@ -115,25 +151,82 @@ export const textosDoPronto = (t, { pronto, destino, pessoa, nomeLista }) => {
     };
   }
   const base = { funil: destino?.funil.nome, pessoa };
+  const falharam = pronto.falharam || 0;
   return {
-    titulo:
-      pronto.n === 1
-        ? t(`${NS}.UMA`, { ...base, nome: pronto.nome })
-        : t(`${NS}.VARIAS`, { ...base, n: pronto.n }),
+    titulo: tituloDoFunil(t, { pronto, base }),
     detalhes: [
-      t(`${NS}.DETALHE`, { etapa: destino?.etapa.nome }),
+      pronto.n ? t(`${NS}.DETALHE`, { etapa: destino?.etapa.nome }) : '',
       pronto.jaEstavam ? t(`${NS}.JA_ESTAVAM`, { n: pronto.jaEstavam }) : '',
+      // As que falharam continuam na lista, com o "Vai": dá para mandar de novo.
+      falharam ? t(`${NS}.FALHARAM`, { n: falharam }, falharam) : '',
+      falharam ? t(`${NS}.FALHARAM_O_QUE_FAZER`) : '',
     ].filter(Boolean),
   };
 };
 
+// A empresa que entrou no funil agora (gaveta ou folha) deixa o "Vai" e diz
+// onde está. A nova (created) entrou no destino escolhido, com quem mandou; a
+// que já tinha card (existing) está num funil que a resposta não diz qual.
+export const mandadaAgora = (
+  empresa,
+  { destino, pessoa, cardId = null, nova = true }
+) => ({
+  ...empresa,
+  mandada: true,
+  fora: null,
+  noFunil: nova
+    ? {
+        funil: destino?.funil.nome,
+        etapa: destino?.etapa?.nome,
+        pessoa,
+        funilId: destino?.funil.id,
+        cardId,
+      }
+    : { cardId },
+});
+
+// O resumo do envio aplicado na lista: created e existing viram mandadas.
+export const marcarEnviadas = (trocar, resumo, { destino, pessoa }) => {
+  resumo.created.forEach(({ id, cardId }) =>
+    trocar(id, item => mandadaAgora(item, { destino, pessoa, cardId }))
+  );
+  resumo.existing.forEach(({ id, cardId }) =>
+    trocar(id, item =>
+      mandadaAgora(item, { destino, pessoa, cardId, nova: false })
+    )
+  );
+};
+
 // Demonstração (rodada 4): a empresa mandada pela gaveta segue para os estados
 // seguintes pela URL e sai da conta do "vão" (fonte única de números).
-export const comoMandada = (empresa, pessoa) => ({
-  ...empresa,
-  mandada: 'Vendas',
-  noFunil: { funil: 'Vendas', etapa: 'Novo contato', pessoa },
-});
+export const comoMandada = (empresa, pessoa) =>
+  mandadaAgora(empresa, {
+    destino: { funil: { nome: 'Vendas' }, etapa: { nome: 'Novo contato' } },
+    pessoa,
+  });
+
+// A empresa nova que chega do servidor fora da busca (evento ao vivo
+// prospecting.lead.updated, "Usar esta pessoa", "Buscar de novo") vem no
+// formato do lead (LeadPayload), com a prioridade do lead e não a desta busca
+// (search_scoring_payload). A empresa fica no grupo em que a busca a pôs.
+// E a mandada pela gaveta nesta visita segue "você já mandou", não "já está
+// no funil" (P3 da crítica r5).
+export const atualizarDaBusca = (antiga, nova) => {
+  if (!antiga) return nova;
+  const daBusca = {
+    ...nova,
+    prioridade: antiga.prioridade,
+    chance: antiga.chance,
+  };
+  return antiga.mandada
+    ? {
+        ...daBusca,
+        mandada: antiga.mandada,
+        fora: null,
+        noFunil: daBusca.noFunil || antiga.noFunil,
+      }
+    : daBusca;
+};
 
 // A empresa que a gaveta abre quando a URL da demonstração não diz qual
 // (saiu de AcharConfiraPage.vue, trava de 600 linhas).

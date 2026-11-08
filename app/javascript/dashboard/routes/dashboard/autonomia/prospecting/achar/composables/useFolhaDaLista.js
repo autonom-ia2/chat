@@ -1,4 +1,5 @@
 import { lembrarDestino } from '../utils/destinoPronto';
+import { marcarEnviadas } from '../utils/acharConfiraEstados';
 
 // #2692 — as ações da folha "O que fazer com as {n} empresas?" (F1) e dos dois
 // painéis que abrem de dentro dela ("Com quem ficam" e "Para onde vão"). Saiu
@@ -29,10 +30,12 @@ export function useFolhaDaLista({
   escolhidas,
   destino,
   pessoaId,
+  pessoaNome,
   nomeLista,
   folha,
   pronto,
   subpainel,
+  trocar,
 }) {
   const progredir = feitas => {
     if (!folha.value?.enviando) return;
@@ -65,11 +68,20 @@ export function useFolhaDaLista({
         etapaId: destino.value.etapa.id,
       });
     }
+    // O nome antes de marcar: as mandadas saem das escolhidas.
+    const primeiraNova = escolhidas.value.find(
+      empresa => empresa.id === resumo.created[0]?.id
+    );
+    marcarEnviadas(trocar, resumo, {
+      destino: destino.value,
+      pessoa: pessoaNome.value,
+    });
     pronto.value = {
       tipo: 'funil',
       n: resumo.created.length,
       jaEstavam: resumo.existing.length,
-      nome: escolhidas.value[0]?.nome,
+      falharam: resumo.failed.length,
+      nome: primeiraNova?.nome,
     };
     folha.value = null;
     if (demo.value) {

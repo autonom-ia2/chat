@@ -10,6 +10,7 @@ const props = defineProps({
   primeiro: { type: Object, default: null },
   grupos: { type: Array, required: true },
   deFora: { type: Array, required: true },
+  tiradas: { type: Array, default: () => [] },
   naoVai: { type: Set, required: true },
   leitura: { type: Boolean, default: false },
   pesquisaLigada: { type: Boolean, default: true },
@@ -117,6 +118,22 @@ watch(
   >
     <AcharEmpresaCartao
       v-for="empresa in deFora"
+      :key="empresa.id"
+      :empresa="empresa"
+      leitura
+      :destacada="destacada === empresa.id"
+      @abrir="emit('abrir', empresa)"
+    />
+  </AcharGrupo>
+
+  <AcharGrupo
+    v-if="tiradas.length"
+    chave="tiradas"
+    :titulo="$t(`${NS}.GRUPOS.TIRADAS`, { n: tiradas.length })"
+    :comeca-fechado="comecaFechado('tiradas')"
+  >
+    <AcharEmpresaCartao
+      v-for="empresa in tiradas"
       :key="empresa.id"
       :empresa="empresa"
       leitura
