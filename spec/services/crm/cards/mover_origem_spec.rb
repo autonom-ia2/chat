@@ -36,4 +36,11 @@ RSpec.describe Crm::Cards::Mover do
     expect(movimento.payload).to include('by' => 'automacao')
     expect(Crm::Ai::EscolhaDePessoa.movimentos(account.id, desde: 1.hour.ago)).not_to include(movimento)
   end
+
+  it 'deixa de fora o movimento em lote de quem arquiva o funil ou apaga a etapa (motivo)' do
+    lote = Crm::Activity.create!(account_id: account.id, card_id: card.id, actor_type: 'user', actor_id: admin.id, event_type: 'move',
+                                 payload: { from_stage_id: card.stage_id, to_stage_id: proposta.id, motivo: 'etapa_apagada' })
+
+    expect(Crm::Ai::EscolhaDePessoa.movimentos(account.id, desde: 1.hour.ago)).not_to include(lote)
+  end
 end

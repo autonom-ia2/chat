@@ -73,10 +73,10 @@ module Crm
       private
 
       # #1920: o que dá para ver de como o card estava em `ate`: as mensagens até ali e a hora daquele instante. O resumo,
-      # os campos, o estado do atendimento, as passagens e os outros pedidos são de AGORA (podem já dizer como terminou)
+      # os campos, a etapa, o estado do atendimento, as passagens e os outros pedidos são de AGORA (podem já dizer como terminou)
       # e ficam vazios, para não vazar o desfecho na avaliação de uma decisão passada.
       def historico
-        { summary: '', recent_messages: recent_messages, current_stage: { id: @card.stage_id, name: @card.stage&.name },
+        { summary: '', recent_messages: recent_messages,
           known_attributes: { contact: {}, conversation: {}, card: {} }, conversation_state: {},
           temporal: temporal_context(@ate), other_subjects: [] }
       end
@@ -248,6 +248,8 @@ module Crm
       # Envio que falhou (#1923) não chegou ao cliente: sai do histórico, como no dos Agentes (PessoaDaEquipe). A falha
       # chega depois da criação (message_updated), quando a avaliação já foi agendada; é aqui que ela deixa de contar.
       # IS DISTINCT FROM: a coluna aceita nulo, e `status != 3` descartaria a mensagem sem status.
+      # Com `ate` (#1920) o status lido é o de agora, não o daquele instante (a coluna não guarda histórico): aceito,
+      # porque mensagem que falhou não chegou ao cliente e não serve de evidência do que ele disse.
       def latest_for(conversation_id)
         escopo = Message.where(conversation_id: conversation_id, private: false)
         escopo = escopo.where(created_at: ..@ate) if @ate
@@ -259,7 +261,12 @@ module Crm
       end
 
       def conversation_ids
-        @conversation_ids ||= ([@card.conversation_id] + @card.card_conversations.pluck(:conversation_id)).compact.uniq
+        @conversation_ids ||= ([@card.conversation_id] + vinculos.pluck(:conversation_id)).compact.uniq
+      end
+
+      # Com `ate` (#1920), só as conversas que já estavam ligadas ao card naquele instante.
+      def vinculos
+        @ate ? @card.card_conversations.where(created_at: ..@ate) : @card.card_conversations
       end
 
       def janela_por_conversa
