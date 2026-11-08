@@ -92,6 +92,20 @@ RSpec.describe Autonomia::Automacao::MensagemFalhou, :automacao_motor do
     expect(execucoes(outra).count).to eq(1)
   end
 
+  it 'duas automações "falhou → manda" não giram uma na outra', :aggregate_failures do
+    reenvia = [mensagem_passo('de_novo', 'Tentando de novo.')]
+    a = automacao_ligada(account, admin, reenvia, gatilho: falhou)
+    b = automacao_ligada(account, admin, reenvia, gatilho: falhou)
+    canal_avisa(enviada, :failed)
+    expect(execucoes(a).count + execucoes(b).count).to eq(2)
+
+    reenvios = conversa.messages.outgoing.select { |item| item.content_attributes.to_h['passo'] == 'de_novo' }
+    expect(reenvios.size).to eq(2)
+    travel(10.minutes) { reenvios.each { |item| canal_avisa(item, :failed) } }
+
+    expect(execucoes(a).count + execucoes(b).count).to eq(2)
+  end
+
   it 'rajada: N mensagens recusadas em N conversas abrem N execuções, sem laço', :aggregate_failures do
     email = { 'id' => 'email', 'tipo' => 'email', 'caixa_id' => caixa_de_email.id, 'assunto' => ['Aviso'],
               'texto' => [{ '$valor' => 'envio.texto' }] }

@@ -6,7 +6,7 @@ require 'rails_helper'
 # passando (F9.8).
 RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model do
   pendentes = {
-    1 => ['Renovação do seguro sem esquecer ninguém', 'G6 (30 dias antes do vencimento), G1, G2, G3, G8, G11, G12, G34'],
+    1 => ['Renovação do seguro sem esquecer ninguém', 'G6 (30 dias antes do vencimento), G1, G2, G3, G8, G11, G12, G32 (reunião marcada no meio do fluxo), G34'],
     2 => ['Lead do anúncio atendido em 5 minutos', 'G29 (card criado pelo formulário de um anúncio e o nome dele), G30, G31, G32'],
     3 => ['Pós-procedimento da clínica', 'G5 (entrou em "Atendida"), G1, G2, G3, G12, G16, G20'],
     4 => ['Aluno que começa a faltar', 'G5 (entrou em "Faltou"), G1, G3, G4, G12, G15, G25'],

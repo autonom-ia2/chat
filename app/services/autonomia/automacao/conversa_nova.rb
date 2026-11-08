@@ -52,6 +52,7 @@ module Autonomia::Automacao::ConversaNova
   # Por que a conversa não abriria para este contato, ou nil. O passo pula com o motivo.
   def motivo_do_contato(caixa, contato)
     return 'contato_sem_telefone' if pelo_telefone?(caixa) && contato.phone_number.blank?
+    return 'numero_de_outro_contato' if numero_de_outro?(caixa, contato)
 
     'contato_nao_recebe' if ::Contact.opted_out.exists?(id: contato.id)
   end
@@ -82,6 +83,17 @@ module Autonomia::Automacao::ConversaNova
   end
 
   def pelo_telefone?(caixa) = PELO_TELEFONE.include?(caixa.channel_type)
+
+  # O número já é de outro contato nesta caixa: o ContactInboxBuilder tiraria o número dele (renomeia o source_id do
+  # outro) para dar a este. A automação não mexe no contato de outra pessoa; o passo pula. Os formatos do builder:
+  # o WhatsApp sem o "+", o SMS com ele, o Twilio também com "whatsapp:".
+  def numero_de_outro?(caixa, contato)
+    return false unless pelo_telefone?(caixa)
+
+    telefone = contato.phone_number
+    formatos = [telefone, telefone.delete('+'), "whatsapp:#{telefone}"]
+    ::ContactInbox.where(inbox_id: caixa.id, source_id: formatos).where.not(contact_id: contato.id).exists?
+  end
 
   def digitos(texto) = texto.to_s.delete('^0-9')
 

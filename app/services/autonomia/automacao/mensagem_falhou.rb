@@ -7,6 +7,8 @@
 #   abre outra.
 # - A automação que mandou a mensagem não começa de novo por ela; o caminho dentro do fluxo é o ramo "se o envio
 #   falhou" (`envio.situacao`). Outra automação começa. Sem isso, "falhou → manda de novo" giraria na mesma recusa.
+# - A mensagem que uma execução deste gatilho mandou e falhou não começa nenhuma: a recusa vem do canal, fora da cadeia
+#   (Cadeia), e duas automações "falhou → manda" girariam uma na outra.
 # - Na execução, `envio.texto` e `envio.situacao` são os da mensagem que falhou até o primeiro envio dela
 #   (Contexto#ultimo_envio).
 module Autonomia::Automacao::MensagemFalhou
@@ -14,6 +16,7 @@ module Autonomia::Automacao::MensagemFalhou
 
   def comecar(mensagem)
     return unless mensagem.outgoing? && !mensagem.private? && ::Autonomia::Automacao::Motor.ligado?(mensagem.account)
+    return if de_uma_falha?(mensagem)
 
     escuta = ::Autonomia::Automacao::Escuta
     tipo = ::Autonomia::Automacao::Gatilhos::FALHOU
@@ -24,5 +27,13 @@ module Autonomia::Automacao::MensagemFalhou
     rescue StandardError => e
       escuta.registrar_erro("não começou automacao=#{definicao.id} mensagem=#{mensagem.id}", e)
     end
+  end
+
+  def de_uma_falha?(mensagem)
+    execucao_id = mensagem.content_attributes.to_h.with_indifferent_access[:execucao_id]
+    return false if execucao_id.blank?
+
+    ::Autonomia::Automacao::Execucao.exists?(id: execucao_id, account_id: mensagem.account_id,
+                                             chave_gatilho: ::Autonomia::Automacao::Gatilhos::FALHOU)
   end
 end

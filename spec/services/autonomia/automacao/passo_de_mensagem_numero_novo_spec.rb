@@ -88,9 +88,23 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
     conversa
     numero_novo!
 
-    execucao = rodar([mensagem_passo('recado', { '$valor' => 'contato.email' })], conversa)
+    execucao = rodar([mensagem_passo('recado', '   ')], conversa)
 
-    expect(registros(execucao)).to eq([%w[recado pulado faltou_valor]])
+    expect(registros(execucao)).to eq([%w[recado pulado texto_vazio]])
+    expect(Conversation.where(contact: contato).count).to eq(1)
+    expect(ContactInbox.where(contact: contato).count).to eq(1)
+  end
+
+  it 'o número novo que já é de outro contato na caixa: pula sem mexer no outro', :aggregate_failures do
+    conversa
+    outro = account.contacts.create!(name: 'Carla', phone_number: '+5511988880000')
+    do_outro = ContactInboxBuilder.new(contact: outro, inbox: caixa, source_id: nil).perform
+    contato.update_columns(phone_number: '+5511988880000') # rubocop:disable Rails/SkipsModelValidations
+
+    execucao = rodar([recado], conversa)
+
+    expect(registros(execucao)).to eq([%w[recado pulado numero_de_outro_contato]])
+    expect(do_outro.reload.source_id).to eq('+5511988880000')
     expect(Conversation.where(contact: contato).count).to eq(1)
   end
 
