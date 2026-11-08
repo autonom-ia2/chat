@@ -14,7 +14,25 @@ class Crm::MetaAdsLeadForm < ApplicationRecord
   validates :page_id, :form_id, presence: true
   validates :form_id, uniqueness: { scope: :account_id }
 
+  # Os que a reconciliação relê (#2285): destino num funil ativo, na Página que a conta está recebendo, com os dois
+  # marcos de início (destination_set_at e leadgen_receiving_since). Linha de antes do #2285 tem marco nulo e fica de
+  # fora até o destino ser salvo de novo: sem saber desde quando, não relê nada.
+  scope :reconcilable, lambda {
+    receiving = Crm::MetaAdsPage.leadgen_receiving.where.not(leadgen_receiving_since: nil)
+                                .where('crm_meta_ads_pages.account_id = crm_meta_ads_lead_forms.account_id')
+                                .where('crm_meta_ads_pages.page_id = crm_meta_ads_lead_forms.page_id')
+    joins(:pipeline).merge(Crm::Pipeline.active).where.not(stage_id: nil).where.not(destination_set_at: nil)
+                    .where(receiving.arel.exists)
+  }
+
   def destination?
     pipeline_id.present? && stage_id.present?
+  end
+
+  # O marco ao salvar um destino (#2285). Nasce quando o formulário passa a ter destino (ou ainda não tinha marco);
+  # trocar de funil mantém o marco, porque o formulário já mandava gente para algum lugar. Destino num funil arquivado
+  # não mandava ninguém (o webhook ignora): aí o marco nasce de novo. Chamar antes de gravar o destino novo: lê o anterior.
+  def next_destination_set_at
+    destination? && pipeline&.active? && destination_set_at ? destination_set_at : Time.current
   end
 end
