@@ -79,11 +79,18 @@ class Autonomia::Prospecting::CrmCardConverter
   end
 
   def run_stage_automation(card, stage)
-    ::Crm::StageAutomations::Runner.new(card: card, actor: @user, from_stage_id: nil, to_stage_id: stage.id).perform
+    ::Crm::StageAutomations::Runner.new(card: card, actor: @user, from_stage_id: nil, to_stage_id: stage.id,
+                                        automation_context: stage_automation_context).perform
   rescue StandardError => e
     # O card já está gravado e fica; a automação que falhou vai para o log e para o rastreador de erros.
     Rails.logger.error("[prospecting.crm_card] automação de entrada falhou card=#{card.id} lead=#{@lead.id}: #{e.class}")
     ChatwootExceptionTracker.new(e, account: @account).capture_exception
+  end
+
+  # Dono escolhido (#2694, decisão do Rodrigo em 08/11): vence o "atribuir dono" da automação de entrada da etapa
+  # (Crm::StageAutomations::StepExecutor#assign_owner!). Sem escolha, o contexto fica como sempre.
+  def stage_automation_context
+    @owner_id.present? ? { dono_escolhido: true } : {}
   end
 
   def create_card(stage:, contact:, company:)
@@ -91,7 +98,8 @@ class Autonomia::Prospecting::CrmCardConverter
       account: @account,
       user: @user,
       params: card_params(stage: stage, contact: contact, company: company),
-      etapa_escolhida: true
+      etapa_escolhida: true,
+      dono_escolhido: @owner_id.present?
     ).perform
   end
 
