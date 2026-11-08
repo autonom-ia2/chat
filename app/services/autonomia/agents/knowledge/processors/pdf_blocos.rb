@@ -5,13 +5,15 @@
 #   normal entre elas, já é um parágrafo só e vira um título só;
 # - nível: pelo tamanho da letra entre os títulos do documento, do maior (1) para o menor;
 # - parágrafo que continua na página seguinte (a mesma ligação do texto) é um bloco só, com a página onde começa;
-# - página de sumário sai inteira: a maioria das linhas termina no número da página ("3. FRANQUIA ........ 7").
+# - página de sumário sai inteira: a maioria das linhas termina no número da página, depois da linha de pontos
+#   ("3. FRANQUIA ........ 7"). Sem a linha de pontos a página fica: perder uma tabela custa mais que guardar um sumário.
 # Rodapé corrido e número de página já saem no PdfParagrafos.
 module Autonomia::Agents::Knowledge::Processors::PdfBlocos
   MAX_LINHAS_DO_TITULO = 3
   # Página de sumário: pelo menos MIN_LINHAS_DO_SUMARIO linhas, e pelo menos FRACAO_DO_SUMARIO delas terminam num número.
   MIN_LINHAS_DO_SUMARIO = 4
   FRACAO_DO_SUMARIO = 0.5
+  LINHA_DE_PONTOS = ['...', '…'].freeze
 
   private
 
@@ -27,7 +29,7 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
   def blocos_das_paginas(paginas)
     continua = false
     paginas.each_with_index.with_object([]) do |(pagina, indice), blocos|
-      next continua = false if pagina[:linhas].empty? || sumario?(pagina)
+      next continua = false if pagina[:linhas].empty? || sumario_fora?(pagina, indice + 1)
 
       grupos(pagina).each_with_index do |grupo, posicao|
         acrescentar(blocos, bloco_do_grupo(grupo, pagina, indice + 1), continua: continua && posicao.zero?)
@@ -36,11 +38,11 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
     end
   end
 
-  # O primeiro parágrafo da página que continua o último da anterior entra nele (fica a página onde começou).
+  # O primeiro parágrafo da página que continua o último da anterior entra nele: fica a página onde começou e a do fim.
   def acrescentar(blocos, bloco, continua:)
     return blocos << bloco unless continua && blocos.last&.dig(:tipo) == :paragrafo && bloco[:tipo] == :paragrafo
 
-    blocos[-1] = blocos.last.merge(texto: "#{blocos.last[:texto]}\n#{bloco[:texto]}")
+    blocos[-1] = blocos.last.merge(texto: "#{blocos.last[:texto]}\n#{bloco[:texto]}", pagina_fim: bloco[:pagina])
   end
 
   def bloco_do_grupo(grupo, pagina, numero)
@@ -60,14 +62,23 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
     linha[:letra] > pagina[:letra_do_corpo] * (1 + Autonomia::Agents::Knowledge::Processors::PdfParagrafos::TROCA_DE_LETRA)
   end
 
-  # O nível de cada título: a posição da letra dele entre as letras de título do documento, da maior para a menor.
+  # O nível de cada título: a posição da letra dele entre as letras de título do documento, da maior para a menor. Letras
+  # que diferem menos que TROCA_DE_LETRA (11,98 e 12) são o mesmo nível, como no corte dos parágrafos.
   def com_niveis(blocos)
-    letras = blocos.select { |bloco| bloco[:tipo] == :titulo }.pluck(:letra).uniq.sort.reverse
+    niveis = niveis_das_letras(blocos.select { |bloco| bloco[:tipo] == :titulo }.pluck(:letra))
     blocos.map do |bloco|
       next bloco unless bloco[:tipo] == :titulo
 
-      { tipo: :titulo, nivel: letras.index(bloco[:letra]) + 1, texto: bloco[:texto], pagina: bloco[:pagina] }
+      { tipo: :titulo, nivel: niveis[bloco[:letra]], texto: bloco[:texto], pagina: bloco[:pagina] }
     end
+  end
+
+  # { letra => nível }: da maior para a menor, a letra perto da anterior fica no mesmo nível.
+  def niveis_das_letras(letras)
+    grupos = letras.uniq.sort.reverse.slice_when do |maior, menor|
+      maior - menor > maior * Autonomia::Agents::Knowledge::Processors::PdfParagrafos::TROCA_DE_LETRA
+    end
+    grupos.each_with_index.with_object({}) { |(grupo, indice), niveis| grupo.each { |letra| niveis[letra] = indice + 1 } }
   end
 
   # A letra que cobre mais texto no documento.
@@ -76,13 +87,31 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
                      .max_by(&:last)&.first.to_f
   end
 
-  # Sumário: a maioria das linhas termina num número, e esses números são páginas do documento, crescendo de cima para
-  # baixo. Uma tabela de valores (percentuais, preços) também termina em número, mas os números não crescem assim.
+  def sumario_fora?(pagina, numero)
+    return false unless sumario?(pagina)
+
+    Rails.logger.info("[autonomia][pdf_blocos] página #{numero} lida como sumário, fora do corte por seção")
+    true
+  end
+
+  # Sumário: a maioria das linhas termina num número depois da linha de pontos, e esses números são páginas do documento,
+  # crescendo de cima para baixo. Uma tabela de valores (percentuais, preços, prazos) também termina em número, mas sem a
+  # linha de pontos, e muitas vezes os números não crescem assim.
   def sumario?(pagina)
     linhas = pagina[:linhas]
-    numeros = linhas.filter_map { |linha| numero_no_fim(linha[:texto]) }
-    linhas.size >= MIN_LINHAS_DO_SUMARIO && numeros.size >= linhas.size * FRACAO_DO_SUMARIO &&
-      numeros.each_cons(2).all? { |anterior, seguinte| anterior <= seguinte } && numeros.max <= pagina[:total_de_paginas]
+    numeradas = linhas.select { |linha| numero_no_fim(linha[:texto]) }
+    linhas.size >= MIN_LINHAS_DO_SUMARIO && numeradas.size >= linhas.size * FRACAO_DO_SUMARIO &&
+      numeradas.count { |linha| com_linha_de_pontos?(linha[:texto]) } >= numeradas.size * FRACAO_DO_SUMARIO &&
+      paginas_do_documento?(numeradas.map { |linha| numero_no_fim(linha[:texto]) }, pagina[:total_de_paginas])
+  end
+
+  # Os números crescem de cima para baixo e nenhum passa do total de páginas.
+  def paginas_do_documento?(numeros, total)
+    numeros.each_cons(2).all? { |anterior, seguinte| anterior <= seguinte } && numeros.max <= total
+  end
+
+  def com_linha_de_pontos?(texto)
+    LINHA_DE_PONTOS.any? { |pontos| texto.include?(pontos) }
   end
 
   def numero_no_fim(texto)

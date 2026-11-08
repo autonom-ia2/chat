@@ -18,7 +18,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
   let(:linha) { 13.2 }
   let(:corpo1) { 'O seguro cobre os danos materiais causados ao veiculo segurado por colisao, incendio e roubo,' }
   let(:corpo2) { 'conforme as condicoes desta apolice e os limites contratados pelo segurado na proposta.' }
-  let(:pdf) { pdf_com([sumario, coberturas, tabela, assistencia, percentuais]) }
+  let(:pdf) { pdf_com([sumario, coberturas, tabela, assistencia, percentuais, planos]) }
 
   # [texto, y, fonte, tamanho]: F1 Helvetica, F2 Helvetica-Bold.
   def sumario
@@ -45,9 +45,10 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
      ['3', 25.9, 'F1', 10]]
   end
 
-  # O número da página só sai em PDF de 4 páginas ou mais (PdfParagrafos::CORRIDO_MIN_PAGINAS).
+  # O número da página só sai em PDF de 4 páginas ou mais (PdfParagrafos::CORRIDO_MIN_PAGINAS). A letra do título, 13,9,
+  # difere da do "2. COBERTURAS" (14) bem menos que TROCA_DE_LETRA: o mesmo nível.
   def assistencia
-    [['3. ASSISTENCIA', topo, 'F1', 14], [corpo1, topo - 26.4, 'F1', 10], ['4', 25.9, 'F1', 10]]
+    [['3. ASSISTENCIA', topo, 'F1', 13.9], [corpo1, topo - 26.4, 'F1', 10], ['4', 25.9, 'F1', 10]]
   end
 
   # Tabela de percentuais: quase toda linha termina num número, mas os números não crescem como num sumário.
@@ -58,6 +59,15 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
      ['Alienacao mental total e incuravel 100', topo - 79.2, 'F1', 10],
      ['Fratura nao consolidada do maxilar inferior 20', topo - 105.6, 'F1', 10],
      ['5', 25.9, 'F1', 10]]
+  end
+
+  # Tabela de planos: os números crescem e cabem nas páginas do documento, como num sumário, mas não há linha de pontos.
+  def planos
+    [['Plano Basico com assistencia local 1', topo, 'F1', 10],
+     ['Plano Medio com assistencia estadual 2', topo - 26.4, 'F1', 10],
+     ['Plano Plus com assistencia nacional 4', topo - 52.8, 'F1', 10],
+     ['Plano Top com assistencia internacional 5', topo - 79.2, 'F1', 10],
+     ['6', 25.9, 'F1', 10]]
   end
 
   def pdf_com(paginas)
@@ -109,13 +119,21 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     it 'leaves the table of contents and the page numbers out', :aggregate_failures do
       blocos = blocos_gravados
 
-      expect(blocos.map { |bloco| bloco[:pagina] }.uniq).to eq([2, 3, 4, 5])
-      expect(blocos.pluck(:texto)).not_to include('2', '3', '4', '5')
+      expect(blocos.map { |bloco| bloco[:pagina] }.uniq).to eq([2, 3, 4, 5, 6])
+      expect(blocos.pluck(:texto)).not_to include('2', '3', '4', '5', '6')
     end
 
     it 'keeps a table whose lines end in numbers that do not grow like page numbers' do
       expect(blocos_gravados.pluck(:texto).join("\n")).to include('Surdez total incuravel de um dos ouvidos 20',
                                                                   'Fratura nao consolidada do maxilar inferior 20')
+    end
+
+    it 'keeps a table whose numbers grow like page numbers but has no dot leader' do
+      expect(blocos_gravados.pluck(:texto).join("\n")).to include('Plano Top com assistencia internacional 5')
+    end
+
+    it 'gives the same level to title letters closer than the letter change' do
+      expect(blocos_gravados).to include({ tipo: :titulo, nivel: 1, texto: '3. ASSISTENCIA', pagina: 4 })
     end
 
     it 'keeps the text the processor returns as before' do

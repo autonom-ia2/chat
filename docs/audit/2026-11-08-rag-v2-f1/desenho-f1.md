@@ -94,7 +94,7 @@ caminho no PDF e leva o mesmo desenho aos outros formatos.
    `HEADING_MAX`. Os casos "tabela 9" e "braço inteiro" entram no gabarito do Suhai.
 5. **Regex de título sai do Chunker** nos formatos que passam a dar blocos (`NUMBERED_HEADING`, `shouted_line?`, a
    divisão de FAQ por pergunta). Com o bloco vindo do formato, o Chunker não precisa adivinhar.
-6. **O metadado do trecho** ganha `caminho`, `paginas` (de–até) ou `linha`/`aba`/`endereco`, e `secao_id`. A F3 usa o
+6. **O metadado do trecho** ganha `caminho`, `paginas_do_trecho` (de–até; a chave `paginas` continua sendo só a seção de 25 páginas do material grande, que o ResumoPorSecao e o Revisor leem — achado da revisão) ou `linha`/`aba`/`endereco`, e `secao_id`. A F3 usa o
    `secao_id` para mandar a seção inteira ao modelo.
 
 ### Planilha (XLSX e CSV): linhas em grupo, não 1 linha = 1 trecho

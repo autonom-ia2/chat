@@ -4,12 +4,14 @@
 #   continua exata, filtrada pelo agente, como já é hoje.
 # - O HNSW por cosseno NÃO entra aqui: é busca aproximada e, com o filtro por agente, pode devolver outros candidatos.
 #   Só entra numa migration própria se a medida local mostrar o mesmo hit@12 da busca exata (desenho da F1).
-# - Concorrente: não trava a tabela. O statement_timeout de 14 s do database.yml fica zerado só nesta migration.
+# - Concorrente: não trava a tabela. O statement_timeout de 14 s do database.yml fica zerado só nesta migration, e a
+#   espera por uma transação longa para em LOCK_TIMEOUT: o deploy falha em vez de ficar preso (rodar de novo resolve).
 # - O down recria o ivfflat como era. Rodar de novo não muda nada.
 class RemoveUnusedIvfflatFromAutonomiaKnowledge < ActiveRecord::Migration[7.2]
   disable_ddl_transaction!
 
   INDICE = 'idx_autonomia_knowledge_embedding'.freeze
+  LOCK_TIMEOUT = '5min'.freeze
 
   def up
     sem_limite_de_tempo { remove_index :autonomia_agent_knowledge, name: INDICE, algorithm: :concurrently, if_exists: true }
@@ -26,9 +28,11 @@ class RemoveUnusedIvfflatFromAutonomiaKnowledge < ActiveRecord::Migration[7.2]
 
   def sem_limite_de_tempo
     anterior = select_value('SHOW statement_timeout')
-    safety_assured { execute 'SET statement_timeout = 0' }
+    espera = select_value('SHOW lock_timeout')
+    safety_assured { execute "SET statement_timeout = 0; SET lock_timeout = #{connection.quote(LOCK_TIMEOUT)}" }
     yield
   ensure
     safety_assured { execute "SET statement_timeout = #{connection.quote(anterior)}" } if anterior
+    safety_assured { execute "SET lock_timeout = #{connection.quote(espera)}" } if espera
   end
 end

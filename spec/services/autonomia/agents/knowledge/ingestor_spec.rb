@@ -160,10 +160,31 @@ RSpec.describe Autonomia::Agents::Knowledge::Ingestor do
 
       guincho = source.reload.knowledge_entries.order(:chunk_index).last
       expect(guincho.content).to start_with("condicoes-gerais › ASSISTENCIA 24 HORAS\n\n")
-      expect(guincho.metadata).to include('paginas' => [9, 9], 'section_heading' => 'ASSISTENCIA 24 HORAS',
+      expect(guincho.metadata).to include('paginas_do_trecho' => [9, 9], 'section_heading' => 'ASSISTENCIA 24 HORAS',
                                           'material_type' => 'secao')
       expect(guincho.metadata['caminho']).to eq(['condicoes-gerais', 'ASSISTENCIA 24 HORAS'])
       expect(guincho.metadata['secao_id']).to be_present
+    end
+
+    # A chave `paginas` é a seção de 25 páginas do material grande: o ResumoPorSecao agrupa por ela (chamada paga por
+    # seção) e o Revisor reconhece o material grande por ela. PDF pequeno não a recebe só por ter sido cortado por seção.
+    it 'gives a small PDF no `paginas`, so the summary by section and the Reviewer see a small material' do
+      run!
+
+      expect(source.reload.knowledge_entries.where("metadata ? 'paginas'")).to be_empty
+    end
+
+    it 'stamps the 25-page section where each piece starts on a large PDF', :aggregate_failures do
+      allow(processor).to receive(:extract) do
+        source.blocos = blocos
+        source.secoes = [{ 'paginas' => [1, 5], 'texto' => 'COBERTURAS' }, { 'paginas' => [6, 10], 'texto' => 'ASSISTENCIA' }]
+        blocos.pluck(:texto).join("\n\n")
+      end
+      run!
+
+      entries = source.reload.knowledge_entries.order(:chunk_index)
+      expect(entries.first.metadata).to include('paginas' => [1, 5], 'paginas_do_trecho' => [3, 3])
+      expect(entries.last.metadata).to include('paginas' => [6, 10], 'paginas_do_trecho' => [9, 9])
     end
 
     it 'leaves the document name out of the path when the material has none' do

@@ -92,6 +92,42 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
     expect(trechos.last[:text]).to start_with('Condicoes Gerais › 6. ACEITACAO')
   end
 
+  it 'keeps the last page of a paragraph that goes on to the next page' do
+    trechos = cortar([titulo('3.1 Franquia', 1, 4), paragrafo(franquia, 4).merge(pagina_fim: 6)])
+
+    expect(trechos.first[:paginas]).to eq([4, 6])
+  end
+
+  it 'joins a small section only once, so its text never ends under a section two places ahead', :aggregate_failures do
+    trechos = cortar([titulo('Definicoes', 1), titulo('Avaria', 2), paragrafo('Dano ao veiculo.'),
+                      titulo('Bonus', 2), paragrafo('Desconto na renovacao.'), titulo('Franquia', 2), paragrafo(franquia)])
+
+    avaria = trechos.find { |trecho| trecho[:text].include?('Dano ao veiculo.') }
+    expect(avaria[:text]).to start_with('Condicoes Gerais › Definicoes › Bonus')
+    expect(trechos.last[:text]).to start_with('Condicoes Gerais › Definicoes › Franquia')
+    expect(trechos.last[:text]).not_to include('Dano ao veiculo.')
+  end
+
+  it 'keeps a small last section with no sibling after it' do
+    trechos = cortar([titulo('Coberturas', 1), paragrafo(franquia), titulo('Ouvidoria', 1), paragrafo('Ligue 0800.')])
+
+    expect(trechos.last[:text]).to eq("Condicoes Gerais › Ouvidoria\n\nLigue 0800.")
+  end
+
+  it 'does not join a small section into its own subsection' do
+    trechos = cortar([titulo('Assistencia', 1), paragrafo('Servicos 24 horas.'), titulo('Guincho', 2), paragrafo(franquia)])
+
+    expect(trechos.first[:text]).to eq("Condicoes Gerais › Assistencia\n\nServicos 24 horas.")
+  end
+
+  it 'loses no paragraph: every block text is in some piece' do
+    blocos = [paragrafo('Abertura do contrato.'), titulo('A', 1), paragrafo('Curto.'), titulo('B', 1), paragrafo(franquia),
+              titulo('B.1', 2), titulo('B.2', 2), paragrafo(reducao * 20), titulo('C', 1)]
+    texto = cortar(blocos, maximo: 500).pluck(:text).join("\n")
+
+    expect(blocos.pluck(:texto).flat_map(&:split).uniq - texto.split).to be_empty
+  end
+
   it 'returns nothing for no blocks' do
     expect(cortar([])).to eq([])
   end

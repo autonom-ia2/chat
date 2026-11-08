@@ -10,6 +10,12 @@ cd "$(dirname "$0")/../.."
 eval "$(rbenv init - bash)"
 export RAILS_ENV=test LOG_LEVEL=info POSTGRES_DATABASE="${RAG_PLACAR_BANCO:-chatwoot_test_1431}"
 
+# O schema apaga o banco: só num banco de teste local.
+case "$POSTGRES_DATABASE" in
+  chatwoot_test_*) ;;
+  *) echo "banco recusado: $POSTGRES_DATABASE (a régua só roda em chatwoot_test_*)" >&2; exit 1 ;;
+esac
+
 acao=${1:?uso: ambiente.sh schema|runner|rake ...}
 shift
 case "$acao" in

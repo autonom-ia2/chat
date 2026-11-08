@@ -63,9 +63,15 @@ module Autonomia
           end
         end
 
-        # #1431 (F1) — o processor leu os blocos do formato: corte por seção, cada trecho com o caminho e as páginas.
+        # #1431 (F1) — o processor leu os blocos do formato: corte por seção, cada trecho com o caminho e as páginas dele
+        # (`paginas_do_trecho`). No material grande, o trecho leva também a seção de 25 páginas onde começa (`paginas`),
+        # como no corte de hoje: é por ela que o ResumoPorSecao agrupa e o Revisor reconhece o material grande.
         def trechos_por_secao
-          CortePorSecao.new(@source.blocos, documento: File.basename(@source.reference.to_s, '.*').presence).trechos
+          secoes = @source.respond_to?(:secoes) ? Array(@source.secoes) : []
+          CortePorSecao.new(@source.blocos, documento: File.basename(@source.reference.to_s, '.*').presence).trechos.map do |trecho|
+            faixa = secoes.find { |secao| Range.new(*secao['paginas']).cover?(trecho[:paginas].first) }&.dig('paginas')
+            { text: trecho[:text], metadata: trecho[:metadata], paginas_do_trecho: trecho[:paginas], paginas: faixa }.compact
+          end
         end
 
         # Apaga os entries antigos da fonte e cria os novos numa transação (re-sync idempotente).
@@ -133,7 +139,7 @@ module Autonomia
             char_span: chunk_meta[:char_span],
             chunk_index: index,
             doc: doc_metadata
-          }.merge(entry[:paginas] ? { paginas: entry[:paginas] } : {})
+          }.merge(entry.slice(:paginas, :paginas_do_trecho).compact)
             .merge(chunk_meta.slice(:caminho, :secao_id))
         end
 

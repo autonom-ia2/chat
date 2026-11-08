@@ -7,7 +7,9 @@
 # - Seção com corpo abaixo de PISO se junta à irmã seguinte (mesmo pai), com o título dela no texto: a definição de duas
 #   linhas não vira trecho sozinha.
 # - Cada trecho começa pelo caminho (Documento › Seção › Subseção), que vai ao embedding: é ele que faz "franquia" achar
-#   o trecho da seção FRANQUIA. As páginas vão ao metadado, não ao texto.
+#   o trecho da seção FRANQUIA. As páginas do trecho vão ao metadado (`paginas_do_trecho`), não ao texto. A chave
+#   `paginas` é outra coisa: a seção de 25 páginas do material grande, que o Ingestor põe (ResumoPorSecao e Revisor
+#   leem por ela).
 # Nada aqui lê o texto da pessoa: a estrutura vem do formato.
 class Autonomia::Agents::Knowledge::CortePorSecao
   # ~400 tokens em português (desenho da F1, docs/audit/2026-11-08-rag-v2-f1/desenho-f1.md).
@@ -57,14 +59,15 @@ class Autonomia::Agents::Knowledge::CortePorSecao
     end
   end
 
-  # Seção pequena entra no começo da irmã seguinte, com o próprio título como primeira linha.
+  # Seção pequena entra no começo da irmã seguinte, com o próprio título como primeira linha. Uma vez só: a seção que
+  # recebeu uma irmã não vai adiante, para o texto não acabar sob o caminho de uma seção duas casas à frente.
   def juntar_pequenas(lista)
+    recebida = nil
     lista.each_with_index.filter_map do |secao, indice|
-      seguinte = lista[indice + 1]
-      next secao unless pequena?(secao) && irmas?(secao, seguinte)
-
-      seguinte.paragrafos.unshift(*como_paragrafos_da_irma(secao))
-      nil
+      secao = secao.class.new(**secao.to_h, paragrafos: como_paragrafos_da_irma(recebida) + secao.paragrafos) if recebida
+      juntar = recebida.nil? && pequena?(secao) && irmas?(secao, lista[indice + 1])
+      recebida = juntar ? secao : nil
+      secao unless juntar
     end
   end
 
@@ -87,7 +90,7 @@ class Autonomia::Agents::Knowledge::CortePorSecao
     grupos(pedacos(secao.paragrafos)).map do |grupo|
       corpo = grupo.pluck(:texto).join("\n\n")
       { text: [caminho.join(SEPARADOR).presence, corpo].compact.join("\n\n"),
-        paginas: grupo.pluck(:pagina).minmax,
+        paginas: grupo.flat_map { |paragrafo| [paragrafo[:pagina], paragrafo[:pagina_fim]] }.compact.minmax,
         metadata: { section_heading: secao.caminho.last, material_type: 'secao', char_span: corpo.length,
                     keywords: Autonomia::Agents::Knowledge::Chunker.keywords_for("#{secao.caminho.last} #{corpo}"),
                     caminho: caminho, secao_id: secao.id } }

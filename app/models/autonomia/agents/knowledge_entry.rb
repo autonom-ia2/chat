@@ -18,7 +18,6 @@
 # Indexes
 #
 #  idx_autonomia_knowledge_agent_status                   (autonomia_agent_id,status)
-#  idx_autonomia_knowledge_embedding                      (embedding) USING ivfflat
 #  idx_autonomia_knowledge_embedding_large                (embedding_large) USING hnsw
 #  index_autonomia_agent_knowledge_on_account_id          (account_id)
 #  index_autonomia_agent_knowledge_on_autonomia_agent_id  (autonomia_agent_id)
