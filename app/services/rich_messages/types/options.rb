@@ -89,6 +89,20 @@ class RichMessages::Types::Options
     end.join("\n")
   end
 
+  # A régua dos textos do cartão (texto preenchido, até `max`, em uma linha), também para quem monta o formato antes
+  # de mandar (o agente, #1479: o botão da lista que não cabe vira o padrão em vez de derrubar a lista).
+  def self.fits?(text, max)
+    filled_text?(text) && text.length <= max && one_line?(text)
+  end
+
+  def self.filled_text?(value)
+    value.is_a?(String) && value.strip.present?
+  end
+
+  def self.one_line?(text)
+    LINE_BREAKS.none? { |line_break| text.include?(line_break) }
+  end
+
   private
 
   # [título da seção, opções]; com `options` soltas, uma seção sem título.
@@ -201,14 +215,14 @@ class RichMessages::Types::Options
   end
 
   def fits?(text, max)
-    filled_text?(text) && text.length <= max && one_line?(text)
+    self.class.fits?(text, max)
   end
 
   def filled_text?(value)
-    value.is_a?(String) && value.strip.present?
+    self.class.filled_text?(value)
   end
 
   def one_line?(text)
-    LINE_BREAKS.none? { |line_break| text.include?(line_break) }
+    self.class.one_line?(text)
   end
 end

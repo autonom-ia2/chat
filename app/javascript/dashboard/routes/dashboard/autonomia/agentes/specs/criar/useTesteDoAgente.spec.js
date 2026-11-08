@@ -214,6 +214,52 @@ describe('useTesteDoAgente', () => {
     }
   );
 
+  // Tema 6 (#1428): sem o portão, a IA que falhou volta 200 com `error` e sem texto, não com a mensagem fixa.
+  it('shows the failure state, not an empty bubble, when the agent answers with an error and no text', async () => {
+    responde({
+      reply: null,
+      error: 'ai_unavailable',
+      handoff: { should: false },
+    });
+    const { teste } = montar();
+    await teste.enviar('Oi');
+    expect(teste.aviso.value).toEqual({ tipo: 'falha', pergunta: 'Oi' });
+    expect(teste.mensagens.value.filter(m => m.de === 'agente')).toEqual([]);
+    expect(teste.respondidas.value).toBe(0);
+    expect(teste.digitando.value).toBe(false);
+  });
+
+  it('shows the failure state when the agent comes back with no text and no handoff', async () => {
+    responde({ reply: '', handoff: { should: false } });
+    const { teste } = montar();
+    await teste.enviar('Oi');
+    expect(teste.aviso.value).toEqual({ tipo: 'falha', pergunta: 'Oi' });
+    expect(teste.respondidas.value).toBe(0);
+  });
+
+  it('a handoff with no text shows only the handoff note: no bubble, no failure, counted as answered', async () => {
+    responde({ reply: '', handoff: { should: true } });
+    const { teste } = montar();
+    await teste.enviar('Quero falar com uma pessoa');
+    expect(teste.mensagens.value.filter(m => m.de === 'agente')).toEqual([]);
+    expect(teste.ultima.value.passaria).toBe(true);
+    expect(teste.respondidas.value).toBe(1);
+    expect(teste.aviso.value).toBeNull();
+  });
+
+  // A Lia segue no portão: a IA fora do ar volta com passagem, `error` e sem texto. A falha ganha.
+  it('an error with no text is a failure even when it comes with a handoff', async () => {
+    responde({
+      reply: null,
+      error: 'ai_unavailable',
+      handoff: { should: true },
+    });
+    const { teste } = montar();
+    await teste.enviar('Oi');
+    expect(teste.aviso.value).toEqual({ tipo: 'falha', pergunta: 'Oi' });
+    expect(teste.respondidas.value).toBe(0);
+  });
+
   it('says offline when the browser has no internet, whatever the error', async () => {
     vi.stubGlobal('navigator', { onLine: false });
     store.dispatch.mockRejectedValue(http(500));

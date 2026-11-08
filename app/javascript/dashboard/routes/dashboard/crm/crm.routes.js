@@ -1,6 +1,7 @@
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { frontendURL } from 'dashboard/helper/URLHelper.js';
 import { isCrmKanbanEnabled } from 'dashboard/helper/routeHelpers';
+import { comFlagsEAlguma } from 'dashboard/helper/comFlags';
 import {
   CRM_VIEW_PERMISSION,
   CRM_VIEW_REPORTS_PERMISSION,
@@ -12,6 +13,7 @@ import {
 const CrmKanbanPage = () => import('./pages/CrmKanbanPage.vue');
 // CRM › Números (#1897): o painel de hoje sem a flag `crm_numeros_lentes`; com ela, "Só eu · Equipe".
 const CrmNumerosPage = () => import('./pages/CrmNumerosPage.vue');
+const CrmNumerosOrigensPage = () => import('./pages/CrmNumerosOrigensPage.vue');
 const CrmAiUsagePage = () => import('./pages/CrmAiUsagePage.vue');
 const CrmSlaPage = () => import('./pages/CrmSlaPage.vue');
 const CaixasPage = () => import('./caixas/pages/CaixasPage.vue');
@@ -60,6 +62,24 @@ const ensureCrmEnabled = (to, _from, next) => {
     return;
   }
   next({ name: 'home', params: to.params });
+};
+
+// IA cuida dos comentários de um anúncio (#2212, B2): o CRM ligado, as flags do anúncio por dentro (meta_ads_hub) e
+// do cuidado, e a dos comentários de ao menos uma rede, como o servidor (MetaAdsCuidadoController#ensure_flags). A
+// gestão (meta_ads_gestao) não entra (#2520).
+const ensureCuidarAnuncioFlags = comFlagsEAlguma(
+  [FEATURE_FLAGS.META_ADS_HUB, FEATURE_FLAGS.META_ADS_COMENTARIOS_IA],
+  [
+    FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM,
+    FEATURE_FLAGS.META_ADS_COMENTARIOS_FACEBOOK,
+  ]
+);
+export const ensureCuidarAnuncio = (to, from, next) => {
+  if (!isCrmKanbanEnabled()) {
+    next({ name: 'home', params: to.params });
+    return undefined;
+  }
+  return ensureCuidarAnuncioFlags(to, from, next);
 };
 
 const ensureCrmAiEnabled = (to, _from, next) => {
@@ -113,6 +133,21 @@ export const routes = [
     component: () => import('../campaigns/metaAds/MetaAdsPage.vue'),
   },
   {
+    // IA cuida dos comentários do anúncio (#2212, B2): ver é o mesmo do anúncio por dentro; mudar, meta_ads_manage (a
+    // tela esconde a escrita sem ela, e o servidor recusa).
+    path: frontendURL(
+      'accounts/:accountId/campaigns/meta-ads/anuncios/:adId/cuidar'
+    ),
+    name: 'campaigns_meta_ads_cuidar',
+    meta: {
+      permissions: ['administrator', 'meta_ads_view', 'meta_ads_manage'],
+      featureFlag: FEATURE_FLAGS.META_ADS_COMENTARIOS_IA,
+    },
+    beforeEnter: ensureCuidarAnuncio,
+    component: () =>
+      import('../campaigns/metaAds/comentariosIa/CuidarAnuncioPage.vue'),
+  },
+  {
     path: frontendURL('accounts/:accountId/crm'),
     name: 'crm_kanban_index',
     meta,
@@ -134,6 +169,15 @@ export const routes = [
     meta: numerosMeta,
     beforeEnter: ensureCrmEnabled,
     component: CrmNumerosPage,
+  },
+  {
+    // Números › "De onde vieram os clientes" (#2001, F6), aberta pela visão "Equipe" de Números. A página volta para
+    // Números sem a flag `crm_numeros_origens` ou sem a visão "Equipe".
+    path: frontendURL('accounts/:accountId/crm/dashboard/origens'),
+    name: 'crm_numeros_origens',
+    meta: numerosMeta,
+    beforeEnter: ensureCrmEnabled,
+    component: CrmNumerosOrigensPage,
   },
   {
     path: frontendURL('accounts/:accountId/crm/ai-usage'),

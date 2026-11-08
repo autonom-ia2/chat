@@ -10,16 +10,19 @@ module Crm
       ESCOLHAS_DE_ETAPA = %w[move reopen].freeze
 
       # tocado (#1693): a IA de assunto disse que a mensagem é sobre este card; ele é avaliado mesmo fora do foco.
-      def initialize(card:, trigger: 'message', tocado: false)
+      # tentativa (#2154): a da avaliação depois da fala do agente (Crm::Ai::AvaliacaoDepoisDaFala#reagendar).
+      def initialize(card:, trigger: 'message', tocado: false, tentativa: 0)
         @card = card
         @account = card.account
         @trigger = trigger
         @tocado = tocado
+        @tentativa = tentativa
       end
 
       def perform
         pular = motivo_para_pular
         return Result.new(status: :skipped, error: pular) if pular
+        return so_a_passagem if @trigger == AvaliacaoDepoisDaFala::TRIGGER
 
         aplicar(classify_stage)
       rescue ResponsesClient::Error => e
@@ -33,7 +36,8 @@ module Crm
         return 'ai_disabled' unless Config.enabled?
         return 'credentials_missing' unless credential_resolver.configured?
         return 'pipeline_ai_disabled' unless pipeline_ai_enabled?
-        return 'debounced' if debounced? && @trigger != 'manual'
+        # #2154: a avaliação depois da fala do agente também não espera o intervalo (a do cliente pode ter acabado de rodar).
+        return 'debounced' if debounced? && ['manual', AvaliacaoDepoisDaFala::TRIGGER].exclude?(@trigger)
         return 'card_not_open' unless @card.open?
         # Multifunil (#1147): só o assunto atual da conversa é avaliado; "Avaliar agora" é escolha da pessoa e o card
         # tocado pela mensagem (#1693) é escolha da IA de assunto.
@@ -58,7 +62,6 @@ module Crm
         result = apply_classification(classification)
         # Card arquivado como "não é negócio" (#1922): o resto (pedido de atendente, retorno, campos) era do card aberto.
         return result.tap { Crm::Memoria::Pendente.descartar!(@card) } if @pipeline_mudou || result.status == :archived
-        return depois_de_fechar(classification, result) if result.status == :closed
 
         refresh_post_classification_context!
         classification = refresh_handoff_classification_if_needed(classification, result, regra)
@@ -162,12 +165,28 @@ module Crm
         Crm::Access::Recipients.inbox_members(conversation).pluck(:name) + Crm::AgentesIa.rotulos_pelo_nome(conversation, handoff_config)
       end
 
+      # #2154: a avaliação depois da fala do agente (Crm::Ai::AvaliacaoDepoisDaFala) só decide a passagem. Não move
+      # etapa nem grava campo, memória, pontuação ou o carimbo da última avaliação: não derruba a avaliação da mensagem
+      # do cliente pelo intervalo. Com o turno seguinte do agente em curso, nem chama o modelo: volta depois.
+      def so_a_passagem
+        conversa = @card.conversa_em_atendimento
+        if conversa && AvaliacaoDepoisDaFala.fala_em_curso?(conversa)
+          AvaliacaoDepoisDaFala.reagendar(@card, conversa, @tentativa)
+          return Result.new(status: :skipped, error: 'fala_em_curso')
+        end
+
+        @passar = true
+        run_handoff(classify_stage)
+        Result.new(status: :so_passagem)
+      end
+
       # Independent of the stage move. Guarded inside the executor; never let a
       # handoff failure break the evaluation result.
       def run_handoff(classification)
         return unless @passar && handoff_config[:enabled]
 
-        HandoffExecutor.new(card: @card, handoff: classification[:handoff], trigger: @trigger, pelo_card: @pelo_card).perform
+        HandoffExecutor.new(card: @card, handoff: classification[:handoff], trigger: @trigger, pelo_card: @pelo_card,
+                            tentativa: @tentativa).perform
       rescue StandardError => e
         Rails.logger.error("[CRM AI handoff] #{e.class}: #{e.message}")
       end
@@ -190,8 +209,9 @@ module Crm
 
         return voltar_como_sugestao(classification) || pessoa_mexeu_na_etapa! if pessoa_mexeu_na_etapa?
 
-        fim = nao_e_negocio!(classification) || fechar_card!(classification)
+        fim = fim_decidido(classification)
         return fim_do_card(fim) if fim
+        return respeitar_a_escolha!('automacao_mexeu_na_etapa') if automacao_mexeu_na_etapa?
 
         target_stage = stages.find { |stage| stage.id == classification[:suggested_stage_id].to_i }
         return Result.new(status: :skipped, error: 'unknown_stage') if target_stage.blank?
@@ -260,18 +280,41 @@ module Crm
       def pessoa_mexeu_na_etapa?
         return false if @trigger == 'manual'
 
-        da_pessoa = Crm::Activity.where(account_id: @card.account_id, card_id: @card.id, actor_type: 'user',
-                                        created_at: RESPEITO_AO_MOVIMENTO.ago..)
+        da_pessoa = MovimentoDaAutomacao.sem_automacao(
+          Crm::Activity.where(account_id: @card.account_id, card_id: @card.id, actor_type: 'user', created_at: RESPEITO_AO_MOVIMENTO.ago..)
+        )
         criou_na_etapa = da_pessoa.where(event_type: 'create').where('payload @> ?', { etapa_escolhida: true }.to_json)
         da_pessoa.where(event_type: ESCOLHAS_DE_ETAPA).or(criou_na_etapa).exists?
       end
 
-      # Nem sugere: a sugestão de etapa que esperava uma pessoa, de antes da escolha dela, também sai.
-      def pessoa_mexeu_na_etapa!
+      # #2428: o último movimento foi de uma automação (Crm::Ai::MovimentoDaAutomacao). Só a etapa fica: fechar o card e
+      # "não é negócio" seguem (fim_decidido, acima), senão o lixo ficaria aberto.
+      def automacao_mexeu_na_etapa?
+        @trigger != 'manual' && MovimentoDaAutomacao.respeitar?(@card)
+      end
+
+      def pessoa_mexeu_na_etapa! = respeitar_a_escolha!('pessoa_mexeu_na_etapa')
+
+      # Nem sugere: a sugestão de etapa que esperava uma pessoa, de antes da escolha dela (ou da automação), também sai.
+      def respeitar_a_escolha!(motivo)
         pendentes = @card.account.crm_ai_stage_suggestions.where(card: @card, status: :pending).to_a
         pendentes.each { |sugestao| sugestao.update!(status: :expired) }
         Crm::Cards::Broadcaster.broadcast(@card, Events::Types::CRM_CARD_UPDATED) if pendentes.any?
-        Result.new(status: :skipped, error: 'pessoa_mexeu_na_etapa')
+        Result.new(status: :skipped, error: motivo)
+      end
+
+      # #2396: "fora do negócio" com pedido de fechar na mesma resposta (quem desistiu ou chegou sem querer): primeiro a
+      # sugestão de fechar, e só sem ela o arquivamento; arquivar tiraria da contagem o lead que é perda, sem ninguém
+      # conferir. O fechar que não vira sugestão (abaixo do limiar, card parado, pedido de pessoa) deixa o lixo sair como
+      # antes. "Teste" e "duplicado" seguem o arquivamento: um teste não é perda, e o repetido contaria a perda duas vezes.
+      def fim_decidido(classification)
+        return nao_e_negocio!(classification) || fechar_card!(classification) unless fora_do_negocio_com_fechar?(classification)
+
+        fechar_card!(classification) || nao_e_negocio!(classification)
+      end
+
+      def fora_do_negocio_com_fechar?(classification)
+        classification[:fechar_card].present? && classification.dig(:nao_e_negocio, :motivo) == NaoENegocio::FORA_DO_NEGOCIO
       end
 
       # #1922: o modelo disse que o card não é negócio. Só com a flag da conta (`crm_ia_arquiva_lixo`) e no automático do
@@ -293,9 +336,9 @@ module Crm
 
       # IA entende a conversa F3: o modelo disse que o pedido deste card terminou. Só com a flag `crm_ia_fecha_card`; nem
       # no "Avaliar agora" nem na avaliação do card parado (silêncio nunca fecha). Com pedido ou promessa de pessoa neste
-      # card, ele fica: fechar pularia a passagem. Fecha sozinho só no automático do funil e com a confiança alta; senão,
-      # vira sugestão de fechar. As guardas do card são do Crm::Ai::FecharCard. A leitura nova da conversa tira da tela a
-      # sugestão de fechar que esperava (a mesma leitura grava outra, se ainda for o caso).
+      # card, ele fica: fechar pularia a passagem. Nunca fecha sozinho (decisão do Rodrigo, 30/10, #2389): vira sugestão de
+      # fechar, que a pessoa aceita. As guardas do card são do Crm::Ai::FecharCard. A leitura nova da conversa tira da tela
+      # a sugestão de fechar que esperava (a mesma leitura grava outra, se ainda for o caso).
       def fechar_card!(classification)
         return false unless FecharCard.ligada?(@account)
         return false if FecharCard::GATILHOS_SEM_FECHAMENTO.include?(@trigger)
@@ -304,15 +347,14 @@ module Crm
         return false if classification[:fechar_card].blank?
         return false if HandoffIntent.requested?(classification[:handoff]) || FatosDaConversa.promessa?(classification[:handoff])
 
-        FecharCard.new(card: @card, decisao: classification[:fechar_card], lido_em: @lido_em, sozinho: auto_move_allowed?,
-                       origem: origem(classification)).aplicar!
+        FecharCard.new(card: @card, decisao: classification[:fechar_card], lido_em: @lido_em, origem: origem(classification)).aplicar!
       end
 
-      # true (arquivado), :fechado ou a sugestão de fechar (Crm::AiStageSuggestion).
+      # true (arquivado) ou a sugestão de fechar (Crm::AiStageSuggestion).
       def fim_do_card(fim)
         return Result.new(status: :suggested, suggestion: fim) if fim.is_a?(Crm::AiStageSuggestion)
 
-        Result.new(status: fim == :fechado ? :closed : :archived)
+        Result.new(status: :archived)
       end
 
       # Para a sugestão de fechar: quem leu, quando e a data de retorno que a mesma leitura achou (Retorno).
@@ -320,16 +362,6 @@ module Crm
         pedido = classification[:callback_request]
         pedido = pedido.is_a?(Hash) ? pedido.with_indifferent_access.slice(:detected, :requested_at).presence : nil
         { model_used: classification[:model_used], trigger: @trigger, pedido_de_retorno: pedido }
-      end
-
-      # O card que a IA fechou não passa a conversa nem pontua (isso é de card aberto). Os campos e a memória seguem, e o
-      # "adiou" ganha o lembrete de retorno.
-      def depois_de_fechar(classification, result)
-        refresh_post_classification_context!
-        FecharCard.agendar_retorno(@card, classification[:fechar_card], classification[:callback_request])
-        attribute_extraction.apply(classification[:extracted_attributes])
-        Crm::Memoria::Pendente.aplicar!(@card)
-        result
       end
 
       # IA entende a conversa F3 (revisões adversariais): com a flag, perder é fechar (Crm::Ai::FecharCard), nunca uma

@@ -171,6 +171,22 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
       expect(avaliacoes.first.dig(:schema, :name)).to eq('stage_classification_cards')
     end
 
+    # #2084: marcado parceiro enquanto o modelo maior separa os assuntos. O outro pedido não vira card.
+    it 'contato marcado parceiro durante a decisão: o outro pedido não nasce' do
+      account.enable_features!('contato_relacao')
+      stub_jev(Crm::Subjects::Question::VARIOS)
+      revisao.merge!(assuntos: [{ resposta: 'mesmo_assunto', titulo: '' }, { resposta: "novo_#{vendas.id}", titulo: 'Seguro residencial' }],
+                     principal: 0, motivo: 'ok')
+      allow(cliente).to receive(:create) do |**args|
+        contact.update!(relacao: :parceiro) if args.dig(:schema, :name) == 'assuntos_revisao'
+        responder(args)
+      end
+
+      receber('Pode fechar o auto. E quero cotação do residencial, 100 mil de incêndio')
+
+      expect(account.crm_cards.where(title: 'Seguro residencial')).to be_empty
+    end
+
     it 'erro no principal depois de criar o outro pedido: a decisão fica como falha e o retry não duplica o card' do
       stub_jev(Crm::Subjects::Question::VARIOS)
       revisao.merge!(assuntos: [{ resposta: "novo_#{vendas.id}", titulo: 'Seguro moto' },

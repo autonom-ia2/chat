@@ -52,6 +52,31 @@ describe('balaoDoInstagram', () => {
     ).toBe(BALOES.MIDIA);
   });
 
+  it('servida da nossa cópia, a figurinha é reconhecida pela origem (externalUrl)', () => {
+    const nossa =
+      'https://app.exemplo.com/rails/active_storage/blobs/redirect/x/a.gif';
+    expect(
+      balaoDoInstagram({
+        attachments: [
+          {
+            ...anexo('image', nossa),
+            externalUrl: 'https://media0.giphy.com/a.gif',
+          },
+        ],
+      })
+    ).toBe(BALOES.FIGURINHA);
+    expect(
+      balaoDoInstagram({
+        attachments: [
+          {
+            ...anexo('image', nossa),
+            externalUrl: 'https://lookaside.fbsbx.com/ig_messaging_cdn/x',
+          },
+        ],
+      })
+    ).toBe(BALOES.MIDIA);
+  });
+
   it('post e story pelo image_type gravado no recebimento', () => {
     expect(
       balaoDoInstagram({

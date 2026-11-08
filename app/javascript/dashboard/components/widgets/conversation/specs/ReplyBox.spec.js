@@ -6,6 +6,24 @@ import ReplyBox from '../ReplyBox.vue';
 import WhatsappTemplates from '../WhatsappTemplates/Modal.vue';
 import JanelaDeEmojis from 'dashboard/components-next/emoji/JanelaDeEmojis.vue';
 
+// #2113: a conversa do Instagram com a cara do Direct vem da MessagesView (provide);
+// aqui ela fica desligada, como sem a tela, e cada teste do Instagram a liga.
+const conversaDoInstagram = vi.hoisted(() => ({ ligada: false }));
+vi.mock(
+  'dashboard/components-next/conversa-canal/instagram/useConversaDoInstagram',
+  async original => {
+    const { computed } = await import('vue');
+    return {
+      ...(await original()),
+      useInstagramDaConversa: () => ({
+        ligado: computed(() => conversaDoInstagram.ligada),
+        fuso: computed(() => undefined),
+        contato: computed(() => null),
+      }),
+    };
+  }
+);
+
 const CHANNELS = [
   { name: 'WhatsApp Cloud', inbox: { channel_type: 'Channel::Whatsapp' } },
   {
@@ -585,6 +603,40 @@ describe('ReplyBox CRM subject', () => {
       contentAttributes: { in_reply_to: 3, crm_card_id: 5 },
     });
   });
+});
+
+// #2249: o repasse do assunto recebe só a pessoa responsável; robô com o meu id não conta.
+describe('ReplyBox CRM subject: responsável do repasse (#2249)', () => {
+  const globalConfigAntes = window.globalConfig;
+  beforeEach(() => {
+    window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
+  });
+  afterEach(() => {
+    window.globalConfig = globalConfigAntes;
+  });
+
+  it.each([
+    ['AgentBot', null],
+    ['Captain::Assistant', null],
+    ['User', 7],
+  ])(
+    'responsável %s com o id do usuário: assignee-id %s',
+    (assigneeType, esperado) => {
+      const { wrapper } = mountWith({
+        inbox: { channel_type: 'Channel::Api' },
+        chat: {
+          meta: {
+            sender: { id: 2 },
+            assignee: { id: 7 },
+            assignee_type: assigneeType,
+          },
+        },
+      });
+      const repasse = wrapper.findComponent({ name: 'CrmRepasseDoAssunto' });
+      expect(repasse.exists()).toBe(true);
+      expect(repasse.props('assigneeId')).toBe(esperado);
+    }
+  );
 });
 
 // #2067: o ícone "ficar com a conversa ao enviar" ao lado do Enviar; quem atribui é o servidor.
@@ -1168,5 +1220,44 @@ describe('ReplyBox #1702: Documento do "+" marca o anexo, não o envio', () => {
     ];
     const payloads = wrapper.vm.getMultipleMessagesPayload('Oi');
     expect(payloads.map(p => p.documentIndexes)).toEqual([[], [0]]);
+  });
+});
+
+describe('ReplyBox #2113: respondendo a uma mensagem do Instagram', () => {
+  afterEach(() => {
+    conversaDoInstagram.ligada = false;
+  });
+
+  const citacao = wrapper => wrapper.findComponent({ name: 'ReplyToMessage' });
+
+  it('com a cara do Direct, a citação fica numa linha própria no topo da pílula', async () => {
+    conversaDoInstagram.ligada = true;
+    const { wrapper } = mountWith({
+      inbox: { channel_type: 'Channel::Instagram' },
+    });
+    wrapper.vm.inReplyTo = { id: 3, content: 'Tem a bolsa em preto?' };
+    await nextTick();
+
+    expect(citacao(wrapper).exists()).toBe(true);
+    expect(citacao(wrapper).attributes('data-resposta-do-instagram')).toBe('');
+    expect(citacao(wrapper).element.parentElement.classList).toContain(
+      'reply-box'
+    );
+  });
+
+  it('sem a cara do Direct, a citação segue dentro do campo, como antes', async () => {
+    const { wrapper } = mountWith({
+      inbox: { channel_type: 'Channel::Instagram' },
+    });
+    wrapper.vm.inReplyTo = { id: 3, content: 'Tem a bolsa em preto?' };
+    await nextTick();
+
+    expect(citacao(wrapper).exists()).toBe(true);
+    expect(
+      citacao(wrapper).attributes('data-resposta-do-instagram')
+    ).toBeUndefined();
+    expect(citacao(wrapper).element.parentElement.classList).toContain(
+      'reply-box__top'
+    );
   });
 });

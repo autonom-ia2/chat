@@ -103,6 +103,32 @@ RSpec.describe Crm::Cards::Broadcaster do
     expect(tokens).not_to include(secondary_assignee.pubsub_token)
   end
 
+  # Lista nova (#2283): o tempo real usa o mesmo PayloadBuilder; quem não vê a conversa não recebe quem a atende nem o
+  # retorno ligado a ela.
+  it 'does not send the hidden conversation assignee nor its follow-up id in real time' do
+    account, admin = create_account_and_user
+    admin.update!(name: 'Gestora Ana')
+    member, = create_crm_agent(account: account)
+    inbox = create_crm_inbox(account: account, members: [member])
+    hidden_inbox = create_crm_inbox(account: account, name: 'Caixa da gestão')
+    contact = account.contacts.create!(name: 'Lead', phone_number: '+5511987654323')
+    hidden = create_crm_conversation(account: account, inbox: hidden_inbox, contact: contact, assignee: admin)
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, inbox: inbox, primary_conversation: hidden, title: 'Lead')
+    follow_up = account.crm_follow_ups.create!(card: card, conversation: hidden, created_by: admin, title: 'Retorno oculto',
+                                               due_at: 1.day.ago, timezone: 'America/Sao_Paulo', status: :overdue)
+
+    broadcast_calls = capture_broadcast_calls
+    described_class.broadcast(card, crm_card_updated_event)
+    payloads = broadcast_calls.to_h { |call| [call[:tokens].first, call[:payload]] }
+
+    expect(payloads[member.pubsub_token]).to include(conversation_id: nil, current_responsible: nil, next_follow_up_id: nil)
+    expect(payloads[member.pubsub_token]).not_to have_key(:responsible)
+    expect(payloads[member.pubsub_token].to_json).not_to include('Gestora Ana')
+    expect(payloads[admin.pubsub_token]).to include(conversation_id: hidden.id, next_follow_up_id: follow_up.id)
+    expect(payloads[admin.pubsub_token][:current_responsible]).to include(type: 'agent', name: 'Gestora Ana')
+  end
+
   it 'does not broadcast when CRM Kanban is disabled' do
     ENV['CRM_KANBAN_ENABLED'] = 'false'
     account, admin = create_account_and_user

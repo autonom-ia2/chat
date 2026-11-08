@@ -129,6 +129,10 @@
       }
     },
     "UPDATE_CHATWOOT": "Uma atualização {latestChatwootVersion} para o Chatwoot está disponível. Por favor, atualize sua instância.",
+    "PANEL_OUTDATED": {
+      "MESSAGE": "O painel foi atualizado. Recarregue a página para continuar.",
+      "RELOAD": "Recarregar"
+    },
     "LEARN_MORE": "Saiba mais",
     "PAYMENT_PENDING": "Seu pagamento está pendente. Por favor, atualize suas informações de pagamento para continuar usando o Chatwoot",
     "UPGRADE": "Atualize para continuar usando o Chatwoot",

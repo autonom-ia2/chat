@@ -31,6 +31,7 @@ import {
   caixasDaQuery,
   caixasNaQuery,
   perguntasDeTeste,
+  perguntasDoAgente,
 } from '../constants/criacao';
 import { MODELO_DO_MEU_JEITO, MODELOS } from '../constants/modelos';
 import {
@@ -43,6 +44,7 @@ import { fecharFrase, MAX_FOTO } from '../utils/pagina';
 import {
   canalSugerido,
   horariosDasCaixas,
+  temCanalParaEscolher,
   tipoDoCanalParaTexto,
 } from '../utils/criacao';
 import AgenteBotao from '../components/AgenteBotao.vue';
@@ -168,6 +170,8 @@ const registros = useMapGetter('autonomiaAgents/getRecords');
 const caixas = useMapGetter('inboxes/getInboxes');
 const contaId = useMapGetter('getCurrentAccountId');
 const contaDaStore = useMapGetter('accounts/getAccount');
+// #2490: o canal que o dono pediu na conversa com o Construtor.
+const estadoDaConversa = useMapGetter('autonomiaBuildThreads/getThreadState');
 
 const abrindo = ref(Boolean(idInicial));
 const falhouAoAbrir = ref(false);
@@ -285,8 +289,15 @@ const canais = computed(() =>
 const horarios = computed(() =>
   horariosDasCaixas(canais.value, caixas.value, t)
 );
+// A conversa na tela traz a leitura mais nova; um rascunho reaberto (sem a thread) lê a que ficou no agente.
+const canalPedido = computed(
+  () =>
+    estadoDaConversa.value?.canal_pedido ||
+    agente.value?.config?.canal_pedido ||
+    null
+);
 const sugerido = computed(() =>
-  canalSugerido(canais.value, conversa.agenteId.value)
+  canalSugerido(canais.value, conversa.agenteId.value, canalPedido.value)
 );
 
 const carregarElegiveis = async id => {
@@ -321,7 +332,13 @@ const rotuloComecar = computed(() => {
   if (ocupacao.estado.value === 'carregando') {
     return t('AGENTS.JORNADA.CRIAR.COMECE.COMECAR');
   }
-  if (!sugerido.value) return '';
+  // #2489 (5b): sem uma única caixa certa, a pessoa escolhe no Comece; sem caixa nenhuma, a Confira
+  // mostra o aviso de conectar um canal.
+  if (!sugerido.value) {
+    return temCanalParaEscolher(canais.value, conversa.agenteId.value)
+      ? t('AGENTS.JORNADA.CRIAR.CONFIRA.ESCOLHER_CANAL')
+      : '';
+  }
   const tipo = tipoDoCanalParaTexto(sugerido.value);
   const canal = tipo.chave ? NOME_DO_CANAL[tipo.chave]() : tipo.nome;
   return t('AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_NO', { canal });
@@ -961,6 +978,7 @@ onMounted(() => {
           :demorando="conversa.demorando.value"
           :falhou="conversa.falhou.value"
           :aviso="conversa.aviso.value"
+          :falha-ao-subir="conversa.falhaAoSubir.value"
           :fechada="conversa.fechada.value"
           :respostas="conversa.respostas.value"
           :ideias="ideias"
@@ -1027,6 +1045,7 @@ onMounted(() => {
           :nome="nome"
           :empresa="empresa"
           :perguntas="perguntasDeTeste(modelo, interno, ajudante)"
+          :perguntas-do-agente="perguntasDoAgente(agente, ajudante)"
           :interno="interno"
           :ajudante="ajudante"
           :mensagens="teste.mensagens.value"

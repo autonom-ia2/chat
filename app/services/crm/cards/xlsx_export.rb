@@ -73,7 +73,8 @@ class Crm::Cards::XlsxExport
       user: @user,
       account_user: @account_user,
       conversation_visibility: conversation_visibility,
-      company: @company_by_card_id[card.id]
+      company: @company_by_card_id[card.id],
+      next_follow_up: Crm::Cards::PayloadBuilder::SKIP_FOLLOW_UP # a planilha não tem a coluna; sem consulta por card
     ).perform
     cells = COLUMNS.map { |column| cell_value(column, card, payload) }
     row_styles = COLUMNS.map { |column| styles.cell(LAYOUT[column].first, zebra: zebra, raw: raw_enum(column, card)) }

@@ -144,7 +144,9 @@ const confidenceGap = computed(
         >
           {{
             $t(
-              `${META}.${row.destination.toUpperCase()}.${row.explanation.toUpperCase()}`
+              `${META}.${row.destination.toUpperCase()}.${row.explanation.toUpperCase()}`,
+              { meta: row.meta },
+              row.meta
             )
           }}
         </p>

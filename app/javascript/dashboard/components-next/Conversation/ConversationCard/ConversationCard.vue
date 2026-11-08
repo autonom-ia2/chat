@@ -1,10 +1,11 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { getInboxIconByType, tipoDoIconeDaCaixa } from 'dashboard/helper/inbox';
 import { useRouter, useRoute } from 'vue-router';
 import { frontendURL, conversationUrl } from 'dashboard/helper/URLHelper.js';
 import { dynamicTime, shortTimestamp } from 'shared/helpers/timeHelper';
 import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
+import { nomeDoContatoNaTela } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
@@ -40,7 +41,10 @@ const cardMessagePreviewWithMetaRef = ref(null);
 
 const currentContact = computed(() => props.contact);
 
-const currentContactName = computed(() => currentContact.value?.name);
+// #2255: contato que só tem o número aparece com o telefone legível (só exibição).
+const currentContactName = computed(() =>
+  nomeDoContatoNaTela(currentContact.value)
+);
 const currentContactThumbnail = computed(() => currentContact.value?.thumbnail);
 const currentContactStatus = computed(
   () => currentContact.value?.availabilityStatus
@@ -51,8 +55,13 @@ const inbox = computed(() => props.stateInbox);
 const inboxName = computed(() => inbox.value?.name);
 
 const inboxIcon = computed(() => {
-  const { channelType, medium, voiceEnabled } = inbox.value;
-  return getInboxIconByType(channelType, medium, 'fill', voiceEnabled);
+  const { medium, voiceEnabled } = inbox.value;
+  return getInboxIconByType(
+    tipoDoIconeDaCaixa(inbox.value),
+    medium,
+    'fill',
+    voiceEnabled
+  );
 });
 
 const lastActivityAt = computed(() => {

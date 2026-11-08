@@ -26,8 +26,8 @@ module MetaAdsHelpers
     a_request(:get, ->(uri) { uri.host == graph.host && uri.path.start_with?(graph.path) && uri.path.exclude?('/me/') })
   end
 
-  def meta_graph_error(code, message = 'Erro da Meta')
-    { error: { message: message, type: 'OAuthException', code: code } }
+  def meta_graph_error(code, message = 'Erro da Meta', subcode: nil)
+    { error: { message: message, type: 'OAuthException', code: code, error_subcode: subcode }.compact }
   end
 
   # Insights (#1073): conexão com conta de anúncios escolhida, linha como a Meta devolve e stub do GET.
@@ -52,7 +52,7 @@ module MetaAdsHelpers
   def stub_meta_ad_set_destinations(ad_account_id, rows: [], status: 200)
     body = status == 200 ? { data: rows } : meta_graph_error(100)
     stub_request(:get, meta_graph_url("act_#{ad_account_id}/adsets"))
-      .with(query: hash_including('fields' => 'id,destination_type'))
+      .with(query: hash_including('fields' => 'id,destination_type,optimization_goal'))
       .to_return(status: status, body: body.to_json, headers: { 'Content-Type' => 'application/json' })
   end
 

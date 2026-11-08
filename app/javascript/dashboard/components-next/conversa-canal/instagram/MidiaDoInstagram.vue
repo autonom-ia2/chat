@@ -13,7 +13,7 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
-// O endereço da Meta expira: no lugar da mídia quebrada, "Mídia indisponível".
+// Mídia que não abre (cópia ausente e endereço da Meta expirado): "Mídia indisponível".
 const quebrou = ref(false);
 const ehVideo = computed(() =>
   [ATTACHMENT_TYPES.VIDEO, ATTACHMENT_TYPES.IG_REEL].includes(

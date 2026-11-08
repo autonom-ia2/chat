@@ -522,6 +522,38 @@ describe('CardGaveta (#1423)', () => {
     delete window.globalConfig;
   });
 
+  // #2150 — a sugestão de etapa é de quem tem crm_manage_ai: sem a chave, nada
+  // dela aparece e a gaveta nem pede ao servidor.
+  it('sem crm_manage_ai, não mostra nem pede a sugestão de etapa', async () => {
+    const api = (await import('dashboard/api/crmKanban')).default;
+    api.getCurrentAiSuggestion.mockClear();
+    const sugestao = { id: 4, to_stage_id: 11, to_stage_name: 'Em conversa' };
+    window.globalConfig = { CRM_AI_ENABLED: 'true' };
+    const comSugestao = montar({
+      card: { ...cardBase, ai_suggestion: sugestao },
+    });
+    await flushPromises();
+    expect(
+      comSugestao.find('[data-card-proximo]').attributes('data-passo')
+    ).toBe('sugestao');
+
+    const wrapper = montar({
+      canManageAi: false,
+      card: { ...cardBase, ai_suggestion: sugestao },
+    });
+    await flushPromises();
+    expect(
+      wrapper.find('[data-card-proximo]').attributes('data-passo')
+    ).not.toBe('sugestao');
+    expect(wrapper.find('[data-resumo-sugestao]').exists()).toBe(false);
+
+    const semInicial = montar({ canManageAi: false });
+    await flushPromises();
+    expect(semInicial.find('[data-card-proximo]').exists()).toBe(true);
+    expect(api.getCurrentAiSuggestion).not.toHaveBeenCalled();
+    delete window.globalConfig;
+  });
+
   // IA entende a conversa F3: a sugestão de fechar usa o mesmo cartão, com o
   // texto dela (o que acabou e por quê) e o botão Encerrar, em vez de "Mover".
   it('sugestão de fechar: frase do fim, aviso do retorno e Encerrar', async () => {
@@ -679,6 +711,33 @@ describe('CardGaveta (#1423)', () => {
       'CRM_CARD.ORIGEM.FONTE.ANUNCIO_WHATSAPP'
     );
     expect(wrapper.text()).not.toContain('CRM_KANBAN.META_SYNC_STATUS');
+  });
+
+  it('De onde veio, sem ver os anúncios: só que veio de anúncio, sem nome nem imagem (#2271)', async () => {
+    const wrapper = montar({
+      card: {
+        ...cardBase,
+        campaigns: [
+          {
+            source: 'meta_ctwa',
+            source_type: 'ad',
+            touched_at: '2026-10-01T12:00:00Z',
+            ad_hidden: true,
+            headline: 'Plano anual com 20% off',
+            ad_thumbnail_url: 'https://thumb.example/ad.jpg',
+            ad_preview_url: 'https://preview.example/ad',
+          },
+        ],
+      },
+    });
+    await flushPromises();
+    await clicar(wrapper, '[data-mais="origem"]');
+    const caminho = wrapper.find('[data-origem-caminho]');
+    expect(caminho.text()).toContain('CRM_CARD.ORIGEM.FONTE.ANUNCIO_WHATSAPP');
+    expect(caminho.text()).toContain('CRM_CARD.ORIGEM.ANUNCIO_OCULTO');
+    expect(caminho.text()).not.toContain('Plano anual com 20% off');
+    expect(caminho.find('[data-crm-origin-ad-preview]').exists()).toBe(false);
+    expect(caminho.find('img').exists()).toBe(false);
   });
 
   it('Novo retorno não mostra erro antes de a pessoa escrever', async () => {

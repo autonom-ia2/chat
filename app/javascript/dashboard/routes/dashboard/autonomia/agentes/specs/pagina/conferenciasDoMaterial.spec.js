@@ -144,6 +144,29 @@ describe('UmProblemaPorVez', () => {
     ]);
   });
 
+  // #1426 (t4e): no material grande a tabela sem cabeçalho é só aviso; o material continua em uso.
+  it('aviso do material grande diz que o agente já usa o material', () => {
+    const tabela = {
+      id: 'sem_cabecalho-6',
+      tipo: 'sem_cabecalho',
+      fontes: [6],
+      nome: 'manual.pdf',
+      amostra: ['Cláusula 63'],
+    };
+
+    expect(no(montarProblemas([tabela]), '[data-continua]').text()).toBe(
+      'Bia continua atendendo com o resto do material.'
+    );
+    expect(
+      no(
+        montarProblemas([{ ...tabela, aviso: true }]),
+        '[data-continua]'
+      ).text()
+    ).toBe(
+      'Bia já usa este material; o aviso só ajuda a deixar a tabela mais clara.'
+    );
+  });
+
   it('páginas de fora: quantas foram lidas, do total, de qual arquivo e por quê, sem código', async () => {
     const wrapper = montarProblemas([
       {
@@ -215,6 +238,47 @@ describe('UmProblemaPorVez', () => {
     expect(wrapper.emitted('resolver')).toEqual([['autoteste-r-0', 'certa']]);
   });
 
+  // #1426 (t4d): "De onde o agente tirou" — os trechos usados na resposta, com o arquivo e as páginas.
+  it('autoteste: mostra de onde o agente tirou a resposta, ou que não usou trecho nenhum', () => {
+    const ERRADA = {
+      id: 'autoteste-r-0',
+      tipo: 'autoteste',
+      fontes: [],
+      pergunta: 'Tem carro reserva?',
+      resposta: 'Não tem.',
+    };
+    const comTrechos = montarProblemas([
+      {
+        ...ERRADA,
+        trechos: [
+          {
+            onde: 'condicoes.pdf',
+            paginas: [226, 250],
+            texto: 'Carro reserva por 7 dias.',
+          },
+          { onde: 'tabela.xlsx', texto: 'Plano básico: sem carro reserva.' },
+        ],
+      },
+    ]);
+
+    expect(comTrechos.text()).toContain('De onde Bia tirou');
+    expect(comTrechos.findAll('[data-onde]').map(o => o.text())).toEqual([
+      'condicoes.pdf, páginas 226 a 250',
+      'tabela.xlsx',
+    ]);
+    expect(no(comTrechos, '[data-trechos]').text()).toContain(
+      'Carro reserva por 7 dias.'
+    );
+
+    const semTrecho = montarProblemas([{ ...ERRADA, trechos: [] }]);
+    expect(no(semTrecho, '[data-sem-trecho]').text()).toBe(
+      'Bia não usou nenhum trecho do material para responder.'
+    );
+
+    const rodadaAntiga = montarProblemas([ERRADA]);
+    expect(rodadaAntiga.text()).not.toContain('De onde Bia tirou');
+  });
+
   it('autoteste de fora: a resposta inventada vira cartão com as mesmas saídas', () => {
     const wrapper = montarProblemas([
       {
@@ -267,7 +331,7 @@ describe('AutotesteDoMaterial', () => {
       'Bia acertou 7 de 8 perguntas sobre o seu material.'
     );
     expect(no(wrapper, '[data-fora]').text()).toContain(
-      'disse que não sabia e passou para a equipe'
+      'não inventou resposta'
     );
     expect(no(wrapper, '[data-testar-de-novo]').text()).toBe('Testar de novo');
     expect(no(wrapper, '[data-aviso-amostra]').text()).toBe(
@@ -279,11 +343,46 @@ describe('AutotesteDoMaterial', () => {
     const wrapper = montar(autoteste({ deFora: 1, certasDeFora: 1 }));
 
     expect(no(wrapper, '[data-fora]').text()).toBe(
-      'Na pergunta que não está no material, Bia disse que não sabia e passou para a equipe.'
+      'Na pergunta que não está no material, Bia não inventou resposta.'
     );
     expect(no(wrapper, '[data-perguntas] summary').text()).toBe(
       'Ver a pergunta'
     );
+  });
+
+  it('item que o juiz não conseguiu julgar: diz quantos ficaram de fora da conta', () => {
+    const wrapper = montar(
+      autoteste({ doMaterial: 7, certasDoMaterial: 7, naoJulgadas: 1 })
+    );
+
+    expect(no(wrapper, '[data-resultado]').text()).toBe(
+      'Bia acertou 7 de 7 perguntas sobre o seu material.'
+    );
+    expect(no(wrapper, '[data-nao-julgadas]').text()).toBe(
+      '1 pergunta do teste não deu para julgar e ficou de fora da conta.'
+    );
+  });
+
+  it('nenhuma pergunta do material deu para julgar: texto próprio, nunca "0 de 0"', () => {
+    const wrapper = montar(
+      autoteste({
+        doMaterial: 0,
+        certasDoMaterial: 0,
+        naoJulgadas: 8,
+        resultados: [],
+      })
+    );
+
+    expect(no(wrapper, '[data-resultado]').text()).toBe(
+      'Neste teste, nenhuma pergunta sobre o seu material deu para julgar. Teste de novo.'
+    );
+    expect(no(wrapper, '[data-nao-julgadas]').text()).toBe(
+      '8 perguntas do teste não deram para julgar e ficaram de fora da conta.'
+    );
+  });
+
+  it('sem item fora da conta, não fala disso', () => {
+    expect(no(montar(autoteste()), '[data-nao-julgadas]').exists()).toBe(false);
   });
 
   it('inventou numa de fora: aviso âmbar', () => {
@@ -352,6 +451,7 @@ describe('useConferenciasDoMaterial', () => {
           resposta([VAZIO], {
             estado: 'pronto',
             do_material: 8,
+            nao_julgadas: 1,
             de_fora: 2,
             certas_do_material: 8,
             certas_de_fora: 2,
@@ -374,6 +474,7 @@ describe('useConferenciasDoMaterial', () => {
       estado: 'pronto',
       doMaterial: 8,
       certasDeFora: 2,
+      naoJulgadas: 1,
     });
 
     await vi.advanceTimersByTimeAsync(RELEITURA_DO_AUTOTESTE_MS * 3);

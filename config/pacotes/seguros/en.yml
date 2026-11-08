@@ -12,6 +12,14 @@ en:
       statuses:
         won: 'Active policy'
         lost: 'Not closed'
+    # Vocabulary in the messages the AI writes to the customer (#2034). Insurer, insurtech and brokerage inherit this
+    # line; the brokerage and health have their own.
+    ai:
+      vocabulario: 'Talk about insurance, policy and claim; call someone a client only after they sign up and an insured only if they hold a policy.'
+  # Downloaded report of Numbers › "Where clients came from" (#2001, F6): the status of the client of the month.
+  numeros_origens_report:
+    situation:
+      lost: 'Not closed'
   # Downloaded Ads report (#1960): the situation of who came from the ad and what each word means.
   meta_ads_report:
     glossary: 'Conversation: someone messaged on WhatsApp after tapping an ad. Quote: the card reached an opportunity or negotiation stage. Sale: the card was marked as policy closed.'
@@ -21,3 +29,22 @@ en:
   email_campaigns:
     ai:
       vocabulario: 'Line of business: insurance. Talk about insurance, policy, coverage and renewal in plain language; policyholder only for someone who already has a policy; customer only for someone who already bought.'
+  # Painel de desempenho do agente (#2226): o PDF e a planilha dizem "não fechou", nunca "perda".
+  autonomia:
+    desempenho2:
+      c:
+        kpi:
+          perdas_evitaveis: 'Did not close for a fixable reason'
+        secoes:
+          perdas: 'what did not close'
+        indice:
+          perdas: 'Did not close'
+        perdas:
+          titulo: 'Did not close for a fixable reason'
+          por_que_descricao: 'Each request that did not close, by its main cause.'
+        tabelas:
+          tabela_perdas:
+            titulo: 'Did not close for a fixable reason'
+        planilha:
+          procura:
+            perda: 'Did not close, avoidable'

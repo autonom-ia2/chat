@@ -46,11 +46,12 @@ class Autonomia::Guide::Acoes
   # 02/10/2026: o que sai da plataforma (mensagem, ligação, campanha — inclusive
   # o WhatsApp oficial, que a Meta cobra do cliente), o que troca credencial em
   # uso e o que grava em lote fora da requisição (importação, ação em massa,
-  # macro), onde o caderno não chega. Apagar caixa, empresa, contato, conversa,
+  # macro), onde o caderno não chega. Apagar caixa, empresa, conversa,
   # time, portal, SLA ou etiqueta também entra: a plataforma termina essas
   # exclusões num job (`DeleteObjectJob`, `dependent: :destroy_async`,
   # `Labels::RemoveAssociationsJob`), e o desfazer só traria de volta metade.
-  # Para estas, a pessoa confirma antes.
+  # Para estas, a pessoa confirma antes. Apagar contato saiu daqui para
+  # SO_NA_TELA (#2096, 23/10).
   SEM_DESFAZER = [
     'POST conversations',
     'POST conversations/:conversation_id/messages',
@@ -79,7 +80,6 @@ class Autonomia::Guide::Acoes
     'POST macros/:id/execute',
     'DELETE inboxes/:id',
     'DELETE companies/:id',
-    'DELETE contacts/:id',
     'DELETE conversations/:id',
     'DELETE teams/:id', 'DELETE portals/:id',
     'DELETE sla_policies/:id',
@@ -96,14 +96,23 @@ class Autonomia::Guide::Acoes
     # #1069 — entrar com o Facebook grava uma credencial nova da Meta e troca de onde a plataforma lê.
     'POST crm/meta_ads_connection/facebook_login',
     # #1809 — "Excluir para sempre" da Lixeira do e-mail apaga a conversa pelo DeleteObjectJob, como o DELETE da conversa.
-    'DELETE conversa_canal/pastas_do_email/:conversation_id'
+    'DELETE conversa_canal/pastas_do_email/:conversation_id',
+    # #2084 — "Este contato é" fora do funil expira as sugestões de card do contato e, com arquivar_cards, arquiva os
+    # cards abertos dele em lote: o desfazer do Guia não alcança isso.
+    # #2414 F1.3 — a cópia de uma regra nasce ligada (o `active` vem junto), então passa a agir sozinha: confirma.
+    'PUT crm/contacts/:contact_id/relacao', 'POST automation_rules/:automation_rule_id/clone'
   ].freeze
 
   # O que só a pessoa faz, na tela, e por isso nem entra no catálogo (nem com confirmação). #1586: o aceite do dono
   # para o sistema criar modelos da Meta vale pelo texto exato do aviso que a tela mostra e o registro grava; uma
   # proposta do Guia não mostra esse texto. Vale para o catálogo e para o formato (`Formatos::RotasDeEscrita`).
   # A chave é a resposta que o Guia dá ao pedido (autonomia.guide.only_on_screen.*), com o caminho da tela.
-  SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent' }.freeze
+  # #2096: excluir de vez (card, funil e os cards do contato) exige que a pessoa digite a confirmação; uma proposta do Guia
+  # a preencheria sozinha. Excluir o contato também só na tela (decisão do Rodrigo, 23/10): com a flag crm_arquivados,
+  # ela anonimiza os cards dele e cancela as reuniões futuras, com aviso ao cliente.
+  SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent', 'DELETE contacts/:id' => 'contact_delete' }
+               .merge(['POST crm/cards/permanent_delete', 'POST crm/pipelines/:id/permanent_delete',
+                       'POST crm/contacts/:contact_id/permanent_delete'].index_with('crm_permanent_delete')).freeze
 
   # O que é encanamento do painel, não ação de quem usa: nem entra no catálogo nem tem formato. #1841: o registro
   # de erro do navegador; o Guia chamando isso só gravaria linha falsa no log de diagnóstico.
@@ -148,7 +157,7 @@ class Autonomia::Guide::Acoes
   # caminho que execute pelo turno passa por este ponto, e a confirmação não
   # pode depender de quem chamou lembrar dela.
   def conferir!(acao, dados)
-    garantir_permitida!(acao)
+    garantir_permitida!(acao, dados)
     raise Recusada, traduzir('needs_confirmation') unless desfazivel?(acao, dados)
 
     montar_caminho(acao, dados)
@@ -176,7 +185,7 @@ class Autonomia::Guide::Acoes
   # ação sem o identificador, e essa recusa tem que acontecer ANTES do botão
   # aparecer, não depois do clique.
   def descrever(acao, dados)
-    garantir_permitida!(acao)
+    garantir_permitida!(acao, dados)
     montar_caminho(acao, dados)
     conferencia = conferir_corpo!(acao, dados)
 
@@ -193,7 +202,7 @@ class Autonomia::Guide::Acoes
   # Executa pela API da conta, como o usuário: se a
   # plataforma não deixa ele fazer, não deixa o Guia fazer.
   def executar(acao, dados)
-    garantir_permitida!(acao)
+    garantir_permitida!(acao, dados)
     caminho = montar_caminho(acao, dados)
     conferencia = conferir_corpo!(acao, dados)
     resposta = requisitar(verbo_de(acao), caminho, conferencia.corpo)
@@ -229,21 +238,20 @@ class Autonomia::Guide::Acoes
   def conferir_corpo!(acao, dados) = conferencia(acao, dados).conferida!
   def conferencia(acao, dados) = ::Autonomia::Guide::Formatos::Conferencia.new(acao, corpo_de(dados), conta: @account)
 
-  def garantir_permitida!(acao)
+  def garantir_permitida!(acao, dados = nil)
     raise Recusada, so_na_tela(acao) if SO_NA_TELA.key?(acao.to_s)
     raise Recusada, traduzir('unknown_action') unless catalogo.include?(acao.to_s)
-    raise Recusada, traduzir('admin_only') unless administrador?
+
+    # #2414 F1.3: quem não administra ainda monta automação com automation_manage (Autonomia::Guide::PorteiroDaAutomacao).
+    recusa = ::Autonomia::Guide::PorteiroDaAutomacao.recusa(acao, @account_user, dados ? corpo_de(dados) : {}) unless administrador?
+    raise Recusada, traduzir(recusa) if recusa
   end
 
-  def administrador?
-    @account_user&.role.to_s == 'administrator'
-  end
+  def administrador? = @account_user&.role.to_s == 'administrator'
 
   def verbo_de(acao) = acao.to_s.split(' ', 2).first
 
-  def recurso_de(acao)
-    acao.to_s.split(' ', 2).last
-  end
+  def recurso_de(acao) = acao.to_s.split(' ', 2).last
 
   # Troca cada `:id` pelo valor que veio no pedido. Sem valor, não executa: uma
   # rota com parâmetro em branco atingiria o registro errado ou nenhum.
@@ -298,9 +306,9 @@ class Autonomia::Guide::Acoes
   # não pode ouvir que não deu certo — deu. O erro vai inteiro para o log.
   def auditar(acao, dados, registro)
     Audited.audit_class.create!(
-      auditable: @account, user: @user, action: AUDITORIA,
+      auditable: @account, user: @user, action: self.class::AUDITORIA,
       comment: dados[:descricao].to_s,
-      audited_changes: { 'acao' => acao.to_s, 'frase' => dados[:descricao].to_s, 'registro' => registro }
+      audited_changes: { 'acao' => acao.to_s, 'frase' => dados[:descricao].to_s, 'registro' => registro }.merge(trilha)
     )
   rescue StandardError => e
     Rails.logger.error(
@@ -308,6 +316,9 @@ class Autonomia::Guide::Acoes
       "#{e.class}: #{e.message}"
     )
   end
+
+  # O que a auditoria leva além da ação: a Automação livre põe o id dela (#2459).
+  def trilha = {}
 
   # O erro que volta é o da própria plataforma: é ele que diz a verdade sobre o
   # que faltou ou o que não foi permitido. Quando não há motivo legível, devolve

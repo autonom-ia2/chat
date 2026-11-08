@@ -25,7 +25,14 @@ const estado = vi.hoisted(() => ({
 const traduz = (chave, dados) =>
   dados ? `${chave}:${Object.values(dados).join(',')}` : chave;
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: traduz }) }));
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({ t: traduz }),
+  // O título da gaveta põe o nome por slot (#2255).
+  I18nT: {
+    props: ['keypath'],
+    template: '<span>{{ keypath }}:<slot name="nome" /></span>',
+  },
+}));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ name: 'home', params: { accountId: 7 } }),
   useRouter: () => ({ push: vi.fn(), hasRoute: () => true }),
@@ -239,14 +246,14 @@ describe('NovaConversaGaveta — WhatsApp (#1988)', () => {
       expect(wrapper.find('[data-barra-do-whatsapp]').exists()).toBe(false);
     });
 
-    it('caixa híbrida pelo número reserva: só texto, sem + e sem microfone', async () => {
+    it('caixa híbrida pelo número reserva: + e microfone também (o WAHA manda arquivo)', async () => {
       estado.respostas = [{ can_reply: true, whatsapp_api_reply: true }];
       const wrapper = await abrir();
 
       expect(caixa(wrapper).exists()).toBe(true);
       expect(wrapper.find('[data-emoji-do-whatsapp]').exists()).toBe(true);
-      expect(wrapper.find('[data-mais-do-email]').exists()).toBe(false);
-      expect(wrapper.find('[data-gravar-do-whatsapp]').exists()).toBe(false);
+      expect(wrapper.find('[data-mais-do-email]').exists()).toBe(true);
+      expect(wrapper.find('[data-gravar-do-whatsapp]').exists()).toBe(true);
     });
 
     it('sem a chave de gravação da conta, o microfone não aparece', async () => {

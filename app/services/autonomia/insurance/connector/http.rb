@@ -236,20 +236,36 @@ class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::C
     raise error(:protocol, "resposta inesperada do connector em #{path}", causa: :resposta_ilegivel) if inner_code == 200
 
     raise error(KIND_BY_STATUS.fetch(inner_code, :unavailable),
-                business_message(payload) || "connector HTTP #{inner_code}", business_details(payload),
+                business_message(payload) || "connector HTTP #{inner_code}", detalhes_do_erro(payload),
                 causa: :status_do_handler)
+  end
+
+  # `failure` vai junto dos `details` (auditoria da conexão, 05/11/2026): é a classificação do adapter
+  # — de quem é a ação, se vale tentar de novo — e o `Sync` precisa dela para a tela parar de mostrar o
+  # diagnóstico da verificação anterior depois de um erro.
+  def detalhes_do_erro(payload)
+    failure = payload.is_a?(Hash) ? payload['failure'] : nil
+    failure.is_a?(Hash) ? business_details(payload).merge('failure' => failure) : business_details(payload)
   end
 
   # Camada de infraestrutura: a chamada foi aceita e o handler chegou a rodar?
   def unwrap_invocation(response)
     code = response.code.to_i
-    raise error(KIND_BY_STATUS.fetch(code, :unavailable), "connector invoke HTTP #{code}", causa: :invoke_recusado) unless code == 200
+    raise error(kind_da_invocacao(code), "connector invoke HTTP #{code}", causa: :invoke_recusado) unless code == 200
 
     outer = json_or_nil(response.body)
     raise error(:unavailable, 'connector sem resposta', causa: :resposta_ilegivel) unless outer.is_a?(Hash)
     raise error(:unavailable, "connector falhou (#{outer['errorType']})", causa: :handler_quebrou) if outer['errorType'].present?
 
     outer
+  end
+
+  # 401/403 DA INVOCAÇÃO é a AWS recusando a NOSSA máquina (permissão, relógio do SigV4, credencial da
+  # instância) — o adapter nem rodou, e o portal nunca viu a senha. Pelo mapa do handler isso virava
+  # `auth_required`, que pede a senha à corretora e não é revisitado. É infraestrutura: `unavailable`.
+  def kind_da_invocacao(code)
+    kind = KIND_BY_STATUS.fetch(code, :unavailable)
+    kind == :auth_required ? :unavailable : kind
   end
 
   def business_message(payload)

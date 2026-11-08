@@ -2,7 +2,7 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
-import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import { nomeDoContatoNaTela } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { ExceptionWithMessage } from 'shared/helpers/CustomErrors';
 import { createPendingMessage } from 'dashboard/helper/commons';
@@ -28,6 +28,7 @@ import {
   usaCaixaDoWhatsapp,
   usaModelo,
 } from './novaConversa';
+import { reabreAoEscrever } from './continuarConversa';
 import { partesDoWhatsapp } from './envioNoWhatsapp';
 import { useModeloDoEmailNaGaveta } from './useModeloDoEmailNaGaveta';
 import { useCaixaDeEmailNova } from 'dashboard/components-next/conversa-canal/email/caixaDeEmailNova';
@@ -71,7 +72,15 @@ const textoDoErro = error => {
   return typeof doServidor === 'string' ? doServidor : '';
 };
 
-export function useNovaConversa({ contato, canal, continuar = null }) {
+// `donoDoRascunho` (#2211): de quem é o que está escrito. Por padrão, o id do contato. A
+// conversa vazia com um telefone novo cria o contato só ao enviar: o dono é o número, e o
+// texto não se perde quando o contato ganha id no meio do envio.
+export function useNovaConversa({
+  contato,
+  canal,
+  continuar = null,
+  donoDoRascunho = null,
+}) {
   const store = useStore();
   const { t } = useI18n();
   const { fetchSignatureFlagFromUISettings } = useUISettings();
@@ -114,13 +123,6 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
       !comModelo.value &&
       usaCaixaDoWhatsapp({ canal: canal.value, tipo: tipo.value })
   );
-  // Só texto: a caixa híbrida responde pelo número reserva (fora das 24 h). Na conversa
-  // nova do oficial, o texto livre só existe por esse número (`whatsapp_api_start`).
-  const soTexto = computed(() => {
-    if (!caixaDoWhatsapp.value) return false;
-    if (canal.value?.channelType !== INBOX_TYPES.WHATSAPP) return false;
-    return destino.value ? Boolean(continuar?.soTexto?.value) : true;
-  });
   const comAssinatura = computed(
     () =>
       (tipo.value === TIPOS.EMAIL || caixaDoWhatsapp.value) &&
@@ -244,7 +246,7 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
   // o contato for o mesmo. Fica DEPOIS do watch do canal de propósito: na
   // troca de contato os dois disparam, e é este que dá a palavra final.
   watch(
-    () => contato.value?.id ?? null,
+    () => (donoDoRascunho ? donoDoRascunho.value : (contato.value?.id ?? null)),
     (novo, antigo) => {
       if (String(novo) === String(antigo)) return;
       limpar();
@@ -273,6 +275,8 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
         private: false,
         ...dados,
         ...camposDoEnvio(decisaoDoEnvio, { parte: partesDoEnvio }),
+        // #2216: a conversa visível da caixa com "Reabrir a mesma conversa" reabre.
+        reabrirAoEscrever: reabreAoEscrever(destino.value),
       })
     );
     partesDoEnvio += 1;
@@ -295,7 +299,7 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
     const email = tipo.value === TIPOS.EMAIL;
     return {
       contatoId: contato.value?.id ?? null,
-      nome: contato.value?.name || '',
+      nome: nomeDoContatoNaTela(contato.value),
       texto,
       assunto: email ? assuntoNaPrevia.value : '',
       email,
@@ -508,7 +512,6 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
     comAssinatura,
     assinatura,
     caixaDoWhatsapp,
-    soTexto,
     falta,
     previa,
     enviando,

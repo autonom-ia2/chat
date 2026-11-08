@@ -73,6 +73,23 @@ RSpec.describe Crm::ConversationObserverListener do
     end
   end
 
+  # #2395: os avisos do conector do WhatsApp (QR, vínculo) chegam como mensagem de cliente; não vão ao CRM nem às IAs.
+  it 'ignora a conversa do conector do WhatsApp' do
+    account, user = create_account_and_user
+    inbox = create_crm_inbox(account: account, members: [user])
+    account.crm_inbox_settings.create!(inbox: inbox, crm_enabled: true, subject_ai_mode: :auto)
+    allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
+    contact = account.contacts.create!(name: 'Integração WhatsApp', identifier: Waha::IntegracaoDoConector::IDENTIFIER)
+    conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact)
+    message = create_message(conversation: conversation, sender: contact)
+    clear_enqueued_jobs
+
+    described_class.instance.message_created(event_for(message))
+
+    expect(Crm::SyncConversationCardJob).not_to have_been_enqueued
+    expect(Crm::Subjects::IdentifyJob).not_to have_been_enqueued
+  end
+
   it 'ignores private notes and activity messages' do
     account, user = create_account_and_user
     inbox = create_crm_inbox(account: account, members: [user])

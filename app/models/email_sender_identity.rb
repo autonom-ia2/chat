@@ -30,6 +30,8 @@
 #
 class EmailSenderIdentity < ApplicationRecord
   belongs_to :account
+  # #2237: the domain's default reply inbox, preloaded by the campaign list (EmailCampaigns::ReplyTo).
+  belongs_to :reply_to_inbox, class_name: 'Inbox', optional: true
 
   enum status: { pending: 0, verifying: 1, verified: 2, failed: 3 }
 

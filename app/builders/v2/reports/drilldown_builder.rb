@@ -14,7 +14,8 @@ class V2::Reports::DrilldownBuilder
   }.freeze
   MESSAGE_EVENT_METRICS = %w[avg_first_response_time reply_time].freeze
 
-  pattr_initialize :account, :params
+  # viewer: the AccountUser opening the drilldown; the records are limited to what they can see (#2123).
+  pattr_initialize :account, :params, [:viewer!]
 
   def self.supported_dimension_type?(type) = SUPPORTED_DIMENSION_TYPES.include?((type.presence || 'account').to_s)
 
@@ -52,11 +53,11 @@ class V2::Reports::DrilldownBuilder
 
   def drilldown_scope
     if message_metric?
-      message_scope
+      visible(message_scope)
     elsif conversation_metric?
-      conversation_scope
+      visible(conversation_scope, :id)
     else
-      reporting_event_scope
+      visible(reporting_event_scope)
     end
   end
 
@@ -88,6 +89,16 @@ class V2::Reports::DrilldownBuilder
     end
 
     events
+  end
+
+  # Every record hangs off a conversation, so restricting by conversation keeps the list, the totals and the
+  # conversation count on the same set the viewer can open. The rule is the conversation list's (ConversationFinder):
+  # inbox membership, CRM access and, in EE, the custom role scope; whoever reads none gets an empty list (#2123).
+  def visible(relation, conversation_column = :conversation_id)
+    return relation if viewer.administrator?
+
+    readable = Conversations::PermissionFilterService.new(account.conversations, viewer.user, account, for_reading: true).perform
+    relation.where(conversation_column => readable.reorder(nil).select(:id))
   end
 
   def bot_handoff_conversation_ids_subquery

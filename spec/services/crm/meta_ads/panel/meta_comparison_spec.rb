@@ -51,12 +51,12 @@ RSpec.describe Crm::MetaAds::Panel::MetaComparison do
       days: 7, until: Date.new(2026, 10, 6), explanation: nil,
       rows: [
         { destination: 'whatsapp', meta: 10, ours: 1, difference: -9, explanation: 'meta_higher' },
-        { destination: 'site', meta: 4, meta_visits: 9, ours: 2, difference: -2, explanation: 'close' }
+        { destination: 'site', meta: 4, meta_visits: 9, ours: 2, difference: -2, explanation: 'meta_higher' }
       ]
     )
   end
 
-  it 'perto é até 2 ou 10% do número da Meta; acima, diz quem contou mais' do
+  it 'perto é até 10% do maior; acima, diz quem contou mais' do
     insight(Date.new(2026, 10, 1), conversations: 40)
     conversations(45).each { |conversation| link_from(conversation, 'whatsapp', 2) }
 
@@ -68,6 +68,52 @@ RSpec.describe Crm::MetaAds::Panel::MetaComparison do
     expect(comparison[:rows].sole).to include(meta: 42, ours: 46, difference: 4, explanation: 'close')
   end
 
+  # #2521: a conversa iniciada que a Meta conta em anúncio de Messenger ou Direct sai da linha do WhatsApp e vai para a
+  # linha "Messenger e Direct", ao lado das conversas que chegaram por esses anúncios.
+  it 'anúncio de Messenger ou Direct tem a linha própria, fora da do WhatsApp' do
+    connection.update!(destinations: { 'whatsapp' => true })
+    insight(Date.new(2026, 10, 3), conversations: 10)
+    Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-msg', object_type: 'adset', destination_type: 'MESSENGER',
+                              optimization_goal: 'CONVERSATIONS', fetched_at: now)
+    Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: 'M', adset_id: 'set-msg',
+                                    date: Date.new(2026, 10, 3), currency: 'BRL', spend: 10, conversations_started: 4,
+                                    attribution_window: '7d_click', fetched_at: now)
+    messenger, direct, whatsapp = conversations(3)
+    link_from(messenger, 'messenger', 3)
+    link_from(direct, 'instagram', 4)
+    link_from(whatsapp, 'whatsapp', 4)
+
+    expect(comparison[:rows]).to eq(
+      [{ destination: 'whatsapp', meta: 10, ours: 1, difference: -9, explanation: 'meta_higher' },
+       { destination: 'messaging', meta: 4, ours: 2, difference: -2, explanation: 'meta_higher' }]
+    )
+  end
+
+  # #2344: com números pequenos, uma tolerância absoluta fazia 2 × 0 "bater".
+  it 'batem só com os dois lados acima de zero e perto; um lado zerado nunca bate' do
+    connection.update!(destinations: { 'whatsapp' => true })
+    # 0 × 2 com gasto: a Meta não mandou número (no_meta_data), e a linha fica sem frase.
+    {
+      [2, 0] => 'ours_none', [0, 2] => nil, [1, 1] => 'close', [10, 11] => 'close', [100, 108] => 'close',
+      [2, 3] => 'ours_higher', [3, 2] => 'meta_higher'
+    }.each do |(meta, ours), explanation|
+      Crm::MetaAdInsightDaily.delete_all
+      Crm::MetaAdLink.delete_all
+      insight(Date.new(2026, 10, 3), conversations: meta)
+      conversations(ours).each { |conversation| link_from(conversation, 'whatsapp', 3) }
+
+      expect(comparison[:rows].sole).to include(meta: meta, ours: ours, explanation: explanation), "#{meta} × #{ours}"
+    end
+  end
+
+  it 'site: a Meta com leads e nós com zero também é ours_none' do
+    connection.update!(destinations: { 'site' => true })
+    insight(Date.new(2026, 10, 3), leads: 3, visits: 10)
+
+    expect(comparison[:rows]).to eq([{ destination: 'site', meta: 3, meta_visits: 10, ours: 0, difference: -3,
+                                       explanation: 'ours_none' }])
+  end
+
   it 'destino não marcado não tem linha, mesmo com número da Meta' do
     insight(Date.new(2026, 10, 3), conversations: 5, leads: 8, visits: 20)
     link_from(conversations(1).first, 'site', 3)
@@ -75,7 +121,7 @@ RSpec.describe Crm::MetaAds::Panel::MetaComparison do
     expect(comparison[:rows].map { |row| row[:destination] }).to eq(['whatsapp'])
   end
 
-  # Sem número da Meta na linha não há o que explicar: "batem" ou "a Meta só conta 7 dias" seria falso.
+  # A Meta não mandou número nenhum no período: o aviso geral (no_meta_data) explica, e a linha fica sem frase (#2344).
   it 'sem número da Meta e sem conversa nossa, nil; com gasto e só a nossa conta, no_meta_data e a linha sem explicação' do
     connection.update!(destinations: { 'whatsapp' => true, 'site' => true })
     insight(Date.new(2026, 10, 3), spend: 50)
@@ -93,6 +139,6 @@ RSpec.describe Crm::MetaAds::Panel::MetaComparison do
     conversations(12).each { |conversation| link_from(conversation, 'whatsapp', 1) }
 
     expect(comparison(days: 30)).to include(days: 30, rows: [include(meta: 12, ours: 12, explanation: 'close')])
-    expect(comparison(days: 7)[:rows].sole).to include(meta: 0, ours: 12, explanation: nil)
+    expect(comparison(days: 7)[:rows].sole).to include(meta: 0, ours: 12, explanation: 'meta_none')
   end
 end

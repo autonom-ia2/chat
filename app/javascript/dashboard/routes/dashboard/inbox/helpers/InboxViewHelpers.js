@@ -15,4 +15,6 @@ export const NOTIFICATION_TYPES_MAPPING = {
   SLA_MISSED_RESOLUTION: ['i-lucide-heart-crack', 'text-n-ruby-11'],
   // #935 — aviso urgente do Guia da Plataforma.
   GUIDE_ALERT: ['i-lucide-bell-ring', 'text-n-amber-11'],
+  // #2277 — a search by conversation ended (Campanhas › Novo público).
+  CONVERSATION_AUDIENCE_READY: ['i-lucide-users-round', 'text-n-blue-11'],
 };

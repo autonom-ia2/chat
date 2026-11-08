@@ -11,12 +11,23 @@ module ConversaCanal::SpamDoBloqueado
 
   # Põe a conversa no Spam do painel, resolvida. Também usada quando o remetente no Spam responde numa conversa que já
   # existia (ConversaCanal::PastaNaMensagemDoCliente). Upsert: a conversa pode estar na Lixeira.
+  # Quem resolve é o Spam da caixa (#2616): a atividade diz por que a conversa foi para lá, e não "por inatividade".
+  # Uma linha por ida ao Spam: conversa nova, conversa que estava em outra pasta ou na Entrada (aberta ou já resolvida),
+  # ou reaberta no Spam. Roda no after_create_commit da conversa ou da mensagem, fora de transação.
   def self.mandar_para_o_spam(conversa)
+    no_spam = ConversaCanal::PastaDoEmail.exists?(conversation_id: conversa.id, pasta: 'spam')
     ConversaCanal::PastaDoEmail.upsert( # rubocop:disable Rails/SkipsModelValidations -- pasta fixa, conferida no modelo
       { account_id: conversa.account_id, conversation_id: conversa.id, pasta: 'spam' },
       unique_by: :conversation_id, update_only: %i[pasta]
     )
-    conversa.update!(status: :resolved) unless conversa.resolved?
+    return if no_spam && conversa.resolved?
+
+    ConversaCanal::AtividadeDaPasta.com_autor(ConversaCanal::PastaDoEmail.find_by!(conversation_id: conversa.id)) do
+      conversa.transaction do
+        conversa.update!(status: :resolved) unless conversa.resolved?
+        ConversaCanal::AtividadeDaPasta.registrar!(conversa, 'spam_do_remetente')
+      end
+    end
   end
 
   private

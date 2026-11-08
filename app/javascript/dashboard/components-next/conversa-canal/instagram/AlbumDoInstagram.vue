@@ -13,7 +13,7 @@ const props = defineProps({
 
 const { t } = useI18n();
 const COLUNAS = 3;
-// Endereço da Meta expirado: o quadrado mostra o aviso no lugar da mídia.
+// Mídia que não abre (cópia ausente e endereço da Meta expirado): o quadrado mostra o aviso.
 const quebrados = ref(new Set());
 const quebrou = anexo => {
   quebrados.value = new Set([...quebrados.value, anexo.id]);

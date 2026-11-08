@@ -12,13 +12,15 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
   let(:legendas) { instance_double(Crm::Ai::VisionCaptioner, caption: 'descrição da foto') }
   let(:transcricoes) { instance_double(Crm::Ai::TranscriptionClient, transcribe: 'texto do áudio') }
 
-  def mensagem(tipo = :incoming, conteudo = nil)
-    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: tipo, content: conteudo)
+  def mensagem(tipo = :incoming, conteudo = nil, criada_em: Time.current)
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: tipo, content: conteudo,
+                     created_at: criada_em)
   end
 
   def meta(anexo) = anexo.reload.meta.to_h
 
   before do
+    limpar_redis_do_leitor
     allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
     allow(Crm::Ai::CredentialResolver).to receive(:new)
       .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k', source: 'teste' }))
@@ -117,23 +119,231 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
       expect(legendas).to have_received(:caption).once
     end
 
-    it 'a falha esperada (a API da IA) também marca o anexo, para não tentar para sempre', :aggregate_failures do
-      allow(legendas).to receive(:caption).and_raise(Crm::Ai::ResponsesClient::Error, 'falhou')
-      foto = anexar_imagem(mensagem)
+    describe 'falha da leitura (#2109)' do
+      def passou_a_espera(anexo) = anexo.update!(meta: anexo.reload.meta.merge(Crm::Ai::FalhaDaMidia::PROXIMA => 1.second.ago.iso8601))
 
-      described_class.new(foto.message).perform
+      it 'falha permanente (a API recusou o pedido) marca o anexo na hora, com o motivo', :aggregate_failures do
+        allow(legendas).to receive(:caption).and_raise(Crm::Ai::ResponsesClient::Error.new('rejected', status: 400))
+        foto = anexar_imagem(mensagem)
 
-      expect(meta(foto)['crm_ai_image_done']).to be(true)
-      expect(meta(foto)).not_to have_key('ai_caption')
+        expect(described_class.new(foto.message).perform).to eq(1)
+        expect(meta(foto)).to include('crm_ai_image_done' => true, 'crm_ai_midia_falha' => 'permanente',
+                                      'crm_ai_midia_erro' => 'Crm::Ai::ResponsesClient::Error')
+        expect(meta(foto)).not_to have_key('ai_caption')
+      end
+
+      it 'arquivo que a API não aceita (400 na transcrição) também é permanente' do
+        allow(transcricoes).to receive(:transcribe).and_raise(Faraday::BadRequestError, 'formato')
+        audio = anexar_audio(mensagem)
+
+        described_class.new(audio.message).perform
+
+        expect(meta(audio)).to include('crm_ai_audio_done' => true, 'crm_ai_midia_falha' => 'permanente')
+      end
+
+      it 'leitura sem texto (sem fala, arquivo grande) marca sem_texto, que é definitiva' do
+        allow(transcricoes).to receive(:transcribe).and_return(nil)
+        audio = anexar_audio(mensagem)
+
+        described_class.new(audio.message).perform
+
+        expect(meta(audio)).to include('crm_ai_audio_done' => true, 'crm_ai_midia_falha' => 'sem_texto')
+      end
+
+      [Faraday::ConnectionFailed, Faraday::TimeoutError, Faraday::TooManyRequestsError, Faraday::ServerError,
+       Faraday::UnauthorizedError, Faraday::SSLError, Net::ReadTimeout, Errno::EHOSTUNREACH].each do |erro|
+        it "falha passageira (#{erro}) não marca, agenda a próxima tentativa e sobe para o job", :aggregate_failures do
+          allow(transcricoes).to receive(:transcribe).and_raise(erro)
+          audio = anexar_audio(mensagem)
+
+          expect { described_class.new(audio.message).perform }.to raise_error(described_class::FalhaPassageira)
+          expect(meta(audio)).not_to have_key('crm_ai_audio_done')
+          expect(meta(audio)).to include('crm_ai_midia_tentativas' => 1, 'crm_ai_midia_erro' => erro.name)
+          expect(Time.zone.parse(meta(audio)['crm_ai_midia_proxima_em'])).to be_within(5.seconds).of(1.minute.from_now)
+        end
+      end
+
+      it 'a chave recusada (403) é permanente' do
+        allow(legendas).to receive(:caption).and_raise(Crm::Ai::ResponsesClient::Error.new('x', status: 403))
+        foto = anexar_imagem(mensagem)
+
+        described_class.new(foto.message).perform
+
+        expect(meta(foto)['crm_ai_midia_falha']).to eq('permanente')
+      end
+
+      it 'a API da foto ocupada (429) ou recusando a chave (401) é passageira', :aggregate_failures do
+        [429, 401].each do |status|
+          allow(legendas).to receive(:caption).and_raise(Crm::Ai::ResponsesClient::Error.new('x', status: status))
+          foto = anexar_imagem(mensagem)
+
+          expect { described_class.new(foto.message).perform }.to raise_error(described_class::FalhaPassageira)
+          expect(meta(foto)).not_to have_key('crm_ai_image_done')
+        end
+      end
+
+      it 'enquanto a próxima tentativa não vence, ninguém lê nem gasta tentativa', :aggregate_failures do
+        allow(transcricoes).to receive(:transcribe).and_raise(Faraday::TimeoutError)
+        audio = anexar_audio(mensagem)
+        expect { described_class.new(audio.message).perform }.to raise_error(described_class::FalhaPassageira)
+
+        expect(described_class.new(audio.message.reload, releitura: :mensagem_nova).perform).to eq(0)
+        expect { described_class.ler_a_rajada(conversation, audio.message) }.not_to raise_error
+        expect(transcricoes).to have_received(:transcribe).once
+        expect(meta(audio)['crm_ai_midia_tentativas']).to eq(1)
+      end
+
+      it 'a próxima tentativa nunca fica para depois do fim da janela da mensagem' do
+        allow(transcricoes).to receive(:transcribe).and_raise(Faraday::TimeoutError)
+        audio = anexar_audio(mensagem(criada_em: 47.hours.ago), meta: { 'crm_ai_midia_tentativas' => 9 })
+
+        expect { described_class.new(audio.message.reload).perform }.to raise_error(described_class::FalhaPassageira)
+
+        expect(Time.zone.parse(meta(audio)['crm_ai_midia_proxima_em']))
+          .to be_within(5.seconds).of(audio.message.created_at + Crm::Ai::FalhaDaMidia::JANELA_DE_RELEITURA)
+      end
+
+      it 'mensagem fora da janela de 48 h com falha passageira: marca expirado', :aggregate_failures do
+        allow(transcricoes).to receive(:transcribe).and_raise(Faraday::TooManyRequestsError)
+        audio = anexar_audio(mensagem(criada_em: (Crm::Ai::FalhaDaMidia::JANELA_DE_RELEITURA + 1.minute).ago))
+
+        expect(described_class.new(audio.message.reload).perform).to eq(1)
+        expect(meta(audio)).to include('crm_ai_audio_done' => true, 'crm_ai_midia_falha' => 'expirado',
+                                       'crm_ai_midia_erro' => 'Faraday::TooManyRequestsError')
+      end
+
+      it 'a tentativa seguinte que dá certo lê e tira o motivo e a espera', :aggregate_failures do
+        tentativas = 0
+        allow(transcricoes).to receive(:transcribe) do
+          tentativas += 1
+          raise Faraday::TimeoutError if tentativas == 1
+
+          'texto do áudio'
+        end
+        audio = anexar_audio(mensagem)
+
+        expect { described_class.new(audio.message).perform }.to raise_error(described_class::FalhaPassageira)
+        passou_a_espera(audio)
+        expect(described_class.new(audio.message.reload).perform).to eq(1)
+        expect(meta(audio)).to include('transcribed_text' => 'texto do áudio', 'crm_ai_audio_done' => true)
+        expect(meta(audio)).not_to have_key('crm_ai_midia_proxima_em')
+      end
+
+      it 'os outros anexos da mensagem seguem; a falha passageira sobe só no fim', :aggregate_failures do
+        chegada = mensagem
+        audio = anexar_audio(chegada)
+        foto = anexar_imagem(chegada)
+        allow(transcricoes).to receive(:transcribe).and_raise(Faraday::ConnectionFailed)
+
+        expect { described_class.new(chegada).perform }.to raise_error(described_class::FalhaPassageira)
+        expect(meta(foto)['ai_caption']).to eq('descrição da foto')
+        expect(meta(audio)).not_to have_key('crm_ai_audio_done')
+      end
+
+      it 'a tentativa com falha passageira conta no teto do dia (em dia de API lenta, o gasto tem limite)', :aggregate_failures do
+        stub_const("#{described_class}::MAX_LEITURAS_POR_DIA", 1)
+        allow(transcricoes).to receive(:transcribe).and_raise(Faraday::TimeoutError)
+        audio = anexar_audio(mensagem)
+        expect { described_class.new(audio.message).perform }.to raise_error(described_class::FalhaPassageira)
+
+        foto = anexar_imagem(mensagem)
+
+        expect(described_class.new(foto.message).perform).to eq(0)
+        expect(Crm::Ai::TetoDaMidia.new(account).usado).to eq(2)
+      end
+
+      it 'anexo em leitura por outro processo (marca vigente) não é lido de novo; marca vencida é', :aggregate_failures do
+        foto = anexar_imagem(mensagem, meta: { Crm::Ai::ReservaDaMidia::LENDO => 5.minutes.from_now.iso8601 })
+        expect(described_class.new(foto.message).perform).to eq(0)
+
+        foto.update!(meta: { Crm::Ai::ReservaDaMidia::LENDO => 1.second.ago.iso8601 })
+        expect(described_class.new(foto.message.reload).perform).to eq(1)
+        expect(meta(foto)).not_to have_key(Crm::Ai::ReservaDaMidia::LENDO)
+      end
+
+      it 'na leitura em linha, a falha passageira não sobe e o anexo fica pendente', :aggregate_failures do
+        allow(transcricoes).to receive(:transcribe).and_raise(Faraday::TimeoutError)
+        audio = anexar_audio(mensagem)
+
+        expect { described_class.ler_a_rajada(conversation, audio.message) }.not_to raise_error
+        expect(described_class.pendente?(audio.reload)).to be(true)
+      end
     end
 
-    it 'a falha de rede na transcrição também marca o anexo' do
-      allow(transcricoes).to receive(:transcribe).and_raise(Faraday::ConnectionFailed, 'sem rede')
-      audio = anexar_audio(mensagem)
+    # Regra do Rodrigo (23/10/2026): chegou mensagem nova, o leitor relê a mídia antiga sem texto das últimas mensagens,
+    # de qualquer idade, salvo falha definitiva.
+    describe 'mensagem nova relê a mídia antiga sem texto (#2109)' do
+      def antiga(meta) = anexar_audio(mensagem(criada_em: 30.days.ago), meta: meta)
 
-      described_class.new(audio.message).perform
+      it 'relê o áudio antigo marcado sem texto (antes do #2109, ou expirado) entre as últimas', :aggregate_failures do
+        sem_motivo = antiga('crm_ai_audio_done' => true)
+        expirado = antiga('crm_ai_audio_done' => true, 'crm_ai_midia_falha' => 'expirado')
+        nova = mensagem(:incoming, 'e aí?')
 
-      expect(meta(audio)['crm_ai_audio_done']).to be(true)
+        perform_enqueued_jobs { described_class.ler_a_rajada(conversation, nova) }
+
+        expect(meta(sem_motivo)).to include('transcribed_text' => 'texto do áudio')
+        expect(meta(expirado)).to include('transcribed_text' => 'texto do áudio')
+        expect(meta(expirado)).not_to have_key('crm_ai_midia_falha')
+      end
+
+      it 'não relê o de falha definitiva nem o que já tem texto', :aggregate_failures do
+        Crm::Ai::FalhaDaMidia::FALHAS_DEFINITIVAS.each { |falha| antiga('crm_ai_audio_done' => true, 'crm_ai_midia_falha' => falha) }
+        antiga('transcribed_text' => 'já lido', 'crm_ai_audio_done' => true)
+
+        perform_enqueued_jobs { described_class.ler_a_rajada(conversation, mensagem(:incoming, 'e aí?')) }
+
+        expect(transcricoes).not_to have_received(:transcribe)
+      end
+
+      it 'a leitura em linha não espera a releitura: enfileira o job da chegada', :aggregate_failures do
+        clear_enqueued_jobs
+        antiga('crm_ai_audio_done' => true)
+
+        described_class.ler_a_rajada(conversation, mensagem(:incoming, 'e aí?'))
+
+        expect(transcricoes).not_to have_received(:transcribe)
+        expect(Crm::Ai::LerMidiaJob).to have_been_enqueued.with(anything, 'mensagem_nova').on_queue('low').once
+      end
+
+      it 'o expirado que falha de novo só volta a ser relido depois de ESPERA_DO_EXPIRADO', :aggregate_failures do
+        allow(transcricoes).to receive(:transcribe).and_raise(Faraday::TimeoutError)
+        anexo = antiga('crm_ai_audio_done' => true, 'crm_ai_midia_falha' => 'expirado')
+
+        described_class.new(Message.find(anexo.message_id), releitura: :mensagem_nova).perform
+        expect(described_class.new(Message.find(anexo.message_id), releitura: :mensagem_nova).escolhidos).to be_empty
+        travel(Crm::Ai::FalhaDaMidia::ESPERA_DO_EXPIRADO + 1.minute) do
+          expect(described_class.new(Message.find(anexo.message_id), releitura: :mensagem_nova).escolhidos).to eq([anexo])
+        end
+        expect(transcricoes).to have_received(:transcribe).once
+      end
+
+      # Pega: o expirado (ex.: chave recusada, 401) ser relido uma vez por hora sem fim enquanto a conversa tem mensagem.
+      it 'o expirado para de vez depois de MAX_RELEITURAS_DO_EXPIRADO falhas, com aviso', :aggregate_failures do
+        allow(transcricoes).to receive(:transcribe).and_raise(Faraday::UnauthorizedError)
+        allow(Rails.logger).to receive(:warn)
+        anexo = antiga('crm_ai_audio_done' => true, 'crm_ai_midia_falha' => 'expirado')
+        maximo = Crm::Ai::FalhaDaMidia::MAX_RELEITURAS_DO_EXPIRADO
+
+        maximo.times do |vez|
+          travel((vez + 1) * (Crm::Ai::FalhaDaMidia::ESPERA_DO_EXPIRADO + 1.minute)) do
+            described_class.new(Message.find(anexo.message_id), releitura: :mensagem_nova).perform
+          end
+        end
+
+        expect(meta(anexo)).to include('crm_ai_midia_falha' => 'expirado_esgotado', 'crm_ai_midia_releituras_do_expirado' => maximo)
+        expect(Rails.logger).to have_received(:warn).with(a_string_including('esgotou=true'))
+        travel(1.day) do
+          expect(described_class.new(Message.find(anexo.message_id), releitura: :mensagem_nova).escolhidos).to be_empty
+        end
+        expect(transcricoes).to have_received(:transcribe).exactly(maximo).times
+      end
+
+      it 'a avaliação do card (sem mensagem nova) não relê o marcado sem texto' do
+        anexo = antiga('crm_ai_audio_done' => true)
+
+        expect(described_class.new(anexo.message).escolhidos).to be_empty
+      end
     end
 
     # Pega (revisão adversarial F4): um erro nosso ser engolido e o anexo marcado como lido, sem nunca ser lido.
@@ -143,6 +353,7 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
 
       expect { described_class.new(foto.message).perform }.to raise_error(NoMethodError)
       expect(meta(foto)).not_to have_key('crm_ai_image_done')
+      expect(meta(foto)).not_to have_key(Crm::Ai::ReservaDaMidia::LENDO)
     end
 
     describe 'arquivo que ainda não chegou ao storage (corrida com o upload)' do
@@ -309,6 +520,16 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
       expect { Crm::Ai::MediaEnricher.new(card: card).perform }.not_to raise_error
       expect(legendas).to have_received(:caption)
       expect(meta(foto)).not_to have_key('crm_ai_image_done')
+    end
+
+    it 'com a flag, a falha passageira fica pendente e a avaliação segue', :aggregate_failures do
+      account.enable_features!(described_class::FLAG)
+      allow(legendas).to receive(:caption).and_raise(Faraday::TooManyRequestsError)
+      foto = anexar_imagem(mensagem)
+
+      expect { Crm::Ai::MediaEnricher.new(card: card).perform }.not_to raise_error
+      expect(meta(foto)).not_to have_key('crm_ai_image_done')
+      expect(meta(foto)['crm_ai_midia_tentativas']).to eq(1)
     end
 
     it 'sem a flag, o PDF segue sem leitura (como antes)' do

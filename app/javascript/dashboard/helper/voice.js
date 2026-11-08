@@ -5,6 +5,7 @@ import {
 import { MESSAGE_TYPE } from 'shared/constants/messages';
 import { useCallsStore } from 'dashboard/stores/calls';
 import types from 'dashboard/store/mutation-types';
+import { humanAssigneeId } from 'dashboard/helper/assigneeHelper';
 
 export const TERMINAL_STATUSES = [
   'completed',
@@ -53,7 +54,8 @@ const shouldSkipCall = (callDirection, senderId, currentUserId) => {
 };
 
 const extractAssigneeId = conversation => {
-  return conversation?.assignee_id || conversation?.meta?.assignee?.id || null;
+  // assignee_id é a coluna de pessoa; no meta, robô com o mesmo id não conta (#2249).
+  return conversation?.assignee_id || humanAssigneeId(conversation);
 };
 
 const isAssignedToAnotherAgent = (assigneeId, currentUserId) => {

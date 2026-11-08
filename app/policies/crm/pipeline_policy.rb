@@ -19,7 +19,21 @@ class Crm::PipelinePolicy < ApplicationPolicy
     update?
   end
 
+  # Funil arquivado (#2095): restaurar e a prévia do arquivamento (cards abertos, caixas) são de quem gerencia funis.
+  def restore?
+    update?
+  end
+
+  def archive_preview?
+    destroy?
+  end
+
   def manage_ai?
+    administrator? && record.account_id == account.id
+  end
+
+  # Excluir de vez (#2096): só administrador, também no EE (ver Crm::CardPolicy#permanent_delete?).
+  def permanent_delete?
     administrator? && record.account_id == account.id
   end
 

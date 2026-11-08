@@ -10,6 +10,10 @@ import { errorMessageKey, intlLocale, relativeTime } from '../metaAdsHelpers';
 import { useMetaAdsLive } from '../useMetaAdsLive';
 import MetaAdsConfidence from './MetaAdsConfidence.vue';
 import MetaAdsWhatsappReport from './MetaAdsWhatsappReport.vue';
+import { useRoute } from 'vue-router';
+import { useMapGetter } from 'dashboard/composables/store';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { lerPagina } from '../gestaoDoAnuncio';
 
 // Anúncios da Meta (#1068): a conexão pronta. Herói com a frase da conta, quatro quadros com o que está
 // ligado de verdade (WhatsApp, site, campanhas com nome, funis avisando a Meta), o que acontece agora e um
@@ -196,8 +200,23 @@ const remove = async () => {
   }
 };
 
+// Página da conexão (#2161, flag meta_ads_gestao): a que a pessoa escolheu ao entrar com o Facebook.
+const route = useRoute();
+const isFeatureEnabledonAccount = useMapGetter(
+  'accounts/isFeatureEnabledonAccount'
+);
+const page = ref(null);
+const loadPage = async () => {
+  const on = isFeatureEnabledonAccount.value(
+    Number(route.params.accountId),
+    FEATURE_FLAGS.META_ADS_GESTAO
+  );
+  if (on) page.value = await lerPagina();
+};
+
 onMounted(() => {
   load();
+  loadPage();
   if (!attention.value) live.start();
 });
 </script>
@@ -304,6 +323,9 @@ onMounted(() => {
                   })
                 : $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.NO_PIXEL')
             }}
+          </span>
+          <span v-if="page" data-summary-page>
+            {{ $t('CRM_KANBAN.META_ADS_HUB.GESTAO.PAGE', { page: page.name }) }}
           </span>
           <span v-if="verified">{{ verified }}</span>
         </p>

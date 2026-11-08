@@ -40,7 +40,7 @@ RSpec.describe Crm::Ai::FecharCard do
       expect(Crm::Ai::FatosDaConversa.agente_protegido_atendendo?(card)).to be(true)
     end
 
-    it 'não fecha sozinho, nem com confiança alta', :aggregate_failures do
+    it 'nem com confiança alta: não fecha nem sugere', :aggregate_failures do
       ia_responde(fechar_card: fim(confidence: 0.99))
 
       avaliar
@@ -67,13 +67,15 @@ RSpec.describe Crm::Ai::FecharCard do
   end
 
   describe 'sem o agente de cotação atendendo' do
-    it 'outro agente nosso no nome: fecha como sempre', :aggregate_failures do
+    # A IA nunca fecha sozinha (#2389): mesmo com 0,99, sugere.
+    it 'outro agente nosso no nome: com confiança 0,99, sugere fechar como sempre', :aggregate_failures do
       expect(Crm::Ai::FatosDaConversa.agente_protegido_atendendo?(card)).to be(false)
       ia_responde(fechar_card: fim(confidence: 0.99))
 
       avaliar
 
-      expect(card.reload).to be_lost
+      expect(card.reload).to be_open
+      expect(sugestoes.pending.sole.fechar).to include('resultado' => 'perdido')
     end
 
     it 'outro agente nosso no nome: sugere fechar e "era teste" como sempre', :aggregate_failures do

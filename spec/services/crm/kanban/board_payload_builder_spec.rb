@@ -239,6 +239,19 @@ RSpec.describe Crm::Kanban::BoardPayloadBuilder do
     expect(cards.pluck(:id)).to contain_exactly(card.id)
   end
 
+  # A flag de SLA é lida uma vez, da conta da requisição (#2295): o selo só vai com ela ligada.
+  it 'sends the SLA badge only when the account has the sla feature' do
+    conversation = create_conversation
+    create(:applied_sla, conversation: conversation, sla_policy: create(:sla_policy, account: account))
+    create_card(conversation: conversation)
+
+    expect(board_cards.first[:conversation]).not_to have_key(:applied_sla)
+
+    account.enable_features!('sla')
+
+    expect(board_cards.first.dig(:conversation, :applied_sla)).to include(sla_status: 'active')
+  end
+
   it 'sends the contact type for the customer badge on the board (#1258)' do
     conversation = create_conversation
     conversation.contact.update!(contact_type: :customer, customer_since: Time.zone.parse('2026-03-15 12:00'))

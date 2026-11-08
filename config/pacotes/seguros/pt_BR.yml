@@ -12,6 +12,14 @@ pt_BR:
       statuses:
         won: 'Seguro ativo'
         lost: 'Não fechou'
+    # Vocabulário nas mensagens que a IA escreve ao cliente (#2034). Seguradora, insurtech e corretora herdam esta linha;
+    # a corretora e a saúde têm a sua.
+    ai:
+      vocabulario: 'Fale de seguro, apólice e sinistro; chame de cliente só quem já contratou e de segurado só quem tem apólice.'
+  # Relatório baixado de Números › "De onde vieram os clientes" (#2001, F6): a situação do cliente do mês.
+  numeros_origens_report:
+    situation:
+      lost: 'Não fechou'
   # Relatório baixado de Anúncios (#1960): a situação de quem veio do anúncio e o que cada palavra quer dizer.
   meta_ads_report:
     glossary: 'Conversa: alguém chamou no WhatsApp depois de tocar num anúncio. Proposta: o card chegou a uma etapa de oportunidade ou negociação. Venda: o card foi marcado como seguro fechado.'
@@ -21,3 +29,22 @@ pt_BR:
   email_campaigns:
     ai:
       vocabulario: 'Ramo da conta: seguros. Fale de seguro, apólice, cobertura e renovação em linguagem simples; segurado só para quem já tem apólice; cliente só para quem já comprou.'
+  # Painel de desempenho do agente (#2226): o PDF e a planilha dizem "não fechou", nunca "perda".
+  autonomia:
+    desempenho2:
+      c:
+        kpi:
+          perdas_evitaveis: 'Não fecharam por causa corrigível'
+        secoes:
+          perdas: 'o que não fechou'
+        indice:
+          perdas: 'Não fecharam'
+        perdas:
+          titulo: 'Não fecharam por causa corrigível'
+          por_que_descricao: 'Cada procura que não fechou, pela causa principal.'
+        tabelas:
+          tabela_perdas:
+            titulo: 'Não fecharam por causa corrigível'
+        planilha:
+          procura:
+            perda: 'Não fechou, dava para evitar'

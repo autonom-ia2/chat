@@ -37,10 +37,10 @@ module Crm
 
       def suggestions
         scope = account.crm_ai_stage_suggestions.where(created_at: range)
-        return scope.where(card_id: account.crm_cards.where(pipeline_id: pipelines.select(:id)).select(:id)) if todos_os_funis?
+        return scope.where(card_id: Crm::Relacao.cards_do_funil(account).where(pipeline_id: pipelines.select(:id)).select(:id)) if todos_os_funis?
         return scope if pipeline.blank?
 
-        scope.where(card_id: account.crm_cards.where(pipeline_id: pipeline.id).select(:id))
+        scope.where(card_id: Crm::Relacao.cards_do_funil(account).where(pipeline_id: pipeline.id).select(:id))
       end
 
       def todos_os_funis?

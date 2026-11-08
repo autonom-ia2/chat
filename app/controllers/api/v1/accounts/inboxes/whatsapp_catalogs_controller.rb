@@ -52,13 +52,13 @@ class Api::V1::Accounts::Inboxes::WhatsappCatalogsController < Api::V1::Accounts
     render json: { payload: client.find(ids).values.map(&:to_h), meta: { after: nil } }
   end
 
-  # Os três abaixo rodam fora do `around_action` do idioma (#1419): cada um reabre o idioma da pessoa ou da conta.
+  # Os três abaixo respondem pelo `rescue_from`; o idioma da pessoa (ou da conta) vem do BaseController (#1419, #2110).
   def catalog_missing
-    switch_locale_using_account_locale { render_error('catalog_missing', :not_found) }
+    render_error('catalog_missing', :not_found)
   end
 
   def meta_unreachable
-    switch_locale_using_account_locale { render_error('meta_unreachable', :service_unavailable) }
+    render_error('meta_unreachable', :service_unavailable)
   end
 
   # O texto da Meta nunca vai para a tela (#1394): falta de permissão e catálogo sumido (ou sem acesso) têm texto nosso,
@@ -66,7 +66,7 @@ class Api::V1::Accounts::Inboxes::WhatsappCatalogsController < Api::V1::Accounts
   OWN_TEXTS = { 'permission_denied' => 'catalog_permission_denied', 'not_found_or_no_access' => 'catalog_not_found' }.freeze
 
   def meta_refused(error)
-    switch_locale_using_account_locale { render_error(OWN_TEXTS.fetch(error.code, 'meta_failed')) }
+    render_error(OWN_TEXTS.fetch(error.code, 'meta_failed'))
   end
 
   def render_error(code, status = :unprocessable_entity)

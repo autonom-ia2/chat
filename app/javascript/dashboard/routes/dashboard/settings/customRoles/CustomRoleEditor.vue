@@ -12,7 +12,7 @@ import PermissionGroup from './component/PermissionGroup.vue';
 import RoleSummary from './component/RoleSummary.vue';
 import AssignAgentsDialog from './component/AssignAgentsDialog.vue';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
-import { LOCK_REASONS } from 'dashboard/helper/peopleAccess';
+import { LOCK_REASONS, holdsKey } from 'dashboard/helper/peopleAccess';
 import {
   BLANK_PROFILE,
   LEVELS,
@@ -20,6 +20,7 @@ import {
   MODULE_GROUPS,
   SENSITIVE_EXTRAS,
   hasAccess,
+  modulesWithKeys,
   profilePermissions,
   setLevel,
   toggleExtra,
@@ -33,6 +34,7 @@ const { t } = useI18n();
 
 const roles = useMapGetter('customRole/getCustomRoles');
 const uiFlags = useMapGetter('customRole/getUIFlags');
+const agents = useMapGetter('agents/getAgents');
 
 // Fora do administrador (#1931): só monta com as próprias chaves, sem chave de delegação (a menos que
 // possa entregar acima do próprio acesso), e não abre a própria função nem uma acima do alcance.
@@ -51,9 +53,16 @@ const search = ref('');
 const openGroups = ref([]);
 const openRows = ref([]);
 const nameError = ref('');
+// Chaves do modelo que a pessoa não pode entregar e que ficaram de fora ao aplicá-lo (#2115).
+const leftOut = ref([]);
 
 const confirmRef = ref(null);
-const confirmation = ref({ title: '', description: '', label: '' });
+const confirmation = ref({
+  title: '',
+  description: '',
+  label: '',
+  cancel: '',
+});
 let pendingAction = null;
 const assignRef = ref(null);
 
@@ -116,7 +125,9 @@ const backToList = () => router.push({ name: 'custom_roles_list' });
 
 // Step 1 -----------------------------------------------------------------
 const applyProfile = key => {
-  permissions.value = withinReach(profilePermissions(key));
+  const full = profilePermissions(key);
+  permissions.value = withinReach(full);
+  leftOut.value = full.filter(item => !permissions.value.includes(item));
   baseProfile.value = key === BLANK_PROFILE ? null : key;
   openRows.value = [];
   openGroups.value = key === BLANK_PROFILE ? [MODULE_GROUPS[0].key] : [];
@@ -237,6 +248,8 @@ const clearGroup = group => {
   );
 };
 
+const leftOutModules = computed(() => modulesWithKeys(leftOut.value));
+
 const areaCount = computed(
   () => MODULES.filter(module => hasAccess(module, permissions.value)).length
 );
@@ -244,20 +257,30 @@ const isSaving = computed(
   () => uiFlags.value.creatingItem || uiFlags.value.updatingItem
 );
 
-const save = async () => {
-  if (name.value.trim().length < 2) {
-    nameError.value = t('CUSTOM_ROLE.FORM.NAME.ERROR');
-    return;
-  }
-  if (!permissions.value.length) {
-    useAlert(t('CUSTOM_ROLE.FORM.PERMISSIONS.ERROR'));
-    return;
-  }
-  const payload = {
-    name: name.value.trim(),
-    description: description.value.trim(),
-    permissions: permissions.value,
+// Um nome por conta, sem diferenciar maiúsculas nem espaços (#2185). O servidor confere de novo, e o banco tem
+// índice único.
+const isNameTaken = value =>
+  value !== findRole(roleId.value)?.name &&
+  roles.value.some(
+    role =>
+      role.id !== roleId.value &&
+      role.name.trim().toLowerCase() === value.toLowerCase()
+  );
+
+// Quem tem a função e as áreas em que ela perde chaves ao salvar (#2185): o administrador confirma antes.
+// Passar de ver para editar não é perda: editar inclui ver, como no servidor (holdsKey).
+const lostAccess = () => {
+  const saved = findRole(roleId.value)?.permissions || [];
+  const next = { permissions: permissions.value };
+  const removed = saved.filter(key => !holdsKey(next, key));
+  return {
+    people: agents.value.filter(agent => agent.custom_role_id === roleId.value)
+      .length,
+    areas: modulesWithKeys(removed),
   };
+};
+
+const persist = async payload => {
   try {
     if (isNewRole.value) {
       const role = await store.dispatch('customRole/createCustomRole', payload);
@@ -276,8 +299,57 @@ const save = async () => {
     useAlert(t('CUSTOM_ROLE.EDIT.API.SUCCESS_MESSAGE'));
     backToList();
   } catch (error) {
+    // O nome é a única recusa de campo que chega aqui: o tamanho é conferido em save, antes de chegar aqui.
+    if (error?.attributes?.includes('name')) {
+      nameError.value = t('CUSTOM_ROLE.FORM.NAME.TAKEN');
+      return;
+    }
     useAlert(error?.message || t('CUSTOM_ROLE.FORM.API.ERROR_MESSAGE'));
   }
+};
+
+const save = async () => {
+  const typedName = name.value.trim();
+  if (typedName.length < 2) {
+    nameError.value = t('CUSTOM_ROLE.FORM.NAME.ERROR');
+    return null;
+  }
+  if (isNameTaken(typedName)) {
+    nameError.value = t('CUSTOM_ROLE.FORM.NAME.TAKEN');
+    return null;
+  }
+  if (!permissions.value.length) {
+    useAlert(t('CUSTOM_ROLE.FORM.PERMISSIONS.ERROR'));
+    return null;
+  }
+  const payload = {
+    name: typedName,
+    description: description.value.trim(),
+    permissions: permissions.value,
+  };
+  if (isNewRole.value) return persist(payload);
+  // Conta sobre a lista de agentes de agora: velha ou vazia, ela esconderia quem perde acesso.
+  try {
+    await store.dispatch('agents/get');
+  } catch {
+    useAlert(t('CUSTOM_ROLE.FORM.API.ERROR_MESSAGE'));
+    return null;
+  }
+  const { people, areas } = lostAccess();
+  if (!people || !areas.length) return persist(payload);
+  return askConfirmation(
+    {
+      title: t('CUSTOM_ROLE.EDITOR.LOST_ACCESS.TITLE', people),
+      description: t('CUSTOM_ROLE.EDITOR.LOST_ACCESS.DESCRIPTION', {
+        areas: areas
+          .map(module => t(`CUSTOM_ROLE.MATRIX.MODULES.${module.key}.NAME`))
+          .join(', '),
+      }),
+      label: t('CUSTOM_ROLE.EDITOR.LOST_ACCESS.CONFIRM'),
+      cancel: t('CUSTOM_ROLE.EDITOR.LOST_ACCESS.BACK'),
+    },
+    () => persist(payload)
+  );
 };
 </script>
 
@@ -287,6 +359,7 @@ const save = async () => {
       v-if="step === 'pick'"
       :is-new-role="isNewRole"
       :initial-profile="baseProfile || 'AGENT'"
+      :reach="withinReach"
       @choose="chooseProfile"
       @back="isNewRole ? backToList() : (step = 'edit')"
     />
@@ -350,6 +423,31 @@ const save = async () => {
           class="shrink-0"
           @click="step = 'pick'"
         />
+      </div>
+
+      <div
+        v-if="leftOutModules.length"
+        role="status"
+        class="flex items-start gap-3 px-4 py-3 text-sm rounded-xl bg-n-amber-3"
+      >
+        <span class="i-lucide-lock size-4 mt-0.5 shrink-0 text-n-amber-11" />
+        <div class="flex flex-col flex-1 min-w-0 gap-1">
+          <span class="font-medium text-n-slate-12">
+            {{ $t('CUSTOM_ROLE.EDITOR.LEFT_OUT.TITLE') }}
+          </span>
+          <span class="text-n-slate-11">
+            {{ $t('CUSTOM_ROLE.EDITOR.LEFT_OUT.DESCRIPTION') }}
+          </span>
+          <ul class="flex flex-wrap p-0 m-0 list-none gap-x-3 gap-y-1">
+            <li
+              v-for="module in leftOutModules"
+              :key="module.key"
+              class="font-medium text-n-amber-12"
+            >
+              {{ $t(`CUSTOM_ROLE.MATRIX.MODULES.${module.key}.NAME`) }}
+            </li>
+          </ul>
+        </div>
       </div>
 
       <section
@@ -480,6 +578,7 @@ const save = async () => {
       :title="confirmation.title"
       :description="confirmation.description"
       :confirm-button-label="confirmation.label"
+      :cancel-button-label="confirmation.cancel || ''"
       @confirm="onConfirm"
     />
     <AssignAgentsDialog ref="assignRef" @done="backToList" />

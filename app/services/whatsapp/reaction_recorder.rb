@@ -13,6 +13,9 @@
 # - Reação tirada deixa uma lápide no Redis (autor + hora, por LAPIDE_VALIDADE): a reação mais antiga do mesmo autor
 #   que chegar atrasada depois dela não volta. Fica fora de `reactions`, que continua só com as reações vivas.
 # - Emoji com mais de MAXIMO_DE_BYTES é ignorado: um desenho só nunca passa disso.
+# - A hora da reação recebida guarda a fração de segundo quando o provedor a manda (o Instagram manda em milissegundos,
+#   #2113): sem ela, dois eventos do mesmo segundo entregues fora de ordem empatam e o mais antigo vence. O WhatsApp manda
+#   em segundos e continua gravando sem fração.
 # - Caixa híbrida (#1067): mensagem que saiu pelo WhatsApp API e ainda não recebeu o eco da Meta guarda o id físico no
 #   source_id; o wamid da reação carrega esse mesmo id.
 class Whatsapp::ReactionRecorder
@@ -20,6 +23,7 @@ class Whatsapp::ReactionRecorder
   MAXIMO_DE_BYTES = 64
   # A Meta reentrega webhook por até 7 dias.
   LAPIDE_VALIDADE = 7.days
+  CASAS_DA_FRACAO = 3
 
   def initialize(inbox:, reacted_source_id:, emoji:, reacted_at: nil, author: nil)
     @inbox = inbox
@@ -27,6 +31,7 @@ class Whatsapp::ReactionRecorder
     @reacted_source_id = reacted_source_id.to_s
     @emoji = emoji.to_s.strip
     @reacted_at = reacted_at || Time.current
+    @casas = reacted_at.respond_to?(:subsec) && reacted_at.subsec.nonzero? ? CASAS_DA_FRACAO : 0
   end
 
   # -> a mensagem reagida (atualizada ou não), ou nil quando ela não existe aqui.
@@ -99,7 +104,7 @@ class Whatsapp::ReactionRecorder
   end
 
   def remember_removal(message, author)
-    Redis::Alfred.set(tombstone_key(message, author), @reacted_at.iso8601, ex: LAPIDE_VALIDADE.to_i)
+    Redis::Alfred.set(tombstone_key(message, author), @reacted_at.iso8601(@casas), ex: LAPIDE_VALIDADE.to_i)
   end
 
   # Atendente: uma reação do número da empresa, como em author?.
@@ -109,7 +114,7 @@ class Whatsapp::ReactionRecorder
   end
 
   def entry_for(author)
-    { 'emoji' => @emoji, 'sender_type' => author.class.name, 'sender_id' => author.id, 'at' => @reacted_at.iso8601 }
+    { 'emoji' => @emoji, 'sender_type' => author.class.name, 'sender_id' => author.id, 'at' => @reacted_at.iso8601(@casas) }
   end
 
   def log_missing

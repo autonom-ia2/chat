@@ -246,6 +246,51 @@ RSpec.describe 'CRM meta_ads_connection facebook_login API', type: :request do
       expect(response.parsed_body['error']).to eq('token_missing')
     end
 
+    # A Meta não diz qual Pixel a pessoa marcou na janela do login (#2343): o usuário do sistema da integração
+    # acumula os Pixels de logins anteriores. A lista vai inteira, e a tela pergunta quando há mais de um.
+    describe 'Pixels no login (#2343)' do
+      let(:seguros) { '2164882667623689' }
+      let(:medico) { '1674865833738871' }
+
+      def stub_pixels
+        stub_graph("act_#{ad_account}", account_row)
+        stub_graph("act_#{ad_account}/adspixels", { data: [
+                     { id: seguros, name: 'Pixel Placement Seguros', last_fired_time: '2026-10-27T10:00:00+0000' },
+                     { id: medico, name: 'Pixel Placement - RC Médico', last_fired_time: '2026-10-22T10:00:00+0000' }
+                   ] })
+      end
+
+      it 'lista todos os Pixels da conta sem perguntar à Meta quem foi marcado' do
+        connect_with_login
+        stub_pixels
+        me = stub_request(:get, meta_graph_url('me')).with(query: hash_including({}))
+        assigned = stub_request(:get, %r{/assigned_users})
+
+        get "#{base}/pixels", params: { mode: 'facebook_login', ad_account_id: ad_account }, headers: auth_headers(admin)
+
+        expect(response.parsed_body['pixels']).to eq([
+                                                       { 'id' => seguros, 'name' => 'Pixel Placement Seguros',
+                                                         'last_fired_time' => '2026-10-27T10:00:00+0000' },
+                                                       { 'id' => medico, 'name' => 'Pixel Placement - RC Médico',
+                                                         'last_fired_time' => '2026-10-22T10:00:00+0000' }
+                                                     ])
+        expect(me).not_to have_been_requested
+        expect(assigned).not_to have_been_requested
+      end
+
+      it 'grava o Pixel escolhido com o token do login' do
+        connect_with_login
+        stub_pixels
+        stub_graph("act_#{ad_account}/insights", { data: [{ spend: '10' }] })
+
+        post "#{base}/selection", params: { mode: 'facebook_login', ad_account_id: ad_account, pixel_id: seguros },
+                                  headers: auth_headers(admin), as: :json
+
+        expect(Crm::MetaAdsConnection.find_by!(account_id: account.id))
+          .to have_attributes(pixel_id: seguros, pixel_name: 'Pixel Placement Seguros', mode: 'facebook_login')
+      end
+    end
+
     it 'a escolha da conta mantém o token e o modo do login' do
       connect_with_login
       stub_graph("act_#{ad_account}", account_row)

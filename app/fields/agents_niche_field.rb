@@ -6,8 +6,9 @@ class AgentsNicheField < Administrate::Field::Base
     { attr => %i[nicho perfil canal] }
   end
 
+  # O cartão marcado: "padrao" quando a conta segue a instalação (#1429, voltar ao padrão).
   def nicho
-    data.nicho
+    data.padrao? ? Autonomia::Agents::Nicho::PADRAO : data.nicho
   end
 
   # O cartão de perfil marcado quando a conta está em geral: o perfil padrão, para quem trocar para seguros.
@@ -24,9 +25,9 @@ class AgentsNicheField < Administrate::Field::Base
     Autonomia::Agents::Nicho.padrao_da_instalacao
   end
 
-  # Geral primeiro, como no mockup aprovado (#1550).
+  # O padrão da instalação primeiro (#1429); depois geral e seguros, como no mockup aprovado (#1550).
   def nichos
-    [Autonomia::Agents::Nicho::GERAL, Autonomia::Agents::Nicho::SEGUROS]
+    [Autonomia::Agents::Nicho::PADRAO, Autonomia::Agents::Nicho::GERAL, Autonomia::Agents::Nicho::SEGUROS]
   end
 
   def perfis

@@ -1,8 +1,9 @@
 require 'rails_helper'
 
-# IA entende a conversa F3 (flag `crm_ia_fecha_card`), o caminho do Crm::Ai::Evaluator depois de a IA fechar o card: não
-# passa a conversa nem pontua; o "adiou" ganha o lembrete de retorno (regra a); "era teste" vira sugestão (regra k); e,
-# com uma pessoa mexendo na etapa há pouco, VOLTAR vira sugestão (regra h, D1). O modelo é simulado.
+# IA entende a conversa F3 (flag `crm_ia_fecha_card`), o caminho do Crm::Ai::Evaluator quando a IA decide fechar o card:
+# vira sugestão e o card segue aberto (a IA nunca fecha sozinha, #2389); aceito, o "adiou" ganha o lembrete de retorno
+# (regra a); "era teste" vira sugestão (regra k); e, com uma pessoa mexendo na etapa há pouco, VOLTAR vira sugestão
+# (regra h, D1). O modelo é simulado.
 RSpec.describe Crm::Ai::Evaluator do
   around do |example|
     with_modified_env(CRM_KANBAN_ENABLED: 'true', CRM_AI_ENABLED: 'true') { example.run }
@@ -45,29 +46,35 @@ RSpec.describe Crm::Ai::Evaluator do
 
   def as_nove(dia) = fuso.parse("#{dia.iso8601} 09:00")
 
-  describe 'depois de fechar' do
-    # Pega: o card fechado pela IA passar a conversa ou mexer na pontuação (isso é de card aberto).
-    it 'não passa a conversa nem pontua; os campos e a memória seguem', :aggregate_failures do
-      allow(Crm::Ai::Config).to receive(:handoff_settings).and_return(enabled: true, trigger: 'quando pedir uma pessoa')
-      allow(Crm::Ai::HandoffExecutor).to receive(:new)
-      allow(Crm::Ai::ScoreApplier).to receive(:new)
+  # O card só fecha (e o retorno do "adiou" só nasce) quando a pessoa aceita a sugestão.
+  def avaliar_e_aceitar
+    sugestao = avaliar.suggestion
+    expect(retornos).to be_empty
+    Crm::Ai::SuggestionApplier.new(card: card, suggestion: sugestao, actor: admin).perform
+  end
+
+  describe 'a decisão de fechar' do
+    # Pega (#2389): a IA fechar sozinha com confiança alta. O card segue aberto e a avaliação segue como a de card aberto.
+    it 'vira sugestão; o card segue aberto, pontua e a memória segue; nenhum lembrete antes do aceite', :aggregate_failures do
+      score = instance_double(Crm::Ai::ScoreApplier, perform: nil)
+      allow(Crm::Ai::ScoreApplier).to receive(:new).and_return(score)
       allow(Crm::Memoria::Pendente).to receive(:aplicar!)
-      ia_responde(fechar_card: { resultado: 'perdido', motivo: 'recusou', retorno_em: nil, confidence: 0.96, reasoning: 'Não quer.' },
+      ia_responde(fechar_card: { resultado: 'perdido', motivo: 'recusou', retorno_em: nil, confidence: 0.99, reasoning: 'Não quer.' },
                   suggested_stage_id: stage.id)
 
-      expect(avaliar.status).to eq(:closed)
-      expect(Crm::Ai::HandoffExecutor).not_to have_received(:new)
-      expect(Crm::Ai::ScoreApplier).not_to have_received(:new)
+      expect(avaliar.status).to eq(:suggested)
+      expect(card.reload).to be_open
+      expect(Crm::Ai::ScoreApplier).to have_received(:new)
       expect(Crm::Memoria::Pendente).to have_received(:aplicar!).with(card)
       expect(retornos).to be_empty
     end
   end
 
   describe 'retorno do "adiou" (regra a)' do
-    it 'sem data do cliente: lembrete em 30 dias, às 9 h do fuso, marcado como adiou', :aggregate_failures do
+    it 'aceito, sem data do cliente: lembrete em 30 dias, às 9 h do fuso, marcado como adiou', :aggregate_failures do
       ia_responde(adiou)
 
-      avaliar
+      avaliar_e_aceitar
 
       lembrete = retornos.sole
       expect(lembrete.due_at).to eq(as_nove(fuso.today + 30))
@@ -77,10 +84,10 @@ RSpec.describe Crm::Ai::Evaluator do
       expect(card.reload).to be_lost
     end
 
-    it 'com a data dita pelo cliente: o lembrete é nela' do
+    it 'aceito, com a data dita pelo cliente: o lembrete é nela' do
       ia_responde(adiou(retorno_em: (fuso.today + 45).iso8601))
 
-      avaliar
+      avaliar_e_aceitar
 
       expect(retornos.sole.due_at).to eq(as_nove(fuso.today + 45))
     end
@@ -89,26 +96,45 @@ RSpec.describe Crm::Ai::Evaluator do
     it 'data fora do horizonte do retorno: cai nos 30 dias' do
       ia_responde(adiou(retorno_em: (fuso.today + 400).iso8601))
 
-      avaliar
+      avaliar_e_aceitar
 
       expect(retornos.sole.due_at).to eq(as_nove(fuso.today + 30))
     end
 
     # Pega: criar retorno num funil em que a equipe desligou o retorno da IA.
-    it 'funil com o retorno desligado: fecha e não cria lembrete', :aggregate_failures do
+    it 'funil com o retorno desligado: o aceite fecha e não cria lembrete', :aggregate_failures do
       pipeline.update!(metadata: pipeline.metadata.deep_merge('ai' => { 'callback_enabled' => false }))
       ia_responde(adiou)
 
-      avaliar
+      avaliar_e_aceitar
 
       expect(card.reload).to be_lost
       expect(retornos).to be_empty
     end
 
-    it 'recusou: fecha sem lembrete' do
+    # #2389: a sugestão de fechar segue o caminho de qualquer sugestão de hoje (abaixo de 0,95 já era assim): o pedido de
+    # retorno da mesma leitura vira o lembrete na hora, e o aceite troca a data dele pela do "adiou" (um pendente por card).
+    [0.86, 0.99].each do |confianca|
+      it "confiança #{confianca}, com pedido de retorno detectado: lembrete na hora pedida; o aceite move para as 9 h", :aggregate_failures do
+        dia = fuso.today + 10
+        pedido = { detected: true, confidence: 0.9, requested_at: "#{dia.iso8601}T14:00", requested_at_text: 'dia tal à tarde' }
+        ia_responde(adiou.deep_merge(fechar_card: { confidence: confianca }, callback_request: pedido))
+
+        sugestao = avaliar.suggestion
+
+        expect(card.reload).to be_open
+        expect(retornos.sole.due_at).to eq(fuso.parse("#{dia.iso8601} 14:00"))
+        Crm::Ai::SuggestionApplier.new(card: card, suggestion: sugestao, actor: admin).perform
+        expect(card.reload).to be_lost
+        expect(retornos.sole).to have_attributes(due_at: as_nove(dia))
+        expect(retornos.sole.metadata).to include('motivo' => 'adiou')
+      end
+    end
+
+    it 'recusou aceito: fecha sem lembrete' do
       ia_responde(adiou.deep_merge(fechar_card: { motivo: 'recusou' }))
 
-      avaliar
+      avaliar_e_aceitar
 
       expect(retornos).to be_empty
     end
@@ -168,6 +194,86 @@ RSpec.describe Crm::Ai::Evaluator do
       avaliar
 
       expect(card.reload).to be_open
+    end
+  end
+
+  # #2396 (decisão do Rodrigo, 30/10): quem desistiu ou chegou sem querer é perda, que vira sugestão; nunca o arquivamento
+  # automático do "não é negócio", que tira o lead do relatório de anúncios.
+  describe '"não é negócio" e "fechar" na mesma resposta' do
+    before { account.enable_features!(Crm::Ai::NaoENegocio::FLAG) }
+
+    let(:os_dois) do
+      { nao_e_negocio: { motivo: 'fora_do_negocio', confidence: 0.95, reasoning: 'Clicou sem querer.', duplicado_de: nil },
+        fechar_card: { resultado: 'perdido', motivo: 'recusou', retorno_em: nil, confidence: 0.95, reasoning: 'Não tem interesse.' },
+        suggested_stage_id: stage.id }
+    end
+
+    # Pega: o lead que desistiu sair arquivado (some do relatório de anúncios) em vez de virar sugestão de perdido.
+    it 'vale a sugestão de perdido; nada é arquivado', :aggregate_failures do
+      ia_responde(os_dois)
+
+      resultado = avaliar
+
+      expect(resultado.status).to eq(:suggested)
+      expect(resultado.suggestion.fechar).to eq('resultado' => 'perdido', 'motivo' => 'recusou')
+      expect(card.reload).to be_open
+      expect(Crm::Activity.where(card: card, event_type: 'archive')).to be_empty
+    end
+
+    # Pega: a regra derrubar o arquivamento do lixo de verdade, que vem sem pedido de fechar.
+    it 'só o "não é negócio": arquiva como antes' do
+      ia_responde(os_dois.merge(fechar_card: nil))
+
+      avaliar
+
+      expect(card.reload).to be_archived
+    end
+
+    # Pega (revisão do #2412): o lixo ficar aberto, sem ninguém saber, quando o pedido de fechar veio mas não virou
+    # sugestão. A guarda é pelo resultado do fechar, não pela presença do campo.
+    it 'o pedido de fechar abaixo do limiar de sugestão: arquiva' do
+      ia_responde(os_dois.deep_merge(fechar_card: { confidence: 0.3 }))
+
+      avaliar
+
+      expect(card.reload).to be_archived
+    end
+
+    it 'na avaliação do card parado (fechar nunca sugere): arquiva' do
+      ia_responde(os_dois)
+
+      avaliar(trigger: Crm::Ai::FecharCard::TRIGGER_CARD_PARADO)
+
+      expect(card.reload).to be_archived
+    end
+
+    it 'sem a flag do fechar: arquiva' do
+      account.disable_features!(Crm::Ai::FecharCard::FLAG)
+      ia_responde(os_dois)
+
+      avaliar
+
+      expect(card.reload).to be_archived
+    end
+
+    # Pega: um "era teste" virar perda. Segue a sugestão de arquivar, como antes do #2396.
+    it '"teste" com fechar: segue a sugestão de arquivar como teste', :aggregate_failures do
+      ia_responde(os_dois.deep_merge(nao_e_negocio: { motivo: 'teste' }))
+
+      resultado = avaliar
+
+      expect(resultado.suggestion.fechar).to eq('resultado' => 'arquivado', 'motivo' => 'teste')
+      expect(Crm::AiStageSuggestion.where(card: card).filter_map(&:fechar).pluck('resultado')).not_to include('perdido')
+    end
+
+    # Pega: o repetido contar a perda duas vezes (no card que fica e neste).
+    it '"duplicado" com fechar: arquiva o repetido' do
+      account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Pedido', currency: 'BRL', primary_conversation: conversa)
+      ia_responde(os_dois.deep_merge(nao_e_negocio: { motivo: 'duplicado', duplicado_de: account.crm_cards.order(:id).first.id }))
+
+      avaliar
+
+      expect(card.reload).to be_archived
     end
   end
 

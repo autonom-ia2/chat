@@ -5,7 +5,8 @@
 #    e quem veio dele, cada pessoa com um selo da situação.
 # 3. "Comece por aqui": quem chegou por anúncio e ainda espera resposta, a espera mais longa primeiro.
 # O que não cabe (mais anúncios, mais pessoas) a página diz que está na planilha. Quem não pode exportar o CRM
-# (Dados#com_pessoas?) recebe só os números: sem as pessoas por anúncio e sem a página de quem espera.
+# (Dados#com_pessoas?) recebe só os números: sem as pessoas por anúncio e sem a página de quem espera. Quem não vê os
+# valores de venda (#2075) recebe as vendas sem o valor: o painel vem com o valor nil, e nil nunca vira "R$ 0".
 class Crm::MetaAds::Relatorio::Pdf
   include Crm::MetaAds::Relatorio::Formato
 
@@ -45,8 +46,9 @@ class Crm::MetaAds::Relatorio::Pdf
     @dados.totais
   end
 
+  # O valor de venda escondido (nil, #2075) continua nil: nunca "R$ 0".
   def moeda(valor)
-    dinheiro(valor, @dados.moeda)
+    dinheiro(valor, @dados.moeda) unless valor.nil?
   end
 
   def periodo

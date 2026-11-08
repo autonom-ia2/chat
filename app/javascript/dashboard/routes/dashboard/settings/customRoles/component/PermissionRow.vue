@@ -40,7 +40,7 @@ const reachOptions = [CONVERSATION_LEVELS.LIMITED, CONVERSATION_LEVELS.ALL];
 const showReach = computed(
   () => isConversations && activeSlot.value === LEVELS.MANAGE
 );
-const slots = computed(() => levelSlots(props.module));
+const slots = computed(() => levelSlots(props.module, level.value));
 const extras = computed(() => visibleExtras(props.module, props.permissions));
 const extrasOn = computed(
   () => extras.value.filter(key => props.permissions.includes(key)).length

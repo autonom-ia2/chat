@@ -28,10 +28,11 @@ const COMPARTILHADOS = {
 const MIDIAS = [A.IMAGE, A.VIDEO];
 
 // Figurinha e GIF chegam como imagem servida pelo Giphy (o app os desenha soltos, sem balão).
+// A mídia é servida da nossa cópia (#2113): o endereço de origem vem em `externalUrl`.
 const HOSTS_DE_FIGURINHA = ['giphy.com'];
 const ehFigurinha = anexo => {
   try {
-    const { hostname } = new URL(anexo.dataUrl);
+    const { hostname } = new URL(anexo.externalUrl || anexo.dataUrl);
     return HOSTS_DE_FIGURINHA.some(
       host => hostname === host || hostname.endsWith(`.${host}`)
     );

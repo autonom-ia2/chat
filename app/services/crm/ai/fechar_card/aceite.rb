@@ -49,6 +49,33 @@ class Crm::Ai::FecharCard::Aceite < Crm::Ai::FecharCard
     sugestao.update!(status: :accepted)
   end
 
+  # O fechamento, com a pessoa como autora (a IA nunca fecha sozinha, #2389). As outras sugestões pendentes do card
+  # expiram.
+  def fechar!
+    ir_para_etapa_de_fim!
+    @card.account.crm_ai_stage_suggestions.where(card: @card, status: :pending).where.not(id: sugestao.id)
+         .find_each { |pendente| pendente.update!(status: :expired) }
+    Crm::Cards::Closer.new(card: @card, actor: ator, result: perdido? ? 'lost' : 'won', lost_reason: rotulo_do_motivo,
+                           payload_extra: payload).perform
+    true
+  end
+
+  # A etapa de perda (ou, no resolvido, a de ganho do funil de Atender), como uma pessoa que arrasta o card antes de
+  # fechar. Sem ela, o card fecha onde está.
+  def ir_para_etapa_de_fim!
+    etapa = etapa_de_fim
+    return if etapa.nil? || etapa.id == @card.stage_id
+
+    Crm::Cards::Mover.new(card: @card, actor: ator, target_stage: etapa,
+                          automation_context: { source: 'crm_ai', suggestion_id: sugestao.id }).perform
+  end
+
+  def rotulo_do_motivo
+    return unless perdido?
+
+    I18n.t("crm.ai_fechar_card.motivos.#{motivo}", locale: @card.account.locale.presence || I18n.default_locale)
+  end
+
   # Como uma pessoa arquiva (Crm::Cards::Archiver), que trava lembretes e card nessa ordem e relê o card antes da
   # guarda. A sugestão aceita já saiu de pendente.
   def arquivar!

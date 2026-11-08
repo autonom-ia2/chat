@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import DeOndeTirou from './DeOndeTirou.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import EscolhaRadio from '../EscolhaRadio.vue';
 
@@ -202,7 +203,7 @@ const corrigirResposta = () =>
       class="flex flex-col gap-3 p-4 rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6"
     >
       <p
-        class="flex items-center gap-2 m-0 text-xs font-semibold uppercase text-n-amber-11"
+        class="flex items-center gap-2 m-0 text-xs font-semibold text-n-amber-11"
       >
         <span class="i-lucide-hand size-4" aria-hidden="true" />
         <span data-contagem>
@@ -273,6 +274,11 @@ const corrigirResposta = () =>
             }}
           </dd>
         </template>
+        <DeOndeTirou
+          v-if="atual.trechos"
+          :trechos="atual.trechos"
+          :nome="nome"
+        />
       </dl>
 
       <EscolhaRadio
@@ -380,11 +386,15 @@ const corrigirResposta = () =>
       </div>
 
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <p class="m-0 text-xs text-n-slate-11">
+        <p data-continua class="m-0 text-xs text-n-slate-11">
           {{
-            t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.CONTINUA', {
-              agente: nome,
-            })
+            atual.aviso
+              ? t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.CONTINUA_AVISO', {
+                  agente: nome,
+                })
+              : t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.CONTINUA', {
+                  agente: nome,
+                })
           }}
         </p>
         <button

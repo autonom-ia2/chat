@@ -18,7 +18,8 @@
       "NUMEROS": {
         "ESPERAM": "Waiting for you",
         "SEM_RESPONSAVEL": "Unassigned",
-        "FORA_DO_PRAZO": "Past due"
+        "FORA_DO_PRAZO": "Past due",
+        "ESPERAM_DAS_SUAS": "of your {total} is waiting for you | of your {total} are waiting for you"
       },
       "ERRO": "Could not load the numbers right now.",
       "TENTAR_DE_NOVO": "Try again",

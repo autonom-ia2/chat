@@ -29,6 +29,13 @@ RSpec.describe Autonomia::Agents::Material::ConferenciaDoMaterial do
     expect(conferir).to eq('problema' => 'sem_cabecalho', 'amostra' => ['Coca 350', '6,00', '12', 'S'])
   end
 
+  # #1426 (t4e, decisão do Rodrigo de 30/10): sem a 1ª linha da tabela no texto, não há prova; o material não é reprovado.
+  it 'tabela sem cabeçalho sem nenhuma célula que esteja no material: sem problema' do
+    modelo_diz(leitura: 'nao_se_aplica', tabela: 'sem_cabecalho', primeira_linha: ['Produto inventado', '99,00'])
+
+    expect(conferir).to eq('problema' => nil, 'amostra' => [])
+  end
+
   it 'leitura ruim: problema ocr' do
     modelo_diz(leitura: 'ruim', tabela: 'nao_se_aplica')
 
@@ -61,6 +68,58 @@ RSpec.describe Autonomia::Agents::Material::ConferenciaDoMaterial do
       expect(kwargs[:input].first[:content].first[:text]).to include('TEXTO DO MATERIAL (dado)', 'Coca 350')
       expect(kwargs[:schema][:schema][:properties][:leitura][:enum]).to include('nao_se_aplica')
       expect(kwargs[:schema][:schema][:properties][:tabela][:enum]).to include('nao_se_aplica')
+    end
+  end
+
+  # #1426 (#2425) — um PDF digitado de 74 páginas era reprovado como "leitura ruim": a amostra trazia sumário com
+  # linhas de pontos e trechos curtos. O código diz ao modelo de onde veio o texto; o modelo continua decidindo.
+  describe 'a origem do texto, que o modelo recebe' do
+    let(:amostra) { "Sumario\n1. OBJETIVO DO SEGURO#{'.' * 60}4\n---\n2. COBERTURAS#{'.' * 60}5\n---\nCNPJ 00.000.000/0001-00" }
+
+    def origem_enviada
+      modelo_diz(leitura: 'nao_se_aplica', tabela: 'nao_se_aplica')
+      conferir
+      texto = nil
+      expect(cliente).to have_received(:create) { |**kwargs| texto = kwargs[:input].first[:content].first[:text] }
+      texto.lines.find { |linha| linha.start_with?('Origem do texto:') }.to_s.strip
+    end
+
+    context 'with the typed PDF (dotted table of contents in the sample)' do
+      let(:fonte) { material('cg.pdf', source_type: 'pdf') }
+
+      it 'diz que é a camada de texto do PDF, e a instrução diz que sumário pontilhado não é leitura ruim', :aggregate_failures do
+        expect(origem_enviada).to eq('Origem do texto: camada de texto do PDF, sem passar pelo nosso OCR')
+        expect(described_class::INSTRUCAO).to include('Sumario ou indice com linhas de pontos', 'nao sao leitura ruim')
+      end
+
+      it 'o sumário pontilhado vai inteiro ao modelo, e o veredito do modelo vale', :aggregate_failures do
+        modelo_diz(leitura: 'nao_se_aplica', tabela: 'nao_se_aplica')
+
+        expect(conferir).to eq('problema' => nil, 'amostra' => [])
+        expect(cliente).to have_received(:create) do |**kwargs|
+          expect(kwargs[:input].first[:content].first[:text]).to end_with("TEXTO DO MATERIAL (dado):\n#{amostra}")
+        end
+      end
+    end
+
+    context 'with the scanned PDF read by our OCR in this reading' do
+      let(:fonte) { material('scan.pdf', source_type: 'pdf').tap { |f| f.leitura_de_imagem = true } }
+
+      it 'diz que é leitura de imagem, e leitura ruim reprova como antes', :aggregate_failures do
+        expect(origem_enviada).to eq('Origem do texto: leitura de imagem por OCR (foto ou PDF escaneado)')
+        modelo_diz(leitura: 'ruim', tabela: 'nao_se_aplica')
+        expect(conferir).to eq('problema' => 'ocr', 'amostra' => [])
+      end
+    end
+
+    context 'with the photo' do
+      let(:fonte) { material('cardapio.jpg', source_type: 'foto') }
+
+      it('diz que é leitura de imagem') { expect(origem_enviada).to eq('Origem do texto: leitura de imagem por OCR (foto ou PDF escaneado)') }
+    end
+
+    it 'com a planilha, diz que é texto digitado' do
+      expect(origem_enviada).to eq('Origem do texto: texto digitado (arquivo ou pagina da web)')
     end
   end
 
@@ -97,6 +156,29 @@ RSpec.describe Autonomia::Agents::Material::ConferenciaDoMaterial do
       expect(fonte.reviewed_at).to be_present
       expect(fonte.metadata['conferencia']).to eq('problema' => 'sem_cabecalho', 'amostra' => ['Coca 350'])
       expect(fonte.metadata['hash_do_texto']).to eq(Digest::SHA256.hexdigest(amostra))
+    end
+
+    # #1426 (t4e, decisão do Rodrigo de 30/10): no material grande (o PDF lido em seções), a tabela sem cabeçalho vira aviso:
+    # o material continua na base e o cartão aparece com "Pular por agora".
+    it 'no material grande, tabela sem cabeçalho vira aviso e o material continua aceito', :aggregate_failures do
+      fonte.knowledge_entries.update_all(metadata: { 'paginas' => [1, 25] }) # rubocop:disable Rails/SkipsModelValidations
+
+      revisar
+
+      expect(fonte.review_status).to eq('accepted')
+      expect(fonte.review_summary).to eq('Preços.')
+      expect(fonte.metadata['conferencia']).to eq('problema' => 'sem_cabecalho', 'amostra' => ['Coca 350'], 'aviso' => true)
+    end
+
+    # #2425 — a marca do OCR vai da leitura à conferência na mesma Source (o ProcessJob passa o mesmo objeto).
+    it 'a Source lida pelo OCR nesta leitura chega à conferência como leitura de imagem' do
+      fonte.leitura_de_imagem = true
+
+      revisar
+
+      expect(cliente).to have_received(:create).with(hash_including(input: [hash_including(
+        content: [hash_including(text: a_string_including('Origem do texto: leitura de imagem por OCR'))]
+      )]))
     end
 
     it 'sem problema, o parecer da revisão fica como veio' do

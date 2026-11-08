@@ -1,6 +1,6 @@
 json.meta do
   json.labels @conversation.cached_label_list_array
-  json.additional_attributes @conversation.additional_attributes
+  json.additional_attributes Crm::AnuncioDeOrigem.atributos_para(Current.user, Current.account_user, @conversation.additional_attributes) # #2271
   json.contact @conversation.contact.push_event_data
   json.assignee @conversation.assignee.push_event_data if @conversation.assignee.present?
   json.agent_last_seen_at @conversation.agent_last_seen_at

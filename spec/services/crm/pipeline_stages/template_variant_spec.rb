@@ -51,7 +51,7 @@ RSpec.describe Crm::PipelineStages::TemplateVariant do
     expect(valores).to all(be_in(Crm::PipelineStage::CATEGORIES))
   end
 
-  it 'em saúde, só o Atendimento muda; posição inválida não acha nada' do
+  it 'em saúde, só o Atendimento e a Carteira mudam; posição inválida não acha nada' do
     ligado do
       account = conta('saude_beneficios')
 
@@ -59,6 +59,9 @@ RSpec.describe Crm::PipelineStages::TemplateVariant do
       expect(outros.map { |template| described_class.category_for(account: account, template: template, position: 3) }).to all(be_nil)
       expect([0, 5, nil, 'x'].map { |posicao| described_class.category_for(account: account, template: 'ATENDIMENTO', position: posicao) })
         .to all(be_nil)
+      # #2083: na Carteira, o aniversário do contrato (E3) é andamento, não pausa o prazo.
+      expect((1..4).map { |posicao| described_class.category_for(account: account, template: 'CARTEIRA', position: posicao) })
+        .to eq(%w[novo andamento andamento resolvido])
     end
   end
 end

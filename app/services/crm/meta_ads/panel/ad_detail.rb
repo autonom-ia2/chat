@@ -8,6 +8,14 @@
 #
 # Sem conexão (Anúncios sem login, #1960), `account:` diz a conta e o anúncio traz `people`: cada conversa que
 # ele trouxe no período, com a situação do card e se já teve resposta (Panel::PathList do anúncio).
+#
+# `private_replies` (#2521): quantos comentários do anúncio receberam privado no período e quantas pessoas responderam.
+# As que responderam são as conversas ligadas a esses privados (Links::CommentTouch, pela chave do comentário): "M"
+# é sempre uma parte de "N", mesmo com o privado de antes do período respondido dentro dele. Só com conexão.
+#
+# Os valores de venda em R$ seguem a pessoa de `visible` (#2075, Panel::SalesValue): sem `sales_value_view`, o anúncio
+# sai sem o dinheiro dos cards e cada proposta sem o valor, menos a de que a pessoa é dona. O porquê do veredito é do
+# gasto e fica.
 class Crm::MetaAds::Panel::AdDetail
   QUOTES_LIMIT = 20
 
@@ -21,16 +29,20 @@ class Crm::MetaAds::Panel::AdDetail
   def payload
     return if row.nil?
 
-    row.merge(
+    shown_row.merge(
       period: @report.period.key, days: @report.days, from: @report.first_day, to: @report.last_day, currency: @report.currency,
       preview_url: object&.preview_url, campaign_name: parent_name(:campaign_id), adset_name: parent_name(:adset_id),
       account_average_cost_per_sale: @report.average_cost_per_sale,
       reason: reason,
       daily: daily, quotes_list: quotes_list
-    ).merge(@report.whatsapp_only? ? { people: people, spend: nil } : {})
+    ).merge(@report.whatsapp_only? ? { people: people, spend: nil } : { private_replies: private_replies })
   end
 
   private
+
+  def shown_row
+    Crm::MetaAds::Panel::SalesValue.visible?(@visible) ? row : Crm::MetaAds::Panel::SalesValue.hide(row)
+  end
 
   # Sem veredito (sem conexão, ou anúncio que leva para fora de conversa) não há porquê.
   def reason
@@ -72,10 +84,21 @@ class Crm::MetaAds::Panel::AdDetail
   # Abertas primeiro, a que espera há mais tempo no topo — é quem pede retomada; depois as vendas.
   def quotes_list
     cards = only_visible(@report.cohort.cards.select { |card| card.ad_id == @ad_id && card.quote? })
-    cards.sort_by { |card| [card.sale? ? 1 : 0, card.waiting_since || Time.current] }.first(QUOTES_LIMIT).map do |card|
-      { card_id: card.id, title: card.title, value: card.value, status: card.status, stage_name: card.stage_name,
-        conversation_id: card.conversation_id, waiting_since: card.waiting_since }
-    end
+    cards.sort_by { |card| [card.sale? ? 1 : 0, card.waiting_since || Time.current] }.first(QUOTES_LIMIT).map { |card| quote(card) }
+  end
+
+  def quote(card)
+    row = { card_id: card.id, title: card.title, value: card.value, status: card.status, stage_name: card.stage_name,
+            conversation_id: card.conversation_id, waiting_since: card.waiting_since }
+    Crm::MetaAds::Panel::SalesValue.card?(@visible, card) ? row : row.merge(value: nil, value_hidden: true)
+  end
+
+  def private_replies
+    sent = Crm::MetaAdsCommentAction.where(account_id: @report.account_id, ad_id: @ad_id, action: 'private_reply', at: @report.range)
+                                    .where.not(confirmed_at: nil).pluck(:comment_id)
+    keys = sent.map { |comment_id| "#{Crm::MetaAds::Links::CommentTouch::KEY_PREFIX}#{comment_id}" }
+    replied = Crm::MetaAdLink.where(account_id: @report.account_id, ad_id: @ad_id, touch_key: keys).distinct.count(:conversation_id)
+    { sent: sent.size, replied: replied }
   end
 
   def people

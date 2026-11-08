@@ -23,6 +23,7 @@ import {
   fornecerSequencia,
 } from '../conversa-canal/instagram/useConversaDoInstagram';
 import {
+  mensagensDoInstagram,
   sequenciaDoInstagram,
   vistoDaConversa,
 } from '../conversa-canal/instagram/sequenciaDoInstagram';
@@ -94,6 +95,8 @@ const temAlbumDoWaha = atributos => {
 };
 // #1786: assunto no topo e Responder / Responder a todos / Encaminhar no fim.
 const emailNovo = useEmailDaConversa().ligado;
+// #2079/#2113: conversa do Instagram com a cara do Direct (sem a pele do WhatsApp).
+const instagram = useInstagramDaConversa().ligado;
 const allMessages = computed(() => {
   const comPele = Boolean(peleDaLista.value);
   const passa = message =>
@@ -106,6 +109,7 @@ const allMessages = computed(() => {
       'content_attributes.whatsapp_flow_response.response_json',
     ],
   });
+  if (instagram.value) return mensagensDoInstagram(mensagens);
   if (!comPele) return mensagens;
   return mensagens
     .filter(mensagem => !ocultaNaPele(mensagem) || temMarcaDoWaha(mensagem))
@@ -197,7 +201,6 @@ const shouldGroupWithNext = (index, searchList) => {
 };
 
 // #2079: na conversa do Instagram, horário entre os blocos, grupos e o "Visto".
-const instagram = useInstagramDaConversa().ligado;
 const sequenciaInstagram = computed(() =>
   instagram.value ? sequenciaDoInstagram(allMessages.value) : new Map()
 );

@@ -1,0 +1,25 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "RETORNO": {
+      "FRASE": "Criar retorno para {quem} daqui a {quando}: “{titulo}”",
+      "FRASE_COM_MENSAGEM": "Criar retorno para {quem} daqui a {quando}: “{titulo}”, e mandar ao cliente: “{mensagem}”",
+      "QUEM": {
+        "RESPONSAVEL": "quem cuida",
+        "PESSOAS": "1 pessoa | {n} pessoas",
+        "TIME": "um time"
+      },
+      "OPCOES": {
+        "RESPONSAVEL": "Quem cuida: no card, o dono; na conversa, o responsável",
+        "PESSOAS": "Pessoas escolhidas",
+        "TIME": "Um time"
+      },
+      "PESSOAS": "Quais pessoas",
+      "TIME": "Qual time",
+      "ESCOLHA": "Escolha",
+      "MANDAR": "Na hora do retorno, mandar uma mensagem ao cliente",
+      "MANDAR_DICA": "Só vale quando a automação roda num card com conversa de WhatsApp. Fora da janela de 24 h, a mensagem só sai por um modelo aprovado; sem ele, a equipe é avisada.",
+      "MENSAGEM": "O que mandar ao cliente",
+      "SO_LEMBRETE": "Sem a mensagem, a equipe recebe só o lembrete."
+    }
+  }
+}

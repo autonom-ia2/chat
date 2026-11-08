@@ -7,9 +7,10 @@ import { formatValueByCurrency } from './trackedLinkWebsite';
 // in the narrow detail aside, so it is a list, not a wide table: the name and
 // the won value on top, clicks · conversations · won deals underneath. Every
 // number stays visible at any width (no horizontal scroll on phones).
-// won_cards and won_value_by_currency are financial: the API only sends them to
-// administrators. When they are absent the columns are left out, never shown
-// as zero or as a dash (that would read as "no sales").
+// won_cards counts only the cards the person sees in the CRM, and
+// won_value_by_currency only comes with sales_value_view (#2075). When a field
+// is absent its column is left out, never shown as zero or as a dash (that
+// would read as "no sales").
 const props = defineProps({
   campaigns: { type: Array, default: () => [] },
   originName: { type: String, default: '' },

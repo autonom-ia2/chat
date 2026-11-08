@@ -1,0 +1,24 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "RECEITAS": {
+      "COMO_COMECAR": "How do you want to start?",
+      "ZERO_TITULO": "Build from scratch",
+      "ZERO_TEXTO": "Choose the \"When\" and the steps yourself.",
+      "OU_RECEITA": "Or start from a ready recipe",
+      "USAR": "Use this one",
+      "REQUER": {
+        "AUTOMACAO_MENSAGENS": "Sends a message to the customer, and automatic messages aren't turned on in this account yet."
+      },
+      "BOAS_VINDAS": {
+        "TITULO": "Let them know we'll reply soon",
+        "TEXTO": "Whoever starts a conversation is told the team will reply soon.",
+        "NOME": "Welcome"
+      },
+      "AGRADECER": {
+        "TITULO": "Thank them when closing",
+        "TEXTO": "The customer gets a thank-you when the conversation is resolved.",
+        "NOME": "Thank when closing"
+      }
+    }
+  }
+}

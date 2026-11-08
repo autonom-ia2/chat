@@ -9,7 +9,7 @@ const CLOUD = {
   provider: 'whatsapp_cloud',
 };
 
-const montar = ({ conversa = {} } = {}) => {
+const montar = ({ conversa = {}, soArquivos = false } = {}) => {
   const store = createStore({
     getters: {
       getSelectedChat: () => conversa,
@@ -19,7 +19,7 @@ const montar = ({ conversa = {} } = {}) => {
   });
   const i18n = createI18n({ legacy: false, locale: 'en', missingWarn: false });
   return mount(MaisDoWhatsapp, {
-    props: { caixa: CLOUD, enviar: vi.fn() },
+    props: { caixa: CLOUD, enviar: vi.fn(), soArquivos },
     global: {
       plugins: [store, i18n],
       stubs: { JanelaDoMais: true, Icon: true },
@@ -74,10 +74,19 @@ describe('MaisDoWhatsapp: Documento e Fotos e vídeos (#1702)', () => {
     campo.remove();
   });
 
-  it('no número reserva (só texto) Documento e Fotos e vídeos somem', async () => {
+  it('antes de existir conversa (#2211), só Documento e Fotos e vídeos', async () => {
+    const wrapper = montar({ soArquivos: true });
+    await abrirMenu(wrapper);
+    const itens = wrapper
+      .findAll('[data-item]')
+      .map(item => item.attributes('data-item'));
+    expect(itens).toEqual(['documento', 'fotos_e_videos']);
+  });
+
+  it('no número reserva Documento e Fotos e vídeos continuam (o WAHA manda arquivo)', async () => {
     const wrapper = montar({ conversa: { whatsapp_api_reply: true } });
     await abrirMenu(wrapper);
-    expect(wrapper.find('[data-item="documento"]').exists()).toBe(false);
-    expect(wrapper.find('[data-item="fotos_e_videos"]').exists()).toBe(false);
+    expect(wrapper.find('[data-item="documento"]').exists()).toBe(true);
+    expect(wrapper.find('[data-item="fotos_e_videos"]').exists()).toBe(true);
   });
 });

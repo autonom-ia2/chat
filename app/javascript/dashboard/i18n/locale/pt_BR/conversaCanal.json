@@ -39,8 +39,7 @@
       "ENQUETE": "Enquete",
       "FORMULARIO": "Formulário",
       "DOCUMENTO": "Documento",
-      "FOTOS_E_VIDEOS": "Fotos e vídeos",
-      "SO_TEXTO": "Fora das 24 horas a resposta sai pelo número reserva e só em texto. Foto, áudio e documento não vão."
+      "FOTOS_E_VIDEOS": "Fotos e vídeos"
     },
     "JANELA": {
       "PREVIA": "Como o cliente vai ver",
@@ -663,6 +662,7 @@
       "VISTO": "Visto",
       "RESPONDER": "Responder",
       "MAIS_OPCOES": "Mais opções",
+      "REAGIR_FORA_DA_JANELA": "A conversa passou do prazo sem mensagem do cliente. O Instagram só aceita reação com a conversa aberta.",
       "VOCE_RESPONDEU": "Você respondeu",
       "RESPONDEU_A_VOCE": "Respondeu a você",
       "RESPONDEU_AO_STORY": "Respondeu ao seu story",
@@ -680,6 +680,44 @@
       "CAMPO": "Mensagem...",
       "VER_TRANSCRICAO": "Ver transcrição",
       "MIDIA_INDISPONIVEL": "Mídia indisponível"
+    },
+    "COMENTARIO": {
+      "ROTULO": "Comentário do Instagram",
+      "NO_POST": "Comentário no post",
+      "NO_ANUNCIO": "Comentário no anúncio",
+      "ALGUEM": "Alguém",
+      "ESCONDIDO": "Escondido",
+      "CARREGANDO": "Carregando o comentário…",
+      "POR_QUE_ESCONDIDO": "Só você vê este comentário. Toque em Mostrar de novo para voltar.",
+      "SUA_RESPOSTA": "Sua resposta pública:",
+      "RESPONDER": "Responder em público",
+      "RESPONDER_ROTULO": "Resposta pública para {autor}",
+      "RESPONDER_NOTA": "Sai no post, para todo mundo ver. Para escrever só para a pessoa, use o Direct, na caixa de baixo.",
+      "PUBLICAR": "Publicar resposta",
+      "CANCELAR": "Cancelar",
+      "ESCONDER": "Esconder",
+      "MOSTRAR": "Mostrar de novo",
+      "APAGAR": "Apagar",
+      "APAGAR_CONFIRMA": "Apagar o comentário de {autor}: «{texto}»?",
+      "APAGAR_NOTA": "Ele some do post para todo mundo. Não dá para desfazer.",
+      "APAGAR_SIM": "Apagar comentário",
+      "APAGADO": "Este comentário foi apagado e não aparece mais no post.",
+      "INDISPONIVEL": "Não deu para ler o comentário no Instagram agora.",
+      "TENTAR_DE_NOVO": "Tentar de novo",
+      "SEM_PERMISSAO": "Para responder, esconder ou apagar este comentário daqui, o Instagram precisa liberar o acesso aos comentários.",
+      "PECA_AO_ADMIN": "Peça a um administrador para liberar em Seus posts.",
+      "LIBERAR": "Liberar acesso",
+      "FEITO": {
+        "RESPONDIDO": "Resposta publicada no post",
+        "ESCONDIDO": "Comentário escondido",
+        "MOSTRADO": "Comentário visível de novo",
+        "APAGADO": "Comentário apagado"
+      },
+      "ERRO": {
+        "GERAL": "Não deu para fazer no Instagram. Tente de novo.",
+        "PERMISSAO": "O Instagram não deixou: é preciso liberar de novo o acesso aos comentários.",
+        "SUMIU": "Este comentário não está mais no Instagram."
+      }
     }
   }
 }

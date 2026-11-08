@@ -340,7 +340,7 @@ RSpec.describe 'Autonomia journeys - external agent lifecycle', type: :request d
       # Act — o payload do PanelTune: campos simples + `mode: 'guided'` + config das virtuais.
       patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}",
             params: { agent: { greeting: 'Olá! Sou a Lia.', tone: 'cordial', mode: 'guided',
-                               config: { handoff_strategy: 'none', confidence_threshold: 0.5 } } },
+                               config: { handoff_strategy: 'none' } } },
             headers: administrator.create_new_auth_token, as: :json
 
       # Assert

@@ -1,4 +1,4 @@
-# Reação do ATENDENTE a uma mensagem do WhatsApp (#1702), como no app: emoji no balão, emoji vazio tira a reação.
+# Reação do ATENDENTE a uma mensagem do WhatsApp (#1702) e do Instagram (#2113), como no app: emoji no balão, emoji vazio tira a reação.
 #
 # Ordem: confere a mensagem e a caixa, manda ao provedor e só então grava em `content_attributes.reactions` (pelo
 # Whatsapp::ReactionRecorder, com sender_type 'User'). Recusa do provedor: nada é gravado e a frase vai para a tela.
@@ -12,6 +12,9 @@
 # - Caixa WAHA comum com a flag `whatsapp_rich_native` e motor que declara a reação (#1709): quem grava
 #   (Waha::RichNative::Reactions, a reação é da empresa) e leva ao cliente (evento c2y_message_reaction ao conector) é o
 #   Waha::RichNative::MessageActions.react!; aqui não se chama o PUT /api/reaction nem o `gravar`.
+# - Caixa Instagram (login do Instagram, #2113): sender_action react/unreact na API do Instagram
+#   (ConversaCanal::ReacaoNoInstagram); como na Cloud, só mensagem do cliente e com a janela aberta. A caixa do Instagram
+#   ligada por página do Facebook não reage pelo painel (recebe e mostra a reação do cliente, Instagram::ReacaoDoCliente).
 class ConversaCanal::ReacaoDoAtendente
   class Recusa < StandardError; end
 
@@ -48,7 +51,8 @@ class ConversaCanal::ReacaoDoAtendente
     recusar!(:emoji_invalido) unless um_emoji_ou_vazio?
     recusar!(:mensagem_invalida) unless reagivel?
     recusar!(:caixa_sem_reacao) if remetente.nil?
-    recusar!(:sem_identificacao) if @message.source_id.blank?
+    # O Instagram diz a própria frase (ReacaoNoInstagram#validar!).
+    recusar!(:sem_identificacao) if @message.source_id.blank? && !instagram?
     remetente.validar!
   end
 
@@ -69,6 +73,8 @@ class ConversaCanal::ReacaoDoAtendente
                    ConversaCanal::ReacaoNaCloud.new(message: @message)
                  elsif waha?
                    ConversaCanal::ReacaoNoWaha.new(message: @message)
+                 elsif instagram?
+                   ConversaCanal::ReacaoNoInstagram.new(message: @message)
                  end
   end
 
@@ -78,6 +84,10 @@ class ConversaCanal::ReacaoDoAtendente
 
   def waha?
     canal.is_a?(Channel::Api) && canal.waha_provider?
+  end
+
+  def instagram?
+    canal.is_a?(Channel::Instagram)
   end
 
   def pelo_conector?

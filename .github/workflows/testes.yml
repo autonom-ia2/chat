@@ -50,7 +50,7 @@ jobs:
   lint-backend:
     name: Rubocop
     if: github.event_name != 'merge_group'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +66,7 @@ jobs:
   security-scan:
     name: Brakeman e bundle-audit
     if: github.event_name != 'merge_group'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -89,7 +89,7 @@ jobs:
   lint-frontend:
     name: ESLint
     if: github.event_name != 'merge_group'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -113,7 +113,7 @@ jobs:
   # agregado abaixo, que nao muda de nome se o numero de nos mudar.
   frontend-tests:
     name: Vitest (${{ matrix.parte }}/2)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -140,7 +140,7 @@ jobs:
     name: Vitest
     needs: frontend-tests
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Todas as partes do Vitest passaram?
@@ -154,7 +154,7 @@ jobs:
   # confere que toda spec entra em exatamente um no. Sem tempos, cai no round-robin.
   rspec-plan:
     name: RSpec - plano
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -213,7 +213,7 @@ jobs:
   backend-tests:
     name: RSpec (${{ matrix.ci_node_index }}/${{ needs.rspec-plan.outputs.total }})
     needs: rspec-plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     strategy:
       fail-fast: false
@@ -398,7 +398,7 @@ jobs:
   # Versão repetida entre PRs do lote também para aqui. Regras: docs/migrations-em-lote.md.
   migrations:
     name: Migrations do lote
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
       postgres:
@@ -522,7 +522,7 @@ jobs:
     name: RSpec
     needs: [rspec-plan, backend-tests, migrations]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Todas as partes do RSpec passaram?

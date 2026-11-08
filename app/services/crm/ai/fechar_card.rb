@@ -13,12 +13,13 @@
 #   como Resolvido.
 # - Ganho nunca (regra c): o campo não tem esse resultado, e num funil de venda o código recusa o "resolvido".
 #
-# Sugestão por padrão (decisão do Rodrigo, 22/10): a IA fecha sozinha só com confiança de Config::AUTO_CLOSE_THRESHOLD
-# e o movimento automático do funil ligado. Abaixo disso, a partir de Config::SUGGESTION_THRESHOLD, a decisão vira uma
-# sugestão pendente (Crm::AiStageSuggestion, com o resultado, o motivo e a data de retorno em `metadata['fechar']`), e
-# a pessoa fecha num clique (.aceitar!: o mesmo fechamento, com ela como autora). Recusar não fecha nada.
+# Sempre sugestão (decisão do Rodrigo, 30/10, #2389): a IA nunca fecha o card sozinha, nem com o movimento automático
+# do funil ligado e nem com confiança alta (os fechamentos errados da semana vieram com 0,95–0,99: a confiança não
+# separa o certo do errado). A partir de Config::SUGGESTION_THRESHOLD, a decisão vira uma sugestão pendente
+# (Crm::AiStageSuggestion, com o resultado, o motivo e a data de retorno em `metadata['fechar']`), e a pessoa fecha num
+# clique (.aceitar!: o fechamento, com ela como autora, Crm::Ai::FecharCard::Aceite). Recusar não fecha nada.
 #
-# Guardas do código, relidas sob a trava do card (como Crm::Ai::NaoENegocio), para fechar e para sugerir: card aberto;
+# Guardas do código, relidas sob a trava do card (como Crm::Ai::NaoENegocio), para sugerir: card aberto;
 # nenhuma mensagem do cliente depois de a conversa ser lida para esta avaliação; nenhuma pessoa escolheu a etapa ou o
 # desfecho do card há menos de RESPEITO_AO_MOVIMENTO. O resto é do Crm::Ai::Evaluator: nunca no "Avaliar agora" (a
 # pessoa olhando fecha se quiser) nem na avaliação do card parado (regra i: silêncio nunca fecha), e nunca com pedido ou
@@ -63,7 +64,10 @@ class Crm::Ai::FecharCard
       - "adiou": o cliente disse que agora não, que vai pensar, que deixa para depois ou que volta a falar mais tarde,
         SEM recusar. Vale em qualquer tipo de funil. Se ele disse quando quer retomar, ponha em "retorno_em" a data
         ("YYYY-MM-DD", resolvida a partir de "now_local"); sem data dita por ele, null.
-      - "recusou": o cliente recusou de forma clara e final o que oferecemos ou o atendimento.
+      - "recusou": o cliente recusou de forma clara e final o que oferecemos ou o atendimento, desistiu do pedido, disse
+        que não tem mais interesse ou que chegou até nós sem querer pela nossa divulgação (clicou no anúncio, mandou a
+        mensagem pronta ou preencheu o formulário por engano): esse lead é perda. Não é lead, e por isso não é perda:
+        mensagem que era para outra pessoa e caiu neste número, quem oferece algo à empresa, golpe ou robô.
       - "fechou_com_outra": o cliente disse que fechou ou resolveu com outra empresa ou pessoa.
     - "resultado": "resolvido", só em "pipeline.kind" = "serve": o CLIENTE confirmou com clareza que o problema DESTE
       card foi resolvido, e nenhum texto do funil, das etapas ou do handoff_trigger diz que quem encerra o atendimento
@@ -98,7 +102,8 @@ class Crm::Ai::FecharCard
   end
 
   # Regra do respeito de 24 h (Crm::Subjects::Applier): os cards da conta fechados pela IA desde `desde`, que nenhuma
-  # pessoa fechou ou reabriu depois. O fechamento da IA não é fechamento de uma pessoa.
+  # pessoa fechou ou reabriu depois. Legado: desde o #2389 a IA não fecha mais card (o aceite grava a pessoa como ator e
+  # não casa aqui), então só acha fechamentos de antes do deploy e fica vazio 24 h depois dele.
   def self.fechados_pela_ia(account, desde)
     recentes = Crm::Activity.where(account_id: account.id, created_at: desde..)
     pela_ia = recentes.where(event_type: EVENTOS_DE_FECHAMENTO, actor_type: 'system').where('payload @> ?', { by: 'ai' }.to_json)
@@ -149,24 +154,18 @@ class Crm::Ai::FecharCard
     expirar_pendentes(card) if ligada?(card.account)
   end
 
-  # lido_em: quando a conversa foi lida para a avaliação (Crm::Ai::Evaluator#stage_classifier). sozinho: a IA pode fechar
-  # sem a pessoa (movimento automático do funil); sem isso, no máximo sugere. origem: model_used e trigger da sugestão.
-  def initialize(card:, decisao:, lido_em:, sozinho: true, origem: {})
+  # lido_em: quando a conversa foi lida para a avaliação (Crm::Ai::Evaluator#stage_classifier). origem: model_used e
+  # trigger da sugestão.
+  def initialize(card:, decisao:, lido_em:, origem: {})
     @card = card
     @decisao = decisao.is_a?(Hash) ? decisao.with_indifferent_access : {}
     @lido_em = lido_em
-    @sozinho = sozinho
     @origem = origem.to_h.with_indifferent_access
   end
 
-  # :fechado quando o card foi fechado; a sugestão (Crm::AiStageSuggestion) quando virou sugestão; nil quando nada.
+  # A sugestão de fechar (Crm::AiStageSuggestion) ou nil. Nunca fecha: quem fecha é a pessoa que aceita.
   def aplicar!
-    return unless aplicavel?
-    return sugerir! unless sozinho?
-
-    fechado = @card.with_lock { pode_fechar? && fechar! }
-    Crm::Cards::Broadcaster.broadcast(@card, Events::Types::CRM_CARD_UPDATED) if fechado
-    :fechado if fechado
+    sugerir! if aplicavel?
   end
 
   private
@@ -182,8 +181,6 @@ class Crm::Ai::FecharCard
   def aplicavel?
     RESULTADOS.include?(resultado) && decisao_valida? && confianca >= Crm::Ai::Config::SUGGESTION_THRESHOLD && @lido_em.present?
   end
-
-  def sozinho? = @sozinho && confianca >= Crm::Ai::Config::AUTO_CLOSE_THRESHOLD
 
   def decisao_valida?
     return false unless RESULTADOS.include?(resultado)
@@ -210,8 +207,8 @@ class Crm::Ai::FecharCard
     { resultado: resultado, motivo: (motivo if perdido?), retorno_em: (@decisao[:retorno_em].presence if motivo == ADIOU) }.compact
   end
 
-  # O agente de cotação atendendo a conversa (Crm::Ai::FatosDaConversa.agente_protegido_atendendo?): a IA do CRM não fecha
-  # nem sugere fechar por cima dele.
+  # O agente de cotação atendendo a conversa (Crm::Ai::FatosDaConversa.agente_protegido_atendendo?): a IA do CRM não
+  # sugere fechar por cima dele.
   def pode_fechar?
     @card.open? && !mensagem_nova? && !pessoa_escolheu? && !Crm::Ai::FatosDaConversa.agente_protegido_atendendo?(@card)
   end
@@ -226,48 +223,15 @@ class Crm::Ai::FecharCard
   end
 
   def pessoa_escolheu?
-    da_pessoa = Crm::Activity.where(account_id: @card.account_id, card_id: @card.id, actor_type: 'user',
-                                    created_at: Crm::Ai::Evaluator::RESPEITO_AO_MOVIMENTO.ago..)
+    da_pessoa = Crm::Ai::MovimentoDaAutomacao.sem_automacao(
+      Crm::Activity.where(account_id: @card.account_id, card_id: @card.id, actor_type: 'user',
+                          created_at: Crm::Ai::Evaluator::RESPEITO_AO_MOVIMENTO.ago..)
+    )
     criou_na_etapa = da_pessoa.where(event_type: 'create').where('payload @> ?', { etapa_escolhida: true }.to_json)
     da_pessoa.where(event_type: ESCOLHAS_DA_PESSOA).or(criou_na_etapa).exists?
   end
 
-  # Sem ator: a IA fechou sozinha. A pessoa que aceita a sugestão chega pelo Crm::Ai::FecharCard::Aceite.
-  def fechar!
-    ir_para_etapa_de_fim!
-    @card.account.crm_ai_stage_suggestions.where(card: @card, status: :pending).where.not(id: sugestao&.id)
-         .find_each { |pendente| pendente.update!(status: :expired) }
-    Crm::Cards::Closer.new(card: @card, actor: ator, result: perdido? ? 'lost' : 'won', lost_reason: rotulo_do_motivo,
-                           payload_extra: payload).perform
-    true
-  end
-
-  def ator = nil
-
-  def sugestao = nil
-
-  # A etapa de perda (ou, no resolvido, a de ganho do funil de Atender), como uma pessoa que arrasta o card antes de
-  # fechar. Sem ela, o card fecha onde está.
-  def ir_para_etapa_de_fim!
-    etapa = etapa_de_fim
-    return if etapa.nil? || etapa.id == @card.stage_id
-
-    Crm::Cards::Mover.new(card: @card, actor: ator, target_stage: etapa,
-                          automation_context: { source: 'crm_ai', suggestion_id: sugestao&.id }.compact).perform
-  end
-
   def etapa_de_fim
     @card.pipeline.stages.order(:position, :id).find_by(perdido? ? { is_lost_stage: true } : { is_won_stage: true })
-  end
-
-  def rotulo_do_motivo
-    return unless perdido?
-
-    I18n.t("crm.ai_fechar_card.motivos.#{motivo}", locale: @card.account.locale.presence || I18n.default_locale)
-  end
-
-  def payload
-    { by: 'ai', motivo: (motivo if perdido?), retorno_em: (@decisao[:retorno_em].presence if motivo == ADIOU),
-      confidence: confianca, reasoning: @decisao[:reasoning].to_s.truncate(300) }.compact
   end
 end

@@ -1,5 +1,6 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import { META_ADS_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
@@ -17,6 +18,9 @@ import MetaAdsFunnelStep from './components/MetaAdsFunnelStep.vue';
 import MetaAdsSummary from './components/MetaAdsSummary.vue';
 import MetaAdsPanel from './components/MetaAdsPanel.vue';
 import AnunciosSemLogin from './semLogin/AnunciosSemLogin.vue';
+import MetaAdsOrganic from './organico/MetaAdsOrganic.vue';
+import MetaAdsViewTabs from './components/MetaAdsViewTabs.vue';
+import MetaAdsLeadForms from './leadForms/MetaAdsLeadForms.vue';
 import { currentStep } from './metaAdsHelpers';
 
 // Campanhas › Anúncios da Meta (#1047, F1b): a conexão guiada num lugar só, em 4 passos —
@@ -52,13 +56,32 @@ const rememberMode = value => {
 };
 // Conectado (#1088): "Resultado" (o painel do dia a dia) ou "Conexão" (o resumo da conexão), lembrado no
 // endereço (?aba=). Conexão que precisa de atenção abre direto na conexão.
-const VIEWS = ['resultado', 'conexao'];
+// "Orgânico" (#2199) só com a flag meta_ads_organico: o que a Página e o Instagram alcançam sem anúncio.
+// Formulários (#2195) só com a flag meta_ads_formularios: quem preenche o formulário do anúncio entra no funil.
+const ALL_VIEWS = ['resultado', 'organico', 'formularios', 'conexao'];
+const { t } = useI18n();
+const tabLabels = computed(() => ({
+  resultado: t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.RESULT'),
+  organico: t('META_ADS_ORGANIC.TAB'),
+  formularios: t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.LEAD_FORMS'),
+  conexao: t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.CONNECTION'),
+}));
 const view = ref(
-  VIEWS.includes(route.query.aba) ? route.query.aba : 'resultado'
+  ALL_VIEWS.includes(route.query.aba) ? route.query.aba : 'resultado'
 );
+// A aba segue o endereço: quem manda para a Conexão de dentro do Resultado (criar anúncio sem conta, sem Página) só
+// muda o `?aba=`.
+watch(
+  () => route.query.aba,
+  aba => {
+    if (ALL_VIEWS.includes(aba)) view.value = aba;
+  }
+);
+// Trocar de aba encerra a volta pendente (`?volta=`): escolher a conta depois não leva mais à criação nem ao anúncio.
 const chooseView = value => {
   view.value = value;
-  router.replace({ query: { ...route.query, aba: value } });
+  const { volta, ...query } = route.query;
+  router.replace({ query: { ...query, aba: value } });
 };
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
@@ -103,6 +126,19 @@ const partnerName = computed(
   () => connection.value?.partner?.business_name || 'Hub2You'
 );
 // Compartilhar escolhido e conexão ainda não gravada: o passo 1 já conta como feito.
+// Conta gravada sem código do site e sem "Não tenho site": o passo da conta fica pendente, não feito (#2343).
+const accountPending = computed(
+  () =>
+    Boolean(connection.value?.ad_account) &&
+    !connection.value?.pixel &&
+    !connection.value?.no_site
+);
+// Anúncio levando ao site sem página do site ligada (#2338): o passo do Destino fica pendente, não feito.
+const destinationsPending = computed(
+  () =>
+    Boolean(connection.value?.destinations?.site) &&
+    connection.value?.site_pages_count === 0
+);
 const checklistCurrent = computed(() =>
   activeStep.value === 2 && !connection.value?.configured ? 2 : step.value
 );
@@ -112,13 +148,78 @@ const panelAvailable = computed(
     connection.value?.status === 'active' &&
     Boolean(connection.value?.ad_account)
 );
-const showPanel = computed(
-  () => view.value === 'resultado' && panelAvailable.value
+// Seus posts virou página própria (#2302): com a flag seus_posts, a aba sai daqui e o endereço antigo (?aba=organico,
+// de links e da volta do login do Instagram) leva à página nova, para quem pode abri-la.
+const seusPostsOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    Number(route.params.accountId),
+    FEATURE_FLAGS.SEUS_POSTS
+  )
+);
+const canSeePosts = usePermissionGranted('posts_view');
+const canManagePosts = usePermissionGranted('posts_manage');
+// As flags da conta podem chegar depois da tela montar (link direto): a troca espera por elas.
+watch(
+  () =>
+    route.query.aba === 'organico' &&
+    seusPostsOn.value &&
+    (canSeePosts.value || canManagePosts.value),
+  mover => {
+    if (mover)
+      router.replace({
+        name: 'seus_posts_index',
+        params: { accountId: route.params.accountId },
+      });
+  },
+  { immediate: true }
+);
+// A aba antiga só sai para quem abre a página nova: quem só tem Anúncios da Meta continua com ela.
+const organicOn = computed(
+  () =>
+    !(seusPostsOn.value && (canSeePosts.value || canManagePosts.value)) &&
+    isFeatureEnabledonAccount.value(
+      Number(route.params.accountId),
+      FEATURE_FLAGS.META_ADS_ORGANICO
+    )
+);
+const leadFormsOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    Number(route.params.accountId),
+    FEATURE_FLAGS.META_ADS_FORMULARIOS
+  )
+);
+// Quem só vê (meta_ads_view) fica sem a Conexão: as abas dele são Resultado, Seus posts e Formulários.
+const VIEWS = computed(() =>
+  ALL_VIEWS.filter(
+    name =>
+      (name !== 'organico' || organicOn.value) &&
+      (name !== 'formularios' || leadFormsOn.value) &&
+      (name !== 'conexao' || !readOnly.value)
+  )
+);
+// Aba que a tela mostra: sem painel, só a Conexão; aba fora da lista (flag desligada), o Resultado.
+const activeView = computed(() => {
+  if (!panelAvailable.value) return 'conexao';
+  return VIEWS.value.includes(view.value) ? view.value : 'resultado';
+});
+const showPanel = computed(() => activeView.value === 'resultado');
+const showOrganic = computed(() => activeView.value === 'organico');
+const showLeadForms = computed(() => activeView.value === 'formularios');
+// Na aba Seus posts o subtítulo fala de post, não de anúncio.
+const subtitle = computed(() =>
+  showOrganic.value && !openStep.value
+    ? t('META_ADS_ORGANIC.SUBTITLE')
+    : t('CRM_KANBAN.META_ADS_HUB.PAGE.SUBTITLE')
 );
 // Painel conectado (#2054): a lista dos 4 passos sai da lateral do Resultado e o painel usa a largura toda. Ela
 // aparece na aba Conexão e enquanto um passo está aberto ou falta configurar.
 const showChecklist = computed(
-  () => !(step.value === DONE && !openStep.value && showPanel.value)
+  () =>
+    !(
+      step.value === DONE &&
+      !openStep.value &&
+      (showPanel.value || showOrganic.value || showLeadForms.value)
+    )
 );
 // Anúncios sem login (#1960, degrau 0): com a flag e sem conexão de anúncios nenhuma (o servidor diz em
 // whatsapp_result.enabled), a página abre pronta com o resultado que chega pelo WhatsApp. Quem já tem
@@ -171,9 +272,20 @@ const startFacebookLogin = data => {
   openStep.value = 2;
 };
 
+// Entrou de novo com o Facebook a partir dos comentários de um anúncio (#2197, `?volta=<anúncio>`): volta ao anúncio.
+// Veio de criar anúncio sem conta de anúncios (#2338, `?volta=criar`): volta para criar.
+const backToAd = () => {
+  const target = route.query.volta;
+  if (!target) return;
+  view.value = 'resultado';
+  const back = target === 'criar' ? { criar: 'novo' } : { anuncio: target };
+  router.replace({ query: { aba: 'resultado', ...back } });
+};
+
 const accountSaved = data => {
   rememberMode(null);
   update(data);
+  backToAd();
 };
 
 // Passo 4 gravado no funil: relê a conexão, que diz se as vendas já são avisadas.
@@ -222,6 +334,15 @@ const removed = async () => {
   await load();
 };
 
+// Criar anúncio achou a conexão sem conta de anúncios (#2338): a conexão em memória está velha (o login refeito na
+// criação limpou a escolha). Relê, e a Conexão abre no passo da conta.
+watch(
+  () => route.query.volta,
+  target => {
+    if (target === 'criar') load();
+  }
+);
+
 onMounted(load);
 </script>
 
@@ -247,7 +368,7 @@ onMounted(load);
           {{ $t('CRM_KANBAN.META_ADS_HUB.PAGE.TITLE') }}
         </h1>
         <p class="mt-2 mb-0 text-sm leading-6 text-n-slate-11">
-          {{ $t('CRM_KANBAN.META_ADS_HUB.PAGE.SUBTITLE') }}
+          {{ subtitle }}
         </p>
       </header>
 
@@ -281,7 +402,18 @@ onMounted(load);
       />
 
       <template v-else-if="readOnly">
-        <MetaAdsPanel v-if="panelAvailable" read-only />
+        <div v-if="panelAvailable" class="flex flex-col min-w-0 gap-5">
+          <MetaAdsViewTabs
+            v-if="VIEWS.length > 1"
+            :views="VIEWS"
+            :active="activeView"
+            :labels="tabLabels"
+            @choose="chooseView"
+          />
+          <MetaAdsOrganic v-if="showOrganic" read-only />
+          <MetaAdsLeadForms v-else-if="showLeadForms" read-only />
+          <MetaAdsPanel v-else read-only />
+        </div>
         <div
           v-else
           data-meta-ads-not-connected
@@ -305,34 +437,20 @@ onMounted(load);
       >
         <div class="flex flex-col min-w-0 gap-5">
           <template v-if="step === 5 && !openStep">
-            <div
+            <MetaAdsViewTabs
               v-if="panelAvailable"
-              role="group"
-              :aria-label="$t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.LABEL')"
-              class="flex gap-1 p-1 rounded-lg bg-n-alpha-1 w-fit"
-            >
-              <button
-                v-for="name in VIEWS"
-                :key="name"
-                type="button"
-                :data-view-tab="name"
-                :aria-pressed="(showPanel ? 'resultado' : 'conexao') === name"
-                class="px-4 text-[13px] font-520 border-0 rounded-md min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-                :class="
-                  (showPanel ? 'resultado' : 'conexao') === name
-                    ? 'bg-n-solid-1 text-n-slate-12 shadow-[0_1px_2px_rgba(0,0,0,0.06)]'
-                    : 'bg-transparent text-n-slate-11 hover:text-n-slate-12'
-                "
-                @click="chooseView(name)"
-              >
-                {{
-                  name === 'resultado'
-                    ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.RESULT')
-                    : $t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.CONNECTION')
-                }}
-              </button>
-            </div>
+              :views="VIEWS"
+              :active="activeView"
+              :labels="tabLabels"
+              @choose="chooseView"
+            />
             <MetaAdsPanel v-if="showPanel" @open="openStep = $event" />
+            <MetaAdsOrganic v-else-if="showOrganic" :read-only="readOnly" />
+            <MetaAdsLeadForms
+              v-else-if="showLeadForms"
+              :read-only="readOnly"
+              @connect="chooseView('conexao')"
+            />
             <MetaAdsSummary
               v-else
               :connection="connection"
@@ -376,6 +494,7 @@ onMounted(load);
               v-else-if="activeStep === 3"
               :destinations="connection.destinations"
               @saved="update"
+              @page-linked="load"
             />
             <MetaAdsFunnelStep
               v-else-if="activeStep === 4"
@@ -394,6 +513,8 @@ onMounted(load);
             :current="checklistCurrent"
             :open="activeStep <= 4 ? activeStep : null"
             :sales-off="salesOff"
+            :account-pending="accountPending"
+            :destinations-pending="destinationsPending"
             @change="openStep = $event"
           />
         </aside>

@@ -557,19 +557,27 @@ RSpec.describe Autonomia::Agents::Tools::AsyncRunJob, type: :job do
     it 'answers in the conversation without ever holding a worker and without duplicating the message' do
       # Arrange
       started = Time.current
+      polls = 0
       poll = lambda do |_attempt|
+        polls += 1
         Time.current - started >= 60 ? progress.done(deliveries: [pdf('tres_opcoes')]) : progress.running
       end
       register_async_tool(build_async_tool(poll: poll))
       run = create_run(expires_at: 10.minutes.from_now)
 
-      # Act — o relógio só anda ENTRE as execuções; nenhuma delas dorme.
+      # Act — o relógio só anda ENTRE as execuções; nenhuma delas dorme. Sem relógio de parede (#2243):
+      # o MOTOR seguraria o worker dormindo ou consultando de novo dentro da mesma execução, e é isso que
+      # se conta. (A espera da própria ferramenta pelo portal é outro desenho, coberto no seu spec.)
       attempt = 0
       waited = 0.seconds
       while run.reload.running? && attempt < async_config::MAX_ATTEMPTS
-        started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        described_class.new.perform(run.id, attempt)
-        expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at).to be < 5
+        job = described_class.new
+        slept = []
+        allow(job).to receive(:sleep) { |seconds| slept << seconds }
+        polls_before = polls
+        job.perform(run.id, attempt)
+        expect(slept).to be_empty
+        expect(polls - polls_before).to be <= 1
         wait = async_config.interval_for(agent, attempt)
         waited += wait
         travel(wait)

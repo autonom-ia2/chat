@@ -44,7 +44,7 @@ class Crm::Numeros::IaNoTime
   end
 
   def venda
-    vendas = @account.crm_cards.where(id: @ganhos, pipeline_id: @cards.ids(:venda)).where(card_com_robo_sql)
+    vendas = Crm::Relacao.cards_do_funil(@account).where(id: @ganhos, pipeline_id: @cards.ids(:venda)).where(card_com_robo_sql)
     { participou: vendas.count, valor: @valor ? (vendas.where(currency: @moeda).sum(:value_cents) / 100.0).round(2) : nil }
   end
 

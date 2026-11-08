@@ -43,9 +43,10 @@ RSpec.describe Autonomia::Segmentos::Catalogo do
 
   it 'deixa a camada mais específica vencer e cai na camada seguros no que ela não tem' do
     pacotes.with(saude) do
-      expect(I18n.t(won, locale: :pt_BR)).to eq('Plano ativo')
-      expect(I18n.t(won, locale: :en)).to eq('Active plan')
+      expect(I18n.t(won, locale: :pt_BR)).to eq('Implantado')
+      expect(I18n.t(won, locale: :en)).to eq('Implemented')
       expect(I18n.t(lost, locale: :pt_BR)).to eq('Não fechou')
+      expect(I18n.t('crm.export.columns.lost_reason', locale: :pt_BR)).to eq('Por que não fechou')
     end
   end
 
@@ -103,7 +104,7 @@ RSpec.describe Autonomia::Segmentos::Catalogo do
       end
     end
 
-    expect([primeira.join(10)&.value, segunda.join(10)&.value]).to eq(['Seguro ativo', 'Plano ativo'])
+    expect([primeira.join(10)&.value, segunda.join(10)&.value]).to eq(['Seguro ativo', 'Implantado'])
   end
 
   # Troca os yml do pacote no teste e remonta o índice de verdade (com o filtro contra o base); devolve o original no fim.
@@ -212,7 +213,7 @@ RSpec.describe Autonomia::Segmentos::Catalogo do
       expect(dados).to be_frozen
       expect(dados.keys).to include('seguros', 'seguros/saude_beneficios')
       expect(dados.dig('seguros', :pt_BR, :crm, :export, :statuses, :won)).to eq('Seguro ativo')
-      expect(dados.dig('seguros/saude_beneficios', :en, :crm, :export, :statuses, :won)).to eq('Active plan')
+      expect(dados.dig('seguros/saude_beneficios', :en, :crm, :export, :statuses, :won)).to eq('Implemented')
     end
   end
 
@@ -246,7 +247,11 @@ RSpec.describe Autonomia::Segmentos::Catalogo do
         expect(I18n.t("#{criterio}.legado.em_atendimento", locale: :pt_BR)).to include('CEP de pernoite')
         expect(I18n.t("#{criterio}.vendas.e2", locale: :en)).to include('the team said it is quoting')
       end
-      pacotes.with(saude) { expect(I18n.t("#{criterio}.vendas.e2", locale: :pt_BR)).to eq(base) }
+      # A saúde tem a Venda de plano dela (#2083) e não herda o legado da corretora.
+      pacotes.with(saude) do
+        expect(I18n.t("#{criterio}.vendas.e2", locale: :pt_BR)).to include('quantas vidas')
+        expect(I18n.t("#{criterio}.legado.em_atendimento", locale: :pt_BR)).not_to include('CEP de pernoite')
+      end
       expect(I18n.t("#{criterio}.vendas.e2", locale: :pt_BR)).to eq(base)
     end
 

@@ -133,3 +133,22 @@ it('ignores stale search responses', async () => {
   await flushPromises();
   expect(wrapper.vm.results[0].id).toBe(42);
 });
+// #2111: o telefone usava o PhoneNumberInput compacto (h-8, 32 px) ao lado de nome e e-mail em h-10 (40 px).
+// O jsdom não calcula CSS: a prova aqui é a classe de altura; a medida em pixels está no print do PR.
+it('gives the phone box the same height class as the e-mail box', () => {
+  wrapper = mount(CrmRelationshipLinkForm, {
+    props: { cardId: 5, mode: 'new' },
+    global: {
+      stubs: { Avatar: true },
+      directives: { 'on-clickaway': {} },
+    },
+  });
+  const heightOf = element =>
+    [...element.classList].filter(name => name.startsWith('h-'));
+  const email = wrapper.find('input[type="email"]').element;
+  const phoneBox = wrapper
+    .find('input[type="tel"]')
+    .element.parentElement.closest('.outline');
+  expect(heightOf(email)).toEqual(['h-10']);
+  expect(heightOf(phoneBox)).toEqual(heightOf(email));
+});

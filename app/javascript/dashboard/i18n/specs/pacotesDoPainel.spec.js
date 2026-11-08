@@ -106,7 +106,7 @@ describe('composeMessages', () => {
     geral.forEach(([caminho, texto]) => {
       if (!trocadas.has(caminho)) expect(resultado.get(caminho)).toBe(texto);
     });
-    expect(resultado.get('CRM_KANBAN.DRAWER.STATUS_WON')).toBe('Plano ativo');
+    expect(resultado.get('CRM_KANBAN.DRAWER.STATUS_WON')).toBe('Implantado');
     expect(resultado.get('CRM_KANBAN.DRAWER.STATUS_LOST')).toBe('Não fechou');
   });
 });

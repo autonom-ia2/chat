@@ -46,6 +46,19 @@ module CampaignJourneyHelpers
     end
     sent
   end
+
+  # #2367: the header or card file goes up to Meta's media endpoint once per dispatch and the send carries its id.
+  # Returns the uploaded file names, in order; `status` other than 200 answers with a Meta error (the send keeps the link).
+  def stub_meta_media_upload(status: 200)
+    uploads = []
+    matcher = ->(uri) { uri.host == 'graph.facebook.com' && uri.path.end_with?('/media') }
+    stub_request(:post, matcher).to_return do |request|
+      uploads << request.body.b.split('filename="'.b, 2).last.to_s.split('"'.b, 2).first.to_s.force_encoding('UTF-8')
+      body = status == 200 ? { id: "media_#{uploads.size}" } : { error: { message: 'upload refused' } }
+      { status: status, headers: { 'Content-Type' => 'application/json' }, body: body.to_json }
+    end
+    uploads
+  end
 end
 
 # SMS (#1004): Twilio SMS and Bandwidth inboxes whose HTTP APIs are stubbed — specs never send a

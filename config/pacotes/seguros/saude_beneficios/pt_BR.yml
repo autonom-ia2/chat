@@ -3,8 +3,52 @@ pt_BR:
   crm:
     export:
       statuses:
-        won: 'Plano ativo'
+        won: 'Implantado'
+      columns:
+        next_follow_up_at: 'Próximo retorno'
+    # #2083: a "Venda de plano" é o modelo Vendas com as etapas da saúde (Novo, Cotação, Proposta, Na operadora,
+    # Implantado). A recusa da operadora não é perda: o card fica em "Na operadora" até a proposta voltar. Os
+    # critérios "legado" valem para funis antigos, pelo nome da etapa.
+    stage_criteria:
+      vendas:
+        e1: 'O cliente chegou agora e quer um plano. Ainda não disse quantas vidas são nem mandou as idades para cotar.'
+        e2: 'O cliente está mandando os dados para cotar (quantas vidas, idades, cidade, CNPJ se for empresa), ou a equipe disse que está cotando. Ainda não mandou as opções.'
+        e3: 'A equipe mandou as opções da cotação, ou pediu a documentação e a declaração de saúde para fazer a proposta. A proposta ainda não foi para a operadora.'
+        e4: 'A equipe disse ao cliente que mandou a proposta para a operadora e está esperando a resposta. Pendência da operadora também fica aqui.'
+        e5: 'A equipe contou ao cliente que a operadora aprovou e o plano foi implantado: mandou a carteirinha, o número do contrato ou a data de início.'
+      legado:
+        em_atendimento: 'O cliente está mandando os dados para cotar (quantas vidas, idades, cidade, CNPJ se for empresa), ou a equipe disse que está cotando. Ainda não mandou as opções.'
+        fechamento: 'O cliente escolheu o plano e disse que quer contratar: mandou a documentação, a declaração de saúde ou pediu para fazer a proposta.'
+        novo: 'O cliente chegou agora: mandou a primeira mensagem ou pediu uma cotação. Ainda não disse quantas vidas são nem mandou as idades para cotar.'
+        perdido: 'Encerrado sem fechar: o cliente recusou com clareza, pediu para não ser contatado, disse que contratou com outro corretor, o número é inválido, não respondeu depois das tentativas definidas pelo funil, ou o atendente encerrou a conversa sem fechar. Recusa da operadora não entra aqui. Não usar para quem ainda está negociando ou só disse "vou pensar".'
+        proposta: 'A equipe já mandou as opções da cotação e o cliente está comparando ou pensando. Ainda não disse qual plano quer.'
+    # Vocabulário nas mensagens que a IA escreve ao cliente (#2034).
+    ai:
+      vocabulario: 'Fale de plano, vidas, titular e dependentes, operadora, boleto e reembolso; chame de cliente quem procura ou já tem o plano e nunca diga segurado nem apólice.'
+    booking_v2:
+      templates:
+        consult_45:
+          description: 'Escolha um horário para falar do seu plano aqui no escritório.'
+          title: 'Atendimento no escritório'
+        sales_30:
+          description: 'Escolha um horário e a gente faz a cotação do seu plano por vídeo no WhatsApp.'
+          title: 'Conversa para cotar o plano'
+        visit_60:
+          description: 'Escolha um horário para a reunião presencial sobre o plano da sua empresa.'
+          title: 'Reunião sobre o plano da empresa'
+    follow_up_reminder:
+      due_at: 'Marcado para: %{time}'
+    service_reminders:
+      payment_after: 'Lembrar do boleto: depois do vencimento'
+      payment_before: 'Lembrar do boleto: 3 dias antes'
+      payment_due: 'Lembrar do boleto: no dia'
+  # Erro ao trazer a identidade visual do site (lote 3 do #2083).
+  brand_kits:
+    import_errors:
+      invalid_url: 'Digite o endereço completo do site, por exemplo https://suacorretora.com.br.'
   # Ramo da conta para a IA de e-mail (#2037).
   email_campaigns:
     ai:
-      vocabulario: 'Ramo da conta: planos de saúde e benefícios. Diga plano e beneficiário. Não fale em apólice, segurado nem sinistro.'
+      vocabulario: 'Ramo da conta: planos de saúde e benefícios. Diga plano, vidas, titular e dependentes, operadora e boleto. Não fale em apólice, segurado nem sinistro. Não prometa cobertura, carência, rede nem reajuste.'
+  meta_ads_report:
+    glossary: 'Conversa: alguém chamou no WhatsApp depois de tocar num anúncio. Proposta: o card chegou a uma etapa de oportunidade ou negociação. Venda: o card foi marcado como implantado.'

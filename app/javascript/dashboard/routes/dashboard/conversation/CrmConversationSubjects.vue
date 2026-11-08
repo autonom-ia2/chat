@@ -93,16 +93,29 @@ const statusLabel = subject => {
 
 const openNewSubject = () => dialogRef.value?.open();
 
+// #2162: a sugestão que veio de uma dúvida da IA pergunta "criar card?"; pode vir sem nome (o card nasce sem nome).
+const doubtCreateTexts = params => [
+  params.title
+    ? t(
+        'CRM_KANBAN.CONVERSATION.SUBJECTS.SUGGESTION_DOUBT_CREATE_TITLE',
+        params
+      )
+    : t('CRM_KANBAN.CONVERSATION.SUBJECTS.SUGGESTION_DOUBT_CREATE', params),
+  t('CRM_KANBAN.CONVERSATION.SUBJECTS.SUGGESTION_DOUBT_CREATE_ACCEPT'),
+];
+
 const suggestionTexts = () => {
   const params = {
     title: suggestion.value.title || suggestion.value.card_title,
     pipeline: suggestion.value.pipeline_name,
   };
   return {
-    create: [
-      t('CRM_KANBAN.CONVERSATION.SUBJECTS.SUGGESTION_CREATE', params),
-      t('CRM_KANBAN.CONVERSATION.SUBJECTS.SUGGESTION_CREATE_ACCEPT'),
-    ],
+    create: suggestion.value.duvida
+      ? doubtCreateTexts(params)
+      : [
+          t('CRM_KANBAN.CONVERSATION.SUBJECTS.SUGGESTION_CREATE', params),
+          t('CRM_KANBAN.CONVERSATION.SUBJECTS.SUGGESTION_CREATE_ACCEPT'),
+        ],
     rename: [
       t('CRM_KANBAN.CONVERSATION.SUBJECTS.SUGGESTION_RENAME', params),
       t('CRM_KANBAN.CONVERSATION.SUBJECTS.SUGGESTION_RENAME_ACCEPT'),

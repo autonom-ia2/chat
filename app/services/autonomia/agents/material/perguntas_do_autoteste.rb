@@ -53,7 +53,7 @@ class Autonomia::Agents::Material::PerguntasDoAutoteste
   end
 
   def gerar
-    fontes = @agent.sources.knowledge_sources.servable.order(:id).to_a
+    fontes = @agent.sources.da_agente.knowledge_sources.servable.order(:id).to_a
     return if fontes.empty?
 
     credencial = Crm::Ai::CredentialResolver.new(account: @agent.account).resolve

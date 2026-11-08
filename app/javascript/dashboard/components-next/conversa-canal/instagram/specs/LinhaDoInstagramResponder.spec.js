@@ -11,6 +11,12 @@ import {
   MESSAGE_STATUS,
   MESSAGE_TYPES,
 } from 'dashboard/components-next/message/constants';
+import { INBOX_FEATURE_MAP } from 'dashboard/composables/useInbox';
+import {
+  INBOX_FEATURE_MAP as MAPA_DA_TELA,
+  INBOX_FEATURES,
+} from 'shared/mixins/inboxMixin';
+import { INBOX_TYPES } from 'dashboard/helper/inbox';
 
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {}, params: {} }) }));
 vi.mock('../useConversaDoInstagram', async original => ({
@@ -24,10 +30,13 @@ vi.mock('../useConversaDoInstagram', async original => ({
 }));
 
 // #2079: o "Responder" ao lado do balão do Direct segue a regra do menu da mensagem.
+// #2113: a caixa do Instagram envia a resposta citando (reply_to da Meta), na recebida e na enviada.
+// A conversa (MessagesView, ReplyBox) lê o mapa do mixin; o composable tem a mesma lista.
+const instagramResponde = (feature, mapa = MAPA_DA_TELA) =>
+  mapa[feature].includes(INBOX_TYPES.INSTAGRAM);
 const montar = ({
   podeOperar = true,
-  // A caixa do Instagram de hoje não responde a uma mensagem (INBOX_FEATURE_MAP, useInbox.js).
-  canalResponde = false,
+  canalResponde = true,
   content = 'Tem a bolsa em preto?',
   contentAttributes = {},
 } = {}) => {
@@ -50,8 +59,9 @@ const montar = ({
       currentUserId: 1,
       sender: { id: 2, name: 'Cliente', type: 'Contact' },
       inboxSupportsReplyTo: {
-        incoming: canalResponde,
-        outgoing: canalResponde,
+        incoming: canalResponde && instagramResponde(INBOX_FEATURES.REPLY_TO),
+        outgoing:
+          canalResponde && instagramResponde(INBOX_FEATURES.REPLY_TO_OUTGOING),
       },
     },
     global: { ...montagem, plugins: [store] },
@@ -62,17 +72,19 @@ const botaoResponder = wrapper =>
   wrapper.find('[aria-label="CONVERSA_CANAL.INSTAGRAM.RESPONDER"]');
 
 describe('Responder na linha do Instagram', () => {
-  it('caixa do Instagram de hoje não mostra o Responder (o canal não envia a resposta)', () => {
-    const wrapper = montar();
-
-    expect(wrapper.findComponent({ name: 'LinhaDoInstagram' }).exists()).toBe(
+  it('a caixa do Instagram responde citando, na recebida e na enviada', () => {
+    expect(instagramResponde(INBOX_FEATURES.REPLY_TO)).toBe(true);
+    expect(instagramResponde(INBOX_FEATURES.REPLY_TO_OUTGOING)).toBe(true);
+    expect(instagramResponde(INBOX_FEATURES.REPLY_TO, INBOX_FEATURE_MAP)).toBe(
       true
     );
-    expect(botaoResponder(wrapper).exists()).toBe(false);
+    expect(
+      instagramResponde(INBOX_FEATURES.REPLY_TO_OUTGOING, INBOX_FEATURE_MAP)
+    ).toBe(true);
   });
 
-  it('com o canal respondendo, quem opera a conversa vê o Responder', () => {
-    const wrapper = montar({ canalResponde: true });
+  it('quem opera a conversa do Instagram vê o Responder', () => {
+    const wrapper = montar();
 
     expect(wrapper.findComponent({ name: 'LinhaDoInstagram' }).exists()).toBe(
       true
@@ -80,8 +92,17 @@ describe('Responder na linha do Instagram', () => {
     expect(botaoResponder(wrapper).exists()).toBe(true);
   });
 
+  it('canal que não envia a citação não mostra o Responder', () => {
+    const wrapper = montar({ canalResponde: false });
+
+    expect(wrapper.findComponent({ name: 'LinhaDoInstagram' }).exists()).toBe(
+      true
+    );
+    expect(botaoResponder(wrapper).exists()).toBe(false);
+  });
+
   it('quem só lê a conversa não vê o Responder', () => {
-    const wrapper = montar({ podeOperar: false, canalResponde: true });
+    const wrapper = montar({ podeOperar: false });
 
     expect(wrapper.findComponent({ name: 'LinhaDoInstagram' }).exists()).toBe(
       true

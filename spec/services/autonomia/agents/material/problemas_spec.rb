@@ -32,6 +32,21 @@ RSpec.describe Autonomia::Agents::Material::Problemas do
     expect(do_tipo('sem_cabecalho').sole).to include('fontes' => [planilha.id], 'amostra' => ['Coca 350', '6,00'], 'foto' => false)
   end
 
+  # #1426 (t4e): no material grande a tabela sem cabeçalho é aviso; o material segue aceito e o cartão aparece.
+  it 'tabela sem cabeçalho de material grande: aparece como aviso, com o material aceito' do
+    manual = material('manual.pdf', metadata: { 'conferencia' => { 'problema' => 'sem_cabecalho', 'amostra' => ['Cláusula 63'],
+                                                                   'aviso' => true } })
+
+    expect(do_tipo('sem_cabecalho').sole).to include('id' => "sem_cabecalho-#{manual.id}", 'fontes' => [manual.id],
+                                                     'amostra' => ['Cláusula 63'], 'aviso' => true)
+  end
+
+  it 'tabela sem cabeçalho que reprovou o material não vem marcada como aviso' do
+    material('bebidas.xlsx', review_status: 'needs_resend', metadata: { 'conferencia' => { 'problema' => 'sem_cabecalho' } })
+
+    expect(do_tipo('sem_cabecalho').sole).not_to have_key('aviso')
+  end
+
   it 'duplicado: fica o mais antigo; o par mantido pela pessoa não volta', :aggregate_failures do
     primeiro = material('horarios.pdf', metadata: { 'hash_do_texto' => 'abc' })
     segundo = material('horarios (1).pdf', metadata: { 'hash_do_texto' => 'abc' })
@@ -98,6 +113,37 @@ RSpec.describe Autonomia::Agents::Material::Problemas do
                                           'esperado' => 'Sim, no Centro.', 'onde' => 'cardapio.pdf' }])
     expect(do_tipo('autoteste_fora')).to eq([{ 'id' => 'autoteste-r1-1', 'tipo' => 'autoteste_fora', 'fontes' => [],
                                                'pergunta' => 'Vende bolo?', 'resposta' => 'Sim, R$ 90.', 'equipe' => false }])
+  end
+
+  # #1426 (t4d): "De onde o agente tirou" — os trechos que o autoteste guardou, com o nome do material na hora da leitura.
+  it 'autoteste: o cartão leva os trechos usados; o de material que saiu da base some', :aggregate_failures do
+    manual = material('manual.pdf')
+    itens = [
+      { 'pergunta' => 'Tem carro reserva?', 'origem' => 'material', 'esperado' => 'Sim, 7 dias.', 'fonte' => manual.id,
+        'resposta' => 'Não tem.', 'equipe' => false, 'veredito' => 'errado',
+        'trechos' => [{ 'fonte' => manual.id, 'paginas' => [226, 250], 'texto' => 'Carro reserva por 7 dias.' },
+                      { 'fonte' => 999_999, 'texto' => 'De um material apagado.' }] },
+      { 'pergunta' => 'Vende bolo?', 'origem' => 'fora', 'resposta' => 'Sim.', 'equipe' => false, 'veredito' => 'inventou',
+        'trechos' => [] }
+    ]
+    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste',
+                                                       { 'rodada' => 'r1', 'rodada_dos_itens' => 'r1', 'estado' => 'pronto', 'itens' => itens })
+
+    expect(do_tipo('autoteste').sole['trechos']).to eq([{ 'onde' => 'manual.pdf', 'paginas' => [226, 250],
+                                                          'texto' => 'Carro reserva por 7 dias.' }])
+    expect(do_tipo('autoteste_fora').sole['trechos']).to eq([])
+  end
+
+  # Todos os trechos eram de material que saiu: o agente usou o material, então a tela não pode dizer que não usou nada.
+  it 'autoteste: com todos os trechos de material que saiu da base, o cartão vai sem o bloco' do
+    manual = material('manual.pdf')
+    item = { 'pergunta' => 'Tem carro reserva?', 'origem' => 'material', 'esperado' => 'Sim, 7 dias.', 'fonte' => manual.id,
+             'resposta' => 'Não tem.', 'equipe' => false, 'veredito' => 'errado',
+             'trechos' => [{ 'fonte' => 999_999, 'texto' => 'De um material apagado.' }] }
+    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste',
+                                                       { 'rodada' => 'r1', 'rodada_dos_itens' => 'r1', 'estado' => 'pronto', 'itens' => [item] })
+
+    expect(do_tipo('autoteste').sole).not_to have_key('trechos')
   end
 
   it 'fora da Fase 2 ou na Lia: nada', :aggregate_failures do

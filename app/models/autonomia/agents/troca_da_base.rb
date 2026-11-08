@@ -15,9 +15,6 @@ module Autonomia::Agents::TrocaDaBase
   extend ActiveSupport::Concern
 
   MOTIVO = 'base_de_seguros'.freeze
-  # Fora da versão, mas lida pelo Answerer na resposta da comparação: o portão de confiança decide quando o agente passa
-  # para a equipe. Só o dono a muda (pela API); nada a escreve sozinho.
-  CONFIG_QUE_MUDA_A_RESPOSTA = %w[confidence_threshold].freeze
 
   # Sem a Fase 2 ou sem instrução não há versão onde guardar a troca (e, portanto, Desfazer).
   class TrocaIndisponivel < StandardError; end
@@ -40,12 +37,10 @@ module Autonomia::Agents::TrocaDaBase
   end
 
   # O agente como ele responde: o mesmo retrato da versão (instrução, jeito de falar, regras, config versionada com a
-  # base) mais as chaves da config que mudam a resposta sem entrar na versão (CONFIG_QUE_MUDA_A_RESPOSTA), em hash. O
-  # que fica fora, e por quê, está em BaseDeSeguros::Comparada.
+  # base), em hash. O que fica fora, e por quê, está em BaseDeSeguros::Comparada.
   # As chaves vão em ordem: o jsonb do banco devolve outra ordem que o objeto em memória, e o hash precisa ser o mesmo.
   def retrato_para_comparar
-    da_resposta = config.to_h.slice(*CONFIG_QUE_MUDA_A_RESPOSTA)
-    retrato = retrato_da_versao.merge('instruction' => instruction.to_s, 'config_da_resposta' => da_resposta).as_json
+    retrato = retrato_da_versao.merge('instruction' => instruction.to_s).as_json
     Digest::SHA256.hexdigest(em_ordem(retrato).to_json)[0, 16]
   end
 

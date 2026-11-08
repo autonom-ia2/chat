@@ -536,8 +536,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # vírgula, dois pontos ou ponto, sem mudar o sentido. "Frota" continua como estava, só sem o travessão.
   # Decisão do Rodrigo, 25/09/2026 (`cec07ea1…` -> `2d1558ba…`): frota é três veículos ou mais para o mesmo segurado;
   # um ou dois veículos são itens, cotados em paralelo pelo §B do comum.
+  # Decisão do Rodrigo, 02/11/2026, chat#2466 (`2d1558ba…` -> `376906d7…`): moto cota igual ao carro, sem perguntar
+  # associado nem frequência; os dois vão com padrão (não associado, até duas vezes por semana) no adapter.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('2d1558ba709c82d6fe9378b9fe22f21a')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('376906d79cc07e74bd46bca5c285fb4a')
   end
 
   # chat#612 (23/09/2026): a §G e a §J não contam recusa nem motivo ao cliente; só a instabilidade.

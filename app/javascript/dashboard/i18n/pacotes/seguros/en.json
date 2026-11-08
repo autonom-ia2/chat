@@ -240,5 +240,44 @@
     "SUGGESTIONS": {
       "REPORTS": "How many policies did I close this month?"
     }
+  },
+  "AGENTS": {
+    "DESEMPENHO2": {
+      "A": {
+        "KPI": {
+          "PERDAS_EVITAVEIS": {
+            "ROTULO": "Did not close for a fixable reason"
+          }
+        },
+        "PERDAS": {
+          "SOBRE": "Did not close",
+          "TITULO": "Did not close, and it could be avoided",
+          "UNIDADE_POR_QUE": "Unit: requests. A request that did not close can have more than one reason."
+        }
+      },
+      "B": {
+        "FILTROS": {
+          "SO_PERDAS": "Only the ones that did not close for a fixable reason"
+        }
+      }
+    }
+  },
+  "CRM_LISTA_ACAO": {
+    "ALTERAR": {
+      "DESFECHO": "Mark as active policy or not closed"
+    }
+  },
+  "AUTOMACAO_LIVRE": {
+    "VALORES": {
+      "CARD_MOTIVO_DA_PERDA": "Why it did not close"
+    },
+    "GATILHOS": {
+      "CARD_GANHO": "When the card closes the policy",
+      "CARD_PERDIDO": "When the card does not close"
+    },
+    "GATILHO_COM": {
+      "CARD_GANHO": "When a card in {funil} closes the policy",
+      "CARD_PERDIDO": "When a card in {funil} does not close"
+    }
   }
 }

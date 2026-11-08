@@ -1,0 +1,8 @@
+# Account vocabulary in the messages the AI writes to the customer in the follow-up, the agreed callback, the Serve
+# reminder and the out-of-window template (#2034). Empty here, so an account outside a package gets the prompt as it
+# always was; the insurance layers (config/pacotes/seguros/**) fill it in. The AI prompt is in Portuguese, so only the
+# pt_BR line is read; the en copy exists because a package must carry both languages.
+en:
+  crm:
+    ai:
+      vocabulario: ''

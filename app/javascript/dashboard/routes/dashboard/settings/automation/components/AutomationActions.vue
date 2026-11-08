@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import AutomationActionInput from 'dashboard/components/widgets/AutomationActionInput.vue';
+import AutomationLockedAction from './AutomationLockedAction.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import {
   getFileName,
@@ -47,6 +48,9 @@ const actions = defineModel({ type: Array, required: true });
 const hasActionErrors = computed(() =>
   Object.keys(props.errors).some(key => key.startsWith('action_'))
 );
+
+const isOffered = actionName =>
+  props.actionTypes.some(type => type.key === actionName);
 </script>
 
 <template>
@@ -62,22 +66,33 @@ const hasActionErrors = computed(() =>
           : 'outline-n-weak dark:outline-n-strong'
       "
     >
-      <AutomationActionInput
-        v-for="(action, i) in actions"
-        :key="i"
-        v-model="actions[i]"
-        :action-types="actionTypes"
-        :dropdown-values="getActionDropdownValues(action.action_name)"
-        :show-action-input="showActionInput(actionTypes, action.action_name)"
-        :error-message="
-          errors[`action_${i}`]
-            ? $t(`AUTOMATION.ERRORS.${errors[`action_${i}`]}`)
-            : ''
-        "
-        :initial-file-name="showFileName ? getFileName(action, files) : ''"
-        @reset-action="resetAction(i)"
-        @remove-action="removeAction(i)"
-      />
+      <template v-for="(action, i) in actions" :key="i">
+        <AutomationLockedAction
+          v-if="!isOffered(action.action_name)"
+          :action-name="action.action_name"
+          :error-message="
+            errors[`action_${i}`]
+              ? $t(`AUTOMATION.ERRORS.${errors[`action_${i}`]}`)
+              : ''
+          "
+          @remove-action="removeAction(i)"
+        />
+        <AutomationActionInput
+          v-else
+          v-model="actions[i]"
+          :action-types="actionTypes"
+          :dropdown-values="getActionDropdownValues(action.action_name)"
+          :show-action-input="showActionInput(actionTypes, action.action_name)"
+          :error-message="
+            errors[`action_${i}`]
+              ? $t(`AUTOMATION.ERRORS.${errors[`action_${i}`]}`)
+              : ''
+          "
+          :initial-file-name="showFileName ? getFileName(action, files) : ''"
+          @reset-action="resetAction(i)"
+          @remove-action="removeAction(i)"
+        />
+      </template>
       <div class="pt-2">
         <NextButton
           icon="i-lucide-plus"

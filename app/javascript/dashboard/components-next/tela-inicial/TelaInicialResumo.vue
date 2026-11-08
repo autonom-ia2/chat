@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useListaNova } from 'dashboard/components-next/Conversation/ListaDeConversas/useListaNova';
 
 // #1801 — o resumo do dia num herói escuro (o mesmo de Automações). Os números vêm
 // do servidor; o número maior que zero leva à lista certa; zero não é clicável. Quem vê os
@@ -12,6 +13,7 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+const listaNova = useListaNova();
 
 const numeros = computed(() => {
   const { esperamVoce, semResponsavel, foraDoPrazo } = props.dados;
@@ -30,6 +32,22 @@ const numeros = computed(() => {
     { chave: 'FORA_DO_PRAZO', valor: foraDoPrazo, alerta: foraDoPrazo > 0 },
   ];
 });
+
+// #2211 (A3), com a lista nova: "3 das suas 4 esperam você". Com uma conversa só, antes de carregar ou com a
+// chave desligada, fica "Esperam você".
+const rotuloDoNumero = numero => {
+  const { comVoce, pronto } = props.dados;
+  const comDasSuas =
+    listaNova.value && numero.chave === 'ESPERAM' && pronto && comVoce > 1;
+  if (!comDasSuas) {
+    return t(`TELA_INICIAL.RESUMO.NUMEROS.${numero.chave}`);
+  }
+  return t(
+    'TELA_INICIAL.RESUMO.NUMEROS.ESPERAM_DAS_SUAS',
+    { total: comVoce },
+    numero.valor
+  );
+};
 
 const clicavel = numero =>
   props.dados.pronto && numero.valor > 0 && Boolean(numero.fazer);
@@ -129,7 +147,7 @@ const linhaDaEquipe = computed(() => {
                 }}
               </span>
               <span class="flex items-center gap-1 text-sm text-white/75">
-                {{ $t(`TELA_INICIAL.RESUMO.NUMEROS.${numero.chave}`) }}
+                {{ rotuloDoNumero(numero) }}
                 <span
                   v-if="clicavel(numero)"
                   class="i-lucide-chevron-right size-4 text-white/40 rtl:rotate-180"

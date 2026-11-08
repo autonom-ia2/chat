@@ -4,12 +4,22 @@ import {
   duration,
   errorMessageKey,
   formatFact,
+  latestPixel,
   money,
   periodRange,
   thumbClass,
 } from '../metaAdsHelpers';
 
 describe('Anúncios da Meta · helpers (#1047)', () => {
+  it('picks the most recently fired Pixel (#2343)', () => {
+    const old = { id: 'a', last_fired_time: '2026-10-22T00:00:00+0000' };
+    const recent = { id: 'b', last_fired_time: '2026-10-27T00:00:00+0000' };
+    const never = { id: 'c', last_fired_time: null };
+
+    expect(latestPixel([never, old, recent])).toEqual(recent);
+    expect(latestPixel([])).toBeUndefined();
+  });
+
   const connected = {
     configured: true,
     verified_at: '2026-10-06T10:00:00Z',

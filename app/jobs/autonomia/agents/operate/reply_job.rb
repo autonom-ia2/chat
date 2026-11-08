@@ -43,7 +43,7 @@ module Autonomia
           return unless ::Autonomia::Agents::Config.enabled?(conversation.account)
 
           agent_inbox = eligible_agent_inbox(conversation)
-          return if agent_inbox.blank?
+          return sem_quem_responda(conversation, message_id, phase) if agent_inbox.blank?
 
           return passagem(conversation, agent_inbox, message_id, posse) if phase == ::Autonomia::Agents::Operate::AoReceberPassagem::FASE
           return trigger(conversation, agent_inbox, message_id) unless phase == 'settle'
@@ -65,6 +65,7 @@ module Autonomia
         # Janela CONFIGURÁVEL por agente (config['debounce_seconds']), default OPERATE_DEBOUNCE_SECONDS.
         def trigger(conversation, agent_inbox, message_id)
           stamp_debounce(conversation, message_id)
+          abrir_turno(conversation, message_id)
           self.class.set(wait: ::Autonomia::Agents::Config.debounce_seconds_for(agent_inbox.agent))
               .perform_later(conversation.id, message_id, 'settle')
         end
@@ -75,16 +76,47 @@ module Autonomia
         def settle(conversation, agent_inbox, message_id, posse)
           return unless current_token?(conversation, message_id)
           return esperar_o_assunto(conversation, message_id, posse) if esperar_o_assunto?(conversation, agent_inbox, message_id)
-          return unless ::Autonomia::Agents::Operate::PosseDoTurno.assumir?(conversation: conversation, agent_inbox: agent_inbox,
-                                                                            message_id: message_id, job_id: job_id,
-                                                                            posse: posse)
+          return posse_ja_tomada(conversation, agent_inbox, message_id) unless assumir_o_turno?(conversation, agent_inbox, message_id, posse)
 
-          ::Autonomia::Agents::Operate::Responder.new(
+          responder(conversation, agent_inbox, message_id, posse)
+        end
+
+        # #2154: outro settle tem a posse deste turno. A marca só sai se o turno já foi respondido (há resposta do robô a
+        # esta mensagem); se o outro settle ainda está na IA, a marca é dele e fica.
+        def posse_ja_tomada(conversation, agent_inbox, message_id)
+          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+          return unless ::Autonomia::Agents::Operate::Responder.new(conversation: conversation, agent_inbox: agent_inbox,
+                                                                    reply_to_message_id: message_id).respondida?
+
+          soltar_turno(conversation, message_id)
+        end
+
+        def assumir_o_turno?(conversation, agent_inbox, message_id, posse)
+          ::Autonomia::Agents::Operate::PosseDoTurno.assumir?(conversation: conversation, agent_inbox: agent_inbox,
+                                                              message_id: message_id, job_id: job_id, posse: posse)
+        end
+
+        # #2154: o turno acaba aqui, por qualquer caminho (resposta, silêncio, falha, ou um prepend do Responder que pula o
+        # turno sem chegar ao corpo dele, como o Waha::RichNative::AgentTurnGuard), e a marca dele sai. Fica só quando o
+        # turno segue: a cadeia de pedaços assumiu a marca, ou o dono novo refaz o turno.
+        def responder(conversation, agent_inbox, message_id, posse)
+          responder = ::Autonomia::Agents::Operate::Responder.new(
             conversation: conversation,
             agent_inbox: agent_inbox,
             reply_to_message_id: message_id,
             posse: ::Autonomia::Agents::Operate::PosseDoTurno.valor(job_id: job_id, posse: posse, agent_inbox: agent_inbox)
-          ).perform
+          )
+          responder.perform
+        ensure
+          fim_do_turno(conversation, message_id, responder)
+        end
+
+        # Sem a flag, nada (nem pergunta ao Responder).
+        def fim_do_turno(conversation, message_id, responder)
+          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+          return if responder&.turno_segue?
+
+          ::Autonomia::Agents::Operate::TurnoEmCurso.soltar(conversation.id, message_id)
         end
 
         # Fase 'passagem' (#1630): o turno sem mensagem nova do cliente. O segundo argumento do job é o id da PASSAGEM, não
@@ -118,6 +150,25 @@ module Autonomia
               DEBOUNCE_KEY, stamp.to_json
             ]
           )
+        end
+
+        # #2154 (flag `agente_so_informa`): o turno começa na mensagem do cliente, para a IA de Atribuição não entregar a
+        # conversa enquanto o agente responde (Operate::TurnoEmCurso). A mensagem mais nova toma a marca.
+        def abrir_turno(conversation, message_id)
+          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+
+          ::Autonomia::Agents::Operate::TurnoEmCurso.abrir(conversation.id, message_id)
+        end
+
+        # O settle de um turno que já não tem quem responda (uma pessoa assumiu, o agente saiu) solta a marca dele.
+        def sem_quem_responda(conversation, message_id, phase)
+          soltar_turno(conversation, message_id) if phase == 'settle'
+        end
+
+        def soltar_turno(conversation, message_id)
+          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+
+          ::Autonomia::Agents::Operate::TurnoEmCurso.soltar(conversation.id, message_id)
         end
 
         # Relê o stamp do banco e compara o token. Mensagem mais nova => token diferente => aborta.

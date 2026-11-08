@@ -108,6 +108,42 @@ RSpec.describe Autonomia::Agents::Knowledge::Ingestor do
     end
   end
 
+  # #1426 (t4e) — PDF grande dividido em seções pelo processador: cada trecho guarda as páginas da seção de onde veio.
+  describe '#perform with the sections of a large PDF' do
+    let(:secoes) do
+      [{ 'paginas' => [1, 25], 'texto' => "COBERTURAS\n\nA cobertura basica protege o veiculo contra colisao e incendio." },
+       { 'paginas' => [201, 225], 'texto' => "ASSISTENCIA 24 HORAS\n\nO guincho atende ate duzentos quilometros da residencia." }]
+    end
+
+    before do
+      allow(processor).to receive(:extract) do
+        source.secoes = secoes
+        secoes.pluck('texto').join("\n\n")
+      end
+    end
+
+    it 'stamps the pages of its section on every chunk' do
+      run!
+
+      entries = source.reload.knowledge_entries.order(:chunk_index)
+      guincho = entries.find { |entry| entry.content.include?('guincho') }
+      expect(guincho.metadata['paginas']).to eq([201, 225])
+      expect(entries.first.metadata['paginas']).to eq([1, 25])
+    end
+
+    it 'keeps the chunk index continuous across the sections' do
+      run!
+
+      expect(source.reload.knowledge_entries.order(:chunk_index).pluck(:chunk_index)).to eq((0...source.knowledge_entries.count).to_a)
+    end
+  end
+
+  it 'leaves the pages out of the metadata when the material has no sections' do
+    run!
+
+    expect(source.reload.knowledge_entries.first.metadata).not_to have_key('paginas')
+  end
+
   # B1 — com o modelo 3-large ativo, o Ingestor grava na coluna halfvec `embedding_large` (SQL cru) e
   # deixa a coluna legada `embedding` (vector 1536) NULL — a base fica pronta p/ o cutover sem misturar.
   describe '#perform with the large embedding model active' do

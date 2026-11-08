@@ -9,8 +9,11 @@
 # só. Nulo: não calculado (sem a flag `crm_avaliar_toda_mensagem`, dúvida, falha); vazio: nenhum assunto ("obrigado!").
 # Medição (#2018), só registro: jev_answer é o tipo da opção que o Jev escolheu (sem_assunto, mesmo, card, novo, varios),
 # nulo quando ele não respondeu. review_reason é por que o modelo maior foi chamado (certeza_baixa, pedido_novo, varios,
-# nome_do_atual; o primeiro que vale, nessa ordem), nulo quando o Jev decidiu sozinho. Com o modelo maior, a decisão
-# final pode diferir do jev_answer.
+# nome_do_atual, nome_provisorio; o primeiro que vale, nessa ordem), nulo quando o Jev decidiu sozinho. Com o modelo
+# maior, a decisão final pode diferir do jev_answer.
+# Nome genérico (#2163, flag `crm_ia_nome_provisorio`): reason `mesmo_assunto` na decisão "o mesmo assunto" (o card
+# carrega um pedido), `nome_refinado` no nome genérico trocado pelo específico, `card_ja_tinha_pedido` no card novo que
+# nasceu em vez de renomear o card sem nome que já carregava um pedido.
 class Crm::SubjectDecision < ApplicationRecord
   self.table_name = 'crm_subject_decisions'
 

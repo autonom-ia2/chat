@@ -1,9 +1,9 @@
 require 'rails_helper'
 
-# IA entende a conversa F3 (flag `crm_ia_fecha_card`): a IA de etapa fecha o card pela decisão do modelo na mesma
-# avaliação. Perdido com motivo em qualquer funil, Resolvido só em funil de Atender, Ganho nunca; sozinha só no automático
-# e com a confiança de fechar sozinho (Config::AUTO_CLOSE_THRESHOLD); abaixo dela, sugestão que a pessoa aceita num
-# clique. Nunca por cima de uma pessoa ou de mensagem nova. O modelo é simulado: aqui se prova o código.
+# IA entende a conversa F3 (flag `crm_ia_fecha_card`): a IA de etapa decide, na mesma avaliação, que o pedido do card
+# terminou. Perdido com motivo em qualquer funil, Resolvido só em funil de Atender, Ganho nunca. A decisão é sempre
+# sugestão, que a pessoa aceita num clique: a IA nunca fecha sozinha, nem com confiança 0,99 (decisão do Rodrigo, 30/10,
+# #2389). Nunca por cima de uma pessoa ou de mensagem nova. O modelo é simulado: aqui se prova o código.
 RSpec.describe Crm::Ai::FecharCard do
   around do |example|
     with_modified_env(CRM_KANBAN_ENABLED: 'true', CRM_AI_ENABLED: 'true') { example.run }
@@ -49,7 +49,7 @@ RSpec.describe Crm::Ai::FecharCard do
     allow(Crm::Cards::CurrentSubject).to receive(:card?).and_return(true)
   end
 
-  # 0,96: acima de Config::AUTO_CLOSE_THRESHOLD (0,95), fecha sozinho.
+  # 0,96: a faixa dos fechamentos errados da semana (0,95–0,99). Vira sugestão, como qualquer confiança de sugerir.
   def fim(resultado: 'perdido', motivo: 'recusou', confidence: 0.96, retorno_em: nil)
     { resultado: resultado, motivo: motivo, retorno_em: retorno_em, confidence: confidence, reasoning: 'O cliente disse que não quer.' }
   end
@@ -58,55 +58,68 @@ RSpec.describe Crm::Ai::FecharCard do
     Crm::Ai::Evaluator.new(card: card, trigger: trigger).perform
   end
 
+  def aceitar(sugestao) = Crm::Ai::SuggestionApplier.new(card: sugestao.card, suggestion: sugestao, actor: admin).perform
+
+  # A IA sugere e a pessoa aceita: o card só fecha no aceite.
+  def sugerir_e_aceitar(card)
+    resultado = avaliar(card)
+    expect(resultado.status).to eq(:suggested)
+    expect(card.reload).to be_open
+    aceitar(resultado.suggestion)
+    resultado.suggestion
+  end
+
   # Pega: o "Perdido" da IA ser só uma coluna, com o card aberto e sem motivo (achado H4 do placar).
-  it 'perdido: fecha como Perdido, com o motivo na língua da conta e a IA na linha do tempo', :aggregate_failures do
+  it 'perdido aceito: fecha como Perdido, com o motivo na língua da conta e a pessoa na linha do tempo', :aggregate_failures do
     account.update!(locale: 'pt_BR')
     card = novo_card
     ia_responde(fim(motivo: 'fechou_com_outra'), suggested_stage_id: stage.id)
 
-    expect(avaliar(card).status).to eq(:closed)
+    sugestao = sugerir_e_aceitar(card)
+
     expect(card.reload).to have_attributes(status: 'lost', lost_reason: 'Fechou com outra empresa')
     expect(card.closed_at).to be_present
     atividade = Crm::Activity.where(card: card, event_type: 'lost').sole
-    expect(atividade).to have_attributes(actor_type: 'system', actor_id: nil)
+    expect(atividade).to have_attributes(actor_type: 'user', actor_id: admin.id)
     expect(atividade.payload)
-      .to include('by' => 'ai', 'motivo' => 'fechou_com_outra', 'confidence' => 0.96, 'lost_reason' => 'Fechou com outra empresa')
+      .to include('sugestao_da_ia' => sugestao.id, 'motivo' => 'fechou_com_outra', 'lost_reason' => 'Fechou com outra empresa')
     expect(atividade.payload).to have_key('closed_with')
   end
 
   # Pega: o card fechado ficar na etapa do meio quando o funil tem a etapa de perda (o quadro mente).
-  it 'perdido num funil com etapa de perda: o card vai para ela antes de fechar', :aggregate_failures do
+  it 'perdido aceito num funil com etapa de perda: o card vai para ela antes de fechar', :aggregate_failures do
     perda = create_crm_stage(account: account, pipeline: pipeline, name: 'Perdido', position: 9).tap { |etapa| etapa.update!(is_lost_stage: true) }
     card = novo_card
     ia_responde(fim, suggested_stage_id: stage.id)
 
-    avaliar(card)
+    sugerir_e_aceitar(card)
 
     expect(card.reload).to have_attributes(stage_id: perda.id, status: 'lost')
-    expect(Crm::Activity.where(card: card, event_type: 'move', actor_type: 'system')).to exist
+    expect(Crm::Activity.where(card: card, event_type: 'move', actor_type: 'user')).to exist
   end
 
   # Pega: o perdido de um funil de Atender virar "lost" (venda) em vez de Cancelado.
-  it 'perdido num funil de Atender: fecha como Cancelado' do
+  it 'perdido aceito num funil de Atender: fecha como Cancelado' do
     funil, etapa = funil_de_atender
     card = novo_card(funil: funil, etapa: etapa)
     ia_responde(fim(motivo: 'adiou'), suggested_stage_id: etapa.id)
 
-    avaliar(card)
+    sugerir_e_aceitar(card)
 
     expect(card.reload).to have_attributes(status: 'cancelled', lost_reason: 'Postponed')
   end
 
   # Pega (regra j): o atendimento resolvido continuar aberto, e ir para a etapa de fim do funil de Atender.
-  it 'resolvido num funil de Atender: fecha como Resolvido, na etapa de fim', :aggregate_failures do
+  it 'resolvido aceito num funil de Atender: fecha como Resolvido, na etapa de fim', :aggregate_failures do
     funil, etapa = funil_de_atender
     final = create_crm_stage(account: account, pipeline: funil, name: 'Resolvido', position: 5).tap { |e| e.update!(is_won_stage: true) }
     card = novo_card(funil: funil, etapa: etapa)
     ia_responde(fim(resultado: 'resolvido', motivo: nil), suggested_stage_id: etapa.id)
 
-    expect(avaliar(card).status).to eq(:closed)
+    sugerir_e_aceitar(card)
+
     expect(card.reload).to have_attributes(status: 'resolved', stage_id: final.id, lost_reason: nil)
-    expect(Crm::Activity.where(card: card, event_type: 'resolved').sole.payload).to include('by' => 'ai')
+    expect(Crm::Activity.where(card: card, event_type: 'resolved').sole).to have_attributes(actor_type: 'user', actor_id: admin.id)
   end
 
   # Pega (regra c): a IA marcar Ganho. Num funil de venda, "resolvido" seria ganho: o código recusa e o card segue aberto.
@@ -152,8 +165,8 @@ RSpec.describe Crm::Ai::FecharCard do
     account.crm_ai_stage_suggestions.where(card: card).where("metadata ->> 'fechar' IS NOT NULL")
   end
 
-  # Pega (decisão do Rodrigo, 22/10): a IA fechar sozinha com a confiança dos fechamentos errados da rodada F5 (0,85–0,86).
-  describe 'abaixo da confiança de fechar sozinho: vira sugestão de fechar' do
+  # Pega (decisão do Rodrigo, 30/10, #2389): a IA fechar sozinha. Os fechamentos errados da semana vieram com 0,95–0,99.
+  describe 'a decisão de fechar vira sugestão de fechar' do
     let!(:perda) { create_crm_stage(account: account, pipeline: pipeline, name: 'Perdido', position: 9).tap { |e| e.update!(is_lost_stage: true) } }
 
     it 'grava a sugestão pendente com o resultado, o motivo, o retorno e o texto, e o card fica', :aggregate_failures do
@@ -170,15 +183,58 @@ RSpec.describe Crm::Ai::FecharCard do
       expect(Crm::FollowUp.where(card: card)).to be_empty
     end
 
-    it 'na fronteira: 0,95 fecha sozinho, 0,94 sugere', :aggregate_failures do
-      sozinho = novo_card
-      ia_responde(fim(confidence: Crm::Ai::Config::AUTO_CLOSE_THRESHOLD), suggested_stage_id: stage.id)
-      expect(avaliar(sozinho).status).to eq(:closed)
+    # Pega: um limiar de "fechar sozinho" voltar. 0,94 a 1,0 cobre a faixa dos erros da semana e a confiança máxima.
+    [0.94, 0.95, 0.96, 0.99, 1.0].each do |confianca|
+      it "confiança #{confianca}: vira sugestão pendente, e o card fica aberto", :aggregate_failures do
+        card = novo_card
+        ia_responde(fim(confidence: confianca), suggested_stage_id: stage.id)
 
-      sugerido = novo_card
-      ia_responde(fim(confidence: 0.94), suggested_stage_id: stage.id)
-      expect(avaliar(sugerido).status).to eq(:suggested)
-      expect(sugerido.reload).to be_open
+        resultado = avaliar(card)
+
+        expect(resultado.status).to eq(:suggested)
+        expect(resultado.suggestion).to have_attributes(status: 'pending', confidence: confianca)
+        expect(card.reload).to have_attributes(status: 'open', closed_at: nil, stage_id: stage.id)
+        expect(Crm::Activity.where(card: card, event_type: described_class::EVENTOS_DE_FECHAMENTO)).to be_empty
+      end
+    end
+
+    # Pega: algum caminho da avaliação fechar o card sem pessoa. O único fechamento é o do aceite, com a pessoa como ator.
+    it 'nenhuma avaliação fecha: o Closer só roda no aceite, com a pessoa', :aggregate_failures do
+      allow(Crm::Cards::Closer).to receive(:new).and_call_original
+      card = novo_card
+      ['message', 'manual', described_class::TRIGGER_CARD_PARADO].each do |gatilho|
+        card.update!(metadata: {})
+        ia_responde(fim(confidence: 1.0), suggested_stage_id: stage.id)
+        avaliar(card, trigger: gatilho)
+      end
+      expect(Crm::Cards::Closer).not_to have_received(:new)
+      expect(card.reload).to be_open
+
+      card.update!(metadata: {})
+      ia_responde(fim(confidence: 1.0), suggested_stage_id: stage.id)
+      aceitar(avaliar(card).suggestion)
+
+      expect(Crm::Cards::Closer).to have_received(:new).once.with(hash_including(card: card, actor: admin))
+      expect(card.reload).to be_lost
+    end
+
+    it 'chamado direto, com confiança 1,0: devolve a sugestão e não fecha', :aggregate_failures do
+      card = novo_card
+
+      resultado = described_class.new(card: card, decisao: fim(confidence: 1.0), lido_em: Time.current,
+                                      origem: { model_used: 'm', trigger: 'message' }).aplicar!
+
+      expect(resultado).to be_a(Crm::AiStageSuggestion).and(be_pending)
+      expect(card.reload).to be_open
+    end
+
+    it 'confiança 0,99 no "resolvido" de um funil de Atender: também vira sugestão', :aggregate_failures do
+      funil, etapa = funil_de_atender
+      card = novo_card(funil: funil, etapa: etapa)
+      ia_responde(fim(resultado: 'resolvido', motivo: nil, confidence: 0.99), suggested_stage_id: etapa.id)
+
+      expect(avaliar(card).status).to eq(:suggested)
+      expect(card.reload).to be_open
     end
 
     it 'abaixo da confiança de sugerir: nem fecha nem sugere fechar' do
@@ -380,8 +436,6 @@ RSpec.describe Crm::Ai::FecharCard do
       avaliar(card).suggestion
     end
 
-    def aceitar(sugestao) = Crm::Ai::SuggestionApplier.new(card: sugestao.card, suggestion: sugestao, actor: admin).perform
-
     it 'perdido "adiou": vai para a perda, fecha com o motivo e a pessoa como autora, e agenda o retorno', :aggregate_failures do
       card = novo_card
       dia = fuso.today + 20
@@ -444,6 +498,20 @@ RSpec.describe Crm::Ai::FecharCard do
       expect(described_class.aceitar!(sugestao, ator: admin)).to be(false)
       expect(card.reload).to be_open
       expect(sugestao.reload).to be_expired
+    end
+
+    # Pega (#2389): um aceite sem pessoa (ator nil) ou pelo automático fechar o card como sistema.
+    it 'sem pessoa ou pelo automático: não fecha, e a sugestão expira', :aggregate_failures do
+      [{ actor: nil, auto: false }, { actor: admin, auto: true }].each do |modo|
+        card = novo_card
+        sugestao = sugerir(card, fim(confidence: 0.99))
+
+        Crm::Ai::SuggestionApplier.new(card: card, suggestion: sugestao, **modo).perform
+
+        expect(card.reload).to be_open
+        expect(sugestao.reload).to be_expired
+        expect(Crm::Activity.where(card: card, event_type: described_class::EVENTOS_DE_FECHAMENTO)).to be_empty
+      end
     end
 
     it 'mensagem da equipe depois da leitura não impede o aceite' do

@@ -1,4 +1,5 @@
 <script setup>
+import { nomeDoContatoNaTela } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 import { onMounted, computed, ref, reactive, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
@@ -209,7 +210,9 @@ onMounted(() => {
               key: 'CONTACTS',
               to: { name: 'contacts_dashboard_index', params: { accountId } },
             },
-            ...(selectedContact?.name ? [{ label: selectedContact.name }] : []),
+            ...(selectedContact?.name
+              ? [{ label: nomeDoContatoNaTela(selectedContact) }]
+              : []),
           ]"
         />
       </template>

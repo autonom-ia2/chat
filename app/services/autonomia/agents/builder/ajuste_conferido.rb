@@ -4,7 +4,8 @@
 #   1. so_pergunta=true ou lista vazia (com ou sem pergunta do modelo): NÃO aplica. O turno vira resposta
 #      (needs_more_info=true). Nunca "Pronto" falso: a escrita que não muda nada também não fecha como aplicada.
 #   2. Aplica só os campos listados (AjustePorLista.so_os_pedidos). O resto do agente fica idêntico. Pedido claro e
-#      pergunta no mesmo turno: o claro entra e a resposta (`resposta_ao_dono`) vai junto, sem virar pendência.
+#      pergunta no mesmo turno: o claro entra e a resposta (`resposta_ao_dono`, quando o modelo marca `dono_perguntou`)
+#      vai junto, sem virar pendência.
 #   3. Confere (ConferenciaDoAjuste, só índices). Item não atendido: UMA correção e uma nova conferência; ainda
 #      faltando, vira pergunta ao dono, e o que entrou fica aplicado. Conflito sem falta vira pergunta, sem correção.
 #   4. O resultado vai no state da thread (`conferencia`) e na versão builder_adjust (`pedido`, `mudancas`,
@@ -60,6 +61,7 @@ module Autonomia::Agents::Builder::AjusteConferido
     @campos_truncados = []
     @explicacao_da_correcao = nil
     @opcoes_da_correcao = []
+    @itens_descartados = 0
     @pendencia_anterior = pending_question
     @turnos_da_pendencia = @thread.state.to_h['pendencia_turnos'].to_i
     # O "tira isso" só vai enquanto o Desfazer do último ajuste ainda vale, decidido no começo do turno, antes da escrita
@@ -165,7 +167,7 @@ module Autonomia::Agents::Builder::AjusteConferido
     # próximo ajuste aplicado ou o Desfazer (#1428, parte 3).
     estado = estado_do_ajuste(parsed.merge('needs_more_info' => true, 'next_question' => mensagens.last.to_s))
              .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil, 'parcial' => false,
-                    'opcoes_de_resposta' => [])
+                    'opcoes_de_resposta' => [], 'pergunta_na_tela' => nil)
              .merge(extra)
     mensagens.each { |mensagem| persist_assistant_turn!(mensagem) } if @thread.mark_ready!(token, state: estado)
   end
@@ -189,8 +191,8 @@ module Autonomia::Agents::Builder::AjusteConferido
     agent = @thread.agent
     dados = { 'token' => token, 'mudancas' => mudancas, 'versao_id' => agent.versao_do_construtor&.id,
               'versao_antes_id' => agent.versao_antes_do_construtor&.id,
-              'resposta' => parsed.slice('needs_more_info', 'next_question', 'resposta_ao_dono', 'pendencia_resolvida',
-                                         'opcoes_de_resposta'),
+              'resposta' => parsed.slice('needs_more_info', 'next_question', 'resposta_ao_dono', 'dono_perguntou',
+                                         'pendencia_resolvida', 'opcoes_de_resposta'),
               'agente_updated_at' => agent.reload.updated_at.iso8601(6), 'campos_truncados' => @campos_truncados,
               'perguntas_de_prova' => Autonomia::Agents::ProvaDoAjuste.perguntas(parsed) }
     dados if guardar_ajuste!(token, dados, { 'aplicado_em_token' => token })

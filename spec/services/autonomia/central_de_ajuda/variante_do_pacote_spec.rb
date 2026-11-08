@@ -72,8 +72,8 @@ RSpec.describe Autonomia::CentralDeAjuda::VarianteDoPacote do
       leitura = leitura_de(conta('seguros', 'saude_beneficios'))
       fechar = leitura.artigo('10.04')
 
-      expect(fechar.title).to eq('Fechou o plano, não fechou, reabrir e arquivar')
-      expect(fechar.content).to include('**Marcar: fechou o plano**')
+      expect(fechar.title).to eq('Implantado, não fechou, reabrir e arquivar')
+      expect(fechar.content).to include('**Marcar como implantado**')
       expect(fechar.content).not_to include('seguro')
       expect(leitura.central(fechar)['pacote']).to eq('seguros/saude_beneficios')
     end

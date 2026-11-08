@@ -30,8 +30,6 @@ import {
 export function useContinuarConversa({ contato, canal }) {
   const destino = ref(DESTINOS.CONTINUAR);
   const podeResponder = ref(false);
-  // #1988: caixa híbrida fora das 24 h responde pelo número reserva, só em texto.
-  const soTexto = ref(false);
   // #1809 — conversa de e-mail: o assunto dela (a resposta sai com "Re: ...") e o
   // último e-mail, que vai como histórico no fim, como na resposta.
   const assunto = ref('');
@@ -84,7 +82,6 @@ export function useContinuarConversa({ contato, canal }) {
       const { data } = await ConversationAPI.show(alvo.displayId);
       if (pedido !== ultimoPedido) return;
       podeResponder.value = data?.can_reply === true;
-      soTexto.value = data?.whatsapp_api_reply === true;
       meta.value = data?.meta || null;
     } catch (error) {
       // A resposta anterior continua valendo (ver acima).
@@ -96,7 +93,6 @@ export function useContinuarConversa({ contato, canal }) {
     const pedido = ultimoPedido;
     const alvo = existente.value?.visible ? existente.value : null;
     podeResponder.value = false;
-    soTexto.value = false;
     assunto.value = '';
     ultimoEmail.value = null;
     meta.value = null;
@@ -118,7 +114,6 @@ export function useContinuarConversa({ contato, canal }) {
       ]);
       if (pedido !== ultimoPedido) return;
       podeResponder.value = data?.can_reply === true;
-      soTexto.value = data?.whatsapp_api_reply === true;
       meta.value = data?.meta || null;
       const emails = (mensagens?.data?.payload || []).filter(ehEmail);
       assunto.value = email
@@ -179,7 +174,6 @@ export function useContinuarConversa({ contato, canal }) {
     esperando,
     carregar,
     atualizar,
-    soTexto,
     assunto,
     ultimoEmail,
     meta,

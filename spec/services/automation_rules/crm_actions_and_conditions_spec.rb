@@ -30,6 +30,17 @@ RSpec.describe AutomationRules::CrmActions do
       expect(card).to have_attributes(pipeline_id: pipeline.id, stage_id: next_stage.id, contact_id: conversation.contact_id)
     end
 
+    # #2084: contato marcado parceiro do mercado ou não é negócio não ganha card pela automação.
+    it 'crm_create_card não cria card para contato fora do funil, com a flag contato_relacao' do
+      account.enable_features!('contato_relacao')
+      conversation.contact.update!(relacao: :nao_e_negocio)
+
+      expect { run_action('crm_create_card', [next_stage.id]) }.not_to change(Crm::Card, :count)
+
+      conversation.contact.update!(relacao: :interessado)
+      expect { run_action('crm_create_card', [next_stage.id]) }.to change(Crm::Card, :count).by(1)
+    end
+
     it 'crm_create_card não duplica quando a conversa já tem card' do
       create_card
 
@@ -58,6 +69,24 @@ RSpec.describe AutomationRules::CrmActions do
       run_action('crm_move_card_stage', [next_stage.id])
 
       expect(card.reload.stage_id).to eq(next_stage.id)
+    end
+
+    it 'crm_create_card marca na criação a regra que pôs o card na etapa (#2428)' do
+      run_action('crm_create_card', [next_stage.id])
+
+      card = Crm::Cards::ConversationCardFinder.new(account: account).find(conversation)
+      criacao = Crm::Activity.where(card: card, event_type: 'create').sole
+      expect(criacao.payload).to include('by' => 'automacao', 'origem' => 'regra', 'automacao_id' => rule.id)
+    end
+
+    # #2428: sem a marca, a IA do funil não separa a regra dela mesma e desfaz o movimento.
+    it 'crm_move_card_stage marca no movimento a regra que o fez' do
+      card = create_card
+
+      run_action('crm_move_card_stage', [next_stage.id])
+
+      movimento = Crm::Activity.where(card: card, event_type: 'move').sole
+      expect(movimento.payload).to include('by' => 'automacao', 'origem' => 'regra', 'automacao_id' => rule.id)
     end
 
     it 'crm_move_card_stage move o card do funil da etapa quando a conversa tem cards em vários funis' do

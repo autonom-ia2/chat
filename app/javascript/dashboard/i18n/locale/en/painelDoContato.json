@@ -1,0 +1,185 @@
+{
+  "PAINEL_DO_CONTATO": {
+    "TITULO": "About this contact",
+    "FECHAR": "Close",
+    "VOLTAR_PARA_CONVERSA": "Back to the conversation",
+    "VOLTAR": "Back",
+    "SO_LEITURA": "You can see this conversation, but not change it.",
+    "ERRO": "This part could not be loaded right now.",
+    "TENTAR_DE_NOVO": "Try again",
+    "NOME": {
+      "COPIAR": "Copy",
+      "NUMERO_COPIADO": "Number copied",
+      "EDITAR": "Edit details",
+      "RECUSA": "Asked not to receive automatic messages. You can reply normally.",
+      "ETIQUETAS": "Contact labels"
+    },
+    "QUEM_CUIDA": {
+      "TITULO": "Who takes care",
+      "VOCE": "It is with you.",
+      "COLEGA": "It is with {nome}.",
+      "IA": "It is with the AI {nome}.",
+      "NINGUEM": "Nobody is taking care of this conversation.",
+      "NINGUEM_AO_RESPONDER": "Nobody is taking care of this conversation. When you reply, it is yours.",
+      "TIME_E_PRIORIDADE": "It is in the {time} team, with {nivel} priority.",
+      "SO_TIME": "It is in the {time} team.",
+      "SO_PRIORIDADE": "Priority {nivel}.",
+      "TROCAR": "Change",
+      "ESCOLHER": "Choose who takes care",
+      "ESCOLHA_TITULO": "Who takes care of this conversation",
+      "PESSOAS": "People",
+      "GRUPO_IA": "AI",
+      "NINGUEM_OPCAO": "Nobody",
+      "AGORA_COM": "Now it is with {nome}.",
+      "AGORA_NINGUEM": "Now nobody is taking care of this conversation.",
+      "ERRO": "Could not change it now. Try again."
+    },
+    "COMBINADO": {
+      "TITULO": "Agreed",
+      "ERA_PARA": "It was due {quando}: {oQue}.",
+      "QUANDO": "{quando}: {oQue}.",
+      "AUTOMATICA": "{quando} an automatic message goes out.",
+      "VER_OS_OUTROS": "See the other one | See the other {count}",
+      "MOSTRAR_MENOS": "Show less",
+      "ATRASADO": "Late",
+      "TIPO": {
+        "TASK": "Task",
+        "MESSAGE": "Send a message",
+        "CALL": "Call",
+        "MEETING": "Meeting",
+        "NOTE": "Note"
+      }
+    },
+    "DATA": {
+      "QUANDO": "{dia} at {hora}",
+      "HOJE": "today",
+      "AMANHA": "tomorrow",
+      "ONTEM": "yesterday",
+      "SEMANA": {
+        "DOMINGO": "Sunday",
+        "SEGUNDA": "Monday",
+        "TERCA": "Tuesday",
+        "QUARTA": "Wednesday",
+        "QUINTA": "Thursday",
+        "SEXTA": "Friday",
+        "SABADO": "Saturday"
+      }
+    },
+    "ASSUNTO": {
+      "TITULO": "Subject",
+      "FRASE": "{assunto} is in {etapa}.",
+      "SEM_NOME": "The subject of this conversation is in {etapa}."
+    },
+    "ORIGEM": {
+      "TITULO": "Where it came from",
+      "ANUNCIO": "Came from an ad: {nome}.",
+      "ANUNCIO_SEM_NOME": "Came from an ad.",
+      "ANUNCIO_NO": "Came from an ad on {canal}: {nome}.",
+      "ANUNCIO_NO_SEM_NOME": "Came from an ad on {canal}.",
+      "LINK": "Came through the link {nome}.",
+      "LINK_SEM_NOME": "Came through a link.",
+      "PUBLICACAO": "Came from a post: {nome}.",
+      "PUBLICACAO_SEM_NOME": "Came from a post.",
+      "CAMPANHA": "Came from a campaign: {nome}.",
+      "CAMPANHA_SEM_NOME": "Came from a campaign."
+    },
+    "LISTAS": {
+      "CONVERSAS": "Previous conversations ({count})",
+      "ARQUIVOS": "Files in this conversation ({count})",
+      "INFORMACOES": "Other information ({count})",
+      "ACOMPANHAM": "Who follows this conversation ({count})",
+      "TITULO_CONVERSAS": "Previous conversations",
+      "TITULO_ARQUIVOS": "Files in this conversation",
+      "TITULO_INFORMACOES": "Other information",
+      "TITULO_ACOMPANHAM": "Who follows this conversation",
+      "CONVERSA_COM": "Conversation from {dia}, with {nome}.",
+      "CONVERSA_COM_IA": "Conversation from {dia}, with the AI {nome}.",
+      "CONVERSA_SEM_NINGUEM": "Conversation from {dia}, with nobody.",
+      "AINDA_ABERTA": "Still open.",
+      "ABRIR_ARQUIVO": "Open {nome}",
+      "ACOMPANHAR_NO_MENU": "To follow or stop following, use the ⋯ menu at the top of the conversation."
+    },
+    "PE": {
+      "VER_PAGINA": "See the contact page",
+      "FRASE": "There you merge duplicate records and start another conversation."
+    },
+    "MENU_DO_TOPO": {
+      "TIME_E_PRIORIDADE": "Change team or priority",
+      "SO_PRIORIDADE": "Change priority",
+      "ACOMPANHAR": "Follow this conversation",
+      "DEIXAR": "Stop following",
+      "ACOMPANHANDO": "Done. You get notified of every new message.",
+      "DEIXOU": "You stopped following this conversation.",
+      "ERRO": "Could not change it now. Try again.",
+      "ETIQUETAS": "Labels for this conversation"
+    },
+    "CARREGANDO": "Loading",
+    "INFORMACOES": {
+      "SALVO": "Done.",
+      "ERRO": "Could not save it now. Try again.",
+      "COPIADO": "Copied."
+    },
+    "TIME_E_PRIORIDADE": {
+      "TITULO": "Team and priority",
+      "TITULO_SO_PRIORIDADE": "Priority",
+      "TIME": "Team",
+      "PRIORIDADE": "Priority",
+      "SEM_TIME": "No team",
+      "SEM_PRIORIDADE": "No priority",
+      "BAIXA": "Low",
+      "MEDIA": "Medium",
+      "ALTA": "High",
+      "URGENTE": "Urgent",
+      "SALVAR": "Save",
+      "CANCELAR": "Cancel",
+      "PRONTO": "Done.",
+      "ERRO": "Could not save it now. Try again."
+    },
+    "RELACAO": {
+      "TITULO": "This contact is",
+      "OPCOES": {
+        "INTERESSADO": {
+          "ROTULO": "Prospect",
+          "DICA": "Buys or may buy from you."
+        },
+        "PARCEIRO": {
+          "ROTULO": "Market partner",
+          "DICA": "Supplier or peer in your field."
+        },
+        "NAO_E_NEGOCIO": {
+          "ROTULO": "Not business",
+          "DICA": "Wrong number, spam or personal."
+        }
+      },
+      "EFEITO": {
+        "INTERESSADO": "Their conversations become cards in the pipeline and count in the Numbers.",
+        "FORA": "Their conversations do not become cards on their own and stay out of the Numbers. You can still create a card by hand."
+      },
+      "ARQUIVAR": {
+        "TITULO": "This contact has 1 open card. Archive it? | This contact has {count} open cards. Archive them?",
+        "TEXTO": "An archived card leaves the pipeline and the Numbers. Nothing is lost: you can reopen it from the CRM.",
+        "SIM": "Archive",
+        "NAO": "Keep"
+      },
+      "SALVO": "This contact is now {relacao}.",
+      "ARQUIVADOS": "1 card archived. | {count} cards archived.",
+      "NAO_ARQUIVADOS": "1 card stayed open: you cannot archive it. | {count} cards stayed open: you cannot archive them.",
+      "ERRO": "Could not change it now. Try again."
+    },
+    "ETIQUETAS": {
+      "TITULO": "Labels for this conversation",
+      "MUDAR": "Change the labels of this conversation: {etiquetas}",
+      "CRIAR": "Create a label",
+      "DIALOGO_TITULO": "Labels for this conversation",
+      "DIALOGO_FRASE": "Tap a label to add it or take it off.",
+      "PRONTO": "Done",
+      "ERRO": "Could not change the label. Try again.",
+      "ERRO_AO_CARREGAR": "Could not load the labels of this conversation.",
+      "TENTAR_DE_NOVO": "Try again"
+    }
+  },
+  "APAGAR_CONTATO": {
+    "UM": "The contact, its conversations and its messages will be deleted. This can't be undone.",
+    "VARIOS": "These {count} contacts, their conversations and their messages will be deleted. This can't be undone."
+  }
+}

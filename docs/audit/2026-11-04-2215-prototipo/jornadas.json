@@ -1,0 +1,29 @@
+{
+  "pasta": "docs/audit/2026-11-04-2215-prototipo/prints",
+  "conta": 1,
+  "larguras": [1440, 390],
+  "temas": ["light", "dark"],
+  "jornadas": [
+    {
+      "nome": "post",
+      "etapas": [
+        { "nome": "login", "url": "/app/login", "sem_login": true, "esperar": "input[type=\"password\"]" },
+        { "nome": "conversa", "url": "/app/accounts/{conta}/conversations/22", "esperar": "[data-comentario-acao]", "pausa": 2500 },
+        { "nome": "responder", "passos": [{ "clicar": "[data-comentario-acao=responder]" }, { "preencher": ["[data-comentario-escrever] textarea", "Oi, Marina! Te mandei os valores no direct 😊"] }], "pausa": 800 },
+        { "nome": "respondido", "passos": [{ "clicar": "[data-comentario-enviar]" }, { "esperar": "[data-comentario-resposta]" }], "pausa": 800 },
+        { "nome": "escondido", "passos": [{ "clicar": "[data-comentario-acao=esconder]" }, { "esperar": "[data-comentario-selo-escondido]" }], "pausa": 800 },
+        { "nome": "confirmar-apagar", "passos": [{ "clicar": "[data-comentario-acao=apagar]" }], "pausa": 800 },
+        { "nome": "apagado", "passos": [{ "clicar": "[data-comentario-apagar]" }, { "esperar": "[data-comentario-apagado]" }], "pausa": 800 }
+      ]
+    },
+    {
+      "nome": "estados",
+      "etapas": [
+        { "nome": "login", "url": "/app/login", "sem_login": true, "esperar": "input[type=\"password\"]" },
+        { "nome": "anuncio", "url": "/app/accounts/{conta}/conversations/23", "esperar": "[data-comentario-acao]", "pausa": 2500 },
+        { "nome": "sem-permissao", "url": "/app/accounts/{conta}/conversations/22?demo=permissao", "esperar": "[data-comentario-sem-permissao]", "pausa": 2000 },
+        { "nome": "so-ver", "url": "/app/accounts/{conta}/conversations/22?demo=so-ver", "esperar": "[data-comentario-texto]", "pausa": 2000 }
+      ]
+    }
+  ]
+}

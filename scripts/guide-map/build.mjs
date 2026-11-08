@@ -30,7 +30,15 @@ export const PASTA_PACOTES = 'lib/operator_guide/pacotes';
 const ARQUIVO_DO_PACOTE = 'porques.md';
 export const SAIDA_DO_PACOTE = 'guia-produto.md';
 // O pacote troca só o texto. Rota, gate, cobre e destino saem do roteador e do base.
-const CAMPOS_DO_PACOTE = ['titulo', 'intent', 'onde_fica', 'passos', 'gotchas'];
+const CAMPOS_DO_PACOTE = [
+  'titulo',
+  'intent',
+  'onde_fica',
+  'perfil',
+  'pre_requisitos',
+  'passos',
+  'gotchas',
+];
 
 // Campos que o código sabe e o arquivo humano não repete.
 const CAMPOS_GERADOS = ['rota', 'gate'];

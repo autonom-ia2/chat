@@ -27,7 +27,7 @@ class Crm::Numeros::CardsDaEquipe
   end
 
   def abertos(tipo)
-    @account.crm_cards.where(status: Crm::Card.statuses[:open], pipeline_id: funil(tipo))
+    do_funil.where(status: Crm::Card.statuses[:open], pipeline_id: funil(tipo))
   end
 
   def atrasados(cards)
@@ -50,7 +50,7 @@ class Crm::Numeros::CardsDaEquipe
   def lista_bate?(tipo, desde, ids)
     return false if funil(tipo).nil? || ids.size >= Crm::Numeros::Credito::MAX_CARDS
 
-    na_lista = @account.crm_cards.where(pipeline_id: funil(tipo), status: Crm::Numeros::MeusCards::FECHADOS, closed_at: desde..)
+    na_lista = do_funil.where(pipeline_id: funil(tipo), status: Crm::Numeros::MeusCards::FECHADOS, closed_at: desde..)
     na_lista.count == ids.size && na_lista.where(id: ids).count == ids.size
   end
 
@@ -59,18 +59,25 @@ class Crm::Numeros::CardsDaEquipe
   def ganhos_sem_responsavel(desde)
     return 0 if funil(:venda).nil?
 
-    ganhos = @account.crm_cards.where(pipeline_id: funil(:venda), status: Crm::Card.statuses[:won], closed_at: desde..)
+    ganhos = do_funil.where(pipeline_id: funil(:venda), status: Crm::Card.statuses[:won], closed_at: desde..)
     apply_responsible_filter(ganhos).distinct.count(:id)
   end
 
   # "Recebeu": os cards criados no mês nos funis de Vender, por responsável de hoje.
   def recebidos(range)
-    @account.crm_cards.where(pipeline_id: ids(:venda), created_at: range).where.not(owner_id: nil).group(:owner_id).count
+    do_funil.where(pipeline_id: ids(:venda), created_at: range).where.not(owner_id: nil).group(:owner_id).count
   end
 
   # Quem tem card aberto em cada tipo de funil (em qualquer funil do tipo): entra em "Quem cuidou".
   def responsaveis_com_abertos(tipo)
-    @account.crm_cards.where(status: Crm::Card.statuses[:open], pipeline_id: ids(tipo)).where.not(owner_id: nil)
+    do_funil.where(status: Crm::Card.statuses[:open], pipeline_id: ids(tipo)).where.not(owner_id: nil)
             .distinct.pluck(:owner_id)
+  end
+
+  private
+
+  # Este contato é (#2084): sem os cards de contato fora do funil (parceiro, não é negócio).
+  def do_funil
+    Crm::Relacao.cards_do_funil(@account)
   end
 end

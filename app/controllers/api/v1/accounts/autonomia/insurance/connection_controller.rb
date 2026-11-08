@@ -48,10 +48,15 @@ class Api::V1::Accounts::Autonomia::Insurance::ConnectionController < Api::V1::A
 
   private
 
-  # `discovering` é o estado que a tela acompanha até assentar. Se o job falhar, o próprio `ScanJob`
+  # O estado de passagem é o que a tela acompanha até assentar. Se o job falhar, o próprio `ScanJob`
   # grava `degraded`; se ele nem rodar, o `HealthcheckJob#presas` re-sincroniza depois de 10 min.
+  #
+  # `discovering` SÓ para conexão pronta: ele é `usable?` quando já houve varredura, e as ferramentas
+  # da Lia seguem usando a configuração anterior (chat#2647). Conexão fora do ar (credencial recusada,
+  # portal caído, `degraded`) passa por `authenticating`, que não serve às ferramentas: sem isso, a
+  # Lia tentaria login com uma senha que o portal já recusou antes do `ScanJob` confirmar qualquer coisa.
   def enqueue_scan!
-    connection.update!(status: 'discovering')
+    connection.update!(status: connection.ready? ? 'discovering' : 'authenticating')
     ::Autonomia::Insurance::Connections::ScanJob.perform_later(connection.id)
   end
 
