@@ -65,7 +65,9 @@
       "CARD_LINK_DA_AGENDA": "Booking link of the card owner (at step time)",
       "CONVERSA_LINK_DA_AGENDA": "Booking link of the conversation assignee (at step time)",
       "REUNIAO_INICIO": "Meeting date and time",
-      "REUNIAO_LINK_DA_REUNIAO": "Meeting call link"
+      "REUNIAO_LINK_DA_REUNIAO": "Meeting call link",
+      "ENVIO_TEXTO": "Text of the last message the automation sent",
+      "ENVIO_SITUACAO": "Status of the last message the automation sent"
     },
     "PASSOS": {
       "ESPERAR": "Wait for a while",
@@ -80,7 +82,12 @@
       "CAIXA_PESSOAS": "Add people to an inbox",
       "CONTATO_ETIQUETAS": "Add or remove a contact label",
       "CONTATO_ALTERAR": "Update the contact",
+      "CONTATO_NOTA": "Add a note to the contact",
       "EMPRESA_ALTERAR": "Update the contact's company",
+      "CONTATO_CRIAR": "Create a contact",
+      "EMPRESA_CRIAR": "Create a company",
+      "CONTATO_CLIENTE": "Mark the contact as a customer",
+      "CARD_CONTATO_CRIAR": "Create the card contact",
       "ETIQUETA_CRIAR": "Create a label",
       "ETIQUETA_ALTERAR": "Change a label",
       "ATRIBUTO_CRIAR": "Create a custom field",
@@ -126,6 +133,7 @@
       "EMAIL": "Email",
       "PHONE_NUMBER": "Phone",
       "COMPANY_ID": "Company",
+      "CONTENT": "Note text",
       "DESCRIPTION": "Description",
       "DOMAIN": "Website",
       "TITLE": "Label name",
@@ -256,7 +264,8 @@
       "INSERIR": "Add a step here",
       "PASSOS_NO_GALHO": "(1 step) | ({n} steps)",
       "AVANCADA": "Advanced action",
-      "AVANCADA_DICA": "Only the Guide changes this step. Here it stays as it is."
+      "AVANCADA_DICA": "Only the Guide changes this step. Here it stays as it is.",
+      "SEM_CAMPOS_DICA": "This step has nothing to fill in. Just save."
     },
     "FRASES": {
       "FALTA_GATILHO": "Choose when it starts",
@@ -303,6 +312,8 @@
       "ESCREVER_MENSAGEM_SEM_INSTRUCAO": "AI writes and sends to the customer: the instruction is missing",
       "ESCREVER_SUGESTAO": "AI writes a suggestion for the team: “{instrucao}”",
       "ESCREVER_SUGESTAO_SEM_INSTRUCAO": "AI writes a suggestion for the team: the instruction is missing",
+      "ESCREVER_GUARDAR": "AI writes a text and keeps it for the next steps: “{instrucao}”",
+      "ESCREVER_GUARDAR_SEM_INSTRUCAO": "AI writes a text and keeps it for the next steps: the instruction is missing",
       "RESUMIR_NOTA": "AI summarizes the conversation in a note",
       "RESUMIR_AVISAR": "AI summarizes the conversation and notifies {quem}",
       "EMAIL": "E-mail the customer: “{assunto}”"
@@ -353,6 +364,7 @@
       "ATRIBUTO_CALCULADO": "{nome}: {valor}",
       "DATA_MAIS": "{de} + {n} {unidade}",
       "DATA_MENOS": "{de} − {n} {unidade}",
+      "DATA_FIM_DO_MES": "{data}, at the end of the month",
       "DATA": {
         "PERGUNTA": "Which date to save?",
         "DIA": "A set day",
@@ -368,6 +380,9 @@
         "SENTIDO": "After or before",
         "DEPOIS": "after",
         "ANTES": "before",
+        "FIM": "Which day of that month?",
+        "FIM_DIA": "The day worked out",
+        "FIM_MES": "The last day of the month",
         "GRAVA": "Saves: {valor}",
         "CAMPO_APAGADO": "This date field was deleted from the account. Pick another one: as it is, Save all will not accept it.",
         "NUMERO_INVALIDO": "Use a whole number from 0 to {teto}."

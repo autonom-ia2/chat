@@ -262,6 +262,118 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.REPETE"
         }
       ]
+    },
+    {
+      "tipo": "card.recorrente",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_RECORRENTE",
+      "grupo": "tempo",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "frequencia",
+          "peca": "frequencia",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FREQUENCIA"
+        },
+        {
+          "nome": "dia_da_semana",
+          "peca": "dia_da_semana",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DA_SEMANA"
+        },
+        {
+          "nome": "dia_do_mes",
+          "peca": "dia_do_mes",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
+        },
+        {
+          "nome": "hora",
+          "peca": "hora",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        },
+        {
+          "nome": "selecao",
+          "peca": "selecao",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.SELECAO"
+        }
+      ]
+    },
+    {
+      "tipo": "contato.recorrente",
+      "alvo": "Contact",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONTATO_RECORRENTE",
+      "grupo": "tempo",
+      "requer": "automacao_gatilhos",
+      "parametros": [
+        {
+          "nome": "frequencia",
+          "peca": "frequencia",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FREQUENCIA"
+        },
+        {
+          "nome": "dia_da_semana",
+          "peca": "dia_da_semana",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DA_SEMANA"
+        },
+        {
+          "nome": "dia_do_mes",
+          "peca": "dia_do_mes",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
+        },
+        {
+          "nome": "hora",
+          "peca": "hora",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        },
+        {
+          "nome": "selecao",
+          "peca": "selecao",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.SELECAO"
+        }
+      ]
+    },
+    {
+      "tipo": "conta.recorrente",
+      "alvo": "Account",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONTA_RECORRENTE",
+      "grupo": "tempo",
+      "requer": "automacao_gatilhos",
+      "parametros": [
+        {
+          "nome": "frequencia",
+          "peca": "frequencia",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FREQUENCIA"
+        },
+        {
+          "nome": "dia_da_semana",
+          "peca": "dia_da_semana",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DA_SEMANA"
+        },
+        {
+          "nome": "dia_do_mes",
+          "peca": "dia_do_mes",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
+        },
+        {
+          "nome": "hora",
+          "peca": "hora",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        }
+      ]
     }
   ],
   "operadores": [
@@ -545,6 +657,44 @@
       "so_na_espera": true
     },
     {
+      "caminho": "envio.texto",
+      "base": "envio",
+      "frase": "AUTOMACAO_LIVRE.VALORES.ENVIO_TEXTO"
+    },
+    {
+      "caminho": "envio.situacao",
+      "base": "envio",
+      "frase": "AUTOMACAO_LIVRE.VALORES.ENVIO_SITUACAO",
+      "opcoes": [
+        {
+          "valor": "saiu",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.SAIU"
+        },
+        {
+          "valor": "entregue",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.ENTREGUE"
+        },
+        {
+          "valor": "lida",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.LIDA"
+        },
+        {
+          "valor": "falhou",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALHOU"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
       "caminho": "conversa.atributos",
       "base": "conversa",
       "atributos": "conversation_attribute",
@@ -646,16 +796,19 @@
   "alvos": {
     "Conversation": [
       "conversa",
-      "contato"
+      "contato",
+      "envio"
     ],
     "Crm::Card": [
       "card",
       "conversa",
       "contato",
-      "reuniao"
+      "reuniao",
+      "envio"
     ],
     "Contact": [
-      "contato"
+      "contato",
+      "envio"
     ]
   },
   "grupos": [
@@ -1253,6 +1406,27 @@
     },
     {
       "tipo": "acao",
+      "nome": "contato_nota",
+      "acao": "POST contacts/:contact_id/notes",
+      "grupo": "CONTATO",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONTATO_NOTA",
+      "caminho": {
+        "contact_id": {
+          "$valor": "contato.id"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "content",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CONTENT",
+          "obrigatorio": true
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
       "nome": "contato_alterar",
       "acao": "PATCH contacts/:id",
       "grupo": "CONTATO",
@@ -1333,6 +1507,138 @@
         {
           "nome": "custom_attributes",
           "peca": "atributos_da_empresa",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CUSTOM_ATTRIBUTES",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "contato_criar",
+      "acao": "POST contacts",
+      "grupo": "CONTATO",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONTATO_CRIAR",
+      "caminho": {},
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "name",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.NAME",
+          "obrigatorio": false
+        },
+        {
+          "nome": "email",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.EMAIL",
+          "obrigatorio": false
+        },
+        {
+          "nome": "phone_number",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PHONE_NUMBER",
+          "obrigatorio": false
+        },
+        {
+          "nome": "company_id",
+          "peca": "empresa",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.COMPANY_ID",
+          "obrigatorio": false
+        },
+        {
+          "nome": "custom_attributes",
+          "peca": "atributos_do_contato",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CUSTOM_ATTRIBUTES",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "empresa_criar",
+      "acao": "POST companies",
+      "grupo": "CONTATO",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.EMPRESA_CRIAR",
+      "caminho": {},
+      "envelope": "company",
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "name",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.NAME",
+          "obrigatorio": true,
+          "max_caracteres": 100
+        },
+        {
+          "nome": "description",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DESCRIPTION",
+          "obrigatorio": false,
+          "max_caracteres": 1000
+        },
+        {
+          "nome": "domain",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DOMAIN",
+          "obrigatorio": false
+        },
+        {
+          "nome": "custom_attributes",
+          "peca": "atributos_da_empresa",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CUSTOM_ATTRIBUTES",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "contato_cliente",
+      "acao": "POST contacts/:contact_id/customer",
+      "grupo": "CONTATO",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONTATO_CLIENTE",
+      "caminho": {
+        "contact_id": {
+          "$valor": "contato.id"
+        }
+      },
+      "fixos": {},
+      "campos": []
+    },
+    {
+      "tipo": "acao",
+      "nome": "card_contato_criar",
+      "acao": "POST crm/cards/:card_id/contact",
+      "grupo": "FUNIL",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CARD_CONTATO_CRIAR",
+      "caminho": {
+        "card_id": {
+          "$valor": "card.id"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "name",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.NAME",
+          "obrigatorio": false
+        },
+        {
+          "nome": "email",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.EMAIL",
+          "obrigatorio": false
+        },
+        {
+          "nome": "phone_number",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PHONE_NUMBER",
+          "obrigatorio": false
+        },
+        {
+          "nome": "custom_attributes",
+          "peca": "atributos_do_contato",
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CUSTOM_ATTRIBUTES",
           "obrigatorio": false
         }

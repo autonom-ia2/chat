@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_760000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -629,6 +629,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_760000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "evento"
+    t.jsonb "textos", default: {}, null: false
     t.index ["account_id"], name: "index_autonomia_automacao_execucoes_on_account_id"
     t.index ["alvo_type", "alvo_id"], name: "index_autonomia_automacao_execucoes_on_alvo"
     t.index ["automacao_id", "alvo_type", "alvo_id", "chave_gatilho"], name: "idx_autonomia_automacao_execucoes_abertas", unique: true, where: "(finalizada_em IS NULL)"
@@ -3041,9 +3042,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_760000) do
     t.string "request_digest", limit: 64
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "source_post_id"
+    t.string "source_post_network"
     t.index ["account_id", "ad_account_id", "request_digest"], name: "idx_crm_meta_ads_created_objects_digest", unique: true, where: "((status)::text = ANY (ARRAY[('creating'::character varying)::text, ('unconfirmed'::character varying)::text, ('rollback_failed'::character varying)::text]))"
     t.index ["account_id", "ad_id"], name: "idx_crm_meta_ads_created_objects_ad"
     t.index ["account_id", "idempotency_key"], name: "idx_crm_meta_ads_created_objects_key", unique: true
+    t.index ["account_id", "source_post_id"], name: "idx_crm_meta_ads_created_objects_source_post"
   end
 
   create_table "crm_meta_ads_lead_forms", force: :cascade do |t|
@@ -3058,6 +3062,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_760000) do
     t.bigint "brought_stage_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "destination_set_at"
     t.index ["account_id", "form_id"], name: "index_crm_meta_ads_lead_forms_on_account_id_and_form_id", unique: true
     t.index ["brought_pipeline_id"], name: "index_crm_meta_ads_lead_forms_on_brought_pipeline_id"
     t.index ["brought_stage_id"], name: "index_crm_meta_ads_lead_forms_on_brought_stage_id"
@@ -3094,6 +3099,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_760000) do
     t.boolean "feed_receiving", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "leadgen_receiving_since"
     t.index ["account_id", "page_id"], name: "index_crm_meta_ads_pages_on_account_id_and_page_id", unique: true
     t.index ["page_id"], name: "index_crm_meta_ads_pages_on_page_id"
   end

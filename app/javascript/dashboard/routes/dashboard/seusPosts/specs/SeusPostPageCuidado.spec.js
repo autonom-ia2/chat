@@ -216,6 +216,33 @@ describe('Seus posts: o cuidado no post (#2212)', () => {
     expect(bloco(wrapper).text()).not.toContain('esperam resposta');
   });
 
+  // #2522: leitura de uma rede só, os números da rede que leu e o mesmo aviso do Painel, com ler de novo.
+  it('uma rede faltou: os números da que leu, o aviso da que faltou e ler de novo', async () => {
+    ComentariosIaAPI.getResumo
+      .mockResolvedValueOnce({
+        data: resumoPronto({
+          network_status: { instagram: 'ready', facebook: 'meta_unavailable' },
+        }),
+      })
+      .mockResolvedValueOnce({
+        data: resumoPronto({
+          network_status: { instagram: 'ready', facebook: 'ready' },
+        }),
+      });
+    const wrapper = await montar();
+
+    const aviso = bloco(wrapper).find('[data-ia-rede-faltou]');
+    expect(aviso.attributes('data-network')).toBe('facebook');
+    expect(bloco(wrapper).find('[data-seus-posts-esperam]').exists()).toBe(
+      true
+    );
+    await aviso.find('button').trigger('click');
+    await flushPromises();
+
+    expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(2);
+    expect(bloco(wrapper).find('[data-ia-rede-faltou]').exists()).toBe(false);
+  });
+
   it('meta_unavailable: diz e oferece ler de novo', async () => {
     ComentariosIaAPI.getResumo
       .mockResolvedValueOnce({ data: { status: 'meta_unavailable' } })

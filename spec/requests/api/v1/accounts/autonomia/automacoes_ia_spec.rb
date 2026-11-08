@@ -222,13 +222,15 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::AutomacoesIa', :automacao_motor, t
 
       expect(response.parsed_body).to include('aviso' => 'nenhuma_entraria', 'candidatas' => [conversa.display_id])
     end
-  end
 
-  it 'o card nunca vai à IA: o esquema da receita não aceita card em le' do
-    testar(corpo: receita.merge(passos: [decidir.merge(le: %w[mensagens_recentes card])]))
+    # #2679: `le: card` vale. O card vai só se quem pede o vê (testar_passo_card_spec); esta conversa não tem card, e a
+    # IA lê o resto.
+    it 'o passo que lê o card testa: a conversa sem card vai à IA com o resto', :aggregate_failures do
+      testar(corpo: receita.merge(passos: [decidir.merge(le: %w[mensagens_recentes card])]))
 
-    expect(response).to have_http_status(:unprocessable_entity)
-    expect(corpos).to be_empty
+      expect(response).to have_http_status(:ok)
+      expect(corpos.size).to eq(1)
+    end
   end
 
   describe 'custos' do

@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
+import { isCrmKanbanEnabled } from 'dashboard/helper/routeHelpers';
 import { useAlert } from 'dashboard/composables';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
@@ -24,6 +25,7 @@ import {
   useCuidado,
   useResumo,
 } from '../../campaigns/metaAds/comentariosIa/useCuidado';
+import AvisoRedeQueFaltou from '../../campaigns/metaAds/comentariosIa/AvisoRedeQueFaltou.vue';
 
 // Seus posts F2 (#2305): um post do perfil e os comentários dele, montado como o detalhe de um anúncio: o voltar, o
 // herói (nome, como foi e quem espera você), a foto e o post à esquerda, os números à direita e os comentários
@@ -180,13 +182,19 @@ const restoDaLegenda = computed(() => {
 const resumo = computed(() => {
   const media = { apareceu: dados.value?.normal?.views ?? null };
   const { nivel, vezes } = vereditoDoPost(post.value, media);
-  return t(`SEUS_POSTS.POST.SUMMARY.${nivel}`, { times: vezes });
+  // #2522: no Instagram só se sabe do anúncio feito pela plataforma, que entrega por outra mídia, com números e
+  // comentários próprios.
+  const chave =
+    nivel === 'BOOSTED' && rede.value === 'instagram'
+      ? 'BOOSTED_INSTAGRAM'
+      : nivel;
+  return t(`SEUS_POSTS.POST.SUMMARY.${chave}`, { times: vezes });
 });
 
-// Os números do post em quatro quadros, como o detalhe de anúncio, e os outros numa linha curta embaixo. No
-// Instagram, vezes, curtidas e comentários são sem anúncio; pessoas, salvaram e compartilharam podem incluir. Na
-// Página, só as vezes se separam: o resto inclui o anúncio quando houve. O Facebook não conta quem salvou: no lugar,
-// cliques no post.
+// Os números do post em quatro quadros, como o detalhe de anúncio, e os outros numa linha curta embaixo. Só as vezes
+// se separam do anúncio: o resto pode incluir. No Instagram, curtidas e comentários também seguem marcados como "pode
+// incluir anúncio", como no cartão de Seus posts, até haver chamada real num post impulsionado (#2522). Na Página, o
+// resto inclui o anúncio quando houve. O Facebook não conta quem salvou: no lugar, cliques no post.
 const QUADROS = [
   ['apareceu', 'VIEWS'],
   ['pessoas', 'PEOPLE'],
@@ -204,11 +212,8 @@ const OUTROS = {
   ],
 };
 const SEM_INSIGHTS = ['curtidas', 'comentarios'];
-const podeTerAnuncio = chave => {
-  if (chave === 'apareceu') return false;
-  if (rede.value === 'instagram') return chave === 'pessoas';
-  return post.value.podeTerAnuncio;
-};
+const podeTerAnuncio = chave =>
+  chave !== 'apareceu' && post.value.podeTerAnuncio;
 const quadros = computed(() =>
   QUADROS.filter(
     ([chave]) => !post.value.semInsights || SEM_INSIGHTS.includes(chave)
@@ -235,6 +240,8 @@ const outros = computed(() =>
 );
 const ladoDoAnuncio = computed(() => {
   if (post.value.semInsights) return '';
+  if (post.value.impulsionado && rede.value === 'instagram')
+    return t('SEUS_POSTS.POST.SIDE.BOOSTED_INSTAGRAM');
   if (post.value.impulsionado)
     return t('SEUS_POSTS.POST.SIDE.BOOSTED', {
       name: t('SEUS_POSTS.POST.NUMBERS.VIEWS'),
@@ -242,6 +249,18 @@ const ladoDoAnuncio = computed(() => {
   if (rede.value === 'instagram') return t('SEUS_POSTS.POST.SIDE.INSTAGRAM');
   return t('SEUS_POSTS.TILES.LEGEND_NONE');
 });
+
+// #2522: o post do Instagram impulsionado por aqui. Os comentários do anúncio ficam noutra mídia, e o anúncio por
+// dentro (Anúncios da Meta) os mostra. `ad_id` só vem para quem vê Anúncios da Meta; a página deles pede também o CRM.
+const anuncioDoPost = computed(() =>
+  dados.value?.ad_id && isCrmKanbanEnabled()
+    ? {
+        name: 'campaigns_meta_ads_index',
+        params: { accountId: route.params.accountId },
+        query: { aba: 'resultado', anuncio: String(dados.value.ad_id) },
+      }
+    : null
+);
 
 // Comentários: filtro simples, contado da lista que já veio. Aba sem nada não aparece (Todos sempre).
 const FILTROS = [
@@ -786,6 +805,14 @@ const BOTAO_DE_BORDA =
                 />
               </div>
               <template v-else>
+                <!-- #2522: o mesmo aviso do Painel quando uma rede do alvo faltou. O post de Seus posts é de uma rede só
+                     (rede que falha vem como status, no ramo acima); o aviso fica para o alvo de duas redes. -->
+                <AvisoRedeQueFaltou
+                  :network-status="oQueTem.network_status"
+                  pode-tentar
+                  :carregando="lendoResumo"
+                  @tentar="lerResumo"
+                />
                 <!-- Um item por linha: no celular, " · " quebrava e deixava o ponto no começo da linha. -->
                 <ul
                   class="m-0 flex list-none flex-col gap-1 p-0 text-base font-medium text-n-slate-12"
@@ -839,6 +866,23 @@ const BOTAO_DE_BORDA =
           class="flex scroll-mt-4 flex-col gap-4 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
           data-seus-posts-comentarios
         >
+          <div
+            v-if="anuncioDoPost"
+            data-seus-posts-comentarios-do-anuncio
+            class="flex flex-col items-start gap-3 rounded-xl bg-n-alpha-1 p-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <p class="m-0 text-sm text-n-slate-12">
+              {{ $t('SEUS_POSTS.POST.AD_COMMENTS.TEXT') }}
+            </p>
+            <router-link
+              :to="anuncioDoPost"
+              data-seus-posts-ver-anuncio
+              class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-0 text-sm sm:px-3 font-medium text-n-brand outline-none hover:underline focus-visible:ring-2 focus-visible:ring-n-brand"
+            >
+              <span class="i-lucide-megaphone size-4" aria-hidden="true" />
+              {{ $t('SEUS_POSTS.POST.AD_COMMENTS.OPEN') }}
+            </router-link>
+          </div>
           <div
             class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
           >

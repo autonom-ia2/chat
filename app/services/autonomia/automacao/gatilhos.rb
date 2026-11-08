@@ -12,6 +12,10 @@
 #
 # Os de tempo (#2499, PR3) não vêm de evento: a varredura (TempoJob) acha os alvos da janela pelos parâmetros (`dias`,
 # a data de um campo, a hora) e a marca é o próprio fato ("parado desde tal instante", "a data do campo vale tal dia").
+# O recorrente (#2635, G7) também é da varredura: na ocorrência (todo dia, toda semana, todo mês, numa hora), age em
+# cada card ou contato da seleção, e a marca é a ocorrência com o alvo. O conta.recorrente não tem seleção: roda uma vez
+# por ocorrência, com a própria conta como alvo (o "disparar" de campanha da G14 escolhe o público), e a marca é só a
+# ocorrência.
 #
 # Acrescentar um gatilho: a entrada aqui, o tipo no esquema da receita, a frase (en e pt_BR) e, se for evento, o
 # método do AutomacaoListener. A Partida, o Executor e a varredura não mudam.
@@ -20,7 +24,11 @@ module Autonomia::Automacao::Gatilhos
 
   CARD = 'Crm::Card'.freeze
   CONTATO = 'Contact'.freeze
+  CONTA = 'Account'.freeze
   DA_DATA = %w[campo dias quando hora repete].freeze
+  DO_RECORRENTE = %w[frequencia dia_da_semana dia_do_mes hora selecao].freeze
+  DA_OCORRENCIA = %w[frequencia dia_da_semana dia_do_mes hora].freeze
+  VARRIDOS = %i[tempo recorrente].freeze
 
   LISTA = [
     Entrada.new(tipo: 'conversa.criada', alvo: 'Conversation', origem: :evento, parametros: []),
@@ -37,7 +45,10 @@ module Autonomia::Automacao::Gatilhos
     Entrada.new(tipo: 'card.reuniao_cancelada', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.parado', alvo: CARD, origem: :tempo, parametros: %w[etapa_id dias]),
     Entrada.new(tipo: 'card.data', alvo: CARD, origem: :tempo, parametros: DA_DATA),
-    Entrada.new(tipo: 'contato.data', alvo: CONTATO, origem: :tempo, parametros: DA_DATA)
+    Entrada.new(tipo: 'contato.data', alvo: CONTATO, origem: :tempo, parametros: DA_DATA),
+    Entrada.new(tipo: 'card.recorrente', alvo: CARD, origem: :recorrente, parametros: DO_RECORRENTE),
+    Entrada.new(tipo: 'contato.recorrente', alvo: CONTATO, origem: :recorrente, parametros: DO_RECORRENTE),
+    Entrada.new(tipo: 'conta.recorrente', alvo: CONTA, origem: :recorrente, parametros: DA_OCORRENCIA)
   ].index_by(&:tipo).freeze
 
   # O evento do emissor do CRM (Crm::Webhooks::Emitter) e os gatilhos que ele pode disparar. O card criado já nasce
@@ -64,15 +75,21 @@ module Autonomia::Automacao::Gatilhos
 
   def entrada(tipo) = LISTA[tipo.to_s]
 
-  # O tipo do alvo (`Conversation`, `Crm::Card`, `Contact`) do gatilho; nil quando o tipo não existe.
+  # O tipo do alvo (`Conversation`, `Crm::Card`, `Contact`, `Account`) do gatilho; nil quando o tipo não existe.
   def alvo(tipo) = entrada(tipo)&.alvo
 
   def do_card?(tipo) = alvo(tipo) == CARD
 
-  def de_tempo?(tipo) = entrada(tipo)&.origem == :tempo
+  # Os da varredura: os de tempo e o recorrente.
+  def de_tempo?(tipo) = VARRIDOS.include?(entrada(tipo)&.origem)
+
+  def recorrente?(tipo) = entrada(tipo)&.origem == :recorrente
+
+  # O conta.recorrente: sem seleção, uma execução por ocorrência na própria conta.
+  def da_conta?(tipo) = alvo(tipo) == CONTA
 
   # Os tipos que a varredura de tempo acha.
-  def de_tempo = LISTA.values.select { |item| item.origem == :tempo }.map(&:tipo)
+  def de_tempo = LISTA.values.select { |item| VARRIDOS.include?(item.origem) }.map(&:tipo)
 
   # O gatilho vale na conta agora? Os de conversa vêm com o motor; os de card pedem a flag da F6 e o CRM; os de reunião,
   # também as reuniões da instalação ligadas (sem elas nenhuma reunião nasce).
@@ -121,4 +138,11 @@ module Autonomia::Automacao::Gatilhos
 
   # A data do campo: uma vez por alvo, campo e dia.
   def marca_da_data(tipo, alvo, campo, dia) = "#{tipo}:#{alvo.id}:#{campo}:#{dia.iso8601}"
+
+  # O recorrente: uma vez por ocorrência e alvo; o da conta, uma vez por ocorrência. A ocorrência em UTC: a hora local
+  # ambígua do horário de verão não repete nem pula.
+  def marca_do_recorrente(tipo, alvo_id, ocorrencia)
+    marca = "recorrente:#{ocorrencia.utc.iso8601}:#{tipo}"
+    da_conta?(tipo) ? marca : "#{marca}:#{alvo_id}"
+  end
 end
