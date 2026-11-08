@@ -231,6 +231,32 @@ describe('ParaChamarPage pela API', () => {
     );
     expect(wrapper.find('[data-sucesso-fila]').exists()).toBe(false);
     expect(titulo(wrapper)).toBe('Empresa 1');
+    expect(
+      wrapper.find('[data-depois]').attributes('disabled')
+    ).toBeUndefined();
+  });
+
+  it('com o "Não serve" gravando, os motivos ficam desligados e um segundo toque não grava', async () => {
+    let terminar;
+    AutonomiaProspectingAPI.discardLeads.mockReturnValue(
+      new Promise(resolve => {
+        terminar = resolve;
+      })
+    );
+    const wrapper = await abrir();
+
+    await clicar(wrapper, '[data-nao-serve]');
+    await clicar(wrapper, '[data-motivo="no_interest"]');
+    await clicar(wrapper, '[data-motivo="closed"]');
+
+    expect(
+      wrapper.find('[data-motivo="closed"]').attributes('disabled')
+    ).toBeDefined();
+    expect(AutonomiaProspectingAPI.discardLeads).toHaveBeenCalledTimes(1);
+
+    terminar({});
+    await flushPromises();
+    expect(titulo(wrapper)).toBe('Empresa 2');
   });
 
   it('"Não serve" descarta com o motivo e anda; "Desfazer" volta o lead a new_lead', async () => {

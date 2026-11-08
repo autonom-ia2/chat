@@ -38,6 +38,15 @@ const ESTADOS = {
   'fila-fim-adiados': { fase: 'fim' },
 };
 
+// A gravação da fila em voo (mandar, "Não serve", "Depois" ou "Desfazer"),
+// fora da instância: se a pessoa sai da tela e volta no meio dela, o carregar
+// da tela nova espera a gravação terminar antes de pedir a fila, e não mostra
+// uma empresa que acabou de sair.
+let gravacaoEmVoo = null;
+// Teto da espera: uma gravação que nunca responde não prende a tela em
+// "carregando"; passado o prazo, a fila é pedida mesmo assim.
+const ESPERA_MAXIMA_MS = 15000;
+
 const esperar = ms =>
   new Promise(resolve => {
     setTimeout(resolve, ms);
@@ -88,8 +97,23 @@ export function useFilaParaChamar({
     indice.value += 1;
   };
 
-  // Uma ação por vez na fila: mandar, "Não serve" e "Depois" esperam uma à outra.
-  const gravando = () => mandando.value || ocupado.value;
+  // Uma ação por vez na fila: mandar, "Não serve", "Depois" e "Desfazer"
+  // esperam uma à outra.
+  const gravando = computed(() => mandando.value || ocupado.value);
+
+  // Liga a trava, grava e solta a trava sempre (finally), mesmo se a gravação
+  // falhar. A promessa fica em gravacaoEmVoo enquanto corre.
+  const travar = async (trava, acao) => {
+    trava.value = true;
+    const promessa = (async () => acao())();
+    gravacaoEmVoo = promessa;
+    try {
+      return await promessa;
+    } finally {
+      trava.value = false;
+      if (gravacaoEmVoo === promessa) gravacaoEmVoo = null;
+    }
+  };
 
   // Depois de gravar, a fila só anda se ainda está na empresa gravada.
   const andarDe = posicao => {
@@ -131,6 +155,15 @@ export function useFilaParaChamar({
     aviso.value = null;
     mandado.value = null;
     try {
+      if (gravacaoEmVoo) {
+        const aguardada = gravacaoEmVoo;
+        await Promise.race([
+          aguardada.catch(() => null),
+          esperar(ESPERA_MAXIMA_MS),
+        ]);
+        // A que estourou o teto não faz a próxima tela esperar de novo.
+        if (gravacaoEmVoo === aguardada) gravacaoEmVoo = null;
+      }
       await carregarAjustes();
       const [fila, lista] = await Promise.all([
         fonte.value.fila(),
@@ -164,38 +197,39 @@ export function useFilaParaChamar({
       await esperar(ESPERA);
       return 'criado';
     }
-    let resumo;
+    // Tudo dentro do try: uma resposta sem created/existing também vira o
+    // aviso de falha, e a fila fica no cartão.
     try {
-      resumo = await fonte.value.mandarParaFunil({
+      const resumo = await fonte.value.mandarParaFunil({
         ids: [empresa.id],
         funilId: destino.value.funil.id,
         etapaId: destino.value.etapa.id,
         donoId: donoId.value,
       });
+      const criados = resumo.created.length;
+      if (!criados && !resumo.existing.length) {
+        useAlert(t(TEXTO_DO_ERRO[erroDoDono(resumo) || 'funil']));
+        return null;
+      }
+      lembrarDestino(contaId.value, usuarioId.value, {
+        funilId: destino.value.funil.id,
+        etapaId: destino.value.etapa.id,
+      });
+      // Só "existing": o card já existia, com a etapa e o dono dele. A tela
+      // não afirma os escolhidos.
+      return criados ? 'criado' : 'existente';
     } catch {
       useAlert(t(TEXTO_DO_ERRO.funil));
       return null;
     }
-    if (!resumo.created.length && !resumo.existing.length) {
-      useAlert(t(TEXTO_DO_ERRO[erroDoDono(resumo) || 'funil']));
-      return null;
-    }
-    lembrarDestino(contaId.value, usuarioId.value, {
-      funilId: destino.value.funil.id,
-      etapaId: destino.value.etapa.id,
-    });
-    // Só "existing": o card já existia, com a etapa e o dono dele. A tela não
-    // afirma os escolhidos.
-    return resumo.created.length ? 'criado' : 'existente';
   };
 
   const mandar = async () => {
-    if (gravando() || !atual.value) return;
+    if (gravando.value || !atual.value) return;
+    const empresa = atual.value;
     const posicao = indice.value;
     aviso.value = null;
-    mandando.value = true;
-    const foi = await enviar(atual.value);
-    mandando.value = false;
+    const foi = await travar(mandando, () => enviar(empresa));
     if (!foi || indice.value !== posicao) return;
     if (foi === 'existente') {
       andarDe(posicao);
@@ -239,10 +273,9 @@ export function useFilaParaChamar({
   const tirarDaFila = async ({ gravarIda, gravarVolta, contador, chave }) => {
     const empresa = atual.value;
     const posicao = indice.value;
-    if (!empresa || gravando()) return;
-    ocupado.value = true;
-    const gravou = await gravar(gravarIda(empresa));
-    ocupado.value = false;
+    if (!empresa || gravando.value) return;
+    aviso.value = null;
+    const gravou = await travar(ocupado, () => gravar(gravarIda(empresa)));
     if (!gravou) return;
     contador.value += 1;
     andarDe(posicao);
@@ -278,10 +311,14 @@ export function useFilaParaChamar({
       chave: `${NS}.DEPOIS_AVISO`,
     });
 
+  // Com uma gravação em voo, o "Desfazer" não faz nada (o botão também fica
+  // desligado); a volta grava com a mesma trava.
   const desfazer = async () => {
+    if (gravando.value) return;
     const atualAviso = aviso.value;
     aviso.value = null;
-    await atualAviso?.desfazer();
+    if (!atualAviso?.desfazer) return;
+    await travar(ocupado, atualAviso.desfazer);
   };
 
   return {
@@ -294,6 +331,7 @@ export function useFilaParaChamar({
     fase,
     mandando,
     ocupado,
+    gravando,
     aviso,
     foram,
     voltam,

@@ -66,6 +66,7 @@ const {
   fase,
   mandando,
   ocupado,
+  gravando,
   aviso,
   foram,
   voltam,
@@ -254,7 +255,7 @@ watch(demo, carregar);
               tom="verde"
             />
             <p
-              v-if="truncada"
+              v-if="truncada && teto"
               class="m-0 text-sm text-n-slate-11"
               data-fila-truncada
             >
@@ -270,6 +271,7 @@ watch(demo, carregar);
             :botao="
               aviso.desfazer ? $t('PROSPECTING_ACHAR.COMUM.DESFAZER') : ''
             "
+            :desligado="gravando"
             data-aviso-fila
             @acao="desfazer"
           />
@@ -280,6 +282,7 @@ watch(demo, carregar);
           >
             <AcharMotivos
               :titulo="$t(`${NS}.NAO_SERVE_TITULO`, { nome: atual.nome })"
+              :ocupado="gravando"
               @escolher="tirar"
             />
           </section>

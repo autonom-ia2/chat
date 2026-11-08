@@ -1,9 +1,11 @@
 import { ref } from 'vue';
+import { useAlert } from 'dashboard/composables';
 import { useFilaParaChamar } from '../composables/useFilaParaChamar';
 
 // #2697 — uma ação por vez na fila, pelo composable (sem depender do botão
 // desligado na tela): com uma gravação em voo, mandar, "Não serve" e "Depois"
-// não gravam nada; e a fila só anda se ainda está na empresa que foi gravada.
+// não gravam nada; a trava solta mesmo quando a gravação falha; o "Desfazer"
+// espera; e a tela remontada espera a gravação em voo antes de pedir a fila.
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: chave => chave }) }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
@@ -23,6 +25,10 @@ const esperarTudo = () =>
 
 const montar = () => {
   const fonte = {
+    fila: vi
+      .fn()
+      .mockResolvedValue({ cartoes: [], fim: null, truncada: false }),
+    funis: vi.fn().mockResolvedValue([]),
     mandarParaFunil: vi.fn(),
     descartar: vi.fn(),
     voltarNaoServe: vi.fn().mockResolvedValue({}),
@@ -95,19 +101,97 @@ it('"Depois" com mandar em voo não grava, e o sucesso fica na empresa mandada',
   expect(fila.indice.value).toBe(0);
 });
 
-it('se a fila voltou para outra empresa durante a gravação, ela não anda', async () => {
+it('"Desfazer" com uma gravação em voo não chama voltarNaoServe nem muda a empresa', async () => {
   const { fila, fonte } = montar();
-  fonte.depois.mockResolvedValue({});
-  await fila.depois();
+  fonte.descartar.mockResolvedValue({});
+  await fila.tirar('closed');
+  const avisoDaPrimeira = fila.aviso.value;
   expect(fila.indice.value).toBe(1);
 
   const voo = emVoo();
-  fonte.descartar.mockReturnValue(voo.promessa);
-  fila.tirar('closed');
+  fonte.depois.mockReturnValue(voo.promessa);
+  fila.depois();
+  expect(fila.aviso.value).toBeNull();
+  // A faixa da empresa anterior ainda na tela (o botão desligado é a outra
+  // metade): tocar "Desfazer" não faz nada.
+  fila.aviso.value = avisoDaPrimeira;
   await fila.desfazer();
-  expect(fila.indice.value).toBe(0);
+  expect(fonte.voltarNaoServe).not.toHaveBeenCalled();
+  expect(fila.indice.value).toBe(1);
 
   voo.terminar({});
   await esperarTudo();
-  expect(fila.indice.value).toBe(0);
+  expect(fila.indice.value).toBe(2);
+});
+
+it('envio que falha solta a trava, avisa e deixa as outras ações voltarem', async () => {
+  const { fila, fonte } = montar();
+  fonte.mandarParaFunil.mockRejectedValue(new Error('rede'));
+
+  await fila.mandar();
+  expect(useAlert).toHaveBeenCalled();
+  expect(fila.gravando.value).toBe(false);
+  expect(fila.fase.value).toBe('cartao');
+
+  fonte.depois.mockResolvedValue({});
+  await fila.depois();
+  expect(fonte.depois).toHaveBeenCalledTimes(1);
+});
+
+it('resposta de envio sem created/existing vira o aviso de falha e fica no cartão', async () => {
+  const { fila, fonte } = montar();
+  useAlert.mockClear();
+  fonte.mandarParaFunil.mockResolvedValue({});
+
+  await fila.mandar();
+  expect(useAlert).toHaveBeenCalledWith('PROSPECTING_ACHAR.FOLHA.ERRO_FUNIL');
+  expect(fila.gravando.value).toBe(false);
+  expect([fila.indice.value, fila.fase.value]).toEqual([0, 'cartao']);
+});
+
+it('se a gravação estoura de vez (enviar lança), a trava solta mesmo assim', async () => {
+  const { fila, fonte } = montar();
+  fonte.mandarParaFunil.mockRejectedValue(new Error('rede'));
+  useAlert.mockImplementationOnce(() => {
+    throw new Error('quebrou');
+  });
+
+  await expect(fila.mandar()).rejects.toThrow('quebrou');
+  expect(fila.gravando.value).toBe(false);
+});
+
+it('a tela remontada espera a gravação em voo antes de pedir a fila', async () => {
+  const primeira = montar();
+  const voo = emVoo();
+  primeira.fonte.depois.mockReturnValue(voo.promessa);
+  primeira.fila.depois();
+
+  const segunda = montar();
+  const carregou = segunda.fila.carregar();
+  await esperarTudo();
+  expect(segunda.fonte.fila).not.toHaveBeenCalled();
+
+  voo.terminar({});
+  await carregou;
+  expect(segunda.fonte.fila).toHaveBeenCalledTimes(1);
+});
+
+it('gravação que nunca responde não prende a tela: passado o teto, a fila é pedida', async () => {
+  vi.useFakeTimers();
+  try {
+    const primeira = montar();
+    primeira.fonte.depois.mockReturnValue(new Promise(() => {}));
+    primeira.fila.depois();
+
+    const segunda = montar();
+    const carregou = segunda.fila.carregar();
+    await vi.advanceTimersByTimeAsync(14000);
+    expect(segunda.fonte.fila).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1500);
+    await carregou;
+    expect(segunda.fonte.fila).toHaveBeenCalledTimes(1);
+  } finally {
+    vi.useRealTimers();
+  }
 });
