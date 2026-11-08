@@ -13,12 +13,22 @@ class Autonomia::Automacao::Contexto
 
   attr_reader :alvo
 
-  # `execucao`: a execução em que o passo roda, quando há uma. Só a reunião do gatilho (G12) lê dela.
-  def self.de(alvo, execucao: nil) = new(alvo, execucao: execucao)
+  # `execucao`: a execução em que o passo roda, quando há uma. A reunião do gatilho (G12) e o texto da IA (#2679) leem dela.
+  # `textos`: no ensaio, que não tem execução, o texto que cada passo de IA produziria (só para mostrar).
+  def self.de(alvo, execucao: nil, textos: nil) = new(alvo, execucao: execucao, textos: textos)
 
-  def initialize(alvo, execucao: nil)
+  # Os `textos` do ensaio (#2679): ele não chama a IA, e no lugar do texto de cada passo que escreve vai a marca de onde
+  # ele entraria.
+  def self.marcas_da_ia(receita, conta)
+    ::Autonomia::Automacao::Receita.new(receita, conta: conta, account_user: nil).passos
+                                   .select { |passo| ::Autonomia::Automacao::Valores::PASSOS_QUE_ESCREVEM.include?(passo['tipo']) }
+                                   .to_h { |passo| [passo['id'], I18n.t('autonomia.automacao.ensaio.texto_da_ia', passo: passo['id'])] }
+  end
+
+  def initialize(alvo, execucao: nil, textos: nil)
     @alvo = alvo
     @execucao = execucao
+    @textos = textos
   end
 
   def conversa
@@ -64,6 +74,10 @@ class Autonomia::Automacao::Contexto
     # reorder: a Message ordena por created_at no default_scope, e o order só desempataria.
     ::Message.where(account_id: @execucao.account_id, id: ids, private: false, message_type: :outgoing).reorder(id: :desc).first
   end
+
+  # #2679: o texto que o passo de IA `passo_id` produziu nesta execução (Execucao#guardar_texto!). Antes do passo rodar,
+  # nil.
+  def texto_da_ia(passo_id) = (@textos || @execucao&.textos).to_h[passo_id.to_s]
 
   # "conversa", "card" ou "contato": a base dos caminhos do Valores que o alvo tem sem ponte.
   def base

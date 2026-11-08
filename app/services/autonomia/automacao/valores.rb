@@ -66,6 +66,12 @@ class Autonomia::Automacao::Valores
   # A última mensagem que a execução mandou ao cliente (#2680): o texto e a situação (Envio).
   ENVIO = ::Autonomia::Automacao::Envio::VALORES
 
+  # #2679: o texto que um passo de IA ("escrever", "resumir") desta execução produziu: `ia.<id do passo>`. Vale em
+  # qualquer alvo: fica na execução, não no alvo. O salvar confere que o id é de um passo que escreve (Receita); antes de
+  # ele rodar, ou num caminho em que ele não rodou, lê vazio, e o passo pula com `faltou_valor`.
+  IA = 'ia.'.freeze
+  PASSOS_QUE_ESCREVEM = %w[escrever resumir].freeze
+
   # O que cada alvo alcança, pelas pontes do Contexto.
   BASES_DO_ALVO = {
     'Conversation' => %w[conversa contato envio],
@@ -123,8 +129,13 @@ class Autonomia::Automacao::Valores
 
   class << self
     def caminho_valido?(caminho)
-      [CAMPOS, MENSAGEM, RESPOSTA, AGENDA, ENVIO].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present?
+      [CAMPOS, MENSAGEM, RESPOSTA, AGENDA, ENVIO].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? || da_ia?(caminho)
     end
+
+    def da_ia?(caminho) = caminho.to_s.start_with?(IA) && caminho.to_s.length > IA.length
+
+    # "ia.p3" => "p3".
+    def passo_da_ia(caminho) = caminho.to_s.delete_prefix(IA)
 
     def da_reuniao?(caminho) = caminho.to_s.start_with?('reuniao.')
 
@@ -151,7 +162,8 @@ class Autonomia::Automacao::Valores
 
     # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.
     def no_alvo?(caminho, alvo_type)
-      return true if da_mensagem?(caminho) || BASES_DO_ALVO.fetch(alvo_type, []).include?(caminho.to_s.split('.', 2).first)
+      return true if da_mensagem?(caminho) || da_ia?(caminho)
+      return true if BASES_DO_ALVO.fetch(alvo_type, []).include?(caminho.to_s.split('.', 2).first)
 
       caminho.to_s == RESPOSTA_DO_CONTATO && BASES_DO_ALVO.fetch(alvo_type, []).include?('contato')
     end
@@ -212,7 +224,7 @@ class Autonomia::Automacao::Valores
   def falta_da_agenda = (@por_da_agenda if @vazios.any? && @vazios.all? { |caminho| AGENDA.key?(caminho) })
 
   def ler(caminho)
-    valor = lido(caminho)
+    valor = self.class.da_ia?(caminho) ? @contexto.texto_da_ia(self.class.passo_da_ia(caminho)) : lido(caminho)
     @vazios << caminho.to_s if valor.blank?
     valor
   end

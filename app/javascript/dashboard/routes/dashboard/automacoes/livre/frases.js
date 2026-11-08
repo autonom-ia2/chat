@@ -52,7 +52,10 @@ const comCaixa = (frase, gatilho, t, nomes) => {
 export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
   const entrada = catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo);
   if (!entrada) return t(`${P}.FALTA_GATILHO`);
-  const parametros = entrada.parametros || [];
+  // #2678: o "repete" é opcional e entra só como fim da frase ("..., todo ano").
+  const parametros = (entrada.parametros || []).filter(
+    item => item.peca !== 'repete'
+  );
   const escolhidos = Object.fromEntries(
     parametros.map(item => [
       item.peca,
@@ -64,7 +67,11 @@ export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
   );
   if (!parametros.length || !completo)
     return comCaixa(t(entrada.frase), gatilho, t, nomes);
-  const frase = t(chaveDaFrase(entrada, gatilho), escolhidos);
+  const base = t(chaveDaFrase(entrada, gatilho), escolhidos);
+  const frase =
+    gatilho.repete === 'todo_ano'
+      ? t('AUTOMACAO_LIVRE.GATILHO_TODO_ANO', { frase: base })
+      : base;
   const funil = nomes.funilDaEtapa?.[gatilho.etapa_id];
   return comCaixa(
     funil ? t('AUTOMACAO_LIVRE.GATILHO_NO_FUNIL', { frase, funil }) : frase,
@@ -80,7 +87,8 @@ export const fraseDoValor = (caminho, catalogo, t) => {
   const fixo = valores.find(
     item => item.caminho === caminho && !item.atributos
   );
-  if (fixo) return t(fixo.frase);
+  // #2679: o texto da IA (comTextosDaIa) chega com o rótulo pronto, sem frase.
+  if (fixo) return fixo.rotulo || t(fixo.frase);
   const base = valores.find(
     item => item.atributos && caminho?.startsWith(`${item.caminho}.`)
   );
@@ -278,7 +286,7 @@ const FRASE_DA_IA = {
     }),
   escrever: (passo, t) =>
     t(
-      `${P}.ESCREVER_${passo.destino === 'mensagem' ? 'MENSAGEM' : 'SUGESTAO'}${
+      `${P}.ESCREVER_${(passo.destino || 'sugestao').toUpperCase()}${
         escrito(passo.instrucao) ? '' : '_SEM_INSTRUCAO'
       }`,
       { instrucao: curto(escrito(passo.instrucao)) }

@@ -172,7 +172,8 @@ module FechamentoAutomacao::Lacunas
     'G17' => -> { acao?('POST contacts') },
     'G18' => nil,
     'G19' => -> { acao?('POST contacts/:contact_id/notes') },
-    'G20' => nil,
+    # Os passos de IA leem a foto, o PDF e o áudio da conversa (`le: anexos`, #2669).
+    'G20' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('anexos') },
     'G21' => -> { passo?('prospeccao') },
     'G22' => nil,
     'G23' => nil,
@@ -181,6 +182,9 @@ module FechamentoAutomacao::Lacunas
     'G26' => -> { passo?('sla') },
     # "Card criado ou atualizado com valor acima de R$ 50 mil" (15) e "card completo" (8, passo 8): só o card criado é a G5.
     'G27' => -> { gatilho?('card.atualizado', 'card.campo_mudou', 'card.valor_mudou') },
+    # O texto da IA vira valor entre passos (`ia.<passo>`, #2679): fora da janela, a "mensagem" o leva no modelo aprovado
+    # (exemplo 3, passo 2); o "mesmo resumo" não vai outra vez à IA (exemplo 10, passo 6).
+    'G28' => -> { valor?('ia.cuidados') },
     # Achadas no exemplo 2 (07/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
     # G29: a origem do card do formulário (anúncio, formulário) como valor da receita, no filtro do gatilho e nos passos.
     'G29' => nil,
@@ -193,7 +197,16 @@ module FechamentoAutomacao::Lacunas
     # #2680: a receita escolhe a caixa por onde abrir a conversa de quem não tem uma (o lead do formulário, o contato).
     'G33' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('properties', 'gatilho', 'properties').key?('conversa_nova') },
     # #2680: a resposta em outra conversa do contato conta, e a mensagem que a automação mandou vira valor.
-    'G34' => -> { valor?('envio.texto') && valor?('envio.situacao') }
+    'G34' => -> { valor?('envio.texto') && valor?('envio.situacao') },
+    # A IA lê o card (`le: card`, #2679): exemplo 13, passo 5; exemplo 15, passo 9.
+    'G35' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('card') },
+    # A IA lê as notas internas da conversa (`le: notas`, #2679): exemplo 5, passo 1.
+    'G36' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('notas') },
+    # Do exemplo 10 (#2678), fora do lote 2: esperar só a pessoa que atende a conversa (a Fernanda), não a equipe inteira.
+    'G40' => -> { valor?('conversa.responsavel_respondeu') },
+    # Do exemplo 10 (#2678), ainda sem dono: a instrução no resumir ("o que já foi prometido") e avisar o responsável
+    # quando a agente de IA atende a conversa.
+    'G41' => nil
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

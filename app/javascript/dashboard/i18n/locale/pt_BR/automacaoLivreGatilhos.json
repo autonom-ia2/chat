@@ -51,7 +51,8 @@
       "DIAS": "Dias",
       "CAMPO": "Campo de data",
       "QUANDO": "Antes ou depois da data",
-      "HORA": "A partir de que hora"
+      "HORA": "A partir de que hora",
+      "REPETE": "Repete"
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversa e mensagem",
@@ -81,6 +82,11 @@
     "GATILHO_NO_DIA": {
       "CARD_DATA": "No dia de {campo} do card, a partir das {hora}h",
       "CONTATO_DATA": "No dia de {campo} do contato, a partir das {hora}h"
+    },
+    "GATILHO_TODO_ANO": "{frase}, todo ano",
+    "REPETE_DA_DATA": {
+      "UMA_VEZ": "Só nessa data, com o ano",
+      "TODO_ANO": "Todo ano, no mesmo dia e mês (aniversário)"
     },
     "QUANDO_DA_DATA": {
       "ANTES": "antes",

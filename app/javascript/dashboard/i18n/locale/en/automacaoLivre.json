@@ -305,6 +305,8 @@
       "ESCREVER_MENSAGEM_SEM_INSTRUCAO": "AI writes and sends to the customer: the instruction is missing",
       "ESCREVER_SUGESTAO": "AI writes a suggestion for the team: “{instrucao}”",
       "ESCREVER_SUGESTAO_SEM_INSTRUCAO": "AI writes a suggestion for the team: the instruction is missing",
+      "ESCREVER_GUARDAR": "AI writes a text and keeps it for the next steps: “{instrucao}”",
+      "ESCREVER_GUARDAR_SEM_INSTRUCAO": "AI writes a text and keeps it for the next steps: the instruction is missing",
       "RESUMIR_NOTA": "AI summarizes the conversation in a note",
       "RESUMIR_AVISAR": "AI summarizes the conversation and notifies {quem}",
       "EMAIL": "E-mail the customer: “{assunto}”"

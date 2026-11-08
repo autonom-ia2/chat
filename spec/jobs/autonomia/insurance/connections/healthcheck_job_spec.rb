@@ -102,6 +102,52 @@ RSpec.describe Autonomia::Insurance::Connections::HealthcheckJob, type: :job do
     end
   end
 
+  # "Sessões lotadas" (auditoria da conexão, achado 4): cada tentativa é um login recusado a mais, e
+  # quem libera a vaga é a corretora. Uma por hora, não uma a cada 30 minutos.
+  describe 'offline por sessões lotadas' do
+    let(:lotadas) { { 'last_failure' => { 'cause' => 'sessions_full', 'actor' => 'broker' } } }
+
+    it 'não tenta de novo antes de uma hora' do
+      # Arrange
+      record = connection(status: 'offline')
+      record.update!(last_healthcheck_at: 30.minutes.ago, metadata: lotadas)
+      checked_at = record.last_healthcheck_at
+
+      # Act
+      described_class.new.perform
+
+      # Assert
+      expect(record.reload.status).to eq('offline')
+      expect(record.last_healthcheck_at).to be_within(1.second).of(checked_at)
+    end
+
+    it 'tenta de novo depois de uma hora, e volta sozinha quando a vaga abriu' do
+      # Arrange
+      record = connection(status: 'offline')
+      record.update!(last_healthcheck_at: 61.minutes.ago, metadata: lotadas)
+
+      # Act
+      described_class.new.perform
+
+      # Assert — o Mock aceita o login, como o portal depois de a corretora liberar a vaga
+      expect(record.reload.status).to eq('ready')
+      expect(record.last_healthcheck_at).to be_within(30.seconds).of(Time.current)
+    end
+
+    it 'não recua para offline de outra causa: portal fora continua de 30 em 30 minutos' do
+      # Arrange
+      record = connection(status: 'offline')
+      record.update!(last_healthcheck_at: 30.minutes.ago,
+                     metadata: { 'last_failure' => { 'cause' => 'portal_unavailable', 'actor' => 'nobody' } })
+
+      # Act
+      described_class.new.perform
+
+      # Assert
+      expect(record.reload.last_healthcheck_at).to be_within(30.seconds).of(Time.current)
+    end
+  end
+
   it 'skips accounts with the module turned off' do
     # Arrange
     other = create(:account)

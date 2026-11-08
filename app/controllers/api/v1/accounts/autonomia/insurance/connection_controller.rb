@@ -1,4 +1,9 @@
 class Api::V1::Accounts::Autonomia::Insurance::ConnectionController < Api::V1::Accounts::Autonomia::Insurance::BaseController
+  # Quanto a requisição aguarda um login que OUTRO processo esteja fazendo (healthcheck, cotação). Abaixo
+  # do Rack::Timeout de 15 s: passando disso a resposta volta com o estado do momento, e o login do outro
+  # processo continua e grava a sessão.
+  ESPERA_DO_LOGIN_NA_TELA = 10.seconds
+
   # GET /connection — estado atual (sem credenciais).
   def show
     render json: { payload: connection.persisted? ? connection.public_payload : blank_payload }
@@ -13,7 +18,7 @@ class Api::V1::Accounts::Autonomia::Insurance::ConnectionController < Api::V1::A
   def create
     connection.assign_attributes(credential_params)
     connection.save!
-    ::Autonomia::Insurance::Connections::Sync.new(connection, scan_capabilities: false).call
+    sincronizar!
     enqueue_scan! if connection.ready?
     render json: { payload: connection.public_payload }
   rescue ActiveRecord::RecordInvalid => e
@@ -24,7 +29,7 @@ class Api::V1::Accounts::Autonomia::Insurance::ConnectionController < Api::V1::A
   def reconnect
     return render_not_configured unless connection.persisted? && connection.credentials_present?
 
-    ::Autonomia::Insurance::Connections::Sync.new(connection, scan_capabilities: false).call
+    sincronizar!
     render json: { payload: connection.public_payload }
   end
 
@@ -47,6 +52,11 @@ class Api::V1::Accounts::Autonomia::Insurance::ConnectionController < Api::V1::A
   end
 
   private
+
+  # Login e status, sem varredura, com a espera curta da tela.
+  def sincronizar!
+    ::Autonomia::Insurance::Connections::Sync.new(connection, scan_capabilities: false, espera_do_login: ESPERA_DO_LOGIN_NA_TELA).call
+  end
 
   # O estado de passagem é o que a tela acompanha até assentar. Se o job falhar, o próprio `ScanJob`
   # grava `degraded`; se ele nem rodar, o `HealthcheckJob#presas` re-sincroniza depois de 10 min.

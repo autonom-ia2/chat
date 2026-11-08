@@ -77,10 +77,11 @@ class Autonomia::Automacao::VarreduraJob < ApplicationJob
   end
 
   # Só fecha se ela continua como foi lida: a rodada que terminou nesse meio-tempo vence. Sem callback (a órfã não
-  # passa no `belongs_to`), com a finalizada_em junto, como o CHECK pede.
+  # passa no `belongs_to`), com a finalizada_em junto, como o CHECK pede, e sem os textos da IA (Execucao::AO_TERMINAR).
   def fechar(execucao)
     agora = Time.current
     execucoes.where(id: execucao.id, estado: execucao.estado, travada_em: execucao.travada_em)
-             .update_all(estado: 'interrompida', travada_em: nil, finalizada_em: agora, updated_at: agora) == 1 # rubocop:disable Rails/SkipsModelValidations
+             .update_all(estado: 'interrompida', travada_em: nil, finalizada_em: agora, updated_at: agora, # rubocop:disable Rails/SkipsModelValidations
+                         **::Autonomia::Automacao::Execucao::AO_TERMINAR) == 1
   end
 end
