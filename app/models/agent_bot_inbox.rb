@@ -16,7 +16,7 @@ class AgentBotInbox < ApplicationRecord
   validates :agent_bot_id, presence: true
   before_validation :ensure_account_id
 
-  belongs_to :inbox
+  belongs_to :inbox, inverse_of: :agent_bot_inbox
   belongs_to :agent_bot
   belongs_to :account
   enum status: { active: 0, inactive: 1 }

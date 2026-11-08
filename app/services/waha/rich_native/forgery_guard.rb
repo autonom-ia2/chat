@@ -28,8 +28,12 @@ module Waha::RichNative::ForgeryGuard
   # continua gravando.
   # `revogada_no_canal` (o motor confirmou o apagar para todos, WhatsappHybrid::RichNative::RevokeJob): a pele diz ao
   # atendente que o cliente não vê mais a mensagem; ninguém com token pode forjá-la. Também em todas as caixas.
+  # `c2y_phone_author_id` (#1941, quem estava atribuído quando o eco do celular chegou): só o chat2you grava, depois
+  # desta limpeza (Waha::EcoDoCelular no WAHA comum; o recebimento da Cloud por dentro). Forjada, poria o nome de outra
+  # pessoa em cima do balão. Em todas as caixas.
   ALWAYS_DROPPED = ['waha_native', 'waha_text', 'waha_media_as_media', RichMessages::SENT_AS_KEY,
-                    Waha::RichNative::TurnKinds::DELETED_KEY, WhatsappHybrid::RichNative::RevokeJob::REVOKED_KEY].freeze
+                    Waha::RichNative::TurnKinds::DELETED_KEY, WhatsappHybrid::RichNative::RevokeJob::REVOKED_KEY,
+                    Waha::EcoDoCelular::CHAVE].freeze
   INCOMING_ONLY_KEYS = Waha::RichNative::ContractGuard::INCOMING_ONLY_KEYS
 
   def self.prepended(controller)

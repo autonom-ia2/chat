@@ -1,0 +1,6 @@
+stack=autonomia instancia=i-01b471bf4ffe387df
+Success	conta | caixa | canal | sessao | motor | secret | dono_gravado | app_confere | hash16 | token_de | membro | papel | veredito
+17 | 9 | 7 | 5531920022318 | wa-autonomia.autonomia.site | t | 1 | sim | 3b90c90d4e4aa5ec | User#1 | sim | administrador | OK (gravado confere)
+20 | 11 | 8 | 5531989900901 | wa-autonomia.autonomia.site | t | 16 | sim | 42165ba79543f12b | User#16 | sim | administrador | OK (gravado confere)
+23 | 13 | 9 | 5531983572705 | wa-autonomia.autonomia.site | t | 30 | sim | 50053b69ac13aad3 | User#30 | sim | administrador | OK (gravado confere)
+	

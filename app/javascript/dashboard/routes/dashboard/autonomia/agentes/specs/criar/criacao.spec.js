@@ -4,12 +4,15 @@ import {
   modeloDaQuery,
   idDaQuery,
   perguntasDeTeste,
+  perguntasDoAgente,
+  MAX_PERGUNTAS_DE_TESTE,
   exemploDoModelo,
   ETAPA,
   etapaDaQuery,
 } from '../../constants/criacao';
 import {
   canalSugerido,
+  temCanalParaEscolher,
   tipoDoCanalParaTexto,
   horariosDasCaixas,
   textoDoHorario,
@@ -87,15 +90,61 @@ describe('Copiloto da equipe na query (#1494)', () => {
   });
 });
 
+// #2489 (5a) — o teste pergunta o que o Construtor escreveu para este agente, não o genérico do ramo.
+describe('perguntas do próprio agente no teste', () => {
+  it('takes the first questions the Builder wrote, trimmed and without blanks', () => {
+    const agente = {
+      starter_questions: [
+        ' Cobre cancelamento? ',
+        '',
+        null,
+        'Quanto custa 10 dias?',
+        'Tem para intercâmbio?',
+        'E bagagem?',
+      ],
+    };
+    expect(perguntasDoAgente(agente)).toEqual([
+      'Cobre cancelamento?',
+      'Quanto custa 10 dias?',
+      'Tem para intercâmbio?',
+    ]);
+    expect(perguntasDoAgente(agente)).toHaveLength(MAX_PERGUNTAS_DE_TESTE);
+  });
+
+  it('drops repeated questions and also serves the team copilot (its questions are team requests)', () => {
+    expect(
+      perguntasDoAgente({
+        starter_questions: ['Resuma', ' Resuma', 'Próximo passo?'],
+      })
+    ).toEqual(['Resuma', 'Próximo passo?']);
+  });
+
+  it('is empty without questions (the model ones stay) and for the helper agent', () => {
+    expect(perguntasDoAgente(null)).toEqual([]);
+    expect(perguntasDoAgente({ starter_questions: [] })).toEqual([]);
+    expect(perguntasDoAgente({ starter_questions: ['Oi?'] }, true)).toEqual([]);
+  });
+});
+
 describe('canal sugerido no botão de começar', () => {
-  it('prefers a free WhatsApp, then any free inbox', () => {
+  // #2489 (5b): o dono pode ter pedido Instagram; com dúvida, ninguém é sugerido e a pessoa escolhe.
+  it('suggests nothing when more than one free inbox exists (no WhatsApp preference)', () => {
     expect(
-      canalSugerido([livre(1, 'Channel::WebWidget'), livre(2), ocupada(3)], 5)
-        .inbox_id
-    ).toBe(2);
+      canalSugerido([livre(1, 'Channel::Instagram'), livre(2)], 5)
+    ).toBeNull();
+  });
+
+  it('suggests the only free inbox the person reaches', () => {
     expect(
-      canalSugerido([ocupada(3), livre(1, 'Channel::Email')], 5).inbox_id
+      canalSugerido([livre(1, 'Channel::Instagram'), ocupada(3)], 5).inbox_id
     ).toBe(1);
+    expect(
+      canalSugerido([{ ...livre(2), alcanca: false }, livre(4)], 5).inbox_id
+    ).toBe(4);
+  });
+
+  it('never suggests a free inbox out of reach', () => {
+    expect(canalSugerido([{ ...livre(1), alcanca: false }], 5)).toBeNull();
   });
 
   it('counts the inbox this agent already has as free', () => {
@@ -106,10 +155,61 @@ describe('canal sugerido no botão de começar', () => {
     expect(canalSugerido([ocupada(3), minha], 5).inbox_id).toBe(4);
   });
 
-  it('falls back to a busy inbox (swap), never to another system', () => {
-    expect(canalSugerido([externa(1), ocupada(3)], 5).inbox_id).toBe(3);
+  it('never falls back to a busy inbox or another system', () => {
+    expect(canalSugerido([ocupada(3)], 5)).toBeNull();
+    expect(canalSugerido([externa(1), ocupada(3)], 5)).toBeNull();
     expect(canalSugerido([externa(1)], 5)).toBeNull();
     expect(canalSugerido([], 5)).toBeNull();
+  });
+
+  // #2490: o dono pediu um canal na conversa; só caixas dele entram, e a WAHA conta como WhatsApp.
+  it('suggests only the free inbox of the channel the owner asked for', () => {
+    const insta = { ...livre(1, 'Channel::Instagram'), canal: 'instagram' };
+    const zap = { ...livre(2), canal: 'whatsapp' };
+    const waha = { ...livre(3, 'Channel::Api', 'Celular'), canal: 'whatsapp' };
+    expect(canalSugerido([insta, zap], 5, 'instagram').inbox_id).toBe(1);
+    expect(canalSugerido([insta, waha], 5, 'whatsapp').inbox_id).toBe(3);
+    expect(canalSugerido([insta, zap, waha], 5, 'whatsapp')).toBeNull();
+  });
+
+  it('lets the person choose when the asked channel is busy or missing', () => {
+    const instaOcupado = {
+      ...ocupada(1, 'Channel::Instagram'),
+      canal: 'instagram',
+    };
+    const zap = { ...livre(2), canal: 'whatsapp' };
+    expect(canalSugerido([instaOcupado, zap], 5, 'instagram')).toBeNull();
+    expect(canalSugerido([zap], 5, 'site')).toBeNull();
+    expect(temCanalParaEscolher([instaOcupado, zap], 5)).toBe(true);
+  });
+
+  it('does not filter when nothing was asked ("nenhum" or an old thread)', () => {
+    const zap = { ...livre(2), canal: 'whatsapp' };
+    expect(canalSugerido([zap], 5, 'nenhum').inbox_id).toBe(2);
+    expect(canalSugerido([zap], 5, undefined).inbox_id).toBe(2);
+    expect(canalSugerido([zap], 5, '').inbox_id).toBe(2);
+  });
+
+  it('has a channel to choose when any inbox is free or busy, never only other systems', () => {
+    expect(temCanalParaEscolher([livre(1), livre(2)], 5)).toBe(true);
+    expect(temCanalParaEscolher([ocupada(3)], 5)).toBe(true);
+    expect(temCanalParaEscolher([externa(1)], 5)).toBe(false);
+    expect(temCanalParaEscolher([{ ...livre(1), alcanca: false }], 5)).toBe(
+      false
+    );
+    expect(
+      temCanalParaEscolher([{ ...livre(1), alcanca: false }, ocupada(3)], 5)
+    ).toBe(true);
+    expect(
+      temCanalParaEscolher(
+        [
+          { ...livre(1), alcanca: false },
+          { ...ocupada(3), alcanca: false },
+        ],
+        5
+      )
+    ).toBe(false);
+    expect(temCanalParaEscolher([], 5)).toBe(false);
   });
 
   it('names the channel by its kind, or by the inbox name when unknown', () => {

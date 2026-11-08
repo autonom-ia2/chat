@@ -17,10 +17,12 @@ import {
 } from 'dashboard/helper/choiceKeys';
 
 const props = defineProps({
-  // { value, label, disabled?, shortLabel?, searchLabel? }. value pode ser
-  // string, número, booleano ou null. shortLabel: o que o botão mostra quando
-  // a opção está escolhida (ex.: "🇧🇷 +55"); searchLabel: o texto que a busca
-  // por digitação compara (ex.: "Brasil"). Sem eles, vale o label.
+  // { value, label, disabled?, hint?, shortLabel?, searchLabel? }. value pode
+  // ser string, número, booleano ou null. hint: uma linha embaixo do rótulo,
+  // ligada por aria-describedby (ex.: por que a opção está desabilitada).
+  // shortLabel: o que o botão mostra quando a opção está escolhida (ex.:
+  // "🇧🇷 +55"); searchLabel: o texto que a busca por digitação compara (ex.:
+  // "Brasil"). Sem eles, vale o label.
   options: { type: Array, default: () => [], validator: isChoiceList },
   // Alternativa a `options`, como <optgroup>: [{ label, options: [...] }].
   groups: {
@@ -44,6 +46,10 @@ const props = defineProps({
   compact: { type: Boolean, default: false },
   // id do botão, para um <label for> visível de quem usa apontar para o campo.
   triggerId: { type: String, default: undefined },
+  // Largura só do texto mostrado agora, em vez da maior opção, e a lista se
+  // alinha pela direita do botão quando à direita não cabe (#2202: "Recentes ▾"
+  // e "Filtrar ▾" no topo estreito da lista de conversas). Sem a prop, nada muda.
+  fitSelected: { type: Boolean, default: false },
 });
 
 // Como o @change do select nativo: só quando a escolha muda, já com o
@@ -64,11 +70,16 @@ const OPTION_HEIGHT = 44;
 const LIST_PADDING_TOP = 4;
 const LIST_GAP = 4;
 const VIEWPORT_MARGIN = 8;
+// Com fitSelected: abaixo desta largura livre à direita, a lista se alinha pela
+// direita do botão (se do outro lado sobra mais).
+const LIST_MIN_WIDTH = 224;
 
 const id = useId();
 const listId = `${id}-list`;
 const optionId = index => `${id}-option-${index}`;
 const groupLabelId = index => `${id}-group-${index}`;
+const hintId = index => `${id}-hint-${index}`;
+const labelId = index => `${id}-label-${index}`;
 
 const root = useTemplateRef('root');
 const trigger = useTemplateRef('trigger');
@@ -116,7 +127,11 @@ const selectedLabel = computed(() => {
 // Todos os textos que o botão pode mostrar: medidos invisíveis na mesma célula,
 // dão ao campo a largura do maior, estável como a do select nativo.
 const medidas = computed(() =>
-  [props.placeholder, ...flatOptions.value.map(textoNoBotao)].filter(Boolean)
+  props.fitSelected
+    ? [selectedLabel.value].filter(Boolean)
+    : [props.placeholder, ...flatOptions.value.map(textoNoBotao)].filter(
+        Boolean
+      )
 );
 // O <label> em volta, se houver: clicar nele com a lista aberta fecha pelo
 // próprio botão (ativação do label), sem o clique-fora fechar antes e o botão
@@ -157,8 +172,17 @@ const place = () => {
     Math.max(OPTION_HEIGHT, Math.min(LIST_MAX_HEIGHT, space))
   );
   // Em RTL a lista se alinha pela direita do botão e cresce para a esquerda.
+  // Com fitSelected, em LTR também, quando à direita não cabe a lista e do
+  // outro lado sobra mais (#2202: "Filtrar ▾" no canto da tela do celular).
   const rtl = getComputedStyle(trigger.value).direction === 'rtl';
-  const horizontal = rtl
+  const espacoADireita = window.innerWidth - rect.left - VIEWPORT_MARGIN;
+  const espacoAEsquerda = rect.right - VIEWPORT_MARGIN;
+  const alinhaPelaDireita =
+    rtl ||
+    (props.fitSelected &&
+      espacoADireita < LIST_MIN_WIDTH &&
+      espacoAEsquerda > espacoADireita);
+  const horizontal = alinhaPelaDireita
     ? {
         right: `${window.innerWidth - rect.right}px`,
         maxWidth: `${rect.right - VIEWPORT_MARGIN}px`,
@@ -316,6 +340,16 @@ onClickOutside(
   },
   { ignore: [list, ownLabel] }
 );
+
+// Abre a lista por quem usa (ex.: um botão de texto que vira a escolha, #2138),
+// sem simular clique: foca o botão e abre na opção escolhida, como o teclado.
+const abrir = () => {
+  if (props.disabled || isOpen.value) return;
+  trigger.value?.focus({ preventScroll: true });
+  show(selected.value >= 0 ? selected.value : 0);
+};
+
+defineExpose({ abrir });
 </script>
 
 <template>
@@ -410,6 +444,8 @@ onClickOutside(
             :data-value="String(option.value)"
             :aria-selected="index === selected"
             :aria-disabled="option.disabled || undefined"
+            :aria-labelledby="option.hint ? labelId(index) : undefined"
+            :aria-describedby="option.hint ? hintId(index) : undefined"
             class="flex items-center justify-between gap-2 px-3 text-sm min-h-11"
             :class="{
               'bg-n-alpha-2': index === active,
@@ -421,7 +457,18 @@ onClickOutside(
             @pointermove="active = index"
             @click.prevent="commit(index)"
           >
-            <span class="truncate">{{ option.label }}</span>
+            <span class="flex flex-col min-w-0">
+              <span :id="labelId(index)" class="truncate">{{
+                option.label
+              }}</span>
+              <span
+                v-if="option.hint"
+                :id="hintId(index)"
+                class="text-xs truncate text-n-slate-10"
+              >
+                {{ option.hint }}
+              </span>
+            </span>
             <span
               v-if="index === selected"
               class="flex-shrink-0 i-lucide-check size-4 text-n-slate-11"

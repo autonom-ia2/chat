@@ -30,18 +30,45 @@ RSpec.describe 'Onboarding progress API', type: :request do
       expect(response.parsed_body['passos'].pluck('id')).to eq(%w[perfil primeira_resposta])
     end
 
-    it 'responde rápido numa conta com volume de conversas' do
+    # Sem relógio (#2243): o tempo de parede varia com a carga do runner. O que mantém a resposta rápida
+    # com volume é cada regra perguntar com `exists?` — o número de consultas não cresce com as mensagens,
+    # nenhuma mensagem é carregada e toda consulta à tabela de mensagens para na primeira linha.
+    it 'não cresce o trabalho no banco com o volume de mensagens da conta' do
       inbox = create(:inbox, account: account)
       conversa = create(:conversation, account: account, inbox: inbox)
-      create_list(:message, 50, account: account, conversation: conversa, message_type: :incoming)
+      create(:message, account: account, conversation: conversa, message_type: :incoming)
+      headers = admin.create_new_auth_token
+      # A primeira requisição carrega o que é feito uma vez só (rota, autoload); fica fora da comparação.
+      get base, headers: headers, as: :json
 
-      inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      get base, headers: admin.create_new_auth_token, as: :json
-      decorrido = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio) * 1000
+      com_uma = medir_requisicao { get base, headers: headers, as: :json }
+      expect(response).to have_http_status(:success)
+      create_list(:message, 49, account: account, conversation: conversa, message_type: :incoming)
+      com_cinquenta = medir_requisicao { get base, headers: headers, as: :json }
 
       expect(response).to have_http_status(:success)
-      expect(decorrido).to be < 300
+      expect(com_cinquenta[:consultas]).to eq(com_uma[:consultas])
+      expect(com_cinquenta[:mensagens_carregadas]).to eq(0)
+      expect(com_cinquenta[:mensagens_sem_limite]).to be_empty
     end
+  end
+
+  def medir_requisicao(&)
+    medida = { consultas: 0, mensagens_carregadas: 0, mensagens_sem_limite: [] }
+    contar_consulta = lambda do |*, payload|
+      next if payload[:cached] || %w[SCHEMA TRANSACTION].include?(payload[:name])
+
+      medida[:consultas] += 1
+      sql = payload[:sql]
+      medida[:mensagens_sem_limite] << sql if sql.include?('FROM "messages"') && sql.exclude?('LIMIT')
+    end
+    contar_mensagem = lambda do |*, payload|
+      medida[:mensagens_carregadas] += payload[:record_count] if payload[:class_name] == 'Message'
+    end
+    ActiveSupport::Notifications.subscribed(contar_consulta, 'sql.active_record') do
+      ActiveSupport::Notifications.subscribed(contar_mensagem, 'instantiation.active_record', &)
+    end
+    medida
   end
 
   describe 'POST skip' do

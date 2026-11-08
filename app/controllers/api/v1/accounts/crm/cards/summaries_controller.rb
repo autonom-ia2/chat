@@ -12,7 +12,8 @@ class Api::V1::Accounts::Crm::Cards::SummariesController < Api::V1::Accounts::Cr
       scope: policy_scope(::Crm::Card),
       params: params,
       group_by: params[:group_by],
-      conversation_visibility: ::Crm::Conversations::Visibility.new(account: Current.account, user: Current.user, account_user: Current.account_user)
+      conversation_visibility: ::Crm::Conversations::Visibility.new(account: Current.account, user: Current.user, account_user: Current.account_user),
+      value_visible: ::Crm::ValorDeVenda.ve?(Current.account_user)
     ).perform
     render json: { payload: summary }
   end

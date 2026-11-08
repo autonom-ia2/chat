@@ -20,6 +20,7 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     when 'copilot_run', 'copilot_chat' then authorize_copilot!
     when 'copilot_text' then authorize_copilot_text!
     when 'agent_test', 'agent_suggest' then authorize_agent!
+    when 'agent_base_compare' then authorize_agent_base!
     when 'email_rewrite' then authorize_email!
     when 'stage_criteria', 'stage_criteria_draft' then authorize_pipeline!
     when 'meta_funnel_stages' then authorize_meta_funnel!
@@ -40,6 +41,7 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     when 'copilot_run', 'copilot_chat' then copilot_result
     when 'copilot_text' then Autonomia::Copilot::ConversationCopilot.new(account: @account, **@inputs).perform.to_h
     when 'agent_test', 'agent_suggest' then playground_result
+    when 'agent_base_compare' then agent_base_compare
     when 'email_rewrite' then EmailCampaigns::Ai::Rewriter.new(account: @account, **@inputs).perform
     when 'stage_criteria', 'stage_criteria_draft'
       Crm::Ai::StageCriteriaImprover.new(pipeline: pipeline, **@inputs.except(:pipeline_id, :pipeline_name)).perform
@@ -98,7 +100,8 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     Pundit.authorize(@context, pipeline, :manage_ai?)
   end
 
-  # Anúncios da Meta (#1047): só administrador, e só funil ligado ao WhatsApp oficial da conta.
+  # Anúncios da Meta (#1047): administrador ou `meta_ads_manage` (#2070, policy Crm::MetaAdsConnection :update?), e só
+  # funil ligado ao WhatsApp oficial da conta.
   def authorize_meta_funnel!
     raise Pundit::NotAuthorizedError unless Crm::Config.enabled? && Crm::Ai::Config.enabled?
 
@@ -146,8 +149,9 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
   def meta_ads_daily_action
     run = ::Crm::MetaAdvisorRun.find_by!(id: @inputs.fetch(:run_id), account_id: @account.id)
     Crm::MetaAds::Advisor::Analysis.write!(run)
-    advice = Crm::MetaAds::Advisor::Analysis.serialize(run.reload, @inputs.fetch(:language))
-    { daily_action: Crm::MetaAds::VisibleConversations.new(account: @account, account_user: @account_user).advice(advice) }
+    viewer = Crm::MetaAds::VisibleConversations.new(account: @account, account_user: @account_user)
+    advice = Crm::MetaAds::Advisor::Analysis.serialize(run.reload, @inputs.fetch(:language), visible: viewer)
+    { daily_action: viewer.advice(advice) }
   end
 
   def meta_ads_quote_message
@@ -176,6 +180,18 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     raise Pundit::NotAuthorizedError unless Autonomia::Agents::Config.enabled?(@account) && @account_user.permission_granted?('autonomia_view')
 
     agent
+  end
+
+  # #1429 (F3): o antes e depois da base de seguros é a porta do "atualizar": Fase 2, autonomia_manage e agente com linha.
+  def authorize_agent_base!
+    permitido = Autonomia::Agents::Config.enabled?(@account) && Autonomia::Agents::Fase2.ligada?(@account) &&
+                @account_user.permission_granted?('autonomia_manage')
+    raise Pundit::NotAuthorizedError unless permitido && Autonomia::Agents::BaseDeSeguros.elegivel?(agent)
+  end
+
+  # Quem pediu fica guardado como quem viu o antes e depois (só essa pessoa pode atualizar depois).
+  def agent_base_compare
+    Autonomia::Agents::BaseDeSeguros::Comparacao.new(agent, idioma: I18n.locale.to_s, account_user: @account_user).rodar
   end
 
   def copilot_result
@@ -240,10 +256,11 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
   end
 
   def suggestion_payload(suggestion)
-    return if suggestion.blank?
+    return if suggestion.blank? || suggestion.fechar_desligado?
 
     { id: suggestion.id, from_stage_id: suggestion.from_stage_id, to_stage_id: suggestion.to_stage_id,
       to_stage_name: suggestion.to_stage&.name, confidence: suggestion.confidence.to_f,
       reasoning: suggestion.reasoning, status: suggestion.status, created_at: suggestion.created_at }
+      .merge(suggestion.fechar ? { fechar: suggestion.fechar } : {})
   end
 end

@@ -22,6 +22,7 @@ pt_BR:
       revoke_business: "Exclusão pela empresa registrada na mensagem"
       event_response: "Resposta ao evento registrada"
       view_once: "Visualização única registrada"
+    receive_failed: "⚠️ Uma mensagem do WhatsApp não chegou aqui. Confira no celular da caixa."
     view_once_unavailable: "Você recebeu uma mensagem de visualização única. Por motivos de privacidade, você só pode abrir essa mensagem no seu celular."
     media_unavailable:
       voice: "Mensagem de voz não recebida (o download falhou)"

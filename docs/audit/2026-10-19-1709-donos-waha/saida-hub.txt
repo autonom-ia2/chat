@@ -1,0 +1,42 @@
+stack=hub2you instancia=i-0940200b53d8d966d
+Success	conta | caixa | canal | sessao | motor | secret | dono_gravado | app_confere | hash16 | token_de | membro | papel | veredito
+6 | 49 | 35 | 5511915441111 | wa-hub.autonomia.site | t | 9 | sim | 0c7d979dc796e66b | User#9 | sim | administrador | OK (gravado confere)
+16 | 69 | 44 | 5511965720256 | wa-hub.autonomia.site | t | 23 | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | OK (gravado confere)
+17 | 6 | 3 | 5511991218828 | wa-hub.autonomia.site | t | - | apps=1 nenhum desta caixa | - | - | - | - | NAO_GRAVAR (sem app chatwoot desta caixa)
+17 | 8 | 5 | 5511930340099 | wa-hub.autonomia.site | t | - | apps=1 nenhum desta caixa | - | - | - | - | NAO_GRAVAR (sem app chatwoot desta caixa)
+17 | 10 | 7 | 5511913715552 | wa-hub.autonomia.site | t | - | sim | 55248a6d6a977e1b | User#1 | sim | administrador | GRAVAR 1
+17 | 14 | 11 | 5511949854889 | wa-hub.autonomia.site | t | - | apps=1 nenhum desta caixa | - | - | - | - | NAO_GRAVAR (sem app chatwoot desta caixa)
+17 | 15 | 12 | 5511991153031 | wa-hub.autonomia.site | t | - | sim | 55248a6d6a977e1b | User#1 | sim | administrador | GRAVAR 1
+17 | 17 | 14 | 5511991245768 | wa-hub.autonomia.site | t | - | sim | 55248a6d6a977e1b | User#1 | sim | administrador | GRAVAR 1
+17 | 18 | 15 | 5511966335605 | wa-hub.autonomia.site | t | - | apps=0 nenhum desta caixa | - | - | - | - | NAO_GRAVAR (sem app chatwoot desta caixa)
+17 | 20 | 17 | 5519994696751 | wa-hub.autonomia.site | t | - | apps=1 nenhum desta caixa | - | - | - | - | NAO_GRAVAR (sem app chatwoot desta caixa)
+17 | 21 | 18 | 5511991265171 | wa-hub.autonomia.site | t | - | sim | 55248a6d6a977e1b | User#1 | sim | administrador | GRAVAR 1
+17 | 70 | 45 | 5511945738358 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 71 | 46 | 5511988992228 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 75 | 50 | 5511991151665 | wa-hub.autonomia.site | t | - | apps=1 nenhum desta caixa | - | - | - | - | NAO_GRAVAR (sem app chatwoot desta caixa)
+17 | 76 | 51 | 5511949854889 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 77 | 52 | 5511991151665 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 79 | 54 | 5519994696751 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 80 | 55 | 5511966333921 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 81 | 56 | 5511992941032 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 82 | 57 | 5511991177389 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 83 | 58 | 5511963372217 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 84 | 59 | 5511913716185 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 87 | 62 | 5511991298455 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 89 | 63 | 5511945588861 | wa-hub.autonomia.site | t | - | apps=1 nenhum desta caixa | - | - | - | - | NAO_GRAVAR (sem app chatwoot desta caixa)
+17 | 91 | 65 | 5511945588861 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 92 | 66 | 5511913318302 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 94 | 68 | 5511913715614 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 96 | 70 | 5511930340099 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 97 | 71 | 5541989008436 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 98 | 72 | 5511991218828 | wa-hub.autonomia.site | t | - | sim | 2dca76d4dbe64823 | User#23 | sim | administrador | GRAVAR 23
+17 | 100 | 73 | 5511999185572 | wa-hub.autonomia.site | t | - | sim | b0308dac598ceb3f | User#56 | sim | administrador | GRAVAR 56
+17 | 103 | 75 | 5511991195126 | wa-hub.autonomia.site | t | - | sim | b0308dac598ceb3f | User#56 | sim | administrador | GRAVAR 56
+17 | 105 | 77 | 5511991967082 | wa-hub.autonomia.site | t | - | sim | b0308dac598ceb3f | User#56 | sim | administrador | GRAVAR 56
+17 | 107 | 79 | 5511991191011 | wa-hub.autonomia.site | t | - | sim | b0308dac598ceb3f | User#56 | sim | administrador | GRAVAR 56
+17 | 108 | 80 | 5511954882222 | wa-hub.autonomia.site | t | - | sim | b0308dac598ceb3f | User#56 | sim | administrador | GRAVAR 56
+18 | 56 | 36 | 5511941010656 | wa-hub.autonomia.site | t | 1 | sim | 55248a6d6a977e1b | User#1 | sim | administrador | OK (gravado confere)
+45 | 64 | 40 | 5522974007844 | wa-hub.autonomia.site | t | 1 | sim | 55248a6d6a977e1b | User#1 | sim | administrador | OK (gravado confere)
+47 | 62 | 39 | 5511959098887 | wa-hub.autonomia.site | t | 1 | sim | 55248a6d6a977e1b | User#1 | sim | administrador | OK (gravado confere)
+50 | 104 | 76 | 5511984005477 | wa-hub.autonomia.site | t | 65 | sim | 2f9a0891873b331f | User#65 | sim | administrador | OK (gravado confere)
+	

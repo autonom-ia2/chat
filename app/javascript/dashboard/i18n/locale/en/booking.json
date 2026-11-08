@@ -337,7 +337,7 @@
       "CHANNEL": {
         "OFFICIAL": "This is the official WhatsApp. If the customer has not talked to you in the last 24 hours, the notice only goes out with a message approved by Meta. Choose those messages below.",
         "WAHA": "From this unofficial number, the notice goes out even if the customer has not talked to you. Many notices like that can make WhatsApp block the number.",
-        "API": "From this number, the notice goes out right away when the customer talked to you in the last 24 hours. Otherwise it goes out with the ready message chosen below."
+        "API": "From this number, the notice goes out right away when the customer talked to you in the last 24 hours. Otherwise it goes out with the text template chosen below."
       },
       "PRESET_LABEL": "When should the customer be notified?",
       "PRESETS": {
@@ -368,12 +368,15 @@
       "SAMPLE_LINK": "(booking link)",
       "TEMPLATE_OPTION_LANGUAGE": "{preview} · {language}",
       "TEMPLATE_SAVED": "The message already chosen",
-      "MISSING_TEMPLATES": "No ready message for: {kinds}. That notice only goes out to people who talked to you in the last 24 hours.",
-      "API_TEMPLATES_LABEL": "Ready messages of this WhatsApp",
-      "API_TEMPLATES_HINT": "Choose a ready message for each notice. The day, the time and the link go at the end of it.",
-      "API_TEMPLATES_EMPTY": "This WhatsApp has no ready message yet. Without one, the notice only goes out to people who talked to you in the last 24 hours.",
-      "API_TEMPLATES_FAILED": "Could not see the ready messages of this WhatsApp. Ask an administrator to choose them.",
+      "MISSING_TEMPLATES": "No approved message for: {kinds}. That notice only goes out to people who talked to you in the last 24 hours.",
+      "API_MISSING_TEMPLATES": "No text template for: {kinds}. That notice only goes out to people who talked to you in the last 24 hours.",
+      "API_TEMPLATES_LABEL": "Text templates of this WhatsApp",
+      "API_TEMPLATES_HINT": "Choose a text template for each notice. The day, the time and the link go at the end of it.",
+      "API_TEMPLATES_EMPTY": "This WhatsApp has no text template yet. Without one, the notice only goes out to people who talked to you in the last 24 hours.",
+      "API_TEMPLATES_FAILED": "Could not see the text templates of this WhatsApp. Ask an administrator to choose them.",
       "TEMPLATE_FOR": "Approved message for the notice {notice}",
+      "API_TEMPLATE_NONE": "No text template",
+      "API_TEMPLATE_FOR": "Text template for the notice {notice}",
       "AUTO": {
         "SUGGESTED": "Suggested",
         "SUGGESTING": "Looking for the best message for each notice…",

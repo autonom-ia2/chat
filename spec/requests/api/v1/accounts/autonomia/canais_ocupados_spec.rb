@@ -69,12 +69,43 @@ RSpec.describe 'Autonomia canais ocupados', type: :request do
       expect(response).to have_http_status(:success)
       expect(response.parsed_body['payload']).to eq([
                                                       { 'inbox_id' => alfa.id, 'name' => 'Alfa',
-                                                        'channel_type' => alfa.channel_type, 'occupied_by' => nil, 'so_de_pessoas' => true,
+                                                        'channel_type' => alfa.channel_type, 'canal' => 'site', 'occupied_by' => nil,
+                                                        'so_de_pessoas' => true,
                                                         'areas' => [], 'alcanca' => true },
                                                       { 'inbox_id' => zeta.id, 'name' => 'Zeta',
-                                                        'channel_type' => zeta.channel_type, 'occupied_by' => nil, 'so_de_pessoas' => true,
+                                                        'channel_type' => zeta.channel_type, 'canal' => 'site', 'occupied_by' => nil,
+                                                        'so_de_pessoas' => true,
                                                         'areas' => [], 'alcanca' => true }
                                                     ])
+    end
+
+    # #2490: a Confira sugere a caixa do canal que o dono pediu. A WAHA (Channel::Api) é WhatsApp; outra API não tem canal.
+    it 'tells the channel of each inbox from its type and the API provider, never from the name' do
+      # As factories de canal criam a própria caixa; os nomes enganam de propósito.
+      caixa = lambda do |canal, nome|
+        canal.inbox.tap { |inbox| inbox.update!(name: nome) }
+      end
+      whatsapp = caixa.call(create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false),
+                            'Instagram da loja')
+      waha = caixa.call(create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha' }), 'Celular')
+      api = caixa.call(create(:channel_api, account: account), 'WhatsApp antigo')
+      instagram = caixa.call(create(:channel_instagram, account: account), 'Direct')
+      # Página do Facebook com o Instagram ligado é Instagram (Inbox#instagram?); Twilio no medium whatsapp é WhatsApp.
+      pagina = lambda do |instagram_id, nome|
+        create(:inbox, account: account, name: nome,
+                       channel: create(:channel_facebook_page, account: account, inbox: nil, instagram_id: instagram_id))
+      end
+      pagina_com_insta = pagina.call('17841400000000000', 'Página da loja')
+      pagina_sem_insta = pagina.call(nil, 'Instagram (só a página)')
+      twilio_zap = create(:channel_twilio_sms, :whatsapp, account: account).inbox
+      twilio_sms = create(:channel_twilio_sms, account: account).inbox
+
+      get_canais
+
+      canais = response.parsed_body['payload'].to_h { |item| [item['inbox_id'], item['canal']] }
+      expect(canais).to include(whatsapp.id => 'whatsapp', waha.id => 'whatsapp', api.id => nil, instagram.id => 'instagram',
+                                pagina_com_insta.id => 'instagram', pagina_sem_insta.id => 'facebook',
+                                twilio_zap.id => 'whatsapp', twilio_sms.id => nil)
     end
 
     it 'names the native agent that answers an inbox and whether it is answering now' do

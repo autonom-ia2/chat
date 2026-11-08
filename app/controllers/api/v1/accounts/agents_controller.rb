@@ -1,6 +1,9 @@
 class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
   before_action :fetch_agent, except: [:create, :index, :bulk_create]
   before_action :check_authorization
+  before_action :guard_new_agent!, only: [:create]
+  before_action :guard_agent_update!, only: [:update]
+  before_action :guard_agent_removal!, only: [:destroy]
 
   def index
     @agents = agents
@@ -23,8 +26,10 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
   end
 
   def update
-    @agent.update!(agent_params.slice(:name).compact)
-    @agent.current_account_user.update!(agent_params.slice(*account_user_attributes).compact)
+    ActiveRecord::Base.transaction do
+      @agent.update!(agent_params.slice(:name).compact)
+      @agent.current_account_user.update!(agent_params.slice(*account_user_attributes).compact)
+    end
   end
 
   def destroy
@@ -53,6 +58,25 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
 
   def fetch_agent
     @agent = agents.find(params[:id])
+  end
+
+  # #1931: people_manage lets non-administrators manage agents; the guard keeps administrators and one's own access
+  # out of reach.
+  def access_guard
+    @access_guard ||= AccountUsers::AccessGuard.new(actor: Current.account_user)
+  end
+
+  def guard_new_agent!
+    access_guard.assign_role!(params.dig(:agent, :role))
+  end
+
+  def guard_agent_update!
+    access_guard.manage!(@agent.current_account_user)
+    access_guard.change_role!(@agent.current_account_user, params.dig(:agent, :role))
+  end
+
+  def guard_agent_removal!
+    access_guard.remove!(@agent.current_account_user)
   end
 
   def account_user_attributes

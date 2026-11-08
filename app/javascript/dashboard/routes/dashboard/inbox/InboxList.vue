@@ -186,9 +186,33 @@ const abrirAvisoDoGuia = async notificationItem => {
   }
 };
 
+// #2277 — the search by conversation ended: opens Novo público on that search.
+const abrirPublicoPelasConversas = async notificationItem => {
+  const { id, primaryActorId, primaryActorType } = notificationItem;
+  try {
+    await store.dispatch('notifications/read', {
+      id,
+      primaryActorId,
+      primaryActorType,
+      unreadCount: meta.value.unreadCount,
+    });
+    store.dispatch('notifications/unReadCount');
+  } catch {
+    // the screen opens anyway; marking as read waits for the next time
+  }
+  router.push({
+    name: 'campaigns_journey_audience_new',
+    query: { busca: String(primaryActorId) },
+  });
+};
+
 const openConversation = async notificationItem => {
   if (notificationItem.notificationType === 'guide_alert') {
     await abrirAvisoDoGuia(notificationItem);
+    return;
+  }
+  if (notificationItem.notificationType === 'conversation_audience_ready') {
+    await abrirPublicoPelasConversas(notificationItem);
     return;
   }
   const {
@@ -268,6 +292,7 @@ onMounted(() => {
           :state-inbox="stateInbox(notificationItem.primaryActor?.inboxId)"
           class="inbox-card rounded-none hover:rounded-lg hover:bg-n-alpha-1 dark:hover:bg-n-alpha-3"
           :class="
+            notificationItem.primaryActorType === 'Conversation' &&
             currentConversationId === notificationItem.primaryActor?.id
               ? 'bg-n-alpha-1 dark:bg-n-alpha-3 !rounded-lg active'
               : ''

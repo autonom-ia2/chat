@@ -100,6 +100,10 @@ module Autonomia::Agents::Tools::Recusa
     'agenda_horario_ocupado' => 'o horário escolhido foi ocupado antes da reserva; o modelo recebeu novas opções',
     'agenda_limite_de_reunioes' => 'o telefone já tem o máximo de reuniões abertas nesta agenda',
     'agenda_indisponivel' => 'a reserva falhou por um motivo do sistema (responsável, funil ou calendário)',
+    # #1479 F3: o mapa e o cartão de contato da página de agendamento (`enviar_localizacao`, `enviar_contato`).
+    'cartao_sem_conversa' => 'não há conversa para receber o mapa ou o contato (Testar, Copiloto, playground)',
+    'cartao_sem_dado' => 'a página de agendamento não tem mais o local com mapa ou o telefone de contato',
+    'cartao_local_invalido' => 'o modelo pediu um local_id que não está entre os locais com mapa da página',
     # Tema 14 (#1434): o principal passou do teto de consultas ao ajudante, ou do prazo da resposta.
     'ajudante_limite_atingido' => 'a resposta passou do teto de consultas ao ajudante ou do prazo; a consulta não rodou',
     'ajudante_sem_entrega' => 'o ajudante pediu uma ferramenta assíncrona; ele nunca entrega nada ao cliente, e ela não rodou'

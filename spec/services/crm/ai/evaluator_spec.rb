@@ -102,6 +102,126 @@ RSpec.describe Crm::Ai::Evaluator do
     expect(result.suggestion.to_stage_id).to eq(target_stage.id)
   end
 
+  # #1918: card que uma pessoa moveu, reabriu ou criou numa etapa há pouco: em nenhum gatilho automático (a mensagem, que
+  # também é o gatilho do EvaluateCardJob agendado pelo StaleCardsJob) a IA move ou sugere etapa; "Avaliar agora" é a
+  # pessoa pedindo.
+  describe 'movido por uma pessoa há pouco' do
+    def preparar
+      account, admin = create_account_and_user
+      pipeline, stage = create_crm_pipeline(account: account, user: admin)
+      pipeline.update!(metadata: { 'ai' => { 'auto_move_enabled' => true } })
+      proposta = create_crm_stage(account: account, pipeline: pipeline, name: 'Proposta', position: 1)
+      alvo = create_crm_stage(account: account, pipeline: pipeline, name: 'Fechamento', position: 2)
+      alvo.update!(metadata: { 'ai_criteria' => 'Cliente aceitou' })
+      card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Lead', currency: 'BRL')
+      travel_to(1.hour.ago) { Crm::Cards::Mover.new(card: card, actor: admin, target_stage: proposta).perform }
+      ia_responde(alvo)
+      card
+    end
+
+    def ia_responde(alvo)
+      allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(
+        instance_double(Crm::Ai::CredentialResolver, configured?: true, resolve: { api_key: 'test' })
+      )
+      allow(Crm::Ai::StageClassifier).to receive(:new).and_return(
+        instance_double(Crm::Ai::StageClassifier, perform: { suggested_stage_id: alvo.id, confidence: 0.95, reasoning: 'x', model_used: 'm' })
+      )
+      allow(Crm::Cards::CurrentSubject).to receive(:card?).and_return(true)
+    end
+
+    def sem_mexer(card)
+      result = described_class.new(card: card, trigger: 'message').perform
+
+      expect(result).to have_attributes(status: :skipped, error: 'pessoa_mexeu_na_etapa')
+      expect(card.account.crm_ai_stage_suggestions.where(card: card, status: %i[pending auto_applied])).to be_empty
+      card.reload
+    end
+
+    it 'gatilho automático: não move nem sugere' do
+      card = preparar
+
+      expect(sem_mexer(card).stage.name).to eq('Proposta')
+    end
+
+    it 'reaberto por uma pessoa há pouco: não move nem sugere' do
+      card = preparar
+      card.update!(status: :lost)
+      travel_to(30.minutes.ago) { Crm::Cards::Closer.new(card: card, actor: card.account.users.first, result: 'reopen').perform }
+      Crm::Activity.where(card: card, event_type: 'move').delete_all
+
+      expect(sem_mexer(card)).to have_attributes(status: 'open')
+      expect(card.stage.name).to eq('Proposta')
+    end
+
+    def criado_pela_pessoa(card, tempo:, etapa_escolhida:)
+      Crm::Activity.where(card: card).delete_all
+      travel_to(tempo.ago) do
+        Crm::Cards::Creator.new(account: card.account, user: card.account.users.first, etapa_escolhida: etapa_escolhida,
+                                params: { pipeline_id: card.pipeline_id, stage_id: card.stage_id, title: 'Novo' }).perform
+      end
+    end
+
+    it 'criado por uma pessoa que escolheu a etapa há pouco: não move nem sugere' do
+      novo = criado_pela_pessoa(preparar, tempo: 30.minutes, etapa_escolhida: true)
+
+      expect(sem_mexer(novo).stage.name).to eq('Proposta')
+    end
+
+    it 'criado por uma pessoa na etapa padrão (aceitou a sugestão de assunto, criou pela conversa): a IA move' do
+      novo = criado_pela_pessoa(preparar, tempo: 30.minutes, etapa_escolhida: false)
+
+      expect(described_class.new(card: novo, trigger: 'message').perform.status).to eq(:auto_moved)
+    end
+
+    it 'passada a janela, a etapa escolhida na criação não trava mais' do
+      novo = criado_pela_pessoa(preparar, tempo: described_class::RESPEITO_AO_MOVIMENTO + 1.minute, etapa_escolhida: true)
+
+      expect(described_class.new(card: novo, trigger: 'message').perform.status).to eq(:auto_moved)
+    end
+
+    it 'com a IA respondendo a mesma etapa, a sugestão de antes também sai, e a tela é avisada' do
+      card = preparar
+      antiga = card.account.crm_ai_stage_suggestions.create!(card: card, from_stage: card.stage, to_stage: card.pipeline.stages.last,
+                                                             confidence: 0.6, model_used: 'm', status: :pending)
+      ia_responde(card.stage)
+      allow(Crm::Cards::Broadcaster).to receive(:broadcast)
+
+      expect(described_class.new(card: card, trigger: 'message').perform.error).to eq('pessoa_mexeu_na_etapa')
+      expect(antiga.reload).to be_expired
+      expect(Crm::Cards::Broadcaster).to have_received(:broadcast).with(card, Events::Types::CRM_CARD_UPDATED)
+    end
+
+    it 'a sugestão de etapa de antes da escolha da pessoa sai, e o resto da avaliação segue' do
+      card = preparar
+      antiga = card.account.crm_ai_stage_suggestions.create!(card: card, from_stage: card.stage, to_stage: card.stage, confidence: 0.6,
+                                                             model_used: 'm', status: :pending)
+      extracao = instance_double(Crm::Ai::AttributeExtraction, schema: { contact: [], conversation: [] }, apply: nil)
+      allow(Crm::Ai::AttributeExtraction).to receive(:new).and_return(extracao)
+
+      sem_mexer(card)
+
+      expect(antiga.reload).to be_expired
+      expect(extracao).to have_received(:apply)
+      expect(card.metadata.dig('ai', 'last_evaluated_at')).to be_present
+    end
+
+    it 'só a atividade da IA (sistema) não trava' do
+      card = preparar
+      Crm::Activity.where(card: card).update_all(actor_type: 'system', actor_id: nil) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(described_class.new(card: card, trigger: 'message').perform.status).to eq(:auto_moved)
+    end
+
+    it '"Avaliar agora": move' do
+      card = preparar
+
+      result = described_class.new(card: card, trigger: 'manual').perform
+
+      expect(result.status).to eq(:auto_moved)
+      expect(card.reload.stage.name).to eq('Fechamento')
+    end
+  end
+
   it 'applies extracted attributes even when the stage does not change' do
     ENV.delete('CRM_AI_ATTR_EXTRACTION')
     account, admin = create_account_and_user

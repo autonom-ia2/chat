@@ -15,6 +15,9 @@ module Crm
         base_payload.merge(outcome_payload).merge(open_payload)
       end
 
+      # Valor de venda (#2075): sem `sales_value_view`, os valores, a taxa por valor e a meta em R$ vêm nil, e
+      # value_hidden diz à tela que é falta de permissão, não falta de venda.
+
       private
 
       def empty
@@ -25,7 +28,8 @@ module Crm
         {
           pipeline: { id: pipeline.id, name: pipeline.name },
           period: { since: since.iso8601, until: until_time.iso8601 },
-          counts_as_sale: pipeline.counts_as_sale?
+          counts_as_sale: pipeline.counts_as_sale?,
+          value_hidden: !value_visible?
         }
       end
 
@@ -63,7 +67,7 @@ module Crm
       end
 
       def pipeline_cards
-        account.crm_cards.where(pipeline_id: pipeline.id)
+        Crm::Relacao.cards_do_funil(account).where(pipeline_id: pipeline.id)
       end
 
       def open_cards
@@ -80,7 +84,7 @@ module Crm
       def closed_with(status)
         return pipeline_cards.none if status.nil?
 
-        pipeline_cards.where(closed_at: range, status: Crm::Card.statuses[status])
+        pipeline_cards.where(closed_at: range).com_desfecho(status)
       end
 
       def win_rate(won_count, lost_count)
@@ -92,6 +96,8 @@ module Crm
       # dimensionless ratio, so we sum value_cents across currencies for the
       # headline number (the per-currency money totals stay split elsewhere).
       def win_rate_by_value(won, lost)
+        return unless value_visible?
+
         won_value = won.sum(:value_cents)
         lost_value = lost.sum(:value_cents)
         decided_value = won_value + lost_value
@@ -105,6 +111,8 @@ module Crm
       # is set. `month_elapsed` powers the pacing indicator (attainment vs time).
       # #1876: o mês é o do fuso da conta; no relógio do servidor, a venda de 31/10 às 22h caía em novembro.
       def goal_payload
+        return unless value_visible?
+
         config = (pipeline.metadata || {})['goals']
         return if config.blank?
 
@@ -128,7 +136,7 @@ module Crm
       end
 
       def won_in(period, currency)
-        pipeline_cards.where(status: Crm::Card.statuses[:won], currency: currency, closed_at: period).sum(:value_cents)
+        pipeline_cards.where(currency: currency, closed_at: period).com_desfecho(:won).sum(:value_cents)
       end
     end
   end

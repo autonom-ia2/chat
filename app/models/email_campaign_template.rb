@@ -39,5 +39,10 @@ class EmailCampaignTemplate < ApplicationRecord
 
   scope :by_category, ->(category) { where(category: category) if category.present? }
   scope :global, -> { where(account_id: nil) }
-  scope :for_account, ->(account) { where(account: account).or(global) }
+  # What an account reads: its own templates plus the shared ones, minus the shared designs of a line of business the
+  # account is not in (#2037, EmailCampaigns::TemplateCatalog.names_outside).
+  scope :for_account, lambda { |account|
+    outside = EmailCampaigns::TemplateCatalog.names_outside(Autonomia::Segmentos::Pacotes.camadas(account))
+    where(account: account).or(global.where.not(name: outside))
+  }
 end

@@ -30,7 +30,8 @@ class Autonomia::CentralDeAjuda::Leitura
   def artigos
     @artigos ||= begin
       todos = portal ? portal.articles.published.includes(:category).where('articles.slug LIKE ?', 'plataforma-%').to_a : []
-      todos.select { |artigo| visivel?(artigo) }.sort_by { |artigo| [artigo.category&.position.to_i, artigo.position.to_i] }
+      visiveis = todos.select { |artigo| visivel?(artigo) }.sort_by { |artigo| [artigo.category&.position.to_i, artigo.position.to_i] }
+      com_o_pacote(visiveis)
     end
   end
 
@@ -85,6 +86,21 @@ class Autonomia::CentralDeAjuda::Leitura
     return false if meta['publico'] == 'admin' && !@administrador
 
     recurso_liberado?(meta['requer'])
+  end
+
+  # A conta de um pacote lê o artigo com as palavras dele (#1802). Variante com defeito não derruba a Central:
+  # fica o artigo base, e o erro vai para o log (o spec da variante barra o defeito antes do deploy).
+  def com_o_pacote(lista)
+    variantes = ::Autonomia::CentralDeAjuda::VarianteDoPacote.para(::Autonomia::Segmentos::Pacotes.camadas(@account))
+    return lista if variantes.empty?
+
+    lista.map do |artigo|
+      variante = variantes[central(artigo)['id']]
+      variante ? ::Autonomia::CentralDeAjuda::ArtigoDoPacote.new(artigo, variante) : artigo
+    end
+  rescue ::Autonomia::CentralDeAjuda::ArtigoFonte::FormatoInvalido, Errno::ENOENT, Psych::SyntaxError => e
+    Rails.logger.error("[central_de_ajuda][leitura] account=#{@account&.id} variante do pacote: #{e.class}: #{e.message}")
+    lista
   end
 
   def recurso_liberado?(requer)

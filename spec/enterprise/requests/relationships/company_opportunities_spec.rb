@@ -188,7 +188,8 @@ RSpec.describe 'Company opportunities from linked contacts', type: :request do
     expect(response.body).not_to include('Restricted negotiation')
     get url, params: { result: 'won' }, headers: auth_headers(agent)
     expect(response.parsed_body.dig('meta', 'total_count')).to eq(0)
-    role.update!(permissions: %w[contact_view crm_manage_cards])
+    # #2124: an editing key would bring crm_view along, so revoking means leaving only CRM reports.
+    role.update!(permissions: %w[contact_view crm_view_reports])
     get url, headers: auth_headers(agent)
     expect(response).to have_http_status(:unauthorized)
   end

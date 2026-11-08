@@ -16,6 +16,11 @@ class WahaInboxAPI extends ApiClient {
     return axios.get(`${this.url}/${inboxId}/connection`);
   }
 
+  // Só o estado da conexão, sem QR (#1941): para a faixa da lista da caixa.
+  status(inboxId) {
+    return axios.get(`${this.url}/${inboxId}/status`);
+  }
+
   reconnect(inboxId) {
     return axios.post(`${this.url}/${inboxId}/reconnect`);
   }

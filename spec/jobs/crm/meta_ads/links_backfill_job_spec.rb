@@ -1,6 +1,7 @@
 require 'rails_helper'
 
-# Carga das ligações dos últimos 90 dias (#1073, F2b): só banco, uma por conexão, avisa a tela no fim.
+# Carga das ligações (#1073, F2b): só banco, uma por conexão, avisa a tela no fim. Desde o #2054 cobre o "desde o
+# início" do painel (37 meses) e o toque legado em `campaign`.
 RSpec.describe Crm::MetaAds::LinksBackfillJob do
   let(:account) { create(:account) }
   let(:connection) { create_meta_ads_insights_connection(account) }
@@ -10,21 +11,35 @@ RSpec.describe Crm::MetaAds::LinksBackfillJob do
 
   after { Redis::Alfred.delete("#{described_class::RUNNING_KEY}:#{connection.id}") }
 
+  # #2521: a conversa do privado de um comentário de anúncio em que a pessoa respondeu.
+  def comment_conversation
+    conversation = create(:conversation, account: account)
+    Crm::MetaAdsCommentAction.create!(account: account, network: 'instagram', comment_id: 'c-1', ad_id: '120254710067060999',
+                                      action: 'private_reply', actor: 'ai', conversation_id: conversation.id, at: 1.day.ago,
+                                      confirmed_at: 1.day.ago)
+    create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :incoming)
+    conversation
+  end
+
   it 'start: uma carga por conexão de cada vez' do
     expect(described_class.start(connection)).to be(true)
     expect(described_class.start(connection)).to be(false)
   end
 
-  it 'liga as conversas com toque dos últimos 90 dias, marca a carga, avisa a tela e solta a marca' do
+  it 'liga as conversas com toque do histórico do painel, marca a carga, avisa a tela e solta a marca' do
     create(:user, account: account, role: :administrator)
     recent = create(:conversation, account: account, additional_attributes: { 'campaign_touches' => [ctwa_touch] })
-    old = create(:conversation, account: account, additional_attributes: { 'campaign_touches' => [ctwa_touch.merge('ctwa_clid' => 'clid-old')] })
-    old.update_columns(updated_at: 100.days.ago) # rubocop:disable Rails/SkipsModelValidations
+    months_ago = create(:conversation, account: account, additional_attributes: { 'campaign_touches' => [ctwa_touch.merge('ctwa_clid' => 'clid-m')] })
+    months_ago.update_columns(updated_at: 200.days.ago) # rubocop:disable Rails/SkipsModelValidations
+    legacy = create(:conversation, account: account, additional_attributes: { 'campaign' => ctwa_touch.merge('ctwa_clid' => 'clid-legacy') })
+    too_old = create(:conversation, account: account, additional_attributes: { 'campaign_touches' => [ctwa_touch.merge('ctwa_clid' => 'clid-old')] })
+    too_old.update_columns(updated_at: 40.months.ago) # rubocop:disable Rails/SkipsModelValidations
+    from_comment = comment_conversation
     described_class.start(connection)
 
     expect { described_class.perform_now(connection.id) }.to have_enqueued_job(ActionCableBroadcastJob)
 
-    expect(Crm::MetaAdLink.pluck(:conversation_id)).to eq([recent.id])
+    expect(Crm::MetaAdLink.pluck(:conversation_id)).to contain_exactly(recent.id, months_ago.id, legacy.id, from_comment.id)
     expect(connection.reload.links_backfilled_at).to be_present
     expect(described_class.start(connection)).to be(true)
   end

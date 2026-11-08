@@ -71,7 +71,7 @@ module EmailCampaigns
         text = PromptBuilder.input_text(brief: @brief, placeholders: @placeholders, assets: @assets, videos: videos,
                                         identity: @identity)
         { instructions: PromptBuilder.generate(placeholders: @placeholders, assets: @assets, videos: videos,
-                                               brand: @account.name, identity: @identity),
+                                               brand: @account.name, identity: @identity, vocabulary: vocabulary),
           input: build_input(text), input_text: text, schema: GENERATE_SCHEMA, tools: Crm::Ai::WebSearch.tools }
       end
 
@@ -80,8 +80,16 @@ module EmailCampaigns
         text = EditPromptBuilder.input_text(request: @brief, sections: sections.editable, placeholders: @placeholders,
                                             assets_rule: PromptBuilder.assets_rule(@assets, identity: @identity),
                                             video_rule: PromptBuilder.video_embed_rule(videos))
-        { instructions: EditPromptBuilder.instructions(identity: adjust_identity), input: build_input(text), input_text: text,
-          schema: EditPromptBuilder::SCHEMA, tools: nil }
+        { instructions: EditPromptBuilder.instructions(identity: adjust_identity, vocabulary: vocabulary),
+          input: build_input(text), input_text: text, schema: EditPromptBuilder::SCHEMA, tools: nil }
+      end
+
+      # Vocabulário do ramo da conta (#2037): uma linha do pacote do servidor (config/pacotes/seguros/**). Fora de um
+      # pacote a chave base é vazia e o pedido fica como sempre foi. pt_BR porque o pedido ao modelo é em português.
+      def vocabulary
+        @vocabulary ||= Autonomia::Segmentos::Pacotes.with(@account) do
+          I18n.t('email_campaigns.ai.vocabulario', locale: :pt_BR, default: '')
+        end
       end
 
       # Identidade visual do ajuste: o kit escolhido (#1076, BrandKits::PromptPayload) ou, sem kit, só o nome da conta.

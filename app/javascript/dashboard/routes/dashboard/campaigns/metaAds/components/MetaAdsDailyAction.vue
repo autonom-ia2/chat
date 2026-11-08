@@ -162,6 +162,12 @@ const onlyUnanswered = action => {
   return Number(median) <= Number(action.facts?.target_seconds);
 };
 
+// #2075 — sem a chave de valores de venda a soma das propostas paradas não vem: o porquê sai sem o valor.
+const whyKey = (action, base, suffix) =>
+  action.kind === 'stalled_quotes' && action.facts?.value == null
+    ? `${base}.WHY_NO_VALUE`
+    : `${base}.WHY${suffix}`;
+
 const ruleText = action => {
   const base = `${KEY}.${action.kind.toUpperCase()}`;
   const suffix = action.variant ? `_${action.variant.toUpperCase()}` : '';
@@ -173,7 +179,7 @@ const ruleText = action => {
   return {
     headline: t(textKey, params, pluralOf(action)),
     body: null,
-    why: t(`${base}.WHY${suffix}`, params),
+    why: t(whyKey(action, base, suffix), params),
   };
 };
 
@@ -305,7 +311,7 @@ const MAIN_BUTTON =
 const mainClass = index =>
   index
     ? `${MAIN_BUTTON} bg-transparent border border-solid border-white/40 text-white hover:bg-white/10`
-    : `${MAIN_BUTTON} bg-white border-0 text-[#0D2344] hover:bg-n-blue-2`;
+    : `${MAIN_BUTTON} bg-white border-0 text-n-heroi hover:bg-n-blue-2`;
 const LINK_BUTTON =
   'inline-flex items-center justify-center px-2 min-w-11 min-h-11 text-[13px] font-460 bg-transparent border-0 rounded text-white/70 hover:text-white hover:underline disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white';
 </script>

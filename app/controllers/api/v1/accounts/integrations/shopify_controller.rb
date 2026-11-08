@@ -3,6 +3,8 @@ class Api::V1::Accounts::Integrations::ShopifyController < Api::V1::Accounts::In
   before_action :setup_shopify_context, only: [:orders]
   before_action :fetch_hook, except: [:auth]
   before_action :check_authorization, only: [:destroy]
+  # Starting the connection ends with the store token saved on the account: same gate as connecting any hook (#2027).
+  before_action -> { authorize(:hook, :create?) }, only: [:auth]
   before_action :validate_contact, only: [:orders]
   # Os pedidos trazem dados do cliente (#1849): só para quem vê o contato.
   before_action -> { authorize contact, :show? }, only: [:orders]

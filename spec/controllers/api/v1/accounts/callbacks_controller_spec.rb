@@ -145,4 +145,28 @@ RSpec.describe 'Callbacks API', type: :request do
       end
     end
   end
+
+  # #2027: listing pages and registering one create a Facebook inbox, and reauthorizing swaps the page token: admin or
+  # inbox_manage only, like any other inbox.
+  describe 'agent without inbox_manage' do
+    let(:agent) { create(:user, account: account, role: :agent) }
+
+    it 'cannot list pages, register a page or reauthorize one', :aggregate_failures do
+      token_antes = facebook_page.page_access_token
+
+      expect do
+        post "/api/v1/accounts/#{account.id}/callbacks/register_facebook_page", headers: agent.create_new_auth_token,
+                                                                                params: valid_params, as: :json
+      end.not_to change(Inbox, :count)
+      expect(response).to have_http_status(:unauthorized)
+
+      post "/api/v1/accounts/#{account.id}/callbacks/facebook_pages", headers: agent.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unauthorized)
+
+      post "/api/v1/accounts/#{account.id}/callbacks/reauthorize_page", headers: agent.create_new_auth_token,
+                                                                        params: { inbox_id: inbox.id }, as: :json
+      expect(response).to have_http_status(:unauthorized)
+      expect(facebook_page.reload.page_access_token).to eq(token_antes)
+    end
+  end
 end

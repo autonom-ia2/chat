@@ -67,4 +67,17 @@ describe('CitacaoDaResposta', () => {
       '<body><p>Oi</p></body>'
     );
   });
+
+  it('texto puro com imagem embutida pelo Chatwoot: a imagem vai como HTML (#1942)', async () => {
+    const src = `${window.location.origin}/rails/active_storage/blobs/redirect/abc/image0.jpeg`;
+    const wrapper = montar('historico', {
+      text_content: {
+        full: `Esse é um teste\n\n<img src="${src}" alt="image0.jpeg">`,
+      },
+    });
+    await wrapper.get('[data-ver-citacao]').trigger('click');
+    const html = wrapper.get('[data-letter]').attributes('data-html');
+    expect(html).toContain(`<img src="${src}" alt="image0.jpeg">`);
+    expect(html).toContain('Esse é um teste');
+  });
 });

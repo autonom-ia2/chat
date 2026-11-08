@@ -132,7 +132,7 @@ class ContactMergeAction
     # attributes in base contact are given preference
     merged_attributes = mergee_contact_attributes.deep_merge(base_contact_attributes)
     @mergee_contact.reload
-    merged_attributes = merged_attributes.merge(inherited_opt_out).merge(inherited_customer)
+    merged_attributes = merged_attributes.merge(inherited_attributes)
 
     @mergee_contact.destroy!
     Rails.configuration.dispatcher.dispatch(CONTACT_MERGED, Time.zone.now, contact: @base_contact,
@@ -146,11 +146,25 @@ class ContactMergeAction
   end
 
   # #1144: cliente é da pessoa. Se um dos dois já era cliente, o que fica é cliente, com a data mais antiga.
+  # O que é da pessoa e passa do absorvido para o que fica: a recusa de mensagens, ser cliente e a marca "Este contato é".
+  def inherited_attributes
+    inherited_opt_out.merge(inherited_customer).merge(inherited_relacao)
+  end
+
   def inherited_customer
     customers = [@base_contact, @mergee_contact].select(&:customer?)
     return {} if customers.empty?
 
     { 'contact_type' => 'customer', 'customer_since' => customers.filter_map(&:customer_since).min }
+  end
+
+  # #2084: "Este contato é" foi marcado por uma pessoa. Se o contato que fica é interessado (o padrão) e o absorvido
+  # foi marcado parceiro ou não é negócio, a marca passa para o que fica, junto com os cards dele. Se os dois foram
+  # marcados, vale a do que fica.
+  def inherited_relacao
+    return {} unless @base_contact.relacao_interessado? && !@mergee_contact.relacao_interessado?
+
+    { 'relacao' => @mergee_contact.relacao }
   end
 
   # chat#713: a recusa de mensagens ativas é da pessoa. Se só o contato absorvido tinha recusado, a recusa (data, origem

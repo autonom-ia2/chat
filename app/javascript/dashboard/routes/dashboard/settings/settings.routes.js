@@ -6,7 +6,10 @@ import {
   INBOX_PERMISSIONS,
   AUTOMATION_PERMISSIONS,
   SLA_MANAGE_PERMISSION,
+  PEOPLE_MANAGE_PERMISSION,
+  CUSTOM_ROLE_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions.js';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 const CANNED_LIST_PERMISSIONS = [
   ...ROLES,
@@ -24,6 +27,17 @@ const SETTINGS_LANDINGS = [
   { name: 'macros_wrapper', permissions: ['macro_manage'] },
   // SLA moved to CRM › SLA; settings/sla (sla_list) is not registered (#1618).
   { name: 'crm_sla_index', permissions: [SLA_MANAGE_PERMISSION] },
+  // Pessoas (#1931): quem cuida das pessoas ou monta funções também chega em Configurações.
+  {
+    name: 'agent_list',
+    permissions: [PEOPLE_MANAGE_PERMISSION],
+    featureFlag: FEATURE_FLAGS.AGENT_MANAGEMENT,
+  },
+  {
+    name: 'custom_roles_list',
+    permissions: [CUSTOM_ROLE_MANAGE_PERMISSION],
+    featureFlag: FEATURE_FLAGS.CUSTOM_ROLES,
+  },
 ];
 
 import account from './account/account.routes';
@@ -43,6 +57,7 @@ import macros from './macros/macros.routes';
 import reports from './reports/reports.routes';
 import teams from './teams/teams.routes';
 import customRoles from './customRoles/customRole.routes';
+import funcoesDaEquipe from './funcoesDaEquipe/funcoesDaEquipe.routes';
 import profile from './profile/profile.routes';
 import security from './security/security.routes';
 import conversationWorkflow from './conversationWorkflow/conversationWorkflow.routes';
@@ -91,6 +106,7 @@ export default {
     ...reports.routes,
     ...teams.routes,
     ...customRoles.routes,
+    ...funcoesDaEquipe.routes,
     ...profile.routes,
     ...security.routes,
     ...conversationWorkflow.routes,

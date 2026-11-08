@@ -6,7 +6,6 @@ en:
   autonomia_agents_niche:
     label: Account segment and niche
     help: Changes the words in the dashboard, the Guide, the Help Center and the agents to the way this account works.
-    installation_default: "Default for this installation: %{niche}"
     is_default: (default for this installation)
     warning: The change shows the next time the team opens the dashboard. Funnels already created do not change. Existing agents only change through the Update with the new base button.
     switch_off: While segment wording is turned off on this installation, the choice is saved and starts to apply once it is turned on.
@@ -16,6 +15,9 @@ en:
     preview_label_off: "Once segment wording is turned on, a closed card will show as"
     separator: " · "
     niches:
+      padrao:
+        title: Default for this installation
+        text: "Today: %{niche}. Follows the installation if the default changes."
       seguros:
         title: Insurance
         text: For insurance companies.

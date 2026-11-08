@@ -1,15 +1,19 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useListaNova } from 'dashboard/components-next/Conversation/ListaDeConversas/useListaNova';
 
 // #1801 — o resumo do dia num herói escuro (o mesmo de Automações). Os números vêm
 // do servidor; o número maior que zero leva à lista certa; zero não é clicável. Quem vê os
 // totais da conta ganha uma linha discreta da equipe. Uma ação: abrir a próxima conversa.
 const props = defineProps({
   dados: { type: Object, required: true },
+  // #1897: o destino do rodapé "Como vai o seu mês" (CRM › Números), ou nada.
+  comoVaiOMes: { type: Object, default: null },
 });
 
 const { t } = useI18n();
+const listaNova = useListaNova();
 
 const numeros = computed(() => {
   const { esperamVoce, semResponsavel, foraDoPrazo } = props.dados;
@@ -28,6 +32,22 @@ const numeros = computed(() => {
     { chave: 'FORA_DO_PRAZO', valor: foraDoPrazo, alerta: foraDoPrazo > 0 },
   ];
 });
+
+// #2211 (A3), com a lista nova: "3 das suas 4 esperam você". Com uma conversa só, antes de carregar ou com a
+// chave desligada, fica "Esperam você".
+const rotuloDoNumero = numero => {
+  const { comVoce, pronto } = props.dados;
+  const comDasSuas =
+    listaNova.value && numero.chave === 'ESPERAM' && pronto && comVoce > 1;
+  if (!comDasSuas) {
+    return t(`TELA_INICIAL.RESUMO.NUMEROS.${numero.chave}`);
+  }
+  return t(
+    'TELA_INICIAL.RESUMO.NUMEROS.ESPERAM_DAS_SUAS',
+    { total: comVoce },
+    numero.valor
+  );
+};
 
 const clicavel = numero =>
   props.dados.pronto && numero.valor > 0 && Boolean(numero.fazer);
@@ -61,7 +81,7 @@ const linhaDaEquipe = computed(() => {
     class="flex items-center justify-center w-full h-full p-4 overflow-auto bg-n-surface-1 md:p-10"
   >
     <div
-      class="relative w-full max-w-3xl px-6 py-8 overflow-hidden text-white shadow-xl rounded-3xl bg-n-heroi dark:bg-[#12305E] ring-1 ring-inset ring-white/10 md:px-10 md:py-10"
+      class="relative w-full max-w-3xl px-6 py-8 overflow-hidden text-white shadow-xl rounded-3xl bg-n-heroi dark:bg-n-heroi-escuro ring-1 ring-inset ring-white/10 md:px-10 md:py-10"
     >
       <span
         aria-hidden="true"
@@ -127,7 +147,7 @@ const linhaDaEquipe = computed(() => {
                 }}
               </span>
               <span class="flex items-center gap-1 text-sm text-white/75">
-                {{ $t(`TELA_INICIAL.RESUMO.NUMEROS.${numero.chave}`) }}
+                {{ rotuloDoNumero(numero) }}
                 <span
                   v-if="clicavel(numero)"
                   class="i-lucide-chevron-right size-4 text-white/40 rtl:rotate-180"
@@ -213,6 +233,24 @@ const linhaDaEquipe = computed(() => {
             <span class="i-lucide-users size-4" aria-hidden="true" />
             {{ linhaDaEquipe }}
           </component>
+        </div>
+
+        <div
+          v-if="comoVaiOMes"
+          class="hidden pt-5 border-t border-white/10 md:block"
+        >
+          <RouterLink
+            :to="comoVaiOMes"
+            data-como-vai-o-mes
+            class="inline-flex items-center gap-2 text-sm font-medium transition min-h-11 text-white/75 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+          >
+            <span class="i-lucide-chart-column size-4" aria-hidden="true" />
+            {{ $t('CRM_NUMEROS_V2.TELA_INICIAL') }}
+            <span
+              class="i-lucide-arrow-right size-4 rtl:rotate-180"
+              aria-hidden="true"
+            />
+          </RouterLink>
         </div>
       </div>
     </div>

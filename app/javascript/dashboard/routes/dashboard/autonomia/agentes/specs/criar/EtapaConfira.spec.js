@@ -41,6 +41,31 @@ describe('EtapaConfira', () => {
     });
   });
 
+  // #2489 (5a) — as perguntas do próprio agente tomam o lugar das do modelo (e do pacote do segmento).
+  it("offers the agent's own questions instead of the model ones", async () => {
+    const wrapper = montar({
+      perguntasDoAgente: [
+        'O seguro cobre cancelamento da viagem?',
+        'Qual o valor para 10 dias na Europa?',
+      ],
+    });
+    const perguntas = wrapper.get('[data-perguntas]').findAll('button');
+    expect(perguntas.map(b => b.text())).toEqual([
+      'O seguro cobre cancelamento da viagem?',
+      'Qual o valor para 10 dias na Europa?',
+    ]);
+    // Frases do Construtor podem ser longas: empilhadas, como as respostas prontas.
+    expect(wrapper.get('[data-perguntas]').classes()).toContain('flex-col');
+    expect(montar().get('[data-perguntas]').classes()).not.toContain(
+      'flex-col'
+    );
+    await perguntas[0].trigger('click');
+    expect(wrapper.emitted('perguntar')[0][0]).toEqual({
+      texto: 'O seguro cobre cancelamento da viagem?',
+      anexos: [],
+    });
+  });
+
   it('the test clip takes only photos', () => {
     const wrapper = montar();
     expect(wrapper.get('input[type="file"]').attributes('accept')).toBe(
@@ -149,6 +174,57 @@ describe('EtapaConfira', () => {
       await erro.get('button').trigger('click');
       expect(wrapper.emitted('tentarDeNovo')).toHaveLength(1);
     }
+  });
+
+  // #1427 — a foto que a conferência recusou: o motivo do servidor, âmbar, sem "Tentar de novo".
+  it('shows the reason a photo was refused, with no "Try again"', () => {
+    const wrapper = montar({
+      problema: 'foto_recusada',
+      aviso: {
+        tipo: 'foto_recusada',
+        mensagem: 'Mande uma foto parada. Foto animada não dá para ler.',
+      },
+    });
+    const erro = wrapper.get('[data-erro-teste]');
+    expect(erro.text()).toContain(
+      'Mande uma foto parada. Foto animada não dá para ler.'
+    );
+    expect(erro.find('button').exists()).toBe(false);
+  });
+
+  it('says the photo is too big when it never left the browser', () => {
+    const wrapper = montar({ problema: 'foto_recusada' });
+    expect(wrapper.get('[data-erro-teste]').text()).toContain(
+      'AGENTS.JORNADA.PAGINA.SABE.FOTO_GRANDE'
+    );
+  });
+
+  it('puts back in the field what was written with the refused photo', async () => {
+    const wrapper = montar();
+    await wrapper.setProps({
+      problema: 'foto_recusada',
+      aviso: {
+        tipo: 'foto_recusada',
+        grande: true,
+        texto: 'Quanto custa este?',
+      },
+    });
+    expect(wrapper.get('textarea').element.value).toBe('Quanto custa este?');
+  });
+
+  it('puts the same text back again when two big photos are refused in a row', async () => {
+    const wrapper = montar();
+    const recusa = () => ({
+      tipo: 'foto_recusada',
+      grande: true,
+      texto: 'Quanto custa este?',
+    });
+    await wrapper.setProps({ problema: 'foto_recusada', aviso: recusa() });
+    await wrapper.get('textarea').setValue(''); // mandou de novo: o campo esvazia
+
+    await wrapper.setProps({ aviso: recusa() });
+
+    expect(wrapper.get('textarea').element.value).toBe('Quanto custa este?');
   });
 
   it('on the phone, the "not enough" text does not point to the side', () => {

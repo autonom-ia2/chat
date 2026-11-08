@@ -61,6 +61,46 @@ describe('#hasMessageFailedWithExternalError', () => {
   });
 });
 
+describe('#createPendingMessageAndSend (#2067)', () => {
+  // Pega a promessa perdida: a caixa de resposta precisa saber se a mensagem saiu.
+  it('devolve a resposta do envio e a recusa chega a quem enviou', async () => {
+    const enviar = vi.fn().mockResolvedValue({ id: 10, ok: true });
+    const resposta = await actions.createPendingMessageAndSend(
+      { dispatch: enviar },
+      { conversationId: 1, message: 'Oi' }
+    );
+    expect(resposta).toEqual({ id: 10, ok: true });
+    expect(enviar).toHaveBeenCalledWith(
+      'sendMessageWithData',
+      expect.objectContaining({ conversation_id: 1, content: 'Oi' })
+    );
+
+    const recusar = vi.fn().mockRejectedValue(new Error('recusada'));
+    await expect(
+      actions.createPendingMessageAndSend(
+        { dispatch: recusar },
+        { conversationId: 1, message: 'Oi' }
+      )
+    ).rejects.toThrow('recusada');
+  });
+
+  it('sendMessageWithData devolve o que o servidor respondeu', async () => {
+    axios.mockResolvedValueOnce({
+      data: { id: 11, conversation_id: 1, ficar_com_a_conversa_nao_deu: true },
+    });
+    const resposta = await actions.sendMessageWithData(
+      { commit },
+      {
+        conversation_id: 1,
+        id: 'temp-1',
+        status: 'progress',
+        content_attributes: {},
+      }
+    );
+    expect(resposta.ficar_com_a_conversa_nao_deu).toBe(true);
+  });
+});
+
 describe('#actions', () => {
   describe('conversation history loading', () => {
     let store;

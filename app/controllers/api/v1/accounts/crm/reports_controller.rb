@@ -17,8 +17,9 @@ class Api::V1::Accounts::Crm::ReportsController < Api::V1::Accounts::Crm::BaseCo
     render_report(::Crm::Reports::Funnel)
   end
 
+  # #2000: `todos_os_funis` soma os funis que a pessoa enxerga (a frase da Gestão de IA). Só este relatório o lê.
   def ai_vs_human
-    render_report(::Crm::Reports::AiVsHuman)
+    render_report(::Crm::Reports::AiVsHuman, params.permit(:todos_os_funis))
   end
 
   def throughput
@@ -50,10 +51,11 @@ class Api::V1::Accounts::Crm::ReportsController < Api::V1::Accounts::Crm::BaseCo
 
   # Quem tem acesso por funil e não enxerga funil nenhum fica sem relatório: sem funil, alguns relatórios somariam a
   # conta inteira.
-  def render_report(builder_class)
+  def render_report(builder_class, extras = {})
     return render json: { payload: nil } if visible_pipelines.restricted? && report_pipelines.none?
 
-    payload = builder_class.new(account: Current.account, params: report_params, pipelines: report_pipelines).perform
+    payload = builder_class.new(account: Current.account, params: report_params.merge(extras), pipelines: report_pipelines,
+                                value_visible: ::Crm::ValorDeVenda.ve?(Current.account_user)).perform
     render json: { payload: payload }
   end
 
@@ -65,7 +67,7 @@ class Api::V1::Accounts::Crm::ReportsController < Api::V1::Accounts::Crm::BaseCo
   end
 
   def report_pipelines
-    @report_pipelines ||= visible_pipelines.apply_to_reports(Current.account.crm_pipelines)
+    @report_pipelines ||= visible_pipelines.apply_to_reports(Current.account.crm_pipelines.active)
   end
 
   def visible_pipelines

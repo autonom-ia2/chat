@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useBranding } from 'shared/composables/useBranding';
 import { useAdmin } from 'dashboard/composables/useAdmin';
+import { useHasCustomRolePermission } from 'dashboard/composables/useCanManage';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
@@ -21,11 +22,12 @@ const { estado, autorizacao, carregar, mudar, dinheiro, quando, diaDaData } =
 
 const marca = computed(() => installationName.value || 'Chat2You');
 const ligada = computed(() => Boolean(autorizacao.value?.servico));
-// Ver: quem administra modelos. Mudar: só o administrador da conta (o aceite
-// libera gasto com a Meta; financeiro não se delega por função).
+// Ver: quem administra modelos ou vê os custos da conta. Mudar: o administrador ou
+// a função com Financeiro em Editar (financial_manage, #1969): o aceite libera gasto com a Meta.
 const { isAdmin } = useAdmin();
-const podeMudar = computed(() => Boolean(isAdmin.value));
-// A frase "Só quem administra a conta pode mudar." descreve cada controle travado.
+const temFinanceiro = useHasCustomRolePermission('financial_manage');
+const podeMudar = computed(() => Boolean(isAdmin.value || temFinanceiro.value));
+// A frase de quem pode mudar (SO_ADMIN) descreve cada controle travado.
 const ID_SO_ADMIN = 'autorizacao-so-admin';
 const divulgacao = computed(() => Boolean(autorizacao.value?.divulgacao));
 

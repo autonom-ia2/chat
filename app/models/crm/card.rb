@@ -99,7 +99,13 @@ class Crm::Card < ApplicationRecord
   enum status: { open: 0, won: 1, lost: 2, archived: 3, resolved: 4, cancelled: 5 }
   enum priority: { low: 0, medium: 1, high: 2, urgent: 3 }
 
+  # Arquivar não desfaz o fechamento: o card ganho, perdido, resolvido ou cancelado que é arquivado guarda aqui o
+  # desfecho que tinha, e o closed_at fica. Números, metas e relatórios continuam contando (scope com_desfecho), e
+  # reabrir o arquivado devolve esse desfecho com a data de antes (Crm::Cards::Closer). Só o próprio card escreve a chave.
+  DESFECHO_ARQUIVADO = 'desfecho_arquivado'.freeze
+
   before_validation :ensure_activity_defaults
+  before_save :manter_desfecho_arquivado
   before_save :sync_closed_at
   # Ganho só existe em funil que conta como venda: quem comprou vira cliente (#1144). No modelo, para valer em todo
   # caminho que grava o ganho (fechar, criar já ganho, lote, automação).
@@ -126,6 +132,39 @@ class Crm::Card < ApplicationRecord
   scope :active, -> { where(status: statuses[:open]) }
   scope :standalone, -> { where(contact_id: nil, conversation_id: nil, inbox_id: nil) }
   scope :linked, -> { where('contact_id IS NOT NULL OR conversation_id IS NOT NULL OR inbox_id IS NOT NULL') }
+  # Os cards com estes desfechos, inclusive os arquivados depois de fechados com eles (DESFECHO_ARQUIVADO).
+  scope :com_desfecho, lambda { |*desfechos|
+    nomes = desfechos.flatten.map(&:to_s)
+    where(status: nomes).or(where(status: :archived).where("crm_cards.metadata->>'#{DESFECHO_ARQUIVADO}' IN (?)", nomes))
+  }
+
+  # O mesmo filtro em SQL puro, para consulta montada à mão (um bind: o nome do desfecho).
+  def self.desfecho_sql
+    "(crm_cards.status = #{statuses[:archived]} AND crm_cards.metadata->>'#{DESFECHO_ARQUIVADO}' = ?)"
+  end
+
+  # O desfecho que conta: o status ou, no arquivado depois de fechado, o desfecho guardado.
+  def self.desfecho_de(status, desfecho_arquivado)
+    status.to_s == 'archived' && desfecho_arquivado.present? ? desfecho_arquivado : status.to_s
+  end
+
+  def desfecho_arquivado
+    archived? ? metadata.to_h[DESFECHO_ARQUIVADO] : nil
+  end
+
+  # Donos que saíram da conta (#2095), entre os ids dados. O validate_owner_account recusa gravar o card com um deles.
+  # Quem sai passa a ter os cards soltos (Agents::DestroyJob); os de antes disso ainda guardam o id, e o restaurar e o
+  # arquivar do funil soltam o dono ao gravar, em vez de travar.
+  def self.donos_fora_da_conta(account_id, owner_ids)
+    ids = owner_ids.compact.uniq
+    return Set.new if ids.empty?
+
+    Set.new(ids) - AccountUser.where(account_id: account_id, user_id: ids).pluck(:user_id)
+  end
+
+  def dono_saiu_da_conta?
+    self.class.donos_fora_da_conta(account_id, [owner_id]).any?
+  end
 
   def standalone?
     contact_id.blank? && conversation_id.blank? && inbox_id.blank?
@@ -186,7 +225,9 @@ class Crm::Card < ApplicationRecord
   def active_inbox_bot(resolved_inbox)
     return if resolved_inbox.blank?
 
-    resolved_inbox.agent_bot_inbox&.active? ? resolved_inbox.agent_bot : nil
+    # Pelo agent_bot_inbox, e não pelo has_one :through: assim o preload de agent_bot_inbox: :agent_bot vale (#2283).
+    bot_inbox = resolved_inbox.agent_bot_inbox
+    bot_inbox&.active? ? bot_inbox.agent_bot : nil
   end
 
   def sugerir_repasse
@@ -218,12 +259,50 @@ class Crm::Card < ApplicationRecord
 
   # closed_at is the source of truth for win/lost + cycle-time reports.
   # It must reflect the explicit close decision, never updated_at.
+  # Arquivar guarda o desfecho e mantém a data; sair do arquivo volta a ler o desfecho guardado, e voltar a ele é o
+  # mesmo fechamento, não um novo.
   def sync_closed_at
     return unless will_save_change_to_status?
+    return arquivar_desfecho if archived?
+
+    anterior = status_in_database == 'archived' ? metadata_in_database.to_h[DESFECHO_ARQUIVADO] : status_in_database
+    self.metadata = metadata.to_h.except(DESFECHO_ARQUIVADO)
+    return if anterior == status
     # Ganho -> resolvido ao mudar de funil é o mesmo fechamento, não um novo (#1144).
-    return if Crm::Cards::Outcome.equivalent?(status_in_database, status)
+    return if Crm::Cards::Outcome.equivalent?(anterior, status)
 
     self.closed_at = Crm::Cards::Outcome::CLOSED_STATUSES.include?(status) ? Time.current : nil
+  end
+
+  def arquivar_desfecho
+    anterior = status_in_database
+    if Crm::Cards::Outcome::CLOSED_STATUSES.include?(anterior)
+      self.metadata = metadata.to_h.merge(DESFECHO_ARQUIVADO => anterior)
+    else
+      self.metadata = metadata.to_h.except(DESFECHO_ARQUIVADO)
+      self.closed_at = nil
+    end
+  end
+
+  # A chave do desfecho só muda junto com o status: edição de metadata (PATCH, upsert) não cria nem troca venda. O
+  # arquivado que muda de funil leva o desfecho como o card fechado leva o status (Crm::Cards::Mover, #1144 e #1498).
+  def manter_desfecho_arquivado
+    return if will_save_change_to_status?
+
+    guardado = metadata_in_database.to_h[DESFECHO_ARQUIVADO]
+    guardado = desfecho_no_funil_novo(guardado) if guardado && will_save_change_to_pipeline_id?
+    return if metadata.to_h[DESFECHO_ARQUIVADO] == guardado
+
+    self.metadata = guardado ? metadata.to_h.merge(DESFECHO_ARQUIVADO => guardado) : metadata.to_h.except(DESFECHO_ARQUIVADO)
+  end
+
+  # Atendimento fechado que vai para um funil de Vender entra Aberto: sem desfecho e sem data.
+  def desfecho_no_funil_novo(guardado)
+    novo = Crm::Cards::Outcome.status_after_move(pipeline, guardado)
+    return novo if Crm::Cards::Outcome::CLOSED_STATUSES.include?(novo)
+
+    self.closed_at = nil
+    nil
   end
 
   # Ganho/perdido só em funil que conta como venda; resolvido/cancelado só nos outros (#1144). Checado só quando o status

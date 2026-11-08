@@ -1,10 +1,20 @@
-// Citação de e-mails que o extrator do Chatwoot não reconhece (#1786): o histórico que
+// Citação pela marca que o leitor de e-mail põe (#1786, #1916): o histórico que
 // o iPhone/Apple Mail põe em <blockquote type="cite"> e o bloco "De: / Enviado: / Para:"
 // do Outlook em qualquer idioma (o extrator só procura "From:" e "Sent:" em inglês).
 // Lê a estrutura do HTML (DOM), sem regex. Devolve o HTML sem a citação e se achou.
 import DOMPurify from 'dompurify';
 import { cortarCitacaoComSinal } from './citacaoComSinal';
 
+// A marca que cada leitor põe em volta do histórico citado (#1916): Gmail, Yahoo, Proton e
+// o "Em ..., Fulano escreveu:" do Thunderbird (o histórico dele é blockquote[type=cite]).
+// Classe exata do leitor, nunca "qualquer classe com quote no nome".
+const MARCAS_DOS_LEITORES = [
+  '.gmail_quote_container',
+  '.gmail_quote',
+  '.yahoo_quoted',
+  '.protonmail_quote',
+  '.moz-cite-prefix',
+];
 // Outlook marca o começo da resposta citada com estes ids (web, Windows e Mac).
 const INICIOS_DO_OUTLOOK = [
   '#divRplyFwdMsg',
@@ -38,6 +48,12 @@ export const cortarCitacaoDosLeitores = raiz => {
   raiz.querySelectorAll('blockquote[type="cite"]').forEach(bloco => {
     achou = true;
     bloco.remove();
+  });
+  MARCAS_DOS_LEITORES.forEach(seletor => {
+    raiz.querySelectorAll(seletor).forEach(bloco => {
+      achou = true;
+      bloco.remove();
+    });
   });
 
   const inicio =

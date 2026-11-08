@@ -1,21 +1,33 @@
+# #1931: custom_role_manage builds roles; people_manage also reads them, to pick one when adding someone. What a
+# person may build or hand out is checked by CustomRoles::GrantGuard.
 class CustomRolePolicy < ApplicationPolicy
   def index?
-    @account_user.administrator?
+    read?
   end
 
   def update?
-    @account_user.administrator?
+    manage?
   end
 
   def show?
-    @account_user.administrator?
+    read?
   end
 
   def create?
-    @account_user.administrator?
+    manage?
   end
 
   def destroy?
-    @account_user.administrator?
+    manage?
+  end
+
+  private
+
+  def read?
+    manage? || @account_user.permission_granted?('people_manage')
+  end
+
+  def manage?
+    @account_user.permission_granted?('custom_role_manage')
   end
 end

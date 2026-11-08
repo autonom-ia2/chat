@@ -7,16 +7,24 @@ import {
   AUTOMATION_PERMISSIONS,
   CRM_MANAGE_AI_PERMISSION,
   CRM_ADMIN_PERMISSION,
+  PEOPLE_MANAGE_PERMISSION,
+  CUSTOM_ROLE_MANAGE_PERMISSION,
+  FINANCIAL_VIEW_PERMISSION,
+  FINANCIAL_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions.js';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 const SettingsInicioPage = () => import('./SettingsInicioPage.vue');
 
 // Chaves que abrem a página de cartões além das telas de Configurações de sempre: quem cuida da IA do CRM vê o
-// cartão da passagem. O settings_home (/settings) aceita as mesmas, para o endereço digitado chegar aqui.
+// cartão da passagem; quem vê ou muda os custos da conta, o cartão "Custos do WhatsApp" (#1969; a função guarda só a
+// chave mais alta, então financial_manage entra junto). O settings_home (/settings)
+// aceita as mesmas, para o endereço digitado chegar aqui.
 export const CHAVES_EXTRAS_DO_INICIO = [
   CRM_MANAGE_AI_PERMISSION,
   CRM_ADMIN_PERMISSION,
+  FINANCIAL_VIEW_PERMISSION,
+  FINANCIAL_MANAGE_PERMISSION,
 ];
 
 // Página inicial de Configurações em cartões (#1617), só com o menu novo ligado na conta. Quem abre: quem já
@@ -39,6 +47,8 @@ export const routes = [
         'macro_manage',
         ...AUTOMATION_PERMISSIONS,
         'sla_manage',
+        PEOPLE_MANAGE_PERMISSION,
+        CUSTOM_ROLE_MANAGE_PERMISSION,
         // Quem cuida da IA do CRM chega na passagem pelo cartão "Passar para uma pessoa".
         ...CHAVES_EXTRAS_DO_INICIO,
       ],

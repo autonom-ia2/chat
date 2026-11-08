@@ -47,7 +47,8 @@ RSpec.describe 'Mensagens com o modelo usado', type: :request do
     get "/api/v1/accounts/#{account.id}/conversations/#{conversa.display_id}/messages", headers: agente.create_new_auth_token, as: :json
 
     mensagem = response.parsed_body['payload'].find { |m| m['content'] == 'Vitrine' }
-    expect(mensagem['additional_attributes']).to eq('template_params' => { 'name' => 'vitrine', 'enviado' => enviado })
+    expect(mensagem['additional_attributes'])
+      .to eq('campaign_id' => 7, 'campaign_template_name' => 'vitrine', 'template_params' => { 'name' => 'vitrine', 'enviado' => enviado })
   end
 
   it 'na mensagem da jornada de campanha usa o nome gravado pela campanha' do
@@ -60,7 +61,21 @@ RSpec.describe 'Mensagens com o modelo usado', type: :request do
 
     mensagens = response.parsed_body['payload']
     expect(mensagens.find { |m| m['content'] == 'Promo' }['additional_attributes'])
-      .to eq('template_params' => { 'name' => 'promo_outubro' })
-    expect(mensagens.find { |m| m['content'] == 'Livre' }).not_to have_key('additional_attributes')
+      .to eq('campaign_id' => 7, 'campaign_template_name' => 'promo_outubro', 'template_params' => { 'name' => 'promo_outubro' })
+    expect(mensagens.find { |m| m['content'] == 'Livre' }['additional_attributes']).to eq('campaign_id' => 7)
+  end
+
+  # #2049: o rótulo com o nome da campanha lê o id da campanha; sem ele na lista, o rótulo sumia ao recarregar.
+  it 'traz de qual campanha veio, também na campanha da API do WhatsApp, e só isso dos atributos da campanha' do
+    create(:message, conversation: conversa, account: account, inbox: caixa, message_type: :outgoing, content: 'Disparo',
+                     additional_attributes: { 'whatsapp_api_campaign_id' => 12, 'whatsapp_api_campaign_recipient_id' => 345 })
+    create(:message, conversation: conversa, account: account, inbox: caixa, message_type: :outgoing, content: 'Comum',
+                     additional_attributes: { 'campaign_id' => nil, 'outro' => 'x' })
+
+    get "/api/v1/accounts/#{account.id}/conversations/#{conversa.display_id}/messages", headers: agente.create_new_auth_token, as: :json
+
+    mensagens = response.parsed_body['payload']
+    expect(mensagens.find { |m| m['content'] == 'Disparo' }['additional_attributes']).to eq('whatsapp_api_campaign_id' => 12)
+    expect(mensagens.find { |m| m['content'] == 'Comum' }).not_to have_key('additional_attributes')
   end
 end

@@ -2,6 +2,7 @@ import { shallowMount } from '@vue/test-utils';
 import { createStore } from 'vuex';
 import ConfigurationPage from '../ConfigurationPage.vue';
 import SmtpSettings from '../../SmtpSettings.vue';
+import HmacSecretKey from '../components/HmacSecretKey.vue';
 import { useAlert } from 'dashboard/composables';
 
 const { runEmbeddedSignup, getInboxes } = vi.hoisted(() => ({
@@ -18,7 +19,9 @@ vi.mock('dashboard/composables/useWhatsappEmbeddedSignup', () => ({
   SIGNUP_TIMEOUT_CODE: 'WHATSAPP_SIGNUP_TIMEOUT',
 }));
 
-const mountComponent = inbox =>
+const ADMIN = ['administrator'];
+
+const mountComponent = (inbox, permissions = ADMIN) =>
   shallowMount(ConfigurationPage, {
     props: { inbox },
     global: {
@@ -26,6 +29,8 @@ const mountComponent = inbox =>
         createStore({
           getters: {
             'globalConfig/isOnChatwootCloud': () => true,
+            getCurrentUser: () => ({ accounts: [{ id: 1, permissions }] }),
+            getCurrentAccountId: () => 1,
           },
           actions: { 'inboxes/get': getInboxes },
         }),
@@ -76,6 +81,44 @@ describe('ConfigurationPage', () => {
     expect(wrapper.text()).toContain(
       'INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_RECONFIGURE_BUTTON'
     );
+  });
+
+  // #2027: trocar a credencial de uma caixa existente pede integration_manage.
+  it('hides IMAP/SMTP and the WhatsApp reconfigure without integration_manage', () => {
+    const emailPage = mountComponent({ channel_type: 'Channel::Email' }, [
+      'inbox_manage',
+    ]);
+    expect(emailPage.findComponent(SmtpSettings).exists()).toBe(false);
+
+    const whatsappPage = mountComponent(
+      {
+        channel_type: 'Channel::Whatsapp',
+        provider: 'whatsapp_cloud',
+        provider_config: { source: 'embedded_signup' },
+      },
+      ['inbox_manage']
+    );
+    expect(whatsappPage.vm.showWhatsAppReconfigure).toBe(false);
+  });
+
+  it('shows IMAP/SMTP to a role with integration_manage', () => {
+    const wrapper = mountComponent({ channel_type: 'Channel::Email' }, [
+      'integration_manage',
+    ]);
+    expect(wrapper.findComponent(SmtpSettings).exists()).toBe(true);
+  });
+
+  it('shows the HMAC key only when the server sent the token', () => {
+    const without = mountComponent({ channel_type: 'Channel::Api' }, [
+      'inbox_manage',
+    ]);
+    expect(without.findComponent(HmacSecretKey).exists()).toBe(false);
+
+    const withToken = mountComponent(
+      { channel_type: 'Channel::Api', hmac_token: 'hmac' },
+      ['token_manage']
+    );
+    expect(withToken.findComponent(HmacSecretKey).exists()).toBe(true);
   });
 
   it('does not show the WhatsApp reconfigure option for manual WhatsApp inboxes', () => {

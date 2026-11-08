@@ -12,7 +12,7 @@ RSpec.describe Crm::Ai::ScoreApplier do
   let(:signals) do
     {
       next_stage_readiness: 'pronta', intent: 'alta', urgency: 'imediata',
-      decision_maker: 'sim', blocker: 'nenhum', last_turn_owner: 'cliente',
+      decision_maker: 'sim', blocker: 'nenhum', ready_to_close: 'nao_se_aplica', buying_signal: true,
       unfulfilled_promise: false, unreadable: false, reason: 'Pediu link de pagamento'
     }
   end
@@ -44,6 +44,59 @@ RSpec.describe Crm::Ai::ScoreApplier do
       'source' => 'ai',
       'stage_id' => stage.id
     )
+  end
+
+  # #1962: quem espera vem do banco. Mesmos sinais fracos; muda só quem mandou a última mensagem real.
+  describe 'cliente esperando, lido do banco' do
+    let(:inbox) { create_crm_inbox(account: account, members: [admin]) }
+    let(:conversation) do
+      contact = account.contacts.create!(name: 'Lead', phone_number: '+5511988887777')
+      create_crm_conversation(account: account, inbox: inbox, contact: contact)
+    end
+    let(:weak_signals) do
+      { next_stage_readiness: 'inicial', intent: 'baixa', urgency: 'nenhuma', decision_maker: 'desconhecido',
+        blocker: 'nenhum', ready_to_close: 'nao_se_aplica', buying_signal: false, awaiting_our_reply: true,
+        unfulfilled_promise: false, unreadable: false, reason: 'Cliente perguntou e ninguém respondeu' }
+    end
+
+    def message(type, at)
+      conversation.messages.create!(account: account, inbox: inbox, content: 'x', message_type: type, created_at: at,
+                                    sender: type == :incoming ? conversation.contact : admin)
+    end
+
+    before do
+      enable_score!
+      card.update!(conversation_id: conversation.id)
+    end
+
+    it 'segura no piso de quente quando o cliente falou por último' do
+      message(:outgoing, 6.days.ago)
+      message(:incoming, 5.days.ago)
+
+      described_class.new(card: card, signals: weak_signals).perform
+
+      expect(card.reload.metadata.dig('ai', 'score', 'tier')).to eq('quente')
+      expect(card.metadata.dig('ai', 'score', 'breakdown', 'customer_waiting')).to be > 0
+    end
+
+    # "Obrigado, vou pensar": a última fala é do cliente, mas o modelo diz que não há o que responder.
+    it 'não segura o piso quando a fala do cliente não pede resposta nossa' do
+      message(:outgoing, 6.days.ago)
+      message(:incoming, 5.days.ago)
+
+      described_class.new(card: card, signals: weak_signals.merge(awaiting_our_reply: false)).perform
+
+      expect(card.reload.metadata.dig('ai', 'score', 'tier')).to eq('frio')
+    end
+
+    it 'deixa esfriar quando nós respondemos por último' do
+      message(:incoming, 6.days.ago)
+      message(:outgoing, 5.days.ago)
+
+      described_class.new(card: card, signals: weak_signals).perform
+
+      expect(card.reload.metadata.dig('ai', 'score', 'tier')).to eq('frio')
+    end
   end
 
   it 'does not overwrite a manual score while the card stays in the same stage' do

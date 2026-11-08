@@ -122,6 +122,32 @@ RSpec.describe 'Messages API and the WAHA rich native contract', type: :request 
     expect(created.content_attributes).not_to have_key('revogada_no_canal')
   end
 
+  # #1941, item 3: o autor do eco do celular é calculado pelo chat2you (Waha::EcoDoCelular), nunca vem da API.
+  describe 'c2y_phone_author_id' do
+    let(:joao) { create(:user, account: account, role: :agent) }
+    let(:outro) { create(:user, account: account, role: :agent) }
+
+    before do
+      channel.update!(additional_attributes: channel.additional_attributes.merge('account_token_owner_user_id' => admin.id))
+      conversation.update!(assignee: joao)
+    end
+
+    it 'records the assignee on the connector echo, ignoring a forged author, and strips the prefix' do
+      message = create_message(content: "*📱 Enviado do WhatsApp*\n\nOi", message_type: 'outgoing',
+                               content_attributes: { external_echo: true, c2y_phone_author_id: outro.id })
+
+      expect(message.content).to eq('Oi')
+      expect(message.content_attributes['c2y_phone_author_id']).to eq(joao.id)
+      expect(message.sender).to eq(admin)
+    end
+
+    it 'drops a forged author from a message that is not an echo' do
+      message = create_message(content: 'Oi', content_attributes: { c2y_phone_author_id: outro.id, outro: 'fica' })
+
+      expect(message.content_attributes).to eq('outro' => 'fica')
+    end
+  end
+
   it 'drops a forged view_once_unavailable from a message created by the API' do
     message = create_message(content: 'Oi', content_attributes: { view_once_unavailable: true, outro: 'fica' })
 

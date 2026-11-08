@@ -3,7 +3,16 @@ import { computed, ref, useTemplateRef } from 'vue';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import { SINAIS } from './modeloPronto';
 import { htmlDePrevia } from 'dashboard/components-next/conversa-canal/email/modeloDeEmail';
-import { remetenteDoEmail } from 'dashboard/components-next/conversa-canal/email/dadosDoEmail';
+import { Letter } from 'vue-letter';
+import {
+  remetenteDoEmail,
+  semRastreio,
+} from 'dashboard/components-next/conversa-canal/email/dadosDoEmail';
+import {
+  imagemSemRastreio,
+  linkSemRastreio,
+} from 'dashboard/components-next/conversa-canal/email/documentoDoEmail';
+import { htmlDoTextoComImagens } from 'dashboard/components-next/conversa-canal/email/imagemNoTextoDoEmail';
 
 // #1459 — um e-mail como cartão: de quem, assunto e corpo. Serve à prévia e à
 // confirmação. O editor entrega o corpo com marcação de formatação; aqui ele
@@ -55,6 +64,11 @@ const textoCitado = computed(() => {
     email.text_content?.full || props.historico?.content || ''
   ).trim();
 });
+// #1942: imagem embutida pelo Chatwoot no texto puro aparece como imagem, pelo Letter
+// (que sanitiza), nunca como tag crua. Sem imagem, o texto segue como texto.
+const htmlCitado = computed(() => htmlDoTextoComImagens(textoCitado.value));
+const imagemDaPrevia = imagemSemRastreio(semRastreio);
+const linkDaPrevia = linkSemRastreio(semRastreio);
 </script>
 
 <template>
@@ -113,7 +127,20 @@ const textoCitado = computed(() => {
       <p class="mb-2 text-n-slate-11">
         {{ $t(`${P}.HISTORICO`, { nome: quemCitou }) }}
       </p>
+      <div
+        v-if="htmlCitado"
+        class="max-h-48 overflow-hidden whitespace-pre-wrap break-words border-s-2 border-n-slate-6 ps-3 text-n-slate-11 [&_img]:max-h-32 [&_img]:max-w-full [&_img]:object-contain"
+        data-previa-do-historico-com-imagem
+      >
+        <Letter
+          class-name="letter-render"
+          :html="htmlCitado"
+          :rewrite-external-resources="imagemDaPrevia"
+          :rewrite-external-links="linkDaPrevia"
+        />
+      </div>
       <p
+        v-else
         class="mb-0 max-h-48 overflow-hidden whitespace-pre-wrap break-words border-s-2 border-n-slate-6 ps-3 text-n-slate-11"
       >
         {{ textoCitado }}

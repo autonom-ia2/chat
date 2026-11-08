@@ -58,6 +58,16 @@ RSpec.describe Crm::Cards::Closer do
     expect(activity.payload['closed_with']).to eq(snapshot(card, nil))
   end
 
+  # IA entende a conversa F3: o fechamento da IA leva quem fechou e o motivo; o desfecho e o responsável não mudam.
+  it 'leva o payload_extra na atividade, sem trocar o motivo nem o responsável' do
+    card = card_in(sale)
+    described_class.new(card: card, actor: nil, result: 'lost', lost_reason: 'Adiou',
+                        payload_extra: { by: 'ai', motivo: 'adiou', lost_reason: 'outro' }).perform
+
+    expect(card.activities.order(:id).last.payload)
+      .to include('by' => 'ai', 'motivo' => 'adiou', 'lost_reason' => 'Adiou', 'closed_with' => be_present)
+  end
+
   it 'não grava nada ao reabrir' do
     card = card_in(sale)
     close(card, 'won')

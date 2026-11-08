@@ -231,6 +231,14 @@ RSpec.describe SamlUserBuilder do
           account_user = AccountUser.find_by(user: user, account: account)
           expect(account_user.custom_role_id).to be_nil
         end
+
+        it 'ignores a mapping to a role of another account (#1931)' do
+          account.enable_features!('custom_roles')
+          saml_settings.update!(role_mappings: { 'Administrators' => { 'custom_role_id' => create(:custom_role).id } })
+
+          user = builder.perform
+          expect(AccountUser.find_by(user: user, account: account).custom_role_id).to be_nil
+        end
       end
 
       context 'when user is not in any mapped groups' do

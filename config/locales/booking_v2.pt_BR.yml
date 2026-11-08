@@ -37,7 +37,7 @@ pt_BR:
         stop_button_label: "Parar avisos"
         test_prefix: "Este é um teste da sua página de agendamento. Seu cliente recebe um link igual a este:"
       notice_templates:
-        platform_reason: "Mensagem pronta feita para este aviso e aprovada pela Meta."
+        platform_reason: "Mensagem aprovada pela Meta, feita para este aviso."
       notice_texts:
         sample_name: "Ana"
         ai_failed: "Não conseguimos escrever agora. Tente de novo ou escreva do seu jeito."

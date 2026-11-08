@@ -113,6 +113,9 @@ const RECHEIO = [
   // linha da hora; sem o espaço a mais, ele cobria o fim do texto.
   '[&[data-bubble-name=text]:has([data-transporte])_.prose-bubble>p:last-child]:after:!w-[210px]',
   '[&[data-bubble-name=text]:has([data-transporte]):has([data-rotulo-editada])_.prose-bubble>p:last-child]:after:!w-[262px]',
+  // Mandada pelo celular (#1941): o 📱 entra antes da hora; sem o espaço a mais, cobria o fim do texto.
+  '[&[data-bubble-name=text]:has([data-eco-do-celular])_.prose-bubble>p:last-child]:after:!w-[84px]',
+  '[&[data-bubble-name=text]:has([data-eco-do-celular]):has([data-rotulo-editada])_.prose-bubble>p:last-child]:after:!w-[136px]',
 ].join(' ');
 
 // Citação (resposta a uma mensagem): faixa verde à esquerda e fundo levemente
@@ -286,11 +289,17 @@ export const TOPO_DA_CONVERSA =
 // pílula é feita de três peças lado a lado (ícones, campo, botão), cada uma com a sua
 // ponta arredondada. A escolha "Responder / Mensagem privada" fica em cima, pequena.
 // O Tailwind só gera classe escrita por extenso: cada peça tem a sua lista completa.
+// Sombra de cada pílula como box-shadow, nunca filter na caixa: filter (como transform)
+// vira o bloco de contenção de todo position: fixed lá dentro, e o modal de modelos,
+// a confirmação e a área de soltar anexos ficavam presos à caixa, não à tela (#1986).
+// Sem desfoque: a sombra de uma peça não vaza sobre a vizinha e não marca a emenda.
 const PILULA_ESQUERDA = [
+  '[&_.left-wrap]:shadow-[0_1px_0_rgba(0,0,0,0.08)]',
   '[&_.left-wrap]:order-1 [&_.left-wrap]:!gap-0 [&_.left-wrap]:ps-1.5 [&_.left-wrap]:min-h-[52px] [&_.left-wrap]:flex [&_.left-wrap]:items-center',
   '[&_.left-wrap]:bg-white dark:[&_.left-wrap]:bg-[#242626] ltr:[&_.left-wrap]:rounded-l-[26px] rtl:[&_.left-wrap]:rounded-r-[26px]',
 ].join(' ');
 const PILULA_DIREITA = [
+  '[&_.right-wrap]:shadow-[0_1px_0_rgba(0,0,0,0.08)]',
   '[&_.right-wrap]:order-3 [&_.right-wrap]:pe-1.5 [&_.right-wrap]:min-h-[52px] [&_.right-wrap]:flex [&_.right-wrap]:items-center',
   '[&_.right-wrap]:bg-white dark:[&_.right-wrap]:bg-[#242626] ltr:[&_.right-wrap]:rounded-r-[26px] rtl:[&_.right-wrap]:rounded-l-[26px]',
 ].join(' ');
@@ -300,7 +309,7 @@ export const CAIXA_DE_RESPOSTA = {
   barra: `${PAPEL_DE_PAREDE} [&_.cursor-row-resize]:!hidden`,
   caixa: [
     '!mx-0 !mb-0 !rounded-none !border-0 !bg-transparent',
-    'flex flex-wrap items-stretch gap-x-0 px-4 pb-3 [filter:drop-shadow(0_1px_1px_rgba(0,0,0,0.08))]',
+    'flex flex-wrap items-stretch gap-x-0 px-4 pb-3',
     '[&>*:first-child]:basis-full [&>*:first-child]:!h-9',
     PILULA_ESQUERDA,
     // No celular os ícones ficam numa pílula própria e o campo ganha a largura toda.
@@ -315,6 +324,7 @@ export const CAIXA_DE_RESPOSTA = {
   ].join(' '),
   campo: [
     // flex-wrap: a citação e o assunto do CRM ocupam uma linha inteira em cima do texto.
+    'shadow-[0_1px_0_rgba(0,0,0,0.08)]',
     'order-2 flex-1 min-w-0 !mx-0 !px-2 !py-[14px] min-h-[52px] flex flex-wrap content-center items-center rounded-none !bg-white dark:!bg-[#242626]',
     'max-md:ltr:rounded-l-[26px] max-md:rtl:rounded-r-[26px] max-md:!ps-4',
     'text-[15px] text-[#0A0A0A] dark:text-[#FAFAFA]',

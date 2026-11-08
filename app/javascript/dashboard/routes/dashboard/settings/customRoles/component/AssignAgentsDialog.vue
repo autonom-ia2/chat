@@ -6,6 +6,7 @@ import { useStore, useMapGetter } from 'dashboard/composables/store';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
+import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 
 const emit = defineEmits(['done']);
 
@@ -26,9 +27,11 @@ const onClose = () => {
   emit('done');
 };
 
-// Administrators keep full access; a custom role would only hide their admin screens.
+// Administrators keep full access; a custom role would only hide their admin screens. Nobody gives a role to
+// themselves, nor to someone whose current role is out of their reach (#1931).
+const { canTouchMember } = usePeopleAccess();
 const candidates = computed(() =>
-  agents.value.filter(agent => agent.role === 'agent')
+  agents.value.filter(agent => agent.role === 'agent' && canTouchMember(agent))
 );
 
 const toggle = id => {

@@ -724,6 +724,49 @@ describe('AgenteCriarPage', () => {
     wrapper.unmount();
   });
 
+  // #1427 — na Fase 2 o servidor confere a foto do teste: a recusada mostra o motivo, sai do celular e devolve o texto.
+  it('shows why the server refused the photo of the test and gives the written text back', async () => {
+    const recusa = Object.assign(new Error('422'), {
+      response: {
+        status: 422,
+        data: {
+          code: 'foto_recusada',
+          error: 'Mande uma foto parada. Foto animada não dá para ler.',
+        },
+      },
+    });
+    prepararStore({ teste: recusa });
+    const { createObjectURL, revokeObjectURL } = URL;
+    URL.createObjectURL = () => 'blob:x';
+    URL.revokeObjectURL = () => {};
+    const wrapper = await montar({ query: { agente: '90' } });
+    const confira = wrapper.get('[data-confira]');
+    const seletor = confira.get('input[type="file"]');
+    Object.defineProperty(seletor.element, 'files', {
+      value: [new File(['x'], 'animada.gif', { type: 'image/gif' })],
+    });
+    await seletor.trigger('change');
+    await confira.get('textarea').setValue('Quanto custa este?');
+    await confira.get('form').trigger('submit');
+
+    await vi.waitFor(() =>
+      expect(wrapper.find('[data-erro-teste]').exists()).toBe(true)
+    );
+    await flushPromises();
+    const erro = wrapper.get('[data-erro-teste]');
+    expect(erro.text()).toContain(
+      'Mande uma foto parada. Foto animada não dá para ler.'
+    );
+    expect(erro.find('button').exists()).toBe(false);
+    expect(wrapper.find('[data-balao="cliente"]').exists()).toBe(false);
+    expect(wrapper.get('[data-confira] textarea').element.value).toBe(
+      'Quanto custa este?'
+    );
+    wrapper.unmount();
+    URL.createObjectURL = createObjectURL;
+    URL.revokeObjectURL = revokeObjectURL;
+  });
+
   it('a photo without text in the test goes with a default text and shows in the customer bubble', async () => {
     // O jsdom não tem prévia de arquivo; o campo pede uma para mostrar a foto antes de mandar.
     const { createObjectURL, revokeObjectURL } = URL;
@@ -795,6 +838,75 @@ describe('AgenteCriarPage', () => {
     expect(corpo().textContent).toContain(
       'AGENTS.JORNADA.ONDE_QUANDO.SEM_LEITURA'
     );
+    wrapper.unmount();
+  });
+
+  // #2489 (5b): o dono pediu Instagram e a conta tem também um WhatsApp livre; sem certeza, a pessoa escolhe.
+  it('with more than one free inbox, the button says "choose channel" and Comece opens with none marked', async () => {
+    jornada.canaisOcupados.mockResolvedValue({
+      data: {
+        payload: [
+          ...L2,
+          {
+            inbox_id: 15,
+            name: 'Instagram da Loja',
+            channel_type: 'Channel::Instagram',
+            occupied_by: null,
+          },
+        ],
+      },
+    });
+    const wrapper = await montar({ query: { agente: '90' } });
+    await wrapper.get('[data-perguntas] button').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-comecar] button').text()).toBe(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.ESCOLHER_CANAL'
+    );
+    expect(wrapper.find('[data-sem-canal]').exists()).toBe(false);
+    await wrapper.get('[data-comecar] button').trigger('click');
+    await flushPromises();
+
+    const comece = wrapper.findComponent({ name: 'EtapaComece' });
+    expect(comece.exists()).toBe(true);
+    expect(comece.props('ondeInicial')).toBeNull();
+    expect(canaisApi.connect).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('with only a busy inbox, the button says "choose channel" and nothing is marked', async () => {
+    jornada.canaisOcupados.mockResolvedValue({ data: { payload: [L2[1]] } });
+    const wrapper = await montar({ query: { agente: '90' } });
+    await wrapper.get('[data-perguntas] button').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-comecar] button').text()).toBe(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.ESCOLHER_CANAL'
+    );
+    await wrapper.get('[data-comecar] button').trigger('click');
+    await flushPromises();
+    expect(
+      wrapper.findComponent({ name: 'EtapaComece' }).props('ondeInicial')
+    ).toBeNull();
+    wrapper.unmount();
+  });
+
+  // Achado do tester (#2489): uma livre e uma ocupada, as duas fora do alcance, abriam um Comece todo bloqueado.
+  it('with every inbox out of reach (one free, one busy), shows the notice and no empty button', async () => {
+    jornada.canaisOcupados.mockResolvedValue({
+      data: {
+        payload: [
+          { ...L2[0], alcanca: false },
+          { ...L2[1], alcanca: false },
+        ],
+      },
+    });
+    const wrapper = await montar({ query: { agente: '90' } });
+    await wrapper.get('[data-perguntas] button').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-comecar]').exists()).toBe(false);
+    expect(wrapper.find('[data-sem-canal]').exists()).toBe(true);
     wrapper.unmount();
   });
 

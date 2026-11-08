@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { frontendURL } from 'dashboard/helper/URLHelper.js';
 import { dynamicTime } from 'shared/helpers/timeHelper';
 import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { getInboxIconByType, tipoDoIconeDaCaixa } from 'dashboard/helper/inbox';
 import { useInbox } from 'dashboard/composables/useInbox';
 import { ATTACHMENT_TYPES } from 'dashboard/components-next/message/constants.js';
 
@@ -71,8 +71,13 @@ const inboxName = computed(() => inbox.value?.name);
 
 const inboxIcon = computed(() => {
   if (!inbox.value) return null;
-  const { channelType, medium, voiceEnabled } = inbox.value;
-  return getInboxIconByType(channelType, medium, 'fill', voiceEnabled);
+  const { medium, voiceEnabled } = inbox.value;
+  return getInboxIconByType(
+    tipoDoIconeDaCaixa(inbox.value),
+    medium,
+    'fill',
+    voiceEnabled
+  );
 });
 
 const fileAttachments = computed(() => {

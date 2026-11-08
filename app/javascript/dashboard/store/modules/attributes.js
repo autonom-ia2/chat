@@ -2,6 +2,11 @@ import * as MutationHelpers from 'shared/helpers/vuex/mutationHelpers';
 import types from '../mutation-types';
 import AttributeAPI from '../../api/attributes';
 import camelcaseKeys from 'camelcase-keys';
+import { semAtributosInternosDoWhatsapp } from 'dashboard/helper/atributosInternosDoWhatsapp';
+
+// Fork (#2138): os campos internos da WAHA não saem para nenhuma tela. Ficam em
+// records (e no servidor), só os getters os deixam de fora.
+const visiveis = records => semAtributosInternosDoWhatsapp(records);
 
 export const state = {
   records: [],
@@ -20,30 +25,30 @@ export const getters = {
     return _state.uiFlags;
   },
   getAttributes: _state => {
-    return _state.records;
+    return visiveis(_state.records);
   },
   getConversationAttributes: _state => {
-    return _state.records
+    return visiveis(_state.records)
       .filter(record => record.attribute_model === 'conversation_attribute')
       .map(camelcaseKeys);
   },
   getContactAttributes: _state => {
-    return _state.records
+    return visiveis(_state.records)
       .filter(record => record.attribute_model === 'contact_attribute')
       .map(camelcaseKeys);
   },
   getCompanyAttributes: _state => {
-    return _state.records
+    return visiveis(_state.records)
       .filter(record => record.attribute_model === 'company_attribute')
       .map(camelcaseKeys);
   },
   getCardAttributes: _state => {
-    return _state.records
+    return visiveis(_state.records)
       .filter(record => record.attribute_model === 'card_attribute')
       .map(camelcaseKeys);
   },
   getAttributesByModel: _state => attributeModel => {
-    return _state.records.filter(
+    return visiveis(_state.records).filter(
       record => record.attribute_model === attributeModel
     );
   },

@@ -22,6 +22,7 @@ const getViewKey = ({
   queryData,
   daIa,
   esperandoMin,
+  noFunil,
 }) =>
   JSON.stringify([
     ConversationApi.url,
@@ -34,6 +35,7 @@ const getViewKey = ({
       // #1883: com o filtro do link, a contagem das abas é outra.
       daIa,
       esperandoMin,
+      noFunil,
     },
   ]);
 

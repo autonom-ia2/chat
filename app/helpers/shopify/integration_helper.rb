@@ -1,5 +1,7 @@
 module Shopify::IntegrationHelper
   REQUIRED_SCOPES = %w[read_customers read_orders read_fulfillments].freeze
+  # The state only has to survive the trip to Shopify and back (#2027).
+  STATE_TTL = 15.minutes
 
   # Generates a signed JWT token for Shopify integration
   #
@@ -17,7 +19,8 @@ module Shopify::IntegrationHelper
   def token_payload(account_id)
     {
       sub: account_id,
-      iat: Time.current.to_i
+      iat: Time.current.to_i,
+      exp: (Time.current + STATE_TTL).to_i
     }
   end
 
@@ -48,7 +51,8 @@ module Shopify::IntegrationHelper
       true,
       {
         algorithm: 'HS256',
-        verify_expiration: true
+        verify_expiration: true,
+        required_claims: ['exp']
       }
     ).first['sub']
   rescue StandardError => e

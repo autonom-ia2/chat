@@ -7,19 +7,26 @@ class Captain::CustomToolPolicy < ApplicationPolicy
     true
   end
 
+  # A tool calls an outside endpoint with the account's credentials (#2027): admin or integration_manage.
   def create?
-    @account_user.administrator?
+    integration_manage?
   end
 
   def test?
-    @account_user.administrator?
+    integration_manage?
   end
 
   def update?
-    @account_user.administrator?
+    integration_manage?
   end
 
   def destroy?
-    @account_user.administrator?
+    integration_manage?
+  end
+
+  private
+
+  def integration_manage?
+    @account_user.permission_granted?('integration_manage')
   end
 end

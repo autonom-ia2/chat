@@ -15,11 +15,12 @@ module Whatsapp::Templates::ReenvioDoModelo::Midia
 
   module_function
 
-  # processed_params com os links nossos assinados de novo, ou nil quando um arquivo nosso sumiu.
-  def renovar(processed, account_id)
+  # processed_params com os arquivos nossos de novo pela caixa de destino (id da mídia subido nela, #2367, ou link
+  # assinado novo), ou nil quando um arquivo nosso sumiu.
+  def renovar(processed, inbox)
     processed = processed.to_h
-    header = renovado(processed['header'], account_id)
-    cards = cartoes(processed).map { |card| cartao_renovado(card, account_id) }
+    header = renovado(processed['header'], inbox)
+    cards = cartoes(processed).map { |card| cartao_renovado(card, inbox) }
     return if header == SUMIU || cards.include?(SUMIU)
 
     processed = processed.merge('header' => header) if processed.key?('header')
@@ -31,21 +32,25 @@ module Whatsapp::Templates::ReenvioDoModelo::Midia
     carousel.is_a?(Hash) ? Array(carousel['cards']) : []
   end
 
-  def cartao_renovado(card, account_id)
+  def cartao_renovado(card, inbox)
     return card unless card.is_a?(Hash)
 
-    header = renovado(card['header'], account_id)
+    header = renovado(card['header'], inbox)
     header == SUMIU ? SUMIU : card.merge('header' => header)
   end
 
-  def renovado(header, account_id)
-    return header unless header.is_a?(Hash) && header['media_url'].present?
+  # O id gravado no envio original nunca é reaproveitado: vale para a caixa que subiu e vence em 30 dias (Meta).
+  def renovado(header, inbox)
+    return header unless header.is_a?(Hash)
+
+    header = header.except('media_id')
+    return header if header['media_url'].blank?
 
     blob, nosso = arquivo_do_link(header['media_url'].to_s)
     return header unless nosso
-    return SUMIU unless blob && da_conta?(blob, account_id)
+    return SUMIU unless blob && da_conta?(blob, inbox.account_id)
 
-    header.merge(Whatsapp::Templates::HeaderMedia.signed_media(blob))
+    header.merge(Whatsapp::Templates::HeaderMedia.dispatch_file(blob, inbox))
   end
 
   # [blob, nosso?]: link do caminho do Rails é sempre nosso (blob nil = sumiu); na nuvem, só quando a chave existe.

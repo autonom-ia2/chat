@@ -8,15 +8,15 @@
 # - Trava: uma leitura por contato de cada vez (dois e-mails seguidos não pagam duas leituras que gravam por cima).
 # - Leitura única por mensagem: a nova tentativa do job não paga a IA de novo pelo mesmo e-mail.
 # - Teto diário de chamadas por conta e, quando a IA é paga pela chave da instalação, também um teto da instalação
-#   inteira (o teto por conta sozinho deixaria N contas x 500 chamadas por dia na mesma chave).
+#   inteira (o teto por conta sozinho deixaria N contas x 5000 chamadas por dia na mesma chave).
 class Autonomia::ContatoPeloEmail::Freios
   PREFIXO = 'autonomia:contato_pelo_email'.freeze
   AUTOMATICOS_PARA_PAUSAR = 3
   AUTOMATICOS_POR = 30.days
   PAUSA_AUTOMATICOS = 30.days
   PAUSA_NADA_NOVO = 24.hours
-  TETO_DIARIO = 500
-  TETO_DIARIO_DA_INSTALACAO = 2000
+  TETO_DIARIO = 5000
+  TETO_DIARIO_DA_INSTALACAO = 20_000
   TRAVA_POR = 5.minutes
   LIDO_POR = 1.day
   SEPARADOR = ':'.freeze

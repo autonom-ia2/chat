@@ -1,12 +1,14 @@
-# Carga das ligações conversa → anúncio dos últimos WINDOW (#1073, F2b). Roda uma vez por conexão: ao abrir a
-# tela ou na rodada das 4h, enquanto `links_backfilled_at` estiver vazio. Lê só o banco (os toques já gravados e
+# Carga das ligações conversa → anúncio dos últimos WINDOW (#1073, F2b). Roda uma vez por conexão: ao conectar
+# (Setup#save!), ao abrir a tela ou na rodada das 4h, enquanto `links_backfilled_at` estiver vazio. A janela é a do
+# "desde o início" do painel (Panel::Period::MAX_MONTHS, #2054): quem conecta depois de meses de anúncio sem login
+# não perde nenhuma conversa do histórico. Lê só o banco (os toques já gravados e
 # o cache de nomes); não chama a Meta.
 #
 # Uma carga por conexão de cada vez (RUNNING_KEY, solta no fim). Avisa a tela aberta quando termina.
 class Crm::MetaAds::LinksBackfillJob < ApplicationJob
   queue_as :low
 
-  WINDOW = 90.days
+  WINDOW = Crm::MetaAds::Panel::Period::MAX_MONTHS.months
   RUNNING_KEY = 'crm:meta_ads:links:backfill'.freeze
   RUNNING_TTL = 1.hour
 
@@ -30,10 +32,16 @@ class Crm::MetaAds::LinksBackfillJob < ApplicationJob
 
   private
 
-  # Gravar um toque atualiza a conversa: quem teve toque na janela tem updated_at dentro dela.
+  # Gravar um toque atualiza a conversa: quem teve toque na janela tem updated_at dentro dela. A conversa do privado de
+  # um comentário de anúncio (#2521) entra pela linha do privado.
   def candidates(connection)
-    Conversation.where(account_id: connection.account_id)
-                .where(updated_at: WINDOW.ago..)
-                .where("conversations.additional_attributes ? 'campaign_touches'")
+    scope = Conversation.where(account_id: connection.account_id).where(updated_at: WINDOW.ago..)
+    scope.where("conversations.additional_attributes ?| array['campaign_touches', 'campaign']")
+         .or(scope.where(id: comment_conversation_ids(connection)))
+  end
+
+  def comment_conversation_ids(connection)
+    Crm::MetaAdsCommentAction.where(account_id: connection.account_id, action: 'private_reply')
+                             .where.not(ad_id: [nil, '']).where.not(conversation_id: nil).select(:conversation_id)
   end
 end

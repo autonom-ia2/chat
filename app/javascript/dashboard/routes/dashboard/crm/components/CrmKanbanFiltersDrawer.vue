@@ -7,6 +7,7 @@ import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState'
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import { useCrmPermissions } from '../composables/useCrmPermissions';
 
 const props = defineProps({
   // #1498 — funil de Atender: "Meus atendimentos", sem falar de venda.
@@ -31,12 +32,22 @@ const props = defineProps({
   staleChoices: { type: Array, default: () => [] },
   linkedChoices: { type: Array, default: () => [] },
   resultChoices: { type: Array, default: () => [] },
-  canManageAi: { type: Boolean, default: false },
   companyFilterAvailable: { type: Boolean, default: true },
+  // #2095 (flag crm_arquivados): quantos cards arquivados o funil tem; null = sem o atalho.
+  arquivados: { type: Number, default: null },
 });
 
-const emit = defineEmits(['close', 'apply', 'clear', 'search-company']);
+const emit = defineEmits([
+  'close',
+  'apply',
+  'clear',
+  'search-company',
+  'abrirArquivados',
+]);
 const { t } = useI18n();
+// #2075 — sem a chave de valores o servidor ignora a faixa de valor: a tela nem oferece.
+// #2150 — "Pendente de IA" revela quais cards têm sugestão de etapa: só com crm_manage_ai (o servidor ignora sem a chave).
+const { canSeeSalesValues, canManageAi } = useCrmPermissions();
 const drawerElement = ref(null);
 const draft = reactive(defaultFilters());
 const selectedCompanyOption = ref(null);
@@ -348,6 +359,18 @@ useFixedPanelPresence(computed(() => props.show));
                   : '!outline-n-weak !bg-n-surface-1'
               "
               @click="applyShortcut('overdue')"
+            />
+            <!-- #2095: não é filtro. Abre o painel de Arquivados (fecha este); por isso não fica marcado. -->
+            <Button
+              v-if="arquivados !== null"
+              data-atalho-arquivados
+              :label="t('CRM_ARQUIVADOS.ATALHO', { count: arquivados })"
+              icon="i-lucide-panel-right-open"
+              trailing-icon
+              outline
+              slate
+              class="!min-h-11 !rounded-lg !outline-n-weak !bg-n-surface-1"
+              @click="emit('abrirArquivados')"
             />
           </div>
         </div>
@@ -739,7 +762,7 @@ useFixedPanelPresence(computed(() => props.show));
               />
             </summary>
             <div class="grid gap-5 pb-5">
-              <div class="grid gap-1">
+              <div v-if="canSeeSalesValues" class="grid gap-1">
                 <span class="text-sm font-medium text-n-slate-12">
                   {{ t('CRM_KANBAN.FILTERS.VALUE_RANGE') }}
                 </span>

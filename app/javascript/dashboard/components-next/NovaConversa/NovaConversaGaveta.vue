@@ -12,6 +12,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import { nomeDoContatoNaTela } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
 import { emitter } from 'shared/helpers/mitt';
@@ -131,6 +132,7 @@ const {
   destino: conversaDaMensagem,
   comAssinatura,
   assinatura,
+  caixaDoWhatsapp,
   falta,
   previa,
   enviando,
@@ -143,7 +145,10 @@ const {
   historico,
   comHistorico,
   assuntoNaPrevia,
+  ficar,
 } = useNovaConversa({ contato, canal, continuar });
+// #2067: o ícone "ficar com a conversa" só na conversa que já existe e não é minha.
+const ficarNoRodape = computed(() => (ficar.aplica ? ficar : null));
 
 // #1809 — para quem vai e o modelo de e-mail do "+", para a caixa do e-mail.
 provide(EMAIL_DA_GAVETA, {
@@ -174,7 +179,8 @@ const naExistente = computed(
 const { prender, entrar, entrarSeLivre } = useFocoPreso(raiz, aberta);
 const { podeCriar: podeCriarPronta, irCriar } = useCriarMensagemPronta();
 
-const nome = computed(() => contato.value?.name || '');
+// Nome que é só telefone sai legível no título e na prévia (#2255); só exibição.
+const nome = computed(() => nomeDoContatoNaTela(contato.value));
 const tela = computed(() =>
   telaDaGaveta({
     enviada: Boolean(enviada.value),
@@ -184,15 +190,17 @@ const tela = computed(() =>
     canais: canais.value,
   })
 );
+// A chave e o nome vão separados: o herói põe o nome num slot do <i18n-t>, para o
+// telefone não quebrar a linha no hífen (#2255).
 const titulo = computed(() => {
   if (tela.value === TELAS.ENVIADA) {
     return enviada.value.nome
-      ? t('NOVA_CONVERSA.ENVIADA.TITULO', { nome: enviada.value.nome })
-      : t('NOVA_CONVERSA.ENVIADA.TITULO_SEM_NOME');
+      ? { chave: 'NOVA_CONVERSA.ENVIADA.TITULO', nome: enviada.value.nome }
+      : { chave: 'NOVA_CONVERSA.ENVIADA.TITULO_SEM_NOME', nome: '' };
   }
   return nome.value
-    ? t('NOVA_CONVERSA.TITULO', { nome: nome.value })
-    : t('NOVA_CONVERSA.TITULO_SEM_CONTATO');
+    ? { chave: 'NOVA_CONVERSA.TITULO', nome: nome.value }
+    : { chave: 'NOVA_CONVERSA.TITULO_SEM_CONTATO', nome: '' };
 });
 // A frase do cabeçalho acompanha o momento: procurar, escrever, ou nada.
 const frase = computed(() => {
@@ -470,6 +478,7 @@ useFixedPanelPresence(aberta);
                     :com-assinatura="comAssinatura"
                     :pode-criar-pronta="podeCriarPronta"
                     :continuando="continuando"
+                    @enviar="mandar"
                     @update:campos-prontos="form.camposProntos = $event"
                     @update:texto-do-modelo="form.textoDoModelo = $event"
                     @enviar-pronta="enviarPronta"
@@ -492,6 +501,7 @@ useFixedPanelPresence(aberta);
                     "
                     :assunto="assuntoNaPrevia"
                     :historico="comHistorico ? historico : null"
+                    :anexos="caixaDoWhatsapp ? form.anexos : []"
                     :remetente="canal?.name || ''"
                     :endereco-do-remetente="linhaDoCanal(canal)"
                   />
@@ -510,6 +520,7 @@ useFixedPanelPresence(aberta);
           :modo="modoDoRodape"
           :falta="falta"
           :enviando="enviando"
+          :ficar="ficarNoRodape"
           @cancelar="cancelar"
           @enviar="mandar"
           @abrir="abrirConversa"

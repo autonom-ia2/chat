@@ -19,12 +19,30 @@ module Autonomia::Agents::Builder::TextosDoAjuste
     locale.present? && I18n.available_locales.map(&:to_s).include?(locale)
   end
 
-  # A pergunta ao dono quando ficou item sem aplicar, com os pedidos que o Construtor listou. A explicação da correção
-  # (texto do Construtor) vem no lugar da pergunta genérica.
+  # A pergunta INTEIRA ao dono quando ficou item sem aplicar, com os pedidos que o Construtor listou. É a que fica na
+  # conversa e na pendência do Construtor (o referente do turno seguinte). A explicação da correção (texto do
+  # Construtor) vem no lugar da pergunta genérica.
   def pergunta_do_que_faltou(conferencia, locale, explicacao: nil)
     pedidos = lista(Autonomia::Agents::Builder::AjustePorLista.nao_atendidos(conferencia), 'pedido')
     inicio = pedidos.present? ? texto(:nao_consegui, locale, pedidos: pedidos) : texto(:nao_consegui_tudo, locale)
-    [inicio, explicacao.to_s.strip.presence || texto(:de_outro_jeito, locale)].join(' ')
+    [inicio, pergunta(explicacao, locale)].join(' ')
+  end
+
+  # #1850 — a mesma pergunta como a TELA mostra enquanto o cartão ⚠ do turno está lá: sem o que o cartão já mostra
+  # (ResultadoDoAjuste.o_que_faltou, pelos grupos do cartão). Cita só o pedido que ficou fora do cartão; quando o cartão
+  # mostra tudo o que faltou, só pergunta. Sem cartão, igual à inteira.
+  def pergunta_na_tela(conferencia, locale, explicacao: nil)
+    faltou = Autonomia::Agents::ResultadoDoAjuste.o_que_faltou(conferencia)
+    inicio = if faltou[:fora_do_cartao].any?
+               texto(:nao_consegui, locale, pedidos: faltou[:fora_do_cartao].join('; '))
+             elsif !faltou[:mostrado]
+               texto(:nao_consegui_tudo, locale)
+             end
+    [inicio, pergunta(explicacao, locale)].compact.join(' ')
+  end
+
+  def pergunta(explicacao, locale)
+    explicacao.to_s.strip.presence || texto(:de_outro_jeito, locale)
   end
 
   # Tudo entrou, mas a conferência viu conflito com o resto do agente: o dono decide.

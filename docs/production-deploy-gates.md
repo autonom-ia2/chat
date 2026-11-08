@@ -59,7 +59,8 @@ automático em push voltou, agora com `paths-ignore` para workflow e docs. Em
 
 Regra operacional que permanece: a instância N-2 é terminada 5 minutos após
 cada deploy bem-sucedido, logo só existe um degrau de rollback por stack. Antes
-de um deploy com migration, tirar snapshot manual do RDS.
+de um deploy com migration, tirar snapshot manual do RDS, até o snapshot automático
+do próprio deploy ser ligado (#2024, [migrations-em-lote.md](migrations-em-lote.md)).
 
 O corpo blue-green, as verificações de saúde e o rollback permanecem
 inalterados. Esta política separa a aprovação de merge da decisão operacional de

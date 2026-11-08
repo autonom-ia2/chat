@@ -21,8 +21,11 @@ class Crm::FollowUps::SeriesMaterializer
 
   private
 
+  # Card arquivado não ganha vez nova: a série que o Crm::Cards::Archiver não pegou (travada aqui) se encerra, sob a
+  # trava dela. O status vem da barreira do arquivamento (série -> card, a ordem de sempre).
   def materialize
     return unless @series.active?
+    return finish_series if @series.card_id && Crm::Cards::Archiver.arquivado_sob_trava?(@series.card_id)
     return if @series.follow_ups.pending.exists?
 
     occurrence = @series.schedule.next_after(start_from)

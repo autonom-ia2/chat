@@ -4,13 +4,14 @@ import { useTimeoutFn } from '@vueuse/core';
 import { provideMessageContext } from './provider.js';
 import { useTrack } from 'dashboard/composables';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import { emitter } from 'shared/helpers/mitt';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import { ACCOUNT_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { getInboxIconByType, tipoDoIconeDaCaixa } from 'dashboard/helper/inbox';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import {
   MESSAGE_TYPES,
@@ -77,6 +78,12 @@ import BotaoDeEncaminhar from 'dashboard/components-next/conversa-canal/encaminh
 import MarcaDeEncaminhar from 'dashboard/components-next/conversa-canal/encaminhar/MarcaDeEncaminhar.vue';
 import { useEncaminharDaMensagem } from 'dashboard/components-next/conversa-canal/encaminhar/useEncaminharDaMensagem';
 import { useBranding } from 'shared/composables/useBranding';
+import { ehNotaDoConector } from 'dashboard/components-next/conversa-canal/notaDoConector';
+import { textoDaMensagem } from 'dashboard/components-next/conversa-canal/ecoDoCelular';
+import { useEcoDoCelular } from 'dashboard/components-next/conversa-canal/useEcoDoCelular';
+import LinhaDoInstagram from 'dashboard/components-next/conversa-canal/instagram/LinhaDoInstagram.vue';
+import { useInstagramDaConversa } from 'dashboard/components-next/conversa-canal/instagram/useConversaDoInstagram';
+import { balaoDoInstagram } from 'dashboard/components-next/conversa-canal/instagram/balaoDoInstagram';
 
 /**
  * @typedef {Object} Attachment
@@ -181,8 +188,23 @@ const { t } = useI18n();
 const route = useRoute();
 const inboxGetter = useMapGetter('inboxes/getInbox');
 const inbox = computed(() => inboxGetter.value(props.inboxId) || {});
+// #1941: a nota técnica antiga do conector WAHA aparece como a linha de aviso.
+const notaDoConector = computed(() =>
+  ehNotaDoConector({
+    caixa: inbox.value,
+    privada: props.private,
+    conteudo: props.content,
+  })
+);
 const isOnChatwootCloud = useMapGetter('globalConfig/isOnChatwootCloud');
 const { replaceInstallationName } = useBranding();
+
+// #1941: mandada pelo app do celular (eco). O texto sai sem o prefixo do conector WAHA
+// (inclusive no histórico) e o nome é o de quem estava atribuído quando chegou.
+const eco = useEcoDoCelular(computed(() => props.contentAttributes));
+const conteudo = computed(() =>
+  textoDaMensagem(props.content, props.contentAttributes)
+);
 
 // fork chat#1709 (fase 3): reagir e editar pelo painel, só com a ação no campo da conversa.
 // Também serve ao "só leitura" do #1800, mais abaixo.
@@ -227,6 +249,7 @@ const isAutonomiaAgentMessage = computed(
  * @type {import('vue').ComputedRef<'user'|'agent'|'activity'|'private'|'bot'|'template'>}
  */
 const variant = computed(() => {
+  if (notaDoConector.value) return MESSAGE_VARIANTS.ACTIVITY;
   if (props.private) return MESSAGE_VARIANTS.PRIVATE;
 
   if (props.isEmailInbox) {
@@ -301,6 +324,7 @@ const isBotOrAgentMessage = computed(() => {
  * @returns {import('vue').ComputedRef<'left'|'right'|'center'>} The computed orientation
  */
 const orientation = computed(() => {
+  if (notaDoConector.value) return ORIENTATION.CENTER;
   if (isBotOrAgentMessage.value) {
     return ORIENTATION.RIGHT;
   }
@@ -369,7 +393,22 @@ const pele = usePele();
 const balaoDoWhatsapp = computed(() =>
   pele.value ? balaoDaPele(props) : null
 );
-// #1702: a citação levou até aqui: a linha pisca por um instante (só com a pele).
+// #2079: na conversa do Instagram com a cara do Direct, a linha inteira é a do app.
+// Tipo sem balão do Direct (arquivo, não suportada) segue no balão de sempre, e a
+// mensagem que falhou também: lá fica o erro e o "Tentar de novo".
+const instagram = useInstagramDaConversa();
+const linhaDoInstagram = computed(
+  () =>
+    instagram.ligado.value &&
+    !props.private &&
+    ![MESSAGE_VARIANTS.ACTIVITY, MESSAGE_VARIANTS.ERROR].includes(
+      variant.value
+    ) &&
+    !props.contentAttributes?.externalError &&
+    balaoDoInstagram(props) !== null
+);
+// #1702/#2211: a citação ou o link com ?messageId= levou até aqui: a linha fica destacada
+// 3 s em âmbar (só com a pele).
 const destacadaPelaCitacao = computed(
   () => !!pele.value && mensagemDestacada.value === props.id
 );
@@ -461,7 +500,8 @@ const componentToRender = computed(() => {
     )
       return LocationBubble;
 
-    if (!props.content) {
+    // #1941: foto mandada pelo celular cujo texto era só o prefixo do conector.
+    if (!conteudo.value) {
       if (fileType === ATTACHMENT_TYPES.IMAGE) return ImageBubble;
       if (fileType === ATTACHMENT_TYPES.FILE) return FileBubble;
       if (fileType === ATTACHMENT_TYPES.AUDIO) return AudioBubble;
@@ -482,7 +522,7 @@ const shouldShowContextMenu = computed(() => {
 });
 
 const isBubble = computed(() => {
-  return props.messageType !== MESSAGE_TYPES.ACTIVITY;
+  return props.messageType !== MESSAGE_TYPES.ACTIVITY && !notaDoConector.value;
 });
 
 const isMessageDeleted = computed(() => {
@@ -535,7 +575,7 @@ const mensagemParaEncaminhar = computed(() => ({
   contentType: props.contentType,
   status: props.status,
   private: props.private,
-  content: props.content,
+  content: conteudo.value,
   contentAttributes: props.contentAttributes,
   additionalAttributes: props.additionalAttributes,
   attachments: props.attachments,
@@ -554,14 +594,17 @@ const payloadForContextMenu = computed(() => {
       (album.value || contatosJuntos.value)?.map(item => item.id) || null,
     id: props.id,
     content_attributes: props.contentAttributes,
-    content: props.content,
+    content: conteudo.value,
     conversation_id: props.conversationId,
     c2y_revocable: props.c2yRevocable,
   };
 });
 
+// Quem tem cargo só apaga com a chave (#1893); administrador e agente sem cargo seguem apagando.
+const canDeleteMessage = useCanManage('conversation_message_delete');
+
 const allContextMenuOptions = computed(() => {
-  const hasText = !!props.content;
+  const hasText = !!conteudo.value;
   const hasAttachments = !!(props.attachments && props.attachments.length > 0);
 
   const isOutgoing = props.messageType === MESSAGE_TYPES.OUTGOING;
@@ -574,14 +617,16 @@ const allContextMenuOptions = computed(() => {
     delete:
       (hasText || hasAttachments) &&
       !isFailedOrProcessing &&
-      !isMessageDeleted.value,
+      !isMessageDeleted.value &&
+      canDeleteMessage.value,
     cannedResponse: isOutgoing && hasText && !isMessageDeleted.value,
     copyLink: !isFailedOrProcessing,
     translate: !isFailedOrProcessing && !isMessageDeleted.value && hasText,
     replyTo:
       !props.private &&
       props.inboxSupportsReplyTo.outgoing &&
-      !isFailedOrProcessing,
+      !isFailedOrProcessing &&
+      !isMessageDeleted.value,
     report:
       isOnChatwootCloud.value &&
       isCaptainMessage.value &&
@@ -631,7 +676,7 @@ const shouldRenderMessage = computed(() => {
 
   return (
     hasAttachments ||
-    props.content ||
+    conteudo.value ||
     isEmailContentType ||
     isUnsupported ||
     isAnIntegrationMessage ||
@@ -678,12 +723,23 @@ function handleReplyTo() {
 }
 
 const avatarInfo = computed(() => {
+  // #1941: eco com quem estava atribuído = avatar dessa pessoa; nunca o remetente.
+  if (eco.autor.value) {
+    return {
+      name: eco.nomeDoAutor.value,
+      src: eco.autor.value.thumbnail || '',
+    };
+  }
   if (props.contentAttributes?.externalEcho) {
-    const { name, avatar_url, channel_type, medium, voice_enabled } =
-      inbox.value;
+    const { name, avatar_url, medium, voice_enabled } = inbox.value;
     const iconName = avatar_url
       ? null
-      : getInboxIconByType(channel_type, medium, 'fill', voice_enabled);
+      : getInboxIconByType(
+          tipoDoIconeDaCaixa(inbox.value),
+          medium,
+          'fill',
+          voice_enabled
+        );
     return {
       name: iconName ? '' : name || t('CONVERSATION.NATIVE_APP'),
       src: avatar_url || '',
@@ -719,6 +775,11 @@ const avatarInfo = computed(() => {
 });
 
 const avatarTooltip = computed(() => {
+  if (eco.autor.value) {
+    return t('CONVERSA_CANAL.ECO_DO_CELULAR.ENVIADA_POR', {
+      nome: eco.nomeDoAutor.value,
+    });
+  }
   if (props.contentAttributes?.externalEcho) {
     return replaceInstallationName(t('CONVERSATION.NATIVE_APP_ADVISORY'));
   }
@@ -742,6 +803,11 @@ onMounted(setupHighlightTimer);
 
 provideMessageContext({
   ...toRefs(props),
+  content: computed(() =>
+    notaDoConector.value
+      ? t('CONVERSA_CANAL.NOTA_DO_CONECTOR.AVISO')
+      : conteudo.value
+  ),
   isPrivate: computed(() => props.private),
   variant,
   orientation,
@@ -765,7 +831,8 @@ provideMessageContext({
         'relative ltr:pl-12 rtl:pr-12': encaminhar.emSelecao.value,
         'bg-[#000]/[0.06] dark:bg-white/[0.06]': encaminhar.marcada.value,
         'transition-colors duration-500': pele,
-        'bg-[#000]/[0.1] dark:bg-white/[0.1]': destacadaPelaCitacao,
+        // #2211: faixa âmbar com contorno amber-11 (≥ 3:1 contra o fundo nos dois temas).
+        'bg-n-amber-3 ring-2 ring-inset ring-n-amber-11': destacadaPelaCitacao,
       },
     ]"
   >
@@ -780,8 +847,20 @@ provideMessageContext({
     >
       <LigacaoDoWhatsapp v-if="ligacao" />
       <AvisoDeTemporarias v-else-if="temporarias" />
-      <ActivityBubble v-else :content="content" />
+      <!-- O texto vem do contexto da mensagem (o da nota do conector é o aviso curto, #1941). -->
+      <ActivityBubble v-else />
     </div>
+    <LinhaDoInstagram
+      v-else-if="linhaDoInstagram"
+      :pode-responder="contextMenuEnabledOptions.replyTo"
+      :pode-reagir="reacaoDoAtendente.visivel.value && !isReadOnly"
+      :reacao-atual="reacaoDoAtendente.atual.value"
+      :reacao-bloqueada="reacaoDoAtendente.bloqueado.value"
+      :reagindo="reacaoDoAtendente.enviando.value"
+      @responder="handleReplyTo"
+      @reagir="reacaoDoAtendente.reagir"
+      @menu="openContextMenu($event)"
+    />
     <div
       v-else
       :class="[
@@ -880,7 +959,7 @@ provideMessageContext({
         ref="messageActionDialogs"
         :conversation-id="conversationId"
         :message-id="id"
-        :content="content || ''"
+        :content="conteudo || ''"
         :reactions="messageReactions"
       />
     </div>

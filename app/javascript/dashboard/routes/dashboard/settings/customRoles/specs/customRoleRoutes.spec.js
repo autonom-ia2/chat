@@ -11,4 +11,16 @@ describe('customRole routes', () => {
       'custom_roles_edit',
     ]);
   });
+
+  it('opens to administrators and to whoever builds roles (#1931)', () => {
+    const [parent] = customRoleRoutes.routes;
+    parent.children
+      .filter(route => route.name)
+      .forEach(route =>
+        expect(route.meta.permissions).toEqual([
+          'administrator',
+          'custom_role_manage',
+        ])
+      );
+  });
 });

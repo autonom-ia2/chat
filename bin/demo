@@ -1,0 +1,450 @@
+#!/bin/bash
+# Kit único de demo em tela real (#2140). Roda no M4, de dentro da worktree; o painel sobe no M2.
+# Runbook: docs/runbooks/demo-tela-real.md
+#
+#   bin/demo up <slug>                       snapshot da worktree, banco/Redis próprios, seed, Rails + Vite
+#   bin/demo sync <slug>                     leva o que mudou na worktree para o snapshot da demo
+#   bin/demo flag <slug> <flag> [conta]      liga uma feature flag no banco da demo (conta 1 por padrão)
+#   bin/demo seed <slug> <arquivo.rb>        roda um seed próprio (rails runner) no banco da demo
+#   bin/demo tunnel <slug>                   comando de túnel e URL para abrir no M4
+#   bin/demo prints <slug> <jornadas.json>   prints por jornada (1440 e 390) em docs/<pasta>/
+#   bin/demo psql <slug> "SQL"               roda um SQL no banco da demo, como a role da demo (sem superuser)
+#   bin/demo status <slug>                   estado gravado da demo
+#   bin/demo down <slug> [--apagar]          desliga; com --apagar, apaga banco, snapshot e pasta da demo
+#
+# Só demo local. Nada aqui fala com produção, AWS ou banco de produção.
+set -euo pipefail
+
+HOST=m2
+RAIZ_DEMOS=/Users/Shared/chat2you-demos
+PREFIXO_SNAPSHOT=/Users/Shared/maccluster-workspaces/chat2you/
+KIT=$(cd "${BASH_SOURCE[0]%/*}/../script/demo" && pwd -P) || { echo "bin/demo: não achei script/demo" >&2; exit 1; }
+# Portas: Rails 4400-5196 (passo 4), Vite = Rails + 2, Redis 57400-57599. Longe das de teste (55432, 56379)
+# e das demos feitas à mão (3301-4025, 56xxx).
+FAIXAS=200
+BASE_RAILS=4400
+BASE_REDIS=57400
+
+uso() { /usr/bin/sed -n '2,15p' "${BASH_SOURCE[0]}" | /usr/bin/cut -c3-; exit 2; }
+falha() { echo "bin/demo: $*" >&2; exit 1; }
+# em_uso (mesmo arquivo que o no_m2.sh usa no M2)
+# shellcheck source=script/demo/comum.sh
+source "$KIT/comum.sh"
+
+validar_slug() {
+  local s=$1
+  case "$s" in
+    '' | *[!a-z0-9-]* | -* | *-) falha "slug inválido '$s': use minúsculas, dígitos e hífen (ex.: 2140-kit)" ;;
+  esac
+  [ ${#s} -le 30 ] || falha "slug longo demais (máx. 30)"
+}
+
+portas() {
+  local n
+  n=$(printf %s "$1" | /usr/bin/cksum | /usr/bin/awk -v f="$FAIXAS" '{print $1 % f}') || falha "cksum falhou; não sei as portas"
+  case "$n" in '' | *[!0-9]*) falha "cksum devolveu '$n'; não sei as portas" ;; esac
+  RAILS_PORT=$((BASE_RAILS + n * 4))
+  VITE_PORT=$((RAILS_PORT + 2))
+  REDIS_PORT=$((BASE_REDIS + n))
+}
+
+# ssh junta os argumentos numa linha só: cada um vai escapado com %q para chegar inteiro no M2.
+no_m2() {
+  local comando
+  printf -v comando '%q ' /bin/bash "$RAIZ_DEMOS/$slug/kit/no_m2.sh" "$@" || falha "não montei o comando para o $HOST"
+  ssh -o BatchMode=yes "$HOST" "$comando"
+}
+
+# Leva o script/demo desta worktree para a pasta da demo no M2 (o kit roda de lá, não do snapshot).
+enviar_kit() {
+  ssh -o BatchMode=yes "$HOST" "/bin/mkdir -p '$RAIZ_DEMOS/$slug/kit'" || falha "ssh para o $HOST falhou"
+  /usr/bin/tar -C "$KIT" -cf - . | ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/kit' -xf -" ||
+    falha "não levei o kit ao $HOST"
+}
+
+# Erro de ssh (rede, M2 fora) para o comando; só "arquivo ausente" responde "não existe".
+existe_no_m2() {
+  local resposta
+  resposta=$(ssh -o BatchMode=yes "$HOST" "if test -f '$RAIZ_DEMOS/$slug/demo.env'; then echo sim; else echo nao; fi") ||
+    falha "ssh para o $HOST falhou; não sei se a demo existe"
+  case "$resposta" in
+    sim) return 0 ;;
+    nao) return 1 ;;
+    *) falha "resposta inesperada do $HOST: $resposta" ;;
+  esac
+}
+
+exigir_demo_registrada() { existe_no_m2 || falha "a demo $slug não existe no $HOST. Rode: bin/demo up $slug"; }
+
+# Demo em remoção (o M2 já apagou banco e snapshot, falta o M4): só o down --apagar e o status seguem.
+em_remocao() {
+  local valor
+  valor=$(valor_do_estado EM_REMOCAO) || falha "não consegui ler o estado da demo no $HOST"
+  case "$valor" in
+    sim) return 0 ;;
+    nao) return 1 ;;
+    *) falha "estado da demo sem EM_REMOCAO (veio '$valor')" ;;
+  esac
+}
+recusar_em_remocao() { if em_remocao; then falha "demo em remoção: rode bin/demo down $slug --apagar"; fi; }
+
+exigir_demo() {
+  exigir_demo_registrada
+  recusar_em_remocao
+}
+
+# Um valor do demo.env do M2. Erro de ssh/awk ou chave ausente sai com 1 (quem chama usa `|| falha`): nunca vira
+# valor vazio aceito em silêncio.
+valor_do_estado() {
+  local saida valor
+  saida=$(no_m2 estado "$slug") || falha "não consegui ler o estado da demo no $HOST"
+  valor=$(printf '%s\n' "$saida" | /usr/bin/awk -F= -v k="$1" '$1 == k {print substr($0, length(k) + 2)}') ||
+    falha "awk falhou lendo o estado da demo"
+  [ -n "$valor" ] || falha "estado da demo sem $1"
+  printf '%s\n' "$valor"
+}
+
+worktree() {
+  WT=$(/usr/bin/git rev-parse --show-toplevel) || falha "rode de dentro da worktree"
+}
+
+json_campo() { /usr/bin/python3 -I -c 'import json,sys; print(json.load(sys.stdin)[sys.argv[1]])' "$1"; }
+
+# O que nunca vai do M4 para o M2 nem é apagado lá pelo rsync: dependências, caches e logs da demo.
+EXCLUIR_RSYNC=(--exclude=/src/node_modules --exclude=/src/tests/playwright/node_modules --exclude=/src/tmp
+  --exclude=/src/log --exclude=/src/public/vite-dev --exclude=/src/public/vite-test --exclude=/src/storage
+  --exclude=/src/.bundle --exclude=/src/coverage)
+
+# Snapshot no M4 (--local-only: sem fila de réplica do MacCluster) e cópia no M2 pelo mesmo caminho.
+# A cópia do M2 nasce de um clone APFS (cp -c, custo ~0) do snapshot chat2you mais recente que já está lá,
+# e o rsync --checksum --delete leva só a diferença. Funciona com o M2 em "modo remoto", em que o MacCluster
+# não replica snapshot (transferência grande); só a diferença trafega.
+# Snapshot criado pelo up e ainda não registrado (demo.env): qualquer saída com erro até o registro o descarta nos
+# dois Macs (trap EXIT do cmd_up). Vazio = nada a descartar.
+SNAPSHOT_NOVO=''
+descartar_snapshot_novo() {
+  local codigo=$? snapdir=$SNAPSHOT_NOVO
+  SNAPSHOT_NOVO=''
+  [ -n "$snapdir" ] && [ "$codigo" -ne 0 ] || return 0
+  echo "bin/demo: o up falhou depois do snapshot; descartando $snapdir no $HOST e neste Mac" >&2
+  if no_m2 descartar-snapshot "$slug" "$snapdir"; then
+    apagar_snapshot_local "$snapdir/src"
+  else
+    echo "bin/demo: não consegui descartar no $HOST: $HOST:$snapdir (o deste Mac ficou: $snapdir)" >&2
+  fi
+}
+
+criar_snapshot() {
+  local saida snapdir
+  echo "snapshot da worktree $WT (só no M4) ..."
+  saida=$(maccluster workspace snapshot --cwd "$WT" --name chat2you --local-only --json) || falha "snapshot falhou"
+  SNAP=$(printf %s "$saida" | json_campo src) || falha "não li o caminho do snapshot na saída do MacCluster"
+  case "$SNAP" in */src) ;; *) falha "snapshot em caminho inesperado: $SNAP" ;; esac
+  snapdir=${SNAP%/src}
+  snapshot_valido "$snapdir"
+  # O id do snapshot leva data, hora, HEAD, hash e um uuid: cada chamada cria um diretório novo. Confere que é este.
+  /usr/bin/python3 -I -c 'import json,os,sys
+m = json.load(open(os.path.join(sys.argv[1], ".maccluster-workspace.json")))
+ok = m["snapshot_id"] == os.path.basename(sys.argv[1]) and m["source_path"] == sys.argv[2]
+sys.exit(0 if ok else 1)' "$snapdir" "$WT" || falha "o snapshot $snapdir não é desta worktree"
+  # Daqui em diante, qualquer falha descarta este snapshot nos dois Macs (descartar_snapshot_novo).
+  SNAPSHOT_NOVO=$snapdir
+  # Só este usuário abre o snapshot (o rsync -a leva o modo 700 para a cópia do M2).
+  /bin/chmod 700 "$snapdir" || falha "não consegui fechar o snapshot em 700: $snapdir"
+  echo "snapshot no M4: $snapdir"
+  no_m2 clonar-base "$slug" "$snapdir" || falha "não consegui preparar a cópia no $HOST"
+  echo "rsync da diferença para o $HOST ..."
+  local estatisticas
+  estatisticas=$(/usr/bin/rsync -a --checksum --delete "${EXCLUIR_RSYNC[@]}" --stats "$snapdir/" "$HOST:$snapdir/") ||
+    falha "rsync para o $HOST falhou"
+  printf '%s\n' "$estatisticas" | /usr/bin/grep -i 'files transferred\|total transferred\|sent ' || :
+  local resto
+  resto=$(/usr/bin/rsync -a --checksum --delete "${EXCLUIR_RSYNC[@]}" -n -i "$snapdir/" "$HOST:$snapdir/") ||
+    falha "não consegui conferir a cópia no $HOST"
+  [ -z "$resto" ] || { echo "$resto" | /usr/bin/head -10; falha "cópia no $HOST diverge do snapshot depois do rsync"; }
+  echo "snapshot no $HOST igual ao do M4: $SNAP"
+}
+
+cmd_up() {
+  worktree
+  portas "$slug"
+  if existe_no_m2; then
+    recusar_em_remocao
+    local origem
+    origem=$(valor_do_estado ORIGEM) || falha "não li a origem da demo"
+    [ "$origem" = "$WT" ] || falha "a demo $slug nasceu de $origem, não desta worktree ($WT). Use outro slug."
+    echo "demo $slug já existe: religando (sem snapshot nem banco novos)"
+    enviar_kit
+  else
+    enviar_kit
+    no_m2 checar "$slug" "$RAILS_PORT" "$VITE_PORT" "$REDIS_PORT"
+    local cabeca
+    cabeca=$(/usr/bin/git -C "$WT" rev-parse HEAD) || falha "git rev-parse falhou"
+    trap descartar_snapshot_novo EXIT
+    criar_snapshot
+    gravar_sincronizados "$cabeca"
+    no_m2 iniciar "$slug" "$SNAP" "$cabeca" "$WT" "$RAILS_PORT" "$VITE_PORT" "$REDIS_PORT" || falha "não registrei a demo"
+    # Registrada: daqui em diante quem apaga é o down --apagar.
+    SNAPSHOT_NOVO=''
+    trap - EXIT
+  fi
+  no_m2 preparar "$slug"
+  no_m2 subir "$slug"
+  cmd_tunnel
+}
+
+sensivel() {
+  case "$1" in
+    .env | .env.* | */.env | */.env.* | *.pem | *.key | *.p12 | *.pfx | .npmrc | */.npmrc | id_* | */id_* | \
+      config/credentials/* | config/credentials.yml.enc | \
+      .secrets/* | */.secrets/* | *.sqlite* | \
+      node_modules/* | */node_modules/* | tmp/* | log/* | public/vite*/* | .claude/* | .codex/*) return 0 ;;
+  esac
+  return 1
+}
+
+# Acrescenta em $2 (NUL) os arquivos que diferem do commit base $1 (alterados, novos, apagados) mais os não
+# rastreados. Cada git é conferido à parte (num `{ a; b; }` a falha do primeiro sumiria).
+candidatos() {
+  /usr/bin/git -C "$WT" diff -z --name-only "$1" >> "$2" || falha "git diff falhou; não sei o que mudou"
+  /usr/bin/git -C "$WT" ls-files -z --others --exclude-standard >> "$2" || falha "git ls-files falhou; não sei o que mudou"
+}
+
+temporario() {
+  TEMPORARIO=$(/usr/bin/mktemp "${TMPDIR:-/tmp}/demo-$1.XXXXXX") || falha "mktemp falhou"
+  [ -n "$TEMPORARIO" ] && [ -f "$TEMPORARIO" ] || falha "mktemp não criou o arquivo"
+}
+
+# A lista do último sync fica no M2 (NUL): arquivo não rastreado que sumiu da worktree também some da demo.
+gravar_sincronizados() {
+  local lista
+  temporario sincronizados
+  lista=$TEMPORARIO
+  candidatos "$1" "$lista"
+  LC_ALL=C /usr/bin/sort -z -u "$lista" | ssh -o BatchMode=yes "$HOST" "/bin/cat > '$RAIZ_DEMOS/$slug/sincronizados.z'" ||
+    { /bin/rm -f "$lista"; falha "não gravei a lista do sync no $HOST"; }
+  /bin/rm -f "$lista"
+}
+
+# Lista anterior. Ausente (1o sync) = vazia; erro de ssh para o comando.
+sincronizados_antes() {
+  ssh -o BatchMode=yes "$HOST" "if test -f '$RAIZ_DEMOS/$slug/sincronizados.z'; then /bin/cat '$RAIZ_DEMOS/$slug/sincronizados.z'; fi" ||
+    falha "ssh para o $HOST falhou ao ler a lista do último sync"
+}
+
+cmd_sync() {
+  exigir_demo
+  worktree
+  enviar_kit
+  local snap base origem
+  snap=$(valor_do_estado SNAP) || falha "não li o snapshot da demo"
+  base=$(valor_do_estado BASE_SHA) || falha "não li o commit base da demo"
+  origem=$(valor_do_estado ORIGEM) || falha "não li a origem da demo"
+  [ "$origem" = "$WT" ] || falha "a demo $slug nasceu de $origem, não desta worktree ($WT)"
+  local copiar=() apagar=() f lista remoto
+  temporario sync
+  lista=$TEMPORARIO
+  # shellcheck disable=SC2064
+  trap "/bin/rm -f '$lista'" EXIT
+  candidatos "$base" "$lista"
+  sincronizados_antes >> "$lista"
+  LC_ALL=C /usr/bin/sort -z -u -o "$lista" "$lista" || falha "sort falhou na lista do sync"
+  while IFS= read -r -d '' f; do
+    [ -n "$f" ] || continue
+    if sensivel "$f"; then echo "ignorado (sensível/cache): $f"; continue; fi
+    if [ -e "$WT/$f" ]; then copiar+=("$f"); else apagar+=("$f"); fi
+  done < "$lista"
+  /bin/rm -f "$lista"
+  echo "desde ${base:0:10}: copiar ${#copiar[@]}, apagar ${#apagar[@]}"
+  for f in "${copiar[@]+"${copiar[@]}"}"; do echo "  + $f"; done
+  local migrar=false reiniciar=false pnpm=false vite=false
+  for f in "${copiar[@]+"${copiar[@]}"}" "${apagar[@]+"${apagar[@]}"}"; do
+    case "$f" in Gemfile | Gemfile.lock) falha "Gemfile mudou: gem nova precisa existir no Ruby do MacCluster. Faça uma demo nova." ;; esac
+    case "$f" in db/migrate/* | db/schema.rb) migrar=true ;; esac
+    case "$f" in package.json | pnpm-lock.yaml) pnpm=true ;; esac
+    # Em padrão de case, * também casa "/": config/*.yml pega config/locales/x.yml.
+    case "$f" in *.rb | config/*.yml | config/*.yml.erb | lib/*) reiniciar=true ;; esac
+    case "$f" in config/vite.json | vite.config.* | tailwind.config.* | postcss.config.*) vite=true ;; esac
+  done
+  if [ ${#copiar[@]} -gt 0 ]; then
+    /usr/bin/tar -C "$WT" -cf - -- "${copiar[@]}" | ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$snap' -xf -" ||
+      falha "não copiei os arquivos para o snapshot no $HOST"
+  fi
+  for f in "${apagar[@]+"${apagar[@]}"}"; do
+    printf -v remoto '/bin/rm -f %q' "$snap/$f" || falha "não montei o rm de $f"
+    ssh -o BatchMode=yes "$HOST" "$remoto" || falha "não apaguei $f no $HOST"
+    echo "  - $f"
+  done
+  gravar_sincronizados "$base"
+  $pnpm && no_m2 pnpm "$slug"
+  $migrar && no_m2 migrar "$slug"
+  if $vite; then
+    echo "config do Vite/Tailwind mudou: reiniciando o Vite"
+    no_m2 reiniciar-vite "$slug"
+  fi
+  if $migrar || $reiniciar; then
+    echo "Ruby/config/migration mudou: reiniciando só o Rails"
+    no_m2 reiniciar-rails "$slug"
+  elif ! $vite; then
+    echo "só front: o Vite recarrega sozinho"
+  fi
+}
+
+cmd_flag() {
+  exigir_demo
+  enviar_kit
+  no_m2 flag "$slug" "${1:?uso: bin/demo flag <slug> <flag> [conta]}" "${2:-1}"
+}
+
+cmd_seed() {
+  local arquivo=${1:?uso: bin/demo seed <slug> <arquivo.rb>}
+  [ -f "$arquivo" ] || falha "arquivo não existe: $arquivo"
+  exigir_demo
+  enviar_kit
+  ssh -o BatchMode=yes "$HOST" "/bin/mkdir -p '$RAIZ_DEMOS/$slug/seeds'" || falha "ssh para o $HOST falhou"
+  local pasta=. nome=${arquivo##*/}
+  case "$arquivo" in */*) pasta=${arquivo%/*} ;; esac
+  /usr/bin/tar -C "$pasta" -cf - -- "$nome" |
+    ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/seeds' -xf -" || falha "não levei o seed ao $HOST"
+  no_m2 semear "$slug" "$nome"
+}
+
+cmd_tunnel() {
+  local rails vite
+  rails=$(valor_do_estado RAILS_PORT) || falha "não li a porta do Rails"
+  vite=$(valor_do_estado VITE_PORT) || falha "não li a porta do Vite"
+  cat <<TXT
+
+Painel da demo $slug no ar no $HOST. Para abrir no M4:
+  ssh -f -N -L $rails:127.0.0.1:$rails -L '$vite:[::1]:$vite' $HOST
+  http://localhost:$rails/app/login   (usuário do seed: john@acme.inc, senha em db/seeds.rb)
+Fechar o túnel: pkill -f 'ssh -f -N -L $rails:'
+TXT
+}
+
+# A pasta dos prints (relativa à worktree) não pode passar por link simbólico, nem ela nem nenhum ancestral até a
+# worktree, e o caminho real (pwd -P) do que já existe tem de ficar dentro do caminho real da worktree.
+pasta_segura() {
+  local relativa=$1 parte=$1 real raiz existente
+  while :; do
+    [ ! -L "$WT/$parte" ] || falha "\"pasta\" passa por link simbólico: $WT/$parte"
+    case "$parte" in */*) parte=${parte%/*} ;; *) break ;; esac
+  done
+  raiz=$(cd "$WT" && pwd -P) || falha "não li o caminho real da worktree"
+  existente=$relativa
+  while [ ! -d "$WT/$existente" ]; do
+    case "$existente" in */*) existente=${existente%/*} ;; *) existente=. ; break ;; esac
+  done
+  real=$(cd "$WT/$existente" && pwd -P) || falha "não li o caminho real de $WT/$existente"
+  case "$real" in
+    "$raiz" | "$raiz"/*) ;;
+    *) falha "\"pasta\" sai da worktree: $real" ;;
+  esac
+}
+
+cmd_prints() {
+  worktree
+  local jornadas=${1:?uso: bin/demo prints <slug> <jornadas.json>} pasta
+  [ -f "$jornadas" ] || falha "arquivo não existe: $jornadas"
+  pasta=$(/usr/bin/python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1])).get("pasta",""))' "$jornadas") ||
+    falha "não li \"pasta\" em $jornadas"
+  case "$pasta" in
+    docs/?* ) ;;
+    *) falha "\"pasta\" do jornadas.json precisa começar com docs/ (veio '$pasta')" ;;
+  esac
+  case "$pasta" in *..* | */.* | *//*) falha "\"pasta\" não pode ter componente começando com '.' nem '//' ('$pasta')" ;; esac
+  # Prints regravam a pasta inteira: nunca por cima de arquivo versionado.
+  local versionados
+  versionados=$(/usr/bin/git -C "$WT" ls-files -- "$pasta") || falha "git ls-files falhou; não sei se $pasta é versionada"
+  [ -z "$versionados" ] || falha "\"pasta\" $pasta tem arquivo versionado; use uma pasta nova (ex.: $pasta-v2)"
+  pasta_segura "$pasta"
+  exigir_demo
+  enviar_kit
+  ssh -o BatchMode=yes "$HOST" "/bin/mkdir -p '$RAIZ_DEMOS/$slug/prints-entrada'" || falha "ssh para o $HOST falhou"
+  ssh -o BatchMode=yes "$HOST" "/bin/cat > '$RAIZ_DEMOS/$slug/prints-entrada/jornadas.json'" < "$jornadas" ||
+    falha "não levei as jornadas ao $HOST"
+  local codigo=0
+  no_m2 prints "$slug" || codigo=$?
+  # Os prints chegam num temporário fora da worktree; só arquivo comum e pasta passam, e só para uma pasta sem link.
+  local recebidos estranhos links
+  recebidos=$(/usr/bin/mktemp -d "${TMPDIR:-/tmp}/demo-prints.XXXXXX") || falha "mktemp falhou"
+  [ -n "$recebidos" ] && [ -d "$recebidos" ] || falha "mktemp não criou a pasta"
+  # shellcheck disable=SC2064
+  trap "/bin/rm -rf '$recebidos'" EXIT
+  ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/prints-saida' -cf - ." | /usr/bin/tar -C "$recebidos" -xf - ||
+    falha "não trouxe os prints do $HOST"
+  estranhos=$(/usr/bin/find "$recebidos" ! -type f ! -type d) || falha "find falhou nos prints recebidos"
+  [ -z "$estranhos" ] || falha "os prints trouxeram algo que não é arquivo nem pasta (link?): $estranhos"
+  /bin/mkdir -p "$WT/$pasta" || falha "não criei $WT/$pasta"
+  pasta_segura "$pasta"
+  links=$(/usr/bin/find "$WT/$pasta" -type l) || falha "find falhou em $WT/$pasta"
+  [ -z "$links" ] || falha "há link simbólico dentro de $WT/$pasta: $links"
+  /bin/cp -R "$recebidos/." "$WT/$pasta/" || falha "não copiei os prints para $WT/$pasta"
+  [ "$codigo" -eq 0 ] || echo "bin/demo: prints com FALHA (saída $codigo); veja as linhas acima" >&2
+  echo "prints em $WT/$pasta (o relato com URLs e erros fica no $HOST: $RAIZ_DEMOS/$slug/relato.json)"
+  return "$codigo"
+}
+
+# Confere, sem apagar, que o snapshot deste Mac pode sair (caminho, marcador, ninguém usando).
+conferir_snapshot_local() {
+  local snapdir=${1%/src}
+  snapshot_valido "$snapdir"
+  [ -d "$snapdir" ] || { echo "snapshot não existe neste Mac: $snapdir"; return; }
+  [ -f "$snapdir/.maccluster-workspace.json" ] || falha "$snapdir sem o marcador do MacCluster; não apago"
+  # Mesma conferência do M2: o marcador tem de dizer que o snapshot é este (snapshot_id igual ao nome).
+  /usr/bin/python3 -I -c 'import json,os,sys
+m = json.load(open(os.path.join(sys.argv[1], ".maccluster-workspace.json")))
+sys.exit(0 if m.get("snapshot_id") == os.path.basename(sys.argv[1]) else 1)' "$snapdir" ||
+    falha "o marcador de $snapdir não é deste snapshot (snapshot_id diferente do nome); não apago"
+  snapshot_so_meu "$snapdir"
+  if em_uso "$snapdir"; then falha "snapshot em uso neste Mac; não apaguei: $snapdir (repita, ou apague à mão pelo caminho exato com lsof +D vazio)"; fi
+}
+
+apagar_snapshot_local() {
+  local snapdir=${1%/src}
+  conferir_snapshot_local "$1"
+  [ -d "$snapdir" ] || return 0
+  /bin/rm -rf "$snapdir"
+  echo "snapshot apagado neste Mac (M4): $snapdir"
+  # O MacCluster deixa um lock vazio ao lado de cada snapshot que ele cria.
+  local trava
+  trava="${snapdir%/*}/.${snapdir##*/}.maccluster-lock"
+  [ ! -f "$trava" ] || [ -s "$trava" ] || /bin/rm -f "$trava"
+}
+
+cmd_down() {
+  exigir_demo_registrada
+  enviar_kit
+  if [ "${1:-}" != --apagar ]; then recusar_em_remocao; fi
+  if [ "${1:-}" = --apagar ]; then
+    local snap
+    snap=$(valor_do_estado SNAP) || falha "não li o snapshot da demo; nada apagado"
+    conferir_snapshot_local "$snap"
+    no_m2 apagar "$slug" || falha "o $HOST recusou o apagar; nada foi apagado no M4 ($snap)"
+    # O demo.env do M2 só some no `fechar`: se o M4 recusar aqui, repetir o down --apagar termina o serviço.
+    apagar_snapshot_local "$snap"
+    no_m2 fechar "$slug"
+  else
+    no_m2 descer "$slug"
+    echo "banco, snapshot e pasta continuam. Para apagar: bin/demo down $slug --apagar"
+  fi
+}
+
+[ $# -ge 2 ] || uso
+cmd=$1
+slug=$2
+shift 2
+validar_slug "$slug"
+
+case "$cmd" in
+  up) cmd_up ;;
+  sync) cmd_sync ;;
+  flag) cmd_flag "$@" ;;
+  seed) cmd_seed "$@" ;;
+  tunnel) exigir_demo; cmd_tunnel ;;
+  prints) cmd_prints "$@" ;;
+  psql) exigir_demo; enviar_kit; no_m2 psql "$slug" "${1:-}" ;;
+  status) exigir_demo_registrada; no_m2 estado "$slug" ;;
+  down) cmd_down "$@" ;;
+  *) uso ;;
+esac

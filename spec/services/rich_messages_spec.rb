@@ -304,9 +304,10 @@ describe RichMessages do
     it 'filters rich_message, which carries the link and, in other types, form data' do
       filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
 
-      filtered = filter.filter('content' => 'Corpo', 'content_attributes' => { 'rich_message' => { 'type' => 'spec_stamp', 'code' => 'A1' } })
+      # `content` também sai do log desde o #2103 (e casa `content_attributes` inteiro); aqui fica só o rich_message.
+      filtered = filter.filter('message' => { 'rich_message' => { 'type' => 'spec_stamp', 'code' => 'A1' } })
 
-      expect(filtered).to eq('content' => 'Corpo', 'content_attributes' => { 'rich_message' => '[FILTERED]' })
+      expect(filtered).to eq('message' => { 'rich_message' => '[FILTERED]' })
     end
   end
 

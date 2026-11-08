@@ -338,6 +338,27 @@ RSpec.describe Conversation do
                                content: system_resolved_message,
                                content_attributes: { activity: { type: 'conversation_status_changed', status: 'resolved' } } })
     end
+
+    # #2536: o auto-resolve roda num job, sem o idioma de ninguém.
+    it 'writes the system auto resolution message in the account locale' do
+      account.update!(locale: 'pt_BR', auto_resolve_after: 40 * 24 * 60)
+      conversation2 = create(:conversation, status: 'open', account: account, assignee: old_assignee)
+      Current.reset
+
+      expect { I18n.with_locale(:en) { conversation2.update(status: :resolved) } }
+        .to have_enqueued_job(Conversations::ActivityMessageJob)
+        .with(conversation2, { account_id: conversation2.account_id, inbox_id: conversation2.inbox_id, message_type: :activity,
+                               content: 'A conversa foi marcada como resolvida pelo sistema por ter 40 dias de inatividade',
+                               content_attributes: { activity: { type: 'conversation_status_changed', status: 'resolved' } } })
+    end
+
+    # #2536: sem auto-resolve na conta, quem resolveu sem pessoa não foi ele; antes saía "0 minutes of inactivity".
+    it 'does not claim inactivity when nobody resolved it and the account has no auto resolve' do
+      conversation2 = create(:conversation, status: 'open', account: account, assignee: old_assignee)
+      Current.reset
+
+      expect { conversation2.update(status: :resolved) }.not_to have_enqueued_job(Conversations::ActivityMessageJob)
+    end
   end
 
   describe '#update_labels' do
@@ -700,8 +721,11 @@ RSpec.describe Conversation do
       create(:message, message_type: :incoming, **message_params)
     end
 
+    # #2202: a resposta de uma pessoa marca a conversa como vista (ConversaCanal::VistaAoResponder), o que zeraria esta
+    # mensagem do cliente no mesmo instante. Por isso a saída aqui é de campanha, que não marca: prova o filtro de
+    # recebidas sem depender do #2202.
     before do
-      create(:message, message_type: :outgoing, **message_params)
+      create(:message, message_type: :outgoing, **message_params, additional_attributes: { 'campaign_id' => 1 })
     end
 
     it 'returns unread incoming messages' do
@@ -1133,6 +1157,28 @@ RSpec.describe Conversation do
       allow(message_window_service).to receive(:can_reply?).and_return(false)
       expect(conversation.can_reply?).to be false
       expect(message_window_service).to have_received(:can_reply?)
+    end
+  end
+
+  describe '#can_reply_automatically? (#2259)' do
+    it 'is the same as can_reply? outside Instagram and Messenger, so the WhatsApp Hybrid override still applies' do
+      conversation = create(:conversation)
+      allow(conversation).to receive(:can_reply?).and_return(true)
+
+      expect(conversation.can_reply_automatically?).to be true
+      expect(conversation).to have_received(:can_reply?)
+    end
+
+    it 'keeps 24 hours on Instagram even with HUMAN_AGENT on (automatic sends never carry the tag)' do
+      channel = create(:channel_instagram)
+      inbox = create(:inbox, channel: channel, account: channel.account)
+      conversation = create(:conversation, inbox: inbox, account: channel.account)
+      create(:message, account: channel.account, inbox: inbox, conversation: conversation, created_at: 3.days.ago)
+
+      with_modified_env ENABLE_INSTAGRAM_CHANNEL_HUMAN_AGENT: 'true' do
+        expect(conversation.can_reply?).to be true
+        expect(conversation.can_reply_automatically?).to be false
+      end
     end
   end
 

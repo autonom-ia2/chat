@@ -16,6 +16,7 @@ const ERROR_KEYS = {
   'email_campaign.test_send_no_recipient': `${BUILDER}.SEND_TEST_EMPTY`,
   'email_campaign.invalid_email': `${BUILDER}.SEND_TEST_INVALID`,
   'email_campaign.test_send_suppressed': `${BUILDER}.SEND_TEST_SUPPRESSED`,
+  'email_campaign.test_send_no_subject': `${BUILDER}.SEND_TEST_NO_SUBJECT`,
 };
 
 export const testSendAddress = currentUser =>

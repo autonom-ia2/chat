@@ -63,6 +63,28 @@ RSpec.describe Crm::Ai::ResponsesClient do
     expect(request).to have_been_requested.twice
   end
 
+  # #2109: quem chama (o leitor de mídia) decide tentar de novo mais tarde pela natureza da falha.
+  it 'tells the caller when the failure is transient (429 after the retries) and keeps the status', :aggregate_failures do
+    stub_request(:post, url).to_return(status: 429)
+    expect { client.create(**params) }.to raise_error(described_class::Error) { |e|
+      expect(e.status).to eq(429)
+      expect(e.passageira?).to be(true)
+    }
+  end
+
+  it 'tells the caller when the failure is permanent (400)', :aggregate_failures do
+    stub_request(:post, url).to_return(status: 400, body: '{"error":{"message":"rejected"}}', headers: { 'Content-Type' => 'application/json' })
+    expect { client.create(**params) }.to raise_error(described_class::Error) { |e|
+      expect(e.status).to eq(400)
+      expect(e.passageira?).to be(false)
+    }
+  end
+
+  it 'a network failure after the retries is transient' do
+    stub_request(:post, url).to_raise(Net::ReadTimeout)
+    expect { client.create(**params) }.to raise_error(described_class::Error) { |e| expect(e.passageira?).to be(true) }
+  end
+
   it 'does not retry a successful HTTP response with unusable output' do
     request = stub_request(:post, url).to_return(body: '{"output":[]}', headers: { 'Content-Type' => 'application/json' })
     expect { client.create(**params) }.to raise_error(described_class::Error, 'empty_response')

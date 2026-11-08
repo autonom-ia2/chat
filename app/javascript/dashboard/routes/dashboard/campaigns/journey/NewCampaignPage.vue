@@ -43,6 +43,12 @@ import {
   loadDraft,
   saveDraft,
 } from 'dashboard/components-next/CampaignJourney/campaignDraft';
+// #1898: building is separate from sending (campaign_send).
+import { useCanManage } from 'dashboard/composables/useCanManage';
+import {
+  acharPronta,
+  guardarPronta,
+} from 'dashboard/components-next/CampaignJourney/prontasParaDisparar';
 import {
   BINDING_SOURCES,
   allBound,
@@ -119,6 +125,9 @@ const inboxes = useMapGetter('inboxes/getInboxes');
 const filteredTemplates = useMapGetter('inboxes/getFilteredWhatsAppTemplates');
 
 const currentUser = useMapGetter('getCurrentUser');
+// #1898: without campaign_send, the last step leaves the campaign ready for who sends (server draft).
+const podeDisparar = useCanManage('campaign_send');
+const prontaAberta = ref(null);
 
 const draft = ref(emptyDraft());
 // A draft left unfinished, shown as a question before the journey (#1093).
@@ -500,8 +509,18 @@ const onChannelLabel = computed(() =>
     ? t(`${NS}.REVIEW.ON_CHANNEL_EMAIL`)
     : t(`${NS}.REVIEW.ON_CHANNEL`)
 );
+// A campaign left ready with a WhatsApp API attachment: the file did not travel with it, so it is picked again.
+const anexoCheck = computed(() =>
+  podeDisparar.value &&
+  prontaAberta.value?.draft?.anexo &&
+  draft.value.channel === CAMPAIGN_CHANNELS.WHATSAPP_API
+    ? [{ key: 'anexo', ok: Boolean(forms.mediaFile.value) }]
+    : []
+);
 const reviewChecks = computed(() =>
-  isEmailChannel.value ? emailChecks(forms.emailCampaign.value) : []
+  isEmailChannel.value
+    ? emailChecks(forms.emailCampaign.value)
+    : anexoCheck.value
 );
 
 const reachable = computed(() => {
@@ -674,32 +693,46 @@ const scheduledAtValue = () =>
     ? scheduleToUtc(draft.value.scheduledAt, timeZone.value)
     : null;
 
+// Sending a campaign left ready: the server removes its draft once the campaign exists.
+const withDraftId = payload =>
+  prontaAberta.value
+    ? { ...payload, draft_id: prontaAberta.value.id }
+    : payload;
+
 const SUBMITTERS = {
   [CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]: () =>
     journeyCampaignsAPI.create(
-      buildCampaignPayload({
-        audienceId: draft.value.audienceId,
-        title: draft.value.title,
-        inboxId: draft.value.inboxId,
-        scheduledAt: scheduledAtValue(),
-        template: template.value,
-        bindings: draft.value.bindings,
-        defaults: draft.value.defaults,
-        extras: pedidoDoFormato.value
-          ? extrasParaEnvio(pedidoDoFormato.value, draft.value.formato || {}, {
-              timeZone: timeZone.value,
-            })
-          : {},
-        // Fork (#1335): a mensagem escrita para quem falou nas últimas 24 h.
-        freeText: textoDaConversaAberta.value,
-      })
+      withDraftId(
+        buildCampaignPayload({
+          audienceId: draft.value.audienceId,
+          title: draft.value.title,
+          inboxId: draft.value.inboxId,
+          scheduledAt: scheduledAtValue(),
+          template: template.value,
+          bindings: draft.value.bindings,
+          defaults: draft.value.defaults,
+          extras: pedidoDoFormato.value
+            ? extrasParaEnvio(
+                pedidoDoFormato.value,
+                draft.value.formato || {},
+                {
+                  timeZone: timeZone.value,
+                }
+              )
+            : {},
+          // Fork (#1335): a mensagem escrita para quem falou nas últimas 24 h.
+          freeText: textoDaConversaAberta.value,
+        })
+      )
     ),
   [CAMPAIGN_CHANNELS.WHATSAPP_API]: () => {
-    const payload = buildWhatsappApiPayload({
-      audienceId: draft.value.audienceId,
-      draft: draft.value,
-      scheduledAt: scheduledAtValue(),
-    });
+    const payload = withDraftId(
+      buildWhatsappApiPayload({
+        audienceId: draft.value.audienceId,
+        draft: draft.value,
+        scheduledAt: scheduledAtValue(),
+      })
+    );
     const file = forms.mediaFile.value;
     return file
       ? journeyCampaignsAPI.createWithFile({
@@ -710,11 +743,13 @@ const SUBMITTERS = {
   },
   [CAMPAIGN_CHANNELS.SMS]: () =>
     journeyCampaignsAPI.create(
-      buildSmsPayload({
-        audienceId: draft.value.audienceId,
-        draft: draft.value,
-        scheduledAt: scheduledAtValue(),
-      })
+      withDraftId(
+        buildSmsPayload({
+          audienceId: draft.value.audienceId,
+          draft: draft.value,
+          scheduledAt: scheduledAtValue(),
+        })
+      )
     ),
   // The e-mail draft exists since Passo 2: schedule it or send it now (engine endpoints).
   [CAMPAIGN_CHANNELS.EMAIL]: () => {
@@ -726,7 +761,35 @@ const SUBMITTERS = {
   },
 };
 
+const deixarPronta = async () => {
+  isSubmitting.value = true;
+  submitError.value = '';
+  try {
+    const { step, ...journey } = draft.value;
+    // The WhatsApp API attachment is a file in this browser: the draft keeps only its name, and who sends picks it again.
+    const anexo =
+      forms.mediaFile.value?.name || prontaAberta.value?.draft?.anexo || '';
+    await guardarPronta({
+      id: prontaAberta.value?.id,
+      title: draft.value.title,
+      channel: draft.value.channel,
+      draft: { ...journey, anexo },
+    });
+    clearDraft(accountId.value);
+    useAlert(t(`${NS}.REVIEW.PRONTA.${anexo ? 'SALVA_COM_ANEXO' : 'SALVA'}`));
+    router.push({ name: 'campaigns_journey_index' });
+  } catch {
+    submitError.value = t(`${NS}.REVIEW.PRONTA.ERRO`);
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
 const submit = async () => {
+  if (!podeDisparar.value) {
+    await deixarPronta();
+    return;
+  }
   isSubmitting.value = true;
   submitError.value = '';
   try {
@@ -747,11 +810,14 @@ const createEmail = async () => {
   isCreatingEmail.value = true;
   submitError.value = '';
   try {
+    // A draft left ready gets linked to the new e-mail and goes once that e-mail is sent or scheduled.
     const { data } = await journeyCampaignsAPI.create(
-      buildEmailPayload({
-        audienceId: draft.value.audienceId,
-        draft: draft.value,
-      })
+      withDraftId(
+        buildEmailPayload({
+          audienceId: draft.value.audienceId,
+          draft: draft.value,
+        })
+      )
     );
     update({ emailCampaignId: data.id });
   } catch (error) {
@@ -902,6 +968,20 @@ useOnEnter(async () => {
   isActive = true;
   submitError.value = '';
   returned.value = route.query.returned === '1';
+  // #1898: `?pronta=<id>` opens, at the review, the campaign someone left ready. Gone (already sent or removed):
+  // the journey starts as usual.
+  prontaAberta.value = route.query.pronta
+    ? await acharPronta(String(route.query.pronta)).catch(() => null)
+    : null;
+  if (prontaAberta.value) {
+    freshDraft.value = null;
+    await startJourney({
+      ...emptyDraft(),
+      ...prontaAberta.value.draft,
+      step: 3,
+    });
+    return;
+  }
   const entry = journeyEntry(route.query, loadDraft(accountId.value), {
     withTemplates: ponte.flagLigada.value,
   });
@@ -1119,6 +1199,8 @@ onBeforeUnmount(() => {
           :is-submitting="isSubmitting"
           :error-message="submitError"
           :now-blocked-reason="nowBlockedReason"
+          :so-deixa-pronta="!podeDisparar"
+          :montada-por="podeDisparar && prontaAberta ? prontaAberta.autor : ''"
           @update="update"
           @go="goTo"
           @back="goTo(2)"

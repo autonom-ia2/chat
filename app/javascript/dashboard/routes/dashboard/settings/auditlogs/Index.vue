@@ -197,7 +197,7 @@ onMounted(() => {
               <template #default>
                 <BaseTableCell>
                   <span
-                    class="text-body-main text-n-slate-12 whitespace-nowrap"
+                    class="text-body-main text-n-slate-12 whitespace-normal break-words"
                   >
                     {{ generateLogText(auditLogItem) }}
                   </span>

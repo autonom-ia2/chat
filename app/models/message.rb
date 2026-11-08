@@ -40,7 +40,7 @@
 #
 
 class Message < ApplicationRecord
-  # Teto de espera pela linha da conversa quando uma pessoa responde uma conversa à espera (#1499).
+  # Teto de espera pela linha da conversa quando uma pessoa fica com ela ao responder (#1499, #2067).
   PERSON_CLAIM_LOCK_TIMEOUT = '2s'.freeze
 
   searchkick callbacks: false if ChatwootApp.advanced_search_allowed?
@@ -87,6 +87,13 @@ class Message < ApplicationRecord
   attr_accessor :echo_id
   # Transient flag used to skip waiting_since clearing for specific bot/system messages.
   attr_accessor :preserve_waiting_since
+  # #2067: "ficar com a conversa ao enviar", o ícone ao lado do Enviar no painel (Conversations::FicarAoEnviar::Pedido:
+  # ligado ou desligado, e o dono que a tela viu). nil = o pedido não disse (API, app, integrações) ou a conta está com a
+  # flag desligada, e vale a regra de antes (claim_conversation_for_person).
+  attr_accessor :ficar_com_a_conversa
+  # #2067: o ícone estava ligado e não deu para ficar com a conversa (trava ocupada, outro dono, erro). Vai na resposta do
+  # envio, para a tela avisar; nil quando ficou ou não foi pedido.
+  attr_reader :ficar_com_a_conversa_nao_deu
 
   enum message_type: { incoming: 0, outgoing: 1, activity: 2, template: 3 }
   enum content_type: {
@@ -346,7 +353,7 @@ class Message < ApplicationRecord
     dispatch_create_events
     send_reply
     claim_conversation_for_bot
-    claim_waiting_conversation_for_person
+    claim_conversation_for_person
     execute_message_template_hooks
     update_contact_activity
   end
@@ -372,28 +379,73 @@ class Message < ApplicationRecord
     ChatwootExceptionTracker.new(e, account: account).capture_exception
   end
 
-  # Pessoa respondendo numa conversa que o robô já passou e está à espera de pessoa fica com ela (#1499, decisão do
-  # Rodrigo em 13/10, opção b): senão a fila do motor de entrega a daria a outro enquanto o cliente fala com quem
-  # respondeu. Enquanto o robô ainda atende (sem marca de espera), responder não tira o robô: só "Atribuir a mim".
-  # Atribuir encerra as marcas de espera e tira o robô (callbacks da conversa). Olha as marcas antes de travar (a maioria
-  # das respostas não está à espera) e trava com teto, como a fila do motor: a resposta não fica presa atrás de uma entrega.
-  def claim_waiting_conversation_for_person
-    # Leitura nova (sem trava): a conversa em memória vem do começo do pedido e pode não ver uma passagem recém-gravada.
-    return unless public_person_reply? && waiting_for_person?(Conversation.find(conversation_id))
+  # Quem responde pelo painel fica com a conversa (#2067, decisões do Rodrigo em 21 e 22/10, que trocam a de 13/10 do
+  # #1377/#1405 "atendente responde não assume"). Roda depois da mensagem gravada ("ao enviar" é ao clicar em Enviar: se o
+  # provedor recusar depois, a conversa continua com quem tentou) e uma vez só, numa trava com teto, como a fila do motor:
+  # a resposta não fica presa atrás de uma entrega.
+  # - Ícone ligado: fica com ela se o dono ainda é o que a tela viu (Conversations::FicarAoEnviar.mesmo_dono?). Sem
+  #   ninguém e com a IA valem como a mesma situação; de um colega, só se a tela viu esse colega e a pessoa ligou o ícone.
+  # - Ícone desligado: ninguém fica, nem na conversa à espera de pessoa.
+  # - O pedido não disse (API, app, ou a flag desligada): a regra de antes. Só a conversa que o robô já passou e espera
+  #   pessoa fica com quem respondeu (#1499, opção b), senão a fila do motor de entrega a daria a outro.
+  # Atribuir encerra as marcas de espera e tira o robô (callbacks da conversa), e o registro de passagens grava a troca.
+  # Com o ícone ligado, não ficar nunca é calado: a resposta do envio leva `ficar_com_a_conversa_nao_deu` e o log diz por quê.
+  def claim_conversation_for_person
+    return unless public_person_reply? && claim_requested?
 
-    Conversation.transaction do
-      Conversation.connection.execute("SET LOCAL lock_timeout = '#{PERSON_CLAIM_LOCK_TIMEOUT}'")
-      locked = Conversation.lock.find(conversation_id)
-      next unless waiting_for_person?(locked)
-
-      locked.update!(assignee: sender, status: :open)
+    resultado = com_motivo_do_pedido do
+      Conversation.transaction do
+        Conversation.connection.execute("SET LOCAL lock_timeout = '#{PERSON_CLAIM_LOCK_TIMEOUT}'")
+        claim_locked_conversation(Conversation.lock.find(conversation_id))
+      end
     end
+    claim_not_done!(resultado) if resultado.is_a?(Symbol)
   rescue ActiveRecord::LockWaitTimeout
     # Linha presa por uma entrega em andamento: quem decide é ela; a resposta já foi gravada e enviada.
     Rails.logger.warn("[crm][entrega] resposta conversa=#{conversation_id} não assumiu: trava ocupada")
+    claim_not_done!(:trava_ocupada)
   rescue ActiveRecord::ActiveRecordError => e
-    # A mensagem já está gravada e enviada; a conversa segue na fila do motor, que a entrega a alguém.
+    # A mensagem já está gravada e enviada; a conversa segue como estava (ou na fila do motor, que a entrega a alguém).
     ChatwootExceptionTracker.new(e, account: account).capture_exception
+    claim_not_done!(:erro)
+  end
+
+  # -> true quando ficou ou já era dela; :dono_mudou quando o pedido explícito encontrou outro dono.
+  def claim_locked_conversation(locked)
+    return true if locked.assignee_id == sender_id && locked.ai_assignee_type.blank?
+    return waiting_for_person?(locked) && claim!(locked) if ficar_com_a_conversa.nil?
+    return :dono_mudou unless Conversations::FicarAoEnviar.mesmo_dono?(ficar_com_a_conversa.visto, locked)
+
+    claim!(locked)
+  end
+
+  # #2067: com o pedido explícito, o registro de passagens grava o porquê ('ficou_ao_enviar'); o listener roda depois do
+  # commit, ainda dentro do bloco. Sem pedido, a regra de antes ('atribuicao').
+  def com_motivo_do_pedido(&)
+    return yield if ficar_com_a_conversa.nil?
+
+    Crm::Passagens.com_motivo(Crm::Passagens::Atribuicao::FICOU_AO_ENVIAR, &)
+  end
+
+  def claim!(locked)
+    locked.update!(assignee: sender, status: locked.pending? ? :open : locked.status)
+  end
+
+  # Só o pedido explícito avisa (o envio sem pedido segue a regra de antes, em silêncio).
+  def claim_not_done!(motivo)
+    return unless ficar_com_a_conversa&.fica?
+
+    @ficar_com_a_conversa_nao_deu = true
+    Rails.logger.warn("[conversa][ficar_ao_enviar] conversa=#{conversation_id} mensagem=#{id} pessoa=#{sender_id} " \
+                      "não ficou: #{motivo}")
+  end
+
+  # Olha antes de travar: a maioria das respostas sem pedido não está à espera. Leitura nova (sem trava): a conversa em
+  # memória vem do começo do pedido e pode não ver uma passagem recém-gravada.
+  def claim_requested?
+    return ficar_com_a_conversa.fica? if ficar_com_a_conversa
+
+    waiting_for_person?(Conversation.find(conversation_id))
   end
 
   # Resposta pública que a própria pessoa mandou agora (ela é quem está logado no pedido). Aviso, follow-up ou envio

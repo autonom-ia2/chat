@@ -50,6 +50,17 @@ RSpec.describe 'E-mail campaign reply-to inbox (#999, L5)', :aggregate_failures,
       expect(described_class.for(campaign.reload)).to eq('sender@example.org')
     end
 
+    # #2237: "A mesma do remetente" is the campaign's own From, not the domain's default from_email.
+    it 'falls back to the campaign From, not the address saved on the verified domain' do
+      campaign.sender_identity.update!(from_email: 'lucas@example.org')
+      campaign.update!(reply_to_inbox: nil, reply_to: nil, from_email: 'jhuliene@example.org')
+
+      expect(described_class.for(campaign.reload)).to eq('jhuliene@example.org')
+
+      campaign.update!(from_email: nil)
+      expect(described_class.for(campaign.reload)).to eq('lucas@example.org')
+    end
+
     it 'refuses a reply inbox that is not an e-mail inbox of the account' do
       other = create(:channel_email).inbox
       api_inbox = create(:inbox, account: account)
@@ -70,6 +81,39 @@ RSpec.describe 'E-mail campaign reply-to inbox (#999, L5)', :aggregate_failures,
     expect(delivered.size).to eq(1)
     expect(delivered.first).to include(to: 'ana@alfa.com.br', reply_to: 'respostas@empresa.com.br')
     expect(recipient.reload.sent_at).to be_present
+  end
+
+  it 'sends by the verified domain with the campaign From as Reply-To when no reply inbox is chosen (#2237)' do
+    campaign.sender_identity.update!(from_email: 'lucas@example.org')
+    campaign.update!(reply_to_inbox: nil, reply_to: nil, from_email: 'jhuliene@example.org')
+    allow(EmailCampaigns::Ses::Sender).to receive(:new).and_return(capturing_sender(EmailCampaigns::Ses::Sender))
+    engine = EmailCampaigns::DeliveryEngine.new(campaign.reload)
+    allow(engine).to receive(:sleep)
+
+    engine.perform
+
+    expect(delivered.size).to eq(1)
+    expect(delivered.first).to include(from_email: 'jhuliene@example.org', reply_to: 'jhuliene@example.org')
+  end
+
+  it 'shows on the campaign the Reply-To the send will really use (#2237)' do
+    admin = create(:user, account: account, role: :administrator)
+    campaign.sender_identity.update!(from_email: 'lucas@example.org')
+    campaign.update!(reply_to_inbox: nil, reply_to: nil, from_email: 'jhuliene@example.org')
+
+    get "/api/v1/accounts/#{account.id}/email_campaigns/campaigns/#{campaign.id}", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.dig('payload', 'reply_to_address')).to eq('jhuliene@example.org')
+  end
+
+  it 'uses one From chain for the send, the test send and the Reply-To (#2237)' do
+    identity = campaign.sender_identity
+    campaign.update!(reply_to_inbox: nil, reply_to: nil, from_email: nil)
+    identity.update!(from_email: nil)
+
+    expect(campaign.reload.sender_address).to eq("no-reply@#{identity.domain}")
+    expect(EmailCampaigns::ReplyTo.for(campaign)).to eq("no-reply@#{identity.domain}")
   end
 
   it 'sends by the inbox (direct) with the reply inbox as Reply-To' do

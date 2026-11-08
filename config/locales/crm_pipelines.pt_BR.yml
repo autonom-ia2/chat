@@ -2,3 +2,5 @@ pt_BR:
   crm:
     pipelines:
       outcome_labels_invalid: "Os nomes dos desfechos precisam ser um objeto com success e/ou failure em texto, com até 30 caracteres cada."
+      archive_last_active: "Este é o único funil ativo da conta. Crie outro funil antes de arquivar este."
+      archive_only_default: "Este é o funil principal. Torne outro funil o principal antes de arquivar este."

@@ -41,10 +41,19 @@ RSpec.describe Crm::BookingV2::HostEligibility do
     expect(described_class.eligible?(account: account, user: with_admin)).to be(true)
 
     { 'agendamento_view' => %w[agendamento_view], 'agendamento_manage' => %w[agendamento_manage],
-      'crm_manage_cards' => %w[crm_manage_cards], 'crm_move_cards' => %w[crm_move_cards],
+      'crm_view_reports' => %w[crm_view_reports], 'sales_value_view' => %w[sales_value_view],
       'report_manage' => %w[report_manage] }.each do |label, keys|
       user = create(:user, account: account, role: :agent).tap { |member| grant(member, *keys) }
       expect(described_class.eligible?(account: account, user: user)).to be(false), "#{label} não deveria bastar"
+    end
+  end
+
+  # #2124: chave de editar o CRM grava crm_view junto, então quem edita cards também atende.
+  it 'aceita quem tem só uma chave de editar o CRM' do
+    CustomRole::CRM_EDITING_KEYS.each do |key|
+      user = create(:user, account: account, role: :agent).tap { |member| grant(member, key) }
+      expect(described_class.eligible?(account: account, user: user)).to be(true), "#{key} deveria bastar"
+      expect(described_class.eligible_user_ids(account: account)).to include(user.id)
     end
   end
 

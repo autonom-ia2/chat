@@ -14,6 +14,8 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import AccessToken from 'dashboard/routes/dashboard/settings/profile/AccessToken.vue';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import { TOKEN_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
 
 const props = defineProps({
   type: {
@@ -36,6 +38,8 @@ const store = useStore();
 const { t } = useI18n();
 const dialogRef = ref(null);
 const uiFlags = useMapGetter('agentBots/getUIFlags');
+// O servidor só manda token e segredo para administrador ou token_manage, e só eles trocam (#2027).
+const canResetTokens = usePermissionGranted(TOKEN_MANAGE_PERMISSION);
 
 const formState = reactive({
   botName: '',
@@ -109,10 +113,7 @@ const botUrlError = computed(() =>
 );
 
 const showAccessTokenInput = computed(
-  () =>
-    showAccessToken.value ||
-    props.type === MODAL_TYPES.EDIT ||
-    accessToken.value
+  () => showAccessToken.value || !!accessToken.value
 );
 
 const resetForm = () => {
@@ -355,6 +356,7 @@ defineExpose({ dialogRef });
         </label>
         <AccessToken
           :value="botSecret"
+          :show-reset-button="canResetTokens"
           @on-copy="onCopySecret"
           @on-reset="onResetSecret"
         />
@@ -370,6 +372,7 @@ defineExpose({ dialogRef });
         <AccessToken
           v-if="type === MODAL_TYPES.EDIT"
           :value="accessToken"
+          :show-reset-button="canResetTokens"
           @on-copy="onCopyToken"
           @on-reset="onResetToken"
         />

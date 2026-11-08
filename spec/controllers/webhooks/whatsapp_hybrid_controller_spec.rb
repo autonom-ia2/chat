@@ -52,6 +52,18 @@ RSpec.describe 'WhatsApp Híbrido engine webhook', type: :request do
       )
   end
 
+  it 'passes fromMe, the physical id and only the device that read, never the phone (#2246)' do
+    read = { id: 'evt_read', timestamp: now_ms, event: 'message.ack', session: 'hybrid-test',
+             payload: { id: 'false_5511900000000@c.us_ABC123', from: '5511900000000@c.us', fromMe: false, ack: 3, ackName: 'READ',
+                        _data: { Type: 'read', IsFromMe: true, MessageIDs: ['ABC123'], Sender: '5511999993846:0@s.whatsapp.net' } } }.to_json
+
+    expect { post_signed(read, OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', read)) }
+      .to have_enqueued_job(WhatsappHybrid::WebhookEventJob).with(
+        connection.id, 'message.ack',
+        { 'ack' => 3, 'id' => 'ABC123', 'from_me' => false, 'aparelho' => '0' }
+      )
+  end
+
   it 'applies a replayed event only once' do
     signature = OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', body)
     post_signed(body, signature)
@@ -122,5 +134,55 @@ RSpec.describe 'WhatsApp Híbrido engine webhook', type: :request do
     expect { post_signed(message_body, OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', message_body)) }
       .not_to have_enqueued_job(WhatsappHybrid::WebhookEventJob)
     expect(response).to have_http_status(:ok)
+  end
+
+  # #2246 do corpo assinado do GOWS até o "visto": controller (used_fields), job e serviço, sem double no meio.
+  # Payload anonimizado, no formato derivado do código do motor (ainda não capturado em produção).
+  describe 'read on the business phone, end to end (#2246)' do
+    let(:physical_id) { '2A5D2D8DA089BE42E4D5' }
+    let(:contact) { create(:contact, account: channel.account, phone_number: '+5511900000000') }
+    let(:conversation) do
+      create(:conversation, account: channel.account, inbox: channel.inbox, contact: contact, agent_last_seen_at: 1.hour.ago)
+    end
+    let!(:received) do
+      create(:message, message_type: :incoming, conversation: conversation, account: channel.account, inbox: channel.inbox,
+                       sender: contact, source_id: 'wamid.HBgNNTUxMTkzNzAxNjA5NBUCABIYFDJBNUQyRDhEQTA4OUJFNDJFNEQ1AA==')
+    end
+
+    def read_by(sender)
+      { id: "evt_#{SecureRandom.hex(4)}", timestamp: now_ms, event: 'message.ack', session: 'hybrid-test',
+        me: { id: '5511999993846@c.us' },
+        payload: { id: "false_5511900000000@c.us_#{physical_id}", from: '5511900000000@c.us', fromMe: false, ack: 3,
+                   ackName: 'READ', _data: { Type: 'read', IsFromMe: true, MessageIDs: [physical_id], Sender: sender } } }.to_json
+    end
+
+    def deliver_read(sender)
+      read = read_by(sender)
+      perform_enqueued_jobs(only: WhatsappHybrid::WebhookEventJob) do
+        post_signed(read, OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', read))
+      end
+    end
+
+    before do
+      connection.update!(status: 'connected', connected_phone: channel.phone_number.delete('^0-9'), risk_accepted_at: Time.current)
+      Redis::Alfred.delete(WhatsappHybrid::Config.inbox_flag_key(channel.inbox.id))
+      channel.account.enable_features!(ConversaCanal::VistaNoCelular::FLAG)
+      allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+      WhatsappHybrid::LeituraNoCelular.indexar(received)
+    end
+
+    after { Redis::Alfred.delete(WhatsappHybrid::LeituraNoCelular.chave(channel.inbox.id, physical_id)) }
+
+    it 'clears the unread dot when the main phone (device 0) read it' do
+      deliver_read('5511999993846:0@s.whatsapp.net')
+
+      expect(conversation.reload.unread_incoming_messages).to be_empty
+    end
+
+    it 'keeps the unread dot when a linked device (device 5) read it' do
+      deliver_read('5511999993846:5@s.whatsapp.net')
+
+      expect(conversation.reload.unread_incoming_messages).to contain_exactly(received)
+    end
   end
 end

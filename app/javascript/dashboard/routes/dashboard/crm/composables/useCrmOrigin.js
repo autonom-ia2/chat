@@ -1,5 +1,12 @@
 import { useI18n } from 'vue-i18n';
 
+// Paid Meta ad clicks that open a chat with the ad id in source_id: WhatsApp,
+// Messenger and Instagram Direct (#2521). Legacy touches without `source` were
+// always WhatsApp.
+export const META_AD_CLICK_SOURCES = ['meta_ctwa', 'meta_ctm', 'meta_ctd'];
+export const isMetaAdClickOption = option =>
+  !option.source || META_AD_CLICK_SOURCES.includes(option.source);
+
 export const CRM_ORIGIN_SOURCE_META = {
   meta_ctwa: {
     icon: 'i-lucide-message-circle',
@@ -20,6 +27,15 @@ export const CRM_ORIGIN_SOURCE_META = {
   meta_paid: {
     icon: 'i-lucide-megaphone',
     labelKey: 'CRM_KANBAN.ORIGIN.META_PAID',
+  },
+  // #2521/#2620: clique no anúncio que abre o Messenger e o Direct.
+  meta_ctm: {
+    icon: 'i-lucide-message-square',
+    labelKey: 'CRM_KANBAN.ORIGIN.META_CTM',
+  },
+  meta_ctd: {
+    icon: 'i-lucide-instagram',
+    labelKey: 'CRM_KANBAN.ORIGIN.META_CTD',
   },
   tracked_link: {
     icon: 'i-lucide-link',
@@ -116,9 +132,18 @@ const sourceForCampaign = campaign => {
     : FALLBACK_SOURCE;
 };
 
-export const buildCrmOrigin = campaign => {
-  if (!campaign || typeof campaign !== 'object') return null;
+// #2271: without meta_ads_view the server sends an ad touch with only where and
+// when it came from (ad_hidden). The screen uses nothing else from it either.
+const AD_HIDDEN_FIELDS = ['source', 'source_type', 'touched_at'];
+const visibleTouch = touch =>
+  touch.ad_hidden
+    ? Object.fromEntries(AD_HIDDEN_FIELDS.map(field => [field, touch[field]]))
+    : touch;
 
+export const buildCrmOrigin = touch => {
+  if (!touch || typeof touch !== 'object') return null;
+
+  const campaign = visibleTouch(touch);
   const source = sourceForCampaign(campaign);
   const meta = sourceMetaFor(source);
   const headline = text(campaign.headline);
@@ -139,6 +164,7 @@ export const buildCrmOrigin = campaign => {
     adPreviewUrl: safeSourceUrl(campaign.ad_preview_url),
     adThumbnailUrl: safeSourceUrl(campaign.ad_thumbnail_url),
     touchedAt: campaign.touched_at || null,
+    adHidden: Boolean(touch.ad_hidden),
     // Names resolved from the Meta API (#1034) win; otherwise the UTMs pasted in
     // the ad (#1011): utm_campaign = campaign, utm_term = ad set, utm_content = ad.
     // Meta's automatic parameters send IDs there — see hierarchyItems.
@@ -204,6 +230,10 @@ export function useCrmOrigin() {
         return t('CRM_KANBAN.ORIGIN.TIKTOK_ADS');
       case 'meta_paid':
         return t('CRM_KANBAN.ORIGIN.META_PAID');
+      case 'meta_ctm':
+        return t('CRM_KANBAN.ORIGIN.META_CTM');
+      case 'meta_ctd':
+        return t('CRM_KANBAN.ORIGIN.META_CTD');
       case 'tracked_link':
         return t('CRM_KANBAN.ORIGIN.TRACKED_LINK');
       case 'campaign_whatsapp':

@@ -34,6 +34,11 @@ import { semAcento } from 'dashboard/helper/semAcento';
 const props = defineProps({
   // Elemento acima do qual a janela abre (a barra de baixo da caixa de resposta).
   ancora: { type: Object, default: null },
+  // Lado da âncora em que a janela se alinha: 'inicio' (esquerda) ou 'fim' (direita, a
+  // reação numa mensagem enviada).
+  alinhar: { type: String, default: 'inicio' },
+  // Na reação pelo celular a busca não ganha foco: o teclado cobriria a grade.
+  focarBusca: { type: Boolean, default: true },
 });
 const emit = defineEmits(['escolher', 'fechar']);
 
@@ -108,35 +113,46 @@ const categorias = computed(() => [
 ]);
 const ativa = ref(categorias.value[0]?.slug);
 
-// Posição: em cima da barra de baixo da caixa, alinhada à esquerda dela; sem espaço
-// em cima, abre embaixo. Nunca sai da tela. Acompanha a âncora quando ela muda de
-// tamanho ou a página rola (#1895).
+// Posição: em cima da âncora (a barra de baixo da caixa de resposta ou o balão),
+// alinhada ao lado pedido; sem espaço em cima, abre do lado que tem mais espaço e
+// encolhe para caber. Nunca sai da tela. Acompanha a âncora quando ela muda de tamanho
+// ou a página rola (#1895, #2113).
 const { width: larguraDaTela, height: alturaDaTela } = useWindowSize();
 const ancora = useElementBounding(() => props.ancora);
+const DISTANCIA = 8;
 const posicao = computed(() => {
   const caixa = props.ancora
     ? {
         left: ancora.left.value,
+        right: ancora.right.value,
         top: ancora.top.value,
         bottom: ancora.bottom.value,
       }
     : null;
   const largura = Math.min(LARGURA, larguraDaTela.value - MARGEM * 2);
+  const inicio =
+    props.alinhar === 'fim' && caixa ? caixa.right - largura : caixa?.left;
   const esquerda = Math.min(
-    Math.max(MARGEM, caixa?.left ?? MARGEM),
+    Math.max(MARGEM, inicio ?? MARGEM),
     larguraDaTela.value - largura - MARGEM
   );
-  const cabeEmCima = (caixa?.top ?? alturaDaTela.value) > ALTURA + MARGEM * 2;
-  return cabeEmCima
+  const espacoEmCima = (caixa?.top ?? alturaDaTela.value) - DISTANCIA - MARGEM;
+  const espacoEmBaixo =
+    alturaDaTela.value - (caixa?.bottom ?? 0) - DISTANCIA - MARGEM;
+  const emCima = espacoEmCima >= ALTURA || espacoEmCima >= espacoEmBaixo;
+  const altura = `${Math.min(ALTURA, Math.max(emCima ? espacoEmCima : espacoEmBaixo, 0))}px`;
+  return emCima
     ? {
         left: `${esquerda}px`,
         width: `${largura}px`,
-        bottom: `${alturaDaTela.value - (caixa?.top ?? 0) + 8}px`,
+        height: altura,
+        bottom: `${alturaDaTela.value - (caixa?.top ?? 0) + DISTANCIA}px`,
       }
     : {
         left: `${esquerda}px`,
         width: `${largura}px`,
-        top: `${(caixa?.bottom ?? 0) + 8}px`,
+        height: altura,
+        top: `${(caixa?.bottom ?? 0) + DISTANCIA}px`,
       };
 });
 
@@ -199,7 +215,8 @@ onBeforeUnmount(() => {
 
 onMounted(async () => {
   focoAoAbrir = document.activeElement;
-  campo.value?.focus();
+  if (props.focarBusca) campo.value?.focus();
+  else janela.value?.focus();
   if (!String(locale.value).startsWith('pt')) return;
   const { default: nomes } = await import('./emojisEmPortugues.json');
   nomesEmPortugues.value = nomes;
@@ -215,8 +232,9 @@ onMounted(async () => {
       ref="janela"
       role="dialog"
       :aria-label="t('CONVERSA_CANAL.EMAIL.EMOJIS.TITULO')"
-      class="fixed z-[10000] flex flex-col overflow-hidden rounded-2xl border border-n-weak bg-n-solid-1 shadow-[0_8px_32px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.08)]"
-      :style="{ ...posicao, height: `${ALTURA}px` }"
+      class="fixed z-[10000] flex flex-col overflow-hidden rounded-2xl outline-none border border-n-weak bg-n-solid-1 shadow-[0_8px_32px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.08)]"
+      :style="posicao"
+      tabindex="-1"
       data-janela-de-emojis
       data-popover-content
     >

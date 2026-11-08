@@ -17,6 +17,7 @@ import SettingsLayout from '../SettingsLayout.vue';
 import CrmScheduleEditor from 'dashboard/routes/dashboard/crm/components/sla/CrmScheduleEditor.vue';
 import CrmServiceSchedulesAPI from 'dashboard/api/crmServiceSchedules';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 
 const getters = useStoreGetters();
 const store = useStore();
@@ -49,8 +50,10 @@ const filteredAgentList = computed(() => {
 });
 
 const uiFlags = computed(() => getters['agents/getUIFlags'].value);
-const currentUserId = computed(() => getters.getCurrentUserID.value);
 const customRoles = useMapGetter('customRole/getCustomRoles');
+// Quem pode mexer em quem (#1931): a si mesmo nunca, administrador só outro administrador, e a função atual
+// precisa estar ao alcance de quem mexe.
+const { memberLockReason } = usePeopleAccess();
 
 onMounted(() => {
   store.dispatch('agents/get');
@@ -82,12 +85,10 @@ const verifiedAdministrators = computed(() => {
   );
 });
 
-const showEditAction = agent => {
-  return currentUserId.value !== agent.id;
-};
+const showEditAction = agent => !memberLockReason(agent);
 
 const showDeleteAction = agent => {
-  if (currentUserId.value === agent.id) {
+  if (memberLockReason(agent)) {
     return false;
   }
 
@@ -282,6 +283,13 @@ const confirmDeletion = () => {
             </div>
           </div>
           <div class="flex justify-end gap-3">
+            <span
+              v-if="memberLockReason(agent)"
+              v-tooltip.top="$t(`AGENT_MGMT.LOCK.${memberLockReason(agent)}`)"
+              role="img"
+              :aria-label="$t(`AGENT_MGMT.LOCK.${memberLockReason(agent)}`)"
+              class="i-lucide-lock size-4 mt-2 text-n-slate-10"
+            />
             <Button
               v-if="showEditAction(agent)"
               v-tooltip.top="$t('AGENT_MGMT.EDIT.BUTTON_TEXT')"

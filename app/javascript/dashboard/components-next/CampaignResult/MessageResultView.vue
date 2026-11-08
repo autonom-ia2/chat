@@ -31,6 +31,8 @@ const NS = 'RESULT_JOURNEY';
 const { t, locale } = useI18n();
 const store = useStore();
 const canManage = useCanManage('campaign_manage');
+// #1898: retomar dispara de novo, então pede a chave de disparar.
+const canSend = useCanManage('campaign_send');
 
 const result = ref(null);
 const isLoading = ref(false);
@@ -191,7 +193,7 @@ watch(() => [props.channel, props.campaignId], load, { immediate: true });
               @click="runApiAction('pause')"
             />
             <Button
-              v-if="campaign.status === 'paused'"
+              v-if="campaign.status === 'paused' && canSend"
               :label="t(`${NS}.ACTIONS.RESUME`)"
               icon="i-lucide-play"
               slate

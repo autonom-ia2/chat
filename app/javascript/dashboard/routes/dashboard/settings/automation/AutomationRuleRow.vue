@@ -6,6 +6,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import ToggleSwitch from 'dashboard/components-next/switch/Switch.vue';
 import { BaseTableRow, BaseTableCell } from 'dashboard/components-next/table';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { useSaidaExterna } from './saidaExterna';
 
 const props = defineProps({
   automation: {
@@ -21,6 +22,9 @@ const props = defineProps({
 const emit = defineEmits(['toggle', 'edit', 'delete', 'clone']);
 
 const canManage = useCanManage('automation_manage');
+// #2448: sem integration_manage, a regra com webhook ou transcrição por e-mail não liga, não desliga e não é copiada.
+const { travada } = useSaidaExterna();
+const saidaTravada = computed(() => travada(props.automation.actions));
 
 const readableDate = date => messageStamp(new Date(date), 'LLL d, yyyy');
 const readableDateWithTime = date =>
@@ -62,10 +66,19 @@ const automationActive = computed({
             {{ automation.description }}
           </span>
         </div>
+        <p
+          v-if="canManage && saidaTravada"
+          class="mt-1 text-sm text-n-amber-11"
+        >
+          {{ $t('AUTOMATION.EXTERNAL_ACTIONS_LOCKED') }}
+        </p>
       </BaseTableCell>
 
       <BaseTableCell>
-        <ToggleSwitch v-model="automationActive" :disabled="!canManage" />
+        <ToggleSwitch
+          v-model="automationActive"
+          :disabled="!canManage || saidaTravada"
+        />
       </BaseTableCell>
 
       <BaseTableCell :title="readableDateWithTime(automation.created_on)">
@@ -89,6 +102,7 @@ const automationActive = computed({
             icon="i-woot-clone"
             sm
             slate
+            :disabled="saidaTravada"
             :is-loading="loading"
             @click="$emit('clone', automation)"
           />

@@ -176,6 +176,8 @@ class ActionCableConnector extends BaseActionCableConnector {
       lastActivityAt,
       conversationId,
     });
+    // #1988: quem não depende da lista de conversas (a gaveta "Enviar mensagem") ouve aqui.
+    emitter.emit(BUS_EVENTS.MENSAGEM_AO_VIVO, data);
   };
 
   // eslint-disable-next-line class-methods-use-this

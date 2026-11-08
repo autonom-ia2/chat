@@ -61,6 +61,15 @@ describe('quem só lê conversas', () => {
       expect(canOperateConversation(comRobo, role, vendas, 1)).toBe(false);
     });
 
+    it('assistente (Captain::Assistant) com o mesmo id também não (#2249)', () => {
+      const comAssistente = {
+        meta: { assignee: { id: 1 }, assignee_type: 'Captain::Assistant' },
+      };
+      expect(canOperateConversation(comAssistente, role, vendas, 1)).toBe(
+        false
+      );
+    });
+
     it('sem responsável: só a que espera pessoa, como awaiting_person?', () => {
       const ninguem = { meta: {} };
       const roboPassou = {

@@ -1,5 +1,5 @@
 # Conexão da conta com os anúncios da Meta (#1034, #1047). Ver (READ_ACTIONS): administrador ou `meta_ads_view` (#1794);
-# o resto só administrador (policy Crm::MetaAdsConnection).
+# o resto: administrador ou `meta_ads_manage`, chave protegida (#2070, policy Crm::MetaAdsConnection).
 #
 # GET    → estado da conexão (nunca o token), dados do portfólio parceiro da plataforma e se algum funil
 #          ligado ao WhatsApp oficial já avisa a Meta das vendas.
@@ -22,25 +22,33 @@
 #                  O fim da leitura chega pelo canal de tempo real (crm.meta_ads.insights_updated).
 #
 # Painel (#1088):
-# GET   panel?days=7|30 → o painel do dia a dia (Crm::MetaAds::Panel::Report); também pede a leitura de hoje.
+# GET   panel?period=7d|30d|90d|this_month|last_month|all (#2011; o antigo days=7|30 segue valendo) → o painel do dia a
+#       dia (Crm::MetaAds::Panel::Report); também pede a leitura de hoje.
 #       F5 (#1110): mais o consultor (`advice`, até 3 ações, sempre de 30 dias), a Meta × nós do período
 #       (`meta_comparison`) e o tempo de resposta do período (`response_time`).
-# GET   panel_ad?ad_id=&days=7|30 → um anúncio por dentro (Crm::MetaAds::Panel::AdDetail). Só banco: abrir o
+# GET   panel_ad?ad_id=&period= → um anúncio por dentro (Crm::MetaAds::Panel::AdDetail). Só banco: abrir o
 #       anúncio não chama a Meta nem pede leitura (o painel por trás já pediu).
-# GET   panel_list?step=conversations|quotes|sales|slow_replies&days=7|30 → a lista por trás de cada etapa do
+# GET   panel_list?step=conversations|quotes|sales|slow_replies&period= → a lista por trás de cada etapa do
 #       caminho do dinheiro (Crm::MetaAds::Panel::PathList, F5). Só banco. Etapa fora da lista: 422 invalid_step.
 #
+# Anúncios sem login (#1960): com a flag `anuncios_sem_login` e sem conexão ativa com conta de anúncios, panel,
+# panel_ad e panel_list respondem com o que o WhatsApp contou (Report sem conexão, `source: 'whatsapp'`), e o GET
+# traz `whatsapp_result` para a tela vazia. Só leitura: a coorte sai dos toques gravados na conversa
+# (Panel::WhatsappCohort).
+#
 # Sem a permissão, 403 (não 401: a sessão é válida, só falta a permissão). As listas que levam a uma conversa
-# mostram só as visíveis para a pessoa (Crm::MetaAds::VisibleConversations, #1794).
+# mostram só as visíveis para a pessoa (Crm::MetaAds::VisibleConversations, #1794). Os valores de venda em R$ do painel,
+# do anúncio, das listas e do consultor seguem a mesma pessoa (#2075, Crm::MetaAds::Panel::SalesValue).
 class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::Crm::BaseController
   include DeferInteractiveAi
+  include Crm::MetaAdsPanelSource
 
   # Tokens da Meta têm algumas centenas de caracteres; o teto barra corpos absurdos antes da Graph.
   MAX_TOKEN_LENGTH = 2048
   SELECTION_RESET = { ad_account_id: nil, ad_account_name: nil, ad_account_business_id: nil, ad_account_timezone: nil,
                       pixel_id: nil, pixel_name: nil, verified_at: nil }.freeze
   # O que `meta_ads_view` alcança (#1794): o estado da conexão e o painel. Contas, Pixels, funis e a leitura avulsa
-  # são da conexão guiada e do resumo, do administrador (chamam a Meta com o token ou trazem caixas e funis).
+  # são da conexão guiada e do resumo, de `meta_ads_manage` (#2070; chamam a Meta com o token ou trazem caixas e funis).
   READ_ACTIONS = %w[show panel panel_ad panel_list].freeze
 
   before_action :ensure_allowed
@@ -95,30 +103,26 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
   end
 
   def panel
-    connection = current_connection
-    return render json: { panel: nil } if connection.blank? || connection.ad_account_id.blank?
+    return render json: { panel: whatsapp_panel_payload } if whatsapp_panel?
+    return render json: { panel: nil } unless panel_ready?
 
+    connection = current_connection
     refreshing = ::Crm::MetaAds::Insights::Refresh.request!(connection)
-    report = ::Crm::MetaAds::Panel::Report.new(connection, days: params[:days])
+    report = ::Crm::MetaAds::Panel::Report.new(connection, period: panel_period, visible: viewer)
     render json: { panel: panel_payload(connection, report).merge(synced_at: connection.reload.insights_synced_at, refreshing: refreshing) }
   end
 
   def panel_ad
-    connection = current_connection
-    return render json: { ad: nil } if connection.blank? || connection.ad_account_id.blank?
+    return render json: { ad: nil } unless panel_ready?
 
-    visible = ::Crm::MetaAds::VisibleConversations.current
-    render json: { ad: ::Crm::MetaAds::Panel::AdDetail.new(connection, ad_id: params[:ad_id], days: params[:days], visible: visible).payload }
+    render json: { ad: ::Crm::MetaAds::Panel::AdDetail.new(panel_source, ad_id: params[:ad_id], **panel_scope).payload }
   end
 
   def panel_list
     return render_unprocessable('invalid_step') unless ::Crm::MetaAds::Panel::PathList::STEPS.include?(params[:step])
+    return render json: { list: nil } unless panel_ready?
 
-    connection = current_connection
-    return render json: { list: nil } if connection.blank? || connection.ad_account_id.blank?
-
-    visible = ::Crm::MetaAds::VisibleConversations.current
-    render json: { list: ::Crm::MetaAds::Panel::PathList.new(connection, step: params[:step], days: params[:days], visible: visible).payload }
+    render json: { list: ::Crm::MetaAds::Panel::PathList.new(panel_source, step: params[:step], **panel_scope).payload }
   end
 
   def ad_accounts
@@ -134,7 +138,8 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
   end
 
   def selection
-    setup.select!(mode: params[:mode], ad_account_id: params[:ad_account_id].to_s, pixel_id: params[:pixel_id].presence&.to_s)
+    setup.select!(mode: params[:mode], ad_account_id: params[:ad_account_id].to_s, pixel_id: params[:pixel_id].presence&.to_s,
+                  no_site: ActiveModel::Type::Boolean.new.cast(params[:no_site]) == true)
     render json: payload
   rescue Crm::MetaAds::Setup::Error => e
     render_unprocessable(e.code)
@@ -148,7 +153,8 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
 
     bool = ActiveModel::Type::Boolean.new
     values = ::Crm::MetaAdsConnection::DESTINATIONS.index_with { |key| bool.cast(params.dig(:destinations, key)) == true }
-    connection.update!(destinations: values)
+    # Marcar o site desfaz o "Não tenho site" (#2338): a escolha mais recente vale e a lista volta a pedir o código.
+    connection.update!(destinations: connection.destinations_with_no_site(values, connection.no_site? && !values['site']))
     render json: payload
   end
 
@@ -221,8 +227,9 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     report.payload.merge(
       meta_comparison: ::Crm::MetaAds::Panel::MetaComparison.new(connection, report).payload,
       response_time: response_time(connection, report),
-      advice: ::Crm::MetaAds::VisibleConversations.current.advice(
-        ::Crm::MetaAds::Advisor::Analysis.current(connection, locale: I18n.locale.to_s, report: report, shown: !authenticate_by_access_token?)
+      advice: viewer.advice(
+        ::Crm::MetaAds::Advisor::Analysis.current(connection, locale: I18n.locale.to_s, report: report, shown: !authenticate_by_access_token?,
+                                                              visible: viewer)
       )
     )
   end
@@ -232,7 +239,7 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
   def response_time(connection, report)
     return if report.cohort.conversation_ads.empty?
 
-    payload = if report.days == ::Crm::MetaAds::Advisor::Facts::COHORT_DAYS
+    payload = if report.period.rolling?(::Crm::MetaAds::Advisor::Facts::COHORT_DAYS)
                 ::Crm::MetaAds::Advisor::Facts.new(connection, report: report).payload.dig(:account, :response)
               else
                 ::Crm::MetaAds::Panel::ResponseTime.new(account_id: connection.account_id, range: report.range).payload
@@ -248,7 +255,8 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
       whatsapp_portfolio: setup.portfolio_ids.any?,
       # Portfólio do cliente na Meta: o "Abrir a Meta" do passo 1 cai direto em Parceiros dele (#1068).
       client_portfolio_id: setup.portfolio_ids.first,
-      sales_signal: { enabled: ::Crm::MetaAds::Funnels.new(Current.account, connection).sales_enabled? }
+      sales_signal: { enabled: ::Crm::MetaAds::Funnels.new(Current.account, connection).sales_enabled? },
+      whatsapp_result: ::Crm::MetaAds::SemLogin.payload(Current.account, Current.account_user)
     )
   end
 

@@ -105,4 +105,61 @@ RSpec.describe Crm::MetaAds::Links::Linker do
     expect(Crm::MetaAdLink.where(conversation: conversation).order(:touched_at).pluck(:touch_key, :first_touch, :campaign_id))
       .to eq([['clid-1', true, campaign_id], ['clid-2', false, campaign_id]])
   end
+
+  # #2054: conversa de antes da lista de toques guarda só `campaign`; o painel sem login já a contava.
+  it 'conversa antiga com o toque só em campaign vira a ligação do primeiro toque' do
+    cache_ad
+    conversation.update!(additional_attributes: { 'campaign' => ctwa_touch })
+
+    expect(described_class.new(conversation).perform).to eq(1)
+    expect(link_for('clid-1')).to have_attributes(ad_id: ad_id, origin: 'whatsapp', first_touch: true)
+  end
+
+  # #2521: o privado em resposta ao comentário de um anúncio conta quando a pessoa respondeu depois dele.
+  describe 'privado de comentário de anúncio' do
+    let(:sent_at) { Time.zone.parse('2026-10-03T12:00:00Z') }
+
+    def private_reply(comment_id: 'c-1', ad_of_comment: ad_id, confirmed: true, at: sent_at)
+      Crm::MetaAdsCommentAction.create!(account: account, network: 'instagram', comment_id: comment_id, ad_id: ad_of_comment,
+                                        action: 'private_reply', actor: 'ai', conversation_id: conversation.id, at: at,
+                                        confirmed_at: (at if confirmed))
+    end
+
+    def incoming(at)
+      create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :incoming, created_at: at)
+    end
+
+    it 'com resposta da pessoa: liga ao anúncio, na hora da resposta, como primeiro toque' do
+      cache_ad
+      private_reply
+      incoming(sent_at + 5.minutes)
+
+      expect(described_class.new(conversation).perform).to eq(1)
+      expect(link_for('meta_comment:c-1')).to have_attributes(
+        origin: 'comment', certainty: 'ad', ad_id: ad_id, adset_id: adset_id, campaign_id: campaign_id, first_touch: true,
+        touched_at: sent_at + 5.minutes
+      )
+    end
+
+    it 'sem resposta, com resposta só antes do privado, sem anúncio ou não confirmado pela Meta: não liga' do
+      incoming(sent_at - 1.day) # a conversa que a pessoa já tinha aberta na caixa
+      private_reply
+      private_reply(comment_id: 'c-2', ad_of_comment: nil)
+      private_reply(comment_id: 'c-3', confirmed: false)
+
+      expect(described_class.new(conversation).perform).to eq(0)
+      expect(Crm::MetaAdLink.count).to eq(0)
+    end
+
+    it 'com clique antes, o privado não é o primeiro toque, e regravar não duplica' do
+      assign_touches([ctwa_touch])
+      private_reply
+      incoming(sent_at + 1.minute)
+
+      2.times { described_class.new(conversation).perform }
+
+      expect(Crm::MetaAdLink.where(conversation: conversation).pluck(:origin, :first_touch))
+        .to contain_exactly(['whatsapp', true], ['comment', false])
+    end
+  end
 end

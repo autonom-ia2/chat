@@ -42,7 +42,10 @@ RSpec.describe Autonomia::Guide::FluxosDaTela do
   end
 
   it 'o Answerer põe os fixos antes dos achados, sem repetir e dentro do teto' do
-    achados = Array.new(Autonomia::Agents::Config::ANSWER_TOP_K) { |i| instance_double(Autonomia::Agents::KnowledgeEntry, id: 100 + i) }
+    # Os ids dos doubles começam acima de todo registro real: na CI paralela um id fixo (100 + i) já caiu
+    # sobre o do `criar`, o dedupe o descartou e vieram 11 trechos em vez de 12 (#1981).
+    base = [criar, decisor, lista, parecido].map(&:id).max + 1000
+    achados = Array.new(Autonomia::Agents::Config::ANSWER_TOP_K) { |i| instance_double(Autonomia::Agents::KnowledgeEntry, id: base + i) }
     achados[3] = decisor
     answerer = Autonomia::Agents::Answerer.new(agent: agent, query: 'oi', fixos: [criar, decisor])
 

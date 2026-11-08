@@ -47,6 +47,12 @@ en:
         e2: 'The team told the customer it asked the insurer for the change and is waiting for its answer.'
         e3: 'The team asked the customer for a document or a detail and they have not sent it yet.'
         e4: 'The team told the customer the change was made or sent the new policy.'
+      # #2083: health plan model (layer seguros/saude_beneficios). The text lives here, in the base catalog.
+      carteira:
+        e1: 'The customer plan was just implemented and the team is welcoming them: member card, app or how to use the network.'
+        e2: 'The customer already uses the plan and talks to the team about a question, a bill, a bill copy, adding a dependent or an authorization request.'
+        e3: 'The customer contract is close to its anniversary and the team talked to them about the price adjustment or the renewal.'
+        e4: 'The customer said they keep the plan after the contract anniversary, or changed plans with the team.'
       legado:
         novo: 'First contact or newly created lead. The customer showed initial interest, asked a first question or replied for the first time. There is no needs assessment or proposal yet.'
         em_atendimento: 'Active conversation with qualification in progress: an agent or the AI is understanding the need, collecting details, answering questions or scheduling. No formal proposal, quote or commercial terms have been sent yet.'

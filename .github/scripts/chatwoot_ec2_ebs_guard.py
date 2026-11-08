@@ -52,6 +52,34 @@ def get_parameter(name):
     )
 
 
+# #1979: com a produção congelada por um rollback, a instância que o Desligar a blue deixou de terminar pode ser a
+# volta manual. Mesma regra de duas chaves do scripts/deploy/blue-green-recovery.sh: congelada = há pedido e ele não é
+# o liberado. Chave que não existe conta como vazia; qualquer outro erro sobe, para a limpeza não seguir sem saber.
+def read_ssm_strict(name):
+    completed = subprocess.run(
+        ["aws", "ssm", "get-parameter", "--name", name, "--query", "Parameter.Value", "--output", "text"],
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if completed.returncode != 0:
+        if "ParameterNotFound" in completed.stderr:
+            return ""
+        raise RuntimeError(f"ssm_read_failed:{name}")
+    return completed.stdout.strip()
+
+
+def deploy_freeze_state(args):
+    released = read_ssm_strict(args.deploy_freeze_released_parameter)
+    request = read_ssm_strict(args.deploy_freeze_parameter)
+    if request in ("", "off"):
+        return "off"
+    if request == "on" or request.startswith("on:"):
+        return "off" if request == released else "on"
+    raise RuntimeError(f"deploy_freeze_invalid:{request}")
+
+
 def tag_value(tags, key):
     for tag in tags or []:
         if tag.get("Key") == key:
@@ -199,6 +227,14 @@ def create_rollback_ami(args, current_instance_id):
     return image_id
 
 
+def current_freeze(args):
+    try:
+        return deploy_freeze_state(args)
+    except RuntimeError as error:
+        print(f"::error::Não deu para ler o congelamento ({error}).", file=sys.stderr)
+        return "unknown"
+
+
 def cleanup(args, inventory):
     has_cleanup_candidates = bool(
         inventory["candidate_instances"] or inventory["candidate_available_volumes"]
@@ -210,9 +246,15 @@ def cleanup(args, inventory):
         )
     terminated_instances = []
     deleted_volumes = []
+    stopped_by_freeze = None
 
     for candidate in inventory["candidate_instances"]:
         instance_id = candidate["instance_id"]
+        # A limpeza pode levar quase uma hora: um rollback que congelou no meio dela para a próxima terminação.
+        freeze = current_freeze(args)
+        if freeze != "off":
+            stopped_by_freeze = freeze
+            break
         volume_ids = [
             item["volume_id"]
             for item in candidate.get("block_devices", [])
@@ -235,10 +277,23 @@ def cleanup(args, inventory):
                 allow_failure=True,
             )
             if state == "available":
+                freeze = current_freeze(args)
+                if freeze != "off":
+                    stopped_by_freeze = freeze
+                    break
                 aws_run(["ec2", "delete-volume", "--volume-id", volume_id])
                 deleted_volumes.append(volume_id)
+        if stopped_by_freeze:
+            break
 
     for volume in inventory["candidate_available_volumes"]:
+        if stopped_by_freeze:
+            break
+        # Também sem instância candidata: a AMI pode levar minutos, e um rollback pode congelar nesse meio.
+        freeze = current_freeze(args)
+        if freeze != "off":
+            stopped_by_freeze = freeze
+            break
         volume_id = volume["volume_id"]
         aws_run(["ec2", "delete-volume", "--volume-id", volume_id])
         deleted_volumes.append(volume_id)
@@ -247,6 +302,7 @@ def cleanup(args, inventory):
         "rollback_ami_id": rollback_ami_id,
         "terminated_instances": terminated_instances,
         "deleted_volumes": sorted(set(deleted_volumes)),
+        "stopped_by_freeze": stopped_by_freeze,
     }
 
 
@@ -259,6 +315,8 @@ def main():
     parser.add_argument("--name-prefix", action="append", required=True)
     parser.add_argument("--current-instance-parameter", required=True)
     parser.add_argument("--previous-instance-parameter", required=True)
+    parser.add_argument("--deploy-freeze-parameter", required=True)
+    parser.add_argument("--deploy-freeze-released-parameter", required=True)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
     os.environ["AWS_REGION"] = args.region
@@ -267,8 +325,23 @@ def main():
     inventory = build_inventory(args)
     result = {"inventory": inventory, "cleanup": None}
 
+    freeze = "off"
     if args.mode == "cleanup":
-        result["cleanup"] = cleanup(args, inventory)
+        freeze = current_freeze(args)
+        if freeze == "off":
+            result["cleanup"] = cleanup(args, inventory)
+            freeze = result["cleanup"]["stopped_by_freeze"] or "off"
+            if freeze != "off":
+                print(
+                    f"::warning::Limpeza parou no meio: congelamento {freeze}. O que já foi terminado está no artefato.",
+                    file=sys.stderr,
+                )
+        else:
+            result["cleanup"] = {"skipped": f"deploy_freeze_{freeze}"}
+            print(
+                f"::warning::Limpeza não rodou: congelamento {freeze}. Nada foi terminado; o inventário segue no artefato.",
+                file=sys.stderr,
+            )
 
     with open(args.output, "w", encoding="utf-8") as output:
         json.dump(result, output, indent=2, sort_keys=True)
@@ -288,6 +361,8 @@ def main():
     }
     json.dump(summary, sys.stdout, indent=2, sort_keys=True)
     sys.stdout.write("\n")
+    if freeze == "unknown":
+        sys.exit(1)
 
 
 if __name__ == "__main__":

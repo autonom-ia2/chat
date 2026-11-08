@@ -32,8 +32,14 @@ export const destinoDeConfiguracoes = async (to, landings) => {
     return { name: 'general_settings_index', params };
   }
   const permissions = getUserPermissions(usuario, params.accountId);
-  const landing = landings.find(page =>
-    hasPermissions(page.permissions, permissions)
+  // `featureFlag`: a tela só serve de entrada quando a flag dela está ligada na conta (Usuários e Funções, #1931).
+  const flagLigada = flag =>
+    !flag ||
+    store.getters['accounts/isFeatureEnabledonAccount'](params.accountId, flag);
+  const landing = landings.find(
+    page =>
+      hasPermissions(page.permissions, permissions) &&
+      flagLigada(page.featureFlag)
   );
   if (landing) return { name: landing.name, params };
   return frontendURL(defaultRedirectPage(to, permissions));

@@ -27,7 +27,9 @@
 # Com a flag `crm_avaliar_toda_mensagem` (#1675), o último passo faz a IA do CRM reler o card em foco, já o do assunto
 # decidido (Crm::Conversations::CardEmFoco). Não repete o que a troca de foco ou o card novo já agendaram. Quando a
 # decisão traz a lista de cards que a mensagem tocou (#1693), a IA avalia esses cards numa chamada só
-# (Crm::Conversations::CardsTocados), e lista vazia ("obrigado!") não avalia nada.
+# (Crm::Conversations::CardsTocados). Sem assunto ("obrigado!", "já fechei com outra") a lista traz o card em foco
+# (#1918), e a IA de etapa decide se ele fica ou muda; lista vazia (sem card aberto, pedido novo que virou sugestão)
+# não avalia nada.
 class Crm::Subjects::IdentifyJob < ApplicationJob
   EVENTO = 'crm.subject.decided'.freeze
 
@@ -61,7 +63,11 @@ class Crm::Subjects::IdentifyJob < ApplicationJob
     decidir(conversation, message)
   end
 
+  # IA entende a conversa F4 (flag `crm_ia_leitor_de_midia`): a espera do assunto na ordem do turno é curta, então os
+  # anexos da rajada que o job da chegada ainda não leu são lidos aqui, em linha, antes da pergunta (a trava por anexo
+  # faz quem chega depois esperar e encontrar lido). Sem a flag, não faz nada.
   def decidir(conversation, message)
+    Crm::Ai::LeitorDeMidia.ler_a_rajada(conversation, message)
     decisao = Crm::Subjects::Identifier.new(conversation: conversation, message: message).perform
     decisao&.state || 'sem_decisao'
   ensure

@@ -44,11 +44,46 @@ describe('cópia da página do agente em pt_BR', () => {
     const [respondidas, passadas] = wrapper.findAll('[data-numero]');
     expect(respondidas.text()).toContain('1.234');
     expect(respondidas.text()).toContain('conversas respondidas');
+    // #2000 (revisão de produto) — a nota não repete o período nem o número do cartão ao lado.
     expect(respondidas.text()).toContain(
-      'Esta semana, Bia respondeu 1.234 conversas e passou 87 para a equipe.'
+      'Conversas em que Bia mandou ao menos uma resposta.'
     );
-    expect(passadas.text()).toContain('passadas para a equipe');
-    expect(passadas.text()).toContain('Quando não soube responder.');
+    // #2000 — a maioria das passagens é por horário ou a pedido do cliente.
+    expect(passadas.text()).toContain('passadas para alguém da equipe');
+    expect(passadas.text()).toContain(
+      'Por horário, a pedido do cliente ou porque não soube.'
+    );
+    expect(passadas.text()).not.toContain('Quando não soube responder');
+  });
+
+  it('says "esta semana" in so many words and shows the solved ones (#2000)', () => {
+    const wrapper = mount(AgenteSemana, {
+      props: {
+        nome: 'Bia',
+        numeros: { respondidas: 3, passadas: 1, resolvidas: 2 },
+      },
+    });
+    expect(wrapper.get('[data-periodo]').text()).toBe(
+      'Esta semana (os últimos 7 dias, contando hoje)'
+    );
+    expect(wrapper.get('[data-no-mes]').text()).toBe(
+      'Em Números › Equipe você vê esses números do mês.'
+    );
+    const resolvidas = wrapper.get('[data-numero="resolvidas"]');
+    expect(resolvidas.text()).toContain('resolvidas sem a equipe');
+    expect(resolvidas.text()).toContain(
+      'Terminaram sem ninguém da equipe precisar entrar.'
+    );
+  });
+
+  it('says each card opens the conversations, only for whoever can open them', () => {
+    const montar = podeAbrir =>
+      mount(AgenteSemana, {
+        props: { nome: 'Bia', numeros: { respondidas: 3 }, podeAbrir },
+      });
+    expect(montar(true).findAll('[data-ver]')).toHaveLength(3);
+    expect(montar(true).get('[data-ver]').text()).toBe('Ver as conversas');
+    expect(montar(false).find('[data-ver]').exists()).toBe(false);
   });
 
   it('uses the singular for one conversation (#1369)', () => {
@@ -58,10 +93,7 @@ describe('cópia da página do agente em pt_BR', () => {
     const [respondidas, passadas] = wrapper.findAll('[data-numero]');
     expect(respondidas.text()).toContain('conversa respondida');
     expect(respondidas.text()).not.toContain('conversas');
-    expect(respondidas.text()).toContain(
-      'Esta semana, Bia respondeu 1 conversa e passou 1 para a equipe.'
-    );
-    expect(passadas.text()).toContain('passada para a equipe');
+    expect(passadas.text()).toContain('passada para alguém da equipe');
     expect(passadas.text()).not.toContain('passadas');
   });
 

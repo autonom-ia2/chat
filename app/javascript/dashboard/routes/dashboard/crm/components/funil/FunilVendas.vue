@@ -2,6 +2,7 @@
 import Input from 'dashboard/components-next/input/Input.vue';
 import FunilTipo from './FunilTipo.vue';
 import { TIPOS, tipoDaVenda } from './funil';
+import { useCrmPermissions } from '../../composables/useCrmPermissions';
 
 // #1384 — se o funil conta como venda, a meta do mês e o nome do resultado.
 // #1498 — "conta como venda" virou a pergunta do tipo (Vender ou Atender),
@@ -17,6 +18,8 @@ const venda = defineModel('venda', { type: Boolean, default: true });
 const meta = defineModel('meta', { type: [String, Number], default: '' });
 const sucesso = defineModel('sucesso', { type: String, default: '' });
 const fracasso = defineModel('fracasso', { type: String, default: '' });
+// #2075 — a meta do mês é dinheiro: sem a chave de valores o campo não aparece (o servidor guarda a que existe).
+const { canSeeSalesValues } = useCrmPermissions();
 </script>
 
 <template>
@@ -28,7 +31,7 @@ const fracasso = defineModel('fracasso', { type: String, default: '' });
     />
 
     <label
-      v-if="venda"
+      v-if="venda && canSeeSalesValues"
       class="flex flex-col gap-1 rounded-2xl border border-n-weak bg-n-solid-1 p-5"
     >
       <span class="text-base font-semibold text-n-slate-12">

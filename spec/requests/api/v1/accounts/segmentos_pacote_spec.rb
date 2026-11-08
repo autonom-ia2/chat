@@ -85,6 +85,27 @@ RSpec.describe 'Pacote de tradução da conta nas requisições', type: :request
     end
   end
 
+  # #1802, lote 5: a página nova de agendamento nasce com o título do modelo da corretora.
+  it 'cria a página de agendamento com o modelo do pacote na corretora e com o geral na conta seguinte' do
+    titulo_da_pagina = lambda do |(account, admin, _pipeline)|
+      account.enable_features('crm_booking_v2')
+      account.save!
+      post "/api/v1/accounts/#{account.id}/crm/booking_pages", params: { template_key: 'sales_30' },
+                                                               headers: auth_headers(admin), as: :json
+      expect(response).to have_http_status(:created)
+      account.crm_agent_booking_profiles.last.title
+    end
+
+    with_modified_env(AUTONOMIA_PACOTES_ENABLED: 'true', CRM_CALENDAR_MEETINGS_ENABLED: 'true') do
+      expect(titulo_da_pagina.call(conta_com_card_ganho('seguros', 'corretora'))).to eq('Conversa para cotar o seguro')
+      expect(titulo_da_pagina.call(conta_com_card_ganho('geral'))).to eq('Conversa de vendas de 30 min')
+    end
+
+    with_modified_env(AUTONOMIA_PACOTES_ENABLED: nil, CRM_CALENDAR_MEETINGS_ENABLED: 'true') do
+      expect(titulo_da_pagina.call(conta_com_card_ganho('seguros', 'corretora'))).to eq('Conversa de vendas de 30 min')
+    end
+  end
+
   describe 'GET /api/v1/accounts/:id' do
     it 'traz o nome do pacote da conta' do
       account, admin, = conta_com_card_ganho('seguros', 'corretora')

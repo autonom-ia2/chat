@@ -5,9 +5,10 @@ import StepReview from '../StepReview.vue';
 
 // #1387 (L15): "Quando começa" sem erro antes de a pessoa escolher a data e sem
 // o "·" sobrando ao lado do canal.
-const montar = draft =>
+const montar = (draft, extra = {}) =>
   mount(StepReview, {
     props: {
+      ...extra,
       draft,
       blocks: [],
       channelLabel: 'WhatsApp',
@@ -66,5 +67,33 @@ describe('StepReview schedule (#1387)', () => {
       .find(texto => texto.startsWith('Date and time'));
     expect(rotulo).toBe('Date and time (account time zone: America/Sao Paulo)');
     expect(wrapper.text()).not.toContain('Standard Time');
+  });
+});
+
+// #1898: who builds without campaign_send leaves the campaign ready; who sends sees who left it.
+describe('StepReview ready to send (#1898)', () => {
+  const PRONTA = en.CAMPAIGN_JOURNEY.NEW_CAMPAIGN.REVIEW.PRONTA;
+
+  it('who only builds marks it ready, without the send confirmation', async () => {
+    const wrapper = montar({ when: 'now' }, { soDeixaPronta: true });
+    const button = wrapper.find('[data-test="open-confirmation"]');
+
+    expect(button.text()).toContain(PRONTA.DEIXAR);
+    expect(wrapper.find('[data-test="aviso-pronta"]').text()).toContain(
+      PRONTA.QUEM_MONTA
+    );
+    await button.trigger('click');
+    expect(wrapper.emitted('submit')).toHaveLength(1);
+  });
+
+  it('who sends sees who left it ready', () => {
+    const wrapper = montar({ when: 'now' }, { montadaPor: 'Carla' });
+
+    expect(wrapper.find('[data-test="aviso-pronta"]').text()).toContain(
+      'Carla built it and marked it ready.'
+    );
+    expect(
+      wrapper.find('[data-test="open-confirmation"]').text()
+    ).not.toContain(PRONTA.DEIXAR);
   });
 });

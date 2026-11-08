@@ -36,6 +36,14 @@ class ConversaCanalAPI extends ApiClient {
     });
   }
 
+  // Sim / Talvez / Não ao convite de reunião do e-mail (#1984): aceito, talvez ou recusado.
+  responderConvite(conversationId, messageId, resposta) {
+    return axios.put(`${this.url}/convites_do_email/${messageId}`, {
+      conversation_id: conversationId,
+      resposta,
+    });
+  }
+
   // Encaminhar (#1702): conversas que o usuário vê, e o envio para até 5 delas.
   destinosParaEncaminhar(termo) {
     return axios.get(`${this.url}/encaminhamentos`, { params: { termo } });

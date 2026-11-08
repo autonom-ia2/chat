@@ -1,0 +1,326 @@
+{
+  "gerado_por": "bundle exec rails autonomia:funcoes:sem_funcao",
+  "capacidades": [
+    {
+      "id": "conversas_dos_colegas",
+      "chaves": [
+        "conversation_manage"
+      ],
+      "premissas": [
+        "na_caixa"
+      ],
+      "pode": true,
+      "fontes": [
+        {
+          "regra": "ConversationPolicy#agent_can_view_conversation?",
+          "arquivo": "app/policies/conversation_policy.rb"
+        },
+        {
+          "regra": "Crm::Access::ConversationScope#allows?",
+          "arquivo": "app/services/crm/access/conversation_scope.rb"
+        },
+        {
+          "regra": "Enterprise::ConversationPolicy#show?",
+          "arquivo": "enterprise/app/policies/enterprise/conversation_policy.rb"
+        },
+        {
+          "regra": "Enterprise::ConversationPolicy#view?",
+          "arquivo": "enterprise/app/policies/enterprise/conversation_policy.rb"
+        }
+      ]
+    },
+    {
+      "id": "contatos",
+      "chaves": [
+        "contact_view",
+        "contact_manage"
+      ],
+      "premissas": [],
+      "pode": true,
+      "fontes": [
+        {
+          "regra": "Relationships::RecordPermissions#relationship_record_read?",
+          "arquivo": "enterprise/app/policies/relationships/record_permissions.rb"
+        },
+        {
+          "regra": "Relationships::RecordPermissions#relationship_record_write?",
+          "arquivo": "enterprise/app/policies/relationships/record_permissions.rb"
+        }
+      ]
+    },
+    {
+      "id": "respostas_prontas",
+      "chaves": [
+        "canned_response_manage"
+      ],
+      "premissas": [],
+      "pode": true,
+      "fontes": [
+        {
+          "regra": "CannedResponsePolicy#manage?",
+          "arquivo": "app/policies/canned_response_policy.rb"
+        }
+      ]
+    },
+    {
+      "id": "apagar_mensagens",
+      "chaves": [
+        "conversation_message_delete"
+      ],
+      "premissas": [
+        "na_caixa"
+      ],
+      "pode": true,
+      "fontes": [
+        {
+          "regra": "Enterprise::ConversationPolicy#delete_message?",
+          "arquivo": "enterprise/app/policies/enterprise/conversation_policy.rb"
+        }
+      ]
+    },
+    {
+      "id": "vendas_das_colunas",
+      "chaves": [
+        "crm_manage_cards",
+        "crm_move_cards"
+      ],
+      "premissas": [
+        "ve_o_card",
+        "participa_da_coluna"
+      ],
+      "pode": true,
+      "fontes": [
+        {
+          "regra": "CrmPermissions#crm_permission?",
+          "arquivo": "enterprise/app/policies/crm_permissions.rb"
+        },
+        {
+          "regra": "Enterprise::Crm::CardPolicy#update?",
+          "arquivo": "enterprise/app/policies/enterprise/crm/card_policy.rb"
+        },
+        {
+          "regra": "Enterprise::Crm::CardPolicy#move?",
+          "arquivo": "enterprise/app/policies/enterprise/crm/card_policy.rb"
+        },
+        {
+          "regra": "Crm::CardPolicy#funnel_member?",
+          "arquivo": "app/policies/crm/card_policy.rb"
+        }
+      ]
+    },
+    {
+      "id": "arquivar_vendas",
+      "chaves": [
+        "crm_delete_cards"
+      ],
+      "premissas": [
+        "ve_o_card",
+        "participa_da_coluna"
+      ],
+      "pode": true,
+      "fontes": [
+        {
+          "regra": "Enterprise::Crm::CardPolicy#destroy?",
+          "arquivo": "enterprise/app/policies/enterprise/crm/card_policy.rb"
+        },
+        {
+          "regra": "CrmPermissions::PLAIN_AGENT_DENIED_KEYS",
+          "arquivo": "enterprise/app/policies/crm_permissions.rb"
+        }
+      ]
+    },
+    {
+      "id": "relatorios_das_vendas",
+      "chaves": [
+        "crm_view_reports"
+      ],
+      "premissas": [],
+      "depende_da_flag": {
+        "flag": "crm_numeros_lentes",
+        "desligada": true,
+        "ligada": false
+      },
+      "fontes": [
+        {
+          "regra": "Enterprise::Crm::ReportPolicy#view?",
+          "arquivo": "enterprise/app/policies/enterprise/crm/report_policy.rb"
+        },
+        {
+          "regra": "Crm::Config.numeros_lentes_enabled?",
+          "arquivo": "app/services/crm/config.rb"
+        }
+      ]
+    },
+    {
+      "id": "procurar_clientes_novos",
+      "chaves": [
+        "prospecting_view",
+        "prospecting_manage"
+      ],
+      "premissas": [],
+      "pode": false,
+      "fontes": [
+        {
+          "regra": "Api::BaseController#check_module_permission!",
+          "arquivo": "app/controllers/api/base_controller.rb"
+        },
+        {
+          "regra": "Enterprise::AccountUser#permission_granted?",
+          "arquivo": "enterprise/app/models/enterprise/account_user.rb"
+        }
+      ]
+    },
+    {
+      "id": "planilha_de_clientes",
+      "chaves": [
+        "contact_export",
+        "crm_export"
+      ],
+      "premissas": [],
+      "pode": false,
+      "fontes": [
+        {
+          "regra": "Enterprise::ContactPolicy#export?",
+          "arquivo": "enterprise/app/policies/enterprise/contact_policy.rb"
+        },
+        {
+          "regra": "Enterprise::Crm::CardPolicy#export?",
+          "arquivo": "enterprise/app/policies/enterprise/crm/card_policy.rb"
+        },
+        {
+          "regra": "CrmPermissions::PLAIN_AGENT_DENIED_KEYS",
+          "arquivo": "enterprise/app/policies/crm_permissions.rb"
+        }
+      ]
+    },
+    {
+      "id": "valores_das_vendas",
+      "chaves": [
+        "sales_value_view"
+      ],
+      "premissas": [],
+      "pode": true,
+      "fontes": [
+        {
+          "regra": "Crm::ValorDeVenda.ve?",
+          "arquivo": "app/services/crm/valor_de_venda.rb"
+        }
+      ]
+    },
+    {
+      "id": "montar_colunas",
+      "chaves": [
+        "crm_manage_pipelines"
+      ],
+      "premissas": [],
+      "pode": false,
+      "fontes": [
+        {
+          "regra": "Enterprise::Crm::PipelinePolicy#create?",
+          "arquivo": "enterprise/app/policies/enterprise/crm/pipeline_policy.rb"
+        },
+        {
+          "regra": "Enterprise::Crm::PipelinePolicy#update?",
+          "arquivo": "enterprise/app/policies/enterprise/crm/pipeline_policy.rb"
+        },
+        {
+          "regra": "CrmPermissions::PLAIN_AGENT_DENIED_KEYS",
+          "arquivo": "enterprise/app/policies/crm_permissions.rb"
+        }
+      ]
+    },
+    {
+      "id": "ia_das_vendas",
+      "chaves": [
+        "crm_manage_ai"
+      ],
+      "premissas": [
+        "ve_o_card",
+        "participa_da_coluna"
+      ],
+      "pode": false,
+      "fontes": [
+        {
+          "regra": "Enterprise::Crm::CardPolicy#evaluate_ai?",
+          "arquivo": "enterprise/app/policies/enterprise/crm/card_policy.rb"
+        },
+        {
+          "regra": "Enterprise::Crm::CardPolicy#summarize?",
+          "arquivo": "enterprise/app/policies/enterprise/crm/card_policy.rb"
+        },
+        {
+          "regra": "CrmPermissions::PLAIN_AGENT_DENIED_KEYS",
+          "arquivo": "enterprise/app/policies/crm_permissions.rb"
+        }
+      ]
+    },
+    {
+      "id": "cuidar_de_tudo_nas_vendas",
+      "chaves": [
+        "crm_admin"
+      ],
+      "premissas": [],
+      "pode": false,
+      "fontes": [
+        {
+          "regra": "CrmPermissions#crm_permission?",
+          "arquivo": "enterprise/app/policies/crm_permissions.rb"
+        },
+        {
+          "regra": "Enterprise::Crm::InboxAgentAccessPolicy#update?",
+          "arquivo": "enterprise/app/policies/enterprise/crm/inbox_agent_access_policy.rb"
+        },
+        {
+          "regra": "Enterprise::Crm::ServiceSchedulePolicy#create?",
+          "arquivo": "enterprise/app/policies/enterprise/crm/service_schedule_policy.rb"
+        },
+        {
+          "regra": "CrmPermissions::PLAIN_AGENT_DENIED_KEYS",
+          "arquivo": "enterprise/app/policies/crm_permissions.rb"
+        }
+      ]
+    },
+    {
+      "id": "metas_do_mes",
+      "chaves": [
+        "crm_metas_manage"
+      ],
+      "premissas": [],
+      "pode": false,
+      "fontes": [
+        {
+          "regra": "Enterprise::Crm::MetasPolicy#manage?",
+          "arquivo": "enterprise/app/policies/enterprise/crm/metas_policy.rb"
+        }
+      ]
+    }
+  ],
+  "extras": [
+    {
+      "id": "responsavel_de_agendamento",
+      "chaves": [],
+      "premissas": [],
+      "pode": true,
+      "fontes": [
+        {
+          "regra": "Crm::BookingV2::HostEligibility.sees_cards?",
+          "arquivo": "app/services/crm/booking_v2/host_eligibility.rb"
+        }
+      ]
+    },
+    {
+      "id": "anuncio_de_origem",
+      "chaves": [
+        "meta_ads_view"
+      ],
+      "premissas": [],
+      "pode": true,
+      "fontes": [
+        {
+          "regra": "Crm::AnuncioDeOrigem.ve?",
+          "arquivo": "app/services/crm/anuncio_de_origem.rb"
+        }
+      ]
+    }
+  ]
+}

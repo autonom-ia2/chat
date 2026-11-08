@@ -1,5 +1,6 @@
 <script setup>
 import Button from 'dashboard/components-next/button/Button.vue';
+import FicarComAConversa from 'dashboard/components-next/conversa-canal/atribuir/FicarComAConversa.vue';
 
 // #1459 — rodapé fixo da gaveta, com no máximo um botão azul:
 // - `enviar`: "Cancelar" e "Enviar mensagem" (desligado enquanto falta algo,
@@ -7,10 +8,13 @@ import Button from 'dashboard/components-next/button/Button.vue';
 // - `enviada`: "Fechar" e "Abrir a conversa";
 // - `fechar`: só "Fechar" (ainda sem contato, ou contato sem canal — nesses
 //   casos a ação da tela está no corpo).
+// #2067: na conversa que já existe, o ícone "ficar com a conversa ao enviar" fica ao lado
+// do "Enviar mensagem", como na caixa de resposta (`ficar`, de useFicarComAConversa).
 defineProps({
   modo: { type: String, default: 'enviar' },
   falta: { type: String, default: '' },
   enviando: { type: Boolean, default: false },
+  ficar: { type: Object, default: null },
 });
 
 defineEmits(['cancelar', 'enviar', 'abrir', 'fechar']);
@@ -37,6 +41,7 @@ const R = 'NOVA_CONVERSA.RODAPE';
         class="!min-h-11"
         @click="$emit('cancelar')"
       />
+      <FicarComAConversa v-if="ficar" :ficar="ficar" />
       <Button
         data-nova-conversa-principal
         :label="$t(`${R}.ENVIAR`)"

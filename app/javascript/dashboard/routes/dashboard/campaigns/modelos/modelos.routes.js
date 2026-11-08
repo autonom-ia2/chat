@@ -2,6 +2,7 @@ import { frontendURL } from 'dashboard/helper/URLHelper.js';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import store from 'dashboard/store';
 import {
+  PERMISSOES_DA_AUTORIZACAO,
   PERMISSOES_PARA_CRIAR,
   PERMISSOES_PARA_VER,
 } from './helpers/usePodeCriarModelo';
@@ -75,12 +76,13 @@ export const routes = [
     meta: meta(PERMISSOES_PARA_CRIAR, LISTA),
     beforeEnter: exigirJornadaDeModelos,
   },
-  // #1586: autorização do dono para o sistema criar modelos (só quem administra modelos).
+  // #1586: autorização do dono para o sistema criar modelos. Abre para quem administra modelos e para quem vê os
+  // custos da conta (financial_view, #1969); mudar fica com o administrador ou financial_manage.
   {
     path: frontendURL(`${base}/autorizacao`),
     name: 'modelos_whatsapp_autorizacao',
     component: AutorizacaoPage,
-    meta: meta(PERMISSOES_PARA_CRIAR, LISTA),
+    meta: meta(PERMISSOES_DA_AUTORIZACAO, LISTA),
     beforeEnter: exigirJornadaDeModelos,
   },
   {

@@ -4,12 +4,14 @@ import SettingsLayout from '../SettingsLayout.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import CustomRoleCard from './component/CustomRoleCard.vue';
 import CustomRolePaywall from './component/CustomRolePaywall.vue';
+import DeleteRoleDialog from './component/DeleteRoleDialog.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { picoSearch } from '@chatwoot/pico-search';
+import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 
 const store = useStore();
 const router = useRouter();
@@ -19,6 +21,7 @@ const loading = ref({});
 const showDeleteConfirmationPopup = ref(false);
 const activeResponse = ref({});
 const searchQuery = ref('');
+const deleteRoleRef = ref(null);
 
 const records = useMapGetter('customRole/getCustomRoles');
 const agents = useMapGetter('agents/getAgents');
@@ -29,6 +32,9 @@ const filteredRecords = computed(() => {
   return picoSearch(records.value, query, ['name', 'description']);
 });
 const uiFlags = useMapGetter('customRole/getUIFlags');
+// Fora do administrador (#1931): ninguém edita a própria função nem uma acima do seu alcance, e só
+// duplica o que poderia criar.
+const { roleLockReason, reachesRole } = usePeopleAccess();
 
 const agentsOf = role =>
   agents.value.filter(agent => agent.custom_role_id === role.id);
@@ -90,22 +96,52 @@ const duplicateRole = role => {
   router.push({ name: 'custom_roles_new', query: { duplicate: role.id } });
 };
 
+// Com gente na função, pergunta antes para onde essas pessoas vão (#2185).
 const openDeletePopup = response => {
-  showDeleteConfirmationPopup.value = true;
   activeResponse.value = response;
+  const people = agentsOf(response).length;
+  if (people) {
+    deleteRoleRef.value?.open(response, people);
+    return;
+  }
+  showDeleteConfirmationPopup.value = true;
 };
 
 const closeDeletePopup = () => {
   showDeleteConfirmationPopup.value = false;
 };
 
-const deleteCustomRole = async id => {
+// A lista de agentes chega depois da tela ou ficou velha, e o servidor achou gente na função: recarrega e faz a
+// pergunta do destino em vez de só mostrar o aviso.
+const askDestinationAfterRefusal = async (id, message) => {
+  loading.value[id] = false;
+  await store.dispatch('agents/get');
+  const role = records.value.find(item => item.id === id);
+  const people = role ? agentsOf(role).length : 0;
+  if (!people) {
+    showAlertMessage(message);
+    return;
+  }
+  activeResponse.value = role;
+  deleteRoleRef.value?.open(role, people);
+};
+
+const deleteCustomRole = async (id, destinationRoleId) => {
   try {
-    await store.dispatch('customRole/deleteCustomRole', id);
+    await store.dispatch('customRole/deleteCustomRole', {
+      id,
+      destinationRoleId,
+    });
+    // As pessoas mudaram de função: a lista de agentes precisa refletir isso.
+    if (destinationRoleId) store.dispatch('agents/get');
     showAlertMessage(t('CUSTOM_ROLE.DELETE.API.SUCCESS_MESSAGE'));
   } catch (error) {
     const errorMessage =
       error?.message || t('CUSTOM_ROLE.DELETE.API.ERROR_MESSAGE');
+    if (error?.code === 'destination_required') {
+      await askDestinationAfterRefusal(id, errorMessage);
+      return;
+    }
     showAlertMessage(errorMessage);
   }
 };
@@ -114,6 +150,11 @@ const confirmDeletion = () => {
   loading.value[activeResponse.value.id] = true;
   closeDeletePopup();
   deleteCustomRole(activeResponse.value.id);
+};
+
+const confirmMoveAndDeletion = ({ role, destinationRoleId }) => {
+  loading.value[role.id] = true;
+  deleteCustomRole(role.id, destinationRoleId);
 };
 </script>
 
@@ -166,6 +207,8 @@ const confirmDeletion = () => {
             :role="role"
             :agents="agentsOf(role)"
             :is-deleting="!!loading[role.id]"
+            :lock-reason="roleLockReason(role) || ''"
+            :can-duplicate="reachesRole(role)"
             @edit="openEditRole"
             @duplicate="duplicateRole"
             @delete="openDeletePopup"
@@ -190,5 +233,6 @@ const confirmDeletion = () => {
       :confirm-text="deleteConfirmText"
       :reject-text="deleteRejectText"
     />
+    <DeleteRoleDialog ref="deleteRoleRef" @confirm="confirmMoveAndDeletion" />
   </SettingsLayout>
 </template>

@@ -22,7 +22,7 @@ RSpec.describe Crm::Cards::PayloadBuilder do
     card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Lead', conversation_id: conversation.id,
                                      inbox_id: conversation.inbox_id, contact_id: conversation.contact_id)
 
-    item = described_class.campaign_touches_for(conversation).sole
+    item = described_class.campaign_touches_for(conversation, ad_visible: true).sole
     payload = described_class.new(card, user: admin, account_user: admin.account_users.find_by(account: account)).perform
 
     expect(item).to include(campaign_name: 'Viagem EUA', adset_name: 'Conjunto 60+', ad_name: 'Video 2',
@@ -36,7 +36,7 @@ RSpec.describe Crm::Cards::PayloadBuilder do
     conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact)
     conversation.update!(additional_attributes: { 'campaign_touches' => [{ 'source' => 'meta_paid', 'utm_campaign' => '120254710067060416' }] })
 
-    item = described_class.campaign_touches_for(conversation).sole
+    item = described_class.campaign_touches_for(conversation, ad_visible: true).sole
 
     expect(item).to include(campaign_name: nil, adset_name: nil, ad_name: nil, utm_campaign: '120254710067060416')
   end

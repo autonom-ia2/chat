@@ -62,11 +62,7 @@ class Autonomia::Sso::Provisioner
   def ensure_account_user(user, account, pending_invitation)
     AccountUser.find_or_initialize_by(user: user, account: account).tap do |account_user|
       if pending_invitation.present?
-        account_user.role = pending_invitation.fetch('role', nil).presence || 'administrator'
-        if pending_invitation.fetch('custom_role_id', nil).present?
-          account_user.custom_role_id = pending_invitation['custom_role_id']
-        end
-        account_user.inviter_id ||= pending_invitation['invited_by_user_id']
+        Autonomia::Sso::InvitationAccess.new(account, pending_invitation).apply(account_user)
       elsif account_user.new_record?
         account_user.role = 'administrator'
       end
@@ -75,53 +71,11 @@ class Autonomia::Sso::Provisioner
   end
 
   def apply_pending_agent_invitation!(user, account, pending_invitation)
-    assign_existing_inboxes!(user, account, pending_invitation)
-    create_whatsapp_api_inbox!(user, account, pending_invitation)
-    consume_pending_agent_invitation(account)
-  end
-
-  def assign_existing_inboxes!(user, account, pending_invitation)
-    inbox_ids = Array(pending_invitation['inbox_ids']).filter_map do |value|
-      value.to_i if value.to_s.match?(/\A\d+\z/)
-    end.uniq
-
-    account.inboxes.where(id: inbox_ids).find_each do |inbox|
-      InboxMember.find_or_create_by!(inbox: inbox, user: user)
+    if Autonomia::Sso::InvitationAccess.new(account, pending_invitation).inboxes_allowed?
+      whatsapp_inbox = Autonomia::Sso::InvitationInboxes.new(account, pending_invitation, user).apply!
+      @post_login_redirect_path = invite_connection_path(account) if whatsapp_inbox
     end
-  end
-
-  def create_whatsapp_api_inbox!(user, account, pending_invitation)
-    return unless ActiveModel::Type::Boolean.new.cast(pending_invitation['create_whatsapp_api_inbox'])
-
-    result = Waha::InboxProvisioner.new(
-      account: account,
-      phone: pending_invitation['whatsapp_api_phone'],
-      display_name: user.name,
-      api_access_token: api_access_token_for(pending_invitation, fallback_user: user)
-    ).perform
-
-    InboxMember.find_or_create_by!(inbox: result.inbox, user: user)
-    mark_invite_connection_pending!(result.inbox, user)
-    @post_login_redirect_path = invite_connection_path(account)
-  end
-
-  def api_access_token_for(pending_invitation, fallback_user:)
-    token_owner = User.find_by(id: pending_invitation['invited_by_user_id']) || fallback_user
-    (token_owner.access_token || token_owner.create_access_token).token
-  end
-
-  def mark_invite_connection_pending!(inbox, user)
-    channel = inbox.channel
-    attrs = (channel.additional_attributes || {}).to_h
-    channel.update!(
-      additional_attributes: attrs.merge(
-        'autonomia_invite_connection' => {
-          'user_id' => user.id,
-          'status' => 'pending',
-          'created_at' => Time.current.iso8601
-        }
-      )
-    )
+    consume_pending_agent_invitation(account)
   end
 
   def set_pending_invite_connection_redirect(user, account)

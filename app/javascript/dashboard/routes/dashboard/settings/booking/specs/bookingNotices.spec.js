@@ -153,7 +153,7 @@ describe('bookingNotices', () => {
     expect(templatePreview(long, samples).endsWith('…')).toBe(true);
   });
 
-  it('aponta os avisos sem mensagem pronta, só onde ela faz falta', () => {
+  it('aponta os avisos sem mensagem escolhida, só onde ela faz falta', () => {
     const chosen = form({
       noticePreset: 'light',
       noticeTemplates: { booked: { name: 'a', language: 'pt_BR' } },
@@ -332,7 +332,7 @@ describe('StepNotices', () => {
     );
   });
 
-  it('canal API de campanhas: escolhe a mensagem pronta do canal e grava o id', async () => {
+  it('canal API de campanhas: escolhe o modelo de texto do canal e grava o id', async () => {
     WhatsappApiMessageTemplatesAPI.get.mockResolvedValue({
       data: { payload: [{ id: 5, name: 'Lembrete', body: 'Oi!' }] },
     });
@@ -343,13 +343,53 @@ describe('StepNotices', () => {
       .find('[data-template-kind="booked"]')
       .findComponent(ChoiceSelect);
     expect(booked.props('options')).toEqual([
-      { value: '', label: 'BOOKING.NOTICES.TEMPLATE_NONE' },
+      { value: '', label: 'BOOKING.NOTICES.API_TEMPLATE_NONE' },
       { value: 'id:5', label: 'Lembrete' },
     ]);
     await booked.vm.$emit('update:modelValue', 'id:5');
     expect(lastChange(wrapper)).toEqual({
       noticeTemplates: { booked: { id: 5 } },
     });
+  });
+
+  // #1864: no canal API nada é aprovado pela Meta; os textos dizem "modelo de texto".
+  it('canal API: opção vazia, rótulo e aviso de faltando falam em modelo de texto', async () => {
+    WhatsappApiMessageTemplatesAPI.get.mockResolvedValue({
+      data: { payload: [{ id: 5, name: 'Lembrete', body: 'Oi!' }] },
+    });
+    const wrapper = mountStep({ noticeInboxId: 14, noticePreset: 'minimal' }, [
+      API,
+    ]);
+    await flushPromises();
+    const booked = wrapper
+      .find('[data-template-kind="booked"]')
+      .findComponent(ChoiceSelect);
+    expect(booked.props('options')[0].label).toBe(
+      'BOOKING.NOTICES.API_TEMPLATE_NONE'
+    );
+    expect(booked.props('ariaLabel')).toContain(
+      'BOOKING.NOTICES.API_TEMPLATE_FOR'
+    );
+    const missing = wrapper.find('[data-missing-templates]').text();
+    expect(missing).toContain('BOOKING.NOTICES.API_MISSING_TEMPLATES');
+    expect(missing).toContain('BOOKING.NOTICES.KINDS.BOOKED');
+  });
+
+  it('WhatsApp oficial: opção vazia e rótulo falam em mensagem aprovada', () => {
+    templatesGetter.mockReturnValue([template('aviso_marcado')]);
+    const wrapper = mountStep({ noticeInboxId: 12, noticePreset: 'minimal' });
+    const booked = wrapper
+      .find('[data-template-kind="booked"]')
+      .findComponent(ChoiceSelect);
+    expect(booked.props('options')[0].label).toBe(
+      'BOOKING.NOTICES.TEMPLATE_NONE'
+    );
+    expect(booked.props('ariaLabel')).toBe(
+      'BOOKING.NOTICES.TEMPLATE_FOR {"notice":"BOOKING.NOTICES.KINDS.BOOKED"}'
+    );
+    expect(wrapper.find('[data-missing-templates]').text()).toBe(
+      'BOOKING.NOTICES.MISSING_TEMPLATES {"kinds":"BOOKING.NOTICES.KINDS.BOOKED, BOOKING.NOTICES.KINDS.RESCHEDULED"}'
+    );
   });
 
   it('canal API sem acesso às mensagens: diz que não deu para ver', async () => {
@@ -441,6 +481,13 @@ describe('BookingNoticesSummary', () => {
     });
     expect(waha.find('[data-notices-window]').text()).toBe(
       'BOOKING.PREVIEW.NOTICES_UNOFFICIAL_RISK'
+    );
+
+    const api = mount(BookingNoticesSummary, {
+      props: { form: form({ noticeInboxId: 14 }), inboxOptions: [API] },
+    });
+    expect(api.find('[data-notices-window]').text()).toContain(
+      'BOOKING.NOTICES.API_MISSING_TEMPLATES'
     );
 
     const readOnly = mount(BookingNoticesSummary, {

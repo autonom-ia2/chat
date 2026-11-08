@@ -79,6 +79,8 @@ export const FORK_LAYOUT = {
     {
       id: 'CRESCER',
       itens: [
+        // Seus posts (#2302): acima de Campanhas, fora de Anúncios.
+        { pega: 'SeusPosts' },
         {
           pega: 'Campaigns',
           // Telas filhas sem item próprio (editor de e-mail, nova campanha…) marcam Campanhas.

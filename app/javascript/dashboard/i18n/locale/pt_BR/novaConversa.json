@@ -34,6 +34,7 @@
       "TENTAR": "Tentar de novo",
       "CANAL": {
         "WHATSAPP": "WhatsApp",
+        "WHATSAPP_CELULAR": "WhatsApp do celular",
         "EMAIL": "E-mail",
         "SMS": "SMS",
         "SITE": "Site",
@@ -82,6 +83,9 @@
       "MENOS_OPCOES": "Menos opções",
       "ANEXAR": "Anexar arquivo",
       "FERRAMENTAS": "Ferramentas do e-mail",
+      "FERRAMENTAS_WHATSAPP": "Ferramentas do WhatsApp",
+      "VOZ": "Mensagem de voz",
+      "TIRAR_VOZ": "Tirar a gravação",
       "COMPLETE": "Complete a mensagem",
       "CAMPO_ROTULO": "O que entra no lugar de ⟨{campo}⟩",
       "CAMPO_FALADO": "campo {campo}",
@@ -117,6 +121,7 @@
       "TITULO_SEM_NOME": "Mensagem a caminho",
       "PELO": {
         "WHATSAPP": "Pelo WhatsApp · {caixa}",
+        "WHATSAPP_CELULAR": "Pelo WhatsApp do celular · {caixa}",
         "EMAIL": "Por e-mail · {caixa}",
         "SMS": "Por SMS · {caixa}",
         "SITE": "Pelo site · {caixa}",

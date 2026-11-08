@@ -13,6 +13,12 @@ RSpec.describe 'Reports API', type: :request do
   let(:params) { { timezone_offset: Time.zone.utc_offset } }
   let(:new_account) { create(:account) }
 
+  # Fork (#2171): timezone_offset 0 vira "Edinburgh" (Europe/London) no controller. Nos domingos em que a Europa
+  # troca de horário, o dia lá começa fora da meia-noite UTC e a série não bate. Relógio fixo num dia sem troca.
+  around do |example|
+    travel_to(Time.zone.parse('2026-06-15T12:00:00Z')) { example.run }
+  end
+
   before do
     create_list(:conversation, 10, account: account, inbox: inbox,
                                    assignee: user, created_at: Time.current.in_time_zone(default_timezone).to_date)

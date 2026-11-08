@@ -2,6 +2,9 @@
 import { computed } from 'vue';
 import { useI18n, I18nT } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import NovaConversaEntrada from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
+import { usePodeComecarConversa } from 'dashboard/components-next/NovaConversa/usePodeComecarConversa';
+import { textoDoFechamento } from './sugestaoDeFechar';
 
 // #1423 — o "Próximo passo": uma coisa só, com o único botão azul da tela, e
 // até duas "Depois disso". A ordem vem de proximoPasso.js. Sem botão cinza ao
@@ -19,6 +22,9 @@ const props = defineProps({
   status: { type: String, default: '' },
   // #1498 — funil de Atender: "Este atendimento terminou".
   venda: { type: Boolean, default: true },
+  // #2195 — "Chamar no WhatsApp" de quem chegou pelo formulário abre a Nova
+  // conversa com este contato (a primeira mensagem sai de Modelos).
+  contatoId: { type: String, default: null },
 });
 
 const emit = defineEmits([
@@ -33,11 +39,13 @@ const emit = defineEmits([
 
 const { t } = useI18n();
 const P = 'CRM_CARD.PASSO';
+const podeComecar = usePodeComecarConversa();
 
 const VISUAL = {
   reuniao_hoje: { icone: 'i-lucide-calendar-clock', tom: 'teal' },
   retorno_atrasado: { icone: 'i-lucide-alarm-clock', tom: 'ruby' },
   espera: { icone: 'i-lucide-message-circle-reply', tom: 'blue' },
+  formulario: { icone: 'i-lucide-clipboard-check', tom: 'blue' },
   sugestao: { icone: 'i-lucide-sparkles', tom: 'iris' },
   retorno_hoje: { icone: 'i-lucide-bell-ring', tom: 'amber' },
   em_dia: { icone: 'i-lucide-circle-check', tom: 'teal' },
@@ -75,6 +83,7 @@ const DESTINO = {
   retorno_futuro: 'agenda',
   espera: 'conversas',
   sugestao: 'etapa',
+  formulario: 'origem',
 };
 
 const principal = computed(() => props.passos.principal);
@@ -111,10 +120,21 @@ const acoes = computed(() => {
           }
         : null,
     ],
+    formulario: [
+      props.contatoId && podeComecar.value
+        ? {
+            rotulo: t(`${P}.CHAMAR_WHATSAPP`),
+            icone: 'i-lucide-message-circle',
+            evento: 'chamar',
+          }
+        : null,
+    ],
     sugestao: props.podeIa
       ? [
           {
-            rotulo: t(`${P}.MOVER`, { etapa: passo.sugestao?.to_stage_name }),
+            rotulo: textoDoFechamento(passo.sugestao)
+              ? t(textoDoFechamento(passo.sugestao).botao)
+              : t(`${P}.MOVER`, { etapa: passo.sugestao?.to_stage_name }),
             icone: 'i-lucide-arrow-right',
             evento: 'aceitar',
           },
@@ -157,13 +177,23 @@ const EVENTOS = {
 };
 const disparar = acao => EVENTOS[acao.evento](acao.dado);
 
+const chaveDe = passo => {
+  if (passo.tipo === 'fechado' && !props.venda) return `${P}.FECHADO_ATENDER`;
+  // #2195 — quem só lê conversas não chama: a frase não manda chamar.
+  if (passo.tipo === 'formulario' && !podeComecar.value)
+    return `${P}.FORMULARIO_LEITURA`;
+  return `${P}.${passo.tipo.toUpperCase()}`;
+};
+
 const fraseDe = passo => {
   const quando = passo.quando ? props.formato.quando(passo.quando) : '';
+  // A sugestão de fechar o card (F3) diz o que acabou, e não a etapa.
+  const fechar = passo.tipo === 'sugestao' && textoDoFechamento(passo.sugestao);
   return {
-    chave:
-      passo.tipo === 'fechado' && !props.venda
-        ? `${P}.FECHADO_ATENDER`
-        : `${P}.${passo.tipo.toUpperCase()}`,
+    chave: fechar ? fechar.frase : chaveDe(passo),
+    curta: fechar ? fechar.curta : `${P}.CURTO.${passo.tipo.toUpperCase()}`,
+    motivo: fechar && fechar.motivo ? t(fechar.motivo) : '',
+    retorno: fechar && fechar.retorno ? t(fechar.retorno) : '',
     quando,
     ha: passo.quando ? props.formato.ha(passo.quando) : '',
     titulo: passo.retorno?.title || '',
@@ -221,6 +251,7 @@ const depois = computed(() =>
           <template #ha>{{ frase.ha }}</template>
           <template #titulo>{{ frase.titulo }}</template>
           <template #etapa>{{ frase.etapa }}</template>
+          <template #motivo>{{ frase.motivo }}</template>
           <template #status>{{ status }}</template>
         </I18nT>
         <p
@@ -235,13 +266,36 @@ const depois = computed(() =>
         >
           {{ principal.sugestao.reasoning }}
         </p>
+        <p
+          v-if="principal.tipo === 'formulario' && !podeComecar"
+          data-passo-sem-conversa
+          class="mb-0 text-sm text-n-slate-11"
+        >
+          {{ t(`${P}.FORMULARIO_SEM_CONVERSA`) }}
+        </p>
+        <p v-if="frase.retorno" class="mb-0 text-sm text-n-slate-11">
+          {{ frase.retorno }}
+        </p>
       </div>
       <div
         v-if="acoes.azul || acoes.cinza"
         class="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0 sm:flex-col sm:items-stretch sm:self-center"
       >
+        <NovaConversaEntrada
+          v-if="acoes.azul?.evento === 'chamar'"
+          :contact-id="contatoId"
+        >
+          <template #trigger>
+            <Button
+              data-passo-principal
+              :label="acoes.azul.rotulo"
+              :icon="acoes.azul.icone"
+              class="!min-h-11 w-full justify-center"
+            />
+          </template>
+        </NovaConversaEntrada>
         <Button
-          v-if="acoes.azul"
+          v-else-if="acoes.azul"
           data-passo-principal
           :label="acoes.azul.rotulo"
           :icon="acoes.azul.icone"
@@ -280,7 +334,7 @@ const depois = computed(() =>
               aria-hidden="true"
             />
             <I18nT
-              :keypath="`${P}.CURTO.${item.tipo.toUpperCase()}`"
+              :keypath="item.curta"
               tag="span"
               scope="global"
               class="min-w-0 flex-1"

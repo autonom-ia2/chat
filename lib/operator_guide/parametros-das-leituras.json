@@ -19,6 +19,22 @@
     "controller": "api/v1/accounts/agent_capacity_policies#show",
     "parametros": []
   },
+  "agentes_do_post": {
+    "controller": "api/v1/accounts/agentes_do_post#index",
+    "parametros": []
+  },
+  "agentes_do_post/:id": {
+    "controller": "api/v1/accounts/agentes_do_post#show",
+    "parametros": []
+  },
+  "agentes_do_post/:id/materiais": {
+    "controller": "api/v1/accounts/agentes_do_post_materiais#index",
+    "parametros": []
+  },
+  "agentes_do_post/anuncios": {
+    "controller": "api/v1/accounts/agentes_do_post#anuncios",
+    "parametros": []
+  },
   "agents": {
     "controller": "api/v1/accounts/agents#index",
     "parametros": []
@@ -116,9 +132,28 @@
     "controller": "api/v1/accounts/autonomia/agents/ajuda#show",
     "parametros": []
   },
+  "autonomia/agents/:agent_id/base": {
+    "controller": "api/v1/accounts/autonomia/agents/base_de_seguros#show",
+    "parametros": []
+  },
   "autonomia/agents/:agent_id/channels": {
     "controller": "api/v1/accounts/autonomia/agents/channels#index",
     "parametros": []
+  },
+  "autonomia/agents/:agent_id/desempenho": {
+    "controller": "api/v1/accounts/autonomia/agents/desempenho#show",
+    "parametros": [
+      "origem",
+      "periodo"
+    ]
+  },
+  "autonomia/agents/:agent_id/desempenho/exportar": {
+    "controller": "api/v1/accounts/autonomia/agents/desempenho#exportar",
+    "parametros": [
+      "formato",
+      "origem",
+      "periodo"
+    ]
   },
   "autonomia/agents/:agent_id/faq_suggestions": {
     "controller": "api/v1/accounts/autonomia/agents/faq_suggestions#index",
@@ -129,6 +164,10 @@
   },
   "autonomia/agents/:agent_id/instruction_versions": {
     "controller": "api/v1/accounts/autonomia/agents/instruction_versions#index",
+    "parametros": []
+  },
+  "autonomia/agents/:agent_id/material": {
+    "controller": "api/v1/accounts/autonomia/agents/material#show",
     "parametros": []
   },
   "autonomia/agents/:agent_id/sources": {
@@ -159,6 +198,36 @@
       "metric",
       "range"
     ]
+  },
+  "autonomia/automacoes": {
+    "controller": "api/v1/accounts/autonomia/automacoes#index",
+    "parametros": []
+  },
+  "autonomia/automacoes/:id": {
+    "controller": "api/v1/accounts/autonomia/automacoes#show",
+    "parametros": []
+  },
+  "autonomia/automacoes/:id/custos": {
+    "controller": "api/v1/accounts/autonomia/automacoes_ia#custos_da_automacao",
+    "parametros": []
+  },
+  "autonomia/automacoes/:id/historico": {
+    "controller": "api/v1/accounts/autonomia/automacoes#historico",
+    "parametros": [
+      "pagina"
+    ]
+  },
+  "autonomia/automacoes/agentes_de_ia": {
+    "controller": "api/v1/accounts/autonomia/automacoes_ia#agentes_de_ia",
+    "parametros": []
+  },
+  "autonomia/automacoes/custos": {
+    "controller": "api/v1/accounts/autonomia/automacoes_ia#custos",
+    "parametros": []
+  },
+  "autonomia/automacoes/passos": {
+    "controller": "api/v1/accounts/autonomia/automacoes#passos",
+    "parametros": []
   },
   "autonomia/avisos": {
     "controller": "api/v1/accounts/autonomia/avisos#index",
@@ -345,6 +414,12 @@
     "controller": "api/v1/accounts/branded_email_layouts#show",
     "parametros": []
   },
+  "busca_da_lista": {
+    "controller": "api/v1/accounts/busca_da_lista#show",
+    "parametros": [
+      "q"
+    ]
+  },
   "callbacks/register_facebook_page": {
     "controller": "api/v1/accounts/callbacks#register_facebook_page",
     "parametros": [
@@ -390,6 +465,10 @@
       "file"
     ]
   },
+  "campaign_imports/:id/people_sheet": {
+    "controller": "api/v1/accounts/campaign_import_audiences#people_sheet",
+    "parametros": []
+  },
   "campaign_imports/:id/problem_rows": {
     "controller": "api/v1/accounts/campaign_import_audiences#problem_rows",
     "parametros": [
@@ -428,6 +507,22 @@
       "categoria",
       "inbox_id"
     ]
+  },
+  "campaign_journey/conversation_audiences/:id": {
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#show",
+    "parametros": [
+      "since"
+    ]
+  },
+  "campaign_journey/conversation_audiences/:id/conversation": {
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#conversation",
+    "parametros": [
+      "person_id"
+    ]
+  },
+  "campaign_journey/conversation_audiences/status": {
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#status",
+    "parametros": []
   },
   "campaign_journey/drafts": {
     "controller": "api/v1/accounts/campaign_journey/drafts#index",
@@ -981,6 +1076,7 @@
       "esperando_min",
       "inbox_id",
       "labels",
+      "no_funil",
       "page",
       "pasta",
       "q",
@@ -990,6 +1086,10 @@
       "team_id",
       "updated_within"
     ]
+  },
+  "conversations/:conversation_id/comentario": {
+    "controller": "api/v1/accounts/conversations/comentario#show",
+    "parametros": []
   },
   "conversations/:conversation_id/draft_messages": {
     "controller": "api/v1/accounts/conversations/draft_messages#show",
@@ -1043,6 +1143,7 @@
       "esperando_min",
       "inbox_id",
       "labels",
+      "no_funil",
       "page",
       "pasta",
       "q",
@@ -1063,6 +1164,7 @@
       "esperando_min",
       "inbox_id",
       "labels",
+      "no_funil",
       "page",
       "pasta",
       "q",
@@ -1194,7 +1296,8 @@
   "crm/cards": {
     "controller": "api/v1/accounts/crm/cards#index",
     "motivos": [
-      "params inteiro repassado a ::Crm::Cards::FilterQuery.new"
+      "params inteiro repassado a ::Crm::Cards::FilterQuery.new",
+      "params inteiro repassado a ::Crm::Cards::OrganizarPor.lista_nova?"
     ]
   },
   "crm/cards/:id": {
@@ -1204,6 +1307,15 @@
   "crm/cards/:id/current_ai_suggestion": {
     "controller": "api/v1/accounts/crm/cards#current_ai_suggestion",
     "parametros": []
+  },
+  "crm/cards/archived": {
+    "controller": "api/v1/accounts/crm/cards/archived#index",
+    "parametros": [
+      "page",
+      "per_page",
+      "pipeline_id",
+      "search"
+    ]
   },
   "crm/cards/export": {
     "controller": "api/v1/accounts/crm/cards#export",
@@ -1225,6 +1337,12 @@
       "params inteiro repassado a ::Crm::Cards::GroupSummary.new"
     ]
   },
+  "crm/cards/upcoming_meetings": {
+    "controller": "api/v1/accounts/crm/cards/upcoming_meetings#index",
+    "parametros": [
+      "card_ids"
+    ]
+  },
   "crm/companies/:company_id/opportunities": {
     "controller": "api/v1/accounts/crm/company_opportunities#index",
     "parametros": [
@@ -1240,6 +1358,14 @@
       "result",
       "search"
     ]
+  },
+  "crm/contacts/:contact_id/permanent_delete_preview": {
+    "controller": "api/v1/accounts/crm/contacts/permanent_deletions#preview",
+    "parametros": []
+  },
+  "crm/contacts/:contact_id/relacao": {
+    "controller": "api/v1/accounts/crm/contacts/relacoes#show",
+    "parametros": []
   },
   "crm/conversations/:conversation_id/card": {
     "controller": "api/v1/accounts/crm/cards#by_conversation",
@@ -1326,29 +1452,93 @@
       "mode"
     ]
   },
+  "crm/meta_ads_connection/ads/:ad_id/budget": {
+    "controller": "api/v1/accounts/crm/meta_ads_creation#budget",
+    "parametros": []
+  },
+  "crm/meta_ads_connection/ads/:ad_id/cuidado": {
+    "controller": "api/v1/accounts/crm/meta_ads_cuidado#show",
+    "parametros": []
+  },
+  "crm/meta_ads_connection/ads/:ad_id/facebook_comments": {
+    "controller": "api/v1/accounts/crm/meta_ads_facebook_comments#index",
+    "parametros": [
+      "after"
+    ]
+  },
+  "crm/meta_ads_connection/ads/:ad_id/instagram_comments": {
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#index",
+    "parametros": [
+      "after",
+      "comment_id"
+    ]
+  },
+  "crm/meta_ads_connection/ads/:ad_id/management": {
+    "controller": "api/v1/accounts/crm/meta_ads_ad_management#show",
+    "parametros": []
+  },
+  "crm/meta_ads_connection/ads/:ad_id/resumo": {
+    "controller": "api/v1/accounts/crm/meta_ads_cuidado#resumo",
+    "parametros": []
+  },
+  "crm/meta_ads_connection/boost_posts": {
+    "controller": "api/v1/accounts/crm/meta_ads_creation#boost_posts",
+    "parametros": [
+      "page_id"
+    ]
+  },
+  "crm/meta_ads_connection/create_options": {
+    "controller": "api/v1/accounts/crm/meta_ads_creation#options",
+    "parametros": []
+  },
+  "crm/meta_ads_connection/cuidados": {
+    "controller": "api/v1/accounts/crm/meta_ads_cuidado#cuidados",
+    "parametros": []
+  },
   "crm/meta_ads_connection/funnels": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#funnels",
+    "parametros": []
+  },
+  "crm/meta_ads_connection/organico": {
+    "controller": "api/v1/accounts/crm/meta_ads_organico#show",
+    "parametros": [
+      "days"
+    ]
+  },
+  "crm/meta_ads_connection/pages": {
+    "controller": "api/v1/accounts/crm/meta_ads_ad_management#pages",
+    "parametros": []
+  },
+  "crm/meta_ads_connection/paginas": {
+    "controller": "api/v1/accounts/crm/meta_ads_pagina#index",
     "parametros": []
   },
   "crm/meta_ads_connection/panel": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#panel",
     "parametros": [
-      "days"
+      "days",
+      "period"
     ]
   },
   "crm/meta_ads_connection/panel_ad": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#panel_ad",
     "parametros": [
       "ad_id",
-      "days"
+      "days",
+      "period"
     ]
   },
   "crm/meta_ads_connection/panel_list": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#panel_list",
     "parametros": [
       "days",
+      "period",
       "step"
     ]
+  },
+  "crm/meta_ads_connection/paused_ads": {
+    "controller": "api/v1/accounts/crm/meta_ads_creation#paused",
+    "parametros": []
   },
   "crm/meta_ads_connection/pixels": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#pixels",
@@ -1357,8 +1547,24 @@
       "mode"
     ]
   },
+  "crm/meta_ads_connection/report": {
+    "controller": "api/v1/accounts/crm/meta_ads_reports#show",
+    "parametros": [
+      "days",
+      "formato",
+      "period"
+    ]
+  },
+  "crm/meta_ads_connection/site_pages": {
+    "controller": "api/v1/accounts/crm/meta_ads_site_pages#index",
+    "parametros": []
+  },
   "crm/meta_ads_connection/whatsapp_report": {
     "controller": "api/v1/accounts/crm/meta_ads_whatsapp_reports#show",
+    "parametros": []
+  },
+  "crm/meta_ads_lead_forms": {
+    "controller": "api/v1/accounts/crm/meta_ads_lead_forms#index",
     "parametros": []
   },
   "crm/meta_conversions": {
@@ -1376,6 +1582,10 @@
       "until"
     ]
   },
+  "crm/metas": {
+    "controller": "api/v1/accounts/crm/metas#show",
+    "parametros": []
+  },
   "crm/meu_acesso": {
     "controller": "api/v1/accounts/crm/meu_acesso#show",
     "parametros": []
@@ -1387,15 +1597,41 @@
   "crm/numeros": {
     "controller": "api/v1/accounts/crm/numeros#show",
     "parametros": [
+      "mes",
+      "visao"
+    ]
+  },
+  "crm/numeros/origens": {
+    "controller": "api/v1/accounts/crm/numeros_origens#show",
+    "parametros": [
+      "funil",
+      "mes"
+    ]
+  },
+  "crm/numeros/origens/report": {
+    "controller": "api/v1/accounts/crm/numeros_origens#report",
+    "parametros": [
+      "formato",
+      "funil",
       "mes"
     ]
   },
   "crm/pipelines": {
     "controller": "api/v1/accounts/crm/pipelines#index",
-    "parametros": []
+    "parametros": [
+      "status"
+    ]
   },
   "crm/pipelines/:id": {
     "controller": "api/v1/accounts/crm/pipelines#show",
+    "parametros": []
+  },
+  "crm/pipelines/:id/archive_preview": {
+    "controller": "api/v1/accounts/crm/pipelines#archive_preview",
+    "parametros": []
+  },
+  "crm/pipelines/:id/permanent_delete_preview": {
+    "controller": "api/v1/accounts/crm/pipelines/permanent_deletions#preview",
     "parametros": []
   },
   "crm/pipelines/:pipeline_id/ai_settings": {
@@ -1418,6 +1654,7 @@
       "group_by",
       "pipeline_id",
       "since",
+      "todos_os_funis",
       "until"
     ]
   },
@@ -1810,6 +2047,10 @@
     "controller": "api/v1/accounts/inboxes/whatsapp_templates#usage",
     "parametros": []
   },
+  "inboxes/:inbox_id/whatsapp_templates/media/:conversion_id": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_templates#media_status",
+    "parametros": []
+  },
   "instagram/testers/configuration": {
     "controller": "api/v1/accounts/instagram/testers#configuration",
     "parametros": []
@@ -2065,6 +2306,55 @@
       "params inteiro repassado a SearchService.new"
     ]
   },
+  "seus_posts": {
+    "controller": "api/v1/accounts/seus_posts#index",
+    "parametros": [
+      "days",
+      "perfil"
+    ]
+  },
+  "seus_posts/cuidados": {
+    "controller": "api/v1/accounts/seus_posts_cuidado#cuidados",
+    "parametros": [
+      "perfil"
+    ]
+  },
+  "seus_posts/posts/:post_id": {
+    "controller": "api/v1/accounts/seus_posts_comentarios#show",
+    "parametros": [
+      "comment_id",
+      "perfil"
+    ]
+  },
+  "seus_posts/posts/:post_id/comments": {
+    "controller": "api/v1/accounts/seus_posts_comentarios#index",
+    "parametros": [
+      "after",
+      "comment_id",
+      "perfil"
+    ]
+  },
+  "seus_posts/posts/:post_id/cuidado": {
+    "controller": "api/v1/accounts/seus_posts_cuidado#show",
+    "parametros": [
+      "comment_id",
+      "perfil"
+    ]
+  },
+  "seus_posts/posts/:post_id/cuidado/post": {
+    "controller": "api/v1/accounts/seus_posts_cuidado#ler_post",
+    "parametros": [
+      "comment_id",
+      "perfil"
+    ]
+  },
+  "seus_posts/posts/:post_id/resumo": {
+    "controller": "api/v1/accounts/seus_posts_cuidado#resumo",
+    "parametros": [
+      "comment_id",
+      "perfil"
+    ]
+  },
   "sla_policies": {
     "controller": "api/v1/accounts/sla_policies#index",
     "parametros": []
@@ -2103,6 +2393,10 @@
   },
   "waha_inboxes/:inbox_id/connection": {
     "controller": "api/v1/accounts/waha_inboxes#connection",
+    "parametros": []
+  },
+  "waha_inboxes/:inbox_id/status": {
+    "controller": "api/v1/accounts/waha_inboxes#status",
     "parametros": []
   },
   "webhooks": {

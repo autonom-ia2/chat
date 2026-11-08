@@ -56,6 +56,8 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
     ).perform
     after_follow_up_change('follow_up_created', @follow_up)
     render :show, status: :created
+  rescue Crm::FollowUps::Creator::CardArchived
+    render json: { message: I18n.t('crm.follow_ups.card_archived'), code: 'card_archived' }, status: :unprocessable_entity
   end
 
   def update
@@ -129,9 +131,7 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
     }
   end
 
-  def visible_card(card_id)
-    policy_scope(::Crm::Card).find(card_id)
-  end
+  def visible_card(card_id) = policy_scope(::Crm::Card).find(card_id)
 
   # Acesso por funil (#1148, decisão b): criar lembrete é mexer no card; exige o funil dele.
   def ensure_card_funnel!(card)

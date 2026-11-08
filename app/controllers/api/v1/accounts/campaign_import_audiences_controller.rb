@@ -77,8 +77,7 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   # saved by this audience, paged, with their company. Contacts has no list filter, so the panel reads them here.
   def contacts
     page = [params[:page].to_i, 1].max
-    ids = @campaign_import.campaign_import_rows.status_imported.where.not(contact_id: nil).distinct.pluck(:contact_id)
-    scope = Current.account.contacts.where(id: ids).order(:name, :id)
+    scope = Current.account.contacts.where(id: listed_contact_ids).order(:name, :id)
     records = scope.offset((page - 1) * CONTACTS_PER_PAGE).limit(CONTACTS_PER_PAGE)
     records = records.includes(:company) if Contact.reflect_on_association(:company)
     render json: {
@@ -90,8 +89,20 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   # GET /campaign_imports/:id/sample_contact (#993, PRD §6.3 "Como o cliente vê"): the first eligible row of
   # this audience, only its own values. `payload: null` when the audience has none.
   def sample_contact
-    row = @campaign_import.campaign_import_rows.where(status: SAMPLE_ROW_STATUSES).order(:row_number).first
+    rows = @campaign_import.campaign_import_rows.where(status: SAMPLE_ROW_STATUSES).order(:row_number)
+    rows = rows.where(contact_id: named_contact_ids.to_a) if named_contact_ids
+    row = rows.first
     render json: { payload: row && sample_payload(row) }
+  end
+
+  # GET /campaign_imports/:id/people_sheet (#2332, side panel "Baixar lista"): who the audience holds, as an Excel file.
+  # The same contacts the panel lists; an audience from the conversations needs contact_view (#2277).
+  def people_sheet
+    return render json: { error: 'campaign_import.contacts_hidden' }, status: :forbidden if contact_data_hidden?
+
+    sheet = CampaignImports::AudiencePeopleSheet.new(@campaign_import, contact_ids: named_contact_ids)
+    send_data sheet.to_xlsx, filename: sheet.filename, disposition: 'attachment',
+                             type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   end
 
   # GET /campaign_imports/:id/variable_suggestions?variables[][key]=2&variables[][label]=mês de vencimento
@@ -113,6 +124,12 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
 
   private
 
+  # The audience's contacts; from a search by conversation, only those the viewer may see by name.
+  def listed_contact_ids
+    ids = @campaign_import.campaign_import_rows.status_imported.where.not(contact_id: nil).distinct.pluck(:contact_id)
+    named_contact_ids ? ids.select { |id| named_contact_ids.include?(id) } : ids
+  end
+
   def ensure_campaign_import_enabled
     render json: { error: 'campaign_import.disabled' }, status: :not_found unless CampaignImports::Config.enabled?
   end
@@ -120,8 +137,8 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   def fetch_campaign_import
     # Contact imports (#1006) are never audiences: campaign_flows keeps them out.
     @campaign_import = Current.account.campaign_imports.campaign_flows.includes(:user, :campaign_import_labels).find(params[:id])
-    # Old imports (Base Campanha) also list their contacts in the side panel (F1).
-    return if @campaign_import.audience? || action_name == 'contacts'
+    # Old imports (Base Campanha) also list their contacts in the side panel (F1), and download them (#2332).
+    return if @campaign_import.audience? || %w[contacts people_sheet].include?(action_name)
 
     render_unprocessable('campaign_import.not_an_audience')
   end
@@ -170,17 +187,46 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   end
 
   def contact_payload(contact)
-    { id: contact.id, name: contact.name, email: contact.email, phone_number: contact.phone_number,
-      company_name: contact.try(:company)&.name.presence || contact.additional_attributes.to_h['company_name'] }
+    company = contact.try(:company)&.name.presence || contact.additional_attributes.to_h['company_name']
+    payload = { id: contact.id, name: contact.name, email: contact.email, phone_number: contact.phone_number, company_name: company }
+    return payload unless contact_data_hidden?
+
+    # #2277: phone and e-mail as the audience keeps them (masked), never the contact's own.
+    phone, email = masked_reach[contact.id]
+    payload.merge(email: email, phone_number: phone, company_name: nil)
+  end
+
+  # { contact_id => [raw_phone_masked, email_masked] } of this audience's rows.
+  def masked_reach
+    @masked_reach ||= @campaign_import.campaign_import_rows.status_imported.where.not(contact_id: nil)
+                                      .pluck(:contact_id, :raw_phone_masked, :email_masked)
+                                      .to_h { |contact_id, phone, email| [contact_id, [phone, email]] }
+  end
+
+  # #2277: who of an audience built from the conversations the viewer may see by name; nil for any other audience.
+  def named_contact_ids
+    return @named_contact_ids if defined?(@named_contact_ids)
+
+    @named_contact_ids = if ConversationAudience::Access.from_conversations?(@campaign_import)
+                           ConversationAudience::Access.visible_contact_ids(@campaign_import, Current.user)
+                         end
+  end
+
+  def contact_data_hidden?
+    return @contact_data_hidden if defined?(@contact_data_hidden)
+
+    @contact_data_hidden = ConversationAudience::Access.hides_contact_data?(@campaign_import, Current.account_user)
   end
 
   def sample_payload(row)
     name = (row.contact&.name.presence || row.normalized_name.presence || row.raw_name).to_s.squish
-    {
+    payload = {
       name: name, first_name: name.split.first.to_s,
       company_name: row.contact.try(:company)&.name.presence || row.company_name,
       extra_values: row.extra_values.to_h
     }
+    # #2277: the columns of an audience built from the conversations are the contact's data.
+    contact_data_hidden? ? payload.merge(company_name: nil, extra_values: {}) : payload
   end
 
   # Free-form maps keyed by template variable; the services check every key and value.

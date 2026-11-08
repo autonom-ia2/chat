@@ -10,6 +10,8 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import Auth from '../../../../api/auth';
 import wootConstants from 'dashboard/constants/globals';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { useAgentRoleChoices } from './useAgentRoleChoices';
+import { agentUpdateErrorKey } from './agentUpdateError';
 import CrmScheduleEditor from 'dashboard/routes/dashboard/crm/components/sla/CrmScheduleEditor.vue';
 import CrmServiceSchedulesAPI from 'dashboard/api/crmServiceSchedules';
 
@@ -73,7 +75,6 @@ const pageTitle = computed(
 );
 
 const uiFlags = useMapGetter('agents/getUIFlags');
-const getCustomRoles = useMapGetter('customRole/getCustomRoles');
 const accountId = useMapGetter('getCurrentAccountId');
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
@@ -117,32 +118,9 @@ const onScheduleSaved = saved => {
   showScheduleEditor.value = false;
 };
 
-const roles = computed(() => {
-  const defaultRoles = [
-    {
-      id: 'administrator',
-      name: 'administrator',
-      label: t('AGENT_MGMT.AGENT_TYPES.ADMINISTRATOR'),
-    },
-    {
-      id: 'agent',
-      name: 'agent',
-      label: t('AGENT_MGMT.AGENT_TYPES.AGENT'),
-    },
-  ];
-
-  const customRoles = getCustomRoles.value.map(role => ({
-    id: role.id,
-    name: `custom_${role.id}`,
-    label: role.name,
-  }));
-
-  return [...defaultRoles, ...customRoles];
+const { roles, roleChoices } = useAgentRoleChoices({
+  currentCustomRoleId: props.customRoleId,
 });
-
-const roleChoices = computed(() =>
-  roles.value.map(role => ({ value: role.id, label: role.label }))
-);
 
 const selectedRole = computed(() =>
   roles.value.find(
@@ -189,7 +167,7 @@ const editAgent = async () => {
     useAlert(t('AGENT_MGMT.EDIT.API.SUCCESS_MESSAGE'));
     emit('close');
   } catch (error) {
-    useAlert(t('AGENT_MGMT.EDIT.API.ERROR_MESSAGE'));
+    useAlert(t(agentUpdateErrorKey(error)));
   }
 };
 

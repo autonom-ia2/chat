@@ -101,6 +101,12 @@ RSpec.describe Instagram::Testers::OauthBinding do
     end
   end
 
+  it 'rejects a Meta ads reauthorization without the inbox it reauthorizes (#2199)' do
+    state = payload.except('tester_selection').merge('return_to' => 'meta_ads', 'purpose' => 'meta_ads_organico')
+
+    expect { described_class.claim!(state) }.to(raise_error { |error| expect(error.code).to eq('invalid_selection') })
+  end
+
   it 'rejects an actor belonging only to a different account' do
     other_actor = create(:user, account: create(:account), role: :administrator)
     state = payload.except('tester_selection').merge('actor_id' => other_actor.id)

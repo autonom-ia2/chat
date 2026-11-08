@@ -16,6 +16,12 @@ export const PERMISSOES_PARA_CRIAR = [
   'administrator',
   'whatsapp_templates_manage',
 ];
+// Autorização de cobranças da Meta (#1586): quem cria modelos e quem vê os custos da conta (financial_view, #1969).
+export const PERMISSOES_DA_AUTORIZACAO = [
+  ...PERMISSOES_PARA_CRIAR,
+  'financial_view',
+  'financial_manage',
+];
 
 export function usePodeCriarModelo() {
   return useCanManage('whatsapp_templates_manage');

@@ -67,4 +67,66 @@ RSpec.describe 'WAHA inboxes API', type: :request do
       expect(response).to have_http_status(:unauthorized)
     end
   end
+
+  # #1941, item 5: só o estado da conexão, para a faixa da lista da caixa. Quem vê a caixa vê; sem QR nem telefone.
+  describe 'GET /api/v1/accounts/{account.id}/waha_inboxes/{inbox_id}/status' do
+    let(:path) { "/api/v1/accounts/#{account.id}/waha_inboxes/#{inbox.id}/status" }
+    let(:agent) { create(:user, account: account, role: :agent) }
+
+    it 'tells a member of the inbox the connection state, without the QR or the phone' do
+      create(:inbox_member, user: agent, inbox: inbox)
+      allow(client).to receive(:get_session).with('sessao-teste').and_return({ 'status' => 'SCAN_QR_CODE', 'me' => { 'id' => '5511@c.us' } })
+      allow(client).to receive(:qr_value)
+
+      get path, headers: agent.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body).to eq('status' => 'awaiting_scan', 'connected' => false)
+      expect(client).not_to have_received(:qr_value)
+    end
+
+    it 'answers unknown when the engine does not answer' do
+      allow(client).to receive(:get_session).and_raise(Waha::Client::Error, 'boom')
+
+      get path, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body).to eq('status' => 'unknown', 'connected' => false)
+    end
+
+    it 'keeps the answer for a while, so an open list does not hit the engine every time' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      allow(client).to receive(:get_session).and_return({ 'status' => 'WORKING' })
+
+      2.times { get path, headers: admin.create_new_auth_token, as: :json }
+
+      expect(response.parsed_body).to eq('status' => 'connected', 'connected' => true)
+      expect(client).to have_received(:get_session).once
+    end
+
+    it 'asks the engine again after it did not answer' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      respostas = [Waha::Client::Error.new('boom'), { 'status' => 'WORKING' }]
+      allow(client).to receive(:get_session) { (resposta = respostas.shift).is_a?(Exception) ? raise(resposta) : resposta }
+
+      get path, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['status']).to eq('unknown')
+
+      get path, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['status']).to eq('connected')
+    end
+
+    it 'is not available to an agent outside the inbox' do
+      get path, headers: agent.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'refuses an inbox that is not a WAHA inbox' do
+      other = create(:channel_api, account: account).inbox
+
+      get "/api/v1/accounts/#{account.id}/waha_inboxes/#{other.id}/status", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
 end

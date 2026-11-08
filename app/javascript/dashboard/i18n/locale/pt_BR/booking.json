@@ -337,7 +337,7 @@
       "CHANNEL": {
         "OFFICIAL": "Este é o WhatsApp oficial. Se o cliente não falou com você nas últimas 24 horas, o aviso só sai com uma mensagem aprovada pela Meta. Escolha essas mensagens logo abaixo.",
         "WAHA": "Por este número não oficial, o aviso sai mesmo sem o cliente ter falado com você. Muitos avisos assim podem fazer o WhatsApp bloquear o número.",
-        "API": "Por este número, o aviso sai na hora quando o cliente falou com você nas últimas 24 horas. Fora disso, sai com a mensagem pronta escolhida abaixo."
+        "API": "Por este número, o aviso sai na hora quando o cliente falou com você nas últimas 24 horas. Fora disso, sai com o modelo de texto escolhido abaixo."
       },
       "PRESET_LABEL": "Quando avisar o cliente?",
       "PRESETS": {
@@ -368,12 +368,15 @@
       "SAMPLE_LINK": "(link do horário)",
       "TEMPLATE_OPTION_LANGUAGE": "{preview} · {language}",
       "TEMPLATE_SAVED": "A mensagem já escolhida",
-      "MISSING_TEMPLATES": "Sem mensagem pronta para: {kinds}. Esse aviso só sai para quem falou com você nas últimas 24 horas.",
-      "API_TEMPLATES_LABEL": "Mensagens prontas deste WhatsApp",
-      "API_TEMPLATES_HINT": "Escolha uma mensagem pronta para cada aviso. O dia, a hora e o link vão no fim dela.",
-      "API_TEMPLATES_EMPTY": "Este WhatsApp ainda não tem mensagem pronta. Sem ela, o aviso só sai para quem falou com você nas últimas 24 horas.",
-      "API_TEMPLATES_FAILED": "Não deu para ver as mensagens prontas deste WhatsApp. Peça a um administrador para escolher.",
+      "MISSING_TEMPLATES": "Sem mensagem aprovada para: {kinds}. Esse aviso só sai para quem falou com você nas últimas 24 horas.",
+      "API_MISSING_TEMPLATES": "Sem modelo de texto para: {kinds}. Esse aviso só sai para quem falou com você nas últimas 24 horas.",
+      "API_TEMPLATES_LABEL": "Modelos de texto deste WhatsApp",
+      "API_TEMPLATES_HINT": "Escolha um modelo de texto para cada aviso. O dia, a hora e o link vão no fim dele.",
+      "API_TEMPLATES_EMPTY": "Este WhatsApp ainda não tem modelo de texto. Sem ele, o aviso só sai para quem falou com você nas últimas 24 horas.",
+      "API_TEMPLATES_FAILED": "Não deu para ver os modelos de texto deste WhatsApp. Peça a um administrador para escolher.",
       "TEMPLATE_FOR": "Mensagem aprovada para o aviso {notice}",
+      "API_TEMPLATE_NONE": "Sem modelo de texto",
+      "API_TEMPLATE_FOR": "Modelo de texto para o aviso {notice}",
       "AUTO": {
         "SUGGESTED": "Sugerido",
         "SUGGESTING": "Procurando a melhor mensagem para cada aviso…",

@@ -2,6 +2,19 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { defaultFilters } from 'dashboard/store/modules/crmKanban';
 import CrmKanbanFiltersDrawer from './CrmKanbanFiltersDrawer.vue';
 
+// #2075 — quem vê os valores de venda (o padrão das telas sem função personalizada).
+// #2150 — com crm_manage_ai, a chave que lê a sugestão de etapa da IA.
+const permissoes = vi.hoisted(() => ({ ia: true }));
+vi.mock('../composables/useCrmPermissions', async () => {
+  const { ref } = await import('vue');
+  return {
+    useCrmPermissions: () => ({
+      canSeeSalesValues: ref(true),
+      canManageAi: ref(permissoes.ia),
+    }),
+  };
+});
+
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
     t: (key, params) => (params ? `${key}:${JSON.stringify(params)}` : key),
@@ -211,6 +224,32 @@ describe('CrmKanbanFiltersDrawer', () => {
     expect(wrapper.findAll('details')).toHaveLength(5);
     expect(wrapper.findAll('details[open]')).toHaveLength(0);
     expect(wrapper.text()).toContain('CRM_KANBAN.FILTERS.SHORTCUTS');
+  });
+
+  const aiPendingLabel = drawer =>
+    drawer
+      .findAll('label')
+      .find(item => item.text() === 'CRM_KANBAN.FILTERS.AI_PENDING');
+
+  // #2150 — "Pendente de IA" revela quais cards têm sugestão: só com crm_manage_ai.
+  it('offers the AI pending filter with crm_manage_ai', async () => {
+    wrapper = await mountOpen();
+
+    await aiPendingLabel(wrapper).find('input[type="checkbox"]').setValue(true);
+    const applied = await apply(wrapper);
+
+    expect(applied.aiPending).toBe(true);
+  });
+
+  it('hides the AI pending filter without crm_manage_ai', async () => {
+    permissoes.ia = false;
+    try {
+      wrapper = await mountOpen();
+
+      expect(aiPendingLabel(wrapper)).toBeUndefined();
+    } finally {
+      permissoes.ia = true;
+    }
   });
 
   it('applies the owner and overdue shortcuts to the draft', async () => {

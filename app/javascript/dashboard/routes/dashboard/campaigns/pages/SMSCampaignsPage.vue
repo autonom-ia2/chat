@@ -38,6 +38,7 @@ const handleDelete = campaign => {
   <CampaignLayout
     :header-title="t('CAMPAIGN.SMS.HEADER_TITLE')"
     :button-label="t('CAMPAIGN.SMS.NEW_CAMPAIGN')"
+    create-permission="campaign_send"
     @click="toggleSMSCampaignDialog()"
     @close="toggleSMSCampaignDialog(false)"
   >

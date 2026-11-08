@@ -39,6 +39,9 @@ const ERROS_DE_EXECUCAO = {
   undefined_variable: ['NAO_EXISTE', 'PREENCHE'],
   undefined_filter: ['NAO_EXISTE', 'PREENCHE'],
   syntax_error: ['NAO_EXISTE', 'PREENCHE'],
+  // #1444: com o erro de render recusado, um filtro que falha no valor digitado também chega aqui.
+  argument_error: ['VALOR', 'PREENCHE'],
+  zero_division_error: ['VALOR', 'PREENCHE'],
 };
 
 const lerPrefixo = erro => {

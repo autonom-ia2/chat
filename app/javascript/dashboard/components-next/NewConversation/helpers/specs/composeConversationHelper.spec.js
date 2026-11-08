@@ -93,6 +93,20 @@ describe('composeConversationHelper', () => {
       const result = helpers.buildContactableInboxesList(inboxes);
       expect(result[0].icon).toBe('i-woot-whatsapp-voice');
     });
+
+    it('WhatsApp do celular (caixa API do WAHA) leva o ícone do WhatsApp; API comum não (#2255)', () => {
+      const [celular, comum] = helpers.buildContactableInboxesList([
+        {
+          id: 3,
+          name: 'A celular',
+          channelType: INBOX_TYPES.API,
+          wahaProvider: true,
+        },
+        { id: 4, name: 'B comum', channelType: INBOX_TYPES.API },
+      ]);
+      expect(celular.icon).toBe('i-woot-whatsapp');
+      expect(comum.icon).toBe('i-woot-api');
+    });
   });
 
   describe('getCapitalizedNameFromEmail', () => {

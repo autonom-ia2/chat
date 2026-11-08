@@ -9,8 +9,10 @@ module AutomationRules::CrmActions
   # Só cria quando a conversa não tem card aberto: com só cards ganhos/perdidos, pedido novo vira card novo (#1197).
   # Sem o índice único (#1142), duas automações disparadas juntas poderiam criar dois: a trava da conversa e a
   # checagem dentro dela garantem um só.
+  # #2084: a automação não cria card para contato fora do funil (parceiro, não é negócio).
   def crm_create_card(params)
     return unless Crm::Config.enabled?
+    return if Crm::Relacao.fora_do_funil?(@conversation.contact)
 
     stage = crm_stage(params)
     return if stage.blank?
@@ -21,21 +23,29 @@ module AutomationRules::CrmActions
 
       card = Crm::Cards::Creator.new(
         account: @account, user: nil, conversation: @conversation,
-        params: { pipeline_id: stage.pipeline_id, stage_id: stage.id }
+        params: { pipeline_id: stage.pipeline_id, stage_id: stage.id }, automacao: da_regra
       ).perform
     end
     Crm::Cards::Broadcaster.broadcast(card, CRM_CARD_CREATED) if card.present?
   end
 
+  # #2414 F1.4: com a flag `automacao_fundacao`, contato sem card ganha o card na etapa (Autonomia::Automacao::CardNaEtapa).
   def crm_move_card_stage(params)
     stage = crm_stage(params)
+    if Autonomia::Automacao.fundacao?(@account)
+      return Autonomia::Automacao::CardNaEtapa.new(conversation: @conversation, stage: stage, automacao: da_regra).perform
+    end
+
     card = crm_card_for_pipeline(stage&.pipeline_id)
     # Como no Kanban (só cards abertos): mover card ganho/perdido reabriria eventos de etapa.
     return if card.blank? || stage.blank? || !card.open?
 
-    Crm::Cards::Mover.new(card: card, actor: nil, target_stage: stage).perform
+    Crm::Cards::Mover.new(card: card, actor: nil, target_stage: stage, automacao: da_regra).perform
     Crm::Cards::Broadcaster.broadcast(card, CRM_CARD_MOVED)
   end
+
+  # #2428: o movimento leva a regra que o fez, para a IA do funil não desfazê-lo.
+  def da_regra = { origem: 'regra', id: @rule.id }
 
   def crm_mark_card_won(_params)
     close_crm_card('won')

@@ -68,12 +68,13 @@ class Autonomia::Agents::Tools::Bound
   # `delivery` é o contexto do turno de atendimento (conversa + vínculo do agente). Vem por CHAMADA
   # e não pela construção, para funcionar igual no caminho do principal e no do especialista.
   # `operador` é quem está pedindo, quando a ferramenta age em nome de uma pessoa (#568).
-  def execute(call, delivery: nil, operador: nil)
+  # `turno`: só para o `Idempotency-Key` da ferramenta HTTP, quando ela roda sem `delivery` (o ajudante, #1430).
+  def execute(call, delivery: nil, operador: nil, turno: nil)
     args = JSON.parse(call['arguments'].presence || '{}')
     output = if async?
                accept_async(args, delivery)
              else
-               native? ? run_native(args, delivery, operador) : run_http(args, delivery)
+               native? ? run_native(args, delivery, operador) : run_http(args, delivery, turno)
              end
     cabendo(output)
   rescue JSON::ParserError
@@ -245,8 +246,8 @@ class Autonomia::Agents::Tools::Bound
     delivery.runs.any? { |run| run.slug == slug && run.pedido == pedido && ::Autonomia::Insurance::Faixa.ramo(run.faixa) == ramo }
   end
 
-  def run_http(args, delivery)
-    Autonomia::Agents::Tools::HttpExecutor.new(tool: @record, params: args).call
+  def run_http(args, delivery, turno)
+    Autonomia::Agents::Tools::HttpExecutor.new(tool: @record, params: args, turno: turno || delivery).call
   rescue Autonomia::Agents::Tools::HttpExecutor::Error => e
     recusa_http(e, delivery)
   end

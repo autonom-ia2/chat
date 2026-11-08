@@ -4,7 +4,7 @@ Issue: [#839](https://github.com/autonom-ia2/chat/issues/839). Referência visua
 
 ## Contrato funcional aprovado
 
-A barra mantém esta ordem: **Funil → Criar funil → Buscar por nome → Mais filtros → Encontrar com IA → Zoom**. A busca cede espaço ao novo controle. Criar funil permanece sem borda decorativa. O controle tem largura fixa para não deslocar a busca quando o percentual muda de dois para três algarismos.
+A barra mantém esta ordem: **Funil → Criar funil → Buscar por nome → Mais filtros → Zoom**. A busca cede espaço ao novo controle. Criar funil permanece sem borda decorativa. O controle tem largura fixa para não deslocar a busca quando o percentual muda de dois para três algarismos.
 
 A lupa abre um popover com o percentual atual, menos/mais, cinco atalhos e a indicação de persistência. Cada clique muda **1 ponto percentual**. O intervalo permitido é **70% a 130%, inclusive**. Menos fica desabilitado em 70%; mais, em 130%. Os atalhos são **80%, 90%, 100%, 110% e 120%**. Apenas uma correspondência exata fica destacada; em 87%, nenhum atalho é marcado. O valor inicial é 100%.
 

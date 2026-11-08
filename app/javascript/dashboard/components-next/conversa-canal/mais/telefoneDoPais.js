@@ -87,3 +87,50 @@ export const posicaoDepoisDosDigitos = (formatado, quantos) => {
   }
   return formatado.length;
 };
+
+const semParenteses = texto =>
+  [...texto].filter(letra => letra !== '(' && letra !== ')').join('');
+
+// Telefone gravado (+5541966665555) do jeito que se lê: "+55 41 96666-5555".
+// O formato internacional da biblioteca tira o hífen do número do Brasil
+// ("+55 41 96666 5555"); no Brasil vale o DDI com o formato nacional. Os outros
+// países ficam no internacional. O que não é número possível (com DDI) volta como veio.
+// Usado pela lista de conversas (#2202).
+export const telefoneLegivel = texto => {
+  const numero = parsePhoneNumberFromString(String(texto || '').trim());
+  if (!numero?.isPossible()) return texto || '';
+  if (numero.country !== PAIS_PADRAO) return numero.formatInternational();
+  return `+${numero.countryCallingCode} ${semParenteses(numero.formatNational())}`;
+};
+
+// O nome é só um telefone ("+55 11 95555-4444", "5511955554444"): o avatar mostra o ícone de
+// pessoa em vez das iniciais ("+5"), que não dizem nada (#2202).
+const SINAIS_DO_TELEFONE = ' +()-.';
+const MINIMO_DE_DIGITOS_NO_NOME = 8;
+export const nomeEhTelefone = nome => {
+  const texto = String(nome || '').trim();
+  const digitos = soDigitosDoTelefone(texto);
+  return (
+    digitos.length >= MINIMO_DE_DIGITOS_NO_NOME &&
+    [...texto].every(
+      c => (c >= '0' && c <= '9') || SINAIS_DO_TELEFONE.includes(c)
+    )
+  );
+};
+
+// Nome que é só o número (contato criado pelo telefone, com ou sem "+") vira o telefone legível.
+export const nomeOuTelefone = (nome, telefone) => {
+  const mesmoNumero =
+    nomeEhTelefone(nome) &&
+    soDigitosDoTelefone(nome) === soDigitosDoTelefone(telefone);
+  if (mesmoNumero) return telefoneLegivel(telefone);
+  return nome || telefoneLegivel(telefone);
+};
+
+// O nome do contato para mostrar na tela (#2255), com o telefone em snake_case (servidor) ou camelCase (store).
+// Só exibição: o nome gravado não muda.
+export const nomeDoContatoNaTela = contato =>
+  nomeOuTelefone(
+    contato?.name || '',
+    contato?.phone_number || contato?.phoneNumber || ''
+  );

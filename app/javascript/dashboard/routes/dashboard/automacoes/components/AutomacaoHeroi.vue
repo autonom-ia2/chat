@@ -131,7 +131,7 @@ const aoTeclar = evento => {
         {{ $t('AUTOMACOES.HEROI.TEXTO') }}
       </p>
       <form
-        class="flex flex-col gap-1 p-2 bg-white shadow-2xl rounded-2xl transition"
+        class="flex flex-col gap-1 p-2 bg-white shadow-2xl rounded-2xl transition dark:bg-n-solid-1"
         :class="arrastando ? 'ring-4 ring-n-blue-6' : ''"
         @submit.prevent="enviar"
         @dragover.prevent="arrastando = !desabilitado"
@@ -196,7 +196,7 @@ const aoTeclar = evento => {
             data-anexar
             :disabled="desabilitado || !cabeMais"
             :title="$t('AUTOMACOES.HEROI.ANEXAR')"
-            class="inline-flex items-center gap-2 px-3 text-sm font-medium transition min-h-11 rounded-xl text-n-slate-11 hover:bg-n-slate-2 hover:text-[#0D2344] focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:cursor-not-allowed disabled:opacity-40"
+            class="inline-flex items-center gap-2 px-3 text-sm font-medium transition min-h-11 rounded-xl text-n-slate-11 hover:bg-n-slate-2 hover:text-[#0D2344] dark:hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:cursor-not-allowed disabled:opacity-40"
             @click="seletor?.click()"
           >
             <span class="i-lucide-paperclip size-5" aria-hidden="true" />
@@ -220,7 +220,7 @@ const aoTeclar = evento => {
             :disabled="desabilitado"
             :aria-label="$t('AUTOMACOES.HEROI.FALAR')"
             :title="$t('AUTOMACOES.HEROI.FALAR')"
-            class="grid place-items-center shrink-0 size-12 rounded-xl ring-1 ring-inset ring-n-weak bg-n-slate-2 text-[#0D2344] transition hover:bg-n-slate-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:cursor-not-allowed disabled:opacity-50"
+            class="grid place-items-center shrink-0 size-12 rounded-xl ring-1 ring-inset ring-n-weak bg-n-slate-2 text-[#0D2344] dark:text-n-slate-12 transition hover:bg-n-slate-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:cursor-not-allowed disabled:opacity-50"
             @click="emit('falar')"
           >
             <span class="i-lucide-mic size-6" aria-hidden="true" />

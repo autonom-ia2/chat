@@ -110,7 +110,6 @@ RSpec.describe 'Linear Integration API', type: :request do
 
   describe 'POST /api/v1/accounts/:account_id/integrations/linear/create_issue' do
     let(:inbox) { create(:inbox, account: account) }
-    let(:conversation) { create(:conversation, account: account, inbox: inbox) }
     let(:issue_params) do
       {
         team_id: 'team1',
@@ -123,6 +122,10 @@ RSpec.describe 'Linear Integration API', type: :request do
         conversation_id: conversation.display_id
       }
     end
+    let(:conversation) { create(:conversation, account: account, inbox: inbox) }
+
+    # #2027: only who sees the conversation works it in Linear.
+    before { create(:inbox_member, inbox: conversation.inbox, user: agent) }
 
     context 'when it is an authenticated user' do
       context 'when the issue is created successfully' do
@@ -178,9 +181,12 @@ RSpec.describe 'Linear Integration API', type: :request do
 
   describe 'POST /api/v1/accounts/:account_id/integrations/linear/link_issue' do
     let(:issue_id) { 'ENG-456' }
-    let(:conversation) { create(:conversation, account: account) }
     let(:link) { "#{ENV.fetch('FRONTEND_URL', nil)}/app/accounts/#{account.id}/conversations/#{conversation.display_id}" }
     let(:title) { 'Sample Issue' }
+    let(:conversation) { create(:conversation, account: account) }
+
+    # #2027: only who sees the conversation works it in Linear.
+    before { create(:inbox_member, inbox: conversation.inbox, user: agent) }
 
     context 'when it is an authenticated user' do
       context 'when the issue is linked successfully' do
@@ -229,6 +235,9 @@ RSpec.describe 'Linear Integration API', type: :request do
     let(:link_id) { 'attachment1' }
     let(:issue_id) { 'ENG-789' }
     let(:conversation) { create(:conversation, account: account) }
+
+    # #2027: only who sees the conversation works it in Linear.
+    before { create(:inbox_member, inbox: conversation.inbox, user: agent) }
 
     context 'when it is an authenticated user' do
       context 'when the issue is unlinked successfully' do
@@ -309,6 +318,9 @@ RSpec.describe 'Linear Integration API', type: :request do
     let(:conversation) { create(:conversation, account: account) }
     let(:link) { "#{ENV.fetch('FRONTEND_URL', nil)}/app/accounts/#{account.id}/conversations/#{conversation.display_id}" }
 
+    # #2027: only who sees the conversation works it in Linear.
+    before { create(:inbox_member, inbox: conversation.inbox, user: agent) }
+
     context 'when it is an authenticated user' do
       context 'when linked issue is found' do
         let(:linked_issue) { { data: [{ 'id' => 'issue1', 'title' => 'Sample Issue' }] } }
@@ -335,6 +347,32 @@ RSpec.describe 'Linear Integration API', type: :request do
           expect(response.body).to include('error message')
         end
       end
+    end
+  end
+
+  # #2027: the issue carries the conversation link and content, so the agent must be able to see the conversation.
+  describe 'conversation the agent cannot see' do
+    let(:conversation) { create(:conversation, account: account) }
+
+    it 'refuses to create, link, unlink or list issues and never calls Linear', :aggregate_failures do
+      expect(Integrations::Linear::ProcessorService).not_to receive(:new)
+      headers = agent.create_new_auth_token
+
+      post "/api/v1/accounts/#{account.id}/integrations/linear/create_issue",
+           params: { conversation_id: conversation.display_id, team_id: 'team1', title: 'x' }, headers: headers, as: :json
+      expect(response).to have_http_status(:unauthorized)
+
+      post "/api/v1/accounts/#{account.id}/integrations/linear/link_issue",
+           params: { conversation_id: conversation.display_id, issue_id: 'ENG-1' }, headers: headers, as: :json
+      expect(response).to have_http_status(:unauthorized)
+
+      post "/api/v1/accounts/#{account.id}/integrations/linear/unlink_issue",
+           params: { conversation_id: conversation.display_id, link_id: 'l1', issue_id: 'ENG-1' }, headers: headers, as: :json
+      expect(response).to have_http_status(:unauthorized)
+
+      get "/api/v1/accounts/#{account.id}/integrations/linear/linked_issues",
+          params: { conversation_id: conversation.display_id }, headers: headers, as: :json
+      expect(response).to have_http_status(:unauthorized)
     end
   end
 end

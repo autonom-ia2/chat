@@ -9,6 +9,8 @@ class Api::V1::Accounts::InboxMembersController < Api::V1::Accounts::BaseControl
 
   def create
     authorize @inbox, :create?
+    return if invalid_user_ids?
+
     ActiveRecord::Base.transaction do
       @inbox.add_members(agents_to_be_added_ids)
     end
@@ -17,6 +19,8 @@ class Api::V1::Accounts::InboxMembersController < Api::V1::Accounts::BaseControl
 
   def update
     authorize @inbox, :update?
+    return if invalid_user_ids?
+
     update_agents_list
     fetch_updated_agents
   end
@@ -56,6 +60,14 @@ class Api::V1::Accounts::InboxMembersController < Api::V1::Accounts::BaseControl
 
   def current_agents_ids
     @current_agents_ids = @inbox.members.pluck(:id)
+  end
+
+  # Only people of this account join an inbox (#1931), as in TeamMembersController. Checked after authorize, so only
+  # who manages the inbox learns the answer. An id with no user at all keeps failing on the model ("User must exist").
+  def invalid_user_ids?
+    invalid_ids = User.where(id: Array(params[:user_ids])).pluck(:id) - Current.account.user_ids
+    render json: { error: 'Invalid User IDs' }, status: :unauthorized if invalid_ids.present?
+    invalid_ids.present?
   end
 
   def fetch_inbox

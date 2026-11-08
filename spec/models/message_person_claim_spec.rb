@@ -1,6 +1,7 @@
 require 'rails_helper'
 
-# Pessoa respondendo numa conversa à espera de pessoa fica com ela (#1499, decisão do Rodrigo em 13/10, opção b).
+# Pessoa respondendo numa conversa à espera de pessoa fica com ela (#1499, decisão do Rodrigo em 13/10, opção b). Esta é a
+# regra de quando o pedido não diz nada (API, app). O painel diz sempre, pelo ícone "ficar com a conversa" (#2067).
 RSpec.describe 'Pessoa respondendo conversa à espera' do # rubocop:disable RSpec/DescribeClass
   let(:account) { create(:account) }
   let(:ana) { create(:user, account: account, role: :agent) }
@@ -49,7 +50,7 @@ RSpec.describe 'Pessoa respondendo conversa à espera' do # rubocop:disable RSpe
     expect(conversation.bot_handoff_waiting?).to be(true)
   end
 
-  # A decisão de 13/10 (atendente responde não assume) continua: sem passagem, o robô segue atendendo.
+  # Sem o pedido (API, app), a decisão de 13/10 continua: sem passagem, o robô segue atendendo. O painel manda o pedido.
   it 'robô ainda atendendo (sem marca de espera): a resposta da pessoa não tira o robô' do
     reply
 

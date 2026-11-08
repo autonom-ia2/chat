@@ -145,6 +145,8 @@ const MOTIVOS = {
   kb_refresh: 'KB_REFRESH',
   manual_edit: 'MANUAL_EDIT',
   rollback: 'ROLLBACK',
+  // #1429 F3 — "Atualizar com a nova base".
+  base_de_seguros: 'BASE_DE_SEGUROS',
 };
 export const chaveDoMotivo = motivo => MOTIVOS[motivo] || null;
 

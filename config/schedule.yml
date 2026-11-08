@@ -93,6 +93,12 @@ purge_whatsapp_conversation_uploads_job:
   class: 'Whatsapp::Templates::PurgeConversationUploadsJob'
   queue: scheduled_jobs
 
+# #2005: foto do anúncio que já teve clique antes da flag `anuncios_sem_login` (o link da Meta vence em ~4 dias).
+crm_meta_ads_referral_image_backfill_job:
+  cron: '20 */6 * * *'
+  class: 'Crm::MetaAds::ReferralImageBackfillJob'
+  queue: scheduled_jobs
+
 # executed every minute; feature flag checked inside the job
 crm_follow_up_due_job:
   cron: '*/1 * * * *'
@@ -141,6 +147,13 @@ crm_ai_score_decay_job:
 crm_ai_handoff_drain_job:
   cron: '*/2 * * * *'
   class: 'Crm::Ai::HandoffDrainJob'
+  queue: scheduled_jobs
+
+# A cada 15 minutos (#2109): relê a mídia que ficou pendente (sem texto e sem marca de lido) nas contas com o leitor
+# de mídia do CRM; o anexo marcado nunca volta e o teto do dia por conta continua valendo.
+crm_ai_reler_midia_pendente_job:
+  cron: '7,22,37,52 * * * *'
+  class: 'Crm::Ai::RelerMidiaPendenteJob'
   queue: scheduled_jobs
 
 # executed every 15 minutes; marks stale R3 invite cycles as expired
@@ -287,6 +300,24 @@ autonomia_guide_limpar_execucoes_job:
   class: 'Autonomia::Guide::LimparExecucoesJob'
   queue: scheduled_jobs
 
+# executed every day at 04:45; apaga os registros da Automação livre com mais de 30 dias (#2414, F2 #2452).
+autonomia_automacao_limpar_registros_job:
+  cron: '45 4 * * *'
+  class: 'Autonomia::Automacao::LimparRegistrosJob'
+  queue: scheduled_jobs
+
+# executed every minute; acorda as execuções da Automação livre que esperam e fecha as travadas (#2414, F3 #2459).
+autonomia_automacao_varredura_job:
+  cron: '* * * * *'
+  class: 'Autonomia::Automacao::VarreduraJob'
+  queue: scheduled_jobs
+
+# executed every 15 minutes; os gatilhos de tempo da Automação livre: card parado e data do card ou do contato (#2499).
+autonomia_automacao_tempo_job:
+  cron: '*/15 * * * *'
+  class: 'Autonomia::Automacao::TempoJob'
+  queue: scheduled_jobs
+
 # executed every 5 minutes; retoma a tarefa longa do Guia que ficou sem batimento (#936).
 autonomia_guide_tarefas_vigia_job:
   cron: '*/5 * * * *'
@@ -372,3 +403,17 @@ conversa_canal_limpar_email_lidos_job:
   cron: '15 7 * * *'
   class: 'ConversaCanal::LimparEmailLidosJob'
   queue: low
+
+# #1934 — foto dos contatos antigos das caixas híbridas, uma vez por caixa (WhatsappHybrid::FotoDoContatoBackfillJob).
+whatsapp_hybrid_foto_do_contato_backfill_job:
+  cron: '*/15 * * * *'
+  class: 'WhatsappHybrid::FotoDoContatoBackfillJob'
+  queue: scheduled_jobs
+
+# executed every day at 07:00 UTC; a leitura automática do painel de desempenho (#2301): espalha um job por conta com o
+# painel ligado, e cada conta lê as conversas que ganharam mensagem desde a última leitura. Desligada pela ENV
+# AUTONOMIA_DESEMPENHO_LEITURA_AUTOMATICA (padrão: desligada).
+autonomia_desempenho_leitura_automatica_job:
+  cron: '0 7 * * *'
+  class: 'Autonomia::Desempenho::LeituraAutomaticaJob'
+  queue: scheduled_jobs

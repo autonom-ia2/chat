@@ -288,14 +288,14 @@
       "tipo": "booleano",
       "origem": "cliente",
       "obrigatorio": false,
-      "descricao": "Se o condutor é associado a entidade de classe. OBRIGATÓRIO EM MOTO."
+      "descricao": "Se o condutor é associado a entidade de classe. Não pergunte: sem o cliente dizer, vai 'não'."
     },
     {
       "campo": "vehicle.usagePeriod",
       "tipo": "numero",
       "origem": "cliente",
       "obrigatorio": false,
-      "descricao": "Com que frequência o veículo é usado. OBRIGATÓRIO EM MOTO. O cliente diz 'todo dia', 'só no fim de semana', 'umas duas vezes por semana' — traduza para a opção; se ficar ambíguo ('de vez em quando', 'pouco'), pergunte a frequência. Valores: 0=Todos os dias; 1=Finais de semana e feriados; 2=Até duas vezes por semana.",
+      "descricao": "Com que frequência o veículo é usado. Não pergunte: sem o cliente dizer, a moto vai como 'Até duas vezes por semana' e o carro como 'Todos os dias'. Se ele mesmo disser ('todo dia', 'só no fim de semana', 'umas duas vezes por semana'), traduza para a opção. Valores: 0=Todos os dias; 1=Finais de semana e feriados; 2=Até duas vezes por semana.",
       "valores": {
         "0": "Todos os dias",
         "1": "Finais de semana e feriados",

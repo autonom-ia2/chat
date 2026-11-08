@@ -14,7 +14,7 @@ RSpec.describe Contacts::BulkActionService do
         bulk_delete_service = instance_double(Contacts::BulkDeleteService, perform: true)
 
         expect(Contacts::BulkDeleteService).to receive(:new)
-          .with(account: account, contact_ids: [1, 2])
+          .with(account: account, contact_ids: [1, 2], user: user)
           .and_return(bulk_delete_service)
 
         service.perform

@@ -27,6 +27,8 @@ const emit = defineEmits(['reevaluate', 'resume', 'problems']);
 const NS = 'RESULT_JOURNEY.EMAIL_HEALTH';
 const { t, locale } = useI18n();
 const canManage = useCanManage('campaign_manage');
+// #1898: resuming sends again, so it needs campaign_send.
+const canSend = useCanManage('campaign_send');
 const showDetails = ref(false);
 const {
   health,
@@ -64,7 +66,7 @@ const pill = computed(() => ({
   className: PILL_CLASSES[pillKey.value] || 'bg-n-alpha-2 text-n-slate-11',
 }));
 
-const showResume = computed(() => canManage.value && canResume.value);
+const showResume = computed(() => canSend.value && canResume.value);
 const showReevaluate = computed(() => canManage.value && canReevaluate.value);
 
 // One sentence telling what to do now, matching the main button shown.

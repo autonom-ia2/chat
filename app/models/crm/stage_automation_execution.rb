@@ -32,7 +32,7 @@ class Crm::StageAutomationExecution < ApplicationRecord
 
   belongs_to :account
   belongs_to :card, class_name: 'Crm::Card'
-  belongs_to :stage_automation, class_name: 'Crm::StageAutomation'
+  belongs_to :stage_automation, class_name: 'Crm::StageAutomation', inverse_of: :executions
 
   enum status: { running: 0, completed: 1, failed: 2 }
 

@@ -278,6 +278,12 @@ const ACTIVITY_META = {
   },
 };
 
+// #1922: o detalhe do card que a IA arquivou, pelo motivo dela (Crm::Ai::NaoENegocio::MOTIVOS).
+const NAO_E_NEGOCIO_DETAIL = {
+  fora_do_negocio: 'ACTIVITY_DETAIL_NAO_E_NEGOCIO',
+  duplicado: 'ACTIVITY_DETAIL_DUPLICADO',
+};
+
 const FALLBACK_META = { icon: 'i-lucide-history', tone: 'neutral' };
 
 const ACTIVITY_TONE_CLASSES = {
@@ -318,12 +324,16 @@ export const useCardHistorico = ({
 
   // AI work runs as a system actor (actor_type === 'system'). ai_dismissed is a
   // human action (actor_type === 'user'), so it is NOT keyed on the 'ai_' prefix.
+  // #1922: o card que a IA arquivou como "não é negócio" é um 'archive' com
+  // payload.by === 'ai' (o mesmo evento de quem arquiva à mão).
+  const isAiEvent = activity =>
+    activity.event_type?.startsWith('ai_') || activity.payload?.by === 'ai';
   const activityActor = activity => {
     if (isClientBookingEvent(activity)) {
       return t('CRM_KANBAN.DRAWER.CLIENT_ACTOR');
     }
     if (activity.actor_type === 'system') {
-      return activity.event_type?.startsWith('ai_')
+      return isAiEvent(activity)
         ? t(proprio('AI_ACTOR') || 'CRM_KANBAN.DRAWER.AI_ACTOR')
         : t('CRM_KANBAN.DRAWER.SYSTEM_ACTOR');
     }
@@ -518,6 +528,11 @@ export const useCardHistorico = ({
           );
         }
         return title ? detalhe('ACTIVITY_DETAIL_MEETING', { title }) : '';
+      }
+      // #1922: o motivo que a IA deu, em texto nosso (nunca o texto do modelo).
+      case 'archive': {
+        const motivo = NAO_E_NEGOCIO_DETAIL[activity.payload?.motivo];
+        return activity.payload?.by === 'ai' && motivo ? detalhe(motivo) : '';
       }
       default:
         return '';

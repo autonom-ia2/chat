@@ -25,6 +25,7 @@ RSpec.describe 'Custom role module permissions', type: :policy do # rubocop:disa
 
     it 'grants every key to administrators and none to plain agents' do
       expect(granted?(admin, 'campaign_manage')).to be(true)
+      expect(granted?(admin, 'campaign_send')).to be(true)
       expect(granted?(agent, 'campaign_view')).to be(false)
     end
 
@@ -66,14 +67,51 @@ RSpec.describe 'Custom role module permissions', type: :policy do # rubocop:disa
       expect(WhatsappApiCampaignPolicy.new(context, WhatsappApiCampaign).create?).to be(false)
     end
 
-    it 'gives campaign_manage full campaign access' do
+    it 'lets campaign_manage build, pause and import' do
       context = context_for(custom_role_user('campaign_manage'))
 
       expect(CampaignPolicy.new(context, Campaign).create?).to be(true)
-      expect(EmailCampaignPolicy.new(context, email_campaign).send_now?).to be(true)
+      expect(EmailCampaignPolicy.new(context, email_campaign).update?).to be(true)
+      expect(EmailCampaignPolicy.new(context, email_campaign).pause?).to be(true)
       expect(CampaignImportPolicy.new(context, CampaignImport).confirm?).to be(true)
-      expect(WhatsappApiCampaignPolicy.new(context, WhatsappApiCampaign).create?).to be(true)
+      expect(WhatsappApiCampaignPolicy.new(context, WhatsappApiCampaign).pause?).to be(true)
       expect(EmailSenderIdentityPolicy.new(context, EmailSenderIdentity).create?).to be(true)
+    end
+
+    it 'keeps sending out of campaign_manage (#1898)' do
+      context = context_for(custom_role_user('campaign_manage'))
+
+      expect(CampaignPolicy.new(context, Campaign).send_campaign?).to be(false)
+      expect(EmailCampaignPolicy.new(context, email_campaign).send_now?).to be(false)
+      expect(EmailCampaignPolicy.new(context, email_campaign).schedule?).to be(false)
+      expect(EmailCampaignPolicy.new(context, email_campaign).resume?).to be(false)
+      expect(WhatsappApiCampaignPolicy.new(context, WhatsappApiCampaign).create?).to be(false)
+    end
+
+    it 'lets campaign_send send, schedule and resume (#1898)' do
+      context = context_for(custom_role_user('campaign_manage', 'campaign_send'))
+
+      expect(CampaignPolicy.new(context, Campaign).send_campaign?).to be(true)
+      expect(EmailCampaignPolicy.new(context, email_campaign).send_now?).to be(true)
+      expect(EmailCampaignPolicy.new(context, email_campaign).schedule?).to be(true)
+      expect(EmailCampaignPolicy.new(context, email_campaign).resume?).to be(true)
+      expect(WhatsappApiCampaignPolicy.new(context, WhatsappApiCampaign).create?).to be(true)
+      expect(WhatsappApiCampaignPolicy.new(context, WhatsappApiCampaign).resume?).to be(true)
+    end
+
+    it 'never lets campaign_send send without campaign_manage' do
+      context = context_for(custom_role_user('campaign_send'))
+
+      expect(CampaignPolicy.new(context, Campaign).send_campaign?).to be(false)
+      expect(EmailCampaignPolicy.new(context, email_campaign).send_now?).to be(false)
+      expect(WhatsappApiCampaignPolicy.new(context, WhatsappApiCampaign).create?).to be(false)
+    end
+
+    it 'never lets campaign_send reach another account e-mail campaign' do
+      context = context_for(custom_role_user('campaign_manage', 'campaign_send'))
+      foreign = build(:email_campaign, account: create(:account))
+
+      expect(EmailCampaignPolicy.new(context, foreign).send_now?).to be(false)
     end
 
     it 'keeps campaigns closed to plain agents' do

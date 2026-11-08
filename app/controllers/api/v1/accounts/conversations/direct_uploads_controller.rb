@@ -15,7 +15,7 @@ class Api::V1::Accounts::Conversations::DirectUploadsController < ActiveStorage:
   before_action :conversation
 
   def create
-    return if @conversation.nil? || @current_account.nil?
+    return if @current_account.nil?
 
     super
   end
@@ -33,6 +33,16 @@ class Api::V1::Accounts::Conversations::DirectUploadsController < ActiveStorage:
   end
 
   def conversation
-    @conversation ||= Current.account.conversations.find_by(display_id: params[:conversation_id])
+    # Conversa que não existe responde 404, como as outras rotas da conversa (find_by!).
+    @conversation ||= Current.account.conversations.find_by!(display_id: params[:conversation_id])
+    authorize_conversation
+  end
+
+  # Mesma regra das outras rotas da conversa (Conversations::BaseController): subir arquivo é escrita, segue em show?, e a
+  # recusa vira 401 no handle_with_exception (#2147). Este controller não herda o ApplicationController: o contexto do
+  # Pundit é montado aqui, igual ao pundit_user de lá. Na sessão quem responde é o current_user do Devise.
+  def authorize_conversation
+    user_context = { user: Current.user || current_user, account: Current.account, account_user: Current.account_user }
+    Pundit.authorize(user_context, @conversation, :show?)
   end
 end

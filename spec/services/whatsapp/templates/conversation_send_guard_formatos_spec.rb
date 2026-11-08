@@ -27,6 +27,7 @@ RSpec.describe Whatsapp::Templates::ConversationSendGuard do
       { status: 200, body: { messages: [{ id: 'wamid.1' }] }.to_json, headers: json }
     end
     stub_catalog
+    stub_meta_media_upload # #2367: the carousel photos go up to Meta and the cards carry their ids
   end
 
   # The catalog of the inbox WABA, read again on each product send (Whatsapp::Templates::DispatchProducts).

@@ -13,10 +13,10 @@ RSpec.describe Crm::Numeros::SoEu do
 
   around { |example| travel_to(Time.utc(2026, 10, 19, 15, 0)) { example.run } }
 
-  def so_eu(user = carla, chave: nil)
+  def so_eu(user = carla, chave: nil, valor_da_equipe: true)
     acesso = Crm::Access::VisiblePipelines.new(user: user, account: account)
     described_class.new(account: account, user: user, mes: Crm::Numeros::Mes.new(account: account, chave: chave),
-                        acesso: acesso).perform
+                        acesso: acesso, valor_da_equipe: valor_da_equipe).perform
   end
 
   def card(pipeline_and_stage, owner: carla, conversation: nil, **attrs)
@@ -104,5 +104,16 @@ RSpec.describe Crm::Numeros::SoEu do
     expect(so_eu[:proximo]).to eq([{ tipo: 'campanha_com_voce', n: 2, campanha: 'Dia das Crianças',
                                      origem: 'campaign:whatsapp:7' }])
     expect(so_eu(chave: '2026-09')[:proximo]).to eq([])
+  end
+
+  # #2075: sem `sales_value_view`, a pessoa segue vendo o próprio R$; só a barra da equipe (% da meta) some.
+  it 'sem os valores de venda: o próprio R$ fica, a barra da equipe some' do
+    sale.first.update!(metadata: { 'goals' => { 'monthly_target_cents' => 1_000_000, 'currency' => 'BRL' } })
+    close(card(sale, value_cents: 250_000))
+
+    expect(so_eu[:equipePct]).to eq(25)
+    result = so_eu(valor_da_equipe: false)
+    expect(result[:equipePct]).to be_nil
+    expect(result[:topo]).to include(feito: 2500.0, fechadas: 1)
   end
 end

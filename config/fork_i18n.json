@@ -74,6 +74,45 @@
     },
     {
       "file": "telaInicial.json"
+    },
+    {
+      "file": "painelDoContato.json"
+    },
+    {
+      "file": "listaDeConversas.json"
+    },
+    {
+      "file": "metaAdsOrganico.json"
+    },
+    {
+      "file": "seusPosts.json"
+    },
+    {
+      "file": "metaAdsComentariosIa.json"
+    },
+    {
+      "file": "funcoesDaEquipe.json"
+    },
+    {
+      "file": "automacaoLivre.json"
+    },
+    {
+      "file": "automacaoLivreGatilhos.json"
+    },
+    {
+      "file": "automacaoLivreIa.json"
+    },
+    {
+      "file": "automacaoLivreReceitas.json"
+    },
+    {
+      "file": "automacaoLivreEnsaio.json"
+    },
+    {
+      "file": "automacaoLivreCampanha.json"
+    },
+    {
+      "file": "automacaoLivreRetorno.json"
     }
   ],
   "pacotes": {

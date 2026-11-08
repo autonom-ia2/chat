@@ -50,5 +50,6 @@ Rails.application.configure do
 
   # Raises error for missing translations.
   # config.action_view.raise_on_missing_translations = true
-  config.log_level = ENV.fetch('LOG_LEVEL', 'debug').to_sym
+  # warn by default: debug writes every SQL query to log/test.log (GBs per run). LOG_LEVEL=debug opts back in.
+  config.log_level = ENV.fetch('LOG_LEVEL', 'warn').to_sym
 end

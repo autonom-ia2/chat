@@ -19,6 +19,10 @@ import AudienceChannelSwitches from 'dashboard/components-next/CampaignJourney/A
 import AudiencePeople from 'dashboard/components-next/CampaignJourney/AudiencePeople.vue';
 import AudienceCompanies from 'dashboard/components-next/CampaignJourney/AudienceCompanies.vue';
 import AudienceChannelBadges from 'dashboard/components-next/CampaignJourney/AudienceChannelBadges.vue';
+import AudienceFromConversations from 'dashboard/components-next/CampaignJourney/AudienceFromConversations.vue';
+import AudienceSourceChoice from 'dashboard/components-next/CampaignJourney/AudienceSourceChoice.vue';
+import ConversationAudiencesAPI from 'dashboard/api/campaignJourneyConversationAudiences';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { audiencesAPI } from 'dashboard/api/campaignJourney';
 import {
   PHASES,
@@ -44,6 +48,51 @@ const n = value => formatNumber(value, locale.value);
 const route = useRoute();
 const router = useRouter();
 const accountId = useMapGetter('getCurrentAccountId');
+// #2277: with its flag on, the page first asks where the people come from: the conversations or a spreadsheet.
+// Without the flag the spreadsheet is the only way, as before.
+const isFeatureEnabledonAccount = useMapGetter(
+  'accounts/isFeatureEnabledonAccount'
+);
+const canSearchConversations = computed(() =>
+  isFeatureEnabledonAccount.value(
+    accountId.value,
+    FEATURE_FLAGS.CAMPANHAS_PUBLICO_POR_CONVERSA
+  )
+);
+// `?busca=` (the bell, #2277) opens the conversations straight away, on that search.
+const chosenSource = ref(route.query.busca ? 'conversas' : null);
+// Without the account's own AI the conversations card says it needs a one-time setup.
+const conversationsNeedSetup = ref(false);
+if (canSearchConversations.value) {
+  ConversationAudiencesAPI.status()
+    .then(({ data }) => {
+      conversationsNeedSetup.value = !data.has_own_key;
+    })
+    // The card stays as it is; the conversations screen asks again when opened and says if it fails.
+    .catch(() => {
+      conversationsNeedSetup.value = false;
+    });
+}
+const source = computed(() =>
+  canSearchConversations.value ? chosenSource.value : 'planilha'
+);
+// While a search by conversation is past the request, switching to the spreadsheet is hidden.
+const searchingConversations = ref(false);
+const canSwitchSource = computed(
+  () =>
+    canSearchConversations.value &&
+    Boolean(chosenSource.value) &&
+    !searchingConversations.value
+);
+const switchSource = () => {
+  chosenSource.value =
+    chosenSource.value === 'conversas' ? 'planilha' : 'conversas';
+};
+const uploadSubtitle = computed(() => {
+  if (!source.value) return t(`${NS}.SOURCE.SUBTITLE`);
+  if (source.value === 'conversas') return '';
+  return t(`${NS}.SUBTITLE`);
+});
 
 const name = ref('');
 const file = ref(null);
@@ -256,6 +305,9 @@ useOnEnter(async () => {
   campaignImport.value = null;
   name.value = '';
   file.value = null;
+  // Every visit starts on the choice, except the bell's link (`?busca=`), which opens that search.
+  chosenSource.value = route.query.busca ? 'conversas' : null;
+  searchingConversations.value = false;
   const importId = route.query.import;
   if (!importId) return;
   try {
@@ -293,26 +345,46 @@ onBeforeUnmount(stopPolling);
           {{ t(`${NS}.TITLE`) }}
         </span>
       </nav>
-      <header class="mb-5">
-        <h1
-          class="mb-0 text-[1.75rem] font-semibold leading-tight tracking-tight text-n-slate-12"
+      <header
+        class="mb-5 flex flex-col gap-3 sm:min-h-12 sm:flex-row sm:items-start sm:justify-between"
+      >
+        <div>
+          <h1
+            class="mb-0 text-[1.75rem] font-semibold leading-tight tracking-tight text-n-slate-12"
+          >
+            {{
+              phase === PHASES.UPLOAD || !audienceName
+                ? t(`${NS}.TITLE`)
+                : audienceName
+            }}
+          </h1>
+          <p
+            v-if="phase === PHASES.REVIEW"
+            class="mb-0 mt-2 text-base leading-6 text-n-slate-11"
+          >
+            {{ t(`${NS}.REVIEW_SUBTITLE`) }}
+          </p>
+          <p
+            v-else-if="phase !== PHASES.DONE && uploadSubtitle"
+            class="mb-0 mt-2 text-base leading-6 text-n-slate-11"
+          >
+            {{ uploadSubtitle }}
+          </p>
+        </div>
+        <button
+          v-if="phase === PHASES.UPLOAD && canSwitchSource"
+          type="button"
+          class="inline-flex min-h-12 shrink-0 items-center gap-2 self-start rounded-xl bg-n-solid-1 px-6 text-base font-medium text-n-blue-11 ring-1 ring-inset ring-n-slate-6 hover:bg-n-blue-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          data-test="switch-source"
+          @click="switchSource"
         >
+          <span class="i-lucide-arrow-left-right size-4" aria-hidden="true" />
           {{
-            phase === PHASES.UPLOAD || !audienceName
-              ? t(`${NS}.TITLE`)
-              : audienceName
+            source === 'conversas'
+              ? t(`${NS}.SOURCE.SWITCH_TO_SHEET`)
+              : t(`${NS}.SOURCE.SWITCH_TO_CONVERSATIONS`)
           }}
-        </h1>
-        <p
-          v-if="phase !== PHASES.DONE"
-          class="mb-0 mt-2 text-sm leading-6 text-n-slate-11"
-        >
-          {{
-            phase === PHASES.REVIEW
-              ? t(`${NS}.REVIEW_SUBTITLE`)
-              : t(`${NS}.SUBTITLE`)
-          }}
-        </p>
+        </button>
       </header>
 
       <p
@@ -327,71 +399,83 @@ onBeforeUnmount(stopPolling);
         }}
       </p>
 
-      <!-- 1. Name + spreadsheet -->
-      <form
-        v-if="phase === PHASES.UPLOAD"
-        class="flex flex-col gap-5 rounded-2xl border border-n-weak bg-n-solid-1 p-5 shadow-sm"
-        data-test="audience-upload"
-        @submit.prevent="send"
-      >
-        <div>
-          <Input
-            v-model="name"
-            :label="t(`${NS}.NAME_LABEL`)"
-            :placeholder="t(`${NS}.NAME_PLACEHOLDER`)"
-            :message="t(`${NS}.NAME_HINT`)"
-            custom-input-class="!h-11"
-            data-test="audience-name"
-          />
-        </div>
-        <div class="flex flex-col gap-2">
-          <span class="text-sm font-medium text-n-slate-12">
-            {{ t(`${NS}.FILE_LABEL`) }}
-          </span>
-          <input
-            ref="fileInput"
-            type="file"
-            class="hidden"
-            :accept="ACCEPTED_FILES"
-            data-test="audience-file"
-            @change="onFileChange"
-          />
-          <button
-            type="button"
-            class="flex min-h-32 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-n-blue-6 bg-n-blue-2 p-5 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-            @click="chooseFile"
-          >
-            <span
-              class="i-lucide-file-spreadsheet size-7 text-n-blue-11"
-              aria-hidden="true"
+      <!-- 1. Where the people come from (#2277), then the spreadsheet or the conversations -->
+      <template v-if="phase === PHASES.UPLOAD">
+        <AudienceSourceChoice
+          v-if="!source"
+          :conversations-need-setup="conversationsNeedSetup"
+          @choose="value => (chosenSource = value)"
+        />
+        <AudienceFromConversations
+          v-else-if="source === 'conversas'"
+          @active="value => (searchingConversations = value)"
+          @use-sheet="chosenSource = 'planilha'"
+        />
+        <form
+          v-else
+          class="flex flex-col gap-5 rounded-2xl border border-n-weak bg-n-solid-1 p-5 shadow-sm"
+          data-test="audience-upload"
+          @submit.prevent="send"
+        >
+          <div>
+            <Input
+              v-model="name"
+              :label="t(`${NS}.NAME_LABEL`)"
+              :placeholder="t(`${NS}.NAME_PLACEHOLDER`)"
+              :message="t(`${NS}.NAME_HINT`)"
+              custom-input-class="!h-11"
+              data-test="audience-name"
             />
-            <strong class="text-sm text-n-slate-12">
-              {{ file ? file.name : t(`${NS}.FILE_CTA`) }}
-            </strong>
-            <span class="text-xs text-n-slate-11">
-              {{ file ? t(`${NS}.FILE_CHANGE`) : t(`${NS}.FILE_HINT`) }}
+          </div>
+          <div class="flex flex-col gap-2">
+            <span class="text-sm font-medium text-n-slate-12">
+              {{ t(`${NS}.FILE_LABEL`) }}
             </span>
-          </button>
-        </div>
-        <div class="flex flex-wrap justify-between gap-3">
-          <Button
-            type="button"
-            :label="t(`${NS}.CANCEL`)"
-            variant="outline"
-            color="slate"
-            class="!min-h-11 !rounded-xl"
-            @click="cancel"
-          />
-          <Button
-            type="submit"
-            :label="t(`${NS}.UPLOAD`)"
-            :disabled="!canSend"
-            :is-loading="isSending"
-            class="!min-h-11 !rounded-xl"
-            data-test="send-audience"
-          />
-        </div>
-      </form>
+            <input
+              ref="fileInput"
+              type="file"
+              class="hidden"
+              :accept="ACCEPTED_FILES"
+              data-test="audience-file"
+              @change="onFileChange"
+            />
+            <button
+              type="button"
+              class="flex min-h-32 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-n-blue-6 bg-n-blue-2 p-5 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+              @click="chooseFile"
+            >
+              <span
+                class="i-lucide-file-spreadsheet size-7 text-n-blue-11"
+                aria-hidden="true"
+              />
+              <strong class="text-sm text-n-slate-12">
+                {{ file ? file.name : t(`${NS}.FILE_CTA`) }}
+              </strong>
+              <span class="text-xs text-n-slate-11">
+                {{ file ? t(`${NS}.FILE_CHANGE`) : t(`${NS}.FILE_HINT`) }}
+              </span>
+            </button>
+          </div>
+          <div class="flex flex-wrap justify-between gap-3">
+            <Button
+              type="button"
+              :label="t(`${NS}.CANCEL`)"
+              variant="outline"
+              color="slate"
+              class="!min-h-12 !rounded-xl !px-6 !text-base"
+              @click="cancel"
+            />
+            <Button
+              type="submit"
+              :label="t(`${NS}.UPLOAD`)"
+              :disabled="!canSend"
+              :is-loading="isSending"
+              class="!min-h-12 !rounded-xl !px-6 !text-base"
+              data-test="send-audience"
+            />
+          </div>
+        </form>
+      </template>
 
       <!-- Reading or saving in the background -->
       <div
@@ -491,7 +575,7 @@ onBeforeUnmount(stopPolling);
             :label="t(`${NS}.CANCEL`)"
             variant="outline"
             color="slate"
-            class="!min-h-11 !rounded-xl"
+            class="!min-h-12 !rounded-xl !px-6 !text-base"
             data-test="cancel-audience"
             @click="cancel"
           />
@@ -500,7 +584,7 @@ onBeforeUnmount(stopPolling);
             :label="t(`${NS}.SAVE`)"
             :is-loading="isSaving"
             :disabled="isSaving || isApplying"
-            class="!min-h-11 !rounded-xl"
+            class="!min-h-12 !rounded-xl !px-6 !text-base"
             data-test="save-audience"
             @click="save"
           />
