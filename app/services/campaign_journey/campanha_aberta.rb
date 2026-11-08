@@ -58,6 +58,8 @@ module CampaignJourney::CampanhaAberta
   end
 
   # No envio pela caixa, uma cadeia de ticks já agendada pega quem chegou: outra cadeia furaria o ritmo humano.
+  # Não é garantia: entre um tick apagar a marca da cadeia e agendar o próximo, esta leitura (fora da trava) vê a marca
+  # vazia e abre outra cadeia. As duas convergem em uma (#2722), com no máximo um e-mail fora do ritmo.
   def acordar_envio(campaign)
     return if campaign.direct_inbox? && EmailCampaigns::DirectInbox::DeliveryEngine.tick_scheduled?(campaign)
 

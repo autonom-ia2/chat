@@ -65,18 +65,22 @@ describe('journey channel payloads (api-999.md §2)', () => {
       delivery_mode: 'direct_inbox',
       sender_inbox_id: 12,
     });
-    // #2717: the open campaign goes only when chosen.
-    expect(
-      buildEmailPayload({
-        audienceId: 5,
-        draft: { ...draft, emailAberta: true },
-      }).campaign.aberta
-    ).toBe(true);
     expect(
       buildPreviewPayload({
         audienceId: 5,
         draft: { ...draft, channel: 'email' },
       })
     ).toEqual({ campaign_import_id: 5, channel: 'email' });
+  });
+
+  // #2717: until the Automation step that puts people in the audience (PR-B, #2414), no new
+  // campaign is born open from the screen, not even from an old draft that carries the field.
+  it('never asks for an open e-mail campaign', () => {
+    expect(
+      buildEmailPayload({
+        audienceId: 5,
+        draft: { ...draft, emailAberta: true },
+      }).campaign
+    ).not.toHaveProperty('aberta');
   });
 });

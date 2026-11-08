@@ -74,7 +74,6 @@ export const buildEmailPayload = ({ audienceId, draft }) => {
         : { sender_inbox_id: Number(id) }),
       ...(draft.fromName?.trim() ? { from_name: draft.fromName.trim() } : {}),
       ...(draft.replyInboxId ? { reply_to_inbox_id: draft.replyInboxId } : {}),
-      ...(draft.emailAberta ? { aberta: true } : {}),
     },
   };
 };

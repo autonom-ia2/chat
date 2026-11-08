@@ -104,14 +104,6 @@ const replyOptions = computed(() => [
     label: `${inbox.name} · ${inbox.email}`,
   })),
 ]);
-// #2717: who receives. Closed is the e-mail of today (the list stops at the first send); open
-// keeps following the audience, so whoever enters later also receives it once.
-const audienceModeOptions = computed(() => [
-  { value: 'fechada', label: t(`${NS}.AUDIENCE_MODE_CLOSED`) },
-  { value: 'aberta', label: t(`${NS}.AUDIENCE_MODE_OPEN`) },
-]);
-const chooseAudienceMode = value =>
-  emit('update', { emailAberta: value === 'aberta' });
 const replyInbox = computed(() =>
   props.inboxes.find(
     inbox => inbox.id === props.emailCampaign?.reply_to_inbox_id
@@ -217,21 +209,6 @@ const chooseSender = value => {
           {{ t(`${NS}.REPLY_OUTSIDE`, { email: replyOutsideAddress }) }}
         </p>
       </div>
-      <div class="flex flex-col gap-1">
-        <span class="text-sm font-medium text-n-slate-12">
-          {{ t(`${NS}.AUDIENCE_MODE_LABEL`) }}
-        </span>
-        <ChoiceSelect
-          :model-value="draft.emailAberta ? 'aberta' : 'fechada'"
-          :options="audienceModeOptions"
-          :aria-label="t(`${NS}.AUDIENCE_MODE_LABEL`)"
-          data-test="email-audience-mode"
-          @update:model-value="chooseAudienceMode"
-        />
-        <p class="m-0 text-xs text-n-slate-11">
-          {{ t(`${NS}.AUDIENCE_MODE_HINT`) }}
-        </p>
-      </div>
       <BrandIdentityLine
         :kit-id="draft.brandKitId"
         @change="brandKitId => emit('update', { brandKitId })"
@@ -276,14 +253,6 @@ const chooseSender = value => {
             replyInbox
               ? replyInbox.name
               : emailCampaign.reply_to_address || defaultReplyLabel
-          }}
-        </dd>
-        <dt class="text-n-slate-11">{{ t(`${NS}.AUDIENCE_MODE_LABEL`) }}</dt>
-        <dd class="m-0 text-n-slate-12" data-test="email-audience-mode-detail">
-          {{
-            emailCampaign.aberta
-              ? t(`${NS}.AUDIENCE_MODE_OPEN`)
-              : t(`${NS}.AUDIENCE_MODE_CLOSED`)
           }}
         </dd>
         <dt v-if="emailCampaign.preheader" class="text-n-slate-11">

@@ -18,6 +18,7 @@ import {
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import AvisoCampanhaAberta from './AvisoCampanhaAberta.vue';
 import RecipientImportStatus from './RecipientImportStatus.vue';
 
 const props = defineProps({ campaign: { type: Object, required: true } });
@@ -479,6 +480,7 @@ onMounted(() => {
                 </span>
               </p>
             </div>
+            <AvisoCampanhaAberta v-if="campaign.aberta" class="mb-5" />
             <Spinner v-if="isLoading" />
             <ul v-else class="m-0 list-none space-y-4 p-0 text-xs">
               <li
@@ -606,6 +608,7 @@ onMounted(() => {
           {{ scheduledDescription }}
         </p>
       </div>
+      <AvisoCampanhaAberta v-if="campaign.aberta" class="mt-3" />
     </Dialog>
     <Dialog
       ref="preview"

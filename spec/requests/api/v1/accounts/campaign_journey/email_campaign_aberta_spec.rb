@@ -39,7 +39,7 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
       post "/api/v1/accounts/#{account.id}/campaign_journey/campaigns",
            params: { campaign_import_id: audience.id, channel: 'email',
                      campaign: { title: 'Manutenção', delivery_mode: 'ses', sender_identity_id: identity.id,
-                                 from_email: 'ola@clinica.com.br', aberta: aberta } },
+                                 from_email: 'ola@clinica.com.br', **(aberta ? { aberta: true } : {}) } },
            headers: headers, as: :json
     end
     campanha = EmailCampaign.find(response.parsed_body['id'])
@@ -57,14 +57,16 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
   # O que a Automação fará no PR-B: a pessoa entra no Público (linha com o e-mail atual dela). Daí em diante é o caminho
   # de produção: a linha avisa as campanhas abertas (CampaignJourney::CampanhaAbertaSyncJob), e checagem e envio rodam.
   def entra_no_publico(nome, email, **contato_extra)
-    contato = create(:contact, account: account, name: nome, email: email, **contato_extra)
     linha = nil
-    perform_enqueued_jobs(only: envio) do
-      linha = CampaignImportRow.create!(campaign_import: audience, contact: contato, status: :imported,
-                                        row_number: audience.campaign_import_rows.maximum(:row_number) + 1,
-                                        normalized_email_hash: Digest::SHA256.hexdigest(email))
-    end
+    perform_enqueued_jobs(only: envio) { linha = linha_no_publico(nome, email, **contato_extra) }
     linha
+  end
+
+  def linha_no_publico(nome, email, **contato_extra)
+    contato = create(:contact, account: account, name: nome, email: email, **contato_extra)
+    CampaignImportRow.create!(campaign_import: audience, contact: contato, status: :imported,
+                              row_number: audience.campaign_import_rows.maximum(:row_number) + 1,
+                              normalized_email_hash: Digest::SHA256.hexdigest(email))
   end
 
   it 'aberta: quem entra no Público depois do primeiro envio recebe, uma vez, e a campanha segue enviando' do
@@ -111,6 +113,7 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
 
   it 'aberta: pode sair com a lista vazia e manda para quem entrar depois' do
     audience.campaign_import_rows.update_all(status: CampaignImportRow.statuses[:import_failed]) # rubocop:disable Rails/SkipsModelValidations
+    perform_enqueued_jobs(only: CampaignJourney::CampanhaAbertaSyncJob) # o do público recém-montado: ainda sem campanha
     campanha = criar(aberta: true)
     expect(campanha.email_campaign_recipients).to be_empty
 
@@ -121,6 +124,7 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
     expect(enviados).to eq(['bia@beta.com.br'])
   end
 
+  # O pedido da fechada é o que a tela manda hoje (sem `aberta`): até o PR-B, nenhuma campanha nasce aberta pela tela.
   it 'fechada (como hoje): fecha em enviada, e quem entra depois não recebe' do
     campanha = criar(aberta: false)
     expect(response.parsed_body['aberta']).to be(false)
@@ -179,6 +183,41 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
 
     expect(aberta.email_campaign_recipients.pluck(:email)).to include('bia@beta.com.br')
     expect(fechada.email_campaign_recipients.pluck(:email)).not_to include('bia@beta.com.br', 'zeca@zeta.com.br')
+  end
+
+  it 'aberta: as linhas de uma mesma gravação viram um job só, que põe todas na lista' do
+    campanha = criar(aberta: true)
+    mandar(campanha)
+
+    expect do
+      %w[bia caio dani].each { |nome| linha_no_publico(nome.capitalize, "#{nome}@beta.com.br") }
+    end.to have_enqueued_job(CampaignJourney::CampanhaAbertaSyncJob).with(audience.id).exactly(:once)
+
+    perform_enqueued_jobs(only: envio) { CampaignJourney::CampanhaAbertaSyncJob.perform_now(audience.id) }
+    expect(enviados).to contain_exactly('ana@alfa.com.br', 'bia@beta.com.br', 'caio@beta.com.br', 'dani@beta.com.br')
+  end
+
+  it 'aberta: se a checagem cai no meio, a manutenção a retoma e quem entrou recebe' do
+    campanha = criar(aberta: true)
+    mandar(campanha)
+    caiu = false
+    allow(EmailCampaigns::AddressPreflight).to receive(:new).and_wrap_original do |original, **opcoes|
+      next original.call(**opcoes) if caiu
+
+      caiu = true
+      quebrada = instance_double(EmailCampaigns::AddressPreflight)
+      allow(quebrada).to receive(:call).and_raise(Timeout::Error)
+      quebrada
+    end
+
+    expect { entra_no_publico('Bia Lima', 'bia@beta.com.br') }
+      .to raise_error(Minitest::UnexpectedError) { |falha| expect(falha.error).to be_a(Timeout::Error) }
+    expect(enviados).to eq(['ana@alfa.com.br'])
+
+    travel(EmailCampaigns::PreflightLease::DURATION + 1.minute) do
+      perform_enqueued_jobs(only: envio) { EmailCampaigns::RecipientImportMaintenanceJob.perform_now }
+    end
+    expect(enviados).to eq(%w[ana@alfa.com.br bia@beta.com.br])
   end
 
   describe 'envio pela caixa (ritmo humano)' do
