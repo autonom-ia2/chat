@@ -218,15 +218,4 @@ RSpec.describe Autonomia::Agents::Tools::ConsultaNoTurno do
       end
     end
   end
-
-  describe 'B10: a flag sem o bit no features.yml' do
-    it 'segue sincrona e avisa uma vez no log' do
-      described_class.instance_variable_set(:@avisou_sem_bit, nil)
-      allow(Rails.logger).to receive(:warn).and_call_original
-
-      2.times { expect(described_class.ligada?(account)).to be(false) }
-
-      expect(Rails.logger).to have_received(:warn).with(a_string_including(described_class::FLAG, 'features.yml')).once
-    end
-  end
 end

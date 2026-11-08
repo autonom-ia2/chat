@@ -40,18 +40,6 @@ RSpec.describe Autonomia::Agents::Tools::ConsultaNoTurno, type: :job do
     { 'name' => 'consultar_pedido', 'arguments' => { numero: numero }.to_json, 'call_id' => "c#{numero}" }
   end
 
-  describe 'C02 flag ausente do features.yml' do
-    it 'sem o metodo feature_<flag>? segue sincrono mesmo com feature_enabled? verdadeiro, sem levantar' do
-      allow_any_instance_of(Account).to receive(:feature_enabled?).and_return(true) # rubocop:disable RSpec/AnyInstance
-      sistema_responde('{"status":"ok"}')
-
-      expect(account.respond_to?("feature_#{described_class::FLAG}?")).to be(false)
-      expect(bound.execute(chamada, delivery: turno)).to eq('{"status":"ok"}')
-      expect(runs.count).to eq(0)
-      expect(job).not_to have_been_enqueued
-    end
-  end
-
   describe 'flag ligada' do
     before { ligar_consulta_em_segundo_plano }
 

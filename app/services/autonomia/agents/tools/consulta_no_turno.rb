@@ -52,21 +52,8 @@ class Autonomia::Agents::Tools::ConsultaNoTurno
     ligada?(tool.account)
   end
 
-  # O bit da flag entra no config/features.yml pela Orquestração (ext_2, posição 23). Enquanto ele não está lá, o
-  # `feature_<flag>?` não existe e a conta segue o caminho síncrono do #2426, em vez de levantar em toda chamada HTTP. O
-  # aviso sai uma vez por processo: a flag não liga sem o bit, e ninguém precisa descobrir isso lendo código.
   def self.ligada?(account)
-    return account.feature_enabled?(FLAG) if account.respond_to?("feature_#{FLAG}?")
-
-    avisar_sem_bit
-    false
-  end
-
-  def self.avisar_sem_bit
-    return if @avisou_sem_bit
-
-    @avisou_sem_bit = true
-    Rails.logger.warn("[autonomia][tool][consulta] a flag #{FLAG} não tem bit no config/features.yml: a consulta HTTP segue síncrona")
+    account.feature_enabled?(FLAG)
   end
 
   # O pré-disparo de uma rodada (o `Answerer` e o `Specialists::Runner`, uma vez por rodada) abre a janela dela.
