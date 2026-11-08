@@ -35,6 +35,27 @@ RSpec.describe Autonomia::Automacao::RespostaDaCampanha do
     expect(described_class.titulo(escreve(Time.current))).to be_nil
   end
 
+  # 🟡 da qualidade (#2686): a próxima campanha recebida na caixa fecha a janela da anterior. No filtro do gatilho,
+  # "respondeu à Pré-Black" deixa de casar com a mensagem que chega depois da 2ª campanha.
+  it 'a mensagem depois da 2ª campanha não casa mais com a 1ª no filtro', :aggregate_failures do
+    recebeu('Pré-Black', 3.days.ago)
+    recebeu('Últimas horas', 1.day.ago)
+    casa = lambda do |mensagem|
+      valor = Autonomia::Automacao::Valores.new(alvo: conversa, mensagem: mensagem, quem: nil).ler('mensagem.campanha')
+      valor == 'Pré-Black'
+    end
+
+    expect(casa.call(escreve(2.days.ago))).to be(true)
+    expect(casa.call(escreve(1.hour.ago))).to be(false)
+  end
+
+  it 'a campanha de outra caixa não fecha a janela da anterior' do
+    recebeu('Pré-Black', 3.days.ago)
+    recebeu('Outra caixa', 1.day.ago, caixa: create(:inbox, account: account))
+
+    expect(described_class.titulo(escreve(1.hour.ago))).to eq('Pré-Black')
+  end
+
   it 'só a mensagem do cliente responde' do
     recebeu('Pré-Black', 1.day.ago)
 
