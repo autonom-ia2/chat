@@ -626,10 +626,10 @@
     "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#destroy",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:54",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:55",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:121",
       "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:117",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:113",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:93"
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:94"
     ],
     "sem_corpo": true
   },
@@ -16190,11 +16190,11 @@
     "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#hide",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:45",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:117",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:113",
       "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:46",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:93"
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:121",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:117",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:47",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:94"
     ],
     "sem_corpo": false
   },
@@ -16209,11 +16209,11 @@
     "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#private_reply",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:60",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:61",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:121",
       "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:117",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:113",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:122",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:93"
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:126",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:94"
     ],
     "sem_corpo": false
   },
@@ -16222,10 +16222,10 @@
     "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#release_private_reply",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:66",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:67",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:121",
       "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:117",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:113",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:93"
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:94"
     ],
     "sem_corpo": true
   },
@@ -16240,11 +16240,11 @@
     "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#reply",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:39",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:40",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:121",
       "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:117",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:113",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:122",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:93"
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:126",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:94"
     ],
     "sem_corpo": false
   },
