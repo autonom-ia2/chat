@@ -2484,8 +2484,18 @@
 - gotchas: cada pessoa apaga so as buscas que ela fez, inclusive o administrador; busca antiga sem dono registrado nao pode ser apagada pela tela nova; apagar a busca nao apaga as empresas nem os cards ja criados; Buscar de novo faz uma busca nova, sem aproveitar o resultado guardado, e a busca antiga continua na lista; Ver mais traz as buscas mais antigas.
 - nav_target: `autonomia_prospecting_achar_buscas`
 
+### para_chamar
+- titulo: Chamar as empresas uma por vez na fila Para chamar da Prospeccao nova
+- rota: autonomia_prospecting_para_chamar
+- intent: Onde vejo as empresas que ainda tenho que chamar?; Como chamo uma empresa de cada vez?; O que e a fila Para chamar?; Como mando a empresa da fila para o funil?; O que acontece quando aperto Depois?; Como tiro uma empresa da fila?; Por que uma empresa nao aparece em Para chamar?; Por que a empresa sumiu da fila?; Como desfaço o Nao serve ou o Depois?
+- onde_fica: Barra lateral > Prospeccao > Para chamar
+- perfil: ver a fila exige administrador ou funcao com Ver prospeccao; o agente com funcao ve so as empresas das proprias buscas, e administrador ou funcao com Ver buscas de todos ve as da equipe, com Achada por. Nao serve e Depois exigem Editar prospeccao. Mandar para o funil exige Editar prospeccao e poder criar cards no CRM. Escolher com quem a empresa fica (Alterar em Com quem fica) exige administrador ou funcao com Gerenciar funis e automacoes do CRM (ou Administrador do CRM). Atendente sem funcao nao ve o menu Prospeccao.
+- pre_requisitos: Prospeccao ligada na conta pelo suporte; funcao Prospeccao nova ligada na conta; ter feito ao menos uma busca em Achar empresas; um funil de vender no CRM para mandar
+- passos: 1. Abra Prospeccao > Para chamar; 2. Leia por que chamar, com quem falar e como chamar; se quiser, toque em Ver mais sobre a empresa; 3. Confira Vai para o funil e, se precisar, toque em Alterar; 4. Clique em Mandar para o funil; 5. Na tela de pronto, veja a etapa e com quem a empresa ficou, e clique em Chamar no WhatsApp (ou Ligar); 6. Toque em Proxima empresa; 7. Se a empresa nao serve, toque em Nao serve e escolha o motivo; se quer ver outro dia, toque em Depois.
+- gotchas: entram so as empresas ainda nao tratadas: as que voce ve, sem card em nenhum funil, que nao pediram para nao ser contatadas, que nao foram marcadas como Nao serve, que nao estao fechadas no cadastro do governo e que tem telefone; a de maior chance vem primeiro, e a primeira ganha Chame primeiro; mandar para o funil, Nao serve e Depois tiram a empresa da fila; Depois vale so para voce: ela volta para voce no dia seguinte, no fuso da conta, e continua na fila das outras pessoas; Nao serve vale para todos, e a empresa tambem aparece em Tiradas da lista na busca dela; logo depois de Nao serve ou Depois, o Desfazer da faixa verde devolve a empresa; empresa mandada pela lista de uma busca ja nao entra na fila; a fila mostra ate 100 empresas por vez; o fim do dia conta so o que voce fez nesta passada pela fila; quem so tem Ver prospeccao ve a fila e chama, mas nao manda para o funil nem tira empresas; sem um funil de vender, o botao pede para escolher o funil; desligar a funcao Prospeccao nova na conta volta para as telas de antes.
+- nav_target: `autonomia_prospecting_para_chamar`
+
 ### _fora_do_guia
-- autonomia_prospecting_para_chamar: fila Para chamar da Prospeccao nova, escondida fora da demonstracao ate a fase 5 (#2697), que tira esta linha e escreve a explicacao
 - portals_: editor de portais do Chatwoot, travado para todos; a Central de Ajuda da plataforma e so leitura e vem do repositorio (#501)
 - captain_: recurso do Chatwoot que esta instalação não usa
 - account_suspended: tela de sistema, não é caminho do cliente

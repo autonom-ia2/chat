@@ -4811,6 +4811,28 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "16.18",
+     "titulo": "Chamar as empresas uma por vez em Para chamar",
+     "para_que_serve": "Passar pelas empresas achadas e ainda não tratadas, uma por vez: mandar para o funil, chamar, marcar Não serve ou deixar para Depois.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_prospecting_para_chamar"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_para_chamar",
+      "destaque": null
+     },
+     "requer": "prospeccao_nova",
+     "prints": [],
+     "fontes": [
+      "porques: Chamar as empresas uma por vez na fila Para chamar da Prospeccao nova"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

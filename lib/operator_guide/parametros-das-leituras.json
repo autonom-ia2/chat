@@ -326,7 +326,8 @@
     "controller": "api/v1/accounts/autonomia/prospecting/leads#index",
     "parametros": [
       "list_id",
-      "status"
+      "status",
+      "view"
     ]
   },
   "autonomia/prospecting/leads/:id": {

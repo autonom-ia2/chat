@@ -814,6 +814,9 @@ Rails.application.routes.draw do
                 post :adopt_owner, on: :member
                 post :consent_refusal, on: :member, controller: :lead_consent_refusals, action: :create
                 delete :consent_refusal, on: :member, controller: :lead_consent_refusals, action: :destroy
+                # "Depois" da fila Para chamar (#2697): some da fila de quem pediu até amanhã; o DELETE é o "Desfazer".
+                post :queue_postponement, on: :member, controller: :lead_queue_postponements, action: :create
+                delete :queue_postponement, on: :member, controller: :lead_queue_postponements, action: :destroy
                 post :crm_cards, on: :collection, action: :create_crm_cards
                 get :crm_owners, on: :collection, controller: :crm_owners, action: :index
                 post :discard, on: :collection, controller: :lead_batches, action: :discard

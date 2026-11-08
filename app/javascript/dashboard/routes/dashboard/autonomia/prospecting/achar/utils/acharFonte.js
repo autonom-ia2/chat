@@ -1,7 +1,7 @@
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { sendInBatches, CRM_BATCH_SIZE } from '../../utils/crmSend';
-import { buscaDoPayload, empresaDoLead } from './acharLead';
+import { buscaDoPayload, cartaoDaFila, empresaDoLead } from './acharLead';
 import {
   ajustesDosFiltros,
   montarPedido,
@@ -38,6 +38,8 @@ const diasDesde = data =>
 
 const ESTADOS_SEM_BUSCAS = ['buscas-vazio', 'buscas-so-ver-vazio'];
 const ESTADOS_SEM_FILA = ['fila-vazia', 'fila-vazia-so-ver'];
+// O teto da fila na demonstração, o mesmo do servidor (ParaChamar::MAX_LEADS).
+const TETO_DA_FILA_DEMO = 100;
 const ESTADOS_COM_DOIS_FUNIS = ['folha-sem-destino', 'folha-para-onde'];
 const ESTADOS_DE_UMA_SUGESTAO = [
   'porta-uma-sugestao',
@@ -321,8 +323,30 @@ const fonteDemo = ({ estado, carregarDemo, atraso, usuarioId }) => {
     },
     async fila() {
       const demo = await dados();
-      if (ESTADOS_SEM_FILA.includes(estado)) return { cartoes: [], fim: null };
-      return { cartoes: demo.FILA, fim: demo.FIM_DO_DIA };
+      if (estado === 'fila-erro') throw new Error('demo');
+      if (ESTADOS_SEM_FILA.includes(estado)) {
+        return {
+          cartoes: [],
+          fim: null,
+          truncada: false,
+          teto: TETO_DA_FILA_DEMO,
+        };
+      }
+      return {
+        cartoes: demo.FILA,
+        fim: demo.FIM_DO_DIA,
+        truncada: estado === 'fila-truncada',
+        teto: TETO_DA_FILA_DEMO,
+      };
+    },
+    async voltarNaoServe() {
+      await esperar(atraso);
+    },
+    async depois() {
+      await esperar(atraso);
+    },
+    async desfazerDepois() {
+      await esperar(atraso);
     },
     async configuracoes() {
       return { padrao: null };
@@ -474,6 +498,12 @@ const fonteApi = ({ api, crm, usuarioId, usuarioNome }) => ({
   async descartar({ id, motivo }) {
     await api.discardLeads({ leadIds: [id], reason: motivo });
   },
+  // O "Desfazer" do "Não serve" da fila (#2697): o lead volta a new_lead. O
+  // servidor limpa o motivo junto (leads#update apaga discard_reason quando o
+  // status não é discarded); não precisa de endpoint novo.
+  async voltarNaoServe({ id }) {
+    await api.updateLead(id, { status: 'new_lead' });
+  },
   async naoQuer({ id }) {
     await api.refuseLeadConsent(id);
   },
@@ -516,9 +546,24 @@ const fonteApi = ({ api, crm, usuarioId, usuarioNome }) => ({
       });
     }
   },
-  // A fila "Para chamar" pede leads#index com view=queue (v4, fase 5).
+  // A fila "Para chamar" (#2697): leads#index com view=queue, no mesmo
+  // formato da demonstração. O fim do dia sai da própria passada pela fila
+  // (useFilaParaChamar), então o servidor não manda `fim`. `truncada`: havia
+  // mais que o teto do servidor (meta.truncated); `teto` é esse teto (meta.max).
   async fila() {
-    return { cartoes: [], fim: null };
+    const { data } = await api.getQueue();
+    return {
+      cartoes: (data.payload || []).map(cartaoDaFila),
+      fim: null,
+      truncada: data.meta?.truncated === true,
+      teto: data.meta?.max ?? null,
+    };
+  },
+  async depois({ id }) {
+    await api.postponeQueueLead(id);
+  },
+  async desfazerDepois({ id }) {
+    await api.resumeQueueLead(id);
   },
   async configuracoes() {
     const { data } = await api.getSettings();

@@ -133,6 +133,17 @@ class Autonomia::Prospecting::Lead < ApplicationRecord
   # ContactOptOutSync#update_lead!.
   after_save :mark_refusal_on_new_reach, if: :refusal_reach_changed?
 
+  # Grava uma chave do topo do metadata direto no banco, sem reescrever o resto (o padrão do WhatsappVerifier#persist!):
+  # quem leu o lead antes não apaga o que outra escrita pôs no meio, como o "Depois" da fila Para chamar (#2697). O objeto
+  # em memória fica com a chave nova, sem mudança pendente.
+  def self.write_metadata_key!(lead, key, value)
+    where(id: lead.id).update_all( # rubocop:disable Rails/SkipsModelValidations
+      ['metadata = metadata || ?::jsonb, updated_at = ?', { key => value }.to_json, Time.current]
+    )
+    lead.metadata = lead.metadata.to_h.merge(key => value)
+    lead.clear_attribute_changes([:metadata])
+  end
+
   def consent_refused?
     consent_refused_at.present? || no_consent?
   end

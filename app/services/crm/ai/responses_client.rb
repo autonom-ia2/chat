@@ -8,14 +8,17 @@ module Crm
       # novas tentativas daqui (rede, tempo esgotado, 408, 429 e 5xx); quem chama decide se tenta de novo mais tarde
       # (o leitor de mídia do CRM, #2109). Sem `status:` nem `rede:`, como antes: não é passageira. `tempo_esgotado?`: o
       # pedido chegou e a resposta não voltou a tempo (Net::ReadTimeout): a OpenAI pode ter processado e cobrado (#2301).
+      # `incomplete_reason`: a OpenAI parou a resposta no meio (status incomplete; por exemplo, max_output_tokens) e não
+      # sobrou texto. Vem só o motivo que ela manda, nunca o texto (#2696).
       class Error < StandardError
-        attr_reader :status
+        attr_reader :status, :incomplete_reason
 
-        def initialize(message = nil, status: nil, rede: false, tempo_esgotado: false)
+        def initialize(message = nil, status: nil, rede: false, tempo_esgotado: false, incomplete_reason: nil)
           super(message)
           @status = status
           @rede = rede
           @tempo_esgotado = tempo_esgotado
+          @incomplete_reason = incomplete_reason
         end
 
         def passageira?
@@ -348,26 +351,36 @@ module Crm
         # Grava ANTES de checar o texto: a ida que volta vazia também foi cobrada (#1656).
         record_usage(payload['usage'], model, reasoning_effort, started_at) if registrar_uso
         text = payload['output_text'].presence || extract_output_text(payload)
+        incomplete = incomplete_reason(payload)
         if text.blank?
           log_failure(
             'responses.create',
             model: model,
             response_id: payload['id'],
             error_code: 'empty_response',
+            error_type: incomplete && "incomplete_#{incomplete}",
             error_message: 'empty_response',
             started_at: started_at
           )
-          raise Error, 'empty_response'
+          raise Error.new('empty_response', incomplete_reason: incomplete)
         end
 
         used = tools_used(payload)
         log_call(model, requested_tools, used, started_at)
-        {
+        result = {
           text: text,
           usage: payload['usage'] || {},
           response_id: payload['id'],
           tools_used: used
         }
+        # Só quando a resposta veio cortada (#2696): o texto pode ser um pedaço. Sem corte, o hash é o de antes.
+        incomplete ? result.merge(incomplete_reason: incomplete) : result
+      end
+
+      def incomplete_reason(payload)
+        return unless payload['status'] == 'incomplete'
+
+        payload.dig('incomplete_details', 'reason').presence || 'unknown'
       end
 
       def function_calls(payload)
