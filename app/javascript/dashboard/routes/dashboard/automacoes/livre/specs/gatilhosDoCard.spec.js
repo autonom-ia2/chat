@@ -16,6 +16,11 @@ vi.mock('vue-i18n', () => ({
   }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// Os nomes das caixas (#2680) vêm do store; aqui a conta não tem nenhuma.
+vi.mock('dashboard/composables/store', async () => {
+  const vue = await import('vue');
+  return { useMapGetter: () => vue.ref([]) };
+});
 const permissao = vi.hoisted(() => ({ funil: true }));
 vi.mock(
   'dashboard/routes/dashboard/crm/composables/useCrmPermissions',
@@ -158,6 +163,7 @@ describe('gatilhos de card', () => {
       ...ESCOLHAS.nomes,
       campo: { 'Crm::Card': {}, Contact: {} },
       pagina: {},
+      caixa: {},
     });
   });
 

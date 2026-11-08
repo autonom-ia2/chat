@@ -66,6 +66,14 @@ const comPagina = (frase, gatilho, t, nomes) => {
   return t('AUTOMACAO_LIVRE.GATILHO_NA_PAGINA', { frase, pagina });
 };
 
+// #2680: a caixa por onde a mensagem abre a conversa de quem não tem uma.
+const comCaixa = (frase, gatilho, t, nomes) => {
+  const caixa = nomes.caixa?.[gatilho.conversa_nova?.caixa_id];
+  return caixa
+    ? t('AUTOMACAO_LIVRE.CONVERSA_NOVA.NA_FRASE', { frase, caixa })
+    : frase;
+};
+
 // #2635 (G7): o recorrente diz quando ("Toda segunda, às 8h") e em quem ("nos
 // cards escolhidos"). A seleção fica no "Alterar"; aqui, só se é card, contato
 // ou a conta (o da conta roda uma vez, sem seleção).
@@ -96,7 +104,7 @@ const fraseSemPagina = (gatilho, catalogo, t, nomes) => {
   const entrada = catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo);
   if (!entrada) return t(`${P}.FALTA_GATILHO`);
   if ((entrada.parametros || []).some(item => item.peca === 'frequencia'))
-    return fraseDoRecorrente(gatilho, entrada, t);
+    return comCaixa(fraseDoRecorrente(gatilho, entrada, t), gatilho, t, nomes);
   // #2678: o "repete" é opcional e entra só como fim da frase ("..., todo ano").
   const parametros = (entrada.parametros || []).filter(
     item => !FIM_DA_FRASE.includes(item.peca)
@@ -110,16 +118,20 @@ const fraseSemPagina = (gatilho, catalogo, t, nomes) => {
   const completo = Object.values(escolhidos).every(
     valor => valor !== undefined && valor !== null && valor !== ''
   );
-  if (!parametros.length || !completo) return t(entrada.frase);
+  if (!parametros.length || !completo)
+    return comCaixa(t(entrada.frase), gatilho, t, nomes);
   const base = t(chaveDaFrase(entrada, gatilho), escolhidos);
   const frase =
     gatilho.repete === 'todo_ano'
       ? t('AUTOMACAO_LIVRE.GATILHO_TODO_ANO', { frase: base })
       : base;
   const funil = nomes.funilDaEtapa?.[gatilho.etapa_id];
-  return funil
-    ? t('AUTOMACAO_LIVRE.GATILHO_NO_FUNIL', { frase, funil })
-    : frase;
+  return comCaixa(
+    funil ? t('AUTOMACAO_LIVRE.GATILHO_NO_FUNIL', { frase, funil }) : frase,
+    gatilho,
+    t,
+    nomes
+  );
 };
 
 export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) =>

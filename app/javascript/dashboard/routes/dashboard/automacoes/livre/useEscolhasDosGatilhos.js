@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue';
+import { useMapGetter } from 'dashboard/composables/store';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import AttributeAPI from 'dashboard/api/attributes';
 import CrmBookingPagesAPI from 'dashboard/api/crmBookingPages';
@@ -6,7 +7,8 @@ import { semAtributosInternosDoWhatsapp } from 'dashboard/helper/atributosIntern
 
 // #2499 — o que os campos do gatilho de card mostram: os funis e as etapas de
 // cada funil (agrupadas pelo funil), das mesmas APIs que o CRM usa. Os nomes
-// também servem à frase do gatilho ("Quando o card entra em Orçamento").
+// também servem à frase do gatilho ("Quando o card entra em Orçamento"), e o
+// da caixa da conversa nova (#2680) vem da lista de caixas que a tela carrega.
 const comNome = (lista, nome = 'name') =>
   (lista || []).map(item => ({ value: item.id, label: item[nome] }));
 
@@ -59,6 +61,7 @@ export function useEscolhasDosGatilhos() {
   const definicoes = ref([]);
   // G32: as páginas de agendamento, para o filtro dos gatilhos de reunião.
   const paginas = ref([]);
+  const caixas = useMapGetter('inboxes/getInboxes');
 
   const carregarFunis = async () => {
     const { data } = await CrmKanbanAPI.getPipelines();
@@ -111,6 +114,7 @@ export function useEscolhasDosGatilhos() {
       pagina: porId(paginas.value, 'title'),
       etapa: porId(Object.values(etapasPorFunil.value).flat()),
       funilDaEtapa: funilDaEtapa(funis.value, etapasPorFunil.value),
+      caixa: porId(caixas.value),
     },
   }));
 

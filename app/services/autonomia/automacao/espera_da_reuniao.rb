@@ -23,6 +23,11 @@ module Autonomia::Automacao::EsperaDaReuniao
     end
   end
 
+  # O gate do emissor (Escuta.assinante?): o evento é de reunião e há quem espere por ela no card ou no contato dele.
+  def no_card?(account, tipos, card_id)
+    card_id.present? && tipos.any? { |tipo| ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo) } && de(account.id, card_id).exists?
+  end
+
   # `card_id`: o id do card da reunião (o gate do emissor só tem o id). Sempre preso à conta.
   def de(account_id, card_id)
     card = ::Crm::Card.where(id: card_id, account_id: account_id)

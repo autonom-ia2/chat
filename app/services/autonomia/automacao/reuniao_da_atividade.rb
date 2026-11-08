@@ -25,4 +25,11 @@ module Autonomia::Automacao::ReuniaoDaAtividade
   # O id da página em que a reunião foi marcada; nil quando foi marcada na tela. A IA marca pela página
   # (o Booker grava o id), então a reunião dela tem a página.
   def pagina(reuniao) = reuniao&.metadata.to_h[PAGINA]
+
+  # O parâmetro `pagina_id` dos gatilhos de reunião, para a Escuta casar o filtro; vazio nos outros gatilhos.
+  def do_gatilho(tipo, card, atividade_id)
+    return {} unless ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo)
+
+    { 'pagina_id' => pagina(de(card, atividade_id)) }
+  end
 end

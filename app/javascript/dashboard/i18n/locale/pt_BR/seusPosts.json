@@ -157,6 +157,7 @@
         "BELOW": "Este post apareceu menos que seus posts costumam aparecer.",
         "NEW": "Este post é novo: os números da Meta chegam em até 2 dias.",
         "BOOSTED": "Este post teve anúncio. As vezes que apareceu contam só o que foi sem anúncio; os outros números incluem o anúncio.",
+        "BOOSTED_INSTAGRAM": "Você impulsionou este post pela plataforma. O anúncio tem números e comentários próprios.",
         "TIMES": "Este post foi bem: apareceu {times} vezes mais que seus posts costumam aparecer.",
         "DOUBLE": "Este post foi bem: apareceu o dobro do que seus posts costumam aparecer.",
         "WELL_ABOVE": "Este post foi bem: apareceu bem mais que seus posts costumam aparecer.",
@@ -166,7 +167,12 @@
       },
       "SIDE": {
         "BOOSTED": "Teve anúncio: só “{name}” é sem anúncio.",
+        "BOOSTED_INSTAGRAM": "Números só deste post.",
         "INSTAGRAM": "Vezes que apareceu é sem anúncio. Pessoas que viram, curtidas, comentários, salvos e compartilhamentos podem incluir anúncio."
+      },
+      "AD_COMMENTS": {
+        "TEXT": "Os comentários do anúncio ficam no anúncio, não neste post.",
+        "OPEN": "Ver comentários do anúncio"
       },
       "COMMENTS": {
         "TITLE": "Comentários",

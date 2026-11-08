@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
+import { isCrmKanbanEnabled } from 'dashboard/helper/routeHelpers';
 import { useAlert } from 'dashboard/composables';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
@@ -181,7 +182,13 @@ const restoDaLegenda = computed(() => {
 const resumo = computed(() => {
   const media = { apareceu: dados.value?.normal?.views ?? null };
   const { nivel, vezes } = vereditoDoPost(post.value, media);
-  return t(`SEUS_POSTS.POST.SUMMARY.${nivel}`, { times: vezes });
+  // #2522: no Instagram só se sabe do anúncio feito pela plataforma, que entrega por outra mídia, com números e
+  // comentários próprios.
+  const chave =
+    nivel === 'BOOSTED' && rede.value === 'instagram'
+      ? 'BOOSTED_INSTAGRAM'
+      : nivel;
+  return t(`SEUS_POSTS.POST.SUMMARY.${chave}`, { times: vezes });
 });
 
 // Os números do post em quatro quadros, como o detalhe de anúncio, e os outros numa linha curta embaixo. Só as vezes
@@ -233,6 +240,8 @@ const outros = computed(() =>
 );
 const ladoDoAnuncio = computed(() => {
   if (post.value.semInsights) return '';
+  if (post.value.impulsionado && rede.value === 'instagram')
+    return t('SEUS_POSTS.POST.SIDE.BOOSTED_INSTAGRAM');
   if (post.value.impulsionado)
     return t('SEUS_POSTS.POST.SIDE.BOOSTED', {
       name: t('SEUS_POSTS.POST.NUMBERS.VIEWS'),
@@ -240,6 +249,18 @@ const ladoDoAnuncio = computed(() => {
   if (rede.value === 'instagram') return t('SEUS_POSTS.POST.SIDE.INSTAGRAM');
   return t('SEUS_POSTS.TILES.LEGEND_NONE');
 });
+
+// #2522: o post do Instagram impulsionado por aqui. Os comentários do anúncio ficam noutra mídia, e o anúncio por
+// dentro (Anúncios da Meta) os mostra. `ad_id` só vem para quem vê Anúncios da Meta; a página deles pede também o CRM.
+const anuncioDoPost = computed(() =>
+  dados.value?.ad_id && isCrmKanbanEnabled()
+    ? {
+        name: 'campaigns_meta_ads_index',
+        params: { accountId: route.params.accountId },
+        query: { aba: 'resultado', anuncio: String(dados.value.ad_id) },
+      }
+    : null
+);
 
 // Comentários: filtro simples, contado da lista que já veio. Aba sem nada não aparece (Todos sempre).
 const FILTROS = [
@@ -845,6 +866,23 @@ const BOTAO_DE_BORDA =
           class="flex scroll-mt-4 flex-col gap-4 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
           data-seus-posts-comentarios
         >
+          <div
+            v-if="anuncioDoPost"
+            data-seus-posts-comentarios-do-anuncio
+            class="flex flex-col items-start gap-3 rounded-xl bg-n-alpha-1 p-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <p class="m-0 text-sm text-n-slate-12">
+              {{ $t('SEUS_POSTS.POST.AD_COMMENTS.TEXT') }}
+            </p>
+            <router-link
+              :to="anuncioDoPost"
+              data-seus-posts-ver-anuncio
+              class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-0 text-sm sm:px-3 font-medium text-n-brand outline-none hover:underline focus-visible:ring-2 focus-visible:ring-n-brand"
+            >
+              <span class="i-lucide-megaphone size-4" aria-hidden="true" />
+              {{ $t('SEUS_POSTS.POST.AD_COMMENTS.OPEN') }}
+            </router-link>
+          </div>
           <div
             class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
           >

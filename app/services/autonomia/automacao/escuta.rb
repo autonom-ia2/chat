@@ -10,8 +10,10 @@
 #   Roda no EventoDoCardJob, não no listener: o erro sobe e o job tenta de novo sozinho, sem repetir os webhooks e os
 #   avisos dos outros listeners do mesmo evento. A repetição é segura: a marca da atividade não deixa abrir duas.
 # - `acordar`: a conversa (ou o contato dela) mudou. Quem espera num "esperar até" por ela, também o card cuja
-#   conversa principal é ela, é reservado e confere a condição agora, em vez de esperar o prazo. Só o "esperar até":
-#   a ação que espera uma nova tentativa e o "esperar" de tempo seguem o relógio.
+#   conversa principal é ela, é reservado e confere a condição agora, em vez de esperar o prazo. A mensagem nova acorda
+#   também quem espera pelo mesmo contato em outra conversa, no card ou no contato (#2680). Só o "esperar até": a ação
+#   que espera uma nova tentativa e o "esperar" de tempo seguem o relógio.
+# - `envio_atualizado`: a mensagem que a automação mandou foi entregue, lida ou falhou (#2680, `envio.situacao`).
 #
 # O gate é a flag do motor, lida da conta: conta sem o motor só lê a conta. Com o motor, uma consulta pela conta e pelo
 # tipo do gatilho; não há cache, porque a lista muda a cada automação ligada ou desligada, e uma lista velha ligaria o
@@ -81,18 +83,39 @@ module Autonomia::Automacao::Escuta
     return if mensagem.activity? || !::Autonomia::Automacao::Motor.ligado?(mensagem.account)
 
     comecar(mensagem.conversation, 'mensagem.criada', mensagem: mensagem)
-    acordar(mensagem, [mensagem.conversation_id])
+    acordar(mensagem, [mensagem.conversation_id], contato_id: mensagem.conversation.contact_id)
   rescue StandardError => e
     registrar_erro("não ouviu mensagem=#{mensagem&.id}", e)
   end
 
+  # A situação de uma mensagem que a automação mandou mudou (entregue, lida, falhou): a execução dela, se espera num
+  # "esperar até", confere agora o `envio.situacao` (#2680). Só a mensagem com a marca da automação; a marca já diz a
+  # execução, sem consulta para as outras.
+  def envio_atualizado(mensagem, mudou)
+    return unless mudou.to_h.key?('status')
+
+    execucao = execucao_do_envio(mensagem)
+    reservar(execucao) if execucao && esperando_condicao?(execucao)
+  rescue StandardError => e
+    registrar_erro("não acordou pelo envio mensagem=#{mensagem&.id}", e)
+  end
+
+  # A execução que espera, pela marca da mensagem; nil sem a marca ou com o motor desligado.
+  def execucao_do_envio(mensagem)
+    execucao_id = mensagem.content_attributes.to_h['execucao_id']
+    return if execucao_id.blank? || !::Autonomia::Automacao::Motor.ligado?(mensagem.account)
+
+    ::Autonomia::Automacao::Execucao.find_by(id: execucao_id, account_id: mensagem.account_id, estado: 'esperando')
+  end
+
   # `registro`: o que mudou (conversa, contato ou mensagem); a conta sai dele aqui dentro, sob o rescue.
-  # `conversa_ids`: lista ou subconsulta de ids das conversas.
-  def acordar(registro, conversa_ids)
+  # `conversa_ids`: lista ou subconsulta de ids das conversas. `contato_id`: a mensagem nova do cliente acorda também
+  # quem espera por ele em outra conversa, no card dele ou no próprio contato (#2680: o e-mail abre outra conversa).
+  def acordar(registro, conversa_ids, contato_id: nil)
     account = registro.account
     return unless ::Autonomia::Automacao::Motor.ligado?(account)
 
-    acordar_quem_espera(esperando_pela_conversa(account, conversa_ids))
+    acordar_quem_espera(::Autonomia::Automacao::EsperaDaConversa.de(account, conversa_ids, contato_id))
   rescue StandardError => e
     registrar_erro("não acordou #{registro.class.name}=#{registro&.id}", e)
   end
@@ -112,14 +135,6 @@ module Autonomia::Automacao::Escuta
     rescue StandardError => e
       registrar_erro("não acordou execucao=#{execucao.id}", e)
     end
-  end
-
-  # Quem espera pela conversa: a execução dela e a do card cuja conversa principal é ela (G11: a resposta do cliente
-  # acorda o card na hora, em vez de no fim do prazo).
-  def esperando_pela_conversa(account, conversa_ids)
-    execucoes = ::Autonomia::Automacao::Execucao.where(account_id: account.id, estado: 'esperando')
-    cards = ::Crm::Card.where(account_id: account.id, conversation_id: conversa_ids).select(:id)
-    execucoes.where(alvo_type: 'Conversation', alvo_id: conversa_ids).or(execucoes.where(alvo_type: 'Crm::Card', alvo_id: cards))
   end
 
   # O listener só enfileira o evento do card, e só na conta com os gatilhos de card ligados. A cadeia em curso (que o
@@ -165,15 +180,8 @@ module Autonomia::Automacao::Escuta
     case tipo
     when 'card.entrou_na_etapa' then { 'etapa_id' => mudou[:to_stage_id] || mudou[:stage_id] || card.stage_id }
     when 'card.saiu_da_etapa' then { 'etapa_id' => mudou[:from_stage_id] }
-    else { 'funil_id' => mudou[:pipeline_id] || card.pipeline_id, **pagina_da_reuniao(tipo, card, atividade_id) }
+    else { 'funil_id' => mudou[:pipeline_id] || card.pipeline_id, **::Autonomia::Automacao::ReuniaoDaAtividade.do_gatilho(tipo, card, atividade_id) }
     end
-  end
-
-  def pagina_da_reuniao(tipo, card, atividade_id)
-    return {} unless ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo)
-
-    reuniao = ::Autonomia::Automacao::ReuniaoDaAtividade
-    { 'pagina_id' => reuniao.pagina(reuniao.de(card, atividade_id)) }
   end
 
   # O emissor do CRM pergunta antes de despachar (#2499): a conta tem automação ligada com um gatilho que o evento
@@ -188,7 +196,7 @@ module Autonomia::Automacao::Escuta
   def assinante?(account, evento, mudou = {}, card_id: nil)
     tipos = tipos_ligados(account, evento)
     return false if tipos.blank?
-    return true if espera_no_card?(account, tipos, card_id)
+    return true if ::Autonomia::Automacao::EsperaDaReuniao.no_card?(account, tipos, card_id)
 
     mudou = mudou.to_h.with_indifferent_access
     automacoes_do_gatilho(account.id, tipos).where(tipos.map { |tipo| gatilho_casa_sql(tipo, mudou) }.join(' OR ')).exists?
@@ -201,11 +209,6 @@ module Autonomia::Automacao::Escuta
   def tipos_ligados(account, evento)
     tipos = ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD[evento]
     tipos if tipos.present? && account.present? && ::Autonomia::Automacao::Motor.gatilhos?(account)
-  end
-
-  def espera_no_card?(account, tipos, card_id)
-    card_id.present? && tipos.any? { |tipo| ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo) } &&
-      ::Autonomia::Automacao::EsperaDaReuniao.de(account.id, card_id).exists?
   end
 
   # "tipo = X AND (parâmetro vazio OR parâmetro = valor do evento)", com os valores escapados.
