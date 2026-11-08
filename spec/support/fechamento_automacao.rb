@@ -212,12 +212,18 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 10 (#2678), ainda sem dono: a instrução no resumir ("o que já foi prometido") e avisar o responsável
     # quando a agente de IA atende a conversa.
     'G41' => nil,
+    # Do exemplo 20 (#2703) e do exemplo 4 (#2650): o link da agenda de uma página escolhida (implantação e treinamento;
+    # turmas de outros horários e o professor). Hoje é a página do responsável do card ou da pessoa da conversa.
+    'G44' => nil,
     # Do exemplo 12, passo 3 (#2650): "espera até a Ana responder ou o campo ser preenchido". O "esperar até" acorda com a
     # conversa, o contato e a reunião; o campo do card preenchido só conta quando o prazo vence.
     'G48' => nil,
     # Do exemplo 18, gatilho (#2650): "mensagem com currículo (PDF ou foto)". Os filtros do mensagem.criada leem só tipo,
     # privada e primeira; sem "tem anexo", cada mensagem da candidata roda a seleção de novo.
-    'G49' => nil
+    'G49' => nil,
+    # Do exemplo 4 (#2650): a etiqueta como contador de faltas. Com a execução da primeira falta esperando os 30 dias, a
+    # nova entrada em "Faltou" no mesmo card não abre outra (Partida, `ja_aberta`): o contador nunca chega a 2.
+    'G50' => nil
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

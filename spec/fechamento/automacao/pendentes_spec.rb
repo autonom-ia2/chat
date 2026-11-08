@@ -8,7 +8,9 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
   pendentes = {
     1 => ['Renovação do seguro sem esquecer ninguém', 'G6 (30 dias antes do vencimento), G1, G2, G3, G8, G11, G12'],
     2 => ['Lead do anúncio atendido em 5 minutos', 'G29 (card criado pelo formulário de um anúncio e o nome dele), G30, G31, G32'],
-    4 => ['Aluno que começa a faltar', 'G5 (entrou em "Faltou"), G1, G3, G4, G12, G15, G25, G28'],
+    # O 4 tem spec próprio à risca (exemplo_04_aluno_que_falta_spec.rb); esperam a G50 (a segunda falta com a primeira
+    # ainda esperando), a G44 (passos 6 e 8, link de uma página escolhida) e a G18 (passo 10, fechar o card de retenção).
+    4 => ['Aluno que começa a faltar', 'G50 (reentrada no mesmo card), G44, G18, G5, G1, G3, G4, G12, G15, G25, G28'],
     5 => ['Revisão do carro no tempo certo', 'G5 (card ganho), G1, G3, G6, G12, G16, G19, G28, G32, G36'],
     6 => ['Aniversário que vira horário marcado', 'G6 (data de nascimento do contato), G1, G4, G12, G14, G16, G25'],
     7 => ['Black Friday para os clientes antigos primeiro', 'G37 (público com exclusão), G38, G39, G5, G7, G14, G15'],
