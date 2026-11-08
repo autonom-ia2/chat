@@ -31,6 +31,7 @@ const limpar = () => emit('update:modelValue', null);
       :model-value="valor"
       :label="t('AUSENCIA.CAMPO.LABEL')"
       :message="t('AUSENCIA.CAMPO.DICA')"
+      wrap-message
       @update:model-value="mudar"
     />
     <Button
