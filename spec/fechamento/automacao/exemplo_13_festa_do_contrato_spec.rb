@@ -32,7 +32,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 13: festa do contrato ao depoimento'
   let(:card) do
     account.crm_cards.create!(pipeline: funil, stage: funil_e_etapa.last, title: 'Festa da Ana', currency: 'BRL', contact: familia,
                               primary_conversation: conversa,
-                              custom_attributes: { 'data_da_festa' => '2027-03-20', 'link_contrato' => 'https://buffet.exemplo/contrato/42' })
+                              custom_attributes: { 'data_da_festa' => '2027-03-20', 'tema' => 'fundo do mar',
+                                                   'link_contrato' => 'https://buffet.exemplo/contrato/42' })
   end
   let(:roteiro) { {} }
 
@@ -61,7 +62,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 13: festa do contrato ao depoimento'
   def receitas
     { contrato: receita_do_contrato, convidados: receita_dos_convidados, cardapio: receita_do_cardapio,
       equipe: { gatilho: no_dia(7, 'antes'), passos: [
-        { id: 'resumo', tipo: 'resumir', le: %w[conversa], linhas: 4, destino: { avisar: { pessoas: [cozinha.id, decoracao.id] } } }
+        # A data da festa, os convidados e as alergias estão no card: a IA lê o card (G35, #2679).
+        { id: 'resumo', tipo: 'resumir', le: %w[card conversa], linhas: 4, destino: { avisar: { pessoas: [cozinha.id, decoracao.id] } } }
       ] },
       lembrete: { gatilho: no_dia(1, 'antes'), passos: [mensagem('lembrete', 'festa_lembrete', 'Amanhã é a festa!')] },
       avaliacao: receita_da_avaliacao,
@@ -131,7 +133,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 13: festa do contrato ao depoimento'
   # Os campos do card que a Rose criou, e os da conversa onde o extrair grava antes de copiar para o card.
   def criar_campos
     respostas = { 'convidados' => 'number', 'criancas' => 'number', 'alergias' => 'text' }
-    respostas.merge('data_da_festa' => 'date', 'proxima_oferta' => 'date', 'link_contrato' => 'text')
+    respostas.merge('data_da_festa' => 'date', 'proxima_oferta' => 'date', 'tema' => 'text', 'link_contrato' => 'text')
              .each { |chave, tipo| atributo(chave, 'card_attribute', tipo) }
     respostas.each { |chave, tipo| atributo(chave, 'conversation_attribute', tipo) }
   end
@@ -235,17 +237,31 @@ RSpec.describe 'Fechamento #2414 · exemplo 13: festa do contrato ao depoimento'
     expect(card.reload.custom_attributes).to include('alergias' => 'amendoim')
   end
 
-  it 'passo 5: 7 dias antes, a cozinha e a decoração recebem no sino o resumo da festa', :aggregate_failures do
+  # O termo de ponta a ponta até o passo 5: os números e as alergias chegam ao card pelas respostas da família (passos 2
+  # a 4), e a IA do resumo lê a data, os convidados, as alergias e o tema do próprio card ganho (G35), sem a conversa ter
+  # o tema escrito.
+  it 'passo 5: 7 dias antes, a cozinha e a decoração recebem no sino o resumo da festa, lido do card', :aggregate_failures do
     festa_fechada
-    card.update!(custom_attributes: card.custom_attributes.merge('convidados' => 40, 'alergias' => 'amendoim'))
+    roteiro['automacao_extrair'] = { 'convidados' => 40, 'criancas' => 15 }
+    chega_o_dia('2027-02-18')
+    cliente_responde('2027-02-18', 'Vão ser 40 convidados, 15 crianças.')
+    roteiro['automacao_extrair'] = { 'alergias' => 'amendoim' }
+    chega_o_dia('2027-03-05')
+    cliente_responde('2027-03-05', 'Uma criança tem alergia a amendoim.')
+    expect(card.reload.status).to eq('won')
+    expect(card.custom_attributes).to include('convidados' => 40, 'alergias' => 'amendoim')
     roteiro['automacao_resumir'] = { 'resumo' => 'Festa da Ana em 20/03: 40 convidados, alergia a amendoim, tema fundo do mar.' }
+    saidas_antes = chamadas_para('graph.facebook.com').size
 
     chega_o_dia('2027-03-13')
 
     expect([mencoes_para(cozinha).count, mencoes_para(decoracao).count]).to eq([1, 1])
     resumo = conversa.messages.where(private: true).find_by('content LIKE ?', '%mention://user/%')
     expect(resumo.content).to include('40 convidados', 'amendoim', "mention://user/#{cozinha.id}/", "mention://user/#{decoracao.id}/")
-    expect(chamadas_para('graph.facebook.com')).to be_empty
+    expect(chamadas_para('graph.facebook.com').size).to eq(saidas_antes)
+    lido = ia_recebeu.select { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_resumir' }.sole['input'].to_json
+    expect(lido).to include('2027-03-20', 'amendoim', '40', 'fundo do mar')
+    expect(conversa.messages.where('content LIKE ?', '%fundo do mar%').where.not(id: resumo.id)).to be_empty
   end
 
   it 'passo 6: 1 dia antes, a família é lembrada pelo modelo aprovado' do

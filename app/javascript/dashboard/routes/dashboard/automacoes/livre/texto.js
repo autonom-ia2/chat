@@ -41,6 +41,11 @@ export const opcoesDosValores = (
       if (item.so_guia || item.sem_permissao) return [];
       if (item.so_no_gatilho && item.so_no_gatilho !== gatilho) return [];
       if (item.so_na_espera && !naEspera) return [];
+      // #2679: o texto da IA já chega com o rótulo pronto (comTextosDaIa). No
+      // "Só se" do gatilho nenhum passo rodou: ele não entra.
+      if (item.rotulo && gatilho) return [];
+      if (item.rotulo)
+        return [{ value: item.caminho, chave: item.chave, label: item.rotulo }];
       if (!item.atributos)
         return [{ value: item.caminho, label: t(item.frase) }];
       return atributosDo(item.atributos).map(atributo => ({

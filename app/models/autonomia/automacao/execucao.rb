@@ -14,6 +14,9 @@ class Autonomia::Automacao::Execucao < ApplicationRecord
   # repetir por N dias" e a pergunta "esse cliente já passou por aqui?" sem guardar o histórico passo a passo
   # (#2459, decisão da Automação em 01/11).
   RETENCAO = 90.days
+  # O que a execução terminada perde junto (#2679): os textos da IA são cópia de conversa e só valem enquanto ela anda.
+  # Quem fecha sem callback grava isto junto da finalizada_em.
+  AO_TERMINAR = { textos: {}.freeze }.freeze
 
   belongs_to :account
   belongs_to :automacao, class_name: 'Autonomia::Automacao::Definicao', inverse_of: :execucoes
@@ -34,8 +37,23 @@ class Autonomia::Automacao::Execucao < ApplicationRecord
   def self.gravar_na_rodada(id, marca, **atributos)
     agora = Time.current
     final = TERMINAIS.include?(atributos.fetch(:estado)) ? agora : nil
+    atributos = atributos.merge(AO_TERMINAR) if final
     where(id: id, estado: 'andando', travada_em: marca)
       .update_all(atributos.merge(finalizada_em: final, updated_at: agora)) == 1 # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # #2679: o texto que o passo de IA `passo_id` produziu, para os passos seguintes lerem (Valores, `ia.<passo>`). Só na
+  # execução ainda aberta: quem a fechou enquanto a IA respondia (desligar, varredura) vence, e o texto não volta para
+  # uma execução terminada. Junta no banco (`||`), sem regravar o que outro passo guardou. Devolve se gravou.
+  def guardar_texto!(passo_id, texto)
+    novo = { passo_id.to_s => texto }
+    gravou = self.class.where(id: id, finalizada_em: nil)
+                 .update_all(['textos = textos || ?::jsonb', novo.to_json]) == 1 # rubocop:disable Rails/SkipsModelValidations
+    return false unless gravou
+
+    self[:textos] = textos.merge(novo)
+    clear_attribute_changes([:textos])
+    true
   end
 
   private
@@ -45,10 +63,12 @@ class Autonomia::Automacao::Execucao < ApplicationRecord
   def da_mesma_automacao
     errors.add(:versao, :invalid) if versao && versao.automacao_id != automacao_id
     errors.add(:automacao, :invalid) if automacao && automacao.account_id != account_id
-    errors.add(:alvo, :invalid) if alvo && alvo.account_id != account_id
+    errors.add(:alvo, :invalid) if alvo && ::Autonomia::Automacao::Contexto.de(alvo).conta_id != account_id
   end
 
   def marcar_finalizada
-    self.finalizada_em = TERMINAIS.include?(estado) ? (finalizada_em || Time.current) : nil
+    terminal = TERMINAIS.include?(estado)
+    self.finalizada_em = terminal ? (finalizada_em || Time.current) : nil
+    assign_attributes(AO_TERMINAR) if terminal
   end
 end

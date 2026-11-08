@@ -45,6 +45,30 @@ RSpec.describe Autonomia::Automacao::Corpo do
       end
     end
 
+    # #2705: "até o fim do mês" (exemplo 6, passos 5 e 10). O fim vem depois da soma: hoje + 1 mês, no fim do mês, é o
+    # último dia do mês que vem.
+    it 'fim do mês: o último dia do mês da data, depois da soma, nos meses de 28, 29, 30 e 31 dias', :aggregate_failures do
+      fim = ->(forma) { forma.merge('$data' => forma['$data'].merge('fim_do' => 'mes')) }
+
+      travel_to(Time.utc(2027, 1, 10, 15)) do
+        expect(montar({ 'd' => fim.call(data('hoje')) }).corpo).to eq('d' => '2027-01-31')
+        expect(montar({ 'd' => fim.call(data('hoje', 1, 'meses')) }).corpo).to eq('d' => '2027-02-28')
+        expect(montar({ 'd' => fim.call(data('hoje', 3, 'meses')) }).corpo).to eq('d' => '2027-04-30')
+        expect(montar({ 'd' => fim.call(data('hoje', -1, 'meses')) }).corpo).to eq('d' => '2026-12-31')
+      end
+      travel_to(Time.utc(2028, 2, 3, 15)) { expect(montar({ 'd' => fim.call(data('hoje')) }).corpo).to eq('d' => '2028-02-29') }
+
+      conversa.update!(custom_attributes: { 'entrega' => '2026-03-15' })
+      expect(montar({ 'd' => fim.call(data({ '$valor' => 'conversa.atributos.entrega' }, 2, 'semanas')) }).corpo).to eq('d' => '2026-03-31')
+    end
+
+    it 'fim do mês no fuso da conta: às 22h30 do dia 31 em São Paulo ainda é o mês que acaba' do
+      account.update!(custom_attributes: { 'timezone' => 'America/Sao_Paulo' })
+      forma = { '$data' => { 'de' => 'hoje', 'fim_do' => 'mes' } }
+
+      travel_to(Time.utc(2026, 11, 1, 1, 30)) { expect(montar({ 'd' => forma }).corpo).to eq('d' => '2026-10-31') }
+    end
+
     it 'parte de um atributo de data, gravado como a tela grava ou com a hora', :aggregate_failures do
       conversa.update!(custom_attributes: { 'entrega' => '2026-03-31' })
       expect(montar({ 'd' => data({ '$valor' => 'conversa.atributos.entrega' }, 1, 'meses') }).corpo).to eq('d' => '2026-04-30')

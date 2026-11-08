@@ -4,7 +4,7 @@
 # mostra o que falta em cada um e grava, por aqui, o mesmo que Editar funil grava:
 # - em cada etapa, `metadata['funnel_stage_type']` ("Como a Meta entende esta etapa");
 # - no funil, `metadata['meta_sync']`: envio ligado, venda e mudança de etapa ligadas.
-# A perda e o dataset continuam como o funil já tinha. O Pixel da conexão só entra no funil que não tem um.
+# A perda continua como o funil já tinha; o dataset do WhatsApp vem da caixa (#1940). O Pixel da conexão só entra no funil que não tem um.
 class Crm::MetaAds::Funnels
   STAGE_TYPES = %w[lead qualified opportunity negotiation].freeze
   NO_TYPE = 'none'.freeze
