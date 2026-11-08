@@ -39,6 +39,7 @@ const MOTIVOS = {
   missing_pixel: 'SEM_PIXEL',
   event_too_old: 'VELHO',
   missing_credentials: 'SEM_ACESSO',
+  missing_dataset: 'SEM_DATASET',
   no_meta_event: 'ETAPA_NAO_AVISA',
   missing_signals: 'SEM_SINAIS',
 };
