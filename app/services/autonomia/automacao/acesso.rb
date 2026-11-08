@@ -55,6 +55,16 @@ class Autonomia::Automacao::Acesso
     ::Autonomia::Automacao::Gatilhos.do_card?(@chave_gatilho || @definicao.versao_ativa&.receita&.dig('gatilho', 'tipo'))
   end
 
+  # As mesmas perguntas do "Nova conversa" do painel: administrador ou membro da caixa (o controller confere), e a
+  # ConversationPolicy deixa começar conversa (o EE recusa a função que só lê). O passo "email" e a conversa nova de
+  # quem não tem conversa (ConversaNova, #2680) perguntam aqui, ao salvar e a cada abertura.
+  def self.comeca_conversa?(account_user, caixa)
+    usuario = account_user.user
+    return false unless account_user.administrator? || usuario.inboxes.exists?(id: caixa.id)
+
+    ConversationPolicy.new({ user: usuario, account: account_user.account, account_user: account_user }, Conversation).create?
+  end
+
   # A mesma pergunta para outra pessoa da conta (quem o passo "avisar" menciona, F4).
   def self.alcanca?(usuario, conversa)
     account_user = conversa.account.account_users.find_by(user_id: usuario.id)

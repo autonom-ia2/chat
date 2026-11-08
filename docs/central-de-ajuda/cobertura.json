@@ -220,6 +220,30 @@
       "nota": null
     },
     {
+      "rota": "autonomia_prospecting_achar",
+      "assuntos": [],
+      "situacao": "coberta",
+      "nota": "Prospecção nova (flag prospeccao_nova): porta Achar empresas. Artigo 16.15."
+    },
+    {
+      "rota": "autonomia_prospecting_achar_busca",
+      "assuntos": [],
+      "situacao": "coberta",
+      "nota": "Prospecção nova (flag prospeccao_nova): uma busca aberta pela lista de Buscas. Artigo 16.16."
+    },
+    {
+      "rota": "autonomia_prospecting_achar_buscas",
+      "assuntos": [],
+      "situacao": "coberta",
+      "nota": "Prospecção nova (flag prospeccao_nova): lista Buscas. Artigo 16.16."
+    },
+    {
+      "rota": "autonomia_prospecting_achar_nova",
+      "assuntos": [],
+      "situacao": "coberta",
+      "nota": "Prospecção nova (flag prospeccao_nova): a lista logo depois de buscar. Artigo 16.15."
+    },
+    {
       "rota": "autonomia_prospecting_lists",
       "assuntos": [
         "09.28-prospeccao-listas-e-publico-de-campanha"

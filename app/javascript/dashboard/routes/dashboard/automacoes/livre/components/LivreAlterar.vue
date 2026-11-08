@@ -86,6 +86,14 @@ const escolhasDoCaminho = computed(() =>
     .filter(([, origem]) => origem.escolher)
     .map(([param, origem]) => ({ param, ...origem }))
 );
+// #2660 lote B: ação sem nada a preencher ("marcar como cliente") diz isso,
+// em vez de abrir o painel vazio.
+const acaoSemCampos = computed(
+  () =>
+    entrada.value?.tipo === 'acao' &&
+    !camposDaAcao.value.length &&
+    !escolhasDoCaminho.value.length
+);
 
 const titulo = computed(() =>
   alvo.value
@@ -296,6 +304,14 @@ defineExpose({ abrir, fechar });
         class="mb-0 text-[0.9375rem] text-n-slate-11"
       >
         {{ $t('AUTOMACAO_LIVRE.CONFIRA.AVANCADA_DICA') }}
+      </p>
+
+      <p
+        v-if="acaoSemCampos"
+        data-sem-campos-dica
+        class="mb-0 text-[0.9375rem] text-n-slate-11"
+      >
+        {{ $t('AUTOMACAO_LIVRE.CONFIRA.SEM_CAMPOS_DICA') }}
       </p>
 
       <LivreGatilho

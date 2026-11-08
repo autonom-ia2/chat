@@ -36,11 +36,13 @@ class Api::V1::Accounts::Crm::Cards::ContactsController < Api::V1::Accounts::Crm
 
   private
 
+  # O `permit` vai direto no `params.require(:contact)`: assim o gerador de formatos do Guia lê os campos e o tipo deles
+  # (#2660). Pela variável local, ele via só "contact", sem tipo, e a ação ficava com o formato incompleto.
   def contact_attributes
-    input = params.require(:contact)
-    raise InvalidContactInput, I18n.t('errors.crm.invalid_contact_input') unless valid_contact_input?(input)
+    raise InvalidContactInput, I18n.t('errors.crm.invalid_contact_input') unless valid_contact_input?(params.require(:contact))
 
-    attributes = input.permit(:name, :email, :phone_number, additional_attributes: ADDITIONAL_FIELDS, custom_attributes: {}).to_h
+    attributes = params.require(:contact).permit(:name, :email, :phone_number, additional_attributes: ADDITIONAL_FIELDS,
+                                                                               custom_attributes: {}).to_h
     %w[name email phone_number].each do |key|
       attributes[key] = attributes[key].strip if attributes[key].is_a?(String)
     end

@@ -8,8 +8,10 @@
 # - As esperas andam com o relógio adiantado e a varredura do motor.
 module FechamentoAutomacao
   OPENAI = 'https://api.openai.com/v1/responses'.freeze
-  # Os jobs que o caminho de produção enfileira entre o evento e a saída.
-  JOBS = [EventDispatcherJob, Autonomia::Automacao::AvancarJob, SendReplyJob].freeze
+  # Os jobs que o caminho de produção enfileira entre o evento e a saída. Os do webhook de cada canal (FechamentoAutomacao::
+  # Canais) gravam a mensagem do cliente como em produção.
+  JOBS = [Webhooks::WhatsappEventsJob, Webhooks::InstagramEventsJob, EventDispatcherJob, Autonomia::Automacao::AvancarJob,
+          SendReplyJob].freeze
   LIMITE_DE_JOBS = 60
 
   Chamada = Data.define(:metodo, :host, :caminho, :corpo)
@@ -194,6 +196,10 @@ module FechamentoAutomacao::Lacunas
     'G31' => nil,
     # G32: a reunião marcada como condição do "esperar até", no meio da execução.
     'G32' => nil,
+    # #2680: a receita escolhe a caixa por onde abrir a conversa de quem não tem uma (o lead do formulário, o contato).
+    'G33' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('properties', 'gatilho', 'properties').key?('conversa_nova') },
+    # #2680: a resposta em outra conversa do contato conta, e a mensagem que a automação mandou vira valor.
+    'G34' => -> { valor?('envio.texto') && valor?('envio.situacao') },
     # A IA lê o card (`le: card`, #2679): exemplo 13, passo 5; exemplo 15, passo 9.
     'G35' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('card') },
     # A IA lê as notas internas da conversa (`le: notas`, #2679): exemplo 5, passo 1.

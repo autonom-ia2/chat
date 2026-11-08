@@ -319,7 +319,8 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
       expect(execucao.reload.estado).to eq('concluida')
     end
 
-    it 'a mensagem de outra conversa não acorda o card' do
+    # #2680: o e-mail da automação abre outra conversa do mesmo contato, e a resposta chega nela.
+    it 'a resposta do mesmo contato em outra conversa acorda o card na hora' do
       execucao = comecar_e_rodar(definicao, card)
       outra = create(:conversation, account: account, inbox: conversa.inbox, contact: conversa.contact)
 
@@ -328,7 +329,46 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
         perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { listener.message_created(evento('message.created', message: mensagem)) }
       end
 
+      expect(execucao.reload.estado).to eq('concluida')
+    end
+
+    it 'a mensagem de outro contato não acorda o card' do
+      execucao = comecar_e_rodar(definicao, card)
+      outra = create(:conversation, account: account, inbox: conversa.inbox)
+
+      travel(10.minutes) do
+        mensagem = create(:message, account: account, conversation: outra, inbox: outra.inbox, message_type: :incoming)
+        perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { listener.message_created(evento('message.created', message: mensagem)) }
+      end
+
       expect(execucao.reload.estado).to eq('esperando')
+    end
+  end
+
+  # Parecer da Funções no #2689: a resposta numa caixa que quem ligou não abre não decide o ramo.
+  describe 'nas conversas que quem ligou vê' do
+    let(:espera) { 1.hour.ago.. }
+    let(:outra_caixa) { create(:inbox, account: account) }
+
+    before do
+      conversa.inbox.add_members([atendente.id])
+      outra = create(:conversation, account: account, inbox: outra_caixa, contact: conversa.contact)
+      create(:message, account: account, conversation: outra, inbox: outra_caixa, message_type: :incoming)
+    end
+
+    it 'a resposta na caixa que ele não abre não conta; para o administrador, conta', :aggregate_failures do
+      expect(described_class.cliente?(conversa.contact, espera, atendente)).to be(false)
+      expect(described_class.cliente?(conversa.contact, espera, admin)).to be(true)
+    end
+
+    it 'a resposta na caixa dele conta' do
+      create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming)
+
+      expect(described_class.cliente?(conversa.contact, espera, atendente)).to be(true)
+    end
+
+    it 'sem quem ligou, nunca respondeu' do
+      expect(described_class.cliente?(conversa.contact, espera, nil)).to be(false)
     end
   end
 
