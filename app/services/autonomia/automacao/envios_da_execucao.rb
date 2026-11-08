@@ -2,26 +2,37 @@
 # tentado: o modelo no WhatsApp, o e-mail (que abre uma conversa própria, G34) e as respostas que vieram nessas conversas.
 #
 # - Os envios saem dos registros da execução (`mensagem_id`, a mesma ponte do histórico): só mensagem ao cliente, de
-#   saída e não privada. A nota do "avisar" fica de fora.
+#   saída e não privada. A nota do "avisar" fica de fora. O texto do envio é o da receita e vai com a marca
+#   `not_delivered` quando o canal recusou (status failed).
 # - Só entra conversa que quem ligou a automação vê (Acesso.alcanca?, a política da conversa, só leitura). Outras
 #   conversas do contato, que a execução não tocou, não entram.
-# - O envio que o canal recusou (status failed) vai marcado `not_delivered`.
+# - As respostas das outras conversas (`other_conversations`) vão a quem lê o resumo, então também passam por ele
+#   (parecer de Funções no #2763): no aviso (`publico`), a conversa só entra se todo destinatário a vê; na nota, que
+#   todos da conversa do alvo leem, só entra conversa da mesma caixa do alvo. As que ficam de fora vão em `fora` (os ids).
 # - A conversa do alvo já vai na leitura do passo. Das outras, a mesma leitura de mensagens do passo (o Estado).
 class Autonomia::Automacao::EnviosDaExecucao
   LEITURAS_DE_MENSAGEM = %w[mensagens_recentes mensagens_com_respostas ultima_mensagem].freeze
   MAX_CARACTERES = ::Autonomia::Decisores::Estado::MAX_CARACTERES
 
-  def initialize(execucao:, conversa:, leituras:)
+  # `publico`: as pessoas que vão receber o resumo (o aviso). nil é a nota.
+  def initialize(execucao:, conversa:, leituras:, publico: nil)
     @execucao = execucao
     @conversa = conversa
     @leituras = Array(leituras) & LEITURAS_DE_MENSAGEM
+    @publico = publico
   end
 
   # O que vai à IA junto da leitura do passo. Vazio quando a execução ainda não mandou nada.
   def dados
     @dados ||= { automation_sends: envios.map { |mensagem| envio(mensagem) },
-                 other_conversations: outras.map { |conversa| leitura(conversa) }.compact_blank }.compact_blank
+                 other_conversations: lidas.map { |conversa| leitura(conversa) }.compact_blank }.compact_blank
   end
+
+  # Leu resposta de outra conversa: o resumo não serve para reuso (ia.<passo>) fora deste público.
+  def outras_lidas? = dados.key?(:other_conversations)
+
+  # Os ids das outras conversas que o público do resumo não vê, para o histórico.
+  def fora = (outras - lidas).map(&:display_id)
 
   private
 
@@ -34,17 +45,22 @@ class Autonomia::Automacao::EnviosDaExecucao
   end
 
   def visiveis
-    @visiveis ||= mensagens.map(&:conversation).uniq.select { |conversa| conversa == @conversa || ve?(conversa) }
+    @visiveis ||= mensagens.map(&:conversation).uniq.select { |conversa| conversa == @conversa || ve?(quem_ligou, conversa) }
   end
 
-  def ve?(conversa)
-    quem = @execucao.automacao.ligada_por
-    quem.present? && ::Autonomia::Automacao::Acesso.alcanca?(quem, conversa)
-  end
+  def quem_ligou = @execucao.automacao.ligada_por
+
+  def ve?(pessoa, conversa) = pessoa.present? && ::Autonomia::Automacao::Acesso.alcanca?(pessoa, conversa)
 
   def envios = mensagens.select { |mensagem| visiveis.include?(mensagem.conversation) }
 
   def outras = visiveis - [@conversa]
+
+  def lidas
+    @lidas ||= outras.select do |conversa|
+      @publico.nil? ? conversa.inbox_id == @conversa.inbox_id : @publico.all? { |pessoa| ve?(pessoa, conversa) }
+    end
+  end
 
   def envio(mensagem)
     conversa = mensagem.conversation

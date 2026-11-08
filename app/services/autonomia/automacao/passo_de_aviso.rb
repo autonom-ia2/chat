@@ -33,6 +33,9 @@ class Autonomia::Automacao::PassoDeAviso
     Resultado.new(tipo: :ok, dados: { 'mensagem_id' => nota.id, 'pessoas' => pessoas.map(&:id), 'fora' => fora })
   end
 
+  # Quem vai receber (G42): o "resumir" só lê outra conversa que todas essas pessoas veem.
+  def pessoas = destinatarios.first
+
   # O que pula sem olhar o texto: o "resumir" confere antes de pagar a IA.
   def ninguem_para_avisar
     pessoas, fora = destinatarios

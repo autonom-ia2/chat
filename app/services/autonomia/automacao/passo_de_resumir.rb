@@ -9,7 +9,8 @@
 # sem outra ida à IA.
 #
 # G42 (#2721): lê também o que a própria execução mandou ao cliente (EnviosDaExecucao): o e-mail em conversa própria, o
-# modelo recusado (marcado como não entregue) e as respostas nessas conversas, só das que quem ligou vê.
+# modelo recusado (marcado como não entregue) e as respostas nessas conversas, só das que quem ligou vê. A resposta de
+# outra conversa só entra se o público do resumo a vê, e o resumo que a leu não fica guardado para reuso.
 class Autonomia::Automacao::PassoDeResumir
   include ::Autonomia::Automacao::ComIa
 
@@ -41,7 +42,7 @@ class Autonomia::Automacao::PassoDeResumir
     return negado if negado
 
     aviso = ::Autonomia::Automacao::PassoDeAviso.new(execucao: @execucao, passo: passo_do_aviso, alvo: @conversa) if aviso?
-    estado = leitura
+    estado = leitura_da_execucao(aviso)
     pular = antes_da_ia(aviso, estado)
     return pular if pular
 
@@ -55,9 +56,11 @@ class Autonomia::Automacao::PassoDeResumir
 
   def aviso? = self.class.fala_com_gente?(@passo)
 
-  def leitura(**)
-    envios = ::Autonomia::Automacao::EnviosDaExecucao.new(execucao: @execucao, conversa: @conversa, leituras: @passo['le'])
-    ::Autonomia::Automacao::LeituraDaExecucao.new(super, envios)
+  # G42: o público do resumo (quem o aviso vai mencionar, ou a conversa do alvo na nota) decide que outra conversa entra.
+  def leitura_da_execucao(aviso)
+    @envios = ::Autonomia::Automacao::EnviosDaExecucao.new(execucao: @execucao, conversa: @conversa, leituras: @passo['le'],
+                                                           publico: aviso&.pessoas)
+    ::Autonomia::Automacao::LeituraDaExecucao.new(leitura, @envios)
   end
 
   # O que pula sem pagar a IA: ninguém para avisar, ou nada para ler.
@@ -68,9 +71,10 @@ class Autonomia::Automacao::PassoDeResumir
   def entregar(aviso, texto, custo)
     return Resultado.new(tipo: :pulado, motivo: 'texto_vazio', dados: { 'ia' => custo }) if texto.empty?
 
-    guardar(texto)
+    guardar(texto) unless @envios.outras_lidas?
     resumo = frase(:resumo, texto: texto)
     resultado = aviso ? aviso.avisar(resumo) : Resultado.new(tipo: :ok, dados: { 'nota_id' => nota(resumo).id })
-    Resultado.new(tipo: resultado.tipo, motivo: resultado.motivo, dados: resultado.dados.merge('ia' => custo))
+    fora = { 'conversas_fora' => @envios.fora.presence }.compact
+    Resultado.new(tipo: resultado.tipo, motivo: resultado.motivo, dados: resultado.dados.merge('ia' => custo, **fora))
   end
 end

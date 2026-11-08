@@ -13,12 +13,14 @@ RSpec.describe Autonomia::Automacao::PassoDeResumir, :automacao_motor do
   let(:contato) { create(:contact, account: account, name: 'Carla', email: 'cliente@exemplo.com') }
   let(:conversa) { create(:conversation, account: account, contact: contato, inbox: whatsapp) }
   let(:corpos) { [] }
+  let(:destino) { { 'avisar' => { 'pessoas' => [admin.id] } } }
   let(:passos) do
     [{ 'id' => 'p1', 'tipo' => 'email', 'caixa_id' => caixa_de_email.id, 'assunto' => ['Sua renovação'],
        'texto' => ['Oi, sua apólice vence em 5 dias.'] },
      mensagem_passo('p2', 'Oi, viu o e-mail da renovação?'),
      esperar_passo('p3'),
-     { 'id' => 'p4', 'tipo' => 'resumir', 'le' => %w[mensagens_com_respostas], 'linhas' => 3, 'destino' => 'nota' }]
+     { 'id' => 'p4', 'tipo' => 'resumir', 'le' => %w[mensagens_com_respostas], 'linhas' => 3, 'destino' => destino },
+     esperar_passo('p5')]
   end
 
   before do
@@ -58,10 +60,36 @@ RSpec.describe Autonomia::Automacao::PassoDeResumir, :automacao_motor do
       create(:message, conversation: conversa_de_email, account: account, message_type: :incoming, content: 'Recebi, vou ver amanhã')
     end
 
-    expect(registros(execucao).last).to eq(%w[p4 ok])
+    expect(registros(execucao)).to include(%w[p4 ok])
     expect(corpos.sole['input'].to_s).to include('Oi, sua apólice vence em 5 dias.', 'Sua renovação', 'Recebi, vou ver amanhã')
     expect(corpos.sole['input'].to_s).to include('Oi, viu o e-mail da renovação?', 'Quero renovar o seguro do carro')
     expect(corpos.sole['instructions']).to include('automation_sends', 'not_delivered')
+  end
+
+  # A nota todos da conversa do alvo leem: a resposta de outra caixa não entra, e o histórico diz qual ficou de fora.
+  context 'when o resumo vai numa nota' do
+    let(:destino) { 'nota' }
+
+    it 'lê só outra conversa da mesma caixa do alvo; a do e-mail fica de fora e vai ao histórico', :aggregate_failures do
+      execucao = rodar do
+        create(:message, conversation: conversa_de_email, account: account, message_type: :incoming, content: 'Resposta por e-mail')
+      end
+
+      expect(corpos.sole['input'].to_s).not_to include('Resposta por e-mail')
+      expect(corpos.sole['input'].to_s).to include('Oi, sua apólice vence em 5 dias.')
+      registro = Autonomia::Automacao::Registro.find_by!(execucao: execucao, passo: 'p4')
+      expect(registro.dados).to include('conversas_fora' => [conversa_de_email.display_id])
+      expect(execucao.reload.textos).to include('p4' => 'Tentamos e-mail e WhatsApp.')
+    end
+  end
+
+  it 'o resumo que leu outra conversa não fica guardado para um passo seguinte', :aggregate_failures do
+    execucao = rodar do
+      create(:message, conversation: conversa_de_email, account: account, message_type: :incoming, content: 'Recebi, vou ver amanhã')
+    end
+
+    expect(registros(execucao)).to include(%w[p4 ok])
+    expect(execucao.reload.textos).not_to have_key('p4')
   end
 
   # No OSS só o administrador liga automação, e ele vê toda caixa: a pergunta à política da conversa (a mesma do
@@ -73,7 +101,7 @@ RSpec.describe Autonomia::Automacao::PassoDeResumir, :automacao_motor do
       allow(Autonomia::Automacao::Acesso).to receive(:alcanca?).with(admin, conversa_de_email).and_return(false)
     end
 
-    expect(registros(execucao).last).to eq(%w[p4 ok])
+    expect(registros(execucao)).to include(%w[p4 ok])
     expect(corpos.sole['input'].to_s).not_to include('Oi, sua apólice vence em 5 dias.', 'Resposta escondida', 'Sua renovação')
     expect(corpos.sole['input'].to_s).to include('Oi, viu o e-mail da renovação?')
   end
