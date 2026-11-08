@@ -18,7 +18,8 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
   # [{ tipo: :titulo, nivel:, texto:, pagina: } | { tipo: :paragrafo, texto:, pagina: }], na ordem do documento.
   def blocos_em_paragrafos(pages)
     linhas = pages.map { |page| linhas_da_pagina(page) }
-    documento = { normal: espaco_normal(linhas), fonte_do_corpo: fonte_do_corpo(linhas), letra_do_corpo: letra_do_corpo(linhas) }
+    documento = { normal: espaco_normal(linhas), fonte_do_corpo: fonte_do_corpo(linhas), letra_do_corpo: letra_do_corpo(linhas),
+                  total_de_paginas: @paginas_total || pages.size }
     paginas = sem_rodape(pages.each_with_index.map { |page, indice| pagina_lida(page, linhas[indice], documento) })
     com_niveis(blocos_das_paginas(paginas))
   end
@@ -75,14 +76,17 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
                      .max_by(&:last)&.first.to_f
   end
 
+  # Sumário: a maioria das linhas termina num número, e esses números são páginas do documento, crescendo de cima para
+  # baixo. Uma tabela de valores (percentuais, preços) também termina em número, mas os números não crescem assim.
   def sumario?(pagina)
     linhas = pagina[:linhas]
-    com_numero = linhas.count { |linha| termina_em_numero?(linha[:texto]) }
-    linhas.size >= MIN_LINHAS_DO_SUMARIO && com_numero >= linhas.size * FRACAO_DO_SUMARIO
+    numeros = linhas.filter_map { |linha| numero_no_fim(linha[:texto]) }
+    linhas.size >= MIN_LINHAS_DO_SUMARIO && numeros.size >= linhas.size * FRACAO_DO_SUMARIO &&
+      numeros.each_cons(2).all? { |anterior, seguinte| anterior <= seguinte } && numeros.max <= pagina[:total_de_paginas]
   end
 
-  def termina_em_numero?(texto)
+  def numero_no_fim(texto)
     palavras = texto.split
-    palavras.size > 1 && palavras.last == palavras.last.to_i.to_s
+    palavras.last.to_i if palavras.size > 1 && palavras.last == palavras.last.to_i.to_s
   end
 end

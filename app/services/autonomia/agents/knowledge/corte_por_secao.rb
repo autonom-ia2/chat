@@ -17,7 +17,7 @@ class Autonomia::Agents::Knowledge::CortePorSecao
   SEPARADOR = ' › '.freeze
   FIM_DE_FRASE = '. '.freeze
 
-  Secao = Struct.new(:caminho, :paragrafos, :id, keyword_init: true)
+  Secao = Struct.new(:caminho, :paragrafos, :id, :pagina, keyword_init: true)
 
   def initialize(blocos, documento:, maximo: MAXIMO)
     @blocos = blocos
@@ -40,9 +40,21 @@ class Autonomia::Agents::Knowledge::CortePorSecao
 
       titulos.pop while titulos.any? && titulos.last[:nivel] >= bloco[:nivel]
       titulos << bloco
-      lista << Secao.new(caminho: titulos.pluck(:texto), paragrafos: [], id: "s#{lista.size}")
+      lista << Secao.new(caminho: titulos.pluck(:texto), paragrafos: [], id: "s#{lista.size}", pagina: bloco[:pagina])
     end
-    lista.reject { |secao| secao.paragrafos.empty? }
+    com_titulos_soltos(lista).reject { |secao| secao.paragrafos.empty? }
+  end
+
+  # Título sem nada embaixo e que não abre subseção (o seguinte não é mais fundo) é conteúdo lido como título — o item
+  # de lista curto em negrito, por exemplo. O texto dele vira o corpo da própria seção, para não sumir.
+  def com_titulos_soltos(lista)
+    lista.each_with_index.map do |secao, indice|
+      seguinte = lista[indice + 1]
+      next secao unless secao.paragrafos.empty? && secao.caminho.any?
+      next secao if seguinte && seguinte.caminho.size > secao.caminho.size
+
+      secao.class.new(**secao.to_h, paragrafos: [{ tipo: :paragrafo, texto: secao.caminho.last, pagina: secao.pagina }])
+    end
   end
 
   # Seção pequena entra no começo da irmã seguinte, com o próprio título como primeira linha.

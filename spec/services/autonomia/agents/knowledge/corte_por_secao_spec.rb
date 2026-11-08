@@ -83,6 +83,15 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
     expect(metadata[:keywords]).to include('franquia')
   end
 
+  it 'never drops a title with nothing under it: a short bold list item read as a title keeps its text', :aggregate_failures do
+    trechos = cortar([titulo('5. EXCLUSOES', 1), titulo('j) Perdas durante competicoes de qualquer tipo', 2),
+                      titulo('k) Acidentes por dirigir sem habilitacao', 2), titulo('6. ACEITACAO', 1), paragrafo(franquia)])
+    texto = trechos.pluck(:text).join("\n")
+
+    expect(texto).to include('j) Perdas durante competicoes de qualquer tipo', 'k) Acidentes por dirigir sem habilitacao')
+    expect(trechos.last[:text]).to start_with('Condicoes Gerais › 6. ACEITACAO')
+  end
+
   it 'returns nothing for no blocks' do
     expect(cortar([])).to eq([])
   end
