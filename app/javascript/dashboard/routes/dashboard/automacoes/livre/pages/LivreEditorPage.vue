@@ -509,12 +509,7 @@ onMounted(() => {
               <LivreConfira
                 :receita="receita"
                 :catalogo="catalogoComTextos"
-                :nomes-do-gatilho="{
-                  ...escolhasDoGatilho.nomes,
-                  caixa: Object.fromEntries(
-                    opcoes.caixaDaConversa.map(item => [item.value, item.label])
-                  ),
-                }"
+                :nomes-do-gatilho="escolhasDoGatilho.nomes"
                 :pode-mudar="podeMudar && !ocupado && !conflito"
                 :tudo="tudo"
                 @alterar="chave => mudarUrl({ alterar: chave })"

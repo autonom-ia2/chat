@@ -306,6 +306,37 @@ describe('LivreAlterar', () => {
     });
   });
 
+  // #2680: o topo do painel diz a caixa que abre a conversa nova, como a lista.
+  it('a frase do gatilho no topo diz a caixa da conversa nova', async () => {
+    const catalogo = {
+      ...CATALOGO,
+      gatilhos: [{ tipo: 'conversa.resolvida', frase: 'RESOLVIDA' }],
+    };
+    const wrapper = mount(LivreAlterar, {
+      props: {
+        catalogo,
+        opcoes: {},
+        escolhasDoGatilho: { nomes: { caixa: { 5: 'WhatsApp Vendas' } } },
+        atributosDaPeca: () => [],
+        atributosDo: () => [],
+      },
+      global: {
+        stubs: { SidePanel: PainelFalso },
+        mocks: { $t: chave => chave },
+      },
+    });
+
+    wrapper.vm.abrir({
+      tipo: 'gatilho',
+      valor: { tipo: 'conversa.resolvida', conversa_nova: { caixa_id: 5 } },
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-frase-alterar]').text()).toBe(
+      'AUTOMACAO_LIVRE.CONVERSA_NOVA.NA_FRASE(RESOLVIDA,WhatsApp Vendas)'
+    );
+  });
+
   // G11: a resposta durante a espera só vale na condição do "esperar até".
   it('oferece a resposta durante a espera só na condição do "esperar até"', async () => {
     const condicao = { nome: 'condicao', peca: 'condicao', rotulo: 'CONDICAO' };
