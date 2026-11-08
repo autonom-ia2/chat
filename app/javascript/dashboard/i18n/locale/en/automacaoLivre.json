@@ -83,6 +83,10 @@
       "CONTATO_ALTERAR": "Update the contact",
       "CONTATO_NOTA": "Add a note to the contact",
       "EMPRESA_ALTERAR": "Update the contact's company",
+      "CONTATO_CRIAR": "Create a contact",
+      "EMPRESA_CRIAR": "Create a company",
+      "CONTATO_CLIENTE": "Mark the contact as a customer",
+      "CARD_CONTATO_CRIAR": "Create the card contact",
       "ETIQUETA_CRIAR": "Create a label",
       "ETIQUETA_ALTERAR": "Change a label",
       "ATRIBUTO_CRIAR": "Create a custom field",
@@ -265,7 +269,8 @@
       "INSERIR": "Add a step here",
       "PASSOS_NO_GALHO": "(1 step) | ({n} steps)",
       "AVANCADA": "Advanced action",
-      "AVANCADA_DICA": "Only the Guide changes this step. Here it stays as it is."
+      "AVANCADA_DICA": "Only the Guide changes this step. Here it stays as it is.",
+      "SEM_CAMPOS_DICA": "This step has nothing to fill in. Just save."
     },
     "FRASES": {
       "FALTA_GATILHO": "Choose when it starts",

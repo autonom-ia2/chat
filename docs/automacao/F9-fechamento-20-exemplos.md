@@ -78,13 +78,16 @@ Uma porta por canal, todas na camada HTTP, gravando a chamada:
 | Saída | Onde o pedido sai | Receptor | O spec confere |
 |---|---|---|---|
 | WhatsApp oficial (Cloud) | `graph.facebook.com/…/messages` (`SendReplyJob` → `Whatsapp::Providers::WhatsappCloudService`) | WebMock grava e responde `wamid.*` | número do cliente, texto, e o `template.name` + parâmetros quando for modelo aprovado |
-| WhatsApp Híbrido (WAHA) (a fazer) | host da WAHA da caixa | WebMock grava | sessão, chatId, texto |
-| Instagram (a fazer) | `graph.facebook.com/…/messages` | WebMock grava | recipient id, texto |
+| WhatsApp Híbrido | Dentro da janela de 24 h, pela Cloud (`receptor_whatsapp_cloud`). Fora dela, pela WAHA (`WAHA_API_URL`, `/api/sendText`) | `receptor_waha` grava qualquer pedido à WAHA | com a janela aberta, a saída pela Cloud e nada na WAHA (#2701) |
+| Instagram | `graph.instagram.com/v22.0/<conta>/messages` (`Instagram::SendOnInstagramService`, corpo em formulário) | `receptor_instagram` grava; `respostas_do_instagram` separa a mensagem do "digitando" | recipient id e texto (#2701) |
 | E-mail (a fazer) | ActionMailer (`deliveries`) | `ActionMailer::Base.deliveries` | destinatário, assunto, corpo |
 | Webhook para outro sistema (F8) (a fazer) | URL configurada no passo | WebMock grava e devolve a resposta roteirizada (ex.: número da proposta, ou recusa) | URL, campos escolhidos; a resposta voltando para o card |
 
-Hoje só o WhatsApp oficial está montado (`receptor_whatsapp_cloud`); as outras portas entram com o primeiro exemplo
-que mandar por elas. O receptor não é um mock do nosso código: o `SendReplyJob`, o serviço do canal e o cliente HTTP rodam inteiros, e só
+O WhatsApp oficial, o Híbrido e o Instagram estão montados; as outras portas entram com o primeiro exemplo que
+mandar por elas. A entrada também é a real (`spec/support/fechamento_automacao_canais.rb`, #2701): o webhook da Cloud e o
+do Instagram, assinados como a Meta assina, e o job do canal grava a mensagem do cliente. No Híbrido, a mensagem do
+cliente entra pela Cloud: o motor (WAHA) só avisa status e recibo, e só manda com a janela fechada.
+O receptor não é um mock do nosso código: o `SendReplyJob`, o serviço do canal e o cliente HTTP rodam inteiros, e só
 a rede é trocada. Por isso o pedido gravado é o que iria para produção.
 
 ### 3.3 Relógio adiantado (F9.8)
@@ -224,9 +227,10 @@ G11 → G4 → G12 → G14. G16, G17, G18 e G20 destravam os exemplos mais longo
 
 ### 6.2 Notas do exemplo 10
 
-- **Só o WhatsApp oficial.** O termo diz "toda mensagem do cliente, em qualquer canal". Hoje o spec prova pelo WhatsApp
-  oficial; os outros canais entram com o receptor de cada um (seção 3.2). Para contar inteiro, o exemplo roda em
-  WhatsApp oficial, Híbrido e Instagram.
+- **Qualquer canal: provado (#2701).** O termo diz "toda mensagem do cliente, em qualquer canal". O spec do exemplo prova
+  cada passo pelo WhatsApp oficial, e `exemplo_10_outros_canais_spec.rb` roda a mesma receita (passos 1 a 5) com o
+  cliente escrevendo pelo webhook real do Híbrido e do Instagram. A resposta sai pelo canal dele. No Híbrido, com a
+  janela aberta, ela sai pela Cloud e nada passa pela WAHA.
 - **Nota do "decidir" em toda mensagem normal: decidido.** O "decidir" deixa uma nota privada com o caminho e o porquê
   (F7.4), mas não no "nenhum se aplica" (#2578, PR #2589). Com o gatilho em toda mensagem do cliente, a mensagem normal
   não ganha nota. O spec confere isso.

@@ -83,6 +83,10 @@
       "CONTATO_ALTERAR": "Atualizar o contato",
       "CONTATO_NOTA": "Deixar nota no contato",
       "EMPRESA_ALTERAR": "Atualizar a empresa do contato",
+      "CONTATO_CRIAR": "Criar um contato",
+      "EMPRESA_CRIAR": "Criar uma empresa",
+      "CONTATO_CLIENTE": "Marcar o contato como cliente",
+      "CARD_CONTATO_CRIAR": "Criar o contato do card",
       "ETIQUETA_CRIAR": "Criar uma etiqueta",
       "ETIQUETA_ALTERAR": "Mudar uma etiqueta",
       "ATRIBUTO_CRIAR": "Criar um campo personalizado",
@@ -265,7 +269,8 @@
       "INSERIR": "Pôr um passo aqui",
       "PASSOS_NO_GALHO": "(1 passo) | ({n} passos)",
       "AVANCADA": "Ação avançada",
-      "AVANCADA_DICA": "Só o Guia muda este passo. Aqui ele fica como está."
+      "AVANCADA_DICA": "Só o Guia muda este passo. Aqui ele fica como está.",
+      "SEM_CAMPOS_DICA": "Este passo não pede nada. É só salvar."
     },
     "FRASES": {
       "FALTA_GATILHO": "Escolha quando ela começa",
