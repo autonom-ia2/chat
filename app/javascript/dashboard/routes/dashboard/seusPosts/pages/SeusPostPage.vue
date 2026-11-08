@@ -25,6 +25,7 @@ import {
   useCuidado,
   useResumo,
 } from '../../campaigns/metaAds/comentariosIa/useCuidado';
+import AvisoRedeQueFaltou from '../../campaigns/metaAds/comentariosIa/AvisoRedeQueFaltou.vue';
 
 // Seus posts F2 (#2305): um post do perfil e os comentários dele, montado como o detalhe de um anúncio: o voltar, o
 // herói (nome, como foi e quem espera você), a foto e o post à esquerda, os números à direita e os comentários
@@ -190,10 +191,10 @@ const resumo = computed(() => {
   return t(`SEUS_POSTS.POST.SUMMARY.${chave}`, { times: vezes });
 });
 
-// Os números do post em quatro quadros, como o detalhe de anúncio, e os outros numa linha curta embaixo. No
-// Instagram, vezes, curtidas e comentários são sem anúncio; pessoas, salvaram e compartilharam podem incluir. Na
-// Página, só as vezes se separam: o resto inclui o anúncio quando houve. O Facebook não conta quem salvou: no lugar,
-// cliques no post.
+// Os números do post em quatro quadros, como o detalhe de anúncio, e os outros numa linha curta embaixo. Só as vezes
+// se separam do anúncio: o resto pode incluir. No Instagram, curtidas e comentários também seguem marcados como "pode
+// incluir anúncio", como no cartão de Seus posts, até haver chamada real num post impulsionado (#2522). Na Página, o
+// resto inclui o anúncio quando houve. O Facebook não conta quem salvou: no lugar, cliques no post.
 const QUADROS = [
   ['apareceu', 'VIEWS'],
   ['pessoas', 'PEOPLE'],
@@ -211,11 +212,8 @@ const OUTROS = {
   ],
 };
 const SEM_INSIGHTS = ['curtidas', 'comentarios'];
-const podeTerAnuncio = chave => {
-  if (chave === 'apareceu') return false;
-  if (rede.value === 'instagram') return chave === 'pessoas';
-  return post.value.podeTerAnuncio;
-};
+const podeTerAnuncio = chave =>
+  chave !== 'apareceu' && post.value.podeTerAnuncio;
 const quadros = computed(() =>
   QUADROS.filter(
     ([chave]) => !post.value.semInsights || SEM_INSIGHTS.includes(chave)
@@ -807,6 +805,14 @@ const BOTAO_DE_BORDA =
                 />
               </div>
               <template v-else>
+                <!-- #2522: o mesmo aviso do Painel quando uma rede do alvo faltou. O post de Seus posts é de uma rede só
+                     (rede que falha vem como status, no ramo acima); o aviso fica para o alvo de duas redes. -->
+                <AvisoRedeQueFaltou
+                  :network-status="oQueTem.network_status"
+                  pode-tentar
+                  :carregando="lendoResumo"
+                  @tentar="lerResumo"
+                />
                 <!-- Um item por linha: no celular, " · " quebrava e deixava o ponto no começo da linha. -->
                 <ul
                   class="m-0 flex list-none flex-col gap-1 p-0 text-base font-medium text-n-slate-12"

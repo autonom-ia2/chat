@@ -39,6 +39,10 @@ Passo 3 do exemplo 5 ("card ganho → revisão daqui a 6 meses"):
   ("2026-03-31T00:00:00Z" ou "2026-03-31 08:00") vale pelo dia escrito, como na tela.
 - **Soma pelo calendário:** dias, semanas, meses ou anos; N inteiro, pode ser negativo. 31/01 + 1 mês = 28/02. Teto
   de 3650 de cada unidade no esquema, contra erro de digitação (igual à duração).
+- **Fim do mês (#2705):** `"fim_do": "mes"` leva ao último dia do mês da data já somada. Hoje + 1 mês, no fim do
+  mês, é o último dia do mês que vem; sem `mais`, é o fim do mês de hoje (no fuso da conta). Na tela, a pergunta "Que
+  dia desse mês?" oferece "O próprio dia calculado" ou "O último dia do mês". Exemplo 6, passos 5 e 10:
+  `exemplo_06_fim_do_mes_spec.rb`.
 
 ## Quando a ação pula
 

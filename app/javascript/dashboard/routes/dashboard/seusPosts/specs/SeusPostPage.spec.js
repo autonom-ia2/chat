@@ -215,6 +215,27 @@ describe('Seus posts: o post (#2305)', () => {
     });
   });
 
+  // #2522: um texto só. No Instagram (boosted nil, não se sabe), curtidas e comentários podem incluir anúncio, como no
+  // cartão de Seus posts; só as vezes são sem anúncio.
+  it('no Instagram, curtidas e comentários levam a marca "pode incluir anúncio" e o texto diz o mesmo', async () => {
+    responder();
+    const wrapper = await montar();
+
+    const marcados = ['apareceu', 'pessoas', 'curtidas', 'comentarios'].filter(
+      nome =>
+        wrapper
+          .find(
+            `[data-seus-posts-numero="${nome}"] [data-seus-posts-marca-anuncio]`
+          )
+          .exists()
+    );
+    expect(marcados).toEqual(['pessoas', 'curtidas', 'comentarios']);
+    const lado = wrapper.find('[data-seus-posts-lado]').text();
+    expect(lado).toContain('curtidas, comentários');
+    expect(lado).toContain('podem incluir anúncio');
+    expect(lado).not.toContain('comentários são sem anúncio');
+  });
+
   it('o herói conta quem espera e Ver quem espera filtra a lista', async () => {
     responder();
     const wrapper = await montar();

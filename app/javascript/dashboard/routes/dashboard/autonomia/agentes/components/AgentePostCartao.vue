@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import {
   ICONE_DA_REDE,
   agentesDasPortas,
+  leituraDosComentarios,
   motivosDasPortas,
   estadoDoCuidado,
   redesDoCuidado,
@@ -69,15 +70,25 @@ const titulo = computed(() => {
     ? t(`${KEY}.CARTAO.SEM_LEGENDA`)
     : t(`${KEY}.CARTAO.LENDO`);
 });
-// null: ainda lendo; 'sem_leitura': a Meta não deixou ler os comentários (erro do cartão ou status da leitura).
+// null: ainda lendo; 'sem_leitura': a Meta não deixou ler os comentários (erro do cartão, status da leitura ou, no
+// anúncio nas duas redes, a lista vazia com uma rede de fora: #2522, nunca um zero falso).
+const leitura = computed(() =>
+  leituraDosComentarios(detalhe.value?.comentarios)
+);
 const esperando = computed(() => {
   if (erro.value) return 'sem_leitura';
-  const comentarios = detalhe.value?.comentarios;
-  if (!comentarios) return null;
-  return comentarios.status === 'ready'
-    ? comentarios.esperando.length
-    : 'sem_leitura';
+  if (!detalhe.value?.comentarios) return null;
+  return leitura.value.esperando ?? 'sem_leitura';
 });
+// #2522: a rede que ficou de fora numa linha curta, com o número ou com o "não consegui ler" (o dono vê que a outra
+// rede foi lida). Sem ela quando o cartão nem leu o detalhe.
+const faltou = computed(() =>
+  !erro.value && leitura.value.faltou
+    ? t(`${KEY}.CARTAO.FALTOU_REDE`, {
+        rede: t(`${KEY}.REDE.${leitura.value.faltou.toUpperCase()}`),
+      })
+    : ''
+);
 const usa = computed(() => {
   if (!detalhe.value) return '';
   const [um, outro] = agentesDasPortas(detalhe.value.portas);
@@ -191,11 +202,20 @@ const aoClicar = (evento, grupo = '') => {
       @click="aoClicar($event, 'esperando')"
     >
       <span class="i-lucide-hand size-4 shrink-0" aria-hidden="true" />
-      <span v-if="esperando === 'sem_leitura'" data-sem-leitura>
-        {{ t(`${KEY}.CARTAO.SEM_LEITURA`) }}
-      </span>
-      <span v-else-if="esperando !== null">
-        {{ t(`${KEY}.CARTAO.ESPERANDO`, { n: esperando }, esperando) }}
+      <span v-if="esperando !== null" class="flex flex-col">
+        <span v-if="esperando === 'sem_leitura'" data-sem-leitura>
+          {{ t(`${KEY}.CARTAO.SEM_LEITURA`) }}
+        </span>
+        <span v-else>
+          {{ t(`${KEY}.CARTAO.ESPERANDO`, { n: esperando }, esperando) }}
+        </span>
+        <span
+          v-if="faltou"
+          data-faltou-rede
+          class="text-xs font-normal text-n-slate-11"
+        >
+          {{ faltou }}
+        </span>
       </span>
       <span
         v-else

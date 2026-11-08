@@ -3062,6 +3062,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
     t.bigint "brought_stage_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "destination_set_at"
     t.index ["account_id", "form_id"], name: "index_crm_meta_ads_lead_forms_on_account_id_and_form_id", unique: true
     t.index ["brought_pipeline_id"], name: "index_crm_meta_ads_lead_forms_on_brought_pipeline_id"
     t.index ["brought_stage_id"], name: "index_crm_meta_ads_lead_forms_on_brought_stage_id"
@@ -3098,6 +3099,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
     t.boolean "feed_receiving", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "leadgen_receiving_since"
     t.index ["account_id", "page_id"], name: "index_crm_meta_ads_pages_on_account_id_and_page_id", unique: true
     t.index ["page_id"], name: "index_crm_meta_ads_pages_on_page_id"
   end

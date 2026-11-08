@@ -12,6 +12,39 @@ RSpec.describe 'WAHA inboxes API', type: :request do
 
   before { allow(Waha::Client).to receive(:new).and_return(client) }
 
+  describe 'POST /api/v1/accounts/{account.id}/waha_inboxes (#2478)' do
+    let(:path) { "/api/v1/accounts/#{account.id}/waha_inboxes" }
+    let(:params) { { phone: '5511999999999', name: 'Reserva' } }
+
+    def waha_channel(target_account)
+      create(:channel_api, account: target_account,
+                           additional_attributes: { 'provider' => 'waha', 'session' => '5511999999999' })
+    end
+
+    before { allow(Waha::Config).to receive(:enabled?).and_return(true) }
+
+    it 'answers with the inbox the account already has for the number, so the screen goes on to the QR' do
+      existing = waha_channel(account).inbox
+      allow(client).to receive(:get_session).and_return({ 'status' => 'SCAN_QR_CODE' })
+
+      expect do
+        post path, params: params, headers: admin.create_new_auth_token, as: :json
+      end.not_to change(Inbox, :count)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq('id' => existing.id, 'name' => existing.name)
+    end
+
+    it 'tells the number is in use by another account' do
+      waha_channel(create(:account))
+
+      post path, params: params, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'phone_in_use_elsewhere')
+    end
+  end
+
   describe 'POST /api/v1/accounts/{account.id}/waha_inboxes/{inbox_id}/reconnect' do
     let(:path) { "/api/v1/accounts/#{account.id}/waha_inboxes/#{inbox.id}/reconnect" }
 
