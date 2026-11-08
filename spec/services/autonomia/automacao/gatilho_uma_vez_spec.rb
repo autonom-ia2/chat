@@ -46,7 +46,7 @@ RSpec.describe 'Automação livre: gatilho numa data única', :automacao_motor d
       expect(execucoes.count).to eq(0)
 
       10.times { |vez| varrer_em(fuso.local(2026, 11, 26, 9, 5) + (15.minutes * vez)) }
-      expect(execucoes.pluck(:alvo_type, :evento)).to eq([['Account', 'recorrente:2026-11-26T12:00:00Z:conta.recorrente']])
+      expect(execucoes.pluck(:alvo_type, :evento)).to eq([['Account', 'recorrente:2026-11-26:conta.recorrente']])
     end
 
     # A marca é a ocorrência: concluída a execução, as varreduras seguintes (o resto da janela, o dia seguinte, o mesmo
@@ -60,6 +60,26 @@ RSpec.describe 'Automação livre: gatilho numa data única', :automacao_motor d
       expect(execucoes.count).to eq(1)
     end
 
+    # Mudar só a hora depois do disparo (uma versão nova, religada) não manda a campanha de novo; mudar a data, sim.
+    it 'mudar só a hora depois do disparo não repete; mudar a data roda na nova data', :aggregate_failures do
+      definicao = ligar
+      varrer_em(fuso.local(2026, 11, 26, 9, 5))
+      concluir_todas
+
+      travel_to(fuso.local(2026, 11, 26, 10)) do
+        definicao.salvar_versao!(receita: { 'gatilho' => gatilho(hora: 15), 'passos' => [esperar_passo('p1')] }, autor: admin)
+      end
+      varrer_em(fuso.local(2026, 11, 26, 15, 5))
+      expect(execucoes.count).to eq(1)
+
+      travel_to(fuso.local(2026, 11, 26, 16)) do
+        definicao.salvar_versao!(receita: { 'gatilho' => gatilho(data: '2026-11-28'), 'passos' => [esperar_passo('p1')] }, autor: admin)
+      end
+      varrer_em(fuso.local(2026, 11, 28, 9, 5))
+      expect(execucoes.order(:id).pluck(:evento).last).to eq('recorrente:2026-11-28:conta.recorrente')
+      expect(execucoes.count).to eq(2)
+    end
+
     # A janela é de 1 dia: sem varredura no dia (uma pane longa), a data não roda depois.
     it 'a data que ficou mais de 1 dia sem varredura não roda depois' do
       ligar
@@ -71,6 +91,7 @@ RSpec.describe 'Automação livre: gatilho numa data única', :automacao_motor d
     it 'vale também no contato: cada contato da seleção, uma vez', :aggregate_failures do
       create(:label, account: account, title: 'ja-comprou')
       clientes = create_list(:contact, 2, account: account).each { |contato| contato.update!(label_list: ['ja-comprou']) }
+      create(:contact, account: account) # sem a etiqueta: fica de fora
       ligar(gatilho(tipo: 'contato.recorrente', selecao: { 'etiqueta' => 'ja-comprou' }))
 
       varrer_em(fuso.local(2026, 11, 26, 9, 5))

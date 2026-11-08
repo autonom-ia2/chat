@@ -11,8 +11,8 @@ RSpec.describe Autonomia::Automacao::RespostaDaCampanha do
 
   def recebeu(titulo, quando, caixa: inbox, status: :sent)
     campanha = create(:campaign, account: account, inbox: caixa, title: titulo)
-    CampaignRecipient.create!(account: account, campaign: campanha, contact: ana, inbox: caixa, status: status,
-                              sent_at: (quando unless status == :failed))
+    CampaignRecipient.create!(account: account, campaign: campanha, contact: ana, inbox: caixa, status: :sent, sent_at: quando)
+                     .tap { |destinatario| destinatario.mark_failed!(code: 131_026) if status == :failed }
   end
 
   def escreve(quando, tipo: :incoming)
@@ -27,7 +27,8 @@ RSpec.describe Autonomia::Automacao::RespostaDaCampanha do
     expect(described_class.titulo(escreve(1.hour.ago))).to eq('Últimas horas')
   end
 
-  it 'campanha que falhou, de outra caixa ou depois da mensagem não conta' do
+  # A falha que importa é a de depois do aceite: a Meta aceitou (sent_at gravado) e avisou a falha depois.
+  it 'campanha que falhou depois do aceite, de outra caixa ou depois da mensagem não conta' do
     recebeu('Falhou', 3.days.ago, status: :failed)
     recebeu('Outra caixa', 3.days.ago, caixa: create(:inbox, account: account))
     recebeu('Depois', 1.minute.from_now)

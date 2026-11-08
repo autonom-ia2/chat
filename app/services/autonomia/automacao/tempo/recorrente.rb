@@ -7,7 +7,7 @@
 # ambígua dá sempre o mesmo instante, e a marca (em UTC) não repete. Ligar não age no passado: a ocorrência anterior a
 # ligar (ou a salvar a versão ligada) não roda. O dia do mês que não existe (31 em abril) cai no último dia.
 # A frequência uma_vez (#2681, "quinta antes da Black Friday, 9h") tem uma ocorrência só, na data (AAAA-MM-DD) e na
-# hora: a marca da ocorrência impede repetir, e depois dela não há outra.
+# hora: a marca é a data e impede repetir, mesmo que a hora mude depois do disparo; depois dela não há outra.
 #
 # Os alvos saem em lotes de ids (`lotes`): o TempoDaAutomacaoJob enfileira um RecorrenteLoteJob por lote, e a fila não
 # trava numa seleção grande. Sem teto de quantidade: 25 mil contatos numa etiqueta é uso, não defeito.

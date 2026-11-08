@@ -39,7 +39,8 @@ class Autonomia::Automacao::RecorrenteLoteJob < ApplicationJob
 
   # O erro do alvo, ou nil.
   def comecar(definicao, alvo, tipo, instante)
-    marca = ::Autonomia::Automacao::Gatilhos.marca_do_recorrente(tipo, alvo.id, instante)
+    data = definicao.versao_ativa.receita.dig('gatilho', 'data')
+    marca = ::Autonomia::Automacao::Gatilhos.marca_do_recorrente(tipo, alvo.id, instante, data: data)
     ::Autonomia::Automacao::Partida.new(definicao: definicao, alvo: alvo, chave_gatilho: tipo, evento: marca).call
     nil
   rescue StandardError => e
