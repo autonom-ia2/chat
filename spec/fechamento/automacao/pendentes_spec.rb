@@ -12,9 +12,9 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # ainda esperando), a G44 (passos 6 e 8, link de uma página escolhida) e a G18 (passo 10, fechar o card de retenção).
     4 => ['Aluno que começa a faltar', 'G50 (reentrada no mesmo card), G44, G18, G5, G1, G3, G4, G12, G15, G25, G28'],
     5 => ['Revisão do carro no tempo certo', 'G5 (card ganho), G1, G3, G6, G12, G16, G19, G28, G32, G36'],
-    # O 6 tem spec próprio à risca (exemplo_06_aniversario_spec.rb); esperam a G53 (passos 1, 4, 8 e 9, a conversa do
-    # contato), a G44 (passo 2, link da agenda), a G18 (passo 5, gravar no card) e a G32 (passos 6, 7 e 10, a reunião).
-    6 => ['Aniversário que vira horário marcado', 'G53 (conversa do contato), G44, G18, G32, G6, G1, G4, G12, G14, G16, G25'],
+    # O 6 tem spec próprio à risca (exemplo_06_aniversario_spec.rb); esperam a G55 (passos 1, 4, 8 e 9, a conversa do
+    # contato), a G56 (passos 8 e 9, reunião atendida), a G44 (passo 2), a G18 (passo 5) e a G32 (passos 6, 7 e 10).
+    6 => ['Aniversário que vira horário marcado', 'G55 (conversa do contato), G56, G44, G18, G32, G6, G1, G4, G12, G14, G16, G25'],
     7 => ['Black Friday para os clientes antigos primeiro', 'G37 (público com exclusão), G38, G39, G5, G7, G14, G15'],
     8 => ['Funcionário novo no plano da empresa', 'G24 (2ª automação em cada card criado), G1, G4, G5, G7, G13, G17, G20, G22, G27'],
     9 => ['Prospecção que roda sozinha toda semana', 'G7 (segunda às 8h), G3, G4, G12, G14, G21'],

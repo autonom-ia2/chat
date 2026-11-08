@@ -226,7 +226,10 @@ module FechamentoAutomacao::Lacunas
     'G50' => nil,
     # Do exemplo 6 (#2650): a conversa do contato. A automação que começa no contato (aniversário) não chega à conversa
     # dele, e o card que nasce desse alvo também fica sem conversa: escrever, esperar a resposta e pedir a foto pulam.
-    'G53' => nil
+    'G55' => nil,
+    # Do exemplo 6, passos 8 e 9 (#2650): a reunião registrada como atendida ("Aconteceu", outcome held) não gera evento
+    # nem gatilho; a etapa "Atendida" no lugar dela adaptaria o termo.
+    'G56' => nil
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".
