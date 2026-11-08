@@ -345,6 +345,33 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
     end
   end
 
+  # Parecer da Funções no #2689: a resposta numa caixa que quem ligou não abre não decide o ramo.
+  describe 'nas conversas que quem ligou vê' do
+    let(:espera) { 1.hour.ago.. }
+    let(:outra_caixa) { create(:inbox, account: account) }
+
+    before do
+      conversa.inbox.add_members([atendente.id])
+      outra = create(:conversation, account: account, inbox: outra_caixa, contact: conversa.contact)
+      create(:message, account: account, conversation: outra, inbox: outra_caixa, message_type: :incoming)
+    end
+
+    it 'a resposta na caixa que ele não abre não conta; para o administrador, conta', :aggregate_failures do
+      expect(described_class.cliente?(conversa.contact, espera, atendente)).to be(false)
+      expect(described_class.cliente?(conversa.contact, espera, admin)).to be(true)
+    end
+
+    it 'a resposta na caixa dele conta' do
+      create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming)
+
+      expect(described_class.cliente?(conversa.contact, espera, atendente)).to be(true)
+    end
+
+    it 'sem quem ligou, nunca respondeu' do
+      expect(described_class.cliente?(conversa.contact, espera, nil)).to be(false)
+    end
+  end
+
   describe 'o salvar' do
     def problemas(passos)
       receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => passos }

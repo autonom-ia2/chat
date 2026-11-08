@@ -55,10 +55,11 @@ class Autonomia::Automacao::Valores
   # G11: a resposta que chegou durante o "esperar até" (Resposta). Só existe na condição dele, onde há a janela da
   # espera (`espera`); o salvar recusa no resto. Sem a janela, ou sem conversa (card sem conversa principal), lê
   # false: nunca "respondeu", e "diferente de true" não vira resposta. O cliente responde de qualquer conversa dele
-  # (#2680: o e-mail abre outra), então a resposta dele sai do contato, e vale também no alvo contato.
+  # (#2680: o e-mail abre outra), então a resposta dele sai do contato, nas conversas que `quem` vê, e vale também no
+  # alvo contato.
   RESPOSTA = {
-    'conversa.cliente_respondeu' => ->(contexto, espera) { ::Autonomia::Automacao::Resposta.cliente?(contexto.contato, espera) },
-    'conversa.equipe_respondeu' => ->(contexto, espera) { ::Autonomia::Automacao::Resposta.equipe_na?(contexto.conversa, espera) }
+    'conversa.cliente_respondeu' => ->(contexto, espera, quem) { ::Autonomia::Automacao::Resposta.cliente?(contexto.contato, espera, quem) },
+    'conversa.equipe_respondeu' => ->(contexto, espera, _quem) { ::Autonomia::Automacao::Resposta.equipe_na?(contexto.conversa, espera) }
   }.freeze
   RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu'.freeze
 
@@ -247,7 +248,7 @@ class Autonomia::Automacao::Valores
   # A página de agendamento em que a reunião do gatilho foi marcada, quando veio de uma.
   def pagina_da_reuniao = @contexto.reuniao&.metadata.to_h['booking_profile_id']
 
-  def resposta(caminho) = !@espera.nil? && RESPOSTA.fetch(caminho.to_s).call(@contexto, @espera) == true
+  def resposta(caminho) = !@espera.nil? && RESPOSTA.fetch(caminho.to_s).call(@contexto, @espera, @quem) == true
 
   # A pessoa só é buscada quando o caminho pede permissão.
   def permitido?(caminho) = !PROTEGIDOS.key?(caminho.to_s) || self.class.pode_ler?(caminho, account_user)
