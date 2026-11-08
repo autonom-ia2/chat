@@ -112,6 +112,25 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
         expect(problemas(buscar.merge('etiquetas' => []), quem: agente)).not_to include(frase(:prospeccao_sem_permissao))
       end
 
+      it 'recusa a etapa num funil que a função de quem salva não vê (acesso por funil do CRM)', :aggregate_failures do
+        agente = agente_sem_contato
+        sem_etiqueta = buscar.merge('etiquetas' => [])
+        fechado = frase(:prospeccao_etapa_de_funil_fechado, id: etapa.id)
+        expect(problemas(sem_etiqueta, quem: agente)).not_to include(fechado)
+
+        caixa = create_crm_inbox(account: account, members: [agente])
+        caixa_alheia = create_crm_inbox(account: account, name: 'Filial')
+        vendas = create_crm_pipeline(account: account, user: dona, name: 'Vendas').first
+        Crm::PipelineInbox.create!(account: account, inbox: caixa, pipeline: vendas)
+        Crm::PipelineInbox.create!(account: account, inbox: caixa_alheia, pipeline: funil_e_etapa.first)
+        acesso = Crm::InboxAgentAccess.create!(account: account, inbox: caixa, user: agente, all_pipelines: false, triage: false,
+                                               only_own: false)
+        acesso.agent_pipelines.create!(account: account, pipeline: vendas)
+
+        expect(problemas(sem_etiqueta, quem: agente)).to include(fechado)
+        expect(problemas(sem_etiqueta)).not_to include(fechado)
+      end
+
       it 'aceita o buscar pronto' do
         expect(problemas(buscar)).to be_empty
       end

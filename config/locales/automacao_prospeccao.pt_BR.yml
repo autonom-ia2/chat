@@ -21,3 +21,4 @@ pt_BR:
         prospeccao_sem_permissao: 'Passo %{passo}: para usar este passo você precisa da permissão de usar a Prospecção e, para buscar, da de criar card no CRM e, com etiquetas, da de editar contato.'
         prospeccao_so_sem_alvo: 'Passo %{passo}: buscar empresas só vale numa automação recorrente. Num gatilho de conversa, card ou contato, cada execução faria uma busca paga.'
         prospeccao_busca_de_fora: 'Passo %{passo}: a busca %{id} não está no histórico da Prospecção que você vê.'
+        prospeccao_etapa_de_funil_fechado: 'Passo %{passo}: a etapa %{id} está num funil do CRM que você não vê.'

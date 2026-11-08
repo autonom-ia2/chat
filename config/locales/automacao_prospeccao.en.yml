@@ -21,3 +21,4 @@ en:
         prospeccao_sem_permissao: 'Step %{passo}: to use this step you need permission to use Prospecting and, to search, to create CRM cards and, with labels, to edit contacts.'
         prospeccao_so_sem_alvo: 'Step %{passo}: searching for companies only works in a recurring automation. In a conversation, card or contact trigger, each run would run a paid search.'
         prospeccao_busca_de_fora: 'Step %{passo}: search %{id} is not in the Prospecting history you can see.'
+        prospeccao_etapa_de_funil_fechado: 'Step %{passo}: stage %{id} is in a CRM pipeline you cannot see.'

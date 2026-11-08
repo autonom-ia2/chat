@@ -39,8 +39,20 @@ class Autonomia::Automacao::PassoDeProspeccao
     etiquetas = Array(passo['etiquetas']) - conta.labels.where(id: passo['etiquetas']).pluck(:id)
     [*lista,
      *(frase(:prospeccao_busca_de_fora, passo: id, id: passo['busca_id']) unless busca(conta, account_user, passo['busca_id'])),
-     *(frase(:etapa_do_card_de_fora, passo: id, id: passo['etapa_id']) unless conta.crm_pipeline_stages.exists?(id: passo['etapa_id'])),
+     *problema_da_etapa(passo, conta, account_user),
      *etiquetas.map { |etiqueta| frase(:campanha_etiqueta_de_fora, passo: id, id: etiqueta) }]
+  end
+
+  # A etapa é da conta e está num funil que quem salva enxerga (Crm::Access::VisiblePipelines, a mesma régua do envio ao
+  # CRM da tela): sem isso, o passo salvaria e só falharia ao rodar (`etapa_fora_do_alcance`).
+  def self.problema_da_etapa(passo, conta, account_user)
+    id = passo['id']
+    etapa = conta.crm_pipeline_stages.find_by(id: passo['etapa_id'])
+    return [frase(:etapa_do_card_de_fora, passo: id, id: passo['etapa_id'])] if etapa.nil?
+    return [] if account_user.nil?
+
+    funis = ::Crm::Access::VisiblePipelines.new(user: account_user.user, account: conta, account_user: account_user)
+    funis.visible?(etapa.pipeline_id) ? [] : [frase(:prospeccao_etapa_de_funil_fechado, passo: id, id: etapa.id)]
   end
 
   # A busca do histórico que quem salva (ou quem ligou) enxerga, como na tela da Prospecção.
