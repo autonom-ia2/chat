@@ -10,7 +10,7 @@
         "EMPRESA": "Company name and fields",
         "ANEXOS": "Photos, PDFs and voice notes the customer sent",
         "CARD": "The card: title, stage, pipeline, status and fields",
-        "NOTAS": "The conversation's internal notes"
+        "NOTAS": "The conversation's internal notes (in a text to the customer, the AI may repeat what they say)"
       },
       "CAMINHO": {
         "NOME": "Path name",

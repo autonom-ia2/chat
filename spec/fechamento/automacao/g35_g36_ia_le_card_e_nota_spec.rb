@@ -1,13 +1,13 @@
 require 'rails_helper'
 
-# Fechamento do épico #2414 (#2570), lacunas G33 e G34 (#2679): a IA lê o card (`le: card`) e as notas internas da
+# Fechamento do épico #2414 (#2570), lacunas G35 e G36 (#2679): a IA lê o card (`le: card`) e as notas internas da
 # conversa (`le: notas`). Provadas em dois passos dos termos de aceite, montados pela API da tela, com a IA no dublê do
 # endereço da OpenAI:
 # - exemplo 15, passo 9 ("Cliente grande"): o card perdido, e a IA resume para o Carlos o motivo, que está no card;
 # - exemplo 5, passo 1 ("Revisão do carro"): o card ganho, e a IA tira da conversa e da nota do mecânico o que fazer na
 #   próxima revisão, e grava no contato.
 # O resto dos exemplos 5 e 15 fica no pendentes_spec até as outras lacunas fecharem.
-RSpec.describe 'Fechamento #2414 · G33 e G34: a IA lê o card e a nota', :fechamento_automacao, type: :request do
+RSpec.describe 'Fechamento #2414 · G35 e G36: a IA lê o card e a nota', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 
   around { |exemplo| with_modified_env(CRM_KANBAN_ENABLED: 'true') { exemplo.run } }
@@ -51,7 +51,7 @@ RSpec.describe 'Fechamento #2414 · G33 e G34: a IA lê o card e a nota', :fecha
 
   after { Current.reset }
 
-  describe 'G33 · exemplo 15, passo 9: card perdido, a IA resume o motivo para o Carlos' do
+  describe 'G35 · exemplo 15, passo 9: card perdido, a IA resume o motivo para o Carlos' do
     let(:roteiro) { { 'automacao_resumir' => { 'resumo' => 'Perdemos no preço: o concorrente fez 12% a menos.' } } }
 
     before do
@@ -72,7 +72,7 @@ RSpec.describe 'Fechamento #2414 · G33 e G34: a IA lê o card e a nota', :fecha
     end
   end
 
-  describe 'G34 · exemplo 5, passo 1: a IA lê a nota do mecânico junto da conversa e grava no contato' do
+  describe 'G36 · exemplo 5, passo 1: a IA lê a nota do mecânico junto da conversa e grava no contato' do
     let(:roteiro) { { 'automacao_extrair' => { 'proxima_revisao' => 'trocar as pastilhas de freio' } } }
 
     before do

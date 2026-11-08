@@ -10,7 +10,7 @@
         "EMPRESA": "Nome e campos da empresa",
         "ANEXOS": "Fotos, PDFs e áudios que o cliente mandou",
         "CARD": "O card: título, etapa, funil, status e campos",
-        "NOTAS": "As notas internas da conversa"
+        "NOTAS": "As notas internas da conversa (no texto ao cliente, a IA pode repetir o que elas dizem)"
       },
       "CAMINHO": {
         "NOME": "Nome do caminho",

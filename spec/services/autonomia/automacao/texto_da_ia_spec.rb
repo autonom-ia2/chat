@@ -148,13 +148,19 @@ RSpec.describe 'Texto da IA entre passos', :automacao_motor do # rubocop:disable
     expect(execucao.textos).to eq({})
   end
 
-  it 'antes do passo de IA rodar, o valor está vazio e o passo pula com faltou_valor', :aggregate_failures do
+  def so_se_for(nome, *entao)
+    { 'id' => 's1', 'tipo' => 'se', 'condicao' => { 'campo' => { '$valor' => 'contato.nome' }, 'op' => 'igual', 'valor' => nome },
+      'entao' => entao, 'senao' => [] }
+  end
+
+  it 'o passo de IA num galho que não rodou: o valor está vazio e o passo pula com faltou_valor', :aggregate_failures do
     recebida(1.hour.ago)
     openai_devolve('texto' => texto_da_ia)
 
-    execucao = rodar(mensagem_do_texto('p0'), escrever)
+    execucao = rodar(so_se_for('Zé', escrever), mensagem_do_texto('p2'))
 
-    expect(registros(execucao).first).to eq(%w[p0 pulado faltou_valor])
+    expect(registros(execucao).last).to eq(%w[p2 pulado faltou_valor])
+    expect(corpos).to be_empty
   end
 
   it 'o texto nunca vai para o log nem para o registro', :aggregate_failures do
@@ -186,6 +192,20 @@ RSpec.describe 'Texto da IA entre passos', :automacao_motor do # rubocop:disable
       problemas = Autonomia::Automacao::Receita.new(receita, conta: account, account_user: account.account_users.find_by(user: admin)).problemas
 
       expect(problemas.join).to include('ia.p1', 'gatilho')
+    end
+
+    it 'recusa o texto de um passo de IA que vem depois do leitor' do
+      expect(problemas(mensagem_do_texto('p0'), escrever).join).to include('p0', 'ia.p1')
+    end
+
+    it 'recusa o texto de um passo de IA que está noutro galho do mesmo passo' do
+      galhos = so_se_for('Ana', escrever).merge('senao' => [mensagem_do_texto('p2')])
+
+      expect(problemas(galhos).join).to include('p2', 'ia.p1')
+    end
+
+    it 'aceita o passo de IA num galho anterior: em algum caminho ele roda antes' do
+      expect(problemas(so_se_for('Ana', escrever), mensagem_do_texto('p2'))).to be_empty
     end
 
     it 'recusa o id que não é de um passo que escreve', :aggregate_failures do

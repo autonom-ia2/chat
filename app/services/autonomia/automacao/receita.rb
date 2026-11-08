@@ -74,11 +74,22 @@ class Autonomia::Automacao::Receita
     return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
-    return ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo) if passo['tipo'] == 'ia_assumir'
     return problemas_do_retorno(passo) if passo['tipo'] == 'retorno'
+    return problemas_do_proprio_passo(passo) if %w[ia_assumir card campanha].include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
+  end
+
+  # Os passos que se conferem sozinhos ao salvar, na própria classe: o "Passar para a agente de IA" (G15), o "criar
+  # card" (G4), que confere também a pessoa, e a campanha (G14), que confere o gatilho, a pessoa e a campanha da tela.
+  def problemas_do_proprio_passo(passo)
+    case passo['tipo']
+    when 'card' then ::Autonomia::Automacao::PassoDeCard.problemas_ao_salvar(@conta, passo, @account_user)
+    when 'campanha'
+      ::Autonomia::Automacao::PassoDeCampanha.problemas_ao_salvar(passo, @receita, conta: @conta, account_user: @account_user)
+    else ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo)
+    end
   end
 
   # "mensagem", "avisar" e "email" (F4, G2): só com a flag da F4, os valores do texto (do assunto do e-mail e de cada
@@ -191,26 +202,13 @@ class Autonomia::Automacao::Receita
   def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false)
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
-    return problemas_do_texto_da_ia(id, caminho, no_gatilho) if valores.da_ia?(caminho)
+    return ::Autonomia::Automacao::TextoDaIaNaReceita.new(self, @receita).problemas(id, caminho, no_gatilho: no_gatilho) if valores.da_ia?(caminho)
 
     fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera, gatilho: @receita.dig('gatilho', 'tipo'))
     return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
 
     Array(valores.problema_de_leitura(caminho, conta: @conta, account_user: @account_user)).map { |chave| texto(chave, passo: id, caminho: caminho) }
-  end
-
-  # #2679: `ia.<id>` só lê o texto de um passo que escreve ("escrever", "resumir") desta receita, e nunca no "Só se" do
-  # gatilho: ali nenhum passo rodou, e o valor estaria sempre vazio.
-  def problemas_do_texto_da_ia(id, caminho, no_gatilho)
-    return [texto(:texto_da_ia_no_gatilho, passo: id, caminho: caminho)] if no_gatilho
-    return [] if escreve?(::Autonomia::Automacao::Valores.passo_da_ia(caminho))
-
-    [texto(:texto_da_ia_sem_passo, passo: id, caminho: caminho)]
-  end
-
-  def escreve?(passo_id)
-    ::Autonomia::Automacao::Valores::PASSOS_QUE_ESCREVEM.include?(passos.find { |passo| passo['id'] == passo_id }&.dig('tipo'))
   end
 
   def problemas_da_acao(passo)
