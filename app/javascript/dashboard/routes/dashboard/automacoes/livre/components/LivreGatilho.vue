@@ -47,8 +47,13 @@ const pedePeca = (item, peca) =>
 
 const entrada = computed(() => entradaDo(props.modelValue?.tipo));
 const pede = peca => pedePeca(entrada.value, peca);
-// O dia da semana só no semanal; o do mês, só no mensal.
-const DIA_DA_FREQUENCIA = { dia_da_semana: 'semanal', dia_do_mes: 'mensal' };
+// O dia da semana só no semanal; o do mês, só no mensal; a data, só no "uma
+// vez" (#2681).
+const DIA_DA_FREQUENCIA = {
+  dia_da_semana: 'semanal',
+  dia_do_mes: 'mensal',
+  data: 'uma_vez',
+};
 const parametros = computed(() =>
   (entrada.value?.parametros || []).filter(
     parametro =>
@@ -92,7 +97,7 @@ const quando = computed(() =>
     label: t(`AUTOMACAO_LIVRE.QUANDO_DA_DATA.${valor.toUpperCase()}`),
   }))
 );
-const FREQUENCIAS = ['diaria', 'semanal', 'mensal'];
+const FREQUENCIAS = ['diaria', 'semanal', 'mensal', 'uma_vez'];
 const frequencias = computed(() =>
   FREQUENCIAS.map(valor => ({
     value: valor,
@@ -156,12 +161,13 @@ const trocarTipo = tipo => {
   emit('update:modelValue', filtros ? { ...novo, filtros } : novo);
 };
 // Trocar a frequência troca o dia que ela pede: segunda no semanal, dia 1 no
-// mensal; o diário não pede dia.
+// mensal; o diário não pede dia, e o "uma vez" espera a pessoa escolher a data.
 const DIA_PADRAO = { semanal: { dia_da_semana: 1 }, mensal: { dia_do_mes: 1 } };
 const trocarFrequencia = frequencia => {
   const {
     dia_da_semana: _semana,
     dia_do_mes: _mes,
+    data: _data,
     ...resto
   } = props.modelValue || {};
   emit('update:modelValue', {
@@ -246,6 +252,15 @@ const mudar = (nome, valor) => {
         :aria-label="$t(parametro.frase)"
         :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
         :options="diasDoMes"
+        @update:model-value="valor => mudar(parametro.nome, valor)"
+      />
+      <Input
+        v-else-if="parametro.peca === 'data'"
+        :model-value="modelValue?.data ?? ''"
+        type="date"
+        class="w-44"
+        :aria-label="$t(parametro.frase)"
+        data-gatilho-data
         @update:model-value="valor => mudar(parametro.nome, valor)"
       />
       <LivreSelecao

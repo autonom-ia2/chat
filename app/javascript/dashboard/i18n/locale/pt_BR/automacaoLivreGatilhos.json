@@ -48,6 +48,7 @@
       "FREQUENCIA": "De quanto em quanto",
       "DIA_DA_SEMANA": "Dia da semana",
       "DIA_DO_MES": "Dia do mês",
+      "DATA": "Data",
       "SELECAO": "Quais",
       "REPETE": "Repete"
     },
@@ -100,6 +101,7 @@
       "DIARIA": "Todo dia",
       "SEMANAL": "Toda semana",
       "MENSAL": "Todo mês",
+      "UMA_VEZ": "Uma vez só",
       "DIAS_DA_SEMANA": {
         "0": "domingo",
         "1": "segunda",
@@ -118,7 +120,8 @@
       "FRASE": {
         "DIARIA": "Todo dia às {hora}h, {alvo}",
         "SEMANAL": "Toda {dia} às {hora}h, {alvo}",
-        "MENSAL": "Todo mês no dia {dia}, às {hora}h, {alvo}"
+        "MENSAL": "Todo mês no dia {dia}, às {hora}h, {alvo}",
+        "UMA_VEZ": "Uma vez, em {dia}, às {hora}h, {alvo}"
       }
     },
     "SELECAO": {

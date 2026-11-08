@@ -636,6 +636,7 @@ en:
         campo_de_fora: 'Trigger: field %{campo} is not a date field of this account.'
         faixa_invertida: 'Trigger: in "closed between", the first number (%{de}) is greater than the second (%{ate}). That way it never picks any card.'
         passo_pede_alvo: 'Step %{passo}: this trigger runs on the account, with no conversation, card or contact. Only wait and send campaign fit here.'
+        data_passada: 'Trigger: the date %{data} has already passed. Choose a date from today on, at an hour still to come.'
         selecao_vazia: 'Trigger: choose at least one condition for which cards or contacts it runs on. With none, it would run on the whole account.'
         selecao_de_outro_alvo: 'Trigger: these conditions do not apply here: %{condicoes}.'
         responsavel_de_fora: 'Trigger: the chosen owner is not in this account.'

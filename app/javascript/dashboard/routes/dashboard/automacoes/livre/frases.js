@@ -53,6 +53,9 @@ const DIA_DO_RECORRENTE = {
   mensal: gatilho =>
     Number.isInteger(gatilho.dia_do_mes) ? gatilho.dia_do_mes : undefined,
   diaria: () => '',
+  // #2681: "2026-11-26" vira "26/11/2026".
+  uma_vez: gatilho =>
+    gatilho.data ? gatilho.data.split('-').reverse().join('/') : undefined,
 };
 const fraseDoRecorrente = (gatilho, entrada, t) => {
   const dia = DIA_DO_RECORRENTE[gatilho.frequencia]?.(gatilho, t);

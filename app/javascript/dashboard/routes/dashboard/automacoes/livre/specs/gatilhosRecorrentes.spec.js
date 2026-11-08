@@ -23,6 +23,7 @@ const DO_RECORRENTE = [
   'frequencia',
   'dia_da_semana',
   'dia_do_mes',
+  'data',
   'hora',
   'selecao',
 ].map(parametro);
@@ -128,6 +129,59 @@ describe('gatilho recorrente', () => {
       hora: 9,
       selecao: { situacao: 'aberto' },
     });
+  });
+
+  // #2681: "uma vez só" pede a data (AAAA-MM-DD); trocar a frequência tira a
+  // data, e voltar para "uma vez" espera a pessoa escolher outra.
+  it('uma vez só: pede a data; trocar a frequência tira a data', async () => {
+    const base = { tipo: 'conta.recorrente', hora: 9 };
+    const wrapper = montar({ ...base, frequencia: 'uma_vez' });
+    const nomes = wrapper
+      .findAll('[data-parametro]')
+      .map(item => item.attributes('data-parametro'));
+    expect(nomes).toEqual(['frequencia', 'data', 'hora']);
+
+    await wrapper.find('input[data-gatilho-data]').setValue('2026-11-26');
+    expect(ultimo(wrapper)).toEqual({
+      ...base,
+      frequencia: 'uma_vez',
+      data: '2026-11-26',
+    });
+
+    const comData = montar({
+      ...base,
+      frequencia: 'uma_vez',
+      data: '2026-11-26',
+    });
+    seletorDe(comData, 'frequencia').vm.$emit('update:modelValue', 'diaria');
+    expect(ultimo(comData)).toEqual({ ...base, frequencia: 'diaria' });
+  });
+
+  it('a frase da data única mostra o dia por extenso no formato do Brasil', () => {
+    const t = (chave, valores) =>
+      valores ? `${chave} ${Object.values(valores).join(' ')}` : chave;
+
+    expect(
+      fraseDoGatilho(
+        {
+          tipo: 'conta.recorrente',
+          frequencia: 'uma_vez',
+          data: '2026-11-26',
+          hora: 9,
+        },
+        CATALOGO,
+        t
+      )
+    ).toBe(
+      'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.FRASE.UMA_VEZ 26/11/2026 9 AUTOMACAO_LIVRE.GATILHO_RECORRENTE.CONTA'
+    );
+    expect(
+      fraseDoGatilho(
+        { tipo: 'conta.recorrente', frequencia: 'uma_vez', hora: 9 },
+        CATALOGO,
+        t
+      )
+    ).toBe('AUTOMACAO_LIVRE.GATILHOS.CONTA_RECORRENTE');
   });
 
   it('a frase diz quando e em quem', () => {
