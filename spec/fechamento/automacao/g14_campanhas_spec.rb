@@ -75,7 +75,8 @@ RSpec.describe 'Fechamento #2414 · G14: campanhas como passo', :fechamento_auto
     # A trava do disparo pergunta à Meta o estado do modelo na hora (#1329): a Meta de teste responde aprovado.
     stub_request(:get, ->(uri) { uri.host == 'graph.facebook.com' && uri.path.end_with?('/message_templates') })
       .to_return(status: 200, body: { data: [pre_black.merge('id' => '9001')] }.to_json, headers: { 'Content-Type' => 'application/json' })
-    automacao = montar_automacao(dona, account, nome: 'Pré-Black', receita: { gatilho: { tipo: 'conta.recorrente', frequencia: 'diaria', hora: 8 }, passos: [disparar] })
+    receita = { gatilho: { tipo: 'conta.recorrente', frequencia: 'diaria', hora: 8 }, passos: [disparar] }
+    automacao = montar_automacao(dona, account, nome: 'Pré-Black', receita: receita)
     definicao = Autonomia::Automacao::Definicao.find(automacao['id'])
     definicao.update!(ligada_por: dona)
     execucao = Autonomia::Automacao::Execucao.new(automacao: definicao, account: account)

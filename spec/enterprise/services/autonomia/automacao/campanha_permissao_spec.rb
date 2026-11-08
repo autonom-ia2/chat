@@ -51,7 +51,6 @@ RSpec.describe 'Automação livre: passo campanha com função personalizada (#2
   end
 
   describe 'disparar' do
-
     it 'quem só monta campanha (sem campaign_send) não salva nem dispara' do
       so_monta = pessoa_com(base + %w[campaign_manage])
       frase = I18n.t('autonomia.automacao.receita.campanha_sem_permissao', passo: 'c1')

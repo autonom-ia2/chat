@@ -11,7 +11,6 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     4 => ['Aluno que começa a faltar', 'G5 (entrou em "Faltou"), G1, G3, G4, G12, G15, G25, G28'],
     5 => ['Revisão do carro no tempo certo', 'G5 (card ganho), G1, G3, G6, G12, G16, G19, G28, G36'],
     6 => ['Aniversário que vira horário marcado', 'G6 (data de nascimento do contato), G1, G4, G12, G14, G16, G25'],
-    7 => ['Black Friday para os clientes antigos primeiro', 'G7 (quinta às 9h), G5, G14, G15'],
     8 => ['Funcionário novo no plano da empresa', 'G24 (2ª automação em cada card criado), G1, G4, G5, G7, G13, G17, G20, G22, G27'],
     9 => ['Prospecção que roda sozinha toda semana', 'G7 (segunda às 8h), G3, G4, G12, G14, G21'],
     # #2678 (auditoria dos termos, 07/11): o 10 tem spec próprio dos passos que montam, mas não segue o termo à risca.

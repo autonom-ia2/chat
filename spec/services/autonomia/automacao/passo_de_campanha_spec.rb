@@ -18,6 +18,9 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
       'modelo' => { 'nome' => 'pre_black', 'idioma' => 'pt_BR', 'variaveis' => [['na quinta']] }, 'etiquetas' => [etiqueta.id] }
   end
   let(:nao_receber) { { 'id' => 'n1', 'tipo' => 'campanha', 'faz' => 'nao_receber' } }
+  # O gatilho da conta (G7): o único em que o disparar salva.
+  let(:da_conta) { { 'tipo' => 'conta.recorrente', 'frequencia' => 'diaria', 'hora' => 8 } }
+  let(:gatilho_padrao) { 'conversa.resolvida' }
 
   before do
     ligar_motor(account)
@@ -29,10 +32,6 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
   after { Current.reset }
 
   def frase(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", passo: 'c1', **valores)
-
-  # O gatilho da conta (G7): o único em que o disparar salva.
-  let(:da_conta) { { 'tipo' => 'conta.recorrente', 'frequencia' => 'diaria', 'hora' => 8 } }
-  let(:gatilho_padrao) { 'conversa.resolvida' }
 
   def problemas(passo, gatilho: gatilho_padrao, quem: dona)
     receita = { 'gatilho' => gatilho.is_a?(Hash) ? gatilho : { 'tipo' => gatilho }, 'passos' => [passo] }
@@ -53,7 +52,7 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
     context 'with o gatilho da conta (conta.recorrente, G7)' do
       let(:gatilho_padrao) { da_conta }
 
-    before { account.enable_features!('automacao_gatilhos') }
+      before { account.enable_features!('automacao_gatilhos') }
 
       it 'aceita a campanha pronta, com modelo de utilidade aprovado' do
         expect(problemas(disparar)).to be_empty
@@ -66,7 +65,8 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
                      'modelo' => { 'nome' => 'pre_black', 'idioma' => 'pt_BR', 'variaveis' => [['na quinta']] } }
 
         expect(problemas(disparar)).to be_empty
-        expect(problemas(mensagem)).to be_empty
+        # O passo mensagem não cabe no gatilho da conta (sem conversa); vale no de conversa.
+        expect(problemas(mensagem, gatilho: 'conversa.resolvida')).to be_empty
         expect(Autonomia::Automacao::ModeloWhatsapp.serve?(propaganda, 1)).to be(true)
       end
 
@@ -239,7 +239,9 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
       account.enable_features!('automacao_gatilhos')
       definicao = automacao_ligada(account, dona, [disparar], gatilho: da_conta)
       versao = definicao.versao_ativa
-      versao.update_column(:receita, versao.receita.merge('gatilho' => { 'tipo' => 'conversa.resolvida' })) # rubocop:disable Rails/SkipsModelValidations
+      # A versão é só leitura; update_all grava direto no banco, como uma receita de antes da regra.
+      Autonomia::Automacao::Versao.where(id: versao.id)
+                                  .update_all(receita: versao.receita.merge('gatilho' => { 'tipo' => 'conversa.resolvida' })) # rubocop:disable Rails/SkipsModelValidations
 
       perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(definicao, conversa) }
 
