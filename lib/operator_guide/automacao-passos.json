@@ -657,6 +657,44 @@
       "so_na_espera": true
     },
     {
+      "caminho": "envio.texto",
+      "base": "envio",
+      "frase": "AUTOMACAO_LIVRE.VALORES.ENVIO_TEXTO"
+    },
+    {
+      "caminho": "envio.situacao",
+      "base": "envio",
+      "frase": "AUTOMACAO_LIVRE.VALORES.ENVIO_SITUACAO",
+      "opcoes": [
+        {
+          "valor": "saiu",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.SAIU"
+        },
+        {
+          "valor": "entregue",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.ENTREGUE"
+        },
+        {
+          "valor": "lida",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.LIDA"
+        },
+        {
+          "valor": "falhou",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALHOU"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
       "caminho": "conversa.atributos",
       "base": "conversa",
       "atributos": "conversation_attribute",
@@ -758,16 +796,19 @@
   "alvos": {
     "Conversation": [
       "conversa",
-      "contato"
+      "contato",
+      "envio"
     ],
     "Crm::Card": [
       "card",
       "conversa",
       "contato",
-      "reuniao"
+      "reuniao",
+      "envio"
     ],
     "Contact": [
-      "contato"
+      "contato",
+      "envio"
     ]
   },
   "grupos": [
