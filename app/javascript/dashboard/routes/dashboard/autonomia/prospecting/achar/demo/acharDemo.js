@@ -11,6 +11,8 @@
 // a busca tem 16 no funil (as 2 que já estavam + as 14). Na fila, 2 vão para o
 // funil e 1 volta amanhã. Todos os textos da tela saem destes dados.
 
+import { PORTA_DA_FRASE } from './acharFraseDemo';
+
 export const LIMITE = 20;
 
 export const LUGAR_SALVO = {
@@ -582,12 +584,13 @@ export const PORTA = {
   'como-procurar-modelos': { ...PADRAO, painel: 'como', modelos: true },
   'mais-ajustes': { ...PADRAO, painel: 'mais', modelos: true },
   'porta-pouco-vistas': { ...PADRAO, primeiro: 'pouco' },
-  // Pedido em uma frase (#2696): o campo aparece em todos os estados da porta,
-  // menos sem a IA da conta.
-  'porta-sem-ia': PADRAO,
-  'porta-frase-erro': PADRAO,
-  'porta-frase-nao-entendeu': PADRAO,
+  // Pedido em uma frase (#2696): os estados moram em acharFraseDemo.js.
+  ...PORTA_DA_FRASE(PADRAO),
 };
 
 // Pedido em uma frase (#2696): a resposta da IA na demonstração.
-export { FRASE_ENTENDIDA, FRASE_NAO_ENTENDIDA } from './acharFraseDemo';
+export {
+  FRASE_ENTENDIDA,
+  FRASE_NAO_ENTENDIDA,
+  FRASE_POR_ESTADO,
+} from './acharFraseDemo';

@@ -74,8 +74,12 @@ const ultimasDoPapel = computed(() =>
 );
 const googlePronto = ref(true);
 const emTeste = ref(false);
-// Pedido em uma frase (#2696): só com a IA da conta ligada.
+// Pedido em uma frase (#2696): só com a IA da conta ligada. Enquanto a IA lê,
+// "O quê?", as ideias e "Onde?" ficam travados. O lugar que veio da frase não
+// é escolhido sozinho, nem com uma sugestão só: a pessoa toca.
 const iaPronta = ref(false);
+const lendoFrase = ref(false);
+const ondeDaFrase = ref(null);
 const ondeCampo = ref(null);
 
 const escolherLugar = async sugestao => {
@@ -102,7 +106,9 @@ const procurarLugares = useDebounceFn(async texto => {
     if (texto !== ondeTexto.value) return;
     sugestoes.value = achados;
     naoAchou.value = achados.length === 0;
-    if (achados.length === 1) await escolherLugar(achados[0]);
+    if (achados.length === 1 && texto !== ondeDaFrase.value) {
+      await escolherLugar(achados[0]);
+    }
   } catch {
     sugestoes.value = [];
     naoAchou.value = true;
@@ -116,18 +122,23 @@ watch(ondeTexto, texto => {
 });
 
 // O que a IA entendeu da frase preenche os campos; o que ela não disse fica
-// como estava. O lugar volta a ser texto: as sugestões do Google aparecem e a
-// pessoa confere (uma sugestão só vale sozinha, como digitado à mão).
+// como estava, inclusive o ajuste e a ordem escolhidos à mão. O lugar volta a
+// ser texto: as sugestões do Google aparecem e a pessoa toca no certo.
 const usarFrase = ({ oQue: entendido, onde, ajustes, primeiro }) => {
   if (entendido) oQue.value = entendido;
   if (onde) {
     congelado.value = false;
     lugar.value = null;
     sugestoes.value = [];
+    ondeDaFrase.value = onde;
     ondeTexto.value = onde;
     procurarLugares(onde);
   }
-  como.value = { ...como.value, ajustes, primeiro };
+  como.value = {
+    ...como.value,
+    ajustes: { ...(como.value.ajustes || {}), ...ajustes },
+    ...(primeiro ? { primeiro } : {}),
+  };
 };
 
 const alterarLugar = () => {
@@ -141,7 +152,7 @@ const falta = computed(() => {
   if (lugar.value) return null;
   if (!ondeTexto.value.trim()) return 'ONDE';
   if (procurando.value) return 'PROCURANDO';
-  if (sugestoes.value.length > 1) return 'TOCAR';
+  if (sugestoes.value.length > 0) return 'TOCAR';
   return 'EXISTA';
 });
 
@@ -253,6 +264,7 @@ const preencher = ({ dados, preenchido = { usarSalvo: true } }) => {
     ...como.value,
     n: dados.limite || como.value.n,
     primeiro: preenchido.primeiro || 'melhores',
+    ...(preenchido.ajustes ? { ajustes: preenchido.ajustes } : {}),
   };
 };
 
@@ -321,6 +333,7 @@ watch(demo, carregar);
           >
             <AcharFraseCampo
               v-if="iaPronta"
+              v-model:ocupado="lendoFrase"
               :interpretar="texto => fonte.interpretar(texto)"
               @entendeu="usarFrase"
             />
@@ -338,6 +351,7 @@ watch(demo, carregar);
                   type="text"
                   autocomplete="off"
                   :placeholder="$t(`${NS}.O_QUE.PLACEHOLDER`)"
+                  :disabled="lendoFrase"
                   class="w-full !h-12 px-3 text-base border outline-none !mb-0 rounded-xl border-n-slate-6 bg-n-solid-1 text-n-slate-12 placeholder:text-n-slate-10 focus:border-n-blue-9"
                   data-campo-o-que
                 />
@@ -350,6 +364,7 @@ watch(demo, carregar);
                 :procurando="procurando"
                 :nao-achou="naoAchou"
                 :destacar="falta === 'TOCAR'"
+                :bloqueado="lendoFrase"
                 @escolher="escolherLugar"
                 @alterar="alterarLugar"
               />
@@ -364,6 +379,7 @@ watch(demo, carregar);
                 :key="ideia"
                 type="button"
                 :aria-pressed="ideiaEscolhida(ideia)"
+                :disabled="lendoFrase"
                 class="flex items-center gap-1.5 px-4 text-sm font-medium border border-solid rounded-full min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
                 :class="
                   ideiaEscolhida(ideia)

@@ -1,15 +1,20 @@
 # Eval do pedido em uma frase da Prospecção (#2696, F4) — 08/11/2026
 
-## Resultado: NÃO RODOU (bloqueio)
+## Resultado: 23 de 23, custo real US$ 0,003
 
-O eval está pronto, mas não foi executado. Não há chave de provedor de IA disponível de forma legítima no ambiente
-local de desenvolvimento:
+Duas rodadas em 08/11/2026, com a chave OpenAI de desenvolvimento do cofre local do Rodrigo (a chave não foi impressa
+nem gravada). O teto aprovado foi de US$ 2,00.
 
-- a worktree e o checkout principal não têm `.env` (só `.env.example`);
-- nenhuma variável `OPENAI_API_KEY` (ou parecida) no ambiente da sessão.
+| Rodada | Acertos | Custo real | Tokens (entrada / saída) | Maior saída |
+|---|---|---|---|---|
+| 1 (instrução original) | 22 / 23 | US$ 0,003051 | 17.115 / 2.678 | não medido |
+| 2 (depois da revisão r1) | 23 / 23 | US$ 0,002967 | 18.311 / 2.271 | 137 tokens |
 
-Pelas regras da tarefa, não se usa chave de produção nem `.secrets` de outros projetos. Sem chave, sem rodada.
-Custo gasto: US$ 0,00.
+- Erro da rodada 1: em "dentistas perto de mim", a IA pôs "perto de mim" em "Onde?". A instrução passou a dizer que um
+  lugar que depende de onde a pessoa está deixa "Onde?" vazio e pede o bairro ou a cidade. Não foi usada nenhuma lista
+  de palavras. Na rodada 2, o caso exige esse pedido.
+- A maior saída (137 tokens) fica bem abaixo do teto `MAX_OUTPUT_TOKENS = 600` do interpreter.
+- Total gasto nas duas rodadas: cerca de US$ 0,006.
 
 ## O que está pronto
 
@@ -28,7 +33,7 @@ Custo gasto: US$ 0,00.
 - 5 de "não entendi": saudação, pergunta de preço, texto sem sentido, só o lugar sem o que procurar, e uma tentativa
   de injeção de instrução.
 
-A régua compara com string (`include?` no quê e no onde, igualdade nos ajustes e no modo). Não interpreta a frase.
+A régua compara com uma lista de respostas aceitas por caso (minúsculas e espaços normalizados) e com igualdade nos ajustes e no modo. Ela não interpreta a frase.
 
 ## Estimativa de custo (feita antes, como exigido)
 
@@ -47,4 +52,3 @@ AUTONOMIA_EVAL_PAGO=1 PROSPECCAO_FRASE_EVAL=1 OPENAI_API_KEY=<chave de desenvolv
   bundle exec rspec spec/services/autonomia/prospecting/search_interpreter_eval_spec.rb
 ```
 
-Depois de rodar, registrar aqui: acertos de 23, os erros por caso e o custo real.

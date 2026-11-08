@@ -12152,7 +12152,7 @@
   },
   "POST autonomia/prospecting/searches/interpret": {
     "campos": {
-      "text": {}
+      "frase": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/autonomia/prospecting/search_interpretations#create",

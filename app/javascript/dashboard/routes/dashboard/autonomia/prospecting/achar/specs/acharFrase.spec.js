@@ -87,7 +87,18 @@ describe('interpretar: o mesmo contrato na API e na demonstração', () => {
     });
     await expect(
       fonteDemo('porta-frase-erro').interpretar('x')
-    ).rejects.toBeTruthy();
+    ).rejects.toMatchObject({ codigo: 'prospecting.interpret.ai_failed' });
+    await expect(
+      fonteDemo('porta-frase-sem-ia').interpretar('x')
+    ).rejects.toMatchObject({
+      codigo: 'prospecting.interpret.ai_not_configured',
+    });
+  });
+
+  it('o modo geral não diz nada sobre a ordem: primeiro vem vazio', async () => {
+    const entendido = await fonteDemo('porta').interpretar('padarias');
+
+    expect(entendido.primeiro).toBeNull();
   });
 });
 

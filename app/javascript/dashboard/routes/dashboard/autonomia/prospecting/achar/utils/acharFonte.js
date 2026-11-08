@@ -39,6 +39,15 @@ const diasDesde = data =>
 const ESTADOS_SEM_BUSCAS = ['buscas-vazio', 'buscas-so-ver-vazio'];
 const ESTADOS_SEM_FILA = ['fila-vazia', 'fila-vazia-so-ver'];
 const ESTADOS_COM_DOIS_FUNIS = ['folha-sem-destino', 'folha-para-onde'];
+const ESTADOS_DE_UMA_SUGESTAO = [
+  'porta-uma-sugestao',
+  'porta-frase-uma-sugestao',
+];
+// A recusa da frase na demonstração, com o código que o servidor manda.
+const ERROS_DA_FRASE = {
+  'porta-frase-erro': 'prospecting.interpret.ai_failed',
+  'porta-frase-sem-ia': 'prospecting.interpret.ai_not_configured',
+};
 // Antes de a pessoa tirar alguém, a lista vem inteira; da jornada em diante
 // (confira-tirou, gaveta, folha, pronto) as 2 tiradas ficam em "Não vai".
 const ANTES_DE_TIRAR = ['buscando', 'chegando', 'confira', 'leitura'];
@@ -86,6 +95,8 @@ const doPublico = ({ audience = {}, left_out: fora = [] }) => ({
 
 // O pedido em uma frase (#2696), igual na demonstração e na API: o que a IA da
 // conta entendeu, nos nomes da porta. "Não entendi" volta sem nada preenchido.
+// `primeiro` só vem quando a frase pediu a presença fraca (gbp); o modo geral
+// é o padrão do servidor e não diz nada sobre a ordem escolhida à mão.
 const daFrase = ({
   status,
   what: oQue = null,
@@ -98,7 +109,7 @@ const daFrase = ({
   oQue,
   onde,
   ajustes: ajustesDosFiltros(filtros),
-  primeiro: ordemDoModo(modo),
+  primeiro: modo === 'gbp' ? ordemDoModo(modo) : null,
   ficouDeFora,
 });
 
@@ -137,20 +148,18 @@ const fonteDemo = ({ estado, carregarDemo, atraso, usuarioId }) => {
     async interpretar() {
       const demo = await dados();
       await esperar(atraso);
-      if (estado === 'porta-frase-erro') {
-        throw Object.assign(new Error('demo'), { codigo: null });
+      if (ERROS_DA_FRASE[estado]) {
+        throw Object.assign(new Error('demo'), {
+          codigo: ERROS_DA_FRASE[estado],
+        });
       }
-      return daFrase(
-        estado === 'porta-frase-nao-entendeu'
-          ? demo.FRASE_NAO_ENTENDIDA
-          : demo.FRASE_ENTENDIDA
-      );
+      return daFrase(demo.FRASE_POR_ESTADO[estado] || demo.FRASE_ENTENDIDA);
     },
     async sugestoesDeLugar() {
       const demo = await dados();
       await esperar(atraso);
       if (estado === 'porta-lugar-nao-achado') return [];
-      return estado === 'porta-uma-sugestao'
+      return ESTADOS_DE_UMA_SUGESTAO.includes(estado)
         ? demo.SUGESTAO_UNICA
         : demo.SUGESTOES;
     },

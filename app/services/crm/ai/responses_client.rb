@@ -77,11 +77,13 @@ module Crm
 
       # `tool_choice:` (#1367) desliga as ferramentas de UMA chamada ('none') sem tirá-las da lista: a lista faz parte
       # do prefixo em cache, e mudá-la faria a chamada seguinte, com as ferramentas, perder o cache. Ausente, o corpo
-      # é exatamente o de antes.
+      # é exatamente o de antes. `max_output_tokens:` (#2696) é o teto de saída da chamada (raciocínio incluído); nil,
+      # o padrão, não vai no corpo.
       def create(model:, instructions:, input:, schema: nil, reasoning_effort: 'low', tools: nil, timeout: REQUEST_TIMEOUT,
-                 tool_choice: nil)
+                 tool_choice: nil, max_output_tokens: nil)
         body = base_body(model, instructions, input, schema, reasoning_effort, tools).merge(store: false)
         body[:tool_choice] = tool_choice if tool_choice.present? && tools.present?
+        body[:max_output_tokens] = max_output_tokens if max_output_tokens.present?
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         response = post_responses(body, timeout: timeout, operation: 'responses.create', started_at: started_at)
         parse_response(response, model: model, requested_tools: tools, started_at: started_at, reasoning_effort: reasoning_effort)

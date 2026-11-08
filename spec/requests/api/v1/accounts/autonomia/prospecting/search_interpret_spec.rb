@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-# Pedido em uma frase (#2696, F4): POST searches/interpret { text } devolve "O quê?", "Onde?" e os ajustes que a IA da
+# Pedido em uma frase (#2696, F4): POST searches/interpret { frase } devolve "O quê?", "Onde?" e os ajustes que a IA da
 # conta entendeu, para a pessoa conferir. Não cria busca. Pede prospecting_manage, como criar a busca.
 RSpec.describe 'Autonomia prospecting search interpret', type: :request do
   let(:account) { create(:account) }
@@ -32,7 +32,7 @@ RSpec.describe 'Autonomia prospecting search interpret', type: :request do
   end
 
   def interpret(text = 'padarias perto da Paulista com nota boa', user: admin)
-    post path, params: { text: text }, headers: auth_headers(user), as: :json
+    post path, params: { frase: text }, headers: auth_headers(user), as: :json
   end
 
   it 'devolve os campos que a IA entendeu e não cria busca' do

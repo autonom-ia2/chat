@@ -8,6 +8,9 @@
 #
 # Nada aqui busca nem grava: a resposta só preenche os campos, e a pessoa confere antes de tocar em "Achar empresas".
 # Valor fora do conjunto da tela é descartado, mesmo que o schema já o recuse.
+#
+# Gestão IA: só entra a tentativa que voltou com `usage` (o ResponsesClient grava antes de conferir o texto). Erro de
+# HTTP, de rede ou o prazo estourado não têm `usage` e não entram: não se inventa número (#1656).
 class Autonomia::Prospecting::SearchInterpreter
   class Error < StandardError
     STATUS = { 'text_blank' => :unprocessable_entity, 'text_too_long' => :unprocessable_entity,
@@ -26,7 +29,12 @@ class Autonomia::Prospecting::SearchInterpreter
   FEATURE = 'prospeccao_frase'.freeze
   MODEL = Crm::Ai::Config::MODEL_SUMMARY
   EFFORT = 'low'.freeze
+  # O `timeout` do HTTParty vale por operação (abrir, escrever, ler), não para a chamada inteira. PRAZO_TOTAL corta a
+  # chamada inteira antes dos 15 s do rack-timeout de produção.
   TIMEOUT = 10
+  PRAZO_TOTAL = 12
+  # Teto de saída (raciocínio 'low' + o JSON do schema). No eval de 08/11 a média foi ~116 tokens por pedido.
+  MAX_OUTPUT_TOKENS = 600
   MAX_TEXT = 300
   MAX_FIELD = 120
   MAX_LEFT_OUT = 200
@@ -49,6 +57,7 @@ class Autonomia::Prospecting::SearchInterpreter
     Campos:
     - what: o tipo de empresa ou negócio procurado, curto, como a pessoa escreveria numa busca do Google Maps ("padarias", "escritórios de contabilidade"). Sem o lugar e sem os ajustes.
     - where: o lugar (bairro, rua, avenida, ponto conhecido, cidade, estado), escrito como numa busca de endereço ("Avenida Paulista, São Paulo"). Só o que a pessoa disse; não invente cidade. Sem lugar na frase: null.
+      Um lugar que depende de onde a pessoa está (perto dela, onde ela mora ou trabalha, a região dela) não é um lugar que dê para procurar: where null, e em left_out uma frase curta pedindo o bairro ou a cidade.
     - rating_min / rating_max: nota no Google. "nota boa", "bem avaliadas": rating_min "4". "nota alta", "muito bem avaliadas": "4.5". "nota pelo menos 3": "3". "nota baixa", "mal avaliadas": rating_max "3.9". Senão null.
     - reviews_min: quantidade mínima de avaliações, só quando a pessoa pedir ("muitas avaliações": "50"; "com algumas avaliações": "10"). Use o valor da lista mais próximo do pedido, sem passar dele. Senão null.
     - has_website / has_photos: "yes" quando pede que tenha site / fotos; "no" quando pede que não tenha. Senão null.
@@ -81,19 +90,24 @@ class Autonomia::Prospecting::SearchInterpreter
     raise Error, 'text_blank' if @text.blank?
     raise Error, 'text_too_long' if @text.length > MAX_TEXT
 
-    result(ask)
+    result(ask(client))
   end
 
   private
 
-  def ask
-    response = client.create(model: MODEL, instructions: INSTRUCTIONS, input: { pedido: @text }.to_json,
-                             schema: self.class.schema, reasoning_effort: EFFORT, timeout: TIMEOUT)
+  # Qualquer quebra da chamada (inclusive rede fora de ResponsesClient::NETWORK_ERRORS, como OpenSSL::SSL::SSLError, e o
+  # prazo total) vira ai_failed. O log leva só a classe: a mensagem pode trazer o texto da pessoa ou a URL.
+  # A credencial é resolvida antes (`client`), fora deste rescue: conta sem IA continua ai_not_configured.
+  def ask(ai_client)
+    response = Timeout.timeout(PRAZO_TOTAL) do
+      ai_client.create(model: MODEL, instructions: INSTRUCTIONS, input: { pedido: @text }.to_json, schema: self.class.schema,
+                       reasoning_effort: EFFORT, timeout: TIMEOUT, max_output_tokens: MAX_OUTPUT_TOKENS)
+    end
     parsed = JSON.parse(response[:text])
     raise JSON::ParserError, 'not_an_object' unless parsed.is_a?(Hash)
 
     parsed
-  rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError, TypeError => e
+  rescue StandardError => e
     Rails.logger.warn("[autonomia][prospecting][frase] account_id=#{@account.id} reason=#{e.class.name}")
     raise Error, 'ai_failed'
   end

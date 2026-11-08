@@ -35,7 +35,8 @@ RSpec.describe Autonomia::Prospecting::SearchInterpreter do
     )
     expect(Crm::Ai::ResponsesClient).to have_received(:new)
       .with(credential: hash_including(api_key: 'chave-da-conta'), feature: 'prospeccao_frase', account: account, max_retries: 0)
-    expect(client).to have_received(:create).with(hash_including(schema: described_class.schema, timeout: described_class::TIMEOUT))
+    expect(client).to have_received(:create).with(hash_including(schema: described_class.schema, timeout: described_class::TIMEOUT,
+                                                                 max_output_tokens: described_class::MAX_OUTPUT_TOKENS))
   end
 
   it 'presença fraca vira o modo gbp' do
@@ -75,6 +76,21 @@ RSpec.describe Autonomia::Prospecting::SearchInterpreter do
 
     allow(client).to receive(:create).and_return({ text: '["não é objeto"]', usage: {} })
     expect { interpret }.to raise_error(described_class::Error) { |error| expect(error.status).to eq(:service_unavailable) }
+  end
+
+  it 'erro de rede fora dos NETWORK_ERRORS do cliente também vira ai_failed, com só a classe no log' do
+    allow(Rails.logger).to receive(:warn)
+    allow(client).to receive(:create).and_raise(OpenSSL::SSL::SSLError, 'texto que não vai para o log')
+
+    expect { interpret }.to raise_error(described_class::Error) { |error| expect(error.code).to eq('ai_failed') }
+    expect(Rails.logger).to have_received(:warn).with("[autonomia][prospecting][frase] account_id=#{account.id} reason=OpenSSL::SSL::SSLError")
+  end
+
+  it 'o prazo total corta a chamada inteira e vira ai_failed' do
+    stub_const("#{described_class}::PRAZO_TOTAL", 0.05)
+    allow(client).to receive(:create) { sleep 1 }
+
+    expect { interpret }.to raise_error(described_class::Error) { |error| expect(error.code).to eq('ai_failed') }
   end
 
   it 'conta sem a IA do Kanban CRM não chama ninguém' do

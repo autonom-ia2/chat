@@ -16,3 +16,31 @@ export const FRASE_NAO_ENTENDIDA = {
   score_mode: 'general',
   left_out: null,
 };
+// A frase que só diz o quê e o onde, sem ajuste nem ordem: o que a pessoa
+// escolheu à mão antes fica.
+export const FRASE_SEM_AJUSTE = {
+  ...FRASE_ENTENDIDA,
+  advanced_filters: {},
+  left_out: null,
+};
+
+// Qual resposta cada estado da demonstração devolve; os outros, a entendida.
+export const FRASE_POR_ESTADO = {
+  'porta-frase-nao-entendeu': FRASE_NAO_ENTENDIDA,
+  'porta-frase-ajuste-manual': FRASE_SEM_AJUSTE,
+};
+
+// Os estados da porta do pedido em uma frase, sobre o preenchimento padrão.
+// O campo aparece em todos os estados da porta, menos sem a IA da conta.
+export const PORTA_DA_FRASE = padrao => ({
+  'porta-sem-ia': padrao,
+  'porta-frase-erro': padrao,
+  'porta-frase-sem-ia': padrao,
+  'porta-frase-nao-entendeu': padrao,
+  'porta-frase-uma-sugestao': padrao,
+  'porta-frase-ajuste-manual': {
+    ...padrao,
+    primeiro: 'pouco',
+    ajustes: { nota: 'n45' },
+  },
+});

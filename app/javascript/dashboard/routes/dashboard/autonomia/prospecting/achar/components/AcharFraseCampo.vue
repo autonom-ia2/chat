@@ -7,7 +7,9 @@ import Button from 'dashboard/components-next/button/Button.vue';
 // a página preenche "O quê?", "Onde?" e os ajustes; a pessoa confere antes de
 // tocar em "Achar empresas". Quem interpreta é só a IA (pela fonte, API ou
 // demonstração). Erro ou "não entendi": os campos ficam como estão, e a
-// frase abaixo do campo diz o que fazer. Nada falha calado.
+// frase abaixo do campo diz o que fazer. Nada falha calado. `ocupado` sobe
+// para a página, que trava "O quê?" e "Onde?" enquanto a IA responde: a
+// resposta nunca passa por cima do que a pessoa escreveu nesse meio-tempo.
 const props = defineProps({
   interpretar: { type: Function, required: true },
 });
@@ -19,7 +21,7 @@ const NS = 'PROSPECTING_ACHAR.PORTA.FRASE';
 const MAX_LETRAS = 300;
 
 const texto = ref('');
-const ocupado = ref(false);
+const ocupado = defineModel('ocupado', { type: Boolean, default: false });
 const resultado = ref(null);
 
 const vazio = computed(() => !texto.value.trim());
