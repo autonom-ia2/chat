@@ -124,7 +124,9 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
     corridas = repetidos(paginas, paginas.map { |pagina| pagina[:linhas].each_index.filter_map { |indice| chave_da_borda(pagina, indice) } })
     vistas = Set.new
     paginas.map do |pagina|
-      linhas = pagina[:linhas].reject.with_index { |_, indice| sai_da_borda?(chave_da_borda(pagina, indice), corridas, vistas) }
+      # A página de sumário sai depois: o pé lido nela não conta como visto.
+      desta = sumario?(pagina) ? vistas.dup : vistas
+      linhas = pagina[:linhas].reject.with_index { |_, indice| sai_da_borda?(chave_da_borda(pagina, indice), corridas, desta) }
       pagina.merge(linhas: linhas)
     end
   end

@@ -187,6 +187,15 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
         expect([textos.scan('Voltar ao sumario').size, textos.scan('Condicoes Gerais - Versao 3.0.').size]).to eq([0, 1])
         expect(textos).to include('Clausula 1', 'Clausula 2', 'Clausula 3', 'Clausula 4')
       end
+
+      # A 1ª página é sumário e sai: a linha do pé lida lá não conta como já vista, e ela fica uma vez nas outras.
+      context 'when the first page is the table of contents' do
+        let(:pdf) { pdf_com([[*bordas(1), *sumario.first(6)], *(2..4).map { |numero| pagina_simples(numero) }]) }
+
+        it 'keeps the foot line once' do
+          expect(blocos_gravados.pluck(:texto).join("\n").scan('Condicoes Gerais - Versao 3.0.').size).to eq(1)
+        end
+      end
     end
 
     it 'gives no blocks to the protected agent (Lia)' do

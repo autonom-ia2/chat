@@ -5,9 +5,10 @@
 # - célula: os trechos da linha separados por mais de GAP_DE_CELULA letras. O espaço entre palavras do texto justificado
 #   é menor, e o parágrafo não vira tabela. Linha de duas células cuja segunda vai até a margem é item marcado (a cláusula
 #   "5.1.5.  Restabelecido o pagamento…", o "•" do texto corrido), não fileira;
-# - tabela: MIN_LINHAS_DA_TABELA ou mais linhas de duas células ou mais, com até MAX_LINHAS_SOLTAS linhas de uma célula
-#   seguidas entre elas (a célula que quebra em duas linhas, o rótulo de um grupo de fileiras), sem distância de mais de
-#   LONGE espaços normais entre duas linhas (o rodapé no pé da folha não entra na tabela de cima);
+# - tabela: MIN_LINHAS_DA_TABELA ou mais linhas de duas células ou mais (só duas, com a primeira linha em destaque), com
+#   até MAX_LINHAS_SOLTAS linhas de uma célula seguidas entre elas (a célula que quebra em duas linhas, o rótulo de um
+#   grupo de fileiras), sem distância de mais de LONGE espaços normais entre duas linhas (o rodapé no pé da folha não
+#   entra na tabela de cima);
 # - fileira: as linhas mais próximas que MESMA_FILEIRA do espaço normal entre linhas são uma fileira; nela, as células que
 #   se sobrepõem na horizontal são uma célula só (o texto que quebrou dentro da célula);
 # - cabeçalho: as linhas curtas logo acima da tabela, sem espaço de parágrafo, e as primeiras fileiras fora da fonte do
@@ -54,6 +55,15 @@ module Autonomia::Agents::Knowledge::Processors::PdfTabelas
     end
     grupos.select { |grupo| grupo.size >= MIN_LINHAS_DA_TABELA }
           .map { |grupo| [acima_da_tabela(linhas, grupo.first, pagina), grupo.first, grupo.last] }
+          .select { |faixa| tabela?(linhas, faixa, pagina) }
+  end
+
+  # Só duas células por linha é tabela com cabeçalho: linhas curtas logo acima, ou a primeira linha fora da fonte do corpo
+  # (o negrito). Sem ele, é o marcador da lista ou o número da cláusula curta e o texto (na letra 9 a folga do marcador
+  # passa de GAP_DE_CELULA); e a tabela de duas colunas sem cabeçalho não ganharia título nenhum lida como tabela.
+  def tabela?(linhas, (acima, primeira, ultima), pagina)
+    acima < primeira || linhas[primeira][:fonte].exclude?(pagina[:fonte_do_corpo]) ||
+      linhas[primeira..ultima].any? { |linha| celulas(linha).size > 2 }
   end
 
   def linha_de_tabela?(linha, pagina)

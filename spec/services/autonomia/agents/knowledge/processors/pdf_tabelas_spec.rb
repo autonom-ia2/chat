@@ -123,7 +123,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::PdfTabelas do
     linhas = [corrida(700, 'O premio retido no cancelamento segue a tabela abaixo, conforme o plano que foi contratado'),
               corrida(688, 'pelo segurado:', 200),
               *[['1 a 15', '13%'], ['16 a 30', '20%'], ['31 a 45', '27%']].each_with_index.map do |(prazo, taxa), indice|
-                linha(676 - (indice * 20), celula(prazo, 50, 85), celula(taxa, 150, 170))
+                linha(676 - (indice * 20), celula(prazo, 50, 85), celula(taxa, 150, 170), celula('anual', 250, 280))
               end]
 
     expect(leitor.faixas_de_tabela(pagina(linhas))).to eq([[2, 2, 4]])
@@ -132,7 +132,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::PdfTabelas do
   it 'leaves a short bold title right above the table out of the header' do
     linhas = [linha(698, celula('Tabela 2 - Prazos', 60, 150, 'F2')),
               *[['1 a 15', '13%'], ['16 a 30', '20%'], ['31 a 45', '27%']].each_with_index.map do |(prazo, taxa), indice|
-                linha(686 - (indice * 20), celula(prazo, 50, 85), celula(taxa, 150, 170))
+                linha(686 - (indice * 20), celula(prazo, 50, 85), celula(taxa, 150, 170), celula('anual', 250, 280))
               end,
               corrida(600, 'Texto do contrato que vai ate a margem direita da pagina, como todo paragrafo.')]
 
@@ -163,5 +163,32 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::PdfTabelas do
               linha(668, celula('5.1.6.', 54, 80), celula('Cancelado o seguro', 120, 540)), corrida(656, 'Fim.')]
 
     expect(leitor.faixas_de_tabela(pagina(linhas))).to eq([])
+  end
+
+  # Duas células por linha sem cabeçalho em destaque: o marcador e o texto (na letra 9 a folga passa de GAP_DE_CELULA),
+  # ou o número da cláusula curta e o texto. Sem título de coluna, ler isso como tabela não acrescenta nada.
+  it 'does not read a marked list in a small letter as a table' do
+    lista = %w[Guincho Chaveiro Pneu Taxi].each_with_index.map do |texto, indice|
+      linha(700 - (indice * 12), celula('•', 18, 22.5), celula("#{texto} ate o limite do plano;", 37, 200)).merge(letra: 9.0)
+    end
+
+    expect(leitor.faixas_de_tabela(pagina([*lista, corrida(640, 'Texto do contrato que vai ate a margem direita.')]))).to eq([])
+  end
+
+  it 'does not read short numbered clauses as a table' do
+    linhas = %w[5.2.1. 5.2.2. 5.2.3.].each_with_index.map do |numero, indice|
+      linha(700 - (indice * 12), celula(numero, 18, 40), celula('Incendio;', 63, 110))
+    end
+
+    expect(leitor.faixas_de_tabela(pagina([*linhas, corrida(650, 'Texto do contrato que vai ate a margem direita.')]))).to eq([])
+  end
+
+  it 'reads two columns as a table when the first row stands out in bold' do
+    linhas = [linha(680, celula('Idade', 50, 80, 'F2'), celula('Depreciacao', 150, 210, 'F2')),
+              linha(660, celula('Ate 1 ano', 50, 95), celula('10%', 150, 170)),
+              linha(640, celula('Ate 3 anos', 50, 100), celula('40%', 150, 170)),
+              corrida(610, 'Texto do contrato que vai ate a margem direita.')]
+
+    expect(leitor.faixas_de_tabela(pagina(linhas))).to eq([[0, 0, 2]])
   end
 end
