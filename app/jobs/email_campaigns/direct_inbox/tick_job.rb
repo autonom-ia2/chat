@@ -2,7 +2,8 @@ class EmailCampaigns::DirectInbox::TickJob < ApplicationJob
   queue_as :low
 
   # Um "tick" = envia 1 destinatário e reagenda o próximo (o throttle vive no engine).
-  def perform(campaign_id)
+  # token: the chain token of a scheduled tick (DeliveryEngine#reschedule); nil for a first tick.
+  def perform(campaign_id, token = nil)
     return unless EmailCampaigns::Config.enabled?
 
     campaign = EmailCampaign.find_by(id: campaign_id)
@@ -17,7 +18,7 @@ class EmailCampaigns::DirectInbox::TickJob < ApplicationJob
     end
     return unless eligible
 
-    ActiveRecord.after_all_transactions_commit { EmailCampaigns::DirectInbox::DeliveryEngine.new(campaign).tick }
+    ActiveRecord.after_all_transactions_commit { EmailCampaigns::DirectInbox::DeliveryEngine.new(campaign).tick(token) }
   end
 
   private

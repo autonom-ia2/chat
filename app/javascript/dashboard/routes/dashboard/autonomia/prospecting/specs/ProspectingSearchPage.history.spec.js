@@ -37,8 +37,8 @@ vi.mock('dashboard/api/crmKanban', async () =>
   (await import('./support/searchPageMocks')).crmKanbanApiMock()
 );
 
-const thirdSearch = () =>
-  bakerySearch({ id: 13, query: 'mercado', location: 'Maringá, PR' });
+const thirdSearch = (extra = {}) =>
+  bakerySearch({ id: 13, query: 'mercado', location: 'Maringá, PR', ...extra });
 
 const configModal = wrapper =>
   wrapper
@@ -341,6 +341,20 @@ describe('ProspectingSearchPage · histórico de buscas', () => {
 
     expect(useAlert).toHaveBeenCalledWith('PROSPECTING.ERRORS.UPDATE_SEARCH');
     expect(configModal(wrapper)).toBeTruthy();
+  });
+
+  it('só a busca de quem está logado tem "Apagar"; a de outra pessoa e a sem dono, não', async () => {
+    const wrapper = await mountSearchPage({
+      searches: [
+        bakerySearch(),
+        gymSearch({ user_id: 99 }),
+        thirdSearch({ user_id: null }),
+      ],
+    });
+    const temApagar = card =>
+      card.find('button[title="PROSPECTING.SEARCH.DELETE_SEARCH"]').exists();
+
+    expect(historyCards(wrapper).map(temApagar)).toEqual([true, false, false]);
   });
 
   it('sem permissão de gerenciar esconde configurar e apagar', async () => {

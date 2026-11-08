@@ -65,7 +65,9 @@
       "CARD_LINK_DA_AGENDA": "Booking link of the card owner (at step time)",
       "CONVERSA_LINK_DA_AGENDA": "Booking link of the conversation assignee (at step time)",
       "REUNIAO_INICIO": "Meeting date and time",
-      "REUNIAO_LINK_DA_REUNIAO": "Meeting call link"
+      "REUNIAO_LINK_DA_REUNIAO": "Meeting call link",
+      "ENVIO_TEXTO": "Text of the last message the automation sent",
+      "ENVIO_SITUACAO": "Status of the last message the automation sent"
     },
     "PASSOS": {
       "ESPERAR": "Wait for a while",
@@ -80,7 +82,12 @@
       "CAIXA_PESSOAS": "Add people to an inbox",
       "CONTATO_ETIQUETAS": "Add or remove a contact label",
       "CONTATO_ALTERAR": "Update the contact",
+      "CONTATO_NOTA": "Add a note to the contact",
       "EMPRESA_ALTERAR": "Update the contact's company",
+      "CONTATO_CRIAR": "Create a contact",
+      "EMPRESA_CRIAR": "Create a company",
+      "CONTATO_CLIENTE": "Mark the contact as a customer",
+      "CARD_CONTATO_CRIAR": "Create the card contact",
       "ETIQUETA_CRIAR": "Create a label",
       "ETIQUETA_ALTERAR": "Change a label",
       "ATRIBUTO_CRIAR": "Create a custom field",
@@ -126,6 +133,7 @@
       "EMAIL": "Email",
       "PHONE_NUMBER": "Phone",
       "COMPANY_ID": "Company",
+      "CONTENT": "Note text",
       "DESCRIPTION": "Description",
       "DOMAIN": "Website",
       "TITLE": "Label name",
@@ -256,7 +264,8 @@
       "INSERIR": "Add a step here",
       "PASSOS_NO_GALHO": "(1 step) | ({n} steps)",
       "AVANCADA": "Advanced action",
-      "AVANCADA_DICA": "Only the Guide changes this step. Here it stays as it is."
+      "AVANCADA_DICA": "Only the Guide changes this step. Here it stays as it is.",
+      "SEM_CAMPOS_DICA": "This step has nothing to fill in. Just save."
     },
     "FRASES": {
       "FALTA_GATILHO": "Choose when it starts",
