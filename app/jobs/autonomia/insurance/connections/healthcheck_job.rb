@@ -45,12 +45,25 @@ class Autonomia::Insurance::Connections::HealthcheckJob < ApplicationJob
   RETRY_AUTH_AFTER = 1.hour
   ACAO_DA_CORRETORA = 'broker'.freeze
 
+  # "SESSÕES LOTADAS": todas as vagas de usuário da corretora no portal estão ocupadas, e quem libera é
+  # ela (auditoria da conexão, 05/11/2026, achado 4). Cada tentativa é um login recusado a mais contra
+  # o portal; de 30 em 30 minutos, em 06/11, foram 12 seguidas sem mudar nada. Recua para uma por hora:
+  # a conexão volta sozinha quando a vaga abrir, e a tela já diz ao corretor o que fazer.
+  SESSOES_LOTADAS = 'sessions_full'.freeze
+  RETRY_SESSIONS_FULL_AFTER = 1.hour
+
   def perform
-    ::Autonomia::Insurance::Connection.where(status: CHECKABLE).find_each(batch_size: BATCH_SIZE) do |connection|
-      check(connection)
-    end
+    verificaveis.find_each(batch_size: BATCH_SIZE) { |connection| check(connection) }
     presas.find_each(batch_size: BATCH_SIZE) { |connection| check(connection, varrer: connection.status == VARRENDO) }
     recusas_sem_dono.find_each(batch_size: BATCH_SIZE) { |connection| check(connection) }
+  end
+
+  # As de `CHECKABLE`, menos as em recuo por "Sessões lotadas" verificadas há menos de uma hora.
+  def verificaveis
+    em_recuo = ::Autonomia::Insurance::Connection
+               .where("metadata -> 'last_failure' ->> 'cause' = ?", SESSOES_LOTADAS)
+               .where('last_healthcheck_at >= ?', RETRY_SESSIONS_FULL_AFTER.ago)
+    ::Autonomia::Insurance::Connection.where(status: CHECKABLE).where.not(id: em_recuo.select(:id))
   end
 
   def recusas_sem_dono
