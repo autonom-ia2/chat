@@ -145,13 +145,17 @@ const usarFrase = ({ oQue: entendido, onde, ajustes, primeiro }) => {
   };
 };
 
-// Enviar a frase fecha o que estava aberto (as sugestões e os painéis de
-// "Como procurar"): nada muda o pedido enquanto a IA lê.
+// Enviar a frase fecha os painéis de "Como procurar": nada muda o pedido
+// enquanto a IA lê. As sugestões ficam (o "Onde?" travado as esconde). Ao
+// destravar, a busca de lugares é reagendada para o texto de "Onde?": cobre a
+// frase que não trouxe o lugar e a busca que caiu durante a leitura.
 watch(lendoFrase, lendo => {
-  if (!lendo) return;
-  sugestoes.value = [];
-  rascunhoComo.value = null;
-  painel.value = null;
+  if (lendo) {
+    rascunhoComo.value = null;
+    painel.value = null;
+    return;
+  }
+  if (!lugar.value && ondeTexto.value.trim()) procurarLugares(ondeTexto.value);
 });
 
 const alterarLugar = () => {
@@ -176,6 +180,7 @@ const rotuloDoBotao = computed(() =>
 // D2 (crítica r5): todo botão desligado diz o motivo numa linha acima dele,
 // também enquanto procura o lugar e quando o lugar não foi achado.
 const dica = computed(() => {
+  if (lendoFrase.value) return t(`${NS}.FRASE.LENDO`);
   if (!falta.value || ocupado.value) return '';
   return t(`${NS}.FALTA.${falta.value}`);
 });

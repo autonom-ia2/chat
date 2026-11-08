@@ -247,12 +247,13 @@ describe('AcharPortaPage: o pedido em uma frase', () => {
       { timeout: 3000 }
     );
     const sugestao = wrapper.find('[data-sugestao]');
+    expect(sugestao.exists()).toBe(true);
 
     await pedir(wrapper);
     await nextTick();
 
     expect(wrapper.find('[data-sugestoes]').exists()).toBe(false);
-    if (sugestao.exists()) await sugestao.trigger('mousedown');
+    await sugestao.trigger('mousedown');
     expect(wrapper.find('[data-lugar-escolhido]').exists()).toBe(false);
     expect(
       wrapper.find('[data-campo-onde]').attributes('disabled')
@@ -287,6 +288,94 @@ describe('AcharPortaPage: o pedido em uma frase', () => {
     );
     expect(pedidos).toHaveLength(0);
     wrapper.unmount();
+  });
+
+  it('enquanto a IA lê, a linha acima do botão diz "Lendo a sua frase…"', async () => {
+    rota.query = { demo: 'porta' };
+    const wrapper = mount(AcharPortaPage);
+
+    await pedir(wrapper);
+    await nextTick();
+
+    expect(wrapper.find('[data-dica]').text()).toContain('PORTA.FRASE.LENDO');
+    await vi.waitFor(
+      () => {
+        expect(oQue(wrapper)).toBe('Padarias');
+      },
+      { timeout: 3000 }
+    );
+    expect(wrapper.find('[data-dica]').text()).not.toContain(
+      'PORTA.FRASE.LENDO'
+    );
+    wrapper.unmount();
+  });
+
+  it('frase sem lugar, com texto em "Onde?": as sugestões voltam depois da leitura', async () => {
+    rota.query = { demo: 'porta-frase-sem-onde' };
+    const wrapper = mount(AcharPortaPage);
+
+    // A frase sai logo: a busca de lugares do texto já escrito cai durante a
+    // leitura e é reagendada ao destravar.
+    await pedir(wrapper);
+    await nextTick();
+    expect(wrapper.find('[data-sugestoes]').exists()).toBe(false);
+
+    await vi.waitFor(
+      () => {
+        expect(oQue(wrapper)).toBe('Padarias');
+      },
+      { timeout: 3000 }
+    );
+    expect(wrapper.find('[data-campo-onde]').element.value).toBe('centro');
+    await vi.waitFor(
+      () => {
+        expect(wrapper.findAll('[data-sugestao]')).toHaveLength(3);
+      },
+      { timeout: 3000 }
+    );
+    wrapper.unmount();
+  });
+
+  // Um caso curto por trava: com a frase em voo, cada controle que muda o
+  // pedido não faz nada.
+  describe('com a frase em voo', () => {
+    const emVoo = async () => {
+      rota.query = { demo: 'porta' };
+      const wrapper = mount(AcharPortaPage);
+      await pedir(wrapper);
+      await nextTick();
+      return wrapper;
+    };
+
+    it('"Alterar" de "Como vamos procurar" não abre o painel', async () => {
+      const wrapper = await emVoo();
+
+      await wrapper.find('[data-alterar]').trigger('click');
+
+      expect(wrapper.find('[data-painel]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('"Alterar" do lugar não solta o lugar escolhido', async () => {
+      const wrapper = await emVoo();
+
+      await wrapper.find('[data-alterar-lugar]').trigger('click');
+
+      expect(wrapper.find('[data-lugar-escolhido]').exists()).toBe(true);
+      wrapper.unmount();
+    });
+
+    it('as ideias ficam desligadas e tocar numa não escreve em "O quê?"', async () => {
+      const wrapper = await emVoo();
+      const ideia = wrapper.find('[data-ideia]');
+
+      expect(ideia.attributes('disabled')).toBeDefined();
+      await ideia.trigger('click');
+
+      expect(oQue(wrapper)).toBe('Escritórios');
+      expect(ideia.attributes('aria-pressed')).toBe('false');
+      wrapper.unmount();
+    });
   });
 
   it('a IA da conta desligada no meio do caminho: o aviso diz isso', async () => {

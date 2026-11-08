@@ -50,7 +50,8 @@
         "CONFIRA": "Done. Check the fields below before searching.",
         "NAO_ENTENDEU": "We did not understand. Write it another way or fill in the fields below.",
         "ERRO": "The AI did not answer now. Fill in the fields below.",
-        "SEM_IA": "The account AI is not turned on. Fill in the fields below."
+        "SEM_IA": "The account AI is not turned on. Fill in the fields below.",
+        "LENDO": "Reading your sentence…"
       },
       "O_QUE": {
         "ROTULO": "What?",

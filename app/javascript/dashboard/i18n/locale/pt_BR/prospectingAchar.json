@@ -50,7 +50,8 @@
         "CONFIRA": "Pronto. Confira os campos abaixo antes de buscar.",
         "NAO_ENTENDEU": "Não entendemos. Escreva de outro jeito ou preencha os campos abaixo.",
         "ERRO": "A IA não respondeu agora. Preencha os campos abaixo.",
-        "SEM_IA": "A IA da conta não está ligada. Preencha os campos abaixo."
+        "SEM_IA": "A IA da conta não está ligada. Preencha os campos abaixo.",
+        "LENDO": "Lendo a sua frase…"
       },
       "O_QUE": {
         "ROTULO": "O quê?",

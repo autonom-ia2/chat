@@ -38,7 +38,6 @@ watch(
 );
 
 const escolher = sugestao => {
-  if (props.bloqueado) return;
   ativo.value = -1;
   emit('escolher', sugestao);
 };

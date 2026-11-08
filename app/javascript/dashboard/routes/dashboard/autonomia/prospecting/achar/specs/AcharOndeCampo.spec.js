@@ -14,16 +14,17 @@ describe('AcharOndeCampo travado', () => {
       props: { sugestoes: SUGESTOES, texto: 'centro' },
     });
     expect(wrapper.findAll('[data-sugestao]')).toHaveLength(2);
+    const campo = wrapper.find('[data-campo-onde]');
+    // A primeira sugestão fica marcada: sem a trava, o Enter a escolheria.
+    await campo.trigger('keydown', { key: 'ArrowDown' });
+    expect(campo.attributes('aria-activedescendant')).toBeDefined();
 
     await wrapper.setProps({ bloqueado: true });
 
     expect(wrapper.find('[data-sugestoes]').exists()).toBe(false);
-    expect(
-      wrapper.find('[data-campo-onde]').attributes('disabled')
-    ).toBeDefined();
-    await wrapper.find('[data-campo-onde]').trigger('keydown', {
-      key: 'Enter',
-    });
+    expect(campo.attributes('disabled')).toBeDefined();
+    // dispatchEvent chega ao campo desligado (o trigger dos testes não chega).
+    campo.element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     expect(wrapper.emitted('escolher')).toBeUndefined();
   });
 

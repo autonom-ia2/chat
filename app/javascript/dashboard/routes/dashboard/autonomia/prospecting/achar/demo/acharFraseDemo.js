@@ -24,10 +24,14 @@ export const FRASE_SEM_AJUSTE = {
   left_out: null,
 };
 
+// A frase que não diz o lugar: "Onde?" fica com o que já estava escrito.
+export const FRASE_SEM_ONDE = { ...FRASE_ENTENDIDA, where: null };
+
 // Qual resposta cada estado da demonstração devolve; os outros, a entendida.
 export const FRASE_POR_ESTADO = {
   'porta-frase-nao-entendeu': FRASE_NAO_ENTENDIDA,
   'porta-frase-ajuste-manual': FRASE_SEM_AJUSTE,
+  'porta-frase-sem-onde': FRASE_SEM_ONDE,
 };
 
 // Os estados da porta do pedido em uma frase, sobre o preenchimento padrão.
@@ -38,6 +42,7 @@ export const PORTA_DA_FRASE = padrao => ({
   'porta-frase-sem-ia': padrao,
   'porta-frase-nao-entendeu': padrao,
   'porta-frase-uma-sugestao': padrao,
+  'porta-frase-sem-onde': { oQue: 'Escritórios', ondeTexto: 'centro' },
   'porta-frase-ajuste-manual': {
     ...padrao,
     primeiro: 'pouco',

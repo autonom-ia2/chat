@@ -19,6 +19,17 @@ const { t } = useI18n();
 const NS = 'PROSPECTING_ACHAR.PORTA.FRASE';
 // O mesmo teto do servidor (SearchInterpreter::MAX_TEXT).
 const MAX_LETRAS = 300;
+// Último recurso para qualquer fonte: a resposta que nunca chega vira o aviso
+// de falha e destrava os campos. Na API, o axios já corta antes, aos 20 s
+// (interpretSearch); este prazo só age se nada mais cortar.
+const PRAZO_MS = 22000;
+const comPrazo = promessa => {
+  let relogio;
+  const estouro = new Promise((_, rejeitar) => {
+    relogio = setTimeout(() => rejeitar(new Error('prazo')), PRAZO_MS);
+  });
+  return Promise.race([promessa, estouro]).finally(() => clearTimeout(relogio));
+};
 
 const texto = ref('');
 const ocupado = defineModel('ocupado', { type: Boolean, default: false });
@@ -45,7 +56,7 @@ const preencher = async () => {
   ocupado.value = true;
   resultado.value = null;
   try {
-    const entendido = await props.interpretar(texto.value.trim());
+    const entendido = await comPrazo(props.interpretar(texto.value.trim()));
     if (entendido.entendeu) {
       emit('entendeu', entendido);
       resultado.value = { tipo: 'confira', ficouDeFora: entendido.ficouDeFora };
