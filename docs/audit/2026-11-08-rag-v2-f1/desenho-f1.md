@@ -183,13 +183,18 @@ do Rodrigo é resposta melhor para quem já usa, então o reprocessamento faz pa
 
 ## Os 2 PRs
 
-**PR 1 — PDF**
-- blocos do PDF digitado (título pela letra, título de 2 linhas, tabela por coluna alinhada, sumário fora, página);
-- OCR com posição para o escaneado e para a página de imagem no PDF misto;
-- Chunker por seção, para quem entrega blocos;
-- metadado do trecho;
-- migration: o ivfflat sem uso sai; o HNSW só entra com a prova da seção "Banco";
-- flag.
+**PR 1 — PDF digitado** (pedido de agilizar, 08/11: o PR 1 saiu em duas partes)
+- PR 1a, este:
+  - blocos do PDF digitado: título pela letra maior ou pelo negrito curto, título de 2 linhas como um só, nível
+    pelo tamanho da letra, página de cada bloco, sumário fora;
+  - corte por seção (`CortePorSecao`) para quem entrega blocos;
+  - caminho, páginas e id da seção no metadado do trecho;
+  - migration: o ivfflat sem uso sai; o HNSW só entra com a prova da seção "Banco";
+  - flag.
+- PR 1b, o seguinte:
+  - tabela por coluna alinhada, com o cabeçalho repetido;
+  - OCR com posição para o escaneado e para a página de imagem no PDF misto.
+  - Até lá, a tabela sai como parágrafos e o escaneado segue pelo caminho de hoje (o Chunker).
 
 **PR 2 — os outros formatos**
 - XLSX e CSV, DOCX, MD, site, JSON, TXT e foto passam a entregar blocos;
