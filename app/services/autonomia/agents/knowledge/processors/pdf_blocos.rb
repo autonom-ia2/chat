@@ -124,11 +124,17 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
     corridas = repetidos(paginas, paginas.map { |pagina| pagina[:linhas].each_index.filter_map { |indice| chave_da_borda(pagina, indice) } })
     vistas = Set.new
     paginas.map do |pagina|
-      # A página de sumário sai depois: o pé lido nela não conta como visto.
-      desta = sumario?(pagina) ? vistas.dup : vistas
-      linhas = pagina[:linhas].reject.with_index { |_, indice| sai_da_borda?(chave_da_borda(pagina, indice), corridas, desta) }
-      pagina.merge(linhas: linhas)
+      # O sumário é decidido uma vez, sem as linhas corridas, e vale também em blocos_das_paginas: a página de sumário
+      # sai, e o pé lido nela não conta como visto.
+      sumario = sumario?(pagina.merge(linhas: sem_corridas(pagina) { |chave| corridas.include?(chave) }))
+      desta = sumario ? vistas.dup : vistas
+      pagina.merge(linhas: sem_corridas(pagina) { |chave| sai_da_borda?(chave, corridas, desta) }, sumario: sumario)
     end
+  end
+
+  # As linhas da página sem as da borda em que o bloco diz sim.
+  def sem_corridas(pagina)
+    pagina[:linhas].reject.with_index { |_, indice| yield(chave_da_borda(pagina, indice)) }
   end
 
   def sai_da_borda?(chave, corridas, vistas)
@@ -159,7 +165,7 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
   end
 
   def sumario_fora?(pagina, numero)
-    return false unless sumario?(pagina)
+    return false unless pagina.fetch(:sumario) { sumario?(pagina) }
 
     Rails.logger.info("[autonomia][pdf_blocos] página #{numero} lida como sumário, fora do corte por seção")
     true

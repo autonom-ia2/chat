@@ -183,6 +183,25 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::PdfTabelas do
     expect(leitor.faixas_de_tabela(pagina([*linhas, corrida(650, 'Texto do contrato que vai ate a margem direita.')]))).to eq([])
   end
 
+  it 'does not take a short introduction line above a two cell list as its header' do
+    lista = %w[Guincho Chaveiro Pneu].each_with_index.map do |texto, indice|
+      linha(664 - (indice * 12), celula('•', 18, 22.5), celula("#{texto} ate o limite do plano;", 37, 200)).merge(letra: 9.0)
+    end
+    linhas = [corrida(706, 'Texto do contrato que vai ate a margem direita.'), linha(676, celula('Estao cobertos:', 54, 120)), *lista]
+
+    expect(leitor.faixas_de_tabela(pagina(linhas))).to eq([])
+  end
+
+  it 'reads two columns as a table when the short lines above head both columns' do
+    linhas = [corrida(720, 'Texto do contrato que vai ate a margem direita.'), linha(690, celula('Prazo', 55, 80)),
+              linha(684, celula('% do premio retido', 140, 220)),
+              *[['1 a 15', '13%'], ['16 a 30', '20%'], ['31 a 45', '27%']].each_with_index.map do |(prazo, taxa), indice|
+                linha(670 - (indice * 20), celula(prazo, 50, 85), celula(taxa, 170, 190))
+              end]
+
+    expect(leitor.faixas_de_tabela(pagina(linhas))).to eq([[1, 3, 5]])
+  end
+
   it 'reads two columns as a table when the first row stands out in bold' do
     linhas = [linha(680, celula('Idade', 50, 80, 'F2'), celula('Depreciacao', 150, 210, 'F2')),
               linha(660, celula('Ate 1 ano', 50, 95), celula('10%', 150, 170)),

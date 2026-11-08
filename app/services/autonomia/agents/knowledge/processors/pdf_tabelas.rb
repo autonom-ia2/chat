@@ -58,12 +58,22 @@ module Autonomia::Agents::Knowledge::Processors::PdfTabelas
           .select { |faixa| tabela?(linhas, faixa, pagina) }
   end
 
-  # Só duas células por linha é tabela com cabeçalho: linhas curtas logo acima, ou a primeira linha fora da fonte do corpo
-  # (o negrito). Sem ele, é o marcador da lista ou o número da cláusula curta e o texto (na letra 9 a folga do marcador
-  # passa de GAP_DE_CELULA); e a tabela de duas colunas sem cabeçalho não ganharia título nenhum lida como tabela.
+  # Só duas células por linha é tabela com cabeçalho: as linhas curtas logo acima sobre as duas colunas, ou a primeira
+  # fileira fora da fonte do corpo (o negrito, a mesma regra de fileiras_de_cabecalho). Sem ele, é o marcador da lista ou
+  # o número da cláusula curta e o texto (na letra 9 a folga do marcador passa de GAP_DE_CELULA), e a linha curta de
+  # introdução acima da lista fica sobre uma coluna só. A tabela de duas colunas sem cabeçalho fica como texto: lida
+  # como tabela, não ganharia título nenhum.
   def tabela?(linhas, (acima, primeira, ultima), pagina)
-    acima < primeira || linhas[primeira][:fonte].exclude?(pagina[:fonte_do_corpo]) ||
-      linhas[primeira..ultima].any? { |linha| celulas(linha).size > 2 }
+    da_tabela = linhas[primeira..ultima]
+    return true if da_tabela.any? { |linha| celulas(linha).size > 2 }
+
+    fileiras_de_cabecalho(fileiras_da_tabela(da_tabela, pagina), pagina).positive? ||
+      cabecalho_sobre_colunas?(linhas[acima...primeira], da_tabela)
+  end
+
+  def cabecalho_sobre_colunas?(de_cima, da_tabela)
+    referencia = da_tabela.map { |linha| celulas(linha) }.max_by(&:size)
+    de_cima.flat_map { |linha| celulas(linha) }.map { |pedaco| mais_perto(pedaco, referencia) }.uniq.size > 1
   end
 
   def linha_de_tabela?(linha, pagina)
