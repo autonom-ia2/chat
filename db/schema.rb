@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_840000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -3042,9 +3042,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_840000) do
     t.string "request_digest", limit: 64
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "source_post_id"
+    t.string "source_post_network"
     t.index ["account_id", "ad_account_id", "request_digest"], name: "idx_crm_meta_ads_created_objects_digest", unique: true, where: "((status)::text = ANY (ARRAY[('creating'::character varying)::text, ('unconfirmed'::character varying)::text, ('rollback_failed'::character varying)::text]))"
     t.index ["account_id", "ad_id"], name: "idx_crm_meta_ads_created_objects_ad"
     t.index ["account_id", "idempotency_key"], name: "idx_crm_meta_ads_created_objects_key", unique: true
+    t.index ["account_id", "source_post_id"], name: "idx_crm_meta_ads_created_objects_source_post"
   end
 
   create_table "crm_meta_ads_lead_forms", force: :cascade do |t|
