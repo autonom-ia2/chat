@@ -66,6 +66,12 @@ RSpec.describe Autonomia::Automacao::Valores, :automacao_motor do
     expect(ler(execucao, 'envio.situacao')).to eq('entregue')
   end
 
+  it 'com dois envios, lê o último' do
+    execucao = rodar([oi, mensagem_passo('depois', 'Conseguiu ver?')])
+
+    expect(ler(execucao, 'envio.texto')).to eq('Conseguiu ver?')
+  end
+
   it 'antes do primeiro envio, e a nota do "avisar", leem vazio' do
     execucao = rodar([avisar_passo('aviso', { 'pessoas' => [admin.id] }, 'Olha esta conversa')])
 
