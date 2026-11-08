@@ -1085,6 +1085,7 @@
         "MAIS": "More options",
         "PARADO_FAIXA": "{nome} is not answering anyone right now.",
         "SO_VER": "You can view and test. Whoever manages the account decides when to answer and what to change.",
+        "SO_VER_COM_FERRAMENTAS": "You can view, test and take care of the tools. Everything else is up to whoever manages the account.",
         "ALTERAR": "Change",
         "VER": "View",
         "RESUMO": "Summary of {nome}",

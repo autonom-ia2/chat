@@ -887,7 +887,11 @@ const tirarPergunta = id => {
             class="i-lucide-lock size-5 shrink-0 text-n-blue-11"
             aria-hidden="true"
           />
-          {{ t('AGENTS.JORNADA.PAGINA.SO_VER') }}
+          {{
+            ferramentasDelegadas
+              ? t('AGENTS.JORNADA.PAGINA.SO_VER_COM_FERRAMENTAS')
+              : t('AGENTS.JORNADA.PAGINA.SO_VER')
+          }}
         </p>
         <AgenteSemana
           :numeros="semana.numerosDe(agente.id)"

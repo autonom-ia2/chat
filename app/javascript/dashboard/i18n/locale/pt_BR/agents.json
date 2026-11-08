@@ -1085,6 +1085,7 @@
         "MAIS": "Mais opções",
         "PARADO_FAIXA": "{nome} não está respondendo ninguém agora.",
         "SO_VER": "Você pode ver e testar. Quem administra a conta decide quando atender e o que mudar.",
+        "SO_VER_COM_FERRAMENTAS": "Você pode ver, testar e cuidar das ferramentas. O resto fica com quem administra a conta.",
         "ALTERAR": "Alterar",
         "VER": "Ver",
         "RESUMO": "Resumo de {nome}",

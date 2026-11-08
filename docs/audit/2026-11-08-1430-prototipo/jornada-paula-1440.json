@@ -1,0 +1,151 @@
+{
+  "pasta": "docs/audit/2026-11-08-1430-prototipo/prints/2-paula-cria-e-testa-1440",
+  "conta": 1,
+  "usuario": "paula@acme.inc",
+  "larguras": [
+    1440
+  ],
+  "temas": [
+    "light"
+  ],
+  "jornadas": [
+    {
+      "nome": "paula-cria-e-testa",
+      "etapas": [
+        {
+          "nome": "pagina-da-ana",
+          "url": "/app/accounts/{conta}/agents/1",
+          "esperar": "button:has-text(\"Mais opções\")",
+          "pausa": 4000
+        },
+        {
+          "nome": "mais-opcoes",
+          "passos": [
+            {
+              "clicar": "button:has-text(\"Mais opções\")"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "ferramentas-vazia",
+          "passos": [
+            {
+              "clicar": "[role=\"menuitem\"]:has-text(\"Ferramentas\")"
+            }
+          ],
+          "esperar": "[role=\"dialog\"] button:has-text(\"Adicionar ferramenta\")",
+          "pausa": 2000
+        },
+        {
+          "nome": "passo-1-o-que-faz",
+          "passos": [
+            {
+              "clicar": "[role=\"dialog\"] button:has-text(\"Adicionar ferramenta\")"
+            },
+            {
+              "preencher": [
+                "[role=\"dialog\"] input[type=\"text\"]",
+                "Endereço pelo CEP"
+              ]
+            },
+            {
+              "preencher": [
+                "[role=\"dialog\"] textarea",
+                "Use quando a pessoa disser o CEP. Traz rua, bairro e cidade."
+              ]
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "passo-2-para-onde",
+          "passos": [
+            {
+              "clicar": "[role=\"dialog\"] button:has-text(\"Continuar\")"
+            },
+            {
+              "preencher": [
+                "[role=\"dialog\"] textarea[placeholder=\"https://\"]",
+                "https://viacep.com.br/ws/{{cep}}/json/"
+              ]
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "passo-3-o-que-preenche",
+          "passos": [
+            {
+              "clicar": "[role=\"dialog\"] button:has-text(\"Continuar\")"
+            },
+            {
+              "clicar": "[role=\"dialog\"] button:has-text(\"Adicionar informação\")"
+            },
+            {
+              "preencher": [
+                "[role=\"dialog\"] input[placeholder=\"informação 1\"]",
+                "cep"
+              ]
+            },
+            {
+              "preencher": [
+                "[role=\"dialog\"] textarea >> nth=0",
+                "O CEP que a pessoa disser, só os números."
+              ]
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "passo-4-como-entra",
+          "passos": [
+            {
+              "clicar": "[role=\"dialog\"] button:has-text(\"Continuar\")"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "teste",
+          "passos": [
+            {
+              "clicar": "[role=\"dialog\"] button:has-text(\"Salvar e testar\")"
+            },
+            {
+              "esperar": "[role=\"dialog\"] button:has-text(\"Fazer chamada de teste\")"
+            },
+            {
+              "preencher": [
+                "[role=\"dialog\"] input[type=\"text\"]",
+                "01001000"
+              ]
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "deu-certo",
+          "passos": [
+            {
+              "clicar": "[role=\"dialog\"] button:has-text(\"Fazer chamada de teste\")"
+            },
+            {
+              "esperar": "[role=\"dialog\"] button:has-text(\"Ligar ferramenta\")"
+            }
+          ],
+          "pausa": 2000
+        },
+        {
+          "nome": "ligada",
+          "passos": [
+            {
+              "clicar": "[role=\"dialog\"] button:has-text(\"Ligar ferramenta\")"
+            }
+          ],
+          "pausa": 3000
+        }
+      ]
+    }
+  ]
+}
