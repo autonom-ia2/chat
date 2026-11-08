@@ -6,19 +6,23 @@ module Crm
     class ResponsesClient
       # `status`: o HTTP da resposta, quando houve resposta. `passageira?`: a falha que pode passar sozinha, depois das
       # novas tentativas daqui (rede, tempo esgotado, 408, 429 e 5xx); quem chama decide se tenta de novo mais tarde
-      # (o leitor de mídia do CRM, #2109). Sem `status:` nem `rede:`, como antes: não é passageira.
+      # (o leitor de mídia do CRM, #2109). Sem `status:` nem `rede:`, como antes: não é passageira. `tempo_esgotado?`: o
+      # pedido chegou e a resposta não voltou a tempo (Net::ReadTimeout): a OpenAI pode ter processado e cobrado (#2301).
       class Error < StandardError
         attr_reader :status
 
-        def initialize(message = nil, status: nil, rede: false)
+        def initialize(message = nil, status: nil, rede: false, tempo_esgotado: false)
           super(message)
           @status = status
           @rede = rede
+          @tempo_esgotado = tempo_esgotado
         end
 
         def passageira?
           @rede || [408, 429].include?(@status.to_i) || @status.to_i >= 500
         end
+
+        def tempo_esgotado? = @tempo_esgotado
       end
 
       REQUEST_TIMEOUT = 180
@@ -258,7 +262,7 @@ module Crm
           rescue *NETWORK_ERRORS => e
             if retries >= @max_retries
               log_exception(operation || 'openai.request', e, model: model, response_id: response_id, started_at: started_at)
-              raise Error.new("network_timeout: #{e.class.name.demodulize.underscore}", rede: true)
+              raise Error.new("network_timeout: #{e.class.name.demodulize.underscore}", rede: true, tempo_esgotado: e.is_a?(Net::ReadTimeout))
             end
           end
 

@@ -450,12 +450,12 @@
       "LIMITE_DO_BOTAO": "{n} de {limite} letras",
       "ARQUIVO_ERRADO": {
         "foto": "Escolha uma foto JPG ou PNG.",
-        "video": "Escolha um vídeo MP4.",
+        "video": "Escolha um vídeo MP4 ou MOV.",
         "documento": "Escolha um arquivo PDF."
       },
       "ARQUIVO_GRANDE": {
         "foto": "A foto pode ter até 5 MB.",
-        "video": "O vídeo pode ter até 16 MB.",
+        "video": "O vídeo pode ter até 100 MB.",
         "documento": "O PDF pode ter até 100 MB."
       },
       "TOPO_AJUDA": "Opcional. O mesmo arquivo vai para todas as pessoas que receberem. Use para algo igual para todos (cardápio, catálogo, regulamento). Boleto, comprovante ou documento de cada cliente não vão aqui."

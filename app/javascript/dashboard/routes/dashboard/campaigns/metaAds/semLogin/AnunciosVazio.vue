@@ -1,14 +1,17 @@
 <script setup>
 import { computed } from 'vue';
+import Button from 'dashboard/components-next/button/Button.vue';
 import { SEM_LOGIN, phoneLabel } from './anunciosSemLogin';
 
 // Anúncios sem login (#1960), tela "pronto": o WhatsApp oficial está pronto, mas ninguém veio de anúncio em 90
-// dias. Diz que o resultado aparece aqui e oferece o exemplo.
+// dias. Diz que o resultado aparece aqui e oferece o exemplo. Quem já anuncia para fora do WhatsApp (site, perfil,
+// vídeo) ou ainda vai começar conecta a conta de anúncios daqui mesmo (#2190); só quem pode configurar.
 const props = defineProps({
   inboxes: { type: Array, default: () => [] },
+  canConnect: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['example']);
+const emit = defineEmits(['example', 'connect']);
 
 const phone = computed(() =>
   props.inboxes.length === 1 ? phoneLabel(props.inboxes[0].phone) : null
@@ -49,5 +52,21 @@ const readyText = computed(() => {
       <span class="i-lucide-eye size-4" aria-hidden="true" />
       {{ $t(`${SEM_LOGIN}.READY.EXAMPLE`) }}
     </button>
+    <div
+      v-if="canConnect"
+      data-anuncios-vazio-conectar
+      class="flex flex-col items-start gap-3 w-full pt-4 border-0 border-t border-solid border-n-weak"
+    >
+      <p class="m-0 max-w-2xl text-sm leading-6 text-n-slate-11">
+        {{ $t(`${SEM_LOGIN}.READY.CONNECT_TEXT`) }}
+      </p>
+      <Button
+        data-anuncios-vazio-conectar-botao
+        class="!min-h-11 !rounded-xl"
+        icon="i-lucide-plug"
+        :label="$t(`${SEM_LOGIN}.READY.CONNECT_CTA`)"
+        @click="emit('connect')"
+      />
+    </div>
   </section>
 </template>

@@ -66,8 +66,24 @@ RSpec.describe Crm::Ai::ClassifierPrompt do
 
       expect(motivos(classificador.esquema)).to eq([*Crm::Ai::NaoENegocio::MOTIVOS, 'teste'])
       expect(classificador.send(:instructions))
-        .to eq("#{described_class::TEXT}\n\n#{described_class::NAO_E_NEGOCIO}#{fim}\n\n#{Crm::Ai::FecharCard::TESTE}")
+        .to eq("#{described_class::TEXT}\n\n#{described_class::NAO_E_NEGOCIO_COM_FECHAR}#{fim}\n\n#{Crm::Ai::FecharCard::TESTE}")
+      regra = described_class::NAO_E_NEGOCIO_COM_FECHAR
+      expect(conjunta.send(:instructions))
+        .to eq("#{described_class::TEXT}\n\n#{regra}\n\n#{described_class::VARIOS}#{fim}\n\n#{Crm::Ai::FecharCard::TESTE}")
       expect(Crm::Ai::NaoENegocio::CAMPO[:properties][:motivo][:enum]).to eq(Crm::Ai::NaoENegocio::MOTIVOS)
+    end
+
+    # Pega (#2396): a conta sem o fechar receber a desistência como "perda" sem campo para ela, e mover sozinho para a
+    # etapa de perda quem só clicou por engano. Sem a flag, a desistência fica como antes; o funil estreito vale nos dois.
+    it 'a desistência só manda para "fechar_card" com a flag; sem ela, o texto da etapa de perda', :aggregate_failures do
+      expect(described_class::NAO_E_NEGOCIO).not_to include('fechar_card')
+      expect(described_class::NAO_E_NEGOCIO).to include('(isso é perda: use a etapa de perda, nunca este campo)')
+      expect(described_class::NAO_E_NEGOCIO_COM_FECHAR).to include('isso é perda, vai em "fechar_card"')
+      expect(described_class::NAO_E_NEGOCIO_COM_FECHAR).not_to include('use a etapa de perda')
+      [described_class::NAO_E_NEGOCIO, described_class::NAO_E_NEGOCIO_COM_FECHAR].each do |regra|
+        expect(regra).to include('uma pessoa da equipe o encaminha')
+        expect(regra).not_to include('%<')
+      end
     end
   end
 end

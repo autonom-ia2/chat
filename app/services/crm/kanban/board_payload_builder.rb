@@ -9,6 +9,7 @@ class Crm::Kanban::BoardPayloadBuilder
     @cards_scope = cards_scope
     @params = context.params
     @account_user = context.account_user
+    @account = context.account
     @conversation_visibility = Crm::Conversations::Visibility.new(
       account: context.account,
       user: context.user,
@@ -22,11 +23,12 @@ class Crm::Kanban::BoardPayloadBuilder
     cards_by_stage = stage_list.index_with do |stage|
       cards_for_stage(filtered_cards.where(stage_id: stage.id), stage)
     end
-    @company_by_card_id = Crm::Cards::CompanyResolver.for_cards(
-      cards_by_stage.values.flat_map { |cards, _has_more| cards }
-    )
+    board_cards = cards_by_stage.values.flat_map { |cards, _has_more| cards }
+    @company_by_card_id = Crm::Cards::CompanyResolver.for_cards(board_cards)
     # Acesso por funil (#1148, parte C): a visibilidade das conversas do quadro (principais e vinculadas) numa consulta só.
-    @conversation_visibility.preload_cards(cards_by_stage.values.flat_map { |cards, _has_more| cards })
+    @conversation_visibility.preload_cards(board_cards)
+    # O selo de SLA lê a conta de cada card (#2295): a da requisição já está carregada, então nenhum SELECT por card.
+    ActiveRecord::Associations::Preloader.new(records: board_cards, associations: :account, available_records: [@account]).call
 
     {
       pipeline: pipeline_payload,

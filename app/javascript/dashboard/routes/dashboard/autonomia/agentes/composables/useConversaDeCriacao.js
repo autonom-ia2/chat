@@ -35,6 +35,15 @@ import { useFase2 } from './useFase2';
 //   arquivo, espera o rascunho existir. Ao continuar um rascunho, o que já estava na base volta para
 //   a caixa (fora da conversa, que não mostra o histórico).
 export const ESPERA_DEMORANDO_MS = 60000;
+// #2489 — o servidor só dá a geração por perdida depois de 5 min parada (BuildThread::STALE_PROCESSING_AFTER, a partir do
+// último toque no updated_at) e só então aceita refazê-la. O prazo da tela conta de quando o status vira `processing`
+// (o mais perto disso que a tela vê), com folga. Passado o prazo, a tela oferece "Tentar de novo" em vez de 30 min de
+// "Pensando…"; se o servidor ainda achar a geração viva, o pedido recebe 409 e a tela volta a esperar. Gerar ou ajustar
+// o agente leva até ~4 min em produção (p90 136 s), abaixo do prazo.
+export const PRAZO_DA_RESPOSTA_MS = 5 * 60 * 1000 + 15000;
+// #2489 — teto da espera do turno pelas subidas de material: vencido, o turno sai e leva os nomes
+// do que ainda está subindo (o Construtor diz que está a caminho).
+export const PRAZO_DAS_SUBIDAS_MS = 20000;
 // "Agora não" / sair com pelo menos duas respostas: fecha no servidor para o rascunho ter instrução
 // (mesma regra do Construtor de hoje e do protótipo: hasInstruction = closed || answers >= 2).
 const RESPOSTAS_PARA_FECHAR_AO_SAIR = 2;
@@ -109,10 +118,15 @@ export function useConversaDeCriacao({
   const erroDaBase = ref(false);
   // Tirar não deu certo no servidor: o item volta para a lista e a caixa avisa ({ nome }).
   const falhaAoTirar = ref(null);
+  // #2489 — um arquivo não subiu enquanto o turno esperava: o turno não sai e a conversa avisa ({ nome }).
+  const falhaAoSubir = ref(null);
   // Fontes tiradas (ou sendo tiradas): uma leitura da base em andamento não as traz de volta.
   const tiradas = new Set();
   const aviso = ref(null);
   const demorando = ref(false);
+  // #2489 — a geração passou do prazo: a tela mostra "Tentar de novo". Fica só aqui, sem mexer no status da store: a
+  // consulta continua, e uma resposta que chegue depois (ou um status novo) desfaz o aviso sozinha.
+  const esgotou = ref(false);
   // Quantas vezes a conversa fechou de novo depois de fechada (o teste avisa "Atualizado").
   const atualizacoes = ref(0);
   const encerrando = ref(false);
@@ -122,6 +136,9 @@ export function useConversaDeCriacao({
   const estadosDasFontes = ref({});
   let proximoMaterial = 0;
   let relogioDemora = null;
+  let relogioPrazo = null;
+  // #2489 — a tela saiu (a store foi limpa): um turno que ainda esperava as subidas não sai mais.
+  let desmontado = false;
   // O último turno mandado ({ conteudo, extra, echo }), para reenviar se não chegou.
   let ultimoEnvio = null;
 
@@ -137,10 +154,11 @@ export function useConversaDeCriacao({
     () =>
       enviando.value ||
       Boolean(flags.value?.creating || flags.value?.sending) ||
-      status.value === 'processing'
+      (status.value === 'processing' && !esgotou.value)
   );
   const falhou = computed(
     () =>
+      esgotou.value ||
       ['send', 'failed', 'timeout'].includes(erroDaStore.value) ||
       status.value === 'failed'
   );
@@ -312,8 +330,13 @@ export function useConversaDeCriacao({
     }
   };
 
-  // `descritor` é { file } ou { url }, como a store espera.
-  const mandarParaBase = async (material, descritor) => {
+  // #2489 — como o material vai em `materiais_a_caminho`: igual à `reference` que a fonte terá (o nome
+  // do arquivo; o endereço inteiro do site), para o Construtor tirar o que já chegou.
+  const nomeACaminho = material => material.endereco || material.nome;
+
+  // `descritor` é { file } ou { url }, como a store espera. true = a fonte foi criada (#2489: o turno
+  // espera por isso); false = não subiu e o material mostra a falha.
+  const subirParaBase = async (material, descritor) => {
     trocarMaterial(material.id, { estado: 'enviando' });
     try {
       const fonte = await store.dispatch('autonomiaSources/create', {
@@ -329,16 +352,53 @@ export function useConversaDeCriacao({
             fonteId: fonte.id,
           });
         }
-        return;
+        return true;
       }
       // A leitura da base pode ter trazido este mesmo arquivo antes da resposta: fica um só.
       materiais.value = materiais.value.filter(
         m => m.id === material.id || !fonte?.id || m.fonteId !== fonte.id
       );
       trocarMaterial(material.id, { estado: 'base', fonteId: fonte?.id });
+      return true;
     } catch {
       trocarMaterial(material.id, { estado: 'atencao' });
+      return false;
     }
+  };
+
+  // #2489 — toda subida em andamento ({ subida: material }), venha de onde vier (anexo do turno, fila
+  // do 1º turno, clipe ou caixa de materiais): o turno espera todas antes de sair. A promessa nunca
+  // rejeita (a falha vira false e o material mostra o erro).
+  const subidasEmAndamento = new Map();
+  const mandarParaBase = (material, descritor) => {
+    const subida = subirParaBase(material, descritor);
+    subidasEmAndamento.set(subida, material);
+    subida.finally(() => subidasEmAndamento.delete(subida));
+    return subida;
+  };
+
+  // Espera as subidas em andamento até o prazo. `falhas`: as que não subiram DURANTE esta espera (uma
+  // falha antiga já saiu do registro e não retém o turno). `aindaSubindo`: os nomes do que o prazo
+  // deixou para trás.
+  const esperarSubidas = async () => {
+    const falhas = [];
+    const todas = Promise.all(
+      [...subidasEmAndamento].map(([subida, material]) =>
+        subida.then(subiu => {
+          if (!subiu) falhas.push(material);
+        })
+      )
+    );
+    let relogio;
+    const prazo = new Promise(resolve => {
+      relogio = setTimeout(() => resolve(true), PRAZO_DAS_SUBIDAS_MS);
+    });
+    const venceu = await Promise.race([todas.then(() => false), prazo]);
+    clearTimeout(relogio);
+    const aindaSubindo = venceu
+      ? [...subidasEmAndamento.values()].map(nomeACaminho)
+      : [];
+    return { falhas: [...falhas], aindaSubindo };
   };
 
   // Arquivo ou site antes de existir o rascunho espera na fila ("Vou ler assim que começarmos").
@@ -370,16 +430,28 @@ export function useConversaDeCriacao({
 
   // `endereco` já conferido (enderecoDoSite): a caixa só manda endereço válido.
   const anexarSite = endereco =>
-    paraBase({ nome: nomeDoSite(endereco), tipo: 'site' }, { url: endereco });
+    paraBase(
+      { nome: nomeDoSite(endereco), tipo: 'site', endereco },
+      { url: endereco }
+    );
 
-  watch(agenteId, id => {
-    if (!id) return;
+  // #2489 — antes do rascunho, o que espera na fila vai pelo nome no turno: o Construtor sabe que o
+  // material está a caminho e não diz que não chegou.
+  const materiaisACaminho = () =>
+    materiais.value
+      .filter(m => m.estado === 'fila' && filaDaBase.has(m.id))
+      .map(nomeACaminho);
+
+  // Com o rascunho criado, a fila sobe. O envio também chama: não depende de o watch já ter rodado.
+  const subirFila = () => {
+    if (!agenteId.value) return;
     filaDaBase.forEach((descritor, materialId) => {
       const material = materiais.value.find(m => m.id === materialId);
       if (material) mandarParaBase(material, descritor);
     });
     filaDaBase.clear();
-  });
+  };
+  watch(agenteId, subirFila);
 
   const enviarFotos = async fotos => {
     const enviadas = await Promise.all(
@@ -397,6 +469,42 @@ export function useConversaDeCriacao({
     );
     return enviadas.filter(Boolean);
   };
+
+  const pararPrazo = () => {
+    if (relogioPrazo) clearTimeout(relogioPrazo);
+    relogioPrazo = null;
+  };
+
+  // A subida de material e o envio não contam: o servidor mede a geração, e ela só começa no `processing`.
+  const armarPrazo = () => {
+    pararPrazo();
+    relogioPrazo = setTimeout(() => {
+      relogioPrazo = null;
+      if (status.value === 'processing') esgotou.value = true;
+    }, PRAZO_DA_RESPOSTA_MS);
+  };
+
+  watch(status, agora => {
+    if (agora === 'processing') {
+      armarPrazo();
+      return;
+    }
+    pararPrazo();
+    esgotou.value = false;
+  });
+
+  // Um turno novo depois do prazo (resposta, "Testar agora", reenvio; aceito ou recusado com 409) tira o aviso e conta
+  // um prazo novo: o status pode continuar `processing` sem mudar, e o watch acima não perceberia.
+  watch(
+    () => Boolean(flags.value?.creating || flags.value?.sending),
+    (agora, antes) => {
+      if (agora) {
+        esgotou.value = false;
+        return;
+      }
+      if (antes && status.value === 'processing') armarPrazo();
+    }
+  );
 
   // Manda um turno: abre a conversa com ele se ainda não há thread. `echo: false` não repete o
   // balão (sinal de fechar, ou reenvio do turno que já está na tela).
@@ -424,6 +532,8 @@ export function useConversaDeCriacao({
       return false;
     }
     aviso.value = null;
+    falhaAoSubir.value = null;
+    subirFila();
     anexos.filter(arquivo => !ehFoto(arquivo)).forEach(anexarArquivo);
     const fotos = anexos.filter(ehFoto);
     const conteudo =
@@ -433,10 +543,29 @@ export function useConversaDeCriacao({
 
     enviando.value = true;
     try {
+      // #2489 — com rascunho, o turno só sai depois de todo arquivo em subida chegar à base (deste
+      // envio ou de antes): o Construtor já o vê "em análise". Se algum não subiu, a conversa avisa e o
+      // turno não sai como se tivesse chegado (o texto volta ao campo). Vencido o prazo, o turno sai e
+      // diz o que ainda está a caminho. Se a tela saiu ou a conversa mudou durante a espera, o turno
+      // não sai: a store limpa abriria uma conversa nova (e um rascunho órfão).
+      const conversaAntes = threadId.value;
+      const saiu = () => desmontado || threadId.value !== conversaAntes;
+      const { falhas, aindaSubindo } = await esperarSubidas();
+      if (saiu()) return false;
+      if (falhas.length) {
+        falhaAoSubir.value = { nome: falhas[0].nome };
+        return false;
+      }
       const fotosEnviadas = await enviarFotos(fotos);
-      const extra = fotosEnviadas.length
-        ? { image_signed_ids: fotosEnviadas }
-        : {};
+      if (saiu()) return false;
+      const aCaminho = [
+        ...(agenteId.value ? [] : materiaisACaminho()),
+        ...aindaSubindo,
+      ];
+      const extra = {
+        ...(fotosEnviadas.length ? { image_signed_ids: fotosEnviadas } : {}),
+        ...(aCaminho.length ? { materiais_a_caminho: aCaminho } : {}),
+      };
       ultimoEnvio = { conteudo, extra, echo: true };
       await mandarTurno(ultimoEnvio);
       return true;
@@ -465,7 +594,23 @@ export function useConversaDeCriacao({
     });
   };
 
-  const tentarDeNovo = () => {
+  // #2489 — depois do prazo: o servidor refaz a geração se ela estiver mesmo parada; se ainda estiver viva (409) ou já
+  // tiver terminado (422), a consulta segue e a tela volta a esperar com um prazo novo.
+  const refazerDepoisDoPrazo = () => {
+    esgotou.value = false;
+    armarPrazo();
+    return store
+      .dispatch('autonomiaBuildThreads/retry', { threadId: threadId.value })
+      .catch(() =>
+        store.dispatch('autonomiaBuildThreads/poll', {
+          threadId: threadId.value,
+          delay: 0,
+        })
+      );
+  };
+
+  const fazerTentativa = () => {
+    if (esgotou.value && threadId.value) return refazerDepoisDoPrazo();
     const turnoNaoChegou = erroDaStore.value === 'send';
     store.commit('autonomiaBuildThreads/SET_ERROR', null);
     if (turnoNaoChegou && ultimoEnvio) return reenviar();
@@ -479,6 +624,17 @@ export function useConversaDeCriacao({
         );
     }
     return abrir();
+  };
+
+  // #2489 — um pedido por vez: dois cliques antes da resposta não mandam dois retries (o segundo cairia no caminho
+  // antigo, porque o primeiro já tirou o aviso do prazo). O segundo recebe a mesma promessa.
+  let tentativaEmAndamento = null;
+  const tentarDeNovo = () => {
+    if (tentativaEmAndamento) return tentativaEmAndamento;
+    tentativaEmAndamento = Promise.resolve(fazerTentativa()).finally(() => {
+      tentativaEmAndamento = null;
+    });
+    return tentativaEmAndamento;
   };
 
   const sinalDeFechar = () => t('AGENTS.BUILDER.FINALIZE_SIGNAL');
@@ -525,6 +681,7 @@ export function useConversaDeCriacao({
 
   const tirar = material => {
     falhaAoTirar.value = null;
+    falhaAoSubir.value = null;
     filaDaBase.delete(material.id);
     materiais.value = materiais.value.filter(m => m.id !== material.id);
     if (material.fonteId && agenteId.value) return tirarDoServidor(material);
@@ -548,10 +705,12 @@ export function useConversaDeCriacao({
   const pararRelogio = () => {
     if (relogioDemora) clearTimeout(relogioDemora);
     relogioDemora = null;
+    pararPrazo();
   };
 
   watch(pensando, agora => {
-    pararRelogio();
+    if (relogioDemora) clearTimeout(relogioDemora);
+    relogioDemora = null;
     demorando.value = false;
     if (!agora) return;
     relogioDemora = setTimeout(() => {
@@ -569,6 +728,7 @@ export function useConversaDeCriacao({
   };
 
   onBeforeUnmount(() => {
+    desmontado = true;
     pararRelogio();
     encerrarAoSair();
     limpar();
@@ -580,6 +740,7 @@ export function useConversaDeCriacao({
     base,
     erroDaBase,
     falhaAoTirar,
+    falhaAoSubir,
     carregarBase,
     estadoDoMaterial,
     agenteId,

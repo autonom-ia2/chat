@@ -54,6 +54,9 @@ class Crm::MetaAdsConnection < ApplicationRecord
   # Modos em que a leitura usa o token do próprio cliente, guardado cifrado nesta conexão.
   OWN_TOKEN_MODES = %w[token facebook_login].freeze
   DESTINATIONS = %w[whatsapp site].freeze
+  # "Não tenho site" escolhido de propósito no lugar do código do site (#2343). Fica em `destinations`, ao lado dos
+  # destinos, e é o que separa essa escolha de "Pixel ainda não escolhido".
+  NO_SITE = 'no_site'.freeze
   LAST_ERROR_LIMIT = 255
   NAME_LIMIT = 255
   # No modo `partner` o erro é do token da plataforma: o cliente vê só um código, nunca a mensagem da Meta.
@@ -95,8 +98,15 @@ class Crm::MetaAdsConnection < ApplicationRecord
       configured: true, status: status, mode: mode, last_checked_at: last_checked_at, last_error: last_error,
       verified_at: verified_at, destinations: destinations_payload,
       ad_account: ad_account_id.present? ? { id: ad_account_id, name: ad_account_name } : nil,
-      pixel: pixel_id.present? ? { id: pixel_id, name: pixel_name } : nil
+      pixel: pixel_id.present? ? { id: pixel_id, name: pixel_name } : nil, no_site: no_site?,
+      site_pages_count: site_pages_count
     }
+  end
+
+  # Destino (#2338): páginas do site ligadas na conta (links de site de Links e QR codes). Com o anúncio levando ao site
+  # e nenhuma página, o passo do Destino pede a página. Só a contagem: cliques e vendas seguem atrás de campaign_view.
+  def site_pages_count
+    Ctwa::TrackedLink.where(account_id: account_id, usage: 'website').count
   end
 
   def token_mode?
@@ -139,6 +149,15 @@ class Crm::MetaAdsConnection < ApplicationRecord
   # Pode ler os insights da conta de anúncios escolhida agora (#1073)?
   def insights_readable?
     active? && ad_account_id.present? && readable?
+  end
+
+  def no_site?
+    destinations.to_h[NO_SITE] == true
+  end
+
+  # Destinos com a marca "Não tenho site" ligada ou fora: a chave só existe quando é verdade.
+  def destinations_with_no_site(values, no_site)
+    values.to_h.except(NO_SITE).merge(no_site ? { NO_SITE => true } : {})
   end
 
   def destinations_payload

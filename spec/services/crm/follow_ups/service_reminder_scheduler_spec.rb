@@ -454,8 +454,18 @@ RSpec.describe Crm::FollowUps::ServiceReminderScheduler do
                             'payment_after' => 'Lembrar da parcela: depois do vencimento')
     end
 
-    # Só a corretora diz "parcela", como as telas do painel; os outros perfis do nicho seguem com "pagamento".
-    %w[seguradora insurtech saude_beneficios].each do |outro_perfil|
+    # A saúde diz "boleto" (#2083), como as telas do painel.
+    describe 'com o perfil saude_beneficios' do
+      let(:perfil) { 'saude_beneficios' }
+
+      it 'grava o boleto' do
+        expect(titulos.values).to contain_exactly('Lembrar do boleto: 3 dias antes', 'Lembrar do boleto: no dia',
+                                                  'Lembrar do boleto: depois do vencimento')
+      end
+    end
+
+    # Só a corretora diz "parcela" e a saúde, "boleto"; os outros perfis do nicho seguem com "pagamento".
+    %w[seguradora insurtech].each do |outro_perfil|
       describe "com o perfil #{outro_perfil}" do
         let(:perfil) { outro_perfil }
 

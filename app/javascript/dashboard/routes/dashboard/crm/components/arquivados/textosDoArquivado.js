@@ -85,3 +85,30 @@ export const avisoDoRestaurado = (
 // O nome que entra em "o card de {nome}" e "{nome} já tem outro card aberto" (decisão 6): o do cliente; sem contato,
 // o título do card.
 export const nomeDoCliente = card => card?.contact?.name || card?.title || '';
+
+// Arquivar com Mover (#2145, opção 1 do Rodrigo): o card movido vai mesmo quando o cliente já tinha card aberto no
+// destino. O resumo diz quantos clientes ficaram com mais de um aberto e lista até 3 nomes; o resto vira "mais N". Nulo sem nenhum.
+export const avisoDosDoisAbertos = (t, juntar, resposta, funil) => {
+  const grupo = resposta?.clients_with_two_open;
+  const total = Number(grupo?.count || 0);
+  if (!total) return null;
+  const nomes = (grupo.items || [])
+    .map(item => item.name)
+    .filter(Boolean)
+    .slice(0, 3);
+  const resto = total - nomes.length;
+  if (!nomes.length)
+    return t(
+      'CRM_ARQUIVADOS.FUNIL.MAIS_DE_UM_ABERTO',
+      { count: total, funil },
+      total
+    );
+  const lista = resto
+    ? [...nomes, t('CRM_ARQUIVADOS.FUNIL.MAIS_N', { count: resto }, resto)]
+    : nomes;
+  return t(
+    'CRM_ARQUIVADOS.FUNIL.MAIS_DE_UM_ABERTO_QUEM',
+    { count: total, funil, nomes: juntar(lista) },
+    total
+  );
+};

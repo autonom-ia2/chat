@@ -123,14 +123,13 @@ afterEach(() => {
 });
 
 describe('GavetaFerramentas · lista (F01)', () => {
-  it('lists each tool with its sentence, the On/Off switch and the 10 limit counter', async () => {
+  it('lists each tool with its sentence and the On/Off switch', async () => {
     const wrapper = await montar();
     expect(api.getTools).toHaveBeenCalledWith(7);
     expect(no('aside h2').textContent.trim()).toBe('Ferramentas');
     expect(texto()).toContain(
       'Ferramentas deixam Bia consultar outros sistemas durante a conversa'
     );
-    expect(no('[data-contador]').textContent.trim()).toBe('2 de 10');
     const interruptores = todos('[data-ferramenta] [role="switch"]');
     expect(interruptores.map(i => i.getAttribute('aria-checked'))).toEqual([
       'true',
@@ -159,13 +158,16 @@ describe('GavetaFerramentas · lista (F01)', () => {
     wrapper.unmount();
   });
 
-  it('warns at the limit of 10 and drops the add button', async () => {
-    const dez = Array.from({ length: 10 }, (_, i) => ({ ...FRETE, id: i + 1 }));
-    const wrapper = await montar(dez);
-    expect(no('[data-limite]').textContent).toContain(
-      'Este agente já tem 10 ferramentas, que é o limite.'
-    );
-    expect(rodape()).toBeNull();
+  // #1430: sem limite de quantidade — com 11 ferramentas, "Adicionar" continua.
+  it('keeps the add button with 11 tools, without any limit warning', async () => {
+    const onze = Array.from({ length: 11 }, (_, i) => ({
+      ...FRETE,
+      id: i + 1,
+    }));
+    const wrapper = await montar(onze);
+    expect(todos('[data-ferramenta]')).toHaveLength(11);
+    expect(texto()).not.toContain('limite');
+    expect(rodape().textContent).toContain('Adicionar ferramenta');
     wrapper.unmount();
   });
 

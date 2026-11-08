@@ -4,7 +4,7 @@
 # Escrever na Meta (criar, editar, apagar, subir mídia) só com a flag `whatsapp_templates_journey` na conta:
 # sem ela, 404 antes de qualquer outra coisa. Listar e "onde está em uso" seguem abertos.
 class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Accounts::BaseController
-  WRITE_ACTIONS = %i[create update destroy media].freeze
+  WRITE_ACTIONS = %i[create update destroy media media_status].freeze
 
   before_action :ensure_journey_enabled, only: WRITE_ACTIONS
   before_action :fetch_inbox
@@ -40,10 +40,23 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
     head :no_content
   end
 
+  # Vídeo que precisa de conversão (#2370) volta 202 com `poll_url`; a tela consulta `media_status` até o resultado.
   def media
     return render_error('media_invalid') unless params[:file].respond_to?(:original_filename)
 
-    render json: manager.upload(params[:file]), status: :created
+    result = manager.upload(params[:file])
+    return render json: result, status: :created unless result[:conversion_id]
+
+    render json: { status: 'pending', poll_url: media_poll_url(result[:conversion_id]) }, status: :accepted
+  end
+
+  # Mesmo formato do `pollAiRequest` da tela: `done` com `result` (o da subida) ou `failed` com `error` e `message`.
+  def media_status
+    data = Whatsapp::Templates::VideoConversion.read(params[:conversion_id])
+    return head :not_found unless data && data['inbox_id'] == @inbox.id && data['account_user_id'] == Current.account_user&.id
+
+    render json: { status: data['status'], result: data['result'], error: data['error'],
+                   message: data['error'] && I18n.t("whatsapp_templates.errors.#{data['error']}") }
   end
 
   def usage
@@ -72,6 +85,10 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
 
   def check_authorization
     authorize(WhatsappTemplateProfile, :"#{action_name}?", policy_class: WhatsappTemplatePolicy)
+  end
+
+  def media_poll_url(conversion_id)
+    "/api/v1/accounts/#{Current.account.id}/inboxes/#{@inbox.id}/whatsapp_templates/media/#{conversion_id}"
   end
 
   def manager

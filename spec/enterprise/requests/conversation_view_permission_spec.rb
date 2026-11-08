@@ -89,6 +89,7 @@ RSpec.describe 'Ler conversa sem operar com conversation_view', type: :request d
         [:put, "#{c}/draft_messages", { draft_message: { message: 'x' } }], [:delete, "#{c}/draft_messages", {}],
         [:post, "#{c}/assignments", { assignee_id: leitora.id }],
         [:post, "#{c}/labels", { labels: ['vip'] }],
+        [:patch, "#{c}/labels/alterar", { por: ['vip'] }],
         [:post, "#{c}/contact_info_request", {}],
         [:post, "#{c}/passar_para", { tipo: 'pessoa', id: leitora.id }],
         [:post, "#{c}/direct_uploads", { blob: { filename: 'a.png', byte_size: '1', checksum: 'abc', content_type: 'image/png' } }]

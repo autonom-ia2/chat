@@ -92,3 +92,21 @@ it.each([
     wrapper.unmount();
   }
 );
+it('shows the cadence as turned off when it stopped because the contact left the AI follow-up (#2084)', () => {
+  const parado = {
+    ...card,
+    auto_followup: {
+      spent: false,
+      stopped_reason: 'contact_disabled',
+      max_touches: 3,
+      touches: [{ outcome: 'sent' }],
+    },
+  };
+  const wrapper = shallowMount(CrmCardAutoFollowupStatus, {
+    props: { card: parado },
+  });
+  expect(wrapper.text()).toContain(
+    'CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.STATUS_CONTACT_DISABLED'
+  );
+  wrapper.unmount();
+});

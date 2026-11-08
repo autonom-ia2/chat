@@ -23,7 +23,11 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     authorize ::Crm::Card
     # Ordering is owned by FilterQuery#apply_sort (whitelisted sort/direction,
     # defaulting to updated_at desc — byte-identical to the historical default).
-    @cards = filtered_cards.page(params[:page] || 1).per(per_page)
+    @action_list = ::Crm::Cards::OrganizarPor.lista_nova?(params)
+    cards = filtered_cards
+    # Lista nova (#2283): o grupo e o retorno de cada card vêm na linha; a contagem abaixo é de outra consulta, sem o select.
+    cards = cards.select('crm_cards.*', ::Crm::Cards::ActionGroups::SELECT) if @action_list
+    @cards = cards.page(params[:page] || 1).per(per_page)
     @card_companies = Crm::Cards::CompanyResolver.for_cards(@cards.to_a)
     @cards_count = filtered_cards.count
   end
@@ -135,7 +139,9 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     with_idempotency do
       target_stage = Current.account.crm_pipeline_stages.find(params[:stage_id])
       ensure_move_allowed!(@card, target_stage.pipeline_id)
-      @card = ::Crm::Cards::Mover.new(card: @card, actor: Current.user, target_stage: target_stage).perform
+      # #2428: pedido do passo da Automação livre (dentro da cadeia dela): o movimento leva a automação.
+      @card = ::Crm::Cards::Mover.new(card: @card, actor: Current.user, target_stage: target_stage,
+                                      automacao: ::Autonomia::Automacao::Cadeia.automacao_livre).perform
       broadcast_card(::Events::Types::CRM_CARD_MOVED)
       render :show
     end

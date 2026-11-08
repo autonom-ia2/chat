@@ -73,6 +73,66 @@ RSpec.describe 'Instagram Authorization API', type: :request do
         )
         expect(response.parsed_body['url']).to eq response_url
       end
+
+      # Seus posts (#2199): o cartão "Libere seu Instagram" reautoriza a mesma caixa pedindo também
+      # instagram_business_manage_insights. Só ali, e só com a flag: o pedido global de escopos não muda.
+      describe 'escopo extra de Seus posts' do
+        let(:channel) { create(:channel_instagram, account: account) }
+        let(:params) { { inbox_id: channel.inbox.id, return_to: 'meta_ads', purpose: 'meta_ads_organico' } }
+
+        def scopes
+          Rack::Utils.parse_query(URI.parse(response.parsed_body.fetch('url')).query).fetch('scope').split(',')
+        end
+
+        it 'pede instagram_business_manage_insights e volta para Seus posts' do
+          account.enable_features!('meta_ads_organico')
+
+          post "/api/v1/accounts/#{account.id}/instagram/authorization", params: params,
+                                                                         headers: administrator.create_new_auth_token, as: :json
+
+          expect(response).to have_http_status(:success)
+          expect(scopes).to eq(Instagram::IntegrationHelper::REQUIRED_SCOPES + ['instagram_business_manage_insights'])
+          state = Rack::Utils.parse_query(URI.parse(response.parsed_body.fetch('url')).query).fetch('state')
+          payload = JWT.decode(state, 'synthetic_secret', true, algorithm: 'HS256').first
+          expect(payload).to include('inbox_id' => channel.inbox.id, 'return_to' => 'meta_ads', 'purpose' => 'meta_ads_organico')
+        end
+
+        it 'agente sem integration_manage, recusa' do
+          account.enable_features!('meta_ads_organico')
+
+          post "/api/v1/accounts/#{account.id}/instagram/authorization", params: params,
+                                                                         headers: agent.create_new_auth_token, as: :json
+
+          expect(response).to have_http_status(:unauthorized)
+          expect(response.parsed_body).not_to have_key('url')
+        end
+
+        it 'com a flag desligada, recusa' do
+          post "/api/v1/accounts/#{account.id}/instagram/authorization", params: params,
+                                                                         headers: administrator.create_new_auth_token, as: :json
+
+          expect(response).not_to have_http_status(:success)
+          expect(response.parsed_body).to eq('error_code' => 'invalid_selection')
+        end
+
+        it 'purpose fora da lista, recusa' do
+          account.enable_features!('meta_ads_organico')
+
+          post "/api/v1/accounts/#{account.id}/instagram/authorization", params: params.merge(purpose: 'qualquer'),
+                                                                         headers: administrator.create_new_auth_token, as: :json
+
+          expect(response.parsed_body).to eq('error_code' => 'invalid_selection')
+        end
+
+        it 'reautorizar a caixa pelo lugar de sempre não pede o escopo extra' do
+          account.enable_features!('meta_ads_organico')
+
+          post "/api/v1/accounts/#{account.id}/instagram/authorization", params: { inbox_id: channel.inbox.id, return_to: 'inbox' },
+                                                                         headers: administrator.create_new_auth_token, as: :json
+
+          expect(scopes).to eq(Instagram::IntegrationHelper::REQUIRED_SCOPES)
+        end
+      end
     end
   end
 end

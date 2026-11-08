@@ -8,6 +8,7 @@ import {
   CONVERSATION_LEVELS,
   getLevel,
   setLevel,
+  levelOptions,
   levelSlots,
   slotLevel,
   visibleExtras,
@@ -18,6 +19,7 @@ import {
   profilePermissions,
   sensitiveExtrasOn,
   modulesWithKeys,
+  KEYS_OUTSIDE_MATRIX,
 } from '../permissionMatrix';
 import { DELEGATION_KEYS } from 'dashboard/constants/permissions';
 import { keyLockReason } from 'dashboard/helper/peopleAccess';
@@ -460,7 +462,7 @@ describe('permissionMatrix', () => {
   });
 
   // Espelho de CustomRole::PERMISSIONS (enterprise/app/models/custom_role.rb). Chave nova no servidor entra aqui e
-  // numa área da matriz; o teste abaixo acusa a diferença (#2115).
+  // numa área da matriz (ou em KEYS_OUTSIDE_MATRIX, #2352); o teste abaixo acusa a diferença (#2115).
   const SERVER_KEYS = [
     'conversation_manage',
     'conversation_unassigned_manage',
@@ -486,6 +488,7 @@ describe('permissionMatrix', () => {
     'knowledge_base_view',
     'autonomia_view',
     'autonomia_manage',
+    'desempenho_view',
     'campaign_view',
     'campaign_manage',
     'campaign_send',
@@ -505,6 +508,8 @@ describe('permissionMatrix', () => {
     'whatsapp_templates_manage',
     'meta_ads_view',
     'meta_ads_manage',
+    'posts_view',
+    'posts_manage',
     'label_manage',
     'attribute_manage',
     'macro_manage',
@@ -525,14 +530,64 @@ describe('permissionMatrix', () => {
     ...(module.type === 'conversations' ? ['conversation_manage'] : []),
   ]);
 
-  it('covers exactly the 56 server keys in the matrix', () => {
-    expect(SERVER_KEYS).toHaveLength(56);
-    expect([...new Set(known)].sort()).toEqual([...SERVER_KEYS].sort());
+  it('covers exactly the 59 server keys between the matrix and the keys outside it', () => {
+    expect(SERVER_KEYS).toHaveLength(59);
+    expect(known.filter(key => KEYS_OUTSIDE_MATRIX.includes(key))).toEqual([]);
+    expect([...new Set([...known, ...KEYS_OUTSIDE_MATRIX])].sort()).toEqual(
+      [...SERVER_KEYS].sort()
+    );
   });
 
   it('builds presets from server keys only', () => {
     Object.values(PRESETS).forEach(preset => {
       preset().forEach(key => expect(SERVER_KEYS).toContain(key));
+    });
+  });
+
+  // #2352: the help-center article keys left both role editors.
+  it('builds no preset with a key outside the matrix', () => {
+    Object.values(PRESETS).forEach(preset => {
+      expect(preset().filter(key => KEYS_OUTSIDE_MATRIX.includes(key))).toEqual(
+        []
+      );
+    });
+  });
+
+  it('keeps a stored key outside the matrix when another module changes', () => {
+    const permissions = setLevel(moduleByKey('CAMPAIGNS'), LEVELS.MANAGE, [
+      'knowledge_base_view',
+      'campaign_view',
+    ]);
+    expect(permissions).toEqual(['knowledge_base_view', 'campaign_manage']);
+  });
+
+  // #2360: "Pode mexer" de Seus posts só chega com a F2 (#2305).
+  describe('levels offered later', () => {
+    // Nenhuma área adia um nível hoje (Seus posts liberou editar na F2 #2305); a regra continua valendo.
+    const later = { ...moduleByKey('CAMPAIGNS'), laterLevels: [LEVELS.MANAGE] };
+
+    it('does not offer a later level to a new role', () => {
+      expect(levelOptions(later)).toEqual([LEVELS.NONE, LEVELS.VIEW]);
+      expect(levelSlots(later)).toEqual([LEVELS.NONE, LEVELS.VIEW, null]);
+    });
+
+    it('still shows a later level to a role that already has it, so it can be lowered', () => {
+      expect(levelOptions(later, LEVELS.MANAGE)).toEqual([
+        LEVELS.NONE,
+        LEVELS.VIEW,
+        LEVELS.MANAGE,
+      ]);
+    });
+
+    it('offers posts edit to every role since F2 (#2305)', () => {
+      const posts = moduleByKey('POSTS');
+
+      expect(levelOptions(posts)).toEqual([
+        LEVELS.NONE,
+        LEVELS.VIEW,
+        LEVELS.MANAGE,
+      ]);
+      expect(getLevel(posts, ['posts_manage'])).toBe(LEVELS.MANAGE);
     });
   });
 

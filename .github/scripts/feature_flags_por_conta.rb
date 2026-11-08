@@ -39,14 +39,18 @@ end
 
 def sql_for(rows)
   values = rows.map { |name, column, index| "('#{name}', '#{column}', #{index})" }.join(",\n  ")
-  enabled = "((CASE f.col WHEN 'feature_flags' THEN a.feature_flags ELSE a.feature_flags_ext_1 END) & (1::bigint << f.idx)) <> 0"
+  # Só as colunas das flags pedidas: uma coluna ainda não criada no banco (ext_2 antes do deploy do #2186) não
+  # entra no SQL enquanto nenhuma flag a usar.
+  columns = rows.map { |_name, column, _index| column }.uniq
+  cases = columns.map { |column| "WHEN '#{column}' THEN a.#{column}" }.join(' ')
+  enabled = "((CASE f.col #{cases} END) & (1::bigint << f.idx)) <> 0"
 
   <<~PSQL
     \\pset format csv
     BEGIN READ ONLY;
     WITH f(name, col, idx) AS (VALUES
       #{values}),
-    a AS (SELECT id, feature_flags, feature_flags_ext_1 FROM accounts WHERE status = 0)
+    a AS (SELECT id, #{columns.join(', ')} FROM accounts WHERE status = 0)
     SELECT f.name,
            count(*) FILTER (WHERE #{enabled}) AS ligadas,
            count(*) AS ativas,

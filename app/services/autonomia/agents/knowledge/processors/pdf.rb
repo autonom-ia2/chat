@@ -8,6 +8,7 @@ module Autonomia
         # de texto), a extração normal volta vazia; nesse caso cai p/ OCR (PdfOcr: Rasterizacao + Ocr).
         class Pdf < Base
           include PdfOcr
+          include PdfParagrafos
 
           # Abaixo deste tamanho (após strip) a extração é "quase vazia" (PDF escaneado / só imagem):
           # vale tentar OCR em vez de marcar a fonte como falha por texto ausente.
@@ -17,6 +18,11 @@ module Autonomia
           # 300 páginas cobrem manual, catálogo e tabela completos; o que passar fica de fora e o dono é avisado. Fora
           # da Fase 2 e na Lia (agente protegido), sem teto, como antes.
           MAX_PAGINAS_TEXTO = 300
+          # #1426 (t4e) — material grande: acima disto, na Fase 2 e fora da Lia, o texto também sai em seções de
+          # PAGINAS_POR_SECAO páginas (Source#secoes), para cada trecho saber de que páginas veio e o resumo cobrir o
+          # material inteiro, não só o começo. O material pequeno fica como antes.
+          PAGINAS_DE_MATERIAL_GRANDE = 50
+          PAGINAS_POR_SECAO = 25
 
           # OCR é OPCIONAL porque o custo dele não tem teto: rasteriza página por página a 300 DPI e
           # passa cada uma pelo tesseract. Num PDF escaneado de poucos MB isso são dezenas de páginas
@@ -40,10 +46,12 @@ module Autonomia
               todas = PDF::Reader.new(path).pages
               @paginas_total = todas.size
               paginas = paginas_do_texto(todas)
-              text = paginas.map { |page| "#{page.text}\n" }.join.force_encoding('UTF-8').scrub('')
-              next text unless @ocr && text.strip.length < OCR_MIN_CHARS
+              textos = textos_das_paginas(paginas)
+              text = textos.join
+              next ocr_fallback(text, path, paginas) if @ocr && text.strip.length < OCR_MIN_CHARS
 
-              ocr_fallback(text, path, paginas)
+              registrar_secoes(textos)
+              text
             end
             registrar_paginas_de_fora
             texto
@@ -52,6 +60,20 @@ module Autonomia
           end
 
           private
+
+          # #1426 (#2425) — no material da base de conhecimento, de qualquer conta, cada página sai em parágrafos pela posição
+          # das linhas (PdfParagrafos): é conserto de defeito, não novidade da Fase 2. Fica com o `page.text` da main o que não é
+          # material da base (anexo da conversa, leitor de mídia do CRM, Guia: objetos sem agente), a Lia (instrução mantida)
+          # e o Guia (system_key).
+          def textos_das_paginas(paginas)
+            textos = em_paragrafos? ? textos_em_paragrafos(paginas) : paginas.map { |page| "#{page.text}\n" }
+            textos.map { |texto| texto.force_encoding('UTF-8').scrub('') }
+          end
+
+          def em_paragrafos?
+            agente = @source.respond_to?(:agent) ? @source.agent : nil
+            agente.present? && agente.instrucao_mantida? != true && agente.config.to_h['system_key'].blank?
+          end
 
           def fase2_na_conta?
             @source.respond_to?(:account) && Autonomia::Agents::Fase2.ligada?(@source.account)
@@ -68,6 +90,17 @@ module Autonomia
             alem = pages.size - MAX_PAGINAS_TEXTO
             @paginas_de_fora = @paginas_de_fora.merge('texto_teto' => MAX_PAGINAS_TEXTO, 'texto_alem_do_teto' => alem)
             pages.first(MAX_PAGINAS_TEXTO)
+          end
+
+          # As seções do material grande, pelo texto de cada página lida (em ordem, a partir da 1ª).
+          def registrar_secoes(textos)
+            return unless textos.size > PAGINAS_DE_MATERIAL_GRANDE && fase2_na_conta? && !agente_protegido?
+            return unless @source.respond_to?(:secoes=)
+
+            @source.secoes = textos.each_slice(PAGINAS_POR_SECAO).with_index.map do |grupo, indice|
+              inicio = (indice * PAGINAS_POR_SECAO) + 1
+              { 'paginas' => [inicio, inicio + grupo.size - 1], 'texto' => grupo.join }
+            end
           end
 
           # O que ficou de fora desta leitura vai para o log e para o material (Source#paginas_de_fora, gravado pelo

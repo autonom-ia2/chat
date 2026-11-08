@@ -3,6 +3,10 @@
 # Toque de anúncio da Meta é o clique para o WhatsApp (`meta_ctwa`) ou o clique numa página do site (`site:…`)
 # que traz algum sinal da Meta: ID de anúncio, conjunto ou campanha, o `fbclid` que a Meta põe no endereço, ou o
 # `utm_source=meta` do texto que a tela manda colar nos anúncios. O resto (QR, Google, orgânico) fica de fora.
+# O clique num anúncio de Messenger ou de Direct do Instagram (`meta_ctm`/`meta_ctd`, Crm::MetaAds::MessagingReferral,
+# #2521) é toque com o anúncio, de origem `messenger` ou `instagram`.
+# Também é toque o privado em resposta ao comentário de um anúncio, quando a pessoa respondeu (Links::CommentTouch,
+# #2521): origem `comment`, sempre com o anúncio.
 #
 # O quanto sabemos (Crm::MetaAdLink::CERTAINTIES):
 # - ID do anúncio no toque → `ad`; conjunto e campanha vêm do cache de nomes quando faltam;
@@ -18,10 +22,12 @@ class Crm::MetaAds::Links::Linker
   META_UTM_SOURCE = 'meta'.freeze
   SITE_PREFIX = Crm::MetaAds::TouchEnricher::SITE_SOURCE_PREFIX
   UPDATED_COLUMNS = %i[ad_account_id ad_id adset_id campaign_id origin certainty first_touch touched_at].freeze
+  # Cliques que abrem a conversa direto no canal, com o anúncio no `source_id`.
+  CLICK_ORIGINS = { Ctwa::CampaignBuilder::CTWA_SOURCE => 'whatsapp' }.merge(Crm::MetaAds::MessagingReferral::ORIGINS).freeze
 
   def self.origin(touch)
     return unless touch.is_a?(Hash)
-    return 'whatsapp' if touch['source'] == Ctwa::CampaignBuilder::CTWA_SOURCE
+    return CLICK_ORIGINS[touch['source']] if CLICK_ORIGINS.key?(touch['source'])
     return unless touch['source_id'].to_s.start_with?(SITE_PREFIX)
 
     meta_signal = Crm::MetaAds::TouchEnricher.meta_ids?(touch) || touch['fbclid'].present? || touch['utm_source'] == META_UTM_SOURCE
@@ -39,8 +45,8 @@ class Crm::MetaAds::Links::Linker
 
   # Quantas ligações foram gravadas.
   def perform
-    records = touches.each_with_index.filter_map { |touch, index| record(touch, index.zero?) }
-                     .index_by { |record| record[:touch_key] }.values
+    clicks = touches.each_with_index.filter_map { |touch, index| record(touch, index.zero?) }
+    records = (clicks + comment_records(first: clicks.empty?)).index_by { |record| record[:touch_key] }.values
     return 0 if records.empty?
 
     # Lote já normalizado aqui; o índice único (conversa, toque) é a garantia de uma linha por toque.
@@ -70,6 +76,19 @@ class Crm::MetaAds::Links::Linker
       account_id: @conversation.account_id, conversation_id: @conversation.id, touch_key: key.to_s,
       ad_account_id: @connection&.ad_account_id, origin: origin, first_touch: first, touched_at: touched_at
     }.merge(target(touch))
+  end
+
+  # O privado do comentário não tem clique: o anúncio vem do próprio comentário, e o primeiro toque só é ele quando a
+  # conversa não tem clique nenhum.
+  def comment_records(first:)
+    Crm::MetaAds::Links::CommentTouch.for(@conversation).each_with_index.map do |touch, index|
+      ad = cached_ad(touch[:ad_id])
+      {
+        account_id: @conversation.account_id, conversation_id: @conversation.id, touch_key: touch[:touch_key],
+        ad_account_id: @connection&.ad_account_id, origin: Crm::MetaAds::Links::CommentTouch::ORIGIN, first_touch: first && index.zero?,
+        touched_at: touch[:touched_at], ad_id: touch[:ad_id], certainty: 'ad', adset_id: ad&.adset_id, campaign_id: ad&.campaign_id
+      }
+    end
   end
 
   def target(touch)

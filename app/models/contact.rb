@@ -81,6 +81,8 @@ class Contact < ApplicationRecord
   before_save :sync_contact_attributes
 
   enum contact_type: { visitor: 0, lead: 1, customer: 2 }
+  # Este contato é (#2084/#2085). Fora do funil (parceiro, não é negócio): Crm::Relacao.
+  enum relacao: { interessado: 0, parceiro: 1, nao_e_negocio: 2 }, _prefix: true
 
   scope :order_on_last_activity_at, lambda { |direction|
     order(

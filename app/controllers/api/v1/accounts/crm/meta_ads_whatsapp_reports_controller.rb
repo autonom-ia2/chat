@@ -6,6 +6,10 @@
 # PATCH whatsapp_report      → liga/desliga, escolhe a origem e o número que recebe (chaves ausentes ficam)
 # POST  whatsapp_report/test → manda o resumo de ontem agora, com "[Teste]"; até TEST_LIMIT por hora por conta
 #
+# Ligar/mudar (PATCH) e testar pedem também os valores de venda em R$ (#2075, Crm::ValorDeVenda.ve?): o texto do
+# resumo leva o valor vendido. Sem eles, 403 { error: 'sales_value_forbidden' }. A leitura, o envio das 8h e o alerta
+# não mudam (o envio é da conta, não de uma pessoa).
+#
 # Erros de regra: 422 { error: code } (ver Crm::MetaAds::WhatsappReport::Settings e ::Sender).
 class Api::V1::Accounts::Crm::MetaAdsWhatsappReportsController < Api::V1::Accounts::Crm::BaseController
   TEST_LIMIT = 3
@@ -15,6 +19,7 @@ class Api::V1::Accounts::Crm::MetaAdsWhatsappReportsController < Api::V1::Accoun
   FEATURE = 'meta_ads_hub'.freeze
 
   before_action :ensure_manage
+  before_action :ensure_sales_values, only: [:update, :test_send]
   before_action :ensure_feature, only: [:update, :test_send]
   before_action :ensure_connection, only: [:update, :test_send]
 
@@ -48,6 +53,10 @@ class Api::V1::Accounts::Crm::MetaAdsWhatsappReportsController < Api::V1::Accoun
     return if Pundit.policy!(pundit_user, ::Crm::MetaAdsConnection).update?
 
     render json: { error: 'forbidden' }, status: :forbidden
+  end
+
+  def ensure_sales_values
+    render json: { error: 'sales_value_forbidden' }, status: :forbidden unless ::Crm::ValorDeVenda.ve?(Current.account_user)
   end
 
   # Os envios agendados só saem com Anúncios da Meta ligado; ligar e testar seguem a mesma regra.

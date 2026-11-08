@@ -46,7 +46,7 @@ const notifications = computed(() => {
 const activeNotification = computed(() => {
   return notifications.value?.find(
     n =>
-      n.primary_actor_type !== 'Autonomia::Guide::Aviso' &&
+      n.primary_actor_type === 'Conversation' &&
       n.primary_actor?.id === conversationId.value
   );
 });

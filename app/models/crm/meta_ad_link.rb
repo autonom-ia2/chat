@@ -10,7 +10,10 @@ class Crm::MetaAdLink < ApplicationRecord
   self.table_name = 'crm_meta_ad_links'
 
   CERTAINTIES = %w[ad ad_name campaign unknown].freeze
-  ORIGINS = %w[whatsapp site].freeze
+  # `comment` (#2521): a conversa do privado em resposta ao comentário de um anúncio (da IA ou da equipe), quando a
+  # pessoa respondeu (Links::CommentTouch).
+  # `messenger` e `instagram` (#2521): o clique num anúncio de Messenger ou de Direct (Crm::MetaAds::MessagingReferral).
+  ORIGINS = %w[whatsapp site comment messenger instagram].freeze
 
   belongs_to :account
   belongs_to :conversation

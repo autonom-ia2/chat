@@ -250,6 +250,36 @@ describe('Anúncios da Meta · o que fazer hoje, até 3 ações (#1110, F5)', ()
     );
   });
 
+  // #2075 — sem a chave de valores de venda a soma não vem: o porquê das propostas paradas sai sem o valor.
+  it('without sales values, the stalled quotes "why" leaves the value out instead of breaking', async () => {
+    useRealI18n('pt_BR');
+    const facts = Object.fromEntries(
+      Object.entries(STALLED.facts).filter(([key]) => key !== 'value')
+    );
+    const wrapper = await mountAction({
+      advice: advice([{ ...STALLED, facts }]),
+      currency: 'BRL',
+    });
+
+    const why = item(wrapper, 11).find('[data-daily-why]').text();
+    expect(why).toBe(
+      'Por quê: retomar quem já pediu proposta custa menos que anunciar de novo.'
+    );
+    expect(why).not.toContain('R$');
+  });
+
+  it('with sales values, the stalled quotes "why" carries the sum', async () => {
+    useRealI18n('pt_BR');
+    const wrapper = await mountAction({
+      advice: advice([STALLED]),
+      currency: 'BRL',
+    });
+
+    expect(item(wrapper, 11).find('[data-daily-why]').text()).toMatch(
+      /somam R\$\s6\.200 em negociação/
+    );
+  });
+
   it('the main button goes to the work and records the opening once', async () => {
     const wrapper = await mountAction();
 

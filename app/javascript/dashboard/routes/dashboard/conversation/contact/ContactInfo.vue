@@ -24,6 +24,7 @@ import ComposeConversation from 'dashboard/components-next/NovaConversa/NovaConv
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
 import InlineInput from 'dashboard/components-next/inline-input/InlineInput.vue';
+import { nomeDoContatoNaTela } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 
 export default {
   components: {
@@ -72,6 +73,10 @@ export default {
     };
   },
   computed: {
+    // Nome que é só telefone sai legível (#2255); a edição continua com o nome gravado.
+    nomeNaTela() {
+      return nomeDoContatoNaTela(this.contact);
+    },
     ...mapGetters({
       uiFlags: 'contacts/getUIFlags',
       currentChat: 'getSelectedChat',
@@ -262,7 +267,7 @@ export default {
               "
               @click="startEditingName"
             >
-              {{ contact.name }}
+              {{ nomeNaTela }}
             </h3>
             <NextButton
               v-if="canManageRelationshipRecords"

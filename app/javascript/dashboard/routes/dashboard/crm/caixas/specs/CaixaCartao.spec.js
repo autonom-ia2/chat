@@ -17,6 +17,7 @@ vi.mock('dashboard/composables/store', async () => {
       features: { crm_avaliar_toda_mensagem: conta.ia },
     }),
     getCurrentAccountId: () => 1,
+    'inboxes/getInboxById': () => () => ({}),
   };
   return { useMapGetter: nome => computed(() => getters[nome]()) };
 });

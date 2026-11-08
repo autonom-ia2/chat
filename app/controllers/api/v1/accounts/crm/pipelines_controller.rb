@@ -60,8 +60,8 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
   end
 
   def render_archive_blocked
-    render json: { error: "crm.pipeline_archive_#{@archive_blocked}", message: I18n.t("crm.pipelines.archive_#{@archive_blocked}") },
-           status: :unprocessable_entity
+    render json: { error: "crm.pipeline_archive_#{@archive_blocked}", message: I18n.t("crm.pipelines.archive_#{@archive_blocked}"),
+                   moved_count: archive_moved_before_failure }, status: :unprocessable_entity
   end
 
   def fetch_pipeline

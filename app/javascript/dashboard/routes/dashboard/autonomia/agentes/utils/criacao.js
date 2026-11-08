@@ -2,22 +2,36 @@ import { TIPO_CANAL, tipoDoCanal } from './canais';
 
 // #1181 PR2 — leitura das caixas e do horário para a criação (T04 e T05).
 
-const WHATSAPP = 'Channel::Whatsapp';
+// #2490 — o canal que o dono pediu ao Construtor (state.canal_pedido da thread). "nenhum" e o vazio
+// (thread antiga, ou sem a conversa na tela) não restringem.
+const SEM_CANAL_PEDIDO = 'nenhum';
 
-// O botão "Começar a atender no {canal}" já diz o canal (protótipo ctaChannel): uma caixa livre,
-// de preferência o WhatsApp; sem caixa livre, uma ocupada por outro agente (vira troca). Caixa com
-// outro sistema nunca é sugerida.
-export const canalSugerido = (canais, agenteId) => {
-  const lista = canais || [];
-  const doTipo = tipo =>
-    lista.filter(canal => tipoDoCanal(canal, agenteId) === tipo);
-  const preferirWhatsapp = grupo =>
-    grupo.find(canal => canal.channel_type === WHATSAPP) || grupo[0] || null;
-  return (
-    preferirWhatsapp(doTipo(TIPO_CANAL.LIVRE)) ||
-    preferirWhatsapp(doTipo(TIPO_CANAL.OCUPADO))
+// O botão "Começar a atender no {canal}" só diz o canal quando não há dúvida (#2489, 5b): uma única
+// caixa livre que quem cria alcança. Com mais de uma, nenhuma ou só ocupadas, devolve null e o botão
+// vira "Escolher canal": a pessoa escolhe no Comece. Caixa ocupada ou com outro sistema nunca é
+// sugerida. Se o dono pediu um canal (#2490), só caixas desse canal (`canal` da caixa, que conta a
+// WAHA como WhatsApp) entram: o canal pedido ocupado, ou sem caixa, vira "Escolher canal".
+export const canalSugerido = (canais, agenteId, canalPedido = null) => {
+  const pediu = Boolean(canalPedido) && canalPedido !== SEM_CANAL_PEDIDO;
+  const candidatas = (canais || []).filter(
+    canal =>
+      tipoDoCanal(canal, agenteId) === TIPO_CANAL.LIVRE &&
+      canal.alcanca !== false &&
+      (!pediu || canal.canal === canalPedido)
   );
+  return candidatas.length === 1 ? candidatas[0] : null;
 };
+
+// Há alguma caixa para escolher no Comece (livre, ou ocupada por outro agente, que vira troca), que
+// quem cria alcança? Sem nenhuma, a Confira mostra o aviso de conectar um canal em vez do botão.
+export const temCanalParaEscolher = (canais, agenteId) =>
+  (canais || []).some(
+    canal =>
+      canal.alcanca !== false &&
+      [TIPO_CANAL.LIVRE, TIPO_CANAL.OCUPADO].includes(
+        tipoDoCanal(canal, agenteId)
+      )
+  );
 
 // Como o botão chama o canal: pelo tipo (AGENTS.JORNADA.CRIAR.CANAL.<chave>) ou, num tipo sem nome
 // próprio (API, SMS…), pelo nome da caixa.

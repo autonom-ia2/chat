@@ -37,7 +37,8 @@
 # (Panel::WhatsappCohort).
 #
 # Sem a permissão, 403 (não 401: a sessão é válida, só falta a permissão). As listas que levam a uma conversa
-# mostram só as visíveis para a pessoa (Crm::MetaAds::VisibleConversations, #1794).
+# mostram só as visíveis para a pessoa (Crm::MetaAds::VisibleConversations, #1794). Os valores de venda em R$ do painel,
+# do anúncio, das listas e do consultor seguem a mesma pessoa (#2075, Crm::MetaAds::Panel::SalesValue).
 class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::Crm::BaseController
   include DeferInteractiveAi
   include Crm::MetaAdsPanelSource
@@ -107,7 +108,7 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
 
     connection = current_connection
     refreshing = ::Crm::MetaAds::Insights::Refresh.request!(connection)
-    report = ::Crm::MetaAds::Panel::Report.new(connection, period: panel_period)
+    report = ::Crm::MetaAds::Panel::Report.new(connection, period: panel_period, visible: viewer)
     render json: { panel: panel_payload(connection, report).merge(synced_at: connection.reload.insights_synced_at, refreshing: refreshing) }
   end
 
@@ -137,7 +138,8 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
   end
 
   def selection
-    setup.select!(mode: params[:mode], ad_account_id: params[:ad_account_id].to_s, pixel_id: params[:pixel_id].presence&.to_s)
+    setup.select!(mode: params[:mode], ad_account_id: params[:ad_account_id].to_s, pixel_id: params[:pixel_id].presence&.to_s,
+                  no_site: ActiveModel::Type::Boolean.new.cast(params[:no_site]) == true)
     render json: payload
   rescue Crm::MetaAds::Setup::Error => e
     render_unprocessable(e.code)
@@ -151,7 +153,8 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
 
     bool = ActiveModel::Type::Boolean.new
     values = ::Crm::MetaAdsConnection::DESTINATIONS.index_with { |key| bool.cast(params.dig(:destinations, key)) == true }
-    connection.update!(destinations: values)
+    # Marcar o site desfaz o "Não tenho site" (#2338): a escolha mais recente vale e a lista volta a pedir o código.
+    connection.update!(destinations: connection.destinations_with_no_site(values, connection.no_site? && !values['site']))
     render json: payload
   end
 
@@ -224,8 +227,9 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     report.payload.merge(
       meta_comparison: ::Crm::MetaAds::Panel::MetaComparison.new(connection, report).payload,
       response_time: response_time(connection, report),
-      advice: ::Crm::MetaAds::VisibleConversations.current.advice(
-        ::Crm::MetaAds::Advisor::Analysis.current(connection, locale: I18n.locale.to_s, report: report, shown: !authenticate_by_access_token?)
+      advice: viewer.advice(
+        ::Crm::MetaAds::Advisor::Analysis.current(connection, locale: I18n.locale.to_s, report: report, shown: !authenticate_by_access_token?,
+                                                              visible: viewer)
       )
     )
   end

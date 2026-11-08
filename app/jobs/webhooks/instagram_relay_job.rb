@@ -1,4 +1,5 @@
 # Forwards an Instagram webhook to another stack that shares the same Meta app.
+# The Page webhook (/bot, Webhooks::FacebookPageController, #2200) reuses it the same way.
 #
 # Meta allows a single Instagram webhook URL per app, so the stack that receives it relays
 # events for Instagram accounts it doesn't know. The original body and X-Hub-Signature-256
@@ -10,7 +11,10 @@ class Webhooks::InstagramRelayJob < ApplicationJob
   RELAY_HEADER = 'X-Chatwoot-Instagram-Relay'.freeze
   TIMEOUT_SECONDS = 10
 
-  retry_on StandardError, wait: :polynomially_longer, attempts: 3
+  # O corpo leva mensagens de clientes: fora do log do ActiveJob. As tentativas cobrem um deploy da outra stack.
+  self.log_arguments = false
+
+  retry_on StandardError, wait: :polynomially_longer, attempts: 10
 
   def perform(url, raw_body, signature)
     response = HTTParty.post(

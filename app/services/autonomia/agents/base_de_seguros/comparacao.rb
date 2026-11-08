@@ -57,7 +57,7 @@ class Autonomia::Agents::BaseDeSeguros::Comparacao
   # A resposta pelo caminho do Testar, sem ferramenta. `equipe`: o agente passaria a conversa para a equipe.
   def responder(agent, pergunta)
     resultado = Autonomia::Agents::Answerer.new(agent: agent, query: pergunta, feature: Autonomia::Agents::Playground::USAGE_FEATURE,
-                                                prova: true).answer
+                                                prova: true, trust_instruction: Autonomia::Agents::Playground.como_no_atendimento?(agent)).answer
     texto = resultado.reply.to_s.strip.presence
     equipe = resultado.handoff[:should] == true
     raise Falhou if resultado.error.present? || (texto.nil? && !equipe)

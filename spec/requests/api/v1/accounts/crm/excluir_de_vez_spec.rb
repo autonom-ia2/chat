@@ -332,6 +332,9 @@ RSpec.describe 'CRM excluir de vez', type: :request do
   describe 'POST crm/contacts/:contact_id/permanent_delete (LGPD)' do
     let(:path) { "#{base}/crm/contacts/#{contact.id}/permanent_delete" }
 
+    # A rota só existe com a flag (#2143: o servidor confere).
+    before { account.enable_features!(:crm_arquivados) }
+
     it 'apaga o contato e os cards dele de vez, abertos, ganhos e arquivados, e deixa a conversa' do
       aberto = card_arquivado(status: :open)
       ganho = card_arquivado(title: 'Venda', status: :won, value_cents: 90_000)

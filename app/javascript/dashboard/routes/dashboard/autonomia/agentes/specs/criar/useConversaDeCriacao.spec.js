@@ -3,6 +3,8 @@ import { mount, flushPromises } from '@vue/test-utils';
 import {
   useConversaDeCriacao,
   ESPERA_DEMORANDO_MS,
+  PRAZO_DA_RESPOSTA_MS,
+  PRAZO_DAS_SUBIDAS_MS,
 } from '../../composables/useConversaDeCriacao';
 
 const store = vi.hoisted(() => ({
@@ -77,6 +79,7 @@ const respondeu = vezes => {
 
 describe('useConversaDeCriacao', () => {
   beforeEach(() => prepararStore());
+  afterEach(() => vi.useRealTimers());
 
   it('opens the Builder with only the model, so the AI speaks first (no message)', () => {
     const { conversa } = montar({ modelo: 'sdr' });
@@ -233,6 +236,251 @@ describe('useConversaDeCriacao', () => {
       descriptor: { file: expect.any(File), kind: 'knowledge' },
     });
     expect(conversa.materiais.value[0].fonteId).toBe(31);
+  });
+
+  // #2489 (1): o turno saía antes do arquivo chegar à base, e o Construtor dizia que o material "não apareceu".
+  it('with a draft, sends the turn only after the file reached the knowledge base', async () => {
+    comThread(7, 90);
+    let criar;
+    store.dispatch.mockImplementation(acao =>
+      acao === 'autonomiaSources/create'
+        ? new Promise(resolve => {
+            criar = resolve;
+          })
+        : Promise.resolve(null)
+    );
+    const { conversa } = montar();
+    const envio = conversa.enviar({
+      texto: 'Segue a tabela',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+    await flushPromises();
+
+    expect(chamadas('autonomiaSources/create')).toHaveLength(1);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(0);
+    expect(conversa.pensando.value).toBe(true);
+
+    criar({ id: 31 });
+    expect(await envio).toBe(true);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(1);
+    expect(chamadas('autonomiaBuildThreads/send')[0][1].extra).toEqual({});
+    expect(conversa.materiais.value[0].fonteId).toBe(31);
+  });
+
+  it('with a draft, does not send the turn when the file failed to upload (the material shows it)', async () => {
+    comThread(7, 90);
+    store.dispatch.mockImplementation(acao =>
+      acao === 'autonomiaSources/create'
+        ? Promise.reject(new Error('500'))
+        : Promise.resolve(null)
+    );
+    const { conversa } = montar();
+    const entrou = await conversa.enviar({
+      texto: 'Segue a tabela',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+
+    expect(entrou).toBe(false);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(0);
+    expect(conversa.estadoDoMaterial(conversa.materiais.value[0])).toBe(
+      'atencao'
+    );
+    expect(conversa.pensando.value).toBe(false);
+  });
+
+  // Revisão do #2489: o turno espera TODA subida em andamento, não só a dos anexos deste envio.
+  const createPendente = () => {
+    const controle = {};
+    store.dispatch.mockImplementation(acao =>
+      acao === 'autonomiaSources/create'
+        ? new Promise((resolve, reject) => {
+            controle.resolver = resolve;
+            controle.falhar = reject;
+          })
+        : Promise.resolve(null)
+    );
+    return controle;
+  };
+
+  it('a file queued in the first turn: the second turn waits for its upload once the draft exists', async () => {
+    const { conversa } = montar();
+    await conversa.enviar({
+      texto: 'Vendo seguro viagem',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+    const create = createPendente();
+    comThread(7, 90);
+    await nextTick();
+    await flushPromises();
+    expect(chamadas('autonomiaSources/create')).toHaveLength(1);
+
+    const envio = conversa.enviar({ texto: 'Atendo de seg a sex' });
+    await flushPromises();
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(0);
+    expect(conversa.pensando.value).toBe(true);
+
+    create.resolver({ id: 31 });
+    expect(await envio).toBe(true);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(1);
+    expect(chamadas('autonomiaBuildThreads/send')[0][1].extra).toEqual({});
+  });
+
+  it('a file attached by the clip with a draft: the next turn waits for its upload', async () => {
+    comThread(7, 90);
+    const create = createPendente();
+    const { conversa } = montar();
+    conversa.anexarArquivo(arquivo('tabela.pdf', 'application/pdf'));
+    await flushPromises();
+
+    const envio = conversa.enviar({ texto: 'Segue a tabela' });
+    await flushPromises();
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(0);
+
+    create.resolver({ id: 31 });
+    expect(await envio).toBe(true);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(1);
+  });
+
+  it('a queued file that fails to upload keeps the second turn from going', async () => {
+    const { conversa } = montar();
+    await conversa.enviar({
+      texto: 'Vendo seguro viagem',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+    const create = createPendente();
+    comThread(7, 90);
+    await nextTick();
+    await flushPromises();
+
+    const envio = conversa.enviar({ texto: 'Atendo de seg a sex' });
+    await flushPromises();
+    create.falhar(new Error('500'));
+
+    expect(await envio).toBe(false);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(0);
+    expect(conversa.estadoDoMaterial(conversa.materiais.value[0])).toBe(
+      'atencao'
+    );
+    expect(conversa.pensando.value).toBe(false);
+    expect(conversa.falhaAoSubir.value).toEqual({ nome: 'tabela.pdf' });
+  });
+
+  it('an old failed upload does not hold the next turn, and the notice clears on the next send', async () => {
+    comThread(7, 90);
+    const create = createPendente();
+    const { conversa } = montar();
+    const primeiro = conversa.enviar({
+      texto: 'Segue a tabela',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+    await flushPromises();
+    create.falhar(new Error('500'));
+    expect(await primeiro).toBe(false);
+    expect(conversa.falhaAoSubir.value).toEqual({ nome: 'tabela.pdf' });
+
+    expect(await conversa.enviar({ texto: 'Sigo sem a tabela' })).toBe(true);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(1);
+    expect(conversa.falhaAoSubir.value).toBeNull();
+  });
+
+  it('removing the material clears the notice', async () => {
+    comThread(7, 90);
+    const create = createPendente();
+    const { conversa } = montar();
+    const envio = conversa.enviar({
+      texto: 'Segue a tabela',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+    await flushPromises();
+    create.falhar(new Error('500'));
+    await envio;
+
+    await conversa.tirar(conversa.materiais.value[0]);
+    expect(conversa.falhaAoSubir.value).toBeNull();
+  });
+
+  it('a hung upload: after the deadline the turn goes, naming what is still on the way', async () => {
+    vi.useFakeTimers();
+    comThread(7, 90);
+    createPendente();
+    const { conversa } = montar();
+    const envio = conversa.enviar({
+      texto: 'Segue a tabela',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+    await vi.advanceTimersByTimeAsync(PRAZO_DAS_SUBIDAS_MS - 1);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(0);
+    expect(conversa.pensando.value).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await envio).toBe(true);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(1);
+    expect(chamadas('autonomiaBuildThreads/send')[0][1].extra).toEqual({
+      materiais_a_caminho: ['tabela.pdf'],
+    });
+    expect(conversa.falhaAoSubir.value).toBeNull();
+  });
+
+  // Revisão do #2489: sair da tela limpa a store; o turno que esperava não pode abrir conversa nova.
+  it('leaving the screen during the wait sends nothing (no new conversation, no orphan draft)', async () => {
+    comThread(7, 90);
+    const create = createPendente();
+    const { conversa, wrapper } = montar();
+    const envio = conversa.enviar({
+      texto: 'Segue a tabela',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+    await flushPromises();
+
+    wrapper.unmount();
+    // O RESET da store, como na tela de verdade: a conversa some.
+    store.state['autonomiaBuildThreads/getThread'] = null;
+    create.resolver({ id: 31 });
+
+    expect(await envio).toBe(false);
+    expect(chamadas('autonomiaBuildThreads/start')).toHaveLength(0);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(0);
+  });
+
+  it('a site waiting for the draft goes on the turn by its full address (the reference it will have)', async () => {
+    const { conversa } = montar();
+    conversa.anexarSite('https://www.loja.com.br/precos');
+    await conversa.enviar({ texto: 'Os preços estão no site' });
+
+    const [, inicio] = chamadas('autonomiaBuildThreads/start')[0];
+    expect(inicio.materiais_a_caminho).toEqual([
+      'https://www.loja.com.br/precos',
+    ]);
+    expect(conversa.materiais.value[0].nome).toBe('www.loja.com.br/precos');
+  });
+
+  it('before the draft exists, the turn says which files are on the way', async () => {
+    const { conversa } = montar();
+    await conversa.enviar({
+      texto: 'Vendo seguro viagem',
+      anexos: [
+        arquivo('tabela.pdf', 'application/pdf'),
+        arquivo('foto.png', 'image/png'),
+      ],
+    });
+
+    const [, inicio] = chamadas('autonomiaBuildThreads/start')[0];
+    expect(inicio.message).toBe('Vendo seguro viagem');
+    expect(inicio.materiais_a_caminho).toEqual(['tabela.pdf']);
+    expect(chamadas('autonomiaSources/create')).toHaveLength(0);
+  });
+
+  it('on the open thread without a draft yet, the turn also says which files are on the way', async () => {
+    store.state['autonomiaBuildThreads/getThread'] = { id: 7, agent_id: null };
+    const { conversa } = montar();
+    await conversa.enviar({
+      texto: 'Segue a tabela',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+
+    expect(chamadas('autonomiaBuildThreads/send')[0][1].extra).toEqual({
+      materiais_a_caminho: ['tabela.pdf'],
+    });
   });
 
   it('refuses a file over 25 MB before uploading it', async () => {
@@ -511,6 +759,219 @@ describe('useConversaDeCriacao', () => {
     await nextTick();
     expect(conversa.demorando.value).toBe(false);
     vi.useRealTimers();
+  });
+
+  // #2489 — a geração parada além do prazo do servidor (5 min) vira o cartão "Tentar de novo", em vez de 30 min de
+  // "Pensando…" que só a recarga resolvia. O aviso fica no composable: o status da store não é forjado.
+  describe('prazo da geração (#2489)', () => {
+    const processando = async () => {
+      store.state['autonomiaBuildThreads/getStatus'] = 'processing';
+      await nextTick();
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      comThread();
+    });
+
+    it('offers to try again after the server window, without touching the store status', async () => {
+      const { conversa } = montar();
+      await processando();
+
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS - 1);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+      expect(conversa.pensando.value).toBe(true);
+
+      vi.advanceTimersByTime(1);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+      expect(conversa.pensando.value).toBe(false);
+      expect(store.commit).not.toHaveBeenCalledWith(
+        'autonomiaBuildThreads/SET_STATUS',
+        'failed'
+      );
+      expect(chamadas('autonomiaBuildThreads/stopPolling')).toHaveLength(0);
+
+      await conversa.tentarDeNovo();
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaBuildThreads/retry',
+        {
+          threadId: 7,
+        }
+      );
+      expect(conversa.falhou.value).toBe(false);
+      expect(conversa.pensando.value).toBe(true);
+
+      // Ainda viva no servidor: um prazo novo, e o aviso volta se ela continuar parada.
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+    });
+
+    it('goes back to waiting right away when the server refuses the retry (still alive or already done)', async () => {
+      const { conversa } = montar();
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      store.dispatch.mockImplementation(nome =>
+        nome === 'autonomiaBuildThreads/retry'
+          ? Promise.reject(new Error('409'))
+          : Promise.resolve(null)
+      );
+
+      await conversa.tentarDeNovo();
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaBuildThreads/poll',
+        {
+          threadId: 7,
+          delay: 0,
+        }
+      );
+      expect(conversa.pensando.value).toBe(true);
+    });
+
+    it('a new turn after the window holds the field and counts a new window (status stays processing)', async () => {
+      const { conversa } = montar();
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+
+      store.state['autonomiaBuildThreads/getUIFlags'] = {
+        creating: false,
+        sending: true,
+      };
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+      expect(conversa.pensando.value).toBe(true);
+
+      store.state['autonomiaBuildThreads/getUIFlags'] = {
+        creating: false,
+        sending: false,
+      };
+      await nextTick();
+      expect(conversa.pensando.value).toBe(true);
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS - 1);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+      vi.advanceTimersByTime(1);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+    });
+
+    it('drops the warning when the answer arrives after the window', async () => {
+      const { conversa } = montar();
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+
+      store.state['autonomiaBuildThreads/getStatus'] = 'ready';
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+      expect(conversa.pensando.value).toBe(false);
+    });
+
+    it('counts from when the generation starts, not from the upload or the send', async () => {
+      const { conversa } = montar();
+      store.state['autonomiaBuildThreads/getUIFlags'] = {
+        creating: false,
+        sending: true,
+      };
+      await nextTick();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+
+      store.state['autonomiaBuildThreads/getUIFlags'] = {
+        creating: false,
+        sending: false,
+      };
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS - 1);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+      vi.advanceTimersByTime(1);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+    });
+
+    it('does not warn when the answer arrives in time', async () => {
+      const { conversa } = montar();
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS - 1000);
+      store.state['autonomiaBuildThreads/getStatus'] = 'ready';
+      await nextTick();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+    });
+
+    it('sends one retry when "Try again" is clicked twice before the answer', async () => {
+      const { conversa } = montar();
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      let responder;
+      store.dispatch.mockImplementation(nome =>
+        nome === 'autonomiaBuildThreads/retry'
+          ? new Promise(resolve => {
+              responder = resolve;
+            })
+          : Promise.resolve(null)
+      );
+
+      const primeira = conversa.tentarDeNovo();
+      const segunda = conversa.tentarDeNovo();
+      expect(segunda).toBe(primeira);
+      expect(chamadas('autonomiaBuildThreads/retry')).toHaveLength(1);
+      expect(store.commit).not.toHaveBeenCalledWith(
+        'autonomiaBuildThreads/SET_ERROR',
+        null
+      );
+
+      responder(null);
+      await flushPromises();
+      conversa.tentarDeNovo();
+      expect(chamadas('autonomiaBuildThreads/retry')).toHaveLength(2);
+    });
+
+    it('leaves no timer behind when the screen leaves during the generation', async () => {
+      const { conversa, wrapper } = montar();
+      await processando();
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+
+      wrapper.unmount();
+      expect(vi.getTimerCount()).toBe(0);
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+    });
+
+    it('clears the window and the warning when the thread changes (status back to empty)', async () => {
+      const { conversa } = montar();
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+
+      comThread(8);
+      store.state['autonomiaBuildThreads/getStatus'] = null;
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+
+      // Uma geração que sai antes do prazo não deixa o relógio dela para trás.
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS - 1);
+      store.state['autonomiaBuildThreads/getStatus'] = null;
+      await nextTick();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+      expect(vi.getTimerCount()).toBe(0);
+    });
   });
 
   it('stops polling and clears the stores when leaving', () => {

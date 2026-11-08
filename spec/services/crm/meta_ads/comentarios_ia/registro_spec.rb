@@ -1,0 +1,106 @@
+require 'rails_helper'
+
+RSpec.describe Crm::MetaAds::ComentariosIa::Registro do
+  let(:account) { create(:account) }
+
+  def comentario(comment_id = 'c-1', network: 'instagram')
+    Crm::MetaAds::ComentariosIa::Comentario.new(network: network, account_id: account.id, comment_id: comment_id, ad_id: '120')
+  end
+
+  it 'reserva o comentário uma vez só: o webhook reenviado sai sem nada' do
+    expect(described_class.reservar!(comentario)).to be(true)
+    expect(described_class.reservar!(comentario)).to be(false)
+    expect(described_class.reservar!(comentario('c-1', network: 'facebook'))).to be(true)
+  end
+
+  it 'sem cuidado (#2519): uma linha no_care por comentário, com o anúncio; o webhook reenviado não grava de novo' do
+    2.times { described_class.sem_cuidado!(comentario) }
+
+    expect(Crm::MetaAdsCommentAction.where(comment_id: 'c-1', action: 'no_care').pluck(:ad_id, :actor)).to eq([%w[120 ai]])
+  end
+
+  it 'grava na linha ai_seen o que a IA escolheu, a certeza e o motivo, também sem certeza para agir (#2424)' do
+    described_class.reservar!(comentario)
+    described_class.gravar!(comentario, 'ai_unread')
+    avaliacao = Crm::MetaAds::ComentariosIa::Classificador::Avaliacao.new(chave: nil, escolha: 'private', certeza: 0.41,
+                                                                          motivo: 'Pergunta sobre a empresa, fora do critério.')
+
+    described_class.decisao!(comentario, avaliacao)
+
+    acoes = Crm::MetaAdsCommentAction.where(comment_id: 'c-1')
+    expect(acoes.find_by(action: 'ai_seen'))
+      .to have_attributes(ai_decision: 'private', ai_confidence: BigDecimal('0.41'), ai_reason: 'Pergunta sobre a empresa, fora do critério.')
+    expect(acoes.find_by(action: 'ai_unread')).to have_attributes(ai_decision: nil, ai_reason: nil)
+  end
+
+  it 'a pessoa reservada pelo mesmo comentário (o job tentando de novo depois de um limite da Meta) segue reservada para ele' do
+    item = Crm::MetaAds::ComentariosIa::Comentario.new(network: 'instagram', account_id: account.id, comment_id: 'c-1', post_id: '1790',
+                                                       from_id: 'igsid-1')
+
+    expect(described_class.reservar_pessoa!(item)).to be(true)
+    expect(described_class.reservar_pessoa!(item)).to be(true)
+    expect(described_class.reservar_pessoa!(item.dup.tap { |outro| outro.comment_id = 'c-2' })).to be(false)
+
+    described_class.soltar_pessoa_do_comentario!(item.dup.tap { |sem_autor| sem_autor.from_id = nil })
+    expect(Crm::MetaAdsCommentPerson.count).to eq(0)
+  end
+
+  it 'a recusa do privado em resposta (#2454) fica com o código e o subcódigo da Meta, como IA' do
+    described_class.recusa_do_privado!(comentario, codigo: 100, subcodigo: 2_534_023)
+
+    expect(Crm::MetaAdsCommentAction.sole).to have_attributes(action: 'private_reply_failed', actor: 'ai', ad_id: '120',
+                                                              meta_error_code: 100, meta_error_subcode: 2_534_023)
+  end
+
+  it 'grava como IA, com o anúncio e a conversa' do
+    conversation = create(:conversation, account: account)
+
+    described_class.gravar!(comentario, 'to_you', conversation: conversation)
+
+    expect(Crm::MetaAdsCommentAction.sole)
+      .to have_attributes(account_id: account.id, network: 'instagram', comment_id: 'c-1', action: 'to_you', actor: 'ai',
+                          ad_id: '120', conversation_id: conversation.id)
+  end
+
+  it 'solta o privado recusado sem tocar no que a pessoa fez' do
+    described_class.reivindicar!(comentario, 'private_reply')
+    Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: 'c-1', action: 'reply', actor: 'user',
+                                      user: create(:user, account: account))
+
+    described_class.soltar!(comentario, 'private_reply')
+
+    expect(Crm::MetaAdsCommentAction.pluck(:action, :actor)).to eq([%w[reply user]])
+  end
+
+  it 'a reivindicação devolve a linha, que o adaptador confirma quando a Meta aceita' do
+    reivindicacao = described_class.reivindicar!(comentario, 'private_reply')
+
+    reivindicacao.confirm!
+
+    expect(Crm::MetaAdsCommentAction.sole.confirmed_at).to be_present
+  end
+
+  it 'solta só a reserva do privado que nunca saiu e passou de 2 min, de qualquer autor' do
+    travel_to(3.minutes.ago) do
+      Crm::MetaAdsCommentAction.record!(account: account, network: 'facebook', comment_id: 'c-1', action: 'private_reply', actor: 'user',
+                                        user: create(:user, account: account))
+      described_class.reivindicar!(comentario('c-2', network: 'facebook'), 'private_reply').attempt!
+      described_class.reservar!(comentario('c-1', network: 'facebook'))
+    end
+    described_class.reivindicar!(comentario('c-3', network: 'facebook'), 'private_reply')
+
+    %w[c-1 c-2 c-3].each { |id| described_class.soltar_abandonada!(comentario(id, network: 'facebook')) }
+
+    expect(Crm::MetaAdsCommentAction.order(:comment_id, :action).pluck(:comment_id, :action))
+      .to eq([%w[c-1 ai_seen], %w[c-2 private_reply], %w[c-3 private_reply]])
+  end
+
+  it 'vincula a conversa que nasce depois da reivindicação' do
+    conversation = create(:conversation, account: account)
+    described_class.reivindicar!(comentario, 'private_reply')
+
+    described_class.vincular!(comentario, 'private_reply', conversation)
+
+    expect(Crm::MetaAdsCommentAction.sole.conversation_id).to eq(conversation.id)
+  end
+end

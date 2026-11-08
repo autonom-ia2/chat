@@ -24,7 +24,9 @@
 # callback dela desliga a sessão no WAHA.
 # Reunião marcada no Google ou na Microsoft não é cancelada: a conta está saindo, e o evento continua no calendário de
 # quem a marcou.
-class Autonomia::ExclusaoDaConta
+# A classe passa do limite de linhas por causa de ETAPAS, que é dado: uma linha por tabela da conta, e cresce a cada
+# tabela nova (o exclusao_da_conta_spec cobra). A lógica continua curta.
+class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
   LOTE = 5_000
 
   # [modelo, como achar as linhas da conta]. A ordem é a das chaves estrangeiras: filho antes do pai.
@@ -35,6 +37,10 @@ class Autonomia::ExclusaoDaConta
     ['Crm::Passagem', :por_conta],
     ['Crm::SubjectDecision', :por_conta],
     ['Crm::MemoriaFato', :por_conta],
+    ['Crm::MetaAdsCommentAction', :por_conta],
+    ['Crm::MetaAdsCommentPerson', :por_conta],
+    ['Crm::MetaAdsCommentDraft', :por_conta],
+    ['Crm::MetaAdsPostReading', :por_conta],
     ['Crm::MemoriaChave', :por_conta],
     # Card e o que pendura nele.
     ['Crm::StageAutomationExecution', :por_conta],
@@ -48,6 +54,7 @@ class Autonomia::ExclusaoDaConta
     ['Crm::AiUsageEvent', :por_conta],
     ['Crm::MetaConversionEvent', :por_conta],
     ['Crm::GoogleConversionEvent', :por_conta],
+    ['Crm::MetaAdsLead', :por_conta],
     ['Autonomia::Prospecting::ListLead', :por_conta],
     ['Autonomia::Prospecting::Lead', :por_conta],
     ['Autonomia::Prospecting::List', :por_conta],
@@ -69,6 +76,7 @@ class Autonomia::ExclusaoDaConta
     ['Crm::AgentBookingLink', :por_conta],
     ['Crm::AgentBookingProfile', :por_conta],
     ['Crm::BookingAccountAddress', :por_conta],
+    ['Crm::MetaAdsLeadForm', :por_conta],
     ['Crm::PipelineStage', :por_conta],
     ['Crm::Pipeline', :por_conta],
     ['Crm::CalendarSyncState', :por_conta],
@@ -82,7 +90,9 @@ class Autonomia::ExclusaoDaConta
     ['Crm::MetaAdFrequencyWindow', :por_conta],
     ['Crm::MetaAdLink', :por_conta],
     ['Crm::MetaAdObject', :por_conta],
+    ['Crm::MetaAdsCreatedObject', :por_conta],
     ['Crm::MetaAdsConnection', :por_conta],
+    ['Crm::MetaAdsPage', :por_conta],
     ['Ctwa::TrackedLinkClick', :por_conta],
     ['Ctwa::TrackedLink', :por_conta],
     # Integrações.
@@ -96,13 +106,27 @@ class Autonomia::ExclusaoDaConta
     ['Autonomia::Agents::InstructionVersion', :por_conta],
     ['Autonomia::Agents::KnowledgeEntry', :por_conta],
     ['Autonomia::Agents::Source', :por_conta],
+    # O material só de um post ou anúncio (#2487) aponta para o cuidado: a fonte sai antes, com o arquivo.
+    ['Crm::MetaAdsCommentCare', :por_conta],
     ['Autonomia::Agents::Specialist', :por_conta],
     ['Autonomia::Agents::Tool', :por_conta],
     ['Autonomia::Agents::BuildThread', :por_conta],
     ['Autonomia::Agents::AgentInbox', :por_conta],
     ['Autonomia::Agents::Agent', :por_conta],
+    # Painel de desempenho (#2251): a leitura guardada das conversas.
+    ['Autonomia::Desempenho::Procura', :por_conta], ['Autonomia::Desempenho::Leitura', :por_conta],
+    ['Autonomia::Desempenho::Recomendacao', :por_conta], ['Autonomia::Desempenho::Rodada', :por_conta],
+    ['Autonomia::Desempenho::Ficha', :por_conta],
     ['Autonomia::Insurance::Connection', :por_conta],
     ['Autonomia::AccountLink', :por_conta],
+    # Automação livre (#2414): conversão do antigo (F9), registro, execução, versão e automação. A conversão aponta
+    # para a automação sem cascata e guarda o backup da regra antiga. A versão ativa da automação aponta para a
+    # versão com SET NULL, então as versões saem antes sem esbarrar nela.
+    ['Autonomia::Automacao::Conversao', :por_conta],
+    ['Autonomia::Automacao::Registro', :por_conta],
+    ['Autonomia::Automacao::Execucao', :por_conta],
+    ['Autonomia::Automacao::Versao', :por_conta],
+    ['Autonomia::Automacao::Definicao', :por_conta],
     # Guia da Plataforma.
     ['Autonomia::Guide::Aviso', :por_conta],
     ['Autonomia::Guide::Memoria', :por_conta],
@@ -121,6 +145,8 @@ class Autonomia::ExclusaoDaConta
     ['CampaignAudienceLink', :por_conta],
     ['CampaignPause', :por_conta],
     ['CampaignReplyCode', :por_conta],
+    # Público pelas conversas (#2277): pessoas e lotes saem na cascata da busca.
+    ['ConversationAudienceSearch', :por_conta],
     # E-mail.
     ['ConversaCanal::EmailLido', :por_conta],
     ['ConversaCanal::EmailLidoCaixa', :por_conta],

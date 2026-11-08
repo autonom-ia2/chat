@@ -1,0 +1,161 @@
+{
+  "LISTA_DE_CONVERSAS": {
+    "HORA": {
+      "ONTEM": "Yesterday",
+      "HOJE": "today {hora}",
+      "AMANHA": "tomorrow {hora}",
+      "DIA_E_HORA": "{dia} {hora}",
+      "DICA": "Last message on {ultima} · Started on {comeco}",
+      "DIA_CURTO": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      }
+    },
+    "DURACAO": {
+      "MENOS_DE_1_MIN": "for less than 1 min",
+      "MIN": "for {n} min",
+      "HORA": "for 1 hour | for {n} hours",
+      "DIA": "for 1 day | for {n} days",
+      "MESES": "for {n} months"
+    },
+    "PREFIXO": {
+      "VOCE": "You",
+      "EQUIPE": "Team",
+      "NOTA": "Note",
+      "SELO_IA": "AI",
+      "SEPARADOR": ":"
+    },
+    "SINAL": {
+      "SUA_VEZ": "Your turn: {n} min to pick up",
+      "SUA_VEZ_AGORA": "Your turn: pick up now",
+      "RESERVADA": "Reserved for {nome}",
+      "RESERVADA_SEM_NOME": "Reserved for someone else",
+      "OUTRA_PESSOA": "someone else",
+      "ADIADA_ATE": "Snoozed until {quando}",
+      "ADIADA_CLIENTE": "Snoozed until the customer replies",
+      "PEDIU_AJUDA": "{nome} asked for help {duracao}",
+      "ASSISTENTE_PEDIU_AJUDA": "The assistant asked for help {duracao}",
+      "ASSISTENTE": "The assistant",
+      "ESPERANDO": "Waiting {duracao}",
+      "SEM_RESPOSTA": "No reply {duracao}",
+      "RESPONDEU_SEM_PEGAR": "{nome} replied without taking it",
+      "VOCE_RESPONDEU": "You replied without taking it",
+      "COM": "With {nome}",
+      "SEM_NINGUEM": "No one",
+      "SEPARADOR": "·",
+      "RESOLVIDA": "Resolved"
+    },
+    "PRIORIDADE": {
+      "URGENTE": "Urgent",
+      "ALTA": "High priority"
+    },
+    "ETAPA": {
+      "DICA": "Pipeline {funil}, stage {etapa}",
+      "MAIS": "+{n}"
+    },
+    "ARIA": {
+      "SUA_VEZ": "Your turn to pick up this conversation. {n} minutes left",
+      "RESERVADA": "Reserved for {nome} for {n} more minutes",
+      "PEDIU_AJUDA": "{nome}, AI assistant, asked for help {duracao}",
+      "COM_ROBO": "With {nome}, AI assistant",
+      "ROBO_ESCREVEU": "{nome}, AI assistant, wrote:",
+      "ESCREVEU": "{nome} wrote:",
+      "ULTIMA": "Last message: {quando}.",
+      "NAO_LIDAS": "1 new message. | {n} new messages."
+    },
+    "CABECALHO": {
+      "ORDEM": "List order",
+      "RECENTES": "Most recent first",
+      "RECENTES_CURTO": "Recent",
+      "ESPERA": "Longest waiting first",
+      "ESPERA_CURTO": "Waiting",
+      "ANTIGAS": "Oldest first",
+      "ANTIGAS_CURTO": "Oldest",
+      "AJUDA_ESPERA": "Longest waiting first. Counts from the first message without a reply.",
+      "FILTRAR": "Filter",
+      "FILTRAR_ARIA": "Filter the list",
+      "ABERTAS": "Open",
+      "RESOLVIDAS": "Resolved",
+      "ADIADAS": "Snoozed",
+      "PENDENTES": "Pending",
+      "TODOS_OS_STATUS": "All statuses",
+      "MAIS_FILTROS": "More filters…",
+      "VOLTAR_ABERTAS": "Back to open"
+    },
+    "ABAS": {
+      "ARIA": "Which conversations",
+      "MINHAS": "Mine",
+      "PARA_PEGAR": "To pick up",
+      "TODAS": "All"
+    },
+    "VAZIA": {
+      "MINHAS": "No conversations with you right now.",
+      "PARA_PEGAR": "Nothing to pick up. All caught up.",
+      "TODAS": "No open conversations.",
+      "RESOLVIDAS": "No resolved conversations.",
+      "ADIADAS": "No snoozed conversations. When you snooze one, it shows up here until it's time to come back.",
+      "PENDENTES": "No pending conversations.",
+      "TODOS_OS_STATUS": "No conversations in this tab."
+    },
+    "FUNIS": {
+      "TODOS": "All",
+      "ERRO": "Couldn't load the pipelines.",
+      "TENTAR": "Try again"
+    },
+    "BUSCA": {
+      "CAMPO": "Search name, phone or message",
+      "CAMPO_ARIA": "Search a conversation, message or person",
+      "LIMPAR": "Clear search",
+      "BUSCANDO": "Searching…",
+      "ERRO": "Couldn't search right now.",
+      "TENTAR": "Try again",
+      "NADA": "Nothing found for “{texto}”.",
+      "SECOES": {
+        "CONVERSAS": "Conversations",
+        "MENSAGENS": "Messages",
+        "PESSOAS": "People without a conversation"
+      },
+      "MENSAGEM_ARIA": "Message from {quem} on {quando}, in the conversation with {contato}",
+      "NOTA": "Note",
+      "AUDIO": "Audio",
+      "VOCE": "You",
+      "COMECAR_COM_TELEFONE": "Start a conversation with {telefone}",
+      "COMECAR_COM_TELEFONE_AJUDA": "Nobody has this number. The contact is created when you send.",
+      "SEM_DADOS": "No phone or e-mail",
+      "ESCREVER": "Write",
+      "PARCIAL": "Part of the results took too long and was left out. Try a longer word.",
+      "ESCREVER_PARA_EMAIL": "Write to {email}",
+      "ESCREVER_PARA_EMAIL_AJUDA": "Nobody has this e-mail. The contact is created when you send.",
+      "RESULTADOS": "{count} result | {count} results"
+    },
+    "CONVERSA_VAZIA": {
+      "CARREGANDO": "Loading…",
+      "ERRO": "Couldn't open the conversation.",
+      "TENTAR": "Try again",
+      "POR_ONDE": "Send through?",
+      "FECHAR": "Close",
+      "TROCAR": "Change",
+      "TROCAR_ARIA": "Sending through {caixa}. Change",
+      "ESCOLHER_CAIXA": "Choose where to send from",
+      "SEM_CAIXA": "You can't write to {nome}: the contact has no phone or e-mail.",
+      "COMPLETAR_CONTATO": "Complete the contact",
+      "SEM_CAIXA_NA_CONTA": "No inbox in this account can message {nome}.",
+      "SEM_INSTAGRAM": "Instagram isn't listed: there, only the person can send the first message.",
+      "MODELO_LINHA": "On the official WhatsApp, the first message is an approved template. Once the person replies, you can write freely.",
+      "ESCOLHER_MODELO": "Choose the template",
+      "ENVIAR": "Send",
+      "ENVIANDO": "Sending…",
+      "ERRO_CONTATO": "Couldn't create the contact.",
+      "ENVIADA_OCULTA": "Message sent. It went into a conversation that is with someone else.",
+      "CAIXA_NAO_VOLTOU": "The contact was created, but the inbox didn't come back for it. Try sending again.",
+      "TIPO_MUDOU": "This inbox changed what can be sent first. Check the message and send again: what you wrote was kept.",
+      "TIPO_MUDOU_PARA_MODELO": "This number needs an approved message now. Pick one to start.",
+      "TELEFONE_INVALIDO": "{telefone} isn't a valid phone number. Go back to the list and check the number."
+    }
+  }
+}

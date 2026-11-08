@@ -39,8 +39,7 @@
       "ENQUETE": "Poll",
       "FORMULARIO": "Form",
       "DOCUMENTO": "Document",
-      "FOTOS_E_VIDEOS": "Photos & videos",
-      "SO_TEXTO": "Outside the 24 hours the reply goes through the backup number, as text only. Photos, audio and documents don't go."
+      "FOTOS_E_VIDEOS": "Photos & videos"
     },
     "JANELA": {
       "PREVIA": "What the customer will see",
@@ -681,6 +680,44 @@
       "CAMPO": "Message...",
       "VER_TRANSCRICAO": "See transcription",
       "MIDIA_INDISPONIVEL": "Media unavailable"
+    },
+    "COMENTARIO": {
+      "ROTULO": "Instagram comment",
+      "NO_POST": "Comment on the post",
+      "NO_ANUNCIO": "Comment on the ad",
+      "ALGUEM": "Someone",
+      "ESCONDIDO": "Hidden",
+      "CARREGANDO": "Loading the comment…",
+      "POR_QUE_ESCONDIDO": "Only you see this comment. Tap Show again to bring it back.",
+      "SUA_RESPOSTA": "Your public reply:",
+      "RESPONDER": "Reply in public",
+      "RESPONDER_ROTULO": "Public reply to {autor}",
+      "RESPONDER_NOTA": "Goes out on the post, for everyone to see. To write only to this person, use the Direct box below.",
+      "PUBLICAR": "Publish reply",
+      "CANCELAR": "Cancel",
+      "ESCONDER": "Hide",
+      "MOSTRAR": "Show again",
+      "APAGAR": "Delete",
+      "APAGAR_CONFIRMA": "Delete the comment from {autor}: «{texto}»?",
+      "APAGAR_NOTA": "It disappears from the post for everyone. This cannot be undone.",
+      "APAGAR_SIM": "Delete comment",
+      "APAGADO": "This comment was deleted and no longer shows on the post.",
+      "INDISPONIVEL": "Could not read the comment on Instagram right now.",
+      "TENTAR_DE_NOVO": "Try again",
+      "SEM_PERMISSAO": "To reply, hide or delete this comment from here, Instagram needs to allow access to comments.",
+      "PECA_AO_ADMIN": "Ask an administrator to allow it in Your posts.",
+      "LIBERAR": "Allow access",
+      "FEITO": {
+        "RESPONDIDO": "Reply published on the post",
+        "ESCONDIDO": "Comment hidden",
+        "MOSTRADO": "Comment shown again",
+        "APAGADO": "Comment deleted"
+      },
+      "ERRO": {
+        "GERAL": "Could not do it on Instagram. Try again.",
+        "PERMISSAO": "Instagram did not allow it: access to comments needs to be allowed again.",
+        "SUMIU": "This comment is no longer on Instagram."
+      }
     }
   }
 }

@@ -35,6 +35,7 @@ RSpec.describe 'Shared relationship record write permissions', type: :request do
     [:patch, :note, { note: { content: 'Forbidden update' } }],
     [:delete, :note, {}],
     [:post, :contact_labels, { labels: ['forbidden'] }],
+    [:patch, :contact_labels_alterar, { por: ['forbidden'] }],
     [:post, :company_contacts, {}],
     [:delete, :company_contact, {}],
     [:delete, :contact_avatar, {}],
@@ -51,7 +52,8 @@ RSpec.describe 'Shared relationship record write permissions', type: :request do
       paths = {
         contact: "#{base}/contacts/#{contact.id}", company: "#{base}/companies/#{company.id}",
         contact_notes: "#{base}/contacts/#{contact.id}/notes", note: "#{base}/contacts/#{contact.id}/notes/#{note.id}",
-        contact_labels: "#{base}/contacts/#{contact.id}/labels", company_contacts: "#{base}/companies/#{company.id}/contacts",
+        contact_labels: "#{base}/contacts/#{contact.id}/labels",
+        contact_labels_alterar: "#{base}/contacts/#{contact.id}/labels/alterar", company_contacts: "#{base}/companies/#{company.id}/contacts",
         company_contact: "#{base}/companies/#{company.id}/contacts/#{contact.id}",
         contact_avatar: "#{base}/contacts/#{contact.id}/avatar", company_avatar: "#{base}/companies/#{company.id}/avatar",
         contact_opt_out: "#{base}/contacts/#{contact.id}/opt_out", contact_customer: "#{base}/contacts/#{contact.id}/customer",

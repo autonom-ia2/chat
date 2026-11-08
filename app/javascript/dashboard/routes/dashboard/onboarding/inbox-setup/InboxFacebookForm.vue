@@ -33,7 +33,7 @@ const pageOptions = computed(() =>
 
 // Warm the SDK on open so the login click opens its popup within the gesture's
 // activation window (see useFacebookPageConnect).
-onMounted(preloadSdk);
+onMounted(() => preloadSdk().catch(() => {}));
 
 const connect = async () => {
   errored.value = false;

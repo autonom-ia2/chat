@@ -66,6 +66,8 @@ import {
   topoDaFaixa,
 } from 'dashboard/components-next/conversa-canal/rolagemDaPele';
 import { useAlert } from 'dashboard/composables';
+import ComentarioNaConversa from 'dashboard/components-next/conversa-canal/comentario/ComentarioNaConversa.vue';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 // Até quantos px do fim a lista conta como "no fim" quando a caixa de resposta cresce.
 const NO_FIM_DO_PAINEL = 40;
@@ -83,6 +85,7 @@ export default {
     AvisoJanelaFechada,
     EncaminharDaConversa,
     FaixaDeNaoLidas,
+    ComentarioNaConversa,
   },
   mixins: [inboxMixin],
   setup() {
@@ -161,6 +164,8 @@ export default {
       labelSuggestions: [],
       // #1702: faixa de não lidas da pele; some depois de lida (alguns segundos na tela).
       naoLidasDaPele: null,
+      // #2211: a mensagem pedida (?messageId=) que chegou enquanto a conversa ainda abria.
+      citadaPendente: null,
       cancelarFimDaFaixa: null,
       ultimaDaPele: null,
     };
@@ -173,6 +178,7 @@ export default {
       listLoadingStatus: 'getAllMessagesLoaded',
       currentAccountId: 'getCurrentAccountId',
       isMetaMessageSendingDisabled: 'globalConfig/isMetaMessageSendingDisabled',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
     }),
     isOpen() {
       return this.currentChat?.status === wootConstants.STATUS_TYPE.OPEN;
@@ -192,6 +198,19 @@ export default {
     },
     inboxId() {
       return this.currentChat.inbox_id;
+    },
+    // #2215: a conversa nasceu de um comentário do Instagram (#2212): o comentário fica no topo, com as ações nele.
+    // Atrás da flag da IA dos comentários, a mesma que cria estas conversas.
+    nasceuDeComentarioDoInstagram() {
+      const origem = this.currentChat.additional_attributes?.meta_ads_comment;
+      return (
+        this.isAnInstagramChannel &&
+        origem?.network === 'instagram' &&
+        this.isFeatureEnabledonAccount(
+          this.currentAccountId,
+          FEATURE_FLAGS.META_ADS_COMENTARIOS_IA
+        )
+      );
     },
     inbox() {
       return this.$store.getters['inboxes/getInbox'](this.inboxId);
@@ -358,6 +377,10 @@ export default {
       if (newChat.id === oldChat.id) {
         return;
       }
+      // #2211: pedido de ir à mensagem que a conversa que saiu não usou não vale mais.
+      if (this.citadaPendente?.conversaId === oldChat.id) {
+        this.citadaPendente = null;
+      }
       this.fetchAllAttachmentsFromCurrentChat();
       this.fetchSuggestions();
       this.fetchParticipantsForReading();
@@ -459,7 +482,10 @@ export default {
     removeBusListeners() {
       emitter.off(BUS_EVENTS.SCROLL_TO_MESSAGE, this.onScrollToMessage);
     },
-    onScrollToMessage({ messageId = '' } = {}) {
+    onScrollToMessage({ messageId = '', conversationId } = {}) {
+      // #2211: o aviso de abrir com ?messageId= diz de qual conversa é; se outra já está na
+      // tela (troca rápida), ele não vale para ela.
+      if (conversationId && conversationId !== this.currentChat.id) return;
       // #1702: com a pele, a rolagem segue o app (rolarNaPele); sem ela, o Chatwoot.
       if (this.pele) {
         this.rolarNaPele(messageId);
@@ -482,18 +508,30 @@ export default {
     // lidas; citação: busca a mensagem e a destaca; mensagem nova: só desce quem estava
     // no fim ou quando o atendente enviou.
     async rolarNaPele(messageId) {
-      if (this.naoLidasDaPele?.conversaId !== this.currentChat.id) {
+      const conversaId = this.currentChat.id;
+      // #2211: o pedido de ir à mensagem (link com ?messageId=, da busca) podia chegar com a
+      // conversa ainda abrindo (a faixa não pronta) e se perdia: a conversa abria na faixa ou
+      // no fim. Fica guardado e quem terminar de abrir leva até ela.
+      if (messageId) this.citadaPendente = { conversaId, id: messageId };
+      const abrindoAgora = this.naoLidasDaPele?.conversaId !== conversaId;
+      if (abrindoAgora) {
         // Antes das mensagens chegarem não há o que contar.
         if (this.currentChat.dataFetched !== true) return;
-        await this.abrirNaPele(!messageId);
-        if (!messageId) return;
+        await this.abrirNaPele(!this.citadaDestaConversa());
       }
       if (!this.faixaDaPele) return;
-      if (messageId) {
-        await this.irParaCitada(messageId);
+      const citada = this.citadaDestaConversa();
+      if (citada) {
+        this.citadaPendente = null;
+        await this.irParaCitada(citada);
         return;
       }
+      if (abrindoAgora) return;
       this.acompanharNovas();
+    },
+    citadaDestaConversa() {
+      const pendente = this.citadaPendente;
+      return pendente?.conversaId === this.currentChat.id ? pendente.id : null;
     },
     async abrirNaPele(posicionar) {
       const conversaId = this.currentChat.id;
@@ -515,7 +553,8 @@ export default {
       this.naoLidasDaPele = marcoDeNaoLidas(conversaId, messages, vistoEm);
       this.ultimaDaPele = messages[messages.length - 1]?.id;
       this.agendarFimDaFaixaDaPele(conversaId);
-      if (!posicionar) return;
+      // #2211: com mensagem pedida, quem abre leva direto até ela, sem passar pela faixa.
+      if (!posicionar || this.citadaDestaConversa()) return;
       await this.esperarATela();
       const faixa = this.conversationPanel.querySelector(
         '[data-faixa-nao-lidas]'
@@ -582,17 +621,23 @@ export default {
     // rola até ela e a destaca, como no app.
     async irParaCitada(messageId) {
       const id = Number(messageId);
+      // #2211: trocou de conversa ou fechou a tela no meio: para sem aviso.
+      const conversaId = this.currentChat.id;
+      const naMesma = () =>
+        !this.desmontada && this.currentChat.id === conversaId;
       let carregada = false;
       try {
         carregada = await buscarAteAchar({
           achou: () => this.currentChat.messages.some(item => item.id === id),
-          temMais: () => !this.listLoadingStatus,
+          temMais: () => naMesma() && !this.listLoadingStatus,
           carregarMais: this.carregarAnterioresNaPele,
         });
       } catch (error) {
         carregada = false;
       }
+      if (!naMesma()) return;
       await this.esperarATela();
+      if (!naMesma()) return;
       const alvo = carregada && document.getElementById(`message${id}`);
       if (!alvo) {
         useAlert(this.$t('CONVERSA_CANAL.ROLAGEM.CITADA_NAO_ENCONTRADA'));
@@ -751,6 +796,11 @@ export default {
     :data-conversa-da-pele="pele ? '' : undefined"
   >
     <div ref="topBannerRef">
+      <ComentarioNaConversa
+        v-if="nasceuDeComentarioDoInstagram"
+        :conversation-id="currentChat.id"
+        :inbox-id="currentChat.inbox_id"
+      />
       <Banner
         v-if="isInstagramRestrictionBannerVisible"
         color-scheme="warning"

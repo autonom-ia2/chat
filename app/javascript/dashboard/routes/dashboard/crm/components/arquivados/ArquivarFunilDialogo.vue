@@ -193,9 +193,17 @@ const confirmar = async () => {
     });
     fechar();
   } catch (error) {
-    erro.value = t('CRM_ARQUIVADOS.FUNIL.ERRO', {
-      motivo: motivoDoErro(t, error),
-    });
+    // Arquivar em lotes (#2145): a recusa pode chegar depois de parte dos cards já ter ido para o destino.
+    const levados = Number(error?.response?.data?.moved_count || 0);
+    const motivo = motivoDoErro(t, error);
+    erro.value = levados
+      ? t(
+          'CRM_ARQUIVADOS.FUNIL.ERRO_PARCIAL',
+          { motivo, count: levados },
+          levados
+        )
+      : t('CRM_ARQUIVADOS.FUNIL.ERRO', { motivo });
+    if (levados) await estado.recarregarPrevia();
   } finally {
     enviando.value = false;
   }

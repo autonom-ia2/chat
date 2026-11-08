@@ -3,6 +3,7 @@
 // A `<module>_manage` key implies `<module>_view` on the backend, so only the highest key is stored.
 import {
   CUSTOM_ROLE_MANAGE_PERMISSION,
+  DESEMPENHO_VIEW_PERMISSION,
   FINANCIAL_MANAGE_PERMISSION,
   FINANCIAL_VIEW_PERMISSION,
   GRANT_ABOVE_OWN_PERMISSION,
@@ -14,6 +15,14 @@ import {
   SALES_VALUE_VIEW_PERMISSION,
   TOKEN_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions';
+
+// Chaves do servidor que nenhuma tela de função mostra (#2352). knowledge_base_* guardam o portal de artigos para
+// clientes do Chatwoot, que não está no menu do produto; a Central de Ajuda da plataforma é aberta a todos e não
+// depende de chave. Funções que já têm essas chaves continuam com elas: o setLevel só mexe nas chaves da área que muda.
+export const KEYS_OUTSIDE_MATRIX = [
+  'knowledge_base_view',
+  'knowledge_base_manage',
+];
 
 export const LEVELS = { NONE: 'none', VIEW: 'view', MANAGE: 'manage' };
 // Conversas: só olha (conversation_view, #1800), ou atende as próprias (LIMITED) ou todas (ALL). Na tela, as duas
@@ -92,14 +101,6 @@ export const MODULE_GROUPS = [
         manageOnlyExtras: ['contact_delete'],
       },
       {
-        key: 'KNOWLEDGE_BASE',
-        icon: 'i-lucide-book-open',
-        levels: {
-          view: 'knowledge_base_view',
-          manage: 'knowledge_base_manage',
-        },
-      },
-      {
         key: 'REPORTS',
         icon: 'i-lucide-chart-spline',
         levels: { view: 'report_manage' },
@@ -145,6 +146,12 @@ export const MODULE_GROUPS = [
         key: 'AUTONOMIA',
         icon: 'i-lucide-bot',
         levels: { view: 'autonomia_view', manage: 'autonomia_manage' },
+      },
+      {
+        // #2251 — painel de desempenho do agente e a exportação dele. Só ver; independente de Agentes.
+        key: 'DESEMPENHO',
+        icon: 'i-lucide-chart-line',
+        levels: { view: DESEMPENHO_VIEW_PERMISSION },
       },
       {
         key: 'PROSPECTING',
@@ -193,6 +200,13 @@ export const MODULE_GROUPS = [
           view: META_ADS_VIEW_PERMISSION,
           manage: META_ADS_MANAGE_PERMISSION,
         },
+      },
+      {
+        // Seus posts (#2302): ver os posts e os números do Instagram e da Página das caixas; editar (F2 #2305)
+        // responde, esconde, apaga e manda no privado. Os comentários só aparecem para quem vê a caixa.
+        key: 'POSTS',
+        icon: 'i-lucide-layout-grid',
+        levels: { view: 'posts_view', manage: 'posts_manage' },
       },
     ],
   },
@@ -314,7 +328,8 @@ export const MODULES = MODULE_GROUPS.flatMap(group => group.modules);
 
 export const moduleByKey = key => MODULES.find(module => module.key === key);
 
-const keysOf = module => [
+// As chaves de uma área: as dos níveis e os ajustes.
+export const keysOf = module => [
   ...Object.values(module.levels || {}),
   ...(module.extras || []),
 ];
@@ -324,12 +339,17 @@ const withoutKeys = (permissions, keys) =>
 
 const unique = permissions => [...new Set(permissions)];
 
-export const levelOptions = module => {
+// `current`: o nível que a função já tem. Um nível que a área ainda não oferece (laterLevels) só aparece para ela.
+export const levelOptions = (module, current = null) => {
   if (module.type === 'conversations')
     return Object.values(CONVERSATION_LEVELS);
+  const later = module.laterLevels || [];
   return [
     LEVELS.NONE,
-    ...[LEVELS.VIEW, LEVELS.MANAGE].filter(level => module.levels[level]),
+    ...[LEVELS.VIEW, LEVELS.MANAGE].filter(
+      level =>
+        module.levels[level] && (!later.includes(level) || level === current)
+    ),
   ];
 };
 
@@ -350,11 +370,11 @@ export const slotLevel = (module, level) =>
     ? LEVELS.MANAGE
     : level;
 
-export const levelSlots = module => {
+export const levelSlots = (module, current = null) => {
   if (module.type === 'conversations')
     return [LEVELS.NONE, LEVELS.VIEW, LEVELS.MANAGE];
   const slots = [null, null, null];
-  levelOptions(module).forEach(level => {
+  levelOptions(module, current).forEach(level => {
     slots[SLOT_BY_LEVEL[level]] = level;
   });
   return slots;
@@ -544,7 +564,6 @@ export const PRESETS = {
     ...build({
       CONVERSATIONS: CONVERSATION_LEVELS.LIMITED,
       CONTACTS: LEVELS.VIEW,
-      KNOWLEDGE_BASE: LEVELS.VIEW,
       CRM: LEVELS.MANAGE,
     }),
     // "Pegar da fila".
@@ -554,7 +573,6 @@ export const PRESETS = {
     ...build({
       CONVERSATIONS: CONVERSATION_LEVELS.ALL,
       CONTACTS: LEVELS.MANAGE,
-      KNOWLEDGE_BASE: LEVELS.VIEW,
       REPORTS: LEVELS.VIEW,
       CANNED_RESPONSES: LEVELS.MANAGE,
       CRM: LEVELS.MANAGE,
@@ -627,7 +645,6 @@ export const PRESETS = {
   READ_ONLY: () => [
     ...build({
       CONTACTS: LEVELS.VIEW,
-      KNOWLEDGE_BASE: LEVELS.VIEW,
       REPORTS: LEVELS.VIEW,
       CRM: LEVELS.VIEW,
       AUTONOMIA: LEVELS.VIEW,

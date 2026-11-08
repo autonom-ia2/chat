@@ -3,8 +3,8 @@
 // padrão da barra do e-mail (NovaConversaBarraDoEmail) e com os botões da caixa de
 // resposta: "+" (Documento, Fotos e vídeos) anexa; o emoji abre a janela de emojis em
 // cima da barra; o microfone grava áudio (sai como mensagem de voz); a assinatura liga
-// e desliga para a caixa (a mesma chave da resposta). Só texto (a caixa híbrida pelo
-// número reserva): sem "+" e sem microfone, como na caixa de resposta.
+// e desliga para a caixa (a mesma chave da resposta). Pelo número reserva também: o WAHA
+// manda arquivo e voz.
 import { computed, ref, useTemplateRef } from 'vue';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -19,7 +19,6 @@ import { useAnexarNaNovaConversa } from './useAnexarNaNovaConversa';
 const props = defineProps({
   canal: { type: Object, required: true },
   comAssinatura: { type: Boolean, default: false },
-  soTexto: { type: Boolean, default: false },
 });
 const emit = defineEmits(['inserir', 'gravar']);
 
@@ -31,10 +30,8 @@ const { setSignatureFlagForInbox } = useUISettings();
 // O microfone segue a mesma chave da conta que a caixa de resposta (ReplyBottomPanel).
 const contaAtual = useMapGetter('getCurrentAccountId');
 const temChave = useMapGetter('accounts/isFeatureEnabledonAccount');
-const podeGravar = computed(
-  () =>
-    !props.soTexto &&
-    Boolean(temChave.value(contaAtual.value, FEATURE_FLAGS.VOICE_RECORDER))
+const podeGravar = computed(() =>
+  Boolean(temChave.value(contaAtual.value, FEATURE_FLAGS.VOICE_RECORDER))
 );
 
 const barra = useTemplateRef('barra');
@@ -58,7 +55,6 @@ const alternarAssinatura = () =>
       class="left-wrap flex flex-wrap items-center"
     >
       <MaisDoEmail
-        v-if="!soTexto"
         :com-modelos="false"
         local
         @arquivos="escolha => anexarArquivos(escolha, onFileUpload)"

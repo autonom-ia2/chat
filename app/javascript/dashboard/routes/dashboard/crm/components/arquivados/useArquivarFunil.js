@@ -95,6 +95,18 @@ export const useArquivarFunil = ({ carregarEtapas }) => {
     }
   };
 
+  // Depois de uma recusa com parte dos cards já levada (#2145): a contagem de abertos da janela é a de agora.
+  const recarregarPrevia = async () => {
+    try {
+      const { data } = await CrmArquivadosAPI.previaDoArquivarFunil(
+        funil.value.id
+      );
+      previa.value = data.payload || {};
+    } catch (error) {
+      erroPrevia.value = error;
+    }
+  };
+
   const continuarComPrincipal = async () => {
     if (!novoPrincipal.value) return;
     passo.value = 'escolha';
@@ -166,6 +178,7 @@ export const useArquivarFunil = ({ carregarEtapas }) => {
     pronto,
     primeiraEtapa,
     abrir,
+    recarregarPrevia,
     continuarComPrincipal,
     escolherDestino,
     escolherFunilDasCaixas,

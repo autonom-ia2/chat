@@ -27,6 +27,9 @@ const [showActionsDropdown, toggleDropdown] = useToggle(false);
 const currentChat = computed(() => store.getters.getSelectedChat);
 // Fork (#2138): itens do painel novo do contato, de um componente ao lado.
 const itensDoFork = ref(null);
+// Fork (#2202): a escolha de etiquetas aberta pelo ⋯ devolve o foco a ele.
+const botaoMais = ref(null);
+const focarMaisAcoes = () => botaoMais.value?.$el?.focus();
 
 const actionMenuItems = computed(() => {
   const items = [];
@@ -105,6 +108,7 @@ onUnmounted(() => {
       class="relative flex items-center group"
     >
       <ButtonV4
+        ref="botaoMais"
         v-tooltip="$t('CONVERSATION.HEADER.MORE_ACTIONS')"
         size="sm"
         variant="ghost"
@@ -120,7 +124,11 @@ onUnmounted(() => {
         @action="handleActionClick"
       />
     </div>
-    <ItensDoTopo ref="itensDoFork" :conversa="currentChat" />
+    <ItensDoTopo
+      ref="itensDoFork"
+      :conversa="currentChat"
+      :voltar-foco="focarMaisAcoes"
+    />
     <EmailTranscriptModal
       v-if="showEmailActionsModal"
       :show="showEmailActionsModal"

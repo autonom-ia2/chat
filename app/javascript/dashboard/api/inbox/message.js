@@ -16,6 +16,7 @@ export const buildCreatePayload = ({
   documentIndexes = [],
   ficarComAConversa,
   ficarComAConversaDe,
+  reabrirAoEscrever = false,
 }) => {
   let payload;
   if (files && files.length !== 0) {
@@ -58,6 +59,11 @@ export const buildCreatePayload = ({
         payload.append('ficar_com_a_conversa_de[id]', ficarComAConversaDe.id);
       }
     }
+    // #2216: a gaveta Nova conversa na conversa visível de caixa com "Reabrir a mesma
+    // conversa": o servidor reabre a resolvida ou adiada, sem mudar quem cuida.
+    if (reabrirAoEscrever) {
+      payload.append('reabrir_ao_escrever', true);
+    }
   } else {
     payload = {
       content: message,
@@ -72,6 +78,8 @@ export const buildCreatePayload = ({
       // (flag desligada), o servidor segue a regra de antes.
       ficar_com_a_conversa: ficarComAConversa,
       ficar_com_a_conversa_de: ficarComAConversaDe,
+      // #2216: só a gaveta Nova conversa manda (ver acima).
+      ...(reabrirAoEscrever ? { reabrir_ao_escrever: true } : {}),
     };
   }
   return payload;
@@ -97,6 +105,7 @@ class MessageApi extends ApiClient {
     documentIndexes = [],
     ficarComAConversa,
     ficarComAConversaDe,
+    reabrirAoEscrever = false,
   }) {
     return axios({
       method: 'post',
@@ -115,6 +124,7 @@ class MessageApi extends ApiClient {
         documentIndexes,
         ficarComAConversa,
         ficarComAConversaDe,
+        reabrirAoEscrever,
       }),
     });
   }

@@ -32,4 +32,57 @@ RSpec.describe CustomRoles::GrantGuard do
 
     expect(described_class.new(actor: membership.reload).reach?(%w[crm_manage_pipelines])).to be(false)
   end
+
+  # #2317: deixar alguém sem função é entregar as chaves do "Sem função" (CustomRoles::SemFuncaoCapacidades.chaves).
+  describe '#no_role!' do
+    let(:sem_funcao) { CustomRoles::SemFuncaoCapacidades.chaves(account) }
+
+    it 'deixa o administrador e quem tem grant_above_own' do
+      admin = create(:user, account: account, role: :administrator).account_users.find_by!(account: account)
+      expect { described_class.new(actor: admin).no_role! }.not_to raise_error
+
+      give_giver(%w[people_manage grant_above_own])
+      expect { described_class.new(actor: membership.reload).no_role! }.not_to raise_error
+    end
+
+    it 'recusa com out_of_reach quem não tem uma das chaves' do
+      give_giver(%w[people_manage conversation_view])
+
+      expect { described_class.new(actor: membership.reload).no_role! }
+        .to raise_error(described_class::Denied) { |error| expect(error.code).to eq(described_class::OUT_OF_REACH) }
+    end
+
+    # sales_value_view é do "Sem função" e é chave de delegação: ter todas as chaves não basta, como ao dar uma função
+    # com ela.
+    it 'recusa quem tem todas as chaves, porque uma delas é de delegação' do
+      give_giver(sem_funcao + %w[people_manage])
+
+      expect(sem_funcao & CustomRole::DELEGATION_KEYS).to eq(%w[sales_value_view])
+      expect { described_class.new(actor: membership.reload).no_role! }.to raise_error(described_class::Denied)
+    end
+  end
+
+  # #2308, rodada 5: o motivo da recusa só sai da lista CODES. A tela tem uma frase para cada código
+  # (FRASE_DO_401 em salvarFuncao.js; codigosDo401.spec.js lê esta lista), então um código fora dela não sai.
+  describe 'refusal codes' do
+    it 'keeps every code in one frozen list' do
+      expect(described_class::CODES).to eq(%w[out_of_reach own_role])
+      expect(described_class::CODES).to be_frozen
+    end
+
+    it 'refuses only with a listed code' do
+      described_class::CODES.each { |code| expect(described_class::Denied.new(code).code).to eq(code) }
+      expect { described_class::Denied.new('made_up') }.to raise_error(ArgumentError, /made_up/)
+    end
+
+    it 'says own_role and out_of_reach' do
+      role = give_giver(%w[contact_view custom_role_manage])
+      guard = described_class.new(actor: membership.reload)
+
+      expect { guard.write!(role, %w[contact_view]) }
+        .to raise_error(described_class::Denied) { |error| expect(error.code).to eq(described_class::OWN_ROLE) }
+      expect { guard.write!(nil, %w[financial_view]) }
+        .to raise_error(described_class::Denied) { |error| expect(error.code).to eq(described_class::OUT_OF_REACH) }
+    end
+  end
 end

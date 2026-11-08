@@ -45,18 +45,46 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     });
   }
 
-  // Reads the account, its 30-day spend and the Pixel before saving.
-  select({ mode, adAccountId, pixelId }) {
+  // Reads the account, its 30-day spend and the Pixel before saving. noSite:
+  // without a Pixel, the person chose "I have no website" on purpose (#2343).
+  select({ mode, adAccountId, pixelId, noSite = false }) {
     return axios.post(`${this.url}/selection`, {
       mode,
       ad_account_id: adAccountId,
       pixel_id: pixelId,
+      no_site: noSite,
     });
+  }
+
+  // Login único (#2338): Páginas que a pessoa marcou na janela da Meta, com o Instagram ligado e se já têm caixa, e
+  // as permissões que ela recusou → { pages: [...], declined_permissions: [...] }.
+  loginPages() {
+    return axios.get(`${this.url}/paginas`);
+  }
+
+  // Liga a Página escolhida: cria a caixa dela ou troca o token da que existe → { inbox_id, name }. 422 com error
+  // 'page_not_granted' quando a Meta não deu a Página a este login.
+  linkPage(pageId) {
+    return axios.post(`${this.url}/pagina`, { page_id: pageId });
   }
 
   // { whatsapp: bool, site: bool }
   updateDestinations(destinations) {
     return axios.patch(`${this.url}/destinations`, { destinations });
+  }
+
+  // Destino (#2338): páginas do site, sem cliques nem vendas (meta_ads_view), e ligar uma ali mesmo
+  // (meta_ads_manage) → { payload }.
+  sitePages() {
+    return axios.get(`${this.url}/site_pages`);
+  }
+
+  createSitePage({ name, inbox_id, allowed_origins }) {
+    return axios.post(`${this.url}/site_pages`, {
+      name,
+      inbox_id,
+      allowed_origins,
+    });
   }
 
   // Step 4: active pipelines tied to the official WhatsApp →
@@ -123,6 +151,13 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     });
   }
 
+  // Your posts (#2199): organic results of the Facebook Page and Instagram.
+  // days: 7 | 30 | 90 → { days, from, to, page, instagram }; each place has
+  // status 'ok' | 'needs_permission' | 'not_connected'. 503 'meta_unavailable'.
+  organico(days) {
+    return axios.get(`${this.url}/organico`, { params: { days } });
+  }
+
   // AI reads the stages and answers { suggestions: [{ stage_id, type, reason }] }.
   suggestStages(pipelineId) {
     return pollAiRequest(
@@ -151,6 +186,187 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
   // "Dismiss": the action leaves today's list and does not come back today.
   dismissAdvice(id) {
     return axios.post(`${this.url}/advisor_actions/${id}/dismiss`);
+  }
+
+  // Ad management (#2161, flag meta_ads_gestao), live from Meta →
+  // { management: { status, effective_status, mode, can_change, needs_login,
+  //   post: { message, created_time, permalink_url, page_name, reactions,
+  //   comments, shares } | null } }. 404 ad_not_found / not_connected.
+  adManagement(adId) {
+    return axios.get(`${this.url}/ads/${encodeURIComponent(adId)}/management`);
+  }
+
+  // status = 'ACTIVE' | 'PAUSED' → { status, held_by? }. With the flag
+  // meta_ads_criar and status ACTIVE, held_by is 'campaign' | 'adset' when a
+  // paused parent still keeps the ad from running, or null. 422
+  // cannot_change, meta_refused, meta_unavailable.
+  setAdStatus(adId, status) {
+    return axios.post(`${this.url}/ads/${encodeURIComponent(adId)}/status`, {
+      status,
+    });
+  }
+
+  // Simple ads manager (#2198, flag meta_ads_criar; 404 without it).
+  // What the person can pick to create → { options: { needs_login,
+  // facebook_login, kinds, pages, instagram, whatsapp_numbers, posts, images,
+  // currency, min_daily, max_daily, destinations, placements_by_destination } }.
+  createOptions() {
+    return axios.get(`${this.url}/create_options`);
+  }
+
+  // Posts of the chosen Page and of its Instagram, to boost (#2339) →
+  // { posts, instagram_posts, posts_error }.
+  boostPosts(pageId) {
+    return axios.get(`${this.url}/boost_posts`, {
+      params: { page_id: pageId },
+    });
+  }
+
+  // Photo or video from the device (multipart, field `file`) →
+  // { media: { kind: 'image', hash, url, width, height } } or
+  // { media: { kind: 'video', video_id } }. 422 invalid_media,
+  // media_too_large, meta_unavailable, meta_refused.
+  uploadMedia(file) {
+    const form = new FormData();
+    form.append('file', file);
+    return axios.post(`${this.url}/media`, form);
+  }
+
+  // Photo or video of an organic post (#2653), stored once for both networks
+  // → { media: { kind: 'image' | 'video', signed_id } }. PNG becomes JPEG.
+  uploadPostMedia(file) {
+    const form = new FormData();
+    form.append('file', file);
+    return axios.post(`${this.url}/post_media`, form);
+  }
+
+  // Publishes the post right away (#2653) → { facebook, instagram, failed,
+  // errors }. Each network on its own; the same idempotency_key never
+  // publishes twice. 422 { error } when no network published.
+  publishPost(body) {
+    return axios.post(`${this.url}/posts`, body);
+  }
+
+  // New ad, always created PAUSED → { ad_id, name, status, budget }. The same
+  // idempotency_key returns the same ad. 422 { error, nothing_created };
+  // 409 { error: 'in_progress' } while that key is still being created.
+  createAd(draft) {
+    return axios.post(`${this.url}/ads`, draft);
+  }
+
+  // Budget and dates of the ad (adset or campaign that holds the money) →
+  // { budget: { level, object_id, object_name, kind, amount, currency,
+  //   start_time, end_time, started, ads_count, active_ads_count, min_daily,
+  //   max_daily, can_change, adset_id } }. 404 ad_not_found /
+  // budget_not_found; 422 meta_unavailable.
+  adBudget(adId) {
+    return axios.get(`${this.url}/ads/${encodeURIComponent(adId)}/budget`);
+  }
+
+  // { amount, end_time } → { budget } (the new one). 422 invalid_amount,
+  // invalid_dates, cannot_change, meta_refused, meta_unavailable.
+  updateAdBudget(adId, { amount, end_time: endTime }) {
+    return axios.patch(`${this.url}/ads/${encodeURIComponent(adId)}/budget`, {
+      amount,
+      end_time: endTime,
+    });
+  }
+
+  // Ads created here that are still paused →
+  // { ads: [{ ad_id, name, created_at, budget }] }.
+  pausedAds() {
+    return axios.get(`${this.url}/paused_ads`);
+  }
+
+  // Pages granted at Facebook login → { pages: [{ id, name }] }.
+  pages() {
+    return axios.get(`${this.url}/pages`);
+  }
+
+  // Instagram comments of the ad (#2196, flag meta_ads_comentarios_instagram),
+  // live from Meta → { status: ready | needs_login | not_connected | no_post,
+  //   account, permalink_url, comments, total, next_cursor }.
+  instagramComments(adId, after) {
+    return axios.get(this.instagramCommentsUrl(adId), {
+      params: after ? { after } : {},
+    });
+  }
+
+  // Each action answers 422 { error } (invalid_text, needs_login,
+  // meta_unavailable, meta_refused, private_reply_done,
+  // private_reply_expired; text_too_long when a private reply passes
+  // 1000 bytes, #2543) or 404 comment_not_found.
+  // The text goes as `content`, which the Rails log filters (#2327).
+  replyInstagramComment(adId, commentId, content) {
+    return axios.post(`${this.instagramCommentsUrl(adId, commentId)}/reply`, {
+      content,
+    });
+  }
+
+  hideInstagramComment(adId, commentId, hidden) {
+    return axios.post(`${this.instagramCommentsUrl(adId, commentId)}/hide`, {
+      hidden,
+    });
+  }
+
+  deleteInstagramComment(adId, commentId) {
+    return axios.delete(this.instagramCommentsUrl(adId, commentId));
+  }
+
+  // → { sent_at, conversation_path }
+  privateReplyInstagramComment(adId, commentId, content) {
+    return axios.post(
+      `${this.instagramCommentsUrl(adId, commentId)}/private_reply`,
+      { content }
+    );
+  }
+
+  releaseInstagramPrivateReply(adId, commentId) {
+    return axios.post(
+      `${this.instagramCommentsUrl(adId, commentId)}/private_reply/release`
+    );
+  }
+
+  instagramCommentsUrl(adId, commentId) {
+    const base = `${this.url}/ads/${encodeURIComponent(adId)}/instagram_comments`;
+    return commentId ? `${base}/${encodeURIComponent(commentId)}` : base;
+  }
+
+  // Facebook comments on the ad's Page post (#2197, flag
+  // meta_ads_comentarios_facebook), live from Meta → { comments: { status,
+  // permalink_url, comments, total, next_cursor } }; with `after`, the next
+  // page → { comments: { comments, next_cursor } }.
+  facebookComments(adId, after = null) {
+    return axios.get(this.facebookCommentsUrl(adId), {
+      params: after ? { after } : {},
+    });
+  }
+
+  // Replies as the Page → { id }.
+  // The text goes as `content`, which the Rails log filters.
+  replyFacebookComment(adId, commentId, content) {
+    return axios.post(
+      `${this.facebookCommentsUrl(adId)}/${encodeURIComponent(commentId)}/reply`,
+      { content }
+    );
+  }
+
+  hideFacebookComment(adId, commentId, hidden) {
+    return axios.patch(
+      `${this.facebookCommentsUrl(adId)}/${encodeURIComponent(commentId)}`,
+      { hidden }
+    );
+  }
+
+  // Irreversible: the screen confirms first.
+  deleteFacebookComment(adId, commentId) {
+    return axios.delete(
+      `${this.facebookCommentsUrl(adId)}/${encodeURIComponent(commentId)}`
+    );
+  }
+
+  facebookCommentsUrl(adId) {
+    return `${this.url}/ads/${encodeURIComponent(adId)}/facebook_comments`;
   }
 
   // Suggested message to resume a stalled quote. Never sent by the server →

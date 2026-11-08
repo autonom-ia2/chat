@@ -40,12 +40,14 @@ RSpec.describe Autonomia::Agents::Operate::MessageMedia do
 
     before do
       mensagem.attachments.load
-      Attachment.find(audio.id).update!(meta: { leitura => 5.minutes.from_now.iso8601 })
+      Attachment.find(audio.id).update!(meta: { leitura => 5.minutes.from_now.iso8601, Crm::Ai::ReservaDaMidia::DONO => 'leitor' })
     end
 
     it 'não transcreve e espera o texto do leitor', :aggregate_failures do
       allow(Crm::Ai::ReservaDaMidia).to receive(:sleep) do
-        Crm::Ai::ReservaDaMidia.gravar(Attachment.find(audio.id)) { |meta| meta.merge('transcribed_text' => 'texto do leitor do CRM') }
+        Crm::Ai::ReservaDaMidia.gravar(Attachment.find(audio.id), dono: 'leitor') do |meta|
+          meta.merge('transcribed_text' => 'texto do leitor do CRM')
+        end
       end
 
       resultado = described_class.new(messages: [mensagem], agent: agent).extract

@@ -12,7 +12,19 @@ const dispatch = vi.fn();
 const alerta = vi.fn();
 const rotaAtual = { name: 'contacts_edit' };
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
+// O aviso de #2138 sai do catálogo real em pt_BR; as outras chaves continuam como a própria chave.
+vi.mock('vue-i18n', async () => {
+  const { default: ptBR } = await import(
+    'dashboard/i18n/locale/pt_BR/painelDoContato.json'
+  );
+  const doCatalogo = key =>
+    key.split('.').reduce((nivel, parte) => nivel?.[parte], ptBR);
+  return {
+    useI18n: () => ({
+      t: key => (typeof doCatalogo(key) === 'string' ? doCatalogo(key) : key),
+    }),
+  };
+});
 vi.mock('vuex', () => ({ useStore: () => ({ dispatch }) }));
 vi.mock('vue-router', () => ({
   useRoute: () => rotaAtual,
@@ -29,8 +41,8 @@ const nomesDasRotas = rotas =>
     ...nomesDasRotas(rota.children || []),
   ]);
 
-const apagar = async () => {
-  const wrapper = mount(ContactDeleteModal, {
+const montar = () =>
+  mount(ContactDeleteModal, {
     props: { contact: { id: 5, name: 'Ana' } },
     global: {
       mocks: { $t: key => key },
@@ -46,6 +58,9 @@ const apagar = async () => {
       },
     },
   });
+
+const apagar = async () => {
+  const wrapper = montar();
   const sim = wrapper
     .findAll('button')
     .find(botao => botao.text() === 'DELETE_CONTACT.CONFIRM.YES');
@@ -66,5 +81,12 @@ describe('ContactDeleteModal', () => {
     expect(push).toHaveBeenCalledWith({ name: 'contacts_dashboard_index' });
     expect(nomesDasRotas(contactRoutes)).toContain('contacts_dashboard_index');
     expect(alerta).toHaveBeenCalledWith('DELETE_CONTACT.API.SUCCESS_MESSAGE');
+  });
+
+  // #2138: as conversas e mensagens do contato saem junto; o aviso diz isso antes do "Sim".
+  it('avisa que as conversas e mensagens também são apagadas', () => {
+    expect(montar().text()).toContain(
+      'O contato, as conversas e as mensagens dele serão apagados. Não dá para desfazer.'
+    );
   });
 });

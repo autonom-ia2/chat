@@ -167,31 +167,37 @@ describe Instagram::Messenger::SendOnInstagramService do
         end
       end
 
-      context 'with message_tag HUMAN_AGENT' do
-        before do
-          InstallationConfig.where(name: 'ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT').first_or_create(value: true)
+      context 'with message_tag HUMAN_AGENT (#2259: only a person, only after 24 hours)' do
+        let(:agent) { create(:user, account: account, role: :agent) }
+        let(:conversation) do
+          create(:conversation, account: account, contact: contact, inbox: instagram_messenger_inbox, contact_inbox: contact_inbox)
         end
 
-        it 'if message is sent from chatwoot and is outgoing' do
-          message = create(:message, message_type: 'outgoing', inbox: instagram_messenger_inbox, account: account, conversation: conversation)
+        before do
+          InstallationConfig.where(name: 'ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT').delete_all
+          InstallationConfig.create!(name: 'ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT', value: true, locked: false)
+          GlobalConfig.clear_cache
+          conversation.messages.incoming.each { |incoming| incoming.update!(created_at: 30.hours.ago) }
+          allow(HTTParty).to receive(:post).and_return(mock_response)
+        end
 
-          allow(HTTParty).to receive(:post).with(
-            {
-              recipient: { id: contact.get_source_id(instagram_messenger_inbox.id) },
-              message: {
-                text: message.content
-              },
-              messaging_type: 'MESSAGE_TAG',
-              tag: 'HUMAN_AGENT'
-            }
-          ).and_return(
-            {
-              'message_id': 'anyrandommessageid1234567890'
-            }
-          )
+        it 'tags a reply typed by a person of the team' do
+          message = create(:message, message_type: 'outgoing', inbox: instagram_messenger_inbox, account: account,
+                                     conversation: conversation, sender: agent)
 
           described_class.new(message: message).perform
+
           expect(HTTParty).to have_received(:post)
+            .with(anything, hash_including(body: hash_including(messaging_type: 'MESSAGE_TAG', tag: 'HUMAN_AGENT')))
+        end
+
+        it 'does not tag a bot reply' do
+          message = create(:message, message_type: 'outgoing', inbox: instagram_messenger_inbox, account: account, conversation: conversation,
+                                     sender: create(:agent_bot, account: account))
+
+          described_class.new(message: message).perform
+
+          expect(HTTParty).not_to have_received(:post).with(anything, hash_including(body: hash_including(tag: 'HUMAN_AGENT')))
         end
       end
     end

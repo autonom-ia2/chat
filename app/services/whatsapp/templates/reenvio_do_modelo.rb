@@ -149,7 +149,7 @@ class Whatsapp::Templates::ReenvioDoModelo
     return [params, 'produtos_desligados'] if produtos_desligados?(template)
     return completar_da_campanha(params, template) if @campanha
 
-    processed = Midia.renovar(params['processed_params'], @destino.account_id)
+    processed = Midia.renovar(params['processed_params'], @destino.inbox)
     processed ? [params.merge('processed_params' => processed), nil] : [params, 'midia_indisponivel']
   end
 

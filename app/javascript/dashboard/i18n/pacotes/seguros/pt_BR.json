@@ -240,5 +240,44 @@
     "SUGGESTIONS": {
       "REPORTS": "Quantos seguros fechei este mês?"
     }
+  },
+  "AGENTS": {
+    "DESEMPENHO2": {
+      "A": {
+        "KPI": {
+          "PERDAS_EVITAVEIS": {
+            "ROTULO": "Não fecharam por causa corrigível"
+          }
+        },
+        "PERDAS": {
+          "SOBRE": "Não fecharam",
+          "TITULO": "Não fecharam, e dava para evitar",
+          "UNIDADE_POR_QUE": "Unidade: procuras. Uma procura que não fechou pode ter mais de um motivo."
+        }
+      },
+      "B": {
+        "FILTROS": {
+          "SO_PERDAS": "Só as que não fecharam por causa corrigível"
+        }
+      }
+    }
+  },
+  "CRM_LISTA_ACAO": {
+    "ALTERAR": {
+      "DESFECHO": "Marcar como seguro ativo ou não fechou"
+    }
+  },
+  "AUTOMACAO_LIVRE": {
+    "VALORES": {
+      "CARD_MOTIVO_DA_PERDA": "Por que não fechou"
+    },
+    "GATILHOS": {
+      "CARD_GANHO": "Quando o card fecha o seguro",
+      "CARD_PERDIDO": "Quando o card não fecha"
+    },
+    "GATILHO_COM": {
+      "CARD_GANHO": "Quando um card de {funil} fecha o seguro",
+      "CARD_PERDIDO": "Quando um card de {funil} não fecha"
+    }
   }
 }

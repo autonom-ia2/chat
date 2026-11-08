@@ -14,7 +14,7 @@ class Api::V1::Accounts::EmailCampaigns::TestSendsController < Api::V1::Accounts
     authorize campaign, :update?
 
     to_emails = requested_addresses
-    refusal = address_refusal(campaign, to_emails) || sender_refusal(campaign)
+    refusal = address_refusal(campaign, to_emails) || subject_refusal(campaign) || sender_refusal(campaign)
     return render json: refusal, status: :unprocessable_entity if refusal
     return render json: { error: 'email_campaign.test_send_rate_limited' }, status: :too_many_requests if rate_limited?(campaign)
 
@@ -85,6 +85,11 @@ class Api::V1::Accounts::EmailCampaigns::TestSendsController < Api::V1::Accounts
     { error: 'email_campaign.test_send_suppressed', email: refused.downcase } if refused
   end
 
+  # #2545: a draft may be saved without a subject, but a test without one would go out blank.
+  def subject_refusal(campaign)
+    { error: 'email_campaign.test_send_no_subject' } if campaign.subject.blank?
+  end
+
   def sender_refusal(campaign)
     return if campaign.sender_ready?
 
@@ -113,7 +118,7 @@ class Api::V1::Accounts::EmailCampaigns::TestSendsController < Api::V1::Accounts
 
   def from_email(campaign)
     name = campaign.from_name.presence
-    addr = campaign.from_email.presence || campaign.sender_identity.from_email.presence
+    addr = campaign.sender_address
     addr.present? && name.present? ? "#{name} <#{addr}>" : addr
   end
 

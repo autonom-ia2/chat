@@ -103,7 +103,11 @@ const mountPage = (query = {}) => {
       inboxes: module({ getInboxes: () => smsInboxes.value }),
       emailSenderIdentities: module({ getIdentities: () => [] }),
       globalConfig: module({ get: () => ({}) }),
-      accounts: module({ isFeatureEnabledonAccount: () => () => true }),
+      // The spreadsheet flow: the request in words (#2277) stays off here, so the page opens on the spreadsheet.
+      accounts: module({
+        isFeatureEnabledonAccount: () => (_id, flag) =>
+          flag !== 'campanhas_publico_por_conversa',
+      }),
     },
   });
   const i18n = createI18n({

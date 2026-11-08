@@ -225,7 +225,9 @@ class Crm::Card < ApplicationRecord
   def active_inbox_bot(resolved_inbox)
     return if resolved_inbox.blank?
 
-    resolved_inbox.agent_bot_inbox&.active? ? resolved_inbox.agent_bot : nil
+    # Pelo agent_bot_inbox, e não pelo has_one :through: assim o preload de agent_bot_inbox: :agent_bot vale (#2283).
+    bot_inbox = resolved_inbox.agent_bot_inbox
+    bot_inbox&.active? ? bot_inbox.agent_bot : nil
   end
 
   def sugerir_repasse

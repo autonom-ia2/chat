@@ -599,6 +599,12 @@
   locked: false
 # ------- End of Instagram Channel Related Config ------- #
 
+- name: FB_PAGE_WEBHOOK_RELAY_URLS
+  display_title: 'Facebook Page webhook relay URLs'
+  description: 'Comma-separated Page webhook URLs (/bot) of other installations sharing this Meta app (e.g. https://other.example.com/bot). Every Page event with changes (leadgen, feed) and Messenger events for Pages not connected here are forwarded to them. Leave empty to disable.'
+  value: ''
+  locked: false
+
 # ------- TikTok Channel Related Config ------- #
 - name: TIKTOK_API_VERSION
   display_title: 'TikTok API Version'

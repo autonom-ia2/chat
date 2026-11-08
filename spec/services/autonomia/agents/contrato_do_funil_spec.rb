@@ -127,4 +127,22 @@ RSpec.describe Autonomia::Agents::ContratoDoFunil do
       expect(described_class.robo_do_funil(conversation)).to be_nil
     end
   end
+
+  # #2154: o agente avisou que vai chamar alguém e a fala saiu; quem decide passar é a IA de Atribuição.
+  describe '.avaliar_depois_da_fala' do
+    it 'delega ao CRM' do
+      recebidas = []
+      stub_const('Crm::Ai::AvaliacaoDepoisDaFala', leitor(:agendar) { |conversa| recebidas << conversa })
+
+      described_class.avaliar_depois_da_fala(conversation)
+
+      expect(recebidas).to eq([conversation])
+    end
+
+    it 'sem o leitor, nada' do
+      stub_const('Crm::Ai::AvaliacaoDepoisDaFala', Module.new)
+
+      expect(described_class.avaliar_depois_da_fala(conversation)).to be_nil
+    end
+  end
 end

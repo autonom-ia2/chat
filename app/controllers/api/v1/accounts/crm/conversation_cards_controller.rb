@@ -77,8 +77,9 @@ class Api::V1::Accounts::Crm::ConversationCardsController < Api::V1::Accounts::C
                                      .includes(:pipeline, :card).order(id: :desc).first
     return unless decision && suggestion_visible?(decision)
 
+    # duvida (#2162): a sugestão veio de uma dúvida da IA com sinal de pedido novo; a tela pergunta "criar card?".
     { id: decision.id, action: decision.action, title: decision.title, pipeline_name: decision.pipeline&.name,
-      card_id: decision.card_id, card_title: decision.card&.title }
+      card_id: decision.card_id, card_title: decision.card&.title, duvida: decision.reason == ::Crm::Subjects::DuvidaSugerida::MOTIVO }
   end
 
   # Acesso por funil (#1148, PR D): sugestão de assunto novo só aparece para quem pode criar card naquele funil (aceitar

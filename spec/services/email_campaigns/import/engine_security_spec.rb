@@ -123,16 +123,15 @@ RSpec.describe EmailCampaigns::Import::Engine, :aggregate_failures do
       expect(refusal("<table width=\"600\"><tr><td>#{'<p>texto</p>' * 200}</td></tr></table>", budget: budget)).to eq(:too_slow)
     end
 
-    # What this guards is growth, not a wall-clock number. Two quadratic paths made a cell with many links slow:
-    # reading accented text by character index (MjmlEndingContent, #1099) and asking every link's cell for its whole
-    # text and all of its links (Buttons.cell, #1182). A fixed limit in seconds failed on loaded CI runners with no
-    # regression (5.16 s). Each pair imports 1,600 and then 400 accented links back to back, so a burst of load tends to
-    # hit both, and the median of three pairs ignores one disturbed pair either way. Ratio for 4x the links, measured
-    # on 09/10: 5.3-6.4 with both fixes, 10.5-11 with only the first, 14.3-14.9 with neither.
+    # What this guards is growth, measured as work and never by the clock (#2241): a wall-clock ratio failed on loaded
+    # CI runners with no regression. The work is the visible text the import reads node by node (TableParts.visible).
+    # Asking every link's cell for its whole text made a cell with many links quadratic (#1182): 4x the links read
+    # ~16x the text. Linear reading stays ~4x. The character-index scan of accented text (#1099) is guarded in
+    # mjml_ending_content_spec.
     it 'does not grow quadratically with many accented button-like links in one cell' do
-      ratios = Array.new(3) { import_seconds(button_links_cell(1_600)) / import_seconds(button_links_cell(400)) }
+      ratio = text_read(button_links_cell(1_600)).fdiv(text_read(button_links_cell(400)))
 
-      expect(ratios.sort[1]).to be < 8
+      expect(ratio).to be < 8
     end
 
     def button_links_cell(count)
@@ -140,10 +139,13 @@ RSpec.describe EmailCampaigns::Import::Engine, :aggregate_failures do
       "<table width=\"600\"><tr><td>#{links}</td></tr></table>"
     end
 
-    def import_seconds(html)
-      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    def text_read(html)
+      read = 0
+      allow(EmailCampaigns::Import::TableParts).to receive(:visible).and_wrap_original do |original, node|
+        original.call(node).tap { |text| read += text.length }
+      end
       import(html)
-      Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+      read
     end
   end
 end

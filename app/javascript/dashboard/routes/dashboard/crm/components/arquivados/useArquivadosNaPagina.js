@@ -2,7 +2,12 @@ import { computed, nextTick, ref, watch } from 'vue';
 import CrmArquivadosAPI from 'dashboard/api/crmArquivados';
 import { motivoDoErro } from './motivoDoErro';
 import { avisar } from './useAvisoCrm';
-import { avisoDoRestaurado, ehVenda, nomeDoCliente } from './textosDoArquivado';
+import {
+  avisoDoRestaurado,
+  avisoDosDoisAbertos,
+  ehVenda,
+  nomeDoCliente,
+} from './textosDoArquivado';
 
 // O que a página do CRM faz com Arquivados (#2095, flag crm_arquivados): abrir os painéis, restaurar um card (com o
 // cliente que já voltou), avisar onde o card foi parar, arquivar card e funil com o aviso de pronto. Fica fora da
@@ -215,6 +220,7 @@ export const useArquivadosNaPagina = ({ t, ligado, funilAtual }) => {
 
   const funilArquivado = async ({
     funil,
+    resposta,
     abertos,
     moveu,
     guardou,
@@ -234,6 +240,10 @@ export const useArquivadosNaPagina = ({ t, ligado, funilAtual }) => {
           abertos
         )
       );
+    const dois = moveu
+      ? avisoDosDoisAbertos(t, pagina.juntar, resposta, nomeDoDestino)
+      : null;
+    if (dois) partes.push(dois);
     if (guardou)
       partes.push(
         t('CRM_ARQUIVADOS.FUNIL.FICARAM_GUARDADOS', { count: abertos }, abertos)

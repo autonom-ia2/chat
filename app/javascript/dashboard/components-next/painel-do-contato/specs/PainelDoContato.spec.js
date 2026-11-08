@@ -5,6 +5,7 @@ import CampaignJourneyAPI from 'dashboard/api/campaignJourney';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { refreshCrmConversationStage } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
 import PainelDoContato from '../PainelDoContato.vue';
+import BlocoEtiquetas from '../etiquetas/BlocoEtiquetas.vue';
 import { criarI18n, criarStore } from './apoio';
 
 // #2138 — o painel inteiro: blocos que somem sem conteúdo (contato novo não mostra
@@ -63,9 +64,10 @@ const servidorVazio = () => {
   });
 };
 
-const montar = ({ props = {}, estado = {} } = {}) => {
+const montar = ({ props = {}, estado = {}, attachTo } = {}) => {
   const apoio = criarStore({ conversaSelecionada: CONVERSA, ...estado });
   const wrapper = mount(PainelDoContato, {
+    attachTo,
     props: {
       conversation: CONVERSA,
       contact: CONTATO,
@@ -78,6 +80,7 @@ const montar = ({ props = {}, estado = {} } = {}) => {
       stubs: {
         ContatoBasico: { template: '<div data-contato-basico />' },
         EditContact: true,
+        EtiquetasDaConversaDialog: { template: '<div />' },
         ContactLabels: {
           props: ['readOnly'],
           template:
@@ -101,6 +104,52 @@ beforeEach(() => {
 });
 
 describe('PainelDoContato — o que aparece', () => {
+  it('conversa com etiqueta (#2202): o bloco "Etiquetas" logo depois de "Quem cuida"', async () => {
+    const { wrapper } = montar({
+      estado: {
+        etiquetasDaConta: [{ id: 1, title: 'vip', color: '#ff0000' }],
+        etiquetasDaConversa: { 42: ['vip'] },
+      },
+    });
+    await flushPromises();
+
+    const blocos = wrapper.findAll('section');
+    const indice = blocos.findIndex(
+      bloco => bloco.attributes('data-test-id') === 'bloco-etiquetas'
+    );
+    expect(indice).toBeGreaterThan(0);
+    expect(blocos[indice].text()).toContain('vip');
+    expect(blocos[indice - 1].text()).toContain('Quem cuida');
+  });
+
+  it('tirou a última etiqueta com a escolha aberta: o foco vai ao título "Quem cuida", sem rolar a tela', async () => {
+    const { wrapper, dados } = montar({
+      attachTo: document.body,
+      estado: {
+        etiquetasDaConta: [{ id: 1, title: 'vip', color: '#ff0000' }],
+        etiquetasDaConversa: { 42: ['vip'] },
+      },
+    });
+    await flushPromises();
+    const focar = vi.spyOn(HTMLElement.prototype, 'focus');
+    dados.etiquetasDaConversa = { 42: [] };
+    await flushPromises();
+    expect(wrapper.find('[data-test-id="bloco-etiquetas"]').exists()).toBe(
+      false
+    );
+
+    wrapper.findComponent(BlocoEtiquetas).props('focarAoSumir')();
+
+    const titulo = document.activeElement;
+    expect(titulo.tagName).toBe('H3');
+    expect(titulo.textContent.trim()).toBe('Quem cuida');
+    expect(titulo.getAttribute('tabindex')).toBe('-1');
+    // Contorno visível no foco: não é uma div muda.
+    expect(titulo.className).toContain('focus:outline-2');
+    expect(focar).toHaveBeenCalledWith({ preventScroll: true });
+    focar.mockRestore();
+  });
+
   it('contato novo: nome, telefone, quem cuida e o pé; sem "Mais", combinado ou origem', async () => {
     const { wrapper } = montar();
     await flushPromises();
@@ -115,6 +164,9 @@ describe('PainelDoContato — o que aparece', () => {
       false
     );
     expect(wrapper.find('[data-test-id="bloco-origem"]').exists()).toBe(false);
+    expect(wrapper.find('[data-test-id="bloco-etiquetas"]').exists()).toBe(
+      false
+    );
     expect(wrapper.find('[data-test-id="esqueleto"]').exists()).toBe(false);
     // Nada de "Indisponível" nem de CAIXA ALTA.
     expect(texto(wrapper)).not.toContain('Indisponível');

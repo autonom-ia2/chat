@@ -5,6 +5,7 @@ import { useStore } from 'vuex';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import { usePodeMontarAutomacao } from 'dashboard/composables/usePodeMontarAutomacao';
 
 const props = defineProps({
   stage: { type: Object, required: true },
@@ -16,6 +17,8 @@ const props = defineProps({
 
 const { t } = useI18n();
 const store = useStore();
+// #2414 F1.3: mexer em automação de etapa pede também a chave das regras automáticas (a API recusa sem ela).
+const podeMontar = usePodeMontarAutomacao();
 
 function emptyStep() {
   return {
@@ -218,6 +221,7 @@ watch(
         {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.RULES') }}
       </span>
       <Button
+        v-if="podeMontar"
         :label="t('CRM_KANBAN.STAGE_AUTOMATIONS.ADD_RULE')"
         icon="i-lucide-plus"
         slate
@@ -228,6 +232,9 @@ watch(
         @click="startCreate"
       />
     </div>
+    <p v-if="!podeMontar" class="mb-0 text-sm text-n-amber-11">
+      {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.SO_VER') }}
+    </p>
 
     <div
       v-if="isLoading || uiFlags.isFetchingStageAutomations"
@@ -280,6 +287,7 @@ watch(
             }}
           </span>
           <Button
+            v-if="podeMontar"
             icon="i-lucide-pencil"
             slate
             outline
@@ -290,6 +298,7 @@ watch(
             @click="startEdit(automation)"
           />
           <Button
+            v-if="podeMontar"
             icon="i-lucide-trash-2"
             ruby
             outline

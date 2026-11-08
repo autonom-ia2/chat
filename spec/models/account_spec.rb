@@ -265,16 +265,62 @@ RSpec.describe Account do
         # #2097/#2098: posição 58 (1 << 57), PROVISÓRIA da Orquestração (23/10); definitiva no fim da main na vez do PR.
         feature_crm_arquivados: 1 << 57,
         # #2138: posição 59 (1 << 58), depois da 58 do crm_arquivados #2097 (Orquestração, 23/10).
-        feature_painel_contato_enxuto: 1 << 58
+        feature_painel_contato_enxuto: 1 << 58,
+        # #2154: posição 60 (1 << 59), PROVISÓRIA da Orquestração (24/10); definitiva na vez do PR.
+        feature_agente_so_informa: 1 << 59,
+        # #2161: posição 61 (1 << 60), depois da 60 do agente_so_informa #2166 (Orquestração, 25/10).
+        feature_meta_ads_gestao: 1 << 60,
+        # #2163: posição 62 (1 << 61), definitiva da Orquestração (25/10), depois da 61 do meta_ads_gestao #2164.
+        feature_crm_ia_nome_provisorio: 1 << 61,
+        # #2162: posição 63 (1 << 62), definitiva da Orquestração (25/10), a última da coluna ext_1.
+        feature_crm_ia_duvida_vira_sugestao: 1 << 62
       }
     end
 
     it 'configures the account feature flag extension column' do
-      expect(described_class.flag_columns).to include('feature_flags', 'feature_flags_ext_1')
+      expect(described_class.flag_columns).to include('feature_flags', 'feature_flags_ext_1', 'feature_flags_ext_2')
       expect(described_class.flag_mapping['feature_flags_ext_1']).to eq(mapa_ext_1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_embedded_signup_inbox_creation]).to eq(16)
+      # #2084: primeira flag da feature_flags_ext_2 (posição provisória da Orquestração).
+      # #2001: crm_numeros_origens, posição 2 (1 << 1), DEFINITIVA da Orquestração (26/10).
+      # #2202: lista_quem_espera no fim da ext_2, posição pela ordem de chegada à main; hoje 3 (1 << 2 = 4).
+      # #2251: agentes_painel_desempenho depois dela, posição 4 (1 << 3 = 8), confirmada pela Orquestração (27/10).
+      # #2199: meta_ads_organico, 5 (1 << 4 = 16). #2246: leitura_no_celular logo depois, 6 (1 << 5 = 32), confirmada
+      # pela Orquestração (27/10).
+      # #2195: meta_ads_formularios depois dela, 7 (1 << 6 = 64). #2196: meta_ads_comentarios_instagram, 8 (1 << 7 = 128).
+      # #2198: meta_ads_criar depois dela, 9 (1 << 8 = 256), pela ordem da main (Orquestração, 27/10).
+      # #2304: seus_posts no fim da main de hoje, 10 (1 << 9 = 512), válida contra a main de 27/10 (Orquestração).
+      # #2277: campanhas_publico_por_conversa depois, 11 (1 << 10 = 1024).
+      # #2197: meta_ads_comentarios_facebook depois dela, 12 (1 << 11 = 2048), dada pela Orquestração (28/10).
+      # #2283: crm_lista_acao depois dela, 13 (1 << 12 = 4096), dada pela Orquestração (28/10).
+      # #2308: funcoes_guiadas depois dela, 14 (1 << 13 = 8192).
+      # #2305: seus_posts_comentarios depois dela, 15 (1 << 14 = 16384), provisória da Orquestração (29/10).
+      # #2212: meta_ads_comentarios_ia depois dela, 16 (1 << 15 = 32768), dada pela Orquestração (30/10).
+      # #2381: agente_diz_quando_nao_sabe depois dela, 17 (1 << 16 = 65536), provisória da Orquestração (30/10).
+      # #1775: ia_previa_de_link depois dela, 18 (1 << 17 = 131072), reservada pela Orquestração (31/10).
+      # #1479 F2: agentes_pedir_localizacao depois dela, 19 (1 << 18 = 262144), dada pela Orquestração (31/10).
+      # #2414 F5: automacao_editor depois de automacao_motor, 22 (1 << 21 = 2097152), pela ordem da main (02/11).
+      # #2414 F4: automacao_mensagens depois dela, 23 (1 << 22 = 4194304), pela ordem da main (02/11).
+      # #2414 F7 (#2500): automacao_ia depois dela, 24 (1 << 23 = 8388608), provisória até a Orquestração dar o bit.
+      # #1479 F3: agentes_enviar_local_e_contato depois dela, 25 (1 << 24 = 16777216), dada pela Orquestração (04/11).
+      # #2499 F6: automacao_gatilhos depois dela, 26 (1 << 25 = 33554432), contra a main 45e251027e; Orquestração confirma.
+      # #2613: meta_ads_comentarios_privado_facebook depois dela, 27 (1 << 26 = 67108864), dada pela Orquestração (05/11).
+      # #2338: anuncios_login_unico depois dela, 28 (1 << 27 = 134217728), dada pela Orquestração (06/11).
+      expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
+        feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
+        feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,
+        feature_meta_ads_formularios: 64, feature_meta_ads_comentarios_instagram: 128, feature_meta_ads_criar: 256,
+        feature_seus_posts: 512, feature_campanhas_publico_por_conversa: 1024,
+        feature_meta_ads_comentarios_facebook: 2048, feature_crm_lista_acao: 4096, feature_funcoes_guiadas: 8192,
+        feature_seus_posts_comentarios: 16_384, feature_meta_ads_comentarios_ia: 32_768,
+        feature_agente_diz_quando_nao_sabe: 65_536, feature_ia_previa_de_link: 131_072,
+        feature_agentes_pedir_localizacao: 262_144, feature_automacao_fundacao: 524_288, feature_automacao_motor: 1_048_576,
+        feature_automacao_editor: 2_097_152, feature_automacao_mensagens: 4_194_304, feature_automacao_ia: 8_388_608,
+        feature_agentes_enviar_local_e_contato: 16_777_216, feature_automacao_gatilhos: 33_554_432,
+        feature_meta_ads_comentarios_privado_facebook: 67_108_864, feature_anuncios_login_unico: 134_217_728
+      )
     end
 
     it 'keeps Relationships opt-in and each extension independent of existing flags' do

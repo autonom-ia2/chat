@@ -713,6 +713,33 @@ describe('CardGaveta (#1423)', () => {
     expect(wrapper.text()).not.toContain('CRM_KANBAN.META_SYNC_STATUS');
   });
 
+  it('De onde veio, sem ver os anúncios: só que veio de anúncio, sem nome nem imagem (#2271)', async () => {
+    const wrapper = montar({
+      card: {
+        ...cardBase,
+        campaigns: [
+          {
+            source: 'meta_ctwa',
+            source_type: 'ad',
+            touched_at: '2026-10-01T12:00:00Z',
+            ad_hidden: true,
+            headline: 'Plano anual com 20% off',
+            ad_thumbnail_url: 'https://thumb.example/ad.jpg',
+            ad_preview_url: 'https://preview.example/ad',
+          },
+        ],
+      },
+    });
+    await flushPromises();
+    await clicar(wrapper, '[data-mais="origem"]');
+    const caminho = wrapper.find('[data-origem-caminho]');
+    expect(caminho.text()).toContain('CRM_CARD.ORIGEM.FONTE.ANUNCIO_WHATSAPP');
+    expect(caminho.text()).toContain('CRM_CARD.ORIGEM.ANUNCIO_OCULTO');
+    expect(caminho.text()).not.toContain('Plano anual com 20% off');
+    expect(caminho.find('[data-crm-origin-ad-preview]').exists()).toBe(false);
+    expect(caminho.find('img').exists()).toBe(false);
+  });
+
   it('Novo retorno não mostra erro antes de a pessoa escrever', async () => {
     const wrapper = montar({
       card: {

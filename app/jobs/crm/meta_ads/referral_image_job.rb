@@ -1,4 +1,5 @@
-# Guarda a foto do anúncio que veio no clique para o WhatsApp (#1960). O referral do clique traz `image_url` (ou
+# Guarda a foto do anúncio que veio no clique para o WhatsApp (#1960), o Messenger ou o Direct (#2521, `image_url` vem
+# do `ads_context_data.photo_url`, Crm::MetaAds::MessagingReferral). O referral do clique traz `image_url` (ou
 # `thumbnail_url`, no anúncio em vídeo) num endereço da Meta que expira em poucos dias (medido em 20/10/2026: ~4
 # dias), então a foto é baixada uma vez por anúncio e fica em Crm::MetaAdObject#image. O anúncio que já tem foto
 # não baixa de novo.
@@ -16,13 +17,18 @@ class Crm::MetaAds::ReferralImageJob < ApplicationJob
   IMAGE_TYPES = %w[image/jpeg image/png image/webp image/gif].freeze
 
   def self.enqueue_for(conversation, touch, referral)
-    return unless touch['source'] == Ctwa::CampaignBuilder::CTWA_SOURCE && touch['source_id'].present?
+    return unless Crm::MetaAds::MessagingReferral::AD_CLICK_SOURCES.include?(touch['source']) && touch['source_id'].present?
 
+    enqueue_for_ad(conversation.account_id, touch['source_id'].to_s, referral)
+  end
+
+  # O clique que não passa pela conversa na hora (evento só de referral do Messenger e do Direct, #2521).
+  def self.enqueue_for_ad(account_id, ad_id, referral)
     url = image_url(referral)
-    return if url.nil? || !Crm::MetaAds::SemLogin.enabled?(conversation.account_id)
-    return if stored?(conversation.account_id, touch['source_id'].to_s)
+    return if url.nil? || ad_id.blank? || !Crm::MetaAds::SemLogin.enabled?(account_id)
+    return if stored?(account_id, ad_id.to_s)
 
-    perform_later(conversation.account_id, touch['source_id'].to_s, url)
+    perform_later(account_id, ad_id.to_s, url)
   end
 
   def self.image_url(referral)

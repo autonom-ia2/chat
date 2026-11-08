@@ -8,8 +8,8 @@
 # Os dois valem para o agente como ele estava ao comparar (o RETRATO: o mesmo da versão do agente, com a instrução, o
 # jeito de falar, as regras de passagem, a mensagem de quando não sabe, a config versionada e a base). Mudou qualquer um
 # (edição, volta de versão, atualizar e Desfazer), o "hoje" comparado não é mais o de agora: a marca não vale e o
-# resultado guardado não serve. Também entra o portão de confiança (confidence_threshold), que fica fora da versão mas
-# decide quando o agente passa para a equipe.
+# resultado guardado não serve. O limite de confiança saiu (tema 6, #1428): a comparação roda como o atendimento, sem
+# o portão, e o limite deixou de ser do agente.
 #
 # FICA FORA, por não mudar a resposta da comparação (o caminho do Testar em modo prova, sem ferramenta):
 # - model e temperature: o Answerer usa o modelo fixo dele (Config::ANSWERER_MODEL) e não passa temperatura;

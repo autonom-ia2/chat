@@ -38,6 +38,21 @@ describe('#actions', () => {
     });
   });
 
+  // Fork (#2308): quem já tem o usuário (a gaveta de Funções) o põe na store como o validityCheck, com o setUser junto.
+  describe('#setCurrentUser', () => {
+    it('stores the user and tells the widget and analytics, like validityCheck', () => {
+      const localCommit = vi.fn();
+      APIHelpers.setUser.mockClear();
+
+      actions.setCurrentUser({ commit: localCommit }, { id: 2, name: 'Jane' });
+
+      expect(APIHelpers.setUser).toHaveBeenCalledWith({ id: 2, name: 'Jane' });
+      expect(localCommit.mock.calls).toEqual([
+        [types.SET_CURRENT_USER, { id: 2, name: 'Jane' }],
+      ]);
+    });
+  });
+
   describe('#loginWithSso', () => {
     it('stores auth credentials and current user', async () => {
       const mockResponse = {

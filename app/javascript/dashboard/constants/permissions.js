@@ -16,6 +16,9 @@ export const SALES_VALUE_VIEW_PERMISSION = 'sales_value_view';
 export const CONTACT_VIEW_PERMISSION = 'contact_view';
 export const KNOWLEDGE_BASE_VIEW_PERMISSION = 'knowledge_base_view';
 export const AUTONOMIA_PERMISSIONS = ['autonomia_view', 'autonomia_manage'];
+// #2251 — painel de desempenho do agente (e a exportação dele): só ver, chave própria, independente de agentes.
+export const DESEMPENHO_VIEW_PERMISSION = 'desempenho_view';
+export const CONTACT_EXPORT_PERMISSION = 'contact_export';
 export const CAMPAIGN_PERMISSIONS = ['campaign_view', 'campaign_manage'];
 export const INBOX_PERMISSIONS = ['inbox_view', 'inbox_manage'];
 export const CANNED_RESPONSE_MANAGE_PERMISSION = 'canned_response_manage';
@@ -38,6 +41,8 @@ export const SCHEDULING_PERMISSIONS = [
 // que só o administrador liga.
 export const META_ADS_VIEW_PERMISSION = 'meta_ads_view';
 export const META_ADS_MANAGE_PERMISSION = 'meta_ads_manage';
+// #2302 — Seus posts: ver os posts e os números das caixas que vê (posts_manage também vê).
+export const POSTS_PERMISSIONS = ['posts_view', 'posts_manage'];
 
 // Pessoas (#1931): agentes e times, montar funções, entregar acesso acima do próprio.
 export const PEOPLE_MANAGE_PERMISSION = 'people_manage';

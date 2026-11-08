@@ -51,6 +51,10 @@ import { MESSAGE_MAX_LENGTH } from 'shared/helpers/MessageTypeHelper';
 import inboxMixin, { INBOX_FEATURES } from 'shared/mixins/inboxMixin';
 import { trimContent, debounce, getRecipients } from '@chatwoot/utils';
 import { semQuemSaiuDaCopia } from 'dashboard/helper/semQuemSaiuDaCopia';
+import {
+  humanAssigneeId,
+  isAssignedToUser,
+} from 'dashboard/helper/assigneeHelper';
 import wootConstants from 'dashboard/constants/globals';
 import {
   extractQuotedEmailText,
@@ -295,6 +299,10 @@ export default {
     };
   },
   computed: {
+    // Só pessoa responsável (#2249): o repasse do assunto não aparece para robô com o meu id.
+    pessoaResponsavelId() {
+      return humanAssigneeId(this.currentChat);
+    },
     ...mapGetters({
       currentChat: 'getSelectedChat',
       messageSignature: 'getMessageSignature',
@@ -1291,10 +1299,7 @@ export default {
     },
     async relerSeODonoNaoChegou(conversationId) {
       const conversa = this.$store.getters.getConversationById(conversationId);
-      const meta = conversa?.meta;
-      const jaEMinha =
-        meta?.assignee_type === 'User' &&
-        meta?.assignee?.id === this.currentUser?.id;
+      const jaEMinha = isAssignedToUser(conversa, this.currentUser?.id);
       if (!conversationId || jaEMinha) return;
       try {
         await this.$store.dispatch('getConversation', conversationId);
@@ -1920,7 +1925,7 @@ export default {
   <CrmRepasseDoAssunto
     v-if="crmReplySubjectEnabled"
     :conversation-id="currentChat.id"
-    :assignee-id="currentChat.meta?.assignee?.id || null"
+    :assignee-id="pessoaResponsavelId"
   />
   <WhatsappApiReplyHint
     :conversation="currentChat"

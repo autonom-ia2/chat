@@ -21,6 +21,57 @@ RSpec.describe CustomRole, type: :model do
       expect(inclusion.options[:in]).to eq(CustomRole::PERMISSIONS)
     end
 
+    # #2185: um nome por conta, sem diferenciar maiúsculas nem espaços nas pontas.
+    it 'refuses a name already used in the account, ignoring case and surrounding spaces' do
+      existing = create(:custom_role, name: 'Vendas')
+      role = build(:custom_role, account: existing.account, name: '  vENDAS ')
+
+      expect(role).not_to be_valid
+      expect(role.errors.details[:name]).to include(a_hash_including(error: :taken))
+      expect(role.name).to eq('vENDAS')
+    end
+
+    it 'accepts the same name in another account and keeps a role valid against itself' do
+      existing = create(:custom_role, name: 'Vendas')
+
+      expect(build(:custom_role, name: 'Vendas')).to be_valid
+      expect(existing.reload).to be_valid
+    end
+
+    # O índice segura o que a validação não vê: duas gravações ao mesmo tempo.
+    it 'refuses a duplicate in the database even when the validation is skipped' do
+      existing = create(:custom_role, name: 'Vendas')
+      other = create(:custom_role, account: existing.account, name: 'Outra')
+
+      expect { other.update_column(:name, ' vendas ') }.to raise_error(ActiveRecord::RecordNotUnique) # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    it 'refuses renaming onto a taken name' do
+      existing = create(:custom_role, name: 'Vendas')
+
+      expect(create(:custom_role, account: existing.account, name: 'Suporte').update(name: 'VENDAS ')).to be(false)
+    end
+
+    # Nome antigo salvo com espaço nas pontas conta como o mesmo nome, como no índice.
+    it 'refuses a name taken by an old row saved with surrounding spaces' do
+      existing = create(:custom_role, name: 'Outra')
+      existing.update_column(:name, 'Vendas ') # rubocop:disable Rails/SkipsModelValidations
+
+      expect(build(:custom_role, account: existing.account, name: 'vendas')).not_to be_valid
+    end
+
+    # A pessoa só aponta para uma função que existe: sem isso, ganhar a função durante a exclusão deixava um id solto.
+    it 'keeps account users from pointing to a missing role' do
+      account_user = create(:account_user, account: create(:custom_role).account)
+
+      expect { account_user.update_column(:custom_role_id, described_class.maximum(:id).to_i + 1) } # rubocop:disable Rails/SkipsModelValidations
+        .to raise_error(ActiveRecord::InvalidForeignKey)
+    end
+
+    it 'saves the name without the surrounding spaces' do
+      expect(create(:custom_role, name: '  Suporte  ').reload.name).to eq('Suporte')
+    end
+
     it 'lists the unknown keys and the valid ones' do
       role = build(:custom_role, permissions: %w[contact_view conversation_read_only inbox_38])
 

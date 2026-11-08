@@ -30,16 +30,11 @@ module Crm::PipelineArchiving
     # clique, outra aba), não há o que fazer: 422, em vez de repetir caixas, principal ou "Guardar junto".
     return render_unprocessable(ARCHIVE_ALREADY_ARCHIVED) if @pipeline.archived? && params[:move_to_stage_id].blank?
 
-    result = ::Crm::Pipelines::Archiver.new(
-      pipeline: @pipeline, actor: Current.user, target_stage: archive_target_stage,
-      inboxes_target: other_active_pipeline(params[:inboxes_to_pipeline_id], ::Crm::Pipelines::Archiver::INVALID_INBOXES_TARGET),
-      new_default: other_active_pipeline(params[:new_default_pipeline_id], ::Crm::Pipelines::Archiver::INVALID_DEFAULT),
-      stop_follow_ups: ActiveModel::Type::Boolean.new.cast(params[:stop_follow_ups]) == true
-    ).perform
-    assign_archive_result(result)
+    @archiver = build_archiver
+    assign_archive_result(@archiver.perform)
     render :show
   rescue ::Crm::Pipelines::Archiver::InvalidTarget => e
-    render_unprocessable(e.message)
+    render json: { error: e.message, moved_count: archive_moved_before_failure }, status: :unprocessable_entity
   rescue ::Crm::Pipelines::Archiver::Blocked => e
     @archive_blocked = e.motivo
     render_archive_blocked
@@ -69,11 +64,41 @@ module Crm::PipelineArchiving
     fetch_pipeline
   end
 
+  def build_archiver
+    ::Crm::Pipelines::Archiver.new(
+      pipeline: @pipeline, actor: Current.user, target_stage: archive_target_stage,
+      inboxes_target: other_active_pipeline(params[:inboxes_to_pipeline_id], ::Crm::Pipelines::Archiver::INVALID_INBOXES_TARGET),
+      new_default: other_active_pipeline(params[:new_default_pipeline_id], ::Crm::Pipelines::Archiver::INVALID_DEFAULT),
+      stop_follow_ups: ActiveModel::Type::Boolean.new.cast(params[:stop_follow_ups]) == true
+    )
+  end
+
+  # Os nomes do resumo (#2145) só dos clientes cujo card movido a pessoa vê no CRM: quem gerencia funis com acesso
+  # restrito (funções personalizadas, caixa ou "só as suas") não recebe nome de cliente que não enxerga. O total
+  # (`@clients_with_two_open_count`) continua de todos. Administrador vê todos.
+  def visible_clients_with_two_open(clientes)
+    return [] if clientes.empty?
+
+    visiveis = ::Crm::Cards::VisibleScopeQuery.new(
+      scope: Current.account.crm_cards.where(id: clientes.pluck(:card_id)), account: Current.account,
+      user: Current.user, account_user: Current.account_user
+    ).perform.pluck(:id).to_set
+    clientes.select { |cliente| visiveis.include?(cliente[:card_id]) }.first(20)
+  end
+
+  # Recusa depois de lotes já confirmados (#2145): quantos cards já foram levados ao destino, para a tela dizer.
+  def archive_moved_before_failure
+    @archiver&.moved_before_failure.to_i
+  end
+
   def assign_archive_result(result)
     @moved_cards_count = result.moved.size
     @stopped_follow_ups_count = result.stopped_follow_ups
     @moved_inboxes = result.moved_inboxes
     @inboxes_target_pipeline_id = result.inboxes_target_pipeline_id
+    clientes = result.clientes_com_dois_abertos
+    @clients_with_two_open_count = clientes&.size
+    @clients_with_two_open = clientes && visible_clients_with_two_open(clientes)
     @open_cards_count = @pipeline.cards.open.count
   end
 

@@ -34,6 +34,7 @@
       "TENTAR": "Tentar de novo",
       "CANAL": {
         "WHATSAPP": "WhatsApp",
+        "WHATSAPP_CELULAR": "WhatsApp do celular",
         "EMAIL": "E-mail",
         "SMS": "SMS",
         "SITE": "Site",
@@ -120,6 +121,7 @@
       "TITULO_SEM_NOME": "Mensagem a caminho",
       "PELO": {
         "WHATSAPP": "Pelo WhatsApp · {caixa}",
+        "WHATSAPP_CELULAR": "Pelo WhatsApp do celular · {caixa}",
         "EMAIL": "Por e-mail · {caixa}",
         "SMS": "Por SMS · {caixa}",
         "SITE": "Pelo site · {caixa}",

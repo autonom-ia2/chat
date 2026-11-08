@@ -4,6 +4,11 @@ import CrmMetaAdsWhatsappReportAPI from 'dashboard/api/crmMetaAdsWhatsappReport'
 import { useAlert } from 'dashboard/composables';
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// #2075 — ligar, salvar e testar pedem a chave de valores de venda.
+const salesValues = vi.hoisted(() => ({ value: true }));
+vi.mock('dashboard/routes/dashboard/crm/composables/useCrmPermissions', () => ({
+  useCrmPermissions: () => ({ canSeeSalesValues: salesValues }),
+}));
 vi.mock('dashboard/api/crmMetaAdsWhatsappReport', () => ({
   default: { get: vi.fn(), update: vi.fn(), sendTest: vi.fn() },
 }));
@@ -88,6 +93,44 @@ const PREFIX = 'CRM_KANBAN.META_ADS_HUB.WHATSAPP_REPORT';
 describe('Anúncios da Meta · resumo no WhatsApp (#1100, F4b)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    salesValues.value = true;
+  });
+
+  it('without sales values: toggles, save and test are locked, with the reason', async () => {
+    salesValues.value = false;
+    const wrapper = await mountReport(
+      report({ inbox_id: 5, phone: '+5511977776666' })
+    );
+
+    const toggles = wrapper.findAll('[role="switch"]');
+    expect(
+      toggles.every(node => node.attributes('disabled') !== undefined)
+    ).toBe(true);
+    await toggles[0].trigger('click');
+    expect(toggles[0].attributes('aria-checked')).toBe('false');
+    const buttons = wrapper
+      .findAll('button')
+      .filter(node =>
+        [`${PREFIX}.SAVE`, `${PREFIX}.TEST`].includes(node.text())
+      );
+    expect(buttons).toHaveLength(2);
+    expect(
+      buttons.every(node => node.attributes('disabled') !== undefined)
+    ).toBe(true);
+    expect(wrapper.find('[data-report-needs-sales-value]').text()).toBe(
+      `${PREFIX}.NEEDS_SALES_VALUE`
+    );
+  });
+
+  it('with sales values there is no lock notice', async () => {
+    const wrapper = await mountReport(report());
+
+    expect(wrapper.find('[data-report-needs-sales-value]').exists()).toBe(
+      false
+    );
+    expect(
+      wrapper.find('[role="switch"]').attributes('disabled')
+    ).toBeUndefined();
   });
 
   afterEach(() => {

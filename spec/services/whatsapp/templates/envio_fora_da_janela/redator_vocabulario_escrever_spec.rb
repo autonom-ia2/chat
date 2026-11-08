@@ -46,7 +46,7 @@ RSpec.describe Whatsapp::Templates::EnvioForaDaJanela::Redator, '#escrever' do
     let(:perfil) { 'saude_beneficios' }
 
     it 'recebe a linha da saúde, que nunca diz segurado' do
-      expect(pedido_escrito).to include('Fale de plano, beneficiário e reembolso')
+      expect(pedido_escrito).to include('Fale de plano, vidas, titular e dependentes')
     end
   end
 

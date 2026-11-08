@@ -4,6 +4,8 @@
 //   2. retorno atrasado;
 //   3. o cliente mandou mensagem e espera resposta (waiting_since da conversa
 //      principal, que o servidor só manda quando a pessoa pode ver a conversa);
+//      ou chegou pelo formulário do anúncio da Meta e ninguém falou com ele
+//      ainda (#2195);
 //   4. sugestão de etapa;
 //   5. retorno de hoje;
 //   6. tudo em dia.
@@ -41,6 +43,7 @@ export const passosDoCard = ({
   retornos = [],
   esperaDesde = null,
   sugestao = null,
+  formulario = null,
   status = 'open',
   agora = new Date(),
 } = {}) => {
@@ -63,6 +66,7 @@ export const passosDoCard = ({
 
   const espera = data(esperaDesde);
   if (espera) passos.push({ tipo: 'espera', quando: espera });
+  if (formulario) passos.push({ tipo: 'formulario', formulario });
 
   if (sugestao?.id && sugestao.to_stage_name)
     passos.push({ tipo: 'sugestao', sugestao });
