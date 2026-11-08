@@ -32,10 +32,10 @@ RSpec.describe Autonomia::Automacao::Valores do
     formas = [[:incoming, false], [:outgoing, false], [:outgoing, true], [:template, false]]
 
     # `mensagem.primeira` e `conversa.iniciada_por` dependem das mensagens gravadas: primeira_mensagem_spec. A resposta
-    # durante a espera (G11): resposta_spec.
+    # durante a espera (G11): resposta_spec. A situação do envio (#2680): envio_spec.
     expect(described_class::FECHADOS.keys)
-      .to match_array(described_class::MENSAGEM.keys + described_class::RESPOSTA.keys +
-                    %w[conversa.iniciada_por conversa.responsavel_ausente card.responsavel_ausente])
+      .to match_array(described_class::MENSAGEM.keys + described_class::RESPOSTA.keys + ['conversa.iniciada_por', 'envio.situacao'] +
+                      Autonomia::Automacao::Ausencia::FECHADOS.keys)
     described_class::FECHADOS.slice('mensagem.tipo', 'mensagem.privada').each do |caminho, fechado|
       expect(formas.map { |forma| lido.call(caminho, *forma) }.uniq).to match_array(fechado['opcoes'])
     end

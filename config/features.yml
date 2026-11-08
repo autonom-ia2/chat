@@ -1191,3 +1191,12 @@
   display_name: Anúncios › login único
   enabled: true
   column: feature_flags_ext_2
+
+# Prospecção nova, "Achar empresas" (#2692, F1 #2693): ligada, o menu Prospecção abre as telas novas (porta com "O quê?"
+# e "Onde?", lista com mapa que se completa ao vivo, gaveta da empresa, envio ao funil e Suas buscas). Desligada: as telas
+# de hoje, intactas. Rollback: desligar a flag na conta. Sem migration. Bit: posição 29 (268435456), dada pela
+# Orquestração. Depois do deploy liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: prospeccao_nova
+  display_name: Prospecção › achar empresas (nova)
+  enabled: true
+  column: feature_flags_ext_2

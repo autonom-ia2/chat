@@ -5,7 +5,9 @@
 # Pula e segue, com o motivo no registro:
 # - valor vazio ou texto que ficou em branco;
 # - contato que pediu para não receber (o mesmo campo das campanhas);
-# - canal sem resposta (tweet).
+# - canal sem resposta (tweet);
+# - alvo sem conversa e sem a caixa da conversa nova na receita (`sem_conversa`); com ela (#2680), o passo abre a
+#   conversa (ConversaNova), e pula sem abrir se o contato não tem telefone (`contato_sem_telefone`) ou não recebe.
 # Para a execução, com o motivo no registro (#2573, Autonomia::Automacao::JanelaFechada):
 # - janela fechada. Vale para todo canal com janela, lida como envio automático (sem a tag de agente humano da Meta,
 #   24 h). A caixa híbrida com o WhatsApp API pronto responde fora da janela, em texto. No número oficial, com a janela
@@ -27,7 +29,7 @@ class Autonomia::Automacao::PassoDeMensagem
   end
 
   def executar
-    return sem_conversa if @conversa.nil?
+    return abrir_e_mandar if @conversa.nil?
 
     negado = sem_acesso
     return negado if negado
@@ -87,6 +89,51 @@ class Autonomia::Automacao::PassoDeMensagem
   private
 
   def pulado(motivo, **) = self.class.pulado(motivo, **)
+
+  # Quem não tem conversa (#2680): a receita escolheu a caixa (ConversaNova). Abre a conversa e manda, juntos; o que não
+  # sai (janela fechada sem modelo, texto vazio, robô) desfaz a conversa, e nada fica vazio na caixa. No card sem
+  # conversa principal, a aberta vira a principal dele, e o registro do passo diz isso.
+  def abrir_e_mandar
+    caixa = ::Autonomia::Automacao::ConversaNova.da_execucao(@execucao)
+    contato = ::Autonomia::Automacao::Contexto.de(@alvo).contato
+    return sem_conversa if caixa.nil? || contato.nil?
+    return Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_acesso', dados: {}) unless comeca_conversa?(caixa)
+
+    motivo = ::Autonomia::Automacao::ConversaNova.motivo_do_contato(caixa, contato)
+    return pulado(motivo) if motivo
+
+    texto = texto_pronto
+    return faltou_valor if texto.nil?
+
+    na_conversa_nova(caixa, contato, texto)
+  end
+
+  def na_conversa_nova(caixa, contato, texto)
+    resultado = nil
+    ActiveRecord::Base.transaction do
+      @conversa = ::Autonomia::Automacao::ConversaNova.abrir(caixa, contato)
+      resultado = mandar(texto)
+      raise ActiveRecord::Rollback unless resultado.tipo == :ok
+
+      resultado = Resultado.new(tipo: :ok, dados: resultado.dados.merge(conversa_aberta))
+    end
+    @conversa = nil unless resultado.tipo == :ok
+    resultado
+  end
+
+  def conversa_aberta
+    dados = { 'conversa_aberta' => @conversa.reload.display_id }
+    return dados unless @alvo.is_a?(::Crm::Card) && @alvo.conversation_id.nil?
+
+    @alvo.update!(conversation_id: @conversa.id)
+    dados.merge('conversa_principal_do_card' => @alvo.id)
+  end
+
+  def comeca_conversa?(caixa)
+    usuario = @execucao.automacao.ligada_por
+    account_user = usuario && @execucao.account.account_users.find_by(user_id: usuario.id)
+    account_user.present? && ::Autonomia::Automacao::Acesso.comeca_conversa?(account_user, caixa)
+  end
 
   # O modelo que não sai para a execução, como a janela fechada (#2573). Sem o link da agenda (G12), o motivo próprio
   # e o porquê.

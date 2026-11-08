@@ -12,7 +12,7 @@ module Autonomia::Automacao::CatalogoDeValores
   # `so_nos_gatilhos`: o editor só a oferece nos gatilhos de reunião.
   def todos
     valores = ::Autonomia::Automacao::Valores
-    campos = (valores::CAMPOS.keys + valores::AGENDA.keys + valores::RESPOSTA.keys).map do |caminho|
+    campos = (valores::CAMPOS.keys + valores::AGENDA.keys + valores::RESPOSTA.keys + valores::ENVIO.keys).map do |caminho|
       { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho),
         **do_protegido(caminho), 'so_na_espera' => (true if valores.da_resposta?(caminho)),
         'so_nos_gatilhos' => (::Autonomia::Automacao::Gatilhos::DE_REUNIAO if valores.da_reuniao?(caminho)) }.compact

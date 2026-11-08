@@ -11,8 +11,8 @@
       "required": ["tipo"],
       "properties": {
         "tipo": {
-          "enum": ["conversa.criada", "conversa.aberta", "conversa.resolvida", "mensagem.criada", "card.criado", "card.entrou_na_etapa", "card.saiu_da_etapa", "card.ganho", "card.perdido", "card.reuniao_marcada", "card.reuniao_remarcada", "card.reuniao_cancelada", "card.parado", "card.data", "contato.data"],
-          "description": "conversa.criada: a conversa nasceu, inclusive a que já nasce aberta. conversa.aberta: a conversa voltou a ficar aberta (reaberta ou saiu de pendente/adiada); não dispara na criação. conversa.resolvida: a conversa foi resolvida. mensagem.criada: chegou ou saiu uma mensagem, inclusive nota privada (a atividade da plataforma fica de fora); filtre por mensagem.tipo (recebida, enviada, nota). Quem começou a conversa é conversa.iniciada_por (cliente, equipe); na conversa.criada ela pode ainda estar vazia, porque a mensagem é gravada depois. Para \"o cliente começou a conversa\", use mensagem.criada com mensagem.primeira = true e conversa.iniciada_por = cliente. Os de card (flag automacao_gatilhos; pedem a chave de funis de quem salva e de quem liga) rodam no card e leem card.*, a conversa principal dele e o contato: card.criado (o card nasceu, em qualquer funil ou só no funil_id); card.entrou_na_etapa (o card foi movido para a etapa_id ou nasceu nela); card.saiu_da_etapa (o card foi movido para fora da etapa_id); card.ganho e card.perdido (em qualquer funil ou só no funil_id). Não disparam: o arquivamento em massa, o apagar etapa e a troca de etapa pelo upsert do card. Os de reunião (flag automacao_gatilhos, com as reuniões da instalação ligadas) rodam no card da reunião (toda reunião é de um card): card.reuniao_marcada (a reunião nasceu, pela tela, pela página de agendamento ou pela IA), card.reuniao_remarcada (mudou de horário) e card.reuniao_cancelada; em qualquer funil ou só no funil_id. Só neles a receita lê reuniao.inicio (dia e hora no fuso da reunião) e reuniao.link_da_reuniao (o endereço da chamada). O link da agenda (card.link_da_agenda, conversa.link_da_agenda) vale em qualquer gatilho com card ou conversa: é a página de agendamento do responsável do card ou da pessoa da conversa, para o cliente marcar. Vale o responsável na hora do passo; com duas páginas ou mais sem a da reunião, ou sem responsável, fica vazio e o passo pula com faltou_link_da_agenda. Os de tempo (flag automacao_gatilhos) não vêm de evento: a varredura acha os alvos a cada 15 minutos, numa janela de 1 dia, no fuso da conta. card.parado: o card aberto está na etapa_id há dias dias; dispara uma vez por entrada na etapa, e ligar não age no passado: só entra o card que chega ao prazo depois de ligar (ou de salvar a versão ligada). card.data e contato.data: a data do campo (atributo personalizado de tipo data do card ou do contato) é daqui a dias dias (quando antes) ou foi há dias dias (quando depois), conferido a partir da hora, e a ocorrência anterior a ligar (ou a salvar a versão ligada) não roda; dias 0 é no próprio dia; uma vez por alvo, campo e data. card.data olha o card aberto e o que deu certo: ganho, resolvido (o ganho do funil que não conta como venda) e o arquivado depois de fechado assim; a festa, a revisão e a renovação vêm depois da venda. O perdido, o cancelado e o arquivado sem desfecho ficam de fora. Com repete todo_ano, a data compara só o dia e o mês, todo ano. card.parado e card.data pedem a chave de funis."
+          "enum": ["conversa.criada", "conversa.aberta", "conversa.resolvida", "mensagem.criada", "card.criado", "card.entrou_na_etapa", "card.saiu_da_etapa", "card.ganho", "card.perdido", "card.reuniao_marcada", "card.reuniao_remarcada", "card.reuniao_cancelada", "card.parado", "card.data", "contato.data", "card.recorrente", "contato.recorrente", "conta.recorrente"],
+          "description": "conversa.criada: a conversa nasceu, inclusive a que já nasce aberta. conversa.aberta: a conversa voltou a ficar aberta (reaberta ou saiu de pendente/adiada); não dispara na criação. conversa.resolvida: a conversa foi resolvida. mensagem.criada: chegou ou saiu uma mensagem, inclusive nota privada (a atividade da plataforma fica de fora); filtre por mensagem.tipo (recebida, enviada, nota). Quem começou a conversa é conversa.iniciada_por (cliente, equipe); na conversa.criada ela pode ainda estar vazia, porque a mensagem é gravada depois. Para \"o cliente começou a conversa\", use mensagem.criada com mensagem.primeira = true e conversa.iniciada_por = cliente. Os de card (flag automacao_gatilhos; pedem a chave de funis de quem salva e de quem liga) rodam no card e leem card.*, a conversa principal dele e o contato: card.criado (o card nasceu, em qualquer funil ou só no funil_id); card.entrou_na_etapa (o card foi movido para a etapa_id ou nasceu nela); card.saiu_da_etapa (o card foi movido para fora da etapa_id); card.ganho e card.perdido (em qualquer funil ou só no funil_id). Não disparam: o arquivamento em massa, o apagar etapa e a troca de etapa pelo upsert do card. Os de reunião (flag automacao_gatilhos, com as reuniões da instalação ligadas) rodam no card da reunião (toda reunião é de um card): card.reuniao_marcada (a reunião nasceu, pela tela, pela página de agendamento ou pela IA), card.reuniao_remarcada (mudou de horário) e card.reuniao_cancelada; em qualquer funil ou só no funil_id. Só neles a receita lê reuniao.inicio (dia e hora no fuso da reunião) e reuniao.link_da_reuniao (o endereço da chamada). O link da agenda (card.link_da_agenda, conversa.link_da_agenda) vale em qualquer gatilho com card ou conversa: é a página de agendamento do responsável do card ou da pessoa da conversa, para o cliente marcar. Vale o responsável na hora do passo; com duas páginas ou mais sem a da reunião, ou sem responsável, fica vazio e o passo pula com faltou_link_da_agenda. Os de tempo (flag automacao_gatilhos) não vêm de evento: a varredura acha os alvos a cada 15 minutos, numa janela de 1 dia, no fuso da conta. card.parado: o card aberto está na etapa_id há dias dias; dispara uma vez por entrada na etapa, e ligar não age no passado: só entra o card que chega ao prazo depois de ligar (ou de salvar a versão ligada). card.data e contato.data: a data do campo (atributo personalizado de tipo data do card ou do contato) é daqui a dias dias (quando antes) ou foi há dias dias (quando depois), conferido a partir da hora, e a ocorrência anterior a ligar (ou a salvar a versão ligada) não roda; dias 0 é no próprio dia; uma vez por alvo, campo e data. card.data olha o card aberto e o que deu certo: ganho, resolvido (o ganho do funil que não conta como venda) e o arquivado depois de fechado assim; a festa, a revisão e a renovação vêm depois da venda. O perdido, o cancelado e o arquivado sem desfecho ficam de fora. Com repete todo_ano, a data compara só o dia e o mês, todo ano. card.parado e card.data pedem a chave de funis. card.recorrente e contato.recorrente (flag automacao_gatilhos; o do card pede a chave de funis) rodam na ocorrência (frequencia diaria, semanal no dia_da_semana ou mensal no dia_do_mes, na hora, no fuso da conta) em cada card ou contato da selecao, uma vez por ocorrência; a ocorrência anterior a ligar (ou a salvar a versão ligada) não roda, nem a que ficou mais de 1 dia sem varredura. A selecao pede pelo menos uma condição. conta.recorrente (flag automacao_gatilhos) roda uma vez por ocorrência, sem selecao e sem conversa, card ou contato: só aceita os passos que não pedem alvo (esperar e disparar campanha, que escolhe o público)."
         },
         "etapa_id": { "type": "integer", "description": "Só em card.entrou_na_etapa e card.saiu_da_etapa, onde é obrigatória: a etapa do funil (id)." },
         "funil_id": { "type": "integer", "description": "Só em card.criado, card.ganho, card.perdido e nos de reunião, opcional: limita ao funil (id). Sem ele, vale qualquer funil." },
@@ -20,7 +20,46 @@
         "campo": { "type": "string", "minLength": 1, "maxLength": 255, "description": "Só em card.data e contato.data, obrigatório: a chave do atributo personalizado de tipo data (do card ou do contato)." },
         "quando": { "enum": ["antes", "depois"], "description": "Só em card.data e contato.data, obrigatório: antes (a data ainda vai chegar) ou depois (a data já passou)." },
         "repete": { "enum": ["todo_ano"], "description": "Só em card.data e contato.data, opcional: todo_ano compara só o dia e o mês, todo ano (aniversário, data de casamento, aniversário de contrato); sem ele, a data vale uma vez, com o ano. Quem nasceu em 29/02 é lembrado em 28/02 no ano que não é bissexto." },
-        "hora": { "type": "integer", "minimum": 0, "maximum": 23, "description": "Só em card.data e contato.data, obrigatória: a hora cheia, no fuso da conta, a partir da qual o dia conta." },
+        "hora": { "type": "integer", "minimum": 0, "maximum": 23, "description": "Só em card.data, contato.data e nos recorrentes, obrigatória: a hora cheia, no fuso da conta (nos de data, a partir da qual o dia conta; no recorrente, a hora da ocorrência)." },
+        "conversa_nova": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["caixa_id"],
+          "properties": {
+            "caixa_id": { "type": "integer", "minimum": 1, "description": "A caixa da conta (WhatsApp, SMS ou API) por onde abrir a conversa." }
+          },
+          "description": "Só nos gatilhos de card e de contato: a caixa por onde o passo mensagem abre a conversa de quem não tem uma (o card sem conversa principal, como o do lead do formulário; o contato). A conversa abre como o \"Nova conversa\" do painel, e a janela, o modelo aprovado e o opt-out valem como sempre: conversa nova no número oficial só sai com modelo. Depois dela, a espera, a IA e a agente usam essa conversa (a do contato nessa caixa, a mais recente não resolvida); no card, ela vira a conversa principal. Quem salva e quem liga precisam poder começar conversa nessa caixa. Sem a caixa, esses passos pulam com sem_conversa."
+        },
+        "frequencia": { "enum": ["diaria", "semanal", "mensal"], "description": "Só nos recorrentes, obrigatória: todo dia, toda semana (no dia_da_semana) ou todo mês (no dia_do_mes)." },
+        "dia_da_semana": { "type": "integer", "minimum": 0, "maximum": 6, "description": "Só no recorrente semanal, obrigatório: 0 = domingo, 1 = segunda … 6 = sábado." },
+        "dia_do_mes": { "type": "integer", "minimum": 1, "maximum": 31, "description": "Só no recorrente mensal, obrigatório: o dia do mês; no mês sem esse dia (31 em abril), o último dia." },
+        "selecao": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "funil_id": { "type": "integer", "description": "Card: do funil (id)." },
+            "etapa_id": { "type": "integer", "description": "Card: na etapa (id)." },
+            "situacao": { "enum": ["aberto", "ganho", "perdido"], "description": "Card: aberto, ganho ou perdido." },
+            "responsavel_id": { "type": "integer", "description": "Card: do responsável (id da pessoa)." },
+            "fechado_entre_dias": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["de", "ate"],
+              "properties": { "de": { "type": "integer", "minimum": 0, "maximum": 3650 }, "ate": { "type": "integer", "minimum": 0, "maximum": 3650 } },
+              "description": "Card: ganho ou perdido entre de e ate dias atrás (de 330 ate 360 = há uns 11 meses)."
+            },
+            "etiqueta": { "type": "string", "minLength": 1, "maxLength": 255, "description": "Contato: com a etiqueta." },
+            "sem_etiqueta": { "type": "string", "minLength": 1, "maxLength": 255, "description": "Contato: sem a etiqueta." },
+            "atributo": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["chave", "valor"],
+              "properties": { "chave": { "type": "string", "minLength": 1, "maxLength": 255 }, "valor": { "type": "string", "maxLength": 255 } },
+              "description": "Contato: o atributo personalizado chave vale exatamente valor."
+            }
+          },
+          "description": "Só nos recorrentes, obrigatória, com pelo menos uma condição: quais cards ou contatos da conta. Card: funil_id, etapa_id, situacao, responsavel_id, fechado_entre_dias. Contato: etiqueta, sem_etiqueta, atributo."
+        },
         "filtros": {
           "type": "array",
           "items": { "$ref": "#/definitions/condicao" },
@@ -44,8 +83,33 @@
         },
         {
           "if": { "properties": { "tipo": { "enum": ["card.data", "contato.data"] } } },
-          "then": { "required": ["campo", "quando", "hora"] },
-          "else": { "not": { "anyOf": [{ "required": ["campo"] }, { "required": ["quando"] }, { "required": ["hora"] }, { "required": ["repete"] }] } }
+          "then": { "required": ["campo", "quando"] },
+          "else": { "not": { "anyOf": [{ "required": ["campo"] }, { "required": ["quando"] }, { "required": ["repete"] }] } }
+        },
+        {
+          "if": { "properties": { "tipo": { "enum": ["card.data", "contato.data", "card.recorrente", "contato.recorrente", "conta.recorrente"] } } },
+          "then": { "required": ["hora"] },
+          "else": { "not": { "required": ["hora"] } }
+        },
+        {
+          "if": { "properties": { "tipo": { "enum": ["card.recorrente", "contato.recorrente"] } } },
+          "then": { "required": ["frequencia", "selecao"] },
+          "else": { "not": { "required": ["selecao"] } }
+        },
+        {
+          "if": { "properties": { "tipo": { "enum": ["card.recorrente", "contato.recorrente", "conta.recorrente"] } } },
+          "then": { "required": ["frequencia"] },
+          "else": { "not": { "anyOf": [{ "required": ["frequencia"] }, { "required": ["dia_da_semana"] }, { "required": ["dia_do_mes"] }] } }
+        },
+        {
+          "if": { "required": ["frequencia"], "properties": { "frequencia": { "const": "semanal" } } },
+          "then": { "required": ["dia_da_semana"] },
+          "else": { "not": { "required": ["dia_da_semana"] } }
+        },
+        {
+          "if": { "required": ["frequencia"], "properties": { "frequencia": { "const": "mensal" } } },
+          "then": { "required": ["dia_do_mes"] },
+          "else": { "not": { "required": ["dia_do_mes"] } }
         }
       ]
     },

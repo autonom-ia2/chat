@@ -10,6 +10,7 @@ import GavetaComentariosDoPost from '../components/doPost/GavetaComentariosDoPos
 import {
   ICONE_DA_REDE,
   agentesDasPortas,
+  leituraDosComentarios,
   motivosDasPortas,
   estadoDoCuidado,
   redesDoCuidado,
@@ -62,11 +63,20 @@ const {
 } = useAgenteDoPost(() => props.careId);
 
 const estado = computed(() => estadoDoCuidado(detalhe.value?.status));
-// Quantos esperam o dono; null quando a Meta não deixou ler os comentários (nunca um zero falso).
-const esperando = computed(() => {
-  const comentarios = detalhe.value?.comentarios;
-  return comentarios?.status === 'ready' ? comentarios.esperando.length : null;
-});
+// Quantos esperam o dono; null quando a Meta não deixou ler os comentários (nunca um zero falso), inclusive a lista
+// vazia com uma rede de fora no anúncio nas duas redes (#2522). A rede que faltou numa linha curta, com o número ou
+// com o "não consegui ler".
+const leitura = computed(() =>
+  leituraDosComentarios(detalhe.value?.comentarios)
+);
+const esperando = computed(() => leitura.value.esperando);
+const faltou = computed(() =>
+  leitura.value.faltou
+    ? t(`${KEY}.CARTAO.FALTOU_REDE`, {
+        rede: t(`${KEY}.REDE.${leitura.value.faltou.toUpperCase()}`),
+      })
+    : ''
+);
 const legenda = computed(() => tituloDaLegenda(detalhe.value?.legenda || ''));
 const redes = computed(() => redesDoCuidado(detalhe.value?.network));
 const agentes = computed(() => agentesDasPortas(detalhe.value?.portas));
@@ -333,12 +343,21 @@ const mudar = async status => {
             class="i-lucide-hand size-5 shrink-0 text-n-amber-11"
             aria-hidden="true"
           />
-          <template v-if="esperando === null">
-            {{ t(`${KEY}.CARTAO.SEM_LEITURA`) }}
-          </template>
-          <template v-else>
-            {{ t(`${KEY}.CARTAO.ESPERANDO`, { n: esperando }, esperando) }}
-          </template>
+          <span class="flex flex-col">
+            <span v-if="esperando === null">
+              {{ t(`${KEY}.CARTAO.SEM_LEITURA`) }}
+            </span>
+            <span v-else>
+              {{ t(`${KEY}.CARTAO.ESPERANDO`, { n: esperando }, esperando) }}
+            </span>
+            <span
+              v-if="faltou"
+              data-faltou-rede
+              class="text-sm font-normal text-n-slate-11"
+            >
+              {{ faltou }}
+            </span>
+          </span>
           <span
             class="i-lucide-chevron-right ms-auto size-5 shrink-0 text-n-slate-10 rtl:rotate-180"
             aria-hidden="true"

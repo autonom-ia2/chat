@@ -67,7 +67,9 @@
       "CARD_LINK_DA_AGENDA": "Link da agenda do responsável pelo card (na hora do passo)",
       "CONVERSA_LINK_DA_AGENDA": "Link da agenda do responsável pela conversa (na hora do passo)",
       "REUNIAO_INICIO": "Dia e hora da reunião",
-      "REUNIAO_LINK_DA_REUNIAO": "Link da chamada da reunião"
+      "REUNIAO_LINK_DA_REUNIAO": "Link da chamada da reunião",
+      "ENVIO_TEXTO": "Texto da última mensagem que a automação mandou",
+      "ENVIO_SITUACAO": "Situação da última mensagem que a automação mandou"
     },
     "PASSOS": {
       "ESPERAR": "Esperar um tempo",
@@ -82,7 +84,12 @@
       "CAIXA_PESSOAS": "Pôr pessoas numa caixa",
       "CONTATO_ETIQUETAS": "Pôr ou tirar etiqueta do contato",
       "CONTATO_ALTERAR": "Atualizar o contato",
+      "CONTATO_NOTA": "Deixar nota no contato",
       "EMPRESA_ALTERAR": "Atualizar a empresa do contato",
+      "CONTATO_CRIAR": "Criar um contato",
+      "EMPRESA_CRIAR": "Criar uma empresa",
+      "CONTATO_CLIENTE": "Marcar o contato como cliente",
+      "CARD_CONTATO_CRIAR": "Criar o contato do card",
       "ETIQUETA_CRIAR": "Criar uma etiqueta",
       "ETIQUETA_ALTERAR": "Mudar uma etiqueta",
       "ATRIBUTO_CRIAR": "Criar um campo personalizado",
@@ -128,6 +135,7 @@
       "EMAIL": "E-mail",
       "PHONE_NUMBER": "Telefone",
       "COMPANY_ID": "Empresa",
+      "CONTENT": "Texto da nota",
       "DESCRIPTION": "Descrição",
       "DOMAIN": "Site",
       "TITLE": "Nome da etiqueta",
@@ -258,7 +266,8 @@
       "INSERIR": "Pôr um passo aqui",
       "PASSOS_NO_GALHO": "(1 passo) | ({n} passos)",
       "AVANCADA": "Ação avançada",
-      "AVANCADA_DICA": "Só o Guia muda este passo. Aqui ele fica como está."
+      "AVANCADA_DICA": "Só o Guia muda este passo. Aqui ele fica como está.",
+      "SEM_CAMPOS_DICA": "Este passo não pede nada. É só salvar."
     },
     "FRASES": {
       "FALTA_GATILHO": "Escolha quando ela começa",
