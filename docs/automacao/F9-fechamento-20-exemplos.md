@@ -78,13 +78,16 @@ Uma porta por canal, todas na camada HTTP, gravando a chamada:
 | Saída | Onde o pedido sai | Receptor | O spec confere |
 |---|---|---|---|
 | WhatsApp oficial (Cloud) | `graph.facebook.com/…/messages` (`SendReplyJob` → `Whatsapp::Providers::WhatsappCloudService`) | WebMock grava e responde `wamid.*` | número do cliente, texto, e o `template.name` + parâmetros quando for modelo aprovado |
-| WhatsApp Híbrido (WAHA) (a fazer) | host da WAHA da caixa | WebMock grava | sessão, chatId, texto |
-| Instagram (a fazer) | `graph.facebook.com/…/messages` | WebMock grava | recipient id, texto |
+| WhatsApp Híbrido | Dentro da janela de 24 h, pela Cloud (`receptor_whatsapp_cloud`). Fora dela, pela WAHA (`WAHA_API_URL`, `/api/sendText`) | `receptor_waha` grava qualquer pedido à WAHA | com a janela aberta, a saída pela Cloud e nada na WAHA (#2701) |
+| Instagram | `graph.instagram.com/v22.0/<conta>/messages` (`Instagram::SendOnInstagramService`, corpo em formulário) | `receptor_instagram` grava; `respostas_do_instagram` separa a mensagem do "digitando" | recipient id e texto (#2701) |
 | E-mail (a fazer) | ActionMailer (`deliveries`) | `ActionMailer::Base.deliveries` | destinatário, assunto, corpo |
 | Webhook para outro sistema (F8) (a fazer) | URL configurada no passo | WebMock grava e devolve a resposta roteirizada (ex.: número da proposta, ou recusa) | URL, campos escolhidos; a resposta voltando para o card |
 
-Hoje só o WhatsApp oficial está montado (`receptor_whatsapp_cloud`); as outras portas entram com o primeiro exemplo
-que mandar por elas. O receptor não é um mock do nosso código: o `SendReplyJob`, o serviço do canal e o cliente HTTP rodam inteiros, e só
+O WhatsApp oficial, o Híbrido e o Instagram estão montados; as outras portas entram com o primeiro exemplo que
+mandar por elas. A entrada também é a real (`spec/support/fechamento_automacao_canais.rb`, #2701): o webhook da Cloud e o
+do Instagram, assinados como a Meta assina, e o job do canal grava a mensagem do cliente. No Híbrido, a mensagem do
+cliente entra pela Cloud: o motor (WAHA) só avisa status e recibo, e só manda com a janela fechada.
+O receptor não é um mock do nosso código: o `SendReplyJob`, o serviço do canal e o cliente HTTP rodam inteiros, e só
 a rede é trocada. Por isso o pedido gravado é o que iria para produção.
 
 ### 3.3 Relógio adiantado (F9.8)
@@ -140,7 +143,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G16 | **Valor calculado no corpo** da ação (gravar "hoje + 6 meses", "indicado por {nome}", motivo da perda no texto) | F3/F4 | **Fechada** (#2593 motor, #2639 editor): `$valor`, `$texto` e `$data` no corpo da ação | Motor | 3, 5, 6, 11, 13, 16, 17 |
 | G17 | **Criar contato** (o amigo indicado, o funcionário novo) e **importar em lote** ligado à empresa | novo | `POST contacts` fora da lista; importação não é passo | F2 | 8, 11 |
 | G18 | **Agir ou ler em outro registro ligado** ao alvo (o card do João avisa a Maria, que indicou; a resposta lê o motivo da perda no card antigo do mesmo contato). "Para cada card com etiqueta X" é da G7 | F8 / novo | O passo age só no alvo da execução | Motor | 11, 16 |
-| G19 | **Nota no contato** (não na conversa) | F3 (ação) | `contacts/notes` fora da lista | F2 | 5, 19 |
+| G19 | **Nota no contato** (não na conversa) | F3 (ação) | Em PR (#2636): `POST contacts/:contact_id/notes` na lista | F7 | 5, 19 |
 | G20 | Passos de IA **lendo anexo** (PDF, foto do currículo, documento) | F7 | Em PR (#2669): `le: anexos` — foto e PDF vão como estão ao modelo do passo, áudio pela transcrição; o que passa do limite do provedor pula com motivo | F7 | 3, 8, 14, 18 |
 | G21 | **Prospecção**: rodar busca salva e conferência de WhatsApp como passo | novo | Sem passo | F5 | 9 |
 | G22 | **Avisar quem não está na conversa** (o RH da empresa cliente por mensagem; a equipe quando o alvo não tem conversa) | F4 | O "avisar" é nota com menção na conversa do alvo; card sem conversa pula com `sem_conversa` | F1 | 8 |
@@ -153,9 +156,12 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G29 | **Origem do card do formulário** na receita: o gatilho filtra "card criado pelo formulário de um anúncio" e o passo lê o nome do anúncio (etiqueta com o nome dele) | F6 | A fazer: o formulário grava `source` e `metadata.meta_lead_form` (anúncio, formulário, campanha) no card, mas nenhum caminho de `Valores` lê isso; o filtro só tem o funil (achado no exemplo 2, 07/11) | Gatilhos | 2 |
 | G30 | **Responsável por anúncio**: o corretor responsável por aquele anúncio (retorno para ele, link da agenda dele) | F6 | A fazer: o card do formulário ganha o dono pela regra do `Crm::Cards::Creator`, que não olha o anúncio. A Atribuição (`Crm::Entrega`) liga funil e etapa a pessoa (a fixa ou quem cuida do funil), nunca anúncio; nenhum cadastro liga anúncio a pessoa (achado no exemplo 2, 07/11) | F2 | 2 |
 | G31 | **Decidir a cada resposta**: voltar a esperar e decidir de novo enquanto a IA diz "ainda conversando" | F3/F7 | A fazer: a receita não tem laço; cada passo roda uma vez por execução (achado no exemplo 2, 07/11) | Motor | 2 |
-| G32 | **Esperar a reunião ser marcada** no meio da execução ("visita marcada: move o card e avisa") | F8 | A fazer: a reunião marcada é gatilho (G12), mas não é condição do "esperar até"; o `Resposta` só lê mensagem (achado no exemplo 2, 07/11) | Motor | 2 |
+| G32 | **Esperar a reunião ser marcada** no meio da execução ("visita marcada: move o card e avisa") | F8 | A fazer: a reunião marcada é gatilho (G12), mas não é condição do "esperar até"; o `Resposta` só lê mensagem (achado no exemplo 2, 07/11) | Motor | 2, 5 |
 | G35 | A **IA lê o card** (`le: card`): título, etapa, funil, status, motivo da perda e campos; o valor só com a permissão (#2597) | F7 | Em PR (#2679): só se quem ligou vê o card | F7 | 12, 13, 15 |
 | G36 | A **IA lê as notas internas** da conversa (`le: notas`), como a nota do mecânico | F7 | Em PR (#2679) | F7 | 5 |
+| G37 | **Público da campanha com exclusão**: "a mesma campanha para todos os outros" e "perguntou na Black e não comprou" | F6 | A fazer: o público do passo campanha só soma etiquetas (`PassoDeCampanha`), sem "menos quem tem a etiqueta X" (achado no exemplo 7, 07/11; G33 e G34 são do lote 3, #2680, G35 e G36 da F7, #2688; fecha com o lote 5, #2686) | Gatilhos | 7 |
+| G38 | **Respondeu à campanha X** como filtro do gatilho da mensagem | F6 | A fazer: os valores da receita não têm campanha; `mensagem.criada` pega toda mensagem da conta (achado no exemplo 7, 07/11; fecha com o lote 5, #2686) | Gatilhos | 7 |
+| G39 | **Gatilho numa data única** ("a quinta antes da Black Friday, às 9h") | F6 | A fazer: o recorrente (G7) repete toda semana ou todo mês; não há "uma vez, nesta data" (achado no exemplo 7, 07/11; fecha com o PR do exemplo 7 da G14, #2681 parte 4) | Gatilhos | 7 |
 | G40 | **Esperar só a pessoa que atende** a conversa ("espera a Fernanda até 30 min"), não a equipe inteira | F8 | Em PR: `conversa.responsavel_respondeu` (lote 4, #2682) | Motor | 10 |
 | G41 | **Instrução no resumir** ("o que já foi prometido") e **avisar o responsável quando a agente de IA atende** a conversa | F7 | A fazer: o resumir tem texto fixo (`passo_de_resumir.rb`); o avisar vai a quem atende a conversa, e com a agente de IA ninguém é avisado (achado no exemplo 10, #2678) | F7 | 10 |
 | G45 | A automação que começa pela **conversa lê o card dela** no "Só se" (só para ler) e o filtro sabe se **a mensagem tem anexo** | F6 | Em PR (#2716, PR1) | Gatilhos | 14, 18 |
@@ -186,9 +192,9 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 2 | Lead do anúncio | ✅ G5 (card criado), ⛔ G29 ("pelo formulário de um anúncio") | etiqueta ✅, mensagem pelo modelo ✅ (G1), esperar a resposta ✅ (G11), retorno ✅ (G3), passar para a agente de IA ✅ (G15), decidir ✅, link da agenda ✅ (G12), mover ✅, resumir/avisar ✅, extrair ✅, etiqueta da campanha ✅ (G14) | G29, G30, G31, G32 | Não |
 | 3 | Pós-procedimento da clínica | ✅ G5 (entrou em "Atendida") | extrair ✅, escrever ✅, decidir ✅ (lendo a foto, G20), etiqueta ✅, prioridade ✅, avisar ✅, retorno ✅, e-mail no lugar da campanha "Manutenção" ✅, mover ✅ | — | **Sim** (`exemplo_03_pos_procedimento_spec.rb`) |
 | 4 | Aluno que começa a faltar | 🟡 G5 (entrou em "Faltou") | se com etiqueta do contato ✅, etiqueta pôr/tirar ✅, escrever ✅, decidir ✅, avisar ✅, esperar 30 dias ✅ | G1, G3, G4, G5, G12, G15, G25, G28 (a IA escreve a pergunta e manda pelo modelo) | Não |
-| 5 | Revisão do carro | 🟡 G5 (card ganho) | extrair ✅ (contato), etiqueta ✅, mover ✅ | G1, G3, G5, G6, G12, G16, G19, G28 (lembrete da IA pelo modelo), G36 (nota do mecânico: `g35_g36_ia_le_card_e_nota_spec.rb`) | Não |
+| 5 | Revisão do carro | 🟡 G5 (card ganho) | extrair ✅ (contato), etiqueta ✅, mover ✅ | G1, G3, G5, G6, G12, G16, G19, G28 (lembrete da IA pelo modelo), G32 ("não marcou em 5 dias", passos 6 e 7), G36 (nota do mecânico: `g35_g36_ia_le_card_e_nota_spec.rb`) | Não |
 | 6 | Aniversário | ⛔ G6 (data de nascimento do contato) | escrever ✅, etiqueta ✅, decidir ✅, extrair ✅, avisar ✅ | G1, G4, G6, G12, G14, G16, G25 | Não |
-| 7 | Black Friday | ⛔ G7 (quinta 9h) | decidir ✅, extrair ✅ (card), etiqueta ✅, mensagem ✅ (na janela) | G5, G7, G14, G15 | Não |
+| 7 | Black Friday | 🟡 G7 (toda quinta 9h, #2635); ⛔ G39 (só a quinta antes da Black) | decidir ✅, extrair ✅ (card), etiqueta ✅, mensagem ✅ (na janela), disparar campanha ✅ (G14) | G5, G7, G14, G15, G37, G38, G39 | Não |
 | 8 | Funcionário novo no plano | ✅ mensagem do RH (1ª); ⛔ G24 (2ª) | decidir ✅, mensagem ao RH ✅ | G1, G4, G5, G7, G13, G17, G20, G22, G24, G27 | Não |
 | 9 | Prospecção semanal | ⛔ G7 (segunda 8h) | decidir ✅, etiqueta ✅, mover ✅, resumir ✅ | G3, G4, G7, G12, G14, G21 | Não |
 | 10 | **Cliente bravo** | ✅ mensagem do cliente | decidir ✅, atribuir ✅, prioridade ✅, etiqueta ✅, resumir+avisar ✅, mensagem ✅, o mesmo resumo à dona sem outra ida à IA ✅ (G28) | G40 (passo 6: esperar só a Fernanda), G41 (passo 4: a instrução no resumir; passo 7: avisar com a agente de IA atendendo) | Não (#2678: voltou a pendente) |
@@ -220,9 +226,10 @@ G11 → G4 → G12 → G14. G16, G17, G18 e G20 destravam os exemplos mais longo
 
 ### 6.2 Notas do exemplo 10
 
-- **Só o WhatsApp oficial.** O termo diz "toda mensagem do cliente, em qualquer canal". Hoje o spec prova pelo WhatsApp
-  oficial; os outros canais entram com o receptor de cada um (seção 3.2). Para contar inteiro, o exemplo roda em
-  WhatsApp oficial, Híbrido e Instagram.
+- **Qualquer canal: provado (#2701).** O termo diz "toda mensagem do cliente, em qualquer canal". O spec do exemplo prova
+  cada passo pelo WhatsApp oficial, e `exemplo_10_outros_canais_spec.rb` roda a mesma receita (passos 1 a 5) com o
+  cliente escrevendo pelo webhook real do Híbrido e do Instagram. A resposta sai pelo canal dele. No Híbrido, com a
+  janela aberta, ela sai pela Cloud e nada passa pela WAHA.
 - **Nota do "decidir" em toda mensagem normal: decidido.** O "decidir" deixa uma nota privada com o caminho e o porquê
   (F7.4), mas não no "nenhum se aplica" (#2578, PR #2589). Com o gatilho em toda mensagem do cliente, a mensagem normal
   não ganha nota. O spec confere isso.
