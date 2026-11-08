@@ -166,5 +166,15 @@ RSpec.describe Autonomia::Automacao::Receita do
         .to be(false)
       expect(described_class.esquema_valido?(de_tempo('tipo' => 'contato.data', 'campo' => 'x', **da_data))).to be(true)
     end
+
+    # #2678: "repete todo ano" só nos de data, e só com o valor todo_ano (sem ele, a data vale uma vez).
+    it 'o esquema aceita repete todo_ano só nos de data', :aggregate_failures do
+      valido = ->(gatilho) { described_class.esquema_valido?(de_tempo(gatilho)) }
+      expect(valido.call('tipo' => 'contato.data', 'campo' => 'x', **da_data, 'repete' => 'todo_ano')).to be(true)
+      expect(valido.call('tipo' => 'card.data', 'campo' => 'x', **da_data, 'repete' => 'todo_ano')).to be(true)
+      expect(valido.call('tipo' => 'contato.data', 'campo' => 'x', **da_data, 'repete' => 'uma_vez')).to be(false)
+      expect(valido.call('tipo' => 'card.parado', 'etapa_id' => 1, 'dias' => 1, 'repete' => 'todo_ano')).to be(false)
+      expect(valido.call('tipo' => 'card.ganho', 'repete' => 'todo_ano')).to be(false)
+    end
   end
 end

@@ -215,6 +215,12 @@
           "peca": "hora",
           "obrigatorio": true,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        },
+        {
+          "nome": "repete",
+          "peca": "repete",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.REPETE"
         }
       ]
     },
@@ -248,6 +254,12 @@
           "peca": "hora",
           "obrigatorio": true,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        },
+        {
+          "nome": "repete",
+          "peca": "repete",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.REPETE"
         }
       ]
     }
@@ -660,6 +672,10 @@
       "frase": "AUTOMACAO_LIVRE.GRUPOS.CONVERSA"
     },
     {
+      "chave": "FUNIL",
+      "frase": "AUTOMACAO_LIVRE.GRUPOS.FUNIL"
+    },
+    {
       "chave": "CONTATO",
       "frase": "AUTOMACAO_LIVRE.GRUPOS.CONTATO"
     },
@@ -821,6 +837,44 @@
       ]
     },
     {
+      "tipo": "campanha",
+      "grupo": "MENSAGEM",
+      "requer": "automacao_mensagens",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CAMPANHA",
+      "campos": [
+        {
+          "nome": "faz",
+          "peca": "campanha",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.FAZ"
+        },
+        {
+          "nome": "titulo",
+          "peca": "campanha",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TITULO"
+        },
+        {
+          "nome": "caixa_id",
+          "peca": "campanha",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CAIXA_ID"
+        },
+        {
+          "nome": "modelo",
+          "peca": "campanha",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.MODELO"
+        },
+        {
+          "nome": "etiquetas",
+          "peca": "campanha",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ETIQUETAS"
+        }
+      ]
+    },
+    {
       "tipo": "ia_assumir",
       "grupo": "EQUIPE",
       "frase": "AUTOMACAO_LIVRE.PASSOS.IA_ASSUMIR",
@@ -940,6 +994,21 @@
           "peca": "destino_resumir",
           "obrigatorio": true,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DESTINO"
+        }
+      ]
+    },
+    {
+      "tipo": "card",
+      "grupo": "FUNIL",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CARD",
+      "campos": [
+        {
+          "nome": "etapa_id",
+          "peca": "etapa",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ETAPA_ID"
         }
       ]
     },

@@ -147,7 +147,8 @@ module FechamentoAutomacao::Lacunas
     'G1' => -> { campo_do_passo?('mensagem', 'modelo') },
     'G2' => -> { passo?('email') },
     'G3' => -> { passo?('retorno') },
-    'G4' => -> { acao?('POST crm/cards') || acao?('POST crm/cards/from_conversation') },
+    # O "criar card" entrou como passo próprio (#2628), não como a ação POST crm/cards.
+    'G4' => -> { passo?('card') },
     'G5' => -> { gatilho_no?('Crm::Card') },
     'G6' => -> { gatilho_de?(:tempo) },
     'G7' => -> { gatilho_de?(:recorrente) },
@@ -160,7 +161,9 @@ module FechamentoAutomacao::Lacunas
         %w[card.link_da_agenda conversa.link_da_agenda].any? { |caminho| valor?(caminho) }
     },
     'G13' => -> { passo?('webhook') },
-    'G14' => -> { passo?('campanha') },
+    # Fechada com prova (#2630): o passo existe no esquema e o motor o roda; o ponta a ponta está em
+    # spec/fechamento/automacao/g14_campanhas_spec.rb.
+    'G14' => -> { passo?('campanha') && Autonomia::Automacao::Executor::NATIVOS.key?('campanha') },
     # A Atribuição é o motor único de entrega, inclusive para agente de IA (regra do Rodrigo). A F7 fechou por outro
     # caminho (G15, D1): o passo próprio "ia_assumir", que passa pela Atribuição do CRM, e não `assignee_type` no
     # atribuir, que a lista agora proíbe. "Tirar" é atribuir de volta à pessoa ou ao time, que o passo já faz.
@@ -169,7 +172,8 @@ module FechamentoAutomacao::Lacunas
     'G17' => -> { acao?('POST contacts') },
     'G18' => nil,
     'G19' => -> { acao?('POST contacts/:contact_id/notes') },
-    'G20' => nil,
+    # Os passos de IA leem a foto, o PDF e o áudio da conversa (`le: anexos`, #2669).
+    'G20' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('anexos') },
     'G21' => -> { passo?('prospeccao') },
     'G22' => nil,
     'G23' => nil,
@@ -177,7 +181,34 @@ module FechamentoAutomacao::Lacunas
     'G25' => -> { acao?('POST crm/cards/:id/close') },
     'G26' => -> { passo?('sla') },
     # "Card criado ou atualizado com valor acima de R$ 50 mil" (15) e "card completo" (8, passo 8): só o card criado é a G5.
-    'G27' => -> { gatilho?('card.atualizado', 'card.campo_mudou', 'card.valor_mudou') }
+    'G27' => -> { gatilho?('card.atualizado', 'card.campo_mudou', 'card.valor_mudou') },
+    # O texto da IA vira valor entre passos (`ia.<passo>`, #2679): fora da janela, a "mensagem" o leva no modelo aprovado
+    # (exemplo 3, passo 2); o "mesmo resumo" não vai outra vez à IA (exemplo 10, passo 6).
+    'G28' => -> { valor?('ia.cuidados') },
+    # Achadas no exemplo 2 (07/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
+    # G29: a origem do card do formulário (anúncio, formulário) como valor da receita, no filtro do gatilho e nos passos.
+    'G29' => nil,
+    # G30: o responsável por um anúncio (o corretor daquele anúncio), para o retorno e o link da agenda.
+    'G30' => nil,
+    # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando".
+    'G31' => nil,
+    # G32: a reunião marcada como condição do "esperar até", no meio da execução.
+    'G32' => nil,
+    # A IA lê o card (`le: card`, #2679): exemplo 13, passo 5; exemplo 15, passo 9.
+    'G35' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('card') },
+    # A IA lê as notas internas da conversa (`le: notas`, #2679): exemplo 5, passo 1.
+    'G36' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('notas') },
+    # Do exemplo 10 (#2678), fora do lote 2: esperar só a pessoa que atende a conversa (a Fernanda), não a equipe inteira.
+    'G40' => -> { valor?('conversa.responsavel_respondeu') },
+    # Do exemplo 10 (#2678), ainda sem dono: a instrução no resumir ("o que já foi prometido") e avisar o responsável
+    # quando a agente de IA atende a conversa.
+    'G41' => nil,
+    # Da auditoria dos termos (07/11, #2716): a automação que começa pela conversa lê o card dela no "Só se" (exemplo 14,
+    # passo 2) e o filtro sabe se a mensagem tem anexo (exemplo 18, começo).
+    'G42' => -> { valor?('mensagem.tem_anexo') && Autonomia::Automacao::Valores::BASES_DO_ALVO['Conversation'].include?('card') },
+    # Da auditoria dos termos (07/11, #2716 PR2): a espera para quando chega anexo, não qualquer resposta (exemplo 14,
+    # passo 5: um "já mando" não pode zerar os 2 dias).
+    'G43' => nil
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

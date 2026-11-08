@@ -1,5 +1,11 @@
+import { ref } from 'vue';
 import { mount } from '@vue/test-utils';
 import LivreSeletorPasso from '../components/LivreSeletorPasso.vue';
+
+// O seletor também esconde o passo de funil (G4) de quem não mexe em funil.
+vi.mock('dashboard/routes/dashboard/crm/composables/useCrmPermissions', () => ({
+  useCrmPermissions: () => ({ canManagePipelines: ref(true) }),
+}));
 
 // G13 (#2670) — o passo que pede uma permissão (`chave`) só aparece no seletor
 // para quem a tem; o servidor recusa do mesmo jeito ao salvar.

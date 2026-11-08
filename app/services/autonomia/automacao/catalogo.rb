@@ -50,11 +50,11 @@ module Autonomia::Automacao::Catalogo
                        'agente_de_ia' => 'agente_de_ia',
                        # G3 (#2629): o "criar retorno".
                        'para_do_retorno' => 'quem_recebe_retorno', 'envio_do_retorno' => 'envio_do_retorno' }.freeze
-  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar" e a caixa do "email" (G2).
-  # G13 (#2670): o endereço, o que vai e o que volta do "webhook".
+  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2) e a
+  # etapa do "card" (G4). G13 (#2670): o endereço, o que vai e o que volta do "webhook".
   PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email',
-                          'descricao' => 'descricao', 'url' => 'endereco_do_webhook', 'corpo' => 'corpo_do_webhook',
-                          'gravar' => 'resposta_do_webhook' }.freeze
+                          'etapa_id' => 'etapa', 'descricao' => 'descricao', 'url' => 'endereco_do_webhook',
+                          'corpo' => 'corpo_do_webhook', 'gravar' => 'resposta_do_webhook' }.freeze
 
   module_function
 
@@ -117,14 +117,15 @@ module Autonomia::Automacao::Catalogo
       next if tipo == 'acao' || declarado['nativos_fora_do_editor'].to_h.key?(tipo)
 
       { 'tipo' => tipo, 'grupo' => declarado.dig('nativos', tipo, 'grupo'), 'requer' => declarado.dig('nativos', tipo, 'requer'),
-        'chave' => declarado.dig('nativos', tipo, 'chave'),
-        'frase' => chave('PASSOS', tipo), 'campos' => campos_nativos(forma) }.compact
+        'chave' => declarado.dig('nativos', tipo, 'chave'), 'funil' => declarado.dig('nativos', tipo, 'funil'),
+        'frase' => chave('PASSOS', tipo), 'campos' => campos_nativos(forma, declarado.dig('nativos', tipo, 'peca')) }.compact
     end
   end
 
-  def campos_nativos(forma)
+  # `peca` no yml (a campanha, G14): uma peça só mostra o passo inteiro.
+  def campos_nativos(forma, peca_do_passo = nil)
     forma['properties'].except('id', 'tipo').map do |nome, propriedade|
-      peca = PECAS_DO_ESQUEMA[propriedade['$ref'].to_s.split('/').last] || PECAS_SEM_DEFINICAO[nome]
+      peca = peca_do_passo || PECAS_DO_ESQUEMA[propriedade['$ref'].to_s.split('/').last] || PECAS_SEM_DEFINICAO[nome]
       { 'nome' => nome, 'peca' => peca,
         'obrigatorio' => forma['required'].include?(nome), 'rotulo' => chave('CAMPOS', nome) }
     end

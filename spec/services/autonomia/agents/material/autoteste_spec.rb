@@ -83,6 +83,42 @@ RSpec.describe Autonomia::Agents::Material::Autoteste do
     expect(itens.last['veredito']).to eq('recusou')
   end
 
+  # #2444: o sinal do "não deu para julgar": a conta fica na rodada e sai no log do fim, só com ids e números.
+  it 'guarda e loga quantos itens o juiz deu como nao_se_aplica', :aggregate_failures do
+    allow(juiz).to receive(:julgar).and_return(Array.new(2, 'nao_se_aplica') + Array.new(6, 'certo') + Array.new(2, 'recusou'))
+    allow(Rails.logger).to receive(:info).and_call_original
+
+    pedir_e_rodar
+
+    expect(estado).to include('estado' => 'pronto', 'nao_julgadas' => 2)
+    expect(Rails.logger).to have_received(:info).with(
+      a_string_including("[autonomia][autoteste] agent=#{agent.id} rodada=", ' pronto motivo= nao_julgadas=2 gasto_usd=')
+    )
+  end
+
+  it 'a rodada nova guarda o número junto dos itens da anterior, até terminar' do
+    allow(juiz).to receive(:julgar) { |itens| itens.map { 'nao_se_aplica' } }
+    pedir_e_rodar
+    travel(3.minutes) { described_class.pedir!(agent, quando: 'pedido') }
+
+    expect(estado).to include('estado' => 'rodando', 'nao_julgadas' => 10)
+  end
+
+  # #2444: a regra do dono vale mais que o material; sem ela, o juiz reprovava a resposta que a seguia.
+  # Revisor do #2444: os limites duros (guardrails) também, como o PromptBuilder os põe no prompt.
+  it 'o juiz recebe as regras do dono: a instrução, os limites duros e a regra de passagem' do
+    agent.update!(instruction: 'Cotação só pelo WhatsApp; não colete dados aqui.', handoff_rule: 'Sinistro vai para a equipe.',
+                  guardrails: ['Não passe preço aqui.', ''])
+
+    pedir_e_rodar
+
+    expect(Autonomia::Agents::Material::JuizDoAutoteste).to have_received(:new).with(
+      account: account,
+      regras: "Cotação só pelo WhatsApp; não colete dados aqui.\n\nLimites duros:\n- Não passe preço aqui.\n\n" \
+              'Quando passar para a equipe: Sinistro vai para a equipe.'
+    )
+  end
+
   # t4d: "De onde {agente} tirou". Só trechos deste agente; no máximo 3; o texto vai curto; páginas do material grande.
   it 'guarda até 3 trechos que o agente usou, com material, páginas e texto curto', :aggregate_failures do
     grande = material('manual.pdf', trechos: [])
@@ -105,6 +141,8 @@ RSpec.describe Autonomia::Agents::Material::Autoteste do
     expect(trechos.first).to include('fonte' => grande.id, 'paginas' => [201, 225])
     expect(trechos.first['texto']).to start_with('Cobertura 0 x')
     expect(trechos.first['texto'].size).to be <= described_class::TRECHO_MAX_CHARS
+    # #2444: o juiz lê o trecho inteiro (até o teto dele), para o fato depois do corte da tela não virar invenção.
+    expect(trechos.first['inteiro']).to eq("Cobertura 0 #{'x' * 400}")
   end
 
   it 'resposta sem trecho do material guarda a lista vazia (a tela diz que não usou nenhum)' do

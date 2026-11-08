@@ -1,10 +1,12 @@
 <script setup>
 import { computed, ref } from 'vue';
 import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
+import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 
 // #2414 F5 — o "+" entre dois passos abre este seletor: os passos do catálogo,
 // por grupo. Só entra o que o motor roda (decisão da F5: nada de "em breve").
-// Passo que pede uma flag da conta (`requer`) só entra com ela ligada.
+// Passo que pede uma flag da conta (`requer`) só entra com ela ligada; o de
+// funil (`funil`, G4) só para quem pode mexer no funil, como o gatilho de card.
 const props = defineProps({
   catalogo: { type: Object, required: true },
   liberado: { type: Function, required: true },
@@ -15,6 +17,7 @@ const props = defineProps({
 const emit = defineEmits(['escolher', 'close']);
 
 const painel = ref(null);
+const { canManagePipelines } = useCrmPermissions();
 
 const grupos = computed(() =>
   props.catalogo.grupos
@@ -24,7 +27,8 @@ const grupos = computed(() =>
         passo =>
           passo.grupo === grupo.chave &&
           (!passo.requer || props.liberado(passo.requer)) &&
-          (!passo.chave || props.temChave(passo.chave))
+          (!passo.chave || props.temChave(passo.chave)) &&
+          (!passo.funil || canManagePipelines.value)
       ),
     }))
     .filter(grupo => grupo.passos.length)

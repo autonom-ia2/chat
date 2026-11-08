@@ -28,6 +28,59 @@ RSpec.describe Autonomia::Automacao::Execucao do
     end
   end
 
+  # #2679: o texto da IA é cópia de conversa e só vale enquanto a execução anda.
+  describe 'os textos da IA' do
+    before { execucao.guardar_texto!('p1', 'Oi Ana') }
+
+    it 'guarda pelo id do passo, sem mexer no resto' do
+      expect(execucao.reload).to have_attributes(textos: { 'p1' => 'Oi Ana' }, estado: 'andando')
+    end
+
+    described_class::TERMINAIS.each do |estado|
+      it "somem ao chegar em #{estado}" do
+        execucao.update!(estado: estado)
+
+        expect(execucao.reload.textos).to eq({})
+      end
+    end
+
+    it 'somem quando a rodada termina sem callback (gravar_na_rodada)' do
+      execucao.update!(travada_em: Time.current)
+
+      described_class.gravar_na_rodada(execucao.id, execucao.travada_em, estado: 'concluida', cursor: nil)
+
+      expect(execucao.reload.textos).to eq({})
+    end
+
+    it 'ficam quando a rodada só espera' do
+      execucao.update!(travada_em: Time.current)
+
+      described_class.gravar_na_rodada(execucao.id, execucao.travada_em, estado: 'esperando', cursor: 'p2')
+
+      expect(execucao.reload.textos).to eq('p1' => 'Oi Ana')
+    end
+
+    it 'quem fechou enquanto a IA respondia vence: o texto não volta para a execução terminada', :aggregate_failures do
+      execucao.automacao.desligar!
+
+      expect(execucao.guardar_texto!('p2', 'Tarde demais')).to be(false)
+      expect(execucao.reload.textos).to eq({})
+    end
+
+    it 'junta no banco, sem regravar o que outro passo guardou' do
+      described_class.find(execucao.id).guardar_texto!('p2', 'Resumo')
+      execucao.guardar_texto!('p3', 'Outro')
+
+      expect(execucao.reload.textos).to eq('p1' => 'Oi Ana', 'p2' => 'Resumo', 'p3' => 'Outro')
+    end
+
+    it 'somem quando a automação é desligada' do
+      execucao.automacao.desligar!
+
+      expect(execucao.reload).to have_attributes(estado: 'parada', textos: {})
+    end
+  end
+
   it 'recusa estado fora da lista' do
     expect(outra_igual(estado: 'sumiu')).not_to be_valid
   end
