@@ -73,7 +73,7 @@ class Autonomia::Automacao::Partida
   def ja_aberta
     execucao = execucao_aberta
     execucao.update_columns(repetiu_em: Time.current) # rubocop:disable Rails/SkipsModelValidations
-    ::Autonomia::Automacao::Escuta.acordar_execucao(execucao)
+    ::Autonomia::Automacao::Despertador.acordar(execucao)
     return if ::Autonomia::Automacao::Registro.exists?(execucao: execucao, resultado: 'pulado', motivo: 'ja_aberta')
 
     ::Autonomia::Automacao::Registro.create!(account: @account, automacao: @definicao, execucao: execucao, passo: 'inicio',

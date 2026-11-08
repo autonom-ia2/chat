@@ -22,7 +22,7 @@ Um "esperar até" cuja condição lê a resposta, com o prazo e o caminho "se ve
 
 Lote 4 (#2682): no "esperar até" de um card, a mudança do card numa coluna que a receita lê (título, etapa, funil,
 situação, valor, responsável, time, motivo da perda, atributos) acorda a espera na hora (`Crm::CardAvisaAutomacao` →
-`Escuta.card_mudou`). Antes só a conversa e o contato acordavam.
+`Despertador.card_mudou`). Antes só a conversa e o contato acordavam.
 
 "Equipe" usa a régua da IA que responde (`Autonomia::Agents::Operate::PessoaDaEquipe`). Não contam: a nota interna,
 o robô, o envio automático em nome de alguém (follow-up, convite de reunião, campanha, regra), a mensagem da própria
