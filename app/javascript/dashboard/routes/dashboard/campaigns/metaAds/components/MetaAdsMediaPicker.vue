@@ -18,6 +18,9 @@ import { enviarMidia } from '../criacaoNaMeta';
 const props = defineProps({
   // Imagens já usadas na conta de anúncios: [{ hash, url, width, height }].
   library: { type: Array, default: () => [] },
+  // Quem sobe o arquivo: (mídia lida, arquivo) → mídia com o que o servidor devolveu. O post (#2653) sobe para o
+  // nosso armazenamento, não para a conta de anúncios.
+  upload: { type: Function, default: enviarMidia },
 });
 
 // `uploading`: enquanto sobe, o "Continuar" espera.
@@ -58,7 +61,7 @@ const take = async file => {
   }
   setUploading(true);
   try {
-    const sent = await enviarMidia(chosen, file);
+    const sent = await props.upload(chosen, file);
     if (mine !== attempt) {
       soltarMidia(chosen);
       return;

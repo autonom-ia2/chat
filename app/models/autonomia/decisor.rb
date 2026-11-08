@@ -42,6 +42,8 @@ class Autonomia::Decisor < ApplicationRecord
   MAX_TEXTO_DO_EXEMPLO = 1_500
 
   belongs_to :account
+  # Quem salvou por último (#2558): o Decisor lê o anúncio de origem do card só com a chave dessa pessoa (ve_o_anuncio?).
+  belongs_to :salvo_por, class_name: 'User', optional: true
   has_many :decisoes, class_name: 'Autonomia::DecisorDecisao', inverse_of: :decisor, dependent: :delete_all
 
   before_validation :normalizar_listas
@@ -75,6 +77,14 @@ class Autonomia::Decisor < ApplicationRecord
 
   def leituras_efetivas
     Array(leituras).presence || LEITURAS_PADRAO
+  end
+
+  # O anúncio de origem (#2558, Crm::AnuncioDeOrigem) só vai ao Jev quando quem salvou o Decisor por último o vê hoje. Sem
+  # ninguém (Decisor antigo, pessoa apagada) ou com a pessoa fora da conta, não vai. "Salvar" é criar ou editar pela tela
+  # (DecisoresController); confirmar um exemplo, a dúvida resolvida pelo Guia e os contadores não mudam `salvo_por`: o
+  # exemplo nunca leva o anúncio e não muda o que o Decisor lê.
+  def ve_o_anuncio?
+    Crm::AnuncioDeOrigem.ve?(salvo_por_id && account.account_users.find_by(user_id: salvo_por_id))
   end
 
   # A recusa que ensina quando o Decisor lê o que o gatilho do passo não tem. nil = combina.

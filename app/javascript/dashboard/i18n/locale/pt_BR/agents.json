@@ -1662,7 +1662,9 @@
             "RODANDO": "Testando {nome} com {total} perguntas… {feitas} de {total}",
             "BASE_MUDOU": "O material mudou, então {nome} está sendo testado de novo.",
             "ACERTOU": "{nome} acertou {certas} de {total} perguntas sobre o seu material.",
-            "FORA_OK": "Na pergunta que não está no material, {nome} disse que não sabia e passou para a equipe. | Nas {n} perguntas que não estão no material, {nome} disse que não sabia e passou para a equipe.",
+            "SEM_DO_MATERIAL": "Neste teste, nenhuma pergunta sobre o seu material deu para julgar. Teste de novo.",
+            "NAO_JULGADAS": "1 pergunta do teste não deu para julgar e ficou de fora da conta. | {n} perguntas do teste não deram para julgar e ficaram de fora da conta.",
+            "FORA_OK": "Na pergunta que não está no material, {nome} não inventou resposta. | Nas {n} perguntas que não estão no material, {nome} não inventou resposta.",
             "FORA_ERRO": "Em perguntas que não estão no material, {nome} inventou resposta.",
             "NUNCA": "{nome} ainda não foi testado com o seu material.",
             "PARADO": "Não consegui terminar o teste agora.",
@@ -1714,8 +1716,9 @@
           "ASSISTENTE": "Assistente de criação:",
           "VOCE": "Você:",
           "PENSANDO": "Pensando…",
-          "DEMORANDO": "Está demorando mais que o normal. Pode esperar aqui.",
+          "DEMORANDO": "Ainda estou trabalhando. Pode levar alguns minutos, e a resposta aparece aqui sozinha.",
           "ESPERE": "Espere a resposta anterior.",
+          "NAO_SUBIU": "O arquivo “{nome}” não subiu. Tire ou mande de novo.",
           "CONTINUAR": "Vamos continuar de onde paramos.",
           "FECHOU": "Pronto. {nome} já sabe o principal. Veja como {nome} responde.",
           "ERRO": "Não consegui responder agora.",
@@ -1784,6 +1787,7 @@
           "DEMORA": "Está demorando. Tente de novo.",
           "INCOMPLETO": "{nome} ainda não sabe o suficiente. Conte mais um pouco ao lado.",
           "INCOMPLETO_CELULAR": "{nome} ainda não sabe o suficiente. Conte mais um pouco.",
+          "ESCOLHER_CANAL": "Escolher canal",
           "COMECAR_NO": "Começar a atender no {canal}",
           "COMECAR_TEXTO": "{nome} passa a responder as mensagens dos seus clientes.",
           "COMECAR_COPILOTO": "Começar a ajudar a equipe",
@@ -2798,6 +2802,187 @@
           "SITUACAO_CONFERENCIA_BAIXA": "Conferência baixa",
           "SITUACAO_POUCO": "Poucas conversas"
         }
+      }
+    },
+    "AGENTE_DO_POST": {
+      "CONTAGEM": "Nenhum cuidando de post ou anúncio | 1 cuidando de post ou anúncio | {n} cuidando de posts ou anúncios",
+      "FILTRO": "Mostrar",
+      "TODOS": "Todos",
+      "POSTS": "Posts e anúncios",
+      "TIPO": {
+        "POST": "Post",
+        "AD": "Anúncio"
+      },
+      "REDE": {
+        "INSTAGRAM": "Instagram",
+        "FACEBOOK": "Facebook"
+      },
+      "ESTADO": {
+        "CUIDANDO": "Cuidando",
+        "PAUSADO": "Pausado"
+      },
+      "MOTIVO_DA_PORTA": {
+        "sem_caixa": "No {rede}, este post ou anúncio está sem caixa.",
+        "outra_conta": "A caixa {caixa} é de outra conta.",
+        "sem_chave": "A conta ainda não tem a chave de IA.",
+        "agentes_desligados": "Os agentes estão desligados nesta conta.",
+        "sem_porta": "A caixa {caixa} não tem agente atendendo.",
+        "lia": "Quem atende a caixa {caixa} é a Lia, que faz cotação e não responde comentários.",
+        "porta_parada": "O agente da caixa {caixa} está parado.",
+        "piloto": "O agente da caixa {caixa} está em teste, só com telefones de teste.",
+        "FRASES_FIXAS": "Ali, eu uso as frases fixas que você escreveu."
+      },
+      "CARTAO": {
+        "ESPERANDO": "Nenhum esperando você | 1 esperando você | {n} esperando você",
+        "USA": "Usa o que {nome} sabe.",
+        "USA_DOIS": "Usa o que {um} e {outro} sabem.",
+        "SEM_PORTA": "Sem agente para escrever: uso as frases fixas.",
+        "LENDO": "Lendo o post…",
+        "SEM_LEGENDA": "Sem legenda",
+        "ERRO": "Não consegui ler agora.",
+        "SEM_ACESSO": "Sem acesso a este post ou anúncio.",
+        "SUMIU": "Não está mais na conta.",
+        "SEM_LEITURA": "Não consegui ler os comentários agora"
+      },
+      "CRIAR": {
+        "TITULO": "Criar agente",
+        "QUAL_POST": "Qual post?",
+        "VOLTAR": "Voltar",
+        "ATENDER": {
+          "TITULO": "Atender conversas",
+          "TEXTO": "Responde seus clientes no WhatsApp, no Instagram e no site."
+        },
+        "POST": {
+          "TITULO": "Cuidar dos comentários de um post ou anúncio",
+          "TEXTO": "Leio cada comentário e respondo por você."
+        },
+        "COMENTARIOS": "Nenhum comentário | 1 comentário | {n} comentários",
+        "PERFIL": "De qual perfil?",
+        "LENDO": "Lendo seus posts…",
+        "SEM_POSTS": "Não achei posts deste perfil nos últimos 30 dias.",
+        "ERRO": "Não consegui ler seus posts agora.",
+        "VOLTAR_AGENTES": "Voltar para Agentes",
+        "ANUNCIOS": {
+          "FONTE": "Posts ou anúncios",
+          "CHIP": {
+            "POSTS": "Posts",
+            "ANUNCIOS": "Anúncios"
+          },
+          "QUAL_ANUNCIO": "Qual anúncio?",
+          "LENDO": "Lendo seus anúncios…",
+          "SEM_ANUNCIOS": "Não achei anúncios nos últimos 30 dias.",
+          "ERRO": "Não consegui ler seus anúncios agora.",
+          "SEM_ACESSO": "Você não tem acesso aos anúncios. Peça a quem administra a conta.",
+          "SEM_CONEXAO": "Sua conta de anúncios não está conectada. Conecte em Anúncios para escolher um anúncio.",
+          "SEM_NOME": "Anúncio {id}",
+          "CUIDANDO": "A IA já cuida dele",
+          "PAUSADO": "Pausado"
+        },
+        "SEM_ACESSO": "Você não tem acesso aos posts. Peça a quem administra a conta."
+      },
+      "PAGINA": {
+        "VER_POST": "Ver o post",
+        "VER_ANUNCIO": "Ver o anúncio",
+        "VER_PORTA": "Ver {nome}",
+        "EDITAR": "Editar",
+        "PAUSAR": "Pausar",
+        "RETOMAR": "Voltar a cuidar",
+        "TEXTO_CUIDANDO": "Estou respondendo os comentários deste {alvo}.",
+        "TEXTO_PAUSADO": "Pausei. Os comentários novos ficam com você.",
+        "ALVO": {
+          "POST": "post",
+          "AD": "anúncio"
+        },
+        "ERRO_MUDAR": "Não consegui mudar agora. Tente de novo.",
+        "LENDO": "Lendo os comentários…",
+        "ERRO": "Não consegui ler este post ou anúncio agora. Tente de novo.",
+        "TENTAR": "Tentar de novo",
+        "SUMIU": "Este post ou anúncio não está mais na conta.",
+        "ACESSO": "Você não tem acesso a este post ou anúncio.",
+        "NAO_VE_CAIXA": "Você não vê a caixa de uma das redes deste anúncio. Peça acesso a quem administra a conta."
+      },
+      "SABE": {
+        "TITULO": "O que sabe",
+        "TEXTO": "O que eu uso para responder.",
+        "AVISO": "O que mudar aqui muda no atendimento.",
+        "MATERIAIS": "Materiais de {nome}",
+        "SEM_MATERIAL": "{nome} ainda não tem material.",
+        "MUDAR": "Mudar o que {nome} sabe",
+        "SO_DO_POST": "Só deste post ou anúncio",
+        "FOTO": "O que eu vi na foto:",
+        "SEM_FOTO": "Ainda não li a foto.",
+        "NOTA": "Algo a mais que você contou:",
+        "MUDAR_NO_CUIDADO": "Mudar no cuidado",
+        "PORTA": "No {rede}, quem escreve é {nome}.",
+        "SEM_PORTA": "Sem agente para escrever, eu uso as frases fixas que você escreveu.",
+        "ENSINAR": "Criar um agente",
+        "MATERIAL": {
+          "ANEXAR": "Anexar para eu ler",
+          "TEXTO": "Um arquivo com o que só vale para este post ou anúncio (tabela de tamanhos, prazo, regulamento). Eu leio só para responder os comentários dele.",
+          "TIPOS": "PDF, Word, Excel, texto ou JSON.",
+          "VAZIO": "Nenhum arquivo só deste post ainda.",
+          "ENVIANDO": "Enviando…",
+          "ERRO_ENVIO": "Não consegui receber o arquivo. Tente outro em PDF, Word, Excel ou texto.",
+          "SEM_AGENTE": "Sem agente na caixa, ninguém lê o arquivo. Crie um agente primeiro.",
+          "ERRO_TIRAR": "Não consegui tirar o arquivo. Tente de novo.",
+          "ERRO_LISTA": "Não consegui ver os arquivos deste post agora.",
+          "DEPOIS_DE_LIGAR": "Depois de ligar, você anexa aqui ou em Agentes → O que sabe.",
+          "ANEXAR_AGORA": "Anexar agora",
+          "AVISO_AGORA": "Tem um arquivo só deste post ou anúncio (tabela, prazo, regulamento)? Anexe agora. Ele leva alguns minutos para ser lido: os primeiros comentários são respondidos sem ele."
+        }
+      },
+      "TESTAR": {
+        "TITULO": "Testar",
+        "TEXTO": "Veja o que eu respondo.",
+        "ESCOLHA": "Escreva uma pergunta como se fosse um comentário.",
+        "SUA_PERGUNTA": "Escreva a pergunta",
+        "PERGUNTAR": "Perguntar",
+        "PUBLICO": "No comentário",
+        "PRIVADO": "No privado",
+        "REDE": "Em qual rede?",
+        "SO_TESTE": "É só um teste: nada é publicado.",
+        "FRASES_FIXAS": "Aqui eu uso as frases fixas que você escreveu.",
+        "ERRO": "Não consegui testar agora. Tente de novo.",
+        "IA_FORA": "A IA não respondeu agora. Tente de novo em instantes.",
+        "MOTIVO": {
+          "sem_caixa": "Este post ou anúncio está sem caixa.",
+          "outra_conta": "A caixa é de outra conta.",
+          "sem_chave": "A conta ainda não tem a chave de IA.",
+          "agentes_desligados": "Os agentes estão desligados nesta conta.",
+          "sem_porta": "Nenhum agente atende esta caixa.",
+          "lia": "A Lia faz cotação e não responde comentários.",
+          "porta_parada": "O agente desta caixa está parado.",
+          "piloto": "O agente desta caixa está em teste, só com telefones de teste."
+        },
+        "DO_MATERIAL": "Do seu material: {arquivos}",
+        "FAZ": "O que eu faria",
+        "POR_QUE": "Por quê: {motivo}",
+        "DECISAO": {
+          "private": "Mando no privado e respondo no comentário",
+          "price": "Mando o preço no privado e respondo no comentário",
+          "to_you": "Passo para você como urgente, sem responder",
+          "hide": "Escondo este comentário",
+          "no_reply": "Não respondo",
+          "owner_topic": "Fica com você: é o assunto que você responde",
+          "sem_certeza": "Fica com você: não tive certeza do que fazer",
+          "no_private": "Fica com você: no Facebook o privado ainda não sai",
+          "kept_for_owner": "Fica com você: falta dizer para quem vai o privado",
+          "nao_sei": "Fica com você: era para o privado, mas eu não sei responder isso"
+        }
+      },
+      "COMENTARIOS": {
+        "TITULO": "Comentários",
+        "TEXTO": "Os que eu respondi e os que esperam você.",
+        "RESPONDIDOS": "no privado",
+        "ESPERANDO": "esperando você",
+        "NAO_RESPONDO": "não respondo",
+        "RESPONDIDOS_TEXTO": "Quem recebeu de mim no privado, da mais nova para a mais velha.",
+        "VER_CONVERSA": "Ver conversa",
+        "VER_TODOS": "Ver todos no {alvo}",
+        "NENHUM": "Por enquanto, nada aqui.",
+        "SEM_LEITURA": "Não consegui ler os comentários agora. Tente de novo daqui a pouco.",
+        "RESPONDEU": "Respondeu a mensagem",
+        "VER_CONVERSA_DE": "Ver a conversa com {contato}"
       }
     }
   }

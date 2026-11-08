@@ -114,6 +114,8 @@ const showTestPopover = ref(false);
 const testEmail = computed(() => testSendAddress(currentUser.value));
 const isSendingTest = ref(false);
 const testSendError = ref('');
+// "Detalhes do e-mail" (subject and preheader); a test without a subject opens it (#2545).
+const emailDetailsOpen = ref(false);
 const showSaveTemplatePopover = ref(false);
 const templateName = ref('');
 const isSavingTemplate = ref(false);
@@ -238,9 +240,10 @@ watch(
   value => {
     // Don't clobber the field while a save is in flight (the in-flight value is
     // the source of truth until it lands); only sync external changes otherwise.
-    if (isPersistingSubject.value) return;
-    if (value !== undefined && value !== subjectInput.value)
-      subjectInput.value = value;
+    // A draft may have no subject (null from the server): the field holds '', never null (#2545).
+    if (isPersistingSubject.value || value === undefined) return;
+    const subject = value ?? '';
+    if (subject !== subjectInput.value) subjectInput.value = subject;
   }
 );
 
@@ -278,6 +281,14 @@ const save = async () => {
 };
 
 const sendTest = async toEmails => {
+  // A test without a subject would go out blank (#2545): ask for it where it is written.
+  if (!subjectInput.value.trim()) {
+    testSendError.value = t(
+      'CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_NO_SUBJECT'
+    );
+    emailDetailsOpen.value = true;
+    return;
+  }
   isSendingTest.value = true;
   testSendError.value = '';
   try {
@@ -570,7 +581,6 @@ const senderOpen = ref(false);
 const previewDialog = ref(null);
 const previewHtml = ref('');
 const importStatus = ref(null);
-const emailDetailsOpen = ref(false);
 const compactHeader = ref(false);
 const fullView = ref(false);
 const fitToView = ref(true);

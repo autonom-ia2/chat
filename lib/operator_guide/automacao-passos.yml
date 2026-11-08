@@ -1,0 +1,175 @@
+# Como o editor da Automação livre mostra cada passo (#2414 F5, ADR-001 2.2).
+#
+# O formato de cada campo (tipo, obrigatório, opções, limites) não mora aqui: sai do código, pelo catálogo do Guia
+# (formatos-das-acoes.json) e pelo esquema da receita (automacao-receita.schema.json). Aqui fica só o que o código
+# não sabe dizer: o nome do passo, o grupo do seletor, de onde vem cada parâmetro do caminho e qual peça da tela mostra
+# cada campo. `rake autonomia:guia:automacao` junta tudo em automacao-passos.json, que o editor e o Guia leem.
+#
+# O spec spec/services/autonomia/automacao/catalogo_spec.rb falha quando:
+# - uma ação liberada em automacao-recursos.yml não está em `acoes` nem em `so_guia`;
+# - um campo da ação não está em `campos` nem em `escondidos` (os proibidos e os fixos ficam de fora sozinhos);
+# - a peça da tela não serve para o tipo do campo, ou o parâmetro do caminho não tem de onde vir;
+# - falta a frase em pt_BR ou en (automacaoLivre*.json);
+# - um passo nativo do esquema não está em `nativos` nem em `nativos_fora_do_editor`.
+#
+# `caminho`: o parâmetro vem de um valor do alvo (`conversa.id`, ver Valores) ou de uma escolha na tela (`escolher:`).
+# `campos`: nome do campo (o ponto entra no campo de dentro) => peça da tela. As peças estão em Catalogo::PECAS.
+# `escondidos`: campos que a ação aceita e a tela não mostra, com o motivo no comentário.
+# `so_guia`: ação liberada no motor que o editor não mostra, com o motivo. O Guia continua montando com ela.
+
+grupos: [IA, MENSAGEM, CONVERSA, FUNIL, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, CONTROLE]
+
+nativos:
+  esperar: { grupo: CONTROLE }
+  esperar_ate: { grupo: CONTROLE }
+  se: { grupo: CONTROLE }
+  parar: { grupo: CONTROLE }
+  # `requer`: a flag da conta sem a qual o seletor não oferece o passo. Quem recusa de verdade é a Receita, ao salvar
+  # (passo_desligado), e o executor, ao rodar (mensagens_desligadas).
+  mensagem: { grupo: MENSAGEM, requer: automacao_mensagens }
+  avisar: { grupo: MENSAGEM, requer: automacao_mensagens }
+  # G14 (#2630): disparar campanha e marcar "não recebe". `peca`: o passo inteiro numa peça só (LivreCampanha.vue).
+  campanha: { grupo: MENSAGEM, requer: automacao_mensagens, peca: campanha }
+  # G2: e-mail ao contato pela caixa de e-mail da conta.
+  email: { grupo: MENSAGEM, requer: automacao_mensagens }
+  # F7: os passos de IA, na chave da própria conta. Quem recusa de verdade é a Receita, ao salvar (ia_desligada).
+  decidir: { grupo: IA, requer: automacao_ia }
+  extrair: { grupo: IA, requer: automacao_ia }
+  escrever: { grupo: IA, requer: automacao_ia }
+  resumir: { grupo: IA, requer: automacao_ia }
+  # G15: passar a conversa à agente de IA, pela Atribuição. Sem flag própria: o painel diz quando a conta não tem agente
+  # que receba conversa, e o motor pula com o motivo.
+  ia_assumir: { grupo: EQUIPE }
+  # G3 (#2629): o retorno para a equipe. A mensagem ao cliente na hora pede a flag da F4; quem recusa é a Receita.
+  retorno: { grupo: EQUIPE }
+  # G4: criar card numa etapa, com a flag dos gatilhos de card (F6). `funil`: só para quem pode mexer no funil
+  # (RegraDoFunil.chave?: crm_manage_pipelines ou crm_admin), como o gatilho de card; quem recusa de verdade é a API,
+  # ao salvar e ao ligar.
+  card: { grupo: FUNIL, requer: automacao_gatilhos, funil: true }
+
+# Passos nativos do esquema que o editor ainda não mostra, com o motivo. A receita aceita e o motor roda; a tela só os
+# mostra quando tiver as peças.
+nativos_fora_do_editor: {}
+
+# Os valores da mensagem que disparou o gatilho (#2496, Valores::MENSAGEM). Só existem no "Só se" do gatilho dela; o
+# editor não os oferece em outro gatilho nem nos passos (a Receita recusa: mensagem_so_no_gatilho). As opções e os
+# operadores vêm de Valores::FECHADOS, com a frase em VALOR_DA_MENSAGEM e OPERADOR_DA_MENSAGEM.
+valores_do_gatilho: [mensagem.tipo, mensagem.primeira]
+
+# Valor da mensagem que o editor não oferece para escolher, com o motivo. O Guia continua montando com ele, e o editor o
+# reconhece: mostra a frase e o tira do "Só se" quando o gatilho muda.
+valores_so_guia:
+  mensagem.privada: o mesmo que "Tipo da mensagem é nota interna"; duas formas de dizer a mesma coisa confundem
+
+# A condição que já entra no "Só se" quando a pessoa escolhe o gatilho. Dá para trocar ou tirar depois.
+filtro_sugerido:
+  mensagem.criada: { campo: { $valor: mensagem.tipo }, op: igual, valor: recebida }
+
+acoes:
+  conversa_etiquetas:
+    acao: PATCH conversations/:conversation_id/labels/alterar
+    grupo: CONVERSA
+    caminho: { conversation_id: conversa.id }
+    campos: { por: etiquetas, tirar: etiquetas }
+  conversa_status:
+    acao: POST conversations/:id/toggle_status
+    grupo: CONVERSA
+    caminho: { id: conversa.id }
+    campos: { status: escolha, snoozed_until: data_hora }
+  conversa_prioridade:
+    acao: POST conversations/:id/toggle_priority
+    grupo: CONVERSA
+    caminho: { id: conversa.id }
+    campos: { priority: escolha }
+    # A política de SLA não é liberada como passo (automacao-recursos.yml, sla_policies).
+    escondidos: [sla_policy_id]
+  conversa_atributos:
+    acao: POST conversations/:id/custom_attributes
+    grupo: CONVERSA
+    caminho: { id: conversa.id }
+    campos: { custom_attributes: atributos_da_conversa }
+  conversa_atribuir:
+    acao: POST conversations/:conversation_id/assignments
+    grupo: EQUIPE
+    caminho: { conversation_id: conversa.id }
+    campos: { assignee_id: pessoa, team_id: time }
+  caixa_pessoas:
+    acao: POST inbox_members
+    grupo: EQUIPE
+    campos: { inbox_id: caixa, user_ids: pessoas }
+  contato_etiquetas:
+    acao: PATCH contacts/:contact_id/labels/alterar
+    grupo: CONTATO
+    caminho: { contact_id: contato.id }
+    campos: { por: etiquetas, tirar: etiquetas }
+  contato_alterar:
+    acao: PATCH contacts/:id
+    grupo: CONTATO
+    caminho: { id: contato.id }
+    campos:
+      name: texto
+      email: texto
+      phone_number: texto
+      company_id: empresa
+      custom_attributes: atributos_do_contato
+    # Dados técnicos do canal e da integração; a pessoa não os reconhece. O Guia continua alcançando.
+    escondidos: [additional_attributes, identifier, include_contact_inboxes]
+  empresa_alterar:
+    acao: PATCH companies/:id
+    grupo: CONTATO
+    caminho: { id: contato.empresa_id }
+    campos:
+      name: texto
+      description: texto
+      domain: texto
+      custom_attributes: atributos_da_empresa
+    escondidos: [additional_attributes]
+  etiqueta_criar:
+    acao: POST labels
+    grupo: ETIQUETA
+    campos: { title: texto, description: texto, color: cor, show_on_sidebar: sim_nao }
+  etiqueta_alterar:
+    acao: PATCH labels/:id
+    grupo: ETIQUETA
+    caminho: { id: { escolher: etiqueta } }
+    campos: { title: texto, description: texto, color: cor, show_on_sidebar: sim_nao }
+  atributo_criar:
+    acao: POST custom_attribute_definitions
+    grupo: ATRIBUTO
+    campos:
+      attribute_display_name: texto
+      attribute_key: texto
+      attribute_model: escolha
+      attribute_display_type: escolha
+      attribute_description: texto
+      attribute_values: lista_de_textos
+    # Conferência do valor por padrão de texto: é configuração de quem programa, não de quem monta a automação.
+    escondidos: [regex_cue, regex_pattern]
+  atributo_alterar:
+    acao: PATCH custom_attribute_definitions/:id
+    grupo: ATRIBUTO
+    caminho: { id: { escolher: atributo } }
+    campos:
+      custom_attribute_definition.attribute_display_name: texto
+      custom_attribute_definition.attribute_description: texto
+      custom_attribute_definition.attribute_values: lista_de_textos
+    # attribute_model e filter_type de fora do envelope só filtram a resposta; regex é como no criar. Trocar o tipo de
+    # um atributo que já tem valores gravados confunde esses valores; o Guia alcança, com a pessoa olhando.
+    escondidos:
+      - attribute_model
+      - filter_type
+      - custom_attribute_definition.attribute_display_type
+      - custom_attribute_definition.regex_cue
+      - custom_attribute_definition.regex_pattern
+
+so_guia:
+  PUT labels/:id: Faz o mesmo que o PATCH, que o editor já mostra.
+  PUT custom_attribute_definitions/:id: Faz o mesmo que o PATCH, que o editor já mostra.
+  PUT contacts/:id: Faz o mesmo que o PATCH, que o editor já mostra.
+  PUT companies/:id: Faz o mesmo que o PATCH, que o editor já mostra.
+  PATCH crm/cards/:id: O card só vira alvo com os gatilhos de card (F6); na F5 os gatilhos são de conversa.
+  PUT crm/cards/:id: O card só vira alvo com os gatilhos de card (F6); na F5 os gatilhos são de conversa.
+  POST crm/cards/:id/move: O card só vira alvo com os gatilhos de card (F6); na F5 os gatilhos são de conversa.
+  POST crm/pipelines/:pipeline_id/stages: Etapa é estrutura do funil; entra no editor com os passos de funil (F6), quando a tela filtrar por crm_manage_pipelines.
+  PATCH crm/stages/:id: Etapa é estrutura do funil; entra no editor com os passos de funil (F6), quando a tela filtrar por crm_manage_pipelines.
+  PUT crm/stages/:id: Etapa é estrutura do funil; entra no editor com os passos de funil (F6), quando a tela filtrar por crm_manage_pipelines.

@@ -28,6 +28,10 @@ vi.mock('dashboard/composables/useKeyboardEvents', () => ({
 vi.mock('dashboard/composables/useCanManage', () => ({
   usePermissionGranted: () => ref(true),
 }));
+// #2414 F1.3: as ações da etapa pedem a chave das regras automáticas; aqui a função tem.
+vi.mock('dashboard/composables/usePodeMontarAutomacao', () => ({
+  usePodeMontarAutomacao: () => ref(true),
+}));
 vi.mock('dashboard/api/crmGoogleConversionFeed', () => ({
   default: {
     create: vi.fn().mockResolvedValue({ data: { url: 'https://feed/x' } }),

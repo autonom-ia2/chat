@@ -1662,7 +1662,9 @@
             "RODANDO": "Testing {nome} with {total} questions… {feitas} of {total}",
             "BASE_MUDOU": "The material changed, so {nome} is being tested again.",
             "ACERTOU": "{nome} got {certas} of {total} questions about your material right.",
-            "FORA_OK": "In the question that is not in the material, {nome} said it did not know and handed it to the team. | In the {n} questions that are not in the material, {nome} said it did not know and handed them to the team.",
+            "SEM_DO_MATERIAL": "In this test, no question about your material could be judged. Test again.",
+            "NAO_JULGADAS": "1 test question could not be judged and was left out of the count. | {n} test questions could not be judged and were left out of the count.",
+            "FORA_OK": "In the question that is not in the material, {nome} did not make up an answer. | In the {n} questions that are not in the material, {nome} did not make up an answer.",
             "FORA_ERRO": "In questions that are not in the material, {nome} made up an answer.",
             "NUNCA": "{nome} has not been tested with your material yet.",
             "PARADO": "I could not finish the test right now.",
@@ -1714,8 +1716,9 @@
           "ASSISTENTE": "Creation assistant:",
           "VOCE": "You:",
           "PENSANDO": "Thinking…",
-          "DEMORANDO": "This is taking longer than usual. You can wait here.",
+          "DEMORANDO": "Still working on it. It can take a few minutes, and the answer will show up here on its own.",
           "ESPERE": "Wait for the previous answer.",
+          "NAO_SUBIU": "The file “{nome}” did not upload. Remove it or send it again.",
           "CONTINUAR": "Let's pick up where we left off.",
           "FECHOU": "Done. {nome} already knows the main things. See how {nome} answers.",
           "ERRO": "I could not answer right now.",
@@ -1784,6 +1787,7 @@
           "DEMORA": "This is taking too long. Try again.",
           "INCOMPLETO": "{nome} does not know enough yet. Tell a bit more on the side.",
           "INCOMPLETO_CELULAR": "{nome} does not know enough yet. Tell a bit more.",
+          "ESCOLHER_CANAL": "Choose channel",
           "COMECAR_NO": "Start answering on {canal}",
           "COMECAR_TEXTO": "{nome} starts answering your customers’ messages.",
           "COMECAR_COPILOTO": "Start helping the team",
@@ -2798,6 +2802,187 @@
           "SITUACAO_CONFERENCIA_BAIXA": "Low check",
           "SITUACAO_POUCO": "Few conversations"
         }
+      }
+    },
+    "AGENTE_DO_POST": {
+      "CONTAGEM": "None taking care of a post or ad | 1 taking care of a post or ad | {n} taking care of posts or ads",
+      "FILTRO": "Show",
+      "TODOS": "All",
+      "POSTS": "Posts and ads",
+      "TIPO": {
+        "POST": "Post",
+        "AD": "Ad"
+      },
+      "REDE": {
+        "INSTAGRAM": "Instagram",
+        "FACEBOOK": "Facebook"
+      },
+      "ESTADO": {
+        "CUIDANDO": "Taking care",
+        "PAUSADO": "Paused"
+      },
+      "MOTIVO_DA_PORTA": {
+        "sem_caixa": "On {rede}, this post or ad has no inbox.",
+        "outra_conta": "The {caixa} inbox belongs to another account.",
+        "sem_chave": "The account doesn't have its AI key yet.",
+        "agentes_desligados": "Agents are turned off in this account.",
+        "sem_porta": "No agent answers the {caixa} inbox.",
+        "lia": "The {caixa} inbox is answered by Lia, who makes quotes and doesn't reply to comments.",
+        "porta_parada": "The agent of the {caixa} inbox is stopped.",
+        "piloto": "The agent of the {caixa} inbox is in testing, only with test phones.",
+        "FRASES_FIXAS": "There, I use the fixed phrases you wrote."
+      },
+      "CARTAO": {
+        "ESPERANDO": "None waiting for you | 1 waiting for you | {n} waiting for you",
+        "USA": "Uses what {nome} knows.",
+        "USA_DOIS": "Uses what {um} and {outro} know.",
+        "SEM_PORTA": "No agent to write: I use the fixed phrases.",
+        "LENDO": "Reading the post…",
+        "SEM_LEGENDA": "No caption",
+        "ERRO": "I couldn't read it right now.",
+        "SEM_ACESSO": "No access to this post or ad.",
+        "SUMIU": "No longer in the account.",
+        "SEM_LEITURA": "Couldn't read the comments right now"
+      },
+      "CRIAR": {
+        "TITULO": "Create agent",
+        "QUAL_POST": "Which post?",
+        "VOLTAR": "Back",
+        "ATENDER": {
+          "TITULO": "Answer conversations",
+          "TEXTO": "Answers your customers on WhatsApp, Instagram and your website."
+        },
+        "POST": {
+          "TITULO": "Take care of the comments on a post or ad",
+          "TEXTO": "I read every comment and answer for you."
+        },
+        "COMENTARIOS": "No comments | 1 comment | {n} comments",
+        "PERFIL": "Which profile?",
+        "LENDO": "Reading your posts…",
+        "SEM_POSTS": "I found no posts from this profile in the last 30 days.",
+        "ERRO": "I couldn't read your posts right now.",
+        "VOLTAR_AGENTES": "Back to Agents",
+        "ANUNCIOS": {
+          "FONTE": "Posts or ads",
+          "CHIP": {
+            "POSTS": "Posts",
+            "ANUNCIOS": "Ads"
+          },
+          "QUAL_ANUNCIO": "Which ad?",
+          "LENDO": "Reading your ads…",
+          "SEM_ANUNCIOS": "I found no ads in the last 30 days.",
+          "ERRO": "I couldn't read your ads right now.",
+          "SEM_ACESSO": "You don't have access to the ads. Ask the account admin.",
+          "SEM_CONEXAO": "Your ad account isn't connected. Connect it in Ads to choose an ad.",
+          "SEM_NOME": "Ad {id}",
+          "CUIDANDO": "The AI already takes care of it",
+          "PAUSADO": "Paused"
+        },
+        "SEM_ACESSO": "You don't have access to the posts. Ask the account admin."
+      },
+      "PAGINA": {
+        "VER_POST": "See the post",
+        "VER_ANUNCIO": "See the ad",
+        "VER_PORTA": "See {nome}",
+        "EDITAR": "Edit",
+        "PAUSAR": "Pause",
+        "RETOMAR": "Take care again",
+        "TEXTO_CUIDANDO": "I'm replying to the comments on this {alvo}.",
+        "TEXTO_PAUSADO": "Paused. New comments stay with you.",
+        "ALVO": {
+          "POST": "post",
+          "AD": "ad"
+        },
+        "ERRO_MUDAR": "I couldn't change it right now. Try again.",
+        "LENDO": "Reading the comments…",
+        "ERRO": "I couldn't read this post or ad right now. Try again.",
+        "TENTAR": "Try again",
+        "SUMIU": "This post or ad is no longer in the account.",
+        "ACESSO": "You don't have access to this post or ad.",
+        "NAO_VE_CAIXA": "You can't see the inbox of one of this ad's networks. Ask the account admin for access."
+      },
+      "SABE": {
+        "TITULO": "What it knows",
+        "TEXTO": "What I use to reply.",
+        "AVISO": "Whatever you change here also changes customer service.",
+        "MATERIAIS": "{nome}'s materials",
+        "SEM_MATERIAL": "{nome} has no material yet.",
+        "MUDAR": "Change what {nome} knows",
+        "SO_DO_POST": "Only for this post or ad",
+        "FOTO": "What I saw in the photo:",
+        "SEM_FOTO": "I haven't read the photo yet.",
+        "NOTA": "Something else you told me:",
+        "MUDAR_NO_CUIDADO": "Change it in the care",
+        "PORTA": "On {rede}, {nome} writes.",
+        "SEM_PORTA": "With no agent to write, I use the fixed phrases you wrote.",
+        "ENSINAR": "Create an agent",
+        "MATERIAL": {
+          "ANEXAR": "Attach for me to read",
+          "TEXTO": "A file with what applies only to this post or ad (size chart, delivery time, rules). I read it only to reply to its comments.",
+          "TIPOS": "PDF, Word, Excel, text or JSON.",
+          "VAZIO": "No file just for this post yet.",
+          "ENVIANDO": "Sending…",
+          "ERRO_ENVIO": "I couldn't receive the file. Try another one in PDF, Word, Excel or text.",
+          "SEM_AGENTE": "With no agent on the inbox, nobody reads the file. Create an agent first.",
+          "ERRO_TIRAR": "I couldn't remove the file. Try again.",
+          "ERRO_LISTA": "I can't see this post's files right now.",
+          "DEPOIS_DE_LIGAR": "Once it's on, you attach it here or in Agents → What it knows.",
+          "ANEXAR_AGORA": "Attach now",
+          "AVISO_AGORA": "Got a file just for this post or ad (chart, delivery time, rules)? Attach it now. It takes a few minutes to read: the first comments are answered without it."
+        }
+      },
+      "TESTAR": {
+        "TITULO": "Test",
+        "TEXTO": "See what I reply.",
+        "ESCOLHA": "Write a question as if it were a comment.",
+        "SUA_PERGUNTA": "Write the question",
+        "PERGUNTAR": "Ask",
+        "PUBLICO": "In the comment",
+        "PRIVADO": "In private",
+        "REDE": "On which network?",
+        "SO_TESTE": "It's only a test: nothing is published.",
+        "FRASES_FIXAS": "Here I use the fixed phrases you wrote.",
+        "ERRO": "I couldn't test it right now. Try again.",
+        "IA_FORA": "The AI didn't reply right now. Try again in a moment.",
+        "MOTIVO": {
+          "sem_caixa": "This post or ad has no inbox.",
+          "outra_conta": "The inbox belongs to another account.",
+          "sem_chave": "The account doesn't have its AI key yet.",
+          "agentes_desligados": "Agents are turned off in this account.",
+          "sem_porta": "No agent answers this inbox.",
+          "lia": "Lia makes quotes and doesn't reply to comments.",
+          "porta_parada": "This inbox's agent is stopped.",
+          "piloto": "This inbox's agent is in testing, only with test phones."
+        },
+        "DO_MATERIAL": "From your material: {arquivos}",
+        "FAZ": "What I would do",
+        "POR_QUE": "Why: {motivo}",
+        "DECISAO": {
+          "private": "I send a private message and reply in the comment",
+          "price": "I send the price in private and reply in the comment",
+          "to_you": "I pass it to you as urgent, without replying",
+          "hide": "I hide this comment",
+          "no_reply": "I don't reply",
+          "owner_topic": "It stays with you: it's the subject you answer",
+          "sem_certeza": "It stays with you: I wasn't sure what to do",
+          "no_private": "It stays with you: on Facebook the private message doesn't go out yet",
+          "kept_for_owner": "It stays with you: you still need to say who gets the private message",
+          "nao_sei": "It stays with you: it was a case for a private message, but I don't know how to answer it"
+        }
+      },
+      "COMENTARIOS": {
+        "TITULO": "Comments",
+        "TEXTO": "The ones I replied to and the ones waiting for you.",
+        "RESPONDIDOS": "in private",
+        "ESPERANDO": "waiting for you",
+        "NAO_RESPONDO": "not replying",
+        "RESPONDIDOS_TEXTO": "People who got a private message from me, newest first.",
+        "VER_CONVERSA": "See conversation",
+        "VER_TODOS": "See all on the {alvo}",
+        "NENHUM": "Nothing here for now.",
+        "SEM_LEITURA": "Couldn't read the comments right now. Try again in a moment.",
+        "RESPONDEU": "Replied to the message",
+        "VER_CONVERSA_DE": "See the conversation with {contato}"
       }
     }
   }

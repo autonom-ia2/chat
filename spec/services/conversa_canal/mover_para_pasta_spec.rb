@@ -236,4 +236,67 @@ RSpec.describe ConversaCanal::MoverParaPasta do
     expect { mover('spam', api) }.to raise_error(described_class::Recusa)
     expect { mover('arquivo') }.to raise_error(described_class::Recusa)
   end
+
+  # #2616: quem resolve é a pessoa que moveu, ou o Spam da caixa, e não o auto-resolve da conta. Com auto-resolve ligado,
+  # a resolução saía como "resolvida pelo sistema por N dias de inatividade" (o auto-resolve nunca rodou) e, no toque da
+  # pessoa, sem dizer para onde a conversa foi. A atividade sai no idioma da conta.
+  describe 'atividade de quem resolveu' do
+    let(:account) { create(:account, locale: 'pt_BR', auto_resolve_after: 40 * 24 * 60) }
+    let(:user) { create(:user, account: account, role: :administrator, name: 'Ana Souza') }
+
+    def atividades(alvo = conversa)
+      alvo.messages.activity.reorder(:created_at, :id).pluck(:content)
+    end
+
+    it 'spam e lixeira pelo toque da pessoa: diz quem moveu e para onde, uma vez por pasta; a volta é a de sempre' do
+      Current.user = user
+      I18n.with_locale(:en) do
+        perform_enqueued_jobs do
+          mover('spam')
+          mover('spam')
+          mover('lixeira')
+          mover('')
+        end
+      end
+
+      # A lista inteira: a linha nova substitui o "Conversation was marked resolved by Ana Souza", que não sai junto.
+      expect(atividades).to eq(['Ana Souza moveu a conversa para o Spam.', 'Ana Souza moveu a conversa para a Lixeira.',
+                                'Conversation was reopened by Ana Souza'])
+      expect(Current.executed_by).to be_nil
+    end
+
+    it 'spam automático, em conversa nova e na resposta numa conversa da Entrada: diz por que foi para o Spam' do
+      ConversaCanal::RemetenteNoSpam.create!(account: account, inbox: inbox, email: contato.email)
+      Current.reset
+
+      # Sem o ActionCableBroadcastJob, que já falhava antes do #2616 com a conversa nova criada no teste (sem display_id).
+      nova = I18n.with_locale(:en) do
+        perform_enqueued_jobs(only: [Conversations::ActivityMessageJob, EventDispatcherJob]) do
+          create(:message, account: account, inbox: inbox, conversation: conversa, sender: contato, message_type: :incoming,
+                           content: 'compre já')
+          create(:conversation, account: account, inbox: inbox, contact: contato)
+        end
+      end
+
+      motivo = 'Foi para o Spam: este remetente está no Spam desta caixa.'
+      expect(atividades).to eq([motivo])
+      expect(atividades(nova)).to eq([motivo])
+      expect(Current.executed_by).to be_nil
+    end
+
+    it 'spam automático em conversa já resolvida na Entrada: vai para o Spam com o motivo, sem reabrir' do
+      conversa.update!(status: :resolved)
+      ConversaCanal::RemetenteNoSpam.create!(account: account, inbox: inbox, email: contato.email)
+      Current.reset
+
+      perform_enqueued_jobs do
+        create(:message, account: account, inbox: inbox, conversation: conversa, sender: contato, message_type: :incoming,
+                         content: 'de novo')
+      end
+
+      expect(conversa.reload).to be_resolved
+      expect(atividades.last).to eq('Foi para o Spam: este remetente está no Spam desta caixa.')
+      expect(atividades.grep_v('Foi para o Spam: este remetente está no Spam desta caixa.')).not_to include(a_string_including('40'))
+    end
+  end
 end

@@ -5,6 +5,7 @@ import LoadingState from './components/widgets/LoadingState.vue';
 import NetworkNotification from './components/NetworkNotification.vue';
 import UpdateBanner from './components/app/UpdateBanner.vue';
 import StatusBanner from './components/app/StatusBanner.vue';
+import StaleBundleBanner from './components/app/StaleBundleBanner.vue';
 import PaymentPendingBanner from './components/app/PaymentPendingBanner.vue';
 import PendingEmailVerificationBanner from './components/app/PendingEmailVerificationBanner.vue';
 import LowBackupCodesBanner from './components/app/LowBackupCodesBanner.vue';
@@ -35,6 +36,7 @@ export default {
     NetworkNotification,
     UpdateBanner,
     StatusBanner,
+    StaleBundleBanner,
     PaymentPendingBanner,
     WootSnackbarBox,
     PendingEmailVerificationBanner,
@@ -151,6 +153,7 @@ export default {
   >
     <UpdateBanner :latest-chatwoot-version="latestChatwootVersion" />
     <StatusBanner />
+    <StaleBundleBanner />
     <template v-if="currentAccountId">
       <PendingEmailVerificationBanner v-if="hideOnOnboardingView" />
       <PaymentPendingBanner v-if="hideOnOnboardingView" />

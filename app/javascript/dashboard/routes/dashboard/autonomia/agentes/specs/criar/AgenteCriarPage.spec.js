@@ -841,6 +841,75 @@ describe('AgenteCriarPage', () => {
     wrapper.unmount();
   });
 
+  // #2489 (5b): o dono pediu Instagram e a conta tem também um WhatsApp livre; sem certeza, a pessoa escolhe.
+  it('with more than one free inbox, the button says "choose channel" and Comece opens with none marked', async () => {
+    jornada.canaisOcupados.mockResolvedValue({
+      data: {
+        payload: [
+          ...L2,
+          {
+            inbox_id: 15,
+            name: 'Instagram da Loja',
+            channel_type: 'Channel::Instagram',
+            occupied_by: null,
+          },
+        ],
+      },
+    });
+    const wrapper = await montar({ query: { agente: '90' } });
+    await wrapper.get('[data-perguntas] button').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-comecar] button').text()).toBe(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.ESCOLHER_CANAL'
+    );
+    expect(wrapper.find('[data-sem-canal]').exists()).toBe(false);
+    await wrapper.get('[data-comecar] button').trigger('click');
+    await flushPromises();
+
+    const comece = wrapper.findComponent({ name: 'EtapaComece' });
+    expect(comece.exists()).toBe(true);
+    expect(comece.props('ondeInicial')).toBeNull();
+    expect(canaisApi.connect).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('with only a busy inbox, the button says "choose channel" and nothing is marked', async () => {
+    jornada.canaisOcupados.mockResolvedValue({ data: { payload: [L2[1]] } });
+    const wrapper = await montar({ query: { agente: '90' } });
+    await wrapper.get('[data-perguntas] button').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-comecar] button').text()).toBe(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.ESCOLHER_CANAL'
+    );
+    await wrapper.get('[data-comecar] button').trigger('click');
+    await flushPromises();
+    expect(
+      wrapper.findComponent({ name: 'EtapaComece' }).props('ondeInicial')
+    ).toBeNull();
+    wrapper.unmount();
+  });
+
+  // Achado do tester (#2489): uma livre e uma ocupada, as duas fora do alcance, abriam um Comece todo bloqueado.
+  it('with every inbox out of reach (one free, one busy), shows the notice and no empty button', async () => {
+    jornada.canaisOcupados.mockResolvedValue({
+      data: {
+        payload: [
+          { ...L2[0], alcanca: false },
+          { ...L2[1], alcanca: false },
+        ],
+      },
+    });
+    const wrapper = await montar({ query: { agente: '90' } });
+    await wrapper.get('[data-perguntas] button').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-comecar]').exists()).toBe(false);
+    expect(wrapper.find('[data-sem-canal]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it('with no inbox at all, the button becomes "connect a channel"', async () => {
     jornada.canaisOcupados.mockResolvedValue({ data: { payload: [] } });
     const wrapper = await montar({ query: { agente: '90' } });

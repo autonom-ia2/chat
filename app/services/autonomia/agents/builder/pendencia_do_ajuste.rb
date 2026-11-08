@@ -45,7 +45,8 @@ module Autonomia::Agents::Builder::PendenciaDoAjuste
   def contexto_do_cartao
     agent = @thread.agent
     # Em JSON, como o retrato: uma quebra de linha no nome não vira uma linha de contexto nova.
-    texto = "CONTEXTO INTERNO (nao e fala do usuario). Campos que o dono ve, atuais (devolva iguais o que nao for pedido):\n" \
+    texto = 'CONTEXTO INTERNO (nao e fala do usuario). Campos que o dono ve, atuais (devolva iguais o que nao for ' \
+            "pedido; o human_card acompanha a instruction, veja ROTEIRO E CARTAO):\n" \
             "#{JSON.generate('name' => agent.name.to_s, 'human_card' => agent.human_card.to_s)}"
     { role: 'user', content: [{ type: 'input_text', text: texto }] }
   end

@@ -56,6 +56,24 @@ describe('useCrmOrigin', () => {
     expect(adHierarchyLines(origin)).toEqual([]);
   });
 
+  it('names a Messenger or Direct ad click by its own channel and hides it the same way (#2521, #2620)', () => {
+    [
+      ['meta_ctm', 'CRM_KANBAN.ORIGIN.META_CTM'],
+      ['meta_ctd', 'CRM_KANBAN.ORIGIN.META_CTD'],
+    ].forEach(([source, labelKey]) => {
+      const origin = originFromCampaign({
+        source,
+        source_type: 'ad',
+        ad_hidden: true,
+        touched_at: '2026-10-01T12:00:00Z',
+      });
+
+      expect(origin).toMatchObject({ source, adHidden: true, headline: '' });
+      expect(origin.labelKey).toBe(labelKey);
+      expect(humanizedOriginLabel(origin)).toBe(labelKey);
+    });
+  });
+
   it('carries campaign, ad set and ad from the UTMs', () => {
     const origin = originFromCampaign(landingPageTouch);
 

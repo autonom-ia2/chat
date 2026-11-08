@@ -71,7 +71,8 @@ module Autonomia
       has_many :inboxes, through: :agent_inboxes
       # Revisor v2: só as fontes APROVADAS pela IA Revisora alimentam o Construtor (resumos) e o
       # retrieval do Testar/Operar. needs_resend/needs_review ficam de fora.
-      has_many :accepted_sources, -> { accepted }, class_name: 'Autonomia::Agents::Source',
+      # #2487: e só as do agente: o material só de um post ou anúncio (care_id) não é do agente.
+      has_many :accepted_sources, -> { accepted.da_agente }, class_name: 'Autonomia::Agents::Source',
                                   foreign_key: :autonomia_agent_id
       # Fase F: eventos de operação (replied/handed_off). delete_all = limpeza barata e
       # imutável ao destruir o agente; o Analytics consulta por autonomia_agent_id direto.

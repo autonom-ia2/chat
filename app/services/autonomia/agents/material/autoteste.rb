@@ -13,9 +13,10 @@
 #   rodada, estado (rodando | pronto | parado), motivo (teto | indisponivel), quando (pedido | base_mudou), desde,
 #   feitas, total, gasto_usd, hash_da_base, ultima_automatica,
 #   rodada_dos_itens (a rodada que produziu os itens: o id dos cartões não muda quando outra rodada começa),
+#   nao_julgadas (#2444: quantos itens dessa rodada o juiz deu como nao_se_aplica; vai também no log do fim da rodada),
 #   itens: o ÚLTIMO resultado completo — [{ pergunta, origem (material | fora), esperado, fonte, resposta, equipe,
-#          trechos (t4d: até 3 trechos usados, { fonte, paginas, texto }), veredito (certo | errado | recusou | inventou),
-#          confirmada }]
+#          trechos (t4d: até 3 trechos usados, { fonte, paginas, texto }),
+#          veredito (certo | errado | recusou | inventou | nao_se_aplica), confirmada }]
 # Os itens só são trocados quando a rodada termina: a rodada que para no meio não apaga o resultado anterior (nem os
 # problemas que ele mostra).
 class Autonomia::Agents::Material::Autoteste
@@ -30,6 +31,9 @@ class Autonomia::Agents::Material::Autoteste
   # "De onde {agente} tirou" (t4d): quantos trechos usados a rodada guarda por pergunta e até onde vai o texto de cada.
   TRECHOS_POR_RESPOSTA = 3
   TRECHO_MAX_CHARS = 240
+  # O que o juiz lê de cada trecho (#2444): o fato que passa do corte da tela não pode virar "inventou". O maior pedaço
+  # que a base grava (o mesmo teto da ProvaDoAjuste): o trecho nunca chega cortado.
+  TRECHO_DO_JUIZ_MAX_CHARS = Autonomia::Agents::ProvaDoAjuste::TRECHO_MAX_CHARS
   FALHAS_DA_IA = [Crm::Ai::ResponsesClient::Error, JSON::ParserError, *Crm::Ai::ResponsesClient::NETWORK_ERRORS,
                   OpenSSL::SSL::SSLError, Errno::EHOSTUNREACH, Errno::ENETUNREACH].freeze
 
@@ -38,7 +42,7 @@ class Autonomia::Agents::Material::Autoteste
     # material da Fase 2 ou sem material aprovado. Passado o limite: o pedido da pessoa levanta LimiteDoAutoteste::Excedido;
     # a rodada automática só não abre (nil).
     def pedir!(agent, quando:)
-      return unless Autonomia::Agents::Material.conferir?(agent) && agent.sources.knowledge_sources.servable.exists?
+      return unless Autonomia::Agents::Material.conferir?(agent) && agent.sources.da_agente.knowledge_sources.servable.exists?
 
       rodada, bloqueio, estado = abrir_rodada(agent, quando)
       raise LIMITE::Excedido, bloqueio if bloqueio && quando == 'pedido'
@@ -88,7 +92,7 @@ class Autonomia::Agents::Material::Autoteste
     end
 
     def nova_rodada(atual, rodada, quando, agent)
-      base = atual.is_a?(Hash) ? atual.slice('itens', 'rodada_dos_itens', 'ultima_automatica') : {}
+      base = atual.is_a?(Hash) ? atual.slice('itens', 'rodada_dos_itens', 'nao_julgadas', 'ultima_automatica') : {}
       base = base.merge('ultima_automatica' => Time.current.iso8601) if quando == 'base_mudou'
       base.merge('rodada' => rodada, 'estado' => 'rodando', 'motivo' => nil, 'quando' => quando, 'desde' => Time.current.iso8601,
                  'feitas' => 0, 'total' => 0, 'gasto_usd' => 0.0, 'hash_da_base' => Autonomia::Agents::Material.hash_da_base(agent))
@@ -148,12 +152,15 @@ class Autonomia::Agents::Material::Autoteste
   end
 
   def julgar_e_gravar!(itens)
-    vereditos = chamar(:juiz) { Autonomia::Agents::Material::JuizDoAutoteste.new(account: @agent.account).julgar(itens) }
+    vereditos = chamar(:juiz) do
+      Autonomia::Agents::Material::JuizDoAutoteste.new(account: @agent.account, regras: regras_do_dono).julgar(itens)
+    end
     return if vereditos == :parou
     return parar!('indisponivel') if vereditos.nil?
 
     julgados = itens.zip(vereditos).map { |item, veredito| item.merge('veredito' => veredito) }
-    finalizar!('estado' => 'pronto', 'rodada_dos_itens' => @rodada, 'itens' => julgados)
+    finalizar!('estado' => 'pronto', 'rodada_dos_itens' => @rodada, 'itens' => julgados,
+               'nao_julgadas' => vereditos.count(Autonomia::Agents::Material::JuizDoAutoteste::NAO_SE_APLICA))
   end
 
   # Cabe no teto? Mede e chama; não cabe, para antes (`:parou`).
@@ -177,13 +184,24 @@ class Autonomia::Agents::Material::Autoteste
     { 'resposta' => texto, 'equipe' => equipe, 'trechos' => trechos_usados(resultado.used_knowledge) }
   end
 
+  # O que o dono mandou o agente fazer (#2444): o juiz precisa saber, porque a regra do dono vale mais que o material
+  # (ex.: "a cotação é no WhatsApp, não colete dados aqui"). As mesmas partes que o PromptBuilder põe no prompt: a
+  # instrução que vai ao modelo, os limites duros e a regra de passagem.
+  def regras_do_dono
+    limites = Array(@agent.guardrails).compact_blank
+    limites = limites.any? && "Limites duros:\n#{limites.map { |limite| "- #{limite}" }.join("\n")}"
+    passagem = @agent.handoff_rule.presence && "Quando passar para a equipe: #{@agent.handoff_rule}"
+    [@agent.instrucao_do_sistema.presence, limites, passagem].select(&:present?).join("\n\n")
+  end
+
   # Só trechos do material deste agente (a imagem da mensagem e o que não é dele ficam de fora), na ordem do Answerer.
   def trechos_usados(usados)
     ids = Array(usados).filter_map { |usado| usado[:id] }
     por_id = @agent.knowledge_entries.where(id: ids).index_by(&:id)
     ids.filter_map { |id| por_id[id] }.first(TRECHOS_POR_RESPOSTA).map do |trecho|
       { 'fonte' => trecho.source_id, 'paginas' => trecho.metadata.to_h['paginas'],
-        'texto' => trecho.content.to_s.squish.truncate(TRECHO_MAX_CHARS) }.compact
+        'texto' => trecho.content.to_s.squish.truncate(TRECHO_MAX_CHARS),
+        'inteiro' => trecho.content.to_s.squish.truncate(TRECHO_DO_JUIZ_MAX_CHARS) }.compact
     end
   end
 
@@ -209,7 +227,7 @@ class Autonomia::Agents::Material::Autoteste
   def finalizar!(mudanca)
     alterar! { |atual| atual.merge(mudanca).merge('gasto_usd' => @medidor.gasto.round(4)) }
     Rails.logger.info("[autonomia][autoteste] agent=#{@agent.id} rodada=#{@rodada} #{mudanca['estado']} " \
-                      "motivo=#{mudanca['motivo']} gasto_usd=#{@medidor.gasto.round(4)}")
+                      "motivo=#{mudanca['motivo']} nao_julgadas=#{mudanca['nao_julgadas']} gasto_usd=#{@medidor.gasto.round(4)}")
     true
   end
 

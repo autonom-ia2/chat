@@ -1,4 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils';
+import { ref } from 'vue';
 import { createI18n } from 'vue-i18n';
 import ptBR from 'dashboard/i18n/locale/pt_BR/metaAdsComentariosIa.json';
 import ComentariosIaAPI from 'dashboard/api/comentariosIa';
@@ -16,7 +17,15 @@ vi.mock('dashboard/api/comentariosIa', () => ({
     rascunho: vi.fn(),
     lerAntigos: vi.fn(),
     getResumo: vi.fn(),
+    foto: vi.fn(),
+    corrigirFoto: vi.fn(),
   },
+}));
+const flags = ref([]);
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({
+    isCloudFeatureEnabled: flag => flags.value.includes(flag),
+  }),
 }));
 const push = vi.fn();
 vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
@@ -117,6 +126,27 @@ describe('CuidarComentarios (#2212)', () => {
     expect(ComentariosIaAPI.rascunho).not.toHaveBeenCalled();
   });
 
+  it('passo 1 (#2454): com a flag meta_ads_comentarios_ia, pede "o que eu vi na foto"; sem ela, nada', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
+    ComentariosIaAPI.rascunho.mockResolvedValue({
+      data: { status: 'no_offer' },
+    });
+    ComentariosIaAPI.foto.mockResolvedValue({
+      data: { status: 'ready', text: 'Um bolo de cenoura', corrected: false },
+    });
+
+    const sem = await montar();
+    expect(sem.find('[data-ia-foto]').exists()).toBe(false);
+    expect(ComentariosIaAPI.foto).not.toHaveBeenCalled();
+
+    flags.value = ['meta_ads_comentarios_ia'];
+    const com = await montar();
+    flags.value = [];
+
+    expect(com.find('[data-ia-foto]').text()).toContain('Um bolo de cenoura');
+    expect(ComentariosIaAPI.foto).toHaveBeenCalledWith(target);
+  });
+
   it('ligar que falha avisa e fica nos passos', async () => {
     ComentariosIaAPI.getCuidado.mockResolvedValue({
       data: painel({ message: 'Oi!', para_quem: 'Quem pedir o link' }),
@@ -188,7 +218,30 @@ describe('CuidarComentarios (#2212)', () => {
 
     expect(botao.text()).toBe('Ver no post');
     await botao.trigger('click');
-    expect(wrapper.emitted('back')).toHaveLength(1);
+    expect(wrapper.emitted('reply')).toHaveLength(1);
+    expect(wrapper.emitted('back')).toBeUndefined();
+  });
+
+  // #2520: sem o post por dentro (seus_posts_comentarios), não há onde responder: o "Ver no post" some.
+  it('sem poder abrir o post (canReply falso): o comentário fica sem "Ver no post"', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({
+        care: 'on',
+        to_see: [
+          {
+            id: 'c-1',
+            network: 'instagram',
+            author: 'ana',
+            text: 'Péssimo',
+            kind: 'complaint',
+          },
+        ],
+      }),
+    });
+    const wrapper = await montar({ canReply: false });
+
+    expect(wrapper.text()).toContain('Péssimo');
+    expect(wrapper.find('[data-ia-reply-comment]').exists()).toBe(false);
   });
 
   it('o que a IA leu depois de ligar e não era o caso fica em "Esperando você", não nos antigos', async () => {
@@ -260,6 +313,31 @@ describe('CuidarComentarios (#2212)', () => {
     expect(
       wrapper.find('[data-ia-to-see-row="unread"] .text-n-amber-11').exists()
     ).toBe(false);
+  });
+
+  it('#2519 · a IA não pegou em 10 min: "não vi a tempo", em destaque, com há quanto tempo a pessoa espera', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({
+        care: 'on',
+        para_quem: 'Quem pedir o link',
+        to_see: [
+          {
+            id: 'c-7',
+            network: 'instagram',
+            author: 'fabi',
+            text: 'Qual o valor com desconto?',
+            kind: 'not_caught',
+            created_time: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+          },
+        ],
+      }),
+    });
+    const wrapper = await montar();
+    const linha = wrapper.find('[data-ia-to-see-row="not_caught"]');
+
+    expect(linha.text()).toContain('Não vi este comentário a tempo.');
+    expect(linha.find('.text-n-amber-11').exists()).toBe(true);
+    expect(linha.find('[data-ia-quando]').text()).toBe('há 3 horas');
   });
 
   it('ligado: resultado, pausar e, no grupo dos antigos, ler e mandar', async () => {

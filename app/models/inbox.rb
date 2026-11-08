@@ -79,12 +79,8 @@ class Inbox < ApplicationRecord
   has_one :inbox_assignment_policy, dependent: :destroy
   has_one :assignment_policy, through: :inbox_assignment_policy
   # agent_bot_inbox e agent_bot ficam em InboxBotStatus.
-  # Conserto "caixa deletada" (Autonomia Agents): a FK autonomia_agent_inboxes.inbox_id (sem
-  # ON DELETE CASCADE) barrava o Inbox#destroy quando havia agente conectado. dependent: :destroy
-  # (síncrono, NÃO _async) remove o vínculo ANTES da deleção do Inbox → some a FK; e o
-  # after_destroy de cada AgentInbox limpa o AgentBot-espelho + AgentBotInbox. Agente vira "sem caixa".
-  # Inerte em instalações sem o módulo (tabela ausente ⇒ nenhuma linha associada).
-  has_many :autonomia_agent_inboxes, class_name: 'Autonomia::Agents::AgentInbox', dependent: :destroy
+  # A caixa dos agentes de IA e o cuidado dos comentários (#2487) saem pela app: InboxDoFork.
+  include InboxDoFork
   has_many :webhooks, dependent: :destroy_async
   has_many :hooks, dependent: :destroy_async, class_name: 'Integrations::Hook'
 

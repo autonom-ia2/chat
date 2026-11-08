@@ -166,7 +166,7 @@ Mais quatro pontos, que a tela já supõe:
 
 **Regra:** a gravação da Meta (vídeo do App Review) só mostra o que a chamada
 real confirmou. No protótipo, `?demo=so-confirmado` mostra o caso mínimo, só com
-o que a doc já garante: WhatsApp e site (o Messenger espera o item 9),
+o que a doc já garante: WhatsApp e site (Messenger e Direct entraram no #2560),
 WhatsApp só em "Automático" e "Trocar a foto (cria uma cópia)" no lugar de
 "Trocar foto ou texto". As outras cenas mostram tudo, como se a chamada real
 tivesse confirmado.
@@ -175,10 +175,16 @@ tivesse confirmado.
 
 Verificado na documentação oficial em 26/10/2026.
 
+- **Para onde vai quem toca (#2564).** O anúncio novo começa com a pergunta
+  "Quando a pessoa tocar no anúncio, para onde ela vai?", em três cartões:
+  conversar com você, seu site e seu perfil do Instagram. Só aparece o cartão
+  que tem destino confirmado; o perfil fica apagado, com o motivo, quando a
+  Página não tem conta do Instagram ligada.
 - **Destino, WhatsApp primeiro e marcado.** É decisão de produto: não há dado
-  oficial da Meta sobre qual destino é o mais usado. A troca fica numa linha no
-  topo da tela da foto ("Quem tocar vai para: WhatsApp · Trocar"), sem passo a
-  mais.
+  oficial da Meta sobre qual destino é o mais usado. Dentro de "conversar", a
+  troca do canal fica numa linha no topo da tela da foto ("Quem tocar vai para:
+  WhatsApp · Trocar"); com um destino só (site, perfil), a linha não tem
+  "Trocar".
   - **WhatsApp:** campanha `OUTCOME_ENGAGEMENT`; grupo com
     `destination_type: WHATSAPP`, `optimization_goal: CONVERSATIONS` e
     `promoted_object` com `page_id` (obrigatório) e `whatsapp_phone_number`;
@@ -187,15 +193,27 @@ Verificado na documentação oficial em 26/10/2026.
     vídeo e carrossel.
     [Fonte](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ad-creative/messaging-ads/click-to-whatsapp)
   - **Messenger:** `OUTCOME_ENGAGEMENT`, destino `MESSENGER`, otimização
-    `CONVERSATIONS`, `promoted_object` com `page_id`; botão `MESSAGE_PAGE`.
-    [Fonte](https://developers.facebook.com/docs/marketing-api/reference/ad-campaign-group/)
-  - **Direct do Instagram:** destino `INSTAGRAM_DIRECT`, botão `MESSAGE_PAGE`
-    com `app_destination: INSTAGRAM_DIRECT`.
-    [Fonte](https://developers.facebook.com/documentation/ads-commerce/instagram/ads-api/guides/use-posts-as-ads)
-    O objetivo e a otimização para ele sozinho **não estão confirmados** na doc.
-    Entrou no protótipo por decisão de 26/10; **confirmar na chamada real antes
-    da flag**. Sem conta do Instagram ligada à Página, a opção aparece apagada,
-    com o motivo.
+    `CONVERSATIONS`, `promoted_object` com `page_id`; criativo com `link`
+    `https://fb.com/messenger_doc/` e botão `MESSAGE_PAGE` com
+    `app_destination: MESSENGER`. Liberado no #2560 (05/11), só em
+    "Automático", sem carrossel e sem mensagem pronta (vale a saudação padrão
+    da Meta).
+    [Fonte](https://developers.facebook.com/docs/marketing-api/ad-creative/messaging-ads/click-to-messenger)
+  - **Direct do Instagram:** `OUTCOME_ENGAGEMENT`, destino `INSTAGRAM_DIRECT`,
+    otimização `CONVERSATIONS`, `promoted_object` com `page_id`; criativo com a
+    conta do Instagram da Página, `link` `https://www.instagram.com` e botão
+    `INSTAGRAM_MESSAGE` com `app_destination: INSTAGRAM_DIRECT`. Liberado no
+    #2560 (05/11), com as mesmas limitações do Messenger. Sem conta do
+    Instagram ligada à Página, a opção aparece apagada, com o motivo, e o
+    servidor recusa (`invalid_instagram`).
+    [Fonte](https://developers.facebook.com/docs/marketing-api/ad-creative/messaging-ads/click-to-instagram)
+    A página do Direct ainda cita `instagram_actor_id`, mas a Marketing API
+    v22.0 trocou esse campo por `instagram_user_id`, que é o que o criativo
+    manda (o mesmo do site e do WhatsApp).
+    [Changelog v22.0](https://developers.facebook.com/docs/marketing-api/marketing-api-changelog/version22.0)
+    Vídeo único vale para os dois: as páginas de Messenger e Direct trazem
+    exemplo com `video_data`. **A primeira chamada real confirma** (anúncio
+    pausado de teste na conta 18).
   - **Site:** `OUTCOME_TRAFFIC`, `LINK_CLICKS`, `link` e botão `LEARN_MORE`
     (padrão) ou `SHOP_NOW`.
     [Fonte do link e do botão](https://developers.facebook.com/documentation/ads-commerce/marketing-api/get-started/basic-ad-creation/create-an-ad-creative)
@@ -203,7 +221,22 @@ Verificado na documentação oficial em 26/10/2026.
     só os dois do exemplo oficial. A pessoa digita o endereço como conhece
     ("lojaexemplo.com.br"); a tela completa com `https://` na conferência e no
     envio. O servidor confere o endereço (https e domínio) de novo.
-  - Sem número de WhatsApp, a tela para com "Conectar número" e oferece
+  - **Perfil do Instagram (#2564):** `OUTCOME_TRAFFIC`, destino
+    `INSTAGRAM_PROFILE`, otimização `PROFILE_VISIT`, `promoted_object` com
+    `page_id`, cobrança por impressão; criativo com a conta do Instagram da
+    Página em `instagram_user_id`, `link` para o perfil
+    (`https://www.instagram.com/<usuario>/`) e botão `VIEW_INSTAGRAM_PROFILE`
+    com o mesmo endereço. Só em "Só Instagram" (decisão do Rodrigo, 06/11), sem
+    carrossel. A Meta exige `special_ad_categories` vazio: com "seguro, crédito,
+    empréstimo ou investimento" marcado, a tela explica e leva de volta à
+    pergunta do destino, e o servidor recusa (`special_category_profile`). Sem
+    conta do Instagram (ou sem o @ dela), `invalid_instagram`. A doc avisa que
+    o anúncio tem disponibilidade limitada; vídeo único segue o mesmo
+    `video_data` do site. **A primeira chamada real confirma** (anúncio pausado
+    de teste na conta 18, com OK do Rodrigo).
+    [Fonte](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ad-creative/profile-visit-ads/instagram-profile-visit)
+  - Sem número de WhatsApp, "conversar" escolhe o Direct ou o Messenger quando
+    dá. Se só o WhatsApp sobrar, a tela para com "Conectar número" e oferece
     "Anunciar com outro destino" (o primeiro destino confirmado depois do
     WhatsApp; sem nenhum, só "Conectar número").
 - **O que a pessoa vende:** campo obrigatório no topo ("bolo de pote a R$ 12").
@@ -366,6 +399,8 @@ vídeo ao vivo, e ela só entra no pedido se a chamada real provar que precisa.
 Na conta de teste, com os testadores do app:
 
 1. Objetivo e otimização do anúncio com destino Direct do Instagram sozinho.
+   A doc oficial (Click to Instagram) diz `OUTCOME_ENGAGEMENT` com
+   `CONVERSATIONS`; falta a chamada real (#2560).
 2. "Só Instagram" e "Só Facebook" com destino WhatsApp.
 3. `POST /{ad_id}` com `creative` novo, sem recriar o anúncio.
 4. Subcampos de `boost_eligibility_info`.
@@ -373,7 +408,8 @@ Na conta de teste, com os testadores do app:
 6. Carrossel com destino Messenger ou Direct (hoje a tela não oferece).
 7. Botão de WhatsApp em post da Página (hoje a tela não oferece).
 8. Posições aceitas pelo clique para WhatsApp e `adapt_to_placement`.
-9. Destino Messenger com objetivo de mensagens.
+9. Destino Messenger com objetivo de mensagens. A doc oficial (Click to
+   Messenger) confirma os campos; falta a chamada real (#2560).
 10. Publicar vídeo comum no post da Página: provar se precisa de `publish_video`
     ou se `pages_manage_posts` basta.
 11. Tirar a data de fim de um grupo com orçamento por dia: o servidor manda
@@ -509,6 +545,50 @@ Impulsionar post (#2339), na mesma flag `meta_ads_criar`. Pedido do Rodrigo em
     lista do Instagram inteira falha;
   - se `ON_POST` com `OUTCOME_ENGAGEMENT` passa sem `promoted_object`;
   - o filtro de perfil e capa num post real.
+
+## Servidor do PR 3 (criar post, #2653)
+
+- `POST meta_ads_connection/post_media`: a foto ou o vídeo sobe uma vez para o
+  nosso armazenamento (`Crm::MetaAds::Creation::PostMedia`), com os mesmos
+  limites e a mesma conferência do arquivo do anúncio. PNG vira JPEG (o
+  Instagram só aceita JPEG; a Página recebe a mesma). Volta um `signed_id` que
+  só vale nesta conta e por um dia; o arquivo é apagado depois.
+- `POST meta_ads_connection/posts`: `{ idempotency_key, page_id, networks,
+  caption, media_id }`. Publica na hora (`Crm::MetaAds::Creation::Publish`):
+  - Página: `POST /{page-id}/photos` (`url`, `message`) ou `/videos`
+    (`file_url`, `description`), com o token da Página. Da foto sai o
+    `post_id`, que o impulsionar usa. Do vídeo a Meta devolve só o vídeo: a
+    tela não oferece impulsionar o vídeo da Página (**a confirmar** na chamada
+    real, junto com o item 10).
+  - Instagram: contêiner (`image_url`, ou `media_type: REELS` com
+    `video_url`), `status_code` e `media_publish`. A requisição não fica
+    esperando: a foto ganha até 4 s para o contêiner ficar `FINISHED`; o vídeo
+    confere uma vez. Não pronto: `processing`, e o "Tentar de novo" segue com o
+    mesmo contêiner. Contêiner que já aparece `PUBLISHED`: `unconfirmed`.
+  - Cada rede publica por conta própria. A resposta traz as que publicaram, as
+    que não (`failed`, com o código em `errors`) e `published_now`. Nenhuma
+    publicou: 422 com o código.
+  - Na dúvida, nunca publica de novo sozinho
+    (`Crm::MetaAds::Creation::PublishState`, por chave e rede, no Redis por um
+    dia): uma tentativa de cada vez (trava de 2 minutos, a outra recebe
+    `in_progress`); a mesma chave devolve o que já publicou; se a chamada que
+    publica saiu e não voltou resposta certa (rede, 5xx, queda do processo), a
+    chave responde `unconfirmed` e a tela pede para conferir na rede antes de
+    publicar de novo ("Conferi e não saiu"), com chave nova. Recusa certa da Meta
+    libera a chave. A mesma chave com outro conteúdo (Página, mídia ou legenda)
+    é `idempotency_conflict`.
+  - Foto até 8 MB (teto do Instagram). JPEG decidido pelos bytes, não pelo tipo
+    que o navegador diz; transparência vai sobre fundo branco.
+  - Cada rede pede a sua permissão no token (`pages_manage_posts`,
+    `instagram_content_publish`); sem ela, `cannot_publish` e nada chama a
+    Meta. As opções de criar trazem `publish: { facebook, instagram }` e, no
+    Instagram de cada Página, `publish_left` (lido em
+    `content_publishing_limit`; `null` quando a leitura falha, e a tela não
+    apaga o Instagram por isso).
+  - A Auditoria registra `meta_ads_post_published` com quem publicou, a Página,
+    os ids e as redes que falharam (nunca o token).
+- Mesma gate do resto: flag `meta_ads_criar`, `meta_ads_manage` (ou
+  administrador) para subir mídia e publicar.
 
 ## Permissões que a Meta precisa ver no vídeo
 

@@ -87,4 +87,24 @@ RSpec.describe Autonomia::Insurance::Connector::Http do
     expect(destino).to start_with('https://lambda.us-east-1.amazonaws.com/2015-03-31/functions/')
     expect(destino).to end_with('/invocations')
   end
+
+  # Auditoria da conexão, 05/11/2026: 401/403 da INVOCAÇÃO é a AWS recusando a nossa máquina. O portal
+  # nem viu a senha, e `auth_required` pedia à corretora que trocasse uma senha certa.
+  [401, 403].each do |status|
+    it "a invocação recusada com #{status} é infraestrutura, não senha" do
+      erro = erro_de(outer_status: status, outer_body: '{"Message":"not authorized"}')
+
+      expect(erro.kind).to eq(:unavailable)
+      expect(erro.causa).to eq(:invoke_recusado)
+    end
+  end
+
+  it 'o 403 do HANDLER continua auth_required, e traz a falha classificada pelo adapter' do
+    failure = { 'cause' => 'credential_rejected', 'actor' => 'broker', 'layer' => 'platform_auth', 'retryable' => false }
+    erro = erro_de(inner_status: 403, inner_body: { 'error' => 'auth_required', 'message' => 'recusada',
+                                                    'failure' => failure }.to_json)
+
+    expect(erro.kind).to eq(:auth_required)
+    expect(erro.details['failure']).to eq(failure)
+  end
 end

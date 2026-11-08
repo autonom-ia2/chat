@@ -248,8 +248,11 @@ RSpec.describe Crm::MetaAds::InstagramComments do
 
       expect(row).to include(id: 'c9', text: 'Temos sim', can_reply: false)
       expect(row[:author]).to include(username: 'lojaexemplo', is_page: true)
-      expect(Crm::MetaAdsCommentAction.sole).to have_attributes(account_id: account.id, network: 'instagram', ad_id: ad_id,
-                                                                comment_id: 'c9', action: 'page_reply', actor: 'user', user_id: user.id)
+      expect(Crm::MetaAdsCommentAction.find_by!(action: 'page_reply'))
+        .to have_attributes(account_id: account.id, network: 'instagram', ad_id: ad_id, comment_id: 'c9', actor: 'user', user_id: user.id)
+      # #2519: o comentário respondido também fica marcado, para sair do "esperando" e a IA não agir por cima.
+      expect(Crm::MetaAdsCommentAction.find_by!(action: 'reply'))
+        .to have_attributes(account_id: account.id, network: 'instagram', ad_id: ad_id, comment_id: 'c1', actor: 'user', user_id: user.id)
     end
 
     it 'resposta aceita pela Meta não vira erro quando gravar a linha falha' do
@@ -260,8 +263,9 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
 
       expect(service.reply!(ad_id, 'c1', 'Temos sim', user: user)).to include(id: 'c9')
-      expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(NoMethodError), account: account)
-      expect(tracker).to have_received(:capture_exception)
+      # A linha da resposta (page_reply) e a do comentário respondido (reply, #2519): as duas vão ao rastreador.
+      expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(NoMethodError), account: account).twice
+      expect(tracker).to have_received(:capture_exception).twice
     end
 
     it 'resposta a uma resposta vai para o comentário de cima, como no app' do
@@ -276,7 +280,8 @@ RSpec.describe Crm::MetaAds::InstagramComments do
     it 'recusa comentário de outra mídia como comment_not_found, sem agir' do
       stub_comment('c1', media: '1799999')
 
-      expect { service.hide!(ad_id, 'c1', hidden: true) }.to raise_error(described_class::Error) { |e| expect(e.code).to eq('comment_not_found') }
+      expect { service.hide!(ad_id, 'c1', hidden: true, user: user) }
+        .to raise_error(described_class::Error) { |e| expect(e.code).to eq('comment_not_found') }
       expect(a_request(:post, %r{#{ig}/c1})).not_to have_been_made
     end
 
@@ -285,9 +290,12 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       stub_request(:post, %r{#{ig}/c1\?}).to_return(status: 200, headers: json, body: { success: true }.to_json)
       stub_request(:delete, %r{#{ig}/c1\?}).to_return(status: 200, headers: json, body: { success: true }.to_json)
 
-      expect(service.hide!(ad_id, 'c1', hidden: true)).to eq(id: 'c1', hidden: true)
-      expect(service.hide!(ad_id, 'c1', hidden: false)).to eq(id: 'c1', hidden: false)
-      expect(service.delete!(ad_id, 'c1')).to eq(id: 'c1')
+      expect(service.hide!(ad_id, 'c1', hidden: true, user: user)).to eq(id: 'c1', hidden: true)
+      expect(service.hide!(ad_id, 'c1', hidden: false, user: user)).to eq(id: 'c1', hidden: false)
+      expect(service.delete!(ad_id, 'c1', user: user)).to eq(id: 'c1')
+      # #2519: cada ação da pessoa fica no comentário (o Esperando e o Cuidar a leem).
+      expect(Crm::MetaAdsCommentAction.where(comment_id: 'c1').order(:id).pluck(:action, :actor, :ad_id, :user_id))
+        .to eq([['hide', 'user', ad_id, user.id], ['show', 'user', ad_id, user.id], ['delete', 'user', ad_id, user.id]])
     end
 
     # #2358: agir em comentário pede ver a caixa do Instagram, não só o privado.
@@ -296,8 +304,8 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       refused = ->(code) { raise_error(described_class::Error) { |e| expect(e.code).to eq(code) } }
 
       expect { outsider.reply!(ad_id, 'c1', 'Temos sim', user: user) }.to refused.call('not_inbox_member')
-      expect { outsider.hide!(ad_id, 'c1', hidden: true) }.to refused.call('not_inbox_member')
-      expect { outsider.delete!(ad_id, 'c1') }.to refused.call('not_inbox_member')
+      expect { outsider.hide!(ad_id, 'c1', hidden: true, user: user) }.to refused.call('not_inbox_member')
+      expect { outsider.delete!(ad_id, 'c1', user: user) }.to refused.call('not_inbox_member')
       expect { outsider.private_reply!(ad_id, 'c1', 'Oi', user: user) }.to refused.call('not_inbox_member')
       expect(instagram_call).not_to have_been_made
       expect(Crm::MetaAdsCommentAction.count).to eq(0)
@@ -308,14 +316,18 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       allow(channel).to receive(:reauthorization_required?).and_return(true)
       outsider = described_class.new(connection, inbox_access: ->(_inbox) { false }, can_manage: true)
 
-      expect { outsider.hide!(ad_id, 'c1', hidden: true) }.to raise_error(described_class::Error) { |e| expect(e.code).to eq('needs_login') }
+      expect { outsider.hide!(ad_id, 'c1', hidden: true, user: user) }
+        .to raise_error(described_class::Error) { |e| expect(e.code).to eq('needs_login') }
       expect(instagram_call).not_to have_been_made
     end
 
-    it 'texto vazio ou longo demais: invalid_text, sem chamar a Meta' do
+    it 'texto vazio: invalid_text; privado acima de 1000 bytes: text_too_long; nada chama a Meta' do
       expect { service.reply!(ad_id, 'c1', '  ', user: user) }.to raise_error(described_class::Error) { |e| expect(e.code).to eq('invalid_text') }
       expect { service.private_reply!(ad_id, 'c1', 'a' * 1001, user: user) }
-        .to raise_error(described_class::Error) { |e| expect(e.code).to eq('invalid_text') }
+        .to raise_error(described_class::Error) { |e| expect(e.code).to eq('text_too_long') }
+      # #2543: 600 letras com acento são 1200 bytes, e a Meta conta bytes.
+      expect { service.private_reply!(ad_id, 'c1', 'ã' * 600, user: user) }
+        .to raise_error(described_class::Error) { |e| expect(e.code).to eq('text_too_long') }
       expect(instagram_call).not_to have_been_made
     end
 
@@ -467,6 +479,64 @@ RSpec.describe Crm::MetaAds::InstagramComments do
         expect { service.private_reply!(ad_id, 'c9', 'Oi!', user: user) }
           .to raise_error(described_class::Error) { |e| expect(e.code).to eq('private_reply_top_only') }
         expect(a_request(:post, %r{/messages})).not_to have_been_made
+      end
+
+      describe 'resposta a comentário, com a flag meta_ads_comentarios_ia (#2454)' do
+        let(:mensagens) { "#{ig}/#{ig_id}/messages" }
+
+        before do
+          account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
+          stub_comment('c9', parent_id: 'c1')
+        end
+
+        def recusa(corpo)
+          stub_request(:post, mensagens).with(query: hash_including({})).to_return(status: 400, headers: json, body: { error: corpo }.to_json)
+        end
+
+        it 'não recusa antes da Meta; aceito, a linha guarda o id da mensagem' do
+          service.private_reply!(ad_id, 'c9', 'Oi!', user: user)
+
+          expect(a_request(:post, mensagens).with(query: hash_including({}))).to have_been_made
+          expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c9', action: 'private_reply'))
+            .to have_attributes(confirmed_at: be_present, meta_message_id: 'mid.1', meta_error_code: nil)
+        end
+
+        it 'recusado pela Meta: o código e o subcódigo no erro e na linha private_reply_failed, nunca a mensagem' do
+          recusa({ code: 100, error_subcode: 2_534_023, message: 'Texto de terceiro' })
+
+          expect { service.private_reply!(ad_id, 'c9', 'Oi!', user: user) }.to raise_error(described_class::Error) { |e|
+            expect(e).to have_attributes(code: 'meta_refused', meta_code: 100, meta_subcode: 2_534_023, meta_http: 400)
+          }
+          expect(Crm::MetaAdsCommentAction.where(comment_id: 'c9', action: 'private_reply')).to be_empty
+          expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c9', action: 'private_reply_failed'))
+            .to have_attributes(actor: 'user', user_id: user.id, ad_id: ad_id, meta_error_code: 100, meta_error_subcode: 2_534_023,
+                                meta_message_id: nil)
+        end
+
+        it 'recusa 4xx sem código da Meta: a linha sai, e nenhuma linha de recusa é gravada' do
+          stub_request(:post, mensagens).with(query: hash_including({})).to_return(status: 400, headers: json, body: 'recusado')
+
+          expect { service.private_reply!(ad_id, 'c9', 'Oi!', user: user) }.to raise_error(described_class::Error)
+          expect(Crm::MetaAdsCommentAction.where(comment_id: 'c9')).to be_empty
+        end
+
+        it 'falha passageira segue a regra de hoje: sem confirmação, travada, e sem linha de recusa' do
+          stub_request(:post, mensagens).with(query: hash_including({})).to_timeout
+
+          expect { service.private_reply!(ad_id, 'c9', 'Oi!', user: user) }.to raise_error(described_class::Error)
+          expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c9', action: 'private_reply')).to have_attributes(failed_at: be_present)
+          expect(Crm::MetaAdsCommentAction.where(action: 'private_reply_failed')).to be_empty
+        end
+
+        it 'o comentário de primeiro nível fica como antes: sem id da mensagem nem linha de recusa' do
+          service.private_reply!(ad_id, 'c1', 'Oi!', user: user)
+          expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c1').meta_message_id).to be_nil
+
+          Crm::MetaAdsCommentAction.delete_all
+          recusa({ code: 10 })
+          expect { service.private_reply!(ad_id, 'c1', 'Oi!', user: user) }.to raise_error(described_class::Error)
+          expect(Crm::MetaAdsCommentAction.count).to eq(0)
+        end
       end
 
       it 'depois de a Meta aceitar, erro ao abrir a conversa não vira falha' do

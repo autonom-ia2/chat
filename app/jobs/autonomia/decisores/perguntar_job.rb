@@ -51,6 +51,7 @@ class Autonomia::Decisores::PerguntarJob < ApplicationJob
   end
 
   def seguir(decisao, marca, rule, message, indice)
+    # A extração dos campos escreve texto livre no card e na decisão: sem o anúncio de origem (#2558).
     estado = Autonomia::Decisores::Estado.new(conversation: message.conversation, message: message,
                                               leituras: decisao.decisor.leituras_efetivas)
     Autonomia::Decisores::Seguimento.new(decisao: decisao, marca: marca, estado: estado).perform do

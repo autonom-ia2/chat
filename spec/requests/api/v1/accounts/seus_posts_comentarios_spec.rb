@@ -96,6 +96,19 @@ RSpec.describe 'Seus posts: comentários de cada post', type: :request do
     expect(response.parsed_body['error']).to eq('meta_unavailable')
   end
 
+  # #2519: o comentário respondido fica marcado com a ação da pessoa (além do `page_reply` da resposta), para sair do
+  # "esperando" e a IA não agir por cima.
+  it 'responde em público e grava a ação da pessoa no comentário respondido' do
+    stub_comentario
+    stub_request(:post, %r{#{ig}/#{comment_id}/replies}).to_return(status: 200, headers: json, body: { id: '18000000000000009' }.to_json)
+
+    post "#{base}/comments/#{comment_id}/reply", params: { perfil: perfil, content: 'Temos sim' }, headers: headers, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(Crm::MetaAdsCommentAction.where(actor: 'user').order(:id).pluck(:action, :comment_id))
+      .to eq([%w[page_reply 18000000000000009], ['reply', comment_id]])
+  end
+
   it 'esconde e apaga, grava as ações sem anúncio e esquece "esperando você" do perfil' do
     stub_comentario
     stub_request(:post, %r{#{ig}/#{comment_id}\?}).to_return(status: 200, headers: json, body: { success: true }.to_json)
@@ -143,6 +156,19 @@ RSpec.describe 'Seus posts: comentários de cada post', type: :request do
     # A IA não manda outro privado à mesma pessoa neste post (#2212).
     expect(Crm::MetaAdsCommentPerson.sole).to have_attributes(account_id: account.id, network: 'instagram', post_id: post_id, from_id: '501',
                                                               comment_id: comment_id)
+  end
+
+  it 'privado com acento acima de 1000 bytes (menos de 1000 letras): 422 text_too_long, sem chamar a Meta (#2543)' do
+    envio = stub_request(:post, %r{#{ig}/#{ig_id}/messages})
+
+    post "#{base}/comments/#{comment_id}/private_reply", params: { perfil: perfil, content: 'ã' * 600 },
+                                                         headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body).to eq('error' => 'text_too_long')
+    expect(envio).not_to have_been_made
+    expect(a_request(:get, /graph\.instagram\.com/)).not_to have_been_made
+    expect(Crm::MetaAdsCommentAction.where(comment_id: comment_id)).to be_empty
   end
 
   describe 'a marca da pessoa no post (#2212): nasce antes da Meta' do

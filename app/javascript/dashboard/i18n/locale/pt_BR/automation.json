@@ -1,5 +1,6 @@
 {
   "AUTOMATION": {
+    "EXTERNAL_ACTIONS_LOCKED": "Esta regra envia a conversa para fora da plataforma. Para mudar, ligar, desligar ou copiar, você precisa da permissão de Integrações.",
     "HEADER": "Automação",
     "DESCRIPTION": "A automação pode substituir e simplificar processos existentes que requerem esforço manual, como a adição de etiquetas e a atribuição de conversas ao agente mais adequado. Isso permite que o time se concentre em seus pontos fortes e reduza o tempo gasto em tarefas rotineiras.",
     "LEARN_MORE": "Aprenda mais sobre automação",
@@ -251,6 +252,10 @@
       "RESOLVED": "Resolvido",
       "CANCELLED": "Cancelado"
     },
-    "CRM_OPTIONS_ERROR": "Não foi possível carregar os funis do CRM."
+    "CRM_OPTIONS_ERROR": "Não foi possível carregar os funis do CRM.",
+    "LOCKED_ACTION": {
+      "HINT": "Este passo não pode ser editado aqui. Ele continua na regra ao salvar.",
+      "REMOVE": "Remover passo"
+    }
   }
 }

@@ -1,7 +1,10 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import { lerGestao } from '../gestaoDoAnuncio';
 import CuidarComentarios from './CuidarComentarios.vue';
@@ -17,11 +20,14 @@ const adId = computed(() => String(route.params.adId));
 const target = computed(() => ({ kind: 'ad', id: adId.value }));
 const canManage = usePermissionGranted('meta_ads_manage');
 
-// Sem a gestão (falhou a leitura), a tela de cuidar segue sem o cabeçalho do post.
+// Sem a gestão (falhou a leitura, ou a flag meta_ads_gestao desligada: #2520, a tela abre sem ela), a tela de cuidar
+// segue sem o cabeçalho do post. Sem a flag, nem pergunta (o servidor responderia 404).
+const { isCloudFeatureEnabled } = useAccount();
 const gestao = ref(null);
 const lerAnuncio = async () => {
   const asked = adId.value;
   gestao.value = null;
+  if (!isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_GESTAO)) return;
   const data = await lerGestao(asked);
   if (asked === adId.value) gestao.value = data;
 };
@@ -35,12 +41,24 @@ const cabecalho = computed(() => {
 const caixa = inboxId =>
   frontendURL(`accounts/${route.params.accountId}/inbox/${inboxId}`);
 
+// #2479: aberto pelo "Criar agente" de Agentes (?de=agentes), volta para Agentes.
+const { t } = useI18n();
+const deAgentes = computed(() => route.query.de === 'agentes');
+const voltarLabel = computed(() =>
+  deAgentes.value ? t('AGENTS.AGENTE_DO_POST.CRIAR.VOLTAR_AGENTES') : ''
+);
+const paraOAnuncio = () => ({
+  name: 'campaigns_meta_ads_index',
+  params: { accountId: route.params.accountId },
+  query: { aba: 'resultado', anuncio: adId.value },
+});
+const paraAgentes = () => ({
+  name: 'autonomia_agents_index',
+  params: { accountId: route.params.accountId },
+});
 const voltar = () =>
-  router.push({
-    name: 'campaigns_meta_ads_index',
-    params: { accountId: route.params.accountId },
-    query: { aba: 'resultado', anuncio: adId.value },
-  });
+  router.push(deAgentes.value ? paraAgentes() : paraOAnuncio());
+const responder = () => router.push(paraOAnuncio());
 </script>
 
 <template>
@@ -55,9 +73,11 @@ const voltar = () =>
         :target="target"
         :post="cabecalho"
         origin="anuncio"
+        :back-label="voltarLabel"
         :can-manage="canManage"
         :inbox-path-of="caixa"
         @back="voltar"
+        @reply="responder"
       />
     </div>
   </section>

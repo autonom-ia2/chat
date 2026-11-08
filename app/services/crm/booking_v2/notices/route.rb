@@ -70,6 +70,7 @@ class Crm::BookingV2::Notices::Route
     variables.all? { |name| FILLED_VARIABLES.include?(name) } && Array(template.to_h['components']).none? { |item| asks_more?(item) }
   end
 
+  # Também lido pelo modelo do passo "mensagem" da Automação (Autonomia::Automacao::ModeloWhatsapp, #2468).
   def self.asks_more?(component)
     case component.to_h['type'].to_s.upcase
     when 'HEADER' then MEDIA_HEADERS.include?(component['format'].to_s.upcase) || component['text'].to_s.include?('{{')
@@ -77,7 +78,6 @@ class Crm::BookingV2::Notices::Route
     else false
     end
   end
-  private_class_method :asks_more?
 
   # Modelo da lista sincronizada da caixa com o nome e o idioma configurados (qualquer status).
   def self.synced_template(inbox, configured)

@@ -156,6 +156,7 @@ const mountPanel = async (options = {}) => {
           template: '<span data-report-stub :data-period="period" />',
         },
         RouterLink: {
+          name: 'RouterLink',
           props: ['to'],
           template: '<a :href="to"><slot /></a>',
         },
@@ -176,6 +177,7 @@ const mountPanel = async (options = {}) => {
 describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    accountFlags.clear();
     // Rota reativa e replace que muda o endereço, como o vue-router: o painel lê o anúncio aberto do endereço.
     routing.route = reactive({ params: { accountId: '18' }, query: {} });
     routing.replace.mockImplementation(({ query }) => {
@@ -650,8 +652,8 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
               {
                 destination: 'whatsapp',
                 meta: 52,
-                ours: 46,
-                difference: -6,
+                ours: 48,
+                difference: -4,
                 explanation: 'close',
               },
             ],
@@ -713,40 +715,175 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     expect(wrapper.find('[data-panel-connect]').exists()).toBe(false);
   });
 
-  it('ads without a conversation go to their own block, with spend, clicks and reach (#2054)', async () => {
+  // #2621: uma lista só. O anúncio que não abre conversa entra depois dos de conversa, no mesmo cartão grande, com o
+  // investido e um número só, o do objetivo dele, e sem veredito de conversa.
+  const PROFILE_AD = {
+    ad_id: '9',
+    name: 'Perfil',
+    destination: 'profile',
+    spend: 50,
+    link_clicks: 400,
+    post_engagement: 430,
+    comments: 3,
+    leads: 0,
+    impressions: 10000,
+    thumbnail_url: null,
+    image_url: null,
+  };
+  const panelWithOther = (other, ads = PANEL.ads) =>
     CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
       data: {
         panel: {
           ...PANEL,
-          totals: { ...PANEL.totals, other_spend: 101.76 },
-          other_ads: [
-            {
-              ad_id: '9',
-              name: 'EUA',
-              spend: 101.76,
-              link_clicks: 540,
-              impressions: 35454,
-              thumbnail_url: null,
-              image_url: null,
-            },
-          ],
+          ads,
+          totals: { ...PANEL.totals, other_spend: 50 },
+          other_ads: [other],
         },
       },
     });
+  const statKeys = card =>
+    card
+      .findAll('[data-panel-ad-stat]')
+      .map(node => node.attributes('data-panel-ad-stat'));
+
+  it('every ad goes in one list of big cards, the ones without a conversation after (#2621)', async () => {
+    panelWithOther(PROFILE_AD);
     const wrapper = await mountPanel();
 
-    const other = wrapper.find('[data-panel-other-ads]');
-    expect(other.text()).toContain('PANEL.OTHER_ADS.TITLE');
-    expect(other.find('[data-panel-other-ad="9"]').text()).toContain('EUA');
-    expect(other.find('[data-panel-other-ad="9"]').text()).toContain('540');
-    expect(wrapper.text()).toContain('PANEL.ADS_WHATSAPP_TITLE');
-    expect(wrapper.find('[data-panel-ad="9"]').exists()).toBe(false);
+    const cards = wrapper.findAll('[data-panel-ad]');
+    expect(cards.map(card => card.attributes('data-panel-ad'))).toEqual([
+      ...PANEL.ads.map(ad => String(ad.ad_id)),
+      '9',
+    ]);
+    expect(cards.at(-1).attributes('data-panel-ad-kind')).toBe('profile');
+    expect(
+      cards
+        .at(-1)
+        .find('[data-panel-ad-image-backdrop], [data-panel-ad-placeholder]')
+        .exists()
+    ).toBe(true);
+    expect(wrapper.text()).toContain('PANEL.ADS_ALL_TITLE');
+    expect(wrapper.find('[data-panel-other-ads]').exists()).toBe(false);
   });
 
-  it('without ads outside WhatsApp there is no other block and the usual title (#2054)', async () => {
+  it('a profile ad shows spend and taps to the profile, says where it goes, and has no verdict (#2621)', async () => {
+    panelWithOther(PROFILE_AD);
     const wrapper = await mountPanel();
 
-    expect(wrapper.find('[data-panel-other-ads]').exists()).toBe(false);
+    const card = wrapper.find('[data-panel-ad="9"]');
+    expect(statKeys(card)).toEqual(['SPEND', 'RESULT_PROFILE']);
+    expect(card.text()).toContain('400');
+    expect(card.find('[data-panel-ad-destination]').text()).toContain(
+      'PANEL.OTHER_ADS.DESTINATIONS.PROFILE'
+    );
+    expect(card.find('[data-verdict]').exists()).toBe(false);
+    expect(card.text()).not.toContain('PANEL.AD_QUOTES');
+  });
+
+  it('each goal has its one number: website clicks, leads, engagement, reach, else clicks (#2621)', async () => {
+    const cases = [
+      ['website', 'RESULT_WEBSITE'],
+      ['lead_form', 'RESULT_LEADS'],
+      ['post', 'RESULT_ENGAGEMENT'],
+      ['reach', 'RESULT_SHOWN'],
+      ['app', 'RESULT_CLICKS'],
+    ];
+    // eslint-disable-next-line no-restricted-syntax
+    for (const [destination, key] of cases) {
+      panelWithOther({ ...PROFILE_AD, destination });
+      // eslint-disable-next-line no-await-in-loop
+      const wrapper = await mountPanel();
+      expect(statKeys(wrapper.find('[data-panel-ad="9"]'))).toEqual([
+        'SPEND',
+        key,
+      ]);
+      wrapper.unmount();
+    }
+  });
+
+  it('conversations from a comment DM show next to where the ad goes, only when there are some (#2521)', async () => {
+    panelWithOther({ ...PROFILE_AD, private_conversations: 2 });
+    let wrapper = await mountPanel();
+    expect(
+      wrapper.find('[data-panel-ad="9"] [data-panel-ad-destination]').text()
+    ).toContain('PANEL.AD_PRIVATE');
+    wrapper.unmount();
+
+    panelWithOther(PROFILE_AD);
+    wrapper = await mountPanel();
+    expect(
+      wrapper.find('[data-panel-ad="9"] [data-panel-ad-destination]').text()
+    ).not.toContain('PANEL.AD_PRIVATE');
+  });
+
+  it('an ad among the others opens inside like the rest (#2519)', async () => {
+    panelWithOther(PROFILE_AD);
+    const wrapper = await mountPanel();
+
+    await wrapper.find('[data-panel-ad-open="9"]').trigger('click');
+    await flushPromises();
+
+    expect(routing.route.query).toEqual({ anuncio: '9' });
+    expect(CrmMetaAdsConnectionAPI.panelAd).toHaveBeenLastCalledWith(
+      '9',
+      '30d'
+    );
+  });
+
+  // #2520: sem a gestão (meta_ads_gestao), que não entra na régua dos comentários.
+  const CARE_FLAGS = [
+    'meta_ads_comentarios_instagram',
+    'meta_ads_comentarios_ia',
+  ];
+
+  it('with the comments AI on, each ad with comments links to "Handle comments" (#2519)', async () => {
+    CARE_FLAGS.forEach(flag => accountFlags.add(flag));
+    panelWithOther(PROFILE_AD, [{ ...PANEL.ads[0], comments: 4 }]);
+    const wrapper = await mountPanel();
+
+    expect(wrapper.find('[data-panel-ad-comments="1"]').text()).toContain(
+      'PANEL.COMMENTS.COUNT'
+    );
+    expect(
+      wrapper
+        .findAllComponents({ name: 'RouterLink' })
+        .map(link => link.props('to'))
+    ).toContainEqual({
+      name: 'campaigns_meta_ads_cuidar',
+      params: { accountId: '18', adId: '1' },
+    });
+    expect(
+      wrapper.find('[data-panel-ad="9"] [data-panel-ad-comments="9"]').exists()
+    ).toBe(true);
+    accountFlags.clear();
+  });
+
+  it('without the comments AI, or without comments, there is no comments link (#2519)', async () => {
+    panelWithOther(PROFILE_AD, [{ ...PANEL.ads[0], comments: 4 }]);
+    let wrapper = await mountPanel();
+    expect(wrapper.find('[data-panel-ad-comments]').exists()).toBe(false);
+    wrapper.unmount();
+
+    // A IA sem os comentários de nenhuma rede: o anúncio por dentro também não mostra o cuidar.
+    accountFlags.add('meta_ads_comentarios_ia');
+    panelWithOther(PROFILE_AD, [{ ...PANEL.ads[0], comments: 4 }]);
+    wrapper = await mountPanel();
+    expect(wrapper.find('[data-panel-ad-comments]').exists()).toBe(false);
+    wrapper.unmount();
+
+    CARE_FLAGS.forEach(flag => accountFlags.add(flag));
+    panelWithOther({ ...PROFILE_AD, comments: 0 }, [
+      { ...PANEL.ads[0], comments: 0 },
+    ]);
+    wrapper = await mountPanel();
+    expect(wrapper.find('[data-panel-ad-comments]').exists()).toBe(false);
+    accountFlags.clear();
+  });
+
+  it('without ads outside a conversation the list keeps the usual title (#2054)', async () => {
+    const wrapper = await mountPanel();
+
+    expect(wrapper.find('[data-panel-ad-kind="profile"]').exists()).toBe(false);
     expect(wrapper.text()).toContain('PANEL.ADS_TITLE');
   });
 
@@ -1037,8 +1174,8 @@ describe('Anúncios da Meta · Quanto confiar, Meta × nós (#1110, F5)', () => 
     {
       destination: 'whatsapp',
       meta: 52,
-      ours: 46,
-      difference: -6,
+      ours: 48,
+      difference: -4,
       explanation: 'close',
     },
     {
@@ -1082,11 +1219,11 @@ describe('Anúncios da Meta · Quanto confiar, Meta × nós (#1110, F5)', () => 
     );
     const whatsapp = wrapper.find('[data-confidence-meta-row="whatsapp"]');
     expect(whatsapp.text()).toContain(
-      'Até ontem, a Meta diz 52 conversas iniciadas pelo WhatsApp; nós contamos 46.'
+      'Até ontem, a Meta diz 52 conversas iniciadas pelo WhatsApp; nós contamos 48.'
     );
     expect(whatsapp.findAll('strong').map(node => node.text())).toEqual([
       '52',
-      '46',
+      '48',
     ]);
     expect(whatsapp.text()).toContain('Os dois números batem.');
     const site = wrapper.find('[data-confidence-meta-row="site"]');
@@ -1104,6 +1241,41 @@ describe('Anúncios da Meta · Quanto confiar, Meta × nós (#1110, F5)', () => 
 
     expect(wrapper.find('[data-confidence-meta-empty]').text()).toBe(
       'A Meta ainda não mandou o número deste período.'
+    );
+  });
+
+  // #2344: um lado zerado nunca "bate"; a frase diz o caso, com o número e o plural certos.
+  it('explains a zero on one side, with the Meta number and its plural', () => {
+    const row = (destination, meta, ours, explanation) => ({
+      destination,
+      meta,
+      ours,
+      difference: ours - meta,
+      explanation,
+    });
+    const wrapper = mountConfidence({
+      confidence: CONFIDENCE,
+      comparison: {
+        days: 7,
+        rows: [
+          row('whatsapp', 1, 0, 'ours_none'),
+          row('messaging', 2, 0, 'ours_none'),
+          row('site', 0, 3, 'meta_none'),
+        ],
+      },
+    });
+
+    const text = destination =>
+      wrapper.find(`[data-confidence-meta-row="${destination}"]`).text();
+    expect(text('whatsapp')).toContain(
+      'A Meta contou 1 conversa, mas nenhuma chegou aqui marcada como vinda dos seus anúncios.'
+    );
+    expect(text('messaging')).toContain(
+      'A Meta contou 2 conversas, mas nenhuma chegou aqui marcada como vinda dos seus anúncios.'
+    );
+    expect(text('whatsapp')).not.toContain('batem');
+    expect(text('site')).toContain(
+      'Cada um conta de um jeito. O número que vale é o nosso: são as conversas que chegaram aqui pelo botão do site.'
     );
   });
 

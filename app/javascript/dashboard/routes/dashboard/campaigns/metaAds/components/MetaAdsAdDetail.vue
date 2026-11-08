@@ -16,7 +16,9 @@ import {
   VERDICT_CLASSES,
   adImage,
   amount,
+  destinationKey,
   intlLocale,
+  otherAdStats,
   periodRange,
   relativeTime,
   thumbClass,
@@ -143,8 +145,20 @@ const makeTile = (key, value, tone = 'text-n-slate-12') => ({
 
 // Com venda, o custo por venda ao lado da média da conta é a comparação que decide o veredito. Sem venda não
 // há custo por venda: em vez de dois traços no topo, os números que existem (investido, conversas, propostas).
+// Anúncio que não abre conversa (#2521, ad.outside): o gasto e o que a Meta mede no destino dele, como na lista.
+const outside = computed(() => Boolean(ad.value?.outside));
+const formatCount = value =>
+  new Intl.NumberFormat(intlLocale(locale.value)).format(value || 0);
+const outsideTiles = data => [
+  makeTile('SPEND', fmt(data.spend)),
+  ...otherAdStats(data).map(stat =>
+    makeTile(stat.key, formatCount(stat.value))
+  ),
+];
+
 const tiles = computed(() => {
   const data = ad.value;
+  if (outside.value) return outsideTiles(data);
   const conversations = makeTile('CONVERSATIONS', data.conversations || 0);
   if (data.cost_per_sale == null) {
     return [
@@ -188,6 +202,10 @@ const reasonText = computed(() => {
     count
   );
 });
+
+// Privado dos comentários do anúncio no período (#2521): quantos a IA ou a equipe chamaram e quantos responderam. Só
+// as respostas contam como conversa do anúncio.
+const privateReplies = computed(() => ad.value?.private_replies || null);
 
 const quotes = computed(() => ad.value?.quotes_list || []);
 // Das propostas do anúncio (que incluem as vendidas), as abertas. Vem dos números do anúncio, não da lista,
@@ -237,6 +255,19 @@ const dayLabel = date =>
     timeZone: 'UTC',
   });
 
+// Anúncio que não abre conversa (#2521): o gráfico mostra só o gasto; a série de conversas ficaria sempre no zero.
+const spendOnly = computed(() => outside.value && !withoutSpend.value);
+
+const chartTitleKey = computed(() => {
+  if (withoutSpend.value) return 'CHART_TITLE_TALKS';
+  return spendOnly.value ? 'CHART_TITLE_SPEND' : 'CHART_TITLE';
+});
+
+const chartDayKey = () => {
+  if (withoutSpend.value) return 'CHART_DAY_TALKS';
+  return spendOnly.value ? 'CHART_DAY_SPEND' : 'CHART_DAY';
+};
+
 const chart = computed(() => {
   const daily = ad.value?.daily || [];
   const slot = CHART.width / Math.max(daily.length, 1);
@@ -262,13 +293,11 @@ const chart = computed(() => {
       height,
       center: index * slot + slot / 2,
       dot:
-        talks && !withoutSpend.value
+        talks && !withoutSpend.value && !spendOnly.value
           ? CHART.height - (talks / maxTalks) * room
           : null,
       title: t(
-        withoutSpend.value
-          ? 'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_DAY_TALKS'
-          : 'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_DAY',
+        `CRM_KANBAN.META_ADS_HUB.AD_DETAIL.${chartDayKey()}`,
         { date: dayLabel(day.date), spend: fmt(spend), count: talks },
         talks
       ),
@@ -338,15 +367,16 @@ const gestao = ref(null);
 // ao vivo agora, ou o gasto, que só vem de anúncio sincronizado por uma conexão (sem login, #1960, ele é nil). A
 // gestão sozinha não basta: uma falha passageira na leitura dela tiraria os comentários de um anúncio com números. O
 // gasto sozinho também não: anúncio que nunca rodou, ou parou antes do período, não tem número nenhum (#2335).
+// #2520: a flag da gestão não esconde os comentários (régua única: a dos comentários da rede). Sem a gestão não há a
+// leitura ao vivo, e o sinal fica só o gasto: o anúncio sem número no período fica sem os comentários aqui.
 const showComments = computed(
   () =>
-    gestaoOn.value &&
     commentTabs.value.length > 0 &&
     Boolean(gestao.value || (ad.value && !withoutSpend.value))
 );
 
 // IA cuida dos comentários (#2212, B2, flag meta_ads_comentarios_ia): a entrada fica onde os comentários ficam, e só
-// com eles (showComments já pede a gestão e a flag dos comentários de ao menos uma rede, como o servidor).
+// com eles (showComments já pede a flag dos comentários de ao menos uma rede, como o servidor).
 const showCare = computed(
   () =>
     showComments.value &&
@@ -639,7 +669,26 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
           </dl>
 
           <div
-            v-if="!withoutSpend"
+            v-if="outside"
+            data-ad-detail-destination
+            :data-destination="ad.destination"
+            class="flex flex-col gap-2 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak"
+          >
+            <h4 class="m-0 text-sm font-semibold text-n-slate-11">
+              {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.DESTINATION_TITLE') }}
+            </h4>
+            <p
+              class="m-0 text-pretty text-base leading-relaxed text-n-slate-12"
+            >
+              {{
+                $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.DESTINATION', {
+                  destination: $t(destinationKey(ad)),
+                })
+              }}
+            </p>
+          </div>
+          <div
+            v-else-if="!withoutSpend"
             data-ad-detail-why
             :data-reason="reason.kind"
             class="flex flex-col gap-2 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak"
@@ -688,11 +737,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
       >
         <div class="flex flex-wrap items-center justify-between gap-3">
           <h4 class="m-0 text-sm font-semibold text-n-slate-11">
-            {{
-              withoutSpend
-                ? $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_TITLE_TALKS')
-                : $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_TITLE')
-            }}
+            {{ $t(`CRM_KANBAN.META_ADS_HUB.AD_DETAIL.${chartTitleKey}`) }}
           </h4>
           <ul
             class="m-0 flex list-none gap-4 p-0 text-xs font-medium text-n-slate-11"
@@ -711,7 +756,10 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
               />
               {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.LEGEND_CONVERSATIONS') }}
             </li>
-            <li v-if="!withoutSpend" class="flex items-center gap-1.5">
+            <li
+              v-if="!withoutSpend && !spendOnly"
+              class="flex items-center gap-1.5"
+            >
               <span
                 class="rounded-full size-2.5 bg-n-teal-10"
                 aria-hidden="true"
@@ -726,11 +774,15 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
           class="m-0 text-xs tabular-nums text-n-slate-11"
         >
           {{
-            $t(
-              'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_SCALE',
-              { spend: chart.maxSpend, count: chart.maxTalks },
-              chart.maxTalks
-            )
+            spendOnly
+              ? $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_SCALE_SPEND', {
+                  spend: chart.maxSpend,
+                })
+              : $t(
+                  'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_SCALE',
+                  { spend: chart.maxSpend, count: chart.maxTalks },
+                  chart.maxTalks
+                )
           }}
         </p>
         <!-- O desenho é só para ver; os números de cada dia estão na tabela logo abaixo (toque e leitor de tela). -->
@@ -819,7 +871,11 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
                 >
                   {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.LEGEND_SPEND') }}
                 </th>
-                <th scope="col" class="py-2 font-medium text-end">
+                <th
+                  v-if="!spendOnly"
+                  scope="col"
+                  class="py-2 font-medium text-end"
+                >
                   {{
                     $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.LEGEND_CONVERSATIONS')
                   }}
@@ -839,13 +895,44 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
                 <td v-if="!withoutSpend" class="py-2 text-end">
                   {{ day.spend }}
                 </td>
-                <td class="py-2 text-end">{{ day.talks }}</td>
+                <td v-if="!spendOnly" class="py-2 text-end">
+                  {{ day.talks }}
+                </td>
               </tr>
             </tbody>
           </table>
         </details>
       </div>
 
+      <p
+        v-if="privateReplies?.sent"
+        data-ad-detail-private-replies
+        class="m-0 flex flex-wrap items-center gap-2 text-sm text-n-slate-12"
+      >
+        <span class="i-lucide-send size-4 text-n-slate-11" aria-hidden="true" />
+        <span>
+          {{
+            $t(
+              'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.PRIVATE_REPLIES.SENT',
+              { count: privateReplies.sent },
+              privateReplies.sent
+            )
+          }}
+        </span>
+        <span
+          class="size-1 shrink-0 rounded-full bg-n-slate-8"
+          aria-hidden="true"
+        />
+        <span>
+          {{
+            $t(
+              'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.PRIVATE_REPLIES.REPLIED',
+              { count: privateReplies.replied },
+              privateReplies.replied
+            )
+          }}
+        </span>
+      </p>
       <CuidarAnuncioEntrada
         v-if="showCare"
         :ad-id="adId"

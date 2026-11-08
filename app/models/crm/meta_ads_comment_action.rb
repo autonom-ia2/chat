@@ -6,7 +6,8 @@
 #   conta (#2313).
 # - `action`: o que a pessoa (#2196, #2197) ou a IA dos comentários (#2212) fez. `ai_seen`, `to_you`,
 #   `private_reply_failed` e `kept_for_owner` são só da IA: a leitura do comentário, a reclamação passada à pessoa, o
-#   privado recusado e a pergunta que era o caso do privado, mas ficou com o dono (o privado não sai ali).
+#   privado recusado e a pergunta que era o caso do privado, mas ficou com o dono (o privado não sai ali). `no_care`
+#   (#2519) também: o comentário que chegou sem cuidado ligado, para não sumir sem registro.
 # - `actor`: `user` (com `user_id`) ou `ai`.
 # - `conversation_id`: na resposta no privado, a conversa da caixa onde ela continua.
 # - `ai_decision`, `ai_confidence` e `ai_reason` (#2424): só na linha `ai_seen`, o que a IA escolheu, com que certeza
@@ -31,8 +32,11 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
 
   NETWORKS = %w[instagram facebook].freeze
   ACTIONS = %w[private_reply reply page_reply hide show delete ai_seen to_you private_reply_failed private_reply_unsure
-               kept_for_owner ai_unread private_reply_already].freeze
+               kept_for_owner ai_unread private_reply_already no_care].freeze
   ONCE = %w[private_reply ai_seen].freeze
+  # O que a pessoa faz no comentário pela plataforma, fora o privado (#2519): a IA não age por cima, e o Painel não o
+  # traz como "não vi a tempo". O privado da pessoa tem caminho próprio (a IA diz "já recebeu").
+  BY_USER = %w[reply hide show delete].freeze
   ACTORS = %w[user ai].freeze
   RESERVED_TTL = 2.minutes
   # Bem acima do tempo máximo da chamada à Meta (Instagram::CommentsClient::TIMEOUT_SECONDS).
@@ -49,6 +53,12 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
 
   # Grava agora: account:, network:, comment_id:, action:, actor: e, quando houver, ad_id:, user:, conversation:. Numa
   # ação ONCE já feita, levanta ActiveRecord::RecordNotUnique: quem chama decide (em geral, não age).
+  # Os comentários (ids) em que a pessoa já respondeu, escondeu ou apagou pela plataforma (BY_USER): o Painel não os traz
+  # como "não vi a tempo" (#2519).
+  def self.tratados_pela_pessoa(account_id, ids)
+    where(account_id: account_id, actor: 'user', action: BY_USER, comment_id: ids.map(&:to_s)).distinct.pluck(:comment_id).to_set
+  end
+
   def self.record!(**attributes)
     create!(attributes.merge(at: Time.current))
   end

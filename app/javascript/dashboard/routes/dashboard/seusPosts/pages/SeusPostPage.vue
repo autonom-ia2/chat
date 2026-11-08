@@ -10,7 +10,14 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import EstadoVazio from '../components/EstadoVazio.vue';
 import NumeroQuadro from '../components/NumeroQuadro.vue';
 import ComentarioLinha from '../components/ComentarioLinha.vue';
-import { comentarioParaTela, postParaTela } from '../seusPostsDados';
+import {
+  comentarioParaTela,
+  comentariosDaAba,
+  contarComentarios,
+  flagsDoCuidado,
+  postParaTela,
+  redeDoPerfil,
+} from '../seusPostsDados';
 import { formatar, intlLocale, vereditoDoPost } from '../seusPostsHelpers';
 import { useLiberarAcesso } from '../useLiberarAcesso';
 import {
@@ -46,8 +53,13 @@ const postId = computed(() => route.params.postId);
 // Comentários que viram cliente (#2212, B1), atrás da flag meta_ads_comentarios_ia: o cuidado do post (Painel) e o
 // resumo "O que tem nos comentários" (A2), lidos ao lado do post, sem travar a página. Sem a flag, nada é lido nem
 // aparece. Ver é de quem já vê o post; ligar, pausar e voltar, só com `can_manage` (o mesmo do F2).
+// #2520: com a régua do motor: a flag do cuidado e a dos comentários da rede do perfil, como o servidor.
 const comCuidado = computed(() =>
-  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA)
+  Boolean(
+    flagsDoCuidado(redeDoPerfil(perfilId.value))?.every(flag =>
+      isCloudFeatureEnabled(flag)
+    )
+  )
 );
 const alvoDoCuidado = computed(() =>
   comCuidado.value
@@ -238,15 +250,17 @@ const FILTROS = [
   ['privado', 'privado'],
   ['escondido', 'escondido'],
 ];
-const contagem = computed(() => {
-  const conta = { all: comentarios.value.lista.length };
-  FILTROS.slice(1).forEach(([chave, estado]) => {
-    conta[chave] = comentarios.value.lista.filter(
-      comentario => comentario.estado === estado
-    ).length;
-  });
-  return conta;
-});
+// #2454: com a flag meta_ads_comentarios_ia, o fio conta: as respostas de cliente entram nas abas, como no Resumo.
+const comFio = computed(() =>
+  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA)
+);
+const contagem = computed(() =>
+  contarComentarios(
+    comentarios.value.lista,
+    FILTROS.slice(1).map(([, estado]) => estado),
+    comFio.value
+  )
+);
 const filtros = computed(() =>
   FILTROS.filter(([chave]) => chave === 'all' || contagem.value[chave])
 );
@@ -255,12 +269,13 @@ const filtro = ref('all');
 watch(filtros, lista => {
   if (!lista.some(([chave]) => chave === filtro.value)) filtro.value = 'all';
 });
-const visiveis = computed(() => {
-  const estado = FILTROS.find(([chave]) => chave === filtro.value)[1];
-  return estado
-    ? comentarios.value.lista.filter(comentario => comentario.estado === estado)
-    : comentarios.value.lista;
-});
+const visiveis = computed(() =>
+  comentariosDaAba(
+    comentarios.value.lista,
+    FILTROS.find(([chave]) => chave === filtro.value)[1],
+    comFio.value
+  )
+);
 // Quem espera no herói é a contagem do servidor, a mesma do cartão da lista (até 50 comentários, depois "ou mais"); as
 // abas contam só os comentários já carregados.
 const esperandoNoHeroi = computed(() => {
@@ -302,7 +317,7 @@ const agir = async (comentario, chamada, sucesso, pronto = () => {}) => {
   }
   pronto();
   useAlert(t(`SEUS_POSTS.POST.COMMENTS.DONE.${sucesso}`));
-  // Quem espera mudou: o resumo do servidor também (o cache dele cai junto).
+  // Quem espera mudou: o resumo do servidor conta de novo.
   lerResumo();
   try {
     await lerPost();
@@ -361,7 +376,7 @@ const situacaoDoCuidado = computed(() => {
 const cuidando = computed(() =>
   ['on', 'paused'].includes(situacaoDoCuidado.value)
 );
-// O privado no Facebook espera a pages_messaging (F4): o resumo não promete privado.
+// O privado no Facebook só sai na conta com a flag (#2613, o servidor decide); antes de ler, o resumo não promete.
 const privadoLiberado = computed(
   () => cuidado.value?.private_available ?? rede.value !== 'facebook'
 );
@@ -377,23 +392,18 @@ const mudarCuidado = async () => {
       : await voltarACuidar();
   if (!valeu) useAlert(t('SEUS_POSTS.POST.CARE_ON.ERROR'));
 };
-// O que o botão de cuidar faz, logo abaixo dele. Sem pergunta que ainda dá para mandar no privado, a frase não
-// oferece responder "as que já estão aqui".
+// Os números do bloco (#2454): só o que o servidor conta, sem IA. Quantos esperam resposta e, desses, quantos ainda
+// cabem no privado (até 7 dias).
+const esperam = computed(() => oQueTem.value?.waiting || 0);
+const cabemNoPrivado = computed(() => oQueTem.value?.private_window || 0);
+// O que o botão de cuidar faz, logo abaixo dele. Sem comentário que ainda cabe no privado, a frase não oferece
+// responder "as que já estão aqui".
 const textoDoCuidar = computed(() => {
   if (!privadoLiberado.value) return t('SEUS_POSTS.POST.CARE_OFFER.TEXT_SOON');
-  const perguntas = oQueTem.value?.questions || 0;
-  const velhas = oQueTem.value?.questions_old || 0;
-  if (!perguntas) {
-    return velhas
-      ? t('SEUS_POSTS.POST.CARE_OFFER.TEXT_ONLY_NEW')
-      : t('SEUS_POSTS.POST.CARE_OFFER.TEXT_FUTURE');
-  }
-  if (!velhas) return t('SEUS_POSTS.POST.CARE_OFFER.TEXT');
-  return t(
-    'SEUS_POSTS.POST.CARE_OFFER.TEXT_MIXED',
-    { count: perguntas },
-    perguntas
-  );
+  if (cabemNoPrivado.value) return t('SEUS_POSTS.POST.CARE_OFFER.TEXT');
+  return esperam.value
+    ? t('SEUS_POSTS.POST.CARE_OFFER.TEXT_ONLY_NEW')
+    : t('SEUS_POSTS.POST.CARE_OFFER.TEXT_FUTURE');
 });
 const resumoPronto = computed(() => oQueTem.value?.status === 'ready');
 
@@ -778,50 +788,32 @@ const BOTAO_DE_BORDA =
               <template v-else>
                 <!-- Um item por linha: no celular, " · " quebrava e deixava o ponto no começo da linha. -->
                 <ul
-                  v-if="
-                    oQueTem.questions ||
-                    oQueTem.questions_old ||
-                    oQueTem.complaints
-                  "
                   class="m-0 flex list-none flex-col gap-1 p-0 text-base font-medium text-n-slate-12"
                 >
-                  <li v-if="oQueTem.questions" data-seus-posts-perguntas>
+                  <li data-seus-posts-esperam>
                     {{
-                      $t(
-                        privadoLiberado
-                          ? 'SEUS_POSTS.POST.CARE_OFFER.QUESTIONS'
-                          : 'SEUS_POSTS.POST.CARE_OFFER.QUESTIONS_YOU',
-                        { count: num(oQueTem.questions) },
-                        oQueTem.questions
-                      )
+                      esperam
+                        ? $t(
+                            'SEUS_POSTS.POST.CARE_OFFER.WAITING',
+                            { count: num(esperam) },
+                            esperam
+                          )
+                        : $t('SEUS_POSTS.POST.CARE_OFFER.NONE_WAITING')
                     }}
                   </li>
-                  <li v-if="oQueTem.questions_old">
+                  <li
+                    v-if="privadoLiberado && cabemNoPrivado"
+                    data-seus-posts-cabem-no-privado
+                  >
                     {{
                       $t(
-                        'SEUS_POSTS.POST.CARE_OFFER.QUESTIONS_OLD',
-                        { count: num(oQueTem.questions_old) },
-                        oQueTem.questions_old
-                      )
-                    }}
-                  </li>
-                  <li v-if="oQueTem.complaints">
-                    {{
-                      $t(
-                        'SEUS_POSTS.POST.CARE_OFFER.COMPLAINTS',
-                        { count: num(oQueTem.complaints) },
-                        oQueTem.complaints
+                        'SEUS_POSTS.POST.CARE_OFFER.PRIVATE_WINDOW',
+                        { count: num(cabemNoPrivado) },
+                        cabemNoPrivado
                       )
                     }}
                   </li>
                 </ul>
-                <p v-if="oQueTem.more" class="m-0 text-sm text-n-slate-11">
-                  {{
-                    $t('SEUS_POSTS.POST.CARE_OFFER.MORE', {
-                      count: num(oQueTem.read),
-                    })
-                  }}
-                </p>
                 <p
                   data-seus-posts-o-que-faco
                   class="m-0 text-sm text-n-slate-11"
@@ -924,6 +916,7 @@ const BOTAO_DE_BORDA =
                 v-for="comentario in visiveis"
                 :key="comentario.id"
                 :comentario="comentario"
+                :fio="comFio"
                 :ocupado="ocupado === comentario.id"
                 @responder="
                   (texto, pronto) => responder(comentario, texto, pronto)

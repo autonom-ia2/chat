@@ -22,6 +22,18 @@ RSpec.describe Instagram::CommentsClient do
     expect(request.with(query: hash_including('fields' => described_class::COMMENT_FIELDS))).to have_been_made
   end
 
+  # #2454, revisão da Agentes IA: a leitura da foto roda dentro da requisição; quem chama dá um prazo menor.
+  it 'com um prazo menor, a Meta que não responde nele vira falha de rede, sem subir' do
+    allow(HTTParty).to receive(:get).and_call_original
+    stub_request(:get, "#{base}/1790000000000001").with(query: hash_including({})).to_timeout
+
+    result = described_class.new(channel, timeout: 3).media('1790000000000001')
+
+    expect(HTTParty).to have_received(:get).with(anything, hash_including(timeout: 3))
+    expect(result).to have_attributes(ok: false, http_code: nil)
+    expect(result.transient?).to be(true)
+  end
+
   it 'lê a legenda da mídia, para a IA saber do que o comentário fala (#2424)' do
     stub_request(:get, "#{base}/1790000000000001").with(query: hash_including('fields' => 'caption'))
                                                   .to_return(status: 200, headers: json, body: { caption: 'Promo de verão', id: '1' }.to_json)
@@ -69,6 +81,15 @@ RSpec.describe Instagram::CommentsClient do
 
     expect(client.reply('1', 'Oi, Carla')).to have_attributes(ok: false, error_code: 100)
     expect(Rails.logger).to have_received(:warn).with('[InstagramComments] POST 1/replies http=400 code=100')
+  end
+
+  # #2454: a recusa do privado em resposta é decidida e gravada pelo código e pelo subcódigo, nunca pela mensagem.
+  it 'recusa da Meta vem com o código e o subcódigo' do
+    error = { error: { code: 10, error_subcode: 2_534_023, message: 'Fora da janela' } }
+    stub_request(:post, "#{base}/#{channel.instagram_id}/messages").with(query: hash_including({}))
+                                                                   .to_return(status: 400, headers: json, body: error.to_json)
+
+    expect(client.private_reply('1', 'Oi')).to have_attributes(ok: false, error_code: 10, error_subcode: 2_534_023)
   end
 
   it 'falha de rede vira resultado passageiro, sem levantar' do

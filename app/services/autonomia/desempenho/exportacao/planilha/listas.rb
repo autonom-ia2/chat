@@ -15,7 +15,7 @@ module Autonomia::Desempenho::Exportacao::Planilha::Listas
   # [{ id:, titulo:, tipo:, largura: }] da aba Procuras; os cortes entram um por coluna, na ordem do catálogo.
   def colunas_das_procuras
     cortes = catalogo['cortes'].to_h.keys.map { |corte| coluna(titulo_do_corte(corte), :texto, 18).merge(id: "corte:#{corte}") }
-    anuncio = meta['anuncios_ligados'] ? [%w[anuncio texto 22]] : []
+    anuncio = meta['anuncios_ligados'] && !@painel.dig('origem', 'anuncios_ocultos') ? [%w[anuncio texto 22]] : []
     [*colunas_de_procura(COLUNAS_DO_INICIO), *cortes, *colunas_de_procura(COLUNAS_DO_MEIO + anuncio + COLUNAS_DO_FIM)]
   end
 

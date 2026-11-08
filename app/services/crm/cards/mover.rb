@@ -1,9 +1,12 @@
 class Crm::Cards::Mover
-  def initialize(card:, actor:, target_stage:, automation_context: {})
+  # #2428: quem moveu foi uma automação (`automacao: { origem: 'regra' | 'etapa' | 'livre', id: }`): a atividade grava
+  # `by: 'automacao'`, a origem e o id, e a IA do funil respeita o movimento (Crm::Ai::MovimentoDaAutomacao).
+  def initialize(card:, actor:, target_stage:, automation_context: {}, automacao: nil)
     @card = card
     @actor = actor
     @target_stage = target_stage
     @automation_context = automation_context.to_h.with_indifferent_access
+    @automacao = automacao
   end
 
   def perform
@@ -63,9 +66,16 @@ class Crm::Cards::Mover
         from_stage_id: from_stage_id,
         to_stage_id: @card.stage_id,
         from_stage_name: @from_stage_name,
-        to_stage_name: @target_stage.name
+        to_stage_name: @target_stage.name,
+        **da_automacao
       }
     ).perform
+  end
+
+  def da_automacao
+    return {} if @automacao.blank?
+
+    { by: 'automacao', origem: @automacao[:origem], automacao_id: @automacao[:id] }
   end
 
   def run_stage_automations!(from_stage_id:, exited_at:)

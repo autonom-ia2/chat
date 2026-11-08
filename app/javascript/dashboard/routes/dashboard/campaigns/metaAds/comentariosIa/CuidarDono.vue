@@ -2,22 +2,37 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
-import { FOR_WHOM_LIMIT } from './useCuidado';
+import FotoDoPost from './FotoDoPost.vue';
+import RespostaDoFio from './RespostaDoFio.vue';
+import PassoParaQuem from './PassoParaQuem.vue';
+import PedidoDeTom from './PedidoDeTom.vue';
+import { FOR_WHOM_LIMIT, FRASE_DO_DONO_LIMIT } from './useCuidado';
+import { privadoLongoDemais } from 'dashboard/helper/privadoDoInstagram';
+import MaterialDoPost from 'dashboard/routes/dashboard/autonomia/agentes/components/doPost/MaterialDoPost.vue';
 
 // Comentários que viram cliente (#2212, opção (a) do Rodrigo): o jeito escrito pelo dono, em três passos, uma ação em
 // cada: o que mandar no privado → para quem, nas palavras dele → como fica, com dois comentários do post (a Prévia do
 // servidor), e "Ligar". Não há palavra-gatilho: o modelo lê o "para quem" e cada comentário, e decide; quando não é o
 // caso, diz "aqui não se aplica" e não manda nada (nunca lista de palavras, regra do Rodrigo de 20/09).
-// No Facebook, o privado pelo Messenger espera a Meta liberar pages_messaging (F4): com `private_available` false, a
-// tela diz "em breve" no lugar dos passos.
+// No Facebook, o privado pelo Messenger só sai na conta com a flag meta_ads_comentarios_privado_facebook (#2613; o
+// servidor decide): com `private_available` false, a tela diz "em breve" no lugar dos passos.
+// #2458 (PR 2 do #2436), com a IA escrevendo as respostas (Painel `writes`): o
+// passo 2 soma temas e pede o assunto em que a IA não toca (PassoParaQuem); o passo 3 mostra o que a IA escreveria para
+// o comentário, no comentário e no privado, e aceita o pedido de tom (PedidoDeTom). A mensagem do passo 1 e a frase
+// continuam: são o que vai quando o agente da caixa não pode escrever.
 const props = defineProps({
-  // O Painel do servidor: message, para_quem, phrases, private_available, unanswered.
+  // O Painel do servidor: message, para_quem, phrases, private_available, unanswered e, com a escrita, writes, temas,
+  // assunto_proibido e tom.
   data: { type: Object, required: true },
-  // async paraQuem => Prévia ({ recebe, nao }) ou null quando não deu para ler.
+  // async (paraQuem, escrita) => Prévia ({ recebe, nao, dono }) ou null quando não deu para ler.
   preview: { type: Function, required: true },
   // async () => o começo da mensagem escrito pela IA a partir da legenda do post, ou '' (Rascunho). Só no post do Seus
   // posts; sem ele (o anúncio), o passo 1 abre vazio.
   draft: { type: Function, default: null },
+  // #2454, com a flag meta_ads_comentarios_ia: async () => a leitura da foto do post ("O que eu vi na foto") e
+  // async texto => a correção do dono. Sem elas, o passo 1 fica como antes.
+  photo: { type: Function, default: null },
+  fixPhoto: { type: Function, default: null },
   changing: { type: Boolean, default: false },
   canSendOld: { type: Boolean, default: false },
   saving: { type: Boolean, default: false },
@@ -28,8 +43,8 @@ const emit = defineEmits(['done', 'leave']);
 const { t } = useI18n();
 const KEY = 'META_ADS_COMMENTS_AI.DONO';
 // A Meta aceita até 1000 bytes (UTF-8) no texto do privado: acento e emoji ocupam mais de um byte, então a conta é em
-// bytes, não em letras. O privado é só a mensagem do dono: nada é acrescentado no fim.
-const LIMIT_BYTES = 1000;
+// bytes, não em letras (dashboard/helper/privadoDoInstagram). O privado é só a mensagem do dono: nada é acrescentado
+// no fim.
 const PHRASE_LIMIT = 120;
 const RULES_MORE = ['SEVEN_DAYS', 'LIVE', 'REQUESTS', 'COMPLAINT'];
 const SUGGESTIONS = ['PRICE', 'LINK', 'CATALOG'];
@@ -51,6 +66,19 @@ const forWhom = ref(props.data.para_quem || priceSuggestion.value);
 watch(priceSuggestion, (nova, antiga) => {
   if (forWhom.value === antiga) forWhom.value = nova;
 });
+const writes = computed(() => Boolean(props.data.writes));
+// O cuidado novo começa com o preço marcado, como a frase do campo; o que já tem "para quem" começa com os temas dele.
+const temasIniciais = () => {
+  if (props.data.temas?.length) return [...props.data.temas];
+  return props.data.para_quem ? [] : ['price'];
+};
+const temas = ref(temasIniciais());
+const naoFalo = ref(props.data.assunto_proibido || '');
+const tom = ref(props.data.tom || '');
+const escrita = () =>
+  writes.value
+    ? { assuntoProibido: naoFalo.value.trim(), tom: tom.value.trim() }
+    : undefined;
 const phrase = ref(phrases.value[0] || '');
 const editingPhrase = ref(!phrase.value);
 // A padrão muda com o idioma, que pode chegar depois de abrir a tela (endereço aberto direto): enquanto o dono não a
@@ -94,9 +122,7 @@ const examplesFailed = ref(false);
 
 const soon = computed(() => props.data.private_available === false);
 const dm = computed(() => message.value.trim());
-const tooLong = computed(
-  () => new TextEncoder().encode(dm.value).length > LIMIT_BYTES
-);
+const tooLong = computed(() => privadoLongoDemais(dm.value));
 const forWhomTooLong = computed(
   () => forWhom.value.trim().length > FOR_WHOM_LIMIT
 );
@@ -106,13 +132,30 @@ const recebe = computed(() => {
   return examplesFailed.value ? { sample: true } : null;
 });
 const nao = computed(() => examples.value?.nao || null);
+// #2458: o comentário sobre o assunto proibido, que fica com o dono.
+const dono = computed(() => examples.value?.dono || null);
+// O que a IA escreveria para o comentário que recebe; sem isso (frases fixas), a mensagem e a frase do dono.
+const written = computed(() => recebe.value?.written || null);
+const keptForOwner = computed(() => Boolean(recebe.value?.kept_for_owner));
+// #2454: a resposta dentro de um comentário, com a flag meta_ads_comentarios_ia. A Meta decide se aceita o privado em resposta: a
+// tela não o promete.
+const resposta = computed(() => examples.value?.resposta || null);
 const sample = computed(() => Boolean(recebe.value?.sample));
+// O comentário de cima aparece uma vez só: quando ele é um dos exemplos, a resposta vai dentro do cartão dele ('recebe'
+// ou 'nao'); senão (null), num cartão próprio, com o de cima como contexto, sem selo.
+const respostaDentroDe = computed(() => {
+  const id = resposta.value?.parent?.id;
+  if (!id) return null;
+  if (!sample.value && recebe.value?.id === id) return 'recebe';
+  return nao.value?.id === id ? 'nao' : null;
+});
 const handle = comment =>
   comment.network === 'facebook' ? comment.author : `@${comment.author}`;
 const values = () => ({
   message: message.value.trim(),
   paraQuem: forWhom.value.trim(),
   phrase: phrase.value.trim() || phrases.value[0] || '',
+  escrita: writes.value ? { temas: [...temas.value], ...escrita() } : undefined,
 });
 
 // A Prévia classifica comentários com a IA: sem resposta em PREVIEW_TIMEOUT_MS, o passo 3 cai no "não deu para ler", em
@@ -124,9 +167,11 @@ const previewOrTimeout = paraQuem => {
   const timeout = new Promise(resolve => {
     timer = setTimeout(() => resolve(null), PREVIEW_TIMEOUT_MS);
   });
-  return Promise.race([props.preview(paraQuem), timeout]).finally(() =>
-    clearTimeout(timer)
-  );
+  // Sem a escrita, a chamada de antes, só com o "para quem".
+  const lida = writes.value
+    ? props.preview(paraQuem, escrita())
+    : props.preview(paraQuem);
+  return Promise.race([lida, timeout]).finally(() => clearTimeout(timer));
 };
 const loadExamples = async () => {
   examplesRead += 1;
@@ -151,7 +196,9 @@ const go = async next => {
 const canGoOn = computed(() =>
   step.value === 1
     ? Boolean(message.value.trim()) && !tooLong.value
-    : Boolean(forWhom.value.trim()) && !forWhomTooLong.value
+    : Boolean(forWhom.value.trim()) &&
+      !forWhomTooLong.value &&
+      naoFalo.value.trim().length <= FRASE_DO_DONO_LIMIT
 );
 const canStart = computed(
   () => Boolean(phrase.value.trim() || phrases.value[0]) && !props.saving
@@ -225,6 +272,7 @@ const FIELD =
             {{ $t(`${KEY}.WHAT.${suggested ? 'SUGGESTED' : 'TEXT'}`) }}
           </p>
         </div>
+        <FotoDoPost v-if="photo && fixPhoto" :read="photo" :fix="fixPhoto" />
         <p
           v-if="writing"
           data-ia-dono-writing
@@ -261,6 +309,28 @@ const FIELD =
         <p class="m-0 text-sm text-n-slate-11">
           {{ $t(`${KEY}.WHAT.ALL_IN_ONE`) }}
         </p>
+        <!-- #2487: o material só deste post. Anexar só no cuidado que já existe; no novo, depois de ligar. -->
+        <section
+          v-if="data.writes"
+          data-ia-dono-material
+          class="flex flex-col gap-2 pt-4 border-0 border-t border-solid border-n-weak"
+        >
+          <h3 class="m-0 text-sm font-semibold text-n-slate-12">
+            {{ $t('AGENTS.AGENTE_DO_POST.SABE.SO_DO_POST') }}
+          </h3>
+          <MaterialDoPost
+            v-if="data.care_id"
+            :care-id="data.care_id"
+            pode-mudar
+          />
+          <p
+            v-else
+            data-ia-dono-material-depois
+            class="m-0 text-sm text-n-slate-11"
+          >
+            {{ $t('AGENTS.AGENTE_DO_POST.SABE.MATERIAL.DEPOIS_DE_LIGAR') }}
+          </p>
+        </section>
       </template>
 
       <template v-else-if="step === 2">
@@ -276,7 +346,13 @@ const FIELD =
             {{ $t(`${KEY}.WHO.TEXT`) }}
           </p>
         </div>
-        <div class="flex flex-wrap gap-2">
+        <PassoParaQuem
+          v-if="writes"
+          v-model:for-whom="forWhom"
+          v-model:temas="temas"
+          v-model:nao-falo="naoFalo"
+        />
+        <div v-else class="flex flex-wrap gap-2">
           <button
             v-for="suggestion in SUGGESTIONS"
             :key="suggestion"
@@ -297,6 +373,7 @@ const FIELD =
           </button>
         </div>
         <label
+          v-if="!writes"
           for="ia-dono-who"
           class="flex flex-col gap-2 text-sm font-medium text-n-slate-11"
         >
@@ -313,7 +390,7 @@ const FIELD =
           />
         </label>
         <p
-          v-if="forWhomTooLong"
+          v-if="forWhomTooLong && !writes"
           role="alert"
           data-ia-dono-who-too-long
           class="m-0 text-sm font-medium text-n-ruby-11"
@@ -343,6 +420,8 @@ const FIELD =
             </span>
           </p>
         </div>
+
+        <PedidoDeTom v-if="writes" v-model:tom="tom" @change="loadExamples" />
 
         <div
           v-if="loadingExamples"
@@ -386,24 +465,59 @@ const FIELD =
               </span>
               {{ sample ? $t(`${KEY}.SEE.SAMPLE_TEXT`) : recebe.text }}
             </p>
+            <!-- Quando o agente não saberia, o selo diz que fica com o dono, nunca "É o caso". -->
             <span
+              v-if="keptForOwner"
+              data-ia-dono-kept-badge
+              class="inline-flex w-fit items-center gap-1.5 rounded-full bg-n-amber-3 px-3 py-1 text-sm font-semibold text-n-amber-11"
+            >
+              <span class="i-lucide-hand size-4" aria-hidden="true" />
+              {{ $t(`${KEY}.SEE.OWNER`) }}
+            </span>
+            <span
+              v-else
               class="inline-flex w-fit items-center gap-1.5 rounded-full bg-n-teal-3 px-3 py-1 text-sm font-semibold text-n-teal-11"
             >
               <span class="i-lucide-send size-4" aria-hidden="true" />
               {{ $t(`${KEY}.SEE.${sample ? 'GETS' : 'GETS_BEFORE'}`) }}
             </span>
-            <div class="flex flex-col gap-1.5">
+            <RespostaDoFio
+              v-if="respostaDentroDe === 'recebe'"
+              :resposta="resposta"
+            />
+            <p
+              v-if="keptForOwner"
+              data-ia-dono-kept
+              class="m-0 text-sm leading-6 text-n-slate-11"
+            >
+              {{ $t(`${KEY}.SEE.KEPT`) }}
+            </p>
+            <div v-if="written?.comment" class="flex flex-col gap-1.5">
               <p class="m-0 text-sm font-semibold text-n-slate-11">
-                {{ $t(`${KEY}.SEE.IN_DM`) }}
+                {{ $t(`${KEY}.SEE.WRITTEN_COMMENT`) }}
+              </p>
+              <p
+                data-ia-dono-written-comment
+                class="m-0 w-fit rounded-2xl rounded-tl-md bg-n-alpha-2 px-4 py-2 text-sm leading-6 text-n-slate-12"
+              >
+                {{ written.comment }}
+              </p>
+            </div>
+            <div v-if="!keptForOwner" class="flex flex-col gap-1.5">
+              <p class="m-0 text-sm font-semibold text-n-slate-11">
+                {{ $t(`${KEY}.SEE.${written ? 'WRITTEN_DM' : 'IN_DM'}`) }}
               </p>
               <p
                 data-ia-dono-bubble
                 class="m-0 max-w-xl self-end whitespace-pre-line rounded-2xl rounded-br-md bg-n-blue-9 px-4 py-3 text-sm leading-6 text-white"
               >
-                {{ dm }}
+                {{ written?.dm || dm }}
               </p>
             </div>
-            <div class="flex flex-col gap-1.5">
+            <div
+              v-if="!keptForOwner && !written?.comment"
+              class="flex flex-col gap-1.5"
+            >
               <p class="m-0 text-sm font-semibold text-n-slate-11">
                 {{ $t(`${KEY}.SEE.IN_COMMENT`) }}
               </p>
@@ -465,9 +579,50 @@ const FIELD =
               <span class="i-lucide-minus size-4" aria-hidden="true" />
               {{ $t(`${KEY}.SEE.SKIPS`) }}
             </span>
+            <RespostaDoFio
+              v-if="respostaDentroDe === 'nao'"
+              :resposta="resposta"
+            />
             <p class="m-0 text-sm leading-6 text-n-slate-11">
               {{ $t(`${KEY}.SEE.SKIPS_WHY`) }}
             </p>
+          </li>
+          <li
+            v-if="dono"
+            data-ia-dono-example="dono"
+            class="flex flex-col gap-3 rounded-xl p-4 ring-1 ring-inset ring-n-weak"
+          >
+            <p class="m-0 text-base leading-6 text-n-slate-12">
+              <span class="block text-sm font-semibold text-n-slate-11">
+                {{ handle(dono) }}
+              </span>
+              {{ dono.text }}
+            </p>
+            <span
+              class="inline-flex w-fit items-center gap-1.5 rounded-full bg-n-amber-3 px-3 py-1 text-sm font-semibold text-n-amber-11"
+            >
+              <span class="i-lucide-hand size-4" aria-hidden="true" />
+              {{ $t(`${KEY}.SEE.OWNER`) }}
+            </span>
+            <p class="m-0 text-sm leading-6 text-n-slate-11">
+              {{ $t(`${KEY}.SEE.OWNER_WHY`, { assunto: naoFalo.trim() }) }}
+            </p>
+          </li>
+          <li
+            v-if="resposta && !respostaDentroDe"
+            data-ia-dono-example="resposta"
+            class="flex flex-col gap-3 rounded-xl p-4 ring-1 ring-inset ring-n-weak"
+          >
+            <p
+              data-ia-dono-reply-parent
+              class="m-0 text-base leading-6 text-n-slate-12"
+            >
+              <span class="block text-sm font-semibold text-n-slate-11">
+                {{ handle(resposta.parent) }}
+              </span>
+              {{ resposta.parent.text }}
+            </p>
+            <RespostaDoFio :resposta="resposta" />
           </li>
         </ol>
 

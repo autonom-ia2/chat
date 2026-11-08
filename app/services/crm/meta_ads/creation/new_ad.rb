@@ -21,8 +21,10 @@
 class Crm::MetaAds::Creation::NewAd
   OBJECTIVES = { 'WHATSAPP' => 'OUTCOME_ENGAGEMENT', 'MESSENGER' => 'OUTCOME_ENGAGEMENT',
                  'INSTAGRAM_DIRECT' => 'OUTCOME_ENGAGEMENT', 'WEBSITE' => 'OUTCOME_TRAFFIC',
-                 'ON_POST' => 'OUTCOME_ENGAGEMENT' }.freeze
-  OPTIMIZATION_GOALS = { 'WEBSITE' => 'LINK_CLICKS', 'ON_POST' => 'POST_ENGAGEMENT' }.freeze
+                 'INSTAGRAM_PROFILE' => 'OUTCOME_TRAFFIC', 'ON_POST' => 'OUTCOME_ENGAGEMENT' }.freeze
+  OPTIMIZATION_GOALS = { 'WEBSITE' => 'LINK_CLICKS', 'INSTAGRAM_PROFILE' => 'PROFILE_VISIT', 'ON_POST' => 'POST_ENGAGEMENT' }.freeze
+  # Destinos que precisam da conta do Instagram ligada à Página (#2560, #2564).
+  INSTAGRAM_DESTINATIONS = %w[INSTAGRAM_DIRECT INSTAGRAM_PROFILE].freeze
   SPECIAL_CATEGORY = 'FINANCIAL_PRODUCTS_SERVICES'.freeze
   # Tentativas que podem ter deixado campanha na Meta.
   PENDING_STATUSES = %w[creating unconfirmed rollback_failed].freeze
@@ -114,11 +116,20 @@ class Crm::MetaAds::Creation::NewAd
   end
 
   # Post: tem que ser desta Página (ou do Instagram dela) e a Meta tem que deixar impulsionar, relido agora. Anúncio
-  # novo: o vídeo pronto.
+  # novo: o vídeo pronto e, para o Direct e o perfil, a conta do Instagram ligada à Página (#2560, #2564).
   def ensure_content_ready!(draft, page)
-    return ensure_video_ready!(draft) unless draft[:kind] == 'post'
+    return Crm::MetaAds::Creation::Posts.new(client).find!(page, draft[:post_source], draft[:post_id]) if draft[:kind] == 'post'
+    raise Crm::MetaAds::Creation::Error, 'invalid_instagram' unless instagram_ready?(draft[:destination], page[:instagram].to_h)
 
-    Crm::MetaAds::Creation::Posts.new(client).find!(page, draft[:post_source], draft[:post_id])
+    ensure_video_ready!(draft)
+  end
+
+  # O perfil precisa também do @, que vira o endereço do botão (Crm::MetaAds::Creation::Story).
+  def instagram_ready?(destination, instagram)
+    return true if INSTAGRAM_DESTINATIONS.exclude?(destination)
+    return false if instagram[:id].blank?
+
+    destination != 'INSTAGRAM_PROFILE' || instagram[:username].present?
   end
 
   def find_page!(page_id)
@@ -216,7 +227,7 @@ class Crm::MetaAds::Creation::NewAd
   end
 
   def story_creative_params(draft, page)
-    story = Crm::MetaAds::Creation::Story.new(draft.values, instagram_id: page.dig(:instagram, :id))
+    story = Crm::MetaAds::Creation::Story.new(draft.values, instagram: page[:instagram])
     { name: draft[:name], object_story_spec: story.object_story_spec.to_json }
   end
 

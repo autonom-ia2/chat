@@ -46,7 +46,7 @@ module Autonomia::Agents::Material
   # A "impressão digital" do que o agente usa: os materiais aprovados e o texto de cada um. Muda quando entra, sai ou é
   # relido um material aprovado. Medida objetiva (código), não interpreta texto.
   def hash_da_base(agent)
-    partes = agent.sources.knowledge_sources.servable.order(:id).map do |source|
+    partes = agent.sources.da_agente.knowledge_sources.servable.order(:id).map do |source|
       "#{source.id}:#{source.metadata.to_h['hash_do_texto'] || source.reviewed_at&.to_i}"
     end
     Digest::SHA256.hexdigest(partes.join('|'))

@@ -122,6 +122,9 @@
     "GUIDE": {
       "ACTION": "{agentName} did through the Platform Guide: {frase}"
     },
+    "AUTOMACAO": {
+      "ACTION": "Automation #{automacaoId}, turned on by {agentName}, did: {frase}"
+    },
     "META_ADS": {
       "PAUSED": "{agentName} paused the ad {adName} (#{adId}) on Meta",
       "ACTIVE": "{agentName} turned on the ad {adName} (#{adId}) on Meta"
