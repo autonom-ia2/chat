@@ -230,9 +230,6 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 4 (#2650): a etiqueta como contador de faltas. Com a execução da primeira falta esperando os 30 dias, a
     # nova entrada em "Faltou" no mesmo card não abre outra (Partida, `ja_aberta`): o contador nunca chega a 2.
     'G50' => nil,
-    # Do exemplo 6 (#2650): a conversa do contato. A automação que começa no contato (aniversário) não chega à conversa
-    # dele, e o card que nasce desse alvo também fica sem conversa: escrever, esperar a resposta e pedir a foto pulam.
-    'G55' => nil,
     # Do exemplo 6, passos 8 e 9 (#2650): a reunião registrada como atendida ("Aconteceu", outcome held) não gera evento
     # nem gatilho; a etapa "Atendida" no lugar dela adaptaria o termo.
     'G56' => nil

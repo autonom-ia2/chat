@@ -24,7 +24,9 @@ require 'rails_helper'
 #   com `repete: todo_ano`, às 9h. O alvo é o contato. O último serviço é o campo do contato que o salão preenche
 #   (`ultimo_servico`), e a IA o lê com `le: contato`; o parabéns é o "escrever" que só guarda, e a "mensagem" com o
 #   modelo aprovado o leva (`ia.parabens`, G28). A etiqueta vai no contato; o card nasce pelo passo "card" (G4), ligado
-#   ao contato. A resposta é o "esperar até" `conversa.cliente_respondeu` (G11) antes do "decidir"; o termo não dá prazo
+#   ao contato. A conversa é a do WhatsApp do salão, que a receita escolhe no gatilho (`conversa_nova`, G33, #2680): a
+#   mensagem a abre, e a espera e a IA leem nela. A resposta é o "esperar até" `conversa.cliente_respondeu` (G11) antes
+#   do "decidir"; o termo não dá prazo
 #   e o esquema exige um: 7 dias. "Não pode" estende a data do presente no card (`$data` hoje + 1 mês, no fim do mês,
 #   #2705) e para. "Marcou" é a reunião marcada (`contato.tem_reuniao_marcada`), esperada 10 dias: vencido, o lembrete
 #   pelo modelo aprovado (passo 7);
@@ -40,20 +42,14 @@ require 'rails_helper'
 # docs/automacao/F9-fechamento-20-exemplos.md.
 #
 # O que ainda não monta, cada um no exemplo do passo, escrito como o termo pede:
-# - Passos 1, 4, 8 e 9 (G55, "conversa do contato", lacuna nova): o alvo contato não chega à conversa dele (Contexto: contato
-#   só lê o contato). O "escrever" e o "decidir" pulam com `sem_conversa`; o salvar recusa `conversa.cliente_respondeu`
-#   no gatilho do contato (`valor_fora_do_alvo`). O card do passo 3 nasce ligado só ao contato, sem conversa principal,
-#   e a automação da cliente atendida, no card, também pula a mensagem e o extrair com `sem_conversa`.
 # - Passo 2 (G44): o link da agenda é do responsável do card ou da pessoa da conversa; no contato não há nenhum dos
 #   dois, e uma página escolhida (a do salão) não existe. O salvar recusa `card.link_da_agenda` no gatilho do contato, e o
-#   modelo de 4 variáveis não salva com 3. Por isso a receita dos outros passos vem sem o passo 2. Mesmo com o link, a
-#   mensagem pularia pela conversa do contato.
+#   modelo de 4 variáveis não salva com 3. Por isso a receita dos outros passos vem sem o passo 2.
 # - Passos 5 e 6, "grava no card" (G18): o card é o do passo 3, outro registro; o salvar recusa `card.id` no gatilho do
-#   contato. Por isso a receita dos outros passos vem sem eles. O "não pode" do passo 5 também depende do "decidir"
-#   (G55).
+#   contato. Por isso a receita dos outros passos vem sem eles.
 # - Passos 8 e 9 (G56, "reunião atendida gera evento", lacuna nova): o "Aconteceu" grava `outcome: held` na reunião, mas
 #   nenhum evento sai dele, e não há gatilho de reunião atendida; o salvar recusa `card.reuniao_atendida`. A etapa
-#   "Atendida" no lugar da reunião adaptaria o termo. Mesmo com o gatilho, o card do aniversário não tem conversa (G55).
+#   "Atendida" no lugar da reunião adaptaria o termo.
 # - Passos 6 e 7 (G32): a reunião marcada como condição do "esperar até" (`contato.tem_reuniao_marcada`) não existe
 #   nesta base, nem o aviso a quem atende a reunião (`para.da_reuniao`: o esquema recusa; mesmo com a G32 ele só vale
 #   nos gatilhos de reunião, e o "avisar" sem conversa pula, G22).
@@ -122,8 +118,13 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
 
   # Passos 1 a 7, no aniversário gravado no contato. `extras`: os passos que o salvar recusa (:parabens, :resposta,
   # :estende, :marcou); sem eles, a receita dos outros passos.
+  def gatilho_do_aniversario
+    { tipo: 'contato.data', campo: 'data_de_nascimento', dias: 0, quando: 'antes', repete: 'todo_ano', hora: 9,
+      conversa_nova: { caixa_id: salao.id } }
+  end
+
   def receita_do_aniversario(extras = [])
-    { gatilho: { tipo: 'contato.data', campo: 'data_de_nascimento', dias: 0, quando: 'antes', repete: 'todo_ano', hora: 9 }, passos: [
+    { gatilho: gatilho_do_aniversario, passos: [
       { id: 'parabens', tipo: 'escrever', le: %w[contato], destino: 'guardar',
         instrucao: 'Escreva um parabéns curto pelo aniversário da cliente, no jeito carinhoso do salão, citando o último serviço que ela fez aqui.' },
       *([manda_o_parabens] if extras.include?(:parabens)),
@@ -189,7 +190,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
   # Passos 8 e 9.
   def receita_da_atendida
     autorizou = { campo: { '$valor' => 'contato.atributos.pode_postar' }, op: 'igual', valor: true }
-    { gatilho: { tipo: 'card.reuniao_atendida', pagina_id: agenda.id }, passos: [
+    { gatilho: { tipo: 'card.reuniao_atendida', pagina_id: agenda.id, conversa_nova: { caixa_id: salao.id } }, passos: [
       { id: 'dia_seguinte', tipo: 'esperar', duracao: { valor: 1, unidade: 'dias' } },
       { id: 'pede_a_foto', tipo: 'mensagem', texto: ['Como ficou? Manda uma foto do resultado? Podemos postar no Instagram?'],
         modelo: modelo('aniversario_foto') },
@@ -368,7 +369,6 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
   end
 
   it 'passo 1: a IA escreve o parabéns no jeito do salão, citando o último serviço que ela fez', :aggregate_failures do
-    pending 'G55: o alvo contato não chega à conversa dele, e o "escrever" pula com sem_conversa'
     aniversario_dela
 
     expect(pedidos_da_ia('automacao_escrever').sole.to_json).to include('escova progressiva', 'último serviço')
@@ -392,7 +392,6 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
     end
 
     it 'passo 4: a IA decide a resposta da cliente lendo o que ela escreveu', :aggregate_failures do
-      pending 'G55: o salvar recusa conversa.cliente_respondeu no gatilho do contato'
       ligar_com(:resposta)
       aniversario_dela
       expect(historico('Aniversário').last).to eq(['resposta', 'ok', nil])
@@ -483,7 +482,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
     end
 
     it 'passos 8 e 9: atendida; no dia seguinte, pede pelo modelo aprovado a foto e a autorização para postar', :aggregate_failures do
-      pending 'G56: a reunião atendida não gera evento nem gatilho (e o card do aniversário não tem conversa, G55)'
+      pending 'G56: a reunião atendida não gera evento nem gatilho'
       atendida_e_dia_seguinte
 
       expect(modelos_enviados).to eq(%w[aniversario_foto])
@@ -491,7 +490,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
     end
 
     it 'passo 9: autorizou; a cliente ganha a etiqueta pode-postar e a Jéssica é avisada', :aggregate_failures do
-      pending 'G56: a reunião atendida não gera evento nem gatilho (e o card do aniversário não tem conversa, G55)'
+      pending 'G56: a reunião atendida não gera evento nem gatilho'
       atendida_e_dia_seguinte
 
       cliente_escreve_as('2026-11-19 18:00', 'Ficou lindo! Pode postar sim.')
