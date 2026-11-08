@@ -73,7 +73,7 @@ const lista = (comentarios, extra = {}) => ({
   ...extra,
 });
 
-const responder = (extra = {}) =>
+const responder = (extra = {}, extraDoPost = {}) =>
   SeusPostsAPI.getPost.mockResolvedValue({
     data: {
       perfil: { id: 'instagram-1', network: 'instagram', inbox_id: 7 },
@@ -95,6 +95,7 @@ const responder = (extra = {}) =>
         shares: 2,
         waiting: 50,
         waiting_more: true,
+        ...extraDoPost,
       },
       normal: { views: 400 },
       comments: lista([
@@ -167,6 +168,51 @@ describe('Seus posts: o post (#2305)', () => {
     expect(wrapper.find('[data-seus-posts-outros]').text()).toBe(
       '5 salvaram · 2 compartilharam'
     );
+  });
+
+  // #2522: post do Instagram impulsionado por aqui; os comentários do anúncio ficam no anúncio.
+  describe('anúncio criado aqui a partir do post', () => {
+    afterEach(() => {
+      delete window.globalConfig;
+    });
+
+    it('com o anúncio e o CRM ligado: Teve anúncio, e o atalho leva aos comentários do anúncio', async () => {
+      window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
+      responder({ ad_id: '903' }, { boosted: true });
+      const wrapper = await montar();
+
+      const atalho = wrapper.findComponent('[data-seus-posts-ver-anuncio]');
+      expect(atalho.props('to')).toEqual({
+        name: 'campaigns_meta_ads_index',
+        params: { accountId: 1 },
+        query: { aba: 'resultado', anuncio: '903' },
+      });
+      expect(
+        wrapper.find('[data-seus-posts-comentarios-do-anuncio]').text()
+      ).toContain('Os comentários do anúncio ficam no anúncio');
+      expect(wrapper.find('[data-seus-posts-como-foi]').text()).toContain(
+        'Você impulsionou este post pela plataforma'
+      );
+      expect(wrapper.find('[data-seus-posts-lado]').text()).toBe(
+        'Impulsionado pela plataforma: o anúncio tem números e comentários próprios.'
+      );
+    });
+
+    it('sem o anúncio (quem não vê Anúncios da Meta) ou sem o CRM: nenhum atalho', async () => {
+      window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
+      responder();
+      let wrapper = await montar();
+      expect(
+        wrapper.find('[data-seus-posts-comentarios-do-anuncio]').exists()
+      ).toBe(false);
+
+      window.globalConfig = { CRM_KANBAN_ENABLED: 'false' };
+      responder({ ad_id: '903' });
+      wrapper = await montar();
+      expect(
+        wrapper.find('[data-seus-posts-comentarios-do-anuncio]').exists()
+      ).toBe(false);
+    });
   });
 
   it('o herói conta quem espera e Ver quem espera filtra a lista', async () => {
