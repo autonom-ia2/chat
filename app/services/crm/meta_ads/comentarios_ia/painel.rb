@@ -6,10 +6,11 @@
 # - O resto é lido na hora: os comentários do alvo (Fonte, ao vivo, nunca gravados) e o que a IA fez com cada um
 #   (Crm::MetaAdsCommentAction, actor 'ai'). Recebeu no privado e respondeu: pelas conversas que nasceram do cuidado.
 # - "Esperando você" (`to_see`) é o que ficou com o dono, com o porquê: reclamação, privado recusado, privado que pode
-#   ter saído (a Meta não respondeu), não cuidei (Meta ou Jev fora do ar, teto do dia, sem certeza), mais de 7 dias,
+#   ter saído (a Meta não respondeu), não cuidei (Meta ou IA fora do ar, teto do dia, sem certeza), mais de 7 dias,
 #   era o caso do privado, mas ele não sai ali (`no_private`), não era o caso (a IA leu e não agiu), chegou antes de
 #   ligar (`started_at`) ou chegou com o cuidado pausado (`paused`). O que chegou depois de ligar, com o cuidado ligado,
-#   e a IA ainda não leu está na fila dela: não entra. "Escondi" (`hidden`): o que a IA escondeu.
+#   e a IA ainda não leu está na fila dela: não entra por ESPERA_DA_IA; depois, entra (`not_caught`, #2519).
+#   "Escondi" (`hidden`): o que a IA escondeu.
 # - "Ler e mandar": uma vez por cuidado ligado (trava atômica em `read_old_at`), o LerAntigosJob põe os comentários de
 #   até 7 dias que chegaram antes de ligar na fila do motor, como comentários novos. Quem não é o caso fica com o dono.
 class Crm::MetaAds::ComentariosIa::Painel
@@ -23,12 +24,13 @@ class Crm::MetaAds::ComentariosIa::Painel
   end
 
   STATUSES = %w[on paused].freeze
-  # A rede que já deixa a IA mandar o privado (Rede#privado_disponivel?): o Facebook espera a pages_messaging (F4).
-  PRIVADO_LIBERADO = %w[instagram].freeze
   MOTIVO_DA_ACAO = {
     'to_you' => 'complaint', 'private_reply_failed' => 'failed', 'private_reply_unsure' => 'unsure',
     'kept_for_owner' => 'no_private', 'ai_unread' => 'unread', 'private_reply_already' => 'already_sent'
   }.freeze
+
+  # Quanto o comentário espera na fila da IA antes de vir para o dono, no "Esperando você" (#2519).
+  ESPERA_DA_IA = 10.minutes
 
   CARE_ID = Arel.sql("conversations.additional_attributes -> 'meta_ads_comment' ->> 'care_id'")
   SEM_RESULTADO = { sent: 0, replied: 0 }.freeze
@@ -44,6 +46,8 @@ class Crm::MetaAds::ComentariosIa::Painel
     ids.to_h { |id| [id.to_i, { sent: sent.fetch(id, 0), replied: replied.fetch(id, 0) }] }
   end
 
+  # As conversas do privado dos cuidados `ids` que `user` vê. Também a lista do "no privado" em Agentes (NoPrivado,
+  # #2481).
   def self.enviadas_vistas(account, ids, user)
     Conversations::PermissionFilterService.new(account.conversations, user, account, for_reading: true).perform
                                           .unscope(:order).where(CARE_ID.in(ids))
@@ -54,7 +58,6 @@ class Crm::MetaAds::ComentariosIa::Painel
   def self.respondeu
     Message.unscope(:order).where(message_type: :incoming).where(Message.arel_table[:conversation_id].eq(Conversation.arel_table[:id]))
   end
-  private_class_method :enviadas_vistas, :respondeu
 
   # O cuidado do alvo (Fonte.do_alvo), ou nil. O LerAntigosJob também o acha por aqui.
   def self.cuidado_do(account_id, alvo)
@@ -88,12 +91,14 @@ class Crm::MetaAds::ComentariosIa::Painel
     cuidado_payload.merge(lista(lido))
   end
 
-  def salvar!(message:, para_quem:, phrases:, status:, user:)
+  # escrita (#2458): { temas:, assunto_proibido:, tom: } do passo 2, só os que vieram: o que não veio fica como estava.
+  def salvar!(message:, para_quem:, phrases:, status:, user:, escrita: {}) # rubocop:disable Metrics/ParameterLists -- passo 2 (#2458)
     raise Error, 'invalid_status' unless STATUSES.include?(status)
     raise Error, 'invalid_para_quem' if para_quem.to_s.strip.empty?
 
     gravar!({ network: rede_do_cuidado, post_ids: @post_ids, inbox_id: @alvo['inbox_id'], message: message.to_s.strip,
-              para_quem: para_quem.to_s.strip, phrases: Array(phrases).map(&:to_s), status: status }, user)
+              para_quem: para_quem.to_s.strip, phrases: Array(phrases).map(&:to_s), status: status,
+              **Crm::MetaAds::ComentariosIa::Escrita.do_passo_2(@account, escrita) }, user)
   end
 
   # Só uma chamada acha `read_old_at` vazio e o marca (duas abas, duplo clique): a outra recebe `already_read`. Se a Meta
@@ -147,7 +152,8 @@ class Crm::MetaAds::ComentariosIa::Painel
     registro = cuidado || novo_cuidado(user)
     registro.assign_attributes(atributos)
     religar!(registro)
-    registro.save!
+    # #2520: gravado, o cuidado de Facebook assina o `feed` da Página (o Facebook só manda o comentário com ele).
+    Crm::MetaAds::ComentariosIa::AssinarFeedJob.para!(registro.tap(&:save!))
     @cuidado = registro
   rescue ActiveRecord::RecordNotUnique
     raise if de_novo
@@ -180,20 +186,27 @@ class Crm::MetaAds::ComentariosIa::Painel
   def cuidado_payload
     escrito = cuidado || Crm::MetaAdsCommentCare.new
     {
-      network: rede_do_cuidado, private_available: @networks.intersect?(PRIVADO_LIBERADO), care: cuidado ? escrito.status : 'off',
+      # O privado sai em alguma rede do alvo: no Facebook, só com a flag da conta (Rede.privado_liberado?, #2613).
+      private_available: @networks.any? { |rede| Crm::MetaAds::ComentariosIa::Rede.privado_liberado?(@account, rede) },
+      network: rede_do_cuidado, care: cuidado ? escrito.status : 'off',
       message: escrito.message.to_s, para_quem: escrito.para_quem.to_s, phrases: Array(escrito.phrases),
-      read_old: escrito.read_old_at.present?, results: resultados.merge(skipped: 0)
-    }
+      read_old: escrito.read_old_at.present?, results: resultados.merge(skipped: 0),
+      # #2487: o id do cuidado gravado (nil antes de ligar), para anexar o material só deste post ou anúncio.
+      care_id: cuidado&.id
+    }.merge(Crm::MetaAds::ComentariosIa::Escrita.no_painel(@account, escrito))
   end
 
   def lista(lido)
     acoes = acoes_da_ia((lido[:linhas] + lido[:escondidas]).pluck(:id))
+    @tratados = Crm::MetaAdsCommentAction.tratados_pela_pessoa(@account.id, lido[:linhas].pluck(:id))
     to_see = lido[:linhas].filter_map { |linha| item(linha, acoes[linha[:id].to_s]) }
-    contagens(lido[:linhas]).merge(status: 'ready', to_see: to_see, hidden: escondidas_pela_ia(lido[:escondidas], acoes),
-                                   results: resultados.merge(skipped: to_see.count { |linha| linha[:kind] == 'skipped' }))
+    esperam = Crm::MetaAds::ComentariosIa::Fonte.que_esperam(@account, lido)
+    contagens(esperam).merge(status: 'ready', to_see: to_see, hidden: escondidas_pela_ia(lido[:escondidas], acoes),
+                             results: resultados.merge(skipped: to_see.count { |linha| linha[:kind] == 'skipped' }))
   end
 
-  # unanswered: o que o "Ler e mandar" pode cuidar (até 7 dias e de antes de ligar); older: mais de 7 dias.
+  # unanswered: o que o "Ler e mandar" pode cuidar (até 7 dias e de antes de ligar); older: mais de 7 dias. Com a flag
+  # da conversa, contam também as respostas de cliente (#2454, Fonte.que_esperam), que o LerAntigosJob põe na fila.
   def contagens(linhas)
     { unanswered: linhas.count { |linha| recente?(linha) && antes_de_ligar?(linha) }, older: linhas.count { |linha| !recente?(linha) } }
   end
@@ -211,13 +224,15 @@ class Crm::MetaAds::ComentariosIa::Painel
   end
 
   # nil: chegou depois de ligar, com o cuidado ligado, e a IA ainda não leu (está na fila dela): não fica com o dono.
-  # Com o cuidado pausado, a IA não lê: fica com o dono (`paused`).
+  # Com o cuidado pausado, a IA não lê: fica com o dono (`paused`). Passado ESPERA_DA_IA sem nenhuma ação dela, o
+  # comentário vem para o dono (`not_caught`, #2519): o evento pode não ter chegado, e nada pode sumir em silêncio.
   def tipo_sem_acao(linha, acoes)
     return 'older' unless recente?(linha)
     return 'skipped' if acoes.key?(Crm::MetaAds::ComentariosIa::Registro::LIDO)
     return 'waiting' if antes_de_ligar?(linha)
+    return 'paused' if cuidado.status == 'paused'
 
-    'paused' if cuidado.status == 'paused'
+    'not_caught' if linha[:momento] <= ESPERA_DA_IA.ago && @tratados.exclude?(linha[:id].to_s)
   end
 
   # Sem cuidado, tudo é de antes de ligar.
@@ -225,8 +240,9 @@ class Crm::MetaAds::ComentariosIa::Painel
     cuidado.nil? || linha[:momento].nil? || linha[:momento] < cuidado.started_at
   end
 
+  # `created_time`: há quanto tempo a pessoa espera (#2519), a tela mostra "há 3 horas".
   def comentario(linha)
-    { id: linha[:id].to_s, network: linha[:network], author: linha[:author], text: linha[:text] }
+    { id: linha[:id].to_s, network: linha[:network], author: linha[:author], text: linha[:text], created_time: linha[:momento]&.iso8601 }
   end
 
   # { comment_id => { ação => conversa } }, só as da IA nesta conta.

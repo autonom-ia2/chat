@@ -21,7 +21,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::CuidarJob do
 
   {
     'a Meta não responde à leitura do comentário' => Crm::MetaAds::ComentariosIa::Rede::Indisponivel,
-    'o Jev não responde à pergunta' => TypesafeAi::Decisor::Error.new('typesafe_timeout')
+    'a IA não responde à pergunta' => Crm::MetaAds::ComentariosIa::Classificador::Indisponivel.new('ai_timeout')
   }.each do |caso, erro|
     describe caso do
       before { allow(cuidar).to receive(:call).and_raise(erro) }
@@ -43,6 +43,36 @@ RSpec.describe Crm::MetaAds::ComentariosIa::CuidarJob do
         expect(enqueued_jobs).to be_empty
       end
     end
+  end
+
+  # #2519: o "não cuidei" da queda é gravado como o Cuidar grava, para o Esperando contar o mesmo por anúncio.
+  describe 'esgotado: o anúncio nas linhas (Cuidar.registrado)' do
+    before { allow(cuidar).to receive(:call).and_raise(Crm::MetaAds::ComentariosIa::Rede::Indisponivel) }
+
+    it 'no Facebook, com o cuidado de um anúncio: as linhas levam o anúncio, e o Esperando conta' do
+      create(:crm_meta_ads_comment_care, account: account, target_kind: 'ad', target_id: '120', network: 'both', post_ids: %w[555_1790])
+
+      perform_enqueued_jobs { described_class.perform_later(dados.merge('network' => 'facebook', 'post_id' => '555_1790')) }
+
+      expect(Crm::MetaAdsCommentAction.where(comment_id: 'c-1').pluck(:action, :ad_id)).to contain_exactly(%w[ai_seen 120], %w[ai_unread 120])
+      expect(Crm::MetaAds::ComentariosIa::Esperando.por_anuncio(account.id, %w[120])).to eq('120' => 1)
+    end
+
+    it 'a resposta dentro de um comentário vai sem anúncio (só o primeiro nível conta)' do
+      perform_enqueued_jobs { described_class.perform_later(dados.merge('ad_id' => '120', 'parent_id' => 'c-0')) }
+
+      expect(Crm::MetaAdsCommentAction.where(comment_id: 'c-1').pluck(:ad_id).uniq).to eq([nil])
+    end
+  end
+
+  it 'esgotado depois de limites da Meta no privado: a pessoa reservada por este comentário fica livre' do
+    allow(cuidar).to receive(:call).and_raise(Crm::MetaAds::ComentariosIa::Rede::Indisponivel)
+    Crm::MetaAdsCommentPerson.create!(account: account, network: 'instagram', post_id: '1790', from_id: 'igsid-1', comment_id: 'c-1')
+    Crm::MetaAdsCommentPerson.create!(account: account, network: 'instagram', post_id: '1790', from_id: 'igsid-2', comment_id: 'c-9')
+
+    perform_enqueued_jobs { described_class.perform_later(dados) }
+
+    expect(Crm::MetaAdsCommentPerson.pluck(:comment_id)).to eq(['c-9'])
   end
 
   it 'esgotado, mas outro job já reservou o comentário: não grava o "não consegui ler" por cima' do

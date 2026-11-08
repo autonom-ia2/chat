@@ -225,6 +225,7 @@
         "ERROR": "Não consegui fazer isso agora. Tente de novo.",
         "ERRORS": {
           "invalid_text": "Escreva a mensagem antes de mandar.",
+          "text_too_long": "A mensagem ficou longa demais para o Instagram (letra com acento e emoji contam mais). Tire um pouco do texto.",
           "comment_not_found": "Este comentário não está mais no post.",
           "meta_unavailable": "A Meta não respondeu agora. Tente de novo daqui a pouco.",
           "meta_refused": "A Meta não deixou fazer isso neste comentário.",
@@ -234,20 +235,17 @@
       },
       "CARE_OFFER": {
         "TITLE": "O que tem nos comentários",
-        "QUESTIONS": "{count} pergunta: posso responder no privado | {count} perguntas: posso responder no privado",
-        "QUESTIONS_OLD": "{count} pergunta com mais de 7 dias: fica com você | {count} perguntas com mais de 7 dias: ficam com você",
-        "QUESTIONS_YOU": "{count} pergunta: fica com você | {count} perguntas: ficam com você",
-        "COMPLAINTS": "{count} reclamação: fica com você | {count} reclamações: ficam com você",
+        "WAITING": "{count} comentário espera resposta | {count} comentários esperam resposta",
+        "NONE_WAITING": "Nenhum comentário esperando resposta.",
+        "PRIVATE_WINDOW": "{count} cabe no privado (até 7 dias) | {count} cabem no privado (até 7 dias)",
         "TEXT": "Se você ligar, eu respondo as perguntas no privado e aviso no comentário. Você escolhe se respondo as que já estão aqui.",
-        "TEXT_MIXED": "Se você ligar, eu respondo no privado as perguntas que chegarem. Das que já estão aqui, posso responder a mais recente, se você quiser. | Se você ligar, eu respondo no privado as perguntas que chegarem. Das que já estão aqui, posso responder as {count} mais recentes, se você quiser.",
         "TEXT_ONLY_NEW": "Se você ligar, eu respondo no privado as perguntas que chegarem. As que já estão aqui passaram de 7 dias: responda no comentário.",
         "TEXT_FUTURE": "Se você ligar, eu respondo no privado as perguntas que chegarem.",
         "BUTTON": "Cuidar dos comentários",
         "TEXT_SOON": "Mandar no privado pelo Messenger ainda não está liberado. Assim que a Meta liberar, você liga por aqui.",
         "LOADING": "Estou lendo os comentários…",
         "NEEDS_PERMISSION": "Para eu dizer o que tem nos comentários, preciso do acesso a eles.",
-        "UNAVAILABLE": "Não consegui ler os comentários agora.",
-        "MORE": "Li os {count} mais recentes sem resposta."
+        "UNAVAILABLE": "Não consegui ler os comentários agora."
       },
       "CARE_ON": {
         "PAUSE": "Pausar",

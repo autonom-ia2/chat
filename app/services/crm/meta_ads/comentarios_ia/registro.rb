@@ -2,7 +2,7 @@
 # (crm_meta_ads_comment_actions, Crm::MetaAdsCommentAction), com actor 'ai'.
 #
 # Duas ações são únicas por comentário (índice único parcial do #2196) e servem de reivindicação, gravadas ANTES:
-# - `ai_seen`, antes do Jev: o webhook que a Meta reenvia, ou outro job do mesmo comentário, sai sem gastar nada. Com
+# - `ai_seen`, antes da IA: o webhook que a Meta reenvia, ou outro job do mesmo comentário, sai sem gastar nada. Com
 #   ela, só um job cuida de cada comentário, e as outras ações saem uma vez só;
 # - `private_reply`, antes da Meta, com os estados do #2196 (docs/meta/comentarios-instagram.md): reservado
 #   (record!), `attempt!` logo antes da chamada, `confirm!` quando a Meta aceita. Recusa 4xx: a linha sai (soltar!).
@@ -10,20 +10,27 @@
 #   chegou à chamada vence em Crm::MetaAdsCommentAction::RESERVED_TTL e sai antes da próxima (soltar_abandonada!).
 # As outras são registro do que já aconteceu, gravadas depois (gravar!).
 #
-# Ações da IA: ai_seen (a IA leu o comentário; conta no teto do dia), private_reply, reply, hide, to_you (reclamação
+# Ações da IA: ai_seen (a IA leu o comentário), private_reply, reply, hide, to_you (reclamação
 # passada à pessoa), private_reply_failed (o privado que a Meta recusou), private_reply_unsure (a Meta não respondeu ao
 # privado: pode ter saído), kept_for_owner (a pergunta que era o caso do privado, mas ele não sai ali), ai_unread (a
-# IA não cuidou: a Meta ou o Jev fora do ar em todas as tentativas, teto do dia, sem certeza, sem saber quem comentou,
+# IA não cuidou: a Meta ou a IA fora do ar em todas as tentativas, sem certeza, sem saber quem comentou,
 # ou a Meta não escondeu) e private_reply_already (era o caso do privado, mas a pessoa já tem um deste post). As seis
-# últimas formam o "Esperando você".
+# últimas formam o "Esperando você". no_care (#2519): chegou sem cuidado ligado, e a IA não cuidou (Esperando).
 #
 # O privado por pessoa em cada post (Crm::MetaAdsCommentPerson) é reservado aqui também, antes da Meta.
 module Crm::MetaAds::ComentariosIa::Registro
   ACTOR = 'ai'.freeze
+  # A marca de envio automático (Autonomia::Agents::Operate::PessoaDaEquipe::MARCAS_DE_ENVIO_AUTOMATICO) na mensagem do
+  # privado que a IA mandou, no Instagram e no Messenger: o id da linha `private_reply` dela.
+  MARCA = 'meta_ads_comment_action_id'.freeze
   LIDO = 'ai_seen'.freeze
   NAO_CUIDOU = 'ai_unread'.freeze
   # Era o caso do privado, mas a pessoa já tem um deste post (outro comentário dela, ou o que alguém mandou na tela).
   JA_TEM_PRIVADO = 'private_reply_already'.freeze
+  # Chegou sem cuidado ligado (#2519): a IA não cuida, e o comentário fica com o dono. Antes, sumia sem registro.
+  SEM_CUIDADO = 'no_care'.freeze
+  # O motivo é uma frase curta; o que passar disso é cortado.
+  MOTIVO_MAXIMO = 500
 
   module_function
 
@@ -32,9 +39,12 @@ module Crm::MetaAds::ComentariosIa::Registro
     reivindicar!(comentario, LIDO).present?
   end
 
-  # Comentários que a IA leu hoje na conta, no fuso da plataforma.
-  def hoje(account_id)
-    acoes(account_id).where(action: LIDO, at: Time.current.all_day).count
+  # O que a IA escolheu, com que certeza e por quê, na linha `ai_seen` do comentário (#2424): a auditoria de cada
+  # decisão, também da que não age (sem certeza).
+  def decisao!(comentario, avaliacao)
+    linha(comentario, LIDO).update_all( # rubocop:disable Rails/SkipsModelValidations
+      ai_decision: avaliacao.escolha, ai_confidence: avaliacao.certeza, ai_reason: avaliacao.motivo.to_s.first(MOTIVO_MAXIMO).presence
+    )
   end
 
   # Quantas respostas públicas a IA já deu na conta: escolhe a frase da vez, para não repetir a mesma em seguida.
@@ -49,17 +59,38 @@ module Crm::MetaAds::ComentariosIa::Registro
     false
   end
 
+  # Uma linha por comentário: o webhook reenviado não conta duas vezes (o Esperando conta comentários distintos, então a
+  # corrida rara entre dois reenvios ao mesmo tempo também não).
+  def sem_cuidado!(comentario)
+    linha(comentario, SEM_CUIDADO).exists? || gravar!(comentario, SEM_CUIDADO)
+  end
+
   def gravar!(comentario, acao, conversation: nil)
     registrar!(comentario, acao, conversation: conversation)
     true
   end
 
-  # true só para quem reservou primeiro: a mesma pessoa, no mesmo post, recebe um privado só.
+  # O privado em resposta a comentário (2º nível, #2454) que a Meta recusou: o código e o subcódigo dela, sem texto, para
+  # consulta (o InstagramPrivateReply grava a mesma linha no Instagram).
+  def recusa_do_privado!(comentario, codigo:, subcodigo:)
+    Crm::MetaAdsCommentAction.record!(account: Account.find(comentario.account_id), network: comentario.network,
+                                      comment_id: comentario.comment_id, action: 'private_reply_failed', actor: ACTOR,
+                                      ad_id: comentario.ad_id, meta_error_code: codigo, meta_error_subcode: subcodigo)
+  end
+
+  # true só para quem reservou primeiro: a mesma pessoa, no mesmo post, recebe um privado só. O mesmo comentário que já
+  # a reservou (o job tentando de novo depois de um limite da Meta, #2454) segue com ela.
   def reservar_pessoa!(comentario)
     Crm::MetaAdsCommentPerson.create!(pessoa(comentario).merge(comment_id: comentario.comment_id.to_s))
     true
   rescue ActiveRecord::RecordNotUnique
-    false
+    Crm::MetaAdsCommentPerson.exists?(pessoa(comentario).merge(comment_id: comentario.comment_id.to_s))
+  end
+
+  # A reserva da pessoa feita por este comentário, achada só pelo comentário (o job, esgotado, não tem o autor lido).
+  def soltar_pessoa_do_comentario!(comentario)
+    Crm::MetaAdsCommentPerson.where(account_id: comentario.account_id, network: comentario.network, post_id: comentario.post_id.to_s,
+                                    comment_id: comentario.comment_id.to_s).delete_all
   end
 
   # A Meta recusou o privado: a pessoa pode receber pelo próximo comentário. Só a reserva deste comentário sai.

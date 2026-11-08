@@ -1,7 +1,6 @@
 // #1301 — regras das Ferramentas do agente (protótipo ferramentas.html). Endereço, nomes e corpo
 // são lidos com métodos de string e com o parser URL do navegador: nada de regex.
 
-export const MAX_FERRAMENTAS = 10; // Autonomia::Agents::Tool::MAX_PER_AGENT
 // O mesmo valor de Autonomia::Agents::Tool.masked_header_value: a API devolve o segredo assim e,
 // no PATCH, o ToolsController troca esse valor pelo guardado quando a chave é a mesma.
 export const MASCARA_DO_SEGREDO = '••••••••';

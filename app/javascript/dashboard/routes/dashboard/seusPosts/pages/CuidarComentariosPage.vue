@@ -1,7 +1,10 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import SeusPostsAPI from 'dashboard/api/seusPosts';
+import { useI18n } from 'vue-i18n';
+import ComentariosIaAPI from 'dashboard/api/comentariosIa';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import CuidarComentarios from '../../campaigns/metaAds/comentariosIa/CuidarComentarios.vue';
@@ -9,6 +12,8 @@ import CuidarComentarios from '../../campaigns/metaAds/comentariosIa/CuidarComen
 // Seus posts (#2212, B1): "Cuidar dos comentários" de um post. A tela é a do #2212 (CuidarComentarios), a mesma do
 // anúncio (B2); esta página só a coloca no endereço do post, lê o post (foto, legenda, caixa e `can_manage`, o mesmo
 // do F2) e volta para ele. O cuidado em si vem de GET seus_posts/posts/:post_id/cuidado.
+// #2520: o post vem do próprio cuidado (GET .../cuidado/post), com a régua dele. Sem seus_posts_comentarios não há o post
+// por dentro: o "Voltar" vai para a lista do Seus posts e o "Ver no post" não aparece.
 const route = useRoute();
 const router = useRouter();
 
@@ -33,10 +38,7 @@ const lerPost = async () => {
   dados.value = null;
   erro.value = null;
   try {
-    const { data } = await SeusPostsAPI.getPost({
-      perfil: perfilId.value,
-      postId: postId.value,
-    });
+    const { data } = await ComentariosIaAPI.getPostDoCuidado(target.value);
     if (minha === leitura) dados.value = data;
   } catch (error) {
     if (minha === leitura)
@@ -62,12 +64,37 @@ const caixa = computed(() =>
     : ''
 );
 
-const voltar = () =>
-  router.push({
-    name: 'seus_posts_post',
-    params: { accountId: route.params.accountId, postId: postId.value },
-    query: { perfil: perfilId.value, dias: route.query.dias },
-  });
+const { isCloudFeatureEnabled } = useAccount();
+const comPostPorDentro = computed(() =>
+  isCloudFeatureEnabled(FEATURE_FLAGS.SEUS_POSTS_COMENTARIOS)
+);
+// #2479: aberto pelo "Criar agente" de Agentes (?de=agentes), volta para Agentes.
+const { t } = useI18n();
+const deAgentes = computed(() => route.query.de === 'agentes');
+const voltarLabel = computed(() =>
+  deAgentes.value
+    ? t('AGENTS.AGENTE_DO_POST.CRIAR.VOLTAR_AGENTES')
+    : t(`${KEY}.${comPostPorDentro.value ? 'BACK_POST' : 'BACK_POSTS'}`)
+);
+const paraOPost = () => ({
+  name: 'seus_posts_post',
+  params: { accountId: route.params.accountId, postId: postId.value },
+  query: { perfil: perfilId.value, dias: route.query.dias },
+});
+const paraAgentes = () => ({
+  name: 'autonomia_agents_index',
+  params: { accountId: route.params.accountId },
+});
+const paraALista = () => ({
+  name: 'seus_posts_index',
+  params: { accountId: route.params.accountId },
+  query: { perfil: perfilId.value, dias: route.query.dias },
+});
+const voltar = () => {
+  if (deAgentes.value) router.push(paraAgentes());
+  else router.push(comPostPorDentro.value ? paraOPost() : paraALista());
+};
+const responder = () => router.push(paraOPost());
 </script>
 
 <template>
@@ -86,7 +113,7 @@ const voltar = () =>
           @click="voltar"
         >
           <span class="i-lucide-arrow-left size-4" aria-hidden="true" />
-          {{ $t(`${KEY}.BACK_POST`) }}
+          {{ voltarLabel }}
         </button>
         <div
           v-if="erro"
@@ -123,9 +150,12 @@ const voltar = () =>
         :target="target"
         :post="cabecalho"
         origin="post"
+        :back-label="deAgentes || !comPostPorDentro ? voltarLabel : ''"
         :can-manage="Boolean(dados.can_manage)"
         :inbox-path="caixa"
+        :can-reply="comPostPorDentro"
         @back="voltar"
+        @reply="responder"
       />
     </div>
   </section>

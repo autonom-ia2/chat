@@ -146,10 +146,25 @@ RSpec.describe 'Api::V1::Accounts::Crm::NumerosOrigens', type: :request do
 
       call(role_user('crm_view_reports'), base, funil: 'todos')
       expect(response.parsed_body).to include('gasto' => nil, 'gastoOculto' => true)
-      expect(response.parsed_body['anuncios'].first.keys).not_to include('gasto', 'porVenda')
+      expect(response.parsed_body['anuncios']).to eq([])
 
       call(admin)
       expect(response.parsed_body).to include('gasto' => nil, 'gastoEmTodos' => true)
+    end
+
+    # #2271/#2521: o anúncio que trouxe venda (título, miniatura, id) só para quem vê o anúncio de origem; a origem e as
+    # contagens ficam. Vale para o clique para o WhatsApp, o Messenger e o Direct.
+    it 'anúncios que trouxeram venda só para quem vê o anúncio de origem' do
+      ganho(card(vendas, nome: 'Bia Rocha', campaign: { 'source' => 'meta_ctm', 'source_id' => '120210000000202', 'headline' => 'Direto' },
+                         valor: 50_000))
+
+      call(role_user('crm_view_reports'))
+      expect(response.parsed_body['anuncios']).to eq([])
+      expect(response.parsed_body['origens'].find { |origem| origem['tipo'] == 'anuncio_meta' }).to include('vendas' => 2)
+      expect(response.body).not_to include('Oferta', 'Direto', anuncio, '120210000000202')
+
+      call(role_user('crm_view_reports', 'meta_ads_view'))
+      expect(response.parsed_body['anuncios'].pluck('id')).to contain_exactly(anuncio, '120210000000202')
     end
 
     it 'R$ de venda só com sales_value_view' do
@@ -177,9 +192,10 @@ RSpec.describe 'Api::V1::Accounts::Crm::NumerosOrigens', type: :request do
       baixar(role_user('crm_view_reports', 'meta_ads_view', 'sales_value_view'), 'pdf', funil: 'todos')
       expect(texto_do_pdf).not_to include('Marina Souza', 'Paulo Lima', 'Rita Alves')
 
+      # Sem meta_ads_view, também sem a aba dos anúncios (título e id do anúncio, #2521).
       baixar(role_user('crm_view_reports'), 'planilha', funil: 'todos')
-      expect(abas.size).to eq(3)
-      expect(abas).not_to include('Clientes')
+      expect(abas.size).to eq(2)
+      expect(abas).not_to include('Clientes', I18n.t('numeros_origens_report.sheets.ads'))
     end
 
     it 'planilha leva o gasto só em "Todos os funis" e para quem vê os anúncios' do

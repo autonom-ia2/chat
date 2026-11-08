@@ -78,6 +78,6 @@ RSpec.describe Crm::MetaAds::Relatorio::Planilha do
     planilha = Roo::Excelx.new(StringIO.new(described_class.new(dados).gerar))
     resumo = (1..planilha.sheet(0).last_row).map { |linha| planilha.sheet(0).row(linha) }
 
-    expect(resumo).to include(['Investido', 100], ['Outros anúncios (sem conversa)', 40])
+    expect(resumo).to include(['Investido', 100], ['Anúncios que não abrem conversa', 40])
   end
 end

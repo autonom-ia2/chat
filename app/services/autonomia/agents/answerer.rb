@@ -77,7 +77,8 @@ module Autonomia
       def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
                      trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
                      operador: nil, max_rodadas: 1, max_segundos: nil, feature: 'agente_resposta',
-                     fixos: [], contexto_do_turno: nil, memoria: nil, prova: false)
+                     fixos: [], contexto_do_turno: nil, memoria: nil, prova: false, formato: FormatoDoComentario::CONVERSA,
+                     care_id: nil)
         @agent = agent
         # #1428 (parte 3, entrega B): a PROVA DO AJUSTE. Nenhuma ferramenta vai ao modelo (nem a busca na web, nem
         # especialista ou ajudante): sem `tools`, o ResponsesClient faz uma chamada só e nada pode ser executado. Teto
@@ -87,7 +88,11 @@ module Autonomia
         @memoria = memoria
         # Regra do sistema para ESTE turno, repassada ao PromptBuilder (#1669: a equipe escreveu na conversa). nil:
         # nada muda.
-        @contexto_do_turno = contexto_do_turno
+        # #2458: a resposta a um comentário de post (FormatoDoComentario; formato desconhecido é ArgumentError). Na
+        # conversa (padrão), nada muda; no comentário, a regra do formato vai junto da regra do turno e nenhuma
+        # ferramenta vai ao modelo.
+        # #2487: e o cuidado do comentário (`care_id`), para a busca ler também o material só daquele post ou anúncio.
+        guardar_o_turno(formato, contexto_do_turno, care_id)
         @query = query.to_s
         # Quando a query composta embute contexto ANTES da pergunta real (ex.: copiloto chat com
         # transcrição), o truncamento do Retriever (que preserva o começo) cortaria a pergunta fora
@@ -140,6 +145,8 @@ module Autonomia
         @conferencia_da_fala = conferencia_da_fala
         # #1479: opções e botão de link na resposta ao cliente. Desligado, o pedido ao modelo fica o de antes.
         @interacao = @trust_instruction && Interacao.disponivel?(agent: @agent, delivery: @delivery, audience: @audience)
+        # #1479 F2: e o pedido de localização, com a flag da conta.
+        @localizacao = @interacao && Interacao::PedidoDeLocalizacao.no_turno?(@delivery.conversation)
         # Tema 14: o relógio do prazo da resposta começa aqui, e não na primeira consulta ao ajudante.
         @orcamento_dos_ajudantes = Ajudantes::Orcamento.new
         snippets = retrieve_snippets
@@ -176,6 +183,13 @@ module Autonomia
 
       private
 
+      # O formato da resposta, a regra do turno e o cuidado do comentário, conferidos juntos (FormatoDoComentario).
+      def guardar_o_turno(formato, contexto_do_turno, care_id)
+        @formato = FormatoDoComentario.conferido(formato)
+        @contexto_do_turno = FormatoDoComentario.contexto_do_turno(contexto_do_turno, @formato)
+        @care_id = FormatoDoComentario.cuidado_conferido(care_id, @formato)
+      end
+
       # #1479: a interação pedida pelo modelo; o endereço do link precisa ser um dos que o dono autorizou
       # (`Interacao::Enderecos.do_dono`): a instrução e a base, e a saída de ferramenta dentro de um endereço delas. O
       # link recusado vai à telemetria do turno (sem o endereço) e a resposta segue sem ele. Os endereços do dono só são
@@ -184,7 +198,7 @@ module Autonomia
         return unless @interacao
 
         pedido = parsed['interacao']
-        return Interacao.do_modelo(pedido, enderecos: Set.new) unless pedido.is_a?(Hash) && pedido['tipo'] == 'link'
+        return Interacao.do_modelo(pedido, enderecos: Set.new, localizacao: @localizacao) unless pedido.is_a?(Hash) && pedido['tipo'] == 'link'
 
         enderecos = Interacao::Enderecos.do_dono(dono: [@prompt.instructions, *snippets.map { |trecho| trecho.content.to_s }],
                                                  ferramentas: @saidas_do_turno.to_a)
@@ -304,9 +318,11 @@ module Autonomia
         # C3 (custo): agente declarado SEM base (`with_knowledge=false` explícito) pula o retrieval
         # inteiro — não paga embedding por mensagem nem usa entries residuais de uma base antiga.
         # Default histórico preservado: chave ausente = COM base (retrieval roda normalmente).
-        return [] if @agent.knowledge_disabled?
+        return [] if @agent.knowledge_disabled? && @care_id.nil?
 
-        com_fixos(Retriever.new(agent: @agent).retrieve(@retrieval_query, top_k: Config::ANSWER_TOP_K))
+        # #2487: o turno normal chama a busca como sempre; só a resposta a um comentário passa o cuidado.
+        retriever = @care_id ? Retriever.new(agent: @agent, care_id: @care_id) : Retriever.new(agent: @agent)
+        com_fixos(retriever.retrieve(@retrieval_query, top_k: Config::ANSWER_TOP_K))
       rescue Autonomia::Agents::Retriever::RetrievalError
         # #14 — falha de INFRA. Operate (instrução-dirigido): NÃO silencia o bot — degrada p/ [] e
         # segue pela instrução. Fluxo GATEADO (Guia/copiloto): re-levanta → `answer` faz handoff seguro.
@@ -362,7 +378,8 @@ module Autonomia
       def montar_prompt(snippets)
         PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets, images: @images,
                           documents: @documents, audience: @audience, contexto_do_turno: @contexto_do_turno,
-                          memoria: @memoria, interacao: @interacao == true, mensagem_do_dono: @trust_instruction == true)
+                          memoria: @memoria, interacao: @interacao == true, mensagem_do_dono: @trust_instruction == true,
+                          localizacao: @localizacao == true)
       end
 
       # Só a classe: a mensagem pode ecoar o prompt (a da OpenAI repete trecho do pedido), e o
@@ -377,11 +394,13 @@ module Autonomia
       def schema_da_resposta
         return ConferenciaDaFala::SCHEMA_DA_RESPOSTA if @conferencia_da_fala
 
+        return PromptBuilder::ANSWER_SCHEMA_COM_LOCALIZACAO if @localizacao
+
         @interacao ? PromptBuilder::ANSWER_SCHEMA_COM_INTERACAO : PromptBuilder::ANSWER_SCHEMA
       end
 
       def answer_tools
-        return if @prova
+        return if @prova || FormatoDoComentario.comentario?(@formato)
 
         tools = []
         tools.concat(Array(Crm::Ai::WebSearch.tools)) if web_search_permitida?

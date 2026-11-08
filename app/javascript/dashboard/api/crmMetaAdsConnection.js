@@ -56,6 +56,18 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     });
   }
 
+  // Login único (#2338): Páginas que a pessoa marcou na janela da Meta, com o Instagram ligado e se já têm caixa, e
+  // as permissões que ela recusou → { pages: [...], declined_permissions: [...] }.
+  loginPages() {
+    return axios.get(`${this.url}/paginas`);
+  }
+
+  // Liga a Página escolhida: cria a caixa dela ou troca o token da que existe → { inbox_id, name }. 422 com error
+  // 'page_not_granted' quando a Meta não deu a Página a este login.
+  linkPage(pageId) {
+    return axios.post(`${this.url}/pagina`, { page_id: pageId });
+  }
+
   // { whatsapp: bool, site: bool }
   updateDestinations(destinations) {
     return axios.patch(`${this.url}/destinations`, { destinations });
@@ -220,6 +232,21 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     return axios.post(`${this.url}/media`, form);
   }
 
+  // Photo or video of an organic post (#2653), stored once for both networks
+  // → { media: { kind: 'image' | 'video', signed_id } }. PNG becomes JPEG.
+  uploadPostMedia(file) {
+    const form = new FormData();
+    form.append('file', file);
+    return axios.post(`${this.url}/post_media`, form);
+  }
+
+  // Publishes the post right away (#2653) → { facebook, instagram, failed,
+  // errors }. Each network on its own; the same idempotency_key never
+  // publishes twice. 422 { error } when no network published.
+  publishPost(body) {
+    return axios.post(`${this.url}/posts`, body);
+  }
+
   // New ad, always created PAUSED → { ad_id, name, status, budget }. The same
   // idempotency_key returns the same ad. 422 { error, nothing_created };
   // 409 { error: 'in_progress' } while that key is still being created.
@@ -267,7 +294,8 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
 
   // Each action answers 422 { error } (invalid_text, needs_login,
   // meta_unavailable, meta_refused, private_reply_done,
-  // private_reply_expired) or 404 comment_not_found.
+  // private_reply_expired; text_too_long when a private reply passes
+  // 1000 bytes, #2543) or 404 comment_not_found.
   // The text goes as `content`, which the Rails log filters (#2327).
   replyInstagramComment(adId, commentId, content) {
     return axios.post(`${this.instagramCommentsUrl(adId, commentId)}/reply`, {

@@ -58,6 +58,39 @@ RSpec.describe Crm::MetaAds::WhatsappReport::Digest do
       end
     end
 
+    # #2521: a conversa do privado de comentário de anúncio de alcance fica fora, como no painel, também com o anúncio
+    # pausado (sem gasto ontem): a classificação é pelo conjunto, não pelo gasto do dia.
+    it 'não conta a conversa do privado de comentário de anúncio de fora, mesmo pausado' do
+      travel_to(now) do
+        Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-alcance', object_type: 'adset', destination_type: 'UNDEFINED',
+                                  optimization_goal: 'REACH', fetched_at: now)
+        Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: 'alcance', adset_id: 'set-alcance',
+                                        date: Date.new(2026, 10, 2), currency: 'BRL', spend: 50, attribution_window: '7d_click', fetched_at: now)
+        spend(promo, Date.new(2026, 10, 6), 100)
+        from_ad(promo, at: Time.zone.parse('2026-10-06T10:00:00-03:00'))
+        Crm::MetaAdLink.create!(account: account, conversation: create(:conversation, account: account), touch_key: 'meta_comment:1',
+                                origin: 'comment', certainty: 'ad', ad_id: 'alcance', touched_at: Time.zone.parse('2026-10-06T11:00:00-03:00'))
+
+        payload = described_class.new(connection).payload
+
+        expect(payload).to include(conversations: 1)
+        expect(payload[:best_ad]).to include(ad_id: promo, conversations: 1)
+      end
+    end
+
+    it 'o custo por conversa divide só o gasto dos anúncios que trazem conversa, como o painel' do
+      travel_to(now) do
+        Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-alcance', object_type: 'adset', destination_type: 'UNDEFINED',
+                                  optimization_goal: 'REACH', fetched_at: now)
+        Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: 'alcance', adset_id: 'set-alcance',
+                                        date: Date.new(2026, 10, 6), currency: 'BRL', spend: 50, attribution_window: '7d_click', fetched_at: now)
+        spend(promo, Date.new(2026, 10, 6), 100)
+        2.times { from_ad(promo, at: Time.zone.parse('2026-10-06T10:00:00-03:00')) }
+
+        expect(described_class.new(connection).payload).to include(spend: 150.0, conversations: 2, cost_per_conversation: 50.0)
+      end
+    end
+
     describe 'o que fazer hoje: a primeira ação do consultor (F5)' do
       it 'o envio das 8h pede a análise do dia, que pode escrever pela IA, no idioma do resumo' do
         travel_to(now) do
@@ -135,6 +168,63 @@ RSpec.describe Crm::MetaAds::WhatsappReport::Digest do
         candidate = described_class.new(connection).candidate
 
         expect(candidate).to include(ad_id: capa, spend: 21.0, threshold: 17.46)
+      end
+    end
+
+    # #2521: anúncio que leva para fora de conversa não entra no alerta, com ou sem conversa do privado de comentário — a
+    # mesma régua do painel (Panel::OutsideAds). O de WhatsApp ainda sem conversa continua entrando.
+    it 'anúncio de alcance fica fora do alerta; o de WhatsApp que gastou sem conversa entra' do
+      travel_to(afternoon) do
+        Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-alcance', object_type: 'adset', destination_type: 'UNDEFINED',
+                                  optimization_goal: 'REACH', fetched_at: afternoon)
+        Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-zap', object_type: 'adset', destination_type: 'WHATSAPP',
+                                  optimization_goal: 'CONVERSATIONS', fetched_at: afternoon)
+        { 'alcance' => ['set-alcance', 90], 'privado' => ['set-alcance', 80], 'zap' => ['set-zap', 40] }.each do |ad_id, (adset, value)|
+          Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: ad_id, adset_id: adset,
+                                          date: Date.new(2026, 10, 7), currency: 'BRL', spend: value, attribution_window: '7d_click',
+                                          fetched_at: afternoon)
+        end
+        Crm::MetaAdLink.create!(account: account, conversation: create(:conversation, account: account), touch_key: 'meta_comment:1',
+                                origin: 'comment', certainty: 'ad', ad_id: 'privado', touched_at: 1.hour.ago)
+
+        expect(described_class.new(connection).candidate).to include(ad_id: 'zap', spend: 40.0)
+      end
+    end
+
+    it 'só anúncio de alcance gastou hoje: sem alerta' do
+      travel_to(afternoon) do
+        Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-alcance', object_type: 'adset', destination_type: 'UNDEFINED',
+                                  optimization_goal: 'REACH', fetched_at: afternoon)
+        Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: 'alcance', adset_id: 'set-alcance',
+                                        date: Date.new(2026, 10, 7), currency: 'BRL', spend: 90, attribution_window: '7d_click',
+                                        fetched_at: afternoon)
+
+        expect(described_class.new(connection).candidate).to be_nil
+      end
+    end
+
+    # Mesma régua do painel: o de alcance que já trouxe conversa pelo clique, ou cujo conjunto ainda não foi lido, fica
+    # entre os que trazem conversa e continua no alerta.
+    it 'anúncio de alcance que já trouxe conversa pelo clique continua no alerta' do
+      travel_to(afternoon) do
+        Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-alcance', object_type: 'adset', destination_type: 'UNDEFINED',
+                                  optimization_goal: 'REACH', fetched_at: afternoon)
+        Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: 'alcance', adset_id: 'set-alcance',
+                                        date: Date.new(2026, 10, 7), currency: 'BRL', spend: 90, attribution_window: '7d_click',
+                                        fetched_at: afternoon)
+        from_ad('alcance', at: Time.zone.parse('2026-09-01T10:00:00-03:00'))
+
+        expect(described_class.new(connection).candidate).to include(ad_id: 'alcance', spend: 90.0)
+      end
+    end
+
+    it 'anúncio cujo conjunto ainda não foi lido continua no alerta' do
+      travel_to(afternoon) do
+        Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: 'sem-conjunto', adset_id: 'set-novo',
+                                        date: Date.new(2026, 10, 7), currency: 'BRL', spend: 90, attribution_window: '7d_click',
+                                        fetched_at: afternoon)
+
+        expect(described_class.new(connection).candidate).to include(ad_id: 'sem-conjunto', spend: 90.0)
       end
     end
 

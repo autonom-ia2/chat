@@ -28,7 +28,7 @@ class Crm::MetaAds::Creation::Draft
       page_id: page_id, whatsapp_number: whatsapp_number, site_url: site_url, site_action: site_action,
       media: media(@params[:media]), cards: cards, text: text, headline: @params[:headline].to_s.strip.presence,
       ready_message: @params[:ready_message].to_s.strip.presence, placement: placement,
-      special_category: flag(:special_category), recreate_unconfirmed: flag(:recreate_unconfirmed), **audience, **budget
+      special_category: special_category, recreate_unconfirmed: flag(:recreate_unconfirmed), **audience, **budget
     }
     self
   end
@@ -124,17 +124,26 @@ class Crm::MetaAds::Creation::Draft
     end
   end
 
-  # Carrossel: as mídias depois da primeira, até 10 no total. A ordem é a do carrossel (a primeira aparece primeiro), então
-  # entra no #digest como veio: outra ordem é outro anúncio.
+  # Carrossel: as mídias depois da primeira, até 10 no total, só nos destinos que aceitam. A tela usa a mesma lista
+  # (CAROUSEL_DESTINATIONS em midiaDoAnuncio.js): esconde o carrossel nos outros destinos e apaga Messenger e Direct quando
+  # já há cartões. A ordem é a do carrossel (a primeira aparece primeiro), então entra no #digest como veio.
   def cards
     list = Array(@params[:cards])
     fail!('invalid_media') if list.size + 1 > CARDS_MAX
+    fail!('invalid_media') if list.any? && Crm::MetaAds::Creation::Confirmed::CAROUSEL_DESTINATIONS.exclude?(@params[:destination].to_s)
     list.map { |card| media(card) }
   end
 
   def text
     value = required_string(:text, 'invalid_params')
     value.length <= TEXT_LIMIT ? value : fail!('invalid_params')
+  end
+
+  # Anúncio que leva ao perfil do Instagram não aceita categoria especial (seguro, crédito, empréstimo, investimento): a
+  # Meta exige `special_ad_categories` vazio nesse objetivo (#2564). A tela já pede outro destino; aqui é a trava.
+  def special_category
+    value = flag(:special_category)
+    value && @params[:destination].to_s == 'INSTAGRAM_PROFILE' ? fail!('special_category_profile') : value
   end
 
   def placement

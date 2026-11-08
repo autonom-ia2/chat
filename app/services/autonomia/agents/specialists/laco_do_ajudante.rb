@@ -7,7 +7,8 @@
 # - a base do ajudante antes do pedido. Só os erros esperados da busca (banco do pgvector, embedding) deixam o ajudante
 #   seguir sem ela, marcado em `base_falhou?`; o inesperado sobe (e o `call` do Runner o registra como falha);
 # - as ferramentas do ajudante rodam sem o contexto de entrega. A assíncrona nem roda: ela entregaria ao cliente. A
-#   conversa vai só para o REGISTRO da recusa; a ferramenta nunca a recebe.
+#   conversa vai só para o REGISTRO da recusa e para o `Idempotency-Key` da HTTP (#1430: refazer o turno manda a mesma
+#   chave); a ferramenta nunca a recebe.
 class Autonomia::Agents::Specialists::LacoDoAjudante
   def initialize(vinculo:, delivery:, prazo: nil)
     @vinculo = vinculo
@@ -36,7 +37,7 @@ class Autonomia::Agents::Specialists::LacoDoAjudante
   def executar(tool, call)
     return recusar_assincrona(tool) if tool.async?
 
-    tool.execute(call, delivery: nil)
+    tool.execute(call, delivery: nil, turno: @delivery)
   end
 
   private

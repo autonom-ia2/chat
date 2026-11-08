@@ -139,7 +139,9 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     with_idempotency do
       target_stage = Current.account.crm_pipeline_stages.find(params[:stage_id])
       ensure_move_allowed!(@card, target_stage.pipeline_id)
-      @card = ::Crm::Cards::Mover.new(card: @card, actor: Current.user, target_stage: target_stage).perform
+      # #2428: pedido do passo da Automação livre (dentro da cadeia dela): o movimento leva a automação.
+      @card = ::Crm::Cards::Mover.new(card: @card, actor: Current.user, target_stage: target_stage,
+                                      automacao: ::Autonomia::Automacao::Cadeia.automacao_livre).perform
       broadcast_card(::Events::Types::CRM_CARD_MOVED)
       render :show
     end

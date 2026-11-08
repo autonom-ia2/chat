@@ -52,6 +52,8 @@ class Crm::AgentBookingProfile < ApplicationRecord
   include Crm::BookingNoticeTexts
   include Crm::BookingPostMeetingSettings
   include Crm::BookingShortName
+  # #1479 F3: a coordenada dos locais presenciais, para o mapa que o agente manda.
+  include Crm::BookingPageCoordenadas
 
   self.table_name = 'crm_agent_booking_profiles'
 

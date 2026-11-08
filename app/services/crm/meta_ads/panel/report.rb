@@ -14,10 +14,13 @@
 #
 # Com conexão (#2054), os anúncios se separam em dois blocos. `ads` são os que trazem conversa: já trouxeram alguma
 # (ligação conversa → anúncio, do WhatsApp ou do site, ou a contagem da Meta, em qualquer época) ou levam a uma
-# conversa pelo destino do conjunto; o gasto, o custo por conversa e o custo por venda saem só deles. `other_ads` são
-# os que nunca trouxeram conversa e cujo conjunto, segundo a Meta, leva a outro lugar (site, alcance, vídeo…): gasto e
-# o resultado que a Meta mede (cliques e impressões), para o gasto deles não inflar o custo de quem traz conversa. Sem
-# o destino ainda (Panel::AdDestinations), o anúncio fica entre os que trazem conversa.
+# conversa pelo destino ou pelo objetivo do conjunto; o gasto, o custo por conversa e o custo por
+# venda saem só deles. `other_ads` são os que nunca trouxeram conversa e cujo conjunto, segundo a Meta, leva a outro
+# lugar (perfil, publicação, formulário, site, alcance…): gasto, para onde leva (`destination`) e o que a Meta mede
+# nele (Panel::AdResults), mais as conversas do privado de um comentário deles (`private_conversations`, #2521, fora
+# da coorte), para o gasto deles não inflar o custo de quem traz conversa. Sem o destino ainda
+# (Panel::AdDestinations), o anúncio fica entre os que trazem conversa. Todo anúncio leva os `comments` que a Meta
+# contou no período (#2519), para o atalho "Cuidar dos comentários" da lista.
 #
 # O anúncio por dentro (F3b, Panel::AdDetail) lê daqui o período, a coorte, a linha do anúncio e a média da conta,
 # para que o número da lista e o da tela do anúncio nunca divirjam.
@@ -73,7 +76,11 @@ class Crm::MetaAds::Panel::Report
   end
 
   def cohort
-    @cohort ||= (whatsapp_only? ? Crm::MetaAds::Panel::WhatsappCohort : Crm::MetaAds::Panel::Cohort).new(@account_id, range)
+    @cohort ||= if whatsapp_only?
+                  Crm::MetaAds::Panel::WhatsappCohort.new(@account_id, range)
+                else
+                  Crm::MetaAds::Panel::Cohort.new(@account_id, range)
+                end
   end
 
   def insights
@@ -92,10 +99,11 @@ class Crm::MetaAds::Panel::Report
   end
 
   # Um anúncio do período na forma da lista, esteja entre os que trazem conversa ou entre os outros: a tela do
-  # anúncio (Panel::AdDetail) abre os dois. O dos outros vem sem veredito: ele não traz conversa por desenho, e
-  # "faltam conversas para saber" não vale para ele.
+  # anúncio (Panel::AdDetail) abre os dois. O dos outros vem sem veredito, com `outside` e a medida dele: ele não traz
+  # conversa por desenho, e "faltam conversas para saber" não vale para ele.
   def ad(ad_id)
-    ads.find { |row| row[:ad_id] == ad_id } || (ad_row(ad_id).merge(verdict: nil) if spend_by_ad.key?(ad_id))
+    ads.find { |row| row[:ad_id] == ad_id } ||
+      (ad_row(ad_id).merge(other_ad_row(ad_id), verdict: nil, outside: true) if spend_by_ad.key?(ad_id))
   end
 
   # Anúncios com gasto que não levam a conversa (ver outside_conversation?), do maior gasto ao menor.
@@ -177,34 +185,21 @@ class Crm::MetaAds::Panel::Report
     @whatsapp_ad_ids ||= (spend_by_ad.keys.reject { |ad_id| outside_conversation?(ad_id) } + cohort.conversation_ads.values.compact).uniq
   end
 
-  # Fora dos que trazem conversa: nunca trouxe conversa e a Meta diz que o conjunto leva a outro lugar (site, vídeo,
-  # perfil). Anúncio novo de WhatsApp, ainda sem a primeira mensagem, continua entre os que trazem conversa.
+  # Fora dos que trazem conversa (Panel::OutsideAds). Sem conexão não há gasto, e nenhum anúncio fica de fora.
   def outside_conversation?(ad_id)
-    messaging_ad_ids.exclude?(ad_id) && destinations.outside_conversation?(ad_id)
+    !whatsapp_only? && outside.include?(ad_id)
   end
 
-  def destinations
-    @destinations ||= Crm::MetaAds::Panel::AdDestinations.new(@account_id, insights)
+  def outside
+    @outside ||= Crm::MetaAds::Panel::OutsideAds.new(@account_id, ad_ids: spend_by_ad.keys, range: range)
   end
 
-  # Já trouxe conversa: pelo clique (qualquer época) ou a Meta já contou conversa iniciada nele.
-  def messaging_ad_ids
-    @messaging_ad_ids ||= if whatsapp_only?
-                            Set.new
-                          else
-                            Set.new(insights_since_ever.where(ad_id: spend_by_ad.keys, conversations_started: 1..).distinct.pluck(:ad_id)) |
-                              Crm::MetaAdLink.where(account_id: @account_id, ad_id: spend_by_ad.keys).distinct.pluck(:ad_id)
-                          end
-  end
-
-  def other_metrics
-    @other_metrics ||= insights.group(:ad_id).pluck(:ad_id, Arel.sql('SUM(impressions)'), Arel.sql('SUM(link_clicks)'))
-                               .to_h { |ad_id, impressions, clicks| [ad_id, { impressions: impressions.to_i, link_clicks: clicks.to_i }] }
+  def results
+    @results ||= Crm::MetaAds::Panel::AdResults.new(insights)
   end
 
   def other_ad_row(ad_id)
-    { ad_id: ad_id, spend: spend_by_ad.fetch(ad_id, 0.0).round(2) }
-      .merge(other_metrics.fetch(ad_id, { impressions: 0, link_clicks: 0 }), ad_look(ad_id))
+    { ad_id: ad_id, spend: spend_by_ad.fetch(ad_id, 0.0).round(2) }.merge(outside.row(ad_id), results.for(ad_id), ad_look(ad_id))
   end
 
   def ad_row(ad_id)
@@ -218,7 +213,8 @@ class Crm::MetaAds::Panel::Report
     spend = spend_by_ad.fetch(ad_id, 0.0)
     {
       ad_id: ad_id, spend: spend.round(2), conversations: cohort.conversation_ads.values.count(ad_id),
-      quotes: cards.count(&:quote?), sales: sales.size, sales_value: sales.sum(&:value).round(2), cost_per_sale: ratio(spend, sales.size)
+      quotes: cards.count(&:quote?), sales: sales.size, sales_value: sales.sum(&:value).round(2), cost_per_sale: ratio(spend, sales.size),
+      comments: results.for(ad_id)[:comments]
     }.merge(ad_look(ad_id), outcome_counts(cards))
   end
 
@@ -259,7 +255,7 @@ class Crm::MetaAds::Panel::Report
   end
 
   def confidence
-    @confidence ||= Crm::MetaAds::Links::Stats.new(@connection, since: range.begin).payload[:confidence]
+    @confidence ||= Crm::MetaAds::Links::Stats.new(@connection, since: range.begin, upto: range.end).payload[:confidence]
   end
 
   def ratio(numerator, denominator)

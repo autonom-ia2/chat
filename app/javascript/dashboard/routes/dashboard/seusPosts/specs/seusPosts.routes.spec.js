@@ -78,10 +78,11 @@ describe('seusPosts.routes', () => {
       store.getters['accounts/isFeatureEnabledonAccount'] = (_id, flag) =>
         ligadas.includes(flag);
     };
-    const TODAS = [
-      'seus_posts',
-      'seus_posts_comentarios',
-      'meta_ads_comentarios_ia',
+    // #2520: a régua do motor: a tela, o cuidado e os comentários da rede do perfil; sem seus_posts_comentarios.
+    const TODAS = ['seus_posts', 'meta_ads_comentarios_ia'];
+    const REDES = [
+      'meta_ads_comentarios_instagram',
+      'meta_ads_comentarios_facebook',
     ];
 
     it('a rota fica no endereço do post, com o guarda e as permissões do post', () => {
@@ -95,18 +96,40 @@ describe('seusPosts.routes', () => {
       expect(cuidar.meta.permissions).toEqual(post.meta.permissions);
     });
 
-    it('com as três flags: abre', async () => {
-      comFlags(TODAS);
+    // #2520: a flag da rede do perfil (?perfil=), a mesma que o servidor confere.
+    const doPerfil = perfil => ({ ...para, query: { perfil } });
+    const IG = doPerfil('instagram-1');
+    const FB = doPerfil('facebook-2');
+
+    it.each([
+      [IG, REDES[0]],
+      [FB, REDES[1]],
+    ])('com as duas flags e a da rede do perfil: abre', async (rota, rede) => {
+      comFlags([...TODAS, rede]);
       const next = vi.fn();
-      await ensureCuidarEnabled(para, {}, next);
+      await ensureCuidarEnabled(rota, {}, next);
       expect(next).toHaveBeenCalledWith();
     });
 
-    it.each(TODAS)('sem %s: vai para home', async flag => {
-      comFlags(TODAS.filter(ligada => ligada !== flag));
+    it('só com a flag da outra rede: vai para home (o servidor daria 404)', async () => {
+      comFlags([...TODAS, REDES[1]]);
+      const next = vi.fn();
+      await ensureCuidarEnabled(IG, {}, next);
+      expect(next).toHaveBeenCalledWith({ name: 'home', params: IG.params });
+    });
+
+    it('sem o perfil no endereço: vai para home', async () => {
+      comFlags([...TODAS, ...REDES]);
       const next = vi.fn();
       await ensureCuidarEnabled(para, {}, next);
       expect(next).toHaveBeenCalledWith({ name: 'home', params: para.params });
+    });
+
+    it.each(TODAS)('sem %s: vai para home', async flag => {
+      comFlags([...TODAS, ...REDES].filter(ligada => ligada !== flag));
+      const next = vi.fn();
+      await ensureCuidarEnabled(IG, {}, next);
+      expect(next).toHaveBeenCalledWith({ name: 'home', params: IG.params });
     });
   });
 });

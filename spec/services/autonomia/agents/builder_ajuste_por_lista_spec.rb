@@ -17,7 +17,7 @@ RSpec.describe Autonomia::Agents::Builder do
 
       expect(calls.size).to eq(1)
       expect(calls.first[:schema]).to equal(described_class::BUILDER_SCHEMA)
-      expect(calls.first[:schema][:schema][:properties].keys).not_to include(:so_pergunta, :mudancas, :resposta_ao_dono)
+      expect(calls.first[:schema][:schema][:properties].keys).not_to include(:so_pergunta, :mudancas, :resposta_ao_dono, :dono_perguntou)
       expect(calls.first[:input]).to eq(esperado)
       expect(calls.first.keys).not_to include(:timeout)
       expect(Autonomia::Agents::ConferenciaDoAjuste).not_to have_received(:new)
@@ -40,7 +40,8 @@ RSpec.describe Autonomia::Agents::Builder do
 
       schema = calls.first[:schema]
       expect(schema).to equal(described_class::AjustePorLista::SCHEMA)
-      expect(schema[:schema][:required]).to include('so_pergunta', 'mudancas', 'resposta_ao_dono', 'pendencia_resolvida')
+      expect(schema[:schema][:required]).to include('so_pergunta', 'mudancas', 'resposta_ao_dono', 'dono_perguntou',
+                                                    'pendencia_resolvida')
       expect(schema[:schema][:properties].keys).not_to include(:desfazer_o_nao_pedido)
       expect(schema[:schema][:properties][:mudancas][:items][:properties][:campo][:enum])
         .to eq(%w[instruction tone handoff_rule greeting fallback_message starter_questions guardrails human_card name voice])
@@ -96,6 +97,15 @@ RSpec.describe Autonomia::Agents::Builder do
                                   'so_pergunta' => true, 'conferencia' => nil, 'pergunta_pendente' => '')
         expect(thread.messages.last).to include('role' => 'assistant', 'content' => resposta)
         expect(Autonomia::Agents::ConferenciaDoAjuste).not_to have_received(:new)
+      end
+
+      # #2490: a tela lê o canal pedido da thread antes do agente; o turno do ajuste não o troca por "nenhum".
+      it 'mantém no state da thread o canal que o dono pediu na criação' do
+        thread.update!(state: thread.state.to_h.merge('canal_pedido' => 'instagram'))
+
+        run_turn
+
+        expect(estado).to include('canal_pedido' => 'instagram', 'next_question' => resposta)
       end
 
       it 'mesmo com uma lista junto, nada entra' do
@@ -422,7 +432,7 @@ RSpec.describe Autonomia::Agents::Builder do
       let(:fala) { 'Responda curto. E o que você faz hoje?' }
 
       it 'aplica e entrega a resposta_ao_dono junto, sem virar pendência' do
-        respostas << saida('tone' => 'curto', 'resposta_ao_dono' => 'Hoje eu atendo os clientes.',
+        respostas << saida('tone' => 'curto', 'resposta_ao_dono' => 'Hoje eu atendo os clientes.', 'dono_perguntou' => true,
                            'mudancas' => [mudanca('tone', 'curto')])
 
         run_turn

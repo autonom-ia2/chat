@@ -20,7 +20,8 @@ module VarreduraDeEnviosEmNomeDePessoa
     'app/services/whatsapp/templates/reenvio_do_modelo.rb#Whatsapp::Templates::ReenvioDoModelo#criar' =>
       'encaminhar (#1767): o atendente encaminha no painel; remetente é ele',
     'app/services/crm/meta_ads/instagram_private_reply.rb#Crm::MetaAds::InstagramPrivateReply#record!' =>
-      'responder no privado (#2196): quem gere os anúncios clica no comentário; remetente é ele (Current.user)',
+      'responder no privado (#2196): quem gere os anúncios clica no comentário; remetente é ele (Current.user). O da IA ' \
+      '(#2212, actor ai) vai sem remetente e com a marca Registro::MARCA (marca_da_ia)',
     'lib/integrations/slack/slack_message_helper.rb#Integrations::Slack::SlackMessageHelper#create_message' =>
       'a pessoa responde pelo Slack',
     'lib/integrations/dyte/processor_service.rb#Integrations::Dyte::ProcessorService#create_a_dyte_integration_message' =>

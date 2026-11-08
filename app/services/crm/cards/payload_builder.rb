@@ -87,7 +87,7 @@ class Crm::Cards::PayloadBuilder
               .tap { |payload| append_nested_payloads(payload) }
               .tap { |payload| append_action_list_payload(payload) }
               .tap { |payload| sanitize_hidden_conversation!(payload) }
-              .tap { |payload| sanitize_lead_form_answers!(payload) }
+              .tap { |payload| sanitize_lead_form!(payload) }
               .tap { |payload| Crm::ValorDeVenda.oculta_card!(payload) unless value_visible? }
   end
 
@@ -99,8 +99,10 @@ class Crm::Cards::PayloadBuilder
   end
 
   # Respostas do formulário do anúncio da Meta (#2195) trazem nome, telefone e e-mail: só para quem vê o contato inteiro.
-  def sanitize_lead_form_answers!(payload)
-    payload[:metadata] = Crm::MetaAds::LeadForms::Answers.without(payload[:metadata]) unless full_contact?
+  # O formulário, o anúncio e a campanha (#2558): só para quem vê o anúncio de origem (Crm::AnuncioDeOrigem).
+  def sanitize_lead_form!(payload)
+    payload[:metadata] = Crm::MetaAds::LeadForms::Answers.para(payload[:metadata], contato_inteiro: full_contact?,
+                                                                                   anuncio_visivel: visibility.anuncio_visivel?)
   end
 
   # Conversa que a pessoa não vê (#2283, item 7): o nome de quem atende essa conversa não vai, nem como responsável nem

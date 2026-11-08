@@ -333,7 +333,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   def grupos_do_ramo
     return [] if produto == AUTO
 
-    schema = ::Autonomia::Insurance::Connection.for_account(account).find(&:ready?)&.quote_schema(produto)
+    schema = ::Autonomia::Insurance::Connection.for_account(account).find(&:usable?)&.quote_schema(produto)
     ::Autonomia::Insurance::Parametros.new(schema, ramo: true).nomes_dos_grupos
   end
 
@@ -369,7 +369,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   end
 
   def connection
-    @connection ||= ::Autonomia::Insurance::Connection.for_account(account).find(&:ready?) ||
+    @connection ||= ::Autonomia::Insurance::Connection.for_account(account).find(&:usable?) ||
                     raise(::Autonomia::Insurance::Connector::Error.new(:config, 'sem conexão pronta'))
   end
 

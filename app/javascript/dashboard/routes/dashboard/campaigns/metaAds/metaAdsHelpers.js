@@ -248,3 +248,55 @@ export const adImage = (ad, failed = []) =>
   [ad?.image_url, ad?.thumbnail_url].find(
     url => url && !failed.includes(url)
   ) || null;
+
+// O que a Meta mede em cada destino do anúncio que não abre conversa (#2521; Crm::MetaAds::Panel::AdResults). Ela não
+// manda "visitas ao perfil": o anúncio de perfil fica com cliques e engajamento. Leads só aparecem no formulário ou
+// quando houve algum (site com Pixel). A lista e o anúncio por dentro mostram os mesmos números.
+const OTHER_STAT_KEYS = {
+  profile: ['PROFILE', 'ENGAGEMENT', 'SHOWN'],
+  post: ['ENGAGEMENT', 'COMMENTS', 'SHOWN'],
+  lead_form: ['LEADS', 'CLICKS', 'SHOWN'],
+  website: ['CLICKS', 'LEADS', 'SHOWN'],
+};
+const OTHER_STAT_FIELDS = {
+  CLICKS: 'link_clicks',
+  PROFILE: 'link_clicks',
+  ENGAGEMENT: 'post_engagement',
+  COMMENTS: 'comments',
+  LEADS: 'leads',
+  SHOWN: 'impressions',
+};
+// As conversas do privado de um comentário (#2521) vêm primeiro, só quando houve: são o resultado em conversa de um
+// anúncio que não abre conversa, fora do custo por conversa.
+export const otherAdStats = ad => [
+  ...(ad.private_conversations
+    ? [{ key: 'PRIVATE', value: ad.private_conversations }]
+    : []),
+  ...(OTHER_STAT_KEYS[ad.destination] || ['CLICKS', 'SHOWN'])
+    .filter(
+      key => key !== 'LEADS' || ad.destination === 'lead_form' || ad.leads
+    )
+    .map(key => ({ key, value: ad[OTHER_STAT_FIELDS[key]] || 0 })),
+];
+
+// O número do cartão de um anúncio que não abre conversa, na lista única do painel (#2621): um só, o do objetivo dele.
+// Perfil: a Meta não manda "visitas ao perfil" nas ações do anúncio (Panel::AdResults); o número oficial mais perto é
+// o clique (`link_clicks`), que no anúncio de perfil é o toque que leva ao perfil. Chave em PANEL.AD_RESULT.
+const RESULT_BY_DESTINATION = {
+  profile: ['PROFILE', 'link_clicks'],
+  website: ['WEBSITE', 'link_clicks'],
+  lead_form: ['LEADS', 'leads'],
+  post: ['ENGAGEMENT', 'post_engagement'],
+  reach: ['SHOWN', 'impressions'],
+};
+export const resultadoDoAnuncio = ad => {
+  const [key, field] = RESULT_BY_DESTINATION[ad.destination] || [
+    'CLICKS',
+    'link_clicks',
+  ];
+  return { key, value: ad[field] || 0 };
+};
+
+// Chave do texto do destino (PANEL.OTHER_ADS.DESTINATIONS): profile, post, lead_form, website, app, reach ou other.
+export const destinationKey = ad =>
+  `CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.DESTINATIONS.${(ad.destination || 'other').toUpperCase()}`;

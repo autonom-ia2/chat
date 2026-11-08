@@ -6,7 +6,7 @@
 # criar recebe também a moeda lida na Meta (sem fallback: leitura que falha é erro, e a tela não mostra valor) e o dia
 # de hoje no fuso da conta de anúncios, que vale para as datas do anúncio.
 class Crm::MetaAds::Creation::Options
-  KINDS = %w[ad post].freeze
+  KINDS = %w[ad post publish].freeze
   CURRENCY = Crm::MetaAds::Creation::Money::CURRENCY
   MIN_DAILY = 6
   MAX_DAILY = 500
@@ -20,9 +20,10 @@ class Crm::MetaAds::Creation::Options
   def payload
     can_create = @access.can_create?
     pages = can_create ? read_pages : []
+    publish = can_create ? @access.can_publish : Crm::MetaAds::Creation::Access::PUBLISH.transform_values { false }
     {
-      needs_login: !can_create, facebook_login: Crm::MetaAds::FacebookLogin.public_payload, kinds: KINDS,
-      pages: pages.map { |page| page.slice(:id, :name, :instagram) },
+      needs_login: !can_create, facebook_login: Crm::MetaAds::FacebookLogin.public_payload, kinds: KINDS, publish: publish,
+      pages: pages.map { |page| page.slice(:id, :name).merge(instagram: instagram_with_limit(page[:instagram], publish['instagram'])) },
       whatsapp_numbers: whatsapp_numbers,
       images: can_create ? images : [], min_daily: MIN_DAILY, max_daily: MAX_DAILY, **account_facts(can_create)
     }.merge(Crm::MetaAds::Creation::Confirmed.payload)
@@ -67,6 +68,22 @@ class Crm::MetaAds::Creation::Options
 
   def whatsapp_numbers
     self.class.whatsapp_numbers(@account)
+  end
+
+  # Criar post (PR 3, #2653): quantos posts o Instagram ainda aceita nas próximas 24 horas (`publish_left`). Sem a
+  # permissão, ou se a leitura falhar, `nil`: a tela não apaga o Instagram por isso, e a Meta recusa no publicar se for o caso.
+  def instagram_with_limit(instagram, can_publish)
+    return instagram unless instagram && can_publish
+
+    instagram.merge(publish_left: publish_left(instagram[:id]))
+  end
+
+  def publish_left(instagram_id)
+    result = @access.client.instagram_publishing_limit(instagram_id)
+    row = Array(result.data.to_h['data']).first if result.ok
+    return unless row.is_a?(Hash) && row['quota_usage'].is_a?(Integer) && row.dig('config', 'quota_total').is_a?(Integer)
+
+    [row.dig('config', 'quota_total') - row['quota_usage'], 0].max
   end
 
   # Fotos já usadas: se a leitura falhar, a pessoa ainda sobe uma do celular.

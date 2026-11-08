@@ -1,3 +1,5 @@
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+
 // Seus posts (#2302, F1 #2304): o que GET seus_posts manda (SeusPosts::Leitura, em inglês, como a API) no formato
 // que a tela usa. Número que a Meta não mandou continua nulo, nunca 0.
 
@@ -131,6 +133,28 @@ const estadoDe = comentario => {
   return 'esperando';
 };
 
+// #2454 (flag meta_ads_comentarios_ia, o fio conta): o estado de uma resposta de cliente, com a régua da Fonte
+// do servidor (a do Resumo). Espera quando está à mostra, com texto, sem privado e sem a conta responder no fio depois
+// dela; sem a hora de uma das duas, a resposta da conta conta como depois. Resposta da conta: sem estado (não conta).
+const hora = valor => {
+  const ms = valor ? Date.parse(valor) : Number.NaN;
+  return Number.isNaN(ms) ? null : ms;
+};
+const contaRespondeuDepois = (resposta, fio) =>
+  fio.some(outra => {
+    if (!outra.author?.is_page) return false;
+    const daConta = hora(outra.created_time);
+    const dela = hora(resposta.created_time);
+    return daConta === null || dela === null || daConta >= dela;
+  });
+const estadoDaResposta = (resposta, fio) => {
+  if (resposta.author?.is_page) return null;
+  if (resposta.hidden) return 'escondido';
+  if (resposta.private_reply) return 'privado';
+  if (contaRespondeuDepois(resposta, fio)) return 'respondido';
+  return resposta.text?.trim() ? 'esperando' : null;
+};
+
 export const comentarioParaTela = comentario => ({
   id: comentario.id,
   autor: autorDe(comentario.author),
@@ -144,6 +168,7 @@ export const comentarioParaTela = comentario => ({
     autor: autorDe(resposta.author),
     texto: resposta.text || '',
     daConta: resposta.author?.is_page === true,
+    estado: estadoDaResposta(resposta, comentario.replies || []),
   })),
   pode: {
     responder: comentario.can_reply === true,
@@ -161,3 +186,60 @@ export const comentarioParaTela = comentario => ({
       }
     : null,
 });
+
+// #2454: as abas da lista do post. Sem o fio (flag desligada), contam só os comentários de primeiro nível, como antes.
+// Com ele, contam também as respostas de cliente (as da conta não contam), como o Resumo.
+const respostasDeCliente = comentario =>
+  comentario.respostas.filter(resposta => !resposta.daConta);
+
+export const contarComentarios = (lista, estados, fio) => {
+  const conta = (estado, item) => (item.estado === estado ? 1 : 0);
+  const total = { all: lista.length };
+  estados.forEach(estado => {
+    total[estado] = 0;
+  });
+  lista.forEach(comentario => {
+    const respostas = fio ? respostasDeCliente(comentario) : [];
+    total.all += respostas.length;
+    estados.forEach(estado => {
+      total[estado] +=
+        conta(estado, comentario) +
+        respostas.reduce((soma, resposta) => soma + conta(estado, resposta), 0);
+    });
+  });
+  return total;
+};
+
+// A aba aberta: sem o fio, só os comentários com aquele estado. Com ele, também o comentário de cima de uma resposta
+// de cliente com aquele estado; ali ele é contexto (`contexto`: sem o selo dele, que contradiria a aba) e mostra só as
+// respostas de cliente da aba, mais as da conta.
+export const comentariosDaAba = (lista, estado, fio) => {
+  if (!estado) return lista;
+  if (!fio) return lista.filter(comentario => comentario.estado === estado);
+  return lista.flatMap(comentario => {
+    const daAba = respostasDeCliente(comentario).filter(
+      resposta => resposta.estado === estado
+    );
+    if (comentario.estado !== estado && !daAba.length) return [];
+    return [
+      {
+        ...comentario,
+        contexto: comentario.estado !== estado,
+        respostas: comentario.respostas.filter(
+          resposta => resposta.daConta || resposta.estado === estado
+        ),
+      },
+    ];
+  });
+};
+
+// #2520: o cuidado da IA segue a régua do motor: a flag dele e a dos comentários da rede do perfil ("instagram-12").
+const FLAG_DOS_COMENTARIOS = {
+  instagram: FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM,
+  facebook: FEATURE_FLAGS.META_ADS_COMENTARIOS_FACEBOOK,
+};
+export const flagsDoCuidado = rede =>
+  FLAG_DOS_COMENTARIOS[rede]
+    ? [FEATURE_FLAGS.META_ADS_COMENTARIOS_IA, FLAG_DOS_COMENTARIOS[rede]]
+    : null;
+export const redeDoPerfil = perfilId => String(perfilId || '').split('-')[0];

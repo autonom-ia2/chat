@@ -24,6 +24,13 @@ class Autonomia::Guide::ChamadaInterna
 
   def chamar(metodo, caminho, corpo: nil, filtros: {})
     preservado = estado_do_current
+    # Dentro de uma cadeia de automações (D1 do #2414), o pedido de dentro age como a pessoa do token: quem chamou
+    # por fora não assina o que ela fez. Volta no `ensure`, só nesse caso. A cadeia só existe com a flag
+    # `automacao_fundacao`. Nenhum chamador de hoje roda dentro de uma cadeia: quem chama assim é o motor novo da F3,
+    # com o token de quem ligou a automação.
+    na_cadeia = ::Autonomia::Automacao::Cadeia.ativa?
+    autor = ::Current.executed_by
+    ::Current.executed_by = nil if na_cadeia
     status, _cabecalhos, corpo_resposta = ::Rails.application.call(ambiente(metodo, caminho, corpo, filtros))
 
     Resposta.new(codigo: status.to_s, corpo: ler(corpo_resposta))
@@ -32,6 +39,7 @@ class Autonomia::Guide::ChamadaInterna
     # levantar, o tratador de exceção o zera. Sem isto, o pedido de FORA seguiria
     # sem usuário — um efeito colateral invisível e difícil de rastrear.
     restaurar(preservado)
+    ::Current.executed_by = autor if na_cadeia
   end
 
   private

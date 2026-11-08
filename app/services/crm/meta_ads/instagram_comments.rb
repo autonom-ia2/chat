@@ -14,7 +14,7 @@
 # Cada ação confere antes que o comentário é da mídia do anúncio: sem isso, quem gere os anúncios agiria em qualquer
 # comentário do Instagram da caixa pelo id. Erros (Error#code): `ad_not_found`, `no_post`, `not_connected`,
 # `comment_not_found`, `invalid_text`, `needs_login`, `meta_unavailable`, `meta_refused`, `not_inbox_member` e os do
-# privado (Crm::MetaAds::InstagramPrivateReply).
+# privado (Crm::MetaAds::InstagramPrivateReply), entre eles `text_too_long` (acima de 1000 bytes, antes da Meta, #2543).
 #
 # Ler e agir em comentário (listar, inclusive os ocultos, responder em público ou no privado, ocultar e apagar) pede,
 # além da chave de Anúncios, ver a caixa do Instagram (`inbox_access`, InboxPolicy#show? de quem chama). É a regra de
@@ -56,29 +56,32 @@ class Crm::MetaAds::InstagramComments
     raise Error, failure(result) unless result.ok
 
     Crm::MetaAdsCommentAction.record_reply(account: @connection.account, ad_id: ad_id, reply_id: result.data['id'], user: user)
+    record_action('reply', ad_id, comment_id, user)
     rows(channel).row({ 'id' => result.data['id'].to_s, 'text' => text, 'timestamp' => Time.current.iso8601,
                         'from' => { 'id' => channel.instagram_id, 'username' => channel.provider_name } }, actions: {}, own: true)
   end
 
-  def hide!(ad_id, comment_id, hidden:)
+  def hide!(ad_id, comment_id, hidden:, user:)
     channel = comment_of_ad!(ad_id, comment_id)[:channel]
     result = client(channel).hide(comment_id, hidden: hidden)
     raise Error, failure(result) unless result.ok
 
+    record_action(hidden ? 'hide' : 'show', ad_id, comment_id, user)
     { id: comment_id, hidden: hidden }
   end
 
   # Irreversível: some do Instagram. A tela confirma antes.
-  def delete!(ad_id, comment_id)
+  def delete!(ad_id, comment_id, user:)
     channel = comment_of_ad!(ad_id, comment_id)[:channel]
     result = client(channel).delete(comment_id)
     raise Error, failure(result) unless result.ok
 
+    record_action('delete', ad_id, comment_id, user)
     { id: comment_id }
   end
 
   def private_reply!(ad_id, comment_id, text, user:)
-    valid_text!(text, Crm::MetaAds::InstagramPrivateReply::MAX_TEXT)
+    Crm::MetaAds::InstagramPrivateReply.valid_text!(text)
     found = comment_of_ad!(ad_id, comment_id)
     sent = Crm::MetaAds::InstagramPrivateReply.new(found[:channel]).perform!(comment: found[:comment], text: text, actor: 'user', user: user,
                                                                              ad_id: ad_id)
@@ -98,6 +101,15 @@ class Crm::MetaAds::InstagramComments
   end
 
   private
+
+  # O que a pessoa fez no comentário (#2519): ele sai do "esperando" (Esperando) e a IA não age mais nele (Cuidar). A Meta
+  # já agiu quando isto roda: falha ao gravar vai ao rastreador e a resposta continua dizendo a verdade.
+  def record_action(acao, ad_id, comment_id, user)
+    Crm::MetaAdsCommentAction.record!(account: @connection.account, network: 'instagram', ad_id: ad_id.to_s, comment_id: comment_id.to_s,
+                                      action: acao, actor: 'user', user: user)
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @connection.account).capture_exception
+  end
 
   def target(ad_id)
     ad = @management.ad(ad_id.to_s)

@@ -2,9 +2,9 @@
 # apagar. Chama a Meta ao vivo; o comentário não é gravado (dado de terceiro), só a ação em
 # crm_meta_ads_comment_actions (#2196), sem o texto.
 #
-# - Pela tela: só o post do anúncio da conta de anúncios da conexão (Crm::MetaAds::AdManagement#ad); anúncio de outra
-#   conta é `ad_not_found`; post apagado ou que a Meta não acha mais é `no_post`. Pelo evento do webhook
-#   (`meta_ads.comment_received`, que leva só ids): `comment`, só em post de Página da conta (Crm::MetaAdsPage, #2195).
+# - Só pela tela: o post do anúncio da conta de anúncios da conexão (Crm::MetaAds::AdManagement#ad); anúncio de outra
+#   conta é `ad_not_found`; post apagado ou que a Meta não acha mais é `no_post`. A IA que cuida dos comentários lê e
+#   age pela caixa da Página, sem a conexão (Crm::MetaAds::ComentariosIa::Rede::ComentariosDaPagina, #2587).
 # - Tudo com o token da Página, pedido com o token da pessoa. Ler exige `pages_read_user_content`; responder, ocultar e
 #   apagar, `pages_manage_engagement`. Sem a primeira (ou no modo `partner`, em que o token é o da plataforma), a aba
 #   pede para entrar de novo com o Facebook (`needs_login`); sem a segunda, lê e não age. Falha passageira da Meta ao
@@ -20,7 +20,7 @@
 #   com o mesmo page_id, e `inbox_access` (InboxPolicy#show? de quem abre) dizendo sim. Sem essa caixa na conta é
 #   `no_inbox` para todos, inclusive o administrador; com ela e sem ser dela, `not_inbox_member`. Nos dois casos a
 #   Página não é lida (nem token, nem comentários) e as permissões da pessoa nem são conferidas; só o anúncio foi
-#   lido, para achar a Página. O evento do webhook (`comment`) não passa por aqui: não há pessoa.
+#   lido, para achar a Página.
 # - Resposta no privado (Private Reply) fica fora: exige pages_messaging (decisão de 25/10 na #2197; é do #2212).
 #
 # Erros: `ad_not_found`, `comment_not_found`, `needs_login`, `invalid_text`, `no_inbox`, `not_inbox_member`,
@@ -94,29 +94,6 @@ class Crm::MetaAds::FacebookComments
     act!(post_id!(ad_id), comment_id, 'delete', by_user(ad_id, user)) { |client| client.delete_comment(comment_id) }
     true
   end
-
-  # Para quem consome `meta_ads.comment_received` (#2212), que leva só ids: o comentário como a Graph devolve
-  # (`message`, `from`, `attachment`), lido com o token da Página. Só em post de Página da conta e com a leitura
-  # concedida; nil quando não dá para ler (a recusa vai ao log, só com ids). A Página já é da conta: aqui ela não é
-  # registrada de novo.
-  def comment(post_id, comment_id)
-    return unless granted?(READ) && own_page?(post_id)
-    raise Error, 'comment_not_found' unless Crm::MetaAds::FacebookCommentId.of_post?(comment_id, post_id)
-
-    client = page_client(post_id)
-    client && graph!(client.page_comment(comment_id))
-  rescue Error => e
-    raise if e.code == 'meta_unavailable'
-
-    Rails.logger.warn("[meta_ads] comentário do Facebook não lido: #{e.code} account=#{@connection.account_id} comment=#{comment_id}")
-    nil
-  end
-
-  # Pela IA que cuida dos comentários (#2212): age no comentário que chegou pelo evento, pelo post (não há anúncio) e sem
-  # pessoa, sempre gravado como 'ai'. As mesmas regras da tela: comentário do post, caixa do Messenger da Página na
-  # conta e pages_manage_engagement.
-  def reply_as_ai(post_id, comment_id, message) = reply_to(post_id, comment_id, message, { actor: 'ai', user: nil, ad_id: nil })
-  def hide_as_ai(post_id, comment_id, hidden) = hide_in(post_id, comment_id, hidden, { actor: 'ai', user: nil, ad_id: nil })
 
   private
 
@@ -248,10 +225,6 @@ class Crm::MetaAds::FacebookComments
     return 'no_inbox' if inbox.nil?
 
     'not_inbox_member' unless @inbox_access.call(inbox)
-  end
-
-  def own_page?(post_id)
-    Crm::MetaAdsPage.account_ids_for(page_id(post_id)).include?(@connection.account_id)
   end
 
   # A Meta já agiu quando isto roda: falha ao gravar vai ao rastreador e a resposta continua dizendo a verdade.

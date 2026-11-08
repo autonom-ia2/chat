@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { vOnClickOutside } from '@vueuse/components';
 import Button from 'dashboard/components-next/button/Button.vue';
 import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
+import { privadoLongoDemais } from 'dashboard/helper/privadoDoInstagram';
 import { haQuanto } from '../seusPostsHelpers';
 
 // Seus posts F2 (#2305): um comentário do post, com o que aconteceu com ele e o que dá para fazer. Os botões vêm do
@@ -14,6 +15,9 @@ const props = defineProps({
   comentario: { type: Object, required: true },
   // Uma ação deste comentário está indo para a Meta: os botões esperam.
   ocupado: { type: Boolean, default: false },
+  // #2454, flag meta_ads_comentarios_ia: o fio conta. Cada resposta de cliente mostra o próprio selo; na aba
+  // em que o comentário só aparece por uma resposta (`comentario.contexto`), o selo dele some para não contradizer a aba.
+  fio: { type: Boolean, default: false },
 });
 const emit = defineEmits([
   'responder',
@@ -88,9 +92,14 @@ const fazer = acao => {
     focar('textarea, [data-seus-posts-confirmar-apagar]');
   }
 };
+// O privado conta em bytes, como a Meta (#2543): passou, a linha avisa e o botão espera.
+const longoDemais = computed(
+  () => abrindo.value === 'privado' && privadoLongoDemais(texto.value.trim())
+);
 const enviar = () => {
   // O texto só some quando a Meta aceitou: quem chama roda `fechar` no sucesso, e uma falha deixa o que foi escrito.
   const mensagem = texto.value.trim();
+  if (longoDemais.value) return;
   if (abrindo.value === 'privado') emit('privado', mensagem, fechar);
   else emit('responder', mensagem, fechar);
 };
@@ -126,8 +135,12 @@ const ACAO =
         <span class="text-n-slate-11">{{
           haQuanto(comentario.quando, locale)
         }}</span>
-        <span v-if="ESTADOS[comentario.estado]" class="max-sm:basis-full">
+        <span
+          v-if="ESTADOS[comentario.estado] && !comentario.contexto"
+          class="max-sm:basis-full"
+        >
           <span
+            data-seus-posts-selo
             class="inline-block rounded-full px-2 py-0.5 text-xs font-semibold"
             :class="ESTADOS[comentario.estado]"
           >
@@ -163,6 +176,7 @@ const ACAO =
         <li
           v-for="resposta in comentario.respostas"
           :key="resposta.id"
+          :data-seus-posts-resposta="resposta.id"
           :data-seus-posts-resposta-do-dono="resposta.daConta || undefined"
           class="flex items-start gap-1.5 rounded-lg bg-n-alpha-1 px-3 py-2 text-sm text-n-slate-12"
         >
@@ -177,6 +191,14 @@ const ACAO =
                 : resposta.autor || $t('SEUS_POSTS.POST.COMMENTS.SOMEONE')
             }}</span>
             {{ resposta.texto }}
+            <span
+              v-if="fio && ESTADOS[resposta.estado]"
+              data-seus-posts-resposta-estado
+              class="ms-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold"
+              :class="ESTADOS[resposta.estado]"
+            >
+              {{ $t(`SEUS_POSTS.POST.COMMENTS.STATE.${resposta.estado}`) }}
+            </span>
           </span>
         </li>
       </ul>
@@ -241,8 +263,20 @@ const ACAO =
           :id="`texto-${comentario.id}`"
           v-model="texto"
           rows="2"
+          :aria-invalid="longoDemais || undefined"
+          :aria-describedby="
+            longoDemais ? `texto-${comentario.id}-longo` : undefined
+          "
           class="w-full rounded-xl border border-n-weak bg-n-solid-1 p-3 text-base text-n-slate-12 focus:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
         />
+        <p
+          v-if="longoDemais"
+          :id="`texto-${comentario.id}-longo`"
+          data-seus-posts-longo-demais
+          class="m-0 text-sm text-n-ruby-11"
+        >
+          {{ $t('SEUS_POSTS.POST.COMMENTS.ERRORS.text_too_long') }}
+        </p>
         <p v-if="abrindo === 'privado'" class="m-0 text-sm text-n-slate-11">
           {{ $t('SEUS_POSTS.POST.COMMENTS.PRIVATE_NOTE') }}
         </p>
@@ -251,7 +285,7 @@ const ACAO =
             type="submit"
             :data-seus-posts-enviar="abrindo"
             :icon="abrindo === 'privado' ? 'i-lucide-send' : 'i-lucide-reply'"
-            :disabled="!texto.trim() || ocupado"
+            :disabled="!texto.trim() || ocupado || longoDemais"
             :label="
               abrindo === 'privado'
                 ? $t('SEUS_POSTS.POST.COMMENTS.PRIVATE_SEND')

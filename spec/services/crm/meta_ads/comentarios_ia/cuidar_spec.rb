@@ -4,7 +4,11 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account) }
   let!(:care) { create(:crm_meta_ads_comment_care, account: account, target_id: '1790') }
-  let(:rede) { instance_double(Crm::MetaAds::ComentariosIa::Rede::Facebook, responder: true, esconder: true, privado_disponivel?: true) }
+  # Com a flag do cuidado, a Escrita (#2458) lê a legenda e o comentário de cima; sem chave da conta, as frases fixas.
+  let(:rede) do
+    instance_double(Crm::MetaAds::ComentariosIa::Rede::Facebook, responder: true, esconder: true, privado_disponivel?: true,
+                                                                 legenda: nil, ler_pai: nil)
+  end
   let(:classificador) { instance_double(Crm::MetaAds::ComentariosIa::Classificador) }
   let(:conversa) { class_double(Crm::MetaAds::ComentariosIa::Conversa) }
   let(:registro) { class_double(Crm::MetaAds::ComentariosIa::Registro) }
@@ -28,25 +32,28 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     described_class.new(item, rede: rede, classificador: classificador, conversa: conversa, registro: registro).call
   end
 
-  def decide(decisao)
-    allow(classificador).to receive(:decidir!).and_return(decisao)
+  # Sem certeza (decisao nil), a IA escolheu algo com certeza baixa: a decisão não vale, mas fica gravada.
+  def decide(decisao, escolha: decisao || 'private', certeza: decisao ? 0.9 : 0.4)
+    avaliacao = Crm::MetaAds::ComentariosIa::Classificador::Avaliacao.new(chave: decisao, escolha: escolha, certeza: certeza)
+    allow(classificador).to receive(:avaliar!).and_return(avaliacao)
+    avaliacao
   end
 
   before do
     account.enable_features!(described_class::FLAG)
-    allow(registro).to receive_messages(reservar!: true, hoje: 1, vez: 0, gravar!: true, vincular!: 1, soltar!: 1,
-                                        reservar_pessoa!: true, soltar_pessoa!: 1)
+    allow(registro).to receive_messages(reservar!: true, vez: 0, gravar!: true, vincular!: 1, soltar!: 1,
+                                        reservar_pessoa!: true, soltar_pessoa!: 1, decisao!: 1, sem_cuidado!: true)
     allow(conversa).to receive_messages(anotar!: conversation, para_voce!: conversation)
     allow(rede).to receive_messages(privado: enviado, ler: { text: 'Quanto custa?', from_name: 'carla.mendes' })
   end
 
-  it 'lê o comentário na Meta antes de perguntar ao Jev' do
+  it 'lê o comentário na Meta antes de perguntar à IA' do
     decide('no_reply')
 
     cuidar
 
     expect(rede).to have_received(:ler).ordered
-    expect(classificador).to have_received(:decidir!).with('Quanto custa?').ordered
+    expect(classificador).to have_received(:avaliar!).with('Quanto custa?').ordered
   end
 
   it 'comentário vindo da lista (sem o id de quem comentou): usa o lido na Meta' do
@@ -58,13 +65,13 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(conversa).to have_received(:anotar!).with(conversation, an_object_having_attributes(from_id: 'igsid-9'), care, nova: true)
   end
 
-  it 'a Meta diz que não dá para ler (apagado, sem permissão): descartado, sem Jev e sem soltar a leitura' do
-    allow(classificador).to receive(:decidir!)
+  it 'a Meta diz que não dá para ler (apagado, sem permissão): descartado, sem IA e sem soltar a leitura' do
+    allow(classificador).to receive(:avaliar!)
     allow(rede).to receive(:ler).and_return(nil)
 
     cuidar
 
-    expect(classificador).not_to have_received(:decidir!)
+    expect(classificador).not_to have_received(:avaliar!)
     expect(registro).to have_received(:reservar!).with(comentario)
     expect(registro).not_to have_received(:soltar!)
   end
@@ -82,7 +89,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     cuidar
 
-    expect(rede).to have_received(:privado).with(care)
+    expect(rede).to have_received(:privado).with(care, texto: nil)
     expect(conversa).to have_received(:anotar!).with(conversation, lido, care, nova: true)
     expect(registro).to have_received(:vincular!).with(lido, 'private_reply', conversation)
     expect(rede).to have_received(:responder).with('Te mandei os detalhes no privado!')
@@ -119,7 +126,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   end
 
   it 'erro antes de agir na Meta solta a leitura, para o job tentar de novo' do
-    allow(classificador).to receive(:decidir!).and_raise(ActiveRecord::ConnectionTimeoutError)
+    allow(classificador).to receive(:avaliar!).and_raise(ActiveRecord::ConnectionTimeoutError)
 
     expect { cuidar }.to raise_error(ActiveRecord::ConnectionTimeoutError)
     expect(registro).to have_received(:soltar!).with(lido, 'ai_seen')
@@ -152,10 +159,10 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(registro).to have_received(:gravar!).with(anything, 'ai_unread')
   end
 
-  it 'Jev fora do ar: solta a leitura e sobe o erro, para o job tentar de novo' do
-    allow(classificador).to receive(:decidir!).and_raise(TypesafeAi::Decisor::Error.new('typesafe_timeout'))
+  it 'IA fora do ar: solta a leitura e sobe o erro, para o job tentar de novo' do
+    allow(classificador).to receive(:avaliar!).and_raise(Crm::MetaAds::ComentariosIa::Classificador::Indisponivel.new('ai_timeout'))
 
-    expect { cuidar }.to raise_error(TypesafeAi::Decisor::Error)
+    expect { cuidar }.to raise_error(Crm::MetaAds::ComentariosIa::Classificador::Indisponivel)
     expect(registro).to have_received(:soltar!).with(lido, 'ai_seen')
     expect(rede).not_to have_received(:privado)
   end
@@ -311,7 +318,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(registro).to have_received(:reservar!).with(comentario)
   end
 
-  it 'post sem oferta nunca manda privado, mesmo se o Jev pedir: a pergunta fica com o dono' do
+  it 'post sem oferta nunca manda privado, mesmo se a IA pedir: a pergunta fica com o dono' do
     care.update!(offer: nil)
     decide('price')
 
@@ -327,10 +334,10 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     cuidar
 
-    expect(rede).to have_received(:privado).with(care)
+    expect(rede).to have_received(:privado).with(care, texto: nil)
   end
 
-  it 'rede em que o privado ainda não está liberado (Facebook, até a pages_messaging): a pergunta fica com o dono' do
+  it 'rede em que o privado não está liberado (Facebook sem a flag, #2613): a pergunta fica com o dono' do
     allow(rede).to receive(:privado_disponivel?).and_return(false)
     decide('price')
 
@@ -350,18 +357,52 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(registro).not_to have_received(:gravar!)
   end
 
-  it 'sem certeza do Jev: não age, e o comentário fica com o dono como "não cuidei"' do
-    decide(nil)
+  it 'sem certeza da IA: não age, e o comentário fica com o dono como "não cuidei"' do
+    avaliacao = decide(nil)
 
     cuidar
 
     expect(rede).not_to have_received(:privado)
     expect(conversa).not_to have_received(:para_voce!)
     expect(registro).to have_received(:gravar!).with(lido, 'ai_unread')
+    expect(registro).to have_received(:decisao!).with(lido, avaliacao)
   end
 
-  it 'Jev barrado (teto do dia ou flag): não sobe, fica com o dono como "não cuidei"' do
-    allow(classificador).to receive(:decidir!).and_raise(Crm::MetaAds::ComentariosIa::Classificador::Bloqueado.new('daily_limit'))
+  it 'pergunta com a legenda do post, lida na Meta depois do comentário (#2424)' do
+    avaliacao = Crm::MetaAds::ComentariosIa::Classificador::Avaliacao.new(chave: 'no_reply', escolha: 'no_reply', certeza: 0.9)
+    allow(rede).to receive(:legenda).and_return('Seguro viagem com cobertura internacional')
+    allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
+    allow(classificador).to receive(:avaliar!).and_return(avaliacao)
+
+    described_class.new(comentario, rede: rede, conversa: conversa, registro: registro).call
+
+    expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new)
+      .with(care: care, legenda: 'Seguro viagem com cobertura internacional', foto: nil)
+  end
+
+  it 'pergunta também com o que a foto do post mostra, lido do banco, sem chamar a Meta nem a IA da foto (#2454)' do
+    create(:crm_meta_ads_post_reading, account: account, network: 'instagram', post_id: '1790', description: 'Vestido azul',
+                                       correction: 'Vestido midi azul-marinho')
+    allow(rede).to receive(:legenda).and_return(nil)
+    allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
+    decide('no_reply')
+
+    described_class.new(comentario, rede: rede, conversa: conversa, registro: registro).call
+
+    expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new).with(care: care, legenda: nil, foto: 'Vestido midi azul-marinho')
+  end
+
+  it 'grava o que a IA escolheu, a certeza e o motivo também quando ela age, antes de mandar o privado (#2424)' do
+    avaliacao = decide('private')
+
+    cuidar
+
+    expect(registro).to have_received(:decisao!).with(lido, avaliacao).ordered
+    expect(rede).to have_received(:privado).with(care, texto: nil).ordered
+  end
+
+  it 'IA barrada (flag desligada ou sem chave): não sobe, fica com o dono como "não cuidei"' do
+    allow(classificador).to receive(:avaliar!).and_raise(Crm::MetaAds::ComentariosIa::Classificador::Bloqueado.new('feature_disabled'))
 
     cuidar
 
@@ -369,51 +410,105 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(registro).not_to have_received(:soltar!)
   end
 
-  it 'teto do dia, contado depois da reserva (ela conta): o comentário fica com o dono, sem ir ao Jev' do
-    allow(registro).to receive(:hoje).and_return(described_class::TETO_DIARIO + 1)
-    allow(classificador).to receive(:decidir!)
-
-    cuidar
-
-    expect(classificador).not_to have_received(:decidir!)
-    expect(rede).not_to have_received(:ler)
-    expect(registro).to have_received(:gravar!).with(comentario, 'ai_unread')
-  end
-
-  it 'no teto exato (o 200º do dia), ainda cuida' do
-    allow(registro).to receive(:hoje).and_return(described_class::TETO_DIARIO)
+  it 'sem teto de uso (#2454): com centenas de comentários lidos hoje na conta, ainda cuida do próximo' do
+    250.times do |indice|
+      Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: "lido-#{indice}", action: 'ai_seen', actor: 'ai')
+    end
     decide('no_reply')
 
-    cuidar
+    described_class.new(comentario, rede: rede, classificador: classificador, conversa: conversa).call
 
-    expect(classificador).to have_received(:decidir!)
+    expect(classificador).to have_received(:avaliar!).with('Quanto custa?')
+    expect(Crm::MetaAdsCommentAction.where(account_id: account.id, comment_id: 'c-1', action: 'ai_unread')).not_to exist
   end
 
-  describe 'o que não chega ao Jev' do
-    before { allow(classificador).to receive(:decidir!) }
+  # #2519: as linhas do Registro são o que o Esperando conta por anúncio, e o número conta o mesmo que a lista mostra.
+  describe 'o anúncio nas linhas do Registro (Esperando)' do
+    before do
+      create(:crm_meta_ads_comment_care, account: account, target_kind: 'ad', target_id: '120', network: 'both', post_ids: %w[1790])
+    end
+
+    def cuidar_de_verdade(item)
+      decide(nil)
+      described_class.new(item, rede: rede, classificador: classificador, conversa: conversa).call
+    end
+
+    it 'no Facebook (o evento vem sem ad_id), com o cuidado de um anúncio: a linha leva o anúncio, e o Esperando a conta' do
+      cuidar_de_verdade(comentario(network: 'facebook', ad_id: nil))
+
+      expect(Crm::MetaAdsCommentAction.where(comment_id: 'c-1').pluck(:action, :ad_id)).to contain_exactly(%w[ai_seen 120], %w[ai_unread 120])
+      expect(Crm::MetaAds::ComentariosIa::Esperando.por_anuncio(account.id, %w[120])).to eq('120' => 1)
+    end
+
+    it 'a resposta dentro de um comentário vai sem anúncio: a lista mostra só o primeiro nível, e o número também' do
+      account.enable_features!(described_class::FLAG)
+      allow(rede).to receive(:ler_pai).and_return({ text: 'Tem desconto?', from_name: 'ana' })
+      cuidar_de_verdade(comentario(ad_id: '120', parent_id: 'c-0'))
+
+      expect(Crm::MetaAdsCommentAction.where(comment_id: 'c-1').pluck(:ad_id).uniq).to eq([nil])
+      expect(Crm::MetaAds::ComentariosIa::Esperando.por_anuncio(account.id, %w[120])).to eq('120' => 0)
+    end
+  end
+
+  describe 'o que não chega à IA' do
+    before { allow(classificador).to receive(:avaliar!) }
 
     it 'comentário já reivindicado (a Meta reenvia o webhook, ou outro job pegou antes)' do
       allow(registro).to receive(:reservar!).and_return(false)
       cuidar
-      expect(classificador).not_to have_received(:decidir!)
+      expect(classificador).not_to have_received(:avaliar!)
     end
 
     it 'flag desligada' do
       account.disable_features!(described_class::FLAG)
       cuidar
-      expect(classificador).not_to have_received(:decidir!)
+      expect(classificador).not_to have_received(:avaliar!)
       expect(registro).not_to have_received(:reservar!)
+      expect(registro).not_to have_received(:sem_cuidado!)
     end
 
-    it 'post sem cuidado, ou com o cuidado pausado' do
+    # #2519: nada some em silêncio. O comentário de cliente sem cuidado ligado fica registrado (no_care), para o
+    # Esperando contar o que está com o dono.
+    it 'anúncio sem cuidado, ou com o cuidado pausado: não chega à IA, mas fica registrado (no_care)' do
+      care.update!(status: 'paused')
+      cuidar(comentario(ad_id: '120'))
+      expect(registro).not_to have_received(:reservar!)
+      expect(registro).to have_received(:sem_cuidado!).with(comentario(ad_id: '120'))
+    end
+
+    it 'resposta dentro de um comentário de anúncio, sem cuidado: não registra (a lista mostra só o primeiro nível)' do
+      care.update!(status: 'paused')
+      cuidar(comentario(ad_id: '120', parent_id: 'c-0'))
+      expect(registro).not_to have_received(:sem_cuidado!)
+    end
+
+    it 'post sem cuidado: não chega à IA e não registra (sem o anúncio, nenhuma leitura usaria a linha)' do
       care.update!(status: 'paused')
       cuidar
       expect(registro).not_to have_received(:reservar!)
+      expect(registro).not_to have_received(:sem_cuidado!)
     end
 
-    it 'resposta a outro comentário' do
-      cuidar(comentario(parent_id: 'c-0'))
+    # #2519: passados 10 min o comentário aparece ao dono; o job pode ainda tentar de novo. A IA não age por cima dele.
+    it 'a pessoa já respondeu, escondeu ou apagou o comentário: a IA não age' do
+      pessoa = create(:user, account: account)
+      %w[reply hide delete].each_with_index do |acao, indice|
+        Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: "c-#{indice}", action: acao, actor: 'user',
+                                          user: pessoa)
+        cuidar(comentario(comment_id: "c-#{indice}"))
+      end
+
       expect(registro).not_to have_received(:reservar!)
+    end
+
+    it 'sem cuidado, não registra o que não é do motor: flag desligada, mais de 7 dias, o da própria conta' do
+      care.destroy!
+      cuidar(comentario(ad_id: '120', created_time: 8.days.ago))
+      cuidar(comentario(ad_id: '120', from_id: 'ig-1'))
+      account.disable_features!(described_class::FLAG)
+      cuidar(comentario(ad_id: '120'))
+
+      expect(registro).not_to have_received(:sem_cuidado!)
     end
 
     it 'comentário com mais de 7 dias, que não aceita mais privado' do
@@ -439,6 +534,6 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     cuidar(comentario(ad_id: '120'))
 
-    expect(rede).to have_received(:privado).with(anuncio)
+    expect(rede).to have_received(:privado).with(anuncio, texto: nil)
   end
 end

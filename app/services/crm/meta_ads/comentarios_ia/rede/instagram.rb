@@ -17,27 +17,60 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
   # Outro envio deste comentário (já feito, ou saindo agora em outra requisição): nada a fazer.
   OUTRO_ENVIO = %w[private_reply_done private_reply_retry].freeze
 
-  def privado(care)
+  # texto: a mensagem escrita pela IA para este comentário (#2458); sem ela, a do dono. A resposta dentro de um
+  # comentário vai sem o anúncio (#2519): o Esperando conta por anúncio só o primeiro nível, como a lista mostra (a tela
+  # do anúncio também não oferece "Não foi enviado" para resposta).
+  def privado(care, texto: nil)
     resultado = Crm::MetaAds::InstagramPrivateReply.new(@inbox.channel)
-                                                   .perform!(comment: comment, text: care.texto_do_privado, actor: REGISTRO::ACTOR,
-                                                             ad_id: @comentario.ad_id)
+                                                   .perform!(comment: comment, text: texto || care.texto_do_privado, actor: REGISTRO::ACTOR,
+                                                             ad_id: (@comentario.ad_id unless @comentario.resposta?))
     Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, conversation: resultado[:conversation])
   rescue Crm::MetaAds::InstagramPrivateReply::Error => e
     erro = OUTRO_ENVIO.include?(e.code) ? Crm::MetaAds::ComentariosIa::Rede::JA_FEITO : e.code
-    Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: erro, talvez_entregue: sem_confirmacao?)
+    Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: erro, talvez_entregue: sem_confirmacao?, codigo: e.meta_code,
+                                                 subcodigo: e.meta_subcode, http: e.meta_http)
   end
 
   def ler
-    resultado = cliente.comment(@comentario.comment_id)
-    # Token caído ou permissão tirada também tentam de novo: um problema da caixa não descarta, um a um, os comentários
-    # da conta. Só o comentário que não existe mais (ou outra recusa dele) é descartado.
-    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient? || resultado.token_invalid? || resultado.scope_error?
-    return unless resultado.ok
-
-    dados = resultado.data.to_h
-    return if de_outro_post?(dados)
+    dados = na_meta(@comentario.comment_id)
+    return if dados.nil? || de_outro_post?(dados)
 
     { text: dados['text'], from_name: dados.dig('from', 'username'), from_id: dados.dig('from', 'id')&.to_s }
+  end
+
+  # O texto do comentário que esta resposta responde (#2454), lido na Meta pelo id, como o `ler`. nil no comentário de
+  # primeiro nível ou quando não dá para ler o de cima.
+  # Lido uma vez por comentário (#2458): o Classificador e a Escrita leem o mesmo.
+  def ler_pai
+    return @ler_pai if defined?(@ler_pai)
+    return if @comentario.parent_id.blank?
+
+    @ler_pai = na_meta(@comentario.parent_id)&.dig('text')
+  end
+
+  # A legenda do post (#2424), ou nil. Meta fora do ar levanta Indisponivel, como o `ler`. Lida uma vez por comentário
+  # (#2458): o Classificador e a Escrita leem a mesma.
+  def legenda
+    return @legenda if defined?(@legenda)
+    return if @comentario.post_id.blank?
+
+    resultado = cliente.caption(@comentario.post_id)
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient? || resultado.token_invalid? || resultado.scope_error?
+
+    @legenda = (resultado.data.to_h['caption'] if resultado.ok)
+  end
+
+  # As imagens do post (#2454): a foto, as do carrossel ou a capa do vídeo (Imagens). Nenhuma quando não dá para ler; Meta
+  # fora do ar levanta Indisponivel, como a `legenda`. prazo: segundos da ida à Graph (a leitura da foto roda dentro da
+  # requisição); a Meta que não responde nele também é Indisponivel.
+  def imagens(prazo: nil)
+    return [] if @comentario.post_id.blank?
+
+    leitor = prazo ? Instagram::CommentsClient.new(@inbox.channel, timeout: prazo) : cliente
+    resultado = leitor.media(@comentario.post_id)
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient? || resultado.token_invalid? || resultado.scope_error?
+
+    resultado.ok ? Crm::MetaAds::ComentariosIa::Imagens.do_instagram(resultado.data.to_h) : []
   end
 
   def responder(texto)
@@ -49,6 +82,15 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
   end
 
   private
+
+  # Token caído ou permissão tirada também tentam de novo: um problema da caixa não descarta, um a um, os comentários
+  # da conta. Só o comentário que não existe mais (ou outra recusa dele) é descartado (nil).
+  def na_meta(comment_id)
+    resultado = cliente.comment(comment_id)
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient? || resultado.token_invalid? || resultado.scope_error?
+
+    resultado.data.to_h if resultado.ok
+  end
 
   # O InstagramPrivateReply marca `failed_at` quando a Meta não respondeu (rede, 5xx): o privado pode ter saído.
   def sem_confirmacao?
@@ -69,10 +111,12 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
     REGISTRO.gravar!(@comentario, nome)
   end
 
-  # O comentário no formato do webhook e da Graph, que o serviço do #2196 recebe.
+  # O comentário no formato do webhook e da Graph, que o serviço do #2196 recebe. O `parent_id` diz a ele que é resposta
+  # (2º nível, #2454).
   def comment
-    { 'id' => @comentario.comment_id, 'timestamp' => @comentario.momento&.iso8601,
-      'from' => { 'id' => @comentario.from_id, 'username' => @comentario.from_name } }
+    dados = { 'id' => @comentario.comment_id, 'timestamp' => @comentario.momento&.iso8601,
+              'from' => { 'id' => @comentario.from_id, 'username' => @comentario.from_name } }
+    @comentario.resposta? ? dados.merge('parent_id' => @comentario.parent_id) : dados
   end
 
   def cliente

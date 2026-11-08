@@ -589,7 +589,7 @@
         },
         "conversation_message_delete": {
           "TITULO": "Delete messages",
-          "TEXTO": "The message shows as deleted in the conversation"
+          "TEXTO": "The message shows as deleted in the conversation. Also deletes, on Instagram, the comment the conversation came from"
         },
         "crm_manage_ai": {
           "TITULO": "Ask the AI for help in sales",

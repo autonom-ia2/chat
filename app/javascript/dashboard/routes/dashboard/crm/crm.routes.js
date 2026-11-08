@@ -64,15 +64,11 @@ const ensureCrmEnabled = (to, _from, next) => {
   next({ name: 'home', params: to.params });
 };
 
-// IA cuida dos comentários de um anúncio (#2212, B2): o CRM ligado, as flags do anúncio por dentro (meta_ads_hub), da
-// gestão (meta_ads_gestao, que abre os comentários) e do cuidado, e a dos comentários de ao menos uma rede, como o
-// servidor (MetaAdsCuidadoController#ensure_flags).
+// IA cuida dos comentários de um anúncio (#2212, B2): o CRM ligado, as flags do anúncio por dentro (meta_ads_hub) e
+// do cuidado, e a dos comentários de ao menos uma rede, como o servidor (MetaAdsCuidadoController#ensure_flags). A
+// gestão (meta_ads_gestao) não entra (#2520).
 const ensureCuidarAnuncioFlags = comFlagsEAlguma(
-  [
-    FEATURE_FLAGS.META_ADS_HUB,
-    FEATURE_FLAGS.META_ADS_GESTAO,
-    FEATURE_FLAGS.META_ADS_COMENTARIOS_IA,
-  ],
+  [FEATURE_FLAGS.META_ADS_HUB, FEATURE_FLAGS.META_ADS_COMENTARIOS_IA],
   [
     FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM,
     FEATURE_FLAGS.META_ADS_COMENTARIOS_FACEBOOK,

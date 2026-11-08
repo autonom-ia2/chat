@@ -66,6 +66,9 @@ RSpec.describe Crm::StageAutomations::StepExecutor do
 
     expect(result.status).to eq(:ok)
     expect(card.reload.stage_id).to eq(second_stage.id)
+    # #2428: o movimento leva a automação de etapa, para a IA do funil não desfazê-lo.
+    movimento = Crm::Activity.where(card: card, event_type: 'move').sole
+    expect(movimento.payload).to include('by' => 'automacao', 'origem' => 'etapa', 'automacao_id' => step.stage_automation_id)
   end
 
   it 'blocks move_stage when automation depth is exceeded' do
