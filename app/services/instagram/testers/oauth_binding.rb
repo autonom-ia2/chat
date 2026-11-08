@@ -91,11 +91,35 @@ class Instagram::Testers::OauthBinding
   end
 
   def self.valid_reauthorization?(payload)
-    return true unless payload.key?('inbox_id')
+    # Sem caixa é conexão nova; a volta para Anúncios da Meta só existe reautorizando uma caixa (#2199/#2196).
+    return payload['return_to'] != 'meta_ads' && !payload.key?('ad_id') unless payload.key?('inbox_id')
 
-    payload['inbox_id'].is_a?(Integer) && payload['inbox_id'].positive? &&
-      Instagram::Testers::Validation.id?(payload['instagram_id']) &&
-      payload['return_to'] == 'inbox' && !payload.key?('tester_selection')
+    valid_inbox_target?(payload) && reauthorization_return_to?(payload['return_to']) &&
+      !payload.key?('tester_selection') && valid_ad_id?(payload)
+  end
+
+  def self.valid_inbox_target?(payload)
+    payload['inbox_id'].is_a?(Integer) && payload['inbox_id'].positive? && Instagram::Testers::Validation.id?(payload['instagram_id'])
+  end
+
+  # O anúncio de volta (#2196) só existe na volta a Anúncios da Meta, num purpose que volta a um anúncio (`ad: true`), e
+  # só de dígitos (entra no endereço de volta).
+  def self.valid_ad_id?(payload)
+    return true unless payload.key?('ad_id')
+
+    payload['return_to'] == 'meta_ads' && Instagram::IntegrationHelper::REAUTH_PURPOSES.dig(payload['purpose'], :ad) == true &&
+      ad_id?(payload['ad_id'])
+  end
+
+  # Id de anúncio: 1 a 32 dígitos.
+  def self.ad_id?(value)
+    value.is_a?(String) && value.length.between?(1, 32) && value.each_char.all? { |char| char.between?('0', '9') }
+  end
+
+  # Pela própria caixa ou por Anúncios da Meta com escopo a mais (#2199/#2196). O purpose e a flag dele são conferidos
+  # ao assinar o state: um state assinado com a flag ligada ainda vale até expirar (TTL), mesmo se a flag desligar.
+  def self.reauthorization_return_to?(return_to)
+    %w[inbox meta_ads].include?(return_to)
   end
 
   def self.valid_timing?(payload)
@@ -103,5 +127,6 @@ class Instagram::Testers::OauthBinding
       payload['iat'] <= Time.current.to_i && (payload['exp'] - payload['iat']).between?(1, TTL.to_i)
   end
 
-  private_class_method :authorize_connection!, :valid_context?, :validate_selection!, :valid_reauthorization?, :valid_timing?
+  private_class_method :authorize_connection!, :valid_context?, :validate_selection!, :valid_reauthorization?,
+                       :valid_inbox_target?, :reauthorization_return_to?, :valid_ad_id?, :valid_timing?
 end

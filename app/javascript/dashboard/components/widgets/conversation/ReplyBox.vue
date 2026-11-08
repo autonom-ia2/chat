@@ -29,6 +29,11 @@ import MessageSignatureMissingAlert from './MessageSignatureMissingAlert.vue';
 import AvisoDeAssinatura from 'dashboard/components-next/conversa-canal/email/AvisoDeAssinatura.vue';
 import ReplyBoxBanner from './ReplyBoxBanner.vue';
 import WhatsappApiReplyHint from './WhatsappApiReplyHint.vue';
+import DevolverParaIa from 'dashboard/components-next/conversa-canal/atribuir/DevolverParaIa.vue';
+import {
+  camposDoEnvio,
+  useFicarComAConversa,
+} from 'dashboard/components-next/conversa-canal/atribuir/useFicarComAConversa';
 import QuotedEmailPreview from './QuotedEmailPreview.vue';
 import { REPLY_EDITOR_MODES } from 'dashboard/components/widgets/WootWriter/constants';
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
@@ -46,6 +51,10 @@ import { MESSAGE_MAX_LENGTH } from 'shared/helpers/MessageTypeHelper';
 import inboxMixin, { INBOX_FEATURES } from 'shared/mixins/inboxMixin';
 import { trimContent, debounce, getRecipients } from '@chatwoot/utils';
 import { semQuemSaiuDaCopia } from 'dashboard/helper/semQuemSaiuDaCopia';
+import {
+  humanAssigneeId,
+  isAssignedToUser,
+} from 'dashboard/helper/assigneeHelper';
 import wootConstants from 'dashboard/constants/globals';
 import {
   extractQuotedEmailText,
@@ -72,6 +81,8 @@ import {
   indicesDeDocumento,
   usePeleDaResposta,
 } from 'dashboard/components-next/conversa-canal/usePeleDaResposta';
+import { useInstagramDaConversa } from 'dashboard/components-next/conversa-canal/instagram/useConversaDoInstagram';
+import { GRAVADOR_DO_INSTAGRAM } from 'dashboard/components-next/conversa-canal/instagram/visualInstagram';
 import { ABRIR_MODELOS_DO_WHATSAPP } from 'dashboard/components-next/conversa-canal/pele';
 import GravadorDoWhatsapp from 'dashboard/components-next/conversa-canal/GravadorDoWhatsapp.vue';
 import CabecaDaResposta from 'dashboard/components-next/conversa-canal/email/CabecaDaResposta.vue';
@@ -119,6 +130,7 @@ export default {
     JanelaDeEmojis,
     ReplyBoxBanner,
     WhatsappApiReplyHint,
+    DevolverParaIa,
     MessageSignatureMissingAlert,
     AvisoDeAssinatura,
     ReplyBottomPanel,
@@ -156,6 +168,11 @@ export default {
     // #1786: na conversa de e-mail nova, Responder / Responder a todos / Encaminhar.
     const { ligado: emailNovo, fecharResposta: fecharRespostaDoEmail } =
       useEmailDaConversa();
+    // #2079: na conversa do Instagram, o "Mensagem..." do Direct (a pílula vem de usePeleDaResposta).
+    const { ligado: instagram } = useInstagramDaConversa();
+    // #2067: ficar com a conversa ao enviar (com a flag da conta, no lugar da faixa
+    // "Atribuir a mim").
+    const ficar = useFicarComAConversa();
 
     // Options API state and methods live on the instance proxy
     const { proxy } = getCurrentInstance();
@@ -222,12 +239,15 @@ export default {
       iaDoEmail,
       shortcutKey,
       macroExecution,
+      instagram,
+      GRAVADOR_DO_INSTAGRAM,
       classesDaResposta,
       ehWhatsapp,
       emailNovo,
       fecharRespostaDoEmail,
       textoDoCampo,
       FORA_DA_REGUA,
+      ficar,
     };
   },
   data() {
@@ -279,6 +299,10 @@ export default {
     };
   },
   computed: {
+    // Só pessoa responsável (#2249): o repasse do assunto não aparece para robô com o meu id.
+    pessoaResponsavelId() {
+      return humanAssigneeId(this.currentChat);
+    },
     ...mapGetters({
       currentChat: 'getSelectedChat',
       messageSignature: 'getMessageSignature',
@@ -378,6 +402,18 @@ export default {
       );
       return !!stripped.trim();
     },
+    // #2067: o ícone aparece mesmo sem nada digitado (o modelo e o áudio também ficam com a
+    // conversa), nunca na nota privada nem na conversa que já é minha.
+    mostrarFicarComAConversa() {
+      return this.ficar.aplica && !this.isOnPrivateNote;
+    },
+    // #2067: a flag da conta; desligada, a tela fica como antes (faixa "Atribuir a mim").
+    ficarLigadoNaConta() {
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.FICAR_COM_A_CONVERSA_AO_ENVIAR
+      );
+    },
     isBotOwnedPendingConversation() {
       return (
         this.currentChat?.status === wootConstants.STATUS_TYPE.PENDING &&
@@ -405,6 +441,9 @@ export default {
         return this.$t('CONVERSATION.FOOTER.MESSAGING_RESTRICTED');
       }
       if (!this.isPrivate && this.textoDoCampo) return this.textoDoCampo;
+      if (!this.isPrivate && this.instagram) {
+        return this.$t('CONVERSA_CANAL.INSTAGRAM.CAMPO');
+      }
       // #1786: no e-mail novo, uma frase simples no lugar do atalho técnico.
       if (!this.isPrivate && this.emailNovo) {
         return this.$t('CONVERSA_CANAL.EMAIL.ESCREVA');
@@ -1050,6 +1089,9 @@ export default {
         return;
       }
       if (!this.showMentions) {
+        // #2067: uma decisão de "ficar com a conversa" para todas as partes deste envio.
+        const decisao = this.ficar.decidir({ privada: this.isPrivate });
+        let envios;
         const copilotAcceptedMessage = this.getCopilotAcceptedMessage();
         const isOnWhatsApp =
           this.isATwilioWhatsAppChannel ||
@@ -1062,18 +1104,23 @@ export default {
         const isOnInstagram = this.isAnInstagramChannel;
         const isOnTiktok = this.isATiktokChannel;
         if ((isOnWhatsApp || isOnInstagram || isOnTiktok) && !this.isPrivate) {
-          this.sendMessageAsMultipleMessages(
+          envios = this.sendMessageAsMultipleMessages(
             this.message,
-            copilotAcceptedMessage
+            copilotAcceptedMessage,
+            decisao
           );
         } else {
           const messagePayload = this.getMessagePayload(this.message);
-          this.sendMessage(
-            messagePayload,
-            this.message,
-            copilotAcceptedMessage
-          );
+          envios = [
+            this.sendMessage(
+              messagePayload,
+              this.message,
+              copilotAcceptedMessage,
+              decisao
+            ),
+          ];
         }
+        this.depoisDoEnvio(decisao, envios);
 
         if (!this.isPrivate) {
           this.clearEmailField();
@@ -1083,15 +1130,21 @@ export default {
         this.hideEmojiPicker();
       }
     },
-    sendMessageAsMultipleMessages(message, copilotAcceptedMessage = '') {
+    // #2067: devolve os envios (promessas), para decidir uma vez depois de todas as partes.
+    sendMessageAsMultipleMessages(
+      message,
+      copilotAcceptedMessage = '',
+      decisao = null
+    ) {
       const messages = this.getMultipleMessagesPayload(message);
-      messages.forEach(messagePayload => {
+      return messages.map(messagePayload =>
         this.sendMessage(
           messagePayload,
           messagePayload.message || '',
-          copilotAcceptedMessage
-        );
-      });
+          copilotAcceptedMessage,
+          decisao
+        )
+      );
     },
     sendMessageAnalyticsData(
       isPrivate,
@@ -1163,44 +1216,121 @@ export default {
         this.confirmOnSendReply();
       }
     },
+    // `decisao` (#2067): a de "ficar com a conversa" do envio de que esta mensagem é parte
+    // (todas as partes levam o mesmo pedido: saem em paralelo, e qualquer uma que chegue
+    // primeiro fica). Sem ela (modelo, mensagem pronta), o envio decide sozinho. Devolve
+    // { ok, data }.
     async sendMessage(
       messagePayload,
       editorMessage = '',
-      copilotAcceptedMessage = ''
+      copilotAcceptedMessage = '',
+      decisao = undefined
     ) {
+      const sozinho = decisao === undefined;
+      const daqui = sozinho
+        ? this.ficar.decidir({ privada: messagePayload.private })
+        : decisao;
+      const envio = this.enviarParte(
+        { ...messagePayload, ...camposDoEnvio(daqui) },
+        editorMessage,
+        copilotAcceptedMessage
+      );
+      if (sozinho) this.depoisDoEnvio(daqui, [envio]);
+      return envio;
+    },
+    // Como na main: dispara o envio e, na hora (sem esperar o servidor), rola, avisa que a
+    // mensagem saiu, apaga o rascunho desta conversa (chave tirada antes: trocar de conversa
+    // durante um envio lento não apaga o rascunho de outra) e manda a métrica. Só depois
+    // espera a resposta, para o #2067 saber se saiu ({ ok, data }). A falha do servidor só
+    // vira aviso com a flag ligada; desligada, fica como na main (a bolha mostra a falha).
+    async enviarParte(messagePayload, editorMessage, copilotAcceptedMessage) {
+      const chaveDoRascunho = this.conversationIdByRoute
+        ? this.getDraftKey()
+        : null;
+      let envio;
       try {
-        await this.$store.dispatch(
+        envio = this.$store.dispatch(
           'createPendingMessageAndSend',
           this.setCrmSubjectInPayload(messagePayload)
         );
-        emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
-        emitter.emit(BUS_EVENTS.MESSAGE_SENT);
-        this.removeFromDraft();
-        this.sendMessageAnalyticsData(messagePayload.private, {
-          editorMessage,
-          copilotAcceptedMessage,
-        });
       } catch (error) {
-        const errorMessage =
-          error?.response?.data?.error || this.$t('CONVERSATION.MESSAGE_ERROR');
-        useAlert(errorMessage);
+        this.avisarFalhaDoEnvio(error);
+        return { ok: false };
+      }
+      emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
+      emitter.emit(BUS_EVENTS.MESSAGE_SENT);
+      if (chaveDoRascunho) {
+        this.$store.dispatch('draftMessages/delete', { key: chaveDoRascunho });
+      }
+      this.sendMessageAnalyticsData(messagePayload.private, {
+        editorMessage,
+        copilotAcceptedMessage,
+      });
+      try {
+        return { ok: true, data: await envio };
+      } catch (error) {
+        if (this.ficarLigadoNaConta) this.avisarFalhaDoEnvio(error);
+        return { ok: false };
+      }
+    },
+    avisarFalhaDoEnvio(error) {
+      useAlert(
+        error?.response?.data?.error || this.$t('CONVERSATION.MESSAGE_ERROR')
+      );
+    },
+    // #2067: depois de todas as partes de um envio. Alguma não saiu: a escolha do ícone
+    // volta. Pediu para ficar e o servidor não conseguiu em NENHUMA parte: avisa (uma parte
+    // que ficou basta; as outras acham a conversa já minha). Ficou: a tela mostra o dono
+    // novo pelo evento ao vivo; se ele ainda não chegou, relê a conversa uma vez.
+    async depoisDoEnvio(decisao, envios) {
+      if (!decisao) return;
+      const conversationId = this.currentChat?.id;
+      const resultados = await Promise.all(envios);
+      if (resultados.some(({ ok }) => !ok)) {
+        this.ficar.restaurar(decisao);
+        return;
+      }
+      if (!decisao.fica) return;
+      if (resultados.every(({ data }) => data?.ficar_com_a_conversa_nao_deu)) {
+        useAlert(this.$t('CONVERSA_CANAL.FICAR.NAO_DEU'));
+        return;
+      }
+      this.relerSeODonoNaoChegou(conversationId);
+    },
+    async relerSeODonoNaoChegou(conversationId) {
+      const conversa = this.$store.getters.getConversationById(conversationId);
+      const jaEMinha = isAssignedToUser(conversa, this.currentUser?.id);
+      if (!conversationId || jaEMinha) return;
+      try {
+        await this.$store.dispatch('getConversation', conversationId);
+      } catch {
+        // O evento ao vivo da troca de dono ainda atualiza a tela.
       }
     },
     // #1702: o "+" manda localização, contato, botão de link, opções e formulário pelo
     // envio do robô (#1473), com resposta citada e assunto do CRM como o texto. Espera o
     // servidor: a janela só fecha quando a mensagem foi aceita e mostra a recusa.
     async onSendRichMessage({ content, richMessage }) {
+      const decisao = this.ficar.decidir();
       const payload = this.setReplyToInPayload({
         conversationId: this.currentChat.id,
         message: content,
         private: false,
         sender: this.sender,
         contentAttributes: { rich_message: richMessage },
+        ...camposDoEnvio(decisao),
       });
-      await this.$store.dispatch(
-        'sendMessageWithData',
-        createPendingMessage(this.setCrmSubjectInPayload(payload))
-      );
+      let data;
+      try {
+        data = await this.$store.dispatch(
+          'sendMessageWithData',
+          createPendingMessage(this.setCrmSubjectInPayload(payload))
+        );
+      } catch (error) {
+        this.ficar.restaurar(decisao);
+        throw error;
+      }
+      this.depoisDoEnvio(decisao, [{ ok: true, data }]);
       this.resetReplyToMessage();
       emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
       emitter.emit(BUS_EVENTS.MESSAGE_SENT);
@@ -1787,16 +1917,21 @@ export default {
 </script>
 
 <template>
-  <ReplyBoxBanner :message="message" :is-on-private-note="isOnPrivateNote" />
+  <ReplyBoxBanner
+    :message="message"
+    :is-on-private-note="isOnPrivateNote"
+    :ficar-ao-enviar="ficarLigadoNaConta"
+  />
   <CrmRepasseDoAssunto
     v-if="crmReplySubjectEnabled"
     :conversation-id="currentChat.id"
-    :assignee-id="currentChat.meta?.assignee?.id || null"
+    :assignee-id="pessoaResponsavelId"
   />
   <WhatsappApiReplyHint
     :conversation="currentChat"
     :is-on-private-note="isOnPrivateNote"
   />
+  <DevolverParaIa :conversation="currentChat" />
   <div class="reply-box" :class="replyBoxClass">
     <TopoDaResposta
       v-if="emailNovo"
@@ -1821,6 +1956,13 @@ export default {
       @toggle-editor-size="toggleEditorSize"
       @toggle-copilot="copilot.toggleEditor"
       @execute-copilot-action="executeCopilotAction"
+    />
+    <!-- #2113: no Instagram, a citação numa linha própria no topo da pílula; dentro do campo, ela desalinhava o emoji. -->
+    <ReplyToMessage
+      v-if="shouldShowReplyToMessage && instagram"
+      :message="inReplyTo"
+      data-resposta-do-instagram
+      @dismiss="resetReplyToMessage"
     />
     <ArticleSearchPopover
       v-if="showArticleSearchPopover && connectedPortalSlug"
@@ -1854,7 +1996,7 @@ export default {
           @dismiss="resetReplyToMessage"
         />
         <ReplyToMessage
-          v-else-if="shouldShowReplyToMessage"
+          v-else-if="shouldShowReplyToMessage && !instagram"
           :message="inReplyTo"
           @dismiss="resetReplyToMessage"
         />
@@ -1879,10 +2021,13 @@ export default {
           v-model:to-emails="toEmails"
         />
         <GravadorDoWhatsapp
-          v-if="showAudioRecorderEditor && textoDoCampo && !isPrivate"
+          v-if="
+            showAudioRecorderEditor && (textoDoCampo || instagram) && !isPrivate
+          "
           ref="audioRecorderInput"
           :audio-record-format="audioRecordFormat"
           :duracao="recordingAudioDurationText"
+          :visual="instagram ? GRAVADOR_DO_INSTAGRAM : null"
           @recorder-progress-changed="onRecordProgressChanged"
           @finish-record="onFinishRecorder"
           @record-error="onRecordError"
@@ -1922,7 +2067,7 @@ export default {
           class="input popover-prosemirror-menu"
           :is-private="isOnPrivateNote"
           :placeholder="messagePlaceHolder"
-          :reload-on-placeholder-change="emailNovo"
+          :reload-on-placeholder-change="emailNovo || instagram"
           :hidden-menu-options="emailNovo ? FORA_DA_REGUA : []"
           :copilot-available="emailNovo ? iaDoEmail.disponivel.value : null"
           :update-selection-with="updateEditorSelectionWith"
@@ -2075,6 +2220,8 @@ export default {
         :new-conversation-modal-active="newConversationModalActive"
         :enviar-rico="onSendRichMessage"
         :campo-vazio="!hasMeaningfulEditorContent && !hasAttachments"
+        :ficar="mostrarFicarComAConversa ? ficar : null"
+        :ficar-na-conta="ficarLigadoNaConta"
         @select-whatsapp-template="openWhatsappTemplateModal"
         @select-content-template="openContentTemplateModal"
         @toggle-insert-article="toggleInsertArticle"

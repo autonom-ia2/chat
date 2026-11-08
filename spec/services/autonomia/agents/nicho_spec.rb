@@ -189,10 +189,34 @@ RSpec.describe Autonomia::Agents::Nicho do
       expect(account.reload.internal_attributes).to eq(outras_chaves)
     end
 
-    it 'não prende a conta ao padrão quando ela ainda não escolheu e recebe o próprio padrão' do
+    # Voltar ao padrão (#1429): o formulário manda "padrao" quando a conta segue a instalação. Com isso, a escolha
+    # explícita igual ao padrão passa a ser gravada (a conta fica nela mesmo se o padrão mudar).
+    it 'grava a escolha explícita mesmo quando ela é igual ao padrão da instalação' do
       with_modified_env(AUTONOMIA_NICHO_PADRAO: 'seguros:corretora') do
         described_class.atribuir(account, nicho: 'seguros', perfil: 'corretora')
       end
+      account.save!
+
+      expect(account.reload.internal_attributes).to eq(
+        outras_chaves.merge(described_class::NICHO_KEY => 'seguros', described_class::PERFIL_KEY => 'corretora')
+      )
+    end
+
+    it 'volta ao padrão da instalação: apaga nicho, perfil e canal e mantém as outras chaves' do
+      described_class.atribuir(account, nicho: 'seguros', perfil: 'insurtech', canal: 'parceiros')
+      account.save!
+
+      described_class.atribuir(account, nicho: described_class::PADRAO, perfil: 'insurtech', canal: 'parceiros')
+      account.save!
+
+      expect(account.reload.internal_attributes).to eq(outras_chaves)
+      with_modified_env(AUTONOMIA_NICHO_PADRAO: 'seguros:seguradora') do
+        expect(resumo(described_class.for(account))).to eq(%w[seguros seguradora] + [true])
+      end
+    end
+
+    it 'não muda nada ao receber o padrão numa conta que já segue o padrão' do
+      described_class.atribuir(account, nicho: described_class::PADRAO, perfil: nil)
       account.save!
 
       expect(account.reload.internal_attributes).to eq(outras_chaves)
@@ -244,13 +268,16 @@ RSpec.describe Autonomia::Agents::Nicho do
       expect(account.reload.internal_attributes[described_class::CANAL_KEY]).to eq('parceiros')
     end
 
-    it 'não prende a conta ao padrão insurtech/direto quando ela ainda não escolheu e recebe o próprio padrão' do
+    it 'grava insurtech/direto escolhido explicitamente, mesmo igual ao padrão da instalação' do
       with_modified_env(AUTONOMIA_NICHO_PADRAO: 'seguros:insurtech:direto') do
         described_class.atribuir(account, nicho: 'seguros', perfil: 'insurtech', canal: 'direto')
       end
       account.save!
 
-      expect(account.reload.internal_attributes).to eq(outras_chaves)
+      expect(account.reload.internal_attributes).to eq(
+        outras_chaves.merge(described_class::NICHO_KEY => 'seguros', described_class::PERFIL_KEY => 'insurtech',
+                            described_class::CANAL_KEY => 'direto')
+      )
     end
 
     it 'grava canal diferente do padrão numa conta que ainda não escolheu' do

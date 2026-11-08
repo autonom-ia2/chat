@@ -76,6 +76,50 @@ RSpec.describe Autonomia::Decisores::Estado do
     expect(estado(%w[conversa]).para_o_jev(decisor)[:conversation]).to include(inbox: 'WhatsApp Vendas', labels: ['frota'])
   end
 
+  # MOTIVO (#2195): as respostas do formulário do anúncio ficam dentro do metadata do card, num nível abaixo, e trazem
+  # telefone e e-mail; nunca vão. #2558: o formulário, o anúncio e a campanha só vão com `anuncio: true` (a chave do
+  # responsável); sem ele, fechado, só a hora da captura. O exemplo guardado nunca leva o anúncio.
+  describe 'card que veio do formulário do anúncio' do
+    let(:card) do
+      admin = create(:user, account: account)
+      pipeline, stage = create_crm_pipeline(account: account, user: admin, name: 'Auto')
+      origem = { 'form_name' => 'Orçamento', 'ad_name' => 'Carrossel', 'captured_at' => '2026-11-01T12:00:00Z',
+                 'fields' => [{ 'key' => 'phone_number', 'value' => '+5511988887777' }, { 'key' => 'email', 'value' => 'joana@cliente.com' }] }
+      account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, title: 'Joana', metadata: { 'meta_lead_form' => origem })
+    end
+
+    it 'com anuncio: vai a origem, sem as respostas' do
+      lido = described_class.new(card: card, leituras: %w[card], anuncio: true).para_o_jev(decisor)
+
+      expect(lido[:card][:metadata]['meta_lead_form']).to include('Orçamento', 'Carrossel')
+      expect(lido.to_json).not_to include('988887777', 'joana@cliente.com')
+    end
+
+    # Meta aprovar: quando o responsável vê o anúncio, a entrada da IA é a mesma de antes da correção (a origem inteira,
+    # sem as respostas, como fazia Answers.without): a decisão do robô não muda.
+    it 'com anuncio: a entrada da IA é igual à de antes (Answers.without)' do
+      antes = card.metadata.merge('meta_lead_form' => card.metadata['meta_lead_form'].except('fields'))
+      lido = described_class.new(card: card, leituras: %w[card], anuncio: true).para_o_jev(decisor)
+
+      expect(lido[:card][:metadata]).to eq('meta_lead_form' => antes['meta_lead_form'].to_json)
+    end
+
+    it 'sem anuncio (o padrão): só a hora da captura, sem formulário, anúncio nem respostas' do
+      lido = described_class.new(card: card, leituras: %w[card]).para_o_jev(decisor)
+
+      expect(lido[:card][:metadata]['meta_lead_form']).to include('2026-11-01T12:00:00Z')
+      expect(lido.to_json).not_to include('Orçamento', 'Carrossel', '988887777', 'joana@cliente.com')
+    end
+
+    it 'o exemplo guardado nunca leva o anúncio, nem quando a leitura o vê' do
+      estado = described_class.new(card: card, leituras: %w[card], anuncio: true)
+
+      expect(estado.para_o_jev(decisor).to_json).to include('Carrossel')
+      expect(estado.texto_do_exemplo).to include('Joana', '2026-11-01T12:00:00Z')
+      expect(estado.texto_do_exemplo).not_to include('Orçamento', 'Carrossel')
+    end
+  end
+
   it 'mensagens com respostas leem os dois lados, marcados; a última mensagem é a que disparou' do
     mensagem('Fui mal atendido')
     disparo = mensagem('Vou cancelar', :outgoing)
@@ -83,6 +127,25 @@ RSpec.describe Autonomia::Decisores::Estado do
     dois_lados = estado(%w[mensagens_com_respostas]).para_o_jev(decisor)[:messages]
     expect(dois_lados).to eq(['Customer: Fui mal atendido', 'Team: Vou cancelar'])
     expect(estado(%w[ultima_mensagem], message: disparo).para_o_jev(decisor)[:last_message]).to eq('Vou cancelar')
+  end
+
+  # MOTIVO (#1924): a IA de assunto lê uma janela maior; os outros Decisores seguem nas 5 últimas.
+  it 'lê as 5 últimas mensagens, ou a janela que quem chama pedir' do
+    7.times { |indice| mensagem("Mensagem #{indice}") }
+
+    expect(estado(%w[mensagens_recentes]).para_o_jev(decisor)[:messages].first).to eq('Mensagem 2')
+    expect(estado(%w[mensagens_recentes], max_mensagens: 7).para_o_jev(decisor)[:messages].first).to eq('Mensagem 0')
+  end
+
+  # MOTIVO (revisão #1924): a janela maior não pode multiplicar e-mails longos, nem ler menos que a de 5: só as mensagens
+  # além das 5 mais recentes vão mais curtas (um pedido no fim de um texto longo, 2 mensagens antes, não pode sumir).
+  it 'corta no teto pedido só as mensagens além das 5 mais recentes; as 5 seguem nos 5.000 de sempre' do
+    7.times { mensagem('a' * 6_000) }
+
+    lido = estado(%w[mensagens_recentes], max_mensagens: 7, max_caracteres_anteriores: 2_000).para_o_jev(decisor)[:messages]
+
+    expect(lido.map(&:length)).to eq(([2_000] * 2) + ([described_class::MAX_CARACTERES] * 5))
+    expect(estado(%w[mensagens_recentes]).para_o_jev(decisor)[:messages].map(&:length)).to eq([described_class::MAX_CARACTERES] * 5)
   end
 
   # MOTIVO: o texto solto da ferramenta do Guia é dado, e a tarefa diz isso ao Jev.

@@ -1,5 +1,8 @@
-import { INBOX_TYPES } from 'dashboard/helper/inbox';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import {
+  INBOX_TYPES,
+  getInboxIconByType,
+  tipoDoIconeDaCaixa,
+} from 'dashboard/helper/inbox';
 import camelcaseKeys from 'camelcase-keys';
 import ContactAPI from 'dashboard/api/contacts';
 
@@ -41,7 +44,13 @@ const transformInbox = ({
   ...rest
 }) => ({
   id,
-  icon: getInboxIconByType(channelType, medium, 'line', voiceEnabled),
+  // #2255: o WhatsApp do celular (caixa API do WAHA) leva o ícone do WhatsApp.
+  icon: getInboxIconByType(
+    tipoDoIconeDaCaixa({ channelType, ...rest }),
+    medium,
+    'line',
+    voiceEnabled
+  ),
   label: generateLabelForContactableInboxesList({
     name,
     email,

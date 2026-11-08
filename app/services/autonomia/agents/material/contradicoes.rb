@@ -62,7 +62,7 @@ class Autonomia::Agents::Material::Contradicoes
 
   # Confere e grava. Devolve a conferência gravada (com a lista em `contradicoes`), ou nil (IA indisponível: nada muda).
   def conferir!
-    fontes = @agent.sources.knowledge_sources.servable.order(:id).to_a
+    fontes = @agent.sources.da_agente.knowledge_sources.servable.order(:id).to_a
     @textos = fontes.to_h { |fonte| [fonte.id, texto_lido(fonte)] }
     novas = fontes.size < 2 ? [] : perguntar(fontes)
     return if novas.nil?

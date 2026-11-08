@@ -25,7 +25,7 @@ RSpec.describe Crm::Ai::UsageBroadcaster do
     # only assert authorized users are reached and the account stream never is.
     expect(streams).to include(admin.pubsub_token, plain_agent.pubsub_token)
     expect(streams).not_to include("account_#{account.id}")
-    broadcast_calls.each do |(_, message)|
+    broadcast_calls.each do |(stream, message)|
       expect(message[:event]).to eq('crm.ai_usage.created')
       expect(message[:data]).to include(
         account_id: account.id,
@@ -34,9 +34,14 @@ RSpec.describe Crm::Ai::UsageBroadcaster do
         cached_tokens: event.cached_tokens,
         output_tokens: event.output_tokens,
         total_tokens: event.input_tokens + event.output_tokens,
-        cost_usd: event.cost_estimate.to_f,
         created_at: event.created_at.iso8601
       )
+      # The cost in money goes only to who sees the account's costs (#1969): in OSS, the administrator.
+      if stream == admin.pubsub_token
+        expect(message[:data]).to include(cost_usd: event.cost_estimate.to_f)
+      else
+        expect(message[:data]).not_to have_key(:cost_usd)
+      end
       expect(message.to_json).not_to include('model')
       expect(message.to_json).not_to include('prompt')
       expect(message.to_json).not_to include('response')

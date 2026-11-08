@@ -189,7 +189,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
     def schema_do_ramo(agent, produto)
       return nil if agent.nil?
 
-      connection = ::Autonomia::Insurance::Connection.for_account(agent.account).find(&:ready?)
+      connection = ::Autonomia::Insurance::Connection.for_account(agent.account).find(&:usable?)
       connection && schema_da_conexao(connection, produto)
     end
 
@@ -217,7 +217,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
     def available_for?(agent)
       return false unless ::Autonomia::Insurance::Config.enabled?(agent.account)
 
-      ::Autonomia::Insurance::Connection.for_account(agent.account).any?(&:ready?)
+      ::Autonomia::Insurance::Connection.for_account(agent.account).any?(&:usable?)
     rescue StandardError
       false
     end

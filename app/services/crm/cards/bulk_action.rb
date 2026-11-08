@@ -25,6 +25,8 @@ module Crm
       MAX_IDS = 100
 
       class InvalidAction < StandardError; end
+      # A regra do card recusou a mudança (a mensagem é o código, como no card único); o card fica como estava.
+      class Refused < StandardError; end
 
       def initialize(account:, user:, account_user:, ids:, action:, payload: {})
         @account = account
@@ -102,15 +104,26 @@ module Crm
         # Closer::VERB_ALIASES), so a bulk "set to open" reopens the card instead
         # of silently failing every id with Closer::InvalidResult.
         result = @payload[:result].to_s
+        return restore_card!(card, result) if Crm::Cards::Restorer.reabrir_e_restaurar?(card)
+
         closed = Crm::Cards::Closer.new(card: card, actor: @user, result: result).perform
         broadcast(closed, ::Events::Types::CRM_CARD_UPDATED)
       end
 
-      def archive_card!(card)
-        return if card.status == 'archived'
+      # Card arquivado (#2095, com a flag crm_arquivados): "Aberto" restaura, com as recusas do restaurar (funil arquivado, cliente que já voltou),
+      # sem forçar; ganho ou perdido é recusado, como no card único (restaure antes).
+      def restore_card!(card, result)
+        raise Refused, Crm::Cards::Restorer::CLOSE_ARCHIVED unless Crm::Cards::Closer.reopen?(result)
 
-        card.update!(status: :archived, last_activity_at: Time.current)
-        Crm::ActivityLogger.new(card: card, actor: @user, event_type: 'archive', payload: {}).perform
+        restored = Crm::Cards::Restorer.new(card: card, actor: @user).perform
+        raise Refused, restored.error unless restored.restored?
+
+        broadcast(card, ::Events::Types::CRM_CARD_UPDATED)
+      end
+
+      def archive_card!(card)
+        return unless Crm::Cards::Archiver.new(card: card, actor: @user).perform
+
         broadcast(card, ::Events::Types::CRM_CARD_ARCHIVED)
       end
 
@@ -126,9 +139,17 @@ module Crm
       end
 
       def forbidden?(card, target_stage)
-        return true unless Pundit.policy!(user_context, card).public_send(POLICY_BY_ACTION.fetch(@action))
+        return true unless Pundit.policy!(user_context, card).public_send(policy_query(card))
 
         target_stage.present? && !card_guard.move_allowed?(card, target_stage.pipeline_id)
+      end
+
+      # Reabrir o card arquivado é restaurar (#2095): a regra é a do restaurar (Crm::CardPolicy#restore?), não a do fechar.
+      # Só com a flag crm_arquivados; sem ela, como antes.
+      def policy_query(card)
+        return :restore? if @action == 'status' && Crm::Cards::Restorer.reabrir_e_restaurar?(card)
+
+        POLICY_BY_ACTION.fetch(@action)
       end
 
       def user_context

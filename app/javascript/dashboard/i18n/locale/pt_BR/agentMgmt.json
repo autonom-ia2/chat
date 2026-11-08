@@ -113,7 +113,8 @@
       "CANCEL_BUTTON_TEXT": "Cancelar",
       "API": {
         "SUCCESS_MESSAGE": "Agente atualizado com sucesso",
-        "ERROR_MESSAGE": "Não foi possível conectar ao servidor Woot, por favor tente novamente mais tarde"
+        "ERROR_MESSAGE": "Não foi possível conectar ao servidor Woot, por favor tente novamente mais tarde",
+        "OUT_OF_REACH": "Esta mudança está acima do seu acesso. Peça ao administrador."
       },
       "PASSWORD_RESET": {
         "ADMIN_RESET_BUTTON": "Redefinir a senha",
@@ -152,7 +153,8 @@
       "SELF": "É você",
       "ADMIN": "Só um administrador mexe em administradores",
       "ABOVE": "Acima do seu acesso",
-      "ONLY_ADMIN_MAKES_ADMIN": "Só um administrador torna alguém administrador"
+      "ONLY_ADMIN_MAKES_ADMIN": "Só um administrador torna alguém administrador",
+      "ONLY_ADMIN_TAKES_OUT": "Só o administrador tira esta pessoa da função"
     }
   }
 }

@@ -40,6 +40,8 @@ const { t } = useI18n();
 const store = useStore();
 const router = useRouter();
 const canManage = useCanManage('campaign_manage');
+// #1898: retomar dispara de novo, então pede a chave de disparar.
+const canSend = useCanManage('campaign_send');
 
 const busy = ref('');
 const confirming = ref('');
@@ -152,12 +154,13 @@ const items = computed(() =>
       color: 'amber',
       run: pause,
     },
-    canResume.value && {
-      key: 'resume',
-      icon: 'i-lucide-play',
-      color: 'slate',
-      run: resume,
-    },
+    canResume.value &&
+      canSend.value && {
+        key: 'resume',
+        icon: 'i-lucide-play',
+        color: 'slate',
+        run: resume,
+      },
     {
       key: 'duplicate',
       icon: 'i-lucide-copy',

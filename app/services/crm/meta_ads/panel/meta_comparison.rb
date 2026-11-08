@@ -5,16 +5,23 @@
 # cada métrica só existe em anúncio daquele destino, então a linha soma a conta inteira sem contar nada duas vezes:
 # - `whatsapp`: `conversations_started` (conversas iniciadas, 7 dias por clique) × as conversas cujo primeiro
 #   toque do período veio do WhatsApp;
+# - `messaging` (#2521): a mesma métrica, só dos anúncios cujo conjunto leva ao Messenger ou ao Direct
+#   (Panel::AdDestinations#messenger_or_direct?), × as conversas cujo primeiro toque veio do Messenger ou do Direct.
+#   Esses anúncios saem da linha do WhatsApp; o de conjunto ainda não lido fica nela. Não depende de destino marcado na
+#   conexão: aparece quando há número;
 # - `site`: os leads do Pixel (`offsite_conversion.fb_pixel_lead`, em `actions`) × as conversas cujo primeiro
 #   toque veio da ponte do site. As visitas à página (`landing_page_view`) vão junto, só de contexto. É a linha
 #   que a Placement tem: os anúncios dela levam ao site e não têm conversa contada pela Meta (gate G1).
 #
 # Linha sem número da Meta e sem conversa nossa não aparece; sem nenhuma linha, nil. `explanation` é decidida
-# aqui, nunca pela IA.
+# aqui, nunca pela IA. #2344: "batem" (`close`) só com os dois lados acima de zero e a diferença de até 10% do maior;
+# uma tolerância absoluta ficava maior que os próprios números (2 × 0 "batia"). Meta com número e nós com zero é
+# `ours_none`: nenhuma conversa chegou com a marca do anúncio. Meta com zero e nós com número é `meta_none` (cada um conta
+# de um jeito; vale o nosso), menos quando a Meta não mandou número nenhum no período: aí o aviso geral `no_meta_data`
+# já explica, e a linha fica sem frase.
 class Crm::MetaAds::Panel::MetaComparison
   LEAD_ACTION = 'offsite_conversion.fb_pixel_lead'.freeze
   VISIT_ACTION = 'landing_page_view'.freeze
-  CLOSE_MIN = 2
   CLOSE_SHARE = 0.10
   ACTION_SQL = 'jsonb_array_elements(crm_meta_ad_insights_daily.actions) AS action'.freeze
   # Com a janela fixa, cada ação traz o valor nela; sem ele, o valor padrão (como Insights::Writer#conversations).
@@ -26,14 +33,21 @@ class Crm::MetaAds::Panel::MetaComparison
   end
 
   def payload
-    rows = [whatsapp_row, site_row].compact
+    rows = [whatsapp_row, messaging_row, site_row].compact
     return if rows.empty?
 
     no_meta = rows.none? { |row| row[:meta].positive? } && insights.sum(:spend).positive?
-    { days: @report.days, until: until_day, rows: rows, explanation: no_meta ? 'no_meta_data' : nil }
+    return { days: @report.days, until: until_day, rows: rows, explanation: nil } unless no_meta
+
+    { days: @report.days, until: until_day, rows: without_meta_none(rows), explanation: 'no_meta_data' }
   end
 
   private
+
+  # O aviso geral já diz que a Meta não mandou número: a linha não repete "cada um conta de um jeito".
+  def without_meta_none(rows)
+    rows.map { |row| row[:explanation] == 'meta_none' ? row.merge(explanation: nil) : row }
+  end
 
   def destination?(key)
     @connection.destinations_payload[key]
@@ -42,7 +56,19 @@ class Crm::MetaAds::Panel::MetaComparison
   def whatsapp_row
     return unless destination?('whatsapp')
 
-    row('whatsapp', insights.sum(:conversations_started).to_i, ours['whatsapp'].to_i)
+    row('whatsapp', insights.sum(:conversations_started).to_i - messaging_started, ours['whatsapp'].to_i)
+  end
+
+  def messaging_row
+    row('messaging', messaging_started, ours['messenger'].to_i + ours['instagram'].to_i)
+  end
+
+  def messaging_started
+    @messaging_started ||= begin
+      destinations = Crm::MetaAds::Panel::AdDestinations.new(@connection.account_id, insights)
+      started = insights.where(conversations_started: 1..).group(:ad_id).sum(:conversations_started)
+      started.sum { |ad_id, value| destinations.messenger_or_direct?(ad_id) ? value.to_i : 0 }
+    end
   end
 
   def site_row
@@ -58,16 +84,18 @@ class Crm::MetaAds::Panel::MetaComparison
     { destination: destination, meta: meta, ours: ours, difference: difference, explanation: explanation(meta, difference) }
   end
 
-  # Sem número da Meta (ainda não mandou, ou o destino não tem o dado) não há o que explicar: nil.
   def explanation(meta, difference)
-    return if meta.zero?
-    return 'close' if difference.abs <= [CLOSE_MIN, meta * CLOSE_SHARE].max
+    ours = meta + difference
+    return 'meta_none' if meta.zero?
+    return 'ours_none' if ours.zero?
+    return 'close' if difference.abs <= [meta, ours].max * CLOSE_SHARE
 
     difference.negative? ? 'meta_higher' : 'ours_higher'
   end
 
+  # Até ontem (o número da Meta de hoje ainda não fechou), ou até o fim do período que já acabou (mês passado).
   def until_day
-    @report.today - 1
+    [@report.today - 1, @report.last_day].min
   end
 
   def insights
@@ -91,6 +119,6 @@ class Crm::MetaAds::Panel::MetaComparison
   end
 
   def touch_range
-    @report.first_day.in_time_zone(@report.zone)...@report.today.in_time_zone(@report.zone)
+    @report.first_day.in_time_zone(@report.zone)...(until_day + 1).in_time_zone(@report.zone)
   end
 end

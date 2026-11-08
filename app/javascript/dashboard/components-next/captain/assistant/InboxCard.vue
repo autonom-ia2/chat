@@ -7,7 +7,11 @@ import CardLayout from 'dashboard/components-next/CardLayout.vue';
 import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Policy from 'dashboard/components/policy.vue';
-import { INBOX_TYPES, getInboxIconByType } from 'dashboard/helper/inbox';
+import {
+  INBOX_TYPES,
+  getInboxIconByType,
+  tipoDoIconeDaCaixa,
+} from 'dashboard/helper/inbox';
 
 const props = defineProps({
   id: {
@@ -58,12 +62,13 @@ const menuItems = computed(() => [
 ]);
 
 const icon = computed(() => {
-  const {
+  const { medium, voice_enabled: voiceEnabled } = props.inbox;
+  return getInboxIconByType(
+    tipoDoIconeDaCaixa(props.inbox),
     medium,
-    channel_type: type,
-    voice_enabled: voiceEnabled,
-  } = props.inbox;
-  return getInboxIconByType(type, medium, 'outline', voiceEnabled);
+    'outline',
+    voiceEnabled
+  );
 });
 
 const handleAction = ({ action, value }) => {

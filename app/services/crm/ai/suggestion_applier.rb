@@ -9,6 +9,7 @@ module Crm
       end
 
       def perform
+        return fechar if @suggestion.fechar
         return @card if @suggestion.to_stage_id == @card.stage_id
 
         moved_card = Crm::Cards::Mover.new(
@@ -25,6 +26,18 @@ module Crm
       end
 
       private
+
+      # IA entende a conversa F3: a sugestão de fechar aceita fecha o card (Crm::Ai::FecharCard.aceitar!) com a pessoa
+      # como autora. Nunca é automática (a IA nunca fecha sozinha, #2389): sem pessoa, ou no automático, a sugestão expira
+      # e nada fecha.
+      def fechar
+        if @auto || @actor.blank? || @suggestion.fechar_desligado?
+          @suggestion.update!(status: :expired)
+        else
+          Crm::Ai::FecharCard.aceitar!(@suggestion, ator: @actor)
+        end
+        @card.reload
+      end
 
       def update_suggestion_status!
         @suggestion.update!(status: @auto ? :auto_applied : :accepted)

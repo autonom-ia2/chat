@@ -1,17 +1,24 @@
+# Webhooks send the account's conversations out (#2027): admin or integration_manage.
 class WebhookPolicy < ApplicationPolicy
   def index?
-    @account_user.administrator?
+    integration_manage?
   end
 
   def update?
-    @account_user.administrator?
+    integration_manage?
   end
 
   def destroy?
-    @account_user.administrator?
+    integration_manage?
   end
 
   def create?
-    @account_user.administrator?
+    integration_manage?
+  end
+
+  private
+
+  def integration_manage?
+    @account_user.permission_granted?('integration_manage')
   end
 end

@@ -10,20 +10,23 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
   queue_as :scheduled_jobs
 
   # Teto por execução: a varredura é periódica (3h) e não pode virar job de horas numa conta grande.
-  # O que sobrar entra na próxima rodada — decaimento é idempotente e não perde nada.
+  # Os cards abertos são percorridos por id, de todos os funis com nota, e o último id fica guardado
+  # (CURSOR_KEY): a rodada seguinte continua dali e, no fim da fila, volta ao começo. Antes cada rodada
+  # recomeçava do primeiro funil, e o que passasse do teto nunca era recalculado (achado do review, #1962).
   MAX_CARDS_PER_RUN = 2_000
   BATCH_SIZE = 200
+  CURSOR_KEY = 'crm:ai:score_decay:last_card_id'.freeze
+  CURSOR_TTL = 1.day
 
   def perform
     @processed = 0
+    pipelines = Crm::Pipeline.active.select { |pipeline| Crm::Ai::Config.pipeline_score_enabled?(pipeline) }
 
-    Crm::Pipeline.active.find_each do |pipeline|
-      next unless Crm::Ai::Config.pipeline_score_enabled?(pipeline)
-
+    pipelines.each do |pipeline|
       zero_closed_cards(pipeline)
-      decay_open_cards(pipeline)
       break if budget_over?
     end
+    decay_open_cards(pipelines.map(&:id)) unless budget_over? || pipelines.empty?
   end
 
   private
@@ -36,15 +39,30 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
     MAX_CARDS_PER_RUN - @processed
   end
 
-  def decay_open_cards(pipeline)
-    scored_cards_for(pipeline).open.find_in_batches(batch_size: BATCH_SIZE) do |batch|
-      break if budget_over?
+  def decay_open_cards(pipeline_ids)
+    last_id = Redis::Alfred.get(CURSOR_KEY).to_i
+    scope = Crm::Card.open.where(pipeline_id: pipeline_ids).where(Crm::Card.arel_table[:score].gt(0)).order(:id)
 
-      cards = batch.first(remaining_budget)
-      last_messages = last_message_map(cards)
-      cards.each { |card| safely_apply(card, last_messages[card.id]) }
-      @processed += cards.size
+    until budget_over?
+      cards = scope.where(Crm::Card.arel_table[:id].gt(last_id)).limit([BATCH_SIZE, remaining_budget].min).to_a
+      if cards.empty?
+        last_id = 0 # fim da fila: a próxima rodada recomeça do primeiro card
+        break
+      end
+
+      decay_batch(cards)
+      last_id = cards.last.id
     end
+    Redis::Alfred.set(CURSOR_KEY, last_id, ex: CURSOR_TTL.to_i)
+  end
+
+  # Os turnos são lidos antes das travas. Avaliação gravada depois dessa leitura (o ScoreApplier, com a
+  # mensagem nova que chegou no meio) é mais nova que eles: o card fica como está (achado do review, #1962).
+  def decay_batch(cards)
+    read_at = Time.current
+    turns = last_turns(cards)
+    cards.each { |card| safely_apply(card, turns[card.id], read_at) }
+    @processed += cards.size
   end
 
   # Card ganho, perdido ou arquivado mantinha a nota e continuava ranqueando como urgente em
@@ -64,20 +82,19 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
              .where(Crm::Card.arel_table[:score].gt(0))
   end
 
-  # Uma consulta agregada para o lote inteiro, em vez de uma por conversa por card (era N+1: até
-  # duas queries por card a cada 3 horas).
-  def last_message_map(cards)
-    fallback_by_card = cards.index_with(&:last_message_at).compact
-    by_card = conversation_ids_by_card(cards)
-    all_ids = by_card.values.flatten.compact.uniq
-    return fallback_by_card if all_ids.empty?
+  # Duas consultas para o lote inteiro, em vez de uma por conversa por card (era N+1: até
+  # duas queries por card a cada 3 horas). #1962: devolve também se o cliente está esperando
+  # resposta nossa — sem isso o job deixava esfriar a dívida que a avaliação com IA tinha segurado.
+  # Card sem mensagem nas conversas vinculadas usa o last_message_at guardado no card e não sabe quem
+  # espera. Com mensagem, vale só a conversa: o valor guardado conta mensagem automática (template), que
+  # não é turno de ninguém (Crm::Conversations::LastTurns).
+  def last_turns(cards)
+    by_conversation = Crm::Conversations::LastTurns.for(conversation_ids_by_card(cards))
+    cards.index_by(&:id).transform_values do |card|
+      turn = by_conversation[card.id]
+      next turn if turn&.last_message_at.present?
 
-    # `reorder(nil)` derruba o `default_scope { order(created_at: :asc) }` do Message: sem isso o
-    # ORDER BY sobra na consulta agregada e o Postgres recusa o GROUP BY (PG::GroupingError).
-    per_conversation = Message.chat.where(conversation_id: all_ids)
-                              .reorder(nil).group(:conversation_id).maximum(:created_at)
-    by_card.each_with_object(fallback_by_card) do |(card_id, ids), result|
-      result[card_id] = [result[card_id], ids.filter_map { |id| per_conversation[id] }.max].compact.max
+      Crm::Conversations::LastTurns::Turn.new(last_message_at: card.last_message_at, customer_waiting: false, waiting_since: nil)
     end
   end
 
@@ -90,8 +107,8 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
     by_card
   end
 
-  def safely_apply(card, last_message_at)
-    apply(card, last_message_at)
+  def safely_apply(card, turn, read_at)
+    apply(card, turn, read_at)
   rescue ActiveRecord::ActiveRecordError, ArgumentError, TypeError => e
     Rails.logger.warn(
       "[Crm::Ai::ScoreDecayJob] skipped card_id=#{card.id} account_id=#{card.account_id} " \
@@ -99,19 +116,21 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
     )
   end
 
-  def apply(card, last_message_at)
+  def apply(card, turn, read_at)
     card.with_lock do
       # Releitura dentro do lock: o ScoreApplier ou uma edição humana podem ter gravado entre a
       # leitura do lote e agora. Sem isso, o job sobrescreveria a versão mais nova.
       score_meta = card.metadata.to_h.dig('ai', 'score').to_h
-      unless score_meta['source'] == 'manual' || card.score.to_i <= 0
-        anchor = decay_anchor(score_meta, last_message_at)
+      next if score_meta['source'] == 'manual' || card.score.to_i <= 0
 
-        if anchor.present?
-          result = recalculate(score_meta, anchor)
-          persist!(card, score_meta, result, anchor) unless result[:value] == card.score
-        end
-      end
+      evaluated_at = parse_time(score_meta['calculated_at'])
+      next if evaluated_at && evaluated_at > read_at
+
+      anchor = decay_anchor(score_meta, turn.last_message_at)
+      next if anchor.blank?
+
+      result = recalculate(score_meta, anchor, waiting_since: turn.waiting_since)
+      persist!(card, score_meta, result, anchor) unless result[:value] == card.score
     end
   end
 
@@ -127,12 +146,13 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
   # Card pontuado pela versão anterior não tem `signals` gravados. Em vez de ignorá-lo para sempre
   # (justamente o card antigo e parado, que mais precisa esfriar), aplicamos decaimento puro sobre a
   # nota-base guardada.
-  def recalculate(score_meta, anchor)
+  def recalculate(score_meta, anchor, waiting_since:)
     signals = score_meta['signals']
     base = (score_meta['base_value'] || score_meta['value']).to_i
 
     if signals.present?
-      computed = Crm::Ai::ScoreCalculator.new(signals: signals, last_message_at: anchor).perform
+      computed = Crm::Ai::ScoreCalculator.new(signals: signals, last_message_at: anchor,
+                                              waiting_since: waiting_since).perform
       { value: computed.value, tier: computed.tier, base: base }
     else
       value = [base + decay_points(anchor), 0].max
@@ -155,7 +175,7 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
       'tier' => result[:tier],
       'base_value' => result[:base],
       'decay_anchor_at' => anchor.iso8601,
-      'calculated_at' => Time.current.iso8601
+      'calculated_at' => Time.current.iso8601(6)
     )
     card.update_columns(score: result[:value], metadata: metadata, updated_at: Time.current)
   end

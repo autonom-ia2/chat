@@ -12,10 +12,11 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import Icon from 'next/icon/Icon.vue';
 import { useMapGetter } from 'dashboard/composables/store';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import NovaConversaEntrada from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
 import { usePodeComecarConversa } from 'dashboard/components-next/NovaConversa/usePodeComecarConversa';
 import { usePopoverState } from 'dashboard/components-next/sidebar/provider';
-import { PASTAS, usePastaDoEmail } from './pastaDoEmail';
+import { ENVIADOS, PASTAS, usePastaDoEmail } from './pastaDoEmail';
 import { caixaDaFolha, useCaixaDeEmailNova } from './caixaDeEmailNova';
 import { pedirEscrever } from './escreverEmail';
 
@@ -33,6 +34,8 @@ const ehEmailNova = useCaixaDeEmailNova();
 const { pasta, abrirPasta } = usePastaDoEmail();
 const { closeActivePopover } = usePopoverState();
 const podeEscrever = usePodeComecarConversa();
+const contaAtual = useMapGetter('getCurrentAccountId');
+const temChave = useMapGetter('accounts/isFeatureEnabledonAccount');
 
 const caixaId = computed(() => caixaDaFolha(props.folha));
 const caixa = computed(() => caixaPorId.value(Number(caixaId.value)) || {});
@@ -43,11 +46,15 @@ const visivel = computed(
   () => ehEmailNova(caixaId.value) && (props.compacto || aberta.value)
 );
 
-const ITENS = [
+// Enviados (#1938) só com a chave `email_enviados`, logo depois da Entrada, como no Gmail.
+const ITENS = computed(() => [
   { pasta: null, chave: 'ENTRADA', icone: 'i-lucide-inbox' },
+  ...(temChave.value(contaAtual.value, FEATURE_FLAGS.EMAIL_ENVIADOS)
+    ? [{ pasta: ENVIADOS, chave: 'ENVIADOS', icone: 'i-lucide-send' }]
+    : []),
   { pasta: PASTAS.SPAM, chave: 'SPAM', icone: 'i-lucide-octagon-alert' },
   { pasta: PASTAS.LIXEIRA, chave: 'LIXEIRA', icone: 'i-lucide-trash-2' },
-];
+]);
 
 const ativo = item => aberta.value && (pasta.value || null) === item.pasta;
 // No balão, o clique não pode seguir para o link da caixa (zeraria a pasta): para aqui

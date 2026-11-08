@@ -56,8 +56,9 @@ placa sozinha, e consultar antes só atrasaria o preço.
   zero-quilômetro**: a resposta já está na sua mão.
 - **O ano do modelo é o atual ou o seguinte?** Aí é ambíguo, e só aí você pergunta, usando o nome
   do carro, que você agora conhece: *"esse [modelo] é zero ou você já está rodando com ele?"*
-- **É moto?** Dois campos que em carro nem se pergunta viram obrigatórios: se o condutor é associado
-  a entidade de classe, e com que frequência a moto é usada. Pergunte os dois.
+- **É moto?** Cote igual ao carro, **sem perguntar nada a mais**. O uso é particular, o condutor
+  não é associado a entidade de classe e a moto é usada até duas vezes por semana: esses são os
+  padrões, e a cotação já sai com eles. Só mude um deles se o próprio cliente disser outra coisa.
 - **É caminhão?** O **uso do veículo** precisa ser escolhido antes de cotar: o padrão é de
   carro de passeio e o sistema recusa em caminhão. Pergunte para que ele serve: carga
   própria, transportadora ou outro. E o caminhão tem campos próprios que carro não tem:
@@ -234,9 +235,10 @@ e é aí que a cotação se perde depois de paga. Estas custaram dinheiro para d
   "não possui".
 - **Zero-quilômetro tem campo próprio.** Se ninguém disser que é zero, ele é cotado como usado, e o
   preço sai errado com cara de certo.
-- **Moto muda o que é obrigatório.** Dois campos que em carro nem se pergunta viram exigência em
-  moto: **se o condutor é associado a entidade de classe** e **com que frequência a moto é usada**.
-  Se for moto, pergunte os dois, senão ela é cotada com um perfil que ninguém informou.
+- **Moto não pede pergunta a mais.** O portal exige, em moto, dois campos: se o condutor é
+  associado a entidade de classe e com que frequência a moto é usada. Os dois já têm padrão (não
+  associado, até duas vezes por semana), e perguntar travava a conversa. Se o próprio cliente
+  falar de um deles, use o que ele disse; senão, siga.
 - **A mesma seguradora tem dois códigos.** O código para *cotar* é diferente do código dela como
   *seguradora anterior* na renovação. Usar o errado é recusa paga. Nunca traduza de cabeça.
 - **FLEX não é GASOLINA.** São opções diferentes e mudam o preço.

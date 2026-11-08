@@ -1,4 +1,5 @@
 import { picoSearch } from '@chatwoot/pico-search';
+import { telefoneLegivel } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 
 export const INBOX_TYPES = {
   WEB: 'Channel::WebWidget',
@@ -111,17 +112,39 @@ const INBOX_ICON_MAP_LINE = {
 
 const DEFAULT_ICON_LINE = 'i-ri-chat-1-line';
 
+// #2255 — WhatsApp pelo celular: caixa API ligada ao WAHA. Para a pessoa é WhatsApp, em todo lugar.
+// Aceita a caixa como vem do servidor (snake_case) ou já em camelCase.
+export const ehWhatsappDoCelular = caixa =>
+  (caixa?.channel_type || caixa?.channelType) === INBOX_TYPES.API &&
+  Boolean(caixa?.waha_provider || caixa?.wahaProvider);
+
+// #2255 — o tipo que escolhe o ícone da caixa. Recebe a caixa inteira, porque só o tipo não
+// basta: o WhatsApp do celular é uma caixa API e leva o ícone do WhatsApp, não o "{ }".
+export const tipoDoIconeDaCaixa = caixa => {
+  if (ehWhatsappDoCelular(caixa)) return INBOX_TYPES.WHATSAPP;
+  return caixa?.channel_type || caixa?.channelType || '';
+};
+
+const PREFIXO_TWILIO_WHATSAPP = 'whatsapp:';
+const semPrefixoTwilio = numero => {
+  const texto = numero || '';
+  return texto.startsWith(PREFIXO_TWILIO_WHATSAPP)
+    ? texto.slice(PREFIXO_TWILIO_WHATSAPP.length)
+    : texto;
+};
+
 // Facebook, Instagram, TikTok, and X initialize the editable inbox name from
 // the provider account name; their opaque routing IDs should not be displayed.
 const INBOX_IDENTIFIER_RESOLVERS = {
   [INBOX_TYPES.WEB]: inbox => inbox.website_url,
   [INBOX_TYPES.EMAIL]: inbox => inbox.email,
-  [INBOX_TYPES.WHATSAPP]: inbox => inbox.phone_number,
-  [INBOX_TYPES.SMS]: inbox => inbox.phone_number,
+  // #2255: telefone de caixa sai num formato só, legível; o valor gravado não muda.
+  [INBOX_TYPES.WHATSAPP]: inbox => telefoneLegivel(inbox.phone_number),
+  [INBOX_TYPES.SMS]: inbox => telefoneLegivel(inbox.phone_number),
   [INBOX_TYPES.LINE]: inbox => inbox.line_channel_id,
   [INBOX_TYPES.API]: inbox => inbox.inbox_identifier,
   [INBOX_TYPES.TWILIO]: inbox =>
-    inbox.phone_number?.replace(/^whatsapp:/, '') ||
+    telefoneLegivel(semPrefixoTwilio(inbox.phone_number)) ||
     inbox.messaging_service_sid ||
     '',
   [INBOX_TYPES.TELEGRAM]: inbox => {
@@ -132,8 +155,13 @@ const INBOX_IDENTIFIER_RESOLVERS = {
   },
 };
 
-export const getInboxIdentifier = inbox =>
-  INBOX_IDENTIFIER_RESOLVERS[inbox?.channel_type]?.(inbox) || '';
+// #2255: o WhatsApp do celular mostra o número da sessão, legível, no lugar do token da API.
+export const getInboxIdentifier = inbox => {
+  if (ehWhatsappDoCelular(inbox)) {
+    return telefoneLegivel(inbox.waha_phone_number || '');
+  }
+  return INBOX_IDENTIFIER_RESOLVERS[inbox?.channel_type]?.(inbox) || '';
+};
 
 export const searchInboxes = (inboxes, query) => {
   const primaryMatches = picoSearch(inboxes, query, ['name', 'channel_type']);

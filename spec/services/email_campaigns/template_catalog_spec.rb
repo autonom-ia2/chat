@@ -1,10 +1,10 @@
 require 'rails_helper'
 
 RSpec.describe EmailCampaigns::TemplateCatalog, :aggregate_failures do
-  it 'keeps the thirteen pt-BR designs addressable and uniquely keyed' do
+  it 'keeps the pt-BR designs addressable and uniquely keyed' do
     entries = described_class.entries
 
-    expect(entries.size).to eq(13)
+    expect(entries.size).to eq(16)
     expect(entries.map { |entry| entry.fetch('key') }.uniq.size).to eq(entries.size)
     expect(entries.map { |entry| entry.fetch('name') }.uniq.size).to eq(entries.size)
     expect(entries.map { |entry| entry.fetch('name') } & described_class.retired_names).to be_empty
@@ -27,6 +27,28 @@ RSpec.describe EmailCampaigns::TemplateCatalog, :aggregate_failures do
       expect(described_class.body(entry)).to eq(first)
       expect(first).to include('footer-locked')
       expect(first.scan('{{ unsubscribe_url }}').size).to eq(1)
+    end
+  end
+
+  # #2037: a design marked with a package layer shows only to accounts with that layer.
+  it 'hides the designs of a line of business the account is not in' do
+    insurance = described_class.entries.select { |entry| entry['segmento'] == 'seguros/corretora' }.map { |entry| entry.fetch('name') }
+
+    expect(insurance).to contain_exactly('Renovação do seguro chegando', 'Boas-vindas ao segurado', 'Parcela do seguro em aberto')
+    expect(described_class.names_outside([])).to match_array(insurance)
+    expect(described_class.names_outside(%w[seguros seguros/saude_beneficios])).to match_array(insurance)
+    expect(described_class.names_outside(%w[seguros seguros/corretora])).to be_empty
+  end
+
+  it 'only uses {{ nome }} as a personalization field in the insurance designs' do
+    allowed = ['{{ nome }}', '{{ unsubscribe_url }}']
+
+    described_class.entries.select { |entry| entry['segmento'] }.each do |entry|
+      body = described_class.body(entry)
+      rest = allowed.reduce(body) { |text, field| text.gsub(field, '') }
+
+      expect(body).to include('{{ nome }}'), entry.fetch('key')
+      expect(rest).not_to include('{{'), entry.fetch('key')
     end
   end
 

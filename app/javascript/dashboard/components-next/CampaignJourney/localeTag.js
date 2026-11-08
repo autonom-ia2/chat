@@ -10,3 +10,10 @@ export const toLocaleTag = locale =>
 // and throws on the Brazilian account, so every count is formatted here.
 export const formatNumber = (value, locale) =>
   new Intl.NumberFormat(toLocaleTag(locale)).format(Number(value || 0));
+
+// Money in the journey screens ("R$ 2,60", "US$ 0.48"), through the same BCP-47 tag.
+export const formatMoney = (value, currency, locale) =>
+  new Intl.NumberFormat(toLocaleTag(locale), {
+    style: 'currency',
+    currency,
+  }).format(Number(value || 0));

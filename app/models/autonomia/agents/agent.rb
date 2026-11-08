@@ -53,6 +53,8 @@ module Autonomia
       include Autonomia::Agents::AgentVersioning
       # #1428 (parte 3) — o Desfazer do último ajuste do "Mudar conversando" (piloto).
       include Autonomia::Agents::DesfazerAjuste
+      # #1429 (F3) — "Atualizar com a nova base" e o Desfazer dela, pelo mesmo histórico de versões (Fase 2).
+      include Autonomia::Agents::TrocaDaBase
       # #1426 (tema 4b) — as chaves do material escritas pelo sistema (conferências e autoteste), protegidas do save.
       include Autonomia::Agents::ConfigDoMaterial
 
@@ -69,7 +71,8 @@ module Autonomia
       has_many :inboxes, through: :agent_inboxes
       # Revisor v2: só as fontes APROVADAS pela IA Revisora alimentam o Construtor (resumos) e o
       # retrieval do Testar/Operar. needs_resend/needs_review ficam de fora.
-      has_many :accepted_sources, -> { accepted }, class_name: 'Autonomia::Agents::Source',
+      # #2487: e só as do agente: o material só de um post ou anúncio (care_id) não é do agente.
+      has_many :accepted_sources, -> { accepted.da_agente }, class_name: 'Autonomia::Agents::Source',
                                   foreign_key: :autonomia_agent_id
       # Fase F: eventos de operação (replied/handed_off). delete_all = limpeza barata e
       # imutável ao destruir o agente; o Analytics consulta por autonomia_agent_id direto.
@@ -158,7 +161,6 @@ module Autonomia
       store_accessor :config, :native_tool_slugs
       # #1196 — a página de agendamento da agenda da IA; escolhê-la liga `horarios_disponiveis` e `agendar_reuniao`.
       store_accessor :config, :booking_page_id
-      store_accessor :config, :confidence_threshold # Fase B: portão de confiança (lido no Answerer)
       # Fase D: handoff real configurável por agente (jsonb `config`, sem migração).
       # handoff_strategy ∈ Operate::HANDOFF_STRATEGIES; default conservador = 'none'
       # (comportamento da Fase C: só mensagem graciosa + bot_handoff!, conversa fica unassigned).
@@ -239,9 +241,12 @@ module Autonomia
       # lista do deploy (`QuoteAgent::Builder.ferramentas_mantidas`); para os demais, `native_tool_slugs`.
       # Quem monta o catálogo do turno (`Tools::Registry.for_agent`) lê daqui.
       # A agenda (#1196) liga junto com a escolha da página (`config['booking_page_id']`): escolher a página é ligar.
+      # O mapa e o contato da página (#1479 F3) ligam do mesmo jeito, com a flag da conta (`CartaoDaPagina.com_cartoes`).
       def ferramentas_nativas
         ::Autonomia::Insurance::QuoteAgent::Builder.ferramentas_mantidas(self) ||
-          ::Autonomia::Agents::Tools::Native::Agenda.com_agenda(self, native_tool_slugs)
+          ::Autonomia::Agents::Tools::Native::CartaoDaPagina.com_cartoes(
+            self, ::Autonomia::Agents::Tools::Native::Agenda.com_agenda(self, native_tool_slugs)
+          )
       end
 
       # Aplica config gerada pelo Construtor (token-guarded — análogo a ai_guarded_update do

@@ -32,7 +32,8 @@ class Api::V1::Accounts::EmailCampaigns::TemplatesController < Api::V1::Accounts
 
   private
 
-  # Read scope for the gallery: account-owned templates plus shared GLOBAL templates (account_id IS NULL).
+  # Read scope for the gallery: account-owned templates plus shared GLOBAL templates (account_id IS NULL), minus the
+  # shared designs of a line of business the account is not in (#2037).
   def template_scope
     EmailCampaignTemplate.for_account(Current.account)
   end

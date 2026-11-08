@@ -17,9 +17,14 @@ import commonHelpers, { isJSONValid } from 'dashboard/helper/commons';
 import { sync } from 'vuex-router-sync';
 import { createPinia } from 'pinia';
 import router, { initalizeRouter } from 'dashboard/routes';
+import { installStaleBundleRecovery } from 'dashboard/helper/staleBundle';
 import store from 'dashboard/store';
 import constants from 'dashboard/constants/globals';
 import * as Sentry from '@sentry/vue';
+import {
+  breadcrumbSemQuery,
+  eventoSemQuery,
+} from 'dashboard/helper/sentryPrivacy';
 import {
   initializeAnalyticsEvents,
   initializeChatwootEvents,
@@ -90,6 +95,10 @@ const startDashboard = async () => {
       ignoreErrors: [
         'ResizeObserver loop completed with undelivered notifications',
       ],
+      // URLs de xhr/fetch/navegação saem sem query string: a busca de
+      // contatos leva e-mail e telefone em ?q= (#2092).
+      beforeBreadcrumb: breadcrumbSemQuery,
+      beforeSend: eventoSemQuery,
     });
   }
 
@@ -140,6 +149,7 @@ const startDashboard = async () => {
   initializeChatwootEvents();
   initializeAnalyticsEvents();
   initalizeRouter();
+  installStaleBundleRecovery(router);
 
   mountWhenReady(app);
 };

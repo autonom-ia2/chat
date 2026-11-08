@@ -84,19 +84,9 @@ class Whatsapp::Templates::Manager
     true
   end
 
-  # O tipo do arquivo é o que o conteúdo diz (assinatura dos bytes, Marcel, o mesmo do ActiveStorage), nunca o nome nem o
-  # que o navegador declarou (#1334: um texto chamado .png não passa).
+  # Sobe o arquivo de exemplo (`MediaUpload`); vídeo que precisa de conversão volta com `conversion_id` (#2370).
   def upload(file)
-    content_type = Marcel::MimeType.for(file)
-    file.rewind
-    raise Refused, 'media_invalid' unless Whatsapp::Templates::HeaderMedia.upload_allowed?(content_type, file.size)
-
-    handle = client.upload_media(io: file, file_name: file.original_filename, content_type: content_type)
-    file.rewind
-    blob = ActiveStorage::Blob.create_and_upload!(io: file, filename: file.original_filename, content_type: content_type,
-                                                  identify: false, metadata: { 'account_id' => @inbox.account_id })
-    { handle: handle, blob_signed_id: blob.signed_id, file_name: blob.filename.to_s, content_type: blob.content_type,
-      byte_size: blob.byte_size }
+    Whatsapp::Templates::MediaUpload.new(inbox: @inbox, account_user: @account_user).perform(file)
   end
 
   def usage(template_id)

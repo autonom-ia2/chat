@@ -113,7 +113,8 @@
       "CANCEL_BUTTON_TEXT": "Cancel",
       "API": {
         "SUCCESS_MESSAGE": "Agent updated successfully",
-        "ERROR_MESSAGE": "Could not connect to Woot Server, Please try again later"
+        "ERROR_MESSAGE": "Could not connect to Woot Server, Please try again later",
+        "OUT_OF_REACH": "This change is beyond your access. Ask the administrator."
       },
       "PASSWORD_RESET": {
         "ADMIN_RESET_BUTTON": "Reset Password",
@@ -152,7 +153,8 @@
       "SELF": "This is you",
       "ADMIN": "Only an administrator can change administrators",
       "ABOVE": "Above your access",
-      "ONLY_ADMIN_MAKES_ADMIN": "Only an administrator can make someone an administrator"
+      "ONLY_ADMIN_MAKES_ADMIN": "Only an administrator can make someone an administrator",
+      "ONLY_ADMIN_TAKES_OUT": "Only the administrator takes this person out of the role"
     }
   }
 }

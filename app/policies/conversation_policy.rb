@@ -17,6 +17,18 @@ class ConversationPolicy < ApplicationPolicy
     true
   end
 
+  # Apagar mensagem. No OSS, quem escreve na conversa; o EE pede também a chave do cargo.
+  def delete_message?
+    show?
+  end
+
+  # Apagar o comentário do Instagram de onde a conversa nasceu (#2517): não tem volta e pode atingir anúncio pago. Além
+  # de escrever na conversa, só administrador ou, no EE, quem tem conversation_message_delete na função. Agente sem
+  # função não apaga (apagar mensagem, acima, segue como está).
+  def delete_comment?
+    account_user.present? && show? && account_user.permission_granted?('conversation_message_delete')
+  end
+
   # Ler a conversa (GET). No OSS é o mesmo que show?; o EE também deixa passar quem só lê (conversation_view).
   def view?
     show?

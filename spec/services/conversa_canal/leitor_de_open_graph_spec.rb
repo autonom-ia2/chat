@@ -20,6 +20,7 @@ describe ConversaCanal::LeitorDeOpenGraph do
 
     expect(described_class.ler(url)).to eq(
       'url' => url,
+      'final_url' => url,
       'title' => 'Seguro auto em 5 minutos',
       'description' => 'Cotação online, sem ligação.',
       'site_name' => 'Exemplo Seguros',
@@ -30,7 +31,17 @@ describe ConversaCanal::LeitorDeOpenGraph do
   it 'usa o <title> e a meta description quando a página não tem Open Graph' do
     servir(html_sem_og)
 
-    expect(described_class.ler(url)).to eq('url' => url, 'title' => 'Só o título', 'description' => 'Descrição comum')
+    expect(described_class.ler(url)).to eq('url' => url, 'final_url' => url, 'title' => 'Só o título', 'description' => 'Descrição comum')
+  end
+
+  # #1775: o redirecionador (encurtador, redirect aberto no site de outra empresa) não empresta o domínio ao texto lido.
+  it 'grava o endereço final, depois do redirecionamento' do
+    destino = 'https://destino.exemplo.net/oferta'
+    allow(Resolv).to receive(:getaddresses).with('destino.exemplo.net').and_return(['93.184.216.35'])
+    stub_request(:get, url).to_return(status: 302, headers: { 'Location' => destino })
+    stub_request(:get, destino).to_return(status: 200, body: html_sem_og, headers: { 'Content-Type' => 'text/html' })
+
+    expect(described_class.ler(url)).to include('url' => url, 'final_url' => destino)
   end
 
   it 'aceita resposta parcial (206) do pedido com Range' do
@@ -67,7 +78,7 @@ describe ConversaCanal::LeitorDeOpenGraph do
   it 'lê só os primeiros 512 KB quando o servidor ignora o Range (o <head> vem antes)' do
     servir("<html><head><title>Loja grande</title></head><body>#{'a' * 600.kilobytes}</body></html>")
 
-    expect(described_class.ler(url)).to eq('url' => url, 'title' => 'Loja grande')
+    expect(described_class.ler(url)).to eq('url' => url, 'final_url' => url, 'title' => 'Loja grande')
   end
 
   it 'não pede nada a porta fora de 80/443 nem a esquema que não é web' do

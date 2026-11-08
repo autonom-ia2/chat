@@ -5,9 +5,7 @@ module Api::V1::InboxesHelper
     permitted_params[:name]
   end
 
-  def validate_email_channel(attributes)
-    channel_data = permitted_params(attributes)[:channel]
-
+  def validate_email_channel(attributes, channel_data = permitted_params(attributes)[:channel])
     validate_imap(channel_data)
     validate_smtp(channel_data)
   end

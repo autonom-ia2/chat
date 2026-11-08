@@ -171,7 +171,8 @@ RSpec.describe 'CRM conversation-derived campaign visibility', type: :request do
   end
 
   it 'exports only the first authorized campaign, not the earlier restricted source' do
-    role = create(:custom_role, account: account, permissions: %w[crm_view crm_export])
+    # meta_ads_view: aqui o assunto é a conversa restrita; a função sem a chave (#2271) tem spec próprio.
+    role = create(:custom_role, account: account, permissions: %w[crm_view crm_export meta_ads_view])
     membership.update!(custom_role: role)
     get "#{api}/cards/export", params: { pipeline_id: card.pipeline_id }, headers: auth_headers(agent)
     expect(response).to have_http_status(:ok)

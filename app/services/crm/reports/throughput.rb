@@ -44,12 +44,12 @@ module Crm
       end
 
       def closed_in_range
-        scope = account.crm_cards.where(closed_at: range)
+        scope = Crm::Relacao.cards_do_funil(account).where(closed_at: range)
         pipeline.present? ? scope.where(pipeline_id: pipeline.id) : scope
       end
 
       def bucketed(outcome)
-        closed_in_range.where(status: Crm::Card.statuses[outcome])
+        closed_in_range.com_desfecho(outcome)
                        .group(Arel.sql(bucket_sql)).count
       end
 

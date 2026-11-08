@@ -47,6 +47,7 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
 
     @agent = agents_scope.new(attrs.except(:config))
     merge_config!(attrs[:config]) if attrs.key?(:config)
+    marcar_base_do_segmento
     @agent.created_by = Current.user
     apply_manual_scaffold
     # :ativacao (#1366): nascer atendendo também exige onde trabalhar (Agent#tem_onde_trabalhar?). Nascendo manual com
@@ -61,9 +62,10 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   # `agente_de_cotacao` (#380): as escolhas da corretora que o Agente de Cotação lê a cada turno
   # (`QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA`) — só o Builder as escreve, sempre as quatro; uma
   # escrita parcial por aqui pararia o agente com `EscolhasIncompletas`.
+  # `canal_pedido` (#2490): o canal que o dono pediu ao Construtor na criação; só o Builder o escreve.
   PROTECTED_CONFIG_KEYS = (%w[
     topic_map knowledge_confidence knowledge_summary knowledge_refresh_token
-    with_knowledge system_key builder_active_thread_id
+    with_knowledge system_key builder_active_thread_id canal_pedido
   ] + [::Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA]).freeze
 
   # #1366 — status, enabled ou actuation mudando: tudo (assign + save!) com o AGENTE TRAVADO (with_lock relê o agente),
@@ -128,6 +130,13 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     @agent = agents_scope.find(params[:id])
   end
 
+  # #1429 — o agente criado por aqui (manual ou guiado) também recebe o bloco do segmento no PromptBuilder, então nasce
+  # com a marca de base, como o do Construtor. Sem a Fase 2, sem marca (como antes).
+  def marcar_base_do_segmento
+    marca = ::Autonomia::Agents::PromptParts::SegmentoDoAgente.marca(Current.account)
+    @agent.config = @agent.config.to_h.merge('base' => marca) if marca
+  end
+
   # G2 — grava um snapshot no histórico quando o usuário edita a instrução À MÃO (modo manual) e ela
   # de fato mudou. record_instruction_version! é idempotente por hash, mas comparar antes/depois evita
   # até a leitura do último registro num save que não tocou a instrução (ex.: só ajustou o greeting).
@@ -185,7 +194,8 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   # invisível/imutável (agents_scope o esconde) e permitiria se passar pelo Guia da Plataforma.
   # `papel` (tema 14): a marca de origem do ajudante só nasce pelo início do Construtor (BuildThread), nunca pela API.
   # #1426 — as chaves do material (conferências e autoteste) são do sistema: a API nunca as escreve.
-  RESERVED_CONFIG_KEYS = (%w[system_key hidden_from_hub papel] + ::Autonomia::Agents::ConfigDoMaterial::CHAVES).freeze
+  # `base` (#1429): a marca do segmento com que o agente nasceu; o sistema grava no nascimento, nunca a API.
+  RESERVED_CONFIG_KEYS = (%w[system_key hidden_from_hub papel base] + ::Autonomia::Agents::ConfigDoMaterial::CHAVES).freeze
 
   def agent_params
     permitted = %i[name agent_type mode tone greeting fallback_message handoff_rule human_card

@@ -41,9 +41,9 @@ const PIXELS = [
   { id: '91', name: 'Pixel do site', last_fired_time: '2026-10-06T10:00:00Z' },
 ];
 
-const mountStep = async () => {
+const mountStep = async (props = {}) => {
   const wrapper = mount(MetaAdsAccountStep, {
-    props: { mode: 'partner' },
+    props: { mode: 'partner', ...props },
     global: {
       mocks: { $t: key => key },
       stubs: {
@@ -80,6 +80,28 @@ describe('Anúncios da Meta · escolher a conta (#1047)', () => {
     expect(wrapper.get('[data-pixel="91"] input').element.checked).toBe(true);
   });
 
+  it('"I have no website" is saved on purpose and comes back chosen (#2343)', async () => {
+    CrmMetaAdsConnectionAPI.select.mockResolvedValue({
+      data: { configured: true },
+    });
+    const wrapper = await mountStep();
+
+    await wrapper.get('[data-pixel-change]').trigger('click');
+    await wrapper.get('[data-pixel="none"] input').setValue(true);
+    await wrapper.get('[data-use-account]').trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.select).toHaveBeenCalledWith(
+      expect.objectContaining({ pixelId: null, noSite: true })
+    );
+
+    const again = await mountStep({
+      current: { ad_account: { id: '2' }, pixel: null, no_site: true },
+    });
+    await again.get('[data-pixel-change]').trigger('click');
+    expect(again.get('[data-pixel="none"] input').element.checked).toBe(true);
+  });
+
   it('saves the chosen account with the chosen Pixel', async () => {
     CrmMetaAdsConnectionAPI.select.mockResolvedValue({
       data: { configured: true },
@@ -93,6 +115,7 @@ describe('Anúncios da Meta · escolher a conta (#1047)', () => {
       mode: 'partner',
       adAccountId: '2',
       pixelId: '91',
+      noSite: false,
     });
     expect(wrapper.emitted('saved')).toHaveLength(1);
   });
@@ -114,6 +137,7 @@ describe('Anúncios da Meta · escolher a conta (#1047)', () => {
       mode: 'partner',
       adAccountId: '3',
       pixelId: null,
+      noSite: false,
     });
     expect(CrmMetaAdsConnectionAPI.pixels).toHaveBeenLastCalledWith(
       'partner',

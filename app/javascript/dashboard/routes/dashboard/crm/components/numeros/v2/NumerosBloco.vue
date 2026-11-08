@@ -14,9 +14,12 @@ const props = defineProps({
 
 const { t, dinheiro } = useNumerosFormato(props.moeda);
 
-const titulo = computed(() =>
-  t(`${P}.BLOCO.${props.tipo === 'vendendo' ? 'VENDENDO' : 'ATENDENDO'}`)
-);
+// Na visão "Equipe" (#1992) o título diz que o bloco é de todos.
+const titulo = computed(() => {
+  const base = props.tipo === 'vendendo' ? 'VENDENDO' : 'ATENDENDO';
+  const equipe = props.bloco.escopo === 'equipe' ? '_EQUIPE' : '';
+  return t(`${P}.BLOCO.${base}${equipe}`);
+});
 
 const ROTULOS = {
   andamento: 'ANDAMENTO',
@@ -24,9 +27,17 @@ const ROTULOS = {
   resolvidos: 'RESOLVIDOS',
   com_voce: 'COM_VOCE',
   deu_certo: 'DEU_CERTO',
+  lembretes: 'LEMBRETES',
+  parados_atende: 'PARADOS_ATENDE',
 };
 
 const numero = item => {
+  // #2075 — sem a chave de valores o R$ vem vazio (null): o número grande vira a contagem.
+  if (item.tipo === 'fechadas' && item.valor === null)
+    return {
+      grande: String(item.n),
+      rotulo: t(`${P}.BLOCO.FECHADAS_SEM_VALOR`, { n: item.n }, item.n),
+    };
   if (item.tipo === 'fechadas')
     return {
       grande: dinheiro(item.valor),

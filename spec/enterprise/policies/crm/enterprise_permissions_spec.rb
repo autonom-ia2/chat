@@ -71,11 +71,12 @@ RSpec.describe 'Crm Enterprise permission overlay', type: :policy do # rubocop:d
       expect(policy.update?).to be(true)
     end
 
-    it 'treats crm_admin as full CRM access (incl. integration tokens)' do
+    # Integration tokens moved to token_manage (#2027): crm_admin alone no longer mints them.
+    it 'treats crm_admin as full CRM access, without integration tokens' do
       user, account_user = custom_role_user(account: account, permissions: ['crm_admin'])
 
       expect(Crm::PipelinePolicy.new(ctx(account, user, account_user), pipeline).create?).to be(true)
-      expect(Crm::IntegrationTokenPolicy.new(ctx(account, user, account_user), Crm::IntegrationToken).create?).to be(true)
+      expect(Crm::IntegrationTokenPolicy.new(ctx(account, user, account_user), Crm::IntegrationToken).create?).to be(false)
     end
 
     it 'gates manage_ai? by crm_manage_ai' do
@@ -93,6 +94,35 @@ RSpec.describe 'Crm Enterprise permission overlay', type: :policy do # rubocop:d
 
       expect(policy.create?).to be(true)
       expect(policy.update?).to be(true)
+    end
+  end
+
+  describe 'CRM editing keys imply crm_view (#2124)' do
+    CustomRole::CRM_EDITING_KEYS.each do |key|
+      it "lets a role with only #{key} open the board and the cards" do
+        user, account_user = custom_role_user(account: account, permissions: [key])
+        context = ctx(account, user, account_user)
+
+        expect(Crm::PipelinePolicy.new(context, pipeline).index?).to be(true)
+        expect(Crm::CardPolicy.new(context, Crm::Card).index?).to be(true)
+      end
+    end
+
+    it 'keeps crm_view_reports to the reports' do
+      user, account_user = custom_role_user(account: account, permissions: ['crm_view_reports'])
+      context = ctx(account, user, account_user)
+
+      expect(Crm::ReportPolicy.new(context, %i[crm report]).view?).to be(true)
+      expect(Crm::PipelinePolicy.new(context, pipeline).index?).to be(false)
+      expect(Crm::CardPolicy.new(context, Crm::Card).index?).to be(false)
+    end
+
+    it 'gives no CRM to sales_value_view alone' do
+      user, account_user = custom_role_user(account: account, permissions: ['sales_value_view'])
+      context = ctx(account, user, account_user)
+
+      expect(Crm::PipelinePolicy.new(context, pipeline).index?).to be(false)
+      expect(Crm::CardPolicy.new(context, Crm::Card).index?).to be(false)
     end
   end
 end

@@ -21,7 +21,7 @@
 #  updated_at          :datetime         not null
 #  account_id          :bigint           not null
 #  card_id             :bigint           not null
-#  created_by_id       :bigint           not null
+#  created_by_id       :bigint
 #  external_event_id   :string
 #  inbox_id            :bigint
 #  reminder_id         :bigint
@@ -55,7 +55,9 @@ class Crm::Meeting < ApplicationRecord
   belongs_to :account
   belongs_to :card, class_name: 'Crm::Card'
   belongs_to :inbox, optional: true
-  belongs_to :created_by, class_name: 'User'
+  # Nulo só quando quem criou foi excluído da plataforma (#2135): o card mostra "Pessoa removida". Criar exige autor.
+  belongs_to :created_by, class_name: 'User', optional: true
+  validates :created_by, presence: true, on: :create
   belongs_to :reminder, class_name: 'Crm::FollowUp', optional: true
   # Agendamento WhatsApp-first (#1192): conversa em que os avisos ao cliente saem (a do convite, quando houver).
   belongs_to :conversation, optional: true
@@ -75,7 +77,7 @@ class Crm::Meeting < ApplicationRecord
   enum confirmation_status: { pending: 0, confirmed: 1, change_requested: 2 }, _prefix: :confirmation
 
   validates :title, :starts_at, :ends_at, :timezone, :provider, presence: true
-  validates :account_id, :card_id, :created_by_id, presence: true
+  validates :account_id, :card_id, presence: true
   validates :inbox_id, presence: true, unless: :internal?
   validates :external_event_id, uniqueness: { scope: :provider }, allow_blank: true
   validates :metadata, jsonb_attributes_length: true

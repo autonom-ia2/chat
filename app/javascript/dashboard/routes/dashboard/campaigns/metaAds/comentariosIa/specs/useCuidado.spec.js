@@ -1,0 +1,466 @@
+import { flushPromises } from '@vue/test-utils';
+import { ref } from 'vue';
+import ComentariosIaAPI from 'dashboard/api/comentariosIa';
+import { useCuidado, useResumo } from '../useCuidado';
+
+// #2212: o cuidado de um post vem do Painel do servidor; as escritas regravam e devolvem o Painel novo.
+vi.mock('dashboard/api/comentariosIa', () => ({
+  default: {
+    getCuidado: vi.fn(),
+    saveCuidado: vi.fn(),
+    previa: vi.fn(),
+    rascunho: vi.fn(),
+    lerAntigos: vi.fn(),
+    getResumo: vi.fn(),
+    foto: vi.fn(),
+    corrigirFoto: vi.fn(),
+  },
+}));
+
+const alvo = { kind: 'post', id: '1790', perfil: 'instagram-7' };
+const painel = (extra = {}) => ({
+  network: 'instagram',
+  private_available: true,
+  care: 'on',
+  message: 'Oi! O catálogo: loja.com',
+  para_quem: 'Quem pedir o link',
+  phrases: ['Te mandei no privado!', 'Olha o privado!'],
+  read_old: false,
+  results: { sent: 2, replied: 1, skipped: 0 },
+  unanswered: 3,
+  older: 1,
+  to_see: [],
+  hidden: [],
+  ...extra,
+});
+const falha = (status, data) =>
+  Object.assign(new Error('x'), { response: { status, data } });
+const pendente = () => {
+  let resolver;
+  const promessa = new Promise(resolve => {
+    resolver = resolve;
+  });
+  return [promessa, valor => resolver(valor)];
+};
+
+describe('useCuidado (#2212)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('lê o Painel do alvo e para de carregar', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
+    const cuidado = useCuidado(alvo);
+    expect(cuidado.carregando.value).toBe(true);
+    await flushPromises();
+
+    expect(ComentariosIaAPI.getCuidado).toHaveBeenCalledWith(alvo);
+    expect(cuidado.painel.value.care).toBe('on');
+    expect(cuidado.carregando.value).toBe(false);
+    expect(cuidado.erro.value).toBeNull();
+  });
+
+  it.each([
+    [403, 'acesso'],
+    [404, 'sumiu'],
+    [500, 'rede'],
+  ])('erro %s vira %s', async (status, erro) => {
+    ComentariosIaAPI.getCuidado.mockRejectedValue(falha(status));
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    expect(cuidado.erro.value).toBe(erro);
+    expect(cuidado.motivo.value).toBeNull();
+    expect(cuidado.painel.value).toBeNull();
+  });
+
+  it.each([
+    [422, 'no_post'],
+    [422, 'no_inbox'],
+    [422, 'meta_unavailable'],
+    [422, 'needs_login'],
+    [404, 'not_connected'],
+    [404, 'ad_not_found'],
+  ])('erro %s com %s: o motivo vem do servidor', async (status, codigo) => {
+    ComentariosIaAPI.getCuidado.mockRejectedValue(
+      falha(status, { error: codigo })
+    );
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    expect(cuidado.motivo.value).toBe(codigo);
+  });
+
+  it('código que a tela não explica fica sem motivo', async () => {
+    ComentariosIaAPI.getCuidado.mockRejectedValue(
+      falha(403, { error: 'not_inbox_member' })
+    );
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    expect(cuidado.erro.value).toBe('acesso');
+    expect(cuidado.motivo.value).toBeNull();
+  });
+
+  it('sem alvo (flag desligada), não lê nada', async () => {
+    useCuidado(null);
+    useResumo(() => null);
+    await flushPromises();
+
+    expect(ComentariosIaAPI.getCuidado).not.toHaveBeenCalled();
+    expect(ComentariosIaAPI.getResumo).not.toHaveBeenCalled();
+  });
+
+  it('trocar de alvo lê o novo, e só a leitura mais nova vale', async () => {
+    let primeira;
+    ComentariosIaAPI.getCuidado
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          primeira = resolve;
+        })
+      )
+      .mockResolvedValueOnce({ data: painel({ care: 'paused' }) });
+    const atual = ref(alvo);
+    const cuidado = useCuidado(atual);
+    atual.value = { ...alvo, id: '1791' };
+    await flushPromises();
+    primeira({ data: painel({ care: 'off' }) });
+    await flushPromises();
+
+    expect(ComentariosIaAPI.getCuidado).toHaveBeenLastCalledWith({
+      ...alvo,
+      id: '1791',
+    });
+    expect(cuidado.painel.value.care).toBe('paused');
+  });
+
+  it('trocar de alvo tira o Painel do anterior da tela enquanto lê o novo', async () => {
+    const [segunda, responderSegunda] = pendente();
+    ComentariosIaAPI.getCuidado
+      .mockResolvedValueOnce({ data: painel({ message: 'Texto do A' }) })
+      .mockReturnValueOnce(segunda);
+    const atual = ref(alvo);
+    const cuidado = useCuidado(atual);
+    await flushPromises();
+    expect(cuidado.painel.value.message).toBe('Texto do A');
+
+    atual.value = { ...alvo, id: '1791' };
+    await flushPromises();
+    expect(cuidado.painel.value).toBeNull();
+    expect(cuidado.carregando.value).toBe(true);
+
+    responderSegunda({ data: painel({ message: 'Texto do B' }) });
+    await flushPromises();
+    expect(cuidado.painel.value.message).toBe('Texto do B');
+  });
+
+  it('ler de novo o mesmo alvo mantém o Painel na tela', async () => {
+    const [segunda] = pendente();
+    ComentariosIaAPI.getCuidado
+      .mockResolvedValueOnce({ data: painel() })
+      .mockReturnValueOnce(segunda);
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    cuidado.carregar();
+    expect(cuidado.painel.value.care).toBe('on');
+  });
+
+  it('a resposta de uma escrita do alvo anterior não entra no Painel do novo', async () => {
+    const [gravando, responderGravacao] = pendente();
+    ComentariosIaAPI.getCuidado
+      .mockResolvedValueOnce({ data: painel({ message: 'Texto do A' }) })
+      .mockResolvedValueOnce({ data: painel({ message: 'Texto do B' }) });
+    ComentariosIaAPI.saveCuidado.mockReturnValueOnce(gravando);
+    const atual = ref(alvo);
+    const cuidado = useCuidado(atual);
+    await flushPromises();
+
+    const salvo = cuidado.pausar();
+    atual.value = { ...alvo, id: '1791' };
+    await flushPromises();
+    responderGravacao({
+      data: painel({ message: 'Texto do A', care: 'paused' }),
+    });
+    await salvo;
+
+    expect(cuidado.painel.value.message).toBe('Texto do B');
+    expect(cuidado.painel.value.care).toBe('on');
+  });
+
+  it.each([
+    [falha(403), 'acesso'],
+    [falha(422, { error: 'invalid_message' }), 'invalid_message'],
+    [falha(422, { error: 'invalid_para_quem' }), 'invalid_para_quem'],
+    [falha(422, { error: 'invalid_status' }), 'rede'],
+    [falha(500), 'rede'],
+    [new Error('sem rede'), 'rede'],
+  ])('escrita que falha diz o porquê (%#)', async (erro, motivo) => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
+    ComentariosIaAPI.saveCuidado
+      .mockRejectedValueOnce(erro)
+      .mockResolvedValueOnce({ data: painel() });
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    expect(await cuidado.pausar()).toBe(false);
+    expect(cuidado.falhaAoSalvar.value).toBe(motivo);
+    expect(await cuidado.voltar()).toBe(true);
+    expect(cuidado.falhaAoSalvar.value).toBeNull();
+  });
+
+  it('salvar grava o corpo do contrato e guarda o Painel novo', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({ care: 'off' }),
+    });
+    ComentariosIaAPI.saveCuidado.mockResolvedValue({ data: painel() });
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    const valeu = await cuidado.salvar({
+      message: 'Oi!',
+      paraQuem: 'Quem perguntar o preço',
+      phrases: ['Te mandei!'],
+      status: 'on',
+    });
+
+    expect(valeu).toBe(true);
+    expect(ComentariosIaAPI.saveCuidado).toHaveBeenCalledWith(alvo, {
+      message: 'Oi!',
+      paraQuem: 'Quem perguntar o preço',
+      phrases: ['Te mandei!'],
+      status: 'on',
+    });
+    expect(cuidado.painel.value.care).toBe('on');
+    expect(cuidado.salvando.value).toBe(false);
+  });
+
+  it('pausar e voltar regravam o que está guardado, com outro status', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
+    ComentariosIaAPI.saveCuidado.mockResolvedValue({
+      data: painel({ care: 'paused' }),
+    });
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    await cuidado.pausar();
+    expect(ComentariosIaAPI.saveCuidado).toHaveBeenLastCalledWith(alvo, {
+      message: 'Oi! O catálogo: loja.com',
+      paraQuem: 'Quem pedir o link',
+      phrases: ['Te mandei no privado!', 'Olha o privado!'],
+      status: 'paused',
+    });
+    expect(cuidado.painel.value.care).toBe('paused');
+
+    await cuidado.voltar();
+    expect(ComentariosIaAPI.saveCuidado.mock.lastCall[1].status).toBe('on');
+  });
+
+  it('escrita que falha devolve false e mantém o Painel', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
+    ComentariosIaAPI.saveCuidado.mockRejectedValue(falha(422));
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    expect(await cuidado.pausar()).toBe(false);
+    expect(cuidado.painel.value.care).toBe('on');
+    expect(cuidado.salvando.value).toBe(false);
+  });
+
+  it('a prévia devolve os exemplos, ou null quando falha', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
+    const exemplos = { recebe: { sample: true }, nao: null };
+    ComentariosIaAPI.previa
+      .mockResolvedValueOnce({ data: exemplos })
+      .mockRejectedValueOnce(falha(500));
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    expect(await cuidado.previa('Quem pedir o link')).toEqual(exemplos);
+    expect(ComentariosIaAPI.previa).toHaveBeenCalledWith(alvo, {
+      paraQuem: 'Quem pedir o link',
+    });
+    expect(await cuidado.previa('Quem pedir o link')).toBeNull();
+  });
+
+  it('o começo da mensagem: o texto pronto, ou vazio quando o post não oferece nada ou a IA falha', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
+    ComentariosIaAPI.rascunho
+      .mockResolvedValueOnce({
+        data: { status: 'ready', message: 'Oi! Sai por R$ 29.' },
+      })
+      .mockResolvedValueOnce({ data: { status: 'no_offer' } })
+      .mockRejectedValueOnce(falha(422, { error: 'ai_unavailable' }));
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    expect(await cuidado.rascunho()).toBe('Oi! Sai por R$ 29.');
+    expect(ComentariosIaAPI.rascunho).toHaveBeenCalledWith(alvo);
+    expect(await cuidado.rascunho()).toBe('');
+    expect(await cuidado.rascunho()).toBe('');
+  });
+
+  it('o começo da mensagem não é pedido no anúncio: ele abre vazio', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
+    const cuidado = useCuidado({ kind: 'ad', id: '120' });
+    await flushPromises();
+
+    expect(await cuidado.rascunho()).toBe('');
+    expect(ComentariosIaAPI.rascunho).not.toHaveBeenCalled();
+  });
+
+  it('ler e mandar põe na fila e lê o Painel de novo', async () => {
+    ComentariosIaAPI.getCuidado
+      .mockResolvedValueOnce({ data: painel() })
+      .mockResolvedValueOnce({ data: painel({ read_old: true }) });
+    ComentariosIaAPI.lerAntigos.mockResolvedValue({ data: { queued: 3 } });
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    expect(await cuidado.lerAntigos()).toBe(true);
+    expect(ComentariosIaAPI.lerAntigos).toHaveBeenCalledWith(alvo);
+    expect(ComentariosIaAPI.getCuidado).toHaveBeenCalledTimes(2);
+    expect(cuidado.painel.value.read_old).toBe(true);
+  });
+
+  it('ler e mandar que falha não relê', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
+    ComentariosIaAPI.lerAntigos.mockRejectedValue(falha(500));
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    expect(await cuidado.lerAntigos()).toBe(false);
+    expect(ComentariosIaAPI.getCuidado).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useCuidado: a foto do post no passo 1 (#2454)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
+  });
+
+  it('pede a leitura da foto e devolve o que o servidor viu', async () => {
+    const lida = { status: 'ready', text: 'Um bolo', corrected: false };
+    ComentariosIaAPI.foto.mockResolvedValue({ data: lida });
+    const cuidado = useCuidado(alvo);
+
+    expect(await cuidado.foto()).toEqual(lida);
+    expect(ComentariosIaAPI.foto).toHaveBeenCalledWith(alvo);
+  });
+
+  it('corrige com o texto do dono', async () => {
+    const corrigida = { status: 'ready', text: 'Bolo de vó', corrected: true };
+    ComentariosIaAPI.corrigirFoto.mockResolvedValue({ data: corrigida });
+    const cuidado = useCuidado(alvo);
+
+    expect(await cuidado.corrigirFoto('Bolo de vó')).toEqual(corrigida);
+    expect(ComentariosIaAPI.corrigirFoto).toHaveBeenCalledWith(
+      alvo,
+      'Bolo de vó'
+    );
+  });
+
+  it('falha na ida (rede, 404 sem a flag, 403): null, sem quebrar o passo 1', async () => {
+    ComentariosIaAPI.foto.mockRejectedValue(falha(500));
+    ComentariosIaAPI.corrigirFoto.mockRejectedValue(falha(403));
+    const cuidado = useCuidado(alvo);
+
+    expect(await cuidado.foto()).toBeNull();
+    expect(await cuidado.corrigirFoto('x')).toBeNull();
+  });
+});
+
+describe('useResumo (#2212, #2454)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('lê os números do código (esperam e cabem no privado) e marca a falha', async () => {
+    ComentariosIaAPI.getResumo
+      .mockResolvedValueOnce({
+        data: { status: 'ready', waiting: 17, private_window: 12 },
+      })
+      .mockRejectedValueOnce(falha(500));
+    const resumo = useResumo(alvo);
+    await flushPromises();
+
+    expect(resumo.resumo.value).toEqual({
+      status: 'ready',
+      waiting: 17,
+      private_window: 12,
+    });
+    expect(resumo.carregando.value).toBe(false);
+    expect(resumo.falhou.value).toBe(false);
+
+    await resumo.carregar();
+    expect(resumo.falhou.value).toBe(true);
+    expect(resumo.carregando.value).toBe(false);
+  });
+
+  it('uma leitura só: sem IA, o servidor responde na hora e a tela não pergunta de novo', async () => {
+    vi.useFakeTimers();
+    ComentariosIaAPI.getResumo.mockResolvedValue({
+      data: { status: 'ready', waiting: 3, private_window: 2 },
+    });
+    useResumo(alvo);
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(60000);
+    vi.useRealTimers();
+
+    expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(1);
+  });
+
+  it('leitura que não ficou pronta (sem acesso) chega como resumo', async () => {
+    ComentariosIaAPI.getResumo.mockResolvedValue({
+      data: { status: 'needs_permission' },
+    });
+    const resumo = useResumo(alvo);
+    await flushPromises();
+
+    expect(resumo.resumo.value.status).toBe('needs_permission');
+    expect(resumo.carregando.value).toBe(false);
+  });
+
+  it('trocar de alvo tira o resumo do anterior da tela', async () => {
+    const [segunda] = pendente();
+    ComentariosIaAPI.getResumo
+      .mockResolvedValueOnce({ data: { status: 'ready', waiting: 2 } })
+      .mockReturnValueOnce(segunda);
+    const atual = ref(alvo);
+    const resumo = useResumo(atual);
+    await flushPromises();
+
+    atual.value = { ...alvo, id: '1791' };
+    await flushPromises();
+    expect(resumo.resumo.value).toBeNull();
+    expect(resumo.carregando.value).toBe(true);
+  });
+
+  it('só a leitura mais nova vale: a resposta atrasada do alvo anterior não entra', async () => {
+    const [primeira, responderPrimeira] = pendente();
+    ComentariosIaAPI.getResumo
+      .mockReturnValueOnce(primeira)
+      .mockResolvedValueOnce({ data: { status: 'ready', waiting: 5 } });
+    const atual = ref(alvo);
+    const resumo = useResumo(atual);
+    await flushPromises();
+
+    atual.value = { ...alvo, id: '1791' };
+    await flushPromises();
+    responderPrimeira({ data: { status: 'ready', waiting: 1 } });
+    await flushPromises();
+
+    expect(resumo.resumo.value.waiting).toBe(5);
+  });
+
+  it('o mesmo alvo pronto fica na tela enquanto é relido', async () => {
+    const [segunda] = pendente();
+    ComentariosIaAPI.getResumo
+      .mockResolvedValueOnce({ data: { status: 'ready', waiting: 4 } })
+      .mockReturnValueOnce(segunda);
+    const resumo = useResumo(alvo);
+    await flushPromises();
+
+    resumo.carregar();
+    await flushPromises();
+    expect(resumo.resumo.value.waiting).toBe(4);
+    expect(resumo.carregando.value).toBe(true);
+  });
+});

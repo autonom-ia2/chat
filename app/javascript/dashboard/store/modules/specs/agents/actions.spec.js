@@ -12,7 +12,7 @@ describe('#actions', () => {
   describe('#get', () => {
     it('sends correct actions if API is success', async () => {
       axios.get.mockResolvedValue({ data: agentList });
-      await actions.get({ commit });
+      await expect(actions.get({ commit })).resolves.toBe(true);
       expect(commit.mock.calls).toEqual([
         [types.default.SET_AGENT_FETCHING_STATUS, true],
         [types.default.SET_AGENT_FETCHING_STATUS, false],
@@ -21,7 +21,7 @@ describe('#actions', () => {
     });
     it('sends correct actions if API is error', async () => {
       axios.get.mockRejectedValue({ message: 'Incorrect header' });
-      await actions.get({ commit });
+      await expect(actions.get({ commit })).resolves.toBe(false);
       expect(commit.mock.calls).toEqual([
         [types.default.SET_AGENT_FETCHING_STATUS, true],
         [types.default.SET_AGENT_FETCHING_STATUS, false],
@@ -70,6 +70,21 @@ describe('#actions', () => {
         [types.default.SET_AGENT_UPDATING_STATUS, true],
         [types.default.SET_AGENT_UPDATING_STATUS, false],
       ]);
+    });
+    // Fork (#2308): a recusa leva o status e o corpo do servidor, para a gaveta de funções separar o 401.
+    it('keeps status and server error on a rejected update', async () => {
+      axios.patch.mockRejectedValue({
+        response: {
+          status: 401,
+          data: { error: 'You are not authorized to do this action' },
+        },
+      });
+      await expect(
+        actions.update({ commit }, agentList[0])
+      ).rejects.toMatchObject({
+        status: 401,
+        code: 'You are not authorized to do this action',
+      });
     });
   });
 

@@ -28,7 +28,7 @@ class Autonomia::Guide::WarmUpJob < ApplicationJob
   # as mesmas contas. `write` com `unless_exist: true` é o `SET ... NX` do Redis: atômico, só o
   # primeiro processo grava e só ele segue.
   def reservar_varredura
-    Rails.cache.write("#{CACHE_PREFIX}#{::Autonomia::Guide::Seed.kb_version}", true, unless_exist: true)
+    Rails.cache.write("#{CACHE_PREFIX}#{::Autonomia::Guide::Seed.versao_da_instalacao}", true, unless_exist: true)
   end
 
   # O mesmo escopo que `Seed#guide_agent_scope` usa para achar o agente do Guia de UMA conta

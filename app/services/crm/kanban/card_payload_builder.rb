@@ -1,15 +1,18 @@
 class Crm::Kanban::CardPayloadBuilder
   UNRESOLVED_COMPANY = Object.new.freeze
 
-  def initialize(card:, conversation_visibility:, pending_suggestion: nil, company: UNRESOLVED_COMPANY)
+  def initialize(card:, conversation_visibility:, account_user:, pending_suggestion: nil, company: UNRESOLVED_COMPANY)
     @card = card
+    @account_user = account_user
     @conversation_visibility = conversation_visibility
     @pending_suggestion = pending_suggestion
     @company = company.equal?(UNRESOLVED_COMPANY) ? Crm::Cards::CompanyResolver.for_card(card) : company
   end
 
+  # Valor de venda (#2075): sem `sales_value_view`, o card sai sem value_cents, menos o card de que a pessoa é dona.
   def perform
-    identity_payload.merge(status_payload, link_payload)
+    payload = identity_payload.merge(status_payload, link_payload)
+    Crm::ValorDeVenda.ve_o_card?(@account_user, @card) ? payload : Crm::ValorDeVenda.oculta_card!(payload)
   end
 
   private
@@ -66,18 +69,19 @@ class Crm::Kanban::CardPayloadBuilder
     (@card.metadata || {}).dig('ai', 'score', 'source').presence
   end
 
+  # Sugestão de etapa (#2150): só quem tem crm_manage_ai a lê; sem a chave, o card sai sem ai_suggestion.
   def ai_suggestion_payload
-    return unless Crm::Ai::Config.enabled?
+    return unless Crm::Ai::Config.enabled? && Crm::SugestaoDeEtapa.le?(@account_user)
 
     suggestion = @pending_suggestion || @card.ai_stage_suggestions.current_pending.includes(:to_stage).first
-    return if suggestion.blank?
+    return if suggestion.blank? || suggestion.fechar_fora_da_tela?(@card)
 
     {
       id: suggestion.id,
       to_stage_id: suggestion.to_stage_id,
       to_stage_name: suggestion.to_stage&.name,
       confidence: suggestion.confidence.to_f
-    }
+    }.merge(suggestion.fechar ? { fechar: suggestion.fechar } : {})
   end
 
   def link_payload
@@ -85,7 +89,7 @@ class Crm::Kanban::CardPayloadBuilder
       contact: compact_contact,
       company: (Crm::Cards::CompanyResolver.payload(@company) if full_contact?),
       owner: compact_user(@card.owner),
-      responsible: @card.responsible_descriptor,
+      responsible: responsible_payload,
       inbox: compact_inbox,
       conversation: compact_conversation,
       labels: labels_payload,
@@ -122,8 +126,10 @@ class Crm::Kanban::CardPayloadBuilder
   # the pill uses campaigns[0].headline and the badge uses length-1. Each source
   # conversation is authorized by Crm::Cards::PayloadBuilder, matching the
   # list/websocket and server-side campaign filters.
+  # Anúncio de origem (#2271): sem `meta_ads_view`, o toque de anúncio sai sem título, nomes, prévia e miniatura.
   def campaigns_payload
-    Crm::Cards::PayloadBuilder.aggregated_campaigns_for(@card, conversation_visibility: @conversation_visibility)
+    Crm::Cards::PayloadBuilder.aggregated_campaigns_for(@card, conversation_visibility: @conversation_visibility,
+                                                               ad_visible: @conversation_visibility.anuncio_visivel?)
   end
 
   def compact_contact
@@ -180,6 +186,17 @@ class Crm::Kanban::CardPayloadBuilder
     return unless @card.account.feature_enabled?('sla')
 
     conversation.applied_sla&.push_event_data
+  end
+
+  # Conversa que a pessoa não vê (#2283): o nome de quem atende essa conversa não vai, como no Crm::Cards::PayloadBuilder
+  # (o tempo real do quadro chega por ele); no lugar, o dono do card, senão o robô.
+  def responsible_payload
+    conversation = @card.primary_conversation
+    if conversation&.assignee_id.present? && visible_primary_conversation.nil?
+      return Crm::Cards::PayloadBuilder.responsible_without_conversation_agent(@card)
+    end
+
+    @card.responsible_descriptor
   end
 
   def visible_primary_conversation

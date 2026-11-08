@@ -34,6 +34,20 @@ describe('originRows (#1876)', () => {
     expect(rows[2].labelKey).toBe('CRM_DASHBOARD.ORIGIN.SOURCES.NONE');
   });
 
+  it('gives a Messenger or Direct ad click its own line (#2521, #2620)', () => {
+    const rows = originRows([
+      { source: 'meta_ctm', won_count: 2, won_value_by_currency: sale(200) },
+      { source: 'meta_ctd', won_count: 1, won_value_by_currency: sale(100) },
+      { source: 'meta_paid', won_count: 4, won_value_by_currency: sale(400) },
+    ]);
+
+    expect(rows.map(row => [row.source, row.wonCount, row.labelKey])).toEqual([
+      ['meta_ctm', 2, 'CRM_DASHBOARD.ORIGIN.SOURCES.META_CTM'],
+      ['meta_ctd', 1, 'CRM_DASHBOARD.ORIGIN.SOURCES.META_CTD'],
+      ['meta_paid', 4, 'CRM_DASHBOARD.ORIGIN.SOURCES.META_PAID'],
+    ]);
+  });
+
   it('adds up two server rows that land on the same line instead of keeping only the last one', () => {
     const rows = originRows([
       {

@@ -37,6 +37,17 @@ export function useQuemVeNumeros() {
       )
     )
   );
+  // A visão "Equipe" nova (#1992, F5): só junto da "Só eu" (as duas flags).
+  const equipeNova = computed(
+    () =>
+      ligado.value &&
+      Boolean(
+        isFeatureEnabledonAccount.value(
+          accountId.value,
+          FEATURE_FLAGS.CRM_NUMEROS_EQUIPE
+        )
+      )
+  );
   const administrador = computed(() => currentRole.value === 'administrator');
   const semFuncao = computed(() => !currentCustomRoleId.value);
   // Só a chave que a rota de Números aceita (crm.routes.js numerosMeta): crm_admin
@@ -62,5 +73,13 @@ export function useQuemVeNumeros() {
     () => semFuncao.value || veEquipe.value || veSoEu.value
   );
 
-  return { pronto, ligado, administrador, veEquipe, veSoEu, abreNumeros };
+  return {
+    pronto,
+    ligado,
+    equipeNova,
+    administrador,
+    veEquipe,
+    veSoEu,
+    abreNumeros,
+  };
 }

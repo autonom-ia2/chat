@@ -70,4 +70,13 @@ Rails.application.reloader.to_prepare do
   Facebook::Messenger::Bot.on :postback do |postback|
     Webhooks::FacebookEventsJob.perform_later(postback.to_json)
   end
+
+  # Clique num anúncio de Messenger de quem já tinha conversa (#2521, campo `messaging_referrals`). Erro aqui não pode
+  # derrubar o lote do webhook (a Meta reenviaria tudo): fica no log.
+  Facebook::Messenger::Bot.on :referral do |referral|
+    Crm::MetaAds::MessagingReferralJob.enqueue_for('messenger', referral.messaging)
+  rescue StandardError => e
+    Rails.logger.warn("[facebook_messenger] referral não enfileirado: #{e.class}")
+    ChatwootExceptionTracker.new(e).capture_exception
+  end
 end

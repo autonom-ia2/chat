@@ -126,4 +126,18 @@ RSpec.describe Crm::Ai::ContextBuilder do
 
     expect(state[:last_human_agent_at]).to eq(human_message.reload.created_at.iso8601)
   end
+
+  # #1923: a falha do envio chega depois (message_updated), com a avaliação já agendada. O que não chegou ao cliente
+  # não vai ao modelo nem conta como a última fala da equipe.
+  it 'leaves a failed send out of the history and of the last human reply' do
+    add_message(content: 'quero cotar', type: :incoming, sender: contact)
+    entregue = add_message(content: 'já te mando', type: :outgoing, sender: admin)
+    entregue.update_columns(status: nil) # rubocop:disable Rails/SkipsModelValidations -- linha antiga, sem status
+    travel(1.minute) { add_message(content: 'segue a cotação: R$ 1.200', type: :outgoing, sender: admin).update!(status: :failed) }
+
+    context = described_class.new(card: card).perform
+
+    expect(context[:recent_messages].pluck(:content)).to eq(['quero cotar', 'já te mando'])
+    expect(context[:conversation_state][:last_human_agent_at]).to eq(entregue.reload.created_at.iso8601)
+  end
 end

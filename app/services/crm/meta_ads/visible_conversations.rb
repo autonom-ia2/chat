@@ -2,7 +2,7 @@
 # do painel são da conta; as listas que levam a uma conversa (o caminho do dinheiro, as propostas do anúncio e as
 # propostas paradas do consultor) mostram só as conversas que a pessoa já veria: a regra da lista de conversas
 # (caixa, funil e função, Conversations::PermissionFilterService) e a do CRM (caixa "só as atribuídas",
-# Crm::Conversations::Visibility). O administrador vê todas.
+# Crm::Conversations::Visibility). O administrador vê todas. Os valores de venda em R$ seguem a mesma pessoa (#2075).
 class Crm::MetaAds::VisibleConversations
   def initialize(account:, account_user:)
     @account = account
@@ -33,6 +33,17 @@ class Crm::MetaAds::VisibleConversations
     advice.merge(actions: advice[:actions].map do |action|
       action.merge(cards: Array(action[:cards]).select { |card| visible.include?(card[:conversation_id]) })
     end)
+  end
+
+  # Valores de venda em R$ (#2075): seguem o Crm::ValorDeVenda (Crm::MetaAds::Panel::SalesValue).
+  def sales_values?
+    @sales_values = Crm::ValorDeVenda.ve?(@account_user) unless defined?(@sales_values)
+    @sales_values
+  end
+
+  # card: qualquer um com `owner_id` (o Crm::Card ou o card da coorte do painel).
+  def card_value?(card)
+    sales_values? || Crm::ValorDeVenda.dono?(@account_user, card)
   end
 
   private

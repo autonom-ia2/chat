@@ -7,6 +7,8 @@ import NextInput from 'dashboard/components-next/input/Input.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import CallRecordingSettings from './CallRecordingSettings.vue';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import { INTEGRATION_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
 
 export default {
   components: {
@@ -22,6 +24,14 @@ export default {
       type: Object,
       default: () => ({}),
     },
+  },
+  setup() {
+    // As chaves da Twilio são credencial do canal: só integration_manage troca (#2027).
+    return {
+      canManageIntegrations: usePermissionGranted(
+        INTEGRATION_MANAGE_PERMISSION
+      ),
+    };
   },
   data() {
     return {
@@ -56,6 +66,7 @@ export default {
     isSubmitDisabled() {
       if (!this.voiceEnabled) return false;
       if (this.needsCredentials) {
+        if (!this.canManageIntegrations) return true;
         if (this.needsApiKeySid && !this.apiKeySid) return true;
         return !this.apiKeySecret;
       }
@@ -167,15 +178,20 @@ export default {
       <p class="text-sm text-n-slate-11">
         {{ $t('INBOX_MGMT.VOICE_CONFIGURATION.CREDENTIALS.DESCRIPTION') }}
       </p>
+      <p v-if="!canManageIntegrations" class="text-sm text-n-slate-11">
+        {{ $t('INBOX_MGMT.VOICE_CONFIGURATION.CREDENTIALS.ONLY_INTEGRATIONS') }}
+      </p>
       <NextInput
         v-if="needsApiKeySid"
         v-model="apiKeySid"
+        :disabled="!canManageIntegrations"
         :label="$t('INBOX_MGMT.ADD.VOICE.TWILIO.API_KEY_SID.LABEL')"
         :placeholder="$t('INBOX_MGMT.ADD.VOICE.TWILIO.API_KEY_SID.PLACEHOLDER')"
       />
       <NextInput
         v-model="apiKeySecret"
         type="password"
+        :disabled="!canManageIntegrations"
         :label="$t('INBOX_MGMT.ADD.VOICE.TWILIO.API_KEY_SECRET.LABEL')"
         :placeholder="
           $t('INBOX_MGMT.ADD.VOICE.TWILIO.API_KEY_SECRET.PLACEHOLDER')

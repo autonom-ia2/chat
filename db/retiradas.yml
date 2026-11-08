@@ -1,0 +1,15 @@
+# Colunas e tabelas anunciadas para remoção (expand/contract, #2024). Regras: docs/migrations-em-lote.md.
+#
+# Passo 1 (um PR): `self.ignored_columns += %w[coluna]` no model e a linha aqui. Sobe e fica no ar.
+# Passo 2 (outro PR, depois do "ok, SHA" do passo 1): a migration que remove.
+#
+# O job "Migrations do lote" lê este arquivo como estava na BASE do lote. Remoção anunciada no mesmo PR, ou no mesmo
+# lote, não vale: a blue ainda roda o código que grava a coluna.
+#
+# Formato:
+#   colunas:
+#     - tabela.coluna   # Issue e motivo
+#   tabelas:
+#     - tabela          # Issue e motivo
+colunas: []
+tabelas: []

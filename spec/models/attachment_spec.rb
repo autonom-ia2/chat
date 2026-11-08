@@ -152,9 +152,74 @@ RSpec.describe Attachment do
 
   describe 'push_event_data for instagram direct message attachments' do
     let(:account) { create(:account) }
+    let(:meta_url) { 'https://lookaside.fbsbx.com/ig_messaging_cdn/image.jpg' }
     let(:instagram_inbox) do
       create(:inbox, account: account,
                      channel: create(:channel_instagram_fb_page, account: account, instagram_id: 'instagram-dm-test'))
+    end
+
+    before { account.enable_features!('conversa_instagram') }
+
+    def build_attachment(message, file_type: :image, with_file: true)
+      attachment = message.attachments.new(account_id: account.id, file_type: file_type, external_url: meta_url)
+      attachment.file.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'avatar.png', content_type: 'image/png') if with_file
+      attachment.save!
+      attachment
+    end
+
+    shared_examples 'serves the stored file' do
+      it 'uses our stored file for data_url and thumb_url, keeping the Meta URL as origin' do
+        attachment = build_attachment(incoming_message)
+
+        event_data = attachment.push_event_data
+        expect(event_data[:data_url]).to eq(attachment.file_url)
+        expect(event_data[:data_url]).not_to eq(meta_url)
+        expect(event_data[:thumb_url]).to eq(attachment.thumb_url)
+        expect(event_data[:thumb_url]).to be_present
+        expect(event_data[:external_url]).to eq(meta_url)
+      end
+
+      it 'uses our stored file for videos too' do
+        attachment = build_attachment(incoming_message, file_type: :video)
+
+        expect(attachment.push_event_data[:data_url]).to eq(attachment.file_url)
+      end
+
+      it 'uses the Meta URL when there is no stored file' do
+        attachment = build_attachment(incoming_message, with_file: false)
+
+        event_data = attachment.push_event_data
+        expect(event_data[:data_url]).to eq(meta_url)
+        expect(event_data[:thumb_url]).to eq('')
+      end
+
+      # Meta forbids serving stored story media: the Meta URL stops opening once the story expires
+      # or is deleted, and the view shows its placeholder.
+      %w[story_mention ig_story ig_story_reply].each do |image_type|
+        it "keeps the Meta URL for #{image_type} media even with a stored file" do
+          incoming_message.update!(content_attributes: { image_type: image_type })
+          attachment = build_attachment(incoming_message)
+
+          event_data = attachment.push_event_data
+          expect(event_data[:data_url]).to eq(meta_url)
+          expect(event_data[:thumb_url]).to eq(meta_url)
+        end
+      end
+
+      it 'keeps the Meta URL for an ig_story attachment even with a stored file' do
+        attachment = build_attachment(incoming_message, file_type: :ig_story)
+
+        expect(attachment.push_event_data[:data_url]).to eq(meta_url)
+      end
+
+      it 'keeps the Meta URL when the conversa_instagram key is off' do
+        account.disable_features!('conversa_instagram')
+        attachment = build_attachment(incoming_message)
+
+        event_data = attachment.push_event_data
+        expect(event_data[:data_url]).to eq(meta_url)
+        expect(event_data[:thumb_url]).to eq(meta_url)
+      end
     end
 
     context 'when conversation type is instagram_direct_message' do
@@ -162,17 +227,18 @@ RSpec.describe Attachment do
         create(:conversation, account: account, inbox: instagram_inbox,
                               additional_attributes: { 'type' => 'instagram_direct_message' })
       end
-      let(:instagram_message) { create(:message, account: account, inbox: instagram_inbox, conversation: conversation, message_type: :incoming) }
+      let(:incoming_message) { create(:message, account: account, inbox: instagram_inbox, conversation: conversation, message_type: :incoming) }
 
-      it 'uses external_url for data_url and thumb_url' do
-        attachment = instagram_message.attachments.new(account_id: account.id, file_type: :image, external_url: 'https://instagram.com/image.jpg')
-        attachment.file.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'avatar.png', content_type: 'image/png')
-        attachment.save!
+      it_behaves_like 'serves the stored file'
+    end
 
-        event_data = attachment.push_event_data
-        expect(event_data[:data_url]).to eq('https://instagram.com/image.jpg')
-        expect(event_data[:thumb_url]).to eq('https://instagram.com/image.jpg')
-      end
+    context 'when inbox is Channel::Instagram (direct login)' do
+      let(:instagram_channel) { create(:channel_instagram, account: account) }
+      let(:direct_inbox) { instagram_channel.inbox }
+      let(:conversation) { create(:conversation, account: account, inbox: direct_inbox) }
+      let(:incoming_message) { create(:message, account: account, inbox: direct_inbox, conversation: conversation, message_type: :incoming) }
+
+      it_behaves_like 'serves the stored file'
     end
 
     context 'when conversation type is not instagram_direct_message' do
@@ -180,15 +246,14 @@ RSpec.describe Attachment do
         create(:conversation, account: account, inbox: instagram_inbox,
                               additional_attributes: { 'type' => 'other_type' })
       end
-      let(:instagram_message) { create(:message, account: account, inbox: instagram_inbox, conversation: conversation, message_type: :incoming) }
+      let(:incoming_message) { create(:message, account: account, inbox: instagram_inbox, conversation: conversation, message_type: :incoming) }
 
-      it 'uses file_url for data_url instead of external_url' do
-        attachment = instagram_message.attachments.new(account_id: account.id, file_type: :image, external_url: 'https://instagram.com/image.jpg')
-        attachment.file.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'avatar.png', content_type: 'image/png')
-        attachment.save!
+      it 'uses file_url and does not expose the external_url' do
+        attachment = build_attachment(incoming_message)
 
         event_data = attachment.push_event_data
-        expect(event_data[:data_url]).not_to eq('https://instagram.com/image.jpg')
+        expect(event_data[:data_url]).to eq(attachment.file_url)
+        expect(event_data).not_to have_key(:external_url)
       end
     end
 
@@ -199,30 +264,27 @@ RSpec.describe Attachment do
       end
       let(:outgoing_message) { create(:message, account: account, inbox: instagram_inbox, conversation: conversation, message_type: :outgoing) }
 
-      it 'does not override data_url with external_url' do
-        attachment = outgoing_message.attachments.new(account_id: account.id, file_type: :image, external_url: 'https://instagram.com/image.jpg')
-        attachment.file.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'avatar.png', content_type: 'image/png')
-        attachment.save!
+      it 'uses file_url and does not expose the external_url' do
+        attachment = build_attachment(outgoing_message)
 
         event_data = attachment.push_event_data
-        expect(event_data[:data_url]).not_to eq('https://instagram.com/image.jpg')
+        expect(event_data[:data_url]).to eq(attachment.file_url)
+        expect(event_data).not_to have_key(:external_url)
       end
     end
 
-    context 'when inbox is Channel::Instagram (direct login)' do
-      let(:instagram_channel) { create(:channel_instagram, account: account) }
-      let(:direct_inbox) { instagram_channel.inbox }
-      let(:conversation) { create(:conversation, account: account, inbox: direct_inbox) }
-      let(:incoming_message) { create(:message, account: account, inbox: direct_inbox, conversation: conversation, message_type: :incoming) }
+    context 'when inbox is WhatsApp' do
+      let(:whatsapp_inbox) { create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false).inbox }
+      let(:conversation) { create(:conversation, account: account, inbox: whatsapp_inbox) }
+      let(:incoming_message) { create(:message, account: account, inbox: whatsapp_inbox, conversation: conversation, message_type: :incoming) }
 
-      it 'uses external_url for data_url and thumb_url' do
-        attachment = incoming_message.attachments.new(account_id: account.id, file_type: :image, external_url: 'https://instagram.com/image.jpg')
-        attachment.file.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'avatar.png', content_type: 'image/png')
-        attachment.save!
+      it 'keeps serving the stored file, without the external_url' do
+        attachment = build_attachment(incoming_message)
 
         event_data = attachment.push_event_data
-        expect(event_data[:data_url]).to eq('https://instagram.com/image.jpg')
-        expect(event_data[:thumb_url]).to eq('https://instagram.com/image.jpg')
+        expect(event_data[:data_url]).to eq(attachment.file_url)
+        expect(event_data[:thumb_url]).to eq(attachment.thumb_url)
+        expect(event_data).not_to have_key(:external_url)
       end
     end
   end

@@ -3,7 +3,14 @@ import { mapGetters } from 'vuex';
 import { shouldBeUrl } from 'shared/helpers/Validators';
 import { useAlert } from 'dashboard/composables';
 import { useVuelidate } from '@vuelidate/core';
-import { useCanManage } from 'dashboard/composables/useCanManage';
+import {
+  useCanManage,
+  usePermissionGranted,
+} from 'dashboard/composables/useCanManage';
+import {
+  INTEGRATION_MANAGE_PERMISSION,
+  TOKEN_MANAGE_PERMISSION,
+} from 'dashboard/constants/permissions';
 import Avatar from 'next/avatar/Avatar.vue';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
@@ -49,6 +56,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import SpinnerLoader from 'dashboard/components-next/spinner/Spinner.vue';
 import {
   getInboxIconByType,
+  tipoDoIconeDaCaixa,
   getInboxIdentifier,
   INBOX_TYPES,
 } from 'dashboard/helper/inbox';
@@ -109,7 +117,15 @@ export default {
   },
   mixins: [inboxMixin],
   setup() {
-    return { v$: useVuelidate(), canManage: useCanManage('inbox_manage') };
+    // Trocar a credencial do canal fica com integration_manage; os segredos da plataforma, com token_manage (#2027).
+    return {
+      v$: useVuelidate(),
+      canManage: useCanManage('inbox_manage'),
+      canManageIntegrations: usePermissionGranted(
+        INTEGRATION_MANAGE_PERMISSION
+      ),
+      canManageTokens: usePermissionGranted(TOKEN_MANAGE_PERMISSION),
+    };
   },
   data() {
     return {
@@ -364,12 +380,14 @@ export default {
       return this.$store.getters['inboxes/getInbox'](this.currentInboxId);
     },
     inboxIcon() {
-      const {
+      const { medium, voice_enabled: voiceEnabled } = this.inbox;
+      // #2255: o WhatsApp do celular (caixa API do WAHA) leva o ícone do WhatsApp.
+      return getInboxIconByType(
+        tipoDoIconeDaCaixa(this.inbox),
         medium,
-        channel_type: type,
-        voice_enabled: voiceEnabled,
-      } = this.inbox;
-      return getInboxIconByType(type, medium, 'line', voiceEnabled);
+        'line',
+        voiceEnabled
+      );
     },
     bannerMaxWidth() {
       const narrowTabs = ['collaborators', 'bot-configuration'];
@@ -465,6 +483,17 @@ export default {
         this.isAWhatsAppCloudChannel &&
         this.isEmbeddedSignupWhatsApp &&
         this.inbox.reauthorization_required
+      );
+    },
+    // Sem integration_manage, a tela só avisa que o canal caiu, sem o botão de reconectar.
+    needsReconnection() {
+      return (
+        this.microsoftUnauthorized ||
+        this.facebookUnauthorized ||
+        this.googleUnauthorized ||
+        this.instagramUnauthorized ||
+        this.tiktokUnauthorized ||
+        this.whatsappUnauthorized
       );
     },
     whatsappRegistrationIncomplete() {
@@ -779,7 +808,10 @@ export default {
           channel: {
             widget_color: this.inbox.widget_color,
             website_url: this.channelWebsiteUrl,
-            webhook_url: this.webhookUrl,
+            // O servidor só barra endereço trocado; sem a chave, nem envia (#2027).
+            ...(this.canManageIntegrations
+              ? { webhook_url: this.webhookUrl }
+              : {}),
             welcome_title: this.channelWelcomeTitle || '',
             welcome_tagline: this.channelWelcomeTagline || '',
             selectedFeatureFlags: this.selectedFeatureFlags,
@@ -879,43 +911,54 @@ export default {
     </SettingIntroBanner>
     <section class="w-full overflow-auto py-8">
       <div class="max-w-7xl mx-auto w-full">
-        <MicrosoftReauthorize
-          v-if="microsoftUnauthorized"
-          :inbox="inbox"
-          class="mb-4"
+        <template v-if="canManageIntegrations">
+          <MicrosoftReauthorize
+            v-if="microsoftUnauthorized"
+            :inbox="inbox"
+            class="mb-4"
+            :class="bannerMaxWidth"
+          />
+          <FacebookReauthorize
+            v-if="facebookUnauthorized"
+            :inbox="inbox"
+            class="mb-4"
+            :class="bannerMaxWidth"
+          />
+          <GoogleReauthorize
+            v-if="googleUnauthorized"
+            :inbox="inbox"
+            class="mb-4"
+            :class="bannerMaxWidth"
+          />
+          <InstagramReauthorize
+            v-if="instagramUnauthorized"
+            :inbox="inbox"
+            class="mb-4"
+            :class="bannerMaxWidth"
+          />
+          <TiktokReauthorize
+            v-if="tiktokUnauthorized"
+            :inbox="inbox"
+            class="mb-4"
+            :class="bannerMaxWidth"
+          />
+          <WhatsappReauthorize
+            v-if="whatsappUnauthorized"
+            :whatsapp-registration-incomplete="whatsappRegistrationIncomplete"
+            :inbox="inbox"
+            class="mb-4"
+            :class="bannerMaxWidth"
+          />
+        </template>
+        <Banner
+          v-else-if="needsReconnection"
+          color="ruby"
+          class="mx-6 mb-4"
           :class="bannerMaxWidth"
-        />
-        <FacebookReauthorize
-          v-if="facebookUnauthorized"
-          :inbox="inbox"
-          class="mb-4"
-          :class="bannerMaxWidth"
-        />
-        <GoogleReauthorize
-          v-if="googleUnauthorized"
-          :inbox="inbox"
-          class="mb-4"
-          :class="bannerMaxWidth"
-        />
-        <InstagramReauthorize
-          v-if="instagramUnauthorized"
-          :inbox="inbox"
-          class="mb-4"
-          :class="bannerMaxWidth"
-        />
-        <TiktokReauthorize
-          v-if="tiktokUnauthorized"
-          :inbox="inbox"
-          class="mb-4"
-          :class="bannerMaxWidth"
-        />
-        <WhatsappReauthorize
-          v-if="whatsappUnauthorized"
-          :whatsapp-registration-incomplete="whatsappRegistrationIncomplete"
-          :inbox="inbox"
-          class="mb-4"
-          :class="bannerMaxWidth"
-        />
+        >
+          {{ $t('INBOX_MGMT.RECONNECTION_REQUIRED') }}
+          {{ $t('INBOX_MGMT.RECONNECTION_ASK_INTEGRATIONS') }}
+        </Banner>
         <DuplicateInboxBanner
           v-if="hasDuplicateInstagramInbox"
           :content="$t('INBOX_MGMT.ADD.INSTAGRAM.DUPLICATE_INBOX_BANNER')"
@@ -1001,6 +1044,14 @@ export default {
               <woot-input
                 v-model="webhookUrl"
                 class="[&>input]:!mb-0"
+                :readonly="!canManageIntegrations"
+                :help-text="
+                  canManageIntegrations
+                    ? ''
+                    : $t(
+                        'INBOX_MGMT.ADD.WEBSITE_CHANNEL.CHANNEL_WEBHOOK_URL.ONLY_INTEGRATIONS'
+                      )
+                "
                 :class="{ error: v$.webhookUrl.$error }"
                 :placeholder="
                   $t(
@@ -1028,6 +1079,7 @@ export default {
             >
               <AccessToken
                 :value="inbox.secret"
+                :show-reset-button="canManageTokens"
                 @on-copy="copyWebhookSecret"
                 @on-reset="resetWebhookSecret"
               />

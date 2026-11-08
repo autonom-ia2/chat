@@ -5,7 +5,12 @@ import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
-import { errorMessageKey, money, relativeTime } from '../metaAdsHelpers';
+import {
+  errorMessageKey,
+  latestPixel,
+  money,
+  relativeTime,
+} from '../metaAdsHelpers';
 
 // Anúncios da Meta (#1047), passo 2: a conta de anúncios em lista, sem digitar ID. A conta com
 // mais gasto e o código do site (Pixel) usado mais recentemente vêm escolhidos; o código do site
@@ -16,6 +21,8 @@ const props = defineProps({
   mode: { type: String, required: true },
   partnerName: { type: String, default: 'Hub2You' },
   current: { type: Object, default: null },
+  // Aberto por "Alterar", quem abriu já mostra "Voltar" no topo (#2054): o do rodapé sai para não haver dois.
+  showBack: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(['saved', 'back']);
@@ -62,13 +69,6 @@ const viaLabel = computed(() =>
   })
 );
 
-const latestPixel = list =>
-  [...list].sort((a, b) =>
-    String(b.last_fired_time || '').localeCompare(
-      String(a.last_fired_time || '')
-    )
-  )[0];
-
 const loadPixels = async () => {
   pixels.value = null;
   pickingPixel.value = false;
@@ -84,7 +84,9 @@ const loadPixels = async () => {
     const keep = pixels.value.find(
       pixel => pixel.id === props.current?.pixel?.id
     );
-    pixelId.value = keep?.id || latestPixel(pixels.value)?.id || '';
+    const noSite = props.current?.no_site && !props.current?.pixel;
+    pixelId.value =
+      keep?.id || (noSite ? '' : latestPixel(pixels.value)?.id || '');
   } catch (error) {
     pixels.value = [];
     saveError.value = errorText(error);
@@ -130,6 +132,7 @@ const save = async () => {
       mode: props.mode,
       adAccountId: chosen.value.id,
       pixelId: firstRelease ? null : pixelId.value || null,
+      noSite: !firstRelease && !pixelId.value,
     });
     if (firstRelease) {
       accounts.value = accounts.value.map(item =>
@@ -230,6 +233,7 @@ onMounted(load);
           @click="load"
         />
         <Button
+          v-if="showBack"
           class="!min-h-11 !rounded-xl"
           size="sm"
           variant="ghost"
@@ -402,6 +406,7 @@ onMounted(load);
           @click="save"
         />
         <Button
+          v-if="showBack"
           class="!min-h-11 !rounded-xl"
           variant="ghost"
           color="slate"

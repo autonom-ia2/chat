@@ -11,6 +11,8 @@ import NumerosBloco from './NumerosBloco.vue';
 import NumerosIaAjudou from './NumerosIaAjudou.vue';
 import NumerosComoContamos from './NumerosComoContamos.vue';
 import NumerosEspera from './NumerosEspera.vue';
+import NumerosMetasGaveta from './NumerosMetasGaveta.vue';
+import { usePodeDefinirMetas } from './usePodeDefinirMetas';
 import { destino } from './destinos';
 import { larguraDe } from './barras';
 import { P } from './numerosTextos';
@@ -39,6 +41,9 @@ const {
   rotuloDoMes,
 } = useNumerosDoMes({ t, locale });
 const comoContamos = ref(null);
+// #1991: quem define as metas abre a gaveta pelo topo; salvar recarrega a tela.
+const podeDefinirMetas = usePodeDefinirMetas();
+const gavetaMetas = ref(null);
 
 const opcoesDeVisao = computed(() =>
   props.visoes.map(v => ({
@@ -143,6 +148,8 @@ const destinoDoTopo = computed(() => {
           :rotulo-do-mes="rotuloDoMes"
           :moeda="dados.moeda"
           :destino="destinoDoTopo"
+          :pode-definir-metas="podeDefinirMetas && !dados.mes.fechado"
+          @metas="gavetaMetas?.abrir()"
         />
         <NumerosProximoPasso :itens="dados.proximo" :destino-de="destinoDe" />
         <NumerosBloco
@@ -203,5 +210,10 @@ const destinoDoTopo = computed(() => {
     </main>
 
     <NumerosComoContamos ref="comoContamos" :fuso="rotuloDoFuso(fuso)" />
+    <NumerosMetasGaveta
+      v-if="podeDefinirMetas"
+      ref="gavetaMetas"
+      @salvo="carregar"
+    />
   </div>
 </template>

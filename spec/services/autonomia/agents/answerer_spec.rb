@@ -24,6 +24,22 @@ RSpec.describe Autonomia::Agents::Answerer do
     )
   end
 
+  describe 'mensagem de quando não souber (#2381)' do
+    it 'pede o bloco do dono só quando a fala sai como está (trust_instruction)' do
+      agent = create_agent('with_knowledge' => false)
+      expect(Autonomia::Agents::PromptBuilder).to receive(:new).with(hash_including(mensagem_do_dono: true)).and_call_original
+
+      described_class.new(agent: agent, query: 'oi', trust_instruction: true).answer
+    end
+
+    it 'não pede o bloco no caminho com portão (copiloto e Guia)' do
+      agent = create_agent('with_knowledge' => false)
+      expect(Autonomia::Agents::PromptBuilder).to receive(:new).with(hash_including(mensagem_do_dono: false)).and_call_original
+
+      described_class.new(agent: agent, query: 'oi').answer
+    end
+  end
+
   describe 'knowledge retrieval skip (C3)' do
     it 'never instantiates the Retriever for an agent with with_knowledge=false and still answers' do
       # Arrange
@@ -241,10 +257,9 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(result.answered_from_knowledge).to be(false)
     end
 
-    it 'blocks the natural third-person form even with a LOW configured threshold' do
-      # Arrange - "O plano cobre..." (sem 1a pessoa) + threshold 0.1: o ramo direto do portao
-      # independe do threshold (Codex HIGH 2a rodada).
-      allow(agent_with_kb).to receive(:confidence_threshold).and_return(0.1)
+    it 'blocks the natural third-person form, whatever the threshold' do
+      # Arrange - "O plano cobre..." (sem 1a pessoa): o ramo direto do portao independe do
+      # threshold (Codex HIGH 2a rodada).
       stub_model(reply: 'O plano cobre COVID e o prazo de reembolso e de 30 dias.', confidence: 0.95,
                  should_handoff: false, handoff_reason: nil, used_snippet_ids: [],
                  answered_from_knowledge: false)

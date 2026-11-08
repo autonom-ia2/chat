@@ -19,6 +19,7 @@ RSpec.describe Shopify::IntegrationHelper do
 
       expect(decoded_token['sub']).to eq(account_id)
       expect(decoded_token['iat']).to eq(current_time.to_i)
+      expect(decoded_token['exp']).to eq((current_time + described_class::STATE_TTL).to_i)
     end
 
     context 'when client secret is not configured' do
@@ -45,7 +46,7 @@ RSpec.describe Shopify::IntegrationHelper do
     let(:account_id) { 1 }
     let(:client_secret) { 'test_secret' }
     let(:valid_token) do
-      JWT.encode({ sub: account_id, iat: Time.current.to_i }, client_secret, 'HS256')
+      JWT.encode({ sub: account_id, iat: Time.current.to_i, exp: 10.minutes.from_now.to_i }, client_secret, 'HS256')
     end
 
     before do
@@ -70,6 +71,15 @@ RSpec.describe Shopify::IntegrationHelper do
       it 'returns nil' do
         expect(verify_shopify_token(valid_token)).to be_nil
       end
+    end
+
+    # #2027: a state without expiry, or past it, cannot connect a store.
+    it 'rejects a token without exp or already expired' do
+      without_exp = JWT.encode({ sub: account_id, iat: Time.current.to_i }, client_secret, 'HS256')
+      expired = JWT.encode({ sub: account_id, iat: 1.hour.ago.to_i, exp: 1.minute.ago.to_i }, client_secret, 'HS256')
+
+      expect(verify_shopify_token(without_exp)).to be_nil
+      expect(verify_shopify_token(expired)).to be_nil
     end
 
     context 'when token is invalid' do

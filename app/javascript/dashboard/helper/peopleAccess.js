@@ -5,6 +5,7 @@
 import {
   DELEGATION_KEYS,
   GRANT_ABOVE_OWN_PERMISSION,
+  KEY_DEPENDENCIES,
 } from 'dashboard/constants/permissions';
 
 const VIEW_SUFFIX = '_view';
@@ -35,9 +36,29 @@ export const reachesKeys = (giver, keys = []) =>
   reachesEverything(giver) ||
   keys.every(key => !DELEGATION_KEYS.includes(key) && holdsKey(giver, key));
 
-// No role means a plain agent, always allowed.
+// Mirror of CustomRole.with_implied_permissions (enterprise/app/models/custom_role.rb, #2124): an editing CRM key
+// brings crm_view. The server stores roles this way and checks reach on these keys (GrantGuard#reach?).
+export const CRM_EDITING_KEYS = [
+  'crm_manage_cards',
+  'crm_move_cards',
+  'crm_manage_pipelines',
+  'crm_manage_ai',
+  'crm_delete_cards',
+  'crm_metas_manage',
+  'crm_export',
+];
+
+export const withImpliedPermissions = (permissions = []) => {
+  if (permissions.includes('crm_view')) return permissions;
+  if (!permissions.some(key => CRM_EDITING_KEYS.includes(key)))
+    return permissions;
+  return [...permissions, 'crm_view'];
+};
+
+// No role means a plain agent, always allowed. The role is read with its implied keys, as GrantGuard#reach? does: an
+// old role saved with crm_manage_cards and no crm_view is out of reach for a giver without crm_view.
 export const reachesRole = (giver, role) =>
-  !role || reachesKeys(giver, role.permissions || []);
+  !role || reachesKeys(giver, withImpliedPermissions(role.permissions || []));
 
 // Why the giver cannot edit or remove this member, or null when they can.
 export const memberLockReason = (giver, agent, roles = []) => {
@@ -58,10 +79,13 @@ export const roleLockReason = (giver, role) => {
   return reachesRole(giver, role) ? null : LOCK_REASONS.ABOVE;
 };
 
-// Why the giver cannot put this key in a role, or null when they can.
+// Why the giver cannot put this key in a role, or null when they can. A key that needs another (KEY_DEPENDENCIES,
+// #2075) is locked by the other one too: the role editor turns both on together.
 export const keyLockReason = (giver, key) => {
-  if (reachesKeys(giver, [key])) return null;
-  return DELEGATION_KEYS.includes(key)
+  const keys = KEY_DEPENDENCIES[key] ? [key, KEY_DEPENDENCIES[key]] : [key];
+  const locked = keys.find(item => !reachesKeys(giver, [item]));
+  if (!locked) return null;
+  return DELEGATION_KEYS.includes(locked)
     ? LOCK_REASONS.DELEGATION
     : LOCK_REASONS.MISSING;
 };

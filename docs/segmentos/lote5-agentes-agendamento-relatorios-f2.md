@@ -10,7 +10,7 @@ São 56 textos do painel e 7 do servidor.
 
 - **Agentes de IA:**
   - os modelos prontos falam de seguro: "Atender quem quer fazer seguro", a segunda via do boleto, "Oi, bati o carro";
-  - as perguntas de teste conferem se o agente não inventa preço nem confirma cobertura ("Quanto fica o seguro do meu carro?", "Meu seguro cobre carro reserva?");
+  - as perguntas de teste deixam o corretor ver como o agente responde a preço e cobertura ("Quanto fica o seguro do meu carro?", "Meu seguro cobre carro reserva?"); são só sugestões de pergunta, sem conferência automática;
   - as ideias do primeiro passo são de corretora (auto, vários seguros, vida, empresarial);
   - a base de conhecimento pede condições gerais e lista de documentos, e não cardápio nem tabela de preços.
 - **Automação e robôs:** a descrição e os exemplos falam da etiqueta do seguro e de passar a conversa para quem cuida.

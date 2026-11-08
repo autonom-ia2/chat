@@ -4,6 +4,7 @@ import { useFileUpload } from 'dashboard/composables/useFileUpload';
 // (useFileUpload) e cada arquivo entra na lista `anexos` (v-model da gaveta).
 // #1809 — usado pelo "Anexar arquivo" (site) e pelo "+" do e-mail novo. O arquivo
 // escolhido no "+" não traz `id`; ganha um aqui, para a lista poder tirar só ele.
+// #1988: também pelo "+" e pelo microfone da caixa do WhatsApp.
 let ultimoId = 0;
 const comId = recurso => {
   if (recurso.id) return recurso;
@@ -25,6 +26,8 @@ export const useAnexarNaNovaConversa = anexos => {
             isPrivate: false,
             thumb: leitor.result,
             blobSignedId: blob?.signed_id,
+            // #1988: a gravação do microfone; sai como mensagem de voz.
+            isVoiceMessage: Boolean(file.isVoiceMessage),
           },
         ];
       };

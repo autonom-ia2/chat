@@ -8,7 +8,7 @@ e nunca são tocados por este runbook.
 
 | Parte | Onde mora | Como chega |
 |---|---|---|
-| 13 desenhos (MJML + HTML compilado) | `db/seeds/email_templates/` (`catalog.json`, `<categoria>/*.mjml`, `*.html`) | Vão na imagem (`COPY . /app`). **O deploy não grava no banco**: o blue-green só roda `db:chatwoot_prepare` (migrations). |
+| 16 desenhos (MJML + HTML compilado; 3 só para corretoras, #2037) | `db/seeds/email_templates/` (`catalog.json`, `<categoria>/*.mjml`, `*.html`) | Vão na imagem (`COPY . /app`). **O deploy não grava no banco**: o blue-green só roda `db:chatwoot_prepare` (migrations). |
 | Linhas da galeria | tabela `email_campaign_templates` | Só pela rake `email_campaign_templates:seed`, rodada **depois** do deploy pelo workflow `ops-email-templates-seed.yml`. |
 | 5 fotos | `public/email-templates/biblioteca/*.jpg` | Vão na imagem e são servidas pelo próprio Rails (`RAILS_SERVE_STATIC_FILES`, padrão ligado), com `Cache-Control` de 1 ano. |
 | Nomes e categorias na tela | `WORKSPACE.MODELS` e `GALLERY.CATEGORIES` em `campaign.json` (en, pt_BR) | Vão no build do painel, no deploy. |
@@ -24,6 +24,33 @@ aparece como `keep (global outside the catalog)` e fica.
 
 Campanhas criadas a partir dos modelos antigos guardam uma cópia do corpo; não têm vínculo com a tabela e não
 mudam.
+
+## Modelos de um ramo (#2037)
+
+Uma entrada do `catalog.json` com `"segmento"` (uma camada de pacote, como `seguros/corretora`) só aparece para a
+conta que tem essa camada em `Autonomia::Segmentos::Pacotes.camadas` (pacotes ligados no stack e a conta marcada
+no Super Admin). O filtro mora em `EmailCampaignTemplate.for_account`, usado pela galeria e pela policy. Hoje são
+3, de corretora: "Renovação do seguro chegando", "Boas-vindas ao segurado" e "Parcela do seguro em aberto".
+
+A linha do banco é global como as outras; quem esconde é o catálogo. Por isso, **voltar só o código mostra os 3
+para todas as contas**: o catálogo antigo não conhece o `segmento`. Rollback de código sempre junto com a remoção
+das 3 linhas (seção Rollback, item 4).
+
+### Publicação dos 3 de seguros
+
+Mesmo passo a passo de baixo, com estes esperados:
+
+- DRY-RUN: `create=3 update=0 unchanged=13 retire=0 unknown_kept=0` (`create:` para `seguros-renovacao`,
+  `seguros-boas-vindas` e `seguros-parcela-em-aberto`).
+- Os 3 não têm foto: o passo 2 (fotos no ar) continua valendo para os 13.
+- Snapshot do passo 4: dispensável. O apply só cria as 3 linhas e não muda as outras (`unchanged=13`).
+- Verificação extra (leitura):
+  ```sql
+  SELECT count(*) FROM email_campaign_templates
+  WHERE account_id IS NULL AND name IN ('Renovação do seguro chegando', 'Boas-vindas ao segurado', 'Parcela do seguro em aberto');
+  ```
+  Esperado `3`. Na tela: uma conta corretora vê os 3 na galeria; a conta 16 sem segmento não vê.
+- DRY-RUN de novo: `unchanged=16`.
 
 ## O que a rake faz
 
@@ -140,12 +167,22 @@ O deploy em si não muda dados; o apply é que troca a galeria. Rollback, do mai
    ```
    Rodar a verificação: `antigos=14 novos=0`.
 3. **Voltar o código**: `git revert -m 1 <merge do PR>` → PR → merge → deploy, ou o rollback do blue-green
-   (`workflow_dispatch` com `action=rollback`, `confirm_production=true`) para a imagem anterior. Atenção: o
+   (`workflow_dispatch` com `action=rollback`, `confirm_production=true` e `esperado_sha=<SHA de antes do deploy>`, #1979) para a imagem anterior. Atenção: o
    revert sozinho **não** volta a galeria — a rake antiga não apaga os 13 nem existe no runner de ops depois do
    revert — e a imagem antiga não tem `public/email-templates/`, então as fotos dos 13 dariam 404. Código antigo
    só junto com o passo 2.
 
-Nenhum dos três toca modelos das contas nem campanhas.
+4. **Tirar os 3 de seguros (#2037)** (prod write, só com OK do Rodrigo), por psql via SSM, numa transação:
+   ```sql
+   BEGIN;
+   DELETE FROM email_campaign_templates
+   WHERE account_id IS NULL AND name IN ('Renovação do seguro chegando', 'Boas-vindas ao segurado', 'Parcela do seguro em aberto');
+   COMMIT;
+   ```
+   Esperado `DELETE 3`. Obrigatório junto com o revert do código do #2037; sozinho, só tira os 3 da galeria
+   das corretoras. Campanhas já criadas a partir deles guardam a própria cópia e não mudam.
+
+Nenhum deles toca modelos das contas nem campanhas.
 
 ## Desenvolvimento
 
@@ -155,7 +192,7 @@ Nenhum dos três toca modelos das contas nem campanhas.
 - No CI, `spec/services/email_campaigns/quality_gate_library_spec.rb` roda o mesmo gate em cada modelo e falha se
   algum `.html` versionado estiver diferente da recompilação, se o rodapé não for idêntico nos 13 ou se faltar
   nome/categoria em `en` ou `pt_BR`.
-- Modelo novo: entrada em `catalog.json` (`key`, `name`, `path`, `category`), MJML em `<categoria>/`, foto em
+- Modelo novo: entrada em `catalog.json` (`key`, `name`, `path`, `category` e, se for de um ramo, `segmento`), MJML em `<categoria>/`, foto em
   `public/email-templates/biblioteca/` (≤ 200 KB, `alt`), nome em `WORKSPACE.MODELS.<key>` e, se a categoria for
   nova, `GALLERY.CATEGORIES.<categoria>` (en + pt_BR). Modelo retirado: tirar do catálogo e pôr o nome em
   `retired.json`.

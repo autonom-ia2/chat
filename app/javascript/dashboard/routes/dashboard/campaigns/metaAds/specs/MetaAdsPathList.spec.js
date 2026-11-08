@@ -33,7 +33,7 @@ const reply = list =>
 let mounted = null;
 const mountList = async (props = {}) => {
   mounted = mount(MetaAdsPathList, {
-    props: { step: 'quotes', days: 30, currency: 'BRL', ...props },
+    props: { step: 'quotes', period: '30d', currency: 'BRL', ...props },
     global: {
       mocks: { $t: (key, values) => `${key} ${JSON.stringify(values || {})}` },
       stubs: {
@@ -62,9 +62,12 @@ describe('Anúncios da Meta · lista de uma etapa do caminho (#1110, F5)', () =>
 
   it('asks for the step and the period and shows the title and the total', async () => {
     reply({ step: 'quotes', days: 7, total: 2, items: [item(), item()] });
-    const wrapper = await mountList({ days: 7 });
+    const wrapper = await mountList({ period: '7d' });
 
-    expect(CrmMetaAdsConnectionAPI.panelList).toHaveBeenCalledWith('quotes', 7);
+    expect(CrmMetaAdsConnectionAPI.panelList).toHaveBeenCalledWith(
+      'quotes',
+      '7d'
+    );
     expect(wrapper.find('[data-panel-path-list]').text()).toContain(
       `${LIST}.TITLE_QUOTES`
     );

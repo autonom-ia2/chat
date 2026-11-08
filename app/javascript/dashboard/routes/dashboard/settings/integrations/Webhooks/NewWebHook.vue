@@ -50,27 +50,33 @@ const handleCopySecret = async () => {
         "
       />
       <div class="px-8 pb-6">
-        <p class="text-sm text-n-slate-11 mb-4">
-          {{ t('INTEGRATION_SETTINGS.WEBHOOK.SECRET.CREATED_DESC') }}
+        <!-- O servidor só manda a chave de assinatura para administrador ou token_manage (#2027). -->
+        <template v-if="createdWebhook.secret">
+          <p class="text-sm text-n-slate-11 mb-4">
+            {{ t('INTEGRATION_SETTINGS.WEBHOOK.SECRET.CREATED_DESC') }}
+          </p>
+          <label>
+            {{ t('INTEGRATION_SETTINGS.WEBHOOK.SECRET.LABEL') }}
+            <div class="flex items-center gap-2">
+              <input
+                :value="createdWebhook.secret"
+                type="text"
+                readonly
+                class="!mb-0 font-mono"
+              />
+              <NextButton
+                v-tooltip.top="t('INTEGRATION_SETTINGS.WEBHOOK.SECRET.COPY')"
+                icon="i-lucide-copy"
+                slate
+                faded
+                @click="handleCopySecret"
+              />
+            </div>
+          </label>
+        </template>
+        <p v-else class="text-sm text-n-slate-11">
+          {{ t('INTEGRATION_SETTINGS.WEBHOOK.SECRET.HELD_BY_TOKENS') }}
         </p>
-        <label>
-          {{ t('INTEGRATION_SETTINGS.WEBHOOK.SECRET.LABEL') }}
-          <div class="flex items-center gap-2">
-            <input
-              :value="createdWebhook.secret"
-              type="text"
-              readonly
-              class="!mb-0 font-mono"
-            />
-            <NextButton
-              v-tooltip.top="t('INTEGRATION_SETTINGS.WEBHOOK.SECRET.COPY')"
-              icon="i-lucide-copy"
-              slate
-              faded
-              @click="handleCopySecret"
-            />
-          </div>
-        </label>
         <div class="flex justify-end mt-4">
           <NextButton
             blue

@@ -283,3 +283,46 @@ describe('useCardHistorico — funil de Atender', () => {
     );
   });
 });
+
+// #1922: o card que a IA arquivou como "não é negócio" mostra a IA como autora
+// e o motivo em texto nosso; o arquivamento à mão continua do jeito de sempre.
+describe('useCardHistorico — card arquivado pela IA', () => {
+  const REASONING = 'Fornecedor oferecendo serviço';
+
+  it('shows the AI as the actor and the reason in our own words', () => {
+    const arquivou = activity(1, 'archive', {
+      by: 'ai',
+      motivo: 'fora_do_negocio',
+      confidence: 0.9,
+      reasoning: REASONING,
+    });
+    const item = describeActivity(arquivou);
+
+    expect(item.actor).toBe(t('CRM_CARD.HISTORICO.EVENTO.AI_ACTOR'));
+    expect(item.detail).toBe(
+      t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_NAO_E_NEGOCIO')
+    );
+    expect(item.detail).not.toContain(REASONING);
+  });
+
+  it('names a repeated card', () => {
+    const repetido = activity(1, 'archive', { by: 'ai', motivo: 'duplicado' });
+
+    expect(describeActivity(repetido).detail).toBe(
+      t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_DUPLICADO')
+    );
+  });
+
+  it('keeps a manual archive as before', () => {
+    const aMao = activity(
+      1,
+      'archive',
+      {},
+      { actor_type: 'user', actor_name: 'Ana' }
+    );
+    const item = describeActivity(aMao);
+
+    expect(item.actor).toBe('Ana');
+    expect(item.detail).toBe('');
+  });
+});

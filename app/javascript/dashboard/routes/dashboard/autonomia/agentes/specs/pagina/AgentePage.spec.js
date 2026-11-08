@@ -26,7 +26,10 @@ vi.mock('dashboard/composables/store', async () => {
 });
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
-  return { useCanManage: () => computed(() => estado.podeGerenciar) };
+  return {
+    useCanManage: () => computed(() => estado.podeGerenciar),
+    usePermissionGranted: () => computed(() => true),
+  };
 });
 vi.mock('../../composables/usePermissoesDaJornada', async () => {
   const { computed } = await import('vue');
@@ -84,6 +87,14 @@ const materialApi = vi.hoisted(() => ({
   pedirAutoteste: vi.fn(),
 }));
 vi.mock('dashboard/api/autonomia/material', () => ({ default: materialApi }));
+// #1429 F3 — a base de seguros do agente.
+const baseApi = vi.hoisted(() => ({
+  ler: vi.fn(),
+  comparar: vi.fn(),
+  atualizar: vi.fn(),
+  desfazer: vi.fn(),
+}));
+vi.mock('dashboard/api/autonomia/baseDoAgente', () => ({ default: baseApi }));
 
 const no = seletor => document.querySelector(seletor);
 const todos = seletor => [...document.querySelectorAll(seletor)];
@@ -118,7 +129,7 @@ const L2 = [
 const preparar = ({
   agente = bia(),
   show = null,
-  semana = { answered: 12, handed: 3 },
+  semana = { answered: 12, handed: 3, resolved: 5 },
   canais = L2,
   perguntas = [],
   caixas = [{ id: 1, working_hours_enabled: false }],
@@ -296,6 +307,7 @@ describe('AgentePage', () => {
       expect(todos('[data-numero]').map(n => n.textContent)).toEqual([
         expect.stringContaining('12'),
         expect.stringContaining('3'),
+        expect.stringContaining('5'),
       ]);
       expect(texto()).not.toContain('%');
       wrapper.unmount();
@@ -601,7 +613,7 @@ describe('AgentePage', () => {
       await clicar('[data-numero="passadas"]');
       expect(agentesApi.analyticsConversations).toHaveBeenCalledWith(7, {
         range: '7d',
-        metric: 'handed_off',
+        metric: 'passadas',
       });
       wrapper.unmount();
     });
@@ -818,6 +830,30 @@ describe('AgentePage', () => {
       ]);
       expect(faqApi.list).not.toHaveBeenCalled();
       wrapper.unmount();
+    });
+
+    it('links the performance panel for a support agent, never for the quoting agent (#2251)', async () => {
+      const ligarPainel = () => {
+        store.state.getCurrentAccountId = 1;
+        store.state['accounts/getAccount'] = () => ({
+          autonomia_agents_enabled: true,
+          features: {
+            autonomia_agents_journey: true,
+            agentes_painel_desempenho: true,
+          },
+        });
+      };
+      preparar({ agente: bia() });
+      ligarPainel();
+      const atendimento = await montar();
+      expect(no('[data-ver-tudo]')).not.toBeNull();
+      atendimento.unmount();
+
+      preparar({ agente: bia({ agent_type: 'insurance_quote' }) });
+      ligarPainel();
+      const cotacao = await montar();
+      expect(no('[data-ver-tudo]')).toBeNull();
+      cotacao.unmount();
     });
 
     it('shows an active quoting agent as answering and lets it stop', async () => {
@@ -1692,6 +1728,81 @@ describe('AgentePage', () => {
       expect(no('[data-interruptor]').getAttribute('aria-label')).toBe(
         'AGENTS.JORNADA.PAGINA.INTERRUPTOR'
       );
+      wrapper.unmount();
+    });
+  });
+
+  // #1429 F3 — a linha "Base de seguros", só com a Fase 2 e fora da Lia.
+  describe('base de seguros', () => {
+    const comFase2 = () => {
+      store.state['accounts/getAccount'] = () => ({
+        autonomia_agents_fase2: true,
+      });
+      store.state.getCurrentAccountId = 1;
+    };
+    const semBase = {
+      situacao: 'sem_base',
+      atual: null,
+      nova: { segmento: 'seguros/corretora', data: '2026-10-21', versao: 'v' },
+      pode_atualizar: true,
+      desfazer: null,
+    };
+
+    beforeEach(() => {
+      Object.values(baseApi).forEach(fn => fn.mockReset());
+      baseApi.ler.mockResolvedValue({ data: semBase });
+    });
+
+    it('shows the line below the name and voice, with the button for who manages', async () => {
+      comFase2();
+      const wrapper = await montar();
+      expect(baseApi.ler).toHaveBeenCalledWith(7);
+      expect(no('[data-linha="base"]')).not.toBeNull();
+      expect(no('[data-base-atualizar]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('opens the before and after drawer from the button', async () => {
+      comFase2();
+      baseApi.comparar.mockReturnValue(new Promise(() => {}));
+      const wrapper = await montar();
+      await clicar('[data-base-atualizar]');
+      expect(no('[data-comparando]')).not.toBeNull();
+      expect(baseApi.comparar).toHaveBeenCalledWith(7, expect.any(AbortSignal));
+      wrapper.unmount();
+    });
+
+    it('who only views sees the line without the button', async () => {
+      comFase2();
+      estado.podeGerenciar = false;
+      const wrapper = await montar();
+      expect(no('[data-linha="base"]')).not.toBeNull();
+      expect(no('[data-base-atualizar]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('without the Fase 2 it does not even ask', async () => {
+      const wrapper = await montar();
+      expect(baseApi.ler).not.toHaveBeenCalled();
+      expect(no('[data-linha="base"]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('the quote agent (Lia) has no line', async () => {
+      preparar({ agente: bia({ agent_type: 'insurance_quote' }) });
+      comFase2();
+      const wrapper = await montar();
+      expect(baseApi.ler).not.toHaveBeenCalled();
+      expect(no('[data-linha="base"]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('a failed read hides the line, with no error', async () => {
+      comFase2();
+      baseApi.ler.mockRejectedValue(new Error('404'));
+      const wrapper = await montar();
+      expect(no('[data-linha="base"]')).toBeNull();
+      expect(alerta).not.toHaveBeenCalled();
       wrapper.unmount();
     });
   });

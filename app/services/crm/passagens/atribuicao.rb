@@ -3,7 +3,8 @@
 # a própria conversa prendeu no save (ConversationPassagem):
 #
 # - Uma pessoa entrou: passagem de quem estava (a pessoa anterior ou, sem ela, o robô) para ela. Motivo e card do
-#   Crm::Passagens.com_motivo em curso (a Entrega, o /passar_para); sem ele, 'atribuicao'. Quem pediu: o robô do
+#   Crm::Passagens.com_motivo em curso (a Entrega, o /passar_para, o envio com "ficar com a conversa": 'ficou_ao_enviar');
+#   sem ele, 'atribuicao'. Quem pediu: o robô do
 #   contexto, ou a pessoa logada; nil = o sistema (o rodízio nativo, uma automação).
 # - A pessoa saiu e a conversa ficou com um robô (desatribuir numa caixa com robô, inclusive o agente externo):
 #   passagem da pessoa para o robô, motivo 'devolucao'. A ida para a pessoa fecha sozinha. Não grava quando o
@@ -13,6 +14,9 @@ module Crm::Passagens::Atribuicao
   PASSAR_PARA_IA = 'passar_para_ia'.freeze
   ATRIBUICAO = 'atribuicao'.freeze
   DEVOLUCAO = 'devolucao'.freeze
+  # #2067: a pessoa ficou com a conversa ao enviar, com o ícone "ficar com a conversa" (pedido explícito; o envio sem
+  # pedido segue 'atribuicao'). Não é motivo da IA: a origem é a ponta gravada (a IA ou ninguém).
+  FICOU_AO_ENVIAR = 'ficou_ao_enviar'.freeze
 
   module_function
 

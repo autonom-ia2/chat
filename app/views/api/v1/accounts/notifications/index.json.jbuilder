@@ -14,7 +14,7 @@ json.data do
       # TODO: front end assumes primary actor to be conversation. should fix in future
       json.primary_actor_type notification.primary_actor_type
       json.primary_actor_id notification.primary_actor_id
-      json.primary_actor notification.primary_actor.push_event_data
+      json.primary_actor Crm::AnuncioDeOrigem.evento_para(Current.user, Current.account_user, notification.primary_actor.push_event_data) # #2271
       json.read_at notification.read_at
       # Secondary actor could be nil for cases like system assigning conversation
       json.secondary_actor notification.secondary_actor&.push_event_data

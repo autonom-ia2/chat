@@ -22,10 +22,10 @@ RSpec.describe EmailCampaigns::QualityGate, :aggregate_failures do
     end
   end
 
-  it 'shares one identical locked footer across the thirteen designs' do
+  it 'shares one identical locked footer across every design' do
     footers = catalog.entries.flat_map { |entry| described_class.locked_footers(catalog.body(entry)) }
 
-    expect(footers.size).to eq(13)
+    expect(footers.size).to eq(catalog.entries.size)
     expect(footers.uniq.size).to eq(1)
   end
 

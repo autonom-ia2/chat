@@ -25,6 +25,11 @@ class Crm::CardPolicy < ApplicationPolicy
     update?
   end
 
+  # Restaurar o arquivado (#2095): quem arquiva desfaz.
+  def restore?
+    destroy?
+  end
+
   def move?
     update?
   end
@@ -68,6 +73,12 @@ class Crm::CardPolicy < ApplicationPolicy
 
   def current_ai_suggestion?
     show?
+  end
+
+  # Excluir de vez (#2096): só administrador, também no EE. Não vira chave de função: apaga sem volta o histórico de
+  # clientes, como excluir a conta ou mexer na segurança (CLAUDE.md, "Nunca delegar por função").
+  def permanent_delete?
+    account_user&.administrator? || false
   end
 
   class Scope < ApplicationPolicy::Scope

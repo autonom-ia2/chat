@@ -320,7 +320,13 @@ module Crm
         end
       end
 
+      # #2034: o vocabulário da conta vem antes do tom escrito pelo dono, que segue valendo por cima. O lembrete interno
+      # para a equipe não passa por aqui.
       def tone_instructions_line
+        [Crm::Ai::Vocabulario.da(@card&.account), owner_tone_line].compact_blank.join("\n")
+      end
+
+      def owner_tone_line
         return '' if @tone_instructions.blank?
 
         "INSTRUÇÕES DE TOM/MARCA (siga rigorosamente): #{@tone_instructions}"

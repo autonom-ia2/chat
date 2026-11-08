@@ -567,6 +567,88 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
     end
   end
 
+  # #2370: o WhatsApp não entrega HEVC. O .mov do iPhone é convertido para MP4 H.264 num job (dezenas de segundos em
+  # produção, mais que o limite do pedido); a subida volta 202 e a tela consulta o `poll_url`.
+  describe 'POST media: vídeo convertido fora do pedido', :aggregate_failures do
+    def hevc_mov(dir)
+      path = File.join(dir, 'IMG_0001.MOV')
+      system('ffmpeg', '-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc=size=640x360:rate=30:duration=2', '-c:v', 'libx265',
+             '-tag:v', 'hvc1', '-pix_fmt', 'yuv420p', '-f', 'mov', path, exception: true)
+      Rack::Test::UploadedFile.new(path, 'video/quicktime')
+    end
+
+    def post_hevc
+      Dir.mktmpdir { |dir| post "#{base}/media", params: { file: hevc_mov(dir) }, headers: admin.create_new_auth_token }
+    end
+
+    before do
+      allow(GlobalConfigService).to receive(:load).and_call_original
+      allow(GlobalConfigService).to receive(:load).with('WHATSAPP_APP_ID', '').and_return('app_1')
+    end
+
+    it '.mov em HEVC: 202 sem falar com a Meta; o job converte, sobe e a consulta devolve o MP4 em H.264' do
+      session = stub_request(:post, "#{graph}/app_1/uploads").with(query: hash_including('file_type' => 'video/mp4', 'file_name' => 'IMG_0001.mp4'))
+                                                             .to_return(status: 200, headers: json, body: { id: 'upload:v1' }.to_json)
+      stub_request(:post, "#{graph}/upload:v1").to_return(status: 200, headers: json, body: { h: '4::v' }.to_json)
+
+      post_hevc
+
+      expect(response).to have_http_status(:accepted)
+      expect(response.parsed_body['status']).to eq('pending')
+      expect(a_request(:any, graph_host)).not_to have_been_made
+      poll_url = response.parsed_body['poll_url']
+      get poll_url, headers: admin.create_new_auth_token
+      expect(response.parsed_body['status']).to eq('pending')
+
+      perform_enqueued_jobs(only: Whatsapp::Templates::VideoConversionJob)
+      get poll_url, headers: admin.create_new_auth_token
+
+      expect(response.parsed_body['status']).to eq('done')
+      result = response.parsed_body['result']
+      expect(result).to include('handle' => '4::v', 'content_type' => 'video/mp4', 'file_name' => 'IMG_0001.mp4')
+      expect(session).to have_been_made.once
+      ActiveStorage::Blob.find_signed(result['blob_signed_id']).open do |file|
+        expect(Whatsapp::Templates::VideoForMeta.probe(file.path)).to include(video: 'h264', pix_fmt: 'yuv420p')
+      end
+      expect(ActiveStorage::Blob.where('metadata LIKE ?', '%video_conversion%')).to be_empty
+    end
+
+    it 'a Meta recusando a subida: a consulta devolve failed com o texto traduzido, e o original é apagado' do
+      stub_request(:post, "#{graph}/app_1/uploads").with(query: hash_including({}))
+                                                   .to_return(status: 500, headers: json, body: { error: { message: 'x' } }.to_json)
+
+      post_hevc
+      poll_url = response.parsed_body['poll_url']
+      perform_enqueued_jobs(only: Whatsapp::Templates::VideoConversionJob)
+      get poll_url, headers: admin.create_new_auth_token
+
+      expect(response.parsed_body['status']).to eq('failed')
+      expect(response.parsed_body['message']).to eq(I18n.t("whatsapp_templates.errors.#{response.parsed_body['error']}", locale: :pt_BR))
+      expect(ActiveStorage::Blob.where('metadata LIKE ?', '%video_conversion%')).to be_empty
+    end
+
+    it 'a conversão é só de quem subiu: outra pessoa da conta recebe 404' do
+      post_hevc
+      other = create(:user, account: account, role: :administrator)
+
+      get response.parsed_body['poll_url'], headers: other.create_new_auth_token
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it '.mov que o ffprobe não lê: recusa no pedido com video_unreadable, sem job' do
+      fake = "\x00\x00\x00\x14ftypqt  \x00\x00\x00\x00qt  ".b + ('x' * 64)
+      file = Rack::Test::UploadedFile.new(StringIO.new(fake), 'video/quicktime', original_filename: 'falso.mov')
+
+      post "#{base}/media", params: { file: file }, headers: admin.create_new_auth_token
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('error' => 'video_unreadable',
+                                              'message' => I18n.t('whatsapp_templates.errors.video_unreadable', locale: :pt_BR))
+      expect(Whatsapp::Templates::VideoConversionJob).not_to have_been_enqueued
+    end
+  end
+
   # #1334: tipo e tamanho que a Meta aceita, conferidos no servidor antes de subir (página "Media" da Meta, 13/10/2026):
   # JPG/PNG até 5 MB, MP4 até 16 MB, PDF até 100 MB. A foto do cartão da campanha sobe por aqui também.
   describe 'POST media: tipo e tamanho' do

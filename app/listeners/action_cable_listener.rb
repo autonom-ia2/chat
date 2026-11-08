@@ -135,7 +135,7 @@ class ActionCableListener < BaseListener
     conversation, account = extract_conversation_and_account(event)
     tokens = user_tokens(account, Crm::Access::Recipients.inbox_members(conversation))
 
-    broadcast(account, tokens, ASSIGNEE_CHANGED, conversation.push_event_data)
+    broadcast(account, tokens, ASSIGNEE_CHANGED, Crm::Passagens::VeioDaIa.no_evento(conversation.push_event_data, conversation))
   end
 
   def team_changed(event)

@@ -12,6 +12,7 @@ import { usePodeComecarConversa } from 'dashboard/components-next/NovaConversa/u
 const estado = vi.hoisted(() => ({
   podeOperar: true,
   permissoes: ['conversation_manage'],
+  desligadas: [],
 }));
 
 vi.mock('../email/useConversaDeEmail', async original => {
@@ -37,7 +38,8 @@ vi.mock('dashboard/composables/store', async () => {
       name: 'Comercial',
       channel_type: 'Channel::Email',
     }),
-    'accounts/isFeatureEnabledonAccount': () => true,
+    'accounts/isFeatureEnabledonAccount': (_conta, chave) =>
+      !estado.desligadas.includes(chave),
   };
   return {
     useMapGetter: nome =>
@@ -55,6 +57,7 @@ vi.mock('dashboard/components-next/sidebar/provider', () => ({
 }));
 vi.mock('../email/pastaDoEmail', () => ({
   PASTAS: { SPAM: 'spam', LIXEIRA: 'lixeira' },
+  ENVIADOS: 'enviados',
   usePastaDoEmail: () => ({ pasta: ref(null), abrirPasta: vi.fn() }),
 }));
 
@@ -80,6 +83,7 @@ describe('conversa de e-mail para quem só lê (#1809)', () => {
   beforeEach(() => {
     estado.podeOperar = true;
     estado.permissoes = ['conversation_manage'];
+    estado.desligadas = [];
   });
 
   it('o ⋮ de quem só lê tem só Copiar link, Imprimir e Mostrar original', async () => {
@@ -158,9 +162,19 @@ describe('conversa de e-mail para quem só lê (#1809)', () => {
           menu
             .findAll('[data-pasta-do-email]')
             .map(item => item.attributes('data-pasta-do-email'))
-        ).toEqual(['entrada', 'spam', 'lixeira']);
+        ).toEqual(['entrada', 'enviados', 'spam', 'lixeira']);
       }
     );
+
+    it('sem a chave email_enviados, a pasta Enviados não aparece (#1938)', () => {
+      estado.desligadas = ['email_enviados'];
+      const menu = mount(PastasDoEmailNoMenu, { props: { folha }, global });
+      expect(
+        menu
+          .findAll('[data-pasta-do-email]')
+          .map(item => item.attributes('data-pasta-do-email'))
+      ).toEqual(['entrada', 'spam', 'lixeira']);
+    });
 
     it('quem opera vê o Escrever', () => {
       const menu = mount(PastasDoEmailNoMenu, { props: { folha }, global });

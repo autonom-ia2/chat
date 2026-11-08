@@ -17,6 +17,8 @@ const props = defineProps({
 const emit = defineEmits(['reevaluate', 'resume', 'problems']);
 const { t, locale } = useI18n();
 const canManage = useCanManage('campaign_manage');
+// #1898: resuming sends again, so it needs campaign_send.
+const canSend = useCanManage('campaign_send');
 const showDetails = ref(false);
 const {
   health,
@@ -237,7 +239,7 @@ const date = value => formatDate(value, locale.value);
         @click="emit('reevaluate')"
       />
       <Button
-        v-if="canManage && canResume"
+        v-if="canSend && canResume"
         :label="t(`${NS}.RESUME`)"
         icon="i-lucide-play"
         :disabled="busy"

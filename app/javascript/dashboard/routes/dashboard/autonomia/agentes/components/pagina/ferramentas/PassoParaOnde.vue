@@ -7,6 +7,7 @@ import FerramentaEntrada from './FerramentaEntrada.vue';
 import FerramentaFaixa from './FerramentaFaixa.vue';
 import {
   conferirEndereco,
+  enderecoDeExemplo,
   nomeTecnico,
   variaveisEm,
 } from '../../../utils/ferramentas';
@@ -27,8 +28,6 @@ const NS = 'AGENTS.JORNADA.PAGINA.FERRAMENTAS.PASSOS.DOIS';
 const { t } = useI18n();
 
 const VARIAVEL = '{{nome}}';
-const EXEMPLO =
-  'https://api.sualoja.com.br/estoque/busca?termo={{ termo | url_encode }}';
 const INICIO = 'https://';
 
 const mudar = (campo, valor) =>
@@ -92,7 +91,7 @@ const preenchido = valor => String(valor ?? '').trim() !== '';
           variavel: VARIAVEL,
         })
       "
-      :exemplo="EXEMPLO"
+      :exemplo="enderecoDeExemplo(t)"
       exemplo-mono
       :preenchido="preenchido(rascunho.endereco)"
     >

@@ -9,18 +9,45 @@ class Crm::Ai::ScoreCalculator
   INTENT = { 'baixa' => 0, 'media' => 15, 'alta' => 30 }.freeze
   URGENCY = { 'nenhuma' => 0, 'futura' => 3, 'proxima' => 8, 'imediata' => 20 }.freeze
   DECISION_MAKER = { 'sim' => 6, 'nao' => 0, 'desconhecido' => 0 }.freeze
-  BLOCKER = { 'nenhum' => 0, 'leve' => -8, 'forte' => -20 }.freeze
+  BLOCKER = { 'nenhum' => 0, 'leve' => -8, 'forte' => -20, 'negativo_explicito' => 0 }.freeze
+
+  # #1962: número errado, "não é comigo", pediu para parar, mensagem automática sem pessoa. Não é
+  # objeção a vencer: não existe negócio nesta conversa, então a nota vai a 0 na hora, por cima de
+  # promessa, espera e piso.
+  EXPLICIT_NEGATIVE = 'negativo_explicito'.freeze
 
   # Pedido concreto de preço, prazo, parcelamento, link ou documento. Estava diluído em INTENT e é
   # forte demais para isso: é o momento em que o cliente sai de curioso e vira comprador.
   BUYING_SIGNAL_BONUS = 20
 
-  # Quem falou por último decide de quem é a dívida: cliente falou = nós devemos resposta. Humano ter
-  # respondido vale 0, não penalidade: atender bem não pode derrubar a nota do card.
-  LAST_TURN_OWNER = { 'cliente' => 8, 'humano' => 0, 'agente_plataforma' => 0, 'agente_externo' => 0 }.freeze
+  # #1962: cliente esperando resposta nossa = o BANCO diz que a última fala real é dele
+  # (Crm::Conversations::LastTurns) E o modelo diz que ela pede resposta nossa (awaiting_our_reply). O banco
+  # sozinho transformava "obrigado", "vou pensar" e newsletter em dívida nossa; o modelo sozinho (o antigo
+  # last_turn_owner, +8) não existia no ScoreDecayJob. Nota gravada antes do #1962 não tem awaiting_our_reply:
+  # vale "pede resposta" sempre que o banco diz que o cliente falou por último. Ignorar a espera nessas notas
+  # derrubava a 1ª rodada do job (replay de 20/10: "agora" em urgente/quente caía de 20 para 9 de 29) até cada
+  # card ser reavaliado pela IA, e reavaliar a base inteira em produção com IA paga não compensa. Quando o campo
+  # existe, ele vale — inclusive o false.
+  # A dívida cresce com a espera — começa em BASE e soma PER_DAY por dia até MAX — para que, entre dois
+  # clientes esperando, quem espera há mais tempo suba.
+  CUSTOMER_WAITING_BONUS_BASE = 10
+  CUSTOMER_WAITING_BONUS_PER_DAY = 2
+  CUSTOMER_WAITING_BONUS_MAX = 20
+
+  # Cliente esperando resposta nossa é no mínimo quente (55 = início da faixa) enquanto a dívida
+  # vale: alguém precisa responder, mesmo que a conversa em si seja fraca.
+  CUSTOMER_WAITING_FLOOR = 55
+
+  # Validade da dívida nossa (espera do cliente, promessa, "pronto para fechar"). Até aqui vale bônus e
+  # piso; a dívida nossa também não decai. Depois, tudo isso cai e o card esfria a partir do FIM da
+  # validade, não da última mensagem: sem isso, um urgente de 14 dias virava frio de uma rodada para a
+  # outra. Sem validade, 21 urgentes da amostra de 20/10 estavam parados há mais de 14 dias — alguns
+  # há 50–102, com a viagem já passada.
+  DEBT_VALID_DAYS = 14
 
   # Promessa nossa não cumprida ("já envio o link") é o sinal mais forte que existe: o silêncio
-  # deixa de ser desinteresse do cliente e passa a ser falha nossa. Também anula o decaimento.
+  # deixa de ser desinteresse do cliente e passa a ser falha nossa. Também anula o decaimento —
+  # até DEBT_VALID_DAYS de silêncio (#1962).
   UNFULFILLED_PROMISE_BONUS = 35
 
   # Decaimento: silêncio derruba a nota sozinho, sem chamar IA. Contado da ÚLTIMA MENSAGEM, nunca
@@ -34,76 +61,25 @@ class Crm::Ai::ScoreCalculator
   # então o score fica limitado em vez de inventado.
   UNREADABLE_CAP = 20
 
-  # Mantidos em sincronia com SCORE_TIERS do CrmKanbanCard.vue. O teto do "sem promessa" fica em
-  # ~92 para o topo não saturar: só promessa não cumprida encosta em 100.
+  # Mantidos em sincronia com SCORE_TIERS do CrmKanbanCard.vue. Depois do #1962 a soma dos bônus passa de
+  # 100 (espera e pronto para fechar valem até 20 cada) e o topo satura: dois cards em 100 empatam. Fica
+  # assim de propósito na fase 1 — o que decide o topo é o piso da dívida; desempatar dentro de 100 é
+  # assunto da fase 2 (#1961), com prazo e valor.
   TIERS = [[19, 'frio'], [54, 'morno'], [83, 'quente'], [100, 'urgente']].freeze
 
-  # Regra de produto: promessa NOSSA em aberto é sempre urgente — a dívida é nossa e não esfria.
+  # Regra de produto: promessa NOSSA em aberto é urgente enquanto vale — a dívida é nossa.
   # Piso, não bônus: sem ele os rótulos oscilavam entre quente e urgente conforme os outros sinais.
+  # O mesmo piso vale para cliente esperando com pedido de compra na mesa e SEM objeção (#1962): o
+  # dinheiro está parado do nosso lado. Com objeção leve ("vou pensar", "achei caro") fica o piso de quente.
   UNFULFILLED_PROMISE_FLOOR = 85
 
-  # Conversa que respirou nas últimas 72h com o CLIENTE aguardando resposta nunca é frio: alguém
-  # precisa ao menos responder. Não vale para recusa explícita (blocker forte).
-  AWAITING_REPLY_FLOOR = 20
-  AWAITING_REPLY_MAX_IDLE_DAYS = 3
-
-  # Contrato de saída do modelo. Fica aqui, não no StageClassifier: quem define o vocabulário dos
-  # sinais é quem sabe pesá-los. O classifier apenas consome.
-  SIGNALS_SCHEMA = {
-    type: 'object',
-    description: 'Sinais para pontuar a prioridade de atenção humana neste card.',
-    properties: {
-      next_stage_readiness: {
-        type: 'string',
-        enum: %w[nenhuma inicial parcial pronta],
-        description: 'Quanto a conversa JÁ atende ao critério do PRÓXIMO estágio do funil (não do atual).'
-      },
-      intent: {
-        type: 'string',
-        enum: %w[baixa media alta],
-        description: 'Intenção do cliente de avançar (pediu preço, prazo, link, documento).'
-      },
-      urgency: {
-        type: 'string',
-        enum: %w[nenhuma futura proxima imediata],
-        description: 'Urgência pela DATA citada na conversa (embarque, vencimento, consulta): "futura" = meses, "imediata" = dias.'
-      },
-      decision_maker: { type: 'string', enum: %w[desconhecido nao sim], description: 'A pessoa na conversa decide a contratação.' },
-      blocker: {
-        type: 'string',
-        enum: %w[nenhum leve forte],
-        description: 'Objeção aberta: "leve" = vou pensar; "forte" = recusa, concorrente, fora de escopo.'
-      },
-      last_turn_owner: {
-        type: 'string',
-        enum: %w[cliente humano agente_plataforma agente_externo],
-        description: 'Quem enviou a ÚLTIMA mensagem. Use os papéis de recent_messages.'
-      },
-      buying_signal: {
-        type: 'boolean',
-        description: 'true quando o cliente pediu algo concreto para fechar (preço, valor total, parcelamento, prazo, ' \
-                     'link de pagamento, envio de documento) E esse pedido segue de pé. Vale também quando está IMPLÍCITO: ' \
-                     'cliente recebeu preço/proposta e seguiu conversando — reclamar do valor é negociação, não desistência. ' \
-                     '("vou pensar", "depois te falo") MANTÉM o sinal. Recuo explícito ("não quero mais", "desisti", ' \
-                     '"fechei com outro", "não é para mim") ZERA o sinal — use blocker=forte nesse caso.'
-      },
-      unfulfilled_promise: {
-        type: 'boolean',
-        description: 'true SOMENTE quando NÓS prometemos uma ação concreta (enviar link/proposta, retornar, verificar) e ela ' \
-                     'segue NÃO ENTREGUE até a última mensagem. É false quando: a promessa foi cumprida depois na própria ' \
-                     'conversa ("vou gerar agora" seguido da cotação enviada); a continuação depende de dado que o CLIENTE ' \
-                     'ainda não mandou (idades, documentos, CNPJ — a pendência é dele); ou a pergunta do cliente foi ' \
-                     'respondida, mesmo que negativamente. Aguardar resposta DO CLIENTE a algo já entregue NUNCA é ' \
-                     'promessa nossa. Em dúvida, false.'
-      },
-      unreadable: { type: 'boolean', description: 'true quando não há conteúdo legível (áudio sem transcrição, mensagens vazias).' },
-      reason: { type: 'string', maxLength: 140, description: 'Motivo em uma linha, exibido no card. Concreto, sem adjetivo vazio.' },
-      evidence: { type: 'string', maxLength: 300, description: 'Trecho curto da conversa que sustenta os sinais.' }
-    },
-    required: %w[next_stage_readiness intent urgency decision_maker blocker last_turn_owner buying_signal
-                 unfulfilled_promise unreadable reason evidence],
-    additionalProperties: false
-  }.freeze
+  # #1962: "pronto para fechar, falta só um dado". O cliente já escolheu ou aceitou; só falta um
+  # dado para emitir ou fechar. Se o dado é NOSSO, é dívida nossa (o piso da promessa, sem decair); se é
+  # DELE, é o empurrão que mais vale dar (o piso de quente), mas o silêncio dele segue esfriando o card
+  # até o piso. O bônus ordena dentro da faixa.
+  READY_TO_CLOSE_BONUS = 20
+  READY_TO_CLOSE_FLOOR = { 'falta_dado_nosso' => UNFULFILLED_PROMISE_FLOOR,
+                           'falta_dado_do_cliente' => CUSTOMER_WAITING_FLOOR }.freeze
 
   Result = Struct.new(:value, :tier, :reason, :breakdown, keyword_init: true)
 
@@ -113,19 +89,21 @@ class Crm::Ai::ScoreCalculator
     TIERS.find { |ceiling, _| value <= ceiling }.last
   end
 
-  def initialize(signals:, last_message_at:, terminal: false, now: Time.current)
+  # waiting_since: desde quando o cliente espera — a fala dele ainda sem resposta, numa conversa do card em que a
+  # última fala real é dele. Vem do banco (Crm::Conversations::LastTurns), nunca do modelo; nil = ninguém espera.
+  def initialize(signals:, last_message_at:, waiting_since: nil, terminal: false, now: Time.current)
     @signals = signals.respond_to?(:with_indifferent_access) ? signals.with_indifferent_access : {}
     @last_message_at = last_message_at
+    @waiting_since = waiting_since
     @terminal = terminal
     @now = now
   end
 
   def perform
     return terminal_result if @terminal
+    return explicit_negative_result if explicit_negative?
 
-    value = clamp(raw_points + decay_points)
-    value = [value, UNFULFILLED_PROMISE_FLOOR].max if promise_floor?
-    value = [value, AWAITING_REPLY_FLOOR].max if awaiting_reply?
+    value = [clamp(raw_points + decay_points), debt_floor].max
     # Teto de ilegível por ÚLTIMO (achado do review): é teto de confiança — sem conversa legível,
     # nenhum piso se sustenta, inclusive o de promessa.
     value = [value, UNREADABLE_CAP].min if flag(:unreadable)
@@ -135,21 +113,75 @@ class Crm::Ai::ScoreCalculator
 
   private
 
-  # Recusa explícita cancela o piso da promessa (achado do review): se o cliente disse "fechei com
-  # outro", a promessa não entregue virou irrelevante — não há ação comercial válida.
-  def promise_floor?
-    flag(:unfulfilled_promise) && text(:blocker) != 'forte'
+  def explicit_negative?
+    text(:blocker) == EXPLICIT_NEGATIVE
   end
 
-  def awaiting_reply?
-    return false if @last_message_at.blank? || text(:blocker) == 'forte'
-    return false unless text(:last_turn_owner) == 'cliente'
+  # Recusa explícita cancela toda dívida (achado do review): se o cliente disse "fechei com outro",
+  # a promessa não entregue e a espera viraram irrelevantes — não há ação comercial válida.
+  def refused?
+    text(:blocker) == 'forte'
+  end
 
-    @now - @last_message_at <= AWAITING_REPLY_MAX_IDLE_DAYS.days
+  # Conta o tempo exato, não dias inteiros: com 14 dias e 9 horas a dívida já venceu. Sem âncora (card sem
+  # mensagem real) não há dívida: não se deve resposta a uma conversa que não existe.
+  def within_validity?(anchor)
+    anchor.present? && @now - anchor <= DEBT_VALID_DAYS.days
+  end
+
+  # Sinais que fazem dívida, valendo ou vencida. Recusa explícita cancela todos.
+  def promise_signal?
+    flag(:unfulfilled_promise) && !refused?
+  end
+
+  def waiting_signal?
+    @waiting_since.present? && asks_for_reply? && !refused?
+  end
+
+  # Chave ausente = nota antiga (ver CUSTOMER_WAITING_BONUS_BASE): conta como "pede resposta". Chave presente vale
+  # como veio: null ou valor malformado de gateway não é "pede" (achado do review).
+  def asks_for_reply?
+    @signals.key?(:awaiting_our_reply) ? flag(:awaiting_our_reply) : true
+  end
+
+  # O valor de ready_to_close, ou nil. Nota antiga, gravada antes do #1962, não tem o campo: pesa como
+  # "nao_se_aplica".
+  def ready_to_close_signal
+    value = text(:ready_to_close)
+    value if READY_TO_CLOSE_FLOOR.key?(value) && !refused?
+  end
+
+  def promise_open?
+    promise_signal? && within_validity?(@last_message_at)
+  end
+
+  def waiting?
+    waiting_signal? && within_validity?(@waiting_since)
+  end
+
+  def ready_to_close
+    ready_to_close_signal if within_validity?(@last_message_at)
+  end
+
+  # Só o que é NOSSO segura o decaimento. "Falta dado do cliente" mantém o piso, mas o silêncio é dele.
+  def owes_debt?
+    promise_open? || waiting? || ready_to_close == 'falta_dado_nosso'
+  end
+
+  def debt_floor
+    floors = [0]
+    floors << UNFULFILLED_PROMISE_FLOOR if promise_open? || (waiting? && flag(:buying_signal) && text(:blocker) == 'nenhum')
+    floors << CUSTOMER_WAITING_FLOOR if waiting?
+    floors << READY_TO_CLOSE_FLOOR.fetch(ready_to_close) if ready_to_close
+    floors.max
   end
 
   def terminal_result
     Result.new(value: 0, tier: 'frio', reason: 'Card encerrado.', breakdown: { terminal: true })
+  end
+
+  def explicit_negative_result
+    Result.new(value: 0, tier: 'frio', reason: reason_text, breakdown: { explicit_negative: true })
   end
 
   def raw_points
@@ -163,21 +195,44 @@ class Crm::Ai::ScoreCalculator
       urgency: URGENCY.fetch(text(:urgency), 0),
       decision_maker: DECISION_MAKER.fetch(text(:decision_maker), 0),
       blocker: BLOCKER.fetch(text(:blocker), 0),
-      last_turn_owner: LAST_TURN_OWNER.fetch(text(:last_turn_owner), 0),
       buying_signal: flag(:buying_signal) ? BUYING_SIGNAL_BONUS : 0,
-      unfulfilled_promise: promise_floor? ? UNFULFILLED_PROMISE_BONUS : 0
+      unfulfilled_promise: promise_open? ? UNFULFILLED_PROMISE_BONUS : 0,
+      customer_waiting: waiting? ? customer_waiting_bonus : 0,
+      ready_to_close: ready_to_close ? READY_TO_CLOSE_BONUS : 0
     }
   end
 
-  # Promessa aberta ignora o decaimento: o card não pode afundar por um silêncio que é nosso.
+  def customer_waiting_bonus
+    [CUSTOMER_WAITING_BONUS_BASE + (days_since(@waiting_since) * CUSTOMER_WAITING_BONUS_PER_DAY), CUSTOMER_WAITING_BONUS_MAX].min
+  end
+
+  # Dívida nossa em aberto ignora o decaimento: o card não pode afundar por um silêncio que é nosso.
   def decay_points
-    return 0 if flag(:unfulfilled_promise)
-    return 0 if @last_message_at.blank?
+    return 0 if owes_debt?
 
-    idle_days = ((@now - @last_message_at) / 1.day).floor - DECAY_GRACE_DAYS
-    return 0 if idle_days <= 0
+    anchor = decay_anchor
+    return 0 if anchor.blank?
 
-    -(idle_days * DECAY_PER_DAY)
+    days = days_since(anchor) - DECAY_GRACE_DAYS
+    return 0 if days <= 0
+
+    -(days * DECAY_PER_DAY)
+  end
+
+  # Card cuja dívida NOSSA venceu esfria a partir do fim da validade, não da última mensagem: o tempo em que o
+  # silêncio era nosso não conta contra ele. Aqui a dívida já não vale (owes_debt? é falso), então sinal de dívida
+  # nossa presente = dívida vencida. "Falta dado do cliente" não entra: o silêncio sempre foi dele.
+  def decay_anchor
+    return if @last_message_at.blank?
+
+    ends = [@last_message_at]
+    ends << (@last_message_at + DEBT_VALID_DAYS.days) if promise_signal? || ready_to_close_signal == 'falta_dado_nosso'
+    ends << (@waiting_since + DEBT_VALID_DAYS.days) if waiting_signal?
+    ends.max
+  end
+
+  def days_since(time)
+    ((@now - time) / 1.day).floor
   end
 
   def tier_for(value)

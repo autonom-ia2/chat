@@ -71,6 +71,82 @@ RSpec.describe Crm::Subjects::Identifier do
     expect(Crm::SubjectDecision.count).to eq(0)
   end
 
+  # #2084: contato marcado parceiro ou não é negócio não passa pela IA de assunto, nem em Sugerir.
+  context 'with the contact out of the funnel (contato_relacao)' do
+    before { account.enable_features!('contato_relacao') }
+
+    %i[parceiro nao_e_negocio].each do |relacao|
+      it "#{relacao}: não pergunta ao Jev nem ao modelo maior, não cria card nem decisão" do
+        contact.update!(relacao: relacao)
+        requests = stub_jev("novo_#{comercial.id}")
+        stub_review(resposta: "novo_#{comercial.id}", titulo: 'Chat2You')
+
+        expect(identify(incoming('E o Chat2You, quanto custa para 5 atendentes?'))).to be_nil
+        expect(requests).to be_empty
+        expect(cliente).not_to have_received(:create)
+        expect(account.crm_cards.count).to eq(0)
+        expect(Crm::SubjectDecision.count).to eq(0)
+      end
+    end
+
+    it 'em Sugerir também não sugere nada' do
+      account.crm_inbox_settings.find_by(inbox: inbox).update!(subject_ai_mode: :suggest)
+      contact.update!(relacao: :parceiro)
+      requests = stub_jev("novo_#{comercial.id}")
+
+      expect(identify(incoming('Queria também o plano anual'))).to be_nil
+      expect(requests).to be_empty
+      expect(Crm::SubjectDecision.where(state: 'suggested')).to be_empty
+    end
+
+    it 'interessado segue como sempre: o assunto novo vira card' do
+      stub_jev("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Chat2You')
+
+      expect(identify(incoming('E o Chat2You, quanto custa?'))).to have_attributes(state: 'applied')
+      expect(account.crm_cards.count).to eq(1)
+    end
+
+    # A pessoa marca enquanto o Jev pensa: o Identifier já tinha conferido, o Applier confere de novo dentro da trava.
+    def marcar_parceiro_enquanto_pensa(choice)
+      stub_request(:post, 'https://api.typesafe.ai/v1/systemone').to_return do
+        contact.update!(relacao: :parceiro)
+        body = { model: 'jev-1.13.0', usage: { input_tokens: 300, output_tokens: 5 },
+                 answers: { decisao: { type: 'choice', choice: choice, confidence: 0.95 } } }
+        { status: 200, body: body.to_json }
+      end
+    end
+
+    it 'marcado parceiro enquanto a IA pensa: o card não nasce' do
+      marcar_parceiro_enquanto_pensa("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Chat2You')
+
+      expect(identify(incoming('E o Chat2You, quanto custa?'))).to have_attributes(state: 'kept', reason: 'fora_do_funil')
+      expect(account.crm_cards.count).to eq(0)
+    end
+
+    it 'marcado parceiro enquanto a IA pensa, em Sugerir: nenhuma sugestão fica esperando' do
+      account.crm_inbox_settings.find_by(inbox: inbox).update!(subject_ai_mode: :suggest)
+      marcar_parceiro_enquanto_pensa("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Chat2You')
+
+      identify(incoming('Queria também o plano anual'))
+
+      expect(Crm::SubjectDecision.where(state: 'suggested')).to be_empty
+      expect(account.crm_cards.count).to eq(0)
+    end
+
+    it 'com a flag desligada, a marca não muda nada' do
+      account.disable_features!('contato_relacao')
+      contact.update!(relacao: :parceiro)
+      stub_jev("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Chat2You')
+
+      expect(identify(incoming('E o Chat2You, quanto custa?'))).to have_attributes(state: 'applied')
+      expect(account.crm_cards.count).to eq(1)
+    end
+  end
+
   it '"Oi, bom dia" não cria card nem dá nome: o Jev diz que ainda não há assunto e o modelo maior não é chamado' do
     card = create_card(title: 'Joana Lima')
     requests = stub_jev('sem_assunto')
@@ -284,6 +360,23 @@ RSpec.describe Crm::Subjects::Identifier do
     expect(requests.first['state'].to_json).to include('Onix')
   end
 
+  # #1924: o pedido ficava fora das 5 últimas mensagens depois de algumas idas e vindas com a equipe.
+  it 'o Jev e o modelo maior leem o pedido feito antes das 5 últimas mensagens da conversa' do
+    create_card(title: 'Joana Lima')
+    requests = stub_jev("novo_#{comercial.id}", confidence: 0.5)
+    stub_review(resposta: "novo_#{comercial.id}", titulo: 'Cancelamento do plano')
+    incoming('Quero cancelar o meu plano')
+    4.times do |indice|
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: "Equipe #{indice}")
+    end
+
+    identify(incoming('Pode ser hoje?'))
+
+    expect(requests.first['state']['messages'].first).to eq('Customer: Quero cancelar o meu plano')
+    expect(cliente).to have_received(:create).with(hash_including(input: include('Quero cancelar o meu plano'),
+                                                                  instructions: include(Crm::Subjects::Question::REGRA_DO_TIPO)))
+  end
+
   it 'retry do job com a decisão já reservada não pergunta nem aplica de novo' do
     create_card(title: 'Joana Lima')
     requests = stub_jev('sem_assunto')
@@ -473,6 +566,19 @@ RSpec.describe Crm::Subjects::Identifier do
 
       expect { identify(incoming('Quero os agentes de novo')) }.not_to change(Crm::Card, :count)
       expect(Crm::SubjectDecision.last).to have_attributes(action: 'create', state: 'suggested')
+    end
+
+    # Pega (#1922): o arquivamento da IA ("não é negócio") contar como fechamento de uma pessoa, e o cliente que volta
+    # ganhar só uma sugestão: um falso positivo da IA viraria pedido perdido em silêncio.
+    it 'card arquivado pela IA como "não é negócio": o pedido novo vira card' do
+      arquivado = create_card(title: 'Agentes de IA', focused_at: 1.hour.ago)
+      arquivado.update!(status: :archived)
+      Crm::ActivityLogger.new(card: arquivado, actor: nil, event_type: 'archive', payload: { by: 'ai', motivo: 'fora_do_negocio' }).perform
+      create_card(title: 'Chat2You', focused_at: 2.hours.ago)
+      stub_jev("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Agentes de IA')
+
+      expect { identify(incoming('Quero os agentes de novo')) }.to change(Crm::Card, :count).by(1)
     end
 
     it 'sugestão de nome dispensada também não volta' do

@@ -5,17 +5,26 @@ import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import { errorMessageKey } from '../metaAdsHelpers';
 import MetaAdsSitePage from './MetaAdsSitePage.vue';
+import MetaAdsSiteLinkDialog from './MetaAdsSiteLinkDialog.vue';
 import MetaAdsDestinationArt from './MetaAdsDestinationArt.vue';
 
 // Anúncios da Meta (#1047), passo 3: para onde os anúncios levam. WhatsApp direto já funciona
-// sozinho; site usa as páginas ligadas em Links e QR codes (#1011) e o texto dos parâmetros de URL.
+// sozinho; site usa as páginas do site (os links de site de Links e QR codes, #1011) e o texto dos parâmetros de URL.
+// A página é ligada ali mesmo, sem sair dos Anúncios (#2338).
 const props = defineProps({
   destinations: { type: Object, default: () => ({}) },
+  // Embutido no passo a passo do "Conectar anúncios" (#2338) a pergunta é o título da tela: nível 2.
+  headingLevel: {
+    type: Number,
+    default: 3,
+    validator: value => [2, 3].includes(value),
+  },
 });
 
-const emit = defineEmits(['saved']);
+const emit = defineEmits(['saved', 'failed', 'pageLinked']);
 
 const { t } = useI18n();
 
@@ -24,7 +33,13 @@ const choice = ref({
   site: props.destinations.site ?? false,
 });
 const sitePages = ref([]);
+// Carregando ou com falha não é "nenhuma página": oferecer ligar ali criaria uma página repetida.
+const loadingPages = ref(true);
+const loadFailed = ref(false);
 const saving = ref(false);
+const linkDialog = ref(null);
+// O que chegou de cada campanha (cliques, nomes) só vem para quem vê Links e QR codes (campaign_view).
+const canSeeCampaigns = usePermissionGranted('campaign_view');
 
 const OPTIONS = [
   { key: 'whatsapp', icon: 'i-lucide-message-circle' },
@@ -34,15 +49,35 @@ const OPTIONS = [
 const adText = computed(() => sitePages.value[0]?.ad_url_params || '');
 const canSave = computed(() => choice.value.whatsapp || choice.value.site);
 
-const loadPages = async () => {
+const withCampaigns = async pages => {
+  if (!canSeeCampaigns.value || !pages.length) return pages;
   try {
     const { data } = await CtwaTrackedLinksAPI.get();
-    sitePages.value = (data.payload || []).filter(
-      link => link.usage === 'website'
+    const campaigns = Object.fromEntries(
+      (data.payload || []).map(link => [link.id, link.campaigns])
     );
+    return pages.map(page => ({ ...page, campaigns: campaigns[page.id] }));
   } catch {
-    sitePages.value = [];
+    return pages;
   }
+};
+
+const loadPages = async () => {
+  loadingPages.value = true;
+  loadFailed.value = false;
+  try {
+    const { data } = await CrmMetaAdsConnectionAPI.sitePages();
+    sitePages.value = await withCampaigns(data.payload || []);
+  } catch {
+    loadFailed.value = true;
+  } finally {
+    loadingPages.value = false;
+  }
+};
+
+const pageLinked = page => {
+  sitePages.value = [...sitePages.value, page];
+  emit('pageLinked');
 };
 
 const copyAdText = async () => {
@@ -68,6 +103,7 @@ const save = async () => {
     emit('saved', data);
   } catch (error) {
     useAlert(t(errorMessageKey(error)));
+    emit('failed');
   } finally {
     saving.value = false;
   }
@@ -79,9 +115,13 @@ onMounted(loadPages);
 <template>
   <section data-meta-ads-destinations class="flex flex-col gap-4">
     <header class="flex flex-col gap-1">
-      <h3 class="m-0 text-xl font-semibold tracking-tight text-n-slate-12">
+      <component
+        :is="`h${headingLevel}`"
+        data-destinations-title
+        class="m-0 text-xl font-semibold tracking-tight text-n-slate-12"
+      >
         {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.TITLE') }}
-      </h3>
+      </component>
       <p class="m-0 text-sm leading-6 text-n-slate-11">
         {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.HINT') }}
       </p>
@@ -150,8 +190,27 @@ onMounted(loadPages);
         <span class="text-sm font-semibold text-n-slate-12">
           {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_LINKS') }}
         </span>
+        <div
+          v-if="loadFailed"
+          data-site-load-error
+          role="alert"
+          class="flex flex-col items-start gap-3"
+        >
+          <span class="text-sm text-n-ruby-11">
+            {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_LOAD_ERROR') }}
+          </span>
+          <Button
+            data-site-retry
+            class="!min-h-11 !rounded-xl"
+            icon="i-lucide-refresh-cw"
+            slate
+            faded
+            :label="$t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_RETRY')"
+            @click="loadPages"
+          />
+        </div>
         <ul
-          v-if="sitePages.length"
+          v-else-if="sitePages.length"
           class="flex flex-col gap-2 p-0 m-0 list-none"
         >
           <MetaAdsSitePage
@@ -160,17 +219,34 @@ onMounted(loadPages);
             :page="page"
           />
         </ul>
-        <div v-else class="flex flex-wrap items-center gap-3">
+        <div
+          v-else-if="!loadingPages"
+          data-site-empty
+          class="flex flex-col items-start gap-3"
+        >
           <span class="text-sm text-n-slate-11">
             {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_EMPTY') }}
           </span>
-          <router-link
-            :to="{ name: 'campaigns_tracked_links_index' }"
-            class="text-sm font-semibold underline rounded text-n-blue-11 underline-offset-2"
-          >
-            {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_CREATE') }}
-          </router-link>
+          <!-- Secundário: o principal do passo é "Salvar e continuar" (uma ação principal por tela, #2338). -->
+          <Button
+            data-site-link-open
+            variant="outline"
+            class="!min-h-11 !rounded-xl"
+            icon="i-lucide-link"
+            :label="$t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_CREATE')"
+            @click="linkDialog?.open()"
+          />
         </div>
+        <button
+          v-if="!loadFailed && sitePages.length"
+          type="button"
+          data-site-link-another
+          class="self-start p-0 text-sm font-medium bg-transparent border-0 rounded-lg min-h-11 text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+          @click="linkDialog?.open()"
+        >
+          {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_CREATE_ANOTHER') }}
+        </button>
+        <MetaAdsSiteLinkDialog ref="linkDialog" @created="pageLinked" />
       </div>
 
       <!-- O texto é para a Meta, não para a pessoa: só o botão de copiar aparece; o caminho e o

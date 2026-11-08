@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import { getUserPermissions } from 'dashboard/helper/permissionsHelper.js';
 import Button from 'dashboard/components-next/button/Button.vue';
 import api from '../api/modelosWhatsapp';
@@ -69,6 +70,9 @@ const gerenciaCampanhas = computed(() =>
     ['administrator', 'campaign_manage'].includes(permissao)
   )
 );
+
+// #1898: retomar dispara de novo, então pede a chave de disparar.
+const podeDisparar = useCanManage('campaign_send');
 
 const retomando = ref(null);
 const retomar = async campanha => {
@@ -173,7 +177,7 @@ const retomar = async campanha => {
           :class="noModelo ? '' : 'xl:max-w-none'"
         >
           <Button
-            v-if="gerenciaCampanhas && campanha.pausaId"
+            v-if="gerenciaCampanhas && podeDisparar && campanha.pausaId"
             data-retomar
             :label="$t('MODELOS_WHATSAPP.PARADAS.ACOES.RETOMAR')"
             icon="i-lucide-play"

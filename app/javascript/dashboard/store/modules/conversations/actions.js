@@ -696,9 +696,11 @@ const actions = {
     }
   },
 
+  // #2067: devolve a promessa do envio, para a caixa de resposta saber se saiu (e desfazer a
+  // escolha de "ficar com a conversa" quando não saiu).
   createPendingMessageAndSend: async ({ dispatch }, data) => {
     const pendingMessage = createPendingMessage(data);
-    dispatch('sendMessageWithData', pendingMessage);
+    return dispatch('sendMessageWithData', pendingMessage);
   },
 
   sendMessageWithData: async ({ commit }, pendingMessage) => {
@@ -719,6 +721,8 @@ const actions = {
         ...response.data,
         status: MESSAGE_STATUS.SENT,
       });
+      // #2067: a resposta do envio diz se "ficar com a conversa" não deu.
+      return response.data;
     } catch (error) {
       const errorMessage = error.response
         ? error.response.data.error

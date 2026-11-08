@@ -1,0 +1,6 @@
+# Ramo da conta para a IA de e-mail (#2037). Vazio aqui: conta fora de um pacote recebe o pedido de sempre; as camadas
+# de seguros (config/pacotes/seguros/**) preenchem.
+pt_BR:
+  email_campaigns:
+    ai:
+      vocabulario: ''

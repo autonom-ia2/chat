@@ -1,0 +1,116 @@
+{
+  "META_ADS_ORGANIC": {
+    "TAB": "Seus posts",
+    "SUBTITLE": "Veja quem viu seus posts e quem mandou mensagem.",
+    "PERIOD_LABEL": "Período",
+    "PERIODS": {
+      "7d": "7 dias",
+      "30d": "30 dias",
+      "90d": "90 dias"
+    },
+    "LOADING": "Carregando seus posts",
+    "RANGE": "{range} · números da Meta podem levar até 2 dias",
+    "HEADLINE": {
+      "BOTH": "Seus posts apareceram {page} vezes no Facebook e {instagram} no Instagram, sem contar anúncios.",
+      "PAGE": "Os posts da sua Página apareceram {count} vezes, sem contar anúncios.",
+      "INSTAGRAM": "Os posts do seu Instagram apareceram {count} vezes, sem contar anúncios.",
+      "ZERO": "Você não postou nos últimos {days} dias. Um post novo traz as pessoas de volta.",
+      "NONE": "Libere o acesso para ver quantas pessoas sua Página e seu Instagram alcançam.",
+      "UNAVAILABLE": "Não deu para ler os números agora. Tente de novo."
+    },
+    "BEST_POST": "Seu post com mais curtidas foi no {place}. Faça mais posts como este: “{text}”",
+    "STEP": "{step}. {text}",
+    "SOURCE": {
+      "PAGE": {
+        "NAME": "Página do Facebook",
+        "OPEN": "Abrir Página",
+        "POST": "Abrir o Facebook para postar",
+        "MESSAGES": "Ninguém mandou mensagem pela Página nesse período. | 1 pessoa mandou mensagem pela Página. Inclui quem veio de anúncio. | {count} pessoas mandaram mensagem pela Página. Inclui quem veio de anúncio.",
+        "NEEDS_PERMISSION": {
+          "TITLE": "Libere sua Página",
+          "TEXT": "Entre com o Facebook de novo e permita o acesso aos resultados da Página. Seus anúncios continuam no ar.",
+          "BUTTON": "Entrar com Facebook"
+        },
+        "NOT_CONNECTED": {
+          "TITLE": "Nenhuma Página conectada",
+          "TEXT": "Entre com o Facebook e escolha a Página em que você posta.",
+          "BUTTON": "Entrar com Facebook"
+        },
+        "SEE_CONVERSATIONS": "Ver conversas da Página",
+        "UNAVAILABLE": "Não deu para ler sua Página agora"
+      },
+      "INSTAGRAM": {
+        "NAME": "Instagram",
+        "OPEN": "Abrir perfil",
+        "POST": "Abrir o Instagram para postar",
+        "MESSAGES": "Ninguém mandou mensagem pelo Instagram nesse período. | 1 pessoa mandou mensagem pelo Instagram. Inclui quem veio de anúncio. | {count} pessoas mandaram mensagem pelo Instagram. Inclui quem veio de anúncio.",
+        "NEEDS_PERMISSION": {
+          "TITLE": "Libere seu Instagram",
+          "TEXT": "Entre com o Instagram de novo e permita o acesso aos resultados. Suas mensagens continuam chegando.",
+          "BUTTON": "Entrar com Instagram"
+        },
+        "NOT_CONNECTED": {
+          "TITLE": "Nenhum Instagram conectado",
+          "TEXT": "Entre com a sua conta comercial do Instagram para ver os resultados dela aqui.",
+          "BUTTON": "Entrar com Instagram"
+        },
+        "SEE_CONVERSATIONS": "Ver conversas do Instagram",
+        "UNAVAILABLE": "Não deu para ler seu Instagram agora"
+      }
+    },
+    "ASK_ADMIN": "Peça a um administrador desta conta para conectar.",
+    "ERROR": {
+      "TEXT": "Não conseguimos falar com a Meta agora. Tente de novo em alguns minutos.",
+      "RETRY": "Tentar de novo"
+    },
+    "TILES": {
+      "REACH": {
+        "LABEL": "Pessoas que viram",
+        "HELP": "Cada pessoa conta uma vez.",
+        "HELP_UP_TO": "A mesma pessoa pode contar mais de uma vez, se viu um post e um story."
+      },
+      "VIEWS": {
+        "LABEL": "Vezes que apareceu",
+        "HELP": "A mesma pessoa pode ver mais de uma vez."
+      },
+      "INTERACTIONS": {
+        "LABEL": "Curtidas e comentários",
+        "HELP": "Inclui compartilhamentos e salvamentos."
+      },
+      "FOLLOWERS": {
+        "LABEL": "Seguidores",
+        "HELP": "Total de hoje.",
+        "NEW": "+{count} nos últimos {days} dias",
+        "SMALL_ACCOUNT": "A Meta mostra seguidores novos a partir de 100 seguidores."
+      },
+      "MORE": "{count} a mais que nos {days} dias anteriores",
+      "FEWER": "{count} a menos que nos {days} dias anteriores",
+      "SAME": "Igual aos {days} dias anteriores",
+      "NO_COMPARE": "Sem comparação no Instagram: a Meta só guarda 90 dias.",
+      "FIRST_PERIOD": "Primeiro período com dado: nos {days} dias anteriores seus posts não apareceram sem anúncio.",
+      "UP_TO": "até {count}"
+    },
+    "ADS_SHARE": {
+      "TEXT": "{first}% das vezes que sua Página apareceu foram sem pagar. {second}% vieram de anúncios.",
+      "FIRST": "Sem pagar",
+      "SECOND": "De anúncios"
+    },
+    "NEW_PEOPLE": {
+      "TEXT": "{first}% de quem viu seu Instagram ainda não te segue.",
+      "FIRST": "Ainda não segue",
+      "SECOND": "Já segue"
+    },
+    "TOP_POSTS": {
+      "TITLE": "Posts com mais curtidas e comentários",
+      "EMPTY": "Nenhum post nos últimos {days} dias.",
+      "REACH": "alcance {count}",
+      "INTERACTIONS": "{count} curtidas e comentários"
+    },
+    "QUIET": {
+      "TITLE": "Nenhum post nos últimos {days} dias",
+      "TEXT": "Você tem {followers} seguidores. Quando postar, os números aparecem aqui."
+    },
+    "CONNECT_ERROR": "Não conseguimos abrir a entrada. Tente de novo em alguns minutos.",
+    "MESSAGES_NO_ACCESS": "Você não tem acesso às conversas desta caixa."
+  }
+}

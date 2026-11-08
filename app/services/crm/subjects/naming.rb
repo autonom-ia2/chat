@@ -16,7 +16,8 @@ module Crm::Subjects::Naming
     titles.compact_blank
   end
 
-  def self.metadata(card, source)
-    (card.metadata || {}).merge('subject' => { 'source' => source, 'named_at' => Time.current.iso8601 })
+  # provisorio (#2163): o nome é genérico e pode ser refinado uma vez (Crm::Subjects::NomeProvisorio).
+  def self.metadata(card, source, titulo: nil, provisorio: false)
+    (card.metadata || {}).merge('subject' => Crm::Subjects::NomeProvisorio.subject(source, titulo: titulo, provisorio: provisorio))
   end
 end

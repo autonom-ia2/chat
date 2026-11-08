@@ -19,12 +19,23 @@ class Autonomia::Agents::Material::Retrato
     salvo = @agent.chave_do_material(Autonomia::Agents::Material::Autoteste::CHAVE)
     return nunca if salvo.blank?
 
-    itens = Array(salvo['itens'])
+    todos = Array(salvo['itens'])
+    itens = julgaveis(todos)
     { estado: estado(salvo), quando: salvo['quando'], feitas: salvo['feitas'].to_i, total: salvo['total'].to_i,
-      do_material: da_origem(itens, 'material').size, de_fora: da_origem(itens, 'fora').size,
+      nao_julgadas: todos.size - itens.size, **contas(itens) }
+  end
+
+  def contas(itens)
+    { do_material: da_origem(itens, 'material').size, de_fora: da_origem(itens, 'fora').size,
       certas_do_material: da_origem(itens, 'material').count { |item| ok?(item) },
       certas_de_fora: da_origem(itens, 'fora').count { |item| ok?(item) },
       resultados: itens.map { |item| { pergunta: item['pergunta'], origem: item['origem'], ok: ok?(item) } } }
+  end
+
+  # O item que o juiz deu como `nao_se_aplica` (#2444: o próprio item não deixa julgar) fica fora das contas e da lista
+  # (só o número vai, `nao_julgadas`, para a tela dizer quantos ficaram de fora): não é acerto nem erro do agente.
+  def julgaveis(todos)
+    todos.reject { |item| item['veredito'] == Autonomia::Agents::Material::JuizDoAutoteste::NAO_SE_APLICA }
   end
 
   def da_origem(itens, origem)
@@ -44,9 +55,9 @@ class Autonomia::Agents::Material::Retrato
 
   # Sem rodada ainda: a caixa aparece só quando há material aprovado para testar.
   def nunca
-    return unless @agent.sources.knowledge_sources.servable.exists?
+    return unless @agent.sources.da_agente.knowledge_sources.servable.exists?
 
     { estado: 'nunca', quando: nil, feitas: 0, total: 0, do_material: 0, de_fora: 0, certas_do_material: 0,
-      certas_de_fora: 0, resultados: [] }
+      nao_julgadas: 0, certas_de_fora: 0, resultados: [] }
   end
 end

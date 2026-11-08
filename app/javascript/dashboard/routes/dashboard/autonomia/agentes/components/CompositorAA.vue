@@ -13,6 +13,8 @@ const props = defineProps({
   placeholder: { type: String, default: '' },
   anexar: { type: Boolean, default: false },
   soImagens: { type: Boolean, default: false },
+  // #1427 — o rótulo do clipe quando não é o padrão (no Testar: foto ou arquivo, sem site).
+  rotuloAnexar: { type: String, default: '' },
   enviando: { type: Boolean, default: false },
   desabilitado: { type: Boolean, default: false },
 });
@@ -59,6 +61,13 @@ const remover = id => {
 };
 
 onBeforeUnmount(() => anexos.value.forEach(soltar));
+
+const rotuloDoClipe = computed(() => {
+  if (props.rotuloAnexar) return props.rotuloAnexar;
+  return props.soImagens
+    ? t('AGENTS.JORNADA.COMPOSITOR.ANEXAR_FOTO')
+    : t('AGENTS.JORNADA.COMPOSITOR.ANEXAR');
+});
 
 const temAlgo = computed(
   () => Boolean((props.modelValue || '').trim()) || anexos.value.length > 0
@@ -141,11 +150,7 @@ defineExpose({
           type="button"
           data-anexar
           :disabled="desabilitado"
-          :aria-label="
-            soImagens
-              ? t('AGENTS.JORNADA.COMPOSITOR.ANEXAR_FOTO')
-              : t('AGENTS.JORNADA.COMPOSITOR.ANEXAR')
-          "
+          :aria-label="rotuloDoClipe"
           class="grid rounded-xl place-items-center size-11 shrink-0 text-n-slate-11 hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11 disabled:opacity-50"
           @click="seletor?.click()"
         >

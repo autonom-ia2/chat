@@ -11,6 +11,40 @@ const RELATIVE_UNITS = [
 
 export const intlLocale = locale => (locale || 'en').replace('_', '-');
 
+// Períodos do painel (#2011), com os nomes que o servidor entende (Crm::MetaAds::Panel::Period): os botões e os do
+// "Mais períodos".
+export const ROLLING_PERIODS = ['7d', '30d', '90d'];
+export const MORE_PERIODS = ['this_month', 'last_month', 'all'];
+export const DEFAULT_PERIOD = '30d';
+// Dias do período móvel ("30d" → 30); os outros não têm número fixo.
+export const rollingDays = period => Number.parseInt(period, 10) || null;
+
+// "22 de set. – 21 de out.", no idioma da tela, a partir das datas do servidor (AAAA-MM-DD, dias do fuso da conta);
+// com o ano quando o período passa deste ano. Vazio sem as duas datas.
+export const periodRange = (from, to, locale) => {
+  if (!from || !to) return '';
+  const start = new Date(`${from}T00:00:00Z`);
+  const end = new Date(`${to}T00:00:00Z`);
+  const thisYear = new Date().getUTCFullYear();
+  const withYear = [start, end].some(
+    date => date.getUTCFullYear() !== thisYear
+  );
+  return new Intl.DateTimeFormat(intlLocale(locale), {
+    day: 'numeric',
+    month: 'short',
+    ...(withYear ? { year: 'numeric' } : {}),
+    timeZone: 'UTC',
+  }).formatRange(start, end);
+};
+
+// Código do site (Pixel) usado mais recentemente; undefined com a lista vazia.
+export const latestPixel = list =>
+  [...list].sort((a, b) =>
+    String(b.last_fired_time || '').localeCompare(
+      String(a.last_fired_time || '')
+    )
+  )[0];
+
 // "há 2 horas", do próprio timestamp; null quando não há data válida.
 export const relativeTime = (value, locale) => {
   const date = new Date(value || '');
@@ -207,3 +241,62 @@ export const thumbClass = adId => {
   );
   return THUMBS[sum % THUMBS.length];
 };
+
+// Foto do anúncio (#1960): primeiro a guardada do clique no WhatsApp, que não vence; depois a da Meta, que vence
+// em poucos dias. `failed` são os endereços que já não abriram: sem nenhum que abra, o quadro de reserva.
+export const adImage = (ad, failed = []) =>
+  [ad?.image_url, ad?.thumbnail_url].find(
+    url => url && !failed.includes(url)
+  ) || null;
+
+// O que a Meta mede em cada destino do anúncio que não abre conversa (#2521; Crm::MetaAds::Panel::AdResults). Ela não
+// manda "visitas ao perfil": o anúncio de perfil fica com cliques e engajamento. Leads só aparecem no formulário ou
+// quando houve algum (site com Pixel). A lista e o anúncio por dentro mostram os mesmos números.
+const OTHER_STAT_KEYS = {
+  profile: ['PROFILE', 'ENGAGEMENT', 'SHOWN'],
+  post: ['ENGAGEMENT', 'COMMENTS', 'SHOWN'],
+  lead_form: ['LEADS', 'CLICKS', 'SHOWN'],
+  website: ['CLICKS', 'LEADS', 'SHOWN'],
+};
+const OTHER_STAT_FIELDS = {
+  CLICKS: 'link_clicks',
+  PROFILE: 'link_clicks',
+  ENGAGEMENT: 'post_engagement',
+  COMMENTS: 'comments',
+  LEADS: 'leads',
+  SHOWN: 'impressions',
+};
+// As conversas do privado de um comentário (#2521) vêm primeiro, só quando houve: são o resultado em conversa de um
+// anúncio que não abre conversa, fora do custo por conversa.
+export const otherAdStats = ad => [
+  ...(ad.private_conversations
+    ? [{ key: 'PRIVATE', value: ad.private_conversations }]
+    : []),
+  ...(OTHER_STAT_KEYS[ad.destination] || ['CLICKS', 'SHOWN'])
+    .filter(
+      key => key !== 'LEADS' || ad.destination === 'lead_form' || ad.leads
+    )
+    .map(key => ({ key, value: ad[OTHER_STAT_FIELDS[key]] || 0 })),
+];
+
+// O número do cartão de um anúncio que não abre conversa, na lista única do painel (#2621): um só, o do objetivo dele.
+// Perfil: a Meta não manda "visitas ao perfil" nas ações do anúncio (Panel::AdResults); o número oficial mais perto é
+// o clique (`link_clicks`), que no anúncio de perfil é o toque que leva ao perfil. Chave em PANEL.AD_RESULT.
+const RESULT_BY_DESTINATION = {
+  profile: ['PROFILE', 'link_clicks'],
+  website: ['WEBSITE', 'link_clicks'],
+  lead_form: ['LEADS', 'leads'],
+  post: ['ENGAGEMENT', 'post_engagement'],
+  reach: ['SHOWN', 'impressions'],
+};
+export const resultadoDoAnuncio = ad => {
+  const [key, field] = RESULT_BY_DESTINATION[ad.destination] || [
+    'CLICKS',
+    'link_clicks',
+  ];
+  return { key, value: ad[field] || 0 };
+};
+
+// Chave do texto do destino (PANEL.OTHER_ADS.DESTINATIONS): profile, post, lead_form, website, app, reach ou other.
+export const destinationKey = ad =>
+  `CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.DESTINATIONS.${(ad.destination || 'other').toUpperCase()}`;

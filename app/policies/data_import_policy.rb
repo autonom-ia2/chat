@@ -1,14 +1,15 @@
+# Importing from another system takes that system's key (#2027): admin or integration_manage.
 class DataImportPolicy < ApplicationPolicy
   def index?
-    @account_user.administrator?
+    @account_user.permission_granted?('integration_manage')
   end
 
   def show?
-    @account_user.administrator? && record.account_id == account.id
+    index? && record.account_id == account.id
   end
 
   def create?
-    @account_user.administrator?
+    index?
   end
 
   def validate_source?
@@ -37,7 +38,7 @@ class DataImportPolicy < ApplicationPolicy
 
   class Scope < Scope
     def resolve
-      return scope.where(account_id: account.id) if account_user.administrator?
+      return scope.where(account_id: account.id) if account_user.permission_granted?('integration_manage')
 
       scope.none
     end

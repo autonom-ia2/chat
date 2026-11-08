@@ -29,6 +29,13 @@ class Crm::Ai::ClassificacaoConjunta
   end.freeze
   SCHEMA_MEMORIA = SCHEMA.merge(schema: SCHEMA[:schema].merge(properties: { cards: { type: 'array', items: ITEM_MEMORIA } })).freeze
 
+  # O schema da avaliação conjunta a partir do schema de um card: o mesmo item, com o card_id na frente.
+  def self.com_cards(esquema_do_card)
+    corpo = esquema_do_card[:schema]
+    item = corpo.merge(properties: { card_id: { type: 'integer' } }.merge(corpo[:properties]), required: ['card_id', *corpo[:required]])
+    SCHEMA.merge(schema: SCHEMA[:schema].merge(properties: { cards: { type: 'array', items: item } })).freeze
+  end
+
   # principal_id: o card principal da mensagem; o pacote dele vai com "principal": true (onde fica o pedido de
   # atendente que o cliente não ligou a nenhum assunto).
   def initialize(client:, classificadores:, model:, principal_id: nil, reasoning_effort: Crm::Ai::Config::CLASSIFY_REASONING_EFFORT)
@@ -49,14 +56,23 @@ class Crm::Ai::ClassificacaoConjunta
 
   def instructions
     Crm::Ai::ClassifierPrompt.para_varios(@classificadores.flat_map { |classificador| classificador.pacote[:eligible_agents] },
-                                          memoria: memoria?, email_autoria: @classificadores.first.email_autoria?)
+                                          memoria: memoria?, email_autoria: @classificadores.first.email_autoria?,
+                                          nao_e_negocio: nao_e_negocio?,
+                                          pedido_anterior: @classificadores.any? { |classificador| classificador.pacote.key?(:previous_card) },
+                                          fatos: @classificadores.first.fatos?, fecha_card: @classificadores.first.fecha_card?)
   end
 
   # #1828: com a flag `email_autoria`, `saida_da_copia` no topo (é da conversa, não de um card); sem ela, o de sempre.
   def esquema
     base = memoria? ? SCHEMA_MEMORIA : SCHEMA
+    # #1922 e IA entende a conversa F1 e F3: o item sai do schema de um card quando ele muda com a flag da conta.
+    primeiro = @classificadores.first
+    base = self.class.com_cards(primeiro.esquema_do_card) if nao_e_negocio? || primeiro.fatos? || primeiro.fecha_card?
     email_autoria? ? Crm::Email::SaidaDaCopia.com_saida(base) : base
   end
+
+  # #1922: com a flag `crm_ia_arquiva_lixo`, cada card ganha o campo `nao_e_negocio` (StageClassifier#esquema_do_card).
+  def nao_e_negocio? = @classificadores.first.nao_e_negocio?
 
   def email_autoria? = @classificadores.first.email_autoria?
 

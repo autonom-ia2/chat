@@ -1,6 +1,6 @@
-# Os gestos da pessoa sobre cada ação do consultor de anúncios (#1110, F5). Só administrador (policy
-# Crm::MetaAdsConnection :update?): quem só tem `meta_ads_view` vê o consultor, mas não age sobre ele (#1794). Vira
-# `meta_ads_manage` no lote das chaves protegidas.
+# Os gestos da pessoa sobre cada ação do consultor de anúncios (#1110, F5). Administrador ou `meta_ads_manage`
+# (#2070, policy Crm::MetaAdsConnection :update?): quem só tem `meta_ads_view` vê o consultor, mas não age sobre ele
+# (#1794).
 #
 # POST advisor_actions/:id/open    → primeiro clique no botão principal. Idempotente, não muda o status (D5.9).
 # POST advisor_actions/:id/accept  → "Feito". Só de `open`; senão 422 not_open.
@@ -10,7 +10,7 @@
 # cabeçalho api_access_token, que é como o Guia chama (Autonomia::Guide::ChamadaInterna); a métrica de aceite
 # conta só o painel (D5.11).
 class Api::V1::Accounts::Crm::MetaAdsAdvisorActionsController < Api::V1::Accounts::Crm::BaseController
-  before_action :ensure_administrator
+  before_action :ensure_manage
   before_action :load_advisor_action
 
   def open
@@ -34,7 +34,7 @@ class Api::V1::Accounts::Crm::MetaAdsAdvisorActionsController < Api::V1::Account
 
   private
 
-  def ensure_administrator
+  def ensure_manage
     return if Pundit.policy!(pundit_user, ::Crm::MetaAdsConnection).update?
 
     render json: { error: 'forbidden' }, status: :forbidden

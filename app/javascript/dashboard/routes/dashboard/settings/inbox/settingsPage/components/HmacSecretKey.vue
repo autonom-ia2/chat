@@ -7,6 +7,8 @@ import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import AccessToken from 'dashboard/routes/dashboard/settings/profile/AccessToken.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import { TOKEN_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
 
 const props = defineProps({
   inbox: {
@@ -17,6 +19,8 @@ const props = defineProps({
 
 const { t } = useI18n();
 const store = useStore();
+// Trocar a chave fica com token_manage (#2027); o administrador sempre passa.
+const canRotate = usePermissionGranted(TOKEN_MANAGE_PERMISSION);
 
 const dialogRef = ref(null);
 const isRotating = ref(false);
@@ -54,6 +58,7 @@ const rotate = async () => {
   >
     <template #actions>
       <NextButton
+        v-if="canRotate"
         slate
         outline
         type="button"
@@ -67,6 +72,7 @@ const rotate = async () => {
     </template>
   </AccessToken>
   <Dialog
+    v-if="canRotate"
     ref="dialogRef"
     type="alert"
     :title="$t('INBOX_MGMT.SETTINGS_POPUP.IDENTITY_VALIDATION.ROTATE.TITLE')"

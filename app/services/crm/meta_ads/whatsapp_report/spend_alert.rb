@@ -3,6 +3,9 @@
 # Entra o anúncio com gasto de hoje maior ou igual a ALERT_SPEND_FACTOR vezes o custo por conversa da conta nos
 # últimos 30 dias e nenhuma conversa hoje. Sem custo por conversa (nenhuma conversa nos 30 dias), o piso é
 # ALERT_MIN_SPEND na moeda da conta. Havendo mais de um, vai o de maior gasto: uma mensagem só.
+#
+# Anúncio que leva para fora de conversa (alcance, perfil, site, vídeo…) não entra: gastar sem conversa é o esperado
+# dele. A régua é a do painel (Panel::OutsideAds), a mesma que o põe em "Outros anúncios" (#2521).
 class Crm::MetaAds::WhatsappReport::SpendAlert
   ALERT_SPEND_FACTOR = 2
   ALERT_MIN_SPEND = 30
@@ -17,7 +20,10 @@ class Crm::MetaAds::WhatsappReport::SpendAlert
   def candidate
     return @candidate if defined?(@candidate)
 
-    ad_id, spent = spend_by_ad.select { |id, value| value >= threshold && conversations_today[id].to_i.zero? }
+    spent_today = spend_by_ad
+    outside = Crm::MetaAds::Panel::OutsideAds.new(@connection.account_id, ad_ids: spent_today.keys).ids
+    ad_id, spent = spent_today.except(*outside)
+                              .select { |id, value| value >= threshold && conversations_today[id].to_i.zero? }
                               .max_by { |_id, value| value }
     @candidate = ad_id && { ad_id: ad_id, name: ad_name(ad_id), spend: spent.round(2), currency: currency, threshold: threshold }
   end

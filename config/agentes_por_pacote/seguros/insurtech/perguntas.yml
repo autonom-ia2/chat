@@ -1,0 +1,11 @@
+# As 3 perguntas do antes e depois de "Atualizar com a nova base" (#1429, F3): o agente responde cada uma com a base de
+# hoje e com a nova. Curtas, como quem escreve no WhatsApp, sem dado pessoal: um termo do ramo e dois pedidos comuns de
+# quem escreve. pt_BR e en com o mesmo número de perguntas, na mesma ordem.
+pt_BR:
+  - "O que é vigência?"
+  - "Contratei pelo app. Como cancelo?"
+  - "Como aciono o seguro pelo app?"
+en:
+  - "What is the policy term?"
+  - "I bought my policy in the app. How do I cancel?"
+  - "How do I file a claim in the app?"

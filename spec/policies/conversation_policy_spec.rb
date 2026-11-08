@@ -70,4 +70,22 @@ RSpec.describe ConversationPolicy, type: :policy do
       end
     end
   end
+
+  # #2517: apagar o comentário de origem só administrador (no OSS); apagar mensagem segue com quem escreve na conversa.
+  context 'when an agent from the inbox deletes' do
+    before { create(:inbox_member, user: agent, inbox: conversation.inbox) }
+
+    permissions :delete_comment? do
+      it 'denies the agent and allows the administrator' do
+        expect(subject).not_to permit(agent_context, conversation)
+        expect(subject).to permit(administrator_context, conversation)
+      end
+    end
+
+    permissions :delete_message? do
+      it 'still allows the agent to delete a message' do
+        expect(subject).to permit(agent_context, conversation)
+      end
+    end
+  end
 end

@@ -8,6 +8,8 @@
 # Devolve :ok, :skipped (conexão que não pode ser lida agora), :paused (limite de uso) ou o símbolo de
 # Failure.handle!.
 #
+# Depois do `today`, o destino dos conjuntos que ainda não o têm (Insights::Destinations, #2054), também opcional.
+#
 # A leitura de frequência é opcional: roda mesmo se a de posicionamento falhou, pula com a conta em pausa e, no
 # erro, só registra o uso e o log. Nunca passa por Failure.handle!: um código 100 por parâmetro errado na consulta
 # nova não pode desligar a conexão. O resultado do `recent` continua sendo o da leitura de posicionamento.
@@ -42,7 +44,9 @@ class Crm::MetaAds::Insights::Sync
   end
 
   def read_today
-    read(Crm::MetaAds::Insights::Query.ads(Crm::MetaAds::Insights::Query::TODAY)) { |rows| writer.ads!(rows) }
+    outcome = read(Crm::MetaAds::Insights::Query.ads(Crm::MetaAds::Insights::Query::TODAY)) { |rows| writer.ads!(rows) }
+    Crm::MetaAds::Insights::Destinations.new(@connection, client).read! if outcome == :ok
+    outcome
   end
 
   def read_recent

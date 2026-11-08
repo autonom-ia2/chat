@@ -1,12 +1,52 @@
+import { computed, ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import MetaAdsAdDetail from '../components/MetaAdsAdDetail.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
+import { lerGestao } from '../gestaoDoAnuncio';
+import comentariosInstagram from '../components/comentarios/comentariosInstagram';
+import MetaAdsAdStatus from '../components/MetaAdsAdStatus.vue';
+import MetaAdsComments from '../components/comentarios/MetaAdsComments.vue';
+import CuidarAnuncioEntrada from '../comentariosIa/CuidarAnuncioEntrada.vue';
+
+// Permissões negadas no teste; o resto passa (administrador).
+const { negadas } = vi.hoisted(() => ({ negadas: new Set() }));
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
-  default: { panelAd: vi.fn() },
+  default: { panelAd: vi.fn(), adBudget: vi.fn() },
 }));
+// Gestão mínima (#2161): a flag meta_ads_gestao e a situação/post vêm do adaptador.
+const flags = ref({});
+vi.mock('dashboard/composables/store', () => ({
+  useMapGetter: () =>
+    computed(() => (_accountId, flag) => Boolean(flags.value[flag])),
+}));
+vi.mock('dashboard/composables/useCanManage', () => ({
+  usePermissionGranted: key => computed(() => !negadas.has(key)),
+}));
+vi.mock('../gestaoDoAnuncio', () => ({ lerGestao: vi.fn() }));
+// IA cuida dos comentários (#2212, B2): a entrada lê só o estado guardado.
+vi.mock('dashboard/api/comentariosIa', () => ({
+  default: {
+    getCuidadosDosAnuncios: vi.fn(() =>
+      Promise.resolve({ data: { cuidados: [] } })
+    ),
+  },
+}));
+// Comentários (#2196): o adaptador do Instagram responde sem chamar a API.
+vi.mock('../components/comentarios/comentariosInstagram', async () => {
+  const real = await vi.importActual(
+    '../components/comentarios/comentariosInstagram'
+  );
+  return {
+    default: {
+      listar: vi.fn(),
+      podeEntrar: real.podeEntrar,
+      PERMISSOES_PARA_ENTRAR: real.PERMISSOES_PARA_ENTRAR,
+    },
+  };
+});
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: '18' }, query: {} }),
 }));
@@ -64,7 +104,7 @@ const AD = {
 let mounted = null;
 const mountDetail = async (props = {}, options = {}) => {
   mounted = mount(MetaAdsAdDetail, {
-    props: { adId: '1', days: 7, ...props },
+    props: { adId: '1', period: '7d', ...props },
     ...options,
     global: {
       mocks: { $t: (key, values) => `${key} ${JSON.stringify(values || {})}` },
@@ -86,6 +126,7 @@ const answer = ad => ({ data: { ad } });
 describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    flags.value = {};
     CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(answer(AD));
   });
 
@@ -98,7 +139,7 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
   it('asks for the ad and period and shows name, campaign and ad set', async () => {
     const wrapper = await mountDetail();
 
-    expect(CrmMetaAdsConnectionAPI.panelAd).toHaveBeenCalledWith('1', 7);
+    expect(CrmMetaAdsConnectionAPI.panelAd).toHaveBeenCalledWith('1', '7d');
     expect(wrapper.find('[data-ad-detail-name]').text()).toBe(
       'Capa (1080x1350)'
     );
@@ -177,11 +218,30 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     expect(won.find('a').exists()).toBe(false);
   });
 
+  // #2075 — sem a chave de valores de venda, a proposta de outra pessoa vem sem valor; a da própria pessoa, com.
+  it('shows the value only on the quotes that come with one', async () => {
+    const [stalled, won] = AD.quotes_list;
+    CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(
+      answer({
+        ...AD,
+        sales_value: null,
+        value_hidden: true,
+        quotes_list: [{ ...stalled, value: null, value_hidden: true }, won],
+      })
+    );
+    const wrapper = await mountDetail();
+
+    const hidden = wrapper.find('[data-ad-detail-quote="7"]');
+    expect(hidden.text()).toContain('Virgínia');
+    expect(hidden.text()).not.toMatch(/R\$|842/);
+    expect(wrapper.find('[data-ad-detail-quote="8"]').text()).toContain('500');
+  });
+
   it('draws one bar per day and a dot only on days with conversations', async () => {
     CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(
       answer({ ...AD, daily: daily(30) })
     );
-    const wrapper = await mountDetail({ days: 30 });
+    const wrapper = await mountDetail({ period: '30d' });
 
     expect(wrapper.findAll('[data-ad-detail-bar]')).toHaveLength(30);
     expect(wrapper.findAll('[data-ad-detail-dot]')).toHaveLength(10);
@@ -214,8 +274,8 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
       )
       .mockResolvedValueOnce(answer({ ...AD, days: 7, conversations: 5 }));
 
-    await wrapper.setProps({ days: 30 });
-    await wrapper.setProps({ days: 7 });
+    await wrapper.setProps({ period: '30d' });
+    await wrapper.setProps({ period: '7d' });
     await flushPromises();
     slow(answer({ ...AD, days: 30, conversations: 999 }));
     await flushPromises();
@@ -252,6 +312,62 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
       .findAll('[data-ad-detail-tile]')
       .map(tile => tile.attributes('data-ad-detail-tile'));
     expect(keys).toEqual(['SPEND', 'CONVERSATIONS', 'QUOTES', 'SALES']);
+  });
+
+  // #2521: o anúncio que não abre conversa mostra a medida do destino e para onde leva, sem "Por quê".
+  it('an ad outside conversations shows the measure of its destination and where it leads', async () => {
+    CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(
+      answer({
+        ...AD,
+        verdict: null,
+        reason: null,
+        outside: true,
+        destination: 'profile',
+        link_clicks: 400,
+        post_engagement: 430,
+        impressions: 10000,
+        leads: 0,
+      })
+    );
+    const wrapper = await mountDetail();
+
+    expect(
+      wrapper
+        .findAll('[data-ad-detail-tile]')
+        .map(tile => tile.attributes('data-ad-detail-tile'))
+    ).toEqual(['SPEND', 'PROFILE', 'ENGAGEMENT', 'SHOWN']);
+    expect(wrapper.find('[data-ad-detail-why]').exists()).toBe(false);
+    const destination = wrapper.find('[data-ad-detail-destination]');
+    expect(destination.attributes('data-destination')).toBe('profile');
+    expect(destination.text()).toContain('AD_DETAIL.DESTINATION');
+    expect(destination.text()).toContain('DESTINATIONS.PROFILE');
+    // O gráfico fica só com o gasto: sem ponto, legenda nem coluna de conversas.
+    expect(wrapper.text()).toContain('AD_DETAIL.CHART_TITLE_SPEND');
+    expect(wrapper.text()).not.toContain('AD_DETAIL.LEGEND_CONVERSATIONS');
+    expect(wrapper.find('[data-ad-detail-chart-scale]').text()).toContain(
+      'AD_DETAIL.CHART_SCALE_SPEND'
+    );
+    expect(wrapper.findAll('[data-ad-detail-dot]')).toHaveLength(0);
+    expect(wrapper.findAll('[data-ad-detail-bar]').length).toBeGreaterThan(0);
+  });
+
+  it('says how many were messaged privately and how many replied, only when someone was', async () => {
+    CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(
+      answer({ ...AD, private_replies: { sent: 5, replied: 2 } })
+    );
+    let wrapper = await mountDetail();
+    const line = wrapper.find('[data-ad-detail-private-replies]').text();
+    expect(line).toContain('PRIVATE_REPLIES.SENT {"count":5}');
+    expect(line).toContain('PRIVATE_REPLIES.REPLIED {"count":2}');
+    wrapper.unmount();
+
+    CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(
+      answer({ ...AD, private_replies: { sent: 0, replied: 0 } })
+    );
+    wrapper = await mountDetail();
+    expect(wrapper.find('[data-ad-detail-private-replies]').exists()).toBe(
+      false
+    );
   });
 
   it('with a sale puts cost per sale next to the account average', async () => {
@@ -338,5 +454,283 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
 
     expect(wrapper.find('[data-ad-detail-name]').exists()).toBe(true);
     expect(wrapper.find('[data-ad-detail-error]').exists()).toBe(false);
+  });
+  it('shows the comments only with the Instagram comments flag on (#2196)', async () => {
+    lerGestao.mockResolvedValue(null);
+    flags.value = { meta_ads_gestao: true };
+    const off = await mountDetail();
+    expect(off.find('[data-ad-comments]').exists()).toBe(false);
+    off.unmount();
+
+    comentariosInstagram.listar.mockResolvedValue({
+      status: 'ready',
+      account: { username: 'lojaexemplo' },
+      comments: [],
+      total: 0,
+      next_cursor: null,
+    });
+    flags.value = {
+      meta_ads_gestao: true,
+      meta_ads_comentarios_instagram: true,
+    };
+    const on = await mountDetail();
+    expect(on.find('[data-ad-comments]').exists()).toBe(true);
+    expect(on.find('[data-ad-comments-empty]').exists()).toBe(true);
+  });
+
+  // #2520: one flag rule for comments and care (the network comments flag + the care flag); the ad management flag
+  // does not hide them. Without it there is no live read, so the signal is the spend.
+  it('without meta_ads_gestao, an ad with spend still shows the comments and the AI care entry (#2520)', async () => {
+    comentariosInstagram.listar.mockResolvedValue({
+      status: 'ready',
+      account: { username: 'lojaexemplo' },
+      comments: [],
+      total: 0,
+      next_cursor: null,
+    });
+    flags.value = {
+      meta_ads_comentarios_instagram: true,
+      meta_ads_comentarios_ia: true,
+    };
+    const wrapper = await mountDetail();
+
+    expect(lerGestao).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-ad-comments]').exists()).toBe(true);
+    expect(wrapper.findComponent(CuidarAnuncioEntrada).exists()).toBe(true);
+    expect(wrapper.find('[data-ad-status]').exists()).toBe(false);
+  });
+
+  it('shows the AI comment care entry only with meta_ads_comentarios_ia, next to the comments (#2212)', async () => {
+    lerGestao.mockResolvedValue(null);
+    comentariosInstagram.listar.mockResolvedValue({
+      status: 'ready',
+      account: { username: 'lojaexemplo' },
+      comments: [],
+      total: 0,
+      next_cursor: null,
+    });
+    flags.value = {
+      meta_ads_gestao: true,
+      meta_ads_comentarios_instagram: true,
+    };
+    const off = await mountDetail();
+    expect(off.findComponent(CuidarAnuncioEntrada).exists()).toBe(false);
+    off.unmount();
+
+    flags.value = { ...flags.value, meta_ads_comentarios_ia: true };
+    const on = await mountDetail();
+    expect(on.findComponent(CuidarAnuncioEntrada).props()).toMatchObject({
+      adId: '1',
+      canManage: true,
+    });
+  });
+
+  it('without any network comment flag, no AI comment care entry, like the server (#2212)', async () => {
+    lerGestao.mockResolvedValue(null);
+    flags.value = { meta_ads_gestao: true, meta_ads_comentarios_ia: true };
+
+    const wrapper = await mountDetail();
+
+    expect(wrapper.findComponent(CuidarAnuncioEntrada).exists()).toBe(false);
+  });
+
+  // #2358: entrar de novo com o Instagram pede integration_manage e inbox_manage; a aba recebe essa régua ligada às
+  // permissões reais.
+  it('wires the Instagram login rule to integration_manage and inbox_manage (#2358)', async () => {
+    flags.value = {
+      meta_ads_gestao: true,
+      meta_ads_comentarios_instagram: true,
+    };
+
+    const canLogIn = async (deniedKeys, status) => {
+      deniedKeys.forEach(key => negadas.add(key));
+      const wrapper = await mountDetail();
+      const [instagram] = wrapper.findComponent(MetaAdsComments).props('abas');
+      const allowed = instagram.podeEntrar(status);
+      negadas.clear();
+      wrapper.unmount();
+      return allowed;
+    };
+
+    expect(await canLogIn([], 'needs_login')).toBe(true);
+    expect(await canLogIn(['integration_manage'], 'needs_login')).toBe(false);
+    expect(await canLogIn(['inbox_manage'], 'needs_login')).toBe(false);
+    expect(await canLogIn(['integration_manage'], 'not_connected')).toBe(true);
+  });
+
+  it('lets only who has inbox_manage connect the Page to Messenger (#2359)', async () => {
+    flags.value = {
+      meta_ads_gestao: true,
+      meta_ads_comentarios_instagram: true,
+    };
+    expect(
+      (await mountDetail())
+        .findComponent(MetaAdsComments)
+        .props('canCreateInbox')
+    ).toBe(true);
+
+    negadas.add('inbox_manage');
+    const sem = await mountDetail();
+    negadas.clear();
+    expect(sem.findComponent(MetaAdsComments).props()).toMatchObject({
+      canCreateInbox: false,
+      canManage: true,
+    });
+  });
+
+  // #2335 — anúncio que nunca rodou ou parou antes do período: sem números, mas a conexão lê o anúncio ao vivo.
+  const COMMENT_FLAGS = {
+    meta_ads_gestao: true,
+    meta_ads_comentarios_instagram: true,
+  };
+  const READY = {
+    status: 'ready',
+    account: { username: 'lojaexemplo' },
+    comments: [],
+    total: 0,
+    next_cursor: null,
+  };
+
+  it('without numbers but with the ad read from Meta, keeps the empty notice and shows status, post and comments (#2335)', async () => {
+    CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(answer(null));
+    comentariosInstagram.listar.mockResolvedValue(READY);
+    lerGestao.mockResolvedValue({
+      name: 'Anúncio do post',
+      status: 'PAUSED',
+      effective_status: 'PAUSED',
+      can_change: true,
+      needs_login: false,
+      post: { message: 'Texto do post', reactions: 0, comments: 1, shares: 0 },
+    });
+    flags.value = COMMENT_FLAGS;
+    const wrapper = await mountDetail();
+
+    expect(wrapper.find('[data-ad-detail-empty]').exists()).toBe(true);
+    expect(
+      wrapper.find('[data-ad-detail-gestao] [data-ad-status]').exists()
+    ).toBe(true);
+    // A confirmação de pausar e ativar diz o nome, que aqui vem da Meta.
+    expect(wrapper.findComponent(MetaAdsAdStatus).props('adName')).toBe(
+      'Anúncio do post'
+    );
+    expect(wrapper.find('[data-ad-post-message]').text()).toBe('Texto do post');
+    expect(wrapper.find('[data-ad-comments]').exists()).toBe(true);
+  });
+
+  it('without numbers and without the ad read from Meta, shows only the empty notice (#2335)', async () => {
+    CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(answer(null));
+    lerGestao.mockResolvedValue(null);
+    flags.value = COMMENT_FLAGS;
+    const wrapper = await mountDetail();
+
+    expect(wrapper.find('[data-ad-detail-empty]').exists()).toBe(true);
+    expect(wrapper.find('[data-ad-detail-gestao]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-comments]').exists()).toBe(false);
+  });
+
+  it('an ad without connection (no spend) shows no comments, unless Meta reads it live (#1960, #2335)', async () => {
+    CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(
+      answer({ ...AD, spend: null, people: [] })
+    );
+    comentariosInstagram.listar.mockResolvedValue(READY);
+    lerGestao.mockResolvedValue(null);
+    flags.value = COMMENT_FLAGS;
+    const without = await mountDetail();
+    expect(without.find('[data-ad-comments]').exists()).toBe(false);
+    without.unmount();
+
+    lerGestao.mockResolvedValue({
+      status: 'ACTIVE',
+      effective_status: 'ACTIVE',
+    });
+    const read = await mountDetail();
+    expect(read.find('[data-ad-comments]').exists()).toBe(true);
+  });
+
+  it('without the meta_ads_gestao flag, asks nothing about the ad and shows no status or post (#2161)', async () => {
+    const wrapper = await mountDetail();
+
+    expect(lerGestao).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-ad-status]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-post]').exists()).toBe(false);
+  });
+
+  it('with the flag, shows the status in the hero and the Page post under the image (#2161)', async () => {
+    flags.value = { meta_ads_gestao: true };
+    lerGestao.mockResolvedValue({
+      status: 'ACTIVE',
+      effective_status: 'ACTIVE',
+      can_change: true,
+      needs_login: false,
+      post: { message: 'Texto do post', reactions: 3, comments: 1, shares: 0 },
+    });
+    const wrapper = await mountDetail();
+
+    expect(lerGestao).toHaveBeenCalledWith('1');
+    expect(
+      wrapper.find('[data-ad-detail-hero] [data-ad-status]').exists()
+    ).toBe(true);
+    expect(wrapper.find('[data-ad-post-message]').text()).toBe('Texto do post');
+  });
+
+  it('without the meta_ads_criar flag, reads no budget and shows no budget card (#2198)', async () => {
+    flags.value = { meta_ads_gestao: true };
+    lerGestao.mockResolvedValue({
+      status: 'PAUSED',
+      effective_status: 'PAUSED',
+      can_change: true,
+    });
+    const wrapper = await mountDetail();
+
+    expect(CrmMetaAdsConnectionAPI.adBudget).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-ad-budget]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-status-toggle]').exists()).toBe(true);
+  });
+
+  it('with meta_ads_criar, shows the budget and dates of the ad (#2198)', async () => {
+    flags.value = { meta_ads_criar: true };
+    CrmMetaAdsConnectionAPI.adBudget.mockResolvedValue({
+      data: {
+        budget: {
+          level: 'adset',
+          object_name: 'Público',
+          kind: 'daily',
+          amount: 30,
+          currency: 'BRL',
+          start_time: '2026-10-01T09:00:00-0300',
+          end_time: null,
+          ads_count: 1,
+          active_ads_count: 0,
+          min_daily: 6,
+          max_daily: 500,
+          can_change: true,
+        },
+      },
+    });
+    const wrapper = await mountDetail();
+
+    expect(CrmMetaAdsConnectionAPI.adBudget).toHaveBeenCalledWith('1');
+    expect(wrapper.find('[data-ad-budget]').exists()).toBe(true);
+  });
+
+  it('a failed budget read keeps "Activate" from guessing and offers to try again (#2198)', async () => {
+    flags.value = { meta_ads_gestao: true, meta_ads_criar: true };
+    lerGestao.mockResolvedValue({
+      status: 'PAUSED',
+      effective_status: 'PAUSED',
+      can_change: true,
+    });
+    CrmMetaAdsConnectionAPI.adBudget.mockRejectedValue({
+      response: { status: 422, data: { error: 'meta_unavailable' } },
+    });
+    const wrapper = await mountDetail();
+
+    expect(wrapper.find('[data-ad-budget]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-status-toggle]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-status-budget-failed]').exists()).toBe(true);
+
+    await wrapper.find('[data-ad-status-budget-retry]').trigger('click');
+    await flushPromises();
+    expect(CrmMetaAdsConnectionAPI.adBudget).toHaveBeenCalledTimes(2);
   });
 });

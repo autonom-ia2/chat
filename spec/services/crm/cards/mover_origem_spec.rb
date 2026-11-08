@@ -9,15 +9,15 @@ RSpec.describe Crm::Cards::Mover do
   let(:proposta) { create_crm_stage(account: account, pipeline: pipeline_and_stage.first, name: 'Proposta') }
   let(:card) { account.crm_cards.create!(pipeline: pipeline_and_stage.first, stage: pipeline_and_stage.last, title: 'Pedido') }
 
-  def mover(contexto = {})
-    described_class.new(card: card, actor: admin, target_stage: proposta, automation_context: contexto).perform
+  def mover(automacao: nil, **contexto)
+    described_class.new(card: card, actor: admin, target_stage: proposta, automation_context: contexto, automacao: automacao).perform
     Crm::Activity.where(card: card, event_type: 'move').last
   end
 
   it 'grava só as etapas quando uma pessoa move direto' do
     movimento = mover
 
-    expect(movimento.payload.keys).to match_array(%w[from_pipeline_id to_pipeline_id from_stage_id to_stage_id])
+    expect(movimento.payload.keys).to match_array(%w[from_pipeline_id to_pipeline_id from_stage_id to_stage_id from_stage_name to_stage_name])
     expect(Crm::Ai::EscolhaDePessoa.movimentos(account.id, desde: 1.hour.ago)).to include(movimento)
   end
 
@@ -28,5 +28,12 @@ RSpec.describe Crm::Cards::Mover do
     expect(Crm::Ai::EscolhaDePessoa.movimentos(account.id, desde: 1.hour.ago)).not_to include(automacao)
     card.update!(stage: pipeline_and_stage.last)
     expect(mover(source: 'booking_post_meeting', skip_automations: true).payload).to include('source' => 'booking_post_meeting')
+  end
+
+  it 'deixa de fora o movimento do motor novo de automação (by: automacao)' do
+    movimento = mover(skip_automations: true, automacao: { origem: 'regra', id: 1 })
+
+    expect(movimento.payload).to include('by' => 'automacao')
+    expect(Crm::Ai::EscolhaDePessoa.movimentos(account.id, desde: 1.hour.ago)).not_to include(movimento)
   end
 end

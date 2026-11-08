@@ -1,7 +1,8 @@
 class Api::V1::Accounts::Whatsapp::AuthorizationsController < Api::V1::Accounts::BaseController
   before_action :ensure_embedded_signup_enabled
-  # Reconfiguring/reauthorizing a live inbox swaps its credentials: admin or inbox_manage only (#452).
-  before_action -> { check_permission_granted!('inbox_manage') }, if: -> { params[:inbox_id].present? }
+  # Connecting a new number creates an inbox (inbox_manage); reauthorizing a live one swaps its credentials
+  # (integration_manage). Admin always (#452, #2027).
+  before_action -> { check_permission_granted!(params[:inbox_id].present? ? 'integration_manage' : 'inbox_manage') }
   before_action :fetch_and_validate_inbox, if: -> { params[:inbox_id].present? }
 
   # POST /api/v1/accounts/:account_id/whatsapp/authorization

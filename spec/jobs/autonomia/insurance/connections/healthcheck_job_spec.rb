@@ -44,9 +44,10 @@ RSpec.describe Autonomia::Insurance::Connections::HealthcheckJob, type: :job do
     expect(record.last_capability_scan_at).to be_nil
   end
 
-  it 'leaves auth_required alone, so a refused credential is not retried every 30 minutes' do
+  it 'leaves auth_required alone when the broker has to act, so a refused password is not retried' do
     # Arrange — insistir com credencial recusada é o caminho para bloquear a conta da corretora
     record = connection(status: 'auth_required')
+    record.update!(metadata: { 'last_failure' => { 'cause' => 'credential_rejected', 'actor' => 'broker' } })
     checked_at = record.last_healthcheck_at
 
     # Act
@@ -54,6 +55,97 @@ RSpec.describe Autonomia::Insurance::Connections::HealthcheckJob, type: :job do
 
     # Assert
     expect(record.reload.last_healthcheck_at).to be_within(1.second).of(checked_at)
+  end
+
+  # Auditoria da conexão, 05/11/2026: a conta 16 ficou parada de 25/10 a 01/11 em `auth_required` com a
+  # senha certa, porque o estado nunca era revisitado — fosse de quem fosse a falha.
+  describe 'auth_required que não depende da corretora' do
+    it 'volta a ser tentado depois de uma hora' do
+      # Arrange — falha sem dono (sessão recusada depois de renovar), verificada há 3 horas
+      record = connection(status: 'auth_required')
+      record.update!(metadata: { 'last_failure' => { 'cause' => 'session_lost', 'actor' => 'nobody' } })
+
+      # Act
+      described_class.new.perform
+
+      # Assert — o Mock aceita a senha, então a conexão sai de auth_required sozinha
+      expect(record.reload.status).to eq('ready')
+      expect(record.last_healthcheck_at).to be_within(30.seconds).of(Time.current)
+    end
+
+    it 'deixa parada a linha sem classificação, porque pode ser senha recusada' do
+      # Arrange — linha gravada antes de existir last_failure
+      record = connection(status: 'auth_required')
+      checked_at = record.last_healthcheck_at
+
+      # Act
+      described_class.new.perform
+
+      # Assert
+      expect(record.reload.status).to eq('auth_required')
+      expect(record.last_healthcheck_at).to be_within(1.second).of(checked_at)
+    end
+
+    it 'não tenta de novo antes de uma hora' do
+      # Arrange
+      record = connection(status: 'auth_required')
+      record.update!(last_healthcheck_at: 20.minutes.ago,
+                     metadata: { 'last_failure' => { 'cause' => 'session_lost', 'actor' => 'nobody' } })
+      checked_at = record.last_healthcheck_at
+
+      # Act
+      described_class.new.perform
+
+      # Assert
+      expect(record.reload.status).to eq('auth_required')
+      expect(record.last_healthcheck_at).to be_within(1.second).of(checked_at)
+    end
+  end
+
+  # "Sessões lotadas" (auditoria da conexão, achado 4): cada tentativa é um login recusado a mais, e
+  # quem libera a vaga é a corretora. Uma por hora, não uma a cada 30 minutos.
+  describe 'offline por sessões lotadas' do
+    let(:lotadas) { { 'last_failure' => { 'cause' => 'sessions_full', 'actor' => 'broker' } } }
+
+    it 'não tenta de novo antes de uma hora' do
+      # Arrange
+      record = connection(status: 'offline')
+      record.update!(last_healthcheck_at: 30.minutes.ago, metadata: lotadas)
+      checked_at = record.last_healthcheck_at
+
+      # Act
+      described_class.new.perform
+
+      # Assert
+      expect(record.reload.status).to eq('offline')
+      expect(record.last_healthcheck_at).to be_within(1.second).of(checked_at)
+    end
+
+    it 'tenta de novo depois de uma hora, e volta sozinha quando a vaga abriu' do
+      # Arrange
+      record = connection(status: 'offline')
+      record.update!(last_healthcheck_at: 61.minutes.ago, metadata: lotadas)
+
+      # Act
+      described_class.new.perform
+
+      # Assert — o Mock aceita o login, como o portal depois de a corretora liberar a vaga
+      expect(record.reload.status).to eq('ready')
+      expect(record.last_healthcheck_at).to be_within(30.seconds).of(Time.current)
+    end
+
+    it 'não recua para offline de outra causa: portal fora continua de 30 em 30 minutos' do
+      # Arrange
+      record = connection(status: 'offline')
+      record.update!(last_healthcheck_at: 30.minutes.ago,
+                     metadata: { 'last_failure' => { 'cause' => 'portal_unavailable', 'actor' => 'nobody' } })
+
+      # Act
+      described_class.new.perform
+
+      # Assert
+      expect(record.reload.last_healthcheck_at).to be_within(30.seconds).of(Time.current)
+    end
   end
 
   it 'skips accounts with the module turned off' do
@@ -108,6 +200,34 @@ RSpec.describe Autonomia::Insurance::Connections::HealthcheckJob, type: :job do
 
       # Assert
       expect(record.reload.status).to eq('discovering')
+    end
+
+    # Auditoria da conexão, 05/11/2026, achado 17: re-sincronizar sem varrer devolvia `ready` sem
+    # capacidades nem formulários, e toda cotação de auto era recusada.
+    it 'refaz a varredura da que ficou presa em discovering' do
+      # Arrange
+      record = travel_to(30.minutes.ago) { connection(status: 'discovering') }
+
+      # Act
+      described_class.perform_now
+
+      # Assert
+      expect(record.reload.status).to eq('ready')
+      expect(record.last_capability_scan_at).to be_present
+      expect(record.capabilities['products']).to be_present
+      expect(record.quote_schema('auto')).to be_present
+    end
+
+    it 'não varre a que ficou presa em authenticating: ali o que morreu foi o login' do
+      # Arrange
+      record = travel_to(30.minutes.ago) { connection(status: 'authenticating') }
+
+      # Act
+      described_class.perform_now
+
+      # Assert
+      expect(record.reload.status).to eq('ready')
+      expect(record.last_capability_scan_at).to be_nil
     end
 
     it 'vale para os tres estados de passagem, e so para eles' do

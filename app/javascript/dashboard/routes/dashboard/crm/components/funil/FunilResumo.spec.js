@@ -4,6 +4,11 @@ import FunilResumo from './FunilResumo.vue';
 import en from 'dashboard/i18n/locale/en/crm.json';
 import pt_BR from 'dashboard/i18n/locale/pt_BR/crm.json';
 
+// #2075 — quem vê os valores de venda (o padrão das telas sem função personalizada).
+vi.mock('../../composables/useCrmPermissions', () => ({
+  useCrmPermissions: () => ({ canSeeSalesValues: { value: true } }),
+}));
+
 // #1589 — o resumo do funil de Atender diz o tempo escolhido de cada lembrete.
 const montar = lembretesAtender =>
   mount(FunilResumo, {

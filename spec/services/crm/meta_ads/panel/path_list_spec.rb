@@ -29,7 +29,7 @@ RSpec.describe Crm::MetaAds::Panel::PathList do
   end
 
   def list(step, days: 30)
-    described_class.new(connection, step: step, days: days).payload
+    described_class.new(connection, step: step, period: "#{days}d").payload
   end
 
   it 'conversas: a mais recente primeiro, com o card principal, o anúncio e o tempo de resposta' do
@@ -45,7 +45,8 @@ RSpec.describe Crm::MetaAds::Panel::PathList do
                                               stage_name: 'Venda', response_seconds: 120, answered: true)
     expect(payload[:items].second[:touched_at]).to eq(Time.zone.parse('2026-10-06T12:00:00-03:00'))
     expect(Crm::MetaAds::Panel::ResponseTime).to have_received(:new).with(account_id: connection.account_id,
-                                                                          range: Crm::MetaAds::Panel::Report.new(connection, days: 30).range)
+                                                                          range: Crm::MetaAds::Panel::Report.new(connection, days: 30).range,
+                                                                          starts: nil)
   end
 
   it 'propostas: abertas pela espera mais antiga, depois as ganhas; a parada vem marcada' do

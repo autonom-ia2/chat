@@ -20,6 +20,8 @@ import TextArea from 'next/textarea/TextArea.vue';
 import { sanitizeAllowedDomains } from 'dashboard/helper/URLHelper';
 import WhatsappBusinessManagementToken from './WhatsappBusinessManagementToken.vue';
 import HmacSecretKey from './components/HmacSecretKey.vue';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import { INTEGRATION_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
 
 export default {
   components: {
@@ -43,7 +45,11 @@ export default {
   },
   setup() {
     const { runEmbeddedSignup } = useWhatsappEmbeddedSignup();
-    return { v$: useVuelidate(), runEmbeddedSignup };
+    // Trocar a credencial de uma caixa que já existe fica com integration_manage (#2027).
+    const canManageIntegrations = usePermissionGranted(
+      INTEGRATION_MANAGE_PERMISSION
+    );
+    return { v$: useVuelidate(), runEmbeddedSignup, canManageIntegrations };
   },
   data() {
     return {
@@ -69,7 +75,7 @@ export default {
       return this.inbox.provider_config?.source === 'embedded_signup';
     },
     showWhatsAppReconfigure() {
-      return this.isEmbeddedSignupWhatsApp;
+      return this.isEmbeddedSignupWhatsApp && this.canManageIntegrations;
     },
     isForwardingEnabled() {
       return !!this.inbox.forwarding_enabled;
@@ -328,7 +334,9 @@ export default {
       :title="$t('INBOX_MGMT.SETTINGS_POPUP.IDENTITY_VALIDATION.TITLE')"
       class="mt-6"
     >
+      <!-- O servidor só manda o token para administrador ou token_manage (#2027). -->
       <SettingsToggleSection
+        v-if="inbox.hmac_token"
         :header="$t('INBOX_MGMT.SETTINGS_POPUP.IDENTITY_VALIDATION.TITLE')"
         :description="
           $t('INBOX_MGMT.SETTINGS_POPUP.IDENTITY_VALIDATION.DESCRIPTION')
@@ -378,6 +386,7 @@ export default {
     </SettingsFieldSection>
 
     <SettingsFieldSection
+      v-if="inbox.hmac_token"
       :label="$t('INBOX_MGMT.SETTINGS_POPUP.HMAC_VERIFICATION')"
       :help-text="$t('INBOX_MGMT.SETTINGS_POPUP.HMAC_DESCRIPTION')"
     >
@@ -470,8 +479,10 @@ export default {
         </div>
       </SettingsFieldSection>
     </div>
-    <ImapSettings v-if="!inbox.provider" :inbox="inbox" />
-    <SmtpSettings v-if="!inbox.provider" :inbox="inbox" />
+    <template v-if="canManageIntegrations">
+      <ImapSettings v-if="!inbox.provider" :inbox="inbox" />
+      <SmtpSettings v-if="!inbox.provider" :inbox="inbox" />
+    </template>
     <EmailCampaignDomainSettings
       v-if="emailCampaignEnabled && inbox.email"
       :inbox="inbox"
@@ -558,6 +569,7 @@ export default {
       </template>
       <WhatsappBusinessManagementToken
         v-if="
+          canManageIntegrations &&
           isOnChatwootCloud &&
           inbox.provider === 'whatsapp_cloud' &&
           isEmbeddedSignupWhatsApp

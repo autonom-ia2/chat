@@ -18,6 +18,8 @@ const store = useStore();
 const refreshTimer = ref(null);
 const [showCreateDialog, toggleCreateDialog] = useToggle();
 const canManage = useCanManage('campaign_manage');
+// #1898: resuming sends again, so it needs campaign_send.
+const canSend = useCanManage('campaign_send');
 
 const campaigns = useMapGetter('whatsappApiCampaigns/getCampaigns');
 const uiFlags = useMapGetter('whatsappApiCampaigns/getUIFlags');
@@ -128,6 +130,7 @@ onBeforeUnmount(() => {
   <CampaignLayout
     :header-title="t('CAMPAIGN.WHATSAPP_API.HEADER_TITLE')"
     :button-label="t('CAMPAIGN.WHATSAPP_API.NEW_CAMPAIGN')"
+    create-permission="campaign_send"
     @click="toggleCreateDialog()"
     @close="toggleCreateDialog(false)"
   >
@@ -274,7 +277,7 @@ onBeforeUnmount(() => {
                     @click="runAction('pause', campaign)"
                   />
                   <Button
-                    v-if="campaign.status === 'paused'"
+                    v-if="campaign.status === 'paused' && canSend"
                     icon="i-lucide-play"
                     color="teal"
                     variant="ghost"

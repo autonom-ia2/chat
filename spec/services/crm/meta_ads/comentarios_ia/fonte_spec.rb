@@ -1,0 +1,184 @@
+require 'rails_helper'
+
+RSpec.describe Crm::MetaAds::ComentariosIa::Fonte do
+  def row(id, page: false, created: '2026-10-29T10:00:00+0000', **mudancas)
+    { id: id, author: { name: nil, username: "pessoa.#{id}", is_page: page }, text: 'Quanto custa?', created_time: created,
+      hidden: false, replies: [], private_reply: nil }.merge(mudancas)
+  end
+
+  def fonte(**leituras)
+    described_class.new(leituras.transform_keys(&:to_s).transform_values { |payload| { ler: -> { payload }, inbox_id: 3, post_id: '1790' } })
+  end
+
+  it 'só os comentários que esperam o dono: de outra pessoa, à mostra, sem resposta da conta e sem privado' do
+    comments = [
+      row('1'), row('2', page: true), row('3', hidden: true), row('4', replies: [row('4r', page: true)]),
+      row('5', private_reply: { sent_at: 'x' }), row('6', text: ''), row('7', replies: [row('7r')])
+    ]
+
+    lido = fonte(instagram: { status: 'ready', comments: comments }).ler
+
+    expect(lido[:status]).to eq('ready')
+    expect(lido[:linhas].pluck(:id)).to eq(%w[1 7])
+    expect(lido[:linhas].first).to include(network: 'instagram', author: 'pessoa.1', text: 'Quanto custa?', inbox_id: 3, post_id: '1790')
+    expect(lido[:linhas].first.keys).not_to include(:espera, :escondida)
+    expect(lido[:escondidas].pluck(:id)).to eq(%w[3])
+  end
+
+  it 'cada linha leva as respostas de outras pessoas dentro dela (#2454), só o autor e o texto, para a prévia' do
+    comments = [row('7', replies: [row('7r', text: 'Tem em azul?'), row('7v', text: ' ')])]
+
+    lido = fonte(instagram: { status: 'ready', comments: comments }).ler
+
+    expect(lido[:linhas].sole[:respostas]).to eq([{ author: 'pessoa.7r', text: 'Tem em azul?' }])
+  end
+
+  # #2454: o fio conta. A resposta de cliente espera o dono quando está à mostra, sem privado e sem a conta responder depois
+  # dela no mesmo fio, mesmo dentro do comentário da própria conta.
+  it 'as respostas de cliente que esperam o dono, cada uma com o id do comentário de cima' do
+    comments = [
+      row('1', replies: [row('1a', created: '2026-10-29T10:05:00+0000'), row('1b', page: true, created: '2026-10-29T10:10:00+0000'),
+                         row('1c', created: '2026-10-29T10:20:00+0000')]),
+      row('2', page: true, replies: [row('2a', created: '2026-10-29T11:00:00+0000')]),
+      row('3', replies: [row('3a', hidden: true), row('3b', private_reply: { sent_at: 'x' }), row('3c', text: '')])
+    ]
+
+    lido = fonte(instagram: { status: 'ready', comments: comments }).ler
+
+    expect(lido[:respostas_que_esperam].pluck(:id)).to eq(%w[2a 1c])
+    expect(lido[:respostas_que_esperam].last)
+      .to include(network: 'instagram', author: 'pessoa.1c', parent_id: '1', inbox_id: 3, post_id: '1790',
+                  momento: Time.zone.parse('2026-10-29T10:20:00+0000'))
+    expect(lido[:linhas].pluck(:id)).to eq(%w[3])
+  end
+
+  it 'a resposta sem hora, com a conta respondendo no fio: não espera (não dá para dizer que veio depois)' do
+    comments = [row('1', replies: [row('1a', created: nil), row('1b', page: true)])]
+
+    expect(fonte(instagram: { status: 'ready', comments: comments }).ler[:respostas_que_esperam]).to eq([])
+  end
+
+  describe '.que_esperam' do
+    let(:account) { create(:account) }
+    let(:lido) { { status: 'ready', linhas: [{ id: '1' }], escondidas: [], respostas_que_esperam: [{ id: '1a', parent_id: '1' }] } }
+
+    it 'sem a flag meta_ads_comentarios_ia: só os comentários de primeiro nível, como antes' do
+      expect(described_class.que_esperam(account, lido).pluck(:id)).to eq(%w[1])
+    end
+
+    it 'com a flag: também as respostas de cliente' do
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
+
+      expect(described_class.que_esperam(account, lido).pluck(:id)).to eq(%w[1 1a])
+    end
+  end
+
+  it 'anúncio nas duas redes: junta as listas, do mais novo para o mais velho' do
+    lido = fonte(instagram: { status: 'ready', comments: [row('ig', created: '2026-10-28T10:00:00+0000')] },
+                 facebook: { status: 'ready', comments: [row('fb', created: '2026-10-29T10:00:00+0000')] }).ler
+
+    expect(lido[:linhas].map { |linha| [linha[:network], linha[:id]] }).to eq([%w[facebook fb], %w[instagram ig]])
+  end
+
+  it 'leitura que não ficou pronta: devolve o status, sem linhas' do
+    expect(fonte(instagram: { status: 'needs_permission', comments: [] }).ler).to eq(status: 'needs_permission', linhas: [], escondidas: [])
+  end
+
+  it 'erro da Meta vira o status do erro' do
+    leitura = -> { raise Crm::MetaAds::InstagramPrivateReply::Error, 'meta_unavailable' }
+
+    expect(described_class.new({ 'instagram' => { ler: leitura } }).ler).to eq(status: 'meta_unavailable', linhas: [], escondidas: [])
+  end
+
+  it 'erro da leitura do Facebook (anúncio e Página do Seus posts) também vira o status, sem subir' do
+    [Crm::MetaAds::FacebookComments::Error, SeusPosts::ComentariosPagina::Error].each do |erro|
+      leitura = -> { raise erro, 'meta_unavailable' }
+
+      expect(described_class.new({ 'facebook' => { ler: leitura } }).ler).to eq(status: 'meta_unavailable', linhas: [], escondidas: [])
+    end
+  end
+
+  describe '.anuncio (#2212, B2)' do
+    let(:connection) { instance_double(Crm::MetaAdsConnection) }
+    let(:ig_inbox) { instance_double(Inbox, id: 11) }
+    let(:fb_inbox) { instance_double(Inbox, id: 12) }
+    let(:management) { instance_double(Crm::MetaAds::AdManagement) }
+    let(:anuncio) do
+      instance_double(Crm::MetaAds::ComentariosIa::Anuncio, connection: connection, ad_id: '120', management: management,
+                                                            redes: { 'instagram' => { post_id: '1790', inbox: ig_inbox },
+                                                                     'facebook' => { post_id: '55_77', inbox: fb_inbox } })
+    end
+
+    before do
+      instagram = instance_double(Crm::MetaAds::InstagramComments, payload: { status: 'ready', comments: [row('ig')] })
+      facebook = instance_double(Crm::MetaAds::FacebookComments, list: { status: 'ready', comments: [row('55_9')] })
+      allow(Crm::MetaAds::InstagramComments).to receive(:new).and_return(instagram)
+      allow(Crm::MetaAds::FacebookComments).to receive(:new).and_return(facebook)
+    end
+
+    it 'cada linha leva a caixa e o post do criativo da rede dela, para o "Ler e mandar" pôr na fila do motor' do
+      linhas = described_class.anuncio(anuncio, %w[instagram facebook]).ler[:linhas]
+
+      expect(linhas.map { |linha| linha.slice(:id, :network, :inbox_id, :post_id) }).to contain_exactly(
+        { id: 'ig', network: 'instagram', inbox_id: 11, post_id: '1790' }, { id: '55_9', network: 'facebook', inbox_id: 12, post_id: '55_77' }
+      )
+    end
+
+    it 'os leitores usam o anúncio já lido (a mesma AdManagement): o criativo não é lido de novo' do
+      described_class.anuncio(anuncio, %w[instagram facebook]).ler
+
+      expect(Crm::MetaAds::InstagramComments).to have_received(:new).with(connection, hash_including(management: management))
+      expect(Crm::MetaAds::FacebookComments).to have_received(:new).with(connection, hash_including(management: management))
+    end
+
+    it 'anúncio que sumiu no meio da leitura (o leitor devolve nil): status ad_not_found, sem erro' do
+      allow(Crm::MetaAds::InstagramComments).to receive(:new).and_return(instance_double(Crm::MetaAds::InstagramComments, payload: nil))
+
+      expect(described_class.anuncio(anuncio, %w[instagram]).ler).to eq(status: 'ad_not_found', linhas: [], escondidas: [])
+    end
+
+    it 'só as redes pedidas no alvo' do
+      linhas = described_class.anuncio(anuncio, %w[instagram]).ler[:linhas]
+
+      expect(linhas.pluck(:network)).to eq(%w[instagram])
+      expect(Crm::MetaAds::FacebookComments).not_to have_received(:new)
+    end
+
+    it 'do alvo: lê o anúncio de novo pela conexão da conta; anúncio que sumiu, nil' do
+      account = create(:account)
+      allow(Crm::MetaAdsConnection).to receive(:find_by).with(account_id: account.id).and_return(connection)
+      allow(Crm::MetaAds::ComentariosIa::Anuncio).to receive(:ler).with(connection, '120').and_return(anuncio, nil)
+      alvo = { 'kind' => 'ad', 'ad_id' => '120', 'networks' => %w[facebook], 'post_ids' => %w[55_77] }
+
+      expect(described_class.do_alvo(account, alvo).ler[:linhas].pluck(:inbox_id)).to eq([12])
+      expect(described_class.do_alvo(account, alvo)).to be_nil
+    end
+  end
+
+  describe '#legenda (#2424)' do
+    let(:inbox) { create(:inbox) }
+    let(:rede) { instance_double(Crm::MetaAds::ComentariosIa::Rede::Instagram) }
+    let(:fonte) { described_class.new('instagram' => { ler: -> {}, inbox_id: inbox.id, post_id: '1790' }) }
+
+    before { allow(Crm::MetaAds::ComentariosIa::Rede).to receive(:para).and_return(rede) }
+
+    it 'lê o texto do post pela Rede, como o motor, com a caixa e o post da leitura' do
+      allow(rede).to receive(:legenda).and_return('Promo de verão')
+
+      expect(fonte.legenda).to eq('Promo de verão')
+      expect(Crm::MetaAds::ComentariosIa::Rede).to have_received(:para)
+        .with(inbox, have_attributes(network: 'instagram', account_id: inbox.account_id, inbox_id: inbox.id, post_id: '1790'))
+    end
+
+    it 'Meta fora do ar: a tela segue sem a legenda' do
+      allow(rede).to receive(:legenda).and_raise(Crm::MetaAds::ComentariosIa::Rede::Indisponivel)
+
+      expect(fonte.legenda).to be_nil
+    end
+
+    it 'caixa que não existe mais: nil, sem chamar a Meta' do
+      expect(described_class.new('instagram' => { ler: -> {}, inbox_id: 0, post_id: '1790' }).legenda).to be_nil
+      expect(Crm::MetaAds::ComentariosIa::Rede).not_to have_received(:para)
+    end
+  end
+end

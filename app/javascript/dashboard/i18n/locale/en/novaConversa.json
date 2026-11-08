@@ -34,6 +34,7 @@
       "TENTAR": "Try again",
       "CANAL": {
         "WHATSAPP": "WhatsApp",
+        "WHATSAPP_CELULAR": "WhatsApp on the phone",
         "EMAIL": "Email",
         "SMS": "SMS",
         "SITE": "Website",
@@ -82,6 +83,9 @@
       "MENOS_OPCOES": "Fewer options",
       "ANEXAR": "Attach a file",
       "FERRAMENTAS": "Email tools",
+      "FERRAMENTAS_WHATSAPP": "WhatsApp tools",
+      "VOZ": "Voice message",
+      "TIRAR_VOZ": "Remove the recording",
       "COMPLETE": "Complete the message",
       "CAMPO_ROTULO": "What goes in place of ⟨{campo}⟩",
       "CAMPO_FALADO": "field {campo}",
@@ -117,6 +121,7 @@
       "TITULO_SEM_NOME": "Message on its way",
       "PELO": {
         "WHATSAPP": "Through WhatsApp · {caixa}",
+        "WHATSAPP_CELULAR": "Through WhatsApp on the phone · {caixa}",
         "EMAIL": "By email · {caixa}",
         "SMS": "By SMS · {caixa}",
         "SITE": "Through the website · {caixa}",

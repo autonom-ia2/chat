@@ -4,13 +4,14 @@ import { useTimeoutFn } from '@vueuse/core';
 import { provideMessageContext } from './provider.js';
 import { useTrack } from 'dashboard/composables';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import { emitter } from 'shared/helpers/mitt';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import { ACCOUNT_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { getInboxIconByType, tipoDoIconeDaCaixa } from 'dashboard/helper/inbox';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import {
   MESSAGE_TYPES,
@@ -80,6 +81,9 @@ import { useBranding } from 'shared/composables/useBranding';
 import { ehNotaDoConector } from 'dashboard/components-next/conversa-canal/notaDoConector';
 import { textoDaMensagem } from 'dashboard/components-next/conversa-canal/ecoDoCelular';
 import { useEcoDoCelular } from 'dashboard/components-next/conversa-canal/useEcoDoCelular';
+import LinhaDoInstagram from 'dashboard/components-next/conversa-canal/instagram/LinhaDoInstagram.vue';
+import { useInstagramDaConversa } from 'dashboard/components-next/conversa-canal/instagram/useConversaDoInstagram';
+import { balaoDoInstagram } from 'dashboard/components-next/conversa-canal/instagram/balaoDoInstagram';
 
 /**
  * @typedef {Object} Attachment
@@ -389,7 +393,22 @@ const pele = usePele();
 const balaoDoWhatsapp = computed(() =>
   pele.value ? balaoDaPele(props) : null
 );
-// #1702: a citação levou até aqui: a linha pisca por um instante (só com a pele).
+// #2079: na conversa do Instagram com a cara do Direct, a linha inteira é a do app.
+// Tipo sem balão do Direct (arquivo, não suportada) segue no balão de sempre, e a
+// mensagem que falhou também: lá fica o erro e o "Tentar de novo".
+const instagram = useInstagramDaConversa();
+const linhaDoInstagram = computed(
+  () =>
+    instagram.ligado.value &&
+    !props.private &&
+    ![MESSAGE_VARIANTS.ACTIVITY, MESSAGE_VARIANTS.ERROR].includes(
+      variant.value
+    ) &&
+    !props.contentAttributes?.externalError &&
+    balaoDoInstagram(props) !== null
+);
+// #1702/#2211: a citação ou o link com ?messageId= levou até aqui: a linha fica destacada
+// 3 s em âmbar (só com a pele).
 const destacadaPelaCitacao = computed(
   () => !!pele.value && mensagemDestacada.value === props.id
 );
@@ -581,6 +600,9 @@ const payloadForContextMenu = computed(() => {
   };
 });
 
+// Quem tem cargo só apaga com a chave (#1893); administrador e agente sem cargo seguem apagando.
+const canDeleteMessage = useCanManage('conversation_message_delete');
+
 const allContextMenuOptions = computed(() => {
   const hasText = !!conteudo.value;
   const hasAttachments = !!(props.attachments && props.attachments.length > 0);
@@ -595,14 +617,16 @@ const allContextMenuOptions = computed(() => {
     delete:
       (hasText || hasAttachments) &&
       !isFailedOrProcessing &&
-      !isMessageDeleted.value,
+      !isMessageDeleted.value &&
+      canDeleteMessage.value,
     cannedResponse: isOutgoing && hasText && !isMessageDeleted.value,
     copyLink: !isFailedOrProcessing,
     translate: !isFailedOrProcessing && !isMessageDeleted.value && hasText,
     replyTo:
       !props.private &&
       props.inboxSupportsReplyTo.outgoing &&
-      !isFailedOrProcessing,
+      !isFailedOrProcessing &&
+      !isMessageDeleted.value,
     report:
       isOnChatwootCloud.value &&
       isCaptainMessage.value &&
@@ -707,11 +731,15 @@ const avatarInfo = computed(() => {
     };
   }
   if (props.contentAttributes?.externalEcho) {
-    const { name, avatar_url, channel_type, medium, voice_enabled } =
-      inbox.value;
+    const { name, avatar_url, medium, voice_enabled } = inbox.value;
     const iconName = avatar_url
       ? null
-      : getInboxIconByType(channel_type, medium, 'fill', voice_enabled);
+      : getInboxIconByType(
+          tipoDoIconeDaCaixa(inbox.value),
+          medium,
+          'fill',
+          voice_enabled
+        );
     return {
       name: iconName ? '' : name || t('CONVERSATION.NATIVE_APP'),
       src: avatar_url || '',
@@ -803,7 +831,8 @@ provideMessageContext({
         'relative ltr:pl-12 rtl:pr-12': encaminhar.emSelecao.value,
         'bg-[#000]/[0.06] dark:bg-white/[0.06]': encaminhar.marcada.value,
         'transition-colors duration-500': pele,
-        'bg-[#000]/[0.1] dark:bg-white/[0.1]': destacadaPelaCitacao,
+        // #2211: faixa âmbar com contorno amber-11 (≥ 3:1 contra o fundo nos dois temas).
+        'bg-n-amber-3 ring-2 ring-inset ring-n-amber-11': destacadaPelaCitacao,
       },
     ]"
   >
@@ -821,6 +850,17 @@ provideMessageContext({
       <!-- O texto vem do contexto da mensagem (o da nota do conector é o aviso curto, #1941). -->
       <ActivityBubble v-else />
     </div>
+    <LinhaDoInstagram
+      v-else-if="linhaDoInstagram"
+      :pode-responder="contextMenuEnabledOptions.replyTo"
+      :pode-reagir="reacaoDoAtendente.visivel.value && !isReadOnly"
+      :reacao-atual="reacaoDoAtendente.atual.value"
+      :reacao-bloqueada="reacaoDoAtendente.bloqueado.value"
+      :reagindo="reacaoDoAtendente.enviando.value"
+      @responder="handleReplyTo"
+      @reagir="reacaoDoAtendente.reagir"
+      @menu="openContextMenu($event)"
+    />
     <div
       v-else
       :class="[

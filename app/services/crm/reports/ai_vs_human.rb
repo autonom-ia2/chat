@@ -9,10 +9,13 @@ module Crm
     #   dismissed    -> human rejected an AI suggestion
     #   pending      -> awaiting a human decision
     #   expired      -> suggestion went stale
+    #
+    # #2000: com `todos_os_funis`, soma os funis que a pessoa enxerga (a frase da Gestão de IA), em vez de um funil só.
     class AiVsHuman < BaseReport
       def perform
+        # O group de um enum devolve o nome ("accepted"), não o número: ler pelo número dava zero sempre (#2000).
         counts = suggestions.group(:status).count
-        by_status = Crm::AiStageSuggestion.statuses.transform_values { |value| counts[value] || 0 }
+        by_status = Crm::AiStageSuggestion.statuses.keys.index_with { |status| counts[status].to_i }
 
         auto = by_status['auto_applied']
         accepted = by_status['accepted']
@@ -34,9 +37,14 @@ module Crm
 
       def suggestions
         scope = account.crm_ai_stage_suggestions.where(created_at: range)
+        return scope.where(card_id: Crm::Relacao.cards_do_funil(account).where(pipeline_id: pipelines.select(:id)).select(:id)) if todos_os_funis?
         return scope if pipeline.blank?
 
-        scope.where(card_id: account.crm_cards.where(pipeline_id: pipeline.id).select(:id))
+        scope.where(card_id: Crm::Relacao.cards_do_funil(account).where(pipeline_id: pipeline.id).select(:id))
+      end
+
+      def todos_os_funis?
+        ActiveModel::Type::Boolean.new.cast(params[:todos_os_funis]) == true
       end
     end
   end

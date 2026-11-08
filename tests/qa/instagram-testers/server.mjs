@@ -14,6 +14,55 @@ export const output = resolve(root, 'tmp/instagram-931/qa-evidence');
 export const origin = 'http://127.0.0.1:39211';
 export const pathname = '/app/accounts/910/settings/inboxes/new/instagram';
 export const wizardPathPrefix = '/app/accounts/910/settings/inboxes/new';
+const warmUpTimeout = 60000;
+
+async function loadOnce(page, locale) {
+  let requests = 0;
+  const count = () => {
+    requests += 1;
+  };
+  page.on('request', count);
+  const started = performance.now();
+  const elapsed = () => Math.round(performance.now() - started);
+  await page.goto(`${origin}${pathname}?locale=${locale}`, {
+    waitUntil: 'commit',
+    timeout: warmUpTimeout,
+  });
+  const committedMs = elapsed();
+  await page.waitForLoadState('domcontentloaded', { timeout: warmUpTimeout });
+  const domContentLoadedMs = elapsed();
+  await page.waitForFunction(
+    () => window.instagramQa?.ready === true,
+    null,
+    { timeout: warmUpTimeout }
+  );
+  page.off('request', count);
+  return { committedMs, domContentLoadedMs, readyMs: elapsed(), requests };
+}
+
+// O Vite dev compila o grafo de entry.js (Vue, i18n, telas do dashboard) só no primeiro pedido, e o
+// DOMContentLoaded espera esse <script type="module">. Sem aquecer, o 1º cenário pagava a compilação fria
+// dentro dos 10 s do page.goto e caía (#2058). Aquece uma vez, fora dos cenários, e grava quanto custou.
+export async function warmUp(browser) {
+  const context = await browser.newContext({ serviceWorkers: 'block' });
+  try {
+    await context.route('**/*', async route => {
+      const url = new URL(route.request().url());
+      if (url.origin !== origin || url.pathname.startsWith('/api/')) {
+        await route.abort('blockedbyclient');
+        return;
+      }
+      await route.continue();
+    });
+    const page = await context.newPage();
+    // entry.js importa o catálogo do idioma sob demanda: aquece os dois que os cenários usam.
+    const ptBR = await loadOnce(page, 'pt_BR');
+    const en = await loadOnce(page, 'en');
+    return { pt_BR: ptBR, en };
+  } finally {
+    await context.close();
+  }
+}
 
 export async function startServer() {
   if (process.env.INSTAGRAM_QA_RENDER_READY !== '1')

@@ -1,0 +1,11 @@
+# As 3 perguntas do antes e depois de "Atualizar com a nova base" (#1429, F3): o agente responde cada uma com a base de
+# hoje e com a nova. Curtas, como quem escreve no WhatsApp, sem dado pessoal: um termo do ramo, um caso de sinistro ou
+# evento, e um limite de quem decide. pt_BR e en com o mesmo número de perguntas, na mesma ordem.
+pt_BR:
+  - "O que é coparticipação?"
+  - "Vou fazer uma cirurgia. Como peço a autorização do plano?"
+  - "Vocês conseguem liberar o meu reembolso?"
+en:
+  - "What is a copay?"
+  - "I'm having surgery. How do I get prior authorization from my plan?"
+  - "Can you approve my reimbursement?"

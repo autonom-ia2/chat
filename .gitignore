@@ -113,3 +113,9 @@ credential.env
 
 # The isolated VPS runtime uses npm with its own pinned production dependencies.
 !/scripts/instagram_testers/runtime/vps/package-lock.json
+
+# Python
+__pycache__/
+
+# Painel de desempenho (#2226/#2251): o arquivo da vida real e as exportações dele são dados de cliente, só locais.
+public/desempenho-vida-real*

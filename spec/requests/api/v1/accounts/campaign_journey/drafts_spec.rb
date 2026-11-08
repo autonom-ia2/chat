@@ -135,9 +135,22 @@ RSpec.describe 'Campaign journey drafts API (#1898)', :aggregate_failures, type:
       expect(CampaignJourneyDraft.where(id: draft.id)).to be_empty
       expect(other.reload).to be_present
 
-      dispatch_sms(foreign.id)
-      expect(response).to have_http_status(:ok)
+      expect { dispatch_sms(foreign.id) }.not_to change(account.campaigns, :count)
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('draft_gone')
       expect(foreign.reload).to be_present
+    end
+
+    it 'sends a ready campaign only once, even from two tabs or two people' do
+      draft = CampaignJourneyDraft.create!(account: account, user: admin, title: 'Parcela outubro', channel: 'sms')
+
+      dispatch_sms(draft.id)
+      expect(response).to have_http_status(:ok)
+
+      expect { dispatch_sms(draft.id) }.not_to change(account.campaigns, :count)
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('draft_gone')
+      expect(account.campaigns.count).to eq(1)
     end
 
     it 'removes the e-mail draft when that e-mail is sent or scheduled' do
@@ -199,6 +212,7 @@ RSpec.describe 'Campaign journey drafts API (#1898)', :aggregate_failures, type:
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(draft.reload).to be_present
+      expect(account.campaigns.count).to eq(0)
     end
   end
 end

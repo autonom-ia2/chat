@@ -25,3 +25,15 @@ export function useHasCustomRolePermission(key) {
     getUserPermissions(currentUser.value, accountId.value).includes(key)
   );
 }
+
+// Espelho de AccountUser#permission_granted?: o administrador sempre passa; a função personalizada passa só com `key`.
+// Agente comum sem função fica de fora.
+export function usePermissionGranted(key) {
+  const currentUser = useMapGetter('getCurrentUser');
+  const accountId = useMapGetter('getCurrentAccountId');
+
+  return computed(() => {
+    const permissions = getUserPermissions(currentUser.value, accountId.value);
+    return permissions.includes('administrator') || permissions.includes(key);
+  });
+}

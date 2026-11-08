@@ -2,14 +2,11 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMessageContext } from '../message/provider.js';
-import {
-  MESSAGE_STATUS,
-  ORIENTATION,
-  SENDER_TYPES,
-} from '../message/constants';
+import { MESSAGE_STATUS, ORIENTATION } from '../message/constants';
 import { PELES, usePele, usePrimeiras } from './pele';
 import { useModeloDaMensagem } from './useModeloDaMensagem';
 import { useEcoDoCelular } from './useEcoDoCelular';
+import { ehRobo, origemDaMensagem } from './origemDoEnvio';
 import {
   CLASSES_DO_REMETENTE,
   classesDaHora,
@@ -17,8 +14,6 @@ import {
   corDoBico,
   temBico,
 } from './visualWhatsapp';
-
-const ROBOS = [SENDER_TYPES.AGENT_BOT, SENDER_TYPES.CAPTAIN_ASSISTANT];
 
 export const usePeleDoBalao = nomeDoBalao => {
   const pele = usePele();
@@ -66,16 +61,15 @@ export const usePeleDoBalao = nomeDoBalao => {
     if (eco.ehEco.value) return eco.nomeDoAutor.value;
     const tipo = sender.value?.type ?? senderType.value;
     const nome = sender.value?.available_name || sender.value?.name || '';
-    if (ROBOS.includes(tipo)) {
+    if (ehRobo(tipo)) {
       return nome
         ? t('CONVERSA_CANAL.REMETENTE.AGENTE_COM_NOME', { nome })
         : t('CONVERSA_CANAL.REMETENTE.AGENTE');
     }
-    // Follow-up que a plataforma mandou sozinha (crm_follow_up_id): o nome é de quem criou,
-    // mas não foi ela que digitou.
-    if (nome && contentAttributes.value?.crmFollowUpId) {
-      return t('CONVERSA_CANAL.REMETENTE.AUTOMATICO', { nome });
-    }
+    // #2048: envio automático em nome da pessoa (follow-up, aviso do Agendamento) mostra a
+    // origem, não a pessoa: foi a plataforma que mandou.
+    const origem = origemDaMensagem(tipo, contentAttributes.value);
+    if (origem) return t(origem);
     return nome;
   });
 

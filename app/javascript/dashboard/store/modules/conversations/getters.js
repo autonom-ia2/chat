@@ -7,6 +7,7 @@ import {
 } from './helpers';
 import filterQueryGenerator from 'dashboard/helper/filterQueryGenerator';
 import { matchesFilters } from './helpers/filterHelpers';
+import { isAssignedToUser } from 'dashboard/helper/assigneeHelper';
 import {
   getUserPermissions,
   getUserRole,
@@ -108,8 +109,8 @@ const getters = {
     const currentUserID = rootGetters.getCurrentUser?.id;
 
     return _state.allConversations.filter(conversation => {
-      const { assignee } = conversation.meta;
-      const isAssignedToMe = assignee && assignee.id === currentUserID;
+      // Robô com o mesmo id não é "minha" (#2249): só a pessoa responsável conta.
+      const isAssignedToMe = isAssignedToUser(conversation, currentUserID);
       const shouldFilter = applyPageFilters(conversation, activeFilters);
       const isChatMine = isAssignedToMe && shouldFilter;
 

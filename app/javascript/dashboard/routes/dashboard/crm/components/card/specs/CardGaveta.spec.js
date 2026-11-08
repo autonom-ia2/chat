@@ -87,6 +87,9 @@ vi.mock('dashboard/api/crmKanban', () => ({
     dismissAiSuggestion: vi.fn().mockResolvedValue({}),
     summarizeCardConversation: vi.fn().mockResolvedValue({ data: {} }),
     getOwnerOptions: vi.fn(),
+    upcomingMeetings: vi
+      .fn()
+      .mockResolvedValue({ data: { payload: { cards: [] } } }),
   },
 }));
 vi.mock('dashboard/api/metaConversions', () => ({
@@ -436,6 +439,31 @@ describe('CardGaveta (#1423)', () => {
     expect(wrapper.emitted('archive')).toHaveLength(1);
   });
 
+  it('Arquivar avisa a reunião marcada, que continua marcada (#2091)', async () => {
+    const api = (await import('dashboard/api/crmKanban')).default;
+    api.upcomingMeetings.mockResolvedValueOnce({
+      data: {
+        payload: {
+          timezone: 'America/Sao_Paulo',
+          cards: [{ card_id: 5, starts_at: '2026-10-24T10:00:00-03:00' }],
+        },
+      },
+    });
+    const wrapper = montar({ canDeleteCards: true });
+    await flushPromises();
+    await botaoComTexto(
+      wrapper.find('[data-card-arquivar]'),
+      'CRM_CARD.ARQUIVAR.BOTAO'
+    ).trigger('click');
+    await flushPromises();
+
+    expect(api.upcomingMeetings).toHaveBeenCalledWith([5]);
+    expect(wrapper.find('[data-aviso-reuniao]').text()).toContain(
+      'CRM_CARD.ARQUIVAR.REUNIAO'
+    );
+    expect(wrapper.emitted('archive')).toBeUndefined();
+  });
+
   // #1874 — arquivar tem chave própria: quem mexe no card sem ela não vê o Arquivar.
   it('sem Arquivar cards, a gaveta não oferece arquivar', async () => {
     const wrapper = montar({ canManageCards: true, canDeleteCards: false });
@@ -491,6 +519,66 @@ describe('CardGaveta (#1423)', () => {
       'CRM_CARD.PASSO.VER_ETAPA'
     );
     expect(wrapper.find('[data-passo-outro]').exists()).toBe(false);
+    delete window.globalConfig;
+  });
+
+  // #2150 — a sugestão de etapa é de quem tem crm_manage_ai: sem a chave, nada
+  // dela aparece e a gaveta nem pede ao servidor.
+  it('sem crm_manage_ai, não mostra nem pede a sugestão de etapa', async () => {
+    const api = (await import('dashboard/api/crmKanban')).default;
+    api.getCurrentAiSuggestion.mockClear();
+    const sugestao = { id: 4, to_stage_id: 11, to_stage_name: 'Em conversa' };
+    window.globalConfig = { CRM_AI_ENABLED: 'true' };
+    const comSugestao = montar({
+      card: { ...cardBase, ai_suggestion: sugestao },
+    });
+    await flushPromises();
+    expect(
+      comSugestao.find('[data-card-proximo]').attributes('data-passo')
+    ).toBe('sugestao');
+
+    const wrapper = montar({
+      canManageAi: false,
+      card: { ...cardBase, ai_suggestion: sugestao },
+    });
+    await flushPromises();
+    expect(
+      wrapper.find('[data-card-proximo]').attributes('data-passo')
+    ).not.toBe('sugestao');
+    expect(wrapper.find('[data-resumo-sugestao]').exists()).toBe(false);
+
+    const semInicial = montar({ canManageAi: false });
+    await flushPromises();
+    expect(semInicial.find('[data-card-proximo]').exists()).toBe(true);
+    expect(api.getCurrentAiSuggestion).not.toHaveBeenCalled();
+    delete window.globalConfig;
+  });
+
+  // IA entende a conversa F3: a sugestão de fechar usa o mesmo cartão, com o
+  // texto dela (o que acabou e por quê) e o botão Encerrar, em vez de "Mover".
+  it('sugestão de fechar: frase do fim, aviso do retorno e Encerrar', async () => {
+    const api = (await import('dashboard/api/crmKanban')).default;
+    const sugestao = {
+      id: 7,
+      to_stage_id: 10,
+      to_stage_name: 'Novo',
+      reasoning: 'Disse que vai pensar.',
+      fechar: { resultado: 'perdido', motivo: 'adiou' },
+    };
+    window.globalConfig = { CRM_AI_ENABLED: 'true' };
+    const wrapper = montar({ card: { ...cardBase, ai_suggestion: sugestao } });
+    await flushPromises();
+    const cartao = wrapper.find('[data-card-proximo]');
+    expect(cartao.attributes('data-passo')).toBe('sugestao');
+    expect(cartao.text()).toContain('CRM_CARD.FECHAR_SUGESTAO.FRASE.PERDIDO');
+    expect(cartao.text()).toContain('CRM_CARD.FECHAR_SUGESTAO.RETORNO');
+    expect(cartao.text()).not.toContain('CRM_CARD.PASSO.SUGESTAO');
+    expect(wrapper.find('[data-passo-principal]').text()).toContain(
+      'CRM_CARD.FECHAR_SUGESTAO.ENCERRAR'
+    );
+    await clicar(wrapper, '[data-passo-principal]');
+    expect(api.acceptAiSuggestion).toHaveBeenCalledWith(7);
+    expect(alertSpy).toHaveBeenCalledWith('CRM_CARD.FECHAR_SUGESTAO.FECHOU');
     delete window.globalConfig;
   });
 
@@ -623,6 +711,33 @@ describe('CardGaveta (#1423)', () => {
       'CRM_CARD.ORIGEM.FONTE.ANUNCIO_WHATSAPP'
     );
     expect(wrapper.text()).not.toContain('CRM_KANBAN.META_SYNC_STATUS');
+  });
+
+  it('De onde veio, sem ver os anúncios: só que veio de anúncio, sem nome nem imagem (#2271)', async () => {
+    const wrapper = montar({
+      card: {
+        ...cardBase,
+        campaigns: [
+          {
+            source: 'meta_ctwa',
+            source_type: 'ad',
+            touched_at: '2026-10-01T12:00:00Z',
+            ad_hidden: true,
+            headline: 'Plano anual com 20% off',
+            ad_thumbnail_url: 'https://thumb.example/ad.jpg',
+            ad_preview_url: 'https://preview.example/ad',
+          },
+        ],
+      },
+    });
+    await flushPromises();
+    await clicar(wrapper, '[data-mais="origem"]');
+    const caminho = wrapper.find('[data-origem-caminho]');
+    expect(caminho.text()).toContain('CRM_CARD.ORIGEM.FONTE.ANUNCIO_WHATSAPP');
+    expect(caminho.text()).toContain('CRM_CARD.ORIGEM.ANUNCIO_OCULTO');
+    expect(caminho.text()).not.toContain('Plano anual com 20% off');
+    expect(caminho.find('[data-crm-origin-ad-preview]').exists()).toBe(false);
+    expect(caminho.find('img').exists()).toBe(false);
   });
 
   it('Novo retorno não mostra erro antes de a pessoa escrever', async () => {

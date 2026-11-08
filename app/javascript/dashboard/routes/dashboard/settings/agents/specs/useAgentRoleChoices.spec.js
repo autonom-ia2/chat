@@ -10,16 +10,18 @@ const roles = [
   { id: 11, name: 'Caixas', permissions: ['inbox_manage'] },
 ];
 
-const choicesFor = ({ role, permissions }) => {
+const choicesFor = ({ role, permissions, flags = [], currentCustomRoleId }) => {
   const getters = {
     getCurrentUser: { id: 2, accounts: [{ id: 1, permissions }] },
     getCurrentAccountId: 1,
     getCurrentRole: role,
     getCurrentCustomRoleId: role === 'administrator' ? null : 7,
     'customRole/getCustomRoles': roles,
+    'accounts/isFeatureEnabledonAccount': (_account, flag) =>
+      flags.includes(flag),
   };
   useMapGetter.mockImplementation(key => ref(getters[key]));
-  return useAgentRoleChoices().roleChoices.value;
+  return useAgentRoleChoices({ currentCustomRoleId }).roleChoices.value;
 };
 
 describe('useAgentRoleChoices (#1931)', () => {
@@ -46,5 +48,46 @@ describe('useAgentRoleChoices (#1931)', () => {
     expect(byValue(11)).toEqual(
       expect.objectContaining({ disabled: true, hint: 'AGENT_MGMT.LOCK.ABOVE' })
     );
+  });
+
+  // #2317: tirar alguém da função (escolher "Agente" para quem tem uma função) segue a régua de dar uma função.
+  describe('taking someone out of their custom role (#2317)', () => {
+    const manager = {
+      role: 'agent',
+      permissions: ['people_manage', 'contact_manage'],
+      flags: ['custom_roles'],
+    };
+    const agentChoice = options =>
+      choicesFor(options).find(choice => choice.value === 'agent');
+
+    it('locks the plain agent, with the reason, for a giver who does not reach the "Sem função" keys', () => {
+      expect(agentChoice({ ...manager, currentCustomRoleId: 10 })).toEqual(
+        expect.objectContaining({
+          disabled: true,
+          hint: 'AGENT_MGMT.LOCK.ONLY_ADMIN_TAKES_OUT',
+        })
+      );
+    });
+
+    it('keeps it open when adding someone, or editing someone without a custom role', () => {
+      expect(agentChoice(manager).disabled).toBe(false);
+      expect(
+        agentChoice({ ...manager, currentCustomRoleId: null }).disabled
+      ).toBe(false);
+    });
+
+    it('keeps it open for an administrator, grant_above_own, or with custom roles off', () => {
+      const editing = { ...manager, currentCustomRoleId: 10 };
+      expect(agentChoice({ ...editing, role: 'administrator' }).disabled).toBe(
+        false
+      );
+      expect(
+        agentChoice({
+          ...editing,
+          permissions: [...manager.permissions, 'grant_above_own'],
+        }).disabled
+      ).toBe(false);
+      expect(agentChoice({ ...editing, flags: [] }).disabled).toBe(false);
+    });
   });
 });

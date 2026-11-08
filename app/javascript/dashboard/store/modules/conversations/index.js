@@ -7,6 +7,7 @@ import wootConstants from 'dashboard/constants/globals';
 import { BUS_EVENTS } from '../../../../shared/constants/busEvents';
 import { emitter } from 'shared/helpers/mitt';
 import { CONTENT_TYPES } from 'dashboard/components-next/message/constants.js';
+import { veioDaIaPreservado } from 'dashboard/components-next/conversa-canal/atribuir/quemEstaComAConversa';
 
 const state = {
   allConversations: [],
@@ -313,6 +314,13 @@ export const mutations = {
       }
 
       const { messages, ...updates } = conversation;
+      // #2067: o evento ao vivo não traz de qual IA a conversa veio; com o mesmo dono, fica o que já se sabia.
+      if (updates.meta) {
+        updates.meta = veioDaIaPreservado(
+          selectedConversation.meta,
+          updates.meta
+        );
+      }
       allConversations[index] = { ...selectedConversation, ...updates };
       if (_state.selectedChatId === conversation.id) {
         emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);

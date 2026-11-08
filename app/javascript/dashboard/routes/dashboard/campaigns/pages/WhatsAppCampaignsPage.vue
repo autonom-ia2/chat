@@ -49,6 +49,7 @@ const handleAnalytics = campaign => {
   <CampaignLayout
     :header-title="t('CAMPAIGN.WHATSAPP.HEADER_TITLE')"
     :button-label="t('CAMPAIGN.WHATSAPP.NEW_CAMPAIGN')"
+    create-permission="campaign_send"
     @click="toggleWhatsAppCampaignDialog()"
     @close="toggleWhatsAppCampaignDialog(false)"
   >

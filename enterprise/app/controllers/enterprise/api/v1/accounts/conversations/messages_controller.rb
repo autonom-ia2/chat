@@ -1,5 +1,6 @@
 module Enterprise::Api::V1::Accounts::Conversations::MessagesController
   def destroy
+    authorize @conversation, :delete_message?
     audited_message = message
 
     # Lock before the deleted check so concurrent deletes cannot both write an audit entry.

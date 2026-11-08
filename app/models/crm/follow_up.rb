@@ -82,6 +82,12 @@ class Crm::FollowUp < ApplicationRecord
   enum status: { pending: 0, done: 1, canceled: 2, overdue: 3 }
   enum automation_mode: { reminder_only: 0, snooze_conversation: 1, auto_send_message: 2 }
 
+  # Marca do toque da cadência da IA (Crm::FollowUps::AutoFollowupTouchBuilder).
+  AI_FOLLOWUP_SOURCE = 'ai_followup'.freeze
+  # No modo "IA lembra a equipe", o toque que dispara vira lembrete para a pessoa com esta marca
+  # (Crm::FollowUps::AutoFollowupRunner#create_reminder).
+  AI_REMINDER_ACTION_MODE = 'ai_reminder'.freeze
+
   validates :title, :due_at, :timezone, presence: true
   validates :metadata, jsonb_attributes_length: true
   validate :linked_records_must_belong_to_account
@@ -91,9 +97,41 @@ class Crm::FollowUp < ApplicationRecord
   validate :without_card_only_reminds
 
   scope :active, -> { where(status: [statuses[:pending], statuses[:overdue]]) }
+  # Retorno que a pessoa faz (Lista nova, #2283): ativo (o vencido vira overdue no DueProcessor), lembrete ou adiar a
+  # conversa. Envio automático e toque da cadência da IA também têm hora, mas quem age é o sistema: ficam fora. O toque
+  # da IA que já virou lembrete para a equipe (action_mode ai_reminder) é da pessoa e entra.
+  scope :retorno_da_pessoa, lambda {
+    active.where(automation_mode: [automation_modes[:reminder_only], automation_modes[:snooze_conversation]])
+          .where("COALESCE(crm_follow_ups.metadata->>'source', '') <> ? OR crm_follow_ups.metadata->>'action_mode' = ?",
+                 AI_FOLLOWUP_SOURCE, AI_REMINDER_ACTION_MODE)
+  }
   scope :due, ->(time = Time.current) { pending.where(due_at: ..time) }
   # Pré-voo (#1624): o que vence depois de `from` e até `to`; o que já venceu é do DueProcessor.
   scope :due_within, ->(from, to) { pending.where('crm_follow_ups.due_at > ? AND crm_follow_ups.due_at <= ?', from, to) }
+
+  # O retorno da pessoa sem conversa ou de conversa visível (SQL de ids de Crm::Conversations::Visibility#scope). `all: true`
+  # só para quem vê todas as conversas da conta (Visibility#all_conversations?): aí não há filtro.
+  scope :retorno_visivel, lambda { |visible_conversation_ids_sql, all: false|
+    next retorno_da_pessoa if all
+    raise ArgumentError, 'retorno_visivel precisa das conversas visíveis' if visible_conversation_ids_sql.blank?
+
+    retorno_da_pessoa.where("crm_follow_ups.conversation_id IS NULL OR crm_follow_ups.conversation_id IN (#{visible_conversation_ids_sql})")
+  }
+
+  # O retorno da pessoa mais perto de cada card, { card_id => follow_up (só id e due_at) }, numa consulta (a página da
+  # Lista). O "Feito" usa o id; a hora diz a situação e a cor do retorno (#2283).
+  def self.proximos_retornos_da_pessoa(card_ids, conversation_visibility:)
+    return {} if card_ids.blank?
+
+    all = conversation_visibility.all_conversations?
+    visible_sql = conversation_visibility.scope(Conversation.all).select(:id).to_sql unless all
+    retorno_visivel(visible_sql, all: all)
+      .joins(:card).where('crm_follow_ups.account_id = crm_cards.account_id') # lembrete de outra conta não conta
+      .where(card_id: card_ids)
+      .select('DISTINCT ON (crm_follow_ups.card_id) crm_follow_ups.card_id, crm_follow_ups.id, crm_follow_ups.due_at')
+      .reorder(Arel.sql('crm_follow_ups.card_id, crm_follow_ups.due_at, crm_follow_ups.id'))
+      .index_by(&:card_id)
+  end
 
   private
 

@@ -18,6 +18,10 @@ class Crm::IntegrationTokenPolicy < ApplicationPolicy
     administrator?
   end
 
+  def grant_scopes?(_scopes)
+    administrator?
+  end
+
   class Scope < ApplicationPolicy::Scope
     def resolve
       scope.where(account_id: account.id)

@@ -39,8 +39,8 @@ class Crm::MetaAds::Setup
   end
 
   # Lê a conta (nome, gasto dos últimos 30 dias) e o Pixel antes de gravar. Qualquer leitura que falhe
-  # aborta sem mexer na conexão.
-  def select!(mode:, ad_account_id:, pixel_id:)
+  # aborta sem mexer na conexão. `no_site`: sem Pixel, a pessoa escolheu "Não tenho site" de propósito (#2343).
+  def select!(mode:, ad_account_id:, pixel_id:, no_site: false)
     raise Error, 'invalid_ad_account' unless Crm::MetaAds::NameResolver.meta_id?(ad_account_id)
 
     client = client_for(mode)
@@ -50,7 +50,7 @@ class Crm::MetaAds::Setup
     raise_graph!(spend) unless spend.ok
 
     pixel = pixel_id.present? ? find_pixel!(client, ad_account_id, pixel_id) : nil
-    save!(mode, details, pixel)
+    save!(mode, details, pixel, no_site: pixel.nil? && no_site)
   end
 
   def portfolio_ids
@@ -186,17 +186,24 @@ class Crm::MetaAds::Setup
     pixel
   end
 
-  def save!(mode, details, pixel)
+  def save!(mode, details, pixel, no_site:)
     connection.assign_attributes(
       mode: mode, **ad_account_attributes(details), pixel_id: pixel&.dig(:id), pixel_name: limited(pixel&.dig(:name)),
+      destinations: connection.destinations_with_no_site(connection.destinations, no_site),
       status: 'active', verified_at: Time.current, last_checked_at: Time.current, last_error: nil
     )
     connection.access_token = nil if mode == 'partner'
     reset_insights_on_new_ad_account
     connection.save!
+    start_loads(connection)
+    connection
+  end
+
+  # Nomes, gasto (90 dias) e, na primeira conexão, as ligações conversa → anúncio de todo o histórico (#2054).
+  def start_loads(connection)
     Crm::MetaAds::BackfillJob.perform_later(@account.id)
     Crm::MetaAds::InsightsBackfillJob.start(connection) if connection.insights_backfilled_at.nil?
-    connection
+    Crm::MetaAds::LinksBackfillJob.start(connection) if connection.links_backfilled_at.nil?
   end
 
   def ad_account_attributes(details)

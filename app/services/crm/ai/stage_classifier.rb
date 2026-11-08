@@ -77,7 +77,7 @@ module Crm
               required: %w[contact conversation card],
               additionalProperties: false
             },
-            score_signals: ScoreCalculator::SIGNALS_SCHEMA
+            score_signals: ScoreSignalsSchema::SCHEMA
           },
           required: %w[suggested_stage_id confidence reasoning value handoff callback_request extracted_attributes score_signals],
           additionalProperties: false
@@ -89,7 +89,7 @@ module Crm
 
       # O pacote do funil de um card na avaliação conjunta (#1693); o resto da entrada é a conversa, que vai uma vez só.
       PACOTE = %i[card pipeline stages conversation_summary handoff_enabled handoff_trigger eligible_agents attribute_schema
-                  known_attributes memoria memoria_chaves].freeze
+                  known_attributes memoria memoria_chaves previous_card].freeze
 
       def initialize(card:, client:, stages:, context:, model: Config::MODEL_CLASSIFY, reasoning_effort: 'low',
                      handoff_enabled: false, handoff_trigger: '', eligible_agents: [], attribute_schema: { contact: [], conversation: [] })
@@ -107,6 +107,9 @@ module Crm
 
       # Memória das IAs (#1601): o ContextBuilder com a memória traz os ids locais; sem ela, nada muda aqui.
       def memoria? = @context.to_h.key?(:memoria_refs)
+
+      # Card que renasce (#1925): o ContextBuilder trouxe o pedido encerrado antes deste.
+      def pedido_anterior? = @context.to_h.key?(:previous_card)
 
       # #1807: com a flag `email_autoria`, a legenda do aviso de e-mail vai no fim do prefixo.
       def email_autoria? = Crm::Email::Autoria.ligada?(@card&.account)
@@ -132,9 +135,33 @@ module Crm
 
       # #1828: com a flag `email_autoria`, o campo `saida_da_copia` no fim; sem ela, o schema de sempre.
       def esquema
-        base = memoria? ? CLASSIFICATION_SCHEMA_MEMORIA : CLASSIFICATION_SCHEMA
-        email_autoria? ? Crm::Email::SaidaDaCopia.com_saida(base) : base
+        email_autoria? ? Crm::Email::SaidaDaCopia.com_saida(esquema_do_card) : esquema_do_card
       end
+
+      # IA entende a conversa F1: com a flag `crm_ia_fatos_da_conversa`, o `handoff` ganha `promised_by_our_assistant`.
+      def esquema_do_card
+        fatos? ? FatosDaConversa.com_promessa(esquema_sem_fatos) : esquema_sem_fatos
+      end
+
+      # #1922: com a flag `crm_ia_arquiva_lixo`, o campo `nao_e_negocio` antes da memória; sem ela, o schema de sempre.
+      # IA entende a conversa F3: com a flag `crm_ia_fecha_card`, o campo `fechar_card` depois dele (e o motivo "teste" no
+      # `nao_e_negocio`).
+      def esquema_sem_fatos
+        return (memoria? ? CLASSIFICATION_SCHEMA_MEMORIA : CLASSIFICATION_SCHEMA) unless nao_e_negocio? || fecha_card?
+
+        base = nao_e_negocio? ? NaoENegocio.com_campo(CLASSIFICATION_SCHEMA, teste: fecha_card?) : CLASSIFICATION_SCHEMA
+        base = FecharCard.com_campo(base) if fecha_card?
+        memoria? ? Crm::Memoria::Esquema.com_memoria(base) : base
+      end
+
+      # #1922: a regra e o campo "não é negócio" só vão ao modelo com a flag da conta.
+      def nao_e_negocio? = NaoENegocio.ligada?(@card&.account)
+
+      # IA entende a conversa F3: a regra e o campo de fechar o card só com a flag da conta.
+      def fecha_card? = FecharCard.ligada?(@card&.account)
+
+      # IA entende a conversa F1: a ordem da conversa e a promessa do nosso assistente só com a flag da conta.
+      def fatos? = FatosDaConversa.ligada?(@card&.account)
 
       # A parte deste card na avaliação conjunta (Crm::Ai::ClassificacaoConjunta), com os mesmos campos de sempre.
       def pacote = entrada.slice(*PACOTE)
@@ -146,7 +173,10 @@ module Crm
 
       # Prefixo ESTÁVEL (call-invariant) p/ prompt caching — constante congelada em ClassifierPrompt::TEXT (ou a
       # variante com os agentes de IA, #1593). Estágios/critérios DINÂMICOS ficam no user_input. Ver ClassifierPrompt.
-      def instructions = ClassifierPrompt.para(@eligible_agents, memoria: memoria?, email_autoria: email_autoria?)
+      def instructions
+        ClassifierPrompt.para(@eligible_agents, memoria: memoria?, email_autoria: email_autoria?, nao_e_negocio: nao_e_negocio?,
+                                                pedido_anterior: pedido_anterior?, fatos: fatos?, fecha_card: fecha_card?)
+      end
 
       def user_input = entrada.merge(other_subjects_payload).to_json
 
@@ -170,11 +200,14 @@ module Crm
           default_hour: @context.dig(:temporal, :default_hour) || 9,
           attribute_schema: @attribute_schema,
           known_attributes: known_attributes_payload
-        }.merge(memoria_payload).freeze
+        }.merge(memoria_payload).merge(previous_card_payload).freeze
       end
 
       # Com a memória: os fatos já registrados (com id e versão) e as chaves de vários itens. Sem ela, nada muda.
       def memoria_payload = memoria? ? { memoria: @context[:memoria_fatos].to_a, memoria_chaves: @context[:memoria_chaves].to_a } : {}
+
+      # Só quando há pedido anterior (#1925): sem ele, a entrada fica igual à de antes.
+      def previous_card_payload = pedido_anterior? ? { previous_card: @context[:previous_card] } : {}
 
       # Só quando a conversa tem outros pedidos (#1147): com um pedido só, a entrada fica igual à de antes.
       def other_subjects_payload
@@ -197,10 +230,11 @@ module Crm
         values.to_h.select { |key, _value| allowed.include?(key.to_s) }
       end
 
-      # #1498: o tipo do funil (Vender/Atender) e o "Quando usar" entram pelos dados, nunca pelo prefixo em cache.
+      # #1498: o tipo do funil (Vender/Atender) e o "Quando usar" entram pelos dados, nunca pelo prefixo em cache. IA entende
+      # a conversa F2 (flag `crm_ia_assunto_encerrado`): sem "Quando usar", a descrição do funil, como na IA de assunto.
       def pipeline_payload
         pipeline = @card.pipeline
-        { kind: pipeline&.kind || 'sell', when_to_use: pipeline&.when_to_use.presence }.compact
+        { kind: pipeline&.kind || 'sell', when_to_use: Crm::Subjects::Encerrado.quando_usar(pipeline) }.compact
       end
 
       def card_payload

@@ -202,7 +202,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
   # tem resumo, chat#323); `produto` em branco é auto.
   def schema_do_produto
     produto = @resultado.run.arguments.to_h.stringify_keys['produto'].to_s.strip.presence || Resultado.cotacao::AUTO
-    ::Autonomia::Insurance::Connection.for_account(agent.account).find(&:ready?)&.quote_schema(produto)
+    ::Autonomia::Insurance::Connection.for_account(agent.account).find(&:usable?)&.quote_schema(produto)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][insurance] schema indisponível no resultado #{e.class}")
     nil

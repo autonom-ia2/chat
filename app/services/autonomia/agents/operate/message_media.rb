@@ -26,6 +26,9 @@ module Autonomia
         # o mesmo código, exercitado todo dia pelo outro consumidor.
         SourceLike = Struct.new(:file, :reference, :source_type)
 
+        # O anexo está "em leitura" pelo leitor de mídia do CRM: transcrever aqui seria pagar duas vezes (#2109).
+        EM_LEITURA = :em_leitura
+
         # `messages:` é o caminho do turno (os anexos das mensagens); `attachments:` é o do especialista,
         # que já escolheu os anexos (entrega 1). Um ou outro.
         def initialize(agent:, messages: [], attachments: nil)
@@ -145,31 +148,59 @@ module Autonomia
           credential = Crm::Ai::CredentialResolver.new(account: @agent.account).resolve
           return [] if credential.blank?
 
-          audios.filter_map { |attachment| transcript_for(attachment, credential) }
+          # Um só prazo no turno para esperar o leitor do CRM, em todos os áudios: no máximo ESPERA_EM_LINHA.
+          ate_em = Crm::Ai::ReservaDaMidia::ESPERA_EM_LINHA.from_now
+          audios.filter_map { |attachment| transcript_for(attachment, credential, ate_em) }
         end
 
         # Transcreve (ou reusa o cache compartilhado). NUNCA loga o texto. Falha de transcrição -> nil (o
         # prompt v2 manda pedir o texto/resumo quando não há transcrição).
-        def transcript_for(attachment, credential)
+        def transcript_for(attachment, credential, ate_em)
           cached = attachment.meta.to_h['transcribed_text'].to_s
           return cached if cached.present?
 
-          text = Crm::Ai::TranscriptionClient.new(credential: credential).transcribe(attachment).to_s.strip
-          return if text.blank?
+          lido_pelo_crm = texto_do_leitor_do_crm(attachment, ate_em)
+          return lido_pelo_crm if lido_pelo_crm.present?
 
-          cache_transcript(attachment, text) # best-effort: a transcrição alimenta ESTE turno mesmo se o cache falhar
-          text
+          texto = transcrever_uma_vez(attachment, credential)
+          texto == EM_LEITURA ? texto_do_leitor_do_crm(attachment, ate_em) : texto.presence
         rescue StandardError => e
           Rails.logger.warn("[autonomia][operate] transcription_failed attachment=#{attachment.id} #{e.class}")
           nil
         end
 
-        # Cache compartilhado (attachment.meta['transcribed_text']). Recarrega antes do merge p/ reduzir
-        # sobrescrita de chaves concorrentes; NUNCA derruba o turno se a escrita falhar (rescue -> nil).
-        def cache_transcript(attachment, text)
-          attachment.reload
-          attachment.update!(meta: attachment.meta.to_h.merge('transcribed_text' => text))
-        rescue StandardError
+        # A mesma reserva do leitor de mídia do CRM (Crm::Ai::ReservaDaMidia, #2141): trava curta que relê o cache e marca
+        # o anexo "em leitura"; a transcrição roda fora de transação. Quem chega depois (o leitor do CRM ou outro turno)
+        # vê a marca e espera o texto em vez de pagar de novo. Sem reserva: o texto já gravado, ou EM_LEITURA quando outro
+        # processo está pagando (o turno espera o texto dele fora da trava).
+        def transcrever_uma_vez(attachment, credential)
+          dono = Crm::Ai::ReservaDaMidia.reservar(attachment) { attachment.meta.to_h['transcribed_text'].blank? }
+          return attachment.meta.to_h['transcribed_text'].to_s.presence || EM_LEITURA unless dono
+
+          text = nil
+          begin
+            text = Crm::Ai::TranscriptionClient.new(credential: credential).transcribe(attachment).to_s.strip
+          ensure
+            cache_transcript(attachment, text, dono) # best-effort: alimenta ESTE turno mesmo se o cache falhar
+          end
+          text
+        end
+
+        # O leitor de mídia do CRM lê fora da trava (#2109) e marca o anexo "em leitura" (Crm::Ai::ReservaDaMidia): o turno
+        # espera o texto dele até `ate_em` antes de pagar a transcrição de novo. -> o texto, ou nil (a marca seguiu válida:
+        # o turno vai sem a transcrição, e o leitor grava o texto para o próximo).
+        def texto_do_leitor_do_crm(attachment, ate_em)
+          return unless Crm::Ai::ReservaDaMidia.lendo?(attachment.meta.to_h)
+
+          Crm::Ai::ReservaDaMidia.esperar(attachment, ate_em: ate_em).meta.to_h['transcribed_text'].to_s.presence
+        end
+
+        # Cache compartilhado (attachment.meta['transcribed_text']), gravado sobre o meta atual, e a reserva liberada (com
+        # ou sem texto). NUNCA derruba o turno se a escrita falhar: a marca vence no PRAZO.
+        def cache_transcript(attachment, text, dono)
+          Crm::Ai::ReservaDaMidia.gravar(attachment, dono: dono) { |meta| text.present? ? meta.merge('transcribed_text' => text) : meta }
+        rescue StandardError => e
+          Rails.logger.warn("[autonomia][operate] transcription_cache_failed attachment=#{attachment.id} #{e.class}")
           nil
         end
       end

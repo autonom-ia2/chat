@@ -10,21 +10,38 @@ const props = defineProps({
   // Passo aberto agora (pode ser um passo feito, ao alterar).
   open: { type: Number, default: null },
   salesOff: { type: Boolean, default: false },
+  // Conta de anúncios gravada sem código do site e sem "Não tenho site" (#2343): o passo não ganha o visto.
+  accountPending: { type: Boolean, default: false },
+  // Anúncio levando ao site sem página ligada (#2338): o passo do Destino pede a página.
+  destinationsPending: { type: Boolean, default: false },
 });
 
 defineEmits(['change']);
 
 const STEPS = ['CONNECT', 'ACCOUNT', 'DESTINATIONS', 'SALES'];
 const SALES_STEP = 4;
+const ACCOUNT_STEP = 2;
+const DESTINATIONS_STEP = 3;
+// O que falta num passo feito pela metade: a dica e o botão que leva até ele.
+const PENDING = {
+  [ACCOUNT_STEP]: { hint: 'ACCOUNT_PENDING_HINT', action: 'PICK' },
+  [DESTINATIONS_STEP]: { hint: 'DESTINATIONS_PENDING_HINT', action: 'LINK' },
+};
 
 const steps = computed(() =>
   STEPS.map((key, index) => {
     const number = index + 1;
     const off = number === SALES_STEP && props.salesOff;
+    const flagged = {
+      [ACCOUNT_STEP]: props.accountPending,
+      [DESTINATIONS_STEP]: props.destinationsPending,
+    }[number];
+    const pending = number < props.current && Boolean(flagged);
     return {
       key,
       number,
-      done: number < props.current && !off,
+      pending: pending ? PENDING[number] : null,
+      done: number < props.current && !off && !pending,
       off: off && number !== props.current,
       now: number === props.current,
       open: number === props.open,
@@ -53,11 +70,17 @@ const steps = computed(() =>
           :class="{
             'bg-n-teal-9 text-white': step.done,
             'bg-n-blue-9 text-white': step.now,
-            'bg-n-alpha-2 text-n-slate-11': !step.done && !step.now,
+            'bg-n-amber-9 text-white': step.pending,
+            'bg-n-alpha-2 text-n-slate-11':
+              !step.done && !step.now && !step.pending,
           }"
           aria-hidden="true"
         >
           <span v-if="step.done" class="i-lucide-check size-3.5" />
+          <span
+            v-else-if="step.pending"
+            class="i-lucide-alert-triangle size-3.5"
+          />
           <template v-else>{{ step.number }}</template>
         </span>
         <span class="flex flex-col flex-1 min-w-0">
@@ -68,7 +91,11 @@ const steps = computed(() =>
             {{ $t(`CRM_KANBAN.META_ADS_HUB.STEPS.${step.key}`) }}
           </span>
           <span class="text-xs text-n-slate-11">
-            {{ $t(`CRM_KANBAN.META_ADS_HUB.STEPS.${step.key}_HINT`) }}
+            {{
+              step.pending
+                ? $t(`CRM_KANBAN.META_ADS_HUB.STEPS.${step.pending.hint}`)
+                : $t(`CRM_KANBAN.META_ADS_HUB.STEPS.${step.key}_HINT`)
+            }}
           </span>
         </span>
         <span
@@ -77,6 +104,15 @@ const steps = computed(() =>
         >
           {{ $t('CRM_KANBAN.META_ADS_HUB.STEPS.NOW') }}
         </span>
+        <button
+          v-else-if="step.pending && !step.open"
+          type="button"
+          data-step-pending
+          class="px-3 text-xs font-semibold border-0 rounded-lg min-h-11 bg-n-amber-3 text-n-amber-11 hover:bg-n-amber-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+          @click="$emit('change', step.number)"
+        >
+          {{ $t(`CRM_KANBAN.META_ADS_HUB.STEPS.${step.pending.action}`) }}
+        </button>
         <button
           v-else-if="step.off"
           type="button"

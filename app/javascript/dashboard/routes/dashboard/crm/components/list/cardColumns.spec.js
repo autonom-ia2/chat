@@ -22,4 +22,12 @@ describe('buildCrmCardColumns', () => {
     expect(semSelecao).not.toContain('select');
     expect(semSelecao.length).toBe(ids().length - 1);
   });
+
+  // #2075 — sem a chave de valores o servidor ignora a ordem por valor.
+  it('keeps the value column but turns off its sorting without the sales values key', () => {
+    const valor = opcoes =>
+      buildCrmCardColumns({ t, ...opcoes }).find(c => c.id === 'value');
+    expect(valor().enableSorting).toBe(true);
+    expect(valor({ valueVisible: false }).enableSorting).toBe(false);
+  });
 });

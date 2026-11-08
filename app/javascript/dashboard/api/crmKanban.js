@@ -424,6 +424,13 @@ class CrmKanbanAPI extends ApiClient {
     });
   }
 
+  // GET /crm/cards/upcoming_meetings — a próxima reunião marcada de cada card (aviso ao arquivar, #2091).
+  upcomingMeetings(cardIds = []) {
+    return axios.get(`${this.url}/cards/upcoming_meetings`, {
+      params: { card_ids: cardIds },
+    });
+  }
+
   // GET /crm/cards/summaries — { pipeline_id, group_by, ...filters }.
   cardsGroupSummary(params = {}) {
     return axios.get(`${this.url}/cards/summaries`, { params });

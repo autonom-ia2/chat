@@ -73,7 +73,8 @@ class Crm::Cards::XlsxExport
       user: @user,
       account_user: @account_user,
       conversation_visibility: conversation_visibility,
-      company: @company_by_card_id[card.id]
+      company: @company_by_card_id[card.id],
+      next_follow_up: Crm::Cards::PayloadBuilder::SKIP_FOLLOW_UP # a planilha não tem a coluna; sem consulta por card
     ).perform
     cells = COLUMNS.map { |column| cell_value(column, card, payload) }
     row_styles = COLUMNS.map { |column| styles.cell(LAYOUT[column].first, zebra: zebra, raw: raw_enum(column, card)) }
@@ -132,7 +133,8 @@ class Crm::Cards::XlsxExport
 
   def cell_value(column, card, payload)
     case LAYOUT[column].first
-    when :value then card.value_cents && (card.value_cents / 100.0)
+    # Valor de venda (#2075): o do payload, que sai vazio para quem não tem `sales_value_view` (menos o card próprio).
+    when :value then payload[:value_cents] && (payload[:value_cents] / 100.0)
     when :date then card.public_send(column)&.in_time_zone(zone)
     else text_value(column, card, payload)
     end

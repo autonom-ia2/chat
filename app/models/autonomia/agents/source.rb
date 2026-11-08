@@ -53,6 +53,9 @@ module Autonomia
                          foreign_key: :autonomia_agent_id
       has_many :knowledge_entries, class_name: 'Autonomia::Agents::KnowledgeEntry',
                                    foreign_key: :source_id, dependent: :delete_all
+      # #2487 — o material só de um post ou anúncio: é do cuidado dos comentários, não do agente (o `autonomia_agent_id`
+      # guarda a porta da rede no momento do anexo). Só a resposta a um comentário daquele cuidado lê (Retriever).
+      belongs_to :care, class_name: 'Crm::MetaAdsCommentCare', optional: true
 
       enum status: { pending: 0, processing: 1, ready: 2, failed: 3 }
 
@@ -78,6 +81,10 @@ module Autonomia
 
       # Escopo do parecer aceito — usado pelo retrieval e pelos resumos do Construtor.
       scope :accepted, -> { where(review_status: 'accepted') }
+
+      # #2487 — o material do próprio agente, sem o de um post ou anúncio (care_id). Todo leitor do material do agente
+      # fora do Retriever (painel, conferências, placar, autoteste, recompute) parte daqui.
+      scope :da_agente, -> { where(care_id: nil) }
 
       # G6 — fontes SERVÍVEIS: aceitas E com geração de entries vigente — `ready` (caminho normal)
       # OU `failed` transitório (mark_failed! restaurou o parecer 'accepted'; os KnowledgeEntry
@@ -120,9 +127,24 @@ module Autonomia
       ORIGEM_FOTO_DA_CRIACAO = 'foto_da_criacao'.freeze
       # #1426 — as páginas do PDF que ficaram de fora da leitura (teto, página grande, prazo), para o aviso ao dono.
       PAGINAS_DE_FORA = 'paginas_de_fora'.freeze
+      # #1427 — "Lendo a página X de N…": a página que o OCR do PDF está lendo agora e quantas ele vai ler, só durante a
+      # leitura (sai quando ela termina, falha ou é superada).
+      PROGRESSO = 'progresso'.freeze
+      # #1426 (t4e) — o índice do material grande ([{ paginas, resumo, temas }], Knowledge::ResumoPorSecao), desta leitura:
+      # o mark_ready! grava o da leitura nova (ou tira o da anterior, se a nova não tem). A falha e a volta à geração anterior
+      # mantêm o da anterior, que descreve os trechos que continuam servidos.
+      RESUMO_POR_SECAO = 'resumo_por_secao'.freeze
       # #1426 — teto da releitura, o mesmo do painel (TETO_DA_RELEITURA_MS em autonomiaSources.js).
       TETO_DA_RELEITURA = 10.minutes
       attr_accessor :paginas_de_fora
+      # #1426 (t4e) — o PDF grande dividido em seções por faixa de páginas ([{ 'paginas' => [ini, fim], 'texto' }]), posto
+      # pelo Processors::Pdf só durante a leitura. O Ingestor corta cada seção à parte e grava as páginas em cada trecho.
+      attr_accessor :secoes
+      # #1426 (t4e) — o índice por seção desta leitura (Knowledge::ResumoPorSecao), gravado pelo mark_ready! com o "pronto".
+      attr_accessor :resumo_por_secao
+      # #1426 — o texto desta leitura veio de OCR (PDF escaneado), posto pelo Processors::PdfOcr. Só em memória, lido pela
+      # conferência (Material::ConferenciaDoMaterial) no mesmo job: "leitura ruim" só existe quando houve leitura de imagem.
+      attr_accessor :leitura_de_imagem
 
       before_destroy :soltar_foto_da_conversa, prepend: true # antes do has_one_attached apagar o anexo
 
@@ -141,7 +163,7 @@ module Autonomia
         # needs_review+failed (e mesmo restaurando só o status, sem review_summary o Retriever perderia
         # a exclusão "fora do negócio" e o Construtor leria contexto em branco). Restaura tudo.
         # #1426 — as páginas de fora da leitura anterior saem já aqui: a leitura nova escreve as dela no fim.
-        base = (metadata || {}).except(PAGINAS_DE_FORA)
+        base = (metadata || {}).except(PAGINAS_DE_FORA, PROGRESSO)
         # CORRIDA: se a fonte JÁ estava `processing` (um re-sync anterior em curso), os campos de
         # review já estão rebaixados/em branco — NÃO os capture (preservaria lixo). Mantém o
         # prev_review verdadeiro do re-sync anterior. Só captura snapshot fresco quando não-processing.
@@ -185,6 +207,16 @@ module Autonomia
         self.class.exists?(id: id, sync_token: sync_token, status: self.class.statuses[:processing])
       end
 
+      # #1427 — o OCR anota a página que começa a ler, sob a mesma guarda das outras escritas da leitura (mesmo token e ainda
+      # lendo): um job superado não escreve. Escreve só a chave do progresso (o resto do metadata fica) e renova o
+      # updated_at: material avançando não é material parado. A escrita de fim de leitura tira a chave.
+      def anotar_progresso!(pagina:, total:)
+        progresso = { 'pagina' => pagina, 'total' => total }.to_json
+        rows = self.class.where(id: id, sync_token: sync_token, status: self.class.statuses[:processing])
+                   .update_all(["metadata = jsonb_set(metadata, '{#{PROGRESSO}}', ?::jsonb), updated_at = ?", progresso, Time.current])
+        rows.positive?
+      end
+
       # #1426 — lendo agora, e não parado: começou há menos que o teto da releitura (o mesmo TETO_DA_RELEITURA_MS do painel,
       # depois do qual a tela libera "Ler de novo" num material parado).
       def lendo_agora?
@@ -203,7 +235,7 @@ module Autonomia
 
       # #1426 — as páginas do PDF que ficaram de fora nesta leitura (Processors::Pdf põe em `paginas_de_fora`, só em
       # memória) vão junto, sob a mesma guarda de token: um job superado não escreve. Sem nada de fora, a marca some. Vale
-      # também para restore_previous_generation! e mark_failed! (metadata_desta_leitura).
+      # também para restore_previous_generation! e mark_failed!, que trocam só as chaves desta leitura (com_paginas_desta_leitura).
       def mark_ready!(token, chunk_count:)
         guarded_update(token, status: self.class.statuses[:ready], error: nil,
                               metadata: metadata_desta_leitura.merge('chunk_count' => chunk_count), synced_at: Time.current)
@@ -256,14 +288,20 @@ module Autonomia
 
       # O metadata com o que ficou de fora NESTA leitura (Source#paginas_de_fora): a marca da leitura anterior sai sempre.
       def metadata_desta_leitura
-        base = (metadata || {}).except(PAGINAS_DE_FORA)
+        base = (metadata || {}).except(PAGINAS_DE_FORA, PROGRESSO, RESUMO_POR_SECAO)
+        base = base.merge(RESUMO_POR_SECAO => resumo_por_secao) if resumo_por_secao.present?
         paginas_de_fora.present? ? base.merge(PAGINAS_DE_FORA => paginas_de_fora) : base
       end
 
-      # Só escreve o metadata quando a marca muda (sem marca antes nem agora, a escrita é a de sempre).
+      # #1427 — a falha e a volta à geração anterior mexem só nas chaves desta leitura, no próprio banco: tiram o progresso
+      # (anotado por update_all, às vezes por outra instância, então este objeto pode nem conhecê-lo) e trocam as páginas
+      # de fora pelas desta leitura. O resto do metadata fica como está no banco, mesmo o que foi gravado no meio-tempo.
       def com_paginas_desta_leitura(attrs)
-        novo = metadata_desta_leitura
-        novo == (metadata || {}) ? attrs : attrs.merge(metadata: novo)
+        desta_leitura = paginas_de_fora.present? ? { PAGINAS_DE_FORA => paginas_de_fora } : {}
+        sql = self.class.sanitize_sql_array(
+          ["(COALESCE(metadata, '{}'::jsonb) - ? - ?) || ?::jsonb", PROGRESSO, PAGINAS_DE_FORA, desta_leitura.to_json]
+        )
+        attrs.merge(metadata: Arel.sql(sql))
       end
 
       def previous_review_attributes

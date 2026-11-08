@@ -20,12 +20,26 @@ module Crm::Subjects
   LIMITE_MENSAL = 10_000
   # Assuntos abertos que o Jev vê como opção; os mais recentes primeiro.
   MAX_ASSUNTOS = 8
+  # Mensagens dos dois lados que o Jev e o modelo maior leem (#1924). Com 5, o pedido do cliente saía da janela depois
+  # de algumas idas e vindas com a equipe. 12 é a janela recente da IA do card (Crm::Ai::ContextBuilder).
+  MAX_MENSAGENS = 12
+  # As 5 mais recentes seguem até 5.000 caracteres, como na janela de 5; as 7 mais antigas vão cortadas como na IA do card
+  # (2.000). O pior caso (só e-mails longos) fica em ~39 mil caracteres, contra 25 mil da janela de 5 (#1924, revisão).
+  MAX_CARACTERES_ANTERIORES = 2_000
+  JANELA = { max_mensagens: MAX_MENSAGENS, max_caracteres_anteriores: MAX_CARACTERES_ANTERIORES }.freeze
   FEATURE = 'assunto'.freeze
   FEATURE_REVISAO = 'assunto_revisao'.freeze
   # A IA não troca sozinha o assunto que uma pessoa escolheu por este tempo: vira sugestão (#1260).
   RESPEITO_AO_FOCO = 4.hours
   # Card que a pessoa fechou ou arquivou não é recriado sozinho, e sugestão dispensada não volta, por este tempo.
   RESPEITO_AO_FECHAMENTO = 24.hours
+
+  # A leitura da conversa pela IA de assunto: a JANELA e, com a flag `crm_ia_fatos_da_conversa` (IA entende a conversa
+  # F1), a hora e o papel de quem falou (Autonomia::Decisores::Estado com `papeis: true`); com a flag
+  # `crm_ia_leitor_de_midia` (F4), também a mensagem só de mídia, com o texto lido do anexo (`com_midia: true`).
+  def self.janela(account)
+    JANELA.merge(papeis: Crm::Ai::FatosDaConversa.ligada?(account), com_midia: Crm::Ai::LeitorDeMidia.ligada?(account))
+  end
 
   # A caixa aceita sugestão esperando uma pessoa: no modo Sugerir e também na Automática, que sugere em vez de agir
   # quando respeita a pessoa (#1260). Desligada, a sugestão perde o sentido (#1221).

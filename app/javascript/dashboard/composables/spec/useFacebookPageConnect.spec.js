@@ -1,4 +1,7 @@
-import { useFacebookPageConnect } from '../useFacebookPageConnect';
+import {
+  useFacebookPageConnect,
+  FACEBOOK_NOT_CONFIGURED,
+} from '../useFacebookPageConnect';
 import { useMapGetter } from 'dashboard/composables/store';
 import ChannelApi from 'dashboard/api/channels';
 import { setupFacebookSdk } from 'dashboard/routes/dashboard/settings/inbox/channels/whatsapp/utils';
@@ -75,6 +78,17 @@ describe('useFacebookPageConnect', () => {
     });
   });
 
+  it('asks the extra scopes on top of the page scopes (Your posts #2199)', async () => {
+    const { preloadSdk, login } = useFacebookPageConnect();
+    await preloadSdk();
+
+    await expect(login(['read_insights'])).resolves.toBe('user-token');
+    expect(window.FB.login).toHaveBeenCalledWith(expect.any(Function), {
+      scope:
+        'pages_manage_metadata,business_management,pages_messaging,pages_show_list,pages_read_engagement,read_insights',
+    });
+  });
+
   it('resolves null when the user is not authorized', async () => {
     stubLogin({ status: 'not_authorized' });
     const { loginAndFetchPages } = useFacebookPageConnect();
@@ -145,5 +159,49 @@ describe('useFacebookPageConnect', () => {
     await loginAndFetchPages();
 
     expect(setupFacebookSdk).toHaveBeenCalledTimes(1);
+  });
+  // #2319: without an app id FB.login never calls back, so the caller waited forever.
+  it.each([undefined, ''])(
+    'rejects without opening the login when fbAppId is %j',
+    async fbAppId => {
+      window.chatwootConfig = { fbAppId };
+      const { loginAndFetchPages, login } = useFacebookPageConnect();
+
+      await expect(loginAndFetchPages()).rejects.toMatchObject({
+        name: FACEBOOK_NOT_CONFIGURED,
+      });
+      await expect(login(['read_insights'])).rejects.toMatchObject({
+        name: FACEBOOK_NOT_CONFIGURED,
+      });
+      expect(setupFacebookSdk).not.toHaveBeenCalled();
+      expect(window.FB.login).not.toHaveBeenCalled();
+    }
+  );
+
+  it('opens the login right away, without waiting for the SDK', async () => {
+    const pending = createDeferred();
+    setupFacebookSdk.mockReturnValue(pending.promise);
+    const { preloadSdk, login } = useFacebookPageConnect();
+    preloadSdk();
+
+    const token = login(['read_insights']);
+
+    expect(window.FB.login).toHaveBeenCalledTimes(1);
+    await expect(token).resolves.toBe('user-token');
+  });
+
+  it('loads the SDK again on a retry after it failed to load', async () => {
+    const error = new Error('script load failed');
+    error.name = 'ScriptLoaderError';
+    setupFacebookSdk.mockRejectedValueOnce(error).mockResolvedValueOnce();
+    const { loginAndFetchPages } = useFacebookPageConnect();
+
+    await expect(loginAndFetchPages()).rejects.toThrow('script load failed');
+    await expect(loginAndFetchPages()).resolves.toEqual({
+      userAccessToken: 'long-token',
+      pages: PAGES,
+    });
+    expect(setupFacebookSdk).toHaveBeenCalledTimes(2);
+    expect(window.FB.login).toHaveBeenCalledTimes(1);
   });
 });

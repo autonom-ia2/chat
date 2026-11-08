@@ -48,8 +48,9 @@ class Crm::Pipeline < ApplicationRecord
   MAX_WHEN_TO_USE = 1_000
   # Modelo escolhido ao criar o funil (#1498), guardado em metadata['template']. De Vender: VENDAS e RENOVACAO; os outros
   # são de Atender. RENOVACAO, SINISTRO e ENDOSSO (#1802) só aparecem na tela para a corretora (camada
-  # seguros/corretora). Funil antigo não tem: a tela usa o primeiro modelo do tipo.
-  TEMPLATES = %w[VENDAS ATENDIMENTO POS_VENDA COBRANCA AGENDAMENTOS RENOVACAO SINISTRO ENDOSSO].freeze
+  # seguros/corretora); CARTEIRA (#2083), de Atender, só na tela da saúde (seguros/saude_beneficios). A lista vale para
+  # qualquer conta na API, como a dos modelos da corretora. Funil antigo não tem: a tela usa o primeiro modelo do tipo.
+  TEMPLATES = %w[VENDAS ATENDIMENTO POS_VENDA COBRANCA AGENDAMENTOS RENOVACAO SINISTRO ENDOSSO CARTEIRA].freeze
 
   validates :name, presence: true
   # Multifunil (#1145): o "Quando usar" que a IA lê para saber se um pedido é deste funil.
@@ -65,6 +66,19 @@ class Crm::Pipeline < ApplicationRecord
   def self.outcome_labels_valid?(labels)
     labels = labels.to_unsafe_h if labels.respond_to?(:to_unsafe_h)
     labels.is_a?(Hash) && (labels.keys.map(&:to_s) - OUTCOME_LABEL_KEYS).empty? && labels.values.all?(String)
+  end
+
+  # Por que este funil não pode ser arquivado agora, ou nil: a conta precisa de um funil ativo e, se este é o principal,
+  # de outro principal ativo (vários podem estar marcados como principal). Lê o que está gravado, não o que vai ser:
+  # o status a gravar é o próprio arquivamento, e desmarcar o principal na mesma mudança não tira a exigência. A API
+  # responde 422 com a mensagem crm.pipelines.archive_<motivo>.
+  def motivo_para_nao_arquivar
+    return if status_in_database == 'archived'
+
+    outros = account.crm_pipelines.active.where.not(id: id)
+    return 'last_active' unless outros.exists?
+
+    'only_default' if (is_default_in_database || is_default?) && !outros.exists?(is_default: true)
   end
 
   # Tipo do funil (#1498) para a IA: "sell" (Vender) ou "serve" (Atender).
