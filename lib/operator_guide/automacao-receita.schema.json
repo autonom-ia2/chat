@@ -122,7 +122,7 @@
       "properties": { "mensagem": { "$ref": "#/definitions/texto" } }
     },
     "valor_calculado": {
-      "description": "Valor calculado numa folha do corpo da ação (G16), lido na hora da execução. $valor copia um valor do alvo; $texto junta pedaços como o texto da mensagem; $data dá \"AAAA-MM-DD\" a partir de \"hoje\" (no fuso da conta) ou de um atributo do tipo data, mais N dias, semanas, meses ou anos (N negativo volta no tempo; 31/01 + 1 mês = 28/02). Valor lido vazio pula a ação.",
+      "description": "Valor calculado numa folha do corpo da ação (G16), lido na hora da execução. $valor copia um valor do alvo; $texto junta pedaços como o texto da mensagem; $data dá \"AAAA-MM-DD\" a partir de \"hoje\" (no fuso da conta) ou de um atributo do tipo data, mais N dias, semanas, meses ou anos (N negativo volta no tempo; 31/01 + 1 mês = 28/02), e, se pedido, no fim do mês. Valor lido vazio pula a ação.",
       "oneOf": [
         { "$ref": "#/definitions/valor" },
         {
@@ -151,6 +151,10 @@
                     "valor": { "type": "integer", "minimum": -3650, "maximum": 3650 },
                     "unidade": { "enum": ["dias", "semanas", "meses", "anos"] }
                   }
+                },
+                "fim_do": {
+                  "description": "Leva ao último dia do período da data já somada: \"mes\" dá o fim do mês (hoje + 1 mês, no fim do mês = último dia do mês que vem).",
+                  "enum": ["mes"]
                 }
               }
             }
