@@ -202,6 +202,8 @@ class Autonomia::Automacao::Receita
   # o começo da espera, e ela leria sempre vazio. O texto da IA (#2679) só vem de um passo que escreve.
   def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false)
     valores = ::Autonomia::Automacao::Valores
+    agenda = ::Autonomia::Automacao::AgendaDaPagina.problemas(id, caminho, conta: @conta, account_user: @account_user)
+    return agenda if agenda
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
     return ::Autonomia::Automacao::TextoDaIaNaReceita.new(self, @receita).problemas(id, caminho, no_gatilho: no_gatilho) if valores.da_ia?(caminho)
 

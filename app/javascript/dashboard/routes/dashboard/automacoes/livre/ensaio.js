@@ -9,6 +9,9 @@ const E = 'AUTOMACAO_LIVRE.ENSAIO';
 const AVISO = {
   mensagens_desligadas: 'NAO_SAIRIA',
   faltou_valor: 'FALTOU_VALOR',
+  // G12/G44: o link da agenda vazio, e quem pede sem ver o agendamento.
+  faltou_link_da_agenda: 'FALTOU_LINK_DA_AGENDA',
+  sem_acesso_agenda: 'SEM_ACESSO_AGENDA',
   texto_vazio: 'TEXTO_VAZIO',
   // G2: o e-mail que não sairia para o contato desta conversa.
   contato_sem_email: 'CONTATO_SEM_EMAIL',

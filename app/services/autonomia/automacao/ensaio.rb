@@ -152,7 +152,7 @@ class Autonomia::Automacao::Ensaio
     return no(passo, 'mensagens_desligadas') unless ::Autonomia::Automacao::Motor.mensagens?(@conta)
 
     pronto = ::Autonomia::Automacao::Texto.new(passo['texto'], valores).montar
-    return no(passo, 'faltou_valor') if pronto.nil?
+    return no(passo, *::Autonomia::Automacao::AgendaDaPagina.do_vazio(valores.falta_da_agenda)) if pronto.nil?
     return no(passo, 'texto_vazio') if pronto.strip.empty?
 
     # F4b (#2468): o nome do modelo, para a tela dizer o que sai se a janela de 24 h estiver fechada.

@@ -19,6 +19,7 @@ import LivrePortas from '../components/LivrePortas.vue';
 import DialogoDaCasa from 'dashboard/routes/dashboard/settings/funcoesDaEquipe/guiada/DialogoDaCasa.vue';
 import {
   carregarCatalogo,
+  comAgendas,
   comPermissoes,
   comTextosDaIa,
   doAlvoDoGatilho,
@@ -38,6 +39,7 @@ import { useEditorLivre } from '../useEditorLivre';
 import { useOpcoesDaConta } from '../useOpcoesDaConta';
 import { useGatilhosNovos } from '../useGatilhosNovos';
 import { usePodeLerValor } from '../usePodeLerValor';
+import { useAgendasDaConta } from '../useAgendasDaConta';
 
 // #2414 F5 — o editor da Automação livre: o "Confira" à esquerda e, ao lado, a
 // ação principal (Ligar). A URL diz o painel aberto: ?alterar=<item>,
@@ -80,22 +82,34 @@ const avisoDeLigada = computed(() => {
 });
 
 // A frase dos passos (Confira, Ensaio, Histórico) mostra o texto da IA pelo
-// rótulo dele, como o "Alterar" (#2679).
+// rótulo dele, como o "Alterar" (#2679), e o link da agenda pelo nome da
+// página (G44).
+const { paginas: agendas, carregarAgendas } = useAgendasDaConta();
 const catalogoComTextos = computed(() =>
-  comTextosDaIa(catalogo.value, receita.value.passos, t)
+  comAgendas(
+    comTextosDaIa(catalogo.value, receita.value.passos, t),
+    agendas.value,
+    t
+  )
 );
 
 // O "Alterar" só oferece o valor que o alvo do gatilho alcança (#2499) e que
-// a pessoa pode ler (#2597), mais o texto dos passos de IA da receita (#2679).
+// a pessoa pode ler (#2597), mais o texto dos passos de IA da receita (#2679)
+// e o link de cada página de agendamento que marca (G44).
 const podeLerValor = usePodeLerValor();
 const catalogoDoAlvo = computed(() =>
-  comTextosDaIa(
-    doAlvoDoGatilho(
-      comPermissoes(catalogo.value, podeLerValor.value),
-      receita.value.gatilho?.tipo
+  comAgendas(
+    comTextosDaIa(
+      doAlvoDoGatilho(
+        comPermissoes(catalogo.value, podeLerValor.value),
+        receita.value.gatilho?.tipo
+      ),
+      receita.value.passos,
+      t
     ),
-    receita.value.passos,
-    t
+    agendas.value,
+    t,
+    { soAsQueMarcam: true }
   )
 );
 
@@ -334,6 +348,7 @@ const carregarTudo = async () => {
 
 onMounted(() => {
   carregarOpcoes();
+  carregarAgendas();
   carregarTudo();
 });
 </script>
