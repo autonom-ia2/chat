@@ -132,11 +132,10 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     account.enable_features!('automacao_gatilhos', 'whatsapp_campaign')
     create(:inbox_member, user: dona, inbox: inbox)
     canal.update!(message_templates: modelos_aprovados)
-    %w[peca cor tamanho].each do |chave|
-      %w[conversation_attribute card_attribute].each do |modelo|
-        create(:custom_attribute_definition, account: account, attribute_key: chave, attribute_display_name: chave,
-                                             attribute_model: modelo, attribute_display_type: 'text')
-      end
+    # O pedido fica na conversa (onde o extrair grava) e no card da Black (para onde vai).
+    %w[peca cor tamanho].product(%w[conversation_attribute card_attribute]).each do |chave, modelo|
+      create(:custom_attribute_definition, account: account, attribute_key: chave, attribute_display_name: chave,
+                                           attribute_model: modelo, attribute_display_type: 'text')
     end
     preparar_bia
   end
@@ -188,7 +187,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
   # Para quem cada campanha saiu, pelo pedido na Graph.
   def receberam(modelo_aprovado)
     para = chamadas_para('graph.facebook.com').select { |chamada| chamada.corpo.dig('template', 'name') == modelo_aprovado }
-    para.map { |chamada| clientes.key(Contact.find_by!(account: account, phone_number: "+#{chamada.corpo['to']}")) }
+    para.map { |chamada| clientes.find { |_nome, contato| contato.phone_number.delete('+') == chamada.corpo['to'].delete('+') }&.first }
   end
 
   def historico(nome) = Autonomia::Automacao::Registro.where(automacao_id: automacao_id(nome)).order(:id).pluck(:passo, :resultado, :motivo)
@@ -196,6 +195,16 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
   def automacao_id(nome) = Autonomia::Automacao::Definicao.find_by!(account: account, nome: "Black: #{nome}").id
 
   def card_da_black(nome) = account.crm_cards.where(pipeline: funil, contact: clientes.fetch(nome)).sole
+
+  # O card fechado como na tela: o despacho do evento, o job do evento do card e os jobs que ele abre.
+  def fecha_ganho(card, momento)
+    travel_to(fuso.parse(momento)) do
+      Crm::Cards::Closer.new(card: card, actor: dona, result: 'won').perform
+      rodar_jobs
+      perform_enqueued_jobs(only: Autonomia::Automacao::EventoDoCardJob)
+      rodar_jobs
+    end
+  end
 
   before do
     preparar_conta
@@ -235,7 +244,9 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
 
     it 'passo 3: só a resposta à Pré-Black vai à IA; a mensagem sem campanha não', :aggregate_failures do
       roteiro['automacao_decidir'] = { 'caminho' => 'duvida', 'motivo' => 'perguntou o horário' }
+      clientes['Fabio'] = cliente('Fabio', '+5511900000076', [])
 
+      responde('Fabio', 'Vocês abrem no domingo?', '2026-11-27 09:55')
       responde('Carla', 'Até que horas vai a promoção?', '2026-11-27 10:00')
 
       decisoes = ia_recebeu.select { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_decidir' }
@@ -249,6 +260,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
       outro_funil = create_crm_pipeline(account: account, user: dona, name: 'Trocas').first
       troca = account.crm_cards.create!(pipeline: outro_funil, stage: outro_funil.stages.first, title: 'Troca da Duda', currency: 'BRL',
                                         contact: clientes['Duda'], primary_conversation: conversa_de('Duda'))
+      # O card aberto mais recente do contato é o da troca: sem o filtro por funil, o pedido iria para ele.
+      troca.update_column(:created_at, fuso.parse('2026-11-27 23:00')) # rubocop:disable Rails/SkipsModelValidations
       roteiro['automacao_decidir'] = { 'caminho' => 'comprar', 'motivo' => 'quer o vestido' }
       roteiro['automacao_extrair'] = { 'peca' => 'vestido', 'cor' => 'preto', 'tamanho' => 'M' }
 
@@ -302,14 +315,10 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     roteiro['automacao_decidir'] = { 'caminho' => 'duvida', 'motivo' => 'perguntou do frete' }
     responde('Carla', 'O frete é grátis?', '2026-11-27 10:00')
     responde('Duda', 'Tem desconto no vestido?', '2026-11-27 10:05')
-    Crm::Cards::Closer.new(card: account.crm_cards.create!(pipeline: funil, stage: interessados, title: 'Vestido da Duda',
-                                                           currency: 'BRL', contact: clientes['Duda'],
-                                                           primary_conversation: conversa_de('Duda')),
-                           actor: dona, result: 'won').perform
-    travel_to(fuso.parse('2026-11-28 12:00')) do
-      perform_enqueued_jobs(only: Autonomia::Automacao::EventoDoCardJob)
-      rodar_jobs
-    end
+    vestido = account.crm_cards.create!(pipeline: funil, stage: interessados, title: 'Vestido da Duda', currency: 'BRL',
+                                        contact: clientes['Duda'], primary_conversation: conversa_de('Duda'))
+    fecha_ganho(vestido, '2026-11-28 12:00')
+    expect(clientes['Duda'].reload.label_list).to include('comprou-na-black-2026')
 
     chega('2026-11-29 18:10')
 
@@ -320,11 +329,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     card = account.crm_cards.create!(pipeline: funil, stage: interessados, title: 'Vestido do Edu', currency: 'BRL',
                                      contact: clientes['Edu'], primary_conversation: conversa_de('Edu'))
 
-    travel_to(fuso.parse('2026-11-27 16:00')) do
-      Crm::Cards::Closer.new(card: card, actor: dona, result: 'won').perform
-      perform_enqueued_jobs(only: Autonomia::Automacao::EventoDoCardJob)
-      rodar_jobs
-    end
+    fecha_ganho(card, '2026-11-27 16:00')
 
     expect(clientes['Edu'].reload.label_list).to include('comprou-na-black-2026', 'ja-comprou', 'clientes')
     expect(historico(:compra)).to eq([['comprou', 'ok', nil]])
