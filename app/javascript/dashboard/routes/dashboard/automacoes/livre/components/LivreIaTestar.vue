@@ -109,7 +109,16 @@ const MOTIVOS = {
   ia_indisponivel: 'IA_INDISPONIVEL',
   ia_chave_recusada: 'CHAVE_RECUSADA',
 };
+// #2414 G20: o anexo que não pôde ir à IA, com a mesma frase do ensaio.
+const MOTIVOS_DOS_ANEXOS = [
+  'anexo_grande_demais',
+  'anexo_fora_do_formato',
+  'anexo_sem_leitura',
+  'modelo_sem_imagem',
+];
 const linhaDaConversa = conversa => {
+  if (MOTIVOS_DOS_ANEXOS.includes(conversa.motivo))
+    return t(`${I}.ANEXOS.${conversa.motivo.toUpperCase()}`);
   if (!conversa.resultado)
     return t(`${I}.TESTAR.MOTIVOS.${MOTIVOS[conversa.motivo] || 'OUTRO'}`);
   if (props.passo.tipo !== 'decidir') return conversa.resultado.texto;
