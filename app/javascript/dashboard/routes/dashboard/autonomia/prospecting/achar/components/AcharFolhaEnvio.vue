@@ -6,6 +6,7 @@ import AcharPainel from './AcharPainel.vue';
 import AcharEscolhaGrande from './AcharEscolhaGrande.vue';
 import AcharLinhaFrase from './AcharLinhaFrase.vue';
 import AcharEstado from './AcharEstado.vue';
+import { TEXTO_DO_ERRO } from '../composables/useDonoDaLista';
 
 // #2692 — F1, a folha "O que fazer com as {n} empresas?" (v4). Dois cartões
 // grandes e, abaixo do escolhido, a prévia em linhas-frase com "Alterar". Com
@@ -319,7 +320,7 @@ watch(
         v-if="erro"
         faixa
         tom="erro"
-        :texto="$t(erro === 'lista' ? `${NS}.ERRO_LISTA` : `${NS}.ERRO_FUNIL`)"
+        :texto="$t(TEXTO_DO_ERRO[erro] || TEXTO_DO_ERRO.funil)"
       />
       <p
         v-if="botao.dica"

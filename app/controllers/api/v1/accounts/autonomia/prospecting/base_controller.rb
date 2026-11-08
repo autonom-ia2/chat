@@ -1,6 +1,8 @@
 class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accounts::BaseController
   before_action :ensure_feature_enabled
   before_action -> { check_module_permission!('prospecting') }
+  # Dono escolhido sem o funil, de outra conta ou que não existe (#2694): o lote inteiro é recusado.
+  rescue_from ::Autonomia::Prospecting::CrmCardOwner::NotAllowed, with: :render_crm_owner_not_allowed
 
   private
 
@@ -18,6 +20,26 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
 
     render json: { error: I18n.t('autonomia.prospecting.crm_send.errors.forbidden'), code: 'prospecting.crm_send.forbidden' },
            status: :forbidden
+  end
+
+  # Com quem fica o card (#2694): escolher outra pessoa, e ver a lista de quem pode receber, só com a chave de funis
+  # (CrmCardOwner.can_choose?), mais rígido que o CRM, por decisão do Rodrigo.
+  def authorize_crm_owner_choice!
+    return if ::Autonomia::Prospecting::CrmCardOwner.can_choose?(Current.account_user)
+
+    render_crm_send_error('owner_forbidden', status: :forbidden)
+  end
+
+  # O `owner_id` do envio ao funil, sempre na raiz do pedido: no lote (leads/crm_cards) e também no envio individual
+  # (leads/:id/crm_card), fora do envelope `crm_card`, para o contrato ser um só nos dois (o Guia lê `fora_do_envelope`).
+  # Ausente, ou o de quem pede, é o fluxo de sempre (nil): o card fica com quem manda.
+  def chosen_owner_id
+    owner_id = params[:owner_id].presence&.to_s
+    owner_id unless owner_id.nil? || owner_id == Current.user.id.to_s
+  end
+
+  def render_crm_owner_not_allowed
+    render_crm_send_error(::Autonomia::Prospecting::CrmCardOwner::NotAllowed::CODE)
   end
 
   # Pôr o segmento numa campanha muda a audiência dela, e a campanha manda mensagem real: exige a permissão de gerenciar

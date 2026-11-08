@@ -1,5 +1,6 @@
 class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Accounts::Autonomia::Prospecting::BaseController
   before_action :authorize_crm_card_create!, only: [:create_crm_card, :create_crm_cards]
+  before_action :authorize_crm_owner_choice!, only: [:create_crm_card, :create_crm_cards], if: :chosen_owner_id
   before_action -> { authorize_campaign_update!(params[:campaign_id]) }, only: [:create_campaign_segment]
 
   def index
@@ -141,8 +142,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   def adopt_owner
     lead = leads_scope.find(params[:id])
     result = ::Autonomia::Prospecting::OwnerAdoption.new(
-      lead: lead, user: Current.user, owner_name: params[:owner_name],
-      can_update_card: lead.crm_card.nil? || Pundit.policy!(pundit_user, lead.crm_card).update?
+      lead: lead, user: Current.user, owner_name: params[:owner_name], can_update_card: can_update_lead_card?(lead)
     ).perform
 
     render json: { payload: lead_payload(lead.reload), contact_outcome: result.contact_outcome, shared_lead_name: result.shared_lead_name }
@@ -191,10 +191,10 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     )
   end
 
+  # `owner_id` (#2694): com quem ficam os cards, conferido antes (authorize_crm_owner_choice!) e contra o funil (CrmCardBatch).
   def run_crm_send(lead_ids, pipeline_id, stage_id)
-    ::Autonomia::Prospecting::CrmCardBatch.new(
-      account: Current.account, user: Current.user, lead_ids: lead_ids, leads_scope: leads_scope, pipeline_id: pipeline_id, stage_id: stage_id
-    ).perform
+    ::Autonomia::Prospecting::CrmCardBatch.new(account: Current.account, user: Current.user, leads_scope: leads_scope, owner_id: chosen_owner_id,
+                                               lead_ids: lead_ids, pipeline_id: pipeline_id, stage_id: stage_id).perform
   end
 
   def crm_send_payload(result)
@@ -219,6 +219,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   def crm_card_params
     params.require(:crm_card).permit(:pipeline_id, :stage_id)
   end
+
+  def can_update_lead_card?(lead) = lead.crm_card.nil? || Pundit.policy!(pundit_user, lead.crm_card).update?
 
   def lead_params
     params.require(:lead).permit(:status, :discard_reason).tap do |attributes|

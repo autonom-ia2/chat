@@ -18,6 +18,7 @@ import { useListaDaBusca } from '../composables/useListaDaBusca';
 import { useFolhaDaLista } from '../composables/useFolhaDaLista';
 import { useSobreDaLista } from '../composables/useSobreDaLista';
 import { useGavetaDaLista } from '../composables/useGavetaDaLista';
+import { useDonoDaLista } from '../composables/useDonoDaLista';
 import { useRepetirBusca } from '../composables/useRepetirBusca';
 import { ROTAS } from '../utils/acharRotas';
 import { diaEMes } from '../utils/acharQuando';
@@ -65,9 +66,7 @@ const folha = ref(null);
 const pronto = ref(null);
 const subpainel = ref(null);
 const funis = ref([]);
-const pessoas = ref([]);
 const destino = ref(null);
-const pessoaId = ref('voce');
 const nomeLista = ref('');
 const enviandoUma = ref(false);
 // A frase depois de "Usar esta pessoa" (P1); some ao fechar ou trocar de empresa.
@@ -115,13 +114,8 @@ const {
   guardaSelecao: () => !demo.value,
 });
 
-const pessoaNome = computed(() => {
-  if (pessoaId.value === 'voce') return t('PROSPECTING_ACHAR.COMUM.VOCE');
-  return (
-    pessoas.value.find(pessoa => pessoa.id === pessoaId.value)?.nome ||
-    t('PROSPECTING_ACHAR.COMUM.VOCE')
-  );
-});
+const { pessoas, pessoaId, pessoaNome, donoId, carregarPessoas } =
+  useDonoDaLista({ fonte, permissoes, destino });
 const podeTrocarPessoa = computed(() => permissoes.value.trocarDono);
 const empresaDaGaveta = computed(() =>
   gaveta.value
@@ -169,12 +163,8 @@ const aplicarLista = dados => {
 
 const carregarDestino = async () => {
   try {
-    const [lista, gente] = await Promise.all([
-      fonte.value.funis(),
-      fonte.value.pessoas(),
-    ]);
+    const [lista] = await Promise.all([fonte.value.funis(), carregarPessoas()]);
     funis.value = lista;
-    pessoas.value = gente;
     destino.value = escolherDestino({
       funis: lista,
       ultimo: demo.value
@@ -208,6 +198,7 @@ const {
   destino,
   pessoaId,
   pessoaNome,
+  donoId,
   nomeLista,
   folha,
   pronto,
@@ -295,6 +286,8 @@ const {
   gaveta,
   empresaDaGaveta,
   destino,
+  donoId,
+  pessoaNome,
   enviandoUma,
   aviso,
   recado,

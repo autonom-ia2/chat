@@ -1393,6 +1393,8 @@ pt_BR:
           pipeline_not_found: 'O funil ou o estágio escolhido não existe mais. Escolha outro e envie de novo.'
           crm_disabled: 'O CRM está desligado nesta conta.'
           forbidden: 'Seu perfil não pode criar cards no CRM. Peça a um administrador a permissão de gerenciar cards.'
+          owner_forbidden: 'Só quem gerencia os funis pode escolher com quem os cards ficam. Mande sem trocar: eles ficam com você.'
+          owner_not_allowed: 'A pessoa escolhida não tem acesso a este funil. Escolha outra pessoa ou outro funil.'
         card_description:
           score: 'Nota da prospecção: %{score}'
           decision: 'Decisor: %{name}'

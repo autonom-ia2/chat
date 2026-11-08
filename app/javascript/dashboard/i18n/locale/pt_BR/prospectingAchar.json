@@ -269,6 +269,8 @@
       "ESCOLHA_O_QUE": "Escolha o que fazer",
       "NINGUEM": "Nenhuma destas pode receber mensagem",
       "ERRO_FUNIL": "Não deu para mandar. Nenhuma entrou.",
+      "ERRO_DONO_SEM_CHAVE": "Só quem gerencia os funis pode escolher outra pessoa. Mande sem trocar: elas ficam com você.",
+      "ERRO_DONO_SEM_FUNIL": "Essa pessoa não vê este funil. Escolha outra pessoa ou outro funil.",
       "ERRO_LISTA": "Não deu para guardar a lista.",
       "NAO_VAO_LINK": "Por que {n} não vai | Por que {n} não vão",
       "TENTAR": "Tentar de novo",
@@ -284,7 +286,9 @@
     "COM_QUEM_PAINEL": {
       "TITULO": "Com quem ficam as empresas?",
       "VOCE": "{nome} (você)",
-      "PESSOA": "Pessoa"
+      "PESSOA": "Pessoa",
+      "SEM_O_FUNIL": "{nome} não vê este funil. As empresas vão ficar com você.",
+      "ERRO_LISTA": "Não deu para carregar quem pode receber. As empresas vão ficar com você."
     },
     "PRONTO": {
       "VARIAS": "Pronto. {n} empresas entraram no funil {funil}. Elas ficam com {pessoa}.",

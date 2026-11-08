@@ -12,12 +12,15 @@ class Autonomia::Prospecting::CrmCardConverter
   LOWEST_PRIORITY = 'low'.freeze
   DESCRIPTION_SCOPE = 'autonomia.prospecting.crm_send.card_description'.freeze
 
-  def initialize(lead:, user:, pipeline_id:, stage_id:)
+  # owner_id (#2694): com quem fica o card. Sem ele, o Crm::Cards::Creator põe quem manda, como antes. Quem chama já
+  # conferiu o dono (CrmCardBatch, por CrmCardOwner).
+  def initialize(lead:, user:, pipeline_id:, stage_id:, owner_id: nil)
     @lead = lead
     @account = lead.account
     @user = user
     @pipeline_id = pipeline_id
     @stage_id = stage_id
+    @owner_id = owner_id
   end
 
   def perform
@@ -97,6 +100,7 @@ class Autonomia::Prospecting::CrmCardConverter
       pipeline_id: stage.pipeline_id,
       stage_id: stage.id,
       contact_id: contact&.id,
+      owner_id: @owner_id,
       title: @lead.name,
       priority: priority,
       description: description(company),
