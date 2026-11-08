@@ -83,6 +83,7 @@ const ondeDaFrase = ref(null);
 const ondeCampo = ref(null);
 
 const escolherLugar = async sugestao => {
+  if (lendoFrase.value) return;
   sugestoes.value = [];
   naoAchou.value = false;
   try {
@@ -93,7 +94,7 @@ const escolherLugar = async sugestao => {
 };
 
 const procurarLugares = useDebounceFn(async texto => {
-  if (lugar.value || congelado.value) return;
+  if (lugar.value || congelado.value || lendoFrase.value) return;
   if (texto.trim().length < MIN_LETRAS) {
     sugestoes.value = [];
     naoAchou.value = false;
@@ -121,9 +122,12 @@ watch(ondeTexto, texto => {
   if (!congelado.value) procurarLugares(texto);
 });
 
-// O que a IA entendeu da frase preenche os campos; o que ela não disse fica
-// como estava, inclusive o ajuste e a ordem escolhidos à mão. O lugar volta a
-// ser texto: as sugestões do Google aparecem e a pessoa toca no certo.
+// O que a IA entendeu da frase preenche os campos, chave por chave. Quando a
+// frase pede um ajuste, ela troca só aquela chave (pedir "com site" muda o
+// site e deixa a nota escolhida à mão). O que a frase não diz fica como
+// estava: o quê, o onde, cada ajuste e a ordem ("primeiro", que só muda
+// quando a frase pede a presença fraca). O lugar volta a ser texto: as
+// sugestões do Google aparecem e a pessoa toca no certo.
 const usarFrase = ({ oQue: entendido, onde, ajustes, primeiro }) => {
   if (entendido) oQue.value = entendido;
   if (onde) {
@@ -141,7 +145,17 @@ const usarFrase = ({ oQue: entendido, onde, ajustes, primeiro }) => {
   };
 };
 
+// Enviar a frase fecha o que estava aberto (as sugestões e os painéis de
+// "Como procurar"): nada muda o pedido enquanto a IA lê.
+watch(lendoFrase, lendo => {
+  if (!lendo) return;
+  sugestoes.value = [];
+  rascunhoComo.value = null;
+  painel.value = null;
+});
+
 const alterarLugar = () => {
+  if (lendoFrase.value) return;
   lugar.value = null;
   ondeTexto.value = '';
   sugestoes.value = [];
@@ -179,6 +193,7 @@ const ideiaEscolhida = ideia =>
   oQue.value.trim() === t(`${NS}.IDEIAS.${ideia}`);
 
 const achar = async () => {
+  if (lendoFrase.value) return;
   if (falta.value === 'TOCAR') {
     ondeCampo.value?.focarPrimeira();
     return;
@@ -201,6 +216,7 @@ const achar = async () => {
 };
 
 const abrirComo = () => {
+  if (lendoFrase.value) return;
   rascunhoComo.value = { ...como.value };
   painel.value = 'como';
 };
@@ -404,6 +420,7 @@ watch(demo, carregar);
               :texto="fraseComo"
               pode-alterar
               alterar-embaixo
+              :bloqueado="lendoFrase"
               @alterar="abrirComo"
             />
           </form>
@@ -450,7 +467,7 @@ watch(demo, carregar);
           v-if="googlePronto"
           :rotulo="rotuloDoBotao"
           :dica="dica"
-          :desabilitado="Boolean(falta)"
+          :desabilitado="Boolean(falta) || lendoFrase"
           :ocupado="ocupado"
           icone="i-lucide-search"
           @principal="achar"

@@ -29,8 +29,9 @@ class Autonomia::Prospecting::SearchInterpreter
   FEATURE = 'prospeccao_frase'.freeze
   MODEL = Crm::Ai::Config::MODEL_SUMMARY
   EFFORT = 'low'.freeze
-  # O `timeout` do HTTParty vale por operação (abrir, escrever, ler), não para a chamada inteira. PRAZO_TOTAL corta a
-  # chamada inteira antes dos 15 s do rack-timeout de produção.
+  # O `timeout` do HTTParty vale por operação (abrir, escrever, ler), não para a chamada inteira. PRAZO_TOTAL é o
+  # `total_timeout:` do ResponsesClient: corta só a ida HTTP inteira antes dos 15 s do rack-timeout de produção, sem
+  # envolver o registro de uso no banco.
   TIMEOUT = 10
   PRAZO_TOTAL = 12
   # Teto de saída (raciocínio 'low' + o JSON do schema). No eval de 08/11 a média foi ~116 tokens por pedido.
@@ -50,6 +51,8 @@ class Autonomia::Prospecting::SearchInterpreter
     'has_opening_hours' => %w[yes]
   }.freeze
 
+  # Mudou estas instruções, rode o eval pago (spec/services/autonomia/prospecting/search_interpreter_eval_spec.rb) no
+  # mesmo PR: o comportamento do modelo (por exemplo, "perto de mim" sem lugar) não tem teste determinístico.
   INSTRUCTIONS = <<~TEXT.freeze
     Você transforma o pedido de uma pessoa, escrito numa frase, nos campos da busca de empresas no Google Maps.
     Responda só com JSON no schema.
@@ -96,13 +99,12 @@ class Autonomia::Prospecting::SearchInterpreter
   private
 
   # Qualquer quebra da chamada (inclusive rede fora de ResponsesClient::NETWORK_ERRORS, como OpenSSL::SSL::SSLError, e o
-  # prazo total) vira ai_failed. O log leva só a classe: a mensagem pode trazer o texto da pessoa ou a URL.
+  # prazo total do cliente) vira ai_failed. O log leva só a classe: a mensagem pode trazer o texto da pessoa ou a URL.
   # A credencial é resolvida antes (`client`), fora deste rescue: conta sem IA continua ai_not_configured.
   def ask(ai_client)
-    response = Timeout.timeout(PRAZO_TOTAL) do
-      ai_client.create(model: MODEL, instructions: INSTRUCTIONS, input: { pedido: @text }.to_json, schema: self.class.schema,
-                       reasoning_effort: EFFORT, timeout: TIMEOUT, max_output_tokens: MAX_OUTPUT_TOKENS)
-    end
+    response = ai_client.create(model: MODEL, instructions: INSTRUCTIONS, input: { pedido: @text }.to_json, schema: self.class.schema,
+                                reasoning_effort: EFFORT, timeout: TIMEOUT, total_timeout: PRAZO_TOTAL,
+                                max_output_tokens: MAX_OUTPUT_TOKENS)
     parsed = JSON.parse(response[:text])
     raise JSON::ParserError, 'not_an_object' unless parsed.is_a?(Hash)
 

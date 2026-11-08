@@ -16,6 +16,13 @@ nem gravada). O teto aprovado foi de US$ 2,00.
 - A maior saída (137 tokens) fica bem abaixo do teto `MAX_OUTPUT_TOKENS = 600` do interpreter.
 - Total gasto nas duas rodadas: cerca de US$ 0,006.
 
+## Risco residual
+
+- "Perto de mim" (e qualquer lugar que depende de onde a pessoa está) não tem teste determinístico. Quem decide é o
+  modelo, pela instrução; os specs dublam a IA e não cobrem isso. A única prova é o eval pago, que passou na rodada 2.
+- Regra: todo PR que mexer em `INSTRUCTIONS` do `Autonomia::Prospecting::SearchInterpreter` roda o eval no mesmo PR e
+  registra o resultado aqui. O comentário em cima de `INSTRUCTIONS` diz isso.
+
 ## O que está pronto
 
 - Spec: `spec/services/autonomia/prospecting/search_interpreter_eval_spec.rb`, desligado por padrão (fica `pending`).

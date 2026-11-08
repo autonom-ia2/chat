@@ -86,11 +86,15 @@ RSpec.describe Autonomia::Prospecting::SearchInterpreter do
     expect(Rails.logger).to have_received(:warn).with("[autonomia][prospecting][frase] account_id=#{account.id} reason=OpenSSL::SSL::SSLError")
   end
 
-  it 'o prazo total corta a chamada inteira e vira ai_failed' do
-    stub_const("#{described_class}::PRAZO_TOTAL", 0.05)
-    allow(client).to receive(:create) { sleep 1 }
+  it 'o prazo total vai ao cliente (total_timeout), sem Timeout aqui, e o estouro vira ai_failed' do
+    allow(Timeout).to receive(:timeout).and_call_original
+    allow(client).to receive(:create)
+      .and_raise(Crm::Ai::ResponsesClient::Error.new('network_timeout: total_timeout', rede: true, tempo_esgotado: true))
 
     expect { interpret }.to raise_error(described_class::Error) { |error| expect(error.code).to eq('ai_failed') }
+    expect(client).to have_received(:create).with(hash_including(total_timeout: described_class::PRAZO_TOTAL,
+                                                                 timeout: described_class::TIMEOUT))
+    expect(Timeout).not_to have_received(:timeout)
   end
 
   it 'conta sem a IA do Kanban CRM não chama ninguém' do

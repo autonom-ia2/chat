@@ -237,6 +237,58 @@ describe('AcharPortaPage: o pedido em uma frase', () => {
     wrapper.unmount();
   });
 
+  it('com a frase em voo, a lista de sugestões fecha e tocar numa sugestão não escolhe', async () => {
+    rota.query = { demo: 'porta-sugestoes' };
+    const wrapper = mount(AcharPortaPage);
+    await vi.waitFor(
+      () => {
+        expect(wrapper.findAll('[data-sugestao]')).toHaveLength(3);
+      },
+      { timeout: 3000 }
+    );
+    const sugestao = wrapper.find('[data-sugestao]');
+
+    await pedir(wrapper);
+    await nextTick();
+
+    expect(wrapper.find('[data-sugestoes]').exists()).toBe(false);
+    if (sugestao.exists()) await sugestao.trigger('mousedown');
+    expect(wrapper.find('[data-lugar-escolhido]').exists()).toBe(false);
+    expect(
+      wrapper.find('[data-campo-onde]').attributes('disabled')
+    ).toBeDefined();
+    await vi.waitFor(
+      () => {
+        expect(oQue(wrapper)).toBe('Padarias');
+      },
+      { timeout: 3000 }
+    );
+    expect(wrapper.find('[data-lugar-escolhido]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('com a frase em voo, "Achar empresas" e o Enter do formulário não criam busca', async () => {
+    pedidos.length = 0;
+    rota.query = { demo: 'porta' };
+    const wrapper = mount(AcharPortaPage);
+
+    await pedir(wrapper);
+    await nextTick();
+
+    expect(botao(wrapper).attributes('disabled')).toBeDefined();
+    await botao(wrapper).trigger('click');
+    await wrapper.find('[data-cartao-porta]').trigger('submit');
+    expect(wrapper.find('[data-alterar]').attributes('disabled')).toBeDefined();
+    await vi.waitFor(
+      () => {
+        expect(oQue(wrapper)).toBe('Padarias');
+      },
+      { timeout: 3000 }
+    );
+    expect(pedidos).toHaveLength(0);
+    wrapper.unmount();
+  });
+
   it('a IA da conta desligada no meio do caminho: o aviso diz isso', async () => {
     rota.query = { demo: 'porta-frase-sem-ia' };
     const wrapper = mount(AcharPortaPage);
