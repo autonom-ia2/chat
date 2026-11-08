@@ -5,7 +5,8 @@
 #   antigos" depois do webhook, devolve :duplicate sem criar nada.
 # - O contato é o mesmo quando o telefone (E.164) ou o e-mail já existe na conta.
 # - Quem já tem card aberto naquele funil não ganha outro (:existing_card); o lead fica ligado ao card que já existe.
-# - Card criado pelo sistema: sem usuário, dono pela regra do Crm::Cards::Creator. O título é o nome que a pessoa
+# - Card criado pelo sistema: sem usuário. Dono só quando a Atribuição do funil aponta "A mesma pessoa"
+#   (Crm::Cards::DonoPelaRegra, G30); senão, sem dono. O título é o nome que a pessoa
 #   escreveu, se não parecer e-mail nem telefone; sem ele, o nome do formulário; sem os dois, "Lead <id>". Nunca
 #   telefone nem e-mail: o título e o nome do contato vão à IA (Decisor, IA de etapa) e a quem não vê o contato.
 # - E-mail que o contato não aceita fica só nas respostas; o lead entra do mesmo jeito.
@@ -90,6 +91,7 @@ class Crm::MetaAds::LeadForms::Importer
     Crm::Cards::Creator.new(
       account: @account, user: nil,
       params: { pipeline_id: @pipeline.id, stage_id: @stage.id, contact_id: contact.id, source: SOURCE,
+                owner_id: Crm::Cards::DonoPelaRegra.de(account: @account, pipeline: @pipeline, stage: @stage)&.id,
                 # #2562: sem nome, nunca o do formulário: ele costuma repetir a campanha e o título todos veem (#2558).
                 title: title_name(lead) || "Lead #{lead['id']}",
                 metadata: { 'meta_lead_form' => origin(lead) } }

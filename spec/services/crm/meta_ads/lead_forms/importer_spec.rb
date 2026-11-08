@@ -46,6 +46,40 @@ RSpec.describe Crm::MetaAds::LeadForms::Importer do
                                                      new_contact: true, form_id: '9001', ad_name: 'Verão — carrossel 2')
   end
 
+  # G30 (#2702, opção A do Rodrigo): sem conversa não há caixa nem fila; só a regra que aponta uma pessoa dá dono.
+  describe 'dono do card pela Atribuição do funil' do
+    let(:corretor) { create(:user, account: account, role: :agent, name: 'Rafael Corretor') }
+
+    def regra(handoff) = pipeline.update!(metadata: (pipeline.metadata || {}).merge('ai' => { 'handoff' => handoff }))
+
+    it 'regra ligada em "A mesma pessoa": o card nasce com ela de dono' do
+      regra('enabled' => true, 'pool_type' => 'user', 'pool_id' => corretor.id)
+
+      importer.import(lead)
+
+      expect(account.crm_cards.last.owner).to eq(corretor)
+    end
+
+    it 'a etapa vence o funil: a pessoa da etapa é a dona' do
+      regra('enabled' => true, 'pool_type' => 'user', 'pool_id' => admin.id)
+      stage.update!(metadata: { 'ai_handoff' => { 'pool_id' => corretor.id } })
+
+      importer.import(lead)
+
+      expect(account.crm_cards.last.owner).to eq(corretor)
+    end
+
+    it 'rodízio, regra desligada ou pessoa fora da conta: sem dono, como antes', :aggregate_failures do
+      [{ 'enabled' => true, 'pool_type' => 'inbox' }, { 'enabled' => false, 'pool_type' => 'user', 'pool_id' => corretor.id },
+       { 'enabled' => true, 'pool_type' => 'user', 'pool_id' => create(:user).id }].each_with_index do |handoff, indice|
+        regra(handoff)
+        importer.import(lead(id: "L#{indice}", phone: "+551198765120#{indice}", email: "lead#{indice}@example.com"))
+
+        expect(account.crm_cards.order(:id).last.owner_id).to be_nil, handoff.inspect
+      end
+    end
+  end
+
   it 'o mesmo lead de novo não cria outro card nem outro contato' do
     importer.import(lead)
 

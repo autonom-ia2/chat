@@ -188,8 +188,9 @@ module FechamentoAutomacao::Lacunas
     # valores da receita. Ponta a ponta em spec/fechamento/automacao/g29_origem_do_card_spec.rb.
     'G29' => -> { valor?('card.origem') && valor?('card.anuncio') },
     # Achadas no exemplo 2 (07/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
-    # G30: o responsável por um anúncio (o corretor daquele anúncio), para o retorno e o link da agenda.
-    'G30' => nil,
+    # G30 (#2702, opção A do Rodrigo): o card do lead nasce com o corretor fixo da Atribuição do funil ("A mesma
+    # pessoa"), para o retorno e o link da agenda. Ponta a ponta em spec/fechamento/automacao/g30_dono_do_lead_spec.rb.
+    'G30' => -> { Crm::Cards::DonoPelaRegra.respond_to?(:de) },
     # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando".
     'G31' => nil,
     # G32: a reunião marcada como condição do "esperar até", no meio da execução.
