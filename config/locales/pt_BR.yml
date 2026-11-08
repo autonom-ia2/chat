@@ -1058,7 +1058,8 @@ pt_BR:
         mensagens_desligadas: "Mensagem e aviso estão desligados nesta conta. Nada foi mandado."
         ninguem_para_avisar: "Ninguém que enxerga esta conversa estava na lista do aviso."
         retorno_sem_responsavel: "O retorno não foi criado: ele era para o responsável, e ninguém é responsável aqui."
-        sem_conversa: "O card não tem conversa principal. Nada foi mandado."
+        sem_conversa: "Não há conversa onde agir: o card não tem conversa principal, ou o contato não tem conversa, e a automação não escolheu caixa para abrir uma. Nada foi mandado."
+        contato_sem_telefone: "O contato não tem telefone, e a conversa não foi aberta. Nada foi mandado."
         sem_responsavel: "A agente de IA atende esta conversa, e o card dela não tem responsável (ou não há card). Ninguém foi avisado."
         texto_vazio: "O texto ficou em branco depois de montado. A mensagem não foi mandada."
         dado_ausente: 'A IA não achou na conversa nenhum dos dados pedidos. Nada foi gravado.'
@@ -1095,6 +1096,9 @@ pt_BR:
         etapa_do_card_de_fora: 'Passo %{passo}: a etapa %{id} não é desta conta.'
         card_desligado: 'Passo %{passo}: o passo "Criar card" está desligado nesta conta (gatilhos de card ou CRM desligados).'
         caixa_de_email_invalida: 'Passo %{passo}: a caixa %{id} não é uma caixa de e-mail desta conta.'
+        conversa_nova_sem_alvo: 'Gatilho: a caixa para abrir conversa só vale em gatilho de card ou de contato.'
+        conversa_nova_caixa_invalida: 'Gatilho: a caixa %{id} não é uma caixa de WhatsApp, SMS ou API desta conta.'
+        conversa_nova_sem_acesso: 'Gatilho: você não pode começar conversa na caixa %{id}. Peça para entrar nela ou escolha outra.'
         atributo_inexistente: 'Passo %{passo}: a conta não tem o atributo de %{caminho}. Crie o atributo antes ou corrija a chave.'
         acao_fora: 'Passo %{passo}: %{acao} não pode ser passo de automação.'
         caminho_faltando: 'Passo %{passo}: a ação precisa de %{campo}.'

@@ -21,6 +21,15 @@
         "quando": { "enum": ["antes", "depois"], "description": "Só em card.data e contato.data, obrigatório: antes (a data ainda vai chegar) ou depois (a data já passou)." },
         "repete": { "enum": ["todo_ano"], "description": "Só em card.data e contato.data, opcional: todo_ano compara só o dia e o mês, todo ano (aniversário, data de casamento, aniversário de contrato); sem ele, a data vale uma vez, com o ano. Quem nasceu em 29/02 é lembrado em 28/02 no ano que não é bissexto." },
         "hora": { "type": "integer", "minimum": 0, "maximum": 23, "description": "Só em card.data, contato.data e nos recorrentes, obrigatória: a hora cheia, no fuso da conta (nos de data, a partir da qual o dia conta; no recorrente, a hora da ocorrência)." },
+        "conversa_nova": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["caixa_id"],
+          "properties": {
+            "caixa_id": { "type": "integer", "minimum": 1, "description": "A caixa da conta (WhatsApp, SMS ou API) por onde abrir a conversa." }
+          },
+          "description": "Só nos gatilhos de card e de contato: a caixa por onde o passo mensagem abre a conversa de quem não tem uma (o card sem conversa principal, como o do lead do formulário; o contato). A conversa abre como o \"Nova conversa\" do painel, e a janela, o modelo aprovado e o opt-out valem como sempre: conversa nova no número oficial só sai com modelo. Depois dela, a espera, a IA e a agente usam essa conversa (a do contato nessa caixa, a mais recente não resolvida); no card, ela vira a conversa principal. Quem salva e quem liga precisam poder começar conversa nessa caixa. Sem a caixa, esses passos pulam com sem_conversa."
+        },
         "frequencia": { "enum": ["diaria", "semanal", "mensal"], "description": "Só nos recorrentes, obrigatória: todo dia, toda semana (no dia_da_semana) ou todo mês (no dia_do_mes)." },
         "dia_da_semana": { "type": "integer", "minimum": 0, "maximum": 6, "description": "Só no recorrente semanal, obrigatório: 0 = domingo, 1 = segunda … 6 = sábado." },
         "dia_do_mes": { "type": "integer", "minimum": 1, "maximum": 31, "description": "Só no recorrente mensal, obrigatório: o dia do mês; no mês sem esse dia (31 em abril), o último dia." },

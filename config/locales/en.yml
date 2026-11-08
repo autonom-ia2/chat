@@ -565,7 +565,8 @@ en:
         mensagens_desligadas: "Message and alert steps are off for this account. Nothing was sent."
         ninguem_para_avisar: "Nobody who can see this conversation was on the alert list."
         retorno_sem_responsavel: "The follow-up was not created: it was for the owner, and no one owns this yet."
-        sem_conversa: "The card has no main conversation. Nothing was sent."
+        sem_conversa: "There is no conversation to act on: the card has no main conversation, or the contact has none, and the automation has no inbox chosen to open one. Nothing was sent."
+        contato_sem_telefone: "The contact has no phone number, so the conversation was not opened. Nothing was sent."
         sem_responsavel: "The AI agent is handling this conversation, and its card has no owner (or there is no card). No one was alerted."
         texto_vazio: "The text came out blank after it was built. The message was not sent."
         dado_ausente: 'The AI did not find any of the requested data in the conversation. Nothing was saved.'
@@ -602,6 +603,9 @@ en:
         etapa_do_card_de_fora: 'Step %{passo}: stage %{id} is not from this account.'
         card_desligado: 'Step %{passo}: the "Create card" step is off for this account (card triggers or the CRM are off).'
         caixa_de_email_invalida: 'Step %{passo}: inbox %{id} is not an e-mail inbox of this account.'
+        conversa_nova_sem_alvo: 'Trigger: the inbox to open a conversation only applies to card or contact triggers.'
+        conversa_nova_caixa_invalida: 'Trigger: inbox %{id} is not a WhatsApp, SMS or API inbox of this account.'
+        conversa_nova_sem_acesso: 'Trigger: you cannot start conversations in inbox %{id}. Ask to join it or choose another.'
         atributo_inexistente: 'Step %{passo}: the account has no attribute for %{caminho}. Create it first or fix the key.'
         acao_fora: 'Step %{passo}: %{acao} cannot be an automation step.'
         caminho_faltando: 'Step %{passo}: the action needs %{campo}.'
