@@ -61,6 +61,7 @@ const {
   erro,
   cartoes,
   truncada,
+  teto,
   indice,
   fase,
   mandando,
@@ -257,7 +258,7 @@ watch(demo, carregar);
               class="m-0 text-sm text-n-slate-11"
               data-fila-truncada
             >
-              {{ $t(`${NS}.TRUNCADA`) }}
+              {{ $t(`${NS}.TRUNCADA`, { max: teto }) }}
             </p>
           </div>
 
@@ -337,7 +338,7 @@ watch(demo, carregar);
             :primeiro="indice === 0"
             :achado-por="pode.verTodas ? atual.achadoPor : ''"
             :pode-decidir="pode.buscar"
-            :ocupado="ocupado"
+            :ocupado="mandando || ocupado"
             @nao-serve="fase = 'nao-serve'"
             @depois="depois"
             @ver-mais="gavetaAberta = true"
@@ -363,7 +364,7 @@ watch(demo, carregar);
           <AcharRodape
             v-else
             :rotulo="principal.rotulo"
-            :ocupado="mandando"
+            :ocupado="mandando || ocupado"
             @principal="agir"
           >
             <div v-if="linhasDoRodape" class="flex flex-col gap-1">

@@ -387,7 +387,7 @@
       "ERRO_ACAO": "Não deu para guardar. Tente de novo.",
       "MANDOU": "Pronto. {nome} está no funil {funil}.",
       "ETAPA_E_DONO": "Foi para a etapa {etapa}, com {pessoa}.",
-      "TRUNCADA": "Mostrando as 100 primeiras. Termine estas para ver mais.",
+      "TRUNCADA": "Mostrando as {max} primeiras. Termine estas para ver mais.",
       "JA_ESTAVA": "Essa empresa já estava no funil."
     },
     "MOTIVOS": {

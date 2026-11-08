@@ -424,12 +424,12 @@ describe('ParaChamarPage pela API', () => {
     expect(botaoComTexto(wrapper, 'Desfazer')).toBeUndefined();
   });
 
-  it('com mais empresas que o teto, avisa que mostra as 100 primeiras', async () => {
-    responderFila([lead(1), lead(2)], { truncated: true });
+  it('com mais empresas que o teto, avisa com o teto que o servidor mandou', async () => {
+    responderFila([lead(1), lead(2)], { truncated: true, max: 50 });
     const wrapper = await abrir();
 
     expect(wrapper.find('[data-fila-truncada]').text()).toBe(
-      'Mostrando as 100 primeiras. Termine estas para ver mais.'
+      'Mostrando as 50 primeiras. Termine estas para ver mais.'
     );
   });
 
@@ -471,6 +471,7 @@ describe('contrato da fila: demonstração × API', () => {
       dono: { estado: 'confirmado', nome: 'Maria Exemplo', cargo: 'sócia' },
       achadoPor: 'Lucas Exemplo',
     });
-    expect(daApi.truncada).toBe(false);
+    expect(daApi).toMatchObject({ truncada: false, teto: 100 });
+    expect(daDemo.teto).toBe(daApi.teto);
   });
 });

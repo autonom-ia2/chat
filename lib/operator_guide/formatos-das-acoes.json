@@ -3820,7 +3820,7 @@
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:16",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:218",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:220",
       "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:17"
     ],
     "sem_corpo": false
@@ -11916,7 +11916,7 @@
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:51",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:212",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:214",
       "app/controllers/api/v1/accounts/autonomia/prospecting/base_controller.rb:37",
       "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:52"
     ],
@@ -23510,7 +23510,7 @@
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:16",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:218",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:220",
       "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:17"
     ],
     "sem_corpo": false

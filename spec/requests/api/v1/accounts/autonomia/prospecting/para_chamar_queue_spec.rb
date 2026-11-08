@@ -120,7 +120,7 @@ RSpec.describe 'Autonomia prospecting para chamar queue', type: :request do
       expect(response.parsed_body['payload'].first).not_to have_key('found_by_name')
     end
 
-    it 'mostra até 100 e diz quando passou do teto (meta.truncated)' do
+    it 'mostra até o teto, diz quando passou dele (meta.truncated) e qual é (meta.max)' do
       stub_const('Autonomia::Prospecting::ParaChamar::MAX_LEADS', 2)
       create_lead('um', priority_score: 90)
       create_lead('dois', priority_score: 80)
@@ -132,7 +132,7 @@ RSpec.describe 'Autonomia prospecting para chamar queue', type: :request do
       create_lead('tres', priority_score: 70)
       get "#{base_path}/leads", params: { view: 'queue' }, headers: auth_headers(admin)
       expect(response.parsed_body['payload'].pluck('name')).to eq(['Lead um', 'Lead dois'])
-      expect(response.parsed_body.dig('meta', 'truncated')).to be(true)
+      expect(response.parsed_body['meta']).to eq('truncated' => true, 'max' => 2)
     end
   end
 
@@ -169,11 +169,12 @@ RSpec.describe 'Autonomia prospecting para chamar queue', type: :request do
         expect(Time.now.utc.to_date.iso8601).to eq('2026-11-09')
         post "#{base_path}/leads/#{lead.id}/queue_postponement", headers: auth_headers(agent)
 
+        expect(response).to have_http_status(:ok)
         expect(response.parsed_body.dig('payload', 'postponed_on')).to eq('2026-11-08')
         expect(lead.reload.metadata).to include('whatsapp_verification' => { 'status' => 'verified' },
                                                 'para_chamar' => { 'depois' => { agent.id.to_s => '2026-11-08' } })
-        expect(queue_ids(agent)).to be_empty
-        expect(queue_ids(admin)).to eq([lead.id])
+        # Some para quem pediu (agent) e continua para os outros (admin).
+        expect([queue_ids(agent), queue_ids(admin)]).to eq([[], [lead.id]])
       end
 
       travel_to Time.zone.parse('2026-11-08 23:59:00 -03:00') do
@@ -205,8 +206,9 @@ RSpec.describe 'Autonomia prospecting para chamar queue', type: :request do
   end
 
   # Contrato com a tela (cartaoDaFila, acharLead.js): o JSON de verdade do render_queue fica em spec/fixtures, e o vitest
-  # (ParaChamarPage.api.spec.js) monta o cartão a partir dele. Este spec falha quando as chaves do payload mudam; para
-  # regravar o arquivo, apague-o e rode este spec de novo.
+  # (ParaChamarPage.api.spec.js) monta o cartão a partir dele. Este spec falha quando as chaves do payload mudam ou o
+  # arquivo falta, e nunca o escreve sozinho. Para regravar, rode com REGRAVAR_FIXTURE=1 e releia o arquivo antes de
+  # commitar (o repo é público: só nomes de exemplo).
   describe 'contrato com a tela' do
     let(:fixture) { Rails.root.join('spec/fixtures/prospecting_para_chamar_queue.json') }
 
@@ -228,8 +230,9 @@ RSpec.describe 'Autonomia prospecting para chamar queue', type: :request do
 
       get "#{base_path}/leads", params: { view: 'queue' }, headers: auth_headers(admin)
       body = response.parsed_body
-      fixture.write("#{JSON.pretty_generate(body)}\n") unless fixture.exist?
+      fixture.write("#{JSON.pretty_generate(body)}\n") if ENV['REGRAVAR_FIXTURE'] == '1'
 
+      expect(fixture).to exist, "Falta #{fixture}. Regrave com: REGRAVAR_FIXTURE=1 bundle exec rspec #{__FILE__}"
       expect(deep_keys(body)).to eq(deep_keys(JSON.parse(fixture.read)))
     end
   end

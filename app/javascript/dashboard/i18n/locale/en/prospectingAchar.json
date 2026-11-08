@@ -387,7 +387,7 @@
       "ERRO_ACAO": "We could not save it. Try again.",
       "MANDOU": "Done. {nome} is in the {funil} pipeline.",
       "ETAPA_E_DONO": "It went to the {etapa} stage, with {pessoa}.",
-      "TRUNCADA": "Showing the first 100. Finish these to see more.",
+      "TRUNCADA": "Showing the first {max}. Finish these to see more.",
       "JA_ESTAVA": "This business was already in the pipeline."
     },
     "MOTIVOS": {

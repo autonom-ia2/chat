@@ -58,8 +58,9 @@ export function useFilaParaChamar({
   const carregando = ref(true);
   const erro = ref(false);
   const cartoes = ref([]);
-  // Havia mais empresas que o teto do servidor: a tela avisa.
+  // Havia mais empresas que o teto do servidor: a tela avisa, com o teto.
   const truncada = ref(false);
+  const teto = ref(null);
   const indice = ref(0);
   const fase = ref('cartao');
   const mandando = ref(false);
@@ -85,6 +86,14 @@ export function useFilaParaChamar({
       return;
     }
     indice.value += 1;
+  };
+
+  // Uma ação por vez na fila: mandar, "Não serve" e "Depois" esperam uma à outra.
+  const gravando = () => mandando.value || ocupado.value;
+
+  // Depois de gravar, a fila só anda se ainda está na empresa gravada.
+  const andarDe = posicao => {
+    if (indice.value === posicao) andar();
   };
 
   // Volta a empresa ao cartão dela (o "Desfazer").
@@ -129,6 +138,7 @@ export function useFilaParaChamar({
       ]);
       cartoes.value = fila.cartoes;
       truncada.value = fila.truncada === true;
+      teto.value = fila.teto;
       funis.value = lista;
       destino.value = escolherDestino({
         funis: lista,
@@ -180,14 +190,15 @@ export function useFilaParaChamar({
   };
 
   const mandar = async () => {
-    if (mandando.value || !atual.value) return;
+    if (gravando() || !atual.value) return;
+    const posicao = indice.value;
     aviso.value = null;
     mandando.value = true;
     const foi = await enviar(atual.value);
     mandando.value = false;
-    if (!foi) return;
+    if (!foi || indice.value !== posicao) return;
     if (foi === 'existente') {
-      andar();
+      andarDe(posicao);
       aviso.value = { chave: `${NS}.JA_ESTAVA`, tom: 'aviso' };
       return;
     }
@@ -228,13 +239,13 @@ export function useFilaParaChamar({
   const tirarDaFila = async ({ gravarIda, gravarVolta, contador, chave }) => {
     const empresa = atual.value;
     const posicao = indice.value;
-    if (!empresa || ocupado.value) return;
+    if (!empresa || gravando()) return;
     ocupado.value = true;
     const gravou = await gravar(gravarIda(empresa));
     ocupado.value = false;
     if (!gravou) return;
     contador.value += 1;
-    andar();
+    andarDe(posicao);
     aviso.value = {
       chave,
       params: { nome: empresa.nome },
@@ -278,6 +289,7 @@ export function useFilaParaChamar({
     erro,
     cartoes,
     truncada,
+    teto,
     indice,
     fase,
     mandando,

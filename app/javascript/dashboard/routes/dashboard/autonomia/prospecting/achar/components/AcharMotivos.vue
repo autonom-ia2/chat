@@ -70,6 +70,7 @@ const outro = ref('');
         id="achar-outro-motivo"
         v-model="outro"
         rows="2"
+        maxlength="255"
         class="w-full px-3 py-2 text-base border outline-none !mb-0 rounded-xl border-n-slate-6 bg-n-solid-1 text-n-slate-12 focus:border-n-blue-9"
       />
       <Button

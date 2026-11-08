@@ -148,13 +148,15 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   # (ParaChamar), com o mesmo payload do index. A flag prospeccao_nova é só de rota e menu no painel; aqui valem o gate
   # da Prospecção (BaseController) e a visibilidade dos leads, como no resto do módulo.
   # Quem vê as buscas de todos recebe também quem fez a busca de onde o lead veio (found_by_name, "Achada por"); quem vê
-  # só as próprias não recebe o nome de ninguém. meta.truncated diz que havia mais que o teto (ParaChamar::MAX_LEADS).
+  # só as próprias não recebe o nome de ninguém. meta.truncated diz que havia mais que o teto, e meta.max é o teto
+  # (ParaChamar::MAX_LEADS), que a tela mostra no aviso.
   def render_queue
     leads = ::Autonomia::Prospecting::ParaChamar.new(account: Current.account, user: Current.user).leads(leads_scope)
                                                 .includes(*lead_preloads, search: :user).to_a
-    shown = leads.first(::Autonomia::Prospecting::ParaChamar::MAX_LEADS)
+    max = ::Autonomia::Prospecting::ParaChamar::MAX_LEADS
+    shown = leads.first(max)
     render json: { payload: shown.map { |lead| queue_lead_payload(lead) },
-                   meta: { truncated: leads.size > shown.size } }
+                   meta: { truncated: leads.size > shown.size, max: max } }
   end
 
   def queue_lead_payload(lead)

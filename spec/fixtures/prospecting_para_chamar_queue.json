@@ -96,6 +96,7 @@
     }
   ],
   "meta": {
-    "truncated": false
+    "truncated": false,
+    "max": 100
   }
 }

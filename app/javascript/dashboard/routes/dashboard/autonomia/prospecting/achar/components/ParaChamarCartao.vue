@@ -13,7 +13,8 @@ const props = defineProps({
   primeiro: { type: Boolean, default: false },
   achadoPor: { type: String, default: '' },
   podeDecidir: { type: Boolean, default: false },
-  // #2697: gravando "Não serve" ou "Depois", os dois ficam desligados.
+  // #2697: com qualquer gravação da fila em voo (mandar, "Não serve" ou
+  // "Depois"), os dois ficam desligados.
   ocupado: { type: Boolean, default: false },
 });
 const emit = defineEmits(['naoServe', 'depois', 'verMais']);

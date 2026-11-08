@@ -38,6 +38,8 @@ const diasDesde = data =>
 
 const ESTADOS_SEM_BUSCAS = ['buscas-vazio', 'buscas-so-ver-vazio'];
 const ESTADOS_SEM_FILA = ['fila-vazia', 'fila-vazia-so-ver'];
+// O teto da fila na demonstração, o mesmo do servidor (ParaChamar::MAX_LEADS).
+const TETO_DA_FILA_DEMO = 100;
 const ESTADOS_COM_DOIS_FUNIS = ['folha-sem-destino', 'folha-para-onde'];
 const ESTADOS_DE_UMA_SUGESTAO = [
   'porta-uma-sugestao',
@@ -323,12 +325,18 @@ const fonteDemo = ({ estado, carregarDemo, atraso, usuarioId }) => {
       const demo = await dados();
       if (estado === 'fila-erro') throw new Error('demo');
       if (ESTADOS_SEM_FILA.includes(estado)) {
-        return { cartoes: [], fim: null, truncada: false };
+        return {
+          cartoes: [],
+          fim: null,
+          truncada: false,
+          teto: TETO_DA_FILA_DEMO,
+        };
       }
       return {
         cartoes: demo.FILA,
         fim: demo.FIM_DO_DIA,
         truncada: estado === 'fila-truncada',
+        teto: TETO_DA_FILA_DEMO,
       };
     },
     async voltarNaoServe() {
@@ -541,13 +549,14 @@ const fonteApi = ({ api, crm, usuarioId, usuarioNome }) => ({
   // A fila "Para chamar" (#2697): leads#index com view=queue, no mesmo
   // formato da demonstração. O fim do dia sai da própria passada pela fila
   // (useFilaParaChamar), então o servidor não manda `fim`. `truncada`: havia
-  // mais que o teto do servidor (meta.truncated).
+  // mais que o teto do servidor (meta.truncated); `teto` é esse teto (meta.max).
   async fila() {
     const { data } = await api.getQueue();
     return {
       cartoes: (data.payload || []).map(cartaoDaFila),
       fim: null,
       truncada: data.meta?.truncated === true,
+      teto: data.meta?.max ?? null,
     };
   },
   async depois({ id }) {
