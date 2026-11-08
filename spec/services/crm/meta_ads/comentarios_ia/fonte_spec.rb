@@ -81,20 +81,45 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Fonte do
   end
 
   it 'leitura que não ficou pronta: devolve o status, sem linhas' do
-    expect(fonte(instagram: { status: 'needs_permission', comments: [] }).ler).to eq(status: 'needs_permission', linhas: [], escondidas: [])
+    expect(fonte(instagram: { status: 'needs_permission', comments: [] }).ler)
+      .to eq(status: 'needs_permission', linhas: [], escondidas: [], status_das_redes: { 'instagram' => 'needs_permission' })
+  end
+
+  describe 'anúncio nas duas redes com falha numa (#2522)' do
+    it 'a falha do Facebook não esconde o Instagram: as linhas da rede que leu, com o status de cada rede' do
+      lido = fonte(instagram: { status: 'ready', comments: [row('ig')] }, facebook: { status: 'needs_login' }).ler
+
+      expect(lido[:status]).to eq('ready')
+      expect(lido[:linhas].pluck(:id, :network)).to eq([%w[ig instagram]])
+      expect(lido[:status_das_redes]).to eq('instagram' => 'ready', 'facebook' => 'needs_login')
+    end
+
+    it 'erro da Meta numa rede vira o status dela; a outra segue lida' do
+      falha = -> { raise Crm::MetaAds::FacebookComments::Error, 'meta_unavailable' }
+      lido = described_class.new({ 'facebook' => { ler: falha }, 'instagram' => { ler: -> { { status: 'ready', comments: [row('ig')] } } } }).ler
+
+      expect(lido[:linhas].pluck(:id)).to eq(%w[ig])
+      expect(lido[:status_das_redes]).to eq('facebook' => 'meta_unavailable', 'instagram' => 'ready')
+    end
+
+    it 'nenhuma rede leu: o status é o da primeira que falhou, sem linhas' do
+      lido = fonte(instagram: { status: 'needs_permission' }, facebook: { status: 'needs_login' }).ler
+
+      expect(lido).to include(status: 'needs_permission', linhas: [], escondidas: [])
+    end
   end
 
   it 'erro da Meta vira o status do erro' do
     leitura = -> { raise Crm::MetaAds::InstagramPrivateReply::Error, 'meta_unavailable' }
 
-    expect(described_class.new({ 'instagram' => { ler: leitura } }).ler).to eq(status: 'meta_unavailable', linhas: [], escondidas: [])
+    expect(described_class.new({ 'instagram' => { ler: leitura } }).ler).to include(status: 'meta_unavailable', linhas: [], escondidas: [])
   end
 
   it 'erro da leitura do Facebook (anúncio e Página do Seus posts) também vira o status, sem subir' do
     [Crm::MetaAds::FacebookComments::Error, SeusPosts::ComentariosPagina::Error].each do |erro|
       leitura = -> { raise erro, 'meta_unavailable' }
 
-      expect(described_class.new({ 'facebook' => { ler: leitura } }).ler).to eq(status: 'meta_unavailable', linhas: [], escondidas: [])
+      expect(described_class.new({ 'facebook' => { ler: leitura } }).ler).to include(status: 'meta_unavailable', linhas: [], escondidas: [])
     end
   end
 
@@ -134,7 +159,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Fonte do
     it 'anúncio que sumiu no meio da leitura (o leitor devolve nil): status ad_not_found, sem erro' do
       allow(Crm::MetaAds::InstagramComments).to receive(:new).and_return(instance_double(Crm::MetaAds::InstagramComments, payload: nil))
 
-      expect(described_class.anuncio(anuncio, %w[instagram]).ler).to eq(status: 'ad_not_found', linhas: [], escondidas: [])
+      expect(described_class.anuncio(anuncio, %w[instagram]).ler).to include(status: 'ad_not_found', linhas: [], escondidas: [])
     end
 
     it 'só as redes pedidas no alvo' do

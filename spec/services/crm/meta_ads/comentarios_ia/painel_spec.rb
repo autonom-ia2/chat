@@ -347,4 +347,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
 
     expect(painel.payload).to include(status: 'needs_permission', care: 'on', to_see: [], hidden: [])
   end
+
+  it 'anúncio nas duas redes com uma só lida (#2522): a lista da rede que leu e o status de cada rede, para a tela avisar' do
+    allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 3)], escondidas: [],
+                                               status_das_redes: { 'instagram' => 'ready', 'facebook' => 'needs_login' } })
+
+    payload = painel.payload
+
+    expect(payload).to include(status: 'ready', network_status: { 'instagram' => 'ready', 'facebook' => 'needs_login' })
+    expect(payload[:to_see].pluck(:id)).to eq(%w[1])
+  end
 end

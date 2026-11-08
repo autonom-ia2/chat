@@ -3,6 +3,7 @@ import AgentePostCartao from '../components/AgentePostCartao.vue';
 import AgenteDoPostPage from '../pages/AgenteDoPostPage.vue';
 import CriarTipoDeAgente from '../components/criar/CriarTipoDeAgente.vue';
 import {
+  leituraDosComentarios,
   motivosDasPortas,
   tituloDaLegenda,
 } from '../composables/useAgentesDoPost';
@@ -119,6 +120,42 @@ describe('#2469 · os comentários do post em Agentes', () => {
   afterEach(() => {
     montadas.splice(0).forEach(wrapper => wrapper.unmount());
     document.body.innerHTML = '';
+  });
+
+  describe('#2522 · leituraDosComentarios', () => {
+    const lido = (esperando, networkStatus) => ({
+      status: 'ready',
+      esperando,
+      network_status: networkStatus,
+    });
+
+    it('a rede que faltou é a que não está pronta; lista vazia com ela de fora não é zero', () => {
+      const parcial = { instagram: 'ready', facebook: 'needs_login' };
+      expect(leituraDosComentarios(lido([], parcial))).toEqual({
+        esperando: null,
+        faltou: 'facebook',
+      });
+      expect(leituraDosComentarios(lido([{ id: '1' }], parcial))).toEqual({
+        esperando: 1,
+        faltou: 'facebook',
+      });
+    });
+
+    it('tudo lido: zero é zero; leitura que não ficou pronta: null', () => {
+      expect(
+        leituraDosComentarios(
+          lido([], { instagram: 'ready', facebook: 'ready' })
+        )
+      ).toEqual({ esperando: 0, faltou: null });
+      expect(leituraDosComentarios(lido([], undefined))).toEqual({
+        esperando: 0,
+        faltou: null,
+      });
+      expect(leituraDosComentarios({ status: 'needs_login' })).toEqual({
+        esperando: null,
+        faltou: null,
+      });
+    });
   });
 
   describe('o cartão', () => {
@@ -314,6 +351,36 @@ describe('#2469 · os comentários do post em Agentes', () => {
       );
     });
 
+    // #2522: anúncio nas duas redes com o Facebook sem login. Lista vazia: não leu (os do Facebook podem estar
+    // esperando), nunca "nenhum esperando". Com itens: o número. Nos dois, a rede que ficou de fora.
+    it.each([
+      ['vazia', [], 'AGENTS.AGENTE_DO_POST.CARTAO.SEM_LEITURA', false],
+      ['com itens', [{ id: '1', kind: 'waiting' }], 'CARTAO.ESPERANDO', true],
+    ])(
+      'anúncio com o Facebook sem login, lista %s: sem zero falso',
+      async (_nome, lista, texto, temNumero) => {
+        const wrapper = await cartao(
+          { id: 7, kind: 'ad', network: 'both', status: 'on' },
+          detalhe({
+            kind: 'ad',
+            network: 'both',
+            comentarios: {
+              ...detalhe().comentarios,
+              esperando: lista,
+              network_status: { instagram: 'ready', facebook: 'needs_login' },
+            },
+          })
+        );
+
+        const faixa = wrapper.get('[data-esperando]');
+        expect(faixa.text()).toContain(texto);
+        expect(faixa.find('[data-sem-leitura]').exists()).toBe(!temNumero);
+        expect(faixa.get('[data-faltou-rede]').text()).toContain(
+          'AGENTS.AGENTE_DO_POST.CARTAO.FALTOU_REDE'
+        );
+      }
+    );
+
     it('o cartão só lê quando aparece na tela', async () => {
       const observados = [];
       vi.stubGlobal(
@@ -393,6 +460,33 @@ describe('#2469 · os comentários do post em Agentes', () => {
       await flushPromises();
       return wrapper;
     };
+
+    // #2522: a página, o mesmo caso do cartão. Lista vazia com o Facebook de fora: não leu; com itens: o número. Nos
+    // dois, a rede que faltou.
+    it.each([
+      ['vazia', [], 'AGENTS.AGENTE_DO_POST.CARTAO.SEM_LEITURA', false],
+      ['com itens', [{ id: '1', kind: 'waiting' }], 'CARTAO.ESPERANDO', true],
+    ])(
+      'anúncio com o Facebook sem login, lista %s: a página sem zero falso',
+      async (_nome, lista, texto, temNumero) => {
+        const wrapper = await pagina(
+          detalhe({
+            kind: 'ad',
+            network: 'both',
+            comentarios: {
+              ...detalhe().comentarios,
+              esperando: lista,
+              network_status: { instagram: 'ready', facebook: 'needs_login' },
+            },
+          })
+        );
+
+        const botao = wrapper.get('[data-esperando]');
+        expect(botao.text()).toContain(texto);
+        expect(botao.text().includes('CARTAO.SEM_LEITURA')).toBe(!temNumero);
+        expect(botao.find('[data-faltou-rede]').exists()).toBe(true);
+      }
+    );
 
     it('pausar e voltar a cuidar pelo servidor; quem só vê não tem os controles nem o Testar', async () => {
       const wrapper = await pagina(detalhe());
@@ -551,6 +645,86 @@ describe('#2469 · os comentários do post em Agentes', () => {
       await pagina(detalhe());
 
       expect(noBody('[data-respondidos] [data-nenhum]')).not.toBeNull();
+    });
+
+    // #2522: anúncio nas duas redes com uma só lida: os números da rede que leu e o aviso da que faltou, sem
+    // "tentar de novo" (a gaveta não relê).
+    it('Comentários do anúncio com o Facebook sem login: a lista do Instagram e o aviso do Facebook', async () => {
+      rota.query = { gaveta: 'comentarios', grupo: 'esperando' };
+      const base = detalhe().comentarios;
+      await pagina(
+        detalhe({
+          kind: 'ad',
+          network: 'both',
+          comentarios: {
+            ...base,
+            network_status: { instagram: 'ready', facebook: 'needs_login' },
+          },
+        })
+      );
+
+      const avisos = todosNoBody(
+        '[data-gaveta-comentarios] [data-ia-rede-faltou]'
+      );
+      expect(avisos.map(aviso => aviso.dataset.network)).toEqual(['facebook']);
+      expect(avisos[0].querySelector('button')).toBeNull();
+      expect(noBody('[data-sem-leitura]')).toBeNull();
+      expect(todosNoBody('[data-lista] [data-comentario]')).toHaveLength(2);
+    });
+
+    it('Comentários do anúncio com uma rede faltando, em "Respondidos": sem aviso (o número vem do banco)', async () => {
+      rota.query = { gaveta: 'comentarios', grupo: 'respondidos' };
+      const base = detalhe().comentarios;
+      await pagina(
+        detalhe({
+          kind: 'ad',
+          network: 'both',
+          comentarios: {
+            ...base,
+            network_status: { instagram: 'ready', facebook: 'needs_login' },
+          },
+        })
+      );
+
+      expect(noBody('[data-respondidos]')).not.toBeNull();
+      expect(noBody('[data-ia-rede-faltou]')).toBeNull();
+    });
+
+    it('Comentários do anúncio, "Esperando" vazio com o Facebook sem login: sem número e sem "nada aqui"', async () => {
+      rota.query = { gaveta: 'comentarios', grupo: 'esperando' };
+      const base = detalhe().comentarios;
+      await pagina(
+        detalhe({
+          kind: 'ad',
+          network: 'both',
+          comentarios: {
+            ...base,
+            esperando: [],
+            network_status: { instagram: 'ready', facebook: 'needs_login' },
+          },
+        })
+      );
+
+      const numeros = todosNoBody('[data-gaveta-comentarios] [data-grupo]').map(
+        grupo => grupo.querySelector('span').textContent.trim()
+      );
+      expect(numeros).toEqual(['4', '–', '2']);
+      expect(
+        noBody('[data-gaveta-comentarios] [data-sem-leitura]')
+      ).not.toBeNull();
+      expect(noBody('[data-gaveta-comentarios] [data-nenhum]')).toBeNull();
+    });
+
+    it('Comentários com as duas redes lidas: sem aviso', async () => {
+      rota.query = { gaveta: 'comentarios', grupo: 'esperando' };
+      const base = detalhe().comentarios;
+      await pagina(
+        detalhe({
+          comentarios: { ...base, network_status: { instagram: 'ready' } },
+        })
+      );
+
+      expect(noBody('[data-ia-rede-faltou]')).toBeNull();
     });
 
     it('Comentários sem leitura da Meta: esperando e não respondo sem número, com o aviso', async () => {

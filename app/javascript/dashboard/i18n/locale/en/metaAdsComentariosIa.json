@@ -41,6 +41,10 @@
         "ad_not_found": "I couldn't find this ad in your ad account.",
         "meta_unavailable": "Meta didn't answer right now."
       },
+      "PARTIAL": {
+        "instagram": "I could only read the Facebook comments. The Instagram ones are missing.",
+        "facebook": "I could only read the Instagram comments. The Facebook ones are missing."
+      },
       "NO_ACCESS": "You don't have access to comment care on this post.",
       "SAVE_ERROR": "I couldn't save it right now. Try again.",
       "OFF_READONLY": {
