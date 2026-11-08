@@ -124,15 +124,16 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
     end
 
     # Passo 6 (G11 + lote 4, #2682): depois do "acalmar", espera A FERNANDA responder por até 30 minutos (a pessoa
-    # responsável, a quem o passo 2 passou a conversa); sem resposta, avisa a dona com o mesmo resumo. O eco do
-    # "acalmar" e a resposta de outra pessoa da equipe não contam.
+    # responsável, a quem o passo 2 passou a conversa); sem resposta, avisa a dona com o mesmo resumo: o que a IA
+    # escreveu no passo "resumo" (`ia.resumo`, G28, #2679), sem outra ida à IA. O eco do "acalmar" e a resposta de
+    # outra pessoa da equipe não contam.
     context 'with a espera pela resposta da Fernanda (passo 6)' do
       let(:depois_de_acalmar) do
         [{ id: 'espera_fernanda', tipo: 'esperar_ate',
            condicao: { campo: { '$valor' => 'conversa.responsavel_respondeu' }, op: 'igual', valor: true },
            prazo: { valor: 30, unidade: 'minutos' },
-           se_vencer: [{ id: 'resumo_dona', tipo: 'resumir', le: %w[mensagens_recentes], linhas: 3,
-                         destino: { avisar: { pessoas: [dona.id] } } }] }]
+           se_vencer: [{ id: 'resumo_dona', tipo: 'avisar', para: { pessoas: [dona.id] },
+                         texto: ['Ninguém respondeu o cliente bravo em 30 minutos. ', { '$valor' => 'ia.resumo' }] }] }]
       end
 
       def execucao = Autonomia::Automacao::Execucao.where(automacao_id: automacao['id']).sole
@@ -182,6 +183,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
         expect(mencoes_para(dona).count).to eq(1)
         avisos = conversa.messages.where(private: true).where('content LIKE ?', "%mention://user/#{dona.id}/%")
         expect(avisos.sole.content).to include('cobrado duas vezes')
+        expect(ia_recebeu.count { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_resumir' }).to eq(1)
       end
     end
 

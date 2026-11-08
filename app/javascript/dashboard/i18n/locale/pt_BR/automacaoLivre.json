@@ -305,6 +305,8 @@
       "ESCREVER_MENSAGEM_SEM_INSTRUCAO": "A IA escreve e manda ao cliente: falta escrever a instrução",
       "ESCREVER_SUGESTAO": "A IA escreve uma sugestão para a equipe: “{instrucao}”",
       "ESCREVER_SUGESTAO_SEM_INSTRUCAO": "A IA escreve uma sugestão para a equipe: falta escrever a instrução",
+      "ESCREVER_GUARDAR": "A IA escreve um texto e guarda para os passos seguintes: “{instrucao}”",
+      "ESCREVER_GUARDAR_SEM_INSTRUCAO": "A IA escreve um texto e guarda para os passos seguintes: falta escrever a instrução",
       "RESUMIR_NOTA": "A IA resume a conversa numa nota",
       "RESUMIR_AVISAR": "A IA resume a conversa e avisa {quem}",
       "EMAIL": "Mandar e-mail ao cliente: “{assunto}”"
@@ -355,6 +357,7 @@
       "ATRIBUTO_CALCULADO": "{nome}: {valor}",
       "DATA_MAIS": "{de} + {n} {unidade}",
       "DATA_MENOS": "{de} − {n} {unidade}",
+      "DATA_FIM_DO_MES": "{data}, no fim do mês",
       "DATA": {
         "PERGUNTA": "Que data gravar?",
         "DIA": "Um dia certo",
@@ -370,6 +373,9 @@
         "SENTIDO": "Depois ou antes",
         "DEPOIS": "depois",
         "ANTES": "antes",
+        "FIM": "Que dia desse mês?",
+        "FIM_DIA": "O próprio dia calculado",
+        "FIM_MES": "O último dia do mês",
         "GRAVA": "Grava: {valor}",
         "CAMPO_APAGADO": "Este campo de data foi apagado da conta. Escolha outro: assim, o Salvar tudo não aceita.",
         "NUMERO_INVALIDO": "Use um número inteiro de 0 a {teto}."

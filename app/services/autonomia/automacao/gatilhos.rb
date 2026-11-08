@@ -20,7 +20,7 @@ module Autonomia::Automacao::Gatilhos
 
   CARD = 'Crm::Card'.freeze
   CONTATO = 'Contact'.freeze
-  DA_DATA = %w[campo dias quando hora].freeze
+  DA_DATA = %w[campo dias quando hora repete].freeze
 
   LISTA = [
     Entrada.new(tipo: 'conversa.criada', alvo: 'Conversation', origem: :evento, parametros: []),
