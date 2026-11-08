@@ -25,7 +25,7 @@ RSpec.describe 'Automação livre: passo campanha com função personalizada (#2
   before do
     ligar_motor(account)
     ligar_mensagens(account)
-    account.enable_features!('whatsapp_campaign')
+    account.enable_features!('whatsapp_campaign', 'automacao_gatilhos')
     canal.update!(message_templates: [modelo_aprovado])
   end
 
@@ -40,7 +40,7 @@ RSpec.describe 'Automação livre: passo campanha com função personalizada (#2
   end
 
   def problemas(quem)
-    receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [disparar] }
+    receita = { 'gatilho' => { 'tipo' => 'conta.recorrente', 'frequencia' => 'diaria', 'hora' => 8 }, 'passos' => [disparar] }
     Autonomia::Automacao::Receita.new(receita, conta: account, account_user: AccountUser.find_by(account: account, user: quem)).problemas
   end
 
@@ -51,7 +51,6 @@ RSpec.describe 'Automação livre: passo campanha com função personalizada (#2
   end
 
   describe 'disparar' do
-    before { allow(Autonomia::Automacao::PassoDeCampanha).to receive(:gatilho_da_conta?).and_return(true) }
 
     it 'quem só monta campanha (sem campaign_send) não salva nem dispara' do
       so_monta = pessoa_com(base + %w[campaign_manage])

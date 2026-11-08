@@ -28,7 +28,6 @@ class Autonomia::Automacao::PassoDeCampanha
   CANAL = ModeloWhatsapp::CANAL
   PROVEDOR = 'whatsapp_cloud'.freeze
   FLAG_DA_CAMPANHA = :whatsapp_campaign
-  ALVO_DA_CONTA = 'Account'.freeze
 
   # O que a Receita confere ao salvar (#2630). Sem conta (o catálogo das receitas prontas), só o que não depende dela.
   def self.problemas_ao_salvar(passo, receita, conta:, account_user:)
@@ -42,7 +41,7 @@ class Autonomia::Automacao::PassoDeCampanha
 
   def self.problemas_do_disparo(passo, conta, gatilho, account_user)
     id = passo['id']
-    lista = [*(frase(:campanha_so_sem_alvo, passo: id) unless gatilho_da_conta?(gatilho)),
+    lista = [*(frase(:campanha_so_sem_alvo, passo: id) unless ::Autonomia::Automacao::Gatilhos.da_conta?(gatilho)),
              *(frase(:campanha_variavel_fixa, passo: id) unless variaveis_escritas?(passo['modelo']))]
     return lista if conta.nil?
 
@@ -80,12 +79,6 @@ class Autonomia::Automacao::PassoDeCampanha
   def self.caixa_da_campanha(conta, id)
     caixa = conta.inboxes.find_by(id: id, channel_type: CANAL)
     caixa if caixa&.channel.try(:provider) == PROVEDOR
-  end
-
-  # O gatilho que roda na conta inteira, não numa conversa, card ou contato. Contrato com a G7 (#2499): o
-  # `conta.recorrente` entra em Gatilhos::LISTA com alvo 'Account'.
-  def self.gatilho_da_conta?(tipo)
-    ::Autonomia::Automacao::Gatilhos.alvo(tipo) == ALVO_DA_CONTA
   end
 
   def self.pode_disparar?(usuario, conta)

@@ -30,8 +30,12 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
 
   def frase(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", passo: 'c1', **valores)
 
-  def problemas(passo, gatilho: 'conversa.resolvida', quem: dona)
-    receita = { 'gatilho' => { 'tipo' => gatilho }, 'passos' => [passo] }
+  # O gatilho da conta (G7): o único em que o disparar salva.
+  let(:da_conta) { { 'tipo' => 'conta.recorrente', 'frequencia' => 'diaria', 'hora' => 8 } }
+  let(:gatilho_padrao) { 'conversa.resolvida' }
+
+  def problemas(passo, gatilho: gatilho_padrao, quem: dona)
+    receita = { 'gatilho' => gatilho.is_a?(Hash) ? gatilho : { 'tipo' => gatilho }, 'passos' => [passo] }
     Autonomia::Automacao::Receita.new(receita, conta: account, account_user: AccountUser.find_by(account: account, user: quem)).problemas
   end
 
@@ -47,7 +51,9 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
     end
 
     context 'with o gatilho da conta (conta.recorrente, G7)' do
-      before { allow(described_class).to receive(:gatilho_da_conta?).and_return(true) }
+      let(:gatilho_padrao) { da_conta }
+
+    before { account.enable_features!('automacao_gatilhos') }
 
       it 'aceita a campanha pronta, com modelo de utilidade aprovado' do
         expect(problemas(disparar)).to be_empty
@@ -136,15 +142,6 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
 
       expect(account.campaigns.last.audience).to eq([{ 'type' => 'Label', 'id' => etiqueta.id }, { 'type' => 'ExcludeLabel', 'id' => sem.id }])
       expect(resultado.dados).to include('sem_etiquetas' => [sem.id])
-    end
-
-    it 'o gatilho da conta é o de alvo Account (contrato com a G7), não o de conversa ou card' do
-      allow(Autonomia::Automacao::Gatilhos).to receive(:alvo).and_call_original
-      allow(Autonomia::Automacao::Gatilhos).to receive(:alvo).with('conta.recorrente').and_return('Account')
-
-      expect(described_class.gatilho_da_conta?('conta.recorrente')).to be(true)
-      expect(described_class.gatilho_da_conta?('conversa.criada')).to be(false)
-      expect(described_class.gatilho_da_conta?('card.ganho')).to be(false)
     end
 
     it 'receita antiga com alvo pula com o motivo e não cria campanha' do
@@ -237,10 +234,12 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
 
     it 'o disparar que chegar num gatilho de conversa pula com o motivo e a execução segue' do
       conversa = create(:conversation, account: account, inbox: caixa, status: :resolved)
-      # Salva como se fosse o gatilho da conta; ao rodar, a regra de hoje vale.
-      allow(described_class).to receive(:gatilho_da_conta?).and_return(true)
-      definicao = automacao_ligada(account, dona, [disparar])
-      allow(described_class).to receive(:gatilho_da_conta?).and_call_original
+      # Uma receita gravada antes da regra: salva no gatilho da conta e, no banco, trocada para o de conversa (o salvar
+      # de hoje recusaria). Ao rodar, a regra vale.
+      account.enable_features!('automacao_gatilhos')
+      definicao = automacao_ligada(account, dona, [disparar], gatilho: da_conta)
+      versao = definicao.versao_ativa
+      versao.update_column(:receita, versao.receita.merge('gatilho' => { 'tipo' => 'conversa.resolvida' })) # rubocop:disable Rails/SkipsModelValidations
 
       perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(definicao, conversa) }
 
