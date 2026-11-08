@@ -6,6 +6,8 @@
 # montada pelo dia e pela hora no fuso (TimeZone#local), nunca somando horas: na troca do horário de verão a hora
 # ambígua dá sempre o mesmo instante, e a marca (em UTC) não repete. Ligar não age no passado: a ocorrência anterior a
 # ligar (ou a salvar a versão ligada) não roda. O dia do mês que não existe (31 em abril) cai no último dia.
+# A frequência uma_vez (#2681, "quinta antes da Black Friday, 9h") tem uma ocorrência só, na data (AAAA-MM-DD) e na
+# hora: a marca da ocorrência impede repetir, e depois dela não há outra.
 #
 # Os alvos saem em lotes de ids (`lotes`): o TempoDaAutomacaoJob enfileira um RecorrenteLoteJob por lote, e a fila não
 # trava numa seleção grande. Sem teto de quantidade: 25 mil contatos numa etiqueta é uso, não defeito.
@@ -54,6 +56,7 @@ class Autonomia::Automacao::Tempo::Recorrente
     case @gatilho['frequencia']
     when 'semanal' then dia.wday == @gatilho['dia_da_semana'].to_i
     when 'mensal' then dia.day == [@gatilho['dia_do_mes'].to_i, dia.end_of_month.day].min
+    when 'uma_vez' then dia.iso8601 == @gatilho['data']
     else true
     end
   end

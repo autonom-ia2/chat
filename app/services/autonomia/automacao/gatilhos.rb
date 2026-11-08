@@ -26,8 +26,8 @@ module Autonomia::Automacao::Gatilhos
   CONTATO = 'Contact'.freeze
   CONTA = 'Account'.freeze
   DA_DATA = %w[campo dias quando hora repete].freeze
-  DO_RECORRENTE = %w[frequencia dia_da_semana dia_do_mes hora selecao].freeze
-  DA_OCORRENCIA = %w[frequencia dia_da_semana dia_do_mes hora].freeze
+  DO_RECORRENTE = %w[frequencia dia_da_semana dia_do_mes data hora selecao].freeze
+  DA_OCORRENCIA = %w[frequencia dia_da_semana dia_do_mes data hora].freeze
   VARRIDOS = %i[tempo recorrente].freeze
 
   LISTA = [

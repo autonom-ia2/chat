@@ -49,6 +49,7 @@
       "FREQUENCIA": "How often",
       "DIA_DA_SEMANA": "Day of the week",
       "DIA_DO_MES": "Day of the month",
+      "DATA": "Date",
       "SELECAO": "Which ones"
     },
     "GRUPOS_DO_GATILHO": {
@@ -100,6 +101,7 @@
       "DIARIA": "Every day",
       "SEMANAL": "Every week",
       "MENSAL": "Every month",
+      "UMA_VEZ": "Just once",
       "DIAS_DA_SEMANA": {
         "0": "Sunday",
         "1": "Monday",
@@ -118,7 +120,8 @@
       "FRASE": {
         "DIARIA": "Every day at {hora}h, {alvo}",
         "SEMANAL": "Every {dia} at {hora}h, {alvo}",
-        "MENSAL": "Every month on day {dia}, at {hora}h, {alvo}"
+        "MENSAL": "Every month on day {dia}, at {hora}h, {alvo}",
+        "UMA_VEZ": "Once, on {dia}, at {hora}h, {alvo}"
       }
     },
     "SELECAO": {
