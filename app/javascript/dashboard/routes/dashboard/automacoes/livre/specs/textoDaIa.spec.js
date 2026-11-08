@@ -1,7 +1,7 @@
 import { comTextosDaIa } from '../catalogo';
 import { opcoesDosValores } from '../texto';
 import { linhasDoEnsaio } from '../ensaio';
-import { fraseDoPasso } from '../frases';
+import { fraseDoPasso, fraseDoValor } from '../frases';
 
 // #2679 — o texto que o "escrever" e o "resumir" produzem vira um dado que os
 // passos seguintes leem (`ia.<id>`), e o "escrever" pode só guardar.
@@ -122,5 +122,30 @@ describe('o "escrever" que só guarda', () => {
     expect(linha.destaque).toBe(
       'AUTOMACAO_LIVRE.ENSAIO.FARIA.IA_ESCREVER_GUARDAR'
     );
+  });
+});
+
+describe('o texto da IA na frase', () => {
+  it('a frase do valor usa o rótulo, nunca o caminho cru nem uma tradução vazia', () => {
+    const comTextos = comTextosDaIa(catalogo, passos, t);
+
+    expect(fraseDoValor('ia.p1', comTextos, t)).toBe(
+      'AUTOMACAO_LIVRE.IA.TEXTO_DA_IA.ESCREVER(Pergunte como ela está)'
+    );
+  });
+
+  it('a linha da mensagem mostra o rótulo do texto, não [ia.p1]', () => {
+    const comTextos = {
+      ...comTextosDaIa(catalogo, passos, t),
+      passos: [{ tipo: 'mensagem' }],
+    };
+    const frase = fraseDoPasso(
+      { id: 'm2', tipo: 'mensagem', texto: ['Oi! ', { $valor: 'ia.p1' }] },
+      comTextos,
+      t
+    );
+
+    expect(frase).toContain('[AUTOMACAO_LIVRE.IA.TEXTO_DA_IA.ESCREVER(');
+    expect(frase).not.toContain('ia.p1');
   });
 });

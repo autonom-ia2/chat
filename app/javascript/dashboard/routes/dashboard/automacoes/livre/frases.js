@@ -75,7 +75,8 @@ export const fraseDoValor = (caminho, catalogo, t) => {
   const fixo = valores.find(
     item => item.caminho === caminho && !item.atributos
   );
-  if (fixo) return t(fixo.frase);
+  // #2679: o texto da IA (comTextosDaIa) chega com o rótulo pronto, sem frase.
+  if (fixo) return fixo.rotulo || t(fixo.frase);
   const base = valores.find(
     item => item.atributos && caminho?.startsWith(`${item.caminho}.`)
   );

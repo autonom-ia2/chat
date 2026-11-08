@@ -79,6 +79,12 @@ const avisoDeLigada = computed(() => {
     : t('AUTOMACAO_LIVRE.EDITOR.LIGADA_POR_OUTRA');
 });
 
+// A frase dos passos (Confira, Ensaio, Histórico) mostra o texto da IA pelo
+// rótulo dele, como o "Alterar" (#2679).
+const catalogoComTextos = computed(() =>
+  comTextosDaIa(catalogo.value, receita.value.passos, t)
+);
+
 // O "Alterar" só oferece o valor que o alvo do gatilho alcança (#2499) e que
 // a pessoa pode ler (#2597), mais o texto dos passos de IA da receita (#2679).
 const podeLerValor = usePodeLerValor();
@@ -501,7 +507,7 @@ onMounted(() => {
             <div class="flex flex-col gap-4">
               <LivreConfira
                 :receita="receita"
-                :catalogo="catalogo"
+                :catalogo="catalogoComTextos"
                 :nomes-do-gatilho="escolhasDoGatilho.nomes"
                 :pode-mudar="podeMudar && !ocupado && !conflito"
                 :tudo="tudo"
@@ -528,7 +534,7 @@ onMounted(() => {
               <LivreHistorico
                 v-if="automacao?.id && catalogo"
                 :automacao-id="automacao.id"
-                :catalogo="catalogo"
+                :catalogo="catalogoComTextos"
                 :account-id="Number(route.params.accountId)"
               />
             </div>
@@ -569,7 +575,7 @@ onMounted(() => {
             :automacao-id="automacao?.id ?? null"
             :receita="receita"
             :rascunho="mudou"
-            :catalogo="catalogo"
+            :catalogo="catalogoComTextos"
             @fechar="fecharPainel('ensaiar')"
           />
 
