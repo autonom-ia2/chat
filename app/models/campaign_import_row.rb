@@ -46,4 +46,19 @@ class CampaignImportRow < ApplicationRecord
   }, _prefix: true
 
   validates :row_number, presence: true
+
+  # #2717: a linha que entra, sai ou muda no público chega às campanhas de e-mail abertas ligadas a ele. Escrita em lote
+  # (insert_all/delete_all) não passa por aqui: ela monta ou apaga o público inteiro, antes ou no lugar da campanha.
+  # Um callback só: o Rails guarda apenas o último after_commit de um mesmo método.
+  after_commit :sincronizar_campanhas_abertas, if: :muda_quem_recebe?
+
+  private
+
+  def muda_quem_recebe?
+    previously_new_record? || destroyed? || saved_changes.keys.intersect?(%w[status contact_id normalized_email_hash])
+  end
+
+  def sincronizar_campanhas_abertas
+    CampaignJourney::CampanhaAbertaSyncJob.perform_later(campaign_import_id)
+  end
 end

@@ -13,7 +13,8 @@ module CampaignJourney::CampanhaAberta
   # Espera do envio de novo quando o lote terminou antes de alcançar quem chegou no meio.
   NOVA_RODADA = 30.seconds
 
-  # Põe na lista quem entrou no Público e tira o pendente de quem saiu. O pôr/tirar da Automação chama aqui.
+  # Põe na lista quem entrou no Público e tira o pendente de quem saiu. Chamado pela própria linha do público, ao entrar,
+  # sair ou mudar (CampaignImportRow → CampaignJourney::CampanhaAbertaSyncJob), venha ela de quem vier.
   # Corre junto com o envio sem perigo: roda dentro das travas de entrega, e o envio só reserva a pessoa com um UPDATE
   # condicional de pending para sent (EmailCampaigns::DeliveryClaim#claim). Pendente apagado antes da reserva não
   # sai; reservado já não é pending e o sync não toca. Tirar depois do envio não desfaz o e-mail.

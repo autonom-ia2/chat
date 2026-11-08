@@ -22,7 +22,7 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
   end
   let(:enviados) { [] }
   # Só a checagem de higiene e o envio rodam; o resto (avatar do contato etc.) fica na fila.
-  let(:envio) { [EmailCampaigns::RecipientPreflightJob, EmailCampaigns::DeliveryJob] }
+  let(:envio) { [CampaignJourney::CampanhaAbertaSyncJob, EmailCampaigns::RecipientPreflightJob, EmailCampaigns::DeliveryJob] }
 
   before do
     allow(EmailCampaigns::Config).to receive(:enabled?).and_return(true)
@@ -54,12 +54,16 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
     expect(response).to have_http_status(:ok)
   end
 
-  # O que a Automação fará no PR-B: a pessoa entra no Público (linha com o e-mail atual dela) e a lista sincroniza.
-  def entra_no_publico(campanha, nome, email, **contato_extra)
+  # O que a Automação fará no PR-B: a pessoa entra no Público (linha com o e-mail atual dela). Daí em diante é o caminho
+  # de produção: a linha avisa as campanhas abertas (CampaignJourney::CampanhaAbertaSyncJob), e checagem e envio rodam.
+  def entra_no_publico(nome, email, **contato_extra)
     contato = create(:contact, account: account, name: nome, email: email, **contato_extra)
-    linha = CampaignImportRow.create!(campaign_import: audience, contact: contato, row_number: audience.campaign_import_rows.maximum(:row_number) + 1,
-                                      status: :imported, normalized_email_hash: Digest::SHA256.hexdigest(email))
-    perform_enqueued_jobs(only: envio) { CampaignJourney::CampanhaAberta.sincronizar!(campanha) }
+    linha = nil
+    perform_enqueued_jobs(only: envio) do
+      linha = CampaignImportRow.create!(campaign_import: audience, contact: contato, status: :imported,
+                                        row_number: audience.campaign_import_rows.maximum(:row_number) + 1,
+                                        normalized_email_hash: Digest::SHA256.hexdigest(email))
+    end
     linha
   end
 
@@ -71,11 +75,11 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
     expect(enviados).to eq(['ana@alfa.com.br'])
     expect(campanha.reload).to be_sending
 
-    entra_no_publico(campanha, 'Bia Lima', 'bia@beta.com.br')
+    entra_no_publico('Bia Lima', 'bia@beta.com.br')
     expect(enviados).to eq(%w[ana@alfa.com.br bia@beta.com.br])
     expect(campanha.reload).to be_sending
 
-    perform_enqueued_jobs(only: envio) { CampaignJourney::CampanhaAberta.sincronizar!(campanha) }
+    perform_enqueued_jobs(only: envio) { CampaignJourney::CampanhaAbertaSyncJob.perform_now(audience.id) }
     expect(enviados).to eq(%w[ana@alfa.com.br bia@beta.com.br])
   end
 
@@ -84,8 +88,8 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
     mandar(campanha)
     EmailSuppression.create!(account: account, email: 'caio@gama.com.br', reason: 'unsubscribe', source: 'link')
 
-    entra_no_publico(campanha, 'Caio Reis', 'caio@gama.com.br')
-    entra_no_publico(campanha, 'Eva Rocha', 'eva@out.com.br', opted_out_at: Time.current)
+    entra_no_publico('Caio Reis', 'caio@gama.com.br')
+    entra_no_publico('Eva Rocha', 'eva@out.com.br', opted_out_at: Time.current)
 
     expect(enviados).to eq(['ana@alfa.com.br'])
     expect(campanha.email_campaign_recipients.find_by('lower(email) = ?', 'caio@gama.com.br')).to be_suppressed
@@ -97,10 +101,9 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
     mandar(campanha)
     campanha.pause!
 
-    linha = entra_no_publico(campanha, 'Dani Melo', 'dani@delta.com.br')
+    linha = entra_no_publico('Dani Melo', 'dani@delta.com.br')
     expect(campanha.email_campaign_recipients.pluck(:email)).to include('dani@delta.com.br')
-    linha.destroy!
-    CampaignJourney::CampanhaAberta.sincronizar!(campanha)
+    perform_enqueued_jobs(only: envio) { linha.destroy! }
 
     expect(campanha.email_campaign_recipients.pluck(:email)).not_to include('dani@delta.com.br')
     expect(enviados).to eq(['ana@alfa.com.br'])
@@ -114,7 +117,7 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
     mandar(campanha)
     expect(campanha.reload).to be_sending
 
-    entra_no_publico(campanha, 'Bia Lima', 'bia@beta.com.br')
+    entra_no_publico('Bia Lima', 'bia@beta.com.br')
     expect(enviados).to eq(['bia@beta.com.br'])
   end
 
@@ -125,7 +128,7 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
     mandar(campanha)
     expect(campanha.reload).to be_sent
 
-    entra_no_publico(campanha, 'Bia Lima', 'bia@beta.com.br')
+    entra_no_publico('Bia Lima', 'bia@beta.com.br')
     perform_enqueued_jobs(only: envio) { CampaignJourney::EmailAudienceGate.sync!(campanha.reload) }
 
     expect(enviados).to eq(['ana@alfa.com.br'])
@@ -139,7 +142,7 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
     with_modified_env(EMAIL_CAMPAIGN_HYGIENE_MODE: 'enforce') do
       campanha = criar(aberta: true)
       mandar(campanha)
-      entra_no_publico(campanha, 'Bia Lima', 'bia@beta.com.br')
+      entra_no_publico('Bia Lima', 'bia@beta.com.br')
 
       expect(campanha.reload).to be_sending
       expect(campanha.hygiene_pause_reason).to be_nil
@@ -150,7 +153,7 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
   it 'aberta: o motor deixa de fora quem ainda não foi conferido, e a conferência vencida não reabre passada' do
     campanha = criar(aberta: true)
     mandar(campanha)
-    entra_no_publico(campanha, 'Bia Lima', 'bia@beta.com.br')
+    entra_no_publico('Bia Lima', 'bia@beta.com.br')
     nova = campanha.email_campaign_recipients.create!(email: 'caio@gama.com.br', status: :pending, preflight_status: 'unchecked')
 
     expect(CampaignJourney::CampanhaAberta.a_enviar(campanha)).not_to include(nova)
@@ -162,6 +165,20 @@ RSpec.describe 'Campanha de e-mail aberta (#2717)', :aggregate_failures, type: :
 
     expect(EmailCampaigns::RecipientPreflightJob).not_to have_received(:enqueue)
     expect(EmailCampaigns::DeliveryJob).to have_received(:perform_later).with(campanha.id)
+  end
+
+  it 'a mudança no Público só mexe nas campanhas abertas ligadas a ele, enviando ou pausadas' do
+    aberta = criar(aberta: true)
+    mandar(aberta)
+    fechada = criar(aberta: false)
+    outro_publico = saved_audience(account: account, user: user, mapping: { 'name' => 0, 'email' => 1 },
+                                   content: "Nome,Email\nZeca Dias,zeca@zeta.com.br\n")
+    CampaignAudienceLink.for_campaign(fechada).update!(campaign_import: outro_publico)
+
+    entra_no_publico('Bia Lima', 'bia@beta.com.br')
+
+    expect(aberta.email_campaign_recipients.pluck(:email)).to include('bia@beta.com.br')
+    expect(fechada.email_campaign_recipients.pluck(:email)).not_to include('bia@beta.com.br', 'zeca@zeta.com.br')
   end
 
   describe 'envio pela caixa (ritmo humano)' do
