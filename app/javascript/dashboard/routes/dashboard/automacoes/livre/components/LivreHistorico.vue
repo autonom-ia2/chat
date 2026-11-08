@@ -322,6 +322,13 @@ onMounted(() => carregar());
                     }}
                   </span>
                   <span
+                    v-if="passo.dados.conversa_principal_do_card"
+                    data-conversa-principal
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{ $t('AUTOMACAO_LIVRE.HISTORICO.CONVERSA_PRINCIPAL') }}
+                  </span>
+                  <span
                     v-if="passo.dados.ia?.custo_usd != null"
                     data-ia
                     class="text-xs text-n-slate-10"

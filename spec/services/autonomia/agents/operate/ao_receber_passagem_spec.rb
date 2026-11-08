@@ -86,6 +86,22 @@ RSpec.describe Autonomia::Agents::Operate::AoReceberPassagem, :um_turno do
                                   'não assuma como suas as promessas', '`conversation_closed_for_now`')
     end
 
+    it '#1430: com a consulta em segundo plano, o turno da passagem abre a marca do turno em curso e a solta no fim' do
+      ligar_consulta_em_segundo_plano
+      chave = Autonomia::Agents::Operate::TurnoEmCurso.chave(conversation.id)
+      marcas = []
+      ia_grava!(durante: -> { marcas << Redis::Alfred.get(chave) })
+      cliente_escreve('Quero cotar o seguro do meu Onix 2022.')
+      ana_passa!
+
+      rodar_turno!
+
+      marca = "passagem:#{Crm::Passagens.ultima_aberta(conversation).id}"
+      expect(respostas.sole.content).to eq(resposta_da_ia)
+      expect(marcas).to include(marca)
+      expect(Redis::Alfred.get(chave)).not_to eq(marca)
+    end
+
     it 'o evento repetido não abre outro turno (SET NX por passagem), e o mesmo job rodando de novo não posta de novo' do
       cliente_escreve('Quero cotar o seguro do meu Onix 2022.')
       ana_passa!

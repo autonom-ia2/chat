@@ -12,9 +12,10 @@ class Autonomia::Automacao::Historico
   PAROU = %w[parada falhou interrompida].freeze
   # As chaves de `dados` que a tela sabe dizer. Chave fora da lista não sai: o passo novo (os `campos` da F7, por
   # exemplo) declara a dele e a frase no próprio PR.
-  CHAVES = %w[ramo ate tentativa ia conversas_fora].freeze
+  # `conversa_principal_do_card` (#2680): a mensagem abriu a conversa e ela virou a principal do card.
+  CHAVES = %w[ramo ate tentativa ia conversa_principal_do_card conversas_fora].freeze
   # Estas apontam para dentro da conversa: só saem para quem a enxerga.
-  CHAVES_DA_CONVERSA = %w[mensagem_id nota_id].freeze
+  CHAVES_DA_CONVERSA = %w[mensagem_id nota_id conversa_aberta].freeze
   # Dentro de `ia`, só os números do custo: a razão da IA ou um trecho lido seriam texto da conversa.
   IA = %w[custo_usd modelo tokens_entrada tokens_saida].freeze
   # O valor em dinheiro é custo da conta: só sai com `com_valores` (administrador ou financial_view, #1969, #2557). Os

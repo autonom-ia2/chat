@@ -83,7 +83,12 @@ describe('sendInBatches', () => {
     const request = vi
       .fn()
       .mockRejectedValueOnce({
-        response: { data: { error: 'Estágio não pertence ao funil' } },
+        response: {
+          data: {
+            error: 'Estágio não pertence ao funil',
+            code: 'prospecting.crm_send.pipeline_not_found',
+          },
+        },
       })
       .mockImplementationOnce(leadIds => Promise.resolve(createdFor(leadIds)));
 
@@ -94,6 +99,7 @@ describe('sendInBatches', () => {
       lead_id: 1,
       reason_code: 'request_failed',
       message: 'Estágio não pertence ao funil',
+      code: 'prospecting.crm_send.pipeline_not_found',
     });
     expect(summary.created.map(item => item.lead_id)).toEqual([31, 32]);
   });
@@ -104,7 +110,7 @@ describe('sendInBatches', () => {
     const summary = await sendInBatches([5], request);
 
     expect(summary.failed).toEqual([
-      { lead_id: 5, reason_code: 'request_failed', message: null },
+      { lead_id: 5, reason_code: 'request_failed', message: null, code: null },
     ]);
   });
 

@@ -64,23 +64,20 @@ class AutonomiaProspectingAPI extends ApiClient {
 
   // Envio ao CRM (#680): até 30 leads por pedido, resultado por lead
   // (created, existing, failed). Um lead só também vai por aqui.
-  createCrmCards({ leadIds, pipelineId, stageId }) {
+  // ownerId (#2694): com quem ficam os cards; sem ele, com quem manda.
+  createCrmCards({ leadIds, pipelineId, stageId, ownerId = null }) {
     return axios.post(`${this.url}/leads/crm_cards`, {
       lead_ids: leadIds,
       pipeline_id: pipelineId,
       stage_id: stageId,
+      ...(ownerId ? { owner_id: ownerId } : {}),
     });
   }
 
-  // Campanha a partir da seleção da busca (#680): devolve o segmento, com o
-  // motivo de cada lead bloqueado.
-  // campaignType: 'whatsapp_api' ou 'one_off' (#732); sem ele, envio único.
-  addLeadsToCampaign({ leadIds, campaignId, campaignType, segmentName }) {
-    return axios.post(`${this.url}/leads/campaign_segment`, {
-      lead_ids: leadIds,
-      campaign_id: campaignId,
-      campaign_type: campaignType,
-      segment_name: segmentName,
+  // Quem pode receber o card no funil (#2694): só para quem gere funis.
+  getCrmOwners(pipelineId) {
+    return axios.get(`${this.url}/leads/crm_owners`, {
+      params: { pipeline_id: pipelineId },
     });
   }
 
@@ -92,6 +89,15 @@ class AutonomiaProspectingAPI extends ApiClient {
   }
 
   // Descartar com motivo (#732), um lead ou a seleção. Devolve os leads.
+  // "Guardar para mandar mensagem" (#2695): os leads viram um Público de
+  // Campanhas. Volta o Público e quem ficou de fora, com o motivo.
+  createAudience({ leadIds, name }) {
+    return axios.post(`${this.url}/leads/audience`, {
+      lead_ids: leadIds,
+      name,
+    });
+  }
+
   discardLeads({ leadIds, reason }) {
     return axios.post(`${this.url}/leads/discard`, {
       lead_ids: leadIds,
@@ -152,12 +158,6 @@ class AutonomiaProspectingAPI extends ApiClient {
 
   removeLeadFromList(listId, leadId) {
     return axios.delete(`${this.url}/lists/${listId}/leads/${leadId}`);
-  }
-
-  createCampaignSegment(listId, campaignSegment = {}) {
-    return axios.post(`${this.url}/lists/${listId}/campaign_segment`, {
-      campaign_segment: campaignSegment,
-    });
   }
 
   getSettings() {

@@ -4,7 +4,11 @@ import { mount, flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import ProspectingSearchPage from '../../pages/ProspectingSearchPage.vue';
-import { TOUR_ALREADY_SEEN, uiSettingsStore } from './uiSettingsStore';
+import {
+  CURRENT_USER_ID,
+  TOUR_ALREADY_SEEN,
+  uiSettingsStore,
+} from './uiSettingsStore';
 
 const HOUR_MS = 60 * 60 * 1000;
 const LOCATION_DEBOUNCE_WAIT_MS = 320;
@@ -74,9 +78,8 @@ export const settingsFixture = (extra = {}) => ({
   scoring_profile_id: 9,
   default_crm_pipeline_id: 3,
   default_crm_stage_id: 31,
-  // Quem abre a tela nos testes pode criar card e mexer em campanha (#682).
+  // Quem abre a tela nos testes pode criar card (#682).
   can_send_to_crm: true,
-  can_manage_campaigns: true,
   // E é administrador da conta: vê o detalhe técnico da nota (#732, item 9).
   can_view_score_details: true,
   ...extra,
@@ -84,6 +87,7 @@ export const settingsFixture = (extra = {}) => ({
 
 export const bakerySearch = (extra = {}) => ({
   id: 11,
+  user_id: CURRENT_USER_ID,
   query: 'padaria',
   location: 'Curitiba, PR',
   area_type: 'radius',
@@ -103,6 +107,7 @@ export const bakerySearch = (extra = {}) => ({
 
 export const gymSearch = (extra = {}) => ({
   id: 12,
+  user_id: CURRENT_USER_ID,
   query: 'academia',
   location: 'Londrina, PR',
   area_type: 'viewport',

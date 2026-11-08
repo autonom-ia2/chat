@@ -16,6 +16,11 @@ vi.mock('vue-i18n', () => ({
   }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// Os nomes das caixas (#2680) vêm do store; aqui a conta não tem nenhuma.
+vi.mock('dashboard/composables/store', async () => {
+  const vue = await import('vue');
+  return { useMapGetter: () => vue.ref([]) };
+});
 const permissao = vi.hoisted(() => ({ funil: true }));
 vi.mock(
   'dashboard/routes/dashboard/crm/composables/useCrmPermissions',
@@ -152,10 +157,13 @@ describe('gatilhos de card', () => {
     ]);
     // E aí lê os funis e as etapas, agrupadas pelo funil.
     expect(comTudo.escolhasDoGatilho.value.etapas).toEqual(ESCOLHAS.etapas);
-    // Sem gatilho de data oferecido, os campos de data não são lidos.
+    // Sem gatilho de data oferecido, os campos de data não são lidos; sem o de
+    // reunião, nem as páginas de agendamento.
     expect(comTudo.escolhasDoGatilho.value.nomes).toEqual({
       ...ESCOLHAS.nomes,
       campo: { 'Crm::Card': {}, Contact: {} },
+      pagina: {},
+      caixa: {},
     });
   });
 

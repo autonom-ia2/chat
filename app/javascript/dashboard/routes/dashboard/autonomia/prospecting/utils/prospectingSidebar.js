@@ -9,12 +9,71 @@ const SETTINGS_ROUTES = [
   'autonomia_prospecting_settings',
 ];
 
+// #2692 — com a flag prospeccao_nova (protótipo), o menu abre as telas novas:
+// "Achar empresas" (só quem busca) e "Suas buscas", e mantém "Listas", que
+// ninguém decidiu tirar (revisão do #2712). "Para chamar" (a fila) é fase 5:
+// fora do menu, e a rota só abre na demonstração.
+// Configurações saem do menu lateral e continuam em Configurações da conta.
+const ACHAR_ROUTES = [
+  'autonomia_prospecting_achar',
+  'autonomia_prospecting_achar_buscas',
+  'autonomia_prospecting_achar_busca',
+  'autonomia_prospecting_achar_nova',
+  'autonomia_prospecting_lists',
+  'autonomia_prospecting_para_chamar',
+];
+
+const acharItems = ({ podeBuscar, t, accountScopedRoute }) => [
+  {
+    name: 'Prospecting',
+    label: t('SIDEBAR.PROSPECTING'),
+    icon: 'i-lucide-search',
+    activeOn: ACHAR_ROUTES,
+    // Fase 1: Achar empresas, Suas buscas e Listas. "Para chamar" (fase 5)
+    // abre pela URL e não entra no menu (decisão da rodada 3).
+    children: [
+      ...(podeBuscar
+        ? [
+            {
+              name: 'Prospecting Achar',
+              label: t('PROSPECTING_ACHAR.MENU.ACHAR'),
+              to: accountScopedRoute('autonomia_prospecting_achar'),
+              // A lista logo depois de buscar também marca "Achar empresas".
+              activeOn: [
+                'autonomia_prospecting_achar',
+                'autonomia_prospecting_achar_nova',
+              ],
+            },
+          ]
+        : []),
+      {
+        name: 'Prospecting Buscas',
+        label: t('PROSPECTING_ACHAR.MENU.BUSCAS'),
+        to: accountScopedRoute('autonomia_prospecting_achar_buscas'),
+        activeOn: [
+          'autonomia_prospecting_achar_buscas',
+          'autonomia_prospecting_achar_busca',
+        ],
+      },
+      {
+        name: 'Prospecting Lists',
+        label: t('SIDEBAR.PROSPECTING_LISTS'),
+        to: accountScopedRoute('autonomia_prospecting_lists'),
+        activeOn: ['autonomia_prospecting_lists'],
+      },
+    ],
+  },
+];
+
 export const prospectingSidebarItems = ({
   isVisible,
   t,
   accountScopedRoute,
+  novaOn = false,
+  podeBuscar = false,
 }) => {
   if (!isVisible) return [];
+  if (novaOn) return acharItems({ podeBuscar, t, accountScopedRoute });
 
   return [
     {

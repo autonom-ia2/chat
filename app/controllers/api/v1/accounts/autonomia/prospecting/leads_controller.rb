@@ -1,6 +1,6 @@
 class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Accounts::Autonomia::Prospecting::BaseController
   before_action :authorize_crm_card_create!, only: [:create_crm_card, :create_crm_cards]
-  before_action -> { authorize_campaign_update!(params[:campaign_id]) }, only: [:create_campaign_segment]
+  before_action :authorize_crm_owner_choice!, only: [:create_crm_card, :create_crm_cards], if: :chosen_owner_id
 
   def index
     leads = filtered_leads_scope.includes(*lead_preloads).order(created_at: :desc).limit(100)
@@ -77,18 +77,6 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     render_crm_send_error('crm_disabled')
   end
 
-  # "Adicionar à campanha" a partir da seleção (#680, ACAO-25/26/27): a seleção vira lista e segue o segmento das Listas.
-  def create_campaign_segment
-    render json: { payload: selection_segment_payload(selection_campaign_segment.perform) }, status: :created
-  rescue ActiveRecord::RecordNotFound
-    render_campaign_error('prospecting.campaign.not_found', status: :not_found)
-  rescue ActiveRecord::RecordInvalid => e
-    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
-  rescue ::Autonomia::Prospecting::SelectionCampaignSegment::Error => e
-    segment = ::Autonomia::Prospecting::CampaignSegmentPayload.blocked_only(e.blocked_leads, missing_lead_ids: e.missing_lead_ids)
-    render_campaign_error(e.message, payload: { segment: segment })
-  end
-
   def verify_whatsapp
     result = ::Autonomia::Prospecting::WhatsappVerifier.new(
       lead: leads_scope.find(params[:id])
@@ -141,8 +129,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   def adopt_owner
     lead = leads_scope.find(params[:id])
     result = ::Autonomia::Prospecting::OwnerAdoption.new(
-      lead: lead, user: Current.user, owner_name: params[:owner_name],
-      can_update_card: lead.crm_card.nil? || Pundit.policy!(pundit_user, lead.crm_card).update?
+      lead: lead, user: Current.user, owner_name: params[:owner_name], can_update_card: can_update_lead_card?(lead)
     ).perform
 
     render json: { payload: lead_payload(lead.reload), contact_outcome: result.contact_outcome, shared_lead_name: result.shared_lead_name }
@@ -183,18 +170,10 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     )
   end
 
-  # Só os leads que a pessoa vê (leads_scope) entram na lista nova; os outros voltam em missing_lead_ids.
-  def selection_campaign_segment
-    ::Autonomia::Prospecting::SelectionCampaignSegment.new(
-      account: Current.account, user: Current.user, lead_ids: params[:lead_ids], leads_scope: leads_scope,
-      campaign: { id: params[:campaign_id], type: params[:campaign_type] }, segment_name: params[:segment_name]
-    )
-  end
-
+  # `owner_id` (#2694): com quem ficam os cards, conferido antes (authorize_crm_owner_choice!) e contra o funil (CrmCardBatch).
   def run_crm_send(lead_ids, pipeline_id, stage_id)
-    ::Autonomia::Prospecting::CrmCardBatch.new(
-      account: Current.account, user: Current.user, lead_ids: lead_ids, leads_scope: leads_scope, pipeline_id: pipeline_id, stage_id: stage_id
-    ).perform
+    ::Autonomia::Prospecting::CrmCardBatch.new(account: Current.account, user: Current.user, leads_scope: leads_scope, owner_id: chosen_owner_id,
+                                               lead_ids: lead_ids, pipeline_id: pipeline_id, stage_id: stage_id).perform
   end
 
   def crm_send_payload(result)
@@ -209,16 +188,11 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     render json: { error: failure[:message], code: failure[:reason_code], payload: payload }, status: :unprocessable_entity
   end
 
-  def selection_segment_payload(result)
-    {
-      list: list_summary_payload(result.segment.list),
-      segment: ::Autonomia::Prospecting::CampaignSegmentPayload.build(result.segment, missing_lead_ids: result.missing_lead_ids)
-    }
-  end
-
   def crm_card_params
     params.require(:crm_card).permit(:pipeline_id, :stage_id)
   end
+
+  def can_update_lead_card?(lead) = lead.crm_card.nil? || Pundit.policy!(pundit_user, lead.crm_card).update?
 
   def lead_params
     params.require(:lead).permit(:status, :discard_reason).tap do |attributes|
