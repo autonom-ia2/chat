@@ -1192,12 +1192,29 @@
   enabled: true
   column: feature_flags_ext_2
 
+# Prospecção nova, "Achar empresas" (#2692, F1 #2693): ligada, o menu Prospecção abre as telas novas (porta com "O quê?"
+# e "Onde?", lista com mapa que se completa ao vivo, gaveta da empresa, envio ao funil e Suas buscas). Desligada: as telas
+# de hoje, intactas. Rollback: desligar a flag na conta. Sem migration. Bit: posição 29 (268435456), dada pela
+# Orquestração. Depois do deploy liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: prospeccao_nova
+  display_name: Prospecção › achar empresas (nova)
+  enabled: true
+  column: feature_flags_ext_2
+
+# RAG v2, F1 (#1431): o material da base é lido pela estrutura que o próprio formato tem (título, lista e tabela) e
+# cortado por seção, com o caminho e a página em cada trecho. Ligada: o material novo, ou lido de novo, entra pelo
+# corte novo. Desligada: o corte de hoje. O que já foi lido fica como está até ser lido de novo. Rollback: desligar a
+# flag na conta. Bit: posição 30 (536870912), dada pela Orquestração. Liga em todas as contas das 2 stacks.
+- name: rag_corte_por_estrutura
+  display_name: Agentes › base lida pela estrutura
+  enabled: true
+  column: feature_flags_ext_2
+
 # Agentes: ferramentas geridas pela conta (#1430, tema 9 do épico #1424). Ligada: o administrador da conta e quem tem a
 # chave `autonomia_tools_manage` (protegida, só o administrador entrega) criam, editam, testam, ligam e apagam as
 # ferramentas HTTP dos agentes. Desligada: como antes, só a equipe da plataforma. Sem migration. Rollback: desligar a
-# flag na conta. Fim da feature_flags_ext_2, depois de anuncios_login_unico: posição 29 (valor 268435456, 1 << 28),
-# provisória pela ordem da main de 08/11; a Orquestração confirma na hora da fila. Liga em todas as contas ativas das
-# duas stacks (regra de 07/11), com OK do Rodrigo.
+# flag na conta. Posição 31 (1073741824, 1 << 30), dada pela Orquestração em 08/11. Depois do deploy liga em todas as
+# contas ativas das 2 stacks (regra de 07/11).
 - name: agente_ferramentas_delegadas
   display_name: Agentes › ferramentas geridas pela conta
   enabled: false
