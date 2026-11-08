@@ -98,15 +98,17 @@ module Autonomia::Automacao::Escuta
   end
 
   # G32: a reunião do card foi marcada, remarcada ou cancelada. Quem espera no próprio card ("esperar até ter reunião
-  # marcada") confere a condição agora, em vez de no fim do prazo.
+  # marcada") confere a condição agora, em vez de no fim do prazo. #2710: também quem espera em outro card do mesmo
+  # contato, no contato ou numa conversa dele (`contato.tem_reuniao_marcada`).
   def acordar_o_card(card)
-    esperando = ::Autonomia::Automacao::Execucao.where(account_id: card.account_id, estado: 'esperando', alvo: card)
-    acordar_quem_espera(esperando)
+    espera = ::Autonomia::Automacao::EsperaDaReuniao
+    acordar_quem_espera(espera.de(card.account_id, card.id), filtro: espera.method(:le_reuniao?))
   end
 
-  def acordar_quem_espera(execucoes)
+  # `filtro`: só reserva a execução que ele aceita (a reunião acorda só quem lê reunião).
+  def acordar_quem_espera(execucoes, filtro: nil)
     execucoes.includes(:versao).find_each do |execucao|
-      reservar(execucao) if esperando_condicao?(execucao)
+      reservar(execucao) if esperando_condicao?(execucao) && (filtro.nil? || filtro.call(execucao))
     rescue StandardError => e
       registrar_erro("não acordou execucao=#{execucao.id}", e)
     end
@@ -181,7 +183,8 @@ module Autonomia::Automacao::Escuta
   #
   # Roda no after_commit do card: um erro aqui não pode quebrar o pedido de quem moveu o card, nem perder o evento. Em
   # erro, despacha assim mesmo (o job assíncrono decide) e loga só a classe.
-  # A reunião (G32) assina também quando há execução esperando no próprio card: ela acorda para conferir a condição.
+  # A reunião (G32) assina também quando há execução esperando no card ou no contato dele (#2710): ela acorda para
+  # conferir a condição.
   def assinante?(account, evento, mudou = {}, card_id: nil)
     tipos = tipos_ligados(account, evento)
     return false if tipos.blank?
@@ -202,7 +205,7 @@ module Autonomia::Automacao::Escuta
 
   def espera_no_card?(account, tipos, card_id)
     card_id.present? && tipos.any? { |tipo| ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo) } &&
-      ::Autonomia::Automacao::Execucao.exists?(account_id: account.id, estado: 'esperando', alvo_type: 'Crm::Card', alvo_id: card_id)
+      ::Autonomia::Automacao::EsperaDaReuniao.de(account.id, card_id).exists?
   end
 
   # "tipo = X AND (parâmetro vazio OR parâmetro = valor do evento)", com os valores escapados.

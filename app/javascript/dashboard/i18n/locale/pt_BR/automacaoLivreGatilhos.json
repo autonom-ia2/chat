@@ -15,7 +15,8 @@
       "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada",
       "CARD_PARADO": "Quando o card fica parado numa etapa",
       "CARD_DATA": "Perto de uma data do card",
-      "CONTATO_DATA": "Perto de uma data do contato"
+      "CONTATO_DATA": "Perto de uma data do contato",
+      "CARD_ANTES_DA_REUNIAO": "Antes de uma reunião"
     },
     "ORIGEM": {
       "CONVERSA": "Da conversa",
@@ -43,7 +44,8 @@
       "QUANDO": "Antes ou depois da data",
       "HORA": "A partir de que hora",
       "REPETE": "Repete",
-      "PAGINA_ID": "Página de agendamento"
+      "PAGINA_ID": "Página de agendamento",
+      "ANTES": "Quanto tempo antes do início"
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversa e mensagem",
@@ -62,7 +64,8 @@
       "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada num card de {funil}",
       "CARD_PARADO": "Quando o card fica {dias} dias parado em {etapa}",
       "CARD_DATA": "{dias} dias {quando} de {campo} do card, a partir das {hora}h",
-      "CONTATO_DATA": "{dias} dias {quando} de {campo} do contato, a partir das {hora}h"
+      "CONTATO_DATA": "{dias} dias {quando} de {campo} do contato, a partir das {hora}h",
+      "CARD_ANTES_DA_REUNIAO": "{antes} antes de uma reunião"
     },
     "GATILHO_NO_FUNIL": "{frase}, no funil {funil}",
     "GATILHO_NA_PAGINA": "{frase}, pela página {pagina}",
@@ -89,7 +92,8 @@
       "AVISO_DATA": "Confere a cada 15 minutos, no fuso da conta. Data escrita em outro formato não conta.",
       "SEM_CAMPO": "Não há campo de data aqui. Crie um em Configurações › Atributos personalizados.",
       "HORA": "{hora}h",
-      "ERRO_CAMPOS": "Não consegui carregar os campos de data. Feche e abra de novo."
+      "ERRO_CAMPOS": "Não consegui carregar os campos de data. Feche e abra de novo.",
+      "AVISO_LEMBRETE": "Confere a cada 15 minutos. Se a reunião for remarcada, lembra no horário novo; se for cancelada, não lembra. Reunião marcada com menos tempo do que isso é lembrada logo."
     },
     "GATILHO_DE_REUNIAO": {
       "QUALQUER_PAGINA": "Qualquer página",

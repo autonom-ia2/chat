@@ -271,7 +271,11 @@ const gatilhoPronto = gatilho =>
       ?.parametros || []
   )
     .filter(parametro => parametro.obrigatorio)
-    .every(parametro => !vazio(gatilho[parametro.nome]));
+    .every(parametro =>
+      parametro.peca === 'antes'
+        ? Number.isInteger(gatilho[parametro.nome]?.valor)
+        : !vazio(gatilho[parametro.nome])
+    );
 
 const podeSalvar = computed(() => {
   if (avancada.value || !rascunho.value) return false;

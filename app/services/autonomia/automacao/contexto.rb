@@ -94,6 +94,10 @@ class Autonomia::Automacao::Contexto
   private
 
   def reuniao_da_atividade
-    ::Autonomia::Automacao::ReuniaoDaAtividade.de(card, ::Autonomia::Automacao::Gatilhos.atividade_da_marca(@execucao.evento))
+    reuniao = ::Autonomia::Automacao::ReuniaoDaAtividade
+    gatilhos = ::Autonomia::Automacao::Gatilhos
+    return reuniao.do_lembrete(card, @execucao.evento) if @execucao.chave_gatilho == gatilhos::LEMBRETE
+
+    reuniao.de(card, gatilhos.atividade_da_marca(@execucao.evento))
   end
 end

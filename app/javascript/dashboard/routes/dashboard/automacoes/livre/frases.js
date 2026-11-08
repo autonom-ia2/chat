@@ -26,6 +26,18 @@ const VALOR_DA_PECA = {
       ? t(`AUTOMACAO_LIVRE.QUANDO_DA_DATA.${valor.toUpperCase()}`)
       : undefined,
   campo: (valor, t, nomes, alvo) => nomes.campo?.[alvo]?.[valor],
+  // #2709: o lembrete diz quanto tempo antes da reunião ("1 dia").
+  antes: (valor, t) =>
+    Number.isInteger(valor?.valor) && valor?.unidade
+      ? t(`${P}.DURACAO`, {
+          valor: valor.valor,
+          unidade: t(
+            `AUTOMACAO_LIVRE.UNIDADES.${valor.unidade.toUpperCase()}`,
+            {},
+            valor.valor
+          ),
+        })
+      : undefined,
 };
 const valorNaFrase = (peca, valor, t, nomes, alvo) =>
   VALOR_DA_PECA[peca]

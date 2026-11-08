@@ -15,6 +15,13 @@ module Autonomia::Automacao::ReuniaoDaAtividade
     reuniao_id && card.account.crm_meetings.find_by(id: reuniao_id, card_id: card.id)
   end
 
+  # O lembrete (#2709) não tem atividade: a reunião vem da marca da execução, presa ao card e à conta do mesmo jeito.
+  # Só a agendada: cancelada entre a varredura e o passo, o lembrete não lê a reunião (o passo que a pede pula).
+  def do_lembrete(card, marca)
+    reuniao_id = ::Autonomia::Automacao::Gatilhos.reuniao_da_marca(marca)
+    reuniao_id && card.account.crm_meetings.find_by(id: reuniao_id, card_id: card.id, status: :scheduled)
+  end
+
   # O id da página em que a reunião foi marcada; nil quando foi marcada na tela. A IA marca pela página
   # (o Booker grava o id), então a reunião dela tem a página.
   def pagina(reuniao) = reuniao&.metadata.to_h[PAGINA]

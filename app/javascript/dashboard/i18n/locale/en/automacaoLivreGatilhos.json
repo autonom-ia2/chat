@@ -15,7 +15,8 @@
       "CARD_REUNIAO_CANCELADA": "When a meeting is canceled",
       "CARD_PARADO": "When the card is stuck in a stage",
       "CARD_DATA": "Around a card date",
-      "CONTATO_DATA": "Around a contact date"
+      "CONTATO_DATA": "Around a contact date",
+      "CARD_ANTES_DA_REUNIAO": "Before a meeting"
     },
     "ORIGEM": {
       "CONVERSA": "From the conversation",
@@ -43,7 +44,8 @@
       "QUANDO": "Before or after the date",
       "HORA": "From what time",
       "REPETE": "Repeats",
-      "PAGINA_ID": "Booking page"
+      "PAGINA_ID": "Booking page",
+      "ANTES": "How long before it starts"
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversation and message",
@@ -62,7 +64,8 @@
       "CARD_REUNIAO_CANCELADA": "When a meeting is canceled on a {funil} card",
       "CARD_PARADO": "When the card is stuck in {etapa} for {dias} days",
       "CARD_DATA": "{dias} days {quando} the card {campo}, from {hora}h",
-      "CONTATO_DATA": "{dias} days {quando} the contact {campo}, from {hora}h"
+      "CONTATO_DATA": "{dias} days {quando} the contact {campo}, from {hora}h",
+      "CARD_ANTES_DA_REUNIAO": "{antes} before a meeting"
     },
     "GATILHO_NO_FUNIL": "{frase}, in the {funil} pipeline",
     "GATILHO_NA_PAGINA": "{frase}, from the {pagina} page",
@@ -89,7 +92,8 @@
       "AVISO_DATA": "Checked every 15 minutes, in the account time zone. A date written in another format does not count.",
       "SEM_CAMPO": "There is no date field here. Create one in Settings › Custom attributes.",
       "HORA": "{hora}h",
-      "ERRO_CAMPOS": "Could not load the date fields. Close and open it again."
+      "ERRO_CAMPOS": "Could not load the date fields. Close and open it again.",
+      "AVISO_LEMBRETE": "Checked every 15 minutes. If the meeting is rescheduled, it reminds at the new time; if canceled, it does not remind. A meeting booked with less time than this is reminded right away."
     },
     "GATILHO_DE_REUNIAO": {
       "QUALQUER_PAGINA": "Any page",

@@ -3,13 +3,15 @@ import { computed, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import LivreDuracao from './LivreDuracao.vue';
 
 // #2499 — o gatilho no "Alterar": o seletor, agrupado quando há mais de um
 // grupo (conversa e mensagem, card do funil), e o que o gatilho escolhido pede
 // pelo catálogo (`parametros`): a etapa, agrupada pelo funil, ou o funil
 // (vazio = todos). Os de card só chegam aqui com a flag e para quem pode mexer
 // no funil. Os de tempo (PR3a) pedem também os dias, o campo de data do alvo,
-// antes ou depois e a hora.
+// antes ou depois e a hora. O lembrete antes da reunião (#2709) pede quanto
+// tempo antes.
 const props = defineProps({
   modelValue: { type: Object, default: null },
   gatilhos: { type: Array, required: true },
@@ -47,6 +49,7 @@ const pede = peca => pedePeca(entrada.value, peca);
 // etapa" pede a etapa, mas é de tempo (pede os dias) e tem o aviso dele.
 const deEtapa = computed(() => pede('etapa') && !pede('dias'));
 const avisoDeTempo = computed(() => {
+  if (pede('antes')) return 'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_LEMBRETE';
   if (pede('campo')) return 'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_DATA';
   if (pede('dias')) return 'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_PARADO';
   return null;
@@ -92,8 +95,10 @@ const campos = computed(
 // dias antes, a partir das 8h.
 const PADRAO_DO_PARADO = { dias: 3 };
 const PADRAO_DA_DATA = { dias: 30, quando: 'antes', hora: 8 };
+const PADRAO_DO_LEMBRETE = { antes: { valor: 1, unidade: 'dias' } };
 const padraoDo = tipo => {
   const item = entradaDo(tipo);
+  if (pedePeca(item, 'antes')) return PADRAO_DO_LEMBRETE;
   if (pedePeca(item, 'campo')) return PADRAO_DA_DATA;
   if (pedePeca(item, 'dias')) return PADRAO_DO_PARADO;
   return {};
@@ -103,6 +108,11 @@ const funis = computed(() => [
   { value: '', label: t('AUTOMACAO_LIVRE.GATILHO_DO_CARD.TODOS_OS_FUNIS') },
   ...(props.escolhas.funis || []),
 ]);
+// As unidades do "quanto tempo antes" (as mesmas do esperar).
+const UNIDADES = ['minutos', 'horas', 'dias'].map(valor => ({
+  valor,
+  frase: `AUTOMACAO_LIVRE.UNIDADES.${valor.toUpperCase()}`,
+}));
 // G32: a página de agendamento da reunião ("a reunião da renovação").
 const paginas = computed(() => [
   {
@@ -152,7 +162,10 @@ const mudar = (nome, valor) => {
       class="flex flex-col gap-1.5"
       :data-parametro="parametro.nome"
     >
-      <span class="text-sm font-medium text-n-slate-12">
+      <span
+        v-if="parametro.peca !== 'antes'"
+        class="text-sm font-medium text-n-slate-12"
+      >
         {{ $t(parametro.frase) }}
       </span>
       <ChoiceSelect
@@ -172,6 +185,14 @@ const mudar = (nome, valor) => {
         class="w-28"
         :aria-label="$t(parametro.frase)"
         @update:model-value="valor => mudar(parametro.nome, lerDias(valor))"
+      />
+      <LivreDuracao
+        v-else-if="parametro.peca === 'antes'"
+        data-antes
+        :rotulo="$t(parametro.frase)"
+        :model-value="modelValue?.[parametro.nome]"
+        :unidades="UNIDADES"
+        @update:model-value="valor => mudar(parametro.nome, valor)"
       />
       <ChoiceSelect
         v-else-if="parametro.peca === 'hora'"

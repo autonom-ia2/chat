@@ -27,6 +27,13 @@ class Autonomia::Automacao::Valores
     'contato.telefone' => ->(contato) { contato.phone_number },
     'contato.empresa_id' => ->(contato) { contato.company_id },
     'contato.etiquetas' => ->(contato) { contato.label_list },
+    # #2710: o contato tem reunião marcada e ainda por vir em qualquer card dele. A página de agendamento põe a reunião
+    # no card aberto do funil e, sem ele (o card já ganho), cria outro: quem espera no card ganho lê este valor, não o
+    # do card. O "esperar até" acorda com a reunião de qualquer card do contato (Escuta#acordar_o_card).
+    'contato.tem_reuniao_marcada' => lambda do |contato|
+      cards = ::Crm::Card.where(account_id: contato.account_id, contact_id: contato.id).select(:id)
+      contato.account.crm_meetings.upcoming.exists?(card_id: cards)
+    end,
     # `card.id` é o id do banco: é o que as rotas do card recebem e o que a tela mostra (#123).
     'card.id' => ->(card) { card.id },
     'card.titulo' => ->(card) { card.title },
@@ -94,7 +101,8 @@ class Autonomia::Automacao::Valores
     'conversa.iniciada_por' => { 'opcoes' => %w[cliente equipe], 'operadores' => %w[igual diferente] },
     'conversa.cliente_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'card.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] }
+    'card.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'contato.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] }
   }.freeze
 
   ATRIBUTOS = {

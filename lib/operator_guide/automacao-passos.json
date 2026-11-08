@@ -280,6 +280,29 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.REPETE"
         }
       ]
+    },
+    {
+      "tipo": "card.antes_da_reuniao",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_ANTES_DA_REUNIAO",
+      "grupo": "reuniao",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "reunioes": true,
+      "parametros": [
+        {
+          "nome": "antes",
+          "peca": "antes",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.ANTES"
+        },
+        {
+          "nome": "pagina_id",
+          "peca": "pagina",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.PAGINA_ID"
+        }
+      ]
     }
   ],
   "operadores": [
@@ -430,6 +453,31 @@
       "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ETIQUETAS"
     },
     {
+      "caminho": "contato.tem_reuniao_marcada",
+      "base": "contato",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_TEM_REUNIAO_MARCADA",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
       "caminho": "card.id",
       "base": "card",
       "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ID"
@@ -512,7 +560,8 @@
       "so_nos_gatilhos": [
         "card.reuniao_marcada",
         "card.reuniao_remarcada",
-        "card.reuniao_cancelada"
+        "card.reuniao_cancelada",
+        "card.antes_da_reuniao"
       ]
     },
     {
@@ -522,7 +571,8 @@
       "so_nos_gatilhos": [
         "card.reuniao_marcada",
         "card.reuniao_remarcada",
-        "card.reuniao_cancelada"
+        "card.reuniao_cancelada",
+        "card.antes_da_reuniao"
       ]
     },
     {
