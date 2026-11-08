@@ -30,7 +30,7 @@ class Autonomia::Automacao::Executor
   Duracao = ::Autonomia::Automacao::Duracao
   # Passos que falam com gente (F4): só com a flag da F4.
   NATIVOS = { 'mensagem' => ::Autonomia::Automacao::PassoDeMensagem, 'avisar' => ::Autonomia::Automacao::PassoDeAviso,
-              'email' => ::Autonomia::Automacao::PassoDeEmail }.freeze
+              'email' => ::Autonomia::Automacao::PassoDeEmail, 'campanha' => ::Autonomia::Automacao::PassoDeCampanha }.freeze
   # Os passos de IA (F7, #2500); com eles vem a parada fora da janela (F4.4, #2573), que vale também para a mensagem.
   include ::Autonomia::Automacao::IaNoExecutor
   # O "criar card" (G4).

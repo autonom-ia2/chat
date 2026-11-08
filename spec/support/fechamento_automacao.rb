@@ -161,7 +161,9 @@ module FechamentoAutomacao::Lacunas
         %w[card.link_da_agenda conversa.link_da_agenda].any? { |caminho| valor?(caminho) }
     },
     'G13' => -> { passo?('webhook') },
-    'G14' => -> { passo?('campanha') },
+    # Fechada com prova (#2630): o passo existe no esquema e o motor o roda; o ponta a ponta está em
+    # spec/fechamento/automacao/g14_campanhas_spec.rb.
+    'G14' => -> { passo?('campanha') && Autonomia::Automacao::Executor::NATIVOS.key?('campanha') },
     # A Atribuição é o motor único de entrega, inclusive para agente de IA (regra do Rodrigo). A F7 fechou por outro
     # caminho (G15, D1): o passo próprio "ia_assumir", que passa pela Atribuição do CRM, e não `assignee_type` no
     # atribuir, que a lista agora proíbe. "Tirar" é atribuir de volta à pessoa ou ao time, que o passo já faz.
@@ -178,7 +180,26 @@ module FechamentoAutomacao::Lacunas
     'G25' => -> { acao?('POST crm/cards/:id/close') },
     'G26' => -> { passo?('sla') },
     # "Card criado ou atualizado com valor acima de R$ 50 mil" (15) e "card completo" (8, passo 8): só o card criado é a G5.
-    'G27' => -> { gatilho?('card.atualizado', 'card.campo_mudou', 'card.valor_mudou') }
+    'G27' => -> { gatilho?('card.atualizado', 'card.campo_mudou', 'card.valor_mudou') },
+    # G28 (#2674, absorvida pelo lote 2 #2679): o texto da IA vira valor entre passos e a IA lê o card. Segura o 10 e o 13
+    # (#2678) e os 4, 5 e 19. A frente do lote 2 troca o nil pela sonda.
+    'G28' => nil,
+    # Achadas no exemplo 2 (07/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
+    # G29: a origem do card do formulário (anúncio, formulário) como valor da receita, no filtro do gatilho e nos passos.
+    'G29' => nil,
+    # G30: o responsável por um anúncio (o corretor daquele anúncio), para o retorno e o link da agenda.
+    'G30' => nil,
+    # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando".
+    'G31' => nil,
+    # G32: a reunião marcada como condição do "esperar até", no meio da execução.
+    'G32' => nil,
+    # Achadas no exemplo 7 (auditoria dos termos, 07/11), ainda sem desenho; G33 e G34 são do lote 3 (#2680).
+    # G35: o público da campanha com exclusão ("todos os outros", "perguntou e não comprou").
+    'G35' => nil,
+    # G36: o filtro "respondeu à campanha X" no gatilho da mensagem.
+    'G36' => nil,
+    # G37: o gatilho que roda uma vez, numa data ("a quinta antes da Black Friday"), não toda semana.
+    'G37' => nil
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

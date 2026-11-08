@@ -5,14 +5,18 @@
 #
 # No recorrente (#2635, G7), a seleção: pelo menos uma condição (sem nenhuma, a automação pegaria a conta inteira por
 # engano), só as condições do alvo (card ou contato) e funil, etapa, responsável, etiqueta e atributo da conta. O da
-# conta não tem seleção (o esquema recusa).
+# conta não tem seleção (o esquema recusa) e roda sem conversa, card ou contato: só ficam o esperar e o disparar de
+# campanha (G14), que escolhe o público pela etiqueta. Recusar ao salvar é o que impede o passo de quebrar sem alvo ao
+# rodar.
 class Autonomia::Automacao::ProblemasDoGatilho
   Gatilhos = ::Autonomia::Automacao::Gatilhos
 
-  def initialize(gatilho, conta)
+  # `passos`: todos os passos da receita, inclusive os dos ramos (Receita#passos).
+  def initialize(gatilho, conta, passos: [])
     @gatilho = gatilho
     @tipo = gatilho['tipo']
     @conta = conta
+    @passos = passos
   end
 
   # Frases para a pessoa corrigir; vazio = pode salvar.
@@ -22,13 +26,19 @@ class Autonomia::Automacao::ProblemasDoGatilho
     desligado = Gatilhos.desligado(@tipo, @conta)
     return [texto(desligado)] if desligado
 
-    return [] if Gatilhos.da_conta?(@tipo)
+    return passos_que_pedem_alvo if Gatilhos.da_conta?(@tipo)
     return selecao if Gatilhos.recorrente?(@tipo)
 
     [*etapa_de_fora, *funil_de_fora, *parado_sem_dias, *campo_de_fora]
   end
 
   private
+
+  def passos_que_pedem_alvo
+    @passos.reject { |passo| sem_alvo?(passo) }.map { |passo| texto(:passo_pede_alvo, passo: passo['id']) }
+  end
+
+  def sem_alvo?(passo) = passo['tipo'] == 'esperar' || (passo['tipo'] == 'campanha' && passo['faz'] == 'disparar')
 
   def etapa_de_fora
     etapa = @gatilho['etapa_id']

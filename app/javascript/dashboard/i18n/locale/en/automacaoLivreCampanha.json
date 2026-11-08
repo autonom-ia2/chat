@@ -1,0 +1,23 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "CAMPANHA": {
+      "DISPARAR": "Send a WhatsApp campaign",
+      "NAO_RECEBER": "Mark the contact as “does not receive”",
+      "NAO_RECEBER_DICA": "The contact leaves every campaign and gets no more outbound messages. You can undo it on the contact.",
+      "SO_RECORRENTE": "Sending a campaign only works in an automation that runs on its own, on a schedule. With a conversation or card trigger, each run would send the same campaign again, so it can't be saved.",
+      "CAIXA_DICA": "Only official WhatsApp inboxes.",
+      "SEM_CAIXA": "This account has no official WhatsApp inbox.",
+      "MODELO": "Approved template",
+      "MODELO_OPCAO": "{nome} ({idioma})",
+      "SEM_MODELO": "This inbox has no approved template that fits a campaign.",
+      "MODELO_SUMIU": "The template {nome} is no longer approved in this inbox. Choose another one.",
+      "CUSTO_PROPAGANDA": "Marketing templates cost more on Meta, charged per message.",
+      "VARIAVEL": "Text for variable {numero}",
+      "VARIAVEL_DICA": "The campaign goes to many people at once, so write fixed text.",
+      "ETIQUETAS_DICA": "Whoever has one of these labels when it sends gets it. Adding or removing the label puts the person in or out of the campaign.",
+      "SEM_ETIQUETAS": "This account has no labels yet.",
+      "FRASE_DISPARAR": "Send the WhatsApp campaign “{titulo}”",
+      "FRASE_NAO_RECEBER": "Mark the contact as “does not receive”"
+    }
+  }
+}

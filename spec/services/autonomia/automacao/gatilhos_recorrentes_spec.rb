@@ -318,7 +318,9 @@ RSpec.describe 'Automação livre: gatilho recorrente', :automacao_motor do # ru
       etiquetar = { 'id' => 'p2', 'tipo' => 'acao', 'acao' => 'contato.etiquetar', 'corpo' => { 'labels' => ['newsletter'] } }
 
       expect(problemas.call([esperar_passo('p1')])).to be_empty
-      expect(problemas.call([esperar_passo('p1'), etiquetar])).to eq([I18n.t('autonomia.automacao.receita.passo_pede_alvo', passo: 'p2')])
+      # O passo que pede alvo é recusado pelo gatilho; o que mais houver de errado nele aparece junto.
+      expect(problemas.call([esperar_passo('p1'), etiquetar])).to include(I18n.t('autonomia.automacao.receita.passo_pede_alvo', passo: 'p2'))
+      expect(problemas.call([esperar_passo('p1'), etiquetar])).not_to include(I18n.t('autonomia.automacao.receita.passo_pede_alvo', passo: 'p1'))
       expect(Autonomia::Automacao::Receita.esquema_valido?(receita.call([esperar_passo('p1')], 'selecao' => { 'etiqueta' => 'x' }))).to be(false)
     end
   end

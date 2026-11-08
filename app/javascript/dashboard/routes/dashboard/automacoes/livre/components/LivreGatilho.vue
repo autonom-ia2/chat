@@ -113,6 +113,14 @@ const diasDoMes = computed(() =>
     label: t('AUTOMACAO_LIVRE.GATILHO_RECORRENTE.DIA_DO_MES', { dia: i + 1 }),
   }))
 );
+// #2678: a data vale uma vez (com o ano) ou todo ano (só dia e mês). "Uma vez"
+// é a ausência da chave na receita.
+const repete = computed(() =>
+  ['uma_vez', 'todo_ano'].map(valor => ({
+    value: valor,
+    label: t(`AUTOMACAO_LIVRE.REPETE_DA_DATA.${valor.toUpperCase()}`),
+  }))
+);
 // Os campos de data do alvo do gatilho: do card ou do contato.
 const campos = computed(
   () => props.escolhas.campos?.[entrada.value?.alvo] || []
@@ -263,6 +271,15 @@ const mudar = (nome, valor) => {
         :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
         :options="quando"
         @update:model-value="valor => mudar(parametro.nome, valor)"
+      />
+      <ChoiceSelect
+        v-else-if="parametro.peca === 'repete'"
+        :model-value="modelValue?.[parametro.nome] || 'uma_vez'"
+        :aria-label="$t(parametro.frase)"
+        :options="repete"
+        @update:model-value="
+          valor => mudar(parametro.nome, valor === 'uma_vez' ? '' : valor)
+        "
       />
       <template v-else-if="parametro.peca === 'campo'">
         <ChoiceSelect

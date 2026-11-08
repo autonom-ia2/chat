@@ -52,6 +52,8 @@ const BLOCOS_POR_ARQUIVO = {
     'GATILHO_NAO_DISPARA',
     'GATILHO_DO_CARD',
     'GATILHO_NO_DIA',
+    'GATILHO_TODO_ANO',
+    'REPETE_DA_DATA',
     'QUANDO_DA_DATA',
     'GATILHO_DE_TEMPO',
     'GATILHO_RECORRENTE',
@@ -60,6 +62,7 @@ const BLOCOS_POR_ARQUIVO = {
   'automacaoLivreIa.json': ['IA'],
   'automacaoLivreReceitas.json': ['RECEITAS'],
   'automacaoLivreEnsaio.json': ['ENSAIO', 'HISTORICO'],
+  'automacaoLivreCampanha.json': ['CAMPANHA'],
   'automacaoLivreRetorno.json': ['RETORNO'],
 };
 
