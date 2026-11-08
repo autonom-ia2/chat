@@ -93,6 +93,7 @@ export const FEATURE_FLAGS = {
   CRM_ARQUIVADOS: 'crm_arquivados',
   CRM_LISTA_ACAO: 'crm_lista_acao',
   AGENTES_PAINEL_DESEMPENHO: 'agentes_painel_desempenho',
+  AGENTE_FERRAMENTAS_DELEGADAS: 'agente_ferramentas_delegadas',
   CAMPANHAS_PUBLICO_POR_CONVERSA: 'campanhas_publico_por_conversa',
   FUNCOES_GUIADAS: 'funcoes_guiadas',
   AUTOMACAO_EDITOR: 'automacao_editor',
