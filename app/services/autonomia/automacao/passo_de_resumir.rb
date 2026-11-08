@@ -10,7 +10,7 @@
 #
 # G42 (#2721): lê também o que a própria execução mandou ao cliente (EnviosDaExecucao): o e-mail em conversa própria, o
 # modelo recusado (marcado como não entregue) e as respostas nessas conversas, só das que quem ligou vê. A resposta de
-# outra conversa só entra se o público do resumo a vê, e o resumo que a leu não fica guardado para reuso.
+# outra conversa só entra se todos que veem a conversa do alvo também a veem, e o resumo que a leu não fica guardado.
 class Autonomia::Automacao::PassoDeResumir
   include ::Autonomia::Automacao::ComIa
 
@@ -42,7 +42,7 @@ class Autonomia::Automacao::PassoDeResumir
     return negado if negado
 
     aviso = ::Autonomia::Automacao::PassoDeAviso.new(execucao: @execucao, passo: passo_do_aviso, alvo: @conversa) if aviso?
-    estado = leitura_da_execucao(aviso)
+    estado = leitura_da_execucao
     pular = antes_da_ia(aviso, estado)
     return pular if pular
 
@@ -56,10 +56,9 @@ class Autonomia::Automacao::PassoDeResumir
 
   def aviso? = self.class.fala_com_gente?(@passo)
 
-  # G42: o público do resumo (quem o aviso vai mencionar, ou a conversa do alvo na nota) decide que outra conversa entra.
-  def leitura_da_execucao(aviso)
-    @envios = ::Autonomia::Automacao::EnviosDaExecucao.new(execucao: @execucao, conversa: @conversa, leituras: @passo['le'],
-                                                           publico: aviso&.pessoas)
+  # G42: a leitura do passo com o que a execução tentou (EnviosDaExecucao).
+  def leitura_da_execucao
+    @envios = ::Autonomia::Automacao::EnviosDaExecucao.new(execucao: @execucao, conversa: @conversa, leituras: @passo['le'])
     ::Autonomia::Automacao::LeituraDaExecucao.new(leitura, @envios)
   end
 

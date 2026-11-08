@@ -6,20 +6,19 @@
 #   `not_delivered` quando o canal recusou (status failed).
 # - Só entra conversa que quem ligou a automação vê (Acesso.alcanca?, a política da conversa, só leitura). Outras
 #   conversas do contato, que a execução não tocou, não entram.
-# - As respostas das outras conversas (`other_conversations`) vão a quem lê o resumo, então também passam por ele
-#   (parecer de Funções no #2763): no aviso (`publico`), a conversa só entra se todo destinatário a vê; na nota, que
-#   todos da conversa do alvo leem, só entra conversa da mesma caixa do alvo. As que ficam de fora vão em `fora` (os ids).
+# - As respostas das outras conversas (`other_conversations`) vão para a nota ou o aviso, que ficam na conversa do alvo:
+#   qualquer pessoa que abre essa conversa lê o resumo (pareceres de Funções e Qualidade no #2763). Então a outra conversa
+#   só entra se toda pessoa da conta que vê a conversa do alvo também a vê (a mesma política, com caixa, time e função).
+#   As que ficam de fora vão em `fora` (os ids), e o histórico diz quantas.
 # - A conversa do alvo já vai na leitura do passo. Das outras, a mesma leitura de mensagens do passo (o Estado).
 class Autonomia::Automacao::EnviosDaExecucao
   LEITURAS_DE_MENSAGEM = %w[mensagens_recentes mensagens_com_respostas ultima_mensagem].freeze
   MAX_CARACTERES = ::Autonomia::Decisores::Estado::MAX_CARACTERES
 
-  # `publico`: as pessoas que vão receber o resumo (o aviso). nil é a nota.
-  def initialize(execucao:, conversa:, leituras:, publico: nil)
+  def initialize(execucao:, conversa:, leituras:)
     @execucao = execucao
     @conversa = conversa
     @leituras = Array(leituras) & LEITURAS_DE_MENSAGEM
-    @publico = publico
   end
 
   # O que vai à IA junto da leitura do passo. Vazio quando a execução ainda não mandou nada.
@@ -28,10 +27,10 @@ class Autonomia::Automacao::EnviosDaExecucao
                  other_conversations: lidas.map { |conversa| leitura(conversa) }.compact_blank }.compact_blank
   end
 
-  # Leu resposta de outra conversa: o resumo não serve para reuso (ia.<passo>) fora deste público.
+  # Leu resposta de outra conversa: o resumo não fica para reuso (ia.<passo>), que o levaria a outro lugar.
   def outras_lidas? = dados.key?(:other_conversations)
 
-  # Os ids das outras conversas que o público do resumo não vê, para o histórico.
+  # Os ids das outras conversas que nem todos que veem a conversa do alvo veem, para o histórico.
   def fora = (outras - lidas).map(&:display_id)
 
   private
@@ -57,9 +56,11 @@ class Autonomia::Automacao::EnviosDaExecucao
   def outras = visiveis - [@conversa]
 
   def lidas
-    @lidas ||= outras.select do |conversa|
-      @publico.nil? ? conversa.inbox_id == @conversa.inbox_id : @publico.all? { |pessoa| ve?(pessoa, conversa) }
-    end
+    @lidas ||= outras.select { |conversa| quem_ve_o_alvo.all? { |pessoa| ve?(pessoa, conversa) } }
+  end
+
+  def quem_ve_o_alvo
+    @quem_ve_o_alvo ||= outras.empty? ? [] : @conversa.account.users.select { |pessoa| ve?(pessoa, @conversa) }
   end
 
   def envio(mensagem)

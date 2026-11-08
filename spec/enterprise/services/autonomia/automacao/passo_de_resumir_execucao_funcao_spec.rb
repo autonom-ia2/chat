@@ -1,8 +1,8 @@
 require 'rails_helper'
 
-# G42 (#2721) com função personalizada (parecer de Funções no #2763): o resumo em aviso só lê a resposta de outra conversa
-# que todo destinatário vê. Quem vê o WhatsApp do alvo mas não a caixa do e-mail não recebe o que o cliente respondeu
-# por e-mail.
+# G42 (#2721) com função personalizada (pareceres de Funções e Qualidade no #2763): o aviso vira nota na conversa do alvo,
+# e todos que a abrem leem o resumo. A atendente com função vê o WhatsApp do alvo mas não a caixa do e-mail: mesmo sem ser
+# destinatária, a resposta do e-mail fica de fora.
 RSpec.describe Autonomia::Automacao::PassoDeResumir, :automacao_motor do
   include ActiveJob::TestHelper
 
@@ -25,7 +25,7 @@ RSpec.describe Autonomia::Automacao::PassoDeResumir, :automacao_motor do
        'texto' => ['Oi, sua apólice vence em 5 dias.'] },
      esperar_passo('p2'),
      { 'id' => 'p3', 'tipo' => 'resumir', 'le' => %w[mensagens_com_respostas], 'linhas' => 3,
-       'destino' => { 'avisar' => { 'pessoas' => [admin.id, atendente.id] } } },
+       'destino' => { 'avisar' => { 'pessoas' => [admin.id] } } },
      esperar_passo('p4')]
   end
 
@@ -46,7 +46,7 @@ RSpec.describe Autonomia::Automacao::PassoDeResumir, :automacao_motor do
 
   after { Current.reset }
 
-  it 'o destinatário vê o alvo mas não a caixa do e-mail: a resposta do e-mail não vai à IA', :aggregate_failures do
+  it 'quem vê o alvo mas não a caixa do e-mail deixa a resposta do e-mail fora da IA', :aggregate_failures do
     execucao = perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(automacao_ligada(account, admin, passos), conversa) }
     email = Conversation.find_by!(inbox: caixa_de_email)
     create(:message, conversation: email, account: account, message_type: :incoming, content: 'Meu CPF mudou, segue o novo')
@@ -58,6 +58,6 @@ RSpec.describe Autonomia::Automacao::PassoDeResumir, :automacao_motor do
     expect(corpos.sole['input'].to_s).not_to include('Meu CPF mudou, segue o novo')
     expect(corpos.sole['input'].to_s).to include('Quero renovar o seguro do carro')
     registro = Autonomia::Automacao::Registro.find_by!(execucao: execucao, passo: 'p3')
-    expect(registro.dados).to include('pessoas' => contain_exactly(admin.id, atendente.id), 'conversas_fora' => [email.display_id])
+    expect(registro.dados).to include('pessoas' => [admin.id], 'conversas_fora' => [email.display_id])
   end
 end

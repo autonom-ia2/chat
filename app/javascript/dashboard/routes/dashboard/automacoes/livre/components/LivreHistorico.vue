@@ -309,6 +309,19 @@ onMounted(() => carregar());
                     }}
                   </span>
                   <span
+                    v-if="passo.dados.conversas_fora"
+                    data-conversas-fora
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{
+                      $t(
+                        'AUTOMACAO_LIVRE.HISTORICO.CONVERSAS_FORA',
+                        { n: passo.dados.conversas_fora },
+                        passo.dados.conversas_fora
+                      )
+                    }}
+                  </span>
+                  <span
                     v-if="passo.dados.ia?.custo_usd != null"
                     data-ia
                     class="text-xs text-n-slate-10"

@@ -66,11 +66,14 @@ RSpec.describe Autonomia::Automacao::PassoDeResumir, :automacao_motor do
     expect(corpos.sole['instructions']).to include('automation_sends', 'not_delivered')
   end
 
-  # A nota todos da conversa do alvo leem: a resposta de outra caixa não entra, e o histórico diz qual ficou de fora.
-  context 'when o resumo vai numa nota' do
+  # A nota e o aviso ficam na conversa do alvo, e todos que a abrem leem o resumo: a atendente do WhatsApp, fora da caixa do
+  # e-mail, faz a resposta do e-mail ficar de fora, e o histórico diz qual.
+  context 'when alguém que vê a conversa do alvo não vê a do e-mail' do
     let(:destino) { 'nota' }
 
-    it 'lê só outra conversa da mesma caixa do alvo; a do e-mail fica de fora e vai ao histórico', :aggregate_failures do
+    before { whatsapp.add_members([create(:user, account: account, role: :agent).id]) }
+
+    it 'a resposta do e-mail fica de fora, o envio continua e o histórico registra a conversa', :aggregate_failures do
       execucao = rodar do
         create(:message, conversation: conversa_de_email, account: account, message_type: :incoming, content: 'Resposta por e-mail')
       end
