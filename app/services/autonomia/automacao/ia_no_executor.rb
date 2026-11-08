@@ -42,7 +42,7 @@ module Autonomia::Automacao::IaNoExecutor
   # diz `nota_faltou`. A nota nunca fica duplicada.
   def seguir_pelo_caminho(passo, executor, resultado)
     @tentativas = 0
-    registro = registrar(passo['id'], 'ok', nil, resultado.dados)
+    registro = registrar(passo['id'], resultado.tipo == :pulado ? 'pulado' : 'ok', resultado.motivo, resultado.dados)
     nota = anotar(executor, resultado.dados['ramo'])
     registro.update!(dados: registro.dados.merge(nota ? { 'nota_id' => nota.id } : { 'nota_faltou' => true })) unless nota == false
     @roteiro.entrar_no_caminho(passo, resultado.dados['ramo'])

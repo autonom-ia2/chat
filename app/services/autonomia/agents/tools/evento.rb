@@ -22,10 +22,19 @@ class Autonomia::Agents::Tools::Evento
   FECHO_KEY = 'autonomia_evento_fecho'.freeze
 
   COMECO = 'cotacao_comecou'.freeze
+  # #1430: os desfechos da ferramenta HTTP assíncrona (`HttpAssincronaJob`). Genéricos: a ferramenta é do dono da conta,
+  # e o resultado pode ser de qualquer assunto. Os fatos são o que o job gravou na linha, não o catálogo das nativas.
+  CONSULTA_CONCLUIDA = 'consulta_concluida'.freeze
+  CONSULTA_FALHOU = 'consulta_falhou'.freeze
+  CONSULTAS = [CONSULTA_CONCLUIDA, CONSULTA_FALHOU].freeze
+  # O resultado da consulta é DADO DE UM SISTEMA DE FORA, e não entra cru no aviso do sistema: vai cercado, com o aviso
+  # de dado externo (`Recusa::AVISO_DE_DADO_EXTERNO`). A cerca leva um marcador aleatório por evento: o sistema de fora
+  # não o conhece, e não tem como fechá-la por dentro.
+  CERCA_DO_RESULTADO = '<<<RESULTADO_DA_CONSULTA_%<marcador>s>>>'.freeze
   # A lista fechada. `falta_dado` e `ramo_desconhecido` são as recusas do envio; `concluida`, `valores_guardados`,
   # `falhou`, `incerta`, `encerrada_por_prazo` e `sem_aceitacao` são os desfechos que `Tools::Encerramento` escolhe.
   TIPOS = [COMECO, 'falta_dado', 'ramo_desconhecido', 'concluida', 'valores_guardados', 'falhou', 'incerta',
-           'encerrada_por_prazo', 'sem_aceitacao'].freeze
+           'encerrada_por_prazo', 'sem_aceitacao', *CONSULTAS].freeze
 
   # O que o modelo lê sobre cada tipo, antes dos fatos da ferramenta. Texto para o MODELO: nenhuma palavra daqui
   # chega ao cliente como está.
@@ -39,7 +48,21 @@ class Autonomia::Agents::Tools::Evento
     'incerta' => 'não foi possível confirmar se a consulta chegou a ser feita, e nada chegou à pessoa.',
     'encerrada_por_prazo' => 'a consulta terminou, e o resultado já foi enviado nesta conversa.',
     # chat#612: nada falhou; nenhuma seguradora trouxe proposta. O motivo fica com a equipe (`Tools::NotaInterna`).
-    'sem_aceitacao' => 'a consulta terminou e nenhuma seguradora trouxe proposta; nada chegou à pessoa.'
+    'sem_aceitacao' => 'a consulta terminou e nenhuma seguradora trouxe proposta; nada chegou à pessoa.',
+    CONSULTA_CONCLUIDA => 'a consulta que a pessoa pediu terminou. O resultado está no bloco abaixo e ainda não foi dito a ela.',
+    CONSULTA_FALHOU => 'a consulta que a pessoa pediu não pôde ser concluída (erro ou tempo esgotado), e nada chegou a ela. ' \
+                       'Diga que não conseguiu agora.'
+  }.freeze
+  # #1430: a falha da consulta que tem motivo próprio, pelo código gravado na linha (`ToolRun::CODIGO_DA_CONSULTA`). No
+  # lugar da descrição genérica de `consulta_falhou`, e sem o bloco do resultado (que só repetiria o código).
+  FALHAS_DA_CONSULTA = {
+    ::Autonomia::Agents::ToolRun::INCERTA => 'o pedido que a pessoa fez saiu para o sistema, mas a resposta se perdeu: não dá ' \
+                                             'para confirmar se ele foi registrado, e nada chegou a ela. Diga que não ' \
+                                             'conseguiu confirmar agora e que a equipe vai conferir; não diga que deu certo ' \
+                                             'nem que deu errado.',
+    ::Autonomia::Agents::ToolRun::BLOQUEADA => 'a consulta que a pessoa pediu não foi feita, porque o atendimento automático ' \
+                                               'desta conversa foi pausado ou mudou de responsável, e nada chegou a ela. Diga ' \
+                                               'que não conseguiu fazer a consulta agora.'
   }.freeze
 
   attr_reader :run, :tipo
@@ -73,6 +96,15 @@ class Autonomia::Agents::Tools::Evento
     tipo == COMECO ? COMECO_KEY : FECHO_KEY
   end
 
+  # Um resultado de sistema de fora entre as cercas, com o aviso de dado externo; nil quando vazio.
+  def self.cercado(texto)
+    limpo = texto.to_s.strip
+    return nil if limpo.blank?
+
+    cerca = format(CERCA_DO_RESULTADO, marcador: SecureRandom.hex(8))
+    "Resultado da consulta (#{::Autonomia::Agents::Tools::Recusa::AVISO_DE_DADO_EXTERNO}):\n#{cerca}\n#{limpo}\n#{cerca}"
+  end
+
   def self.nao_disparado(run, tipo, motivo)
     Rails.logger.info("[autonomia][evento] nao disparado run=#{run&.id} tipo=#{tipo.presence || '-'} motivo=#{motivo}")
     false
@@ -93,6 +125,10 @@ class Autonomia::Agents::Tools::Evento
     tipo == COMECO
   end
 
+  def consulta?
+    CONSULTAS.include?(tipo)
+  end
+
   def marca
     "#{run.id}:#{tipo}"
   end
@@ -111,8 +147,10 @@ class Autonomia::Agents::Tools::Evento
   end
 
   # Os fatos da ferramenta para este tipo. NUNCA levanta: sem ferramenta, ou com ela falhando, sai só a descrição.
+  # A consulta HTTP (#1430) traz o que o job gravou; o slug dela pode ser o de uma nativa, e o catálogo não é lido.
   def fatos
     return @fatos if defined?(@fatos)
+    return @fatos = (falha_com_motivo ? nil : self.class.cercado(run.resultado_da_consulta)) if run.consulta_http?
 
     @fatos = ::Autonomia::Agents::Tools::Registry.find(run.slug)&.fatos_do_evento(tipo, run).to_s.strip.presence
   rescue StandardError => e
@@ -121,12 +159,20 @@ class Autonomia::Agents::Tools::Evento
   end
 
   # O que o modelo recebe no lugar da mensagem do cliente: claramente do sistema, com o que aconteceu e os fatos.
+  # A da consulta HTTP (#1430) não fala em cotação: o assunto é o da ferramenta do dono da conta.
   def nota_do_sistema
     [
-      'AVISO DO SISTEMA SOBRE A COTAÇÃO DESTA CONVERSA. Isto não é mensagem da pessoa: é o sistema contando o ' \
-      'que aconteceu, para você falar com ela agora, na sua voz.',
-      "O que aconteceu: #{DESCRICOES.fetch(tipo, tipo)}",
-      ("Fatos: #{fatos}" if fatos)
+      "AVISO DO SISTEMA SOBRE #{consulta? ? 'UMA CONSULTA' : 'A COTAÇÃO'} DESTA CONVERSA. Isto não é mensagem da pessoa: é " \
+      'o sistema contando o que aconteceu, para você falar com ela agora, na sua voz.',
+      "O que aconteceu: #{falha_com_motivo || DESCRICOES.fetch(tipo, tipo)}",
+      fatos && (consulta? ? fatos : "Fatos: #{fatos}")
     ].compact.join("\n")
+  end
+
+  # A descrição própria da falha da consulta (`FALHAS_DA_CONSULTA`), ou nil.
+  def falha_com_motivo
+    return nil unless tipo == CONSULTA_FALHOU && run.consulta_http?
+
+    FALHAS_DA_CONSULTA[run.handle.to_h[::Autonomia::Agents::ToolRun::CODIGO_DA_CONSULTA]]
   end
 end

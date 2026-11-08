@@ -9,10 +9,12 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CuidarLigado from './CuidarLigado.vue';
 import CuidarDono from './CuidarDono.vue';
+import AvisoRedeQueFaltou from './AvisoRedeQueFaltou.vue';
 import {
   FOR_WHOM_LIMIT,
   FRASE_DO_DONO_LIMIT,
   MOTIVOS,
+  podeTentarDeNovo,
   useCuidado,
 } from './useCuidado';
 import { porRede } from './redes';
@@ -95,7 +97,6 @@ const fromKey = computed(() => {
 // Por que não deu para ler: o código do servidor, no erro da leitura (motivo) ou no `status` do Painel que veio sem a
 // lista (needs_login, meta_unavailable…). Com texto próprio quando a tela conhece o código; "Tentar de novo" só no que
 // passa sozinho (a Meta fora do ar, a rede): o resto (sem post, sem caixa, sem login) não cura tentando.
-const PASSAGEIROS = ['meta_unavailable'];
 const genericError = computed(() =>
   t(`${KEY}.SCREEN.${props.origin === 'anuncio' ? 'ERROR_AD' : 'ERROR'}`)
 );
@@ -103,11 +104,17 @@ const problemText = code =>
   MOTIVOS.includes(code)
     ? t(`${KEY}.SCREEN.PROBLEM.${code}`)
     : genericError.value;
-const canRetry = code =>
-  !code || !MOTIVOS.includes(code) || PASSAGEIROS.includes(code);
+const canRetry = podeTentarDeNovo;
 const painelStatus = computed(() =>
   painel.value?.status && painel.value.status !== 'ready'
     ? painel.value.status
+    : null
+);
+// #2522: o aviso da rede que faltou (AvisoRedeQueFaltou). Desligado e sem poder ligar, a tela não mostra lista nem
+// número: sem aviso.
+const networkStatus = computed(() =>
+  painel.value?.status === 'ready' && (on.value || props.canManage)
+    ? painel.value.network_status
     : null
 );
 
@@ -337,6 +344,12 @@ const openInbox = path => {
           @click="carregar"
         />
       </div>
+      <AvisoRedeQueFaltou
+        :network-status="networkStatus"
+        pode-tentar
+        :carregando="carregando"
+        @tentar="carregar"
+      />
       <CuidarLigado
         v-if="on && !changing"
         :data="painel"

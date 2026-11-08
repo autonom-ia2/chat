@@ -7,7 +7,9 @@
 # - `ready`: a lista; `no_post`: o anúncio não aparece no Instagram;
 # - `not_connected`: o Instagram do anúncio não tem caixa nesta conta;
 # - `needs_login`: a caixa existe, mas sem a permissão de comentários (ou esperando nova autorização); vem com o
-#   `inbox_id`, que a tela usa para pedir o login de novo (Instagram::IntegrationHelper::REAUTH_PURPOSES);
+#   `inbox_id`, que a tela usa para pedir o login de novo (Instagram::IntegrationHelper::REAUTH_PURPOSES). O id vai só a
+#   quem vê a caixa ou pode reautorizá-la (`inbox_id_for`, a régua de SeusPosts::Caixa#id_para_quem_age, #2365); aos
+#   outros, nil;
 # - `not_inbox_member`: quem chama não vê a caixa do Instagram; a tela diz isso no lugar da lista.
 # nil quando o anúncio não é da conta de anúncios da conexão (a tela trata como inexistente).
 #
@@ -28,11 +30,16 @@ class Crm::MetaAds::InstagramComments
 
   MAX_TEXT = 2200
 
+  # Sem quem chama (a IA dos comentários): o id da caixa não vai a ninguém.
+  NO_INBOX_ID = ->(_inbox) {}
+
+  # inbox_id_for: a régua do id da caixa no `needs_login` (SeusPosts::Caixa#id_para_quem_age de quem chama).
   # management: a Crm::MetaAds::AdManagement que já leu o anúncio, quando quem chama já a tem (IA dos comentários,
   # #2212): ela guarda a leitura, e o criativo não é lido de novo. Sem ela, uma nova.
-  def initialize(connection, inbox_access:, can_manage:, management: nil)
+  def initialize(connection, inbox_access:, can_manage:, inbox_id_for: NO_INBOX_ID, management: nil)
     @connection = connection
     @inbox_access = inbox_access
+    @inbox_id_for = inbox_id_for
     @can_manage = can_manage
     @management = management || Crm::MetaAds::AdManagement.new(connection)
   end
@@ -128,7 +135,7 @@ class Crm::MetaAds::InstagramComments
     channel = Channel::Instagram.find_by(account_id: @connection.account_id, instagram_id: instagram_user_id)
     return { status: 'not_connected', account: { username: ad_account_username(instagram_user_id), name: nil } } if channel.nil?
 
-    target = { status: 'ready', account: { username: channel.provider_name, name: channel.inbox&.name }, inbox_id: channel.inbox&.id }
+    target = { status: 'ready', account: { username: channel.provider_name, name: channel.inbox&.name }, inbox: channel.inbox }
     return target.merge(status: 'needs_login') if channel.reauthorization_required?
 
     target.merge(channel: channel, media_id: creative['effective_instagram_media_id'].to_s,
@@ -176,7 +183,7 @@ class Crm::MetaAds::InstagramComments
 
   def empty(target)
     payload = { status: target[:status], account: target[:account], comments: [], total: 0, next_cursor: nil }
-    target[:status] == 'needs_login' ? payload.merge(inbox_id: target[:inbox_id]) : payload
+    target[:status] == 'needs_login' ? payload.merge(inbox_id: target[:inbox] && @inbox_id_for.call(target[:inbox])) : payload
   end
 
   # A resposta da própria conta vem em dobro da Graph: Crm::MetaAds::InstagramCommentThreads deixa uma só (#2313).
