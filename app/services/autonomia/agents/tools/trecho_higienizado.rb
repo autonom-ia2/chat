@@ -27,18 +27,33 @@ class Autonomia::Agents::Tools::TrechoHigienizado
   MIN_CREDENCIAL = 12
   MIN_CREDENCIAL_COM_DIGITO = 8
 
+  def self.credencial?(literal)
+    caracteres = literal.to_s.each_char
+    return caracteres.any? { |c| !letra?(c) } if literal.length >= MIN_CREDENCIAL
+
+    literal.length >= MIN_CREDENCIAL_COM_DIGITO && caracteres.any? { |c| letra?(c) } && caracteres.any? { |c| c.between?('0', '9') }
+  end
+
+  def self.letra?(caractere)
+    caractere.downcase != caractere.upcase
+  end
+
   def initialize(texto, segredos:, limite:, literais: [], cortado: false)
     @texto = texto.to_s
+    @crus = Array(segredos).map { |valor| valor.to_s.scrub.strip }
     @segredos = formas_dos_segredos(segredos, Array(literais).map { |literal| literal.to_s.scrub }.select { |literal| credencial?(literal) })
     @limite = limite
     @cortado = cortado
   end
 
-  # SÓ O PASSO 2, para os segredos fortes, e nada mais: sem literais, sem a heurística de token, sem mexer nos espaços e
-  # sem corte. É a resposta 2xx da consulta em segundo plano (#1430): dado do negócio (UUID, PIX, linha digitável, id
-  # em endereço) que chega inteiro, menos o que o cadastro da ferramenta guarda como segredo.
+  # A RESPOSTA 2xx DA CONSULTA EM SEGUNDO PLANO (#1430): dado do negócio (UUID, PIX, linha digitável, id em endereço)
+  # que chega inteiro, menos as credenciais que o cadastro da ferramenta guarda. Mais estreito que o passo 2: só o valor
+  # INTEIRO de cada segredo (nas mesmas formas, sem os pedaços), com as mesmas maiúsculas, e só como palavra inteira —
+  # nunca colado a letra, dígito, `_` ou `-` (o "ativo" de uma query não vira "IN[oculto]" em "INATIVO"). Sem literais,
+  # sem a heurística de token, sem mexer nos espaços e sem corte.
   def mascarado
-    sem_segredos(@texto)
+    inteiros = @crus.flat_map { |valor| formas(valor) }.select { |valor| valor.length >= MIN_SEGREDO }.uniq.sort_by { |valor| -valor.length }
+    inteiros.reduce(@texto) { |saida, segredo| trocar_inteiro(saida, segredo) }
   end
 
   def to_s
@@ -57,14 +72,7 @@ class Autonomia::Agents::Tools::TrechoHigienizado
   end
 
   def credencial?(literal)
-    caracteres = literal.each_char
-    return caracteres.any? { |c| !letra?(c) } if literal.length >= MIN_CREDENCIAL
-
-    literal.length >= MIN_CREDENCIAL_COM_DIGITO && caracteres.any? { |c| letra?(c) } && caracteres.any? { |c| c.between?('0', '9') }
-  end
-
-  def letra?(caractere)
-    caractere.downcase != caractere.upcase
+    self.class.credencial?(literal)
   end
 
   def formas(valor)
@@ -85,6 +93,19 @@ class Autonomia::Agents::Tools::TrechoHigienizado
     while (achado = baixo.index(procurado, inicio))
       saida << texto[inicio...achado] << OCULTO
       inicio = achado + alvo.length
+    end
+    saida << texto[inicio..]
+  end
+
+  # Troca só a ocorrência exata que não está colada a um caractere de token dos dois lados.
+  def trocar_inteiro(texto, alvo)
+    saida = +''
+    inicio = 0
+    while (achado = texto.index(alvo, inicio))
+      fim = achado + alvo.length
+      inteiro = (achado.zero? || !de_token?(texto[achado - 1])) && (fim >= texto.length || !de_token?(texto[fim]))
+      saida << texto[inicio...achado] << (inteiro ? OCULTO : alvo)
+      inicio = fim
     end
     saida << texto[inicio..]
   end

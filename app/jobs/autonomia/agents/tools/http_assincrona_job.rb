@@ -17,7 +17,9 @@
 #   8. grava o resultado uma vez (a resposta com os segredos do cadastro mascarados e o teto do síncrono), com conexão
 #      nova;
 #   9. fecha: o evento só sai se o turno desistiu (`ENTREGA`), e sai ANTES do `finish!`, porque o slot dele só é
-#      adquirido em linha viva.
+#      adquirido em linha viva. Sem marca de entrega e com a janela do turno ainda aberta, a linha fica viva com o
+#      resultado: o turno que espera o lê, marca a entrega e fecha. Passada a janela sem marca (o turno morreu), a
+#      desistência é marcada aqui por compare-and-set e o evento fala: o resultado nunca fica mudo.
 #
 # A ferramenta é resolvida pelo id gravado na linha, nunca pelo slug.
 #
@@ -37,6 +39,10 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
   FOLGA = 2.minutes
   # Quanto o job que cedeu a vez espera para tentar de novo. Poucos segundos: a outra conta só precisa pegar a thread.
   ESPERA_DA_VEZ = 3.seconds
+  # Além da janela do turno: a última leitura dele e a marca da desistência. Folga de desenho, não medida.
+  FOLGA_DA_JANELA = 2.seconds
+  # O defeito nosso antes de o pedido sair: a mesma categoria do síncrono para falha de execução.
+  DEFEITO_ANTES_DO_ENVIO = 'tool_execution_error'.freeze
 
   def self.vence_em(segundos)
     segundos.to_i.seconds.from_now + FOLGA
@@ -63,31 +69,59 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
   end
 
   # O job que começou duas vezes e morreu antes de chamar: falha, e o agente diz que não conseguiu. O turno já foi
-  # embora há muito: sem marca de entrega, quem fala é o evento.
+  # embora há muito: sem marca de entrega, quem fala é o evento (a desistência é marcada no `fechar`, depois do
+  # fechamento que confere o prazo).
   def self.abandonar(run, vencida_antes_de:)
-    run.marcar_desistencia!(espera_ms: nil)
     return false unless run.abandonar_consulta!(Recusa.saida('execucao_abandonada'), vencida_antes_de: vencida_antes_de)
 
     fechar(run.reload)
   end
 
   # A chamada saiu e a resposta se perdeu: não chama de novo. Quem atende confere se o pedido foi registrado lá; o
-  # cliente ouve que não deu para confirmar (`Evento`, pelo código `INCERTA`). `vencida_antes_de`: o varredor.
+  # cliente ouve que não deu para confirmar (`Evento`, pelo código `INCERTA`). `vencida_antes_de`: o varredor. A
+  # desistência é marcada no `fechar`, depois do fechamento (o turno que ainda espera lê a incerteza).
   def self.incerta(run, vencida_antes_de: nil)
-    run.marcar_desistencia!(espera_ms: nil) if vencida_antes_de
     return false unless run.fechar_incerta!(Recusa.saida(ToolRun::INCERTA), vencida_antes_de: vencida_antes_de)
 
     Aviso.consulta_incerta(run)
     fechar(run.reload)
   end
 
-  # O evento só com a desistência do turno, e antes do `finish!`.
+  # Com o resultado gravado. Sem marca de entrega e na janela do turno: fica viva para o turno, e esta passada volta
+  # quando a janela vence. Fora dela, sem marca: a desistência por compare-and-set (o turno que marcou antes ganha). O
+  # evento só com a desistência, e antes do `finish!`. -> false quando deixou a linha para o turno.
   def self.fechar(run)
-    status = run.resultado_ok? ? 'done' : 'failed'
-    if run.entrega == ToolRun::DESISTIU_DO_TURNO
-      Evento.disparar(run, run.resultado_ok? ? Evento::CONSULTA_CONCLUIDA : Evento::CONSULTA_FALHOU)
-    end
-    run.finish!(status, failure_code: run.resultado_ok? ? nil : run.handle.to_h[ToolRun::CODIGO_DA_CONSULTA])
+    return esperar_o_turno(run) if run.entrega.nil? && !janela_vencida?(run)
+
+    falar_se_ninguem_entrega(run)
+    ok = run.resultado_ok?
+    run.finish!(ok ? 'done' : 'failed', failure_code: ok ? nil : run.handle.to_h[ToolRun::CODIGO_DA_CONSULTA])
+  end
+
+  def self.falar_se_ninguem_entrega(run)
+    run.reload unless run.entrega || run.desistir_sem_turno!
+    return unless run.entrega == ToolRun::DESISTIU_DO_TURNO
+
+    Evento.disparar(run, run.resultado_ok? ? Evento::CONSULTA_CONCLUIDA : Evento::CONSULTA_FALHOU)
+  end
+
+  # A janela do turno conta do pré-disparo da rodada, que vem antes da abertura: vence no máximo `ESPERA_DO_TURNO`
+  # depois de `ABERTA_EM`, mais a folga da última leitura do turno. Sem a marca, vencida.
+  def self.fim_da_janela(run)
+    aberta_em = Time.zone.parse(run.handle.to_h[ToolRun::ABERTA_EM].to_s)
+    aberta_em && (aberta_em + ::Autonomia::Agents::Tools::ConsultaNoTurno::ESPERA_DO_TURNO.seconds + FOLGA_DA_JANELA)
+  end
+
+  def self.janela_vencida?(run)
+    fim = fim_da_janela(run)
+    fim.nil? || Time.current >= fim
+  end
+
+  # Volta quando a janela vence: se nenhum turno marcou a entrega até lá, esta passada fecha com o evento. Sem a fila
+  # (Redis fora), sobe: a linha fica viva com o resultado, e o varredor fecha (`ReapStaleRunsJob#fechar_consulta`).
+  def self.esperar_o_turno(run)
+    set(wait_until: fim_da_janela(run)).perform_later(run.id)
+    false
   end
 
   def perform(run_id)
@@ -165,20 +199,27 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
     run.running? ? self.class.fechar(run) : fora_do_turno(run, saida, codigo)
     log(run, "fim fila_ms=#{run.handle[ToolRun::FILA_MS]} api_ms=#{api_ms} banco_antes_ms=#{banco_antes_ms} " \
              "banco_depois_ms=#{ms_desde(depois)}")
+    raise @defeito if @defeito
   end
 
   # -> [o texto do desfecho, o código da falha ou nil, o tempo da API]. Só os erros esperados da chamada viram desfecho
-  # (o executor já traduz rede, tempo, HTTP e modelo para `HttpExecutor::Error`); o defeito nosso sobe, registrado.
+  # (o executor já traduz rede, tempo, HTTP e modelo para `HttpExecutor::Error`); o defeito nosso vai ao rastreador.
+  # Antes de o pedido sair (`HttpExecutor#enviada?`), o defeito é falha certa: nada chegou lá, e a consulta falha como
+  # as outras (o defeito sobe depois do fechamento). Depois de sair, sobe na hora: a linha fica com a chamada feita e
+  # sem resultado, e fecha como incerta.
   def chamar(run, tool, agente, chave)
     bound = ::Autonomia::Agents::Tools::Bound.new(agent: agente, record: tool)
     comeco = agora
-    texto = executor(run, tool, chave).call
-    [bound.cabendo(texto), nil, ms_desde(comeco)]
+    chamada = executor(run, tool, chave)
+    [bound.cabendo(chamada.call), nil, ms_desde(comeco)]
   rescue ::Autonomia::Agents::Tools::HttpExecutor::Error => e
     [bound.texto_da_recusa_http(e), bound.categoria_da_recusa_http(e), ms_desde(comeco)]
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: run.account).capture_exception
-    raise
+    raise if chamada&.enviada?
+
+    @defeito = e
+    [Recusa.saida(DEFEITO_ANTES_DO_ENVIO), DEFEITO_ANTES_DO_ENVIO, ms_desde(comeco)]
   end
 
   def executor(run, tool, chave)
@@ -206,15 +247,17 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
   end
 
   # O operador puxou o freio depois da abertura (conta, agente, allowlist), ou a conversa mudou de dono: para sem chamar,
-  # como o `AsyncRunJob`. O resultado `bloqueada` é gravado antes: o turno que ainda espera o lê como recusa, e o que já
-  # desistiu faz o evento `consulta_falhou` falar (o cliente não fica sem resposta; sem quem possa falar, vira nota).
+  # como o `AsyncRunJob`. O resultado `bloqueada` é gravado, e fecha como as outras falhas (`fechar`, `failed` com o
+  # código `bloqueada`; `blocked` mataria o evento, `EventoJob` não fala de execução morta): o turno
+  # que ainda espera o lê como recusa, e sem turno o evento `consulta_falhou` fala (o cliente não fica sem resposta; sem
+  # quem possa falar, vira nota). O motivo (`nao_autorizado`, `vinculo_mudou`) vai ao log.
   def bloqueada?(run)
     codigo = motivo_do_bloqueio(run)
     return false if codigo.nil?
 
+    log(run, "bloqueada motivo=#{codigo}")
     run.gravar_resultado!(Recusa.saida(ToolRun::BLOQUEADA), sucesso: false, codigo: ToolRun::BLOQUEADA, api_ms: nil)
-    run.reload
-    run.entrega == ToolRun::DESISTIU_DO_TURNO ? self.class.fechar(run) : run.finish!('blocked', failure_code: codigo)
+    self.class.fechar(run.reload)
     true
   end
 

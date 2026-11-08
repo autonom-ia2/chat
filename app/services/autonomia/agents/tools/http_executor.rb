@@ -45,7 +45,10 @@ class Autonomia::Agents::Tools::HttpExecutor
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     body = render_body
     headers = request_headers(body)
-    SafeFetch.fetch(rendered_url, **fetch_options(body, headers)) do |result|
+    url = rendered_url
+    opcoes = fetch_options(body, headers)
+    @enviada = true
+    SafeFetch.fetch(url, **opcoes) do |result|
       response = result.tempfile.read.to_s
       Autonomia::Agents::Tools::ChaveDeIdempotencia.concluir(tool: @tool, turno: @turno, params: params)
       log_success(started_at, response.bytesize)
@@ -54,6 +57,12 @@ class Autonomia::Agents::Tools::HttpExecutor
   rescue ValorRecusado, SafeFetch::Error, Liquid::Error, JSON::JSONError, EncodingError => e
     log_failure(started_at, e.class.name)
     raise erro_da_ferramenta(e, headers)
+  end
+
+  # O pedido saiu (ou ia sair) para o sistema de fora: tudo o que vem antes — o corpo, os cabeçalhos, o endereço — já foi
+  # montado. #1430: o defeito antes disto é falha certa; depois, a consulta em segundo plano não sabe o que chegou lá.
+  def enviada?
+    @enviada == true
   end
 
   private

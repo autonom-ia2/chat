@@ -4,6 +4,10 @@
 #
 # `endereco` é o renderizador do executor (`HttpExecutor#render_template`): o endereço do cadastro com cada {{ }} vazio.
 class Autonomia::Agents::Tools::SegredosDaChamada
+  # O nome do parâmetro da query que é credencial, comparado inteiro (`casecmp?`): a query não tem o flag `secret`.
+  NOMES_DE_CREDENCIAL = %w[token api_key apikey key secret password senha access_token].freeze
+  CABECALHOS_DE_AUTENTICACAO = %w[authorization proxy-authorization].freeze
+
   def initialize(tool:, headers:, corpo:, endereco:)
     @tool = tool
     @headers = headers
@@ -17,10 +21,11 @@ class Autonomia::Agents::Tools::SegredosDaChamada
                                                            cortado: cortado).to_s
   end
 
-  # Só os segredos do cadastro (cabeçalhos, query, usuário e senha do endereço), em todas as formas. O resto da resposta
-  # é dado do negócio e chega inteiro, como no síncrono.
+  # Só as CREDENCIAIS do cadastro (`credenciais`), em todas as formas, e só o valor inteiro (`TrechoHigienizado#mascarado`).
+  # O resto da resposta é dado do negócio e chega inteiro, como no síncrono: o "ativo" de `?status=ativo` não esconde
+  # o "INATIVO" da resposta, nem o `1000` de `?limite=1000` o "1000,00", nem o UUID de `?pedido=` o mesmo UUID.
   def mascarar(texto)
-    Autonomia::Agents::Tools::TrechoHigienizado.new(texto, segredos: segredos, limite: nil).mascarado
+    Autonomia::Agents::Tools::TrechoHigienizado.new(texto, segredos: credenciais, limite: nil).mascarado
   end
 
   private
@@ -42,6 +47,30 @@ class Autonomia::Agents::Tools::SegredosDaChamada
     token = token.strip
     formas = [valor, token]
     esquema.casecmp?('basic') ? formas + basic_decodificado(token) : formas
+  end
+
+  # CREDENCIAL DO CADASTRO, pelo que o cadastro diz, sem heurística de formato nem pedaço de nome: o cabeçalho marcado
+  # `secret` (`Tool#headers_config`, o mesmo flag do `tools_controller#segredo_guardado`), o valor de `Authorization` e
+  # `Proxy-Authorization`, o usuário e a senha do endereço, e o parâmetro da query (que não tem o flag) cujo nome é,
+  # inteiro, um da lista curta (`NOMES_DE_CREDENCIAL`, `casecmp?`): `keyword` e `author` não são credencial.
+  def credenciais
+    guardados = Array(@tool.headers_config).select { |item| ActiveModel::Type::Boolean.new.cast(item['secret']) }.map { |item| item['key'].to_s }
+    cabecalhos = Array(@headers).select { |nome, _| cabecalho_de_credencial?(nome, guardados) }.map(&:last)
+    cabecalhos.flat_map { |valor| formas_de_autenticacao(valor) } + usuario_e_senha + credenciais_da_query
+  end
+
+  def cabecalho_de_credencial?(nome, guardados)
+    (CABECALHOS_DE_AUTENTICACAO + guardados).any? { |credencial| credencial.casecmp?(nome.to_s) }
+  end
+
+  def credenciais_da_query
+    uri = endereco_do_cadastro
+    return [] unless uri
+
+    pares = URI.decode_www_form(uri.query.to_s)
+    pares.select { |nome, _| NOMES_DE_CREDENCIAL.any? { |credencial| credencial.casecmp?(nome) } }.map(&:last)
+  rescue ArgumentError
+    []
   end
 
   def basic_decodificado(token)

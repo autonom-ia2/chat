@@ -51,12 +51,12 @@ RSpec.describe Autonomia::Agents::Tools::ConsultaNoTurno, type: :job do
 
       a = runs.find(r1.id)
       b = runs.find(r1.id)
-      expect([a.marcar_entregue!, b.marcar_desistencia!(espera_ms: 1)]).to eq([true, false])
+      expect([a.marcar_entregue!(por: 'mensagem:1'), b.marcar_desistencia!(espera_ms: 1)]).to eq([true, false])
       expect(runs.find(r1.id).entrega).to eq(runs::ENTREGUE_NO_TURNO)
 
       c = runs.find(r2.id)
       d = runs.find(r2.id)
-      expect([c.marcar_desistencia!(espera_ms: 1), d.marcar_entregue!]).to eq([true, false])
+      expect([c.marcar_desistencia!(espera_ms: 1), d.marcar_entregue!(por: 'mensagem:1')]).to eq([true, false])
       expect(runs.find(r2.id).entrega).to eq(runs::DESISTIU_DO_TURNO)
     end
 

@@ -10,18 +10,27 @@
 # A decisão é pelo tempo REAL da resposta, não pelo configurado: o único limite é o `timeout_seconds` da ferramenta.
 #
 # QUEM ENTREGA é decidido por uma marca só na linha (`ToolRun::ConsultaHttp::ENTREGA`), por compare-and-set: o turno
-# marca `entregue_no_turno` ou `desistiu_do_turno`, e a desistência só vale sem resultado gravado. O job só dispara o
-# evento com a desistência. Na corrida, a entrega acontece uma vez.
+# marca `entregue_no_turno` (com o turno que entregou, `ENTREGUE_POR`) ou `desistiu_do_turno`, e a desistência só vale
+# sem resultado gravado. O job só dispara o evento com a desistência; sem marca nenhuma depois da janela, ele mesmo a
+# marca (`HttpAssincronaJob.fechar`). Na corrida, a entrega acontece uma vez:
+#   - o mesmo turno refeito relê o resultado;
+#   - outro turno lê `JA_INFORMADO`, salvo quando o que entregou foi superado antes de postar (uma mensagem mais nova
+#     do cliente, `turno_superado?`): aí este toma a entrega, para o resultado não se perder.
 #
 # REAPROVEITAR, NUNCA CHAMAR DUAS VEZES O MESMO PEDIDO:
 #   - a mesma Idempotency-Key (o turno refeito, a mesma chamada de novo) reusa a execução que roda ou que concluiu com
 #     2xx; a que falhou não é reusada: o turno chama de novo com a mesma chave, como no síncrono;
 #   - o mesmo pedido numa mensagem nova (outra chave) se pendura na execução da conversa que já chamou o sistema de
-#     fora; a que ainda não chamou é trocada pela nova (`superar_sem_chamada!`).
+#     fora; a que ainda não chamou é trocada pela nova (`superar_sem_chamada!`);
+#   - a incerta (a chamada saiu e a resposta se perdeu) segura o mesmo pedido enquanto é recente (`Abertura`), e a
+#     concluída que um turno superado entregou sem falar passa ao turno novo.
 #
 # Sem conversa (Testar, playground, Copiloto), sem a flag ou no turno de um evento, nada daqui roda: a ferramenta é
 # síncrona, como no #2426.
 class Autonomia::Agents::Tools::ConsultaNoTurno
+  include ::Autonomia::Agents::Tools::ConsultaNoTurno::Abertura
+  include ::Autonomia::Agents::Tools::ConsultaNoTurno::TurnoSuperado
+
   ToolRun = ::Autonomia::Agents::ToolRun
   Chave = ::Autonomia::Agents::Tools::ChaveDeIdempotencia
   Erro = ::Autonomia::Agents::Tools::HttpExecutor::Error
@@ -35,9 +44,20 @@ class Autonomia::Agents::Tools::ConsultaNoTurno
   # A execução terminou, e quem fala do resultado é o evento (o turno que a pediu desistiu da janela).
   JA_INFORMADO = 'Esta consulta já terminou, e o resultado foi (ou está sendo) dado ao cliente numa mensagem à parte. ' \
                  'Não repita o resultado; siga a conversa.'.freeze
+  # A incerta já avisada numa mensagem à parte: o pedido saiu e a resposta se perdeu. Não há resultado a dar.
+  INCERTA_JA_INFORMADA = 'Este mesmo pedido já foi enviado ao sistema, mas a resposta se perdeu, e o cliente já foi ' \
+                         'avisado numa mensagem à parte de que não deu para confirmar e que a equipe vai conferir. Não ' \
+                         'envie de novo, não diga que deu certo nem que deu errado; siga a conversa.'.freeze
   # O código da recusa quando a consulta nem chegou a sair (infraestrutura): o modelo lê `tool_execution_error`.
   NAO_DISPAROU = 'tool_execution_error: consulta_nao_disparou'.freeze
   FIM = %w[done failed].freeze
+  # O agente de cotação (a Lia) fica fora: as ferramentas dela têm motor próprio.
+  AGENTE_DE_COTACAO = 'insurance_quote'.freeze
+  # A falha de infraestrutura que o turno engole com a recusa (e o log): o banco e o Redis. O resto é defeito nosso, e
+  # vai também ao rastreador.
+  ERROS_DE_INFRA = [ActiveRecord::ActiveRecordError, Redis::BaseError, RedisClient::Error].freeze
+  # A leitura da espera: o resultado gravado, sem trazer o handle.
+  COM_RESULTADO = Arel.sql("(handle->>'#{::Autonomia::Agents::ToolRun::RESULTADO_DA_CONSULTA}') IS NOT NULL")
 
   # O que o turno guarda de cada chamada disparada: a execução e a janela da rodada, ou a falha do disparo.
   Disparo = Struct.new(:run, :janela, :falhou, keyword_init: true)
@@ -48,8 +68,13 @@ class Autonomia::Agents::Tools::ConsultaNoTurno
   def self.aplica?(tool, turno)
     return false unless turno.respond_to?(:conversation) && turno.conversation.present?
     return false if turno.try(:turno_de_evento?)
+    return false if do_agente_de_cotacao?(tool, turno)
 
     ligada?(tool.account)
+  end
+
+  def self.do_agente_de_cotacao?(tool, turno)
+    [tool.try(:agent), turno.try(:agent_inbox)&.agent].compact.any? { |agente| agente.agent_type == AGENTE_DE_COTACAO }
   end
 
   def self.ligada?(account)
@@ -90,24 +115,31 @@ class Autonomia::Agents::Tools::ConsultaNoTurno
     @chave = Chave.com_ocorrencia(@pedido, ocorrencia)
     @ocorrencia = ocorrencia
     @turno.consultas[identidade] ||= Disparo.new(run: reaproveitada || abrir, janela: janela)
+  rescue *ERROS_DE_INFRA => e
+    registrar_falha('disparo', e)
+    @turno.consultas[identidade] = Disparo.new(falhou: true)
   rescue StandardError => e
+    rastrear(e)
     registrar_falha('disparo', e)
     @turno.consultas[identidade] = Disparo.new(falhou: true)
   end
 
   # -> o texto que o modelo lê. Uma falha que chega na janela levanta `HttpExecutor::Error`, como o síncrono: o `Bound`
-  # a registra e devolve a mesma recusa. O erro de infraestrutura no meio da espera (o banco) vira a recusa nomeada, com
-  # o registro no log: o turno não morre por ele.
+  # a registra e devolve a mesma recusa. O erro no meio da espera (o banco; o defeito nosso também vai ao rastreador)
+  # não derruba o turno e não cala o resultado: com a execução aberta, o turno desiste e o evento fala (`EM_ANDAMENTO`);
+  # `NAO_DISPAROU` só quando não há execução.
   def resultado
-    disparo = tomar_disparo
-    raise Erro, NAO_DISPAROU if disparo.falhou
+    @disparo = tomar_disparo
+    raise Erro, NAO_DISPAROU if @disparo.falhou
 
-    esperar(disparo)
+    esperar(@disparo)
   rescue Erro
     raise
+  rescue *ERROS_DE_INFRA => e
+    falha_na_espera(e)
   rescue StandardError => e
-    registrar_falha('espera', e)
-    raise Erro, NAO_DISPAROU
+    rastrear(e)
+    falha_na_espera(e)
   end
 
   private
@@ -116,12 +148,33 @@ class Autonomia::Agents::Tools::ConsultaNoTurno
     run = disparo.run.reload
     return ja_com_o_evento(run) if run.entrega == ToolRun::DESISTIU_DO_TURNO
 
-    status = aguardar(run, disparo.janela)
-    return entregar(run) if FIM.include?(status)
-    return desistir(run, disparo.janela) if status == 'running'
+    status, gravado = aguardar(run, disparo.janela)
     return EM_ANDAMENTO if status == 'superseded'
+    return entregar(run) if FIM.include?(status) || gravado
+    return desistir(run, disparo.janela) if status == 'running'
 
     raise Erro, 'tool_execution_error'
+  end
+
+  # O resultado não pode ficar mudo: com a execução aberta, este turno desiste (se ainda der) e o evento fala; se a
+  # desistência também falhar, o job a marca quando a janela vencer (`HttpAssincronaJob.fechar`).
+  def falha_na_espera(erro)
+    registrar_falha('espera', erro)
+    run = @disparo&.run
+    raise Erro, NAO_DISPAROU if run.nil?
+
+    desistir_sem_esperar(run)
+    EM_ANDAMENTO
+  end
+
+  def desistir_sem_esperar(run)
+    run.marcar_desistencia!(espera_ms: nil)
+  rescue *ERROS_DE_INFRA => e
+    registrar_falha('desistencia', e)
+  end
+
+  def rastrear(erro)
+    ChatwootExceptionTracker.new(erro, account: @tool.account).capture_exception
   end
 
   # Só ids e a classe do erro: nada do que o modelo mandou, nada do cadastro.
@@ -145,33 +198,65 @@ class Autonomia::Agents::Tools::ConsultaNoTurno
     @turno.janela_das_consultas(self.class.agora, ESPERA_DO_TURNO)
   end
 
-  # Lê SÓ o estado, de `INTERVALO` em `INTERVALO`, até o prazo da janela; entre as leituras, a conexão do banco volta
-  # ao pool. -> o último estado lido.
+  # Lê SÓ o estado e se há resultado, de `INTERVALO` em `INTERVALO`, até o prazo da janela; entre as leituras, a
+  # conexão do banco volta ao pool. O resultado gravado com a linha viva é o job deixando a entrega para o turno
+  # (`HttpAssincronaJob.fechar`). -> [o último estado lido, se o resultado está gravado].
   def aguardar(run, janela)
     loop do
-      status = ToolRun.where(id: run.id).pick(:status)
+      status, gravado = ToolRun.where(id: run.id).pick(:status, COM_RESULTADO)
       restante = janela.last - self.class.agora
-      return status if status != 'running' || restante <= 0
+      return [status, gravado] if status != 'running' || gravado || restante <= 0
 
       ::Autonomia::Agents::Tools::ConexaoDoBanco.soltar
       self.class.pausar([INTERVALO, restante].min)
     end
   end
 
-  # O resultado chegou. Quem marcou a entrega primeiro decide: este turno, ou um que já desistiu (o evento fala).
-  # A resposta 2xx avança a ocorrência do turno: a próxima chamada idêntica é outro pedido (`Delivery#ocorrencia`).
+  # O resultado chegou. Quem marcou a entrega primeiro decide (`entrega_deste_turno?`): este turno, ou outro (o evento,
+  # ou um turno vivo, fala; a incerta já avisada tem texto próprio). A resposta 2xx avança a ocorrência do turno: a
+  # próxima chamada idêntica é outro pedido (`Delivery#ocorrencia`).
   def entregar(run)
     run.reload
-    return ja_com_o_evento(run) if !run.marcar_entregue! && run.entrega != ToolRun::ENTREGUE_NO_TURNO
+    return ja_com_o_evento(run) unless entrega_deste_turno?(run)
+
+    entregue(run)
+  end
+
+  # A MARCA DE ENTREGA É DESTE TURNO: daqui em diante nenhuma falha vira `EM_ANDAMENTO` (ninguém mais falaria). O turno
+  # devolve o resultado gravado, ou a falha gravada; o fechamento e a ocorrência que falham ficam no log e no rastreador.
+  def entregue(run)
+    encerrar(run)
     raise falha(run) unless run.resultado_ok?
 
     concluir(run)
     run.resultado_da_consulta
   end
 
-  # Quem fala é o evento: rodando, o modelo avisa que está consultando; terminada, ele não repete o resultado.
+  # Marca a entrega, ou relê quem marcou: o mesmo turno (refeito) entrega de novo; outro turno, só se o que entregou foi
+  # superado antes de postar, e por compare-and-set (dois turnos novos não tomam os dois).
+  def entrega_deste_turno?(run)
+    return true if run.marcar_entregue!(por: @turno.turno)
+
+    run.reload
+    return false unless run.entrega == ToolRun::ENTREGUE_NO_TURNO
+    return true if run.entregue_por == @turno.turno
+
+    turno_superado?(run.entregue_por) && run.tomar_entrega!(anterior: run.entregue_por, por: @turno.turno)
+  end
+
+  # O turno que entregou fecha a linha que o job deixou viva para ele. A falha aqui não tira o resultado do turno: a
+  # linha fica com a marca, e o job (quando a janela vence) ou o varredor a fecham.
+  def encerrar(run)
+    ::Autonomia::Agents::Tools::HttpAssincronaJob.fechar(run) if run.running?
+  rescue StandardError => e
+    sem_derrubar_a_entrega('fechamento', e)
+  end
+
+  # Quem fala é o evento (ou o turno que entregou): rodando, o modelo avisa que está consultando; com o resultado, ele
+  # não repete. A incerta já foi avisada: não há resultado a não repetir, e o modelo não pode dizer que deu certo.
   def ja_com_o_evento(run)
-    return EM_ANDAMENTO unless FIM.include?(run.status)
+    return EM_ANDAMENTO unless FIM.include?(run.status) || run.resultado_gravado?
+    return INCERTA_JA_INFORMADA if run.incerta?
 
     concluir(run) if run.resultado_ok?
     JA_INFORMADO
@@ -179,6 +264,14 @@ class Autonomia::Agents::Tools::ConsultaNoTurno
 
   def concluir(run)
     @turno.concluir_execucao(@pedido, run.id) if @turno.respond_to?(:concluir_execucao)
+  rescue StandardError => e
+    sem_derrubar_a_entrega('ocorrencia', e)
+  end
+
+  # Erro de infraestrutura só no log; o defeito nosso também no rastreador. Nos dois, o turno segue com o resultado.
+  def sem_derrubar_a_entrega(onde, erro)
+    rastrear(erro) unless ERROS_DE_INFRA.any? { |classe| erro.is_a?(classe) }
+    registrar_falha(onde, erro)
   end
 
   # A falha gravada pelo job é a saída da `Recusa` (`{"error":"<categoria>: <status>", "resposta_do_sistema_externo":…}`):
@@ -198,73 +291,5 @@ class Autonomia::Agents::Tools::ConsultaNoTurno
 
     Rails.logger.info("[autonomia][tool][consulta] turno_desistiu run=#{run.id} slug=#{run.slug} espera_ms=#{espera_ms}")
     EM_ANDAMENTO
-  end
-
-  # A execução com esta chave que ainda serve: a que roda, ou a concluída com 2xx (o turno refeito não chama de novo). A
-  # que falhou não serve: chamar de novo, com a mesma chave, é o que o síncrono faz.
-  def reaproveitada
-    ToolRun.for_conversation(@turno.conversation.id).where(autonomia_agent_tool_id: @tool.id)
-           .where('handle ->> ? = ?', ToolRun::CHAVE_DA_CONSULTA, @chave)
-           .where("status = 'running' OR (status = 'done' AND handle @> ?)", { ToolRun::RESULTADO_OK => true }.to_json)
-           .order(id: :desc).first
-  end
-
-  # Sob a trava da faixa, para duas passadas do mesmo pedido não abrirem duas. O job sai DEPOIS do commit.
-  def abrir
-    nova = false
-    run = ToolRun.transaction do
-      ToolRun.travar!(@turno.conversation.id, @tool.slug, faixa)
-      existente = reaproveitada || pendurada
-      next existente if existente
-
-      nova = true
-      aberta
-    end
-    enfileirar(run) if nova
-    run
-  end
-
-  # O MESMO PEDIDO NUMA MENSAGEM NOVA: a execução viva da faixa que já chamou o sistema de fora é a deste turno também
-  # (chamar de novo, com outra chave, gravaria o pedido duas vezes lá). A que ainda não chamou é trocada pela nova.
-  def pendurada
-    viva = ToolRun.for_conversation(@turno.conversation.id).find_by(status: 'running', slug: @tool.slug, faixa: faixa)
-    return nil if viva.nil? || viva.superar_sem_chamada!
-
-    viva.reload.running? ? viva : nil
-  end
-
-  def aberta
-    run = ToolRun.open!(agent: @agente, slug: @tool.slug, arguments: @params, marcas: marcas, scope: escopo)
-    raise ActiveRecord::RecordNotUnique, "consulta #{@tool.slug} não abriu" if run.nil?
-
-    run.promote!(expected_chunks: 0, notify_customer: false,
-                 expires_at: ::Autonomia::Agents::Tools::HttpAssincronaJob.vence_em(@tool.timeout_seconds))
-    run
-  end
-
-  # Sem o job, a linha não pode ficar viva esperando quem nunca vem: fecha sem evento (o turno ainda não desistiu) e
-  # sobe, para o turno recusar.
-  def enfileirar(run)
-    ::Autonomia::Agents::Tools::HttpAssincronaJob.perform_later(run.id)
-  rescue StandardError
-    run.finish!('failed', failure_code: 'consulta_nao_disparou')
-    raise
-  end
-
-  def marcas
-    { ToolRun::CHAVE_DA_CONSULTA => @chave, ToolRun::TEMPO_DA_CONSULTA => @tool.timeout_seconds,
-      ToolRun::ABERTA_EM => Time.current.iso8601(3) }
-  end
-
-  def escopo
-    { conversation_id: @turno.conversation.id, agent_inbox_id: @turno.agent_inbox&.id, faixa: faixa,
-      origin_message_id: @turno.origin_message_id, autonomia_agent_tool_id: @tool.id }
-  end
-
-  # A faixa é o pedido (a ferramenta, os argumentos tipados e a ocorrência, sem o turno): outro pedido corre junto, e
-  # duas chamadas idênticas da mesma rodada também; o mesmo, numa mensagem nova, cai na mesma faixa (`pendurada`).
-  def faixa
-    @faixa ||= "#{ToolRun::FAIXA_DA_CONSULTA}#{::Autonomia::Insurance::Faixa::SEPARADOR}" \
-               "#{Chave.resumo([@tool.id, Chave.em_ordem(@params), @ocorrencia.to_i])[0, 16]}"
   end
 end

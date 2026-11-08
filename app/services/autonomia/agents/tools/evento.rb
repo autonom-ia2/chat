@@ -28,8 +28,9 @@ class Autonomia::Agents::Tools::Evento
   CONSULTA_FALHOU = 'consulta_falhou'.freeze
   CONSULTAS = [CONSULTA_CONCLUIDA, CONSULTA_FALHOU].freeze
   # O resultado da consulta é DADO DE UM SISTEMA DE FORA, e não entra cru no aviso do sistema: vai cercado, com o aviso
-  # de dado externo (`Recusa::AVISO_DE_DADO_EXTERNO`). A cerca não aparece dentro do texto (ele não a fecha por dentro).
-  CERCA_DO_RESULTADO = '<<<RESULTADO_DA_CONSULTA>>>'.freeze
+  # de dado externo (`Recusa::AVISO_DE_DADO_EXTERNO`). A cerca leva um marcador aleatório por evento: o sistema de fora
+  # não o conhece, e não tem como fechá-la por dentro.
+  CERCA_DO_RESULTADO = '<<<RESULTADO_DA_CONSULTA_%<marcador>s>>>'.freeze
   # A lista fechada. `falta_dado` e `ramo_desconhecido` são as recusas do envio; `concluida`, `valores_guardados`,
   # `falhou`, `incerta`, `encerrada_por_prazo` e `sem_aceitacao` são os desfechos que `Tools::Encerramento` escolhe.
   TIPOS = [COMECO, 'falta_dado', 'ramo_desconhecido', 'concluida', 'valores_guardados', 'falhou', 'incerta',
@@ -97,11 +98,11 @@ class Autonomia::Agents::Tools::Evento
 
   # Um resultado de sistema de fora entre as cercas, com o aviso de dado externo; nil quando vazio.
   def self.cercado(texto)
-    limpo = texto.to_s.gsub(CERCA_DO_RESULTADO, '').strip
+    limpo = texto.to_s.strip
     return nil if limpo.blank?
 
-    "Resultado da consulta (#{::Autonomia::Agents::Tools::Recusa::AVISO_DE_DADO_EXTERNO}):\n#{CERCA_DO_RESULTADO}\n#{limpo}\n" \
-      "#{CERCA_DO_RESULTADO}"
+    cerca = format(CERCA_DO_RESULTADO, marcador: SecureRandom.hex(8))
+    "Resultado da consulta (#{::Autonomia::Agents::Tools::Recusa::AVISO_DE_DADO_EXTERNO}):\n#{cerca}\n#{limpo}\n#{cerca}"
   end
 
   def self.nao_disparado(run, tipo, motivo)

@@ -1250,6 +1250,8 @@ pt_BR:
       # #1479: texto do botão que abre a lista de opções que a IA manda, quando a IA não escolhe um.
       botao_das_opcoes: 'Ver opções'
       instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
+      # #1430: a ferramenta HTTP não pode usar o nome de uma ferramenta nativa.
+      slug_reservado: 'é o nome de uma ferramenta da plataforma'
       # #1428 — "Mudar conversando" (piloto): as mensagens que o Construtor mostra ao dono depois de um ajuste.
       ajuste:
         sem_pedido: 'Não encontrei uma mudança para fazer nessa mensagem. O que você quer mudar no agente?'

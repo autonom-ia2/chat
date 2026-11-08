@@ -14,8 +14,13 @@ RSpec.describe Autonomia::Agents::Tool do
       tool = described_class.new(account: account, agent: agent, name: 'X', slug: slug, endpoint_url: 'https://erp.exemplo.test/x')
 
       expect(tool).not_to be_valid, slug
-      expect(tool.errors[:slug]).to be_present
+      expect(tool.errors[:slug]).to eq([I18n.t('autonomia.agents.slug_reservado')])
     end
+  end
+
+  it 'a mensagem vem do i18n, em ingles e em portugues' do
+    expect(I18n.t('autonomia.agents.slug_reservado', locale: :en)).to eq('is the name of a platform tool')
+    expect(I18n.t('autonomia.agents.slug_reservado', locale: :pt_BR)).to eq('é o nome de uma ferramenta da plataforma')
   end
 
   it 'aceita um slug que nenhuma nativa usa' do

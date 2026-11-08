@@ -165,7 +165,7 @@ class Autonomia::Agents::Tool < ApplicationRecord
   # #1430: o nome de uma nativa é reservado. Pelo nome, a execução desta cairia em quem lê as nativas pelo slug (a
   # cotação da Lia, a medida, a memória), e o modelo veria duas ferramentas com o mesmo nome.
   def validate_slug_livre
-    errors.add(:slug, 'é o nome de uma ferramenta da plataforma') if Autonomia::Agents::Tools::Registry.slugs.include?(slug)
+    errors.add(:slug, I18n.t('autonomia.agents.slug_reservado')) if Autonomia::Agents::Tools::Registry.slugs.include?(slug)
   end
 
   # MESMA REGRA DAS FERRAMENTAS NATIVAS, e pelo mesmo motivo: em `strict: true` a OpenAI exige

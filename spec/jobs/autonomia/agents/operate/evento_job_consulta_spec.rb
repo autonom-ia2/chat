@@ -32,6 +32,7 @@ RSpec.describe Autonomia::Agents::Operate::EventoJob, type: :job do
                                            scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id,
                                                     autonomia_agent_tool_id: tool.id, faixa: 'consulta_http' })
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+    run.merge_handle!({ Autonomia::Agents::ToolRun::CHAVE_DA_CONSULTA => 'chave' }) # a abertura de verdade grava a chave
     run.gravar_resultado!(resultado, sucesso: true, codigo: nil, api_ms: 1)
     run
   end

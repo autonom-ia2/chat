@@ -143,7 +143,7 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob, type: :job do
       expect(SafeFetch).not_to have_received(:fetch)
     end
 
-    it 'operador puxou o freio com o turno ainda na janela: bloqueia sem chamar e sem evento' do
+    it 'operador puxou o freio com o turno ainda na janela: grava a recusa bloqueada para o turno, sem chamar e sem evento' do
       run = consulta_aberta(desistiu: false)
       agent.update!(enabled: false)
       allow(SafeFetch).to receive(:fetch)
@@ -151,8 +151,14 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob, type: :job do
       described_class.new.perform(run.id)
 
       expect(SafeFetch).not_to have_received(:fetch)
-      expect(run.reload).to have_attributes(status: 'blocked', failure_code: 'nao_autorizado')
+      expect(run.reload).to have_attributes(status: 'running')
+      expect(run.handle[runs::CODIGO_DA_CONSULTA]).to eq(runs::BLOQUEADA)
       expect(eventos_disparados(run)).to be_empty
+
+      travel(1.minute) { described_class.new.perform(run.id) }
+
+      expect(run.reload).to have_attributes(status: 'failed', failure_code: runs::BLOQUEADA)
+      expect(eventos_disparados(run)).to eq(['consulta_falhou'])
     end
 
     it 'B6: operador puxou o freio depois de o turno desistir: falha bloqueada com consulta_falhou, sem chamar' do

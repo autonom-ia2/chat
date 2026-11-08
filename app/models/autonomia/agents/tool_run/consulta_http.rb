@@ -40,6 +40,9 @@ module Autonomia::Agents::ToolRun::ConsultaHttp
   ENTREGA = 'autonomia_entrega'.freeze
   ENTREGUE_NO_TURNO = 'entregue_no_turno'.freeze
   DESISTIU_DO_TURNO = 'desistiu_do_turno'.freeze
+  # QUAL TURNO entregou (`Delivery#turno`): o mesmo turno refeito relê o resultado; outro turno lê que já foi dito, salvo
+  # quando o que entregou foi superado antes de postar (`ConsultaNoTurno#entrega_deste_turno?`).
+  ENTREGUE_POR = 'autonomia_entregue_por'.freeze
   # O varredor já reenfileirou esta consulta uma vez (o job começou e morreu antes de chamar). Na segunda, ela fecha
   # como falha. O job que nunca começou não gasta esta chance.
   REENFILEIRADA = 'autonomia_reenfileirada'.freeze
@@ -125,21 +128,46 @@ module Autonomia::Agents::ToolRun::ConsultaHttp
     updated.positive?
   end
 
-  # Uma vez só, em qualquer status: a consulta superada também guarda o que o sistema de fora respondeu.
+  # Uma vez só, em qualquer status: a consulta superada também guarda o que o sistema de fora respondeu. A linha que a
+  # exclusão da conversa limpou (LGPD, `RegistroDaConversaExcluida`) não recebe o corpo de volta: a limpeza tira a chave
+  # da consulta do handle (e encerra a viva com `conversa_excluida`), e a condição é conferida no mesmo comando — o
+  # Postgres a relê na linha nova quando a limpeza trava a linha antes.
   def gravar_resultado!(texto, sucesso:, codigo:, api_ms:)
     marcas = { RESULTADO_DA_CONSULTA => texto.to_s, RESULTADO_OK => sucesso, CODIGO_DA_CONSULTA => codigo, API_MS => api_ms }
-    escrever(sem_chave(self.class.where(id: id), RESULTADO_DA_CONSULTA), marcas.compact)
+    escopo = sem_chave(self.class.where(id: id), RESULTADO_DA_CONSULTA).where('(handle->>?) IS NOT NULL', CHAVE_DA_CONSULTA)
+    escrever(escopo.where('failure_code IS DISTINCT FROM ?', ::Autonomia::Agents::RegistroDaConversaExcluida::CODIGO), marcas.compact)
   end
 
-  # O turno entrega: só se ninguém marcou antes. -> true quando ESTA chamada ficou com a entrega.
-  def marcar_entregue!
-    escrever(sem_chave(self.class.where(id: id), ENTREGA), { ENTREGA => ENTREGUE_NO_TURNO })
+  def incerta?
+    handle.to_h[CODIGO_DA_CONSULTA] == INCERTA
+  end
+
+  def entregue_por
+    handle.to_h[ENTREGUE_POR]
+  end
+
+  # O turno entrega: só se ninguém marcou antes. `por`: o turno (`Delivery#turno`). -> true quando ESTA chamada ficou com
+  # a entrega.
+  def marcar_entregue!(por:)
+    escrever(sem_chave(self.class.where(id: id), ENTREGA), { ENTREGA => ENTREGUE_NO_TURNO, ENTREGUE_POR => por })
+  end
+
+  # O turno que entregou foi superado antes de postar: outro turno toma a entrega, só se ela ainda é do `anterior`.
+  def tomar_entrega!(anterior:, por:)
+    escopo = self.class.where(id: id).where('(handle->>?) = ? AND (handle->>?) = ?', ENTREGA, ENTREGUE_NO_TURNO, ENTREGUE_POR, anterior.to_s)
+    escrever(escopo, { ENTREGUE_POR => por })
   end
 
   # O turno desiste: só se ninguém marcou E o resultado ainda não está gravado. Gravado, quem entrega é o turno.
   def marcar_desistencia!(espera_ms:)
     escopo = sem_chave(sem_chave(self.class.where(id: id), ENTREGA), RESULTADO_DA_CONSULTA)
     escrever(escopo, { ENTREGA => DESISTIU_DO_TURNO, TURNO_DESISTIU => { 'espera_ms' => espera_ms } })
+  end
+
+  # Ninguém vai entregar (a janela do turno passou e nenhum turno marcou): quem fala é o evento. Só sem marca nenhuma, e
+  # com o resultado gravado; o turno que marcou antes ganha.
+  def desistir_sem_turno!
+    escrever(sem_chave(self.class.where(id: id), ENTREGA), { ENTREGA => DESISTIU_DO_TURNO, TURNO_DESISTIU => { 'espera_ms' => nil } })
   end
 
   # AS ESCRITAS DO VARREDOR (`ReapStaleRunsJob#fechar_consulta`) conferem o prazo vencido no mesmo comando: o job que
