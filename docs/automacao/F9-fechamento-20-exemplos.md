@@ -158,8 +158,8 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G36 | A **IA lê as notas internas** da conversa (`le: notas`), como a nota do mecânico | F7 | Em PR (#2679) | F7 | 5 |
 | G40 | **Esperar só a pessoa que atende** a conversa ("espera a Fernanda até 30 min"), não a equipe inteira | F8 | Em PR: `conversa.responsavel_respondeu` (lote 4, #2682) | Motor | 10 |
 | G41 | **Instrução no resumir** ("o que já foi prometido") e **avisar o responsável quando a agente de IA atende** a conversa | F7 | A fazer: o resumir tem texto fixo (`passo_de_resumir.rb`); o avisar vai a quem atende a conversa, e com a agente de IA ninguém é avisado (achado no exemplo 10, #2678) | F7 | 10 |
-| G42 | A automação que começa pela **conversa lê o card dela** no "Só se" (só para ler) e o filtro sabe se **a mensagem tem anexo** | F6 | Em PR (#2716, PR1) | Gatilhos | 14, 18 |
-| G43 | A **espera para quando chega anexo**, não qualquer resposta: um "já mando" não zera os 2 dias do lembrete | F8 | A fazer (#2716, PR2) | Gatilhos | 14 |
+| G45 | A automação que começa pela **conversa lê o card dela** no "Só se" (só para ler) e o filtro sabe se **a mensagem tem anexo** | F6 | Em PR (#2716, PR1) | Gatilhos | 14, 18 |
+| G46 | A **espera para quando chega anexo**, não qualquer resposta: um "já mando" não zera os 2 dias do lembrete | F8 | A fazer (#2716, PR2) | Gatilhos | 14 |
 
 ### 5.1 A sonda de cada lacuna
 
@@ -192,11 +192,11 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 11 | Indicação que vira presente | ✅ mensagem do cliente | decidir ✅, extrair ✅, mensagem a Maria ✅ | G1, G4, G5, G12, G16, G17, G18 | Não |
 | 12 | Visita que aconteceu | 🟡 G5 (entrou em "Visita feita") | mensagem ✅ (na janela), decidir ✅, extrair ✅, mover ✅, etiqueta ✅, avisar ✅ | G2, G3, G5, G11, G14, G25, G35 (a IA lê a frase do corretor no card) | Não |
 | 13 | Festa do contrato ao depoimento | ✅ G5 (card ganho) + ✅ G6 (datas da festa) | e-mail ✅ (G2), modelo fora da janela ✅ (G1), data calculada ✅ (G16), extrair → copiar ao card (2 passos) ✅, resumir/avisar lendo o card ✅ (G35), decidir ✅, etiqueta ✅ | — | **Sim** (`exemplo_13_festa_do_contrato_spec.rb`) |
-| 14 | Documentação para emitir | 🟡 G5 (entrou em "Documentação") | extrair ✅, escrever ✅, etiqueta ✅, mover ✅, avisar ✅ | G1, G3, G5, G13, G18 (passo 6: o card da conversa), G20, G42 (passo 2: o filtro lê o card), G43 (passo 5: a espera por anexo) | Não |
+| 14 | Documentação para emitir | 🟡 G5 (entrou em "Documentação") | extrair ✅, escrever ✅, etiqueta ✅, mover ✅, avisar ✅ | G1, G3, G5, G13, G18 (passo 6: o card da conversa), G20, G45 (passo 2: o filtro lê o card), G46 (passo 5: a espera por anexo) | Não |
 | 15 | Cliente grande | 🟡 G5 (card criado) + ⛔ G27 (valor mudou) | se com etiqueta ✅, atribuir ✅, etiqueta ✅, prioridade ✅, resumir ✅, mensagem ✅ | G3, G5, G11, G12, G15, G27, G35 (a IA resume o motivo da perda: `g35_g36_ia_le_card_e_nota_spec.rb`) | Não |
 | 16 | Reconquistar | ⛔ G7 (dia 1º, perdidos há 11 meses) | etiqueta ✅, decidir ✅, escrever ✅ | G3, G4, G7, G12, G14, G16, G18 | Não |
 | 17 | Vendedora de férias | ⛔ G9 (troca de responsável) | resumir ✅, mensagem ✅, etiqueta ✅ | G7 (toda manhã, por card com a etiqueta), G9, G11, G15, G16, G23 | Não |
-| 18 | Seleção de candidatos | ✅ mensagem na caixa de vagas | decidir ✅, etiqueta ✅, avisar ✅ | G1, G4, G5, G6, G12, G15, G20, G25, G42 (começo: a mensagem tem anexo) | Não |
+| 18 | Seleção de candidatos | ✅ mensagem na caixa de vagas | decidir ✅, etiqueta ✅, avisar ✅ | G1, G4, G5, G6, G12, G15, G20, G25, G45 (começo: a mensagem tem anexo) | Não |
 | 19 | Cliente que sumiu do WhatsApp | ⛔ G8 (mensagem falhou) | etiqueta ✅, extrair ✅ (telefone), escrever ✅, avisar ✅ | G1, G2, G3, G8, G11, G19, G28 (o recado da IA pelo modelo) | Não |
 | 20 | Venda fechada no sistema da empresa | 🟡 G5 (card ganho) | extrair ✅, decidir ✅, mover ✅, etiqueta ✅, avisar ✅ | G1, G2 (boas-vindas e "Dicas do mês" por e-mail), G5, G7 (todo mês, por contato com a etiqueta), G11, G12, G13 | Não |
 

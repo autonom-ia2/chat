@@ -20,11 +20,11 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
            'G40 (esperar só a Fernanda), G41 (a instrução no resumir e avisar com a agente de IA atendendo), G28'],
     11 => ['Indicação que vira presente', 'G4, G17, G18 (criar o contato e o card do amigo e agir no card dele), G1, G5, G12, G16'],
     12 => ['Visita que aconteceu decide o próximo passo', 'G5 (entrou em "Visita feita"), G2, G3, G11, G14, G25, G35'],
-    14 => ['Documentação completa para emitir', 'G5 (entrou em "Documentação"), G1, G3, G13, G18, G20, G42 (o filtro lê o card da conversa), G43'],
+    14 => ['Documentação completa para emitir', 'G5 (entrou em "Documentação"), G1, G3, G13, G18, G20, G45 (o filtro lê o card da conversa), G46'],
     15 => ['Cliente grande, atendimento de dono', 'G27 (card atualizado com valor acima de R$ 50 mil), G3, G5, G11, G12, G15, G35'],
     16 => ['Reconquistar quem foi para o concorrente', 'G7 (todo dia 1º), G3, G4, G12, G14, G16, G18'],
     17 => ['Vendedora de férias, cliente bem cuidado', 'G9 (troca de responsável), G7, G11, G15, G16, G23'],
-    18 => ['Seleção de candidatos sem planilha', 'G4, G20 (ler o currículo e criar o card), G1, G5, G6, G12, G15, G25, G42'],
+    18 => ['Seleção de candidatos sem planilha', 'G4, G20 (ler o currículo e criar o card), G1, G5, G6, G12, G15, G25, G45'],
     19 => ['Cliente que sumiu do WhatsApp', 'G8 (mensagem que falhou), G1, G2, G3, G11, G19, G28'],
     20 => ['Venda fechada já entra no sistema da empresa', 'G5 (card ganho), G1, G2, G7, G11, G12, G13']
   }

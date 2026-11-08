@@ -205,10 +205,10 @@ module FechamentoAutomacao::Lacunas
     'G41' => nil,
     # Da auditoria dos termos (07/11, #2716): a automação que começa pela conversa lê o card dela no "Só se" (exemplo 14,
     # passo 2) e o filtro sabe se a mensagem tem anexo (exemplo 18, começo).
-    'G42' => -> { valor?('mensagem.tem_anexo') && Autonomia::Automacao::Valores::BASES_DO_ALVO['Conversation'].include?('card') },
+    'G45' => -> { valor?('mensagem.tem_anexo') && Autonomia::Automacao::Valores::BASES_DO_ALVO['Conversation'].include?('card') },
     # Da auditoria dos termos (07/11, #2716 PR2): a espera para quando chega anexo, não qualquer resposta (exemplo 14,
     # passo 5: um "já mando" não pode zerar os 2 dias).
-    'G43' => nil
+    'G46' => nil
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".
