@@ -33,6 +33,7 @@ import automacaoLivreReceitas from './automacaoLivreReceitas.json';
 import automacaoLivreEnsaio from './automacaoLivreEnsaio.json';
 import automacaoLivreCampanha from './automacaoLivreCampanha.json';
 import automacaoLivreRetorno from './automacaoLivreRetorno.json';
+import ausencia from './ausencia.json';
 import brandKits from './brandKits.json';
 import booking from './booking.json';
 import resultJourney from './resultJourney.json';
@@ -124,6 +125,7 @@ export default {
     ...automacaoLivreCampanha.AUTOMACAO_LIVRE,
     ...automacaoLivreRetorno.AUTOMACAO_LIVRE,
   },
+  ...ausencia,
   ...brandKits,
   ...booking,
   ...resultJourney,
