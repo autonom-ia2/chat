@@ -160,6 +160,9 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G41 | **Instrução no resumir** ("o que já foi prometido") e **avisar o responsável quando a agente de IA atende** a conversa | F7 | A fazer: o resumir tem texto fixo (`passo_de_resumir.rb`); o avisar vai a quem atende a conversa, e com a agente de IA ninguém é avisado (achado no exemplo 10, #2678) | F7 | 10 |
 | G45 | A automação que começa pela **conversa lê o card dela** no "Só se" (só para ler) e o filtro sabe se **a mensagem tem anexo** | F6 | Em PR (#2716, PR1) | Gatilhos | 14, 18 |
 | G46 | A **espera para quando chega anexo**, não qualquer resposta: um "já mando" não zera os 2 dias do lembrete | F8 | A fazer (#2716, PR2) | Gatilhos | 14 |
+| G44 | Link da agenda de uma página escolhida (ex. 20) | F6 | A fazer (motor-g) | Gatilhos | 20 |
+| G51 | Reunião marcada pela página depois do ganho entra no card que já existe do contato, não num card novo (`booker.rb:157`) | F6 | A fazer | Gatilhos | 20 |
+| G52 | Campanha de e-mail como passo (a G14 cobre só WhatsApp) | novo | A fazer | F5 | 20 |
 
 ### 5.1 A sonda de cada lacuna
 
@@ -198,7 +201,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 17 | Vendedora de férias | ⛔ G9 (troca de responsável) | resumir ✅, mensagem ✅, etiqueta ✅ | G7 (toda manhã, por card com a etiqueta), G9, G11, G15, G16, G23 | Não |
 | 18 | Seleção de candidatos | ✅ mensagem na caixa de vagas | decidir ✅, etiqueta ✅, avisar ✅ | G1, G4, G5, G6, G12, G15, G20, G25, G45 (começo: a mensagem tem anexo) | Não |
 | 19 | Cliente que sumiu do WhatsApp | ⛔ G8 (mensagem falhou) | etiqueta ✅, extrair ✅ (telefone), escrever ✅, avisar ✅ | G1, G2, G3, G8, G11, G19, G28 (o recado da IA pelo modelo) | Não |
-| 20 | Venda fechada no sistema da empresa | 🟡 G5 (card ganho) | extrair ✅, decidir ✅, mover ✅, etiqueta ✅, avisar ✅ | G1, G2 (boas-vindas e "Dicas do mês" por e-mail), G5, G7 (todo mês, por contato com a etiqueta), G11, G12, G13 | Não |
+| 20 | Venda fechada no sistema da empresa | 🟡 G5 (card ganho) | extrair ✅, decidir ✅, mover ✅, etiqueta ✅, avisar ✅ | G1, G2 (boas-vindas e "Dicas do mês" por e-mail), G5, G7 (todo mês, por contato com a etiqueta), G11, G12, G13, G44 (passo 5: link da agenda de uma página escolhida), G51 (passo 6: a reunião depois do ganho entra no card que já existe), G52 (passo 9: campanha de e-mail) | Não |
 
 ### 6.1 As lacunas que destravam mais exemplos
 

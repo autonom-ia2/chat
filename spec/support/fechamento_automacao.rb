@@ -208,7 +208,14 @@ module FechamentoAutomacao::Lacunas
     'G45' => -> { valor?('mensagem.tem_anexo') && Autonomia::Automacao::Valores::BASES_DO_ALVO['Conversation'].include?('card') },
     # Da auditoria dos termos (07/11, #2716 PR2): a espera para quando chega anexo, não qualquer resposta (exemplo 14,
     # passo 5: um "já mando" não pode zerar os 2 dias).
-    'G46' => nil
+    'G46' => nil,
+    # Link da agenda de uma página escolhida (ex. 20).
+    'G44' => nil,
+    # Do exemplo 20, passo 6: a reunião marcada pela página depois do ganho entra no card que já existe do contato, não
+    # num card novo (booker.rb:157).
+    'G51' => nil,
+    # Do exemplo 20, passo 9: campanha de e-mail como passo (a G14 cobre só WhatsApp).
+    'G52' => nil
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".
