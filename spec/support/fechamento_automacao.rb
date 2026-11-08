@@ -196,6 +196,10 @@ module FechamentoAutomacao::Lacunas
     'G31' => nil,
     # G32: a reunião marcada como condição do "esperar até", no meio da execução.
     'G32' => nil,
+    # #2680: a receita escolhe a caixa por onde abrir a conversa de quem não tem uma (o lead do formulário, o contato).
+    'G33' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('properties', 'gatilho', 'properties').key?('conversa_nova') },
+    # #2680: a resposta em outra conversa do contato conta, e a mensagem que a automação mandou vira valor.
+    'G34' => -> { valor?('envio.texto') && valor?('envio.situacao') },
     # A IA lê o card (`le: card`, #2679): exemplo 13, passo 5; exemplo 15, passo 9.
     'G35' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('card') },
     # A IA lê as notas internas da conversa (`le: notas`, #2679): exemplo 5, passo 1.
@@ -214,8 +218,8 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 10 (#2678), ainda sem dono: a instrução no resumir ("o que já foi prometido") e avisar o responsável
     # quando a agente de IA atende a conversa.
     'G41' => nil,
-    # Achadas com a G8 (#2637, 08/11). G42: no mesmo fluxo, "se o envio falhou" (ex. 1, passo 3: o WhatsApp recusou e o
-    # cliente tem e-mail, manda por e-mail); a recusa chega depois, pelo canal, e o fluxo já seguiu. Fica com a F7.
+    # Do exemplo 1, passo 12 (#2721): o resumo lê tudo o que a execução tentou, até o e-mail em conversa própria. Fica
+    # com a F7 (#2763); sem ela, o exemplo 1 segue pendente.
     'G42' => nil,
     # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7). Fica
     # com a Gatilhos, depois do lote 3 (#2689), que traz a porta da frente da conversa nova.
@@ -223,8 +227,8 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
     # (passo 2, "manda por e-mail o mesmo conteúdo").
     'G53' => nil,
-    # G54: esperar a entrega da mensagem (passo 5, "Chegou: tira a etiqueta e grava uma nota").
-    'G54' => nil
+    # G54: esperar a entrega da mensagem (passo 5, "Chegou: tira a etiqueta e grava uma nota"); fechada pela G34.
+    'G54' => -> { valor?('envio.situacao') }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

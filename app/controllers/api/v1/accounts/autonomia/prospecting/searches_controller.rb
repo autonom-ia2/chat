@@ -10,7 +10,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
   before_action -> { check_permission_granted!('prospecting_manage') }, only: [:export]
 
   def index
-    ordered_scope = visible_searches_scope.order(created_at: :desc)
+    ordered_scope = visible_searches_scope.includes(:user).order(created_at: :desc)
     total_count = ordered_scope.count
     searches = ordered_scope.offset((page - 1) * per_page).limit(per_page)
 
@@ -66,9 +66,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     }, status: :created
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
-  rescue ::Autonomia::Prospecting::SearchRunner::UnsupportedProviderError => e
-    render json: { error: e.message }, status: :unprocessable_entity
-  rescue ::Autonomia::Prospecting::SearchRunner::ProviderError => e
+  rescue ::Autonomia::Prospecting::SearchRunner::UnsupportedProviderError, ::Autonomia::Prospecting::SearchRunner::ProviderError => e
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
@@ -90,8 +88,9 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     send_leads_export(by_priority_position(leads_for_search(search), scoring), scoring: scoring, filename: "busca-#{search.id}")
   end
 
+  # Cada pessoa apaga só as buscas que ela fez, inclusive quem vê as de todos (decisão do Rodrigo, #2693).
   def destroy
-    search = visible_searches_scope.find(params[:id])
+    search = visible_searches_scope.where(user_id: Current.user.id).find(params[:id])
     search.destroy!
 
     render json: { payload: { id: search.id } }
@@ -108,29 +107,13 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
 
   def search_params
     params.require(:search).permit(
-      :query,
-      :location,
-      :radius,
-      :area_type,
-      :requested_limit,
-      :limit,
-      :crm_pipeline_id,
-      :crm_stage_id,
-      :fresh,
+      :query, :location, :radius, :area_type, :requested_limit, :limit, :crm_pipeline_id, :crm_stage_id, :fresh,
       categories: [],
       area_config: {},
       metadata: [
-        :location_place_id,
-        :location_latitude,
-        :location_longitude,
-        :location_label,
-        :sort_key,
-        :score_mode,
-        :scoring_profile_id,
-        :preset_id,
-        :decision_maker_type,
-        { advanced_filters: {},
-          filters: [:auto_expand_radius] }
+        :location_place_id, :location_latitude, :location_longitude, :location_label, :sort_key, :score_mode,
+        :scoring_profile_id, :preset_id, :decision_maker_type,
+        { advanced_filters: {}, filters: [:auto_expand_radius] }
       ]
     )
   end
@@ -163,63 +146,13 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     }
   end
 
+  # O corpo da busca mora em SearchPayload (#2693); os leads vão junto só ao abrir a busca.
   def search_payload(search, include_leads: false)
-    payload = search.as_json(
-      only: [
-        :id, :query, :location, :radius, :area_type, :area_config, :provider, :status, :requested_limit,
-        :created_at, :updated_at
-      ]
-    )
-    lead_ids = Array(search.metadata.to_h['lead_ids'])
     leads = leads_for_search(search)
-    payload['results_count'] =
-      if search.metadata.to_h.key?('results_count')
-        search.metadata.to_h['results_count']
-      elsif lead_ids.present?
-        lead_ids.size
-      else
-        leads.count
-      end
-    # Raio pedido, para repetir a busca (#678): com "Expandir raio", radius é o que a expansão alcançou.
-    payload['requested_radius'] = search.metadata.to_h['requested_radius'] || search.radius
-    payload['crm_pipeline_id'] = search.metadata.to_h['crm_pipeline_id']
-    payload['crm_stage_id'] = search.metadata.to_h['crm_stage_id']
-    payload['crm_count'] = leads.count { |lead| lead.crm_card_id.present? }
-    payload['contact_count'] = leads.count { |lead| lead.contact_id.present? }
-    payload['average_score'] = average_score_for(leads)
-    payload['ready_count'] = leads.count do |lead|
-      lead.status == 'ready_for_campaign'
-    end
-    payload['location_place_id'] = search.metadata.to_h['location_place_id']
-    payload['location_latitude'] = search.metadata.to_h['location_latitude']
-    payload['location_longitude'] = search.metadata.to_h['location_longitude']
-    payload['location_label'] = search.metadata.to_h['location_label']
-    payload['search_filters'] =
-      search.metadata.to_h['search_filters'] || search.metadata.to_h['filters'] || {}
-    payload['advanced_filters'] = search.metadata.to_h['advanced_filters'] || {}
-    payload['sort_key'] = search.metadata.to_h['sort_key']
-    payload['score_mode'] = search.metadata.to_h['score_mode']
-    payload['scoring_profile_id'] = search.metadata.to_h['scoring_profile_id']
-    payload['preset_id'] = search.metadata.to_h['preset_id']
-    payload['decision_maker_type'] =
-      search.metadata.to_h['decision_maker_type'].presence || ::Autonomia::Prospecting::DecisionMakerType::DEFAULT
-    payload['summary'] = {
-      results_count: payload['results_count'],
-      contact_count: payload['contact_count'],
-      crm_count: payload['crm_count'],
-      ready_count: payload['ready_count'],
-      average_score: payload['average_score'],
-      consumed_api_units: search.consumed_api_units.to_i,
-      radius_expanded: ActiveModel::Type::Boolean.new.cast(
-        search.metadata.to_h['radius_expanded']
-      ),
-      cached_from_search_id: search.metadata.to_h['cached_from_search_id'],
-      partial_results: search.metadata.to_h['partial_results'] == true
-    }
-    # Barra de progresso da pesquisa de empresa e decisor (#679), sem texto de crédito.
-    payload['research_progress'] = ::Autonomia::Prospecting::Research::Queue.progress(leads)
-    payload['leads'] = leads.map { |lead| lead_payload(lead, search) } if include_leads
-    payload
+    payload = ::Autonomia::Prospecting::SearchPayload.new(search: search, leads: leads).build
+    return payload unless include_leads
+
+    payload.merge('leads' => leads.map { |lead| lead_payload(lead, search) })
   end
 
   # A fila marca 'queued' por update_all: sem reler, a tela recebia 'pending', verificava pela aba os mesmos números
@@ -238,47 +171,9 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
   end
 
   # O bloco técnico da nota (componentes, pesos, fatores negativos) só vai para o administrador (#732, item 9).
-  def lead_payload(lead, search = nil)
-    visible_lead_payload(full_lead_payload(lead, search))
-  end
-
-  def full_lead_payload(lead, search)
-    lead.as_json(only: ::Autonomia::Prospecting::LeadPayload::ATTRIBUTES).merge(
-      source_label: lead.provider.to_s.humanize,
-      contact_status: lead.contact_id.present? ? 'created' : 'pending',
-      crm_status: lead.crm_card_id.present? ? 'created' : 'pending'
-    ).merge(
-      advanced_filter_payload(lead)
-    ).merge(
-      reviews_payload(lead)
-    ).merge(
-      whatsapp_payload(lead)
-    ).merge(
-      lead_payload_builder.research(lead)
-    ).merge(
-      search_rank_payload(lead, search)
-    ).merge(
-      search_scoring_payload(lead, search)
-    ).merge(
-      lead_payload_builder.crm_presence(lead)
-    )
-  end
-
-  # Posição do lead nesta busca, guardada nela (#677). Busca anterior a isso não tem: fica a posição do lead.
-  def search_rank_payload(lead, search)
-    rank = search&.metadata.to_h.dig('lead_ranks', lead.id.to_s)
-    rank.nil? ? {} : { 'search_rank' => rank }
-  end
-
-  # Nota e prioridade do lead nesta busca (#678), no mesmo formato do atributo do lead. Busca anterior a isso não tem:
-  # ficam os valores do lead.
-  def search_scoring_payload(lead, search)
-    scoring = search&.metadata.to_h.dig('lead_scoring', lead.id.to_s)
-    return {} if scoring.blank?
-
-    scoring.slice('score', 'score_breakdown', 'priority_score', 'priority_position').to_h do |key, value|
-      [key, ::Autonomia::Prospecting::Lead.type_for_attribute(key).cast(value).as_json]
-    end
+  # Posição e nota da busca por cima das do lead (#677, #678): as chaves já existem no payload e ficam no mesmo lugar.
+  def lead_payload(lead, search)
+    visible_lead_payload(lead_payload_builder.build(lead).merge(::Autonomia::Prospecting::SearchPayload.lead_in_search(lead, search)))
   end
 
   # Posição de prioridade da busca, senão a do lead; sem posição, no fim, na ordem da busca.
@@ -311,12 +206,5 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       total_pages: total_pages,
       has_more: page < total_pages
     }
-  end
-
-  def average_score_for(leads)
-    scored_leads = leads.filter { |lead| lead.score.present? }
-    return if scored_leads.blank?
-
-    (scored_leads.sum { |lead| lead.score.to_f } / scored_leads.size).round(1)
   end
 end

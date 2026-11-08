@@ -21,8 +21,11 @@ class Autonomia::AutomacaoListener < BaseListener
     falhou.criada(event.data[:message])
   end
 
-  # G8: a mensagem que o canal recusou (o status passou a `failed`).
-  def message_updated(event) = falhou.atualizada(event.data[:message], event.data[:previous_changes])
+  # A situação do envio que a automação mandou acorda a espera (G34), e a recusa do canal começa o gatilho (G8).
+  def message_updated(event)
+    escuta.envio_atualizado(event.data[:message], event.data[:previous_changes])
+    falhou.atualizada(event.data[:message], event.data[:previous_changes])
+  end
 
   def contact_updated(event)
     contact = event.data[:contact]

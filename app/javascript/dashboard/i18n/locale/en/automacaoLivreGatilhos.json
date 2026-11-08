@@ -26,6 +26,12 @@
       "CARD": "From a pipeline card",
       "ANTIGO": "The old way"
     },
+    "CONVERSA_NOVA": {
+      "CAIXA": "Inbox to reach someone with no conversation yet",
+      "NENHUMA": "None (with no conversation, the message is not sent)",
+      "NA_FRASE": "{frase} (with no conversation, opens one in {caixa})",
+      "AJUDA": "If the card or the contact has no conversation yet, the first message opens one in this inbox. On the official WhatsApp, it only goes out with an approved template."
+    },
     "VALOR_DA_MENSAGEM": {
       "RECEBIDA": "from the customer",
       "ENVIADA": "from the team to the customer",
@@ -33,7 +39,11 @@
       "TRUE": "yes",
       "FALSE": "no",
       "CLIENTE": "the customer",
-      "EQUIPE": "the team"
+      "EQUIPE": "the team",
+      "SAIU": "sent, not confirmed yet",
+      "ENTREGUE": "delivered",
+      "LIDA": "read",
+      "FALHOU": "failed"
     },
     "OPERADOR_DA_MENSAGEM": {
       "IGUAL": "is",

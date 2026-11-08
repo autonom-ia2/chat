@@ -1,6 +1,6 @@
 # Automação livre · teste de fechamento dos 20 exemplos (F9.6 a F9.8)
 
-- **Épico:** #2414 · **Issue:** #2570 · **Base:** termos de aceite F1–F9 (31/10, commit `dcd9a9f5d4`), main em `4bd7168c0f` (05/11).
+- **Épico:** #2414 · **Issue:** #2570 · **Base:** termos de aceite F1–F9 (31/10, commit `dcd9a9f5d4`, em [`termos-de-aceite-F1-F9.md`](termos-de-aceite-F1-F9.md)), main em `4bd7168c0f` (05/11).
 - **Para que serve:** o épico só fecha quando os 20 exemplos dos termos rodam de ponta a ponta no ambiente de testes,
   montados como o dono montaria, com teste automático conferindo o resultado prometido. Este documento desenha esse
   teste e, antes dele, mostra **o que falta no motor para cada exemplo rodar**. A lista de lacunas (seção 5) é o
@@ -157,6 +157,8 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G30 | **Responsável por anúncio**: o corretor responsável por aquele anúncio (retorno para ele, link da agenda dele) | F6 | A fazer: o card do formulário ganha o dono pela regra do `Crm::Cards::Creator`, que não olha o anúncio. A Atribuição (`Crm::Entrega`) liga funil e etapa a pessoa (a fixa ou quem cuida do funil), nunca anúncio; nenhum cadastro liga anúncio a pessoa (achado no exemplo 2, 07/11) | F2 | 2 |
 | G31 | **Decidir a cada resposta**: voltar a esperar e decidir de novo enquanto a IA diz "ainda conversando" | F3/F7 | A fazer: a receita não tem laço; cada passo roda uma vez por execução (achado no exemplo 2, 07/11) | Motor | 2 |
 | G32 | **Esperar a reunião ser marcada** no meio da execução ("visita marcada: move o card e avisa") | F8 | A fazer: a reunião marcada é gatilho (G12), mas não é condição do "esperar até"; o `Resposta` só lê mensagem (achado no exemplo 2, 07/11) | Motor | 2, 5 |
+| G33 | **Mandar mensagem a quem não tem conversa** (o lead do formulário, o contato do aniversário): a caixa por onde abrir | F4 | **Fechada** (#2680): `gatilho.conversa_nova.caixa_id`; a mensagem abre a conversa, e a espera, a IA e a agente usam ela | Motor | 2, 6 |
+| G34 | **Resposta em outra conversa do contato** (a do e-mail) e **a mensagem mandada como valor** (`envio.texto`, `envio.situacao`) | G11 | **Fechada** (#2680): o ramo "se o envio falhou, manda por e-mail o mesmo texto" monta sem a G8 | Motor | 1, 19 |
 | G35 | A **IA lê o card** (`le: card`): título, etapa, funil, status, motivo da perda e campos; o valor só com a permissão (#2597) | F7 | Em PR (#2679): só se quem ligou vê o card | F7 | 12, 13, 15 |
 | G36 | A **IA lê as notas internas** da conversa (`le: notas`), como a nota do mecânico | F7 | Em PR (#2679) | F7 | 5 |
 | G37 | **Público da campanha com exclusão**: "a mesma campanha para todos os outros" e "perguntou na Black e não comprou" | F6 | A fazer: o público do passo campanha só soma etiquetas (`PassoDeCampanha`), sem "menos quem tem a etiqueta X" (achado no exemplo 7, 07/11; G33 e G34 são do lote 3, #2680, G35 e G36 da F7, #2688; fecha com o lote 5, #2686) | Gatilhos | 7 |
@@ -164,10 +166,10 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G39 | **Gatilho numa data única** ("a quinta antes da Black Friday, às 9h") | F6 | A fazer: o recorrente (G7) repete toda semana ou todo mês; não há "uma vez, nesta data" (achado no exemplo 7, 07/11; fecha com o PR do exemplo 7 da G14, #2681 parte 4) | Gatilhos | 7 |
 | G40 | **Esperar só a pessoa que atende** a conversa ("espera a Fernanda até 30 min"), não a equipe inteira | F8 | Em PR: `conversa.responsavel_respondeu` (lote 4, #2682) | Motor | 10 |
 | G41 | **Instrução no resumir** ("o que já foi prometido") e **avisar o responsável quando a agente de IA atende** a conversa | F7 | A fazer: o resumir tem texto fixo (`passo_de_resumir.rb`); o avisar vai a quem atende a conversa, e com a agente de IA ninguém é avisado (achado no exemplo 10, #2678) | F7 | 10 |
-| G42 | **"Se o envio falhou"** no mesmo fluxo: o WhatsApp recusou e o cliente tem e-mail, manda por e-mail (ex. 1, passo 3) | F7 | A fazer: a recusa chega depois, pelo canal, e o fluxo já seguiu; o gatilho da G8 começa outra automação, não volta a esta (achado com a G8, #2637) | F7 | 1 |
+| G42 | **O resumo lê tudo o que a execução tentou** (o modelo no WhatsApp, o e-mail em conversa própria, o link da agenda) | F7 | Em PR (#2721): o resumir lê também as conversas em que a execução mandou mensagem, só as que quem ligou vê, com o envio recusado marcado | F7 | 1 |
 | G43 | **Mandar ao número novo** do contato depois que a automação o atualiza (ex. 19, passos 4 e 7) | F4 | A fazer (#2700): a conversa fica presa ao número com que nasceu; depois do lote 3 (#2689), que traz a porta da frente da conversa nova | Gatilhos | 19 |
-| G53 | **O conteúdo da mensagem que falhou** como valor da receita (ex. 19, passo 2: "manda por e-mail o mesmo conteúdo") | F8 | A fazer: a mensagem do gatilho só tem tipo, privada e primeira (`valores.rb`) | Gatilhos | 19 |
-| G54 | **Esperar a entrega** da mensagem (ex. 19, passo 5: "Chegou: tira a etiqueta") | F8 | A fazer: "entregue" não é valor da receita, e o "esperar até" não acorda pelo status da mensagem | Gatilhos | 19 |
+| G53 | **O conteúdo da mensagem que falhou** como valor da receita (ex. 19, passo 2: "manda por e-mail o mesmo conteúdo") | F8 | A fazer: a mensagem do gatilho só tem tipo, privada e primeira (`valores.rb`); o `envio.texto` (G34) é o da própria execução, e a mensagem que falhou foi de outra | Gatilhos | 19 |
+| G54 | **Esperar a entrega** da mensagem (ex. 19, passo 5: "Chegou: tira a etiqueta") | F8 | **Fechada** pela G34 (#2680): "esperar até `envio.situacao` igual a entregue"; a mudança de situação acorda a espera | Gatilhos | 19 |
 
 ### 5.1 A sonda de cada lacuna
 
@@ -187,12 +189,12 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 
 | # | Exemplo | Começa | Passos que já rodam na main | Faltam | Roda hoje |
 |---|---|---|---|---|---|
-| 1 | Renovação do seguro | ⛔ G6 (30 dias antes do vencimento) | mover card ✅, etiqueta ✅, extrair ✅, decidir ✅, avisar ✅, resumir ✅ | G1, G2, G3, G6, G8, G11, G12, G42 (se o WhatsApp recusar, o e-mail no mesmo fluxo) | Não |
-| 2 | Lead do anúncio | ✅ G5 (card criado), ⛔ G29 ("pelo formulário de um anúncio") | etiqueta ✅, mensagem pelo modelo ✅ (G1), esperar a resposta ✅ (G11), retorno ✅ (G3), passar para a agente de IA ✅ (G15), decidir ✅, link da agenda ✅ (G12), mover ✅, resumir/avisar ✅, extrair ✅, etiqueta da campanha ✅ (G14) | G29, G30, G31, G32 | Não |
+| 1 | Renovação do seguro | ⛔ G6 (30 dias antes do vencimento) | mover card ✅, etiqueta ✅, extrair ✅, decidir ✅, avisar ✅, resumir ✅ | G1, G2, G3, G6, G8, G11, G12, G34, G42 (passo 12: o resumo lê o e-mail e o modelo recusado) | Não |
+| 2 | Lead do anúncio | ✅ G5 (card criado), ⛔ G29 ("pelo formulário de um anúncio") | etiqueta ✅, mensagem pelo modelo ✅ (G1), mensagem ao lead sem conversa ✅ (G33), esperar a resposta ✅ (G11), retorno ✅ (G3), passar para a agente de IA ✅ (G15), decidir ✅, link da agenda ✅ (G12), mover ✅, resumir/avisar ✅, extrair ✅, etiqueta da campanha ✅ (G14) | G29, G30, G31, G32 | Não |
 | 3 | Pós-procedimento da clínica | ✅ G5 (entrou em "Atendida") | extrair ✅, escrever ✅, decidir ✅ (lendo a foto, G20), etiqueta ✅, prioridade ✅, avisar ✅, retorno ✅, e-mail no lugar da campanha "Manutenção" ✅, mover ✅ | — | **Sim** (`exemplo_03_pos_procedimento_spec.rb`) |
 | 4 | Aluno que começa a faltar | 🟡 G5 (entrou em "Faltou") | se com etiqueta do contato ✅, etiqueta pôr/tirar ✅, escrever ✅, decidir ✅, avisar ✅, esperar 30 dias ✅ | G1, G3, G4, G5, G12, G15, G25, G28 (a IA escreve a pergunta e manda pelo modelo) | Não |
 | 5 | Revisão do carro | 🟡 G5 (card ganho) | extrair ✅ (contato), etiqueta ✅, mover ✅ | G1, G3, G5, G6, G12, G16, G19, G28 (lembrete da IA pelo modelo), G32 ("não marcou em 5 dias", passos 6 e 7), G36 (nota do mecânico: `g35_g36_ia_le_card_e_nota_spec.rb`) | Não |
-| 6 | Aniversário | ⛔ G6 (data de nascimento do contato) | escrever ✅, etiqueta ✅, decidir ✅, extrair ✅, avisar ✅ | G1, G4, G6, G12, G14, G16, G25 | Não |
+| 6 | Aniversário | ⛔ G6 (data de nascimento do contato) | escrever ✅, etiqueta ✅, decidir ✅, extrair ✅, avisar ✅ | G1, G4, G6, G12, G14, G16, G25, G33 | Não |
 | 7 | Black Friday | 🟡 G7 (toda quinta 9h, #2635); ⛔ G39 (só a quinta antes da Black) | decidir ✅, extrair ✅ (card), etiqueta ✅, mensagem ✅ (na janela), disparar campanha ✅ (G14) | G5, G7, G14, G15, G37, G38, G39 | Não |
 | 8 | Funcionário novo no plano | ✅ mensagem do RH (1ª); ⛔ G24 (2ª) | decidir ✅, mensagem ao RH ✅ | G1, G4, G5, G7, G13, G17, G20, G22, G24, G27 | Não |
 | 9 | Prospecção semanal | ⛔ G7 (segunda 8h) | decidir ✅, etiqueta ✅, mover ✅, resumir ✅ | G3, G4, G7, G12, G14, G21 | Não |
@@ -205,7 +207,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 16 | Reconquistar | ⛔ G7 (dia 1º, perdidos há 11 meses) | etiqueta ✅, decidir ✅, escrever ✅ | G3, G4, G7, G12, G14, G16, G18 | Não |
 | 17 | Vendedora de férias | ⛔ G9 (troca de responsável) | resumir ✅, mensagem ✅, etiqueta ✅ | G7 (toda manhã, por card com a etiqueta), G9, G11, G15, G16, G23 | Não |
 | 18 | Seleção de candidatos | ✅ mensagem na caixa de vagas | decidir ✅, etiqueta ✅, avisar ✅ | G1, G4, G5, G6, G12, G15, G20, G25 | Não |
-| 19 | Cliente que sumiu do WhatsApp | ⛔ G8 (mensagem falhou) | etiqueta ✅, extrair ✅ (telefone), escrever ✅, avisar ✅ | G1, G2, G3, G8, G11, G19, G28 (o recado da IA pelo modelo), G43 (o número novo), G53 (o mesmo conteúdo no e-mail), G54 (esperar a entrega) | Não |
+| 19 | Cliente que sumiu do WhatsApp | ⛔ G8 (mensagem falhou) | etiqueta ✅, extrair ✅ (telefone), escrever ✅, avisar ✅ | G1, G2, G3, G8, G11, G19, G28 (o recado da IA pelo modelo), G34, G43 (o número novo), G53 (o mesmo conteúdo no e-mail) | Não |
 | 20 | Venda fechada no sistema da empresa | 🟡 G5 (card ganho) | extrair ✅, decidir ✅, mover ✅, etiqueta ✅, avisar ✅ | G1, G2 (boas-vindas e "Dicas do mês" por e-mail), G5, G7 (todo mês, por contato com a etiqueta), G11, G12, G13 | Não |
 
 ### 6.1 As lacunas que destravam mais exemplos

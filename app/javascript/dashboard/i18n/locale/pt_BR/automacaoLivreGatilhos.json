@@ -26,6 +26,12 @@
       "CARD": "Do card do funil",
       "ANTIGO": "Do jeito antigo"
     },
+    "CONVERSA_NOVA": {
+      "CAIXA": "Caixa para falar com quem ainda não tem conversa",
+      "NENHUMA": "Nenhuma (sem conversa, a mensagem não sai)",
+      "NA_FRASE": "{frase} (sem conversa, abre uma em {caixa})",
+      "AJUDA": "Se o card ou o contato ainda não tem conversa, a primeira mensagem abre uma nesta caixa. No WhatsApp oficial, ela só sai com um modelo aprovado."
+    },
     "VALOR_DA_MENSAGEM": {
       "RECEBIDA": "do cliente",
       "ENVIADA": "da equipe para o cliente",
@@ -33,7 +39,11 @@
       "TRUE": "sim",
       "FALSE": "não",
       "CLIENTE": "o cliente",
-      "EQUIPE": "a equipe"
+      "EQUIPE": "a equipe",
+      "SAIU": "saiu, sem confirmação ainda",
+      "ENTREGUE": "entregue",
+      "LIDA": "lida",
+      "FALHOU": "falhou"
     },
     "OPERADOR_DA_MENSAGEM": {
       "IGUAL": "é",

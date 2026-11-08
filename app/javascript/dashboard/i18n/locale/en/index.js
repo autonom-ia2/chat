@@ -66,6 +66,7 @@ import login from './login.json';
 import macros from './macros.json';
 import report from './report.json';
 import prospecting from './prospecting.json';
+import prospectingAchar from './prospectingAchar.json';
 import resetPassword from './resetPassword.json';
 import search from './search.json';
 import setNewPassword from './setNewPassword.json';
@@ -154,6 +155,7 @@ export default {
   ...login,
   ...macros,
   ...prospecting,
+  ...prospectingAchar,
   ...report,
   ...resetPassword,
   ...search,
