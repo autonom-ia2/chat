@@ -6,6 +6,12 @@
 # divergiam): para cada número, os últimos NORMAL_POSTS posts com ele, sem o post que se sabe impulsionado. Número que
 # a Meta não manda (post dentro de álbum, post apagado) é "sem número" (nil), e zero (post de hoje que ainda não
 # apareceu) também fica fora: os dois puxariam a média para baixo e todo post pareceria acima do normal.
+#
+# O post impulsionado por aqui (#2522, Crm::MetaAdsCreatedObject.ads_by_post, anúncio já ativado) é `boosted: true`
+# quando a Meta não diz (Instagram, ou Página sem o recorte de anúncio), e sai do normal. Quando a Meta diz que não
+# houve vez de anúncio (Página com o recorte em 0: o anúncio foi ativado mas não entregou), fica o que a Meta disse.
+# Lido do banco junto com a lista, sem chamada à Meta: entra na mesma leitura guardada, então um anúncio recém-ativado
+# aparece na próxima leitura (até 15 minutos).
 class SeusPosts::Posts < Crm::MetaAds::Organico::Lugar
   include SeusPosts::Orcamento
 
@@ -22,7 +28,7 @@ class SeusPosts::Posts < Crm::MetaAds::Organico::Lugar
 
   def numeros
     @truncado = false
-    todos = ler_posts(historico).sort_by { |post| post[:created_time].to_s }.reverse
+    todos = com_anuncio_nosso(ler_posts(historico)).sort_by { |post| post[:created_time].to_s }.reverse
     { status: 'ok', posts: todos, normal: normal(todos), truncated: @truncado }
   end
 
@@ -40,6 +46,12 @@ class SeusPosts::Posts < Crm::MetaAds::Organico::Lugar
     dados = ler(result).to_h
     @truncado ||= dados['truncated'] == true
     Array(dados['data'])
+  end
+
+  # O que a Meta disse (true ou false) fica; só o "não se sabe" (nil) do post impulsionado por aqui passa a `true`.
+  def com_anuncio_nosso(posts)
+    nossos = Crm::MetaAdsCreatedObject.ads_by_post(channel.account_id, SeusPosts::Perfil.rede(channel), posts.pluck(:id))
+    posts.map { |post| post[:boosted].nil? && nossos.key?(post[:id].to_s) ? post.merge(boosted: true) : post }
   end
 
   def normal(todos)

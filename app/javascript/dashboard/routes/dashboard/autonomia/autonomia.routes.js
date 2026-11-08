@@ -9,6 +9,8 @@ import { contaDaRota, ensureProspectingEnabled } from './contaDaRota';
 import { painelDesempenhoLigado } from './agentes/composables/usePainelDesempenho';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { comFlags } from 'dashboard/helper/comFlags';
+// #2692 — Prospecção nova (protótipo), atrás da flag prospeccao_nova.
+import { acharRoutes } from './prospecting/achar/acharRoutes';
 
 // Lazy-loaded pages (owned by HUB / CONSTRUTOR / PAINEL implementers).
 // Dynamic imports keep this NAV module self-contained and code-split the
@@ -188,6 +190,7 @@ export const routes = [
       params: to.params,
     }),
   },
+  ...acharRoutes,
   {
     path: frontendURL('accounts/:accountId/autonomia/insurance'),
     name: 'autonomia_insurance',

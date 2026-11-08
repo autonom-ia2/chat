@@ -49,7 +49,7 @@ class Autonomia::Automacao::Receita
 
   # Frases para a pessoa (ou o Guia) corrigir. Vazio = pode salvar. Só roda com a receita já no esquema.
   def problemas
-    [*ids_repetidos, *gatilho_novo, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) }]
+    [*ids_repetidos, *gatilho_novo, *conversa_nova, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) }]
   end
 
   # Todos os passos, inclusive os de dentro dos ramos, na ordem em que aparecem.
@@ -66,6 +66,9 @@ class Autonomia::Automacao::Receita
   # O gatilho de card e o de tempo (#2499): a flag, a etapa, o funil e o campo de data são da conta; no da conta (G7),
   # os passos que ele aceita.
   def gatilho_novo = ::Autonomia::Automacao::ProblemasDoGatilho.new(@receita['gatilho'].to_h, @conta, passos: passos).problemas
+
+  # A caixa por onde abrir a conversa de quem não tem (#2680): da conta, e quem salva pode começar conversa nela.
+  def conversa_nova = ::Autonomia::Automacao::ConversaNova.problemas_ao_salvar(@conta, @receita['gatilho'].to_h, @account_user)
 
   def filtros_do_gatilho
     Array(@receita.dig('gatilho', 'filtros')).flat_map { |condicao| problemas_da_condicao('gatilho', condicao, no_gatilho: true) }
@@ -222,9 +225,12 @@ class Autonomia::Automacao::Receita
   end
 
   # #2499: `card.*` num gatilho de conversa não tem de onde ler. Gatilho desconhecido o esquema já recusou.
+  # A conversa nova (#2680) dá ao alvo sem conversa (o contato) a ponte para a que ela abre.
   def no_alvo_do_gatilho?(caminho)
     alvo = ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
-    alvo.nil? || ::Autonomia::Automacao::Valores.no_alvo?(caminho, alvo)
+    return true if alvo.nil? || ::Autonomia::Automacao::Valores.no_alvo?(caminho, alvo)
+
+    ::Autonomia::Automacao::ConversaNova.caixa_id(@receita).present? && caminho.to_s.start_with?('conversa.')
   end
 
   def mensagem_no_gatilho?(no_gatilho) = no_gatilho && @receita.dig('gatilho', 'tipo') == ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM

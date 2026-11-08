@@ -65,7 +65,9 @@
       "CARD_LINK_DA_AGENDA": "Link da agenda do responsável pelo card (na hora do passo)",
       "CONVERSA_LINK_DA_AGENDA": "Link da agenda do responsável pela conversa (na hora do passo)",
       "REUNIAO_INICIO": "Dia e hora da reunião",
-      "REUNIAO_LINK_DA_REUNIAO": "Link da chamada da reunião"
+      "REUNIAO_LINK_DA_REUNIAO": "Link da chamada da reunião",
+      "ENVIO_TEXTO": "Texto da última mensagem que a automação mandou",
+      "ENVIO_SITUACAO": "Situação da última mensagem que a automação mandou"
     },
     "PASSOS": {
       "ESPERAR": "Esperar um tempo",
