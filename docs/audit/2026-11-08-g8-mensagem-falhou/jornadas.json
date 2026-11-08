@@ -1,0 +1,74 @@
+{
+  "pasta": "docs/audit/2026-11-08-prints-2637",
+  "conta": 1,
+  "larguras": [
+    1440,
+    390
+  ],
+  "temas": [
+    "light"
+  ],
+  "jornadas": [
+    {
+      "nome": "g8",
+      "etapas": [
+        {
+          "nome": "login",
+          "url": "/app/login",
+          "sem_login": true,
+          "esperar": "input[type=\"password\"]"
+        },
+        {
+          "nome": "nova-automacao",
+          "url": "/app/accounts/{conta}/automacoes/livre/nova",
+          "pausa": 6000
+        },
+        {
+          "nome": "do-zero",
+          "passos": [
+            {
+              "clicar": "text=Montar do zero"
+            }
+          ],
+          "pausa": 3000
+        },
+        {
+          "nome": "escolher",
+          "passos": [
+            {
+              "clicar": "button:has-text(\"Escolher\")"
+            }
+          ],
+          "pausa": 2000
+        },
+        {
+          "nome": "lista-dos-gatilhos",
+          "passos": [
+            {
+              "clicar": "[aria-label=\"Quando começa\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "mensagem-falhou-escolhido",
+          "passos": [
+            {
+              "clicar": "[role=\"option\"]:has-text(\"Quando uma mensagem ao cliente falha\")"
+            }
+          ],
+          "pausa": 2000
+        },
+        {
+          "nome": "salvo-no-editor",
+          "passos": [
+            {
+              "clicar": "button:has-text(\"Salvar\")"
+            }
+          ],
+          "pausa": 2000
+        }
+      ]
+    }
+  ]
+}

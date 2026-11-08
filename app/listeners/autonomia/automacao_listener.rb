@@ -16,8 +16,16 @@ class Autonomia::AutomacaoListener < BaseListener
     escuta.acordar(conversa, [conversa.id])
   end
 
-  def message_created(event) = escuta.mensagem_criada(event.data[:message])
-  def message_updated(event) = escuta.envio_atualizado(event.data[:message], event.data[:previous_changes])
+  def message_created(event)
+    escuta.mensagem_criada(event.data[:message])
+    falhou.criada(event.data[:message])
+  end
+
+  # A situação do envio que a automação mandou acorda a espera (G34), e a recusa do canal começa o gatilho (G8).
+  def message_updated(event)
+    escuta.envio_atualizado(event.data[:message], event.data[:previous_changes])
+    falhou.atualizada(event.data[:message], event.data[:previous_changes])
+  end
 
   def contact_updated(event)
     contact = event.data[:contact]
@@ -46,4 +54,5 @@ class Autonomia::AutomacaoListener < BaseListener
   end
 
   def escuta = ::Autonomia::Automacao::Escuta
+  def falhou = ::Autonomia::Automacao::MensagemQueFalhou
 end
