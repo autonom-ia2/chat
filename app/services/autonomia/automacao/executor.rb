@@ -124,7 +124,7 @@ class Autonomia::Automacao::Executor
     ['parada', pausar(motivo)] if motivo
   end
 
-  def alvo_da_conta? = alvo.present? && alvo.account_id == @account.id
+  def alvo_da_conta? = alvo.present? && contexto.conta_id == @account.id
 
   def desta_rodada? = Execucao.exists?(id: @execucao.id, estado: 'andando', travada_em: @marca)
 

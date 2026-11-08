@@ -594,6 +594,7 @@ en:
         conversa: 'Conversation #%{id}'
         card: 'Card #%{id} · %{titulo}'
         contato: '%{nome}'
+        conta: 'The account'
       valores:
         inicio_da_reuniao: '%m/%d/%Y at %H:%M'
       receita:
@@ -640,6 +641,13 @@ en:
         etapa_de_fora: 'Trigger: stage %{id} is not from this account.'
         parado_sem_dias: 'Trigger: a stuck card needs at least 1 day.'
         campo_de_fora: 'Trigger: field %{campo} is not a date field of this account.'
+        faixa_invertida: 'Trigger: in "closed between", the first number (%{de}) is greater than the second (%{ate}). That way it never picks any card.'
+        passo_pede_alvo: 'Step %{passo}: this trigger runs on the account, with no conversation, card or contact. Only wait and send campaign fit here.'
+        selecao_vazia: 'Trigger: choose at least one condition for which cards or contacts it runs on. With none, it would run on the whole account.'
+        selecao_de_outro_alvo: 'Trigger: these conditions do not apply here: %{condicoes}.'
+        responsavel_de_fora: 'Trigger: the chosen owner is not in this account.'
+        etiqueta_de_fora: 'Trigger: label %{etiqueta} does not exist in this account.'
+        atributo_de_fora: 'Trigger: field %{campo} is not a contact field of this account.'
         funil_de_fora: 'Trigger: pipeline %{id} is not from this account.'
         ia_desligada: "Step %{passo}: AI steps are off for this account."
         caminho_repetido: "Step %{passo}: there is already a path named %{nome}."

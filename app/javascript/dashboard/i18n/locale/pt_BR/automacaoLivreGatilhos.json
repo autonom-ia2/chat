@@ -15,7 +15,10 @@
       "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada",
       "CARD_PARADO": "Quando o card fica parado numa etapa",
       "CARD_DATA": "Perto de uma data do card",
-      "CONTATO_DATA": "Perto de uma data do contato"
+      "CONTATO_DATA": "Perto de uma data do contato",
+      "CARD_RECORRENTE": "Todo dia, semana ou mês, em cards",
+      "CONTATO_RECORRENTE": "Todo dia, semana ou mês, em contatos",
+      "CONTA_RECORRENTE": "Todo dia, semana ou mês, na conta"
     },
     "ORIGEM": {
       "CONVERSA": "Da conversa",
@@ -42,7 +45,11 @@
       "CAMPO": "Campo de data",
       "QUANDO": "Antes ou depois da data",
       "HORA": "A partir de que hora",
-      "REPETE": "Repete"
+      "REPETE": "Repete",
+      "FREQUENCIA": "De quanto em quanto",
+      "DIA_DA_SEMANA": "Dia da semana",
+      "DIA_DO_MES": "Dia do mês",
+      "SELECAO": "Quais"
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversa e mensagem",
@@ -88,6 +95,54 @@
       "SEM_CAMPO": "Não há campo de data aqui. Crie um em Configurações › Atributos personalizados.",
       "HORA": "{hora}h",
       "ERRO_CAMPOS": "Não consegui carregar os campos de data. Feche e abra de novo."
+    },
+    "GATILHO_RECORRENTE": {
+      "DIARIA": "Todo dia",
+      "SEMANAL": "Toda semana",
+      "MENSAL": "Todo mês",
+      "DIAS_DA_SEMANA": {
+        "0": "domingo",
+        "1": "segunda",
+        "2": "terça",
+        "3": "quarta",
+        "4": "quinta",
+        "5": "sexta",
+        "6": "sábado"
+      },
+      "DIA_DO_MES": "Dia {dia}",
+      "AVISO": "Roda na hora escolhida, no fuso da conta, uma vez em cada card ou contato escolhido. No dia 29, 30 ou 31, os meses mais curtos usam o último dia. Se estiver desligada na hora, aquela vez não roda depois. Enquanto a vez anterior ainda estiver rodando (esperando), a nova não começa.",
+      "AVISO_CONTA": "Roda na hora escolhida, no fuso da conta, uma vez só (não em cada card ou contato). Cabem só esperar e disparar campanha. No dia 29, 30 ou 31, os meses mais curtos usam o último dia. Se estiver desligada na hora, aquela vez não roda depois. Enquanto a vez anterior ainda estiver rodando (esperando), a nova não começa.",
+      "CARDS": "nos cards escolhidos",
+      "CONTATOS": "nos contatos escolhidos",
+      "CONTA": "na conta",
+      "FRASE": {
+        "DIARIA": "Todo dia às {hora}h, {alvo}",
+        "SEMANAL": "Toda {dia} às {hora}h, {alvo}",
+        "MENSAL": "Todo mês no dia {dia}, às {hora}h, {alvo}"
+      }
+    },
+    "SELECAO": {
+      "DICA_CARD": "Escolha pelo menos uma condição. Roda em cada card que bate com todas.",
+      "DICA_CONTATO": "Escolha pelo menos uma condição. Roda em cada contato que bate com todas.",
+      "QUALQUER": "Qualquer",
+      "FUNIL": "Funil",
+      "ETAPA": "Etapa",
+      "SITUACAO": "Situação",
+      "SITUACOES": {
+        "ABERTO": "Aberto",
+        "GANHO": "Ganho",
+        "PERDIDO": "Perdido"
+      },
+      "RESPONSAVEL": "Responsável",
+      "FECHADO_ENTRE": "Ganho ou perdido entre",
+      "FECHADO_DE": "De quantos dias atrás",
+      "FECHADO_ATE": "Até quantos dias atrás",
+      "E": "e",
+      "DIAS_ATRAS": "dias atrás",
+      "ETIQUETA": "Com a etiqueta",
+      "SEM_ETIQUETA": "Sem a etiqueta",
+      "ATRIBUTO": "Campo do contato igual a",
+      "VALOR": "Valor"
     }
   }
 }

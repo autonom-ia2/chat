@@ -45,9 +45,37 @@ const chaveDaFrase = (entrada, gatilho) => {
     : `AUTOMACAO_LIVRE.GATILHO_COM.${chave}`;
 };
 
+// #2635 (G7): o recorrente diz quando ("Toda segunda, às 8h") e em quem ("nos
+// cards escolhidos"). A seleção fica no "Alterar"; aqui, só se é card, contato
+// ou a conta (o da conta roda uma vez, sem seleção).
+const R = 'AUTOMACAO_LIVRE.GATILHO_RECORRENTE';
+const DIA_DO_RECORRENTE = {
+  semanal: (gatilho, t) =>
+    Number.isInteger(gatilho.dia_da_semana)
+      ? t(`${R}.DIAS_DA_SEMANA.${gatilho.dia_da_semana}`)
+      : undefined,
+  mensal: gatilho =>
+    Number.isInteger(gatilho.dia_do_mes) ? gatilho.dia_do_mes : undefined,
+  diaria: () => '',
+};
+const fraseDoRecorrente = (gatilho, entrada, t) => {
+  const dia = DIA_DO_RECORRENTE[gatilho.frequencia]?.(gatilho, t);
+  if (dia === undefined || !Number.isInteger(gatilho.hora))
+    return t(entrada.frase);
+  const ALVOS = { Contact: 'CONTATOS', Account: 'CONTA' };
+  const alvo = t(`${R}.${ALVOS[entrada.alvo] || 'CARDS'}`);
+  return t(`${R}.FRASE.${gatilho.frequencia.toUpperCase()}`, {
+    dia,
+    hora: gatilho.hora,
+    alvo,
+  });
+};
+
 export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
   const entrada = catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo);
   if (!entrada) return t(`${P}.FALTA_GATILHO`);
+  if ((entrada.parametros || []).some(item => item.peca === 'frequencia'))
+    return fraseDoRecorrente(gatilho, entrada, t);
   // #2678: o "repete" é opcional e entra só como fim da frase ("..., todo ano").
   const parametros = (entrada.parametros || []).filter(
     item => item.peca !== 'repete'
