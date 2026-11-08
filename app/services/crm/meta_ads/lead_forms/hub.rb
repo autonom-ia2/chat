@@ -32,10 +32,14 @@ class Crm::MetaAds::LeadForms::Hub
     { pages: pages.map { |page| page_payload(page) }, pipelines: pipelines, recent_leads: recent }
   end
 
+  # leadgen_receiving_since (#2285): desde quando esta conta recebe a Página, o marco de início da reconciliação. Só
+  # nasce quando passa a receber (ou quando ainda não tinha marco): ligar de novo uma Página que já recebe não encurta a
+  # releitura dos outros formulários dela.
   def receive!(page_id)
     page = find_page!(page_id)
     subscription(page).add!([LEADGEN])
-    page_record(page).update!(leadgen_receiving: true)
+    record = page_record(page)
+    record.update!(leadgen_receiving: true, leadgen_receiving_since: (record.leadgen_receiving_since if record.leadgen_receiving?) || Time.current)
   rescue Crm::MetaAds::PageSubscription::Error => e
     raise_meta(e)
   end
@@ -47,7 +51,7 @@ class Crm::MetaAds::LeadForms::Hub
     return stop_unlisted!(page_id) if page.nil?
 
     subscription(page).remove!([LEADGEN]) unless receiving_elsewhere?(page)
-    page_record(page).update!(leadgen_receiving: false)
+    page_record(page).update!(leadgen_receiving: false, leadgen_receiving_since: nil)
   rescue Crm::MetaAds::PageSubscription::Error => e
     raise_meta(e)
   end
@@ -56,13 +60,16 @@ class Crm::MetaAds::LeadForms::Hub
   # ligar, o formulário volta ao destino que tinha.
   # Quem já preencheu vem em segundo plano (ImportPastJob), com a Página já ligada e o destino guardado: a resposta não
   # espera a leitura de milhares de leads, e falha nela não desfaz o destino.
+  # destination_set_at (#2285): a reconciliação não relê antes dele, e quem preencheu antes de salvar só entra pelo
+  # "trazer quem já preencheu". Nasce quando o formulário passa a ter destino (ou ainda não tinha marco); trocar de
+  # funil mantém o marco, porque o formulário já mandava gente para algum lugar.
   def save_destination!(form_id, pipeline:, stage:, import_past:)
     page, form = find_form!(form_id)
     raise Crm::MetaAds::LeadForms::Error, 'form_archived' unless form['status'] == ACTIVE
 
     record = form_record(page, form)
-    previous = record.slice(:pipeline_id, :stage_id)
-    record.update!(pipeline: pipeline, stage: stage)
+    previous = record.slice(:pipeline_id, :stage_id, :destination_set_at)
+    record.update!(pipeline: pipeline, stage: stage, destination_set_at: (record.destination_set_at if record.destination?) || Time.current)
     begin
       receive!(page['id'])
     rescue Crm::MetaAds::LeadForms::Error
@@ -86,7 +93,7 @@ class Crm::MetaAds::LeadForms::Hub
     record = Crm::MetaAdsLeadForm.find_by(account_id: @account.id, form_id: form_id.to_s)
     raise Crm::MetaAds::LeadForms::Error, 'form_not_found' if record.nil?
 
-    record.update!(pipeline: nil, stage: nil)
+    record.update!(pipeline: nil, stage: nil, destination_set_at: nil)
   end
 
   def page_name(page_id)
@@ -111,7 +118,7 @@ class Crm::MetaAds::LeadForms::Hub
     record = Crm::MetaAdsPage.find_by(account_id: @account.id, page_id: page_id.to_s)
     raise Crm::MetaAds::LeadForms::Error, 'page_not_found' if record.nil?
 
-    record.update!(leadgen_receiving: false)
+    record.update!(leadgen_receiving: false, leadgen_receiving_since: nil)
   end
 
   def receiving_elsewhere?(page)

@@ -14,12 +14,15 @@ class Crm::MetaAdsLeadForm < ApplicationRecord
   validates :page_id, :form_id, presence: true
   validates :form_id, uniqueness: { scope: :account_id }
 
-  # Os que a reconciliação relê (#2285): destino num funil ativo, na Página que a conta está recebendo.
+  # Os que a reconciliação relê (#2285): destino num funil ativo, na Página que a conta está recebendo, com os dois
+  # marcos de início (destination_set_at e leadgen_receiving_since). Linha de antes do #2285 tem marco nulo e fica de
+  # fora até o destino ser salvo de novo: sem saber desde quando, não relê nada.
   scope :reconcilable, lambda {
-    receiving = Crm::MetaAdsPage.leadgen_receiving
+    receiving = Crm::MetaAdsPage.leadgen_receiving.where.not(leadgen_receiving_since: nil)
                                 .where('crm_meta_ads_pages.account_id = crm_meta_ads_lead_forms.account_id')
                                 .where('crm_meta_ads_pages.page_id = crm_meta_ads_lead_forms.page_id')
-    joins(:pipeline).merge(Crm::Pipeline.active).where.not(stage_id: nil).where(receiving.arel.exists)
+    joins(:pipeline).merge(Crm::Pipeline.active).where.not(stage_id: nil).where.not(destination_set_at: nil)
+                    .where(receiving.arel.exists)
   }
 
   def destination?

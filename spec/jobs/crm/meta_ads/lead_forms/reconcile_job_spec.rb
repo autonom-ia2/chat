@@ -1,7 +1,8 @@
 require 'rails_helper'
 
 # Reconciliação de um formulário (#2285): lead que o webhook não trouxe entra sozinho; quem já entrou não duplica.
-# Queda da Meta fica para a próxima rodada; recusa vai ao rastreador. A trava da rodada sempre sai.
+# Queda da Meta fica para a próxima rodada; recusa vai ao rastreador. A trava da rodada sempre sai. Lê desde o mais
+# recente entre 48 h atrás, o destino salvo e a Página voltar a receber; marco nulo não lê nada.
 RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
@@ -13,15 +14,15 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
   let(:lock_key) { Crm::MetaAds::LeadForms::ReconcileScheduleJob.lock_key(form.id) }
   let!(:form) do
     Crm::MetaAdsLeadForm.create!(account: account, page_id: '104882', form_id: '9001', form_name: 'Orçamento',
-                                 pipeline: pipeline, stage: stage)
+                                 pipeline: pipeline, stage: stage, destination_set_at: 3.days.ago)
   end
+  let!(:page) { Crm::MetaAdsPage.create!(account: account, page_id: '104882', leadgen_receiving: true, leadgen_receiving_since: 3.days.ago) }
 
   before do
     allow(Rails).to receive(:cache).and_return(cache)
     cache.write(lock_key, true)
     account.enable_features!('meta_ads_formularios')
     create_meta_ads_insights_connection(account)
-    Crm::MetaAdsPage.create!(account: account, page_id: '104882', leadgen_receiving: true)
     stub_request(:get, meta_graph_url('104882')).with(query: { fields: 'access_token' })
                                                 .to_return(status: 200, headers: json, body: { access_token: 'page-token' }.to_json)
     stub_request(:get, meta_graph_url('9001')).with(query: { fields: Meta::AdsGraphClient::LEAD_FORM_QUESTION_FIELDS })
@@ -52,6 +53,64 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
     expect(account.crm_cards.where(stage: stage).pluck(:title)).to eq(['Ana'])
     filtering = [{ field: 'time_created', operator: 'GREATER_THAN', value: since }].to_json
     expect(a_request(:get, meta_graph_url('9001/leads')).with(query: hash_including('filtering' => filtering))).to have_been_made.once
+  end
+
+  def filtering(since)
+    [{ field: 'time_created', operator: 'GREATER_THAN', value: since.to_i }].to_json
+  end
+
+  def read_since?(since)
+    a_request(:get, meta_graph_url('9001/leads')).with(query: hash_including('filtering' => filtering(since)))
+  end
+
+  it 'destino salvo depois do lead: lê só desde o destino, e o lead de antes não entra' do
+    freeze_time do
+      form.update!(destination_set_at: 30.minutes.ago)
+      stub_leads
+
+      described_class.perform_now(form.id)
+
+      expect(read_since?(30.minutes.ago)).to have_been_made.once
+    end
+  end
+
+  it 'Página parada e religada: lê só desde que voltou a receber' do
+    freeze_time do
+      page.update!(leadgen_receiving_since: 10.minutes.ago)
+      stub_leads
+
+      described_class.perform_now(form.id)
+
+      expect(read_since?(10.minutes.ago)).to have_been_made.once
+    end
+  end
+
+  it 'fila atrasada: o marco é lido quando o job roda, não quando foi agendado' do
+    stub_leads
+    travel_to(2.hours.from_now) do
+      page.update!(leadgen_receiving_since: 5.minutes.ago)
+
+      described_class.perform_now(form.id)
+
+      expect(read_since?(5.minutes.ago)).to have_been_made.once
+    end
+  end
+
+  it 'destino sem marco (linha de antes do #2285): não chama a Meta e solta a trava' do
+    form.update!(destination_set_at: nil)
+
+    described_class.perform_now(form.id)
+
+    expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+    expect(cache.exist?(lock_key)).to be(false)
+  end
+
+  it 'Página sem marco: não chama a Meta' do
+    page.update!(leadgen_receiving_since: nil)
+
+    described_class.perform_now(form.id)
+
+    expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
   end
 
   it 'lead que já entrou pelo webhook não duplica; só o que faltava vira card' do
