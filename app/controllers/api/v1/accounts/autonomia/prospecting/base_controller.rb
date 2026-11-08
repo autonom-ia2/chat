@@ -42,15 +42,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
     render_crm_send_error(::Autonomia::Prospecting::CrmCardOwner::NotAllowed::CODE)
   end
 
-  # Pôr o segmento numa campanha muda a audiência dela, e a campanha manda mensagem real: exige a permissão de gerenciar
-  # campanhas (CampaignPolicy#update?). Sem campanha escolhida, o segmento só etiqueta contatos.
-  def authorize_campaign_update!(campaign_id)
-    return if campaign_id.blank?
-    return if campaign_manage?
-
-    render_campaign_forbidden
-  end
-
+  # Guardar empresas num Público de Campanhas (LeadAudiencesController, #2695) exige gerenciar campanhas.
   def campaign_manage?
     Current.account_user&.permission_granted?('campaign_manage') || false
   end
@@ -58,14 +50,6 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
   def render_campaign_forbidden
     render json: { error: I18n.t('autonomia.prospecting.campaign_errors.forbidden'), code: 'prospecting.campaign.forbidden' },
            status: :forbidden
-  end
-
-  # Recusa do público de campanha: CampaignSegmentBuilder e SelectionCampaignSegment levantam o código
-  # ('prospecting.campaign.<motivo>'), que segue em `code`; a tela recebe a frase.
-  def render_campaign_error(code, status: :unprocessable_entity, **extra)
-    reason = code.delete_prefix('prospecting.campaign.')
-    message = I18n.t("autonomia.prospecting.campaign_errors.#{reason}", max: ::Autonomia::Prospecting::SelectionCampaignSegment::MAX_LEADS)
-    render json: { error: message, code: code }.merge(extra), status: status
   end
 
   # Recusa do envio ao CRM, na busca e no lead (#680, #682).
@@ -121,7 +105,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
     lead_payload_builder.reviews(lead)
   end
 
-  # A lista sem os leads: a mesma nas Listas e na campanha criada a partir da seleção da busca (#680).
+  # A lista sem os leads (#680). campaign_segment é o segmento por etiqueta que a lista já tinha: a criação saiu (#2695),
+  # o que ficou gravado continua aparecendo.
   def list_summary_payload(list)
     list.as_json(
       only: [:id, :name, :description, :status, :metadata, :created_at, :updated_at]

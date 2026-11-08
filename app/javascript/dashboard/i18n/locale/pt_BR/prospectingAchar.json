@@ -273,6 +273,7 @@
       "ERRO_DONO_SEM_FUNIL": "Essa pessoa não vê este funil. Escolha outra pessoa ou outro funil.",
       "ERRO_LISTA": "Não deu para guardar a lista.",
       "ERRO_LISTA_NINGUEM": "Nenhuma destas pode receber mensagem: pediram para não receber ou não têm celular nem e-mail.",
+      "ERRO_LISTA_DEMAIS": "Guarde até {max} empresas por vez. Desligue algumas e tente de novo.",
       "NAO_VAO_LINK": "Por que {n} não vai | Por que {n} não vão",
       "TENTAR": "Tentar de novo",
       "VAO": "Vão {n} empresas",
@@ -306,6 +307,7 @@
           "BLOQUEADO": "{n} está bloqueada e ficou de fora. | {n} estão bloqueadas e ficaram de fora.",
           "SEM_CONTATO": "{n} não tem celular nem e-mail e ficou de fora. | {n} não têm celular nem e-mail e ficaram de fora.",
           "TIRADA": "{n} tinha sido tirada da lista e ficou de fora. | {n} tinham sido tiradas da lista e ficaram de fora.",
+          "MESMA_PESSOA": "{n} é a mesma pessoa de outra empresa da lista: entrou uma vez só. | {n} são a mesma pessoa de outras empresas da lista: entraram uma vez só.",
           "SUMIU": "{n} não está mais na sua lista. | {n} não estão mais na sua lista.",
           "NAO_DEU": "Não deu para guardar {n}. Tente de novo. | Não deu para guardar {n}. Tente de novo."
         }

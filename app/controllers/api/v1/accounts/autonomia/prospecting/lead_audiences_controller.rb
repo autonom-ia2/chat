@@ -8,13 +8,12 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadAudiencesController < Api::
 
   def create
     result = ::Autonomia::Prospecting::AudienceFromLeads.new(
-      account: Current.account, user: Current.user, lead_ids: params[:lead_ids], name: params[:name], leads_scope: leads_scope
+      account: Current.account, user: Current.user, lead_ids: params.permit(lead_ids: [])[:lead_ids], name: params[:name].to_s,
+      leads_scope: leads_scope
     ).perform
     render json: { payload: audience_payload(result) }, status: :created
   rescue ::Autonomia::Prospecting::AudienceFromLeads::Error => e
-    render_audience_error(e.message, left_out: e.left_out)
-  rescue ::CampaignJourney::AudienceWriter::Error => e
-    render_audience_error(e.message)
+    render_audience_error(e)
   end
 
   private
@@ -38,12 +37,11 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadAudiencesController < Api::
     }
   end
 
-  # A frase do I18n em `error`, o código de máquina em `code` e, quando há, quem ficou de fora e por quê.
-  def render_audience_error(reason, left_out: [])
-    render json: {
-      error: I18n.t("autonomia.prospecting.audience.errors.#{reason}", max: ::Autonomia::Prospecting::AudienceFromLeads::MAX_LEADS),
-      code: "prospecting.audience.#{reason}",
-      left_out: left_out
-    }, status: :unprocessable_entity
+  # A frase do I18n em `error` (com o aviso de que os contatos criados ficaram, quando a recusa veio depois deles), o
+  # código de máquina em `code` e quem ficou de fora e por quê.
+  def render_audience_error(error)
+    message = I18n.t("autonomia.prospecting.audience.errors.#{error.message}", max: ::Autonomia::Prospecting::AudienceFromLeads::MAX_LEADS)
+    message = "#{message} #{I18n.t('autonomia.prospecting.audience.errors.contacts_saved')}" if error.contacts_saved
+    render json: { error: message, code: "prospecting.audience.#{error.message}", left_out: error.left_out }, status: :unprocessable_entity
   end
 end

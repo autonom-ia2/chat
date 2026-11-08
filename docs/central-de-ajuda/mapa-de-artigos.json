@@ -4460,8 +4460,8 @@
     },
     {
      "id": "16.03",
-     "titulo": "Listas de leads e público de campanha",
-     "para_que_serve": "Juntar leads em listas e gerar, a partir delas, o público etiquetado de uma campanha.",
+     "titulo": "Listas de leads",
+     "para_que_serve": "Juntar leads em listas, mandá-las ao CRM e entender o selo dos segmentos por etiqueta criados antes.",
      "publico": "ambos",
      "prioridade": "P2",
      "assuntos": [
@@ -4477,7 +4477,7 @@
      "requer": "autonomia_prospecting",
      "prints": [],
      "fontes": [
-      "porques: Juntar leads em listas e preparar um publico de campanha"
+      "porques: Juntar leads em listas"
      ],
      "revisar": false,
      "nota": null
@@ -4628,8 +4628,8 @@
     },
     {
      "id": "16.10",
-     "titulo": "Colocar leads da busca numa campanha",
-     "para_que_serve": "Levar leads da busca para uma campanha nova ou existente e entender quem fica de fora.",
+     "titulo": "Levar leads da busca para uma campanha",
+     "para_que_serve": "Saber que Adicionar à campanha saiu, levar as empresas a um Público pela tela Achar empresas e o que acontece com os segmentos por etiqueta antigos.",
      "publico": "ambos",
      "prioridade": "P2",
      "assuntos": [
@@ -4645,7 +4645,7 @@
      "requer": "autonomia_prospecting",
      "prints": [],
      "fontes": [
-      "porques: Colocar leads da busca numa campanha"
+      "porques: Levar leads da busca para uma campanha"
      ],
      "revisar": false,
      "nota": null

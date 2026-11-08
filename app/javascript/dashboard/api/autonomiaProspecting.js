@@ -81,18 +81,6 @@ class AutonomiaProspectingAPI extends ApiClient {
     });
   }
 
-  // Campanha a partir da seleção da busca (#680): devolve o segmento, com o
-  // motivo de cada lead bloqueado.
-  // campaignType: 'whatsapp_api' ou 'one_off' (#732); sem ele, envio único.
-  addLeadsToCampaign({ leadIds, campaignId, campaignType, segmentName }) {
-    return axios.post(`${this.url}/leads/campaign_segment`, {
-      lead_ids: leadIds,
-      campaign_id: campaignId,
-      campaign_type: campaignType,
-      segment_name: segmentName,
-    });
-  }
-
   // Criar contatos em lote (#732): até 30 leads por pedido, o mesmo contato
   // de POST leads/:id/contact, com resultado por lead (created, existing,
   // failed).
@@ -170,12 +158,6 @@ class AutonomiaProspectingAPI extends ApiClient {
 
   removeLeadFromList(listId, leadId) {
     return axios.delete(`${this.url}/lists/${listId}/leads/${leadId}`);
-  }
-
-  createCampaignSegment(listId, campaignSegment = {}) {
-    return axios.post(`${this.url}/lists/${listId}/campaign_segment`, {
-      campaign_segment: campaignSegment,
-    });
   }
 
   getSettings() {

@@ -1,6 +1,6 @@
 import { lembrarDestino } from '../utils/destinoPronto';
 import { marcarEnviadas } from '../utils/acharConfiraEstados';
-import { erroDoDono } from './useDonoDaLista';
+import { erroDoDono, LIMITE_DO_PUBLICO } from './useDonoDaLista';
 
 // #2692 — as ações da folha "O que fazer com as {n} empresas?" (F1) e dos dois
 // painéis que abrem de dentro dela ("Com quem ficam" e "Para onde vão"). Saiu
@@ -13,9 +13,13 @@ const VOLTA_DO_SUBPAINEL = {
   'folha-para-onde': 'folha-sem-destino',
 };
 
-// Ninguém da lista pode receber mensagem (todos pediram para não receber ou
-// não têm celular nem e-mail): a folha diz isso, e não "não deu".
-const NINGUEM_PODE_RECEBER = 'prospecting.audience.no_rows';
+// Recusas do Público com frase própria na folha, em vez de "não deu": ninguém
+// pode receber mensagem (a folha diz também quem ficou de fora e por quê) e
+// empresas demais de uma vez.
+const ERRO_DO_PUBLICO = {
+  'prospecting.audience.no_rows': 'lista_ninguem',
+  'prospecting.audience.too_many_leads': 'lista_demais',
+};
 
 export const folhaNova = (escolha = null, mostrarFora = false) => ({
   escolha,
@@ -23,6 +27,7 @@ export const folhaNova = (escolha = null, mostrarFora = false) => ({
   enviando: null,
   guardando: false,
   erro: null,
+  foraDoErro: [],
 });
 
 export function useFolhaDaLista({
@@ -119,11 +124,15 @@ export function useFolhaDaLista({
   // O Público (#2695): o pronto guarda o id, para "Criar a mensagem" abrir a
   // Nova campanha com ele, e quem ficou de fora, para dizer o porquê.
   const guardarDaFolha = async () => {
+    const ids = escolhidas.value
+      .filter(empresa => empresa.temContato)
+      .map(empresa => empresa.id);
+    if (ids.length > LIMITE_DO_PUBLICO) {
+      folha.value = { ...folha.value, erro: 'lista_demais', foraDoErro: [] };
+      return;
+    }
     folha.value = { ...folha.value, guardando: true, erro: null };
     try {
-      const ids = escolhidas.value
-        .filter(empresa => empresa.temContato)
-        .map(empresa => empresa.id);
       const guardado = await fonte.value.guardarLista({
         nome: nomeLista.value,
         ids,
@@ -137,9 +146,12 @@ export function useFolhaDaLista({
       folha.value = null;
       if (demo.value) mudarEstado('guardada');
     } catch (erro) {
-      const erroDaLista =
-        erro?.codigo === NINGUEM_PODE_RECEBER ? 'lista_ninguem' : 'lista';
-      folha.value = { ...folha.value, guardando: false, erro: erroDaLista };
+      folha.value = {
+        ...folha.value,
+        guardando: false,
+        erro: ERRO_DO_PUBLICO[erro?.codigo] || 'lista',
+        foraDoErro: erro?.fora || [],
+      };
     }
   };
 

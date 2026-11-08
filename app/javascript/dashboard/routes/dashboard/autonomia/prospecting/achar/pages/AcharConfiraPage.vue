@@ -559,6 +559,7 @@ watch(estado, async (novo, antigo) => {
       :enviando="folha.enviando"
       :guardando="folha.guardando"
       :erro="folha.erro"
+      :fora-do-erro="folha.foraDoErro"
       @escolher="escolherDestinoDaFolha"
       @alterar-destino="abrirSubpainel('destino')"
       @alterar-pessoa="abrirSubpainel('pessoa')"

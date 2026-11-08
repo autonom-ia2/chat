@@ -25,7 +25,7 @@ RSpec.describe Autonomia::Prospecting::SegmentRefusalSync do
   def phone(index) = format('+55319%08d', index)
 
   def generate_segment(list)
-    Autonomia::Prospecting::CampaignSegmentBuilder.new(list: list, user: admin).perform.label.title
+    legacy_prospecting_segment(list: list, user: admin).title
   end
 
   def refuse(*leads)

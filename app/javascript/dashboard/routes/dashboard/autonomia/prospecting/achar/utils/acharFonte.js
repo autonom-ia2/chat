@@ -78,6 +78,9 @@ const doPublico = ({ audience = {}, left_out: fora = [] }) => ({
   fora: fora.map(item => ({ id: item.lead_id, motivo: item.reason_code })),
 });
 
+// O id do Público de exemplo da demonstração: nada é gravado.
+const PUBLICO_DA_DEMO = 9001;
+
 const comDias = search => ({
   ...buscaDoPayload(search),
   diasAtras: diasDesde(search.created_at),
@@ -252,9 +255,22 @@ const fonteDemo = ({ estado, carregarDemo, atraso, usuarioId }) => {
     async baixarBusca() {
       await esperar(atraso);
     },
+    // Como a API: um Público de exemplo e, com mais de uma, a última fica de
+    // fora por não ter celular nem e-mail (para dar para ver a frase).
     async guardarLista({ nome, ids }) {
       await esperar(atraso * 2);
-      return doPublico({ audience: { name: nome, count: ids.length } });
+      const fora =
+        ids.length > 1
+          ? [{ lead_id: ids[ids.length - 1], reason_code: 'no_channel' }]
+          : [];
+      return doPublico({
+        audience: {
+          id: PUBLICO_DA_DEMO,
+          name: nome,
+          count: ids.length - fora.length,
+        },
+        left_out: fora,
+      });
     },
     async fila() {
       const demo = await dados();

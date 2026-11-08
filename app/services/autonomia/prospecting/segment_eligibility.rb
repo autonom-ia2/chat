@@ -1,7 +1,7 @@
-# Quem entra no segmento de campanha da Prospecção e, se não entra, por quê (#680, ACAO-26/27). As regras valem para o
-# lead na conta, não para a lista: o CampaignSegmentBuilder pergunta por todos os leads da lista, e a recusa depois do
-# segmento (SegmentRefusalSync) só pelos poucos que alcançam os contatos recusados, com um ConsentVeto e um contato por
-# lead para a execução inteira.
+# Quem pode receber pela Prospecção e, se não pode, por quê (#680, ACAO-26/27). As regras valem para o lead na conta,
+# não para a lista: o Público (AudienceFromLeads, #2695) pergunta a parte da decisão da pessoa (consent_block_reason), e a
+# recusa depois de um segmento por etiqueta antigo (SegmentRefusalSync) só pelos poucos leads que alcançam os contatos
+# recusados, com um ConsentVeto e um contato por lead para a execução inteira.
 class Autonomia::Prospecting::SegmentEligibility
   ELIGIBLE_STATUS = 'ready_for_campaign'.freeze
 

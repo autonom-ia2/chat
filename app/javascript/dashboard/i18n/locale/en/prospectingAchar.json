@@ -273,6 +273,7 @@
       "ERRO_DONO_SEM_FUNIL": "This person can't see this funnel. Choose someone else or another funnel.",
       "ERRO_LISTA": "We could not save the list.",
       "ERRO_LISTA_NINGUEM": "None of these can receive messages: they asked not to, or have no mobile or e-mail.",
+      "ERRO_LISTA_DEMAIS": "Save up to {max} companies at a time. Turn some off and try again.",
       "NAO_VAO_LINK": "Why {n} is not going | Why {n} are not going",
       "TENTAR": "Try again",
       "VAO": "{n} companies will go",
@@ -306,6 +307,7 @@
           "BLOQUEADO": "{n} is blocked and was left out. | {n} are blocked and were left out.",
           "SEM_CONTATO": "{n} has no mobile or e-mail and was left out. | {n} have no mobile or e-mail and were left out.",
           "TIRADA": "{n} had been taken off the list and was left out. | {n} had been taken off the list and were left out.",
+          "MESMA_PESSOA": "{n} is the same person as another company on the list and went in once. | {n} are the same person as other companies on the list and went in once.",
           "SUMIU": "{n} is no longer in your list. | {n} are no longer in your list.",
           "NAO_DEU": "Could not save {n}. Try again. | Could not save {n}. Try again."
         }

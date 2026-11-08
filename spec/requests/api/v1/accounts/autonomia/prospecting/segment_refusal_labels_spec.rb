@@ -33,11 +33,7 @@ RSpec.describe 'Autonomia prospecting refusal after segment', type: :request do
   end
 
   def generate_segment
-    post "#{base_url}/lists/#{list.id}/campaign_segment",
-         params: { campaign_segment: { campaign_id: campaign.id, campaign_type: 'whatsapp_api', segment_name: 'Selecao' } },
-         headers: auth_headers(admin), as: :json
-    expect(response).to have_http_status(:created)
-    response.parsed_body.dig('payload', 'segment', 'label', 'title')
+    legacy_prospecting_segment(list: list, user: admin, campaign: campaign, segment_name: 'Selecao').title
   end
 
   def patch_status(lead, attributes)

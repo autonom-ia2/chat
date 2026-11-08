@@ -6,6 +6,7 @@ import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import AcharConfiraPage from '../pages/AcharConfiraPage.vue';
 import { criarFonte } from '../utils/acharFonte';
 import { textosDoPronto } from '../utils/acharConfiraEstados';
+import { LIMITE_DO_PUBLICO } from '../composables/useDonoDaLista';
 
 // #2695 (F3b) — "Guardar para mandar mensagem" pela API: as empresas viram um
 // Público de Campanhas (leads/audience). O pronto diz, em frase de leigo, quem
@@ -201,6 +202,36 @@ describe('AcharConfiraPage: guardar para mandar mensagem', () => {
     expect(wrapper.text()).toContain(
       ptBR.PROSPECTING_ACHAR.FOLHA.ERRO_LISTA_NINGUEM
     );
+    expect(wrapper.find('[data-fora-do-erro]').text()).toBe(
+      '1 pediu para não receber mensagem e ficou de fora.'
+    );
+    wrapper.unmount();
+  });
+
+  it('acima do teto, a folha diz o máximo e não chama o servidor', async () => {
+    const muitos = Array.from({ length: LIMITE_DO_PUBLICO + 1 }, (_, i) =>
+      lead(i + 1)
+    );
+    AutonomiaProspectingAPI.getSearch.mockResolvedValue({
+      data: {
+        payload: {
+          id: 9,
+          query: 'Escritórios',
+          location_label: 'Centro, Campinas, SP',
+          results_count: muitos.length,
+          user_id: 7,
+          leads: muitos,
+        },
+      },
+    });
+    const wrapper = await abrir();
+
+    await guardar(wrapper);
+
+    expect(AutonomiaProspectingAPI.createAudience).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain(
+      `Guarde até ${LIMITE_DO_PUBLICO} empresas por vez.`
+    );
     wrapper.unmount();
   });
 
@@ -239,7 +270,7 @@ describe('fonte do Público', () => {
     );
   });
 
-  it('a demonstração não chama a API e guarda todas', async () => {
+  it('a demonstração não chama a API e devolve um Público de exemplo com um de fora', async () => {
     const api = { createAudience: vi.fn() };
     const fonte = criarFonte({
       demo: 'folha-lista',
@@ -251,7 +282,38 @@ describe('fonte do Público', () => {
     const guardado = await fonte.guardarLista({ nome: 'X', ids: [1, 2] });
 
     expect(api.createAudience).not.toHaveBeenCalled();
-    expect(guardado).toEqual({ publicoId: null, nome: 'X', n: 2, fora: [] });
+    expect(guardado).toEqual({
+      publicoId: 9001,
+      nome: 'X',
+      n: 1,
+      fora: [{ id: 2, motivo: 'no_channel' }],
+    });
+  });
+
+  it('demonstração e API devolvem o Público com as mesmas chaves', async () => {
+    const api = {
+      createAudience: vi.fn().mockResolvedValue({
+        data: {
+          payload: {
+            audience: { id: 55, name: 'X', count: 1 },
+            entered_lead_ids: [1],
+            left_out: [{ lead_id: 2, reason_code: 'opt_out', message: 'x' }],
+          },
+        },
+      }),
+    };
+    const pedido = { nome: 'X', ids: [1, 2] };
+    const daApi = await criarFonte({ api, crm: {} }).guardarLista(pedido);
+    const daDemo = await criarFonte({
+      demo: 'folha-lista',
+      carregarDemo: () => Promise.resolve({}),
+      atraso: 0,
+    }).guardarLista(pedido);
+
+    expect(Object.keys(daDemo).sort()).toEqual(Object.keys(daApi).sort());
+    expect(Object.keys(daDemo.fora[0]).sort()).toEqual(
+      Object.keys(daApi.fora[0]).sort()
+    );
   });
 
   it('o pronto junta quem ficou de fora por motivo, em frase de leigo', () => {
@@ -268,6 +330,7 @@ describe('fonte do Público', () => {
           { id: 1, motivo: 'no_channel' },
           { id: 2, motivo: 'no_channel' },
           { id: 3, motivo: 'unexpected_error' },
+          { id: 4, motivo: 'same_contact' },
         ],
       },
       nomeLista: 'Escritórios',
@@ -277,5 +340,8 @@ describe('fonte do Público', () => {
       '2 não têm celular nem e-mail e ficaram de fora.'
     );
     expect(detalhes).toContain('Não deu para guardar 1. Tente de novo.');
+    expect(detalhes).toContain(
+      '1 é a mesma pessoa de outra empresa da lista: entrou uma vez só.'
+    );
   });
 });
