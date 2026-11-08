@@ -33,6 +33,13 @@ passo:
     motivo: Pôr e tirar etiqueta do contato uma a uma, sem trocar a lista inteira (#2461).
     acoes:
       PATCH contacts/:contact_id/labels/alterar: {}
+  contacts/notes:
+    motivo: >-
+      Deixar uma nota no contato, como a pessoa faz na tela de notas (G19, #2636). A nota sai no nome de quem ligou a
+      automação, como as outras ações; qual automação fez fica no registro dela e na auditoria. Mudar e apagar nota
+      fica fora: a automação não reescreve o que alguém anotou.
+    acoes:
+      POST contacts/:contact_id/notes: {}
   custom_attribute_definitions:
     motivo: >-
       Criar e alterar atributo de conversa, contato, empresa ou card (D13). Trocar a chave ou o modelo deixaria os
@@ -98,6 +105,7 @@ fora:
       - email_oauth_apps
       - crm/integration_tokens
       - crm/meta_ads_connections
+      - crm/meta_ads_pagina
       - integrations/dyte
       - integrations/hooks
       - integrations/linear
@@ -239,7 +247,7 @@ fora:
       - crm/stage_automations
       - crm/stage_automation_steps
       - autonomia/vigias
-  - motivo: Vira passo nativo em outra fase. Retorno, F6; reunião, F8.
+  - motivo: Passo nativo, não ação da lista. Retorno, passo `retorno` (G3); reunião, F8.
     recursos:
       - crm/follow_ups
       - crm/follow_up_series
@@ -294,7 +302,6 @@ fora:
       - branded_email_layouts
       - upload
       - ctwa_tracked_links
-      - contacts/notes
       - contacts/opt_outs
       - contacts/customers
       - contacts/contact_inboxes

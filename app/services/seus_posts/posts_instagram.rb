@@ -1,6 +1,7 @@
-# Seus posts (#2302): os posts do Instagram da caixa (login do Instagram, graph.instagram.com). Pela regra da Meta,
-# vezes, curtidas e comentários do post são só sem anúncio, mas a chamada real de 27/10 só viu posts nunca
-# impulsionados: a tela segue marcando "pode incluir anúncio". O login do Instagram não diz se o post foi impulsionado
+# Seus posts (#2302): os posts do Instagram da caixa (login do Instagram, graph.instagram.com). Só as vezes são sem
+# anúncio; curtidas, comentários, pessoas, salvos e compartilhamentos podem incluir (#2522: a chamada real de 27/10 só
+# viu posts nunca impulsionados, e a tela marca "pode incluir anúncio" até haver chamada real num post impulsionado,
+# com o mesmo texto ao lado dos números). O login do Instagram não diz se o post foi impulsionado
 # (sem boost_ads_list): boosted é nil ("não se sabe"), e nenhum sai da média. Só vezes, curtidas e comentários se
 # comparam com o normal: pessoas, salvos e compartilhamentos de um post impulsionado sem a gente saber puxariam a média.
 class SeusPosts::PostsInstagram < SeusPosts::Posts

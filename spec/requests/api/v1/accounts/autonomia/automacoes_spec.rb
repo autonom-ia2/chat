@@ -381,12 +381,34 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
     end
 
+    # G3 (#2629): o retorno cria pelo crm/follow_ups e pede a mesma chave.
+    it 'recusa salvar o passo "criar retorno" pela API direta' do
+      retorno = { id: 'r1', tipo: 'retorno', titulo: ['Ligar'], daqui: { valor: 1, unidade: 'dias' } }
+
+      post base, params: { nome: 'x', receita: receita.merge(passos: [retorno]) }, headers: montador.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
+    end
+
     # #2499: o gatilho de card também pede a chave de funis, mesmo sem passo de card.
     it 'recusa salvar gatilho de card pela API direta' do
       account.enable_features!('automacao_gatilhos')
       receita_de_card = receita.merge(gatilho: { tipo: 'card.ganho' })
 
       post base, params: { nome: 'x', receita: receita_de_card }, headers: montador.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
+    end
+
+    # G4: o passo "criar card" é passo de funil, como a ação de card.
+    it 'recusa salvar o passo "criar card" pela API direta' do
+      account.enable_features!('automacao_gatilhos')
+      _, etapa = create_crm_pipeline(account: account, user: admin)
+      criar_card = { id: 'p1', tipo: 'card', etapa_id: etapa.id }
+
+      post base, params: { nome: 'x', receita: receita.merge(passos: [criar_card]) }, headers: montador.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))

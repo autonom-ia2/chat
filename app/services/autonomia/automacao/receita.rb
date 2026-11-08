@@ -63,19 +63,10 @@ class Autonomia::Automacao::Receita
     passos.pluck('id').tally.select { |_id, vezes| vezes > 1 }.keys.map { |id| texto(:id_repetido, passo: id) }
   end
 
-  # O gatilho de card e o de tempo (#2499): a flag, a etapa, o funil e o campo de data são da conta.
+  # O gatilho de card e o de tempo (#2499): a flag, a etapa, o funil e o campo de data são da conta; no da conta (G7),
+  # os passos que ele aceita.
   def gatilho_novo
-    gatilho = @receita['gatilho'].to_h
-    [*::Autonomia::Automacao::ProblemasDoGatilho.new(gatilho, @conta).problemas, *valor_da_mudanca(gatilho)]
-  end
-
-  # G27 (#2661): "o valor passou de R$ 50 mil" lê o valor de venda, com a mesma permissão do `card.valor` (#2597): quem
-  # não vê os valores não monta um gatilho que descobre o valor dos cards pelo disparo.
-  def valor_da_mudanca(gatilho)
-    return [] unless gatilho.dig('mudanca', 'campo') == ::Autonomia::Automacao::MudancaDoCard::VALOR
-
-    leitura = ::Autonomia::Automacao::Valores.problema_de_leitura('card.valor', conta: @conta, account_user: @account_user)
-    leitura ? [texto(:gatilho_valor_de_venda)] : []
+    ::Autonomia::Automacao::ProblemasDoGatilho.new(@receita['gatilho'].to_h, @conta, passos: passos, account_user: @account_user).problemas
   end
 
   def filtros_do_gatilho
@@ -83,14 +74,25 @@ class Autonomia::Automacao::Receita
   end
 
   def problemas_do_passo(passo)
-    return [texto(:passo_pede_alvo, passo: passo['id'])] if da_conta? && !sem_alvo?(passo)
     return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
-    return ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo) if passo['tipo'] == 'ia_assumir'
+    return problemas_do_retorno(passo) if passo['tipo'] == 'retorno'
+    return problemas_do_proprio_passo(passo) if %w[ia_assumir card campanha].include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
+  end
+
+  # Os passos que se conferem sozinhos ao salvar, na própria classe: o "Passar para a agente de IA" (G15), o "criar
+  # card" (G4), que confere também a pessoa, e a campanha (G14), que confere o gatilho, a pessoa e a campanha da tela.
+  def problemas_do_proprio_passo(passo)
+    case passo['tipo']
+    when 'card' then ::Autonomia::Automacao::PassoDeCard.problemas_ao_salvar(@conta, passo, @account_user)
+    when 'campanha'
+      ::Autonomia::Automacao::PassoDeCampanha.problemas_ao_salvar(passo, @receita, conta: @conta, account_user: @account_user)
+    else ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo)
+    end
   end
 
   # "mensagem", "avisar" e "email" (F4, G2): só com a flag da F4, os valores do texto (do assunto do e-mail e de cada
@@ -117,6 +119,11 @@ class Autonomia::Automacao::Receita
      *repetidos(id, Array(passo['campos']).pluck('chave'), :campo_repetido),
      *Array(passo['campos']).flat_map { |campo| destino_invalido(id, campo['destino']) },
      *destinatarios_de_fora('id' => id, 'para' => avisar_do_resumir(passo))]
+  end
+
+  # "criar retorno" (G3): a conferência mora no PassoDeRetorno; os caminhos lidos, pela régua daqui.
+  def problemas_do_retorno(passo)
+    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @receita, @account_user) { |c| problemas_do_caminho(passo['id'], c) }
   end
 
   # O destino do resumir é "nota" (texto) ou { avisar: ... }; o do escrever é sempre texto.
@@ -194,10 +201,11 @@ class Autonomia::Automacao::Receita
 
   # Caminho que a automação não sabe ler, ou atributo que a conta não tem. O atributo apagado depois de salvar chega
   # vazio no motor, com o motivo no registro. A resposta (G11) só existe na condição do "esperar até": fora dele não há
-  # o começo da espera, e ela leria sempre vazio.
+  # o começo da espera, e ela leria sempre vazio. O texto da IA (#2679) só vem de um passo que escreve.
   def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false)
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
+    return ::Autonomia::Automacao::TextoDaIaNaReceita.new(self, @receita).problemas(id, caminho, no_gatilho: no_gatilho) if valores.da_ia?(caminho)
 
     fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera, gatilho: @receita.dig('gatilho', 'tipo'))
     return [texto(fora, passo: id, caminho: caminho)] if fora
@@ -218,12 +226,6 @@ class Autonomia::Automacao::Receita
     alvo = ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
     alvo.nil? || ::Autonomia::Automacao::Valores.no_alvo?(caminho, alvo)
   end
-
-  # conta.recorrente (#2635, G7) roda sem conversa, card ou contato: só ficam o esperar e o disparar de campanha (G14),
-  # que escolhe o público pela etiqueta. Recusar aqui é o que impede o passo de quebrar sem alvo ao rodar.
-  def da_conta? = ::Autonomia::Automacao::Gatilhos.da_conta?(@receita.dig('gatilho', 'tipo'))
-
-  def sem_alvo?(passo) = passo['tipo'] == 'esperar' || (passo['tipo'] == 'campanha' && passo['faz'] == 'disparar')
 
   def mensagem_no_gatilho?(no_gatilho) = no_gatilho && @receita.dig('gatilho', 'tipo') == ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM
 

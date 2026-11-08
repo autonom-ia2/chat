@@ -16,11 +16,19 @@ class Autonomia::Automacao::PassoDeAcao
   # 4xx que passam: tempo esgotado, cedo demais e limite de pedidos.
   PASSAGEIROS = [408, 425, 429].freeze
 
-  def initialize(execucao:, passo:, valores:, acesso:)
+  # O passo "criar retorno" (G3, #2629) tem objeto próprio, que chega à mesma porta (AcoesDoRetorno).
+  def self.executar(passo:, **)
+    classe = passo['tipo'] == 'retorno' ? ::Autonomia::Automacao::PassoDeRetorno : self
+    classe.new(passo: passo, **).executar
+  end
+
+  # `acoes`: a porta que executa. O passo "criar retorno" (G3) passa a dele, liberada só para o retorno.
+  def initialize(execucao:, passo:, valores:, acesso:, acoes: ::Autonomia::Automacao::AcoesDoMotor)
     @execucao = execucao
     @passo = passo
     @valores = valores
     @acesso = acesso
+    @acoes = acoes
   end
 
   def executar
@@ -44,7 +52,7 @@ class Autonomia::Automacao::PassoDeAcao
   end
 
   def motor
-    @motor ||= ::Autonomia::Automacao::AcoesDoMotor.new(execucao: @execucao, account_user: @acesso.account_user)
+    @motor ||= @acoes.new(execucao: @execucao, account_user: @acesso.account_user)
   end
 
   def no_caderno(caderno, &)

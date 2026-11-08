@@ -364,6 +364,7 @@
       "SKIP_MISSING_PIXEL": "Falta o Pixel do site no funil.",
       "SKIP_EVENT_TOO_OLD": "Passou de 7 dias. A Meta não aceita mais.",
       "SKIP_MISSING_CREDENTIALS": "A conexão do WhatsApp está sem acesso à Meta.",
+      "SKIP_MISSING_DATASET": "A Meta não informou o registro de vendas deste WhatsApp.",
       "SKIP_NO_META_EVENT": "Esta etapa não envia evento à Meta.",
       "SKIP_MISSING_SIGNALS": "O site não mandou os dados do anúncio (por exemplo, sem consentimento de cookies). Nada foi enviado à Meta.",
       "EVENT_WON": "Venda",
@@ -1716,9 +1717,6 @@
       "META_STAGE_TYPE_NEGOTIATION": "Em negociação",
       "META_SYNC_TITLE": "Meta Ads",
       "META_SYNC_HELP": "Quando um card for ganho, perdido ou mudar de etapa, a conversão volta para a Meta para otimizar seus anúncios de clique para WhatsApp por quem realmente fecha.",
-      "META_SYNC_DATASET": "Dataset ID (avançado)",
-      "META_SYNC_DATASET_PLACEHOLDER": "Deixe vazio para usar o da conexão do WhatsApp",
-      "META_SYNC_DATASET_HELP": "Deixe vazio para derivar da conexão do WhatsApp. Só preencha se a Meta forneceu um dataset específico.",
       "MOVE_STAGE_UP": "Subir etapa",
       "MOVE_STAGE_DOWN": "Descer etapa",
       "DELETE_STAGE": "Excluir etapa",
@@ -2486,7 +2484,8 @@
           "TRUST": {
             "SAFE": "Só vemos os números. Nada muda nos seus anúncios",
             "TIME": "Sem senha e sem chave",
-            "OFF": "Você desliga quando quiser"
+            "OFF": "Você desliga quando quiser",
+            "SAFE_LOGIN_UNICO": "Você escolhe o que liga. Nada é publicado sem você mandar"
           },
           "COPY": {
             "TITLE": "Copie o código da {partner}",
@@ -2550,7 +2549,27 @@
             "DESTINATION_LATER": "Escolher depois",
             "DESTINATION_LATER_HINT": "A conta está conectada. Escolha para onde seus anúncios levam na aba Conexão.",
             "PAGE_MISSING": "Falta ligar a página do site. Ligue para contarmos as visitas que vêm dos anúncios.",
-            "PAGE_LINK": "Ligar"
+            "PAGE_LINK": "Ligar",
+            "WORKS": {
+              "TITLE": "O que já funciona",
+              "SPEND": "Gastos de cada anúncio",
+              "CREATE": "Criar e impulsionar anúncios",
+              "COMMENTS_FACEBOOK": "Comentários do Facebook",
+              "MESSAGES_FACEBOOK": "Mensagens do Facebook",
+              "FORMS": "Formulários de cadastro",
+              "POSTS": "Números dos seus posts",
+              "COMMENTS_INSTAGRAM": "Comentários do Instagram",
+              "MESSAGES_INSTAGRAM": "Mensagens do Instagram",
+              "READY": "Funcionando",
+              "MISSING_PAGE": "Falta a Página",
+              "MISSING_INSTAGRAM": "Falta o Instagram",
+              "MISSING_PERMISSION": "Faltou permitir",
+              "FIX_TEXT": "Na janela do Facebook, alguma permissão ficou desmarcada. Entre de novo e deixe tudo marcado: só o que faltou muda.",
+              "FIX": "Entrar de novo",
+              "MISSING_INSTAGRAM_TAP": "Falta um toque",
+              "INSTAGRAM_TEXT": "O Direct e os comentários do Instagram chegam aqui depois de ligar o Instagram, com um toque.",
+              "INSTAGRAM_CTA": "Ligar o Instagram"
+            }
           },
           "GUIDE": {
             "LABEL": "Onde tocar na Meta",
@@ -2574,6 +2593,7 @@
             "STEPS": {
               "ENTER": "Entre com o Facebook",
               "CHOOSE": "Confirme a sua conta",
+              "PAGE": "Confira a Página",
               "WHERE": "Escolha o destino",
               "SEE": "Veja seus gastos"
             },
@@ -2585,7 +2605,36 @@
             "REFUSED_TITLE": "O Facebook não liberou os seus anúncios",
             "BROKEN": "A conexão com a Meta caiu. Entre de novo para voltar a ver os gastos.",
             "SOMEONE": "Outra pessoa cuida dos meus anúncios",
-            "PARTNER": "Liberar pelo Gerenciador de Negócios"
+            "PARTNER": "Liberar pelo Gerenciador de Negócios",
+            "TEXT_LOGIN_UNICO": "Entre com o mesmo Facebook em que você cria os anúncios. Um login só liga a conta de anúncios e a Página.",
+            "WAITING_LOGIN_UNICO": "A janela do Facebook está aberta. Deixe tudo marcado, inclusive a sua Página, e vá tocando em \"Avançar\" até \"Concluir\"."
+          },
+          "PAGE": {
+            "LOADING": "Buscando sua Página…",
+            "TITLE": "Esta é a Página do seu negócio?",
+            "TEXT_PAGE": "Com a Página ligada, comentários e formulários do Facebook chegam aqui.",
+            "FACEBOOK": "Página do Facebook",
+            "FOLLOWERS": "{count} seguidores",
+            "CONTINUE": "Sim, é esta",
+            "NOT_THIS": "Não é esta Página",
+            "CHOOSE_TITLE": "Qual Página é a do seu negócio?",
+            "CHOOSE_TEXT": "Você marcou mais de uma. Escolha a que aparece nos seus anúncios.",
+            "CHOOSE_CTA": "Continuar",
+            "NONE_TITLE": "Faltou marcar a sua Página",
+            "NONE_TEXT": "Entre de novo e, na janela do Facebook, marque a Página do seu negócio. Sem ela, comentários e formulários não chegam aqui.",
+            "WRONG_TITLE": "Vamos trocar a Página",
+            "WRONG_TEXT": "Entre de novo e, na janela do Facebook, marque só a Página do seu negócio.",
+            "SIGN_IN_AGAIN": "Entrar de novo",
+            "NO_PAGE": "Não tenho Página no Facebook",
+            "FAILED": "Não conseguimos ver suas Páginas agora. Siga sem elas e ligue depois na aba Conexão.",
+            "CONTINUE_WITHOUT": "Seguir sem a Página",
+            "CHOOSE_PLACEHOLDER": "Escolha a sua Página",
+            "ERROR_NOT_GRANTED": "O Facebook não liberou esta Página. Toque em \"Não é esta Página\", entre de novo e marque a Página na janela do Facebook.",
+            "ERROR_RECONNECT": "O acesso ao Facebook venceu. Toque em \"Não é esta Página\" e entre de novo com o Facebook.",
+            "ERROR_LIMIT": "Sua conta chegou ao limite de caixas de entrada do plano. Peça a um administrador para liberar ou aumentar.",
+            "ERROR_MISSING_PERMISSIONS": "Faltou permitir. Esta Página já tem caixa de entrada e, para as mensagens dela continuarem chegando, o Facebook precisa liberar as mensagens da Página. Entre de novo e deixe tudo marcado. Até lá, a caixa continua como está.",
+            "ERROR_FORBIDDEN": "Só quem cuida das caixas de entrada pode ligar a Página. Peça a um administrador.",
+            "ERROR_FAILED": "Não conseguimos ligar a Página agora. Tente de novo em alguns minutos."
           }
         },
         "PENDING": {
@@ -5728,8 +5777,6 @@
       "SITE": "Tem o código do Facebook no seu site?",
       "PIXEL": "Número do Pixel do site",
       "PIXEL_AJUDA": "Só números. Fica no Gerenciador de Eventos do Facebook.",
-      "DATASET": "Conjunto de dados (só se o Facebook pediu)",
-      "DATASET_EXEMPLO": "Ex.: 123456789012345",
       "POR_QUE": {
         "WON": "O principal. Os anúncios passam a procurar pessoas parecidas com quem comprou.",
         "MOVED": "Ajuda os anúncios a achar quem quer comprar, antes mesmo da venda.",
@@ -6345,6 +6392,7 @@
           "SEM_PIXEL": "Falta ligar o seu site ao Facebook neste funil. Peça a quem cuida dos anúncios.",
           "VELHO": "Passaram mais de 7 dias. O Facebook não aceita mais este aviso.",
           "SEM_ACESSO": "A conexão do WhatsApp não tem permissão para avisar o Facebook. Peça a quem cuida dos anúncios.",
+          "SEM_DATASET": "O Facebook não informou o registro de vendas deste WhatsApp.",
           "ETAPA_NAO_AVISA": "Esta etapa não está marcada para avisar o Facebook.",
           "SEM_SINAIS": "O site não mandou os dados do anúncio (por exemplo, a pessoa não aceitou os cookies). Nada foi avisado."
         },

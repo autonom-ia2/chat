@@ -25,6 +25,14 @@ RSpec.describe Autonomia::Automacao::VarreduraJob, :automacao_motor do
     expect(Autonomia::Automacao::AvancarJob).not_to have_been_enqueued
   end
 
+  it 'a interrompida perde o texto da IA (#2679)' do
+    travada = execucao(estado: 'andando', travada_em: 16.minutes.ago, textos: { 'p1' => 'Oi Ana' })
+
+    described_class.perform_now
+
+    expect(travada.reload).to have_attributes(estado: 'interrompida', textos: {})
+  end
+
   it 'reenfileira, com marca nova, a reservada há mais de 15 minutos que nunca começou (fila atrasada)' do
     reservada = execucao(estado: 'andando', travada_em: 16.minutes.ago, due_at: 16.minutes.ago)
 

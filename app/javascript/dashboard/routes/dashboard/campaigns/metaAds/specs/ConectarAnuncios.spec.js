@@ -22,6 +22,10 @@ vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// Sem o login único (#2338): o passo a passo de 4 passos de hoje.
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({ isCloudFeatureEnabled: () => false }),
+}));
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
   return { usePermissionGranted: () => computed(() => false) };
@@ -196,6 +200,8 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
 
     await saveDestination(wrapper);
     expect(wrapper.attributes('data-screen')).toBe('done');
+    // O "O que já funciona" é do login único: sem a flag, o pronto fica como antes.
+    expect(wrapper.find('[data-conectar-funciona]').exists()).toBe(false);
     expect(
       wrapper.find('[data-conectar-faixa] [aria-current="step"]').text()
     ).toContain('Veja seus gastos');

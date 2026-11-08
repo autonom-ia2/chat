@@ -71,8 +71,14 @@ class Autonomia::Automacao::Ensaio
 
     @contados = 0
     @conversa = conversa
-    valores = ::Autonomia::Automacao::Valores.new(alvo: conversa, mensagem: mensagem, quem: @usuario)
+    contexto = ::Autonomia::Automacao::Contexto.de(conversa, textos: textos_da_ia)
+    valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem, quem: @usuario)
     base.merge(entraria: true, motivo: nil, passos: caminho(@roteiro.primeiro, valores))
+  end
+
+  # #2679: o ensaio não chama a IA. No lugar do texto de cada "escrever" e "resumir", a marca de onde ele entraria.
+  def textos_da_ia
+    @textos_da_ia ||= ::Autonomia::Automacao::Contexto.marcas_da_ia(@receita, @conta)
   end
 
   def mensagem_no_gatilho? = @receita.dig('gatilho', 'tipo') == ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM
@@ -123,15 +129,16 @@ class Autonomia::Automacao::Ensaio
     when 'se' then se(passo, valores)
     when 'decidir' then [decidir(passo, valores), nil]
     when 'parar' then [no(passo, 'parar'), nil]
-    else [em_frente(passo), @roteiro.seguinte(passo['id'])]
+    else [em_frente(passo, valores), @roteiro.seguinte(passo['id'])]
     end
   end
 
   # G15: o nome da agente e, se não passaria, o motivo; nunca chama o serviço dos Agentes.
   def ia_assumir(passo, _valores) = no(passo, *::Autonomia::Automacao::PassoDeIaAssumir.ensaiar(passo, @conversa))
 
-  def em_frente(passo)
+  def em_frente(passo, valores)
     return ia(passo) if IA_SO_DIZ.include?(passo['tipo'])
+    return retorno(passo, valores) if passo['tipo'] == 'retorno'
 
     no(passo, SO_MOSTRA.include?(passo['tipo']) ? passo['tipo'] : 'catalogo')
   end
@@ -169,6 +176,30 @@ class Autonomia::Automacao::Ensaio
     return no(passo, 'texto_vazio') if assunto.strip.empty?
 
     pronto.merge(dados: pronto[:dados].merge(assunto: assunto.squish, caixa: caixa.name))
+  end
+
+  # O retorno (G3): o título montado, ou por que pularia, como o motor. O ensaio só descreve; nada é criado.
+  def retorno(passo, valores)
+    return no(passo, 'mensagens_desligadas') if passo['envio'] && !::Autonomia::Automacao::Motor.mensagens?(@conta)
+
+    motivo = pulo_dos_textos(passo, valores)
+    return no(passo, motivo) if motivo
+    return no(passo, 'retorno_sem_responsavel') if [nil, 'responsavel'].include?(passo.dig('para', 'quem')) &&
+                                                   valores.ler('conversa.responsavel_id').blank?
+
+    no(passo, 'retorno', { texto: ::Autonomia::Automacao::Texto.new(passo['titulo'], valores).montar })
+  end
+
+  # O primeiro pulo do título e da mensagem do retorno, na ordem do motor: valor vazio ou texto só de espaços.
+  def pulo_dos_textos(passo, valores)
+    textos = passo['envio'] ? [passo['titulo'], passo.dig('envio', 'mensagem')] : [passo['titulo']]
+    textos.lazy.map { |partes| pulo_do_texto(::Autonomia::Automacao::Texto.new(partes, valores).montar) }.find(&:itself)
+  end
+
+  def pulo_do_texto(pronto)
+    return 'faltou_valor' if pronto.nil?
+
+    'texto_vazio' if pronto.strip.empty?
   end
 
   # O valor calculado do corpo (G16) com os dados desta conversa e o "hoje" de agora: a data que daria se rodasse
@@ -219,7 +250,7 @@ class Autonomia::Automacao::Ensaio
     end
     chave = ::Autonomia::Automacao::Receita::NENHUM
     nenhum = { chave: chave, passos: caminho(@roteiro.entrar(passo, chave), valores) }
-    no(passo, 'decidir', ramos: caminhos << nenhum)
+    no(passo, 'decidir', anexos(passo, ::Autonomia::Automacao::PassoDeDecidir), ramos: caminhos << nenhum)
   end
 
   # O que a IA faria, só com o que a receita diz. O passo que manda mensagem ou aviso (regras da F4) sem a mensagem
@@ -228,7 +259,17 @@ class Autonomia::Automacao::Ensaio
     classe = ::Autonomia::Automacao::IaNoExecutor::IA.fetch(passo['tipo'])
     return no(passo, 'mensagens_desligadas') if classe.fala_com_gente?(passo) && !::Autonomia::Automacao::Motor.mensagens?(@conta)
 
-    no(passo, "ia_#{passo['tipo']}", classe.ensaiar(passo))
+    no(passo, "ia_#{passo['tipo']}", classe.ensaiar(passo).merge(anexos(passo, classe)))
+  end
+
+  # G20: com `le: anexos`, quantos anexos desta conversa a IA leria, ou o motivo de o passo pular, como o motor. Não
+  # baixa nada nem chama a IA.
+  def anexos(passo, classe)
+    return {} unless ::Autonomia::Automacao::AnexosDaConversa.le?(passo)
+
+    lidos = ::Autonomia::Automacao::AnexosDaConversa.new(@conversa)
+    motivo = lidos.motivo(modelo: classe::MODELO)
+    motivo ? { anexos_motivo: motivo } : { anexos: lidos.quantos }
   end
 
   def condicao?(condicao, valores)

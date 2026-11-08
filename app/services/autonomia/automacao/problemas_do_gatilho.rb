@@ -5,7 +5,9 @@
 #
 # No recorrente (#2635, G7), a seleção: pelo menos uma condição (sem nenhuma, a automação pegaria a conta inteira por
 # engano), só as condições do alvo (card ou contato) e funil, etapa, responsável, etiqueta e atributo da conta. O da
-# conta não tem seleção (o esquema recusa).
+# conta não tem seleção (o esquema recusa) e roda sem conversa, card ou contato: só ficam o esperar e o disparar de
+# campanha (G14), que escolhe o público pela etiqueta. Recusar ao salvar é o que impede o passo de quebrar sem alvo ao
+# rodar.
 #
 # No card atualizado (G27, #2661), a mudança: o campo personalizado é do card, desta conta, e a condição numérica
 # (maior que, passou de) tem número para comparar.
@@ -13,10 +15,14 @@ class Autonomia::Automacao::ProblemasDoGatilho
   Gatilhos = ::Autonomia::Automacao::Gatilhos
   MudancaDoCard = ::Autonomia::Automacao::MudancaDoCard
 
-  def initialize(gatilho, conta)
+  # `passos`: todos os passos da receita, inclusive os dos ramos (Receita#passos). `account_user`: quem salva, para o
+  # valor de venda na mudança.
+  def initialize(gatilho, conta, passos: [], account_user: nil)
     @gatilho = gatilho
     @tipo = gatilho['tipo']
     @conta = conta
+    @passos = passos
+    @account_user = account_user
   end
 
   # Frases para a pessoa corrigir; vazio = pode salvar.
@@ -26,13 +32,19 @@ class Autonomia::Automacao::ProblemasDoGatilho
     desligado = Gatilhos.desligado(@tipo, @conta)
     return [texto(desligado)] if desligado
 
-    return [] if Gatilhos.da_conta?(@tipo)
+    return passos_que_pedem_alvo if Gatilhos.da_conta?(@tipo)
     return selecao if Gatilhos.recorrente?(@tipo)
 
     [*etapa_de_fora, *funil_de_fora, *parado_sem_dias, *campo_de_fora, *da_mudanca]
   end
 
   private
+
+  def passos_que_pedem_alvo
+    @passos.reject { |passo| sem_alvo?(passo) }.map { |passo| texto(:passo_pede_alvo, passo: passo['id']) }
+  end
+
+  def sem_alvo?(passo) = passo['tipo'] == 'esperar' || (passo['tipo'] == 'campanha' && passo['faz'] == 'disparar')
 
   def etapa_de_fora
     etapa = @gatilho['etapa_id']
@@ -63,8 +75,17 @@ class Autonomia::Automacao::ProblemasDoGatilho
     mudanca = @gatilho['mudanca']
     return [] if mudanca.nil?
 
-    [*campo_do_card_de_fora(mudanca['chave']),
+    [*campo_do_card_de_fora(mudanca['chave']), *valor_de_venda_escondido(mudanca),
      *(texto(:mudanca_sem_numero) if mudanca_numerica?(mudanca) && !MudancaDoCard.numero?(mudanca['valor']))]
+  end
+
+  # "O valor passou de R$ 50 mil" lê o valor de venda, com a mesma permissão do `card.valor` (#2597): quem não vê os
+  # valores não monta um gatilho que descobre o valor dos cards pelo disparo.
+  def valor_de_venda_escondido(mudanca)
+    return [] unless mudanca['campo'] == MudancaDoCard::VALOR
+    return [] unless ::Autonomia::Automacao::Valores.problema_de_leitura('card.valor', conta: @conta, account_user: @account_user)
+
+    [texto(:gatilho_valor_de_venda)]
   end
 
   def campo_do_card_de_fora(chave)

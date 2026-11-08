@@ -152,6 +152,7 @@ const ICONE = {
   resumir: 'i-lucide-sparkles',
   parar: 'i-lucide-octagon',
   acao: 'i-lucide-zap',
+  card: 'i-lucide-kanban',
 };
 </script>
 

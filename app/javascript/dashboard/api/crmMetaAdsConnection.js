@@ -56,6 +56,18 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     });
   }
 
+  // Login único (#2338): Páginas que a pessoa marcou na janela da Meta, com o Instagram ligado e se já têm caixa, e
+  // as permissões que ela recusou → { pages: [...], declined_permissions: [...] }.
+  loginPages() {
+    return axios.get(`${this.url}/paginas`);
+  }
+
+  // Liga a Página escolhida: cria a caixa dela ou troca o token da que existe → { inbox_id, name }. 422 com error
+  // 'page_not_granted' quando a Meta não deu a Página a este login.
+  linkPage(pageId) {
+    return axios.post(`${this.url}/pagina`, { page_id: pageId });
+  }
+
   // { whatsapp: bool, site: bool }
   updateDestinations(destinations) {
     return axios.patch(`${this.url}/destinations`, { destinations });

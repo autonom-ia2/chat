@@ -50,7 +50,8 @@
       "DIA_DA_SEMANA": "Day of the week",
       "DIA_DO_MES": "Day of the month",
       "SELECAO": "Which ones",
-      "MUDANCA": "Change"
+      "MUDANCA": "Change",
+      "REPETE": "Repeats"
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversation and message",
@@ -80,6 +81,11 @@
     "GATILHO_NO_DIA": {
       "CARD_DATA": "On the card {campo} day, from {hora}h",
       "CONTATO_DATA": "On the contact {campo} day, from {hora}h"
+    },
+    "GATILHO_TODO_ANO": "{frase}, every year",
+    "REPETE_DA_DATA": {
+      "UMA_VEZ": "Only on that date, with the year",
+      "TODO_ANO": "Every year, on the same day and month (birthday)"
     },
     "QUANDO_DA_DATA": {
       "ANTES": "before",
