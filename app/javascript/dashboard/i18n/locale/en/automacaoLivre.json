@@ -58,6 +58,8 @@
       "CARD_TIME_ID": "Card team",
       "CARD_DIAS_NA_ETAPA": "Days in the stage",
       "CARD_MOTIVO_DA_PERDA": "Lost reason",
+      "CARD_ORIGEM": "Where the card came from",
+      "CARD_ANUNCIO": "Ad name from the lead form",
       "CARD_ATRIBUTOS": "Card custom field",
       "MENSAGEM_TIPO": "Message type",
       "MENSAGEM_PRIVADA": "Private message",

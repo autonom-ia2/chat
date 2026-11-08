@@ -58,6 +58,8 @@
       "CARD_TIME_ID": "Time do card",
       "CARD_DIAS_NA_ETAPA": "Dias na etapa",
       "CARD_MOTIVO_DA_PERDA": "Motivo da perda",
+      "CARD_ORIGEM": "De onde o card veio",
+      "CARD_ANUNCIO": "Nome do anúncio do formulário",
       "CARD_ATRIBUTOS": "Campo personalizado do card",
       "MENSAGEM_TIPO": "Tipo da mensagem",
       "MENSAGEM_PRIVADA": "Mensagem interna",

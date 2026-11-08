@@ -29,7 +29,12 @@
       "TRUE": "yes",
       "FALSE": "no",
       "CLIENTE": "the customer",
-      "EQUIPE": "the team"
+      "EQUIPE": "the team",
+      "FORMULARIO_DO_ANUNCIO": "an ad lead form",
+      "CONVERSA": "a conversation",
+      "PROSPECCAO": "prospecting",
+      "AGENDA": "a booking",
+      "OUTRA": "another way (by hand, API)"
     },
     "OPERADOR_DA_MENSAGEM": {
       "IGUAL": "is",

@@ -184,9 +184,10 @@ module FechamentoAutomacao::Lacunas
     # G28 (#2674, absorvida pelo lote 2 #2679): o texto da IA vira valor entre passos e a IA lê o card. Segura o 10 e o 13
     # (#2678) e os 4, 5 e 19. A frente do lote 2 troca o nil pela sonda.
     'G28' => nil,
+    # G29 (#2702): a origem do card (formulário do anúncio, conversa, prospecção, agenda) e o nome do anúncio como
+    # valores da receita. Ponta a ponta em spec/fechamento/automacao/g29_origem_do_card_spec.rb.
+    'G29' => -> { valor?('card.origem') && valor?('card.anuncio') },
     # Achadas no exemplo 2 (07/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
-    # G29: a origem do card do formulário (anúncio, formulário) como valor da receita, no filtro do gatilho e nos passos.
-    'G29' => nil,
     # G30: o responsável por um anúncio (o corretor daquele anúncio), para o retorno e o link da agenda.
     'G30' => nil,
     # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando".

@@ -463,6 +463,48 @@
       "frase": "AUTOMACAO_LIVRE.VALORES.CARD_MOTIVO_DA_PERDA"
     },
     {
+      "caminho": "card.origem",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ORIGEM",
+      "opcoes": [
+        {
+          "valor": "formulario_do_anuncio",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FORMULARIO_DO_ANUNCIO"
+        },
+        {
+          "valor": "conversa",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.CONVERSA"
+        },
+        {
+          "valor": "prospeccao",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.PROSPECCAO"
+        },
+        {
+          "valor": "agenda",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.AGENDA"
+        },
+        {
+          "valor": "outra",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.OUTRA"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
+      "caminho": "card.anuncio",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ANUNCIO"
+    },
+    {
       "caminho": "reuniao.inicio",
       "base": "reuniao",
       "frase": "AUTOMACAO_LIVRE.VALORES.REUNIAO_INICIO",
