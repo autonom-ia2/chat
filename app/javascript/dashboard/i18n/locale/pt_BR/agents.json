@@ -812,9 +812,9 @@
             "ADICIONAR": "Adicionar ferramenta"
           },
           "SEM_PERMISSAO": {
-            "TEXTO": "Ferramentas são configuradas só pela equipe da plataforma, porque fazem chamadas a outros sistemas com chaves de acesso.",
+            "TEXTO": "Só quem tem a permissão Gerenciar ferramentas mexe aqui, porque uma ferramenta manda dados das conversas para outro sistema. Peça ao administrador da conta.",
             "MUDOU": "Sua permissão mudou. Nada foi salvo.",
-            "MUDOU_GARANTIA": "Quem não é da equipe da plataforma não mexe em ferramentas.",
+            "MUDOU_GARANTIA": "Sem a permissão Gerenciar ferramentas, não dá para mexer aqui.",
             "VOLTAR": "Voltar ao agente"
           },
           "PASSOS": {

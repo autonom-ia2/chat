@@ -1,0 +1,19 @@
+{
+  "pasta": "docs/audit/2026-11-08-1430-prototipo/prints/1-admin-entrega-a-chave",
+  "conta": 1,
+  "usuario": "john@acme.inc",
+  "larguras": [1440, 390],
+  "temas": ["light"],
+  "jornadas": [
+    {
+      "nome": "admin-entrega-a-chave",
+      "etapas": [
+        { "nome": "funcoes", "url": "/app/accounts/{conta}/settings/custom-roles/list", "esperar": "text=Supervisão", "pausa": 3000 },
+        { "nome": "abre-supervisao", "passos": [{ "clicar": "text=Supervisão" }], "esperar": "text=Ferramentas dos agentes", "pausa": 2500 },
+        { "nome": "linha-ferramentas", "passos": [{ "clicar": "text=Ferramentas dos agentes" }], "pausa": 2000 },
+        { "nome": "pede-confirmacao", "passos": [{ "clicar": "[data-sensitive-module] >> xpath=ancestor::*[contains(@class,'rounded')][1] >> text=Gerenciar" }], "pausa": 2000 },
+        { "nome": "liberada", "passos": [{ "clicar": "[role=\"dialog\"] button:has-text(\"Liberar\")" }], "pausa": 2000, "pagina_inteira": true }
+      ]
+    }
+  ]
+}

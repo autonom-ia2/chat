@@ -812,9 +812,9 @@
             "ADICIONAR": "Add tool"
           },
           "SEM_PERMISSAO": {
-            "TEXTO": "Tools are set up only by the platform team, because they call other systems with access keys.",
+            "TEXTO": "Only people with the Manage tools permission can change this, because a tool sends conversation data to another system. Ask the account administrator.",
             "MUDOU": "Your permission changed. Nothing was saved.",
-            "MUDOU_GARANTIA": "Only the platform team can change tools.",
+            "MUDOU_GARANTIA": "Without the Manage tools permission, you cannot change this.",
             "VOLTAR": "Back to the agent"
           },
           "PASSOS": {
