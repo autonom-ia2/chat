@@ -8,7 +8,9 @@
         "CONVERSA": "Channel, inbox, labels and status of the conversation",
         "CONTATO": "Contact name and fields (never email or phone)",
         "EMPRESA": "Company name and fields",
-        "ANEXOS": "Photos, PDFs and voice notes the customer sent"
+        "ANEXOS": "Photos, PDFs and voice notes the customer sent",
+        "CARD": "The card: title, stage, pipeline, status and fields",
+        "NOTAS": "The conversation's internal notes (in a text to the customer, the AI may repeat what they say)"
       },
       "CAMINHO": {
         "NOME": "Path name",
@@ -31,8 +33,14 @@
       "DESTINOS": {
         "MENSAGEM": "Send to the customer",
         "SUGESTAO": "Leave as a suggestion for the team to review",
+        "GUARDAR": "Just keep it, for a later step to use",
         "NOTA": "Note in the conversation",
         "AVISAR": "Notify the team"
+      },
+      "TEXTO_DA_IA": {
+        "ESCREVER": "AI text: “{instrucao}”",
+        "ESCREVER_SEM_INSTRUCAO": "AI text (step without instruction)",
+        "RESUMIR": "AI summary"
       },
       "DESTINO_GRAVAR": {
         "CONTATO_NOME": "Contact name",

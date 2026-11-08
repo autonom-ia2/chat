@@ -71,8 +71,14 @@ class Autonomia::Automacao::Ensaio
 
     @contados = 0
     @conversa = conversa
-    valores = ::Autonomia::Automacao::Valores.new(alvo: conversa, mensagem: mensagem, quem: @usuario)
+    contexto = ::Autonomia::Automacao::Contexto.de(conversa, textos: textos_da_ia)
+    valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem, quem: @usuario)
     base.merge(entraria: true, motivo: nil, passos: caminho(@roteiro.primeiro, valores))
+  end
+
+  # #2679: o ensaio não chama a IA. No lugar do texto de cada "escrever" e "resumir", a marca de onde ele entraria.
+  def textos_da_ia
+    @textos_da_ia ||= ::Autonomia::Automacao::Contexto.marcas_da_ia(@receita, @conta)
   end
 
   def mensagem_no_gatilho? = @receita.dig('gatilho', 'tipo') == ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM

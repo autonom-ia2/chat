@@ -17,9 +17,10 @@ import { fraseDaData, fraseDoValor } from '../frases';
 
 // #2414 G16b — o atributo do tipo data numa ação: um dia certo, ou uma data
 // calculada na hora (a partir de hoje ou de outro campo de data, mais ou menos
-// N dias, semanas, meses ou anos). Uma pergunta por vez. O dia certo vai como a
-// tela da conversa grava ("AAAA-MM-DD"); a calculada vai como { $data }, e o
-// "Salvar" só liga com ela inteira.
+// N dias, semanas, meses ou anos), e, se pedido, no fim do mês (#2705). Uma
+// pergunta por vez. O dia certo vai como a tela da conversa grava
+// ("AAAA-MM-DD"); a calculada vai como { $data }, e o "Salvar" só liga com ela
+// inteira.
 const props = defineProps({
   rotulo: { type: String, required: true },
   modelValue: { type: [String, Object], default: null },
@@ -39,7 +40,9 @@ const ids = {
   sentido: useId(),
   quanto: useId(),
   zero: useId(),
+  fim: useId(),
 };
+const FINS = ['dia', 'mes'];
 
 const modoDoValor = valor => {
   if (valor?.$data) return valor.$data.de === 'hoje' ? 'hoje' : 'campo';
@@ -60,6 +63,7 @@ const escolha = reactive({
   unidade: data.value?.mais?.unidade || 'dias',
   sentido: data.value?.mais?.valor < 0 ? 'antes' : 'depois',
   campo: data.value?.de?.$valor || '',
+  fim: data.value?.fim_do === 'mes' ? 'mes' : 'dia',
 });
 
 const opcoesDeModo = computed(() =>
@@ -90,6 +94,12 @@ const opcoesDeUnidade = computed(() =>
     label: t(`AUTOMACAO_LIVRE.UNIDADES.${valor.toUpperCase()}`, {}, 2),
   }))
 );
+const opcoesDeFim = computed(() =>
+  FINS.map(valor => ({
+    value: valor,
+    label: t(`${P}.FIM_${valor.toUpperCase()}`),
+  }))
+);
 const opcoesDeSentido = computed(() =>
   ['depois', 'antes'].map(valor => ({
     value: valor,
@@ -116,13 +126,15 @@ const calculada = () => {
     modo.value === 'hoje' ? 'hoje' : escolha.campo && { $valor: escolha.campo };
   const texto = escolha.numero.trim();
   const n = texto === '' ? null : Number(texto);
-  if (n === 0) return { $data: { de } };
+  const fim = escolha.fim === 'mes' ? { fim_do: 'mes' } : {};
+  if (n === 0) return { $data: { de, ...fim } };
   const valido = Number.isInteger(n) && n > 0 && n <= TETO_DA_DATA;
   const valor = valido && escolha.sentido === 'antes' ? -n : n;
   return {
     $data: {
       de,
       mais: { valor: valido ? valor : null, unidade: escolha.unidade },
+      ...fim,
     },
   };
 };
@@ -245,7 +257,7 @@ const frase = computed(() => {
                   })
                 : ''
             "
-            message-type="error"
+            :message-type="numeroInvalido ? 'error' : 'info'"
             :label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.NUMERO')"
             :aria-describedby="ids.zero"
             @update:model-value="novo => mudar('numero', String(novo ?? ''))"
@@ -280,6 +292,19 @@ const frase = computed(() => {
             @update:model-value="novo => mudar('sentido', novo)"
           />
         </div>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label :for="ids.fim" class="text-sm font-medium text-n-slate-12">
+          {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.FIM') }}
+        </label>
+        <ChoiceSelect
+          data-data-fim
+          :model-value="escolha.fim"
+          :trigger-id="ids.fim"
+          :aria-label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.FIM')"
+          :options="opcoesDeFim"
+          @update:model-value="novo => mudar('fim', novo)"
+        />
       </div>
     </div>
 
