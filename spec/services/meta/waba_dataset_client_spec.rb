@@ -7,11 +7,11 @@ RSpec.describe Meta::WabaDatasetClient do
 
   it 'returns the dataset the WABA already has, without creating one' do
     get = stub_request(:get, endpoint).with(headers: { 'Authorization' => "Bearer #{token}" })
-                                      .to_return(status: 200, body: { data: [{ id: '1341407110837470' }] }.to_json,
+                                      .to_return(status: 200, body: { data: [{ id: '1000000000000001' }] }.to_json,
                                                  headers: { 'Content-Type' => 'application/json' })
     post = stub_request(:post, endpoint)
 
-    expect(client.find_or_create.dataset_id).to eq('1341407110837470')
+    expect(client.find_or_create.dataset_id).to eq('1000000000000001')
     expect(get).to have_been_requested.once
     expect(post).not_to have_been_requested
   end
