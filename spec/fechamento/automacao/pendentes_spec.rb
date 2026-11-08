@@ -19,7 +19,8 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     10 => ['Cliente bravo vai direto para a gerente',
            'G40 (esperar só a Fernanda), G41 (a instrução no resumir e avisar com a agente de IA atendendo), G28'],
     11 => ['Indicação que vira presente', 'G4, G17, G18 (criar o contato e o card do amigo e agir no card dele), G1, G5, G12, G16'],
-    12 => ['Visita que aconteceu decide o próximo passo', 'G5 (entrou em "Visita feita"), G2, G3, G11, G14, G25, G35'],
+    # O 12 tem spec próprio à risca (exemplo_12_visita_feita_spec.rb); só o campo do card no passo 3 espera a G48.
+    12 => ['Visita que aconteceu decide o próximo passo', 'G48 (o campo do card acorda a espera), G5, G2, G3, G11, G14, G25, G35'],
     14 => ['Documentação completa para emitir', 'G5 (entrou em "Documentação"), G1, G3, G13, G20'],
     15 => ['Cliente grande, atendimento de dono', 'G27 (card atualizado com valor acima de R$ 50 mil), G3, G5, G11, G12, G15, G35'],
     16 => ['Reconquistar quem foi para o concorrente', 'G7 (todo dia 1º), G3, G4, G12, G14, G16, G18'],

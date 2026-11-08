@@ -211,7 +211,10 @@ module FechamentoAutomacao::Lacunas
     'G40' => -> { valor?('conversa.responsavel_respondeu') },
     # Do exemplo 10 (#2678), ainda sem dono: a instrução no resumir ("o que já foi prometido") e avisar o responsável
     # quando a agente de IA atende a conversa.
-    'G41' => nil
+    'G41' => nil,
+    # Do exemplo 12, passo 3 (#2650): "espera até a Ana responder ou o campo ser preenchido". O "esperar até" acorda com a
+    # conversa, o contato e a reunião; o campo do card preenchido só conta quando o prazo vence.
+    'G48' => nil
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".
