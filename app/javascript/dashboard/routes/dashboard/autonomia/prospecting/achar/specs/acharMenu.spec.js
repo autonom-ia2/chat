@@ -11,17 +11,19 @@ const montar = opcoes =>
 const filhos = itens => itens[0].children.map(filho => filho.to.name);
 
 describe('menu Prospecção com a flag prospeccao_nova', () => {
-  it('quem busca vê "Achar empresas", "Suas buscas" e "Para chamar" (#2697); Configurações ficam fora', () => {
+  it('quem busca vê "Achar empresas", "Suas buscas", "Listas" e "Para chamar" (#2697); Configurações ficam fora', () => {
     expect(filhos(montar({ novaOn: true, podeBuscar: true }))).toEqual([
       'autonomia_prospecting_achar',
       'autonomia_prospecting_achar_buscas',
+      'autonomia_prospecting_lists',
       'autonomia_prospecting_para_chamar',
     ]);
   });
 
-  it('quem só vê fica com "Suas buscas" e "Para chamar"', () => {
+  it('quem só vê fica com "Suas buscas", "Listas" e "Para chamar"', () => {
     expect(filhos(montar({ novaOn: true, podeBuscar: false }))).toEqual([
       'autonomia_prospecting_achar_buscas',
+      'autonomia_prospecting_lists',
       'autonomia_prospecting_para_chamar',
     ]);
   });

@@ -13,7 +13,7 @@ class Autonomia::Prospecting::SearchPayload
   # Posição e nota do lead nesta busca (#677, #678), guardadas nela, no mesmo formato do atributo do lead. Busca anterior
   # a isso não tem: ficam os valores do lead.
   def self.lead_in_search(lead, search)
-    metadata = search&.metadata.to_h
+    metadata = search.metadata.to_h
     rank = metadata.dig('lead_ranks', lead.id.to_s)
     scoring = metadata.dig('lead_scoring', lead.id.to_s)
     (rank.nil? ? {} : { 'search_rank' => rank }).merge(lead_scoring(scoring))
