@@ -64,11 +64,20 @@ class AutonomiaProspectingAPI extends ApiClient {
 
   // Envio ao CRM (#680): até 30 leads por pedido, resultado por lead
   // (created, existing, failed). Um lead só também vai por aqui.
-  createCrmCards({ leadIds, pipelineId, stageId }) {
+  // ownerId (#2694): com quem ficam os cards; sem ele, com quem manda.
+  createCrmCards({ leadIds, pipelineId, stageId, ownerId = null }) {
     return axios.post(`${this.url}/leads/crm_cards`, {
       lead_ids: leadIds,
       pipeline_id: pipelineId,
       stage_id: stageId,
+      ...(ownerId ? { owner_id: ownerId } : {}),
+    });
+  }
+
+  // Quem pode receber o card no funil (#2694): só para quem gere funis.
+  getCrmOwners(pipelineId) {
+    return axios.get(`${this.url}/leads/crm_owners`, {
+      params: { pipeline_id: pipelineId },
     });
   }
 

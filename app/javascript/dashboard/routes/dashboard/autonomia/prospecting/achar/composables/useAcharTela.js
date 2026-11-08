@@ -5,6 +5,7 @@ import {
   usePermissionGranted,
 } from 'dashboard/composables/useCanManage';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import { criarFonte, demoPedido } from '../utils/acharFonte';
 import { papelValido, permissoesDoPapel } from '../utils/acharPapeis';
 
@@ -26,25 +27,33 @@ export const useAcharTela = () => {
   const usuario = useMapGetter('getCurrentUser');
   const usuarioId = computed(() => usuario.value?.id);
   const fonte = computed(() =>
-    criarFonte({ demo: demo.value, usuarioId: usuarioId.value })
+    criarFonte({
+      demo: demo.value,
+      usuarioId: usuarioId.value,
+      usuarioNome: usuario.value?.name || '',
+    })
   );
   const podeBuscarNaConta = useCanManage('prospecting_manage');
   // Espelho de Visibility#all_searches?: administrador ou "Ver buscas de todos".
   const veTodasNoServidor = usePermissionGranted(
     'prospecting_view_all_searches'
   );
+  // Trocar o dono do card (#2694): só quem gere funis (crm_manage_pipelines;
+  // crm_admin e o administrador passam), a mesma chave do servidor.
+  const { canManagePipelines } = useCrmPermissions();
   const ajustes = ref(null);
 
   // Fora da demonstração: Editar busca e escolhe; mandar ao funil é o que o
-  // servidor diz (can_send_to_crm). Público e dono escolhido na hora são
-  // backend novo (v4, fases 2 e 3): até lá ficam desligados.
+  // servidor diz (can_send_to_crm); trocar o dono, quem gere funis (#2694).
+  // O Público é backend novo (v4, fase 3): até lá fica desligado.
   const permissoes = computed(() => {
     if (fonte.value.usaDemo) return permissoesDoPapel(papel.value);
+    const funil = podeBuscarNaConta.value && ajustes.value?.podeFunil === true;
     return {
       buscar: podeBuscarNaConta.value,
-      funil: podeBuscarNaConta.value && ajustes.value?.podeFunil === true,
+      funil,
       lista: false,
-      trocarDono: false,
+      trocarDono: funil && canManagePipelines.value,
       verTodas: veTodasNoServidor.value,
     };
   });

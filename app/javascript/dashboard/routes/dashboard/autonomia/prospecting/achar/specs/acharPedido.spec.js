@@ -303,12 +303,79 @@ describe('mandar ao funil pela API', () => {
       leadIds: [1, 2, 3],
       pipelineId: 4,
       stageId: 40,
+      ownerId: null,
     });
     expect(resumo).toEqual({
       created: [{ id: 1, cardId: 501 }],
       existing: [{ id: 2, cardId: 502 }],
-      failed: [{ id: 3, motivo: 'invalid_data' }],
+      failed: [{ id: 3, motivo: 'invalid_data', codigo: null }],
     });
+  });
+
+  // #2694: o dono escolhido vai junto; a recusa do servidor guarda o código.
+  it('o dono escolhido vai como ownerId e a recusa do pedido guarda o código', async () => {
+    const api = {
+      createCrmCards: vi.fn().mockRejectedValue({
+        response: {
+          data: { code: 'prospecting.crm_send.owner_forbidden', error: 'x' },
+        },
+      }),
+    };
+    const fonte = criarFonte({ carregarDemo: null, api });
+    const resumo = await fonte.mandarParaFunil({
+      ids: [1],
+      funilId: 4,
+      etapaId: 40,
+      donoId: 8,
+    });
+
+    expect(api.createCrmCards).toHaveBeenCalledWith(
+      expect.objectContaining({ ownerId: 8 })
+    );
+    expect(resumo.failed).toEqual([
+      {
+        id: 1,
+        motivo: 'request_failed',
+        codigo: 'prospecting.crm_send.owner_forbidden',
+      },
+    ]);
+  });
+});
+
+describe('com quem fica pela API (#2694)', () => {
+  it('pede ao servidor as pessoas do funil, com "você" no topo', async () => {
+    const api = {
+      getCrmOwners: vi.fn().mockResolvedValue({
+        data: {
+          payload: [
+            { id: 8, name: 'Paula Ribeiro' },
+            { id: 7, name: 'Lucas Andrade' },
+          ],
+        },
+      }),
+    };
+    const fonte = criarFonte({ carregarDemo: null, api, usuarioId: 7 });
+
+    expect(await fonte.pessoas({ funilId: 4 })).toEqual([
+      { id: 'voce', nome: 'Lucas Andrade', voce: true },
+      { id: 8, nome: 'Paula Ribeiro' },
+    ]);
+    expect(api.getCrmOwners).toHaveBeenCalledWith(4);
+  });
+
+  it('sem funil, só "você", sem perguntar ao servidor', async () => {
+    const api = { getCrmOwners: vi.fn() };
+    const fonte = criarFonte({
+      carregarDemo: null,
+      api,
+      usuarioId: 7,
+      usuarioNome: 'Lucas Andrade',
+    });
+
+    expect(await fonte.pessoas()).toEqual([
+      { id: 'voce', nome: 'Lucas Andrade', voce: true },
+    ]);
+    expect(api.getCrmOwners).not.toHaveBeenCalled();
   });
 });
 

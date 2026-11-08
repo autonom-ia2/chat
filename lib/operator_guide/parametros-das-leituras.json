@@ -333,6 +333,12 @@
     "controller": "api/v1/accounts/autonomia/prospecting/leads#show",
     "parametros": []
   },
+  "autonomia/prospecting/leads/crm_owners": {
+    "controller": "api/v1/accounts/autonomia/prospecting/crm_owners#index",
+    "parametros": [
+      "pipeline_id"
+    ]
+  },
   "autonomia/prospecting/lists": {
     "controller": "api/v1/accounts/autonomia/prospecting/lists#index",
     "parametros": []

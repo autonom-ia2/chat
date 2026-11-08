@@ -7,6 +7,7 @@ import {
   atualizarDaBusca,
   marcarEnviadas,
 } from '../utils/acharConfiraEstados';
+import { TEXTO_DO_ERRO, erroDoDono } from './useDonoDaLista';
 
 // P1 (crítica r5): uma frase leiga para cada desfecho de adopt_owner
 // (contact_outcome). Só "updated" afirma que o contato virou a pessoa.
@@ -45,6 +46,8 @@ export function useGavetaDaLista({
   gaveta,
   empresaDaGaveta,
   destino,
+  donoId,
+  pessoaNome,
   enviandoUma,
   aviso,
   recado,
@@ -70,17 +73,21 @@ export function useGavetaDaLista({
       ids: [gaveta.value.id],
       funilId: destino.value?.funil.id,
       etapaId: destino.value?.etapa.id,
+      donoId: donoId.value,
     });
     enviandoUma.value = false;
     if (!resumo.created.length && !resumo.existing.length) {
-      useAlert(t('PROSPECTING_ACHAR.FOLHA.ERRO_FUNIL'));
+      const erro = erroDoDono(resumo);
+      useAlert(
+        t(erro ? TEXTO_DO_ERRO[erro] : 'PROSPECTING_ACHAR.FOLHA.ERRO_FUNIL')
+      );
       return;
     }
     // Na lista, a empresa mandada deixa o "Vai" e diz onde está; ao reabrir a
     // gaveta, "Mandar / Não serve / Não quer" não voltam (noFunil).
     marcarEnviadas(trocar, resumo, {
       destino: destino.value,
-      pessoa: t('PROSPECTING_ACHAR.COMUM.VOCE'),
+      pessoa: pessoaNome.value,
     });
     mudarPasso('mandou');
   };

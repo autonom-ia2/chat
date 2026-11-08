@@ -62,7 +62,11 @@ const salvarArquivo = (blob, nome) => {
 const doEnvio = ({ created = [], existing = [], failed = [] }) => ({
   created: created.map(item => ({ id: item.lead_id, cardId: item.card_id })),
   existing: existing.map(item => ({ id: item.lead_id, cardId: item.card_id })),
-  failed: failed.map(item => ({ id: item.lead_id, motivo: item.reason_code })),
+  failed: failed.map(item => ({
+    id: item.lead_id,
+    motivo: item.reason_code,
+    codigo: item.code || null,
+  })),
 });
 
 const comDias = search => ({
@@ -270,7 +274,7 @@ const pipelineComEtapas = async (crm, pipeline) => {
   };
 };
 
-const fonteApi = ({ api, crm, usuarioId }) => ({
+const fonteApi = ({ api, crm, usuarioId, usuarioNome }) => ({
   usaDemo: false,
   async porta() {
     const [{ data: ajustes }, { data: buscas }] = await Promise.all([
@@ -351,12 +355,23 @@ const fonteApi = ({ api, crm, usuarioId }) => ({
       (data.payload || []).map(pipeline => pipelineComEtapas(crm, pipeline))
     );
   },
-  // Fase 1 (só front): o card fica com quem manda; a lista de pessoas entra com
-  // o backend do dono escolhido na hora (v4, PR 2a).
-  async pessoas() {
-    return [{ id: 'voce', nome: 'Você', voce: true }];
+  // Com quem fica (#2694): "você" no topo e as pessoas da conta que enxergam o
+  // funil (leads/crm_owners). Sem funil (ou sem poder trocar, quando a tela
+  // não pede a lista), só "você".
+  async pessoas({ funilId = null } = {}) {
+    if (!funilId) return [{ id: 'voce', nome: usuarioNome || '', voce: true }];
+    const { data } = await api.getCrmOwners(funilId);
+    const lista = data.payload || [];
+    const eu = lista.find(pessoa => pessoa.id === usuarioId);
+    return [
+      { id: 'voce', nome: eu?.name || usuarioNome || '', voce: true },
+      ...lista
+        .filter(pessoa => pessoa.id !== usuarioId)
+        .map(pessoa => ({ id: pessoa.id, nome: pessoa.name })),
+    ];
   },
-  async mandarParaFunil({ ids, funilId, etapaId, onProgresso }) {
+  // donoId: com quem ficam os cards (#2694); sem ele, com quem manda.
+  async mandarParaFunil({ ids, funilId, etapaId, donoId = null, onProgresso }) {
     const resumo = await sendInBatches(
       ids,
       lote =>
@@ -364,6 +379,7 @@ const fonteApi = ({ api, crm, usuarioId }) => ({
           leadIds: lote,
           pipelineId: funilId,
           stageId: etapaId,
+          ownerId: donoId,
         }),
       onProgresso
     );
@@ -429,7 +445,8 @@ export const criarFonte = ({
   crm = CrmKanbanAPI,
   atraso = 400,
   usuarioId = null,
+  usuarioNome = '',
 } = {}) =>
   demo && carregarDemo
     ? fonteDemo({ estado: demo, carregarDemo, atraso, usuarioId })
-    : fonteApi({ api, crm, usuarioId });
+    : fonteApi({ api, crm, usuarioId, usuarioNome });
