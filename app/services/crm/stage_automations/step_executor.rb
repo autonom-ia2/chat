@@ -86,13 +86,23 @@ class Crm::StageAutomations::StepExecutor
     ).perform
   end
 
+  # Dono escolhido por uma pessoa (#2694, decisão do Rodrigo em 08/11): vence a automação. Quem cria o card com dono
+  # escolhido (a Prospecção) marca `dono_escolhido` no automation_context, que chega aqui também no passo com atraso e
+  # depois do Decisor. O passo não falha (a sequência segue) e a linha do tempo diz que o dono ficou.
   def assign_owner!
+    return keep_chosen_owner if ActiveModel::Type::Boolean.new.cast(@automation_context[:dono_escolhido])
+
     owner = resolve_owner!
     return Result.failed('owner_not_found') if owner.blank?
 
     @card.update!(owner: owner, last_activity_at: Time.current)
     log_activity('automation_owner_assigned', owner_id: owner.id)
     Result.ok(owner_id: owner.id)
+  end
+
+  def keep_chosen_owner
+    log_activity('automation_owner_kept', owner_id: @card.owner_id)
+    Result.ok(skipped: 'owner_chosen', owner_id: @card.owner_id)
   end
 
   def resolve_owner!

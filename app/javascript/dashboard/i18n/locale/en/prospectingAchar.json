@@ -269,6 +269,8 @@
       "ESCOLHA_O_QUE": "Choose what to do",
       "NINGUEM": "None of these can receive messages",
       "ERRO_FUNIL": "Could not send. None went in.",
+      "ERRO_DONO_SEM_CHAVE": "Only people who manage the funnels can choose someone else. Send without changing it: they stay with you.",
+      "ERRO_DONO_SEM_FUNIL": "This person can't see this funnel. Choose someone else or another funnel.",
       "ERRO_LISTA": "We could not save the list.",
       "NAO_VAO_LINK": "Why {n} is not going | Why {n} are not going",
       "TENTAR": "Try again",
@@ -284,7 +286,9 @@
     "COM_QUEM_PAINEL": {
       "TITULO": "Who keeps the businesses?",
       "VOCE": "{nome} (you)",
-      "PESSOA": "Person"
+      "PESSOA": "Person",
+      "SEM_O_FUNIL": "{nome} can't see this funnel. The businesses will stay with you.",
+      "ERRO_LISTA": "Could not load who can receive them. The businesses will stay with you."
     },
     "PRONTO": {
       "VARIAS": "Done. {n} companies went into the {funil} pipeline. They stay with {pessoa}.",

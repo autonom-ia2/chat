@@ -634,6 +634,7 @@ en:
         modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility and with these variables."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
+        da_reuniao_so_no_gatilho: "Step %{passo}: notifying who attends the meeting only works in meeting triggers."
         gatilho_desligado: 'Card and time triggers are off for this account.'
         reunioes_desligadas: 'Meetings are off in this installation, so the meeting triggers cannot be used.'
         etapa_de_fora: 'Trigger: stage %{id} is not from this account.'
@@ -647,6 +648,7 @@ en:
         etiqueta_de_fora: 'Trigger: label %{etiqueta} does not exist in this account.'
         atributo_de_fora: 'Trigger: field %{campo} is not a contact field of this account.'
         funil_de_fora: 'Trigger: pipeline %{id} is not from this account.'
+        pagina_de_fora: 'Trigger: booking page %{id} is not from this account.'
         ia_desligada: "Step %{passo}: AI steps are off for this account."
         caminho_repetido: "Step %{passo}: there is already a path named %{nome}."
         caminho_reservado: "Step %{passo}: the name %{nome} is already the path for when nothing applies. Pick another name."
@@ -805,6 +807,8 @@ en:
       # #1479: text of the button that opens the list of options the AI sends, when the AI does not choose one.
       botao_das_opcoes: 'See options'
       instrucao_mantida: "The Quote Agent's instruction is maintained by Autonom.ia and cannot be edited here. Its name, business hours and behavior were chosen in the Quotes tab when the agent was created."
+      # #1430: an HTTP tool cannot use the name of a native tool.
+      slug_reservado: 'is the name of a platform tool'
       # #1428 — "Change by chatting" (pilot): messages the builder shows the owner after an adjustment.
       ajuste:
         sem_pedido: 'I did not find a change to make in that message. What do you want to change in the agent?'
@@ -957,6 +961,8 @@ en:
           pipeline_not_found: 'O funil ou o estágio escolhido não existe mais. Escolha outro e envie de novo.'
           crm_disabled: 'O CRM está desligado nesta conta.'
           forbidden: 'Seu perfil não pode criar cards no CRM. Peça a um administrador a permissão de gerenciar cards.'
+          owner_forbidden: 'Só quem gerencia os funis pode escolher com quem os cards ficam. Mande sem trocar: eles ficam com você.'
+          owner_not_allowed: 'A pessoa escolhida não tem acesso a este funil. Escolha outra pessoa ou outro funil.'
         card_description:
           score: 'Nota da prospecção: %{score}'
           decision: 'Decisor: %{name}'

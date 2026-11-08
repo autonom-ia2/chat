@@ -3,8 +3,10 @@
 # inteiro: só pessoas, conferidas uma a uma.
 #
 # Para quem: o responsável da conversa (G41: com a agente de IA atendendo, o dono do card da conversa, o "Responsável"
-# do CRM; sem card ou sem dono, ninguém, e o passo pula com `sem_responsavel`), os times (aberto pessoa a pessoa) e
-# as pessoas escolhidas, só da conta. Fica só quem enxerga a conversa (D5), perguntado à política da conversa para cada pessoa: função personalizada e
+# do CRM; sem card ou sem dono, ninguém, e o passo pula com `sem_responsavel`), os times (aberto pessoa a pessoa), as
+# pessoas escolhidas e, nos gatilhos de reunião (G32), quem atende a reunião do gatilho (a pessoa da página de
+# agendamento, ou quem marcou na tela), só da conta. Fica
+# só quem enxerga a conversa (D5), perguntado à política da conversa para cada pessoa: função personalizada e
 # administrador mudam a resposta, e não basta estar na caixa. Quem não enxerga sai, com o motivo no registro
 # (`fora`), e a lista vazia pula o passo. O texto, com os valores, só chega a quem passou. No card, é a conversa
 # principal dele (NaConversa).
@@ -73,7 +75,8 @@ class Autonomia::Automacao::PassoDeAviso
     [
       (responsavel_id if para['responsavel']),
       *(times.any? ? TeamMember.joins(:team).where(teams: { account_id: @conversa.account_id, id: times }).pluck(:user_id) : []),
-      *Array(para['pessoas'])
+      *Array(para['pessoas']),
+      (quem_atende if para['da_reuniao'])
     ]
   end
 
@@ -97,4 +100,9 @@ class Autonomia::Automacao::PassoDeAviso
     para = @passo['para'].to_h
     para['responsavel'] && agente_de_ia_atende? && responsavel_id.nil? ? [SEM_RESPONSAVEL] : []
   end
+
+  # Quem atende a reunião do gatilho: na marcada pela página, o agente do link ou a pessoa padrão da página; na marcada
+  # na tela, quem marcou (Crm::Meetings::Creator grava em created_by). Sem reunião (fora do gatilho dela), ninguém. Pelo
+  # alvo da execução: o "resumir" chama este passo com a conversa, e a reunião é do card.
+  def quem_atende = ::Autonomia::Automacao::Contexto.de(@execucao.alvo, execucao: @execucao).reuniao&.created_by_id
 end

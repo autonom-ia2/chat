@@ -28,6 +28,12 @@ class Api::V1::ProfilesController < Api::BaseController
     @user.account_users.find_by!(account_id: availability_params[:account_id]).update!(availability: availability_params[:availability])
   end
 
+  # #2737 G23: a própria pessoa marca até quando está ausente, só na conta dela (account_id), como a disponibilidade.
+  # Sem a chave `ausente_ate` é erro (422), não limpeza: só o nulo explícito limpa.
+  def ausencia
+    @user.account_users.find_by!(account_id: ausencia_params[:account_id]).update!(ausente_ate: ausencia_params.fetch(:ausente_ate))
+  end
+
   def set_active_account
     @user.account_users.find_by(account_id: profile_params[:account_id]).update(active_at: Time.now.utc)
     head :ok
@@ -51,6 +57,10 @@ class Api::V1::ProfilesController < Api::BaseController
 
   def availability_params
     params.require(:profile).permit(:account_id, :availability)
+  end
+
+  def ausencia_params
+    params.require(:profile).permit(:account_id, :ausente_ate)
   end
 
   def auto_offline_params

@@ -1,5 +1,6 @@
 import { lembrarDestino } from '../utils/destinoPronto';
 import { marcarEnviadas } from '../utils/acharConfiraEstados';
+import { erroDoDono } from './useDonoDaLista';
 
 // #2692 — as ações da folha "O que fazer com as {n} empresas?" (F1) e dos dois
 // painéis que abrem de dentro dela ("Com quem ficam" e "Para onde vão"). Saiu
@@ -31,6 +32,7 @@ export function useFolhaDaLista({
   destino,
   pessoaId,
   pessoaNome,
+  donoId,
   nomeLista,
   folha,
   pronto,
@@ -56,10 +58,13 @@ export function useFolhaDaLista({
       ids,
       funilId: destino.value?.funil.id,
       etapaId: destino.value?.etapa.id,
+      donoId: donoId.value,
       onProgresso: progredir,
     });
     if (!resumo.created.length && !resumo.existing.length) {
-      folha.value = { ...folha.value, enviando: null, erro: 'funil' };
+      // Dono recusado (#2694) tem frase própria; o resto é "não deu para mandar".
+      const erro = erroDoDono(resumo) || 'funil';
+      folha.value = { ...folha.value, enviando: null, erro };
       return;
     }
     if (!demo.value) {

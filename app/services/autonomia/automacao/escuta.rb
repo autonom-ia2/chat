@@ -115,25 +115,26 @@ module Autonomia::Automacao::Escuta
     account = registro.account
     return unless ::Autonomia::Automacao::Motor.ligado?(account)
 
-    esperando_pela_conversa(account, conversa_ids, contato_id).includes(:versao).find_each do |execucao|
-      reservar(execucao) if esperando_condicao?(execucao)
-    rescue StandardError => e
-      registrar_erro("não acordou execucao=#{execucao.id}", e)
-    end
+    acordar_quem_espera(::Autonomia::Automacao::EsperaDaConversa.de(account, conversa_ids, contato_id))
   rescue StandardError => e
     registrar_erro("não acordou #{registro.class.name}=#{registro&.id}", e)
   end
 
-  # Quem espera pela conversa: a execução dela e a do card cuja conversa principal é ela (G11: a resposta do cliente
-  # acorda o card na hora, em vez de no fim do prazo).
-  def esperando_pela_conversa(account, conversa_ids, contato_id = nil)
-    execucoes = ::Autonomia::Automacao::Execucao.where(account_id: account.id, estado: 'esperando')
-    conversas = contato_id ? ::Conversation.where(account_id: account.id, contact_id: contato_id).select(:id) : conversa_ids
-    cards = ::Crm::Card.where(account_id: account.id, conversation_id: conversas)
-    cards = cards.or(::Crm::Card.where(account_id: account.id, contact_id: contato_id)) if contato_id
-    pelas_conversas = execucoes.where(alvo_type: 'Conversation', alvo_id: conversas)
-                               .or(execucoes.where(alvo_type: 'Crm::Card', alvo_id: cards.select(:id)))
-    contato_id ? pelas_conversas.or(execucoes.where(alvo_type: 'Contact', alvo_id: contato_id)) : pelas_conversas
+  # G32: a reunião do card foi marcada, remarcada ou cancelada. Quem espera no próprio card ("esperar até ter reunião
+  # marcada") confere a condição agora, em vez de no fim do prazo. #2710: também quem espera em outro card do mesmo
+  # contato, no contato ou numa conversa dele (`contato.tem_reuniao_marcada`).
+  def acordar_o_card(card)
+    espera = ::Autonomia::Automacao::EsperaDaReuniao
+    acordar_quem_espera(espera.de(card.account_id, card.id), filtro: espera.method(:le_reuniao?))
+  end
+
+  # `filtro`: só reserva a execução que ele aceita (a reunião acorda só quem lê reunião).
+  def acordar_quem_espera(execucoes, filtro: nil)
+    execucoes.includes(:versao).find_each do |execucao|
+      reservar(execucao) if esperando_condicao?(execucao) && (filtro.nil? || filtro.call(execucao))
+    rescue StandardError => e
+      registrar_erro("não acordou execucao=#{execucao.id}", e)
+    end
   end
 
   # O listener só enfileira o evento do card, e só na conta com os gatilhos de card ligados. A cadeia em curso (que o
@@ -165,19 +166,21 @@ module Autonomia::Automacao::Escuta
     return unless card
 
     mudou = dados[:changed_attributes].to_h.with_indifferent_access
-    ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD.fetch(evento, []).each do |tipo|
+    tipos = ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD.fetch(evento, [])
+    tipos.each do |tipo|
       marca = ::Autonomia::Automacao::Gatilhos.marca_da_atividade(tipo, dados[:activity_id])
-      cada_automacao(card, tipo, dados_do_card(tipo, card, mudou)) { |definicao| partir(definicao, card, tipo, evento: marca) }
+      cada_automacao(card, tipo, dados_do_card(tipo, card, mudou, dados[:activity_id])) { |definicao| partir(definicao, card, tipo, evento: marca) }
     end
+    acordar_o_card(card) if tipos.any? { |tipo| ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo) }
   end
 
   # A etapa de onde o card saiu ou para onde entrou, e o funil, para os parâmetros do gatilho. O card criado traz a
-  # etapa em que nasceu (stage_id); o movido, as duas pontas.
-  def dados_do_card(tipo, card, mudou)
+  # etapa em que nasceu (stage_id); o movido, as duas pontas. A reunião (G32) traz também a página de agendamento.
+  def dados_do_card(tipo, card, mudou, atividade_id = nil)
     case tipo
     when 'card.entrou_na_etapa' then { 'etapa_id' => mudou[:to_stage_id] || mudou[:stage_id] || card.stage_id }
     when 'card.saiu_da_etapa' then { 'etapa_id' => mudou[:from_stage_id] }
-    else { 'funil_id' => mudou[:pipeline_id] || card.pipeline_id }
+    else { 'funil_id' => mudou[:pipeline_id] || card.pipeline_id, **::Autonomia::Automacao::ReuniaoDaAtividade.do_gatilho(tipo, card, atividade_id) }
     end
   end
 
@@ -188,15 +191,24 @@ module Autonomia::Automacao::Escuta
   #
   # Roda no after_commit do card: um erro aqui não pode quebrar o pedido de quem moveu o card, nem perder o evento. Em
   # erro, despacha assim mesmo (o job assíncrono decide) e loga só a classe.
-  def assinante?(account, evento, mudou = {})
-    tipos = ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD[evento]
-    return false if tipos.blank? || account.blank? || !::Autonomia::Automacao::Motor.gatilhos?(account)
+  # A reunião (G32) assina também quando há execução esperando no card ou no contato dele (#2710): ela acorda para
+  # conferir a condição.
+  def assinante?(account, evento, mudou = {}, card_id: nil)
+    tipos = tipos_ligados(account, evento)
+    return false if tipos.blank?
+    return true if ::Autonomia::Automacao::EsperaDaReuniao.no_card?(account, tipos, card_id)
 
     mudou = mudou.to_h.with_indifferent_access
     automacoes_do_gatilho(account.id, tipos).where(tipos.map { |tipo| gatilho_casa_sql(tipo, mudou) }.join(' OR ')).exists?
   rescue StandardError => e
     registrar_erro("gate do emissor falhou evento=#{evento} conta=#{account&.id}; despacha assim mesmo", e)
     true
+  end
+
+  # Os gatilhos que o evento dispara, só com a conta e a flag ligada.
+  def tipos_ligados(account, evento)
+    tipos = ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD[evento]
+    tipos if tipos.present? && account.present? && ::Autonomia::Automacao::Motor.gatilhos?(account)
   end
 
   # "tipo = X AND (parâmetro vazio OR parâmetro = valor do evento)", com os valores escapados.

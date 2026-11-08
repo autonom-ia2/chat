@@ -15,7 +15,12 @@ module Autonomia::Agents::Tools::ChaveDeIdempotencia
     return nova if turno.nil? || turno.conversation.nil?
 
     pedido = pedido(tool, turno, params)
-    resumo([pedido, turno.ocorrencia(pedido)])
+    com_ocorrencia(pedido, turno.ocorrencia(pedido))
+  end
+
+  # A chave do pedido numa ocorrência dada: a do pré-disparo da rodada da consulta em segundo plano (#1430).
+  def com_ocorrencia(pedido, ocorrencia)
+    resumo([pedido, ocorrencia])
   end
 
   # A resposta 2xx chegou: a próxima chamada idêntica neste turno é outro pedido.

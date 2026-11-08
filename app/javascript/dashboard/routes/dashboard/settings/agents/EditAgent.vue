@@ -14,6 +14,7 @@ import { useAgentRoleChoices } from './useAgentRoleChoices';
 import { agentUpdateErrorKey } from './agentUpdateError';
 import CrmScheduleEditor from 'dashboard/routes/dashboard/crm/components/sla/CrmScheduleEditor.vue';
 import CrmServiceSchedulesAPI from 'dashboard/api/crmServiceSchedules';
+import CampoAusenteAte from 'dashboard/components/ausencia/CampoAusenteAte.vue';
 
 const props = defineProps({
   id: {
@@ -44,6 +45,11 @@ const props = defineProps({
     type: Number,
     default: null,
   },
+  // #2737 G23: ISO da API, ou null.
+  ausenteAte: {
+    type: String,
+    default: null,
+  },
 });
 
 const emit = defineEmits(['close']);
@@ -55,6 +61,7 @@ const { t } = useI18n();
 
 const agentName = ref(props.name);
 const agentAvailability = ref(props.availability);
+const agentAusenteAte = ref(props.ausenteAte);
 const selectedRoleId = ref(props.customRoleId || props.type);
 const agentCredentials = ref({ email: props.email });
 
@@ -155,6 +162,10 @@ const editAgent = async () => {
       name: agentName.value,
       availability: agentAvailability.value,
     };
+    // Só manda o "ausente até" que mudou aqui: a lista da Equipe pode estar velha (a pessoa marcou no perfil depois).
+    if (agentAusenteAte.value !== props.ausenteAte) {
+      payload.ausente_ate = agentAusenteAte.value;
+    }
 
     if (selectedRole.value.name.startsWith('custom_')) {
       payload.custom_role_id = selectedRole.value.id;
@@ -231,6 +242,10 @@ const resetPassword = async () => {
             {{ $t('AGENT_MGMT.EDIT.FORM.AGENT_AVAILABILITY.ERROR') }}
           </span>
         </label>
+      </div>
+
+      <div class="w-full mb-4">
+        <CampoAusenteAte v-model="agentAusenteAte" />
       </div>
 
       <div v-if="showSlaSchedule" class="flex flex-col w-full gap-1 py-2">
