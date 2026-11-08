@@ -61,6 +61,17 @@ RSpec.describe Crm::MetaAds::LeadForms::Hub do
     expect(page.leadgen_receiving_since).to eq(first_page)
   end
 
+  it 'destino que estava num funil arquivado: salvar de novo começa o marco dali (o webhook não mandava ninguém)' do
+    save!
+    pipeline.update!(status: :archived)
+    other_pipeline, other_stage = create_crm_pipeline(account: account, user: admin, name: 'Outro')
+
+    travel 2.hours do
+      hub.save_destination!('9001', pipeline: other_pipeline, stage: other_stage, import_past: false)
+      expect(form.destination_set_at).to be_within(1.second).of(Time.current)
+    end
+  end
+
   it 'linha de antes do #2285 (marcos nulos) ganha os marcos quando o destino é salvo de novo' do
     Crm::MetaAdsLeadForm.create!(account: account, page_id: '104882', form_id: '9001', pipeline: pipeline, stage: stage)
     Crm::MetaAdsPage.create!(account: account, page_id: '104882', leadgen_receiving: true)

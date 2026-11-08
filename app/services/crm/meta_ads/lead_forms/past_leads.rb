@@ -68,17 +68,24 @@ class Crm::MetaAds::LeadForms::PastLeads
     counted.symbolize_keys
   end
 
-  # Quantos viraram card novo (os repetidos e quem já tinha card aberto no funil não contam). As perguntas do
-  # formulário só são lidas quando há lead: a reconciliação de hora em hora (#2285) quase sempre volta vazia, e cada
-  # chamada a mais gasta o limite de uso da Meta.
+  # Quantos viraram card novo (os repetidos e quem já tinha card aberto no funil não contam). Quem já entrou (o
+  # leadgen_id está guardado) nem passa pelo Importer, e as perguntas do formulário só são lidas quando sobra alguém:
+  # a reconciliação de hora em hora (#2285) relê leads que o webhook já trouxe, e cada chamada a mais gasta o limite
+  # de uso da Meta.
   def import!(pipeline:, stage:)
     rows, truncated = read
-    imported = rows.empty? ? 0 : rows.count { |lead| importer(pipeline, stage).import(lead) == :created }
+    fresh = new_leads(rows)
+    imported = fresh.empty? ? 0 : fresh.count { |lead| importer(pipeline, stage).import(lead) == :created }
     Rails.cache.delete(self.class.cache_key(@account.id, @form['id']))
     { imported: imported, truncated: truncated }
   end
 
   private
+
+  def new_leads(rows)
+    known = Crm::MetaAdsLead.where(account_id: @account.id, leadgen_id: rows.map { |lead| lead['id'].to_s }).pluck(:leadgen_id).to_set
+    rows.reject { |lead| known.include?(lead['id'].to_s) }
+  end
 
   def importer(pipeline, stage)
     @importer ||= begin

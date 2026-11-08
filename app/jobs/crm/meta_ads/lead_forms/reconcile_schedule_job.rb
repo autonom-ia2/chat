@@ -12,34 +12,37 @@
 # Conta com `meta_ads_formularios` desligada: o webhook ignora o lead dela, então a Página não está recebendo de fato.
 # A cada rodada, o marco leadgen_receiving_since das Páginas dela anda para agora; quando a flag volta, a reconciliação
 # não relê o período em que ela esteve desligada. Precisão de uma rodada (1 hora): o que caiu entre a última rodada com
-# a flag desligada e o instante em que ela voltou pode ser relido.
+# a flag desligada e o instante em que ela voltou pode ser relido, e uma flag desligada e religada entre duas rodadas
+# não é vista.
 class Crm::MetaAds::LeadForms::ReconcileScheduleJob < ApplicationJob
   queue_as :scheduled_jobs
 
   LOCK_TTL = 6.hours
+  FEATURE = Crm::MetaAds::LeadForms::ImportPastJob::FEATURE
 
   def self.lock_key(form_record_id)
     ['crm_meta_ads_lead_forms', 'reconcile', form_record_id]
   end
 
   def perform
-    paused = Set.new
+    hold_paused
     Crm::MetaAdsLeadForm.reconcilable.includes(:account).find_each do |form|
-      next paused << form.account_id unless form.account.feature_enabled?(Crm::MetaAds::LeadForms::ImportPastJob::FEATURE)
+      next unless form.account.feature_enabled?(FEATURE)
       next unless Rails.cache.write(self.class.lock_key(form.id), true, expires_in: LOCK_TTL, unless_exist: true)
 
       Crm::MetaAds::LeadForms::ReconcileJob.perform_later(form.id)
     end
-    hold_paused(paused)
   end
 
   private
 
-  # Só o marco, sem callbacks: a Página continua assinada e volta a receber quando a flag voltar.
-  def hold_paused(account_ids)
-    return if account_ids.empty?
+  # Todas as Páginas recebendo de contas com a flag desligada, tenham ou não formulário a reler agora. Só o marco, sem
+  # callbacks: a Página continua assinada e volta a receber quando a flag voltar.
+  def hold_paused
+    marked = Crm::MetaAdsPage.leadgen_receiving.where.not(leadgen_receiving_since: nil)
+    paused = Account.where(id: marked.select(:account_id)).reject { |account| account.feature_enabled?(FEATURE) }.map(&:id)
+    return if paused.empty?
 
-    Crm::MetaAdsPage.leadgen_receiving.where(account_id: account_ids.to_a).where.not(leadgen_receiving_since: nil)
-                    .update_all(leadgen_receiving_since: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    marked.where(account_id: paused).update_all(leadgen_receiving_since: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 end

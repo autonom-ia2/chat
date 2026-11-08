@@ -89,6 +89,16 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileScheduleJob do
     end
   end
 
+  it 'flag desligada sem formulário a reler agora (funil arquivado): o marco da Página anda do mesmo jeito' do
+    account.disable_features!('meta_ads_formularios')
+    pipeline.update!(status: :archived)
+
+    freeze_time do
+      described_class.perform_now
+      expect(page.reload.leadgen_receiving_since).to eq(Time.current)
+    end
+  end
+
   it 'flag desligada noutra conta não mexe no marco desta' do
     other = create(:account)
     other.disable_features!('meta_ads_formularios')

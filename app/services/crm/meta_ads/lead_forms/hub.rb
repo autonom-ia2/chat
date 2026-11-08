@@ -61,15 +61,14 @@ class Crm::MetaAds::LeadForms::Hub
   # Quem já preencheu vem em segundo plano (ImportPastJob), com a Página já ligada e o destino guardado: a resposta não
   # espera a leitura de milhares de leads, e falha nela não desfaz o destino.
   # destination_set_at (#2285): a reconciliação não relê antes dele, e quem preencheu antes de salvar só entra pelo
-  # "trazer quem já preencheu". Nasce quando o formulário passa a ter destino (ou ainda não tinha marco); trocar de
-  # funil mantém o marco, porque o formulário já mandava gente para algum lugar.
+  # "trazer quem já preencheu". Quando ele nasce de novo: Crm::MetaAdsLeadForm#next_destination_set_at.
   def save_destination!(form_id, pipeline:, stage:, import_past:)
     page, form = find_form!(form_id)
     raise Crm::MetaAds::LeadForms::Error, 'form_archived' unless form['status'] == ACTIVE
 
     record = form_record(page, form)
     previous = record.slice(:pipeline_id, :stage_id, :destination_set_at)
-    record.update!(pipeline: pipeline, stage: stage, destination_set_at: (record.destination_set_at if record.destination?) || Time.current)
+    record.update!(pipeline: pipeline, stage: stage, destination_set_at: record.next_destination_set_at)
     begin
       receive!(page['id'])
     rescue Crm::MetaAds::LeadForms::Error

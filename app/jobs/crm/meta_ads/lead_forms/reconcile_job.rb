@@ -7,12 +7,13 @@
 # aqui: o scope reconcilable o deixa de fora até o destino ser salvo de novo.
 #
 # A janela cobre bem mais que o intervalo entre rodadas (1 hora): Meta fora do ar agora, a próxima rodada relê as mesmas
-# horas. Por isso a queda não tenta de novo aqui; só fica no log. Recusa da Meta (token, permissão) vai ao rastreador:
-# sem ela resolvida, a reconciliação não traz ninguém. A trava da rodada sai no fim, dê certo ou não.
+# horas. Por isso a queda não tenta de novo aqui; só fica no log. Recusa da Meta (token, permissão) vai ao rastreador,
+# uma vez por dia por formulário: sem ela resolvida, a reconciliação não traz ninguém. A trava da rodada sai no fim.
 class Crm::MetaAds::LeadForms::ReconcileJob < ApplicationJob
   queue_as :low
 
   WINDOW = 48.hours
+  REFUSED_NOTICE_TTL = 1.day
 
   def perform(form_record_id)
     form = Crm::MetaAdsLeadForm.reconcilable.includes(:account, :pipeline, :stage).find_by(id: form_record_id)
@@ -38,10 +39,18 @@ class Crm::MetaAds::LeadForms::ReconcileJob < ApplicationJob
 
     result = past.import!(pipeline: form.pipeline, stage: form.stage)
     Rails.logger.info("[MetaAds::LeadForms::Reconcile] form_id=#{form.form_id} imported=#{result[:imported]}") if result[:imported].positive?
+    Rails.logger.warn("[MetaAds::LeadForms::Reconcile] form_id=#{form.form_id} leitura parou no teto de páginas") if result[:truncated]
   rescue Crm::MetaAds::LeadForms::Unavailable
     Rails.logger.warn("[MetaAds::LeadForms::Reconcile] Meta fora do ar (form_id=#{form.form_id}); a próxima rodada relê")
   rescue Crm::MetaAds::LeadForms::Error => e
-    refused = StandardError.new("Reconciliação do formulário recusada pela Meta (form_id=#{form.form_id}, code=#{e.code})")
+    notify_refused(form, e)
+  end
+
+  def notify_refused(form, error)
+    key = ['crm_meta_ads_lead_forms', 'reconcile_refused', form.id]
+    return unless Rails.cache.write(key, true, expires_in: REFUSED_NOTICE_TTL, unless_exist: true)
+
+    refused = StandardError.new("Reconciliação do formulário recusada pela Meta (form_id=#{form.form_id}, code=#{error.code})")
     ChatwootExceptionTracker.new(refused, account: form.account).capture_exception
   end
 end

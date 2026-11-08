@@ -63,37 +63,62 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
     a_request(:get, meta_graph_url('9001/leads')).with(query: hash_including('filtering' => filtering(since)))
   end
 
+  # A Meta filtra pelo time_created: aqui ela devolve o lead de 1 h atrás só para quem pede as 48 h.
+  def stub_leads_by_since(old_since, new_since)
+    old = { data: [lead('L1', 'Ana', '+5511987650001')] }
+    stub_request(:get, meta_graph_url('9001/leads')).with(query: hash_including('filtering' => filtering(old_since)))
+                                                    .to_return(status: 200, headers: json, body: old.to_json)
+    stub_request(:get, meta_graph_url('9001/leads')).with(query: hash_including('filtering' => filtering(new_since)))
+                                                    .to_return(status: 200, headers: json, body: { data: [] }.to_json)
+  end
+
   it 'destino salvo depois do lead: lê só desde o destino, e o lead de antes não entra' do
     freeze_time do
       form.update!(destination_set_at: 30.minutes.ago)
-      stub_leads
+      stub_leads_by_since(48.hours.ago, 30.minutes.ago)
 
       described_class.perform_now(form.id)
 
       expect(read_since?(30.minutes.ago)).to have_been_made.once
+      expect(account.crm_cards.count).to eq(0)
     end
   end
 
-  it 'Página parada e religada: lê só desde que voltou a receber' do
+  it 'Página parada e religada: lê só desde que voltou a receber, e o lead do período parado não entra' do
     freeze_time do
       page.update!(leadgen_receiving_since: 10.minutes.ago)
-      stub_leads
+      stub_leads_by_since(48.hours.ago, 10.minutes.ago)
 
       described_class.perform_now(form.id)
 
       expect(read_since?(10.minutes.ago)).to have_been_made.once
+      expect(account.crm_cards.count).to eq(0)
     end
   end
 
-  it 'fila atrasada: o marco é lido quando o job roda, não quando foi agendado' do
+  it 'fila atrasada: Página parada e religada com o job na fila; o marco é lido quando o job roda' do
     stub_leads
+    described_class.perform_later(form.id)
+
     travel_to(2.hours.from_now) do
       page.update!(leadgen_receiving_since: 5.minutes.ago)
 
-      described_class.perform_now(form.id)
+      perform_enqueued_jobs
 
       expect(read_since?(5.minutes.ago)).to have_been_made.once
     end
+  end
+
+  it 'lead que já entrou não passa pelo Importer nem faz ler as perguntas' do
+    stub_leads
+    described_class.perform_now(form.id)
+    WebMock.reset_executed_requests!
+    allow(Crm::MetaAds::LeadForms::Importer).to receive(:new).and_call_original
+
+    described_class.perform_now(form.id)
+
+    expect(Crm::MetaAds::LeadForms::Importer).not_to have_received(:new)
+    expect(a_request(:get, meta_graph_url('9001')).with(query: hash_including({}))).not_to have_been_made
   end
 
   it 'destino sem marco (linha de antes do #2285): não chama a Meta e solta a trava' do
@@ -152,15 +177,15 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
     expect(cache.exist?(lock_key)).to be(false)
   end
 
-  it 'Meta recusa ler: vai ao rastreador com o form_id e o código' do
+  it 'Meta recusa ler: vai ao rastreador com o form_id e o código, uma vez por dia' do
     stub_leads(status: 400)
     tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
     allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
 
-    described_class.perform_now(form.id)
+    2.times { described_class.perform_now(form.id) }
 
     expect(ChatwootExceptionTracker).to have_received(:new)
-      .with(having_attributes(message: include('form_id=9001').and(include('code=meta_refused'))), account: account)
+      .with(having_attributes(message: include('form_id=9001').and(include('code=meta_refused'))), account: account).once
     expect(cache.exist?(lock_key)).to be(false)
   end
 
