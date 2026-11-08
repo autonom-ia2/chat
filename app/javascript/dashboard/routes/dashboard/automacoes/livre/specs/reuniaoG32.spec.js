@@ -17,6 +17,11 @@ vi.mock('vue-i18n', () => ({
   }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// Os nomes das caixas (#2680) vêm do store; aqui a conta não tem nenhuma.
+vi.mock('dashboard/composables/store', async () => {
+  const vue = await import('vue');
+  return { useMapGetter: () => vue.ref([]) };
+});
 const acesso = vi.hoisted(() => ({ agendamento: true }));
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
