@@ -635,6 +635,7 @@ const VARIANTES = [
     funcao: 7,
     chaves: ['crm_manage_ai', 'crm_view', 'agendamento_view'],
   },
+  { prospeccaoNova: true },
 ];
 
 describe('camada do fork contra o Sidebar.vue de verdade', () => {
@@ -644,7 +645,7 @@ describe('camada do fork contra o Sidebar.vue de verdade', () => {
 
   const listas = () => VARIANTES.map(montar);
 
-  it('com a flag ligada, o menu novo recebe a mesma lista do menu de sempre e a organiza', () => {
+  it('com menu_lateral_novo ligado (e prospeccao_nova desligada), o menu novo recebe a mesma lista do menu de sempre e a organiza', () => {
     const itens = montar({});
     expect(
       itens.map(item => ({
@@ -711,13 +712,29 @@ describe('camada do fork contra o Sidebar.vue de verdade', () => {
     expect([...new Set(sumiram)]).toEqual([]);
   });
 
-  it('com a Prospecção nova ligada, Prospecção mostra "Achar empresas" e "Buscas" (#2693)', () => {
-    const prospeccao = montar({ prospeccaoNova: true }).find(
-      item => item.name === 'Prospecting'
-    );
+  it('com prospeccao_nova ligada, Prospecção fica em Acompanhar com "Achar empresas", "Suas buscas" e "Listas" (#2693)', () => {
+    const itens = montar({ prospeccaoNova: true });
+    const prospeccao = itens.find(item => item.name === 'Prospecting');
     expect(prospeccao.children.map(filho => filho.name)).toEqual([
       'Prospecting Achar',
       'Prospecting Buscas',
+      'Prospecting Lists',
+    ]);
+
+    const menu = organizeForkMenu(itens, ctx);
+    const acompanhar = menu.grupos.find(grupo => grupo.id === 'ACOMPANHAR');
+    expect(nomes(acompanhar.itens)).toEqual([
+      'CRM',
+      'Prospecting',
+      'Contacts',
+      'Companies',
+      'Agenda',
+    ]);
+    const noGrupo = acompanhar.itens.find(item => item.name === 'Prospecting');
+    expect(noGrupo.children.map(filho => filho.name)).toEqual([
+      'Prospecting Achar',
+      'Prospecting Buscas',
+      'Prospecting Lists',
     ]);
   });
 

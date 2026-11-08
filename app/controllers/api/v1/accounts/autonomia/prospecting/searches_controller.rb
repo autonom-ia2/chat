@@ -172,7 +172,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
 
   # O bloco técnico da nota (componentes, pesos, fatores negativos) só vai para o administrador (#732, item 9).
   # Posição e nota da busca por cima das do lead (#677, #678): as chaves já existem no payload e ficam no mesmo lugar.
-  def lead_payload(lead, search = nil)
+  def lead_payload(lead, search)
     visible_lead_payload(lead_payload_builder.build(lead).merge(::Autonomia::Prospecting::SearchPayload.lead_in_search(lead, search)))
   end
 
