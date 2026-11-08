@@ -1060,6 +1060,7 @@ pt_BR:
         retorno_sem_responsavel: "O retorno não foi criado: ele era para o responsável, e ninguém é responsável aqui."
         sem_conversa: "Não há conversa onde agir: o card não tem conversa principal, ou o contato não tem conversa, e a automação não escolheu caixa para abrir uma. Nada foi mandado."
         contato_sem_telefone: "O contato não tem telefone, e a conversa não foi aberta. Nada foi mandado."
+        numero_de_outro_contato: "O número novo do contato já é de outro contato nesta caixa. Nada foi mandado, e o outro contato não foi mexido."
         texto_vazio: "O texto ficou em branco depois de montado. A mensagem não foi mandada."
         dado_ausente: 'A IA não achou na conversa nenhum dos dados pedidos. Nada foi gravado.'
         ia_chave_recusada: 'O provedor de IA recusou a chave da conta. Confira a chave de IA nas integrações.'

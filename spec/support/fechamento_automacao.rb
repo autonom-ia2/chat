@@ -217,7 +217,9 @@ module FechamentoAutomacao::Lacunas
     'G40' => -> { valor?('conversa.responsavel_respondeu') },
     # Do exemplo 10 (#2678), ainda sem dono: a instrução no resumir ("o que já foi prometido") e avisar o responsável
     # quando a agente de IA atende a conversa.
-    'G41' => nil
+    'G41' => nil,
+    # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7).
+    'G43' => -> { ::Autonomia::Automacao::NumeroNovo.respond_to?(:trocou?) }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

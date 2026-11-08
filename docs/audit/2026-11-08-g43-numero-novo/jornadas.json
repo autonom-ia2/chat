@@ -1,0 +1,35 @@
+{
+  "pasta": "docs/audit/2026-11-08-prints-2700",
+  "conta": 1,
+  "larguras": [
+    1440,
+    390
+  ],
+  "temas": [
+    "light"
+  ],
+  "jornadas": [
+    {
+      "nome": "g43",
+      "etapas": [
+        {
+          "nome": "login",
+          "url": "/app/login",
+          "sem_login": true,
+          "esperar": "input[type=\"password\"]"
+        },
+        {
+          "nome": "historico",
+          "url": "/app/accounts/{conta}/automacoes/livre/1",
+          "esperar": "[data-numero-novo]",
+          "pausa": 4000,
+          "passos": [
+            {
+              "clicar": "[data-numero-novo]"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

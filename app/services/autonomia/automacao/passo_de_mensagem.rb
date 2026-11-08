@@ -8,6 +8,8 @@
 # - canal sem resposta (tweet);
 # - alvo sem conversa e sem a caixa da conversa nova na receita (`sem_conversa`); com ela (#2680), o passo abre a
 #   conversa (ConversaNova), e pula sem abrir se o contato não tem telefone (`contato_sem_telefone`) ou não recebe.
+# O contato trocou de número (G43, #2700, NumeroNovo): no WhatsApp e no SMS a mensagem sai na conversa do número novo,
+# na mesma caixa, aberta junto com o envio, com as mesmas regras abaixo. O registro diz `numero_novo`.
 # Para a execução, com o motivo no registro (#2573, Autonomia::Automacao::JanelaFechada):
 # - janela fechada. Vale para todo canal com janela, lida como envio automático (sem a tag de agente humano da Meta,
 #   24 h). A caixa híbrida com o WhatsApp API pronto responde fora da janela, em texto. No número oficial, com a janela
@@ -42,6 +44,13 @@ class Autonomia::Automacao::PassoDeMensagem
 
   # Com o texto já pronto. O "escrever" da F7 (#2500) chega aqui com o texto da IA.
   def mandar(texto)
+    return no_numero_novo(texto) if ::Autonomia::Automacao::NumeroNovo.trocou?(@conversa)
+
+    mandar_aqui(texto)
+  end
+
+  # Na conversa que o passo já tem: a do alvo, a nova (#2680) ou a do número novo (G43).
+  def mandar_aqui(texto)
     motivo = motivo_do_canal
     # Fora da janela o modelo sai no lugar do texto, que nem é lido: texto vazio não o impede.
     return mandar_modelo if motivo == 'fora_da_janela' && @passo['modelo']
@@ -109,21 +118,41 @@ class Autonomia::Automacao::PassoDeMensagem
   end
 
   def na_conversa_nova(caixa, contato, texto)
+    mandar_em(-> { ::Autonomia::Automacao::ConversaNova.abrir(caixa, contato) }, texto) { conversa_aberta(nil) }
+  end
+
+  # G43 (#2700): o telefone do contato mudou. Manda na conversa do número novo, na mesma caixa (NumeroNovo). Quem ligou
+  # precisa poder começar conversa nela, como na conversa nova. No card, ela toma o lugar da principal antiga.
+  def no_numero_novo(texto)
+    antiga = @conversa
+    return Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_acesso', dados: {}) unless comeca_conversa?(antiga.inbox)
+    return pulado('numero_de_outro_contato') if ::Autonomia::Automacao::NumeroNovo.de_outro_contato?(antiga)
+
+    mandar_em(-> { ::Autonomia::Automacao::NumeroNovo.conversa(antiga) }, texto) do
+      conversa_aberta(antiga.id).merge('numero_novo' => true)
+    end
+  end
+
+  # Abre (ou reaproveita) a conversa e manda, juntos: o que não sai (janela fechada sem modelo, texto vazio, robô,
+  # contato que não recebe) desfaz a conversa aberta, e nada fica vazio na caixa. O bloco diz o que vai ao registro.
+  def mandar_em(abrir, texto)
+    antes = @conversa
     resultado = nil
     ActiveRecord::Base.transaction do
-      @conversa = ::Autonomia::Automacao::ConversaNova.abrir(caixa, contato)
-      resultado = mandar(texto)
+      @conversa = abrir.call
+      resultado = mandar_aqui(texto)
       raise ActiveRecord::Rollback unless resultado.tipo == :ok
 
-      resultado = Resultado.new(tipo: :ok, dados: resultado.dados.merge(conversa_aberta))
+      resultado = Resultado.new(tipo: :ok, dados: resultado.dados.merge(yield))
     end
-    @conversa = nil unless resultado.tipo == :ok
+    @conversa = antes unless resultado.tipo == :ok
     resultado
   end
 
-  def conversa_aberta
+  # `principal`: o id da conversa principal do card que a aberta substitui. O card sem conversa principal também a ganha.
+  def conversa_aberta(principal)
     dados = { 'conversa_aberta' => @conversa.reload.display_id }
-    return dados unless @alvo.is_a?(::Crm::Card) && @alvo.conversation_id.nil?
+    return dados unless @alvo.is_a?(::Crm::Card) && [principal, nil].include?(@alvo.conversation_id)
 
     @alvo.update!(conversation_id: @conversa.id)
     dados.merge('conversa_principal_do_card' => @alvo.id)
@@ -144,8 +173,17 @@ class Autonomia::Automacao::PassoDeMensagem
     Resultado.new(tipo: :pulado, motivo: 'faltou_link_da_agenda', dados: { 'por' => por, 'janela' => 'fechada' })
   end
 
+  # A janela da conversa onde a mensagem vai sair. O "escrever" pergunta antes da IA, ainda na conversa do número antigo:
+  # com o número trocado (G43), vale a do número novo, e a conversa que ainda vai ser aberta não tem mensagem do cliente.
   def janela_aberta?
-    ::Conversations::MessageWindowService.new(@conversa, automatic: true).can_reply? || @conversa.whatsapp_api_reply?
+    ::Conversations::MessageWindowService.new(conversa_do_envio, automatic: true).can_reply? || @conversa.whatsapp_api_reply?
+  end
+
+  def conversa_do_envio
+    return @conversa unless ::Autonomia::Automacao::NumeroNovo.trocou?(@conversa)
+
+    ::Autonomia::Automacao::NumeroNovo.existente(@conversa) ||
+      ::Conversation.new(account: @conversa.account, inbox: @conversa.inbox, contact: @conversa.contact)
   end
 
   # Não manda, e deixa a nota para a equipe ver o que aconteceu (menciona quem ligou).

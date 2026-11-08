@@ -2,9 +2,9 @@
 # outros dois quando há caminho até eles. O Valores, os passos e o Spam leem por aqui, nunca supondo a conversa.
 #
 # | alvo     | conversa                             | card | contato           |
-# | conversa | ela                                  | —    | conversa.contact  |
+# | conversa | ela (ou a do número novo, G43)       | —    | conversa.contact  |
 # | card     | card.primary_conversation (pode faltar) | ele | card.contact, senão o da conversa |
-# | contato  | — (a da conversa nova, #2680)        | —    | ele               |
+# | contato  | — (a da conversa nova, #2680, ou a do número novo) | — | ele    |
 # | conta    | —                                    | —    | —                 |
 #
 # A conta (#2635, G7) é o alvo do conta.recorrente: a execução da ocorrência, sem conversa, card nem contato. Nenhum
@@ -37,9 +37,23 @@ class Autonomia::Automacao::Contexto
   end
 
   def conversa
-    return @alvo if @alvo.is_a?(::Conversation)
+    return numero_novo || @alvo if @alvo.is_a?(::Conversation)
+    return @alvo.primary_conversation || conversa_nova if @alvo.is_a?(::Crm::Card)
 
-    (@alvo.primary_conversation if @alvo.is_a?(::Crm::Card)) || conversa_nova
+    numero_novo || conversa_nova
+  end
+
+  # G43 (#2700): depois que o passo "mensagem" mandou no número novo do contato, os passos seguintes usam aquela
+  # conversa, achada pelo registro dele. O card não precisa: a conversa do número novo já virou a principal. Guarda só a
+  # achada: antes do passo "mensagem", a próxima pergunta procura de novo.
+  def numero_novo
+    return unless @execucao
+
+    @numero_novo ||= begin
+      registro = @execucao.registros.where(resultado: 'ok').where("dados ? 'numero_novo'").order(:id).last
+      id = registro&.dados&.dig('conversa_aberta')
+      id && ::Conversation.find_by(account_id: @execucao.account_id, display_id: id)
+    end
   end
 
   # Quem não tem conversa (o card sem conversa principal, o contato) usa a que a receita abriu na caixa da conversa nova

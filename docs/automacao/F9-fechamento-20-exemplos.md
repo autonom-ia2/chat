@@ -166,6 +166,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G39 | **Gatilho numa data única** ("a quinta antes da Black Friday, às 9h") | F6 | A fazer: o recorrente (G7) repete toda semana ou todo mês; não há "uma vez, nesta data" (achado no exemplo 7, 07/11; fecha com o PR do exemplo 7 da G14, #2681 parte 4) | Gatilhos | 7 |
 | G40 | **Esperar só a pessoa que atende** a conversa ("espera a Fernanda até 30 min"), não a equipe inteira | F8 | Em PR: `conversa.responsavel_respondeu` (lote 4, #2682) | Motor | 10 |
 | G41 | **Instrução no resumir** ("o que já foi prometido") e **avisar o responsável quando a agente de IA atende** a conversa | F7 | A fazer: o resumir tem texto fixo (`passo_de_resumir.rb`); o avisar vai a quem atende a conversa, e com a agente de IA ninguém é avisado (achado no exemplo 10, #2678) | F7 | 10 |
+| G43 | **Mandar ao número novo** do contato depois que a automação o atualiza (ex. 19, passos 4 e 7) | F4 | **Fechada** (#2700): no WhatsApp e no SMS, o passo "mensagem" manda na conversa do número novo, na mesma caixa (`NumeroNovo`); os passos seguintes usam essa conversa, e no card ela vira a principal | Gatilhos | 19 |
 
 ### 5.1 A sonda de cada lacuna
 
@@ -203,7 +204,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 16 | Reconquistar | ⛔ G7 (dia 1º, perdidos há 11 meses) | etiqueta ✅, decidir ✅, escrever ✅ | G3, G4, G7, G12, G14, G16, G18 | Não |
 | 17 | Vendedora de férias | ⛔ G9 (troca de responsável) | resumir ✅, mensagem ✅, etiqueta ✅ | G7 (toda manhã, por card com a etiqueta), G9, G11, G15, G16, G23 | Não |
 | 18 | Seleção de candidatos | ✅ mensagem na caixa de vagas | decidir ✅, etiqueta ✅, avisar ✅ | G1, G4, G5, G6, G12, G15, G20, G25 | Não |
-| 19 | Cliente que sumiu do WhatsApp | ⛔ G8 (mensagem falhou) | etiqueta ✅, extrair ✅ (telefone), escrever ✅, avisar ✅ | G1, G2, G3, G8, G11, G19, G28 (o recado da IA pelo modelo), G34 | Não |
+| 19 | Cliente que sumiu do WhatsApp | ⛔ G8 (mensagem falhou) | etiqueta ✅, extrair ✅ (telefone), escrever ✅, avisar ✅ | G1, G2, G3, G8, G11, G19, G28 (o recado da IA pelo modelo), G34, G43 (o número novo) | Não |
 | 20 | Venda fechada no sistema da empresa | 🟡 G5 (card ganho) | extrair ✅, decidir ✅, mover ✅, etiqueta ✅, avisar ✅ | G1, G2 (boas-vindas e "Dicas do mês" por e-mail), G5, G7 (todo mês, por contato com a etiqueta), G11, G12, G13 | Não |
 
 ### 6.1 As lacunas que destravam mais exemplos

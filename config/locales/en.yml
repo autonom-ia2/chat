@@ -567,6 +567,7 @@ en:
         retorno_sem_responsavel: "The follow-up was not created: it was for the owner, and no one owns this yet."
         sem_conversa: "There is no conversation to act on: the card has no main conversation, or the contact has none, and the automation has no inbox chosen to open one. Nothing was sent."
         contato_sem_telefone: "The contact has no phone number, so the conversation was not opened. Nothing was sent."
+        numero_de_outro_contato: "The contact's new number already belongs to another contact in this inbox. Nothing was sent, and the other contact was not changed."
         texto_vazio: "The text came out blank after it was built. The message was not sent."
         dado_ausente: 'The AI did not find any of the requested data in the conversation. Nothing was saved.'
         ia_chave_recusada: "The AI provider refused the account's key. Check the AI key in the integrations."

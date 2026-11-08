@@ -97,11 +97,13 @@ const ramoDe = (execucao, passo) => {
   return nomeDoCaminho(execucao, passo) || ramo;
 };
 
-const linkDa = (execucao, mensagemId) => {
+// A mensagem que saiu numa conversa aberta pelo passo (o número novo, G43) mora
+// nela, não na conversa do alvo.
+const linkDa = (execucao, mensagemId, conversaAberta) => {
   const url = frontendURL(
     conversationUrl({
       accountId: props.accountId,
-      id: execucao.alvo.conversa_id,
+      id: conversaAberta || execucao.alvo.conversa_id,
     })
   );
   return mensagemId ? `${url}?messageId=${mensagemId}` : url;
@@ -309,6 +311,13 @@ onMounted(() => carregar());
                     }}
                   </span>
                   <span
+                    v-if="passo.dados.numero_novo"
+                    data-numero-novo
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{ $t('AUTOMACAO_LIVRE.HISTORICO.NUMERO_NOVO') }}
+                  </span>
+                  <span
                     v-if="passo.dados.conversa_principal_do_card"
                     data-conversa-principal
                     class="text-sm text-n-slate-11"
@@ -331,7 +340,8 @@ onMounted(() => carregar());
                     :href="
                       linkDa(
                         execucao,
-                        passo.dados.mensagem_id || passo.dados.nota_id
+                        passo.dados.mensagem_id || passo.dados.nota_id,
+                        passo.dados.conversa_aberta
                       )
                     "
                     class="text-sm font-medium text-n-blue-11 hover:underline"

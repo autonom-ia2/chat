@@ -97,6 +97,7 @@
       "SEGUIU_POR": "Took: {ramo}",
       "ESPERA_ATE": "Waits until {quando}",
       "CONVERSA_PRINCIPAL": "Opened a conversation, which became the card main conversation",
+      "NUMERO_NOVO": "Sent to the contact's new number, in another conversation of the same inbox",
       "TENTATIVA": "Attempt {n}",
       "IA": "AI: US$ {valor}",
       "IA_MENOS_DE": "AI: less than US$ {valor}",
