@@ -46,6 +46,9 @@ nativos:
   # (RegraDoFunil.chave?: crm_manage_pipelines ou crm_admin), como o gatilho de card; quem recusa de verdade é a API,
   # ao salvar e ao ligar.
   card: { grupo: FUNIL, requer: automacao_gatilhos, funil: true }
+  # G21 (#2706): buscar empresas na Prospecção e marcar a recusa do lead. Sem flag própria: quem recusa é a Receita
+  # (Prospecção desligada, sem a chave dela). `peca`: o passo inteiro numa peça só (LivreProspeccao.vue).
+  prospeccao: { grupo: FUNIL, peca: prospeccao }
 
 # Passos nativos do esquema que o editor ainda não mostra, com o motivo. A receita aceita e o motor roda; a tela só os
 # mostra quando tiver as peças.

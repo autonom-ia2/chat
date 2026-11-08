@@ -61,6 +61,7 @@ const BLOCOS_POR_ARQUIVO = {
   'automacaoLivreReceitas.json': ['RECEITAS'],
   'automacaoLivreEnsaio.json': ['ENSAIO', 'HISTORICO'],
   'automacaoLivreCampanha.json': ['CAMPANHA'],
+  'automacaoLivreProspeccao.json': ['PROSPECCAO'],
   'automacaoLivreRetorno.json': ['RETORNO'],
 };
 

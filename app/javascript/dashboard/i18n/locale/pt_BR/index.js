@@ -31,6 +31,7 @@ import automacaoLivreIa from './automacaoLivreIa.json';
 import automacaoLivreReceitas from './automacaoLivreReceitas.json';
 import automacaoLivreEnsaio from './automacaoLivreEnsaio.json';
 import automacaoLivreCampanha from './automacaoLivreCampanha.json';
+import automacaoLivreProspeccao from './automacaoLivreProspeccao.json';
 import automacaoLivreRetorno from './automacaoLivreRetorno.json';
 import brandKits from './brandKits.json';
 import booking from './booking.json';
@@ -120,6 +121,7 @@ export default {
     ...automacaoLivreReceitas.AUTOMACAO_LIVRE,
     ...automacaoLivreEnsaio.AUTOMACAO_LIVRE,
     ...automacaoLivreCampanha.AUTOMACAO_LIVRE,
+    ...automacaoLivreProspeccao.AUTOMACAO_LIVRE,
     ...automacaoLivreRetorno.AUTOMACAO_LIVRE,
   },
   ...brandKits,

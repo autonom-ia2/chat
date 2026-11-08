@@ -871,6 +871,43 @@
       ]
     },
     {
+      "tipo": "prospeccao",
+      "grupo": "FUNIL",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.PROSPECCAO",
+      "campos": [
+        {
+          "nome": "faz",
+          "peca": "prospeccao",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.FAZ"
+        },
+        {
+          "nome": "busca_id",
+          "peca": "prospeccao",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.BUSCA_ID"
+        },
+        {
+          "nome": "quantas",
+          "peca": "prospeccao",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.QUANTAS"
+        },
+        {
+          "nome": "etapa_id",
+          "peca": "prospeccao",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ETAPA_ID"
+        },
+        {
+          "nome": "etiquetas",
+          "peca": "prospeccao",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ETIQUETAS"
+        }
+      ]
+    },
+    {
       "tipo": "ia_assumir",
       "grupo": "EQUIPE",
       "frase": "AUTOMACAO_LIVRE.PASSOS.IA_ASSUMIR",

@@ -75,19 +75,21 @@ class Autonomia::Automacao::Receita
     return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
     return problemas_do_retorno(passo) if passo['tipo'] == 'retorno'
-    return problemas_do_proprio_passo(passo) if %w[ia_assumir card campanha].include?(passo['tipo'])
+    return problemas_do_proprio_passo(passo) if %w[ia_assumir card campanha prospeccao].include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
   end
 
   # Os passos que se conferem sozinhos ao salvar, na própria classe: o "Passar para a agente de IA" (G15), o "criar
-  # card" (G4), que confere também a pessoa, e a campanha (G14), que confere o gatilho, a pessoa e a campanha da tela.
+  # card" (G4), que confere também a pessoa, a campanha (G14), que confere o gatilho, a pessoa e a campanha da tela, e a
+  # prospecção (G21), que confere o gatilho, a pessoa, a busca, a etapa e as etiquetas.
   def problemas_do_proprio_passo(passo)
     case passo['tipo']
     when 'card' then ::Autonomia::Automacao::PassoDeCard.problemas_ao_salvar(@conta, passo, @account_user)
-    when 'campanha'
-      ::Autonomia::Automacao::PassoDeCampanha.problemas_ao_salvar(passo, @receita, conta: @conta, account_user: @account_user)
+    when 'campanha', 'prospeccao'
+      classe = passo['tipo'] == 'campanha' ? ::Autonomia::Automacao::PassoDeCampanha : ::Autonomia::Automacao::PassoDeProspeccao
+      classe.problemas_ao_salvar(passo, @receita, conta: @conta, account_user: @account_user)
     else ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo)
     end
   end

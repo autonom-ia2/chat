@@ -142,7 +142,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G18 | **Agir ou ler em outro registro ligado** ao alvo (o card do João avisa a Maria, que indicou; a resposta lê o motivo da perda no card antigo do mesmo contato). "Para cada card com etiqueta X" é da G7 | F8 / novo | O passo age só no alvo da execução | Motor | 11, 16 |
 | G19 | **Nota no contato** (não na conversa) | F3 (ação) | `contacts/notes` fora da lista | F2 | 5, 19 |
 | G20 | Passos de IA **lendo anexo** (PDF, foto do currículo, documento) pelo leitor de mídia | F7 | O `Estado` dos passos de IA não usa `com_midia`; só a IA de assunto lê | F7 | 3, 8, 14, 18 |
-| G21 | **Prospecção**: rodar busca salva e conferência de WhatsApp como passo | novo | Sem passo | F5 | 9 |
+| G21 | **Prospecção**: rodar busca salva e conferência de WhatsApp como passo | novo | **Fechada no motor** (#2706), o `buscar` só salva com o `conta.recorrente` da G7 (#2652): passo `prospeccao` com `buscar` (repete uma busca do histórico, espera a conferência de WhatsApp até 2 h, card por empresa com WhatsApp e etiqueta no contato; só em gatilho sem alvo, G7) e `recusar` (recusa do lead); ponta a ponta do ex. 9 espera a G7 | F5 | 9 |
 | G22 | **Avisar quem não está na conversa** (o RH da empresa cliente por mensagem; a equipe quando o alvo não tem conversa) | F4 | O "avisar" é nota com menção na conversa do alvo; card sem conversa pula com `sem_conversa` | F1 | 8 |
 | G23 | Condição sobre **disponibilidade de uma pessoa** (a responsável voltou de férias) | F8 | Não é valor da receita | Motor | 17 |
 | G24 | **Encadear duas automações** em que a primeira cria N registros e a segunda roda em cada um | F6/F8 | Depende de G4, G5 e G17 | Motor | 8 |

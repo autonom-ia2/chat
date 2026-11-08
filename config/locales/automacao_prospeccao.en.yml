@@ -1,0 +1,22 @@
+# Free-form automation, "prospecting" step (#2414 G21, #2706). Own file so it does not fight over en.yml with other work.
+en:
+  autonomia:
+    automacao:
+      motivos:
+        prospeccao_desligada: 'Prospecting is turned off in this account. Nothing was done.'
+        quem_ligou_sem_permissao_prospeccao: 'The person who turned on the automation can no longer use Prospecting or create CRM cards. Take over and turn it back on.'
+        prospeccao_so_sem_alvo: 'This automation runs on each conversation, card or contact, so it would run a paid search every time. Searching for companies only works in a recurring automation. Nothing was searched.'
+        sem_lead_da_prospeccao: 'This contact did not come from Prospecting. There is no company to mark as "does not want to be contacted".'
+        busca_sumiu: 'The chosen search is no longer in the Prospecting history. Nothing was searched.'
+        prospeccao_sem_whatsapp: 'The account has no WhatsApp connected to check the numbers. Nothing was searched.'
+        prospeccao_sem_chave_google: 'Google search is not set up in this account''s Prospecting. Nothing was searched.'
+        busca_falhou_paga: 'This run''s search failed after calling Google. It was not repeated, so it is not paid twice.'
+        busca_sem_resposta: 'The company search did not answer. The automation will try again.'
+        busca_recusada: 'Prospecting refused the search as it is saved. Open the search in Prospecting and check it.'
+        conferencia_no_prazo: '2 hours passed and some numbers were not checked. Cards were created only for companies with a checked WhatsApp.'
+        etapa_fora_do_alcance: 'The person who turned on the automation can no longer reach the chosen pipeline, or the CRM is off. No card was created.'
+      receita:
+        prospeccao_desligada: 'Step %{passo}: Prospecting is turned off in this account.'
+        prospeccao_sem_permissao: 'Step %{passo}: to use this step you need permission to use Prospecting and, to search, to create CRM cards.'
+        prospeccao_so_sem_alvo: 'Step %{passo}: searching for companies only works in a recurring automation. In a conversation, card or contact trigger, each run would run a paid search.'
+        prospeccao_busca_de_fora: 'Step %{passo}: search %{id} is not in the Prospecting history you can see.'

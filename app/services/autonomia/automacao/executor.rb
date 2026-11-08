@@ -89,7 +89,7 @@ class Autonomia::Automacao::Executor
     when 'esperar' then esperar(passo)
     when 'esperar_ate' then esperar_ate(passo)
     when 'se' then se(passo)
-    when 'acao', 'retorno' then acao(passo)
+    when 'acao', 'retorno', 'prospeccao' then acao(passo)
     when *NATIVOS.keys then passo_nativo(passo, NATIVOS.fetch(passo['tipo']))
     when *IA.keys then passo_de_ia(passo, IA.fetch(passo['tipo']))
     when 'ia_assumir' then passo_nativo(passo, ::Autonomia::Automacao::PassoDeIaAssumir, mensagem: false)
@@ -185,7 +185,7 @@ class Autonomia::Automacao::Executor
     when :ok, :pulado then seguir_depois_da_acao(passo, resultado)
     when :permanente then encerrar(passo['id'], 'falhou', resultado.motivo, 'falhou', resultado.dados)
     when :sem_acesso then encerrar(passo['id'], 'parada', pausar(resultado.motivo), 'falhou', resultado.dados)
-    else tentar_de_novo(passo, resultado)
+    else resultado.tipo == :esperar ? aguardar(passo, resultado.dados['ate'], registrar: false) : tentar_de_novo(passo, resultado)
     end
   end
 

@@ -16,9 +16,12 @@ class Autonomia::Automacao::PassoDeAcao
   # 4xx que passam: tempo esgotado, cedo demais e limite de pedidos.
   PASSAGEIROS = [408, 425, 429].freeze
 
-  # O passo "criar retorno" (G3, #2629) tem objeto próprio, que chega à mesma porta (AcoesDoRetorno).
+  # Passos com objeto próprio que chegam à mesma porta: o "criar retorno" (G3, #2629, pela AcoesDoRetorno) e a
+  # "prospecção" (G21, #2706), que usa a espera e a nova tentativa da ação.
+  PROPRIOS = { 'retorno' => 'Autonomia::Automacao::PassoDeRetorno', 'prospeccao' => 'Autonomia::Automacao::PassoDeProspeccao' }.freeze
+
   def self.executar(passo:, **)
-    classe = passo['tipo'] == 'retorno' ? ::Autonomia::Automacao::PassoDeRetorno : self
+    classe = PROPRIOS.key?(passo['tipo']) ? PROPRIOS.fetch(passo['tipo']).constantize : self
     classe.new(passo: passo, **).executar
   end
 

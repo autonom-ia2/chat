@@ -173,7 +173,9 @@ module FechamentoAutomacao::Lacunas
     'G18' => nil,
     'G19' => -> { acao?('POST contacts/:contact_id/notes') },
     'G20' => nil,
-    'G21' => -> { passo?('prospeccao') },
+    # Fechada no motor (#2706): o passo existe no esquema e chega pela porta da ação. O ponta a ponta do exemplo 9 espera
+    # o conta.recorrente da G7 (#2652).
+    'G21' => -> { passo?('prospeccao') && Autonomia::Automacao::PassoDeAcao::PROPRIOS.key?('prospeccao') },
     'G22' => nil,
     'G23' => nil,
     'G24' => nil,

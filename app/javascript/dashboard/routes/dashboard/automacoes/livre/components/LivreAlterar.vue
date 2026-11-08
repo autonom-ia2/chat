@@ -12,6 +12,7 @@ import LivreTexto from './LivreTexto.vue';
 import LivreModelo from './LivreModelo.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
 import LivreCampanha from './LivreCampanha.vue';
+import LivreProspeccao from './LivreProspeccao.vue';
 import LivreEtapa from './LivreEtapa.vue';
 import LivreRetornoPara from './LivreRetornoPara.vue';
 import LivreRetornoEnvio from './LivreRetornoEnvio.vue';
@@ -20,6 +21,7 @@ import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
 import { caminhosProntos } from '../ia';
 import { campanhaPronta } from '../campanha';
+import { prospeccaoPronta } from '../prospeccao';
 import { envioPronto, paraPronto } from '../retorno';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { temDataIncompleta } from '../texto';
@@ -215,6 +217,8 @@ const nativoPronto = campo => {
   // G14: a peça da campanha mostra e confere o passo inteiro.
   if (campo.peca === 'campanha')
     return campanhaPronta(rascunho.value, caixasDaConta.value);
+  // G21: a peça da prospecção também.
+  if (campo.peca === 'prospeccao') return prospeccaoPronta(rascunho.value);
   if (campo.peca === 'quem_recebe_retorno') return paraPronto(valor);
   if (campo.peca === 'envio_do_retorno') return envioPronto(valor);
   if (campo.peca === 'destinatarios')
@@ -407,6 +411,13 @@ defineExpose({ abrir, fechar });
           v-else-if="campo.peca === 'campanha' && campo.nome === 'faz'"
           :model-value="rascunho"
           :etiquetas="opcoes.etiqueta"
+          @update:model-value="novo => (rascunho = novo)"
+        />
+        <LivreProspeccao
+          v-else-if="campo.peca === 'prospeccao' && campo.nome === 'faz'"
+          :model-value="rascunho"
+          :etiquetas="opcoes.etiqueta"
+          :etapas="escolhasDoGatilho.etapas || []"
           @update:model-value="novo => (rascunho = novo)"
         />
         <LivreEtapa

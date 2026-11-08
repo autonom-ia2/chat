@@ -113,6 +113,9 @@
     },
     {
       "file": "automacaoLivreRetorno.json"
+    },
+    {
+      "file": "automacaoLivreProspeccao.json"
     }
   ],
   "pacotes": {
