@@ -340,6 +340,45 @@ RSpec.describe Crm::BookingV2::Booker do
     end
   end
 
+  # G47 (#2755, exemplo 5 passo 8): o card que a página cria leva a conversa do contato na caixa da página, para a
+  # automação do card (o link da agenda depois do cancelamento) ter por onde falar.
+  describe 'card novo da página com a conversa do contato' do
+    let(:caixa) { create_crm_inbox(account: account) }
+    let(:ana) { account.contacts.create!(name: 'Ana', phone_number: '+5521988887777') }
+
+    before { profile.update!(inbox: caixa) }
+
+    it 'liga a conversa mais recente do contato na caixa da página', :aggregate_failures do
+      create_crm_conversation(account: account, inbox: caixa, contact: ana)
+      recente = create_crm_conversation(account: account, inbox: caixa, contact: ana)
+
+      card = book.card
+
+      expect(card).to have_attributes(contact_id: ana.id, conversation_id: recente.id, inbox_id: caixa.id, source: 'public_link')
+      expect(Crm::CardConversation.where(card: card).pluck(:conversation_id, :is_primary)).to eq([[recente.id, true]])
+    end
+
+    it 'não liga a conversa do contato em outra caixa' do
+      create_crm_conversation(account: account, inbox: create_crm_inbox(account: account, name: 'Outra'), contact: ana)
+
+      expect(book.card.conversation_id).to be_nil
+    end
+
+    it 'página sem caixa: o card nasce sem conversa' do
+      create_crm_conversation(account: account, inbox: caixa, contact: ana)
+      profile.update!(inbox: nil)
+
+      expect(book.card.conversation_id).to be_nil
+    end
+
+    it 'a conversa de quem chama (o convite) vale mais que a da caixa' do
+      create_crm_conversation(account: account, inbox: caixa, contact: ana)
+      do_convite = create_crm_conversation(account: account, inbox: create_crm_inbox(account: account, name: 'Convite'), contact: ana)
+
+      expect(book(conversation: do_convite, source: 'invite').card.conversation_id).to eq(do_convite.id)
+    end
+  end
+
   describe 'contato que já tem card aberto, pelo link público' do
     it 'põe a reunião no card aberto do funil da página, sem criar outro nem avisar card novo' do
       world.card
