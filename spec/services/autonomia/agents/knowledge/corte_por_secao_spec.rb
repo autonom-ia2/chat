@@ -53,7 +53,7 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
 
   it 'splits a long section by paragraph, repeating the last paragraph at the start of the next piece', :aggregate_failures do
     paragrafos = (1..6).map { |n| paragrafo("Paragrafo #{n}: #{'regra da cobertura do seguro ' * 10}") }
-    trechos = cortar([titulo('Regras', 1), *paragrafos], maximo: 700)
+    trechos = cortar([titulo('Regras', 1), *paragrafos], maximo: 700).select { |trecho| trecho[:metadata][:material_type] == 'secao' }
 
     expect(trechos.size).to be > 1
     expect(trechos).to all(satisfy { |trecho| trecho[:text].start_with?('Condicoes Gerais › Regras') })
@@ -130,5 +130,83 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
 
   it 'returns nothing for no blocks' do
     expect(cortar([])).to eq([])
+  end
+
+  # PR 1b: na seção longa, o item de lista, o verbete do glossário e a fileira da tabela também viram trecho próprio,
+  # para não sumirem diluídos no trecho da seção inteira.
+  context 'with items in a long section' do
+    let(:abertura) { 'Alem das exclusoes gerais, estarao excluidas da cobertura do seguro:' }
+    let(:itens) do
+      [abertura, 'a) Quaisquer bens ou acessorios instalados no veiculo, mesmo em decorrencia de sinistro coberto;',
+       *('b'..'k').map { |letra| "#{letra}) Perdas ou danos por desgaste, uso ou falha de material do veiculo segurado;" }]
+    end
+    let(:exclusoes) { { tipo: :paragrafo, texto: itens.join("\n"), itens: itens, pagina: 7 } }
+
+    it 'keeps the section piece and adds one piece per item, with the opening line that introduces the list', :aggregate_failures do
+      trechos = cortar([titulo('2. EXCLUSOES', 1, 7), exclusoes])
+      de_item = trechos.select { |trecho| trecho[:metadata][:material_type] == 'item' }
+
+      expect(trechos.first[:metadata][:material_type]).to eq('secao')
+      expect(de_item.size).to eq(11)
+      expect(de_item.first[:text]).to eq("2. EXCLUSOES\n\n#{abertura}\n#{itens[1]}")
+      expect(de_item.first[:metadata]).to include(caminho: ['Condicoes Gerais', '2. EXCLUSOES'],
+                                                  secao_id: trechos.first[:metadata][:secao_id])
+      expect(de_item.first[:paginas]).to eq([7, 7])
+    end
+
+    it 'joins a short item to the next one, so a glossary term stays with its definition' do
+      verbetes = ['Perda Parcial', "Dano ao veiculo menor que 75% do valor determinado. #{('Texto da definicao. ' * 8).strip}",
+                  'Premio', "Valor pago pelo segurado para a seguradora assumir o risco. #{('Texto da definicao. ' * 8).strip}",
+                  'Sinistro', "Ocorrencia do evento coberto pelo seguro durante a vigencia. #{('Texto da definicao. ' * 8).strip}"]
+      glossario = { tipo: :paragrafo, texto: verbetes.join("\n"), itens: verbetes, pagina: 3 }
+
+      de_item = cortar([titulo('3. DEFINICOES', 1, 3), glossario]).select { |trecho| trecho[:metadata][:material_type] == 'item' }
+
+      expect(de_item.map { |trecho| trecho[:text].split("\n\n", 2).last }).to eq(verbetes.each_slice(2).map { |par| par.join("\n") })
+    end
+
+    it 'gives an item crossing two pieces of its section no pointer, so the search keeps the whole item' do
+      longo = "a) #{'O segurado perde o direito se agravar o risco de proposito. ' * 12}".strip
+      blocos = [titulo('2. PERDA DE DIREITOS', 1, 7),
+                { tipo: :paragrafo, texto: [abertura, longo, itens[2]].join("\n"), itens: [abertura, longo, itens[2]], pagina: 7 }]
+      de_item = cortar(blocos, maximo: 500).select { |trecho| trecho[:metadata][:material_type] == 'item' }
+
+      expect(de_item.map { |trecho| trecho[:metadata].key?(:trecho_da_secao) }).to include(false)
+    end
+
+    it 'gives no item pieces to a short section' do
+      curta = { tipo: :paragrafo, texto: itens.first(3).join("\n"), itens: itens.first(3), pagina: 7 }
+
+      expect(cortar([titulo('2. EXCLUSOES', 1), curta]).pluck(:metadata).pluck(:material_type)).to eq(['secao'])
+    end
+  end
+
+  context 'with a table' do
+    let(:fileiras) { (1..40).map { |n| "PLANO ANUAL Dias: #{n * 15} a #{(n * 15) + 14} | % do premio: #{n + 10}%" } }
+    let(:tabela) { { tipo: :tabela, texto: fileiras.join("\n"), itens: fileiras, pagina: 31 } }
+
+    it 'splits a long table between whole rows, each one with the header of its columns', :aggregate_failures do
+      de_secao = cortar([titulo('5.1 Prazo curto', 1, 31), tabela], maximo: 300)
+                 .select { |trecho| trecho[:metadata][:material_type] == 'secao' }
+
+      expect(de_secao.size).to be > 1
+      corpos = de_secao.map { |trecho| trecho[:text].split("\n\n", 2).last }
+      expect(corpos).to all(satisfy { |corpo| corpo.length <= 300 })
+      expect(corpos.flat_map { |corpo| corpo.lines(chomp: true) }).to eq(fileiras)
+    end
+
+    it 'gives one piece per row, with the header of each column' do
+      de_item = cortar([titulo('5.1 Prazo curto', 1, 31), tabela]).select { |trecho| trecho[:metadata][:material_type] == 'item' }
+
+      expect(de_item.map { |trecho| trecho[:text].split("\n\n", 2).last }).to eq(tabela[:itens])
+    end
+
+    it 'points every item to the piece of its section that holds it' do
+      trechos = cortar([titulo('5.1 Prazo curto', 1, 31), tabela], maximo: 300)
+
+      expect(trechos.select { |trecho| trecho[:metadata][:material_type] == 'item' }).to all(
+        satisfy { |item| trechos[item[:metadata][:trecho_da_secao]][:text].include?(item[:text].split("\n\n", 2).last) }
+      )
+    end
   end
 end

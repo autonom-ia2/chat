@@ -76,6 +76,7 @@ class Autonomia::Agents::Retriever
     # B3 — rerank ADITIVO por metadata (nunca filtro que zera — lição P1.1b): reordena os candidatos já
     # dentro do teto, promovendo o chunk cujo heading/keywords/topics casam com os termos da query.
     kept = rerank_by_metadata(kept, query)
+    kept = secoes_dos_itens(kept)
     result = dedup_by_source(kept).first(top_k)
     # P1.1c — complemento lexical p/ termos exatos que o embedding raso perde (SKU, "domingo",
     # "dermato"): só quando o vetorial veio fraco/incompleto. Roda sobre o MESMO escopo filtrado.
@@ -191,10 +192,10 @@ class Autonomia::Agents::Retriever
 
     seen = vector_hits.map(&:id)
     clause = terms.map { 'content ILIKE ?' }.join(' OR ')
-    lex = escopo_da_base
-          .where(clause, *terms.map { |t| "%#{t}%" })
-          .limit(top_k)
-          .reject { |e| seen.include?(e.id) }
+    lex = escopo_da_base.do_material
+                        .where(clause, *terms.map { |t| "%#{t}%" })
+                        .limit(top_k)
+                        .reject { |e| seen.include?(e.id) }
     # Hit lexical não passou pelo nearest_neighbors → o atributo SQL `neighbor_distance` (alias do
     # SELECT) não existe nessas instâncias. Define um reader singleton com o patamar de match forte
     # p/ uniformizar com os hits vetoriais (P2.1 lê .neighbor_distance p/ ancorar confiança):
@@ -254,6 +255,41 @@ class Autonomia::Agents::Retriever
     doc = meta[:doc] || {}
     parts = [meta[:section_heading], meta[:material_type], meta[:keywords], doc[:topics], doc[:entities]]
     parts.flatten.compact.join(' ').downcase
+  end
+
+  # #1431 (PR 1b) — o trecho de item (CortePorSecao: item de lista, verbete, fileira de tabela) só serve para achar. No
+  # lugar dele volta o trecho da seção que o contém (`trecho_da_secao`), com a distância do item, e cada trecho uma vez
+  # só, na ordem do melhor. O item sem `trecho_da_secao` (atravessa dois trechos da seção) volta ele mesmo. Sem item
+  # entre os candidatos (todo material lido antes do 1b), a lista volta igual.
+  def secoes_dos_itens(entries)
+    itens = entries.select { |entry| item?(entry) }
+    return entries if itens.empty?
+
+    secoes = secoes_dos(itens)
+    entries.filter_map { |entry| item?(entry) ? secao_no_lugar(entry, secoes) : entry }.uniq(&:id)
+  end
+
+  def item?(entry)
+    metadata = entry.metadata.to_h
+    metadata['material_type'] == 'item' && !metadata['trecho_da_secao'].nil?
+  end
+
+  # { [source_id, chunk_index] => trecho da seção }, numa consulta só, no mesmo escopo da busca.
+  def secoes_dos(itens)
+    chaves = itens.map { |item| [item.source_id, item.metadata['trecho_da_secao']] }
+    escopo_da_base.where(source_id: chaves.map(&:first).uniq, chunk_index: chaves.map(&:last).uniq)
+                  .index_by { |secao| [secao.source_id, secao.chunk_index] }
+  end
+
+  # A seção leva a distância do primeiro item que a trouxe (o melhor, pela ordem), como o reforço lexical faz com o hit
+  # dele: a ancoragem de confiança do Answerer lê `neighbor_distance`.
+  def secao_no_lugar(item, secoes)
+    secao = secoes[[item.source_id, item.metadata['trecho_da_secao']]]
+    return if secao.nil?
+
+    distancia = item.neighbor_distance
+    secao.define_singleton_method(:neighbor_distance) { distancia } unless secao.singleton_methods.include?(:neighbor_distance)
+    secao
   end
 
   # Dedup por fonte (P2): 1 melhor trecho por fonte primeiro (já ordenados por distância pelo

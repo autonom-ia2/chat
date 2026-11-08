@@ -140,7 +140,7 @@ module Autonomia
             chunk_index: index,
             doc: doc_metadata
           }.merge(entry.slice(:paginas, :paginas_do_trecho).compact)
-            .merge(chunk_meta.slice(:caminho, :secao_id))
+            .merge(chunk_meta.slice(:caminho, :secao_id, :trecho_da_secao))
         end
 
         # Sub-hash da classificação do documento (B2.3), com chaves de string (jsonb) e à prova de nil.

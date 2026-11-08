@@ -10,6 +10,7 @@ module Autonomia
           include PdfOcr
           include PdfParagrafos
           include PdfBlocos
+          include PdfTabelas
 
           # Abaixo deste tamanho (após strip) a extração é "quase vazia" (PDF escaneado / só imagem):
           # vale tentar OCR em vez de marcar a fonte como falha por texto ausente.

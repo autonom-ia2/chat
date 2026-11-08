@@ -88,11 +88,13 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
   end
 
   # Entre trechos, folga negativa além do que o pdf-reader junta (3 pt) é texto sobreposto (duas linhas da mesma célula na
-  # mesma altura): palavras diferentes, separadas por espaço.
+  # mesma altura): palavras diferentes, separadas por espaço. `trechos` guarda a posição de cada um, para a tabela
+  # (PdfTabelas) achar as células; o texto da linha não muda.
   def linha(trechos)
     texto = Autonomia::Agents::Knowledge::Processors::PdfTrechos.juntar(trechos, sobreposto: true).strip
     { y: trechos.first.y, direita: trechos.map { |trecho| trecho.x + trecho.width }.max, letra: letra_da_linha(trechos),
-      fonte: fonte_da_linha(trechos), texto: texto }
+      fonte: fonte_da_linha(trechos), texto: texto,
+      trechos: trechos.map { |trecho| { x: trecho.x, fim: trecho.x + trecho.width, texto: texto_do(trecho).strip } } }
   end
 
   # A letra da linha é a que cobre mais texto nela: uma palavra maior no meio não faz da linha um título.

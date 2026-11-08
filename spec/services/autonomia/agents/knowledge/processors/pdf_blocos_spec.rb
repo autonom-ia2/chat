@@ -79,7 +79,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
                '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
                '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>']
     paginas.each_with_index do |linhas, indice|
-      conteudo = linhas.map { |texto, y, fonte, tamanho| "BT /#{fonte} #{tamanho} Tf 54 #{y} Td (#{texto}) Tj ET" }.join("\n")
+      conteudo = linhas.map { |texto, y, fonte, tamanho, x = 54| "BT /#{fonte} #{tamanho} Tf #{x} #{y} Td (#{texto}) Tj ET" }.join("\n")
       objetos << '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> ' \
                  "/Contents #{ids[indice] + 1} 0 R >>"
       objetos << "<< /Length #{conteudo.bytesize} >>\nstream\n#{conteudo}\nendstream"
@@ -109,7 +109,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       blocos = blocos_gravados
 
       expect(blocos).to include({ tipo: :titulo, nivel: 1, texto: '2. COBERTURAS', pagina: 2 })
-      expect(blocos).to include({ tipo: :paragrafo, texto: "#{corpo1}\n#{corpo2}", pagina: 2 })
+      expect(blocos).to include({ tipo: :paragrafo, texto: "#{corpo1}\n#{corpo2}", itens: ["#{corpo1}\n#{corpo2}"], pagina: 2 })
     end
 
     it 'reads a title broken in two lines as one title, below the bigger one' do
@@ -140,6 +140,51 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
 
     it 'keeps the text the processor returns as before' do
       expect(described_class.new(source).extract).to include("2. COBERTURAS\n\n#{corpo1}\n#{corpo2}")
+    end
+
+    # PR 1b: tabela por célula, item de lista pela linha curta; a linha que se repete no alto das páginas sai, e a do pé
+    # (mesmo com o número da página no fim) fica só na primeira vez.
+    context 'with a table, a list and running lines' do
+      let(:pdf) { pdf_com([prazo_curto, *(2..4).map { |numero| pagina_simples(numero) }]) }
+
+      def bordas(numero)
+        [['Voltar ao sumario', 815, 'F1', 10], ['Condicoes Gerais - Versao 3.0.', 20, 'F1', 8], [numero.to_s, 20, 'F1', 8, 540]]
+      end
+
+      def prazo_curto
+        [*bordas(1), ['1. PRAZO CURTO', topo, 'F1', 14],
+         [corpo1, topo - 26.4, 'F1', 10], ['coberto pelo seguro;', topo - 26.4 - linha, 'F1', 10],
+         ['b- Custos da blindagem do veiculo;', topo - 26.4 - (2 * linha), 'F1', 10],
+         ['Prazo', 680, 'F2', 10], ['% do premio', 680, 'F2', 10, 200],
+         ['1 a 15', 660, 'F1', 10], ['13%', 660, 'F1', 10, 200],
+         ['16 a 30', 640, 'F1', 10], ['20%', 640, 'F1', 10, 200],
+         ['31 a 45', 620, 'F1', 10], ['27%', 620, 'F1', 10, 200],
+         [corpo2, 590, 'F1', 10]]
+      end
+
+      def pagina_simples(numero)
+        [*bordas(numero), ["#{numero + 1}. CLAUSULA", topo, 'F1', 14], [corpo1, topo - 26.4, 'F1', 10], [corpo2, topo - 26.4 - linha, 'F1', 10]]
+      end
+
+      it 'reads the table rows with the header of each column', :aggregate_failures do
+        tabela = blocos_gravados.find { |bloco| bloco[:tipo] == :tabela }
+
+        expect(tabela).to include(pagina: 1, texto: tabela[:itens].join("\n"))
+        expect(tabela[:itens]).to eq(['Prazo: 1 a 15 | % do premio: 13%', 'Prazo: 16 a 30 | % do premio: 20%',
+                                      'Prazo: 31 a 45 | % do premio: 27%'])
+      end
+
+      it 'splits the paragraph in items where a line ends before the margin' do
+        lista = blocos_gravados.find { |bloco| bloco[:texto].start_with?(corpo1) && bloco[:pagina] == 1 }
+
+        expect(lista[:itens]).to eq(["#{corpo1}\ncoberto pelo seguro;", 'b- Custos da blindagem do veiculo;'])
+      end
+
+      it 'drops a line repeated at the top of the pages and keeps one at the foot only once, even with the page number' do
+        textos = blocos_gravados.pluck(:texto).join("\n")
+
+        expect([textos.scan('Voltar ao sumario').size, textos.scan('Condicoes Gerais - Versao 3.0.').size]).to eq([0, 1])
+      end
     end
 
     it 'gives no blocks to the protected agent (Lia)' do
