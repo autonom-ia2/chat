@@ -26,6 +26,7 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
 
   before do
     ligar_motor(account)
+    account.enable_features!('automacao_gatilhos')
     Autonomia::Prospecting::Config.enable_for!(account)
     Autonomia::Prospecting::Setting.for_account(account).update!(provider: 'mock')
     allow(Autonomia::Prospecting::WhatsappVerifier).to receive(:available_for?).and_return(true)
@@ -35,20 +36,26 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
 
   def frase(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", passo: 'p1', **valores)
 
-  def problemas(passo, gatilho: 'conversa.resolvida', quem: dona)
-    receita = { 'gatilho' => { 'tipo' => gatilho }, 'passos' => [passo] }
+  # O gatilho da conta (conta.recorrente, G7): toda segunda às 8h, alvo = a própria conta.
+  def conta_recorrente = { 'tipo' => 'conta.recorrente', 'frequencia' => 'semanal', 'dia_da_semana' => 1, 'hora' => 8 }
+
+  def problemas(passo, gatilho: { 'tipo' => 'conversa.resolvida' }, quem: dona)
+    receita = { 'gatilho' => gatilho, 'passos' => [passo] }
     Autonomia::Automacao::Receita.new(receita, conta: account, account_user: AccountUser.find_by(account: account, user: quem)).problemas
   end
 
-  # A execução do recorrente da conta (G7): o alvo é a própria conta. Na main o conta.recorrente ainda não existe, então
-  # a execução é gravada numa conversa e lê a conta como alvo.
+  # A execução do recorrente da conta (G7): o alvo é a própria conta.
   def execucao_da_conta(passos = [buscar], por: dona)
-    definicao = automacao_ligada(account, dona, passos)
-    execucao = comecar(definicao, conversa)
+    definicao = automacao_ligada(account, dona, passos, gatilho: conta_recorrente)
+    execucao = Autonomia::Automacao::Partida.new(definicao: definicao, alvo: account, chave_gatilho: 'conta.recorrente').call
     # Quem ligou perdeu a chave depois de a execução começar: a rodada confere de novo.
     definicao.update!(ligada_por: por)
-    allow(execucao).to receive(:alvo).and_return(account)
     execucao
+  end
+
+  # O recusar roda no alvo da conversa (o lead é o do contato dela).
+  def execucao_na_conversa(passos = [recusar])
+    comecar(automacao_ligada(account, dona, passos), conversa)
   end
 
   # Função com a Prospecção e o criar card, sem contact_manage: na tela, não põe etiqueta no contato.
@@ -83,7 +90,7 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
   describe 'ao salvar' do
     it 'recusa o buscar em gatilho de conversa ou de card: cada execução faria uma busca paga' do
       expect(problemas(buscar)).to eq([frase(:prospeccao_so_sem_alvo)])
-      expect(problemas(buscar, gatilho: 'card.ganho')).to include(frase(:prospeccao_so_sem_alvo))
+      expect(problemas(buscar, gatilho: { 'tipo' => 'card.ganho' })).to include(frase(:prospeccao_so_sem_alvo))
     end
 
     it 'aceita o recusar em qualquer gatilho' do
@@ -103,7 +110,11 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
     end
 
     context 'with o gatilho da conta (conta.recorrente, G7)' do
-      before { allow(Autonomia::Automacao::PassoDeCampanha).to receive(:gatilho_da_conta?).and_return(true) }
+      def problemas(passo, quem: dona) = super(passo, gatilho: conta_recorrente, quem: quem)
+
+      it 'o recusar pede alvo: no gatilho da conta não salva' do
+        expect(problemas(recusar)).to include(I18n.t('autonomia.automacao.receita.passo_pede_alvo', passo: 'r1'))
+      end
 
       it 'com etiquetas, recusa a função que cria card mas não muda contato (sem contact_manage)', :aggregate_failures do
         agente = agente_sem_contato
@@ -150,7 +161,6 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
 
   describe 'buscar' do
     # Contrato com a G7: o conta.recorrente tem a conta como alvo e é o único gatilho que aceita o buscar.
-    before { allow(Autonomia::Automacao::PassoDeCampanha).to receive(:gatilho_da_conta?).and_return(true) }
 
     it 'roda a busca pela Prospecção, sem cache, e espera a conferência de WhatsApp', :aggregate_failures do
       origem
@@ -307,6 +317,7 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
       expect([resultado.tipo, resultado.motivo]).to eq([:permanente, 'busca_sumiu'])
     end
 
+    # A Receita recusa o buscar fora do gatilho da conta; a receita que chegar assim mesmo pula ao rodar.
     it 'num alvo que não é a conta, pula sem buscar' do
       origem
       execucao = execucao_da_conta
@@ -338,8 +349,7 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
     it 'grava a recusa no lead do contato, que deixa de receber campanhas', :aggregate_failures do
       lead = conferir(origem, verificados: []).first
       lead.update!(contact: contato)
-      execucao = execucao_da_conta([recusar])
-      allow(execucao).to receive(:alvo).and_return(conversa)
+      execucao = execucao_na_conversa
 
       resultado = rodar(execucao, recusar)
 
@@ -351,8 +361,7 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
     end
 
     it 'contato que não veio da Prospecção pula, com o motivo' do
-      execucao = execucao_da_conta([recusar])
-      allow(execucao).to receive(:alvo).and_return(conversa)
+      execucao = execucao_na_conversa
 
       expect(rodar(execucao, recusar).motivo).to eq('sem_lead_da_prospeccao')
     end
