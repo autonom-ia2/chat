@@ -1047,6 +1047,7 @@ pt_BR:
         modelo_de_propaganda: "A janela estava fechada, e o modelo escolhido é de propaganda. A automação só manda modelo de utilidade. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_mudou: "A janela estava fechada, e o modelo desta caixa pede outras variáveis do que as do passo. Escolha o modelo de novo. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_faltou_valor: "A janela estava fechada, e um valor que o modelo pede estava vazio nesta conversa. A mensagem não foi mandada, e a automação parou nesta conversa."
+        modelo_texto_longo: "A janela estava fechada, e o modelo com os valores no lugar passou dos 1024 caracteres que o WhatsApp aceita. A mensagem não foi mandada, e a automação parou nesta conversa."
         laco_suspeito: "O outro lado respondeu depressa demais muitas vezes seguidas, como um robô. A automação parou nesta conversa."
         mensagens_desligadas: "Mensagem e aviso estão desligados nesta conta. Nada foi mandado."
         ninguem_para_avisar: "Ninguém que enxerga esta conversa estava na lista do aviso."

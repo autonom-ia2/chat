@@ -15,6 +15,10 @@ class Autonomia::Automacao::ModeloWhatsapp
   # Só o número oficial (Cloud e 360dialog) tem modelo da Meta e janela de 24 h imposta por ela.
   CANAL = 'Channel::Whatsapp'.freeze
   ROTA = ::Crm::BookingV2::Notices::Route
+  # O corpo do modelo, com as variáveis já no lugar, não passa de 1024 caracteres: acima disso a Meta recusa com o erro
+  # 132005, e a recusa só chega depois, com o passo já "ok". Vale para qualquer valor, e o texto da IA (`ia.<passo>`,
+  # #2679) é o que mais cresce.
+  LIMITE_DO_CORPO = 1024
 
   Pronto = Data.define(:template_params, :conteudo)
 
@@ -74,7 +78,8 @@ class Autonomia::Automacao::ModeloWhatsapp
 
     # A Meta recusa variável de corpo com quebra de linha, tab ou espaços seguidos (erro 132018), e a recusa só chega
     # depois, com o passo já "ok": cada sequência de espaços vira um espaço, no envio e no texto do painel.
-    pronto(item, lidos.map { |lido| lido.split.join(' ') })
+    envio = pronto(item, lidos.map { |lido| lido.split.join(' ') })
+    envio.conteudo.length > LIMITE_DO_CORPO ? 'modelo_texto_longo' : envio
   end
 
   private

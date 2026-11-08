@@ -554,6 +554,7 @@ en:
         modelo_de_propaganda: "The window was closed, and the chosen template is marketing. The automation only sends utility templates. The message was not sent, and the automation stopped in this conversation."
         modelo_mudou: "The window was closed, and this inbox's template asks for different variables than the step's. Choose the template again. The message was not sent, and the automation stopped in this conversation."
         modelo_faltou_valor: "The window was closed, and a value the template needs was empty in this conversation. The message was not sent, and the automation stopped in this conversation."
+        modelo_texto_longo: "The window was closed, and the template with the values in place went over the 1024 characters WhatsApp accepts. The message was not sent, and the automation stopped in this conversation."
         laco_suspeito: "The other side replied too fast too many times in a row, like a bot. The automation stopped in this conversation."
         mensagens_desligadas: "Message and alert steps are off for this account. Nothing was sent."
         ninguem_para_avisar: "Nobody who can see this conversation was on the alert list."

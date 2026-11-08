@@ -75,6 +75,30 @@ RSpec.describe 'Texto da IA entre passos', :automacao_motor do # rubocop:disable
     expect(pedidos.last.to_json).to include(texto_da_ia)
   end
 
+  it 'fora da janela, o texto da IA que estoura os 1024 caracteres do modelo para antes da Graph', :aggregate_failures do
+    recebida(30.hours.ago)
+    openai_devolve('texto' => 'a' * 1020)
+
+    execucao = rodar(escrever, mensagem_do_texto(modelo: true))
+
+    expect(registros(execucao)).to eq([['p1', 'ok', nil], %w[p2 falhou modelo_texto_longo]])
+    expect(execucao.reload.estado).to eq('parada')
+    expect(mandada).to be_nil
+    expect(pedidos).to be_empty
+  end
+
+  it 'fora da janela, o texto da IA que cabe exato nos 1024 caracteres sai pelo modelo', :aggregate_failures do
+    recebida(30.hours.ago)
+    openai_devolve('texto' => 'a' * 1020)
+    canal.update!(message_templates: [{ 'name' => 'retomar', 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'UTILITY',
+                                        'components' => [{ 'type' => 'BODY', 'text' => 'Olá {{1}}' }] }])
+
+    execucao = rodar(escrever, mensagem_do_texto(modelo: true))
+
+    expect(registros(execucao)).to eq([['p1', 'ok', nil], ['p2', 'ok', nil]])
+    expect(mandada.content.length).to eq(1024)
+  end
+
   it 'dentro da janela, o mesmo texto vai direto, sem o modelo', :aggregate_failures do
     recebida(1.hour.ago)
     openai_devolve('texto' => texto_da_ia)
