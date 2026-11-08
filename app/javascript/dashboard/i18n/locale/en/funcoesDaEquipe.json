@@ -190,6 +190,7 @@
       "POSTS_MANAGE": "Reply to, hide and delete the comments on the posts",
       "INBOX_MANAGE": "Set up the channels",
       "AUTONOMIA_MANAGE": "Create and train the AI bots",
+      "AUTONOMIA_TOOLS_MANAGE": "Connect the AI bots to other company systems",
       "AUTOMATION_MANAGE": "Create and change the automatic rules",
       "LABEL_MANAGE": "Create and change labels",
       "MACRO_MANAGE": "Create and change message shortcuts",
@@ -263,6 +264,10 @@
       "AUTONOMIA": {
         "NOME": "AI bots",
         "NA_FRASE": "AI bots"
+      },
+      "AUTONOMIA_TOOLS": {
+        "NOME": "Bots connected to other systems",
+        "NA_FRASE": "how the bots connect to other systems"
       },
       "DESEMPENHO": {
         "NOME": "Team performance",

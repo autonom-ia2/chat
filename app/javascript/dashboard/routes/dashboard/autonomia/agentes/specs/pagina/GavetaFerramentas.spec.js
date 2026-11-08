@@ -188,7 +188,7 @@ describe('GavetaFerramentas · lista (F01)', () => {
     wrapper.unmount();
   });
 
-  it('explains, without the list, when the API refuses (not a super admin)', async () => {
+  it('explains, without the list, when the API refuses (no tools key)', async () => {
     // Pundit::NotAuthorizedError → render_unauthorized: o backend responde 401.
     api.getTools.mockRejectedValueOnce({ response: { status: 401 } });
     const wrapper = mount(GavetaFerramentas, {
@@ -197,7 +197,7 @@ describe('GavetaFerramentas · lista (F01)', () => {
     });
     await flushPromises();
     expect(no('[data-sem-permissao]').textContent).toContain(
-      'Ferramentas são configuradas só pela equipe da plataforma'
+      'Só quem tem a permissão Gerenciar ferramentas mexe aqui'
     );
     expect(texto()).not.toContain('Sua permissão mudou');
     await clicarNoTexto('Voltar ao agente');

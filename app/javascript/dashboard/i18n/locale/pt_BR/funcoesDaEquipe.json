@@ -190,6 +190,7 @@
       "POSTS_MANAGE": "Responder, esconder e apagar os comentários dos posts",
       "INBOX_MANAGE": "Arrumar os canais",
       "AUTONOMIA_MANAGE": "Criar e treinar os robôs de IA",
+      "AUTONOMIA_TOOLS_MANAGE": "Ligar os robôs de IA a outros sistemas da empresa",
       "AUTOMATION_MANAGE": "Criar e mudar as regras automáticas",
       "LABEL_MANAGE": "Criar e mudar as etiquetas",
       "MACRO_MANAGE": "Criar e mudar os atalhos de mensagens",
@@ -263,6 +264,10 @@
       "AUTONOMIA": {
         "NOME": "Robôs de IA",
         "NA_FRASE": "os robôs de IA"
+      },
+      "AUTONOMIA_TOOLS": {
+        "NOME": "Robôs ligados a outros sistemas",
+        "NA_FRASE": "a ligação dos robôs com outros sistemas"
       },
       "DESEMPENHO": {
         "NOME": "Desempenho da equipe",
