@@ -12151,6 +12151,18 @@
     ],
     "sem_corpo": false
   },
+  "POST autonomia/prospecting/searches/interpret": {
+    "campos": {
+      "frase": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/prospecting/search_interpretations#create",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/prospecting/search_interpretations_controller.rb:4",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/search_interpretations_controller.rb:5"
+    ],
+    "sem_corpo": false
+  },
   "POST autonomia/tarefas/:id/cancelar": {
     "completo": true,
     "controller": "api/v1/accounts/autonomia/tarefas#cancelar",

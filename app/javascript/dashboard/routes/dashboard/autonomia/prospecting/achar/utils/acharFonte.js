@@ -2,7 +2,13 @@ import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { sendInBatches, CRM_BATCH_SIZE } from '../../utils/crmSend';
 import { buscaDoPayload, empresaDoLead } from './acharLead';
-import { montarPedido, pedidoDeNovo, pedidoSalvoDe } from './acharPedido';
+import {
+  ajustesDosFiltros,
+  montarPedido,
+  ordemDoModo,
+  pedidoDeNovo,
+  pedidoSalvoDe,
+} from './acharPedido';
 import { demoPedido } from './acharRotas';
 
 // #2692 — de onde a Prospecção nova lê (molde: agentes/utils/desempenhoFonte.js).
@@ -33,6 +39,15 @@ const diasDesde = data =>
 const ESTADOS_SEM_BUSCAS = ['buscas-vazio', 'buscas-so-ver-vazio'];
 const ESTADOS_SEM_FILA = ['fila-vazia', 'fila-vazia-so-ver'];
 const ESTADOS_COM_DOIS_FUNIS = ['folha-sem-destino', 'folha-para-onde'];
+const ESTADOS_DE_UMA_SUGESTAO = [
+  'porta-uma-sugestao',
+  'porta-frase-uma-sugestao',
+];
+// A recusa da frase na demonstração, com o código que o servidor manda.
+const ERROS_DA_FRASE = {
+  'porta-frase-erro': 'prospecting.interpret.ai_failed',
+  'porta-frase-sem-ia': 'prospecting.interpret.ai_not_configured',
+};
 // Antes de a pessoa tirar alguém, a lista vem inteira; da jornada em diante
 // (confira-tirou, gaveta, folha, pronto) as 2 tiradas ficam em "Não vai".
 const ANTES_DE_TIRAR = ['buscando', 'chegando', 'confira', 'leitura'];
@@ -78,6 +93,26 @@ const doPublico = ({ audience = {}, left_out: fora = [] }) => ({
   fora: fora.map(item => ({ id: item.lead_id, motivo: item.reason_code })),
 });
 
+// O pedido em uma frase (#2696), igual na demonstração e na API: o que a IA da
+// conta entendeu, nos nomes da porta. "Não entendi" volta sem nada preenchido.
+// `primeiro` só vem quando a frase pediu a presença fraca (gbp); o modo geral
+// é o padrão do servidor e não diz nada sobre a ordem escolhida à mão.
+const daFrase = ({
+  status,
+  what: oQue = null,
+  where: onde = null,
+  advanced_filters: filtros = {},
+  score_mode: modo = 'general',
+  left_out: ficouDeFora = null,
+}) => ({
+  entendeu: status === 'understood',
+  oQue,
+  onde,
+  ajustes: ajustesDosFiltros(filtros),
+  primeiro: modo === 'gbp' ? ordemDoModo(modo) : null,
+  ficouDeFora,
+});
+
 // O id do Público de exemplo da demonstração: nada é gravado, e "Criar a
 // mensagem" não o leva para a Nova campanha (AcharConfiraPage).
 const PUBLICO_DA_DEMO = 9001;
@@ -107,13 +142,24 @@ const fonteDemo = ({ estado, carregarDemo, atraso, usuarioId }) => {
         preenchido: demo.PORTA[estado] || demo.PORTA.porta,
         modelos: demo.PORTA[estado]?.modelos ? demo.MODELOS : [],
         limite: demo.LIMITE,
+        iaPronta: estado !== 'porta-sem-ia',
       };
+    },
+    async interpretar() {
+      const demo = await dados();
+      await esperar(atraso);
+      if (ERROS_DA_FRASE[estado]) {
+        throw Object.assign(new Error('demo'), {
+          codigo: ERROS_DA_FRASE[estado],
+        });
+      }
+      return daFrase(demo.FRASE_POR_ESTADO[estado] || demo.FRASE_ENTENDIDA);
     },
     async sugestoesDeLugar() {
       const demo = await dados();
       await esperar(atraso);
       if (estado === 'porta-lugar-nao-achado') return [];
-      return estado === 'porta-uma-sugestao'
+      return ESTADOS_DE_UMA_SUGESTAO.includes(estado)
         ? demo.SUGESTAO_UNICA
         : demo.SUGESTOES;
     },
@@ -327,7 +373,21 @@ const fonteApi = ({ api, crm, usuarioId, usuarioNome }) => ({
       googlePronto:
         ajustes.payload?.platform_google_places_configured !== false,
       emTeste: ajustes.payload?.mock_provider === true,
+      // Sem a IA do Kanban CRM, o campo da frase não aparece (#2696).
+      iaPronta: ajustes.payload?.ai_credential_configured === true,
     };
+  },
+  // Na recusa, o erro leva o código do servidor (ai_failed,
+  // ai_not_configured...); a porta escolhe a frase.
+  async interpretar(texto) {
+    try {
+      const { data } = await api.interpretSearch(texto);
+      return daFrase(data.payload || {});
+    } catch (erro) {
+      throw Object.assign(new Error('frase'), {
+        codigo: erro?.response?.data?.code || null,
+      });
+    }
   },
   async sugestoesDeLugar(texto) {
     const { data } = await api.getLocationSuggestions(texto);

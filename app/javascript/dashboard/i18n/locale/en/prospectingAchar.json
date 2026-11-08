@@ -42,6 +42,17 @@
     },
     "PORTA": {
       "TITULO": "Which businesses do you want to find?",
+      "FRASE": {
+        "ROTULO": "Describe what you are looking for",
+        "PLACEHOLDER": "E.g.: bakeries near Paulista Avenue with good ratings",
+        "BOTAO": "Fill in the fields",
+        "BOTAO_OCUPADO": "Reading…",
+        "CONFIRA": "Done. Check the fields below before searching.",
+        "NAO_ENTENDEU": "We did not understand. Write it another way or fill in the fields below.",
+        "ERRO": "The AI did not answer now. Fill in the fields below.",
+        "SEM_IA": "The account AI is not turned on. Fill in the fields below.",
+        "LENDO": "Reading your sentence…"
+      },
       "O_QUE": {
         "ROTULO": "What?",
         "PLACEHOLDER": "E.g. offices"

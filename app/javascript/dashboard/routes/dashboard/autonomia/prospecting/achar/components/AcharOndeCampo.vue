@@ -13,6 +13,8 @@ const props = defineProps({
   procurando: { type: Boolean, default: false },
   naoAchou: { type: Boolean, default: false },
   destacar: { type: Boolean, default: false },
+  // Enquanto a IA lê o pedido em uma frase (#2696), o campo não muda.
+  bloqueado: { type: Boolean, default: false },
 });
 const emit = defineEmits(['escolher', 'alterar']);
 const texto = defineModel('texto', { type: String, default: '' });
@@ -20,7 +22,10 @@ const id = useId();
 const listaId = `${id}-lista`;
 const campo = ref(null);
 const ativo = ref(-1);
-const aberta = computed(() => !props.lugar && props.sugestoes.length > 0);
+// Travado (a IA lendo a frase), a lista fecha e tocar numa sugestão não faz nada.
+const aberta = computed(
+  () => !props.lugar && props.sugestoes.length > 0 && !props.bloqueado
+);
 const opcaoId = indice => `${id}-opcao-${indice}`;
 // Várias sugestões e a pessoa ainda não tocou: a primeira já vem marcada
 // (rodada 2), e Enter escolhe.
@@ -91,6 +96,7 @@ defineExpose({ focarPrimeira });
         slate
         faded
         class="!min-h-11 !rounded-xl shrink-0"
+        :disabled="bloqueado"
         data-alterar-lugar
         @click="emit('alterar')"
       />
@@ -108,6 +114,7 @@ defineExpose({ focarPrimeira });
         :aria-controls="listaId"
         :aria-activedescendant="ativo >= 0 ? opcaoId(ativo) : undefined"
         :placeholder="$t('PROSPECTING_ACHAR.PORTA.ONDE.PLACEHOLDER')"
+        :disabled="bloqueado"
         class="w-full !h-12 px-3 text-base border outline-none !mb-0 rounded-xl border-n-slate-6 bg-n-solid-1 text-n-slate-12 placeholder:text-n-slate-10 focus:border-n-blue-9"
         data-campo-onde
         @keydown="aoTeclar"

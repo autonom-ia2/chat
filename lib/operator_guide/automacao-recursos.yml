@@ -352,5 +352,6 @@ fora:
       - autonomia/prospecting/leads
       - autonomia/prospecting/lists
       - autonomia/prospecting/saved_presets
+      - autonomia/prospecting/search_interpretations
       - autonomia/prospecting/searches
       - autonomia/prospecting/settings

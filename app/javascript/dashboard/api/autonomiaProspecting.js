@@ -1,6 +1,8 @@
 /* global axios */
 import ApiClient from './ApiClient';
 
+export const INTERPRET_TIMEOUT_MS = 20000;
+
 class AutonomiaProspectingAPI extends ApiClient {
   constructor() {
     super('autonomia/prospecting', { accountScoped: true });
@@ -12,6 +14,17 @@ class AutonomiaProspectingAPI extends ApiClient {
 
   getSearch(searchId) {
     return axios.get(`${this.url}/searches/${searchId}`);
+  }
+
+  // Pedido em uma frase (#2696): a IA da conta devolve o quê, onde e os
+  // ajustes; não cria a busca. O prazo de 20 s é só desta chamada: estourou,
+  // a porta mostra o aviso de falha e destrava os campos.
+  interpretSearch(frase) {
+    return axios.post(
+      `${this.url}/searches/interpret`,
+      { frase },
+      { timeout: INTERPRET_TIMEOUT_MS }
+    );
   }
 
   getLocationSuggestions(query) {

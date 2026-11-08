@@ -985,6 +985,12 @@ en:
         errors:
           no_leads: 'Escolha pelo menos um lead para criar contatos.'
           too_many_leads: 'Crie até %{max} contatos por vez.'
+      interpret:
+        errors:
+          text_blank: 'Write what you are looking for.'
+          text_too_long: 'Write your request in up to %{max} characters.'
+          ai_not_configured: 'The account AI is not turned on. Fill in the fields.'
+          ai_failed: 'The AI did not answer now. Fill in the fields.'
       audience:
         left_out:
           not_found: 'Não está mais na sua lista.'

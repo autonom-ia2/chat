@@ -1442,6 +1442,12 @@ pt_BR:
         errors:
           no_leads: 'Escolha pelo menos um lead para criar contatos.'
           too_many_leads: 'Crie até %{max} contatos por vez.'
+      interpret:
+        errors:
+          text_blank: 'Escreva o que você procura.'
+          text_too_long: 'Escreva o pedido com até %{max} letras.'
+          ai_not_configured: 'A IA da conta não está ligada. Preencha os campos.'
+          ai_failed: 'A IA não respondeu agora. Preencha os campos.'
       audience:
         left_out:
           not_found: 'Não está mais na sua lista.'

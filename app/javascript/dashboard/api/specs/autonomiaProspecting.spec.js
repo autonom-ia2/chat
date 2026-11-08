@@ -135,4 +135,16 @@ describe('#AutonomiaProspectingAPI', () => {
       '/api/v1/accounts/85/autonomia/prospecting/saved_presets/5'
     );
   });
+
+  // Pedido em uma frase (#2696): o corpo leva `frase`, e o prazo de 20 s vale
+  // só para esta chamada.
+  it('interpreta a frase com prazo próprio de 20 s', () => {
+    prospecting.interpretSearch('padarias no centro');
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/searches/interpret',
+      { frase: 'padarias no centro' },
+      { timeout: 20000 }
+    );
+  });
 });
