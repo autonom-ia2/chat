@@ -7,7 +7,10 @@
         "ULTIMA_MENSAGEM": "The message that started the automation",
         "CONVERSA": "Channel, inbox, labels and status of the conversation",
         "CONTATO": "Contact name and fields (never email or phone)",
-        "EMPRESA": "Company name and fields"
+        "EMPRESA": "Company name and fields",
+        "ANEXOS": "Photos, PDFs and voice notes the customer sent",
+        "CARD": "The card: title, stage, pipeline, status and fields",
+        "NOTAS": "The conversation's internal notes (in a text to the customer, the AI may repeat what they say)"
       },
       "CAMINHO": {
         "NOME": "Path name",
@@ -30,8 +33,14 @@
       "DESTINOS": {
         "MENSAGEM": "Send to the customer",
         "SUGESTAO": "Leave as a suggestion for the team to review",
+        "GUARDAR": "Just keep it, for a later step to use",
         "NOTA": "Note in the conversation",
         "AVISAR": "Notify the team"
+      },
+      "TEXTO_DA_IA": {
+        "ESCREVER": "AI text: “{instrucao}”",
+        "ESCREVER_SEM_INSTRUCAO": "AI text (step without instruction)",
+        "RESUMIR": "AI summary"
       },
       "DESTINO_GRAVAR": {
         "CONTATO_NOME": "Contact name",
@@ -65,6 +74,13 @@
           "CHAVE_RECUSADA": "The AI provider refused the account key. Check the key in integrations.",
           "OUTRO": "The AI could not answer for this conversation."
         }
+      },
+      "ANEXOS": {
+        "LERIA": "This conversation has no attachment for the AI to read. | The AI would read 1 attachment from this conversation. | The AI would read {n} attachments from this conversation.",
+        "ANEXO_GRANDE_DEMAIS": "An attachment in this conversation is too large for the AI. The AI is not called in this conversation.",
+        "ANEXO_FORA_DO_FORMATO": "An attachment in this conversation is in a format the AI cannot read. The AI is not called in this conversation.",
+        "ANEXO_SEM_LEITURA": "An attachment in this conversation cannot be read yet (a voice note without transcription or a file that did not arrive). The AI is not called in this conversation.",
+        "MODELO_SEM_IMAGEM": "The AI of this step cannot see photos or PDFs. The AI is not called in this conversation."
       }
     }
   }

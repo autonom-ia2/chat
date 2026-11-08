@@ -3,6 +3,7 @@
 // a condição lê e cada passo com os campos e a peça da tela de cada campo.
 import { ref } from 'vue';
 import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
+import { todosOsPassos } from './receita';
 
 const catalogo = ref(null);
 let carregando = null;
@@ -89,9 +90,17 @@ export const novoPasso = (entrada, id, t) => {
   if (entrada.tipo === 'mensagem') return { id, tipo: 'mensagem', texto: [] };
   if (entrada.tipo === 'avisar')
     return { id, tipo: 'avisar', texto: [], para: { responsavel: true } };
+  // G14: nasce no "não receber", que vale em qualquer gatilho.
+  if (entrada.tipo === 'campanha')
+    return { id, tipo: 'campanha', faz: 'nao_receber' };
   // G2: a caixa de e-mail a escolher, o assunto e o texto a escrever.
   if (entrada.tipo === 'email')
     return { id, tipo: 'email', caixa_id: null, assunto: [], texto: [] };
+  // G3: o retorno nasce para o responsável, daqui a um dia, só como lembrete.
+  if (entrada.tipo === 'retorno')
+    return { id, tipo: 'retorno', titulo: [], daqui: { ...DURACAO_PADRAO } };
+  // G4: a etapa do card a escolher no painel.
+  if (entrada.tipo === 'card') return { id, tipo: 'card', etapa_id: null };
   // F7: os passos de IA nascem com o que a IA lê por padrão; o decidir com dois
   // caminhos e o extrair com um dado, a preencher no painel.
   const LE = ['mensagens_recentes'];
@@ -178,4 +187,34 @@ export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
         (!item.so_nos_gatilhos || item.so_nos_gatilhos.includes(tipoDoGatilho))
     ),
   };
+};
+
+// #2679 — o texto que um "escrever" ou "resumir" da receita produz vira um dado
+// que os passos seguintes leem (`ia.<id>`). O rótulo diz qual: a instrução do
+// "escrever", ou "Resumo da IA"; dois iguais levam o id junto (comChaveSeRepetido).
+// Antes de o passo rodar, o dado está vazio e o passo que o lê pula.
+const CABE_NO_ROTULO = 40;
+const rotuloDoTexto = (passo, t) => {
+  if (passo.tipo === 'resumir')
+    return t('AUTOMACAO_LIVRE.IA.TEXTO_DA_IA.RESUMIR');
+  const letras = Array.from((passo.instrucao || '').trim());
+  const curta =
+    letras.length > CABE_NO_ROTULO
+      ? `${letras.slice(0, CABE_NO_ROTULO).join('').trimEnd()}…`
+      : letras.join('');
+  return curta
+    ? t('AUTOMACAO_LIVRE.IA.TEXTO_DA_IA.ESCREVER', { instrucao: curta })
+    : t('AUTOMACAO_LIVRE.IA.TEXTO_DA_IA.ESCREVER_SEM_INSTRUCAO');
+};
+
+export const comTextosDaIa = (dados, passos, t) => {
+  if (!dados?.valores) return dados;
+  const textos = todosOsPassos(passos)
+    .filter(passo => ['escrever', 'resumir'].includes(passo.tipo))
+    .map(passo => ({
+      caminho: `ia.${passo.id}`,
+      chave: passo.id,
+      rotulo: rotuloDoTexto(passo, t),
+    }));
+  return { ...dados, valores: [...dados.valores, ...textos] };
 };

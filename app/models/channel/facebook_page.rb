@@ -39,6 +39,9 @@ class Channel::FacebookPage < ApplicationRecord
   REFERRAL_FIELDS = %w[messaging_referrals].freeze
 
   validates :page_id, uniqueness: { scope: :account_id }
+  # O token do login de empresa (Facebook Login for Business, #2683) passa de 255 caracteres, o teto genérico das colunas
+  # string no ApplicationRecord. A coluna não tem limite no banco; este teto folgado só substitui o genérico.
+  validates :page_access_token, :user_access_token, length: { maximum: 4096 }
 
   after_create_commit :subscribe
   before_destroy :unsubscribe
