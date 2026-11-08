@@ -199,9 +199,9 @@
     "controller": "api/v1/accounts/autonomia/prospecting/lists#remove_lead",
     "modelo": "Autonomia::Prospecting::List",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:47",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:49",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:48"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:46",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:48",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:47"
     ],
     "sem_corpo": true
   },
@@ -3810,9 +3810,9 @@
     "envelope": "lead",
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:15",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:226",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:16"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:14",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:198",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:15"
     ],
     "sem_corpo": false
   },
@@ -11864,9 +11864,9 @@
       "leitura crua sem tipo: owner_name (repassada a ::Autonomia::Prospecting::OwnerAdoption.new)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:142",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:145",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:143"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:129",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:132",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:130"
     ],
     "sem_corpo": false
   },
@@ -11885,8 +11885,8 @@
     "controller": "api/v1/accounts/autonomia/prospecting/leads#create_contact",
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:31",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:33"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:30",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:32"
     ],
     "sem_corpo": true
   },
@@ -11906,10 +11906,10 @@
     },
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:50",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:220",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:49",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:192",
       "app/controllers/api/v1/accounts/autonomia/prospecting/base_controller.rb:37",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:51"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:50"
     ],
     "sem_corpo": false
   },
@@ -11918,8 +11918,8 @@
     "controller": "api/v1/accounts/autonomia/prospecting/leads#enrich",
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:113",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:114"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:100",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:101"
     ],
     "sem_corpo": true
   },
@@ -11934,9 +11934,9 @@
     "controller": "api/v1/accounts/autonomia/prospecting/leads#research",
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:129",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:136",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:130"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:116",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:123",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:117"
     ],
     "sem_corpo": false
   },
@@ -11945,34 +11945,27 @@
     "controller": "api/v1/accounts/autonomia/prospecting/leads#verify_whatsapp",
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:93",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:95"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:80",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:82"
     ],
     "sem_corpo": true
   },
-  "POST autonomia/prospecting/leads/campaign_segment": {
+  "POST autonomia/prospecting/leads/audience": {
     "campos": {
-      "campaign_id": {
-        "tipo": "id",
-        "tipo_pela_leitura": "nome"
-      },
-      "campaign_type": {},
       "lead_ids": {
-        "tipo": "lista",
-        "tipo_pela_leitura": "nome"
+        "tipo": "lista"
       },
-      "segment_name": {}
+      "name": {
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string"
+      }
     },
-    "completo": false,
-    "controller": "api/v1/accounts/autonomia/prospecting/leads#create_campaign_segment",
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/prospecting/lead_audiences#create",
     "modelo": "Autonomia::Prospecting::Lead",
-    "motivos": [
-      "leitura crua sem tipo: campaign_type, segment_name (repassada a ::Autonomia::Prospecting::SelectionCampaignSegment.new)"
-    ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:82",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:190",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:189"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lead_audiences_controller.rb:9",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lead_audiences_controller.rb:10"
     ],
     "sem_corpo": false
   },
@@ -12015,9 +12008,9 @@
     "controller": "api/v1/accounts/autonomia/prospecting/leads#create_crm_cards",
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:66",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:65",
       "app/controllers/api/v1/accounts/autonomia/prospecting/base_controller.rb:37",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:67"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:66"
     ],
     "sem_corpo": false
   },
@@ -12060,26 +12053,7 @@
     "envelope": "list",
     "modelo": "Autonomia::Prospecting::List",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:17",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:84"
-    ],
-    "sem_corpo": false
-  },
-  "POST autonomia/prospecting/lists/:id/campaign_segment": {
-    "campos": {
-      "campaign_id": {},
-      "campaign_type": {},
-      "segment_name": {}
-    },
-    "completo": true,
-    "controller": "api/v1/accounts/autonomia/prospecting/lists#campaign_segment",
-    "corpo_plano": false,
-    "envelope": "campaign_segment",
-    "modelo": "Autonomia::Prospecting::List",
-    "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:54",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:90",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:88",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:16",
       "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:56"
     ],
     "sem_corpo": false
@@ -12096,9 +12070,9 @@
     "controller": "api/v1/accounts/autonomia/prospecting/lists#add_lead",
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:31",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:33",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:32"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:30",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:32",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:31"
     ],
     "sem_corpo": false
   },
@@ -23525,9 +23499,9 @@
     "envelope": "lead",
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:15",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:226",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:16"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:14",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:198",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/leads_controller.rb:15"
     ],
     "sem_corpo": false
   },

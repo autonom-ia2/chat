@@ -16,9 +16,16 @@ const ERRO_DO_CODIGO = {
 };
 
 // A frase de cada erro do envio ao funil (folha e gaveta).
+// Quantas empresas cabem num Público de uma vez: o mesmo teto do servidor
+// (AudienceFromLeads::MAX_LEADS, medido no #2695 r1).
+export const LIMITE_DO_PUBLICO = 100;
+
 export const TEXTO_DO_ERRO = {
   funil: 'PROSPECTING_ACHAR.FOLHA.ERRO_FUNIL',
   lista: 'PROSPECTING_ACHAR.FOLHA.ERRO_LISTA',
+  lista_ninguem: 'PROSPECTING_ACHAR.FOLHA.ERRO_LISTA_NINGUEM',
+  lista_demais: 'PROSPECTING_ACHAR.FOLHA.ERRO_LISTA_DEMAIS',
+  lista_contato_apagado: 'PROSPECTING_ACHAR.FOLHA.ERRO_LISTA_CONTATO_APAGADO',
   dono_sem_chave: 'PROSPECTING_ACHAR.FOLHA.ERRO_DONO_SEM_CHAVE',
   dono_sem_funil: 'PROSPECTING_ACHAR.FOLHA.ERRO_DONO_SEM_FUNIL',
 };

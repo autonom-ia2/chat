@@ -55,6 +55,16 @@ describe('#AutonomiaProspectingAPI', () => {
     );
   });
 
+  // "Guardar para mandar mensagem" (#2695): Público a partir dos leads.
+  it('guarda os leads num Público com o nome', () => {
+    prospecting.createAudience({ leadIds: [1, 2], name: 'Padarias' });
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/leads/audience',
+      { lead_ids: [1, 2], name: 'Padarias' }
+    );
+  });
+
   // Descartar e criar contatos em lote (#732).
   it('descarta os leads com o motivo', () => {
     prospecting.discardLeads({ leadIds: [1, 2], reason: 'Sem interesse' });
@@ -71,38 +81,6 @@ describe('#AutonomiaProspectingAPI', () => {
     expect(axiosMock.post).toHaveBeenCalledWith(
       '/api/v1/accounts/85/autonomia/prospecting/leads/contacts',
       { lead_ids: [1, 2] }
-    );
-  });
-
-  it('adiciona os leads da seleção a uma campanha', () => {
-    prospecting.addLeadsToCampaign({
-      leadIds: [1, 2],
-      campaignId: 8,
-      segmentName: 'Padarias',
-    });
-
-    expect(axiosMock.post).toHaveBeenCalledWith(
-      '/api/v1/accounts/85/autonomia/prospecting/leads/campaign_segment',
-      { lead_ids: [1, 2], campaign_id: 8, segment_name: 'Padarias' }
-    );
-  });
-
-  it('manda o tipo da campanha quando é a da API do WhatsApp (#732)', () => {
-    prospecting.addLeadsToCampaign({
-      leadIds: [1],
-      campaignId: 8,
-      campaignType: 'whatsapp_api',
-      segmentName: 'Padarias',
-    });
-
-    expect(axiosMock.post).toHaveBeenCalledWith(
-      '/api/v1/accounts/85/autonomia/prospecting/leads/campaign_segment',
-      {
-        lead_ids: [1],
-        campaign_id: 8,
-        campaign_type: 'whatsapp_api',
-        segment_name: 'Padarias',
-      }
     );
   });
 

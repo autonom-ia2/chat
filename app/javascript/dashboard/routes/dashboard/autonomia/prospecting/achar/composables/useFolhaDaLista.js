@@ -1,6 +1,6 @@
 import { lembrarDestino } from '../utils/destinoPronto';
 import { marcarEnviadas } from '../utils/acharConfiraEstados';
-import { erroDoDono } from './useDonoDaLista';
+import { erroDoDono, LIMITE_DO_PUBLICO } from './useDonoDaLista';
 
 // #2692 — as ações da folha "O que fazer com as {n} empresas?" (F1) e dos dois
 // painéis que abrem de dentro dela ("Com quem ficam" e "Para onde vão"). Saiu
@@ -13,12 +13,24 @@ const VOLTA_DO_SUBPAINEL = {
   'folha-para-onde': 'folha-sem-destino',
 };
 
+// Recusas do Público com frase própria na folha, em vez de "não deu": ninguém
+// pode receber mensagem (a folha diz também quem ficou de fora e por quê),
+// empresas demais de uma vez e um contato apagado enquanto a lista era
+// guardada (os contatos criados até ali ficaram gravados). O código vem do
+// servidor pela fonte (acharFonte.js, guardarLista).
+const ERRO_DO_PUBLICO = {
+  'prospecting.audience.no_rows': 'lista_ninguem',
+  'prospecting.audience.too_many_leads': 'lista_demais',
+  'prospecting.audience.foreign_contact': 'lista_contato_apagado',
+};
+
 export const folhaNova = (escolha = null, mostrarFora = false) => ({
   escolha,
   mostrarFora,
   enviando: null,
   guardando: false,
   erro: null,
+  foraDoErro: [],
 });
 
 export function useFolhaDaLista({
@@ -52,6 +64,7 @@ export function useFolhaDaLista({
     folha.value = {
       ...folha.value,
       erro: null,
+      foraDoErro: [],
       enviando: { feitas: 0, total: ids.length },
     };
     const resumo = await fonte.value.mandarParaFunil({
@@ -112,18 +125,42 @@ export function useFolhaDaLista({
   const mandarDaFolha = () =>
     demo.value ? mudarEstado('folha-enviando') : enviar();
 
+  // O Público (#2695): o pronto guarda o id, para "Criar a mensagem" abrir a
+  // Nova campanha com ele, e quem ficou de fora, para dizer o porquê.
   const guardarDaFolha = async () => {
-    folha.value = { ...folha.value, guardando: true, erro: null };
+    const ids = escolhidas.value
+      .filter(empresa => empresa.temContato)
+      .map(empresa => empresa.id);
+    if (ids.length > LIMITE_DO_PUBLICO) {
+      folha.value = { ...folha.value, erro: 'lista_demais', foraDoErro: [] };
+      return;
+    }
+    folha.value = {
+      ...folha.value,
+      guardando: true,
+      erro: null,
+      foraDoErro: [],
+    };
     try {
-      const ids = escolhidas.value
-        .filter(empresa => empresa.temContato)
-        .map(empresa => empresa.id);
-      await fonte.value.guardarLista({ nome: nomeLista.value, ids });
-      pronto.value = { tipo: 'lista', n: ids.length };
+      const guardado = await fonte.value.guardarLista({
+        nome: nomeLista.value,
+        ids,
+      });
+      pronto.value = {
+        tipo: 'lista',
+        n: guardado.n,
+        publicoId: guardado.publicoId,
+        fora: guardado.fora,
+      };
       folha.value = null;
       if (demo.value) mudarEstado('guardada');
-    } catch {
-      folha.value = { ...folha.value, guardando: false, erro: 'lista' };
+    } catch (erro) {
+      folha.value = {
+        ...folha.value,
+        guardando: false,
+        erro: ERRO_DO_PUBLICO[erro?.codigo] || 'lista',
+        foraDoErro: erro?.fora || [],
+      };
     }
   };
 

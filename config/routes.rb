@@ -814,14 +814,13 @@ Rails.application.routes.draw do
                 delete :consent_refusal, on: :member, controller: :lead_consent_refusals, action: :destroy
                 post :crm_cards, on: :collection, action: :create_crm_cards
                 get :crm_owners, on: :collection, controller: :crm_owners, action: :index
-                post :campaign_segment, on: :collection, action: :create_campaign_segment
                 post :discard, on: :collection, controller: :lead_batches, action: :discard
                 post :contacts, on: :collection, controller: :lead_batches, action: :contacts
+                post :audience, on: :collection, controller: :lead_audiences, action: :create
               end
               resources :lists, only: [:index, :show, :create] do
                 post 'leads', on: :member, action: :add_lead
                 delete 'leads/:lead_id', on: :member, action: :remove_lead
-                post :campaign_segment, on: :member
                 get :export, on: :member
               end
               resource :settings, only: [:show, :update]

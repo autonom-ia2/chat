@@ -299,10 +299,16 @@ const voltarParaLista = () => {
   if (demo.value) voltarParaAListaDaDemo();
   else pronto.value = null;
 };
+// Com o Público guardado (#2695), a Nova campanha abre com ele escolhido. Na
+// demonstração o Público é de exemplo: a Nova campanha abre sem ele.
 const escreverMensagem = () =>
   router.push({
     name: 'campaigns_journey_new',
     params: { accountId: route.params.accountId },
+    query:
+      pronto.value?.publicoId && !demo.value
+        ? { audience: String(pronto.value.publicoId) }
+        : {},
   });
 const mudarPedido = () => irPara(ROTAS.PORTA, { estado: 'porta' });
 const voltarParaBuscas = () =>
@@ -555,6 +561,7 @@ watch(estado, async (novo, antigo) => {
       :enviando="folha.enviando"
       :guardando="folha.guardando"
       :erro="folha.erro"
+      :fora-do-erro="folha.foraDoErro"
       @escolher="escolherDestinoDaFolha"
       @alterar-destino="abrirSubpainel('destino')"
       @alterar-pessoa="abrirSubpainel('pessoa')"

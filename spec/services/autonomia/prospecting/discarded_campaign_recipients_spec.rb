@@ -3,7 +3,7 @@ require 'rails_helper'
 # Descarte tira da campanha em andamento (decisão de 26/09): a campanha da API do WhatsApp resolve o público quando
 # começa e guarda os destinatários. Lead descartado depois disso sai dos pendentes da campanha que recebeu o segmento da
 # lista dele, com o motivo 'discarded', no job que o descarte já enfileira. A campanha não termina com falhas por isso.
-RSpec.describe Autonomia::Prospecting::DiscardedCampaignRecipients do
+RSpec.describe Autonomia::Prospecting::DiscardedCampaignRecipients, :legacy_prospecting_segment do
   let(:account) { create(:account) }
   let(:admin) { create(:user, :administrator, account: account) }
   let(:inbox) { create_whatsapp_api_inbox(account: account) }
@@ -25,16 +25,14 @@ RSpec.describe Autonomia::Prospecting::DiscardedCampaignRecipients do
 
   def running_campaign_from(segment_list)
     campaign = create_whatsapp_api_campaign(account: account, user: admin, inbox: inbox, label: base_label)
-    Autonomia::Prospecting::CampaignSegmentBuilder.new(list: segment_list, user: admin, campaign_id: campaign.id,
-                                                       campaign_type: 'whatsapp_api').perform
+    legacy_prospecting_segment(list: segment_list, user: admin, campaign: campaign)
     WhatsappApiCampaigns::AudienceResolver.new(campaign.reload).perform
     campaign.update!(status: :running, started_at: Time.current)
     campaign
   end
 
   def segment_into(campaign, segment_list)
-    Autonomia::Prospecting::CampaignSegmentBuilder.new(list: segment_list, user: admin, campaign_id: campaign.id,
-                                                       campaign_type: 'whatsapp_api').perform
+    legacy_prospecting_segment(list: segment_list, user: admin, campaign: campaign)
   end
 
   def start(campaign)
@@ -171,11 +169,10 @@ RSpec.describe Autonomia::Prospecting::DiscardedCampaignRecipients do
     discarded = add_lead(1, '+5531999970091')
     add_lead(2, '+5531999970092')
     campaign = create_whatsapp_api_campaign(account: account, user: admin, inbox: inbox, label: base_label)
-    Autonomia::Prospecting::CampaignSegmentBuilder.new(list: list, user: admin, campaign_id: campaign.id, campaign_type: 'whatsapp_api',
-                                                       segment_name: 'Padarias').perform
+    legacy_prospecting_segment(list: list, user: admin, campaign: campaign, segment_name: 'Padarias')
     old_title = list.reload.metadata.dig('campaign_segment', 'label_title')
     start(campaign)
-    Autonomia::Prospecting::CampaignSegmentBuilder.new(list: list, user: admin, segment_name: 'Padarias SP').perform
+    legacy_prospecting_segment(list: list, user: admin, segment_name: 'Padarias SP')
     expect(list.reload.metadata.dig('campaign_segment', 'label_title')).not_to eq(old_title)
 
     discard(discarded)
@@ -188,7 +185,7 @@ RSpec.describe Autonomia::Prospecting::DiscardedCampaignRecipients do
     discarded = add_lead(1, '+5531999970081')
     add_lead(2, '+5531999970082')
     campaign = running_campaign_from(list)
-    Autonomia::Prospecting::CampaignSegmentBuilder.new(list: list, user: admin).perform
+    legacy_prospecting_segment(list: list, user: admin)
 
     discard(discarded)
 

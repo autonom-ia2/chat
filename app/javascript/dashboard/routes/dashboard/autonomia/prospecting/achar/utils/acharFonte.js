@@ -69,6 +69,19 @@ const doEnvio = ({ created = [], existing = [], failed = [] }) => ({
   })),
 });
 
+// O Público guardado (#2695), igual na demonstração e na API: o id para abrir
+// a Nova campanha com ele, quantas pessoas entraram e quem ficou de fora.
+const doPublico = ({ audience = {}, left_out: fora = [] }) => ({
+  publicoId: audience.id || null,
+  nome: audience.name || '',
+  n: audience.count || 0,
+  fora: fora.map(item => ({ id: item.lead_id, motivo: item.reason_code })),
+});
+
+// O id do Público de exemplo da demonstração: nada é gravado, e "Criar a
+// mensagem" não o leva para a Nova campanha (AcharConfiraPage).
+const PUBLICO_DA_DEMO = 9001;
+
 const comDias = search => ({
   ...buscaDoPayload(search),
   diasAtras: diasDesde(search.created_at),
@@ -243,9 +256,22 @@ const fonteDemo = ({ estado, carregarDemo, atraso, usuarioId }) => {
     async baixarBusca() {
       await esperar(atraso);
     },
+    // Como a API: um Público de exemplo e, com mais de uma, a última fica de
+    // fora por não ter celular nem e-mail (para dar para ver a frase).
     async guardarLista({ nome, ids }) {
       await esperar(atraso * 2);
-      return { nome, n: ids.length };
+      const fora =
+        ids.length > 1
+          ? [{ lead_id: ids[ids.length - 1], reason_code: 'no_channel' }]
+          : [];
+      return doPublico({
+        audience: {
+          id: PUBLICO_DA_DEMO,
+          name: nome,
+          count: ids.length - fora.length,
+        },
+        left_out: fora,
+      });
     },
     async fila() {
       const demo = await dados();
@@ -414,10 +440,21 @@ const fonteApi = ({ api, crm, usuarioId, usuarioNome }) => ({
     const { data } = await api.exportSearch(id, { format: 'xlsx' });
     salvarArquivo(data, `prospeccao-${id}.xlsx`);
   },
-  // O Público a partir de empresas é backend novo (v4, fase 3). Até lá o cartão
-  // "Guardar para mandar mensagem" não aparece fora da demonstração.
-  async guardarLista() {
-    throw new Error('publico_de_empresas_indisponivel');
+  // "Guardar para mandar mensagem" (#2695): as empresas viram um Público de
+  // Campanhas. Na recusa, o erro leva o código do servidor (no_rows,
+  // too_many_leads, foreign_contact...; a folha escolhe a frase em
+  // useFolhaDaLista) e quem ficou de fora.
+  async guardarLista({ nome, ids }) {
+    try {
+      const { data } = await api.createAudience({ leadIds: ids, name: nome });
+      return doPublico(data.payload || {});
+    } catch (erro) {
+      const recusa = erro?.response?.data || {};
+      throw Object.assign(new Error('publico'), {
+        codigo: recusa.code || null,
+        fora: doPublico({ left_out: recusa.left_out || [] }).fora,
+      });
+    }
   },
   // A fila "Para chamar" pede leads#index com view=queue (v4, fase 5).
   async fila() {
