@@ -8,7 +8,6 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
   pendentes = {
     1 => ['Renovação do seguro sem esquecer ninguém', 'G6 (30 dias antes do vencimento), G1, G2, G3, G8, G11, G12'],
     2 => ['Lead do anúncio atendido em 5 minutos', 'G29 (card criado pelo formulário de um anúncio e o nome dele), G30, G31, G32'],
-    3 => ['Pós-procedimento da clínica', 'G5 (entrou em "Atendida"), G1, G2, G3, G12, G16, G20'],
     4 => ['Aluno que começa a faltar', 'G5 (entrou em "Faltou"), G1, G3, G4, G12, G15, G25'],
     5 => ['Revisão do carro no tempo certo', 'G5 (card ganho), G1, G3, G6, G12, G16, G19'],
     6 => ['Aniversário que vira horário marcado', 'G6 (data de nascimento do contato), G1, G4, G12, G14, G16, G25'],
