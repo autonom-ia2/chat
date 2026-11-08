@@ -240,6 +240,53 @@ describe('LivreData', () => {
     expect(wrapper.find('[data-data-sem-campo]').exists()).toBe(true);
   });
 
+  // #2705: "até o fim do mês" (exemplo 6, passos 5 e 10).
+  it('fim do mês: hoje + 1 mês no último dia do mês vira fim_do e a frase diz isso', async () => {
+    const wrapper = montar(null);
+    await escolher(wrapper, 'data-data-modo', 'hoje');
+    expect(wrapper.find('[data-data-fim]').attributes('data-valor')).toBe(
+      'dia'
+    );
+    await wrapper.find('[data-data-numero]').setValue('1');
+    await escolher(wrapper, 'data-data-unidade', 'meses');
+    await escolher(wrapper, 'data-data-fim', 'mes');
+
+    const valor = ultimo(wrapper);
+    expect(valor).toEqual({
+      $data: {
+        de: 'hoje',
+        mais: { valor: 1, unidade: 'meses' },
+        fim_do: 'mes',
+      },
+    });
+    await wrapper.setProps({ modelValue: valor });
+    expect(wrapper.find('[data-data-frase]').text()).toBe(
+      'AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.GRAVA(AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA_FIM_DO_MES(AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA_MAIS(AUTOMACAO_LIVRE.ALTERAR_PAINEL.HOJE,1,AUTOMACAO_LIVRE.UNIDADES.MESES#1)))'
+    );
+  });
+
+  it('fim do mês com zero: o fim do próprio mês; voltar ao dia calculado tira o fim_do', async () => {
+    const wrapper = montar(null);
+    await escolher(wrapper, 'data-data-modo', 'hoje');
+    await wrapper.find('[data-data-numero]').setValue('0');
+    await escolher(wrapper, 'data-data-fim', 'mes');
+    expect(ultimo(wrapper)).toEqual({ $data: { de: 'hoje', fim_do: 'mes' } });
+
+    await escolher(wrapper, 'data-data-fim', 'dia');
+    expect(ultimo(wrapper)).toEqual({ $data: { de: 'hoje' } });
+  });
+
+  it('reabre o fim do mês salvo', () => {
+    const wrapper = montar({ $data: { de: 'hoje', fim_do: 'mes' } });
+
+    expect(wrapper.find('[data-data-fim]').attributes('data-valor')).toBe(
+      'mes'
+    );
+    expect(wrapper.find('[data-data-frase]').text()).toBe(
+      'AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.GRAVA(AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA_FIM_DO_MES(AUTOMACAO_LIVRE.ALTERAR_PAINEL.HOJE))'
+    );
+  });
+
   it('reabre o que foi salvo: modo, número, unidade e sentido', () => {
     const wrapper = montar({
       $data: {
