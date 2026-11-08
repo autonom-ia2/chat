@@ -1126,6 +1126,7 @@ pt_BR:
         modelo_indisponivel: "Passo %{passo}: nenhuma caixa do WhatsApp oficial tem o modelo %{nome} aprovado, de utilidade e com estas variáveis."
         time_de_fora: "Passo %{passo}: o time %{id} não é desta conta."
         pessoa_de_fora: "Passo %{passo}: a pessoa %{id} não é desta conta."
+        da_reuniao_so_no_gatilho: "Passo %{passo}: avisar quem atende a reunião só vale nos gatilhos de reunião."
         gatilho_desligado: 'Os gatilhos de card e de tempo estão desligados nesta conta.'
         reunioes_desligadas: 'As reuniões estão desligadas nesta instalação, e os gatilhos de reunião não podem ser usados.'
         etapa_de_fora: 'Gatilho: a etapa %{id} não é desta conta.'
@@ -1139,6 +1140,7 @@ pt_BR:
         etiqueta_de_fora: 'Gatilho: a etiqueta %{etiqueta} não existe nesta conta.'
         atributo_de_fora: 'Gatilho: o campo %{campo} não é um campo de contato desta conta.'
         funil_de_fora: 'Gatilho: o funil %{id} não é desta conta.'
+        pagina_de_fora: 'Gatilho: a página de agendamento %{id} não é desta conta.'
         ia_desligada: "Passo %{passo}: os passos de IA estão desligados nesta conta."
         caminho_repetido: "Passo %{passo}: já existe um caminho com o nome %{nome}."
         caminho_reservado: "Passo %{passo}: o nome %{nome} já é o caminho de quando nada se aplica. Escolha outro nome."

@@ -45,7 +45,11 @@ vi.mock('dashboard/composables/useAccount', () => ({
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { ref: criarRef } = await import('vue');
   const podeMudar = criarRef(true);
-  return { useCanManage: () => podeMudar };
+  // G32: o filtro de página dos gatilhos de reunião pede o agendamento.
+  return {
+    useCanManage: () => podeMudar,
+    usePermissionGranted: () => podeMudar,
+  };
 });
 vi.mock('dashboard/composables/store', async () => {
   const { ref: criarRef } = await import('vue');
