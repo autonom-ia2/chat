@@ -179,7 +179,7 @@
     "controller": "api/v1/accounts/autonomia/insurance/connection#destroy",
     "modelo": "Autonomia::Insurance::Connection",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/insurance/connection_controller.rb:44",
+      "app/controllers/api/v1/accounts/autonomia/insurance/connection_controller.rb:49",
       "app/controllers/api/v1/accounts/autonomia/insurance/base_controller.rb:19"
     ],
     "sem_corpo": false
@@ -11770,8 +11770,8 @@
     },
     "modelo": "Autonomia::Insurance::Connection",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/insurance/connection_controller.rb:13",
-      "app/controllers/api/v1/accounts/autonomia/insurance/connection_controller.rb:64",
+      "app/controllers/api/v1/accounts/autonomia/insurance/connection_controller.rb:18",
+      "app/controllers/api/v1/accounts/autonomia/insurance/connection_controller.rb:74",
       "app/controllers/api/v1/accounts/autonomia/insurance/base_controller.rb:19"
     ],
     "sem_corpo": false
@@ -11791,7 +11791,7 @@
     "controller": "api/v1/accounts/autonomia/insurance/connection#reconnect",
     "modelo": "Autonomia::Insurance::Connection",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/insurance/connection_controller.rb:24",
+      "app/controllers/api/v1/accounts/autonomia/insurance/connection_controller.rb:29",
       "app/controllers/api/v1/accounts/autonomia/insurance/base_controller.rb:19"
     ],
     "sem_corpo": false
@@ -11811,7 +11811,7 @@
     "controller": "api/v1/accounts/autonomia/insurance/connection#scan",
     "modelo": "Autonomia::Insurance::Connection",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/insurance/connection_controller.rb:36",
+      "app/controllers/api/v1/accounts/autonomia/insurance/connection_controller.rb:41",
       "app/controllers/api/v1/accounts/autonomia/insurance/base_controller.rb:19"
     ],
     "sem_corpo": false
