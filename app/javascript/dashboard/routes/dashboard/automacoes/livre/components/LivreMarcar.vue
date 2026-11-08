@@ -104,6 +104,9 @@ const alternar = valor =>
         :options="dadosLivres"
         @update:model-value="porDado"
       />
+      <p class="text-xs text-n-slate-11">
+        {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_DADO_AJUDA') }}
+      </p>
     </div>
   </fieldset>
 </template>

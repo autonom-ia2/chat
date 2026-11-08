@@ -10,5 +10,6 @@ tradução ficou faltando e a página não registrou erro.
   "um formulário de anúncio". A frase do topo diz "De onde o card veio é um formulário de anúncio".
 - `etiqueta-*.png`: o passo "Pôr etiqueta no contato" aberto. A frase, no topo do painel e na linha do passo no
   Confira, diz "Pôr as etiquetas vip e [Anúncio do formulário] no contato". Em "Pôr as etiquetas", `vip` marcada e o dado posto como chip
-  "[Anúncio do formulário]"; embaixo, o seletor "Pôr uma etiqueta com o nome de um dado". Em "Tirar as etiquetas",
+  "[Anúncio do formulário]"; embaixo, o seletor "Pôr uma etiqueta com o nome de um dado" e a ajuda "A etiqueta sai com o dado sem espaço nem
+  pontuação ("Black Friday, 50% off" vira black_friday_50_off). O texto original fica na descrição da etiqueta." Em "Tirar as etiquetas",
   `vip` aparece bloqueada porque já está em "Pôr" (comportamento antigo).

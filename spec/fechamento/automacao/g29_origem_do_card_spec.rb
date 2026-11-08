@@ -56,10 +56,12 @@ RSpec.describe 'Fechamento #2414 · G29: origem do card e anúncio do formulári
   # O lead como a Graph da Meta o entrega ao webhook e ao "trazer os antigos".
   def lead_do_formulario
     { 'id' => 'L2702', 'created_time' => '2026-11-08T12:00:00+0000', 'form_id' => '9001', 'ad_id' => '77',
-      'ad_name' => 'Apartamento Jardim', 'campaign_name' => 'Lançamento',
+      'ad_name' => 'Black Friday, 50% off "Jardim" Promoção', 'campaign_name' => 'Lançamento',
       'field_data' => [{ 'name' => 'full_name', 'values' => ['Ana Souza'] }, { 'name' => 'phone_number', 'values' => ['+5511987652702'] }] }
   end
 
+  # O nome real do anúncio (espaço, vírgula, aspas, "%" e acento) vira etiqueta pela regra da tela de etiquetas, e o
+  # texto original fica na descrição da etiqueta, que a Marina vê ao passar o mouse sobre ela.
   it 'lead do formulário: a automação passa no filtro e põe no contato a etiqueta com o nome do anúncio', :aggregate_failures do
     automacao = ligada
 
@@ -70,7 +72,9 @@ RSpec.describe 'Fechamento #2414 · G29: origem do card e anúncio do formulári
     card = account.crm_cards.sole
     expect(resultado).to eq(:created)
     expect(historico_de(automacao)).to eq([['etiqueta', 'ok', nil]])
-    expect(card.contact.reload.label_list).to eq(['apartamento jardim'])
+    expect(card.contact.reload.label_list).to eq(['black_friday_50_off_jardim_promoção'])
+    expect(account.labels.sole).to have_attributes(title: 'black_friday_50_off_jardim_promoção',
+                                                   description: 'Black Friday, 50% off "Jardim" Promoção')
   end
 
   def controle_passo
