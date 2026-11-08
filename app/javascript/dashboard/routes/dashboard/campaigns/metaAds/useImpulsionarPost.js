@@ -26,7 +26,11 @@ export const useImpulsionarPost = ({ draft, numbers }) => {
       !postsDoInstagram.value.length
   );
 
+  // O post que já veio escolhido (o que a pessoa acabou de publicar, #2653) fica, se a Meta deixa impulsionar.
   const marcarPrimeiro = () => {
+    const { post_source: source, post_id: id } = draft.value;
+    const lista = source === 'instagram' ? postsDoInstagram.value : posts.value;
+    if (lista.some(post => post.id === id && post.eligible)) return;
     const doInstagram = postsDoInstagram.value.find(post => post.eligible);
     const daPagina = posts.value.find(post => post.eligible);
     draft.value = {

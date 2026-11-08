@@ -37,7 +37,19 @@ class Autonomia::Automacao::Valores
     'card.responsavel_id' => ->(card) { card.owner_id },
     'card.time_id' => ->(card) { card.team_id },
     'card.dias_na_etapa' => ->(card) { card.entered_stage_at && ((Time.current - card.entered_stage_at) / 1.day).floor },
-    'card.motivo_da_perda' => ->(card) { card.lost_reason }
+    'card.motivo_da_perda' => ->(card) { card.lost_reason },
+    # G12: a reunião da atividade que disparou o gatilho de reunião (Contexto#reuniao). O início sai no fuso da reunião,
+    # o mesmo do convite que o cliente recebeu.
+    'reuniao.inicio' => ->(reuniao) { ::Autonomia::Automacao::Valores.inicio_da_reuniao(reuniao) },
+    'reuniao.link_da_reuniao' => ->(reuniao) { reuniao.online_meeting_url }
+  }.freeze
+
+  # G12: o link da agenda (LinkDaAgenda) de quem cuida: o responsável do card ou a pessoa da conversa. Vale em qualquer
+  # gatilho com card ou conversa: vai no texto para o cliente marcar, quando ainda não há reunião. A página da reunião
+  # do gatilho, quando há, desempata entre as páginas da pessoa.
+  AGENDA = {
+    'card.link_da_agenda' => ->(card) { card.owner },
+    'conversa.link_da_agenda' => ->(conversa) { conversa.assignee }
   }.freeze
 
   # G11: a resposta que chegou durante o "esperar até" (Resposta). Só existe na condição dele, onde há a janela da
@@ -48,10 +60,16 @@ class Autonomia::Automacao::Valores
     'conversa.equipe_respondeu' => ->(conversa, espera) { ::Autonomia::Automacao::Resposta.equipe?(conversa, espera) }
   }.freeze
 
+  # #2679: o texto que um passo de IA ("escrever", "resumir") desta execução produziu: `ia.<id do passo>`. Vale em
+  # qualquer alvo: fica na execução, não no alvo. O salvar confere que o id é de um passo que escreve (Receita); antes de
+  # ele rodar, ou num caminho em que ele não rodou, lê vazio, e o passo pula com `faltou_valor`.
+  IA = 'ia.'.freeze
+  PASSOS_QUE_ESCREVEM = %w[escrever resumir].freeze
+
   # O que cada alvo alcança, pelas pontes do Contexto.
   BASES_DO_ALVO = {
     'Conversation' => %w[conversa contato],
-    'Crm::Card' => %w[card conversa contato],
+    'Crm::Card' => %w[card conversa contato reuniao],
     'Contact' => %w[contato]
   }.freeze
 
@@ -104,7 +122,21 @@ class Autonomia::Automacao::Valores
 
   class << self
     def caminho_valido?(caminho)
-      CAMPOS.key?(caminho.to_s) || MENSAGEM.key?(caminho.to_s) || RESPOSTA.key?(caminho.to_s) || atributo(caminho).present?
+      [CAMPOS, MENSAGEM, RESPOSTA, AGENDA].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? || da_ia?(caminho)
+    end
+
+    def da_ia?(caminho) = caminho.to_s.start_with?(IA) && caminho.to_s.length > IA.length
+
+    # "ia.p3" => "p3".
+    def passo_da_ia(caminho) = caminho.to_s.delete_prefix(IA)
+
+    def da_reuniao?(caminho) = caminho.to_s.start_with?('reuniao.')
+
+    # "10/11/2026 às 09:00", no fuso e no idioma da reunião e da conta.
+    def inicio_da_reuniao(reuniao)
+      inicio = reuniao.starts_at.in_time_zone(ActiveSupport::TimeZone[reuniao.timezone.to_s] || Time.zone)
+      formato = I18n.t('autonomia.automacao.valores.inicio_da_reuniao', locale: reuniao.account.locale.presence || I18n.default_locale)
+      inicio.strftime(formato)
     end
 
     def da_mensagem?(caminho) = MENSAGEM.key?(caminho.to_s)
@@ -112,16 +144,18 @@ class Autonomia::Automacao::Valores
     def da_resposta?(caminho) = RESPOSTA.key?(caminho.to_s)
 
     # O valor que só existe num lugar da receita: a mensagem no filtro do gatilho dela (`mensagem`: a receita está lá);
-    # a resposta no "esperar até" (`na_espera`). Devolve a chave da frase do salvar, ou nil.
-    def fora_do_lugar(caminho, mensagem:, na_espera:)
+    # a resposta no "esperar até" (`na_espera`); a reunião nos gatilhos de reunião (`gatilho`). Devolve a chave da
+    # frase do salvar, ou nil.
+    def fora_do_lugar(caminho, mensagem:, na_espera:, gatilho: nil)
       return :mensagem_so_no_gatilho if da_mensagem?(caminho) && !mensagem
+      return :reuniao_so_no_gatilho if da_reuniao?(caminho) && !::Autonomia::Automacao::Gatilhos.de_reuniao?(gatilho)
 
       :resposta_so_na_espera if da_resposta?(caminho) && !na_espera
     end
 
     # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.
     def no_alvo?(caminho, alvo_type)
-      da_mensagem?(caminho) || BASES_DO_ALVO.fetch(alvo_type, []).include?(caminho.to_s.split('.', 2).first)
+      da_mensagem?(caminho) || da_ia?(caminho) || BASES_DO_ALVO.fetch(alvo_type, []).include?(caminho.to_s.split('.', 2).first)
     end
 
     def fechado(caminho) = FECHADOS[caminho.to_s]
@@ -172,13 +206,26 @@ class Autonomia::Automacao::Valores
     @mensagem = mensagem
     @quem = quem
     @espera = espera
+    @vazios = []
   end
 
+  # Por que o link da agenda lido ficou vazio (`por` do LinkDaAgenda), para o passo pular com o motivo próprio. Só
+  # quando ele é o único valor vazio lido: com outro vazio junto, o motivo é o geral (`faltou_valor`).
+  def falta_da_agenda = (@por_da_agenda if @vazios.any? && @vazios.all? { |caminho| AGENDA.key?(caminho) })
+
   def ler(caminho)
+    valor = self.class.da_ia?(caminho) ? @contexto.texto_da_ia(self.class.passo_da_ia(caminho)) : lido(caminho)
+    @vazios << caminho.to_s if valor.blank?
+    valor
+  end
+
+  private
+
+  def lido(caminho)
     return unless permitido?(caminho)
     return @mensagem && MENSAGEM.fetch(caminho.to_s).call(@mensagem) if MENSAGEM.key?(caminho.to_s)
     return resposta(caminho) if RESPOSTA.key?(caminho.to_s)
-    return do_objeto(caminho) { |objeto| CAMPOS.fetch(caminho.to_s).call(objeto) } if CAMPOS.key?(caminho.to_s)
+    return do_campo(caminho.to_s) if campo?(caminho.to_s)
 
     base, chave = self.class.atributo(caminho)
     raise ArgumentError, "caminho desconhecido: #{caminho}" unless base
@@ -186,7 +233,20 @@ class Autonomia::Automacao::Valores
     do_objeto(caminho) { |objeto| ATRIBUTOS.fetch(base).call(objeto).to_h[chave] }
   end
 
-  private
+  def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave)
+
+  def do_campo(chave)
+    do_objeto(chave) { |objeto| CAMPOS.key?(chave) ? CAMPOS[chave].call(objeto) : link_da_agenda(objeto, AGENDA[chave].call(objeto)) }
+  end
+
+  def link_da_agenda(objeto, pessoa)
+    resultado = ::Autonomia::Automacao::LinkDaAgenda.resultado(objeto.account, pessoa, pagina_id: pagina_da_reuniao)
+    @por_da_agenda ||= resultado.por
+    resultado.url
+  end
+
+  # A página de agendamento em que a reunião do gatilho foi marcada, quando veio de uma.
+  def pagina_da_reuniao = @contexto.reuniao&.metadata.to_h['booking_profile_id']
 
   def resposta(caminho) = !@espera.nil? && do_objeto(caminho) { |conversa| RESPOSTA.fetch(caminho.to_s).call(conversa, @espera) } == true
 
@@ -210,6 +270,7 @@ class Autonomia::Automacao::Valores
     when 'conversa' then @contexto.conversa
     when 'contato' then @contexto.contato
     when 'card' then @contexto.card
+    when 'reuniao' then @contexto.reuniao
     end
   end
 end

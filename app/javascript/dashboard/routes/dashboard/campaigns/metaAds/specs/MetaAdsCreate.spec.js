@@ -826,4 +826,97 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
 
     expect(wrapper.text()).toContain(`${KEY}.ERRORS.SPECIAL_CATEGORY_PROFILE`);
   });
+
+  // #2645: o número do WhatsApp só é pergunta quando o anúncio leva ao WhatsApp.
+  const TWO_NUMBERS = [
+    { id: '+5511900002161', name: 'Loja', phone: '+5511900002161' },
+    { id: '+5511900002162', name: 'Loja 2', phone: '+5511900002162' },
+  ];
+  const pickNumber = async (wrapper, id) => {
+    wrapper
+      .findAllComponents(ChoiceSelect)
+      .find(item => item.attributes('data-create-number') !== undefined)
+      .vm.$emit('update:modelValue', id);
+    await flushPromises();
+  };
+
+  it('with two numbers, a profile ad never asks for a WhatsApp number', async () => {
+    const wrapper = await mountCreate(
+      { ...PROFILE, whatsapp_numbers: TWO_NUMBERS },
+      'PROFILE'
+    );
+
+    expect(step(wrapper)).toBe('CONTENT');
+    expect(wrapper.find('[data-create-number]').exists()).toBe(false);
+  });
+
+  it('with two numbers, a WhatsApp ad asks only for the number, with a title that says so', async () => {
+    const wrapper = await mountCreate({
+      ...OPTIONS,
+      whatsapp_numbers: TWO_NUMBERS,
+    });
+
+    expect(step(wrapper)).toBe('WHERE');
+    expect(wrapper.text()).toContain(`${KEY}.WHERE.TITLE_NUMBER`);
+    expect(wrapper.find('[data-create-page]').exists()).toBe(false);
+    await submit(wrapper);
+    expect(step(wrapper)).toBe('WHERE');
+
+    await pickNumber(wrapper, TWO_NUMBERS[1].id);
+    await submit(wrapper);
+    expect(step(wrapper)).toBe('CONTENT');
+  });
+
+  it('switching channel in the photo step keeps the person in the photo step', async () => {
+    const wrapper = await mountCreate({
+      ...MESSAGING,
+      whatsapp_numbers: TWO_NUMBERS,
+    });
+    await pickNumber(wrapper, TWO_NUMBERS[0].id);
+    await submit(wrapper);
+    expect(step(wrapper)).toBe('CONTENT');
+
+    await wrapper.find('[data-create-destination-change]').trigger('click');
+    await wrapper
+      .find('[data-create-destination-option="MESSENGER"]')
+      .trigger('click');
+    await flushPromises();
+    expect(step(wrapper)).toBe('CONTENT');
+
+    await wrapper.find('[data-create-destination-change]').trigger('click');
+    await wrapper
+      .find('[data-create-destination-option="WHATSAPP"]')
+      .trigger('click');
+    await flushPromises();
+    expect(step(wrapper)).toBe('CONTENT');
+  });
+
+  it('with two Pages and two numbers, a WhatsApp ad asks for both, with the full title', async () => {
+    const wrapper = await mountCreate({
+      ...OPTIONS,
+      whatsapp_numbers: TWO_NUMBERS,
+      pages: [...OPTIONS.pages, { id: '220000000002161', name: 'Outra' }],
+    });
+
+    expect(step(wrapper)).toBe('WHERE');
+    expect(wrapper.text()).toContain(`${KEY}.WHERE.TITLE`);
+    expect(wrapper.text()).not.toContain(`${KEY}.WHERE.TITLE_`);
+    expect(wrapper.find('[data-create-page]').exists()).toBe(true);
+    expect(wrapper.find('[data-create-number]').exists()).toBe(true);
+  });
+
+  it('with two Pages and a website ad, the step asks only for the Page', async () => {
+    const wrapper = await mountCreate(
+      {
+        ...OPTIONS,
+        whatsapp_numbers: TWO_NUMBERS,
+        pages: [...OPTIONS.pages, { id: '220000000002161', name: 'Outra' }],
+      },
+      'WEBSITE'
+    );
+
+    expect(step(wrapper)).toBe('WHERE');
+    expect(wrapper.text()).toContain(`${KEY}.WHERE.TITLE_PAGE`);
+    expect(wrapper.find('[data-create-number]').exists()).toBe(false);
+  });
 });

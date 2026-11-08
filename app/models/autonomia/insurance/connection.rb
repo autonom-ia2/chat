@@ -109,6 +109,15 @@ class Autonomia::Insurance::Connection < ApplicationRecord
     status == 'ready'
   end
 
+  # Serve às ferramentas da Lia? `ready`, ou `discovering` de uma conexão que JÁ FOI VARRIDA: a varredura
+  # nova (Atualizar configuração) leva ~25 s e só troca capacidades e formulários no fim; até lá os
+  # anteriores valem. Antes, só `ready` servia, e o turno que caía nessa janela dizia ao cliente que a
+  # corretora não tinha conectado o AGGER (auditoria da conexão, 05/11/2026, achado 3). Sem varredura
+  # anterior (`discovering` logo depois de Conectar) não há o que usar.
+  def usable?
+    ready? || (status == 'discovering' && last_capability_scan_at.present?)
+  end
+
   # O que sai para o frontend/logs. Senha e login completo NUNCA — só o hint mascarado.
   def public_payload
     {

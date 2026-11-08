@@ -17,7 +17,7 @@
 # `escondidos`: campos que a ação aceita e a tela não mostra, com o motivo no comentário.
 # `so_guia`: ação liberada no motor que o editor não mostra, com o motivo. O Guia continua montando com ela.
 
-grupos: [IA, MENSAGEM, CONVERSA, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, CONTROLE]
+grupos: [IA, MENSAGEM, CONVERSA, FUNIL, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, CONTROLE]
 
 nativos:
   esperar: { grupo: CONTROLE }
@@ -28,6 +28,8 @@ nativos:
   # (passo_desligado), e o executor, ao rodar (mensagens_desligadas).
   mensagem: { grupo: MENSAGEM, requer: automacao_mensagens }
   avisar: { grupo: MENSAGEM, requer: automacao_mensagens }
+  # G14 (#2630): disparar campanha e marcar "não recebe". `peca`: o passo inteiro numa peça só (LivreCampanha.vue).
+  campanha: { grupo: MENSAGEM, requer: automacao_mensagens, peca: campanha }
   # G2: e-mail ao contato pela caixa de e-mail da conta.
   email: { grupo: MENSAGEM, requer: automacao_mensagens }
   # F7: os passos de IA, na chave da própria conta. Quem recusa de verdade é a Receita, ao salvar (ia_desligada).
@@ -35,6 +37,15 @@ nativos:
   extrair: { grupo: IA, requer: automacao_ia }
   escrever: { grupo: IA, requer: automacao_ia }
   resumir: { grupo: IA, requer: automacao_ia }
+  # G15: passar a conversa à agente de IA, pela Atribuição. Sem flag própria: o painel diz quando a conta não tem agente
+  # que receba conversa, e o motor pula com o motivo.
+  ia_assumir: { grupo: EQUIPE }
+  # G3 (#2629): o retorno para a equipe. A mensagem ao cliente na hora pede a flag da F4; quem recusa é a Receita.
+  retorno: { grupo: EQUIPE }
+  # G4: criar card numa etapa, com a flag dos gatilhos de card (F6). `funil`: só para quem pode mexer no funil
+  # (RegraDoFunil.chave?: crm_manage_pipelines ou crm_admin), como o gatilho de card; quem recusa de verdade é a API,
+  # ao salvar e ao ligar.
+  card: { grupo: FUNIL, requer: automacao_gatilhos, funil: true }
 
 # Passos nativos do esquema que o editor ainda não mostra, com o motivo. A receita aceita e o motor roda; a tela só os
 # mostra quando tiver as peças.
@@ -82,8 +93,6 @@ acoes:
     grupo: EQUIPE
     caminho: { conversation_id: conversa.id }
     campos: { assignee_id: pessoa, team_id: time }
-    # A plataforma deduz o tipo pelo campo preenchido.
-    escondidos: [assignee_type]
   caixa_pessoas:
     acao: POST inbox_members
     grupo: EQUIPE

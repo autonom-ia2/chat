@@ -102,4 +102,79 @@ RSpec.describe Autonomia::Automacao::Receita do
       expect(problemas('tipo' => 'conversa.criada', 'filtros' => filtro)).to include(a_string_including('card.valor'))
     end
   end
+
+  # #2499 PR3a: os gatilhos de tempo. O parado pede pelo menos 1 dia; a data é um atributo personalizado de tipo data,
+  # do card no card.data e do contato no contato.data. O do contato não depende do CRM.
+  describe 'gatilho de tempo' do
+    around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
+
+    let(:admin) { create(:user, account: account, role: :administrator) }
+    let(:etapa) { create_crm_pipeline(account: account, user: admin).last }
+    let(:da_data) { { 'dias' => 30, 'quando' => 'antes', 'hora' => 8 } }
+
+    def de_tempo(gatilho) = { 'gatilho' => gatilho, 'passos' => [{ 'id' => 'p1', 'tipo' => 'parar' }] }
+
+    def problemas(gatilho) = described_class.new(de_tempo(gatilho), conta: account, account_user: nil).problemas
+
+    def campo(chave, modelo, tipo = 'date')
+      create(:custom_attribute_definition, account: account, attribute_key: chave, attribute_model: modelo, attribute_display_type: tipo)
+    end
+
+    before do
+      account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_gatilhos')
+      campo('vencimento', 'contact_attribute')
+      campo('renovacao', 'card_attribute')
+      campo('apelido', 'contact_attribute', 'text')
+    end
+
+    it 'aceita o parado com dias e a data com o campo de data do modelo certo', :aggregate_failures do
+      expect(problemas('tipo' => 'card.parado', 'etapa_id' => etapa.id, 'dias' => 3)).to be_empty
+      expect(problemas('tipo' => 'contato.data', 'campo' => 'vencimento', **da_data)).to be_empty
+      expect(problemas('tipo' => 'card.data', 'campo' => 'renovacao', **da_data)).to be_empty
+    end
+
+    it 'recusa o parado com 0 dias e o campo que não é data do modelo', :aggregate_failures do
+      expect(problemas('tipo' => 'card.parado', 'etapa_id' => etapa.id, 'dias' => 0))
+        .to eq([I18n.t('autonomia.automacao.receita.parado_sem_dias')])
+      %w[renovacao apelido ausente].each do |chave|
+        expect(problemas('tipo' => 'contato.data', 'campo' => chave, **da_data))
+          .to eq([I18n.t('autonomia.automacao.receita.campo_de_fora', campo: chave)])
+      end
+      expect(problemas('tipo' => 'card.data', 'campo' => 'vencimento', **da_data))
+        .to eq([I18n.t('autonomia.automacao.receita.campo_de_fora', campo: 'vencimento')])
+    end
+
+    it 'sem a flag recusa; o do contato vale sem o CRM, o do card não', :aggregate_failures do
+      with_modified_env(CRM_KANBAN_ENABLED: 'false') do
+        expect(problemas('tipo' => 'contato.data', 'campo' => 'vencimento', **da_data)).to be_empty
+        expect(problemas('tipo' => 'card.data', 'campo' => 'renovacao', **da_data))
+          .to eq([I18n.t('autonomia.automacao.receita.gatilho_desligado')])
+      end
+      account.disable_features!('automacao_gatilhos')
+      expect(problemas('tipo' => 'contato.data', 'campo' => 'vencimento', **da_data))
+        .to eq([I18n.t('autonomia.automacao.receita.gatilho_desligado')])
+    end
+
+    it 'o esquema pede dias nos de tempo, e campo, quando e hora só nos de data', :aggregate_failures do
+      expect(described_class.esquema_valido?(de_tempo('tipo' => 'card.parado', 'etapa_id' => 1))).to be(false)
+      expect(described_class.esquema_valido?(de_tempo('tipo' => 'contato.data', 'campo' => 'x', 'dias' => 1, 'quando' => 'antes')))
+        .to be(false)
+      expect(described_class.esquema_valido?(de_tempo('tipo' => 'card.parado', 'etapa_id' => 1, 'dias' => 1, 'hora' => 8)))
+        .to be(false)
+      expect(described_class.esquema_valido?(de_tempo('tipo' => 'conversa.criada', 'dias' => 1))).to be(false)
+      expect(described_class.esquema_valido?(de_tempo('tipo' => 'contato.data', 'campo' => 'x', **da_data, 'quando' => 'durante')))
+        .to be(false)
+      expect(described_class.esquema_valido?(de_tempo('tipo' => 'contato.data', 'campo' => 'x', **da_data))).to be(true)
+    end
+
+    # #2678: "repete todo ano" só nos de data, e só com o valor todo_ano (sem ele, a data vale uma vez).
+    it 'o esquema aceita repete todo_ano só nos de data', :aggregate_failures do
+      valido = ->(gatilho) { described_class.esquema_valido?(de_tempo(gatilho)) }
+      expect(valido.call('tipo' => 'contato.data', 'campo' => 'x', **da_data, 'repete' => 'todo_ano')).to be(true)
+      expect(valido.call('tipo' => 'card.data', 'campo' => 'x', **da_data, 'repete' => 'todo_ano')).to be(true)
+      expect(valido.call('tipo' => 'contato.data', 'campo' => 'x', **da_data, 'repete' => 'uma_vez')).to be(false)
+      expect(valido.call('tipo' => 'card.parado', 'etapa_id' => 1, 'dias' => 1, 'repete' => 'todo_ano')).to be(false)
+      expect(valido.call('tipo' => 'card.ganho', 'repete' => 'todo_ano')).to be(false)
+    end
+  end
 end

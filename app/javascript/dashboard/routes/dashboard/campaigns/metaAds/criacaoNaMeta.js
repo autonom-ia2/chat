@@ -191,3 +191,30 @@ export const criarAnuncio = async (pedido, { recriar = false } = {}) => {
 export const esquecerTentativas = () => {
   tentativas.clear();
 };
+
+// Criar post (#2653). A mídia sobe uma vez assim que a pessoa escolhe, e serve para as duas redes e para o "Tentar de
+// novo": { kind, signed_id }.
+export const enviarMidiaDoPost = async file => {
+  const { data } = await CrmMetaAdsConnectionAPI.uploadPostMedia(file);
+  return data.media;
+};
+
+// Publica na hora: { facebook: { id, permalink, boostable }, instagram: {...}, failed: [...], errors: { rede: código } }.
+// Uma rede pode publicar e a outra não; nenhuma: erro (o código vem em `response.data.error`). A mesma chave nunca
+// publica duas vezes.
+export const publicarPost = async ({
+  chave,
+  pageId,
+  networks,
+  caption,
+  mediaId,
+}) => {
+  const { data } = await CrmMetaAdsConnectionAPI.publishPost({
+    idempotency_key: chave,
+    page_id: pageId,
+    networks,
+    caption,
+    media_id: mediaId,
+  });
+  return data;
+};

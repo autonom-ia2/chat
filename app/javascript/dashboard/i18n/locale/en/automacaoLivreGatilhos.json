@@ -9,7 +9,13 @@
       "CARD_ENTROU_NA_ETAPA": "When the card enters a stage",
       "CARD_SAIU_DA_ETAPA": "When the card leaves a stage",
       "CARD_GANHO": "When the card is won",
-      "CARD_PERDIDO": "When the card is lost"
+      "CARD_PERDIDO": "When the card is lost",
+      "CARD_REUNIAO_MARCADA": "When a meeting is scheduled",
+      "CARD_REUNIAO_REMARCADA": "When a meeting is rescheduled",
+      "CARD_REUNIAO_CANCELADA": "When a meeting is canceled",
+      "CARD_PARADO": "When the card is stuck in a stage",
+      "CARD_DATA": "Around a card date",
+      "CONTATO_DATA": "Around a contact date"
     },
     "ORIGEM": {
       "CONVERSA": "From the conversation",
@@ -31,24 +37,57 @@
     },
     "PARAMETROS_DO_GATILHO": {
       "ETAPA_ID": "Stage",
-      "FUNIL_ID": "Pipeline"
+      "FUNIL_ID": "Pipeline",
+      "DIAS": "Days",
+      "CAMPO": "Date field",
+      "QUANDO": "Before or after the date",
+      "HORA": "From what time",
+      "REPETE": "Repeats"
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversation and message",
-      "CARD": "Pipeline card"
+      "CARD": "Pipeline card",
+      "REUNIAO": "Meeting",
+      "TEMPO": "Time"
     },
     "GATILHO_COM": {
       "CARD_CRIADO": "When a card is created in {funil}",
       "CARD_ENTROU_NA_ETAPA": "When the card enters {etapa}",
       "CARD_SAIU_DA_ETAPA": "When the card leaves {etapa}",
       "CARD_GANHO": "When a card in {funil} is won",
-      "CARD_PERDIDO": "When a card in {funil} is lost"
+      "CARD_PERDIDO": "When a card in {funil} is lost",
+      "CARD_REUNIAO_MARCADA": "When a meeting is scheduled on a {funil} card",
+      "CARD_REUNIAO_REMARCADA": "When a meeting is rescheduled on a {funil} card",
+      "CARD_REUNIAO_CANCELADA": "When a meeting is canceled on a {funil} card",
+      "CARD_PARADO": "When the card is stuck in {etapa} for {dias} days",
+      "CARD_DATA": "{dias} days {quando} the card {campo}, from {hora}h",
+      "CONTATO_DATA": "{dias} days {quando} the contact {campo}, from {hora}h"
     },
     "GATILHO_NO_FUNIL": "{frase}, in the {funil} pipeline",
     "GATILHO_NAO_DISPARA": "Does not trigger when many cards are archived at once, when the stage is deleted or when another system changes the stage.",
     "GATILHO_DO_CARD": {
       "TODOS_OS_FUNIS": "All pipelines",
       "ERRO_FUNIS": "Could not load the pipelines and stages. Close and open it again."
+    },
+    "GATILHO_NO_DIA": {
+      "CARD_DATA": "On the card {campo} day, from {hora}h",
+      "CONTATO_DATA": "On the contact {campo} day, from {hora}h"
+    },
+    "GATILHO_TODO_ANO": "{frase}, every year",
+    "REPETE_DA_DATA": {
+      "UMA_VEZ": "Only on that date, with the year",
+      "TODO_ANO": "Every year, on the same day and month (birthday)"
+    },
+    "QUANDO_DA_DATA": {
+      "ANTES": "before",
+      "DEPOIS": "after"
+    },
+    "GATILHO_DE_TEMPO": {
+      "AVISO_PARADO": "Only cards that reach the deadline from now on are included. Cards already more than 1 day past the deadline are left out.",
+      "AVISO_DATA": "Checked every 15 minutes, in the account time zone. A date written in another format does not count.",
+      "SEM_CAMPO": "There is no date field here. Create one in Settings › Custom attributes.",
+      "HORA": "{hora}h",
+      "ERRO_CAMPOS": "Could not load the date fields. Close and open it again."
     }
   }
 }

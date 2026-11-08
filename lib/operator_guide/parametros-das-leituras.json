@@ -217,6 +217,10 @@
       "pagina"
     ]
   },
+  "autonomia/automacoes/agentes_de_ia": {
+    "controller": "api/v1/accounts/autonomia/automacoes_ia#agentes_de_ia",
+    "parametros": []
+  },
   "autonomia/automacoes/custos": {
     "controller": "api/v1/accounts/autonomia/automacoes_ia#custos",
     "parametros": []
@@ -1503,6 +1507,10 @@
   },
   "crm/meta_ads_connection/pages": {
     "controller": "api/v1/accounts/crm/meta_ads_ad_management#pages",
+    "parametros": []
+  },
+  "crm/meta_ads_connection/paginas": {
+    "controller": "api/v1/accounts/crm/meta_ads_pagina#index",
     "parametros": []
   },
   "crm/meta_ads_connection/panel": {

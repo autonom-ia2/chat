@@ -12,14 +12,17 @@ module Crm
       # funil ao aceitar a sugestão de assunto) não é escolha.
       # automacao (#2428): o card que uma automação criou numa etapa (`{ origem:, id: }`, como no Crm::Cards::Mover). A IA
       # do funil respeita essa etapa como respeita o movimento da automação (Crm::Ai::MovimentoDaAutomacao).
+      # foco: false (#2628) — o card nasce ligado à conversa sem virar o assunto atual dela: o passo "criar card" da
+      # Automação livre abre o card de outro funil (Melhorias, retenção) e o card do pedido continua o principal.
       # rubocop:disable Metrics/ParameterLists -- quem escolheu a etapa (a pessoa ou a automação) é dado da criação
-      def initialize(account:, user:, params:, conversation: nil, etapa_escolhida: false, automacao: nil)
+      def initialize(account:, user:, params:, conversation: nil, etapa_escolhida: false, automacao: nil, foco: true)
         @account = account
         @user = user
         @params = params.to_h.with_indifferent_access
         @conversation = conversation
         @etapa_escolhida = etapa_escolhida && user.present?
         @automacao = automacao
+        @foco = foco
       end
       # rubocop:enable Metrics/ParameterLists
 
@@ -93,7 +96,8 @@ module Crm
 
       def link_primary_conversation(card)
         # Card criado pelo sistema não tira o assunto que uma pessoa acabou de escolher (#1260): nasce sem foco.
-        sem_foco = @user.blank? && Crm::Cards::Focus.pessoa_escolheu?(account_id: @account.id, conversation_id: card.conversation_id)
+        sem_foco = !@foco ||
+                   (@user.blank? && Crm::Cards::Focus.pessoa_escolheu?(account_id: @account.id, conversation_id: card.conversation_id))
         Crm::CardConversation.find_or_create_by!(
           account: @account,
           card: card,

@@ -41,6 +41,11 @@ export const opcoesDosValores = (
       if (item.so_guia || item.sem_permissao) return [];
       if (item.so_no_gatilho && item.so_no_gatilho !== gatilho) return [];
       if (item.so_na_espera && !naEspera) return [];
+      // #2679: o texto da IA já chega com o rótulo pronto (comTextosDaIa). No
+      // "Só se" do gatilho nenhum passo rodou: ele não entra.
+      if (item.rotulo && gatilho) return [];
+      if (item.rotulo)
+        return [{ value: item.caminho, chave: item.chave, label: item.rotulo }];
       if (!item.atributos)
         return [{ value: item.caminho, label: t(item.frase) }];
       return atributosDo(item.atributos).map(atributo => ({
@@ -69,6 +74,38 @@ export const campoDasPartes = partes =>
   (partes || []).some(parte => typeof parte !== 'string')
     ? { $texto: partes }
     : (partes || []).join('');
+
+// #2414 G16b — os campos de data que a data calculada pode usar como ponto de
+// partida: só os atributos do tipo data, com os rótulos do "Pôr um dado".
+export const opcoesDeDatas = (catalogo, atributosDo, t) => {
+  const bases = (catalogo?.valores || []).filter(item => item.atributos);
+  return opcoesDosValores(
+    { ...catalogo, valores: bases },
+    modelo =>
+      atributosDo(modelo).filter(
+        atributo => atributo.attribute_display_type === 'date'
+      ),
+    t
+  );
+};
+
+// O mesmo teto do esquema (automacao-receita.schema.json), contra erro de
+// digitação.
+export const TETO_DA_DATA = 3650;
+
+// A data calculada só vai para a receita inteira: o ponto de partida escolhido
+// e, quando há "mais", um número inteiro dentro do teto.
+export const dataCompleta = data =>
+  Boolean(data?.de) &&
+  (data.mais === undefined ||
+    (Number.isInteger(data.mais.valor) &&
+      Math.abs(data.mais.valor) <= TETO_DA_DATA));
+
+export const temDataIncompleta = valor => {
+  if (!valor || typeof valor !== 'object') return false;
+  if (valor.$data) return !dataCompleta(valor.$data);
+  return Object.values(valor).some(temDataIncompleta);
+};
 
 // O valor que a pessoa não pode ler (#2597) e que o texto já usa, com o nome
 // dele: mostra o nome, não "apagado". Só o que já está nas partes entra, para

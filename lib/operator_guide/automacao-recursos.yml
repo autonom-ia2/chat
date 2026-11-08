@@ -67,9 +67,9 @@ passo:
       POST conversations/:id/toggle_priority: {}
       POST conversations/:id/toggle_status: {}
   conversations/assignments:
-    motivo: Atribuir a conversa a uma pessoa ou a um time (D13).
+    motivo: Atribuir a conversa a uma pessoa ou a um time (D13). Para a agente de IA, só o passo ia_assumir, pela Atribuição (G15).
     acoes:
-      POST conversations/:conversation_id/assignments: {}
+      POST conversations/:conversation_id/assignments: { proibe: [assignee_type] }
   crm/cards:
     motivo: Alterar o card e movê-lo de etapa.
     acoes:
@@ -105,6 +105,7 @@ fora:
       - email_oauth_apps
       - crm/integration_tokens
       - crm/meta_ads_connections
+      - crm/meta_ads_pagina
       - integrations/dyte
       - integrations/hooks
       - integrations/linear
@@ -246,7 +247,7 @@ fora:
       - crm/stage_automations
       - crm/stage_automation_steps
       - autonomia/vigias
-  - motivo: Vira passo nativo em outra fase. Retorno, F6; reunião, F8.
+  - motivo: Passo nativo, não ação da lista. Retorno, passo `retorno` (G3); reunião, F8.
     recursos:
       - crm/follow_ups
       - crm/follow_up_series

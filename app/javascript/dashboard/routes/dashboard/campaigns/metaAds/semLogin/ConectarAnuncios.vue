@@ -8,16 +8,26 @@ import {
   watch,
 } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
+import { frontendURL } from 'dashboard/helper/URLHelper';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
-import { amount, errorMessageKey, relativeTime } from '../metaAdsHelpers';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import {
+  amount,
+  errorMessageKey,
+  intlLocale,
+  relativeTime,
+} from '../metaAdsHelpers';
 import { useMetaAdsFacebookLogin } from '../useMetaAdsFacebookLogin';
 import { SEM_LOGIN } from './anunciosSemLogin';
 import MetaTelaGuia from './MetaTelaGuia.vue';
 import MetaAdsDestinationsStep from '../components/MetaAdsDestinationsStep.vue';
 import MetaAdsSiteLinkDialog from '../components/MetaAdsSiteLinkDialog.vue';
+import { recursosDoLogin } from './loginUnicoRecursos';
 
 // Conectar a conta de anúncios a partir do painel sem login (#2054), sem ninguém da plataforma no portfólio do
 // cliente. Uma ação por tela:
@@ -44,12 +54,26 @@ const META_PARTNERS_URL =
   'https://business.facebook.com/latest/settings/partners';
 const RECHECK_SECONDS = 20;
 const RECHECK_TIMES = 3;
-const FACEBOOK_STEPS = ['ENTER', 'CHOOSE', 'WHERE', 'SEE'];
+// Login único (#2338, flag anuncios_login_unico): a Página vem do mesmo login e ganha um passo; sem a flag, 4 passos.
+const FACEBOOK_STEPS = ['ENTER', 'CHOOSE', 'PAGE', 'WHERE', 'SEE'];
 const PARTNER_STEPS = ['copy', 'meta', 'mark'];
 // Opção "Não tenho site" no "Alterar" do código do site.
 const NO_SITE = 'none';
 
 const { t, locale } = useI18n();
+const { isCloudFeatureEnabled } = useAccount();
+const loginUnico = computed(() =>
+  isCloudFeatureEnabled(FEATURE_FLAGS.ANUNCIOS_LOGIN_UNICO)
+);
+const facebookSteps = computed(() =>
+  loginUnico.value
+    ? FACEBOOK_STEPS
+    : FACEBOOK_STEPS.filter(step => step !== 'PAGE')
+);
+// Com o login único os textos não prometem "só leitura": a Página liga comentários e criar anúncio.
+const textKey = key => (loginUnico.value ? `${key}_LOGIN_UNICO` : key);
+const route = useRoute();
+const router = useRouter();
 const {
   isConnecting,
   preload,
@@ -91,17 +115,24 @@ const partnersUrl = computed(() => {
 const partnerStep = computed(() => PARTNER_STEPS.indexOf(screen.value) + 1);
 // Depois de entrar com o Facebook, a faixa "Entrar → Confirmar → Destino → Ver" mostra onde a pessoa está.
 const FACEBOOK_SCREENS = {
-  checking: 2,
-  found: 2,
-  choose: 2,
-  pixel: 2,
-  connecting: 2,
-  notyet: 2,
-  destino: 3,
-  done: 4,
+  checking: 'CHOOSE',
+  found: 'CHOOSE',
+  choose: 'CHOOSE',
+  pixel: 'CHOOSE',
+  connecting: 'CHOOSE',
+  notyet: 'CHOOSE',
+  pages: 'PAGE',
+  page: 'PAGE',
+  pageChoose: 'PAGE',
+  pageNone: 'PAGE',
+  pageWrong: 'PAGE',
+  destino: 'WHERE',
+  done: 'SEE',
 };
 const facebookStep = computed(() =>
-  mode.value === 'facebook_login' ? FACEBOOK_SCREENS[screen.value] || 0 : 0
+  mode.value === 'facebook_login'
+    ? facebookSteps.value.indexOf(FACEBOOK_SCREENS[screen.value]) + 1
+    : 0
 );
 const broken = computed(() => props.resume?.state === 'broken');
 // Quem conecta a partir do WhatsApp mede o WhatsApp: conta sem destino nenhum (o servidor manda os dois falsos)
@@ -129,10 +160,58 @@ const pageMissing = computed(
     savedDestination.value.site_pages_count === 0
 );
 const linkDialog = ref(null);
-// Depois de conectar, voltar sairia do passo a passo com a conta já ligada: o "Voltar" some.
-const canGoBack = computed(
-  () => screen.value !== 'destino' && screen.value !== 'done'
+// Login único (#2338): as Páginas que a pessoa marcou na janela da Meta, com o Instagram de cada uma, e as
+// permissões que ela desmarcou. Uma Página só: a tela confirma. Mais de uma: pergunta qual. Nenhuma: pede para
+// entrar de novo e marcar, ou seguir sem.
+const pages = ref([]);
+const pagesFailed = ref(false);
+const granted = ref([]);
+const declined = ref([]);
+const chosenPage = ref(null);
+const pageChoice = ref('');
+const savingPage = ref(false);
+const pageError = ref(null);
+const pageChoices = computed(() =>
+  pages.value.map(row => ({
+    value: row.id,
+    label: row.name,
+    hint: row.instagram ? `@${row.instagram.username}` : row.category,
+  }))
 );
+const works = computed(() =>
+  recursosDoLogin({
+    page: chosenPage.value,
+    granted: granted.value,
+    declined: declined.value,
+  })
+);
+const worksMissingPermission = computed(() =>
+  works.value.some(item => item.falta === 'PERMISSION')
+);
+// Instagram por toque à parte (#2338, decisão do Rodrigo): o login único não liga o Direct nem os comentários do
+// Instagram; o pronto leva ao login do Instagram de hoje, o da caixa de entrada.
+const instagramToConnect = computed(() =>
+  works.value.some(item => item.falta === 'INSTAGRAM_TAP')
+);
+const connectInstagram = () =>
+  router.push(
+    frontendURL(
+      `accounts/${route.params.accountId}/settings/inboxes/new/instagram`
+    )
+  );
+const count = value =>
+  new Intl.NumberFormat(intlLocale(locale.value)).format(value);
+// Depois de conectar, voltar sairia do passo a passo com a conta já ligada: o "Voltar" some.
+const AFTER_CONNECTED = [
+  'pages',
+  'page',
+  'pageChoose',
+  'pageNone',
+  'pageWrong',
+  'destino',
+  'done',
+];
+const canGoBack = computed(() => !AFTER_CONNECTED.includes(screen.value));
 const message = computed(() =>
   t(`${C}.SEND.MESSAGE`, {
     partner: partnerName.value,
@@ -302,6 +381,63 @@ const loadPixels = async account => {
   }
 };
 
+const loadPages = async () => {
+  go('pages');
+  try {
+    const { data } = await CrmMetaAdsConnectionAPI.loginPages();
+    pages.value = data.pages || [];
+    granted.value = data.granted_permissions || [];
+    declined.value = data.declined_permissions || [];
+    pagesFailed.value = false;
+  } catch {
+    pages.value = [];
+    pagesFailed.value = true;
+  }
+  if (pages.value.length === 1) {
+    [chosenPage.value] = pages.value;
+    go('page');
+  } else if (pages.value.length > 1) {
+    pageChoice.value = '';
+    go('pageChoose');
+  } else {
+    go('pageNone');
+  }
+};
+
+// Ligar cria a caixa da Página (ou troca o token da que existe). Sem dar certo, a pessoa fica no passo com o motivo.
+const PAGE_ERRORS = {
+  page_not_granted: 'NOT_GRANTED',
+  forbidden: 'FORBIDDEN',
+  reconnect: 'RECONNECT',
+  limit: 'LIMIT',
+  missing_permissions: 'MISSING_PERMISSIONS',
+};
+const confirmPage = async page => {
+  savingPage.value = true;
+  pageError.value = null;
+  try {
+    await CrmMetaAdsConnectionAPI.linkPage(page.id);
+  } catch (error) {
+    // 402: a conta chegou ao limite de caixas do plano (CustomExceptions::Inbox::LimitExceeded).
+    const code =
+      error?.response?.status === 402 ? 'limit' : error?.response?.data?.error;
+    pageError.value = PAGE_ERRORS[code] || 'FAILED';
+    return;
+  } finally {
+    savingPage.value = false;
+  }
+  chosenPage.value = page;
+  go('destino');
+};
+
+const confirmChosenPage = () =>
+  confirmPage(pages.value.find(row => row.id === pageChoice.value));
+
+const withoutPage = () => {
+  chosenPage.value = null;
+  go('destino');
+};
+
 const save = async ({ noSite = false } = {}) => {
   go('connecting');
   try {
@@ -326,7 +462,8 @@ const save = async ({ noSite = false } = {}) => {
       preWriteFailed.value = true;
     }
   }
-  go('destino');
+  if (loginUnico.value) loadPages();
+  else go('destino');
 };
 
 const connectAccount = async account => {
@@ -403,7 +540,7 @@ onBeforeUnmount(stopRecheck);
     ref="root"
     data-conectar-anuncios
     :data-screen="screen"
-    class="mx-auto flex w-full max-w-2xl flex-col gap-6 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-8"
+    class="mx-auto mb-24 flex w-full max-w-2xl flex-col gap-6 rounded-2xl sm:mb-0 bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-8"
   >
     <div
       v-if="canGoBack || partnerStep"
@@ -436,7 +573,7 @@ onBeforeUnmount(stopRecheck);
       class="m-0 flex list-none items-center gap-2 p-0 text-xs font-medium sm:text-sm"
     >
       <li
-        v-for="(item, index) in FACEBOOK_STEPS"
+        v-for="(item, index) in facebookSteps"
         :key="item"
         class="flex min-w-0 items-center gap-2"
         :aria-current="index + 1 === facebookStep ? 'step' : undefined"
@@ -465,7 +602,7 @@ onBeforeUnmount(stopRecheck);
           {{ $t(`${C}.START.STEPS.${item}`) }}
         </span>
         <span
-          v-if="index < FACEBOOK_STEPS.length - 1"
+          v-if="index < facebookSteps.length - 1"
           class="h-px w-4 flex-none bg-n-weak sm:w-8"
           aria-hidden="true"
         />
@@ -483,7 +620,7 @@ onBeforeUnmount(stopRecheck);
           {{ $t(`${C}.START.TITLE`) }}
         </h2>
         <p class="m-0 text-base text-n-slate-11">
-          {{ $t(`${C}.START.TEXT`) }}
+          {{ $t(textKey(`${C}.START.TEXT`)) }}
         </p>
       </div>
       <p
@@ -495,11 +632,11 @@ onBeforeUnmount(stopRecheck);
       </p>
       <ol
         data-conectar-como
-        class="m-0 grid list-none grid-cols-2 gap-2 p-0 sm:grid-cols-4"
+        class="m-0 grid list-none grid-cols-2 gap-2 p-0 sm:grid-cols-5"
         :aria-label="$t(`${C}.START.HOW`)"
       >
         <li
-          v-for="(item, index) in FACEBOOK_STEPS"
+          v-for="(item, index) in facebookSteps"
           :key="item"
           class="flex flex-col items-center gap-2 rounded-2xl bg-n-alpha-1 px-2 py-4 text-center"
         >
@@ -533,7 +670,7 @@ onBeforeUnmount(stopRecheck);
           role="status"
           class="m-0 rounded-xl bg-n-blue-2 px-4 py-3 text-sm font-medium text-n-blue-11"
         >
-          {{ $t(`${C}.START.WAITING`) }}
+          {{ $t(textKey(`${C}.START.WAITING`)) }}
         </p>
         <div
           v-else-if="loginNotice"
@@ -569,7 +706,13 @@ onBeforeUnmount(stopRecheck);
             class="i-lucide-check size-4 text-n-teal-11"
             aria-hidden="true"
           />
-          {{ $t(`${C}.TRUST.${item}`) }}
+          {{
+            $t(
+              item === 'SAFE'
+                ? textKey(`${C}.TRUST.SAFE`)
+                : `${C}.TRUST.${item}`
+            )
+          }}
         </li>
       </ul>
       <div
@@ -744,7 +887,7 @@ onBeforeUnmount(stopRecheck);
 
     <!-- Conferindo / conectando -->
     <div
-      v-else-if="screen === 'checking' || screen === 'connecting'"
+      v-else-if="['checking', 'connecting', 'pages'].includes(screen)"
       class="flex flex-col items-center gap-4 py-10 text-center"
       aria-live="polite"
     >
@@ -757,7 +900,9 @@ onBeforeUnmount(stopRecheck);
         {{
           screen === 'checking'
             ? $t(`${C}.CHECKING`)
-            : $t(`${C}.CONNECTING`, { name: chosen?.name })
+            : screen === 'pages'
+              ? $t(`${C}.PAGE.LOADING`)
+              : $t(`${C}.CONNECTING`, { name: chosen?.name })
         }}
       </h2>
     </div>
@@ -949,6 +1094,196 @@ onBeforeUnmount(stopRecheck);
       </button>
     </template>
 
+    <!-- Login único (#2338): a Página e o Instagram que vieram do mesmo login -->
+    <template v-else-if="screen === 'page' && chosenPage">
+      <div class="flex flex-col gap-2">
+        <h2
+          data-conectar-titulo
+          tabindex="-1"
+          class="m-0 text-2xl font-bold tracking-tight text-balance text-n-slate-12 outline-none"
+        >
+          {{ $t(`${C}.PAGE.TITLE`) }}
+        </h2>
+        <p class="m-0 text-base text-n-slate-11">
+          {{ $t(`${C}.PAGE.TEXT_PAGE`) }}
+        </p>
+      </div>
+      <div data-conectar-pagina class="flex flex-col gap-3">
+        <div
+          class="flex items-center gap-4 rounded-2xl bg-n-solid-2 p-4 ring-1 ring-inset ring-n-weak"
+        >
+          <span
+            class="grid size-12 flex-none place-items-center rounded-full bg-[#1877F2] text-white"
+            aria-hidden="true"
+          >
+            <span class="i-ri-facebook-fill size-6" />
+          </span>
+          <span class="flex min-w-0 flex-col">
+            <span class="text-xs font-medium text-n-slate-11">
+              {{ $t(`${C}.PAGE.FACEBOOK`) }}
+            </span>
+            <span class="truncate text-lg font-semibold text-n-slate-12">
+              {{ chosenPage.name }}
+            </span>
+            <span class="text-sm text-n-slate-11">
+              {{ chosenPage.category }}
+              <span
+                v-if="chosenPage.followers != null"
+                class="before:content-['·'] before:mx-1"
+              >
+                {{
+                  $t(`${C}.PAGE.FOLLOWERS`, {
+                    count: count(chosenPage.followers),
+                  })
+                }}
+              </span>
+            </span>
+          </span>
+        </div>
+      </div>
+      <Button
+        data-conectar-pagina-sim
+        class="!min-h-12 !rounded-xl self-start"
+        icon="i-lucide-check"
+        :is-loading="savingPage"
+        :label="$t(`${C}.PAGE.CONTINUE`)"
+        @click="confirmPage(chosenPage)"
+      />
+      <p
+        v-if="pageError"
+        data-conectar-pagina-erro
+        role="alert"
+        class="m-0 rounded-xl bg-n-ruby-2 p-4 text-sm text-n-ruby-12 ring-1 ring-inset ring-n-ruby-6"
+      >
+        {{ $t(`${C}.PAGE.ERROR_${pageError}`) }}
+      </p>
+      <Button
+        v-if="pageError === 'MISSING_PERMISSIONS'"
+        data-conectar-pagina-permitir
+        variant="outline"
+        class="!min-h-11 self-start"
+        icon="i-ri-facebook-circle-fill"
+        :is-loading="isConnecting"
+        :label="$t(`${C}.DONE.WORKS.FIX`)"
+        @click="signIn"
+      />
+      <button
+        type="button"
+        data-conectar-pagina-nao
+        class="inline-flex min-h-11 items-center self-start rounded-xl border-0 bg-transparent px-0 text-sm font-medium text-n-blue-11 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+        @click="go('pageWrong')"
+      >
+        {{ $t(`${C}.PAGE.NOT_THIS`) }}
+      </button>
+    </template>
+
+    <template v-else-if="screen === 'pageChoose'">
+      <div class="flex flex-col gap-2">
+        <h2
+          data-conectar-titulo
+          tabindex="-1"
+          class="m-0 text-2xl font-bold tracking-tight text-balance text-n-slate-12 outline-none"
+        >
+          {{ $t(`${C}.PAGE.CHOOSE_TITLE`) }}
+        </h2>
+        <p class="m-0 text-base text-n-slate-11">
+          {{ $t(`${C}.PAGE.CHOOSE_TEXT`) }}
+        </p>
+      </div>
+      <ChoiceSelect
+        v-model="pageChoice"
+        data-conectar-pagina-escolha
+        :options="pageChoices"
+        :placeholder="$t(`${C}.PAGE.CHOOSE_PLACEHOLDER`)"
+        :aria-label="$t(`${C}.PAGE.CHOOSE_TITLE`)"
+      />
+      <Button
+        data-conectar-pagina-continuar
+        class="!min-h-12 !rounded-xl self-start"
+        :disabled="!pageChoice"
+        :is-loading="savingPage"
+        :label="$t(`${C}.PAGE.CHOOSE_CTA`)"
+        @click="confirmChosenPage"
+      />
+      <p
+        v-if="pageError"
+        data-conectar-pagina-erro
+        role="alert"
+        class="m-0 rounded-xl bg-n-ruby-2 p-4 text-sm text-n-ruby-12 ring-1 ring-inset ring-n-ruby-6"
+      >
+        {{ $t(`${C}.PAGE.ERROR_${pageError}`) }}
+      </p>
+      <Button
+        v-if="pageError === 'MISSING_PERMISSIONS'"
+        data-conectar-pagina-permitir
+        variant="outline"
+        class="!min-h-11 self-start"
+        icon="i-ri-facebook-circle-fill"
+        :is-loading="isConnecting"
+        :label="$t(`${C}.DONE.WORKS.FIX`)"
+        @click="signIn"
+      />
+    </template>
+
+    <template v-else-if="screen === 'pageNone' || screen === 'pageWrong'">
+      <div class="flex flex-col gap-2">
+        <h2
+          data-conectar-titulo
+          tabindex="-1"
+          class="m-0 text-2xl font-bold tracking-tight text-balance text-n-slate-12 outline-none"
+        >
+          {{
+            screen === 'pageWrong'
+              ? $t(`${C}.PAGE.WRONG_TITLE`)
+              : $t(`${C}.PAGE.NONE_TITLE`)
+          }}
+        </h2>
+        <p class="m-0 text-base text-n-slate-11">
+          {{
+            pagesFailed
+              ? $t(`${C}.PAGE.FAILED`)
+              : screen === 'pageWrong'
+                ? $t(`${C}.PAGE.WRONG_TEXT`)
+                : $t(`${C}.PAGE.NONE_TEXT`)
+          }}
+        </p>
+      </div>
+      <button
+        v-if="!pagesFailed"
+        type="button"
+        data-conectar-pagina-entrar
+        :disabled="isConnecting"
+        class="inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl border-0 bg-[#1460D1] px-7 text-base font-semibold text-white hover:bg-[#0F52B8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand disabled:cursor-wait sm:w-auto sm:self-start"
+        @click="signIn"
+      >
+        <span
+          class="i-ri-facebook-circle-fill size-6"
+          :class="{ 'animate-pulse': isConnecting }"
+          aria-hidden="true"
+        />
+        {{ $t(`${C}.PAGE.SIGN_IN_AGAIN`) }}
+      </button>
+      <p
+        v-if="isConnecting"
+        role="status"
+        class="m-0 rounded-xl bg-n-blue-2 px-4 py-3 text-sm font-medium text-n-blue-11"
+      >
+        {{ $t(textKey(`${C}.START.WAITING`)) }}
+      </p>
+      <button
+        type="button"
+        data-conectar-sem-pagina
+        class="inline-flex min-h-11 items-center self-start rounded-xl border-0 bg-transparent px-0 text-sm font-medium text-n-blue-11 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+        @click="withoutPage"
+      >
+        {{
+          pagesFailed
+            ? $t(`${C}.PAGE.CONTINUE_WITHOUT`)
+            : $t(`${C}.PAGE.NO_PAGE`)
+        }}
+      </button>
+    </template>
+
     <!-- Para onde o anúncio leva (#2338): o passo de destinos da aba Conexão -->
     <div v-else-if="screen === 'destino'" class="flex flex-col gap-4">
       <MetaAdsDestinationsStep
@@ -996,6 +1331,84 @@ onBeforeUnmount(stopRecheck);
       <p class="m-0 max-w-md text-base text-n-slate-11">
         {{ $t(`${C}.DONE.TEXT`, { name: chosen?.name }) }}
       </p>
+      <section
+        v-if="loginUnico"
+        data-conectar-funciona
+        class="flex w-full max-w-md flex-col gap-3 rounded-2xl bg-n-alpha-1 p-4 text-start"
+        :aria-label="$t(`${C}.DONE.WORKS.TITLE`)"
+      >
+        <h3 class="m-0 text-sm font-semibold text-n-slate-12">
+          {{ $t(`${C}.DONE.WORKS.TITLE`) }}
+        </h3>
+        <ul class="m-0 flex list-none flex-col gap-2 p-0">
+          <li
+            v-for="item in works"
+            :key="item.chave"
+            :data-recurso="item.chave"
+            :data-falta="item.falta || undefined"
+            class="flex items-center justify-between gap-3 text-sm"
+          >
+            <span class="flex min-w-0 items-center gap-2 text-n-slate-12">
+              <span
+                class="size-4 flex-none"
+                :class="
+                  item.falta
+                    ? 'i-lucide-circle-dashed text-n-amber-11'
+                    : 'i-lucide-circle-check text-n-teal-11'
+                "
+                aria-hidden="true"
+              />
+              {{ $t(`${C}.DONE.WORKS.${item.chave}`) }}
+            </span>
+            <span
+              class="flex-none text-xs font-medium"
+              :class="item.falta ? 'text-n-amber-11' : 'text-n-teal-11'"
+            >
+              {{
+                item.falta
+                  ? $t(`${C}.DONE.WORKS.MISSING_${item.falta}`)
+                  : $t(`${C}.DONE.WORKS.READY`)
+              }}
+            </span>
+          </li>
+        </ul>
+        <div
+          v-if="instagramToConnect"
+          data-conectar-ligar-instagram
+          class="flex flex-col gap-2 border-t border-solid border-n-weak pt-3"
+        >
+          <p class="m-0 text-sm text-n-slate-11">
+            {{ $t(`${C}.DONE.WORKS.INSTAGRAM_TEXT`) }}
+          </p>
+          <Button
+            data-conectar-instagram-ligar
+            variant="outline"
+            size="sm"
+            class="!min-h-11 self-start"
+            icon="i-ri-instagram-line"
+            :label="$t(`${C}.DONE.WORKS.INSTAGRAM_CTA`)"
+            @click="connectInstagram"
+          />
+        </div>
+        <div
+          v-if="worksMissingPermission"
+          data-conectar-faltou-permitir
+          class="flex flex-col gap-2 border-t border-solid border-n-weak pt-3"
+        >
+          <p class="m-0 text-sm text-n-slate-11">
+            {{ $t(`${C}.DONE.WORKS.FIX_TEXT`) }}
+          </p>
+          <Button
+            data-conectar-entrar-de-novo
+            variant="outline"
+            size="sm"
+            class="!min-h-11 self-start"
+            icon="i-ri-facebook-circle-fill"
+            :label="$t(`${C}.DONE.WORKS.FIX`)"
+            @click="signIn"
+          />
+        </div>
+      </section>
       <div
         v-if="pixels.length"
         data-conectar-pixel

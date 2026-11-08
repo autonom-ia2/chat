@@ -6,6 +6,9 @@
 # POST  meta_ads_connection/media             → foto ou vídeo do celular → { kind, hash | video_id }.
 # POST  meta_ads_connection/ads               → anúncio novo ou post impulsionado (`kind: post`), sempre pausado →
 #                                               { ad_id, name, status, budget }.
+# POST  meta_ads_connection/post_media        → foto ou vídeo do post (PR 3, #2653) → { kind, signed_id }.
+# POST  meta_ads_connection/posts             → publica o post na hora, na Página e/ou no Instagram (PR 3, #2653) →
+#                                               { facebook, instagram, failed, errors }.
 # GET   meta_ads_connection/ads/:ad_id/budget → orçamento e datas; falha é erro, nunca vazio.
 # PATCH meta_ads_connection/ads/:ad_id/budget → { amount, end_time } → orçamento novo.
 # GET   meta_ads_connection/paused_ads        → anúncios criados aqui que seguem pausados.
@@ -17,11 +20,12 @@
 class Api::V1::Accounts::Crm::MetaAdsCreationController < Api::V1::Accounts::Crm::BaseController
   CREATED_ACTION = 'meta_ads_ad_created'.freeze
   BUDGET_ACTION = 'meta_ads_budget_change'.freeze
+  PUBLISHED_ACTION = 'meta_ads_post_published'.freeze
   NOT_FOUND_CODES = %w[ad_not_found budget_not_found].freeze
 
   before_action :ensure_feature
   before_action :ensure_view
-  before_action :ensure_manage, only: [:options, :boost_posts, :media, :create, :update_budget]
+  before_action :ensure_manage, only: [:options, :boost_posts, :media, :create, :update_budget, :post_media, :publish]
   before_action :load_connection
 
   rescue_from ::Crm::MetaAds::Creation::Error, with: :render_creation_error
@@ -46,6 +50,24 @@ class Api::V1::Accounts::Crm::MetaAdsCreationController < Api::V1::Accounts::Crm
     created = service.create!(create_params)
     audit!(CREATED_ACTION, 'ad_id' => created[:ad_id], 'ad_name' => created[:name], 'budget' => created[:budget]) if service.created_now
     render json: created
+  end
+
+  def post_media
+    file = params[:file]
+    return render_unprocessable('invalid_media') unless file.respond_to?(:path)
+
+    render json: { media: ::Crm::MetaAds::Creation::PostMedia.new(Current.account).upload!(file) }
+  end
+
+  # Publicado é público: a Auditoria registra cada rede que publicou agora, com quem fez.
+  def publish
+    published = ::Crm::MetaAds::Creation::Publish.new(@connection).publish!(publish_params)
+    now = published[:published_now]
+    if now.any?
+      audit!(PUBLISHED_ACTION, 'page_id' => publish_params[:page_id], 'failed' => published[:failed],
+                               'posts' => now.index_with { |network| published[network.to_sym][:id] })
+    end
+    render json: published
   end
 
   def budget
@@ -74,6 +96,10 @@ class Api::V1::Accounts::Crm::MetaAdsCreationController < Api::V1::Accounts::Crm
                   :site_action, :text, :headline, :ready_message, :placement, :region, :age_min, :age_max, :special_category,
                   :daily_amount, :start_date, :end_date, :recreate_unconfirmed,
                   states: [], media: [:kind, :hash, :video_id, :image_hash], cards: [:kind, :hash, :video_id, :image_hash]).to_h
+  end
+
+  def publish_params
+    params.permit(:idempotency_key, :page_id, :caption, :media_id, networks: []).to_h.symbolize_keys
   end
 
   def ensure_feature

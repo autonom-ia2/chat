@@ -20,16 +20,21 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
   validates :origem, inclusion: { in: ORIGENS }
   validate :versao_ativa_desta_automacao
 
+  # O instante em que ficou ligada, a cada vez que liga (religar depois de desligar conta de novo). Os gatilhos de tempo
+  # não agem na ocorrência anterior a ele (Tempo.ligada_desde).
+  before_save { self.ligada_em = Time.current if ativa && will_save_change_to_ativa? }
+
   # Desligar sempre funciona (D7, F3.4): quem está no meio para agora, e a próxima rodada de quem já estava na fila
   # também para (o executor confere `ativa`).
   #
   # Sem callback de propósito: a execução órfã (alvo apagado) não passa no `belongs_to`, e desligar não pode falhar por
-  # ela. Leva a finalizada_em junto, como o CHECK pede.
+  # ela. Leva a finalizada_em junto, como o CHECK pede, e apaga os textos da IA (Execucao::AO_TERMINAR).
   def desligar!
     transaction do
       update!(ativa: false)
       agora = Time.current
-      execucoes.abertas.update_all(estado: 'parada', travada_em: nil, finalizada_em: agora, updated_at: agora) # rubocop:disable Rails/SkipsModelValidations
+      execucoes.abertas.update_all(estado: 'parada', travada_em: nil, finalizada_em: agora, updated_at: agora, # rubocop:disable Rails/SkipsModelValidations
+                                   **::Autonomia::Automacao::Execucao::AO_TERMINAR)
     end
   end
 

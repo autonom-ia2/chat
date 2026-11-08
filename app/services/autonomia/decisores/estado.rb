@@ -24,7 +24,16 @@
 #
 # `valor_do_card: false` (#2597, a Automação livre para quem não vê valores de venda): o card vai sem o valor. Quem chama
 # decide pela regra dele (Valores.pode_ler?); sem ele, igual.
-class Autonomia::Decisores::Estado
+#
+# `motivo_da_perda: true` (#2679, só os passos de IA da Automação): o card leva o motivo da perda. Sem ele, igual.
+#
+# `anuncio: true` (#2558): o card leva o anúncio de origem do formulário da Meta (formulário, anúncio e campanha em
+# metadata.meta_lead_form). Sem ele, só a hora da captura (Crm::MetaAds::LeadForms::Answers): fechado por padrão. Só a
+# resposta de opção fechada recebe o anúncio, pela chave do responsável (Crm::AnuncioDeOrigem.ve?): a rodada do Decisor
+# (quem o salvou por último), o teste do Decisor (quem testa) e a classificação do Guia (quem pede). Texto livre nunca
+# o recebe, porque o que ele escreve chega a quem não tem a chave: a dúvida que o Guia responde com motivo, a extração
+# de campos e os passos de IA da Automação (nota, mensagem, resumo). O exemplo guardado (texto_do_exemplo) também não.
+class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
   include Autonomia::DadoDeContato
 
   MAX_MENSAGENS = 5
@@ -40,14 +49,15 @@ class Autonomia::Decisores::Estado
   LEITORES = {
     'mensagens_recentes' => :ler_mensagens, 'mensagens_com_respostas' => :ler_mensagens_com_respostas,
     'ultima_mensagem' => :ler_ultima_mensagem, 'conversa' => :ler_conversa, 'contato' => :ler_contato,
-    'card' => :ler_card, 'empresa' => :ler_empresa
+    'card' => :ler_card, 'empresa' => :ler_empresa, 'notas' => :ler_notas
   }.freeze
   # Os blocos estruturados, que o exemplo guarda em JSON.
   BLOCOS = %i[contact conversation card company].freeze
 
   attr_reader :conversation, :message
 
-  # O estado de uma decisão já guardada (a dúvida que vai ao Guia, a resposta que vira exemplo).
+  # O estado de uma decisão já guardada (a dúvida que vai ao Guia, a resposta que vira exemplo). Sem o anúncio: o Guia
+  # responde com um motivo em texto livre, gravado na decisão (#2558).
   def self.da_decisao(decisao)
     new(conversation: decisao.conversation, message: decisao.message, card: decisao.card,
         leituras: decisao.decisor.leituras_efetivas)
@@ -55,7 +65,7 @@ class Autonomia::Decisores::Estado
 
   def initialize(conversation: nil, message: nil, card: nil, contact: nil, texto: nil, # rubocop:disable Metrics/ParameterLists
                  leituras: Autonomia::Decisor::LEITURAS_PADRAO, max_mensagens: MAX_MENSAGENS, max_caracteres_anteriores: MAX_CARACTERES,
-                 papeis: false, com_midia: false, fuso: nil, valor_do_card: true)
+                 papeis: false, com_midia: false, fuso: nil, valor_do_card: true, anuncio: false, motivo_da_perda: false)
     @conversation = conversation
     @message = message
     @card = card
@@ -68,6 +78,8 @@ class Autonomia::Decisores::Estado
     @com_midia = com_midia
     @fuso = fuso
     @valor_do_card = valor_do_card
+    @anuncio = anuncio
+    @motivo_da_perda = motivo_da_perda
   end
 
   # #936 — o registro de uma tarefa longa vai ao Jev inteiro, como texto: sem vazio e sem valor com
@@ -87,10 +99,12 @@ class Autonomia::Decisores::Estado
     dados
   end
 
-  # O texto guardado como exemplo quando a pessoa (ou o Guia) confirma a resposta.
+  # O texto guardado como exemplo quando a pessoa (ou o Guia) confirma a resposta. Sem o anúncio de origem (#2558): o
+  # exemplo fica no Decisor, e quem tem automation_view o lê.
   def texto_do_exemplo
-    blocos = BLOCOS.filter_map { |chave| "#{chave}: #{dados[chave].to_json}" if dados[chave] }
-    [dados[:subject], *dados[:messages], dados[:last_message], dados[:text], *blocos]
+    lido = @anuncio && dados[:card] ? dados.merge(ler_card(anuncio: false)) : dados
+    blocos = BLOCOS.filter_map { |chave| "#{chave}: #{lido[chave].to_json}" if lido[chave] }
+    [lido[:subject], *lido[:messages], lido[:last_message], lido[:text], *blocos]
       .compact_blank.join("\n\n").first(Autonomia::Decisor::MAX_TEXTO_DO_EXEMPLO)
   end
 
@@ -157,6 +171,12 @@ class Autonomia::Decisores::Estado
                       attributes: curto(conversation.custom_attributes), status: conversation.status }.compact_blank }
   end
 
+  # As notas internas da conversa (#2679, a IA da Automação): as mais recentes com texto, na mesma janela e no mesmo corte
+  # das mensagens. O Decisor não declara esta leitura (Autonomia::Decisor::LEITURAS).
+  def ler_notas
+    { notes: textos(ultimas(conversation&.messages&.where(private: true))) }
+  end
+
   # Nome e atributos. O e-mail e o telefone ficam de fora sempre, inclusive como nome.
   def ler_contato
     return {} if contato.nil?
@@ -164,13 +184,23 @@ class Autonomia::Decisores::Estado
     { contact: { name: (contato.name unless nome_provisorio?), attributes: curto(contato.custom_attributes) }.compact_blank }
   end
 
-  def ler_card
+  # As respostas do formulário do anúncio (#2195) trazem telefone e e-mail um nível abaixo, onde o curto não olha: nunca
+  # vão. O formulário, o anúncio e a campanha, só com `anuncio` (#2558). O motivo da perda, só com `motivo_da_perda` (a
+  # IA da Automação, #2679), cortado como um atributo e fora se tiver forma de e-mail ou de telefone.
+  def ler_card(anuncio: @anuncio)
     return {} if card.nil?
 
-    # As respostas do formulário do anúncio (#2195) trazem telefone e e-mail um nível abaixo, onde o curto não olha.
-    metadata = curto(Crm::MetaAds::LeadForms::Answers.without(card.metadata))
+    metadata = curto(Crm::MetaAds::LeadForms::Answers.para(card.metadata, contato_inteiro: false, anuncio_visivel: anuncio))
     { card: { title: card.title, stage: card.stage&.name, pipeline: card.pipeline&.name, value: valor_do_card, status: card.status,
-              metadata: metadata, attributes: curto(card.custom_attributes) }.compact_blank }
+              lost_reason: motivo_da_perda, metadata: metadata,
+              attributes: curto(card.custom_attributes) }.compact_blank }
+  end
+
+  def motivo_da_perda
+    return unless @motivo_da_perda
+
+    texto = card.lost_reason.to_s.strip.first(MAX_VALOR)
+    texto.presence unless contato?(texto)
   end
 
   def valor_do_card = ("#{card.value_cents / 100.0} #{card.currency}" if @valor_do_card && card.value_cents.to_i.positive?)

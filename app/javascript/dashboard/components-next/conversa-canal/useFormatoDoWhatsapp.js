@@ -25,6 +25,7 @@ const MARCAS_DE_ENVIO_AUTOMATICO = [
   'crmFollowUpId',
   'crmBookingInviteId',
   'crmBookingNotice',
+  'metaAdsCommentActionId',
 ];
 const MARCAS_DE_CAMPANHA = ['campaignId', 'whatsappApiCampaignId'];
 

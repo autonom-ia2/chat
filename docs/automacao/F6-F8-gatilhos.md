@@ -79,7 +79,7 @@ Nada muda na Partida, no Executor nem na varredura.
 | `card.ganho` / `card.perdido` | card | evento | atividade `won` / `lost` (Closer) | `funil_id` (opcional) | `atividade:<activity id>` |
 | `reuniao.marcada` / `.remarcada` / `.cancelada` | card | evento | atividades `meeting_scheduled` / `_rescheduled` / `_canceled` | — | `atividade:<activity id>` |
 | `card.parado` | card | tempo | `entered_stage_at` (índice `idx_crm_cards_entered_stage`) | `etapa_id`, `dias` | `parado:<card>:<entered_stage_at µs>` |
-| `card.data` / `contato.data` | card / contato | tempo | `custom_attributes` (atributo de tipo data) | `campo`, `dias`, `antes`/`depois`, `hora` | `data:<alvo>:<campo>:<data>` |
+| `card.data` / `contato.data` | card / contato | tempo | `custom_attributes` (atributo de tipo data) | `campo`, `dias`, `antes`/`depois`, `hora`, `repete` (opcional: `todo_ano`) | `data:<alvo>:<campo>:<data>` |
 | `recorrente` | card ou contato | tempo | relógio no fuso da conta | `frequencia`, `dia`, `hora`, `alvo`, filtros | `recorrente:<ocorrência local>:<alvo>` |
 
 **Valores do evento**, que só o filtro do gatilho lê:
@@ -163,10 +163,12 @@ A tela da etapa avisa o que não dispara. Ver a pergunta P5 sobre o upsert.
 - **Por automação**, acha os alvos da **janela**, enfileira um job por lote e, para cada alvo, chama a Partida com a marca. A janela é de 1 dia para trás.
 - **Tudo no SQL, em lote** (`find_each`): o filtro da janela, da etapa, da data e dos filtros simples vai na consulta. Nunca se carrega a conta inteira no Ruby. Contatos passam de 100 mil por conta, e a varredura roda a cada 15 minutos. É proteção contra defeito, não teto. O PR leva um spec com volume e o `EXPLAIN` de cada consulta.
   - **parado:** `entered_stage_at` entre `agora − dias − janela` e `agora − dias`, na etapa escolhida, com o card aberto. Usa o índice `idx_crm_cards_entered_stage`.
-    - O card que já estava parado havia mais de `dias + 1` quando a automação foi ligada **nunca dispara**: ligar não age no passado. A tela do gatilho diz isso.
+    - O card que chegou ao prazo antes de a automação ser ligada **nunca dispara**: ligar não age no passado (`ligada_em`, ou a hora da versão ativa, o que for mais recente). A tela do gatilho diz isso.
   - **data:** a data-alvo é calculada no Ruby (hoje no fuso da conta ∓ `dias`) e entra no SQL como igualdade: `custom_attributes->>'<campo>' = '<AAAA-MM-DD>'`. Vale para card e contato.
+    - #2678: no card, entram o aberto e o que **deu certo**: ganho, resolvido (o ganho do funil que não conta como venda) e o arquivado depois de fechado assim (`Crm::Card.com_desfecho`). A festa, a revisão e a renovação vêm depois da venda. O perdido, o cancelado e o arquivado sem desfecho ficam de fora.
+    - #2678: com `repete: todo_ano`, compara só mês e dia (`substr(campo, 6, 5)`), com o formato ISO conferido antes. Em ano que não é bissexto, o dia 28/02 também pega quem tem 29/02. A marca leva o dia-alvo com o ano: uma vez por ano.
     - Só se lê data ISO (`AAAA-MM-DD`). O valor em outro formato não casa com a igualdade e é ignorado. A varredura conta quantos alvos da conta têm o campo em formato inválido e põe isso no histórico da automação, sem o valor.
-    - "Já passou da `hora`" é conferido antes da consulta.
+    - "Já passou da `hora`" é conferido antes da consulta. A ocorrência anterior a ligar (ou a salvar a versão ligada) não roda: ligar às 8h um "às 9h" começa pela de hoje às 9h, nunca pela de ontem.
   - **recorrente:** a última ocorrência (`frequencia`, `dia`, `hora`, no fuso da conta) que é ≤ agora e cabe na janela. Age em cada card ou contato que passa nos filtros, uma vez cada (F8.6). Os filtros do recorrente vão no SQL.
     - A ocorrência entra na marca em **UTC ISO** (`iso8601`), nunca na hora local: no fuso com horário de verão, a hora local ambígua não repete nem pula. Spec com um fuso que tenha horário de verão.
 - **Deploy no meio** (F8.1): nada mora em memória. A janela e a marca fazem a varredura seguinte achar a ocorrência perdida, e ela não repete a que já rodou.

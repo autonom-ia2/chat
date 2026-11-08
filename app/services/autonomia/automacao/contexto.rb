@@ -13,10 +13,22 @@ class Autonomia::Automacao::Contexto
 
   attr_reader :alvo
 
-  def self.de(alvo) = new(alvo)
+  # `execucao`: a execução em que o passo roda, quando há uma. A reunião do gatilho (G12) e o texto da IA (#2679) leem dela.
+  # `textos`: no ensaio, que não tem execução, o texto que cada passo de IA produziria (só para mostrar).
+  def self.de(alvo, execucao: nil, textos: nil) = new(alvo, execucao: execucao, textos: textos)
 
-  def initialize(alvo)
+  # Os `textos` do ensaio (#2679): ele não chama a IA, e no lugar do texto de cada passo que escreve vai a marca de onde
+  # ele entraria.
+  def self.marcas_da_ia(receita, conta)
+    ::Autonomia::Automacao::Receita.new(receita, conta: conta, account_user: nil).passos
+                                   .select { |passo| ::Autonomia::Automacao::Valores::PASSOS_QUE_ESCREVEM.include?(passo['tipo']) }
+                                   .to_h { |passo| [passo['id'], I18n.t('autonomia.automacao.ensaio.texto_da_ia', passo: passo['id'])] }
+  end
+
+  def initialize(alvo, execucao: nil, textos: nil)
     @alvo = alvo
+    @execucao = execucao
+    @textos = textos
   end
 
   def conversa
@@ -33,6 +45,19 @@ class Autonomia::Automacao::Contexto
 
     @alvo.contact || conversa&.contact if @alvo.is_a?(::Crm::Card)
   end
+
+  # A reunião do gatilho de reunião (G12): a da atividade que disparou, achada pela marca da execução e sempre presa ao
+  # card e à conta do alvo (parecer do Funções), nunca só pelo id. Num passo que roda dias depois ela é relida: a
+  # reunião remarcada de novo traz o horário novo. Fora do gatilho de reunião, ou sem a atividade, nil.
+  def reuniao
+    return @reuniao if defined?(@reuniao)
+
+    @reuniao = (reuniao_da_atividade if card && @execucao && ::Autonomia::Automacao::Gatilhos.de_reuniao?(@execucao.chave_gatilho))
+  end
+
+  # #2679: o texto que o passo de IA `passo_id` produziu nesta execução (Execucao#guardar_texto!). Antes do passo rodar,
+  # nil.
+  def texto_da_ia(passo_id) = (@textos || @execucao&.textos).to_h[passo_id.to_s]
 
   # "conversa", "card" ou "contato": a base dos caminhos do Valores que o alvo tem sem ponte.
   def base
@@ -78,5 +103,14 @@ class Autonomia::Automacao::Contexto
     when ::Contact then ContactPolicy.new(contexto, @alvo).show?
     else false
     end
+  end
+
+  private
+
+  def reuniao_da_atividade
+    atividade_id = ::Autonomia::Automacao::Gatilhos.atividade_da_marca(@execucao.evento)
+    atividade = atividade_id && ::Crm::Activity.find_by(id: atividade_id, account_id: card.account_id, card_id: card.id)
+    reuniao_id = atividade&.payload.to_h['meeting_id']
+    reuniao_id && card.account.crm_meetings.find_by(id: reuniao_id, card_id: card.id)
   end
 end

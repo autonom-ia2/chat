@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_730000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_780000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -629,6 +629,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_730000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "evento"
+    t.jsonb "textos", default: {}, null: false
     t.index ["account_id"], name: "index_autonomia_automacao_execucoes_on_account_id"
     t.index ["alvo_type", "alvo_id"], name: "index_autonomia_automacao_execucoes_on_alvo"
     t.index ["automacao_id", "alvo_type", "alvo_id", "chave_gatilho"], name: "idx_autonomia_automacao_execucoes_abertas", unique: true, where: "(finalizada_em IS NULL)"
@@ -676,6 +677,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_730000) do
     t.bigint "ligada_por_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "ligada_em"
     t.index ["account_id", "ativa"], name: "idx_autonomia_automacoes_ligadas"
     t.index ["ligada_por_id"], name: "index_autonomia_automacoes_on_ligada_por_id"
     t.index ["versao_ativa_id"], name: "index_autonomia_automacoes_on_versao_ativa_id"
@@ -725,7 +727,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_730000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "leituras", default: [], null: false
+    t.bigint "salvo_por_id"
     t.index ["account_id", "nome"], name: "index_autonomia_decisores_on_account_id_and_nome", unique: true
+    t.index ["salvo_por_id"], name: "index_autonomia_decisores_on_salvo_por_id"
   end
 
   create_table "autonomia_desempenho_fichas", force: :cascade do |t|

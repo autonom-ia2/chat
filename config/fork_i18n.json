@@ -107,6 +107,12 @@
     },
     {
       "file": "automacaoLivreEnsaio.json"
+    },
+    {
+      "file": "automacaoLivreCampanha.json"
+    },
+    {
+      "file": "automacaoLivreRetorno.json"
     }
   ],
   "pacotes": {

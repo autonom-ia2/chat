@@ -3,25 +3,66 @@
 // etiqueta entra, porque vai pelo nome; pessoa, time e caixa ficam no "Alterar".
 import { entradaDoPasso, lerCampo } from './catalogo';
 import { comColchetes } from './texto';
+import { fraseDaCampanha } from './campanha';
+import { fraseDoRetorno } from './retorno';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
 
 // #2499: o gatilho com a etapa ou o funil escolhidos diz o nome deles
 // ("Quando o card entra em Orçamento"). `nomes` vem pela peça do parâmetro
-// ({ etapa: { 12: 'Orçamento' }, funil: {...} }). Sem o nome na tela, ou sem o
-// funil (vale qualquer um), fica a frase do catálogo. Com mais de um funil na
-// conta, `nomes.funilDaEtapa` acrescenta o funil da etapa ("..., no funil X").
+// ({ etapa: { 12: 'Orçamento' }, funil: {...} }); o campo de data, também pelo
+// alvo ({ campo: { Contact: { aniversario: 'Aniversário' } } }). Os de tempo
+// dizem os dias e a hora pelo número e o "antes"/"depois" em frase. Sem o nome
+// na tela, ou sem o funil (vale qualquer um), fica a frase do catálogo. Com
+// mais de um funil na conta, `nomes.funilDaEtapa` acrescenta o funil da etapa
+// ("..., no funil X").
+const QUANDO_DA_DATA = ['antes', 'depois'];
+const numero = valor => (Number.isInteger(valor) ? valor : undefined);
+const VALOR_DA_PECA = {
+  dias: numero,
+  hora: numero,
+  quando: (valor, t) =>
+    QUANDO_DA_DATA.includes(valor)
+      ? t(`AUTOMACAO_LIVRE.QUANDO_DA_DATA.${valor.toUpperCase()}`)
+      : undefined,
+  campo: (valor, t, nomes, alvo) => nomes.campo?.[alvo]?.[valor],
+};
+const valorNaFrase = (peca, valor, t, nomes, alvo) =>
+  VALOR_DA_PECA[peca]
+    ? VALOR_DA_PECA[peca](valor, t, nomes, alvo)
+    : nomes[peca]?.[valor];
+
+// No próprio dia da data (dias = 0), a frase dos de data não fala em dias.
+const chaveDaFrase = (entrada, gatilho) => {
+  const chave = entrada.frase.split('.').pop();
+  const temQuando = entrada.parametros.some(item => item.peca === 'quando');
+  return temQuando && gatilho.dias === 0
+    ? `AUTOMACAO_LIVRE.GATILHO_NO_DIA.${chave}`
+    : `AUTOMACAO_LIVRE.GATILHO_COM.${chave}`;
+};
+
 export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
   const entrada = catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo);
   if (!entrada) return t(`${P}.FALTA_GATILHO`);
-  const parametros = entrada.parametros || [];
-  const escolhidos = Object.fromEntries(
-    parametros.map(item => [item.peca, nomes[item.peca]?.[gatilho[item.nome]]])
+  // #2678: o "repete" é opcional e entra só como fim da frase ("..., todo ano").
+  const parametros = (entrada.parametros || []).filter(
+    item => item.peca !== 'repete'
   );
-  if (!parametros.length || !Object.values(escolhidos).every(Boolean))
-    return t(entrada.frase);
-  const chave = entrada.frase.split('.').pop();
-  const frase = t(`AUTOMACAO_LIVRE.GATILHO_COM.${chave}`, escolhidos);
+  const escolhidos = Object.fromEntries(
+    parametros.map(item => [
+      item.peca,
+      valorNaFrase(item.peca, gatilho[item.nome], t, nomes, entrada.alvo),
+    ])
+  );
+  const completo = Object.values(escolhidos).every(
+    valor => valor !== undefined && valor !== null && valor !== ''
+  );
+  if (!parametros.length || !completo) return t(entrada.frase);
+  const base = t(chaveDaFrase(entrada, gatilho), escolhidos);
+  const frase =
+    gatilho.repete === 'todo_ano'
+      ? t('AUTOMACAO_LIVRE.GATILHO_TODO_ANO', { frase: base })
+      : base;
   const funil = nomes.funilDaEtapa?.[gatilho.etapa_id];
   return funil
     ? t('AUTOMACAO_LIVRE.GATILHO_NO_FUNIL', { frase, funil })
@@ -34,7 +75,8 @@ export const fraseDoValor = (caminho, catalogo, t) => {
   const fixo = valores.find(
     item => item.caminho === caminho && !item.atributos
   );
-  if (fixo) return t(fixo.frase);
+  // #2679: o texto da IA (comTextosDaIa) chega com o rótulo pronto, sem frase.
+  if (fixo) return fixo.rotulo || t(fixo.frase);
   const base = valores.find(
     item => item.atributos && caminho?.startsWith(`${item.caminho}.`)
   );
@@ -232,7 +274,7 @@ const FRASE_DA_IA = {
     }),
   escrever: (passo, t) =>
     t(
-      `${P}.ESCREVER_${passo.destino === 'mensagem' ? 'MENSAGEM' : 'SUGESTAO'}${
+      `${P}.ESCREVER_${(passo.destino || 'sugestao').toUpperCase()}${
         escrito(passo.instrucao) ? '' : '_SEM_INSTRUCAO'
       }`,
       { instrucao: curto(escrito(passo.instrucao)) }
@@ -273,15 +315,43 @@ export const fraseDoPasso = (passo, catalogo, t) => {
       texto: fraseDoTexto(passo.texto, catalogo, t),
     });
   if (FRASE_DA_IA[passo.tipo]) return FRASE_DA_IA[passo.tipo](passo, t);
+  if (passo.tipo === 'campanha') return fraseDaCampanha(passo, t);
+  if (passo.tipo === 'retorno')
+    return fraseDoRetorno(passo, t, {
+      quando: fraseDaDuracao(passo.daqui, catalogo, t),
+      titulo: fraseDoTexto(passo.titulo, catalogo, t),
+      mensagem: passo.envio && fraseDoTexto(passo.envio.mensagem, catalogo, t),
+    });
   if (passo.tipo !== 'acao') return t(entrada.frase);
   if (ETIQUETAS_DE[entrada.nome]) return fraseDasEtiquetas(passo, entrada, t);
   return [t(entrada.frase), ...resumoDaAcao(passo, entrada, t)].join(' · ');
 };
 
+const A = 'AUTOMACAO_LIVRE.ALTERAR_PAINEL';
+
+// #2414 G16b — a data calculada em frase curta: "hoje + 6 meses", "Data de
+// nascimento − 1 dia". `rotular` dá o nome do campo de partida (a peça de data
+// usa o nome que a pessoa vê na escolha).
+export const fraseDaData = (
+  data,
+  catalogo,
+  t,
+  rotular = caminho => fraseDoValor(caminho, catalogo, t)
+) => {
+  const { de, mais } = data || {};
+  const inicio = de === 'hoje' ? t(`${A}.HOJE`) : rotular(de?.$valor);
+  if (!mais?.valor) return inicio;
+  const n = Math.abs(mais.valor);
+  return t(`${A}.DATA_${mais.valor < 0 ? 'MENOS' : 'MAIS'}`, {
+    de: inicio,
+    n,
+    unidade: t(`AUTOMACAO_LIVRE.UNIDADES.${mais.unidade.toUpperCase()}`, {}, n),
+  });
+};
+
 // #2414 G16 — o valor calculado que o Guia montou num campo da ação, em frase:
 // "Vem da conversa: Nome do contato", "Montado na hora: indicado por [Nome do
 // contato]", "Data calculada na hora: hoje + 6 meses".
-const A = 'AUTOMACAO_LIVRE.ALTERAR_PAINEL';
 export const fraseDoCalculado = (valor, catalogo, t) => {
   if (valor?.$valor)
     return t(`${A}.DA_CONVERSA`, {
@@ -291,14 +361,7 @@ export const fraseDoCalculado = (valor, catalogo, t) => {
     return t(`${A}.CALCULADO_TEXTO`, {
       texto: fraseDoTexto(valor.$texto, catalogo, t),
     });
-  const { de, mais } = valor?.$data || {};
-  const inicio =
-    de === 'hoje' ? t(`${A}.HOJE`) : fraseDoValor(de?.$valor, catalogo, t);
-  if (!mais?.valor) return t(`${A}.DATA_CALCULADA`, { de: inicio });
-  const n = Math.abs(mais.valor);
-  return t(`${A}.DATA_CALCULADA_${mais.valor < 0 ? 'MENOS' : 'MAIS'}`, {
-    de: inicio,
-    n,
-    unidade: t(`AUTOMACAO_LIVRE.UNIDADES.${mais.unidade.toUpperCase()}`, {}, n),
+  return t(`${A}.DATA_CALCULADA`, {
+    de: fraseDaData(valor?.$data, catalogo, t),
   });
 };
