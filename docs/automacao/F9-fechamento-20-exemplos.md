@@ -1,6 +1,6 @@
 # Automação livre · teste de fechamento dos 20 exemplos (F9.6 a F9.8)
 
-- **Épico:** #2414 · **Issue:** #2570 · **Base:** termos de aceite F1–F9 (31/10, commit `dcd9a9f5d4`), main em `4bd7168c0f` (05/11).
+- **Épico:** #2414 · **Issue:** #2570 · **Base:** termos de aceite F1–F9 (31/10, commit `dcd9a9f5d4`, em [`termos-de-aceite-F1-F9.md`](termos-de-aceite-F1-F9.md)), main em `4bd7168c0f` (05/11).
 - **Para que serve:** o épico só fecha quando os 20 exemplos dos termos rodam de ponta a ponta no ambiente de testes,
   montados como o dono montaria, com teste automático conferindo o resultado prometido. Este documento desenha esse
   teste e, antes dele, mostra **o que falta no motor para cada exemplo rodar**. A lista de lacunas (seção 5) é o
