@@ -65,6 +65,15 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
     expect(Crm::MetaAdsLead.where(account: account).pluck(:leadgen_id)).to contain_exactly('L1', 'L2')
   end
 
+  it 'rodada sem lead novo: não lê as perguntas do formulário (só o token da Página e a lista de leads)' do
+    stub_leads(leads: [])
+
+    described_class.perform_now(form.id)
+
+    expect(a_request(:get, meta_graph_url('9001')).with(query: hash_including({}))).not_to have_been_made
+    expect(a_request(:get, meta_graph_url('9001/leads')).with(query: hash_including({}))).to have_been_made.once
+  end
+
   it 'solta a trava da rodada no fim' do
     stub_leads
 

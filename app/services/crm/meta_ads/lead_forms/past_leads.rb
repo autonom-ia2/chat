@@ -68,20 +68,27 @@ class Crm::MetaAds::LeadForms::PastLeads
     counted.symbolize_keys
   end
 
-  # Quantos viraram card novo (os repetidos e quem já tinha card aberto no funil não contam).
+  # Quantos viraram card novo (os repetidos e quem já tinha card aberto no funil não contam). As perguntas do
+  # formulário só são lidas quando há lead: a reconciliação de hora em hora (#2285) quase sempre volta vazia, e cada
+  # chamada a mais gasta o limite de uso da Meta.
   def import!(pipeline:, stage:)
-    questions = client.lead_form_questions(@form['id'])
-    importer = Crm::MetaAds::LeadForms::Importer.new(
-      account: @account, pipeline: pipeline, stage: stage, form_name: @form['name'], page_id: @page['id'],
-      questions: questions.ok ? Array(questions.data.to_h['questions']) : []
-    )
     rows, truncated = read
-    imported = rows.count { |lead| importer.import(lead) == :created }
+    imported = rows.empty? ? 0 : rows.count { |lead| importer(pipeline, stage).import(lead) == :created }
     Rails.cache.delete(self.class.cache_key(@account.id, @form['id']))
     { imported: imported, truncated: truncated }
   end
 
   private
+
+  def importer(pipeline, stage)
+    @importer ||= begin
+      questions = client.lead_form_questions(@form['id'])
+      Crm::MetaAds::LeadForms::Importer.new(
+        account: @account, pipeline: pipeline, stage: stage, form_name: @form['name'], page_id: @page['id'],
+        questions: questions.ok ? Array(questions.data.to_h['questions']) : []
+      )
+    end
+  end
 
   def client
     @client ||= Meta::AdsGraphClient.new(access_token: @page['access_token'])

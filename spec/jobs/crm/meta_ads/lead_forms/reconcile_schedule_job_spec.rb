@@ -29,6 +29,14 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileScheduleJob do
     expect { described_class.perform_now }.not_to have_enqueued_job(Crm::MetaAds::LeadForms::ReconcileJob)
   end
 
+  it 'fila atrasada por horas: o job anterior ainda na fila não ganha outro' do
+    described_class.perform_now
+
+    travel 5.hours do
+      expect { described_class.perform_now }.not_to have_enqueued_job(Crm::MetaAds::LeadForms::ReconcileJob)
+    end
+  end
+
   it 'formulário sem destino fica de fora' do
     form.update!(pipeline: nil, stage: nil)
 
