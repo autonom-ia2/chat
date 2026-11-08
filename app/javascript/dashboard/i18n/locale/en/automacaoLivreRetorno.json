@@ -1,0 +1,25 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "RETORNO": {
+      "FRASE": "Create a follow-up for {quem} in {quando}: “{titulo}”",
+      "FRASE_COM_MENSAGEM": "Create a follow-up for {quem} in {quando}: “{titulo}”, and send the customer: “{mensagem}”",
+      "QUEM": {
+        "RESPONSAVEL": "whoever handles it",
+        "PESSOAS": "1 person | {n} people",
+        "TIME": "a team"
+      },
+      "OPCOES": {
+        "RESPONSAVEL": "Whoever handles it: on a card, its owner; in a conversation, its assignee",
+        "PESSOAS": "Chosen people",
+        "TIME": "A team"
+      },
+      "PESSOAS": "Which people",
+      "TIME": "Which team",
+      "ESCOLHA": "Choose",
+      "MANDAR": "At follow-up time, send the customer a message",
+      "MANDAR_DICA": "Only works when the automation runs on a card with a WhatsApp conversation. Outside the 24-hour window, the message only goes out with an approved template; without one, the team is alerted.",
+      "MENSAGEM": "What to send the customer",
+      "SO_LEMBRETE": "Without the message, the team only gets the reminder."
+    }
+  }
+}

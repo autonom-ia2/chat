@@ -47,7 +47,8 @@ module Autonomia::Automacao::AcoesPermitidas
   # O que o corpo da ação fere nas regras da lista, na ordem exige, fixos, proíbe e um_de:
   # [[chave da frase em autonomia.automacao.receita, { campo:, ... }], ...]. A Receita monta a frase.
   def fora_da_lista(acao, valores)
-    faltando(acao, valores) + trocados(acao, valores) + proibidos(acao, valores) + fora_das_opcoes(acao, valores)
+    faltando(acao, valores) + trocados(acao, valores) +
+      proibidos(acao, valores).map { |campo| [:proibido, { campo: campo }] } + fora_das_opcoes(acao, valores)
   end
 
   def faltando(acao, valores) = exige(acao).select { |campo| valores[campo].blank? }.map { |campo| [:exige, { campo: campo }] }
@@ -56,8 +57,10 @@ module Autonomia::Automacao::AcoesPermitidas
     fixos(acao).reject { |campo, valor| valores[campo] == valor }.map { |campo, valor| [:fixo, { campo: campo, valor: valor }] }
   end
 
+  # Os campos proibidos que os valores mandam (a chave presente, mesmo vazia; o ponto entra no campo de dentro). A
+  # Receita pergunta ao salvar, e o motor de novo ao rodar (G15).
   def proibidos(acao, valores)
-    proibe(acao).select { |campo| mandado?(valores, campo.split('.')) }.map { |campo| [:proibido, { campo: campo }] }
+    proibe(acao).select { |campo| mandado?(valores.to_h, campo.split('.')) }
   end
 
   def fora_das_opcoes(acao, valores)

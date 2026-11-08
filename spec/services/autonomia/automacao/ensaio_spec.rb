@@ -120,6 +120,39 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     end
   end
 
+  # G3 (#2629): o retorno mostra o título montado ou por que pularia, e não cria nada.
+  describe 'criar retorno' do
+    let(:retorno) do
+      { 'id' => 'r1', 'tipo' => 'retorno', 'titulo' => ['Ligar para ', { '$valor' => 'contato.nome' }],
+        'daqui' => { 'valor' => 2, 'unidade' => 'dias' } }
+    end
+
+    it 'com responsável, o título montado; sem, diz que não criaria; nada é criado', :aggregate_failures do
+      expect(passos_de(receita(retorno)).first).to include(faria: 'retorno_sem_responsavel')
+
+      conversa.update!(assignee: admin)
+
+      expect(passos_de(receita(retorno)).first).to eq(id: 'r1', tipo: 'retorno', faria: 'retorno', dados: { texto: 'Ligar para Maria' })
+      expect(passos_de(receita(retorno.merge('para' => { 'quem' => 'pessoas', 'pessoas' => [admin.id] }))).first[:faria]).to eq('retorno')
+      expect(Crm::FollowUp.count).to eq(0)
+    end
+
+    it 'com a mensagem e sem a mensagem automática, diz que não sairia' do
+      account.disable_features!('automacao_mensagens')
+
+      expect(passos_de(receita(retorno.merge('envio' => { 'mensagem' => ['Oi'] }))).first[:faria]).to eq('mensagens_desligadas')
+    end
+
+    it 'a mensagem com valor vazio ou só de espaços pula como o motor', :aggregate_failures do
+      conversa.update!(assignee: admin)
+      vazia = retorno.merge('envio' => { 'mensagem' => [{ '$valor' => 'contato.email' }] })
+
+      conversa.contact.update!(email: nil)
+      expect(passos_de(receita(vazia)).first[:faria]).to eq('faltou_valor')
+      expect(passos_de(receita(retorno.merge('envio' => { 'mensagem' => ['   '] }))).first[:faria]).to eq('texto_vazio')
+    end
+  end
+
   it 'um tipo que o ensaio não conhece só ganha a frase do catálogo' do
     expect(passos_de(receita({ 'id' => 'x1', 'tipo' => 'inventado' })).first).to eq(id: 'x1', tipo: 'inventado', faria: 'catalogo', dados: {})
   end

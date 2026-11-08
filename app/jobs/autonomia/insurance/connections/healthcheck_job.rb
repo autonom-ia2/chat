@@ -30,6 +30,11 @@ class Autonomia::Insurance::Connections::HealthcheckJob < ApplicationJob
   # sincronização é que decide o estado. Se estiver tudo bem, volta a `ready` sozinha.
   STUCK_AFTER = 10.minutes
 
+  # Presa em `discovering` é uma VARREDURA que morreu, e é ela que se refaz. Re-sincronizar sem varrer
+  # devolvia `ready` sem capacidades nem formulários, e toda cotação de auto era recusada até alguém
+  # clicar em Atualizar configuração (auditoria da conexão, 05/11/2026, achado 17).
+  VARRENDO = 'discovering'.freeze
+
   # `auth_required` QUE NÃO É DA CORRETORA volta a ser tentado, a cada 60 a 90 minutos (auditoria da
   # conexão, 05/11/2026). Só quando o adapter AFIRMA que a ação não é dela — `last_failure.actor`
   # presente e diferente de `broker` (sessão recusada depois de renovar, por exemplo). Sem
@@ -40,12 +45,25 @@ class Autonomia::Insurance::Connections::HealthcheckJob < ApplicationJob
   RETRY_AUTH_AFTER = 1.hour
   ACAO_DA_CORRETORA = 'broker'.freeze
 
+  # "SESSÕES LOTADAS": todas as vagas de usuário da corretora no portal estão ocupadas, e quem libera é
+  # ela (auditoria da conexão, 05/11/2026, achado 4). Cada tentativa é um login recusado a mais contra
+  # o portal; de 30 em 30 minutos, em 06/11, foram 12 seguidas sem mudar nada. Recua para uma por hora:
+  # a conexão volta sozinha quando a vaga abrir, e a tela já diz ao corretor o que fazer.
+  SESSOES_LOTADAS = 'sessions_full'.freeze
+  RETRY_SESSIONS_FULL_AFTER = 1.hour
+
   def perform
-    ::Autonomia::Insurance::Connection.where(status: CHECKABLE).find_each(batch_size: BATCH_SIZE) do |connection|
-      check(connection)
-    end
-    presas.find_each(batch_size: BATCH_SIZE) { |connection| check(connection) }
+    verificaveis.find_each(batch_size: BATCH_SIZE) { |connection| check(connection) }
+    presas.find_each(batch_size: BATCH_SIZE) { |connection| check(connection, varrer: connection.status == VARRENDO) }
     recusas_sem_dono.find_each(batch_size: BATCH_SIZE) { |connection| check(connection) }
+  end
+
+  # As de `CHECKABLE`, menos as em recuo por "Sessões lotadas" verificadas há menos de uma hora.
+  def verificaveis
+    em_recuo = ::Autonomia::Insurance::Connection
+               .where("metadata -> 'last_failure' ->> 'cause' = ?", SESSOES_LOTADAS)
+               .where('last_healthcheck_at >= ?', RETRY_SESSIONS_FULL_AFTER.ago)
+    ::Autonomia::Insurance::Connection.where(status: CHECKABLE).where.not(id: em_recuo.select(:id))
   end
 
   def recusas_sem_dono
@@ -68,11 +86,11 @@ class Autonomia::Insurance::Connections::HealthcheckJob < ApplicationJob
 
   # `Sync` com `scan_capabilities: false` é exatamente o ping: resolve a sessão (reusa ou renova),
   # consulta o portal, grava status e `last_healthcheck_at`, e NUNCA levanta — falha vira estado
-  # consultável na tela, que é o que o corretor precisa ver.
-  def check(connection)
+  # consultável na tela, que é o que o corretor precisa ver. `varrer:` só para a varredura presa.
+  def check(connection, varrer: false)
     return unless ::Autonomia::Insurance::Config.enabled?(connection.account)
 
-    ::Autonomia::Insurance::Connections::Sync.new(connection, scan_capabilities: false).call
+    ::Autonomia::Insurance::Connections::Sync.new(connection, scan_capabilities: varrer).call
   rescue StandardError => e
     # Uma conexão problemática não pode impedir a verificação das outras.
     Rails.logger.warn("[autonomia][insurance] healthcheck failed connection=#{connection.id} #{e.class}")

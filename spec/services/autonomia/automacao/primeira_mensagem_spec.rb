@@ -129,7 +129,7 @@ RSpec.describe Autonomia::Automacao::PrimeiraMensagem do
       conversas.anotar!(nova, comentario('instagram', instagram), care, nova: true)
       expect(described_class.iniciada_por(nova.reload)).to eq('equipe')
 
-      messenger = conversas.no_messenger!(comentario('facebook', pagina), envio, care.message)
+      messenger = conversas.no_messenger!(comentario('facebook', pagina), envio, care.message, 42)
       conversas.anotar!(messenger, comentario('facebook', pagina), care, nova: true)
       expect(described_class.iniciada_por(messenger.reload)).to eq('equipe')
     end

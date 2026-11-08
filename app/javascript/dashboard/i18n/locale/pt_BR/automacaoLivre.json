@@ -88,11 +88,15 @@
       "ATRIBUTO_ALTERAR": "Mudar um campo personalizado",
       "MENSAGEM": "Mandar mensagem ao cliente",
       "AVISAR": "Avisar a equipe",
+      "CAMPANHA": "Campanha",
       "DECIDIR": "A IA decide o caminho",
       "EXTRAIR": "A IA tira dados da conversa",
       "ESCREVER": "A IA escreve um texto",
+      "CARD": "Criar um card no funil",
       "RESUMIR": "A IA resume a conversa",
-      "EMAIL": "Mandar e-mail ao cliente"
+      "IA_ASSUMIR": "Passar para a agente de IA",
+      "EMAIL": "Mandar e-mail ao cliente",
+      "RETORNO": "Criar um retorno para a equipe"
     },
     "ESCOLHER": {
       "ETIQUETA": "Qual etiqueta",
@@ -115,6 +119,10 @@
       "TEAM_ID": "Time",
       "INBOX_ID": "Caixa",
       "USER_IDS": "Pessoas",
+      "FAZ": "O que fazer",
+      "TITULO": "Nome da campanha",
+      "CAIXA_ID": "Caixa do WhatsApp",
+      "ETIQUETAS": "Para quem tem as etiquetas",
       "NAME": "Nome",
       "EMAIL": "E-mail",
       "PHONE_NUMBER": "Telefone",
@@ -134,6 +142,9 @@
       "ATTRIBUTE_VALUES": "Opções da lista",
       "TEXTO": "O que dizer",
       "PARA": "Quem avisar",
+      "TITULO": "O que a equipe vai fazer",
+      "DAQUI": "Daqui a quanto tempo",
+      "ENVIO": "Mensagem ao cliente",
       "LE": "O que a IA lê",
       "PERGUNTA": "O que a IA deve decidir",
       "CAMINHOS": "Caminhos",
@@ -143,6 +154,8 @@
       "INSTRUCAO": "O que a IA deve escrever",
       "DESTINO": "Para onde vai",
       "LINHAS": "Tamanho do resumo (linhas)",
+      "ETAPA_ID": "Em qual etapa o card nasce",
+      "AGENTE_ID": "Qual agente de IA",
       "CAIXA_ID": "Por qual caixa de e-mail",
       "ASSUNTO": "Assunto",
       "MODELO": "Se a janela de 24 h estiver fechada"
@@ -297,6 +310,8 @@
       "ESCREVER_MENSAGEM_SEM_INSTRUCAO": "A IA escreve e manda ao cliente: falta escrever a instrução",
       "ESCREVER_SUGESTAO": "A IA escreve uma sugestão para a equipe: “{instrucao}”",
       "ESCREVER_SUGESTAO_SEM_INSTRUCAO": "A IA escreve uma sugestão para a equipe: falta escrever a instrução",
+      "ESCREVER_GUARDAR": "A IA escreve um texto e guarda para os passos seguintes: “{instrucao}”",
+      "ESCREVER_GUARDAR_SEM_INSTRUCAO": "A IA escreve um texto e guarda para os passos seguintes: falta escrever a instrução",
       "RESUMIR_NOTA": "A IA resume a conversa numa nota",
       "RESUMIR_AVISAR": "A IA resume a conversa e avisa {quem}",
       "EMAIL": "Mandar e-mail ao cliente: “{assunto}”"
@@ -376,6 +391,8 @@
         "SUMIU": "O modelo {nome} não está mais aprovado, de utilidade, nas caixas que você vê. Escolha outro.",
         "VARIAVEL": "Variável {numero} do modelo"
       },
+      "SEM_AGENTE_DE_IA": "Nenhuma agente de IA recebe conversas nesta conta ainda. Ponha uma agente numa caixa, em Agentes de IA, para usar este passo.",
+      "AGENTES_DE_IA_FALHOU": "Não deu para carregar as agentes de IA. Recarregue a página para tentar de novo.",
       "POR_VALOR_EM": "Pôr um dado da conversa em “{campo}”",
       "SEM_CAIXA_DE_EMAIL": "A conta ainda não tem caixa de e-mail. Crie uma em Caixas de entrada para usar este passo."
     },

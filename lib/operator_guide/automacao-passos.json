@@ -215,6 +215,12 @@
           "peca": "hora",
           "obrigatorio": true,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        },
+        {
+          "nome": "repete",
+          "peca": "repete",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.REPETE"
         }
       ]
     },
@@ -248,6 +254,12 @@
           "peca": "hora",
           "obrigatorio": true,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        },
+        {
+          "nome": "repete",
+          "peca": "repete",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.REPETE"
         }
       ]
     }
@@ -821,6 +833,57 @@
       ]
     },
     {
+      "tipo": "campanha",
+      "grupo": "MENSAGEM",
+      "requer": "automacao_mensagens",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CAMPANHA",
+      "campos": [
+        {
+          "nome": "faz",
+          "peca": "campanha",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.FAZ"
+        },
+        {
+          "nome": "titulo",
+          "peca": "campanha",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TITULO"
+        },
+        {
+          "nome": "caixa_id",
+          "peca": "campanha",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CAIXA_ID"
+        },
+        {
+          "nome": "modelo",
+          "peca": "campanha",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.MODELO"
+        },
+        {
+          "nome": "etiquetas",
+          "peca": "campanha",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ETIQUETAS"
+        }
+      ]
+    },
+    {
+      "tipo": "ia_assumir",
+      "grupo": "EQUIPE",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.IA_ASSUMIR",
+      "campos": [
+        {
+          "nome": "agente_id",
+          "peca": "agente_de_ia",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.AGENTE_ID"
+        }
+      ]
+    },
+    {
       "tipo": "decidir",
       "grupo": "IA",
       "requer": "automacao_ia",
@@ -927,6 +990,52 @@
           "peca": "destino_resumir",
           "obrigatorio": true,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DESTINO"
+        }
+      ]
+    },
+    {
+      "tipo": "card",
+      "grupo": "FUNIL",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CARD",
+      "campos": [
+        {
+          "nome": "etapa_id",
+          "peca": "etapa",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ETAPA_ID"
+        }
+      ]
+    },
+    {
+      "tipo": "retorno",
+      "grupo": "EQUIPE",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.RETORNO",
+      "campos": [
+        {
+          "nome": "titulo",
+          "peca": "texto_com_valores",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TITULO"
+        },
+        {
+          "nome": "daqui",
+          "peca": "duracao",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DAQUI"
+        },
+        {
+          "nome": "para",
+          "peca": "quem_recebe_retorno",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PARA"
+        },
+        {
+          "nome": "envio",
+          "peca": "envio_do_retorno",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ENVIO"
         }
       ]
     },

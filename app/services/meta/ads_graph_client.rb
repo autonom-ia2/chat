@@ -175,11 +175,13 @@ class Meta::AdsGraphClient
 
   include Meta::AdsGraphClient::Management
   include Meta::AdsGraphClient::Creation
+  include Meta::AdsGraphClient::Publishing
   include Meta::AdsGraphClient::Organico
   include Meta::AdsGraphClient::SeusPosts
   include Meta::AdsGraphClient::LeadForms
   include Meta::AdsGraphClient::Prazo
   include Meta::AdsGraphClient::Recusa
+  include Meta::AdsGraphClient::LoginUnico
 
   private
 

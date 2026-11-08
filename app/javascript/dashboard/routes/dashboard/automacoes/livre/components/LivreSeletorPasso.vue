@@ -16,6 +16,7 @@ const emit = defineEmits(['escolher', 'close']);
 const { canManagePipelines } = useCrmPermissions();
 
 const painel = ref(null);
+const { canManagePipelines } = useCrmPermissions();
 
 const grupos = computed(() =>
   props.catalogo.grupos

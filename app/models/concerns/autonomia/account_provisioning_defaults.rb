@@ -25,10 +25,12 @@ module Autonomia::AccountProvisioningDefaults
 
   # #2228: conta nova nasce com a Fase 2 dos Agentes e o "Agente de IA" por caixa. As chaves que já vêm na criação
   # (billing_provider, signup_source, ou a própria chave dada por quem cria) valem por cima do padrão.
+  # #2667: e com o agente que age ao receber a passagem (liberado para todas as contas em 07/11/2026).
   def apply_autonomia_default_internal_attributes
     self.internal_attributes = {
       Autonomia::Agents::Fase2::INTERNAL_ATTR_KEY => true,
-      Autonomia::Agents::AgenteIaPorCaixa::INTERNAL_ATTR_KEY => true
+      Autonomia::Agents::AgenteIaPorCaixa::INTERNAL_ATTR_KEY => true,
+      Autonomia::Agents::Operate::AoReceberPassagem::LIGADA_KEY => true
     }.merge(internal_attributes.to_h.stringify_keys)
   end
 

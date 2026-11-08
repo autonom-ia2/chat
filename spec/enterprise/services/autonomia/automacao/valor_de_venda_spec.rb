@@ -228,8 +228,8 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
     end
   end
 
-  # A leitura "card" do Decisores::Estado leva o valor. O esquema da receita ainda não deixa o passo de IA ler o card, mas
-  # o ComIa já passa a regra de quem ligou: se a leitura entrar na lista, o valor não vaza por ali.
+  # A leitura "card" do Decisores::Estado leva o valor só com a chave de quem ligou (#2597). Desde o #2679 (`le: card`), o
+  # card inteiro só vai se quem ligou ainda o vê: quem saiu da conta não manda nem o título.
   describe 'leitura do card no passo de IA' do
     let(:dono) { pessoa_com(base + %w[sales_value_view]) }
 
@@ -246,14 +246,14 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
       expect(card_lido(automacao_ligada(account, dono, [caro], gatilho: gatilho))).to include(value: '2500.0 BRL')
     end
 
-    it 'quem ligou perdeu a chave ou saiu da conta: o card vai sem o valor', :aggregate_failures do
+    it 'quem ligou perdeu a chave: o card vai sem o valor; saiu da conta: o card não vai', :aggregate_failures do
       definicao = automacao_ligada(account, dono, [caro], gatilho: gatilho)
       AccountUser.find_by(account: account, user: dono).custom_role.update!(permissions: base)
       lido = card_lido(definicao)
       expect([lido[:title], lido.key?(:value)]).to eq(['Pedido', false])
 
       AccountUser.find_by(account: account, user: dono).destroy!
-      expect(card_lido(definicao)).not_to have_key(:value)
+      expect(card_lido(definicao)).to be_nil
     end
   end
 
