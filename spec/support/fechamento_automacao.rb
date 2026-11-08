@@ -8,8 +8,10 @@
 # - As esperas andam com o relógio adiantado e a varredura do motor.
 module FechamentoAutomacao
   OPENAI = 'https://api.openai.com/v1/responses'.freeze
-  # Os jobs que o caminho de produção enfileira entre o evento e a saída.
-  JOBS = [EventDispatcherJob, Autonomia::Automacao::AvancarJob, SendReplyJob].freeze
+  # Os jobs que o caminho de produção enfileira entre o evento e a saída. Os do webhook de cada canal (FechamentoAutomacao::
+  # Canais) gravam a mensagem do cliente como em produção.
+  JOBS = [Webhooks::WhatsappEventsJob, Webhooks::InstagramEventsJob, EventDispatcherJob, Autonomia::Automacao::AvancarJob,
+          SendReplyJob].freeze
   LIMITE_DE_JOBS = 60
 
   Chamada = Data.define(:metodo, :host, :caminho, :corpo)
