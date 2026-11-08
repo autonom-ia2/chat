@@ -305,6 +305,8 @@
       "ESCREVER_MENSAGEM_SEM_INSTRUCAO": "A IA escreve e manda ao cliente: falta escrever a instrução",
       "ESCREVER_SUGESTAO": "A IA escreve uma sugestão para a equipe: “{instrucao}”",
       "ESCREVER_SUGESTAO_SEM_INSTRUCAO": "A IA escreve uma sugestão para a equipe: falta escrever a instrução",
+      "ESCREVER_GUARDAR": "A IA escreve um texto e guarda para os passos seguintes: “{instrucao}”",
+      "ESCREVER_GUARDAR_SEM_INSTRUCAO": "A IA escreve um texto e guarda para os passos seguintes: falta escrever a instrução",
       "RESUMIR_NOTA": "A IA resume a conversa numa nota",
       "RESUMIR_AVISAR": "A IA resume a conversa e avisa {quem}",
       "EMAIL": "Mandar e-mail ao cliente: “{assunto}”"

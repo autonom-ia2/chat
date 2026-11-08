@@ -51,11 +51,24 @@ const FARIA_DA_IA = {
       lista: (dados.campos || []).map(campo => ondeGrava(campo, t)).join('; '),
     }),
   ia_escrever: (dados, t) =>
-    t(
-      `${F}.IA_ESCREVER_${dados.destino === 'mensagem' ? 'MENSAGEM' : 'SUGESTAO'}`
-    ),
+    t(`${F}.IA_ESCREVER_${(dados.destino || 'sugestao').toUpperCase()}`),
   ia_resumir: (dados, t) =>
     t(`${F}.IA_RESUMIR_${dados.destino === 'avisar' ? 'AVISAR' : 'NOTA'}`),
+};
+
+// #2414 G20 — o passo de IA que lê os anexos: quantos desta conversa a IA
+// leria, ou por que não seria chamada (como o motor).
+const ANEXOS = 'AUTOMACAO_LIVRE.IA.ANEXOS';
+const comAnexos = (linha, no, t) => {
+  const { anexos, anexos_motivo: motivo } = no.dados || {};
+  if (motivo)
+    return { ...linha, aviso: t(`${ANEXOS}.${motivo.toUpperCase()}`) };
+  if (anexos === undefined) return linha;
+  const frase = t(`${ANEXOS}.LERIA`, { n: anexos }, anexos);
+  return {
+    ...linha,
+    destaque: [linha.destaque, frase].filter(Boolean).join(' '),
+  };
 };
 
 const rotuloDoCaminho = (no, ramo, t) => {
@@ -117,7 +130,7 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
 
 export const linhasDoEnsaio = (nos, fraseDe, t, nivel = 0) =>
   (nos || []).flatMap(no => [
-    linhaDoNo(no, fraseDe, t, nivel),
+    comAnexos(linhaDoNo(no, fraseDe, t, nivel), no, t),
     ...(no.ramos || []).flatMap(ramo => [
       { nivel: nivel + 1, caminho: true, texto: rotuloDoCaminho(no, ramo, t) },
       ...linhasDoEnsaio(ramo.passos, fraseDe, t, nivel + 2),
