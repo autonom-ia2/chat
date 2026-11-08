@@ -60,9 +60,11 @@ const {
   carregando,
   erro,
   cartoes,
+  truncada,
   indice,
   fase,
   mandando,
+  ocupado,
   aviso,
   foram,
   voltam,
@@ -250,14 +252,24 @@ watch(demo, carregar);
               "
               tom="verde"
             />
+            <p
+              v-if="truncada"
+              class="m-0 text-sm text-n-slate-11"
+              data-fila-truncada
+            >
+              {{ $t(`${NS}.TRUNCADA`) }}
+            </p>
           </div>
 
           <AcharEstado
             v-if="aviso"
             faixa
-            tom="feito"
+            :tom="aviso.tom || 'feito'"
             :texto="$t(aviso.chave, aviso.params || {})"
-            :botao="$t('PROSPECTING_ACHAR.COMUM.DESFAZER')"
+            :botao="
+              aviso.desfazer ? $t('PROSPECTING_ACHAR.COMUM.DESFAZER') : ''
+            "
+            data-aviso-fila
             @acao="desfazer"
           />
 
@@ -325,6 +337,7 @@ watch(demo, carregar);
             :primeiro="indice === 0"
             :achado-por="pode.verTodas ? atual.achadoPor : ''"
             :pode-decidir="pode.buscar"
+            :ocupado="ocupado"
             @nao-serve="fase = 'nao-serve'"
             @depois="depois"
             @ver-mais="gavetaAberta = true"

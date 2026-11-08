@@ -13,6 +13,8 @@ const props = defineProps({
   primeiro: { type: Boolean, default: false },
   achadoPor: { type: String, default: '' },
   podeDecidir: { type: Boolean, default: false },
+  // #2697: gravando "Não serve" ou "Depois", os dois ficam desligados.
+  ocupado: { type: Boolean, default: false },
 });
 const emit = defineEmits(['naoServe', 'depois', 'verMais']);
 
@@ -145,6 +147,7 @@ const blocos = computed(() => [
         slate
         faded
         class="!min-h-12 !rounded-xl !text-base"
+        :disabled="ocupado"
         data-nao-serve
         @click="emit('naoServe')"
       />
@@ -154,6 +157,7 @@ const blocos = computed(() => [
         slate
         faded
         class="!min-h-12 !rounded-xl !text-base"
+        :disabled="ocupado"
         data-depois
         @click="emit('depois')"
       />

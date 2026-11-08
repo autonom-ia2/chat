@@ -12,6 +12,7 @@
 # o dia (no fuso da conta) em que a pessoa apertou. A empresa volta para essa pessoa no dia seguinte. A escrita mexe só
 # nessa chave, sem reescrever o resto do metadata (o mesmo padrão de LeadWorkQueue.mark_whatsapp_queued).
 class Autonomia::Prospecting::ParaChamar
+  # A fila mostra até 100; quando há mais, a tela avisa ("Mostrando as 100 primeiras").
   MAX_LEADS = 100
   ACTIVE_REGISTRATION = 'ATIVA'.freeze
 
@@ -57,7 +58,7 @@ class Autonomia::Prospecting::ParaChamar
          .where.not(CLOSED_SQL)
          .where.not(self.class.sanitize(POSTPONED_SQL, @user.id.to_s, today.iso8601))
          .order(Arel.sql(ORDER_SQL))
-         .limit(MAX_LEADS)
+         .limit(MAX_LEADS + 1) # uma a mais só para saber que passou do teto (meta.truncated no controller)
   end
 
   # "Depois": some da fila desta pessoa até amanhã.

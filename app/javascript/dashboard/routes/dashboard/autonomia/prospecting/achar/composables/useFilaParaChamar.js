@@ -58,9 +58,13 @@ export function useFilaParaChamar({
   const carregando = ref(true);
   const erro = ref(false);
   const cartoes = ref([]);
+  // Havia mais empresas que o teto do servidor: a tela avisa.
+  const truncada = ref(false);
   const indice = ref(0);
   const fase = ref('cartao');
   const mandando = ref(false);
+  // Uma gravação por vez em "Não serve" e "Depois" (o mesmo que `mandando`).
+  const ocupado = ref(false);
   const aviso = ref(null);
   const foram = ref(0);
   const voltam = ref(0);
@@ -73,6 +77,8 @@ export function useFilaParaChamar({
   const temWhatsapp = computed(() => atual.value?.whatsapp === 'tem');
 
   const andar = () => {
+    // O "Desfazer" é da empresa de antes: some quando a fila anda.
+    aviso.value = null;
     fase.value = 'cartao';
     if (indice.value + 1 >= cartoes.value.length) {
       fase.value = 'fim';
@@ -122,6 +128,7 @@ export function useFilaParaChamar({
         fonte.value.funis(),
       ]);
       cartoes.value = fila.cartoes;
+      truncada.value = fila.truncada === true;
       funis.value = lista;
       destino.value = escolherDestino({
         funis: lista,
@@ -136,6 +143,7 @@ export function useFilaParaChamar({
       aplicarDemo(fila);
     } catch {
       cartoes.value = [];
+      truncada.value = false;
       erro.value = true;
     }
     carregando.value = false;
@@ -144,7 +152,7 @@ export function useFilaParaChamar({
   const enviar = async empresa => {
     if (demo.value) {
       await esperar(ESPERA);
-      return true;
+      return 'criado';
     }
     let resumo;
     try {
@@ -156,25 +164,33 @@ export function useFilaParaChamar({
       });
     } catch {
       useAlert(t(TEXTO_DO_ERRO.funil));
-      return false;
+      return null;
     }
     if (!resumo.created.length && !resumo.existing.length) {
       useAlert(t(TEXTO_DO_ERRO[erroDoDono(resumo) || 'funil']));
-      return false;
+      return null;
     }
     lembrarDestino(contaId.value, usuarioId.value, {
       funilId: destino.value.funil.id,
       etapaId: destino.value.etapa.id,
     });
-    return true;
+    // Só "existing": o card já existia, com a etapa e o dono dele. A tela não
+    // afirma os escolhidos.
+    return resumo.created.length ? 'criado' : 'existente';
   };
 
   const mandar = async () => {
     if (mandando.value || !atual.value) return;
+    aviso.value = null;
     mandando.value = true;
     const foi = await enviar(atual.value);
     mandando.value = false;
     if (!foi) return;
+    if (foi === 'existente') {
+      andar();
+      aviso.value = { chave: `${NS}.JA_ESTAVA`, tom: 'aviso' };
+      return;
+    }
     foram.value += 1;
     mandado.value = {
       etapa: destino.value?.etapa.nome,
@@ -212,7 +228,11 @@ export function useFilaParaChamar({
   const tirarDaFila = async ({ gravarIda, gravarVolta, contador, chave }) => {
     const empresa = atual.value;
     const posicao = indice.value;
-    if (!empresa || !(await gravar(gravarIda(empresa)))) return;
+    if (!empresa || ocupado.value) return;
+    ocupado.value = true;
+    const gravou = await gravar(gravarIda(empresa));
+    ocupado.value = false;
+    if (!gravou) return;
     contador.value += 1;
     andar();
     aviso.value = {
@@ -226,10 +246,12 @@ export function useFilaParaChamar({
     };
   };
 
-  const tirar = motivo =>
+  // "Outro motivo" chega com o texto escrito, que é o que fica gravado (como na
+  // gaveta, AcharEmpresaGaveta).
+  const tirar = (motivo, texto) =>
     tirarDaFila({
       gravarIda: empresa => () =>
-        fonte.value.descartar({ id: empresa.id, motivo }),
+        fonte.value.descartar({ id: empresa.id, motivo: texto || motivo }),
       gravarVolta: empresa => () =>
         fonte.value.voltarNaoServe({ id: empresa.id }),
       contador: naoServem,
@@ -255,9 +277,11 @@ export function useFilaParaChamar({
     carregando,
     erro,
     cartoes,
+    truncada,
     indice,
     fase,
     mandando,
+    ocupado,
     aviso,
     foram,
     voltam,

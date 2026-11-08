@@ -322,8 +322,14 @@ const fonteDemo = ({ estado, carregarDemo, atraso, usuarioId }) => {
     async fila() {
       const demo = await dados();
       if (estado === 'fila-erro') throw new Error('demo');
-      if (ESTADOS_SEM_FILA.includes(estado)) return { cartoes: [], fim: null };
-      return { cartoes: demo.FILA, fim: demo.FIM_DO_DIA };
+      if (ESTADOS_SEM_FILA.includes(estado)) {
+        return { cartoes: [], fim: null, truncada: false };
+      }
+      return {
+        cartoes: demo.FILA,
+        fim: demo.FIM_DO_DIA,
+        truncada: estado === 'fila-truncada',
+      };
     },
     async voltarNaoServe() {
       await esperar(atraso);
@@ -484,7 +490,9 @@ const fonteApi = ({ api, crm, usuarioId, usuarioNome }) => ({
   async descartar({ id, motivo }) {
     await api.discardLeads({ leadIds: [id], reason: motivo });
   },
-  // O "Desfazer" do "Não serve" da fila (#2697): o lead volta a new_lead.
+  // O "Desfazer" do "Não serve" da fila (#2697): o lead volta a new_lead. O
+  // servidor limpa o motivo junto (leads#update apaga discard_reason quando o
+  // status não é discarded); não precisa de endpoint novo.
   async voltarNaoServe({ id }) {
     await api.updateLead(id, { status: 'new_lead' });
   },
@@ -532,10 +540,15 @@ const fonteApi = ({ api, crm, usuarioId, usuarioNome }) => ({
   },
   // A fila "Para chamar" (#2697): leads#index com view=queue, no mesmo
   // formato da demonstração. O fim do dia sai da própria passada pela fila
-  // (useFilaParaChamar), então o servidor não manda `fim`.
+  // (useFilaParaChamar), então o servidor não manda `fim`. `truncada`: havia
+  // mais que o teto do servidor (meta.truncated).
   async fila() {
     const { data } = await api.getQueue();
-    return { cartoes: (data.payload || []).map(cartaoDaFila), fim: null };
+    return {
+      cartoes: (data.payload || []).map(cartaoDaFila),
+      fim: null,
+      truncada: data.meta?.truncated === true,
+    };
   },
   async depois({ id }) {
     await api.postponeQueueLead(id);

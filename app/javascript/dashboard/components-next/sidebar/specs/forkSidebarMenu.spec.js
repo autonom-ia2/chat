@@ -438,6 +438,7 @@ const montar = ({
   papel = 'administrator',
   funcao = null,
   chaves = [],
+  prospeccaoNova = false,
 }) => {
   estado.relacionamentos = relacionamentos;
   window.globalConfig = {
@@ -470,7 +471,7 @@ const montar = ({
     // antes; o menu dela com a flag tem spec próprio (prospecting/achar/specs/acharMenu.spec.js).
     'accounts/isFeatureEnabledonAccount': ref(
       (_id, flag) =>
-        flag !== 'prospeccao_nova' &&
+        (prospeccaoNova || flag !== 'prospeccao_nova') &&
         (jornadas || flag !== 'autonomia_agents_journey')
     ),
     'inboxes/getInboxes': ref([]),
@@ -708,6 +709,17 @@ describe('camada do fork contra o Sidebar.vue de verdade', () => {
       ...Object.values(FILHOS_CONHECIDOS).flat(),
     ].filter(nome => !existentes.has(nome));
     expect([...new Set(sumiram)]).toEqual([]);
+  });
+
+  it('com a Prospecção nova ligada, "Para chamar" fica dentro de Prospecção (#2697)', () => {
+    const prospeccao = montar({ prospeccaoNova: true }).find(
+      item => item.name === 'Prospecting'
+    );
+    expect(prospeccao.children.map(filho => filho.name)).toEqual([
+      'Prospecting Achar',
+      'Prospecting Buscas',
+      'Prospecting Para Chamar',
+    ]);
   });
 
   it('com a flag desligada, o menu de sempre continua igual ao do main (nomes e filhos)', () => {

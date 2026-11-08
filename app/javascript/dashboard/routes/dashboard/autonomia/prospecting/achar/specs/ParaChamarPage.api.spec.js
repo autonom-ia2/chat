@@ -4,8 +4,10 @@ import ptBR from 'dashboard/i18n/locale/pt_BR/prospectingAchar.json';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { useAlert } from 'dashboard/composables';
+import filaReal from '../../../../../../../../../spec/fixtures/prospecting_para_chamar_queue.json';
 import * as demoDados from '../demo/acharDemo';
 import { criarFonte } from '../utils/acharFonte';
+import { cartaoDaFila } from '../utils/acharLead';
 import ParaChamarPage from '../pages/ParaChamarPage.vue';
 
 // #2697 — a fila "Para chamar" pela fonte da API (sem ?demo=), com a API e o
@@ -98,9 +100,9 @@ const lead = (id, extra = {}) => ({
   ...extra,
 });
 
-const responderFila = (leads = [lead(1), lead(2)]) =>
+const responderFila = (leads = [lead(1), lead(2)], meta = {}) =>
   AutonomiaProspectingAPI.getQueue.mockResolvedValue({
-    data: { payload: leads },
+    data: { payload: leads, meta },
   });
 
 const abrir = async () => {
@@ -344,13 +346,106 @@ describe('ParaChamarPage pela API', () => {
       'Foi para a etapa Novo contato, com Paula.'
     );
   });
+  it('duplo toque em "Depois" grava uma vez só, com o botão desligado enquanto grava', async () => {
+    responderFila([lead(1)]);
+    let terminar;
+    AutonomiaProspectingAPI.postponeQueueLead.mockReturnValue(
+      new Promise(resolve => {
+        terminar = resolve;
+      })
+    );
+    const wrapper = await abrir();
+
+    await wrapper.find('[data-depois]').trigger('click');
+    await wrapper.find('[data-depois]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-depois]').attributes('disabled')).toBeDefined();
+    expect(
+      wrapper.find('[data-nao-serve]').attributes('disabled')
+    ).toBeDefined();
+    expect(AutonomiaProspectingAPI.postponeQueueLead).toHaveBeenCalledTimes(1);
+
+    terminar({});
+    await flushPromises();
+
+    expect(wrapper.find('[data-fim-da-fila]').text()).toContain(
+      '1 volta amanhã.'
+    );
+  });
+
+  it('empresa que já estava no funil: avisa, não afirma etapa nem dono, e a fila anda', async () => {
+    AutonomiaProspectingAPI.createCrmCards.mockResolvedValue({
+      data: { payload: { existing: [{ lead_id: 1, card_id: 77 }] } },
+    });
+    const wrapper = await abrir();
+
+    await clicar(wrapper, '[data-principal]');
+
+    expect(wrapper.find('[data-aviso-fila]').text()).toContain(
+      'Essa empresa já estava no funil.'
+    );
+    expect(botaoComTexto(wrapper, 'Desfazer')).toBeUndefined();
+    expect(wrapper.find('[data-sucesso-fila]').exists()).toBe(false);
+    expect(wrapper.find('[data-etapa-e-dono]').exists()).toBe(false);
+    expect(titulo(wrapper)).toBe('Empresa 2');
+  });
+
+  it('"Outro motivo" grava o texto escrito', async () => {
+    AutonomiaProspectingAPI.discardLeads.mockResolvedValue({});
+    const wrapper = await abrir();
+
+    await clicar(wrapper, '[data-nao-serve]');
+    await clicar(wrapper, '[data-outro-motivo]');
+    await wrapper.find('textarea').setValue('  Só atende atacado  ');
+    await botaoComTexto(wrapper, 'Confirmar').trigger('click');
+    await flushPromises();
+
+    expect(AutonomiaProspectingAPI.discardLeads).toHaveBeenCalledWith({
+      leadIds: [1],
+      reason: 'Só atende atacado',
+    });
+  });
+
+  it('o "Desfazer" da empresa anterior some depois de mandar a seguinte', async () => {
+    AutonomiaProspectingAPI.postponeQueueLead.mockResolvedValue({});
+    AutonomiaProspectingAPI.createCrmCards.mockResolvedValue({
+      data: { payload: { created: [{ lead_id: 2, card_id: 502 }] } },
+    });
+    const wrapper = await abrir();
+
+    await clicar(wrapper, '[data-depois]');
+    expect(botaoComTexto(wrapper, 'Desfazer')).toBeDefined();
+
+    await clicar(wrapper, '[data-principal]');
+
+    expect(wrapper.find('[data-sucesso-fila]').exists()).toBe(true);
+    expect(wrapper.find('[data-aviso-fila]').exists()).toBe(false);
+    expect(botaoComTexto(wrapper, 'Desfazer')).toBeUndefined();
+  });
+
+  it('com mais empresas que o teto, avisa que mostra as 100 primeiras', async () => {
+    responderFila([lead(1), lead(2)], { truncated: true });
+    const wrapper = await abrir();
+
+    expect(wrapper.find('[data-fila-truncada]').text()).toBe(
+      'Mostrando as 100 primeiras. Termine estas para ver mais.'
+    );
+  });
+
+  it('sem passar do teto, não avisa', async () => {
+    const wrapper = await abrir();
+
+    expect(wrapper.find('[data-fila-truncada]').exists()).toBe(false);
+  });
 });
 
 describe('contrato da fila: demonstração × API', () => {
-  it('o cartão da API tem todas as chaves do cartão da demonstração', async () => {
-    const api = {
-      getQueue: vi.fn().mockResolvedValue({ data: { payload: [lead(1)] } }),
-    };
+  // O payload é o de verdade: o request spec (para_chamar_queue_spec.rb,
+  // "contrato com a tela") confere que o render_queue tem as mesmas chaves deste
+  // arquivo.
+  it('o cartão montado do payload real tem todas as chaves do cartão da demonstração', async () => {
+    const api = { getQueue: vi.fn().mockResolvedValue({ data: filaReal }) };
     const daApi = await criarFonte({ api, crm: {}, carregarDemo: null }).fila();
     const daDemo = await criarFonte({
       demo: 'fila',
@@ -358,18 +453,24 @@ describe('contrato da fila: demonstração × API', () => {
     }).fila();
 
     expect(Object.keys(daApi)).toEqual(Object.keys(daDemo));
-    const chavesDaApi = Object.keys(daApi.cartoes[0]);
-    daDemo.cartoes.forEach(cartao => {
-      expect(chavesDaApi).toEqual(expect.arrayContaining(Object.keys(cartao)));
-      expect(Object.keys(daApi.cartoes[0].dono)).toEqual(
-        expect.arrayContaining(Object.keys(cartao.dono))
+    const cartao = cartaoDaFila(filaReal.payload[0]);
+    expect(daApi.cartoes[0]).toEqual(cartao);
+    daDemo.cartoes.forEach(daDemonstracao => {
+      expect(Object.keys(cartao)).toEqual(
+        expect.arrayContaining(Object.keys(daDemonstracao))
+      );
+      expect(Object.keys(cartao.dono)).toEqual(
+        expect.arrayContaining(Object.keys(daDemonstracao.dono))
       );
     });
-    expect(daApi.cartoes[0]).toMatchObject({
-      nome: 'Empresa 1',
+    expect(cartao).toMatchObject({
+      nome: 'Lead contrato',
       chance: 'boa',
       whatsapp: 'tem',
-      achadoPor: 'Lucas',
+      whatsappUrl: 'https://wa.me/5519999990000',
+      dono: { estado: 'confirmado', nome: 'Maria Exemplo', cargo: 'sócia' },
+      achadoPor: 'Lucas Exemplo',
     });
+    expect(daApi.truncada).toBe(false);
   });
 });

@@ -145,11 +145,21 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   private
 
   # A fila "Para chamar" (#2697, view=queue): os leads que a pessoa vê e ainda não foram tratados, na ordem da chance
-  # (ParaChamar). Cada um leva o nome de quem fez a busca de onde ele veio (found_by_name, "Achada por").
+  # (ParaChamar), com o mesmo payload do index. A flag prospeccao_nova é só de rota e menu no painel; aqui valem o gate
+  # da Prospecção (BaseController) e a visibilidade dos leads, como no resto do módulo.
+  # Quem vê as buscas de todos recebe também quem fez a busca de onde o lead veio (found_by_name, "Achada por"); quem vê
+  # só as próprias não recebe o nome de ninguém. meta.truncated diz que havia mais que o teto (ParaChamar::MAX_LEADS).
   def render_queue
     leads = ::Autonomia::Prospecting::ParaChamar.new(account: Current.account, user: Current.user).leads(leads_scope)
-                                                .includes(*lead_preloads, search: :user)
-    render json: { payload: leads.map { |lead| lead_payload(lead).merge(found_by_name: lead.search&.user&.name) } }
+                                                .includes(*lead_preloads, search: :user).to_a
+    shown = leads.first(::Autonomia::Prospecting::ParaChamar::MAX_LEADS)
+    render json: { payload: shown.map { |lead| queue_lead_payload(lead) },
+                   meta: { truncated: leads.size > shown.size } }
+  end
+
+  def queue_lead_payload(lead)
+    payload = lead_payload(lead)
+    visibility.all_searches? ? payload.merge(found_by_name: lead.search&.user&.name) : payload
   end
 
   def filtered_leads_scope

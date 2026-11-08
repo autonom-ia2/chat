@@ -4,7 +4,8 @@ require 'rails_helper'
 # opção A, decidida pelo Rodrigo em 08/11: lead visível, new_lead, sem recusa, sem card, não fechado, com telefone e
 # fora do "Depois" de quem pede.
 RSpec.describe 'Autonomia prospecting para chamar queue', type: :request do
-  let(:account) { create(:account) }
+  # Fuso da conta explícito (−03): o "dia" do "Depois" é o da conta, não o do servidor.
+  let(:account) { create(:account, reporting_timezone: 'America/Sao_Paulo') }
   let(:admin) { create(:user, :administrator, account: account) }
   let(:agent) { agent_with(%w[prospecting_manage]) }
   let(:other_agent) { agent_with(%w[prospecting_manage]) }
@@ -102,12 +103,36 @@ RSpec.describe 'Autonomia prospecting para chamar queue', type: :request do
       expect(queue_ids(admin)).to eq([boa.id, media.id, sem.id])
     end
 
-    it 'cada cartão leva quem achou a empresa (found_by_name)' do
+    it 'quem vê as buscas de todos recebe quem achou a empresa (found_by_name)' do
       create_lead('achada', owner: other_agent)
 
       get "#{base_path}/leads", params: { view: 'queue' }, headers: auth_headers(admin)
 
       expect(response.parsed_body['payload'].first['found_by_name']).to eq(other_agent.name)
+    end
+
+    it 'quem vê só as próprias buscas não recebe o nome de ninguém' do
+      create_lead('minha', owner: agent)
+
+      get "#{base_path}/leads", params: { view: 'queue' }, headers: auth_headers(agent)
+
+      expect(response.parsed_body['payload'].size).to eq(1)
+      expect(response.parsed_body['payload'].first).not_to have_key('found_by_name')
+    end
+
+    it 'mostra até 100 e diz quando passou do teto (meta.truncated)' do
+      stub_const('Autonomia::Prospecting::ParaChamar::MAX_LEADS', 2)
+      create_lead('um', priority_score: 90)
+      create_lead('dois', priority_score: 80)
+
+      get "#{base_path}/leads", params: { view: 'queue' }, headers: auth_headers(admin)
+      expect(response.parsed_body['payload'].size).to eq(2)
+      expect(response.parsed_body.dig('meta', 'truncated')).to be(false)
+
+      create_lead('tres', priority_score: 70)
+      get "#{base_path}/leads", params: { view: 'queue' }, headers: auth_headers(admin)
+      expect(response.parsed_body['payload'].pluck('name')).to eq(['Lead um', 'Lead dois'])
+      expect(response.parsed_body.dig('meta', 'truncated')).to be(true)
     end
   end
 
@@ -138,11 +163,12 @@ RSpec.describe 'Autonomia prospecting para chamar queue', type: :request do
   describe 'Depois' do
     let!(:lead) { create_lead('depois', owner: agent, metadata: { 'whatsapp_verification' => { 'status' => 'verified' } }) }
 
-    it 'some da fila de quem pediu até amanhã, sem sumir para os outros, e o resto do metadata fica' do
-      travel_to Time.zone.parse('2026-11-08 10:00:00 -03:00') do
+    # 22:30 de 08/11 na conta (−03) já é 09/11 em UTC: o dia gravado e o "volta amanhã" são os da conta.
+    it 'some da fila de quem pediu até o dia seguinte da conta, sem sumir para os outros, e o resto do metadata fica' do
+      travel_to Time.zone.parse('2026-11-08 22:30:00 -03:00') do
+        expect(Time.now.utc.to_date.iso8601).to eq('2026-11-09')
         post "#{base_path}/leads/#{lead.id}/queue_postponement", headers: auth_headers(agent)
 
-        expect(response).to have_http_status(:ok)
         expect(response.parsed_body.dig('payload', 'postponed_on')).to eq('2026-11-08')
         expect(lead.reload.metadata).to include('whatsapp_verification' => { 'status' => 'verified' },
                                                 'para_chamar' => { 'depois' => { agent.id.to_s => '2026-11-08' } })
@@ -150,7 +176,11 @@ RSpec.describe 'Autonomia prospecting para chamar queue', type: :request do
         expect(queue_ids(admin)).to eq([lead.id])
       end
 
-      travel_to Time.zone.parse('2026-11-09 08:00:00 -03:00') do
+      travel_to Time.zone.parse('2026-11-08 23:59:00 -03:00') do
+        expect(queue_ids(agent)).to be_empty
+      end
+
+      travel_to Time.zone.parse('2026-11-09 00:01:00 -03:00') do
         expect(queue_ids(agent)).to eq([lead.id])
       end
     end
@@ -174,6 +204,36 @@ RSpec.describe 'Autonomia prospecting para chamar queue', type: :request do
     end
   end
 
+  # Contrato com a tela (cartaoDaFila, acharLead.js): o JSON de verdade do render_queue fica em spec/fixtures, e o vitest
+  # (ParaChamarPage.api.spec.js) monta o cartão a partir dele. Este spec falha quando as chaves do payload mudam; para
+  # regravar o arquivo, apague-o e rode este spec de novo.
+  describe 'contrato com a tela' do
+    let(:fixture) { Rails.root.join('spec/fixtures/prospecting_para_chamar_queue.json') }
+
+    def deep_keys(value)
+      case value
+      when Hash then value.transform_values { |item| deep_keys(item) }.sort.to_h
+      when Array then value.first(1).map { |item| deep_keys(item) }
+      else value&.class&.name
+      end
+    end
+
+    it 'o payload real tem as mesmas chaves do arquivo que o vitest lê' do
+      profile = Autonomia::Prospecting::CompanyProfile.create!(cnpj: '11222333000181', trade_name: 'Padaria Exemplo', registration_status: 'ATIVA',
+                                                               verified_at: Time.zone.parse('2026-11-01 10:00'))
+      create_lead('contrato', owner: other_agent, category: 'Padaria', neighborhood: 'Centro', human_insight: 'Nota boa no Google.',
+                              rating: 4.6, reviews_count: 120, company_profile: profile, company_research_status: 'confirmed',
+                              decision_research_status: 'confirmed', decision_name: 'Maria Exemplo', decision_role: 'sócia',
+                              metadata: { 'whatsapp_verification' => { 'status' => 'verified', 'phone' => '+5519999990000' } })
+
+      get "#{base_path}/leads", params: { view: 'queue' }, headers: auth_headers(admin)
+      body = response.parsed_body
+      fixture.write("#{JSON.pretty_generate(body)}\n") unless fixture.exist?
+
+      expect(deep_keys(body)).to eq(deep_keys(JSON.parse(fixture.read)))
+    end
+  end
+
   describe 'ações do cartão pelos endpoints de sempre' do
     let!(:lead) { create_lead('acao', owner: agent) }
 
@@ -182,8 +242,12 @@ RSpec.describe 'Autonomia prospecting para chamar queue', type: :request do
       expect(response).to have_http_status(:ok)
       expect(queue_ids(agent)).to be_empty
 
+      expect(lead.reload.discard_reason).to eq('no_interest')
+
+      # O "Desfazer": o PATCH de status de sempre já limpa o motivo quando o status não é discarded (lead_params).
       patch "#{base_path}/leads/#{lead.id}", params: { lead: { status: 'new_lead' } }, headers: auth_headers(agent)
       expect(response).to have_http_status(:ok)
+      expect(lead.reload).to have_attributes(status: 'new_lead', discard_reason: nil)
       expect(queue_ids(agent)).to eq([lead.id])
     end
 
