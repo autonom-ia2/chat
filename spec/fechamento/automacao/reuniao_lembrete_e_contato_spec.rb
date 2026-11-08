@@ -215,6 +215,30 @@ RSpec.describe 'Fechamento #2414 · reunião: lembrete antes e reunião do conta
       Crm::Meetings::CancelService.new(meeting: reuniao).perform
       expect(tem_reuniao?(ganho)).to be(false)
     end
+
+    # Parecer do Funções (#2703): reunião em card de funil que quem ligou não vê não decide o ramo.
+    it 'só conta a reunião de card que quem ligou vê; o administrador vê todos', :aggregate_failures do
+      ganho = novo_card('Contrato da Júlia')
+      sinistro = create_crm_pipeline(account: account, user: doutora, name: 'Sinistro')
+      [funil, sinistro.first].each { |pipeline| Crm::PipelineInbox.create!(account: account, inbox: inbox, pipeline: pipeline) }
+      acesso = Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: recepcao, all_pipelines: false, triage: false,
+                                             only_own: false)
+      acesso.agent_pipelines.create!(account: account, pipeline: funil)
+      Crm::Cards::Creator.new(account: account, user: doutora, params: {
+                                pipeline_id: sinistro.first.id, stage_id: sinistro.last.id, contact_id: cliente.id,
+                                owner_id: doutora.id, inbox_id: inbox.id, title: 'Sinistro da Júlia', currency: 'BRL'
+                              }).perform
+      drenar
+      marca(account.crm_cards.find_by!(title: 'Sinistro da Júlia'), pagina: outra_pagina)
+
+      da_recepcao = -> { Autonomia::Automacao::Valores.new(alvo: ganho.reload, quem: recepcao).ler('contato.tem_reuniao_marcada') }
+      expect(da_recepcao.call).to be(false)
+      expect(tem_reuniao?(ganho)).to be(true)
+      expect(Autonomia::Automacao::Valores.new(alvo: ganho.reload, quem: nil).ler('contato.tem_reuniao_marcada')).to be(false)
+
+      marca(novo_card('Júlia - Entrevistas'), pagina: entrevistas)
+      expect(da_recepcao.call).to be(true)
+    end
   end
 
   describe 'exemplo 20, passo 6: a reunião marcada depois do ganho move o card ganho (#2710)' do

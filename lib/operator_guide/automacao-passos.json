@@ -453,31 +453,6 @@
       "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ETIQUETAS"
     },
     {
-      "caminho": "contato.tem_reuniao_marcada",
-      "base": "contato",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_TEM_REUNIAO_MARCADA",
-      "opcoes": [
-        {
-          "valor": true,
-          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
-        },
-        {
-          "valor": false,
-          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
-        }
-      ],
-      "operadores": [
-        {
-          "op": "igual",
-          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
-        },
-        {
-          "op": "diferente",
-          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
-        }
-      ]
-    },
-    {
       "caminho": "card.id",
       "base": "card",
       "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ID"
@@ -573,6 +548,31 @@
         "card.reuniao_remarcada",
         "card.reuniao_cancelada",
         "card.antes_da_reuniao"
+      ]
+    },
+    {
+      "caminho": "contato.tem_reuniao_marcada",
+      "base": "contato",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_TEM_REUNIAO_MARCADA",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
       ]
     },
     {

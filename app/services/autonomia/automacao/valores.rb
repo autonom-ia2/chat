@@ -27,13 +27,6 @@ class Autonomia::Automacao::Valores
     'contato.telefone' => ->(contato) { contato.phone_number },
     'contato.empresa_id' => ->(contato) { contato.company_id },
     'contato.etiquetas' => ->(contato) { contato.label_list },
-    # #2710: o contato tem reunião marcada e ainda por vir em qualquer card dele. A página de agendamento põe a reunião
-    # no card aberto do funil e, sem ele (o card já ganho), cria outro: quem espera no card ganho lê este valor, não o
-    # do card. O "esperar até" acorda com a reunião de qualquer card do contato (Escuta#acordar_o_card).
-    'contato.tem_reuniao_marcada' => lambda do |contato|
-      cards = ::Crm::Card.where(account_id: contato.account_id, contact_id: contato.id).select(:id)
-      contato.account.crm_meetings.upcoming.exists?(card_id: cards)
-    end,
     # `card.id` é o id do banco: é o que as rotas do card recebem e o que a tela mostra (#123).
     'card.id' => ->(card) { card.id },
     'card.titulo' => ->(card) { card.title },
@@ -47,11 +40,21 @@ class Autonomia::Automacao::Valores
     'card.motivo_da_perda' => ->(card) { card.lost_reason },
     # G32: o card tem reunião marcada e ainda por vir (não cancelada nem remarcada para outra). O "esperar até" que lê
     # este valor acorda quando uma reunião do card é marcada, remarcada ou cancelada (Escuta#acordar_o_card).
-    'card.tem_reuniao_marcada' => ->(card) { card.account.crm_meetings.upcoming.exists?(card_id: card.id) },
+    'card.tem_reuniao_marcada' => ->(card) { ::Autonomia::Automacao::ValoresDaReuniao.marcada_no_card?(card) },
     # G12: a reunião da atividade que disparou o gatilho de reunião (Contexto#reuniao). O início sai no fuso da reunião,
     # o mesmo do convite que o cliente recebeu.
-    'reuniao.inicio' => ->(reuniao) { ::Autonomia::Automacao::Valores.inicio_da_reuniao(reuniao) },
+    'reuniao.inicio' => ->(reuniao) { ::Autonomia::Automacao::ValoresDaReuniao.inicio(reuniao) },
     'reuniao.link_da_reuniao' => ->(reuniao) { reuniao.online_meeting_url }
+  }.freeze
+
+  # Os valores que leem outros registros além do alvo: só os que quem ligou a automação vê (ValoresDaReuniao).
+  # #2710: a página de agendamento põe a reunião no card aberto do funil e, sem ele (o card já ganho), cria outro: quem
+  # espera no card ganho lê o valor do contato, não o do card. O "esperar até" acorda com a reunião de qualquer card do
+  # contato (Escuta#acordar_o_card).
+  DO_QUE_QUEM_VE = {
+    'contato.tem_reuniao_marcada' => lambda do |contato, account_user|
+      ::Autonomia::Automacao::ValoresDaReuniao.marcada_no_contato?(contato, account_user)
+    end
   }.freeze
 
   # G12: o link da agenda (LinkDaAgenda) de quem cuida: o responsável do card ou a pessoa da conversa. Vale em qualquer
@@ -134,7 +137,7 @@ class Autonomia::Automacao::Valores
 
   class << self
     def caminho_valido?(caminho)
-      [CAMPOS, MENSAGEM, RESPOSTA, AGENDA].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? || da_ia?(caminho)
+      [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? || da_ia?(caminho)
     end
 
     def da_ia?(caminho) = caminho.to_s.start_with?(IA) && caminho.to_s.length > IA.length
@@ -143,13 +146,6 @@ class Autonomia::Automacao::Valores
     def passo_da_ia(caminho) = caminho.to_s.delete_prefix(IA)
 
     def da_reuniao?(caminho) = caminho.to_s.start_with?('reuniao.')
-
-    # "10/11/2026 às 09:00", no fuso e no idioma da reunião e da conta.
-    def inicio_da_reuniao(reuniao)
-      inicio = reuniao.starts_at.in_time_zone(ActiveSupport::TimeZone[reuniao.timezone.to_s] || Time.zone)
-      formato = I18n.t('autonomia.automacao.valores.inicio_da_reuniao', locale: reuniao.account.locale.presence || I18n.default_locale)
-      inicio.strftime(formato)
-    end
 
     def da_mensagem?(caminho) = MENSAGEM.key?(caminho.to_s)
 
@@ -245,9 +241,11 @@ class Autonomia::Automacao::Valores
     do_objeto(caminho) { |objeto| ATRIBUTOS.fetch(base).call(objeto).to_h[chave] }
   end
 
-  def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave)
+  def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave) || DO_QUE_QUEM_VE.key?(chave)
 
   def do_campo(chave)
+    return do_objeto(chave) { |objeto| DO_QUE_QUEM_VE[chave].call(objeto, account_user) } if DO_QUE_QUEM_VE.key?(chave)
+
     do_objeto(chave) { |objeto| CAMPOS.key?(chave) ? CAMPOS[chave].call(objeto) : link_da_agenda(objeto, AGENDA[chave].call(objeto)) }
   end
 
