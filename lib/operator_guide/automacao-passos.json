@@ -617,6 +617,11 @@
       ]
     },
     {
+      "caminho": "mensagem.campanha",
+      "frase": "AUTOMACAO_LIVRE.VALORES.MENSAGEM_CAMPANHA",
+      "so_no_gatilho": "mensagem.criada"
+    },
+    {
       "caminho": "mensagem.privada",
       "frase": "AUTOMACAO_LIVRE.VALORES.MENSAGEM_PRIVADA",
       "so_no_gatilho": "mensagem.criada",
@@ -867,6 +872,12 @@
           "peca": "campanha",
           "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ETIQUETAS"
+        },
+        {
+          "nome": "sem_etiquetas",
+          "peca": "campanha",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SEM_ETIQUETAS"
         }
       ]
     },

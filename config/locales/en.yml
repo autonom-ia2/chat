@@ -559,7 +559,7 @@ en:
         limite_da_caixa: "The inbox has a reply time limit, set in its options, and the customer has not written within it. The message was not sent, and the automation stopped in this conversation."
         modelo_fora_da_caixa: "The window was closed, and this conversation's inbox doesn't have the chosen template. The message was not sent, and the automation stopped in this conversation."
         modelo_nao_aprovado: "The window was closed, and the chosen template isn't approved by Meta in this inbox. The message was not sent, and the automation stopped in this conversation."
-        modelo_de_propaganda: "The window was closed, and the chosen template is marketing. The automation only sends utility templates. The message was not sent, and the automation stopped in this conversation."
+        modelo_de_categoria_fora: "The window was closed, and the chosen template is neither utility nor marketing. The message was not sent, and the automation stopped in this conversation."
         modelo_mudou: "The window was closed, and this inbox's template asks for different variables than the step's. Choose the template again. The message was not sent, and the automation stopped in this conversation."
         modelo_faltou_valor: "The window was closed, and a value the template needs was empty in this conversation. The message was not sent, and the automation stopped in this conversation."
         modelo_texto_longo: "The window was closed, and the template with the values in place went over the 1024 characters WhatsApp accepts. The message was not sent, and the automation stopped in this conversation."
@@ -632,7 +632,7 @@ en:
         agente_de_ia_invalido: 'Step %{passo}: AI agent %{id} is not from this account.'
         retorno_mensagem_sem_card: "Step %{passo}: the follow-up message only goes out with a card trigger. Use a card trigger or turn the message off."
         sem_criar_retorno: 'Step %{passo}: you cannot create follow-ups in the CRM, which the "Create follow-up" step needs.'
-        modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility and with these variables."
+        modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility or marketing, and with these variables."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
         gatilho_desligado: 'Card and time triggers are off for this account.'

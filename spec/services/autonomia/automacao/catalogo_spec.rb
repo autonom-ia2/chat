@@ -132,7 +132,10 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     expect(declarados).to match_array(valores::MENSAGEM.keys)
     expect(declarado['valores_so_guia'].values).to all(be_present)
     expect(da_mensagem.pluck('caminho')).to match_array(valores::MENSAGEM.keys)
-    da_mensagem.each do |valor|
+    # O nome da campanha (#2681) é escrito, sem opções: vai ao editor como texto.
+    escritos, fechados = da_mensagem.partition { |valor| valor['caminho'] == 'mensagem.campanha' }
+    expect(escritos.first).not_to include('opcoes', 'operadores')
+    fechados.each do |valor|
       expect(valor['opcoes'].pluck('valor')).to eq(valores.fechado(valor['caminho'])['opcoes'])
       expect(valor['operadores'].pluck('op')).to eq(valores.fechado(valor['caminho'])['operadores'])
     end

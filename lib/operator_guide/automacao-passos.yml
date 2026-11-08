@@ -56,8 +56,9 @@ nativos_fora_do_editor: {}
 
 # Os valores da mensagem que disparou o gatilho (#2496, Valores::MENSAGEM). Só existem no "Só se" do gatilho dela; o
 # editor não os oferece em outro gatilho nem nos passos (a Receita recusa: mensagem_so_no_gatilho). As opções e os
-# operadores vêm de Valores::FECHADOS, com a frase em VALOR_DA_MENSAGEM e OPERADOR_DA_MENSAGEM.
-valores_do_gatilho: [mensagem.tipo, mensagem.primeira]
+# operadores vêm de Valores::FECHADOS, com a frase em VALOR_DA_MENSAGEM e OPERADOR_DA_MENSAGEM. `mensagem.campanha` (#2681)
+# não é fechado: o valor é o nome da campanha, escrito.
+valores_do_gatilho: [mensagem.tipo, mensagem.primeira, mensagem.campanha]
 
 # Valor da mensagem que o editor não oferece para escolher, com o motivo. O Guia continua montando com ele, e o editor o
 # reconhece: mostra a frase e o tira do "Só se" quando o gatilho muda.

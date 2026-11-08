@@ -3,16 +3,12 @@
 // servidor (Autonomia::Automacao::PassoDeCampanha): caixa do WhatsApp oficial
 // na Cloud API, modelo aprovado de utilidade ou de propaganda, com o corpo
 // pedindo {{1}}..{{n}} e nada além do corpo para preencher.
-import {
-  corpoDoModelo,
-  numeradas,
-  pedeMais,
-  variaveisDoCorpo,
-} from './modeloWhatsapp';
+import { serve } from './modeloWhatsapp';
 
-// Utilidade e propaganda (decisão do Rodrigo, 06/11), a mesma constante do
-// servidor. O modelo de propaganda mostra o aviso de custo (ehPropaganda).
-export const CATEGORIAS_DA_CAMPANHA = ['UTILITY', 'MARKETING'];
+// O modelo serve na campanha pela mesma régua do passo mensagem (utilidade e
+// propaganda, lote 5 #2681). O de propaganda mostra o aviso de custo.
+export { ehPropaganda } from './modeloWhatsapp';
+
 const CANAL = 'Channel::Whatsapp';
 const PROVEDOR = 'whatsapp_cloud';
 
@@ -21,17 +17,10 @@ export const caixasDaCampanha = caixas =>
     caixa => caixa.channel_type === CANAL && caixa.provider === PROVEDOR
   );
 
-export const serveNaCampanha = modelo =>
-  String(modelo.status).toLowerCase() === 'approved' &&
-  CATEGORIAS_DA_CAMPANHA.includes(String(modelo.category).toUpperCase()) &&
-  numeradas(variaveisDoCorpo(corpoDoModelo(modelo))) &&
-  !(modelo.components || []).some(pedeMais);
+export const serveNaCampanha = serve;
 
 export const modelosDaCaixa = caixa =>
   (caixa?.message_templates || []).filter(serveNaCampanha);
-
-export const ehPropaganda = modelo =>
-  String(modelo?.category).toUpperCase() === 'MARKETING';
 
 // Só o que cada escolha precisa: o "não receber" não leva os campos do disparo.
 export const comFaz = (passo, faz) =>

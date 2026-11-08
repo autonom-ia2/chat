@@ -24,7 +24,7 @@
         "filtros": {
           "type": "array",
           "items": { "$ref": "#/definitions/condicao" },
-          "description": "Só aqui a receita lê mensagem.tipo, mensagem.privada e mensagem.primeira (a primeira mensagem de verdade da conversa, sem nota nem atividade), e só no gatilho mensagem.criada."
+          "description": "Só aqui a receita lê mensagem.tipo, mensagem.privada, mensagem.primeira (a primeira mensagem de verdade da conversa, sem nota nem atividade) e mensagem.campanha (o nome da última campanha que o cliente recebeu nesta caixa antes de responder), e só no gatilho mensagem.criada."
         }
       },
       "allOf": [
@@ -416,7 +416,7 @@
           "type": "object",
           "additionalProperties": false,
           "required": ["id", "tipo", "faz"],
-          "description": "Campanhas (G14). faz=disparar: monta a campanha de WhatsApp oficial com o modelo aprovado e a manda para quem tem as etiquetas, pela mesma Campanha da tela (quem pediu para não receber fica de fora). Só em gatilho sem alvo (recorrente): num gatilho de conversa, card ou contato, cada execução mandaria a mesma campanha de novo. As variáveis do modelo são texto fixo. faz=nao_receber: marca o contato do alvo como \"não recebe\" mensagens ativas e campanhas, como o botão do contato. Pôr ou tirar alguém de uma campanha é pôr ou tirar a etiqueta do público dela.",
+          "description": "Campanhas (G14). faz=disparar: monta a campanha de WhatsApp oficial com o modelo aprovado e a manda para quem tem as etiquetas, pela mesma Campanha da tela (quem pediu para não receber fica de fora). sem_etiquetas deixa de fora quem tem uma delas. Só em gatilho da conta (conta.recorrente): num gatilho de conversa, card ou contato, cada execução mandaria a mesma campanha de novo. As variáveis do modelo são texto fixo. faz=nao_receber: marca o contato do alvo como \"não recebe\" mensagens ativas e campanhas, como o botão do contato. Pôr ou tirar alguém de uma campanha é pôr ou tirar a etiqueta do público dela.",
           "properties": {
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "campanha" },
@@ -424,7 +424,8 @@
             "titulo": { "type": "string", "minLength": 1, "maxLength": 255 },
             "caixa_id": { "type": "integer", "minimum": 1 },
             "modelo": { "$ref": "#/definitions/modelo_whatsapp" },
-            "etiquetas": { "$ref": "#/definitions/ids" }
+            "etiquetas": { "$ref": "#/definitions/ids" },
+            "sem_etiquetas": { "$ref": "#/definitions/ids" }
           },
           "allOf": [
             {

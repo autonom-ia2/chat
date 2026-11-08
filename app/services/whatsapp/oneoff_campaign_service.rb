@@ -49,6 +49,12 @@ class Whatsapp::OneoffCampaignService
     Rails.logger.info "Skipping campaign recipient contact_id=#{contact.id}: opted_out"
   end
 
+  # Fork (#2681): the contacts of a label audience, in one place, so Autonomia::Automacao::CampanhaSemEtiquetas can
+  # leave out the excluded labels of an automation's campaign.
+  def label_audience_contacts(audience_labels)
+    campaign.account.contacts.tagged_with(audience_labels, any: true)
+  end
+
   def extract_audience_labels
     audience_label_ids = campaign.audience.select { |audience| audience['type'] == 'Label' }.pluck('id')
     campaign.account.labels.where(id: audience_label_ids).pluck(:title)
@@ -76,7 +82,7 @@ class Whatsapp::OneoffCampaignService
   end
 
   def process_audience(audience_labels)
-    contacts = campaign.account.contacts.tagged_with(audience_labels, any: true)
+    contacts = label_audience_contacts(audience_labels)
     Rails.logger.info "Processing #{contacts.count} contacts for campaign #{campaign.id}"
 
     contacts.each { |contact| process_contact(contact) }

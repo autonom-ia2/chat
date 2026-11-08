@@ -53,15 +53,15 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
         expect(problemas(disparar)).to be_empty
       end
 
-      it 'aceita modelo de propaganda (decisão de 06/11), que o passo mensagem continua recusando' do
+      it 'aceita modelo de propaganda (decisão de 06/11), como o passo mensagem desde o lote 5 (#2681)' do
         propaganda = pre_black.merge('category' => 'MARKETING')
         canal.update!(message_templates: [propaganda])
         mensagem = { 'id' => 'm1', 'tipo' => 'mensagem', 'texto' => ['Oi'],
                      'modelo' => { 'nome' => 'pre_black', 'idioma' => 'pt_BR', 'variaveis' => [['na quinta']] } }
 
         expect(problemas(disparar)).to be_empty
-        expect(problemas(mensagem)).to eq([I18n.t('autonomia.automacao.receita.modelo_indisponivel', passo: 'm1', nome: 'pre_black')])
-        expect(Autonomia::Automacao::ModeloWhatsapp.serve?(propaganda, 1)).to be(false)
+        expect(problemas(mensagem)).to be_empty
+        expect(Autonomia::Automacao::ModeloWhatsapp.serve?(propaganda, 1)).to be(true)
       end
 
       it 'recusa modelo de autenticação' do
@@ -88,6 +88,7 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
         sem_modelo = disparar.deep_merge('modelo' => { 'nome' => 'nao_existe' })
 
         expect(problemas(passo)).to include(frase(:campanha_sem_caixa), frase(:campanha_etiqueta_de_fora, id: outra.id))
+        expect(problemas(disparar.merge('sem_etiquetas' => [outra.id]))).to eq([frase(:campanha_etiqueta_de_fora, id: outra.id)])
         expect(problemas(sem_modelo)).to include(frase(:campanha_modelo, nome: 'nao_existe'))
       end
 
@@ -122,8 +123,19 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
                                           audience: [{ 'type' => 'Label', 'id' => etiqueta.id }])
       expect(campanha.template_params).to include('name' => 'pre_black', 'language' => 'pt_BR',
                                                   'processed_params' => { 'body' => { '1' => 'na quinta' } })
-      expect(resultado.dados).to eq('campanha_id' => campanha.display_id, 'etiquetas' => [etiqueta.id])
+      expect(resultado.dados).to eq('campanha_id' => campanha.display_id, 'etiquetas' => [etiqueta.id], 'sem_etiquetas' => [])
       expect(Campaigns::TriggerOneoffCampaignJob).to have_been_enqueued.with(campanha)
+    end
+
+    # Lote 5 (#2681): o "todos menos quem já comprou" do exemplo 7.
+    it 'grava as etiquetas excluídas no público, para o envio deixar essa gente de fora' do
+      sem = create(:label, account: account, title: 'comprou_na_black')
+
+      resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: disparar.merge('sem_etiquetas' => [sem.id]),
+                                      alvo: account).executar
+
+      expect(account.campaigns.last.audience).to eq([{ 'type' => 'Label', 'id' => etiqueta.id }, { 'type' => 'ExcludeLabel', 'id' => sem.id }])
+      expect(resultado.dados).to include('sem_etiquetas' => [sem.id])
     end
 
     it 'o gatilho da conta é o de alvo Account (contrato com a G7), não o de conversa ou card' do

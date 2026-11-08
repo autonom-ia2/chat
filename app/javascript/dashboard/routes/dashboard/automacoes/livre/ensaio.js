@@ -116,13 +116,18 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
     return { ...base, destaque: gravaria(no.dados.calculados, t) };
   if (FARIA_DA_IA[no.faria])
     return { ...base, destaque: FARIA_DA_IA[no.faria](no.dados || {}, t) };
-  // F4b: com modelo, a tela diz o que sai se a janela de 24 h estiver fechada.
+  // F4b: com modelo, a tela diz o que sai se a janela de 24 h estiver fechada;
+  // o de propaganda (lote 5, #2681) avisa que custa mais.
   if (no.dados?.texto)
     return {
       ...base,
       balao: no.dados.texto,
       ...(no.dados.modelo && {
-        destaque: t(`${E}.MODELO_FORA_DA_JANELA`, { modelo: no.dados.modelo }),
+        destaque: no.dados.propaganda
+          ? t(`${E}.MODELO_PROPAGANDA_FORA_DA_JANELA`, {
+              modelo: no.dados.modelo,
+            })
+          : t(`${E}.MODELO_FORA_DA_JANELA`, { modelo: no.dados.modelo }),
       }),
     };
   return base;
