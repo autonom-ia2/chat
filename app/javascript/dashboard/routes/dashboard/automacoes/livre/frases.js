@@ -366,15 +366,22 @@ export const fraseDaData = (
   t,
   rotular = caminho => fraseDoValor(caminho, catalogo, t)
 ) => {
-  const { de, mais } = data || {};
+  const { de, mais, fim_do: fimDo } = data || {};
   const inicio = de === 'hoje' ? t(`${A}.HOJE`) : rotular(de?.$valor);
-  if (!mais?.valor) return inicio;
-  const n = Math.abs(mais.valor);
-  return t(`${A}.DATA_${mais.valor < 0 ? 'MENOS' : 'MAIS'}`, {
-    de: inicio,
-    n,
-    unidade: t(`AUTOMACAO_LIVRE.UNIDADES.${mais.unidade.toUpperCase()}`, {}, n),
-  });
+  const n = Math.abs(mais?.valor || 0);
+  const somada = n
+    ? t(`${A}.DATA_${mais.valor < 0 ? 'MENOS' : 'MAIS'}`, {
+        de: inicio,
+        n,
+        unidade: t(
+          `AUTOMACAO_LIVRE.UNIDADES.${mais.unidade.toUpperCase()}`,
+          {},
+          n
+        ),
+      })
+    : inicio;
+  // #2705: "hoje + 1 mês, no fim do mês".
+  return fimDo === 'mes' ? t(`${A}.DATA_FIM_DO_MES`, { data: somada }) : somada;
 };
 
 // #2414 G16 — o valor calculado que o Guia montou num campo da ação, em frase:
