@@ -15,12 +15,14 @@ import LivreCampanha from './LivreCampanha.vue';
 import LivreEtapa from './LivreEtapa.vue';
 import LivreRetornoPara from './LivreRetornoPara.vue';
 import LivreRetornoEnvio from './LivreRetornoEnvio.vue';
+import LivreRegistro from './LivreRegistro.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
 import { caminhosProntos } from '../ia';
 import { campanhaPronta } from '../campanha';
 import { envioPronto, paraPronto } from '../retorno';
+import { registroPronto } from '../outroRegistro';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { temDataIncompleta } from '../texto';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
@@ -43,6 +45,8 @@ const props = defineProps({
   // funis, os de card) e as escolhas deles. Sem a lista, todos os do catálogo.
   gatilhos: { type: Array, default: null },
   escolhasDoGatilho: { type: Object, default: () => ({}) },
+  // G18: os cards do contato só para quem pode mexer no funil.
+  podeLerCards: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['salvar', 'tirar', 'close']);
@@ -217,6 +221,7 @@ const nativoPronto = campo => {
     return campanhaPronta(rascunho.value, caixasDaConta.value);
   if (campo.peca === 'quem_recebe_retorno') return paraPronto(valor);
   if (campo.peca === 'envio_do_retorno') return envioPronto(valor);
+  if (campo.peca === 'registro_ligado') return registroPronto(valor);
   if (campo.peca === 'destinatarios')
     return Boolean(
       valor?.responsavel || valor?.times?.length || valor?.pessoas?.length
@@ -452,6 +457,16 @@ defineExpose({ abrir, fechar });
           :rotulo="$t(campo.rotulo)"
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreRegistro
+          v-else-if="campo.peca === 'registro_ligado'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :catalogo="catalogo"
+          :atributos-do="atributosDo"
+          :escolhas="escolhasDoGatilho"
+          :pode-ler-cards="podeLerCards"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreRetornoEnvio

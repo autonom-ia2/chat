@@ -12,6 +12,7 @@ import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import LivreConfira from '../components/LivreConfira.vue';
 import LivreSeletorPasso from '../components/LivreSeletorPasso.vue';
 import LivreAlterar from '../components/LivreAlterar.vue';
+import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import LivreLigar from '../components/LivreLigar.vue';
 import LivreHistorico from '../components/LivreHistorico.vue';
 import LivreEnsaio from '../components/LivreEnsaio.vue';
@@ -34,6 +35,11 @@ import {
   tirarPasso,
   trocarPasso,
 } from '../receita';
+import {
+  TIPO as EM_OUTRO_REGISTRO,
+  alvoDaLista,
+  listaDoPasso,
+} from '../outroRegistro';
 import { useEditorLivre } from '../useEditorLivre';
 import { useOpcoesDaConta } from '../useOpcoesDaConta';
 import { useGatilhosNovos } from '../useGatilhosNovos';
@@ -51,6 +57,8 @@ const { catalogo } = useCatalogo();
 const { opcoes, atributosDaPeca, atributosDo, carregarOpcoes } =
   useOpcoesDaConta();
 const { isCloudFeatureEnabled } = useAccount();
+// G18: os cards do contato, no "em outro registro", só para quem mexe no funil.
+const { canManagePipelines } = useCrmPermissions();
 // #2499: os gatilhos que esta pessoa pode escolher, e os funis e as etapas.
 const { gatilhos, escolhasDoGatilho } = useGatilhosNovos(
   isCloudFeatureEnabled,
@@ -87,12 +95,22 @@ const catalogoComTextos = computed(() =>
 
 // O "Alterar" só oferece o valor que o alvo do gatilho alcança (#2499) e que
 // a pessoa pode ler (#2597), mais o texto dos passos de IA da receita (#2679).
+// G18: dentro do "em outro registro", o do registro em que o ramo roda; a lista
+// é a do passo aberto (ou a do novo).
 const podeLerValor = usePodeLerValor();
+// O passo escolhido no seletor ainda não está na receita: espera o "Salvar".
+const passoNovo = ref(null);
+const listaDoPainel = () => {
+  const chave = String(route.query.alterar || '');
+  if (chave === 'novo') return passoNovo.value?.listaId;
+  return listaDoPasso(receita.value.passos, chave);
+};
 const catalogoDoAlvo = computed(() =>
   comTextosDaIa(
     doAlvoDoGatilho(
       comPermissoes(catalogo.value, podeLerValor.value),
-      receita.value.gatilho?.tipo
+      receita.value.gatilho?.tipo,
+      alvoDaLista(receita.value.passos, listaDoPainel())
     ),
     receita.value.passos,
     t
@@ -102,10 +120,23 @@ const catalogoDoAlvo = computed(() =>
 const seletor = ref(null);
 const alterar = ref(null);
 const guarda = ref(null);
-// O passo escolhido no seletor ainda não está na receita: espera o "Salvar".
-const passoNovo = ref(null);
 
 const tudo = computed(() => route.query.tudo === '1');
+
+// G18: dentro do "em outro registro" não cabe outro (a filha nunca abre netas).
+const catalogoDoSeletor = computed(() => {
+  const dentro = alvoDaLista(
+    receita.value.passos,
+    String(route.query.seletor || '').split('@')[0]
+  );
+  if (!dentro || !catalogo.value) return catalogo.value;
+  return {
+    ...catalogo.value,
+    passos: catalogo.value.passos.filter(
+      passo => passo.tipo !== EM_OUTRO_REGISTRO
+    ),
+  };
+});
 
 const mudarUrl = query =>
   router.replace({ query: { ...(tudo.value ? { tudo: '1' } : {}), ...query } });
@@ -582,7 +613,7 @@ onMounted(() => {
           <template v-if="catalogo && podeMudar">
             <LivreSeletorPasso
               ref="seletor"
-              :catalogo="catalogo"
+              :catalogo="catalogoDoSeletor"
               :liberado="isCloudFeatureEnabled"
               @escolher="escolherPasso"
               @close="fecharPainel('seletor')"
@@ -597,6 +628,7 @@ onMounted(() => {
               :custos="custos"
               :gatilhos="gatilhos"
               :escolhas-do-gatilho="escolhasDoGatilho"
+              :pode-ler-cards="canManagePipelines"
               @salvar="salvar"
               @tirar="tirar"
               @close="fecharPainel('alterar')"

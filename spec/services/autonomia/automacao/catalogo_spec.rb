@@ -97,7 +97,7 @@ RSpec.describe Autonomia::Automacao::Catalogo do
 
     expect(nativos.pluck('tipo')).to contain_exactly('esperar', 'esperar_ate', 'se', 'parar', 'mensagem', 'avisar', 'email',
                                                      'campanha', 'decidir', 'extrair', 'escrever', 'resumir', 'ia_assumir', 'retorno',
-                                                     'card')
+                                                     'card', 'em_outro_registro')
     expect(nativos.flat_map { |passo| passo['campos'] }.pluck('peca')).to all(be_present)
     expect(passos.pluck('grupo') - declarado['grupos']).to be_empty
   end
@@ -118,7 +118,8 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     fora = declarado['nativos_fora_do_editor'].to_h
 
     expect((declarado['nativos'].keys + fora.keys).sort).to eq(do_esquema.sort)
-    expect(fora.values).to all(include('#2486'))
+    # Cada um com a Issue que o leva para a tela (o primeiro foi a #2486, de mensagem e avisar).
+    expect(fora.values).to all(include('(#'))
   end
 
   # #2496: todo valor da mensagem do gatilho está no editor ou só no Guia, uma vez. O que fica de fora do catálogo

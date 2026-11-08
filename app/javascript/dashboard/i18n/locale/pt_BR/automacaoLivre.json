@@ -95,7 +95,8 @@
       "RESUMIR": "A IA resume a conversa",
       "IA_ASSUMIR": "Passar para a agente de IA",
       "EMAIL": "Mandar e-mail ao cliente",
-      "RETORNO": "Criar um retorno para a equipe"
+      "RETORNO": "Criar um retorno para a equipe",
+      "EM_OUTRO_REGISTRO": "Fazer no contato ou nos cards ligados"
     },
     "ESCOLHER": {
       "ETIQUETA": "Qual etiqueta",
@@ -155,7 +156,9 @@
       "AGENTE_ID": "Qual agente de IA",
       "CAIXA_ID": "Por qual caixa de e-mail",
       "ASSUNTO": "Assunto",
-      "MODELO": "Se a janela de 24 h estiver fechada"
+      "MODELO": "Se a janela de 24 h estiver fechada",
+      "REGISTRO": "Onde fazer os passos de dentro",
+      "PASSOS": "Passos de dentro"
     },
     "OPCOES": {
       "STATUS": {
@@ -314,7 +317,8 @@
       "SENAO": "Senão",
       "SE_VENCER": "Se o prazo acabar",
       "NENHUM": "Nenhum se aplica",
-      "CAMINHO": "Caminho {n}"
+      "CAMINHO": "Caminho {n}",
+      "PASSOS": "Em cada um"
     },
     "SELETOR": {
       "TITULO": "Escolha o próximo passo",

@@ -1040,6 +1040,25 @@
       ]
     },
     {
+      "tipo": "em_outro_registro",
+      "grupo": "CONTROLE",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.EM_OUTRO_REGISTRO",
+      "campos": [
+        {
+          "nome": "registro",
+          "peca": "registro_ligado",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.REGISTRO"
+        },
+        {
+          "nome": "passos",
+          "peca": "passos",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PASSOS"
+        }
+      ]
+    },
+    {
       "tipo": "acao",
       "nome": "conversa_etiquetas",
       "acao": "PATCH conversations/:conversation_id/labels/alterar",

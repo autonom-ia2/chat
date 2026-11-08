@@ -9,7 +9,8 @@ module Autonomia::Automacao::NaConversa
     @execucao = execucao
     @passo = passo
     @alvo = alvo
-    @conversa = ::Autonomia::Automacao::Contexto.de(alvo).conversa
+    # Com a execução: a filha do "em outro registro" (G18) num card do mesmo contato age na conversa da mãe.
+    @conversa = ::Autonomia::Automacao::Contexto.de(alvo, execucao: execucao).conversa
   end
 
   private

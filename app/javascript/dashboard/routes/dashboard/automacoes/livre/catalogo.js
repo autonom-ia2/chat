@@ -96,6 +96,10 @@ export const novoPasso = (entrada, id, t) => {
   // G2: a caixa de e-mail a escolher, o assunto e o texto a escrever.
   if (entrada.tipo === 'email')
     return { id, tipo: 'email', caixa_id: null, assunto: [], texto: [] };
+  // G18: o "em outro registro" nasce sem ligação e sem passo dentro; a pessoa
+  // escolhe onde no painel e põe os passos pelo próprio Confira.
+  if (entrada.tipo === 'em_outro_registro')
+    return { id, tipo: 'em_outro_registro', registro: {}, passos: [] };
   // G3: o retorno nasce para o responsável, daqui a um dia, só como lembrete.
   if (entrada.tipo === 'retorno')
     return { id, tipo: 'retorno', titulo: [], daqui: { ...DURACAO_PADRAO } };
@@ -175,16 +179,24 @@ export const comPermissoes = (dados, podeLer) => {
 };
 
 // G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião.
-export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
-  const alvo = dados?.gatilhos?.find(item => item.tipo === tipoDoGatilho)?.alvo;
+// G18 (#2671): dentro do "em outro registro", vale o registro em que o ramo roda
+// (`alvoDoRamo`), não o alvo do gatilho; lá não há a reunião do gatilho. `alvo`
+// volta junto, para a peça que precisa saber de onde lê (o campo do contato).
+export const doAlvoDoGatilho = (dados, tipoDoGatilho, alvoDoRamo = null) => {
+  const doGatilho = dados?.gatilhos?.find(
+    item => item.tipo === tipoDoGatilho
+  )?.alvo;
+  const alvo = alvoDoRamo || doGatilho;
   const bases = alvo && dados.alvos?.[alvo];
   if (!bases) return dados;
+  const daReuniao = item =>
+    !item.so_nos_gatilhos ||
+    (!alvoDoRamo && item.so_nos_gatilhos.includes(tipoDoGatilho));
   return {
     ...dados,
+    alvo,
     valores: dados.valores.filter(
-      item =>
-        (!item.base || bases.includes(item.base)) &&
-        (!item.so_nos_gatilhos || item.so_nos_gatilhos.includes(tipoDoGatilho))
+      item => (!item.base || bases.includes(item.base)) && daReuniao(item)
     ),
   };
 };

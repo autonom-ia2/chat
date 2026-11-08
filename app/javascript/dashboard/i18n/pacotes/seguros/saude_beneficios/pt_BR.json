@@ -1326,6 +1326,11 @@
     },
     "GATILHO_COM": {
       "CARD_GANHO": "Quando um plano de {funil} é implantado"
+    },
+    "OUTRO_REGISTRO": {
+      "SITUACOES": {
+        "WON": "Com o plano implantado"
+      }
     }
   }
 }
