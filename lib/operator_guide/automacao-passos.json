@@ -459,31 +459,6 @@
       "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_RESPONSAVEL_ID"
     },
     {
-      "caminho": "conversa.responsavel_ausente",
-      "base": "conversa",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_RESPONSAVEL_AUSENTE",
-      "opcoes": [
-        {
-          "valor": true,
-          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
-        },
-        {
-          "valor": false,
-          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
-        }
-      ],
-      "operadores": [
-        {
-          "op": "igual",
-          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
-        },
-        {
-          "op": "diferente",
-          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
-        }
-      ]
-    },
-    {
       "caminho": "conversa.time_id",
       "base": "conversa",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_TIME_ID"
@@ -585,31 +560,6 @@
       "frase": "AUTOMACAO_LIVRE.VALORES.CARD_RESPONSAVEL_ID"
     },
     {
-      "caminho": "card.responsavel_ausente",
-      "base": "card",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_RESPONSAVEL_AUSENTE",
-      "opcoes": [
-        {
-          "valor": true,
-          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
-        },
-        {
-          "valor": false,
-          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
-        }
-      ],
-      "operadores": [
-        {
-          "op": "igual",
-          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
-        },
-        {
-          "op": "diferente",
-          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
-        }
-      ]
-    },
-    {
       "caminho": "card.time_id",
       "base": "card",
       "frase": "AUTOMACAO_LIVRE.VALORES.CARD_TIME_ID"
@@ -642,6 +592,56 @@
         "card.reuniao_marcada",
         "card.reuniao_remarcada",
         "card.reuniao_cancelada"
+      ]
+    },
+    {
+      "caminho": "conversa.responsavel_ausente",
+      "base": "conversa",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_RESPONSAVEL_AUSENTE",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
+      "caminho": "card.responsavel_ausente",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_RESPONSAVEL_AUSENTE",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
       ]
     },
     {
