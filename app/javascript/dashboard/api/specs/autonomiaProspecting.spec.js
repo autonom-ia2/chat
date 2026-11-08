@@ -55,6 +55,16 @@ describe('#AutonomiaProspectingAPI', () => {
     );
   });
 
+  // "Guardar para mandar mensagem" (#2695): Público a partir dos leads.
+  it('guarda os leads num Público com o nome', () => {
+    prospecting.createAudience({ leadIds: [1, 2], name: 'Padarias' });
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/leads/audience',
+      { lead_ids: [1, 2], name: 'Padarias' }
+    );
+  });
+
   // Descartar e criar contatos em lote (#732).
   it('descarta os leads com o motivo', () => {
     prospecting.discardLeads({ leadIds: [1, 2], reason: 'Sem interesse' });

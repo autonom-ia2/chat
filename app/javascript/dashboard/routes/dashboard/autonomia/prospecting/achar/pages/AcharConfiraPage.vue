@@ -299,10 +299,14 @@ const voltarParaLista = () => {
   if (demo.value) voltarParaAListaDaDemo();
   else pronto.value = null;
 };
+// Com o Público guardado (#2695), a Nova campanha abre com ele escolhido.
 const escreverMensagem = () =>
   router.push({
     name: 'campaigns_journey_new',
     params: { accountId: route.params.accountId },
+    query: pronto.value?.publicoId
+      ? { audience: String(pronto.value.publicoId) }
+      : {},
   });
 const mudarPedido = () => irPara(ROTAS.PORTA, { estado: 'porta' });
 const voltarParaBuscas = () =>

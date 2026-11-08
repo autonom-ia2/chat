@@ -4789,6 +4789,28 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "16.17",
+     "titulo": "Guardar as empresas achadas para mandar mensagem",
+     "para_que_serve": "Guardar as empresas da Prospecção nova num Público de Campanhas, entender quem fica de fora e abrir a Nova campanha com ele.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_prospecting_achar_busca"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_achar_busca",
+      "destaque": null
+     },
+     "requer": "prospeccao_nova",
+     "prints": [],
+     "fontes": [
+      "porques: Guardar as empresas da Prospeccao nova para mandar mensagem"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

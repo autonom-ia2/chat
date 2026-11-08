@@ -1417,6 +1417,22 @@ pt_BR:
         errors:
           no_leads: 'Escolha pelo menos um lead para criar contatos.'
           too_many_leads: 'Crie até %{max} contatos por vez.'
+      audience:
+        left_out:
+          not_found: 'Não está mais na sua lista.'
+          discarded: 'Você tirou esta empresa da lista.'
+          opt_out: 'Pediu para não receber mensagens.'
+          contact_blocked: 'O contato está bloqueado.'
+          no_channel: 'Não tem celular nem e-mail.'
+          invalid_data: 'O contato foi recusado. Confira nome, telefone e e-mail.'
+          unexpected_error: 'Não deu para guardar esta agora. Tente de novo.'
+        errors:
+          no_leads: 'Escolha pelo menos uma empresa para guardar.'
+          too_many_leads: 'Guarde até %{max} empresas por vez.'
+          name_required: 'Dê um nome para a lista.'
+          no_rows: 'Nenhuma destas pode receber mensagem: pediram para não receber ou não têm celular nem e-mail.'
+          foreign_contact: 'Um dos contatos foi apagado enquanto a lista era guardada. Tente de novo.'
+          disabled: 'Os Públicos de Campanhas não estão ligados nesta conta.'
       campaign_blocked:
         not_found: 'Lead não encontrado nesta conta.'
         discarded: 'Lead descartado.'

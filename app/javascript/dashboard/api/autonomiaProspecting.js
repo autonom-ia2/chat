@@ -101,6 +101,15 @@ class AutonomiaProspectingAPI extends ApiClient {
   }
 
   // Descartar com motivo (#732), um lead ou a seleção. Devolve os leads.
+  // "Guardar para mandar mensagem" (#2695): os leads viram um Público de
+  // Campanhas. Volta o Público e quem ficou de fora, com o motivo.
+  createAudience({ leadIds, name }) {
+    return axios.post(`${this.url}/leads/audience`, {
+      lead_ids: leadIds,
+      name,
+    });
+  }
+
   discardLeads({ leadIds, reason }) {
     return axios.post(`${this.url}/leads/discard`, {
       lead_ids: leadIds,

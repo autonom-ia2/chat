@@ -272,6 +272,7 @@
       "ERRO_DONO_SEM_CHAVE": "Only people who manage the funnels can choose someone else. Send without changing it: they stay with you.",
       "ERRO_DONO_SEM_FUNIL": "This person can't see this funnel. Choose someone else or another funnel.",
       "ERRO_LISTA": "We could not save the list.",
+      "ERRO_LISTA_NINGUEM": "None of these can receive messages: they asked not to, or have no mobile or e-mail.",
       "NAO_VAO_LINK": "Why {n} is not going | Why {n} are not going",
       "TENTAR": "Try again",
       "VAO": "{n} companies will go",
@@ -299,7 +300,15 @@
       "LISTA": {
         "TITULO": "Done. The message list is saved.",
         "DETALHE": "{nome} · {n} businesses",
-        "ESCREVER": "Create the message"
+        "ESCREVER": "Create the message",
+        "FORA": {
+          "NAO_QUER": "{n} asked not to receive messages and was left out. | {n} asked not to receive messages and were left out.",
+          "BLOQUEADO": "{n} is blocked and was left out. | {n} are blocked and were left out.",
+          "SEM_CONTATO": "{n} has no mobile or e-mail and was left out. | {n} have no mobile or e-mail and were left out.",
+          "TIRADA": "{n} had been taken off the list and was left out. | {n} had been taken off the list and were left out.",
+          "SUMIU": "{n} is no longer in your list. | {n} are no longer in your list.",
+          "NAO_DEU": "Could not save {n}. Try again. | Could not save {n}. Try again."
+        }
       },
       "NENHUMA_NOVA": "No new company entered the {funil} pipeline.",
       "FALHARAM": "{n} company didn't get into the pipeline. | {n} companies didn't get into the pipeline.",

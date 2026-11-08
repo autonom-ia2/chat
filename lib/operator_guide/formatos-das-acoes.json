@@ -11949,6 +11949,26 @@
     ],
     "sem_corpo": true
   },
+  "POST autonomia/prospecting/leads/audience": {
+    "campos": {
+      "lead_ids": {
+        "tipo": "lista",
+        "tipo_pela_leitura": "nome"
+      },
+      "name": {
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/prospecting/lead_audiences#create",
+    "modelo": "Autonomia::Prospecting::Lead",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lead_audiences_controller.rb:9",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lead_audiences_controller.rb:11"
+    ],
+    "sem_corpo": false
+  },
   "POST autonomia/prospecting/leads/campaign_segment": {
     "campos": {
       "campaign_id": {

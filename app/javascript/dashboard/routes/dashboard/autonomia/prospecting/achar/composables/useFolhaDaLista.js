@@ -13,6 +13,10 @@ const VOLTA_DO_SUBPAINEL = {
   'folha-para-onde': 'folha-sem-destino',
 };
 
+// Ninguém da lista pode receber mensagem (todos pediram para não receber ou
+// não têm celular nem e-mail): a folha diz isso, e não "não deu".
+const NINGUEM_PODE_RECEBER = 'prospecting.audience.no_rows';
+
 export const folhaNova = (escolha = null, mostrarFora = false) => ({
   escolha,
   mostrarFora,
@@ -112,18 +116,30 @@ export function useFolhaDaLista({
   const mandarDaFolha = () =>
     demo.value ? mudarEstado('folha-enviando') : enviar();
 
+  // O Público (#2695): o pronto guarda o id, para "Criar a mensagem" abrir a
+  // Nova campanha com ele, e quem ficou de fora, para dizer o porquê.
   const guardarDaFolha = async () => {
     folha.value = { ...folha.value, guardando: true, erro: null };
     try {
       const ids = escolhidas.value
         .filter(empresa => empresa.temContato)
         .map(empresa => empresa.id);
-      await fonte.value.guardarLista({ nome: nomeLista.value, ids });
-      pronto.value = { tipo: 'lista', n: ids.length };
+      const guardado = await fonte.value.guardarLista({
+        nome: nomeLista.value,
+        ids,
+      });
+      pronto.value = {
+        tipo: 'lista',
+        n: guardado.n,
+        publicoId: guardado.publicoId,
+        fora: guardado.fora,
+      };
       folha.value = null;
       if (demo.value) mudarEstado('guardada');
-    } catch {
-      folha.value = { ...folha.value, guardando: false, erro: 'lista' };
+    } catch (erro) {
+      const erroDaLista =
+        erro?.codigo === NINGUEM_PODE_RECEBER ? 'lista_ninguem' : 'lista';
+      folha.value = { ...folha.value, guardando: false, erro: erroDaLista };
     }
   };
 

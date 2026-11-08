@@ -69,6 +69,15 @@ const doEnvio = ({ created = [], existing = [], failed = [] }) => ({
   })),
 });
 
+// O Público guardado (#2695), igual na demonstração e na API: o id para abrir
+// a Nova campanha com ele, quantas pessoas entraram e quem ficou de fora.
+const doPublico = ({ audience = {}, left_out: fora = [] }) => ({
+  publicoId: audience.id || null,
+  nome: audience.name || '',
+  n: audience.count || 0,
+  fora: fora.map(item => ({ id: item.lead_id, motivo: item.reason_code })),
+});
+
 const comDias = search => ({
   ...buscaDoPayload(search),
   diasAtras: diasDesde(search.created_at),
@@ -245,7 +254,7 @@ const fonteDemo = ({ estado, carregarDemo, atraso, usuarioId }) => {
     },
     async guardarLista({ nome, ids }) {
       await esperar(atraso * 2);
-      return { nome, n: ids.length };
+      return doPublico({ audience: { name: nome, count: ids.length } });
     },
     async fila() {
       const demo = await dados();
@@ -414,10 +423,19 @@ const fonteApi = ({ api, crm, usuarioId, usuarioNome }) => ({
     const { data } = await api.exportSearch(id, { format: 'xlsx' });
     salvarArquivo(data, `prospeccao-${id}.xlsx`);
   },
-  // O Público a partir de empresas é backend novo (v4, fase 3). Até lá o cartão
-  // "Guardar para mandar mensagem" não aparece fora da demonstração.
-  async guardarLista() {
-    throw new Error('publico_de_empresas_indisponivel');
+  // "Guardar para mandar mensagem" (#2695): as empresas viram um Público de
+  // Campanhas. Na recusa, o erro leva o código do servidor e quem ficou de fora.
+  async guardarLista({ nome, ids }) {
+    try {
+      const { data } = await api.createAudience({ leadIds: ids, name: nome });
+      return doPublico(data.payload || {});
+    } catch (erro) {
+      const recusa = erro?.response?.data || {};
+      throw Object.assign(new Error('publico'), {
+        codigo: recusa.code || null,
+        fora: doPublico({ left_out: recusa.left_out || [] }).fora,
+      });
+    }
   },
   // A fila "Para chamar" pede leads#index com view=queue (v4, fase 5).
   async fila() {
