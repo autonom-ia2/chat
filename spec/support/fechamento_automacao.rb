@@ -176,7 +176,8 @@ module FechamentoAutomacao::Lacunas
     'G20' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('anexos') },
     'G21' => -> { passo?('prospeccao') },
     'G22' => nil,
-    'G23' => nil,
+    # G23 (#2737): o "ausente até" de quem cuida, como valor da condição.
+    'G23' => -> { valor?('card.responsavel_ausente') && valor?('conversa.responsavel_ausente') },
     'G24' => nil,
     'G25' => -> { acao?('POST crm/cards/:id/close') },
     'G26' => -> { passo?('sla') },

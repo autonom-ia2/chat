@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_780000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_800000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -65,6 +65,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_780000) do
     t.bigint "custom_role_id"
     t.bigint "agent_capacity_policy_id"
     t.boolean "integration", default: false, null: false
+    t.datetime "ausente_ate"
     t.index ["account_id", "user_id"], name: "uniq_user_id_per_account_id", unique: true
     t.index ["account_id"], name: "index_account_users_on_account_id"
     t.index ["agent_capacity_policy_id"], name: "index_account_users_on_agent_capacity_policy_id"

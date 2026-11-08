@@ -17,6 +17,8 @@ class Autonomia::Automacao::Valores
     'conversa.prioridade' => ->(conversa) { conversa.priority },
     'conversa.caixa_id' => ->(conversa) { conversa.inbox_id },
     'conversa.responsavel_id' => ->(conversa) { conversa.assignee_id },
+    # G23 (#2737): a pessoa responsável está ausente agora ("ausente até" na conta da execução ainda não passou).
+    'conversa.responsavel_ausente' => ->(conversa) { ::AccountUser.ausente_na_conta?(conversa.account_id, conversa.assignee_id) },
     'conversa.time_id' => ->(conversa) { conversa.team_id },
     'conversa.etiquetas' => ->(conversa) { conversa.label_list },
     # "cliente" ou "equipe", pela primeira mensagem de verdade (#2527); vazio enquanto a conversa não tem mensagem.
@@ -35,6 +37,7 @@ class Autonomia::Automacao::Valores
     'card.status' => ->(card) { card.status },
     'card.valor' => ->(card) { card.value_cents.to_d / 100 },
     'card.responsavel_id' => ->(card) { card.owner_id },
+    'card.responsavel_ausente' => ->(card) { ::AccountUser.ausente_na_conta?(card.account_id, card.owner_id) },
     'card.time_id' => ->(card) { card.team_id },
     'card.dias_na_etapa' => ->(card) { card.entered_stage_at && ((Time.current - card.entered_stage_at) / 1.day).floor },
     'card.motivo_da_perda' => ->(card) { card.lost_reason },
@@ -96,7 +99,9 @@ class Autonomia::Automacao::Valores
     'mensagem.primeira' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'conversa.iniciada_por' => { 'opcoes' => %w[cliente equipe], 'operadores' => %w[igual diferente] },
     'conversa.cliente_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] }
+    'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'conversa.responsavel_ausente' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'card.responsavel_ausente' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] }
   }.freeze
 
   ATRIBUTOS = {
