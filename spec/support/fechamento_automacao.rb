@@ -236,7 +236,11 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 5, passo 8 (#2703): o card que a página de agendamento cria para a reunião (card do serviço já ganho)
     # nasce sem conversa, e a mensagem do gatilho de reunião nele pula com `sem_conversa`. Caminho escolhido: o Booker
     # liga ao card novo a conversa do contato na caixa da página, quando ela existe. A frente dona troca o nil pela sonda.
-    'G47' => nil
+    'G47' => nil,
+    # Do exemplo 9, passo 4 (decisão da Automação, 09/11): a campanha vai só às empresas que a execução criou agora, não a
+    # todo contato com a etiqueta (o público da campanha hoje é só etiqueta). Mandar de novo às da semana anterior quebra
+    # o "empresas novas" do termo. A frente dona troca o nil pela sonda.
+    'G58' => nil
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".
