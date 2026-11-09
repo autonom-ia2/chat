@@ -1,6 +1,8 @@
 /* global axios */
 import ApiClient from './ApiClient';
 
+export const INTERPRET_TIMEOUT_MS = 20000;
+
 class AutonomiaProspectingAPI extends ApiClient {
   constructor() {
     super('autonomia/prospecting', { accountScoped: true });
@@ -12,6 +14,17 @@ class AutonomiaProspectingAPI extends ApiClient {
 
   getSearch(searchId) {
     return axios.get(`${this.url}/searches/${searchId}`);
+  }
+
+  // Pedido em uma frase (#2696): a IA da conta devolve o quê, onde e os
+  // ajustes; não cria a busca. O prazo de 20 s é só desta chamada: estourou,
+  // a porta mostra o aviso de falha e destrava os campos.
+  interpretSearch(frase) {
+    return axios.post(
+      `${this.url}/searches/interpret`,
+      { frase },
+      { timeout: INTERPRET_TIMEOUT_MS }
+    );
   }
 
   getLocationSuggestions(query) {
@@ -58,29 +71,42 @@ class AutonomiaProspectingAPI extends ApiClient {
     return axios.get(`${this.url}/leads`, { params });
   }
 
+  // A fila "Para chamar" (#2697): os leads ainda não tratados, na ordem da
+  // chance, cada um com quem achou (found_by_name).
+  getQueue() {
+    return axios.get(`${this.url}/leads`, { params: { view: 'queue' } });
+  }
+
+  // "Depois" da fila (#2697): some da fila de quem pediu até amanhã. O DELETE
+  // é o "Desfazer".
+  postponeQueueLead(leadId) {
+    return axios.post(`${this.url}/leads/${leadId}/queue_postponement`);
+  }
+
+  resumeQueueLead(leadId) {
+    return axios.delete(`${this.url}/leads/${leadId}/queue_postponement`);
+  }
+
   createLeadContact(leadId) {
     return axios.post(`${this.url}/leads/${leadId}/contact`);
   }
 
   // Envio ao CRM (#680): até 30 leads por pedido, resultado por lead
   // (created, existing, failed). Um lead só também vai por aqui.
-  createCrmCards({ leadIds, pipelineId, stageId }) {
+  // ownerId (#2694): com quem ficam os cards; sem ele, com quem manda.
+  createCrmCards({ leadIds, pipelineId, stageId, ownerId = null }) {
     return axios.post(`${this.url}/leads/crm_cards`, {
       lead_ids: leadIds,
       pipeline_id: pipelineId,
       stage_id: stageId,
+      ...(ownerId ? { owner_id: ownerId } : {}),
     });
   }
 
-  // Campanha a partir da seleção da busca (#680): devolve o segmento, com o
-  // motivo de cada lead bloqueado.
-  // campaignType: 'whatsapp_api' ou 'one_off' (#732); sem ele, envio único.
-  addLeadsToCampaign({ leadIds, campaignId, campaignType, segmentName }) {
-    return axios.post(`${this.url}/leads/campaign_segment`, {
-      lead_ids: leadIds,
-      campaign_id: campaignId,
-      campaign_type: campaignType,
-      segment_name: segmentName,
+  // Quem pode receber o card no funil (#2694): só para quem gere funis.
+  getCrmOwners(pipelineId) {
+    return axios.get(`${this.url}/leads/crm_owners`, {
+      params: { pipeline_id: pipelineId },
     });
   }
 
@@ -92,6 +118,15 @@ class AutonomiaProspectingAPI extends ApiClient {
   }
 
   // Descartar com motivo (#732), um lead ou a seleção. Devolve os leads.
+  // "Guardar para mandar mensagem" (#2695): os leads viram um Público de
+  // Campanhas. Volta o Público e quem ficou de fora, com o motivo.
+  createAudience({ leadIds, name }) {
+    return axios.post(`${this.url}/leads/audience`, {
+      lead_ids: leadIds,
+      name,
+    });
+  }
+
   discardLeads({ leadIds, reason }) {
     return axios.post(`${this.url}/leads/discard`, {
       lead_ids: leadIds,
@@ -152,12 +187,6 @@ class AutonomiaProspectingAPI extends ApiClient {
 
   removeLeadFromList(listId, leadId) {
     return axios.delete(`${this.url}/lists/${listId}/leads/${leadId}`);
-  }
-
-  createCampaignSegment(listId, campaignSegment = {}) {
-    return axios.post(`${this.url}/lists/${listId}/campaign_segment`, {
-      campaign_segment: campaignSegment,
-    });
   }
 
   getSettings() {

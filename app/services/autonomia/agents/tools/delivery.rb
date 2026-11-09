@@ -79,6 +79,41 @@ class Autonomia::Agents::Tools::Delivery
     ocorrencias[pedido] += 1
   end
 
+  # #1430 (desenho D): A JANELA DAS CONSULTAS HTTP EM SEGUNDO PLANO É DA RODADA. Cada pré-disparo
+  # (`ConsultaNoTurno.nova_rodada`, uma vez por rodada de chamadas do modelo) abre uma janela nova; as consultas da
+  # mesma rodada esperam juntas a mesma janela, sem somar. Sem pré-disparo (quem executa a chamada direto), a janela abre no primeiro disparo
+  # e vale para as seguintes. `agora` e `espera` vêm de quem dispara (o relógio monotônico e
+  # `ConsultaNoTurno::ESPERA_DO_TURNO`). -> [início, prazo].
+  def abrir_janela_das_consultas(agora, espera)
+    @reservas_da_rodada = Hash.new(0)
+    @janela_das_consultas = [agora, agora + espera]
+  end
+
+  def janela_das_consultas(agora, espera)
+    @janela_das_consultas ||= [agora, agora + espera]
+  end
+
+  # A ocorrência de uma chamada no PRÉ-DISPARO da rodada: duas chamadas idênticas na mesma rodada são dois pedidos, como
+  # no síncrono, onde a primeira conclui antes de a segunda sair. Conta a partir da ocorrência atual do turno.
+  def reservar_ocorrencia(pedido)
+    @reservas_da_rodada ||= Hash.new(0)
+    numero = ocorrencia(pedido) + @reservas_da_rodada[pedido]
+    @reservas_da_rodada[pedido] += 1
+    numero
+  end
+
+  # A resposta 2xx de UMA execução avança a ocorrência uma vez só, venha ela na janela ou já entregue por evento.
+  def concluir_execucao(pedido, run_id)
+    @execucoes_concluidas ||= Set.new
+    concluir(pedido) if @execucoes_concluidas.add?(run_id)
+  end
+
+  # Os disparos deste turno que ainda não foram lidos, pela chamada do modelo (`call_id`) ou, sem ela, pela
+  # Idempotency-Key. A execução da chamada TOMA o seu (`ConsultaNoTurno#resultado`): repetir a chamada depois não o reusa.
+  def consultas
+    @consultas ||= {}
+  end
+
   def register(run)
     @runs << run if run.present?
     run

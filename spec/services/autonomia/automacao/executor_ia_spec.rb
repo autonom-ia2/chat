@@ -414,6 +414,25 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(corpos.first['instructions']).to include('até 2 linhas')
     end
 
+    # G41 (#2752, exemplo 10, passo 4): a instrução vai junto do texto fixo, sem trocá-lo.
+    it 'com instrução, a IA recebe o texto fixo e a instrução', :aggregate_failures do
+      openai_devolve({ 'resumo' => 'Quer o reembolso; o Rafael prometeu ligar hoje.' })
+      passo = resumir('nota').merge('instrucao' => 'Inclua o que a equipe já prometeu ao cliente.')
+
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [passo]))
+
+      expect(registros(execucao)).to eq([['p1', 'ok', nil]])
+      expect(corpos.first['instructions']).to include('até 2 linhas', 'nunca invente', 'Inclua o que a equipe já prometeu ao cliente.')
+    end
+
+    it 'sem instrução, a IA recebe só o texto fixo' do
+      openai_devolve({ 'resumo' => 'Quer acionar o seguro.' })
+
+      comecar_e_rodar(automacao_ligada(account, admin, [resumir('nota')]))
+
+      expect(corpos.first['instructions']).not_to include('Instrução')
+    end
+
     it 'em aviso, ninguém para avisar pula antes de pagar a IA', :aggregate_failures do
       ligar_mensagens(account)
       openai_devolve({ 'resumo' => 'x' })

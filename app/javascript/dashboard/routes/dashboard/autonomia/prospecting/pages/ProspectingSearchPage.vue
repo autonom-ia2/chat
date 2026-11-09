@@ -11,13 +11,11 @@ import SearchConfigModal from '../components/search/SearchConfigModal.vue';
 import SearchTour from '../components/search/SearchTour.vue';
 import LeadDetailDrawer from '../components/search/LeadDetailDrawer.vue';
 import CrmSendModal from '../components/crm/CrmSendModal.vue';
-import CampaignSelectionModal from '../components/campaign/CampaignSelectionModal.vue';
 import { useProspectingSearch } from '../composables/useProspectingSearch';
 
 const { t } = useI18n();
 const {
   canManage,
-  canChooseCampaign,
   settings,
   showNewSearch,
   selectedSearchConfig,
@@ -26,8 +24,6 @@ const {
   crmSendLeads,
   closeCrmSend,
   applyCrmSendResult,
-  campaignLeads,
-  selectedSearch,
   deleteSearchConfirmModal,
   deleteSearchConfirmConfig,
   toggleNewSearch,
@@ -126,14 +122,6 @@ const {
       :suggested-stage-id="crmForm.stage_id"
       @sent="applyCrmSendResult"
       @close="closeCrmSend"
-    />
-
-    <CampaignSelectionModal
-      v-if="campaignLeads"
-      :leads="campaignLeads"
-      :default-segment-name="selectedSearch?.query || ''"
-      :can-choose-campaign="canChooseCampaign"
-      @close="campaignLeads = null"
     />
 
     <ConfirmModal

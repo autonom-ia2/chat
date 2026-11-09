@@ -84,7 +84,7 @@ module Autonomia
         # #2154: outro settle tem a posse deste turno. A marca só sai se o turno já foi respondido (há resposta do robô a
         # esta mensagem); se o outro settle ainda está na IA, a marca é dele e fica.
         def posse_ja_tomada(conversation, agent_inbox, message_id)
-          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+          return unless ::Autonomia::Agents::Operate::TurnoEmCurso.marcar?(conversation.account)
           return unless ::Autonomia::Agents::Operate::Responder.new(conversation: conversation, agent_inbox: agent_inbox,
                                                                     reply_to_message_id: message_id).respondida?
 
@@ -111,9 +111,9 @@ module Autonomia
           fim_do_turno(conversation, message_id, responder)
         end
 
-        # Sem a flag, nada (nem pergunta ao Responder).
+        # Sem a marca (`TurnoEmCurso.marcar?`), nada (nem pergunta ao Responder).
         def fim_do_turno(conversation, message_id, responder)
-          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+          return unless ::Autonomia::Agents::Operate::TurnoEmCurso.marcar?(conversation.account)
           return if responder&.turno_segue?
 
           ::Autonomia::Agents::Operate::TurnoEmCurso.soltar(conversation.id, message_id)
@@ -153,9 +153,10 @@ module Autonomia
         end
 
         # #2154 (flag `agente_so_informa`): o turno começa na mensagem do cliente, para a IA de Atribuição não entregar a
-        # conversa enquanto o agente responde (Operate::TurnoEmCurso). A mensagem mais nova toma a marca.
+        # conversa enquanto o agente responde (Operate::TurnoEmCurso). A mensagem mais nova toma a marca. #1430: também
+        # com a consulta em segundo plano, para o resultado dela não passar na frente da fala do turno.
         def abrir_turno(conversation, message_id)
-          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+          return unless ::Autonomia::Agents::Operate::TurnoEmCurso.marcar?(conversation.account)
 
           ::Autonomia::Agents::Operate::TurnoEmCurso.abrir(conversation.id, message_id)
         end
@@ -166,7 +167,7 @@ module Autonomia
         end
 
         def soltar_turno(conversation, message_id)
-          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+          return unless ::Autonomia::Agents::Operate::TurnoEmCurso.marcar?(conversation.account)
 
           ::Autonomia::Agents::Operate::TurnoEmCurso.soltar(conversation.id, message_id)
         end

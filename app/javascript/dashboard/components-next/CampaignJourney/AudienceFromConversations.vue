@@ -281,8 +281,16 @@ const save = async withCampaign => {
         .filter(person => !leftOut.value.has(person.id))
         .map(person => person.id),
     });
-  } catch {
-    useAlert(t(`${NS}.SAVE_ERROR`));
+  } catch (error) {
+    // A contact deleted while saving (foreign_contact, #2695) has its own sentence.
+    const code = error?.response?.data?.error;
+    useAlert(
+      t(
+        code === 'foreign_contact'
+          ? `${NS}.SAVE_ERROR_FOREIGN_CONTACT`
+          : `${NS}.SAVE_ERROR`
+      )
+    );
     return;
   } finally {
     isBusy.value = false;

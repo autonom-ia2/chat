@@ -106,6 +106,21 @@ RSpec.describe 'Autonomia prospecting search visibility', type: :request do
       get "#{base_path}/searches/#{other_search.id}/export", params: { format: 'csv' }, headers: auth_headers(admin)
       expect(response).to have_http_status(:ok)
     end
+
+    # Cada pessoa apaga só as buscas que fez, inclusive o administrador (#2693).
+    it 'o administrador não exclui a busca de outra pessoa (404)' do
+      delete "#{base_path}/searches/#{other_search.id}", headers: auth_headers(admin)
+
+      expect(response).to have_http_status(:not_found)
+      expect(Autonomia::Prospecting::Search.exists?(other_search.id)).to be(true)
+    end
+
+    it 'a lista diz quem fez cada busca' do
+      get "#{base_path}/searches", headers: auth_headers(admin)
+
+      payload = response.parsed_body['payload'].index_by { |search| search['id'] }
+      expect(payload[other_search.id].slice('user_id', 'user_name')).to eq('user_id' => other_agent.id, 'user_name' => other_agent.name)
+    end
   end
 
   describe 'leads da busca de outro agente' do
@@ -181,18 +196,6 @@ RSpec.describe 'Autonomia prospecting search visibility', type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.dig('payload', 'failed').pluck('lead_id', 'reason_code')).to eq([[other_lead.id, 'not_found']])
       expect(account.crm_cards.count).to eq(0)
-    end
-
-    it 'não põe o lead numa lista pela seleção da campanha, e o lead continua fechado para ele' do
-      other_lead.update!(phone: '+5531999990001', country: 'BR', status: :ready_for_campaign,
-                         metadata: { 'whatsapp_verification' => { 'status' => 'verified', 'phone' => '+5531999990001' } })
-
-      post "#{base_path}/leads/campaign_segment", params: { lead_ids: [other_lead.id], segment_name: 'Seleção' },
-                                                  headers: auth_headers(agent), as: :json
-
-      expect(Autonomia::Prospecting::ListLead.where(prospect_lead_id: other_lead.id)).not_to exist
-      get "#{base_path}/leads/#{other_lead.id}", headers: auth_headers(agent)
-      expect(response).to have_http_status(:not_found)
     end
 
     it 'não põe o lead numa lista pelo id (404), e o lead continua fechado para ele' do
