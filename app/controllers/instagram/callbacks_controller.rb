@@ -155,7 +155,10 @@ class Instagram::CallbacksController < ApplicationController
   def update_channel(channel_instagram, user_details)
     expires_at = Time.current + @long_lived_token_response['expires_in'].seconds
 
+    # Entrar pelo login do Instagram numa caixa trocada para o login do Facebook (#2406) a devolve ao login do Instagram.
     channel_instagram.update!(
+      login: 'instagram',
+      page_id: nil,
       access_token: @long_lived_token_response['access_token'],
       expires_at: expires_at,
       provider_name: user_details['username'],
