@@ -70,6 +70,7 @@ RSpec.describe Autonomia::Agents::PromptBuilder do
       expect(lembretes.size).to eq(1)
       expect(entrada.last).to eq(lembretes.first)
       expect(lembretes.first[:content].to_s).to include('`used_snippet_ids`', 'regra de quando não souber')
+      expect(lembretes.first[:content].to_s.scan('Antes de responder').size).to eq(1)
       expect(montar.instructions).to include('ORDEM DAS FONTES', regra)
     end
 

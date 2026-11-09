@@ -332,10 +332,15 @@ module Autonomia
         [user_message(@query), (message('developer', lembrete_do_fim) if @snippets.any? && lembrete_do_fim)].compact
       end
 
-      # nil sem nenhuma das duas flags: o input termina na pergunta, como antes.
+      # nil sem nenhuma das duas flags: o input termina na pergunta, como antes. Com as duas, o "Antes de responder:" sai
+      # uma vez só.
       def lembrete_do_fim
-        partes = [(LEMBRETE_DO_FIM if material_primeiro?), (LEMBRETE_DO_TRECHO if usa_o_trecho?)].compact
-        partes.join(' ').presence
+        trecho = usa_o_trecho?
+        material = material_primeiro?
+        return (LEMBRETE_DO_TRECHO if trecho) unless material
+        return LEMBRETE_DO_FIM unless trecho
+
+        "#{LEMBRETE_DO_FIM} Além disso, #{LEMBRETE_DO_TRECHO.delete_prefix('Antes de responder: ')}"
       end
 
       # Conveniência p/ o Answerer.
