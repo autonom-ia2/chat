@@ -99,6 +99,8 @@ end
 # fail") e o exemplo ganha o spec de verdade. A frente que fecha uma lacuna ajusta a sonda no mesmo PR, se o nome que
 # ela deu for outro. Sonda `nil` é lacuna sem pergunta que o código responda: a frente troca pela prova.
 module FechamentoAutomacao::Lacunas
+  extend CrmHelpers
+
   module_function
 
   def passo?(*tipos) = tipos.intersect?(tipos_de_passo(Autonomia::Automacao::Receita::ESQUEMA))
@@ -145,6 +147,45 @@ module FechamentoAutomacao::Lacunas
       montado.corpo&.dig('custom_attributes', 'revisao') == Time.current.utc.to_date.advance(months: 6).iso8601
   end
 
+  # G18: o passo "em outro registro" da mãe lê no alvo dela o contato guardado no campo, e o job abre a execução filha no
+  # contato ligado, que anda só no ramo do passo (nunca nos passos da mãe). Roda na transação do exemplo, que desfaz
+  # tudo; a primeira rodada da filha só fica na fila.
+  def filha_anda_no_registro_ligado?
+    account = FactoryBot.create(:account)
+    account.enable_features!('automacao_fundacao', 'automacao_motor')
+    FactoryBot.create(:custom_attribute_definition, account: account, attribute_key: 'indicado_por', attribute_display_name: 'Indicado por',
+                                                    attribute_model: 'contact_attribute', attribute_display_type: 'number')
+    maria = account.contacts.create!(name: 'Maria')
+    joao = account.contacts.create!(name: 'João', custom_attributes: { 'indicado_por' => maria.id })
+    mae = mae_com_passo_em_outro(account, FactoryBot.create(:conversation, account: account, contact: joao))
+    filha = abrir_filhas(mae) && Autonomia::Automacao::Execucao.find_by(automacao_id: mae.automacao_id, alvo: maria)
+    roteiro = filha && Autonomia::Automacao::Roteiro.da(filha)
+    roteiro.present? && roteiro.primeiro['id'] == 'na_maria' && roteiro.seguinte('na_maria').nil?
+  end
+
+  def mae_com_passo_em_outro(account, conversa)
+    ramo = { 'id' => 'na_maria', 'tipo' => 'esperar', 'duracao' => { 'valor' => 1, 'unidade' => 'dias' } }
+    passo = { 'id' => 'outro', 'tipo' => 'em_outro_registro', 'passos' => [ramo],
+              'registro' => { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'contato.atributos.indicado_por' }, 'usar' => 'contato' } }
+    receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [passo, { 'id' => 'na_mae', 'tipo' => 'parar' }] }
+    dona = FactoryBot.create(:user, account: account, role: :administrator)
+    automacao = FactoryBot.create(:autonomia_automacao, account: account, ativa: true, ligada_por: dona)
+    versao = FactoryBot.create(:autonomia_automacao_versao, automacao: automacao, receita: receita)
+    FactoryBot.create(:autonomia_automacao_execucao, versao: versao, alvo: conversa)
+  end
+
+  # O passo da mãe como o Executor o roda, e o job que ele enfileira, com o contato que o passo leu.
+  def abrir_filhas(mae)
+    passo = Autonomia::Automacao::Roteiro.da(mae).passo('outro')
+    valores = Autonomia::Automacao::Valores.new(alvo: mae.alvo, quem: mae.automacao.ligada_por)
+    acesso = Autonomia::Automacao::Acesso.new(mae.automacao, chave_gatilho: mae.chave_gatilho)
+    lido = Autonomia::Automacao::PassoEmOutroRegistro.new(execucao: mae, passo: passo, valores: valores, acesso: acesso).executar
+    return false unless lido.tipo == :ok
+
+    Autonomia::Automacao::EmOutroRegistroJob.perform_now(mae.account_id, mae.id, 'outro', lido.dados['contato_id'])
+    true
+  end
+
   SONDAS = {
     # O modelo aprovado entrou como campo do passo "mensagem" (F4b, #2468/#2586), não como passo próprio.
     'G1' => -> { campo_do_passo?('mensagem', 'modelo') },
@@ -173,7 +214,7 @@ module FechamentoAutomacao::Lacunas
     'G15' => -> { passo?('ia_assumir') },
     'G16' => -> { valor_calculado_no_corpo? },
     'G17' => -> { acao?('POST contacts') },
-    'G18' => -> { passo?('em_outro_registro') },
+    'G18' => -> { filha_anda_no_registro_ligado? },
     'G19' => -> { acao?('POST contacts/:contact_id/notes') },
     # Os passos de IA leem a foto, o PDF e o áudio da conversa (`le: anexos`, #2669).
     'G20' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('anexos') },

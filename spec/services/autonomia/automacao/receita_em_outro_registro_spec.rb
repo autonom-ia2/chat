@@ -15,7 +15,15 @@ RSpec.describe Autonomia::Automacao::Receita do
 
   def problemas(receita, account_user: nil) = described_class.new(receita, conta: account, account_user: account_user).problemas
 
-  before { account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_mensagens') }
+  def atributo(chave, modelo, tipo)
+    create(:custom_attribute_definition, account: account, attribute_key: chave, attribute_display_name: chave,
+                                         attribute_model: modelo, attribute_display_type: tipo)
+  end
+
+  before do
+    account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_mensagens')
+    atributo('indicado_por', 'contact_attribute', 'number')
+  end
 
   it 'está no esquema e anda pela travessia única (a chave de funis do controller vê o ramo)', :aggregate_failures do
     lida = receita('mensagem.criada', em_outro(cards_perdidos, mensagem('m1', 'card.motivo_da_perda')))
@@ -29,7 +37,7 @@ RSpec.describe Autonomia::Automacao::Receita do
   end
 
   it 'o ramo no contato não lê a conversa: ele roda no contato, que não tem conversa' do
-    no_contato = { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'contato.id' }, 'usar' => 'contato' }
+    no_contato = { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'contato.atributos.indicado_por' }, 'usar' => 'contato' }
 
     expect(problemas(receita('mensagem.criada', em_outro(no_contato, mensagem('m1', 'conversa.status')))))
       .to eq([I18n.t("#{frase}.valor_fora_do_alvo", passo: 'm1', caminho: 'conversa.status')])
@@ -40,6 +48,18 @@ RSpec.describe Autonomia::Automacao::Receita do
 
     expect(problemas(receita('mensagem.criada', em_outro(do_card, mensagem('m1', 'contato.nome')))))
       .to include(I18n.t("#{frase}.valor_fora_do_alvo", passo: 'outro', caminho: 'card.atributos.indicado_por'))
+  end
+
+  # A tela só oferece campo de número; o servidor é a barreira de verdade (o Guia e a API montam sem a tela).
+  it 'o campo que guarda o contato tem de ser um campo de número: o servidor recusa o resto', :aggregate_failures do
+    atributo('telefone_de_quem_indicou', 'contact_attribute', 'text')
+    campo = ->(caminho) { { 'de' => 'contato_do_campo', 'campo' => { '$valor' => caminho }, 'usar' => 'conversa' } }
+    recusado = [I18n.t("#{frase}.em_outro_registro.campo_sem_contato", passo: 'outro')]
+
+    expect(problemas(receita('mensagem.criada', em_outro(campo.call('contato.atributos.indicado_por'))))).to be_empty
+    %w[contato.id contato.telefone contato.atributos.telefone_de_quem_indicou].each do |caminho|
+      expect(problemas(receita('mensagem.criada', em_outro(campo.call(caminho))))).to eq(recusado)
+    end
   end
 
   it 'recusa "em outro registro" dentro de outro: a filha nunca abre netas' do

@@ -67,11 +67,20 @@ module Autonomia::Automacao::EmOutroRegistro
      *::Autonomia::Automacao::Receita.new(ramo, conta: conta, account_user: account_user, alvo: alvo_do_ramo(passo)).problemas]
   end
 
-  def da_ligacao(id, registro, conta, account_user)
-    return [*yield(registro.dig('campo', '$valor'))] if registro['de'] == 'contato_do_campo'
+  def da_ligacao(id, registro, conta, account_user, &)
+    return do_campo(id, registro.dig('campo', '$valor'), conta, &) if registro['de'] == 'contato_do_campo'
 
     chave = account_user && !::Autonomia::Automacao::RegraDoFunil.chave?(account_user) ? [texto(:sem_chave_de_funis, passo: id)] : []
     chave + do_funil(id, registro, conta)
+  end
+
+  # O campo guarda o id do contato: só um atributo do tipo número, como a tela oferece. O resto (o telefone, o nome, o
+  # próprio contato do alvo, o texto da IA) nunca é o contato ligado, e o passo pularia sempre ou acharia outro contato.
+  def do_campo(id, caminho, conta)
+    lidos = [*yield(caminho)]
+    return lidos if lidos.any?
+
+    ::Autonomia::Automacao::Valores::Atributos.numero?(caminho, conta) ? [] : [texto(:campo_sem_contato, passo: id)]
   end
 
   def do_funil(id, registro, conta)

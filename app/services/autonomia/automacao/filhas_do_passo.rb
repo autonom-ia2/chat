@@ -20,11 +20,15 @@ class Autonomia::Automacao::FilhasDoPasso
   end
 
   # A conta por resultado ('abertas', 'abertas_antes', 'fora_do_alcance', 'ja_aberta'). A automação desligada (ou o
-  # motor) não abre nenhuma, e a mãe registra isso.
+  # motor) não abre nenhuma, e a mãe registra isso. A ligação que não acha registro nenhum também fica no histórico da
+  # mãe, com o motivo (F3.6, F4.3): o passo dela gravou "ok" ao entregar a procura, e sem a linha ninguém saberia por
+  # que nada aconteceu.
   def abrir
-    return pular_tudo unless @mae.automacao.ativa && ::Autonomia::Automacao::Motor.ligado?(@account)
+    return pular_com('desligada') unless @mae.automacao.ativa && ::Autonomia::Automacao::Motor.ligado?(@account)
 
     contagem = registros.each_with_object(Hash.new(0)) { |registro, conta| conta[abrir_para(registro)] += 1 }
+    return pular_com(sem_registro) if contagem.empty?
+
     anotar_pulados(contagem.except('abertas', 'abertas_antes'))
     contagem
   end
@@ -43,6 +47,14 @@ class Autonomia::Automacao::FilhasDoPasso
     when 'contato_do_campo' then [registro['usar'] == 'conversa' ? conversa_mais_recente : contato].compact
     else cards
     end
+  end
+
+  # Por que a ligação não achou registro: o contato da âncora não existe na conta, ele não tem conversa (o ramo roda na
+  # conversa), ou nenhum outro card dele passa nos filtros.
+  def sem_registro
+    return 'contato_ligado_sumiu' unless contato
+
+    registro['de'] == 'contato_do_campo' ? 'contato_ligado_sem_conversa' : 'nenhum_card_ligado'
   end
 
   def conversa_mais_recente
@@ -90,9 +102,9 @@ class Autonomia::Automacao::FilhasDoPasso
     'abertas_antes'
   end
 
-  def pular_tudo
-    registrar_na_mae('desligada', {})
-    { 'desligada' => 1 }
+  def pular_com(motivo)
+    registrar_na_mae(motivo, {})
+    { motivo => 1 }
   end
 
   # Uma linha só na mãe para os registros que ficaram sem os passos, com a conta de cada motivo.
