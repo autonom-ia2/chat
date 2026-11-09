@@ -107,6 +107,15 @@ RSpec.describe 'Crm::MetaCapi resolvers' do # rubocop:disable RSpec/DescribeClas
       expect(described_class.reportable?(inbox)).to be(true)
     end
 
+    # #2799: a 360dialog inbox also has an api_key, but it is not a Meta token.
+    it 'yields nothing for a WhatsApp inbox that is not the official Cloud API' do
+      channel = create(:channel_whatsapp, account: account, provider: 'default', validate_provider_config: false, sync_templates: false)
+      channel.update_columns(provider_config: channel.provider_config.merge('business_account_id' => '123456789')) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(described_class.for(channel.inbox)).to eq(channel: nil, access_token: nil, waba_id: nil)
+      expect(described_class.reportable?(channel.inbox)).to be(false)
+    end
+
     it 'yields nothing for an inbox without a Meta token' do
       inbox = create_crm_inbox(account: account)
 

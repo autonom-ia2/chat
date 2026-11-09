@@ -183,7 +183,7 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
     expect(a_request(:get, meta_graph_url(ad_id)).with(query: hash_including({}))).to have_been_made.once
   end
 
-  it 'anúncio só no Facebook: o Painel é da rede facebook, sem o privado liberado (F4), com a caixa da Página' do
+  it 'anúncio só no Facebook: o Painel é da rede facebook, sem o privado liberado sem a pages_messaging, com a caixa da Página' do
     page_id = story_id.split('_').first
     account.disable_features!('meta_ads_comentarios_instagram')
     account.enable_features!('meta_ads_comentarios_facebook')
@@ -209,8 +209,11 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
                                             'inbox_id' => pagina.id)
     expect(response.parsed_body['to_see'].map { |item| [item['id'], item['kind']] }).to eq([%w[555_1 waiting]])
 
-    # #2613: com a flag do privado no Facebook, a tela deixa ligar o privado.
+    # #2307: com a pages_messaging concedida ao login da Página, a tela deixa ligar o privado (a flag antiga não conta).
     account.enable_features!('meta_ads_comentarios_privado_facebook')
+    stub_request(:get, meta_graph_url('me/permissions'))
+      .to_return(status: 200, headers: json, body: { data: %w[pages_read_user_content pages_manage_engagement pages_messaging]
+        .map { |name| { permission: name, status: 'granted' } } }.to_json)
     get "#{base}/cuidado", headers: admin.create_new_auth_token, as: :json
     expect(response.parsed_body).to include('network' => 'facebook', 'private_available' => true)
   end

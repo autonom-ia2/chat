@@ -250,6 +250,16 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(registro).to have_received(:gravar!).with(lido, 'private_reply_failed', conversation: conversation)
   end
 
+  it 'privado recusado com código (#2307): o código e o subcódigo da Meta ficam na linha, para a tela dizer o porquê' do
+    decide('private')
+    allow(rede).to receive(:privado).and_return(Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: '230 - Requires', codigo: 230))
+
+    cuidar
+
+    expect(rede).not_to have_received(:responder)
+    expect(registro).to have_received(:gravar!).with(lido, 'private_reply_failed', conversation: conversation, recusa: { codigo: 230 })
+  end
+
   it 'privado que já tinha saído (pela pessoa ou outro job), confirmado pela Meta: "já recebeu", sem mais nada' do
     decide('private')
     Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: 'c-1', action: 'private_reply', actor: 'user')

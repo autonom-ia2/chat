@@ -124,6 +124,11 @@ class WhatsappApiCampaign < ApplicationRecord
     skipped_count(WhatsappApiCampaignRecipient::OPTED_OUT_REASON)
   end
 
+  # Destinatários pulados porque o contato está bloqueado (chat#2733; já contados em cancelled_count).
+  def blocked_count
+    skipped_count(WhatsappApiCampaignRecipient::BLOCKED_REASON)
+  end
+
   # Destinatários tirados porque o lead da Prospecção foi descartado com a campanha em andamento (chat#713).
   def discarded_count
     skipped_count(WhatsappApiCampaignRecipient::DISCARDED_REASON)
