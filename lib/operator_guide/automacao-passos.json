@@ -849,7 +849,8 @@
       "frase": "AUTOMACAO_LIVRE.VALORES.FALHOU_TEXTO",
       "so_nos_gatilhos": [
         "mensagem.falhou"
-      ]
+      ],
+      "so_nos_passos": true
     },
     {
       "caminho": "conversa.atributos",

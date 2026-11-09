@@ -623,6 +623,7 @@ en:
         mensagem_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the filter of the "message created" trigger.'
         reuniao_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the meeting triggers (scheduled, rescheduled, canceled).'
         falhou_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the trigger of a message that wasn''t delivered.'
+        falhou_no_filtro: 'Step %{passo}: %{caminho} can only be used in the steps, not in the trigger''s "Only if".'
         resposta_so_na_espera: 'Step %{passo}: %{caminho} only exists in the condition of a "wait until" step.'
         valor_fora_do_alvo: 'Step %{passo}: %{caminho} cannot be read from what this trigger starts on (conversation, card or contact).'
         operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'

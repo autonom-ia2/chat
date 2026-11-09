@@ -128,4 +128,14 @@ RSpec.describe 'Fechamento #2414 · G53: o conteúdo da mensagem que falhou', :f
     expect(response).to have_http_status(:unprocessable_content)
     expect(response.body).to include('falhou.texto só existe no gatilho de mensagem que não chegou')
   end
+
+  # A Partida confere o "Só se" antes de haver a execução de onde o texto é lido: ali ele leria sempre vazio.
+  it 'o salvar recusa o texto da mensagem que falhou no "Só se" do próprio gatilho' do
+    filtro = { campo: { '$valor' => 'falhou.texto' }, op: 'preenchido' }
+    com_filtro = receita.merge(gatilho: { tipo: 'mensagem.falhou', filtros: [filtro] })
+    post api_automacoes(account), params: { nome: 'No filtro', receita: com_filtro }, headers: dona.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include('falhou.texto só pode ser usado nos passos, não no \\"Só se\\" do gatilho')
+  end
 end

@@ -168,6 +168,10 @@ RSpec.describe Autonomia::Automacao::Valores do
       expect(described_class.fora_do_lugar('falhou.texto', mensagem: false, na_espera: false, gatilho: 'mensagem.falhou')).to be_nil
       expect(described_class.fora_do_lugar('falhou.texto', mensagem: false, na_espera: false, gatilho: 'mensagem.criada'))
         .to eq(:falhou_so_no_gatilho)
+      expect(described_class.fora_do_lugar('falhou.texto', mensagem: false, na_espera: false, gatilho: 'mensagem.falhou', no_filtro: true))
+        .to eq(:falhou_no_filtro)
+      expect(described_class.fora_do_lugar('falhou.texto', mensagem: false, na_espera: false, gatilho: 'mensagem.criada', no_filtro: true))
+        .to eq(:falhou_so_no_gatilho)
       expect(described_class.no_alvo?('falhou.texto', 'Conversation')).to be(true)
       expect(described_class.no_alvo?('falhou.texto', 'Crm::Card')).to be(false)
     end

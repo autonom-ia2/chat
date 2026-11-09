@@ -9,13 +9,13 @@ module Autonomia::Automacao::CatalogoDeValores
   # O que a receita lê do alvo, para o editor mostrar como chip. Os atributos entram pela base mais a chave. A `base`
   # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499). A resposta durante a espera
   # (G11) vem marcada `so_na_espera`: o editor só a oferece na condição do "esperar até". A reunião (G12) vem com
-  # `so_nos_gatilhos`: o editor só a oferece nos gatilhos de reunião; a mensagem que falhou (G53), só no gatilho dela.
+  # `so_nos_gatilhos`: o editor só a oferece nos gatilhos de reunião; a mensagem que falhou (G53), só no gatilho dela e
+  # com `so_nos_passos`: fora do "Só se" do gatilho, que a Partida confere sem ela.
   def todos
     valores = ::Autonomia::Automacao::Valores
     campos = caminhos_dos_campos(valores).map do |caminho|
       { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho),
-        **do_protegido(caminho), 'so_na_espera' => (true if valores.da_resposta?(caminho)),
-        'so_nos_gatilhos' => so_nos_gatilhos(valores, caminho) }.compact
+        **do_protegido(caminho), **lugares(valores, caminho) }.compact
     end
     atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
       { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base) }
@@ -30,6 +30,12 @@ module Autonomia::Automacao::CatalogoDeValores
   def caminhos_dos_campos(valores)
     valores::CAMPOS.keys + valores::DO_QUE_QUEM_VE.keys + valores::AGENDA.keys + valores::RESPOSTA.keys + valores::ENVIO.keys +
       valores::FALHOU.keys
+  end
+
+  # Onde a receita pode ler o valor: na espera, em certos gatilhos, só nos passos.
+  def lugares(valores, caminho)
+    { 'so_na_espera' => (true if valores.da_resposta?(caminho)), 'so_nos_gatilhos' => so_nos_gatilhos(valores, caminho),
+      'so_nos_passos' => (true if valores.da_falha?(caminho)) }
   end
 
   def so_nos_gatilhos(valores, caminho)

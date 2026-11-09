@@ -1,5 +1,5 @@
-# A mensagem que dispararia agora o gatilho de mensagem, para o ensaio (#2498) e o "Testar este passo" (#2500), que não
-# têm evento:
+# A mensagem que dispararia agora o gatilho de mensagem, para o ensaio (#2498), que não tem evento. O "Testar este
+# passo" (#2500) não lê este arquivo: só herda dele, pelo Ensaio#entrariam, a escolha das conversas em que rodar.
 # - "mensagem criada": a última da conversa, pela régua da Escuta (atividade não é mensagem de ninguém; a nota privada
 #   conta);
 # - "mensagem que falhou" (G53): a última recusada (MensagemQueFalhou.ultima), que faz o `falhou.texto` dos passos
