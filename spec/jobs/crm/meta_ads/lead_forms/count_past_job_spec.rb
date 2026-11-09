@@ -50,4 +50,14 @@ RSpec.describe Crm::MetaAds::LeadForms::CountPastJob do
     expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
     expect(cache.exist?(lock)).to be(false)
   end
+
+  it 'token recusado pela Meta (190): não guarda número e solta a trava, como nas outras recusas' do
+    stub_request(:get, meta_graph_url('104882')).with(query: { fields: 'access_token' })
+                                                .to_return(status: 400, headers: json, body: meta_graph_error(190, 'Token expirado').to_json)
+
+    expect { described_class.perform_now(account.id, '104882', '9001') }.not_to raise_error
+
+    expect(cache.exist?(Crm::MetaAds::LeadForms::PastLeads.cache_key(account.id, '9001'))).to be(false)
+    expect(cache.exist?(lock)).to be(false)
+  end
 end

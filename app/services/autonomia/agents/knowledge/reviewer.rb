@@ -448,7 +448,7 @@ module Autonomia
         # Amostra estratificada da fonte que atravessa o documento inteiro (G5), truncada por chunk.
         # 1) Puxa só os chunk_index prontos (barato); 2) decide quais manter; 3) carrega só esses.
         def sample_chunks_text
-          ready = @source.knowledge_entries.where(status: Autonomia::Agents::KnowledgeEntry.statuses[:ready])
+          ready = @source.knowledge_entries.where(status: Autonomia::Agents::KnowledgeEntry.statuses[:ready]).do_material
           indexes = stratified_indexes(ready.order(:chunk_index).pluck(:chunk_index))
           return '' if indexes.empty?
 
@@ -553,7 +553,7 @@ module Autonomia
 
         # Medida objetiva (código): o texto inteiro lido deste material, na ordem.
         def hash_do_texto
-          textos = @source.knowledge_entries.where(status: Autonomia::Agents::KnowledgeEntry.statuses[:ready])
+          textos = @source.knowledge_entries.where(status: Autonomia::Agents::KnowledgeEntry.statuses[:ready]).do_material
                           .order(:chunk_index).pluck(:content)
           Digest::SHA256.hexdigest(textos.join("\n"))
         end
