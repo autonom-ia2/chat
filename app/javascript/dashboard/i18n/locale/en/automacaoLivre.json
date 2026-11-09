@@ -74,7 +74,8 @@
       "REUNIAO_INICIO": "Meeting date and time",
       "REUNIAO_LINK_DA_REUNIAO": "Meeting call link",
       "ENVIO_TEXTO": "Text of the last message the automation sent",
-      "ENVIO_SITUACAO": "Status of the last message the automation sent"
+      "ENVIO_SITUACAO": "Status of the last message the automation sent",
+      "FALHOU_TEXTO": "Text of the message that wasn't delivered"
     },
     "PASSOS": {
       "ESPERAR": "Wait for a while",

@@ -1,7 +1,9 @@
 class EmailCampaigns::Presentation::Recipients
-  def initialize(campaign, recipients)
+  # masked: who reads the report does not read contacts (#2802); name and e-mail go out masked.
+  def initialize(campaign, recipients, masked: false)
     @campaign = campaign
     @recipients = recipients.to_a
+    @masked = masked
   end
 
   def call
@@ -24,13 +26,19 @@ class EmailCampaigns::Presentation::Recipients
 
   def present(recipient)
     {
-      id: recipient.id, name: recipient.name, email: recipient.email, delivery_mode: @campaign.delivery_mode,
+      id: recipient.id, **identity(recipient), delivery_mode: @campaign.delivery_mode,
       attempts: recipient.attempts, last_event_at: recipient.last_event_at, sent_at: recipient.sent_at,
       opens: @counts.fetch([recipient.id, 'open'], 0), clicks: @counts.fetch([recipient.id, 'click'], 0),
       preflight_status: recipient.preflight_status, preflight_reason: recipient.preflight_reason_code,
       preflight_suggestion: recipient.preflight_suggestion, preflight_valid_until: recipient.preflight_valid_until,
       suppression_reason: suppression_reason(recipient.email.strip.downcase)
     }.merge(delivery_presentation(recipient))
+  end
+
+  def identity(recipient)
+    return { name: recipient.name, email: recipient.email } unless @masked
+
+    { name: ConversationAudience::Access.masked_name(recipient.name), email: ConversationAudience::Access.masked_email(recipient.email) }
   end
 
   # A recusa do contato (chat#737) aparece como opt_out quando não há outro motivo de supressão registrado.

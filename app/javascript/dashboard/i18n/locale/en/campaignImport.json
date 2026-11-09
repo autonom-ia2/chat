@@ -18,7 +18,8 @@
       "UNDO_ERROR": "Could not undo labels.",
       "DELETE_SUCCESS": "Base removed.",
       "DELETE_ERROR": "Could not remove the base.",
-      "DOWNLOAD_ERROR": "Could not download the file."
+      "DOWNLOAD_ERROR": "Could not download the file.",
+      "DOWNLOAD_HIDDEN": "Only who can see contacts downloads this file."
     },
     "DIALOG": {
       "TITLE": "Import campaign base",
