@@ -18,6 +18,8 @@ import MetaAdsMediaPicker from './MetaAdsMediaPicker.vue';
 //   e a confirmação diz isso antes. Só quando a chamada real confirmou (`can_swap_creative`); sem isso, um botão só,
 //   "Trocar a foto (cria uma cópia)": o mesmo diálogo cria uma cópia pausada já com a foto e o texto novos, e a
 //   confirmação lembra de pausar este quando ativar a cópia, para não gastar em dobro. "Duplicar" fica como link.
+// - Carrossel e post impulsionado (`creativeKind` vazio) não têm uma foto para trocar: só o "Duplicar".
+// Só aparece em anúncio criado pelo Chat2You (opção a do Rodrigo, 09/11); a gestão diz isso (`created_here`).
 const props = defineProps({
   adId: { type: String, required: true },
   adName: { type: String, default: '' },
@@ -25,6 +27,8 @@ const props = defineProps({
   text: { type: String, default: '' },
   budget: { type: Object, default: null },
   canSwap: { type: Boolean, default: false },
+  // 'image' ou 'video': o que dá para trocar (foto por foto, vídeo por vídeo). Vazio: só duplicar.
+  creativeKind: { type: String, default: '' },
 });
 
 const emit = defineEmits(['reviewing']);
@@ -66,6 +70,21 @@ const copyHint = computed(() => {
     : t(`${KEY}.SWAP_AS_COPY_HINT`, { value });
 });
 
+// Só diz "nada foi gasto" quando o servidor garante (`nothing_created: true`). Sem resposta, em andamento (409), falha do
+// servidor ou `nothing_created: false`: a Meta pode ter feito, então pede para conferir.
+// Recusa do nosso servidor antes de mudar algo (sem permissão, anúncio não achado, pedido recusado).
+const REFUSED_STATUSES = [403, 404, 422];
+const surelyNothing = error =>
+  REFUSED_STATUSES.includes(error?.response?.status) &&
+  error.response.data?.nothing_created !== false;
+
+// O original já terminou: não há o que copiar.
+const copyError = error => {
+  if (error?.response?.data?.error === 'invalid_dates')
+    return t(`${KEY}.ENDED`);
+  return t(surelyNothing(error) ? `${KEY}.DUPLICATE_ERROR` : `${KEY}.UNSURE`);
+};
+
 const duplicate = async () => {
   saving.value = true;
   try {
@@ -75,8 +94,8 @@ const duplicate = async () => {
       can_change: true,
     });
     duplicateDialog.value?.close();
-  } catch {
-    useAlert(t(`${KEY}.DUPLICATE_ERROR`));
+  } catch (error) {
+    useAlert(copyError(error));
   } finally {
     saving.value = false;
   }
@@ -90,19 +109,27 @@ const copyChanged = status => {
 // atual chega só com o endereço (`source: 'current'`): sem as medidas, o seletor não diz o formato dela, e ela não vai
 // no pedido (o servidor mantém a do anúncio).
 const changeDialog = ref(null);
-const current = computed(() =>
-  props.image
-    ? { kind: 'image', url: props.image, source: 'current' }
-    : null
-);
+const current = computed(() => {
+  if (!props.image) return null;
+  return props.creativeKind === 'video'
+    ? {
+        kind: 'video',
+        url: props.image,
+        poster: props.image,
+        source: 'current',
+      }
+    : { kind: 'image', url: props.image, source: 'current' };
+});
 const media = ref(null);
 // Enquanto a foto nova sobe para a Meta, o "Continuar" espera.
 const uploading = ref(false);
 const newText = ref('');
 const confirming = ref(false);
+// Texto vazio não vale: o anúncio precisa de texto.
 const changed = computed(
   () =>
     Boolean(media.value) &&
+    newText.value.trim() !== '' &&
     (media.value !== current.value || newText.value.trim() !== props.text)
 );
 
@@ -123,6 +150,11 @@ const saveLabel = computed(() => {
   return t(
     props.canSwap ? `${KEY}.CHANGE_CONFIRM` : `${KEY}.DUPLICATE_CONFIRM`
   );
+});
+
+const hintKey = computed(() => {
+  if (!props.creativeKind) return `${KEY}.HINT_DUPLICATE`;
+  return props.canSwap ? `${KEY}.HINT` : `${KEY}.HINT_COPY`;
 });
 
 const openChange = () => {
@@ -160,8 +192,8 @@ const saveChange = async () => {
   if (!props.canSwap) {
     try {
       await saveAsCopy(creative);
-    } catch {
-      useAlert(t(`${KEY}.DUPLICATE_ERROR`));
+    } catch (error) {
+      useAlert(copyError(error));
     } finally {
       saving.value = false;
     }
@@ -172,11 +204,14 @@ const saveChange = async () => {
     emit('reviewing', {
       effective_status: result.effective_status,
       image: creative.media.poster || creative.media.url,
+      text: creative.text,
     });
     useAlert(t(`${KEY}.CHANGE_DONE`));
     changeDialog.value?.close();
-  } catch {
-    useAlert(t(`${KEY}.CHANGE_ERROR`));
+  } catch (error) {
+    useAlert(
+      t(surelyNothing(error) ? `${KEY}.CHANGE_ERROR` : `${KEY}.CHANGE_UNSURE`)
+    );
   } finally {
     saving.value = false;
   }
@@ -191,7 +226,20 @@ const saveChange = async () => {
     <h3 class="m-0 text-base font-semibold text-n-slate-12">
       {{ $t(`${KEY}.TITLE`) }}
     </h3>
-    <div v-if="canSwap" class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+    <Button
+      v-if="!creativeKind"
+      data-ad-care-duplicate
+      :variant="copy ? 'faded' : null"
+      :color="copy ? 'slate' : null"
+      icon="i-lucide-copy"
+      :label="$t(`${KEY}.DUPLICATE`)"
+      class="w-full sm:w-auto sm:self-start"
+      @click="duplicateDialog?.open()"
+    />
+    <div
+      v-else-if="canSwap"
+      class="flex flex-col gap-2 sm:flex-row sm:flex-wrap"
+    >
       <Button
         data-ad-care-duplicate
         variant="faded"
@@ -223,10 +271,10 @@ const saveChange = async () => {
       @click="openChange"
     />
     <p class="m-0 text-sm text-n-slate-11">
-      {{ $t(canSwap ? `${KEY}.HINT` : `${KEY}.HINT_COPY`) }}
+      {{ $t(hintKey) }}
     </p>
     <button
-      v-if="!canSwap"
+      v-if="creativeKind && !canSwap"
       type="button"
       data-ad-care-duplicate
       class="inline-flex min-h-11 items-center gap-1.5 self-start rounded-lg border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
@@ -328,6 +376,7 @@ const saveChange = async () => {
         <MetaAdsMediaPicker
           v-model="media"
           replacing
+          :only="creativeKind"
           @uploading="uploading = $event"
         />
         <TextArea

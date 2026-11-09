@@ -3415,7 +3415,12 @@
           "SWAP_AS_COPY_HINT_NO_BUDGET": "A cópia tem orçamento próprio. Ela não gasta nada até você ativar. Quando ativar a cópia, pause este para não gastar em dobro.",
           "SWAP_AS_COPY_DONE": "Cópia com a foto nova criada e pausada: \"{name}\"",
           "CONTINUE": "Continuar",
-          "SWAP_AS_COPY_ACTIVATE": "Depois, pause o anúncio original para não gastar em dobro."
+          "SWAP_AS_COPY_ACTIVATE": "Depois, pause o anúncio original para não gastar em dobro.",
+          "OUTSIDE": "Duplicar e trocar a foto valem para os anúncios criados por aqui. Para este, use o Gerenciador de Anúncios da Meta.",
+          "HINT_DUPLICATE": "Duplicar cria uma cópia pausada, com orçamento próprio.",
+          "ENDED": "O anúncio original já terminou, então não há o que copiar. Crie um anúncio novo.",
+          "UNSURE": "A Meta não respondeu a tempo. Confira no Gerenciador de Anúncios se a cópia apareceu antes de tentar de novo.",
+          "CHANGE_UNSURE": "A Meta não respondeu a tempo. Abra o anúncio de novo daqui a pouco para ver se a troca entrou."
         }
       },
       "AD_DETAIL": {
@@ -3860,7 +3865,9 @@
             "VIDEO_SIZE": "Esse vídeo é pesado demais. Corte no app de fotos do celular e escolha de novo.",
             "VIDEO_LONG": "O vídeo tem mais de 1 minuto. Corte no app de fotos do celular e escolha de novo.",
             "READ": "Não deu para abrir esse arquivo. Tente outro.",
-            "UPLOAD": "Não deu para enviar esse arquivo para a Meta agora. Tente de novo."
+            "UPLOAD": "Não deu para enviar esse arquivo para a Meta agora. Tente de novo.",
+            "ONLY_IMAGE": "Este anúncio é de foto: escolha uma foto JPG ou PNG.",
+            "ONLY_VIDEO": "Este anúncio é de vídeo: escolha um vídeo MP4 ou MOV."
           },
           "DROP_WHERE": "Do celular ou do computador: toque aqui ou arraste o arquivo.",
           "CAROUSEL": {

@@ -3414,7 +3414,12 @@
           "SWAP_AS_COPY_HINT_NO_BUDGET": "The copy has its own budget. It spends nothing until you turn it on. When you turn the copy on, pause this ad so you don't spend twice.",
           "SWAP_AS_COPY_DONE": "Copy with the new photo created and paused: \"{name}\"",
           "CONTINUE": "Continue",
-          "SWAP_AS_COPY_ACTIVATE": "Then pause the original ad so you don't spend twice."
+          "SWAP_AS_COPY_ACTIVATE": "Then pause the original ad so you don't spend twice.",
+          "OUTSIDE": "Duplicate and change photo are for ads created here. For this one, use Meta Ads Manager.",
+          "HINT_DUPLICATE": "Duplicate makes a paused copy with its own budget.",
+          "ENDED": "The original ad has already ended, so there's nothing to copy. Create a new ad instead.",
+          "UNSURE": "Meta didn't answer in time. Check Meta Ads Manager to see if the copy showed up before trying again.",
+          "CHANGE_UNSURE": "Meta didn't answer in time. Open the ad again in a little while to see if the change went through."
         }
       },
       "AD_DETAIL": {
@@ -3859,7 +3864,9 @@
             "VIDEO_SIZE": "This video is too heavy. Trim it in your phone's photos app and choose it again.",
             "VIDEO_LONG": "The video is longer than 1 minute. Trim it in your phone's photos app and choose it again.",
             "READ": "We couldn't open this file. Try another one.",
-            "UPLOAD": "We couldn't send this file to Meta right now. Try again."
+            "UPLOAD": "We couldn't send this file to Meta right now. Try again.",
+            "ONLY_IMAGE": "This ad uses a photo: choose a JPG or PNG photo.",
+            "ONLY_VIDEO": "This ad uses a video: choose an MP4 or MOV video."
           },
           "DROP_WHERE": "From your phone or computer: tap here or drag the file.",
           "CAROUSEL": {

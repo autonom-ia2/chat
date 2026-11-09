@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import {
   MEDIA_ACCEPT,
+  MEDIA_LIMITS,
   formatoDaMidia,
   lerMidia,
   soltarMidia,
@@ -24,6 +25,8 @@ const props = defineProps({
   // Trocar a foto de um anúncio que existe (#2778): a de agora é "Foto atual" (`source: 'current'`, sem as medidas,
   // então sem a dica do formato), a escolhida é "Foto nova".
   replacing: { type: Boolean, default: false },
+  // Só foto ('image') ou só vídeo ('video'): trocar a mídia de um anúncio é foto por foto e vídeo por vídeo (#2778).
+  only: { type: String, default: '' },
 });
 
 // `uploading`: enquanto sobe, o "Continuar" espera.
@@ -41,7 +44,9 @@ const uploading = ref(false);
 // Só a última escolha vale: trocar de arquivo no meio do envio descarta o anterior.
 let attempt = 0;
 
-const accept = MEDIA_ACCEPT;
+const accept = computed(() =>
+  props.only ? MEDIA_LIMITS[props.only].types.join(',') : MEDIA_ACCEPT
+);
 
 const setUploading = value => {
   uploading.value = value;
@@ -60,6 +65,11 @@ const take = async file => {
     error.value = t(`${KEY}.ERRORS.${refused.code || 'READ'}`, {
       max: refused.max,
     });
+    return;
+  }
+  if (props.only && chosen.kind !== props.only) {
+    soltarMidia(chosen);
+    error.value = t(`${KEY}.ERRORS.ONLY_${props.only.toUpperCase()}`);
     return;
   }
   setUploading(true);
@@ -236,7 +246,7 @@ const chosenLabel = computed(() => {
     </p>
 
     <!-- Segunda opção: imagens que a conta já usou em anúncios. Fechada até a pessoa pedir. -->
-    <template v-if="props.library.length">
+    <template v-if="props.library.length && props.only !== 'video'">
       <button
         type="button"
         data-create-media-library-toggle

@@ -463,6 +463,9 @@ Rails.application.routes.draw do
               get 'ads/:ad_id/budget', to: 'meta_ads_creation#budget'
               patch 'ads/:ad_id/budget', to: 'meta_ads_creation#update_budget'
               get :paused_ads, to: 'meta_ads_creation#paused'
+              # Cuidar do anúncio criado aqui (#2778): duplicar e trocar a foto ou o texto.
+              post 'ads/:ad_id/copies', to: 'meta_ads_ad_care#copy'
+              put 'ads/:ad_id/creative', to: 'meta_ads_ad_care#creative'
               # Comentários do anúncio no Instagram (#2196): ler, responder, ocultar, apagar e responder no privado.
               get 'ads/:ad_id/instagram_comments', to: 'meta_ads_instagram_comments#index'
               post 'ads/:ad_id/instagram_comments/:comment_id/reply', to: 'meta_ads_instagram_comments#reply'

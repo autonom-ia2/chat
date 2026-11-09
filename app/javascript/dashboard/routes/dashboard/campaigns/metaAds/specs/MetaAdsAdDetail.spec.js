@@ -733,4 +733,65 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     await flushPromises();
     expect(CrmMetaAdsConnectionAPI.adBudget).toHaveBeenCalledTimes(2);
   });
+
+  // #2778, opção (a) do Rodrigo: "Cuidar do anúncio" só nos anúncios criados pelo Chat2You; nos outros, uma linha.
+  describe('cuidar do anúncio (#2778)', () => {
+    const BUDGET = {
+      level: 'adset',
+      object_name: 'Público',
+      kind: 'daily',
+      amount: '30.00',
+      currency: 'BRL',
+      start_time: '2026-10-01T09:00:00-0300',
+      end_time: null,
+      ads_count: 1,
+      active_ads_count: 1,
+      min_daily: 6,
+      max_daily: 500,
+      can_change: true,
+    };
+    const gestaoWith = extra => ({
+      status: 'ACTIVE',
+      effective_status: 'ACTIVE',
+      can_change: true,
+      ...extra,
+    });
+
+    beforeEach(() => {
+      flags.value = { meta_ads_gestao: true, meta_ads_criar: true };
+      CrmMetaAdsConnectionAPI.adBudget.mockResolvedValue({
+        data: { budget: BUDGET },
+      });
+    });
+
+    it('created here: shows the card and not the Ads Manager line', async () => {
+      lerGestao.mockResolvedValue(
+        gestaoWith({ created_here: true, creative_kind: 'image' })
+      );
+      const wrapper = await mountDetail();
+
+      expect(wrapper.find('[data-ad-care]').exists()).toBe(true);
+      expect(wrapper.find('[data-ad-care-outside]').exists()).toBe(false);
+    });
+
+    it('created elsewhere: no card, a line pointing to the Ads Manager', async () => {
+      lerGestao.mockResolvedValue(gestaoWith({ created_here: false }));
+      const wrapper = await mountDetail();
+
+      expect(wrapper.find('[data-ad-care]').exists()).toBe(false);
+      expect(wrapper.find('[data-ad-care-outside]').text()).toContain(
+        'CRM_KANBAN.META_ADS_HUB.GESTAO.CARE.OUTSIDE'
+      );
+    });
+
+    it('without meta_ads_manage: neither the card nor the line', async () => {
+      negadas.add('meta_ads_manage');
+      lerGestao.mockResolvedValue(gestaoWith({ created_here: true }));
+      const wrapper = await mountDetail();
+      negadas.delete('meta_ads_manage');
+
+      expect(wrapper.find('[data-ad-care]').exists()).toBe(false);
+      expect(wrapper.find('[data-ad-care-outside]').exists()).toBe(false);
+    });
+  });
 });

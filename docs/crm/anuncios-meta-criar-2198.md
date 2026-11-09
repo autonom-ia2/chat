@@ -353,10 +353,20 @@ botão de WhatsApp e post impulsionado não levam ao site: o campo não vai
 ## Fluxo 5: cuidar do que existe
 
 - **Pausar, ativar, orçamento e datas:** já existiam (#2161 e acima).
-- **Duplicar:** `POST /{campaign_id}/copies` com `deep_copy: true` e
-  `status_option: PAUSED`. A cópia tem orçamento próprio, igual ao do original;
+- **Duplicar (#2778):** só nos anúncios criados pelo Chat2You (opção a do
+  Rodrigo, 09/11); nos outros, a tela diz para usar o Gerenciador. São três
+  passos, todos com `status_option: PAUSED`: `POST /{campaign_id}/copies` com
+  `deep_copy: false` e o nome terminando em " - Cópia [marca]" (`rename_options`);
+  `POST /{adset_id}/copies` para dentro da campanha nova, começando agora; e o
+  anúncio novo, pausado, com o criativo do original ou um novo (`POST
+  act_{id}/ads`, a mesma chamada do criar). Assim a cópia com foto nova não
+  depende do `POST /{ad_id}` com `creative`, que ainda não foi confirmado. A
+  idempotência, o desfazer e o "não confirmada" são os do criar (a marca no fim
+  do nome acha a campanha). A cópia tem orçamento próprio, igual ao do original;
   copiar só o anúncio dividiria o dinheiro do grupo. A confirmação diz o valor
-  por extenso, e o "Ativar" da cópia fica ali mesmo.
+  por extenso, e o "Ativar" da cópia fica ali mesmo. Original que já terminou
+  não é copiado (`invalid_dates`). Confirmar na chamada real o `start_time` do
+  grupo copiado e o nome que a Meta dá com `rename_suffix`.
   [Fonte](https://developers.facebook.com/docs/marketing-api/reference/ad-campaign-group/copies/),
   [cópia de anúncio (PAUSED é o padrão)](https://developers.facebook.com/docs/marketing-api/reference/adgroup/copies/)
   O servidor relê o `effective_status` da cópia, como no criar (ponto 2).

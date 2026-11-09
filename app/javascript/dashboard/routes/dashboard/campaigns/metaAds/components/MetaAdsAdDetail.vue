@@ -427,12 +427,26 @@ const loadBudget = async () => {
 watch(() => props.adId, loadBudget);
 
 // Duplicar e trocar foto ou texto (#2778): com a flag de criar, para quem pode mexer, quando a conexão pode mudar o
-// anúncio. Depois de trocar, o detalhe já mostra a foto nova e a situação "em análise".
-const showAdCare = computed(
+// anúncio. Só nos anúncios criados pelo Chat2You (opção a do Rodrigo, 09/11, `created_here`); nos outros, uma linha
+// diz para usar o Gerenciador de Anúncios. Depois de trocar, o detalhe já mostra a foto nova e a situação "em análise".
+const careAllowed = computed(
   () => budgetOn.value && canManage.value && Boolean(gestao.value?.can_change)
 );
-const reviewing = ({ effective_status: effective, image: newImage }) => {
-  gestao.value = { ...gestao.value, effective_status: effective };
+const showAdCare = computed(
+  () => careAllowed.value && Boolean(gestao.value?.created_here)
+);
+const showCareOutside = computed(
+  () => careAllowed.value && !gestao.value?.created_here
+);
+// O texto novo também: a próxima troca abre com ele (e não manda o antigo de volta).
+const reviewing = ({ effective_status: effective, image: newImage, text }) => {
+  const post = gestao.value?.post;
+  gestao.value = {
+    ...gestao.value,
+    effective_status: effective,
+    creative_text: text,
+    ...(post ? { post: { ...post, message: text } } : {}),
+  };
   swappedImage.value = newImage;
 };
 
@@ -532,12 +546,20 @@ const image = computed(
         v-if="showAdCare"
         :ad-id="adId"
         :ad-name="gestao.name || ''"
-        :image="swappedImage"
-        :text="gestao.post?.message || ''"
+        :image="swappedImage || gestao.creative_image || ''"
+        :text="gestao.post?.message || gestao.creative_text || ''"
         :budget="budget"
         :can-swap="Boolean(gestao.can_swap_creative)"
+        :creative-kind="gestao.creative_kind || ''"
         @reviewing="reviewing"
       />
+      <p
+        v-else-if="showCareOutside"
+        data-ad-care-outside
+        class="m-0 text-sm text-n-slate-11"
+      >
+        {{ $t('CRM_KANBAN.META_ADS_HUB.GESTAO.CARE.OUTSIDE') }}
+      </p>
       <MetaAdsAdPost v-if="gestao?.post" :post="gestao.post" />
       <CuidarAnuncioEntrada
         v-if="showCare"
@@ -663,11 +685,19 @@ const image = computed(
             :ad-id="adId"
             :ad-name="ad.name || ''"
             :image="image"
-            :text="gestao.post?.message || ''"
+            :text="gestao.post?.message || gestao.creative_text || ''"
             :budget="budget"
             :can-swap="Boolean(gestao.can_swap_creative)"
+            :creative-kind="gestao.creative_kind || ''"
             @reviewing="reviewing"
           />
+          <p
+            v-else-if="showCareOutside"
+            data-ad-care-outside
+            class="m-0 text-sm text-n-slate-11"
+          >
+            {{ $t('CRM_KANBAN.META_ADS_HUB.GESTAO.CARE.OUTSIDE') }}
+          </p>
           <span
             v-if="ad.verdict"
             :data-verdict="ad.verdict"

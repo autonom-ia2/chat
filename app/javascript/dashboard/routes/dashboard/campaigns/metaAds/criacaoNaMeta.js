@@ -203,6 +203,9 @@ const comChave = async (signature, call) => {
     tentativas.delete(signature);
     return data;
   } catch (error) {
+    // Como no criar: o servidor achou outra tentativa deste mesmo pedido, e daqui em diante é ela.
+    const atual = error?.response?.data?.idempotency_key;
+    if (atual) tentativas.set(signature, atual);
     if (!tentativaContinua(error)) tentativas.delete(signature);
     throw error;
   }
