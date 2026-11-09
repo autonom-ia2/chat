@@ -15,7 +15,7 @@ Um "esperar até" cuja condição lê a resposta, com o prazo e o caminho "se ve
 
 | Valor | Verdadeiro quando, **durante esta espera** |
 |---|---|
-| `conversa.cliente_respondeu` | chegou mensagem do cliente na conversa |
+| `conversa.cliente_respondeu` | chegou mensagem do cliente em qualquer conversa dele na conta (#2680: o e-mail abre outra) |
 | `conversa.equipe_respondeu` | uma pessoa da equipe escreveu ao cliente, pela tela ou pelo app do celular (eco) |
 | `conversa.responsavel_respondeu` | a pessoa atribuída à conversa (na hora da conferência) escreveu ao cliente pela tela; o eco do celular não conta, porque não diz quem mandou (lote 4, #2682) |
 | `gatilho.repetiu` | o gatilho da execução aconteceu de novo (a Partida grava `repetiu_em` em vez de só descartar com `ja_aberta`) (lote 4) |
@@ -56,7 +56,11 @@ seguiu, o caminho não volta atrás.
   o `Valores` lê vazio, nunca "respondeu".
 - **Acorda na hora.** A mensagem já acordava o "esperar até" da conversa. Agora acorda também o do card cuja conversa
   principal é a da mensagem. Sem isso, o card só conferiria a resposta no fim do prazo: o resultado sairia certo, mas
-  atrasado.
+  atrasado. Desde o #2680, a mensagem do cliente acorda também quem espera por ele em outra conversa, no card dele e
+  no próprio contato.
+- **O cliente responde de qualquer conversa dele** (#2680). O passo "email" abre uma conversa nova; a resposta chega
+  nela, não na do alvo. Por isso `conversa.cliente_respondeu` lê do contato, e vale também no alvo contato. A equipe
+  continua na conversa do alvo.
 - **Resposta que chega depois do prazo** não muda o caminho já seguido: o "se vencer" já rodou.
 
 ## Editor

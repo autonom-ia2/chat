@@ -2,7 +2,7 @@
 # equipe responder". `espera` é a janela da espera (Range: do começo até o prazo, ou sem fim na primeira conferência);
 # só conta o que chegou depois do começo e até o prazo.
 #
-# - Cliente: mensagem recebida na conversa.
+# - Cliente: mensagem recebida em qualquer conversa do contato na conta que quem ligou vê (#2680).
 # - Equipe: a mesma régua da IA que responde (Autonomia::Agents::Operate::PessoaDaEquipe): pessoa da equipe escrevendo
 #   ao cliente, ou o eco do que ela mandou pelo app do celular. Não contam a nota, o robô, o envio automático em nome
 #   de alguém (follow-up, campanha, regra), a mensagem da própria automação nem a que falhou: o cliente não a recebeu.
@@ -25,9 +25,29 @@
 module Autonomia::Automacao::Resposta
   module_function
 
-  def cliente?(conversa, espera)
-    na_janela(conversa.messages.incoming, espera).exists?
+  # Os valores que a condição do "esperar até" lê (Valores::RESPOSTA). Cada um recebe o Contexto da execução, a janela
+  # da espera e quem ligou, e trata o vazio (sem contato, sem conversa) como "não respondeu".
+  VALORES = {
+    'conversa.cliente_respondeu' => ->(contexto, espera, quem) { cliente?(contexto.contato, espera, quem) },
+    'conversa.equipe_respondeu' => ->(contexto, espera, _quem) { equipe_na?(contexto.conversa, espera) },
+    'conversa.responsavel_respondeu' => ->(contexto, espera, _quem) { responsavel?(contexto.conversa, espera) },
+    'gatilho.repetiu' => ->(contexto, espera, _quem) { repetiu?(contexto.execucao, espera) }
+  }.freeze
+
+  # Em qualquer conversa do contato na conta que `quem` (quem ligou) vê, pelo filtro da lista de conversas (#2680): o
+  # e-mail da automação abre uma conversa nova, e a resposta chega nela. A resposta numa caixa que quem ligou não abre
+  # não decide o ramo (parecer da Funções). Sem contato, ou sem quem ligou, nunca respondeu.
+  def cliente?(contato, espera, quem)
+    return false if contato.nil? || quem.nil?
+
+    conta = contato.account
+    do_contato = ::Conversation.where(account_id: conta.id, contact_id: contato.id)
+    conversas = ::Conversations::PermissionFilterService.new(do_contato, quem, conta, for_reading: true).perform.select(:id)
+    na_janela(::Message.incoming.where(account_id: conta.id, conversation_id: conversas), espera).exists?
   end
+
+  # Sem conversa (o card sem conversa principal, o contato antes da conversa nova), a equipe nunca respondeu.
+  def equipe_na?(conversa, espera) = conversa.present? && equipe?(conversa, espera)
 
   # O SQL já deixa só o que pode ser pessoa ou eco (público, que não falhou, remetente pessoa ou nenhum); a régua decide.
   def equipe?(conversa, espera)

@@ -30,8 +30,6 @@ const createData = () => ({
   selectedLeadIds: ref([]),
   // Leads da janela Enviar ao CRM (#680); null com a janela fechada.
   crmSendLeads: ref(null),
-  // Leads da janela Adicionar à campanha (#680); null com a janela fechada.
-  campaignLeads: ref(null),
   searches: ref([]),
   searchHistoryMeta: ref({
     page: 1,

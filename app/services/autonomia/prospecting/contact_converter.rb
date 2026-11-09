@@ -53,6 +53,10 @@ class Autonomia::Prospecting::ContactConverter
     Result.new(lead: @lead.reload, contact: contact.reload, created: created, company: @company)
   end
 
+  # Tem por onde receber, sem gravar nada: o telefone que o perform gravaria (o WhatsApp confirmado ou o do Google, em
+  # E.164) ou um e-mail que o Contact aceita. O Público da Prospecção (AudienceFromLeads) pergunta antes de converter.
+  def channel? = contact_phone.present? || email.present?
+
   # O contato que o perform usaria, sem gravar nada: a guarda da campanha (bloqueado, pediu para parar) olha este mesmo
   # contato, e não só o do telefone do Google.
   def existing_contact
@@ -181,9 +185,7 @@ class Autonomia::Prospecting::ContactConverter
     @normalized_phone ||= e164(@lead.phone)
   end
 
-  def e164(raw)
-    Autonomia::Prospecting::PhoneContract.e164(raw, region: Autonomia::Prospecting::PhoneContract.region_for(@account))
-  end
+  def e164(raw) = Autonomia::Prospecting::PhoneContract.e164(raw, region: Autonomia::Prospecting::PhoneContract.region_for(@account))
 
   # Mesma validação do modelo Contact: e-mail que ele recusaria não entra.
   def email

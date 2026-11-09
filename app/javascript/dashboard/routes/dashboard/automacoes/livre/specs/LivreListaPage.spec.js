@@ -7,14 +7,18 @@ import LivreListaPage from '../pages/LivreListaPage.vue';
 // #2414 F5 — a lista única: as novas (em frase pelo catálogo) e as do jeito
 // antigo, que abrem na tela de hoje. Ligar leva a versão vista e a linha
 // continua com a frase (a resposta de ligar não traz a receita).
-const { routerPush, config } = vi.hoisted(() => ({
+const { routerPush, config, caixas } = vi.hoisted(() => ({
   routerPush: vi.fn(),
   config: { crmKanbanEnabled: false },
+  caixas: [{ id: 5, name: 'WhatsApp Vendas' }],
 }));
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
-    t: (chave, valores) => (valores?.n ? `${chave}:${valores.n}` : chave),
+    t: (chave, valores) => {
+      if (valores?.caixa) return `${valores.frase} → ${valores.caixa}`;
+      return valores?.n ? `${chave}:${valores.n}` : chave;
+    },
   }),
 }));
 vi.mock('vue-router', () => ({
@@ -31,8 +35,10 @@ vi.mock('dashboard/composables/store', async () => {
   const { ref } = await import('vue');
   return {
     useStore: () => ({ dispatch: vi.fn() }),
-    useMapGetter: getter =>
-      getter === 'globalConfig/get' ? ref(config) : ref([]),
+    useMapGetter: getter => {
+      if (getter === 'globalConfig/get') return ref(config);
+      return ref(getter === 'inboxes/getInboxes' ? caixas : []);
+    },
   };
 });
 vi.mock('dashboard/api/autonomia/decisores', () => ({
@@ -156,6 +162,35 @@ describe('LivreListaPage', () => {
     );
     expect(linha.find('[data-frase]').text()).toContain(
       'AUTOMACAO_LIVRE.GATILHO_COM.CARD_ENTROU_NA_ETAPA'
+    );
+  });
+
+  // #2680: a frase da lista diz a caixa que abre a conversa nova, como no editor.
+  it('a frase do gatilho diz a caixa da conversa nova', async () => {
+    AutomacoesAPI.get.mockResolvedValue({
+      data: {
+        automacoes: [
+          {
+            ...NOVA,
+            versao: {
+              id: 23,
+              receita: {
+                gatilho: {
+                  tipo: 'card.entrou_na_etapa',
+                  etapa_id: 12,
+                  conversa_nova: { caixa_id: 5 },
+                },
+                passos: [{ id: 'p1', tipo: 'parar' }],
+              },
+            },
+          },
+        ],
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-frase]').text()).toContain(
+      'AUTOMACAO_LIVRE.GATILHO_COM.CARD_ENTROU_NA_ETAPA → WhatsApp Vendas'
     );
   });
 

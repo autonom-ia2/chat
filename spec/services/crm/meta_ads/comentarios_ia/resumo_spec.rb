@@ -24,6 +24,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Resumo do
     expect(resumo.call).to eq(status: 'ready', waiting: 5, private_window: 3)
   end
 
+  it 'anúncio nas duas redes com uma só lida (#2522): os números da rede que leu e o status de cada rede' do
+    allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: linhas.first(2), escondidas: [],
+                                               status_das_redes: { 'instagram' => 'ready', 'facebook' => 'needs_login' } })
+
+    expect(resumo.call).to eq(status: 'ready', waiting: 2, private_window: 2,
+                              network_status: { 'instagram' => 'ready', 'facebook' => 'needs_login' })
+  end
+
   describe 'as respostas de cliente dentro dos comentários (#2454)' do
     before do
       respostas = [linha('1a', dias: 1).merge(parent_id: '1'), linha('4a', dias: 9).merge(parent_id: '4')]

@@ -1,0 +1,16 @@
+{
+  "AUSENCIA": {
+    "CAMPO": {
+      "LABEL": "Ausente até",
+      "DICA": "Férias ou licença. Depois desta data a pessoa volta a contar como presente sozinha. As automações podem conferir \"responsável está ausente\".",
+      "LIMPAR": "Não está ausente"
+    },
+    "PERFIL": {
+      "TITULO": "Ausência",
+      "NOTA": "Marque até quando você fica ausente desta conta. Deixe vazio quando não estiver.",
+      "SALVAR": "Salvar",
+      "SALVO": "Salvo.",
+      "ERRO": "Não deu para salvar. Confira a data e tente de novo."
+    }
+  }
+}

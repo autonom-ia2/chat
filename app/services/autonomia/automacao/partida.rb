@@ -43,7 +43,7 @@ class Autonomia::Automacao::Partida
 
   def pode_comecar?
     @definicao.ativa && @definicao.versao_ativa && ::Autonomia::Automacao::Gatilhos.disponivel?(@chave_gatilho, @account) &&
-      @alvo.account_id == @account.id && !contexto.no_spam?
+      contexto.conta_id == @account.id && !contexto.no_spam?
   end
 
   def gatilho = @definicao.versao_ativa.receita['gatilho'].to_h
