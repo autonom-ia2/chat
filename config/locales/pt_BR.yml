@@ -1155,6 +1155,7 @@ pt_BR:
         falhou_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no gatilho de mensagem que não chegou.'
         falhou_no_filtro: 'Passo %{passo}: %{caminho} só pode ser usado nos passos, não no "Só se" do gatilho.'
         resposta_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até".'
+        solicitados_so_no_recorrente: 'Passo %{passo}: %{caminho} só vale no gatilho recorrente de contato com a condição "pediu card no funil".'
         valor_fora_do_alvo: 'Passo %{passo}: %{caminho} não dá para ler naquilo em que este gatilho começa (conversa, card ou contato).'
         card_da_conversa_so_le: 'Passo %{passo}: a automação que começa numa conversa só lê o card (%{caminho}). Para mexer no card, use uma automação que começa no card.'
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'
@@ -1185,6 +1186,8 @@ pt_BR:
         campo_do_card_de_fora: 'Gatilho: o campo %{campo} não é um campo de card desta conta.'
         gatilho_valor_de_venda: 'Gatilho: só quem vê os valores de venda pode usar o valor de venda no gatilho. Peça a permissão ou escolha outro campo.'
         mudanca_sem_numero: 'Gatilho: "maior que" e "passou de" (e o valor de venda) pedem um número, como 50000 ou 50000.5.'
+        faltando_de_fora: 'Gatilho: o campo %{campo} não é um campo de marcar do card nesta conta.'
+        solicitante_sem_gravador: 'Gatilho: a condição "pediu card no funil" ainda não está disponível. Nenhum passo grava quem pediu o card, então ela nunca acharia ninguém.'
         funil_de_fora: 'Gatilho: o funil %{id} não é desta conta.'
         pagina_de_fora: 'Gatilho: a página de agendamento %{id} não é desta conta.'
         ia_desligada: "Passo %{passo}: os passos de IA estão desligados nesta conta."

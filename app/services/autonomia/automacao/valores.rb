@@ -61,6 +61,10 @@ class Autonomia::Automacao::Valores
     end
   }.freeze
 
+  # G22 (exemplo 8, passo 9): quem o RH pediu e ainda falta mandar documento (Solicitados::VALORES; o caminho e o
+  # gatilho em que ele vale, Solicitados::CAMINHO e ::GATILHO).
+  DA_SELECAO = ::Autonomia::Automacao::Solicitados::VALORES
+
   # G12: o link da agenda (LinkDaAgenda) de quem cuida: o responsável do card ou a pessoa da conversa. Vale em qualquer
   # gatilho com card ou conversa: vai no texto para o cliente marcar, quando ainda não há reunião. A página da reunião
   # do gatilho, quando há, desempata entre as páginas da pessoa.
@@ -165,7 +169,7 @@ class Autonomia::Automacao::Valores
 
   class << self
     def caminho_valido?(caminho)
-      [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA, ENVIO, TROCA, FALHOU].any? { |lista| lista.key?(caminho.to_s) } ||
+      [CAMPOS, DO_QUE_QUEM_VE, DA_SELECAO, MENSAGEM, RESPOSTA, AGENDA, ENVIO, TROCA, FALHOU].any? { |lista| lista.key?(caminho.to_s) } ||
         atributo(caminho).present? || livre?(caminho)
     end
 
@@ -260,10 +264,11 @@ class Autonomia::Automacao::Valores
     do_objeto(caminho) { |objeto| ::Autonomia::Automacao::Valores::Atributos.ler(base, chave, objeto) }
   end
 
-  def campo?(chave) = [AGENDA, DO_QUE_QUEM_VE, *LEITURA_DIRETA].any? { |lista| lista.key?(chave) } || PAGINA.caminho?(chave)
+  def campo?(chave) = [AGENDA, DO_QUE_QUEM_VE, DA_SELECAO, *LEITURA_DIRETA].any? { |lista| lista.key?(chave) } || PAGINA.caminho?(chave)
 
   def do_campo(chave)
     return guardar_link(PAGINA.resultado(chave, contexto: @contexto, account_user: account_user)) if PAGINA.caminho?(chave)
+    return do_objeto(chave) { |objeto| DA_SELECAO[chave].call(objeto, account_user, @contexto.selecao) } if DA_SELECAO.key?(chave)
     return do_objeto(chave) { |objeto| DO_QUE_QUEM_VE[chave].call(objeto, account_user) } if DO_QUE_QUEM_VE.key?(chave)
     return link_da_agenda(chave) if AGENDA.key?(chave)
 

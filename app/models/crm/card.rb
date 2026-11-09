@@ -28,6 +28,7 @@
 #  inbox_id          :bigint
 #  owner_id          :bigint
 #  pipeline_id       :bigint           not null
+#  solicitante_contact_id :bigint
 #  stage_id          :bigint           not null
 #  team_id           :bigint
 #
@@ -49,6 +50,7 @@
 #  idx_crm_cards_last_message                    (account_id,last_message_at)
 #  idx_crm_cards_next_follow_up                  (account_id,next_follow_up_at)
 #  idx_crm_cards_owner                           (account_id,owner_id,status,id)
+#  idx_crm_cards_solicitante                     (account_id,solicitante_contact_id,status) WHERE (solicitante_contact_id IS NOT NULL)
 #  idx_crm_cards_status_created                  (account_id,status,created_at)
 #  idx_crm_cards_title_trgm                      (lower((title)::text) gin_trgm_ops) USING gin
 #  idx_crm_cards_visible_inbox                   (account_id,inbox_id,status,id)
@@ -68,6 +70,7 @@
 #
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (contact_id => contacts.id) ON DELETE => cascade
+#  fk_rails_...  (solicitante_contact_id => contacts.id) ON DELETE => nullify
 #  fk_rails_...  (conversation_id => conversations.id) ON DELETE => cascade
 #  fk_rails_...  (inbox_id => inboxes.id) ON DELETE => nullify
 #  fk_rails_...  (owner_id => users.id)
@@ -86,6 +89,9 @@ class Crm::Card < ApplicationRecord
   belongs_to :inbox, optional: true
   belongs_to :owner, class_name: 'User', optional: true
   belongs_to :team, optional: true
+  # G22 (#2414, exemplo 8): quem pediu a inclusão (o RH que mandou a lista). O aviso de sexta acha por ele o RH de cada
+  # empresa (Autonomia::Automacao::Solicitados). Quem grava é a criação dos cards do passo 3.
+  belongs_to :solicitante, class_name: 'Contact', foreign_key: :solicitante_contact_id, optional: true, inverse_of: :cards_solicitados
 
   has_many :card_conversations, class_name: 'Crm::CardConversation', dependent: :destroy, inverse_of: :card
   has_many :linked_conversations, through: :card_conversations, source: :conversation
@@ -329,12 +335,7 @@ class Crm::Card < ApplicationRecord
   end
 
   def linked_records_must_belong_to_account
-    validate_same_account(:pipeline)
-    validate_same_account(:stage)
-    validate_same_account(:contact)
-    validate_same_account(:primary_conversation)
-    validate_same_account(:inbox)
-    validate_same_account(:team)
+    %i[pipeline stage contact primary_conversation inbox team solicitante].each { |associacao| validate_same_account(associacao) }
     validate_owner_account
   end
 

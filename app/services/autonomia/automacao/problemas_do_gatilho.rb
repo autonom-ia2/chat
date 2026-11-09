@@ -130,7 +130,7 @@ class Autonomia::Automacao::ProblemasDoGatilho
     outras = @gatilho['selecao'].to_h.keys - escolha.condicoes.keys
     return [texto(:selecao_de_outro_alvo, condicoes: outras.join(', '))] if outras.any?
 
-    da_selecao_de_fora(@gatilho['selecao'])
+    [*da_selecao_de_fora(@gatilho['selecao']), *solicitante_de_fora(@gatilho['selecao']['solicitante_de'])]
   end
 
   def da_selecao_de_fora(selecao)
@@ -138,6 +138,26 @@ class Autonomia::Automacao::ProblemasDoGatilho
      *(texto(:etapa_de_fora, id: selecao['etapa_id']) if selecao['etapa_id'] && !@conta.crm_pipeline_stages.exists?(id: selecao['etapa_id'])),
      *(texto(:responsavel_de_fora) if selecao['responsavel_id'] && !@conta.account_users.exists?(user_id: selecao['responsavel_id'])),
      *etiquetas_de_fora(selecao), *atributo_de_fora(selecao['atributo']), *faixa_invertida(selecao['fechado_entre_dias'])]
+  end
+
+  # G22: o "pediu card no funil" pede o funil da conta, a etapa desse funil e, em cada campo que falta, um campo de
+  # marcar do card desta conta (é o que o passo 6 marca). Campo de contato ou de outro tipo nunca casaria. Enquanto nenhum
+  # passo grava o solicitante (Solicitados::GRAVADORES, G24), a condição não pega ninguém, nunca: o salvar recusa.
+  def solicitante_de_fora(condicao)
+    return [] if condicao.nil?
+    return [texto(:solicitante_sem_gravador)] unless ::Autonomia::Automacao::Solicitados.gravado?
+
+    funil = condicao['funil_id']
+    etapa = condicao['etapa_id']
+    [*(texto(:funil_de_fora, id: funil) unless @conta.crm_pipelines.exists?(id: funil)),
+     *(texto(:etapa_de_fora, id: etapa) if etapa && !@conta.crm_pipeline_stages.exists?(id: etapa, pipeline_id: funil)),
+     *faltando_de_fora(condicao['faltando'])]
+  end
+
+  def faltando_de_fora(chaves)
+    marcar = @conta.custom_attribute_definitions.where(attribute_model: :card_attribute, attribute_display_type: :checkbox,
+                                                       attribute_key: chaves).pluck(:attribute_key)
+    (Array(chaves) - marcar).map { |chave| texto(:faltando_de_fora, campo: chave) }
   end
 
   # "Fechado entre 360 e 330 dias" não pega ninguém, nunca: a pessoa trocou as pontas.

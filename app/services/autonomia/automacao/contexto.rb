@@ -89,6 +89,9 @@ class Autonomia::Automacao::Contexto
     @conversa_do_card = ::Autonomia::Automacao::EmOutroRegistro.conversa_da_mae(@execucao, @alvo) || @alvo.primary_conversation
   end
 
+  # A seleção do gatilho recorrente na versão desta execução (G22: a condição `solicitante_de`). Sem execução, nil.
+  def selecao = @execucao&.versao&.receita.to_h.dig('gatilho', 'selecao')
+
   # A conta do alvo; no conta.recorrente, a própria.
   def conta = (@alvo.is_a?(::Account) ? @alvo : @alvo.account)
 

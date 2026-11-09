@@ -30,8 +30,8 @@ module Autonomia::Automacao::CatalogoDeValores
   # Os valores de leitura direta: os campos, os que dependem de quem vê, a agenda, a resposta, o envio, a troca e a
   # mensagem que falhou.
   def caminhos_dos_campos(valores)
-    valores::CAMPOS.keys + valores::DO_QUE_QUEM_VE.keys + valores::AGENDA.keys + valores::RESPOSTA.keys + valores::ENVIO.keys +
-      valores::TROCA.keys + valores::FALHOU.keys
+    valores::CAMPOS.keys + valores::DO_QUE_QUEM_VE.keys + valores::DA_SELECAO.keys + valores::AGENDA.keys + valores::RESPOSTA.keys +
+      valores::ENVIO.keys + valores::TROCA.keys + valores::FALHOU.keys
   end
 
   # Onde a receita pode ler o valor: na espera, em certos gatilhos (LugarDoValor), só nos passos.

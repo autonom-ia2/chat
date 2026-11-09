@@ -187,7 +187,13 @@
       "ETIQUETA": "Has the label",
       "SEM_ETIQUETA": "Does not have the label",
       "ATRIBUTO": "Contact field equal to",
-      "VALOR": "Value"
+      "VALOR": "Value",
+      "SOLICITANTE": {
+        "FUNIL": "Asked for a card in the pipeline",
+        "DICA": "Contacts who asked for a card in this pipeline that still has fields to check. One contact per company.",
+        "ETAPA": "Only cards in the stage",
+        "FALTANDO": "Still missing when any of these is unchecked"
+      }
     },
     "MUDANCA": {
       "CAMPO": "Field",

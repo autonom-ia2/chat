@@ -662,6 +662,7 @@ en:
         falhou_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the trigger of a message that wasn''t delivered.'
         falhou_no_filtro: 'Step %{passo}: %{caminho} can only be used in the steps, not in the trigger''s "Only if".'
         resposta_so_na_espera: 'Step %{passo}: %{caminho} only exists in the condition of a "wait until" step.'
+        solicitados_so_no_recorrente: 'Step %{passo}: %{caminho} only works in the recurring contact trigger with the condition "asked for a card in the pipeline".'
         valor_fora_do_alvo: 'Step %{passo}: %{caminho} cannot be read from what this trigger starts on (conversation, card or contact).'
         card_da_conversa_so_le: 'Step %{passo}: an automation that starts on a conversation only reads the card (%{caminho}). To change the card, use an automation that starts on the card.'
         operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'
@@ -692,6 +693,8 @@ en:
         campo_do_card_de_fora: 'Trigger: field %{campo} is not a card field of this account.'
         gatilho_valor_de_venda: 'Trigger: only people who see sales values can use the sale value in the trigger. Ask for the permission or choose another field.'
         mudanca_sem_numero: 'Trigger: "greater than" and "went above" (and the sale value) need a number, like 50000 or 50000.5.'
+        faltando_de_fora: 'Trigger: field %{campo} is not a checkbox field of the card in this account.'
+        solicitante_sem_gravador: 'Trigger: the condition "asked for a card in the pipeline" is not available yet. No step records who asked for the card, so it would never find anyone.'
         funil_de_fora: 'Trigger: pipeline %{id} is not from this account.'
         pagina_de_fora: 'Trigger: booking page %{id} is not from this account.'
         ia_desligada: "Step %{passo}: AI steps are off for this account."

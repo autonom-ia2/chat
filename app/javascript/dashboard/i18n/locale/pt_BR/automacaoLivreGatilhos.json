@@ -187,7 +187,13 @@
       "ETIQUETA": "Com a etiqueta",
       "SEM_ETIQUETA": "Sem a etiqueta",
       "ATRIBUTO": "Campo do contato igual a",
-      "VALOR": "Valor"
+      "VALOR": "Valor",
+      "SOLICITANTE": {
+        "FUNIL": "Pediu card no funil",
+        "DICA": "Contatos que pediram um card neste funil e ainda faltam campos marcados. Um contato por empresa.",
+        "ETAPA": "Só os cards na etapa",
+        "FALTANDO": "Falta quando algum destes não está marcado"
+      }
     },
     "MUDANCA": {
       "CAMPO": "Campo",

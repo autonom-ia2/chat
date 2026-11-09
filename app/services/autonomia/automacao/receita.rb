@@ -200,8 +200,7 @@ class Autonomia::Automacao::Receita
     de_passo = de_outro_passo(id, caminho, no_gatilho, lugar[:tipo])
     return de_passo if de_passo
 
-    fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera,
-                                          gatilho: @receita.dig('gatilho', 'tipo'), no_filtro: no_gatilho)
+    fora = ::Autonomia::Automacao::LugarDoValor.fora(caminho, gatilho: @receita['gatilho'], na_espera: na_espera, no_filtro: no_gatilho)
     return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
 
@@ -233,8 +232,6 @@ class Autonomia::Automacao::Receita
 
   # A conferência do caminho que vai para um texto (mensagem, aviso, e-mail, retorno).
   def no_texto(id) = ->(caminho) { problemas_do_caminho(id, caminho, onde: :texto) }
-
-  def mensagem_no_gatilho?(no_gatilho) = no_gatilho && @receita.dig('gatilho', 'tipo') == ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM
 
   def texto(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", **valores)
 end
