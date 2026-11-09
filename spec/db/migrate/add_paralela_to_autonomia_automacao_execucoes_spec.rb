@@ -1,5 +1,5 @@
 require 'rails_helper'
-require Rails.root.join('db/migrate/20261109999900_add_paralela_to_autonomia_automacao_execucoes.rb')
+require Rails.root.join('db/migrate/20261109960000_add_paralela_to_autonomia_automacao_execucoes.rb')
 
 # #2414 G50: a troca do índice da execução aberta. Um CREATE UNIQUE INDEX CONCURRENTLY que cai no meio deixa o índice
 # inválido; o IF NOT EXISTS o daria por pronto só pelo nome, e o índice velho sairia sem nenhum válido no lugar. A
