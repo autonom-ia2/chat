@@ -2568,7 +2568,20 @@
               "FIX": "Sign in again",
               "MISSING_INSTAGRAM_TAP": "One more tap",
               "INSTAGRAM_TEXT": "Instagram Direct and comments arrive here after you link Instagram, with one tap.",
-              "INSTAGRAM_CTA": "Link Instagram"
+              "INSTAGRAM_CTA": "Link Instagram",
+              "INSTAGRAM_TEXT_PAGINA": "Link {'@'}{username} with this same Facebook sign-in. Direct messages and comments arrive here.",
+              "INSTAGRAM_CTA_PAGINA": "Link Instagram",
+              "INSTAGRAM_LINKED": "{'@'}{username} is linked. Direct messages and comments arrive here.",
+              "INSTAGRAM_ERROR": {
+                "MISSING_PERMISSIONS": "Instagram was left unchecked in the Facebook window. Sign in again and keep Instagram checked.",
+                "NOT_OWN_TOKEN": "Your ads are shared with the partner. Sign in with your own Facebook to link Instagram here.",
+                "NO_INSTAGRAM": "This Page has no Instagram linked on Facebook. Link it on Facebook, or use the Instagram sign-in.",
+                "NOT_GRANTED": "This Page was not checked in the Facebook window. Sign in again and check it.",
+                "RECONNECT": "Your Facebook access expired. Sign in again.",
+                "FORBIDDEN": "You cannot link inboxes. Ask an administrator.",
+                "LIMIT": "Your plan reached its inbox limit.",
+                "FAILED": "We could not link Instagram now. Try again in a few minutes."
+              }
             }
           },
           "GUIDE": {
@@ -6387,6 +6400,8 @@
         "RECUSADO": "The notice was not accepted",
         "NAO_ENVIADO": "We did not tell them",
         "RECUSADO_DICA": "Facebook did not accept the notice. Ask whoever runs your ads to check the link with your website.",
+        "SEM_CONFIRMACAO": "We don't know if the notice arrived",
+        "SEM_CONFIRMACAO_DICA": "Facebook did not answer. So the sale is not counted twice, we did not send it again.",
         "VER_MOTIVO": "See the reason",
         "MOTIVO": {
           "SEM_PIXEL": "Your website is not connected to Facebook in this funnel yet. Ask whoever runs your ads.",
@@ -7232,7 +7247,8 @@
     "FILTRO_DO_LINK": {
       "DA_IA": "Handed over by AI",
       "ESPERANDO": "Waiting over {n} min",
-      "DA_IA_ESPERANDO": "From AI, waiting {n}+ min"
+      "DA_IA_ESPERANDO": "From AI, waiting {n}+ min",
+      "DESDE_DIAS": "Started in the last {n} days"
     }
   },
   "CRM_NUMEROS_V2": {

@@ -13,6 +13,7 @@ import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { usePastaDoEmail } from 'dashboard/components-next/conversa-canal/email/pastaDoEmail';
 import {
   filtroDoLinkDaLista,
+  filtroDoLinkLigado,
   abaDoFiltroDoLink,
   statusDoFiltroDoLink,
   funilDoFiltroDoLink,
@@ -266,12 +267,13 @@ function defaultAssigneeTab() {
 // #1809: Spam e Lixeira da caixa de e-mail (a pasta vem do endereço, ?pasta=).
 const { pasta: pastaDoEmail, versao: versaoDasPastas } = usePastaDoEmail();
 
-// #1883: filtros pelo link do Números (?da_ia=1, ?esperando_min=30). No Spam e na Lixeira a pasta manda; com filtro
-// avançado ou pasta salva, a lista vem de outro pedido e eles não valem.
+// #1883: filtros pelo link do Números (?da_ia=1, ?esperando_min=30) e de Seus posts (?desde_dias=30, #2209). No Spam
+// e na Lixeira a pasta manda; com filtro avançado ou pasta salva, a lista vem de outro pedido e eles não valem.
 const {
   daIa: daIaDoLink,
   esperandoMin: esperandoDoLink,
   noFunil: noFunilDoLink,
+  desdeDias: desdeDiasDoLink,
   assinatura: assinaturaDoLink,
   limparTudo: limparTudoDoLink,
   irParaALista,
@@ -282,6 +284,7 @@ const filtroDoLink = computed(() =>
     daIa: daIaDoLink.value,
     esperandoMin: esperandoDoLink.value,
     noFunil: noFunilDoLink.value,
+    desdeDias: desdeDiasDoLink.value,
     pasta: pastaDoEmail.value,
     filtroAvancado: hasAppliedFiltersOrActiveFolders.value,
   })
@@ -363,26 +366,19 @@ const funilDaLista = computed(() =>
   funilDoFiltroDoLink(filtroDoLink.value, crmPipelineId.value, FUNNEL_ALL)
 );
 // #1999: com o filtro do link, a caixa abre em "Todas" (se a pessoa tem) e em "Abertas", para bater com o número do
-// Números.
-// #2199: "Ver conversas" da aba Seus posts (Anúncios da Meta) abre a caixa em "Todas" (?aba=todas), se a pessoa tem.
+// Números. "Ver conversas" de Seus posts (#2209) abre em "Todas" e em todos os status.
 function abaAoAbrir() {
   const abas = assigneeTabItems.value.map(item => item.key);
   const todas = wootConstants.ASSIGNEE_TYPE.ALL;
-  const pedeTodas =
-    router.currentRoute.value.query.aba === 'todas' && abas.includes(todas);
   return (
-    abaDoFiltroDoLink(filtroDoLink.value, abas, todas) ||
-    (pedeTodas ? todas : null) ||
-    defaultAssigneeTab()
+    abaDoFiltroDoLink(filtroDoLink.value, abas, todas) || defaultAssigneeTab()
   );
 }
 // A conversa aberta fica na lista filtrada enquanto estiver aberta.
 const conversaAberta = useMapGetter('getSelectedChat');
 // Saindo da caixa, nenhuma releitura agendada roda por baixo.
 onBeforeUnmount(cancelarReleituraDoFiltroDoLink);
-const temFiltroDoLink = computed(() =>
-  Boolean(filtroDoLink.value.daIa || filtroDoLink.value.esperandoMin)
-);
+const temFiltroDoLink = computed(() => filtroDoLinkLigado(filtroDoLink.value));
 // #2202: com a chave lista_quem_espera, o topo novo ("Recentes ▾", "Filtrar ▾", abas
 // Minhas · Para pegar · Todas). Filtro avançado, pasta salva, escopo de contato, filtro do link e pastas
 // do e-mail continuam no topo de sempre, que já mostra e limpa o filtro do jeito dele.
@@ -429,7 +425,12 @@ const textoDaListaVazia = computed(() => {
     : t('CHAT_LIST.LIST.404');
 });
 const tituloDoFiltroDoLink = computed(() => {
-  const { daIa, esperandoMin: n } = filtroDoLink.value;
+  const { daIa, esperandoMin: n, desdeDias } = filtroDoLink.value;
+  if (!daIa && !n) {
+    return t('FORK_CONVERSATION_LIST.FILTRO_DO_LINK.DESDE_DIAS', {
+      n: desdeDias,
+    });
+  }
   if (daIa && n) {
     return t('FORK_CONVERSATION_LIST.FILTRO_DO_LINK.DA_IA_ESPERANDO', { n });
   }
@@ -535,7 +536,7 @@ const conversationList = computed(() => {
     }
     localConversationList = filterPeloFiltroDoLink(
       localConversationList,
-      Boolean(filters.daIa || filters.esperandoMin),
+      filtroDoLinkLigado(filters),
       idsDoFiltroDoLink.value,
       conversaAberta.value?.id
     );
@@ -1052,7 +1053,8 @@ onMounted(() => {
   activeStatus.value = statusDoFiltroDoLink(
     filtroDoLink.value,
     activeStatus.value,
-    wootConstants.STATUS_TYPE.OPEN
+    wootConstants.STATUS_TYPE.OPEN,
+    wootConstants.STATUS_TYPE.ALL
   );
   store.dispatch('setChatStatusFilter', activeStatus.value);
   store.dispatch('setChatSortFilter', activeSortBy.value);
@@ -1111,7 +1113,15 @@ watch(
 );
 watch([pastaDoEmail, versaoDasPastas], () => resetAndFetchData());
 // Os valores do link, não o filtro já combinado: aplicar um filtro avançado não pode disparar uma releitura que o apaga.
-watch(assinaturaDoLink, () => resetAndFetchData());
+// O filtro do link abre num status próprio (Abertas no Números, todos em Seus posts) sem gravar a escolha da pessoa:
+// quando o link sai (Limpar, menu), a lista volta ao status salvo.
+watch(assinaturaDoLink, () => {
+  if (!temFiltroDoLink.value) {
+    setFiltersFromUISettings();
+    store.dispatch('setChatStatusFilter', activeStatus.value);
+  }
+  resetAndFetchData();
+});
 
 // A seta "Limpar filtros" do topo: um clique limpa tudo. Com o link no endereço (mesmo com o filtro avançado por cima),
 // tira o link e o watch acima relê a lista, o que também tira o avançado.

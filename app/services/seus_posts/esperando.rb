@@ -78,6 +78,6 @@ class SeusPosts::Esperando < Crm::MetaAds::Organico::Lugar
   end
 
   def api
-    @api ||= instagram? ? client(base_uri: Crm::MetaAds::Organico::INSTAGRAM_BASE_URI) : client
+    @api ||= instagram? ? client(base_uri: channel.graph_host, instagram_node: channel.graph_node) : client
   end
 end
