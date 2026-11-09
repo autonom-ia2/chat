@@ -196,6 +196,8 @@ export function useFolhaDaLista({
         publicoId: guardado.publicoId,
         fora: guardado.fora,
         nome: guardado.lista ? guardado.nome : null,
+        // Numa lista que já existia, o tamanho dela agora, como o servidor diz.
+        naLista: guardado.lista ? guardado.lista.empresas : null,
         canaisDesligados: guardado.canaisDesligados || [],
       };
       folha.value = null;

@@ -167,6 +167,22 @@ export const foraDoPublico = (t, fora = []) => {
 export const textosDoPronto = (t, { pronto, destino, pessoa, nomeLista }) => {
   if (!pronto) return { titulo: '', detalhes: [] };
   const NS = 'PROSPECTING_ACHAR.PRONTO';
+  if (pronto.tipo === 'lista' && pronto.naLista != null) {
+    // Lista que já existia (#2775): o que entrou e o tamanho real dela agora
+    // (o número do servidor, não uma soma na tela).
+    return {
+      titulo: t(
+        `${NS}.LISTA.TITULO_EXISTENTE`,
+        { n: pronto.n, nome: pronto.nome },
+        pronto.n
+      ),
+      detalhes: [
+        t(`${NS}.LISTA.AGORA_TEM`, { n: pronto.naLista }, pronto.naLista),
+        ...foraDoPublico(t, pronto.fora),
+        t('PROSPECTING_ACHAR.FOLHA.ONDE_FICA'),
+      ],
+    };
+  }
   if (pronto.tipo === 'lista') {
     return {
       titulo: t(`${NS}.LISTA.TITULO`),

@@ -40,6 +40,8 @@ const {
 
 const NS = 'PROSPECTING_ACHAR.BUSCAS';
 const carregando = ref(true);
+// O título só aparece depois da primeira leitura (ver o <h1>).
+const tituloPronto = ref(false);
 const erro = ref(false);
 const buscas = ref([]);
 const menuDe = ref(null);
@@ -99,6 +101,7 @@ const carregar = async () => {
     erro.value = true;
   }
   carregando.value = false;
+  tituloPronto.value = true;
   // Estados da demonstração com o menu ou a confirmação já abertos.
   menuDe.value = demo.value === 'buscas-mais' ? buscas.value[0]?.id : null;
   apagando.value = demo.value === 'apagar' ? buscas.value[0] : null;
@@ -209,10 +212,22 @@ watch(demo, carregar);
         class="flex flex-col w-full max-w-4xl gap-6 px-4 pt-6 mx-auto min-h-full md:px-8 md:pt-10"
         :class="temRodape ? 'pb-0' : 'md:pb-10'"
       >
+        <!-- O título depende das buscas (há de outra pessoa?), que chegam
+          depois do primeiro desenho: até a primeira leitura, um esqueleto do
+          mesmo tamanho, para não aparecer "Suas buscas" e virar "Buscas da
+          equipe". -->
         <h1
           class="m-0 text-2xl font-bold tracking-tight md:text-[2rem] text-n-slate-12"
+          :aria-busy="!tituloPronto"
         >
-          {{ daEquipe ? $t(`${NS}.TITULO_EQUIPE`) : $t(`${NS}.TITULO`) }}
+          <span
+            v-if="!tituloPronto"
+            class="inline-block w-56 align-middle rounded-lg h-[1em] bg-n-slate-3 animate-pulse"
+            data-titulo-carregando
+          />
+          <template v-else>
+            {{ daEquipe ? $t(`${NS}.TITULO_EQUIPE`) : $t(`${NS}.TITULO`) }}
+          </template>
         </h1>
         <!-- #2775 (F6): a aba "Suas listas" fica ao lado. -->
         <AcharAbasDasBuscas v-if="permissoes.lista" atual="buscas" />

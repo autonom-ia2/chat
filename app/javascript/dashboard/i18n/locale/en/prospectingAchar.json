@@ -301,7 +301,8 @@
       "ERRO_LISTA_ENVIADA": "This list was already used in a sent campaign and cannot change. Choose another one or a new list.",
       "TODAS_JA_ESTAO": "These businesses are already on this list",
       "ERRO_LISTA_JA_ESTAVAM": "These businesses were already on this list.",
-      "LISTAS_INCOMPLETAS": "Not all of your lists showed up. Close and open again to see the others."
+      "LISTAS_INCOMPLETAS": "Not all of your lists showed up. Close and open again to see the others.",
+      "ENTRAM_JA_ESTAVAM": "{entram} of {total} go in · {n} was already on the list | {entram} of {total} go in · {n} were already on the list"
     },
     "PARA_ONDE_PAINEL": {
       "TITULO": "Where do they go?",
@@ -340,7 +341,9 @@
           "WHATSAPP": "{n} was added, but WhatsApp is turned off on this list. To turn it on, go to Campaigns › Audiences. | {n} were added, but WhatsApp is turned off on this list. To turn it on, go to Campaigns › Audiences.",
           "EMAIL": "{n} was added, but e-mail is turned off on this list. To turn it on, go to Campaigns › Audiences. | {n} were added, but e-mail is turned off on this list. To turn it on, go to Campaigns › Audiences.",
           "IR": "Open Campaigns › Audiences"
-        }
+        },
+        "TITULO_EXISTENTE": "Done. {n} business was added to the list {nome}. | Done. {n} businesses were added to the list {nome}.",
+        "AGORA_TEM": "The list now has {n} business. | The list now has {n} businesses."
       },
       "NENHUMA_NOVA": "No new company entered the {funil} pipeline.",
       "FALHARAM": "{n} company didn't get into the pipeline. | {n} companies didn't get into the pipeline.",

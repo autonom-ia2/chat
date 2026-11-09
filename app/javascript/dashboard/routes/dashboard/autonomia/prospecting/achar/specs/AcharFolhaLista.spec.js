@@ -9,7 +9,7 @@ import {
   useFolhaDaLista,
 } from '../composables/useFolhaDaLista';
 import { TEXTO_DO_ERRO } from '../composables/useDonoDaLista';
-import { foraDoPublico } from '../utils/acharConfiraEstados';
+import { foraDoPublico, textosDoPronto } from '../utils/acharConfiraEstados';
 import { MAX_PAGINAS_DE_LISTAS } from '../utils/listasDaFolha';
 
 const pagina = n =>
@@ -296,6 +296,7 @@ describe('Guardar lista: lista nova ou uma que já existe', () => {
       publicoId: 4,
       nome: 'Padarias',
       canaisDesligados: [{ canal: 'email', n: 1 }],
+      naLista: LISTAS[0].empresas,
     });
   });
 
@@ -335,5 +336,76 @@ describe('Guardar lista: lista nova ou uma que já existe', () => {
     expect(ptBR.PROSPECTING_ACHAR.PRONTO.LISTA.FORA.NAO_RECEBE).toContain(
       'não pode receber mensagem'
     );
+  });
+
+  // Vídeo da F6: o topo e o botão vêm da mesma conta.
+  it('numa lista que já existe, o topo e o botão contam o mesmo: quem já está não entra', () => {
+    const wrapper = montarFolha({
+      n: 20,
+      entramLista: 20,
+      listaId: 4,
+      listas: [{ ...LISTAS[0], entram: 16 }, LISTAS[1]],
+    });
+
+    expect(wrapper.find('[data-entram]').text()).toContain(
+      'Entram 16 das 20 · 4 já estavam na lista'
+    );
+    expect(wrapper.find('[data-principal-folha]').text()).toBe(
+      'Pôr 16 empresas na lista'
+    );
+    wrapper.unmount();
+
+    const uma = montarFolha({
+      n: 3,
+      entramLista: 3,
+      listaId: 4,
+      listas: [{ ...LISTAS[0], entram: 2 }, LISTAS[1]],
+    });
+    expect(uma.find('[data-entram]').text()).toContain(
+      'Entram 2 das 3 · 1 já estava na lista'
+    );
+    uma.unmount();
+
+    const nova = montarFolha({ n: 20, entramLista: 18 });
+    expect(nova.find('[data-entram]').text()).toContain('Entram 18 das 20');
+    expect(nova.find('[data-entram]').text()).not.toContain('já estav');
+    nova.unmount();
+  });
+
+  // Vídeo da F6: o pronto da lista que já existia diz o que entrou e o
+  // tamanho que o servidor devolve.
+  it('o pronto da lista que já existia diz quantas entraram e o tamanho real', () => {
+    const t = createI18n({
+      legacy: false,
+      locale: 'pt_BR',
+      messages: { pt_BR: ptBR },
+    }).global.t;
+
+    const existente = textosDoPronto(t, {
+      pronto: {
+        tipo: 'lista',
+        n: 17,
+        nome: 'Salões de Pinheiros',
+        naLista: 34,
+        fora: [],
+      },
+      nomeLista: 'salão de beleza · Pinheiros · 09/11',
+    });
+    expect(existente.titulo).toBe(
+      'Pronto. 17 empresas entraram na lista Salões de Pinheiros.'
+    );
+    expect(existente.detalhes[0]).toBe('A lista agora tem 34 empresas.');
+
+    const uma = textosDoPronto(t, {
+      pronto: { tipo: 'lista', n: 1, nome: 'Salões', naLista: 1, fora: [] },
+    });
+    expect(uma.titulo).toBe('Pronto. 1 empresa entrou na lista Salões.');
+    expect(uma.detalhes[0]).toBe('A lista agora tem 1 empresa.');
+
+    const nova = textosDoPronto(t, {
+      pronto: { tipo: 'lista', n: 17, nome: null, naLista: null, fora: [] },
+      nomeLista: 'salão de beleza · Pinheiros · 09/11',
+    });
+    expect(nova.titulo).toBe('Pronto. A lista para mensagem está guardada.');
   });
 });

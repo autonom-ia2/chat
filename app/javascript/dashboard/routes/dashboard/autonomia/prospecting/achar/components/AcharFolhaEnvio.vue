@@ -74,6 +74,29 @@ const listaEscolhida = computed(() =>
   (props.listas || []).find(lista => lista.id === props.listaId)
 );
 
+// Uma conta só para o topo ("Entram 16 das 20 · 4 já estavam na lista") e o
+// botão ("Pôr 16 empresas na lista"): numa lista que já existe, quem já está
+// nela não entra (entram vem de lerListasDaFolha; sem ele, contam todas com
+// contato).
+const quantasEntram = computed(() => {
+  const lista = listaEscolhida.value;
+  return lista ? (lista.entram ?? props.entramLista) : props.entramLista;
+});
+const jaEstavam = computed(() =>
+  listaEscolhida.value ? props.entramLista - quantasEntram.value : 0
+);
+const textoEntram = computed(() => {
+  if (!jaEstavam.value) {
+    return t(`${NS}.ENTRAM`, { n: quantasEntram.value, total: props.n });
+  }
+  // O plural segue {n} (quantas já estavam); quantas entram vai em {entram}.
+  return t(
+    `${NS}.ENTRAM_JA_ESTAVAM`,
+    { entram: quantasEntram.value, total: props.n, n: jaEstavam.value },
+    jaEstavam.value
+  );
+});
+
 const numerosDaEscolhida = computed(() => {
   const lista = listaEscolhida.value;
   if (!lista) return '';
@@ -152,7 +175,7 @@ const botao = computed(() => {
   // Numa lista que já existe, só conta quem entra: quem já está nela não
   // (entram vem de lerListasDaFolha; sem ele, contam todas com contato).
   const lista = listaEscolhida.value;
-  const n = lista ? (lista.entram ?? props.entramLista) : props.entramLista;
+  const n = quantasEntram.value;
   if (lista && !n) {
     return { rotulo: t(`${NS}.TODAS_JA_ESTAO`), desabilitado: true };
   }
@@ -318,7 +341,8 @@ watch(
       />
       <AcharLinhaFrase
         icone="i-lucide-users"
-        :texto="$t(`${NS}.ENTRAM`, { n: entramLista, total: n })"
+        :texto="textoEntram"
+        data-entram
       />
     </div>
 

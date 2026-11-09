@@ -301,7 +301,8 @@
       "ERRO_LISTA_ENVIADA": "Esta lista já foi usada numa campanha enviada e não muda mais. Escolha outra ou uma lista nova.",
       "TODAS_JA_ESTAO": "Essas empresas já estão nesta lista",
       "ERRO_LISTA_JA_ESTAVAM": "Essas empresas já estavam nesta lista.",
-      "LISTAS_INCOMPLETAS": "Nem todas as suas listas apareceram. Feche e abra de novo para ver as outras."
+      "LISTAS_INCOMPLETAS": "Nem todas as suas listas apareceram. Feche e abra de novo para ver as outras.",
+      "ENTRAM_JA_ESTAVAM": "Entram {entram} das {total} · {n} já estava na lista | Entram {entram} das {total} · {n} já estavam na lista"
     },
     "PARA_ONDE_PAINEL": {
       "TITULO": "Para onde elas vão?",
@@ -340,7 +341,9 @@
           "WHATSAPP": "{n} entrou, mas o WhatsApp desta lista está desligado. Para ligar, vá em Campanhas › Públicos. | {n} entraram, mas o WhatsApp desta lista está desligado. Para ligar, vá em Campanhas › Públicos.",
           "EMAIL": "{n} entrou, mas o e-mail desta lista está desligado. Para ligar, vá em Campanhas › Públicos. | {n} entraram, mas o e-mail desta lista está desligado. Para ligar, vá em Campanhas › Públicos.",
           "IR": "Abrir Campanhas › Públicos"
-        }
+        },
+        "TITULO_EXISTENTE": "Pronto. {n} empresa entrou na lista {nome}. | Pronto. {n} empresas entraram na lista {nome}.",
+        "AGORA_TEM": "A lista agora tem {n} empresa. | A lista agora tem {n} empresas."
       },
       "NENHUMA_NOVA": "Nenhuma empresa nova entrou no funil {funil}.",
       "FALHARAM": "{n} empresa não entrou no funil. | {n} empresas não entraram no funil.",
