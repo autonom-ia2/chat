@@ -55,6 +55,27 @@ describe('PermissionRow', () => {
     expect(checked(wrapper).text()).toBe('CUSTOM_ROLE.MATRIX.LEVELS.MANAGE');
   });
 
+  // #1430: Ferramentas dos agentes — só "Gerenciar", com selo e nota de sensível.
+  it('shows the tools row with "Gerenciar", the sensitive badge and the note', () => {
+    const wrapper = mountRow('AUTONOMIA_TOOLS', []);
+
+    expect(radios(wrapper)).toHaveLength(2);
+    expect(radios(wrapper)[1].text()).toBe(
+      'CUSTOM_ROLE.MATRIX.MODULES.AUTONOMIA_TOOLS.LEVEL_LABEL_MANAGE'
+    );
+    expect(wrapper.find('[data-sensitive-module]').exists()).toBe(true);
+    expect(wrapper.find('[data-sensitive-note]').text()).toBe(
+      'CUSTOM_ROLE.MATRIX.MODULES.AUTONOMIA_TOOLS.NOTE'
+    );
+  });
+
+  it('shows no sensitive badge on a common row', () => {
+    const wrapper = mountRow('AUTONOMIA', []);
+
+    expect(wrapper.find('[data-sensitive-module]').exists()).toBe(false);
+    expect(wrapper.find('[data-sensitive-note]').exists()).toBe(false);
+  });
+
   it('emits the chosen level', async () => {
     const wrapper = mountRow('INBOXES', []);
 

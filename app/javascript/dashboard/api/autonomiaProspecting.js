@@ -127,6 +127,53 @@ class AutonomiaProspectingAPI extends ApiClient {
     });
   }
 
+  // "Suas listas" (#2775, F6): os Públicos da Prospecção, com os números.
+  // As listas por cursor: depois é { em, id } da última lista já mostrada
+  // (meta.next_before_at e next_before_id). leadIds: a lista diz quais desses
+  // leads já estão nela (already_lead_ids).
+  getAudiences({ depois = null, leadIds = [] } = {}) {
+    const params = {
+      ...(depois ? { before_at: depois.em, before_id: depois.id } : {}),
+      ...(leadIds.length ? { lead_ids: leadIds } : {}),
+    };
+    return axios.get(`${this.url}/audiences`, { params });
+  }
+
+  // after: a linha da última empresa já mostrada (cursor das empresas).
+  getAudience(id, { after = null } = {}) {
+    return axios.get(`${this.url}/audiences/${id}`, {
+      params: after ? { after } : {},
+    });
+  }
+
+  addLeadsToAudience(id, { leadIds }) {
+    return axios.post(`${this.url}/audiences/${id}/leads`, {
+      lead_ids: leadIds,
+    });
+  }
+
+  // Tirar pelo contato (a aba) ou pelo lead (a gaveta).
+  removeFromAudience(id, { contactIds = [], leadIds = [] }) {
+    return axios.delete(`${this.url}/audiences/${id}/members`, {
+      data: { contact_ids: contactIds, lead_ids: leadIds },
+    });
+  }
+
+  // O "Desfazer" do "Tirar": só quem foi tirado volta.
+  restoreToAudience(id, { contactIds }) {
+    return axios.post(`${this.url}/audiences/${id}/members`, {
+      contact_ids: contactIds,
+    });
+  }
+
+  copyAudience(id) {
+    return axios.post(`${this.url}/audiences/${id}/copy`);
+  }
+
+  getLeadAudiences(leadId) {
+    return axios.get(`${this.url}/leads/${leadId}/audiences`);
+  }
+
   discardLeads({ leadIds, reason }) {
     return axios.post(`${this.url}/leads/discard`, {
       lead_ids: leadIds,

@@ -71,8 +71,10 @@ class Channel::FacebookPage < ApplicationRecord
   # A mesma Página pode ser caixa de outra conta desta stack: aí os campos do Messenger continuam dela. Esta conferência
   # só vê o banco desta stack: Página que também é caixa na outra stack perde os campos do Messenger lá (risco aberto
   # no #2200). Duas remoções simultâneas da mesma Página podem deixar os campos inscritos (só sobra evento ignorado).
+  # #2406: a caixa do Instagram do login único recebe o Direct pela inscrição desta mesma Página.
   def unsubscribe
     return true if Channel::FacebookPage.where(page_id: page_id).where.not(id: id).exists?
+    return true if Channel::Instagram.exists?(login: 'facebook', page_id: page_id)
 
     page_subscription.remove!(MESSENGER_FIELDS + REFERRAL_FIELDS)
   rescue StandardError => e

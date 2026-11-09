@@ -5,6 +5,7 @@ import {
   getLevel,
   isExtraLocked,
   levelOptions,
+  listedModules,
   moduleByKey,
   setLevel,
 } from '../customRoles/permissionMatrix';
@@ -37,6 +38,9 @@ export const RECOLHIDA = [
   'POSTS',
   'INBOXES',
   'AUTONOMIA',
+  // #1430: ligar os robôs a outros sistemas. Só com a flag agente_ferramentas_delegadas (listedModules); a chave é de
+  // delegação, então quem não é administrador vê com cadeado.
+  'AUTONOMIA_TOOLS',
   'AUTOMATIONS',
   'LABELS',
   'MACROS',
@@ -92,6 +96,7 @@ export const DONO_DAS_CHAVES = {
     'inbox_manage',
     'autonomia_view',
     'autonomia_manage',
+    'autonomia_tools_manage',
     'automation_view',
     'automation_manage',
     'label_manage',
@@ -139,12 +144,15 @@ export const areasDaRecolhida = ({
   permissions,
   inicial,
   comCotacoes,
+  temFlag = () => true,
 }) => {
-  const candidatas = [
-    ...RECOLHIDA,
-    ...(comCotacoes ? CONDICIONAL : []),
-    ...SO_ADMIN,
-  ].map(moduleByKey);
+  // Área atrás de flag (Ferramentas dos agentes, #1430) só entra na conta com a flag.
+  const candidatas = listedModules(
+    [...RECOLHIDA, ...(comCotacoes ? CONDICIONAL : []), ...SO_ADMIN].map(
+      moduleByKey
+    ),
+    temFlag
+  );
   const mudou = module =>
     getLevel(module, permissions) !== getLevel(module, inicial);
   const noCadeado = module =>

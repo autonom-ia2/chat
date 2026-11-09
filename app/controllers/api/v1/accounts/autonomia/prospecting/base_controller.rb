@@ -47,6 +47,27 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
     Current.account_user&.permission_granted?('campaign_manage') || false
   end
 
+  # Os Públicos de Campanhas (LeadAudiencesController e AudiencesController, #2695 e #2775): sem
+  # CAMPAIGN_JOURNEY_ENABLED e CAMPAIGN_IMPORT_ENABLED, 404 com a frase.
+  def ensure_audiences_enabled
+    return if ::CampaignJourney::Config.enabled? && ::CampaignImports::Config.enabled?
+
+    render json: { error: I18n.t('autonomia.prospecting.audience.errors.disabled'), code: 'prospecting.audience.disabled' },
+           status: :not_found
+  end
+
+  def authorize_campaign_manage!
+    render_campaign_forbidden unless campaign_manage?
+  end
+
+  # Recusa de guardar ou acrescentar leads (AudienceFromLeads::Error): a frase do I18n em `error` (com o aviso de que os
+  # contatos criados ficaram, quando a recusa veio depois deles), o código de máquina em `code` e quem ficou de fora.
+  def render_audience_error(error)
+    message = I18n.t("autonomia.prospecting.audience.errors.#{error.message}", max: ::Autonomia::Prospecting::AudienceFromLeads::MAX_LEADS)
+    message = "#{message} #{I18n.t('autonomia.prospecting.audience.errors.contacts_saved')}" if error.contacts_saved
+    render json: { error: message, code: "prospecting.audience.#{error.message}", left_out: error.left_out }, status: :unprocessable_entity
+  end
+
   def render_campaign_forbidden
     render json: { error: I18n.t('autonomia.prospecting.campaign_errors.forbidden'), code: 'prospecting.campaign.forbidden' },
            status: :forbidden
