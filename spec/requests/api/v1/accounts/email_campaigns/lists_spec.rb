@@ -45,6 +45,15 @@ RSpec.describe 'Email lists', :aggregate_failures, type: :request do
       expect(response.parsed_body).to eq('error' => 'email_list.invalid', 'errors' => { 'name' => ['taken'] })
     end
 
+    it 'o pedido que perde a corrida pelo mesmo nome recebe nome repetido, não 500' do
+      allow(EmailList).to receive(:titulo_livre).and_raise(ActiveRecord::RecordNotUnique)
+
+      post "#{base}/lists", params: { email_list: { name: 'Dicas do mês' } }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'email_list.invalid', 'errors' => { 'name' => ['taken'] })
+    end
+
     it 'não apaga lista usada por campanha agendada' do
       lista = EmailList.criar(account: account, name: 'Dicas do mês')
       create(:email_campaign, account: account).update_columns(email_list_id: lista.id, status: EmailCampaign.statuses[:scheduled]) # rubocop:disable Rails/SkipsModelValidations

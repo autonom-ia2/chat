@@ -56,6 +56,9 @@ class EmailList < ApplicationRecord
   validate :nome_de_uma_lista_so
 
   # Cria a lista e uma etiqueta nova para ela. Devolve a lista, salva ou com os erros.
+  #
+  # Dois pedidos ao mesmo tempo com o mesmo nome passam juntos pela conferência (titulo_livre e as validações) e um
+  # deles bate no índice único (da etiqueta ou do nome da lista): esse volta como nome repetido, sem etiqueta sobrando.
   def self.criar(account:, name:)
     lista = new(account: account, name: name)
     titulo = titulo_da_etiqueta(lista.name)
@@ -66,6 +69,8 @@ class EmailList < ApplicationRecord
       raise ActiveRecord::Rollback unless lista.save
     end
     lista
+  rescue ActiveRecord::RecordNotUnique
+    lista.tap { |repetida| repetida.errors.add(:name, :taken) }
   end
 
   # nil quando o nome não tem letra nem número que sobre ("!!!").

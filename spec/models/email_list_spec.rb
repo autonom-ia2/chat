@@ -60,6 +60,18 @@ RSpec.describe EmailList do
       expect(account.labels.where('title LIKE ?', 'lista-email-%').count).to eq(1)
     end
 
+    it 'dois pedidos ao mesmo tempo: o que bate no índice único volta como nome repetido, não como erro' do
+      etiquetas = account.labels
+      allow(account).to receive(:labels).and_return(etiquetas)
+      allow(etiquetas).to receive(:create!).and_raise(ActiveRecord::RecordNotUnique)
+
+      lista = described_class.criar(account: account, name: 'Dicas do mês')
+
+      expect(lista).not_to be_persisted
+      expect(lista.errors.details[:name]).to include(a_hash_including(error: :taken))
+      expect(described_class.count).to eq(0)
+    end
+
     it 'recusa nome vazio ou sem letra nem número, sem criar etiqueta' do
       expect(described_class.criar(account: account, name: '  ').errors.details[:name]).to include(a_hash_including(error: :blank))
       expect(described_class.criar(account: account, name: '!!!').errors.details[:name]).to include(a_hash_including(error: :invalid))
