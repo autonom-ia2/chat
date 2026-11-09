@@ -29,13 +29,15 @@ class Api::V1::Accounts::EmailCampaigns::ReportsController < Api::V1::Accounts::
   def recipients
     query = EmailCampaigns::RecipientQuery.new(@campaign, recipient_params)
     @meta = query.meta.merge(delivery_mode: @campaign.delivery_mode)
-    @recipients = EmailCampaigns::Presentation::Recipients.new(@campaign, query.paginated).call
+    @recipients = EmailCampaigns::Presentation::Recipients.new(@campaign, query.paginated, masked: contact_data_hidden?).call
   end
 
   def export
     query = EmailCampaigns::RecipientQuery.new(@campaign, recipient_params)
+    # Read now: the CSV streams after the action returns.
+    masked = contact_data_hidden?
     csv = EmailCampaigns::Reports::CsvExport.new(scope: -> { query.call }, columns: EmailCampaigns::Reports::CsvExport::RECIPIENT_COLUMNS) do |batch|
-      EmailCampaigns::Presentation::Recipients.new(@campaign, batch).call
+      EmailCampaigns::Presentation::Recipients.new(@campaign, batch, masked: masked).call
     end
     stream_csv(csv, 'recipients')
   end
@@ -43,15 +45,16 @@ class Api::V1::Accounts::EmailCampaigns::ReportsController < Api::V1::Accounts::
   def import_issues
     query = EmailCampaigns::Reports::ImportIssuesQuery.new(@campaign, issue_params)
     @meta = query.meta
-    @issues = EmailCampaigns::Reports::ImportIssuesQuery.present(query.paginated)
+    @issues = EmailCampaigns::Reports::ImportIssuesQuery.present(query.paginated, masked: contact_data_hidden?)
     @import_summary = EmailCampaigns::Presentation::ImportSummary.new(@campaign).call
     @preflight = EmailCampaigns::Presentation::Hygiene.new(@campaign, actor: Current.user).call
   end
 
   def export_import_issues
     query = EmailCampaigns::Reports::ImportIssuesQuery.new(@campaign, issue_params)
+    masked = contact_data_hidden?
     csv = EmailCampaigns::Reports::CsvExport.new(scope: query.call, columns: EmailCampaigns::Reports::CsvExport::ISSUE_COLUMNS) do |batch|
-      EmailCampaigns::Reports::ImportIssuesQuery.present(batch)
+      EmailCampaigns::Reports::ImportIssuesQuery.present(batch, masked: masked)
     end
     stream_csv(csv, 'import_issues')
   end
@@ -61,6 +64,11 @@ class Api::V1::Accounts::EmailCampaigns::ReportsController < Api::V1::Accounts::
   def authorize_reports
     action = %w[export export_import_issues].include?(action_name) ? :export? : :view?
     authorize EmailCampaign, action, policy_class: EmailCampaignReportPolicy
+  end
+
+  # #2802: recipients' name and e-mail are contact data; who does not read contacts sees them masked.
+  def contact_data_hidden?
+    ConversationAudience::Access.hides_contact_data?(Current.account_user)
   end
 
   def fetch_campaign
@@ -78,15 +86,19 @@ class Api::V1::Accounts::EmailCampaigns::ReportsController < Api::V1::Accounts::
 
   def builder
     @builder ||= EmailCampaigns::Reports::Builder.new(
-      account: Current.account, actor: Current.user, params: report_filter_params(%w[campaign_id status campaign_status q since until])
+      account: Current.account, actor: Current.user, masked: contact_data_hidden?,
+      params: report_filter_params(%w[campaign_id status campaign_status q since until])
     )
   end
 
+  # #2802: the search compares with the real name and e-mail and would tell whether a person is in the campaign; who
+  # does not read contacts searches nothing.
   def recipient_params
-    report_filter_params(%w[q status problem page])
+    report_filter_params(contact_data_hidden? ? %w[status problem page] : %w[q status problem page])
   end
 
+  # #2802: the search compares with the real address; who does not read contacts searches nothing.
   def issue_params
-    report_filter_params(%w[q reason reason_code page])
+    report_filter_params(contact_data_hidden? ? %w[reason reason_code page] : %w[q reason reason_code page])
   end
 end

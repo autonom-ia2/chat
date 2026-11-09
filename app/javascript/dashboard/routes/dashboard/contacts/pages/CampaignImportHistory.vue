@@ -140,8 +140,11 @@ const downloadFile = async (campaignImport, file) => {
       URL.revokeObjectURL(url);
       link.remove();
     }, 1000);
-  } catch {
-    useAlert(t('CAMPAIGN_IMPORT.API.DOWNLOAD_ERROR'));
+  } catch (error) {
+    const hidden = error?.response?.status === 403;
+    useAlert(
+      t(`CAMPAIGN_IMPORT.API.${hidden ? 'DOWNLOAD_HIDDEN' : 'DOWNLOAD_ERROR'}`)
+    );
   }
 };
 

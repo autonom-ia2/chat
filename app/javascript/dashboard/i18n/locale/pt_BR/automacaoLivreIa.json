@@ -1,6 +1,14 @@
 {
   "AUTOMACAO_LIVRE": {
     "IA": {
+      "DE_NOVO": {
+        "DICA": "Quando a IA escolher um destes caminhos, a automação espera a próxima resposta do cliente e decide de novo. Sem resposta no prazo, ela encerra sem mandar nada. Cada vez custa uma consulta à IA.",
+        "QUANDO": "Decidir de novo quando a IA escolher",
+        "PRAZO": "Esperar a próxima resposta por até",
+        "DESCONHECIDO": "Um caminho marcado não existe mais ({chave}). Desmarque.",
+        "COM_PASSOS": "“{nome}” decide de novo, então não pode ter passos. Tire os passos dele na lista.",
+        "TODOS": "Deixe sem marcar pelo menos uma saída (um caminho ou o \"Nenhum se aplica\"), para a automação seguir."
+      },
       "LEITURAS": {
         "MENSAGENS_RECENTES": "As últimas mensagens do cliente",
         "MENSAGENS_COM_RESPOSTAS": "As últimas mensagens do cliente e da equipe",

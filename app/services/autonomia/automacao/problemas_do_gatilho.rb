@@ -7,7 +7,7 @@
 # engano), só as condições do alvo (card ou contato) e funil, etapa, responsável, etiqueta e atributo da conta. O da
 # conta não tem seleção (o esquema recusa) e roda sem conversa, card ou contato: só ficam o esperar e o disparar de
 # campanha (G14), que escolhe o público pela etiqueta. Recusar ao salvar é o que impede o passo de quebrar sem alvo ao
-# rodar.
+# rodar. Na data única (G39, #2681), a data que já passou.
 #
 # No card atualizado (G27, #2661), a mudança: o campo personalizado é do card, desta conta, e a condição numérica
 # (maior que, passou de) tem número para comparar.
@@ -32,8 +32,8 @@ class Autonomia::Automacao::ProblemasDoGatilho
     desligado = Gatilhos.desligado(@tipo, @conta)
     return [texto(desligado)] if desligado
 
-    return passos_que_pedem_alvo if Gatilhos.da_conta?(@tipo)
-    return selecao if Gatilhos.recorrente?(@tipo)
+    return [*data_passada, *passos_que_pedem_alvo] if Gatilhos.da_conta?(@tipo)
+    return [*data_passada, *selecao] if Gatilhos.recorrente?(@tipo)
 
     [*etapa_de_fora, *funil_de_fora, *pagina_de_fora, *parado_sem_dias, *campo_de_fora, *da_mudanca]
   end
@@ -45,6 +45,16 @@ class Autonomia::Automacao::ProblemasDoGatilho
   end
 
   def sem_alvo?(passo) = passo['tipo'] == 'esperar' || (passo['tipo'] == 'campanha' && passo['faz'] == 'disparar')
+
+  # A data única (G39, #2681) que já passou nunca roda: salvar assim é engano, não escolha.
+  def data_passada
+    return [] unless @gatilho['frequencia'] == 'uma_vez'
+
+    fuso = ::Autonomia::Automacao::Tempo.fuso(@conta)
+    dia = Date.iso8601(@gatilho['data'])
+    instante = fuso.local(dia.year, dia.month, dia.day, @gatilho['hora'].to_i)
+    instante > Time.current ? [] : [texto(:data_passada, data: I18n.l(dia))]
+  end
 
   def etapa_de_fora
     etapa = @gatilho['etapa_id']

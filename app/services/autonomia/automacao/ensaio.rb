@@ -5,8 +5,8 @@
 # rascunho, já conferida por quem chama).
 #
 # Para cada conversa:
-# - não entraria: no Spam, sem mensagem (no gatilho "mensagem criada"), resposta automática de e-mail (a régua da
-#   Escuta) ou fora do "Só se" do gatilho;
+# - não entraria: no Spam, sem mensagem (no gatilho "mensagem criada"), sem mensagem recusada (no gatilho "mensagem que
+#   falhou", G53), resposta automática de e-mail (a régua da Escuta) ou fora do "Só se" do gatilho;
 # - entraria: os passos em ordem, do jeito do Roteiro. O "se" vale agora e segue pelo ramo que valer. O "esperar até"
 #   que ainda não vale abre dois caminhos (se chegar a tempo: segue o resto; se o prazo vencer: o ramo e depois o
 #   resto; sem prazo, só o primeiro), e o "decidir" da IA abre um caminho por saída, sem escolher. "Parar" acaba o caminho.
@@ -23,7 +23,7 @@ class Autonomia::Automacao::Ensaio
   OUTRAS = 40
   # Contra defeito, não contra uso: cada "esperar até" ou "decidir" multiplica os caminhos.
   MAXIMO_DE_PASSOS = 500
-  GATILHOS = %w[conversa.criada conversa.aberta conversa.resolvida mensagem.criada].freeze
+  GATILHOS = %w[conversa.criada conversa.aberta conversa.resolvida mensagem.criada mensagem.falhou].freeze
   SO_MOSTRA = %w[esperar].freeze
   # #2500 F7: os passos de IA que seguem em frente; o "decidir" abre caminhos e tem regra própria.
   IA_SO_DIZ = %w[extrair escrever resumir].freeze
@@ -54,7 +54,7 @@ class Autonomia::Automacao::Ensaio
   # (#2500 C2) roda nelas.
   def entrariam(limite)
     recentes = visiveis.includes(:contact).reorder(last_activity_at: :desc, id: :desc).limit(RECENTES + OUTRAS)
-    recentes.select { |conversa| fora(conversa, (ultima_mensagem(conversa) if mensagem_no_gatilho?)).nil? }.first(limite)
+    recentes.select { |conversa| fora(conversa, mensagem_do_gatilho(conversa)).nil? }.first(limite)
   end
 
   private
@@ -64,14 +64,15 @@ class Autonomia::Automacao::Ensaio
   end
 
   def ensaiar(conversa)
-    mensagem = ultima_mensagem(conversa) if mensagem_no_gatilho?
+    mensagem = mensagem_do_gatilho(conversa)
     base = { conversa_id: conversa.display_id, nome: conversa.contact&.name, ultima_atividade: conversa.last_activity_at }
     motivo = fora(conversa, mensagem)
     return base.merge(entraria: false, motivo: motivo, passos: []) if motivo
 
     @contados = 0
     @conversa = conversa
-    contexto = ::Autonomia::Automacao::Contexto.de(conversa, textos: textos_da_ia)
+    falhou = (mensagem if ::Autonomia::Automacao::MensagemDoGatilho.falhou?(tipo_do_gatilho))
+    contexto = ::Autonomia::Automacao::Contexto.de(conversa, textos: textos_da_ia, falhou: falhou)
     valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem, quem: @usuario)
     base.merge(entraria: true, motivo: nil, passos: caminho(@roteiro.primeiro, valores))
   end
@@ -81,19 +82,17 @@ class Autonomia::Automacao::Ensaio
     @textos_da_ia ||= ::Autonomia::Automacao::Contexto.marcas_da_ia(@receita, @conta)
   end
 
-  def mensagem_no_gatilho? = @receita.dig('gatilho', 'tipo') == ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM
+  def tipo_do_gatilho = @receita.dig('gatilho', 'tipo')
 
-  # A régua da Escuta: atividade não é mensagem de ninguém; a nota privada conta.
-  def ultima_mensagem(conversa)
-    conversa.messages.where.not(message_type: :activity).reorder(created_at: :desc, id: :desc).first
-  end
+  def mensagem_do_gatilho(conversa) = ::Autonomia::Automacao::MensagemDoGatilho.de(conversa, tipo_do_gatilho)
 
   # O Spam pela mesma pergunta da Partida (#2499): o Contexto do alvo.
   def fora(conversa, mensagem)
     contexto = ::Autonomia::Automacao::Contexto.de(conversa)
+    faltando = ::Autonomia::Automacao::MensagemDoGatilho.faltando(tipo_do_gatilho, mensagem)
     return 'spam' if contexto.no_spam?
-    return 'sem_mensagem' if mensagem_no_gatilho? && mensagem.nil?
-    return 'resposta_automatica' if ::Autonomia::Automacao::Escuta.resposta_automatica?(conversa, @receita.dig('gatilho', 'tipo'), mensagem)
+    return faltando if faltando
+    return 'resposta_automatica' if ::Autonomia::Automacao::Escuta.resposta_automatica?(conversa, tipo_do_gatilho, mensagem)
 
     valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem, quem: @usuario)
     filtros = Array(@receita.dig('gatilho', 'filtros'))
@@ -245,13 +244,11 @@ class Autonomia::Automacao::Ensaio
   end
 
   # A IA escolheria o caminho: o ensaio mostra todos, sem chamar modelo nenhum.
+  # G31: o caminho que decide de novo espera a próxima resposta e não roda passo nenhum; vencido o prazo, a execução
+  # acaba sem mandar nada (DecidirDeNovo.ramos_do_ensaio).
   def decidir(passo, valores)
-    caminhos = Array(passo['caminhos']).map do |item|
-      { chave: item['chave'], nome: item['nome'], passos: caminho(Array(item['passos']).first || @roteiro.seguinte(passo['id']), valores) }
-    end
-    chave = ::Autonomia::Automacao::Receita::NENHUM
-    nenhum = { chave: chave, passos: caminho(@roteiro.entrar(passo, chave), valores) }
-    no(passo, 'decidir', anexos(passo, ::Autonomia::Automacao::PassoDeDecidir), ramos: caminhos << nenhum)
+    ramos = ::Autonomia::Automacao::DecidirDeNovo.ramos_do_ensaio(passo, @roteiro) { |primeiro| caminho(primeiro, valores) }
+    no(passo, 'decidir', anexos(passo, ::Autonomia::Automacao::PassoDeDecidir), ramos: ramos)
   end
 
   # O que a IA faria, só com o que a receita diz. O passo que manda mensagem ou aviso (regras da F4) sem a mensagem

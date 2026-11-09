@@ -11,6 +11,7 @@ import CrmKanbanAPI from 'dashboard/api/crmKanban';
 // escolhido, funil_id não vai; a frase diz o nome da etapa.
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
+    locale: { value: 'pt_BR' },
     t: (chave, valores) =>
       valores ? `${chave} ${Object.values(valores).join(' ')}` : chave,
   }),

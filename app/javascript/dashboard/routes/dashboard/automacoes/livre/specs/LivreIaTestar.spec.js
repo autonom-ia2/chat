@@ -60,6 +60,17 @@ describe('LivreIaTestar', () => {
     podeMudar.value = true;
   });
 
+  // #2780: na automação já salva, o servidor confere também quem a ligou.
+  it('manda o id da automação já salva', async () => {
+    AutomacoesAPI.testarPasso.mockResolvedValueOnce(primeira(BRUNO, [7]));
+    const wrapper = montar({ automacaoId: 42 });
+
+    await wrapper.find('[data-testar]').trigger('click');
+    await flushPromises();
+
+    expect(AutomacoesAPI.testarPasso.mock.calls[0][0].automacaoId).toBe(42);
+  });
+
   it('o 1º pedido traz as candidatas; os seguintes pedem cada uma pelo id', async () => {
     AutomacoesAPI.testarPasso
       .mockResolvedValueOnce(primeira(BRUNO, [7, 8]))
@@ -70,8 +81,13 @@ describe('LivreIaTestar', () => {
     await flushPromises();
 
     expect(AutomacoesAPI.testarPasso.mock.calls.map(([a]) => a)).toEqual([
-      { receita: RECEITA, passoId: 'p1', conversaId: undefined },
-      { receita: RECEITA, passoId: 'p1', conversaId: 8 },
+      {
+        receita: RECEITA,
+        passoId: 'p1',
+        conversaId: undefined,
+        automacaoId: null,
+      },
+      { receita: RECEITA, passoId: 'p1', conversaId: 8, automacaoId: null },
     ]);
     const linhas = wrapper.findAll('[data-teste-resultado]');
     expect(linhas.map(linha => linha.text())).toEqual([
