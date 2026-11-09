@@ -106,6 +106,38 @@ RSpec.describe Autonomia::Agents::EmbeddingService do
       end
     end
 
+    it 'turns Faraday::SSLError into a passing failure with the reason conexao' do
+      allow(ctx).to receive(:embed).and_raise(Faraday::SSLError.new('handshake'))
+
+      expect { service.embed('pergunta') }.to raise_error(described_class::Passageira) { |falha| expect(falha.motivo).to eq('conexao') }
+    end
+
+    it 'keeps any other network failure as a plain embedding error, with log, never loose', :aggregate_failures do
+      allow(ctx).to receive(:embed).and_raise(Faraday::ParsingError.new('cut'))
+      allow(Rails.logger).to receive(:error)
+
+      expect { service.embed('pergunta') }
+        .to raise_error(described_class::EmbeddingError) do |falha|
+          expect([falha.class, falha.motivo]).to eq([described_class::EmbeddingError, 'provedor_recusou'])
+        end
+      expect(Rails.logger).to have_received(:error).with(include('error_type=Faraday::ParsingError'))
+    end
+
+    it 'cuts the whole attempt at the deadline, even when the network keeps trickling' do
+      lento = described_class.new(account: account, prazo: 0.2)
+      allow(lento).to receive(:context).and_return(ctx)
+      allow(ctx).to receive(:embed) { sleep 2 }
+
+      inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      expect { lento.embed('pergunta') }.to raise_error(described_class::Passageira) { |falha| expect(falha.motivo).to eq('prazo') }
+      expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio).to be < 1
+    end
+
+    it 'gives the label of a lasting failure without the message of the provider', :aggregate_failures do
+      expect(described_class::EmbeddingError.new('ai_not_configured').motivo).to eq('ai_not_configured')
+      expect(described_class::EmbeddingError.new('Failed to create an embedding: Incorrect API key sk-xx').motivo).to eq('provedor_recusou')
+    end
+
     it 'keeps a lasting failure (wrong key) as a plain embedding error' do
       allow(ctx).to receive(:embed).and_raise(RubyLLM::UnauthorizedError.new(nil, 'bad key'))
 

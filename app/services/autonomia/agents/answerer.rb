@@ -322,7 +322,8 @@ module Autonomia
 
         # #2487: o turno normal chama a busca como sempre; só a resposta a um comentário passa o cuidado.
         retriever = @care_id ? Retriever.new(agent: @agent, care_id: @care_id) : Retriever.new(agent: @agent)
-        com_fixos(retriever.retrieve(@retrieval_query, top_k: Config::ANSWER_TOP_K))
+        # #2850: sem o vetor da pergunta, aceita os trechos só pela palavra; sem distância, a confiança não sobe com eles.
+        com_fixos(retriever.retrieve(@retrieval_query, top_k: Config::ANSWER_TOP_K, por_palavra_sem_vetor: true))
       rescue Autonomia::Agents::Retriever::RetrievalError
         # #14 — falha de INFRA. Operate (instrução-dirigido): NÃO silencia o bot — degrada p/ [] e
         # segue pela instrução. Fluxo GATEADO (Guia/copiloto): re-levanta → `answer` faz handoff seguro.

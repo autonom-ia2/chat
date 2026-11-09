@@ -60,7 +60,7 @@ RSpec.describe Autonomia::Agents::Retriever do
   it 'with the deadline, answers inside the budget by the words, with at most 2 connections', :aggregate_failures do
     inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
-    resultado = described_class.new(agent: agent.reload).retrieve('telefone do aviso de sinistro', top_k: 3)
+    resultado = described_class.new(agent: agent.reload).retrieve('telefone do aviso de sinistro', top_k: 3, por_palavra_sem_vetor: true)
 
     expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio).to be < orcamento + 0.5
     expect(resultado.map(&:content)).to eq(['Aviso de sinistro: telefone 0800 000 0000.'])

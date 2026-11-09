@@ -33,8 +33,9 @@ RSpec.describe Autonomia::Agents::Retriever do
     allow(Autonomia::Agents::VetorDaPergunta).to receive(:agora).and_return(*leituras)
   end
 
-  def buscar
-    retriever.retrieve(pergunta, top_k: 3)
+  # O Answerer pede a busca só pela palavra quando falta o vetor; os demais chamadores não.
+  def buscar(por_palavra_sem_vetor: true)
+    retriever.retrieve(pergunta, top_k: 3, por_palavra_sem_vetor: por_palavra_sem_vetor)
   end
 
   before do
@@ -50,6 +51,14 @@ RSpec.describe Autonomia::Agents::Retriever do
     buscar
 
     expect(Autonomia::Agents::EmbeddingService).to have_received(:new).with(account: account, model: anything, prazo: prazo)
+  end
+
+  it 'measures without the deadline of the question on the path of the placar' do
+    allow(embedding_service).to receive(:embed).and_return(perto)
+
+    retriever.retrieve!(pergunta, top_k: 3)
+
+    expect(Autonomia::Agents::EmbeddingService).to have_received(:new).with(account: account, model: anything, prazo: nil)
   end
 
   it 'tries once more when the second attempt fits, and finds by the vector', :aggregate_failures do
@@ -87,11 +96,13 @@ RSpec.describe Autonomia::Agents::Retriever do
     expect(embedding_service).to have_received(:embed).twice
   end
 
-  it 'does not try again on a lasting failure (wrong key)' do
+  it 'does not try again on a lasting failure (no key), and logs its reason', :aggregate_failures do
+    account.enable_features!('rag_busca_hibrida')
     allow(embedding_service).to receive(:embed).and_raise(Autonomia::Agents::EmbeddingService::EmbeddingError, 'ai_not_configured')
 
     expect(buscar).to eq([])
     expect(embedding_service).to have_received(:embed).once
+    expect(Rails.logger).to have_received(:warn).with(include('degraded', 'motivo=ai_not_configured'))
   end
 
   context 'with the hybrid search on' do
@@ -138,6 +149,43 @@ RSpec.describe Autonomia::Agents::Retriever do
       encontrado = buscar.find { |trecho| trecho.id == secao.id }
 
       expect(encontrado.neighbor_distance).to be_nil
+    end
+
+    it 'gives [] to the callers that did not ask for the words (Ajudante, Guia)' do
+      expect(buscar(por_palavra_sem_vetor: false)).to eq([])
+    end
+
+    it 'counts the failure by day, account, reason and path, for 30 days', :aggregate_failures do
+      chave = Autonomia::Agents::VetorDaPergunta.chave(account.id, 'prazo', 'so_palavra')
+      Redis::Alfred.delete(chave)
+
+      2.times { buscar }
+
+      expect(Redis::Alfred.get(chave).to_i).to eq(2)
+      expect(Redis::Alfred.ttl(chave)).to be_between(1, 30.days.to_i)
+    ensure
+      Redis::Alfred.delete(chave)
+    end
+
+    it 'keeps another account out, even with the same words' do
+      outra = create(:account)
+      dono = Autonomia::Agents::Agent.create!(account: outra, name: 'Outro', agent_type: 'custom', status: :active, enabled: true,
+                                              instruction: 'x')
+      fonte = dono.sources.create!(account: outra, source_type: 'pdf', status: :ready, reference: 'o.pdf')
+      entry(0, 'Aviso de sinistro da outra conta, telefone 0800 444.', alvo: dono, fonte: fonte)
+
+      expect(buscar.map(&:content).join).not_to include('outra conta')
+    end
+
+    it 'reads the material of the post only in the turn of that comment' do
+      cuidado = create(:crm_meta_ads_comment_care, account: account)
+      fonte = Autonomia::Agents::Source.create!(account: account, agent: agent, care: cuidado, source_type: 'txt', kind: 'knowledge',
+                                                status: :ready, reference: 'post.txt')
+      entry(0, 'Aviso de sinistro do post, telefone 0800 555.', fonte: fonte)
+
+      expect(buscar.map(&:content).join).not_to include('do post')
+      expect(described_class.new(agent: agent.reload, care_id: cuidado.id)
+        .retrieve(pergunta, top_k: 3, por_palavra_sem_vetor: true).map(&:content).join).to include('do post')
     end
 
     it 'still raises on the path that measures the search (placar)' do

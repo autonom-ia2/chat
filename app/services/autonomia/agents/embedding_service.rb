@@ -1,5 +1,15 @@
 class Autonomia::Agents::EmbeddingService
-  class EmbeddingError < StandardError; end
+  class EmbeddingError < StandardError
+    ROTULOS = %w[ai_not_configured invalid_api_base].freeze
+
+    # #2850 — rótulo curto para log e telemetria. Nunca a mensagem do provedor, que pode trazer um pedaço da chave.
+    def motivo
+      ROTULOS.include?(message) ? message : 'provedor_recusou'
+    end
+  end
+
+  # #2850 — o prazo TOTAL de uma tentativa estourou (o do Faraday vale por operação: abrir, escrever, cada leitura).
+  class PrazoTotal < StandardError; end
 
   # #2850 — falha que pode passar numa nova tentativa (prazo, conexão, provedor fora, limite de taxa). `motivo` é um
   # rótulo curto para log e telemetria. O Retriever decide se tenta de novo; quem não trata recebe um EmbeddingError.
@@ -14,8 +24,10 @@ class Autonomia::Agents::EmbeddingService
 
   # O erro de prazo e de conexão vem do Faraday, sem passar pelo RubyLLM::Error.
   PASSAGEIRAS = {
+    PrazoTotal => 'prazo',
     Faraday::TimeoutError => 'prazo',
     Faraday::ConnectionFailed => 'conexao',
+    Faraday::SSLError => 'conexao',
     RubyLLM::ServerError => 'provedor',
     RubyLLM::ServiceUnavailableError => 'provedor',
     RubyLLM::OverloadedError => 'provedor',
@@ -51,10 +63,14 @@ class Autonomia::Agents::EmbeddingService
     return [] if text.blank?
 
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    context.embed(text, model: @model).vectors
+    dentro_do_prazo { context.embed(text, model: @model).vectors }
   rescue *PASSAGEIRAS.keys => e
     log_failure(e, started_at: started_at)
     raise Passageira, PASSAGEIRAS.find { |classe, _motivo| e.is_a?(classe) }.last
+  rescue Faraday::Error => e
+    # O resto do Faraday (resposta cortada, por exemplo) não é RubyLLM::Error: sem isto escaparia sem log nem motivo.
+    log_failure(e, started_at: started_at)
+    raise EmbeddingError, 'Failed to create an embedding: rede'
   rescue RubyLLM::Error => e
     log_failure(e, started_at: started_at)
     raise EmbeddingError, "Failed to create an embedding: #{e.message}"
@@ -113,6 +129,13 @@ class Autonomia::Agents::EmbeddingService
         com_prazo(config)
       end
     end
+  end
+
+  # #2850 — com prazo, a tentativa inteira cabe nele (o Timeout, como no `total_timeout` do Crm::Ai::ResponsesClient).
+  def dentro_do_prazo(&)
+    return yield if @prazo.nil?
+
+    Timeout.timeout(@prazo, PrazoTotal, &)
   end
 
   def com_prazo(config)
