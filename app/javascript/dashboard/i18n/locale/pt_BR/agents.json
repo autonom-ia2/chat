@@ -870,7 +870,8 @@
                 "HTTPS": "Use um link que comece com https://.",
                 "INCOMPLETO": "Esse link está incompleto. Confira o que vem depois de https://.",
                 "REDE": "Esse link não pode ser usado: aponta para dentro da própria rede.",
-                "IP": "Use o nome do site, não um número de IP."
+                "IP": "Use o nome do site, não um número de IP.",
+                "SENHA": "Coloque a senha em Chave de acesso, não no link."
               },
               "SLUG": "Nome técnico",
               "SLUG_AJUDA": "É o nome da ferramenta para o agente. Se ficar vazio, criamos a partir do nome. Só letras, números e _.",
@@ -950,10 +951,12 @@
               "ERRO": {
                 "VALOR": "Digite a chave.",
                 "REDIGITAR": "Digite a chave de novo para salvar.",
+                "REPETIDO": "Já tem uma chave com esse nome. Use outro nome.",
                 "CHAVE": "Use só letras sem acento, números e hífen. Ex.: x-api-key"
               },
               "REMOVER_TITULO": "Remover esta chave?",
-              "REMOVER_TEXTO": "A chave guardada é apagada quando você salvar."
+              "REMOVER_TEXTO": "A chave guardada é apagada quando você salvar.",
+              "LINK_MUDOU": "Você mudou o link ou o que a ferramenta faz. Digite a chave de novo: a guardada não vai para um link novo."
             }
           },
           "TESTE": {

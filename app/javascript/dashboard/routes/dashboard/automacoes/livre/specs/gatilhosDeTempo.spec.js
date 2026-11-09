@@ -12,6 +12,7 @@ import AttributeAPI from 'dashboard/api/attributes';
 // campo (a chave) e o "quando". Cada um mostra o aviso dele.
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
+    locale: { value: 'pt_BR' },
     t: (chave, valores) =>
       valores ? `${chave} ${Object.values(valores).join(' ')}` : chave,
   }),
