@@ -52,6 +52,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Registro do
                                                               meta_error_code: 100, meta_error_subcode: 2_534_023)
   end
 
+  it 'o privado recusado (#2307) grava o código e o subcódigo da Meta junto da conversa' do
+    conversation = create(:conversation, account: account)
+
+    described_class.gravar!(comentario, 'private_reply_failed', conversation: conversation, recusa: { codigo: 230 })
+
+    expect(Crm::MetaAdsCommentAction.sole).to have_attributes(action: 'private_reply_failed', conversation_id: conversation.id,
+                                                              meta_error_code: 230, meta_error_subcode: nil)
+  end
+
   it 'grava como IA, com o anúncio e a conversa' do
     conversation = create(:conversation, account: account)
 

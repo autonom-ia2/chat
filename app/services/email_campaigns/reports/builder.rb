@@ -4,9 +4,11 @@ class EmailCampaigns::Reports::Builder
   TIMELINE_EVENT_TYPES = %w[delivered open click].freeze
   TIMELINE_CAP = 30.days
 
-  def initialize(account:, params: {}, actor: nil)
+  # masked: who reads does not read contacts (#2802); the people who opened or clicked go out masked.
+  def initialize(account:, params: {}, actor: nil, masked: false)
     @account = account
     @actor = actor
+    @masked = masked
     @query = EmailCampaigns::CampaignQuery.new(account: account, params: params)
   end
 
@@ -115,6 +117,12 @@ class EmailCampaigns::Reports::Builder
                           .distinct
                           .order(last_event_at: :desc, id: :asc)
                           .limit(PEOPLE_LIMIT)
-                          .map { |r| { id: r.id, name: r.name, email: r.email, last_event_at: r.last_event_at } }
+                          .map { |r| { id: r.id, **person(r), last_event_at: r.last_event_at } }
+  end
+
+  def person(recipient)
+    return { name: recipient.name, email: recipient.email } unless @masked
+
+    { name: ConversationAudience::Access.masked_name(recipient.name), email: ConversationAudience::Access.masked_email(recipient.email) }
   end
 end

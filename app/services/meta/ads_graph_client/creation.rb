@@ -11,6 +11,7 @@ module Meta::AdsGraphClient::Creation
   IMAGES_LIMIT = 30
   CAMPAIGNS_LIMIT = 25
   OBJECT_STATUS_FIELDS = 'status,effective_status'.freeze
+  CREATIVE_SPEC_FIELDS = 'object_story_spec,url_tags,thumbnail_url'.freeze
   # Posts para impulsionar (PR 2, #2339): os mais recentes de cada lado, com o que diz se a Meta deixa promover. O tipo
   # do anexo separa a foto de perfil (`profile_media`) e a de capa (`cover_photo`), que a Meta recusa no criar.
   BOOST_POSTS_LIMIT = 25
@@ -75,9 +76,30 @@ module Meta::AdsGraphClient::Creation
     get(ad_id.to_s, fields: AD_BUDGET_FIELDS)
   end
 
-  # Anúncios de um grupo ou de uma campanha, só com a situação de entrega.
-  def ads_of(object_id)
-    paged("#{object_id}/ads", fields: 'effective_status')
+  # Anúncios de um grupo ou de uma campanha, só com a situação de entrega (a cópia adotada pede também o nome, #2804).
+  def ads_of(object_id, fields: 'effective_status')
+    paged("#{object_id}/ads", fields: fields)
+  end
+
+  # Grupos de uma campanha (#2804): a cópia achada na Meta continua de onde parou, sem copiar o grupo de novo.
+  def adsets_of(campaign_id)
+    paged("#{campaign_id}/adsets", fields: 'name,effective_status')
+  end
+
+  # Cópia pausada de uma campanha ou de um grupo (#2778, Fluxo 5) → { copied_campaign_id } ou { copied_adset_id }.
+  def copy_campaign(campaign_id, params)
+    post("#{campaign_id}/copies", params)
+  end
+
+  def copy_adset(adset_id, params)
+    post("#{adset_id}/copies", params)
+  end
+
+  # O criativo como foi criado (#2778): é dele que sai o criativo novo, com outra foto ou outro texto. A miniatura é a
+  # "Foto atual" da tela.
+  def creative_spec(creative_id)
+    get(creative_id.to_s, fields: CREATIVE_SPEC_FIELDS, thumbnail_width: Meta::AdsGraphClient::THUMBNAIL_SIZE,
+                          thumbnail_height: Meta::AdsGraphClient::THUMBNAIL_SIZE)
   end
 
   def update_object(object_id, params)

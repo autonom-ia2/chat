@@ -238,6 +238,13 @@ const showCrmHandoffEntry = computed(
     crmAiEnabled.value &&
     hasAnyPermission([CRM_MANAGE_AI_PERMISSION, CRM_ADMIN_PERMISSION])
 );
+// #2692 — Prospecção nova (protótipo): o menu abre as telas novas com a flag.
+const prospeccaoNovaOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    accountId.value,
+    FEATURE_FLAGS.PROSPECCAO_NOVA
+  )
+);
 const autonomiaProspectingEnabled = computed(
   () =>
     (isAdministrator.value || hasAnyPermission(PROSPECTING_PERMISSIONS)) &&
@@ -887,6 +894,9 @@ const menuItems = computed(() => {
       isVisible: autonomiaProspectingEnabled.value,
       t,
       accountScopedRoute,
+      novaOn: prospeccaoNovaOn.value,
+      podeBuscar:
+        isAdministrator.value || hasAnyPermission(['prospecting_manage']),
     }),
     ...(autonomiaInsuranceEnabled.value
       ? [

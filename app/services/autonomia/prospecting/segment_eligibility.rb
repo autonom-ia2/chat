@@ -1,7 +1,7 @@
-# Quem entra no segmento de campanha da Prospecção e, se não entra, por quê (#680, ACAO-26/27). As regras valem para o
-# lead na conta, não para a lista: o CampaignSegmentBuilder pergunta por todos os leads da lista, e a recusa depois do
-# segmento (SegmentRefusalSync) só pelos poucos que alcançam os contatos recusados, com um ConsentVeto e um contato por
-# lead para a execução inteira.
+# Quem pode receber pela Prospecção e, se não pode, por quê (#680, ACAO-26/27). As regras valem para o lead na conta,
+# não para a lista: o Público (AudienceFromLeads, #2695) pergunta a parte da decisão da pessoa (consent_block_reason), e a
+# recusa depois de um segmento por etiqueta antigo (SegmentRefusalSync) só pelos poucos leads que alcançam os contatos
+# recusados, com um ConsentVeto e um contato por lead para a execução inteira.
 class Autonomia::Prospecting::SegmentEligibility
   ELIGIBLE_STATUS = 'ready_for_campaign'.freeze
 
@@ -15,13 +15,19 @@ class Autonomia::Prospecting::SegmentEligibility
   # depois o que falta no lead. Contato bloqueado ou que pediu para parar nunca recebe a etiqueta.
   # A recusa de outro lead com o mesmo contato, telefone ou e-mail também vale (ConsentVeto).
   def block_reason(lead)
+    consent_block_reason(lead) || lead_block_reason(lead)
+  end
+
+  # Só o que a pessoa decidiu (descarte, pedido para parar, bloqueio), sem o que falta no lead. O Público da Prospecção
+  # nova (AudienceFromLeads, #2695) usa esta parte: lá vale o telefone ou o e-mail, sem exigir WhatsApp nem status.
+  def consent_block_reason(lead)
     return 'discarded' if lead.discarded?
     return 'opt_out' if lead.consent_refused?
 
     contact = existing_contact(lead)
     return 'opt_out' if consent_veto.vetoed?(lead: lead, contact: contact)
 
-    contact_block_reason(contact) || lead_block_reason(lead)
+    contact_block_reason(contact)
   end
 
   # O que o próprio lead decide, sem consultar contato: não recusou, tem telefone, WhatsApp verificado e está pronto.

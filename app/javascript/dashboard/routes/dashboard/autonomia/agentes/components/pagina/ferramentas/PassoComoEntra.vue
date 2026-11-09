@@ -1,14 +1,14 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgenteBotao from '../../AgenteBotao.vue';
 import AgenteConfirmacao from '../../AgenteConfirmacao.vue';
 import CartaoCabecalho from './CartaoCabecalho.vue';
 import FerramentaFaixa from './FerramentaFaixa.vue';
-import { novoCabecalho } from '../../../utils/ferramentas';
+import { destinoMudou, novoCabecalho } from '../../../utils/ferramentas';
 
-// #1301 (protótipos F06 e F10) — passo 4: chaves de acesso e cabeçalhos. Content-Type e Accept não
-// aparecem porque o sistema já os põe. Tirar um segredo guardado pede confirmação (a chave é apagada
+// #1301 (protótipos F06 e F10) — passo 4: a chave de acesso (#1430: a tela não fala em cabeçalho).
+// Content-Type e Accept não aparecem porque o sistema já os põe. Tirar um segredo guardado pede confirmação (a chave é apagada
 // ao salvar). Na criação, a faixa avisa que a ferramenta é salva desligada.
 const props = defineProps({
   rascunho: { type: Object, required: true },
@@ -21,9 +21,9 @@ const emit = defineEmits(['update:rascunho', 'anunciar']);
 
 const NS = 'AGENTS.JORNADA.PAGINA.FERRAMENTAS.PASSOS.QUATRO';
 const { t } = useI18n();
-const VARIAVEL = '{{nome}}';
 
 const confirmacao = ref(null);
+const mudouDestino = computed(() => destinoMudou(props.rascunho));
 const aRemover = ref(null);
 
 const mudarCabecalhos = cabecalhos =>
@@ -81,6 +81,7 @@ const erroDo = (indice, campo) => {
         :base="base"
         :erro="erroDo(indice, 'valor')"
         :erro-chave="erroDo(indice, 'chave')"
+        :destino-mudou="mudouDestino"
         @update:cabecalho="mudarCabecalho(indice, $event)"
         @remover="pedirRemover(indice)"
       />
@@ -102,9 +103,6 @@ const erroDo = (indice, campo) => {
     >
       {{ t(`${NS}.ADICIONAR`) }}
     </AgenteBotao>
-    <p class="m-0 text-sm text-n-slate-11">
-      {{ t(`${NS}.NOTA`, { variavel: VARIAVEL }) }}
-    </p>
     <FerramentaFaixa
       v-if="novo"
       data-salva-desligada

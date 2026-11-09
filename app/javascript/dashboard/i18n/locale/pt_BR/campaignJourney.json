@@ -216,6 +216,9 @@
         "NOT_RECEIVING": "não recebem",
         "NOT_RECEIVING_HINT": "Ficam no público, mas não recebem envios.",
         "OPTED_OUT": "WhatsApp: recusaram mensagens · {count}",
+        "BLOCKED": "WhatsApp: contatos bloqueados · {count}",
+        "EMAIL_OPTED_OUT": "E-mail: recusaram mensagens · {count}",
+        "EMAIL_BLOCKED": "E-mail: contatos bloqueados · {count}",
         "UNSUBSCRIBED": "E-mail: descadastrados · {count}",
         "BOUNCED": "E-mail: endereço voltou · {count}",
         "SUPPRESSED": "E-mail: bloqueados pelo provedor · {count}"
@@ -377,6 +380,7 @@
         "OUT_TITLE": "Não vão receber, mesmo seguindo a regra:",
         "OUT_NO_CONTACT": "sem telefone nem e-mail: {count}",
         "OUT_OPTED_OUT": "pediram para não receber: {count}",
+        "OUT_BLOCKED": "bloqueados: {count}",
         "OUT_NAMES": "{reason} ({names})",
         "SEE_WHO": "Ver quem",
         "HIDE_WHO": "Esconder",
@@ -419,6 +423,7 @@
         "LOAD_ERROR": "Não deu para carregar agora. Tente de novo daqui a pouco.",
         "ACTION_ERROR": "Não deu para fazer isso agora. Tente de novo.",
         "SAVE_ERROR": "Não deu para salvar o público agora. Tente de novo.",
+        "SAVE_ERROR_FOREIGN_CONTACT": "Um dos contatos foi apagado enquanto o público era salvo. Tente de novo.",
         "SEARCH_IN_PROGRESS": "Você já tem uma procura em andamento. Espere terminar ou pare a procura antes."
       },
       "SOURCE": {
@@ -585,6 +590,7 @@
         "REASONS": {
           "CHANNEL_DISABLED": "Canal desligado no público",
           "OPTED_OUT": "Recusaram mensagens",
+          "BLOCKED": "Contatos bloqueados",
           "UNSUBSCRIBED": "Descadastrados",
           "BOUNCED": "E-mail que voltou",
           "SUPPRESSED": "Bloqueados pelo provedor",

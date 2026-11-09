@@ -216,6 +216,9 @@
         "NOT_RECEIVING": "do not receive",
         "NOT_RECEIVING_HINT": "They stay in the audience but are left out of sends.",
         "OPTED_OUT": "WhatsApp: refused messages · {count}",
+        "BLOCKED": "WhatsApp: blocked contacts · {count}",
+        "EMAIL_OPTED_OUT": "Email: refused messages · {count}",
+        "EMAIL_BLOCKED": "Email: blocked contacts · {count}",
         "UNSUBSCRIBED": "Email: unsubscribed · {count}",
         "BOUNCED": "Email: address bounced · {count}",
         "SUPPRESSED": "Email: blocked by the provider · {count}"
@@ -377,6 +380,7 @@
         "OUT_TITLE": "Will not receive, even following the rule:",
         "OUT_NO_CONTACT": "no phone or e-mail: {count}",
         "OUT_OPTED_OUT": "asked not to receive: {count}",
+        "OUT_BLOCKED": "blocked: {count}",
         "OUT_NAMES": "{reason} ({names})",
         "SEE_WHO": "See who",
         "HIDE_WHO": "Hide",
@@ -419,6 +423,7 @@
         "LOAD_ERROR": "Could not load now. Try again in a moment.",
         "ACTION_ERROR": "Could not do that now. Try again.",
         "SAVE_ERROR": "Could not save the audience now. Try again.",
+        "SAVE_ERROR_FOREIGN_CONTACT": "One of the contacts was deleted while the audience was being saved. Try again.",
         "SEARCH_IN_PROGRESS": "You already have a search running. Wait for it to finish or stop it first."
       },
       "SOURCE": {
@@ -585,6 +590,7 @@
         "REASONS": {
           "CHANNEL_DISABLED": "Channel switched off in the audience",
           "OPTED_OUT": "Refused messages",
+          "BLOCKED": "Blocked contacts",
           "UNSUBSCRIBED": "Unsubscribed",
           "BOUNCED": "Email bounced",
           "SUPPRESSED": "Blocked by the provider",

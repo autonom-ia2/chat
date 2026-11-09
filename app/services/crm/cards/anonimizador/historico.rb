@@ -97,14 +97,16 @@ class Crm::Cards::Anonimizador::Historico
   end
 
   # Conversões de anúncio: a linha fica (o painel conta o que foi enviado), sem o identificador do clique (gclid,
-  # ctwa_clid), que é da pessoa. O que ainda não foi enviado não vai mais.
+  # ctwa_clid), que é da pessoa. O que ainda não foi enviado não vai mais. O texto do erro sai, menos o
+  # "não sabemos se o aviso chegou" (#2799), que não é da pessoa e o cartão continua mostrando.
   def limpar_conversoes!
     google = dos_cards(Crm::GoogleConversionEvent)
     google.where(status: 'ready').update_all(status: 'skipped', skip_reason: MOTIVO, updated_at: @agora)
     google.update_all(gclid: nil, updated_at: @agora)
     meta = dos_cards(Crm::MetaConversionEvent)
     meta.pending.update_all(status: Crm::MetaConversionEvent.statuses[:skipped], updated_at: @agora)
-    meta.update_all(ctwa_clid: nil, error_message: nil, updated_at: @agora)
+    meta.update_all(ctwa_clid: nil, updated_at: @agora)
+    meta.where.not(error_message: Crm::MetaConversionEvent::UNKNOWN_OUTCOME).update_all(error_message: nil, updated_at: @agora)
   end
 
   # Vínculos com a conversa e com quem a pessoa era: saem. Passagens, decisões de assunto e convites são da conversa e

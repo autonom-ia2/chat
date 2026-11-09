@@ -1,6 +1,7 @@
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import {
   criarAnuncio,
+  duplicarAnuncio,
   enviarMidia,
   esquecerTentativas,
   lerOpcoesDeCriacao,
@@ -9,6 +10,7 @@ import {
   mudarOrcamento,
   novaChave,
   pedidoDoAnuncio,
+  trocarCriativo,
 } from '../criacaoNaMeta';
 import { capaEmArquivo } from '../midiaDoAnuncio';
 import { siteNormalizado, siteValido } from '../anuncioNovo';
@@ -29,6 +31,8 @@ vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
     adBudget: vi.fn(),
     updateAdBudget: vi.fn(),
     pausedAds: vi.fn(),
+    copyAd: vi.fn(),
+    swapAdCreative: vi.fn(),
   },
 }));
 
@@ -408,5 +412,115 @@ describe('Anúncios da Meta · ajudas do anúncio novo (#2198)', () => {
     expect(parseAmount('20,005')).toBeNull();
     expect(parseAmount('6.')).toBeNull();
     expect(parseAmount('1,2,3')).toBeNull();
+  });
+});
+
+// Cuidar do anúncio (#2778): duplicar e trocar, cada um com a sua chave de tentativa.
+describe('duplicar e trocar foto ou texto (#2778)', () => {
+  beforeEach(() => {
+    esquecerTentativas();
+    vi.clearAllMocks();
+    let count = 0;
+    vi.spyOn(crypto, 'randomUUID').mockImplementation(() => {
+      count += 1;
+      return `key-${count}`;
+    });
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  const CURRENT = {
+    kind: 'image',
+    url: 'https://x/foto.jpg',
+    source: 'current',
+  };
+  const NEW_PHOTO = {
+    kind: 'image',
+    hash: 'h2',
+    url: 'blob:x',
+    source: 'upload',
+  };
+
+  it('duplicates with a key and nothing else, and reads the copy budget for the screen', async () => {
+    CrmMetaAdsConnectionAPI.copyAd.mockResolvedValue({
+      data: { ad_id: '9', status: 'PAUSED', budget: { amount: '30.00' } },
+    });
+
+    const copy = await duplicarAnuncio('1');
+
+    expect(CrmMetaAdsConnectionAPI.copyAd).toHaveBeenCalledWith('1', {
+      idempotency_key: 'key-1',
+    });
+    expect(copy.budget).toMatchObject({ amount: 30, amount_cents: 3000 });
+  });
+
+  it('a copy with a new photo sends the photo; with the current photo, only the text', async () => {
+    CrmMetaAdsConnectionAPI.copyAd.mockResolvedValue({ data: { ad_id: '9' } });
+
+    await duplicarAnuncio('1', { media: NEW_PHOTO, text: 'Novo' });
+    await duplicarAnuncio('1', { media: CURRENT, text: 'Novo' });
+
+    expect(CrmMetaAdsConnectionAPI.copyAd.mock.calls).toEqual([
+      [
+        '1',
+        {
+          creative: { text: 'Novo', media: { kind: 'image', hash: 'h2' } },
+          idempotency_key: 'key-1',
+        },
+      ],
+      ['1', { creative: { text: 'Novo' }, idempotency_key: 'key-2' }],
+    ]);
+  });
+
+  it('keeps the key when Meta did not answer, so the retry does not copy twice', async () => {
+    CrmMetaAdsConnectionAPI.copyAd
+      .mockRejectedValueOnce(new Error('Network Error'))
+      .mockResolvedValueOnce({ data: { ad_id: '9' } });
+
+    await expect(duplicarAnuncio('1')).rejects.toThrow();
+    await duplicarAnuncio('1');
+
+    const keys = CrmMetaAdsConnectionAPI.copyAd.mock.calls.map(
+      ([, body]) => body.idempotency_key
+    );
+    expect(keys).toEqual(['key-1', 'key-1']);
+  });
+
+  it('an unconfirmed copy is recreated with the same key and recreate_unconfirmed (#2804)', async () => {
+    CrmMetaAdsConnectionAPI.copyAd
+      .mockRejectedValueOnce(
+        Object.assign(new Error('x'), {
+          response: {
+            status: 422,
+            data: { error: 'unconfirmed', nothing_created: false },
+          },
+        })
+      )
+      .mockResolvedValueOnce({ data: { ad_id: '9' } });
+
+    await expect(duplicarAnuncio('1')).rejects.toThrow();
+    await duplicarAnuncio('1', null, { recriar: true });
+
+    expect(CrmMetaAdsConnectionAPI.copyAd.mock.calls).toEqual([
+      ['1', { idempotency_key: 'key-1' }],
+      ['1', { idempotency_key: 'key-1', recreate_unconfirmed: true }],
+    ]);
+  });
+
+  it('swaps on the ad itself with the text and the new photo', async () => {
+    CrmMetaAdsConnectionAPI.swapAdCreative.mockResolvedValue({
+      data: { effective_status: 'PENDING_REVIEW' },
+    });
+
+    const result = await trocarCriativo('1', {
+      media: NEW_PHOTO,
+      text: 'Novo',
+    });
+
+    expect(CrmMetaAdsConnectionAPI.swapAdCreative).toHaveBeenCalledWith('1', {
+      text: 'Novo',
+      media: { kind: 'image', hash: 'h2' },
+      idempotency_key: 'key-1',
+    });
+    expect(result).toEqual({ effective_status: 'PENDING_REVIEW' });
   });
 });

@@ -49,7 +49,9 @@ module Autonomia::Automacao::Catalogo
                        # G15: a agente de IA que assume a conversa.
                        'agente_de_ia' => 'agente_de_ia',
                        # G3 (#2629): o "criar retorno".
-                       'para_do_retorno' => 'quem_recebe_retorno', 'envio_do_retorno' => 'envio_do_retorno' }.freeze
+                       'para_do_retorno' => 'quem_recebe_retorno', 'envio_do_retorno' => 'envio_do_retorno',
+                       # G31: o "decidir" que espera a próxima resposta e decide de novo.
+                       'de_novo' => 'de_novo' }.freeze
   # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2) e a
   # etapa do "card" (G4).
   PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email',
@@ -117,16 +119,17 @@ module Autonomia::Automacao::Catalogo
 
       { 'tipo' => tipo, 'grupo' => declarado.dig('nativos', tipo, 'grupo'), 'requer' => declarado.dig('nativos', tipo, 'requer'),
         'funil' => declarado.dig('nativos', tipo, 'funil'), 'frase' => chave('PASSOS', tipo),
-        'campos' => campos_nativos(forma, declarado.dig('nativos', tipo, 'peca')) }.compact
+        'campos' => campos_nativos(forma, declarado.dig('nativos', tipo, 'peca'), declarado.dig('nativos', tipo, 'rotulos')) }.compact
     end
   end
 
-  # `peca` no yml (a campanha, G14): uma peça só mostra o passo inteiro.
-  def campos_nativos(forma, peca_do_passo = nil)
+  # `peca` no yml (a campanha, G14): uma peça só mostra o passo inteiro. `rotulos` (G41): o rótulo próprio de um campo
+  # neste passo.
+  def campos_nativos(forma, peca_do_passo = nil, rotulos = nil)
     forma['properties'].except('id', 'tipo').map do |nome, propriedade|
       peca = peca_do_passo || PECAS_DO_ESQUEMA[propriedade['$ref'].to_s.split('/').last] || PECAS_SEM_DEFINICAO[nome]
       { 'nome' => nome, 'peca' => peca,
-        'obrigatorio' => forma['required'].include?(nome), 'rotulo' => chave('CAMPOS', nome) }
+        'obrigatorio' => forma['required'].include?(nome), 'rotulo' => chave('CAMPOS', rotulos.to_h[nome] || nome) }
     end
   end
 

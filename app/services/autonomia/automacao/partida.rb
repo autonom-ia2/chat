@@ -43,7 +43,7 @@ class Autonomia::Automacao::Partida
 
   def pode_comecar?
     @definicao.ativa && @definicao.versao_ativa && ::Autonomia::Automacao::Gatilhos.disponivel?(@chave_gatilho, @account) &&
-      @alvo.account_id == @account.id && !contexto.no_spam?
+      contexto.conta_id == @account.id && !contexto.no_spam?
   end
 
   def gatilho = @definicao.versao_ativa.receita['gatilho'].to_h
@@ -68,9 +68,12 @@ class Autonomia::Automacao::Partida
 
   # O gatilho aconteceu de novo com a execução ainda rodando (esperando, por exemplo): não abre outra, e o histórico da
   # que está aberta diz isso ao dono. Uma linha por execução: a mensagem nova numa conversa com a execução aberta é o
-  # caso comum, e não pode encher o histórico.
+  # caso comum, e não pode encher o histórico. A hora da repetição fica na execução, e o "esperar até" que espera por
+  # ela (`gatilho.repetiu`, lote 4) acorda agora.
   def ja_aberta
     execucao = execucao_aberta
+    execucao.update_columns(repetiu_em: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    ::Autonomia::Automacao::Despertador.acordar(execucao)
     return if ::Autonomia::Automacao::Registro.exists?(execucao: execucao, resultado: 'pulado', motivo: 'ja_aberta')
 
     ::Autonomia::Automacao::Registro.create!(account: @account, automacao: @definicao, execucao: execucao, passo: 'inicio',

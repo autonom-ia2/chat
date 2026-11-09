@@ -25,7 +25,8 @@ class Autonomia::Insurance::ResultadoDaCotacao
   # -> as execuções de `cotar_seguro` da conversa; só as da `faixa` (o produto) quando ela vem. Sem faixa, todas:
   # quem lê sem saber o produto fica com a mais nova, como antes de residencial correr ao lado de auto.
   def self.execucoes(conversation_id, faixa: nil)
-    runs = ::Autonomia::Agents::ToolRun.for_conversation(conversation_id).where(slug: cotacao.slug)
+    # #1430: só as nativas — uma ferramenta HTTP cadastrada com o mesmo slug não é cotação.
+    runs = ::Autonomia::Agents::ToolRun.nativas.for_conversation(conversation_id).where(slug: cotacao.slug)
     faixa.present? ? runs.where(faixa: faixa.to_s) : runs
   end
 

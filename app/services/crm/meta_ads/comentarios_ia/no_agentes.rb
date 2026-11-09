@@ -20,7 +20,8 @@ class Crm::MetaAds::ComentariosIa::NoAgentes
   RECEBE = %w[private price].freeze
   # Sem certeza suficiente o motor não decide: o comentário fica com o dono ("não cuidei").
   SEM_CERTEZA = 'sem_certeza'.freeze
-  # Era o caso do privado, mas ele não sai nesta rede (Facebook sem a flag, #2613): nada é publicado, fica com o dono.
+  # Era o caso do privado, mas ele não sai nesta rede (a Página sem a pages_messaging, #2307): nada é publicado, fica
+  # com o dono.
   SEM_PRIVADO_NA_REDE = 'no_private'.freeze
 
   def self.item(care)
@@ -78,7 +79,8 @@ class Crm::MetaAds::ComentariosIa::NoAgentes
   def comentarios
     payload = @painel.payload
     to_see = Array(payload[:to_see])
-    { status: payload[:status], results: payload[:results], no_privado: @no_privado.call,
+    # #2522: o status de cada rede, para a gaveta avisar qual faltou no anúncio nas duas redes.
+    { status: payload[:status], network_status: payload[:network_status], results: payload[:results], no_privado: @no_privado.call,
       esperando: to_see.reject { |linha| linha[:kind] == NAO_ERA_O_CASO },
       nao_respondo: to_see.select { |linha| linha[:kind] == NAO_ERA_O_CASO } + Array(payload[:hidden]).map { |linha| linha.merge(kind: 'hidden') } }
   end
@@ -138,8 +140,9 @@ class Crm::MetaAds::ComentariosIa::NoAgentes
     Crm::MetaAds::ComentariosIa::Foto.texto_para_ia(@care.account, network, rede[:post_id])
   end
 
+  # Pela caixa da rede (#2307): no Facebook, a Página com a `pages_messaging` concedida.
   def privado?(network)
-    Crm::MetaAds::ComentariosIa::Rede.privado_liberado?(@care.account, network)
+    Crm::MetaAds::ComentariosIa::Rede.privado_na_fonte?(@care.account, network, @fonte)
   end
 
   def caixa(inbox_id)

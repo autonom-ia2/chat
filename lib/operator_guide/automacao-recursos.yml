@@ -33,6 +33,13 @@ passo:
     motivo: Pôr e tirar etiqueta do contato uma a uma, sem trocar a lista inteira (#2461).
     acoes:
       PATCH contacts/:contact_id/labels/alterar: {}
+  contacts/notes:
+    motivo: >-
+      Deixar uma nota no contato, como a pessoa faz na tela de notas (G19, #2636). A nota sai no nome de quem ligou a
+      automação, como as outras ações; qual automação fez fica no registro dela e na auditoria. Mudar e apagar nota
+      fica fora: a automação não reescreve o que alguém anotou.
+    acoes:
+      POST contacts/:contact_id/notes: {}
   custom_attribute_definitions:
     motivo: >-
       Criar e alterar atributo de conversa, contato, empresa ou card (D13). Trocar a chave ou o modelo deixaria os
@@ -43,16 +50,29 @@ passo:
       PUT custom_attribute_definitions/:id: { proibe: [custom_attribute_definition.attribute_key, custom_attribute_definition.attribute_model] }
   contacts:
     motivo: >-
-      Alterar o contato e os atributos dele. A foto fica de fora (a plataforma buscaria uma URL de fora), e bloquear
-      também: corta a conversa com o cliente.
+      Criar e alterar o contato e os atributos dele (criar: G17, #2660 lote B). A foto fica de fora (a plataforma
+      buscaria uma URL de fora), e bloquear também: corta a conversa com o cliente. No criar, o `source_id` também:
+      solto, ele toma a identidade de outro contato na caixa.
     acoes:
+      POST contacts: { proibe: [avatar, avatar_url, blocked, source_id] }
       PATCH contacts/:id: { proibe: [avatar, avatar_url, blocked] }
       PUT contacts/:id: { proibe: [avatar, avatar_url, blocked] }
-  companies:
-    motivo: Alterar a empresa e os atributos dela. A foto fica de fora (a plataforma buscaria uma URL de fora).
+  contacts/customers:
+    motivo: Marcar o contato como cliente (#2660 lote B). Voltar a lead é DELETE, que fica para a trava do lote 3.
     acoes:
+      POST contacts/:contact_id/customer: {}
+  companies:
+    motivo: >-
+      Criar e alterar a empresa e os atributos dela (criar: #2660 lote B). A foto fica de fora (a plataforma buscaria
+      uma URL de fora).
+    acoes:
+      POST companies: { proibe: [avatar] }
       PATCH companies/:id: { proibe: [avatar] }
       PUT companies/:id: { proibe: [avatar] }
+  companies/contacts:
+    motivo: Pôr o contato na empresa (#2660 lote B). Tirar é DELETE, que fica para a trava do lote 3.
+    acoes:
+      POST companies/:company_id/contacts: {}
   conversations:
     motivo: Atributo, prioridade e status da conversa.
     acoes:
@@ -64,11 +84,38 @@ passo:
     acoes:
       POST conversations/:conversation_id/assignments: { proibe: [assignee_type] }
   crm/cards:
-    motivo: Alterar o card e movê-lo de etapa.
+    motivo: >-
+      Alterar o card, movê-lo de etapa, ligar e desligar o contato e a conversa dele, e restaurar o arquivado (#2660
+      lote B). O `force` do restaurar fica fora: ele restaura mesmo com outro card aberto do cliente e duplica.
     acoes:
       PATCH crm/cards/:id: {}
       PUT crm/cards/:id: {}
       POST crm/cards/:id/move: {}
+      POST crm/cards/:id/link_contact: {}
+      POST crm/cards/:id/unlink_contact: {}
+      POST crm/cards/:id/link_conversation: {}
+      POST crm/cards/:id/unlink_conversation: {}
+      POST crm/cards/:id/restore: { proibe: [force] }
+  crm/cards/restores:
+    motivo: Restaurar cards arquivados pelos ids (#2660 lote B). O `force` fica fora, como no restaurar de um card só.
+    acoes:
+      POST crm/cards/restore: { proibe: [force] }
+  crm/cards/contacts:
+    motivo: >-
+      Criar um contato e ligá-lo ao card (#2660 lote B). A rota pede a chave `Idempotency-Key`; o motor manda uma por
+      execução e pedido (AcoesDoMotor), e a repetição do passo devolve o mesmo contato em vez de criar outro.
+    acoes:
+      POST crm/cards/:card_id/contact: {}
+  crm/memoria_fatos:
+    motivo: >-
+      Aceitar a sugestão, destravar e marcar "não vale mais" num fato da memória do card (#2660 lote B). Pela automação,
+      aceitar e destravar dispensam a conferência da pessoa (destravar desfaz a trava que alguém pôs): quem monta a
+      automação é quem decide isso. Criar o fato fica fora: `valor` e `item_ref` vão crus para Crm::Memoria::Correcao,
+      e o formato não diz o tipo.
+    acoes:
+      POST crm/memoria/cards/:card_id/fatos/:id/aceitar: {}
+      POST crm/memoria/cards/:card_id/fatos/:id/destravar: {}
+      POST crm/memoria/cards/:card_id/fatos/:id/nao_vale_mais: {}
   crm/stages:
     motivo: >-
       Criar e alterar etapa do funil (D13; formato completo desde o #2460). Reordenar fica fora, inclusive a posição
@@ -99,6 +146,7 @@ fora:
       - crm/integration_tokens
       - crm/meta_ads_connections
       - crm/meta_ads_pagina
+      - crm/meta_ads_instagram
       - integrations/dyte
       - integrations/hooks
       - integrations/linear
@@ -128,7 +176,6 @@ fora:
       - crm/ai_suggestions
       - crm/stage_criteria
       - crm/memoria_chaves
-      - crm/memoria_fatos
       - crm/meta_ads_ai
       - crm/meta_ads_advisor_actions
       - crm/conversation_cards
@@ -211,6 +258,7 @@ fora:
       - crm/meta_ads_whatsapp_reports
       - crm/meta_ads_ad_management
       - crm/meta_ads_creation
+      - crm/meta_ads_ad_care
       - crm/meta_ads_cuidado
       - crm/meta_ads_lead_forms
       - crm/meta_ads_site_pages
@@ -278,8 +326,6 @@ fora:
       - crm/inbox_settings
       - crm/service_schedules
       - crm/metas
-      - crm/cards/contacts
-      - crm/cards/restores
       - crm/contacts/relacoes
       - relationships/configurations
       - relationships/values
@@ -295,20 +341,21 @@ fora:
       - branded_email_layouts
       - upload
       - ctwa_tracked_links
-      - contacts/notes
       - contacts/opt_outs
-      - contacts/customers
       - contacts/contact_inboxes
       - contact_inboxes
-      - companies/contacts
       - conversations/participants
       - conversations/passar_para
       - conversa_canal/pastas_do_email
       - autonomia/avisos
+      - autonomia/prospecting/audiences
+      - autonomia/prospecting/lead_audiences
       - autonomia/prospecting/lead_batches
       - autonomia/prospecting/lead_consent_refusals
+      - autonomia/prospecting/lead_queue_postponements
       - autonomia/prospecting/leads
       - autonomia/prospecting/lists
       - autonomia/prospecting/saved_presets
+      - autonomia/prospecting/search_interpretations
       - autonomia/prospecting/searches
       - autonomia/prospecting/settings

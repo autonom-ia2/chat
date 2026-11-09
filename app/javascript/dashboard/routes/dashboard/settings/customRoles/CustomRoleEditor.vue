@@ -20,6 +20,7 @@ import {
   MODULE_GROUPS,
   SENSITIVE_EXTRAS,
   hasAccess,
+  listedModules,
   modulesWithKeys,
   profilePermissions,
   setLevel,
@@ -181,11 +182,20 @@ const matches = module => {
   return texts.join(' ').toLowerCase().includes(query.value);
 };
 
-const visibleGroups = computed(() =>
+// Uma área atrás de flag (Ferramentas dos agentes, #1430) só aparece na conta que tem a flag.
+const hasFeature = flag =>
+  isFeatureEnabledOnAccount.value(currentAccountId.value, flag);
+const listedGroups = computed(() =>
   MODULE_GROUPS.map(group => ({
-    group,
-    modules: group.modules.filter(matches),
-  })).filter(item => item.modules.length)
+    ...group,
+    modules: listedModules(group.modules, hasFeature),
+  }))
+);
+
+const visibleGroups = computed(() =>
+  listedGroups.value
+    .map(group => ({ group, modules: group.modules.filter(matches) }))
+    .filter(item => item.modules.length)
 );
 
 const isGroupOpen = key => !!query.value || openGroups.value.includes(key);
@@ -205,7 +215,7 @@ const toggleRow = key => {
   openRows.value = toggleItem(openRows.value, key);
 };
 
-const selectLevel = (module, level) => {
+const applyLevel = (module, level) => {
   const wasOff = !hasAccess(module, permissions.value);
   permissions.value = setLevel(module, level, permissions.value);
   const opensExtras =
@@ -213,6 +223,25 @@ const selectLevel = (module, level) => {
   if (opensExtras?.length && !openRows.value.includes(module.key)) {
     openRows.value = [...openRows.value, module.key];
   }
+};
+
+// Área sensível (Ferramentas dos agentes, #1430): liberar pede confirmação, como os ajustes finos sensíveis.
+const selectLevel = (module, level) => {
+  const turningOn =
+    level !== LEVELS.NONE && !hasAccess(module, permissions.value);
+  if (!module.sensitive || !turningOn) return applyLevel(module, level);
+  return askConfirmation(
+    {
+      title: t('CUSTOM_ROLE.EDITOR.SENSITIVE_CONFIRM.TITLE', {
+        name: t(
+          `CUSTOM_ROLE.PERMISSIONS.${module.levels[level].toUpperCase()}`
+        ),
+      }),
+      description: t(`CUSTOM_ROLE.MATRIX.MODULES.${module.key}.CONFIRM`),
+      label: t('CUSTOM_ROLE.EDITOR.SENSITIVE_CONFIRM.CONFIRM'),
+    },
+    () => applyLevel(module, level)
+  );
 };
 
 const changeExtra = (module, key) => {
