@@ -112,16 +112,10 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
   def download
     return render json: { error: 'campaign_import.contacts_hidden' }, status: :forbidden unless policy(@campaign_import).download_file?(params[:file])
 
-    attachment = attachment_for(params[:file])
-    return render_bad_request('campaign_import.download_not_available') unless attachment&.attached?
+    file = CampaignImports::DownloadFile.new(@campaign_import, params[:file], Current.account_user)
+    return render_bad_request('campaign_import.download_not_available') unless file.available?
 
-    blob = attachment.blob
-    # The files this app wrote go out as Excel opens them (#2332); the person's own upload goes out as it came.
-    data = params[:file].to_s == 'original' ? attachment.download : CampaignImports::ExcelCsv.from_stored(attachment.download)
-    send_data data,
-              filename: blob.filename.to_s,
-              type: blob.content_type || 'application/octet-stream',
-              disposition: 'attachment'
+    send_data file.data, filename: file.filename, type: file.content_type, disposition: 'attachment'
   end
 
   private
@@ -207,15 +201,6 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
       default_country: 'BR',
       requested_batch_count: normalized_batch_count
     }
-  end
-
-  def attachment_for(kind)
-    {
-      'original' => @campaign_import.original_file,
-      'normalized_csv' => @campaign_import.normalized_csv,
-      'error_csv' => @campaign_import.error_csv,
-      'report_csv' => @campaign_import.report_csv
-    }[kind.to_s]
   end
 
   def render_audience_in_use(campaigns)

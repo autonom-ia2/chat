@@ -89,8 +89,10 @@ class Api::V1::Accounts::EmailCampaigns::ReportsController < Api::V1::Accounts::
     )
   end
 
+  # #2802: the search compares with the real name and e-mail and would tell whether a person is in the campaign; who
+  # does not read contacts searches nothing.
   def recipient_params
-    report_filter_params(%w[q status problem page])
+    report_filter_params(contact_data_hidden? ? %w[status problem page] : %w[q status problem page])
   end
 
   def issue_params

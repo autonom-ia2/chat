@@ -95,6 +95,19 @@ RSpec.describe 'Campaign import audience contact mask', :aggregate_failures, typ
       end
     end
 
+    it 'masks the names of the error file for a campaign_manage role without contact_view' do
+      audience.error_csv.attach(io: StringIO.new("row_number,name,phone_number,email,errors\n3,Bia Souza,+55 11 9****-4322,,duplicate\n"),
+                                filename: 'erros.csv', content_type: 'text/csv')
+
+      get path, params: { file: 'error_csv' }, headers: headers(with_role(%w[campaign_manage]))
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('Bia S.', 'duplicate')
+      expect(response.body).not_to include('Bia Souza')
+
+      get path, params: { file: 'error_csv' }, headers: headers(with_role(%w[campaign_manage contact_view]))
+      expect(response.body).to include('Bia Souza')
+    end
+
     it 'gives both files to a campaign_manage role with contact_view' do
       reader = with_role(%w[campaign_manage contact_view])
       %w[normalized_csv original].each do |file|
