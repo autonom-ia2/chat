@@ -18,11 +18,18 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # O 13 saiu com o lote 2 (#2679): o spec dele roda à risca, com o card ganho e a IA lendo o card.
     10 => ['Cliente bravo vai direto para a gerente',
            'G40 (esperar só a Fernanda), G41 (a instrução no resumir e avisar com a agente de IA atendendo), G28'],
-    11 => ['Indicação que vira presente', 'G4, G17, G18 (criar o contato e o card do amigo e agir no card dele), G1, G5, G12, G16'],
+    # #2675 (09/11): com a G18, o 11 ainda para no passo 3. O POST contacts cria o João, mas nenhum passo seguinte o alcança
+    # (o contato criado não é valor da receita), e a filha não lê a Maria para gravar "indicado por Maria" no card dele.
+    11 => ['Indicação que vira presente',
+           'G49 (passo 3: agir no contato que o passo criou e gravar quem indicou no card dele), G1, G4, G5, G12, G16, G17, G18'],
     12 => ['Visita que aconteceu decide o próximo passo', 'G5 (entrou em "Visita feita"), G2, G3, G11, G14, G25, G35'],
     14 => ['Documentação completa para emitir', 'G5 (entrou em "Documentação"), G1, G3, G13, G20'],
     15 => ['Cliente grande, atendimento de dono', 'G27 (card atualizado com valor acima de R$ 50 mil), G3, G5, G11, G12, G15, G35'],
-    16 => ['Reconquistar quem foi para o concorrente', 'G7 (todo dia 1º), G3, G4, G12, G14, G16, G18'],
+    # #2675 (09/11): o "Começa quando" monta (card.recorrente com fechado_entre_dias e o "Só se" no card.motivo_da_perda).
+    # Para no passo 2: a campanha só sai do conta.recorrente, e o gatilho do 16 roda em cada card; e no 3, a resposta à campanha.
+    16 => ['Reconquistar quem foi para o concorrente',
+           'G55 (passo 2: disparar a campanha da etiqueta num gatilho de card), G38 (passo 3: cada resposta à campanha), ' \
+           'G3, G4, G7, G12, G14, G16, G18'],
     17 => ['Vendedora de férias, cliente bem cuidado', 'G9 (troca de responsável), G7, G11, G15, G16, G23'],
     18 => ['Seleção de candidatos sem planilha', 'G4, G20 (ler o currículo e criar o card), G1, G5, G6, G12, G15, G25'],
     19 => ['Cliente que sumiu do WhatsApp', 'G43 (mandar ao número novo), G1, G2, G3, G8, G11, G19, G28, G34, G53'],

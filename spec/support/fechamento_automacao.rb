@@ -226,6 +226,13 @@ module FechamentoAutomacao::Lacunas
     # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7). Fica
     # com a Gatilhos, depois do lote 3 (#2689), que traz a porta da frente da conversa nova.
     'G43' => nil,
+    # Achadas no #2675 (09/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
+    # G49 (ex. 11, passo 3): agir no contato que um passo da execução criou (POST contacts), levando um valor da mãe
+    # ("indicado por Maria") ao card dele. Hoje o contato criado não é valor da receita, e a filha só lê o próprio alvo.
+    'G49' => nil,
+    # G55 (ex. 16, passo 2): disparar a campanha da etiqueta a partir de um gatilho de card. A campanha só sai do
+    # conta.recorrente (`campanha_so_sem_alvo`), e o "para cada card perdido" é o card.recorrente.
+    'G55' => nil,
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
     # (passo 2, "manda por e-mail o mesmo conteúdo").
     'G53' => nil,
