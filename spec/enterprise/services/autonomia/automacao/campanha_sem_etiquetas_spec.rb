@@ -62,6 +62,20 @@ RSpec.describe Autonomia::Automacao::CampanhaSemEtiquetas do
     expect(enviados).to contain_exactly('+5511900000051', '+5511900000052')
   end
 
+  # Exemplo 7, passo 2: "a mesma campanha para todos os outros contatos". O público é a conta inteira, menos quem tem a
+  # etiqueta excluída; quem recusou continua de fora e o contato de outra conta não entra.
+  it '"todos os contatos" manda para a conta inteira menos quem tem a etiqueta excluída', :aggregate_failures do
+    cliente('+5511900000081')
+    cliente('+5511900000082', 'clientes')
+    cliente('+5511900000083', 'ja_comprou')
+    cliente('+5511900000084').opt_out!(source: 'manual')
+    create(:contact, phone_number: '+5511900000085')
+
+    disparar([*described_class.todos, *described_class.audiencia([ja_comprou.id])])
+
+    expect(enviados).to contain_exactly('+5511900000081', '+5511900000082')
+  end
+
   # 🟡 da qualidade (#2686): a campanha ligada a um público importado tira o público do CampaignJourney::AudienceContacts,
   # sem passar pelas etiquetas. A exclusão vale ali também. O público importado é trocado por todos os contatos da
   # conta: a regra de quem entra pela planilha é do spec da jornada.

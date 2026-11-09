@@ -1170,6 +1170,12 @@
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.MODELO"
         },
         {
+          "nome": "publico",
+          "peca": "campanha",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PUBLICO"
+        },
+        {
           "nome": "etiquetas",
           "peca": "campanha",
           "obrigatorio": false,

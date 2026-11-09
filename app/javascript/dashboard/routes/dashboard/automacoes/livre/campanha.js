@@ -28,6 +28,21 @@ export const comFaz = (passo, faz) =>
     ? { ...passo, faz, etiquetas: passo.etiquetas || [] }
     : { id: passo.id, tipo: passo.tipo, faz };
 
+// Quem recebe (exemplo 7, passo 2): quem tem as etiquetas ou todos os contatos
+// da conta. "Todos" não leva etiqueta de público; o "menos quem tem" continua.
+export const PARA_TODOS = 'todos';
+
+export const paraTodos = passo => passo?.publico === PARA_TODOS;
+
+export const comPublico = (passo, publico) => {
+  if (publico === PARA_TODOS) {
+    const { etiquetas, ...resto } = passo;
+    return { ...resto, publico: PARA_TODOS };
+  }
+  const { publico: _, ...resto } = passo;
+  return { ...resto, etiquetas: passo.etiquetas || [] };
+};
+
 const escrito = texto => typeof texto === 'string' && texto.trim() !== '';
 
 // A caixa e o modelo contra o que a tela mostra: modelo que sumiu da caixa (ou
@@ -53,7 +68,7 @@ export const campanhaPronta = (passo, caixas) => {
     (passo.modelo.variaveis || []).every(partes =>
       (partes || []).some(escrito)
     ) &&
-    (passo.etiquetas || []).length > 0
+    (paraTodos(passo) || (passo.etiquetas || []).length > 0)
   );
 };
 

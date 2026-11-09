@@ -470,7 +470,7 @@
           "type": "object",
           "additionalProperties": false,
           "required": ["id", "tipo", "faz"],
-          "description": "Campanhas (G14). faz=disparar: monta a campanha de WhatsApp oficial com o modelo aprovado e a manda para quem tem as etiquetas, pela mesma Campanha da tela (quem pediu para não receber fica de fora). sem_etiquetas deixa de fora quem tem uma delas. Só em gatilho da conta (conta.recorrente): num gatilho de conversa, card ou contato, cada execução mandaria a mesma campanha de novo. As variáveis do modelo são texto fixo. faz=nao_receber: marca o contato do alvo como \"não recebe\" mensagens ativas e campanhas, como o botão do contato. Pôr ou tirar alguém de uma campanha é pôr ou tirar a etiqueta do público dela.",
+          "description": "Campanhas (G14). faz=disparar: monta a campanha de WhatsApp oficial com o modelo aprovado e a manda para quem tem as etiquetas, pela mesma Campanha da tela (quem pediu para não receber fica de fora). publico=todos manda para todos os contatos da conta, sem etiquetas de público. sem_etiquetas deixa de fora quem tem uma delas. Só em gatilho da conta (conta.recorrente): num gatilho de conversa, card ou contato, cada execução mandaria a mesma campanha de novo. As variáveis do modelo são texto fixo. faz=nao_receber: marca o contato do alvo como \"não recebe\" mensagens ativas e campanhas, como o botão do contato. Pôr ou tirar alguém de uma campanha é pôr ou tirar a etiqueta do público dela.",
           "properties": {
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "campanha" },
@@ -478,13 +478,22 @@
             "titulo": { "type": "string", "minLength": 1, "maxLength": 255 },
             "caixa_id": { "type": "integer", "minimum": 1 },
             "modelo": { "$ref": "#/definitions/modelo_whatsapp" },
+            "publico": { "enum": ["etiquetas", "todos"] },
             "etiquetas": { "$ref": "#/definitions/ids" },
             "sem_etiquetas": { "$ref": "#/definitions/ids" }
           },
           "allOf": [
             {
               "if": { "properties": { "faz": { "const": "disparar" } } },
-              "then": { "required": ["titulo", "caixa_id", "modelo", "etiquetas"], "properties": { "etiquetas": { "minItems": 1 } } }
+              "then": { "required": ["titulo", "caixa_id", "modelo"] }
+            },
+            {
+              "if": { "properties": { "faz": { "const": "disparar" }, "publico": { "const": "todos" } }, "required": ["publico"] },
+              "then": { "properties": { "etiquetas": { "maxItems": 0 } } },
+              "else": {
+                "if": { "properties": { "faz": { "const": "disparar" } } },
+                "then": { "required": ["etiquetas"], "properties": { "etiquetas": { "minItems": 1 } } }
+              }
             }
           ]
         },

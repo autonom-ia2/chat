@@ -207,16 +207,13 @@ module FechamentoAutomacao::Lacunas
     # A IA lê as notas internas da conversa (`le: notas`, #2679): exemplo 5, passo 1.
     'G36' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('notas') },
     # Achadas no exemplo 7 (auditoria dos termos, 07/11); G33 e G34 são do lote 3 (#2680), G35 e G36 da F7 (#2688).
-    # G37 e G38 fecham com o lote 5 (#2686); a G39 (data única) e o spec do exemplo 7 de ponta a ponta vêm depois, num
-    # PR de integração.
-    # G37: o público da campanha com exclusão ("todos os outros", "perguntou e não comprou"): o passo campanha aceita
-    # `sem_etiquetas`, e o módulo que tira esses contatos no envio está no Whatsapp::OneoffCampaignService.
-    'G37' => lambda {
-      campo_do_passo?('campanha', 'sem_etiquetas') &&
-        Whatsapp::OneoffCampaignService <= Autonomia::Automacao::CampanhaSemEtiquetas
-    },
-    # G38: o filtro "respondeu à campanha X" no gatilho da mensagem.
-    'G38' => -> { valor?('mensagem.campanha') },
+    # O lote 5 (#2686) traz as peças da G37 e da G38. Não fecha a G39 (data única, no #2758) nem traz o spec do exemplo 7
+    # de ponta a ponta, que vem no PR de integração: o exemplo 7 segue pendente até lá.
+    # G37: o público da campanha com exclusão ("todos os outros", "perguntou e não comprou"): o passo monta a campanha
+    # para todos os contatos menos quem tem a etiqueta excluída, e o envio de verdade deixa essa gente de fora.
+    'G37' => -> { FechamentoAutomacao::SondasDaCampanha.campanha_para_todos_os_outros? },
+    # G38: o filtro "respondeu à campanha X" no gatilho da mensagem casa só com a resposta àquela campanha.
+    'G38' => -> { FechamentoAutomacao::SondasDaCampanha.filtro_da_campanha_filtra? },
     # G39: o gatilho que roda uma vez, numa data ("a quinta antes da Black Friday"), não toda semana.
     'G39' => nil,
     # Do exemplo 10 (#2678), fora do lote 2: esperar só a pessoa que atende a conversa (a Fernanda), não a equipe inteira.

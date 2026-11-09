@@ -135,6 +135,7 @@
       "CAIXA_ID": "WhatsApp inbox",
       "ETIQUETAS": "Who has these labels",
       "SEM_ETIQUETAS": "Except who has these labels",
+      "PUBLICO": "Who gets it",
       "NAME": "Name",
       "EMAIL": "Email",
       "PHONE_NUMBER": "Phone",

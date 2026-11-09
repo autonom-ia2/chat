@@ -6,16 +6,22 @@
 # Vale nos dois caminhos do público: o das etiquetas (`label_audience_contacts`) e o da campanha ligada a um público
 # importado (`audience_contacts`, do CampaignJourney::AudienceContacts), que não passa pelas etiquetas.
 #
+# "Todos os contatos" (exemplo 7, passo 2: "a mesma campanha para todos os outros contatos"): o passo grava
+# `AllContacts` no lugar das `Label`, e o público passa a ser todos os contatos da conta, menos os excluídos.
+#
 # Só a lista de contatos muda. Quem pediu para não receber continua fora pela regra do envio de cada contato, que
-# segue igual. Campanha sem `ExcludeLabel` (toda campanha da tela) recebe o mesmo público de antes.
+# segue igual. Campanha sem `ExcludeLabel` nem `AllContacts` (toda campanha da tela) recebe o mesmo público de antes.
 module Autonomia::Automacao::CampanhaSemEtiquetas
   TIPO = 'ExcludeLabel'.freeze
+  TODOS = 'AllContacts'.freeze
 
   def self.audiencia(ids) = Array(ids).map { |id| { 'type' => TIPO, 'id' => id } }
 
+  def self.todos = [{ 'type' => TODOS }]
+
   private
 
-  def label_audience_contacts(audience_labels) = sem_etiquetas_excluidas(super)
+  def label_audience_contacts(audience_labels) = sem_etiquetas_excluidas(para_todos? ? campaign.account.contacts : super)
 
   def audience_contacts = sem_etiquetas_excluidas(super)
 
@@ -25,6 +31,8 @@ module Autonomia::Automacao::CampanhaSemEtiquetas
 
     contatos.where.not(id: campaign.account.contacts.tagged_with(excluidas, any: true).reselect(:id))
   end
+
+  def para_todos? = Array(campaign.audience).any? { |item| item['type'] == TODOS }
 
   def excluded_audience_labels
     ids = Array(campaign.audience).select { |item| item['type'] == TIPO }.pluck('id')

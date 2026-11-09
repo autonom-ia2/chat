@@ -92,6 +92,24 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
         expect(problemas(sem_modelo)).to include(frase(:campanha_modelo, nome: 'nao_existe'))
       end
 
+      # Exemplo 7, passo 2: "monta a mesma campanha para todos os outros contatos".
+      it 'aceita "todos os contatos" sem etiqueta de público, com as excluídas' do
+        sem = create(:label, account: account, title: 'comprou')
+        todos = disparar.except('etiquetas').merge('publico' => 'todos', 'sem_etiquetas' => [sem.id])
+
+        expect(problemas(todos)).to be_empty
+      end
+
+      it 'o esquema pede etiqueta de público, menos em "todos", que não leva etiqueta de público', :aggregate_failures do
+        valido = ->(passo) { Autonomia::Automacao::Receita.esquema_valido?({ 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [passo] }) }
+
+        expect(valido.call(disparar)).to be(true)
+        expect(valido.call(disparar.except('etiquetas'))).to be(false)
+        expect(valido.call(disparar.merge('publico' => 'etiquetas', 'etiquetas' => []))).to be(false)
+        expect(valido.call(disparar.except('etiquetas').merge('publico' => 'todos'))).to be(true)
+        expect(valido.call(disparar.merge('publico' => 'todos'))).to be(false)
+      end
+
       it 'recusa com as campanhas de WhatsApp desligadas na conta' do
         account.disable_features!('whatsapp_campaign')
 
@@ -123,7 +141,8 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
                                           audience: [{ 'type' => 'Label', 'id' => etiqueta.id }])
       expect(campanha.template_params).to include('name' => 'pre_black', 'language' => 'pt_BR',
                                                   'processed_params' => { 'body' => { '1' => 'na quinta' } })
-      expect(resultado.dados).to eq('campanha_id' => campanha.display_id, 'etiquetas' => [etiqueta.id], 'sem_etiquetas' => [])
+      expect(resultado.dados).to eq('campanha_id' => campanha.display_id, 'publico' => 'etiquetas', 'etiquetas' => [etiqueta.id],
+                                    'sem_etiquetas' => [])
       expect(Campaigns::TriggerOneoffCampaignJob).to have_been_enqueued.with(campanha)
     end
 
@@ -136,6 +155,29 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
 
       expect(account.campaigns.last.audience).to eq([{ 'type' => 'Label', 'id' => etiqueta.id }, { 'type' => 'ExcludeLabel', 'id' => sem.id }])
       expect(resultado.dados).to include('sem_etiquetas' => [sem.id])
+    end
+
+    # Exemplo 7, passo 2: "a mesma campanha para todos os outros contatos".
+    it '"todos os contatos" grava o público inteiro da conta, menos as excluídas, sem etiqueta de público' do
+      sem = create(:label, account: account, title: 'ja_comprou_antes')
+      passo = disparar.except('etiquetas').merge('publico' => 'todos', 'sem_etiquetas' => [sem.id])
+
+      resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: passo, alvo: account).executar
+
+      campanha = account.campaigns.last
+      expect(resultado.tipo).to eq(:ok)
+      expect(campanha.audience).to eq([{ 'type' => 'AllContacts' }, { 'type' => 'ExcludeLabel', 'id' => sem.id }])
+      expect(resultado.dados).to include('publico' => 'todos', 'etiquetas' => [], 'sem_etiquetas' => [sem.id])
+      expect(Campaigns::TriggerOneoffCampaignJob).to have_been_enqueued.with(campanha)
+    end
+
+    it 'etiquetas de público que sumiram pulam com o motivo, sem criar campanha' do
+      sumiu = disparar.merge('etiquetas' => [0])
+
+      resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: sumiu, alvo: account).executar
+
+      expect([resultado.tipo, resultado.motivo]).to eq([:pulado, 'campanha_sem_etiqueta'])
+      expect(account.campaigns).to be_empty
     end
 
     it 'o gatilho da conta é o de alvo Account (contrato com a G7), não o de conversa ou card' do

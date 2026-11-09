@@ -11,16 +11,20 @@ import {
   variaveisDoCorpo,
 } from '../modeloWhatsapp';
 import {
+  PARA_TODOS,
   caixasDaCampanha,
   comFaz,
+  comPublico,
   ehPropaganda,
   modelosDaCaixa,
+  paraTodos,
 } from '../campanha';
 
 // #2414 G14 (#2630) — o passo "campanha" inteiro: o que fazer e, para mandar,
 // a caixa do WhatsApp oficial, o modelo aprovado com o texto fixo de cada
-// variável, o nome e as etiquetas de quem recebe. O servidor confere tudo de
-// novo ao salvar, inclusive que o gatilho roda sozinho.
+// variável, o nome e quem recebe (as etiquetas ou todos os contatos, menos quem
+// tem as etiquetas excluídas). O servidor confere tudo de novo ao salvar,
+// inclusive que o gatilho roda sozinho.
 const props = defineProps({
   modelValue: { type: Object, required: true },
   etiquetas: { type: Array, default: () => [] },
@@ -33,6 +37,7 @@ const C = 'AUTOMACAO_LIVRE.CAMPANHA';
 const idFaz = useId();
 const idCaixa = useId();
 const idModelo = useId();
+const idPublico = useId();
 
 const passo = computed(() => props.modelValue);
 const disparar = computed(() => passo.value.faz === 'disparar');
@@ -44,6 +49,14 @@ const opcoesDoFaz = computed(() => [
   { value: 'disparar', label: t(`${C}.DISPARAR`) },
 ]);
 const escolherFaz = faz => emit('update:modelValue', comFaz(passo.value, faz));
+
+const todos = computed(() => paraTodos(passo.value));
+const opcoesDoPublico = computed(() => [
+  { value: 'etiquetas', label: t(`${C}.PUBLICO_ETIQUETAS`) },
+  { value: PARA_TODOS, label: t(`${C}.PUBLICO_TODOS`) },
+]);
+const escolherPublico = publico =>
+  emit('update:modelValue', comPublico(passo.value, publico));
 
 const todasAsCaixas = useMapGetter('inboxes/getInboxes');
 const caixas = computed(() => caixasDaCampanha(todasAsCaixas.value));
@@ -208,6 +221,23 @@ const mudarVariavel = (indice, texto) => {
       </template>
 
       <div class="flex flex-col gap-1.5">
+        <label :for="idPublico" class="text-sm font-medium text-n-slate-12">
+          {{ $t('AUTOMACAO_LIVRE.CAMPOS.PUBLICO') }}
+        </label>
+        <ChoiceSelect
+          data-campanha-publico
+          :model-value="todos ? PARA_TODOS : 'etiquetas'"
+          :trigger-id="idPublico"
+          :aria-label="$t('AUTOMACAO_LIVRE.CAMPOS.PUBLICO')"
+          :options="opcoesDoPublico"
+          @update:model-value="escolherPublico"
+        />
+        <p v-if="todos" class="mb-0 text-sm text-n-slate-11">
+          {{ $t(`${C}.PUBLICO_TODOS_DICA`) }}
+        </p>
+      </div>
+
+      <div v-if="!todos" class="flex flex-col gap-1.5">
         <LivreMarcar
           :rotulo="$t('AUTOMACAO_LIVRE.CAMPOS.ETIQUETAS')"
           :opcoes="etiquetas"

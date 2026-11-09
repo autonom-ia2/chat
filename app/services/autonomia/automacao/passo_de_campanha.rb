@@ -5,7 +5,9 @@
 #   mesmo job do agendador). Quem manda é o Whatsapp::OneoffCampaignService (e o overlay do EE): ele lê o público no
 #   disparo, relê a recusa de cada contato antes de mandar e manda o modelo. Nada sai por um caminho próprio daqui.
 #   `sem_etiquetas` (lote 5, #2681) deixa de fora quem tem uma delas, mesmo com etiqueta do público
-#   (Autonomia::Automacao::CampanhaSemEtiquetas).
+#   (Autonomia::Automacao::CampanhaSemEtiquetas). `publico: todos` (exemplo 7, passo 2: "a mesma campanha para todos os
+#   outros contatos") manda para todos os contatos da conta, sem etiqueta de público, menos os de `sem_etiquetas`. A
+#   recusa de cada contato (quem pediu para não receber) continua valendo no envio, como em toda campanha.
 #   Só em gatilho da conta (o recorrente da G7, `conta.recorrente`, alvo = a própria Account): num gatilho de
 #   conversa, card ou contato, cada execução criaria uma campanha
 #   nova para o mesmo público, o mesmo envio N vezes. A Receita recusa ao salvar; a receita que chegar assim mesmo pula
@@ -29,6 +31,7 @@ class Autonomia::Automacao::PassoDeCampanha
   PROVEDOR = 'whatsapp_cloud'.freeze
   FLAG_DA_CAMPANHA = :whatsapp_campaign
   ALVO_DA_CONTA = 'Account'.freeze
+  PARA_TODOS = 'todos'.freeze
 
   # O que a Receita confere ao salvar (#2630). Sem conta (o catálogo das receitas prontas), só o que não depende dela.
   def self.problemas_ao_salvar(passo, receita, conta:, account_user:)
@@ -145,16 +148,22 @@ class Autonomia::Automacao::PassoDeCampanha
   end
 
   def criar_e_disparar(caixa, template_params)
-    etiquetas = @conta.labels.where(id: @passo['etiquetas']).pluck(:id)
-    return pulado('campanha_sem_etiqueta') if etiquetas.empty?
+    todos = @passo['publico'] == PARA_TODOS
+    etiquetas = todos ? [] : @conta.labels.where(id: @passo['etiquetas']).pluck(:id)
+    return pulado('campanha_sem_etiqueta') if etiquetas.empty? && !todos
 
     sem = @conta.labels.where(id: @passo['sem_etiquetas']).pluck(:id)
-    campanha = criar_campanha(caixa, template_params, audiencia(etiquetas, sem))
+    campanha = criar_campanha(caixa, template_params, audiencia(todos, etiquetas, sem))
     ::Campaigns::TriggerOneoffCampaignJob.perform_later(campanha)
-    Resultado.new(tipo: :ok, motivo: nil, dados: { 'campanha_id' => campanha.display_id, 'etiquetas' => etiquetas, 'sem_etiquetas' => sem })
+    disparada(campanha, todos ? PARA_TODOS : 'etiquetas', etiquetas, sem)
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.info("[automacao][campanha] recusada automacao=#{@automacao.id} erro=#{e.record.errors.attribute_names.join(',')}")
     pulado('campanha_recusada')
+  end
+
+  def disparada(campanha, publico, etiquetas, sem)
+    Resultado.new(tipo: :ok, motivo: nil,
+                  dados: { 'campanha_id' => campanha.display_id, 'publico' => publico, 'etiquetas' => etiquetas, 'sem_etiquetas' => sem })
   end
 
   def criar_campanha(caixa, template_params, audiencia)
@@ -164,9 +173,11 @@ class Autonomia::Automacao::PassoDeCampanha
     )
   end
 
-  # As etiquetas do público e as excluídas (lote 5, #2681: ExcludeLabel, tirado pelo CampanhaSemEtiquetas no envio).
-  def audiencia(etiquetas, sem)
-    etiquetas.map { |id| { 'type' => 'Label', 'id' => id } } + ::Autonomia::Automacao::CampanhaSemEtiquetas.audiencia(sem)
+  # As etiquetas do público (ou todos os contatos) e as excluídas (lote 5, #2681: ExcludeLabel e AllContacts, lidos pelo
+  # CampanhaSemEtiquetas no envio).
+  def audiencia(todos, etiquetas, sem)
+    publico = todos ? ::Autonomia::Automacao::CampanhaSemEtiquetas.todos : etiquetas.map { |id| { 'type' => 'Label', 'id' => id } }
+    publico + ::Autonomia::Automacao::CampanhaSemEtiquetas.audiencia(sem)
   end
 
   def nao_receber
