@@ -1137,6 +1137,7 @@ pt_BR:
         campo_de_fora: 'Gatilho: o campo %{campo} não é um campo de data desta conta.'
         faixa_invertida: 'Gatilho: em "fechado entre", o primeiro número (%{de}) é maior que o segundo (%{ate}). Assim não pega nenhum card.'
         passo_pede_alvo: 'Passo %{passo}: este gatilho roda na conta, sem conversa, card ou contato. Aqui só cabem esperar e disparar campanha.'
+        data_passada: 'Gatilho: a data %{data} já passou. Escolha uma data a partir de hoje, numa hora que ainda vai chegar.'
         selecao_vazia: 'Gatilho: escolha pelo menos uma condição de quais cards ou contatos ele pega. Sem nenhuma, pegaria a conta inteira.'
         selecao_de_outro_alvo: 'Gatilho: estas condições não valem aqui: %{condicoes}.'
         responsavel_de_fora: 'Gatilho: o responsável escolhido não é desta conta.'

@@ -314,6 +314,12 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
         },
         {
+          "nome": "data",
+          "peca": "data",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DATA"
+        },
+        {
           "nome": "hora",
           "peca": "hora",
           "obrigatorio": true,
@@ -353,6 +359,12 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
         },
         {
+          "nome": "data",
+          "peca": "data",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DATA"
+        },
+        {
           "nome": "hora",
           "peca": "hora",
           "obrigatorio": true,
@@ -390,6 +402,12 @@
           "peca": "dia_do_mes",
           "obrigatorio": false,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
+        },
+        {
+          "nome": "data",
+          "peca": "data",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DATA"
         },
         {
           "nome": "hora",
