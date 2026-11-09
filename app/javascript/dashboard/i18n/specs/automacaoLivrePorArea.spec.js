@@ -39,6 +39,7 @@ const BLOCOS_POR_ARQUIVO = {
     'SELETOR',
     'ALTERAR_PAINEL',
     'LIGAR',
+    'CRIADO',
   ],
   'automacaoLivreGatilhos.json': [
     'GATILHOS',
