@@ -25,6 +25,15 @@ module Autonomia::Automacao::CampanhaSemEtiquetas
 
   def self.todos = [{ 'type' => TODOS }]
 
+  def self.ids_excluidos(campaign) = Array(campaign.audience).select { |item| item['type'] == TIPO }.map { |item| item['id'].to_i }.uniq
+
+  # As etiquetas excluídas da campanha que não existem mais. Com alguma, a campanha não sai (o `perform` daqui) e não
+  # pode ser retomada (CampaignPauses::ResumeReadiness): a etiqueta recriada é outra, então a exclusão não volta.
+  def self.etiquetas_apagadas(campaign)
+    ids = ids_excluidos(campaign)
+    ids.empty? ? [] : ids - campaign.account.labels.where(id: ids).pluck(:id)
+  end
+
   def perform
     return super if campaign.completed? || excluidas_apagadas.empty?
 
@@ -48,7 +57,7 @@ module Autonomia::Automacao::CampanhaSemEtiquetas
 
   def para_todos? = Array(campaign.audience).any? { |item| item['type'] == TODOS }
 
-  def ids_excluidos = Array(campaign.audience).select { |item| item['type'] == TIPO }.map { |item| item['id'].to_i }.uniq
+  def ids_excluidos = Autonomia::Automacao::CampanhaSemEtiquetas.ids_excluidos(campaign)
 
   # Lidas uma vez por envio: o `perform` confere que todas existem antes de montar o público.
   def etiquetas_excluidas

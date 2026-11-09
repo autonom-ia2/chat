@@ -737,7 +737,8 @@
       "NOVA_DATA": "Create the campaign again with a later date.",
       "AGUARDE_PRODUTO": "When the product is back in the catalog, tap Resume. Or create the campaign again with another product.",
       "FALE_COM_SUPORTE": "Contact support to enable catalog products again, then tap Resume.",
-      "CONECTE_CATALOGO": "Connect the catalog again on WhatsApp and tap Resume."
+      "CONECTE_CATALOGO": "Connect the catalog again on WhatsApp and tap Resume.",
+      "EDITE_AUTOMACAO": "The campaign will not go out anymore. Edit the automation, choose the labels again and it creates a new campaign."
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · needs reconnecting",

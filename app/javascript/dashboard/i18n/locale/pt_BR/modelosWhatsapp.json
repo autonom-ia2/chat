@@ -737,7 +737,8 @@
       "NOVA_DATA": "Crie a campanha de novo com uma data à frente.",
       "AGUARDE_PRODUTO": "Quando o produto voltar ao catálogo, toque em Retomar. Ou crie a campanha de novo com outro produto.",
       "FALE_COM_SUPORTE": "Fale com o suporte para liberar os produtos do catálogo e toque em Retomar.",
-      "CONECTE_CATALOGO": "Conecte o catálogo de novo no WhatsApp e toque em Retomar."
+      "CONECTE_CATALOGO": "Conecte o catálogo de novo no WhatsApp e toque em Retomar.",
+      "EDITE_AUTOMACAO": "Esta campanha não sai mais. Edite a automação e escolha as etiquetas de novo: ela cria uma campanha nova."
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · precisa reconectar",
