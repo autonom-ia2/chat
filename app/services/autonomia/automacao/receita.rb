@@ -234,8 +234,9 @@ class Autonomia::Automacao::Receita
     ::Autonomia::Automacao::ConversaNova.caixa_id(@receita).present? && caminho.to_s.start_with?('conversa.')
   end
 
-  # A conferência do caminho que vai para um texto (mensagem, aviso, e-mail, retorno).
-  def no_texto(id) = ->(caminho) { problemas_do_caminho(id, caminho, onde: :texto) }
+  # A conferência do caminho que vai para um texto (mensagem, aviso, e-mail, retorno). Quem confere também onde a ação
+  # grava (o destino do "gravar" do webhook) passa `onde: :caminho`: o card da conversa não recebe (#2716).
+  def no_texto(id) = ->(caminho, onde = :texto) { problemas_do_caminho(id, caminho, onde: onde) }
 
   def mensagem_no_gatilho?(no_gatilho) = no_gatilho && @receita.dig('gatilho', 'tipo') == ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM
 

@@ -1,4 +1,6 @@
 import {
+  BASES_DA_RESPOSTA,
+  basesDaResposta,
   corpoDasLinhas,
   corpoPronto,
   enderecoPronto,
@@ -15,6 +17,19 @@ const t = (chave, valores) =>
   valores ? `${chave}(${Object.values(valores).join(',')})` : chave;
 
 describe('webhook', () => {
+  it('na automação de conversa, a resposta não grava no card dela (#2716)', () => {
+    const gatilhos = [
+      { tipo: 'conversa.resolvida', alvo: 'Conversation' },
+      { tipo: 'card.ganho', alvo: 'Crm::Card' },
+    ];
+    expect(
+      basesDaResposta({ gatilhos, gatilho: 'conversa.resolvida' })
+    ).toEqual(['contato.atributos', 'conversa.atributos']);
+    expect(basesDaResposta({ gatilhos, gatilho: 'card.ganho' })).toEqual(
+      BASES_DA_RESPOSTA
+    );
+  });
+
   it('aceita só endereço https com host', () => {
     expect(enderecoPronto('https://cobranca.exemplo.com/api')).toBe(true);
     expect(enderecoPronto('http://cobranca.exemplo.com/api')).toBe(false);

@@ -24,7 +24,8 @@ class Autonomia::Automacao::PassoDeWebhook
   }.freeze
 
   # Ao salvar: o motor de gatilhos ligado, quem salva pode mandar dados para fora, o endereço, os valores lidos no corpo
-  # (pelo bloco de quem confere a receita) e cada destino um atributo que a conta tem, num lugar que o gatilho alcança.
+  # (pelo bloco de quem confere a receita) e cada destino um atributo que a conta tem, num lugar que o gatilho alcança
+  # (o mesmo bloco, com `:caminho`: é onde a ação grava, e na automação de conversa o card dela é só para ler, #2716).
   # `account_user` nil (o catálogo, a leitura sem pessoa) não confere a pessoa.
   def self.problemas_ao_salvar(conta, passo, account_user, &)
     id = passo['id']
@@ -62,7 +63,7 @@ class Autonomia::Automacao::PassoDeWebhook
     valido = DESTINOS.keys.any? { |prefixo| destino.to_s.start_with?("#{prefixo}.") }
     return [frase(:webhook_destino_invalido, passo: id, destino: destino)] unless valido
 
-    yield destino
+    yield destino, :caminho
   end
 
   def self.frase(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", **valores)

@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
-import { BASES_DA_RESPOSTA } from '../webhook';
+import { basesDaResposta } from '../webhook';
 
 // G13 (#2670) — o que guardar da resposta do outro sistema: o nome da
 // informação na resposta e o campo personalizado onde ela fica. Só os lugares
@@ -24,9 +24,11 @@ const LIMITE = 10;
 
 const lista = computed(() => props.modelValue || []);
 
+const bases = computed(() => basesDaResposta(props.catalogo));
+
 const destinos = computed(() =>
   (props.catalogo?.valores || [])
-    .filter(item => BASES_DA_RESPOSTA.includes(item.caminho) && item.atributos)
+    .filter(item => bases.value.includes(item.caminho) && item.atributos)
     .flatMap(item =>
       props.atributosDo(item.atributos).map(atributo => ({
         value: `${item.caminho}.${atributo.attribute_key}`,

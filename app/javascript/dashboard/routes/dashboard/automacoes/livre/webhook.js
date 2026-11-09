@@ -11,6 +11,18 @@ export const BASES_DA_RESPOSTA = [
   'conversa.atributos',
 ];
 
+// Os lugares do catálogo já filtrado pelo gatilho (doAlvoDoGatilho). Na
+// automação de conversa, o card dela é só para ler (#2716): a resposta não grava
+// nele, e o servidor recusa (card_da_conversa_so_le).
+export const basesDaResposta = catalogo => {
+  const alvo = catalogo?.gatilhos?.find(
+    item => item.tipo === catalogo.gatilho
+  )?.alvo;
+  return alvo === 'Conversation'
+    ? BASES_DA_RESPOSTA.filter(base => base !== 'card.atributos')
+    : BASES_DA_RESPOSTA;
+};
+
 // O host do endereço, ou '' quando ainda não é um endereço.
 export const hostDoEndereco = url => {
   try {

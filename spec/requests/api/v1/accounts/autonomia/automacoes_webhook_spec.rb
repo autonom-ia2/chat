@@ -113,5 +113,19 @@ RSpec.describe 'Automação livre · passo webhook (G13)', type: :request do
       expect(problemas('https://hooks.exemplo.com/x', gravar: [{ 'chave' => 'id', 'destino' => 'contato.atributos.nao_existe' }])).not_to be_empty
       expect(problemas('https://hooks.exemplo.com/x', gravar: [{ 'chave' => 'id', 'destino' => 'card.atributos.numero' }])).not_to be_empty
     end
+
+    # #2716: a automação de conversa lê o card dela, mas não grava nele. Sem a recusa, a gravação sumiria em silêncio
+    # (o Contexto não dá card ao alvo conversa).
+    it 'na automação de conversa, a resposta não grava no card dela; na de card, grava', :aggregate_failures do
+      create(:custom_attribute_definition, account: account, attribute_model: 'card_attribute', attribute_key: 'numero',
+                                           attribute_display_name: 'numero', attribute_display_type: 'text')
+      gravar = [{ 'chave' => 'id', 'destino' => 'card.atributos.numero' }]
+      frase = I18n.t('autonomia.automacao.receita.card_da_conversa_so_le', passo: 'w1', caminho: 'card.atributos.numero')
+
+      expect(problemas('https://hooks.exemplo.com/x', gravar: gravar)).to eq([frase])
+      passo = { 'id' => 'w1', 'tipo' => 'webhook', 'descricao' => 'Mandar', 'url' => 'https://hooks.exemplo.com/x', 'gravar' => gravar }
+      receita = { 'gatilho' => { 'tipo' => 'card.ganho' }, 'passos' => [passo] }
+      expect(Autonomia::Automacao::Receita.new(receita, conta: account, account_user: nil).problemas).not_to include(frase)
+    end
   end
 end
