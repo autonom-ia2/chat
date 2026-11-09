@@ -133,8 +133,9 @@ describe('valor que pede permissão', () => {
     expect(wrapper.find('[data-opcoes]').text()).not.toContain('VALOR');
   });
 
-  // #2780 (Rodrigo, 09/11): no gatilho de conversa, o valor da venda só decide.
-  describe('no gatilho de conversa, só para decidir', () => {
+  // #2780 (Rodrigo, 09/11, decisão 3): o valor da venda só decide, em
+  // qualquer gatilho.
+  describe('só para decidir, em qualquer gatilho', () => {
     const comGatilhos = {
       ...com,
       gatilhos: [
@@ -160,8 +161,13 @@ describe('valor que pede permissão', () => {
       ).toEqual(['TITULO', 'VALOR']);
     });
 
-    it('no gatilho de card, o texto segue oferecendo o valor', () => {
-      expect(rotulos(doCard)).toEqual(['TITULO', 'VALOR']);
+    it('no gatilho de card também: o texto não oferece o valor; a condição, sim', () => {
+      expect(rotulos(doCard)).toEqual(['TITULO']);
+      expect(
+        opcoesDosValores(doCard, () => [], t, null, false, true).map(
+          item => item.label
+        )
+      ).toEqual(['TITULO', 'VALOR']);
     });
 
     it('a condição nova oferece o valor no gatilho de conversa', () => {

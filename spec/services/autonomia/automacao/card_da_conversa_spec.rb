@@ -170,6 +170,17 @@ RSpec.describe 'Automação livre: o card da conversa e o anexo da mensagem', :a
         expect(problemas(gravar('a1', valor))).to include(so_decide('a1'))
         expect(problemas(gravar('a2', { '$texto' => ['R$ ', valor] }))).to include(so_decide('a2'))
       end
+
+      it 'na automação de card também: aceita na condição e recusa no texto da mensagem', :aggregate_failures do
+        de_card = lambda do |passo|
+          receita = { 'gatilho' => { 'tipo' => 'card.ganho' }, 'passos' => [passo] }
+          Autonomia::Automacao::Receita.new(receita, conta: account, account_user: admin.account_users.first).problemas
+        end
+        se = { 'id' => 's1', 'tipo' => 'se', 'condicao' => caro, 'entao' => [mensagem_passo('m2', 'Cliente especial')], 'senao' => [] }
+
+        expect(de_card.call(se)).not_to include(so_decide('s1'), so_decide('m2'))
+        expect(de_card.call(mensagem_passo('m1', 'Valor: ', valor))).to include(so_decide('m1'))
+      end
     end
 
     it 'aceita "tem anexo" só com uma das opções', :aggregate_failures do
@@ -218,7 +229,7 @@ RSpec.describe 'Automação livre: o card da conversa e o anexo da mensagem', :a
 
     it 'o valor calculado do corpo também não o escreve, e a condição o lê', :aggregate_failures do
       card(documentacao).update!(value_cents: 250_000)
-      contexto = Autonomia::Automacao::Contexto.de(conversa, gatilho: 'mensagem.criada')
+      contexto = Autonomia::Automacao::Contexto.de(conversa)
       valores = Autonomia::Automacao::Valores.new(alvo: contexto, quem: admin)
       folha = { 'custom_attributes' => { 'valor' => { '$valor' => 'card.valor' } } }
       corpo = Autonomia::Automacao::Corpo.new(folha, valores: valores, conta: account)
@@ -228,15 +239,15 @@ RSpec.describe 'Automação livre: o card da conversa e o anexo da mensagem', :a
       expect(valores.ler('card.valor')).to eq(2500)
     end
 
-    # A decisão vem do tipo do gatilho da receita, como no salvar, e não do objeto em que a execução roda: o ensaio de
-    # uma automação de card roda numa conversa e escreve o valor como a execução no card escreveria.
-    it 'decide pelo tipo do gatilho, não pelo alvo', :aggregate_failures do
-      card(documentacao).update!(value_cents: 250_000)
-      no_gatilho = ->(gatilho) { Autonomia::Automacao::Contexto.de(conversa, gatilho: gatilho) }
-      escrito = ->(gatilho) { Autonomia::Automacao::Valores.new(alvo: no_gatilho.call(gatilho), quem: admin).ler_para_escrever('card.valor') }
+    # Decisão 3 do Rodrigo (09/11): vale em qualquer automação, não só na de conversa. No card, quem ligou com a chave
+    # lê o valor para decidir, mas não o escreve.
+    it 'na automação de card, quem tem a chave lê o valor para decidir e não o escreve', :aggregate_failures do
+      do_card = card(documentacao)
+      do_card.update!(value_cents: 250_000)
+      valores = Autonomia::Automacao::Valores.new(alvo: do_card, quem: admin)
 
-      expect(escrito.call('mensagem.criada')).to be_nil
-      expect(escrito.call('card.ganho')).to eq(2500)
+      expect(valores.ler('card.valor')).to eq(2500)
+      expect(valores.ler_para_escrever('card.valor')).to be_nil
     end
   end
 

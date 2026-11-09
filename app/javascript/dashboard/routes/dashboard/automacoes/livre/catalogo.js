@@ -180,7 +180,7 @@ export const comPermissoes = (dados, podeLer) => {
 // abre; e "o cliente respondeu" sai do contato, então vale onde há contato.
 // #2716: o card da conversa (gatilho de conversa) só para quem tem a chave de
 // funis (`podeLerCard`), a mesma pergunta que o salvar faz.
-// #2780 (Rodrigo, 09/11): no gatilho de conversa, o valor protegido
+// #2780 (Rodrigo, 09/11): em qualquer gatilho, o valor protegido
 // (`permissao`, como o valor do card) só decide: vem marcado
 // `so_para_decidir`, e o texto e o corpo não o oferecem; o "Só se" e as
 // condições, sim.
@@ -203,7 +203,7 @@ export const doAlvoDoGatilho = (
     (!item.base ||
       bases.includes(item.base) ||
       (item.caminho === RESPOSTA_DO_CONTATO && bases.includes('contato')));
-  const soDecide = item => alvo === 'Conversation' && Boolean(item.permissao);
+  const soDecide = item => Boolean(item.permissao);
   return {
     ...dados,
     gatilho: tipoDoGatilho,

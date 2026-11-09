@@ -56,6 +56,21 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
     lista.include?(I18n.t('autonomia.automacao.receita.valor_de_venda', passo: passo, caminho: 'card.valor'))
   end
 
+  # #2780 (decisão 3 do Rodrigo, 09/11): o valor só decide, em qualquer automação; no texto e no corpo, o salvar recusa
+  # para todos, com ou sem a chave.
+  def so_decide?(lista, passo)
+    lista.include?(I18n.t('autonomia.automacao.receita.valor_protegido_so_decide', passo: passo, caminho: 'card.valor'))
+  end
+
+  # A versão gravada antes da regra, com o valor num texto ou num corpo: o salvar de hoje a recusaria.
+  def versao_antiga(quem, passos)
+    definicao = create(:autonomia_automacao, account: account, ligada_por: quem)
+    versao = definicao.versoes.new(account: account, numero: 1, autor: quem, digest: SecureRandom.hex(32), receita: receita(passos))
+    versao.save!(validate: false)
+    definicao.update!(versao_ativa: versao, ativa: true)
+    definicao
+  end
+
   def registros(execucao)
     Autonomia::Automacao::Registro.where(execucao: execucao).order(:id).pluck(:passo, :resultado, :motivo)
   end
@@ -79,37 +94,38 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
     let(:com_chave) { pessoa_com(base + %w[sales_value_view]) }
     let(:no_texto) { [mensagem_passo('m1', 'Valor: ', valor)] }
 
-    it 'recusa ler o valor no texto, na condição, no filtro do gatilho e no caminho da ação para quem não tem a chave' do
+    it 'recusa ler o valor na condição, no filtro do gatilho e no caminho da ação para quem não tem a chave' do
       no_filtro = { 'campo' => valor, 'op' => 'maior', 'valor' => 0 }
       no_caminho = prioridade_passo('a1', conversa_id: valor)
 
-      expect(recusa?(problemas(no_texto, sem_chave), 'm1')).to be(true)
       expect(recusa?(problemas([caro], sem_chave), 's1')).to be(true)
-      expect(recusa?(problemas(no_texto, sem_chave, gatilho.merge('filtros' => [no_filtro])), 'gatilho')).to be(true)
+      expect(recusa?(problemas([caro], sem_chave, gatilho.merge('filtros' => [no_filtro])), 'gatilho')).to be(true)
       expect(recusa?(problemas([no_caminho], sem_chave), 'a1')).to be(true)
     end
 
-    it 'recusa o valor calculado do corpo da ação (G16) para quem não tem a chave, e deixa quem tem' do
-      expect([recusa?(problemas([no_corpo], sem_chave), 'a1'), recusa?(problemas([no_corpo], com_chave), 'a1')]).to eq([true, false])
+    it 'recusa o valor no texto e no corpo calculado da ação (G16) para todos, com ou sem a chave (#2780)' do
+      [sem_chave, com_chave, admin].each do |quem|
+        expect([so_decide?(problemas(no_texto, quem), 'm1'), so_decide?(problemas([no_corpo], quem), 'a1')]).to eq([true, true])
+      end
     end
 
     it 'deixa quem tem a chave, o administrador e o agente sem função' do
       sem_funcao = create(:user, account: account, role: :agent)
 
-      [com_chave, admin, sem_funcao].each { |quem| expect(recusa?(problemas(no_texto, quem), 'm1')).to be(false) }
+      [com_chave, admin, sem_funcao].each { |quem| expect(recusa?(problemas([caro], quem), 's1')).to be(false) }
     end
 
     it 'o dono do card sem a chave também não lê o valor pela automação (ve?, não ve_o_card?)' do
       card.update!(owner: sem_chave)
 
-      expect(recusa?(problemas(no_texto, sem_chave), 'm1')).to be(true)
+      expect(recusa?(problemas([caro], sem_chave), 's1')).to be(true)
     end
 
     it 'o salvar da versão confere o autor' do
       definicao = create(:autonomia_automacao, account: account, ligada_por: sem_chave)
 
-      expect { definicao.salvar_versao!(receita: receita(no_texto), autor: sem_chave) }.to raise_error(ActiveRecord::RecordInvalid, /card\.valor/)
-      expect { definicao.salvar_versao!(receita: receita(no_texto), autor: com_chave) }.not_to raise_error
+      expect { definicao.salvar_versao!(receita: receita([caro]), autor: sem_chave) }.to raise_error(ActiveRecord::RecordInvalid, /card\.valor/)
+      expect { definicao.salvar_versao!(receita: receita([caro]), autor: com_chave) }.not_to raise_error
     end
 
     it 'religar ("assumir e religar") confere quem liga' do
@@ -157,41 +173,42 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
       expect([conversa.reload.priority, registros(execucao).map(&:first)]).to eq(['high', %w[s1 a1]])
     end
 
-    it 'quem ligou perdeu a chave: a condição vê vazio e a mensagem pula, sem escrever nem mandar o valor' do
-      definicao = automacao_ligada(account, dono, [caro, mensagem_passo('m1', 'Valor: ', valor)], gatilho: gatilho)
+    it 'quem ligou perdeu a chave: a condição vê vazio' do
+      definicao = automacao_ligada(account, dono, [caro], gatilho: gatilho)
       tirar_a_chave
 
       execucao = rodar(definicao)
 
       expect(conversa.reload.priority).to eq('low')
-      expect(registros(execucao)).to eq([['s1', 'ok', nil], ['a2', 'ok', nil], %w[m1 pulado faltou_valor]])
+      expect(registros(execucao)).to eq([['s1', 'ok', nil], ['a2', 'ok', nil]])
+    end
+
+    # #2780: a versão antiga com o valor num texto, mesmo de quem tem a chave, não o escreve nem manda.
+    it 'versão antiga com a chave: a condição lê o valor e a mensagem com ele pula, sem mandar o valor' do
+      execucao = rodar(versao_antiga(dono, [caro, mensagem_passo('m1', 'Valor: ', valor)]))
+
+      expect(conversa.reload.priority).to eq('high')
+      expect(registros(execucao)).to eq([['s1', 'ok', nil], ['a1', 'ok', nil], %w[m1 pulado faltou_valor]])
       expect(conversa.messages.where('content LIKE ? OR content LIKE ?', '%2500%', 'Valor:%')).to be_empty
     end
 
-    # G2 (#2601): o assunto do e-mail lê com as permissões de quem ligou, como o texto da mensagem.
-    it 'quem ligou perdeu a chave: o e-mail com o valor no assunto pula, sem abrir conversa nem mandar o valor' do
+    # G2 (#2601) e #2780: o assunto do e-mail não escreve o valor, como o texto da mensagem.
+    it 'versão antiga com a chave: o e-mail com o valor no assunto pula, sem abrir conversa nem mandar o valor' do
       caixa = create(:channel_email, account: account).inbox
       create(:inbox_member, user: dono, inbox: caixa)
       conversa.contact.update!(email: 'cliente@exemplo.com')
       email = { 'id' => 'm1', 'tipo' => 'email', 'caixa_id' => caixa.id, 'assunto' => ['Valor: ', valor], 'texto' => ['Oi'] }
-      definicao = automacao_ligada(account, dono, [email], gatilho: gatilho)
-      tirar_a_chave
 
-      execucao = rodar(definicao)
+      execucao = rodar(versao_antiga(dono, [email]))
 
       expect(registros(execucao)).to eq([%w[m1 pulado faltou_valor]])
       expect(caixa.conversations).to be_empty
     end
 
-    it 'valor calculado do corpo (G16): com a chave grava; sem ela, a ação pula sem gravar o valor' do
-      com = rodar(automacao_ligada(account, dono, [no_corpo], gatilho: gatilho))
-      expect([registros(com), conversa.reload.custom_attributes['nota']]).to eq([[['a1', 'ok', nil]], 'Valor 2500.0'])
+    it 'versão antiga com o valor calculado do corpo (G16): mesmo com a chave, a ação pula sem gravar o valor' do
+      execucao = rodar(versao_antiga(dono, [no_corpo]))
 
-      conversa.update!(custom_attributes: {})
-      definicao = automacao_ligada(account, dono, [no_corpo], gatilho: gatilho)
-      tirar_a_chave
-      sem = rodar(definicao)
-      expect([registros(sem).map(&:second), conversa.reload.custom_attributes['nota']]).to eq([['pulado'], nil])
+      expect([registros(execucao).map(&:second), conversa.reload.custom_attributes['nota']]).to eq([['pulado'], nil])
     end
 
     # O "esperar até" (G11) lê a condição com as permissões de quem ligou, como o "se".
@@ -217,7 +234,7 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
 
     # Sem account_user, o Valores já lê vazio (ver "quem não está na conta"); antes disso, a execução nem anda.
     it 'quem ligou saiu da conta: a execução não anda, nada escrito nem mandado' do
-      definicao = automacao_ligada(account, dono, [caro, mensagem_passo('m1', 'Valor: ', valor)], gatilho: gatilho)
+      definicao = automacao_ligada(account, dono, [caro, mensagem_passo('m1', 'Valor do pedido')], gatilho: gatilho)
       AccountUser.find_by(account: account, user: dono).destroy!
 
       execucao = rodar(definicao)
@@ -228,22 +245,34 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
     end
   end
 
-  # A leitura "card" do Decisores::Estado leva o valor só com a chave de quem ligou (#2597). Desde o #2679 (`le: card`), o
-  # card inteiro só vai se quem ligou ainda o vê: quem saiu da conta não manda nem o título.
+  # A leitura "card" do Decisores::Estado leva o valor só com a chave de quem ligou (#2597) e só no "decidir" (#2780: o
+  # passo que escreve nunca o leva). Desde o #2679 (`le: card`), o card inteiro só vai se quem ligou ainda o vê: quem
+  # saiu da conta não manda nem o título.
   describe 'leitura do card no passo de IA' do
     let(:dono) { pessoa_com(base + %w[sales_value_view]) }
 
-    def card_lido(definicao)
+    def resumir = { 'id' => 'r1', 'tipo' => 'resumir', 'le' => %w[card], 'linhas' => 2, 'destino' => 'nota' }
+
+    def decidir
+      { 'id' => 'd1', 'tipo' => 'decidir', 'le' => %w[card], 'pergunta' => 'É venda grande?', 'nenhum' => [],
+        'caminhos' => [{ 'nome' => 'Grande', 'chave' => 'grande', 'descricao' => 'valor alto', 'passos' => [] }] }
+    end
+
+    def card_lido(definicao, passo = decidir)
       card
       execucao = Autonomia::Automacao::Execucao.find_or_create_by!(
         account: account, automacao: definicao, versao: definicao.versao_ativa, alvo: card, chave_gatilho: 'card.ganho'
       )
-      passo = { 'id' => 'r1', 'tipo' => 'resumir', 'le' => %w[card], 'linhas' => 2, 'destino' => 'nota' }
-      Autonomia::Automacao::PassoDeResumir.new(execucao: execucao, passo: passo, alvo: card, acesso: nil).send(:leitura).conversa[:card]
+      classe = passo['tipo'] == 'decidir' ? Autonomia::Automacao::PassoDeDecidir : Autonomia::Automacao::PassoDeResumir
+      classe.new(execucao: execucao, passo: passo, alvo: card, acesso: nil).send(:leitura).conversa[:card]
     end
 
-    it 'quem ligou tem a chave: o card vai com o valor' do
-      expect(card_lido(automacao_ligada(account, dono, [caro], gatilho: gatilho))).to include(value: '2500.0 BRL')
+    it 'quem ligou tem a chave: o decidir leva o valor; o resumir, não' do
+      definicao = automacao_ligada(account, dono, [caro], gatilho: gatilho)
+
+      expect(card_lido(definicao)).to include(value: '2500.0 BRL')
+      expect(card_lido(definicao, resumir)).to include(title: 'Pedido')
+      expect(card_lido(definicao, resumir)).not_to have_key(:value)
     end
 
     it 'quem ligou perdeu a chave: o card vai sem o valor; saiu da conta: o card não vai', :aggregate_failures do
@@ -257,11 +286,12 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
     end
   end
 
-  # O "Testar este passo" (#2500 C2) lê como quem pede: o valor do card só com a chave dela.
+  # O "Testar este passo" (#2500 C2) lê como quem pede: o valor do card só com a chave dela, e só no "decidir" (#2780).
   describe 'leitura do card no testar' do
     def card_lido_no_teste(quem)
       card
-      passo = { 'id' => 'r1', 'tipo' => 'resumir', 'le' => %w[card], 'linhas' => 2, 'destino' => 'nota' }
+      passo = { 'id' => 'r1', 'tipo' => 'decidir', 'le' => %w[card], 'pergunta' => 'É venda grande?', 'nenhum' => [],
+                'caminhos' => [{ 'nome' => 'Grande', 'chave' => 'grande', 'descricao' => 'valor alto', 'passos' => [] }] }
       pedido = Autonomia::Automacao::TestarPasso::Pedido.new(receita: receita([passo]), passo_id: 'r1')
       teste = Autonomia::Automacao::TestarPasso.new(pedido: pedido, conta: account, account_user: na_conta(quem))
       teste.send(:leitura, conversa).conversa[:card]

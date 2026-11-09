@@ -404,21 +404,21 @@ ex.14 continua no `pendentes_spec`.
   versão em que começou). Ao rodar, os cards que quem ligou não vê (o escopo do `Crm::CardPolicy`) saem antes de
   escolher o assunto atual; sem card visível na conversa, lê vazio.
 - O editor oferece os valores do card no gatilho de conversa só a quem tem a chave de funis (`doAlvoDoGatilho`).
-- **Valor protegido só decide** (decisão do Rodrigo, 09/11, PR #2780). Na automação de conversa, os valores de
+- **Valor protegido só decide** (decisão do Rodrigo, 09/11, PR #2780). Em qualquer automação (de conversa, de card ou
+  de contato), os valores de
   `Valores::PROTEGIDOS` (hoje `card.valor`) valem no filtro do gatilho, no "Só se" e nas condições. Não vão para
   mensagem, aviso, e-mail, retorno nem corpo de ação (atributo, nota, campo): o salvar e o ligar recusam
   (`valor_protegido_so_decide`, em `Receita#problemas_do_caminho` com `onde: :texto` ou `:corpo`). Na execução,
   `Texto` e `Corpo` leem por `Valores#ler_para_escrever`, que devolve vazio para esse valor: a versão antiga que o
   tenha no texto pula com `faltou_valor` e não manda o valor. A condição continua com `ler`. O editor marca o valor
-  `so_para_decidir` no gatilho de conversa (`doAlvoDoGatilho`): o texto e o corpo não o oferecem, a condição sim. A
-  automação de card segue com a regra de sempre (`sales_value_view`). Um caso real de mandar o valor ao cliente pede
-  regra própria depois.
-  Os passos de IA seguem o mesmo critério (`ComIa.leva_o_valor?`, também no "Testar este passo"): na automação de
-  conversa, o `le: card` do escrever, do resumir e do extrair vai sem o valor; o decidir o recebe. Essa brecha já
-  existia na main desde o #2679 (o `Estado` acha o card da conversa); fechada aqui.
-  A decisão vem sempre do tipo do gatilho da receita (`Valores.so_decide?(caminho, gatilho)`, com `Contexto#gatilho`),
-  no salvar, na execução, no ensaio e nos passos de IA. No "Testar este passo", o valor só vai se quem testa e quem
-  ligou a automação já salva (`automacao_id`) podem vê-lo.
+  `so_para_decidir` em todo gatilho (`doAlvoDoGatilho`): o texto e o corpo não o oferecem, a condição sim. Ler continua
+  pedindo a permissão (`sales_value_view`). Um caso real de mandar o valor ao cliente pede regra própria depois.
+  Os passos de IA seguem o mesmo critério (`ComIa.leva_o_valor?`, também no "Testar este passo"): em qualquer
+  automação, o `le: card` do escrever, do resumir e do extrair vai sem o valor; o decidir o recebe. Essa brecha já
+  existia na main desde o #2679; fechada aqui.
+  A regra não depende do gatilho (`Valores.so_decide?(caminho)`): vale igual no salvar, na execução, no ensaio e nos
+  passos de IA. No "Testar este passo", o valor só vai (ao decidir) se quem testa e quem ligou a automação já salva
+  (`automacao_id`) podem vê-lo.
 - `mensagem.tem_anexo` (sim ou não, só no filtro de `mensagem.criada`): a mensagem traz foto ou PDF (a régua do
   ex.14: "a cada foto ou PDF que chega"). Foto é o anexo `image` com arquivo; PDF é o `file` com `application/pdf`.
   Áudio, vídeo, figurinha e outro arquivo não contam. A figurinha do WhatsApp chega como `image`
