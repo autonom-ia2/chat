@@ -32,6 +32,8 @@ const props = defineProps({
   readBudget: { type: Function, default: null },
   // 'dark' no topo escuro do anúncio; 'light' nas listas do painel.
   tone: { type: String, default: 'dark' },
+  // Uma frase a mais no diálogo de ativar (#2778): a cópia que veio de "Trocar a foto" lembra de pausar o original.
+  activateNote: { type: String, default: '' },
 });
 
 const emit = defineEmits(['changed', 'retryBudget']);
@@ -54,9 +56,14 @@ const STATUS_ERRORS = {
 // O botão mexe na situação do próprio anúncio. "No ar" só quando a entrega também está ativa: anúncio ativo com a
 // campanha ou o conjunto pausado (ou em análise, recusado…) fica "Fora do ar", e pausar continua valendo.
 const active = computed(() => props.gestao.status === 'ACTIVE');
-// Arquivado ou apagado também é "Fora do ar" (e sem botão: só ACTIVE e PAUSED mudam por aqui).
+// Arquivado ou apagado também é "Fora do ar" (e sem botão: só ACTIVE e PAUSED mudam por aqui). Ativo e em análise da
+// Meta (depois de trocar a foto ou o texto, #2778) diz isso, e que volta ao ar sozinho.
+const IN_REVIEW = ['PENDING_REVIEW', 'IN_PROCESS'];
 const badge = computed(() => {
   if (props.gestao.status === 'PAUSED') return 'PAUSED';
+  if (active.value && IN_REVIEW.includes(props.gestao.effective_status)) {
+    return 'REVIEW';
+  }
   return active.value && props.gestao.effective_status === 'ACTIVE'
     ? 'ACTIVE'
     : 'OFF';
@@ -167,15 +174,20 @@ const light = computed(() => props.tone === 'light');
 const BADGE_CLASSES = {
   dark: {
     ACTIVE: 'bg-n-teal-9/20 text-white',
+    REVIEW: 'bg-n-amber-9/25 text-white',
     OTHER: 'bg-white/10 text-white/80',
   },
   light: {
     ACTIVE: 'bg-n-teal-3 text-n-teal-11',
+    REVIEW: 'bg-n-amber-3 text-n-amber-11',
     OTHER: 'bg-n-alpha-2 text-n-slate-11',
   },
 };
 const badgeClass = computed(
-  () => BADGE_CLASSES[props.tone][badge.value === 'ACTIVE' ? 'ACTIVE' : 'OTHER']
+  () =>
+    BADGE_CLASSES[props.tone][
+      ['ACTIVE', 'REVIEW'].includes(badge.value) ? badge.value : 'OTHER'
+    ]
 );
 
 // O botão principal do topo (Ativar/Pausar, ou "Tentar de novo" quando o orçamento não veio).
@@ -185,9 +197,12 @@ const primaryClass = computed(() =>
     : 'bg-white text-n-heroi hover:bg-n-blue-2 focus-visible:ring-white'
 );
 
-const description = computed(
-  () => spend.value || t(`${KEY}.${action.value}_HINT`)
-);
+const description = computed(() => {
+  const text = spend.value || t(`${KEY}.${action.value}_HINT`);
+  return action.value === 'ACTIVATE' && props.activateNote
+    ? `${text} ${props.activateNote}`
+    : text;
+});
 
 // Ativado, mas a campanha ou o grupo seguem pausados no Gerenciador da Meta (`held_by`, #2198): avisa em vez de dizer
 // que começou a rodar.
@@ -236,13 +251,22 @@ const confirm = async () => {
         class="size-2 rounded-full"
         :class="{
           'bg-n-teal-9': badge === 'ACTIVE',
-          'bg-n-slate-9': badge !== 'ACTIVE' && light,
-          'bg-white/50': badge !== 'ACTIVE' && !light,
+          'bg-n-amber-9': badge === 'REVIEW',
+          'bg-n-slate-9': !['ACTIVE', 'REVIEW'].includes(badge) && light,
+          'bg-white/50': !['ACTIVE', 'REVIEW'].includes(badge) && !light,
         }"
         aria-hidden="true"
       />
       {{ $t(`${KEY}.${badge}`) }}
     </span>
+    <p
+      v-if="badge === 'REVIEW'"
+      data-ad-status-reviewing
+      class="m-0 basis-full text-sm"
+      :class="light ? 'text-n-slate-11' : 'text-white/75'"
+    >
+      {{ $t(`${KEY}.REVIEW_HINT`) }}
+    </p>
     <!-- Orçamento que não veio: o "Ativar" desligado sai, e o "Tentar de novo" ocupa o lugar dele. -->
     <button
       v-if="showButton && blockedBy !== 'failed'"
