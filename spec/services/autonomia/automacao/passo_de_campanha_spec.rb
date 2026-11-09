@@ -180,6 +180,17 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
       expect(account.campaigns).to be_empty
     end
 
+    # 🟡 da revisão (#2686): falha fechada. Uma etiqueta excluída que sumiu não cai da exclusão em silêncio.
+    it 'etiqueta excluída que sumiu pula com o motivo, sem criar campanha', :aggregate_failures do
+      passo = disparar.except('etiquetas').merge('publico' => 'todos', 'sem_etiquetas' => [etiqueta.id, 0])
+
+      resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: passo, alvo: account).executar
+
+      expect([resultado.tipo, resultado.motivo]).to eq([:pulado, 'campanha_exclusao_apagada'])
+      expect(account.campaigns).to be_empty
+      expect(%i[en pt_BR].map { |locale| I18n.exists?('autonomia.automacao.motivos.campanha_exclusao_apagada', locale) }).to eq([true, true])
+    end
+
     it 'o gatilho da conta é o de alvo Account (contrato com a G7), não o de conversa ou card' do
       allow(Autonomia::Automacao::Gatilhos).to receive(:alvo).and_call_original
       allow(Autonomia::Automacao::Gatilhos).to receive(:alvo).with('conta.recorrente').and_return('Account')

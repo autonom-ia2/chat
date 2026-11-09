@@ -152,13 +152,23 @@ class Autonomia::Automacao::PassoDeCampanha
     etiquetas = todos ? [] : @conta.labels.where(id: @passo['etiquetas']).pluck(:id)
     return pulado('campanha_sem_etiqueta') if etiquetas.empty? && !todos
 
-    sem = @conta.labels.where(id: @passo['sem_etiquetas']).pluck(:id)
+    sem = excluidas_existentes
+    return pulado('campanha_exclusao_apagada') if sem.nil?
+
     campanha = criar_campanha(caixa, template_params, audiencia(todos, etiquetas, sem))
     ::Campaigns::TriggerOneoffCampaignJob.perform_later(campanha)
     disparada(campanha, todos ? PARA_TODOS : 'etiquetas', etiquetas, sem)
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.info("[automacao][campanha] recusada automacao=#{@automacao.id} erro=#{e.record.errors.attribute_names.join(',')}")
     pulado('campanha_recusada')
+  end
+
+  # As etiquetas excluídas, ou nil quando alguma sumiu. Falha fechada (#2686): a que sumiu não pode cair da exclusão,
+  # senão a campanha "para todos menos X" iria também para X.
+  def excluidas_existentes
+    pedidas = Array(@passo['sem_etiquetas']).map(&:to_i).uniq
+    existentes = @conta.labels.where(id: pedidas).pluck(:id)
+    existentes if (pedidas - existentes).empty?
   end
 
   def disparada(campanha, publico, etiquetas, sem)

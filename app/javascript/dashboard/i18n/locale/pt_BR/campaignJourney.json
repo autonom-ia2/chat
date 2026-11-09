@@ -741,7 +741,8 @@
       "modelo_apagado": "modelo apagado",
       "formato_nao_vai": "formato ainda não vai",
       "nao_conferido": "não deu para conferir o modelo",
-      "outro": "parou antes de enviar"
+      "outro": "parou antes de enviar",
+      "etiqueta_excluida_apagada": "etiqueta excluída apagada"
     }
   }
 }

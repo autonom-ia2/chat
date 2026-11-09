@@ -741,7 +741,8 @@
       "modelo_apagado": "template deleted",
       "formato_nao_vai": "format not supported yet",
       "nao_conferido": "could not check the template",
-      "outro": "stopped before sending"
+      "outro": "stopped before sending",
+      "etiqueta_excluida_apagada": "excluded label deleted"
     }
   }
 }

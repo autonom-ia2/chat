@@ -716,7 +716,8 @@
         "oferta_vencida": "The offer deadline passed before the send. Nothing was sent.",
         "produto_indisponivel": "The product “{produto}” is out of stock or left the catalog. Nothing was sent.",
         "sem_catalogo": "The WhatsApp account no longer has a product catalog connected. Nothing was sent.",
-        "produtos_desligados": "Campaigns with catalog products are no longer enabled for this account. Nothing was sent."
+        "produtos_desligados": "Campaigns with catalog products are no longer enabled for this account. Nothing was sent.",
+        "etiqueta_excluida_apagada": "A label this automation campaign leaves out was deleted. Nothing was sent, so none of those people got it. Edit the automation and choose the labels again."
       },
       "ACOES": {
         "ABRIR_MODELO": "See the template",

@@ -716,7 +716,8 @@
         "oferta_vencida": "O prazo da oferta passou antes do envio. Nada foi enviado.",
         "produto_indisponivel": "O produto “{produto}” acabou ou saiu do catálogo. Nada foi enviado.",
         "sem_catalogo": "A conta do WhatsApp não tem mais catálogo de produtos conectado. Nada foi enviado.",
-        "produtos_desligados": "Campanha com produtos do catálogo não está mais liberada para esta conta. Nada foi enviado."
+        "produtos_desligados": "Campanha com produtos do catálogo não está mais liberada para esta conta. Nada foi enviado.",
+        "etiqueta_excluida_apagada": "Uma etiqueta que esta campanha da automação deixa de fora foi apagada. Nada foi mandado, e ninguém dessa etiqueta recebeu. Edite a automação e escolha as etiquetas de novo."
       },
       "ACOES": {
         "ABRIR_MODELO": "Ver o modelo",

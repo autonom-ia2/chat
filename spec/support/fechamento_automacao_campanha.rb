@@ -24,18 +24,30 @@ module FechamentoAutomacao::SondasDaCampanha
     campanha.present? && enviados_por(campanha) == [outro.phone_number]
   end
 
-  # G38 (exemplo 7, passo 3): o filtro "respondeu à campanha Pré-Black" do gatilho da mensagem, avaliado como a Partida
-  # avalia, casa com a resposta de quem recebeu a Pré-Black e não com a de quem recebeu outra campanha.
+  # G38 (exemplo 7, passo 3): a automação ligada com o filtro "respondeu à campanha Pré-Black" no gatilho da mensagem
+  # começa, pela Partida de verdade, na resposta de quem recebeu a Pré-Black e não na de quem recebeu outra campanha.
   def filtro_da_campanha_filtra?
     return false unless defined?(::CampaignRecipient)
 
     canal = FactoryBot.create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
-    casou = %w[Pré-Black Outra].map do |titulo|
+    automacao = automacao_com_filtro(canal.account)
+    comecou = %w[Pré-Black Outra].map do |titulo|
       conversa, mensagem = resposta_a(canal, titulo)
-      valores = Autonomia::Automacao::Valores.new(alvo: conversa, mensagem: mensagem, quem: nil)
-      Autonomia::Automacao::Condicao.new(FILTRO_PRE_BLACK, valores).verdadeira?
+      Autonomia::Automacao::Partida.new(definicao: automacao, alvo: conversa, chave_gatilho: 'mensagem.criada', mensagem: mensagem).call
+      Autonomia::Automacao::Execucao.exists?(automacao_id: automacao.id, alvo: conversa)
     end
-    casou == [true, false]
+    comecou == [true, false]
+  end
+
+  def automacao_com_filtro(account)
+    account.enable_features!('automacao_fundacao', 'automacao_motor')
+    dona = FactoryBot.create(:user, account: account, role: :administrator)
+    receita = { 'gatilho' => { 'tipo' => 'mensagem.criada', 'filtros' => [FILTRO_PRE_BLACK] },
+                'passos' => [{ 'id' => 'e1', 'tipo' => 'esperar', 'duracao' => { 'valor' => 1, 'unidade' => 'dias' } }] }
+    FactoryBot.create(:autonomia_automacao, account: account, ligada_por: dona).tap do |automacao|
+      automacao.salvar_versao!(receita: receita, autor: dona)
+      automacao.update!(ativa: true)
+    end
   end
 
   def caixa_oficial
