@@ -62,6 +62,53 @@ RSpec.describe Autonomia::Automacao::CampanhaSemEtiquetas do
     expect(enviados).to contain_exactly('+5511900000051', '+5511900000052')
   end
 
+  # Exemplo 7, passo 2: "a mesma campanha para todos os outros contatos". O público é a conta inteira, menos quem tem a
+  # etiqueta excluída; quem recusou continua de fora e o contato de outra conta não entra.
+  it '"todos os contatos" manda para a conta inteira menos quem tem a etiqueta excluída', :aggregate_failures do
+    cliente('+5511900000081')
+    cliente('+5511900000082', 'clientes')
+    cliente('+5511900000083', 'ja_comprou')
+    cliente('+5511900000084').opt_out!(source: 'manual')
+    create(:contact, phone_number: '+5511900000085')
+
+    disparar([*described_class.todos, *described_class.audiencia([ja_comprou.id])])
+
+    expect(enviados).to contain_exactly('+5511900000081', '+5511900000082')
+  end
+
+  # 🟡 da revisão (#2686): falha fechada. A etiqueta excluída apagada entre a criação da campanha e o envio não some da
+  # exclusão: nada sai, nenhum destinatário é criado e a campanha para com o motivo.
+  describe 'etiqueta excluída apagada antes do envio' do
+    it 'em "todos os contatos", não manda para ninguém e a campanha para com o motivo', :aggregate_failures do
+      cliente('+5511900000091')
+      cliente('+5511900000092', 'ja_comprou')
+      alvo = campanha([*described_class.todos, *described_class.audiencia([ja_comprou.id])])
+      apagada = ja_comprou.id
+      ja_comprou.destroy!
+
+      Whatsapp::OneoffCampaignService.new(campaign: alvo).perform
+
+      pausa = CampaignPause.open_for(alvo)
+      expect(enviados).to be_empty
+      expect(CampaignRecipient.where(campaign: alvo)).to be_empty
+      expect([pausa.source, pausa.reason_code]).to eq(%w[system audience_exclusion_label_missing])
+      expect(pausa.details).to eq('missing_label_ids' => [apagada])
+      expect(alvo.reload).not_to be_completed
+    end
+
+    it 'com etiqueta de público, basta uma das excluídas ter sumido para nada sair', :aggregate_failures do
+      outra = create(:label, account: account, title: 'outra')
+      cliente('+5511900000093', 'clientes')
+      alvo = campanha([{ 'type' => 'Label', 'id' => publico.id }, *described_class.audiencia([ja_comprou.id, outra.id])])
+      outra.destroy!
+
+      Whatsapp::OneoffCampaignService.new(campaign: alvo).perform
+
+      expect(enviados).to be_empty
+      expect(CampaignPause.open_for(alvo).details).to eq('missing_label_ids' => [outra.id])
+    end
+  end
+
   # 🟡 da qualidade (#2686): a campanha ligada a um público importado tira o público do CampaignJourney::AudienceContacts,
   # sem passar pelas etiquetas. A exclusão vale ali também. O público importado é trocado por todos os contatos da
   # conta: a regra de quem entra pela planilha é do spec da jornada.

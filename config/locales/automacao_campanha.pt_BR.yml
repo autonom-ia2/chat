@@ -18,6 +18,7 @@ pt_BR:
         campanha_sem_caixa: 'A caixa escolhida não existe mais ou não é do WhatsApp oficial. A campanha não foi criada.'
         campanha_desligada: 'As campanhas de WhatsApp estão desligadas nesta conta. A campanha não foi criada.'
         campanha_sem_etiqueta: 'Nenhuma das etiquetas escolhidas existe mais. A campanha não foi criada.'
+        campanha_exclusao_apagada: 'Uma etiqueta que esta campanha deixa de fora não existe mais. Nada foi mandado, e ninguém dessa etiqueta recebeu. Edite a automação e escolha as etiquetas de novo.'
         campanha_recusada: 'A plataforma recusou a campanha como ela foi montada. Nada foi mandado.'
         campanha_modelo_fora_da_caixa: 'A caixa escolhida não tem o modelo escolhido. A campanha não foi criada.'
         campanha_modelo_nao_aprovado: 'O modelo escolhido não está aprovado pela Meta nesta caixa. A campanha não foi criada.'

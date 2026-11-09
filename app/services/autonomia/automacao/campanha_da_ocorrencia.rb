@@ -50,7 +50,7 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
       return [] unless por_alvo?(tipo)
 
       passos_de_disparar(definicao.versao_ativa.receita['passos']).map do |passo_id|
-        garantir(definicao, Gatilhos.marca_da_vez(tipo, ocorrencia), passo_id)
+        garantir(definicao, marca_da_vez(definicao, tipo, ocorrencia), passo_id)
       end
     end
 
@@ -66,7 +66,7 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
     def lote_feito(definicao, tipo, ocorrencia, indice)
       return if indice.nil? || !por_alvo?(tipo)
 
-      abertas(definicao.id, Gatilhos.marca_da_vez(tipo, ocorrencia)).each do |id|
+      abertas(definicao.id, marca_da_vez(definicao, tipo, ocorrencia)).each do |id|
         travado(id) { |vez| vez.update!(lotes_feitos: (vez.lotes_feitos | [indice])) }
         conferir(id)
       end
@@ -118,6 +118,11 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
     private
 
     def por_alvo?(tipo) = Gatilhos.recorrente?(tipo) && !Gatilhos.da_conta?(tipo)
+
+    # A marca da vez com a data da receita: no uma_vez (#2681) a vez é a data, a mesma das chegadas (RecorrenteLoteJob).
+    def marca_da_vez(definicao, tipo, ocorrencia)
+      Gatilhos.marca_da_vez(tipo, ocorrencia, data: definicao.versao_ativa.receita.dig('gatilho', 'data'))
+    end
 
     def passos_de_disparar(lista)
       Array(lista).flat_map do |passo|

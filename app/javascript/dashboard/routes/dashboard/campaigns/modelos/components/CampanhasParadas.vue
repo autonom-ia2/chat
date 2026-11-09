@@ -34,7 +34,11 @@ const ESPERA = {
   produto_indisponivel: 'AGUARDE_PRODUTO',
   sem_catalogo: 'CONECTE_CATALOGO',
   produtos_desligados: 'FALE_COM_SUPORTE',
+  // #2686: a etiqueta excluída não volta (a recriada é outra); a campanha não sai mais.
+  etiqueta_excluida_apagada: 'EDITE_AUTOMACAO',
 };
+// Paradas que "Retomar" nunca resolve: o botão não aparece.
+const SEM_RETOMAR = ['etiqueta_excluida_apagada'];
 const oQueFazer = campanha => ESPERA[campanha.motivo] || 'CORRIJA_PRIMEIRO';
 const { t } = useI18n();
 
@@ -151,7 +155,7 @@ const retomar = async campanha => {
               v-if="
                 !noModelo &&
                 campanha.modeloId &&
-                !['nao_conferido', 'oferta_vencida'].includes(
+                !['nao_conferido', 'oferta_vencida', ...SEM_RETOMAR].includes(
                   campanha.motivo
                 ) &&
                 !ACAO[campanha.motivo]
@@ -177,7 +181,12 @@ const retomar = async campanha => {
           :class="noModelo ? '' : 'xl:max-w-none'"
         >
           <Button
-            v-if="gerenciaCampanhas && podeDisparar && campanha.pausaId"
+            v-if="
+              gerenciaCampanhas &&
+              podeDisparar &&
+              campanha.pausaId &&
+              !SEM_RETOMAR.includes(campanha.motivo)
+            "
             data-retomar
             :label="$t('MODELOS_WHATSAPP.PARADAS.ACOES.RETOMAR')"
             icon="i-lucide-play"

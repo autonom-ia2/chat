@@ -9,6 +9,9 @@
 # Vale pelo nome, não pelo número: a campanha que a própria automação dispara nasce a cada disparo, com o nome do passo,
 # e não existe ainda quando a automação é montada. Recebida quer dizer aceita pela Meta (enviada, entregue ou lida).
 # Só a mensagem do cliente responde. Sem destinatário de campanha (o OSS não guarda), lê vazio.
+#
+# A consulta fica na conta e passa pelos índices que já existem: as campanhas da caixa (campaigns.inbox_id) e, nelas, o
+# destinatário do contato (campaign_recipients (campaign_id, contact_id)). Roda em toda mensagem que chega com o filtro.
 class Autonomia::Automacao::RespostaDaCampanha
   def self.titulo(mensagem)
     return unless mensagem.incoming? && defined?(::CampaignRecipient)
@@ -16,8 +19,9 @@ class Autonomia::Automacao::RespostaDaCampanha
     contato = mensagem.conversation&.contact_id
     return if contato.nil?
 
-    ::Campaign.joins(:campaign_recipients)
-              .where(campaign_recipients: { contact_id: contato, inbox_id: mensagem.inbox_id, sent_at: ...mensagem.created_at })
-              .order('campaign_recipients.sent_at DESC').pick(:title)
+    campanhas = ::Campaign.where(account_id: mensagem.account_id, inbox_id: mensagem.inbox_id).select(:id)
+    ::CampaignRecipient.joins(:campaign)
+                       .where(account_id: mensagem.account_id, campaign_id: campanhas, contact_id: contato, sent_at: ...mensagem.created_at)
+                       .order('campaign_recipients.sent_at DESC').pick('campaigns.title')
   end
 end

@@ -5,7 +5,9 @@
 #   mesmo job do agendador). Quem manda é o Whatsapp::OneoffCampaignService (e o overlay do EE): ele lê o público no
 #   disparo, relê a recusa de cada contato antes de mandar e manda o modelo. Nada sai por um caminho próprio daqui.
 #   `sem_etiquetas` (lote 5, #2681) deixa de fora quem tem uma delas, mesmo com etiqueta do público
-#   (Autonomia::Automacao::CampanhaSemEtiquetas).
+#   (Autonomia::Automacao::CampanhaSemEtiquetas). `publico: todos` (exemplo 7, passo 2: "a mesma campanha para todos os
+#   outros contatos") manda para todos os contatos da conta, sem etiqueta de público, menos os de `sem_etiquetas`. A
+#   recusa de cada contato (quem pediu para não receber) continua valendo no envio, como em toda campanha.
 #   Só em gatilho recorrente (G7). No `conta.recorrente` (alvo = a própria Account) a execução é uma por vez e cria a
 #   campanha na hora. No `card.recorrente` e no `contato.recorrente` (G55, exemplo 16) há uma execução por card ou
 #   contato da vez, e a campanha é uma só para a vez inteira (Autonomia::Automacao::CampanhaDaOcorrencia). Num gatilho
@@ -31,6 +33,7 @@ class Autonomia::Automacao::PassoDeCampanha
   PROVEDOR = 'whatsapp_cloud'.freeze
   FLAG_DA_CAMPANHA = :whatsapp_campaign
   ALVO_DA_CONTA = 'Account'.freeze
+  PARA_TODOS = 'todos'.freeze
 
   # O que a Receita confere ao salvar (#2630). Sem conta (o catálogo das receitas prontas), só o que não depende dela.
   def self.problemas_ao_salvar(passo, receita, conta:, account_user:)
@@ -161,16 +164,33 @@ class Autonomia::Automacao::PassoDeCampanha
   end
 
   def criar_e_disparar(caixa, template_params)
-    etiquetas = @conta.labels.where(id: @passo['etiquetas']).pluck(:id)
-    return pulado('campanha_sem_etiqueta') if etiquetas.empty?
+    todos = @passo['publico'] == PARA_TODOS
+    etiquetas = todos ? [] : @conta.labels.where(id: @passo['etiquetas']).pluck(:id)
+    return pulado('campanha_sem_etiqueta') if etiquetas.empty? && !todos
 
-    sem = @conta.labels.where(id: @passo['sem_etiquetas']).pluck(:id)
-    dados = { 'etiquetas' => etiquetas, 'sem_etiquetas' => sem }
-    publico = audiencia(etiquetas, sem)
-    da_conta? ? campanha_da_conta(caixa, template_params, publico, dados) : campanha_da_vez(dados)
+    sem = excluidas_existentes
+    return pulado('campanha_exclusao_apagada') if sem.nil?
+
+    publicar(caixa, template_params, todos, etiquetas, sem)
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.info("[automacao][campanha] recusada automacao=#{@automacao.id} erro=#{e.record.errors.attribute_names.join(',')}")
     pulado('campanha_recusada')
+  end
+
+  # Na conta, a campanha sai agora; no card ou contato do recorrente, a execução entra na campanha da vez (G55).
+  def publicar(caixa, template_params, todos, etiquetas, sem)
+    dados = { 'publico' => todos ? PARA_TODOS : 'etiquetas', 'etiquetas' => etiquetas, 'sem_etiquetas' => sem }
+    return campanha_da_vez(dados) unless da_conta?
+
+    campanha_da_conta(caixa, template_params, audiencia(todos, etiquetas, sem), dados)
+  end
+
+  # As etiquetas excluídas, ou nil quando alguma sumiu. Falha fechada (#2686): a que sumiu não pode cair da exclusão,
+  # senão a campanha "para todos menos X" iria também para X.
+  def excluidas_existentes
+    pedidas = Array(@passo['sem_etiquetas']).map(&:to_i).uniq
+    existentes = @conta.labels.where(id: pedidas).pluck(:id)
+    existentes if (pedidas - existentes).empty?
   end
 
   def criar_campanha(caixa, template_params, audiencia)
@@ -207,9 +227,11 @@ class Autonomia::Automacao::PassoDeCampanha
   # A vez do recorrente de card ou contato desta execução, ou nil fora dele.
   def ocorrencia = (@ocorrencia ||= ::Autonomia::Automacao::CampanhaDaOcorrencia.vez_da(@execucao))
 
-  # As etiquetas do público e as excluídas (lote 5, #2681: ExcludeLabel, tirado pelo CampanhaSemEtiquetas no envio).
-  def audiencia(etiquetas, sem)
-    etiquetas.map { |id| { 'type' => 'Label', 'id' => id } } + ::Autonomia::Automacao::CampanhaSemEtiquetas.audiencia(sem)
+  # As etiquetas do público (ou todos os contatos) e as excluídas (lote 5, #2681: ExcludeLabel e AllContacts, lidos pelo
+  # CampanhaSemEtiquetas no envio).
+  def audiencia(todos, etiquetas, sem)
+    publico = todos ? ::Autonomia::Automacao::CampanhaSemEtiquetas.todos : etiquetas.map { |id| { 'type' => 'Label', 'id' => id } }
+    publico + ::Autonomia::Automacao::CampanhaSemEtiquetas.audiencia(sem)
   end
 
   def nao_receber

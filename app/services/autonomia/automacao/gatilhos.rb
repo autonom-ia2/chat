@@ -27,8 +27,8 @@ module Autonomia::Automacao::Gatilhos
   CONTATO = 'Contact'.freeze
   CONTA = 'Account'.freeze
   DA_DATA = %w[campo dias quando hora repete].freeze
-  DO_RECORRENTE = %w[frequencia dia_da_semana dia_do_mes hora selecao].freeze
-  DA_OCORRENCIA = %w[frequencia dia_da_semana dia_do_mes hora].freeze
+  DO_RECORRENTE = %w[frequencia dia_da_semana dia_do_mes data hora selecao].freeze
+  DA_OCORRENCIA = %w[frequencia dia_da_semana dia_do_mes data hora].freeze
   VARRIDOS = %i[tempo recorrente].freeze
 
   LISTA = [
@@ -155,14 +155,16 @@ module Autonomia::Automacao::Gatilhos
   end
 
   # O recorrente: uma vez por ocorrência e alvo; o da conta, uma vez por ocorrência. A ocorrência em UTC: a hora local
-  # ambígua do horário de verão não repete nem pula.
-  def marca_do_recorrente(tipo, alvo_id, ocorrencia)
-    marca = marca_da_vez(tipo, ocorrencia)
+  # ambígua do horário de verão não repete nem pula. A do uma_vez (#2681) é a data, sem a hora: mudar só a hora depois
+  # do disparo não manda de novo; mudar a data é outra ocorrência.
+  def marca_do_recorrente(tipo, alvo_id, ocorrencia, data: nil)
+    marca = marca_da_vez(tipo, ocorrencia, data: data)
     da_conta?(tipo) ? marca : "#{marca}:#{alvo_id}"
   end
 
-  # A vez de um recorrente de card ou contato (G55): a marca do recorrente sem o alvo.
-  def marca_da_vez(tipo, ocorrencia) = "recorrente:#{ocorrencia.utc.iso8601}:#{tipo}"
+  # A vez de um recorrente de card ou contato (G55): a marca do recorrente sem o alvo. No uma_vez, a data (#2681), como
+  # no marca_do_recorrente: mudar só a hora reaproveita a vez.
+  def marca_da_vez(tipo, ocorrencia, data: nil) = "recorrente:#{data || ocorrencia.utc.iso8601}:#{tipo}"
 
   # A ocorrência de uma marca de marca_do_recorrente de card ou contato: a marca sem o alvo, a mesma para todos os
   # alvos daquela vez (G55: a campanha da vez é uma só). nil em marca de outro formato.

@@ -4,6 +4,7 @@ import {
   campanhaPronta,
   caixasDaCampanha,
   comFaz,
+  comPublico,
   fraseDaCampanha,
   serveNaCampanha,
 } from '../campanha';
@@ -81,6 +82,25 @@ describe('campanha.js', () => {
     ).toBe(true);
   });
 
+  // Exemplo 7, passo 2: "a mesma campanha para todos os outros contatos".
+  it('"todos os contatos" fica pronta sem etiqueta de público', () => {
+    const todos = comPublico(PRONTA, 'todos');
+
+    expect(todos.publico).toBe('todos');
+    expect(todos).not.toHaveProperty('etiquetas');
+    expect(campanhaPronta({ ...todos, sem_etiquetas: [7] }, CAIXAS)).toBe(true);
+  });
+
+  it('voltar para "quem tem as etiquetas" tira o "todos"', () => {
+    const volta = comPublico({ ...PRONTA, publico: 'todos' }, 'etiquetas');
+
+    expect(volta).not.toHaveProperty('publico');
+    expect(volta.etiquetas).toEqual([7]);
+    expect(
+      campanhaPronta(comPublico({ ...PRONTA, etiquetas: [] }, 'etiquetas'))
+    ).toBe(false);
+  });
+
   it('modelo que sumiu da caixa, ou caixa que não é a oficial, não salva', () => {
     const sumiu = { ...PRONTA, modelo: { ...PRONTA.modelo, nome: 'antigo' } };
     expect(campanhaPronta(sumiu, CAIXAS)).toBe(false);
@@ -156,6 +176,26 @@ describe('LivreCampanha', () => {
     expect(
       comFaz({ ...PRONTA, sem_etiquetas: [7] }, 'nao_receber')
     ).not.toHaveProperty('sem_etiquetas');
+  });
+
+  it('escolher "todos os contatos" esconde as etiquetas do público e mantém o "menos quem tem"', async () => {
+    const tela = montar(PRONTA);
+
+    const publico = tela
+      .findAllComponents({ name: 'ChoiceSelect' })
+      .find(item => item.attributes('data-campanha-publico') !== undefined);
+    publico.vm.$emit('update:modelValue', 'todos');
+
+    const [[emitido]] = tela.emitted('update:modelValue');
+    expect(emitido.publico).toBe('todos');
+    expect(emitido).not.toHaveProperty('etiquetas');
+
+    await tela.setProps({ modelValue: { ...emitido, sem_etiquetas: [7] } });
+    expect(tela.findAllComponents({ name: 'LivreMarcar' })).toHaveLength(1);
+    expect(tela.find('[data-campanha-sem]').exists()).toBe(true);
+    expect(tela.text()).toContain(
+      'AUTOMACAO_LIVRE.CAMPANHA.PUBLICO_TODOS_DICA'
+    );
   });
 
   it('nenhum <select> nativo', () => {

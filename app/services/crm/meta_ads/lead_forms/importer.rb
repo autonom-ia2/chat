@@ -5,8 +5,8 @@
 #   antigos" depois do webhook, devolve :duplicate sem criar nada.
 # - O contato é o mesmo quando o telefone (E.164) ou o e-mail já existe na conta.
 # - Quem já tem card aberto naquele funil não ganha outro (:existing_card); o lead fica ligado ao card que já existe.
-# - Card criado pelo sistema: sem usuário, dono pela regra do Crm::Cards::Creator. O título é o nome que a pessoa
-#   escreveu, se não parecer e-mail nem telefone; sem ele, o nome do formulário; sem os dois, "Lead <id>". Nunca
+# - Card criado pelo sistema: sem usuário; dono pela Atribuição do funil (DonoDoLead, G30), ou nenhum.
+# - O título é o nome que a pessoa escreveu, se não parecer e-mail nem telefone; sem ele, o nome do formulário; sem os dois, "Lead <id>". Nunca
 #   telefone nem e-mail: o título e o nome do contato vão à IA (Decisor, IA de etapa) e a quem não vê o contato.
 # - E-mail que o contato não aceita fica só nas respostas; o lead entra do mesmo jeito.
 # - Lead que não dá para gravar (:failed) vai para o rastreador de erros e não para os outros do mesmo lote. A recusa
@@ -24,9 +24,11 @@ class Crm::MetaAds::LeadForms::Importer
   EMAIL_KEY = 'email'.freeze
   E164_DIGITS = (8..15)
 
+  # `em_lote`: o "trazer quem já preencheu" e a reconciliação (PastLeads); o dono do card sai pela fila inteira (DonoDoLead).
   # rubocop:disable Metrics/ParameterLists
-  def initialize(account:, pipeline:, stage:, form_name:, page_id: nil, questions: [], refused: nil)
+  def initialize(account:, pipeline:, stage:, form_name:, page_id: nil, questions: [], em_lote: false, refused: nil)
     @account = account
+    @em_lote = em_lote
     @refused = refused
     @page_id = page_id
     @pipeline = pipeline
@@ -122,10 +124,16 @@ class Crm::MetaAds::LeadForms::Importer
     Crm::Cards::Creator.new(
       account: @account, user: nil,
       params: { pipeline_id: @pipeline.id, stage_id: @stage.id, contact_id: contact.id, source: SOURCE,
+                # G30 (#2702): o dono que a Atribuição do funil daria; ninguém pode receber, sem dono.
+                owner_id: dono_do_lead.pessoa&.id,
                 # #2562: sem nome, nunca o do formulário: ele costuma repetir a campanha e o título todos veem (#2558).
                 title: title_name(lead) || "Lead #{lead['id']}",
                 metadata: { 'meta_lead_form' => origin(lead) } }
     ).perform
+  end
+
+  def dono_do_lead
+    @dono_do_lead ||= Crm::MetaAds::LeadForms::DonoDoLead.new(pipeline: @pipeline, stage: @stage, em_lote: @em_lote)
   end
 
   def origin(lead)

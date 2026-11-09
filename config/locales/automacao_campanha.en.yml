@@ -18,6 +18,7 @@ en:
         campanha_sem_caixa: 'The chosen inbox no longer exists or is not an official WhatsApp inbox. The campaign was not created.'
         campanha_desligada: 'WhatsApp campaigns are off for this account. The campaign was not created.'
         campanha_sem_etiqueta: 'None of the chosen labels exist anymore. The campaign was not created.'
+        campanha_exclusao_apagada: 'A label this campaign leaves out no longer exists. Nothing was sent, so none of those people got it. Edit the automation and choose the labels again.'
         campanha_recusada: 'The platform refused the campaign as it was set up. Nothing was sent.'
         campanha_modelo_fora_da_caixa: "The chosen inbox doesn't have the chosen template. The campaign was not created."
         campanha_modelo_nao_aprovado: "The chosen template isn't approved by Meta in this inbox. The campaign was not created."

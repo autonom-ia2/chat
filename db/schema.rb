@@ -650,6 +650,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_955500) do
     t.datetime "updated_at", null: false
     t.string "evento"
     t.jsonb "textos", default: {}, null: false
+    t.datetime "repetiu_em"
     t.index ["account_id"], name: "index_autonomia_automacao_execucoes_on_account_id"
     t.index ["alvo_type", "alvo_id"], name: "index_autonomia_automacao_execucoes_on_alvo"
     t.index ["automacao_id", "alvo_type", "alvo_id", "chave_gatilho"], name: "idx_autonomia_automacao_execucoes_abertas", unique: true, where: "(finalizada_em IS NULL)"

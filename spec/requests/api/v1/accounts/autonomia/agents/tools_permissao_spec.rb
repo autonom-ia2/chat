@@ -172,6 +172,51 @@ RSpec.describe 'Autonomia agent tools permission', type: :request do
       expect(ferramenta.reload.endpoint_url).to eq('https://api.loja.test/frete')
     end
 
+    it 'refuses changing the path on the same site while keeping the stored secret' do
+      token = com_funcao(%w[autonomia_tools_manage]).create_new_auth_token
+
+      patch "#{base}/#{ferramenta.id}", params: { tool: { endpoint_url: 'https://api.loja.test/clientes' } }, headers: token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['campos']).to eq(['headers_config'])
+      expect(ferramenta.reload.endpoint_url).to eq('https://api.loja.test/frete')
+    end
+
+    it 'accepts a new path when the same key is typed again' do
+      token = com_funcao(%w[autonomia_tools_manage]).create_new_auth_token
+      tool = { endpoint_url: 'https://api.loja.test/clientes', headers_config: [{ key: 'x-api-key', value: segredo, secret: true }] }
+
+      patch "#{base}/#{ferramenta.id}", params: { tool: tool }, headers: token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include(segredo)
+      expect(ferramenta.reload.endpoint_url).to eq('https://api.loja.test/clientes')
+    end
+
+    it 'refuses a method override header while keeping the stored secret' do
+      token = com_funcao(%w[autonomia_tools_manage]).create_new_auth_token
+      cabecalhos = [{ key: 'x-api-key', value: Autonomia::Agents::Tool.masked_header_value, secret: true },
+                    { key: 'X-HTTP-Method-Override', value: 'DELETE', secret: false }]
+
+      patch "#{base}/#{ferramenta.id}", params: { tool: { headers_config: cabecalhos } }, headers: token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(ferramenta.reload.headers_config.size).to eq(1)
+    end
+
+    it 'refuses a typed header next to the masked one with the same name' do
+      token = com_funcao(%w[autonomia_tools_manage]).create_new_auth_token
+      cabecalhos = [{ key: 'x-api-key', value: 'lixo', secret: true },
+                    { key: 'x-api-key', value: Autonomia::Agents::Tool.masked_header_value, secret: true }]
+
+      patch "#{base}/#{ferramenta.id}", params: { tool: { endpoint_url: 'https://coletor.test/x', headers_config: cabecalhos } },
+                                        headers: token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).not_to include(segredo)
+      expect(ferramenta.reload.endpoint_url).to eq('https://api.loja.test/frete')
+    end
+
     it 'lets the key holder test a tool without the secret coming back' do
       executor = instance_double(Autonomia::Agents::Tools::HttpExecutor, call: '{"ok":true}')
       allow(Autonomia::Agents::Tools::HttpExecutor).to receive(:new).and_return(executor)
