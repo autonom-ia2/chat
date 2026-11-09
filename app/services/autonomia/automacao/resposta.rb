@@ -53,11 +53,16 @@ module Autonomia::Automacao::Resposta
   end
 
   # O marco da leitura do G31, como fica gravado no registro: o id da última mensagem do cliente visível agora (0 sem
-  # nenhuma), o instante e os ids das visíveis gravadas na margem antes dele (poucas: a margem é de segundos).
+  # nenhuma), o instante e os ids das visíveis gravadas na margem antes dele (poucas: a margem é de segundos). Os dois
+  # saem da mesma consulta (o mesmo retrato do banco): a mensagem que comita no meio não fica entre um e outro.
   def marco(contato, quem, agora = Time.current)
-    recebidas = do_cliente(contato, quem)
-    lidas_na_margem = recebidas ? recebidas.where('messages.created_at > ?', agora - MARGEM_DO_MARCO).order(:id).pluck(:id) : []
-    { 'lido_ate' => recebidas&.maximum(:id).to_i, 'lido_em' => agora.iso8601(6), 'lidas_na_margem' => lidas_na_margem }
+    ultimo, lidas = do_cliente(contato, quem)&.reorder(nil)&.pick(Arel.sql('MAX(messages.id)'), margem_agregada(agora))
+    { 'lido_ate' => ultimo.to_i, 'lido_em' => agora.iso8601(6), 'lidas_na_margem' => Array(lidas) }
+  end
+
+  def margem_agregada(agora)
+    filtro = ['ARRAY_AGG(messages.id ORDER BY messages.id) FILTER (WHERE messages.created_at > ?)', agora - MARGEM_DO_MARCO]
+    Arel.sql(::Message.sanitize_sql_array(filtro))
   end
 
   def inicio_da_margem(marco) = Time.zone.parse(marco.fetch('lido_em')) - MARGEM_DO_MARCO

@@ -7,8 +7,9 @@
 #
 # - O marco da leitura (Resposta.marco, gravado no registro do caminho) é o id da última mensagem do cliente visível
 #   antes da ida à IA, o instante e as mensagens da margem de segundos antes dele. Nova é a de id maior (mesmo com
-#   `created_at` de antes) ou a da margem que não estava visível (commit atrasado); a que a IA já leu nunca reconta. A
-#   que chegou enquanto a IA pensava (rajada) faz decidir de novo na mesma rodada, sem esperar. O prazo conta do
+#   `created_at` de antes) ou a da margem que não estava visível (commit atrasado). Numa corrida, a mensagem que comita
+#   entre o marco e a leitura da IA pode ser lida e ainda contar uma vez: no máximo uma volta paga a mais, nunca uma
+#   perdida. A que chegou enquanto a IA pensava (rajada) faz decidir de novo na mesma rodada, sem esperar. O prazo conta do
 #   instante da leitura (`@decidido_em`).
 # - Ao retomar, conta a resposta depois do marco e até o prazo (`due_at`), pela régua da G11 (só nas conversas que
 #   quem ligou vê). Acordada por outra coisa (a resposta da agente de IA, o contato mudando), volta a esperar sem
