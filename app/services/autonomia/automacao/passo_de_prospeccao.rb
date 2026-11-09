@@ -21,19 +21,20 @@ class Autonomia::Automacao::PassoDeProspeccao
   Resultado = ::Autonomia::Automacao::PassoDeAcao::Resultado
   CHAVE = 'prospecting_manage'.freeze
 
-  # O que a Receita confere ao salvar e ao ligar. Sem conta (o catálogo das receitas prontas), só o gatilho.
-  def self.problemas_ao_salvar(passo, receita, conta:, account_user:)
+  # O que a Receita confere ao salvar e ao ligar. Sem conta (o catálogo das receitas prontas), só o alvo (`alvo`,
+  # Receita#alvo: o tipo do registro em que o passo roda).
+  def self.problemas_ao_salvar(passo, alvo, conta:, account_user:)
     id = passo['id']
     return [frase(:prospeccao_desligada, passo: id)] if conta && !::Autonomia::Prospecting::Config.enabled?(conta)
 
     buscar = passo['faz'] == 'buscar'
     lista = account_user && !pode?(account_user, passo) ? [frase(:prospeccao_sem_permissao, passo: id)] : []
-    buscar ? lista + problemas_da_busca(passo, receita.dig('gatilho', 'tipo'), conta, account_user) : lista
+    buscar ? lista + problemas_da_busca(passo, alvo, conta, account_user) : lista
   end
 
-  def self.problemas_da_busca(passo, gatilho, conta, account_user)
+  def self.problemas_da_busca(passo, alvo, conta, account_user)
     id = passo['id']
-    lista = ::Autonomia::Automacao::PassoDeCampanha.gatilho_da_conta?(gatilho) ? [] : [frase(:prospeccao_so_sem_alvo, passo: id)]
+    lista = ::Autonomia::Automacao::PassoDeCampanha.alvo_da_conta?(alvo) ? [] : [frase(:prospeccao_so_sem_alvo, passo: id)]
     return lista if conta.nil?
 
     etiquetas = Array(passo['etiquetas']) - conta.labels.where(id: passo['etiquetas']).pluck(:id)

@@ -33,13 +33,13 @@ class Autonomia::Automacao::PassoDeCampanha
   PUBLICO_DESTA_EXECUCAO = 'desta_execucao'.freeze
 
   # O que a Receita confere ao salvar (#2630). Sem conta (o catálogo das receitas prontas), só o que não depende dela.
-  def self.problemas_ao_salvar(passo, receita, conta:, account_user:)
+  # `alvo`: o tipo do registro em que o passo roda (Receita#alvo); o ramo do "em outro registro" nunca roda na conta.
+  def self.problemas_ao_salvar(passo, receita, alvo:, conta:, account_user:)
     id = passo['id']
-    gatilho = receita.dig('gatilho', 'tipo')
     desligado = conta && !::Autonomia::Automacao::Motor.mensagens?(conta) ? [frase(:passo_desligado, passo: id)] : []
     return desligado unless passo['faz'] == 'disparar'
 
-    desligado + problemas_do_disparo(passo, conta, gatilho, account_user) + problemas_do_publico(passo, receita)
+    desligado + problemas_do_disparo(passo, conta, alvo, account_user) + problemas_do_publico(passo, receita)
   end
 
   # G58: o público desta execução precisa de um passo antes dele que crie card ou contato; sem ele, sairia sempre vazio.
@@ -54,9 +54,9 @@ class Autonomia::Automacao::PassoDeCampanha
 
   def self.desta_execucao?(passo) = passo['publico'] == PUBLICO_DESTA_EXECUCAO
 
-  def self.problemas_do_disparo(passo, conta, gatilho, account_user)
+  def self.problemas_do_disparo(passo, conta, alvo, account_user)
     id = passo['id']
-    lista = [*(frase(:campanha_so_sem_alvo, passo: id) unless gatilho_da_conta?(gatilho)),
+    lista = [*(frase(:campanha_so_sem_alvo, passo: id) unless alvo_da_conta?(alvo)),
              *(frase(:campanha_variavel_fixa, passo: id) unless variaveis_escritas?(passo['modelo']))]
     return lista if conta.nil?
 
@@ -95,11 +95,9 @@ class Autonomia::Automacao::PassoDeCampanha
     caixa if caixa&.channel.try(:provider) == PROVEDOR
   end
 
-  # O gatilho que roda na conta inteira, não numa conversa, card ou contato. Contrato com a G7 (#2499): o
-  # `conta.recorrente` entra em Gatilhos::LISTA com alvo 'Account'.
-  def self.gatilho_da_conta?(tipo)
-    ::Autonomia::Automacao::Gatilhos.alvo(tipo) == ALVO_DA_CONTA
-  end
+  # O passo roda na conta inteira, não numa conversa, card ou contato. Contrato com a G7 (#2499): o `conta.recorrente`
+  # entra em Gatilhos::LISTA com alvo 'Account'. `alvo`: Receita#alvo.
+  def self.alvo_da_conta?(alvo) = alvo == ALVO_DA_CONTA
 
   def self.pode_disparar?(usuario, conta)
     account_user = usuario && conta.account_users.find_by(user_id: usuario.id)

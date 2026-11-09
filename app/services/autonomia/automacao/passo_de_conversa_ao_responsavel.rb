@@ -18,9 +18,10 @@ class Autonomia::Automacao::PassoDeConversaAoResponsavel
   ACAO = 'POST conversations/:conversation_id/assignments'.freeze
   Resultado = ::Autonomia::Automacao::PassoDeAcao::Resultado
 
-  # Ao salvar: só com gatilho de card, que tem o card de onde ler o responsável.
-  def self.problemas_ao_salvar(passo, receita)
-    return [] if ::Autonomia::Automacao::Gatilhos.do_card?(receita.dig('gatilho', 'tipo'))
+  # Ao salvar: só no card (`alvo`, Receita#alvo: o gatilho de card ou o ramo nos cards do contato), que tem o card de
+  # onde ler o responsável.
+  def self.problemas_ao_salvar(passo, alvo)
+    return [] if alvo == ::Autonomia::Automacao::Gatilhos::CARD
 
     [I18n.t('autonomia.automacao.receita.responsavel_so_com_card', passo: passo['id'])]
   end

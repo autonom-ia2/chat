@@ -10,12 +10,14 @@ class Autonomia::Automacao::PassosProprios
 
   def self.do_tipo?(passo) = TIPOS.include?(passo['tipo'])
 
-  # `dentro`: a receita é o ramo de um "em outro registro" (Receita com `alvo`). `caminho`: (id do passo, caminho) →
-  # problemas, a régua da Receita.
-  def initialize(conta:, account_user:, receita:, dentro:, &caminho)
+  # `alvo`: o tipo do registro em que os passos rodam (Receita#alvo): no ramo de um "em outro registro", o do ramo; fora
+  # dele, o do gatilho. As regras de "só no card" e "só na conta" leem ele, nunca o gatilho. `dentro`: a receita é o ramo
+  # de um "em outro registro" (Receita com `alvo`). `caminho`: (id do passo, caminho) → problemas, a régua da Receita.
+  def initialize(conta:, account_user:, receita:, alvo:, dentro:, &caminho)
     @conta = conta
     @account_user = account_user
     @receita = receita
+    @alvo = alvo
     @dentro = dentro
     @caminho = caminho
   end
@@ -35,11 +37,11 @@ class Autonomia::Automacao::PassosProprios
   def sem_caminho(passo)
     case passo['tipo']
     when 'campanha'
-      ::Autonomia::Automacao::PassoDeCampanha.problemas_ao_salvar(passo, @receita, conta: @conta, account_user: @account_user)
+      ::Autonomia::Automacao::PassoDeCampanha.problemas_ao_salvar(passo, @receita, alvo: @alvo, conta: @conta, account_user: @account_user)
     when 'para_cada' then ::Autonomia::Automacao::PassoParaCada.problemas_ao_salvar(@conta, passo, @account_user)
     when 'prospeccao'
-      ::Autonomia::Automacao::PassoDeProspeccao.problemas_ao_salvar(passo, @receita, conta: @conta, account_user: @account_user)
-    when 'conversa_ao_responsavel' then ::Autonomia::Automacao::PassoDeConversaAoResponsavel.problemas_ao_salvar(passo, @receita)
+      ::Autonomia::Automacao::PassoDeProspeccao.problemas_ao_salvar(passo, @alvo, conta: @conta, account_user: @account_user)
+    when 'conversa_ao_responsavel' then ::Autonomia::Automacao::PassoDeConversaAoResponsavel.problemas_ao_salvar(passo, @alvo)
     else ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo)
     end
   end
@@ -52,7 +54,7 @@ class Autonomia::Automacao::PassosProprios
   end
 
   def retorno(passo)
-    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @receita, @account_user) do |c|
+    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @alvo, @account_user) do |c|
       @caminho.call(passo['id'], c, onde: :texto)
     end
   end

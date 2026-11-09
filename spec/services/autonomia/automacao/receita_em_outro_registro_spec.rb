@@ -83,6 +83,33 @@ RSpec.describe Autonomia::Automacao::Receita do
       .to eq([I18n.t("#{frase}.em_outro_registro.sem_chave_de_funis", passo: 'outro')])
   end
 
+  # As regras de "só no card" leem o alvo da receita (Receita#alvo): no ramo nos cards do contato, o card do ramo; fora do
+  # ramo, o do gatilho. O ramo nasce com `gatilho` vazio, e ler o tipo do gatilho recusava o passo válido.
+  describe 'o que só vale no card' do
+    let(:aviso) { { 'id' => 'aviso', 'tipo' => 'avisar', 'para' => { 'responsavel_do_card' => true }, 'texto' => ['Oi'] } }
+    let(:conversa) { { 'id' => 'conversa', 'tipo' => 'conversa_ao_responsavel' } }
+    let(:retorno) do
+      { 'id' => 'retorno', 'tipo' => 'retorno', 'titulo' => ['Ligar'], 'daqui' => { 'valor' => 2, 'unidade' => 'dias' },
+        'envio' => { 'mensagem' => ['Oi'] } }
+    end
+
+    it 'vale no ramo nos cards do contato, num gatilho de conversa', :aggregate_failures do
+      [aviso, conversa, retorno].each do |passo|
+        lida = receita('mensagem.criada', em_outro(cards_perdidos, passo))
+
+        expect(described_class.esquema_valido?(lida)).to be(true)
+        expect(problemas(lida)).to eq([])
+      end
+    end
+
+    it 'fora do ramo, num gatilho de conversa, continua recusado', :aggregate_failures do
+      expect(problemas(receita('mensagem.criada', aviso)))
+        .to eq([I18n.t("#{frase}.responsavel_do_card_sem_card", passo: 'aviso')])
+      expect(problemas(receita('mensagem.criada', conversa))).to eq([I18n.t("#{frase}.responsavel_so_com_card", passo: 'conversa')])
+      expect(problemas(receita('mensagem.criada', retorno))).to eq([I18n.t("#{frase}.retorno_mensagem_sem_card", passo: 'retorno')])
+    end
+  end
+
   it 'o id repetido entre o ramo e o resto sai uma vez só' do
     lida = receita('mensagem.criada', mensagem('m1', 'contato.nome'), em_outro(cards_perdidos, mensagem('m1', 'card.titulo')))
 

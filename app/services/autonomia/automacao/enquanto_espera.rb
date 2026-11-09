@@ -23,10 +23,11 @@ module Autonomia::Automacao::EnquantoEspera
 
   def conferir_as?(passo) = passo.is_a?(Hash) && passo['tipo'] == 'esperar_ate' && !passo['conferir_as'].nil?
 
-  # `receita`: a receita inteira; `passos`: todos os passos dela, na ordem (Receita#passos).
-  def problemas_ao_salvar(receita, passos)
+  # `receita`: a receita inteira; `passos`: todos os passos dela, na ordem (Receita#passos); `alvo`: o tipo do registro
+  # em que eles rodam (Receita#alvo).
+  def problemas_ao_salvar(receita, passos, alvo)
     roteiro = ::Autonomia::Automacao::Roteiro.new(receita)
-    da_conta = ::Autonomia::Automacao::Gatilhos.da_conta?(receita.dig('gatilho', 'tipo'))
+    da_conta = alvo == ::Autonomia::Automacao::Gatilhos::CONTA
     passos.flat_map do |passo|
       [*conferir_com_prazo(passo), *(a_cada?(passo) ? galho(passo, roteiro, da_conta) : []), *desde_no_galho(passo, roteiro)]
     end

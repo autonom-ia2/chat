@@ -16,18 +16,19 @@ class Autonomia::Automacao::PassoDeRetorno
   Resultado = ::Autonomia::Automacao::PassoDeAcao::Resultado
 
   # Ao salvar: os valores do título e da mensagem lidos pelo bloco de quem confere a receita (Receita#problemas_do_caminho),
-  # a mensagem só com a flag da F4 e só com gatilho de card, as pessoas e o time da própria conta e, com a pessoa, poder
-  # criar retorno (FollowUpPolicy#create?, como o "criar card" do G4). `account_user` nil (o catálogo) não confere a pessoa.
-  def self.problemas_ao_salvar(conta, passo, receita, account_user, &)
+  # a mensagem só com a flag da F4 e só no card (`alvo`, Receita#alvo: o gatilho de card ou o ramo nos cards do contato),
+  # as pessoas e o time da própria conta e, com a pessoa, poder criar retorno (FollowUpPolicy#create?, como o "criar
+  # card" do G4). `account_user` nil (o catálogo) não confere a pessoa.
+  def self.problemas_ao_salvar(conta, passo, alvo, account_user, &)
     textos = [passo['titulo'], passo.dig('envio', 'mensagem')].compact
     lidos = textos.flat_map { |partes| ::Autonomia::Automacao::Texto.caminhos(partes) }.flat_map(&)
-    da_mensagem(conta, passo, receita.dig('gatilho', 'tipo')) + de_quem_salva(passo, account_user) + lidos + de_fora(conta, passo)
+    da_mensagem(conta, passo, alvo) + de_quem_salva(passo, account_user) + lidos + de_fora(conta, passo)
   end
 
-  def self.da_mensagem(conta, passo, gatilho)
+  def self.da_mensagem(conta, passo, alvo)
     return [] unless passo['envio']
     return [frase(:passo_desligado, passo: passo['id'])] unless ::Autonomia::Automacao::Motor.mensagens?(conta)
-    return [] if ::Autonomia::Automacao::Gatilhos.do_card?(gatilho)
+    return [] if alvo == ::Autonomia::Automacao::Gatilhos::CARD
 
     [frase(:retorno_mensagem_sem_card, passo: passo['id'])]
   end

@@ -61,7 +61,7 @@ class Autonomia::Automacao::Receita
     [*(@alvo ? [] : ids_repetidos), *gatilho_novo, *conversa_nova, *agenda_de_reserva, *filtros_do_gatilho,
      *do_alvo.flat_map { |passo| problemas_do_passo(passo) },
      *::Autonomia::Automacao::Duracao.sem_prazo_que_vence(do_alvo).map { |id| texto(:sem_prazo_com_se_vencer, passo: id) },
-     *::Autonomia::Automacao::EnquantoEspera.problemas_ao_salvar(@receita, do_alvo)]
+     *::Autonomia::Automacao::EnquantoEspera.problemas_ao_salvar(@receita, do_alvo, alvo)]
   end
 
   # Todos os passos, inclusive os de dentro dos ramos, na ordem em que aparecem.
@@ -112,7 +112,7 @@ class Autonomia::Automacao::Receita
   # Os passos com conferência própria (PassosProprios); os caminhos que eles leem passam pela régua daqui.
   def passos_proprios
     @passos_proprios ||= ::Autonomia::Automacao::PassosProprios.new(conta: @conta, account_user: @account_user, receita: @receita,
-                                                                    dentro: @alvo.present?) do |id, c, **opcoes|
+                                                                    alvo: alvo, dentro: @alvo.present?) do |id, c, **opcoes|
                                                                       problemas_do_caminho(id, c, **opcoes)
                                                                     end
   end
@@ -160,7 +160,7 @@ class Autonomia::Automacao::Receita
   end
 
   def destinatarios_de_fora(passo)
-    ::Autonomia::Automacao::DestinatariosDoAviso.new(@conta, @receita.dig('gatilho', 'tipo')).problemas(passo['id'], passo['para'])
+    ::Autonomia::Automacao::DestinatariosDoAviso.new(@conta, alvo).problemas(passo['id'], passo['para'])
   end
 
   # O caminho que não vale ali já diz o que corrigir; o valor fora só aparece depois.
