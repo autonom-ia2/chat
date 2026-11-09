@@ -34,6 +34,11 @@
       "NA_FRASE": "{frase} (sem conversa, abre uma em {caixa})",
       "AJUDA": "Se o card ou o contato ainda não tem conversa, a primeira mensagem abre uma nesta caixa. No WhatsApp oficial, ela só sai com um modelo aprovado."
     },
+    "AGENDA_DE_RESERVA": {
+      "TITULO": "Página de agenda de reserva",
+      "NENHUMA": "Nenhuma (sem ninguém atendendo, o link da agenda fica vazio)",
+      "AJUDA": "Vai no link da agenda quando ninguém atende a conversa, ou o contato ainda não tem conversa. Quem atende sempre manda a própria página."
+    },
     "VALOR_DA_MENSAGEM": {
       "RECEBIDA": "do cliente",
       "ENVIADA": "da equipe para o cliente",

@@ -3,7 +3,8 @@ require 'rails_helper'
 # Fechamento do épico #2414 (#2570), lacunas G59, G60 e G61. Exemplo 6 numa automação só, a do aniversário (gatilho
 # `contato.data`, no contato), com os passos que já rodam à risca:
 # - passo 2: manda pelo modelo aprovado "Aniversário", com o link da agenda (G60: `conversa.link_da_agenda`, a página de
-#   quem atende a conversa do contato na caixa escolhida, pela ponte da conversa nova do #2680);
+#   quem atende a conversa do contato na caixa escolhida, pela ponte da conversa nova do #2680; sem ninguém atendendo,
+#   a página de reserva escolhida no gatilho, decisão 10 do Rodrigo);
 # - passo 3: cria o card no quadro "Aniversário";
 # - passo 6: "Marcou: avisa a profissional" (G61: quem atende a próxima reunião marcada do contato); o "grava no card"
 #   é a G49;
@@ -27,6 +28,7 @@ RSpec.describe 'Fechamento #2414 · G59: esperar a reunião acontecer', :fechame
   let(:jessica) { create(:user, account: account, role: :administrator, name: 'Jéssica') }
   let(:carol) { create(:user, account: account, role: :agent, name: 'Carol Profissional') }
   let(:pagina) { create_booking_profile(account: account, host: carol, title: 'Hidratação') }
+  let(:salao) { create_booking_profile(account: account, host: jessica, title: 'Agenda do salão') }
   let(:conversa) do
     contact_inbox = create(:contact_inbox, inbox: inbox, contact: bia, source_id: '5511900000059')
     create(:conversation, account: account, inbox: inbox, contact: bia, contact_inbox: contact_inbox, assignee: carol, status: :open)
@@ -43,7 +45,7 @@ RSpec.describe 'Fechamento #2414 · G59: esperar a reunião acontecer', :fechame
 
   def receita
     { gatilho: { tipo: 'contato.data', campo: 'nascimento', dias: 0, quando: 'antes', hora: 9, repete: 'todo_ano',
-                 conversa_nova: { caixa_id: inbox.id } },
+                 conversa_nova: { caixa_id: inbox.id }, agenda_de_reserva: { pagina_id: salao.id } },
       passos: passos_do_aniversario + passos_da_foto }
   end
 
@@ -146,6 +148,7 @@ RSpec.describe 'Fechamento #2414 · G59: esperar a reunião acontecer', :fechame
       account.enable_features!('automacao_gatilhos', 'crm_booking_v2')
       [jessica, carol].each { |pessoa| create(:inbox_member, user: pessoa, inbox: inbox) }
       pagina
+      salao
       create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :incoming, sender: bia,
                        content: 'Amei a escova de setembro!', created_at: 2.months.ago)
       { 'nascimento' => 'date', 'autorizou' => 'text' }.each do |chave, tipo|
@@ -227,16 +230,45 @@ RSpec.describe 'Fechamento #2414 · G59: esperar a reunião acontecer', :fechame
     expect(cursor).to eq('dia_seguinte')
   end
 
-  # G60: o link é o de quem atende a conversa do contato na caixa da conversa nova. Sem ninguém atendendo, vazio, e o
-  # passo pula com o porquê (`sem_responsavel`): nunca o link de outra pessoa (parecer do Funções, G12).
-  it 'o link da agenda no contato sai de quem atende a conversa; sem ninguém, vazio com o porquê', :aggregate_failures do
-    valores = -> { Autonomia::Automacao::Valores.new(alvo: Autonomia::Automacao::Contexto.de(bia, execucao: execucao), quem: jessica) }
-    expect(valores.call.ler('conversa.link_da_agenda')).to eq(Crm::BookingV2::ShortLink.url_for(pagina))
+  # G60: o link é o de quem atende a conversa do contato na caixa da conversa nova. Sem ninguém atendendo, vale a página
+  # de reserva escolhida no gatilho (decisão 10 do Rodrigo); nunca o link de outra pessoa (parecer do Funções, G12).
+  def leitura_da_agenda(com: execucao)
+    Autonomia::Automacao::Valores.new(alvo: Autonomia::Automacao::Contexto.de(bia, execucao: com), quem: jessica)
+  end
+
+  it 'o link da agenda: com quem atenda, a página dela; sem ninguém, a página de reserva do gatilho', :aggregate_failures do
+    expect(leitura_da_agenda.ler('conversa.link_da_agenda')).to eq(Crm::BookingV2::ShortLink.url_for(pagina))
 
     conversa.update!(assignee: nil)
-    leitura = valores.call
+    expect(leitura_da_agenda.ler('conversa.link_da_agenda')).to eq(Crm::BookingV2::ShortLink.url_for(salao))
+
+    conversa.destroy!
+    expect(leitura_da_agenda.ler('conversa.link_da_agenda')).to eq(Crm::BookingV2::ShortLink.url_for(salao))
+  end
+
+  it 'sem ninguém atendendo e sem página de reserva no gatilho: vazio, e o passo pula com sem_responsavel', :aggregate_failures do
+    conversa.update!(assignee: nil)
+    receita = execucao.versao.receita.deep_dup.tap { |copia| copia['gatilho'].delete('agenda_de_reserva') }
+    sem_reserva = Autonomia::Automacao::Execucao.new(account: account, automacao: execucao.automacao, alvo: bia,
+                                                     versao: Autonomia::Automacao::Versao.new(receita: receita))
+    leitura = leitura_da_agenda(com: sem_reserva)
+
     expect(leitura.ler('conversa.link_da_agenda')).to be_nil
     expect(leitura.falta_da_agenda).to eq('sem_responsavel')
+  end
+
+  # A página de reserva desligada ou apagada depois de ligar a automação: vazio com o motivo próprio, nunca outro link.
+  it 'a página de reserva desligada ou apagada depois: vazio com o motivo próprio', :aggregate_failures do
+    conversa.update!(assignee: nil)
+    salao.update!(enabled: false)
+    leitura = leitura_da_agenda
+    expect(leitura.ler('conversa.link_da_agenda')).to be_nil
+    expect(leitura.falta_da_agenda).to eq('agenda_de_reserva_indisponivel')
+
+    salao.destroy!
+    leitura = leitura_da_agenda
+    expect(leitura.ler('conversa.link_da_agenda')).to be_nil
+    expect(leitura.falta_da_agenda).to eq('agenda_de_reserva_indisponivel')
   end
 
   # Acesso (G59 e G61): a reunião em card de funil que quem ligou não vê não decide a espera (parecer do Funções, #2703).

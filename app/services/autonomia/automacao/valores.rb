@@ -234,15 +234,26 @@ class Autonomia::Automacao::Valores
 
   def do_campo(chave)
     return do_objeto(chave) { |objeto| DO_QUE_QUEM_VE[chave].call(objeto, account_user) } if DO_QUE_QUEM_VE.key?(chave)
-    return do_objeto(chave) { |objeto| link_da_agenda(objeto, AGENDA[chave].call(objeto)) } if AGENDA.key?(chave)
+    return link_da_agenda(chave) if AGENDA.key?(chave)
 
     do_objeto(chave) { |objeto| (CAMPOS[chave] || ENVIO[chave]).call(objeto) }
   end
 
-  def link_da_agenda(objeto, pessoa)
-    resultado = ::Autonomia::Automacao::LinkDaAgenda.resultado(objeto.account, pessoa, pagina_id: pagina_da_reuniao)
+  # G60: a página de quem atende; sem ninguém (ou sem a ponte: o contato ainda sem conversa na caixa escolhida), a página
+  # de agenda de reserva da receita (AgendaDeReserva); sem ela, vazio por `sem_responsavel`.
+  def link_da_agenda(chave)
+    objeto = da_base(chave)
+    pessoa = objeto && AGENDA[chave].call(objeto)
+    resultado = pessoa ? ::Autonomia::Automacao::LinkDaAgenda.resultado(@contexto.conta, pessoa, pagina_id: pagina_da_reuniao) : sem_quem_atenda
     @por_da_agenda ||= resultado.por
     resultado.url
+  end
+
+  def sem_quem_atenda
+    reserva = ::Autonomia::Automacao::AgendaDeReserva.pagina_id(@contexto.execucao&.versao&.receita)
+    return ::Autonomia::Automacao::AgendaDeReserva.resultado(@contexto.conta, reserva, @quem) if reserva
+
+    ::Autonomia::Automacao::LinkDaAgenda::Resultado.new(url: nil, por: 'sem_responsavel')
   end
 
   # A página de agendamento em que a reunião do gatilho foi marcada, quando veio de uma.

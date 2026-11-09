@@ -141,7 +141,7 @@ class Autonomia::Automacao::PassoDeMensagem
     por = valores.falta_da_agenda if motivo == 'faltou_valor'
     return pulado(motivo, janela_fechada: true) unless por
 
-    Resultado.new(tipo: :pulado, motivo: 'faltou_link_da_agenda', dados: { 'por' => por, 'janela' => 'fechada' })
+    Resultado.new(tipo: :pulado, motivo: ::Autonomia::Automacao::AgendaDeReserva.motivo(por), dados: { 'por' => por, 'janela' => 'fechada' })
   end
 
   def janela_aberta?

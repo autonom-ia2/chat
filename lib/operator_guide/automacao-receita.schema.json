@@ -23,6 +23,13 @@
         "quando": { "enum": ["antes", "depois"], "description": "Só em card.data e contato.data, obrigatório: antes (a data ainda vai chegar) ou depois (a data já passou)." },
         "repete": { "enum": ["todo_ano"], "description": "Só em card.data e contato.data, opcional: todo_ano compara só o dia e o mês, todo ano (aniversário, data de casamento, aniversário de contrato); sem ele, a data vale uma vez, com o ano. Quem nasceu em 29/02 é lembrado em 28/02 no ano que não é bissexto." },
         "hora": { "type": "integer", "minimum": 0, "maximum": 23, "description": "Só em card.data, contato.data e nos recorrentes, obrigatória: a hora cheia, no fuso da conta (nos de data, a partir da qual o dia conta; no recorrente, a hora da ocorrência)." },
+        "agenda_de_reserva": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pagina_id"],
+          "description": "G60, opcional, nos gatilhos de conversa, de card e de contato: a página de agendamento fixa (id) que vai no link da agenda (card.link_da_agenda, conversa.link_da_agenda) quando ninguém atende a conversa ou o card, ou o contato ainda não tem conversa na caixa da conversa nova. Havendo quem atenda, vale a página dessa pessoa. Página desligada ou apagada depois: o passo pula com agenda_de_reserva_indisponivel. Quem salva precisa ler as páginas de agendamento.",
+          "properties": { "pagina_id": { "type": "integer", "minimum": 1 } }
+        },
         "conversa_nova": {
           "type": "object",
           "additionalProperties": false,

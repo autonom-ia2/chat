@@ -34,6 +34,11 @@
       "NA_FRASE": "{frase} (with no conversation, opens one in {caixa})",
       "AJUDA": "If the card or the contact has no conversation yet, the first message opens one in this inbox. On the official WhatsApp, it only goes out with an approved template."
     },
+    "AGENDA_DE_RESERVA": {
+      "TITULO": "Backup booking page",
+      "NENHUMA": "None (with nobody attending, the booking link stays empty)",
+      "AJUDA": "Goes in the booking link when nobody attends the conversation, or the contact has no conversation yet. Whoever attends always sends their own page."
+    },
     "VALOR_DA_MENSAGEM": {
       "RECEBIDA": "from the customer",
       "ENVIADA": "from the team to the customer",

@@ -247,7 +247,7 @@ module FechamentoAutomacao::Lacunas
     },
     # Do exemplo 6, passo 2 (G60): o link da agenda numa automação que roda no contato, pela ponte da conversa nova
     # (#2680) até a conversa dele na caixa escolhida; prova no mesmo spec da G59.
-    'G60' => -> { valor?('conversa.link_da_agenda') && Autonomia::Automacao::Contexto.method_defined?(:conversa_nova) },
+    'G60' => -> { valor?('conversa.link_da_agenda') && Autonomia::Automacao.const_defined?(:AgendaDeReserva) },
     # Do exemplo 6, passo 6 (G61): avisar quem atende a reunião fora dos gatilhos de reunião (a próxima marcada do contato,
     # em card que quem ligou vê); prova no mesmo spec da G59.
     'G61' => -> { Autonomia::Automacao::ValoresDaReuniao.respond_to?(:proxima_do_contato) }
