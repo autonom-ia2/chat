@@ -2573,6 +2573,8 @@
               "INSTAGRAM_CTA_PAGINA": "Link Instagram",
               "INSTAGRAM_ERROR": {
                 "MISSING_PERMISSIONS": "Instagram was left unchecked in the Facebook window. Sign in again and keep Instagram checked.",
+                "NO_INSTAGRAM": "This Page has no Instagram linked on Facebook. Link it on Facebook, or use the Instagram sign-in.",
+                "NOT_GRANTED": "This Page was not checked in the Facebook window. Sign in again and check it.",
                 "RECONNECT": "Your Facebook access expired. Sign in again.",
                 "FORBIDDEN": "You cannot link inboxes. Ask an administrator.",
                 "LIMIT": "Your plan reached its inbox limit.",

@@ -84,11 +84,15 @@ class Crm::MetaAds::LoginUnico::LigarInstagram
     channel.inbox
   end
 
+  # Dois toques ao mesmo tempo: o segundo bate no índice único (instagram_id, account_id) e vira troca na caixa do
+  # primeiro.
   def create(instagram, attributes)
     ActiveRecord::Base.transaction do
       channel = Channel::Instagram.create!(account_id: @connection.account_id, instagram_id: instagram['id'].to_s, **attributes)
       Account.find(@connection.account_id).inboxes.create!(name: instagram['username'], channel: channel)
     end
+  rescue ActiveRecord::RecordNotUnique
+    switch(Channel::Instagram.find_by!(account_id: @connection.account_id, instagram_id: instagram['id'].to_s), attributes)
   end
 
   def client

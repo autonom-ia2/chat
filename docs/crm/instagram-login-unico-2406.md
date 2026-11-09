@@ -29,10 +29,16 @@ Review.
   `Crm::MetaAds::PageSubscription`. O webhook do Instagram já entrega esses eventos ao mesmo controller (`object:
   instagram`), e a assinatura confere com o `FB_APP_SECRET`.
 
+- Na conta que também tem a caixa da Página com esse Instagram ligado, o Direct e os comentários do Instagram passam a
+  ir para a caixa do Instagram, e não mais para a caixa da Página. É a mesma regra de hoje quando a conta tem a caixa do
+  login do Instagram (`Instagram::ConnectedChannels`: o canal do Instagram primeiro, a Página depois). O Messenger da
+  Página não muda.
+- Apagar a caixa da Página não tira a inscrição da Página enquanto uma caixa do Instagram do login único a usa.
+
 ### Fica de fora
 
 - O login do Instagram continua igual e não pode ser desligado. Quem só tem Instagram só liga por ele.
-- Nenhuma caixa existente muda sozinha. Veja "Migração das caixas".
+- Nenhuma caixa existente troca de login sozinha. Veja "Migração das caixas".
 - Publicar no Instagram pelo login do Facebook (`instagram_content_publish`) fica para outra Issue.
 
 ## 2. Permissões novas na configuração do login
@@ -46,6 +52,10 @@ A configuração `META_ADS_LOGIN_CONFIGURATION_ID` (1533640672115651) precisa pe
 | `instagram_manage_comments` | comentários: ler, responder, ocultar e apagar | a caixa liga, mas os comentários do Instagram não leem |
 | `instagram_manage_insights` | números de Seus posts e dos Anúncios | a caixa liga, mas os números do Instagram não leem |
 | `pages_manage_metadata` | inscrever a Página no webhook | já está na configuração por causa do Messenger |
+| `pages_read_engagement`, `pages_show_list` | ler o perfil de quem manda o Direct (nome, foto, @), pela doc do perfil do Instagram na Messenger Platform | o contato chega como "Unknown (IG: …)" |
+
+A doc da Meta pede ainda que o token da Página seja de alguém com a tarefa de moderar (`MODERATE`) e de mandar
+mensagem (`MESSAGE`) na Página. O Direct não pede `pages_messaging`: essa é a do Messenger.
 
 A troca da configuração é feita no painel da Meta, pelo Rodrigo. O código não muda essa lista.
 
@@ -82,6 +92,11 @@ A troca da configuração é feita no painel da Meta, pelo Rodrigo. O código n�
 
 ## 6. Riscos abertos
 
+- Reação e leitura (`message_reactions`, `messaging_seen`) dependem dos campos do Instagram marcados no painel do app
+  do login de empresa (Webhooks > Instagram). A Página se inscreve com os campos do Messenger. Se esses campos não
+  estiverem marcados no app, o Direct chega, mas a reação e o "visto" não.
+- As chamadas vão sem `appsecret_proof`, como as outras do login de empresa (Anúncios, token da Página). Se o app
+  passar a exigir a chave secreta, todas param juntas.
 - O formato das respostas da Graph pelo `graph.facebook.com` foi lido na documentação, não numa chamada real. O teste
   do Rodrigo é a primeira chamada real.
 - Os nomes das métricas de insights do Instagram pelo login do Facebook seguem a mesma doc. Se a Meta recusar alguma,

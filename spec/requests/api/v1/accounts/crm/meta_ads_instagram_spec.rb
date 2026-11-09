@@ -82,14 +82,21 @@ RSpec.describe 'CRM meta_ads_connection Instagram do login único (#2406)', type
     expect(response.parsed_body['inbox_id']).to eq(existing.inbox.id)
   end
 
-  it 'trocar o login de uma caixa pede integration_manage' do
-    stub_meta
-    create(:channel_instagram, account: account, instagram_id: instagram_id)
-    account.account_users.find_by(user: admin).update!(role: :agent)
+  it 'sem a flag do login único responde 404' do
+    account.disable_features!('anuncios_login_unico')
 
     link
 
-    expect(response).to have_http_status(:forbidden)
+    expect(response).to have_http_status(:not_found)
+  end
+
+  it 'no modo parceiro: 422 not_own_token, sem chamar a Meta' do
+    allow_any_instance_of(Crm::MetaAdsConnection).to receive(:own_token?).and_return(false) # rubocop:disable RSpec/AnyInstance
+
+    link
+
+    expect(response.parsed_body['error']).to eq('not_own_token')
+    expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
   end
 
   it 'login sem as permissões do Instagram: 422 missing_permissions e nada é criado' do

@@ -2574,6 +2574,8 @@
               "INSTAGRAM_CTA_PAGINA": "Ligar o Instagram",
               "INSTAGRAM_ERROR": {
                 "MISSING_PERMISSIONS": "O Instagram ficou desmarcado na janela do Facebook. Entre de novo e deixe o Instagram marcado.",
+                "NO_INSTAGRAM": "Esta Página não tem Instagram ligado no Facebook. Ligue lá, ou use o login do Instagram.",
+                "NOT_GRANTED": "Esta Página ficou desmarcada na janela do Facebook. Entre de novo e marque a Página.",
                 "RECONNECT": "O seu acesso ao Facebook venceu. Entre de novo.",
                 "FORBIDDEN": "Você não pode ligar caixas. Peça a um administrador.",
                 "LIMIT": "O seu plano chegou ao limite de caixas.",

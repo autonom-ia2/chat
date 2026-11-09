@@ -2,7 +2,8 @@
 # página de posts (chamada real de 27/10, v23). Mesmas regras de token, versão e limpeza de erro do cliente.
 # - Página: token da Página. O recorte is_from_ads vai numa chamada própria: duas métricas com o mesmo recorte na mesma
 #   chamada dão erro (code 2). post_total_media_view_unique vem duas vezes (lifetime e day): quem lê usa a lifetime.
-# - Instagram: token do login do Instagram, graph.instagram.com (base_uri). Números lifetime de cada mídia.
+# - Instagram: token do login do Instagram, graph.instagram.com (base_uri); no login do Facebook (#2406), o token da
+#   Página, graph.facebook.com e o id do Instagram no lugar do `me`. Números lifetime de cada mídia.
 # - Comentários dos posts, para "esperando você" (F2, #2305): os primeiros COMENTARIOS_POR_POST de primeiro nível de
 #   cada post, com quem escreveu e quem respondeu, embutidos na lista de posts (chamada real de 29/10: veio nas duas
 #   redes). Numa chamada própria: sem a permissão de ler comentários, só ela falha, e os números do F1 continuam.

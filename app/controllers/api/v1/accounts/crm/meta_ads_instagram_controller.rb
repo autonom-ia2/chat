@@ -16,6 +16,8 @@ class Api::V1::Accounts::Crm::MetaAdsInstagramController < Api::V1::Accounts::Cr
   def create
     page_id = params[:page_id].to_s
     return render_unprocessable('page_id_required') unless numeric_id?(page_id)
+    # No modo parceiro o token é o da plataforma: nem a leitura da régua abaixo chama a Meta com ele.
+    return render_unprocessable('not_own_token') unless @connection.own_token?
     return render json: { error: 'forbidden' }, status: :forbidden unless can_link?(page_id)
 
     inbox = service.call(page_id)

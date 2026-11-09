@@ -1,4 +1,5 @@
-# Seus posts (#2302): os posts do Instagram da caixa (login do Instagram, graph.instagram.com). Só as vezes são sem
+# Seus posts (#2302): os posts do Instagram da caixa (login do Instagram, graph.instagram.com; no login do Facebook,
+# #2406, graph.facebook.com pelo id do Instagram, Channel::Instagram#graph_node). Só as vezes são sem
 # anúncio; curtidas, comentários, pessoas, salvos e compartilhamentos podem incluir (#2522: a chamada real de 27/10 só
 # viu posts nunca impulsionados, e a tela marca "pode incluir anúncio" até haver chamada real num post impulsionado,
 # com o mesmo texto ao lado dos números). O login do Instagram não diz se o post foi impulsionado

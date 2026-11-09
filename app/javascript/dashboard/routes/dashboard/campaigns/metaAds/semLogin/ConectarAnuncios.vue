@@ -184,7 +184,8 @@ const pageChoices = computed(() =>
     hint: row.instagram ? `@${row.instagram.username}` : row.category,
   }))
 );
-const instagramLigado = ref(false);
+// O id da Página cujo Instagram este toque ligou: vale só para ela.
+const instagramLigadoDe = ref(null);
 const savingInstagram = ref(false);
 const instagramError = ref(null);
 const works = computed(() =>
@@ -193,7 +194,9 @@ const works = computed(() =>
     granted: granted.value,
     declined: declined.value,
     pelaPagina: instagramPelaPagina.value,
-    instagramLigado: instagramLigado.value,
+    instagramLigado:
+      Boolean(chosenPage.value) &&
+      instagramLigadoDe.value === chosenPage.value.id,
   })
 );
 const worksMissingPermission = computed(() =>
@@ -206,6 +209,8 @@ const instagramToConnect = computed(() =>
 );
 const INSTAGRAM_ERRORS = {
   missing_permissions: 'MISSING_PERMISSIONS',
+  no_instagram: 'NO_INSTAGRAM',
+  page_not_granted: 'NOT_GRANTED',
   reconnect: 'RECONNECT',
   forbidden: 'FORBIDDEN',
   limit: 'LIMIT',
@@ -215,7 +220,7 @@ const linkInstagram = async () => {
   instagramError.value = null;
   try {
     await CrmMetaAdsConnectionAPI.linkInstagram(chosenPage.value.id);
-    instagramLigado.value = true;
+    instagramLigadoDe.value = chosenPage.value.id;
   } catch (error) {
     const code =
       error?.response?.status === 402 ? 'limit' : error?.response?.data?.error;
@@ -1425,6 +1430,7 @@ onBeforeUnmount(stopRecheck);
             class="!min-h-11 self-start"
             icon="i-ri-instagram-line"
             :is-loading="savingInstagram"
+            :disabled="savingInstagram"
             :label="$t(`${C}.DONE.WORKS.${instagramKey('INSTAGRAM_CTA')}`)"
             @click="connectInstagram"
           />
