@@ -140,6 +140,20 @@ RSpec.describe Crm::MetaCapi::BackfillJob do
       expect(report[:already_sent]).to eq(1)
       expect(report[:enqueued]).to eq(1)
     end
+
+    # #2799: Meta may have kept it, and DispatchJob never posts it again, so it is not "would send".
+    it 'does not enqueue an event whose outcome at Meta is unknown, but does a refused one' do
+      Crm::MetaConversionEvent.create!(account: account, card: card, event_id: won_event_id, event_type: 'won',
+                                       status: :error, error_message: 'unknown_outcome')
+      Crm::MetaConversionEvent.create!(account: account, card: card, event_id: moved_event_id, event_type: 'moved',
+                                       status: :error, error_message: 'refused')
+
+      report = described_class.perform_now(account.id, dry_run: false)
+
+      expect(Crm::MetaCapi::DispatchJob).to have_received(:perform_later)
+        .with(account.id, card.id, move_activity.id, 'moved', source: 'backfill').once
+      expect(report).to include(already_sent: 1, enqueued: 1)
+    end
   end
 
   describe 'gating' do

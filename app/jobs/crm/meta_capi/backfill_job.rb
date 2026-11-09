@@ -123,8 +123,10 @@ class Crm::MetaCapi::BackfillJob < ApplicationJob
     "crm-#{card.id}-#{capi_event}-#{activity.id}"
   end
 
+  # Accepted, or maybe received by Meta (unknown outcome, #2799): DispatchJob never posts either again.
   def already_sent?(event_id)
-    Crm::MetaConversionEvent.accepted.exists?(event_id: event_id)
+    events = Crm::MetaConversionEvent.where(event_id: event_id)
+    events.accepted.or(events.error.where(error_message: Crm::MetaConversionEvent::UNKNOWN_OUTCOME)).exists?
   end
 
   def enqueue_dispatch(card, capi_event, activity, report)

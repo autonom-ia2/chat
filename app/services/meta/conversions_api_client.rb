@@ -91,12 +91,18 @@ class Meta::ConversionsApiClient
 
   def answer(response)
     http_code = response.code.to_i
-    body = sanitize(response.body)
+    raw = text(response.body)
+    body = sanitize(raw)
     return Result.new(ok: true, http_code: http_code, body: body) if response.is_a?(Net::HTTPSuccess)
 
-    error = meta_error(response.body)
+    error = meta_error(raw)
     Result.new(ok: false, http_code: http_code, body: body, error: body, error_code: error['code'], error_subcode: error['error_subcode'],
                unknown_outcome: SERVER_ERROR_HTTP.cover?(http_code))
+  end
+
+  # Net::HTTP hands the body over as binary; Meta answers UTF-8 (HTTParty used to decode it).
+  def text(raw)
+    raw.to_s.dup.force_encoding(Encoding::UTF_8).scrub
   end
 
   # The `error` object of Meta's answer, or {} when the body has none it can read.

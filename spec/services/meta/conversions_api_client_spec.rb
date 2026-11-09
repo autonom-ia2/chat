@@ -77,6 +77,15 @@ RSpec.describe Meta::ConversionsApiClient do
       expect(client.post_events([event])).to have_attributes(ok: true, http_code: 200)
     end
 
+    it 'reads the answer as UTF-8 text' do
+      stub_request(:post, endpoint).to_return(status: 400, body: '{"error":{"code":100,"message":"Parâmetro inválido"}}'.b)
+
+      result = client.post_events([event])
+
+      expect(result.error.encoding).to eq(Encoding::UTF_8)
+      expect(result.error).to include('Parâmetro inválido')
+    end
+
     it 'has no error code on success' do
       stub_request(:post, endpoint).to_return(status: 200, body: '{"events_received":1}')
 
@@ -123,7 +132,7 @@ RSpec.describe Meta::ConversionsApiClient do
       end
     end
 
-    it 'keeps the outcome known when the SSL handshake fails: no request was sent, so it can be sent again (#2799)' do
+    it 'keeps the outcome known when opening the connection raises an SSL error (the handshake): it can be sent again (#2799)' do
       fail_on_connect(OpenSSL::SSL::SSLError.new('handshake failure'))
 
       expect(client.post_events([event])).to have_attributes(ok: false, http_code: nil, unknown_outcome: false)
