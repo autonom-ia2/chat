@@ -59,10 +59,10 @@ module Autonomia::Automacao::Gatilhos
   ].index_by(&:tipo).freeze
 
   # O evento do emissor do CRM (Crm::Webhooks::Emitter) e os gatilhos que ele pode disparar. O card criado já nasce
-  # numa etapa: conta como "entrou" nela, venha da tela, da API, da IA ou de uma automação. E conta como "atualizado":
-  # os campos com que ele nasce vêm do vazio ("criado ou atualizado com valor acima de R$ 50 mil").
+  # numa etapa: conta como "entrou" nela, venha da tela, da API, da IA ou de uma automação. O "atualizado" (G27) não vem
+  # do emissor: nasce do próprio card (Autonomia::Automacao::CardAtualizado), na criação e em toda edição.
   DO_EVENTO_DO_CARD = {
-    Events::Types::CRM_CARD_CREATED => ['card.criado', 'card.entrou_na_etapa', ATUALIZADO],
+    Events::Types::CRM_CARD_CREATED => %w[card.criado card.entrou_na_etapa],
     Events::Types::CRM_CARD_UPDATED => [ATUALIZADO],
     Events::Types::CRM_CARD_MOVED => %w[card.saiu_da_etapa card.entrou_na_etapa],
     Events::Types::CRM_CARD_WON => %w[card.ganho],

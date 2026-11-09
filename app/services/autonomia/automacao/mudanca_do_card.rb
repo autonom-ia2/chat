@@ -6,10 +6,11 @@
 #   passou_de  — estava em `valor` ou abaixo e agora está acima ("o valor passou de R$ 50 mil"): uma vez só, na subida.
 # No valor de venda, `valor` é em reais; o card guarda centavos.
 #
-# De onde vem o que mudou: a atividade do card. A edição ('update') traz o novo e, no `antes`, o anterior só dos campos
-# que mudaram (Crm::Cards::Antes); o card criado ('create') conta como tudo vindo do vazio: o card que já nasce com
-# R$ 80 mil "passou de R$ 50 mil". Número que não é número (texto num campo, condição sem valor) não casa: nada dispara
-# por engano.
+# De onde vem o que mudou: o próprio card (Crm::CardAvisaAutomacao), o único caminho da Automação livre para "o card
+# mudou", venha da tela, da API, do upsert, da IA, do lote ou de um passo. Cada gravação soma o par [antes, agora] do
+# valor e de cada campo personalizado (`somar`, no after_save); no commit, o que de fato mudou (`do_commit`) vira um
+# evento só. O card criado conta como tudo vindo do vazio: o que já nasce com R$ 80 mil "passou de R$ 50 mil". Número
+# que não é número (texto num campo, condição sem valor) não casa: nada dispara por engano.
 module Autonomia::Automacao::MudancaDoCard
   CONDICOES = %w[mudou igual maior_que passou_de].freeze
   NUMERICAS = %w[maior_que passou_de].freeze
@@ -35,12 +36,6 @@ module Autonomia::Automacao::MudancaDoCard
     end
   end
 
-  # Os dados do gatilho no evento do card (Escuta): o que mudou e de quanto. O card criado conta como tudo vindo do vazio.
-  def do_evento(payload, card, evento, atividade_id)
-    criado = evento == Events::Types::CRM_CARD_CREATED
-    { 'mudancas' => da_atividade(payload, card, criado: criado, atividade_id: atividade_id) }
-  end
-
   # O "card atualizado" no valor de venda só dispara se quem ligou vê os valores (#2597): o disparo diria a quem não vê
   # que o card passou do limite. Os outros gatilhos e o campo personalizado passam.
   def quem_ligou_le?(definicao)
@@ -51,41 +46,35 @@ module Autonomia::Automacao::MudancaDoCard
     ::Autonomia::Automacao::Valores.pode_ler?('card.valor', quem)
   end
 
-  # O que a atividade diz que mudou. criado: o card acabou de nascer (o payload não traz os campos; vêm do card, como
-  # estavam na criação).
-  def da_atividade(payload, card, criado:, atividade_id: nil)
-    return do_card_novo(card, atividade_id) if criado
-
-    antes = payload['antes'].to_h
-    mudancas = {}
-    mudancas[VALOR] = [reais(antes['value_cents']), reais(payload['value_cents'])] if antes.key?('value_cents')
-    novos = payload['custom_attributes'].to_h
-    antes['custom_attributes'].to_h.each { |nome, velho| mudancas["#{ATRIBUTO}:#{nome}"] = [velho, novos[nome]] }
-    mudancas
-  end
-
-  def do_card_novo(card, atividade_id)
-    valor, campos = como_nasceu(card, atividade_id)
-    mudancas = {}
-    mudancas[VALOR] = [nil, reais(valor)] if valor.to_i.positive?
-    campos.each { |nome, atual| mudancas["#{ATRIBUTO}:#{nome}"] = [nil, atual] unless atual.to_s.empty? }
-    mudancas
-  end
-
-  # O card como nasceu: o de agora, desfeitas as edições depois da criação (o `antes` de cada uma, da mais nova para a
-  # mais velha). Sem isso, o card criado com R$ 10 mil e editado para R$ 80 mil antes do job dispararia "passou de" na
-  # criação e de novo na edição.
-  def como_nasceu(card, atividade_id)
-    valor = card.value_cents
-    campos = card.custom_attributes.to_h.dup
-    depois = ::Crm::Activity.where(card_id: card.id, event_type: 'update')
-    depois = depois.where('id > ?', atividade_id) if atividade_id
-    depois.order(id: :desc).pluck(:payload).each do |payload|
-      antes = payload.to_h['antes'].to_h
-      valor = antes['value_cents'] if antes.key?('value_cents')
-      campos.merge!(antes['custom_attributes'].to_h)
+  # No after_save do card: a soma das gravações da transação, com o `antes` da primeira e o `agora` da última, em
+  # centavos no valor. Devolve uma soma nova; a anterior fica como estava.
+  def somar(acumulado, saved_changes)
+    pares_lidos(saved_changes).each_with_object(acumulado.to_h.dup) do |(chave, (antes, agora)), soma|
+      soma[chave] = [soma.key?(chave) ? soma[chave].first : antes, agora]
     end
-    [valor, campos]
+  end
+
+  def pares_lidos(saved_changes)
+    pares = {}
+    pares[VALOR] = saved_changes['value_cents'] if saved_changes.key?('value_cents')
+    return pares unless saved_changes.key?('custom_attributes')
+
+    velho, novo = saved_changes['custom_attributes'].map(&:to_h)
+    (velho.keys | novo.keys).each { |nome| pares["#{ATRIBUTO}:#{nome}"] = [velho[nome], novo[nome]] }
+    pares
+  end
+
+  # No commit: só o que de fato mudou (gravar e voltar ao mesmo valor não é mudança). No card criado, só o que nasceu
+  # preenchido: valor acima de zero e campo não vazio.
+  def do_commit(soma, criado:)
+    soma.to_h.reject do |chave, (antes, agora)|
+      antes == agora || (criado && (chave == VALOR ? agora.to_i <= 0 : agora.to_s.empty?))
+    end
+  end
+
+  # No job: o par do valor em reais, como a condição compara.
+  def em_reais(mudancas)
+    mudancas.to_h.to_h { |chave, (antes, agora)| [chave, chave == VALOR ? [reais(antes), reais(agora)] : [antes, agora]] }
   end
 
   def chave(mudanca)

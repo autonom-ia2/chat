@@ -14,6 +14,8 @@
 #   também quem espera pelo mesmo contato em outra conversa, no card ou no contato (#2680). Só o "esperar até": a ação
 #   que espera uma nova tentativa e o "esperar" de tempo seguem o relógio.
 # - `envio_atualizado`: a mensagem que a automação mandou foi entregue, lida ou falhou (#2680, `envio.situacao`).
+# O card que mudou e o gatilho que aconteceu de novo durante a espera (lote 4, #2682) acordam pelo Despertador, que
+# usa a mesma reserva daqui (`reservar`, `esperando_condicao?`).
 #
 # O gate é a flag do motor, lida da conta: conta sem o motor só lê a conta. Com o motor, uma consulta pela conta e pelo
 # tipo do gatilho; não há cache, porque a lista muda a cada automação ligada ou desligada, e uma lista velha ligaria o
@@ -167,15 +169,15 @@ module Autonomia::Automacao::Escuta
 
     mudou = dados[:changed_attributes].to_h.with_indifferent_access
     tipos = ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD.fetch(evento, [])
-    tipos.each { |tipo| partir_do_evento(card, tipo, mudou, evento, dados[:activity_id]) }
+    tipos.each { |tipo| partir_do_evento(card, tipo, mudou, dados) }
     acordar_o_card(card) if tipos.any? { |tipo| ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo) }
   end
 
-  # Cada automação do gatilho começa no card, com a marca da atividade. G27: o "card atualizado" no valor de venda só
-  # para quem ligou e vê os valores (MudancaDoCard.quem_ligou_le?).
-  def partir_do_evento(card, tipo, mudou, evento, atividade_id)
-    marca = ::Autonomia::Automacao::Gatilhos.marca_da_atividade(tipo, atividade_id)
-    cada_automacao(card, tipo, dados_do_card(tipo, card, mudou, evento, atividade_id)) do |definicao|
+  # Cada automação do gatilho começa no card, com a marca da atividade. G27: o "card atualizado" vem do próprio card
+  # (CardAtualizado), com a marca do commit, e no valor de venda só para quem ligou e vê os valores.
+  def partir_do_evento(card, tipo, mudou, dados)
+    marca = dados[:marca] || ::Autonomia::Automacao::Gatilhos.marca_da_atividade(tipo, dados[:activity_id])
+    cada_automacao(card, tipo, dados_do_card(tipo, card, mudou, dados[:activity_id])) do |definicao|
       partir(definicao, card, tipo, evento: marca) if ::Autonomia::Automacao::MudancaDoCard.quem_ligou_le?(definicao)
     end
   end
@@ -183,9 +185,9 @@ module Autonomia::Automacao::Escuta
   # A etapa de onde o card saiu ou para onde entrou, e o funil, para os parâmetros do gatilho. O card criado traz a
   # etapa em que nasceu (stage_id); o movido, as duas pontas. O atualizado (G27), o que mudou e de quanto. A reunião
   # (G32) traz também a página de agendamento.
-  def dados_do_card(tipo, card, mudou, evento, atividade_id)
+  def dados_do_card(tipo, card, mudou, atividade_id = nil)
     case tipo
-    when ::Autonomia::Automacao::Gatilhos::ATUALIZADO then ::Autonomia::Automacao::MudancaDoCard.do_evento(mudou, card, evento, atividade_id)
+    when ::Autonomia::Automacao::Gatilhos::ATUALIZADO then { 'mudancas' => ::Autonomia::Automacao::MudancaDoCard.em_reais(mudou[:mudancas]) }
     when 'card.entrou_na_etapa' then { 'etapa_id' => mudou[:to_stage_id] || mudou[:stage_id] || card.stage_id }
     when 'card.saiu_da_etapa' then { 'etapa_id' => mudou[:from_stage_id] }
     else { 'funil_id' => mudou[:pipeline_id] || card.pipeline_id, **::Autonomia::Automacao::ReuniaoDaAtividade.do_gatilho(tipo, card, atividade_id) }
@@ -230,8 +232,8 @@ module Autonomia::Automacao::Escuta
     )
   end
 
-  # O parâmetro do gatilho e o valor que o evento traz, sem reler o card. O atualizado (G27) não filtra aqui: a mudança
-  # pede o card e o `antes`, e o job confere.
+  # O parâmetro do gatilho e o valor que o evento traz, sem reler o card. O atualizado (G27) não filtra aqui: o job
+  # confere a mudança.
   def parametro_do_evento(tipo, mudou)
     case tipo
     when ::Autonomia::Automacao::Gatilhos::ATUALIZADO then [nil, nil]

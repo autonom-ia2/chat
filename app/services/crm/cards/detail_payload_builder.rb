@@ -126,16 +126,10 @@ class Crm::Cards::DetailPayloadBuilder
     @card.activities.where.not(event_type: 'ai_suggested')
   end
 
-  # Valor de venda (#2075): o ganho grava value_cents na atividade, e a edição grava os campos que o pedido mandou e,
-  # no `antes` (G27), o valor anterior dos que mudaram.
+  # Valor de venda (#2075): o ganho grava value_cents na atividade, e a edição grava os campos que o pedido mandou.
   def without_value(activity)
     payload = activity[:payload]
-    return activity unless payload.is_a?(Hash)
-
-    payload = payload.except('value_cents', :value_cents)
-    antes = payload['antes'] || payload[:antes]
-    payload = payload.merge('antes' => antes.except('value_cents', :value_cents)).except(:antes) if antes.is_a?(Hash)
-    activity.merge(payload: payload)
+    payload.is_a?(Hash) ? activity.merge(payload: payload.except('value_cents', :value_cents)) : activity
   end
 
   def administrator?

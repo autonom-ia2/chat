@@ -1,9 +1,10 @@
 require 'rails_helper'
 
-# G27 (#2661): o gatilho "card atualizado". A edição do card (a tela, a API, a IA ou outra automação) grava a atividade
-# 'update' com o valor de antes; o emissor do CRM a despacha só quando há automação com o gatilho; a escuta confere a
-# mudança escolhida (o campo e a condição) e a Partida abre a execução. Tudo pela plataforma: o PATCH de verdade, o
-# despacho assíncrono, o EventoDoCardJob e o AvancarJob.
+# G27 (#2661): o gatilho "card atualizado". Nasce do próprio card (Crm::CardAvisaAutomacao, o único caminho para "o card
+# mudou"): cada gravação soma o par [antes, agora] do valor e dos campos, e o commit enfileira um evento só, quando há
+# automação com o gatilho; a escuta confere a mudança escolhida (o campo e a condição) e a Partida abre a execução. Vale
+# a tela, a API, o upsert, a IA, o lote e os passos da automação. Tudo pela plataforma: o PATCH de verdade, o
+# EventoDoCardJob e o AvancarJob.
 RSpec.describe 'Automação livre: card atualizado', :automacao_motor, type: :request do
   include ActiveJob::TestHelper
 
@@ -130,13 +131,6 @@ RSpec.describe 'Automação livre: card atualizado', :automacao_motor, type: :re
 
       expect(vezes(definicao)).to eq(1)
     end
-
-    it 'a atividade da edição guarda o antes só dos campos que mudaram' do
-      editar(card, value_cents: 2_000_000, custom_attributes: { plano: 'ouro' })
-
-      expect(Crm::Activity.where(card: card, event_type: 'update').last.payload['antes'])
-        .to eq('value_cents' => 1_000_000, 'custom_attributes' => { 'plano' => nil })
-    end
   end
 
   # Exemplo 15 ("Cliente grande"): "card criado ou atualizado com valor acima de R$ 50 mil".
@@ -156,7 +150,7 @@ RSpec.describe 'Automação livre: card atualizado', :automacao_motor, type: :re
       expect(execucoes.where(automacao: definicao).pluck(:alvo_id)).to eq([grande.id])
     end
 
-    # O job da criação pode rodar depois de uma edição: ele vê o card como nasceu, e só a edição dispara.
+    # Cada commit leva o par dele: a criação com R$ 10 mil não passa; a edição para R$ 80 mil passa, uma vez.
     it 'criado com R$ 10 mil e editado para R$ 80 mil antes do job dispara uma vez, pela edição', :aggregate_failures do
       definicao = atualizado({ 'campo' => 'valor', 'condicao' => 'passou_de', 'valor' => '50000' })
       novo_card = Crm::Cards::Creator.new(account: account, user: admin,
@@ -166,7 +160,7 @@ RSpec.describe 'Automação livre: card atualizado', :automacao_motor, type: :re
       editar(novo_card, value_cents: 8_000_000)
 
       expect(execucoes.where(automacao: definicao).pluck(:evento))
-        .to eq(["card.atualizado:atividade:#{Crm::Activity.where(card: novo_card, event_type: 'update').sole.id}"])
+        .to eq(["card.atualizado:#{novo_card.id}:#{novo_card.reload.updated_at.utc.iso8601(6)}"])
     end
   end
 
@@ -179,15 +173,6 @@ RSpec.describe 'Automação livre: card atualizado', :automacao_motor, type: :re
 
     def ia_grava(valor) = Autonomia::Decisores::Aplicador.new(decisor: decisor, conversation: conversa, card: card).aplicar({ 'documentos' => valor })
 
-    it 'entra no histórico como da IA, com o antes', :aggregate_failures do
-      ia_grava('completos')
-
-      atividade = Crm::Activity.where(card: card, event_type: 'update').sole
-      expect(atividade).to have_attributes(actor_type: 'system', actor_id: nil, conversation_id: conversa.id)
-      expect(atividade.payload).to eq('custom_attributes' => { 'documentos' => 'completos' }, 'by' => 'ai',
-                                      'antes' => { 'custom_attributes' => { 'documentos' => nil } })
-    end
-
     it 'a IA marca os documentos e a automação move o card para "Enviar à operadora"', :aggregate_failures do
       definicao = atualizado({ 'campo' => 'atributo', 'chave' => 'documentos', 'condicao' => 'igual', 'valor' => 'completos' },
                              [mover_passo('a1', operadora)])
@@ -199,25 +184,25 @@ RSpec.describe 'Automação livre: card atualizado', :automacao_motor, type: :re
       expect(card.reload.stage).to eq(operadora)
     end
 
-    it 'a IA que não muda nada (o campo já tinha valor) não grava linha', :aggregate_failures do
+    it 'a IA que não muda nada (o campo já tinha valor) não dispara', :aggregate_failures do
       card.update!(custom_attributes: { 'documentos' => 'completos' })
+      definicao = atualizado({ 'campo' => 'atributo', 'chave' => 'documentos', 'condicao' => 'mudou' })
 
       expect(ia_grava('outro').recusados).to have_key('documentos')
-      expect(Crm::Activity.where(card: card, event_type: 'update')).to be_empty
+      drenar
+      expect(vezes(definicao)).to eq(0)
     end
   end
 
-  # A IA do funil (Crm::Ai::AttributeExtractorApplier) grava o campo do card pela conversa: também deixa rastro.
+  # A IA do funil (Crm::Ai::AttributeExtractorApplier) grava o campo do card pela conversa, sem atividade de edição.
   describe 'o campo que a IA do funil extrai da conversa' do
-    it 'entra no histórico como da IA e dispara o gatilho', :aggregate_failures do
+    it 'dispara o gatilho' do
       definicao = atualizado({ 'campo' => 'atributo', 'chave' => 'documentos', 'condicao' => 'igual', 'valor' => 'completos' })
       extraido = { card: [{ key: 'documentos', value: 'completos', confidence: 0.9, evidence: 'mandei tudo' }] }
 
       Crm::Ai::AttributeExtractorApplier.new(card: Crm::Card.find(card.id), extracted_attributes: extraido, prefix: '').perform
       drenar
 
-      expect(Crm::Activity.where(card: card, event_type: 'update').sole.payload)
-        .to include('by' => 'ai', 'antes' => { 'custom_attributes' => { 'documentos' => nil } })
       expect(vezes(definicao)).to eq(1)
     end
   end
@@ -280,32 +265,103 @@ RSpec.describe 'Automação livre: card atualizado', :automacao_motor, type: :re
     end
   end
 
-  describe 'o gate do emissor' do
-    it 'sem automação de card atualizado, a edição não despacha' do
+  describe 'o gate' do
+    def jobs_da_automacao = enqueued_jobs.count { |job| job[:job] == Autonomia::Automacao::EventoDoCardJob }
+
+    it 'sem automação de card atualizado, a edição não enfileira' do
       automacao_ligada(account, admin, [esperar_passo('p1')], gatilho: { 'tipo' => 'card.ganho' })
 
       patch "/api/v1/accounts/#{account.id}/crm/cards/#{card.id}", params: { value_cents: 2 }, headers: auth_headers(admin), as: :json
 
-      expect(enqueued_jobs.map { |job| job[:job] }).not_to include(EventDispatcherJob)
+      expect(jobs_da_automacao).to eq(0)
     end
 
-    it 'a edição que não mexe no valor nem em campo (só o título) não despacha' do
-      atualizado({ 'campo' => 'valor', 'condicao' => 'mudou' })
-
-      patch "/api/v1/accounts/#{account.id}/crm/cards/#{card.id}", params: { title: 'Outro' }, headers: auth_headers(admin), as: :json
-
-      expect(enqueued_jobs.map { |job| job[:job] }).not_to include(EventDispatcherJob)
-    end
-
-    it 'com a automação, despacha sem chamar webhook nem Meta nem Google', :aggregate_failures do
+    it 'com a automação, enfileira direto do card, sem webhook, Meta nem Google', :aggregate_failures do
       atualizado({ 'campo' => 'valor', 'condicao' => 'mudou' })
 
       patch "/api/v1/accounts/#{account.id}/crm/cards/#{card.id}", params: { value_cents: 2 }, headers: auth_headers(admin), as: :json
-      perform_enqueued_jobs(only: EventDispatcherJob)
 
       fora = [Webhooks::CrmDeliveryJob, WebhookJob, Crm::MetaCapi::DispatchJob, Crm::GoogleOffline::RecordJob]
       expect(enqueued_jobs.map { |job| job[:job] } & fora).to be_empty
-      expect(Autonomia::Automacao::EventoDoCardJob).to have_been_enqueued
+      expect(jobs_da_automacao).to eq(1)
+    end
+  end
+
+  # Um caminho só (o próprio card): toda gravação pelo modelo conta, tenha ou não atividade de edição.
+  describe 'de onde vem a mudança' do
+    def jobs_da_automacao = enqueued_jobs.count { |job| job[:job] == Autonomia::Automacao::EventoDoCardJob }
+
+    it 'a gravação em lote, sem atividade de edição, dispara em cada card', :aggregate_failures do
+      definicao = atualizado({ 'campo' => 'atributo', 'chave' => 'documentos', 'condicao' => 'igual', 'valor' => 'completos' })
+      outro = account.crm_cards.create!(pipeline: funil, stage: novo, title: 'Outro', currency: 'BRL')
+
+      Crm::Card.transaction do
+        [card, outro].each { |alvo| alvo.update!(custom_attributes: alvo.custom_attributes.to_h.merge('documentos' => 'completos')) }
+      end
+      drenar
+
+      expect(Crm::Activity.where(card: [card, outro], event_type: 'update')).to be_empty
+      expect(execucoes.where(automacao: definicao).pluck(:alvo_id)).to contain_exactly(card.id, outro.id)
+    end
+
+    it 'o upsert por external_id dispara', :aggregate_failures do
+      definicao = atualizado({ 'campo' => 'atributo', 'chave' => 'plano', 'condicao' => 'igual', 'valor' => 'ouro' })
+      card.update!(external_id: 'erp-7')
+      base = { pipeline_id: funil.id, stage_id: novo.id, title: 'Plano empresa', external_id: 'erp-7' }
+
+      params = { card: base.merge(custom_attributes: { plano: 'ouro' }) }
+      post "/api/v1/accounts/#{account.id}/crm/cards", params: params, headers: auth_headers(admin), as: :json
+      expect(response).to have_http_status(:ok).or have_http_status(:created)
+      drenar
+
+      expect(execucoes.where(automacao: definicao).sole.alvo).to eq(card)
+    end
+
+    it 'o passo de outra automação que grava o campo dispara', :aggregate_failures do
+      grava = atualizado({ 'campo' => 'atributo', 'chave' => 'plano', 'condicao' => 'mudou' },
+                         [gravar_passo('a1', { 'custom_attributes' => { 'documentos' => 'completos' } })])
+      escuta = atualizado({ 'campo' => 'atributo', 'chave' => 'documentos', 'condicao' => 'igual', 'valor' => 'completos' })
+
+      editar(card, custom_attributes: { plano: 'ouro' })
+
+      expect([vezes(grava), vezes(escuta)]).to eq([1, 1])
+      expect(card.reload.custom_attributes['documentos']).to eq('completos')
+    end
+
+    it 'mudança fora do valor e dos campos (título, última atividade) não enfileira' do
+      atualizado({ 'campo' => 'valor', 'condicao' => 'mudou' })
+
+      card.update!(title: 'Outro', last_activity_at: Time.current)
+
+      expect(jobs_da_automacao).to eq(0)
+    end
+
+    # O after_commit vê só a última gravação em saved_changes; a soma guarda o antes da primeira.
+    it 'várias gravações no mesmo commit viram um evento só, com o antes da primeira', :aggregate_failures do
+      definicao = atualizado({ 'campo' => 'valor', 'condicao' => 'passou_de', 'valor' => '50000' })
+
+      Crm::Card.transaction do
+        card.update!(value_cents: 3_000_000)
+        card.update!(custom_attributes: { 'plano' => 'ouro' })
+        card.update!(value_cents: 6_000_000)
+      end
+
+      expect(jobs_da_automacao).to eq(1)
+      dados = ActiveJob::Arguments.deserialize(enqueued_jobs.find { |job| job[:job] == Autonomia::Automacao::EventoDoCardJob }[:args]).first
+      expect(dados.dig('changed_attributes', 'mudancas')).to eq('valor' => [1_000_000, 6_000_000], 'atributo:plano' => [nil, 'ouro'])
+      drenar
+      expect(vezes(definicao)).to eq(1)
+    end
+
+    it 'a gravação desfeita (rollback) não enfileira' do
+      atualizado({ 'campo' => 'valor', 'condicao' => 'mudou' })
+
+      Crm::Card.transaction do
+        card.update!(value_cents: 3_000_000)
+        raise ActiveRecord::Rollback
+      end
+
+      expect(jobs_da_automacao).to eq(0)
     end
   end
 

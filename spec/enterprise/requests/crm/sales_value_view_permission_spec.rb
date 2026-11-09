@@ -133,22 +133,6 @@ RSpec.describe 'Valores de venda com sales_value_view (#2075)', :aggregate_failu
     expect(edicao['payload']).to include('value_cents' => 500_000)
   end
 
-  # G27 (#2661): a edição guarda o valor de antes para o gatilho "card atualizado". Ele segue a mesma regra do valor.
-  it 'detalhe: o antes da edição não traz o valor anterior a quem não vê o valor' do
-    account.custom_attribute_definitions.create!(attribute_key: 'plano', attribute_display_name: 'Plano',
-                                                 attribute_model: :card_attribute, attribute_display_type: :text)
-    patch "#{crm}/cards/#{alheio.id}", params: { value_cents: 900_000, custom_attributes: { plano: 'ouro' } },
-                                       headers: auth_headers(admin), as: :json
-    expect(response).to have_http_status(:ok)
-
-    edicao = ler("cards/#{alheio.id}", sem_chave)['activities'].find { |atividade| atividade['event_type'] == 'update' }
-    expect(edicao['payload']).not_to have_key('value_cents')
-    expect(edicao['payload']['antes']).to eq('custom_attributes' => { 'plano' => nil })
-
-    edicao = ler("cards/#{alheio.id}", com_chave)['activities'].find { |atividade| atividade['event_type'] == 'update' }
-    expect(edicao['payload']['antes']).to include('value_cents' => 500_000)
-  end
-
   it 'somas da lista: sem a chave, a contagem fica e a soma vem nil' do
     grupo = ler('cards/summaries', sem_chave, pipeline_id: pipeline.id, group_by: 'stage')['groups'].first
     expect(grupo).to include('count' => 2, 'sum_cents' => nil)

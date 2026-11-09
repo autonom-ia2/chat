@@ -41,6 +41,8 @@
       "CONVERSA_INICIADA_POR": "Who started the conversation",
       "CONVERSA_CLIENTE_RESPONDEU": "The customer replied during the wait",
       "CONVERSA_EQUIPE_RESPONDEU": "The team replied during the wait",
+      "CONVERSA_RESPONSAVEL_RESPONDEU": "The assigned person replied during the wait",
+      "GATILHO_REPETIU": "The trigger happened again during the wait",
       "CONTATO_ID": "The contact",
       "CONTATO_NOME": "Contact name",
       "CONTATO_EMAIL": "Contact email",
