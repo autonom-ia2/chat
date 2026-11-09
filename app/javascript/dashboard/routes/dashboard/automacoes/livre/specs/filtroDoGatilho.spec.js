@@ -147,6 +147,35 @@ describe('o valor da mensagem na tela', () => {
     expect(caminhos()).toEqual(['conversa.status']);
   });
 
+  // G53: a Partida confere o "Só se" sem a mensagem que falhou; ela só vale
+  // nos passos, e o editor não a oferece no filtro.
+  it('a mensagem que falhou fica fora do "Só se" e entra nos passos', () => {
+    const FALHOU = 'mensagem.falhou';
+    const comFalhou = {
+      ...CATALOGO,
+      valores: [
+        { caminho: 'conversa.status', frase: 'STATUS' },
+        {
+          caminho: 'falhou.texto',
+          base: 'falhou',
+          frase: 'FALHOU_TEXTO',
+          so_nos_gatilhos: [FALHOU],
+          so_nos_passos: true,
+        },
+      ],
+    };
+    const de = gatilho =>
+      opcoesDosValores(
+        comFalhou,
+        () => [],
+        chave => chave,
+        gatilho
+      ).map(item => item.value);
+
+    expect(de(FALHOU)).toEqual(['conversa.status']);
+    expect(de()).toEqual(['conversa.status', 'falhou.texto']);
+  });
+
   it('compara só por "é" e "não é", e os outros campos por todos', () => {
     expect(
       operadoresDoValor('mensagem.tipo', CATALOGO).map(item => item.op)

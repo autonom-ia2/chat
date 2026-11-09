@@ -51,7 +51,9 @@ module Autonomia::Automacao::Catalogo
                        # G3 (#2629): o "criar retorno".
                        'para_do_retorno' => 'quem_recebe_retorno', 'envio_do_retorno' => 'envio_do_retorno',
                        # G57 (#2769): hoje ou amanhã; a peça mostra também o `daqui`.
-                       'quando_do_retorno' => 'quando_do_retorno' }.freeze
+                       'quando_do_retorno' => 'quando_do_retorno',
+                       # G31: o "decidir" que espera a próxima resposta e decide de novo.
+                       'de_novo' => 'de_novo' }.freeze
   # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2) e a
   # etapa do "card" (G4).
   PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email',
