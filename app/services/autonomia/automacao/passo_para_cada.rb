@@ -114,6 +114,8 @@ class Autonomia::Automacao::PassoParaCada
       return Resultado.new(tipo: :sem_acesso, motivo: negado.motivo, dados: dados.merge(item.contagem)) if negado
     end
     Resultado.new(tipo: :ok, motivo: nil, dados: dados.merge(item.contagem))
+  rescue Falha => e
+    Resultado.new(tipo: e.tipo, motivo: e.motivo, dados: dados.merge(item.contagem))
   end
 
   def instrucoes

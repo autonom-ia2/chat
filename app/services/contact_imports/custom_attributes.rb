@@ -26,19 +26,30 @@ class ContactImports::CustomAttributes
   # extra_values: { 'Vencimento' => '10/2026' } as stored on the import row (blank cells left out).
   # A value that does not fit a typed attribute (number, date, list...) is left out; the preview
   # already listed it (ContactImports::AttributeProblems).
+  #
+  # The contact is locked and read again first: two writers on the same contact (two automation runs, #2771) would
+  # otherwise each write the whole hash they read before, and the last one would drop the keys the other just wrote.
   def merge!(contact, extra_values)
-    current = contact.custom_attributes.to_h
-    additions = extra_values.to_h.each_with_object({}) do |(header, raw), found|
+    return if extra_values.blank?
+
+    contact.with_lock do
+      current = contact.custom_attributes.to_h
+      additions = additions(current, extra_values)
+      contact.update!(custom_attributes: current.merge(additions)) if additions.any?
+    end
+  end
+
+  private
+
+  def additions(current, extra_values)
+    extra_values.to_h.each_with_object({}) do |(header, raw), found|
       column = columns_by_header[header]
       next if column.nil? || raw.blank? || current[column.key].to_s.strip.present?
 
       value = column.cast(raw)
       found[column.key] = value unless value == ContactImports::AttributeValue::INVALID
     end
-    contact.update!(custom_attributes: current.merge(additions)) if additions.any?
   end
-
-  private
 
   def columns
     @columns ||= ContactImports::AttributeColumns.new(@account, @extra_columns).perform

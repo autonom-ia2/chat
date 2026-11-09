@@ -56,6 +56,13 @@ RSpec.describe Autonomia::Automacao::Receita, :automacao_motor do
     expect(problemas(para_cada)).to eq([erro(:ia_desligada, passo: 'lista'), erro(:card_desligado, passo: 'lista')])
   end
 
+  it 'recusa o campo de chave só com espaços, que o esquema aceita e viraria um atributo do contato sem nome' do
+    campos = [{ 'chave' => 'nome', 'descricao' => 'Nome' }, { 'chave' => ' ', 'descricao' => 'Data de nascimento' }]
+
+    expect(described_class.esquema_valido?(receita(para_cada(campos: campos)))).to be(true)
+    expect(problemas(para_cada(campos: campos))).to eq([erro(:para_cada_chave_em_branco, passo: 'lista')])
+  end
+
   it 'quem salva precisa poder importar contatos' do
     agente = create(:user, account: account, role: :agent)
     allow(Autonomia::Automacao::PassoDeCard).to receive(:cria_card?).and_return(true)

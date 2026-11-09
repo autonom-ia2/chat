@@ -19,6 +19,9 @@ require 'rails_helper'
 # - O modelo aprovado da lista de documentos tem na Meta o nome `documentos_da_inclusao`.
 # - O "quadro" é o funil "Inclusão de vidas"; o card nasce na primeira etapa dele.
 # - A data de nascimento vai para o contato como a coluna "data_nascimento" do Importar contatos (atributo do contato).
+# - Passo 3: os contatos entram pelas regras de linha do Importar contatos (CampaignImports::ContactRow), sem registro de
+#   importação (CampaignImport). A lista não aparece em Contatos > Importações. Se "pela mesma importação da tela
+#   Contatos" exige esse registro, o passo 3 ainda não cumpre o termo à risca (decisão pendente do Rodrigo).
 #
 # Passos 6 a 9 em aberto (pendentes_spec): a 2ª automação não volta a esperar a cada documento (G31: a receita não tem
 # laço), não há gatilho de card completo (G27) e o aviso de sexta ao RH, que não está na conversa do card, é a G22.

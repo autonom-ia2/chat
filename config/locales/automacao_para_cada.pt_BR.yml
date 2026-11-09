@@ -3,8 +3,10 @@ pt_BR:
   autonomia:
     automacao:
       motivos:
+        atributo_recusado: 'A conta recusou criar um campo do contato para esta lista. Os itens dali em diante não foram tratados; confira os nomes dos campos do passo.'
         lista_vazia: 'A IA não achou lista na conversa. Nenhum card foi criado.'
         quem_ligou_sem_permissao_importar: 'Quem ligou a automação não pode mais importar contatos. Assuma e religue.'
       receita:
+        para_cada_chave_em_branco: 'Passo %{passo}: todo campo precisa de um nome. Um campo em branco não vira campo do contato.'
         para_cada_sem_nome: 'Passo %{passo}: cada item precisa do campo "nome". O contato e o card nascem dele.'
         para_cada_sem_importar: 'Passo %{passo}: para usar este passo você precisa da permissão de importar contatos.'

@@ -2,7 +2,8 @@
 # 50 e a forma dos campos o esquema já confere.
 #
 # - a flag dos passos de IA (automacao_ia) e a do "criar card" com o CRM ligado (PassoDeCard.ligado?);
-# - as chaves dos campos não repetem, e uma delas é `nome`;
+# - as chaves dos campos não ficam em branco, não repetem, e uma delas é `nome`. A chave só de espaços passa no esquema
+#   (minLength 1), mas vira um atributo do contato sem nome, que a conta recusa criar na hora de rodar;
 # - a etapa é da conta e está num funil que quem salva enxerga (a mesma régua da prospecção);
 # - quem salva pode criar card e importar contatos (a pergunta da tela de Contatos). A chave de funis o controller já
 #   confere (PASSOS_DE_FUNIL). Sem pessoa (`account_user` nil: o catálogo), só a conta.
@@ -14,7 +15,7 @@ class Autonomia::Automacao::ProblemasDoParaCada
   end
 
   def problemas
-    [*ia_desligada, *campos_repetidos, *sem_nome, *etapa, *sem_importar]
+    [*ia_desligada, *chaves_em_branco, *campos_repetidos, *sem_nome, *etapa, *sem_importar]
   end
 
   private
@@ -24,6 +25,8 @@ class Autonomia::Automacao::ProblemasDoParaCada
   def chaves = Array(@passo['campos']).pluck('chave')
 
   def ia_desligada = ::Autonomia::Automacao::Motor.ia?(@conta) ? [] : [texto(:ia_desligada)]
+
+  def chaves_em_branco = chaves.any? { |chave| chave.to_s.strip.empty? } ? [texto(:para_cada_chave_em_branco)] : []
 
   def campos_repetidos
     chaves.tally.select { |_chave, vezes| vezes > 1 }.keys.map { |chave| texto(:campo_repetido, chave: chave) }

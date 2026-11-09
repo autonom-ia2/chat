@@ -126,6 +126,34 @@ RSpec.describe Autonomia::Automacao::PassoParaCada, :automacao_motor do
       .to eq([{}, { 'data_nascimento' => ContactImports::AttributeValue.new(account.custom_attribute_definitions.sole).cast('12/03/1990') }])
   end
 
+  it 'duas execuções no mesmo contato somam os campos: a segunda não apaga o que a primeira gravou', :aggregate_failures do
+    nascimento = { 'chave' => 'data_nascimento', 'descricao' => 'Data de nascimento' }
+    cargo = { 'chave' => 'cargo', 'descricao' => 'Cargo' }
+    openai_devolve([item('Bruno Dias', '11 98888-0003').merge('data_nascimento' => '01/02/1990')])
+    rodar([para_cada.merge('campos' => para_cada['campos'] + [nascimento])])
+    openai_devolve([item('Bruno Dias', '11 98888-0003').merge('cargo' => 'Soldador')])
+    rodar([para_cada.merge('campos' => para_cada['campos'] + [cargo])])
+
+    bruno = account.contacts.find_by!(phone_number: '+5511988880003')
+    expect(bruno.custom_attributes).to eq('data_nascimento' => '01/02/1990', 'cargo' => 'Soldador')
+  end
+
+  it 'o campo que a conta recusa criar como atributo falha o passo com motivo próprio, sem marcar o contato como recusado',
+     :aggregate_failures do
+    em_branco = { 'chave' => ' ', 'descricao' => 'Data de nascimento' }
+    # Uma receita salva antes da conferência da chave em branco: ao salvar de novo, ela não passaria.
+    sem_problemas = instance_double(Autonomia::Automacao::ProblemasDoParaCada, problemas: [])
+    allow(Autonomia::Automacao::ProblemasDoParaCada).to receive(:new).and_return(sem_problemas)
+    openai_devolve([item('Bruno Dias', '11 98888-0003').merge(' ' => '01/02/1990')])
+
+    execucao = rodar([para_cada.merge('campos' => para_cada['campos'] + [em_branco])])
+
+    expect([execucao.reload.estado, registros(execucao)]).to eq(['falhou', [%w[lista falhou atributo_recusado]]])
+    expect(dados_do(execucao)['pulados']).to eq({})
+    expect(account.contacts.where(name: 'Bruno Dias')).to be_empty
+    expect(funil.cards).to be_empty
+  end
+
   it 'os passos seguintes leem quantos e os nomes da lista', :aggregate_failures do
     ligar_mensagens(account)
     openai_devolve([item('João Lima'), item('Maria Souza')])
