@@ -289,15 +289,15 @@ module Autonomia
         # último pedaço. A resposta nova sem nada a enviar nem consulta a âncora; o retry só a procura quando o turno pode
         # ter cartão ou interação depois do áudio (`pode_ter_ancora?`). O retry cuja âncora não tem nada, com cartão
         # marcado neste run: o cartão novo não sai (`cartao_descartado` motivo=ja_respondido). Erro ao enfileirar não muda
-        # o turno, porque a resposta já saiu: log com os ids e a classe, tracker e `cartao_nao_enviado`
-        # motivo=erro_ao_enfileirar.
+        # o turno, porque a resposta já saiu: log com os ids e a classe, tracker e `cartao_nao_enviado` (e, com a
+        # interação gravada no áudio, `interacao_nao_enviada`) motivo=erro_ao_enfileirar.
         def enfileirar_cartoes(outcome)
           return if @cadeia_agendada || (@ancora.nil? && outcome.message.present?)
 
           ancora = @ancora || ancora_do_retry
           return descartar_cartoes('ja_respondido') unless ::Autonomia::Agents::Operate::CartoesDoTurno.algo_a_enviar?(ancora)
 
-          ::Autonomia::Agents::Operate::EnviarCartoesJob.perform_later(ancora.id)
+          ::Autonomia::Agents::Operate::CartoesDoTurno.job_da(ancora).perform_later(ancora.id)
           @cartoes_enfileirados = true
         rescue StandardError => e
           erro_ao_enfileirar(e, ancora)
@@ -309,18 +309,24 @@ module Autonomia
         end
 
         # #1479: o turno pode ter gravado cartões (a conta com o envio do mapa e do contato) ou a interação depois do
-        # áudio (o agente com voz, e a interação ligada: `InteracaoDepoisDoAudio.ligada?`, o mesmo gate de quem a posta).
-        # Fora disso, o retry não faz a busca (LIKE) da âncora.
+        # áudio (a interação ligada: `InteracaoDepoisDoAudio.ligada?`, o mesmo gate de quem a posta). Não olha a voz do
+        # agente: ela pode ter sido desligada entre o áudio e o retry, e a pergunta gravada ficaria sem job. Fora disso, o
+        # retry não faz a busca (LIKE) da âncora.
         def pode_ter_ancora?
           ::Autonomia::Agents::Tools::Native::CartaoDaPagina.ligado?(@conversation.account) ||
-            (::Autonomia::Agents::Config.voice_reply_enabled?(@agent) &&
-             ::Autonomia::Agents::Operate::InteracaoDepoisDoAudio.ligada?(@conversation.account))
+            ::Autonomia::Agents::Operate::InteracaoDepoisDoAudio.ligada?(@conversation.account)
         end
 
         def erro_ao_enfileirar(error, ancora)
           @cartoes_enfileirados = true # o erro já ficou registrado; a falha do turno não registra de novo
           Rails.logger.warn("[autonomia][operate] cartoes_nao_enfileirados agent=#{@agent.id} conv=#{@conversation.id} #{error.class.name}")
           ChatwootExceptionTracker.new(error, account: @conversation.account).capture_exception
+          if ::Autonomia::Agents::Operate::InteracaoDepoisDoAudio.da_ancora(ancora).present?
+            ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(:interacao_nao_enviada, conversation_id: @conversation.id,
+                                                                                              msg: ancora.id, motivo: 'erro_ao_enfileirar')
+          end
+          return if ancora && ::Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(ancora).empty?
+
           ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(:cartao_nao_enviado, conversation_id: @conversation.id,
                                                                                          msg: ancora&.id, motivo: 'erro_ao_enfileirar')
         end

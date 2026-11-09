@@ -2,8 +2,9 @@ require 'rails_helper'
 
 # #1479: na resposta em voz, a interação (opções, link, pedido de localização) sai DEPOIS do áudio. O áudio vai com
 # anexo e o `SendReplyJob` dele espera 2 s; a interação postada logo depois saía antes. Agora ela fica gravada no áudio
-# (a âncora) e sai pelo `EnviarCartoesJob`, quando o áudio saiu para o canal, antes dos cartões. Áudio que falhou, pessoa
-# da equipe que respondeu ou Fase 2 desligada: nada sai, com registro. O retry do turno nunca duplica a interação.
+# (a âncora) e sai pelo `EnviarInteracaoJob`, quando o áudio saiu para o canal, antes dos cartões. Áudio que falhou: a
+# pergunta sai degradada. Pessoa da equipe que respondeu, cliente que escreveu de novo ou Fase 2 desligada: nada sai,
+# com registro. O retry do turno nunca duplica a interação.
 RSpec.describe Autonomia::Agents::Operate::Responder do
   let(:account) do
     conta_da_fase2.tap { |conta| conta.enable_features!('agentes_enviar_local_e_contato', 'agentes_pedir_localizacao') }
@@ -96,9 +97,13 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
   # Os jobs da âncora enfileirados até agora rodam uma vez, como o Sidekiq faria (o reagendado fica na fila).
   def rodar_jobs
-    jobs = ActiveJob::Base.queue_adapter.enqueued_jobs.select { |item| item[:job] == Autonomia::Agents::Operate::EnviarCartoesJob }
+    jobs = ActiveJob::Base.queue_adapter.enqueued_jobs.select { |item| jobs_da_ancora.include?(item[:job]) }
     ActiveJob::Base.queue_adapter.enqueued_jobs.delete_if { |item| jobs.include?(item) }
-    jobs.each { |item| Autonomia::Agents::Operate::EnviarCartoesJob.perform_now(*ActiveJob::Arguments.deserialize(item[:args])) }
+    jobs.each { |item| item[:job].perform_now(*ActiveJob::Arguments.deserialize(item[:args])) }
+  end
+
+  def jobs_da_ancora
+    [Autonomia::Agents::Operate::EnviarCartoesJob, Autonomia::Agents::Operate::EnviarInteracaoJob]
   end
 
   # O canal confirma o envio de tudo que o robô postou (o `source_id` da Meta).
@@ -191,16 +196,108 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     expect(tipos).to eq(%w[audio options location])
   end
 
-  it 'o áudio falhou: nem a interação nem o cartão, com registro (só ids)' do
+  it 'o áudio falhou: a pergunta sai assim mesmo (interacao_degradada), o cartão não, com registro (só ids)' do
     responde('Temos vaga amanhã.', opcoes, cartoes: [mapa])
     perform
     audio.update!(status: :failed)
     rodar_jobs
 
-    expect(tipos).to eq(%w[audio])
-    expect(logs.join).to include('interacao_nao_enviada', "msg=#{audio.id}", 'motivo=anterior_falhou')
+    expect(tipos).to eq(%w[audio options])
+    expect(logs.join).to include('interacao_degradada', "msg=#{audio.id}", 'motivo=anterior_falhou')
     expect(logs.join).to include('cartao_nao_enviado', 'motivo=anterior_falhou')
-    expect(logs.join).not_to include('Qual período')
+    expect(logs.join).not_to include('interacao_nao_enviada', 'Qual período')
+    expect(audio.reload.content_attributes['autonomia_cartoes_encerrados']).to eq('anterior_falhou')
+    ate_o_fim
+    expect(tipos).to eq(%w[audio options])
+  end
+
+  describe 'erro ao postar a interação' do
+    def falha_ao_postar
+      allow(Messages::MessageBuilder).to receive(:new).and_raise(ActiveRecord::Deadlocked)
+    end
+
+    it 'antes do teto: reagenda sem desistir, e na próxima vez a pergunta sai' do
+      responde('Temos vaga amanhã.', opcoes)
+      perform
+      canal_confirma
+      falha_ao_postar
+      rodar_jobs
+
+      expect(interacoes).to be_empty
+      expect(logs.join).not_to include('interacao_nao_enviada')
+      expect(ActiveJob::Base.queue_adapter.enqueued_jobs.map { |item| item[:job] }).to include(Autonomia::Agents::Operate::EnviarInteracaoJob)
+      allow(Messages::MessageBuilder).to receive(:new).and_call_original
+      rodar_jobs
+      expect(tipos).to eq(%w[audio options])
+    end
+
+    it 'áudio que falhou e erro ao postar: reagenda sem registrar degradada; ela só aparece uma vez, quando a pergunta sai' do
+      responde('Temos vaga amanhã.', opcoes)
+      perform
+      audio.update!(status: :failed)
+      falha_ao_postar
+      2.times { rodar_jobs }
+      expect(logs.join).not_to include('interacao_degradada')
+
+      allow(Messages::MessageBuilder).to receive(:new).and_call_original
+      rodar_jobs
+      expect(tipos).to eq(%w[audio options])
+      expect(logs.join.scan('interacao_degradada').size).to eq(1)
+    end
+
+    it 'depois do teto: desiste com interacao_nao_enviada motivo=erro_ao_postar' do
+      responde('Temos vaga amanhã.', opcoes)
+      perform
+      canal_confirma
+      falha_ao_postar
+      travel(Autonomia::Agents::Operate::EnviarCartoesJob::TETO + 1.second) { rodar_jobs }
+
+      expect(interacoes).to be_empty
+      expect(logs.join).to include('interacao_nao_enviada', 'motivo=erro_ao_postar')
+    end
+  end
+
+  it 'o cliente escreveu de novo depois do áudio, antes da pergunta sair: nada sai, motivo=turno_superado' do
+    responde('Temos vaga amanhã.', opcoes)
+    perform
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'de manhã')
+    ate_o_fim
+
+    expect(interacoes).to be_empty
+    expect(logs.join).to include('interacao_nao_enviada', 'motivo=turno_superado')
+  end
+
+  it 'job repetido depois da pergunta sair, com o cliente já tendo respondido: nenhuma desistência falsa' do
+    responde('Temos vaga amanhã.', opcoes)
+    perform
+    ate_o_fim
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'Tarde')
+    Autonomia::Agents::Operate::EnviarInteracaoJob.perform_now(audio.id)
+
+    expect(tipos).to eq(%w[audio options])
+    expect(logs.join).not_to include('interacao_nao_enviada')
+    expect(audio.reload.content_attributes).not_to have_key('autonomia_cartoes_encerrados')
+  end
+
+  it 'a voz desligada entre o áudio e o retry do turno: o retry ainda enfileira a pergunta gravada' do
+    responde('Temos vaga amanhã.', opcoes)
+    perform
+    ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+    allow(Autonomia::Agents::Config).to receive(:voice_reply_enabled?).and_return(false)
+    allow_any_instance_of(described_class).to receive(:voice_reply_applies?).and_return(false) # rubocop:disable RSpec/AnyInstance
+    perform
+    ate_o_fim
+
+    expect(tipos).to eq(%w[audio options])
+  end
+
+  it 'erro ao enfileirar o job do áudio: registra interacao_nao_enviada motivo=erro_ao_enfileirar' do
+    responde('Temos vaga amanhã.', opcoes)
+    allow(Autonomia::Agents::Operate::EnviarInteracaoJob).to receive(:perform_later).and_raise(Redis::CannotConnectError)
+    perform
+
+    expect(logs.join).to include('interacao_nao_enviada', 'motivo=erro_ao_enfileirar')
+    expect(logs.join).not_to include('cartao_nao_enviado')
   end
 
   it 'uma pessoa da equipe respondeu entre o áudio e a interação: nada sai, com registro' do
@@ -256,14 +353,19 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
     expect(enviadas.sole.content).to eq("Temos vaga amanhã.\n\nQual período?")
     expect(enviadas.sole.content_attributes).not_to have_key('autonomia_interacao_depois')
-    expect(ActiveJob::Base.queue_adapter.enqueued_jobs.map { |item| item[:job] }).not_to include(Autonomia::Agents::Operate::EnviarCartoesJob)
+    expect(ActiveJob::Base.queue_adapter.enqueued_jobs.map { |item| item[:job] }).not_to include(*jobs_da_ancora)
   end
 
-  it 'os argumentos do job levam só o id do áudio' do
-    responde('Temos vaga amanhã.', opcoes)
+  it 'a EnviarInteracaoJob leva 6 tentativas no próprio job (cobre a sobreposição do deploy, além do max_retries: 3)' do
+    expect(Autonomia::Agents::Operate::EnviarInteracaoJob.get_sidekiq_options['retry']).to eq(6)
+  end
+
+  it 'o áudio vai pela EnviarInteracaoJob (o worker antigo não a conhece), com só o id do áudio nos argumentos' do
+    responde('Temos vaga amanhã.', opcoes, cartoes: [mapa])
     perform
-    job = ActiveJob::Base.queue_adapter.enqueued_jobs.find { |item| item[:job] == Autonomia::Agents::Operate::EnviarCartoesJob }
-    expect(job[:args]).to eq([audio.id])
+    jobs = ActiveJob::Base.queue_adapter.enqueued_jobs.select { |item| jobs_da_ancora.include?(item[:job]) }
+    expect(jobs.map { |item| item[:job] }).to eq([Autonomia::Agents::Operate::EnviarInteracaoJob])
+    expect(jobs.sole[:args]).to eq([audio.id])
   end
 
   # r2 da revisão: o teto, as guardas de turno e de dono, o formato reconferido e os destinatários do e-mail na hora.
@@ -283,14 +385,14 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(tipos).to eq(%w[audio options])
     end
 
-    it 'o áudio que falhou continua segurando tudo, mesmo depois do teto' do
+    it 'o áudio que falhou depois do teto: a pergunta sai uma vez, motivo=anterior_falhou' do
       responde('Temos vaga amanhã.', opcoes)
       perform
       audio.update!(status: :failed)
       travel(teto) { rodar_jobs }
 
-      expect(tipos).to eq(%w[audio])
-      expect(logs.join).not_to include('interacao_degradada')
+      expect(tipos).to eq(%w[audio options])
+      expect(logs.join).to include('interacao_degradada', 'motivo=anterior_falhou')
     end
   end
 
@@ -332,16 +434,28 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     let(:inbox) { create(:channel_email, account: account).inbox }
     let(:contact_inbox) { create(:contact_inbox, inbox: inbox) }
 
-    it 'os destinatários saem da conversa na hora de postar, e o áudio não os grava' do
+    before do
       account.enable_features!(Crm::Email::Autoria::FLAG)
-      copia = ['ana@familia.com.br']
-      allow_any_instance_of(Crm::Email::Destinatarios).to receive(:para_a_ia) { { to: ['joao@empresa.com.br'], cc: copia, bcc: [] } } # rubocop:disable RSpec/AnyInstance
+      conversation.contact.update!(email: 'joao@empresa.com.br')
+      email = { 'from' => ['joao@empresa.com.br'], 'cc' => ['ana@familia.com.br', 'rh@empresa.com.br'] }
+      pergunta.update!(content_attributes: pergunta.content_attributes.merge('email' => email))
+    end
+
+    it 'a cópia é a da mensagem do cliente (calculada com o áudio), não a do áudio, que não tem Cc' do
       responde('Temos vaga amanhã.', opcoes)
       perform
-      expect(audio.content_attributes.to_json).not_to include('familia')
-
-      copia = ['rh@empresa.com.br']
       ate_o_fim
+
+      expect(interacoes.sole.content_attributes['cc_emails']).to contain_exactly('ana@familia.com.br', 'rh@empresa.com.br')
+      expect(interacoes.sole.content_attributes['to_emails']).to eq(['joao@empresa.com.br'])
+    end
+
+    it 'quem pediu para sair da cópia depois do áudio sai da pergunta' do
+      responde('Temos vaga amanhã.', opcoes)
+      perform
+      Crm::Email::Destinatarios.registrar_saida!(conversation, 'ana@familia.com.br')
+      ate_o_fim
+
       expect(interacoes.sole.content_attributes['cc_emails']).to eq(['rh@empresa.com.br'])
     end
   end

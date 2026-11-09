@@ -5,7 +5,10 @@
 # espera ela sair, e a desistência dela encerra a âncora (nenhum cartão sai sem a pergunta antes). Uma diferença: no
 # TETO com o áudio ainda pendente, a interação NÃO desiste. A pergunta nunca se perde (`Interacao.mensagem`): ela sai
 # assim mesmo, com o registro `interacao_degradada` motivo=anterior_pendente, e os cartões desistem como sempre
-# (`cartao_nao_enviado` motivo=anterior_pendente, âncora encerrada). Áudio que FALHOU continua segurando tudo.
+# (`cartao_nao_enviado` motivo=anterior_pendente, âncora encerrada). Áudio que FALHOU também não derruba a pergunta: ela
+# sai degradada (motivo=anterior_falhou), como saía antes deste PR, e os cartões desistem. Erro ao postar a interação
+# (deadlock, conexão) não desiste na hora: reagenda em ESPERA até o TETO contado do áudio, e só depois dele registra
+# `interacao_nao_enviada` motivo=erro_ao_postar. A âncora com interação vem pela `EnviarInteracaoJob` (o deploy).
 #
 # Por mensagem ainda não postada, na ordem (a interação, depois os cartões na ordem gravada), conferindo a mensagem que
 # ela espera (a âncora, a interação, ou o cartão anterior, para nada trocar de ordem no canal) pela regra de
@@ -17,8 +20,8 @@
 #     depois da âncora (motivo=pessoa_respondeu) ou se a conta foi desligada (motivo=desligado);
 #   - a anterior sumiu da conversa: para, sem postar.
 # Dois jobs da mesma âncora (o do Responder e o do retry "já respondido") não duplicam: o token é conferido sob lock.
-# Erro ao postar: o log leva só os ids e a classe, o erro vai ao tracker, `cartao_nao_enviado` motivo=erro_ao_postar, e o
-# job para sem relançar (o texto já saiu).
+# Erro ao postar um cartão: o log leva só os ids e a classe, o erro vai ao tracker, `cartao_nao_enviado`
+# motivo=erro_ao_postar, e o job para sem relançar (o texto já saiu).
 # TODA DESISTÊNCIA FICA GRAVADA NA ÂNCORA (`CartoesDoTurno#encerrar!`), e a âncora encerrada é pulada: um retry tardio
 # nunca manda o cartão horas depois.
 class Autonomia::Agents::Operate::EnviarCartoesJob < ApplicationJob
@@ -76,27 +79,31 @@ class Autonomia::Agents::Operate::EnviarCartoesJob < ApplicationJob
   def depois_de(anterior)
     case ::Autonomia::Agents::Operate::SaidaDaMensagem.estado(anterior)
     when :saiu then yield
-    when :falhou then nao_enviado('anterior_falhou')
+    when :falhou then @etapa == :interacao ? degradada('anterior_falhou') : nao_enviado('anterior_falhou')
     else esperar(anterior)
     end
   end
 
   def esperar(anterior)
-    return degradada if @etapa == :interacao && anterior.created_at <= TETO.ago
+    return degradada('anterior_pendente') if @etapa == :interacao && anterior.created_at <= TETO.ago
     return nao_enviado('anterior_pendente') if anterior.created_at <= TETO.ago
 
+    reagendar
+  end
+
+  def reagendar
     self.class.set(wait: ESPERA).perform_later(@ancora.id)
     false
   end
 
-  # O áudio passou do teto ainda pendente: a interação sai assim mesmo (as guardas do `postar!` valem), e os cartões
-  # desistem e a âncora encerra. -> false (nada mais sai nesta âncora).
-  def degradada
-    telemetria(:interacao_degradada, 'anterior_pendente')
+  # O áudio falhou ou passou do teto ainda pendente: a interação sai assim mesmo (as guardas do `postar!` valem), e os
+  # cartões desistem e a âncora encerra. -> false (nada mais sai nesta âncora).
+  def degradada(motivo)
     return false unless postada_sem_erro?(@interacao.method(:postar!))
 
+    telemetria(:interacao_degradada, motivo)
     @etapa = nil
-    nao_enviado('anterior_pendente')
+    nao_enviado(motivo)
   end
 
   # Registra e grava a desistência na âncora. -> false. Na etapa da interação, os cartões que viriam depois dela também
@@ -121,6 +128,8 @@ class Autonomia::Agents::Operate::EnviarCartoesJob < ApplicationJob
     rotulo = @etapa == :interacao ? 'interacao_falhou' : 'cartao_falhou'
     Rails.logger.warn("[autonomia][operate] #{rotulo} conv=#{@ancora.conversation_id} msg=#{@ancora.id} erro=#{e.class.name}")
     ChatwootExceptionTracker.new(e, account: @ancora.account).capture_exception
+    return reagendar if @etapa == :interacao && @ancora.created_at > TETO.ago
+
     nao_enviado('erro_ao_postar')
   end
 end

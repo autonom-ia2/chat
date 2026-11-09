@@ -80,7 +80,9 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   end
 
   def jobs_dos_cartoes
-    ActiveJob::Base.queue_adapter.enqueued_jobs.select { |item| item[:job] == Autonomia::Agents::Operate::EnviarCartoesJob }
+    ActiveJob::Base.queue_adapter.enqueued_jobs.select do |item|
+      [Autonomia::Agents::Operate::EnviarCartoesJob, Autonomia::Agents::Operate::EnviarInteracaoJob].include?(item[:job])
+    end
   end
 
   # O canal confirma o envio do que o robô postou (o `source_id` da Meta) e os jobs dos cartões rodam, como o Sidekiq
@@ -90,7 +92,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       enviadas.each { |mensagem| mensagem.update_column(:source_id, "wamid.#{mensagem.id}") if mensagem.source_id.blank? } # rubocop:disable Rails/SkipsModelValidations
       jobs = jobs_dos_cartoes
       ActiveJob::Base.queue_adapter.enqueued_jobs.delete_if { |item| jobs.include?(item) }
-      jobs.each { |item| Autonomia::Agents::Operate::EnviarCartoesJob.perform_now(*ActiveJob::Arguments.deserialize(item[:args])) }
+      jobs.each { |item| item[:job].perform_now(*ActiveJob::Arguments.deserialize(item[:args])) }
     end
   end
 
@@ -334,10 +336,11 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   describe 'a guarda "já respondido" e a busca da âncora' do
     before { allow(Autonomia::Agents::Operate::CartoesDoTurno).to receive(:ancora_do_turno).and_call_original }
 
-    context 'without the cards flag and without voice' do
+    context 'without the cards flag and with the interaction off' do
       let(:account) { conta_da_fase2 }
 
       it 'o retry não consulta a âncora' do
+        allow(Autonomia::Agents::Operate::InteracaoDepoisDoAudio).to receive(:ligada?).and_return(false)
         responde('Fica no Centro.', [])
         2.times { perform }
         expect(enviadas.size).to eq(1)
@@ -345,9 +348,9 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       end
     end
 
-    context 'without the cards flag, with voice on the agent' do
+    # A voz do agente não entra: ela pode ter sido desligada entre o áudio e o retry.
+    context 'without the cards flag, with the interaction on' do
       let(:account) { conta_da_fase2 }
-      let(:agent) { criar_principal(account, config: { 'with_knowledge' => false, 'voice_reply' => true }) }
 
       it 'o retry consulta a âncora (pode haver interação depois do áudio)' do
         responde('Fica no Centro.', [])

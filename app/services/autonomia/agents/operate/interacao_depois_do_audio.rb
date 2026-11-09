@@ -8,10 +8,12 @@
 # O ÁUDIO GRAVA A MENSAGEM JÁ MONTADA (`Interacao.mensagem` sem texto antes: o corpo, o `rich_message` e a versão em
 # texto), a marca do pedido de localização (`PedidoDeLocalizacao.marca`) e o token (o turno + `interacao`). Na hora de
 # postar, a regra da caixa (`Interacao.sai_o_formato?`) decide de novo, como no cartão: sem o formato, sai a versão em
-# texto. Os destinatários do e-mail (#1828) também são calculados na hora (`Crm::Email::Destinatarios.da_ia`), nunca
-# gravados no áudio. A mensagem leva o que a de antes levava (`autonomia_agent_id` e `autonomia_reply_to_message_id` do
-# áudio, o robô do áudio): `Interacao.oferta_do_agente?`, o toque (`selected_option` com `in_reply_to`) e a
-# `LocalizacaoRecebida` a reconhecem igual.
+# texto. Os destinatários do e-mail (#1828) são calculados quando o áudio é gravado (`Crm::Email::Destinatarios.da_ia`):
+# na hora de postar, a última mensagem pública já é o próprio áudio, sem Cc, e a cópia se perderia. Na hora de postar,
+# quem pediu para sair da cópia nesse meio tempo sai (`Destinatarios.gravados_da_ia`). A mensagem leva o que a de antes
+# levava (`autonomia_agent_id` e `autonomia_reply_to_message_id` do áudio, o robô do áudio):
+# `Interacao.oferta_do_agente?`, o toque (`selected_option` com `in_reply_to`) e a `LocalizacaoRecebida` a reconhecem
+# igual.
 #
 # Sob o lock da conversa, nada sai (motivo para o registro, só ids):
 #   - `pessoa_respondeu`: uma pessoa da equipe escreveu depois do áudio;
@@ -19,8 +21,10 @@
 #     a âncora no retry). Não é o `Interacao.disponivel?` inteiro: ele depende do contexto de entrega, que o job não tem;
 #   - `dono_mudou`: o vínculo do robô do áudio não responde mais a conversa (`Operate.no_comando?`, o contrato do
 #     ChunkedDeliveryJob: sem responsável humano, agente ativo, mesma caixa);
-#   - `turno_superado`: o robô do áudio já respondeu outra mensagem do cliente depois dele (id maior que o do áudio e
-#     `autonomia_reply_to_message_id` presente e diferente). Só ids e o campo; o texto nunca é lido.
+#   - `turno_superado`: o cliente escreveu de novo depois do áudio (mensagem recebida com id maior), ou o robô do áudio já
+#     respondeu outra mensagem dele (id maior que o do áudio e `autonomia_reply_to_message_id` presente e diferente). O
+#     turno novo responde; a pergunta velha sairia no meio da conversa nova. Só ids e o campo; o texto nunca é lido.
+# A interação que já saiu é conferida antes das guardas: um job repetido depois dela nunca registra desistência falsa.
 # O token, conferido sob o mesmo lock, impede a interação duplicada (dois jobs do mesmo áudio, o retry do turno que
 # reenfileira para o áudio existente).
 class Autonomia::Agents::Operate::InteracaoDepoisDoAudio
@@ -36,7 +40,8 @@ class Autonomia::Agents::Operate::InteracaoDepoisDoAudio
       final = ::Autonomia::Agents::Interacao.mensagem(interacao, texto: nil, conversation: conversation)
       { NA_ANCORA => { 'content' => final[:content], 'rich_message' => final[:rich_message], 'em_texto' => final[:em_texto],
                        'marca' => ::Autonomia::Agents::Interacao::PedidoDeLocalizacao.marca(interacao),
-                       'token' => "#{turno}:interacao" } }
+                       'token' => "#{turno}:interacao",
+                       'destinatarios' => ::Crm::Email::Destinatarios.da_ia(conversation).transform_keys(&:to_s) } }
     end
 
     # A interação gravada na mensagem, ou nil.
@@ -77,8 +82,9 @@ class Autonomia::Agents::Operate::InteracaoDepoisDoAudio
   # (ou outro job já a postou); senão o motivo de não postar. Erro sobe para quem chama.
   def postar!
     @conversation.with_lock do
-      motivo = motivo_para_nao_postar
-      construir! unless motivo || postada
+      ja_saiu = postada
+      motivo = motivo_para_nao_postar unless ja_saiu
+      construir! unless ja_saiu || motivo
       motivo
     end
   end
@@ -99,6 +105,8 @@ class Autonomia::Agents::Operate::InteracaoDepoisDoAudio
   end
 
   def turno_superado?
+    return true if @conversation.messages.incoming.exists?(['id > ?', @ancora.id])
+
     deste_turno = @ancora.content_attributes.to_h[RESPOSTA].to_s
     @conversation.messages.outgoing.where(sender_type: 'AgentBot', sender_id: @ancora.sender_id).where('id > ?', @ancora.id)
                  .any? do |message|
@@ -115,9 +123,14 @@ class Autonomia::Agents::Operate::InteracaoDepoisDoAudio
       ActionController::Parameters.new(
         content: content, message_type: 'outgoing', sender_type: 'AgentBot', sender_id: @ancora.sender_id, private: false,
         content_attributes: do_audio.merge(formato, pendente['marca'].to_h, TOKEN => pendente['token']),
-        **::Crm::Email::Destinatarios.da_ia(@conversation)
+        **destinatarios
       )
     ).perform
+  end
+
+  # Os gravados no áudio, sem quem saiu da cópia depois.
+  def destinatarios
+    ::Crm::Email::Destinatarios.gravados_da_ia(@conversation, pendente['destinatarios'])
   end
 
   # -> [o conteúdo, as chaves do formato]. Sem o formato (a caixa não o leva agora): a versão em texto, sem chave.
