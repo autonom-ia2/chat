@@ -1,0 +1,80 @@
+require 'rails_helper'
+
+# G30 (#2702): o card do lead do formulário nasce com o dono que a Atribuição do funil daria. O card não tem conversa nem
+# caixa: quem pode receber é quem cuida do funil nas caixas ligadas a ele (Crm::Entrega::QuemCuida). Funil sem
+# Atribuição ligada, ou sem ninguém que possa receber, fica como hoje: sem dono.
+RSpec.describe Crm::MetaAds::LeadForms::DonoDoLead do
+  let(:account) { create(:account) }
+  let(:admin) { create(:user, account: account, role: :administrator, name: 'Dona') }
+  let(:ana) { create(:user, account: account, role: :agent, name: 'Ana Corretora') }
+  let(:bruno) { create(:user, account: account, role: :agent, name: 'Bruno Corretor') }
+  let(:funil_e_etapa) { create_crm_pipeline(account: account, user: admin) }
+  let(:funil) { funil_e_etapa.first }
+  let(:etapa) { funil_e_etapa.last }
+  let(:caixa) { create_crm_whatsapp_api_inbox(account: account, members: [ana, bruno]) }
+  let(:importer) { Crm::MetaAds::LeadForms::Importer.new(account: account, pipeline: funil, stage: etapa, form_name: 'Visitas') }
+
+  def lead(id, telefone)
+    { 'id' => id, 'created_time' => '2026-11-08T12:00:00+0000', 'form_id' => '9001', 'ad_name' => 'Apartamento Jardim',
+      'field_data' => [{ 'name' => 'full_name', 'values' => ["Lead #{id}"] }, { 'name' => 'phone_number', 'values' => [telefone] }] }
+  end
+
+  def atribuicao(**regra)
+    funil.update!(metadata: { 'ai' => { 'handoff' => { 'enabled' => true }.merge(regra.stringify_keys) } })
+  end
+
+  def online(*pessoas)
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_return(pessoas.to_h { |pessoa| [pessoa.id.to_s, 'online'] })
+  end
+
+  def dono_do_lead(id, telefone)
+    importer.import(lead(id, telefone))
+    Crm::MetaAdsLead.find_by(leadgen_id: id).card.owner
+  end
+
+  before do
+    account.crm_pipeline_inboxes.create!(pipeline: funil, inbox: caixa)
+    online
+  end
+
+  it 'com a Atribuição ligada, o lead vai para quem cuida do funil com menos cards abertos nele', :aggregate_failures do
+    atribuicao
+    account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'Card da Ana', currency: 'BRL', owner: ana)
+
+    expect(dono_do_lead('L1', '+5511987650001')).to eq(bruno)
+    expect(dono_do_lead('L2', '+5511987650002')).to eq(ana)
+  end
+
+  it 'prefere quem está online, sem segurar o lead quando ninguém está' do
+    atribuicao(prefer_online: true)
+    online(ana)
+    account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'Card da Ana', currency: 'BRL', owner: ana)
+
+    expect(dono_do_lead('L1', '+5511987650001')).to eq(ana)
+  end
+
+  it 'a regra com pessoa fixa dá o lead a ela; fora de quem cuida do funil, vale a fila', :aggregate_failures do
+    atribuicao(pool_type: 'user', pool_id: ana.id)
+    account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'Card da Ana', currency: 'BRL', owner: ana)
+    expect(dono_do_lead('L1', '+5511987650001')).to eq(ana)
+
+    atribuicao(pool_type: 'user', pool_id: create(:user, account: account, role: :agent).id)
+    expect(dono_do_lead('L2', '+5511987650002')).to eq(bruno)
+  end
+
+  it 'a regra da etapa vence a do funil' do
+    atribuicao
+    etapa.update!(metadata: { 'ai_handoff' => { 'pool_type' => 'user', 'pool_id' => ana.id } })
+    account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'Card da Ana', currency: 'BRL', owner: ana)
+
+    expect(dono_do_lead('L1', '+5511987650001')).to eq(ana)
+  end
+
+  it 'sem a Atribuição ligada, ou sem ninguém que cuide do funil, o lead fica sem dono como hoje', :aggregate_failures do
+    expect(dono_do_lead('L1', '+5511987650001')).to be_nil
+
+    atribuicao
+    caixa.inbox_members.destroy_all
+    expect(dono_do_lead('L2', '+5511987650002')).to be_nil
+  end
+end
