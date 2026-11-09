@@ -16,7 +16,7 @@ module Autonomia::Automacao::ReuniaoDaAtividade
   end
 
   # G56: o resultado da reunião só começa a "reunião atendida" no primeiro "Aconteceu"; os outros só acordam a espera
-  # (Escuta#comecar_no_card). Os demais gatilhos do card começam sempre.
+  # (Escuta#acordar_o_card). Os demais gatilhos do card começam sempre (Escuta#partir_do_evento).
   def comeca?(tipo, card, atividade_id)
     tipo != ::Autonomia::Automacao::Gatilhos::ATENDIDA || atendida_agora?(card, atividade_id)
   end
