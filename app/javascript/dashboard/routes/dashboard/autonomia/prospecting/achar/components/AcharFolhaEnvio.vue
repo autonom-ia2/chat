@@ -85,16 +85,14 @@ const quantasEntram = computed(() => {
 const jaEstavam = computed(() =>
   listaEscolhida.value ? props.entramLista - quantasEntram.value : 0
 );
+// Duas frases, cada uma com o próprio plural (#2834): "Entra 1 das 3" segue
+// quantas entram; "2 já estavam na lista", quantas já estavam.
 const textoEntram = computed(() => {
-  if (!jaEstavam.value) {
-    return t(`${NS}.ENTRAM`, { n: quantasEntram.value, total: props.n });
-  }
-  // O plural segue {n} (quantas já estavam); quantas entram vai em {entram}.
-  return t(
-    `${NS}.ENTRAM_JA_ESTAVAM`,
-    { entram: quantasEntram.value, total: props.n, n: jaEstavam.value },
-    jaEstavam.value
-  );
+  const n = quantasEntram.value;
+  const entram = t(`${NS}.ENTRAM`, { n, total: props.n }, n);
+  if (!jaEstavam.value) return entram;
+  const ja = t(`${NS}.JA_ESTAVAM`, { n: jaEstavam.value }, jaEstavam.value);
+  return `${entram} · ${ja}`;
 });
 
 const numerosDaEscolhida = computed(() => {
@@ -110,7 +108,7 @@ const escolhaFinal = computed(() => {
   return props.podeFunil ? 'funil' : 'lista';
 });
 const titulo = computed(() => {
-  if (dois.value) return t(`${NS}.TITULO`, { n: props.n });
+  if (dois.value) return t(`${NS}.TITULO`, { n: props.n }, props.n);
   return t(`${NS}.${props.podeFunil ? 'FUNIL' : 'LISTA'}.TITULO`);
 });
 // Lista: a base é a seleção ("Entram 12 das 14"); só quem não tem contato
