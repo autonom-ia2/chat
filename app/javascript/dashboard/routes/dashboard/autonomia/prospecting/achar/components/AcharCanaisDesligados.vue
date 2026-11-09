@@ -25,7 +25,7 @@ const irParaPublicos = () =>
 
 <template>
   <div
-    v-if="canais.length"
+    v-show="canais.length"
     role="status"
     class="flex flex-col items-center gap-1"
     data-canais-desligados

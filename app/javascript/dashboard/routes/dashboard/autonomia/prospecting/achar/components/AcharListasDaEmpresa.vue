@@ -23,7 +23,7 @@ const { listas, saida, ocupado, erro, tirar, desfazer } = useListasDaEmpresa({
 
 <template>
   <section
-    v-if="podeLista && (listas.length || saida)"
+    v-show="podeLista && (listas.length || saida)"
     class="flex flex-col gap-2"
     data-listas-da-empresa
   >

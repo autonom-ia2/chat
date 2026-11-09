@@ -468,7 +468,7 @@ describe('Suas listas e a lista aberta', () => {
     aviso.unmount();
 
     const nada = mount(AcharCanaisDesligados, { props: { canais: [] } });
-    expect(nada.find('[data-canais-desligados]').exists()).toBe(false);
+    expect(nada.find('[data-canais-desligados]').isVisible()).toBe(false);
     nada.unmount();
   });
 

@@ -10,7 +10,7 @@ const props = defineProps({
 });
 
 const NS = 'PROSPECTING_ACHAR.ABAS';
-const { permissoes, irPara } = useAcharTela();
+const { irPara } = useAcharTela();
 const ABAS = [
   { id: 'buscas', chave: 'BUSCAS', rota: ROTAS.BUSCAS, estado: 'buscas' },
   { id: 'listas', chave: 'LISTAS', rota: ROTAS.LISTAS, estado: 'listas' },
@@ -22,7 +22,6 @@ const abrir = aba => {
 
 <template>
   <nav
-    v-if="permissoes.lista"
     class="flex gap-2 p-1 rounded-2xl bg-n-slate-3 self-start"
     :aria-label="$t(`${NS}.ROTULO`)"
     data-abas

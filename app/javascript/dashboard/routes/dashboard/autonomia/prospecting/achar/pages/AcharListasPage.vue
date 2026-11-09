@@ -98,7 +98,7 @@ watch(demo, carregar);
         >
           {{ $t(`${NS}.TITULO`) }}
         </h1>
-        <AcharAbasDasBuscas atual="listas" />
+        <AcharAbasDasBuscas v-if="permissoes.lista" atual="listas" />
 
         <AcharEstado
           v-if="!permissoes.lista"

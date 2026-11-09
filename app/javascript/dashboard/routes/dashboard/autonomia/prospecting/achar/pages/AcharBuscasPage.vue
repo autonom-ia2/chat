@@ -215,7 +215,7 @@ watch(demo, carregar);
           {{ daEquipe ? $t(`${NS}.TITULO_EQUIPE`) : $t(`${NS}.TITULO`) }}
         </h1>
         <!-- #2775 (F6): a aba "Suas listas" fica ao lado. -->
-        <AcharAbasDasBuscas atual="buscas" />
+        <AcharAbasDasBuscas v-if="permissoes.lista" atual="buscas" />
 
         <AcharEstado
           v-if="avisoSoVer"
