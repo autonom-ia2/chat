@@ -169,11 +169,20 @@ module Autonomia::Automacao::Escuta
 
     mudou = dados[:changed_attributes].to_h.with_indifferent_access
     tipos = ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD.fetch(evento, [])
-    tipos.each do |tipo|
-      marca = ::Autonomia::Automacao::Gatilhos.marca_da_atividade(tipo, dados[:activity_id])
-      cada_automacao(card, tipo, dados_do_card(tipo, card, mudou, dados[:activity_id])) { |definicao| partir(definicao, card, tipo, evento: marca) }
-    end
+    tipos.each { |tipo| comecar_no_card(card, tipo, mudou, dados[:activity_id]) }
     acordar_o_card(card) if tipos.any? { |tipo| ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo) }
+  end
+
+  def comecar_no_card(card, tipo, mudou, atividade_id)
+    return unless dispara?(tipo, card, atividade_id)
+
+    marca = ::Autonomia::Automacao::Gatilhos.marca_da_atividade(tipo, atividade_id)
+    cada_automacao(card, tipo, dados_do_card(tipo, card, mudou, atividade_id)) { |definicao| partir(definicao, card, tipo, evento: marca) }
+  end
+
+  # G56: o resultado da reunião só começa a "reunião atendida" no primeiro "Aconteceu"; os outros só acordam a espera.
+  def dispara?(tipo, card, atividade_id)
+    tipo != ::Autonomia::Automacao::Gatilhos::ATENDIDA || ::Autonomia::Automacao::ReuniaoDaAtividade.atendida_agora?(card, atividade_id)
   end
 
   # A etapa de onde o card saiu ou para onde entrou, e o funil, para os parâmetros do gatilho. O card criado traz a

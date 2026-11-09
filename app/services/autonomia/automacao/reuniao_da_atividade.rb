@@ -10,9 +10,20 @@ module Autonomia::Automacao::ReuniaoDaAtividade
   module_function
 
   def de(card, atividade_id)
-    atividade = atividade_id && ::Crm::Activity.find_by(id: atividade_id, account_id: card.account_id, card_id: card.id)
-    reuniao_id = atividade&.payload.to_h['meeting_id']
+    reuniao_id = payload(card, atividade_id)['meeting_id']
     reuniao_id && card.account.crm_meetings.find_by(id: reuniao_id, card_id: card.id)
+  end
+
+  # G56: a atividade é o primeiro "Aconteceu" da reunião (Crm::Meetings::RecordOutcomeService grava `first_held`).
+  # "Não compareceu", salvar as anotações de novo e voltar para "Aconteceu" depois de trocar não disparam.
+  def atendida_agora?(card, atividade_id)
+    dados = payload(card, atividade_id)
+    dados['outcome'] == 'held' && dados['first_held'] == true
+  end
+
+  def payload(card, atividade_id)
+    atividade = atividade_id && ::Crm::Activity.find_by(id: atividade_id, account_id: card.account_id, card_id: card.id)
+    atividade&.payload.to_h
   end
 
   # O lembrete (#2709) não tem atividade: a reunião vem da marca da execução, presa ao card e à conta do mesmo jeito.

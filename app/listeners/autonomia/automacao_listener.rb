@@ -43,6 +43,7 @@ class Autonomia::AutomacaoListener < BaseListener
   def crm_meeting_scheduled(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_MEETING_SCHEDULED)
   def crm_meeting_rescheduled(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_MEETING_RESCHEDULED)
   def crm_meeting_canceled(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_MEETING_CANCELED)
+  def crm_meeting_outcome_recorded(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_MEETING_OUTCOME_RECORDED)
 
   private
 
