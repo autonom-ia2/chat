@@ -159,15 +159,15 @@ class Autonomia::Automacao::PassoDeCampanha
     sem = @conta.labels.where(id: @passo['sem_etiquetas']).pluck(:id)
     dados = { 'etiquetas' => etiquetas, 'sem_etiquetas' => sem }
     publico = audiencia(etiquetas, sem)
-    da_conta? ? campanha_da_conta(caixa, template_params, publico, dados) : campanha_da_vez(caixa, template_params, publico, dados)
+    da_conta? ? campanha_da_conta(caixa, template_params, publico, dados) : campanha_da_vez(dados)
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.info("[automacao][campanha] recusada automacao=#{@automacao.id} erro=#{e.record.errors.attribute_names.join(',')}")
     pulado('campanha_recusada')
   end
 
-  def criar_campanha(caixa, template_params, audiencia, saida = Time.current)
+  def criar_campanha(caixa, template_params, audiencia)
     @conta.campaigns.create!(
-      title: @passo['titulo'], inbox: caixa, sender: @quem, scheduled_at: saida, template_params: template_params,
+      title: @passo['titulo'], inbox: caixa, sender: @quem, scheduled_at: Time.current, template_params: template_params,
       message: self.class.texto_do_modelo(caixa, template_params), audience: audiencia
     )
   end
@@ -184,23 +184,22 @@ class Autonomia::Automacao::PassoDeCampanha
   # Roda por vez: na conta (conta.recorrente) ou num card ou contato do recorrente (G55).
   def da_vez? = da_conta? || ocorrencia.present?
 
-  # G55: a campanha da vez no card.recorrente e no contato.recorrente. Quem cria ou entra nela grava o id no registro;
-  # o agendador das campanhas a manda quando a vez para de juntar gente (CampanhaDaOcorrencia).
-  def campanha_da_vez(caixa, template_params, audiencia, dados)
-    vez = ::Autonomia::Automacao::CampanhaDaOcorrencia.new(execucao: @execucao, passo_id: @passo['id'], ocorrencia: ocorrencia)
-    campanha, situacao = vez.juntar { |saida| criar_campanha(caixa, template_params, audiencia, saida) }
-    tipo, motivo = situacao == :ja_saiu ? [:pulado, 'campanha_da_vez_ja_saiu'] : [:ok, nil]
-    Resultado.new(tipo: tipo, motivo: motivo, dados: { 'campanha_id' => campanha.display_id, **dados })
+  # G55: no card.recorrente e no contato.recorrente, a execução chega à campanha da vez e segue. A campanha sai quando a
+  # vez fecha (CampanhaDaOcorrencia); se esta chegada é a que fecha, o passo devolve o resumo da saída.
+  def campanha_da_vez(dados)
+    vez, situacao = ::Autonomia::Automacao::CampanhaDaOcorrencia.chegar(@execucao, @passo['id'])
+    marca = { 'campanha_da_vez' => vez.id, **dados }
+    if situacao == :ja_saiu
+      return Resultado.new(tipo: :pulado, motivo: 'campanha_da_vez_ja_saiu', dados: marca.merge('campanha_id' => vez.campanha_display_id))
+    end
+    return Resultado.new(tipo: :ok, motivo: 'campanha_da_vez_aguardando', dados: marca) unless situacao
+
+    resumo = ::Autonomia::Automacao::CampanhaDaOcorrencia.disparar(vez)
+    Resultado.new(tipo: resumo.tipo, motivo: resumo.motivo, dados: marca.merge(resumo.dados))
   end
 
-  # A vez do recorrente de card ou contato desta execução (Gatilhos.ocorrencia_da_marca), ou nil fora dele.
-  def ocorrencia
-    return @ocorrencia if defined?(@ocorrencia)
-
-    tipo = @execucao.chave_gatilho
-    recorrente = ::Autonomia::Automacao::Gatilhos.recorrente?(tipo) && !::Autonomia::Automacao::Gatilhos.da_conta?(tipo)
-    @ocorrencia = (::Autonomia::Automacao::Gatilhos.ocorrencia_da_marca(@execucao.evento, @execucao.alvo_id) if recorrente)
-  end
+  # A vez do recorrente de card ou contato desta execução, ou nil fora dele.
+  def ocorrencia = (@ocorrencia ||= ::Autonomia::Automacao::CampanhaDaOcorrencia.vez_da(@execucao))
 
   # As etiquetas do público e as excluídas (lote 5, #2681: ExcludeLabel, tirado pelo CampanhaSemEtiquetas no envio).
   def audiencia(etiquetas, sem)

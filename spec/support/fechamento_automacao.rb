@@ -230,13 +230,13 @@ module FechamentoAutomacao::Lacunas
     # com a Gatilhos, depois do lote 3 (#2689), que traz a porta da frente da conversa nova.
     'G43' => nil,
     # G55 (ex. 16, passo 2): disparar a campanha da etiqueta a partir de um gatilho de card. O card.recorrente aceita o
-    # disparar, e a campanha é uma só por vez (CampanhaDaOcorrencia); prova ponta a ponta em
+    # disparar, e a campanha é uma só por vez, quando a vez fecha (CampanhaDaOcorrencia); prova ponta a ponta em
     # spec/fechamento/automacao/g55_campanha_no_card_spec.rb.
     'G55' => lambda {
       passo = { 'id' => 'g55', 'faz' => 'disparar', 'modelo' => { 'variaveis' => [['texto fixo']] } }
       receita = { 'gatilho' => { 'tipo' => 'card.recorrente' } }
       Autonomia::Automacao::PassoDeCampanha.problemas_ao_salvar(passo, receita, conta: nil, account_user: nil).empty? &&
-        Autonomia::Automacao::CampanhaDaOcorrencia::JUNTAR.positive?
+        Autonomia::Automacao::CampanhaDaVez.column_names.include?('esperados')
     },
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
     # (passo 2, "manda por e-mail o mesmo conteúdo").

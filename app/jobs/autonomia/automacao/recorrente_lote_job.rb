@@ -17,6 +17,8 @@ class Autonomia::Automacao::RecorrenteLoteJob < ApplicationJob
     tipo = definicao.versao_ativa.receita.dig('gatilho', 'tipo')
     instante = Time.zone.parse(ocorrencia)
     erro = alvos(definicao, instante, ids).filter_map { |alvo| comecar(definicao, alvo, tipo, instante) }.first
+    # G55: os ids que não abriram execução contam como fora da campanha da vez.
+    ::Autonomia::Automacao::CampanhaDaOcorrencia.lote_feito(definicao, tipo, instante, ids)
     raise erro if erro
   end
 

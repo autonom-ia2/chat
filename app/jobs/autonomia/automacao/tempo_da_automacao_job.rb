@@ -61,9 +61,14 @@ class Autonomia::Automacao::TempoDaAutomacaoJob < ApplicationJob
     chave = "automacao:recorrente:#{definicao.id}:#{ocorrencia.utc.iso8601}"
     return unless Redis::Alfred.set(chave, 1, nx: true, ex: ::Autonomia::Automacao::Tempo::JANELA.to_i)
 
+    # G55: a campanha da vez conta os cards que a vez espera (os ids enfileirados).
+    vezes = ::Autonomia::Automacao::CampanhaDaOcorrencia.abrir(definicao, ocorrencia)
+    total = 0
     busca.lotes do |ids, instante|
+      total += ids.size
       ::Autonomia::Automacao::RecorrenteLoteJob.perform_later(definicao.id, ids, instante.utc.iso8601)
     end
+    ::Autonomia::Automacao::CampanhaDaOcorrencia.esperar(vezes, total)
     nil
   end
 

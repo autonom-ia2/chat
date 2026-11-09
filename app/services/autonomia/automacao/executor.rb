@@ -239,8 +239,10 @@ class Autonomia::Automacao::Executor
     nil
   end
 
+  # G55: a execução de um recorrente de card que fecha sem ter chegado à campanha da vez conta como saída dela.
   def finalizar(estado)
     gravar(estado: estado, travada_em: nil)
+    ::Autonomia::Automacao::CampanhaDaOcorrencia.saiu(@execucao)
   end
 
   # Só grava na rodada que tomou a execução: se alguém a desligou no meio, nada muda e a rodada para do mesmo jeito.

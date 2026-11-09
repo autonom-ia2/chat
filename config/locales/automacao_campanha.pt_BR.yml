@@ -5,6 +5,9 @@ pt_BR:
       motivos:
         campanha_so_sem_alvo: 'Esta automação roda a cada conversa, card ou contato que muda, então mandaria a mesma campanha de novo a cada vez. Mandar campanha só vale numa automação recorrente (por data). Nada foi mandado.'
         campanha_da_vez_ja_saiu: 'A campanha desta vez já tinha saído quando este card ou contato chegou aqui. Ele não recebeu esta campanha.'
+        campanha_da_vez_aguardando: 'Entrou na campanha desta vez. Ela sai quando todos os cards ou contatos desta vez passarem por aqui ou saírem por outro caminho.'
+        campanha_da_vez_saiu: 'A campanha desta vez saiu para todos com as etiquetas. De %{esperados} esperados, %{chegaram} chegaram a este passo, %{sairam} saíram por outro caminho e %{sem_execucao} não começaram a automação.'
+        campanha_da_vez_saiu_pela_rede: 'A vez não fechou em %{horas} horas, então a campanha saiu para todos com as etiquetas. De %{esperados} esperados, %{chegaram} chegaram a este passo, %{sairam} saíram por outro caminho, %{sem_execucao} não começaram a automação e %{faltaram} ficaram de fora sem passar por aqui (ainda andando ou fechados fora da automação).'
         quem_ligou_sem_permissao_campanha: 'Quem ligou a automação não pode mais enviar campanhas. Assuma e religue.'
         campanha_sem_caixa: 'A caixa escolhida não existe mais ou não é do WhatsApp oficial. A campanha não foi criada.'
         campanha_desligada: 'As campanhas de WhatsApp estão desligadas nesta conta. A campanha não foi criada.'

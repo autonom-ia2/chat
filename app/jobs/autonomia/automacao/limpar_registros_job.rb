@@ -9,6 +9,8 @@ class Autonomia::Automacao::LimparRegistrosJob < ApplicationJob
   def perform
     ::Autonomia::Automacao::Registro.where(created_at: ...::Autonomia::Automacao::Registro::RETENCAO.ago).in_batches(of: LOTE).delete_all
     finalizadas_sem_registro.in_batches(of: LOTE).delete_all
+    # G55: a conta da campanha da vez (a rede de segurança fecha cada uma em horas).
+    ::Autonomia::Automacao::CampanhaDaVez.where(created_at: ...::Autonomia::Automacao::Registro::RETENCAO.ago).in_batches(of: LOTE).delete_all
   end
 
   private

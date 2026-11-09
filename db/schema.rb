@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_900000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_09_955500) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -599,6 +599,24 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_900000) do
     t.index ["account_id"], name: "index_autonomia_agents_on_account_id"
     t.index ["created_by_id"], name: "index_autonomia_agents_on_created_by_id"
     t.index ["deleted_by_id"], name: "index_autonomia_agents_on_deleted_by_id"
+  end
+
+  create_table "autonomia_automacao_campanhas_da_vez", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "automacao_id", null: false
+    t.string "ocorrencia", null: false
+    t.string "passo", null: false
+    t.integer "esperados"
+    t.integer "chegadas", default: 0, null: false
+    t.integer "saidas", default: 0, null: false
+    t.integer "sem_execucao", default: 0, null: false
+    t.bigint "primeira_execucao_id"
+    t.integer "campanha_display_id"
+    t.datetime "fechada_em"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_autonomia_automacao_campanhas_da_vez_on_account_id"
+    t.index ["automacao_id", "ocorrencia", "passo"], name: "idx_autonomia_automacao_campanhas_da_vez_unica", unique: true
   end
 
   create_table "autonomia_automacao_conversoes", force: :cascade do |t|
@@ -4722,6 +4740,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_900000) do
   add_foreign_key "autonomia_agents", "accounts"
   add_foreign_key "autonomia_agents", "users", column: "created_by_id"
   add_foreign_key "autonomia_agents", "users", column: "deleted_by_id", on_delete: :nullify
+  add_foreign_key "autonomia_automacao_campanhas_da_vez", "accounts"
+  add_foreign_key "autonomia_automacao_campanhas_da_vez", "autonomia_automacoes", column: "automacao_id"
   add_foreign_key "autonomia_automacao_conversoes", "accounts"
   add_foreign_key "autonomia_automacao_conversoes", "autonomia_automacoes", column: "definicao_id"
   add_foreign_key "autonomia_automacao_execucoes", "accounts"

@@ -5,8 +5,8 @@ require 'rails_helper'
 # aprovado 'Seu seguro está vencendo' para todos com essa etiqueta". É a prova que a sonda da G55 lê.
 #
 # O card.recorrente abre uma execução por card. A campanha é da vez, não do card: uma só, para todos com a etiqueta,
-# saindo pelo agendador das campanhas depois que a vez para de juntar gente (CampanhaDaOcorrencia). Montado e ligado pela
-# API da tela, como a corretora faria; o que sai para o cliente para no receptor de teste (F9.7).
+# saindo quando o último card da vez passa pelo passo (CampanhaDaOcorrencia). Montado e ligado pela API da tela, como a
+# corretora faria; o que sai para o cliente para no receptor de teste (F9.7).
 #
 # Fica de fora daqui: o "Só se" do motivo da perda (`card.motivo_da_perda`, G18, no #2675) e os passos 3 a 8 (G38 e os
 # outros do exemplo, em pendentes_spec.rb).
@@ -57,14 +57,6 @@ RSpec.describe 'Fechamento #2414 · G55: a campanha da vez num gatilho de card',
     end
   end
 
-  # O agendador das campanhas (o mesmo da tela) passando depois que a vez parou de juntar gente.
-  def agendador_passa(momento)
-    travel_to(momento) do
-      TriggerScheduledItemsJob.perform_now
-      perform_enqueued_jobs(only: Campaigns::TriggerOneoffCampaignJob)
-    end
-  end
-
   before do
     account.update!(locale: 'pt_BR', reporting_timezone: fuso.name)
     flags_do_piloto(account)
@@ -94,14 +86,13 @@ RSpec.describe 'Fechamento #2414 · G55: a campanha da vez num gatilho de card',
     expect([ana, bruno].map { |contato| contato.reload.label_list }).to all(eq(['reconquista']))
     expect(account.campaigns.count).to eq(1)
     campanha = account.campaigns.last
-    expect(campanha).to have_attributes(title: 'Seu seguro está vencendo', campaign_status: 'active', sender: juliana,
+    expect(campanha).to have_attributes(title: 'Seu seguro está vencendo', sender: juliana,
                                         audience: [{ 'type' => 'Label', 'id' => reconquista.id }])
-    registros = Autonomia::Automacao::Registro.where(passo: 'campanha').pluck(:resultado, :dados)
-    expect(registros.map(&:first)).to eq(%w[ok ok])
-    expect(registros.map { |(_, dados)| dados['campanha_id'] }.uniq).to eq([campanha.display_id])
-    expect(chamadas_para('graph.facebook.com')).to be_empty
+    # O primeiro card entra e espera a vez; o segundo, o último da vez, a fecha e a campanha sai.
+    registros = Autonomia::Automacao::Registro.where(passo: 'campanha').order(:id).pluck(:resultado, :motivo)
+    expect(registros).to eq([%w[ok campanha_da_vez_aguardando], %w[ok campanha_da_vez_saiu]])
 
-    agendador_passa(campanha.scheduled_at + 1.minute)
+    travel_to(dia_primeiro + 6.minutes) { perform_enqueued_jobs(only: Campaigns::TriggerOneoffCampaignJob) }
 
     expect(campanha.reload.campaign_status).to eq('completed')
     enviados = chamadas_para('graph.facebook.com').map(&:corpo)
