@@ -172,7 +172,9 @@
       },
       "AD_COMMENTS": {
         "TEXT": "Os comentários do anúncio ficam no anúncio, não neste post.",
-        "OPEN": "Ver comentários do anúncio"
+        "OPEN": "Ver comentários do anúncio",
+        "TEXT_MANY": "Este post virou {count} anúncios. Os comentários de cada um ficam no anúncio, não neste post.",
+        "ITEM": "{name}, criado em {date}"
       },
       "COMMENTS": {
         "TITLE": "Comentários",

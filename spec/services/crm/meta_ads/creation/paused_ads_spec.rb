@@ -75,6 +75,26 @@ RSpec.describe Crm::MetaAds::Creation::PausedAds do
     expect(described_class.new(connection).list).to eq([])
   end
 
+  # #2739: ativado no Gerenciador da Meta, fora do Chat2You. A leitura que já se faz aqui grava a ativação, como o Ativar
+  # daqui grava: o post impulsionado passa a "Teve anúncio" em Seus posts, e o anúncio não é lido de novo.
+  it 'anúncio ligado fora do Chat2You fica marcado como ativado; pausado ou recusado, não' do
+    lido_ativo = created('1')
+    lido_em_analise = created('2')
+    pausado = created('3')
+    recusado = created('4')
+    stub_ad('1', 'ACTIVE')
+    stub_ad('2', 'IN_PROCESS', status: 'ACTIVE')
+    stub_ad('3', 'PAUSED')
+    stub_ad('4', 'DISAPPROVED', status: 'PAUSED')
+
+    freeze_time do
+      expect(described_class.new(connection).list.pluck(:ad_id)).to eq(%w[3])
+
+      expect([lido_ativo, lido_em_analise].map { |record| record.reload.activated_at }).to all(eq(Time.current))
+      expect([pausado, recusado].map { |record| record.reload.activated_at }).to all(be_nil)
+    end
+  end
+
   it 'anúncio que já foi ativado aqui não é lido de novo' do
     created('1').update!(activated_at: Time.current)
 

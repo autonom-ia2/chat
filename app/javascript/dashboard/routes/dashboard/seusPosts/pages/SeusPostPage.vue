@@ -251,16 +251,26 @@ const ladoDoAnuncio = computed(() => {
 });
 
 // #2522: o post do Instagram impulsionado por aqui. Os comentários do anúncio ficam noutra mídia, e o anúncio por
-// dentro (Anúncios da Meta) os mostra. `ad_id` só vem para quem vê Anúncios da Meta; a página deles pede também o CRM.
-const anuncioDoPost = computed(() =>
-  dados.value?.ad_id && isCrmKanbanEnabled()
-    ? {
-        name: 'campaigns_meta_ads_index',
-        params: { accountId: route.params.accountId },
-        query: { aba: 'resultado', anuncio: String(dados.value.ad_id) },
-      }
-    : null
-);
+// dentro (Anúncios da Meta) os mostra. `ads` só vem para quem vê Anúncios da Meta; a página deles pede também o CRM.
+// #2739: impulsionado mais de uma vez, cada anúncio tem os próprios comentários: um atalho por anúncio, com o nome e
+// o dia em que foi criado (dois com o mesmo nome não ficam iguais).
+const anunciosDoPost = computed(() => {
+  const ads = dados.value?.ads || [];
+  if (!ads.length || !isCrmKanbanEnabled()) return [];
+  return ads.map(ad => ({
+    id: String(ad.id),
+    name: ad.name || t('SEUS_POSTS.POST.AD_COMMENTS.OPEN'),
+    criado: new Date(ad.created_at).toLocaleDateString(
+      intlLocale(locale.value),
+      { day: 'numeric', month: 'long' }
+    ),
+    to: {
+      name: 'campaigns_meta_ads_index',
+      params: { accountId: route.params.accountId },
+      query: { aba: 'resultado', anuncio: String(ad.id) },
+    },
+  }));
+});
 
 // Comentários: filtro simples, contado da lista que já veio. Aba sem nada não aparece (Todos sempre).
 const FILTROS = [
@@ -867,7 +877,7 @@ const BOTAO_DE_BORDA =
           data-seus-posts-comentarios
         >
           <div
-            v-if="anuncioDoPost"
+            v-if="anunciosDoPost.length === 1"
             data-seus-posts-comentarios-do-anuncio
             class="flex flex-col items-start gap-3 rounded-xl bg-n-alpha-1 p-4 sm:flex-row sm:items-center sm:justify-between"
           >
@@ -875,13 +885,46 @@ const BOTAO_DE_BORDA =
               {{ $t('SEUS_POSTS.POST.AD_COMMENTS.TEXT') }}
             </p>
             <router-link
-              :to="anuncioDoPost"
+              :to="anunciosDoPost[0].to"
               data-seus-posts-ver-anuncio
               class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-0 text-sm sm:px-3 font-medium text-n-brand outline-none hover:underline focus-visible:ring-2 focus-visible:ring-n-brand"
             >
               <span class="i-lucide-megaphone size-4" aria-hidden="true" />
               {{ $t('SEUS_POSTS.POST.AD_COMMENTS.OPEN') }}
             </router-link>
+          </div>
+          <div
+            v-else-if="anunciosDoPost.length > 1"
+            data-seus-posts-comentarios-do-anuncio
+            class="flex flex-col gap-2 rounded-xl bg-n-alpha-1 p-4"
+          >
+            <p class="m-0 text-sm text-n-slate-12">
+              {{
+                $t('SEUS_POSTS.POST.AD_COMMENTS.TEXT_MANY', {
+                  count: anunciosDoPost.length,
+                })
+              }}
+            </p>
+            <ul role="list" class="m-0 flex list-none flex-col p-0">
+              <li v-for="anuncio in anunciosDoPost" :key="anuncio.id">
+                <router-link
+                  :to="anuncio.to"
+                  data-seus-posts-ver-anuncio
+                  class="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl text-sm font-medium text-n-brand outline-none hover:underline focus-visible:ring-2 focus-visible:ring-n-brand"
+                >
+                  <span
+                    class="i-lucide-megaphone size-4 shrink-0"
+                    aria-hidden="true"
+                  />
+                  <span class="truncate">{{
+                    $t('SEUS_POSTS.POST.AD_COMMENTS.ITEM', {
+                      name: anuncio.name,
+                      date: anuncio.criado,
+                    })
+                  }}</span>
+                </router-link>
+              </li>
+            </ul>
           </div>
           <div
             class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
