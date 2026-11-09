@@ -1,6 +1,27 @@
 class Autonomia::Agents::EmbeddingService
   class EmbeddingError < StandardError; end
 
+  # #2850 — falha que pode passar numa nova tentativa (prazo, conexão, provedor fora, limite de taxa). `motivo` é um
+  # rótulo curto para log e telemetria. O Retriever decide se tenta de novo; quem não trata recebe um EmbeddingError.
+  class Passageira < EmbeddingError
+    attr_reader :motivo
+
+    def initialize(motivo)
+      @motivo = motivo
+      super("Failed to create an embedding: #{motivo}")
+    end
+  end
+
+  # O erro de prazo e de conexão vem do Faraday, sem passar pelo RubyLLM::Error.
+  PASSAGEIRAS = {
+    Faraday::TimeoutError => 'prazo',
+    Faraday::ConnectionFailed => 'conexao',
+    RubyLLM::ServerError => 'provedor',
+    RubyLLM::ServiceUnavailableError => 'provedor',
+    RubyLLM::OverloadedError => 'provedor',
+    RubyLLM::RateLimitError => 'limite_de_taxa'
+  }.freeze
+
   # api_base padrão da OpenAI. O RubyLLM já tem o seu próprio default (com o path correto), então
   # quando a credencial da conta vem com este host "pelado" (sem /v1) NÃO repassamos o base — senão
   # a URL de embeddings sai errada e o provedor responde erro. Só repassamos base de provedor custom.
@@ -14,10 +35,13 @@ class Autonomia::Agents::EmbeddingService
   # `model:` explícito (opcional) trava o modelo p/ TODA a operação (Ingestor/Retriever resolvem 1x e
   # passam aqui) — evita que uma troca de config no meio de embed/retrieve/write compare/grave vetor de
   # dimensão diferente na coluna errada. Também habilita o backfill (força 3-large sem virar o global).
-  def initialize(account:, model: nil)
+  # `prazo:` (segundos, opcional) — #2850: prazo por tentativa, sem as repetições do RubyLLM. Sem ele (ingestão em
+  # lote, fora do turno do cliente), ficam os padrões do RubyLLM.
+  def initialize(account:, model: nil, prazo: nil)
     Llm::Config.initialize!
     @account = account
     @model = model.presence || Autonomia::Agents::Config.active_embedding_model
+    @prazo = prazo
   end
 
   # text -> Array<Float> (dim do modelo: 1536 no 3-small, 3072 no 3-large). Retorna [] se vazio.
@@ -28,6 +52,9 @@ class Autonomia::Agents::EmbeddingService
 
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     context.embed(text, model: @model).vectors
+  rescue *PASSAGEIRAS.keys => e
+    log_failure(e, started_at: started_at)
+    raise Passageira, PASSAGEIRAS.find { |classe, _motivo| e.is_a?(classe) }.last
   rescue RubyLLM::Error => e
     log_failure(e, started_at: started_at)
     raise EmbeddingError, "Failed to create an embedding: #{e.message}"
@@ -83,8 +110,16 @@ class Autonomia::Agents::EmbeddingService
       RubyLLM.context do |config|
         config.openai_api_key = cred[:api_key]
         config.openai_api_base = base if base.present?
+        com_prazo(config)
       end
     end
+  end
+
+  def com_prazo(config)
+    return if @prazo.nil?
+
+    config.request_timeout = @prazo
+    config.max_retries = 0
   end
 
   def log_failure(error, started_at:)

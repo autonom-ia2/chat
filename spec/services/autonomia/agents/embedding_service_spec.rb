@@ -64,4 +64,53 @@ RSpec.describe Autonomia::Agents::EmbeddingService do
       expect(service.embed_batch(['', nil])).to eq([[], []])
     end
   end
+
+  # #2850 (Refs #1431) — o embedding da pergunta tem prazo próprio, sem as novas tentativas do RubyLLM (300 s e até 3
+  # repetições por padrão). Quem decide se tenta de novo é o Retriever, que conhece o orçamento do turno.
+  describe 'deadline of the question (#2850)' do
+    let(:credencial) { instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'chave-de-teste' }) }
+
+    before { allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(credencial) }
+
+    it 'sets the deadline per attempt and turns off the retries of RubyLLM', :aggregate_failures do
+      config = described_class.new(account: account, prazo: 2.0).send(:context).config
+
+      expect(config.request_timeout).to eq(2.0)
+      expect(config.max_retries).to eq(0)
+    end
+
+    it 'keeps the defaults of RubyLLM without a deadline (the ingestion in background)' do
+      expect(described_class.new(account: account).send(:context).config.request_timeout).to eq(RubyLLM.config.request_timeout)
+    end
+  end
+
+  describe 'passing failures (#2850)' do
+    let(:ctx) { instance_double(RubyLLM::Context) }
+
+    before { allow(service).to receive(:context).and_return(ctx) } # rubocop:disable RSpec/SubjectStub
+
+    {
+      Faraday::TimeoutError.new('execution expired') => 'prazo',
+      Faraday::ConnectionFailed.new('connection refused') => 'conexao',
+      RubyLLM::ServerError.new(nil, 'bad gateway') => 'provedor',
+      RubyLLM::ServiceUnavailableError.new(nil, 'unavailable') => 'provedor',
+      RubyLLM::OverloadedError.new(nil, 'overloaded') => 'provedor',
+      RubyLLM::RateLimitError.new(nil, 'slow down') => 'limite_de_taxa'
+    }.each do |erro, motivo|
+      it "turns #{erro.class.name} into a passing failure with the reason #{motivo}", :aggregate_failures do
+        allow(ctx).to receive(:embed).and_raise(erro)
+        allow(Rails.logger).to receive(:error)
+
+        expect { service.embed('pergunta') }.to raise_error(described_class::Passageira) { |falha| expect(falha.motivo).to eq(motivo) }
+        expect(Rails.logger).to have_received(:error).with(include('operation=autonomia.embedding', "error_type=#{erro.class.name}"))
+      end
+    end
+
+    it 'keeps a lasting failure (wrong key) as a plain embedding error' do
+      allow(ctx).to receive(:embed).and_raise(RubyLLM::UnauthorizedError.new(nil, 'bad key'))
+
+      expect { service.embed('pergunta') }
+        .to raise_error(described_class::EmbeddingError) { |falha| expect(falha).not_to be_a(described_class::Passageira) }
+    end
+  end
 end

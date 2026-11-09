@@ -15,7 +15,7 @@ class Autonomia::Agents::Retriever
   # Escopo SEMPRE por agente (isolamento de conta/agente). Cada record expõe
   # .neighbor_distance. Retorna [] se o embedding vier vazio.
   def retrieve(query, top_k: Autonomia::Agents::Config::RETRIEVER_TOP_K)
-    retrieve!(query, top_k: top_k)
+    buscar(query, top_k, so_palavra_sem_vetor: busca_hibrida?)
   rescue RetrievalError
     raise
   rescue Autonomia::Agents::EmbeddingService::EmbeddingError => e
@@ -36,6 +36,17 @@ class Autonomia::Agents::Retriever
   # #1431 (F0) — a mesma busca, sem degradar: a falha do embedding SOBE. É o caminho de quem MEDE a busca
   # (PlacarDaBase), onde uma falha lida como [] viraria "não achou" no placar.
   def retrieve!(query, top_k: Autonomia::Agents::Config::RETRIEVER_TOP_K)
+    buscar(query, top_k, so_palavra_sem_vetor: false)
+  end
+
+  def context_for(query, top_k: Autonomia::Agents::Config::RETRIEVER_TOP_K)
+    retrieve(query, top_k: top_k).map(&:content)
+  end
+
+  private
+
+  # `so_palavra_sem_vetor` (#2850): sem o vetor da pergunta, segue só pela busca por palavra em vez de levantar.
+  def buscar(query, top_k, so_palavra_sem_vetor:)
     # C1 (custo) — teto da query ANTES do embedding: sem isso, uma mensagem colada gigante viraria um
     # embedding igualmente gigante (custo por token / limite do provider) mesmo com o PromptBuilder
     # capando depois. Defesa CENTRAL aqui (único funil): cobre Answerer (Testar/copiloto/operate),
@@ -45,7 +56,10 @@ class Autonomia::Agents::Retriever
     # MESMO modelo (coerência dimensão↔coluna), mesmo se a config global virar no meio da operação.
     model = Autonomia::Agents::Config.active_embedding_model
     query = Autonomia::Agents::Config.truncate_text(query, Autonomia::Agents::Config::MAX_QUERY_CHARS)
-    vector = embedding_service(model).embed(query)
+    vector = Autonomia::Agents::VetorDaPergunta.new(embedding_service(model), agent_id: @agent.id)
+                                               .calcular(query, so_palavra_sem_vetor: so_palavra_sem_vetor)
+    # nil: o embedding falhou e a busca segue só pela palavra (#2850).
+    return so_pela_palavra(query, top_k, model) if vector.nil?
     return [] if vector.blank?
 
     return busca_hibrida(vector, query, top_k, model) if busca_hibrida?
@@ -61,11 +75,12 @@ class Autonomia::Agents::Retriever
     raise RetrievalError, 'retrieval_unavailable'
   end
 
-  def context_for(query, top_k: Autonomia::Agents::Config::RETRIEVER_TOP_K)
-    retrieve(query, top_k: top_k).map(&:content)
+  # Sem vetor, os trechos vêm só da busca por palavra, sem distância (nil): ninguém lê como acerto forte o que o
+  # vetor não mediu. O teto de distância não se aplica; o escopo (agente, prontos, sem material reprovado), sim.
+  def so_pela_palavra(query, top_k, model)
+    busca = Autonomia::Agents::BuscaHibrida.new(escopo: escopo_da_base, vector: nil, model: model, query: query)
+    dedup_by_source(secoes_dos_itens(busca.por_palavra(top_k * 4))).first(top_k)
   end
-
-  private
 
   # #2810 — com a flag, a ordem sai da fusão do vetor com a busca por palavra (BuscaHibrida), no lugar do bônus por
   # metadado e do reforço lexical; as seções dos itens e o dedup por fonte seguem como no caminho de hoje.
@@ -292,6 +307,7 @@ class Autonomia::Agents::Retriever
   # preso ao modelo antigo (coerência query↔coluna). `model` vem resolvido do retrieve (1x por operação).
   def embedding_service(model = nil)
     @embedding_service ||= {}
-    @embedding_service[model] ||= Autonomia::Agents::EmbeddingService.new(account: @agent.account, model: model)
+    @embedding_service[model] ||= Autonomia::Agents::EmbeddingService.new(account: @agent.account, model: model,
+                                                                          prazo: Autonomia::Agents::Config::PRAZO_DO_EMBEDDING_S)
   end
 end
