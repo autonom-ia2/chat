@@ -120,7 +120,8 @@ const linhaDaNova = automacao => {
       automacao.versao?.receita?.gatilho,
       catalogo.value,
       t,
-      escolhasDoGatilho.value.nomes
+      escolhasDoGatilho.value.nomes,
+      locale.value
     ),
     primeiro: passos[0] ? fraseDoPasso(passos[0], catalogo.value, t) : '',
     outros: Math.max(passos.length - 1, 0),

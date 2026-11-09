@@ -77,8 +77,10 @@ const comAnexos = (linha, no, t) => {
 const rotuloDoCaminho = (no, ramo, t) => {
   if (no.tipo === 'esperar_ate')
     return t(`${E}.${ramo.chave === 'chegou' ? 'SE_CHEGAR' : 'SE_VENCER'}`);
-  if (ramo.chave === 'nenhum') return t(`${E}.SE_NENHUM`);
-  return t(`${E}.SE_CAMINHO`, { nome: ramo.nome || ramo.chave });
+  // G31: o caminho que decide de novo espera a próxima resposta.
+  const deNovo = ramo.de_novo ? '_DE_NOVO' : '';
+  if (ramo.chave === 'nenhum') return t(`${E}.SE_NENHUM${deNovo}`);
+  return t(`${E}.SE_CAMINHO${deNovo}`, { nome: ramo.nome || ramo.chave });
 };
 
 const linhaDoNo = (no, fraseDe, t, nivel) => {
