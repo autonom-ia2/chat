@@ -158,6 +158,9 @@ class Autonomia::Automacao::Valores
   # Os atributos personalizados (`contato.atributos.placa`) ficam em Valores::Atributos.
   MODELOS = ::Autonomia::Automacao::Valores::Atributos::MODELOS
 
+  # Onde cada valor vale na receita (`fora_do_lugar`) fica em Valores::Lugar.
+  extend ::Autonomia::Automacao::Valores::Lugar
+
   class << self
     def caminho_valido?(caminho)
       [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA, ENVIO, FALHOU].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? ||
@@ -179,26 +182,6 @@ class Autonomia::Automacao::Valores
     def da_resposta?(caminho) = RESPOSTA.key?(caminho.to_s)
 
     def da_falha?(caminho) = FALHOU.key?(caminho.to_s)
-
-    # O valor que só existe num lugar da receita: a mensagem no filtro do gatilho dela (`mensagem`: a receita está lá);
-    # a resposta no "esperar até" (`na_espera`); a reunião nos gatilhos de reunião e a mensagem que falhou no gatilho
-    # dela (`gatilho`). A mensagem que falhou fica só nos passos (`no_filtro`): o "Só se" roda na Partida, antes de
-    # haver a execução de onde ela é lida, e leria sempre vazio. Devolve a chave da frase do salvar, ou nil.
-    def fora_do_lugar(caminho, mensagem:, na_espera:, gatilho: nil, no_filtro: false)
-      return :mensagem_so_no_gatilho if da_mensagem?(caminho) && !mensagem
-      return :resposta_so_na_espera if da_resposta?(caminho) && !na_espera
-
-      fora_do_gatilho(caminho, gatilho) || falhou_no_filtro(caminho, no_filtro)
-    end
-
-    def falhou_no_filtro(caminho, no_filtro) = (:falhou_no_filtro if no_filtro && da_falha?(caminho))
-
-    # O valor que só existe em certos gatilhos: a reunião e a mensagem que falhou.
-    def fora_do_gatilho(caminho, gatilho)
-      return :reuniao_so_no_gatilho if da_reuniao?(caminho) && !::Autonomia::Automacao::Gatilhos.de_reuniao?(gatilho)
-
-      :falhou_so_no_gatilho if da_falha?(caminho) && gatilho != ::Autonomia::Automacao::MensagemQueFalhou::TIPO
-    end
 
     # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.
     def no_alvo?(caminho, alvo_type)
