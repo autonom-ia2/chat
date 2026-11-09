@@ -98,8 +98,8 @@ class Autonomia::Automacao::TestarPasso
     base.merge(motivo: e.motivo)
   end
 
-  # O valor do card só com a chave de quem pede (#2597), a mesma regra do Valores. O anúncio de origem nunca (#2558),
-  # como no passo de verdade (ComIa).
+  # O valor do card só com a chave de quem pede (#2597), a mesma regra do Valores, e, no gatilho de conversa, só no
+  # "decidir" (#2780). O anúncio de origem nunca (#2558), como no passo de verdade (ComIa.leva_o_valor?).
   # Com `le: anexos` (G20), os anexos da conversa, como no passo de verdade.
   def leitura(conversa)
     leituras = ::Autonomia::Automacao::ComIa.leituras(@passo)
@@ -110,8 +110,10 @@ class Autonomia::Automacao::TestarPasso
 
   def estado_de(conversa, leituras)
     ::Autonomia::Decisores::Estado.new(conversation: conversa, leituras: leituras, motivo_da_perda: true,
-                                       valor_do_card: ::Autonomia::Automacao::Valores.pode_ler?('card.valor', @account_user))
+                                       valor_do_card: ::Autonomia::Automacao::ComIa.leva_o_valor?(@passo, alvo_do_gatilho, @account_user))
   end
+
+  def alvo_do_gatilho = ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
 
   def ve_o_card?(card) = ::Autonomia::Automacao::ComIa.ve_o_card?(@usuario, card)
 

@@ -413,6 +413,9 @@ ex.14 continua no `pendentes_spec`.
   `so_para_decidir` no gatilho de conversa (`doAlvoDoGatilho`): o texto e o corpo não o oferecem, a condição sim. A
   automação de card segue com a regra de sempre (`sales_value_view`). Um caso real de mandar o valor ao cliente pede
   regra própria depois.
+  Os passos de IA seguem o mesmo critério (`ComIa.leva_o_valor?`, também no "Testar este passo"): na automação de
+  conversa, o `le: card` do escrever, do resumir e do extrair vai sem o valor; o decidir o recebe. Essa brecha já
+  existia na main desde o #2679 (o `Estado` acha o card da conversa); fechada aqui.
 - `mensagem.tem_anexo` (sim ou não, só no filtro de `mensagem.criada`): a mensagem traz foto ou PDF (a régua do
   ex.14: "a cada foto ou PDF que chega"). Foto é o anexo `image` com arquivo; PDF é o `file` com `application/pdf`.
   Áudio, vídeo, figurinha e outro arquivo não contam. A figurinha do WhatsApp chega como `image`
