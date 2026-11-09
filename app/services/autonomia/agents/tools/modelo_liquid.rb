@@ -16,6 +16,34 @@ module Autonomia::Agents::Tools::ModeloLiquid
   # Todo render da ferramenta para ao passar destes limites (`Liquid::MemoryError`). Bem acima do uso real: a resposta do
   # sistema já é cortada em 256 KB, e o recorte de uma lista de centenas de itens fica longe do teto de nós.
   LIMITES = { render_score_limit: 100_000, render_length_limit: 1_000_000, assign_score_limit: 1_000_000 }.freeze
+  # Tester do #1430 (B11): os limites acima contam nós e bytes, não o trabalho de um filtro — `split` de um texto grande a
+  # cada volta gastava 5 s de CPU sem tocar em nenhum. Todo render tem prazo, conferido a cada nó e a cada volta. O
+  # recorte de 500 itens leva milissegundos.
+  PRAZO = 1.0
+
+  # Os LIMITES do Liquid mais o PRAZO. O Liquid zera os contadores (`reset`) no começo de cada render: o prazo conta dali.
+  class LimitesComPrazo < Liquid::ResourceLimits
+    def reset
+      super
+      @prazo = Process.clock_gettime(Process::CLOCK_MONOTONIC) + PRAZO
+    end
+
+    def increment_render_score(amount)
+      super
+      conferir_prazo
+    end
+
+    def increment_write_score(output)
+      super
+      conferir_prazo
+    end
+
+    private
+
+    def conferir_prazo
+      raise_limits_reached if Process.clock_gettime(Process::CLOCK_MONOTONIC) > @prazo
+    end
+  end
   REPETEM = [Liquid::For, Liquid::TableRow].freeze
 
   # Revisão do delta (2ª): `{% assign n = n | times: n %}` em volta dobra o tamanho do número a cada volta, sem escrever
@@ -58,7 +86,7 @@ module Autonomia::Agents::Tools::ModeloLiquid
   # linha onde quebrou vão para o log, sem a mensagem, que pode ter valor da conversa: um defeito nosso num filtro não
   # some no código. `cause: nil` para a mensagem também não seguir pendurada no erro novo.
   def renderizar(template, params, filtro)
-    template.render!(params, strict_variables: true, strict_filters: true, global_filter: filtro, filters: FILTROS)
+    template.render!(contexto(params), strict_variables: true, strict_filters: true, global_filter: filtro, filters: FILTROS)
   rescue Liquid::Error
     raise
   rescue StandardError => e
@@ -66,15 +94,26 @@ module Autonomia::Agents::Tools::ModeloLiquid
     raise Liquid::InternalError, 'internal', cause: nil
   end
 
+  # O recorte da resposta usa `render` (sem !): variável que falta fica vazia. Devolve nil quando um limite parou o
+  # modelo — o `render` escreve esse erro no texto, e o agente não pode receber pedaço.
+  def recortar(template, dados)
+    limites = contexto(dados)
+    saida = template.render(limites, strict_variables: false, strict_filters: true, filters: FILTROS)
+    saida unless limites.resource_limits.reached? || template.errors.any?(Liquid::MemoryError)
+  end
+
+  def contexto(dados)
+    Liquid::Context.build(environments: dados, resource_limits: LimitesComPrazo.new(LIMITES))
+  end
+
   # Recusa (`faixa_grande`) o modelo com faixa maior que FAIXA_MAXIMA ou montada com variável EM QUALQUER LUGAR — `for`,
   # `assign`, filtro, condição (tester do #1430: guardada num `assign`, ela passava): o Liquid monta o array da faixa
   # inteira antes de qualquer limite contar. Recusa também `for`/`tablerow` sem nada dentro: o limite de render soma os nós
   # do corpo a cada volta, e corpo vazio soma zero (5 milhões de voltas em segundos). Só lê a árvore, pelo visitante do
-  # próprio Liquid: nada é renderizado. Devolve o template já com os LIMITES, para todo render da ferramenta passar por aqui.
+  # próprio Liquid: nada é renderizado. Os LIMITES e o PRAZO vêm no contexto de cada render (`contexto`).
   def conferir_faixas!(template)
     raise Autonomia::Agents::Tools::HttpExecutor::ValorRecusado, 'faixa_grande' if faixa_perigosa_no?(template) || repete_sem_corpo?(template)
 
-    LIMITES.each { |limite, valor| template.resource_limits.public_send(:"#{limite}=", valor) }
     template
   end
 

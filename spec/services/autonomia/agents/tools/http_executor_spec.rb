@@ -109,6 +109,29 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
     tempfile&.close!
   end
 
+  # Tester do #1430 (B11): filtro caro repetido (split de um texto grande a cada volta) não soma nos limites de nós,
+  # e 300 voltas eram 5 s de CPU. Todo render tem prazo; aqui o prazo é encurtado para o teste não pesar.
+  it 'stops a template that takes too long, in a header and in the mapping' do
+    stub_const('Autonomia::Agents::Tools::ModeloLiquid::PRAZO', 0.05)
+    lento = '{% assign s = "x" %}{% for i in (1..14) %}{% assign s = s | append: s %}{% endfor %}' \
+            '{% for i in (1..300) %}{{ s | split: "" | size }}{% endfor %}'
+    tempfile = Tempfile.new('tool-response')
+    tempfile.write('{"ok":true}')
+    tempfile.rewind
+    resultado = SafeFetch::Result.new(tempfile: tempfile, filename: 'r.json', content_type: 'application/json')
+    allow(SafeFetch).to receive(:fetch).and_yield(resultado)
+
+    tool.update_columns(headers_config: [{ 'key' => 'x-a', 'value' => lento, 'secret' => false }]) # rubocop:disable Rails/SkipsModelValidations
+    expect { described_class.new(tool: tool.reload, params: { q: 'freio' }).call }.to raise_error(described_class::Error)
+    expect(SafeFetch).not_to have_received(:fetch)
+
+    tool.update_columns(headers_config: [], response_mapping: { 'template' => lento }) # rubocop:disable Rails/SkipsModelValidations
+    expect { described_class.new(tool: tool.reload, params: { q: 'freio' }).call }
+      .to raise_error(described_class::Error, /limite_do_modelo/)
+  ensure
+    tempfile&.close!
+  end
+
   it 'keeps everyday arithmetic in the mapping' do
     tempfile = Tempfile.new('tool-response')
     tempfile.write('{"preco":89.9,"qtd":3}')
