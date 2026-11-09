@@ -357,6 +357,14 @@ describe Whatsapp::OneoffCampaignService do
       expect(service).not_to have_received(:process_liquid_template_params)
     end
 
+    it 'não envia ao contato bloqueado (chat#2733)' do
+      contact = create(:contact, :with_phone_number, account: account, blocked: true)
+
+      service.send(:process_contact, contact)
+
+      expect(service).not_to have_received(:process_liquid_template_params)
+    end
+
     it 'envia ao contato que não recusou' do
       contact = create(:contact, :with_phone_number, account: account)
 

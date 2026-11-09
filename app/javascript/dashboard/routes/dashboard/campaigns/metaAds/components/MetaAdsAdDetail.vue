@@ -551,9 +551,12 @@ const image = computed(
         :image="swappedImage || gestao.creative_image || ''"
         :text="gestao.post?.message || gestao.creative_text || ''"
         :budget="budget"
-        :can-swap="Boolean(gestao.can_swap_creative)"
+        :original-status="gestao.status || ''"
+        :manager-url="gestao.ads_manager_url || ''"
+        :active-copy="gestao.active_copy || null"
         :creative-kind="gestao.creative_kind || ''"
         @reviewing="reviewing"
+        @original-paused="statusChanged('PAUSED')"
       />
       <MetaAdsCareOutside
         v-else-if="showCareOutside"
@@ -686,9 +689,12 @@ const image = computed(
             :image="image"
             :text="gestao.post?.message || gestao.creative_text || ''"
             :budget="budget"
-            :can-swap="Boolean(gestao.can_swap_creative)"
+            :original-status="gestao.status || ''"
+            :manager-url="gestao.ads_manager_url || ''"
+            :active-copy="gestao.active_copy || null"
             :creative-kind="gestao.creative_kind || ''"
             @reviewing="reviewing"
+            @original-paused="statusChanged('PAUSED')"
           />
           <MetaAdsCareOutside
             v-else-if="showCareOutside"

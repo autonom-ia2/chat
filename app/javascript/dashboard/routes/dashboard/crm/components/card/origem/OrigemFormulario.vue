@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
-import { phoneLabel } from 'dashboard/routes/dashboard/campaigns/metaAds/semLogin/anunciosSemLogin';
+import { telefoneParaLer } from 'dashboard/helper/telefoneParaLer';
 
 // #1423 — o que o cliente preencheu na página (VC-05), como chegou: os mesmos
 // campos da CrmCardLeadForm, sem o título técnico.
@@ -15,10 +15,10 @@ const campos = computed(() =>
     campo => campo && String(campo.value ?? '').trim()
   )
 );
-// Telefone do formulário do anúncio da Meta (#2195) chega cru ("+5511987651201"): o mesmo formato da lista de
-// quem chegou pelos formulários ("(11) 98765-1201" no Brasil).
+// Telefone do formulário do anúncio da Meta (#2195) chega cru ("+5511987651201"): o formato único do painel
+// ("(11) 98765-1201" no Brasil, #2213).
 const valorDe = campo =>
-  campo.key === 'phone_number' ? phoneLabel(campo.value) : campo.value;
+  campo.key === 'phone_number' ? telefoneParaLer(campo.value) : campo.value;
 const quando = computed(() =>
   relativeTimeFromISO(props.formulario?.captured_at, locale.value)
 );

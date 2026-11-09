@@ -19,6 +19,12 @@ class Meta::WabaDatasetClient
   # The token is dead (190) or lacks the permission (10, 200-299): the inbox must be
   # reconnected, which the card says as 'missing_credentials'.
   ACCESS_CODES = [10, 190, *200..299].freeze
+  # 100 with subcode 33 on the WABA node: it does not exist for this token, which also means
+  # reconnecting (#2799), not "no dataset".
+  UNREACHABLE_OBJECT = [100, 33].freeze
+  # Only a network failure is passing. Any other exception is a bug of ours and raises (#2799).
+  NETWORK_ERRORS = [Timeout::Error, SocketError, SystemCallError, OpenSSL::SSL::SSLError, EOFError, IOError,
+                    Net::HTTPBadResponse].freeze
 
   Result = Struct.new(:dataset_id, :error, :transient, :access_denied, keyword_init: true)
 
@@ -58,8 +64,10 @@ class Meta::WabaDatasetClient
     Result.new(dataset_id: (body['id'].presence&.to_s if body.is_a?(Hash)))
   end
 
+  # Digits only: Integer() would also take surrounding spaces, which would land in the Graph path (#2799).
   def numeric_waba?
-    Integer(@waba_id.to_s, exception: false)&.positive?
+    waba = @waba_id.to_s
+    waba.present? && waba.delete('0-9').empty? && waba.to_i.positive?
   end
 
   # [parsed body, nil] on success, [nil, failed Result] otherwise. The body is parsed here,
@@ -72,16 +80,21 @@ class Meta::WabaDatasetClient
     return [body, nil] if response.success?
 
     [nil, failure(response.code, body, response.body)]
-  rescue StandardError => e
+  rescue *NETWORK_ERRORS => e
     [nil, Result.new(error: sanitize(e.message), transient: true)]
   end
 
   def failure(http_code, body, raw)
     error = body.is_a?(Hash) ? body['error'] : nil
-    code = error.is_a?(Hash) ? error['code'].to_i : nil
-    message = error.is_a?(Hash) ? "meta_error_#{code}: #{error['message']}" : (raw.presence || "http #{http_code}")
-    Result.new(error: sanitize(message), access_denied: ACCESS_CODES.include?(code),
-               transient: http_code.to_i >= 500 || TRANSIENT_HTTP.include?(http_code.to_i) || TRANSIENT_CODES.include?(code))
+    return Result.new(error: sanitize(raw.presence || "http #{http_code}"), transient: transient?(http_code, nil)) unless error.is_a?(Hash)
+
+    code = error['code'].to_i
+    Result.new(error: sanitize("meta_error_#{code}: #{error['message']}"), transient: transient?(http_code, code),
+               access_denied: ACCESS_CODES.include?(code) || [code, error['error_subcode'].to_i] == UNREACHABLE_OBJECT)
+  end
+
+  def transient?(http_code, code)
+    http_code.to_i >= 500 || TRANSIENT_HTTP.include?(http_code.to_i) || TRANSIENT_CODES.include?(code)
   end
 
   def parse(raw)

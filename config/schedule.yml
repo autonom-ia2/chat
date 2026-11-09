@@ -162,6 +162,13 @@ crm_ai_handoff_expiry_job:
   class: 'Crm::Ai::HandoffExpiryJob'
   queue: scheduled_jobs
 
+# #2799: a cada 10 minutos, envio de venda à Meta que ficou pela metade (pending há mais de 10 minutos) vira
+# "Não sabemos se o aviso chegou" (em até ~20 minutos), sem esperar nova tentativa. Um job por conta, até 500 linhas.
+crm_meta_capi_stale_pending_sweep_job:
+  cron: '4,14,24,34,44,54 * * * *'
+  class: 'Crm::MetaCapi::StalePendingSweepJob'
+  queue: low
+
 # executed hourly; wipes personal data (form, Meta signals) of website clicks that
 # expired unattributed or were attributed long ago (#1011, LGPD minimization).
 ctwa_tracked_link_clicks_retention_job:
@@ -380,6 +387,13 @@ crm_meta_ads_whatsapp_alert_job:
 crm_meta_ads_lead_forms_reconcile_job:
   cron: '17 * * * *'
   class: 'Crm::MetaAds::LeadForms::ReconcileScheduleJob'
+  queue: scheduled_jobs
+
+# Seus posts (#2804): anúncio criado aqui a partir de um post e ligado no Gerenciador da Meta ganha "Teve anúncio", e a
+# mídia do anúncio no Instagram fica guardada para o "Esperando você". Uma leitura por anúncio, só dos últimos 90 dias.
+crm_meta_ads_activation_sweep_job:
+  cron: '41 * * * *'
+  class: 'Crm::MetaAds::ActivationSweepScheduleJob'
   queue: scheduled_jobs
 
 # Anúncios da Meta F5 (#1110): apaga análises do consultor com mais de 90 dias, ações com mais de 400 e janelas de

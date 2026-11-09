@@ -62,14 +62,45 @@ RSpec.describe Meta::ConversionsApiClient do
       expect([result.error_code, result.error_subcode]).to eq([100, 33])
     end
 
+    it 'never calls a 5xx a dataset that is gone, even with 100/33 in the body (#2799)' do
+      stub_request(:post, endpoint).to_return(status: 500, body: '{"error":{"code":100,"error_subcode":33}}')
+
+      expect(client.post_events([event])).to have_attributes(unknown_outcome: true, dataset_gone?: false)
+    end
+
+    it 'keeps an answer already read when closing the connection fails' do
+      stub_request(:post, endpoint).to_return(status: 200, body: '{"events_received":1}')
+      allow(Net::HTTP).to receive(:new).and_wrap_original do |original, *args|
+        original.call(*args).tap { |http| allow(http).to receive(:finish).and_raise(IOError) }
+      end
+
+      expect(client.post_events([event])).to have_attributes(ok: true, http_code: 200)
+    end
+
+    it 'reads the answer as UTF-8 text' do
+      stub_request(:post, endpoint).to_return(status: 400, body: '{"error":{"code":100,"message":"Parâmetro inválido"}}'.b)
+
+      result = client.post_events([event])
+
+      expect(result.error.encoding).to eq(Encoding::UTF_8)
+      expect(result.error).to include('Parâmetro inválido')
+    end
+
     it 'has no error code on success' do
       stub_request(:post, endpoint).to_return(status: 200, body: '{"events_received":1}')
 
       expect(client.post_events([event]).error_code).to be_nil
     end
 
+    # Fails while opening the connection (TCP or the SSL handshake): nothing of the request left.
+    def fail_on_connect(error)
+      allow(Net::HTTP).to receive(:new).and_wrap_original do |original, *args|
+        original.call(*args).tap { |http| allow(http).to receive(:start).and_raise(error) }
+      end
+    end
+
     it 'never surfaces the token when the HTTP call raises' do
-      allow(HTTParty).to receive(:post).and_raise(StandardError.new("network down token=#{token}"))
+      fail_on_connect(StandardError.new("network down token=#{token}"))
 
       result = client.post_events([event])
 
@@ -80,17 +111,41 @@ RSpec.describe Meta::ConversionsApiClient do
     end
 
     it 'marks the outcome unknown when the call may have reached Meta (#2738)' do
-      [Net::ReadTimeout, Net::WriteTimeout, Errno::ECONNRESET].each do |error|
-        allow(HTTParty).to receive(:post).and_raise(error)
+      [Net::ReadTimeout, Net::WriteTimeout, Errno::ECONNRESET, EOFError].each do |error|
+        stub_request(:post, endpoint).to_raise(error)
 
         expect(client.post_events([event]).unknown_outcome).to be(true), error.name
       end
     end
 
-    it 'keeps the outcome known when the connection never opened' do
-      allow(HTTParty).to receive(:post).and_raise(Net::OpenTimeout)
+    it 'marks the outcome unknown on an SSL error after the connection opened: the body may have left (#2799)' do
+      stub_request(:post, endpoint).to_raise(OpenSSL::SSL::SSLError)
 
-      expect(client.post_events([event])).to have_attributes(ok: false, unknown_outcome: false)
+      expect(client.post_events([event])).to have_attributes(ok: false, unknown_outcome: true)
+    end
+
+    it 'keeps the outcome known when the connection never opened' do
+      [Net::OpenTimeout, SocketError, Errno::ECONNREFUSED].each do |error|
+        fail_on_connect(error)
+
+        expect(client.post_events([event])).to have_attributes(ok: false, unknown_outcome: false), error.name
+      end
+    end
+
+    it 'keeps the outcome known when opening the connection raises an SSL error (the handshake): it can be sent again (#2799)' do
+      fail_on_connect(OpenSSL::SSL::SSLError.new('handshake failure'))
+
+      expect(client.post_events([event])).to have_attributes(ok: false, http_code: nil, unknown_outcome: false)
+    end
+
+    it 'marks the outcome unknown when Meta answers with a server error: it may have kept the event (#2799)' do
+      [500, 502, 503, 504].each do |status|
+        stub_request(:post, endpoint).to_return(status: status, body: '{"error":{"code":2,"message":"Service temporarily unavailable"}}')
+
+        result = client.post_events([event])
+
+        expect(result).to have_attributes(ok: false, http_code: status, error_code: 2, unknown_outcome: true), status.to_s
+      end
     end
 
     it 'keeps the outcome known when Meta answers' do
