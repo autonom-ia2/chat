@@ -445,7 +445,7 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
     it 'uses the move instant of a moved event as the cutoff' do
       activity = card.activities.create!(account: account, event_type: 'move', created_at: 3.days.ago,
                                          payload: { 'to_stage_id' => stage.id })
-      link_click(whatsapp_inbox(token: 'later_key', waba: '222', dataset: 'DS2'), 'AFTER_MOVE', 2.days.ago)
+      link_click(whatsapp_inbox(token: 'later_key', waba: '222', dataset: 'DS2'), 'AFTER_MOVE', 60.hours.ago)
 
       described_class.perform_now(account.id, card.id, activity.id, 'moved')
 
@@ -516,6 +516,17 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
 
       expect(Crm::MetaConversionEvent.find_by(event_id: event_id).status).to eq('error')
       expect(channel.reload.provider_config['meta_dataset']).to eq('waba_id' => '111', 'id' => 'DS123')
+    end
+
+    it 'asks to reconnect, without a retry, when the new lookup is refused for access' do
+      allow(client).to receive(:post_events).and_return(gone)
+      result = Meta::WabaDatasetClient::Result.new(error: 'token expired', access_denied: true)
+      allow(Meta::WabaDatasetClient).to receive(:new).and_return(instance_double(Meta::WabaDatasetClient, find_or_create: result))
+
+      expect { perform }.not_to raise_error
+
+      expect(client).to have_received(:post_events).once
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id)).to have_attributes(status: 'skipped', error_message: 'missing_credentials')
     end
   end
 

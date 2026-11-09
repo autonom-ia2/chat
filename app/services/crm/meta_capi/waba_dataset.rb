@@ -4,7 +4,8 @@
 #
 # The id is kept in the channel's provider_config ('meta_dataset') together with the WABA
 # it belongs to, so Meta is asked once per inbox and a reauthorization onto another WABA
-# looks it up again instead of reusing the old one. Written straight in SQL on purpose:
+# looks it up again instead of reusing the old one (or a dataset refused as gone, see
+# `refresh`). Written straight in SQL on purpose:
 # saving the channel normally re-validates the provider config against Meta, and a jsonb
 # merge does not lose a concurrent write to another key. Failing to keep it only costs a
 # lookup next time, so it never fails the send.
@@ -38,11 +39,12 @@ module Crm::MetaCapi::WabaDataset
   end
 
   # The WABA's dataset after Meta refused the kept one as gone, or nil when Meta answers the
-  # same id or the lookup fails: the caller keeps the refusal and the retry asks again.
+  # same id or the lookup fails in passing: the caller keeps the refusal and the retry asks
+  # again. AccessDenied still raises: retrying would repeat the refusal until Sidekiq gives up.
   def replacement(channel, stale_id:, access_token:, waba_id:)
     fresh = refresh(channel, access_token: access_token, waba_id: waba_id)
     fresh unless fresh == stale_id
-  rescue LookupError, AccessDenied => e
+  rescue LookupError => e
     Rails.logger.warn("Crm::MetaCapi::WabaDataset refresh failed channel=#{channel.id}: #{e.message}")
     nil
   end

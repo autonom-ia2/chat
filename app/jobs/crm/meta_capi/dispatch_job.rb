@@ -53,7 +53,7 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
   # A claimed row must not stay pending after an unexpected failure (#2738): see
   # Crm::MetaConversionEvent.release_pending!. The last Meta answer tells if it was accepted.
   def release(row, error)
-    return if row&.id.nil?
+    return if row.nil? || row.id.nil?
 
     accepted_http_code = @last_response.http_code if @last_response&.ok
     Crm::MetaConversionEvent.release_pending!(row.id, reason: "unexpected: #{error.class.name}", accepted_http_code: accepted_http_code)
@@ -109,19 +109,25 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
     )
     apply_transition_time!(payload, row.event_type, activity)
     response = post_events(credentials[:access_token], row, payload)
-    record_result(row, response.dataset_gone? ? post_to_fresh_dataset(row, credentials, payload, response) : response)
+    return record_result(row, response) unless response.dataset_gone?
+
+    post_to_fresh_dataset(row, credentials, payload, response)
   end
 
   # Meta dropped the kept dataset without the WABA changing (#2738): ask for the WABA's
   # dataset once more and, when it is another one, send there once. Otherwise the first
-  # refusal stands: the row becomes an error and the Sidekiq retry tries again.
+  # refusal stands: the row becomes an error and the Sidekiq retry tries again. A dead token
+  # or missing permission on that lookup skips as 'missing_credentials', like the first one.
   def post_to_fresh_dataset(row, credentials, payload, refusal)
     fresh = Crm::MetaCapi::WabaDataset.replacement(credentials[:channel], stale_id: row.dataset_id,
                                                                           **credentials.slice(:access_token, :waba_id))
-    return refusal if fresh.blank?
+    return record_result(row, refusal) if fresh.blank?
 
     row.update!(dataset_id: fresh)
-    post_events(credentials[:access_token], row, payload)
+    record_result(row, post_events(credentials[:access_token], row, payload))
+  rescue Crm::MetaCapi::WabaDataset::AccessDenied => e
+    Rails.logger.warn("Crm::MetaCapi::DispatchJob dataset access denied event=#{row.event_id}: #{sanitize(e.message)}")
+    skip(row, 'missing_credentials')
   end
 
   # Website mode (#1011, docs/crm/ponte-lp-atribuicao.md section 6): no ctwa_clid, so we
