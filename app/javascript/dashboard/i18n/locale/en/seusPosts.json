@@ -251,7 +251,7 @@
         "TEXT_ONLY_NEW": "If you turn it on, I answer new questions privately. The ones already here are older than 7 days: answer them on the comment.",
         "TEXT_FUTURE": "If you turn it on, I answer new questions privately.",
         "BUTTON": "Take care of comments",
-        "TEXT_SOON": "Sending it privately on Messenger isn't available yet. As soon as Meta allows it, you turn it on here.",
+        "TEXT_SOON": "Sending it privately on Messenger isn't available for this Page yet. As soon as Meta allows it, you turn it on here.",
         "LOADING": "I'm reading the comments…",
         "NEEDS_PERMISSION": "To tell you what's in the comments, I need access to them.",
         "UNAVAILABLE": "I couldn't read the comments right now."

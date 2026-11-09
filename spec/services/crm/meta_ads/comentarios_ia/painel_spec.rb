@@ -112,16 +112,50 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     expect(sem_ver.payload[:to_see].first[:conversation_path]).to be_nil
   end
 
-  it 'no Facebook, o privado só está liberado na conta com a flag (#2613)' do
-    facebook = described_class.new(account: account, alvo: alvo.merge('networks' => ['facebook']), fonte: fonte, conversation_access: ve_tudo,
-                                   viewer: admin)
-    expect(facebook.payload[:private_available]).to be(false)
+  describe 'no Facebook (#2307)' do
+    let(:pagina) { create(:inbox, account: account, channel: build(:channel_facebook_page, account: account)) }
+    let(:permissao) { instance_double(Crm::MetaAds::ComentariosIa::Rede::PermissaoDoMessenger, liberada?: false) }
+    let(:facebook) do
+      described_class.new(account: account, alvo: alvo.merge('networks' => ['facebook']), fonte: fonte, conversation_access: ve_tudo,
+                          viewer: admin)
+    end
 
-    account.enable_features!('meta_ads_comentarios_privado_facebook')
-    expect(facebook.payload[:private_available]).to be(true)
+    before do
+      allow(fonte).to receive(:redes).and_return({ 'facebook' => { inbox_id: pagina.id, post_id: '1790' } })
+      allow(Crm::MetaAds::ComentariosIa::Rede::PermissaoDoMessenger).to receive(:new).with(pagina.channel).and_return(permissao)
+    end
+
+    it 'o privado está liberado na Página com a pages_messaging concedida, não por flag da conta' do
+      account.enable_features!('meta_ads_comentarios_privado_facebook')
+      expect(facebook.payload[:private_available]).to be(false)
+
+      allow(permissao).to receive(:liberada?).and_return(true)
+      expect(facebook.payload[:private_available]).to be(true)
+    end
+
+    it 'sem a caixa da Página no alvo, o privado não está liberado' do
+      allow(fonte).to receive(:redes).and_return({})
+      allow(permissao).to receive(:liberada?).and_return(true)
+
+      expect(facebook.payload[:private_available]).to be(false)
+    end
+
+    it 'o privado que a Meta recusou por permissão fica com o dono, dizendo isso (no_permission); outra recusa, failed' do
+      linhas = [linha('1'), linha('2'), linha('3')].map { |item| item.merge(network: 'facebook') }
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: linhas,
+                                                 escondidas: [] })
+      { '1' => [230, nil], '2' => [10, 2_018_278], '3' => [10, nil] }.each do |id, (codigo, subcodigo)|
+        Crm::MetaAdsCommentAction.record!(account: account, network: 'facebook', comment_id: id, action: 'ai_seen', actor: 'ai')
+        Crm::MetaAdsCommentAction.record!(account: account, network: 'facebook', comment_id: id, action: 'private_reply_failed', actor: 'ai',
+                                          meta_error_code: codigo, meta_error_subcode: subcodigo)
+      end
+
+      expect(facebook.payload[:to_see].map { |item| [item[:id], item[:kind]] }).to eq([%w[1 no_permission], %w[2 failed], %w[3 no_permission]])
+    end
   end
 
   it 'no Facebook, a pergunta que era o caso fica com o dono (no_private), não como "não se aplica"' do
+    allow(fonte).to receive(:redes).and_return({})
     facebook = described_class.new(account: account, alvo: alvo.merge('networks' => ['facebook']), fonte: fonte, conversation_access: ve_tudo,
                                    viewer: admin)
     allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1').merge(network: 'facebook')], escondidas: [] })

@@ -87,6 +87,7 @@
         "unread": "Não cuidei deste comentário. Responda você, se quiser.",
         "unsure": "Não sei se o privado saiu: a Meta não respondeu. Confira no direct antes de responder.",
         "no_private": "Pergunta. Mandar no privado ainda não dá aqui: responda no comentário.",
+        "no_permission": "Pergunta. A Meta não deixou mandar no privado por esta Página: responda no comentário.",
         "paused": "Chegou com o cuidado pausado. Responda no comentário, se quiser.",
         "waiting": "Chegou antes de você ligar. Responda no comentário, se quiser.",
         "older": "Mais de 7 dias: não dá mais para mandar no privado. Responda no comentário.",
@@ -179,7 +180,7 @@
       "SOON": {
         "BADGE": "Em breve",
         "TITLE": "Mandar no Messenger ainda não está liberado",
-        "TEXT": "No Facebook, a mensagem no privado depende de uma liberação da Meta. Assim que ela liberar, você liga por aqui."
+        "TEXT": "Nesta Página, a Meta ainda não liberou a mensagem no privado pelo Messenger. Assim que ela liberar, você liga por aqui."
       },
       "PREVIOUS": "Passo anterior",
       "OLD_NOTE": "O que já está aqui: pergunto depois de ligar. | Os {count} que já estão aqui: pergunto depois de ligar.",

@@ -369,6 +369,19 @@ describe('Seus posts: o cuidado no post (#2212)', () => {
     expect(bloco(wrapper).text()).toContain('ainda não está liberado');
   });
 
+  it('#2307 · Página com a permissão da Meta: promete o privado, como no Instagram', async () => {
+    comPost({ network: 'facebook' });
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({ network: 'facebook', private_available: true }),
+    });
+    const wrapper = await montar();
+
+    expect(bloco(wrapper).find('[data-seus-posts-o-que-faco]').text()).toBe(
+      ptBR.SEUS_POSTS.POST.CARE_OFFER.TEXT
+    );
+    expect(bloco(wrapper).text()).not.toContain('ainda não está liberado');
+  });
+
   it('cuidando: o herói diz e pausa com um toque; o bloco do resumo sai', async () => {
     ComentariosIaAPI.getCuidado.mockResolvedValue({
       data: painel({ care: 'on', message: 'Oi!', para_quem: 'Quem pedir' }),

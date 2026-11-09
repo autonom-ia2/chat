@@ -6,8 +6,8 @@
 # - Facebook (Rede::Facebook): o privado pelo Messenger é nosso (Rede::Pagina, token da caixa); a leitura, a resposta e
 #   o esconder pelo Rede::ComentariosDaPagina, também com o token da caixa (#2587), que grava a ação.
 #
-# `privado_disponivel?` diz se a rede deixa a IA mandar o privado: no Instagram, sempre; no Facebook, só na conta com a
-# flag `meta_ads_comentarios_privado_facebook` (privado_liberado?, #2613).
+# `privado_disponivel?` diz se a rede deixa a IA mandar o privado: no Instagram, sempre; no Facebook, só na Página cujo
+# login tem a `pages_messaging` concedida pela Meta (privado_liberado?, Rede::PermissaoDoMessenger, #2307).
 # Todo adaptador responde `privado(care)` com um Envio (ok, conversation, erro) e `responder(texto)` e `esconder` com
 # true ou false. Nada levanta para o job: a recusa da Meta é um resultado.
 #
@@ -26,10 +26,6 @@ module Crm::MetaAds::ComentariosIa::Rede
   JA_FEITO = 'private_reply_done'.freeze
   # A Meta não respondeu à leitura do comentário (rede, 5xx, limite).
   class Indisponivel < StandardError; end
-  # O privado pelo Messenger no Facebook (#2613): a Meta deixa usar a pages_messaging nas Páginas de quem tem papel no
-  # app (Standard Access), e é o caso das contas internas. Para elas a flag liga; para as outras, espera a Meta
-  # aprovar a permissão para o app.
-  PRIVADO_NO_FACEBOOK = 'meta_ads_comentarios_privado_facebook'.freeze
 
   module_function
 
@@ -40,13 +36,32 @@ module Crm::MetaAds::ComentariosIa::Rede
     end
   end
 
-  # Se a IA pode mandar o privado nesta rede, nesta conta: o motor (Rede#privado_disponivel?), a tela do cuidado
-  # (Painel, `private_available`) e o teste em Agentes (NoAgentes) perguntam aqui.
-  def privado_liberado?(account, network)
+  # Se a IA pode mandar o privado nesta rede, por esta caixa: o motor (Rede#privado_disponivel?), a tela do cuidado
+  # (Painel, `private_available`) e o teste em Agentes (NoAgentes) perguntam aqui. No Facebook, o que vale é o que a
+  # Meta concedeu ao login da Página (#2307): quem tem papel no app usa já; o cliente, quando a Meta aprovar a
+  # `pages_messaging`. Sem a caixa da Página, não sai.
+  def privado_liberado?(network, inbox)
     case network
     when 'instagram' then true
-    when 'facebook' then account.feature_enabled?(PRIVADO_NO_FACEBOOK)
+    when 'facebook' then inbox.present? && PermissaoDoMessenger.new(inbox.channel).liberada?
     else false
     end
+  end
+
+  # O mesmo, pela caixa da rede na Fonte (Fonte#redes): a tela do cuidado e o teste em Agentes.
+  def privado_na_fonte?(account, network, fonte)
+    return privado_liberado?(network, nil) unless network == 'facebook'
+
+    inbox_id = fonte.redes.dig(network, :inbox_id)
+    privado_liberado?(network, inbox_id && Inbox.find_by(id: inbox_id, account_id: account.id))
+  end
+
+  # A recusa do privado por falta de permissão (#2307): (#200–299) "Requires pages_messaging permission" e o (#10) sem
+  # subcódigo, "Application does not have permission". O (#10) com subcódigo é outra coisa (fora da janela de 7 dias,
+  # já respondido) e não tira o privado da Página.
+  def sem_permissao?(codigo, subcodigo)
+    return false if codigo.nil?
+
+    codigo.between?(200, 299) || (codigo == 10 && subcodigo.nil?)
   end
 end
