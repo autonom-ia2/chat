@@ -98,6 +98,16 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
     expect(trechos.first[:paginas]).to eq([4, 6])
   end
 
+  # #2786 — glossário com o termo em negrito: cada verbete é uma seção pequena. Quem recebe a irmã também escreve o
+  # próprio termo no texto, senão a definição dele fica sem o termo e a da irmã fica sob o caminho dele.
+  it 'keeps each term next to its own definition when a small section joins the next one' do
+    trechos = cortar([titulo('Glossario', 1), titulo('Franquia', 2), paragrafo('Valor que fica por conta do segurado.'),
+                      titulo('Sinistro', 2), paragrafo('O acontecimento que causa o prejuizo coberto.')])
+
+    expect(trechos.first[:text]).to eq("Condicoes Gerais › Glossario › Sinistro\n\nFranquia\nValor que fica por conta do segurado." \
+                                       "\n\nSinistro\nO acontecimento que causa o prejuizo coberto.")
+  end
+
   it 'joins a small section only once, so its text never ends under a section two places ahead', :aggregate_failures do
     trechos = cortar([titulo('Definicoes', 1), titulo('Avaria', 2), paragrafo('Dano ao veiculo.'),
                       titulo('Bonus', 2), paragrafo('Desconto na renovacao.'), titulo('Franquia', 2), paragrafo(franquia)])

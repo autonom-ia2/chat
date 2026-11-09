@@ -81,10 +81,12 @@ class Autonomia::Agents::Knowledge::CortePorSecao
 
   # Seção pequena entra no começo da irmã seguinte, com o próprio título como primeira linha. Uma vez só: a seção que
   # recebeu uma irmã não vai adiante, para o texto não acabar sob o caminho de uma seção duas casas à frente.
+  # A que recebe também põe o próprio título antes do texto dela (#2786): no glossário, sem isso a definição dela ficava
+  # sem o termo, e a da irmã, sob o caminho dela.
   def juntar_pequenas(lista)
     recebida = nil
     lista.each_with_index.filter_map do |secao, indice|
-      secao = secao.class.new(**secao.to_h, paragrafos: como_paragrafos_da_irma(recebida) + secao.paragrafos) if recebida
+      secao = secao.class.new(**secao.to_h, paragrafos: como_paragrafos_da_irma(recebida) + como_paragrafos_da_irma(secao)) if recebida
       juntar = recebida.nil? && pequena?(secao) && irmas?(secao, lista[indice + 1])
       recebida = juntar ? secao : nil
       secao unless juntar
