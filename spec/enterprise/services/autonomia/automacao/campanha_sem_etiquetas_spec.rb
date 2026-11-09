@@ -61,4 +61,42 @@ RSpec.describe Autonomia::Automacao::CampanhaSemEtiquetas do
 
     expect(enviados).to contain_exactly('+5511900000051', '+5511900000052')
   end
+
+  # 🟡 da qualidade (#2686): a campanha ligada a um público importado tira o público do CampaignJourney::AudienceContacts,
+  # sem passar pelas etiquetas. A exclusão vale ali também. O público importado é trocado por todos os contatos da
+  # conta: a regra de quem entra pela planilha é do spec da jornada.
+  describe 'campanha ligada a um público importado' do
+    before do
+      link = instance_double(CampaignAudienceLink, campaign_import: nil, variable_bindings: {}, variable_defaults: {})
+      allow(CampaignAudienceLink).to receive(:for_campaign).and_return(link)
+      allow(CampaignJourney::AudienceContacts).to receive(:contacts_for) { account.contacts }
+      allow(CampaignJourney::AudienceContacts).to receive(:whatsapp_enabled?).and_return(true)
+    end
+
+    it 'manda para o público importado menos quem tem a etiqueta excluída' do
+      cliente('+5511900000061')
+      cliente('+5511900000062', 'ja_comprou')
+
+      disparar(described_class.audiencia([ja_comprou.id]))
+
+      expect(enviados).to eq(['+5511900000061'])
+    end
+
+    it 'sem etiqueta excluída, manda para o público importado inteiro' do
+      cliente('+5511900000071')
+      cliente('+5511900000072', 'ja_comprou')
+
+      disparar([])
+
+      expect(enviados).to contain_exactly('+5511900000071', '+5511900000072')
+    end
+  end
+
+  # A exclusão só alcança o caminho do público importado se o módulo estiver por cima do da jornada: a ordem vem do
+  # nome do initializer (carrega depois do campaign_journey.rb).
+  it 'fica por cima da jornada de campanhas no envio' do
+    ancestrais = Whatsapp::OneoffCampaignService.ancestors
+
+    expect(ancestrais.index(described_class)).to be < ancestrais.index(CampaignJourney::AudienceContacts)
+  end
 end
