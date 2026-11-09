@@ -114,6 +114,28 @@ describe('LivreHistorico', () => {
     );
   });
 
+  // G42: o resumo diz quantas conversas deixou de fora, sem os ids.
+  it('o resumo diz quantas conversas deixou de fora', async () => {
+    responder([
+      execucao(1, {
+        passos: [
+          {
+            passo: 'p1',
+            resultado: 'ok',
+            motivo: null,
+            dados: { conversas_fora: 2 },
+          },
+        ],
+      }),
+    ]);
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.find('[data-conversas-fora]').text()).toBe(
+      'AUTOMACAO_LIVRE.HISTORICO.CONVERSAS_FORA(2)'
+    );
+  });
+
   it('o "se" diz por qual caminho seguiu', async () => {
     responder([
       execucao(1, {

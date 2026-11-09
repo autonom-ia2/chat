@@ -220,9 +220,8 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 10 (#2678, #2752): a instrução no resumir ("o que já foi prometido") e avisar o responsável quando a
     # agente de IA atende a conversa (o dono do card; sem ele, o passo pula com sem_responsavel).
     'G41' => -> { campo_do_passo?('resumir', 'instrucao') && I18n.exists?('autonomia.automacao.motivos.sem_responsavel', :pt_BR) },
-    # Do exemplo 1, passo 12 (#2721): o resumo lê tudo o que a execução tentou, até o e-mail em conversa própria. Fica
-    # com a F7 (#2763); sem ela, o exemplo 1 segue pendente.
-    'G42' => nil,
+    # Do exemplo 1, passo 12 (#2721, #2763): o resumo lê tudo o que a execução tentou, até o e-mail em conversa própria.
+    'G42' => -> { Autonomia::Automacao::EnviosDaExecucao.method_defined?(:dados) },
     # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7),
     # só quando o número da conversa morreu (a última mensagem da empresa nela falhou).
     'G43' => -> { ::Autonomia::Automacao::NumeroNovo.respond_to?(:numero_morto?) },

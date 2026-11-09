@@ -96,6 +96,7 @@
       "PASSO_SUMIU": "A step that is no longer in this version",
       "SEGUIU_POR": "Took: {ramo}",
       "ESPERA_ATE": "Waits until {quando}",
+      "CONVERSAS_FORA": "The summary left out {n} conversation: not everyone who sees this conversation can see it. | The summary left out {n} conversations: not everyone who sees this conversation can see them.",
       "CONVERSA_PRINCIPAL": "Opened a conversation, which became the card main conversation",
       "NUMERO_NOVO": "Sent to the contact's new number, in another conversation of the same inbox",
       "TENTATIVA": "Attempt {n}",

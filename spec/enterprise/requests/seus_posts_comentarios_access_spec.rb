@@ -78,7 +78,7 @@ RSpec.describe 'Seus posts: comentários de cada post só para quem vê a caixa 
   end
 
   # #2522: o anúncio que impulsionou o post por aqui só vai para quem vê Anúncios da Meta.
-  it 'anúncio do post: só com meta_ads_view (ou meta_ads_manage); só posts_view recebe nulo' do
+  it 'anúncio do post: só com meta_ads_view (ou meta_ads_manage); só posts_view recebe a lista vazia' do
     stub_lista
     account.enable_features!('meta_ads_hub', 'meta_ads_comentarios_instagram')
     Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: SecureRandom.uuid, status: 'created', ad_id: '903',
@@ -86,10 +86,10 @@ RSpec.describe 'Seus posts: comentários de cada post só para quem vê a caixa 
 
     ad_ids = [%w[posts_view], %w[posts_view meta_ads_view], %w[posts_view meta_ads_manage]].map do |permissions|
       get base, params: { perfil: perfil }, headers: member_with(permissions).create_new_auth_token, as: :json
-      response.parsed_body['ad_id']
+      response.parsed_body['ads'].pluck('id')
     end
 
-    expect(ad_ids).to eq([nil, '903', '903'])
+    expect(ad_ids).to eq([[], %w[903], %w[903]])
   end
 
   it 'só posts_view: 403 em toda ação, sem chamar o Instagram' do
@@ -203,7 +203,7 @@ RSpec.describe 'Seus posts: comentários de cada post só para quem vê a caixa 
     end
 
     # #2522: no Facebook o anúncio usa o próprio post e os comentários já estão nele: sem atalho para o anúncio.
-    it 'post da Página impulsionado por aqui: ad_id nulo, mesmo para quem vê Anúncios da Meta' do
+    it 'post da Página impulsionado por aqui: sem anúncios, mesmo para quem vê Anúncios da Meta' do
       account.enable_features!('meta_ads_hub', 'meta_ads_comentarios_instagram')
       Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: SecureRandom.uuid, status: 'created', ad_id: '903',
                                         source_post_id: post_pagina, source_post_network: 'facebook', activated_at: 1.day.ago)
@@ -217,7 +217,7 @@ RSpec.describe 'Seus posts: comentários de cada post só para quem vê a caixa 
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.dig('post', 'id')).to eq(post_pagina)
-      expect(response.parsed_body['ad_id']).to be_nil
+      expect(response.parsed_body['ads']).to eq([])
     end
 
     it 'só posts_view: 403; posts_manage sem a caixa do Messenger: 403 not_inbox_member; sem chamar a Meta' do

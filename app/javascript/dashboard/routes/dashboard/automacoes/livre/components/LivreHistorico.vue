@@ -318,6 +318,19 @@ onMounted(() => carregar());
                     {{ $t('AUTOMACAO_LIVRE.HISTORICO.NUMERO_NOVO') }}
                   </span>
                   <span
+                    v-if="passo.dados.conversas_fora"
+                    data-conversas-fora
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{
+                      $t(
+                        'AUTOMACAO_LIVRE.HISTORICO.CONVERSAS_FORA',
+                        { n: passo.dados.conversas_fora },
+                        passo.dados.conversas_fora
+                      )
+                    }}
+                  </span>
+                  <span
                     v-if="passo.dados.conversa_principal_do_card"
                     data-conversa-principal
                     class="text-sm text-n-slate-11"
