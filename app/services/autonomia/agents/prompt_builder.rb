@@ -61,12 +61,12 @@ module Autonomia
         termo, responda pelo que o material diz, com as palavras dele, e ponha o id desse trecho em `used_snippet_ids`; não
         troque por uma definição sua nem do segmento. O conhecimento geral fica só para o que o [CONTEXTO] não cobre.
       ORDEM
-      # O lembrete da ordem junto dos trechos: a regra só nas instruções, longe deles, não mudou a resposta (#2801).
+      # O lembrete da ordem junto dos trechos, além da regra nas instruções, longe deles (#2801).
       LEMBRETE_DO_CONTEXTO = 'Se um trecho abaixo responde à pergunta, inclusive a definição de um termo, a resposta ' \
                              'segue esse trecho, com as palavras dele, e o id dele vai em `used_snippet_ids`: ele vence a ' \
                              'sua memória e o CONTEXTO DA CONTA.'.freeze
-      # O mesmo lembrete DEPOIS da pergunta, curto: só nesta posição ele mudou a resposta na medida do #2801 (a mensagem
-      # depois da pergunta é a que o modelo pesa mais). Sai só com trecho do material no turno.
+      # O mesmo lembrete DEPOIS da pergunta, curto: a mensagem depois da pergunta é a que o modelo pesa mais. Sai só com
+      # trecho do material no turno.
       LEMBRETE_DO_FIM = 'Antes de responder: se algum trecho do [CONTEXTO] responde à pergunta, inclusive a definição de ' \
                         'um termo, responda pelo que ele diz e ponha o id dele em `used_snippet_ids`. Sua memória e o ' \
                         'CONTEXTO DA CONTA só valem para o que o [CONTEXTO] não traz.'.freeze
@@ -239,8 +239,7 @@ module Autonomia
         return "#{strict} Responda APENAS com base nessas fontes; NÃO use conhecimento geral externo." if @audience == :system
 
         geral = "#{strict} CONHECIMENTO GERAL DO MUNDO (fato público estável: geografia, países de um tratado, " \
-                "#{'definições, conceitos, ' unless material_primeiro?}documentos exigidos por lei conhecida) você " \
-                'PODE responder com seu próprio ' \
+                'definições, conceitos, documentos exigidos por lei conhecida) você PODE responder com seu próprio ' \
                 'conhecimento — marque answered_from_knowledge=false, should_handoff=false e confiança conforme sua ' \
                 'certeza; NÃO trate como fora-de-escopo quando ajudar o atendimento. Se o fato geral influenciar uma ' \
                 'decisão contratual do negócio (ex.: cobertura exigida), acrescente 1 frase sugerindo confirmar na ' \
@@ -250,6 +249,9 @@ module Autonomia
 
       # #2801 — a ordem das fontes, com a flag `agente_material_primeiro`: o material do agente vence a memória do modelo e
       # o bloco do segmento, também na definição de um termo. Fora da Lia (regra própria da cotação) e do Guia (estrito).
+      # A definição que o material não traz continua vindo do conhecimento geral (fix Schengen): a ordem só diz quem
+      # vence quando o [CONTEXTO] traz o assunto. No formato antigo (AI_AGENT_PROMPT_V2=false) a ordem não entra nas
+      # instruções, só os lembretes do input: aceito, o formato antigo é só o caminho de rollback do prompt.
       def material_primeiro?
         @agent.agent_type != 'insurance_quote' && @agent.config.to_h['system_key'].blank? &&
           @agent.account&.feature_enabled?(FLAG_MATERIAL_PRIMEIRO)
@@ -394,7 +396,7 @@ module Autonomia
       def segmento_message
         return if @agent.config.to_h['system_key'].present? || @agent.agent_type == 'insurance_quote'
 
-        PromptParts::SegmentoDoAgente.mensagem(@agent)
+        PromptParts::SegmentoDoAgente.mensagem(@agent, material_primeiro: material_primeiro?)
       end
 
       def context_message

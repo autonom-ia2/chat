@@ -21,6 +21,15 @@ RSpec.describe Autonomia::Agents::PromptBuilder do
     builder(alvo).input.map { |item| item[:content].to_s }.find { |texto| texto.include?('CONTEXTO DA CONTA') }
   end
 
+  def com_trecho(alvo = agent)
+    trecho = Autonomia::Agents::KnowledgeEntry.new(id: 7, content: 'Franquia: valor que fica por conta do segurado.')
+    described_class.new(agent: alvo.reload, query: 'O que é franquia?', history: [], snippets: [trecho]).input
+  end
+
+  def contexto(entrada)
+    entrada.map { |item| item[:content].to_s }.find { |texto| texto.include?('[CONTEXTO] Fonte de fatos') }
+  end
+
   before { Autonomia::Agents::Fase2.ligar!(account) }
 
   context 'with the flag on' do
@@ -30,14 +39,16 @@ RSpec.describe Autonomia::Agents::PromptBuilder do
       regra = builder.instructions
 
       expect(regra).to include(ordem, 'inclusive a definição de um termo', '`used_snippet_ids`')
-      expect(regra.index('[CONTEXTO]', regra.index(ordem))).to be < regra.index('conhecimento geral', regra.index(ordem))
+      posicoes = ['(1) o [CONTEXTO]', '(2) os FATOS-ÂNCORA', '(3) resultados de ferramentas', '(4) o CONTEXTO DA CONTA',
+                  '(5) o seu conhecimento geral'].map { |fonte| regra.index(fonte) }
+      expect(posicoes).to all(be_present)
+      expect(posicoes).to eq(posicoes.sort)
+      expect(regra.index(ordem)).to be > regra.index('CONHECIMENTO GERAL DO MUNDO')
     end
 
-    it 'keeps the general knowledge for what the material does not cover (Schengen), without the definitions', :aggregate_failures do
-      regra = builder.instructions
-
-      expect(regra).to include('CONHECIMENTO GERAL DO MUNDO', 'países de um tratado', 'só para o que o [CONTEXTO] não cobre')
-      expect(regra).not_to include('definições, conceitos')
+    it 'keeps the general knowledge, definitions included, for what the material does not cover (Schengen)' do
+      expect(builder.instructions).to include('CONHECIMENTO GERAL DO MUNDO', 'países de um tratado', 'definições, conceitos',
+                                              'só para o que o [CONTEXTO] não cobre')
     end
 
     it 'reminds the order next to the pieces of the material' do
@@ -65,15 +76,26 @@ RSpec.describe Autonomia::Agents::PromptBuilder do
       expect(segmento).to include('só quando o [CONTEXTO] não trouxer o assunto')
     end
 
-    it 'leaves the platform Guide strict, with no order of sources' do
-      expect(builder(audience: :system).instructions).not_to include(ordem)
+    it 'leaves the platform Guide (system_key) as it is, with pieces of the material', :aggregate_failures do
+      guia = Autonomia::Agents::Agent.create!(account: account, name: 'Guia', agent_type: 'support', status: :active,
+                                              enabled: true, instruction: 'Guie.', config: { 'system_key' => 'guia' })
+
+      expect(builder(guia).instructions).not_to include(ordem)
+      expect(com_trecho(guia).last[:role]).to eq('user')
+      expect(contexto(com_trecho(guia))).not_to include('Se um trecho abaixo responde')
     end
 
-    it 'leaves Lia (insurance_quote) as it is' do
+    it 'leaves Lia (insurance_quote) as it is, with pieces of the material', :aggregate_failures do
       lia = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'insurance_quote', status: :active,
                                              enabled: true, instruction: 'Cote o seguro.')
 
       expect(builder(lia).instructions).not_to include(ordem)
+      expect(com_trecho(lia).last[:role]).to eq('user')
+      expect(contexto(com_trecho(lia))).not_to include('Se um trecho abaixo responde')
+    end
+
+    it 'leaves the segment block of the agent Builder as it is (it has no [CONTEXTO])' do
+      expect(Autonomia::Agents::PromptParts::SegmentoDaConta.texto(account, marca['texto'])).to include('Use como referência.')
     end
   end
 
@@ -86,6 +108,7 @@ RSpec.describe Autonomia::Agents::PromptBuilder do
                             .input.last[:role]).to eq('user')
       expect(segmento).to include('Use como referência.')
       expect(segmento).not_to include('só quando o [CONTEXTO]')
+      expect(contexto(com_trecho)).not_to include('Se um trecho abaixo responde')
     end
   end
 end
