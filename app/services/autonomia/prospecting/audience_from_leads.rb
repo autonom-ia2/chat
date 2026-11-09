@@ -10,7 +10,8 @@
 #   quem não teria telefone nem e-mail no contato (no_channel, pela mesma regra do conversor: ContactConverter#channel?).
 # - Depois do contato vale a régua de todo Público (ConversationAudience::Reach): telefone OU e-mail do contato, e
 #   nunca quem pediu para não receber. O contato que ainda assim fica sem canal (o telefone já era de outro contato)
-#   sai com no_channel; ele continua criado, como no "Criar contatos".
+#   sai com no_channel; ele continua criado, como no "Criar contatos". O bloqueado sai com blocked e qualquer outro
+#   motivo da régua, com unreachable: nenhum contato que a régua recusa entra no Público.
 # - Id que não é número (texto, "0x1A", negativo) não some: sai como not_found, para a tela contar. O vazio e o teto
 #   contam o pedido como veio, antes desse filtro.
 # - Dois leads que dão no mesmo contato (a mesma pessoa em duas empresas) entram uma vez: o primeiro, na ordem do
@@ -18,6 +19,8 @@
 #   mesma pessoa.
 # - Isolamento por lead, de propósito: a falha de um lead (dado recusado ou erro inesperado) fica só nele, em left_out,
 #   e os outros entram. Um lead ruim não derruba o pedido inteiro.
+# - Lista que já existe (#2775, F6): Autonomia::Prospecting::LeadsIntoAudience, a subclasse que usa este mesmo caminho
+#   e troca só o alvo (check_target!, members, no_rows_code e finish).
 # - O Público é gravado de uma vez, no fim. Recusa do writer (contato apagado no meio, por exemplo) vira Error com o
 #   mesmo código e contacts_saved: os contatos já criados ficam.
 class Autonomia::Prospecting::AudienceFromLeads
@@ -26,12 +29,18 @@ class Autonomia::Prospecting::AudienceFromLeads
   MAX_LEADS = 100
   SOURCE = 'prospecting'.freeze
   NO_CHANNEL = 'no_channel'.freeze
+  # O motivo da régua de todo Público (ConversationAudience::Reach.reason_for) vira o código de left_out. Motivo que o
+  # mapa não conhece nunca deixa o contato entrar calado: sai como UNREACHABLE. 'bloqueado' é o motivo que a #2733 cria
+  # (ConversationAudience::Reach::BLOCKED); fica como texto até a constante chegar à main.
   REACH_REASONS = {
     ConversationAudience::Reach::OPTED_OUT => 'opt_out',
-    ConversationAudience::Reach::NO_CONTACT => NO_CHANNEL
+    ConversationAudience::Reach::NO_CONTACT => NO_CHANNEL,
+    'bloqueado' => 'blocked'
   }.freeze
+  UNREACHABLE = 'unreachable'.freeze
 
-  Result = Struct.new(:audience, :entered_lead_ids, :left_out, keyword_init: true)
+  # channels_off: só na lista que já existe (LeadsIntoAudience), os canais desligados que ganharam gente.
+  Result = Struct.new(:audience, :entered_lead_ids, :left_out, :channels_off, keyword_init: true)
 
   # Recusa do pedido inteiro. left_out: quem ficou de fora e por quê, para a tela explicar mesmo quando ninguém entra.
   # contacts_saved: a recusa veio depois de criar os contatos (eles ficam gravados).
@@ -43,20 +52,6 @@ class Autonomia::Prospecting::AudienceFromLeads
       @left_out = left_out
       @contacts_saved = contacts_saved
     end
-  end
-
-  # A linha de um contato no Público: nome, telefone e e-mail (hash e máscara) e a empresa. Também do passo campanha da
-  # Automação livre (G58, #2779), que grava o Público dos contatos que a execução criou.
-  def self.row_for(contact)
-    CampaignJourney::AudienceWriter::Row.new(
-      contact_id: contact.id, name: contact.name, phone: ConversationAudience::Reach.phone(contact),
-      email: ConversationAudience::Reach.email(contact), company_name: company_name(contact), extra_values: {}
-    )
-  end
-
-  # A mesma leitura da mensagem para empresa_cliente.nome (TemplateFields::ContactResolver).
-  def self.company_name(contact)
-    contact.try(:company)&.name.presence || contact.additional_attributes.to_h['company_name'].to_s.squish.presence
   end
 
   # leads_scope: os leads que quem pede enxerga (Visibility, #732 item 6). O controller sempre passa; sem ele, a conta.
@@ -72,17 +67,37 @@ class Autonomia::Prospecting::AudienceFromLeads
   def perform
     raise Error, 'no_leads' if @requested.empty?
     raise Error, 'too_many_leads' if @requested.size > MAX_LEADS
-    raise Error, 'name_required' if @name.blank?
 
+    check_target!
     rows = {}
     left_out = invalid_ids.map { |value| left(value, 'not_found') }
     @lead_ids.each { |lead_id| place(lead_id, rows, left_out) }
-    raise Error.new('no_rows', left_out: left_out) if rows.empty?
+    raise Error.new(no_rows_code(left_out), left_out: left_out) if rows.empty?
 
-    Result.new(audience: write(rows, left_out), entered_lead_ids: rows.keys, left_out: left_out)
+    finish(rows, left_out)
   end
 
   private
+
+  # O que precisa estar certo no destino antes de criar qualquer contato. No Público novo, o nome.
+  def check_target!
+    raise Error, 'name_required' if @name.blank?
+  end
+
+  # Os contatos que já estão no destino; nenhum no Público novo.
+  def members
+    Set.new
+  end
+
+  # O código da recusa quando ninguém entra; no Público novo, sempre no_rows.
+  def no_rows_code(_left_out)
+    'no_rows'
+  end
+
+  # Grava as linhas e diz quem entrou. No Público novo, todos os de rows entram.
+  def finish(rows, left_out)
+    Result.new(audience: write(rows, left_out), entered_lead_ids: rows.keys, left_out: left_out, channels_off: [])
+  end
 
   # O que veio no pedido e não é id: sai como not_found, com o valor como veio.
   def invalid_ids
@@ -125,11 +140,18 @@ class Autonomia::Prospecting::AudienceFromLeads
   end
 
   def add_row(lead_id, contact, rows, left_out)
-    reason = REACH_REASONS[ConversationAudience::Reach.reason_for(contact)]
+    reason = reach_reason(contact)
+    reason ||= 'already_in_list' if members.include?(contact.id)
     reason ||= 'same_contact' if rows.each_value.any? { |row| row.contact_id == contact.id }
     return left_out << left(lead_id, reason) if reason
 
-    rows[lead_id] = self.class.row_for(contact)
+    rows[lead_id] = Autonomia::Prospecting::AudienceRows.row_for(contact)
+  end
+
+  # nil quando o contato pode receber; senão o código de left_out, e UNREACHABLE para um motivo novo da régua.
+  def reach_reason(contact)
+    reason = ConversationAudience::Reach.reason_for(contact)
+    REACH_REASONS.fetch(reason, UNREACHABLE) unless reason.nil?
   end
 
   def converter_for(lead)

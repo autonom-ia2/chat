@@ -3,7 +3,7 @@
 #
 # Nada novo no envio: os contatos que a execução criou (ContatosDaExecucao) viram um Público de Campanhas
 # (CampaignJourney::AudienceWriter, source 'automacao', com a automação e a execução nas opções), com a mesma linha da
-# Prospecção (AudienceFromLeads.row_for). A Campanha sai pelo CampaignJourney::WhatsappCampaignCreator, ligada ao Público
+# Prospecção (AudienceRows.row_for). A Campanha sai pelo CampaignJourney::WhatsappCampaignCreator, ligada ao Público
 # (CampaignAudienceLink), como a tela de Campanhas. O envio é o de todo Público (Whatsapp::OneoffCampaignService com
 # CampaignJourney::AudienceContacts): recusa relida no envio e status por destinatário. Público e Campanha nascem juntos
 # ou nenhum.
@@ -45,7 +45,7 @@ class Autonomia::Automacao::CampanhaDaExecucao
 
   def gravar_publico
     opcoes = { 'automacao_id' => @execucao.automacao_id, 'execucao_id' => @execucao.id }
-    linhas = @contatos.dentro.map { |contato| ::Autonomia::Prospecting::AudienceFromLeads.row_for(contato) }
+    linhas = @contatos.dentro.map { |contato| ::Autonomia::Prospecting::AudienceRows.row_for(contato) }
     ::CampaignJourney::AudienceWriter.new(@conta, user: quem_ligou, source: SOURCE, options: opcoes)
                                      .perform(nome_do_publico, linhas)
   end

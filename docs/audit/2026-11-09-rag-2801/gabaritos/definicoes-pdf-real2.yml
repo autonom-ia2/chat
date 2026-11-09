@@ -1,0 +1,15 @@
+# #2801 — perguntas de definição respondidas pelas definições das Condições Contratuais Mapfre Residencial (base
+# pdf-real2). Meta: resposta pelo material, com a fonte.
+perguntas:
+  - pergunta: "O que é sinistro?"
+    tipo: definicao
+    esperado: "Ocorrência de evento previsto nas condições do seguro, futura e incerta, que obriga a seguradora a analisar a cobertura e, se for o caso, pagar a indenização, o reembolso ou prestar o serviço."
+    ancoras: ["Ocorrência de evento previsto nas Condições Contratuais"]
+  - pergunta: "O que quer dizer vigência do seguro?"
+    tipo: definicao
+    esperado: "O intervalo contínuo de tempo em que a apólice ou o certificado está em vigor."
+    ancoras: ["Intervalo contínuo de tempo durante o qual está em vigor"]
+  - pergunta: "O que é o LMI?"
+    tipo: definicao
+    esperado: "Limite Máximo de Indenização: o valor máximo de indenização contratado para cada cobertura, que não se soma com o de outras coberturas."
+    ancoras: ["Valor máximo de indenização especificado na Apólice"]

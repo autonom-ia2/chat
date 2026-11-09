@@ -122,4 +122,32 @@ RSpec.describe Crm::MetaAds::LeadForms::Hub do
 
     expect(form).to have_attributes(pipeline_id: nil, stage_id: nil, destination_set_at: nil)
   end
+
+  # #2740: a recusa pode ser do destino (funil ou etapa que o card não aceita). Salvar o destino, mesmo igual, muda a
+  # linha do formulário, e a reconciliação seguinte tenta de novo os leads recusados.
+  describe 'leads recusados' do
+    let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+
+    def refused
+      Crm::MetaAds::LeadForms::RefusedLeads.new(form)
+    end
+
+    before { allow(Rails).to receive(:cache).and_return(cache) }
+
+    it 'salvar o mesmo destino de novo esquece a recusa' do
+      save!
+      refused.remember!('L1')
+
+      travel(1.second) { save! }
+
+      expect(refused.ids(['L1'])).to be_empty
+    end
+
+    it 'sem salvar de novo, a recusa fica' do
+      save!
+      refused.remember!('L1')
+
+      expect(refused.ids(['L1'])).to eq(['L1'])
+    end
+  end
 end

@@ -81,6 +81,23 @@ RSpec.describe 'Anúncios da Meta: criar e orçamento com funções (#2198)', ty
     expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
   end
 
+  # Cuidar do anúncio (#2778): duplicar e trocar a foto são mudar, não ver.
+  it 'meta_ads_view não duplica nem troca a foto (403), sem chamar a Meta; meta_ads_manage passa do portão' do
+    headers = pessoa_com(%w[meta_ads_view]).create_new_auth_token
+
+    post "#{path}/ads/#{ad_id}/copies", params: { idempotency_key: SecureRandom.uuid }, headers: headers, as: :json
+    expect(response).to have_http_status(:forbidden)
+    put "#{path}/ads/#{ad_id}/creative", params: { idempotency_key: SecureRandom.uuid, text: 'Oi' }, headers: headers, as: :json
+    expect(response).to have_http_status(:forbidden)
+    expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+
+    # Anúncio que não foi criado aqui: o portão de permissão passou e a recusa é a da opção (a).
+    post "#{path}/ads/#{ad_id}/copies", params: { idempotency_key: SecureRandom.uuid },
+                                        headers: pessoa_com(%w[meta_ads_manage]).create_new_auth_token, as: :json
+    expect(response).to have_http_status(:not_found)
+    expect(response.parsed_body).to eq('error' => 'ad_not_found')
+  end
+
   # Pedido da Funções no PR 1: ligar ou pausar anúncio é mudar, não ver.
   it 'meta_ads_view não liga nem pausa anúncio (403), sem chamar a Meta' do
     account.enable_features!('meta_ads_gestao')

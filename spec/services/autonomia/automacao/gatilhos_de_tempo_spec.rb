@@ -263,7 +263,8 @@ RSpec.describe 'Automação livre: gatilhos de tempo', :automacao_motor do # rub
           fechar_execucoes
         end
 
-        expect(execucoes.where(automacao: definicao).pluck(:evento))
+        # Na ordem em que nasceram: sem o order, o Postgres devolve em qualquer ordem e o spec falhava às vezes.
+        expect(execucoes.where(automacao: definicao).order(:id).pluck(:evento))
           .to eq(["contato.data:#{contato.id}:vencimento:2027-02-28", "contato.data:#{contato.id}:vencimento:2028-02-29"])
       end
 

@@ -357,7 +357,9 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
 
   context 'when the card also carries a ctwa_clid' do
     let(:conversation) do
-      create(:conversation, account: account, inbox: channel.inbox, additional_attributes: { 'campaign' => { 'ctwa_clid' => 'CLID1' } })
+      # Started before the sale: only clicks made by the event count (#2738).
+      create(:conversation, account: account, inbox: channel.inbox, additional_attributes: { 'campaign' => { 'ctwa_clid' => 'CLID1' } },
+                            created_at: 1.day.ago)
     end
 
     it 'keeps the CTWA path: business_messaging to the dataset with the click id' do

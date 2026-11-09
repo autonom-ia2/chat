@@ -1,12 +1,15 @@
 // Filtros pelo link na caixa de conversas (Números F2, #1883). Os botões do Números abrem a lista já filtrada:
 // `?da_ia=1` = recebidas da IA; `?esperando_min=30` = esperando alguém há mais de 30 min. O servidor confere de novo
 // (Crm::ConversationFinderComFiltrosDoLink); aqui, valor que a caixa não oferece é ignorado.
+// `?desde_dias=30` (Seus posts #2209): só as conversas que começaram no período do cartão (7, 30 ou 90 dias).
 // O filtro é o que está no endereço, e só nele: abrir uma conversa da lista filtrada leva o link junto (a lista ao lado
 // segue filtrada); qualquer outro caminho (o menu, o card do CRM, Contatos) chega sem o link e mostra a lista inteira.
 import { computed, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 const ESPERANDO_MIN = { MIN: 1, MAX: 1440 };
+// Os períodos de Seus posts (Crm::MetaAds::Organico::Periodo::DIAS).
+const DESDE_DIAS = [7, 30, 90];
 const SO_DIGITOS = valor =>
   valor !== '' && [...valor].every(c => c >= '0' && c <= '9');
 // "Esperando há mais de N min": a conversa que cruza o limite entra na próxima releitura, uma por minuto.
@@ -33,7 +36,7 @@ const CONVERSAS = [
   'conversation_through_participating',
 ];
 // `no_funil=1` (#1999): só as de cliente num funil que a pessoa vê no Números. Vem junto de um dos outros dois.
-const PARAMETROS = ['da_ia', 'esperando_min', 'no_funil'];
+const PARAMETROS = ['da_ia', 'esperando_min', 'no_funil', 'desde_dias'];
 
 const minutosValidos = valor => {
   const texto = String(valor ?? '');
@@ -44,11 +47,19 @@ const minutosValidos = valor => {
     : null;
 };
 
+const diasValidos = valor =>
+  DESDE_DIAS.find(dias => String(dias) === String(valor ?? '')) ?? null;
+
 export const filtrosDoEndereco = destino => ({
   daIa: destino?.query?.da_ia === '1',
   esperandoMin: minutosValidos(destino?.query?.esperando_min),
   noFunil: destino?.query?.no_funil === '1',
+  desdeDias: diasValidos(destino?.query?.desde_dias),
 });
+
+// Algum filtro do link liga a lista (no_funil só vem junto de outro).
+export const filtroDoLinkLigado = filtros =>
+  Boolean(filtros?.daIa || filtros?.esperandoMin || filtros?.desdeDias);
 
 // O filtro que a lista pede ao servidor. No Spam e na Lixeira a pasta manda; com filtro avançado ou pasta salva, a lista
 // vem de outro pedido e o link não vale. Sempre as duas chaves: o merge dos filtros da store (UPDATE_CHAT_LIST_FILTERS)
@@ -57,17 +68,24 @@ export const filtroDoLinkDaLista = ({
   daIa,
   esperandoMin,
   noFunil,
+  desdeDias,
   pasta,
   filtroAvancado,
 }) => {
   if (pasta || filtroAvancado) {
-    return { daIa: undefined, esperandoMin: undefined, noFunil: undefined };
+    return {
+      daIa: undefined,
+      esperandoMin: undefined,
+      noFunil: undefined,
+      desdeDias: undefined,
+    };
   }
   const ligado = Boolean(daIa || esperandoMin);
   return {
     daIa: daIa || undefined,
     esperandoMin: esperandoMin ?? undefined,
     noFunil: (ligado && noFunil) || undefined,
+    desdeDias: desdeDias ?? undefined,
   };
 };
 
@@ -75,8 +93,8 @@ export const filtroDoLinkDaLista = ({
 // número conta tudo o que a pessoa vê, então a lista pede "todas" e o servidor (ConversationFinder, com as permissões de
 // quem pede) corta o que ela não pode ver: as Minhas mais as Não atribuídas, o mesmo das abas dela somadas. Com "Todas"
 // ou sem o filtro, vale a aba escolhida.
-export const abaDaListaComLink = ({ daIa, esperandoMin }, abas, aba, todas) =>
-  (daIa || esperandoMin) && !abas.includes(todas) ? todas : aba;
+export const abaDaListaComLink = (filtros, abas, aba, todas) =>
+  filtroDoLinkLigado(filtros) && !abas.includes(todas) ? todas : aba;
 
 // Onde a página da lista fica gravada (#1999): a resposta grava na aba que a lista pediu (a da lista, não a escolhida),
 // e a próxima página e o fim da lista têm que ser lidos no mesmo lugar. Com o filtro avançado, a gaveta dele.
@@ -85,19 +103,28 @@ export const chaveDaPaginaDaLista = (filtroAvancado, abaDaLista) =>
 
 // O funil da lista com o filtro do link (#1999): o escopo vem do link, e o funil escolhido na caixa fica de lado (sem
 // gravar nada: a escolha salva volta quando o link sai). Sem o filtro, o funil escolhido.
-export const funilDoFiltroDoLink = ({ daIa, esperandoMin }, funil, todos) =>
-  daIa || esperandoMin ? todos : funil;
+export const funilDoFiltroDoLink = (filtros, funil, todos) =>
+  filtroDoLinkLigado(filtros) ? todos : funil;
 
 // A aba em que a caixa abre com o filtro do link (#1999): o Números conta todas as conversas que a pessoa enxerga, então
 // a caixa abre em "Todas", quando a pessoa tem essa aba, para o número da lista bater com o do Números. Sem o filtro do
 // link (ou sem "Todas"), null: vale a aba de sempre.
-export const abaDoFiltroDoLink = ({ daIa, esperandoMin }, abas, todas) =>
-  (daIa || esperandoMin) && abas.includes(todas) ? todas : null;
+export const abaDoFiltroDoLink = (filtros, abas, todas) =>
+  filtroDoLinkLigado(filtros) && abas.includes(todas) ? todas : null;
 
 // O status com o filtro do link (#1999): o Números conta as conversas abertas, então a caixa abre em "Abertas" mesmo
-// que a pessoa tenha salvo outro status. Só nesta abertura: a escolha salva da pessoa não muda. Sem o filtro, o de sempre.
-export const statusDoFiltroDoLink = ({ daIa, esperandoMin }, status, aberto) =>
-  daIa || esperandoMin ? aberto : status;
+// que a pessoa tenha salvo outro status. Seus posts (#2209) conta as conversas de qualquer status, então
+// `desde_dias` abre em "Todos os status". Só nesta abertura: a escolha salva da pessoa não muda. Sem o filtro, o de
+// sempre.
+export const statusDoFiltroDoLink = (
+  { daIa, esperandoMin, desdeDias },
+  status,
+  aberto,
+  todos
+) => {
+  if (daIa || esperandoMin) return aberto;
+  return desdeDias ? todos : status;
+};
 
 export const naCaixa = destino =>
   LISTAS.includes(destino?.name) || CONVERSAS.includes(destino?.name);
@@ -144,14 +171,15 @@ export const useFiltrosDoLinkNaCaixa = () => {
   const filtros = computed(() =>
     naCaixa(route)
       ? filtrosDoEndereco(route)
-      : { daIa: false, esperandoMin: null, noFunil: false }
+      : { daIa: false, esperandoMin: null, noFunil: false, desdeDias: null }
   );
   const daIa = computed(() => filtros.value.daIa);
   const esperandoMin = computed(() => filtros.value.esperandoMin);
   const noFunil = computed(() => filtros.value.noFunil);
+  const desdeDias = computed(() => filtros.value.desdeDias);
   // Muda quando qualquer valor do link muda (#1999): a lista relê, e a releitura periódica usa os valores novos.
   const assinatura = computed(() =>
-    [daIa.value, esperandoMin.value, noFunil.value].join('|')
+    [daIa.value, esperandoMin.value, noFunil.value, desdeDias.value].join('|')
   );
   const linkNoEndereco = computed(() => Object.keys(doLink(route)).length > 0);
 
@@ -177,7 +205,7 @@ export const useFiltrosDoLinkNaCaixa = () => {
   // A seta "Limpar filtros": um clique tira tudo. Com o filtro do link ligado, tirar o link já relê a lista (e a releitura
   // tira o filtro avançado); com o link no endereço mas sem valor que a caixa ofereça (`?da_ia=0`), tira e relê.
   const limparTudo = async reler => {
-    const filtroLigado = Boolean(daIa.value || esperandoMin.value);
+    const filtroLigado = filtroDoLinkLigado(filtros.value);
     if (linkNoEndereco.value) await limpar();
     if (!filtroLigado) reler();
   };
@@ -191,6 +219,7 @@ export const useFiltrosDoLinkNaCaixa = () => {
     ...(noFunil.value && (daIa.value || esperandoMin.value)
       ? { no_funil: '1' }
       : {}),
+    ...(desdeDias.value ? { desde_dias: String(desdeDias.value) } : {}),
   }));
 
   // Voltar da conversa para a lista (marcar como não lida, excluir): com o filtro ligado, a lista volta filtrada.
@@ -205,6 +234,7 @@ export const useFiltrosDoLinkNaCaixa = () => {
     daIa,
     esperandoMin,
     noFunil,
+    desdeDias,
     assinatura,
     limpar,
     limparTudo,
