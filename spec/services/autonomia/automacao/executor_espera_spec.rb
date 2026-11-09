@@ -33,8 +33,8 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
   before do
     ligar_motor(account)
     Autonomia::Prospecting::Config.enable_for!(account)
-    stub_const('PassoDeTeste', passo_de_teste)
-    stub_const('Autonomia::Automacao::PassoDeAcao::PROPRIOS', { 'prospeccao' => 'PassoDeTeste' })
+    # A prospecção de verdade dá lugar ao passo de teste: o PassoDeAcao continua escolhendo o passo pelo tipo.
+    allow(Autonomia::Automacao::PassoDeProspeccao).to receive(:new) { passo_de_teste.new }
     passo_de_teste.rodadas = 0
     passo_de_teste.respostas = [esperar, esperar, pronto]
   end
