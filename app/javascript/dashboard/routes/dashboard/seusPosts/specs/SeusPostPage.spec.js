@@ -73,7 +73,7 @@ const lista = (comentarios, extra = {}) => ({
   ...extra,
 });
 
-const responder = (extra = {}) =>
+const responder = (extra = {}, extraDoPost = {}) =>
   SeusPostsAPI.getPost.mockResolvedValue({
     data: {
       perfil: { id: 'instagram-1', network: 'instagram', inbox_id: 7 },
@@ -95,6 +95,7 @@ const responder = (extra = {}) =>
         shares: 2,
         waiting: 50,
         waiting_more: true,
+        ...extraDoPost,
       },
       normal: { views: 400 },
       comments: lista([
@@ -167,6 +168,94 @@ describe('Seus posts: o post (#2305)', () => {
     expect(wrapper.find('[data-seus-posts-outros]').text()).toBe(
       '5 salvaram · 2 compartilharam'
     );
+  });
+
+  // #2522: post do Instagram impulsionado por aqui; os comentários do anúncio ficam no anúncio.
+  describe('anúncio criado aqui a partir do post', () => {
+    afterEach(() => {
+      delete window.globalConfig;
+    });
+
+    it('com o anúncio e o CRM ligado: Teve anúncio, e o atalho leva aos comentários do anúncio', async () => {
+      window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
+      responder({ ads: [{ id: '903', name: 'Promoção' }] }, { boosted: true });
+      const wrapper = await montar();
+
+      const atalho = wrapper.findComponent('[data-seus-posts-ver-anuncio]');
+      expect(atalho.props('to')).toEqual({
+        name: 'campaigns_meta_ads_index',
+        params: { accountId: 1 },
+        query: { aba: 'resultado', anuncio: '903' },
+      });
+      expect(
+        wrapper.find('[data-seus-posts-comentarios-do-anuncio]').text()
+      ).toContain('Os comentários do anúncio ficam no anúncio');
+      expect(wrapper.find('[data-seus-posts-como-foi]').text()).toContain(
+        'Você impulsionou este post pela plataforma'
+      );
+      expect(wrapper.find('[data-seus-posts-lado]').text()).toBe(
+        'Números só deste post.'
+      );
+    });
+
+    // #2739: cada anúncio tem os próprios comentários; um atalho por anúncio, com o nome, o mais novo primeiro.
+    it('post impulsionado mais de uma vez: um atalho por anúncio, com o nome e o dia (o ano só quando não é o atual)', async () => {
+      window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
+      const anoAtual = new Date().getFullYear();
+      responder(
+        {
+          ads: [
+            {
+              id: '905',
+              name: null,
+              created_at: `${anoAtual}-11-03T12:00:00Z`,
+            },
+            {
+              id: '904',
+              name: 'Promoção',
+              created_at: `${anoAtual}-10-20T12:00:00Z`,
+            },
+            { id: '903', name: 'Promoção', created_at: '2024-10-20T12:00:00Z' },
+          ],
+        },
+        { boosted: true }
+      );
+      const wrapper = await montar();
+
+      const atalhos = wrapper.findAllComponents(
+        '[data-seus-posts-ver-anuncio]'
+      );
+      expect(atalhos.map(atalho => atalho.props('to').query.anuncio)).toEqual([
+        '905',
+        '904',
+        '903',
+      ]);
+      // Sem nome, "Anúncio"; o ano só quando não é o atual.
+      expect(atalhos.map(atalho => atalho.text())).toEqual([
+        'Anúncio, criado em 3 de novembro',
+        'Promoção, criado em 20 de outubro',
+        'Promoção, criado em 20 de outubro de 2024',
+      ]);
+      expect(
+        wrapper.find('[data-seus-posts-comentarios-do-anuncio]').text()
+      ).toContain('Este post virou 3 anúncios');
+    });
+
+    it('sem o anúncio (quem não vê Anúncios da Meta) ou sem o CRM: nenhum atalho', async () => {
+      window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
+      responder();
+      let wrapper = await montar();
+      expect(
+        wrapper.find('[data-seus-posts-comentarios-do-anuncio]').exists()
+      ).toBe(false);
+
+      window.globalConfig = { CRM_KANBAN_ENABLED: 'false' };
+      responder({ ads: [{ id: '903', name: 'Promoção' }] });
+      wrapper = await montar();
+      expect(
+        wrapper.find('[data-seus-posts-comentarios-do-anuncio]').exists()
+      ).toBe(false);
+    });
   });
 
   // #2522: um texto só. No Instagram (boosted nil, não se sabe), curtidas e comentários podem incluir anúncio, como no

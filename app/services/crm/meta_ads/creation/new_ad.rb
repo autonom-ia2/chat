@@ -148,6 +148,8 @@ class Crm::MetaAds::Creation::NewAd
   end
 
   def build!(record, draft, page)
+    # O post de origem (#2522) vai junto do primeiro passo gravado. Anúncio novo: nulo.
+    record.assign_attributes(source_post(draft))
     step!(record, :campaign_id, :create_campaign, campaign_params(draft, record))
     step!(record, :adset_id, :create_adset, adset_params(draft, record.campaign_id))
     step!(record, :creative_id, :create_creative, creative_params(draft, page))
@@ -175,6 +177,11 @@ class Crm::MetaAds::Creation::NewAd
 
     record.assign_attributes(column => id.to_s)
     record.save!
+  end
+
+  def source_post(draft)
+    post = draft[:kind] == 'post'
+    { source_post_id: (draft[:post_id] if post), source_post_network: (draft[:post_source] if post) }
   end
 
   def alive!(record)

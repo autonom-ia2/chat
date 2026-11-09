@@ -178,7 +178,8 @@ module FechamentoAutomacao::Lacunas
     'G20' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('anexos') },
     'G21' => -> { passo?('prospeccao') },
     'G22' => nil,
-    'G23' => nil,
+    # G23 (#2737): o "ausente até" de quem cuida, como valor da condição.
+    'G23' => -> { valor?('card.responsavel_ausente') && valor?('conversa.responsavel_ausente') },
     'G24' => nil,
     'G25' => -> { acao?('POST crm/cards/:id/close') },
     'G26' => -> { passo?('sla') },
@@ -194,8 +195,13 @@ module FechamentoAutomacao::Lacunas
     'G30' => nil,
     # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando".
     'G31' => nil,
-    # G32: a reunião marcada como condição do "esperar até", no meio da execução.
-    'G32' => nil,
+    # G32 (#2703): a reunião marcada como condição do "esperar até", no meio da execução; prova ponta a ponta em
+    # spec/fechamento/automacao/g32_reuniao_spec.rb.
+    'G32' => -> { valor?('card.tem_reuniao_marcada') },
+    # #2680: a receita escolhe a caixa por onde abrir a conversa de quem não tem uma (o lead do formulário, o contato).
+    'G33' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('properties', 'gatilho', 'properties').key?('conversa_nova') },
+    # #2680: a resposta em outra conversa do contato conta, e a mensagem que a automação mandou vira valor.
+    'G34' => -> { valor?('envio.texto') && valor?('envio.situacao') },
     # A IA lê o card (`le: card`, #2679): exemplo 13, passo 5; exemplo 15, passo 9.
     'G35' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('card') },
     # A IA lê as notas internas da conversa (`le: notas`, #2679): exemplo 5, passo 1.
@@ -211,9 +217,9 @@ module FechamentoAutomacao::Lacunas
     'G39' => nil,
     # Do exemplo 10 (#2678), fora do lote 2: esperar só a pessoa que atende a conversa (a Fernanda), não a equipe inteira.
     'G40' => -> { valor?('conversa.responsavel_respondeu') },
-    # Do exemplo 10 (#2678), ainda sem dono: a instrução no resumir ("o que já foi prometido") e avisar o responsável
-    # quando a agente de IA atende a conversa.
-    'G41' => nil,
+    # Do exemplo 10 (#2678, #2752): a instrução no resumir ("o que já foi prometido") e avisar o responsável quando a
+    # agente de IA atende a conversa (o dono do card; sem ele, o passo pula com sem_responsavel).
+    'G41' => -> { campo_do_passo?('resumir', 'instrucao') && I18n.exists?('autonomia.automacao.motivos.sem_responsavel', :pt_BR) },
     # Da auditoria dos termos (07/11, #2716): a automação que começa pela conversa lê o card dela no "Só se" (exemplo 14,
     # passo 2) e o filtro sabe se a mensagem tem anexo (exemplo 18, começo).
     'G45' => -> { valor?('mensagem.tem_anexo') && Autonomia::Automacao::Valores::BASES_DO_ALVO['Conversation'].include?('card') },
@@ -225,7 +231,21 @@ module FechamentoAutomacao::Lacunas
     'G44' => nil,
     # Do exemplo 20, passo 9 (termo à risca: "coloca o cliente na campanha de e-mail"): pôr o contato numa campanha de
     # e-mail. A G14 cobre só WhatsApp; etiqueta + G7 + G2 é adaptar, não conta.
-    'G52' => nil
+    'G52' => nil,
+    # Do exemplo 1, passo 12 (#2721, #2763): o resumo lê tudo o que a execução tentou, até o e-mail em conversa própria.
+    'G42' => -> { Autonomia::Automacao::EnviosDaExecucao.method_defined?(:dados) },
+    # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7). Fica
+    # com a Gatilhos, depois do lote 3 (#2689), que traz a porta da frente da conversa nova.
+    'G43' => nil,
+    # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
+    # (passo 2, "manda por e-mail o mesmo conteúdo").
+    'G53' => nil,
+    # G54: esperar a entrega da mensagem (passo 5, "Chegou: tira a etiqueta e grava uma nota"); fechada pela G34.
+    'G54' => -> { valor?('envio.situacao') },
+    # Do exemplo 5, passo 8 (#2703): o card que a página de agendamento cria para a reunião (card do serviço já ganho)
+    # nasce sem conversa, e a mensagem do gatilho de reunião nele pula com `sem_conversa`. Caminho escolhido: o Booker
+    # liga ao card novo a conversa do contato na caixa da página, quando ela existe. A frente dona troca o nil pela sonda.
+    'G47' => nil
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

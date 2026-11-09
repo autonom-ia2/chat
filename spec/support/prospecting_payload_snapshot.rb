@@ -5,7 +5,7 @@ module ProspectingPayloadSnapshot
   FIXTURE = 'prospecting/legacy_engine_payloads.json'.freeze
   FROZEN_AT = Time.zone.parse('2026-09-25 12:00:00 UTC')
   VOLATILE_KEYS = %w[id created_at updated_at contact_id crm_card_id scoring_profile_id cached_from_search_id crm_pipeline_id
-                     crm_stage_id company_profile_id].freeze
+                     crm_stage_id company_profile_id user_id user_name].freeze
 
   module_function
 
@@ -35,7 +35,8 @@ module ProspectingPayloadSnapshot
   end
 end
 
-# Os pedidos que a tela faz numa conta de motor legado: busca GMN, busca geral, reabrir a primeira e abrir um lead.
+# Os pedidos que a tela faz numa conta de motor legado: busca GMN, busca geral, reabrir a primeira, listar as buscas e
+# abrir um lead.
 RSpec.shared_context 'with prospecting legacy engine snapshot' do
   let(:snapshot_account) { create(:account) }
   let(:snapshot_admin) { create(:user, :administrator, account: snapshot_account) }
@@ -59,6 +60,11 @@ RSpec.shared_context 'with prospecting legacy engine snapshot' do
   end
 
   def legacy_engine_snapshot
+    ProspectingPayloadSnapshot.normalize(legacy_engine_payloads)
+  end
+
+  # O que a API devolveu, sem marcador: para conferir com valor os campos que o retrato mascara.
+  def legacy_engine_payloads
     Autonomia::Prospecting::Config.enable_for!(snapshot_account)
     Autonomia::Prospecting::Setting.for_account(snapshot_account).update!(provider: 'google_places', cache_ttl_seconds: 0)
     places = ProspectingPayloadSnapshot.places(snapshot_google_fixture)
@@ -69,8 +75,11 @@ RSpec.shared_context 'with prospecting legacy engine snapshot' do
       gbp = snapshot_search('padaria', 'gbp')
       general = snapshot_search('padaria no batel', 'general')
       reopened = snapshot_get("searches/#{gbp.dig('search', 'id')}")
+      # As duas buscas têm o mesmo created_at (relógio parado) e o banco não garante a ordem do empate: o retrato
+      # da lista ordena pela frase da busca.
+      index = snapshot_get('searches').sort_by { |search| search['query'] }
       lead = snapshot_get("leads/#{gbp['leads'].first['id']}")
-      ProspectingPayloadSnapshot.normalize('gbp' => gbp, 'general' => general, 'reopened' => reopened, 'lead' => lead)
+      { 'gbp' => gbp, 'general' => general, 'reopened' => reopened, 'index' => index, 'lead' => lead }
     end
   end
 end

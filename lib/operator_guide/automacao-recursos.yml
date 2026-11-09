@@ -146,6 +146,7 @@ fora:
       - crm/integration_tokens
       - crm/meta_ads_connections
       - crm/meta_ads_pagina
+      - crm/meta_ads_instagram
       - integrations/dyte
       - integrations/hooks
       - integrations/linear
@@ -347,10 +348,13 @@ fora:
       - conversations/passar_para
       - conversa_canal/pastas_do_email
       - autonomia/avisos
+      - autonomia/prospecting/lead_audiences
       - autonomia/prospecting/lead_batches
       - autonomia/prospecting/lead_consent_refusals
+      - autonomia/prospecting/lead_queue_postponements
       - autonomia/prospecting/leads
       - autonomia/prospecting/lists
       - autonomia/prospecting/saved_presets
+      - autonomia/prospecting/search_interpretations
       - autonomia/prospecting/searches
       - autonomia/prospecting/settings

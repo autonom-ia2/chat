@@ -12,12 +12,6 @@ import CrmSendModal from '../components/crm/CrmSendModal.vue';
 import { useListLeadsContext } from '../composables/useListLeadsContext';
 import { crmSendableLeads } from '../utils/leadCrmPresence';
 import {
-  campaignChoices as buildCampaignChoices,
-  loadCampaigns,
-  parseCampaignChoice,
-  savedCampaignChoice,
-} from '../utils/campaignChoices';
-import {
   activeAdvancedLeadFiltersCount,
   defaultAdvancedLeadFilters,
   filterLeadsByAdvancedFilters,
@@ -35,13 +29,10 @@ const DOT_SEPARATOR = '·';
 const isLoading = ref(true);
 const isCreating = ref(false);
 const busyLeadId = ref(null);
-const isCreatingCampaignSegment = ref(false);
 const isAddingSelectedLeads = ref(false);
 const lists = ref([]);
 const selectedList = ref(null);
 const allLeads = ref([]);
-const campaigns = ref([]);
-const whatsappApiCampaigns = ref([]);
 const settings = ref(null);
 // Leads da janela Enviar ao CRM (#680); null com a janela fechada.
 const crmSendLeads = ref(null);
@@ -51,11 +42,6 @@ const showAddLeadFilters = ref(false);
 const selectedAddLeadIds = ref([]);
 const showCreateListModal = ref(false);
 const showAddLeadsModal = ref(false);
-const showCampaignModal = ref(false);
-const campaignSegmentForm = ref({
-  campaign_id: '',
-  segment_name: '',
-});
 const form = ref({
   name: '',
   description: '',
@@ -114,21 +100,6 @@ const campaignReadyLeads = computed(() =>
       lead.status === 'ready_for_campaign' && leadHasVerifiedWhatsApp(lead)
   )
 );
-const campaignBlockedLeads = computed(() =>
-  (selectedList.value?.leads || []).filter(
-    lead =>
-      lead.status !== 'ready_for_campaign' || !leadHasVerifiedWhatsApp(lead)
-  )
-);
-// Os dois tipos de campanha, a da API do WhatsApp primeiro (#732, item 11).
-const campaignChoices = computed(() => [
-  { value: '', label: t('PROSPECTING.LISTS.CAMPAIGN_SEGMENT_ONLY_LABEL') },
-  ...buildCampaignChoices({
-    campaigns: campaigns.value,
-    whatsappApiCampaigns: whatsappApiCampaigns.value,
-    t,
-  }),
-]);
 const yesNoAnyChoices = computed(() => [
   { value: '', label: t('PROSPECTING.SEARCH.FILTERS.ANY') },
   { value: 'yes', label: t('PROSPECTING.SEARCH.FILTERS.YES') },
@@ -137,9 +108,6 @@ const yesNoAnyChoices = computed(() => [
 // Aberto agora só filtra por "sim", como no Orth e no motor (#677): "não" não existe.
 const yesAnyChoices = computed(() =>
   yesNoAnyChoices.value.filter(choice => choice.value !== 'no')
-);
-const currentCampaignSegment = computed(
-  () => selectedList.value?.campaign_segment || null
 );
 const selectedAddLeadsCount = computed(() => selectedAddLeadIds.value.length);
 const selectedListContactCount = computed(
@@ -194,12 +162,6 @@ const fetchAllLeads = async () => {
   verifyLeadsWhatsApp(allLeads.value);
 };
 
-const fetchCampaigns = async () => {
-  const loaded = await loadCampaigns();
-  campaigns.value = loaded.campaigns;
-  whatsappApiCampaigns.value = loaded.whatsappApiCampaigns;
-};
-
 const fetchSettings = async () => {
   const { data } = await AutonomiaProspectingAPI.getSettings();
   settings.value = data.payload || {};
@@ -213,10 +175,6 @@ const selectList = async list => {
     selectedLeadDetailId.value = null;
     selectedList.value = data.payload || null;
     verifyLeadsWhatsApp(selectedList.value?.leads || []);
-    campaignSegmentForm.value = {
-      campaign_id: savedCampaignChoice(currentCampaignSegment.value),
-      segment_name: selectedList.value?.name || '',
-    };
   } catch {
     useAlert(t('PROSPECTING.ERRORS.LOAD_LIST'));
   }
@@ -226,12 +184,7 @@ const loadPage = async () => {
   isLoading.value = true;
   try {
     await fetchSettings();
-    await Promise.all([
-      fetchLists(),
-      fetchAllLeads(),
-      fetchCampaigns(),
-      fetchCrmPipelines(),
-    ]);
+    await Promise.all([fetchLists(), fetchAllLeads(), fetchCrmPipelines()]);
     if (lists.value.length) {
       await selectList(lists.value[0]);
     }
@@ -277,17 +230,6 @@ const openAddLeadsModal = async list => {
   addLeadAdvancedFilters.value = defaultAdvancedLeadFilters();
   showAddLeadFilters.value = false;
   showAddLeadsModal.value = true;
-};
-
-const openCampaignModal = async list => {
-  if (list?.id && list.id !== selectedList.value?.id) {
-    await selectList(list);
-  }
-  campaignSegmentForm.value = {
-    campaign_id: savedCampaignChoice(currentCampaignSegment.value),
-    segment_name: selectedList.value?.name || '',
-  };
-  showCampaignModal.value = true;
 };
 
 const toggleAddLeadSelection = leadId => {
@@ -397,44 +339,6 @@ const applyCrmSendResult = ({ created, existing }) => {
       ...selectedList.value,
       leads: selectedList.value.leads.map(withCard),
     };
-  }
-};
-
-const createCampaignSegment = async () => {
-  if (
-    !selectedList.value?.id ||
-    isCreatingCampaignSegment.value ||
-    !campaignReadyLeads.value.length
-  ) {
-    return;
-  }
-
-  isCreatingCampaignSegment.value = true;
-  const { campaignId, campaignType } = parseCampaignChoice(
-    campaignSegmentForm.value.campaign_id
-  );
-  try {
-    const { data } = await AutonomiaProspectingAPI.createCampaignSegment(
-      selectedList.value.id,
-      {
-        campaign_id: campaignId,
-        campaign_type: campaignType,
-        segment_name:
-          campaignSegmentForm.value.segment_name || selectedList.value.name,
-      }
-    );
-    selectedList.value = data.payload?.list || selectedList.value;
-    await fetchLists();
-    useAlert(
-      t('PROSPECTING.LISTS.CAMPAIGN_SEGMENT_CREATED', {
-        label: data.payload?.segment?.label?.title || '-',
-      })
-    );
-    showCampaignModal.value = false;
-  } catch (e) {
-    alertError(e, t('PROSPECTING.ERRORS.CREATE_CAMPAIGN_SEGMENT'));
-  } finally {
-    isCreatingCampaignSegment.value = false;
   }
 };
 
@@ -566,15 +470,6 @@ onMounted(loadPage);
                 >
                   <span class="i-lucide-user-plus size-3.5" />
                   {{ t('PROSPECTING.LISTS.ADD_LEADS_TITLE') }}
-                </button>
-                <button
-                  type="button"
-                  class="inline-flex h-8 items-center gap-1.5 rounded-md border border-n-weak bg-n-solid-1 px-2.5 text-xs font-medium text-n-slate-12 hover:bg-n-solid-2"
-                  :title="t('PROSPECTING.LISTS.CAMPAIGN_SEGMENT_TITLE')"
-                  @click.stop="openCampaignModal(list)"
-                >
-                  <span class="i-lucide-megaphone size-3.5" />
-                  {{ t('PROSPECTING.LISTS.CAMPAIGN_SEGMENT_TITLE') }}
                 </button>
               </div>
             </article>
@@ -1213,111 +1108,6 @@ onMounted(loadPage);
             </button>
           </div>
         </footer>
-      </section>
-    </div>
-
-    <div
-      v-if="showCampaignModal"
-      class="fixed inset-0 z-40 flex items-center justify-center bg-n-slate-12/40 p-4"
-      @click.self="showCampaignModal = false"
-    >
-      <section
-        class="grid w-full max-w-2xl gap-5 rounded-md border border-n-weak bg-n-solid-1 p-5 shadow-xl"
-      >
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <h2 class="text-base font-semibold text-n-slate-12">
-              {{ t('PROSPECTING.LISTS.CAMPAIGN_SEGMENT_TITLE') }}
-            </h2>
-            <p class="mt-1 text-sm text-n-slate-10">
-              {{ selectedList?.name }}
-            </p>
-          </div>
-          <button
-            type="button"
-            class="flex size-8 items-center justify-center rounded-md text-n-slate-11 hover:bg-n-solid-2"
-            :title="t('PROSPECTING.LISTS.CLOSE')"
-            @click="showCampaignModal = false"
-          >
-            <span class="i-lucide-x size-4" />
-          </button>
-        </div>
-        <div class="grid gap-2 sm:grid-cols-3">
-          <div class="rounded-md border border-n-weak bg-n-solid-2 px-3 py-2">
-            <div class="text-xs text-n-slate-10">
-              {{ t('PROSPECTING.LISTS.METRICS.READY') }}
-            </div>
-            <div class="text-base font-semibold text-n-teal-11">
-              {{ campaignReadyLeads.length }}
-            </div>
-          </div>
-          <div class="rounded-md border border-n-weak bg-n-solid-2 px-3 py-2">
-            <div class="text-xs text-n-slate-10">
-              {{ t('PROSPECTING.LISTS.METRICS.BLOCKED') }}
-            </div>
-            <div class="text-base font-semibold text-n-amber-11">
-              {{ campaignBlockedLeads.length }}
-            </div>
-          </div>
-          <div class="rounded-md border border-n-weak bg-n-solid-2 px-3 py-2">
-            <div class="text-xs text-n-slate-10">
-              {{ t('PROSPECTING.LISTS.METRICS.SEGMENT') }}
-            </div>
-            <div class="truncate text-base font-semibold text-n-slate-12">
-              {{ currentCampaignSegment?.label_title || '-' }}
-            </div>
-          </div>
-        </div>
-        <div class="grid gap-4 md:grid-cols-2">
-          <div class="grid content-start gap-1">
-            <label
-              for="prospecting-campaign-segment-name"
-              class="text-xs font-medium text-n-slate-11"
-            >
-              {{ t('PROSPECTING.LISTS.FIELDS.SEGMENT_NAME') }}
-            </label>
-            <input
-              id="prospecting-campaign-segment-name"
-              v-model="campaignSegmentForm.segment_name"
-              class="h-10 rounded-md border border-n-weak bg-n-solid-2 px-3 text-sm text-n-slate-12"
-              :placeholder="selectedList?.name"
-            />
-          </div>
-          <label class="grid content-start gap-1">
-            <span class="text-xs font-medium text-n-slate-11">
-              {{ t('PROSPECTING.LISTS.FIELDS.CAMPAIGN') }}
-            </span>
-            <ChoiceSelect
-              v-model="campaignSegmentForm.campaign_id"
-              :options="campaignChoices"
-              :aria-label="t('PROSPECTING.LISTS.FIELDS.CAMPAIGN')"
-            />
-          </label>
-        </div>
-        <p class="text-xs text-n-slate-10">
-          {{ t('PROSPECTING.LISTS.CAMPAIGN_SEGMENT_HINT') }}
-        </p>
-        <div class="flex justify-end gap-2">
-          <button
-            type="button"
-            class="h-9 rounded-md border border-n-weak px-3 text-sm font-medium text-n-slate-12 hover:bg-n-solid-2"
-            @click="showCampaignModal = false"
-          >
-            {{ t('PROSPECTING.LISTS.CANCEL') }}
-          </button>
-          <button
-            type="button"
-            class="h-9 rounded-md bg-n-brand px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-            :disabled="isCreatingCampaignSegment || !campaignReadyLeads.length"
-            @click="createCampaignSegment"
-          >
-            {{
-              isCreatingCampaignSegment
-                ? t('PROSPECTING.LISTS.CAMPAIGN_SEGMENT_CREATING')
-                : t('PROSPECTING.LISTS.CAMPAIGN_SEGMENT_CREATE')
-            }}
-          </button>
-        </div>
       </section>
     </div>
 
