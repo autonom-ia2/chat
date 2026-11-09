@@ -175,7 +175,8 @@
         "OPEN": "Ver comentários do anúncio",
         "TEXT_MANY": "Este post virou {count} anúncios. Os comentários de cada um ficam no anúncio, não neste post.",
         "ITEM": "{name}, criado em {date}",
-        "UNNAMED": "Anúncio"
+        "UNNAMED": "Anúncio",
+        "WAITING": "{count} comentário esperando você | {count} comentários esperando você"
       },
       "COMMENTS": {
         "TITLE": "Comentários",
@@ -243,7 +244,8 @@
         }
       },
       "CARE_OFFER": {
-        "TITLE": "O que tem nos comentários",
+        "TITLE": "O que tem nos comentários deste post",
+        "TITLE_WITH_ADS": "O que tem nos comentários deste post (os do anúncio ficam no anúncio)",
         "WAITING": "{count} comentário espera resposta | {count} comentários esperam resposta",
         "NONE_WAITING": "Nenhum comentário esperando resposta.",
         "PRIVATE_WINDOW": "{count} cabe no privado (até 7 dias) | {count} cabem no privado (até 7 dias)",
@@ -251,7 +253,7 @@
         "TEXT_ONLY_NEW": "Se você ligar, eu respondo no privado as perguntas que chegarem. As que já estão aqui passaram de 7 dias: responda no comentário.",
         "TEXT_FUTURE": "Se você ligar, eu respondo no privado as perguntas que chegarem.",
         "BUTTON": "Cuidar dos comentários",
-        "TEXT_SOON": "Mandar no privado pelo Messenger ainda não está liberado. Assim que a Meta liberar, você liga por aqui.",
+        "TEXT_SOON": "Nesta Página, mandar no privado pelo Messenger ainda não está liberado. Quando a Meta liberar, entre de novo com a Página e ligue por aqui.",
         "LOADING": "Estou lendo os comentários…",
         "NEEDS_PERMISSION": "Para eu dizer o que tem nos comentários, preciso do acesso a eles.",
         "UNAVAILABLE": "Não consegui ler os comentários agora."

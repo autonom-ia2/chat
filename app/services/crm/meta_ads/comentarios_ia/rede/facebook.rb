@@ -17,11 +17,11 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     @comentario = comentario
   end
 
-  # O privado pelo Messenger depende da `pages_messaging`: só na conta com a flag (Rede.privado_liberado?, #2613). Sem
-  # ela, no Facebook a IA esconde propaganda e passa reclamação; a pergunta fica com o dono (`kept_for_owner`). A frase
-  # pública só acompanha o privado, então também não sai.
+  # O privado pelo Messenger depende da `pages_messaging` concedida ao login da Página (Rede.privado_liberado?, #2307).
+  # Sem ela, no Facebook a IA esconde propaganda e passa reclamação; a pergunta fica com o dono (`kept_for_owner`). A
+  # frase pública só acompanha o privado, então também não sai.
   def privado_disponivel?
-    Crm::MetaAds::ComentariosIa::Rede.privado_liberado?(@inbox.account, 'facebook')
+    Crm::MetaAds::ComentariosIa::Rede.privado_liberado?('facebook', @inbox)
   end
 
   # texto: a mensagem escrita pela IA para este comentário (#2458); sem ela, a do dono. O botão do dono vai junto.

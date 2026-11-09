@@ -65,8 +65,9 @@ module Crm::MetaAds::ComentariosIa::Registro
     linha(comentario, SEM_CUIDADO).exists? || gravar!(comentario, SEM_CUIDADO)
   end
 
-  def gravar!(comentario, acao, conversation: nil)
-    registrar!(comentario, acao, conversation: conversation)
+  # recusa: o código e o subcódigo da Meta no privado recusado (#2307), para o Painel dizer quando foi falta de permissão.
+  def gravar!(comentario, acao, conversation: nil, recusa: {})
+    registrar!(comentario, acao, conversation: conversation, **recusa)
     true
   end
 
@@ -76,6 +77,15 @@ module Crm::MetaAds::ComentariosIa::Registro
     Crm::MetaAdsCommentAction.record!(account: Account.find(comentario.account_id), network: comentario.network,
                                       comment_id: comentario.comment_id, action: 'private_reply_failed', actor: ACTOR,
                                       ad_id: comentario.ad_id, meta_error_code: codigo, meta_error_subcode: subcodigo)
+  end
+
+  # Dos comentários `ids`, os da Página que tiveram o privado recusado pela Meta por falta de permissão (#2307,
+  # Rede.sem_permissao?): o Painel diz isso no "Esperando você". No Instagram o privado não depende disso.
+  def sem_permissao(account_id, ids)
+    acoes(account_id).where(network: 'facebook', action: 'private_reply_failed', comment_id: ids.map(&:to_s))
+                     .pluck(:comment_id, :meta_error_code, :meta_error_subcode)
+                     .filter_map { |id, codigo, subcodigo| id if Crm::MetaAds::ComentariosIa::Rede.sem_permissao?(codigo, subcodigo) }
+                     .to_set
   end
 
   # true só para quem reservou primeiro: a mesma pessoa, no mesmo post, recebe um privado só. O mesmo comentário que já
@@ -110,10 +120,10 @@ module Crm::MetaAds::ComentariosIa::Registro
                              .where(at: ...Crm::MetaAdsCommentAction::RESERVED_TTL.ago).delete_all
   end
 
-  def registrar!(comentario, acao, conversation: nil)
+  def registrar!(comentario, acao, conversation: nil, codigo: nil, subcodigo: nil)
     Crm::MetaAdsCommentAction.record!(account: Account.find(comentario.account_id), network: comentario.network,
                                       comment_id: comentario.comment_id, action: acao, actor: ACTOR, ad_id: comentario.ad_id,
-                                      conversation: conversation)
+                                      conversation: conversation, meta_error_code: codigo, meta_error_subcode: subcodigo)
   end
 
   # A conversa nasce depois da reivindicação: o id dela entra na linha.

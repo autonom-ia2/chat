@@ -2978,7 +2978,7 @@
           "no_reply": "I don't reply",
           "owner_topic": "It stays with you: it's the subject you answer",
           "sem_certeza": "It stays with you: I wasn't sure what to do",
-          "no_private": "It stays with you: on Facebook the private message doesn't go out yet",
+          "no_private": "It stays with you: this Page can't send private messages yet",
           "kept_for_owner": "It stays with you: you still need to say who gets the private message",
           "nao_sei": "It stays with you: it was a case for a private message, but I don't know how to answer it"
         }

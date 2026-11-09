@@ -20,8 +20,8 @@ module WhatsappApiCampaigns
         duplicate_phone = phone_hash.present? && seen_phone_hashes.include?(phone_hash)
 
         create_recipient_for(contact, phone_hash: phone_hash, duplicate_phone: duplicate_phone)
-        # Quem recusou não reserva o número: outro contato com o mesmo telefone ainda recebe.
-        seen_phone_hashes << phone_hash if phone_hash.present? && !duplicate_phone && !contact.opted_out?
+        # Quem recusou ou está bloqueado não reserva o número: outro contato com o mesmo telefone ainda recebe.
+        seen_phone_hashes << phone_hash if phone_hash.present? && !duplicate_phone && contact.campaign_refusal.nil?
       end
     end
 
@@ -49,9 +49,10 @@ module WhatsappApiCampaigns
     end
 
     def apply_recipient_validation_status(recipient, contact, duplicate_phone)
-      if contact.opted_out?
+      refusal = contact.campaign_refusal
+      if refusal
         recipient.status = :cancelled
-        recipient.last_error_message = WhatsappApiCampaignRecipient::OPTED_OUT_REASON
+        recipient.last_error_message = refusal
         recipient.cancelled_at = Time.current
       elsif contact.phone_number.blank?
         recipient.status = :failed
