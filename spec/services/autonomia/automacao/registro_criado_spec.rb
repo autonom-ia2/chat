@@ -103,6 +103,16 @@ RSpec.describe Autonomia::Automacao::RegistroCriado, :automacao_motor do
       expect(problemas(conteudo)).to be_empty
       expect(Autonomia::Automacao::EmOutroRegistro.de_funil?(ramo, conteudo)).to be(true)
     end
+
+    it 'no gatilho de conversa, a caixa da conversa nova só vale com o ramo no registro criado, não no contato do campo' do
+      caixa = create_crm_whatsapp_api_inbox(account: account, members: [admin])
+      ramo = { 'id' => 'outro', 'tipo' => 'em_outro_registro',
+               'registro' => { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'contato.id' }, 'usar' => 'contato' },
+               'passos' => [{ 'id' => 'oi', 'tipo' => 'mensagem', 'texto' => ['Oi'] }] }
+      conteudo = receita({ 'tipo' => 'conversa.resolvida', 'conversa_nova' => { 'caixa_id' => caixa.id } }, ramo)
+
+      expect(problemas(conteudo)).to eq([I18n.t("#{frase}.conversa_nova_sem_alvo")])
+    end
   end
 
   describe 'ao rodar' do
@@ -146,6 +156,36 @@ RSpec.describe Autonomia::Automacao::RegistroCriado, :automacao_motor do
       execucao = rodar(bia, aniversario, [card('p3'), no_card('p6', 'criado.p3', { 'presente' => 'x' })], chave: 'contato.data')
 
       expect(historico(execucao)).to eq([%w[p3 pulado card_ja_existe], %w[p6 pulado faltou_valor]])
+    end
+
+    # O laço que repete passos (#2791) passa pelo mesmo passo de novo: vale a última passagem, e a que pulou lê vazio.
+    it 'vale a última passagem do passo: criou e depois pulou, lê vazio (nunca o id antigo)', :aggregate_failures do
+      bia = create(:contact, account: account, name: 'Bia')
+      definicao = automacao_ligada(account, admin, [card('p3')], gatilho: aniversario)
+      execucao = Autonomia::Automacao::Execucao.create!(account: account, automacao: definicao, versao: definicao.versao_ativa,
+                                                        alvo: bia, chave_gatilho: 'contato.data', estado: 'concluida')
+      registrar = lambda do |resultado, dados|
+        Autonomia::Automacao::Registro.create!(account: account, automacao: definicao, execucao: execucao, passo: 'p3', resultado: resultado,
+                                               dados: dados)
+      end
+
+      registrar.call('ok', { 'criado' => { 'tipo' => 'Crm::Card', 'id' => 41 } })
+      expect(Autonomia::Automacao::Contexto.de(bia, execucao: execucao).criado('p3')).to eq(41)
+
+      registrar.call('pulado', { 'card_id' => 41 })
+      expect(Autonomia::Automacao::Contexto.de(bia, execucao: execucao).criado('p3')).to be_nil
+
+      registrar.call('ok', { 'criado' => { 'tipo' => 'Crm::Card', 'id' => 42 } })
+      expect(Autonomia::Automacao::Contexto.de(bia, execucao: execucao).criado('p3')).to eq(42)
+    end
+
+    it 'a ação que cria mais de um registro do tipo dá o primeiro criado, na ordem do caderno' do
+      caderno = Autonomia::Guide::Execucao.abrir(account: account, user: admin)
+      [7, 5].each_with_index do |id, ordem|
+        caderno.mudancas.create!(passo: 0, ordem: ordem, tabela: 'contacts', record_type: 'Contact', record_id: id, operacao: 'create')
+      end
+
+      expect(described_class.do_caderno('POST contacts', caderno)).to eq('tipo' => 'Contact', 'id' => 7)
     end
 
     it 'o contato criado que quem ligou não alcança pausa a automação, sem criar o card' do

@@ -78,9 +78,9 @@ class Autonomia::Automacao::Receita
   def gatilho_novo = ::Autonomia::Automacao::ProblemasDoGatilho.new(@receita['gatilho'].to_h, @conta, passos: passos).problemas
 
   # A caixa por onde abrir a conversa de quem não tem (#2680): da conta, e quem salva pode começar conversa nela. O ramo
-  # do "em outro registro" num card ou contato também pode não ter conversa (G49).
+  # do "em outro registro" no card ou contato que um passo criou também não tem conversa (G49).
   def conversa_nova
-    ramos = ::Autonomia::Automacao::EmOutroRegistro.alvos_dos_ramos(passos, @receita)
+    ramos = ::Autonomia::Automacao::EmOutroRegistro.alvos_dos_criados(passos, @receita)
     ::Autonomia::Automacao::ConversaNova.problemas_ao_salvar(@conta, @receita['gatilho'].to_h, @account_user, ramos: ramos)
   end
 

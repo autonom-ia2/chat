@@ -32,18 +32,22 @@ module Autonomia::Automacao::RegistroCriado
     ACOES[passo['acao']] if passo&.dig('tipo') == 'acao'
   end
 
-  # O que a ação `acao` criou, pelo caderno: `{ 'tipo', 'id' }`, ou nil.
+  # O que a ação `acao` criou, pelo caderno: `{ 'tipo', 'id' }`, ou nil. Se a ação criou mais de um registro do tipo
+  # (o pedido que cria o contato e um contato ligado a ele), vale o primeiro criado, na ordem do caderno.
   def do_caderno(acao, caderno)
     tipo = ACOES[acao.to_s]
-    id = tipo && caderno.mudancas.where(operacao: 'create', record_type: tipo).pick(:record_id)
+    id = tipo && caderno.mudancas.where(operacao: 'create', record_type: tipo).reorder(:id).pick(:record_id)
     { 'tipo' => tipo, 'id' => id } if id
   end
 
-  # O `{ 'tipo', 'id' }` que o passo `passo_id` criou nesta execução (o último, se ele rodou mais de uma vez), ou nil.
+  # O `{ 'tipo', 'id' }` que o passo `passo_id` criou nesta execução, ou nil. Vale a ÚLTIMA passagem do passo (o laço que
+  # repete passos, #2791, passa por ele mais de uma vez): se ela pulou, falhou ou não criou nada, lê vazio, nunca o id
+  # de uma passagem anterior.
   def da_execucao(execucao, passo_id)
     return unless execucao
 
-    execucao.registros.where(passo: passo_id.to_s, resultado: 'ok').where("dados ? 'criado'").reorder(id: :desc).pick(:dados)&.dig('criado')
+    ultima = execucao.registros.where(passo: passo_id.to_s).reorder(id: :desc).first
+    ultima.dados.to_h['criado'] if ultima&.resultado == 'ok'
   end
 
   # O registro criado, sempre na conta da execução; nil se ele já não existe.

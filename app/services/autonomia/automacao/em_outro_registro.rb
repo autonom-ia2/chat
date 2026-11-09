@@ -44,8 +44,11 @@ module Autonomia::Automacao::EmOutroRegistro
     ::Autonomia::Automacao::RegistroCriado.tipo_do_passo(::Autonomia::Automacao::Roteiro.new(receita.to_h).passo(passo_id))
   end
 
-  # O tipo do registro de cada "em outro registro" dos `passos` (a conversa nova, G49).
-  def alvos_dos_ramos(passos, receita) = passos.filter_map { |passo| alvo_do_ramo(passo, receita) if do_tipo?(passo) }
+  # O tipo do registro criado de cada "em outro registro" com a ligação `criado_no_passo` (a conversa nova, G49). As
+  # outras ligações acham registros que já existem, e a caixa da conversa nova continua só nos gatilhos de card e contato.
+  def alvos_dos_criados(passos, receita)
+    passos.filter_map { |passo| alvo_do_ramo(passo, receita) if do_tipo?(passo) && passo.dig('registro', 'de') == CRIADO }
+  end
 
   # A ligação lê cards do CRM: pede a chave de funis, como o gatilho de card e a ação de funil (controller#de_funil?).
   def de_funil?(passo, receita) = do_tipo?(passo) && alvo_do_ramo(passo, receita) == 'Crm::Card'

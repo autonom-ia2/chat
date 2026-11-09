@@ -29,8 +29,9 @@ module Autonomia::Automacao::ConversaNova
   # (`account_user`; nil no catálogo) pode começar conversa nela.
   ALVOS = [::Autonomia::Automacao::Gatilhos::CARD, ::Autonomia::Automacao::Gatilhos::CONTATO].freeze
 
-  # `ramos`: o tipo do registro em que cada "em outro registro" da receita roda (G18). G49: o ramo no card ou no contato
-  # que um passo criou (o card do João, sem conversa) abre a conversa por esta caixa, mesmo num gatilho de conversa.
+  # `ramos`: o tipo do registro de cada "em outro registro" da receita que roda no registro que um passo criou
+  # (`criado_no_passo`, G49): o card do João, sem conversa, abre a conversa por esta caixa, mesmo num gatilho de conversa.
+  # Os ramos nas outras ligações não contam (EmOutroRegistro.alvos_dos_criados).
   RAMOS = %w[Crm::Card Contact].freeze
 
   def problemas_ao_salvar(conta, gatilho, account_user, ramos: [])
@@ -57,6 +58,14 @@ module Autonomia::Automacao::ConversaNova
   # Por que a conversa não abriria para este contato, ou nil. O passo pula com o motivo.
   def motivo_do_contato(caixa, contato)
     return 'contato_sem_telefone' if PELO_TELEFONE.include?(caixa.channel_type) && contato.phone_number.blank?
+
+    recusa_do_contato(contato)
+  end
+
+  # O ponto único da recusa do contato na conversa nova: o bloqueado não recebe nada da automação (decisão 5 do Rodrigo),
+  # e quem pediu para não receber também não. Quando o #2794 entrar, a regra vira Contact.campaign_refusal_now, aqui.
+  def recusa_do_contato(contato)
+    return 'contato_bloqueado' if contato.blocked?
 
     'contato_nao_recebe' if ::Contact.opted_out.exists?(id: contato.id)
   end
