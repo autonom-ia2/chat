@@ -573,6 +573,8 @@ en:
         sem_conversa: "There is no conversation to act on: the card has no main conversation, or the contact has none, and the automation has no inbox chosen to open one. Nothing was sent."
         contato_sem_telefone: "The contact has no phone number, so the conversation was not opened. Nothing was sent."
         sem_responsavel: "The AI agent is handling this conversation, and its card has no owner (or there is no card). No one was alerted."
+        card_sem_responsavel: "The card has no owner. The conversation stayed with whoever had it."
+        responsavel_nao_ve_a_conversa: "The card owner cannot see this conversation (they are not in its inbox). The conversation stayed with whoever had it."
         texto_vazio: "The text came out blank after it was built. The message was not sent."
         dado_ausente: 'The AI did not find any of the requested data in the conversation. Nothing was saved.'
         ia_chave_recusada: "The AI provider refused the account's key. Check the AI key in the integrations."
@@ -638,6 +640,7 @@ en:
         passo_desligado: "Step %{passo}: message and alert steps are off for this account."
         agente_de_ia_invalido: 'Step %{passo}: AI agent %{id} is not from this account.'
         retorno_mensagem_sem_card: "Step %{passo}: the follow-up message only goes out with a card trigger. Use a card trigger or turn the message off."
+        responsavel_so_com_card: "Step %{passo}: handing the conversation to the card owner only works with a card trigger."
         sem_criar_retorno: 'Step %{passo}: you cannot create follow-ups in the CRM, which the "Create follow-up" step needs.'
         modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility and with these variables."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
@@ -685,6 +688,8 @@ en:
         resumo: "Automation summary:\n\n%{texto}"
       ia:
         gravar: 'Save what the AI found in the conversation'
+      descricoes:
+        conversa_ao_responsavel: 'Hand the conversation to the card owner'
     automacoes:
       ensaio:
         condicoes_invalidas: 'This automation has a condition the platform does not accept, so it cannot be tested. Fix it in manual mode.'

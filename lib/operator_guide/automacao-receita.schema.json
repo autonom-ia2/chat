@@ -554,6 +554,15 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["id", "tipo"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "conversa_ao_responsavel", "description": "Passar a conversa para o responsável do card (G66; só com gatilho de card): a conversa principal do card passa para quem cuida do card agora, pelo mesmo pedido do Atribuir da conversa, como quem ligou. A troca do dono do card feita fora da automação não mexe na conversa; ponha este passo depois da troca. Pula sem conversa, com o card sem responsável ou se o responsável não enxerga a conversa; já com ele, segue sem trocar." }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "required": ["id", "tipo", "pergunta", "caminhos"],
           "properties": {
             "id": { "$ref": "#/definitions/id" },

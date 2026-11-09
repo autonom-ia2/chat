@@ -117,6 +117,7 @@
       "CARD": "Create a card in the pipeline",
       "RESUMIR": "AI summarizes the conversation",
       "IA_ASSUMIR": "Hand over to the AI agent",
+      "CONVERSA_AO_RESPONSAVEL": "Hand the conversation to the card owner",
       "EMAIL": "Send an e-mail to the customer",
       "RETORNO": "Create a follow-up for the team"
     },

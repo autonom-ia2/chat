@@ -1,18 +1,22 @@
 require 'rails_helper'
 
 # Fechamento do épico #2414, exemplo 17 dos termos de aceite, "Vendedora de férias, cliente bem cuidado", à risca e numa
-# automação só (G63 #2830, G64 #2839):
+# automação só (G63 #2830, G64 #2839, G66 #2843):
 #
 # > "Quando alguém sai de férias eu passo os clientes para outra pessoa, mas o cliente fica perdido e a colega não sabe
 # > o que foi combinado. E quando ela volta, quero que os clientes voltem pra ela." — Paula, gerente comercial
 #
 # Começa quando o responsável do card muda e a anterior está ausente (G9): a Paula troca os cards da Júlia para a
-# Renata pela Lista do CRM. Passos 1 a 3 como no g9_troca_de_responsavel_spec.rb. O passo 4 é o galho "a cada mensagem
-# do cliente" (G63) do "esperar até" que espera a Júlia voltar; o passo 5, "toda manhã", é a conferência às 8h no fuso
-# da conta (G64, decisão 12); o 6, o resumo para a Júlia depois de devolver o card.
+# Renata pela Lista do CRM. Passos 1 a 3 como no g9_troca_de_responsavel_spec.rb. A troca do dono do card não leva a
+# conversa (ela segue com a Júlia); pela decisão 14 do Rodrigo (G66), a receita põe depois da troca o passo "passar a
+# conversa para o responsável do card", o único passo a mais que o termo. O passo 4 é o galho "a cada mensagem do
+# cliente" (G63) do "esperar até" que espera a Júlia voltar, e "espera a Renata responder" lê quem atende a conversa,
+# agora a Renata; o passo 5, "toda manhã", é a conferência às 8h no fuso da conta (G64, decisão 12); o 6, o resumo para a
+# Júlia depois de devolver o card.
 #
-# A IA é o dublê; o WhatsApp oficial para no receptor de teste. Os cenários que esbarram em quem atende a conversa
-# (a Júlia, que segue no nome dela depois da troca do card) ficam pendentes com o motivo: lacuna G66.
+# A IA é o dublê; o WhatsApp oficial para no receptor de teste. Fica pendente, com o motivo, o "passa a conversa para a
+# agente de IA" do passo 4: com a Renata no nome da conversa, o ia_assumir pula com `pessoa_atribuida` ("pessoa no nome
+# vence", D1). Pede decisão do Rodrigo, não lacuna de código.
 RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa automação só', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 
@@ -44,7 +48,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
   let(:receita) do
     { gatilho: { tipo: 'card.responsavel_mudou', funil_id: funil_e_etapa.first.id,
                  filtros: [{ campo: valor('gatilho.responsavel_anterior_ausente'), op: 'igual', valor: true }] },
-      passos: [*passos_1_a_3, ferias, *passos_da_volta] }
+      passos: [*passos_1_a_3, conversa_para_a_renata, ferias, *passos_da_volta] }
   end
 
   def valor(caminho) = { '$valor' => caminho }
@@ -63,6 +67,9 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
        descricao: 'Pôr a etiqueta cobertura de férias', caminho: { conversation_id: valor('conversa.id') },
        corpo: { por: ['cobertura-de-ferias'] } }]
   end
+
+  # G66 (decisão 14): a conversa acompanha a troca do dono do card, por um passo da automação, logo depois da troca.
+  def conversa_para_a_renata = { id: 'conversa', tipo: 'conversa_ao_responsavel' }
 
   # Passos 4 e 5: espera a Júlia voltar, conferindo toda manhã às 8h; a cada mensagem do cliente, espera a Renata
   # responder por até 2 horas e, sem resposta, passa para a agente de IA.
@@ -152,17 +159,18 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
 
   after { Current.reset }
 
-  it 'a troca faz os passos 1 a 3 e espera a Júlia, conferindo às 8h da manhã seguinte', :aggregate_failures do
-    expect(registros.pluck(:passo, :resultado)).to eq([%w[resumo ok], %w[aviso_ao_cliente ok], %w[original ok], %w[etiqueta ok], %w[ferias ok]])
+  it 'a troca faz os passos 1 a 3, passa a conversa para a Renata e espera a Júlia, conferindo às 8h da manhã seguinte',
+     :aggregate_failures do
+    expect(registros.pluck(:passo, :resultado)).to eq([%w[resumo ok], %w[aviso_ao_cliente ok], %w[original ok], %w[etiqueta ok],
+                                                       %w[conversa ok], %w[ferias ok]])
     expect(execucao).to have_attributes(estado: 'esperando', cursor: 'ferias', due_at: fuso.local(2026, 11, 3, 8))
     expect(card.reload.owner).to eq(renata)
+    expect(conversa.reload.assignee).to eq(renata)
     expect(conversa.reload.label_list).to include('cobertura-de-ferias')
   end
 
-  # G66: a troca do dono do card não leva a conversa. Quem atende a conversa segue a Júlia, então
-  # `conversa.responsavel_respondeu` espera a Júlia, não a Renata, e a resposta da Renata não conta.
+  # G66: a conversa passou para a Renata, e `conversa.responsavel_respondeu` espera por ela.
   it 'o cliente escreve e a Renata responde em 1 h: a agente de IA não entra', :aggregate_failures do
-    pending 'G66: a conversa segue com a Júlia depois da troca do card; "a Renata respondeu" lê quem atende a conversa'
     escreve_em(fuso.local(2026, 11, 4, 10), 'Oi, alguém aí?')
     expect(execucao.cursor).to eq('espera_a_renata')
 
@@ -184,10 +192,11 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
     expect(execucao).to have_attributes(estado: 'esperando', cursor: 'ferias', due_at: fuso.local(2026, 11, 5, 8))
   end
 
-  # G66: a agente de IA não entra com uma pessoa no nome da conversa (PassoDeIaAssumir: "pessoa no nome vence", D1),
-  # e a conversa segue no nome da Júlia.
+  # A agente de IA não entra com uma pessoa no nome da conversa (PassoDeIaAssumir: "pessoa no nome vence", D1). Depois
+  # do G66 a pessoa no nome é a Renata, como o termo quer para "espera a Renata responder"; o "passa a conversa para a
+  # agente de IA" que vem depois pede decisão do Rodrigo sobre a D1 neste passo.
   it 'ninguém responde em 2 h: a conversa passa para a agente de IA', :aggregate_failures do
-    pending 'G66: ia_assumir pula com pessoa_atribuida, porque a conversa segue no nome da Júlia'
+    pending 'D1: ia_assumir pula com pessoa_atribuida, porque a conversa está no nome da Renata (decisão do Rodrigo pendente)'
     escreve_em(fuso.local(2026, 11, 4, 10), 'Oi, alguém aí?')
     varrer_em(fuso.local(2026, 11, 4, 12, 1))
 

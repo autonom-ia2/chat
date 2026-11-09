@@ -1448,6 +1448,14 @@
       ]
     },
     {
+      "tipo": "conversa_ao_responsavel",
+      "grupo": "EQUIPE",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONVERSA_AO_RESPONSAVEL",
+      "campos": []
+    },
+    {
       "tipo": "decidir",
       "grupo": "IA",
       "requer": "automacao_ia",

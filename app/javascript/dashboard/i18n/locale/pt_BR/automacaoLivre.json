@@ -117,6 +117,7 @@
       "CARD": "Criar um card no funil",
       "RESUMIR": "A IA resume a conversa",
       "IA_ASSUMIR": "Passar para a agente de IA",
+      "CONVERSA_AO_RESPONSAVEL": "Passar a conversa para o responsável do card",
       "EMAIL": "Mandar e-mail ao cliente",
       "RETORNO": "Criar um retorno para a equipe"
     },

@@ -16,9 +16,14 @@ class Autonomia::Automacao::PassoDeAcao
   # 4xx que passam: tempo esgotado, cedo demais e limite de pedidos.
   PASSAGEIROS = [408, 425, 429].freeze
 
-  # O passo "criar retorno" (G3, #2629) tem objeto próprio, que chega à mesma porta (AcoesDoRetorno).
+  # O passo "criar retorno" (G3, #2629) tem objeto próprio, que chega à mesma porta (AcoesDoRetorno); o "passar a conversa
+  # para o responsável do card" (G66, #2843) também, pela porta da ação.
   def self.executar(passo:, **)
-    classe = passo['tipo'] == 'retorno' ? ::Autonomia::Automacao::PassoDeRetorno : self
+    classe = case passo['tipo']
+             when 'retorno' then ::Autonomia::Automacao::PassoDeRetorno
+             when ::Autonomia::Automacao::PassoDeConversaAoResponsavel::TIPO then ::Autonomia::Automacao::PassoDeConversaAoResponsavel
+             else self
+             end
     classe.new(passo: passo, **).executar
   end
 
