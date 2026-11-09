@@ -23,6 +23,10 @@
 # não conta agora. A espera segue; no prazo, a varredura confere de novo a janela inteira, com o id já gravado: o eco
 # da bolha é descartado, e o de uma pessoa conta (atrasado, no prazo).
 module Autonomia::Automacao::Resposta
+  # O marco do G31 guarda também as mensagens do cliente gravadas nestes últimos segundos antes da leitura: a que já
+  # tinha o id reservado e só ficou visível depois (commit atrasado) cai nesta margem e conta, sem recontar a que a IA leu.
+  MARGEM_DO_MARCO = 10.seconds
+
   module_function
 
   # Os valores que a condição do "esperar até" lê (Valores::RESPOSTA). Cada um recebe o Contexto da execução, a janela
@@ -38,12 +42,45 @@ module Autonomia::Automacao::Resposta
   # e-mail da automação abre uma conversa nova, e a resposta chega nela. A resposta numa caixa que quem ligou não abre
   # não decide o ramo (parecer da Funções). Sem contato, ou sem quem ligou, nunca respondeu.
   def cliente?(contato, espera, quem)
-    return false if contato.nil? || quem.nil?
+    recebidas = do_cliente(contato, quem)
+    !recebidas.nil? && na_janela(recebidas, espera).exists?
+  end
+
+  # O "decidir" que decide de novo (G31): a resposta depois do `marco` (Resposta.marco) e até `ate` (sem fim na
+  # primeira conferência). Nova é a de id maior que o último lido (gravada depois da leitura, mesmo com `created_at` de
+  # antes) ou a gravada na margem antes da leitura que não estava visível nela (id reservado antes, commit depois).
+  def cliente_depois?(contato, marco, ate, quem)
+    recebidas = do_cliente(contato, quem)
+    return false if recebidas.nil?
+
+    na_margem = recebidas.where('messages.created_at > ?', inicio_da_margem(marco)).where.not(id: marco.fetch('lidas_na_margem'))
+    novas = recebidas.where('messages.id > ?', marco.fetch('lido_ate')).or(na_margem)
+    (ate ? novas.where('messages.created_at <= ?', ate) : novas).exists?
+  end
+
+  # O marco da leitura do G31, como fica gravado no registro: o id da última mensagem do cliente visível agora (0 sem
+  # nenhuma), o instante e os ids das visíveis gravadas na margem antes dele (poucas: a margem é de segundos). Os dois
+  # saem da mesma consulta (o mesmo retrato do banco): a mensagem que comita no meio não fica entre um e outro.
+  def marco(contato, quem, agora = Time.current)
+    ultimo, lidas = do_cliente(contato, quem)&.reorder(nil)&.pick(Arel.sql('MAX(messages.id)'), margem_agregada(agora))
+    { 'lido_ate' => ultimo.to_i, 'lido_em' => agora.iso8601(6), 'lidas_na_margem' => Array(lidas) }
+  end
+
+  def margem_agregada(agora)
+    filtro = ['ARRAY_AGG(messages.id ORDER BY messages.id) FILTER (WHERE messages.created_at > ?)', agora - MARGEM_DO_MARCO]
+    Arel.sql(::Message.sanitize_sql_array(filtro))
+  end
+
+  def inicio_da_margem(marco) = Time.zone.parse(marco.fetch('lido_em')) - MARGEM_DO_MARCO
+
+  # As mensagens recebidas do contato nas conversas que quem ligou vê; nil sem contato ou sem quem ligou.
+  def do_cliente(contato, quem)
+    return if contato.nil? || quem.nil?
 
     conta = contato.account
     do_contato = ::Conversation.where(account_id: conta.id, contact_id: contato.id)
     conversas = ::Conversations::PermissionFilterService.new(do_contato, quem, conta, for_reading: true).perform.select(:id)
-    na_janela(::Message.incoming.where(account_id: conta.id, conversation_id: conversas), espera).exists?
+    ::Message.incoming.where(account_id: conta.id, conversation_id: conversas)
   end
 
   # Sem conversa (o card sem conversa principal, o contato antes da conversa nova), a equipe nunca respondeu.

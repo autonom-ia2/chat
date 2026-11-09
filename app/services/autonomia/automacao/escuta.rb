@@ -29,7 +29,8 @@
 # deixa registro (não há execução onde pôr); o "esperar até" que não acordou segue pelo relógio.
 #
 # A execução acordada não herda a cadeia de quem a acordou: retoma a dela, gravada na Partida. A proteção contra
-# laço vale nas partidas; cada receita tem um número finito de esperas, então o despertar não gira sem fim.
+# laço vale nas partidas; cada receita tem um número finito de esperas, então o despertar não gira sem fim. O "decidir"
+# que decide a cada resposta (G31) volta à mesma espera, mas cada volta consome uma resposta nova do cliente.
 module Autonomia::Automacao::Escuta
   module_function
 
@@ -255,8 +256,11 @@ module Autonomia::Automacao::Escuta
                                      .where("autonomia_automacao_versoes.receita -> 'gatilho' ->> 'tipo' IN (?)", Array(tipo))
   end
 
+  # O "esperar até" e o "decidir" que espera a próxima resposta (G31). Este, só sem nova tentativa marcada: a do erro
+  # passageiro da IA segue o relógio, como a da ação.
   def esperando_condicao?(execucao)
-    ::Autonomia::Automacao::Roteiro.new(execucao.versao.receita).passo(execucao.cursor)&.fetch('tipo', nil) == 'esperar_ate'
+    passo = ::Autonomia::Automacao::Roteiro.new(execucao.versao.receita).passo(execucao.cursor)
+    passo&.fetch('tipo', nil) == 'esperar_ate' || (::Autonomia::Automacao::DecidirDeNovo.espera?(passo) && execucao.tentativas.zero?)
   end
 
   # A mesma reserva da varredura (marca nova, só se continua esperando), mantendo o `due_at`: é o prazo do "esperar até",

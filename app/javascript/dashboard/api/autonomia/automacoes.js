@@ -46,12 +46,14 @@ class AutomacoesAPI extends ApiClient {
 
   // "Testar este passo" (#2500 C2): uma conversa por pedido. O 1º escolhe as
   // candidatas (o servidor devolve os ids); os seguintes mandam `conversaId`,
-  // conferido no servidor. Chama a IA e paga.
-  testarPasso({ receita, passoId, conversaId }) {
+  // conferido no servidor. Chama a IA e paga. `automacaoId`: a automação já
+  // salva, para o servidor conferir também quem a ligou (#2780).
+  testarPasso({ receita, passoId, conversaId, automacaoId }) {
     return axios.post(`${this.url}/testar_passo`, {
       receita,
       passo_id: passoId,
       conversa_id: conversaId,
+      automacao_id: automacaoId,
     });
   }
 

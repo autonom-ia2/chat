@@ -27,8 +27,8 @@ module Autonomia::Automacao::Gatilhos
   CONTATO = 'Contact'.freeze
   CONTA = 'Account'.freeze
   DA_DATA = %w[campo dias quando hora repete].freeze
-  DO_RECORRENTE = %w[frequencia dia_da_semana dia_do_mes hora selecao].freeze
-  DA_OCORRENCIA = %w[frequencia dia_da_semana dia_do_mes hora].freeze
+  DO_RECORRENTE = %w[frequencia dia_da_semana dia_do_mes data hora selecao].freeze
+  DA_OCORRENCIA = %w[frequencia dia_da_semana dia_do_mes data hora].freeze
   VARRIDOS = %i[tempo recorrente].freeze
   # O card atualizado (G27, #2661): a `mudanca` é o campo e a condição (Autonomia::Automacao::MudancaDoCard).
   ATUALIZADO = 'card.atualizado'.freeze
@@ -162,9 +162,10 @@ module Autonomia::Automacao::Gatilhos
   end
 
   # O recorrente: uma vez por ocorrência e alvo; o da conta, uma vez por ocorrência. A ocorrência em UTC: a hora local
-  # ambígua do horário de verão não repete nem pula.
-  def marca_do_recorrente(tipo, alvo_id, ocorrencia)
-    marca = "recorrente:#{ocorrencia.utc.iso8601}:#{tipo}"
+  # ambígua do horário de verão não repete nem pula. A do uma_vez (#2681) é a data, sem a hora: mudar só a hora depois
+  # do disparo não manda de novo; mudar a data é outra ocorrência.
+  def marca_do_recorrente(tipo, alvo_id, ocorrencia, data: nil)
+    marca = "recorrente:#{data || ocorrencia.utc.iso8601}:#{tipo}"
     da_conta?(tipo) ? marca : "#{marca}:#{alvo_id}"
   end
 end

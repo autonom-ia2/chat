@@ -19,6 +19,7 @@
       "FORA": {
         "SPAM": "Nothing: the conversation is in Spam.",
         "SEM_MENSAGEM": "Nothing: the conversation has no message yet.",
+        "SEM_MENSAGEM_QUE_FALHOU": "Nothing: no message in this conversation failed to reach the customer.",
         "FORA_DO_FILTRO": "Nothing: the conversation doesn't pass the trigger's \"Only if\".",
         "RESPOSTA_AUTOMATICA": "Nothing: the last message is an automatic e-mail reply (out of office, server notice)."
       },
@@ -29,6 +30,8 @@
       "SE_VENCER": "If the deadline passes:",
       "SE_CAMINHO": "If the AI picks \"{nome}\":",
       "SE_NENHUM": "If none applies:",
+      "SE_CAMINHO_DE_NOVO": "If the AI picks \"{nome}\": waits for the next reply and decides again. With no reply by the deadline, it ends without sending anything.",
+      "SE_NENHUM_DE_NOVO": "If none applies: waits for the next reply and decides again. With no reply by the deadline, it ends without sending anything.",
       "NAO_SAIRIA": "Wouldn't go out: automatic messages aren't turned on in this account yet.",
       "FALTOU_VALOR": "Wouldn't go out: the text is missing a detail from this conversation.",
       "RETORNO_SEM_RESPONSAVEL": "Would not create the follow-up: this conversation has no assignee.",

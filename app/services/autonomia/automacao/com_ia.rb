@@ -16,6 +16,15 @@ module Autonomia::Automacao::ComIa
     ::Autonomia::Automacao::AnexosDaConversa.sem_anexos(passo['le']).presence || ::Autonomia::Decisor::LEITURAS_PADRAO
   end
 
+  VALOR = 'card.valor'.freeze
+  DECIDE = 'decidir'.freeze
+
+  # O valor do card vai à IA? Só com a chave de quem lê (#2597, Valores.pode_ler?) e só no passo que decide (decisão 9,
+  # #2780): a IA nunca o recebe para escrever (escrever, resumir, extrair), em nenhuma automação.
+  def self.leva_o_valor?(passo, account_user)
+    ::Autonomia::Automacao::Valores.pode_ler?(VALOR, account_user) && passo['tipo'] == DECIDE
+  end
+
   # `usuario` vê o card? A pergunta do resto do CRM (Crm::CardPolicy#show?). Quem saiu da conta não vê.
   def self.ve_o_card?(usuario, card)
     account_user = usuario && card.account.account_users.find_by(user_id: usuario.id)
@@ -58,12 +67,13 @@ module Autonomia::Automacao::ComIa
     leituras.exclude?('card') || estado.card.nil? || ::Autonomia::Automacao::ComIa.ve_o_card?(@execucao.automacao.ligada_por, estado.card)
   end
 
-  # #2597: a leitura "card" leva o valor só se quem ligou a automação pode lê-lo, a mesma regra do Valores. Quem saiu da
-  # conta não lê. O anúncio de origem (#2558) nunca vai: todo passo de IA escreve texto livre (nota, mensagem, resumo).
+  # #2597: a leitura "card" leva o valor só se quem ligou a automação pode lê-lo, a mesma regra do Valores; #2780: só no
+  # "decidir", em qualquer automação (ComIa.leva_o_valor?). Quem saiu da conta não lê. O anúncio de origem (#2558)
+  # nunca vai: todo passo de IA escreve texto livre (nota, mensagem, resumo).
   def ve_o_valor_do_card?
     quem = @execucao.automacao.ligada_por
     na_conta = quem && @conversa.account.account_users.find_by(user_id: quem.id)
-    ::Autonomia::Automacao::Valores.pode_ler?('card.valor', na_conta)
+    ::Autonomia::Automacao::ComIa.leva_o_valor?(@passo, na_conta)
   end
 
   # O fuso que a tela grava na conta (#954, o mesmo do Guia); sem ele, o padrão da plataforma (Crm::Timezone::Resolver).

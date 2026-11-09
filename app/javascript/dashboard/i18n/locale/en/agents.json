@@ -870,7 +870,8 @@
                 "HTTPS": "Use a link that starts with https://.",
                 "INCOMPLETO": "This link is incomplete. Check what comes after https://.",
                 "REDE": "This link cannot be used: it points inside the private network.",
-                "IP": "Use the site name, not an IP number."
+                "IP": "Use the site name, not an IP number.",
+                "SENHA": "Put the password in Access key, not in the link."
               },
               "SLUG": "Technical name",
               "SLUG_AJUDA": "The name of the tool for the agent. If empty, we build it from the name. Only letters, numbers and _.",
@@ -950,10 +951,12 @@
               "ERRO": {
                 "VALOR": "Type the key.",
                 "REDIGITAR": "Type the key again to save.",
+                "REPETIDO": "There is already a key with this name. Use another name.",
                 "CHAVE": "Use only letters without accents, numbers and hyphen. E.g.: x-api-key"
               },
               "REMOVER_TITULO": "Remove this key?",
-              "REMOVER_TEXTO": "The stored key is deleted when you save."
+              "REMOVER_TEXTO": "The stored key is deleted when you save.",
+              "LINK_MUDOU": "You changed the link or what the tool does. Type the key again: the stored one doesn't go to a new link."
             }
           },
           "TESTE": {

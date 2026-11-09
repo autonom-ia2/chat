@@ -15,6 +15,7 @@ const { routerPush, config, caixas } = vi.hoisted(() => ({
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
+    locale: { value: 'pt_BR' },
     t: (chave, valores) => {
       if (valores?.caixa) return `${valores.frase} → ${valores.caixa}`;
       return valores?.n ? `${chave}:${valores.n}` : chave;
