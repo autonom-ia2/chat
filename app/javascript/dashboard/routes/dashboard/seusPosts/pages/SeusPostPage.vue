@@ -254,6 +254,8 @@ const ladoDoAnuncio = computed(() => {
 // dentro (Anúncios da Meta) os mostra. `ads` só vem para quem vê Anúncios da Meta; a página deles pede também o CRM.
 // #2739: impulsionado mais de uma vez, cada anúncio tem os próprios comentários: um atalho por anúncio, com o nome e
 // o dia em que foi criado (dois com o mesmo nome não ficam iguais).
+// #2804: só os da conta de anúncios conectada agora, cada um com quantos comentários dele esperam você (eles entram
+// no "esperando você" do post).
 const anunciosDoPost = computed(() => {
   const ads = dados.value?.ads || [];
   if (!ads.length || !isCrmKanbanEnabled()) return [];
@@ -263,6 +265,7 @@ const anunciosDoPost = computed(() => {
     return {
       id: String(ad.id),
       name: ad.name || t('SEUS_POSTS.POST.AD_COMMENTS.UNNAMED'),
+      esperando: ad.waiting || 0,
       // O ano só aparece quando não é o atual: dois anúncios de anos diferentes no mesmo dia não ficam iguais.
       criado: criadoEm.toLocaleDateString(intlLocale(locale.value), {
         day: 'numeric',
@@ -887,9 +890,24 @@ const BOTAO_DE_BORDA =
             data-seus-posts-comentarios-do-anuncio
             class="flex flex-col items-start gap-3 rounded-xl bg-n-alpha-1 p-4 sm:flex-row sm:items-center sm:justify-between"
           >
-            <p class="m-0 text-sm text-n-slate-12">
-              {{ $t('SEUS_POSTS.POST.AD_COMMENTS.TEXT') }}
-            </p>
+            <div class="flex flex-col gap-1">
+              <p class="m-0 text-sm text-n-slate-12">
+                {{ $t('SEUS_POSTS.POST.AD_COMMENTS.TEXT') }}
+              </p>
+              <p
+                v-if="anunciosDoPost[0].esperando"
+                data-seus-posts-anuncio-esperando
+                class="m-0 text-sm font-semibold text-n-amber-11"
+              >
+                {{
+                  $t(
+                    'SEUS_POSTS.POST.AD_COMMENTS.WAITING',
+                    { count: anunciosDoPost[0].esperando },
+                    anunciosDoPost[0].esperando
+                  )
+                }}
+              </p>
+            </div>
             <router-link
               :to="anunciosDoPost[0].to"
               data-seus-posts-ver-anuncio
@@ -928,6 +946,19 @@ const BOTAO_DE_BORDA =
                       date: anuncio.criado,
                     })
                   }}</span>
+                  <span
+                    v-if="anuncio.esperando"
+                    data-seus-posts-anuncio-esperando
+                    class="shrink-0 font-semibold text-n-amber-11"
+                  >
+                    {{
+                      $t(
+                        'SEUS_POSTS.POST.AD_COMMENTS.WAITING',
+                        { count: anuncio.esperando },
+                        anuncio.esperando
+                      )
+                    }}
+                  </span>
                 </router-link>
               </li>
             </ul>

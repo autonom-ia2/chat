@@ -38,6 +38,12 @@ module Meta::AdsGraphClient::SeusPosts
     organic_posts('me/media', window.merge(fields: SEUS_POSTS_INSTAGRAM_COMMENTS_FIELDS), limit: POSTS_COM_COMENTARIOS)
   end
 
+  # Os comentários da mídia de um anúncio do Instagram (#2804), nos mesmos campos dos posts da lista: o post impulsionado
+  # por aqui tem os comentários do anúncio noutra mídia, fora de me/media.
+  def seus_posts_instagram_media_comments(media_id)
+    get(media_id.to_s, fields: SEUS_POSTS_INSTAGRAM_COMMENTS_FIELDS)
+  end
+
   def seus_posts_page_comments(page_id, window)
     organic_posts("#{page_id}/published_posts", window.merge(fields: SEUS_POSTS_PAGE_COMMENTS_FIELDS), limit: POSTS_COM_COMENTARIOS)
   end

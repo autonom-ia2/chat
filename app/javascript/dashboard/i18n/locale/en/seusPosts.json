@@ -175,7 +175,8 @@
         "OPEN": "See the ad's comments",
         "TEXT_MANY": "This post became {count} ads. Each one's comments are on that ad, not on this post.",
         "ITEM": "{name}, created on {date}",
-        "UNNAMED": "Ad"
+        "UNNAMED": "Ad",
+        "WAITING": "{count} comment waiting for you | {count} comments waiting for you"
       },
       "COMMENTS": {
         "TITLE": "Comments",
