@@ -3,8 +3,23 @@
 ## Resultado em uma frase
 
 Com a flag `agente_usa_o_trecho`, a **recusa foi a 1,00** nas duas bases: o agente parou de dar palpite em seguro
-("depende da cobertura", "pode haver desconto"). O **acerto ficou igual**, dentro do ruído. A causa do acerto que falta é a
-**busca** (#2810), não a camada de resposta.
+("depende da cobertura", "pode haver desconto"). O **acerto não subiu**: ficou em 0,50 na base residencial e **caiu de
+0,50 para 0,375 na de auto**, porque 1 pergunta (o rastreador) passou de certo para errado; ver abaixo. A causa do acerto
+que falta é sobretudo a **busca** (#2810).
+
+**Critério da Issue não cumprido:** "com o dado no trecho, a resposta usa o dado" não melhorou o acerto medido, e os casos
+da Issue (telefone de aviso, prazo, venda do imóvel) não ficaram certos. O de telefone de aviso é de busca. A troca de
+escopo (entregar o ganho de recusa e levar o acerto para a #2810) depende do OK do Rodrigo.
+
+**O que foi medido:** o head `438233f772`. Depois da medida, o texto da regra mudou na redação, por apontamento dos
+revisores, e não foi medido de novo, porque não cabe no teto. As mudanças foram:
+
+- o dado "exatamente como o trecho diz, no tom da conversa", no lugar de "nas palavras do cliente";
+- "salvo a regra de passagem ou os limites do dono";
+- a recusa ganhou destino quando não há a regra de quando não souber: "diga que não tem essa informação e marque `should_handoff`";
+- o lembrete juntado ficou com um "Antes de responder" só.
+
+As respostas por pergunta estão em `respostas.json`. Os documentos são públicos, sem dado de cliente.
 
 ## Placar
 
@@ -55,7 +70,7 @@ Os outros 5:
   - só na audiência de cliente e só no prompt v2;
   - sem exemplo de um segmento no texto comum a todos;
   - um lembrete só quando as duas flags (#2801 e #2807) estão ligadas.
-- O placar acima é do texto final, medido depois de todas as correções.
+- O placar acima foi medido em `438233f772`, depois das correções da primeira revisão. A segunda revisão só pediu mudanças de redação, listadas no topo.
 
 ## Custo
 

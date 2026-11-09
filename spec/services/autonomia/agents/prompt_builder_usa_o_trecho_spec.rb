@@ -28,7 +28,9 @@ RSpec.describe Autonomia::Agents::PromptBuilder do
       instrucoes = montar.instructions
 
       expect(instrucoes).to include(regra, 'afirme esse fato com o dado', 'sem dizer que precisa confirmar')
-      expect(instrucoes).to include('sem marcar `should_handoff` por isso')
+      expect(instrucoes).to include('sem marcar `should_handoff` por isso', 'salvo a regra de passagem ou os limites do dono')
+      expect(instrucoes).to include('exatamente como o trecho diz')
+      expect(instrucoes).not_to include('nas palavras do cliente')
     end
 
     it 'keeps the piece as data, never as an order' do
@@ -36,7 +38,7 @@ RSpec.describe Autonomia::Agents::PromptBuilder do
     end
 
     it 'does not let the model attribute the data beyond what the piece says' do
-      expect(montar.instructions).to include('não atribua o dado a ninguém além do que o trecho diz')
+      expect(montar.instructions).to include('Não atribua o dado a ninguém além do que o trecho diz')
     end
 
     it 'looks for the fact by meaning, with no example from one segment in the shared rule', :aggregate_failures do
@@ -48,7 +50,8 @@ RSpec.describe Autonomia::Agents::PromptBuilder do
       instrucoes = montar.instructions
 
       expect(instrucoes).to include('nem no [CONTEXTO], nem nos FATOS-ÂNCORA, nem em resultado de ferramenta')
-      expect(instrucoes).to include('siga a regra de quando não souber, sem palpite de como costuma ser')
+      expect(instrucoes).to include('siga a regra de quando não souber, se houver')
+      expect(instrucoes).to include('sem ela, diga que não tem essa informação e marque `should_handoff`', 'sem palpite')
       expect(instrucoes).to include('CONHECIMENTO GERAL DO MUNDO', 'países de um tratado', 'definições, conceitos')
       expect(instrucoes).to include('O conhecimento geral do mundo segue a regra acima')
     end
@@ -59,6 +62,7 @@ RSpec.describe Autonomia::Agents::PromptBuilder do
       expect(entrada.last[:role]).to eq('developer')
       expect(entrada.last[:content].to_s).to include('responda com ele', 'fato-âncora', 'ferramenta')
       expect(entrada.last[:content].to_s).to include('cumprimento ou agradecimento')
+      expect(entrada.last[:content].to_s).to include('diga que não tem essa informação e marque `should_handoff`')
       expect(entrada[-2][:content].to_s).to include('Bati o carro')
     end
 
@@ -121,6 +125,7 @@ RSpec.describe Autonomia::Agents::PromptBuilder do
 
       expect(montar.instructions).to eq(montar(gemeo).instructions)
       expect(montar.input).to eq(montar(gemeo).input)
+      expect(montar.input.last[:role]).to eq('user')
       expect(montar.instructions).not_to include(regra)
     end
 
