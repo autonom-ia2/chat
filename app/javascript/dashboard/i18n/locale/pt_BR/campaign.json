@@ -296,7 +296,8 @@
           "REASON": "Motivo",
           "ERROR_CODE": "Código {code}",
           "EMPTY_REASON": "-",
-          "REASON_OPTED_OUT": "Contato não quer receber mensagens ativas"
+          "REASON_OPTED_OUT": "Contato não quer receber mensagens ativas",
+          "REASON_BLOCKED": "Contato bloqueado"
         }
       }
     },
@@ -335,6 +336,7 @@
         "MEDIA_ONLY": "Somente mídia",
         "FAILURES": "{count} falhas",
         "OPTED_OUT": "Recusaram mensagens ativas: {count}",
+        "BLOCKED": "Contatos bloqueados: {count}",
         "DISCARDED": "Descartados na Prospecção: {count}"
       },
       "ACTIONS": {
@@ -687,6 +689,7 @@
         "SEND_TEST_TOO_MANY": "No máximo 5 e-mails por teste.",
         "SEND_TEST_SUPPRESSED": "{email} não recebe e-mails desta conta. Use outro endereço.",
         "SEND_TEST_RATE_LIMITED": "Muitos testes para esta campanha. Tente de novo daqui a uma hora",
+        "SEND_TEST_NO_SUBJECT": "Inclua o assunto em Detalhes do e-mail.",
         "SAVE_TEMPLATE": "Salvar como modelo",
         "SAVE_TEMPLATE_NAME_LABEL": "Nome do modelo",
         "SAVE_TEMPLATE_NAME_PLACEHOLDER": "ex.: Convite para live",

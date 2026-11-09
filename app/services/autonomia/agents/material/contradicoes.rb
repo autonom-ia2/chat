@@ -62,7 +62,7 @@ class Autonomia::Agents::Material::Contradicoes
 
   # Confere e grava. Devolve a conferência gravada (com a lista em `contradicoes`), ou nil (IA indisponível: nada muda).
   def conferir!
-    fontes = @agent.sources.knowledge_sources.servable.order(:id).to_a
+    fontes = @agent.sources.da_agente.knowledge_sources.servable.order(:id).to_a
     @textos = fontes.to_h { |fonte| [fonte.id, texto_lido(fonte)] }
     novas = fontes.size < 2 ? [] : perguntar(fontes)
     return if novas.nil?
@@ -110,7 +110,7 @@ class Autonomia::Agents::Material::Contradicoes
 
   # Trechos espalhados pelo material (começo, meio e fim), curtos.
   def trechos(fonte)
-    pronto = fonte.knowledge_entries.where(status: Autonomia::Agents::KnowledgeEntry.statuses[:ready])
+    pronto = fonte.knowledge_entries.where(status: Autonomia::Agents::KnowledgeEntry.statuses[:ready]).do_material
     indices = pronto.order(:chunk_index).pluck(:chunk_index)
     passo = [(indices.size.to_f / TRECHOS_POR_MATERIAL).ceil, 1].max
     escolhidos = indices.each_slice(passo).map(&:first).first(TRECHOS_POR_MATERIAL)
@@ -152,7 +152,7 @@ class Autonomia::Agents::Material::Contradicoes
 
   # O texto lido inteiro do material, com os espaços normalizados (medida objetiva, para conferir o trecho).
   def texto_lido(fonte)
-    fonte.knowledge_entries.where(status: Autonomia::Agents::KnowledgeEntry.statuses[:ready]).order(:chunk_index)
+    fonte.knowledge_entries.where(status: Autonomia::Agents::KnowledgeEntry.statuses[:ready]).do_material.order(:chunk_index)
          .pluck(:content).join("\n").squish
   end
 end

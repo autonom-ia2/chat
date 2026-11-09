@@ -1,0 +1,170 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "GATILHOS": {
+      "CONVERSA_CRIADA": "Quando uma conversa começa",
+      "CONVERSA_ABERTA": "Quando uma conversa é reaberta",
+      "CONVERSA_RESOLVIDA": "Quando uma conversa é resolvida",
+      "MENSAGEM_CRIADA": "Quando chega uma mensagem",
+      "MENSAGEM_FALHOU": "Quando uma mensagem ao cliente falha",
+      "CARD_CRIADO": "Quando um card é criado",
+      "CARD_ENTROU_NA_ETAPA": "Quando o card entra numa etapa",
+      "CARD_SAIU_DA_ETAPA": "Quando o card sai de uma etapa",
+      "CARD_GANHO": "Quando o card é ganho",
+      "CARD_PERDIDO": "Quando o card é perdido",
+      "CARD_REUNIAO_MARCADA": "Quando uma reunião é marcada",
+      "CARD_REUNIAO_REMARCADA": "Quando uma reunião é remarcada",
+      "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada",
+      "CARD_PARADO": "Quando o card fica parado numa etapa",
+      "CARD_DATA": "Perto de uma data do card",
+      "CONTATO_DATA": "Perto de uma data do contato",
+      "CARD_ANTES_DA_REUNIAO": "Antes de uma reunião",
+      "CARD_RECORRENTE": "Todo dia, semana ou mês, em cards",
+      "CONTATO_RECORRENTE": "Todo dia, semana ou mês, em contatos",
+      "CONTA_RECORRENTE": "Todo dia, semana ou mês, na conta"
+    },
+    "ORIGEM": {
+      "CONVERSA": "Da conversa",
+      "CARD": "Do card do funil",
+      "ANTIGO": "Do jeito antigo"
+    },
+    "CONVERSA_NOVA": {
+      "CAIXA": "Caixa para falar com quem ainda não tem conversa",
+      "NENHUMA": "Nenhuma (sem conversa, a mensagem não sai)",
+      "NA_FRASE": "{frase} (sem conversa, abre uma em {caixa})",
+      "AJUDA": "Se o card ou o contato ainda não tem conversa, a primeira mensagem abre uma nesta caixa. No WhatsApp oficial, ela só sai com um modelo aprovado."
+    },
+    "VALOR_DA_MENSAGEM": {
+      "RECEBIDA": "do cliente",
+      "ENVIADA": "da equipe para o cliente",
+      "NOTA": "nota interna",
+      "TRUE": "sim",
+      "FALSE": "não",
+      "CLIENTE": "o cliente",
+      "EQUIPE": "a equipe",
+      "SAIU": "saiu, sem confirmação ainda",
+      "ENTREGUE": "entregue",
+      "LIDA": "lida",
+      "FALHOU": "falhou"
+    },
+    "OPERADOR_DA_MENSAGEM": {
+      "IGUAL": "é",
+      "DIFERENTE": "não é"
+    },
+    "PARAMETROS_DO_GATILHO": {
+      "ETAPA_ID": "Etapa",
+      "FUNIL_ID": "Funil",
+      "DIAS": "Dias",
+      "CAMPO": "Campo de data",
+      "QUANDO": "Antes ou depois da data",
+      "HORA": "A partir de que hora",
+      "FREQUENCIA": "De quanto em quanto",
+      "DIA_DA_SEMANA": "Dia da semana",
+      "DIA_DO_MES": "Dia do mês",
+      "SELECAO": "Quais",
+      "REPETE": "Repete",
+      "PAGINA_ID": "Página de agendamento",
+      "ANTES": "Quanto tempo antes do início"
+    },
+    "GRUPOS_DO_GATILHO": {
+      "CONVERSA": "Conversa e mensagem",
+      "CARD": "Card do funil",
+      "REUNIAO": "Reunião",
+      "TEMPO": "Tempo"
+    },
+    "GATILHO_COM": {
+      "CARD_CRIADO": "Quando um card é criado em {funil}",
+      "CARD_ENTROU_NA_ETAPA": "Quando o card entra em {etapa}",
+      "CARD_SAIU_DA_ETAPA": "Quando o card sai de {etapa}",
+      "CARD_GANHO": "Quando um card de {funil} é ganho",
+      "CARD_PERDIDO": "Quando um card de {funil} é perdido",
+      "CARD_REUNIAO_MARCADA": "Quando uma reunião é marcada num card de {funil}",
+      "CARD_REUNIAO_REMARCADA": "Quando uma reunião é remarcada num card de {funil}",
+      "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada num card de {funil}",
+      "CARD_PARADO": "Quando o card fica {dias} dias parado em {etapa}",
+      "CARD_DATA": "{dias} dias {quando} de {campo} do card, a partir das {hora}h",
+      "CONTATO_DATA": "{dias} dias {quando} de {campo} do contato, a partir das {hora}h",
+      "CARD_ANTES_DA_REUNIAO": "{antes} antes de uma reunião"
+    },
+    "GATILHO_NO_FUNIL": "{frase}, no funil {funil}",
+    "GATILHO_NA_PAGINA": "{frase}, pela página {pagina}",
+    "GATILHO_NAO_DISPARA": "Não dispara quando vários cards são arquivados de uma vez, quando a etapa é apagada ou quando outro sistema muda a etapa.",
+    "GATILHO_DO_CARD": {
+      "TODOS_OS_FUNIS": "Todos os funis",
+      "ERRO_FUNIS": "Não consegui carregar os funis e as etapas. Feche e abra de novo."
+    },
+    "GATILHO_NO_DIA": {
+      "CARD_DATA": "No dia de {campo} do card, a partir das {hora}h",
+      "CONTATO_DATA": "No dia de {campo} do contato, a partir das {hora}h"
+    },
+    "GATILHO_TODO_ANO": "{frase}, todo ano",
+    "REPETE_DA_DATA": {
+      "UMA_VEZ": "Só nessa data, com o ano",
+      "TODO_ANO": "Todo ano, no mesmo dia e mês (aniversário)"
+    },
+    "QUANDO_DA_DATA": {
+      "ANTES": "antes",
+      "DEPOIS": "depois"
+    },
+    "GATILHO_DE_TEMPO": {
+      "AVISO_PARADO": "Só entram os cards que chegarem ao prazo a partir de agora. Quem já passou do prazo há mais de 1 dia fica de fora.",
+      "AVISO_DATA": "Confere a cada 15 minutos, no fuso da conta. Data escrita em outro formato não conta.",
+      "SEM_CAMPO": "Não há campo de data aqui. Crie um em Configurações › Atributos personalizados.",
+      "HORA": "{hora}h",
+      "ERRO_CAMPOS": "Não consegui carregar os campos de data. Feche e abra de novo.",
+      "AVISO_LEMBRETE": "Confere a cada 15 minutos. Se a reunião for remarcada, lembra no horário novo; se for cancelada, não lembra. Reunião marcada com menos tempo do que isso é lembrada logo."
+    },
+    "GATILHO_DE_REUNIAO": {
+      "QUALQUER_PAGINA": "Qualquer página",
+      "PAGINA_SEM_NOME": "uma página de agendamento",
+      "ERRO_PAGINAS": "Não consegui carregar as páginas de agendamento. Feche e abra de novo."
+    },
+    "GATILHO_RECORRENTE": {
+      "DIARIA": "Todo dia",
+      "SEMANAL": "Toda semana",
+      "MENSAL": "Todo mês",
+      "DIAS_DA_SEMANA": {
+        "0": "domingo",
+        "1": "segunda",
+        "2": "terça",
+        "3": "quarta",
+        "4": "quinta",
+        "5": "sexta",
+        "6": "sábado"
+      },
+      "DIA_DO_MES": "Dia {dia}",
+      "AVISO": "Roda na hora escolhida, no fuso da conta, uma vez em cada card ou contato escolhido. No dia 29, 30 ou 31, os meses mais curtos usam o último dia. Se estiver desligada na hora, aquela vez não roda depois. Enquanto a vez anterior ainda estiver rodando (esperando), a nova não começa.",
+      "AVISO_CONTA": "Roda na hora escolhida, no fuso da conta, uma vez só (não em cada card ou contato). Cabem só esperar e disparar campanha. No dia 29, 30 ou 31, os meses mais curtos usam o último dia. Se estiver desligada na hora, aquela vez não roda depois. Enquanto a vez anterior ainda estiver rodando (esperando), a nova não começa.",
+      "CARDS": "nos cards escolhidos",
+      "CONTATOS": "nos contatos escolhidos",
+      "CONTA": "na conta",
+      "FRASE": {
+        "DIARIA": "Todo dia às {hora}h, {alvo}",
+        "SEMANAL": "Toda {dia} às {hora}h, {alvo}",
+        "MENSAL": "Todo mês no dia {dia}, às {hora}h, {alvo}"
+      }
+    },
+    "SELECAO": {
+      "DICA_CARD": "Escolha pelo menos uma condição. Roda em cada card que bate com todas.",
+      "DICA_CONTATO": "Escolha pelo menos uma condição. Roda em cada contato que bate com todas.",
+      "QUALQUER": "Qualquer",
+      "FUNIL": "Funil",
+      "ETAPA": "Etapa",
+      "SITUACAO": "Situação",
+      "SITUACOES": {
+        "ABERTO": "Aberto",
+        "GANHO": "Ganho",
+        "PERDIDO": "Perdido"
+      },
+      "RESPONSAVEL": "Responsável",
+      "FECHADO_ENTRE": "Ganho ou perdido entre",
+      "FECHADO_DE": "De quantos dias atrás",
+      "FECHADO_ATE": "Até quantos dias atrás",
+      "E": "e",
+      "DIAS_ATRAS": "dias atrás",
+      "ETIQUETA": "Com a etiqueta",
+      "SEM_ETIQUETA": "Sem a etiqueta",
+      "ATRIBUTO": "Campo do contato igual a",
+      "VALOR": "Valor"
+    }
+  }
+}

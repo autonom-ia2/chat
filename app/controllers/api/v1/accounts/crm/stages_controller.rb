@@ -17,6 +17,8 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
 
   def create
     @stage = Current.account.crm_pipeline_stages.new(stage_params.merge(pipeline: @pipeline))
+    # Sem posição (a automação nunca escolhe, #2414), a etapa nova vai para o fim do funil. A tela sempre manda a dela.
+    @stage.position = @pipeline.stages.maximum(:position).to_i + 1 unless stage_params.key?(:position)
     apply_default_ai_criteria!(@stage)
     # New stages must honor the funnel classification too — update-only handling
     # would silently drop the mapping the funnel drawer sends on stage creation.
@@ -109,7 +111,7 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     provided = params[:stage]&.key?(:funnel_stage_type)
     return unless provided || metadata.key?('funnel_stage_type')
 
-    type = (provided ? params.dig(:stage, :funnel_stage_type) : metadata['funnel_stage_type']).presence
+    type = (provided ? params.dig(:stage, :funnel_stage_type).to_s : metadata['funnel_stage_type'].to_s).presence
     if FUNNEL_STAGE_TYPES.include?(type)
       metadata['funnel_stage_type'] = type
     else
@@ -123,7 +125,7 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     provided = params[:stage]&.key?(:category)
     return unless provided || metadata.key?('category')
 
-    category = (provided ? params.dig(:stage, :category) : metadata['category']).to_s
+    category = provided ? params.dig(:stage, :category).to_s : metadata['category'].to_s
     if ::Crm::PipelineStage::CATEGORIES.include?(category)
       metadata['category'] = category
     else
@@ -137,9 +139,19 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     return if @pipeline.counts_as_sale?
 
     category = Crm::PipelineStages::TemplateVariant.category_for(
-      account: Current.account, template: @pipeline.metadata&.dig('template'), position: params.dig(:stage, :template_position)
+      account: Current.account, template: @pipeline.metadata&.dig('template'), position: template_position
     )
     metadata['category'] = category if category
+  end
+
+  # A posição da etapa no modelo (E1, E2...). Só um inteiro vale (3 ou "3", sempre na base 10: "010" é 10); nil,
+  # vazio, texto, "3abc", "3.0", "1e2", "0x10", lista e objeto viram 0, o mesmo "sem posição" de antes. O `Integer(...)`
+  # direto na leitura deixa o tipo legível para o formato da ação (#2460).
+  def template_position
+    valor = params.dig(:stage, :template_position)
+    return Integer(valor, exception: false).to_i unless valor.is_a?(String)
+
+    Integer(valor, 10, exception: false).to_i
   end
 
   def apply_default_ai_criteria!(stage)
@@ -148,7 +160,7 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     # #1548: a etapa que veio do modelo traz a posição dela no modelo (template_position); o modelo é o do funil.
     defaults = Crm::Ai::DefaultStageCriteria.metadata_for(
       stage.name, atender: !@pipeline.counts_as_sale?,
-                  template: @pipeline.metadata&.dig('template'), position: params.dig(:stage, :template_position)
+                  template: @pipeline.metadata&.dig('template'), position: template_position
     )
     return if defaults.blank?
 

@@ -45,6 +45,14 @@ class CampaignImportPolicy < ApplicationPolicy
     permission_granted?('campaign_manage')
   end
 
+  # #2802: the original and the normalized file carry the people's real phone and e-mail; only who reads contacts
+  # downloads them. The error and report files keep the contact masked.
+  CONTACT_FILES = %w[original normalized_csv].freeze
+
+  def download_file?(kind)
+    CONTACT_FILES.exclude?(kind.to_s) || !ConversationAudience::Access.hides_contact_data?(@account_user)
+  end
+
   # "Baixar lista" of an audience (#2332): the same people a normalized file download gives.
   def people_sheet?
     permission_granted?('campaign_manage')
@@ -78,7 +86,8 @@ class CampaignImportPolicy < ApplicationPolicy
     permission_granted?('campaign_view')
   end
 
-  # #993 side panel: who is in the audience, for whoever can see the audience.
+  # #993 side panel: who is in the audience, for whoever can see the audience; without contact reading the controller
+  # masks phone and e-mail and hides the company (ConversationAudience::Access.hides_contact_data?, #2414 review).
   def contacts?
     permission_granted?('campaign_view')
   end

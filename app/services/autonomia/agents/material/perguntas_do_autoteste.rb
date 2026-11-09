@@ -53,7 +53,7 @@ class Autonomia::Agents::Material::PerguntasDoAutoteste
   end
 
   def gerar
-    fontes = @agent.sources.knowledge_sources.servable.order(:id).to_a
+    fontes = @agent.sources.da_agente.knowledge_sources.servable.order(:id).to_a
     return if fontes.empty?
 
     credencial = Crm::Ai::CredentialResolver.new(account: @agent.account).resolve
@@ -78,7 +78,7 @@ class Autonomia::Agents::Material::PerguntasDoAutoteste
   end
 
   def trechos(fonte)
-    pronto = fonte.knowledge_entries.where(status: Autonomia::Agents::KnowledgeEntry.statuses[:ready])
+    pronto = fonte.knowledge_entries.where(status: Autonomia::Agents::KnowledgeEntry.statuses[:ready]).do_material
     indices = pronto.order(:chunk_index).pluck(:chunk_index)
     passo = [(indices.size.to_f / TRECHOS_POR_MATERIAL).ceil, 1].max
     escolhidos = indices.each_slice(passo).map(&:first).first(TRECHOS_POR_MATERIAL)

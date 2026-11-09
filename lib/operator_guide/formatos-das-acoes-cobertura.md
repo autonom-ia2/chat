@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 684 |
-| Sem corpo | 199 |
-| Com corpo | 485 |
-| Com corpo e formato completo | 400 (82,5%) |
-| Com corpo e formato incompleto | 85 |
+| No catálogo | 716 |
+| Sem corpo | 207 |
+| Com corpo | 509 |
+| Com corpo e formato completo | 421 (82,7%) |
+| Com corpo e formato incompleto | 88 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 17 de 208 |
-| Leituras cruas tipadas | 199 de 293 |
+| Campos aninhados com vocabulário | 17 de 213 |
+| Leituras cruas tipadas | 215 de 308 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 71 |
+| leitura crua sem tipo | 74 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -35,26 +35,30 @@ Uma ação pode ter mais de um motivo.
 
 - `DELETE assignment_policies/:assignment_policy_id/inboxes/:id` — a rota não tem a action no controller: a chamada dá erro
 - `DELETE inboxes/:inbox_id/conference` — leitura crua sem tipo: call_sid
+- `PATCH autonomia/automacoes/:id` — leitura crua sem tipo: receita
 - `PATCH crm/meta_ads_connection/ads/:ad_id/budget` — leitura crua sem tipo: amount (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!), end_time (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!)
 - `PATCH crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id` — leitura crua sem tipo: hidden (repassada a comments.hide!)
 - `PATCH crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PATCH crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)
-- `PATCH crm/stages/:id` — leitura crua sem tipo: category, funnel_stage_type
 - `PATCH ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
 - `PATCH portals/:id` — leitura crua sem tipo: portal.config.analytics
 - `PATCH relationships/:entity/:id/values` — leitura crua sem tipo: field
 - `PATCH relationships/configuration` — leitura crua sem tipo: configuration
+- `POST agentes_do_post/:id/materiais` — leitura crua sem tipo: file
 - `POST agents/bulk_create` — leitura crua sem tipo: emails
 - `POST assignment_policies/:assignment_policy_id/inboxes` — a rota não tem a action no controller: a chamada dá erro
 - `POST autonomia/agents/:agent_id/sources` — leitura crua sem tipo: descriptor.kind
 - `POST autonomia/agents/:agent_id/tools/:id/test` — leitura crua sem tipo: params
+- `POST autonomia/automacoes` — leitura crua sem tipo: receita
+- `POST autonomia/automacoes/:id/ensaio` — leitura crua sem tipo: receita
+- `POST autonomia/automacoes/ensaio` — leitura crua sem tipo: receita
+- `POST autonomia/automacoes/testar_passo` — leitura crua sem tipo: receita
 - `POST autonomia/build_threads` — leitura crua sem tipo: message (repassada a @thread.append_message!), papel, type (repassada a @thread.persist_start_options!), with_knowledge (repassada a @thread.persist_start_options!)
 - `POST autonomia/build_threads/:id/messages` — leitura crua sem tipo: message (repassada a @thread.append_message!)
 - `POST autonomia/conversations/:conversation_id/copilot` — leitura crua sem tipo: draft, instruction, task, tone
 - `POST autonomia/conversations/:conversation_id/copilot/chat` — leitura crua sem tipo: message
 - `POST autonomia/insurance/quote_agent` — leitura crua sem tipo: quote_agent.behavior (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new), quote_agent.broker_name (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new), quote_agent.business_hours (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new), quote_agent.name (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new)
 - `POST autonomia/prospecting/leads/:id/adopt_owner` — leitura crua sem tipo: owner_name (repassada a ::Autonomia::Prospecting::OwnerAdoption.new)
-- `POST autonomia/prospecting/leads/campaign_segment` — leitura crua sem tipo: campaign_type, segment_name (repassada a ::Autonomia::Prospecting::SelectionCampaignSegment.new)
 - `POST autonomia/prospecting/leads/discard` — leitura crua sem tipo: reason (repassada a ::Autonomia::Prospecting::LeadDiscard.new)
 - `POST callbacks/facebook_pages` — leitura crua sem tipo: omniauth_token
 - `POST callbacks/reauthorize_page` — leitura crua sem tipo: omniauth_token
@@ -75,7 +79,6 @@ Uma ação pode ter mais de um motivo.
 - `POST conversations/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/conversations_controller.rb:52); params inteiro repassado a ::Conversations::FilterService.new
 - `POST crm/booking_invites/:id/deliver` — leitura crua sem tipo: text (repassada a ::Crm::BookingV2::InviteDeliverer.new)
 - `POST crm/booking_pages/:id/test_invite` — leitura crua sem tipo: phone (repassada a ::Crm::BookingV2::TestInvite.new)
-- `POST crm/cards/:card_id/contact` — leitura crua sem tipo: contact
 - `POST crm/cards/:id/close` — leitura crua sem tipo: result (repassada a ::Crm::Cards::Closer.new)
 - `POST crm/cards/bulk` — leitura crua sem tipo: action_name, bulk_action
 - `POST crm/meetings/:id/sync` — leitura crua sem tipo: force
@@ -83,8 +86,8 @@ Uma ação pode ter mais de um motivo.
 - `POST crm/memoria/cards/:card_id/fatos` — leitura crua sem tipo: chave, item_ref (repassada a ::Crm::Memoria::Correcao.corrigir!), valor (repassada a ::Crm::Memoria::Correcao.corrigir!)
 - `POST crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply` — leitura crua sem tipo: content (repassada a comments.reply!)
 - `POST crm/meta_ads_connection/media` — leitura crua sem tipo: file
+- `POST crm/meta_ads_connection/post_media` — leitura crua sem tipo: file
 - `POST crm/pipelines` — leitura crua sem tipo: goal, outcome_labels
-- `POST crm/pipelines/:pipeline_id/stages` — leitura crua sem tipo: category, funnel_stage_type, template_position (repassada a Crm::PipelineStages::TemplateVariant.category_for)
 - `POST ctwa_tracked_links` — leitura crua sem tipo: ctwa_tracked_link
 - `POST data_imports` — params inteiro repassado a DataImportSkipLogFinder.new
 - `POST data_imports/:id/abandon` — params inteiro repassado a DataImportSkipLogFinder.new
@@ -112,15 +115,16 @@ Uma ação pode ter mais de um motivo.
 - `POST whatsapp_calls/:id/terminate` — leitura crua sem tipo: sdp_answer (repassada a Whatsapp::CallService.new)
 - `POST whatsapp_calls/:id/upload_recording` — leitura crua sem tipo: recording (repassada a @call.message.attachments.create!)
 - `POST whatsapp_calls/initiate` — leitura crua sem tipo: sdp_offer (repassada a provider_service.initiate_call)
+- `PUT autonomia/automacoes/:id` — leitura crua sem tipo: receita
 - `PUT crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PUT crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)
-- `PUT crm/stages/:id` — leitura crua sem tipo: category, funnel_stage_type
 - `PUT ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
 - `PUT portals/:id` — leitura crua sem tipo: portal.config.analytics
 - `PUT relationships/configuration` — leitura crua sem tipo: configuration
 
 ## Leituras cruas sem tipo
 
+- `api/v1/accounts/agentes_do_post_materiais#create` file — o código não converte nem compara o valor
 - `api/v1/accounts/agents#bulk_create` emails — o código não converte nem compara o valor
 - `api/v1/accounts/articles#reorder` positions_hash — repassada a Article.update_positions
 - `api/v1/accounts/autonomia/agents/build_threads#create` message — repassada a @thread.append_message!
@@ -130,6 +134,11 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/autonomia/agents/build_threads#messages` message — repassada a @thread.append_message!
 - `api/v1/accounts/autonomia/agents/sources#create` descriptor.kind — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/agents/tools#test` params — o código não converte nem compara o valor
+- `api/v1/accounts/autonomia/automacoes#create` receita — o código não converte nem compara o valor
+- `api/v1/accounts/autonomia/automacoes#ensaio` receita — o código não converte nem compara o valor
+- `api/v1/accounts/autonomia/automacoes#ensaio_novo` receita — o código não converte nem compara o valor
+- `api/v1/accounts/autonomia/automacoes#update` receita — o código não converte nem compara o valor
+- `api/v1/accounts/autonomia/automacoes_ia#testar_passo` receita — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/conversation_copilot#chat` message — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/conversation_copilot#create` draft — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/conversation_copilot#create` instruction — o código não converte nem compara o valor
@@ -141,8 +150,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/autonomia/insurance/quote_agent#create` quote_agent.name — repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new
 - `api/v1/accounts/autonomia/prospecting/lead_batches#discard` reason — repassada a ::Autonomia::Prospecting::LeadDiscard.new
 - `api/v1/accounts/autonomia/prospecting/leads#adopt_owner` owner_name — repassada a ::Autonomia::Prospecting::OwnerAdoption.new
-- `api/v1/accounts/autonomia/prospecting/leads#create_campaign_segment` campaign_type — o código não converte nem compara o valor
-- `api/v1/accounts/autonomia/prospecting/leads#create_campaign_segment` segment_name — repassada a ::Autonomia::Prospecting::SelectionCampaignSegment.new
 - `api/v1/accounts/callbacks#facebook_pages` omniauth_token — o código não converte nem compara o valor
 - `api/v1/accounts/callbacks#reauthorize_page` omniauth_token — o código não converte nem compara o valor
 - `api/v1/accounts/callbacks#register_facebook_page` inbox_name — o código não converte nem compara o valor
@@ -167,7 +174,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/cards#close` result — repassada a ::Crm::Cards::Closer.new
 - `api/v1/accounts/crm/cards/bulk#create` action_name — o código não converte nem compara o valor
 - `api/v1/accounts/crm/cards/bulk#create` bulk_action — o código não converte nem compara o valor
-- `api/v1/accounts/crm/cards/contacts#create` contact — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meetings#suggest_times` date — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meetings#suggest_times` duration_minutes — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meetings#sync` force — o código não converte nem compara o valor
@@ -175,6 +181,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/memoria_fatos#create` item_ref — repassada a ::Crm::Memoria::Correcao.corrigir!
 - `api/v1/accounts/crm/memoria_fatos#create` valor — repassada a ::Crm::Memoria::Correcao.corrigir!
 - `api/v1/accounts/crm/meta_ads_creation#media` file — o código não converte nem compara o valor
+- `api/v1/accounts/crm/meta_ads_creation#post_media` file — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meta_ads_creation#update_budget` amount — repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!
 - `api/v1/accounts/crm/meta_ads_creation#update_budget` end_time — repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!
 - `api/v1/accounts/crm/meta_ads_facebook_comments#reply` content — repassada a comments.reply!
@@ -185,11 +192,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/pipelines#update` google_sync — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#update` meta_sync — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#update` outcome_labels — o código não converte nem compara o valor
-- `api/v1/accounts/crm/stages#create` category — o código não converte nem compara o valor
-- `api/v1/accounts/crm/stages#create` funnel_stage_type — o código não converte nem compara o valor
-- `api/v1/accounts/crm/stages#create` template_position — repassada a Crm::PipelineStages::TemplateVariant.category_for
-- `api/v1/accounts/crm/stages#update` category — o código não converte nem compara o valor
-- `api/v1/accounts/crm/stages#update` funnel_stage_type — o código não converte nem compara o valor
 - `api/v1/accounts/ctwa_tracked_links#create` ctwa_tracked_link — o código não converte nem compara o valor
 - `api/v1/accounts/ctwa_tracked_links#update` ctwa_tracked_link — o código não converte nem compara o valor
 - `api/v1/accounts/email_campaigns/ai#generate` brand_mode — repassada a modes.include?
@@ -222,8 +224,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 423 |
-| Com parâmetros conhecidos | 372 |
+| No catálogo | 441 |
+| Com parâmetros conhecidos | 390 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

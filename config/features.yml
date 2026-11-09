@@ -849,6 +849,12 @@
   enabled: true
   column: feature_flags_ext_1
 
+# 07/11/2026 (#2667): o Rodrigo liberou para todas as contas 27 flags que ainda não eram de todas —
+# crm_ia_nome_provisorio, crm_ia_duvida_vira_sugestao e 25 da feature_flags_ext_2. A lista exata está na migration
+# 20261108760000. As contas existentes foram ligadas pela Orquestração; as novas nascem ligadas pela migration. Quando o
+# texto de uma delas diz "Desligada", "nasce desligada" ou "piloto", vale como histórico até 07/11/2026. customer_base
+# e instagram_assisted_onboarding ficaram de fora.
+
 # IA de assunto: nome genérico refinado uma vez (#2163). Ligada: o modelo maior diz se o nome que deu ao pedido é
 # genérico por falta de informação ("Nova cotação"); o card guarda essa marca. Quando o detalhe chega no mesmo pedido,
 # o nome é trocado UMA vez pelo específico, no mesmo card, sem criar outro. Nome dado ou editado por pessoa nunca é
@@ -858,7 +864,7 @@
 # da 61 do meta_ads_gestao #2164. Piloto 1, 16 e 18 da hub por psql, depois do NO AR.
 - name: crm_ia_nome_provisorio
   display_name: CRM › IA refina o nome genérico do pedido
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # IA de assunto: dúvida com sinal de pedido novo vira sugestão (#2162). Ligada: quando a IA de assunto fica em dúvida e
@@ -869,7 +875,7 @@
 # do crm_ia_nome_provisorio #2163; é a última posição da coluna. Piloto 1, 16 e 18 da hub por psql, depois do NO AR.
 - name: crm_ia_duvida_vira_sugestao
   display_name: CRM › Dúvida da IA de assunto vira sugestão
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Este contato é (#2084/#2085): interessado (o padrão), parceiro do mercado ou não é negócio, na coluna contacts.relacao.
@@ -879,7 +885,7 @@
 # primeira da coluna, confirmada pela Orquestração (25/10): chega à main antes das flags de anúncio (#2195, #2199, #2212).
 - name: contato_relacao
   display_name: Contatos › este contato é interessado, parceiro ou não é negócio
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # CRM › Números › "De onde vieram os clientes" (#2001, F6 do #1871). Ligada: a visão "Equipe" de Números ganha o
@@ -911,7 +917,7 @@
 # feature_flags_ext_2, depois de lista_quem_espera: posição 4 (valor 8, 1 << 3), confirmada pela Orquestração (27/10).
 - name: agentes_painel_desempenho
   display_name: Agentes IA › painel de desempenho do agente
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Anúncios da Meta: resultados orgânicos (#2199). Ligada: a página de Anúncios da Meta ganha a aba "Seus posts", ao
@@ -922,7 +928,7 @@
 # dela (a Orquestração confere antes de enfileirar).
 - name: meta_ads_organico
   display_name: Anúncios da Meta - resultados orgânicos da Página e do Instagram
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Leitura no celular apaga a bolinha (#2246, opção C). Ligada: quando o celular do negócio lê as mensagens do cliente,
@@ -934,7 +940,7 @@
 # primeiro liga só numa conta de teste com Híbrido, para medir (Orquestração, com OK do Rodrigo).
 - name: leitura_no_celular
   display_name: Conversas › leitura no celular apaga a bolinha
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Anúncios da Meta › Formulários (#2195). Ligada: a aba Formulários mostra as Páginas que a pessoa concedeu ao entrar com
@@ -946,18 +952,19 @@
 # (27/10). Se outra flag da ext_2 entrar antes, esta vai para depois dela.
 - name: meta_ads_formularios
   display_name: Anúncios da Meta › Formulários (leads no funil)
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
-# Anúncios da Meta › comentários do anúncio no Instagram (#2196, épico #2194). Ligada (com meta_ads_gestao): o detalhe
+# Anúncios da Meta › comentários do anúncio no Instagram (#2196, épico #2194). Ligada: o detalhe
 # do anúncio ganha a aba Instagram dos comentários (ver, responder, ocultar, apagar e responder no privado), e a caixa
 # do Instagram pode pedir de novo o login com instagram_business_manage_comments, voltando ao anúncio. Desligada: a aba
 # não aparece e a API responde 404. Migration 20261108550000 (crm_meta_ads_comment_actions). Fim da
 # feature_flags_ext_2, depois de meta_ads_formularios (#2195): posição 8 (valor 128, 1 << 7). Se outra flag da ext_2
 # entrar antes, esta vai para depois dela (a Orquestração confere antes de enfileirar).
+# #2520: não pede meta_ads_gestao, e é a flag de rede do cuidado da IA no Instagram (com meta_ads_comentarios_ia).
 - name: meta_ads_comentarios_instagram
   display_name: Anúncios da Meta › comentários do anúncio no Instagram
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Anúncios da Meta: o Gerenciador simples (#2198, PR 1). Ligada: "Criar anúncio" no Resultado abre o anúncio novo
@@ -968,7 +975,7 @@
 # na main, confirmada pela Orquestração na hora da fila (hoje 9, valor 256, 1 << 8, depois do meta_ads_comentarios_instagram).
 - name: meta_ads_criar
   display_name: Anúncios da Meta › criar anúncio, orçamento e datas
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Seus posts (#2302, F1 #2304): página própria no grupo Crescer, com os números do perfil e todos os posts do Instagram
@@ -979,7 +986,7 @@
 # (contas 1, 16 e 18).
 - name: seus_posts
   display_name: Seus posts (Instagram e Página)
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Novo público pedindo em palavras (#2277). Ligada: em Campanhas › Público › Novo público, além da planilha, a pessoa
@@ -997,9 +1004,10 @@
 # webhook `feed` da Página avisa comentário novo. Desligada: a aba some e a API responde 404. Sem migration. Fim da
 # feature_flags_ext_2, depois de campanhas_publico_por_conversa (#2303): posição 12 (valor 2048, 1 << 11), dada pela
 # Orquestração (28/10). Se outra flag da ext_2 entrar antes, esta vai para depois dela.
+# #2520: é a flag de rede do cuidado da IA no Facebook; só com ela ligar o cuidado assina o `feed` da Página.
 - name: meta_ads_comentarios_facebook
   display_name: Anúncios da Meta › comentários do anúncio no Facebook
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Lista nova do CRM "o que fazer agora" (#2283, frontend; o servidor entrou no #2292). Ligada: a visão Lista do CRM vira
@@ -1010,7 +1018,7 @@
 # enfileirar. Nasce ligada no piloto (contas 1, 16 e 18).
 - name: crm_lista_acao
   display_name: CRM › Lista nova "o que fazer agora"
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Funções da equipe guiadas (#2308, épico #1784). Ligada: Funções da equipe abre a tela nova inteira: a lista
@@ -1024,7 +1032,7 @@
 # Orquestração confirma antes de enfileirar.
 - name: funcoes_guiadas
   display_name: Funções da equipe › lista e criação guiadas
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Seus posts F2 (#2305, épico #2302): os comentários de cada post do Instagram e da Página, com responder, mandar no
@@ -1036,19 +1044,21 @@
 # Rodrigo.
 - name: seus_posts_comentarios
   display_name: Seus posts › comentários de cada post
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # IA cuida dos comentários (#2212, épico #2194). Ligada: nos posts e anúncios em que a pessoa ligou o cuidado, a IA lê
 # cada comentário novo (evento `meta_ads.comment_received`, do #2196 e do #2197). Quem pede informação recebe o
 # privado (Private Reply no Instagram Direct ou no Messenger) e uma frase no comentário. Reclamação vai urgente para a
-# pessoa, propaganda some do post, e o resto fica sem resposta. Teto de 200 comentários por conta por dia. O custo do
+# pessoa, propaganda some do post, e o resto fica sem resposta. Sem teto de uso (#2454). O custo do
 # Jev é nosso (eval de 27/10: ~US$ 0,000024 por comentário). Desligada: nenhum comentário é lido. Sem tela neste PR.
 # Migration 20261108620000 (crm_meta_ads_comment_cares). Fim da feature_flags_ext_2, depois de seus_posts_comentarios:
 # posição 16 (valor 32768, 1 << 15), reservada pela Orquestração em 30/10 e confirmada por ela na hora da fila.
+# #2458, sem chave nova (decisão do Rodrigo, 01/11): ligada, a IA também escreve o privado e a frase do comentário, pelo
+# agente da porta da caixa; sem agente que possa falar com cliente, as frases fixas. Desligar desliga o cuidado inteiro.
 - name: meta_ads_comentarios_ia
   display_name: Anúncios › IA cuida dos comentários
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Agentes: a mensagem de quando não souber vai ao modelo (#2381, D2 do tema 6 #1428). Ligada: no atendimento ao cliente,
@@ -1060,7 +1070,7 @@
 # na hora da fila. Nasce ligada no piloto (contas 1, 16 e 18).
 - name: agente_diz_quando_nao_sabe
   display_name: Agentes › mensagem de quando não souber vai ao modelo
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Agentes: a IA lê a prévia do link (#1775, épico #1424). Ligada: quando o cliente manda um link no WhatsApp, a IA lê o
@@ -1072,7 +1082,7 @@
 # Orquestração em 31/10 e confirmada por ela na hora da fila. Nasce ligada no piloto (contas 1, 16 e 18).
 - name: ia_previa_de_link
   display_name: Agentes › IA lê a prévia do link
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Agentes: o agente pede a localização do cliente (#1479 F2, épico #1424). Ligada (com a Fase 2): o modelo pode pedir,
@@ -1084,18 +1094,56 @@
 # 31/10 e confirmada por ela na hora da fila. Nasce ligada no piloto (contas 1, 16 e 18).
 - name: agentes_pedir_localizacao
   display_name: Agentes › pedir a localização do cliente
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
-
-# Agentes: ferramentas geridas pela conta (#1430, tema 9 do épico #1424). Ligada: o administrador da conta e quem tem a
-# chave `autonomia_tools_manage` (protegida, só o administrador entrega) criam, editam, testam, ligam e apagam as
-# ferramentas HTTP dos agentes. Desligada: como antes, só a equipe da plataforma. Sem migration. Rollback: desligar a
-# flag na conta. feature_flags_ext_2, posição 20 (valor 524288, 1 << 19), reservada pela Orquestração em 31/10: entra
-# depois de ia_previa_de_link (#1775, 18) e agentes_pedir_localizacao (#1479, 19). Nasce ligada no piloto (contas 1,
-# 16 e 18), com OK do Rodrigo.
-- name: agente_ferramentas_delegadas
-  display_name: Agentes › ferramentas geridas pela conta
-  enabled: false
+# Automação livre F1, fundação segura (#2443, épico #2414). Ligada: os três motores de automação (regras, automações
+# de etapa do CRM e o motor novo) contam numa cadeia só, com profundidade 3 e nunca a mesma automação duas vezes (D6),
+# e "mover para a etapa" cria o card quando a conversa não tem nenhum. Desligada: cada motor faz o que fazia antes.
+# Rollback: desligar a flag na conta. Sem migration. feature_flags_ext_2, posição 20 (valor 524288, 1 << 19), dada
+# pela Orquestração em 02/11. Nasce ligada no piloto (contas 1, 16 e 18).
+- name: automacao_fundacao
+  display_name: Automação › fundação (cadeia comum e mover cria o card)
+  enabled: true
+  column: feature_flags_ext_2
+# Automação livre F3, o motor (#2459, épico #2414). Ligada junto com automacao_fundacao: a conta roda as automações
+# novas (esperar, se, parar e ação da plataforma pela lista de permitidas), com a varredura de minuto em minuto.
+# Desligada: nenhuma automação começa, e a execução que esperava fecha como parada (motor_desligado) quando a
+# varredura a acorda. Rollback: desligar a flag na conta. Sem migration.
+# Bit: feature_flags_ext_2, posição 21 (valor 1048576, 1 << 20), dada pela Orquestração em 02/11. Nasce ligada no
+# piloto (contas 1, 16 e 18).
+- name: automacao_motor
+  display_name: Automação › motor (automações novas)
+  enabled: true
+  column: feature_flags_ext_2
+# Automação livre F5, o editor (#2414). Ligada: Automações mostra a lista única (as novas, as do jeito antigo e as do
+# funil) e o editor das automações novas, montado do catálogo de passos (lib/operator_guide/automacao-passos.json).
+# Desligada: a tela de Automações fica a de hoje e a API do editor responde 404, menos o desligar, que sempre funciona
+# (D7). Rollback: desligar a flag na conta. Sem migration.
+# Bit: sem reserva (Orquestração, 02/11). Fica no fim da feature_flags_ext_2, na ordem real em que entrar na main;
+# contra a main 8964425403 (#2476), depois de automacao_motor: posição 22 (valor 2097152, 1 << 21). A F4
+# (automacao_mensagens) também pediu a 22: vale a ordem de entrada, e quem entrar por segundo traz a main e vira 23
+# (4194304). A Orquestração confirma o número na hora da fila. Nasce ligada no piloto (contas 1, 16 e 18).
+- name: automacao_editor
+  display_name: Automação › editor e lista única
+  enabled: true
+  column: feature_flags_ext_2
+# Automação livre F4, passos mensagem e avisar (#2459, épico #2414). Só vale com automacao_motor e automacao_fundacao
+# ligadas (sem a fundação não há a cadeia comum contra laço com as regras antigas). Ligada: a receita pode
+# mandar mensagem ao cliente (sai como "Automação") e avisar a equipe por menção numa nota privada. Desligada: o salvar
+# recusa o passo, e a execução que chega nele fecha como parada (mensagens_desligadas), sem mandar nada. Sem teto de
+# uso; só a proteção contra laço. Rollback: desligar a flag na conta. Sem migration.
+# Bit: feature_flags_ext_2, posição 23 (valor 4194304, 1 << 22), logo depois de automacao_editor (#2485 entrou
+# primeiro, na 22). Nasce DESLIGADA em todas as contas; só liga depois da #2486 (Salvar tudo).
+- name: automacao_mensagens
+  display_name: Automação › mensagem ao cliente e aviso à equipe
+  enabled: true
+  column: feature_flags_ext_2
+# #2414 F7 (#2500): passos de IA (decidir, extrair, escrever, resumir) na chave da própria conta, sem teto de uso.
+# Só vale com automacao_motor e automacao_fundacao; o escrever para o cliente e o resumo em aviso pedem também
+# automacao_mensagens. Bit: a posição no fim da ext_2 vale pela ordem de entrada na fila (Orquestração).
+- name: automacao_ia
+  display_name: Automação › passos de IA
+  enabled: true
   column: feature_flags_ext_2
 
 # Agentes: o agente manda o mapa e o cartão de contato da página de agendamento (#1479 F3, épico #1424). Ligada (com a
@@ -1104,9 +1152,128 @@
 # página); o cartão sai numa mensagem própria, logo depois da resposta. O endereço novo ou mudado da página é
 # convertido em coordenada por um job (Google Places), sem travar o salvar. A Lia fica fora. Desligada: nada muda, nem
 # o catálogo nem a página. Rollback: desligar a flag na conta. Sem migration. Fim da feature_flags_ext_2, depois de
-# agente_ferramentas_delegadas: posição 21 (valor 1048576, 1 << 20), dada pela Orquestração em 31/10. Nasce ligada no
-# piloto (contas 1, 16 e 18).
+# automacao_ia: posição 25 (valor 16777216, 1 << 24), dada pela Orquestração em 04/11. Nasce ligada no piloto (contas
+# 1, 16 e 18).
 - name: agentes_enviar_local_e_contato
   display_name: Agentes › enviar o mapa e o contato da página
+  enabled: true
+  column: feature_flags_ext_2
+# Automação livre F6 (#2499, épico #2414): os gatilhos de card do funil (card criado, entrou ou saiu da etapa, ganho e
+# perdido). Só vale com automacao_motor e automacao_fundacao, e com o CRM da instalação ligado. Ligada: o editor
+# oferece os gatilhos de card a quem pode mexer no funil, e o emissor do CRM despacha o evento também quando há
+# automação assinante. Desligada: o salvar recusa o gatilho de card (gatilho_desligado), a escuta e o emissor não olham
+# a conta, e a execução aberta de gatilho de card fecha como parada (gatilho_desligado). Rollback: desligar a flag na
+# conta. Sem migration. Bit: fim da feature_flags_ext_2, depois de agentes_enviar_local_e_contato: posição 26 (valor
+# 33554432, 1 << 25) contra a main 45e251027e; a Orquestração confirma o número na fila. Nasce ligada no piloto
+# (contas 1, 16 e 18).
+- name: automacao_gatilhos
+  display_name: Automação › gatilhos de card do funil
+  enabled: true
+  column: feature_flags_ext_2
+
+# IA cuida dos comentários (#2613, parte do #2212): o privado pelo Messenger no Facebook. Desde o #2307 o código não
+# lê mais esta flag: o privado sai na Página cujo login tem a pages_messaging concedida pela Meta
+# (Crm::MetaAds::ComentariosIa::Rede::PermissaoDoMessenger). A entrada fica porque o bit é a posição na coluna: tirar
+# daqui mudaria as flags que vêm depois. Bit: posição 27 (67108864). Rollback do #2307: reverter o PR (sem migration);
+# a flag continua ligada nas contas internas, e o código de antes volta a lê-la.
+- name: meta_ads_comentarios_privado_facebook
+  display_name: Anúncios › privado no Facebook pela IA
+  enabled: true
+  column: feature_flags_ext_2
+
+# Login único (#2338): a Página vem do mesmo "Entrar com o Facebook" dos Anúncios. Ligada: o passo a passo de conectar
+# os anúncios ganha "Confira a Página" (a caixa da Página nasce ou é reautorizada ali mesmo, sem o login da Página) e o
+# pronto mostra o que já funciona. Desligada: o passo a passo de 4 passos de hoje. O Instagram continua no login dele.
+# Rollback: desligar a flag na conta. Sem migration. Bit: posição 28 (134217728), dada pela Orquestração. Nasce
+# desligada; o piloto (1, 16 e 18 na hub2you e 24 na autonomia) pede o OK do Rodrigo.
+- name: anuncios_login_unico
+  display_name: Anúncios › login único
+  enabled: true
+  column: feature_flags_ext_2
+
+# Prospecção nova, "Achar empresas" (#2692, F1 #2693): ligada, o menu Prospecção abre as telas novas (porta com "O quê?"
+# e "Onde?", lista com mapa que se completa ao vivo, gaveta da empresa, envio ao funil e Suas buscas). Desligada: as telas
+# de hoje, intactas. Rollback: desligar a flag na conta. Sem migration. Bit: posição 29 (268435456), dada pela
+# Orquestração. Depois do deploy liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: prospeccao_nova
+  display_name: Prospecção › achar empresas (nova)
+  enabled: true
+  column: feature_flags_ext_2
+
+# RAG v2, F1 (#1431): o material da base é lido pela estrutura que o próprio formato tem (título, lista e tabela) e
+# cortado por seção, com o caminho e a página em cada trecho. Ligada: o material novo, ou lido de novo, entra pelo
+# corte novo. Desligada: o corte de hoje. O que já foi lido fica como está até ser lido de novo. Rollback: desligar a
+# flag na conta. Bit: posição 30 (536870912), dada pela Orquestração. Liga em todas as contas das 2 stacks.
+- name: rag_corte_por_estrutura
+  display_name: Agentes › base lida pela estrutura
+  enabled: true
+  column: feature_flags_ext_2
+
+# Agentes: ferramentas geridas pela conta (#1430, tema 9 do épico #1424). Ligada: o administrador da conta e quem tem a
+# chave `autonomia_tools_manage` (protegida, só o administrador entrega) criam, editam, testam, ligam e apagam as
+# ferramentas HTTP dos agentes. Desligada: como antes, só a equipe da plataforma. Sem migration. Rollback: desligar a
+# flag na conta. Posição 31 (1073741824, 1 << 30), dada pela Orquestração em 08/11. Depois do deploy liga em todas as
+# contas ativas das 2 stacks (regra de 07/11).
+- name: agente_ferramentas_delegadas
+  display_name: Agentes › ferramentas geridas pela conta
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: a ferramenta HTTP consulta em segundo plano (#1430, tema 9 do épico #1424). Ligada: numa conversa, toda
+# chamada de ferramenta HTTP vira uma execução na fila própria `agent_tools`; o turno espera até 8 s por rodada e, se a
+# resposta não chegar, avisa que está consultando e fala o resultado depois, num evento. Desligada: a chamada roda
+# dentro do turno, como antes. A Lia fica fora. Rollback: desligar a flag na conta. Com migration 20261108830000
+# (coluna `autonomia_agent_tool_id` em `autonomia_tool_runs`). Posição 32 (2147483648, 1 << 31), dada pela Orquestração
+# em 08/11. Depois do deploy liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: agente_ferramenta_em_segundo_plano
+  display_name: Agentes › ferramenta consulta em segundo plano
+  enabled: false
+  column: feature_flags_ext_2
+
+# Instagram pelo login único (#2406, depois do #2338): quem tem Página com Instagram liga o Instagram com o mesmo
+# "Entrar com o Facebook" dos Anúncios. Só vale com anuncios_login_unico. Ligada: no pronto do passo a passo, "Ligar o
+# Instagram" liga ali mesmo uma caixa do Instagram com o token da Página (graph.facebook.com), ou troca para esse login
+# a caixa do mesmo Instagram que já existe na conta. Desligada: o botão leva ao login do Instagram, como antes. O login
+# do Instagram continua para quem só tem Instagram. Com migration 20261108900000 (colunas `login` e `page_id` em
+# channel_instagram). Rollback: desligar a flag na conta; a caixa já trocada volta ao reautorizar pelo login do
+# Instagram (docs/crm/instagram-login-unico-2406.md). Posição 33 (4294967296, 1 << 32), dada pela Orquestração em
+# 09/11. Nasce desligada e liga só na conta de teste do Rodrigo, com o OK dele: as permissões instagram_manage_* ainda
+# não passaram pelo App Review.
+- name: instagram_login_unico
+  display_name: Anúncios › Instagram pelo login único
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: o material do próprio agente vem primeiro (#2801, Refs #1431). Ligada: a regra de resposta dá a ordem das
+# fontes (material do agente > fatos-âncora das instruções > ferramentas > segmento da conta > conhecimento geral) e o
+# bloco do segmento passa a valer só quando o material não traz o assunto. Quando o [CONTEXTO] traz o que foi perguntado,
+# inclusive uma definição, a resposta segue o material e marca a fonte. Fora da Lia e do Guia. Desligada: como antes.
+# Sem migration. Rollback: desligar a flag na conta. Posição 34 (8589934592, 1 << 33), dada pela Orquestração em
+# 09/11. Depois do deploy liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: agente_material_primeiro
+  display_name: Agentes › material do agente primeiro
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: com o fato do negócio no trecho, a resposta usa o dado (#2807, Refs #1431). Ligada: a regra de resposta manda
+# afirmar o fato do negócio que o [CONTEXTO] traz, sem "preciso confirmar" e sem atribuir o dado além do que o trecho
+# diz; o fato que não está no material, nos fatos-âncora nem em ferramenta segue a regra de quando não souber, sem
+# palpite. Só no atendimento ao cliente; fora da Lia, do Guia e do copiloto. Desligada: como antes. Sem migration.
+# Rollback: desligar a flag na conta. Posição 35 (17179869184, 1 << 34), dada pela Orquestração em 09/11: só entra na
+# fila depois do #2801 na main, que traz a 34 (agente_material_primeiro). Depois do NO AR, a Orquestração liga em todas
+# as contas ativas das 2 stacks (regra C de 09/11).
+- name: agente_usa_o_trecho
+  display_name: Agentes › usar o dado do trecho
+  enabled: false
+  column: feature_flags_ext_2
+
+# RAG: busca híbrida (#2810, Refs #1431). Ligada: os candidatos do vetor e os da busca por palavra (texto em português,
+# índice GIN da migration 20261108910000) entram juntos e a ordem sai da fusão por posição (RRF, k = 60), no lugar do
+# bônus por metadado e do reforço lexical. O teto de distância, as seções dos itens, o material reprovado e o isolamento
+# por agente continuam valendo. Desligada: a busca de hoje. Rollback: desligar a flag na conta. Posição 36
+# (34359738368, 1 << 35), dada pela Orquestração em 09/11: entra na fila depois do #2811. Ligar em todas as
+# contas é decisão do Rodrigo (o RESULTADO do #2810 diz por quê), não a regra C automática.
+- name: rag_busca_hibrida
+  display_name: RAG › busca híbrida
   enabled: false
   column: feature_flags_ext_2

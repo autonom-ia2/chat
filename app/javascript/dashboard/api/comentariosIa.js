@@ -32,28 +32,53 @@ class ComentariosIaAPI extends ApiClient {
     return kind === 'post' ? { perfil } : {};
   }
 
+  // #2520: the post of the care screen (post target only), under the care flags: { perfil, status, can_manage, post }.
+  getPostDoCuidado(target) {
+    return axios.get(`${this.targetUrl(target)}/cuidado/post`, {
+      params: ComentariosIaAPI.params(target),
+    });
+  }
+
   getCuidado(target) {
     return axios.get(`${this.targetUrl(target)}/cuidado`, {
       params: ComentariosIaAPI.params(target),
     });
   }
 
-  // { message, para_quem, phrases, status } → Painel
-  saveCuidado(target, { message, paraQuem, phrases, status }) {
+  // { message, para_quem, phrases, status } → Painel. Com a escrita (#2458), também `escrita`: { temas,
+  // assuntoProibido, tom } do passo 2; sem ela, o servidor não mexe nesses campos.
+  saveCuidado(target, { message, paraQuem, phrases, status, escrita }) {
     return axios.put(
       `${this.targetUrl(target)}/cuidado`,
-      { message, para_quem: paraQuem, phrases, status },
+      {
+        message,
+        para_quem: paraQuem,
+        phrases,
+        status,
+        ...ComentariosIaAPI.escrita(escrita),
+      },
       { params: ComentariosIaAPI.params(target) }
     );
   }
 
-  // { recebe: { author, text, network } | { sample: true }, nao: { author, text } | null }
-  previa(target, { paraQuem }) {
+  // { recebe: { author, text, network, written?, kept_for_owner? } | { sample: true }, nao: { author, text } | null,
+  // dono: { author, text } | null }. `escrita` (#2458): { assuntoProibido, tom }.
+  previa(target, { paraQuem, escrita }) {
     return axios.post(
       `${this.targetUrl(target)}/cuidado/previa`,
-      { para_quem: paraQuem },
+      { para_quem: paraQuem, ...ComentariosIaAPI.escrita(escrita) },
       { params: ComentariosIaAPI.params(target) }
     );
+  }
+
+  static escrita(escrita) {
+    if (!escrita) return {};
+    const { temas, assuntoProibido, tom } = escrita;
+    return {
+      ...(temas ? { temas } : {}),
+      assunto_proibido: assuntoProibido || '',
+      tom: tom || '',
+    };
   }
 
   // Seus posts: o começo da mensagem do passo 1, escrito pela IA a partir da
@@ -63,6 +88,23 @@ class ComentariosIaAPI extends ApiClient {
     return axios.post(`${this.targetUrl(target)}/cuidado/rascunho`, null, {
       params: ComentariosIaAPI.params(target),
     });
+  }
+
+  // "O que eu vi na foto" do passo 1 (#2454): o servidor lê a foto do post uma
+  // vez. { status: 'ready', text, corrected } | 'no_image' | 'unavailable'.
+  foto(target) {
+    return axios.post(`${this.targetUrl(target)}/cuidado/foto`, null, {
+      params: ComentariosIaAPI.params(target),
+    });
+  }
+
+  // A correção do dono, que vale no lugar da leitura. Mesmo formato.
+  corrigirFoto(target, correction) {
+    return axios.put(
+      `${this.targetUrl(target)}/cuidado/foto`,
+      { correction },
+      { params: ComentariosIaAPI.params(target) }
+    );
   }
 
   // { queued }
@@ -92,7 +134,7 @@ class ComentariosIaAPI extends ApiClient {
     );
   }
 
-  // { status, questions, questions_old, complaints, read, more }
+  // { status, waiting, private_window }: só o que o servidor conta, sem IA (#2454).
   getResumo(target) {
     return axios.get(`${this.targetUrl(target)}/resumo`, {
       params: ComentariosIaAPI.params(target),

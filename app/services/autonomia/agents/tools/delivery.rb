@@ -66,6 +66,54 @@ class Autonomia::Agents::Tools::Delivery
                end
   end
 
+  # Quantas vezes ESTE turno já fez a mesma chamada COM SUCESSO (`pedido`: o resumo da ferramenta com os mesmos
+  # argumentos), a partir de 0 (#1430, decisão A). "1 T42" e depois "mais um igual" são dois pedidos; o retry do turno
+  # cria outro objeto e conta de novo do zero, então cada chamada reproduz o mesmo número. Só a resposta 2xx avança
+  # (`concluir`): repetir depois de tempo esgotado, erro ou recusa é a MESMA tentativa, e leva a mesma chave — o tempo
+  # esgotado pode ter gravado o pedido lá.
+  def ocorrencia(pedido)
+    ocorrencias[pedido]
+  end
+
+  def concluir(pedido)
+    ocorrencias[pedido] += 1
+  end
+
+  # #1430 (desenho D): A JANELA DAS CONSULTAS HTTP EM SEGUNDO PLANO É DA RODADA. Cada pré-disparo
+  # (`ConsultaNoTurno.nova_rodada`, uma vez por rodada de chamadas do modelo) abre uma janela nova; as consultas da
+  # mesma rodada esperam juntas a mesma janela, sem somar. Sem pré-disparo (quem executa a chamada direto), a janela abre no primeiro disparo
+  # e vale para as seguintes. `agora` e `espera` vêm de quem dispara (o relógio monotônico e
+  # `ConsultaNoTurno::ESPERA_DO_TURNO`). -> [início, prazo].
+  def abrir_janela_das_consultas(agora, espera)
+    @reservas_da_rodada = Hash.new(0)
+    @janela_das_consultas = [agora, agora + espera]
+  end
+
+  def janela_das_consultas(agora, espera)
+    @janela_das_consultas ||= [agora, agora + espera]
+  end
+
+  # A ocorrência de uma chamada no PRÉ-DISPARO da rodada: duas chamadas idênticas na mesma rodada são dois pedidos, como
+  # no síncrono, onde a primeira conclui antes de a segunda sair. Conta a partir da ocorrência atual do turno.
+  def reservar_ocorrencia(pedido)
+    @reservas_da_rodada ||= Hash.new(0)
+    numero = ocorrencia(pedido) + @reservas_da_rodada[pedido]
+    @reservas_da_rodada[pedido] += 1
+    numero
+  end
+
+  # A resposta 2xx de UMA execução avança a ocorrência uma vez só, venha ela na janela ou já entregue por evento.
+  def concluir_execucao(pedido, run_id)
+    @execucoes_concluidas ||= Set.new
+    concluir(pedido) if @execucoes_concluidas.add?(run_id)
+  end
+
+  # Os disparos deste turno que ainda não foram lidos, pela chamada do modelo (`call_id`) ou, sem ela, pela
+  # Idempotency-Key. A execução da chamada TOMA o seu (`ConsultaNoTurno#resultado`): repetir a chamada depois não o reusa.
+  def consultas
+    @consultas ||= {}
+  end
+
   def register(run)
     @runs << run if run.present?
     run
@@ -106,5 +154,11 @@ class Autonomia::Agents::Tools::Delivery
   # Os cartões marcados no turno, na ordem em que foram marcados.
   def cartoes
     @cartoes.to_h.values
+  end
+
+  private
+
+  def ocorrencias
+    @ocorrencias ||= Hash.new(0)
   end
 end

@@ -272,6 +272,276 @@ RSpec.describe Autonomia::Agents::Builder do
     end
   end
 
+  # #2489 — quem julga se o andaime e o cartão acompanharam a instrução é a conferência (o modelo). Ela lê os dois,
+  # antes e depois; o item que ela der como não atendido por eles aciona a correção que já existe, uma vez.
+  describe 'quando a instrução muda: andaime e cartão na conferência' do
+    let(:fala) { 'Não colete dados neste canal' }
+    let(:instrucao_nova) { 'Atenda o cliente da corretora com cordialidade. Não colete dados do cliente neste canal.' }
+    let(:lista) { [mudanca('instruction', fala, 'Não coleta dados.')] }
+    let(:aviso_do_roteiro) do
+      { role: 'developer', content: [{ type: 'input_text', text: described_class::CorrecaoDoAjuste::AVISO_DO_ROTEIRO }] }
+    end
+
+    before { respostas << saida('instruction' => instrucao_nova, 'mudancas' => lista) }
+
+    it 'a conferência recebe o andaime e o cartão, antes e depois' do
+      run_turn
+
+      expect(recebidas.first).to include(
+        antes: hash_including('scaffold' => 'andaime', 'human_card' => 'O Hubber atende os clientes.',
+                              'instruction' => 'Atenda o cliente da corretora com cordialidade.'),
+        depois: hash_including('scaffold' => 'andaime', 'human_card' => 'O Hubber atende os clientes.',
+                               'instruction' => instrucao_nova)
+      )
+    end
+
+    it 'não atendido pelo roteiro: UMA correção, com o aviso do roteiro, e o agente fica com andaime e cartão novos' do
+      conferencias << { roteiro: [0] }
+      respostas << saida('instruction' => instrucao_nova, 'scaffold' => 'andaime sem coleta',
+                         'human_card' => 'O Hubber atende os clientes sem pedir dados.', 'mudancas' => lista)
+
+      run_turn
+
+      expect(calls.size).to eq(2)
+      expect(calls.last[:input].last).to eq(aviso_do_roteiro)
+      expect(calls.last[:input].last(3).first[:content].first[:text]).to include("- #{fala} (campo instruction)")
+      expect(agent.reload).to have_attributes(instruction: instrucao_nova, scaffold: 'andaime sem coleta',
+                                              human_card: 'O Hubber atende os clientes sem pedir dados.')
+      expect(estado).to include('needs_more_info' => false, 'applied' => true)
+      expect(estado['conferencia']).to include('correcao' => true, 'falta' => false)
+    end
+
+    it 'ainda não atendido pelo roteiro depois da correção: segue o não atendido de sempre, sem 2ª correção' do
+      conferencias.push({ roteiro: [0] }, { roteiro: [0] })
+      respostas << saida('instruction' => instrucao_nova, 'human_card' => 'O Hubber atende sem pedir dados.',
+                         'mudancas' => lista)
+
+      run_turn
+
+      expect(calls.size).to eq(2)
+      expect(estado).to include('needs_more_info' => true, 'applied' => true)
+      expect(estado['conferencia']).to include('correcao' => true, 'falta' => true)
+      expect(estado['next_question']).to start_with(texto(:nao_consegui, pedidos: fala))
+    end
+
+    it 'conferência indisponível: sem correção, o turno fecha como antes, e o log diz roteiro_nao_conferido só com ids' do
+      allow(Rails.logger).to receive(:warn)
+      conferencias << { erro: true }
+
+      run_turn
+
+      expect(calls.size).to eq(1)
+      expect(estado).to include('applied' => true)
+      expect(Rails.logger).to have_received(:warn).with("[autonomia][builder] roteiro_nao_conferido thread=#{thread.id}")
+    end
+
+    it 'versão de antes sem o agente no metadata: a conferência recebe o andaime e o cartão atuais, e o pulo vai ao log' do
+      allow(Rails.logger).to receive(:info)
+      allow(Autonomia::Agents::ConferenciaDoAjuste).to receive(:new) do
+        agent.instruction_versions.find_each { |versao| versao.update!(metadata: versao.metadata.to_h.except('agente')) }
+        conferente
+      end
+
+      run_turn
+
+      expect(recebidas.first[:depois]).to include('scaffold' => 'andaime', 'human_card' => 'O Hubber atende os clientes.')
+      expect(recebidas.first[:antes]).not_to have_key('scaffold')
+      expect(Rails.logger).to have_received(:info).with(a_string_including('[autonomia][builder] roteiro_sem_antes thread='))
+    end
+
+    it 'índice do roteiro fora da instrução: sai da conferência guardada, com log do índice e da thread' do
+      allow(Rails.logger).to receive(:warn)
+      allow(conferente).to receive(:conferir) do |**kwargs|
+        recebidas << kwargs
+        conferencia_de(kwargs[:mudancas]).merge('roteiro_descartado' => [0])
+      end
+
+      run_turn
+
+      expect(calls.size).to eq(1)
+      expect(estado['conferencia']).not_to have_key('roteiro_descartado')
+      expect(Rails.logger).to have_received(:warn).with("[autonomia][builder] roteiro_descartado thread=#{thread.id} indice=0")
+    end
+
+    it 'andaime em branco antes: fica fora dos dois lados, e nada se exige dele' do
+      agent.update!(scaffold: '')
+
+      run_turn
+
+      expect(recebidas.first[:antes]).not_to have_key('scaffold')
+      expect(recebidas.first[:depois]).not_to have_key('scaffold')
+      expect(recebidas.first[:depois]).to include('human_card' => 'O Hubber atende os clientes.')
+    end
+
+    it 'falta por outro motivo: a correção vai sem o aviso do roteiro' do
+      conferencias << { nao: [0] }
+
+      run_turn
+
+      expect(calls.size).to eq(2)
+      expect(calls.last[:input]).not_to include(aviso_do_roteiro)
+    end
+  end
+
+  # O caso "não fale de preço" com cartão neutro: a conferência diz que andaime e cartão iguais estão certos, e nada
+  # força mudança (era a falha falsa da guarda de igualdade).
+  describe 'quando a instrução muda e a conferência dá andaime e cartão iguais como certos' do
+    let(:fala) { 'Não fale de preço com o cliente' }
+
+    it 'fecha sem correção, com o cartão e o andaime como estavam' do
+      respostas << saida('instruction' => 'Atenda com cordialidade. Não fale de preço.', 'guardrails' => ['Não fale de preço.'],
+                         'mudancas' => [mudanca('guardrails'), mudanca('instruction')])
+
+      run_turn
+
+      expect(calls.size).to eq(1)
+      expect(agent.reload).to have_attributes(scaffold: 'andaime', human_card: 'O Hubber atende os clientes.')
+      expect(estado).to include('needs_more_info' => false, 'applied' => true)
+      expect(estado['conferencia']).to include('falta' => false)
+    end
+  end
+
+  # Revisão do 40506a4cef (🔴): sem filtro à mão. "Seja mais formal e não colete dados", com o tom só no tone e a coleta
+  # só na instrução: o roteiro apontado pela conferência vira falta e a correção roda.
+  describe 'quando o pedido junta tom e coleta, cada um num campo só' do
+    let(:fala) { 'Seja mais formal e não colete dados' }
+    let(:lista) { [mudanca('tone', 'mais formal'), mudanca('instruction', 'não colete dados')] }
+
+    it 'o roteiro apontado na instrução aciona UMA correção' do
+      respostas << saida('tone' => 'formal', 'instruction' => 'Atenda com formalidade. Não colete dados.', 'mudancas' => lista)
+      conferencias << { roteiro: [1] }
+      respostas << saida('tone' => 'formal', 'instruction' => 'Atenda com formalidade. Não colete dados.',
+                         'scaffold' => 'andaime sem coleta', 'mudancas' => [mudanca('instruction', 'não colete dados')])
+
+      run_turn
+
+      expect(calls.size).to eq(2)
+      expect(calls.last[:input].last[:content].first[:text]).to eq(described_class::CorrecaoDoAjuste::AVISO_DO_ROTEIRO)
+      expect(agent.reload.scaffold).to eq('andaime sem coleta')
+      expect(estado['conferencia']).to include('correcao' => true, 'falta' => false)
+    end
+  end
+
+  describe 'quando o pedido é só de tom' do
+    it 'não aciona a correção nem loga roteiro_sem_antes, mesmo sem o agente na versão de antes' do
+      allow(Rails.logger).to receive(:info)
+      allow(Autonomia::Agents::ConferenciaDoAjuste).to receive(:new) do
+        agent.instruction_versions.find_each { |versao| versao.update!(metadata: versao.metadata.to_h.except('agente')) }
+        conferente
+      end
+      respostas << saida('tone' => 'formal', 'mudancas' => [mudanca('tone', 'mais formal')])
+
+      run_turn
+
+      expect(calls.size).to eq(1)
+      expect(agent.reload).to have_attributes(tone: 'formal', scaffold: 'andaime', human_card: 'O Hubber atende os clientes.')
+      expect(estado['conferencia']).to include('falta' => false)
+      expect(Rails.logger).not_to have_received(:info).with(a_string_including('roteiro_sem_antes'))
+    end
+  end
+
+  # #2489 (tester T04/T04b e revisão do 14b8f7654e) — a resposta_ao_dono só vai quando o próprio Construtor marca
+  # dono_perguntou, haja falta ou não. Decide o campo do schema, nunca o texto.
+  describe 'a resposta_ao_dono no fechamento' do
+    let(:fala) { 'Não colete dados neste canal' }
+    let(:instrucao_nova) { 'Atenda o cliente da corretora com cordialidade. Não colete dados do cliente neste canal.' }
+    let(:lista) { [mudanca('instruction', fala, 'Não coleta dados.')] }
+
+    def conteudos
+      thread.reload.messages.pluck('content')
+    end
+
+    it 'com falta e pergunta do dono: a resposta chega, junto da pergunta do que faltou' do
+      fala_com_pergunta = 'Não colete dados neste canal. E ele fala de preço hoje?'
+      thread.append_message!('user', fala_com_pergunta)
+      respostas << saida('instruction' => instrucao_nova, 'dono_perguntou' => true,
+                         'resposta_ao_dono' => 'Hoje ele não fala de preço.', 'mudancas' => lista)
+      respostas << saida('instruction' => instrucao_nova, 'mudancas' => lista)
+      conferencias.push({ roteiro: [0] }, { roteiro: [0] })
+
+      run_turn
+
+      expect(estado['conferencia']).to include('falta' => true)
+      expect(conteudos).to include('Hoje ele não fala de preço.')
+      expect(conteudos.last).to start_with(texto(:nao_consegui, pedidos: fala))
+    end
+
+    it 'com falta e sem pergunta: o "Pronto" da 1ª chamada não chega' do
+      respostas << saida('instruction' => instrucao_nova, 'resposta_ao_dono' => 'Pronto, tirei a coleta.', 'mudancas' => lista)
+      respostas << saida('instruction' => instrucao_nova, 'mudancas' => lista)
+      conferencias << { roteiro: [0] }
+
+      run_turn
+
+      expect(estado['conferencia']).to include('falta' => true)
+      expect(conteudos).not_to include('Pronto, tirei a coleta.')
+      expect(conteudos.last).to start_with(texto(:nao_consegui, pedidos: fala))
+    end
+
+    it 'com falta e sem pergunta: o "Pronto" da correção também não chega' do
+      respostas << saida('instruction' => instrucao_nova, 'mudancas' => lista)
+      respostas << saida('instruction' => instrucao_nova, 'human_card' => 'O Hubber atende sem pedir dados.',
+                         'resposta_ao_dono' => 'Pronto, corrigi o roteiro.', 'mudancas' => lista)
+      conferencias.push({ roteiro: [0] }, { roteiro: [0] })
+
+      run_turn
+
+      expect(calls.size).to eq(2)
+      expect(estado['conferencia']).to include('correcao' => true, 'falta' => true)
+      expect(conteudos).not_to include('Pronto, corrigi o roteiro.')
+      expect(conteudos.last).to start_with(texto(:nao_consegui, pedidos: fala))
+    end
+
+    # Revisão do e07221b352: sem falta, o comportamento é o da main (a resposta vai se não estiver vazia).
+    it 'sem falta e sem pergunta declarada: a resposta_ao_dono vai, como na main, e nada é cortado' do
+      allow(Rails.logger).to receive(:info)
+      respostas << saida('instruction' => instrucao_nova, 'resposta_ao_dono' => 'Hoje ele atende os clientes.', 'mudancas' => lista)
+
+      run_turn
+
+      expect(estado['conferencia']).to include('falta' => false)
+      expect(conteudos).to include('Hoje ele atende os clientes.')
+      expect(Rails.logger).not_to have_received(:info).with(a_string_including('resposta_ao_dono_cortada'))
+    end
+
+    it 'com falta, a resposta cortada vai ao log só com o id da thread, nunca com o texto' do
+      allow(Rails.logger).to receive(:info)
+      respostas << saida('instruction' => instrucao_nova, 'resposta_ao_dono' => 'Pronto, tirei a coleta.', 'mudancas' => lista)
+      respostas << saida('instruction' => instrucao_nova, 'mudancas' => lista)
+      conferencias << { roteiro: [0] }
+
+      run_turn
+
+      expect(Rails.logger).to have_received(:info).with("[autonomia][builder] resposta_ao_dono_cortada thread=#{thread.id}")
+      expect(Rails.logger).not_to have_received(:info).with(a_string_including('Pronto, tirei a coleta.'))
+    end
+
+    it 'a resposta da correção não sobrescreve a resposta real da 1ª chamada à pergunta do dono' do
+      thread.append_message!('user', 'Não colete dados neste canal. E ele fala de preço hoje?')
+      respostas << saida('instruction' => instrucao_nova, 'dono_perguntou' => true,
+                         'resposta_ao_dono' => 'Hoje ele não fala de preço.', 'mudancas' => lista)
+      respostas << saida('instruction' => instrucao_nova, 'scaffold' => 'andaime sem coleta', 'dono_perguntou' => true,
+                         'resposta_ao_dono' => 'Pronto, corrigi o roteiro.', 'mudancas' => lista)
+      conferencias << { roteiro: [0] }
+
+      run_turn
+
+      expect(estado['conferencia']).to include('correcao' => true, 'falta' => false)
+      expect(conteudos).to include('Hoje ele não fala de preço.')
+      expect(conteudos).not_to include('Pronto, corrigi o roteiro.')
+    end
+
+    it 'sem falta e com pergunta: a resposta chega' do
+      respostas << saida('instruction' => instrucao_nova, 'dono_perguntou' => true,
+                         'resposta_ao_dono' => 'Hoje ele atende os clientes.', 'mudancas' => lista)
+
+      run_turn
+
+      expect(estado['conferencia']).to include('falta' => false)
+      expect(conteudos).to include('Hoje ele atende os clientes.')
+    end
+  end
+
   # B da revisão (e prova A): conflito sem falta vira pergunta, sem correção.
   describe 'quando só há conflito, com tudo atendido' do
     before do

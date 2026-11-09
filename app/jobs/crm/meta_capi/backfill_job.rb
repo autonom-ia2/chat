@@ -15,6 +15,10 @@
 #   - STAGE axis:  'moved' for the CURRENT stage, only when that stage has a
 #     funnel_stage_type configured.
 # Both are gated by the pipeline's meta_sync config (enabled + event subscribed).
+# Only a click made up to the event counts, with the same cut as the live send (#2799,
+# PayloadBuilder.event_time_for): an event whose clicks all came after it is reported as
+# skipped_click_after_event, unless website signals made by then would carry it, as in
+# DispatchJob's website fallback.
 #
 # SECURITY: this job never touches the Meta access token — DispatchJob resolves and
 # posts it. Nothing token-shaped is ever logged here.
@@ -55,6 +59,11 @@ class Crm::MetaCapi::BackfillJob < ApplicationJob
   end
 
   def process_event(card, capi_event, activity, report)
+    unless clicked_by_event?(card, capi_event, activity)
+      report[:skipped_click_after_event] += 1
+      return
+    end
+
     event_id = build_event_id(card, capi_event, activity)
     if already_sent?(event_id)
       report[:already_sent] += 1
@@ -96,6 +105,12 @@ class Crm::MetaCapi::BackfillJob < ApplicationJob
     card.activities.where(event_type: event_types).order(created_at: :desc).first
   end
 
+  def clicked_by_event?(card, capi_event, activity)
+    up_to = Crm::MetaCapi::PayloadBuilder.event_time_for(card, capi_event, activity)
+    Crm::MetaCapi::CtwaClidResolver.sources(card, up_to: up_to).any? ||
+      Crm::MetaCapi::WebsiteSignalResolver.resolve(card, up_to: up_to).present?
+  end
+
   # Mirrors Crm::MetaCapiListener#meta_sync_enabled?: the event must be subscribed
   # under the pipeline's meta_sync config for the backfill to consider it.
   def subscribed?(pipeline, capi_event)
@@ -108,8 +123,10 @@ class Crm::MetaCapi::BackfillJob < ApplicationJob
     "crm-#{card.id}-#{capi_event}-#{activity.id}"
   end
 
+  # Accepted, or maybe received by Meta (unknown outcome, #2799): DispatchJob never posts either again.
   def already_sent?(event_id)
-    Crm::MetaConversionEvent.accepted.exists?(event_id: event_id)
+    events = Crm::MetaConversionEvent.where(event_id: event_id)
+    events.accepted.or(events.error.where(error_message: Crm::MetaConversionEvent::UNKNOWN_OUTCOME)).exists?
   end
 
   def enqueue_dispatch(card, capi_event, activity, report)
@@ -127,7 +144,10 @@ class Crm::MetaCapi::BackfillJob < ApplicationJob
   end
 
   def cards_scope(pipeline)
-    pipeline.cards.where.not(conversation_id: nil)
+    # A card whose click lives only in a linked conversation (#1940) counts too.
+    linked = Crm::CardConversation.where('crm_card_conversations.card_id = crm_cards.id').arel.exists
+    pipeline.cards.where.not(conversation_id: nil).or(pipeline.cards.where(linked))
+            .includes(:primary_conversation, :linked_conversations)
   end
 
   def build_report(account_id, dry_run)
@@ -136,6 +156,7 @@ class Crm::MetaCapi::BackfillJob < ApplicationJob
       dry_run: dry_run,
       would_send: 0,
       skipped_no_clid: 0,
+      skipped_click_after_event: 0,
       already_sent: 0,
       enqueued: 0,
       by_event_type: Hash.new(0)
@@ -146,6 +167,7 @@ class Crm::MetaCapi::BackfillJob < ApplicationJob
     Rails.logger.info(
       "Crm::MetaCapi::BackfillJob account=#{report[:account_id]} dry_run=#{report[:dry_run]} " \
       "would_send=#{report[:would_send]} skipped_no_clid=#{report[:skipped_no_clid]} " \
+      "skipped_click_after_event=#{report[:skipped_click_after_event]} " \
       "already_sent=#{report[:already_sent]} enqueued=#{report[:enqueued]} by_event_type=#{report[:by_event_type]}"
     )
     report

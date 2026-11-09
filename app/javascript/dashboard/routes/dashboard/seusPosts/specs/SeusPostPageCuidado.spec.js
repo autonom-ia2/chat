@@ -8,7 +8,8 @@ import ComentariosIaAPI from 'dashboard/api/comentariosIa';
 import { useAlert } from 'dashboard/composables';
 
 // #2212 (B1): no post, atrás da flag meta_ads_comentarios_ia, o bloco "O que tem nos comentários" (o resumo, A2) e o
-// "Cuidando · Pausar". Lidos à parte: a página não espera por eles. Dados sintéticos.
+// "Cuidando · Pausar". Lidos à parte: a página não espera por eles. #2454: o resumo traz só o que o código conta
+// (quantos esperam resposta e quantos ainda cabem no privado), sem IA. Dados sintéticos.
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/api/seusPosts', () => ({
   default: { getPost: vi.fn(), getComments: vi.fn() },
@@ -50,14 +51,20 @@ const route = reactive({
 });
 vi.mock('vue-router', () => ({ useRoute: () => route }));
 
-const TODAS = ['seus_posts_comentarios', 'meta_ads_comentarios_ia'];
+// #2520: o cuidado segue a régua do motor: a flag dele e a dos comentários da rede do perfil.
+const TODAS = [
+  'seus_posts_comentarios',
+  'meta_ads_comentarios_ia',
+  'meta_ads_comentarios_instagram',
+];
 
-const comPost = ({ network = 'instagram', canManage = true } = {}) =>
+const comPost = ({ network = 'instagram', canManage = true, ads } = {}) =>
   SeusPostsAPI.getPost.mockResolvedValue({
     data: {
       perfil: { id: 'instagram-1', network, inbox_id: 7 },
       status: 'ok',
       can_manage: canManage,
+      ...(ads ? { ads } : {}),
       post: {
         id: '17900000000000001',
         text: 'Promoção de outubro. Peças com 20% até domingo.',
@@ -96,11 +103,8 @@ const painel = (extra = {}) => ({
 });
 const resumoPronto = (extra = {}) => ({
   status: 'ready',
-  questions: 3,
-  questions_old: 0,
-  complaints: 1,
-  read: 4,
-  more: false,
+  waiting: 17,
+  private_window: 12,
   ...extra,
 });
 
@@ -154,6 +158,18 @@ describe('Seus posts: o cuidado no post (#2212)', () => {
     );
   });
 
+  it('sem a flag dos comentários da rede do perfil: não lê o cuidado (#2520)', async () => {
+    flags.value = [
+      'seus_posts_comentarios',
+      'meta_ads_comentarios_ia',
+      'meta_ads_comentarios_facebook',
+    ];
+    const wrapper = await montar();
+
+    expect(ComentariosIaAPI.getCuidado).not.toHaveBeenCalled();
+    expect(bloco(wrapper).exists()).toBe(false);
+  });
+
   it('pronto: lê o resumo do post do perfil e diz o que tem, com o botão de cuidar', async () => {
     const wrapper = await montar();
     const alvo = {
@@ -165,10 +181,8 @@ describe('Seus posts: o cuidado no post (#2212)', () => {
     expect(ComentariosIaAPI.getResumo).toHaveBeenCalledWith(alvo);
     expect(ComentariosIaAPI.getCuidado).toHaveBeenCalledWith(alvo);
     expect(bloco(wrapper).attributes('data-status')).toBe('ready');
-    expect(bloco(wrapper).text()).toContain(
-      '3 perguntas: posso responder no privado'
-    );
-    expect(bloco(wrapper).text()).toContain('1 reclamação: fica com você');
+    expect(bloco(wrapper).text()).toContain('17 comentários esperam resposta');
+    expect(bloco(wrapper).text()).toContain('12 cabem no privado (até 7 dias)');
     expect(
       bloco(wrapper).find('[data-seus-posts-cuidar]').attributes('data-to')
     ).toBe('seus_posts_cuidar');
@@ -178,7 +192,7 @@ describe('Seus posts: o cuidado no post (#2212)', () => {
     comPost({ canManage: false });
     const wrapper = await montar();
 
-    expect(bloco(wrapper).text()).toContain('3 perguntas');
+    expect(bloco(wrapper).text()).toContain('17 comentários esperam resposta');
     expect(bloco(wrapper).find('[data-seus-posts-cuidar]').exists()).toBe(
       false
     );
@@ -200,7 +214,34 @@ describe('Seus posts: o cuidado no post (#2212)', () => {
 
     expect(bloco(wrapper).attributes('data-status')).toBe('needs_permission');
     expect(bloco(wrapper).text()).toContain('preciso do acesso');
-    expect(bloco(wrapper).text()).not.toContain('perguntas');
+    expect(bloco(wrapper).text()).not.toContain('esperam resposta');
+  });
+
+  // #2522: leitura de uma rede só, os números da rede que leu e o mesmo aviso do Painel, com ler de novo.
+  it('uma rede faltou: os números da que leu, o aviso da que faltou e ler de novo', async () => {
+    ComentariosIaAPI.getResumo
+      .mockResolvedValueOnce({
+        data: resumoPronto({
+          network_status: { instagram: 'ready', facebook: 'meta_unavailable' },
+        }),
+      })
+      .mockResolvedValueOnce({
+        data: resumoPronto({
+          network_status: { instagram: 'ready', facebook: 'ready' },
+        }),
+      });
+    const wrapper = await montar();
+
+    const aviso = bloco(wrapper).find('[data-ia-rede-faltou]');
+    expect(aviso.attributes('data-network')).toBe('facebook');
+    expect(bloco(wrapper).find('[data-seus-posts-esperam]').exists()).toBe(
+      true
+    );
+    await aviso.find('button').trigger('click');
+    await flushPromises();
+
+    expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(2);
+    expect(bloco(wrapper).find('[data-ia-rede-faltou]').exists()).toBe(false);
   });
 
   it('meta_unavailable: diz e oferece ler de novo', async () => {
@@ -231,87 +272,73 @@ describe('Seus posts: o cuidado no post (#2212)', () => {
     ).toBe(true);
   });
 
-  it('reading (a primeira contagem): segue carregando e lê de novo até ficar pronto', async () => {
-    vi.useFakeTimers();
-    try {
-      ComentariosIaAPI.getResumo
-        .mockResolvedValueOnce({ data: { status: 'reading' } })
-        .mockResolvedValueOnce({ data: { status: 'reading' } })
-        .mockResolvedValueOnce({ data: resumoPronto() });
-      const wrapper = await montar();
+  // #2804: o topo do post soma os comentários do anúncio; este bloco é do cuidado da IA, que cuida só do post.
+  it('o título diz que fala dos comentários deste post; com anúncio, que os do anúncio ficam no anúncio', async () => {
+    ComentariosIaAPI.getResumo.mockResolvedValue({ data: resumoPronto() });
+    let wrapper = await montar();
+    expect(bloco(wrapper).find('h2').text()).toBe(
+      'O que tem nos comentários deste post'
+    );
 
-      expect(bloco(wrapper).attributes('data-status')).toBe('loading');
-      expect(bloco(wrapper).text()).toContain('Estou lendo os comentários');
-      expect(
-        bloco(wrapper).find('[data-seus-posts-o-que-tem-de-novo]').exists()
-      ).toBe(false);
-
-      await vi.advanceTimersByTimeAsync(3000);
-      expect(bloco(wrapper).attributes('data-status')).toBe('loading');
-      await vi.advanceTimersByTimeAsync(3000);
-
-      expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(3);
-      expect(bloco(wrapper).attributes('data-status')).toBe('ready');
-      expect(bloco(wrapper).text()).toContain('3 perguntas');
-    } finally {
-      vi.useRealTimers();
-    }
+    window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
+    comPost({ ads: [{ id: '903', name: 'Promoção', waiting: 2 }] });
+    wrapper = await montar();
+    expect(bloco(wrapper).find('h2').text()).toBe(
+      'O que tem nos comentários deste post (os do anúncio ficam no anúncio)'
+    );
+    delete window.globalConfig;
   });
 
-  it('reading que não acaba: para no teto e oferece tentar de novo', async () => {
-    vi.useFakeTimers();
-    try {
-      ComentariosIaAPI.getResumo.mockResolvedValue({
-        data: { status: 'reading' },
-      });
-      const wrapper = await montar();
-      await vi.advanceTimersByTimeAsync(3000 * 30);
+  it('um comentário: singular, e o que eu faço com ele', async () => {
+    ComentariosIaAPI.getResumo.mockResolvedValue({
+      data: resumoPronto({ waiting: 1, private_window: 1 }),
+    });
+    const wrapper = await montar();
 
-      expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(10);
-      expect(bloco(wrapper).attributes('data-status')).toBe('error');
-      expect(bloco(wrapper).text()).toContain(
-        'Não consegui ler os comentários agora.'
-      );
-      expect(
-        bloco(wrapper).find('[data-seus-posts-o-que-tem-de-novo]').exists()
-      ).toBe(true);
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(bloco(wrapper).text()).toContain('1 comentário espera resposta');
+    expect(bloco(wrapper).text()).toContain('1 cabe no privado (até 7 dias)');
+    expect(bloco(wrapper).find('[data-seus-posts-o-que-faco]').text()).toBe(
+      ptBR.SEUS_POSTS.POST.CARE_OFFER.TEXT
+    );
   });
 
-  it('sair da página com o resumo lendo para de perguntar', async () => {
+  it('todos com mais de 7 dias: não diz que cabem no privado e avisa que só os novos', async () => {
+    ComentariosIaAPI.getResumo.mockResolvedValue({
+      data: resumoPronto({ waiting: 5, private_window: 0 }),
+    });
+    const wrapper = await montar();
+
+    expect(bloco(wrapper).text()).toContain('5 comentários esperam resposta');
+    expect(bloco(wrapper).text()).not.toContain('cabe');
+    expect(bloco(wrapper).find('[data-seus-posts-o-que-faco]').text()).toBe(
+      ptBR.SEUS_POSTS.POST.CARE_OFFER.TEXT_ONLY_NEW
+    );
+  });
+
+  it('ninguém esperando: diz e fala dos que chegarem', async () => {
+    ComentariosIaAPI.getResumo.mockResolvedValue({
+      data: resumoPronto({ waiting: 0, private_window: 0 }),
+    });
+    const wrapper = await montar();
+
+    expect(bloco(wrapper).text()).toContain(
+      'Nenhum comentário esperando resposta.'
+    );
+    expect(bloco(wrapper).find('[data-seus-posts-o-que-faco]').text()).toBe(
+      ptBR.SEUS_POSTS.POST.CARE_OFFER.TEXT_FUTURE
+    );
+  });
+
+  it('lê o resumo uma vez só: sem IA, não pergunta de novo', async () => {
     vi.useFakeTimers();
     try {
-      ComentariosIaAPI.getResumo.mockResolvedValue({
-        data: { status: 'reading' },
-      });
-      const wrapper = await montar();
-      wrapper.unmount();
-      montadas.splice(montadas.indexOf(wrapper), 1);
-      await vi.advanceTimersByTimeAsync(3000 * 5);
+      await montar();
+      await vi.advanceTimersByTimeAsync(60000);
 
       expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }
-  });
-
-  it('ai_unavailable (a IA fora): diz que não deu e oferece tentar de novo', async () => {
-    ComentariosIaAPI.getResumo
-      .mockResolvedValueOnce({ data: { status: 'ai_unavailable' } })
-      .mockResolvedValueOnce({ data: resumoPronto() });
-    const wrapper = await montar();
-
-    expect(bloco(wrapper).text()).toContain(
-      'Não consegui ler os comentários agora.'
-    );
-    await bloco(wrapper)
-      .find('[data-seus-posts-o-que-tem-de-novo]')
-      .trigger('click');
-    await flushPromises();
-
-    expect(bloco(wrapper).attributes('data-status')).toBe('ready');
   });
 
   it('o cuidado não veio (rede): aviso com tentar de novo, sem oferecer cuidar', async () => {
@@ -355,9 +382,22 @@ describe('Seus posts: o cuidado no post (#2212)', () => {
     });
     const wrapper = await montar();
 
-    expect(bloco(wrapper).text()).toContain('3 perguntas: ficam com você');
-    expect(bloco(wrapper).text()).not.toContain('no privado as perguntas');
+    expect(bloco(wrapper).text()).toContain('17 comentários esperam resposta');
+    expect(bloco(wrapper).text()).not.toContain('cabem no privado');
     expect(bloco(wrapper).text()).toContain('ainda não está liberado');
+  });
+
+  it('#2307 · Página com a permissão da Meta: promete o privado, como no Instagram', async () => {
+    comPost({ network: 'facebook' });
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({ network: 'facebook', private_available: true }),
+    });
+    const wrapper = await montar();
+
+    expect(bloco(wrapper).find('[data-seus-posts-o-que-faco]').text()).toBe(
+      ptBR.SEUS_POSTS.POST.CARE_OFFER.TEXT
+    );
+    expect(bloco(wrapper).text()).not.toContain('ainda não está liberado');
   });
 
   it('cuidando: o herói diz e pausa com um toque; o bloco do resumo sai', async () => {

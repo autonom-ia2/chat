@@ -78,6 +78,43 @@ describe('MetaAdsComments (#2196)', () => {
     expect(ig.listar).toHaveBeenCalledTimes(2);
   });
 
+  // #2543: a Meta conta o privado em bytes. 600 letras com acento são 1200 bytes: a caixa avisa e não manda.
+  it('counts the private reply in bytes: accented text under 1000 letters is too long', async () => {
+    const ig = adaptador(ready([comment('1')]));
+    const shell = await mountShell([{ key: 'INSTAGRAM', adaptador: ig }]);
+    const accented = 'ã'.repeat(600);
+
+    await shell.find('[data-ad-comment-private]').trigger('click');
+    const field = shell.find('[data-ad-comment-composer] textarea');
+    expect(field.attributes('maxlength')).toBeUndefined();
+    await field.setValue(accented);
+
+    expect(shell.find('[data-ad-comment-too-long]').text()).toBe(
+      said('ERRORS.TEXT_TOO_LONG')
+    );
+    expect(field.attributes('aria-invalid')).toBe('true');
+    expect(
+      shell.find('[data-ad-comment-send]').attributes('disabled')
+    ).toBeDefined();
+    await shell.find('[data-ad-comment-composer]').trigger('submit');
+    expect(ig.privado).not.toHaveBeenCalled();
+
+    await field.setValue('ã'.repeat(500));
+    expect(shell.find('[data-ad-comment-too-long]').exists()).toBe(false);
+  });
+
+  it('keeps the public reply limit in letters, without the byte warning', async () => {
+    const ig = adaptador(ready([comment('1')]));
+    const shell = await mountShell([{ key: 'INSTAGRAM', adaptador: ig }]);
+
+    await shell.find('[data-ad-comment-reply]').trigger('click');
+    const field = shell.find('[data-ad-comment-composer] textarea');
+    await field.setValue('ã'.repeat(600));
+
+    expect(field.attributes('maxlength')).toBe('1000');
+    expect(shell.find('[data-ad-comment-too-long]').exists()).toBe(false);
+  });
+
   it('says the reason in the words of its own network on the Facebook tab (#2197)', async () => {
     const fb = adaptador(ready([comment('1')]));
     fb.ocultar.mockRejectedValue(refused(422, 'meta_unavailable'));

@@ -1,17 +1,25 @@
 # IA cuida dos comentários (#2212): o que acontece com um comentário novo num post ou anúncio de que a IA cuida.
 #
 # 1. Filtra o que não é dela: flag desligada, caixa de outra conta ou de outro canal, resposta a outro comentário, post
-#    sem cuidado ou pausado, ou comentário com mais de 7 dias (o privado não sai mais).
+#    sem cuidado ou pausado, ou comentário com mais de 7 dias (o privado não sai mais). O de cliente sem cuidado ligado
+#    fica registrado (`no_care`, #2519): o Esperando o conta, e nada some em silêncio.
+#    Com a flag meta_ads_comentarios_ia (#2454), a resposta dentro de um comentário entra: a de cliente é
+#    decidida como um comentário próprio, com o de cima (lido na Meta pelo id, Rede#ler_pai) à parte, como contexto. A
+#    da própria conta (o perfil ou a Página, inclusive a frase pública que a IA posta) nunca entra. O privado para
+#    resposta vai à Meta, que decide (o teste real é do próprio produto, na conta piloto). A recusa dela com código é
+#    final: a pessoa recebe só a frase pública que não promete o privado (o preço, se o dono ligou essa chave); sem ela,
+#    o comentário fica com o dono. A recusa, com o código e o subcódigo, fica gravada pela Rede.
 # 2. Reivindica o comentário (Registro, `ai_seen`) ANTES da IA: o webhook reenviado, ou outro job do mesmo comentário,
-#    sai aqui sem gastar nada. O teto do dia é contado depois da reserva (ela conta), para a concorrência não passar
-#    dele; passou, o comentário fica com o dono.
+#    sai aqui sem gastar nada. Não há teto de uso (decisão do Rodrigo, #2454): as guardas são contra defeito, não
+#    contra uso — o mesmo comentário não é decidido duas vezes (esta reserva) e um privado por pessoa em cada post
+#    (a reserva da pessoa, no passo 4).
 # 3. Lê o comentário na Meta (o evento leva só ids, #2327). Se a Meta diz que não dá (apagado, sem permissão), ele fica
 #    descartado; se ela não responde, o job tenta de novo (CuidarJob, com teto).
 #    Depois, pergunta à IA o que fazer (Classificador), com a legenda do post. IA fora do ar, ou a legenda sem resposta
 #    da Meta: o job tenta de novo. Sem a legenda, "quanto custa esse?" pode ser decidido errado, e o motor não manda
 #    privado no escuro; esgotadas as tentativas, o comentário fica com o dono. O que a IA escolheu, a certeza e o motivo
 #    ficam na linha `ai_seen` (#2424), também quando ela age.
-#    A IA que não cuidou (sem certeza, teto do dia, IA barrada pelo teto ou pela flag) grava `ai_unread`: o comentário
+#    A IA que não cuidou (sem certeza, IA barrada pela flag ou sem chave) grava `ai_unread`: o comentário
 #    fica com o dono, no "Esperando você", nunca some.
 # 4. Faz:
 #    - privado ou preço: reserva a pessoa no post (um privado por pessoa, antes da Meta), manda o privado e põe o
@@ -21,18 +29,42 @@
 #    - reclamação: não responde, e a conversa abre urgente para a pessoa;
 #    - propaganda: esconde;
 #    - o resto: nada (a reivindicação já registra que a IA leu).
-#    Sem oferta na ficha nem "para quem" do dono, ou na rede em que o privado ainda não está liberado (Facebook, F4),
+#    - #2458: a frase do comentário e a do privado são escritas pela IA
+#      para este comentário (Escrita), as duas ANTES de qualquer envio. O que o agente não sabe, e o comentário sobre o
+#      assunto proibido do dono (`owner_topic`), ficam com o dono (`kept_for_owner`). O preço que o dono escreveu vale
+#      no lugar da frase escrita. Sem agente que possa escrever, as frases fixas (o motivo vai ao log).
+#    Sem oferta na ficha nem "para quem" do dono, ou na rede em que o privado não está liberado (a Página sem a
+#    `pages_messaging` concedida, #2307),
 #    nunca manda privado: a pergunta fica com o dono (`kept_for_owner`, "Esperando você" no Painel).
 #
 # Erro antes de a IA agir na Meta solta a reivindicação e sobe: o job tenta de novo. Depois de agir, a reivindicação
 # fica, para o reenvio não mandar o privado de novo.
-class Crm::MetaAds::ComentariosIa::Cuidar
+class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength -- no teto antes do #2458; a escrita fica entre a reserva e o envio
   FLAG = 'meta_ads_comentarios_ia'.freeze
-  TETO_DIARIO = 200
   # Até quando o comentário aceita o Private Reply.
   JANELA = 7.days
   # Era o caso do privado, mas ele não sai aqui (sem o que mandar, ou a rede ainda não o libera).
   FICA_COM_O_DONO = 'kept_for_owner'.freeze
+
+  # #2519: o comentário como fica nas linhas do Registro, que o Esperando conta por anúncio. Também o CuidarJob, quando
+  # as tentativas acabam.
+  # - No Facebook o evento vem sem `ad_id`; com o cuidado de um anúncio, a linha leva o anúncio dele.
+  # - A resposta dentro de um comentário (#2454) vai sem anúncio: a lista "Esperando você" mostra só o primeiro nível,
+  #   e o número conta o mesmo que a lista.
+  # A Conversa e a Rede seguem com o comentário como chegou (a chave da conversa usa o `ad_id` do evento). As linhas que
+  # a Rede grava (a resposta pública, o esconder, o privado do Facebook) ficam com o `ad_id` do evento: nenhuma delas fica
+  # com o dono, e o número não as conta.
+  def self.registrado(comentario, care = cuidado_de(comentario))
+    return comentario.class.new(**comentario.to_h, ad_id: nil) if comentario.resposta?
+    return comentario if comentario.ad_id.present? || care&.target_kind != 'ad'
+
+    comentario.class.new(**comentario.to_h, ad_id: care.target_id)
+  end
+
+  def self.cuidado_de(comentario)
+    Crm::MetaAdsCommentCare.cuidando(account_id: comentario.account_id, network: comentario.network, post_id: comentario.post_id,
+                                     ad_id: comentario.ad_id)
+  end
 
   def initialize(comentario, rede: nil, classificador: nil, conversa: Crm::MetaAds::ComentariosIa::Conversa,
                  registro: Crm::MetaAds::ComentariosIa::Registro)
@@ -44,7 +76,9 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   end
 
   def call
-    cuidar if cuidar? && @registro.reservar!(@comentario)
+    return @registro.sem_cuidado!(registrado) if sem_cuidado?
+
+    cuidar if cuidar? && @registro.reservar!(registrado)
   end
 
   private
@@ -52,12 +86,12 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   # Depois da reserva: um erro antes de agir na Meta solta a leitura, para o job tentar de novo. Depois de agir, não.
   # O comentário que a Meta diz que não dá para ler (apagado, sem permissão) fica com a reserva: descartado, não volta.
   def cuidar
-    return nao_cuidou('teto') if @registro.hoje(@comentario.account_id) > TETO_DIARIO
-
     lido = rede.ler
     return descartar if lido.nil?
 
     @comentario = @comentario.lido(**lido)
+    return da_conta_na_leitura if da_conta?
+
     decisao = decidir
     decisao ? executar(decisao) : nao_cuidou('sem_certeza')
   rescue Crm::MetaAds::ComentariosIa::Classificador::Bloqueado => e
@@ -70,17 +104,30 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   # O privado só sai com o que mandar (oferta ou "para quem") e na rede que já o libera; senão, a pergunta fica com o
   # dono (FICA_COM_O_DONO: o Painel a mostra em "Esperando você", não como "não se aplica").
   def decidir
-    avaliacao = classificador.avaliar!(@comentario.text)
-    @registro.decisao!(@comentario, avaliacao) if avaliacao
+    avaliacao = avaliar
+    @registro.decisao!(registrado, avaliacao) if avaliacao
     decisao = avaliacao&.chave
     return decisao unless %w[private price].include?(decisao)
 
     care.privado? && rede.privado_disponivel? ? decisao : FICA_COM_O_DONO
   end
 
+  # Na resposta, o comentário de cima vai à IA à parte (Classificador, `parent_comment`).
+  def avaliar
+    return classificador.avaliar!(@comentario.text) unless @comentario.resposta?
+
+    classificador.avaliar!(@comentario.text, pai: rede.ler_pai)
+  end
+
+  # O autor só veio na leitura (comentário da lista) e é a própria conta: a leitura sai, e nada fica gravado.
+  def da_conta_na_leitura
+    Rails.logger.info("[comentarios_ia] comentário da própria conta ignorado #{ids}")
+    soltar_leitura
+  end
+
   # Uma falha ao soltar não pode trocar o erro original: é ele que diz ao job se tenta de novo.
   def soltar_leitura
-    @registro.soltar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::LIDO)
+    @registro.soltar!(registrado, Crm::MetaAds::ComentariosIa::Registro::LIDO)
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: Account.find_by(id: @comentario.account_id)).capture_exception
   end
@@ -88,7 +135,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   # O comentário fica com o dono, com o porquê só no log (ids, nunca o texto).
   def nao_cuidou(motivo)
     Rails.logger.info("[comentarios_ia] não cuidou motivo=#{motivo} #{ids}")
-    @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
+    @registro.gravar!(registrado, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
   end
 
   def ids
@@ -101,10 +148,41 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   end
 
   def cuidar?
-    return false if inbox.nil? || @comentario.resposta? || care.nil? || rede.nil?
+    return false if inbox.nil? || !do_motor? || care.nil? || rede.nil?
     return false unless inbox.account.feature_enabled?(FLAG)
 
-    na_janela?
+    na_janela? && !pessoa_agiu?
+  end
+
+  # #2519: passados 10 min o comentário aparece ao dono no "Esperando você", mas o job pode ainda tentar de novo (Meta ou
+  # IA fora do ar). Se a pessoa já respondeu, escondeu ou apagou, a IA não age por cima dela. O privado que a pessoa
+  # mandou segue o caminho de antes (a IA vê a reserva dela e diz "já recebeu").
+  def pessoa_agiu?
+    Crm::MetaAdsCommentAction.exists?(account_id: @comentario.account_id, network: @comentario.network,
+                                      comment_id: @comentario.comment_id.to_s, actor: 'user', action: Crm::MetaAdsCommentAction::BY_USER)
+  end
+
+  # #2519: o comentário de cliente num anúncio (com o `ad_id`, que só o Instagram manda) sem cuidado ligado (nenhum, ou o
+  # do anúncio pausado) fica registrado (`no_care`), para o Esperando contar o que está com o dono. Antes, sumia sem
+  # rastro. Sem o anúncio, nenhuma leitura usaria a linha. Só o primeiro nível, como a lista "Esperando você".
+  def sem_cuidado?
+    return false if @comentario.ad_id.blank? || @comentario.resposta? || inbox.nil? || !do_motor? || care.present?
+
+    inbox.account.feature_enabled?(FLAG) && na_janela?
+  end
+
+  # O comentário de primeiro nível e a resposta dentro dele (#2454), nunca o da própria conta.
+  def do_motor?
+    !da_conta?
+  end
+
+  # O perfil ou a Página da própria conta (o dono do evento ou o da caixa): a frase pública que a IA posta, ou a
+  # resposta do dono, não volta para ela.
+  def da_conta?
+    autor = @comentario.from_id.to_s
+    return false if autor.blank?
+
+    [@comentario.owner_id, inbox.channel.try(:instagram_id), inbox.channel.try(:page_id)].compact.map(&:to_s).include?(autor)
   end
 
   def na_janela?
@@ -118,7 +196,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     when 'private', 'price' then privado(decisao)
     when 'to_you' then agir { para_voce('to_you') }
     when 'hide' then esconder
-    when FICA_COM_O_DONO then @registro.gravar!(@comentario, FICA_COM_O_DONO)
+    when FICA_COM_O_DONO, Crm::MetaAds::ComentariosIa::Classificador::DONO then @registro.gravar!(registrado, FICA_COM_O_DONO)
     end
   end
 
@@ -131,32 +209,83 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   # deste post (outro comentário dela) não recebe outro.
   def privado(decisao)
     return nao_cuidou('sem_quem_comentou') if @comentario.from_id.blank? || @comentario.post_id.blank?
-    return ja_tem_privado unless @registro.reservar_pessoa!(@comentario)
+
+    return ja_tem_privado unless @registro.reservar_pessoa!(registrado)
+
+    textos = textos_reservados(decisao)
+    # O agente não soube escrever: fica com o dono, no "Esperando você".
+    return @registro.gravar!(registrado, FICA_COM_O_DONO) if textos.key?(:dono)
 
     inicio = Time.current
-    envio = agir { rede.privado(care) }
-    return nao_saiu(envio) unless envio.ok
+    envio = agir { rede.privado(care, texto: textos[:privado]) }
+    return nao_saiu(envio, decisao) unless envio.ok
 
     na_conversa(envio.conversation, inicio)
-    responder(decisao)
+    responder(decisao, textos[:publico])
   end
 
-  # A frase pública depois do privado. A Meta recusou: o dono vê "não cuidei" e responde ele.
-  def responder(decisao)
-    return if rede.responder(care.resposta_publica(decisao, @registro.vez(@comentario.account_id)))
+  # #2458: com a escrita ligada, a mensagem do privado e a frase do comentário escritas pela IA (Escrita#textos), as duas
+  # antes de qualquer envio e depois da reserva da pessoa: quem já tem o privado deste post não gasta IA. Nada saiu
+  # (fica com o dono, ou a IA fora do ar): a reserva sai.
+  def textos_reservados(decisao)
+    return {} unless Crm::MetaAds::ComentariosIa::Escrita.ligada?(inbox.account)
+
+    textos = textos_escritos(decisao)
+    @registro.soltar_pessoa!(registrado) if textos.key?(:dono)
+    textos
+  rescue Crm::MetaAds::ComentariosIa::Classificador::Erro
+    @registro.soltar_pessoa!(registrado)
+    raise
+  end
+
+  def textos_escritos(decisao)
+    Crm::MetaAds::ComentariosIa::Escrita.new(care: care, inbox: inbox, legenda: rede.legenda, foto: texto_da_foto)
+                                        .textos(decisao, comentario: @comentario.text, pai: rede.ler_pai)
+  end
+
+  # A frase pública depois do privado (a escrita pela IA, ou a do dono). A Meta recusou: o dono vê "não cuidei" e
+  # responde ele.
+  def responder(decisao, escrita = nil)
+    return if rede.responder(escrita || care.resposta_publica(decisao, @registro.vez(@comentario.account_id)))
 
     recusou('reply')
-    @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
+    @registro.gravar!(registrado, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
   end
 
   # Já feito (pela pessoa, na tela do #2196, ou por outro job): nada a mostrar. Sem resposta da Meta, pode ter saído: a
   # reserva da pessoa fica. Recusa: a reserva sai.
-  def nao_saiu(envio)
+  def nao_saiu(envio, decisao)
     return outro_envio if envio.erro == Crm::MetaAds::ComentariosIa::Rede::JA_FEITO
     return para_voce('private_reply_unsure') if envio.talvez_entregue
 
-    @registro.soltar_pessoa!(@comentario)
-    para_voce('private_reply_failed')
+    return limite_em_resposta(envio) if @comentario.resposta? && Crm::MetaAds::ComentariosIa::LimiteDaMeta.do_envio?(envio)
+
+    @registro.soltar_pessoa!(registrado)
+    return recusado_em_resposta(envio, decisao) if @comentario.resposta? && envio.codigo.present?
+
+    para_voce('private_reply_failed', recusa: { codigo: envio.codigo, subcodigo: envio.subcodigo })
+  end
+
+  # #2454: limite de chamadas da Meta no privado em resposta não é recusa. A leitura sai (para o job poder cuidar de
+  # novo) e o erro sobe como passageiro: o CuidarJob tenta mais tarde. A pessoa fica reservada para este comentário
+  # (Registro#reservar_pessoa! reconhece a dele), e nada é decidido pelo dono.
+  def limite_em_resposta(envio)
+    Rails.logger.info("[comentarios_ia] limite da Meta no privado em resposta codigo=#{envio.codigo} http=#{envio.http} #{ids}")
+    soltar_leitura
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel
+  end
+
+  # #2454: a Meta recusou o privado na resposta (2º nível), com código. É final: não volta para a fila. A pessoa recebe
+  # só a frase pública que não promete o privado (o preço, se o dono ligou essa chave); sem ela, fica com o dono. A
+  # recusa, com o código e o subcódigo, já ficou gravada pela Rede; aqui o motivo vai ao log, só com ids e códigos.
+  def recusado_em_resposta(envio, decisao)
+    Rails.logger.info("[comentarios_ia] privado em resposta recusado codigo=#{envio.codigo} subcodigo=#{envio.subcodigo} #{ids}")
+    frase = care.price_reply.presence if decisao == 'price'
+    return @registro.gravar!(registrado, FICA_COM_O_DONO) if frase.nil?
+    return if rede.responder(frase)
+
+    recusou('reply')
+    @registro.gravar!(registrado, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
   end
 
   # O comentário no topo da conversa do privado, e o id dela na linha do privado. O privado já saiu: uma falha aqui vai
@@ -165,7 +294,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     return Rails.logger.warn("[comentarios_ia] privado sem conversa gravada #{ids}") if conversation.nil?
 
     @conversa.anotar!(conversation, @comentario, care, nova: conversation.created_at >= inicio)
-    @registro.vincular!(@comentario, 'private_reply', conversation)
+    @registro.vincular!(registrado, 'private_reply', conversation)
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: inbox.account).capture_exception
   end
@@ -179,7 +308,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     return if agir { rede.esconder }
 
     recusou('hide')
-    @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
+    @registro.gravar!(registrado, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
   end
 
   # Outro envio deste comentário (a pessoa na tela, ou outro job). Confirmado pela Meta: "já recebeu". Ainda saindo, ou
@@ -188,7 +317,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   def outro_envio
     return ja_tem_privado if privado_confirmado?
 
-    @registro.soltar_pessoa!(@comentario)
+    @registro.soltar_pessoa!(registrado)
     nao_cuidou('outro_envio_sem_confirmacao')
   end
 
@@ -199,12 +328,19 @@ class Crm::MetaAds::ComentariosIa::Cuidar
 
   # O Painel mostra "já recebeu o privado" em vez de "não se aplica".
   def ja_tem_privado
-    @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::JA_TEM_PRIVADO)
+    @registro.gravar!(registrado, Crm::MetaAds::ComentariosIa::Registro::JA_TEM_PRIVADO)
   end
 
   # Uma vez só por comentário: o `ai_seen` já deixou um job só cuidando dele.
-  def para_voce(motivo)
-    @registro.gravar!(@comentario, motivo, conversation: @conversa.para_voce!(@comentario, care, motivo))
+  # recusa: o código e o subcódigo da Meta no privado recusado (#2307); o Painel diz quando foi falta de permissão.
+  def para_voce(motivo, recusa: {})
+    codigos = recusa.compact
+    opcoes = { conversation: @conversa.para_voce!(@comentario, care, motivo) }.merge(codigos.empty? ? {} : { recusa: codigos })
+    @registro.gravar!(registrado, motivo, **opcoes)
+  end
+
+  def registrado
+    self.class.registrado(@comentario, care)
   end
 
   def inbox
@@ -214,12 +350,16 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   end
 
   def care
-    @care ||= Crm::MetaAdsCommentCare.cuidando(account_id: @comentario.account_id, network: @comentario.network,
-                                               post_id: @comentario.post_id, ad_id: @comentario.ad_id)
+    @care ||= self.class.cuidado_de(@comentario)
   end
 
   def classificador
-    @classificador ||= Crm::MetaAds::ComentariosIa::Classificador.new(care: care, legenda: rede.legenda)
+    @classificador ||= Crm::MetaAds::ComentariosIa::Classificador.new(care: care, legenda: rede.legenda, foto: texto_da_foto)
+  end
+
+  # O que a foto do post mostra (#2454), lido do banco: a leitura é feita no passo 1 da tela, nunca aqui.
+  def texto_da_foto
+    Crm::MetaAds::ComentariosIa::Foto.texto_para_ia(inbox.account, @comentario.network, @comentario.post_id)
   end
 
   def rede

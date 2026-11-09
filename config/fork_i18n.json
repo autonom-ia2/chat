@@ -92,6 +92,33 @@
     },
     {
       "file": "funcoesDaEquipe.json"
+    },
+    {
+      "file": "automacaoLivre.json"
+    },
+    {
+      "file": "automacaoLivreGatilhos.json"
+    },
+    {
+      "file": "automacaoLivreIa.json"
+    },
+    {
+      "file": "automacaoLivreReceitas.json"
+    },
+    {
+      "file": "automacaoLivreEnsaio.json"
+    },
+    {
+      "file": "automacaoLivreCampanha.json"
+    },
+    {
+      "file": "automacaoLivreRetorno.json"
+    },
+    {
+      "file": "ausencia.json"
+    },
+    {
+      "file": "prospectingAchar.json"
     }
   ],
   "pacotes": {

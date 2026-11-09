@@ -2,7 +2,8 @@
 # conta o gasto.
 #
 # Gasto de `crm_meta_ad_insights_daily` (date = ontem); conversas, propostas e vendas da mesma coorte do painel
-# (`Panel::Cohort`) com o intervalo de ontem; o anúncio que mais trouxe conversa; e o que fazer hoje.
+# (`Panel::Cohort`, que já deixa de fora as conversas do privado de comentário de anúncio que leva para fora de
+# conversa, #2521) com o intervalo de ontem; o anúncio que mais trouxe conversa; e o que fazer hoje.
 #
 # O que fazer hoje (F5, #1110): a primeira ação do consultor (Crm::MetaAds::Advisor::Analysis), a mesma que o
 # painel mostra em primeiro, porque o consultor não depende do período da tela (D5.2). Com `with_ai: true` (o
@@ -24,7 +25,7 @@ class Crm::MetaAds::WhatsappReport::Digest
   def payload
     @payload ||= {
       date: date, currency: currency, spend: spend, conversations: cohort.conversation_ads.size,
-      cost_per_conversation: ratio(spend, cohort.conversation_ads.size), quotes: cohort.cards.count(&:quote?),
+      cost_per_conversation: ratio(conversation_spend, cohort.conversation_ads.size), quotes: cohort.cards.count(&:quote?),
       sales: sales.size, sales_value: sales.sum(&:value).round(2), best_ad: best_ad, action: action
     }
   end
@@ -49,6 +50,14 @@ class Crm::MetaAds::WhatsappReport::Digest
 
   def spend
     @spend ||= insights.sum(:spend).to_f.round(2)
+  end
+
+  # O custo por conversa divide só o gasto dos anúncios que trazem conversa, como o painel (Report#total_spend): o de
+  # alcance ou perfil (Panel::OutsideAds, #2521) não infla o custo.
+  def conversation_spend
+    by_ad = insights.group(:ad_id).sum(:spend)
+    outside = Crm::MetaAds::Panel::OutsideAds.new(@connection.account_id, ad_ids: by_ad.keys).ids
+    by_ad.except(*outside).values.sum.to_f.round(2)
   end
 
   def currency

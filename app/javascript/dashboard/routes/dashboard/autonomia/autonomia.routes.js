@@ -7,6 +7,10 @@ import {
 } from 'dashboard/constants/permissions.js';
 import { contaDaRota, ensureProspectingEnabled } from './contaDaRota';
 import { painelDesempenhoLigado } from './agentes/composables/usePainelDesempenho';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { comFlags } from 'dashboard/helper/comFlags';
+// #2692 — Prospecção nova (protótipo), atrás da flag prospeccao_nova.
+import { acharRoutes } from './prospecting/achar/acharRoutes';
 
 // Lazy-loaded pages (owned by HUB / CONSTRUTOR / PAINEL implementers).
 // Dynamic imports keep this NAV module self-contained and code-split the
@@ -21,6 +25,8 @@ const AgentePaginaEntrada = () =>
   import('./agentes/entrada/AgentePaginaEntrada.vue');
 // #2226 — painel de desempenho do agente (PR 1: protótipo com dados inventados).
 const DesempenhoPage = () => import('./agentes/pages/DesempenhoPage.vue');
+// #2469 (PR 3a do #2436) — a página do cartão de um post ou anúncio com o cuidado dos comentários.
+const AgenteDoPostPage = () => import('./agentes/pages/AgenteDoPostPage.vue');
 const ProspectingSearchPage = () =>
   import('./prospecting/pages/ProspectingSearchPage.vue');
 const ProspectingListsPage = () =>
@@ -126,6 +132,19 @@ export const routes = [
     component: AgentesCriarEntrada,
   },
   {
+    // #2469: atrás da flag do cuidado (meta_ads_comentarios_ia, "Sem chave nova"). Quem vê qual post ou anúncio, o
+    // servidor decide (as guardas da tela do cuidado de cada um).
+    path: frontendURL('accounts/:accountId/agents/posts/:careId'),
+    name: 'autonomia_post_comments',
+    meta: { ...agentsMeta, featureFlag: FEATURE_FLAGS.META_ADS_COMENTARIOS_IA },
+    beforeEnter: [
+      ensureAutonomiaEnabled,
+      comFlags(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA),
+    ],
+    component: AgenteDoPostPage,
+    props: route => ({ careId: route.params.careId }),
+  },
+  {
     path: frontendURL(
       'accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?'
     ),
@@ -171,6 +190,7 @@ export const routes = [
       params: to.params,
     }),
   },
+  ...acharRoutes,
   {
     path: frontendURL('accounts/:accountId/autonomia/insurance'),
     name: 'autonomia_insurance',

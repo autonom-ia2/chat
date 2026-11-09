@@ -2,7 +2,8 @@
 # (a) Sem anúncio rastreado: como chegaram (ranking, cada linha com quanto fechou) e, ao lado, a frase calma e as
 #     ressalvas da conferência (ex.: um grupo que é piso). A taxa por grupo não se repete num segundo cartão.
 # (b) Com anúncios: os dois cartões com a MESMA métrica (veio de anúncio × chegou sem anúncio), o ranking por anúncio
-#     e o ranking de quem chegou sem anúncio. Em ambos, a nota da origem como ressalva.
+#     e o ranking de quem chegou sem anúncio. Em ambos, a nota da origem como ressalva. Para quem não vê o anúncio de
+#     origem (`anuncios_ocultos`, #2296), sem o ranking por anúncio: o de quem chegou sem anúncio ocupa a largura toda.
 module Autonomia::Desempenho::Exportacao::Pdf::Origem
   ALTURA_DO_LADO = 74
   PARTE_LARGA = 0.58
@@ -49,10 +50,16 @@ module Autonomia::Desempenho::Exportacao::Pdf::Origem
 
   def origem_com_anuncio(origem, cima)
     cima = lados_da_origem(origem['comparacao'].to_h, cima) - 14
-    fim_a = ranking_por_anuncio(origem, 0, cima)
     sem_anuncio = Array(origem['grupos']).select { |grupo| grupo['tipo'] == 'sem_anuncio' }.map { |grupo| linha_de_origem(grupo) }
-    topo_b = titulo_do_bloco(t('origem.sem_anuncio_como'), coluna_larga + 20, cima, coluna_estreita)
-    [fim_a, ranking(sem_anuncio, coluna_larga + 20, topo_b, coluna_estreita, serie: 'volume', limite: 6)].min
+    return ranking_sem_anuncio(sem_anuncio, 0, cima, largura) if origem['anuncios_ocultos']
+
+    fim_a = ranking_por_anuncio(origem, 0, cima)
+    [fim_a, ranking_sem_anuncio(sem_anuncio, coluna_larga + 20, cima, coluna_estreita)].min
+  end
+
+  def ranking_sem_anuncio(itens, esq, cima, largura_do_bloco)
+    topo = titulo_do_bloco(t('origem.sem_anuncio_como'), esq, cima, largura_do_bloco)
+    ranking(itens, esq, topo, largura_do_bloco, serie: 'volume', limite: 6)
   end
 
   def lados_da_origem(comparacao, cima)

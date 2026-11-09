@@ -24,6 +24,14 @@ import painelDoContato from './painelDoContato.json';
 import listaDeConversas from './listaDeConversas.json';
 import metaAdsOrganico from './metaAdsOrganico.json';
 import funcoesDaEquipe from './funcoesDaEquipe.json';
+import automacaoLivre from './automacaoLivre.json';
+import automacaoLivreGatilhos from './automacaoLivreGatilhos.json';
+import automacaoLivreIa from './automacaoLivreIa.json';
+import automacaoLivreReceitas from './automacaoLivreReceitas.json';
+import automacaoLivreEnsaio from './automacaoLivreEnsaio.json';
+import automacaoLivreCampanha from './automacaoLivreCampanha.json';
+import automacaoLivreRetorno from './automacaoLivreRetorno.json';
+import ausencia from './ausencia.json';
 import brandKits from './brandKits.json';
 import booking from './booking.json';
 import resultJourney from './resultJourney.json';
@@ -59,6 +67,7 @@ import login from './login.json';
 import macros from './macros.json';
 import report from './report.json';
 import prospecting from './prospecting.json';
+import prospectingAchar from './prospectingAchar.json';
 import resetPassword from './resetPassword.json';
 import search from './search.json';
 import setNewPassword from './setNewPassword.json';
@@ -102,6 +111,18 @@ export default {
   ...listaDeConversas,
   ...metaAdsOrganico,
   ...funcoesDaEquipe,
+  // Automação livre (#2569): um namespace, um arquivo por área. As áreas não
+  // repetem chave entre si (automacaoLivrePorArea.spec.js confere).
+  AUTOMACAO_LIVRE: {
+    ...automacaoLivre.AUTOMACAO_LIVRE,
+    ...automacaoLivreGatilhos.AUTOMACAO_LIVRE,
+    ...automacaoLivreIa.AUTOMACAO_LIVRE,
+    ...automacaoLivreReceitas.AUTOMACAO_LIVRE,
+    ...automacaoLivreEnsaio.AUTOMACAO_LIVRE,
+    ...automacaoLivreCampanha.AUTOMACAO_LIVRE,
+    ...automacaoLivreRetorno.AUTOMACAO_LIVRE,
+  },
+  ...ausencia,
   ...brandKits,
   ...booking,
   ...resultJourney,
@@ -136,6 +157,7 @@ export default {
   ...login,
   ...macros,
   ...prospecting,
+  ...prospectingAchar,
   ...report,
   ...resetPassword,
   ...search,

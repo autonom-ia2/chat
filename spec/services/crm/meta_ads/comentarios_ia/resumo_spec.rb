@@ -1,109 +1,81 @@
 require 'rails_helper'
 
+# O bloco "O que tem nos comentários" (#2454): antes do clique do dono, só o que o código conta. Nenhuma IA.
 RSpec.describe Crm::MetaAds::ComentariosIa::Resumo do
   let(:account) { create(:account) }
   let(:alvo) { { 'kind' => 'post', 'perfil' => 'ig-1', 'post_id' => '1790' } }
-  let(:fonte) { instance_double(Crm::MetaAds::ComentariosIa::Fonte, legenda: 'Vestido midi de linho') }
-  let(:classificador) { instance_double(Crm::MetaAds::ComentariosIa::Classificador) }
-  let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+  let(:fonte) { instance_double(Crm::MetaAds::ComentariosIa::Fonte) }
   let(:resumo) { described_class.new(account: account, alvo: alvo, fonte: fonte) }
   let(:linhas) do
-    [linha('1', 'Quanto custa?'), linha('2', 'Tem no M?'), linha('3', 'Ninguém me responde'), linha('4', 'Lindo!'),
-     linha('5', 'Valor?', dias: 9)]
+    [linha('1', dias: 1), linha('2', dias: 3), linha('3', dias: 6), linha('4', dias: 9), linha('5', dias: 30)]
   end
 
-  def linha(id, text, dias: 1)
-    { id: id, network: 'instagram', author: 'pessoa', text: text, momento: dias.days.ago }
+  def linha(id, dias:)
+    { id: id, network: 'instagram', author: 'pessoa', text: 'Quanto custa?', momento: dias.days.ago }
   end
 
   before do
-    allow(Rails).to receive(:cache).and_return(cache)
-    allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: linhas })
-    allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
-    allow(classificador).to receive(:decidir!) do |texto|
-      { 'Quanto custa?' => 'price', 'Tem no M?' => 'private', 'Ninguém me responde' => 'to_you', 'Lindo!' => 'no_reply',
-        'Valor?' => 'price' }[texto]
+    allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: linhas, escondidas: [] })
+    allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new)
+    allow(Crm::Ai::ResponsesClient).to receive(:new)
+  end
+
+  it 'conta quantos esperam resposta e quantos ainda cabem no privado (até 7 dias)' do
+    expect(resumo.call).to eq(status: 'ready', waiting: 5, private_window: 3)
+  end
+
+  it 'anúncio nas duas redes com uma só lida (#2522): os números da rede que leu e o status de cada rede' do
+    allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: linhas.first(2), escondidas: [],
+                                               status_das_redes: { 'instagram' => 'ready', 'facebook' => 'needs_login' } })
+
+    expect(resumo.call).to eq(status: 'ready', waiting: 2, private_window: 2,
+                              network_status: { 'instagram' => 'ready', 'facebook' => 'needs_login' })
+  end
+
+  describe 'as respostas de cliente dentro dos comentários (#2454)' do
+    before do
+      respostas = [linha('1a', dias: 1).merge(parent_id: '1'), linha('4a', dias: 9).merge(parent_id: '4')]
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: linhas, escondidas: [], respostas_que_esperam: respostas })
+    end
+
+    it 'com a flag meta_ads_comentarios_ia: o fio conta, nos que esperam e nos que cabem no privado' do
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
+
+      expect(resumo.call).to eq(status: 'ready', waiting: 7, private_window: 4)
+    end
+
+    it 'sem a flag: como antes, só os de primeiro nível' do
+      expect(resumo.call).to eq(status: 'ready', waiting: 5, private_window: 3)
     end
   end
 
-  it 'na primeira vez, conta fora do pedido e diz que está lendo, com um job só' do
-    expect { 2.times { expect(resumo.call).to eq(status: 'reading') } }
-      .to have_enqueued_job(Crm::MetaAds::ComentariosIa::ResumoJob).with(account.id, alvo).exactly(:once)
-    expect(classificador).not_to have_received(:decidir!)
+  it 'sem nenhuma IA: nem o Classificador, nem o cliente, nem uso gravado' do
+    resumo.call
+
+    expect(Crm::MetaAds::ComentariosIa::Classificador).not_to have_received(:new)
+    expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+    expect(Crm::AiUsageEvent.count).to eq(0)
   end
 
-  it 'conta os pedidos de até 7 dias, os mais velhos e as reclamações, e devolve do cache depois' do
-    resumo.contar!
+  it 'sem data do comentário: espera, mas não cabe no privado' do
+    allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 1).merge(momento: nil)], escondidas: [] })
 
-    expect(resumo.call).to eq(status: 'ready', questions: 2, questions_old: 1, complaints: 1, read: 5, more: false)
+    expect(resumo.call).to eq(status: 'ready', waiting: 1, private_window: 0)
   end
 
-  it 'com o critério fixo do resumo no lugar do "para quem" do dono, e a legenda do post (#2424)' do
-    resumo.contar!
+  it 'ninguém esperando: zero e zero' do
+    allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [], escondidas: [] })
 
-    expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new)
-      .with(care: an_object_having_attributes(account: account, para_quem: described_class::CRITERIO, offer: nil),
-            legenda: 'Vestido midi de linho', tela: true)
-  end
-
-  it 'lista nova (alguém respondeu ou chegou comentário): conta de novo' do
-    resumo.contar!
-    allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: linhas.first(2) })
-
-    expect(resumo.call).to eq(status: 'reading')
-  end
-
-  it 'mais comentários do que o limite: conta os mais recentes e diz que há mais' do
-    muitas = Array.new(described_class::LIMITE + 1) { |indice| linha(indice.to_s, 'Lindo!') }
-    allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: muitas })
-
-    resumo.contar!
-
-    expect(resumo.call).to include(read: described_class::LIMITE, more: true)
-    expect(classificador).to have_received(:decidir!).exactly(described_class::LIMITE).times
+    expect(resumo.call).to eq(status: 'ready', waiting: 0, private_window: 0)
   end
 
   it 'leitura que não ficou pronta: devolve o status, sem contar' do
-    allow(fonte).to receive(:ler).and_return({ status: 'needs_permission', linhas: [] })
+    allow(fonte).to receive(:ler).and_return({ status: 'needs_permission', linhas: [], escondidas: [] })
 
     expect(resumo.call).to eq(status: 'needs_permission')
-    expect(classificador).not_to have_received(:decidir!)
-  end
-
-  describe 'com a IA fora do ar' do
-    before do
-      allow(classificador).to receive(:decidir!).and_raise(Crm::MetaAds::ComentariosIa::Classificador::Indisponivel.new('ai_unavailable'))
-    end
-
-    it 'não grava conta zerada como pronta: diz ai_unavailable uma vez e, na próxima, conta de novo' do
-      expect(resumo.call).to eq(status: 'reading')
-      resumo.contar!
-
-      expect(resumo.call).to eq(status: 'ai_unavailable')
-      expect { expect(resumo.call).to eq(status: 'reading') }.to have_enqueued_job(Crm::MetaAds::ComentariosIa::ResumoJob)
-    end
-
-    it 'para no primeiro erro, sem gastar as outras chamadas' do
-      resumo.contar!
-
-      expect(classificador).to have_received(:decidir!).once
-    end
-  end
-
-  it 'a trava do "contando" dura mais que o job mais lento: uma chamada à IA por comentário, até o prazo dela' do
-    por_comentario = Crm::MetaAds::ComentariosIa::Classificador::PRAZO
-
-    expect(described_class::CONTANDO).to be >= (described_class::LIMITE * por_comentario).seconds
   end
 
   it 'perfil ou conexão que não existem mais: not_found' do
     expect(described_class.new(account: account, alvo: alvo).call).to eq(status: 'not_found')
-  end
-
-  it 'no cache só os números, nunca o texto' do
-    resumo.contar!
-
-    gravado = cache.instance_variable_get(:@data).values.map { |entrada| entrada.value.to_s }.join
-    expect(gravado).not_to include('Quanto custa', 'Ninguém', 'pessoa')
   end
 end

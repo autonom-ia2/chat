@@ -22,9 +22,17 @@ class Autonomia::Guide::ChamadaInterna
     @user = user
   end
 
-  def chamar(metodo, caminho, corpo: nil, filtros: {})
+  # `cabecalhos`: cabeçalhos HTTP a mais, pelo nome ('Idempotency-Key'). O token é sempre o de quem a chamada leva.
+  def chamar(metodo, caminho, corpo: nil, filtros: {}, cabecalhos: {})
     preservado = estado_do_current
-    status, _cabecalhos, corpo_resposta = ::Rails.application.call(ambiente(metodo, caminho, corpo, filtros))
+    # Dentro de uma cadeia de automações (D1 do #2414), o pedido de dentro age como a pessoa do token: quem chamou
+    # por fora não assina o que ela fez. Volta no `ensure`, só nesse caso. A cadeia só existe com a flag
+    # `automacao_fundacao`. Nenhum chamador de hoje roda dentro de uma cadeia: quem chama assim é o motor novo da F3,
+    # com o token de quem ligou a automação.
+    na_cadeia = ::Autonomia::Automacao::Cadeia.ativa?
+    autor = ::Current.executed_by
+    ::Current.executed_by = nil if na_cadeia
+    status, _cabecalhos_da_resposta, corpo_resposta = ::Rails.application.call(ambiente(metodo, caminho, corpo, filtros, cabecalhos))
 
     Resposta.new(codigo: status.to_s, corpo: ler(corpo_resposta))
   ensure
@@ -32,19 +40,26 @@ class Autonomia::Guide::ChamadaInterna
     # levantar, o tratador de exceção o zera. Sem isto, o pedido de FORA seguiria
     # sem usuário — um efeito colateral invisível e difícil de rastrear.
     restaurar(preservado)
+    ::Current.executed_by = autor if na_cadeia
   end
 
   private
 
-  def ambiente(metodo, caminho, corpo, filtros)
+  def ambiente(metodo, caminho, corpo, filtros, cabecalhos)
     ::Rack::MockRequest.env_for(
       "http://interno#{caminho}#{consulta(filtros)}",
       :method => metodo.to_s.upcase,
       :input => corpo.present? ? ::JSON.generate(corpo) : '',
       'CONTENT_TYPE' => 'application/json',
+      **cabecalhos_rack(cabecalhos),
       'HTTP_API_ACCESS_TOKEN' => @user.access_token.token,
       'HTTP_ACCEPT' => 'application/json'
     )
+  end
+
+  # 'Idempotency-Key' => 'HTTP_IDEMPOTENCY_KEY', como o Rack recebe do navegador. Vem antes do token: não o troca.
+  def cabecalhos_rack(cabecalhos)
+    cabecalhos.to_h.transform_keys { |nome| "HTTP_#{nome.to_s.upcase.tr('-', '_')}" }
   end
 
   def consulta(filtros)

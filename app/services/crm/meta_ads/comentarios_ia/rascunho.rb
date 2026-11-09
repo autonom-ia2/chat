@@ -7,9 +7,10 @@
 # - A linha é reservada (`writing`) ANTES de chamar a IA, por compare-and-set: duas aberturas juntas fazem uma chamada só;
 #   a outra abre o campo vazio. A IA que não respondeu (`failed`) só é chamada de novo depois de NOVA_TENTATIVA, e uma
 #   reserva parada (o processo morreu) vale até RESERVA.
-# - Conta no teto do dia da tela (Classificador::FEATURE_DA_TELA), com a flag do cuidado ligada. A tentativa conta
-#   mesmo quando a IA não responde (rede, tempo esgotado, 5xx): pode ter sido cobrada. A resposta vazia o próprio
-#   ResponsesClient já grava, e a recusa 4xx (chave, modelo) não é cobrada: essas não contam de novo.
+# - Grava o uso com a feature da tela (Classificador::FEATURE_DA_TELA), só com a flag do cuidado ligada; sem teto de uso
+#   (#2454). A tentativa é gravada mesmo quando a IA não responde (rede, tempo esgotado, 5xx): pode ter sido cobrada. A
+#   resposta vazia o próprio ResponsesClient já grava, e a recusa 4xx (chave, modelo) não é cobrada: essas não são
+#   gravadas de novo.
 # - Roda dentro da requisição: uma ida só, sem nova tentativa, com prazo de PRAZO segundos (o rack-timeout corta em 15).
 # - A legenda é do próprio dono, mas vai ao modelo como dado, nunca como ordem. O modelo só usa o que está nela: não
 #   inventa preço, link, cupom nem prazo.
@@ -37,12 +38,14 @@ class Crm::MetaAds::ComentariosIa::Rascunho
     @legenda = legenda.to_s.strip
   end
 
-  # { status: 'ready', message: } | { status: 'no_offer' } | { status: 'no_caption' } | { status: 'ai_unavailable' }
+  # { status: 'ready', message: } | { status: 'no_offer' } | { status: 'no_caption' } | { status: 'ai_unavailable' } |
+  # { status: 'no_credential' } (a conta sem a chave dela: nada vai ao modelo nem é guardado; a da instalação não serve).
   def call
     return { status: 'no_caption' } if @legenda.empty?
 
     guardado = Crm::MetaAdsCommentDraft.find_by(account_id: @account.id, target_kind: @target_kind, target_id: @target_id)
     return resposta(guardado) if guardado && !chamar_de_novo?(guardado)
+    return { status: 'no_credential' } if credencial.nil?
     return da_outra_abertura unless reservar!(guardado)
 
     resposta(escrever!)
@@ -102,15 +105,18 @@ class Crm::MetaAds::ComentariosIa::Rascunho
   def perguntar
     return { status: 'failed' } unless Crm::Ai::Config.enabled?
 
-    classificador = Crm::MetaAds::ComentariosIa::Classificador
-    classificador.liberado!(@account, feature: FEATURE, teto: classificador::TETO_DIARIO_DA_TELA)
-    credencial = Crm::Ai::CredentialResolver.new(account: @account).resolve
-    return { status: 'failed' } if credencial.blank?
-
+    Crm::MetaAds::ComentariosIa::Classificador.liberado!(@account)
     aceito(chamar(credencial))
   rescue Crm::MetaAds::ComentariosIa::Classificador::Bloqueado => e
     Rails.logger.warn("[comentarios_ia] rascunho account=#{@account.id} bloqueado=#{e.message}")
     { status: 'failed' }
+  end
+
+  # Só a chave da conta (ChaveDaConta).
+  def credencial
+    return @credencial if defined?(@credencial)
+
+    @credencial = Crm::MetaAds::ComentariosIa::ChaveDaConta.de(@account)
   end
 
   def chamar(credencial)
@@ -119,7 +125,7 @@ class Crm::MetaAds::ComentariosIa::Rascunho
                              schema: SCHEMA, reasoning_effort: 'low', timeout: PRAZO)
     JSON.parse(resposta.fetch(:text))
   rescue Crm::Ai::ResponsesClient::Error => e
-    # A ida que não voltou não grava uso no cliente: conta aqui, para o teto da tela valer também na falha.
+    # A ida que não voltou não grava uso no cliente: grava aqui, para o custo da falha também aparecer.
     Crm::Ai::UsageRecorder.record(account: @account, feature: FEATURE, model: MODEL) if e.passageira?
     Rails.logger.warn("[comentarios_ia] rascunho account=#{@account.id} erro=#{e.class.name} tempo_esgotado=#{e.tempo_esgotado?}")
     nil

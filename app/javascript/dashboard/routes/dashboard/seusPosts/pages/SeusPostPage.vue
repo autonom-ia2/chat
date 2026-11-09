@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
+import { isCrmKanbanEnabled } from 'dashboard/helper/routeHelpers';
 import { useAlert } from 'dashboard/composables';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
@@ -10,13 +11,21 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import EstadoVazio from '../components/EstadoVazio.vue';
 import NumeroQuadro from '../components/NumeroQuadro.vue';
 import ComentarioLinha from '../components/ComentarioLinha.vue';
-import { comentarioParaTela, postParaTela } from '../seusPostsDados';
+import {
+  comentarioParaTela,
+  comentariosDaAba,
+  contarComentarios,
+  flagsDoCuidado,
+  postParaTela,
+  redeDoPerfil,
+} from '../seusPostsDados';
 import { formatar, intlLocale, vereditoDoPost } from '../seusPostsHelpers';
 import { useLiberarAcesso } from '../useLiberarAcesso';
 import {
   useCuidado,
   useResumo,
 } from '../../campaigns/metaAds/comentariosIa/useCuidado';
+import AvisoRedeQueFaltou from '../../campaigns/metaAds/comentariosIa/AvisoRedeQueFaltou.vue';
 
 // Seus posts F2 (#2305): um post do perfil e os comentários dele, montado como o detalhe de um anúncio: o voltar, o
 // herói (nome, como foi e quem espera você), a foto e o post à esquerda, os números à direita e os comentários
@@ -46,8 +55,13 @@ const postId = computed(() => route.params.postId);
 // Comentários que viram cliente (#2212, B1), atrás da flag meta_ads_comentarios_ia: o cuidado do post (Painel) e o
 // resumo "O que tem nos comentários" (A2), lidos ao lado do post, sem travar a página. Sem a flag, nada é lido nem
 // aparece. Ver é de quem já vê o post; ligar, pausar e voltar, só com `can_manage` (o mesmo do F2).
+// #2520: com a régua do motor: a flag do cuidado e a dos comentários da rede do perfil, como o servidor.
 const comCuidado = computed(() =>
-  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA)
+  Boolean(
+    flagsDoCuidado(redeDoPerfil(perfilId.value))?.every(flag =>
+      isCloudFeatureEnabled(flag)
+    )
+  )
 );
 const alvoDoCuidado = computed(() =>
   comCuidado.value
@@ -168,13 +182,19 @@ const restoDaLegenda = computed(() => {
 const resumo = computed(() => {
   const media = { apareceu: dados.value?.normal?.views ?? null };
   const { nivel, vezes } = vereditoDoPost(post.value, media);
-  return t(`SEUS_POSTS.POST.SUMMARY.${nivel}`, { times: vezes });
+  // #2522: no Instagram só se sabe do anúncio feito pela plataforma, que entrega por outra mídia, com números e
+  // comentários próprios.
+  const chave =
+    nivel === 'BOOSTED' && rede.value === 'instagram'
+      ? 'BOOSTED_INSTAGRAM'
+      : nivel;
+  return t(`SEUS_POSTS.POST.SUMMARY.${chave}`, { times: vezes });
 });
 
-// Os números do post em quatro quadros, como o detalhe de anúncio, e os outros numa linha curta embaixo. No
-// Instagram, vezes, curtidas e comentários são sem anúncio; pessoas, salvaram e compartilharam podem incluir. Na
-// Página, só as vezes se separam: o resto inclui o anúncio quando houve. O Facebook não conta quem salvou: no lugar,
-// cliques no post.
+// Os números do post em quatro quadros, como o detalhe de anúncio, e os outros numa linha curta embaixo. Só as vezes
+// se separam do anúncio: o resto pode incluir. No Instagram, curtidas e comentários também seguem marcados como "pode
+// incluir anúncio", como no cartão de Seus posts, até haver chamada real num post impulsionado (#2522). Na Página, o
+// resto inclui o anúncio quando houve. O Facebook não conta quem salvou: no lugar, cliques no post.
 const QUADROS = [
   ['apareceu', 'VIEWS'],
   ['pessoas', 'PEOPLE'],
@@ -192,11 +212,8 @@ const OUTROS = {
   ],
 };
 const SEM_INSIGHTS = ['curtidas', 'comentarios'];
-const podeTerAnuncio = chave => {
-  if (chave === 'apareceu') return false;
-  if (rede.value === 'instagram') return chave === 'pessoas';
-  return post.value.podeTerAnuncio;
-};
+const podeTerAnuncio = chave =>
+  chave !== 'apareceu' && post.value.podeTerAnuncio;
 const quadros = computed(() =>
   QUADROS.filter(
     ([chave]) => !post.value.semInsights || SEM_INSIGHTS.includes(chave)
@@ -223,12 +240,45 @@ const outros = computed(() =>
 );
 const ladoDoAnuncio = computed(() => {
   if (post.value.semInsights) return '';
+  if (post.value.impulsionado && rede.value === 'instagram')
+    return t('SEUS_POSTS.POST.SIDE.BOOSTED_INSTAGRAM');
   if (post.value.impulsionado)
     return t('SEUS_POSTS.POST.SIDE.BOOSTED', {
       name: t('SEUS_POSTS.POST.NUMBERS.VIEWS'),
     });
   if (rede.value === 'instagram') return t('SEUS_POSTS.POST.SIDE.INSTAGRAM');
   return t('SEUS_POSTS.TILES.LEGEND_NONE');
+});
+
+// #2522: o post do Instagram impulsionado por aqui. Os comentários do anúncio ficam noutra mídia, e o anúncio por
+// dentro (Anúncios da Meta) os mostra. `ads` só vem para quem vê Anúncios da Meta; a página deles pede também o CRM.
+// #2739: impulsionado mais de uma vez, cada anúncio tem os próprios comentários: um atalho por anúncio, com o nome e
+// o dia em que foi criado (dois com o mesmo nome não ficam iguais).
+// #2804: só os da conta de anúncios conectada agora, cada um com quantos comentários dele esperam você (eles entram
+// no "esperando você" do post).
+const anunciosDoPost = computed(() => {
+  const ads = dados.value?.ads || [];
+  if (!ads.length || !isCrmKanbanEnabled()) return [];
+  const anoAtual = new Date().getFullYear();
+  return ads.map(ad => {
+    const criadoEm = new Date(ad.created_at);
+    return {
+      id: String(ad.id),
+      name: ad.name || t('SEUS_POSTS.POST.AD_COMMENTS.UNNAMED'),
+      esperando: ad.waiting || 0,
+      // O ano só aparece quando não é o atual: dois anúncios de anos diferentes no mesmo dia não ficam iguais.
+      criado: criadoEm.toLocaleDateString(intlLocale(locale.value), {
+        day: 'numeric',
+        month: 'long',
+        ...(criadoEm.getFullYear() === anoAtual ? {} : { year: 'numeric' }),
+      }),
+      to: {
+        name: 'campaigns_meta_ads_index',
+        params: { accountId: route.params.accountId },
+        query: { aba: 'resultado', anuncio: String(ad.id) },
+      },
+    };
+  });
 });
 
 // Comentários: filtro simples, contado da lista que já veio. Aba sem nada não aparece (Todos sempre).
@@ -238,15 +288,17 @@ const FILTROS = [
   ['privado', 'privado'],
   ['escondido', 'escondido'],
 ];
-const contagem = computed(() => {
-  const conta = { all: comentarios.value.lista.length };
-  FILTROS.slice(1).forEach(([chave, estado]) => {
-    conta[chave] = comentarios.value.lista.filter(
-      comentario => comentario.estado === estado
-    ).length;
-  });
-  return conta;
-});
+// #2454: com a flag meta_ads_comentarios_ia, o fio conta: as respostas de cliente entram nas abas, como no Resumo.
+const comFio = computed(() =>
+  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA)
+);
+const contagem = computed(() =>
+  contarComentarios(
+    comentarios.value.lista,
+    FILTROS.slice(1).map(([, estado]) => estado),
+    comFio.value
+  )
+);
 const filtros = computed(() =>
   FILTROS.filter(([chave]) => chave === 'all' || contagem.value[chave])
 );
@@ -255,12 +307,13 @@ const filtro = ref('all');
 watch(filtros, lista => {
   if (!lista.some(([chave]) => chave === filtro.value)) filtro.value = 'all';
 });
-const visiveis = computed(() => {
-  const estado = FILTROS.find(([chave]) => chave === filtro.value)[1];
-  return estado
-    ? comentarios.value.lista.filter(comentario => comentario.estado === estado)
-    : comentarios.value.lista;
-});
+const visiveis = computed(() =>
+  comentariosDaAba(
+    comentarios.value.lista,
+    FILTROS.find(([chave]) => chave === filtro.value)[1],
+    comFio.value
+  )
+);
 // Quem espera no herói é a contagem do servidor, a mesma do cartão da lista (até 50 comentários, depois "ou mais"); as
 // abas contam só os comentários já carregados.
 const esperandoNoHeroi = computed(() => {
@@ -302,7 +355,7 @@ const agir = async (comentario, chamada, sucesso, pronto = () => {}) => {
   }
   pronto();
   useAlert(t(`SEUS_POSTS.POST.COMMENTS.DONE.${sucesso}`));
-  // Quem espera mudou: o resumo do servidor também (o cache dele cai junto).
+  // Quem espera mudou: o resumo do servidor conta de novo.
   lerResumo();
   try {
     await lerPost();
@@ -361,7 +414,8 @@ const situacaoDoCuidado = computed(() => {
 const cuidando = computed(() =>
   ['on', 'paused'].includes(situacaoDoCuidado.value)
 );
-// O privado no Facebook espera a pages_messaging (F4): o resumo não promete privado.
+// O privado no Facebook só sai na Página com a permissão da Meta (#2307, o servidor decide); antes de ler, o resumo
+// não promete.
 const privadoLiberado = computed(
   () => cuidado.value?.private_available ?? rede.value !== 'facebook'
 );
@@ -377,23 +431,18 @@ const mudarCuidado = async () => {
       : await voltarACuidar();
   if (!valeu) useAlert(t('SEUS_POSTS.POST.CARE_ON.ERROR'));
 };
-// O que o botão de cuidar faz, logo abaixo dele. Sem pergunta que ainda dá para mandar no privado, a frase não
-// oferece responder "as que já estão aqui".
+// Os números do bloco (#2454): só o que o servidor conta, sem IA. Quantos esperam resposta e, desses, quantos ainda
+// cabem no privado (até 7 dias).
+const esperam = computed(() => oQueTem.value?.waiting || 0);
+const cabemNoPrivado = computed(() => oQueTem.value?.private_window || 0);
+// O que o botão de cuidar faz, logo abaixo dele. Sem comentário que ainda cabe no privado, a frase não oferece
+// responder "as que já estão aqui".
 const textoDoCuidar = computed(() => {
   if (!privadoLiberado.value) return t('SEUS_POSTS.POST.CARE_OFFER.TEXT_SOON');
-  const perguntas = oQueTem.value?.questions || 0;
-  const velhas = oQueTem.value?.questions_old || 0;
-  if (!perguntas) {
-    return velhas
-      ? t('SEUS_POSTS.POST.CARE_OFFER.TEXT_ONLY_NEW')
-      : t('SEUS_POSTS.POST.CARE_OFFER.TEXT_FUTURE');
-  }
-  if (!velhas) return t('SEUS_POSTS.POST.CARE_OFFER.TEXT');
-  return t(
-    'SEUS_POSTS.POST.CARE_OFFER.TEXT_MIXED',
-    { count: perguntas },
-    perguntas
-  );
+  if (cabemNoPrivado.value) return t('SEUS_POSTS.POST.CARE_OFFER.TEXT');
+  return esperam.value
+    ? t('SEUS_POSTS.POST.CARE_OFFER.TEXT_ONLY_NEW')
+    : t('SEUS_POSTS.POST.CARE_OFFER.TEXT_FUTURE');
 });
 const resumoPronto = computed(() => oQueTem.value?.status === 'ready');
 
@@ -738,7 +787,11 @@ const BOTAO_DE_BORDA =
               class="flex flex-col gap-2 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak"
             >
               <h2 class="m-0 text-sm font-semibold text-n-slate-11">
-                {{ $t('SEUS_POSTS.POST.CARE_OFFER.TITLE') }}
+                {{
+                  anunciosDoPost.length
+                    ? $t('SEUS_POSTS.POST.CARE_OFFER.TITLE_WITH_ADS')
+                    : $t('SEUS_POSTS.POST.CARE_OFFER.TITLE')
+                }}
               </h2>
               <div
                 v-if="lendoResumo && !oQueTem"
@@ -776,52 +829,42 @@ const BOTAO_DE_BORDA =
                 />
               </div>
               <template v-else>
+                <!-- #2522: o mesmo aviso do Painel quando uma rede do alvo faltou. O post de Seus posts é de uma rede só
+                     (rede que falha vem como status, no ramo acima); o aviso fica para o alvo de duas redes. -->
+                <AvisoRedeQueFaltou
+                  :network-status="oQueTem.network_status"
+                  pode-tentar
+                  :carregando="lendoResumo"
+                  @tentar="lerResumo"
+                />
                 <!-- Um item por linha: no celular, " · " quebrava e deixava o ponto no começo da linha. -->
                 <ul
-                  v-if="
-                    oQueTem.questions ||
-                    oQueTem.questions_old ||
-                    oQueTem.complaints
-                  "
                   class="m-0 flex list-none flex-col gap-1 p-0 text-base font-medium text-n-slate-12"
                 >
-                  <li v-if="oQueTem.questions" data-seus-posts-perguntas>
+                  <li data-seus-posts-esperam>
                     {{
-                      $t(
-                        privadoLiberado
-                          ? 'SEUS_POSTS.POST.CARE_OFFER.QUESTIONS'
-                          : 'SEUS_POSTS.POST.CARE_OFFER.QUESTIONS_YOU',
-                        { count: num(oQueTem.questions) },
-                        oQueTem.questions
-                      )
+                      esperam
+                        ? $t(
+                            'SEUS_POSTS.POST.CARE_OFFER.WAITING',
+                            { count: num(esperam) },
+                            esperam
+                          )
+                        : $t('SEUS_POSTS.POST.CARE_OFFER.NONE_WAITING')
                     }}
                   </li>
-                  <li v-if="oQueTem.questions_old">
+                  <li
+                    v-if="privadoLiberado && cabemNoPrivado"
+                    data-seus-posts-cabem-no-privado
+                  >
                     {{
                       $t(
-                        'SEUS_POSTS.POST.CARE_OFFER.QUESTIONS_OLD',
-                        { count: num(oQueTem.questions_old) },
-                        oQueTem.questions_old
-                      )
-                    }}
-                  </li>
-                  <li v-if="oQueTem.complaints">
-                    {{
-                      $t(
-                        'SEUS_POSTS.POST.CARE_OFFER.COMPLAINTS',
-                        { count: num(oQueTem.complaints) },
-                        oQueTem.complaints
+                        'SEUS_POSTS.POST.CARE_OFFER.PRIVATE_WINDOW',
+                        { count: num(cabemNoPrivado) },
+                        cabemNoPrivado
                       )
                     }}
                   </li>
                 </ul>
-                <p v-if="oQueTem.more" class="m-0 text-sm text-n-slate-11">
-                  {{
-                    $t('SEUS_POSTS.POST.CARE_OFFER.MORE', {
-                      count: num(oQueTem.read),
-                    })
-                  }}
-                </p>
                 <p
                   data-seus-posts-o-que-faco
                   class="m-0 text-sm text-n-slate-11"
@@ -847,6 +890,84 @@ const BOTAO_DE_BORDA =
           class="flex scroll-mt-4 flex-col gap-4 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
           data-seus-posts-comentarios
         >
+          <div
+            v-if="anunciosDoPost.length === 1"
+            data-seus-posts-comentarios-do-anuncio
+            class="flex flex-col items-start gap-3 rounded-xl bg-n-alpha-1 p-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div class="flex flex-col gap-1">
+              <p class="m-0 text-sm text-n-slate-12">
+                {{ $t('SEUS_POSTS.POST.AD_COMMENTS.TEXT') }}
+              </p>
+              <p
+                v-if="anunciosDoPost[0].esperando"
+                data-seus-posts-anuncio-esperando
+                class="m-0 text-sm font-semibold text-n-amber-11"
+              >
+                {{
+                  $t(
+                    'SEUS_POSTS.POST.AD_COMMENTS.WAITING',
+                    { count: anunciosDoPost[0].esperando },
+                    anunciosDoPost[0].esperando
+                  )
+                }}
+              </p>
+            </div>
+            <router-link
+              :to="anunciosDoPost[0].to"
+              data-seus-posts-ver-anuncio
+              class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-0 text-sm sm:px-3 font-medium text-n-brand outline-none hover:underline focus-visible:ring-2 focus-visible:ring-n-brand"
+            >
+              <span class="i-lucide-megaphone size-4" aria-hidden="true" />
+              {{ $t('SEUS_POSTS.POST.AD_COMMENTS.OPEN') }}
+            </router-link>
+          </div>
+          <div
+            v-else-if="anunciosDoPost.length > 1"
+            data-seus-posts-comentarios-do-anuncio
+            class="flex flex-col gap-2 rounded-xl bg-n-alpha-1 p-4"
+          >
+            <p class="m-0 text-sm text-n-slate-12">
+              {{
+                $t('SEUS_POSTS.POST.AD_COMMENTS.TEXT_MANY', {
+                  count: anunciosDoPost.length,
+                })
+              }}
+            </p>
+            <ul role="list" class="m-0 flex list-none flex-col p-0">
+              <li v-for="anuncio in anunciosDoPost" :key="anuncio.id">
+                <router-link
+                  :to="anuncio.to"
+                  data-seus-posts-ver-anuncio
+                  class="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl py-2 text-sm font-medium text-n-brand outline-none hover:underline focus-visible:ring-2 focus-visible:ring-n-brand"
+                >
+                  <span
+                    class="i-lucide-megaphone size-4 shrink-0"
+                    aria-hidden="true"
+                  />
+                  <span class="min-w-0 break-words">{{
+                    $t('SEUS_POSTS.POST.AD_COMMENTS.ITEM', {
+                      name: anuncio.name,
+                      date: anuncio.criado,
+                    })
+                  }}</span>
+                  <span
+                    v-if="anuncio.esperando"
+                    data-seus-posts-anuncio-esperando
+                    class="shrink-0 font-semibold text-n-amber-11"
+                  >
+                    {{
+                      $t(
+                        'SEUS_POSTS.POST.AD_COMMENTS.WAITING',
+                        { count: anuncio.esperando },
+                        anuncio.esperando
+                      )
+                    }}
+                  </span>
+                </router-link>
+              </li>
+            </ul>
+          </div>
           <div
             class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
           >
@@ -924,6 +1045,7 @@ const BOTAO_DE_BORDA =
                 v-for="comentario in visiveis"
                 :key="comentario.id"
                 :comentario="comentario"
+                :fio="comFio"
                 :ocupado="ocupado === comentario.id"
                 @responder="
                   (texto, pronto) => responder(comentario, texto, pronto)

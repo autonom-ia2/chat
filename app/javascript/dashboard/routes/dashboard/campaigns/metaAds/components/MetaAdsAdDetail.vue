@@ -16,7 +16,9 @@ import {
   VERDICT_CLASSES,
   adImage,
   amount,
+  destinationKey,
   intlLocale,
+  otherAdStats,
   periodRange,
   relativeTime,
   thumbClass,
@@ -32,6 +34,8 @@ import comentariosFacebook from './comentarios/comentariosFacebook';
 import MetaAdsAdStatus from './MetaAdsAdStatus.vue';
 import MetaAdsAdPost from './MetaAdsAdPost.vue';
 import MetaAdsBudget from './MetaAdsBudget.vue';
+import MetaAdsAdCare from './MetaAdsAdCare.vue';
+import MetaAdsCareOutside from './MetaAdsCareOutside.vue';
 import { lerOrcamento } from '../criacaoNaMeta';
 
 // Anúncios da Meta (#1088, F3b): o anúncio por dentro, passos 3 e 4 da jornada "O painel do dia a dia". A
@@ -143,8 +147,20 @@ const makeTile = (key, value, tone = 'text-n-slate-12') => ({
 
 // Com venda, o custo por venda ao lado da média da conta é a comparação que decide o veredito. Sem venda não
 // há custo por venda: em vez de dois traços no topo, os números que existem (investido, conversas, propostas).
+// Anúncio que não abre conversa (#2521, ad.outside): o gasto e o que a Meta mede no destino dele, como na lista.
+const outside = computed(() => Boolean(ad.value?.outside));
+const formatCount = value =>
+  new Intl.NumberFormat(intlLocale(locale.value)).format(value || 0);
+const outsideTiles = data => [
+  makeTile('SPEND', fmt(data.spend)),
+  ...otherAdStats(data).map(stat =>
+    makeTile(stat.key, formatCount(stat.value))
+  ),
+];
+
 const tiles = computed(() => {
   const data = ad.value;
+  if (outside.value) return outsideTiles(data);
   const conversations = makeTile('CONVERSATIONS', data.conversations || 0);
   if (data.cost_per_sale == null) {
     return [
@@ -188,6 +204,10 @@ const reasonText = computed(() => {
     count
   );
 });
+
+// Privado dos comentários do anúncio no período (#2521): quantos a IA ou a equipe chamaram e quantos responderam. Só
+// as respostas contam como conversa do anúncio.
+const privateReplies = computed(() => ad.value?.private_replies || null);
 
 const quotes = computed(() => ad.value?.quotes_list || []);
 // Das propostas do anúncio (que incluem as vendidas), as abertas. Vem dos números do anúncio, não da lista,
@@ -237,6 +257,19 @@ const dayLabel = date =>
     timeZone: 'UTC',
   });
 
+// Anúncio que não abre conversa (#2521): o gráfico mostra só o gasto; a série de conversas ficaria sempre no zero.
+const spendOnly = computed(() => outside.value && !withoutSpend.value);
+
+const chartTitleKey = computed(() => {
+  if (withoutSpend.value) return 'CHART_TITLE_TALKS';
+  return spendOnly.value ? 'CHART_TITLE_SPEND' : 'CHART_TITLE';
+});
+
+const chartDayKey = () => {
+  if (withoutSpend.value) return 'CHART_DAY_TALKS';
+  return spendOnly.value ? 'CHART_DAY_SPEND' : 'CHART_DAY';
+};
+
 const chart = computed(() => {
   const daily = ad.value?.daily || [];
   const slot = CHART.width / Math.max(daily.length, 1);
@@ -262,13 +295,11 @@ const chart = computed(() => {
       height,
       center: index * slot + slot / 2,
       dot:
-        talks && !withoutSpend.value
+        talks && !withoutSpend.value && !spendOnly.value
           ? CHART.height - (talks / maxTalks) * room
           : null,
       title: t(
-        withoutSpend.value
-          ? 'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_DAY_TALKS'
-          : 'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_DAY',
+        `CRM_KANBAN.META_ADS_HUB.AD_DETAIL.${chartDayKey()}`,
         { date: dayLabel(day.date), spend: fmt(spend), count: talks },
         talks
       ),
@@ -333,20 +364,23 @@ const commentTabs = computed(() =>
   )
 );
 const gestao = ref(null);
+// A foto nova depois de trocar (#2778), enquanto a Meta analisa.
+const swappedImage = ref('');
 
 // Comentários só com conexão, que é quem tem token para ler na Meta (#2196). O sinal é a gestão, que leu o anúncio
 // ao vivo agora, ou o gasto, que só vem de anúncio sincronizado por uma conexão (sem login, #1960, ele é nil). A
 // gestão sozinha não basta: uma falha passageira na leitura dela tiraria os comentários de um anúncio com números. O
 // gasto sozinho também não: anúncio que nunca rodou, ou parou antes do período, não tem número nenhum (#2335).
+// #2520: a flag da gestão não esconde os comentários (régua única: a dos comentários da rede). Sem a gestão não há a
+// leitura ao vivo, e o sinal fica só o gasto: o anúncio sem número no período fica sem os comentários aqui.
 const showComments = computed(
   () =>
-    gestaoOn.value &&
     commentTabs.value.length > 0 &&
     Boolean(gestao.value || (ad.value && !withoutSpend.value))
 );
 
 // IA cuida dos comentários (#2212, B2, flag meta_ads_comentarios_ia): a entrada fica onde os comentários ficam, e só
-// com eles (showComments já pede a gestão e a flag dos comentários de ao menos uma rede, como o servidor).
+// com eles (showComments já pede a flag dos comentários de ao menos uma rede, como o servidor).
 const showCare = computed(
   () =>
     showComments.value &&
@@ -358,6 +392,7 @@ const showCare = computed(
 
 const loadGestao = async () => {
   gestao.value = null;
+  swappedImage.value = '';
   if (!gestaoOn.value) return;
   const asked = props.adId;
   const data = await lerGestao(asked);
@@ -392,6 +427,31 @@ const loadBudget = async () => {
 };
 watch(() => props.adId, loadBudget);
 
+// Duplicar e trocar foto ou texto (#2778): com a flag de criar, para quem pode mexer, quando a conexão pode mudar o
+// anúncio. Só nos anúncios criados pelo Chat2You (opção a do Rodrigo, 09/11, `created_here`); nos outros, uma linha
+// diz para usar o Gerenciador de Anúncios. Depois de trocar, o detalhe já mostra a foto nova e a situação "em análise".
+// A gestão primeiro: sem ela (Anúncios sem login, #1960) não há o que cuidar, e a permissão nem é lida.
+const careAllowed = computed(
+  () => budgetOn.value && Boolean(gestao.value?.can_change) && canManage.value
+);
+const showAdCare = computed(
+  () => careAllowed.value && Boolean(gestao.value?.created_here)
+);
+const showCareOutside = computed(
+  () => careAllowed.value && !gestao.value?.created_here
+);
+// O texto novo também: a próxima troca abre com ele (e não manda o antigo de volta).
+const reviewing = ({ effective_status: effective, image: newImage, text }) => {
+  const post = gestao.value?.post;
+  gestao.value = {
+    ...gestao.value,
+    effective_status: effective,
+    creative_text: text,
+    ...(post ? { post: { ...post, message: text } } : {}),
+  };
+  swappedImage.value = newImage;
+};
+
 watch(() => props.adId, loadGestao);
 
 // A entrega (`effective_status`) é a Meta quem diz: depois de mudar, a situação é lida de novo, sem tirar o selo.
@@ -411,7 +471,9 @@ onMounted(() => {
 // Link de imagem da Meta vencido: mostra o quadro de reserva (guarda a URL que falhou, então um link novo volta
 // a tentar).
 const brokenImages = ref([]);
-const image = computed(() => adImage(ad.value, brokenImages.value));
+const image = computed(
+  () => swappedImage.value || adImage(ad.value, brokenImages.value)
+);
 </script>
 
 <template>
@@ -481,6 +543,24 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
         :budget="budget"
         :can-manage="canManage"
         @changed="budget = $event"
+      />
+      <MetaAdsAdCare
+        v-if="showAdCare"
+        :ad-id="adId"
+        :ad-name="gestao.name || ''"
+        :image="swappedImage || gestao.creative_image || ''"
+        :text="gestao.post?.message || gestao.creative_text || ''"
+        :budget="budget"
+        :original-status="gestao.status || ''"
+        :manager-url="gestao.ads_manager_url || ''"
+        :active-copy="gestao.active_copy || null"
+        :creative-kind="gestao.creative_kind || ''"
+        @reviewing="reviewing"
+        @original-paused="statusChanged('PAUSED')"
+      />
+      <MetaAdsCareOutside
+        v-else-if="showCareOutside"
+        :url="gestao.ads_manager_url"
       />
       <MetaAdsAdPost v-if="gestao?.post" :post="gestao.post" />
       <CuidarAnuncioEntrada
@@ -602,6 +682,24 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
             :can-manage="canManage"
             @changed="budget = $event"
           />
+          <MetaAdsAdCare
+            v-if="showAdCare"
+            :ad-id="adId"
+            :ad-name="ad.name || ''"
+            :image="image"
+            :text="gestao.post?.message || gestao.creative_text || ''"
+            :budget="budget"
+            :original-status="gestao.status || ''"
+            :manager-url="gestao.ads_manager_url || ''"
+            :active-copy="gestao.active_copy || null"
+            :creative-kind="gestao.creative_kind || ''"
+            @reviewing="reviewing"
+            @original-paused="statusChanged('PAUSED')"
+          />
+          <MetaAdsCareOutside
+            v-else-if="showCareOutside"
+            :url="gestao.ads_manager_url"
+          />
           <span
             v-if="ad.verdict"
             :data-verdict="ad.verdict"
@@ -639,7 +737,26 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
           </dl>
 
           <div
-            v-if="!withoutSpend"
+            v-if="outside"
+            data-ad-detail-destination
+            :data-destination="ad.destination"
+            class="flex flex-col gap-2 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak"
+          >
+            <h4 class="m-0 text-sm font-semibold text-n-slate-11">
+              {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.DESTINATION_TITLE') }}
+            </h4>
+            <p
+              class="m-0 text-pretty text-base leading-relaxed text-n-slate-12"
+            >
+              {{
+                $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.DESTINATION', {
+                  destination: $t(destinationKey(ad)),
+                })
+              }}
+            </p>
+          </div>
+          <div
+            v-else-if="!withoutSpend"
             data-ad-detail-why
             :data-reason="reason.kind"
             class="flex flex-col gap-2 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak"
@@ -688,11 +805,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
       >
         <div class="flex flex-wrap items-center justify-between gap-3">
           <h4 class="m-0 text-sm font-semibold text-n-slate-11">
-            {{
-              withoutSpend
-                ? $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_TITLE_TALKS')
-                : $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_TITLE')
-            }}
+            {{ $t(`CRM_KANBAN.META_ADS_HUB.AD_DETAIL.${chartTitleKey}`) }}
           </h4>
           <ul
             class="m-0 flex list-none gap-4 p-0 text-xs font-medium text-n-slate-11"
@@ -711,7 +824,10 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
               />
               {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.LEGEND_CONVERSATIONS') }}
             </li>
-            <li v-if="!withoutSpend" class="flex items-center gap-1.5">
+            <li
+              v-if="!withoutSpend && !spendOnly"
+              class="flex items-center gap-1.5"
+            >
               <span
                 class="rounded-full size-2.5 bg-n-teal-10"
                 aria-hidden="true"
@@ -726,11 +842,15 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
           class="m-0 text-xs tabular-nums text-n-slate-11"
         >
           {{
-            $t(
-              'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_SCALE',
-              { spend: chart.maxSpend, count: chart.maxTalks },
-              chart.maxTalks
-            )
+            spendOnly
+              ? $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_SCALE_SPEND', {
+                  spend: chart.maxSpend,
+                })
+              : $t(
+                  'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_SCALE',
+                  { spend: chart.maxSpend, count: chart.maxTalks },
+                  chart.maxTalks
+                )
           }}
         </p>
         <!-- O desenho é só para ver; os números de cada dia estão na tabela logo abaixo (toque e leitor de tela). -->
@@ -819,7 +939,11 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
                 >
                   {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.LEGEND_SPEND') }}
                 </th>
-                <th scope="col" class="py-2 font-medium text-end">
+                <th
+                  v-if="!spendOnly"
+                  scope="col"
+                  class="py-2 font-medium text-end"
+                >
                   {{
                     $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.LEGEND_CONVERSATIONS')
                   }}
@@ -839,13 +963,44 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
                 <td v-if="!withoutSpend" class="py-2 text-end">
                   {{ day.spend }}
                 </td>
-                <td class="py-2 text-end">{{ day.talks }}</td>
+                <td v-if="!spendOnly" class="py-2 text-end">
+                  {{ day.talks }}
+                </td>
               </tr>
             </tbody>
           </table>
         </details>
       </div>
 
+      <p
+        v-if="privateReplies?.sent"
+        data-ad-detail-private-replies
+        class="m-0 flex flex-wrap items-center gap-2 text-sm text-n-slate-12"
+      >
+        <span class="i-lucide-send size-4 text-n-slate-11" aria-hidden="true" />
+        <span>
+          {{
+            $t(
+              'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.PRIVATE_REPLIES.SENT',
+              { count: privateReplies.sent },
+              privateReplies.sent
+            )
+          }}
+        </span>
+        <span
+          class="size-1 shrink-0 rounded-full bg-n-slate-8"
+          aria-hidden="true"
+        />
+        <span>
+          {{
+            $t(
+              'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.PRIVATE_REPLIES.REPLIED',
+              { count: privateReplies.replied },
+              privateReplies.replied
+            )
+          }}
+        </span>
+      </p>
       <CuidarAnuncioEntrada
         v-if="showCare"
         :ad-id="adId"

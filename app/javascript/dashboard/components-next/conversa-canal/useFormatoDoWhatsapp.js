@@ -21,9 +21,11 @@ import { ehRobo } from './origemDoEnvio';
 // a lista única que o envio (Messages::EnvioAutomatico) também lê.
 const MARCAS_DE_ENVIO_AUTOMATICO = [
   'automationRuleId',
+  'automacaoId',
   'crmFollowUpId',
   'crmBookingInviteId',
   'crmBookingNotice',
+  'metaAdsCommentActionId',
 ];
 const MARCAS_DE_CAMPANHA = ['campaignId', 'whatsappApiCampaignId'];
 

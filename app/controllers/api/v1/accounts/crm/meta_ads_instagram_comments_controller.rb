@@ -1,9 +1,10 @@
-# Comentários do anúncio no Instagram (#2196, flags `meta_ads_gestao` e `meta_ads_comentarios_instagram`). Sem as
-# flags, 404: nada aqui chama a Meta.
+# Comentários do anúncio no Instagram (#2196, flag `meta_ads_comentarios_instagram`; a gestão de Anúncios não entra,
+# #2520). Sem a flag, 404: nada aqui chama a Meta.
 #
 # GET    meta_ads_connection/ads/:ad_id/instagram_comments?after=          → comentários (Crm::MetaAds::InstagramComments).
 #        Ver: administrador ou `meta_ads_view`, e ver a caixa do Instagram (InboxPolicy#show?). Sem ver a caixa,
-#        `status: not_inbox_member` e nenhum comentário (#2358).
+#        `status: not_inbox_member` e nenhum comentário (#2358). No `needs_login`, o `inbox_id` vai só a quem vê a caixa
+#        ou tem `integration_manage` (SeusPosts::Caixa#id_para_quem_age, #2365).
 # POST   .../instagram_comments/:comment_id/reply          content=        → responder em público.
 # POST   .../instagram_comments/:comment_id/hide           hidden=         → ocultar ou mostrar de novo.
 # POST   .../instagram_comments/:comment_id/private_reply  content=        → responder no privado (Private Reply).
@@ -46,13 +47,13 @@ class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Acco
     hidden = ActiveModel::Type::Boolean.new.cast(params[:hidden])
     return render json: { error: 'invalid_hidden' }, status: :unprocessable_content unless [true, false].include?(hidden)
 
-    result = comments.hide!(ad_id, comment_id, hidden: hidden)
+    result = comments.hide!(ad_id, comment_id, hidden: hidden, user: Current.user)
     audit!(hidden ? 'hide' : 'show')
     render json: result
   end
 
   def destroy
-    result = comments.delete!(ad_id, comment_id)
+    result = comments.delete!(ad_id, comment_id, user: Current.user)
     audit!('delete')
     render json: result
   end
@@ -72,8 +73,7 @@ class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Acco
   private
 
   def ensure_feature
-    head :not_found unless Current.account.feature_enabled?('meta_ads_gestao') &&
-                           Current.account.feature_enabled?('meta_ads_comentarios_instagram')
+    head :not_found unless Current.account.feature_enabled?('meta_ads_comentarios_instagram')
   end
 
   def ensure_view
@@ -106,7 +106,10 @@ class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Acco
 
   def comments
     @comments ||= ::Crm::MetaAds::InstagramComments.new(
-      @connection, inbox_access: ->(inbox) { inbox.present? && Pundit.policy!(pundit_user, inbox).show? }, can_manage: policy.update?
+      @connection,
+      inbox_access: ->(inbox) { inbox.present? && Pundit.policy!(pundit_user, inbox).show? },
+      can_manage: policy.update?,
+      inbox_id_for: ->(inbox) { SeusPosts::Caixa.new(inbox: inbox, viewer: pundit_user).id_para_quem_age }
     )
   end
 

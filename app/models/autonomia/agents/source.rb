@@ -53,6 +53,9 @@ module Autonomia
                          foreign_key: :autonomia_agent_id
       has_many :knowledge_entries, class_name: 'Autonomia::Agents::KnowledgeEntry',
                                    foreign_key: :source_id, dependent: :delete_all
+      # #2487 — o material só de um post ou anúncio: é do cuidado dos comentários, não do agente (o `autonomia_agent_id`
+      # guarda a porta da rede no momento do anexo). Só a resposta a um comentário daquele cuidado lê (Retriever).
+      belongs_to :care, class_name: 'Crm::MetaAdsCommentCare', optional: true
 
       enum status: { pending: 0, processing: 1, ready: 2, failed: 3 }
 
@@ -78,6 +81,10 @@ module Autonomia
 
       # Escopo do parecer aceito — usado pelo retrieval e pelos resumos do Construtor.
       scope :accepted, -> { where(review_status: 'accepted') }
+
+      # #2487 — o material do próprio agente, sem o de um post ou anúncio (care_id). Todo leitor do material do agente
+      # fora do Retriever (painel, conferências, placar, autoteste, recompute) parte daqui.
+      scope :da_agente, -> { where(care_id: nil) }
 
       # G6 — fontes SERVÍVEIS: aceitas E com geração de entries vigente — `ready` (caminho normal)
       # OU `failed` transitório (mark_failed! restaurou o parecer 'accepted'; os KnowledgeEntry
@@ -133,8 +140,14 @@ module Autonomia
       # #1426 (t4e) — o PDF grande dividido em seções por faixa de páginas ([{ 'paginas' => [ini, fim], 'texto' }]), posto
       # pelo Processors::Pdf só durante a leitura. O Ingestor corta cada seção à parte e grava as páginas em cada trecho.
       attr_accessor :secoes
+      # #1431 (F1) — os blocos do material (título com nível, parágrafo, página), postos pelo processor só durante a leitura,
+      # com a flag rag_corte_por_estrutura. Com eles, o Ingestor corta por seção (Knowledge::CortePorSecao), não pelo Chunker.
+      attr_accessor :blocos
       # #1426 (t4e) — o índice por seção desta leitura (Knowledge::ResumoPorSecao), gravado pelo mark_ready! com o "pronto".
       attr_accessor :resumo_por_secao
+      # #1426 — o texto desta leitura veio de OCR (PDF escaneado), posto pelo Processors::PdfOcr. Só em memória, lido pela
+      # conferência (Material::ConferenciaDoMaterial) no mesmo job: "leitura ruim" só existe quando houve leitura de imagem.
+      attr_accessor :leitura_de_imagem
 
       before_destroy :soltar_foto_da_conversa, prepend: true # antes do has_one_attached apagar o anexo
 

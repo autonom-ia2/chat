@@ -133,19 +133,29 @@ class Crm::Cards::FilterQuery
   # (o id do anúncio do primeiro toque). A seleção e a origem são as mesmas da tela (Crm::Numeros::Origens::Cards e
   # Classificador), então a lista tem o tamanho que a tela mostra. List-only, como o `closed_in`. Origem e anúncio só
   # valem junto do mês (sem ele a classificação leria o funil inteiro): link com mês inválido, fora do limite de meses ou
-  # com origem/anúncio sem mês mostra a lista vazia, nunca o funil inteiro sem filtro.
+  # com origem/anúncio sem mês mostra a lista vazia, nunca o funil inteiro sem filtro. Quem não vê o anúncio de origem
+  # (Crm::AnuncioDeOrigem, #2296) não filtra por `anuncio`: o parâmetro é ignorado, como os ids de anúncio do
+  # `campaign_source_ids`, porque filtrar revelaria qual card veio de qual anúncio.
   def apply_origens_filter(cards)
-    return cards if ORIGENS_PARAMS.all? { |chave| @params[chave].blank? }
+    return cards if origens_pedidas.all? { |chave| @params[chave].blank? }
 
     range = entrou_em_range
     return cards.none if range.nil?
 
     cards = Crm::Numeros::Origens::Cards.do_mes(cards, range, account: @account)
     origem = Crm::Numeros::Origens::Classificador::ORIGENS.find { |grupo| grupo == @params[:origem].to_s }
-    anuncio = @params[:anuncio].to_s.presence
+    anuncio = anuncio_do_filtro
     return cards if origem.nil? && anuncio.nil?
 
     cards.where(id: Crm::Numeros::Origens::Classificador.new(cards, range).ids_de(origem: origem, anuncio: anuncio))
+  end
+
+  def origens_pedidas
+    @conversation_visibility.anuncio_visivel? ? ORIGENS_PARAMS : ORIGENS_PARAMS - %i[anuncio]
+  end
+
+  def anuncio_do_filtro
+    @params[:anuncio].to_s.presence if @conversation_visibility.anuncio_visivel?
   end
 
   def entrou_em_range

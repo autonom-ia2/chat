@@ -39,10 +39,18 @@ const MOTIVOS = {
   missing_pixel: 'SEM_PIXEL',
   event_too_old: 'VELHO',
   missing_credentials: 'SEM_ACESSO',
+  missing_dataset: 'SEM_DATASET',
   no_meta_event: 'ETAPA_NAO_AVISA',
   missing_signals: 'SEM_SINAIS',
 };
 const QUANDO = { won: 'GANHO', lost: 'PERDIDO', moved: 'ETAPA' };
+// #2738: a Meta pode ter recebido o aviso sem responder. Mandar de novo poderia
+// contar a venda duas vezes, então a plataforma não manda e diz isso.
+const SEM_CONFIRMACAO = {
+  tom: 'bg-n-amber-3 text-n-amber-11',
+  icone: 'i-lucide-circle-help',
+  chave: 'SEM_CONFIRMACAO',
+};
 
 const estado = computed(() => {
   const { status, error_message: mensagem } = props.conversao || {};
@@ -52,6 +60,8 @@ const estado = computed(() => {
     const motivo = MOTIVOS[mensagem];
     return motivo ? { ...base, detalhe: t(`${A}.MOTIVO.${motivo}`) } : null;
   }
+  if (status === 'error' && mensagem === 'unknown_outcome')
+    return { ...SEM_CONFIRMACAO, detalhe: t(`${A}.SEM_CONFIRMACAO_DICA`) };
   if (status === 'error')
     return { ...base, detalhe: t(`${A}.RECUSADO_DICA`), bruto: mensagem || '' };
   return { ...base, detalhe: '' };

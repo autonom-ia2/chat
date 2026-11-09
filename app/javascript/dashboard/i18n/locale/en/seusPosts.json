@@ -157,6 +157,7 @@
         "BELOW": "This post showed up less than your posts usually do.",
         "NEW": "This post is new: Meta’s numbers arrive within 2 days.",
         "BOOSTED": "This post had an ad. Times shown counts only what was not from the ad; the other numbers include the ad.",
+        "BOOSTED_INSTAGRAM": "You boosted this post through the platform. The ad has its own numbers and comments.",
         "TIMES": "This post did well: it showed up {times} times more than your posts usually do.",
         "DOUBLE": "This post did well: it showed up twice as much as your posts usually do.",
         "WELL_ABOVE": "This post did well: it showed up much more than your posts usually do.",
@@ -166,7 +167,16 @@
       },
       "SIDE": {
         "BOOSTED": "Had an ad: only “{name}” is without the ad.",
-        "INSTAGRAM": "Times shown, likes and comments are without ads. People who saw it, saves and shares may include ads."
+        "BOOSTED_INSTAGRAM": "Numbers for this post only.",
+        "INSTAGRAM": "Times shown is without ads. People who saw it, likes, comments, saves and shares may include ads."
+      },
+      "AD_COMMENTS": {
+        "TEXT": "The ad's comments are on the ad, not on this post.",
+        "OPEN": "See the ad's comments",
+        "TEXT_MANY": "This post became {count} ads. Each one's comments are on that ad, not on this post.",
+        "ITEM": "{name}, created on {date}",
+        "UNNAMED": "Ad",
+        "WAITING": "{count} comment waiting for you | {count} comments waiting for you"
       },
       "COMMENTS": {
         "TITLE": "Comments",
@@ -225,6 +235,7 @@
         "ERROR": "I couldn’t do that right now. Try again.",
         "ERRORS": {
           "invalid_text": "Write the message before sending.",
+          "text_too_long": "The message is too long for Instagram (accented letters and emojis count extra). Make it a bit shorter.",
           "comment_not_found": "This comment is no longer on the post.",
           "meta_unavailable": "Meta didn’t respond right now. Try again in a moment.",
           "meta_refused": "Meta didn’t allow this on this comment.",
@@ -233,21 +244,19 @@
         }
       },
       "CARE_OFFER": {
-        "TITLE": "What's in the comments",
-        "QUESTIONS": "{count} question: I can answer privately | {count} questions: I can answer privately",
-        "QUESTIONS_OLD": "{count} question older than 7 days: yours to answer | {count} questions older than 7 days: yours to answer",
-        "QUESTIONS_YOU": "{count} question: left for you | {count} questions: left for you",
-        "COMPLAINTS": "{count} complaint: left for you | {count} complaints: left for you",
+        "TITLE": "What's in this post's comments",
+        "TITLE_WITH_ADS": "What's in this post's comments (the ad's comments are on the ad)",
+        "WAITING": "{count} comment is waiting for a reply | {count} comments are waiting for a reply",
+        "NONE_WAITING": "No comments waiting for a reply.",
+        "PRIVATE_WINDOW": "{count} can still get a private message (up to 7 days) | {count} can still get a private message (up to 7 days)",
         "TEXT": "If you turn it on, I answer questions privately and say so on the comment. You choose whether I answer the ones already here.",
-        "TEXT_MIXED": "If you turn it on, I answer new questions privately. Of the ones already here, I can answer the most recent one, if you want. | If you turn it on, I answer new questions privately. Of the ones already here, I can answer the {count} most recent ones, if you want.",
         "TEXT_ONLY_NEW": "If you turn it on, I answer new questions privately. The ones already here are older than 7 days: answer them on the comment.",
         "TEXT_FUTURE": "If you turn it on, I answer new questions privately.",
         "BUTTON": "Take care of comments",
-        "TEXT_SOON": "Sending it privately on Messenger isn't available yet. As soon as Meta allows it, you turn it on here.",
+        "TEXT_SOON": "Sending it privately on Messenger isn't available for this Page yet. When Meta allows it, sign in with the Page again and turn it on here.",
         "LOADING": "I'm reading the comments…",
         "NEEDS_PERMISSION": "To tell you what's in the comments, I need access to them.",
-        "UNAVAILABLE": "I couldn't read the comments right now.",
-        "MORE": "I read the {count} most recent ones without a reply."
+        "UNAVAILABLE": "I couldn't read the comments right now."
       },
       "CARE_ON": {
         "PAUSE": "Pause",

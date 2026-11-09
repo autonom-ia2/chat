@@ -1,12 +1,16 @@
 # IA cuida dos comentários (#2212, B1/B2): o "Ler e mandar" do dono. Os comentários que chegaram antes de ligar o
 # cuidado (`started_at`), com até 7 dias (o privado não alcança os mais velhos), vão para a fila do motor como
 # comentários novos: cada um no seu CuidarJob, que lê o texto na Meta e decide se é o caso. O motor não repete o que já
-# fez (a reserva `ai_seen`). Os argumentos e os jobs levam só ids.
+# fez (a reserva `ai_seen`). Os argumentos e os jobs levam só ids. Com a flag meta_ads_comentarios_ia, também
+# as respostas de cliente dentro dos comentários (#2454, Fonte.que_esperam), com o id do de cima (`parent_id`).
 #
 # A Meta fora do ar tenta de novo poucas vezes (TENTATIVAS). Esgotado, ou com uma recusa que não passa com o tempo (sem
 # permissão), o job solta a marca `read_old_at` (Painel#ler_antigos!): o botão volta e o dono pode tentar de novo. O
 # mesmo quando o perfil, a conexão ou o anúncio não existem mais (`not_found`), ou quando a leitura do anúncio falha
 # antes de chegar aos comentários (AdManagement::Error).
+#
+# Anúncio nas duas redes com uma só lida (#2522): os comentários da rede que leu vão para a fila, e a falha da outra
+# segue a mesma regra (tenta de novo ou solta a marca). Pôr na fila de novo não repete nada: o motor tem a reserva.
 class Crm::MetaAds::ComentariosIa::LerAntigosJob < ApplicationJob
   # A Meta não respondeu à leitura dos comentários.
   class MetaIndisponivel < StandardError; end
@@ -35,13 +39,25 @@ class Crm::MetaAds::ComentariosIa::LerAntigosJob < ApplicationJob
     return if care.nil?
 
     lido = ler(account, alvo)
-    return enfileirar_antigos(account, alvo.to_h.stringify_keys, care, lido[:linhas]) if lido[:status] == 'ready'
-    raise MetaIndisponivel if lido[:status] == PASSAGEIRO
+    if lido[:status] == 'ready'
+      enfileirar_antigos(account, alvo.to_h.stringify_keys, care, Crm::MetaAds::ComentariosIa::Fonte.que_esperam(account, lido))
+    end
+    falha = falha_de(lido)
+    return if falha.nil?
+    raise MetaIndisponivel if falha == PASSAGEIRO
 
-    self.class.soltar!(account_id, alvo, lido[:status])
+    self.class.soltar!(account_id, alvo, falha)
   end
 
   private
+
+  # O que faltou na leitura: a rede que não leu (#2522) ou, sem o status por rede, o da leitura. nil: tudo lido. Com
+  # mais de uma rede faltando, a Meta fora do ar vem antes: a recusa de uma não corta a nova tentativa da outra.
+  def falha_de(lido)
+    falhas = lido[:status_das_redes].to_h.values.reject { |status| status == 'ready' }
+    falhas = [lido[:status]] if falhas.empty? && lido[:status] != 'ready'
+    falhas.include?(PASSAGEIRO) ? PASSAGEIRO : falhas.first
+  end
 
   def ler(account, alvo)
     fonte = Crm::MetaAds::ComentariosIa::Fonte.do_alvo(account, alvo)
@@ -57,7 +73,8 @@ class Crm::MetaAds::ComentariosIa::LerAntigosJob < ApplicationJob
   def enfileirar(account, alvo, linha)
     comentario = Crm::MetaAds::ComentariosIa::Comentario.new(
       network: linha[:network], account_id: account.id, inbox_id: linha[:inbox_id], post_id: linha[:post_id],
-      ad_id: alvo['kind'] == 'ad' ? alvo['ad_id'] : nil, comment_id: linha[:id].to_s, created_time: linha[:momento]
+      ad_id: alvo['kind'] == 'ad' ? alvo['ad_id'] : nil, comment_id: linha[:id].to_s, parent_id: linha[:parent_id],
+      created_time: linha[:momento]
     )
     Crm::MetaAds::ComentariosIa::CuidarJob.perform_later(comentario.para_o_job.stringify_keys)
   end

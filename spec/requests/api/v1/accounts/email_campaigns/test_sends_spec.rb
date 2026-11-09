@@ -99,6 +99,17 @@ RSpec.describe 'E-mail campaign test send (#999, D8/L6)', :aggregate_failures, t
     Redis::Alfred.delete("email_campaign_test_send:#{admin.id}:#{campaign.id}")
   end
 
+  it 'refuses a campaign without a subject (#2545)' do
+    capturing(EmailCampaigns::Ses::Sender)
+    campaign.update!(subject: nil)
+
+    send_test
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body).to eq('error' => 'email_campaign.test_send_no_subject')
+    expect(delivered).to be_empty
+  end
+
   it 'refuses a campaign without a ready sender' do
     capturing(EmailCampaigns::Ses::Sender)
     campaign.sender_identity.update!(status: :pending)

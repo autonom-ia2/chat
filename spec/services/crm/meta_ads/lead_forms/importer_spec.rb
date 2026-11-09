@@ -88,19 +88,19 @@ RSpec.describe Crm::MetaAds::LeadForms::Importer do
     expect(card.metadata['meta_lead_form']['fields']).to include(include('key' => 'phone_number', 'value' => '11 98765-1201'))
   end
 
-  it 'sem nome, telefone com DDI nem e-mail: o card nasce com o nome do formulário' do
+  it 'sem nome, telefone com DDI nem e-mail: o card nasce com "Lead" e o id, sem o nome do formulário (#2562)' do
     lead_sem_contato = lead(name: '', phone: '11 98765-1201', email: '')
 
     expect(importer.import(lead_sem_contato)).to eq(:created)
-    expect(account.crm_cards.last.title).to eq('Orçamento de verão')
+    expect(account.crm_cards.last.title).to eq('Lead L1')
   end
 
   # O título vai à IA (Decisor, IA de etapa) e a quem não vê o contato: telefone e e-mail nunca entram nele.
-  it 'sem nome, com telefone e e-mail: o título é o nome do formulário, sem telefone nem e-mail' do
+  it 'sem nome, com telefone e e-mail: o título é "Lead" e o id, sem telefone nem e-mail' do
     importer.import(lead(name: ''))
 
     card = account.crm_cards.last
-    expect(card.title).to eq('Orçamento de verão')
+    expect(card.title).to eq('Lead L1')
     expect(card.contact.phone_number).to eq('+5511987651201')
     decisor = build(:autonomia_decisor, account: account)
     estado = Autonomia::Decisores::Estado.new(card: card, leituras: %w[card contato])
@@ -109,19 +109,19 @@ RSpec.describe Crm::MetaAds::LeadForms::Importer do
     end)
   end
 
-  it 'nome que é um e-mail: título e contato ficam sem ele, e o título é o nome do formulário' do
+  it 'nome que é um e-mail: título e contato ficam sem ele, e o título é "Lead" e o id' do
     importer.import(lead(name: 'mariana@example.com'))
 
     card = account.crm_cards.last
-    expect(card.title).to eq('Orçamento de verão')
+    expect(card.title).to eq('Lead L1')
     expect(card.contact.name.to_s).not_to include('mariana@example.com')
   end
 
-  it 'nome que é um telefone: título e contato ficam sem ele, e o título é o nome do formulário' do
+  it 'nome que é um telefone: título e contato ficam sem ele, e o título é "Lead" e o id' do
     importer.import(lead(name: '(11) 98765-1201'))
 
     card = account.crm_cards.last
-    expect(card.title).to eq('Orçamento de verão')
+    expect(card.title).to eq('Lead L1')
     expect(card.contact.name.to_s).not_to include('98765-1201')
   end
 
@@ -155,6 +155,77 @@ RSpec.describe Crm::MetaAds::LeadForms::Importer do
     expect(importer.import(lead)).to eq(:failed)
     expect(tracker).to have_received(:capture_exception)
     expect(Crm::MetaAdsLead.count).to eq(0)
+  end
+
+  # #2804: a recusa diz de onde veio, para a reconciliação saber quando tentar de novo (RefusedLeads).
+  describe 'tipo da recusa' do
+    let(:refused) { instance_double(Crm::MetaAds::LeadForms::RefusedLeads, remember!: true) }
+    let(:importer) do
+      described_class.new(account: account, pipeline: pipeline, stage: stage, form_name: form.form_name, page_id: '104882',
+                          questions: questions, refused: refused)
+    end
+
+    before do
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
+    end
+
+    def recusa(record, attribute, error)
+      record.errors.add(attribute, error)
+      ActiveRecord::RecordInvalid.new(record)
+    end
+
+    it 'card recusado pelo funil ou pela etapa: recusa do destino' do
+      allow(Crm::Cards::Creator).to receive(:new).and_raise(recusa(Crm::Card.new, :stage, :invalid))
+
+      expect(importer.import(lead)).to eq(:failed)
+      expect(refused).to have_received(:remember!).with('L1', :destination)
+    end
+
+    it 'card recusado só pelo título ou pelas respostas: recusa do lead' do
+      allow(Crm::Cards::Creator).to receive(:new).and_raise(recusa(Crm::Card.new, :metadata, :invalid))
+
+      importer.import(lead)
+
+      expect(refused).to have_received(:remember!).with('L1', :lead)
+    end
+
+    it 'contato recusado pelo dado do lead: recusa do lead' do
+      allow_any_instance_of(Contact).to receive(:save!).and_raise(recusa(Contact.new, :name, :too_long)) # rubocop:disable RSpec/AnyInstance
+
+      importer.import(lead)
+
+      expect(refused).to have_received(:remember!).with('L1', :lead)
+    end
+
+    it 'contato que outro processo acabou de gravar (unicidade): recusa passageira' do
+      allow_any_instance_of(Contact).to receive(:save!).and_raise(recusa(Contact.new, :phone_number, :taken)) # rubocop:disable RSpec/AnyInstance
+
+      importer.import(lead)
+
+      expect(refused).to have_received(:remember!).with('L1', :transient)
+    end
+
+    it 'índice único fora da reserva do lead (corrida no banco): :failed passageiro, sem derrubar o lote' do
+      allow(Crm::Cards::Creator).to receive(:new).and_raise(ActiveRecord::RecordNotUnique, 'duplicate key')
+
+      expect(importer.import(lead)).to eq(:failed)
+      expect(refused).to have_received(:remember!).with('L1', :transient)
+      expect(Crm::MetaAdsLead.count).to eq(0)
+    end
+
+    it 'outra recusa do banco (dado que o Postgres não grava): recusa do lead, sem derrubar o lote' do
+      allow(Crm::Cards::Creator).to receive(:new).and_raise(ActiveRecord::StatementInvalid, 'invalid byte sequence')
+
+      expect(importer.import(lead)).to eq(:failed)
+      expect(refused).to have_received(:remember!).with('L1', :lead)
+    end
+
+    it 'impasse no banco (deadlock): :failed passageiro' do
+      allow(Crm::Cards::Creator).to receive(:new).and_raise(ActiveRecord::Deadlocked, 'deadlock detected')
+
+      expect(importer.import(lead)).to eq(:failed)
+      expect(refused).to have_received(:remember!).with('L1', :transient)
+    end
   end
 
   it 'telefone com espaço e traço vira E.164' do

@@ -4,35 +4,20 @@ class Autonomia::Agents::Retriever
   # conhecimento) → handoff seguro no fluxo gateado (Guia/copiloto), em vez de responder ungrounded.
   class RetrievalError < StandardError; end
 
-  def initialize(agent:)
+  # #2487 — `care_id`: a resposta a um comentário do cuidado (Crm::MetaAdsCommentCare) lê também o material só daquele
+  # post ou anúncio. nil (todo turno que não é de comentário): só o material do agente, como sempre.
+  def initialize(agent:, care_id: nil)
     @agent = agent
+    @care_id = care_id
   end
 
   # query:String, top_k:Integer -> Array<Autonomia::Agents::KnowledgeEntry>
   # Escopo SEMPRE por agente (isolamento de conta/agente). Cada record expõe
   # .neighbor_distance. Retorna [] se o embedding vier vazio.
   def retrieve(query, top_k: Autonomia::Agents::Config::RETRIEVER_TOP_K)
-    # C1 (custo) — teto da query ANTES do embedding: sem isso, uma mensagem colada gigante viraria um
-    # embedding igualmente gigante (custo por token / limite do provider) mesmo com o PromptBuilder
-    # capando depois. Defesa CENTRAL aqui (único funil): cobre Answerer (Testar/copiloto/operate),
-    # Guide::Chat e context_for sem repetir truncamento em cada caller. O mesmo texto truncado segue
-    # para o reforço lexical (merge_lexical), mantendo vetorial e lexical coerentes entre si.
-    # Resolve o modelo UMA vez por retrieve: a query é embedada e comparada SEMPRE contra a coluna do
-    # MESMO modelo (coerência dimensão↔coluna), mesmo se a config global virar no meio da operação.
-    model = Autonomia::Agents::Config.active_embedding_model
-    query = Autonomia::Agents::Config.truncate_text(query, Autonomia::Agents::Config::MAX_QUERY_CHARS)
-    vector = embedding_service(model).embed(query)
-    return [] if vector.blank?
-
-    # folga (top_k*4) p/ rerank, dedup por fonte e merge lexical
-    rank_candidates(candidate_rows(vector, top_k, model), query, top_k)
-  rescue ActiveRecord::ActiveRecordError => e
-    # #14 — FALHA DE INFRA/BANCO (pgvector fora, conexão perdida, statement inválido): NÃO mascarar
-    # como "sem KB" (que faria o agente responder ungrounded ou dizer "não tenho material"). Levanta
-    # erro DISTINTO → o Answerer faz handoff seguro no caminho gateado (Guia/copiloto); no operate
-    # instrução-dirigido, degrada para [] (não silenciar o bot por uma falha transitória de banco).
-    Rails.logger.error("[autonomia][retriever] db_failure agent=#{@agent.id} #{e.class}")
-    raise RetrievalError, 'retrieval_unavailable'
+    retrieve!(query, top_k: top_k)
+  rescue RetrievalError
+    raise
   rescue Autonomia::Agents::EmbeddingService::EmbeddingError => e
     # RESILIÊNCIA (Testar/operate): erro de embedding/credencial/provider/timeout NÃO pode quebrar o
     # fluxo. Degrada para [] → o Answerer responde pela personalidade/instrução ou faz handoff seguro.
@@ -48,12 +33,51 @@ class Autonomia::Agents::Retriever
     []
   end
 
-  # Conveniência p/ Fase B: trechos de texto já formatados.
+  # #1431 (F0) — a mesma busca, sem degradar: a falha do embedding SOBE. É o caminho de quem MEDE a busca
+  # (PlacarDaBase), onde uma falha lida como [] viraria "não achou" no placar.
+  def retrieve!(query, top_k: Autonomia::Agents::Config::RETRIEVER_TOP_K)
+    # C1 (custo) — teto da query ANTES do embedding: sem isso, uma mensagem colada gigante viraria um
+    # embedding igualmente gigante (custo por token / limite do provider) mesmo com o PromptBuilder
+    # capando depois. Defesa CENTRAL aqui (único funil): cobre Answerer (Testar/copiloto/operate),
+    # Guide::Chat e context_for sem repetir truncamento em cada caller. O mesmo texto truncado segue
+    # para o reforço lexical (merge_lexical), mantendo vetorial e lexical coerentes entre si.
+    # Resolve o modelo UMA vez por retrieve: a query é embedada e comparada SEMPRE contra a coluna do
+    # MESMO modelo (coerência dimensão↔coluna), mesmo se a config global virar no meio da operação.
+    model = Autonomia::Agents::Config.active_embedding_model
+    query = Autonomia::Agents::Config.truncate_text(query, Autonomia::Agents::Config::MAX_QUERY_CHARS)
+    vector = embedding_service(model).embed(query)
+    return [] if vector.blank?
+
+    return busca_hibrida(vector, query, top_k, model) if busca_hibrida?
+
+    # folga (top_k*4) p/ rerank, dedup por fonte e merge lexical
+    rank_candidates(candidate_rows(vector, top_k, model), query, top_k)
+  rescue ActiveRecord::ActiveRecordError => e
+    # #14 — FALHA DE INFRA/BANCO (pgvector fora, conexão perdida, statement inválido): NÃO mascarar
+    # como "sem KB" (que faria o agente responder ungrounded ou dizer "não tenho material"). Levanta
+    # erro DISTINTO → o Answerer faz handoff seguro no caminho gateado (Guia/copiloto); no operate
+    # instrução-dirigido, degrada para [] (não silenciar o bot por uma falha transitória de banco).
+    Rails.logger.error("[autonomia][retriever] db_failure agent=#{@agent.id} #{e.class}")
+    raise RetrievalError, 'retrieval_unavailable'
+  end
+
   def context_for(query, top_k: Autonomia::Agents::Config::RETRIEVER_TOP_K)
     retrieve(query, top_k: top_k).map(&:content)
   end
 
   private
+
+  # #2810 — com a flag, a ordem sai da fusão do vetor com a busca por palavra (BuscaHibrida), no lugar do bônus por
+  # metadado e do reforço lexical; as seções dos itens e o dedup por fonte seguem como no caminho de hoje.
+  def busca_hibrida?
+    @agent.account&.feature_enabled?(Autonomia::Agents::BuscaHibrida::FLAG)
+  end
+
+  def busca_hibrida(vector, query, top_k, model)
+    busca = Autonomia::Agents::BuscaHibrida.new(escopo: escopo_da_base, vector: vector, model: model, query: query)
+    fundidos = busca.fundir(candidate_rows(vector, top_k, model).to_a, top_k * 4)
+    dedup_by_source(secoes_dos_itens(fundidos)).first(top_k)
+  end
 
   # Pipeline de ranqueamento sobre os candidatos vetoriais (top_k*4): teto frouxo -> rerank por
   # metadata -> dedup por fonte -> reforço lexical. Extraído do retrieve p/ manter cada método focado.
@@ -66,6 +90,7 @@ class Autonomia::Agents::Retriever
     # B3 — rerank ADITIVO por metadata (nunca filtro que zera — lição P1.1b): reordena os candidatos já
     # dentro do teto, promovendo o chunk cujo heading/keywords/topics casam com os termos da query.
     kept = rerank_by_metadata(kept, query)
+    kept = secoes_dos_itens(kept)
     result = dedup_by_source(kept).first(top_k)
     # P1.1c — complemento lexical p/ termos exatos que o embedding raso perde (SKU, "domingo",
     # "dermato"): só quando o vetorial veio fraco/incompleto. Roda sobre o MESMO escopo filtrado.
@@ -77,7 +102,7 @@ class Autonomia::Agents::Retriever
   # :embedding_large (halfvec 3072), pois neighbor 0.2.3 não conhece halfvec. Ambos expõem
   # `neighbor_distance` na MESMA escala (distância de cosseno) — os patamares 0.75/0.45 valem igual.
   def candidate_rows(vector, top_k, model)
-    scope = @agent.knowledge_entries.ready.where.not(source_id: rejected_source_ids)
+    scope = escopo_da_base
     if Autonomia::Agents::Config.embedding_large?(model)
       nearest_by_halfvec(scope, vector, top_k)
     else
@@ -97,6 +122,36 @@ class Autonomia::Agents::Retriever
          .limit(top_k * 4)
   end
 
+  # O que a busca lê, igual no vetorial e no lexical: os trechos prontos, sem os das fontes reprovadas.
+  # #2487 — a trava do material só de um post ou anúncio. No turno normal, só o material do agente (fonte sem care_id).
+  # Na resposta a um comentário, também o do cuidado `@care_id`, venha de que porta vier (no anúncio, o Instagram e o
+  # Facebook podem ter agentes diferentes), e sempre da conta do agente. O agente sem base (`with_knowledge=false`) lê só
+  # o do cuidado.
+  def escopo_da_base
+    base_da_busca.ready.where.not(source_id: rejected_source_ids)
+  end
+
+  def base_da_busca
+    return trechos_do_agente if @care_id.nil?
+    return trechos_do_cuidado if @agent.knowledge_disabled?
+
+    trechos_do_agente.or(trechos_do_cuidado)
+  end
+
+  # Os trechos sem fonte e os das fontes do agente que não são de um cuidado.
+  def trechos_do_agente
+    trechos = Autonomia::Agents::KnowledgeEntry.where(autonomia_agent_id: @agent.id)
+    trechos.where(source_id: nil).or(trechos.where(source_id: @agent.sources.da_agente.select(:id)))
+  end
+
+  def trechos_do_cuidado
+    Autonomia::Agents::KnowledgeEntry.where(account_id: @agent.account_id, source_id: fontes_do_cuidado.select(:id))
+  end
+
+  def fontes_do_cuidado
+    Autonomia::Agents::Source.where(care_id: @care_id, account_id: @agent.account_id)
+  end
+
   # Revisor v2 (§2.6): exclui do retrieval o conhecimento de fontes REPROVADAS pela IA Revisora
   # (needs_resend) ou não-avaliáveis sem IA (needs_review). Fontes 'accepted' E ainda-não-revisadas
   # (review_status nil — legado/sources pré-revisor) SEGUEM incluídas → sem regressão para
@@ -111,7 +166,12 @@ class Autonomia::Agents::Retriever
   # TIPO, mesmo negócio) que NÃO isola — ver scope_mismatched_source_ids. Salvaguarda anti-regressão
   # idêntica à do topic_map: só exclui mismatched quando RESTA conhecimento em escopo — nunca esvazia tudo.
   def rejected_source_ids
-    @agent.sources.where(review_status: %w[needs_resend needs_review]).pluck(:id) +
+    @rejected_source_ids ||= ids_reprovados
+  end
+
+  def ids_reprovados
+    fontes = @care_id ? @agent.sources.or(fontes_do_cuidado) : @agent.sources
+    fontes.where(review_status: %w[needs_resend needs_review]).pluck(:id) +
       scope_mismatched_source_ids
   end
 
@@ -150,11 +210,10 @@ class Autonomia::Agents::Retriever
 
     seen = vector_hits.map(&:id)
     clause = terms.map { 'content ILIKE ?' }.join(' OR ')
-    lex = @agent.knowledge_entries.ready
-                .where.not(source_id: rejected_source_ids)
-                .where(clause, *terms.map { |t| "%#{t}%" })
-                .limit(top_k)
-                .reject { |e| seen.include?(e.id) }
+    lex = escopo_da_base.do_material
+                        .where(clause, *terms.map { |t| "%#{t}%" })
+                        .limit(top_k)
+                        .reject { |e| seen.include?(e.id) }
     # Hit lexical não passou pelo nearest_neighbors → o atributo SQL `neighbor_distance` (alias do
     # SELECT) não existe nessas instâncias. Define um reader singleton com o patamar de match forte
     # p/ uniformizar com os hits vetoriais (P2.1 lê .neighbor_distance p/ ancorar confiança):
@@ -214,6 +273,11 @@ class Autonomia::Agents::Retriever
     doc = meta[:doc] || {}
     parts = [meta[:section_heading], meta[:material_type], meta[:keywords], doc[:topics], doc[:entities]]
     parts.flatten.compact.join(' ').downcase
+  end
+
+  # #1431 (PR 1b) — o item volta como o trecho da seção que o contém (SecoesDosItens, extraído no #2810).
+  def secoes_dos_itens(entries)
+    Autonomia::Agents::SecoesDosItens.new(escopo_da_base).trocar(entries)
   end
 
   # Dedup por fonte (P2): 1 melhor trecho por fonte primeiro (já ordenados por distância pelo

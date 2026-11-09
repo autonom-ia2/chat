@@ -8,6 +8,9 @@ module Autonomia
         # de texto), a extração normal volta vazia; nesse caso cai p/ OCR (PdfOcr: Rasterizacao + Ocr).
         class Pdf < Base
           include PdfOcr
+          include PdfParagrafos
+          include PdfBlocos
+          include PdfTabelas
 
           # Abaixo deste tamanho (após strip) a extração é "quase vazia" (PDF escaneado / só imagem):
           # vale tentar OCR em vez de marcar a fonte como falha por texto ausente.
@@ -45,11 +48,12 @@ module Autonomia
               todas = PDF::Reader.new(path).pages
               @paginas_total = todas.size
               paginas = paginas_do_texto(todas)
-              textos = paginas.map { |page| "#{page.text}\n".force_encoding('UTF-8').scrub('') }
+              textos = textos_das_paginas(paginas)
               text = textos.join
               next ocr_fallback(text, path, paginas) if @ocr && text.strip.length < OCR_MIN_CHARS
 
               registrar_secoes(textos)
+              registrar_blocos(paginas)
               text
             end
             registrar_paginas_de_fora
@@ -59,6 +63,20 @@ module Autonomia
           end
 
           private
+
+          # #1426 (#2425) — no material da base de conhecimento, de qualquer conta, cada página sai em parágrafos pela posição
+          # das linhas (PdfParagrafos): é conserto de defeito, não novidade da Fase 2. Fica com o `page.text` da main o que não é
+          # material da base (anexo da conversa, leitor de mídia do CRM, Guia: objetos sem agente), a Lia (instrução mantida)
+          # e o Guia (system_key).
+          def textos_das_paginas(paginas)
+            textos = em_paragrafos? ? textos_em_paragrafos(paginas) : paginas.map { |page| "#{page.text}\n" }
+            textos.map { |texto| texto.force_encoding('UTF-8').scrub('') }
+          end
+
+          def em_paragrafos?
+            agente = @source.respond_to?(:agent) ? @source.agent : nil
+            agente.present? && agente.instrucao_mantida? != true && agente.config.to_h['system_key'].blank?
+          end
 
           def fase2_na_conta?
             @source.respond_to?(:account) && Autonomia::Agents::Fase2.ligada?(@source.account)
@@ -86,6 +104,15 @@ module Autonomia
               inicio = (indice * PAGINAS_POR_SECAO) + 1
               { 'paginas' => [inicio, inicio + grupo.size - 1], 'texto' => grupo.join }
             end
+          end
+
+          # #1431 (F1) — com a flag rag_corte_por_estrutura, os blocos do PDF (PdfBlocos) para o corte por seção. Só no
+          # material da base que já sai em parágrafos; a Lia fica como está. PDF escaneado (OCR) não chega aqui.
+          def registrar_blocos(paginas)
+            return unless em_paragrafos? && !agente_protegido? && @source.respond_to?(:blocos=)
+            return unless @source.account&.feature_enabled?('rag_corte_por_estrutura')
+
+            @source.blocos = blocos_em_paragrafos(paginas)
           end
 
           # O que ficou de fora desta leitura vai para o log e para o material (Source#paginas_de_fora, gravado pelo

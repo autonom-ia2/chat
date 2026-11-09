@@ -1,0 +1,361 @@
+# O que a Automação livre pode fazer como passo "ação da plataforma" (#2414 F3, ADR-001 2.1, D3 e D13).
+#
+# Cada recurso do catálogo do Guia (o controller de cada ação em formatos-das-acoes.json) está aqui, em `passo` ou
+# em `fora`, com o motivo. "Fora" é o padrão: em `passo`, só as ações listadas viram passo; as outras do mesmo recurso
+# continuam fora. O spec spec/services/autonomia/automacao/acoes_permitidas_spec.rb falha quando um recurso novo
+# aparece sem classificação, quando uma ação liberada some ou fica com formato incompleto, quando ela não tem
+# desfazer (Acoes::SEM_DESFAZER) ou é só da tela, e quando é apagar estrutura (F3.11).
+#
+# `exige`: campos que a receita tem de preencher além do que a plataforma pede. Etiqueta e atributo criados pela
+# automação levam descrição (F3.10).
+# `fixos`: campo que a receita manda sempre com este valor (o atributo da conversa sem `merge` apagaria os outros).
+# `proibe`: campo que a receita não pode mandar; o ponto entra no campo de dentro (`objeto.campo`).
+#
+# Liberar uma ação vale pelo que ela faz quando uma pessoa clica: resolver a conversa dispara a pesquisa de satisfação
+# da caixa e as regras da conta; mover o card dispara as automações da etapa. É a cascata da D6, contada na cadeia
+# comum (F1), não um passo escondido.
+#
+# Liberar uma ação nova: ler o controller, conferir que o desfazer do Guia a alcança e que ela não fala com o cliente
+# nem sai da plataforma (isso é passo nativo, F4/F8), e só então pôr aqui.
+
+passo:
+  labels:
+    motivo: Criar e alterar etiqueta da conta (D13). Apagar fica só no Guia (F3.11).
+    acoes:
+      POST labels: { exige: [description] }
+      PATCH labels/:id: {}
+      PUT labels/:id: {}
+  conversations/alterar_etiquetas:
+    motivo: Pôr e tirar etiqueta da conversa uma a uma, sem trocar a lista inteira (#2202).
+    acoes:
+      PATCH conversations/:conversation_id/labels/alterar: {}
+  contacts/alterar_etiquetas:
+    motivo: Pôr e tirar etiqueta do contato uma a uma, sem trocar a lista inteira (#2461).
+    acoes:
+      PATCH contacts/:contact_id/labels/alterar: {}
+  contacts/notes:
+    motivo: >-
+      Deixar uma nota no contato, como a pessoa faz na tela de notas (G19, #2636). A nota sai no nome de quem ligou a
+      automação, como as outras ações; qual automação fez fica no registro dela e na auditoria. Mudar e apagar nota
+      fica fora: a automação não reescreve o que alguém anotou.
+    acoes:
+      POST contacts/:contact_id/notes: {}
+  custom_attribute_definitions:
+    motivo: >-
+      Criar e alterar atributo de conversa, contato, empresa ou card (D13). Trocar a chave ou o modelo deixaria os
+      valores já gravados órfãos, então fica fora. Apagar fica só no Guia (F3.11).
+    acoes:
+      POST custom_attribute_definitions: { exige: [attribute_description] }
+      PATCH custom_attribute_definitions/:id: { proibe: [custom_attribute_definition.attribute_key, custom_attribute_definition.attribute_model] }
+      PUT custom_attribute_definitions/:id: { proibe: [custom_attribute_definition.attribute_key, custom_attribute_definition.attribute_model] }
+  contacts:
+    motivo: >-
+      Criar e alterar o contato e os atributos dele (criar: G17, #2660 lote B). A foto fica de fora (a plataforma
+      buscaria uma URL de fora), e bloquear também: corta a conversa com o cliente. No criar, o `source_id` também:
+      solto, ele toma a identidade de outro contato na caixa.
+    acoes:
+      POST contacts: { proibe: [avatar, avatar_url, blocked, source_id] }
+      PATCH contacts/:id: { proibe: [avatar, avatar_url, blocked] }
+      PUT contacts/:id: { proibe: [avatar, avatar_url, blocked] }
+  contacts/customers:
+    motivo: Marcar o contato como cliente (#2660 lote B). Voltar a lead é DELETE, que fica para a trava do lote 3.
+    acoes:
+      POST contacts/:contact_id/customer: {}
+  companies:
+    motivo: >-
+      Criar e alterar a empresa e os atributos dela (criar: #2660 lote B). A foto fica de fora (a plataforma buscaria
+      uma URL de fora).
+    acoes:
+      POST companies: { proibe: [avatar] }
+      PATCH companies/:id: { proibe: [avatar] }
+      PUT companies/:id: { proibe: [avatar] }
+  companies/contacts:
+    motivo: Pôr o contato na empresa (#2660 lote B). Tirar é DELETE, que fica para a trava do lote 3.
+    acoes:
+      POST companies/:company_id/contacts: {}
+  conversations:
+    motivo: Atributo, prioridade e status da conversa.
+    acoes:
+      POST conversations/:id/custom_attributes: { fixos: { merge: true } }
+      POST conversations/:id/toggle_priority: {}
+      POST conversations/:id/toggle_status: {}
+  conversations/assignments:
+    motivo: Atribuir a conversa a uma pessoa ou a um time (D13). Para a agente de IA, só o passo ia_assumir, pela Atribuição (G15).
+    acoes:
+      POST conversations/:conversation_id/assignments: { proibe: [assignee_type] }
+  crm/cards:
+    motivo: >-
+      Alterar o card, movê-lo de etapa, ligar e desligar o contato e a conversa dele, e restaurar o arquivado (#2660
+      lote B). O `force` do restaurar fica fora: ele restaura mesmo com outro card aberto do cliente e duplica.
+    acoes:
+      PATCH crm/cards/:id: {}
+      PUT crm/cards/:id: {}
+      POST crm/cards/:id/move: {}
+      POST crm/cards/:id/link_contact: {}
+      POST crm/cards/:id/unlink_contact: {}
+      POST crm/cards/:id/link_conversation: {}
+      POST crm/cards/:id/unlink_conversation: {}
+      POST crm/cards/:id/restore: { proibe: [force] }
+  crm/cards/restores:
+    motivo: Restaurar cards arquivados pelos ids (#2660 lote B). O `force` fica fora, como no restaurar de um card só.
+    acoes:
+      POST crm/cards/restore: { proibe: [force] }
+  crm/cards/contacts:
+    motivo: >-
+      Criar um contato e ligá-lo ao card (#2660 lote B). A rota pede a chave `Idempotency-Key`; o motor manda uma por
+      execução e pedido (AcoesDoMotor), e a repetição do passo devolve o mesmo contato em vez de criar outro.
+    acoes:
+      POST crm/cards/:card_id/contact: {}
+  crm/memoria_fatos:
+    motivo: >-
+      Aceitar a sugestão, destravar e marcar "não vale mais" num fato da memória do card (#2660 lote B). Pela automação,
+      aceitar e destravar dispensam a conferência da pessoa (destravar desfaz a trava que alguém pôs): quem monta a
+      automação é quem decide isso. Criar o fato fica fora: `valor` e `item_ref` vão crus para Crm::Memoria::Correcao,
+      e o formato não diz o tipo.
+    acoes:
+      POST crm/memoria/cards/:card_id/fatos/:id/aceitar: {}
+      POST crm/memoria/cards/:card_id/fatos/:id/destravar: {}
+      POST crm/memoria/cards/:card_id/fatos/:id/nao_vale_mais: {}
+  crm/stages:
+    motivo: >-
+      Criar e alterar etapa do funil (D13; formato completo desde o #2460). Reordenar fica fora, inclusive a posição
+      de uma etapa só, no criar e no alterar: ela muda a ordem do funil. A etapa criada vai para o fim. Apagar fica
+      só no Guia (F3.11).
+    acoes:
+      POST crm/pipelines/:pipeline_id/stages: { proibe: [position] }
+      PATCH crm/stages/:id: { proibe: [position] }
+      PUT crm/stages/:id: { proibe: [position] }
+  inbox_members:
+    motivo: Pôr agente na caixa (D13). O PATCH troca a lista inteira e pode tirar gente; fica fora.
+    acoes:
+      POST inbox_members: {}
+
+fora:
+  - motivo: Usuários, funções, conta, segurança, integrações, credenciais, tokens e canais. Sempre fora (ADR-001 2.1).
+    sempre: true
+    recursos:
+      - agents
+      - agent_bots
+      - api/v1/accounts
+      - custom_roles
+      - saml_settings
+      - webhooks
+      - callbacks
+      - dashboard_apps
+      - email_oauth_apps
+      - crm/integration_tokens
+      - crm/meta_ads_connections
+      - crm/meta_ads_pagina
+      - crm/meta_ads_instagram
+      - integrations/dyte
+      - integrations/hooks
+      - integrations/linear
+      - integrations/notion
+      - integrations/shopify
+      - integrations/slack
+      - google/authorizations
+      - instagram/authorizations
+      - microsoft/authorizations
+      - notion/authorizations
+      - tiktok/authorizations
+      - twitter/authorizations
+      - whatsapp/authorizations
+      - whatsapp/access_requests
+      - whatsapp/manual_setup
+      - instagram/testers
+      - autonomia/insurance/connection
+      - autonomia/invite_connections
+      - channels/twilio_channels
+      - inboxes
+      - waha_inboxes
+      - whatsapp_hybrid_connections
+  - motivo: Rotas de IA, do CRM e dos agentes. Sempre fora (ADR-001 2.1); a IA como passo é nativa, na F7.
+    sempre: true
+    recursos:
+      - crm/ai_settings
+      - crm/ai_suggestions
+      - crm/stage_criteria
+      - crm/memoria_chaves
+      - crm/meta_ads_ai
+      - crm/meta_ads_advisor_actions
+      - crm/conversation_cards
+      - crm/caixas
+      - autonomia/agents
+      - autonomia/agents/ajuda
+      - autonomia/agents/base_de_seguros
+      - autonomia/agents/build_threads
+      - autonomia/agents/builder_images
+      - autonomia/agents/channels
+      - autonomia/agents/faq_suggestions
+      - autonomia/agents/instruction_versions
+      - autonomia/agents/material
+      - autonomia/agents/message_reports
+      - autonomia/agents/onde_atende
+      - autonomia/agents/playground
+      - autonomia/agents/sources
+      - autonomia/agents/tools
+      - autonomia/quem_atende
+      - autonomia/conversation_copilot
+      - autonomia/text_copilot
+      - autonomia/decisores
+      - autonomia/decisoes
+      - autonomia/insurance/quote_agent
+      - captain/assistant_responses
+      - captain/assistants
+      - captain/bulk_actions
+      - captain/copilot_messages
+      - captain/copilot_threads
+      - captain/custom_tools
+      - captain/documents
+      - captain/faq_suggestions
+      - captain/inboxes
+      - captain/message_reports
+      - captain/preferences
+      - captain/scenarios
+      - captain/tasks
+  - motivo: Fala com o cliente ou sai da plataforma, sem desfazer. Mensagem e aviso são passos nativos (F4); webhook de saída, F8.
+    recursos:
+      - conversations/messages
+      - conversations/message_edits
+      - conversations/message_reactions
+      - conversations/contact_info_requests
+      - conversations/draft_messages
+      - conversations/direct_uploads
+      - conversations/comentario
+      - conversa_canal/encaminhamentos
+      - conversa_canal/reacoes
+      - conversa_canal/convites_do_email
+      - conversa_canal/ditados
+      - contacts/calls
+      - whatsapp_calls
+      - conference
+      - campaigns
+      - whatsapp_api_campaigns
+      - campaign_journey/campaign_pauses
+      - campaign_journey/campaigns
+      - campaign_journey/conversa_aberta
+      - campaign_journey/conversation_audiences
+      - campaign_journey/drafts
+      - campaign_journey/recipient_previews
+      - email_campaigns/ai
+      - email_campaigns/assets
+      - email_campaigns/campaigns
+      - email_campaigns/maintenance
+      - email_campaigns/recipients
+      - email_campaigns/reputations
+      - email_campaigns/sender_identities
+      - email_campaigns/template_imports
+      - email_campaigns/templates
+      - email_campaigns/test_sends
+      - email_campaigns/videos
+      - crm/booking_invites
+      - seus_posts_comentarios
+      - seus_posts_cuidado
+      - agentes_do_post
+      - agentes_do_post_materiais
+      - crm/meta_ads_facebook_comments
+      - crm/meta_ads_instagram_comments
+      - crm/meta_ads_whatsapp_reports
+      - crm/meta_ads_ad_management
+      - crm/meta_ads_creation
+      - crm/meta_ads_ad_care
+      - crm/meta_ads_cuidado
+      - crm/meta_ads_lead_forms
+      - crm/meta_ads_site_pages
+      - crm/google_conversion_feeds
+      - whatsapp_api_message_templates
+      - whatsapp_template_suggestions
+      - inboxes/whatsapp_templates
+      - inboxes/whatsapp_conversation_assets
+  - motivo: Grava em lote fora da requisição, onde o desfazer não chega (Acoes::SEM_DESFAZER).
+    recursos:
+      - bulk_actions
+      - crm/cards/bulk
+      - articles/bulk_actions
+      - macros
+      - data_imports
+      - contact_imports
+      - campaign_imports
+      - campaign_import_audiences
+      - brand_kit_imports
+      - actions/contact_merges
+      - autonomia/tarefas
+  - motivo: Mexe nas próprias automações e vigias. Automação que monta automação é laço de montagem, não uso.
+    recursos:
+      - automation_rules
+      - autonomia/automacoes
+      - autonomia/automacoes_ia
+      - crm/stage_automations
+      - crm/stage_automation_steps
+      - autonomia/vigias
+  - motivo: Passo nativo, não ação da lista. Retorno, passo `retorno` (G3); reunião, F8.
+    recursos:
+      - crm/follow_ups
+      - crm/follow_up_series
+      - crm/meetings
+      - crm/meeting_actions
+      - crm/booking_pages
+      - crm/booking_page_meetings
+      - crm/booking_profiles
+      - crm/booking_stats
+      - crm/my_booking_hours
+  - motivo: >-
+      Troca a lista inteira de etiquetas e apaga a que outra pessoa pôs no meio-tempo. O passo usa a rota de pôr e
+      tirar uma a uma: conversations/alterar_etiquetas (#2202) e contacts/alterar_etiquetas (#2461).
+    recursos:
+      - contacts/labels
+      - conversations/labels
+  - motivo: Configuração e dados que a F3 não libera. A D13 cobre etiqueta, atributo, etapa, atribuição e agente na caixa; o resto entra quando um caso real pedir.
+    recursos:
+      - teams
+      - team_members
+      - canned_responses
+      - custom_filters
+      - crm/saved_views
+      - sla_policies
+      - assignment_policies
+      - assignment_policies/inboxes
+      - agent_capacity_policies
+      - agent_capacity_policies/inbox_limits
+      - agent_capacity_policies/users
+      - inboxes/assignment_policies
+      - inbox_csat_templates
+      - csat_survey_responses
+      - crm/pipelines
+      - crm/pipeline_inboxes
+      - crm/inbox_settings
+      - crm/service_schedules
+      - crm/metas
+      - crm/contacts/relacoes
+      - relationships/configurations
+      - relationships/values
+      - nomes_de_etiquetas
+      - notification_settings
+      - notifications
+      - onboarding_progress
+      - onboardings
+      - portals
+      - articles
+      - categories
+      - brand_kits
+      - branded_email_layouts
+      - upload
+      - ctwa_tracked_links
+      - contacts/opt_outs
+      - contacts/contact_inboxes
+      - contact_inboxes
+      - conversations/participants
+      - conversations/passar_para
+      - conversa_canal/pastas_do_email
+      - autonomia/avisos
+      - autonomia/prospecting/audiences
+      - autonomia/prospecting/lead_audiences
+      - autonomia/prospecting/lead_batches
+      - autonomia/prospecting/lead_consent_refusals
+      - autonomia/prospecting/lead_queue_postponements
+      - autonomia/prospecting/leads
+      - autonomia/prospecting/lists
+      - autonomia/prospecting/saved_presets
+      - autonomia/prospecting/search_interpretations
+      - autonomia/prospecting/searches
+      - autonomia/prospecting/settings

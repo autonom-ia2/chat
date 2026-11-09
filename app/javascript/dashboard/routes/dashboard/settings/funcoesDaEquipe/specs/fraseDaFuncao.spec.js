@@ -235,4 +235,14 @@ describe('menuDaFuncao', () => {
       });
     });
   });
+
+  // #1430: ligar os robôs a outros sistemas aparece no Pode e leva ao menu Robôs de IA, não a Configurações.
+  it('ferramentas dos robôs: Pode próprio e menu Robôs de IA', () => {
+    const { pode, menu } = previaDaFuncao([
+      'autonomia_view',
+      'autonomia_tools_manage',
+    ]);
+    expect(pode).toContain('AUTONOMIA_TOOLS_MANAGE');
+    expect(menu).toEqual(['ROBOS']);
+  });
 });

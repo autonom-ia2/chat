@@ -94,6 +94,21 @@ RSpec.describe 'Campaign journey results API (#1007)', :aggregate_failures, type
       expect(statuses).to eq('sent' => ['Ana Maria Souza', 'Bia Lima'], 'replied' => ['Ana Maria Souza'], 'failed' => ['Caio'])
     end
 
+    # #2802: phone already masked; for who does not read contacts the name too, and the message (it carries their values).
+    it 'masks the name and hides the message for a campaign_view role without contact_view' do
+      get result_path('whatsapp_official', whatsapp_campaign.display_id, '/recipients'), headers: headers(viewer), as: :json
+
+      ana_row = response.parsed_body.dig('payload', 'rows').find { |row| row.dig('contact', 'id') == ana.id }
+      expect(ana_row.dig('contact', 'name')).to eq('Ana S.')
+      expect(ana_row['message_content']).to be_nil
+      expect(response.body).not_to include('Ana Maria Souza', 'Olá Ana', '987654321')
+
+      reader = viewer.tap { |user| user.account_users.first.custom_role.update!(permissions: %w[campaign_view contact_view]) }
+      get result_path('whatsapp_official', whatsapp_campaign.display_id, '/recipients'), headers: headers(reader), as: :json
+      expect(response.parsed_body.dig('payload', 'rows').find { |row| row.dig('contact', 'id') == ana.id })
+        .to include('message_content' => 'Olá Ana', 'contact' => include('name' => 'Ana Maria Souza'))
+    end
+
     it 'refuses an unknown filter' do
       get result_path('whatsapp_official', whatsapp_campaign.display_id, '/recipients'), params: { status: 'opened' }, headers: headers
 
@@ -268,6 +283,15 @@ RSpec.describe 'Campaign journey results API (#1007)', :aggregate_failures, type
       row = response.parsed_body.dig('payload', 'rows').sole
       expect(row).to include('conversation_display_id' => conversation.display_id, 'status' => 'replied')
       expect(row.dig('contact', 'email')).to eq('a**@alfa.com.br')
+    end
+
+    it 'masks the name of who replied for a campaign_view role without contact_view (#2802)' do
+      replied!(ana, email_campaign)
+
+      get result_path('email', email_campaign.id, '/recipients'), params: { status: 'replied' }, headers: headers(viewer)
+
+      expect(response.parsed_body.dig('payload', 'rows').sole.dig('contact', 'name')).to eq('Ana S.')
+      expect(response.body).not_to include('Ana Maria Souza')
     end
 
     it 'exports masked e-mails and names' do

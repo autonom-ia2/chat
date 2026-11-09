@@ -162,6 +162,13 @@ crm_ai_handoff_expiry_job:
   class: 'Crm::Ai::HandoffExpiryJob'
   queue: scheduled_jobs
 
+# #2799: a cada 10 minutos, envio de venda à Meta que ficou pela metade (pending há mais de 10 minutos) vira
+# "Não sabemos se o aviso chegou" (em até ~20 minutos), sem esperar nova tentativa. Um job por conta, até 500 linhas.
+crm_meta_capi_stale_pending_sweep_job:
+  cron: '4,14,24,34,44,54 * * * *'
+  class: 'Crm::MetaCapi::StalePendingSweepJob'
+  queue: low
+
 # executed hourly; wipes personal data (form, Meta signals) of website clicks that
 # expired unattributed or were attributed long ago (#1011, LGPD minimization).
 ctwa_tracked_link_clicks_retention_job:
@@ -300,6 +307,24 @@ autonomia_guide_limpar_execucoes_job:
   class: 'Autonomia::Guide::LimparExecucoesJob'
   queue: scheduled_jobs
 
+# executed every day at 04:45; apaga os registros da Automação livre com mais de 30 dias (#2414, F2 #2452).
+autonomia_automacao_limpar_registros_job:
+  cron: '45 4 * * *'
+  class: 'Autonomia::Automacao::LimparRegistrosJob'
+  queue: scheduled_jobs
+
+# executed every minute; acorda as execuções da Automação livre que esperam e fecha as travadas (#2414, F3 #2459).
+autonomia_automacao_varredura_job:
+  cron: '* * * * *'
+  class: 'Autonomia::Automacao::VarreduraJob'
+  queue: scheduled_jobs
+
+# executed every 15 minutes; os gatilhos de tempo da Automação livre: card parado e data do card ou do contato (#2499).
+autonomia_automacao_tempo_job:
+  cron: '*/15 * * * *'
+  class: 'Autonomia::Automacao::TempoJob'
+  queue: scheduled_jobs
+
 # executed every 5 minutes; retoma a tarefa longa do Guia que ficou sem batimento (#936).
 autonomia_guide_tarefas_vigia_job:
   cron: '*/5 * * * *'
@@ -356,6 +381,20 @@ crm_meta_ads_whatsapp_alert_job:
   class: 'Crm::MetaAds::WhatsappReport::ScheduleJob'
   queue: scheduled_jobs
   args: ['alert']
+
+# Formulários da Meta (#2285): relê as últimas 48 h de cada formulário com destino e traz o lead que o webhook não
+# trouxe. Uma leitura por formulário por rodada; o Importer não duplica.
+crm_meta_ads_lead_forms_reconcile_job:
+  cron: '17 * * * *'
+  class: 'Crm::MetaAds::LeadForms::ReconcileScheduleJob'
+  queue: scheduled_jobs
+
+# Seus posts (#2804): anúncio criado aqui a partir de um post e ligado no Gerenciador da Meta ganha "Teve anúncio", e a
+# mídia do anúncio no Instagram fica guardada para o "Esperando você". Uma leitura por anúncio, só dos últimos 90 dias.
+crm_meta_ads_activation_sweep_job:
+  cron: '41 * * * *'
+  class: 'Crm::MetaAds::ActivationSweepScheduleJob'
+  queue: scheduled_jobs
 
 # Anúncios da Meta F5 (#1110): apaga análises do consultor com mais de 90 dias, ações com mais de 400 e janelas de
 # frequência com mais de 35, às 5h30 de Brasília (08:30 UTC), depois da leitura das 4h.

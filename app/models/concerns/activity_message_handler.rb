@@ -85,10 +85,17 @@ module ActivityMessageHandler
       I18n.t("conversations.activity.status.#{status}", user_name: user_name)
     elsif Current.contact.present? && resolved?
       I18n.t('conversations.activity.status.contact_resolved', contact_name: Current.contact.name.capitalize)
-    elsif resolved?
-      message_data = auto_resolve_message_key(auto_resolve_after || 0)
-      I18n.t("conversations.activity.status.#{message_data[:key]}", count: message_data[:count])
+    elsif resolved? && auto_resolve_after.to_i.positive?
+      auto_resolve_activity_content
     end
+  end
+
+  # #2536: só o auto-resolve da conta (Conversations::ResolutionJob) chega aqui. Sem `auto_resolve_after`, quem resolveu
+  # não foi ele, e "0 minutos de inatividade" seria falso: sem mensagem. O job roda fora de requisição, sem o idioma de
+  # ninguém: a mensagem sai no idioma da conta.
+  def auto_resolve_activity_content
+    message_data = auto_resolve_message_key(auto_resolve_after)
+    I18n.t("conversations.activity.status.#{message_data[:key]}", count: message_data[:count], locale: account.locale)
   end
 
   def automation_status_change_activity_content

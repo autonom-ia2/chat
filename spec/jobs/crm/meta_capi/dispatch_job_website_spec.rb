@@ -4,9 +4,14 @@ require 'rails_helper'
 # O caminho CTWA continua coberto por dispatch_job_spec.rb, sem alteração.
 RSpec.describe Crm::MetaCapi::DispatchJob do
   let(:account) { create(:account) }
-  let(:pipeline_metadata) { { 'meta_sync' => { 'dataset_id' => 'DS123', 'pixel_id' => '2164882667623689' } } }
+  let(:pipeline_metadata) { { 'meta_sync' => { 'pixel_id' => '2164882667623689' } } }
+  # The WhatsApp (CTWA) path reads the dataset of the inbox WABA (#1940), kept on the channel.
   let(:channel) do
     create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false)
+      .tap do |created|
+        dataset = { 'waba_id' => created.provider_config['business_account_id'], 'id' => 'DS123' }
+        created.update_columns(provider_config: created.provider_config.merge('meta_dataset' => dataset)) # rubocop:disable Rails/SkipsModelValidations
+      end
   end
   let(:conversation) { create(:conversation, account: account, inbox: channel.inbox) }
   let(:pipeline) do
@@ -35,7 +40,9 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
   before do
     link = create(:ctwa_tracked_link, account: account, inbox: channel.inbox, usage: 'website',
                                       allowed_origins: ['https://placement.com.br'])
-    create(:ctwa_tracked_link_click, account: account, tracked_link: link, conversation: conversation, meta_signals: click_signals)
+    # Only website clicks made by the event count (#2799): this one is a day before the sale.
+    create(:ctwa_tracked_link_click, account: account, tracked_link: link, conversation: conversation, meta_signals: click_signals,
+                                     created_at: 1.day.ago)
     allow(Meta::ConversionsApiClient).to receive(:new).and_return(client)
     allow(client).to receive(:post_events)
       .and_return(Meta::ConversionsApiClient::Result.new(ok: true, http_code: 200, body: 'ok', error: nil))
@@ -241,15 +248,39 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
       expect(row.status).to eq('accepted')
     end
 
-    it 'does not switch tokens on a passing Meta failure (5xx) and lets Sidekiq retry' do
+    # #2799: Meta may have kept an event it answered with a 5xx, so it is not sent again.
+    it 'does not switch tokens nor retry on a Meta server error (5xx): the outcome is unknown' do
       connection = create_meta_ads_connection(account, token: ads_token)
-      answer(ads_token, refuse(nil, http: 503))
+      answer(ads_token, Meta::ConversionsApiClient::Result.new(ok: false, http_code: 503, body: 'no', error: 'down', unknown_outcome: true))
 
-      expect { perform }.to raise_error(described_class::DispatchError)
+      expect { perform }.not_to raise_error
 
       expect(Meta::ConversionsApiClient).not_to have_received(:new).with(access_token: whatsapp_token, dataset_id: anything)
       expect(connection.reload.status).to eq('active')
-      expect(row.status).to eq('error')
+      expect(row).to have_attributes(status: 'error', error_message: 'unknown_outcome', http_code: 503)
+    end
+
+    it 'neither marks the connection invalid nor tries the WhatsApp token on a 5xx that carries a token code' do
+      connection = create_meta_ads_connection(account, token: ads_token)
+      answer(ads_token, Meta::ConversionsApiClient::Result.new(ok: false, http_code: 500, error: 'x', error_code: 190, unknown_outcome: true))
+
+      perform
+
+      expect(Meta::ConversionsApiClient).not_to have_received(:new).with(access_token: whatsapp_token, dataset_id: anything)
+      expect(connection.reload.status).to eq('active')
+      expect(row.error_message).to eq('unknown_outcome')
+    end
+  end
+
+  # #2799: same cut as the WhatsApp click (#2738): a website click after the sale did not bring it.
+  context 'when the only website click came after the sale' do
+    before { Ctwa::TrackedLinkClick.update_all(created_at: 1.hour.ago) } # rubocop:disable Rails/SkipsModelValidations
+
+    it 'sends nothing and says the card has no click' do
+      perform
+
+      expect(Meta::ConversionsApiClient).not_to have_received(:new)
+      expect(row).to have_attributes(status: 'skipped', error_message: 'missing_ctwa_clid')
     end
   end
 
@@ -284,6 +315,8 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
 
   context 'when the event is older than 7 days at send time' do
     let(:closed_at) { 8.days.ago }
+
+    before { Ctwa::TrackedLinkClick.update_all(created_at: 9.days.ago) } # rubocop:disable Rails/SkipsModelValidations
 
     it 'skips with event_too_old without raising, so Sidekiq does not retry' do
       expect { perform }.not_to raise_error
@@ -337,9 +370,24 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
     expect(client).to have_received(:post_events).once
   end
 
+  context 'when the only click is in a linked conversation of a non-official inbox (#1940)' do
+    it 'still sends the website event to the funnel Pixel' do
+      api_conversation = create(:conversation, account: account, inbox: create_crm_inbox(account: account),
+                                               additional_attributes: { 'campaign' => { 'ctwa_clid' => 'API1' } })
+      Crm::CardConversation.create!(account: account, card: card, conversation: api_conversation)
+
+      perform
+
+      expect(Meta::ConversionsApiClient).to have_received(:new).with(access_token: anything, dataset_id: '2164882667623689')
+      expect(row).to have_attributes(status: 'accepted', attribution_mode: 'website')
+    end
+  end
+
   context 'when the card also carries a ctwa_clid' do
     let(:conversation) do
-      create(:conversation, account: account, inbox: channel.inbox, additional_attributes: { 'campaign' => { 'ctwa_clid' => 'CLID1' } })
+      # Started before the sale: only clicks made by the event count (#2738).
+      create(:conversation, account: account, inbox: channel.inbox, additional_attributes: { 'campaign' => { 'ctwa_clid' => 'CLID1' } },
+                            created_at: 1.day.ago)
     end
 
     it 'keeps the CTWA path: business_messaging to the dataset with the click id' do

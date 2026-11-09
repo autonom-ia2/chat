@@ -15,7 +15,9 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   # Autonom.ia (operate), que só materializa em inbox com agente ativo + flag on.
   # `:message_edit`: o cliente editou a mensagem (#2113, Instagram::MessageEditService). Só chega com o campo de edição
   # inscrito no app da Meta (ver Channel::Instagram#subscribe).
-  SUPPORTED_EVENTS = [:message, :read, :postback, :reaction, :message_edit].freeze
+  # `:referral` (#2521): clique num anúncio do Direct de quem já tinha conversa; fica por último, porque a mensagem com
+  # referral é `:message`.
+  SUPPORTED_EVENTS = [:message, :read, :postback, :reaction, :message_edit, :referral].freeze
   TEST_EVENT_FIELD = 'messages'.freeze
   COMMENT_FIELDS = %w[comments mentions].freeze
   COMMENT_JOB = 'Webhooks::InstagramCommentJob'.freeze
@@ -83,17 +85,45 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
 
   def process_messages(entry)
     messages(entry).each do |messaging|
-      Rails.logger.info("Instagram Events Job Messaging: #{messaging}")
+      # Só o tipo e os ids: o `messaging` inteiro traz o texto e, no anúncio (#2521), links assinados da Meta.
+      Rails.logger.info("Instagram Events Job Messaging: event=#{event_name(messaging).inspect} mid=#{messaging.dig(:message, :mid)}")
 
-      instagram_id = instagram_id(messaging)
-      channel = find_channel(instagram_id)
-
-      next if channel.blank?
-
-      if (event_name = event_name(messaging))
-        send(event_name, messaging, channel)
-      end
+      deliver(messaging, ::Instagram::ConnectedChannels.for(instagram_id(messaging)))
     end
+  end
+
+  # O mesmo Instagram pode estar em mais de uma conta (#2781): o evento vai a um canal por conta, como o Messenger. O
+  # referral sai uma vez só, porque o MessagingReferralJob já percorre as caixas de todas as contas. Um erro que escapa
+  # do serviço de uma conta não impede as outras: o primeiro sobe no fim e o retry refaz o lote (a mensagem é
+  # deduplicada na caixa). O construtor da mensagem trata os próprios erros, como antes.
+  def deliver(messaging, channels)
+    event_name = event_name(messaging)
+    return if event_name.nil? || channels.empty?
+    return referral(messaging, channels.first) if event_name == :referral
+
+    each_isolated(echo_channels(messaging, channels)) { |channel| send(event_name, messaging, channel) }
+  end
+
+  def each_isolated(channels)
+    errors = channels.filter_map do |channel|
+      yield channel
+      nil
+    rescue StandardError => e
+      e
+    end
+    raise errors.first if errors.any?
+  end
+
+  # O eco de uma resposta enviada por uma conta fica só nela, como no Messenger (que ignora o eco do próprio app): a
+  # outra conta não vê a resposta da primeira. O eco que nenhuma caixa conhece (resposta pelo celular ou pelo app do
+  # Instagram) vai a todas, como no Messenger. Limite: o eco que chega antes de a resposta gravar o mid (o job do eco já
+  # espera 2 s) também vai a todas.
+  def echo_channels(messaging, channels)
+    mid = messaging.dig(:message, :mid)
+    return channels unless agent_message_via_echo?(messaging) && channels.many? && mid.present?
+
+    owners = channels.select { |channel| channel.inbox.present? && channel.inbox.messages.exists?(source_id: mid) }
+    owners.presence || channels
   end
 
   def agent_message_via_echo?(messaging)
@@ -137,17 +167,6 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
 
   def sender_id
     @entries&.dig(0, :messaging, 0, :sender, :id)
-  end
-
-  def find_channel(instagram_id)
-    # There will be chances for the instagram account to be connected to a facebook page,
-    # so we need to check for both instagram and facebook page channels
-    # priority is for instagram channel which created via instagram login
-    channel = Channel::Instagram.find_by(instagram_id: instagram_id)
-    # If not found, fallback to the facebook page channel
-    channel ||= Channel::FacebookPage.find_by(instagram_id: instagram_id)
-
-    channel
   end
 
   def event_name(messaging)
@@ -206,6 +225,14 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   rescue StandardError => e
     Rails.logger.warn("[autonomia][operate] ig_reaction_failed #{e.class}")
     nil
+  end
+
+  # Erro aqui não pode parar os outros eventos do lote: fica no log e no rastreador, como no Messenger.
+  def referral(messaging, _channel)
+    Crm::MetaAds::MessagingReferralJob.enqueue_for('instagram', messaging.to_h.deep_stringify_keys)
+  rescue StandardError => e
+    Rails.logger.warn("[#{self.class.name}] referral não enfileirado: #{e.class}")
+    ChatwootExceptionTracker.new(e).capture_exception
   end
 
   def message_edit(messaging, channel)

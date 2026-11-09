@@ -48,7 +48,9 @@ vi.mock('vue-router', () => ({
 }));
 
 const UM_DIA = 24 * 60 * 60 * 1000;
-const haDias = dias => new Date(Date.now() - dias * UM_DIA).toISOString();
+// Um instante só para o arquivo: posts com a mesma idade empatam e ficam na ordem de entrada.
+const AGORA = Date.now();
+const haDias = dias => new Date(AGORA - dias * UM_DIA).toISOString();
 
 const post = (id, extra = {}) => ({
   id,
@@ -166,6 +168,19 @@ describe('Seus posts (#2304)', () => {
     // No Instagram, quem viu é o teto.
     expect(quadros[0].text()).toContain('até 1.800');
     expect(quadros[3].text()).toContain('3 a mais');
+  });
+
+  it('"Ver conversas" abre a caixa com as conversas do período escolhido (#2209)', async () => {
+    route.query = { dias: '7' };
+    responder(instagram());
+    const wrapper = await montar();
+
+    await wrapper.find('[data-seus-posts-ver-conversas]').trigger('click');
+
+    expect(push).toHaveBeenCalledWith({
+      path: '/app/accounts/1/inbox/7',
+      query: { desde_dias: '7' },
+    });
   });
 
   it('sem ver a caixa, sem o quadro de mensagens nem "Ver conversas"', async () => {

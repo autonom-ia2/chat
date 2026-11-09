@@ -5,8 +5,8 @@
 #
 # - Depois do privado: no Instagram, a conversa vem do InstagramPrivateReply do #2196; no Messenger, de no_messenger!.
 #   Nos dois, o privado que saiu está gravado com o id da Meta (source_id): o envio ao canal não o manda de novo, e o
-#   eco não o duplica. anotar! põe o comentário no topo e resolve a conversa nova, porque a IA resolveu sozinha. A
-#   conversa que a pessoa já tinha aberta na caixa continua aberta.
+#   eco não o duplica. anotar! põe o comentário no topo e resolve a conversa nova, porque a IA resolveu sozinha, com
+#   uma atividade que diz isso (#2536). A conversa que a pessoa já tinha aberta na caixa continua aberta.
 # - Para a pessoa (reclamação, ou privado que a Meta recusou): a conversa nasce aberta, urgente só na reclamação, e vai
 #   à Atribuição como qualquer passagem: quem recebe é a regra do funil; com ninguém online, o robô da caixa segue,
 #   como em toda passagem. Ele só fala se a pessoa escrever no direct.
@@ -23,16 +23,39 @@ module Crm::MetaAds::ComentariosIa::Conversa
     primeira = conversation.messages.reorder(:created_at, :id).first
     atividade!(conversation, comentou(comentario), antes_de: primeira && (primeira.created_at - 1.second))
     atributos = conversation.additional_attributes.to_h.merge('meta_ads_comment' => origem(comentario, care).merge('private_reply' => true))
-    conversation.update!(additional_attributes: atributos, **(nova ? { status: :resolved } : {}))
+    if nova
+      resolver!(conversation, atributos, care, traduzir(comentario, 'resolved_after_private_reply'))
+    else
+      conversation.update!(additional_attributes: atributos)
+    end
     conversation
   end
 
+  # Quem resolve é a IA, não uma pessoa nem o auto-resolve da conta (#2536). Com o cuidado em `Current.executed_by`, o
+  # ActivityMessageHandler não escreve o "resolvida por inatividade" (que saía com "0 minutos", em inglês): a atividade
+  # certa é a de anotar!, no idioma da conta, gravada na mesma transação (resolvida sempre com a explicação). O
+  # executed_by fica em volta da transação inteira porque o handler roda no after_update_commit; por isso resolver!
+  # não pode rodar dentro de uma transação de fora (hoje, Cuidar#na_conversa não abre nenhuma). O executed_by de antes
+  # volta no fim, como em Enterprise::Message.
+  def resolver!(conversation, atributos, care, texto)
+    antes = Current.executed_by
+    Current.executed_by = care
+    conversation.transaction do
+      conversation.update!(additional_attributes: atributos, status: :resolved)
+      atividade!(conversation, texto)
+    end
+  ensure
+    Current.executed_by = antes
+  end
+
   # O privado que saiu pelo Messenger entra na caixa, no contato da resposta da Meta (o PSID): na conversa que a pessoa
-  # já tem aberta, ou numa nova. Igual ao que o #2196 faz no Instagram.
-  def no_messenger!(comentario, envio, texto)
+  # já tem aberta, ou numa nova. Igual ao que o #2196 faz no Instagram, com a mesma marca de envio automático
+  # (Registro::MARCA, o id da linha `private_reply` da IA).
+  def no_messenger!(comentario, envio, texto, action_id)
     conversation = criar!(comentario, envio.recipient_id, status: :open, reaproveitar: true)
     Message.create!(account_id: conversation.account_id, inbox_id: conversation.inbox_id, conversation: conversation,
-                    message_type: :outgoing, content: texto, source_id: envio.message_id)
+                    message_type: :outgoing, content: texto, source_id: envio.message_id,
+                    content_attributes: { Crm::MetaAds::ComentariosIa::Registro::MARCA => action_id })
     conversation
   end
 

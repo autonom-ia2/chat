@@ -18,7 +18,13 @@ Rails.application.config.filter_parameters += [
   :images,
   # #2103 — o log do Rails vai para o CloudWatch por 30 dias. E-mail e texto de mensagem (`content`) de cliente
   # não vão junto; telefone já sai filtrado acima.
-  :email, :content
+  :email, :content,
+  # #2469 — a pergunta do Testar do cuidado dos comentários (POST agentes_do_post/:id/testar) é texto de quem testa,
+  # nunca gravado nem logado.
+  :pergunta,
+  # #2696 — o pedido em uma frase da Prospecção (POST searches/interpret { frase }) é texto livre de quem busca. A chave
+  # é `frase`, e não `text`, que casaria também com `context` e outras.
+  :frase
 ]
 
 # Regex to filter all occurrences of 'token' in keys except for 'website_token'

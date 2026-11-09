@@ -20,16 +20,29 @@ export const MOTIVOS = [
   'ad_not_found',
   'meta_unavailable',
 ];
+// "Tentar de novo" só no que passa sozinho (a Meta fora do ar, a rede, o código que a tela não conhece): o resto (sem
+// post, sem caixa, sem login) não cura tentando.
+const PASSAGEIROS = ['meta_unavailable'];
+export const podeTentarDeNovo = codigo =>
+  !codigo || !MOTIVOS.includes(codigo) || PASSAGEIROS.includes(codigo);
 const conhecido = codigo => (MOTIVOS.includes(codigo) ? codigo : null);
 export const motivoDaResposta = error =>
   conhecido(error?.response?.data?.error);
 
 // O "para quem" do dono vai inteiro ao classificador: até 500 letras (o servidor recusa mais).
 export const FOR_WHOM_LIMIT = 500;
+// #2458: o assunto proibido e o pedido de tom, cada um numa frase (Crm::MetaAdsCommentCare::FRASE_DO_DONO_LIMIT).
+export const FRASE_DO_DONO_LIMIT = 300;
 
 // Por que uma escrita falhou, para a tela dizer o certo: 'acesso' (403), 'invalid_message' ou 'invalid_para_quem' (422
 // do servidor, o texto não serve) ou 'rede' (o resto).
-const ESCRITA_INVALIDA = ['invalid_message', 'invalid_para_quem'];
+const ESCRITA_INVALIDA = [
+  'invalid_message',
+  'invalid_para_quem',
+  'invalid_temas',
+  'invalid_assunto_proibido',
+  'invalid_tom',
+];
 export const falhaDaEscrita = error => {
   if (error?.response?.status === 403) return 'acesso';
   const codigo = error?.response?.data?.error;
@@ -99,13 +112,14 @@ export function useCuidado(alvo) {
   };
 
   // Grava a mensagem, o "para quem" e as frases; `status` liga ('on') ou mantém o atual.
-  const salvar = ({ message, paraQuem, phrases, status }) =>
+  const salvar = ({ message, paraQuem, phrases, status, escrita }) =>
     escrever(() =>
       ComentariosIaAPI.saveCuidado(target(), {
         message,
         paraQuem,
         phrases,
         status: status || painel.value?.care,
+        escrita,
       })
     );
 
@@ -123,9 +137,13 @@ export function useCuidado(alvo) {
   const voltar = () => mudarStatus('on');
 
   // Passo 3 do jeito do dono: dois comentários do post, um que é o caso e um que não é. Falha: null.
-  const previa = async paraQuem => {
+  // `escrita` (#2458): { assuntoProibido, tom }, só com a IA escrevendo.
+  const previa = async (paraQuem, escrita) => {
     try {
-      const { data } = await ComentariosIaAPI.previa(target(), { paraQuem });
+      const { data } = await ComentariosIaAPI.previa(target(), {
+        paraQuem,
+        escrita,
+      });
       return data;
     } catch {
       return null;
@@ -144,6 +162,20 @@ export function useCuidado(alvo) {
       return '';
     }
   };
+
+  // Passo 1 (#2454): "O que eu vi na foto". A leitura e a correção do dono; falha na ida (rede, 403, 404 sem a flag): null,
+  // e a tela diz que não conseguiu ver ou guardar, sem travar o passo.
+  const lerOuNull = async chamada => {
+    try {
+      const { data } = await chamada();
+      return data;
+    } catch {
+      return null;
+    }
+  };
+  const foto = () => lerOuNull(() => ComentariosIaAPI.foto(target()));
+  const corrigirFoto = texto =>
+    lerOuNull(() => ComentariosIaAPI.corrigirFoto(target(), texto));
 
   // "Ler e mandar" os comentários que chegaram antes de ligar: o servidor põe na fila e o Painel é lido de novo.
   const lerAntigos = async () => {
@@ -170,18 +202,16 @@ export function useCuidado(alvo) {
     voltar,
     previa,
     rascunho,
+    foto,
+    corrigirFoto,
     lerAntigos,
   };
 }
 
-// O resumo "O que tem nos comentários" (A2) do mesmo alvo: { status, questions, questions_old, complaints, read, more }.
-// Na primeira visita o servidor conta num job e responde `reading`: a tela segue "carregando" e pergunta de novo a cada
-// ESPERA_LENDO_MS, até MAX_LEITURAS; passou disso, `falhou`, e a tela oferece tentar de novo. Falha de rede ou do
-// servidor também é `falhou`. `ai_unavailable` (a IA fora) e `meta_unavailable` vêm no `resumo`, e a tela diz que não
-// deu. Trocar de alvo ou sair da tela para as perguntas. Sem alvo, nada é lido.
-export const ESPERA_LENDO_MS = 3000;
-export const MAX_LEITURAS = 10;
-
+// O resumo "O que tem nos comentários" (A2) do mesmo alvo: { status, waiting, private_window }. Desde o #2454 o servidor
+// só conta (sem IA) e responde na hora: uma leitura por alvo, sem perguntar de novo. Falha de rede ou do servidor é
+// `falhou`; o que a Meta não deixou ler (`needs_permission`, `meta_unavailable`) vem no `resumo`, e a tela diz que não
+// deu. Trocar de alvo descarta a leitura anterior. Sem alvo, nada é lido.
 export function useResumo(alvo) {
   const resumo = ref(null);
   const carregando = ref(false);
@@ -191,40 +221,11 @@ export function useResumo(alvo) {
 
   let leitura = 0;
   let lido = '';
-  let espera = null;
-  const parar = () => {
-    clearTimeout(espera);
-    espera = null;
-  };
-
-  const ler = async (minha, tentativa) => {
-    let data;
-    try {
-      ({ data } = await ComentariosIaAPI.getResumo(target()));
-    } catch {
-      if (minha !== leitura) return;
-      falhou.value = true;
-      carregando.value = false;
-      return;
-    }
-    if (minha !== leitura) return;
-    if (data?.status !== 'reading') {
-      resumo.value = data;
-      carregando.value = false;
-      return;
-    }
-    if (tentativa >= MAX_LEITURAS) {
-      falhou.value = true;
-      carregando.value = false;
-      return;
-    }
-    espera = setTimeout(() => ler(minha, tentativa + 1), ESPERA_LENDO_MS);
-  };
 
   const carregar = async () => {
-    parar();
     if (!target()) return;
     leitura += 1;
+    const minha = leitura;
     // Outro alvo, ou um resumo que não ficou pronto: some, e a tela mostra "carregando" de novo. O mesmo alvo pronto
     // fica na tela enquanto é relido (depois de responder um comentário, por exemplo).
     if (chaveDo(target()) !== lido || resumo.value?.status !== 'ready') {
@@ -233,14 +234,21 @@ export function useResumo(alvo) {
     }
     carregando.value = true;
     falhou.value = false;
-    await ler(leitura, 1);
+    try {
+      const { data } = await ComentariosIaAPI.getResumo(target());
+      if (minha !== leitura) return;
+      resumo.value = data;
+    } catch {
+      if (minha !== leitura) return;
+      falhou.value = true;
+    }
+    carregando.value = false;
   };
 
   watch(target, carregar, { immediate: true, deep: true });
   if (getCurrentScope()) {
     onScopeDispose(() => {
       leitura += 1;
-      parar();
     });
   }
 

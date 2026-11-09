@@ -49,6 +49,23 @@ RSpec.describe Autonomia::Agents::Retriever do
     end
   end
 
+  describe 'embedding failure' do
+    before do
+      service = instance_double(Autonomia::Agents::EmbeddingService)
+      allow(service).to receive(:embed).and_raise(Autonomia::Agents::EmbeddingService::EmbeddingError, 'ai_not_configured')
+      allow(Autonomia::Agents::EmbeddingService).to receive(:new).and_return(service)
+    end
+
+    it 'degrades to no passages in the service path' do
+      expect(described_class.new(agent: agent).retrieve('frete')).to eq([])
+    end
+
+    it 'raises in the measuring path, so a failure never reads as "found nothing"' do
+      expect { described_class.new(agent: agent).retrieve!('frete') }
+        .to raise_error(Autonomia::Agents::EmbeddingService::EmbeddingError, /ai_not_configured/)
+    end
+  end
+
   # B1 — modelo 3-small ATIVO (default): NN pela coluna legada `embedding` via gem neighbor. Guarda a
   # não-regressão do caminho vetorial atual com um vizinho REAL no banco (não só o short-circuit da C1).
   describe 'small embedding path (default 3-small / neighbor gem)' do
@@ -73,6 +90,67 @@ RSpec.describe Autonomia::Agents::Retriever do
       # Assert
       expect(result.map(&:id)).to include(entry.id)
       expect(result.first.neighbor_distance.to_f).to be <= Autonomia::Agents::Config::RETRIEVAL_HARD_CEILING
+    end
+  end
+
+  # #1431 (PR 1b) — o trecho de item só serve para achar: volta o trecho da seção que o contém, uma vez só, com a
+  # distância do item; e quem lê o material inteiro não o vê.
+  describe 'item pieces' do
+    let(:embedding_service) { instance_double(Autonomia::Agents::EmbeddingService) }
+    let(:vector) { Array.new(1536) { 0.01 } }
+    let(:longe) { Array.new(1536) { |indice| indice.even? ? 0.01 : -0.01 } }
+    let(:source) { agent.sources.create!(account: account, source_type: 'pdf', status: :ready, reference: 'cg.pdf') }
+
+    before do
+      allow(embedding_service).to receive(:embed).and_return(vector)
+      allow(Autonomia::Agents::EmbeddingService).to receive(:new).and_return(embedding_service)
+    end
+
+    def entry(indice, content, embedding, metadata = {})
+      agent.knowledge_entries.create!(account: account, source: source, content: content, status: :ready,
+                                      chunk_index: indice, metadata: metadata, embedding: embedding)
+    end
+
+    it 'gives back the section piece in place of the item, once, with the distance of the item', :aggregate_failures do
+      secao = entry(0, "Exclusoes\n\na) bens instalados no veiculo;\nb) blindagem;", longe, { 'material_type' => 'secao' })
+      item = { 'material_type' => 'item', 'trecho_da_secao' => 0 }
+      entry(1, "Exclusoes\n\na) bens instalados no veiculo;", vector, item)
+      entry(2, "Exclusoes\n\nb) blindagem;", vector, item)
+
+      result = described_class.new(agent: agent).retrieve('o som do carro tem cobertura?')
+
+      expect(result.map(&:id)).to eq([secao.id])
+      expect(result.first.neighbor_distance.to_f).to be < 0.01
+    end
+
+    it 'gives back the item itself when its section piece is not in the scope' do
+      item = entry(1, "Exclusoes\n\na) bens instalados no veiculo;", vector, { 'material_type' => 'item', 'trecho_da_secao' => 7 })
+
+      expect(described_class.new(agent: agent).retrieve('o som do carro tem cobertura?').map(&:id)).to eq([item.id])
+    end
+
+    it 'keeps the closer distance when the section piece also came on its own', :aggregate_failures do
+      meio = Array.new(1536) { |indice| indice < 1100 ? 0.01 : -0.01 }
+      secao = entry(0, "Exclusoes\n\na) bens instalados no veiculo;", meio, { 'material_type' => 'secao' })
+      entry(1, "Exclusoes\n\na) bens instalados no veiculo;", vector, { 'material_type' => 'item', 'trecho_da_secao' => 0 })
+
+      result = described_class.new(agent: agent).retrieve('o som do carro tem cobertura?')
+
+      expect(result.map(&:id)).to eq([secao.id])
+      expect(result.first.neighbor_distance.to_f).to be < 0.01
+    end
+
+    it 'gives back the item itself when it has no section piece to point to' do
+      item = entry(0, "Perda de direitos\n\na) agravar o risco", vector, { 'material_type' => 'item' })
+
+      expect(described_class.new(agent: agent).retrieve('agravar o risco').map(&:id)).to eq([item.id])
+    end
+
+    it 'leaves the item out of what reads the whole material' do
+      secao = entry(0, 'Exclusoes', longe, { 'material_type' => 'secao' })
+      entry(1, 'a) bens', vector, { 'material_type' => 'item', 'trecho_da_secao' => 0 })
+
+      expect(source.knowledge_entries.do_material.map(&:id)).to eq([secao.id])
     end
   end
 

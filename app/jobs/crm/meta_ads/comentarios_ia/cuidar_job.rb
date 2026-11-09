@@ -4,7 +4,8 @@
 # Os argumentos são só ids (Comentario#para_o_job): o Sidekiq os guarda em claro no Redis. Se a Meta não responde à
 # leitura do comentário, ou a IA não responde à pergunta, o job tenta de novo, até TENTATIVAS vezes, com espera
 # crescente (cerca de 4 horas no total). Depois, o comentário fica com a pessoa: a reserva `ai_seen` e o `ai_unread`
-# são gravados (o painel mostra "não cuidei"), com aviso no log só com ids, e ele não volta à fila.
+# são gravados (o painel mostra "não cuidei"), com aviso no log só com ids, e ele não volta à fila. A pessoa que este
+# comentário reservou (limite da Meta no privado em resposta, #2454) fica livre para outro comentário dela.
 # O privado aceita até 7 dias: 4 horas cobrem uma queda sem segurar o comentário para sempre.
 class Crm::MetaAds::ComentariosIa::CuidarJob < ApplicationJob
   queue_as :low
@@ -13,11 +14,16 @@ class Crm::MetaAds::ComentariosIa::CuidarJob < ApplicationJob
 
   retry_on Crm::MetaAds::ComentariosIa::Rede::Indisponivel, Crm::MetaAds::ComentariosIa::Classificador::Indisponivel,
            wait: :polynomially_longer, attempts: TENTATIVAS do |job, erro|
-    comentario = Crm::MetaAds::ComentariosIa::Comentario.new(**job.arguments.first.symbolize_keys)
+    # Como o Cuidar grava (#2519): com o anúncio do cuidado no Facebook, sem anúncio na resposta a comentário.
+    comentario = Crm::MetaAds::ComentariosIa::Cuidar.registrado(Crm::MetaAds::ComentariosIa::Comentario.new(**job.arguments.first.symbolize_keys))
     Rails.logger.warn("[comentarios_ia] #{erro.class.name} em #{TENTATIVAS} tentativas, comentário fica com a pessoa: " \
                       "account=#{comentario.account_id} network=#{comentario.network} comment=#{comentario.comment_id}")
     registro = Crm::MetaAds::ComentariosIa::Registro
-    registro.gravar!(comentario, registro::NAO_CUIDOU) if registro.reservar!(comentario)
+    next unless registro.reservar!(comentario)
+
+    # Só quem ficou com o comentário solta a pessoa: se outro job o cuidou (e mandou o privado), a reserva é dele.
+    registro.soltar_pessoa_do_comentario!(comentario)
+    registro.gravar!(comentario, registro::NAO_CUIDOU)
   end
 
   def perform(dados)

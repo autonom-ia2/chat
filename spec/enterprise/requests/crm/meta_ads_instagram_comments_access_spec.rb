@@ -27,7 +27,7 @@ RSpec.describe 'Comentários do Instagram: ler e agir só para quem vê a caixa 
     AccountUser.find_by(account: account, user: manager).update!(custom_role: role)
     viewer_role = CustomRole.create!(account: account, name: 'Só vê anúncios', permissions: %w[meta_ads_view])
     AccountUser.find_by(account: account, user: viewer).update!(custom_role: viewer_role)
-    account.enable_features!('meta_ads_gestao', 'meta_ads_comentarios_instagram')
+    account.enable_features!('meta_ads_comentarios_instagram')
     create_meta_ads_insights_connection(account)
     stub_request(:get, meta_graph_url(ad_id)).with(query: hash_including({}))
                                              .to_return(status: 200, headers: json,
@@ -132,5 +132,49 @@ RSpec.describe 'Comentários do Instagram: ler e agir só para quem vê a caixa 
     get path, headers: manager.create_new_auth_token, as: :json
 
     expect(response.parsed_body['comments'].first).to include('can_reply' => true, 'can_hide' => true, 'can_reply_private' => true)
+  end
+
+  # #2365: no `needs_login`, o id da caixa (que a tela usa só para o link de reautorização) segue a régua de Seus posts
+  # (SeusPosts::Caixa#id_para_quem_age): vai a quem vê a caixa ou tem `integration_manage`; aos outros, nil.
+  describe 'inbox_id da caixa pedindo login (#2365)' do
+    before { inbox.channel.prompt_reauthorization! }
+
+    def member_with(permissions, in_inbox:)
+      user = create(:user, account: account, role: :agent)
+      role = CustomRole.create!(account: account, name: "Função #{permissions.join(' ')} #{in_inbox}", permissions: permissions)
+      AccountUser.find_by(account: account, user: user).update!(custom_role: role)
+      create(:inbox_member, user: user, inbox: inbox) if in_inbox
+      user
+    end
+
+    def inbox_id_for(user)
+      get path, headers: user.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include('status' => 'needs_login', 'comments' => [])
+      response.parsed_body.fetch('inbox_id')
+    end
+
+    it 'vai a quem vê a caixa, sem integration_manage' do
+      expect(inbox_id_for(member_with(%w[meta_ads_view], in_inbox: true))).to eq(inbox.id)
+    end
+
+    it 'não vai a quem não vê a caixa nem tem integration_manage' do
+      expect(inbox_id_for(member_with(%w[meta_ads_manage], in_inbox: false))).to be_nil
+    end
+
+    it 'vai a quem tem integration_manage, mesmo sem ver a caixa' do
+      expect(inbox_id_for(member_with(%w[meta_ads_view integration_manage], in_inbox: false))).to eq(inbox.id)
+    end
+
+    it 'vai a quem vê a caixa e tem integration_manage' do
+      expect(inbox_id_for(member_with(%w[meta_ads_view integration_manage], in_inbox: true))).to eq(inbox.id)
+    end
+
+    it 'o Instagram não é chamado em nenhum dos casos' do
+      inbox_id_for(member_with(%w[meta_ads_view], in_inbox: false))
+
+      expect(instagram_call).not_to have_been_made
+    end
   end
 end

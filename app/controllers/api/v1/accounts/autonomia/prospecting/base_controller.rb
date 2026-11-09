@@ -1,6 +1,8 @@
 class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accounts::BaseController
   before_action :ensure_feature_enabled
   before_action -> { check_module_permission!('prospecting') }
+  # Dono escolhido sem o funil, de outra conta ou que não existe (#2694): o lote inteiro é recusado.
+  rescue_from ::Autonomia::Prospecting::CrmCardOwner::NotAllowed, with: :render_crm_owner_not_allowed
 
   private
 
@@ -20,30 +22,55 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
            status: :forbidden
   end
 
-  # Pôr o segmento numa campanha muda a audiência dela, e a campanha manda mensagem real: exige a permissão de gerenciar
-  # campanhas (CampaignPolicy#update?). Sem campanha escolhida, o segmento só etiqueta contatos.
-  def authorize_campaign_update!(campaign_id)
-    return if campaign_id.blank?
-    return if campaign_manage?
+  # Com quem fica o card (#2694): escolher outra pessoa, e ver a lista de quem pode receber, só com a chave de funis
+  # (CrmCardOwner.can_choose?), mais rígido que o CRM, por decisão do Rodrigo.
+  def authorize_crm_owner_choice!
+    return if ::Autonomia::Prospecting::CrmCardOwner.can_choose?(Current.account_user)
 
-    render_campaign_forbidden
+    render_crm_send_error('owner_forbidden', status: :forbidden)
   end
 
+  # O `owner_id` do envio ao funil, sempre na raiz do pedido: no lote (leads/crm_cards) e também no envio individual
+  # (leads/:id/crm_card), fora do envelope `crm_card`, para o contrato ser um só nos dois (o Guia lê `fora_do_envelope`).
+  # Ausente, ou o de quem pede, é o fluxo de sempre (nil): o card fica com quem manda.
+  def chosen_owner_id
+    owner_id = params[:owner_id].presence&.to_s
+    owner_id unless owner_id.nil? || owner_id == Current.user.id.to_s
+  end
+
+  def render_crm_owner_not_allowed
+    render_crm_send_error(::Autonomia::Prospecting::CrmCardOwner::NotAllowed::CODE)
+  end
+
+  # Guardar empresas num Público de Campanhas (LeadAudiencesController, #2695) exige gerenciar campanhas.
   def campaign_manage?
     Current.account_user&.permission_granted?('campaign_manage') || false
+  end
+
+  # Os Públicos de Campanhas (LeadAudiencesController e AudiencesController, #2695 e #2775): sem
+  # CAMPAIGN_JOURNEY_ENABLED e CAMPAIGN_IMPORT_ENABLED, 404 com a frase.
+  def ensure_audiences_enabled
+    return if ::CampaignJourney::Config.enabled? && ::CampaignImports::Config.enabled?
+
+    render json: { error: I18n.t('autonomia.prospecting.audience.errors.disabled'), code: 'prospecting.audience.disabled' },
+           status: :not_found
+  end
+
+  def authorize_campaign_manage!
+    render_campaign_forbidden unless campaign_manage?
+  end
+
+  # Recusa de guardar ou acrescentar leads (AudienceFromLeads::Error): a frase do I18n em `error` (com o aviso de que os
+  # contatos criados ficaram, quando a recusa veio depois deles), o código de máquina em `code` e quem ficou de fora.
+  def render_audience_error(error)
+    message = I18n.t("autonomia.prospecting.audience.errors.#{error.message}", max: ::Autonomia::Prospecting::AudienceFromLeads::MAX_LEADS)
+    message = "#{message} #{I18n.t('autonomia.prospecting.audience.errors.contacts_saved')}" if error.contacts_saved
+    render json: { error: message, code: "prospecting.audience.#{error.message}", left_out: error.left_out }, status: :unprocessable_entity
   end
 
   def render_campaign_forbidden
     render json: { error: I18n.t('autonomia.prospecting.campaign_errors.forbidden'), code: 'prospecting.campaign.forbidden' },
            status: :forbidden
-  end
-
-  # Recusa do público de campanha: CampaignSegmentBuilder e SelectionCampaignSegment levantam o código
-  # ('prospecting.campaign.<motivo>'), que segue em `code`; a tela recebe a frase.
-  def render_campaign_error(code, status: :unprocessable_entity, **extra)
-    reason = code.delete_prefix('prospecting.campaign.')
-    message = I18n.t("autonomia.prospecting.campaign_errors.#{reason}", max: ::Autonomia::Prospecting::SelectionCampaignSegment::MAX_LEADS)
-    render json: { error: message, code: code }.merge(extra), status: status
   end
 
   # Recusa do envio ao CRM, na busca e no lead (#680, #682).
@@ -99,7 +126,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
     lead_payload_builder.reviews(lead)
   end
 
-  # A lista sem os leads: a mesma nas Listas e na campanha criada a partir da seleção da busca (#680).
+  # A lista sem os leads (#680). campaign_segment é o segmento por etiqueta que a lista já tinha: a criação saiu (#2695),
+  # o que ficou gravado continua aparecendo.
   def list_summary_payload(list)
     list.as_json(
       only: [:id, :name, :description, :status, :metadata, :created_at, :updated_at]

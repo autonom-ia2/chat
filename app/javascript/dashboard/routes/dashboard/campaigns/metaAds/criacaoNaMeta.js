@@ -187,7 +187,88 @@ export const criarAnuncio = async (pedido, { recriar = false } = {}) => {
   }
 };
 
+// Cuidar do anúncio (#2778): duplicar e trocar foto ou texto, cada um com a sua chave de tentativa, como o criar. A foto
+// atual (`source: 'current'`) não vai: o servidor mantém a do anúncio e troca só o texto.
+const criativoNoPedido = creative => ({
+  text: creative.text,
+  ...(creative.media.source === 'current'
+    ? {}
+    : { media: midiaNaMeta(creative.media) }),
+});
+
+const comChave = async (signature, call) => {
+  const key = chaveDoPedido(signature);
+  try {
+    const { data } = await call(key);
+    tentativas.delete(signature);
+    return data;
+  } catch (error) {
+    // Como no criar: o servidor achou outra tentativa deste mesmo pedido, e daqui em diante é ela.
+    const atual = error?.response?.data?.idempotency_key;
+    if (atual) tentativas.set(signature, atual);
+    if (!tentativaContinua(error)) tentativas.delete(signature);
+    throw error;
+  }
+};
+
+// Cópia pausada da campanha inteira, com orçamento próprio; com `creative`, já nasce com a foto e o texto novos.
+// `recriar` (#2804): a cópia ficou não confirmada, a pessoa conferiu no Gerenciador de Anúncios que ela não está lá e
+// pediu para criar de novo (mesma chave; o servidor grava na Auditoria).
+export const duplicarAnuncio = async (
+  adId,
+  creative = null,
+  { recriar = false } = {}
+) => {
+  const body = creative ? { creative: criativoNoPedido(creative) } : {};
+  const data = await comChave(JSON.stringify(['copy', adId, body]), key =>
+    CrmMetaAdsConnectionAPI.copyAd(adId, {
+      ...body,
+      idempotency_key: key,
+      ...(recriar ? { recreate_unconfirmed: true } : {}),
+    })
+  );
+  return { ...data, budget: orcamentoNaTela(data.budget) };
+};
+
+// Troca no próprio anúncio: a Meta analisa de novo, e a situação volta como "em análise".
+export const trocarCriativo = async (adId, creative) => {
+  const body = criativoNoPedido(creative);
+  return comChave(JSON.stringify(['swap', adId, body]), key =>
+    CrmMetaAdsConnectionAPI.swapAdCreative(adId, {
+      ...body,
+      idempotency_key: key,
+    })
+  );
+};
+
 // Ao sair do fluxo de criar (e nos testes): nenhuma tentativa fica na memória.
 export const esquecerTentativas = () => {
   tentativas.clear();
+};
+
+// Criar post (#2653). A mídia sobe uma vez assim que a pessoa escolhe, e serve para as duas redes e para o "Tentar de
+// novo": { kind, signed_id }.
+export const enviarMidiaDoPost = async file => {
+  const { data } = await CrmMetaAdsConnectionAPI.uploadPostMedia(file);
+  return data.media;
+};
+
+// Publica na hora: { facebook: { id, permalink, boostable }, instagram: {...}, failed: [...], errors: { rede: código } }.
+// Uma rede pode publicar e a outra não; nenhuma: erro (o código vem em `response.data.error`). A mesma chave nunca
+// publica duas vezes.
+export const publicarPost = async ({
+  chave,
+  pageId,
+  networks,
+  caption,
+  mediaId,
+}) => {
+  const { data } = await CrmMetaAdsConnectionAPI.publishPost({
+    idempotency_key: chave,
+    page_id: pageId,
+    networks,
+    caption,
+    media_id: mediaId,
+  });
+  return data;
 };

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import {
   MEDIA_ACCEPT,
+  MEDIA_LIMITS,
   formatoDaMidia,
   lerMidia,
   soltarMidia,
@@ -18,6 +19,14 @@ import { enviarMidia } from '../criacaoNaMeta';
 const props = defineProps({
   // Imagens já usadas na conta de anúncios: [{ hash, url, width, height }].
   library: { type: Array, default: () => [] },
+  // Quem sobe o arquivo: (mídia lida, arquivo) → mídia com o que o servidor devolveu. O post (#2653) sobe para o
+  // nosso armazenamento, não para a conta de anúncios.
+  upload: { type: Function, default: enviarMidia },
+  // Trocar a foto de um anúncio que existe (#2778): a de agora é "Foto atual" (`source: 'current'`, sem as medidas,
+  // então sem a dica do formato), a escolhida é "Foto nova".
+  replacing: { type: Boolean, default: false },
+  // Só foto ('image') ou só vídeo ('video'): trocar a mídia de um anúncio é foto por foto e vídeo por vídeo (#2778).
+  only: { type: String, default: '' },
 });
 
 // `uploading`: enquanto sobe, o "Continuar" espera.
@@ -35,7 +44,9 @@ const uploading = ref(false);
 // Só a última escolha vale: trocar de arquivo no meio do envio descarta o anterior.
 let attempt = 0;
 
-const accept = MEDIA_ACCEPT;
+const accept = computed(() =>
+  props.only ? MEDIA_LIMITS[props.only].types.join(',') : MEDIA_ACCEPT
+);
 
 const setUploading = value => {
   uploading.value = value;
@@ -56,9 +67,14 @@ const take = async file => {
     });
     return;
   }
+  if (props.only && chosen.kind !== props.only) {
+    soltarMidia(chosen);
+    error.value = t(`${KEY}.ERRORS.ONLY_${props.only.toUpperCase()}`);
+    return;
+  }
   setUploading(true);
   try {
-    const sent = await enviarMidia(chosen, file);
+    const sent = await props.upload(chosen, file);
     if (mine !== attempt) {
       soltarMidia(chosen);
       return;
@@ -105,11 +121,14 @@ const duration = computed(() =>
   media.value?.kind === 'video' ? Math.round(media.value.duration || 0) : 0
 );
 
-const chosenLabel = computed(() =>
-  media.value.kind === 'video'
-    ? t(`${KEY}.CHOSEN_VIDEO`, { seconds: duration.value })
-    : t(`${KEY}.CHOSEN_IMAGE`)
-);
+const isCurrent = computed(() => media.value?.source === 'current');
+const chosenLabel = computed(() => {
+  if (isCurrent.value) return t(`${KEY}.CHOSEN_CURRENT`);
+  if (media.value.kind === 'video') {
+    return t(`${KEY}.CHOSEN_VIDEO`, { seconds: duration.value });
+  }
+  return t(props.replacing ? `${KEY}.CHOSEN_NEW` : `${KEY}.CHOSEN_IMAGE`);
+});
 </script>
 
 <template>
@@ -170,7 +189,11 @@ const chosenLabel = computed(() =>
         <span class="text-sm font-semibold text-n-slate-12">
           {{ chosenLabel }}
         </span>
-        <span data-create-media-shape class="text-xs text-n-slate-11">
+        <span
+          v-if="!isCurrent"
+          data-create-media-shape
+          class="text-xs text-n-slate-11"
+        >
           {{ $t(`${KEY}.SHAPES.${shape}`) }}
         </span>
       </div>
@@ -223,7 +246,7 @@ const chosenLabel = computed(() =>
     </p>
 
     <!-- Segunda opção: imagens que a conta já usou em anúncios. Fechada até a pessoa pedir. -->
-    <template v-if="props.library.length">
+    <template v-if="props.library.length && props.only !== 'video'">
       <button
         type="button"
         data-create-media-library-toggle

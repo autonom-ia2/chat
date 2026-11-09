@@ -23,7 +23,8 @@
 # - 'conversation_view': Can read every conversation of their inboxes (messages and notes) without operating on them.
 #   Writes keep requiring the trio above (#1800).
 # - 'conversation_message_delete': Can delete messages in the conversations they operate (#1893). Agents without a
-#   custom role keep deleting as before.
+#   custom role keep deleting messages as before. The key also deletes the Instagram comment a conversation came
+#   from, which agents without a custom role cannot do (only administrators, #2517).
 # - 'contact_manage': Can manage contacts.
 # - 'report_manage': Can manage reports.
 # - 'knowledge_base_manage': Can manage knowledge base portals.
@@ -48,6 +49,9 @@
 # - 'contact_export': export the contact base (split from contact_manage in #1845; roles that had contact_manage kept it).
 # - 'contact_delete': delete contacts and companies, one by one or in bulk (#1845).
 # - 'autonomia_view': view and test Autonom.ia agents. 'autonomia_manage': create, train and publish them.
+# - 'autonomia_tools_manage': create, edit, test, turn on and delete the HTTP tools of the agents (#1430, behind the
+#   agente_ferramentas_delegadas flag). Protected (DELEGATION_KEYS): the tool decides where conversation data goes. Implies
+#   autonomia_view, never autonomia_manage. A secret header value is write-only, for everyone.
 # - 'desempenho_view': the agent performance panel and its PDF/spreadsheet export (#2251). Independent from
 #   autonomia_view; the panel shows a conversation only to who sees its inbox. View only (no _manage).
 # - 'campaign_view': view campaigns and their reports. 'campaign_manage': build campaigns and import lists.
@@ -138,6 +142,7 @@ class CustomRole < ApplicationRecord
     knowledge_base_view
     autonomia_view
     autonomia_manage
+    autonomia_tools_manage
     desempenho_view
     campaign_view
     campaign_manage
@@ -177,19 +182,22 @@ class CustomRole < ApplicationRecord
 
   # Delegable keys only an administrator hands out, unless the giver has grant_above_own (CLAUDE.md, #1931).
   DELEGATION_KEYS = %w[people_manage custom_role_manage grant_above_own financial_view financial_manage integration_manage
-                       token_manage meta_ads_manage sales_value_view].freeze
+                       token_manage meta_ads_manage sales_value_view autonomia_tools_manage].freeze
 
   # Editing the CRM needs seeing it (#2124). crm_view_reports and sales_value_view stay apart.
   CRM_EDITING_KEYS = %w[crm_manage_cards crm_move_cards crm_manage_pipelines crm_manage_ai crm_delete_cards crm_metas_manage
                         crm_export].freeze
 
-  # The keys as the role stores them: an editing key brings crm_view along. Readers check the stored keys, and the grant
-  # guard checks these, so nobody hands out a crm_view they do not hold.
+  # A key that only works with another one stored next to it: the CRM editing keys need crm_view (#2124); the tools key
+  # needs autonomia_view, because the tools drawer lives on the agent page (#1430).
+  IMPLIED_VIEWS = { 'crm_view' => CRM_EDITING_KEYS, 'autonomia_view' => %w[autonomia_tools_manage] }.freeze
+
+  # The keys as the role stores them. Readers check the stored keys, and the grant guard checks these, so nobody hands
+  # out a view they do not hold.
   def self.with_implied_permissions(permissions)
     keys = Array(permissions).map(&:to_s)
-    return keys if keys.include?('crm_view') || !keys.intersect?(CRM_EDITING_KEYS)
-
-    keys + ['crm_view']
+    implied = IMPLIED_VIEWS.filter_map { |view, editing| view if keys.exclude?(view) && keys.intersect?(editing) }
+    keys + implied
   end
 
   # Um nome por conta, sem diferenciar maiúsculas nem espaços nas pontas (#2185): duas "Vendas" confundem quem dá a

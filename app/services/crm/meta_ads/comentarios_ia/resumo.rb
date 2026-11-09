@@ -1,29 +1,15 @@
-# IA cuida dos comentários (#2212, A2): o bloco "O que tem nos comentários" do post e do anúncio. Conta, entre os
-# comentários que esperam o dono (Fonte), quantos pedem informação (até 7 dias, que o privado ainda alcança, e mais
-# velhos) e quantas são reclamações, para o dono decidir se liga a IA.
+# IA cuida dos comentários (#2212, A2; #2454): o bloco "O que tem nos comentários" do post e do anúncio, antes de o
+# dono ligar o cuidado. Só o que o código conta, sem IA (regra do #2436: antes do clique em "Cuidar dos comentários",
+# nenhuma chamada de IA):
+# - `waiting`: os comentários que esperam o dono (Fonte: de outra pessoa, não escondidos, sem resposta da conta e sem
+#   privado); com a flag meta_ads_comentarios_ia, também as respostas de cliente dentro deles (o fio conta,
+#   #2454; Fonte.que_esperam), para bater com o número de comentários que a Meta mostra;
+# - `private_window`: desses, os que ainda cabem no privado (até Cuidar::JANELA, 7 dias). Sem a data, não cabe.
 #
-# - Quem decide é o Classificador, com um critério fixo no lugar do "para quem" do dono (ainda não há cuidado): pede
-#   informação, preço ou como comprar o que o post mostra, com a legenda do post (Fonte#legenda, #2424). Nada de lista
-#   de palavras.
-# - Até LIMITE comentários, os mais recentes. Passou disso, `more: true`: a conta é "pelo menos".
-# - A IA leva alguns segundos por comentário: a conta roda no ResumoJob e fica no cache só com os números (nunca o
-#   texto), por CACHE. A chave leva os ids que esperam: quando a lista muda (alguém respondeu, chegou comentário), conta
-#   de novo. Enquanto conta, `status: 'reading'`, e a tela pergunta de novo.
-# - IA fora do ar não é "nenhum pedido": a conta para no primeiro erro, nada vai para o cache como pronto e a tela
-#   recebe `ai_unavailable` uma vez (FALHOU); a pergunta seguinte conta de novo.
+# A leitura é a da Fonte, ao vivo na Meta, como o Painel. Leitura que não ficou pronta devolve só o status dela. No
+# anúncio nas duas redes com uma só lida (#2522), os números são os da rede que leu e `network_status` diz qual faltou.
 class Crm::MetaAds::ComentariosIa::Resumo
-  LIMITE = 30
-  CACHE = 1.hour
-  # O teto do job: uma chamada à IA por comentário, sem nova tentativa, até o prazo do Classificador. A trava de um job
-  # só por lista não pode vencer antes dele.
-  POR_COMENTARIO = Crm::MetaAds::ComentariosIa::Classificador::PRAZO
-  CONTANDO = ((LIMITE * POR_COMENTARIO) + 60).seconds
-  # Quanto o aviso "IA fora do ar" espera a tela perguntar: lido uma vez, ele sai e a próxima pergunta conta de novo.
-  FALHOU = 10.minutes
-  CRITERIO = 'Anyone who asks for information about what the post shows, its price, or how to get or buy it.'.freeze
-  PEDIDOS = %w[private price].freeze
-
-  # alvo: os ids que o ResumoJob precisa para ler de novo, sem nada do comentário (Fonte.do_alvo).
+  # alvo: os ids para achar a Fonte de novo (Fonte.do_alvo), quando ela não vem pronta.
   def initialize(account:, alvo:, fonte: nil)
     @account = account
     @alvo = alvo.to_h.stringify_keys
@@ -36,71 +22,14 @@ class Crm::MetaAds::ComentariosIa::Resumo
     lido = @fonte.ler
     return { status: lido[:status] } unless lido[:status] == 'ready'
 
-    linhas = recentes(lido[:linhas])
-    chave = chave(linhas)
-    Rails.cache.read(chave) || falhou(chave) || contar_depois(chave)
-  end
-
-  # No ResumoJob: lê de novo e grava a conta no cache.
-  def contar!
-    lido = @fonte&.ler || {}
-    return unless lido[:status] == 'ready'
-
-    linhas = recentes(lido[:linhas])
-    chave = chave(linhas)
-    Rails.cache.write(chave, contar(linhas, more: lido[:linhas].size > LIMITE), expires_in: CACHE)
-  rescue Crm::MetaAds::ComentariosIa::Classificador::Erro => e
-    Rails.logger.warn("[comentarios_ia] resumo account=#{@account.id} ia=#{e.code}")
-    Rails.cache.write("#{chave}:falhou", 1, expires_in: FALHOU)
-    Rails.cache.delete("#{chave}:contando")
+    linhas = Crm::MetaAds::ComentariosIa::Fonte.que_esperam(@account, lido)
+    { status: 'ready', waiting: linhas.size, private_window: linhas.count { |linha| cabe_no_privado?(linha) },
+      network_status: lido[:status_das_redes] }.compact
   end
 
   private
 
-  # O aviso sai na primeira leitura: a tela mostra a falha e o "tentar de novo" conta outra vez.
-  def falhou(chave)
-    return unless Rails.cache.delete("#{chave}:falhou")
-
-    { status: 'ai_unavailable' }
-  end
-
-  def contar_depois(chave)
-    # Um job só por lista: a tela pergunta de novo a cada poucos segundos enquanto conta.
-    primeiro = Rails.cache.write("#{chave}:contando", 1, unless_exist: true, expires_in: CONTANDO)
-    Crm::MetaAds::ComentariosIa::ResumoJob.perform_later(@account.id, @alvo) if primeiro
-    { status: 'reading' }
-  end
-
-  def contar(linhas, more:)
-    contagem = { status: 'ready', questions: 0, questions_old: 0, complaints: 0, read: linhas.size, more: more }
-    linhas.each do |linha|
-      decisao = classificador.decidir!(linha[:text])
-      if PEDIDOS.include?(decisao)
-        contagem[recente?(linha) ? :questions : :questions_old] += 1
-      elsif decisao == 'to_you'
-        contagem[:complaints] += 1
-      end
-    end
-    contagem
-  end
-
-  # A Fonte já entrega do mais novo para o mais velho.
-  def recentes(linhas)
-    linhas.first(LIMITE)
-  end
-
-  def recente?(linha)
-    linha[:momento]&.>=(Crm::MetaAds::ComentariosIa::Cuidar::JANELA.ago)
-  end
-
-  def chave(linhas)
-    ids = linhas.map { |linha| "#{linha[:network]}:#{linha[:id]}" }.sort.join(',')
-    "comentarios_ia:resumo:#{@account.id}:#{@alvo.values.flatten.join(':')}:#{Digest::SHA256.hexdigest(ids)}"
-  end
-
-  def classificador
-    @classificador ||= Crm::MetaAds::ComentariosIa::Classificador.new(
-      care: Crm::MetaAdsCommentCare.new(account: @account, para_quem: CRITERIO), legenda: @fonte.legenda, tela: true
-    )
+  def cabe_no_privado?(linha)
+    linha[:momento].present? && linha[:momento] >= Crm::MetaAds::ComentariosIa::Cuidar::JANELA.ago
   end
 end

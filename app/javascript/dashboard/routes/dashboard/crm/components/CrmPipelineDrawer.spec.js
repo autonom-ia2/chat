@@ -28,6 +28,10 @@ vi.mock('dashboard/composables/useKeyboardEvents', () => ({
 vi.mock('dashboard/composables/useCanManage', () => ({
   usePermissionGranted: () => ref(true),
 }));
+// #2414 F1.3: as ações da etapa pedem a chave das regras automáticas; aqui a função tem.
+vi.mock('dashboard/composables/usePodeMontarAutomacao', () => ({
+  usePodeMontarAutomacao: () => ref(true),
+}));
 vi.mock('dashboard/api/crmGoogleConversionFeed', () => ({
   default: {
     create: vi.fn().mockResolvedValue({ data: { url: 'https://feed/x' } }),
@@ -157,7 +161,6 @@ describe('CrmPipelineDrawer website Pixel', () => {
     metadata: {
       meta_sync: {
         enabled: true,
-        dataset_id: '999',
         pixel_id: '2164882667623689',
       },
     },
@@ -171,9 +174,10 @@ describe('CrmPipelineDrawer website Pixel', () => {
 
     const [[payload]] = wrapper.emitted('save');
     expect(payload.pipeline.meta_sync).toMatchObject({
-      dataset_id: '999',
       pixel_id: '2164882667623689',
     });
+    // #1940: o dataset do WhatsApp vem da caixa, não do funil.
+    expect(payload.pipeline.meta_sync).not.toHaveProperty('dataset_id');
   });
 
   it('keeps only digits, up to 20, when the Pixel id is typed or pasted', async () => {

@@ -6,7 +6,6 @@ import { frontendURL } from 'dashboard/helper/URLHelper';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useAlert } from 'dashboard/composables';
-import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import SeusPostsAPI from 'dashboard/api/seusPosts';
 import ComentariosIaAPI from 'dashboard/api/comentariosIa';
 import CuidandoFaixa from 'dashboard/routes/dashboard/campaigns/metaAds/comentariosIa/CuidandoFaixa.vue';
@@ -15,7 +14,7 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import EstadoVazio from '../components/EstadoVazio.vue';
 import NumeroQuadro from '../components/NumeroQuadro.vue';
 import PostCard from '../components/PostCard.vue';
-import { perfilParaTela } from '../seusPostsDados';
+import { flagsDoCuidado, perfilParaTela } from '../seusPostsDados';
 import { useLiberarAcesso } from '../useLiberarAcesso';
 import {
   ICONE_DA_REDE,
@@ -268,8 +267,13 @@ const verEsperando = () => {
 // O cuidado da IA (#2212): os cuidados do perfil, lidos ao lado da página, sem travar. Falha vira lista vazia: o selo
 // e a faixa são um atalho, a tela de cada post continua dizendo o estado.
 const { isCloudFeatureEnabled } = useAccount();
+// #2520: a flag do cuidado e a dos comentários da rede do perfil, como o servidor.
 const comCuidado = computed(() =>
-  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA)
+  Boolean(
+    flagsDoCuidado(perfil.value?.rede)?.every(flag =>
+      isCloudFeatureEnabled(flag)
+    )
+  )
 );
 const podeMudarCuidado = usePermissionGranted('posts_manage');
 const cuidados = ref([]);
@@ -351,7 +355,8 @@ const vereditoDe = post => {
   return { nivel, texto: t(`SEUS_POSTS.VS_NORMAL.${nivel}`, { times: vezes }) };
 };
 
-// "Ver conversas": a caixa abre em "Todas" (?aba=todas), como na aba de Anúncios.
+// "Ver conversas" (#2209): a caixa abre com as conversas que começaram no período do cartão (?desde_dias=), em
+// "Todas" e em todos os status, para a lista bater com "N pessoas mandaram mensagem".
 const verConversas = computed(
   () => resumo.value?.mensagens !== null && perfil.value?.inboxId
 );
@@ -360,7 +365,7 @@ const abrirConversas = () =>
     path: frontendURL(
       `accounts/${route.params.accountId}/inbox/${perfil.value.inboxId}`
     ),
-    query: { aba: 'todas' },
+    query: { desde_dias: String(dias.value) },
   });
 const abrirNaRede = () => window.open(perfil.value.link, '_blank', 'noopener');
 

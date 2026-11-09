@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_910000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -65,6 +65,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.bigint "custom_role_id"
     t.bigint "agent_capacity_policy_id"
     t.boolean "integration", default: false, null: false
+    t.datetime "ausente_ate"
     t.index ["account_id", "user_id"], name: "uniq_user_id_per_account_id", unique: true
     t.index ["account_id"], name: "index_account_users_on_account_id"
     t.index ["agent_capacity_policy_id"], name: "index_account_users_on_agent_capacity_policy_id"
@@ -458,10 +459,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.halfvec "embedding_large", limit: 3072
+    t.index "to_tsvector('portuguese'::regconfig, content)", name: "index_autonomia_agent_knowledge_on_texto_pt", using: :gin
     t.index ["account_id"], name: "index_autonomia_agent_knowledge_on_account_id"
     t.index ["autonomia_agent_id", "status"], name: "idx_autonomia_knowledge_agent_status"
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_knowledge_on_autonomia_agent_id"
-    t.index ["embedding"], name: "idx_autonomia_knowledge_embedding", using: :ivfflat
     t.index ["embedding_large"], name: "idx_autonomia_knowledge_embedding_large", opclass: :halfvec_cosine_ops, using: :hnsw
     t.index ["source_id"], name: "index_autonomia_agent_knowledge_on_source_id"
   end
@@ -488,10 +489,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.text "review_reason"
     t.datetime "reviewed_at"
     t.integer "kind", default: 0, null: false
+    t.bigint "care_id"
     t.index ["account_id"], name: "index_autonomia_agent_sources_on_account_id"
     t.index ["autonomia_agent_id", "kind"], name: "index_autonomia_agent_sources_on_autonomia_agent_id_and_kind"
     t.index ["autonomia_agent_id", "status"], name: "index_autonomia_agent_sources_on_autonomia_agent_id_and_status"
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_sources_on_autonomia_agent_id"
+    t.index ["care_id"], name: "index_autonomia_agent_sources_on_care_id", where: "(care_id IS NOT NULL)"
   end
 
   create_table "autonomia_agent_specialists", force: :cascade do |t|
@@ -537,7 +540,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.datetime "updated_at", null: false
     t.string "faixa", default: "", null: false
     t.bigint "card_id"
+    t.bigint "autonomia_agent_tool_id"
     t.index ["account_id", "slug", "created_at"], name: "idx_autonomia_tool_runs_account_slug"
+    t.index ["autonomia_agent_tool_id"], name: "idx_autonomia_tool_runs_agent_tool"
     t.index ["conversation_id", "created_at"], name: "idx_autonomia_tool_runs_conversation"
     t.index ["conversation_id", "slug", "faixa"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('running'::character varying)::text]))"
     t.index ["execution_key"], name: "idx_autonomia_tool_runs_execution_key", unique: true
@@ -558,10 +563,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.jsonb "response_mapping", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "timeout_seconds", default: 30, null: false
     t.index ["account_id", "enabled"], name: "index_autonomia_agent_tools_on_account_id_and_enabled"
     t.index ["account_id"], name: "index_autonomia_agent_tools_on_account_id"
     t.index ["autonomia_agent_id", "slug"], name: "idx_autonomia_agent_tools_agent_slug", unique: true
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_tools_on_autonomia_agent_id"
+    t.check_constraint "timeout_seconds > 0", name: "autonomia_agent_tools_timeout_seconds"
   end
 
   create_table "autonomia_agents", force: :cascade do |t|
@@ -593,6 +600,91 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.index ["account_id"], name: "index_autonomia_agents_on_account_id"
     t.index ["created_by_id"], name: "index_autonomia_agents_on_created_by_id"
     t.index ["deleted_by_id"], name: "index_autonomia_agents_on_deleted_by_id"
+  end
+
+  create_table "autonomia_automacao_conversoes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "antigo_tipo", null: false
+    t.bigint "antigo_id", null: false
+    t.bigint "definicao_id", null: false
+    t.jsonb "estado_antes", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "antigo_tipo", "antigo_id"], name: "idx_autonomia_automacao_conversoes_antiga", unique: true
+    t.index ["definicao_id"], name: "index_autonomia_automacao_conversoes_on_definicao_id"
+  end
+
+  create_table "autonomia_automacao_execucoes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "automacao_id", null: false
+    t.bigint "versao_id", null: false
+    t.string "alvo_type", null: false
+    t.bigint "alvo_id", null: false
+    t.string "chave_gatilho", null: false
+    t.string "cursor"
+    t.datetime "due_at"
+    t.string "estado", default: "andando", null: false
+    t.datetime "finalizada_em"
+    t.jsonb "cadeia", default: [], null: false
+    t.integer "profundidade", default: 0, null: false
+    t.integer "tentativas", default: 0, null: false
+    t.datetime "travada_em"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "evento"
+    t.jsonb "textos", default: {}, null: false
+    t.datetime "repetiu_em"
+    t.index ["account_id"], name: "index_autonomia_automacao_execucoes_on_account_id"
+    t.index ["alvo_type", "alvo_id"], name: "index_autonomia_automacao_execucoes_on_alvo"
+    t.index ["automacao_id", "alvo_type", "alvo_id", "chave_gatilho"], name: "idx_autonomia_automacao_execucoes_abertas", unique: true, where: "(finalizada_em IS NULL)"
+    t.index ["automacao_id", "evento"], name: "idx_autonomia_automacao_execucoes_evento", unique: true, where: "(evento IS NOT NULL)"
+    t.index ["automacao_id"], name: "index_autonomia_automacao_execucoes_on_automacao_id"
+    t.index ["due_at"], name: "idx_autonomia_automacao_execucoes_esperando", where: "(finalizada_em IS NULL)"
+    t.index ["versao_id"], name: "index_autonomia_automacao_execucoes_on_versao_id"
+    t.check_constraint "(estado::text = ANY (ARRAY['concluida'::text, 'falhou'::text, 'interrompida'::text, 'parada'::text, 'do_antigo'::text])) = (finalizada_em IS NOT NULL)", name: "chk_autonomia_automacao_execucoes_finalizada"
+  end
+
+  create_table "autonomia_automacao_registros", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "automacao_id", null: false
+    t.bigint "execucao_id", null: false
+    t.string "passo", null: false
+    t.string "resultado", null: false
+    t.string "motivo"
+    t.jsonb "dados", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_autonomia_automacao_registros_on_account_id"
+    t.index ["automacao_id", "created_at"], name: "idx_autonomia_automacao_registros_automacao"
+    t.index ["created_at"], name: "index_autonomia_automacao_registros_on_created_at"
+    t.index ["execucao_id", "created_at"], name: "idx_autonomia_automacao_registros_execucao"
+  end
+
+  create_table "autonomia_automacao_versoes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "automacao_id", null: false
+    t.integer "numero", null: false
+    t.jsonb "receita", default: {}, null: false
+    t.string "digest", null: false
+    t.bigint "autor_id"
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_autonomia_automacao_versoes_on_account_id"
+    t.index ["automacao_id", "numero"], name: "idx_autonomia_automacao_versoes_numero", unique: true
+    t.index ["autor_id"], name: "index_autonomia_automacao_versoes_on_autor_id"
+  end
+
+  create_table "autonomia_automacoes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "nome", null: false
+    t.boolean "ativa", default: false, null: false
+    t.string "origem", null: false
+    t.bigint "versao_ativa_id"
+    t.bigint "ligada_por_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "ligada_em"
+    t.index ["account_id", "ativa"], name: "idx_autonomia_automacoes_ligadas"
+    t.index ["ligada_por_id"], name: "index_autonomia_automacoes_on_ligada_por_id"
+    t.index ["versao_ativa_id"], name: "index_autonomia_automacoes_on_versao_ativa_id"
   end
 
   create_table "autonomia_decisor_decisoes", force: :cascade do |t|
@@ -639,7 +731,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "leituras", default: [], null: false
+    t.bigint "salvo_por_id"
     t.index ["account_id", "nome"], name: "index_autonomia_decisores_on_account_id_and_nome", unique: true
+    t.index ["salvo_por_id"], name: "index_autonomia_decisores_on_salvo_por_id"
   end
 
   create_table "autonomia_desempenho_fichas", force: :cascade do |t|
@@ -1716,8 +1810,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.datetime "updated_at", null: false
     t.string "provider_name"
     t.string "app_scoped_user_id"
+    t.string "login", default: "instagram", null: false
+    t.string "page_id"
     t.index ["app_scoped_user_id"], name: "index_channel_instagram_on_app_scoped_user_id"
-    t.index ["instagram_id"], name: "index_channel_instagram_on_instagram_id", unique: true
+    t.index ["instagram_id", "account_id"], name: "index_channel_instagram_on_instagram_id_and_account_id", unique: true
   end
 
   create_table "channel_line", force: :cascade do |t|
@@ -2806,6 +2902,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.text "preview_url"
     t.text "thumbnail_url"
     t.string "destination_type"
+    t.string "optimization_goal"
     t.index ["account_id", "meta_object_id"], name: "idx_crm_meta_ad_objects_account_object", unique: true
   end
 
@@ -2844,6 +2941,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.string "ai_decision"
     t.decimal "ai_confidence", precision: 4, scale: 3
     t.text "ai_reason"
+    t.string "meta_message_id"
+    t.integer "meta_error_code"
+    t.integer "meta_error_subcode"
     t.index ["account_id", "network", "comment_id"], name: "idx_crm_meta_ads_comment_actions_lookup"
     t.index ["conversation_id"], name: "idx_crm_meta_ads_comment_actions_conversation"
     t.index ["network", "comment_id", "action"], name: "idx_crm_meta_ads_comment_actions_once", unique: true, where: "((action)::text = ANY (ARRAY['private_reply'::text, 'ai_seen'::text]))"
@@ -2871,6 +2971,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.datetime "started_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "temas", default: [], null: false
+    t.string "assunto_proibido"
+    t.string "tom"
     t.index ["account_id", "target_kind", "target_id"], name: "idx_crm_meta_ads_comment_cares_target", unique: true
     t.index ["created_by_id"], name: "index_crm_meta_ads_comment_cares_on_created_by_id"
     t.index ["inbox_id"], name: "index_crm_meta_ads_comment_cares_on_inbox_id"
@@ -2945,9 +3048,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.string "request_digest", limit: 64
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "source_post_id"
+    t.string "source_post_network"
     t.index ["account_id", "ad_account_id", "request_digest"], name: "idx_crm_meta_ads_created_objects_digest", unique: true, where: "((status)::text = ANY (ARRAY[('creating'::character varying)::text, ('unconfirmed'::character varying)::text, ('rollback_failed'::character varying)::text]))"
     t.index ["account_id", "ad_id"], name: "idx_crm_meta_ads_created_objects_ad"
     t.index ["account_id", "idempotency_key"], name: "idx_crm_meta_ads_created_objects_key", unique: true
+    t.index ["account_id", "source_post_id"], name: "idx_crm_meta_ads_created_objects_source_post"
   end
 
   create_table "crm_meta_ads_lead_forms", force: :cascade do |t|
@@ -2962,6 +3068,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.bigint "brought_stage_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "destination_set_at"
     t.index ["account_id", "form_id"], name: "index_crm_meta_ads_lead_forms_on_account_id_and_form_id", unique: true
     t.index ["brought_pipeline_id"], name: "index_crm_meta_ads_lead_forms_on_brought_pipeline_id"
     t.index ["brought_stage_id"], name: "index_crm_meta_ads_lead_forms_on_brought_stage_id"
@@ -2998,8 +3105,24 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.boolean "feed_receiving", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "leadgen_receiving_since"
     t.index ["account_id", "page_id"], name: "index_crm_meta_ads_pages_on_account_id_and_page_id", unique: true
     t.index ["page_id"], name: "index_crm_meta_ads_pages_on_page_id"
+  end
+
+  create_table "crm_meta_ads_post_readings", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "network", null: false
+    t.string "post_id", null: false
+    t.text "description"
+    t.text "correction"
+    t.bigint "corrected_by_id"
+    t.string "model"
+    t.datetime "read_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "network", "post_id"], name: "idx_crm_meta_ads_post_readings_post", unique: true
+    t.index ["corrected_by_id"], name: "index_crm_meta_ads_post_readings_on_corrected_by_id"
   end
 
   create_table "crm_meta_advisor_actions", force: :cascade do |t|
@@ -4592,6 +4715,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
   add_foreign_key "autonomia_agent_knowledge", "autonomia_agents"
   add_foreign_key "autonomia_agent_sources", "accounts"
   add_foreign_key "autonomia_agent_sources", "autonomia_agents"
+  add_foreign_key "autonomia_agent_sources", "crm_meta_ads_comment_cares", column: "care_id", on_delete: :cascade, validate: false
   add_foreign_key "autonomia_agent_specialists", "accounts"
   add_foreign_key "autonomia_agent_specialists", "autonomia_agents", column: "delegate_agent_id", on_delete: :cascade
   add_foreign_key "autonomia_agent_tool_runs", "accounts"
@@ -4600,6 +4724,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
   add_foreign_key "autonomia_agents", "accounts"
   add_foreign_key "autonomia_agents", "users", column: "created_by_id"
   add_foreign_key "autonomia_agents", "users", column: "deleted_by_id", on_delete: :nullify
+  add_foreign_key "autonomia_automacao_conversoes", "accounts"
+  add_foreign_key "autonomia_automacao_conversoes", "autonomia_automacoes", column: "definicao_id"
+  add_foreign_key "autonomia_automacao_execucoes", "accounts"
+  add_foreign_key "autonomia_automacao_execucoes", "autonomia_automacao_versoes", column: "versao_id"
+  add_foreign_key "autonomia_automacao_execucoes", "autonomia_automacoes", column: "automacao_id"
+  add_foreign_key "autonomia_automacao_registros", "accounts"
+  add_foreign_key "autonomia_automacao_registros", "autonomia_automacao_execucoes", column: "execucao_id"
+  add_foreign_key "autonomia_automacao_registros", "autonomia_automacoes", column: "automacao_id"
+  add_foreign_key "autonomia_automacao_versoes", "accounts"
+  add_foreign_key "autonomia_automacao_versoes", "autonomia_automacoes", column: "automacao_id"
+  add_foreign_key "autonomia_automacao_versoes", "users", column: "autor_id", on_delete: :nullify
+  add_foreign_key "autonomia_automacoes", "accounts"
+  add_foreign_key "autonomia_automacoes", "autonomia_automacao_versoes", column: "versao_ativa_id", on_delete: :nullify
+  add_foreign_key "autonomia_automacoes", "users", column: "ligada_por_id", on_delete: :nullify
   add_foreign_key "autonomia_decisor_decisoes", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_decisor_decisoes", "automation_rules", on_delete: :nullify
   add_foreign_key "autonomia_decisor_decisoes", "autonomia_decisores", column: "decisor_id", on_delete: :cascade
@@ -4813,6 +4951,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
   add_foreign_key "crm_meta_ads_leads", "contacts", on_delete: :nullify
   add_foreign_key "crm_meta_ads_leads", "crm_cards", column: "card_id", on_delete: :nullify
   add_foreign_key "crm_meta_ads_pages", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_post_readings", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_post_readings", "users", column: "corrected_by_id", on_delete: :nullify
   add_foreign_key "crm_meta_advisor_actions", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_advisor_actions", "crm_meta_advisor_runs", column: "last_run_id", on_delete: :nullify
   add_foreign_key "crm_meta_advisor_actions", "crm_meta_advisor_runs", column: "run_id", on_delete: :nullify

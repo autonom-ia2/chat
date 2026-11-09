@@ -37,7 +37,7 @@ RSpec.describe Crm::Numeros::Origens::Tela do
   def tela(funil: nil, gasto: true, valor: true, mes: nil)
     funis = Crm::Numeros::Origens::Funis.new(account: account, acesso: acesso, pedido: funil)
     described_class.new(account: account, mes: Crm::Numeros::Mes.new(account: account, chave: mes), funis: funis,
-                        perfil: { gasto: gasto, valor: valor }).perform
+                        perfil: { gasto: gasto, valor: valor, anuncio: true }).perform
   end
 
   def origem(payload, tipo)

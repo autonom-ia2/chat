@@ -84,6 +84,15 @@ RSpec.describe Crm::MetaAdsCommentCare do
     expect(build(:crm_meta_ads_comment_care, account: account, para_quem: 'a' * 501)).not_to be_valid
   end
 
+  it 'aceita os temas só pelas chaves dos chips, sem repetir, e o assunto proibido e o tom numa frase (#2458)', :aggregate_failures do
+    expect(build(:crm_meta_ads_comment_care, account: account, temas: %w[link price])).to be_valid
+    [['pedir o link'], [''], [1], 'link', %w[price price]].each do |temas|
+      expect(build(:crm_meta_ads_comment_care, account: account, temas: temas)).not_to be_valid
+    end
+    expect(build(:crm_meta_ads_comment_care, account: account, assunto_proibido: 'a' * 301)).not_to be_valid
+    expect(build(:crm_meta_ads_comment_care, account: account, tom: 'a' * 301)).not_to be_valid
+  end
+
   it 'separa os cuidados ativos dos pausados' do
     ativo = create(:crm_meta_ads_comment_care, account: account)
     create(:crm_meta_ads_comment_care, account: account, status: 'paused')
@@ -125,10 +134,18 @@ RSpec.describe Crm::MetaAdsCommentCare do
       expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '17900', ad_id: nil)).to eq(anuncio)
     end
 
-    it 'anúncio pausado: a IA não cuida, e o cuidado do post ligado não entra no lugar dele' do
+    it 'anúncio pausado, com o id dele no comentário: a IA não cuida, e o cuidado do post ligado não entra no lugar dele' do
       anuncio.update!(status: 'paused', post_ids: %w[179])
 
       expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '179', ad_id: '120')).to be_nil
+    end
+
+    # #2520: no Facebook o comentário nunca traz o anúncio, e o post impulsionado é o mesmo do orgânico.
+    it 'anúncio pausado, comentário sem o id do anúncio: vale o cuidado do post ligado' do
+      anuncio.update!(status: 'paused', post_ids: %w[179], network: 'both')
+      post.update!(network: 'facebook')
+
+      expect(described_class.cuidando(network: 'facebook', account_id: account.id, post_id: '179', ad_id: nil)).to eq(post)
       expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '179', ad_id: nil)).to be_nil
     end
 

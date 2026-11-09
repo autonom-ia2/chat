@@ -26,6 +26,33 @@ RSpec.describe Crm::MetaAds::ComentariosIa::LerAntigosJob do
     expect(cuidar.map { |job| job['arguments'].first['comment_id'] }).to eq(%w[1])
   end
 
+  describe 'as respostas de cliente dentro dos comentários (#2454)' do
+    before do
+      respostas = [linha('1a', dias: 3).merge(parent_id: '1'), linha('1b', dias: 1).merge(parent_id: '1')]
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 3)], escondidas: [],
+                                                 respostas_que_esperam: respostas })
+    end
+
+    def na_fila
+      enqueued_jobs.select { |job| job['job_class'] == 'Crm::MetaAds::ComentariosIa::CuidarJob' }.map { |job| job['arguments'].first }
+    end
+
+    it 'com a flag meta_ads_comentarios_ia: vão para a fila do motor com o id do de cima, só ids, sem o texto' do
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
+
+      described_class.perform_now(account.id, alvo)
+
+      expect(na_fila.map { |args| [args['comment_id'], args['parent_id']] }).to eq([['1', nil], %w[1a 1]])
+      expect(na_fila.to_json).not_to include('texto', 'pessoa')
+    end
+
+    it 'sem a flag: só os de primeiro nível, como antes' do
+      described_class.perform_now(account.id, alvo)
+
+      expect(na_fila.pluck('comment_id')).to eq(%w[1])
+    end
+  end
+
   it 'Meta fora do ar: tenta de novo poucas vezes e, esgotado, solta o "Ler e mandar" para o dono tentar de novo' do
     allow(fonte).to receive(:ler).and_return({ status: 'meta_unavailable', linhas: [], escondidas: [] })
     allow(Rails.logger).to receive(:warn)
@@ -44,6 +71,53 @@ RSpec.describe Crm::MetaAds::ComentariosIa::LerAntigosJob do
 
     expect(fonte).to have_received(:ler).once
     expect(care.reload.read_old_at).to be_nil
+  end
+
+  describe 'anúncio nas duas redes com uma só lida (#2522)' do
+    def lido_parcial(falha)
+      { status: 'ready', linhas: [linha('1', dias: 3)], escondidas: [], status_das_redes: { 'instagram' => 'ready', 'facebook' => falha } }
+    end
+
+    def na_fila
+      enqueued_jobs.select { |job| job['job_class'] == 'Crm::MetaAds::ComentariosIa::CuidarJob' }.map { |job| job['arguments'].first['comment_id'] }
+    end
+
+    it 'põe na fila os da rede que leu e solta o "Ler e mandar" pela rede que faltou (sem login)' do
+      allow(fonte).to receive(:ler).and_return(lido_parcial('needs_login'))
+
+      described_class.perform_now(account.id, alvo)
+
+      expect(na_fila).to eq(%w[1])
+      expect(care.reload.read_old_at).to be_nil
+    end
+
+    it 'a rede que faltou por Meta fora do ar: tenta de novo e, esgotado, solta' do
+      allow(fonte).to receive(:ler).and_return(lido_parcial('meta_unavailable'))
+
+      perform_enqueued_jobs(only: described_class) { described_class.perform_later(account.id, alvo) }
+
+      expect(fonte).to have_received(:ler).exactly(described_class::TENTATIVAS).times
+      expect(care.reload.read_old_at).to be_nil
+    end
+
+    it 'nenhuma rede leu, uma sem login e outra com a Meta fora do ar: tenta de novo antes de soltar' do
+      allow(fonte).to receive(:ler).and_return({ status: 'needs_login', linhas: [], escondidas: [],
+                                                 status_das_redes: { 'instagram' => 'needs_login', 'facebook' => 'meta_unavailable' } })
+
+      perform_enqueued_jobs(only: described_class) { described_class.perform_later(account.id, alvo) }
+
+      expect(fonte).to have_received(:ler).exactly(described_class::TENTATIVAS).times
+      expect(care.reload.read_old_at).to be_nil
+    end
+
+    it 'as duas redes leram: põe na fila e mantém a marca' do
+      allow(fonte).to receive(:ler).and_return(lido_parcial('ready'))
+
+      described_class.perform_now(account.id, alvo)
+
+      expect(na_fila).to eq(%w[1])
+      expect(care.reload.read_old_at).to be_present
+    end
   end
 
   it 'solta mesmo o cuidado que não passaria na validação de hoje' do

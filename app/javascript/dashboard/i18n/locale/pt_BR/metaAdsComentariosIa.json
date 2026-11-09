@@ -41,6 +41,10 @@
         "ad_not_found": "Não achei este anúncio na sua conta de anúncios.",
         "meta_unavailable": "A Meta não respondeu agora."
       },
+      "PARTIAL": {
+        "instagram": "Só consegui ler os comentários do Facebook. Os do Instagram ficaram de fora.",
+        "facebook": "Só consegui ler os comentários do Instagram. Os do Facebook ficaram de fora."
+      },
       "NO_ACCESS": "Você não tem acesso ao cuidado dos comentários deste post.",
       "SAVE_ERROR": "Não consegui guardar agora. Tente de novo.",
       "OFF_READONLY": {
@@ -83,10 +87,12 @@
         "unread": "Não cuidei deste comentário. Responda você, se quiser.",
         "unsure": "Não sei se o privado saiu: a Meta não respondeu. Confira no direct antes de responder.",
         "no_private": "Pergunta. Mandar no privado ainda não dá aqui: responda no comentário.",
+        "no_permission": "Pergunta. A Meta não deixou mandar este privado pela Página: responda no comentário.",
         "paused": "Chegou com o cuidado pausado. Responda no comentário, se quiser.",
         "waiting": "Chegou antes de você ligar. Responda no comentário, se quiser.",
         "older": "Mais de 7 dias: não dá mais para mandar no privado. Responda no comentário.",
-        "skipped": "Não se aplica · não mandei. Fica com você: responda no comentário, se quiser."
+        "skipped": "Não se aplica · não mandei. Fica com você: responda no comentário, se quiser.",
+        "not_caught": "Não vi este comentário a tempo. Responda você."
       },
       "OPEN_INBOX": "Abrir na caixa",
       "SEE_ON_POST": "Ver no post",
@@ -102,6 +108,16 @@
       "STEP": "Passo {step} de {total}",
       "NEXT": "Continuar",
       "START": "Ligar",
+      "PHOTO": {
+        "LOOKING": "Olhando a foto…",
+        "SEEN": "O que eu vi na foto:",
+        "FAILED": "Não consegui ver a foto agora.",
+        "FIX": "Corrigir",
+        "WRITE": "Escrever",
+        "SAVE": "Guardar",
+        "CANCEL": "Cancelar",
+        "SAVE_ERROR": "Não consegui guardar agora. Tente de novo."
+      },
       "WHAT": {
         "TITLE": "O que mandar no privado?",
         "TEXT": "Escreva a mensagem que a pessoa recebe. Pode ter link, catálogo, cupom ou preço.",
@@ -121,7 +137,13 @@
           "CATALOG": "Quem quiser ver o catálogo"
         },
         "OWN": "Ou escreva do seu jeito:",
-        "TOO_LONG": "Ficou longo demais. Use até {max} letras."
+        "TOO_LONG": "Ficou longo demais. Use até {max} letras.",
+        "CHIP": "Quem {parte}",
+        "PARTS": {
+          "PRICE": "perguntar o preço",
+          "LINK": "pedir o link",
+          "CATALOG": "quiser ver o catálogo"
+        }
       },
       "SEE": {
         "TITLE": "Veja como fica",
@@ -138,7 +160,14 @@
         "PHRASE_DEFAULT": "Te chamei no privado 😊",
         "GETS_BEFORE": "É o caso · chegou antes",
         "LOADING": "Estou lendo os comentários do post…",
-        "PREVIEW_ERROR": "Não consegui ler os comentários do post agora. Este é um exemplo: você pode ligar assim mesmo."
+        "PREVIEW_ERROR": "Não consegui ler os comentários do post agora. Este é um exemplo: você pode ligar assim mesmo.",
+        "REPLY": "Resposta dentro deste comentário",
+        "REPLY_TRIES": "Tento mandar no privado; se a rede não deixar, respondo só aqui",
+        "WRITTEN_COMMENT": "No comentário, eu respondo:",
+        "WRITTEN_DM": "No privado, eu mando:",
+        "KEPT": "Eu não sei responder isso com o que a empresa me ensinou. Não respondo e deixo com você.",
+        "OWNER": "Fica com você",
+        "OWNER_WHY": "É sobre “{assunto}”. Não respondo e deixo com você."
       },
       "RULES": {
         "ONCE": "Cada pessoa recebe uma mensagem só neste post.",
@@ -151,7 +180,7 @@
       "SOON": {
         "BADGE": "Em breve",
         "TITLE": "Mandar no Messenger ainda não está liberado",
-        "TEXT": "No Facebook, a mensagem no privado depende de uma liberação da Meta. Assim que ela liberar, você liga por aqui."
+        "TEXT": "Nesta Página, a Meta ainda não liberou a mensagem no privado pelo Messenger. Quando ela liberar, entre de novo com a Página: a opção aparece aqui."
       },
       "PREVIOUS": "Passo anterior",
       "OLD_NOTE": "O que já está aqui: pergunto depois de ligar. | Os {count} que já estão aqui: pergunto depois de ligar.",
@@ -160,6 +189,20 @@
         "TEXT": "Eu leio e mando a mensagem só se for o caso. | Eu leio os {count} e mando a mensagem só para quem for o caso.",
         "CONFIRM": "Ler e mandar",
         "BACK": "Agora não"
+      },
+      "NAO_FALO": {
+        "TITLE": "Sobre o que eu não falo?",
+        "OPTIONAL": "(se quiser)",
+        "TEXT": "Mesmo que eu saiba, não respondo e deixo com você.",
+        "PLACEHOLDER": "Ex.: reembolso em andamento"
+      },
+      "TONE": {
+        "LABEL": "Quer de outro jeito?",
+        "PLACEHOLDER": "Ex.: mais formal, sem emoji",
+        "BUTTON": "Ajustar",
+        "DONE": "Escrevo assim: {tom}.",
+        "UNDO": "Voltar como era",
+        "TOO_LONG": "Ficou longo demais. Use até {max} letras."
       }
     },
     "ENTRY": {

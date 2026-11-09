@@ -1,0 +1,431 @@
+{
+  "clinica": {
+    "nome": "Clínica Equilíbrio Fisioterapia e Estética",
+    "endereco": "Avenida das Camélias, 1000, sala 12, Jardim Aurora, Cidade Exemplo/SP",
+    "telefone": "(11) 90000-0000",
+    "whatsapp": "(11) 90000-0001",
+    "email": "contato@clinica-equilibrio.example",
+    "sobre": "Clínica de fisioterapia, pilates, massoterapia, estética, depilação a laser e podologia, com atendimento com hora marcada.",
+    "horario": {
+      "segunda_a_sexta": "7h às 20h",
+      "sabado": "8h às 14h",
+      "domingo_e_feriados": "fechado"
+    }
+  },
+  "convenios": {
+    "aceitos": [
+      "SaúdeMais Vida",
+      "Previna Saúde",
+      "Amparo Saúde"
+    ],
+    "regras": "Os convênios aceitos cobrem apenas fisioterapia e acupuntura, com guia e pedido médico. Estética, depilação, massoterapia e podologia são sempre particulares.",
+    "autorizacao": "A guia autorizada pelo convênio deve ser apresentada na recepção antes da primeira sessão. Sem guia, a sessão é cobrada como particular."
+  },
+  "primeira_consulta": {
+    "como_funciona": "Toda pessoa que começa fisioterapia passa antes pela avaliação fisioterapêutica, em que o fisioterapeuta define o plano e o número de sessões.",
+    "o_que_levar": "Trazer exames de imagem, laudos e lista de medicamentos em uso.",
+    "roupa": "Vir com roupa confortável, que permita movimentar braços e pernas."
+  },
+  "profissionais": [
+    {
+      "nome": "Dra. Letícia Ramos Vieira",
+      "funcao": "Fisioterapeuta",
+      "especialidades": [
+        "fisioterapia ortopédica",
+        "RPG",
+        "avaliação fisioterapêutica"
+      ],
+      "dias_atendimento": "segunda a sábado, das 7h às 13h"
+    },
+    {
+      "nome": "Dr. Henrique Faria Lopes",
+      "funcao": "Fisioterapeuta",
+      "especialidades": [
+        "fisioterapia neurológica",
+        "fisioterapia respiratória"
+      ],
+      "dias_atendimento": "segunda a sexta, das 13h às 20h"
+    },
+    {
+      "nome": "Dra. Patrícia Mendes Salgado",
+      "funcao": "Fisioterapeuta e acupunturista",
+      "especialidades": [
+        "acupuntura",
+        "fisioterapia para gestantes"
+      ],
+      "dias_atendimento": "terça, quinta e sábado, das 8h às 14h"
+    },
+    {
+      "nome": "Camila Duarte Rocha",
+      "funcao": "Instrutora de pilates",
+      "especialidades": [
+        "pilates solo",
+        "pilates em aparelhos",
+        "pilates para gestantes"
+      ],
+      "dias_atendimento": "segunda a sexta, das 7h às 12h e das 16h às 20h"
+    },
+    {
+      "nome": "Thaís Oliveira Brandão",
+      "funcao": "Esteticista",
+      "especialidades": [
+        "depilação a laser",
+        "laser fracionado",
+        "clareamento de manchas"
+      ],
+      "dias_atendimento": "terça a sábado, das 9h às 18h"
+    },
+    {
+      "nome": "Renata Alves Moreira",
+      "funcao": "Esteticista",
+      "especialidades": [
+        "limpeza de pele",
+        "microagulhamento",
+        "criolipólise",
+        "radiofrequência"
+      ],
+      "dias_atendimento": "segunda a sexta, das 10h às 19h"
+    },
+    {
+      "nome": "Marcos Vinícius Teles",
+      "funcao": "Massoterapeuta",
+      "especialidades": [
+        "massagem relaxante",
+        "pedras quentes",
+        "drenagem linfática",
+        "massagem para gestantes"
+      ],
+      "dias_atendimento": "segunda a sábado, das 9h às 18h"
+    },
+    {
+      "nome": "Sílvia Campos Nogueira",
+      "funcao": "Podóloga",
+      "especialidades": [
+        "podologia preventiva",
+        "unha encravada"
+      ],
+      "dias_atendimento": "quarta a sexta, das 9h às 17h"
+    }
+  ],
+  "servicos": [
+    {
+      "nome": "Avaliação fisioterapêutica",
+      "categoria": "Fisioterapia",
+      "duracao_min": 50,
+      "preco": 180,
+      "sessoes_recomendadas": 1,
+      "descricao": "Primeira consulta para definir o plano de tratamento."
+    },
+    {
+      "nome": "Fisioterapia ortopédica",
+      "categoria": "Fisioterapia",
+      "duracao_min": 50,
+      "preco": 160,
+      "sessoes_recomendadas": 10,
+      "descricao": "Tratamento de dores e lesões de coluna, joelho, ombro e tornozelo."
+    },
+    {
+      "nome": "Fisioterapia neurológica",
+      "categoria": "Fisioterapia",
+      "duracao_min": 50,
+      "preco": 170,
+      "sessoes_recomendadas": 12,
+      "descricao": "Reabilitação depois de AVC e em doenças neurológicas."
+    },
+    {
+      "nome": "Fisioterapia respiratória",
+      "categoria": "Fisioterapia",
+      "duracao_min": 40,
+      "preco": 150,
+      "sessoes_recomendadas": 6,
+      "descricao": "Exercícios respiratórios e higiene brônquica."
+    },
+    {
+      "nome": "Fisioterapia para gestantes",
+      "categoria": "Fisioterapia",
+      "duracao_min": 50,
+      "preco": 165,
+      "sessoes_recomendadas": 8,
+      "descricao": "Alívio de dores lombares e preparo para o parto.",
+      "preparo": "Trazer liberação do obstetra."
+    },
+    {
+      "nome": "RPG (reeducação postural global)",
+      "categoria": "Fisioterapia",
+      "duracao_min": 50,
+      "preco": 175,
+      "sessoes_recomendadas": 10,
+      "descricao": "Correção postural com alongamentos ativos."
+    },
+    {
+      "nome": "Acupuntura",
+      "categoria": "Fisioterapia",
+      "duracao_min": 40,
+      "preco": 130,
+      "sessoes_recomendadas": 6,
+      "descricao": "Sessão com agulhas descartáveis para dor e tensão muscular."
+    },
+    {
+      "nome": "Pilates solo em grupo",
+      "categoria": "Pilates",
+      "duracao_min": 50,
+      "preco": 70,
+      "sessoes_recomendadas": 8,
+      "descricao": "Aula em grupo de até 6 alunos, com bola e faixa elástica."
+    },
+    {
+      "nome": "Pilates em aparelhos individual",
+      "categoria": "Pilates",
+      "duracao_min": 50,
+      "preco": 120,
+      "sessoes_recomendadas": 8,
+      "descricao": "Aula individual no reformer e no cadillac."
+    },
+    {
+      "nome": "Pilates para gestantes",
+      "categoria": "Pilates",
+      "duracao_min": 50,
+      "preco": 95,
+      "sessoes_recomendadas": 8,
+      "descricao": "Aula individual adaptada para a gestação.",
+      "preparo": "Trazer liberação do obstetra."
+    },
+    {
+      "nome": "Massagem relaxante",
+      "categoria": "Massoterapia",
+      "duracao_min": 60,
+      "preco": 150,
+      "sessoes_recomendadas": 1,
+      "descricao": "Massagem corporal com óleo vegetal."
+    },
+    {
+      "nome": "Massagem com pedras quentes",
+      "categoria": "Massoterapia",
+      "duracao_min": 75,
+      "preco": 190,
+      "sessoes_recomendadas": 1,
+      "descricao": "Massagem relaxante com pedras de basalto aquecidas."
+    },
+    {
+      "nome": "Drenagem linfática manual",
+      "categoria": "Massoterapia",
+      "duracao_min": 60,
+      "preco": 140,
+      "sessoes_recomendadas": 10,
+      "descricao": "Indicada para retenção de líquido e pós-operatório liberado pelo médico."
+    },
+    {
+      "nome": "Massagem para gestantes",
+      "categoria": "Massoterapia",
+      "duracao_min": 50,
+      "preco": 150,
+      "sessoes_recomendadas": 4,
+      "descricao": "Massagem em posição lateral, com almofadas de apoio.",
+      "preparo": "Trazer liberação do obstetra."
+    },
+    {
+      "nome": "Quick massage",
+      "categoria": "Massoterapia",
+      "duracao_min": 20,
+      "preco": 60,
+      "sessoes_recomendadas": 1,
+      "descricao": "Massagem rápida em cadeira, nas costas, ombros e pescoço."
+    },
+    {
+      "nome": "Limpeza de pele profunda",
+      "categoria": "Estética",
+      "duracao_min": 90,
+      "preco": 190,
+      "sessoes_recomendadas": 1,
+      "descricao": "Higienização, esfoliação, extração e máscara calmante."
+    },
+    {
+      "nome": "Peeling de diamante",
+      "categoria": "Estética",
+      "duracao_min": 40,
+      "preco": 160,
+      "sessoes_recomendadas": 4,
+      "descricao": "Esfoliação mecânica para textura e poros."
+    },
+    {
+      "nome": "Microagulhamento",
+      "categoria": "Estética",
+      "duracao_min": 60,
+      "preco": 350,
+      "sessoes_recomendadas": 3,
+      "descricao": "Estímulo de colágeno para cicatrizes de acne e linhas finas.",
+      "preparo": "Evitar sol por 7 dias antes e avisar sobre uso de anticoagulantes."
+    },
+    {
+      "nome": "Criolipólise",
+      "categoria": "Estética",
+      "duracao_min": 60,
+      "preco": 450,
+      "sessoes_recomendadas": 2,
+      "descricao": "Redução de gordura localizada por resfriamento. Preço por região tratada.",
+      "contraindicacoes": [
+        "hérnia na região",
+        "alergia ao frio",
+        "gestação"
+      ]
+    },
+    {
+      "nome": "Radiofrequência facial",
+      "categoria": "Estética",
+      "duracao_min": 40,
+      "preco": 220,
+      "sessoes_recomendadas": 6,
+      "descricao": "Aquecimento da pele para firmeza do rosto."
+    },
+    {
+      "nome": "Rejuvenescimento com laser fracionado",
+      "categoria": "Estética",
+      "duracao_min": 45,
+      "preco": 480,
+      "sessoes_recomendadas": 3,
+      "descricao": "Laser para textura, manchas e linhas finas.",
+      "preparo": "Evitar sol por 15 dias antes."
+    },
+    {
+      "nome": "Clareamento de manchas com laser",
+      "categoria": "Estética",
+      "duracao_min": 30,
+      "preco": 260,
+      "sessoes_recomendadas": 4,
+      "descricao": "Laser para manchas de sol e melasma leve.",
+      "preparo": "Evitar sol por 15 dias antes."
+    },
+    {
+      "nome": "Depilação a laser do buço",
+      "categoria": "Depilação a laser",
+      "duracao_min": 10,
+      "preco": 50,
+      "sessoes_recomendadas": 8,
+      "descricao": "Laser de diodo, sessões a cada 30 dias."
+    },
+    {
+      "nome": "Depilação a laser das axilas",
+      "categoria": "Depilação a laser",
+      "duracao_min": 15,
+      "preco": 80,
+      "sessoes_recomendadas": 8,
+      "descricao": "Laser de diodo, sessões a cada 30 dias."
+    },
+    {
+      "nome": "Depilação a laser da virilha",
+      "categoria": "Depilação a laser",
+      "duracao_min": 20,
+      "preco": 120,
+      "sessoes_recomendadas": 8,
+      "descricao": "Laser de diodo, sessões a cada 30 dias."
+    },
+    {
+      "nome": "Depilação a laser perna inteira",
+      "categoria": "Depilação a laser",
+      "duracao_min": 40,
+      "preco": 220,
+      "sessoes_recomendadas": 8,
+      "descricao": "Laser de diodo, sessões a cada 45 dias.",
+      "preparo": "Raspar a região com lâmina 1 dia antes."
+    },
+    {
+      "nome": "Podologia preventiva",
+      "categoria": "Podologia",
+      "duracao_min": 50,
+      "preco": 90,
+      "sessoes_recomendadas": 1,
+      "descricao": "Corte técnico das unhas, desbaste de calosidades e hidratação."
+    },
+    {
+      "nome": "Tratamento de unha encravada",
+      "categoria": "Podologia",
+      "duracao_min": 40,
+      "preco": 110,
+      "sessoes_recomendadas": 1,
+      "descricao": "Remoção da espícula e curativo."
+    }
+  ],
+  "pacotes": [
+    {
+      "nome": "Pacote Noivas",
+      "servicos_incluidos": [
+        "Limpeza de pele profunda",
+        "Radiofrequência facial",
+        "Drenagem linfática manual",
+        "Massagem relaxante"
+      ],
+      "total_sessoes": 16,
+      "preco": 2650,
+      "validade_dias": 150,
+      "observacao": "Começar pelo menos 4 meses antes da data do casamento."
+    },
+    {
+      "nome": "Pacote Pilates Mensal",
+      "servicos_incluidos": [
+        "Pilates em aparelhos individual"
+      ],
+      "total_sessoes": 12,
+      "preco": 980,
+      "validade_dias": 45,
+      "observacao": "Três aulas por semana, com horário fixo."
+    },
+    {
+      "nome": "Pacote Gestante",
+      "servicos_incluidos": [
+        "Fisioterapia para gestantes",
+        "Pilates para gestantes",
+        "Massagem para gestantes"
+      ],
+      "total_sessoes": 12,
+      "preco": 1450,
+      "validade_dias": 120,
+      "observacao": "Exige liberação do obstetra."
+    },
+    {
+      "nome": "Pacote Reabilitação",
+      "servicos_incluidos": [
+        "Fisioterapia ortopédica"
+      ],
+      "total_sessoes": 10,
+      "preco": 1440,
+      "validade_dias": 60,
+      "observacao": "Inclui reavaliação na última sessão."
+    },
+    {
+      "nome": "Pacote Pernas Lisas",
+      "servicos_incluidos": [
+        "Depilação a laser perna inteira"
+      ],
+      "total_sessoes": 8,
+      "preco": 1580,
+      "validade_dias": 365,
+      "observacao": "Sessões a cada 45 dias."
+    }
+  ],
+  "politicas": {
+    "agendamento": "Todo atendimento é com hora marcada, pelo telefone ou WhatsApp da clínica.",
+    "cancelamento": "Cancelamentos ou remarcações com pelo menos 12 horas de antecedência não têm custo. Com menos de 12 horas, cobramos 50% do valor da sessão.",
+    "faltas": "Faltas sem aviso são cobradas por inteiro. Se o paciente apresentar atestado médico em até 48 horas, a falta não é cobrada.",
+    "pacotes": "Nos pacotes, a sessão perdida é descontada do total e não é devolvida nem reposta.",
+    "atrasos": "Com atraso de mais de 15 minutos, a sessão é feita no tempo que restar, sem desconto.",
+    "validade_dos_pacotes": "As sessões não usadas dentro da validade do pacote expiram e não são convertidas em dinheiro."
+  },
+  "perguntas_frequentes": [
+    {
+      "pergunta": "Preciso de pedido médico para fazer fisioterapia particular?",
+      "resposta": "Não. No particular, basta agendar a avaliação fisioterapêutica. Pelo convênio, o pedido médico e a guia são obrigatórios."
+    },
+    {
+      "pergunta": "Que roupa uso no pilates?",
+      "resposta": "Roupa de ginástica e meia antiderrapante. A clínica vende a meia na recepção."
+    },
+    {
+      "pergunta": "Depois da depilação a laser posso tomar sol?",
+      "resposta": "Evite sol na região por 7 dias depois de cada sessão e use protetor solar."
+    },
+    {
+      "pergunta": "Posso trocar de profissional no meio do tratamento?",
+      "resposta": "Pode, conforme a agenda. A troca é feita pela recepção e não muda o preço."
+    }
+  ]
+}

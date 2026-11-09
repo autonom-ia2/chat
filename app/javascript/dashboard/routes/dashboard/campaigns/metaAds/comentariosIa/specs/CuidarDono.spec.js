@@ -57,6 +57,29 @@ describe('CuidarDono (#2212)', () => {
     expect(passo(wrapper)).toBe('2');
   });
 
+  describe('passo 1: o que eu vi na foto (#2454)', () => {
+    it('com a leitura da foto (flag ligada): o bloco aparece no passo 1 e pede a leitura', async () => {
+      const photo = vi.fn().mockResolvedValue({
+        status: 'ready',
+        text: 'Um bolo de cenoura',
+        corrected: false,
+      });
+      const wrapper = montar({ photo, fixPhoto: vi.fn() });
+      await flushPromises();
+
+      expect(wrapper.find('[data-ia-foto]').text()).toContain(
+        'Um bolo de cenoura'
+      );
+      expect(photo).toHaveBeenCalledTimes(1);
+    });
+
+    it('sem ela (flag desligada): nada da foto, nada pedido', () => {
+      const wrapper = montar();
+
+      expect(wrapper.find('[data-ia-foto]').exists()).toBe(false);
+    });
+  });
+
   describe('passo 1 com o começo escrito pela IA (mockup aprovado)', () => {
     const pendente = () => {
       let resolver;
@@ -199,6 +222,157 @@ describe('CuidarDono (#2212)', () => {
     expect(wrapper.find('[data-ia-dono-example="nao"]').text()).toContain(
       'Lindo!'
     );
+  });
+
+  describe('passo 3: a resposta dentro de um comentário (#2454)', () => {
+    const abrirComResposta = async kind => {
+      const preview = vi.fn().mockResolvedValue({
+        recebe: {
+          author: 'carla',
+          text: 'Qual o preço?',
+          network: 'instagram',
+        },
+        nao: null,
+        resposta: {
+          author: 'bia',
+          text: 'Quanto custa o azul?',
+          network: 'instagram',
+          kind,
+          parent: { author: 'joao', text: 'Lindo!', network: 'instagram' },
+        },
+      });
+      const wrapper = montar({
+        data: painel({ message: 'Oi!', para_quem: 'Quem perguntar o preço' }),
+        preview,
+      });
+      await proximo(wrapper).trigger('click');
+      await proximo(wrapper).trigger('click');
+      await flushPromises();
+      return wrapper.find('[data-ia-dono-example="resposta"]');
+    };
+
+    it('a resposta aparece dentro do comentário de cima, sem prometer o privado', async () => {
+      const resposta = await abrirComResposta('recebe');
+
+      expect(resposta.find('[data-ia-dono-reply-parent]').text()).toContain(
+        '@joao'
+      );
+      expect(resposta.find('[data-ia-dono-reply]').text()).toContain(
+        'Quanto custa o azul?'
+      );
+      expect(resposta.find('[data-ia-dono-reply-kind]').text()).toBe(
+        'Tento mandar no privado; se a rede não deixar, respondo só aqui'
+      );
+    });
+
+    it('a resposta em que não se aplica diz "Não se aplica"', async () => {
+      const resposta = await abrirComResposta('nao');
+
+      expect(resposta.find('[data-ia-dono-reply-kind]').text()).toBe(
+        'Não se aplica'
+      );
+    });
+
+    const abrirNoFio = async parentId => {
+      const preview = vi.fn().mockResolvedValue({
+        recebe: {
+          id: 'c-1',
+          author: 'ana',
+          text: 'Quanto custa esse?',
+          network: 'instagram',
+        },
+        nao: {
+          id: 'c-2',
+          author: 'carla',
+          text: 'Lindo!',
+          network: 'instagram',
+        },
+        resposta: {
+          author: 'bia',
+          text: 'Também quero saber!',
+          network: 'instagram',
+          kind: 'recebe',
+          parent: {
+            id: parentId,
+            author: 'ana',
+            text: 'Quanto custa esse?',
+            network: 'instagram',
+          },
+        },
+      });
+      const wrapper = montar({
+        data: painel({ message: 'Oi!', para_quem: 'Quem perguntar o preço' }),
+        preview,
+      });
+      await proximo(wrapper).trigger('click');
+      await proximo(wrapper).trigger('click');
+      await flushPromises();
+      return wrapper;
+    };
+    const vezes = (texto, trecho) => texto.split(trecho).length - 1;
+
+    it('o de cima é um dos exemplos: a resposta fica dentro do cartão dele, e ele aparece uma vez só', async () => {
+      const wrapper = await abrirNoFio('c-1');
+      const cartao = wrapper.find('[data-ia-dono-example="recebe"]');
+
+      expect(cartao.find('[data-ia-dono-reply]').text()).toContain(
+        'Também quero saber!'
+      );
+      expect(cartao.find('[data-ia-dono-reply-kind]').text()).toBe(
+        'Tento mandar no privado; se a rede não deixar, respondo só aqui'
+      );
+      expect(wrapper.find('[data-ia-dono-example="resposta"]').exists()).toBe(
+        false
+      );
+      expect(
+        wrapper
+          .find('[data-ia-dono-example="nao"]')
+          .find('[data-ia-dono-reply]')
+          .exists()
+      ).toBe(false);
+      expect(vezes(wrapper.text(), 'Quanto custa esse?')).toBe(1);
+    });
+
+    it('o de cima não está na prévia: aparece como contexto, sem selo, com a resposta abaixo', async () => {
+      const wrapper = await abrirNoFio('c-9');
+      const cartao = wrapper.find('[data-ia-dono-example="resposta"]');
+
+      expect(cartao.find('[data-ia-dono-reply-parent]').text()).toContain(
+        '@ana'
+      );
+      expect(cartao.findAll('[data-ia-dono-reply-kind]')).toHaveLength(1);
+      expect(cartao.find('[data-ia-dono-reply-group]').text()).toContain(
+        'Também quero saber!'
+      );
+      expect(
+        wrapper
+          .find('[data-ia-dono-example="recebe"]')
+          .find('[data-ia-dono-reply]')
+          .exists()
+      ).toBe(false);
+    });
+
+    it('sem resposta na prévia (flag desligada): nada aparece', async () => {
+      const preview = vi.fn().mockResolvedValue({
+        recebe: {
+          author: 'carla',
+          text: 'Qual o preço?',
+          network: 'instagram',
+        },
+        nao: null,
+      });
+      const wrapper = montar({
+        data: painel({ message: 'Oi!', para_quem: 'Quem perguntar o preço' }),
+        preview,
+      });
+      await proximo(wrapper).trigger('click');
+      await proximo(wrapper).trigger('click');
+      await flushPromises();
+
+      expect(wrapper.find('[data-ia-dono-example="resposta"]').exists()).toBe(
+        false
+      );
+    });
   });
 
   it('prévia que falha: avisa e ainda deixa ligar', async () => {

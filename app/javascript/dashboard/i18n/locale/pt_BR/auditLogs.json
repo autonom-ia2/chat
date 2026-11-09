@@ -122,6 +122,9 @@
     "GUIDE": {
       "ACTION": "{agentName} fez pelo Guia da Plataforma: {frase}"
     },
+    "AUTOMACAO": {
+      "ACTION": "A automação #{automacaoId}, ligada por {agentName}, fez: {frase}"
+    },
     "META_ADS": {
       "PAUSED": "{agentName} pausou o anúncio {adName} (#{adId}) na Meta",
       "ACTIVE": "{agentName} ativou o anúncio {adName} (#{adId}) na Meta"

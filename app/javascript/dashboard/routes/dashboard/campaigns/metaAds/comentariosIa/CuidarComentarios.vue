@@ -3,11 +3,20 @@ import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CuidarLigado from './CuidarLigado.vue';
 import CuidarDono from './CuidarDono.vue';
-import { FOR_WHOM_LIMIT, MOTIVOS, useCuidado } from './useCuidado';
+import AvisoRedeQueFaltou from './AvisoRedeQueFaltou.vue';
+import {
+  FOR_WHOM_LIMIT,
+  FRASE_DO_DONO_LIMIT,
+  MOTIVOS,
+  podeTentarDeNovo,
+  useCuidado,
+} from './useCuidado';
 import { porRede } from './redes';
 
 // Comentários que viram cliente (#2212): "Cuidar dos comentários" de um post (Seus posts, B1) ou de um anúncio (B2).
@@ -23,14 +32,20 @@ const props = defineProps({
   post: { type: Object, default: null },
   // De onde a tela abriu: 'post' (o post em Seus posts) ou 'anuncio'.
   origin: { type: String, default: 'post' },
+  // #2479: o texto do "Voltar" quando a tela foi aberta de outro lugar (Agentes); vazio, o de `origin`.
+  backLabel: { type: String, default: '' },
   canManage: { type: Boolean, default: false },
   // A caixa da rede, para "Ver na caixa".
   inboxPath: { type: String, default: '' },
   // No anúncio (B2), a caixa vem do servidor (Painel `inbox_id`): a página diz como vira endereço.
   inboxPathOf: { type: Function, default: null },
+  // #2520: o "Ver no post" só quando a página tem para onde levar (CuidarLigado).
+  canReply: { type: Boolean, default: true },
 });
 
-const emit = defineEmits(['back']);
+// 'reply': "Responder" no cuidado ligado, que leva aos comentários do post ou do anúncio (#2479: mesmo quando o
+// "Voltar" vai para Agentes). Quem usa esta tela precisa tratar os dois: sem `@reply`, o botão não faz nada.
+const emit = defineEmits(['back', 'reply']);
 
 const { t } = useI18n();
 const router = useRouter();
@@ -49,8 +64,15 @@ const {
   voltar,
   previa,
   rascunho,
+  foto,
+  corrigirFoto,
   lerAntigos,
 } = useCuidado(() => props.target);
+// #2454: "O que eu vi na foto" no passo 1, só com a flag meta_ads_comentarios_ia.
+const { isCloudFeatureEnabled } = useAccount();
+const comFoto = computed(() =>
+  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA)
+);
 
 const heading = ref(null);
 const started = ref(null);
@@ -75,7 +97,6 @@ const fromKey = computed(() => {
 // Por que não deu para ler: o código do servidor, no erro da leitura (motivo) ou no `status` do Painel que veio sem a
 // lista (needs_login, meta_unavailable…). Com texto próprio quando a tela conhece o código; "Tentar de novo" só no que
 // passa sozinho (a Meta fora do ar, a rede): o resto (sem post, sem caixa, sem login) não cura tentando.
-const PASSAGEIROS = ['meta_unavailable'];
 const genericError = computed(() =>
   t(`${KEY}.SCREEN.${props.origin === 'anuncio' ? 'ERROR_AD' : 'ERROR'}`)
 );
@@ -83,11 +104,17 @@ const problemText = code =>
   MOTIVOS.includes(code)
     ? t(`${KEY}.SCREEN.PROBLEM.${code}`)
     : genericError.value;
-const canRetry = code =>
-  !code || !MOTIVOS.includes(code) || PASSAGEIROS.includes(code);
+const canRetry = podeTentarDeNovo;
 const painelStatus = computed(() =>
   painel.value?.status && painel.value.status !== 'ready'
     ? painel.value.status
+    : null
+);
+// #2522: o aviso da rede que faltou (AvisoRedeQueFaltou). Desligado e sem poder ligar, a tela não mostra lista nem
+// número: sem aviso.
+const networkStatus = computed(() =>
+  painel.value?.status === 'ready' && (on.value || props.canManage)
+    ? painel.value.network_status
     : null
 );
 
@@ -112,6 +139,10 @@ const AVISO_DA_FALHA = {
   invalid_message: () => t(`${KEY}.DONO.WHAT.TOO_LONG`),
   invalid_para_quem: () =>
     t(`${KEY}.DONO.WHO.TOO_LONG`, { max: FOR_WHOM_LIMIT }),
+  invalid_assunto_proibido: () =>
+    t(`${KEY}.DONO.WHO.TOO_LONG`, { max: FRASE_DO_DONO_LIMIT }),
+  invalid_tom: () =>
+    t(`${KEY}.DONO.WHO.TOO_LONG`, { max: FRASE_DO_DONO_LIMIT }),
 };
 const avisarFalha = () => {
   const aviso = AVISO_DA_FALHA[falhaAoSalvar.value];
@@ -124,7 +155,7 @@ const phrasesWith = phrase => {
   return phrase ? [phrase, ...others] : others;
 };
 
-const finishDono = async ({ message, paraQuem, phrase }) => {
+const finishDono = async ({ message, paraQuem, phrase, escrita }) => {
   const wasChanging = changing.value;
   // Pergunta dos antigos só depois de ligar, e só se havia o que perguntar antes de gravar.
   const askOld = canSendOld.value;
@@ -133,6 +164,7 @@ const finishDono = async ({ message, paraQuem, phrase }) => {
     paraQuem,
     phrases: phrasesWith(phrase),
     status: wasChanging ? undefined : 'on',
+    escrita,
   });
   if (!valeu) {
     avisarFalha();
@@ -201,7 +233,7 @@ const openInbox = path => {
       @click="emit('back')"
     >
       <span class="i-lucide-arrow-left size-4" aria-hidden="true" />
-      {{ $t(`${KEY}.SCREEN.${BACK_KEY[origin] || 'BACK_POSTS'}`) }}
+      {{ backLabel || $t(`${KEY}.SCREEN.${BACK_KEY[origin] || 'BACK_POSTS'}`) }}
     </button>
 
     <header class="flex items-center gap-4">
@@ -312,15 +344,22 @@ const openInbox = path => {
           @click="carregar"
         />
       </div>
+      <AvisoRedeQueFaltou
+        :network-status="networkStatus"
+        pode-tentar
+        :carregando="carregando"
+        @tentar="carregar"
+      />
       <CuidarLigado
         v-if="on && !changing"
         :data="painel"
         :started="started"
         :can-manage="canManage"
         :busy="salvando"
+        :can-reply="canReply"
         @pause="pause"
         @resume="resume"
-        @reply="emit('back')"
+        @reply="emit('reply')"
         @read-old="oldDialog?.open()"
         @inbox="openInbox"
         @change="change"
@@ -345,6 +384,8 @@ const openInbox = path => {
         :data="painel"
         :preview="previa"
         :draft="target.kind === 'post' ? rascunho : null"
+        :photo="comFoto ? foto : null"
+        :fix-photo="comFoto ? corrigirFoto : null"
         :changing="changing"
         :can-send-old="canSendOld"
         :saving="salvando"
