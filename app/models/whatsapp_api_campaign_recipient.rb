@@ -49,7 +49,9 @@
 class WhatsappApiCampaignRecipient < ApplicationRecord
   # Motivo gravado em last_error_message quando o contato recusou mensagens ativas (chat#737).
   # Vira cancelled, não failed: recusa não é falha de entrega e não pode deixar a campanha com falhas.
-  OPTED_OUT_REASON = 'opted_out'.freeze
+  OPTED_OUT_REASON = ContactCampaignReach::OPTED_OUT
+  # O contato está bloqueado (chat#2733): também cancelled, com motivo próprio.
+  BLOCKED_REASON = ContactCampaignReach::BLOCKED
   # O lead da Prospecção foi descartado com a campanha em andamento (chat#713): o pendente sai, também como cancelled.
   DISCARDED_REASON = 'discarded'.freeze
 
@@ -81,11 +83,12 @@ class WhatsappApiCampaignRecipient < ApplicationRecord
     )
   end
 
-  def mark_opted_out!
-    update!(status: :cancelled, cancelled_at: Time.current, last_error_message: OPTED_OUT_REASON)
+  # O contato não pode receber campanha (Contact#campaign_refusal: OPTED_OUT_REASON ou BLOCKED_REASON).
+  def mark_refused!(reason)
+    update!(status: :cancelled, cancelled_at: Time.current, last_error_message: reason)
   end
 
-  # Pulado por um motivo nosso (OPTED_OUT_REASON, DISCARDED_REASON): cancelado, não falha.
+  # Pulado por um motivo nosso (OPTED_OUT_REASON, BLOCKED_REASON, DISCARDED_REASON): cancelado, não falha.
   def skipped_for?(reason)
     cancelled? && last_error_message == reason
   end

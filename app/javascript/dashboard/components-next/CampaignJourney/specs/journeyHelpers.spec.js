@@ -10,6 +10,7 @@ import {
   PHASES,
   channelSwitches,
   companiesBlock,
+  notReceiving,
   peopleSummary,
   phaseOf,
   reasonTally,
@@ -616,5 +617,26 @@ describe('scheduleTime (PRD §6.4)', () => {
       'America/Cuiaba'
     );
     expect(accountTimeZone({ timezone: 'Not/AZone' })).toBe('UTC');
+  });
+});
+
+describe('notReceiving (chat#2733)', () => {
+  it('lists blocked contacts as their own reason, next to who refused', () => {
+    expect(
+      notReceiving({
+        whatsapp: { total: 5, receive: 2, opted_out: 1, blocked: 2 },
+        email: { unsubscribed: 0 },
+      })
+    ).toEqual({
+      items: [
+        { key: 'OPTED_OUT', count: 1 },
+        { key: 'BLOCKED', count: 2 },
+      ],
+      total: 3,
+    });
+  });
+
+  it('is null while the backend has not counted', () => {
+    expect(notReceiving(null)).toBeNull();
   });
 });

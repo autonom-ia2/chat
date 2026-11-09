@@ -64,6 +64,26 @@ RSpec.describe WhatsappApiCampaigns::AudienceResolver do
       expect(campaign.whatsapp_api_campaign_recipients.find_by(contact: outro)).to be_pending
     end
 
+    it 'cancela o destinatário cujo contato está bloqueado, com motivo próprio (chat#2733)' do
+      account, user, inbox, label = create_account_user_inbox_and_label
+      create_labelled_contact(account: account, label: label, name: 'Ana Silva', phone_number: '+5511987654321')
+      bloqueado = create_labelled_contact(account: account, label: label, name: 'Bia Bloqueada', phone_number: '+5521987654321')
+      bloqueado.update!(blocked: true)
+      outro = create_labelled_contact(account: account, label: label, name: 'Bia Outra', phone_number: '+5521987654322')
+      outro.update_columns(phone_number: '+5521987654321')
+      campaign = create_whatsapp_api_campaign(account: account, user: user, inbox: inbox, label: label)
+
+      described_class.new(campaign).perform
+
+      recipient = campaign.whatsapp_api_campaign_recipients.find_by(contact: bloqueado)
+      expect(recipient).to be_cancelled
+      expect(recipient.last_error_message).to eq('blocked')
+      expect(campaign.whatsapp_api_campaign_recipients.find_by(contact: outro)).to be_pending
+      expect(campaign.reload.failed_count).to eq(0)
+      expect(campaign.opted_out_count).to eq(0)
+      expect(campaign.blocked_count).to eq(1)
+    end
+
     it 'não muda nada para quem não recusou' do
       account, user, inbox, label = create_account_user_inbox_and_label
       create_labelled_contact(account: account, label: label, name: 'Ana Silva', phone_number: '+5511987654321')

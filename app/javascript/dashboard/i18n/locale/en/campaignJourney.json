@@ -216,6 +216,7 @@
         "NOT_RECEIVING": "do not receive",
         "NOT_RECEIVING_HINT": "They stay in the audience but are left out of sends.",
         "OPTED_OUT": "WhatsApp: refused messages · {count}",
+        "BLOCKED": "WhatsApp: blocked contacts · {count}",
         "UNSUBSCRIBED": "Email: unsubscribed · {count}",
         "BOUNCED": "Email: address bounced · {count}",
         "SUPPRESSED": "Email: blocked by the provider · {count}"
@@ -377,6 +378,7 @@
         "OUT_TITLE": "Will not receive, even following the rule:",
         "OUT_NO_CONTACT": "no phone or e-mail: {count}",
         "OUT_OPTED_OUT": "asked not to receive: {count}",
+        "OUT_BLOCKED": "blocked: {count}",
         "OUT_NAMES": "{reason} ({names})",
         "SEE_WHO": "See who",
         "HIDE_WHO": "Hide",
@@ -586,6 +588,7 @@
         "REASONS": {
           "CHANNEL_DISABLED": "Channel switched off in the audience",
           "OPTED_OUT": "Refused messages",
+          "BLOCKED": "Blocked contacts",
           "UNSUBSCRIBED": "Unsubscribed",
           "BOUNCED": "Email bounced",
           "SUPPRESSED": "Blocked by the provider",

@@ -3,7 +3,8 @@ require 'digest'
 # Públicos (#993, PRD B8 and §6.4): who in an audience does not receive, per channel, before
 # any send. Works before and after saving because it compares the hashes stored on the rows:
 # - WhatsApp: rows whose mobile belongs to a contact of the account that refused active
-#   messages (#737, `opted_out_at`), with or without the 9th digit;
+#   messages (#737, `opted_out_at`) or is blocked (chat#2733, `blocked`), with or without the
+#   9th digit; refused and blocked at once counts as refused (each row in one reason);
 # - e-mail: rows whose address is suppressed in the account (EmailSuppression and blocking
 #   EmailSuppressionState), split into unsubscribed, bounced and other suppressions.
 # `receive` = channel count − not receiving; a channel switched off receives nobody.
@@ -22,7 +23,7 @@ class CampaignImports::AudienceReachability
   # SMS (#1004) reaches the same mobiles as WhatsApp, with its own switch (absent = off).
   def perform
     whatsapp_result = whatsapp
-    { 'whatsapp' => whatsapp_result, 'sms' => sms(whatsapp_result['opted_out']), 'email' => email }
+    { 'whatsapp' => whatsapp_result, 'sms' => sms(whatsapp_result.slice('opted_out', 'blocked')), 'email' => email }
   end
 
   private
@@ -43,21 +44,25 @@ class CampaignImports::AudienceReachability
   end
 
   def whatsapp
-    hashes = opted_out_phone_hashes
-    opted_out = hashes.empty? ? 0 : rows.where(normalized_phone_hash: hashes).count
-    summary('whatsapp', 'opted_out' => opted_out)
+    opted_out = phone_hashes(@account.contacts.opted_out)
+    blocked = phone_hashes(@account.contacts.campaign_unreachable.not_opted_out) - opted_out
+    summary('whatsapp', 'opted_out' => phone_rows_count(opted_out), 'blocked' => phone_rows_count(blocked))
   end
 
-  def sms(opted_out)
+  def sms(excluded)
     channels = CampaignJourney::AudienceContacts.with_sms_channel(@campaign_import.channels.to_h)
     total = channels.dig('sms', 'count').to_i
-    receive = channels.dig('sms', 'enabled') == true ? [total - opted_out, 0].max : 0
-    { 'total' => total, 'receive' => receive, 'opted_out' => opted_out }
+    receive = channels.dig('sms', 'enabled') == true ? [total - excluded.values.sum, 0].max : 0
+    { 'total' => total, 'receive' => receive }.merge(excluded)
   end
 
-  def opted_out_phone_hashes
+  def phone_rows_count(hashes)
+    hashes.empty? ? 0 : rows.where(normalized_phone_hash: hashes).count
+  end
+
+  def phone_hashes(contacts)
     matcher = CampaignImports::ContactMatcher.new(@account)
-    @account.contacts.where.not(opted_out_at: nil).where.not(phone_number: [nil, '']).pluck(:phone_number)
+    contacts.where.not(phone_number: [nil, '']).pluck(:phone_number)
             .flat_map { |phone| matcher.candidates(phone) }
             .map { |phone| Digest::SHA256.hexdigest(phone) }.uniq
   end
