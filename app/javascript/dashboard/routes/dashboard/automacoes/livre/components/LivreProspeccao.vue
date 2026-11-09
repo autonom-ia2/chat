@@ -10,7 +10,7 @@ import {
   MAXIMO_DE_EMPRESAS,
   buscaQueServe,
   comFaz,
-  nomeDaBusca,
+  opcaoDaBusca,
   quantasServe,
 } from '../prospeccao';
 
@@ -84,7 +84,7 @@ watch(
   { immediate: true }
 );
 const opcoesDaBusca = computed(() =>
-  buscas.value.map(busca => ({ value: busca.id, label: nomeDaBusca(busca, t) }))
+  buscas.value.map(busca => opcaoDaBusca(busca, t))
 );
 const buscaSumiu = computed(
   () =>

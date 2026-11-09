@@ -35,9 +35,9 @@ require 'rails_helper'
 # deduplicação da caixa só reaproveita card da mesma caixa (Crm::Conversations::AutoCreateDeduplicator), o card da
 # prospecção nasce sem caixa, e a resposta abriria um segundo card para a mesma empresa.
 #
-# Limite do termo, para decisão: a campanha de cada segunda vai para todo contato com a etiqueta, então a empresa da
-# semana anterior que não recusou recebe a apresentação de novo. O spec confere só o que o termo promete: a empresa nova
-# recebe, e a que recusou, nunca.
+# Passo 4 em aberto (G58, decisão da Automação em 09/11): a campanha deve ir só às empresas criadas nesta execução. Hoje
+# o público da campanha é só a etiqueta, então a empresa da semana anterior que não recusou recebe a apresentação de
+# novo. O spec confere a empresa nova recebendo e a que recusou nunca; o exemplo segue no pendentes_spec até a G58.
 RSpec.describe 'Fechamento #2414 · exemplo 9: prospecção que roda sozinha toda semana', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 

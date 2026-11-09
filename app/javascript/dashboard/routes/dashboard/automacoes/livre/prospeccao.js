@@ -37,12 +37,16 @@ export const prospeccaoPronta = passo => {
 };
 
 // O nome da busca na lista: o quê, onde e quando, como no histórico da tela.
-export const nomeDaBusca = (busca, t) =>
-  t('AUTOMACAO_LIVRE.PROSPECCAO.BUSCA_OPCAO', {
-    oque: busca.query,
+// A busca na lista: o que buscou em cima e, embaixo, onde e quando. Em duas linhas, o celular não corta a data, que é o
+// que separa duas buscas iguais.
+export const opcaoDaBusca = (busca, t) => ({
+  value: busca.id,
+  label: busca.query,
+  hint: t('AUTOMACAO_LIVRE.PROSPECCAO.BUSCA_DICA_OPCAO', {
     onde: busca.location || t('AUTOMACAO_LIVRE.PROSPECCAO.SEM_LOCAL'),
     data: new Date(busca.created_at).toLocaleDateString(),
-  });
+  }),
+});
 
 const P = 'AUTOMACAO_LIVRE.PROSPECCAO';
 
