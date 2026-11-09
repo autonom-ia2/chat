@@ -59,13 +59,15 @@ module Autonomia::Automacao::Resposta
   end
 
   def responsavel?(conversa, espera)
-    return false if conversa.assignee_id.nil?
+    return false if conversa&.assignee_id.nil?
 
     candidatas = conversa.messages.chat.outgoing.where(sender_type: 'User', sender_id: conversa.assignee_id).where.not(status: :failed)
     na_janela(candidatas, espera).find_each.any? { |mensagem| ::Autonomia::Agents::Operate::PessoaDaEquipe.da_pessoa?(mensagem) }
   end
 
   def repetiu?(execucao, espera)
+    return false if execucao.nil?
+
     em = ::Autonomia::Automacao::Execucao.where(id: execucao.id).where('repetiu_em > ?', espera.begin)
     (espera.end ? em.where('repetiu_em <= ?', espera.end) : em).exists?
   end
