@@ -125,4 +125,55 @@ RSpec.describe Autonomia::Automacao::Valores do
       expect(described_class.new(alvo: conversa.reload, quem: nil).ler('conversa.responsavel_ausente')).to be(false)
     end
   end
+
+  # G53: a mensagem que disparou o "mensagem que falhou" é lida pela marca da execução, sempre presa à conta e à
+  # conversa do alvo, e só a que saiu para o cliente.
+  describe 'falhou.texto (G53)' do
+    let(:recusada) { create(:message, account: account, conversation: conversa, message_type: :outgoing, content: 'Seu boleto vence sexta') }
+
+    def execucao_de(mensagem_id, alvo: conversa, gatilho: 'mensagem.falhou')
+      versao = create(:autonomia_automacao_versao, automacao: create(:autonomia_automacao, account: alvo.account))
+      create(:autonomia_automacao_execucao, versao: versao, alvo: alvo, chave_gatilho: gatilho, evento: "mensagem.falhou:#{mensagem_id}")
+    end
+
+    def lido(execucao, alvo: conversa)
+      described_class.new(alvo: Autonomia::Automacao::Contexto.de(alvo, execucao: execucao), quem: nil).ler('falhou.texto')
+    end
+
+    it 'lê o texto da mensagem que falhou na conversa da execução' do
+      expect(lido(execucao_de(recusada.id))).to eq('Seu boleto vence sexta')
+    end
+
+    it 'lê vazio: mensagem de outra conversa, de outra conta, recebida, nota privada ou apagada', :aggregate_failures do
+      outra_conversa = create(:conversation, account: account, contact: contato)
+      de_outra_conversa = create(:message, account: account, conversation: outra_conversa, message_type: :outgoing, content: 'outra')
+      de_outra_conta = create(:message, message_type: :outgoing, content: 'outra conta')
+      recebida = create(:message, account: account, conversation: conversa, message_type: :incoming, content: 'recebida')
+      nota = create(:message, account: account, conversation: conversa, message_type: :outgoing, private: true, content: 'nota')
+      apagada = create(:message, account: account, conversation: conversa, message_type: :outgoing, content: 'apagada',
+                                 content_attributes: { deleted: true })
+
+      [de_outra_conversa, de_outra_conta, recebida, nota, apagada].each do |mensagem|
+        expect(lido(execucao_de(mensagem.id))).to be_nil, "leu a mensagem #{mensagem.content}"
+      end
+    end
+
+    it 'lê vazio sem execução, em outro gatilho ou com a marca de outro evento', :aggregate_failures do
+      expect(described_class.new(alvo: conversa, quem: nil).ler('falhou.texto')).to be_nil
+      expect(lido(execucao_de(recusada.id, gatilho: 'mensagem.criada'))).to be_nil
+      expect(lido(execucao_de(recusada.id).tap { |execucao| execucao.update!(evento: "card.parado:#{recusada.id}") })).to be_nil
+    end
+
+    it 'só vale no gatilho dela, e só no alvo conversa', :aggregate_failures do
+      expect(described_class.fora_do_lugar('falhou.texto', mensagem: false, na_espera: false, gatilho: 'mensagem.falhou')).to be_nil
+      expect(described_class.fora_do_lugar('falhou.texto', mensagem: false, na_espera: false, gatilho: 'mensagem.criada'))
+        .to eq(:falhou_so_no_gatilho)
+      expect(described_class.fora_do_lugar('falhou.texto', mensagem: false, na_espera: false, gatilho: 'mensagem.falhou', no_filtro: true))
+        .to eq(:falhou_no_filtro)
+      expect(described_class.fora_do_lugar('falhou.texto', mensagem: false, na_espera: false, gatilho: 'mensagem.criada', no_filtro: true))
+        .to eq(:falhou_so_no_gatilho)
+      expect(described_class.no_alvo?('falhou.texto', 'Conversation')).to be(true)
+      expect(described_class.no_alvo?('falhou.texto', 'Crm::Card')).to be(false)
+    end
+  end
 end

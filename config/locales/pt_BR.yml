@@ -1115,6 +1115,8 @@ pt_BR:
         fixo: 'Passo %{passo}: %{campo} tem de ser %{valor}.'
         mensagem_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no filtro do gatilho "mensagem criada".'
         reuniao_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe nos gatilhos de reunião (marcada, remarcada, cancelada).'
+        falhou_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no gatilho de mensagem que não chegou.'
+        falhou_no_filtro: 'Passo %{passo}: %{caminho} só pode ser usado nos passos, não no "Só se" do gatilho.'
         resposta_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até".'
         valor_fora_do_alvo: 'Passo %{passo}: %{caminho} não dá para ler naquilo em que este gatilho começa (conversa, card ou contato).'
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'

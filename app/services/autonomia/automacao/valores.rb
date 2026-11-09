@@ -77,6 +77,13 @@ class Autonomia::Automacao::Valores
   # A última mensagem que a execução mandou ao cliente (#2680): o texto e a situação (Envio).
   ENVIO = ::Autonomia::Automacao::Envio::VALORES
 
+  # G53: a mensagem que disparou o gatilho "mensagem que falhou" (Contexto#mensagem_que_falhou), para os passos depois
+  # dele ("manda por e-mail o mesmo conteúdo"). Só existe nesse gatilho; o salvar recusa no resto. A mensagem apagada
+  # e a que só tem anexo leem vazio, e o passo pula com `faltou_valor`: nunca sai pela metade.
+  FALHOU = {
+    'falhou.texto' => ->(mensagem) { mensagem.content unless mensagem.content_attributes.to_h['deleted'] }
+  }.freeze
+
   # #2679: o texto que um passo de IA ("escrever", "resumir") desta execução produziu: `ia.<id do passo>`. Vale em
   # qualquer alvo: fica na execução, não no alvo. O salvar confere que o id é de um passo que escreve (Receita); antes de
   # ele rodar, ou num caminho em que ele não rodou, lê vazio, e o passo pula com `faltou_valor`.
@@ -85,7 +92,7 @@ class Autonomia::Automacao::Valores
 
   # O que cada alvo alcança, pelas pontes do Contexto.
   BASES_DO_ALVO = {
-    'Conversation' => %w[conversa contato envio gatilho],
+    'Conversation' => %w[conversa contato envio gatilho falhou],
     'Crm::Card' => %w[card conversa contato reuniao envio gatilho],
     'Contact' => %w[contato envio gatilho]
   }.freeze
@@ -134,7 +141,7 @@ class Autonomia::Automacao::Valores
 
   class << self
     def caminho_valido?(caminho)
-      [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA, ENVIO].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? ||
+      [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA, ENVIO, FALHOU].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? ||
         da_ia?(caminho)
     end
 
@@ -149,14 +156,26 @@ class Autonomia::Automacao::Valores
 
     def da_resposta?(caminho) = RESPOSTA.key?(caminho.to_s)
 
+    def da_falha?(caminho) = FALHOU.key?(caminho.to_s)
+
     # O valor que só existe num lugar da receita: a mensagem no filtro do gatilho dela (`mensagem`: a receita está lá);
-    # a resposta no "esperar até" (`na_espera`); a reunião nos gatilhos de reunião (`gatilho`). Devolve a chave da
-    # frase do salvar, ou nil.
-    def fora_do_lugar(caminho, mensagem:, na_espera:, gatilho: nil)
+    # a resposta no "esperar até" (`na_espera`); a reunião nos gatilhos de reunião e a mensagem que falhou no gatilho
+    # dela (`gatilho`). A mensagem que falhou fica só nos passos (`no_filtro`): o "Só se" roda na Partida, antes de
+    # haver a execução de onde ela é lida, e leria sempre vazio. Devolve a chave da frase do salvar, ou nil.
+    def fora_do_lugar(caminho, mensagem:, na_espera:, gatilho: nil, no_filtro: false)
       return :mensagem_so_no_gatilho if da_mensagem?(caminho) && !mensagem
+      return :resposta_so_na_espera if da_resposta?(caminho) && !na_espera
+
+      fora_do_gatilho(caminho, gatilho) || falhou_no_filtro(caminho, no_filtro)
+    end
+
+    def falhou_no_filtro(caminho, no_filtro) = (:falhou_no_filtro if no_filtro && da_falha?(caminho))
+
+    # O valor que só existe em certos gatilhos: a reunião e a mensagem que falhou.
+    def fora_do_gatilho(caminho, gatilho)
       return :reuniao_so_no_gatilho if da_reuniao?(caminho) && !::Autonomia::Automacao::Gatilhos.de_reuniao?(gatilho)
 
-      :resposta_so_na_espera if da_resposta?(caminho) && !na_espera
+      :falhou_so_no_gatilho if da_falha?(caminho) && gatilho != ::Autonomia::Automacao::MensagemQueFalhou::TIPO
     end
 
     # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.
@@ -228,13 +247,13 @@ class Autonomia::Automacao::Valores
     do_objeto(caminho) { |objeto| ::Autonomia::Automacao::Valores::Atributos.ler(base, chave, objeto) }
   end
 
-  def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave) || ENVIO.key?(chave) || DO_QUE_QUEM_VE.key?(chave)
+  def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave) || ENVIO.key?(chave) || FALHOU.key?(chave) || DO_QUE_QUEM_VE.key?(chave)
 
   def do_campo(chave)
     return do_objeto(chave) { |objeto| DO_QUE_QUEM_VE[chave].call(objeto, account_user) } if DO_QUE_QUEM_VE.key?(chave)
     return do_objeto(chave) { |objeto| link_da_agenda(objeto, AGENDA[chave].call(objeto)) } if AGENDA.key?(chave)
 
-    do_objeto(chave) { |objeto| (CAMPOS[chave] || ENVIO[chave]).call(objeto) }
+    do_objeto(chave) { |objeto| (CAMPOS[chave] || ENVIO[chave] || FALHOU[chave]).call(objeto) }
   end
 
   def link_da_agenda(objeto, pessoa)
@@ -270,6 +289,7 @@ class Autonomia::Automacao::Valores
     when 'card' then @contexto.card
     when 'reuniao' then @contexto.reuniao
     when 'envio' then @contexto.ultimo_envio
+    when 'falhou' then @contexto.mensagem_que_falhou
     end
   end
 end
