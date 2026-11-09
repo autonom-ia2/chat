@@ -13,4 +13,5 @@ en:
         faixa_grande: "repeats more than %{maximo} times, uses a range built from agent information, or repeats with nothing inside"
         chave_de_novo: "must be typed again"
         chave_de_novo_destino: "must be typed again, because the link or what the tool does changed"
+        chave_vazia: "must not be empty: type the access key"
         senha_no_link: "can't hold a password: put it in Access key, not in the link"

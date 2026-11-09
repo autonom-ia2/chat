@@ -15,6 +15,7 @@ import {
   passosProvaveisDoErro,
   rascunhoVazio,
   validarPasso,
+  valorFixo,
 } from '../../../utils/ferramentas';
 import {
   passoDaCorrecao,
@@ -338,6 +339,55 @@ describe('linguagem das Ferramentas (#1430)', () => {
       expect(conferirEndereco('https://a.com/x?token={{t}}')).toBe('');
       expect(
         conferirEndereco('https://a.com/x?keyword=pastilha&author=1')
+      ).toBe('');
+    });
+
+    it('asks for the key again when what goes with the call changes', () => {
+      const post = paraRascunho({
+        http_method: 'POST',
+        endpoint_url: 'https://api.loja.com/graphql',
+        request_body_template: '{"query":"{ pedido }"}',
+        headers_config: [
+          { key: 'x-api-key', value: MASCARA_DO_SEGREDO, secret: true },
+          { key: 'x-loja', value: '7', secret: false },
+        ],
+      });
+      const comum = c =>
+        c.chave === 'x-loja' ? { ...c, valor: '8' } : { ...c };
+
+      expect(destinoMudou(post)).toBe(false);
+      expect(destinoMudou({ ...post, corpo: '{"query":"{ clientes }"}' })).toBe(
+        true
+      );
+      expect(
+        destinoMudou({ ...post, cabecalhos: post.cabecalhos.map(comum) })
+      ).toBe(true);
+      expect(
+        destinoMudou({
+          ...post,
+          cabecalhos: [
+            ...post.cabecalhos,
+            { chave: 'X-HTTP-Method-Override', valor: 'DELETE' },
+          ],
+        })
+      ).toBe(true);
+    });
+
+    it('keeps only fixed text when it looks for a password in the link', () => {
+      expect(valorFixo('{{t}}')).toBe('');
+      expect(valorFixo('{{ t | url_encode }}')).toBe('');
+      expect(valorFixo('abc{{t}}')).toBe('abc');
+      expect(valorFixo('{{ "abc" }}')).toBe(' "abc" ');
+      expect(valorFixo('{{ t | append: "x" }}')).toBe(' t | append: "x" ');
+      [
+        'https://a.com/x?api_token=abc',
+        'https://a.com/x?token[]=abc',
+        'https://a.com/x?client_secret=abc',
+        'https://a.com/x?api_key=abc{{t}}',
+        'https://a.com/x?token={{ "abc" }}',
+      ].forEach(link => expect(conferirEndereco(link)).toBe('SENHA'));
+      expect(
+        conferirEndereco('https://a.com/x?token={{ t | url_encode }}')
       ).toBe('');
     });
   });

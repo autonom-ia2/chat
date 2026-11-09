@@ -210,6 +210,34 @@ RSpec.describe Autonomia::Agents::Tool do
       expect(tool).to be_valid
     end
 
+    it 'aceita a mesma chave digitada de novo num link novo' do
+      tool.assign_attributes(endpoint_url: 'https://api.loja.test/persons', chaves_digitadas: ['x-api-key'],
+                             headers_config: [{ key: 'x-api-key', value: 'guardado-123', secret: true }])
+
+      expect(tool).to be_valid
+    end
+
+    # Revisão adversarial: o corpo (GraphQL, RPC) e um cabeçalho comum (X-HTTP-Method-Override) mudam a operação sem
+    # mexer no link nem no método.
+    it 'recusa mudar o que vai junto ou um cabeçalho comum mantendo a chave' do
+      guardado = { key: 'x-api-key', value: 'guardado-123', secret: true }
+      [{ request_body_template: '{"query":"{ clientes }"}' },
+       { headers_config: [guardado, { key: 'X-HTTP-Method-Override', value: 'DELETE', secret: false }] }].each do |mudanca|
+        tool.reload.assign_attributes(mudanca)
+
+        expect(tool).not_to be_valid
+        expect(tool.errors[:headers_config]).to include(I18n.t('autonomia.agents.ferramenta.chave_de_novo_destino'))
+      end
+    end
+
+    it 'recusa segredo vazio num pedido novo, que apagaria a chave' do
+      tool.assign_attributes(endpoint_url: 'https://api.loja.test/persons', chaves_digitadas: ['x-api-key'],
+                             headers_config: [{ key: 'x-api-key', value: '', secret: true }])
+
+      expect(tool).not_to be_valid
+      expect(tool.errors[:headers_config]).to include(I18n.t('autonomia.agents.ferramenta.chave_vazia'))
+    end
+
     it 'recusa trocar a porta ou o esquema do mesmo host' do
       tool.endpoint_url = 'https://api.loja.test:8443/frete'
 
@@ -223,7 +251,9 @@ RSpec.describe Autonomia::Agents::Tool do
     let(:base) { { account: account, agent: agent, name: 'Senha', slug: 'senha' } }
 
     it 'recusa usuário e senha ou parâmetro de credencial com valor' do
-      ['https://ana:segredo@a.test/x', 'https://a.test/x?token=abc', 'https://a.test/x?q=1&API_KEY=abc{{t}}'].each do |link|
+      ['https://ana:segredo@a.test/x', 'https://a.test/x?token=abc', 'https://a.test/x?q=1&API_KEY=abc{{t}}',
+       'https://a.test/x?api_token=abc', 'https://a.test/x?client_secret=abc', 'https://a.test/x?q=1;token=abc',
+       'https://a.test/x?token[]=abc', 'https://a.test/x?token={{ "abc" }}', 'https://a.test/x?token={{ t | append: "x" }}'].each do |link|
         tool = described_class.new(base.merge(endpoint_url: link))
 
         expect(tool).not_to be_valid
@@ -233,9 +263,25 @@ RSpec.describe Autonomia::Agents::Tool do
 
     it 'aceita parâmetro que o agente preenche e nomes que não são credencial' do
       parametro = [{ name: 't', type: 'string', required: true }]
-      ['https://a.test/x?token={{t}}', 'https://a.test/x?keyword={{t}}&author=1'].each do |link|
+      ['https://a.test/x?token={{t}}', 'https://a.test/x?token={{ t | url_encode }}', 'https://a.test/x?keyword={{t}}&author=1'].each do |link|
         expect(described_class.new(base.merge(endpoint_url: link, param_schema: parametro))).to be_valid
       end
+    end
+
+    it 'deixa desligar a ferramenta antiga que já tinha senha no link' do
+      tool = described_class.create!(base.merge(endpoint_url: 'https://a.test/x'))
+      tool.update_column(:endpoint_url, 'https://a.test/x?token=antigo') # rubocop:disable Rails/SkipsModelValidations
+
+      expect(tool.reload.update(enabled: false)).to be(true)
+    end
+
+    # A lista do painel (utils/ferramentas.js) é a mesma do backend: o painel avisa o que o cadastro recusa.
+    it 'tem a mesma lista de nomes no painel' do
+      js = Rails.root.join('app/javascript/dashboard/routes/dashboard/autonomia/agentes/utils/ferramentas.js').read
+      bloco = js.split('export const NOMES_DE_CREDENCIAL = [', 2).second.split('];', 2).first
+      nomes = bloco.split(',').map { |nome| nome.strip.delete("'") }.reject(&:empty?)
+
+      expect(nomes).to eq(Autonomia::Agents::Tools::SegredosDaChamada::NOMES_DE_CREDENCIAL)
     end
   end
 

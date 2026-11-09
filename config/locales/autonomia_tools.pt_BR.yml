@@ -13,4 +13,5 @@ pt_BR:
         faixa_grande: "repete mais de %{maximo} vezes, usa uma faixa montada com informação do agente ou repete sem nada dentro"
         chave_de_novo: "precisa ser digitada de novo"
         chave_de_novo_destino: "precisa ser digitada de novo, porque o link ou o que a ferramenta faz mudou"
+        chave_vazia: "não pode ficar vazia: digite a chave de acesso"
         senha_no_link: "não pode ter senha: coloque a senha em Chave de acesso, não no link"

@@ -26,6 +26,7 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
   end
 
   def update
+    @tool.chaves_digitadas = chaves_digitadas
     @tool.assign_attributes(merged_tool_params)
     @tool.save!
     render :show
@@ -107,6 +108,13 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
 
     attrs['headers_config'] = attrs['headers_config'].map { |header| segredo_guardado(header) }
     attrs
+  end
+
+  # Segredo que chegou sem a máscara foi digitado agora: vale para um pedido novo, mesmo igual ao guardado.
+  def chaves_digitadas
+    Array(tool_params.to_h['headers_config']).filter_map do |header|
+      header['key'] if ActiveModel::Type::Boolean.new.cast(header['secret']) && header['value'] != Autonomia::Agents::Tool.masked_header_value
+    end
   end
 
   # O segredo volta mascarado para a tela; mascarado de novo no envio quer dizer "não mudou".

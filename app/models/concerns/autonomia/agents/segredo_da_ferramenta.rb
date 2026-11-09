@@ -3,52 +3,101 @@
 module Autonomia::Agents::SegredoDaFerramenta
   extend ActiveSupport::Concern
 
+  # `chaves_digitadas`: os nomes dos cabeçalhos de segredo que chegaram digitados agora (sem a máscara), marcados pelo
+  # controller. A mesma chave digitada de novo vale para um pedido novo; sem a marca, o par igual ao guardado é a chave
+  # reaproveitada.
   included do
+    attr_accessor :chaves_digitadas
+
     validate :validate_chave_mascarada
-    validate :validate_chave_no_mesmo_destino, on: :update
-    validate :validate_senha_fora_do_link
+    validate :validate_chave_no_mesmo_pedido, on: :update
+    validate :validate_senha_fora_do_link, if: -> { new_record? || will_save_change_to_endpoint_url? }
   end
 
   private
 
-  # Revisão adversarial e decisão do Rodrigo (09/11): a chave guardada não vai para outro site nem para outro caminho,
-  # busca ou método do mesmo site (trocar /leads por /persons usaria a chave do administrador em outra parte da API).
-  # Mudou o link ou o método, a chave é digitada de novo.
-  def validate_chave_no_mesmo_destino
-    return unless will_save_change_to_endpoint_url? || will_save_change_to_http_method?
-    return unless chave_guardada_reaproveitada?
+  # Revisão adversarial e decisão do Rodrigo (09/11): a chave guardada não vai para outro site nem para outra parte da
+  # mesma API. Mudou o pedido (link, método, o que vai junto ou um cabeçalho que não é segredo, como
+  # X-HTTP-Method-Override), a chave é digitada de novo. Segredo vazio num pedido novo apagaria a chave em silêncio.
+  def validate_chave_no_mesmo_pedido
+    return unless pedido_mudou?
 
-    errors.add(:headers_config, I18n.t('autonomia.agents.ferramenta.chave_de_novo_destino'))
+    errors.add(:headers_config, I18n.t('autonomia.agents.ferramenta.chave_de_novo_destino')) if chave_guardada_reaproveitada?
+    errors.add(:headers_config, I18n.t('autonomia.agents.ferramenta.chave_vazia')) if segredo_vazio?
+  end
+
+  def pedido_mudou?
+    will_save_change_to_endpoint_url? || will_save_change_to_http_method? || will_save_change_to_request_body_template? ||
+      cabecalhos_comuns(headers_config) != cabecalhos_comuns(headers_config_in_database)
   end
 
   def chave_guardada_reaproveitada?
-    guardadas = Array(headers_config_in_database).select { |header| header['secret'] }.map { |header| header.values_at('key', 'value') }
-    headers_config.any? { |header| header['secret'] && guardadas.include?(header.values_at('key', 'value')) }
+    guardadas = cabecalhos_de(headers_config_in_database).select { |header| segredo?(header) }.map { |header| header.values_at('key', 'value') }
+    digitadas = Array(chaves_digitadas)
+    cabecalhos_de(headers_config).any? do |header|
+      segredo?(header) && guardadas.include?(header.values_at('key', 'value')) && digitadas.exclude?(header['key'])
+    end
+  end
+
+  def segredo_vazio?
+    cabecalhos_de(headers_config).any? { |header| segredo?(header) && header['value'].to_s.strip.empty? }
+  end
+
+  def cabecalhos_comuns(lista)
+    cabecalhos_de(lista).reject { |header| segredo?(header) }.map { |header| [header['key'].to_s.strip.downcase, header['value'].to_s] }.sort
+  end
+
+  def cabecalhos_de(lista)
+    Array(lista).map { |header| header.to_h.stringify_keys }
+  end
+
+  def segredo?(header)
+    ActiveModel::Type::Boolean.new.cast(header['secret'])
   end
 
   # A máscara voltou sem chave guardada com o mesmo nome (renomeou, ou desligou o segredo): seria gravada como a chave.
   def validate_chave_mascarada
-    mascarada = headers_config.any? { |header| header['value'] == self.class.masked_header_value }
+    mascarada = cabecalhos_de(headers_config).any? { |header| header['value'] == self.class.masked_header_value }
     errors.add(:headers_config, I18n.t('autonomia.agents.ferramenta.chave_de_novo')) if mascarada
   end
 
   # Decisão do Rodrigo (09/11): senha no link (usuário:senha@ ou ?token=) fica legível para quem tem a chave. O lugar dela
-  # é a Chave de acesso, que ninguém relê. Lido pelo parser de URI, com o que o agente preenche ({{ }}) tirado antes:
-  # `?token={{t}}` vem da conversa e vale.
+  # é a Chave de acesso, que ninguém relê. Conferida no cadastro e quando o link muda: a ferramenta antiga continua podendo
+  # ser desligada. O usuário sai do parser de URI; a busca é lida crua, com `;` também separando, e o nome sem `[]`
+  # (`token[]` é `token` para Rails e PHP). Vale o valor que só tem informação da conversa (`{{t}}`).
   def validate_senha_fora_do_link
     errors.add(:endpoint_url, I18n.t('autonomia.agents.ferramenta.senha_no_link')) if senha_no_link?
   end
 
   def senha_no_link?
-    uri = URI.parse(sem_modelo(endpoint_url.to_s))
-    uri.userinfo.present? || credencial_na_busca?(uri.query)
-  rescue URI::InvalidURIError, ArgumentError
-    false
+    URI.parse(sem_modelo(endpoint_url.to_s)).userinfo.present? || credencial_na_busca?
+  rescue URI::InvalidURIError
+    false # o endereço inválido já é recusado por `validate_endpoint_url`
+  rescue ArgumentError
+    true # busca que nem o parser lê não passa como sem senha
   end
 
-  def credencial_na_busca?(busca)
-    URI.decode_www_form(busca.to_s).any? do |nome, valor|
-      valor.present? && Autonomia::Agents::Tools::SegredosDaChamada::NOMES_DE_CREDENCIAL.any? { |credencial| credencial.casecmp?(nome) }
+  def credencial_na_busca?
+    busca = endpoint_url.to_s.split('#', 2).first.to_s.split('?', 2).second.to_s.tr(';', '&')
+    URI.decode_www_form(busca).any? do |nome, valor|
+      Autonomia::Agents::Tools::SegredosDaChamada.credencial?(nome) && valor_fixo(valor).strip.present?
     end
+  end
+
+  # O que sobra do valor sem as informações da conversa: `{{t}}` e `{{ t | url_encode }}` saem; `{{ "abc" }}` e
+  # `{{ t | append: "x" }}` levam texto fixo e ficam.
+  def valor_fixo(valor)
+    partes = valor.to_s.split('{{', -1)
+    partes.drop(1).reduce(partes.first.to_s) do |saida, pedaco|
+      dentro, depois = pedaco.split('}}', 2)
+      next "#{saida}{{#{pedaco}" if depois.nil?
+
+      "#{saida}#{so_informacao?(dentro) ? '' : dentro}#{depois}"
+    end
+  end
+
+  def so_informacao?(dentro)
+    nome, *filtros = dentro.split('|').map(&:strip)
+    nome.present? && !nome.start_with?('"', "'") && !('0'..'9').cover?(nome[0]) && filtros.all?('url_encode')
   end
 end
