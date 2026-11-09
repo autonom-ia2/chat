@@ -100,4 +100,26 @@ RSpec.describe CampaignJourney::AudienceUsage do
 
     expect(described_class.locked_ids([audience, other])).to eq(Set[audience.id])
   end
+
+  # Revisão do #2775, item 11: as campanhas de e-mail com destinatário enviado saem de uma consulta só, não uma por campanha.
+  it 'locked_ids lê os destinatários enviados numa consulta só, com várias campanhas de e-mail' do
+    audiences = Array.new(3) do |index|
+      account.campaign_imports.create!(user: admin, status: :completed, mode: 'single_label', name: "L#{index}", campaign_name: "L#{index}",
+                                       options: { 'flow' => CampaignImport::AUDIENCE_FLOW })
+    end
+    identity = create(:email_sender_identity, account: account)
+    audiences.each do |item|
+      campaign = create(:email_campaign, account: account, sender_identity: identity)
+      CampaignAudienceLink.create!(account: account, campaign: campaign, campaign_import: item)
+    end
+    sent = CampaignAudienceLink.find_by(campaign_import: audiences.last).campaign
+    create(:email_campaign_recipient, email_campaign: sent, sent_at: Time.current)
+
+    queries = []
+    callback = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?('email_campaign_recipients') }
+    ids = ActiveSupport::Notifications.subscribed(callback, 'sql.active_record') { described_class.locked_ids(audiences) }
+
+    expect(ids).to eq(Set[audiences.last.id])
+    expect(queries.size).to eq(1)
+  end
 end

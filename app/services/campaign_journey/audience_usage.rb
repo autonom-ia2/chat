@@ -24,30 +24,40 @@ module CampaignJourney::AudienceUsage
     locked_ids([campaign_import]).include?(campaign_import.id)
   end
 
-  # Os ids dos Públicos travados entre os dados, numa consulta só pelos vínculos (a lista "Suas listas").
+  # Os ids dos Públicos travados entre os dados (a lista "Suas listas"): uma consulta pelos vínculos e uma só pelas
+  # campanhas de e-mail que já têm destinatário enviado, sem N+1.
   def locked_ids(campaign_imports)
     ids = campaign_imports.map(&:id)
     return Set.new if ids.empty?
 
-    CampaignAudienceLink.where(campaign_import_id: ids).includes(:campaign)
-                        .select { |link| campaign_locked?(link.campaign) }
-                        .to_set(&:campaign_import_id)
+    links = CampaignAudienceLink.where(campaign_import_id: ids).includes(:campaign).to_a
+    sent_email_ids = email_ids_with_sent_recipient(links.filter_map(&:campaign).grep(EmailCampaign).map(&:id))
+    links.select { |link| campaign_locked?(link.campaign, sent_email_ids: sent_email_ids) }.to_set(&:campaign_import_id)
   end
 
-  def campaign_locked?(campaign)
+  # sent_email_ids: os ids das campanhas de e-mail com algum destinatário enviado, quando já lidos de uma vez; sem ele,
+  # a campanha de e-mail é lida sozinha.
+  def campaign_locked?(campaign, sent_email_ids: nil)
     case campaign
     when nil then false
-    when EmailCampaign then email_locked?(campaign)
+    when EmailCampaign then email_locked?(campaign, sent_email_ids)
     when WhatsappApiCampaign then !campaign.scheduled?
     when Campaign then CAMPAIGN_LOCKING_STATUSES.include?(campaign.campaign_status)
     else true
     end
   end
 
-  def email_locked?(campaign)
-    return false if open_email_campaign?(campaign)
+  def email_ids_with_sent_recipient(campaign_ids)
+    return Set.new if campaign_ids.empty?
 
-    EMAIL_LOCKING_STATUSES.include?(campaign.status) || campaign.email_campaign_recipients.where.not(sent_at: nil).exists?
+    EmailCampaignRecipient.where(email_campaign_id: campaign_ids).where.not(sent_at: nil).distinct.pluck(:email_campaign_id).to_set
+  end
+
+  def email_locked?(campaign, sent_email_ids = nil)
+    return false if open_email_campaign?(campaign)
+    return true if EMAIL_LOCKING_STATUSES.include?(campaign.status)
+
+    (sent_email_ids || email_ids_with_sent_recipient([campaign.id])).include?(campaign.id)
   end
 
   # #2717: a campanha de e-mail "aberta" segue recebendo quem entra no Público, então mudar o Público não muda o que já

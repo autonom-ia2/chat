@@ -19,14 +19,14 @@ RSpec.describe CampaignJourney::AudienceMembership do
   end
 
   describe '.add' do
-    it 'acrescenta no fim, com row_number = maior + 1, e acerta contadores e canais' do
+    it 'acrescenta no fim, com row_number = maior + 1, e acerta contadores e a contagem dos canais' do
       result = described_class.add(audience, [row(bia), row(caio)])
 
       expect(result.added_contact_ids).to eq([bia.id, caio.id])
       expect(lines.map { |line| [line.contact_id, line.row_number, line.status] })
         .to eq([[ana.id, 1, 'imported'], [bia.id, 2, 'imported'], [caio.id, 3, 'imported']])
       expect(audience.reload).to have_attributes(total_rows: 3, valid_rows: 3, imported_contacts_count: 3, existing_contacts_count: 3)
-      expect(audience.channels).to include('whatsapp' => { 'enabled' => true, 'count' => 2 }, 'email' => { 'enabled' => true, 'count' => 2 })
+      expect(audience.channels).to include('whatsapp' => { 'enabled' => true, 'count' => 2 }, 'email' => { 'enabled' => false, 'count' => 2 })
     end
 
     it 'quem já está não entra de novo nem ganha outra linha' do
@@ -38,12 +38,22 @@ RSpec.describe CampaignJourney::AudienceMembership do
       expect(audience.reload.valid_rows).to eq(2)
     end
 
-    it 'liga o canal que estava em zero e ganhou gente (o e-mail do Público só de telefone)' do
+    # Revisão do #2775, item 9: o Público não guarda se o canal foi desligado à mão, então pôr gente nunca liga canal.
+    it 'não liga o canal que estava em zero e ganhou gente (o e-mail do Público só de telefone)' do
       expect(audience.channels.dig('email', 'enabled')).to be(false)
 
       described_class.add(audience, [row(bia)])
 
-      expect(audience.reload.channels['email']).to eq('enabled' => true, 'count' => 1)
+      expect(audience.reload.channels['email']).to eq('enabled' => false, 'count' => 1)
+    end
+
+    it 'não religa o canal que a pessoa desligou à mão, nem depois de zerar e voltar a ter gente' do
+      audience.update!(channels: audience.channels.merge('whatsapp' => { 'enabled' => false, 'count' => 1 }))
+      described_class.remove(audience, [ana.id])
+
+      described_class.add(audience.reload, [row(ana), row(caio)])
+
+      expect(audience.reload.channels['whatsapp']).to eq('enabled' => false, 'count' => 2)
     end
 
     it 'recusa contato de outra conta' do
@@ -72,7 +82,21 @@ RSpec.describe CampaignJourney::AudienceMembership do
       expect(audience.channels.dig('whatsapp', 'count')).to eq(0)
       expect(CampaignJourney::AudienceContacts.whatsapp_contact_ids(audience, account: account)).to eq([])
       expect(CampaignJourney::AudienceContacts.email_matches(audience, account: account).map(&:contact_id)).to eq([bia.id])
-      expect(CampaignImports::AudienceReachability::ROW_STATUSES).not_to include(:removed)
+    end
+
+    # Leitura de verdade, não constante: os números da lista, o recount dos canais e quem recebe deixam a linha removed de fora.
+    it 'a linha removed fica fora dos números da lista, do recount e de quem recebe' do
+      described_class.add(audience, [row(bia), row(caio)])
+      described_class.remove(audience.reload, [caio.id])
+
+      numbers = Autonomia::Prospecting::AudienceLists.new(account).numbers([audience.reload])[audience.id]
+      expect(numbers).to include(companies: 2, whatsapp: 1, email: 1)
+      expect(CampaignJourney::AudienceContacts.recounted_channels(audience)).to include(
+        'whatsapp' => include('count' => 1), 'email' => include('count' => 1)
+      )
+      expect(CampaignJourney::AudienceContacts.whatsapp_contact_ids(audience, account: account)).to eq([ana.id])
+      expect(CampaignJourney::AudienceContacts.email_matches(audience, account: account).map(&:contact_id)).to eq([bia.id])
+      expect(lines.find_by(contact_id: caio.id).status).to eq('removed')
     end
 
     it 'tirar quem não está não muda nada' do

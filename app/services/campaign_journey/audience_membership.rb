@@ -17,8 +17,10 @@
 #   diferença de linhas imported, e recontam os canais pelos contatos (AudienceWriter.recount_channels);
 # - gravam linha a linha (create!/update!), nunca em lote: quem observa as linhas (callback do #2717) vê cada mudança.
 #
-# Canal: um canal que estava em zero e passa a ter gente é ligado, a mesma regra de quando o Público nasce (o writer
-# liga o canal que tem dados). Um canal com gente nunca é ligado nem desligado aqui, só recontado.
+# Canal: aqui só se reconta. O canal nunca é ligado (nem fora do zero): o CampaignImport não registra se a pessoa
+# desligou o canal à mão (channels guarda só enabled e count), então ligar poderia desfazer a escolha dela. Quem passa a
+# ter gente num canal desligado o liga em Campanhas > Públicos. Um canal que fica sem ninguém desliga sozinho, como em
+# todo recount (CampaignJourney::AudienceContacts.recounted_channels).
 module CampaignJourney::AudienceMembership
   Error = Class.new(StandardError)
   LOCKED = 'audience_locked'.freeze
@@ -40,7 +42,7 @@ module CampaignJourney::AudienceMembership
       lock!(audience)
       added, skipped, existing_delta = place_rows(audience, rows)
       update_counters!(audience, added.size, existing_delta)
-      recount!(audience, enable_from_zero: true)
+      CampaignJourney::AudienceWriter.recount_channels(audience)
       AddResult.new(audience: audience, added_contact_ids: added, skipped_contact_ids: skipped)
     end
   end
@@ -53,7 +55,7 @@ module CampaignJourney::AudienceMembership
       rows = audience.campaign_import_rows.status_imported.where(contact_id: Array(contact_ids)).to_a
       rows.each { |row| row.update!(status: :removed) }
       update_counters!(audience, -rows.size, -rows.count(&:was_existing_contact))
-      recount!(audience, enable_from_zero: false)
+      CampaignJourney::AudienceWriter.recount_channels(audience)
       RemoveResult.new(audience: audience, removed_contact_ids: rows.map(&:contact_id).uniq)
     end
   end
@@ -111,21 +113,5 @@ module CampaignJourney::AudienceMembership
       imported_contacts_count: audience.imported_contacts_count.to_i + delta,
       existing_contacts_count: audience.existing_contacts_count.to_i + existing_delta
     )
-  end
-
-  def recount!(audience, enable_from_zero:)
-    before = CampaignJourney::AudienceContacts.with_sms_channel(audience.channels.to_h)
-    channels = CampaignJourney::AudienceContacts.recounted_channels(audience)
-    channels = enable_new_channels(audience, before, channels) if enable_from_zero
-    audience.update!(channels: channels)
-  end
-
-  # O canal que estava em zero e ganhou gente liga, como no Público novo (o SMS só com caixa de SMS na conta).
-  def enable_new_channels(audience, before, channels)
-    channels.to_h do |name, channel|
-      grew = before.dig(name, 'count').to_i.zero? && channel['count'].to_i.positive?
-      grew &&= CampaignJourney::AudienceContacts.sms_inbox_connected?(audience.account) if name == 'sms'
-      [name, grew ? channel.merge('enabled' => true) : channel]
-    end
   end
 end
