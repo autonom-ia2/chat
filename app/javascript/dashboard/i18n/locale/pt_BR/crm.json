@@ -2569,7 +2569,16 @@
               "FIX": "Entrar de novo",
               "MISSING_INSTAGRAM_TAP": "Falta um toque",
               "INSTAGRAM_TEXT": "O Direct e os comentários do Instagram chegam aqui depois de ligar o Instagram, com um toque.",
-              "INSTAGRAM_CTA": "Ligar o Instagram"
+              "INSTAGRAM_CTA": "Ligar o Instagram",
+              "INSTAGRAM_TEXT_PAGINA": "Ligue o {'@'}{username} com este mesmo login do Facebook. O Direct e os comentários chegam aqui.",
+              "INSTAGRAM_CTA_PAGINA": "Ligar o Instagram",
+              "INSTAGRAM_ERROR": {
+                "MISSING_PERMISSIONS": "O Instagram ficou desmarcado na janela do Facebook. Entre de novo e deixe o Instagram marcado.",
+                "RECONNECT": "O seu acesso ao Facebook venceu. Entre de novo.",
+                "FORBIDDEN": "Você não pode ligar caixas. Peça a um administrador.",
+                "LIMIT": "O seu plano chegou ao limite de caixas.",
+                "FAILED": "Não deu para ligar o Instagram agora. Tente de novo em alguns minutos."
+              }
             }
           },
           "GUIDE": {

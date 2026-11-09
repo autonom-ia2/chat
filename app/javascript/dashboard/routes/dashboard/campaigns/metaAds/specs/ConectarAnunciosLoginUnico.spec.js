@@ -13,6 +13,8 @@ const facebook = vi.hoisted(() => ({
   preload: vi.fn(() => Promise.resolve()),
 }));
 const router = vi.hoisted(() => ({ push: vi.fn() }));
+// #2406: as flags ligadas na conta; instagram_login_unico entra só nos testes do Instagram pela Página.
+const flags = vi.hoisted(() => new Set(['anuncios_login_unico']));
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: {
@@ -23,12 +25,13 @@ vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
     sitePages: vi.fn(),
     loginPages: vi.fn(),
     linkPage: vi.fn(),
+    linkInstagram: vi.fn(),
   },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
-    isCloudFeatureEnabled: flag => flag === 'anuncios_login_unico',
+    isCloudFeatureEnabled: flag => flags.has(flag),
   }),
 }));
 vi.mock('vue-router', () => ({
@@ -135,6 +138,8 @@ describe('Anúncios · login único (#2338)', () => {
   });
   beforeEach(() => {
     vi.clearAllMocks();
+    flags.clear();
+    flags.add('anuncios_login_unico');
     facebook.connect.mockResolvedValue({ ok: true });
     CrmMetaAdsConnectionAPI.adAccounts.mockResolvedValue({
       data: { ad_accounts: [ACCOUNT] },
@@ -294,6 +299,62 @@ describe('Anúncios · login único (#2338)', () => {
       expect.stringContaining('accounts/7/settings/inboxes/new/instagram')
     );
   });
+
+  const toDone = async () => {
+    pagesReply([LOJA]);
+    const wrapper = await mountConnect();
+    await toPageStep(wrapper);
+    await wrapper.find('[data-conectar-pagina-sim]').trigger('click');
+    await flushPromises();
+    await saveDestination(wrapper);
+    return wrapper;
+  };
+
+  // #2406: com a flag do Instagram, o toque liga o Instagram da Página aqui mesmo, com o mesmo login.
+  it('with Instagram by the Page: the tap links Instagram here, without the Instagram login', async () => {
+    flags.add('instagram_login_unico');
+    CrmMetaAdsConnectionAPI.linkInstagram.mockResolvedValue({
+      data: { inbox_id: 11, name: 'lojaexemplo' },
+    });
+    const wrapper = await toDone();
+
+    expect(wrapper.find('[data-conectar-ligar-instagram]').text()).toContain(
+      'Ligue o @lojaexemplo com este mesmo login do Facebook'
+    );
+    await wrapper.find('[data-conectar-instagram-ligar]').trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.linkInstagram).toHaveBeenCalledWith('104');
+    expect(router.push).not.toHaveBeenCalled();
+    expect(
+      wrapper
+        .find('[data-recurso="MESSAGES_INSTAGRAM"]')
+        .attributes('data-falta')
+    ).toBeUndefined();
+    expect(wrapper.find('[data-conectar-ligar-instagram]').exists()).toBe(
+      false
+    );
+  });
+
+  it('with Instagram by the Page: a login without Instagram says to sign in again and keep it checked', async () => {
+    flags.add('instagram_login_unico');
+    CrmMetaAdsConnectionAPI.linkInstagram.mockRejectedValue({
+      response: { status: 422, data: { error: 'missing_permissions' } },
+    });
+    const wrapper = await toDone();
+
+    await wrapper.find('[data-conectar-instagram-ligar]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-conectar-instagram-erro]').text()).toBe(
+      'O Instagram ficou desmarcado na janela do Facebook. Entre de novo e deixe o Instagram marcado.'
+    );
+    expect(
+      wrapper
+        .find('[data-recurso="MESSAGES_INSTAGRAM"]')
+        .attributes('data-falta')
+    ).toBe('INSTAGRAM_TAP');
+  });
 });
 
 describe('recursosDoLogin', () => {
@@ -325,6 +386,26 @@ describe('recursosDoLogin', () => {
       { chave: 'POSTS', falta: 'PERMISSION' },
       { chave: 'COMMENTS_INSTAGRAM', falta: 'INSTAGRAM_TAP' },
       { chave: 'MESSAGES_INSTAGRAM', falta: 'INSTAGRAM_TAP' },
+    ]);
+  });
+
+  it('Instagram by the Page: already linked counts like the Page features', () => {
+    const page = { id: '1', instagram: { username: 'loja', linked: true } };
+    const instagram = recursosDoLogin({
+      page,
+      declined: ['instagram_manage_comments'],
+      pelaPagina: true,
+    }).filter(item => item.chave.endsWith('INSTAGRAM'));
+    expect(instagram).toEqual([
+      { chave: 'COMMENTS_INSTAGRAM', falta: 'PERMISSION' },
+      { chave: 'MESSAGES_INSTAGRAM', falta: null },
+    ]);
+    const semFlag = recursosDoLogin({ page }).filter(item =>
+      item.chave.endsWith('INSTAGRAM')
+    );
+    expect(semFlag.map(item => item.falta)).toEqual([
+      'INSTAGRAM_TAP',
+      'INSTAGRAM_TAP',
     ]);
   });
 

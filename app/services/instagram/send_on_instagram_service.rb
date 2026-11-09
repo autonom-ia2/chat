@@ -5,9 +5,8 @@ class Instagram::SendOnInstagramService < Instagram::BaseSendService
   def send_sender_action(recipient_id, action, timeout: nil)
     return if recipient_id.blank? || channel.blank?
 
-    instagram_id = channel.instagram_id.presence || 'me'
     HTTParty.post(
-      "https://graph.instagram.com/v22.0/#{instagram_id}/messages",
+      "#{channel.graph_base_uri}/#{channel.messages_node}/messages",
       body: { recipient: { id: recipient_id }, sender_action: action },
       query: { access_token: channel.access_token },
       **{ timeout: timeout }.compact
@@ -28,10 +27,10 @@ class Instagram::SendOnInstagramService < Instagram::BaseSendService
   def send_message(message_content)
     access_token = channel.access_token
     query = { access_token: access_token }
-    instagram_id = channel.instagram_id.presence || 'me'
 
+    # O host e o nó vêm do login da caixa (#2406): no login do Facebook, a Página.
     response = HTTParty.post(
-      "https://graph.instagram.com/#{GlobalConfigService.load('INSTAGRAM_API_VERSION', 'v22.0')}/#{instagram_id}/messages",
+      "#{channel.graph_base_uri}/#{channel.messages_node}/messages",
       body: message_content,
       query: query
     )

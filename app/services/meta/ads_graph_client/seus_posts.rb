@@ -31,11 +31,11 @@ module Meta::AdsGraphClient::SeusPosts
   end
 
   def seus_posts_instagram(window)
-    organic_posts('me/media', window.merge(fields: SEUS_POSTS_INSTAGRAM_FIELDS))
+    organic_posts("#{@instagram_node}/media", window.merge(fields: SEUS_POSTS_INSTAGRAM_FIELDS))
   end
 
   def seus_posts_instagram_comments(window)
-    organic_posts('me/media', window.merge(fields: SEUS_POSTS_INSTAGRAM_COMMENTS_FIELDS), limit: POSTS_COM_COMENTARIOS)
+    organic_posts("#{@instagram_node}/media", window.merge(fields: SEUS_POSTS_INSTAGRAM_COMMENTS_FIELDS), limit: POSTS_COM_COMENTARIOS)
   end
 
   def seus_posts_page_comments(page_id, window)

@@ -33,6 +33,36 @@ RSpec.describe Channel::Instagram do
     end
   end
 
+  # #2406: a caixa do login único fala com graph.facebook.com, pela Página, com o token dela, que não se renova.
+  describe 'Facebook login' do
+    let(:facebook) { create(:channel_instagram, login: 'facebook', page_id: '104000000000001', instagram_id: '1784') }
+
+    it 'uses the Facebook host, the Instagram id for reads and the Page for messages' do
+      expect(facebook.graph_base_uri).to eq('https://graph.facebook.com/v22.0')
+      expect([facebook.graph_node, facebook.messages_node]).to eq(%w[1784 104000000000001])
+      expect([channel.graph_host, channel.graph_node]).to eq(['https://graph.instagram.com', 'me'])
+    end
+
+    it 'returns the stored token without refreshing it' do
+      facebook.update!(expires_at: 1.day.from_now, updated_at: 3.days.ago)
+
+      expect(Instagram::RefreshOauthTokenService).not_to receive(:new)
+      expect(facebook.access_token).to eq(facebook[:access_token])
+    end
+
+    it 'needs the Page and a known login' do
+      expect(build(:channel_instagram, login: 'facebook', page_id: nil)).not_to be_valid
+      expect(build(:channel_instagram, login: 'tiktok')).not_to be_valid
+    end
+
+    it 'subscribes the Page in a job and keeps it on destroy' do
+      expect { facebook }.to have_enqueued_job(Instagram::PageSubscribeJob)
+
+      facebook.destroy!
+      expect(a_request(:delete, /subscribed_apps/)).not_to have_been_made
+    end
+  end
+
   it 'has a valid name' do
     expect(channel.name).to eq('Instagram')
   end

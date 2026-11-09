@@ -179,6 +179,15 @@ RSpec.describe Instagram::CallbacksController do
         expect(other.reload.access_token).to eq('other_token')
       end
 
+      # #2406: entrar pelo login do Instagram numa caixa trocada para o login do Facebook a devolve.
+      it 'brings a Facebook-login inbox back to the Instagram login' do
+        existing = create(:channel_instagram, account: account, instagram_id: '12345', login: 'facebook', page_id: '104000000000001')
+
+        get :show, params: valid_params
+
+        expect(existing.reload).to have_attributes(login: 'instagram', page_id: nil, access_token: 'long_lived_test_token')
+      end
+
       it 'updates existing channel with new token' do
         existing_channel = create(:channel_instagram, account: account, instagram_id: '12345', access_token: 'old_token')
         existing_channel.inbox.update!(name: 'Custom Inbox Name')

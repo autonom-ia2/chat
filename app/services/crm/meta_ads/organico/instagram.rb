@@ -120,6 +120,6 @@ class Crm::MetaAds::Organico::Instagram < Crm::MetaAds::Organico::Lugar
   end
 
   def api
-    @api ||= client(base_uri: Crm::MetaAds::Organico::INSTAGRAM_BASE_URI)
+    @api ||= client(base_uri: channel.graph_host, instagram_node: channel.graph_node)
   end
 end
