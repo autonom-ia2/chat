@@ -126,6 +126,34 @@ RSpec.describe Autonomia::Automacao::DecidirDeNovo, :automacao_motor do
     expect([execucao.estado, execucao.cursor]).to eq(%w[esperando decide])
   end
 
+  # A janela é pelo id da mensagem, não pela hora (revisão do #2800): a gravada depois da leitura, com `created_at` de
+  # antes do marco, não some.
+  it 'a mensagem gravada durante a ida à IA, com a hora de antes da leitura, decide de novo', :aggregate_failures do
+    atrasada = lambda do
+      create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming, content: 'E o IPTU?',
+                       created_at: 5.minutes.ago)
+      'ainda_conversando'
+    end
+    ia_escolhe(atrasada, 'ainda_conversando')
+
+    execucao = comecar_e_rodar
+
+    expect(corpos.size).to eq(2)
+    expect(ramos(execucao)).to eq(%w[ainda_conversando ainda_conversando])
+    expect(Autonomia::Automacao::Registro.where(execucao: execucao, passo: 'decide').order(:id).map { |item| item.dados['lido_ate'] })
+      .to eq(conversa.messages.incoming.reorder(:id).pluck(:id).first(2))
+  end
+
+  it 'na espera, a resposta com a hora de antes da leitura acorda e decide de novo', :aggregate_failures do
+    ia_escolhe('ainda_conversando', 'quer_visitar')
+    execucao = comecar_e_rodar
+
+    travel(10.minutes) { escreve(message_type: :incoming, sender: ana, content: 'Quero visitar', created_at: 1.hour.ago) }
+
+    expect(ramos(execucao.reload)).to eq(%w[ainda_conversando quer_visitar])
+    expect(execucao.estado).to eq('concluida')
+  end
+
   # Decisão do Rodrigo (09/11): 24 horas de silêncio encerram sem mandar nada. Os passos depois do "decidir" não rodam.
   it 'sem resposta em 24 horas, a execução acaba sem mandar nada e o passo depois do decidir não roda', :aggregate_failures do
     ia_escolhe('ainda_conversando')
@@ -197,7 +225,14 @@ RSpec.describe Autonomia::Automacao::DecidirDeNovo, :automacao_motor do
       expect(problemas(passo)).to be_empty
     end
 
-    it 'recusa a chave que o passo não tem, o caminho com passos e todos os caminhos marcados', :aggregate_failures do
+    it 'aceita todos os caminhos marcados com o "nenhum" livre: ele é a saída' do
+      todos = decide.merge('caminhos' => decide['caminhos'].map { |item| item.merge('passos' => []) })
+                    .deep_merge('de_novo' => { 'caminhos' => %w[quer_visitar so_curiosidade ainda_conversando] })
+
+      expect(problemas(todos)).to be_empty
+    end
+
+    it 'recusa a chave que o passo não tem, o caminho com passos e todas as saídas marcadas', :aggregate_failures do
       expect(problemas(decide.deep_merge('de_novo' => { 'caminhos' => %w[ainda_conversando sumiu] })))
         .to eq(['Step decide: "decide again" points to a path this step doesn\'t have (sumiu).'])
       expect(problemas(decide.deep_merge('de_novo' => { 'caminhos' => %w[quer_visitar] })))
@@ -205,8 +240,8 @@ RSpec.describe Autonomia::Automacao::DecidirDeNovo, :automacao_motor do
       expect(problemas(decide.merge('nenhum' => [prioridade_passo('n1')]).deep_merge('de_novo' => { 'caminhos' => %w[nenhum] })))
         .to eq(['Step decide: the path None applies decides again, so it can\'t have steps. Remove its steps or unmark it.'])
       todos = decide.merge('caminhos' => decide['caminhos'].map { |item| item.merge('passos' => []) })
-                    .deep_merge('de_novo' => { 'caminhos' => %w[quer_visitar so_curiosidade ainda_conversando] })
-      expect(problemas(todos)).to eq(['Step decide: leave at least one path that doesn\'t decide again, so the automation can move on.'])
+                    .deep_merge('de_novo' => { 'caminhos' => %w[quer_visitar so_curiosidade ainda_conversando nenhum] })
+      expect(problemas(todos)).to eq(['Step decide: leave at least one way out unmarked (a path or "None applies"), so the automation can move on.'])
     end
   end
 end

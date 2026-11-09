@@ -7,7 +7,7 @@
         "PRAZO": "Esperar a próxima resposta por até",
         "DESCONHECIDO": "Um caminho marcado não existe mais ({chave}). Desmarque.",
         "COM_PASSOS": "“{nome}” decide de novo, então não pode ter passos. Tire os passos dele na lista.",
-        "TODOS": "Deixe pelo menos um caminho sem marcar, para a automação seguir."
+        "TODOS": "Deixe sem marcar pelo menos uma saída (um caminho ou o \"Nenhum se aplica\"), para a automação seguir."
       },
       "LEITURAS": {
         "MENSAGENS_RECENTES": "As últimas mensagens do cliente",

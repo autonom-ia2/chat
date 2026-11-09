@@ -244,8 +244,8 @@ class Autonomia::Automacao::Ensaio
   end
 
   # A IA escolheria o caminho: o ensaio mostra todos, sem chamar modelo nenhum.
-  # G31: o caminho que decide de novo espera a próxima resposta; os passos dele são os que rodam se o prazo vencer
-  # (DecidirDeNovo.ramos_do_ensaio).
+  # G31: o caminho que decide de novo espera a próxima resposta e não roda passo nenhum; vencido o prazo, a execução
+  # acaba sem mandar nada (DecidirDeNovo.ramos_do_ensaio).
   def decidir(passo, valores)
     ramos = ::Autonomia::Automacao::DecidirDeNovo.ramos_do_ensaio(passo, @roteiro) { |primeiro| caminho(primeiro, valores) }
     no(passo, 'decidir', anexos(passo, ::Autonomia::Automacao::PassoDeDecidir), ramos: ramos)

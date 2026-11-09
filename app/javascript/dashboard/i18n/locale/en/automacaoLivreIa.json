@@ -7,7 +7,7 @@
         "PRAZO": "Wait for the next reply at most",
         "DESCONHECIDO": "A marked path no longer exists ({chave}). Unmark it.",
         "COM_PASSOS": "“{nome}” decides again, so it can't have steps. Remove its steps in the list.",
-        "TODOS": "Leave at least one path unmarked, so the automation can move on."
+        "TODOS": "Leave at least one way out unmarked (a path or \"None applies\"), so the automation can move on."
       },
       "LEITURAS": {
         "MENSAGENS_RECENTES": "The latest customer messages",

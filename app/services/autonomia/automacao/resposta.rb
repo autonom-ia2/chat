@@ -32,12 +32,32 @@ module Autonomia::Automacao::Resposta
   # e-mail da automação abre uma conversa nova, e a resposta chega nela. A resposta numa caixa que quem ligou não abre
   # não decide o ramo (parecer da Funções). Sem contato, ou sem quem ligou, nunca respondeu.
   def cliente?(contato, espera, quem)
-    return false if contato.nil? || quem.nil?
+    recebidas = do_cliente(contato, quem)
+    !recebidas.nil? && na_janela(recebidas, espera).exists?
+  end
+
+  # O "decidir" que decide de novo (G31): a resposta depois da mensagem `depois_de` (id) e até `ate` (sem fim na
+  # primeira conferência). Pelo id, não pela hora: a mensagem gravada depois da leitura tem id maior, mesmo com
+  # `created_at` de antes.
+  def cliente_depois?(contato, depois_de, ate, quem)
+    recebidas = do_cliente(contato, quem)
+    return false if recebidas.nil?
+
+    novas = recebidas.where('messages.id > ?', depois_de)
+    (ate ? novas.where('messages.created_at <= ?', ate) : novas).exists?
+  end
+
+  # O marco da leitura do G31: o id da última mensagem do cliente que existe agora (0 sem nenhuma).
+  def ultima_do_cliente_id(contato, quem) = do_cliente(contato, quem)&.maximum(:id).to_i
+
+  # As mensagens recebidas do contato nas conversas que quem ligou vê; nil sem contato ou sem quem ligou.
+  def do_cliente(contato, quem)
+    return if contato.nil? || quem.nil?
 
     conta = contato.account
     do_contato = ::Conversation.where(account_id: conta.id, contact_id: contato.id)
     conversas = ::Conversations::PermissionFilterService.new(do_contato, quem, conta, for_reading: true).perform.select(:id)
-    na_janela(::Message.incoming.where(account_id: conta.id, conversation_id: conversas), espera).exists?
+    ::Message.incoming.where(account_id: conta.id, conversation_id: conversas)
   end
 
   # Sem conversa (o card sem conversa principal, o contato antes da conversa nova), a equipe nunca respondeu.

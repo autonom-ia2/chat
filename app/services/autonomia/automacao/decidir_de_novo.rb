@@ -5,11 +5,13 @@
 # É uma opção do próprio "decidir", não um passo "voltar para": toda volta consome uma mensagem nova do cliente, então
 # o laço acaba por construção e nunca gira pago sem resposta. Cada volta é uma ida paga à IA.
 #
-# - A espera começa no instante da leitura (`@decidido_em`, gravado antes da ida à IA): a mensagem que chegou enquanto
-#   a IA pensava (rajada) faz decidir de novo na mesma rodada, sem esperar.
-# - Ao retomar, a janela é do instante da leitura até o prazo (`due_at`). A resposta conta pela régua da G11
-#   (Resposta.cliente?, só nas conversas que quem ligou vê). Acordada por outra coisa (a resposta da agente de IA, o
-#   contato mudando), volta a esperar sem chamar a IA.
+# - O marco da leitura é o id da última mensagem do cliente que já existia antes da ida à IA (`@lido_ate`, gravado
+#   no registro do caminho), não a hora: a mensagem gravada depois tem id maior, mesmo com `created_at` de antes. A que
+#   chegou enquanto a IA pensava (rajada) faz decidir de novo na mesma rodada, sem esperar. O prazo conta do instante
+#   da leitura (`@decidido_em`).
+# - Ao retomar, conta a resposta depois do marco e até o prazo (`due_at`), pela régua da G11 (só nas conversas que
+#   quem ligou vê). Acordada por outra coisa (a resposta da agente de IA, o contato mudando), volta a esperar sem
+#   chamar a IA.
 # - Vencido o prazo sem resposta, a execução acaba ('concluida') sem mandar nada, com o registro pulado 'prazo_vencido'
 #   (decisão do Rodrigo, 09/11): os passos depois do "decidir" não rodam. É uma regra só, não configurável por caminho.
 # - A nova tentativa de um erro passageiro da IA roda direto, sem pedir outra resposta.
@@ -24,15 +26,18 @@ module Autonomia::Automacao::DecidirDeNovo
   def self.repete?(passo, ramo) = espera?(passo) && Array(passo.dig('de_novo', 'caminhos')).include?(ramo)
 
   # O que o esquema não sabe dizer, conferido ao salvar: a chave é de um caminho do passo (ou "nenhum"), o caminho que
-  # decide de novo não tem passos (sem "voltar para", eles nunca voltariam ao decidir) e sobra um caminho para seguir.
+  # decide de novo não tem passos (sem "voltar para", eles nunca voltariam ao decidir) e sobra uma saída para seguir:
+  # um caminho ou o "nenhum", que é saída como os outros.
   def self.problemas_ao_salvar(passo)
     return [] unless espera?(passo)
 
     caminhos = Array(passo['caminhos'])
     marcados = Array(passo.dig('de_novo', 'caminhos'))
     [*desconhecidos(passo['id'], caminhos, marcados), *com_passos(passo, caminhos, marcados),
-     *(caminhos.all? { |caminho| marcados.include?(caminho['chave']) } ? [texto(:de_novo_todos, passo: passo['id'])] : [])]
+     *(todas_marcadas?(caminhos, marcados) ? [texto(:de_novo_todos, passo: passo['id'])] : [])]
   end
+
+  def self.todas_marcadas?(caminhos, marcados) = [*caminhos.pluck('chave'), NENHUM].all? { |chave| marcados.include?(chave) }
 
   def self.desconhecidos(id, caminhos, marcados)
     (marcados - caminhos.pluck('chave') - [NENHUM]).map { |chave| texto(:de_novo_caminho_desconhecido, passo: id, chave: chave) }
@@ -56,14 +61,28 @@ module Autonomia::Automacao::DecidirDeNovo
   end
 
   def self.texto(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", **valores)
-  private_class_method :desconhecidos, :com_passos, :texto
+  private_class_method :todas_marcadas?, :desconhecidos, :com_passos, :texto
 
   private
+
+  # Antes da ida à IA: o instante (o prazo conta dele) e o id da última mensagem do cliente (a resposta nova é a de id
+  # maior). A mensagem gravada entre o marco e a leitura da IA também decide de novo: paga uma volta, nunca some.
+  def marcar_leitura(passo)
+    return unless ::Autonomia::Automacao::DecidirDeNovo.espera?(passo)
+
+    @decidido_em = Time.current
+    @lido_ate = ::Autonomia::Automacao::Resposta.ultima_do_cliente_id(contexto.contato, @definicao.ligada_por)
+  end
+
+  # Os dados do registro do caminho que decide de novo levam o marco: a espera confere a partir dele ao retomar.
+  def dados_do_caminho(passo, dados)
+    ::Autonomia::Automacao::DecidirDeNovo.repete?(passo, dados['ramo']) ? dados.merge('lido_ate' => @lido_ate) : dados
+  end
 
   # Depois de registrar o caminho (sem nota do motivo: "ainda conversando" deixaria uma por mensagem). A resposta que
   # chegou durante a ida à IA decide de novo já; senão, espera até o prazo, contado do instante da leitura.
   def esperar_resposta(passo)
-    return passo if cliente_respondeu?(@decidido_em..)
+    return passo if cliente_respondeu?(@lido_ate, nil)
 
     aguardar(passo, @decidido_em + prazo_de_novo(passo), registrar: false)
   end
@@ -77,9 +96,18 @@ module Autonomia::Automacao::DecidirDeNovo
     encerrar(passo['id'], 'concluida', 'prazo_vencido')
   end
 
-  def respondeu_na_espera?(passo) = cliente_respondeu?(::Autonomia::Automacao::Duracao.janela(passo.dig('de_novo', 'prazo'), @execucao.due_at))
+  def respondeu_na_espera?(passo) = cliente_respondeu?(lido_ate_gravado(passo), @execucao.due_at)
 
-  def cliente_respondeu?(janela) = ::Autonomia::Automacao::Resposta.cliente?(contexto.contato, janela, @definicao.ligada_por)
+  # O marco do último caminho registrado no passo (o que pôs a execução a esperar). Sem ele, quebra visível.
+  def lido_ate_gravado(passo)
+    ::Autonomia::Automacao::Registro.where(execucao: @execucao, passo: passo['id']).order(:id).last.dados.fetch('lido_ate')
+  end
+
+  # `ligada_por` não chega nil aqui: sem quem ligou, a rodada pausa antes com `sem_quem_ligou` (Executor#rodar e
+  # IaNoExecutor#passo_de_ia, pelo impedida? → Acesso#motivo).
+  def cliente_respondeu?(depois_de, ate)
+    ::Autonomia::Automacao::Resposta.cliente_depois?(contexto.contato, depois_de, ate, @definicao.ligada_por)
+  end
 
   def prazo_de_novo(passo) = ::Autonomia::Automacao::Duracao.de(passo.dig('de_novo', 'prazo'))
 end

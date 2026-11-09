@@ -26,7 +26,7 @@ module Autonomia::Automacao::IaNoExecutor
     end
 
     executor = classe.new(execucao: @execucao, passo: passo, alvo: alvo, acesso: @acesso)
-    @decidido_em = Time.current
+    marcar_leitura(passo)
     depois_da_ia(passo, executor, executor.executar)
   end
 
@@ -47,7 +47,7 @@ module Autonomia::Automacao::IaNoExecutor
   # conversando" deixaria uma por mensagem, como o "nenhum" (#2578).
   def seguir_pelo_caminho(passo, executor, resultado)
     @tentativas = 0
-    registro = registrar(passo['id'], resultado.tipo == :pulado ? 'pulado' : 'ok', resultado.motivo, resultado.dados)
+    registro = registrar(passo['id'], resultado.tipo == :pulado ? 'pulado' : 'ok', resultado.motivo, dados_do_caminho(passo, resultado.dados))
     return esperar_resposta(passo) if ::Autonomia::Automacao::DecidirDeNovo.repete?(passo, resultado.dados['ramo'])
 
     nota = anotar(executor, resultado.dados['ramo'])
