@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import WootSnackbar from './Snackbar.vue';
 import { emitter } from 'shared/helpers/mitt';
 import { useI18n } from 'vue-i18n';
+import { useTelaDeConversa } from 'dashboard/components-next/sidebar/useTelaDeConversa';
 
 const props = defineProps({
   duration: {
@@ -12,6 +13,9 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+// #2206 — no celular (abaixo de sm), o aviso fica embaixo, acima do botão flutuante do menu. Na conversa aberta
+// o botão não existe e embaixo está a caixa de resposta: lá o aviso continua no topo.
+const telaDeConversa = useTelaDeConversa();
 
 const snackMessages = ref([]);
 const snackbarContainer = ref(null);
@@ -58,7 +62,10 @@ onUnmounted(() => {
   <div
     ref="snackbarContainer"
     popover="manual"
-    class="fixed top-auto bottom-20 sm:top-4 sm:bottom-auto left-1/2 -translate-x-1/2 max-w-[25rem] w-[calc(100%-2rem)] text-center bg-transparent border-0 p-0 m-0 outline-none overflow-visible"
+    :class="
+      telaDeConversa ? 'top-4' : 'top-auto bottom-20 sm:top-4 sm:bottom-auto'
+    "
+    class="fixed left-1/2 -translate-x-1/2 max-w-[25rem] w-[calc(100%-2rem)] text-center bg-transparent border-0 p-0 m-0 outline-none overflow-visible"
   >
     <transition-group name="toast-fade" tag="div">
       <WootSnackbar

@@ -1,11 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { useRoute } from 'vue-router';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ButtonGroup from 'dashboard/components-next/buttonGroup/ButtonGroup.vue';
-import { pedidoDeConversaVazia } from 'dashboard/components-next/Conversation/ListaDeConversas/busca/caixasDaConversaVazia';
-import { useListaNova } from 'dashboard/components-next/Conversation/ListaDeConversas/useListaNova';
 import { useEscondeAoRolar } from './useEscondeAoRolar';
+import { useTelaDeConversa } from './useTelaDeConversa';
 
 const props = defineProps({
   isMobileSidebarOpen: {
@@ -16,27 +14,7 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle']);
 
-const route = useRoute();
-const listaNova = useListaNova();
-
-const isConversationRoute = computed(() => {
-  const CONVERSATION_ROUTES = [
-    'inbox_conversation',
-    'conversation_through_inbox',
-    'conversations_through_label',
-    'team_conversations_through_label',
-    'conversations_through_folders',
-    'conversation_through_mentions',
-    'conversation_through_unattended',
-    'conversation_through_participating',
-    'inbox_view_conversation',
-  ];
-  // #2211: com a lista nova, a conversa vazia ("Escrever" na busca da lista) também é tela de conversa.
-  return (
-    CONVERSATION_ROUTES.includes(route.name) ||
-    (listaNova.value && Boolean(pedidoDeConversaVazia(route.query)))
-  );
-});
+const isConversationRoute = useTelaDeConversa();
 
 // #2207 — some enquanto a página rola; com o menu aberto, fica. Só existe abaixo de md (md:hidden).
 const launcher = ref(null);
