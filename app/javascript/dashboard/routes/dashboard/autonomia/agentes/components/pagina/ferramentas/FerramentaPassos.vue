@@ -187,7 +187,7 @@ const garantia = computed(() =>
   novo.value ? t(`${NS}.PASSOS.NADA_SALVO`) : t(`${NS}.PASSOS.CONTINUA_VALENDO`)
 );
 const passosDoErro = computed(() =>
-  passosProvaveisDoErro(erroAoSalvar.value?.mensagem)
+  passosProvaveisDoErro(erroAoSalvar.value?.campos)
 );
 </script>
 
@@ -293,19 +293,18 @@ const passosDoErro = computed(() =>
       :exemplo-aplicado="exemploAplicado"
       @exemplo="aplicarExemplo"
     />
-    <PassoParaOnde
+    <PassoPreenche
       v-else-if="passo === 2"
       v-model:rascunho="rascunho"
       :base="base"
       :erros="erros"
-      :novo="novo"
+      @anunciar="emit('anunciar', $event)"
     />
-    <PassoPreenche
+    <PassoParaOnde
       v-else-if="passo === 3"
       v-model:rascunho="rascunho"
       :base="base"
       :erros="erros"
-      @anunciar="emit('anunciar', $event)"
     />
     <PassoComoEntra
       v-else

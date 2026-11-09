@@ -5,7 +5,9 @@
 // no PATCH, o ToolsController troca esse valor pelo guardado quando a chave é a mesma.
 export const MASCARA_DO_SEGREDO = '••••••••';
 export const TIPOS = ['string', 'number', 'integer', 'boolean'];
-export const PASSOS = ['O_QUE_FAZ', 'PARA_ONDE', 'PREENCHE', 'COMO_ENTRA'];
+// #1430: a pessoa diz primeiro o que o agente descobre na conversa e depois cola o link, tocando na
+// informação para encaixá-la (sem digitar {{ }}).
+export const PASSOS = ['O_QUE_FAZ', 'PREENCHE', 'PARA_ONDE', 'COMO_ENTRA'];
 
 // O HttpExecutor já põe Accept e Content-Type: a tela não os mostra, mas os guarda como vieram.
 const AUTOMATICOS = ['content-type', 'accept'];
@@ -14,7 +16,7 @@ const PERMITIDOS = `${LETRAS}0123456789_`;
 // O exemplo vem do i18n, para o pacote da conta trocar (#1802). As chaves e o filtro ficam no código:
 // "{" e "|" têm significado no vue-i18n.
 const NS_EXEMPLO = 'AGENTS.JORNADA.PAGINA.FERRAMENTAS';
-const VARIAVEL_DO_EXEMPLO = '?termo={{ termo | url_encode }}';
+const VARIAVEL_DO_EXEMPLO = '?termo={{termo}}';
 export const enderecoDeExemplo = t =>
   `${t(`${NS_EXEMPLO}.RASCUNHO_EXEMPLO.ENDERECO`)}${VARIAVEL_DO_EXEMPLO}`;
 
@@ -89,6 +91,7 @@ export const hostDoEndereco = endereco => {
   }
 };
 
+// Informação nova: o rótulo vazio é o que falta. Salva: o nome técnico (de antes do rótulo) vale.
 export const conferirNomeDaInformacao = (nome, lista, indice) => {
   const texto = String(nome ?? '').trim();
   if (!texto) return 'VAZIO';
@@ -134,9 +137,13 @@ export const nomeTecnico = nome => {
   return comLetra.slice(0, MAX_SLUG);
 };
 
+// rotulo: o nome de gente ("CEP"), que a tela mostra. nome: o técnico, que vai no link; numa
+// informação nova sai do rótulo, numa salva fica fixo (mudar quebraria o link já montado).
 export const novaInformacao = () => ({
   id: novoId(),
+  rotulo: '',
   nome: '',
+  fixo: false,
   tipo: 'string',
   descricao: '',
   podeFaltar: false,
@@ -175,7 +182,9 @@ export const rascunhoDeExemplo = t => ({
   informacoes: [
     {
       id: novoId(),
+      rotulo: t(`${NS_EXEMPLO}.RASCUNHO_EXEMPLO.INFORMACAO`),
       nome: 'termo',
+      fixo: true,
       tipo: 'string',
       descricao: t(`${NS_EXEMPLO}.PASSOS.TRES.DESCRICAO_EXEMPLO`),
       podeFaltar: false,
@@ -183,6 +192,127 @@ export const rascunhoDeExemplo = t => ({
   ],
   cabecalhos: [{ ...novoCabecalho(), chave: 'x-api-key' }],
 });
+
+export const mudarRotulo = (informacao, rotulo) => ({
+  ...informacao,
+  rotulo,
+  nome:
+    informacao.fixo || !preenchido(rotulo)
+      ? (informacao.fixo && informacao.nome) || ''
+      : nomeTecnico(rotulo),
+});
+
+// O nome de gente de uma informação pelo nome técnico; sem informação com esse nome, o próprio nome.
+const rotuloDe = (nome, informacoes) => {
+  const achada = (informacoes || []).find(i => i.nome === nome);
+  return (achada && preenchido(achada.rotulo) && achada.rotulo) || nome;
+};
+
+// O link como a pessoa lê: cada {{ informação }} vira [Rótulo].
+export const enderecoLegivel = (endereco, informacoes) => {
+  const partes = String(endereco ?? '').split('{{');
+  return partes.slice(1).reduce((saida, pedaco) => {
+    const fim = pedaco.indexOf('}}');
+    if (fim < 0) return `${saida}{{${pedaco}`;
+    const nome = pedaco.slice(0, fim).split('|')[0].trim();
+    return `${saida}[${rotuloDe(nome, informacoes)}]${pedaco.slice(fim + 2)}`;
+  }, partes[0]);
+};
+
+// O que vale entre colchetes no campo do link: o rótulo de cada informação e, para variável do link sem
+// informação no passo 2, o próprio nome. O nome técnico de uma informação não vale: filter[status] é do link.
+const marcasDoLink = (informacoes, endereco) => {
+  const marcas = new Map(
+    variaveisEm(endereco).map(nome => [
+      String(rotuloDe(nome, informacoes)).trim(),
+      nome,
+    ])
+  );
+  (informacoes || [])
+    .filter(i => preenchido(i.nome) && preenchido(i.rotulo))
+    .forEach(i => marcas.set(i.rotulo.trim(), i.nome));
+  return marcas;
+};
+
+// Troca cada [x] do texto: `trocar(x)` devolve o substituto, ou null para deixar como está.
+const trocarColchetes = (texto, trocar) => {
+  const partes = String(texto ?? '').split('[');
+  return partes.slice(1).reduce((saida, pedaco) => {
+    const fim = pedaco.indexOf(']');
+    const novo = fim < 0 ? null : trocar(pedaco.slice(0, fim));
+    return novo === null
+      ? `${saida}[${pedaco}`
+      : `${saida}${novo}${pedaco.slice(fim + 1)}`;
+  }, partes[0]);
+};
+
+// O campo do link nunca mostra {{ }} (pedido da coordenadora, 09/11): cada {{ informação }} aparece como [Rótulo].
+// Variável com filtro além de url_encode (o backend já codifica pela posição) fica crua, para não perder o filtro.
+// Colchete do próprio link igual a um rótulo vira %5B…%5D (o mesmo para o outro sistema), para a volta não confundir.
+export const enderecoNaTela = (endereco, informacoes) => {
+  const marcas = marcasDoLink(informacoes, endereco);
+  const literal = texto =>
+    trocarColchetes(texto, x => (marcas.has(x.trim()) ? `%5B${x}%5D` : null));
+  const partes = String(endereco ?? '').split('{{');
+  return partes.slice(1).reduce((saida, pedaco) => {
+    const fim = pedaco.indexOf('}}');
+    if (fim < 0) return `${saida}{{${literal(pedaco)}`;
+    const [nome, ...filtros] = pedaco
+      .slice(0, fim)
+      .split('|')
+      .map(p => p.trim());
+    const depois = literal(pedaco.slice(fim + 2));
+    if (!nome || !filtros.every(f => f === 'url_encode')) {
+      return `${saida}{{${pedaco.slice(0, fim + 2)}${depois}`;
+    }
+    return `${saida}[${rotuloDe(nome, informacoes)}]${depois}`;
+  }, literal(partes[0]));
+};
+
+// O caminho de volta: [Rótulo] de uma informação, ou [nome] de uma variável que o link já tinha, vira {{nome}}.
+// Colchete que não é informação ([1], filter[status]) fica como está.
+export const enderecoDaTela = (texto, informacoes, anterior) => {
+  const marcas = marcasDoLink(informacoes, anterior);
+  return trocarColchetes(texto, x => {
+    const nome = marcas.get(x.trim());
+    return nome ? `{{${nome}}}` : null;
+  });
+};
+
+// Encaixa o trecho onde o cursor está (no lugar do que estiver selecionado); sem posição, no fim.
+// Devolve o texto e onde o cursor fica.
+export const inserirNoCursor = (texto, posicao, trecho, fimDaSelecao) => {
+  const atual = String(texto ?? '');
+  const onde =
+    Number.isInteger(posicao) && posicao >= 0 && posicao <= atual.length
+      ? posicao
+      : atual.length;
+  const ate =
+    Number.isInteger(fimDaSelecao) &&
+    fimDaSelecao >= onde &&
+    fimDaSelecao <= atual.length
+      ? fimDaSelecao
+      : onde;
+  return {
+    texto: `${atual.slice(0, onde)}${trecho}${atual.slice(ate)}`,
+    cursor: onde + trecho.length,
+  };
+};
+
+// "Mandar informação": o que vai junto já nasce com todas as informações. Número e sim/não sem
+// aspas; o que pode faltar vai entre aspas, para o vazio não quebrar o formato.
+const SEM_ASPAS = ['number', 'integer', 'boolean'];
+export const corpoPadrao = informacoes => {
+  const validas = (informacoes || []).filter(i => preenchido(i.nome));
+  if (!validas.length) return '';
+  const linhas = validas.map(i => {
+    const variavel = `{{${i.nome}}}`;
+    const valor =
+      SEM_ASPAS.includes(i.tipo) && !i.podeFaltar ? variavel : `"${variavel}"`;
+    return `  "${i.nome}": ${valor}`;
+  });
+  return `{\n${linhas.join(',\n')}\n}`;
+};
 
 const ehAutomatico = cabecalho =>
   AUTOMATICOS.includes(
@@ -202,7 +332,9 @@ export const paraRascunho = ferramenta => {
     endereco: ferramenta.endpoint_url || '',
     informacoes: (ferramenta.param_schema || []).map(p => ({
       id: novoId(),
+      rotulo: p.label || p.name || '',
       nome: p.name || '',
+      fixo: true,
       tipo: TIPOS.includes(p.type) ? p.type : 'string',
       descricao: p.description || '',
       podeFaltar: p.required === false,
@@ -272,6 +404,7 @@ export const paraApi = rascunho => ({
   request_body_template: rascunho.corpo,
   param_schema: rascunho.informacoes.map(i => ({
     name: i.nome.trim(),
+    label: String(i.rotulo ?? '').trim(),
     type: i.tipo,
     description: i.descricao,
     required: !i.podeFaltar,
@@ -295,12 +428,33 @@ const validarCabecalho = cabecalho => {
   return pedeValor ? 'VALOR' : '';
 };
 
+// Informação com rótulo apagado conta como sem nome (a de antes do #1430 não tem rótulo).
+const semRotulo = info => 'rotulo' in info && !preenchido(info.rotulo);
+
+// O rótulo vira [Rótulo] no campo do link: com colchete ele não volta, e repetido (sem olhar maiúscula)
+// faria um [CEP] valer por duas informações.
+const comparavel = rotulo =>
+  String(rotulo ?? '')
+    .trim()
+    .toLocaleLowerCase();
+const conferirRotulo = (info, lista, indice) => {
+  if (!preenchido(info.rotulo)) return '';
+  if (info.rotulo.includes('[') || info.rotulo.includes(']')) return 'COLCHETE';
+  const repetido = lista.some(
+    (item, j) =>
+      j !== indice &&
+      preenchido(item.rotulo) &&
+      comparavel(item.rotulo) === comparavel(info.rotulo)
+  );
+  return repetido ? 'REPETIDO' : '';
+};
+
 const VALIDACOES = {
   1: (rascunho, tentou) => {
     if (!preenchido(rascunho.nome)) return { erros: { nome: 'NOME' } };
     return { erros: {}, avisarQuando: !preenchido(rascunho.quando) && !tentou };
   },
-  2: rascunho => {
+  3: rascunho => {
     const erros = {};
     const endereco = conferirEndereco(rascunho.endereco);
     if (endereco) erros.endereco = endereco;
@@ -309,12 +463,16 @@ const VALIDACOES = {
     }
     return { erros };
   },
-  3: rascunho => ({
+  2: rascunho => ({
     erros: Object.fromEntries(
       rascunho.informacoes
         .map((info, i) => [
           `i${i}`,
-          conferirNomeDaInformacao(info.nome, rascunho.informacoes, i),
+          conferirNomeDaInformacao(
+            semRotulo(info) ? '' : info.nome,
+            rascunho.informacoes,
+            i
+          ) || conferirRotulo(info, rascunho.informacoes, i),
         ])
         .filter(([, erro]) => erro)
     ),
@@ -366,14 +524,23 @@ export const avisosDasInformacoes = rascunho => {
   };
 };
 
-// O 422 traz full_messages: o começo da frase diz o atributo e, com ele, o passo provável.
-export const passosProvaveisDoErro = mensagem => {
-  const texto = String(mensagem ?? '');
-  const comeca = prefixos => prefixos.some(p => texto.startsWith(p));
-  if (comeca(['Endpoint url', 'Slug', 'Http method'])) return [2];
-  if (comeca(['Param schema', 'Request body'])) return [3];
-  if (comeca(['Headers config'])) return [4];
-  return [2, 3];
+// O 422 do salvar traz os campos recusados (`campos`, nomes do model): cada um aponta o passo dele. Sem campos
+// conhecidos, os dois passos prováveis.
+const PASSO_DO_CAMPO = {
+  param_schema: 2,
+  endpoint_url: 3,
+  slug: 3,
+  http_method: 3,
+  request_body_template: 3,
+  response_mapping: 3,
+  headers_config: 4,
+};
+export const passosProvaveisDoErro = (campos = []) => {
+  const passos = (campos || [])
+    .map(campo => PASSO_DO_CAMPO[campo])
+    .filter(Boolean);
+  const unicos = passos.filter((n, i) => passos.indexOf(n) === i).sort();
+  return unicos.length ? unicos : [2, 3];
 };
 
 // Rascunho sem os ids dos cartões: serve para saber se algo mudou.

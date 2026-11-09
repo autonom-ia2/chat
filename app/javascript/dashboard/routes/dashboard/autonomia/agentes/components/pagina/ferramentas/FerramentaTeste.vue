@@ -7,11 +7,7 @@ import EscolhaRadio from '../../EscolhaRadio.vue';
 import FerramentaCampo from './FerramentaCampo.vue';
 import FerramentaEntrada from './FerramentaEntrada.vue';
 import FerramentaFaixa from './FerramentaFaixa.vue';
-import {
-  PASSOS,
-  hostDoEndereco,
-  paraRascunho,
-} from '../../../utils/ferramentas';
+import { PASSOS, paraRascunho } from '../../../utils/ferramentas';
 import {
   lerResposta,
   montarChamada,
@@ -26,7 +22,8 @@ import TesteResposta from './TesteResposta.vue';
 // com os valores digitados. A prévia mostra o que o backend monta (Liquid sem codificar). Deu
 // certo: "O que o agente recebe" e, se a ferramenta está desligada, "Ligar ferramenta" (PATCH
 // enabled:true). Falhou: o erro traduzido, com o texto original em "Detalhe", e o caminho para
-// corrigir. Status e tempo da chamada exigem backend e não aparecem.
+// corrigir. Status e tempo da chamada exigem backend e não aparecem. #1430: cada informação aparece
+// pelo nome de gente; o que vai ao outro sistema fica dobrado em "Ver detalhes".
 const props = defineProps({
   ferramenta: { type: Object, required: true },
   precisaTestar: { type: Boolean, default: false },
@@ -164,10 +161,6 @@ const textoDaFalha = computed(() => {
   ];
   return partes.filter(Boolean).join(' ');
 });
-const resumoDaChamada = computed(
-  () =>
-    `${chamada.value.metodo} ${hostDoEndereco(props.ferramenta.endpoint_url)}`
-);
 </script>
 
 <template>
@@ -189,15 +182,15 @@ const resumoDaChamada = computed(
         :key="informacao.nome"
       >
         <div v-if="informacao.tipo === 'boolean'" class="flex flex-col gap-1.5">
-          <p class="m-0 font-mono text-sm font-semibold text-n-slate-12">
-            {{ informacao.nome }}
+          <p class="m-0 text-sm font-semibold text-n-slate-12">
+            {{ informacao.rotulo }}
           </p>
           <p v-if="informacao.descricao" class="m-0 text-sm text-n-slate-11">
             {{ informacao.descricao }}
           </p>
           <EscolhaRadio
             :id="`${base}-valor-${indice}`"
-            :rotulo="informacao.nome"
+            :rotulo="informacao.rotulo"
             :opcoes="opcoesSimNao"
             :model-value="valores[informacao.nome] ?? null"
             :aria-describedby="
@@ -218,7 +211,7 @@ const resumoDaChamada = computed(
         <FerramentaCampo
           v-else
           :id="`${base}-valor-${indice}`"
-          :rotulo="informacao.nome"
+          :rotulo="informacao.rotulo"
           :opcional="informacao.podeFaltar"
           :erro="errosValores[informacao.nome] ? t(`${NS}.PREENCHA`) : ''"
           :ajuda="informacao.descricao"
@@ -242,40 +235,26 @@ const resumoDaChamada = computed(
     </p>
 
     <details
-      v-if="feito"
+      v-if="!resultado?.ok || resultado.resposta.vazia"
       data-chamada
       class="group rounded-xl ring-1 ring-inset ring-n-weak"
     >
       <summary
-        class="flex items-center gap-2 px-3 text-sm list-none cursor-pointer rounded-xl min-h-11 text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+        class="flex items-center gap-2 px-3 text-sm font-semibold list-none cursor-pointer rounded-xl min-h-11 text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
       >
         <span
           aria-hidden="true"
           class="transition i-lucide-chevron-right size-4 group-open:rotate-90 shrink-0"
         />
-        <span class="font-mono break-all grow">{{ resumoDaChamada }}</span>
-        <span class="font-semibold text-n-blue-11 shrink-0">
-          {{ t(`${NS}.VER_CHAMADA`) }}
-        </span>
+        {{ t(`${NS}.VER_DETALHES`) }}
       </summary>
-      <div class="px-3 pb-3">
+      <div class="flex flex-col gap-2 px-3 pb-3">
+        <p class="m-0 text-sm font-semibold text-n-slate-11">
+          {{ t(`${NS}.DETALHES_CHAMADA`) }}
+        </p>
         <TesteChamada :chamada="chamada" />
       </div>
     </details>
-    <section
-      v-else
-      data-chamada
-      :aria-labelledby="`${base}-chamada`"
-      class="flex flex-col gap-2 p-4 rounded-2xl bg-n-alpha-1"
-    >
-      <p
-        :id="`${base}-chamada`"
-        class="m-0 text-sm font-semibold text-n-slate-12"
-      >
-        {{ t(`${NS}.CHAMADA`) }}
-      </p>
-      <TesteChamada :chamada="chamada" />
-    </section>
 
     <div aria-live="polite" class="relative flex flex-col gap-3">
       <p
@@ -306,6 +285,7 @@ const resumoDaChamada = computed(
         <TesteResposta
           v-else
           :resposta="resultado.resposta"
+          :chamada="chamada"
           :mapeada="Boolean(rascunho.mapeamento)"
         />
         <p class="m-0">
