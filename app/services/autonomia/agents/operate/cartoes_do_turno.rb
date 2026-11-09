@@ -76,20 +76,21 @@ class Autonomia::Agents::Operate::CartoesDoTurno
                                                                                      msg: ancora.id, motivo: 'erro_ao_enfileirar')
     end
 
-    # As referências resolvidas pela página do agente agora. -> [os cartões completos, quantos não resolveram].
+    # As referências resolvidas pela página do agente agora (o contato, com o telefone do agente primeiro, como
+    # `enviar_contato`). -> [os cartões completos, quantos não resolveram].
     def resolver(referencias, agent)
       pagina = NATIVO.pagina(agent)
       completos = Array(referencias).filter_map do |referencia|
-        formato = formato_na_pagina(pagina, referencia)
+        formato = formato_na_pagina(agent, pagina, referencia)
         referencia.slice(*REFERENCIA).merge('rich_message' => formato) if formato
       end
       [completos, Array(referencias).size - completos.size]
     end
 
-    def formato_na_pagina(pagina, referencia)
+    def formato_na_pagina(agent, pagina, referencia)
       case referencia['tipo']
       when 'location' then NATIVO.locais(pagina).find { |local| local['id'] == referencia['chave'] }&.dig('rich_message')
-      when 'contact' then NATIVO.contato(pagina) if referencia['chave'] == NATIVO::CHAVE_DO_CONTATO
+      when 'contact' then NATIVO.contato_do_agente(agent, pagina) if referencia['chave'] == NATIVO::CHAVE_DO_CONTATO
       end
     end
 

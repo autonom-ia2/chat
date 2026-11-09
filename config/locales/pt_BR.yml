@@ -1331,6 +1331,10 @@ pt_BR:
       escolhas_incompletas: "O Agente de Cotação não conseguiu montar a instrução: a escolha '%{campo}' está faltando no cadastro dele. Isso não se corrige por aqui — acione o suporte da Autonom.ia."
       booking_page_forbidden: 'Só quem pode ver o Agendamento (CRM › Agendamento) escolhe a página que a IA usa para marcar.'
       booking_agent_ids_invalid: 'Nenhuma das pessoas escolhidas atende por esta página de agendamento. Escolha pessoas da página, ou deixe vazio para usar todas.'
+      atendimento:
+        telefone_invalido: 'Este telefone não é válido. Digite com o DDD, ou deixe em branco.'
+        endereco_longo: 'O endereço está longo demais. Use até %{maximo} caracteres.'
+        invalido: 'Não deu para ler o endereço e o telefone. Nada foi salvo.'
       operate:
         handoff_default: 'Não quero te passar uma informação imprecisa. Vou encaminhar seu atendimento para alguém do nosso time continuar com você.'
         handoff_defaults:

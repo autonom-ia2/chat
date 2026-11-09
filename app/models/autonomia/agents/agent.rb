@@ -57,6 +57,8 @@ module Autonomia
       include Autonomia::Agents::TrocaDaBase
       # #1426 (tema 4b) — as chaves do material escritas pelo sistema (conferências e autoteste), protegidas do save.
       include Autonomia::Agents::ConfigDoMaterial
+      # #1479 / #2723 — "Endereço e telefone" do agente (`config['atendimento']`), validado em todo caminho que grava.
+      include Autonomia::Agents::DadosDoAtendimento
 
       belongs_to :account
       belongs_to :created_by, class_name: 'User', optional: true

@@ -3,16 +3,18 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
 import CampoDeTelefone from 'dashboard/components-next/conversa-canal/mais/CampoDeTelefone.vue';
+import { MAX_ENDERECO } from '../../composables/useDadosDoAtendimento';
 
 // #1479 (opção B) — os dois campos do atendimento, dentro da GavetaAtendimento (bloco "Endereço e telefone" da
 // página). Só com a flag agentes_enviar_local_e_contato. O telefone é o campo padrão do painel (CampoDeTelefone): o v-model fica
 // vazio enquanto o número não é válido, então "digitou" vem do próprio campo (como no NovaConversaContatoNovo)
 // para avisar "incompleto" em vez de salvar vazio calado. O aviso aparece quando a pessoa sai do campo ou tenta
-// salvar (`conferir`).
+// salvar (`conferir`). `erroDoTelefone`: a explicação do servidor quando ele recusou o número.
 const props = defineProps({
   nome: { type: String, required: true },
   conferir: { type: Boolean, default: false },
   bloqueado: { type: Boolean, default: false },
+  erroDoTelefone: { type: String, default: '' },
 });
 
 const endereco = defineModel('endereco', { type: String, default: '' });
@@ -28,6 +30,9 @@ const saiuDoTelefone = ref(false);
 const incompleto = computed(() => digitou.value && !telefone.value);
 const mostrarAviso = computed(
   () => incompleto.value && (saiuDoTelefone.value || props.conferir)
+);
+const erro = computed(() =>
+  mostrarAviso.value ? t(`${NS}.TELEFONE_INCOMPLETO`) : props.erroDoTelefone
 );
 
 const aoDigitarTelefone = evento => {
@@ -54,6 +59,7 @@ defineExpose({ incompleto, focarTelefone });
       :placeholder="t(`${NS}.ENDERECO_EXEMPLO`)"
       :message="t(`${NS}.ENDERECO_DICA`, { nome })"
       :disabled="bloqueado"
+      :maxlength="MAX_ENDERECO"
       wrap-message
       autocomplete="street-address"
     />
@@ -67,7 +73,7 @@ defineExpose({ incompleto, focarTelefone });
         :label="t(`${NS}.TELEFONE`)"
         :rotulo-do-pais="t(`${NS}.PAIS`)"
         :ajuda="t(`${NS}.TELEFONE_DICA`, { nome })"
-        :erro="mostrarAviso ? t(`${NS}.TELEFONE_INCOMPLETO`) : ''"
+        :erro="erro"
       />
     </div>
   </div>

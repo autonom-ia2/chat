@@ -1,5 +1,5 @@
 <script setup>
-import { ref, useId } from 'vue';
+import { ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import AgenteGaveta from '../AgenteGaveta.vue';
@@ -8,13 +8,14 @@ import AgenteErro from '../AgenteErro.vue';
 import DadosDoAtendimento from './DadosDoAtendimento.vue';
 import {
   lerAtendimento,
-  salvarAtendimento,
+  useSalvarAtendimento,
 } from '../../composables/useDadosDoAtendimento';
 
 // #1479 (opção B do Rodrigo) — "Endereço e telefone de {nome}": gaveta curta do bloco próprio da página, nos dois
 // modos (manual e conversando). Só os dois campos, Salvar e Cancelar; o foco fica preso na AgenteGaveta. Telefone
 // incompleto não salva: leva ao campo com o aviso. Fechar sem salvar não grava nada.
-// PROTÓTIPO: grava pelo adaptador falso (useDadosDoAtendimento), sem backend ainda.
+// Grava no servidor (`config.atendimento`). Telefone que o servidor recusa: a explicação dele aparece no próprio
+// campo, e o foco vai para lá; outra recusa ou falha de rede: o aviso de erro no rodapé, com "Tentar de novo".
 const props = defineProps({
   agente: { type: Object, required: true },
   nome: { type: String, required: true },
@@ -32,7 +33,25 @@ const telefone = ref(inicial.telefone);
 const campos = ref(null);
 const conferir = ref(false);
 const falhou = ref(false);
-const salvando = ref(false);
+const tituloDoErro = ref('');
+const erroDoTelefone = ref('');
+const { salvando, salvar: gravar, recusa } = useSalvarAtendimento();
+
+// Mexeu no telefone: a recusa anterior do servidor não vale mais.
+watch(telefone, () => {
+  erroDoTelefone.value = '';
+});
+
+const mostrarRecusa = falha => {
+  const explicacao = recusa(falha);
+  if (explicacao && telefone.value) {
+    erroDoTelefone.value = explicacao;
+    campos.value?.focarTelefone();
+    return;
+  }
+  tituloDoErro.value = explicacao || t(`${NS}.ERRO`);
+  falhou.value = true;
+};
 
 const salvar = async () => {
   if (salvando.value) return;
@@ -42,18 +61,16 @@ const salvar = async () => {
     return;
   }
   falhou.value = false;
-  salvando.value = true;
+  erroDoTelefone.value = '';
   try {
-    await salvarAtendimento(props.agente, {
+    await gravar(props.agente, {
       endereco: endereco.value,
       telefone: telefone.value,
     });
     useAlert(t(`${NS}.SALVO`));
     emit('fechar');
-  } catch {
-    falhou.value = true;
-  } finally {
-    salvando.value = false;
+  } catch (falha) {
+    mostrarRecusa(falha);
   }
 };
 </script>
@@ -73,12 +90,13 @@ const salvar = async () => {
       :nome="nome"
       :conferir="conferir"
       :bloqueado="salvando"
+      :erro-do-telefone="erroDoTelefone"
     />
     <template #rodape>
       <AgenteErro
         v-if="falhou"
         data-erro
-        :titulo="t(`${NS}.ERRO`)"
+        :titulo="tituloDoErro"
         :garantia="t(`${NS}.ERRO_GARANTIA`)"
         :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
         :carregando="salvando"

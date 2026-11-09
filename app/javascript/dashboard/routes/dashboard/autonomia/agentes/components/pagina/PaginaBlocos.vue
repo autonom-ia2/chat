@@ -73,7 +73,7 @@ const base = `blocos-${useId()}`;
 const pergunta = ref('');
 
 // #1479 (opção B): com a flag, bloco próprio "Endereço e telefone", nos dois modos (manual e conversando). Fica fora
-// da cotação (a Lia não recebe as ferramentas). Protótipo: lidos do adaptador falso (useDadosDoAtendimento).
+// da cotação (a Lia não recebe as ferramentas). Lidos de agente.config.atendimento (useDadosDoAtendimento).
 const comAtendimento = useDadosDoAtendimentoLigado();
 const atendimento = computed(() => {
   if (!comAtendimento.value || props.cotacao) return null;
