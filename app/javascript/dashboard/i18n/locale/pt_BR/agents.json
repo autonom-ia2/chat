@@ -951,6 +951,7 @@
               "ERRO": {
                 "VALOR": "Digite a chave.",
                 "REDIGITAR": "Digite a chave de novo para salvar.",
+                "REPETIDO": "Já tem uma chave com esse nome. Use outro nome.",
                 "CHAVE": "Use só letras sem acento, números e hífen. Ex.: x-api-key"
               },
               "REMOVER_TITULO": "Remover esta chave?",

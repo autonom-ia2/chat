@@ -951,6 +951,7 @@
               "ERRO": {
                 "VALOR": "Type the key.",
                 "REDIGITAR": "Type the key again to save.",
+                "REPETIDO": "There is already a key with this name. Use another name.",
                 "CHAVE": "Use only letters without accents, numbers and hyphen. E.g.: x-api-key"
               },
               "REMOVER_TITULO": "Remove this key?",

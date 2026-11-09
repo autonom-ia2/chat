@@ -390,6 +390,36 @@ describe('linguagem das Ferramentas (#1430)', () => {
         conferirEndereco('https://a.com/x?token={{ t | url_encode }}')
       ).toBe('');
     });
+
+    it('counts a new secret header as a new call and refuses repeated names', () => {
+      const salva2 = paraRascunho({
+        http_method: 'POST',
+        endpoint_url: 'https://api.loja.com/leads',
+        headers_config: [
+          { key: 'x-api-key', value: MASCARA_DO_SEGREDO, secret: true },
+        ],
+      });
+      const override = {
+        ...salva2,
+        cabecalhos: [
+          ...salva2.cabecalhos,
+          { chave: 'X-HTTP-Method-Override', valor: 'DELETE', segredo: true },
+        ],
+      };
+      const repetido = {
+        ...salva2,
+        cabecalhos: [
+          { chave: 'x-api-key', valor: 'lixo', segredo: true },
+          ...salva2.cabecalhos,
+        ],
+      };
+
+      expect(destinoMudou(override)).toBe(true);
+      expect(validarPasso(4, repetido).erros.c1).toBe('REPETIDO');
+      expect(conferirEndereco('https://a.com/x?{{ "token" }}=abc')).toBe(
+        'SENHA'
+      );
+    });
   });
 
   it('keeps technical words out of the steps a person goes through', () => {

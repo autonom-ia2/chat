@@ -5,30 +5,37 @@ module Autonomia::Agents::SegredoDaFerramenta
 
   # `chaves_digitadas`: os nomes dos cabeçalhos de segredo que chegaram digitados agora (sem a máscara), marcados pelo
   # controller. A mesma chave digitada de novo vale para um pedido novo; sem a marca, o par igual ao guardado é a chave
-  # reaproveitada.
+  # reaproveitada. O nome basta porque o cadastro não aceita nome repetido (`CabecalhosDaFerramenta`).
   included do
     attr_accessor :chaves_digitadas
 
     validate :validate_chave_mascarada
     validate :validate_chave_no_mesmo_pedido, on: :update
+    validate :validate_segredo_preenchido, if: -> { new_record? || will_save_change_to_headers_config? }
     validate :validate_senha_fora_do_link, if: -> { new_record? || will_save_change_to_endpoint_url? }
   end
 
   private
 
   # Revisão adversarial e decisão do Rodrigo (09/11): a chave guardada não vai para outro site nem para outra parte da
-  # mesma API. Mudou o pedido (link, método, o que vai junto ou um cabeçalho que não é segredo, como
-  # X-HTTP-Method-Override), a chave é digitada de novo. Segredo vazio num pedido novo apagaria a chave em silêncio.
+  # mesma API. Mudou o pedido (link, método, o que vai junto ou qualquer cabeçalho: um novo, um tirado, o valor de um
+  # comum, ligar ou desligar o segredo — X-HTTP-Method-Override troca o método sem mexer no método), a chave é digitada
+  # de novo. Trocar só o valor de uma chave não muda o pedido.
   def validate_chave_no_mesmo_pedido
     return unless pedido_mudou?
 
     errors.add(:headers_config, I18n.t('autonomia.agents.ferramenta.chave_de_novo_destino')) if chave_guardada_reaproveitada?
+  end
+
+  # Segredo vazio apagaria a chave guardada em silêncio.
+  def validate_segredo_preenchido
     errors.add(:headers_config, I18n.t('autonomia.agents.ferramenta.chave_vazia')) if segredo_vazio?
   end
 
   def pedido_mudou?
-    will_save_change_to_endpoint_url? || will_save_change_to_http_method? || will_save_change_to_request_body_template? ||
-      cabecalhos_comuns(headers_config) != cabecalhos_comuns(headers_config_in_database)
+    will_save_change_to_endpoint_url? || will_save_change_to_http_method? ||
+      attribute_in_database(:request_body_template).to_s != request_body_template.to_s ||
+      cabecalhos_do_pedido(headers_config) != cabecalhos_do_pedido(headers_config_in_database)
   end
 
   def chave_guardada_reaproveitada?
@@ -43,8 +50,12 @@ module Autonomia::Agents::SegredoDaFerramenta
     cabecalhos_de(headers_config).any? { |header| segredo?(header) && header['value'].to_s.strip.empty? }
   end
 
-  def cabecalhos_comuns(lista)
-    cabecalhos_de(lista).reject { |header| segredo?(header) }.map { |header| [header['key'].to_s.strip.downcase, header['value'].to_s] }.sort
+  # O pedido pelos cabeçalhos: o segredo conta pelo nome, o comum pelo nome e pelo valor.
+  def cabecalhos_do_pedido(lista)
+    cabecalhos_de(lista).map do |header|
+      segredo = segredo?(header)
+      [header['key'].to_s.strip.downcase, segredo ? 1 : 0, segredo ? '' : header['value'].to_s]
+    end.sort
   end
 
   def cabecalhos_de(lista)
@@ -80,7 +91,7 @@ module Autonomia::Agents::SegredoDaFerramenta
   def credencial_na_busca?
     busca = endpoint_url.to_s.split('#', 2).first.to_s.split('?', 2).second.to_s.tr(';', '&')
     URI.decode_www_form(busca).any? do |nome, valor|
-      Autonomia::Agents::Tools::SegredosDaChamada.credencial?(nome) && valor_fixo(valor).strip.present?
+      Autonomia::Agents::Tools::SegredosDaChamada.credencial?(nome_fixo(nome)) && valor_fixo(valor).strip.present?
     end
   end
 
@@ -94,6 +105,11 @@ module Autonomia::Agents::SegredoDaFerramenta
 
       "#{saida}#{so_informacao?(dentro) ? '' : dentro}#{depois}"
     end
+  end
+
+  # `?{{ "token" }}=abc` vira `token=abc` na chamada.
+  def nome_fixo(nome)
+    valor_fixo(nome).delete(%('")).strip
   end
 
   def so_informacao?(dentro)

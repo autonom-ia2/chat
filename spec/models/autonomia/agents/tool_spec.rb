@@ -230,12 +230,38 @@ RSpec.describe Autonomia::Agents::Tool do
       end
     end
 
-    it 'recusa segredo vazio num pedido novo, que apagaria a chave' do
-      tool.assign_attributes(endpoint_url: 'https://api.loja.test/persons', chaves_digitadas: ['x-api-key'],
-                             headers_config: [{ key: 'x-api-key', value: '', secret: true }])
+    it 'recusa segredo vazio, que apagaria a chave, com ou sem pedido novo' do
+      [{ endpoint_url: 'https://api.loja.test/persons' }, {}].each do |mudanca|
+        tool.reload.assign_attributes(mudanca.merge(chaves_digitadas: ['x-api-key'], headers_config: [{ key: 'x-api-key', value: '', secret: true }]))
+
+        expect(tool).not_to be_valid
+        expect(tool.errors[:headers_config]).to include(I18n.t('autonomia.agents.ferramenta.chave_vazia'))
+      end
+    end
+
+    # Revisão (3 revisores): um `x-api-key` digitado e outro com a máscara levariam a chave guardada como se fosse digitada.
+    it 'recusa nome de cabeçalho repetido, sem olhar maiúscula' do
+      tool.assign_attributes(endpoint_url: 'https://coletor.test/x', chaves_digitadas: ['x-api-key'],
+                             headers_config: [{ key: 'x-api-key', value: 'lixo', secret: true },
+                                              { key: 'X-Api-Key', value: 'guardado-123', secret: true }])
 
       expect(tool).not_to be_valid
-      expect(tool.errors[:headers_config]).to include(I18n.t('autonomia.agents.ferramenta.chave_vazia'))
+      expect(tool.errors[:headers_config]).to include('não pode repetir o nome de um cabeçalho')
+    end
+
+    it 'recusa um cabeçalho novo marcado como segredo mantendo a chave' do
+      tool.headers_config = [{ key: 'x-api-key', value: 'guardado-123', secret: true },
+                             { key: 'X-HTTP-Method-Override', value: 'DELETE', secret: true }]
+
+      expect(tool).not_to be_valid
+      expect(tool.errors[:headers_config]).to include(I18n.t('autonomia.agents.ferramenta.chave_de_novo_destino'))
+    end
+
+    it 'trata corpo vazio e corpo nulo como o mesmo pedido' do
+      tool.update_column(:request_body_template, nil) # rubocop:disable Rails/SkipsModelValidations
+      tool.reload.assign_attributes(request_body_template: '', description: 'Use para o frete.')
+
+      expect(tool).to be_valid
     end
 
     it 'recusa trocar a porta ou o esquema do mesmo host' do
@@ -253,7 +279,8 @@ RSpec.describe Autonomia::Agents::Tool do
     it 'recusa usuário e senha ou parâmetro de credencial com valor' do
       ['https://ana:segredo@a.test/x', 'https://a.test/x?token=abc', 'https://a.test/x?q=1&API_KEY=abc{{t}}',
        'https://a.test/x?api_token=abc', 'https://a.test/x?client_secret=abc', 'https://a.test/x?q=1;token=abc',
-       'https://a.test/x?token[]=abc', 'https://a.test/x?token={{ "abc" }}', 'https://a.test/x?token={{ t | append: "x" }}'].each do |link|
+       'https://a.test/x?token[]=abc', 'https://a.test/x?token={{ "abc" }}', 'https://a.test/x?token={{ t | append: "x" }}',
+       'https://a.test/x?{{ "token" }}=abc'].each do |link|
         tool = described_class.new(base.merge(endpoint_url: link))
 
         expect(tool).not_to be_valid

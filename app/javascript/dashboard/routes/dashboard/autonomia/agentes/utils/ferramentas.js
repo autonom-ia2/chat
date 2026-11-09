@@ -111,8 +111,13 @@ export const valorFixo = valor => {
   }, partes[0]);
 };
 
+// `?{{ "token" }}=abc` vira `token=abc` na chamada.
 const nomeDoParametro = nome => {
-  const minusculo = nome.toLowerCase();
+  const minusculo = valorFixo(nome)
+    .replaceAll('"', '')
+    .replaceAll("'", '')
+    .trim()
+    .toLowerCase();
   return minusculo.endsWith('[]') ? minusculo.slice(0, -2) : minusculo;
 };
 
@@ -382,13 +387,18 @@ const ehAutomatico = cabecalho =>
       .toLowerCase()
   );
 
-// Os cabeçalhos que não são segredo, do jeito que vão: mudar um deles muda o pedido (X-HTTP-Method-Override troca o
-// método sem mexer no método).
+// O pedido pelos cabeçalhos, como no backend: o segredo conta pelo nome, o comum pelo nome e pelo valor. Um cabeçalho
+// novo, tirado ou com o segredo ligado/desligado muda o pedido (X-HTTP-Method-Override troca o método sem mexer no
+// método); trocar só o valor de uma chave, não.
 const cabecalhosComuns = lista =>
   JSON.stringify(
     lista
-      .filter(c => !c.segredo && preenchido(c.chave))
-      .map(c => [String(c.chave).trim().toLowerCase(), String(c.valor ?? '')])
+      .filter(c => preenchido(c.chave))
+      .map(c => [
+        String(c.chave).trim().toLowerCase(),
+        c.segredo ? 1 : 0,
+        c.segredo ? '' : String(c.valor ?? ''),
+      ])
       .sort()
   );
 
@@ -524,9 +534,17 @@ export const paraApi = rascunho => ({
   response_mapping: mapeamentoParaApi(rascunho),
 });
 
-const validarCabecalho = (cabecalho, mudouDestino) => {
+// O sistema de fora recebe um valor por nome: dois com o mesmo nome (sem olhar maiúscula) são recusados no cadastro.
+const nomeDoCabecalho = chave =>
+  String(chave ?? '')
+    .trim()
+    .toLowerCase();
+
+const validarCabecalho = (cabecalho, mudouDestino, nomesDosOutros = []) => {
   if (!preenchido(cabecalho.chave)) return '';
   if (!chaveValida(cabecalho.chave.trim())) return 'CHAVE';
+  if (nomesDosOutros.includes(nomeDoCabecalho(cabecalho.chave)))
+    return 'REPETIDO';
   if (preenchido(cabecalho.valor)) return '';
   if (precisaRedigitar(cabecalho, mudouDestino)) return 'REDIGITAR';
   const pedeValor =
@@ -588,7 +606,12 @@ const VALIDACOES = {
       rascunho.cabecalhos
         .map((cabecalho, i) => [
           `c${i}`,
-          validarCabecalho(cabecalho, destinoMudou(rascunho)),
+          validarCabecalho(cabecalho, destinoMudou(rascunho), [
+            ...(rascunho.automaticos || []).map(c => nomeDoCabecalho(c.key)),
+            ...rascunho.cabecalhos
+              .filter((_, j) => j < i)
+              .map(c => nomeDoCabecalho(c.chave)),
+          ]),
         ])
         .filter(([, erro]) => erro)
     ),
