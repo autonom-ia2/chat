@@ -28,9 +28,12 @@ class Crm::MetaAds::LeadForms::PastLeads
         since: since)
   end
 
+  # Token recusado (190) sobe como TokenRefused, que é um Error: a tela e os outros jobs seguem iguais, e a
+  # reconciliação marca a conexão (#2740).
   def self.check!(result)
     return if result.ok
     raise Crm::MetaAds::LeadForms::Unavailable if result.transient?
+    raise Crm::MetaAds::LeadForms::TokenRefused, result.error_message if result.token_invalid?
 
     raise Crm::MetaAds::LeadForms::Error, 'meta_refused'
   end
@@ -84,9 +87,12 @@ class Crm::MetaAds::LeadForms::PastLeads
   private
 
   # Em lotes: o "trazer quem já preencheu" lê até 50 mil leads, e um IN só passaria perto do limite de binds do Postgres.
+  # Fica de fora também o lead que o banco já recusou há pouco (Importer.refused_ids, #2740): dado inválido não melhora
+  # na rodada seguinte.
   def new_leads(rows)
     known = rows.map { |lead| lead['id'].to_s }.each_slice(KNOWN_BATCH).with_object(Set.new) do |ids, set|
       set.merge(Crm::MetaAdsLead.where(account_id: @account.id, leadgen_id: ids).pluck(:leadgen_id))
+      set.merge(Crm::MetaAds::LeadForms::Importer.refused_ids(@account.id, ids))
     end
     rows.reject { |lead| known.include?(lead['id'].to_s) }
   end

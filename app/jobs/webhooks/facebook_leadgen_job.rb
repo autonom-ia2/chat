@@ -10,7 +10,7 @@ class Webhooks::FacebookLeadgenJob < ApplicationJob
   # A Meta fora do ar depois das 5 tentativas: o lead não entra agora. O leadgen_id vai ao rastreador, e a
   # reconciliação de hora em hora (ReconcileJob, últimas 48 h, #2285) traz sozinha; o Importer não duplica. Não traz se,
   # antes da rodada, a Página parou de receber, o destino saiu, o funil foi arquivado, a flag foi desligada ou o
-  # formulário é de antes do #2285 sem destino salvo de novo.
+  # lead é de antes do marco de início do formulário (o deploy do #2740, para os formulários de antes do #2285).
   retry_on Crm::MetaAds::LeadForms::Unavailable, wait: :polynomially_longer, attempts: 5 do |job, _error|
     page_id, value = job.arguments
     leadgen_id = value.to_h.stringify_keys['leadgen_id']

@@ -189,6 +189,83 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
     expect(cache.exist?(lock_key)).to be(false)
   end
 
+  # #2740: recusa de token na reconciliação marca a conexão, como o webhook faz. A rodada seguinte nem chama a Meta.
+  describe 'token recusado pela Meta (190)' do
+    def token_recusado(path, query)
+      stub_request(:get, meta_graph_url(path)).with(query: query)
+                                              .to_return(status: 400, headers: json, body: meta_graph_error(190, 'Token expirado').to_json)
+    end
+
+    it 'ao tirar o token da Página: a conexão fica inválida, sem rastreador, e a próxima rodada não chama a Meta',
+       :aggregate_failures do
+      token_recusado('104882', { fields: 'access_token' })
+      allow(ChatwootExceptionTracker).to receive(:new)
+
+      described_class.perform_now(form.id)
+
+      expect(Crm::MetaAdsConnection.find_by(account: account)).to have_attributes(status: 'invalid', last_error: be_present)
+      expect(ChatwootExceptionTracker).not_to have_received(:new)
+      expect(cache.exist?(lock_key)).to be(false)
+
+      WebMock.reset_executed_requests!
+      described_class.perform_now(form.id)
+      expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+    end
+
+    it 'ao ler os leads com o token da Página: a conexão fica inválida' do
+      token_recusado('9001/leads', hash_including({}))
+
+      described_class.perform_now(form.id)
+
+      expect(Crm::MetaAdsConnection.find_by(account: account).status).to eq('invalid')
+    end
+
+    it 'recusa que não é de token (permissão): a conexão continua ativa' do
+      stub_request(:get, meta_graph_url('9001/leads')).with(query: hash_including({}))
+                                                      .to_return(status: 400, headers: json, body: meta_graph_error(200).to_json)
+
+      described_class.perform_now(form.id)
+
+      expect(Crm::MetaAdsConnection.find_by(account: account).status).to eq('active')
+    end
+  end
+
+  # #2740: lead que o banco recusa (dado inválido) não é tentado de novo a cada hora; vai ao rastreador uma vez.
+  describe 'lead que não dá para gravar' do
+    let(:recusa) { ActiveRecord::RecordInvalid.new(Crm::Card.new) }
+
+    it 'a rodada seguinte não tenta de novo, e o lead novo bom entra', :aggregate_failures do
+      stub_leads(leads: [lead('L1', 'Ana', '+5511987650001')])
+      allow_any_instance_of(Crm::Cards::Creator).to receive(:perform).and_raise(recusa) # rubocop:disable RSpec/AnyInstance
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
+
+      described_class.perform_now(form.id)
+      expect(account.crm_cards.count).to eq(0)
+
+      allow_any_instance_of(Crm::Cards::Creator).to receive(:perform).and_call_original # rubocop:disable RSpec/AnyInstance
+      stub_leads(leads: [lead('L1', 'Ana', '+5511987650001'), lead('L2', 'Bia', '+5511987650002')])
+      allow(Crm::MetaAds::LeadForms::Importer).to receive(:new).and_call_original
+
+      2.times { described_class.perform_now(form.id) }
+
+      expect(account.crm_cards.pluck(:title)).to eq(['Bia'])
+      expect(Crm::MetaAdsLead.where(account: account).pluck(:leadgen_id)).to eq(['L2'])
+      expect(ChatwootExceptionTracker).to have_received(:new).once
+    end
+
+    it 'lead só com recusa: a rodada seguinte nem lê as perguntas do formulário' do
+      stub_leads(leads: [lead('L1', 'Ana', '+5511987650001')])
+      allow_any_instance_of(Crm::Cards::Creator).to receive(:perform).and_raise(recusa) # rubocop:disable RSpec/AnyInstance
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
+      described_class.perform_now(form.id)
+      WebMock.reset_executed_requests!
+
+      described_class.perform_now(form.id)
+
+      expect(a_request(:get, meta_graph_url('9001')).with(query: hash_including({}))).not_to have_been_made
+    end
+  end
+
   it 'Página parada depois do agendamento: não chama a Meta e solta a trava' do
     Crm::MetaAdsPage.find_by(account: account).update!(leadgen_receiving: false)
 
