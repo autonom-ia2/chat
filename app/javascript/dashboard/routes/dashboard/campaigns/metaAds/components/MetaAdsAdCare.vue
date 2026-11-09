@@ -376,7 +376,9 @@ const saveChange = async () => {
         <p class="m-0 text-sm text-n-slate-12">
           {{ $t(`${KEY}.PAUSE_ORIGINAL_HINT`) }}
         </p>
+        <!-- Contorno: o botão cheio do cartão já é o da própria cópia. -->
         <Button
+          outline
           icon="i-lucide-pause"
           :label="$t(`${KEY}.PAUSE_ORIGINAL`)"
           class="w-full sm:w-auto"
