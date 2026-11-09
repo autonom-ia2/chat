@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useMapGetter } from 'dashboard/composables/store';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -12,7 +13,6 @@ import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import LivreConfira from '../components/LivreConfira.vue';
 import LivreSeletorPasso from '../components/LivreSeletorPasso.vue';
 import LivreAlterar from '../components/LivreAlterar.vue';
-import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import LivreLigar from '../components/LivreLigar.vue';
 import LivreHistorico from '../components/LivreHistorico.vue';
 import LivreEnsaio from '../components/LivreEnsaio.vue';
@@ -96,6 +96,7 @@ const catalogoComTextos = computed(() =>
 
 // O "Alterar" só oferece o valor que o alvo do gatilho alcança (#2499) e que
 // a pessoa pode ler (#2597), mais o texto dos passos de IA da receita (#2679).
+// O card da conversa, só com a chave de funis (#2716; canManagePipelines).
 // G18: dentro do "em outro registro", o do registro em que o ramo roda; a
 // lista é a do passo aberto (ou a do novo).
 const podeLerValor = usePodeLerValor();
@@ -112,6 +113,7 @@ const catalogoDoAlvo = computed(() =>
       comPermissoes(catalogo.value, podeLerValor.value),
       receita.value.gatilho?.tipo,
       Boolean(receita.value.gatilho?.conversa_nova),
+      canManagePipelines.value,
       alvoDaLista(receita.value.passos, listaDoPainel())
     ),
     passosDaExecucao(receita.value.passos, listaDoPainel()),
@@ -628,6 +630,7 @@ onMounted(() => {
               :atributos-da-peca="atributosDaPeca"
               :atributos-do="atributosDo"
               :receita-do-teste="receitaDoSalvar"
+              :automacao-id="automacao?.id ?? null"
               :custos="custos"
               :gatilhos="gatilhos"
               :escolhas-do-gatilho="{

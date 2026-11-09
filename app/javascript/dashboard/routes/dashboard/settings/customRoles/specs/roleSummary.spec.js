@@ -28,4 +28,24 @@ describe('RoleSummary', () => {
     expect(crmLine.text()).toContain('editar, visualizar relatórios do CRM');
     expect(crmLine.text()).not.toContain(' ,');
   });
+
+  // #1430: a ferramenta não tem item no menu (fica na página do agente) e diz "Gerenciar".
+  it('names the tools level "Gerenciar" and keeps them out of the menu preview', () => {
+    const wrapper = mount(RoleSummary, {
+      props: { permissions: ['autonomia_view', 'autonomia_tools_manage'] },
+      global: { mocks: { $t: t } },
+    });
+
+    const toolsLine = wrapper
+      .findAll('li')
+      .find(item =>
+        item.text().includes('CUSTOM_ROLE.MATRIX.MODULES.AUTONOMIA_TOOLS.NAME')
+      );
+    expect(toolsLine.text()).toContain(
+      'cUSTOM_ROLE.MATRIX.MODULES.AUTONOMIA_TOOLS.LEVEL_LABEL_MANAGE'
+    );
+    const menu = wrapper.find('details').text();
+    expect(menu).toContain('CUSTOM_ROLE.MATRIX.MODULES.AUTONOMIA.NAME');
+    expect(menu).not.toContain('AUTONOMIA_TOOLS');
+  });
 });

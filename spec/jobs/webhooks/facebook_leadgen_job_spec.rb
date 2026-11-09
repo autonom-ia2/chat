@@ -168,4 +168,18 @@ RSpec.describe Webhooks::FacebookLeadgenJob do
     expect { described_class.new.perform('104882', value, nil) }.to raise_error(Crm::MetaAds::LeadForms::Unavailable)
     expect(account.crm_cards.count).to eq(0)
   end
+
+  # #2740: a recusa do webhook também fica lembrada, e a reconciliação não tenta o lead de novo a cada hora.
+  it 'lead que o banco recusa fica lembrado para a reconciliação' do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    allow(Rails).to receive(:cache).and_return(cache)
+    allow(Crm::Cards::Creator).to receive(:new).and_raise(ActiveRecord::RecordInvalid.new(Crm::Card.new))
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
+    stub_meta
+
+    described_class.perform_now('104882', value)
+
+    form = Crm::MetaAdsLeadForm.find_by(account: account, form_id: '9001')
+    expect(Crm::MetaAds::LeadForms::RefusedLeads.new(form).ids(['L77'])).to eq(['L77'])
+  end
 end

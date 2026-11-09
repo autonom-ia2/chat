@@ -25,7 +25,9 @@
 #
 # Indexes
 #
+# rubocop:disable Layout/LineLength
 #  idx_wa_api_recipients_active_phone_hash                    (whatsapp_api_campaign_id,phone_hash) UNIQUE WHERE ((phone_hash IS NOT NULL) AND (status = ANY (ARRAY[0, 1, 2])))
+# rubocop:enable Layout/LineLength
 #  idx_wa_api_recipients_campaign_contact                     (whatsapp_api_campaign_id,contact_id) UNIQUE
 #  idx_wa_api_recipients_campaign_id                          (whatsapp_api_campaign_id)
 #  idx_wa_api_recipients_campaign_message                     (whatsapp_api_campaign_id,message_id) UNIQUE WHERE (message_id IS NOT NULL)
@@ -49,7 +51,9 @@
 class WhatsappApiCampaignRecipient < ApplicationRecord
   # Motivo gravado em last_error_message quando o contato recusou mensagens ativas (chat#737).
   # Vira cancelled, não failed: recusa não é falha de entrega e não pode deixar a campanha com falhas.
-  OPTED_OUT_REASON = 'opted_out'.freeze
+  OPTED_OUT_REASON = ContactCampaignReach::OPTED_OUT
+  # O contato está bloqueado (chat#2733): também cancelled, com motivo próprio.
+  BLOCKED_REASON = ContactCampaignReach::BLOCKED
   # O lead da Prospecção foi descartado com a campanha em andamento (chat#713): o pendente sai, também como cancelled.
   DISCARDED_REASON = 'discarded'.freeze
 
@@ -81,11 +85,12 @@ class WhatsappApiCampaignRecipient < ApplicationRecord
     )
   end
 
-  def mark_opted_out!
-    update!(status: :cancelled, cancelled_at: Time.current, last_error_message: OPTED_OUT_REASON)
+  # O contato não pode receber campanha (Contact#campaign_refusal: OPTED_OUT_REASON ou BLOCKED_REASON).
+  def mark_refused!(reason)
+    update!(status: :cancelled, cancelled_at: Time.current, last_error_message: reason)
   end
 
-  # Pulado por um motivo nosso (OPTED_OUT_REASON, DISCARDED_REASON): cancelado, não falha.
+  # Pulado por um motivo nosso (OPTED_OUT_REASON, BLOCKED_REASON, DISCARDED_REASON): cancelado, não falha.
   def skipped_for?(reason)
     cancelled? && last_error_message == reason
   end

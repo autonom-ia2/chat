@@ -34,6 +34,33 @@ describe('doAlvoDoGatilho', () => {
     );
   });
 
+  // #2716: o gatilho de conversa lê o card da conversa, só com a chave de funis.
+  it('no gatilho de conversa, oferece o card só a quem tem a chave de funis', () => {
+    const comCard = {
+      ...catalogo,
+      alvos: {
+        ...catalogo.alvos,
+        Conversation: ['conversa', 'contato', 'card'],
+      },
+    };
+    expect(
+      caminhos(doAlvoDoGatilho(comCard, 'conversa.criada', false, true))
+    ).toEqual([
+      'conversa.status',
+      'card.valor',
+      'contato.nome',
+      'mensagem.tipo',
+    ]);
+    expect(caminhos(doAlvoDoGatilho(comCard, 'conversa.criada'))).toEqual([
+      'conversa.status',
+      'contato.nome',
+      'mensagem.tipo',
+    ]);
+    expect(
+      caminhos(doAlvoDoGatilho(comCard, 'card.entrou_na_etapa', false, false))
+    ).toContain('card.valor');
+  });
+
   it('sem gatilho escolhido, devolve o catálogo como veio', () => {
     expect(doAlvoDoGatilho(catalogo, undefined)).toBe(catalogo);
     expect(doAlvoDoGatilho(null, 'conversa.criada')).toBeNull();

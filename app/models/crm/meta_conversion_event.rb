@@ -50,6 +50,7 @@ class Crm::MetaConversionEvent < ApplicationRecord
   validates :status, presence: true
 
   scope :recentes, -> { order(created_at: :desc) }
+  scope :stale_pending, -> { pending.where(updated_at: ...STALE_PENDING_AFTER.ago) }
 
   # Atomically claims the row of one event for one send (Crm::MetaCapi::DispatchJob), or nil.
   # The unique index on event_id is the lock for a new row: the first worker inserts it
@@ -78,6 +79,16 @@ class Crm::MetaConversionEvent < ApplicationRecord
 
   def stale_pending?
     pending? && updated_at < STALE_PENDING_AFTER.ago
+  end
+
+  # Ends up to `limit` abandoned sends of one account as an unknown outcome (#2799), oldest id
+  # first, without waiting for a retry that may never come (Crm::MetaCapi::StalePendingSweepJob).
+  # Straight SQL guarded by the status, like release_pending!: a send that finishes meanwhile wins.
+  def self.end_stale_pending!(account_id, limit:)
+    ids = stale_pending.where(account_id: account_id).order(:id).limit(limit).pluck(:id)
+    return 0 if ids.empty?
+
+    stale_pending.where(id: ids).update_all(status: statuses[:error], error_message: UNKNOWN_OUTCOME, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def unknown_outcome?

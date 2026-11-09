@@ -182,6 +182,8 @@ export const comPermissoes = (dados, podeLer) => {
 // do gatilho segue junto, para o "avisar" oferecer quem atende a reunião.
 // #2680: com a caixa da conversa nova, o contato alcança a conversa que ela
 // abre; e "o cliente respondeu" sai do contato, então vale onde há contato.
+// #2716: o card da conversa (gatilho de conversa) só para quem tem a chave de
+// funis (`podeLerCard`), a mesma pergunta que o salvar faz.
 // G18 (#2671): dentro do "em outro registro", vale o registro em que o ramo roda
 // (`alvoDoRamo`), não o alvo do gatilho; lá não há a reunião do gatilho nem a
 // conversa nova. `alvo` volta junto, para a peça que precisa saber de onde lê
@@ -191,6 +193,7 @@ export const doAlvoDoGatilho = (
   dados,
   tipoDoGatilho,
   comConversaNova = false,
+  podeLerCard = false,
   alvoDoRamo = null
 ) => {
   const doGatilho = dados?.gatilhos?.find(
@@ -203,10 +206,12 @@ export const doAlvoDoGatilho = (
     comConversaNova && !alvoDoRamo
       ? [...new Set([...doAlvo, 'conversa'])]
       : doAlvo;
+  const semCard = alvo === 'Conversation' && !podeLerCard;
   const alcanca = item =>
-    !item.base ||
-    bases.includes(item.base) ||
-    (item.caminho === RESPOSTA_DO_CONTATO && bases.includes('contato'));
+    !(semCard && item.base === 'card') &&
+    (!item.base ||
+      bases.includes(item.base) ||
+      (item.caminho === RESPOSTA_DO_CONTATO && bases.includes('contato')));
   const daReuniao = item =>
     !item.so_nos_gatilhos ||
     (!alvoDoRamo && item.so_nos_gatilhos.includes(tipoDoGatilho));

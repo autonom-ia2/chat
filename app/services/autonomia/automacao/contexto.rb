@@ -16,11 +16,13 @@ class Autonomia::Automacao::Contexto
   TIPOS = %w[Conversation Crm::Card Contact Account].freeze
   BASES = { ::Conversation => 'conversa', ::Crm::Card => 'card', ::Contact => 'contato', ::Account => 'conta' }.freeze
 
-  attr_reader :alvo
+  attr_reader :alvo, :execucao
 
-  # `execucao`: a execução em que o passo roda, quando há uma. A reunião do gatilho (G12) e o texto da IA (#2679) leem dela.
+  # `execucao`: a execução em que o passo roda, quando há uma. A reunião do gatilho (G12), o texto da IA (#2679) e o
+  # "gatilho repetiu" (lote 4) leem dela.
   # `textos`: no ensaio, que não tem execução, o texto que cada passo de IA produziria (só para mostrar).
-  def self.de(alvo, execucao: nil, textos: nil) = new(alvo, execucao: execucao, textos: textos)
+  # `falhou`: no ensaio, a última mensagem recusada da conversa (G53), que o Ensaio acha pela régua do gatilho.
+  def self.de(alvo, execucao: nil, textos: nil, falhou: nil) = new(alvo, execucao: execucao, textos: textos, falhou: falhou)
 
   # Os `textos` do ensaio (#2679): ele não chama a IA, e no lugar do texto de cada passo que escreve vai a marca de onde
   # ele entraria.
@@ -30,10 +32,11 @@ class Autonomia::Automacao::Contexto
                                    .to_h { |passo| [passo['id'], I18n.t('autonomia.automacao.ensaio.texto_da_ia', passo: passo['id'])] }
   end
 
-  def initialize(alvo, execucao: nil, textos: nil)
+  def initialize(alvo, execucao: nil, textos: nil, falhou: nil)
     @alvo = alvo
     @execucao = execucao
     @textos = textos
+    @mensagem_que_falhou = falhou if falhou
   end
 
   def conversa
@@ -90,6 +93,16 @@ class Autonomia::Automacao::Contexto
     ids = @execucao.registros.where(resultado: 'ok').where("dados ? 'mensagem_id'").pluck(Arel.sql("dados->>'mensagem_id'"))
     # reorder: a Message ordena por created_at no default_scope, e o order só desempataria.
     ::Message.where(account_id: @execucao.account_id, id: ids, private: false, message_type: :outgoing).reorder(id: :desc).first
+  end
+
+  # G53: a mensagem que disparou o gatilho "mensagem que falhou", achada pela marca da execução (o passo roda depois, sem
+  # ela). Sempre presa à conta e à conversa do alvo, e só a que saiu para o cliente, nunca só pelo id (a mesma regra da
+  # reunião). Fora desse gatilho, ou sem a mensagem, nil. No ensaio, a que chegou em `falhou`.
+  def mensagem_que_falhou
+    return @mensagem_que_falhou if defined?(@mensagem_que_falhou)
+
+    @mensagem_que_falhou = (buscar_mensagem_que_falhou if @execucao && conversa &&
+                                                          @execucao.chave_gatilho == ::Autonomia::Automacao::MensagemQueFalhou::TIPO)
   end
 
   # #2679: o texto que o passo de IA `passo_id` produziu nesta execução (Execucao#guardar_texto!). Antes do passo rodar,
@@ -150,6 +163,11 @@ class Autonomia::Automacao::Contexto
   end
 
   private
+
+  def buscar_mensagem_que_falhou
+    id = ::Autonomia::Automacao::MensagemQueFalhou.id_da_marca(@execucao.evento)
+    id && ::Message.find_by(account_id: conta_id, conversation_id: conversa.id, id: id, message_type: :outgoing, private: false)
+  end
 
   def reuniao_da_atividade
     reuniao = ::Autonomia::Automacao::ReuniaoDaAtividade

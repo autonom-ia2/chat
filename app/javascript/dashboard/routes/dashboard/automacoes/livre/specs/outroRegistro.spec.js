@@ -134,6 +134,7 @@ describe('doAlvoDoGatilho dentro do ramo', () => {
       CATALOGO,
       'mensagem.criada',
       false,
+      false,
       'Crm::Card'
     );
 
