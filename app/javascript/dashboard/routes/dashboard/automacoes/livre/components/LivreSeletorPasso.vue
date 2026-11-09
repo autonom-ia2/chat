@@ -13,7 +13,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['escolher', 'close']);
-const { canManagePipelines } = useCrmPermissions();
 
 const painel = ref(null);
 const { canManagePipelines } = useCrmPermissions();
