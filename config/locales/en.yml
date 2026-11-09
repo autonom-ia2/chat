@@ -532,7 +532,7 @@ en:
         quem_ligou_saiu_da_conta: 'The person who turned on the automation left the account. Take over and turn it back on.'
         quem_ligou_sem_acesso: 'The person who turned on the automation has no access here anymore. Take over and turn it back on.'
         quem_ligou_sem_permissao: 'The person who turned on the automation can no longer manage automations. Take over and turn it back on.'
-        sem_permissao_funil: 'The person who turned on the automation can no longer edit the pipeline, which card triggers need. Take over and turn it back on.'
+        sem_permissao_funil: 'The person who turned on the automation can no longer edit the pipeline, which card triggers and reading the card need. Take over and turn it back on.'
         quem_ligou_sem_permissao_card: 'The person who turned on the automation can no longer create cards in this pipeline, which the "Create card" step needs. Take over and turn it back on.'
         card_desligado: 'The "Create card" step is off for this account (card triggers or the CRM are off). No card was created.'
         card_ja_existe: 'There was already an open card in this pipeline for this conversation (or contact). No new card was created.'
@@ -632,8 +632,11 @@ en:
         fixo: 'Step %{passo}: %{campo} must be %{valor}.'
         mensagem_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the filter of the "message created" trigger.'
         reuniao_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the meeting triggers (scheduled, rescheduled, canceled).'
+        falhou_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the trigger of a message that wasn''t delivered.'
+        falhou_no_filtro: 'Step %{passo}: %{caminho} can only be used in the steps, not in the trigger''s "Only if".'
         resposta_so_na_espera: 'Step %{passo}: %{caminho} only exists in the condition of a "wait until" step.'
         valor_fora_do_alvo: 'Step %{passo}: %{caminho} cannot be read from what this trigger starts on (conversation, card or contact).'
+        card_da_conversa_so_le: 'Step %{passo}: an automation that starts on a conversation only reads the card (%{caminho}). To change the card, use an automation that starts on the card.'
         operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'
         valor_fora: 'Step %{passo}: %{caminho} has no value "%{valor}". Use one of: %{opcoes}.'
         proibido: 'Step %{passo}: the automation cannot change %{campo}.'
@@ -652,6 +655,7 @@ en:
         campo_de_fora: 'Trigger: field %{campo} is not a date field of this account.'
         faixa_invertida: 'Trigger: in "closed between", the first number (%{de}) is greater than the second (%{ate}). That way it never picks any card.'
         passo_pede_alvo: 'Step %{passo}: this trigger runs on the account, with no conversation, card or contact. Only wait and send campaign fit here.'
+        data_passada: 'Trigger: the date %{data} has already passed. Choose a date from today on, at an hour still to come.'
         selecao_vazia: 'Trigger: choose at least one condition for which cards or contacts it runs on. With none, it would run on the whole account.'
         selecao_de_outro_alvo: 'Trigger: these conditions do not apply here: %{condicoes}.'
         responsavel_de_fora: 'Trigger: the chosen owner is not in this account.'
@@ -663,6 +667,10 @@ en:
         caminho_repetido: "Step %{passo}: there is already a path named %{nome}."
         caminho_reservado: "Step %{passo}: the name %{nome} is already the path for when nothing applies. Pick another name."
         caminho_sem_letra: "Step %{passo}: the path name needs at least one letter (%{nome})."
+        de_novo_caminho_desconhecido: "Step %{passo}: \"decide again\" points to a path this step doesn't have (%{chave})."
+        de_novo_com_passos: "Step %{passo}: the path %{nome} decides again, so it can't have steps. Remove its steps or unmark it."
+        de_novo_todos: "Step %{passo}: leave at least one way out unmarked (a path or \"None applies\"), so the automation can move on."
+        caminho_nenhum: "None applies"
         destino_invalido: "Step %{passo}: %{destino} is not a place where the AI can save."
         webhook_desligado: "Step %{passo}: sending to another system is off for this account."
         webhook_so_https: "Step %{passo}: the address of the other system must start with https://."

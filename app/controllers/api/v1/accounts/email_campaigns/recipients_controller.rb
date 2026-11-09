@@ -6,6 +6,7 @@ class Api::V1::Accounts::EmailCampaigns::RecipientsController < Api::V1::Account
   RESULTS_PER_PAGE = 50
 
   def index
+    @contact_data_hidden = ConversationAudience::Access.hides_contact_data?(Current.account_user)
     @recipients = @campaign.email_campaign_recipients
                            .order(:id)
                            .page(@current_page).per(RESULTS_PER_PAGE)

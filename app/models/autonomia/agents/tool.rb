@@ -33,6 +33,7 @@
 #
 class Autonomia::Agents::Tool < ApplicationRecord
   include Autonomia::Agents::CabecalhosDaFerramenta
+  include Autonomia::Agents::SegredoDaFerramenta
 
   self.table_name = 'autonomia_agent_tools'
 
@@ -71,8 +72,6 @@ class Autonomia::Agents::Tool < ApplicationRecord
   validates :timeout_seconds, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: ALCANCE_DO_INTEIRO }
   validate :validate_endpoint_url
   validate :validate_faixas
-  validate :validate_chave_mascarada
-  validate :validate_segredo_no_mesmo_site, on: :update
   validate :validate_param_schema
   validate :validate_slug_livre, if: :will_save_change_to_slug?
 
@@ -200,34 +199,6 @@ class Autonomia::Agents::Tool < ApplicationRecord
 
       errors.add(campo, I18n.t('autonomia.agents.ferramenta.faixa_grande', maximo: Autonomia::Agents::Tools::ModeloLiquid::FAIXA_MAXIMA))
     end
-  end
-
-  # #1430 (revisão adversarial): com a chave delegada, trocar o site e manter a chave guardada levaria a chave para o
-  # site novo no Testar ou no atendimento. Trocou o site (esquema, host ou porta): a chave guardada precisa ser digitada
-  # de novo.
-  def validate_segredo_no_mesmo_site
-    return unless will_save_change_to_endpoint_url? && site(endpoint_url_in_database) != site(endpoint_url)
-    return unless chave_guardada_reaproveitada?
-
-    errors.add(:headers_config, I18n.t('autonomia.agents.ferramenta.chave_de_novo_outro_site'))
-  end
-
-  def chave_guardada_reaproveitada?
-    guardadas = Array(headers_config_in_database).select { |header| header['secret'] }.map { |header| header.values_at('key', 'value') }
-    headers_config.any? { |header| header['secret'] && guardadas.include?(header.values_at('key', 'value')) }
-  end
-
-  # A máscara voltou sem chave guardada com o mesmo nome (renomeou, ou desligou o segredo): seria gravada como a chave.
-  def validate_chave_mascarada
-    mascarada = headers_config.any? { |header| header['value'] == self.class.masked_header_value }
-    errors.add(:headers_config, I18n.t('autonomia.agents.ferramenta.chave_de_novo')) if mascarada
-  end
-
-  def site(texto)
-    uri = URI.parse(sem_modelo(texto.to_s))
-    [uri.scheme.to_s.downcase, uri.host.to_s.downcase, uri.port]
-  rescue URI::InvalidURIError
-    nil
   end
 
   def ip_host?(host)

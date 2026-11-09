@@ -6,6 +6,7 @@ import {
   useCanManage,
   usePermissionGranted,
 } from 'dashboard/composables/useCanManage';
+import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useMapGetter } from 'dashboard/composables/store';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -94,13 +95,16 @@ const catalogoComTextos = computed(() =>
 
 // O "Alterar" só oferece o valor que o alvo do gatilho alcança (#2499) e que
 // a pessoa pode ler (#2597), mais o texto dos passos de IA da receita (#2679).
+// O card da conversa, só com a chave de funis (#2716).
 const podeLerValor = usePodeLerValor();
+const { canManagePipelines } = useCrmPermissions();
 const catalogoDoAlvo = computed(() =>
   comTextosDaIa(
     doAlvoDoGatilho(
       comPermissoes(catalogo.value, podeLerValor.value),
       receita.value.gatilho?.tipo,
-      Boolean(receita.value.gatilho?.conversa_nova)
+      Boolean(receita.value.gatilho?.conversa_nova),
+      canManagePipelines.value
     ),
     receita.value.passos,
     t
@@ -603,6 +607,7 @@ onMounted(() => {
               :atributos-da-peca="atributosDaPeca"
               :atributos-do="atributosDo"
               :receita-do-teste="receitaDoSalvar"
+              :automacao-id="automacao?.id ?? null"
               :custos="custos"
               :gatilhos="gatilhos"
               :escolhas-do-gatilho="{
