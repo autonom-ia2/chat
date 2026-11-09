@@ -54,4 +54,9 @@ module ConversationAudience::Access
   def masked_email(email)
     email.present? ? EmailCampaigns::EmailNormalizer.mask(email.to_s.strip.downcase) : email
   end
+
+  # The only phone mask of the campaign features (CampaignImports::PhoneMask): country code and the last 4 digits.
+  def masked_phone(phone)
+    phone.present? ? CampaignImports::PhoneMask.mask(phone) : phone
+  end
 end

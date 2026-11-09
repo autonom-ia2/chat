@@ -45,15 +45,16 @@ class Api::V1::Accounts::EmailCampaigns::ReportsController < Api::V1::Accounts::
   def import_issues
     query = EmailCampaigns::Reports::ImportIssuesQuery.new(@campaign, issue_params)
     @meta = query.meta
-    @issues = EmailCampaigns::Reports::ImportIssuesQuery.present(query.paginated)
+    @issues = EmailCampaigns::Reports::ImportIssuesQuery.present(query.paginated, masked: contact_data_hidden?)
     @import_summary = EmailCampaigns::Presentation::ImportSummary.new(@campaign).call
     @preflight = EmailCampaigns::Presentation::Hygiene.new(@campaign, actor: Current.user).call
   end
 
   def export_import_issues
     query = EmailCampaigns::Reports::ImportIssuesQuery.new(@campaign, issue_params)
+    masked = contact_data_hidden?
     csv = EmailCampaigns::Reports::CsvExport.new(scope: query.call, columns: EmailCampaigns::Reports::CsvExport::ISSUE_COLUMNS) do |batch|
-      EmailCampaigns::Reports::ImportIssuesQuery.present(batch)
+      EmailCampaigns::Reports::ImportIssuesQuery.present(batch, masked: masked)
     end
     stream_csv(csv, 'import_issues')
   end
@@ -85,7 +86,8 @@ class Api::V1::Accounts::EmailCampaigns::ReportsController < Api::V1::Accounts::
 
   def builder
     @builder ||= EmailCampaigns::Reports::Builder.new(
-      account: Current.account, actor: Current.user, params: report_filter_params(%w[campaign_id status campaign_status q since until])
+      account: Current.account, actor: Current.user, masked: contact_data_hidden?,
+      params: report_filter_params(%w[campaign_id status campaign_status q since until])
     )
   end
 
@@ -95,7 +97,8 @@ class Api::V1::Accounts::EmailCampaigns::ReportsController < Api::V1::Accounts::
     report_filter_params(contact_data_hidden? ? %w[status problem page] : %w[q status problem page])
   end
 
+  # #2802: the search compares with the real address; who does not read contacts searches nothing.
   def issue_params
-    report_filter_params(%w[q reason reason_code page])
+    report_filter_params(contact_data_hidden? ? %w[reason reason_code page] : %w[q reason reason_code page])
   end
 end
