@@ -18,4 +18,6 @@ class Autonomia::Automacao::RegistroCriadoNaReceita < Autonomia::Automacao::Text
     criado = ::Autonomia::Automacao::RegistroCriado.tipo_do_passo(passo)
     criado.present? && (@tipo.nil? || criado == @tipo)
   end
+
+  def do_para_cada(_resto) = nil
 end

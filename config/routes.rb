@@ -297,7 +297,7 @@ Rails.application.routes.draw do
             end
           end
           # Importar contatos (#1006): the journey's contact import (fork controller).
-          resources :contact_imports, only: [:create, :show, :destroy] do
+          resources :contact_imports, only: [:index, :create, :show, :destroy] do
             member do
               patch :columns
               patch :companies

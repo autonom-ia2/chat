@@ -12,8 +12,8 @@
 #   resto; sem prazo, só o primeiro), e o "decidir" da IA abre um caminho por saída, sem escolher. "Parar" acaba o caminho.
 # - a ação com valor calculado no corpo (G16) mostra o valor que daria agora, com os dados da conversa e o "hoje" de
 #   agora, no fuso da conta; pula como o motor pularia.
-# - "extrair", "escrever" e "resumir" (#2500 F7) só dizem o que a IA faria e para onde iria, pelo `ensaiar` de cada
-#   passo: nenhuma IA é chamada.
+# - "extrair", "escrever", "resumir" (#2500 F7) e "para cada item" (G24) só dizem o que a IA faria e para onde iria,
+#   pelo `ensaiar` de cada passo: nenhuma IA é chamada.
 #
 # Cada tipo de passo diz o que faria por um mapa fechado. Tipo fora do mapa (um passo novo) só ganha a frase do
 # catálogo: o ensaio nunca roda o que não conhece.
@@ -26,7 +26,7 @@ class Autonomia::Automacao::Ensaio
   GATILHOS = %w[conversa.criada conversa.aberta conversa.resolvida mensagem.criada mensagem.falhou].freeze
   SO_MOSTRA = %w[esperar].freeze
   # #2500 F7: os passos de IA que seguem em frente; o "decidir" abre caminhos e tem regra própria.
-  IA_SO_DIZ = %w[extrair escrever resumir].freeze
+  IA_SO_DIZ = %w[extrair escrever resumir para_cada].freeze
 
   def self.gatilho_suportado?(receita)
     GATILHOS.include?(receita.dig('gatilho', 'tipo'))

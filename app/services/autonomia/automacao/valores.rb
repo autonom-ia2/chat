@@ -98,7 +98,8 @@ class Autonomia::Automacao::Valores
 
   # #2679: o texto que um passo de IA ("escrever", "resumir") desta execução produziu: `ia.<id do passo>`. Vale em
   # qualquer alvo: fica na execução, não no alvo. O salvar confere que o id é de um passo que escreve (Receita); antes de
-  # ele rodar, ou num caminho em que ele não rodou, lê vazio, e o passo pula com `faltou_valor`.
+  # ele rodar, ou num caminho em que ele não rodou, lê vazio, e o passo pula com `faltou_valor`. O "para cada item" (G24)
+  # deixa `ia.<id>.quantos` e `ia.<id>.nomes`, guardados na execução com a mesma chave (TextoDaIaNaReceita).
   IA = 'ia.'.freeze
   PASSOS_QUE_ESCREVEM = %w[escrever resumir].freeze
 

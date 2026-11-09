@@ -72,14 +72,14 @@ RSpec.describe CampaignImports::Importer do
     it 'marks only the failing row and imports the rest, in blocks' do
       stub_const('CampaignImports::Importer::BLOCK_SIZE', 2)
       account, campaign_import = validated_import("nome,telefone\nAna,11987654321\nBia,21987654321\nCaio,31987654321\n")
-      importer = described_class.new(campaign_import)
-      allow(importer).to receive(:find_existing_contact).and_wrap_original do |method, phone|
+      # The row's contact lookup lives in ContactRow (#2771), through ContactMatcher.
+      allow_any_instance_of(CampaignImports::ContactMatcher).to receive(:find).and_wrap_original do |method, phone| # rubocop:disable RSpec/AnyInstance
         raise ActiveRecord::RecordInvalid, Contact.new if phone == '+5521987654321'
 
         method.call(phone)
       end
 
-      importer.perform
+      described_class.new(campaign_import).perform
 
       campaign_import.reload
       expect(campaign_import).to be_completed_with_failures

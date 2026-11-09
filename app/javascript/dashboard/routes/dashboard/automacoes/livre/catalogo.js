@@ -4,6 +4,7 @@
 import { ref } from 'vue';
 import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import { todosOsPassos } from './receita';
+import { novoParaCada, valoresDoParaCada } from './paraCada';
 
 const catalogo = ref(null);
 let carregando = null;
@@ -136,6 +137,8 @@ export const novoPasso = (entrada, id, t) => {
     return { id, tipo: 'escrever', le: LE, instrucao: '', destino: 'sugestao' };
   if (entrada.tipo === 'resumir')
     return { id, tipo: 'resumir', le: LE, linhas: 3, destino: 'nota' };
+  // G24: o "para cada item" nasce com o campo "nome" e a etapa a escolher.
+  if (entrada.tipo === 'para_cada') return novoParaCada(id);
   // G15: a agente nasce sem escolha; o "Salvar" do painel espera escolher.
   if (entrada.tipo === 'ia_assumir')
     return { id, tipo: 'ia_assumir', agente_id: null };
@@ -232,7 +235,8 @@ export const doAlvoDoGatilho = (
 // #2679 — o texto que um "escrever" ou "resumir" da receita produz vira um dado
 // que os passos seguintes leem (`ia.<id>`). O rótulo diz qual: a instrução do
 // "escrever", ou "Resumo da IA"; dois iguais levam o id junto (comChaveSeRepetido).
-// Antes de o passo rodar, o dado está vazio e o passo que o lê pula.
+// Antes de o passo rodar, o dado está vazio e o passo que o lê pula. O "para cada
+// item" (G24) deixa dois: quantos itens e os nomes (`ia.<id>.quantos`, `.nomes`).
 const CABE_NO_ROTULO = 40;
 const rotuloDoTexto = (passo, t) => {
   if (passo.tipo === 'resumir')
@@ -294,13 +298,17 @@ const ROTULO_DO_CRIADO = { Contact: 'CONTATO', 'Crm::Card': 'CARD' };
 export const comTextosDaIa = (dados, passos, t, achatar = todosOsPassos) => {
   if (!dados?.valores) return dados;
   const lista = achatar(passos);
-  const textos = lista
-    .filter(passo => ['escrever', 'resumir'].includes(passo.tipo))
-    .map(passo => ({
-      caminho: `ia.${passo.id}`,
-      chave: passo.id,
-      rotulo: rotuloDoTexto(passo, t),
-    }));
+  const textos = lista.flatMap(passo => {
+    if (passo.tipo === 'para_cada') return valoresDoParaCada(passo, t);
+    if (!['escrever', 'resumir'].includes(passo.tipo)) return [];
+    return [
+      {
+        caminho: `ia.${passo.id}`,
+        chave: passo.id,
+        rotulo: rotuloDoTexto(passo, t),
+      },
+    ];
+  });
   const criados = lista
     .filter(passo => tipoCriado(passo))
     .map(passo => ({

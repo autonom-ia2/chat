@@ -1684,6 +1684,45 @@
       ]
     },
     {
+      "tipo": "para_cada",
+      "grupo": "IA",
+      "requer": "automacao_ia",
+      "funil": true,
+      "frase": "AUTOMACAO_LIVRE.PASSOS.PARA_CADA",
+      "campos": [
+        {
+          "nome": "le",
+          "peca": "para_cada",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.LE"
+        },
+        {
+          "nome": "descricao",
+          "peca": "para_cada",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DESCRICAO"
+        },
+        {
+          "nome": "campos",
+          "peca": "para_cada",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CAMPOS"
+        },
+        {
+          "nome": "etapa_id",
+          "peca": "para_cada",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ETAPA_ID"
+        },
+        {
+          "nome": "maximo",
+          "peca": "para_cada",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.MAXIMO"
+        }
+      ]
+    },
+    {
       "tipo": "escrever",
       "grupo": "IA",
       "requer": "automacao_ia",

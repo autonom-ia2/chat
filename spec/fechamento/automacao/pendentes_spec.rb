@@ -15,10 +15,12 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # (fechar o card, passo 10).
     6 => ['Aniversário que vira horário marcado', 'G49 (gravar no card criado), G25, G1, G4, G6, G12, G14, G16, G33, G56, G59, G60, G61'],
     7 => ['Black Friday para os clientes antigos primeiro', 'G37 (público com exclusão), G38, G39, G5, G7, G14, G15'],
-    8 => ['Funcionário novo no plano da empresa', 'G24 (2ª automação em cada card criado), G1, G4, G5, G7, G13, G17, G20, G22, G27'],
-    # O 9 tem spec próprio (exemplo_09_prospeccao_semanal_spec.rb, G21 #2706), mas só fecha junto com a G58 (#2784): o
-    # público da execução, a campanha de cada segunda vai só às empresas criadas nesta execução (passo 4 à risca).
-    9 => ['Prospecção que roda sozinha toda semana', 'G58 (#2784: campanha só às empresas desta execução)'],
+    # O 8 tem spec próprio dos passos 1 a 5 (exemplo_08_funcionario_novo_spec.rb, G24 #2771); faltam os passos 6 a 9.
+    8 => ['Funcionário novo no plano da empresa',
+          'G31 (passos 6 e 7: voltar a esperar a cada documento na 2ª automação), G27 (passo 8: card completo), G13, ' \
+          'G22 (passo 9: avisar o RH toda sexta), G7, G24'],
+    # O 9 tem spec próprio (exemplo_09_prospeccao_semanal_spec.rb, G21 #2706); falta só o passo 4 à risca.
+    9 => ['Prospecção que roda sozinha toda semana', 'G58 (campanha só às empresas desta execução)'],
     # O 10 saiu com o lote 4 (#2682, G40) depois da G41 (#2759): o spec dele roda à risca, com a espera só pela Fernanda.
     # O 13 saiu com o lote 2 (#2679): o spec dele roda à risca, com o card ganho e a IA lendo o card.
     # O 11 saiu com a G49: o spec dele roda à risca (exemplo_11_indicacao_spec.rb).

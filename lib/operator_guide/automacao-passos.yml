@@ -38,6 +38,10 @@ nativos:
   escrever: { grupo: IA, requer: automacao_ia }
   # G41: `rotulos` troca o rótulo de um campo só neste passo (a instrução do resumo é opcional e diz o que mais trazer).
   resumir: { grupo: IA, requer: automacao_ia, rotulos: { instrucao: instrucao_do_resumo } }
+  # G24 (#2771): um card por item de uma lista que a IA acha na conversa. Cria card, então pede também a flag dos
+  # gatilhos de card e a chave de funis (`funil`), como o "criar card"; quem recusa de verdade é a Receita, ao salvar e ao
+  # ligar. `peca`: o passo inteiro numa peça só (LivreParaCada.vue).
+  para_cada: { grupo: IA, requer: automacao_ia, funil: true, peca: para_cada }
   # G15: passar a conversa à agente de IA, pela Atribuição. Sem flag própria: o painel diz quando a conta não tem agente
   # que receba conversa, e o motor pula com o motivo.
   ia_assumir: { grupo: EQUIPE }

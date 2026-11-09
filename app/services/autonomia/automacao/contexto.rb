@@ -26,11 +26,17 @@ class Autonomia::Automacao::Contexto
   def self.de(alvo, **) = new(alvo, **)
 
   # Os `textos` do ensaio (#2679): ele não chama a IA, e no lugar do texto de cada passo que escreve vai a marca de onde
-  # ele entraria.
+  # ele entraria. Do "para cada item" (G24), uma marca por valor (`<id>.quantos`, `<id>.nomes`).
   def self.marcas_da_ia(receita, conta)
-    ::Autonomia::Automacao::Receita.new(receita, conta: conta, account_user: nil).passos
-                                   .select { |passo| ::Autonomia::Automacao::Valores::PASSOS_QUE_ESCREVEM.include?(passo['tipo']) }
-                                   .to_h { |passo| [passo['id'], I18n.t('autonomia.automacao.ensaio.texto_da_ia', passo: passo['id'])] }
+    ::Autonomia::Automacao::Receita.new(receita, conta: conta, account_user: nil).passos.flat_map { |passo| chaves_da_ia(passo) }
+                                   .index_with { |chave| I18n.t('autonomia.automacao.ensaio.texto_da_ia', passo: chave) }
+  end
+
+  def self.chaves_da_ia(passo)
+    return [passo['id']] if ::Autonomia::Automacao::Valores::PASSOS_QUE_ESCREVEM.include?(passo['tipo'])
+    return [] unless passo['tipo'] == 'para_cada'
+
+    ::Autonomia::Automacao::PassoParaCada::VALORES.map { |valor| "#{passo['id']}.#{valor}" }
   end
 
   def initialize(alvo, execucao: nil, textos: nil, evento: nil, falhou: nil)

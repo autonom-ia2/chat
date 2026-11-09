@@ -1,0 +1,17 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "PARA_CADA": {
+      "DESCRICAO_DICA": "Say what each item of the list is, for example: each new employee in the HR list.",
+      "CAMPO_DICA": "What the AI takes from each item. It fills in only what is written in the conversation. \"nome\" is always there: the contact and the card are created from it.",
+      "SEM_TELEFONE": "Without the WhatsApp of each one, every item becomes a new contact with the name only, even if the person is already in your contacts.",
+      "POR_TELEFONE": "Find the contact by WhatsApp",
+      "MAXIMO_DICA": "From 1 to {maximo}. Items beyond this do not become cards, and the history says how many were left out.",
+      "MAXIMO_FORA": "Choose a whole number from 1 to {maximo}.",
+      "CONTATO_DICA": "Each item uses the contact with the same WhatsApp, or a new contact is created, as in Import contacts. An existing contact only gets what it lacks: a filled-in name or phone is never replaced. The other fields, such as the date of birth, go to the contact as one more column of Import contacts, only when it does not have that field yet. It goes to the company of whoever sent the list, unless it already has another company.",
+      "FRASE": "For each item of the list ({item}): create a card",
+      "FRASE_SEM_ITEM": "For each item of a list: create a card",
+      "VALOR_QUANTOS": "How many items the list had",
+      "VALOR_NOMES": "The names on the list"
+    }
+  }
+}

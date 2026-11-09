@@ -17,6 +17,23 @@ continua sendo o usado quando a tela nova está desligada.
 
 Permissão: a mesma da importação do Chatwoot (`ContactPolicy#import?` — administrador ou função
 com `contact_manage`). Sem ela → `401`. `campaign_manage` sozinho não basta.
+A gravação (#2771) pergunta de novo, a quem subiu o arquivo, na hora do job: quem perdeu a
+permissão ou saiu da conta antes disso não grava nada, e a importação inteira fica `failed` com
+`validation_summary.import_error = "import_not_allowed"`.
+
+A linha gravada (`CampaignImports::ContactRow`, #2771) é a mesma do passo "Para cada item" da
+Automação: acha pelo telefone (com ou sem o nono dígito) e depois pelo e-mail; contato que já
+existe só ganha o que não tem (nome, telefone e e-mail preenchidos nunca são trocados); a empresa
+só vai para quem não tem empresa.
+
+O passo "Para cada item" da Automação (#2771, decisão 15) grava a rodada como importação de
+contatos: `options.origem = "automacao"`, com `automacao_id` e `execucao_id`; `user` é quem ligou a
+automação; uma linha por item (telefone mascarado e em hash, sem arquivo). Item com telefone que não
+é celular do Brasil ou contato recusado fica `invalid` com o motivo (`problem_rows` do `GET /:id`).
+Só a rodada inteira fecha (`completed`/`completed_with_failures`). A rodada que sai do passo sem
+terminar (pausa por falta de permissão, falha, erro) fica `failed` ("Parou") com o que entrou até ali
+e `validation_summary.parou` = motivo; o que não rodou não conta em `failed_contacts_count`. A nova
+tentativa na mesma execução (erro passageiro) reabre o mesmo registro.
 
 ## Endpoints
 
@@ -25,6 +42,7 @@ o mesmo objeto de `api-992.md` §4 com `flow: "contacts"`.
 
 | Método | Caminho | Corpo | |
 |---|---|---|---|
+| GET | `/?page=` | | Contatos > Importações (#2771): as importações de contatos da conta, da planilha e da automação, 25 por página, mais novas primeiro; `origin` `file` ou `automation`, `failed_count`, `created_by`; `meta.count` |
 | POST | `/` | multipart `import_file` (.csv/.xlsx), `create_companies` (`"false"` desliga) | `201`; validação em segundo plano |
 | GET | `/:id` | | acompanhar o status |
 | PATCH | `/:id/columns` | `{ name, phone, email, company }` (índice ou `null`) | mesmas regras de `api-992.md` §5 |

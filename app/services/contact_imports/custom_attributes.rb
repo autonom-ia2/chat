@@ -4,38 +4,55 @@
 # (ContactImports::AttributeColumns), so the values show on the contact page. merge! runs
 # inside each row savepoint: a contact gains the values it does not have yet; a value it
 # already has is kept, the same rule as name, phone and email (ContactBlankFields).
+#
+# The automation step "para_cada" (#2771, G24) writes the extra fields of each item the same way, with the field keys
+# as the column headers and no import record (`for_columns`).
 class ContactImports::CustomAttributes
-  def initialize(campaign_import)
+  def self.for_columns(account, extra_columns) = new(nil, account: account, extra_columns: extra_columns)
+
+  def initialize(campaign_import, account: campaign_import.account, extra_columns: campaign_import.extra_columns)
     @campaign_import = campaign_import
-    @account = campaign_import.account
+    @account = account
+    @extra_columns = extra_columns
   end
 
   # Returns how many attributes it created.
   def prepare!
     created = columns.reject(&:existing).count { |column| create_definition(column) }
-    @campaign_import.update!(validation_summary: @campaign_import.validation_summary.to_h.merge('contact_attributes_created' => created))
+    @campaign_import&.update!(validation_summary: @campaign_import.validation_summary.to_h.merge('contact_attributes_created' => created))
     created
   end
 
   # extra_values: { 'Vencimento' => '10/2026' } as stored on the import row (blank cells left out).
   # A value that does not fit a typed attribute (number, date, list...) is left out; the preview
   # already listed it (ContactImports::AttributeProblems).
+  #
+  # The contact is locked and read again first: two writers on the same contact (two automation runs, #2771) would
+  # otherwise each write the whole hash they read before, and the last one would drop the keys the other just wrote.
   def merge!(contact, extra_values)
-    current = contact.custom_attributes.to_h
-    additions = extra_values.to_h.each_with_object({}) do |(header, raw), found|
+    return if extra_values.blank?
+
+    contact.with_lock do
+      current = contact.custom_attributes.to_h
+      additions = additions(current, extra_values)
+      contact.update!(custom_attributes: current.merge(additions)) if additions.any?
+    end
+  end
+
+  private
+
+  def additions(current, extra_values)
+    extra_values.to_h.each_with_object({}) do |(header, raw), found|
       column = columns_by_header[header]
       next if column.nil? || raw.blank? || current[column.key].to_s.strip.present?
 
       value = column.cast(raw)
       found[column.key] = value unless value == ContactImports::AttributeValue::INVALID
     end
-    contact.update!(custom_attributes: current.merge(additions)) if additions.any?
   end
 
-  private
-
   def columns
-    @columns ||= ContactImports::AttributeColumns.new(@account, @campaign_import.extra_columns).perform
+    @columns ||= ContactImports::AttributeColumns.new(@account, @extra_columns).perform
   end
 
   def columns_by_header

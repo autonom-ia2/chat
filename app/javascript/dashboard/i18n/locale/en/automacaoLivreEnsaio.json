@@ -49,6 +49,7 @@
         "IA_ESCREVER_GUARDAR": "The text would be kept for the next steps.",
         "IA_RESUMIR_NOTA": "Would stay in a private note.",
         "IA_RESUMIR_AVISAR": "Would notify the team.",
+        "IA_PARA_CADA": "Would create a card for each item of the list, up to {maximo}.",
         "ONDE": {
           "CONVERSA": "{campo}, in the conversation",
           "CONTATO": "{campo}, in the contact",

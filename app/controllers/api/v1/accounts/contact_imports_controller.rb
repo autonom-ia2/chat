@@ -6,10 +6,20 @@
 class Api::V1::Accounts::ContactImportsController < Api::V1::Accounts::BaseController
   BOOLEAN_VALUES = %w[true false].freeze
   PROBLEM_ROWS_SHOWN = 20
+  RESULTS_PER_PAGE = 25
 
   before_action :ensure_contact_import_enabled
   before_action -> { authorize(Contact, :import?) }
-  before_action :fetch_contact_import, except: [:create]
+  before_action :fetch_contact_import, except: [:index, :create]
+
+  # GET /contact_imports?page= — Contatos > Importações (#2771, decision 15): the account's contact imports,
+  # from a file or from the automation step "para cada item", newest first. Never Públicos or campaign bases.
+  def index
+    scope = Current.account.campaign_imports.contact_imports
+    @current_page = [params[:page].to_i, 1].max
+    @campaign_imports = scope.includes(:user).order(created_at: :desc, id: :desc).page(@current_page).per(RESULTS_PER_PAGE)
+    @campaign_imports_count = scope.count
+  end
 
   def show
     render_import
