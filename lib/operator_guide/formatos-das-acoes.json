@@ -184,6 +184,26 @@
     ],
     "sem_corpo": false
   },
+  "DELETE autonomia/prospecting/audiences/:id/members": {
+    "campos": {
+      "contact_ids": {
+        "tipo": "lista"
+      },
+      "lead_ids": {
+        "tipo": "lista"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/prospecting/audiences#remove_members",
+    "modelo": "Autonomia::Prospecting::Lead",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:49",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:101",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:97",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:89"
+    ],
+    "sem_corpo": false
+  },
   "DELETE autonomia/prospecting/leads/:id/consent_refusal": {
     "completo": true,
     "controller": "api/v1/accounts/autonomia/prospecting/lead_consent_refusals#destroy",
@@ -11863,6 +11883,46 @@
     ],
     "sem_corpo": true
   },
+  "POST autonomia/prospecting/audiences/:id/copy": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/prospecting/audiences#copy",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:70",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:89"
+    ],
+    "sem_corpo": true
+  },
+  "POST autonomia/prospecting/audiences/:id/leads": {
+    "campos": {
+      "lead_ids": {
+        "tipo": "lista"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/prospecting/audiences#add_leads",
+    "modelo": "Autonomia::Prospecting::Lead",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:39",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:41",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:89"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/prospecting/audiences/:id/members": {
+    "campos": {
+      "contact_ids": {
+        "tipo": "lista"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/prospecting/audiences#restore_members",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:59",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:97",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:89"
+    ],
+    "sem_corpo": false
+  },
   "POST autonomia/prospecting/leads/:id/adopt_owner": {
     "campos": {
       "owner_name": {}
@@ -11984,8 +12044,8 @@
     "controller": "api/v1/accounts/autonomia/prospecting/lead_audiences#create",
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lead_audiences_controller.rb:9",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lead_audiences_controller.rb:10"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lead_audiences_controller.rb:20",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lead_audiences_controller.rb:21"
     ],
     "sem_corpo": false
   },
