@@ -4,6 +4,8 @@
 # - `no_funil=1` (Números F5, #1992): só as de cliente com card num funil que a pessoa vê no Números
 #   (Crm::Access::VisiblePipelines#apply_to_reports), pelo card principal ou pelo vínculo (crm_card_conversations). É o
 #   escopo da visão "Equipe": a conversa de um funil que o gestor não vê, em que ele só participa, não entra.
+# - `desde_dias=N` (Seus posts #2209; 7, 30 ou 90): só as conversas criadas no período do cartão "N pessoas mandaram
+#   mensagem" (Crm::MetaAds::Organico::Periodo, no fuso dos relatórios da conta), para a lista bater com o número.
 # Entram no `set_up`, depois do filtro de sempre e da visibilidade: as contagens das abas seguem a mesma regra, e o link
 # não mostra nada que a pessoa já não veria. No Spam e na Lixeira do e-mail, a pasta manda e estes filtros não valem.
 # Sem os parâmetros, nada muda: só quem abre o link vê a lista filtrada (por isso sem chave de recurso).
@@ -19,6 +21,7 @@ module Crm::ConversationFinderComFiltrosDoLink
     filtrar_recebidas_da_ia if params[:da_ia] == '1'
     filtrar_esperando if minutos_esperando
     filtrar_no_funil if params[:no_funil] == '1'
+    filtrar_desde_dias if dias_desde
   end
 
   # A passagem gravada, ou a marca de espera de pessoa: o robô passou e ninguém estava online, então a Entrega não
@@ -52,6 +55,20 @@ module Crm::ConversationFinderComFiltrosDoLink
 
   def filtrar_esperando
     @conversations = @conversations.where(waiting_since: ..minutos_esperando.minutes.ago)
+  end
+
+  def filtrar_desde_dias
+    @conversations = @conversations.where(created_at: Crm::MetaAds::Organico::Periodo.new(dias_desde, zona: fuso_dos_relatorios).intervalo)
+  end
+
+  def dias_desde
+    dias = params[:desde_dias].to_s
+    Crm::MetaAds::Organico::Periodo::DIAS.find { |valor| valor.to_s == dias }
+  end
+
+  # O mesmo fuso do cartão de Seus posts (SeusPosts::Leitura#zona).
+  def fuso_dos_relatorios
+    (current_account.reporting_timezone.present? && ActiveSupport::TimeZone[current_account.reporting_timezone]) || Time.zone
   end
 
   # Só dígitos (o Integer aceitaria " 30", "+30" e "1_0"), a mesma regra do painel.

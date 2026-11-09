@@ -199,10 +199,16 @@ class Autonomia::Agents::Material::Autoteste
     ids = Array(usados).filter_map { |usado| usado[:id] }
     por_id = @agent.knowledge_entries.where(id: ids).index_by(&:id)
     ids.filter_map { |id| por_id[id] }.first(TRECHOS_POR_RESPOSTA).map do |trecho|
-      { 'fonte' => trecho.source_id, 'paginas' => trecho.metadata.to_h['paginas'],
+      { 'fonte' => trecho.source_id, 'paginas' => paginas_do(trecho),
         'texto' => trecho.content.to_s.squish.truncate(TRECHO_MAX_CHARS),
         'inteiro' => trecho.content.to_s.squish.truncate(TRECHO_DO_JUIZ_MAX_CHARS) }.compact
     end
+  end
+
+  # #1431 (F1): o trecho cortado por seção sabe as próprias páginas; o de antes, só a seção de 25 páginas do material grande.
+  def paginas_do(trecho)
+    metadata = trecho.metadata.to_h
+    metadata['paginas_do_trecho'] || metadata['paginas']
   end
 
   # O prazo da rodada conta do começo do job, não do pedido: com a fila atrasada, a rodada não nasce vencida. Só a

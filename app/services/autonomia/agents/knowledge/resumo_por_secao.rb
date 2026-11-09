@@ -86,7 +86,7 @@ class Autonomia::Agents::Knowledge::ResumoPorSecao
 
   # { [ini, fim] => texto } na ordem dos trechos. Trecho sem `paginas` (material pequeno) não entra.
   def textos_por_secao
-    @source.knowledge_entries.where(status: Autonomia::Agents::KnowledgeEntry.statuses[:ready]).order(:chunk_index)
+    @source.knowledge_entries.where(status: Autonomia::Agents::KnowledgeEntry.statuses[:ready]).do_material.order(:chunk_index)
            .pluck(:content, :metadata)
            .select { |_, metadata| metadata.to_h['paginas'].present? }
            .group_by { |_, metadata| metadata['paginas'] }

@@ -1,0 +1,15 @@
+# #2801 — perguntas de definição respondidas pelo glossário das Condições Gerais Suhai (base pdf). Meta: resposta pelo
+# material, com a fonte (used_snippet_ids com a âncora).
+perguntas:
+  - pergunta: "O que é franquia?"
+    tipo: definicao
+    esperado: "É a participação obrigatória do segurado, dedutível em cada sinistro coberto (exceto raio, explosão acidental, incêndio e indenização integral)."
+    ancoras: ["participação obrigatória do Segurado, dedutível em cada sinistro coberto"]
+  - pergunta: "O que é salvado?"
+    tipo: definicao
+    esperado: "Veículo ou acessório encontrado depois de paga a indenização por roubo ou furto total, ou o que restou do veículo após um evento indenizado."
+    ancoras: ["Veículo ou acessório encontrado após o pagamento da indenização"]
+  - pergunta: "O que é o prêmio do seguro?"
+    tipo: definicao
+    esperado: "A importância paga pelo segurado ou estipulante à seguradora para que ela assuma o risco do veículo."
+    ancoras: ["importância paga pelo Segurado ou Estipulante à Seguradora"]

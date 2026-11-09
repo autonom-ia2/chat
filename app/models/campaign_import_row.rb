@@ -42,7 +42,10 @@ class CampaignImportRow < ApplicationRecord
     imported: 3,
     import_failed: 4,
     labels_undone: 5,
-    undo_failed: 6
+    undo_failed: 6,
+    # Tirada do Público depois de salvo (#2775, CampaignJourney::AudienceMembership). A linha fica, para a pessoa poder
+    # voltar à mesma linha; todo leitor de envio, contagem e amostra filtra por imported (ou valid), então ela não conta.
+    removed: 7
   }, _prefix: true
 
   validates :row_number, presence: true
