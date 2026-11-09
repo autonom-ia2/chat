@@ -11,6 +11,12 @@ RSpec.describe Autonomia::Automacao::Receita do
 
   def receita(gatilho, *passos) = { 'gatilho' => { 'tipo' => gatilho }, 'passos' => passos }
 
+  # O gatilho de contato (G7), que não alcança card.
+  def de_contato(*passos)
+    gatilho = { 'tipo' => 'contato.recorrente', 'frequencia' => 'diaria', 'hora' => 8, 'selecao' => { 'etiqueta' => 'newsletter' } }
+    { 'gatilho' => gatilho, 'passos' => passos }
+  end
+
   def em_outro(registro, *passos) = { 'id' => 'outro', 'tipo' => 'em_outro_registro', 'registro' => registro, 'passos' => passos }
 
   def mensagem(id, caminho) = { 'id' => id, 'tipo' => 'mensagem', 'texto' => ['Oi ', { '$valor' => caminho }] }
@@ -48,9 +54,47 @@ RSpec.describe Autonomia::Automacao::Receita do
       .to eq([I18n.t("#{frase}.valor_fora_do_alvo", passo: 'm1', caminho: 'conversa.status')])
   end
 
-  it 'a âncora é conferida no alvo do gatilho: card.* num gatilho de conversa não tem de onde ler' do
+  # Decisão 19 (#2716): a âncora lê o card da conversa, só para ler, e abre a filha a partir dele. A chave de funis de
+  # quem salva fica no controller (spec de request) e a de quem ligou no Acesso (card_da_conversa_spec).
+  it 'a âncora num gatilho de conversa lê o campo do card da conversa' do
     expect(problemas(receita('mensagem.criada', em_outro(no_campo.call('card.atributos.indicado_por'), mensagem('m1', 'contato.nome')))))
-      .to include(I18n.t("#{frase}.valor_fora_do_alvo", passo: 'outro', caminho: 'card.atributos.indicado_por'))
+      .to be_empty
+  end
+
+  it 'a âncora é conferida no alvo do gatilho: card.* num gatilho de contato não tem de onde ler' do
+    lida = de_contato(em_outro(no_campo.call('card.atributos.indicado_por'), mensagem('m1', 'contato.nome')))
+
+    expect(problemas(lida)).to include(I18n.t("#{frase}.valor_fora_do_alvo", passo: 'outro', caminho: 'card.atributos.indicado_por'))
+  end
+
+  # Decisão 19: no ramo que roda numa conversa (o contato do campo, usar: conversa), o card dela é só para ler, como no
+  # gatilho de conversa (Receita#alvo_da_receita); no ramo que roda nos cards do contato, a ação age no próprio card.
+  describe 'o card da conversa no ramo, só para ler' do
+    let(:na_conversa) { no_campo.call('card.atributos.indicado_por') }
+    let(:so_le) { ->(id, caminho) { I18n.t("#{frase}.card_da_conversa_so_le", passo: id, caminho: caminho) } }
+
+    def mover(id, caminho)
+      { 'id' => id, 'tipo' => 'acao', 'acao' => 'POST crm/cards/:id/move', 'descricao' => 'Mover',
+        'caminho' => { 'id' => { '$valor' => caminho } }, 'corpo' => { 'stage_id' => 1 } }
+    end
+
+    def gravar(id, caminho)
+      { 'id' => id, 'tipo' => 'acao', 'acao' => 'POST conversations/:id/custom_attributes', 'descricao' => 'Gravar',
+        'caminho' => { 'id' => { '$valor' => 'conversa.id' } }, 'corpo' => { 'custom_attributes' => { 'card' => { '$valor' => caminho } } } }
+    end
+
+    it 'lê o card no texto do ramo que roda numa conversa' do
+      expect(problemas(receita('card.ganho', em_outro(na_conversa, mensagem('m1', 'card.titulo'))))).to be_empty
+    end
+
+    it 'recusa card.* no caminho e card.id no corpo de uma ação do ramo que roda numa conversa', :aggregate_failures do
+      expect(problemas(receita('card.ganho', em_outro(na_conversa, mover('a1', 'card.id'))))).to include(so_le.call('a1', 'card.id'))
+      expect(problemas(receita('card.ganho', em_outro(na_conversa, gravar('a2', 'card.id'))))).to include(so_le.call('a2', 'card.id'))
+    end
+
+    it 'no ramo que roda nos cards do contato, a ação age no próprio card' do
+      expect(problemas(receita('mensagem.criada', em_outro(cards_perdidos, mover('a1', 'card.id'))))).not_to include(so_le.call('a1', 'card.id'))
+    end
   end
 
   # Decisão 16: a tela só oferece o campo do card do tipo contato; o servidor é a barreira de verdade (o Guia e a API
@@ -69,7 +113,7 @@ RSpec.describe Autonomia::Automacao::Receita do
   end
 
   describe 'G65 (#2842): o ramo lê o registro de origem com origem.*' do
-    # O ramo nos cards do contato de um gatilho de conversa: a origem é a conversa, que não alcança card.
+    # O ramo nos cards do contato de um gatilho de conversa: a origem é a conversa, que lê o card dela só para ler.
     let(:no_contato) { cards_perdidos }
 
     def texto(chave, id, caminho) = I18n.t("#{frase}.#{chave}", passo: id, caminho: caminho)
@@ -78,8 +122,23 @@ RSpec.describe Autonomia::Automacao::Receita do
       expect(problemas(receita('mensagem.criada', em_outro(no_contato, mensagem('m1', 'origem.contato.nome'))))).to be_empty
       expect(problemas(receita('mensagem.criada', mensagem('m0', 'origem.contato.nome'), em_outro(no_contato, mensagem('m1', 'contato.nome')))))
         .to eq([texto(:origem_fora_do_ramo, 'm0', 'origem.contato.nome')])
-      expect(problemas(receita('mensagem.criada', em_outro(no_contato, mensagem('m1', 'origem.card.titulo')))))
-        .to eq([texto(:valor_fora_do_alvo, 'm1', 'origem.card.titulo')])
+      expect(problemas(de_contato(em_outro(no_contato, mensagem('m1', 'origem.card.titulo')))))
+        .to include(texto(:valor_fora_do_alvo, 'm1', 'origem.card.titulo'))
+    end
+
+    # Decisão 19: a origem conversa lê o card dela (o assunto atual), só para ler; agir nele pela origem é recusado.
+    it 'na origem conversa, origem.card.* é lido e nunca aponta a ação', :aggregate_failures do
+      mover = { 'id' => 'a1', 'tipo' => 'acao', 'acao' => 'POST crm/cards/:id/move', 'descricao' => 'Mover',
+                'caminho' => { 'id' => { '$valor' => 'origem.card.id' } }, 'corpo' => { 'stage_id' => 1 } }
+      gravar = { 'id' => 'a2', 'tipo' => 'acao', 'acao' => 'POST conversations/:id/custom_attributes', 'descricao' => 'Gravar',
+                 'caminho' => { 'id' => { '$valor' => 'conversa.id' } },
+                 'corpo' => { 'custom_attributes' => { 'card' => { '$valor' => 'origem.card.id' } } } }
+
+      expect(problemas(receita('mensagem.criada', em_outro(no_contato, mensagem('m1', 'origem.card.titulo'))))).to be_empty
+      expect(problemas(receita('mensagem.criada', em_outro(no_contato, mover))))
+        .to include(texto(:card_da_conversa_so_le, 'a1', 'origem.card.id'))
+      expect(problemas(receita('mensagem.criada', em_outro(no_contato, gravar))))
+        .to include(texto(:card_da_conversa_so_le, 'a2', 'origem.card.id'))
     end
 
     it 'só campos e atributos da conversa, do contato e do card: o resto é da execução da mãe', :aggregate_failures do

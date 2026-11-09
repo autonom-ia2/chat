@@ -68,7 +68,8 @@ class Autonomia::Automacao::Acesso
     ::Autonomia::Automacao::Gatilhos.do_card?(@chave_gatilho || @definicao.versao_ativa&.receita&.dig('gatilho', 'tipo'))
   end
 
-  # A automação de conversa que lê o card (#2716) pede a mesma pergunta do gatilho de card. Sem ela, pausa com o motivo,
+  # A automação de conversa que lê o card (#2716) pede a mesma pergunta do gatilho de card; a âncora e o ramo do "em
+  # outro registro", com `origem.card.*`, também (CardDaConversa.le?, decisão 19). Sem ela, pausa com o motivo,
   # em vez de ler o card vazio e deixar o "Só se" falso em silêncio. Vale a versão ativa e a das execuções em andamento:
   # cada uma segue a versão em que começou.
   def le_o_card?

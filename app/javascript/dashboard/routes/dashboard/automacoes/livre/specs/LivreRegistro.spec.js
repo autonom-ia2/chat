@@ -108,6 +108,30 @@ describe('LivreRegistro', () => {
     ]);
   });
 
+  // Decisão 19: no gatilho de conversa, a âncora lê o card dela (só para
+  // ler), e só com a chave de funis.
+  it('no gatilho de conversa, o campo do card só para quem tem a chave de funis', () => {
+    const daConversa = {
+      ...CATALOGO,
+      alvo: 'Conversation',
+      alvos: { Conversation: ['conversa', 'contato', 'card'] },
+    };
+    const comChave = montar({
+      catalogo: daConversa,
+      podeLerCards: true,
+      modelValue: { de: 'contato_do_campo', usar: 'conversa' },
+    });
+    const semChave = montar({
+      catalogo: daConversa,
+      modelValue: { de: 'contato_do_campo', usar: 'conversa' },
+    });
+
+    expect(valores(escolha(comChave, '[data-campo]').props('options'))).toEqual(
+      ['card.atributos.indicado_por']
+    );
+    expect(semChave.find('[data-campo]').exists()).toBe(false);
+  });
+
   it('sem campo do tipo contato, diz o que fazer em vez de uma lista vazia', () => {
     const wrapper = montar({
       modelValue: { de: 'contato_do_campo' },

@@ -70,6 +70,9 @@ class Autonomia::Automacao::Receita
 
   def ramos_do_alvo(passo) = ::Autonomia::Automacao::EmOutroRegistro.do_tipo?(passo) ? [] : self.class.ramos(passo)
 
+  # O tipo do registro em que a receita roda: o do ramo do "em outro registro" (`alvo:`) ou o do gatilho.
+  def alvo_da_receita = @alvo || ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
+
   private
 
   def ids_repetidos
@@ -205,33 +208,40 @@ class Autonomia::Automacao::Receita
   # falhou (G53) não vale no "Só se" do gatilho (`no_gatilho`): a Partida filtra sem ela. `onde`: :caminho ou :corpo da
   # ação, :texto (mensagem, aviso, e-mail, retorno); nil é o que decide (filtro e condição). Na ação, a automação de
   # conversa não usa o card para agir (#2716): nenhum `card.*` no caminho e nenhum `card.id` no corpo; copiar um campo
-  # do card é ler.
+  # do card é ler. Vale também no ramo do "em outro registro" que roda numa conversa (alvo_da_receita) e na origem que é
+  # uma conversa (decisão 19).
   def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false, onde: nil)
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
     return ::Autonomia::Automacao::TextoDaIaNaReceita.new(self, @receita).problemas(id, caminho, no_gatilho: no_gatilho) if valores.da_ia?(caminho)
-    return problemas_da_origem(id, caminho) if valores.da_origem?(caminho)
+    return problemas_da_origem(id, caminho, onde) if valores.da_origem?(caminho)
 
     fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera,
                                           gatilho: @receita.dig('gatilho', 'tipo'), no_filtro: no_gatilho)
     return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
 
-    no_lugar = ::Autonomia::Automacao::CardDaConversa.problema(caminho, onde, @receita.dig('gatilho', 'tipo'))
-    return [texto(no_lugar, passo: id, caminho: caminho)] if no_lugar
-
-    Array(valores.problema_de_leitura(caminho, conta: @conta, account_user: @account_user)).map { |chave| texto(chave, passo: id, caminho: caminho) }
+    lido_no(id, caminho, caminho, onde, alvo_da_receita)
   end
 
   # G65: `origem.*` só no ramo do "em outro registro" (a filha lê o alvo da mãe), com o caminho que o alvo do gatilho da
-  # mãe alcança e a régua de leitura de sempre: o atributo da conta e a permissão de quem salva.
-  def problemas_da_origem(id, caminho)
-    valores = ::Autonomia::Automacao::Valores
-    lido = valores.caminho_da_origem(caminho)
+  # mãe alcança e a régua de sempre (lido_no), no alvo da mãe.
+  def problemas_da_origem(id, caminho, onde)
+    lido = ::Autonomia::Automacao::Valores.caminho_da_origem(caminho)
     return [texto(:origem_fora_do_ramo, passo: id, caminho: caminho)] unless @origem
-    return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless valores.no_alvo?(lido, @origem)
+    return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless ::Autonomia::Automacao::Valores.no_alvo?(lido, @origem)
 
-    Array(valores.problema_de_leitura(lido, conta: @conta, account_user: @account_user)).map { |chave| texto(chave, passo: id, caminho: caminho) }
+    lido_no(id, caminho, lido, onde, @origem)
+  end
+
+  # O `lido` (sem o prefixo da origem) no registro `alvo_type`: o card da conversa só para ler (decisão 19), o atributo
+  # da conta e a permissão de quem salva. A frase leva o `caminho` como a pessoa escreveu.
+  def lido_no(id, caminho, lido, onde, alvo_type)
+    no_lugar = ::Autonomia::Automacao::CardDaConversa.problema(lido, onde, alvo_type)
+    return [texto(no_lugar, passo: id, caminho: caminho)] if no_lugar
+
+    leitura = ::Autonomia::Automacao::Valores.problema_de_leitura(lido, conta: @conta, account_user: @account_user)
+    Array(leitura).map { |chave| texto(chave, passo: id, caminho: caminho) }
   end
 
   def problemas_da_acao(passo)
@@ -244,7 +254,7 @@ class Autonomia::Automacao::Receita
   # #2499: `card.*` num gatilho de conversa não tem de onde ler. Gatilho desconhecido o esquema já recusou.
   # A conversa nova (#2680) dá ao alvo sem conversa (o contato) a ponte para a que ela abre.
   def no_alvo_do_gatilho?(caminho)
-    alvo = @alvo || ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
+    alvo = alvo_da_receita
     return true if alvo.nil? || ::Autonomia::Automacao::Valores.no_alvo?(caminho, alvo)
 
     ::Autonomia::Automacao::ConversaNova.caixa_id(@receita).present? && caminho.to_s.start_with?('conversa.')

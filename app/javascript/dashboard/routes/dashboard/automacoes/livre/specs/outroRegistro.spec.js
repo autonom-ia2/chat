@@ -219,6 +219,36 @@ describe('valores do registro de origem', () => {
     );
   });
 
+  // Decisão 19: a origem que é conversa lê o card dela só para ler, e só com a
+  // chave de funis, como fora do ramo.
+  it('origem conversa: origem.card.* só com a chave de funis', () => {
+    const daConversa = {
+      ...CATALOGO,
+      gatilhos: [{ tipo: 'mensagem.criada', alvo: 'Conversation' }],
+      alvos: {
+        ...CATALOGO.alvos,
+        Conversation: ['conversa', 'contato', 'card'],
+      },
+    };
+    const daOrigem = podeLerCard =>
+      doAlvoDoGatilho(
+        daConversa,
+        'mensagem.criada',
+        false,
+        podeLerCard,
+        'Crm::Card'
+      )
+        .valores.map(item => item.caminho)
+        .filter(caminho => caminho.startsWith('origem.'));
+
+    expect(daOrigem(true)).toEqual([
+      'origem.contato.nome',
+      'origem.card.valor',
+      'origem.card.atributos',
+    ]);
+    expect(daOrigem(false)).toEqual(['origem.contato.nome']);
+  });
+
   it('fora do ramo, nenhum valor de origem', () => {
     const caminhos = doAlvoDoGatilho(CATALOGO, 'card.ganho').valores.map(
       item => item.caminho

@@ -44,10 +44,13 @@ const opcoesDeLigacao = computed(() =>
 );
 
 // O id do contato fica num campo do tipo contato do card do alvo do gatilho.
-const bases = computed(
-  () =>
-    props.catalogo.alvos?.[props.catalogo.alvo] || Object.keys(MODELO_DA_BASE)
-);
+// Decisão 19: na conversa, o card dela só para ler, e só com a chave de funis.
+const bases = computed(() => {
+  const doAlvo =
+    props.catalogo.alvos?.[props.catalogo.alvo] || Object.keys(MODELO_DA_BASE);
+  const semCard = props.catalogo.alvo === 'Conversation' && !props.podeLerCards;
+  return doAlvo.filter(base => !(semCard && base === 'card'));
+});
 const opcoesDeCampo = computed(() =>
   bases.value
     .filter(base => MODELO_DA_BASE[base])

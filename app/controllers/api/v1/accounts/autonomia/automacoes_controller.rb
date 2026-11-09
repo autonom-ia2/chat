@@ -142,7 +142,9 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   # Passo de funil exige também a chave de funis (D2), de quem salva e de quem liga: as mesmas CHAVES da regra do funil
   # (crm_manage_pipelines ou crm_admin). O catálogo esconder o passo não autoriza nada: a API confere aqui. O gatilho de
   # card (#2499) também pede a chave, e o retorno (G3), que cria pelo crm/follow_ups, e o "criar card" (G4). Ler o card
-  # a partir de uma conversa (#2716) também.
+  # a partir de uma conversa (#2716) também: no gatilho de conversa, `card.*` (a âncora do "em outro registro" inclusa) e
+  # `origem.card.*` no ramo (CardDaConversa.le?); em qualquer gatilho, o ramo que roda numa conversa e lê o card dela
+  # (EmOutroRegistro.de_funil?). Decisão 19 do Rodrigo (09/11).
   def sem_funil?(receita)
     return false unless receita.is_a?(Hash) && ::Autonomia::Automacao::Receita.esquema_valido?(receita)
     return false if ::Autonomia::Automacao::RegraDoFunil.chave?(Current.account_user)

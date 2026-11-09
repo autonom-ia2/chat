@@ -38,6 +38,35 @@ RSpec.describe Autonomia::Automacao::EmOutroRegistro do
     expect(Autonomia::Automacao::Roteiro.da(filha).primeiro).to be_nil
   end
 
+  # Decisão 19 (#2716): o card da conversa só para ler, e ler pede a chave de funis. O ramo que roda numa conversa e lê o
+  # card dela pede a chave em qualquer gatilho (o de contato não passa pelo CardDaConversa.le? do controller).
+  describe 'a chave de funis' do
+    def passo(registro, *caminhos)
+      passos = caminhos.map { |caminho| { 'id' => 'm1', 'tipo' => 'mensagem', 'texto' => [{ '$valor' => caminho }] } }
+      { 'id' => 'outro', 'tipo' => 'em_outro_registro', 'registro' => registro, 'passos' => passos }
+    end
+
+    let(:na_conversa) { { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'card.atributos.indicado_por' }, 'usar' => 'conversa' } }
+    let(:no_contato) { na_conversa.merge('usar' => 'contato') }
+
+    it 'pede a chave nos cards do contato e no ramo que lê o card da conversa', :aggregate_failures do
+      expect(described_class.de_funil?(passo({ 'de' => 'cards_do_contato' }))).to be(true)
+      expect(described_class.de_funil?(passo(na_conversa, 'card.titulo'))).to be(true)
+      expect(described_class.de_funil?(passo(na_conversa, 'origem.card.titulo'))).to be(true)
+      expect(described_class.de_funil?(passo(na_conversa, 'contato.nome'))).to be(false)
+      expect(described_class.de_funil?(passo(no_contato, 'contato.nome'))).to be(false)
+      expect(described_class.de_funil?({ 'id' => 'm1', 'tipo' => 'mensagem', 'texto' => [{ '$valor' => 'card.titulo' }] })).to be(false)
+    end
+
+    it 'o CardDaConversa.le? reconhece a âncora e origem.card.*, e não o resto', :aggregate_failures do
+      leitor = Autonomia::Automacao::CardDaConversa
+
+      expect(leitor.le?(passo(na_conversa))).to be(true)
+      expect(leitor.le?([{ '$valor' => 'origem.card.titulo' }])).to be(true)
+      expect(leitor.le?([{ '$valor' => 'origem.contato.nome' }, { '$valor' => 'contato.atributos.cartao' }])).to be(false)
+    end
+  end
+
   # G65 (#2842): a filha lê o registro de origem (o alvo da mãe) na hora, com a permissão de quem ligou.
   describe 'origem.* na filha' do
     let(:account) { create(:account) }
@@ -76,6 +105,22 @@ RSpec.describe Autonomia::Automacao::EmOutroRegistro do
     it 'o valor protegido só com a permissão de quem ligou', :aggregate_failures do
       expect(ler(filha, 'origem.card.valor')).to eq(150)
       expect(ler(filha, 'origem.card.valor', quem: nil)).to be_nil
+    end
+
+    # Decisão 19: a mãe numa conversa; a filha lê o card dela (o assunto atual) pela origem, com a chave de funis de
+    # quem ligou. Sem a chave, lê vazio (o Acesso já pausa antes, com sem_permissao_funil).
+    it 'origem conversa: origem.card.* lê o card da conversa, e vazio para quem não tem a chave de funis', :aggregate_failures do
+      conversa = create(:conversation, account: account, contact: joao)
+      card.update!(primary_conversation: conversa, inbox: conversa.inbox)
+      da_conversa = create(:autonomia_automacao_execucao, versao: versao, alvo: conversa, chave_gatilho: 'mensagem.criada')
+      filha_da_conversa = create(:autonomia_automacao_execucao, versao: versao, alvo: maria, chave_gatilho: 'mensagem.criada',
+                                                                evento: "em:#{da_conversa.id}:contato:#{maria.id}:outro")
+      agente = create(:user, account: account, role: :agent)
+      create(:inbox_member, user: agente, inbox: conversa.inbox)
+
+      expect(ler(filha_da_conversa, 'origem.card.titulo')).to eq('Banho do Rex')
+      expect(ler(filha_da_conversa, 'origem.card.titulo', quem: agente)).to be_nil
+      expect(ler(filha_da_conversa, 'origem.contato.nome', quem: agente)).to eq('João')
     end
 
     it 'fora da filha, origem.* lê vazio' do

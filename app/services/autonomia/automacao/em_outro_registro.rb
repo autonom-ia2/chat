@@ -38,8 +38,14 @@ module Autonomia::Automacao::EmOutroRegistro
     registro['usar'] == 'conversa' ? 'Conversation' : 'Contact'
   end
 
-  # A ligação lê cards do CRM: pede a chave de funis, como o gatilho de card e a ação de funil (controller#de_funil?).
-  def de_funil?(passo) = do_tipo?(passo) && alvo_do_ramo(passo) == 'Crm::Card'
+  # Pede a chave de funis, como o gatilho de card e a ação de funil (controller#de_funil?): a ligação que lê cards do CRM,
+  # e o ramo que roda numa conversa e lê o card dela (#2716, decisão 19: só para ler), qualquer que seja o gatilho.
+  def de_funil?(passo)
+    return false unless do_tipo?(passo)
+
+    alvo = alvo_do_ramo(passo)
+    alvo == 'Crm::Card' || (alvo == 'Conversation' && ::Autonomia::Automacao::CardDaConversa.le?(passo['passos']))
+  end
 
   def marca(mae, registro, passo_id) = [MARCA, mae.id, BASES.fetch(registro.class.name), registro.id, passo_id].join(':')
 

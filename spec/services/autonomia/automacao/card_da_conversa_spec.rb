@@ -217,6 +217,28 @@ RSpec.describe 'Automação livre: o card da conversa e o anexo da mensagem', :a
       expect(Autonomia::Automacao::Acesso.new(sem_card.reload).motivo).to be_nil
     end
 
+    # Decisão 19: a âncora do "em outro registro" (o campo do card da conversa) e origem.card.* no ramo também leem o
+    # card da conversa.
+    it 'pausa sem a chave de funis quando a âncora ou o ramo (origem.card.*) leem o card da conversa', :aggregate_failures do
+      funcao = create(:custom_role, account: account, permissions: %w[automation_manage crm_manage_pipelines])
+      agente.account_users.find_by(account: account).update!(custom_role: funcao)
+      create(:custom_attribute_definition, account: account, attribute_key: 'indicado_por', attribute_display_name: 'Indicado por',
+                                           attribute_model: 'card_attribute', attribute_display_type: 'contato')
+      aberto = { 'campo' => { '$valor' => 'origem.card.status' }, 'op' => 'igual', 'valor' => 'open' }
+      se_aberto = { 'id' => 's1', 'tipo' => 'se', 'condicao' => aberto, 'entao' => [], 'senao' => [] }
+      ancora = { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'card.atributos.indicado_por' }, 'usar' => 'contato' }
+      ramo = ->(id, registro, passos) { { 'id' => id, 'tipo' => 'em_outro_registro', 'registro' => registro, 'passos' => passos } }
+      pela_ancora = automacao_ligada(account, agente, [ramo.call('o1', ancora, [esperar_passo('p1')])], gatilho: { 'tipo' => 'mensagem.criada' })
+      pela_origem = automacao_ligada(account, agente, [ramo.call('o2', { 'de' => 'cards_do_contato' }, [se_aberto])],
+                                     gatilho: { 'tipo' => 'mensagem.criada' })
+
+      expect([pela_ancora, pela_origem].map { |automacao| Autonomia::Automacao::Acesso.new(automacao).motivo }).to eq([nil, nil])
+      funcao.update!(permissions: %w[automation_manage])
+
+      expect([pela_ancora, pela_origem].map { |automacao| Autonomia::Automacao::Acesso.new(automacao.reload).motivo })
+        .to eq(%w[sem_permissao_funil sem_permissao_funil])
+    end
+
     it 'a execução que começou numa versão que lê o card também pede a chave, mesmo que a versão ativa não leia mais' do
       funcao = create(:custom_role, account: account, permissions: %w[automation_manage crm_manage_pipelines])
       agente.account_users.find_by(account: account).update!(custom_role: funcao)

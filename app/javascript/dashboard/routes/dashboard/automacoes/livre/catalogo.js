@@ -191,11 +191,18 @@ export const comPermissoes = (dados, podeLer) => {
 const RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu';
 // G65 (#2842): dentro do ramo, também os valores do registro de origem (o alvo
 // do gatilho), com o prefixo `origem.`. O servidor marca quais (`na_origem`); a
-// permissão (`sem_permissao`) segue a do valor sem o prefixo.
+// permissão (`sem_permissao`) segue a do valor sem o prefixo. Decisão 19: o
+// card de uma origem que é conversa só para ler, e só com a chave de funis
+// (`semCard`), como fora do ramo.
 export const ORIGEM = 'origem.';
-const daOrigem = (valores, bases) =>
+const daOrigem = (valores, bases, semCard) =>
   valores
-    .filter(item => item.na_origem && bases.includes(item.base))
+    .filter(
+      item =>
+        item.na_origem &&
+        bases.includes(item.base) &&
+        !(semCard && item.base === 'card')
+    )
     .map(item => ({
       ...item,
       caminho: `${ORIGEM}${item.caminho}`,
@@ -235,7 +242,11 @@ export const doAlvoDoGatilho = (
     valores: [
       ...dados.valores.filter(item => alcanca(item) && daReuniao(item)),
       ...(alvoDoRamo && dados.alvos?.[doGatilho]
-        ? daOrigem(dados.valores, dados.alvos[doGatilho])
+        ? daOrigem(
+            dados.valores,
+            dados.alvos[doGatilho],
+            doGatilho === 'Conversation' && !podeLerCard
+          )
         : []),
     ],
   };
