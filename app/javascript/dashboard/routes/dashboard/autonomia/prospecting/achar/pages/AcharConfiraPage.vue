@@ -20,8 +20,8 @@ import { useSobreDaLista } from '../composables/useSobreDaLista';
 import { useGavetaDaLista } from '../composables/useGavetaDaLista';
 import { useDonoDaLista } from '../composables/useDonoDaLista';
 import { useRepetirBusca } from '../composables/useRepetirBusca';
+import { useNomeDaLista } from '../composables/useNomeDaLista';
 import { ROTAS } from '../utils/acharRotas';
-import { diaEMes } from '../utils/acharQuando';
 import {
   ESTADOS_LEITURA,
   contasDaLista,
@@ -37,7 +37,7 @@ import { escolherDestino, lerUltimoDestino } from '../utils/destinoPronto';
 // (T1d), a folha "O que fazer com as {n}?" (F1) e o pronto (T2/T3) por cima.
 // A pessoa só tira quem não quer ("Vai / Não vai") e continua. Quem só vê (ou
 // não tem destino) vê a mesma lista em leitura, sem interruptor nem rodapé.
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const {
   route,
   router,
@@ -67,7 +67,6 @@ const pronto = ref(null);
 const subpainel = ref(null);
 const funis = ref([]);
 const destino = ref(null);
-const nomeLista = ref('');
 const enviandoUma = ref(false);
 // A frase depois de "Usar esta pessoa" (P1); some ao fechar ou trocar de empresa.
 const recado = ref('');
@@ -76,6 +75,8 @@ const destacada = ref(null);
 const estadoDaLista = ref(null);
 
 const estado = computed(() => demo.value || '');
+// O nome sugerido é lido na língua de agora (useNomeDaLista), nunca guardado cedo.
+const nomeLista = useNomeDaLista({ busca });
 const leitura = computed(
   () =>
     ESTADOS_LEITURA.includes(estado.value) ||
@@ -153,11 +154,6 @@ const aplicarLista = dados => {
     dados,
     todasFora: estado.value === 'confira-todas-fora',
     soComWhatsapp: estado.value === 'confira-so-whatsapp',
-  });
-  nomeLista.value = t('PROSPECTING_ACHAR.FOLHA.NOME_LISTA', {
-    oQue: dados.busca.oQue,
-    lugar: dados.busca.lugar.split(',')[0],
-    data: diaEMes(new Date(), locale.value),
   });
 };
 
@@ -547,6 +543,8 @@ watch(estado, async (novo, antigo) => {
       v-if="folha && !subpainel"
       v-model:nome-lista="nomeLista"
       v-model:mostrar-fora="folha.mostrarFora"
+      v-model:lista-id="folha.listaId"
+      :listas="folha.listas"
       :n="escolhidas.length"
       :pode-funil="permissoes.funil"
       :pode-lista="permissoes.lista"

@@ -1,3 +1,4 @@
+import { watch } from 'vue';
 import { lembrarDestino } from '../utils/destinoPronto';
 import { marcarEnviadas } from '../utils/acharConfiraEstados';
 import { erroDoDono, LIMITE_DO_PUBLICO } from './useDonoDaLista';
@@ -22,7 +23,12 @@ const ERRO_DO_PUBLICO = {
   'prospecting.audience.no_rows': 'lista_ninguem',
   'prospecting.audience.too_many_leads': 'lista_demais',
   'prospecting.audience.foreign_contact': 'lista_contato_apagado',
+  'prospecting.audience.audience_locked': 'lista_enviada',
 };
+
+// #2775 (F6): "Para qual lista?" — a lista nova (o padrão) ou uma que já
+// existe. `listas` é null até chegar do servidor; sem elas, só a nova.
+export const LISTA_NOVA = 'nova';
 
 export const folhaNova = (escolha = null, mostrarFora = false) => ({
   escolha,
@@ -31,6 +37,8 @@ export const folhaNova = (escolha = null, mostrarFora = false) => ({
   guardando: false,
   erro: null,
   foraDoErro: [],
+  listas: null,
+  listaId: LISTA_NOVA,
 });
 
 export function useFolhaDaLista({
@@ -125,6 +133,35 @@ export function useFolhaDaLista({
   const mandarDaFolha = () =>
     demo.value ? mudarEstado('folha-enviando') : enviar();
 
+  // As listas que já existem, ao abrir a folha (também na demonstração). Falha
+  // ao ler não trava: fica só "Lista nova".
+  const carregarListas = async () => {
+    let listas = [];
+    try {
+      listas = await fonte.value.listas();
+    } catch {
+      listas = [];
+    }
+    if (folha.value) folha.value = { ...folha.value, listas };
+  };
+  watch(
+    () => Boolean(folha.value) && folha.value.listas == null,
+    precisa => {
+      if (precisa) carregarListas();
+    },
+    { immediate: true }
+  );
+
+  // Numa lista nova, o Guardar lista de sempre; numa que já existe (#2775),
+  // as empresas entram nela (quem já estava não entra de novo).
+  const gravarLista = ids => {
+    const listaId = folha.value.listaId ?? LISTA_NOVA;
+    if (listaId === LISTA_NOVA) {
+      return fonte.value.guardarLista({ nome: nomeLista.value, ids });
+    }
+    return fonte.value.acrescentarNaLista({ listaId, ids });
+  };
+
   // O Público (#2695): o pronto guarda o id, para "Criar a mensagem" abrir a
   // Nova campanha com ele, e quem ficou de fora, para dizer o porquê.
   const guardarDaFolha = async () => {
@@ -142,15 +179,13 @@ export function useFolhaDaLista({
       foraDoErro: [],
     };
     try {
-      const guardado = await fonte.value.guardarLista({
-        nome: nomeLista.value,
-        ids,
-      });
+      const guardado = await gravarLista(ids);
       pronto.value = {
         tipo: 'lista',
         n: guardado.n,
         publicoId: guardado.publicoId,
         fora: guardado.fora,
+        nome: guardado.lista ? guardado.nome : null,
       };
       folha.value = null;
       if (demo.value) mudarEstado('guardada');

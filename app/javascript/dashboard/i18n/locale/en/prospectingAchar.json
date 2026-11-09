@@ -291,7 +291,14 @@
       "TENTAR": "Try again",
       "VAO": "{n} companies will go",
       "NAO_ENTRAM_LINK": "Why {n} does not go in | Why {n} do not go in",
-      "DICA_FUNIL": "Choose the pipeline."
+      "DICA_FUNIL": "Choose the pipeline.",
+      "QUAL_LISTA": "Which list?",
+      "LISTA_NOVA": "New list",
+      "NUMEROS_LISTA": "{empresas} businesses · {whatsapp} with WhatsApp · {email} with e-mail",
+      "LISTA_ENVIADA_DICA": "Already sent. It cannot change anymore.",
+      "QUEM_JA_ESTA": "Businesses already on the list are not added again",
+      "POR_NA_LISTA": "Add {n} businesses to the list",
+      "ERRO_LISTA_ENVIADA": "This list was already used in a sent campaign and cannot change. Choose another one or a new list."
     },
     "PARA_ONDE_PAINEL": {
       "TITULO": "Where do they go?",
@@ -322,7 +329,8 @@
           "TIRADA": "{n} had been taken off the list and was left out. | {n} had been taken off the list and were left out.",
           "MESMA_PESSOA": "{n} is the same person as another company on the list and went in once. | {n} are the same person as other companies on the list and went in once.",
           "SUMIU": "{n} is no longer in your list. | {n} are no longer in your list.",
-          "NAO_DEU": "Could not save {n}. Try again. | Could not save {n}. Try again."
+          "NAO_DEU": "Could not save {n}. Try again. | Could not save {n}. Try again.",
+          "JA_ESTAVA": "{n} was already on the list and was not added again. | {n} were already on the list and were not added again."
         }
       },
       "NENHUMA_NOVA": "No new company entered the {funil} pipeline.",
@@ -436,6 +444,52 @@
         "TITULO": "Who comes first"
       },
       "LIMPAR": "Clear settings"
+    },
+    "LISTAS_DA_EMPRESA": {
+      "ESTA_NA": "On the list {nome}",
+      "ENVIADA": "Already sent",
+      "TIRAR": "Remove",
+      "SAIU": "Removed from the list {nome}.",
+      "ERRO_TIRAR": "Could not remove it from the list. Try again.",
+      "ERRO_DESFAZER": "Could not undo. Try again."
+    },
+    "ABAS": {
+      "ROTULO": "Searches and lists",
+      "BUSCAS": "Searches",
+      "LISTAS": "Lists"
+    },
+    "LISTAS": {
+      "TITULO": "Your lists",
+      "VAZIO": "You have not saved any list yet. Open a search and save the businesses in a list for messages.",
+      "ERRO": "Could not open your lists.",
+      "SEM_PERMISSAO": "Your profile cannot save lists. Ask an administrator for the manage campaigns permission.",
+      "ENVIADA": "Already sent",
+      "EMPRESAS": "{n} business | {n} businesses",
+      "COM_WHATSAPP": "{n} with WhatsApp",
+      "COM_EMAIL": "{n} with e-mail",
+      "NO_FUNIL": "{n} already in the pipeline",
+      "CHAMADAS": "{n} already called | {n} already called"
+    },
+    "LISTA": {
+      "VOLTAR": "Your lists",
+      "ERRO": "Could not open this list.",
+      "VAZIA": "This list is empty.",
+      "ENVIADA_AVISO": "This list was already used in a sent campaign. It cannot change anymore. To change it, create a copy.",
+      "ESCREVER": "Write the message",
+      "COPIAR": "Create a copy to edit",
+      "COPIADA": "Done. The copy was created and can be changed.",
+      "ERRO_COPIAR": "Could not create the copy. Try again.",
+      "TIRAR": "Remove",
+      "TIRAR_ROTULO": "Remove {nome} from the list",
+      "TIROU": "{nome} was removed from the list.",
+      "ERRO_TIRAR": "Could not remove it from the list. Try again.",
+      "ERRO_DESFAZER": "Could not undo. Try again.",
+      "VER_MAIS": "Show {n} more",
+      "ERRO_VER_MAIS": "Could not load more businesses.",
+      "SELO_WHATSAPP": "WhatsApp",
+      "SELO_EMAIL": "E-mail",
+      "SELO_FUNIL": "In the pipeline",
+      "SELO_CHAMADA": "Already called"
     }
   }
 }

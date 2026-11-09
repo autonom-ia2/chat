@@ -6,6 +6,8 @@ import AcharPainel from './AcharPainel.vue';
 import AcharEscolhaGrande from './AcharEscolhaGrande.vue';
 import AcharLinhaFrase from './AcharLinhaFrase.vue';
 import AcharEstado from './AcharEstado.vue';
+import AcharEscolhaDaLista from './AcharEscolhaDaLista.vue';
+import { LISTA_NOVA } from '../composables/useFolhaDaLista';
 import {
   LIMITE_DO_PUBLICO,
   TEXTO_DO_ERRO,
@@ -46,6 +48,9 @@ const props = defineProps({
   // Quem ficou de fora na recusa do Público (#2695 r1), dito abaixo do erro.
   foraDoErro: { type: Array, default: () => [] },
   mostrarFora: { type: Boolean, default: false },
+  // #2775 (F6): as listas que já existem (null até chegarem) e a escolhida.
+  listas: { type: Array, default: null },
+  listaId: { type: [String, Number], default: LISTA_NOVA },
 });
 const emit = defineEmits([
   'escolher',
@@ -56,11 +61,16 @@ const emit = defineEmits([
   'close',
   'update:nomeLista',
   'update:mostrarFora',
+  'update:listaId',
 ]);
 
 const { t } = useI18n();
 const NS = 'PROSPECTING_ACHAR.FOLHA';
 const editandoNome = ref(false);
+// Numa lista que já existe, o nome é o dela e o botão diz "Pôr".
+const listaEscolhida = computed(() =>
+  (props.listas || []).find(lista => lista.id === props.listaId)
+);
 
 const dois = computed(() => props.podeFunil && props.podeLista);
 const escolhaFinal = computed(() => {
@@ -130,8 +140,9 @@ const botao = computed(() => {
   if (!props.entramLista) {
     return { rotulo: t(`${NS}.NINGUEM`), desabilitado: true };
   }
+  const chave = listaEscolhida.value ? 'POR_NA_LISTA' : 'GUARDAR';
   return {
-    rotulo: t(`${NS}.GUARDAR`, { n: props.entramLista }),
+    rotulo: t(`${NS}.${chave}`, { n: props.entramLista }),
     acao: 'guardar',
   };
 });
@@ -251,7 +262,22 @@ watch(
       class="flex flex-col gap-3"
       data-previa-lista
     >
+      <AcharEscolhaDaLista
+        v-if="listas?.length"
+        :model-value="listaId"
+        :listas="listas"
+        @update:model-value="emit('update:listaId', $event)"
+      />
       <AcharLinhaFrase
+        v-if="listaEscolhida"
+        icone="i-lucide-list-plus"
+        tom="verde"
+        :rotulo="$t(`${NS}.QUEM_JA_ESTA`)"
+        :texto="$t(`${NS}.NUMEROS_LISTA`, listaEscolhida)"
+        data-lista-escolhida
+      />
+      <AcharLinhaFrase
+        v-else
         icone="i-lucide-list"
         tom="verde"
         :rotulo="$t(`${NS}.NOME_LISTA_ROTULO`)"
@@ -260,7 +286,7 @@ watch(
         @alterar="editandoNome = !editandoNome"
       />
       <input
-        v-if="editandoNome"
+        v-if="editandoNome && !listaEscolhida"
         :value="nomeLista"
         type="text"
         :aria-label="$t(`${NS}.NOME_LISTA_ROTULO`)"

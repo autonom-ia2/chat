@@ -7,6 +7,7 @@ import AcharBuscaCartao from '../components/AcharBuscaCartao.vue';
 import AcharEstado from '../components/AcharEstado.vue';
 import AcharRodape from '../components/AcharRodape.vue';
 import AcharFaixaDoMenu from '../components/AcharFaixaDoMenu.vue';
+import AcharAbasDasBuscas from '../components/AcharAbasDasBuscas.vue';
 import { useAcharTela } from '../composables/useAcharTela';
 import {
   fatoDaBusca,
@@ -213,6 +214,8 @@ watch(demo, carregar);
         >
           {{ daEquipe ? $t(`${NS}.TITULO_EQUIPE`) : $t(`${NS}.TITULO`) }}
         </h1>
+        <!-- #2775 (F6): a aba "Suas listas" fica ao lado. -->
+        <AcharAbasDasBuscas atual="buscas" />
 
         <AcharEstado
           v-if="avisoSoVer"

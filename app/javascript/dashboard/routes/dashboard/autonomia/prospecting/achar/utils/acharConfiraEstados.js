@@ -148,6 +148,7 @@ const FORA_DO_PUBLICO = {
   not_found: 'SUMIU',
   invalid_data: 'NAO_DEU',
   unexpected_error: 'NAO_DEU',
+  already_in_list: 'JA_ESTAVA',
 };
 
 export const foraDoPublico = (t, fora = []) => {
@@ -168,7 +169,11 @@ export const textosDoPronto = (t, { pronto, destino, pessoa, nomeLista }) => {
     return {
       titulo: t(`${NS}.LISTA.TITULO`),
       detalhes: [
-        t(`${NS}.LISTA.DETALHE`, { nome: nomeLista, n: pronto.n }),
+        // Numa lista que já existia (#2775), o nome é o dela.
+        t(`${NS}.LISTA.DETALHE`, {
+          nome: pronto.nome || nomeLista,
+          n: pronto.n,
+        }),
         ...foraDoPublico(t, pronto.fora),
         t('PROSPECTING_ACHAR.FOLHA.ONDE_FICA'),
       ],
