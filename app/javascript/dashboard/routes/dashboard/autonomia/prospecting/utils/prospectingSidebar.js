@@ -10,16 +10,19 @@ const SETTINGS_ROUTES = [
 ];
 
 // #2692 — com a flag prospeccao_nova (protótipo), o menu abre as telas novas:
-// "Achar empresas" (só quem busca), "Suas buscas", "Listas" (que ninguém
-// decidiu tirar, revisão do #2712) e, desde a fase 5 (#2697), "Para chamar"
-// (a fila, para todos que veem a Prospecção).
+// "Achar empresas" (só quem busca), "Suas buscas" e, desde a fase 5 (#2697),
+// "Para chamar" (a fila, para todos que veem a Prospecção). Desde a F6
+// (#2775), as listas moram na aba "Suas listas" de "Suas buscas", e a página
+// Listas antiga sai deste menu; a rota dela continua existindo (e no menu de
+// sempre, com a flag desligada).
 // Configurações saem do menu lateral e continuam em Configurações da conta.
 const ACHAR_ROUTES = [
   'autonomia_prospecting_achar',
   'autonomia_prospecting_achar_buscas',
   'autonomia_prospecting_achar_busca',
   'autonomia_prospecting_achar_nova',
-  'autonomia_prospecting_lists',
+  'autonomia_prospecting_achar_listas',
+  'autonomia_prospecting_achar_lista',
   'autonomia_prospecting_para_chamar',
 ];
 
@@ -30,7 +33,8 @@ const acharItems = ({ podeBuscar, t, accountScopedRoute }) => [
     icon: 'i-lucide-search',
     activeOn: ACHAR_ROUTES,
     // Na fase 1: Achar empresas, Suas buscas e Listas (decisão da rodada 3);
-    // a fila entrou com a fase 5, quando passou a abrir fora da demonstração.
+    // a fila entrou com a fase 5, quando passou a abrir fora da demonstração;
+    // Listas saiu com a F6 (#2775).
     children: [
       ...(podeBuscar
         ? [
@@ -50,16 +54,13 @@ const acharItems = ({ podeBuscar, t, accountScopedRoute }) => [
         name: 'Prospecting Buscas',
         label: t('PROSPECTING_ACHAR.MENU.BUSCAS'),
         to: accountScopedRoute('autonomia_prospecting_achar_buscas'),
+        // A aba "Suas listas" (#2775) também marca "Suas buscas".
         activeOn: [
           'autonomia_prospecting_achar_buscas',
           'autonomia_prospecting_achar_busca',
+          'autonomia_prospecting_achar_listas',
+          'autonomia_prospecting_achar_lista',
         ],
-      },
-      {
-        name: 'Prospecting Lists',
-        label: t('SIDEBAR.PROSPECTING_LISTS'),
-        to: accountScopedRoute('autonomia_prospecting_lists'),
-        activeOn: ['autonomia_prospecting_lists'],
       },
       {
         name: 'Prospecting Para Chamar',

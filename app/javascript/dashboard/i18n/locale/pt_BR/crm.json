@@ -3243,7 +3243,9 @@
           "HELD": {
             "CAMPAIGN": "Anúncio ativado, mas a campanha está pausada no Gerenciador de Anúncios da Meta. Ative a campanha lá para ele começar a rodar.",
             "ADSET": "Anúncio ativado, mas o conjunto de anúncios está pausado no Gerenciador de Anúncios da Meta. Ative o conjunto lá para ele começar a rodar."
-          }
+          },
+          "REVIEW": "Em análise da Meta",
+          "REVIEW_HINT": "Volta ao ar sozinho quando a Meta aprovar."
         },
         "POST": {
           "TITLE": "Post do anúncio",
@@ -3396,6 +3398,43 @@
             "PRIVATE_REPLY_RETRY": "Outra pessoa estava enviando este privado ao mesmo tempo. Recarregue os comentários e tente de novo.",
             "PRIVATE_REPLY_NOT_PENDING": "Este privado não está mais esperando confirmação. Recarregue os comentários."
           }
+        },
+        "CARE": {
+          "TITLE": "Cuidar do anúncio",
+          "HINT": "Duplicar cria uma cópia pausada, com orçamento próprio. Trocar a foto ou o texto manda o anúncio para nova análise da Meta.",
+          "DUPLICATE": "Duplicar",
+          "CHANGE": "Trocar foto ou texto",
+          "CANCEL": "Cancelar",
+          "DUPLICATE_TITLE": "Criar uma cópia pausada de \"{name}\"?",
+          "DUPLICATE_HINT": "A cópia tem orçamento próprio, igual ao do original: {value} por dia. Ela não gasta nada até você ativar.",
+          "DUPLICATE_HINT_TOTAL": "A cópia tem orçamento próprio, igual ao do original: {value} no total. Ela não gasta nada até você ativar.",
+          "DUPLICATE_HINT_NO_BUDGET": "A cópia tem orçamento próprio, igual ao do original. Ela não gasta nada até você ativar.",
+          "DUPLICATE_CONFIRM": "Criar cópia pausada",
+          "DUPLICATE_DONE": "Cópia criada e pausada: \"{name}\"",
+          "DUPLICATE_DONE_HINT": "Ela também aparece no painel, em Pausados. Confira o orçamento antes de ativar.",
+          "DUPLICATE_ERROR": "A Meta não criou a cópia agora. Nada foi gasto. Tente de novo daqui a pouco.",
+          "CHANGE_TITLE": "Trocar foto ou texto",
+          "TEXT": "Texto",
+          "CHANGE_CONFIRM_TITLE": "Mandar o anúncio para nova análise?",
+          "CHANGE_REVIEW": "Com a troca, a Meta analisa o anúncio de novo, em geral em até um dia. Enquanto isso, ele pode ficar fora do ar.",
+          "CHANGE_CONFIRM": "Trocar e mandar para análise",
+          "CHANGE_DONE": "Trocado. A Meta está analisando o anúncio de novo.",
+          "CHANGE_ERROR": "A Meta não trocou agora. O anúncio segue como estava. Tente de novo daqui a pouco.",
+          "HINT_COPY": "A Meta não troca a foto de um anúncio pronto. Criamos uma cópia pausada com a foto nova.",
+          "SWAP_AS_COPY": "Trocar a foto (cria uma cópia)",
+          "SWAP_AS_COPY_CONFIRM_TITLE": "Criar a cópia pausada com a foto nova?",
+          "SWAP_AS_COPY_HINT": "A cópia tem orçamento próprio: {value} por dia. Ela não gasta nada até você ativar. Quando ativar a cópia, pause este para não gastar em dobro.",
+          "SWAP_AS_COPY_HINT_TOTAL": "A cópia tem orçamento próprio: {value} no total. Ela não gasta nada até você ativar. Quando ativar a cópia, pause este para não gastar em dobro.",
+          "SWAP_AS_COPY_HINT_NO_BUDGET": "A cópia tem orçamento próprio. Ela não gasta nada até você ativar. Quando ativar a cópia, pause este para não gastar em dobro.",
+          "SWAP_AS_COPY_DONE": "Cópia com a foto nova criada e pausada: \"{name}\"",
+          "CONTINUE": "Continuar",
+          "SWAP_AS_COPY_ACTIVATE": "Depois, pause o anúncio original para não gastar em dobro.",
+          "OUTSIDE": "Duplicar e trocar a foto valem para os anúncios criados por aqui. Para este, use o Gerenciador de Anúncios da Meta.",
+          "HINT_DUPLICATE": "Duplicar cria uma cópia pausada, com orçamento próprio.",
+          "ENDED": "O anúncio original já terminou, então não há o que copiar. Crie um anúncio novo.",
+          "UNSURE": "A Meta não respondeu a tempo. Confira no Gerenciador de Anúncios se a cópia apareceu antes de tentar de novo.",
+          "CHANGE_UNSURE": "A Meta não respondeu a tempo. Abra o anúncio de novo daqui a pouco para ver se a troca entrou.",
+          "OPEN_MANAGER": "Abrir no Gerenciador"
         }
       },
       "AD_DETAIL": {
@@ -3840,7 +3879,9 @@
             "VIDEO_SIZE": "Esse vídeo é pesado demais. Corte no app de fotos do celular e escolha de novo.",
             "VIDEO_LONG": "O vídeo tem mais de 1 minuto. Corte no app de fotos do celular e escolha de novo.",
             "READ": "Não deu para abrir esse arquivo. Tente outro.",
-            "UPLOAD": "Não deu para enviar esse arquivo para a Meta agora. Tente de novo."
+            "UPLOAD": "Não deu para enviar esse arquivo para a Meta agora. Tente de novo.",
+            "ONLY_IMAGE": "Este anúncio é de foto: escolha uma foto JPG ou PNG.",
+            "ONLY_VIDEO": "Este anúncio é de vídeo: escolha um vídeo MP4 ou MOV."
           },
           "DROP_WHERE": "Do celular ou do computador: toque aqui ou arraste o arquivo.",
           "CAROUSEL": {
@@ -3850,7 +3891,9 @@
             "HINT": "Com 2 ou mais, vira carrossel: a pessoa passa para o lado. Até 10.",
             "FULL": "Chegou ao máximo: 10 cartões."
           },
-          "UPLOADING": "Enviando para a Meta…"
+          "UPLOADING": "Enviando para a Meta…",
+          "CHOSEN_CURRENT": "Foto atual",
+          "CHOSEN_NEW": "Foto nova"
         },
         "DESTINATION": {
           "GOES_TO": "Quem tocar vai para:",

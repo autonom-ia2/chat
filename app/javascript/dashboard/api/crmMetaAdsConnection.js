@@ -260,6 +260,27 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     return axios.post(`${this.url}/ads`, draft);
   }
 
+  // Paused copy of the whole campaign (#2778), with its own budget, the same as
+  // the original → { ad_id, name, status, budget }. With `creative` ({ text,
+  // media? }), the copy is born with the new photo or text. The same
+  // idempotency_key returns the same copy; 409 { error: 'in_progress' }.
+  copyAd(adId, body) {
+    return axios.post(
+      `${this.url}/ads/${encodeURIComponent(adId)}/copies`,
+      body
+    );
+  }
+
+  // New creative on the same ad (#2778): { text, media? } →
+  // { effective_status } (Meta reviews it again). Only when the management
+  // says can_swap_creative. The same idempotency_key changes it once.
+  swapAdCreative(adId, body) {
+    return axios.put(
+      `${this.url}/ads/${encodeURIComponent(adId)}/creative`,
+      body
+    );
+  }
+
   // Budget and dates of the ad (adset or campaign that holds the money) →
   // { budget: { level, object_id, object_name, kind, amount, currency,
   //   start_time, end_time, started, ads_count, active_ads_count, min_daily,
