@@ -13,8 +13,11 @@ class AddIndiceDeTextoNaBaseDoAgente < ActiveRecord::Migration[7.2]
   EXPRESSAO = "to_tsvector('portuguese', content)".freeze
   LOCK_TIMEOUT = '5min'.freeze
 
+  # Um CONCURRENTLY que falha no meio deixa o índice INVALID com o mesmo nome, e o `if_not_exists` pularia a criação:
+  # a busca por palavra rodaria sem índice, sem erro. Por isso o inválido sai antes.
   def up
     sem_limite_de_tempo do
+      remove_index :autonomia_agent_knowledge, name: INDICE, algorithm: :concurrently, if_exists: true if indice_invalido?
       add_index :autonomia_agent_knowledge, EXPRESSAO, name: INDICE, using: :gin, algorithm: :concurrently, if_not_exists: true
     end
   end
@@ -24,6 +27,13 @@ class AddIndiceDeTextoNaBaseDoAgente < ActiveRecord::Migration[7.2]
   end
 
   private
+
+  def indice_invalido?
+    select_value(<<~SQL.squish) == true
+      SELECT NOT i.indisvalid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
+      WHERE c.relname = #{connection.quote(INDICE)}
+    SQL
+  end
 
   def sem_limite_de_tempo
     anterior = select_value('SHOW statement_timeout')

@@ -70,6 +70,18 @@ Mudanças de veredito:
 A venda do imóvel já tinha errado em rodadas anteriores com o mesmo código: com 8 perguntas por base, 1 pergunta a mais
 ou a menos é ruído. As respostas por pergunta e as posições de antes e depois estão em `respostas.json`.
 
+## Riscos e custo por turno
+
+- **hit@1 do auto caiu de 0,25 para 0,125** e o MRR de 0,48 para 0,40: o certo entra mais vezes nos 12, mas nem sempre
+  em 1º. O modelo lê os 12, por isso o acerto da resposta subiu mesmo assim. Fica na conta de quem ligar a flag.
+- **Tempo da busca por palavra** (banco de medida, agente com 1.051 trechos, 30 rodadas): p50 1,9 ms, p95 28,7 ms,
+  máx. 66 ms. A busca do vetor no mesmo agente: p50 2,0 ms, p95 9,0 ms. O plano usa o índice GIN novo junto com o do
+  agente (BitmapAnd). Se um agente muito maior pesar, o passo seguinte é guardar o texto já processado numa coluna.
+- **Sem custo de IA por turno**: a busca por palavra é só SQL. O embedding da pergunta é o mesmo de hoje.
+- **Erro de SQL** na busca por palavra sobe como o erro da busca de hoje (`RetrievalError`): mesma recuperação, sem caminho novo.
+- **Termos com `&`** (um endereço na pergunta): o OU é montado termo a termo, para o `&` de dentro do termo continuar
+  parte dele. O placar da busca foi medido de novo depois dessa troca e deu o mesmo número.
+
 ## O que ficou de fora
 
 - O reparo antes de avisar e o âmbito territorial (Uruguai) continuam fora dos 12. A pergunta do cliente não se parece com o trecho nem no sentido nem na palavra.

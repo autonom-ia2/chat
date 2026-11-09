@@ -20,7 +20,8 @@ class Autonomia::Agents::BuscaHibrida
     @escopo = escopo
     @vector = vector
     @large = Autonomia::Agents::Config.embedding_large?(model)
-    @query = query.to_s
+    # O Postgres não aceita o byte nulo num literal; vira espaço, para não colar as palavras dos dois lados.
+    @query = query.to_s.tr("\u0000", ' ')
   end
 
   # vetoriais: os candidatos do vetor, na ordem do vetor. Devolve a fusão, dentro do teto, do mais forte ao mais fraco.
@@ -43,9 +44,14 @@ class Autonomia::Agents::BuscaHibrida
   end
 
   def por_palavra(limite)
-    consulta = sanitizar(["replace(plainto_tsquery('portuguese', ?)::text, '&', '|')::tsquery", @query])
+    # Os termos da pergunta, cada um entre aspas, ligados por OU. Montado termo a termo: o `&` de dentro de um termo
+    # (um endereço, por exemplo) fica como está.
+    consulta = sanitizar(["(SELECT string_agg(quote_literal(termo), ' | ') FROM unnest(tsvector_to_array(" \
+                          "to_tsvector('portuguese', ?))) termo)::tsquery", @query])
+    # O teto entra antes do LIMIT: trecho longe no sentido não ocupa a vaga de um que está dentro dele.
     @escopo.where.not(coluna => nil)
            .where(Arel.sql("#{TEXTO} @@ #{consulta}"))
+           .where(Arel.sql("#{distancia} <= #{Autonomia::Agents::Config::RETRIEVAL_HARD_CEILING.to_f}"))
            .select(Arel.sql("#{TABELA}.*, #{distancia} AS neighbor_distance"))
            .order(Arel.sql("ts_rank_cd(#{TEXTO}, #{consulta}) DESC, #{TABELA}.id ASC"))
            .limit(limite)
