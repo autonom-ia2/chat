@@ -70,6 +70,20 @@ RSpec.describe Crm::MetaAds::LeadForms::DonoDoLead do
     expect(dono_do_lead('L1', '+5511987650001')).to eq(ana)
   end
 
+  # Parecer da Funções: quem tem função sem `crm_view` não abre o card (CardPolicy#index? do EE). Dono que não abre o
+  # card prende o lead: ninguém mais o pega.
+  it 'quem tem função sem ver o CRM fica fora da fila, inclusive como pessoa fixa', :aggregate_failures do
+    sem_crm = create(:custom_role, account: account, permissions: %w[conversation_manage])
+    AccountUser.find_by(account: account, user: bruno).update!(custom_role: sem_crm)
+    account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'Card da Ana', currency: 'BRL', owner: ana)
+
+    atribuicao(pool_type: 'user', pool_id: bruno.id)
+    expect(dono_do_lead('L1', '+5511987650001')).to eq(ana)
+
+    AccountUser.find_by(account: account, user: ana).update!(custom_role: sem_crm)
+    expect(dono_do_lead('L2', '+5511987650002')).to be_nil
+  end
+
   it 'sem a Atribuição ligada, ou sem ninguém que cuide do funil, o lead fica sem dono como hoje', :aggregate_failures do
     expect(dono_do_lead('L1', '+5511987650001')).to be_nil
 

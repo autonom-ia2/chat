@@ -3,6 +3,7 @@
 # (Crm::Entrega::QuemCuida, a mesma fila do motor de entrega, que já respeita o acesso por funil).
 #
 # O card do lead não tem conversa: não há atendimento ao vivo a segurar nem convite a mandar. Por isso:
+# - só entra na fila quem abre o card (função com `crm_view`);
 # - a pessoa fixa da regra recebe, se estiver entre quem cuida; senão, vale a fila (como na Crm::Entrega);
 # - na fila, quem tem menos cards abertos no funil; empate, quem recebeu card nele há mais tempo; depois, o menor id;
 # - "preferir quem está online" escolhe entre os online quando há algum; ninguém online não segura o lead;
@@ -30,8 +31,16 @@ class Crm::MetaAds::LeadForms::DonoDoLead
 
   private
 
+  # Só quem abre o card (parecer da Funções): função sem `crm_view` não abre (CardPolicy#index? do EE), e o lead com
+  # um dono que não o abre ficaria preso. Mesma conferência do Autonomia::Prospecting::CrmCardOwner#sees_crm?.
   def quem_cuida
-    @pipeline.inboxes.flat_map { |inbox| Crm::Entrega::QuemCuida.na_caixa(inbox: inbox, pipeline_id: @pipeline.id) }.uniq(&:id)
+    cuidam = @pipeline.inboxes.flat_map { |inbox| Crm::Entrega::QuemCuida.na_caixa(inbox: inbox, pipeline_id: @pipeline.id) }.uniq(&:id)
+    vinculos = AccountUser.where(account_id: @pipeline.account_id, user_id: cuidam.map(&:id)).includes(:user).index_by(&:user_id)
+    cuidam.select { |pessoa| vinculos[pessoa.id] && ve_o_crm?(vinculos[pessoa.id]) }
+  end
+
+  def ve_o_crm?(account_user)
+    Pundit.policy!({ user: account_user.user, account: @pipeline.account, account_user: account_user }, Crm::Card).index?
   end
 
   def fixa(regra, fila)
