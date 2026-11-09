@@ -42,6 +42,23 @@ RSpec.describe Autonomia::Automacao::Receita do
       .to include(I18n.t("#{frase}.valor_fora_do_alvo", passo: 'outro', caminho: 'card.atributos.indicado_por'))
   end
 
+  # #2716 dentro do ramo: o ramo que roda numa conversa lê o card dela, mas não age nele, mesmo com gatilho de contato.
+  it 'o ramo na conversa do contato recusa o card no caminho e o id dele no corpo', :aggregate_failures do
+    na_conversa = { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'contato.id' }, 'usar' => 'conversa' }
+    mover = { 'id' => 'a1', 'tipo' => 'acao', 'acao' => 'POST crm/cards/:id/move', 'descricao' => 'Mover',
+              'caminho' => { 'id' => { '$valor' => 'card.id' } }, 'corpo' => { 'stage_id' => 1 } }
+    nota = { 'id' => 'a2', 'tipo' => 'acao', 'acao' => 'POST conversations/:id/custom_attributes', 'descricao' => 'Gravar',
+             'caminho' => { 'id' => { '$valor' => 'conversa.id' } },
+             'corpo' => { 'custom_attributes' => { 'card' => { '$valor' => 'card.id' } } } }
+    gatilho = { 'tipo' => 'contato.data', 'campo' => 'nascimento', 'quando' => 'antes', 'dias' => 1, 'hora' => 9 }
+    so_le = ->(passo) { I18n.t("#{frase}.card_da_conversa_so_le", passo: passo, caminho: 'card.id') }
+
+    expect(problemas({ 'gatilho' => gatilho, 'passos' => [em_outro(na_conversa, mover)] })).to include(so_le.call('a1'))
+    expect(problemas({ 'gatilho' => gatilho, 'passos' => [em_outro(na_conversa, nota)] })).to include(so_le.call('a2'))
+    expect(problemas({ 'gatilho' => gatilho, 'passos' => [em_outro(na_conversa, mensagem('m1', 'card.titulo'))] }))
+      .not_to include(a_string_including('card.titulo'))
+  end
+
   it 'recusa "em outro registro" dentro de outro: a filha nunca abre netas' do
     neto = em_outro(cards_perdidos).merge('id' => 'neto')
 

@@ -12,6 +12,17 @@ RSpec.describe Autonomia::Automacao::EmOutroRegistro do
     expect(described_class.da(instance_double(Autonomia::Automacao::Execucao, evento: marca))).to eq([7, 'passo:um'])
   end
 
+  it 'o ramo na conversa que lê o card dela pede a chave de funis; no contato, ou sem ler o card, não', :aggregate_failures do
+    registro = ->(usar) { { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'contato.id' }, 'usar' => usar } }
+    le = [{ 'id' => 'm1', 'tipo' => 'mensagem', 'texto' => [{ '$valor' => 'card.titulo' }] }]
+    nao_le = [{ 'id' => 'm1', 'tipo' => 'mensagem', 'texto' => [{ '$valor' => 'contato.nome' }] }]
+    passo = ->(usar, passos) { { 'id' => 'outro', 'tipo' => 'em_outro_registro', 'registro' => registro.call(usar), 'passos' => passos } }
+
+    expect(described_class.le_card_da_conversa?(passo.call('conversa', le), {})).to be(true)
+    expect(described_class.le_card_da_conversa?(passo.call('conversa', nao_le), {})).to be(false)
+    expect(described_class.le_card_da_conversa?(passo.call('contato', le), {})).to be(false)
+  end
+
   it 'a execução que não é filha (evento de mensagem, de atividade, nenhum) não tem mãe', :aggregate_failures do
     ['mensagem:9', 'card.ganho:atividade:3', nil].each do |evento|
       expect(described_class.da(instance_double(Autonomia::Automacao::Execucao, evento: evento))).to be_nil

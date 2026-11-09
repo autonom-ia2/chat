@@ -53,6 +53,12 @@ module Autonomia::Automacao::EmOutroRegistro
   # A ligação lê cards do CRM: pede a chave de funis, como o gatilho de card e a ação de funil (controller#de_funil?).
   def de_funil?(passo, receita) = do_tipo?(passo) && alvo_do_ramo(passo, receita) == 'Crm::Card'
 
+  # O ramo que roda numa conversa e lê o card dela (#2716): pede a chave de funis de quem salva, como a receita de
+  # conversa que lê o card (controller#de_funil?). Sem ela, a filha leria o card sempre vazio.
+  def le_card_da_conversa?(passo, receita)
+    do_tipo?(passo) && alvo_do_ramo(passo, receita) == 'Conversation' && ::Autonomia::Automacao::CardDaConversa.le?(passo['passos'])
+  end
+
   def marca(mae, registro, passo_id) = [MARCA, mae.id, BASES.fetch(registro.class.name), registro.id, passo_id].join(':')
 
   # [id da mãe, id do passo] da filha; nil na execução que não é filha. O id do passo vai por último: ele pode ter ":".

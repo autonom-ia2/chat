@@ -159,9 +159,11 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     end
   end
 
-  # O passo de funil, o "em outro registro" que lê cards (G18) e a ação de funil.
+  # O passo de funil, o "em outro registro" que lê cards (G18) ou cujo ramo numa conversa lê o card dela (#2716) e a
+  # ação de funil.
   def passo_de_funil?(passo, receita)
-    PASSOS_DE_FUNIL.include?(passo['tipo']) || ::Autonomia::Automacao::EmOutroRegistro.de_funil?(passo, receita) ||
+    em_outro = ::Autonomia::Automacao::EmOutroRegistro
+    PASSOS_DE_FUNIL.include?(passo['tipo']) || em_outro.de_funil?(passo, receita) || em_outro.le_card_da_conversa?(passo, receita) ||
       (passo['tipo'] == 'acao' && ::Autonomia::Automacao::AcoesPermitidas.de_funil?(passo['acao']))
   end
 

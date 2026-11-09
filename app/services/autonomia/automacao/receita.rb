@@ -196,7 +196,7 @@ class Autonomia::Automacao::Receita
     return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
 
-    no_lugar = ::Autonomia::Automacao::CardDaConversa.problema(caminho, lugar[:onde], @receita.dig('gatilho', 'tipo'))
+    no_lugar = ::Autonomia::Automacao::CardDaConversa.problema(caminho, lugar[:onde], alvo)
     return [texto(no_lugar, passo: id, caminho: caminho)] if no_lugar
 
     Array(valores.problema_de_leitura(caminho, conta: @conta, account_user: @account_user)).map { |chave| texto(chave, passo: id, caminho: caminho) }
@@ -221,11 +221,13 @@ class Autonomia::Automacao::Receita
   # #2499: `card.*` num gatilho de conversa não tem de onde ler. Gatilho desconhecido o esquema já recusou.
   # A conversa nova (#2680) dá ao alvo sem conversa (o contato) a ponte para a que ela abre.
   def no_alvo_do_gatilho?(caminho)
-    alvo = @alvo || ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
     return true if alvo.nil? || ::Autonomia::Automacao::Valores.no_alvo?(caminho, alvo)
 
     ::Autonomia::Automacao::ConversaNova.caixa_id(@receita).present? && caminho.to_s.start_with?('conversa.')
   end
+
+  # O tipo do registro em que a receita roda: o do ramo do "em outro registro" (G18), ou o do gatilho.
+  def alvo = @alvo || ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
 
   # A conferência do caminho que vai para um texto (mensagem, aviso, e-mail, retorno).
   def no_texto(id) = ->(caminho) { problemas_do_caminho(id, caminho, onde: :texto) }
