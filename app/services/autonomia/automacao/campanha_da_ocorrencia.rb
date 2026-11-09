@@ -1,29 +1,36 @@
 # A campanha da vez num gatilho recorrente de card ou contato (#2414 G55, exemplo 16, passo 2: "para cada card perdido"
 # põe a etiqueta, e a campanha sai uma vez "para todos com essa etiqueta").
 #
-# O card.recorrente abre uma execução por card, e a campanha não é do card, é da vez (todo dia 1º, toda segunda). Ela
-# sai quando a vez fecha: todos os cards que a vez esperava chegaram ao passo campanha ou saíram por outro caminho
-# (parar, um "se" que não passa por ele, erro, a automação impedida), ou nem abriram execução (saíram da seleção entre a
-# varredura e o lote, já tinham uma execução aberta). A conta mora no Postgres (Autonomia::Automacao::CampanhaDaVez),
-# uma linha por automação, vez e passo, e cada mudança passa pela trava de transação da vez:
+# O card.recorrente abre uma execução por card, e a campanha não é do card, é da vez (todo dia 1º, toda segunda). A vez
+# fecha pelo ESTADO do banco, nunca por soma: a varredura enfileirou todos os lotes, todos rodaram, e nenhuma execução
+# desta vez está aberta antes do passo campanha (aberta e sem o registro dele). Quem passou pelo passo, quem fechou por
+# outro caminho (parar, um "se", erro, desligar, a varredura das travadas) e quem nem abriu execução não seguram a vez.
+# O cálculo é o mesmo a cada conferência, sob a trava da vez: repetir não muda nada, e uma pane no meio (a execução que
+# morreu entre o passo e o registro) só segura a vez, nunca a fecha antes da hora.
 #
-# - a varredura (TempoDaAutomacaoJob) abre a linha antes dos lotes e grava os esperados (os ids enfileirados) depois;
-# - o lote (RecorrenteLoteJob) conta os ids que não abriram execução;
-# - o passo campanha conta a chegada; o Executor, ao fechar a execução que não chegou, conta a saída.
+# Quem confere: o Executor depois de gravar o registro do passo campanha e ao fechar uma execução; o desligar e a
+# varredura das travadas, que fecham em lote; a varredura do recorrente e cada lote; e a rede de segurança.
 #
-# Quem completa a conta fecha a vez e cria a campanha pelo caminho do gatilho da conta (PassoDeCampanha com a conta como
-# alvo: as mesmas conferências, a Campanha da tela, o job do disparo), que lê o público (as etiquetas) na hora.
+# Ao fechar com pelo menos uma chegada, confere de novo se pode mandar (motor e mensagens ligados, automação ligada,
+# gatilho disponível, quem ligou pode enviar campanha). Pode: monta a campanha pelo caminho do gatilho da conta
+# (PassoDeCampanha#montar, as mesmas conferências e a Campanha da tela) e fecha a vez na mesma transação; o disparo vai
+# para a fila depois do commit (e o agendador das campanhas pega a campanha ativa e vencida mesmo sem ele). Não pode:
+# nada sai, e o registro diz por quê. Erro no meio: a transação volta, a vez continua aberta, o erro fica no registro, e
+# a conferência roda de novo em TENTAR_DE_NOVO. O registro da vez vai para a primeira execução que chegou.
 #
-# Rede de segurança: a vez que não fechar em REDE (um lote que não rodou, uma execução fechada por fora do motor, uma
-# espera longa antes do passo) fecha pelo FecharVezJob com quem chegou. O registro diz quantos chegaram, saíram, não
-# abriram e ficaram de fora sem contar, com o motivo `campanha_da_vez_saiu_pela_rede`.
+# Vez sem chegada nenhuma não fecha e não manda: não houve quem chegasse ao passo.
 #
-# O card que chega depois de a vez fechar pula com `campanha_da_vez_ja_saiu`: outra campanha iria de novo para todos
-# com a etiqueta.
+# Rede de segurança (FecharVezJob, a cada REDE enquanto a vez está aberta): a execução TRAVADA (aberta, sem espera e
+# sem andar há mais de REDE) e o lote que não rodou em REDE contam como fora, e o registro diz quantos. A execução que
+# espera ("esperar" antes da campanha) segura a vez pelo tempo que for.
 class Autonomia::Automacao::CampanhaDaOcorrencia
   REDE = 2.hours
+  TENTAR_DE_NOVO = 5.minutes
   Vez = ::Autonomia::Automacao::CampanhaDaVez
   Gatilhos = ::Autonomia::Automacao::Gatilhos
+  Execucao = ::Autonomia::Automacao::Execucao
+  Registro = ::Autonomia::Automacao::Registro
+  AGUARDANDO = 'campanha_da_vez_aguardando'.freeze
 
   class << self
     # A varredura, antes dos lotes: uma linha por passo de disparar da receita. Nada fora do recorrente de card ou
@@ -32,62 +39,51 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
       tipo = definicao.versao_ativa.receita.dig('gatilho', 'tipo')
       return [] unless por_alvo?(tipo)
 
-      passos_de_disparar(definicao.versao_ativa.receita).map do |passo_id|
+      passos_de_disparar(definicao.versao_ativa.receita['passos']).map do |passo_id|
         garantir(definicao, Gatilhos.marca_da_vez(tipo, ocorrencia), passo_id)
       end
     end
 
-    # A varredura, depois de enfileirar os lotes: o total esperado da vez.
-    def esperar(linhas, total)
-      linhas.each { |linha| mudar(linha.id) { |vez| vez.esperados = total } }
+    # A varredura, depois de enfileirar: quantos lotes a vez espera.
+    def lotes(linhas, total)
+      linhas.each do |linha|
+        travado(linha.id) { |vez| vez.update!(lotes: total) }
+        conferir(linha.id)
+      end
     end
 
-    # O lote: os ids que não abriram execução nesta vez.
-    def lote_feito(definicao, tipo, ocorrencia, ids)
-      return unless por_alvo?(tipo)
+    # O lote `indice` rodou (o repetido marca o mesmo índice).
+    def lote_feito(definicao, tipo, ocorrencia, indice)
+      return if indice.nil? || !por_alvo?(tipo)
 
-      marcas = ids.map { |id| Gatilhos.marca_do_recorrente(tipo, id, ocorrencia) }
-      fora = ids.size - ::Autonomia::Automacao::Execucao.where(automacao_id: definicao.id, evento: marcas).count
-      return if fora.zero?
-
-      abertas(definicao.id, Gatilhos.marca_da_vez(tipo, ocorrencia)).each { |id| mudar(id) { |vez| vez.sem_execucao += fora } }
+      abertas(definicao.id, Gatilhos.marca_da_vez(tipo, ocorrencia)).each do |id|
+        travado(id) { |vez| vez.update!(lotes_feitos: (vez.lotes_feitos | [indice])) }
+        conferir(id)
+      end
     end
 
-    # O Executor fechou a execução: conta a saída nas vezes em que ela não chegou ao passo.
-    def saiu(execucao)
+    # A linha da vez em que a execução chega ao passo campanha.
+    def chegada(execucao, passo_id) = garantir(execucao.automacao, vez_da(execucao), passo_id)
+
+    # Confere as vezes abertas da execução (depois do registro do passo campanha, ou ao fechá-la).
+    def conferir_execucao(execucao)
       vez = vez_da(execucao)
-      return unless vez
-
-      abertas(execucao.automacao_id, vez).each do |id|
-        mudar(id) { |linha| linha.saidas += 1 unless chegou?(execucao, linha) }
-      end
+      abertas(execucao.automacao_id, vez).each { |id| conferir(id) } if vez
     end
 
-    # A chegada ao passo campanha. Devolve [linha, fechada agora?] ou [linha, :ja_saiu].
-    def chegar(execucao, passo_id)
-      linha = garantir(execucao.automacao, vez_da(execucao), passo_id)
-      fechou = nil
-      ja_saiu = travado(linha.id) do |vez|
-        next true if vez.fechada_em
-
-        vez.chegadas += 1
-        vez.primeira_execucao_id ||= execucao.id
-        fechou = fechar_se_pronta(vez)
-        vez.save!
-        false
-      end
-      [linha.reload, ja_saiu ? :ja_saiu : fechou]
+    # Confere as vezes abertas da automação (o desligar fecha as execuções em lote).
+    def conferir_automacao(definicao)
+      Vez.where(automacao_id: definicao.id, fechada_em: nil).ids.each { |id| conferir(id) }
     end
 
-    # O FecharVezJob, depois de REDE: fecha a vez que ainda não fechou, com quem chegou.
-    def fechar_pela_rede(id)
-      fechou = travado(id) do |vez|
-        next false if vez.fechada_em
-
-        vez.update!(fechada_em: Time.current)
-        true
-      end
-      registrar_na_primeira(Vez.find(id), pela_rede: true) if fechou
+    # Fecha a vez quando o estado deixa. Devolve :fechada, :aberta (ainda há quem segure) ou :sem_chegada.
+    def conferir(id, rede: false)
+      situacao, posterior = travado(id) { |vez| fechar_se_puder(vez, rede) }
+      posterior&.call
+      situacao
+    rescue StandardError => e
+      falhou(id, e)
+      :aberta
     end
 
     # A vez da execução de um recorrente de card ou contato, ou nil.
@@ -95,26 +91,14 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
       Gatilhos.ocorrencia_da_marca(execucao.evento, execucao.alvo_id) if por_alvo?(execucao.chave_gatilho)
     end
 
-    # Cria a campanha da vez fechada, pelo caminho do gatilho da conta, e deixa o registro na primeira execução que
-    # chegou. Sem chegada nenhuma, não há campanha. Devolve o Resultado do passo (nil sem chegada).
-    def disparar(vez, pela_rede: false)
-      execucao = vez.primeira_execucao_id && ::Autonomia::Automacao::Execucao.find_by(id: vez.primeira_execucao_id)
-      return log_sem_campanha(vez) unless execucao
-
-      passo = ::Autonomia::Automacao::Roteiro.new(execucao.versao.receita).passo(vez.passo)
-      resultado = ::Autonomia::Automacao::PassoDeCampanha.new(execucao: execucao, passo: passo, alvo: execucao.account).executar
-      vez.update!(campanha_display_id: resultado.dados['campanha_id'])
-      resumo(vez, resultado, pela_rede)
-    end
-
     private
 
     def por_alvo?(tipo) = Gatilhos.recorrente?(tipo) && !Gatilhos.da_conta?(tipo)
 
-    def passos_de_disparar(receita, lista = receita['passos'])
+    def passos_de_disparar(lista)
       Array(lista).flat_map do |passo|
         proprio = passo['tipo'] == 'campanha' && passo['faz'] == 'disparar' ? [passo['id']] : []
-        proprio + ::Autonomia::Automacao::Receita.ramos(passo).flat_map { |ramo| passos_de_disparar(receita, ramo) }
+        proprio + ::Autonomia::Automacao::Receita.ramos(passo).flat_map { |ramo| passos_de_disparar(ramo) }
       end
     end
 
@@ -129,43 +113,6 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
 
     def abertas(automacao_id, ocorrencia) = Vez.where(automacao_id: automacao_id, ocorrencia: ocorrencia, fechada_em: nil).ids
 
-    # A execução deixou o registro de chegada (o passo campanha grava `campanha_da_vez` com o id da linha).
-    def chegou?(execucao, vez)
-      ::Autonomia::Automacao::Registro.where(execucao_id: execucao.id, passo: vez.passo)
-                                      .exists?(["dados ->> 'campanha_da_vez' = ?", vez.id.to_s])
-    end
-
-    # Muda a linha sob a trava e, se a conta completou, fecha e dispara depois do commit.
-    def mudar(id)
-      fechou = travado(id) do |vez|
-        next false if vez.fechada_em
-
-        yield vez
-        pronta = fechar_se_pronta(vez)
-        vez.save!
-        pronta
-      end
-      registrar_na_primeira(Vez.find(id)) if fechou
-    end
-
-    # Fechada fora do passo campanha (a saída, o lote, a rede): o registro vai para a primeira execução que chegou.
-    def registrar_na_primeira(vez, pela_rede: false)
-      resultado = disparar(vez, pela_rede: pela_rede)
-      return unless resultado
-
-      ::Autonomia::Automacao::Registro.create!(account_id: vez.account_id, automacao_id: vez.automacao_id,
-                                               execucao_id: vez.primeira_execucao_id, passo: vez.passo,
-                                               resultado: resultado.tipo == :ok ? 'ok' : 'pulado', motivo: resultado.motivo,
-                                               dados: resultado.dados)
-    end
-
-    def fechar_se_pronta(vez)
-      return false unless vez.pronta?
-
-      vez.fechada_em = Time.current
-      true
-    end
-
     def travado(id)
       Vez.transaction do
         sql = ActiveRecord::Base.sanitize_sql_array(['SELECT pg_advisory_xact_lock(hashtext(?))', "automacao:campanha_da_vez:#{id}"])
@@ -174,25 +121,68 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
       end
     end
 
-    def contagem(vez)
-      { 'campanha_da_vez' => vez.id, 'esperados' => vez.esperados.to_i, 'chegaram' => vez.chegadas, 'sairam' => vez.saidas,
-        'sem_execucao' => vez.sem_execucao, 'faltaram' => vez.faltaram, 'horas' => REDE.in_hours.to_i }
+    # [situação, o que fazer depois do commit]
+    def fechar_se_puder(vez, rede)
+      return [:fechada, nil] if vez.fechada_em
+
+      estado = ::Autonomia::Automacao::EstadoDaVez.new(vez, rede: rede)
+      return [:aberta, nil] unless estado.pronta?
+      return [:sem_chegada, nil] unless estado.primeira
+
+      fechar(vez, estado)
     end
 
-    def resumo(vez, resultado, pela_rede)
-      motivo = if resultado.tipo == :ok
-                 pela_rede ? 'campanha_da_vez_saiu_pela_rede' : 'campanha_da_vez_saiu'
-               else
-                 resultado.motivo
-               end
-      ::Autonomia::Automacao::PassoDeAcao::Resultado.new(tipo: resultado.tipo, motivo: motivo,
-                                                         dados: resultado.dados.merge(contagem(vez)))
+    def fechar(vez, estado)
+      execucao = estado.primeira
+      impedimento = impedimento(execucao)
+      return nao_saiu(vez, estado, impedimento) if impedimento
+
+      passo = ::Autonomia::Automacao::Roteiro.new(execucao.versao.receita).passo(vez.passo)
+      resultado, campanha = ::Autonomia::Automacao::PassoDeCampanha.new(execucao: execucao, passo: passo, alvo: execucao.account).montar
+      return nao_saiu(vez, estado, resultado.motivo) unless campanha
+
+      # O display_id vem do banco (o callback da Campanha só relê depois do commit): relido aqui, dentro da transação.
+      display_id = campanha.reload.display_id
+      vez.update!(fechada_em: Time.current, campanha_display_id: display_id)
+      registrar(vez, estado, 'ok', estado.motivo_da_saida, resultado.dados.merge('campanha_id' => display_id))
+      [:fechada, -> { ::Campaigns::TriggerOneoffCampaignJob.perform_later(campanha) }]
     end
 
-    def log_sem_campanha(vez)
-      Rails.logger.info("[automacao][campanha_da_vez] fechou sem chegada automacao=#{vez.automacao_id} vez=#{vez.id} " \
-                        "esperados=#{vez.esperados} sairam=#{vez.saidas} sem_execucao=#{vez.sem_execucao}")
-      nil
+    # Não pode mandar agora: a vez fecha sem campanha, com o motivo no registro e no log.
+    def nao_saiu(vez, estado, motivo)
+      vez.update!(fechada_em: Time.current)
+      registrar(vez, estado, 'pulado', 'campanha_da_vez_nao_saiu', 'por' => motivo)
+      Rails.logger.info("[automacao][campanha_da_vez] não saiu automacao=#{vez.automacao_id} vez=#{vez.id} motivo=#{motivo}")
+      [:fechada, nil]
+    end
+
+    # O que impede de mandar agora, como no Executor e na Partida (a chave do motivo), ou nil.
+    def impedimento(execucao)
+      definicao = execucao.automacao
+      conta = execucao.account
+      return 'motor_desligado' unless ::Autonomia::Automacao::Motor.ligado?(conta)
+      return 'mensagens_desligadas' unless ::Autonomia::Automacao::Motor.mensagens?(conta)
+      return 'desligada' unless definicao.ativa
+      return 'gatilho_desligado' unless Gatilhos.disponivel?(execucao.chave_gatilho, conta)
+
+      'quem_ligou_sem_permissao_campanha' unless ::Autonomia::Automacao::PassoDeCampanha.pode_disparar?(definicao.ligada_por, conta)
+    end
+
+    def registrar(vez, estado, resultado, motivo, dados)
+      Registro.create!(account_id: vez.account_id, automacao_id: vez.automacao_id, execucao: estado.primeira, passo: vez.passo,
+                       resultado: resultado, motivo: motivo, dados: dados.merge(estado.contagem, 'campanha_da_vez' => vez.id))
+    end
+
+    # O erro fica no log e no registro da primeira execução que chegou; a conferência roda de novo em TENTAR_DE_NOVO.
+    def falhou(id, erro)
+      Rails.logger.error("[automacao][campanha_da_vez] falhou vez=#{id} #{erro.class} em #{erro.backtrace&.first}")
+      vez = Vez.find_by(id: id)
+      primeira = vez && ::Autonomia::Automacao::EstadoDaVez.new(vez).primeira
+      if primeira
+        Registro.create!(account_id: vez.account_id, automacao_id: vez.automacao_id, execucao: primeira, passo: vez.passo,
+                         resultado: 'falhou', motivo: 'campanha_da_vez_falhou', dados: { 'campanha_da_vez' => vez.id, 'erro' => erro.class.name })
+      end
+      ::Autonomia::Automacao::FecharVezJob.set(wait: TENTAR_DE_NOVO).perform_later(id) if vez
     end
   end
 end

@@ -606,11 +606,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_955500) do
     t.bigint "automacao_id", null: false
     t.string "ocorrencia", null: false
     t.string "passo", null: false
-    t.integer "esperados"
-    t.integer "chegadas", default: 0, null: false
-    t.integer "saidas", default: 0, null: false
-    t.integer "sem_execucao", default: 0, null: false
-    t.bigint "primeira_execucao_id"
+    t.integer "lotes"
+    t.jsonb "lotes_feitos", default: [], null: false
     t.integer "campanha_display_id"
     t.datetime "fechada_em"
     t.datetime "created_at", null: false

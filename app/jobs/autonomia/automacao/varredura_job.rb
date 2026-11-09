@@ -71,6 +71,8 @@ class Autonomia::Automacao::VarreduraJob < ApplicationJob
 
       ::Autonomia::Automacao::Registro.create!(account_id: execucao.account_id, automacao_id: execucao.automacao_id, execucao: execucao,
                                                passo: execucao.cursor || 'inicio', resultado: 'falhou', motivo: motivo)
+      # G55: a execução fechada deixa de segurar a campanha da vez.
+      ::Autonomia::Automacao::CampanhaDaOcorrencia.conferir_execucao(execucao)
     rescue StandardError => e
       Rails.logger.error("[automacao][varredura] não fechou execucao=#{execucao.id} motivo=#{motivo} #{e.class}: #{e.message}")
     end

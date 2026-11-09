@@ -5,7 +5,7 @@ require 'rails_helper'
 # aprovado 'Seu seguro está vencendo' para todos com essa etiqueta". É a prova que a sonda da G55 lê.
 #
 # O card.recorrente abre uma execução por card. A campanha é da vez, não do card: uma só, para todos com a etiqueta,
-# saindo quando o último card da vez passa pelo passo (CampanhaDaOcorrencia). Montado e ligado pela API da tela, como a
+# saindo quando nenhum card da vez está mais a caminho do passo (CampanhaDaOcorrencia). Montado e ligado pela API da tela, como a
 # corretora faria; o que sai para o cliente para no receptor de teste (F9.7).
 #
 # Fica de fora daqui: o "Só se" do motivo da perda (`card.motivo_da_perda`, G18, no #2675) e os passos 3 a 8 (G38 e os
@@ -88,9 +88,9 @@ RSpec.describe 'Fechamento #2414 · G55: a campanha da vez num gatilho de card',
     campanha = account.campaigns.last
     expect(campanha).to have_attributes(title: 'Seu seguro está vencendo', sender: juliana,
                                         audience: [{ 'type' => 'Label', 'id' => reconquista.id }])
-    # O primeiro card entra e espera a vez; o segundo, o último da vez, a fecha e a campanha sai.
+    # Os dois cards entram e esperam a vez; quando o último passa, a vez fecha e a campanha sai (registro na primeira).
     registros = Autonomia::Automacao::Registro.where(passo: 'campanha').order(:id).pluck(:resultado, :motivo)
-    expect(registros).to eq([%w[ok campanha_da_vez_aguardando], %w[ok campanha_da_vez_saiu]])
+    expect(registros).to eq([%w[ok campanha_da_vez_aguardando], %w[ok campanha_da_vez_aguardando], %w[ok campanha_da_vez_saiu]])
 
     travel_to(dia_primeiro + 6.minutes) { perform_enqueued_jobs(only: Campaigns::TriggerOneoffCampaignJob) }
 

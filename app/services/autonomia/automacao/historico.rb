@@ -104,8 +104,13 @@ class Autonomia::Automacao::Historico
     ia.is_a?(Hash) ? lidos.merge('ia' => ia.slice(*@ia)) : lidos
   end
 
-  # Os números do registro para o texto do motivo (G55: quantos chegaram e quantos ficaram de fora da campanha da vez).
-  def contagens(dados) = dados.select { |_, valor| valor.is_a?(Integer) }.transform_keys(&:to_sym).except(*I18n::RESERVED_KEYS)
+  # Os números do registro para o texto do motivo (G55: quantos chegaram e quantos ficaram de fora da campanha da vez) e,
+  # em `por`, o texto de outro motivo (a campanha da vez que não saiu diz por quê).
+  def contagens(dados)
+    numeros = dados.select { |_, valor| valor.is_a?(Integer) }.transform_keys(&:to_sym).except(*I18n::RESERVED_KEYS)
+    por = dados['por']
+    por.is_a?(String) ? numeros.merge(por: I18n.t("autonomia.automacao.motivos.#{por}", default: '')) : numeros
+  end
 
   def passo(registro, visivel:)
     chaves = visivel ? CHAVES + CHAVES_DA_CONVERSA : CHAVES

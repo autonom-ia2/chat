@@ -1,8 +1,8 @@
 require 'rails_helper'
 
 # #2414 G55 (exemplo 16, passo 2): no card.recorrente, uma execução por card, e a campanha é da vez. Ela sai uma vez,
-# quando todos os cards que a vez esperava chegaram ao passo campanha, saíram por outro caminho ou nem abriram execução;
-# a vez que não fecha sai pela rede de segurança, com o registro de quantos ficaram de fora.
+# quando a vez fecha pelo estado do banco: os lotes rodaram e nenhuma execução da vez está aberta antes do passo. Nada
+# sai com a automação desligada ou o motor desligado; a rede de segurança só tira da conta quem está travado.
 RSpec.describe Autonomia::Automacao::CampanhaDaOcorrencia, :automacao_motor do
   include ActiveJob::TestHelper
 
@@ -48,106 +48,175 @@ RSpec.describe Autonomia::Automacao::CampanhaDaOcorrencia, :automacao_motor do
 
   after { Current.reset }
 
-  # A varredura: abre a vez e grava os esperados.
-  def varredura(esperados = cards.size)
+  # A varredura de um lote só, que rodou.
+  def varredura(lotes: 1, rodaram: [0])
     linhas = described_class.abrir(definicao, vez)
-    described_class.esperar(linhas, esperados)
+    described_class.lotes(linhas, lotes)
+    rodaram.each { |indice| described_class.lote_feito(definicao, 'card.recorrente', vez, indice) }
     linhas.first.reload
   end
 
-  # O passo campanha na execução, com o registro que o Executor grava depois dele.
+  # O passo campanha na execução, sem o registro (o que o Executor faz antes de gravar).
+  def passo_em(execucao) = Autonomia::Automacao::PassoDeCampanha.new(execucao: execucao, passo: disparar, alvo: execucao.alvo).executar
+
+  # O passo inteiro, como no Executor: o passo, o registro e a conferência da vez.
   def chega(execucao)
-    resultado = Autonomia::Automacao::PassoDeCampanha.new(execucao: execucao, passo: disparar, alvo: execucao.alvo).executar
+    resultado = passo_em(execucao)
     Autonomia::Automacao::Registro.create!(account: account, automacao: definicao, execucao: execucao, passo: 'c1',
                                            resultado: resultado.tipo == :ok ? 'ok' : 'pulado', motivo: resultado.motivo,
                                            dados: resultado.dados)
+    described_class.conferir_execucao(execucao)
     resultado
+  end
+
+  # A execução fecha por outro caminho (o "se", parar, erro), como no Executor#finalizar.
+  def termina(execucao)
+    execucao.update_columns(estado: 'concluida', travada_em: nil, due_at: nil, finalizada_em: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    described_class.conferir_execucao(execucao)
   end
 
   def disparos = enqueued_jobs.count { |job| job[:job] == Campaigns::TriggerOneoffCampaignJob }
 
+  def registro_da_vez(motivo) = Autonomia::Automacao::Registro.where(execucao: execucoes[0], motivo: motivo).sole
+
+  def rede_passa(linha)
+    travel_to(Time.current + described_class::REDE + 1.minute) { Autonomia::Automacao::FecharVezJob.perform_now(linha.id) }
+  end
+
   it 'a vez com N cards sai uma vez, depois do N-ésimo', :aggregate_failures do
-    varredura
+    expect { varredura }.to have_enqueued_job(Autonomia::Automacao::FecharVezJob)
     primeiros = execucoes.first(2).map { |execucao| chega(execucao) }
 
     expect(primeiros.map(&:motivo)).to eq(%w[campanha_da_vez_aguardando campanha_da_vez_aguardando])
     expect(account.campaigns).to be_empty
 
-    ultimo = chega(execucoes.last)
+    chega(execucoes.last)
 
-    expect([ultimo.tipo, ultimo.motivo]).to eq([:ok, 'campanha_da_vez_saiu'])
     expect(account.campaigns.count).to eq(1)
     expect(account.campaigns.last).to have_attributes(sender: dona, audience: [{ 'type' => 'Label', 'id' => etiqueta.id }])
-    expect(ultimo.dados).to include('campanha_id' => account.campaigns.last.display_id, 'esperados' => 3, 'chegaram' => 3, 'faltaram' => 0)
+    expect(registro_da_vez('campanha_da_vez_saiu').dados).to include('campanha_id' => account.campaigns.last.display_id, 'chegaram' => 3)
     expect(disparos).to eq(1)
   end
 
-  it 'o card que para antes não segura a vez: a saída dele completa a conta, e o registro vai para a primeira', :aggregate_failures do
+  it 'o card que termina antes não segura a vez', :aggregate_failures do
     varredura
     chega(execucoes[0])
     chega(execucoes[2])
     expect(account.campaigns).to be_empty
 
-    described_class.saiu(execucoes[1]) # o "se" mandou o card 2 para outro caminho, e a execução fechou
+    termina(execucoes[1])
 
     expect(account.campaigns.count).to eq(1)
-    resumo = Autonomia::Automacao::Registro.where(execucao: execucoes[0], motivo: 'campanha_da_vez_saiu').sole
-    expect(resumo.dados).to include('chegaram' => 2, 'sairam' => 1, 'faltaram' => 0)
+    expect(registro_da_vez('campanha_da_vez_saiu').dados).to include('chegaram' => 2, 'sairam' => 1)
     expect(disparos).to eq(1)
   end
 
-  it 'quem chegou e depois fecha não conta como saída' do
+  it 'desligar no meio da vez: nada sai, e o registro diz por quê', :aggregate_failures do
     linha = varredura
     chega(execucoes[0])
-    described_class.saiu(execucoes[0])
 
-    expect(linha.reload).to have_attributes(chegadas: 1, saidas: 0, fechada_em: nil)
+    definicao.desligar!
+
+    expect(account.campaigns).to be_empty
+    expect(linha.reload.fechada_em).to be_present
+    expect(registro_da_vez('campanha_da_vez_nao_saiu').dados).to include('por' => 'desligada')
+    expect(disparos).to eq(0)
   end
 
-  it 'os ids do lote que não abriram execução contam como fora da vez' do
-    varredura(4)
-    outro = create(:contact, account: account)
-    execucoes.each { |execucao| chega(execucao) }
+  it 'motor desligado: nada sai', :aggregate_failures do
+    varredura
+    execucoes.first(2).each { |execucao| chega(execucao) }
+    account.disable_features!('automacao_motor')
+
+    chega(execucoes.last)
+
+    expect(account.campaigns).to be_empty
+    expect(registro_da_vez('campanha_da_vez_nao_saiu').dados).to include('por' => 'motor_desligado')
+  end
+
+  it 'quem espera antes da campanha segura a vez, mesmo na rede', :aggregate_failures do
+    linha = varredura
+    execucoes.first(2).each { |execucao| chega(execucao) }
+    execucoes.last.update_columns(estado: 'esperando', due_at: 3.days.from_now, updated_at: 1.day.ago) # rubocop:disable Rails/SkipsModelValidations
+
+    expect { rede_passa(linha) }.to have_enqueued_job(Autonomia::Automacao::FecharVezJob).with(linha.id)
+
+    expect(account.campaigns).to be_empty
+    expect(linha.reload.fechada_em).to be_nil
+  end
+
+  it 'a execução travada sai da conta pela rede, com o registro de quem ficou de fora', :aggregate_failures do
+    linha = varredura
+    execucoes.first(2).each { |execucao| chega(execucao) }
+    execucoes.last.update_columns(estado: 'andando', due_at: nil, updated_at: 3.hours.ago) # rubocop:disable Rails/SkipsModelValidations
+    described_class.conferir(linha.id)
     expect(account.campaigns).to be_empty
 
-    described_class.lote_feito(definicao, 'card.recorrente', vez, [*cards.map(&:id), outro.id])
+    rede_passa(linha)
 
     expect(account.campaigns.count).to eq(1)
-  end
-
-  it 'a vez travada sai pela rede de segurança, com quem chegou e quantos ficaram de fora', :aggregate_failures do
-    linha = nil
-    expect { linha = varredura }.to have_enqueued_job(Autonomia::Automacao::FecharVezJob).with(kind_of(Integer))
-    expect(described_class::REDE).to eq(2.hours)
-    chega(execucoes[0])
-
-    travel_to(vez + described_class::REDE + 1.minute) { Autonomia::Automacao::FecharVezJob.perform_now(linha.id) }
-
-    expect(account.campaigns.count).to eq(1)
-    resumo = Autonomia::Automacao::Registro.where(execucao: execucoes[0], motivo: 'campanha_da_vez_saiu_pela_rede').sole
-    expect(resumo.dados).to include('esperados' => 3, 'chegaram' => 1, 'faltaram' => 2, 'horas' => 2)
+    resumo = registro_da_vez('campanha_da_vez_saiu_pela_rede')
+    expect(resumo.dados).to include('chegaram' => 2, 'fora' => 1, 'lotes_fora' => 0, 'horas' => 2)
     historico = Autonomia::Automacao::Historico.new(automacao: definicao, usuario: dona)
     texto = I18n.with_locale(:pt_BR) { historico.send(:passo, resumo, visivel: true)[:motivo] }
-    expect(texto).to include('2 ficaram de fora')
-    expect(disparos).to eq(1)
+    expect(texto).to include('1 ficaram de fora por estarem travados')
   end
 
-  it 'o card que chega depois de a vez sair pula, sem outra campanha', :aggregate_failures do
-    linha = varredura
-    chega(execucoes[0])
-    described_class.fechar_pela_rede(linha.id)
+  it 'o lote repetido não fecha a vez antes do outro lote rodar', :aggregate_failures do
+    linha = varredura(lotes: 2, rodaram: [0, 0])
+    execucoes.each { |execucao| chega(execucao) }
 
-    tarde = chega(execucoes[1])
+    expect(account.campaigns).to be_empty
+    expect(linha.reload.fechada_em).to be_nil
 
-    expect([tarde.tipo, tarde.motivo]).to eq([:pulado, 'campanha_da_vez_ja_saiu'])
-    expect(tarde.dados['campanha_id']).to eq(account.campaigns.last.display_id)
+    described_class.lote_feito(definicao, 'card.recorrente', vez, 1)
+
     expect(account.campaigns.count).to eq(1)
   end
 
-  it 'a rede numa vez já fechada não faz nada' do
-    linha = varredura
-    execucoes.each { |execucao| chega(execucao) }
+  it 'a execução que morreu entre o passo e o registro segura a vez' do
+    varredura
+    passo_em(execucoes.last) # chegou, mas o registro não foi gravado
+    execucoes.first(2).each { |execucao| chega(execucao) }
 
-    expect { described_class.fechar_pela_rede(linha.id) }.not_to(change { account.campaigns.count })
+    expect(account.campaigns).to be_empty
+  end
+
+  it 'o disparo que falha deixa a vez aberta, registra o erro e tenta de novo', :aggregate_failures do
+    linha = varredura
+    falhar = true
+    allow_any_instance_of(Autonomia::Automacao::PassoDeCampanha).to receive(:montar).and_wrap_original do |original| # rubocop:disable RSpec/AnyInstance
+      raise ActiveRecord::ConnectionTimeoutError, 'banco ocupado' if falhar
+
+      original.call
+    end
+
+    expect { execucoes.each { |execucao| chega(execucao) } }.to have_enqueued_job(Autonomia::Automacao::FecharVezJob).with(linha.id)
+    expect(account.campaigns).to be_empty
+    expect(linha.reload.fechada_em).to be_nil
+    expect(registro_da_vez('campanha_da_vez_falhou').dados).to include('erro' => 'ActiveRecord::ConnectionTimeoutError')
+
+    falhar = false
+    Autonomia::Automacao::FecharVezJob.perform_now(linha.id)
+
+    expect(account.campaigns.count).to eq(1)
+    expect(linha.reload.campanha_display_id).to eq(account.campaigns.last.display_id)
+  end
+
+  it 'sem chegada nenhuma, a vez não fecha nem manda' do
+    linha = varredura
+    execucoes.each { |execucao| termina(execucao) }
+
+    expect([account.campaigns.count, linha.reload.fechada_em]).to eq([0, nil])
+  end
+
+  it 'quem chega depois: "já saiu" só se a campanha saiu; senão, "fechou sem mandar"', :aggregate_failures do
+    linha = varredura
+    execucoes.first(2).each { |execucao| chega(execucao) }
+    termina(execucoes.last)
+    expect(passo_em(execucoes.last)).to have_attributes(tipo: :pulado, motivo: 'campanha_da_vez_ja_saiu')
+
+    linha.reload.update!(campanha_display_id: nil) # a vez que fechou sem mandar (desligada, motor desligado)
+    expect(passo_em(execucoes.last)).to have_attributes(tipo: :pulado, motivo: 'campanha_da_vez_fechou_sem_enviar')
   end
 end

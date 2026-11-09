@@ -236,7 +236,7 @@ module FechamentoAutomacao::Lacunas
       passo = { 'id' => 'g55', 'faz' => 'disparar', 'modelo' => { 'variaveis' => [['texto fixo']] } }
       receita = { 'gatilho' => { 'tipo' => 'card.recorrente' } }
       Autonomia::Automacao::PassoDeCampanha.problemas_ao_salvar(passo, receita, conta: nil, account_user: nil).empty? &&
-        Autonomia::Automacao::CampanhaDaVez.column_names.include?('esperados')
+        Autonomia::Automacao::CampanhaDaVez.column_names.include?('lotes_feitos')
     },
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
     # (passo 2, "manda por e-mail o mesmo conteúdo").

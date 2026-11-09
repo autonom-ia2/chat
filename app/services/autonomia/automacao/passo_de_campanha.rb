@@ -135,6 +135,14 @@ class Autonomia::Automacao::PassoDeCampanha
     @passo['faz'] == 'disparar' ? disparar : nao_receber
   end
 
+  # G55: a campanha da vez que fechou, montada pelo caminho da conta (alvo = a conta) sem pôr na fila do disparo. Quem
+  # chama (CampanhaDaOcorrencia) cria a campanha e fecha a vez na mesma transação e enfileira depois do commit.
+  # [Resultado, a campanha criada ou nil].
+  def montar
+    @so_montar = true
+    [disparar, @campanha]
+  end
+
   private
 
   def disparar
@@ -174,8 +182,8 @@ class Autonomia::Automacao::PassoDeCampanha
 
   # O conta.recorrente: uma execução por vez, a campanha sai na hora.
   def campanha_da_conta(caixa, template_params, audiencia, dados)
-    campanha = criar_campanha(caixa, template_params, audiencia)
-    ::Campaigns::TriggerOneoffCampaignJob.perform_later(campanha)
+    campanha = @campanha = criar_campanha(caixa, template_params, audiencia)
+    ::Campaigns::TriggerOneoffCampaignJob.perform_later(campanha) unless @so_montar
     Resultado.new(tipo: :ok, motivo: nil, dados: { 'campanha_id' => campanha.display_id, **dados })
   end
 
@@ -185,17 +193,15 @@ class Autonomia::Automacao::PassoDeCampanha
   def da_vez? = da_conta? || ocorrencia.present?
 
   # G55: no card.recorrente e no contato.recorrente, a execução chega à campanha da vez e segue. A campanha sai quando a
-  # vez fecha (CampanhaDaOcorrencia); se esta chegada é a que fecha, o passo devolve o resumo da saída.
+  # vez fecha (CampanhaDaOcorrencia, conferida pelo Executor depois de gravar este registro). Na vez já fechada: "já
+  # saiu" só se a campanha saiu de fato; senão, "não saiu".
   def campanha_da_vez(dados)
-    vez, situacao = ::Autonomia::Automacao::CampanhaDaOcorrencia.chegar(@execucao, @passo['id'])
+    vez = ::Autonomia::Automacao::CampanhaDaOcorrencia.chegada(@execucao, @passo['id'])
     marca = { 'campanha_da_vez' => vez.id, **dados }
-    if situacao == :ja_saiu
-      return Resultado.new(tipo: :pulado, motivo: 'campanha_da_vez_ja_saiu', dados: marca.merge('campanha_id' => vez.campanha_display_id))
-    end
-    return Resultado.new(tipo: :ok, motivo: 'campanha_da_vez_aguardando', dados: marca) unless situacao
+    return Resultado.new(tipo: :ok, motivo: 'campanha_da_vez_aguardando', dados: marca) unless vez.fechada_em
+    return Resultado.new(tipo: :pulado, motivo: 'campanha_da_vez_fechou_sem_enviar', dados: marca) unless vez.campanha_display_id
 
-    resumo = ::Autonomia::Automacao::CampanhaDaOcorrencia.disparar(vez)
-    Resultado.new(tipo: resumo.tipo, motivo: resumo.motivo, dados: marca.merge(resumo.dados))
+    Resultado.new(tipo: :pulado, motivo: 'campanha_da_vez_ja_saiu', dados: marca.merge('campanha_id' => vez.campanha_display_id))
   end
 
   # A vez do recorrente de card ou contato desta execução, ou nil fora dele.
