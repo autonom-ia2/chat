@@ -21,6 +21,7 @@
         "CONTATO": "Contact name and fields (never email or phone)",
         "EMPRESA": "Company name and fields",
         "ANEXOS": "Photos, PDFs and voice notes the customer sent",
+        "ANEXOS_NOVOS": "Only the photos, PDFs and voice notes that arrived during the “wait until” just before",
         "CARD": "The card: title, stage, pipeline, status and fields",
         "NOTAS": "The conversation's internal notes (in a text to the customer, the AI may repeat what they say)"
       },

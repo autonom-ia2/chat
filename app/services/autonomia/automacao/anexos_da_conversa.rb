@@ -11,8 +11,15 @@
 #
 # Outros anexos (vídeo, localização, contato) não são documento e ficam de fora. O conteúdo do anexo nunca vai para o
 # log.
+#
+# `le: anexos_novos` (G46, o laço dos documentos do exemplo 14): só os anexos que chegaram na pausa, o "esperar até"
+# cumprido logo antes nesta rodada, do começo dele ao instante em que foi cumprido. Sem "esperar até" antes, os da
+# execução inteira. Sem o teto de mensagens: a pausa é o limite, e nada do que o cliente mandou nela fica de fora. A
+# próxima volta do laço lê a pausa seguinte, então nenhum anexo vai duas vezes à IA. Sem execução (o ensaio, o "Testar
+# este passo"), lê como `anexos`. Com as duas leituras, vale a dos novos.
 class Autonomia::Automacao::AnexosDaConversa
   LEITURA = 'anexos'.freeze
+  NOVOS = 'anexos_novos'.freeze
   MAX_MENSAGENS = ::Autonomia::Decisores::Estado::MAX_MENSAGENS
   # O que o provedor aceita como imagem e como arquivo, e até que tamanho: a imagem pelo teto que o leitor de mídia já
   # usa (abaixo do da OpenAI), os PDFs pelo da OpenAI, 32 MB somados num pedido.
@@ -36,15 +43,21 @@ class Autonomia::Automacao::AnexosDaConversa
     end
   end
 
-  def self.le?(passo) = Array(passo['le']).include?(LEITURA)
+  def self.le?(passo) = Array(passo['le']).intersect?([LEITURA, NOVOS])
 
-  def self.leitura(estado, passo, conversa) = ::Autonomia::Automacao::LeituraComAnexos.new(estado, (new(conversa) if le?(passo)))
+  def self.novos?(passo) = Array(passo['le']).include?(NOVOS)
+
+  # `pausa`: a janela dos anexos novos (o motor a dá; nil lê os últimos).
+  def self.leitura(estado, passo, conversa, pausa: nil)
+    ::Autonomia::Automacao::LeituraComAnexos.new(estado, (new(conversa, pausa: (pausa if novos?(passo))) if le?(passo)))
+  end
 
   # As leituras do Estado do Decisor, sem os anexos (que não são dele).
-  def self.sem_anexos(leituras) = Array(leituras) - [LEITURA]
+  def self.sem_anexos(leituras) = Array(leituras) - [LEITURA, NOVOS]
 
-  def initialize(conversa)
+  def initialize(conversa, pausa: nil)
     @conversa = conversa
+    @pausa = pausa
   end
 
   def quantos = anexos.size
@@ -72,11 +85,16 @@ class Autonomia::Automacao::AnexosDaConversa
   private
 
   def anexos
-    @anexos ||= begin
-      mensagens = @conversa.messages.incoming.where(private: false).where(::Crm::Ai::LeitorDeMidia.com_anexo)
-                           .reorder(id: :desc).limit(MAX_MENSAGENS).pluck(:id)
-      Attachment.where(message_id: mensagens, file_type: DOCUMENTOS).includes(file_attachment: :blob).reorder(:message_id, :id).to_a
-    end
+    @anexos ||= Attachment.where(message_id: mensagens.pluck(:id), file_type: DOCUMENTOS).includes(file_attachment: :blob)
+                          .reorder(:message_id, :id).to_a
+  end
+
+  # As da pausa, todas, pela régua da resposta (Resposta.na_janela: depois do começo, até o fim); sem pausa, as últimas.
+  def mensagens
+    com_anexo = @conversa.messages.incoming.where(private: false).where(::Crm::Ai::LeitorDeMidia.com_anexo)
+    return ::Autonomia::Automacao::Resposta.na_janela(com_anexo, @pausa) if @pausa
+
+    com_anexo.reorder(id: :desc).limit(MAX_MENSAGENS)
   end
 
   # Foto ou arquivo: precisam de um modelo que vê imagem.

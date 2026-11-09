@@ -25,7 +25,7 @@ module Autonomia::Automacao::IaNoExecutor
       return encerrar(passo['id'], 'parada', 'mensagens_desligadas')
     end
 
-    executor = classe.new(execucao: @execucao, passo: passo, alvo: alvo, acesso: @acesso)
+    executor = classe.new(execucao: @execucao, passo: passo, alvo: alvo, acesso: @acesso, pausa: @pausa)
     @decidido_em = Time.current
     depois_da_ia(passo, executor, executor.executar)
   end

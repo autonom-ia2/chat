@@ -35,9 +35,11 @@ module Autonomia::Automacao::ComIa
     ::Crm::CardPolicy.new({ user: usuario, account: card.account, account_user: account_user }, card).show?
   end
 
-  def initialize(execucao:, passo:, alvo:, acesso:)
+  # `pausa`: a janela do "esperar até" cumprido logo antes nesta rodada, para `le: anexos_novos` (AnexosDaConversa).
+  def initialize(execucao:, passo:, alvo:, acesso:, pausa: nil)
     super(execucao: execucao, passo: passo, alvo: alvo)
     @acesso = acesso
+    @pausa = pausa
   end
 
   # nil quando o passo pode seguir para a IA; senão o Resultado (sem conversa, quem ligou não a vê).
@@ -50,12 +52,12 @@ module Autonomia::Automacao::ComIa
   private
 
   # Com `fuso`, cada mensagem vai com a data e a hora dela (o extrair precisa para "ontem"). Com `le: anexos` (G20), os
-  # anexos da conversa vão junto (AnexosDaConversa).
+  # anexos da conversa vão junto (AnexosDaConversa); com `anexos_novos` (G46), os da pausa, ou os da execução inteira.
   def leitura(fuso: nil)
     leituras = ::Autonomia::Automacao::ComIa.leituras(@passo)
     estado = estado_com(leituras, fuso)
     estado = estado_com(leituras - ['card'], fuso) unless card_visivel?(leituras, estado)
-    @leitura = ::Autonomia::Automacao::AnexosDaConversa.leitura(estado, @passo, @conversa)
+    @leitura = ::Autonomia::Automacao::AnexosDaConversa.leitura(estado, @passo, @conversa, pausa: @pausa || (@execucao.created_at..))
   end
 
   # `le: card` (#2679): no gatilho de card, o próprio card; no de conversa, o card dela (o Estado acha).

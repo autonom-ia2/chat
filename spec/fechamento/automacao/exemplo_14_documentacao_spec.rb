@@ -6,16 +6,18 @@ require 'rails_helper'
 # > estiver tudo certo." — Dona Cida, dona da corretora
 #
 # Começa quando o card entra em "Documentação". 1. Manda pelo modelo a lista do ramo. 2. A cada foto ou PDF, a IA extrai
-# qual documento é e se dá para ler (grava no card). 3. Não deu para ler: pede de novo. 4. Faltando algo: escreve só o
+# qual documento é e se dá para ler (grava no card, um campo por documento). 3. Não deu para ler: pede de novo. 4. Faltando algo: escreve só o
 # que falta. 5. 2 dias sem documento novo: lembra uma vez, pelo modelo; 4 dias: cria retorno para o corretor. 6. Tudo
 # recebido: etiqueta "docs ok" e move para "Emissão". Os passos 7 e 8 (a seguradora) são a G13 e seguem no pendentes_spec.
 #
 # O laço: o "esperar até o cliente mandar foto ou PDF" (2 dias) e o "decidir" que volta a ele (`de_novo.desde`) nos
 # caminhos "ilegível", "falta algo" e "nenhum". O lembrete é uma vez por pausa, e o prazo recomeça a cada documento
-# (decisão do Rodrigo, 09/11); depois do retorno, a automação encerra. O lembrete e o retorno só saem com o card ainda em
-# "Documentação" (um "se" na receita, decisão do Rodrigo). A etiqueta é "docs-ok": o nome de etiqueta não aceita espaço. Montada e ligada pela API da
-# tela; o card entra pelo Creator; as esperas andam pela varredura do motor; a IA é o dublê no endereço da OpenAI (nenhuma
-# chamada paga); o WhatsApp oficial para no receptor.
+# (decisão do Rodrigo, 09/11); depois do retorno, a automação encerra. O lembrete, o retorno e o "tudo recebido" só agem
+# com o card ainda em "Documentação" (um "se" na receita, decisão do Rodrigo). O extrair lê só os anexos da pausa
+# (`anexos_novos`) e grava cada documento no seu campo do card; o "decidir" lê o card. A etiqueta é "docs-ok": o nome de
+# etiqueta não aceita espaço, como no exemplo 1. Montada e ligada pela API da tela; o card entra pelo Creator; as esperas
+# andam pela varredura do motor; a IA é o dublê no endereço da OpenAI (nenhuma chamada paga); o WhatsApp oficial para no
+# receptor.
 RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 
@@ -34,6 +36,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
   let(:funil) { create_crm_pipeline(account: account, user: cida, name: 'Seguros').first }
   let(:documentacao) { create_crm_stage(account: account, pipeline: funil, name: 'Documentação', position: 1) }
   let(:emissao) { create_crm_stage(account: account, pipeline: funil, name: 'Emissão', position: 2) }
+  let(:perdido) { create_crm_stage(account: account, pipeline: funil, name: 'Perdido', position: 3) }
   # O que o dublê da IA responde, por passo, uma resposta por ida, na ordem (a última se repete). Um Proc roda durante a
   # ida (o que chega enquanto a IA lê) e devolve a resposta.
   let(:respostas) { { 'automacao_extrair' => [], 'automacao_decidir' => [], 'automacao_escrever' => [] } }
@@ -63,11 +66,17 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
     { nome: nome, chave: chave, descricao: descricao, passos: passos }
   end
 
+  # Os três documentos da lista. Cada um tem o campo dele no card: "recebido", ou o que não deu para ler nele.
+  def documentos = { 'cnh' => 'a CNH', 'doc_carro' => 'o documento do carro (CRLV)', 'comprovante' => 'o comprovante de endereço' }
+
+  # A resposta do extrair traz os três campos (o esquema pede todos); o documento que não chegou vem vazio.
+  def extraiu(achados) = documentos.keys.index_with { '' }.merge(achados)
+
   def receita
     { gatilho: { tipo: 'card.entrou_na_etapa', etapa_id: documentacao.id }, passos: [
       { id: 'lista', tipo: 'mensagem', texto: ['Para emitir o seguro auto: CNH, documento do carro e comprovante de endereço.'],
         modelo: modelo('lista_documentos') },
-      espera_lembra_e_liga, extrai, no_card, decide
+      espera_lembra_e_liga, extrai, *no_card, decide
     ] }
   end
 
@@ -80,34 +89,37 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
     chegou_documento('espera_doc', [so_se_em_documentacao('ainda_la', [lembrete, segunda])])
   end
 
+  # Lê só os anexos que chegaram na pausa (`anexos_novos`): nenhum vai duas vezes à IA, e com 6 ou mais nada fica de fora.
   def extrai
-    { id: 'extrai', tipo: 'extrair', le: %w[anexos], trocar: true, campos: [
-      { chave: 'documento', descricao: 'qual documento chegou: CNH, documento do carro ou comprovante de endereço',
-        destino: 'conversa.atributos.documento' },
-      { chave: 'leitura', descricao: 'se o documento dá para ler: "legível", ou o que não deu para ler',
-        destino: 'conversa.atributos.leitura' }
-    ] }
+    campos = documentos.map do |chave, nome|
+      { chave: chave, descricao: "se chegou #{nome}: \"recebido\" se dá para ler, ou o que não deu para ler; vazio se não chegou",
+        destino: "conversa.atributos.#{chave}" }
+    end
+    { id: 'extrai', tipo: 'extrair', le: %w[anexos_novos], trocar: true, campos: campos }
   end
 
+  # Um passo por documento: o que não chegou nesta pausa fica vazio, e o passo dele pula sem apagar o que o card já tem.
   def no_card
-    { id: 'no_card', tipo: 'acao', acao: 'PATCH crm/cards/:id', descricao: 'Gravar no card o documento e a leitura',
-      caminho: { id: card_id }, corpo: { card: { custom_attributes: {
-        documento: { '$valor' => 'conversa.atributos.documento' }, leitura: { '$valor' => 'conversa.atributos.leitura' }
-      } } } }
+    documentos.map do |chave, nome|
+      { id: "no_card_#{chave}", tipo: 'acao', acao: 'PATCH crm/cards/:id', descricao: "Gravar no card #{nome}",
+        caminho: { id: card_id }, corpo: { card: { custom_attributes: { chave => { '$valor' => "conversa.atributos.#{chave}" } } } } }
+    end
   end
 
+  # Decide pelo card (o que já chegou), não pelos anexos. O fim só com o card ainda em Documentação.
   def decide
     tudo_ok = [{ id: 'docs_ok', tipo: 'acao', acao: 'PATCH conversations/:conversation_id/labels/alterar', descricao: 'Pôr a etiqueta docs ok',
                  caminho: { conversation_id: { '$valor' => 'conversa.id' } }, corpo: { por: ['docs-ok'] } },
                { id: 'para_emissao', tipo: 'acao', acao: 'POST crm/cards/:id/move', descricao: 'Levar para Emissão', caminho: { id: card_id },
                  corpo: { stage_id: emissao.id } }]
-    { id: 'decide', tipo: 'decidir', le: %w[card anexos], pergunta: 'O que falta para emitir o seguro auto?',
+    { id: 'decide', tipo: 'decidir', le: %w[card], pergunta: 'O que falta para emitir o seguro auto?',
       caminhos: [
-        caminho('Ilegível', 'ilegivel', 'o documento que chegou não dá para ler',
+        caminho('Ilegível', 'ilegivel', 'um documento do card não deu para ler',
                 [escrever('pede_de_novo', 'Peça de novo o documento, dizendo o que não deu para ler.')]),
-        caminho('Falta algo', 'falta_algo', 'chegou um documento legível, mas ainda falta outro da lista',
+        caminho('Falta algo', 'falta_algo', 'os documentos do card dão para ler, mas falta algum da lista',
                 [escrever('pede_resto', 'Peça só os documentos da lista que ainda não chegaram.')]),
-        caminho('Tudo recebido', 'tudo_recebido', 'CNH, documento do carro e comprovante de endereço chegaram e dão para ler', tudo_ok)
+        caminho('Tudo recebido', 'tudo_recebido', 'CNH, documento do carro e comprovante estão no card como recebidos',
+                [so_se_em_documentacao('ainda_la3', tudo_ok)])
       ],
       nenhum: [], de_novo: { caminhos: %w[ilegivel falta_algo nenhum], desde: 'espera_doc' } }
   end
@@ -165,6 +177,14 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
   def execucao = Autonomia::Automacao::Execucao.sole
   def ramos = Autonomia::Automacao::Registro.where(passo: 'decide').order(:id).map { |item| item.dados['ramo'] }
   def idas(nome) = ia_recebeu.count { |corpo| corpo.dig('text', 'format', 'name') == nome }
+  def pedidos(nome) = ia_recebeu.select { |corpo| corpo.dig('text', 'format', 'name') == nome }
+
+  # O que cada ida do extrair levou: o nome de cada PDF, "foto" por imagem.
+  def lidos_pelo_extrair
+    pedidos('automacao_extrair').map do |corpo|
+      corpo['input'].first['content'].filter_map { |parte| parte['filename'] || ('foto' if parte['type'] == 'input_image') }
+    end
+  end
 
   def ia_roteiro
     fila = respostas
@@ -188,7 +208,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
     flags_do_piloto(account)
     account.enable_features!('automacao_gatilhos')
     [cida, corretor].each { |pessoa| create(:inbox_member, user: pessoa, inbox: inbox) }
-    %w[conversation_attribute card_attribute].product(%w[documento leitura]).each { |modelo, chave| atributo(chave, modelo) }
+    %w[conversation_attribute card_attribute].product(documentos.keys).each { |modelo, chave| atributo(chave, modelo) }
     create(:label, account: account, title: 'docs-ok', description: 'Documentos conferidos')
     corpo = { 'type' => 'BODY', 'text' => 'Oi {{1}}, documentos.' }
     canal.update!(message_templates: %w[lista_documentos lembrete_documentos].map do |nome|
@@ -198,7 +218,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
     # O "fechado" foi há 2 dias: a janela de 24 h está fechada, e a lista sai pelo modelo aprovado, como o termo diz.
     create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :incoming, sender: marcos,
                      content: 'Fechado, pode fazer o seguro', created_at: inicio - 2.days)
-    [documentacao, emissao]
+    [documentacao, emissao, perdido]
     automacao = montar_automacao(cida, account, nome: 'Documentação completa para emitir', receita: receita)
     ligar_automacao(cida, account, automacao)
     clear_enqueued_jobs
@@ -219,13 +239,13 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
 
   it 'passos 2 e 3: a foto ilegível vai à IA, o card guarda o que não deu para ler, o pedido sai e a automação volta a esperar',
      :aggregate_failures do
-    respostas['automacao_extrair'] << { 'documento' => 'CNH', 'leitura' => 'não dá para ler o CPF' }
+    respostas['automacao_extrair'] << extraiu('cnh' => 'não dá para ler o CPF')
     respostas['automacao_decidir'] << { 'caminho' => 'ilegivel', 'motivo' => 'O CPF está borrado.' }
     respostas['automacao_escrever'] << { 'texto' => 'Não consegui ler o CPF da CNH. Pode mandar outra foto?' }
 
     manda(:foto, 'cnh.png', quando: entrada + 3.hours)
 
-    expect(card.reload.custom_attributes).to include('documento' => 'CNH', 'leitura' => 'não dá para ler o CPF')
+    expect(card.reload.custom_attributes).to eq('cnh' => 'não dá para ler o CPF')
     expect(ramos).to eq(%w[ilegivel])
     expect(textos).to eq(['Não consegui ler o CPF da CNH. Pode mandar outra foto?'])
     expect([execucao.reload.estado, execucao.cursor]).to eq(%w[esperando espera_doc])
@@ -234,7 +254,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
   end
 
   it 'passo 4: o PDF da CNH chega legível, e a IA escreve só o que falta, lendo o card', :aggregate_failures do
-    respostas['automacao_extrair'] << { 'documento' => 'CNH', 'leitura' => 'legível' }
+    respostas['automacao_extrair'] << extraiu('cnh' => 'recebido')
     respostas['automacao_decidir'] << { 'caminho' => 'falta_algo', 'motivo' => 'Só chegou a CNH.' }
     respostas['automacao_escrever'] << { 'texto' => 'Recebi a CNH. Faltam o documento do carro e o comprovante de endereço.' }
 
@@ -242,10 +262,11 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
 
     expect(ramos).to eq(%w[falta_algo])
     expect(textos).to eq(['Recebi a CNH. Faltam o documento do carro e o comprovante de endereço.'])
-    escrever = ia_recebeu.find { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_escrever' }
-    expect(escrever.to_json).to include('Peça só os documentos da lista que ainda não chegaram.').and include('CNH')
-    extrair = ia_recebeu.find { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_extrair' }
-    expect(extrair['input'].first['content'].find { |parte| parte['type'] == 'input_file' }).to include('filename' => 'cnh.pdf')
+    expect(pedidos('automacao_escrever').sole.to_json).to include('Peça só os documentos da lista que ainda não chegaram.')
+      .and include('cnh').and include('recebido')
+    expect(pedidos('automacao_decidir').sole.to_json).to include('cnh').and include('recebido')
+    expect(pedidos('automacao_decidir').sole['input'].first['content'].pluck('type')).to eq(%w[input_text])
+    expect(lidos_pelo_extrair).to eq([%w[cnh.pdf]])
     expect([execucao.reload.estado, execucao.cursor]).to eq(%w[esperando espera_doc])
   end
 
@@ -292,7 +313,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
   end
 
   it 'passo 5: o documento depois do lembrete abre uma pausa nova, com o seu próprio lembrete', :aggregate_failures do
-    respostas['automacao_extrair'] << { 'documento' => 'CNH', 'leitura' => 'legível' }
+    respostas['automacao_extrair'] << extraiu('cnh' => 'recebido')
     respostas['automacao_decidir'] << { 'caminho' => 'falta_algo', 'motivo' => 'Só chegou a CNH.' }
     respostas['automacao_escrever'] << { 'texto' => 'Faltam o documento do carro e o comprovante.' }
     varre(entrada + 2.days + 10.minutes)
@@ -310,31 +331,67 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
   end
 
   # A 2ª e a 3ª foto chegam enquanto a IA lê a 1ª: a execução anda, e ninguém a acorda. Na volta ao "esperar até", a
-  # janela começa quando ele foi cumprido, e as duas contam: o laço roda de novo na hora, com as três fotos.
-  it '3 fotos de uma vez: nenhuma se perde', :aggregate_failures do
+  # janela começa quando ele foi cumprido: as duas contam, o laço roda de novo na hora, e a 2ª ida leva só as duas.
+  it '3 fotos de uma vez: nenhuma se perde, nenhuma vai duas vezes, e o card guarda cada documento', :aggregate_failures do
     # O relógio do spec está parado: as duas chegam 1 segundo depois, enquanto a IA lê.
     chegam_mais = lambda do
-      %w[crlv.png comprovante.png].each do |nome|
-        foto_ou_pdf(:foto, nome).update_column(:created_at, 1.second.from_now) # rubocop:disable Rails/SkipsModelValidations
-      end
-      { 'documento' => 'CNH', 'leitura' => 'legível' }
+      travel(1.second)
+      %w[crlv.png comprovante.png].each { |nome| foto_ou_pdf(:foto, nome) }
+      extraiu('cnh' => 'recebido')
     end
-    respostas['automacao_extrair'].push(chegam_mais, { 'documento' => 'comprovante de endereço', 'leitura' => 'legível' })
+    respostas['automacao_extrair'].push(chegam_mais, extraiu('doc_carro' => 'recebido', 'comprovante' => 'recebido'))
     respostas['automacao_decidir'].push({ 'caminho' => 'falta_algo', 'motivo' => 'Só a CNH.' },
                                         { 'caminho' => 'tudo_recebido', 'motivo' => 'Chegaram os três.' })
     respostas['automacao_escrever'] << { 'texto' => 'Faltam o documento do carro e o comprovante.' }
 
     manda(:foto, 'cnh.png', quando: entrada + 2.hours)
 
-    expect([idas('automacao_extrair'), idas('automacao_decidir')]).to eq([2, 2])
-    ultima = ia_recebeu.reverse.find { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_extrair' }
-    expect(ultima['input'].first['content'].count { |parte| parte['type'] == 'input_image' }).to eq(3)
+    expect(lidos_pelo_extrair).to eq([%w[foto], %w[foto foto]])
+    expect(card.reload.custom_attributes).to eq('cnh' => 'recebido', 'doc_carro' => 'recebido', 'comprovante' => 'recebido')
     expect(ramos).to eq(%w[falta_algo tudo_recebido])
-    expect(card.reload.stage_id).to eq(emissao.id)
+    expect(card.stage_id).to eq(emissao.id)
+  end
+
+  # O laço longo: 7 documentos em 7 pausas. A CNH do começo continua no card, e o "decidir" lê o card, não os anexos.
+  it '7 documentos ao longo do laço: cada ida lê só o novo, e a CNH do começo continua contando', :aggregate_failures do
+    pdfs = %w[cnh.pdf carro-1.pdf carro-2.pdf carro-3.pdf carro-4.pdf carro-5.pdf comprovante.pdf]
+    respostas['automacao_extrair'].push(extraiu('cnh' => 'recebido'), *Array.new(4) { extraiu('doc_carro' => 'a placa não dá para ler') },
+                                        extraiu('doc_carro' => 'recebido'), extraiu('comprovante' => 'recebido'))
+    respostas['automacao_decidir'].push({ 'caminho' => 'falta_algo', 'motivo' => 'Só a CNH.' },
+                                        *Array.new(4) { { 'caminho' => 'ilegivel', 'motivo' => 'A placa não dá para ler.' } },
+                                        { 'caminho' => 'falta_algo', 'motivo' => 'Falta o comprovante.' },
+                                        { 'caminho' => 'tudo_recebido', 'motivo' => 'Os três no card.' })
+    respostas['automacao_escrever'] << { 'texto' => 'Pode mandar de novo?' }
+
+    pdfs.each_with_index { |nome, indice| manda(:pdf, nome, quando: entrada + (indice + 1).hours) }
+
+    expect(lidos_pelo_extrair).to eq(pdfs.zip)
+    ultima = pedidos('automacao_decidir').last.to_json
+    expect(ultima).to include('cnh').and include('doc_carro').and include('comprovante')
+    expect(card.reload.custom_attributes).to eq('cnh' => 'recebido', 'doc_carro' => 'recebido', 'comprovante' => 'recebido')
+    expect(ramos.last).to eq('tudo_recebido')
+    expect(card.stage_id).to eq(emissao.id)
+    expect(execucao.reload.estado).to eq('concluida')
+  end
+
+  it 'o card movido à mão para "Perdido" não volta para "Emissão" quando o último documento chega', :aggregate_failures do
+    respostas['automacao_extrair'] << extraiu('comprovante' => 'recebido')
+    respostas['automacao_decidir'] << { 'caminho' => 'tudo_recebido', 'motivo' => 'Os três no card.' }
+    travel_to(entrada + 1.hour) do
+      Crm::Cards::Mover.new(card: card, actor: cida, target_stage: perdido).perform
+      drenar
+    end
+
+    manda(:pdf, 'comprovante.pdf', quando: entrada + 2.hours)
+
+    expect(card.reload.stage_id).to eq(perdido.id)
+    expect(conversa.reload.label_list).not_to include('docs-ok')
+    expect(Autonomia::Automacao::Registro.where(passo: 'ainda_la3_parar').count).to eq(1)
+    expect(execucao.reload.estado).to eq('concluida')
   end
 
   it 'passo 6: tudo recebido põe a etiqueta "docs-ok", move para "Emissão" e acaba', :aggregate_failures do
-    respostas['automacao_extrair'] << { 'documento' => 'comprovante de endereço', 'leitura' => 'legível' }
+    respostas['automacao_extrair'] << extraiu('comprovante' => 'recebido')
     respostas['automacao_decidir'] << { 'caminho' => 'tudo_recebido', 'motivo' => 'Os três chegaram e dão para ler.' }
 
     manda(:pdf, 'comprovante.pdf', quando: entrada + 1.day)

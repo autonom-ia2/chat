@@ -14,7 +14,7 @@ module Autonomia::Automacao::EsperaNoExecutor
 
   def esperar_ate(passo)
     espera = janela_da_espera(passo)
-    return cumprida(passo) if condicao?(passo['condicao'], valores(espera: espera))
+    return cumprida(passo, espera) if condicao?(passo['condicao'], valores(espera: espera))
     return aguardar_condicao(passo, espera, espera.begin + Duracao.de(passo['prazo'])) unless @retomando
     return aguardar_condicao(passo, espera, @execucao.due_at, registrar: false) if @execucao.due_at&.future?
 
@@ -56,8 +56,12 @@ module Autonomia::Automacao::EsperaNoExecutor
     @cumprida_em&.key?(passo['id']) ? (@cumprida_em[passo['id']]..) : Duracao.janela(passo['prazo'], nil)
   end
 
-  def cumprida(passo)
-    (@cumprida_em ||= {})[passo['id']] = Time.current
+  # A pausa (`@pausa`, G46): do começo da janela ao instante cumprido. O passo de IA que lê `anexos_novos` lê só o que
+  # chegou nela; a volta ao mesmo "esperar até" começa nesse instante, então nenhum anexo entra em duas pausas.
+  def cumprida(passo, espera)
+    agora = Time.current
+    (@cumprida_em ||= {})[passo['id']] = agora
+    @pausa = espera.begin..agora
     registrar(passo['id'], 'ok').then { @roteiro.seguinte(passo['id']) }
   end
 end
