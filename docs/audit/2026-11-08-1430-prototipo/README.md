@@ -33,8 +33,9 @@ A Paula tem a função "Sistemas": vê os agentes e tem a chave, mas não edita 
 3. Passo 1, o que ela faz: nome e quando usar.
 4. Passo 2, o que o agente descobre: uma informação chamada **CEP**, com nome de gente.
 5. Passo 3, onde buscar: "Buscar informação" ou "Mandar informação"; cola o link que o outro sistema deu
-   (`https://viacep.com.br/ws//json/`), deixa o cursor no lugar e toca no botão **CEP**. Logo abaixo aparece como o
-   agente usa: `https://viacep.com.br/ws/[CEP]/json/`. Ela nunca digita chaves.
+   (`https://viacep.com.br/ws//json/`), deixa o cursor no lugar e toca no botão **CEP**. O próprio campo passa a
+   mostrar `https://viacep.com.br/ws/[CEP]/json/`; só o que é salvo leva `{{cep}}`. Ela nunca digita nem vê chaves. Link
+   colado com `{{x}}` aparece como `[x]`; colchete que já é do link (`filter[status]`) fica como está.
 6. Passo 4, chave de acesso (se o sistema pedir). O ViaCEP não pede.
 7. Teste com o CEP 01001000: "Deu certo", e o que o agente recebe em linhas (Cep, Logradouro, Bairro, Localidade…).
    O que foi para o outro sistema e a resposta completa ficam em "Ver detalhes".
