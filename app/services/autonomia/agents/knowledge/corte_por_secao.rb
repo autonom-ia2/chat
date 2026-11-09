@@ -5,7 +5,8 @@
 # - Seção até MAXIMO caracteres vira um trecho só; maior, divide por parágrafo, e o último parágrafo de um trecho abre o
 #   seguinte (a resposta que cruza a divisa cabe inteira num dos dois).
 # - Seção com corpo abaixo de PISO se junta à irmã seguinte (mesmo pai), com o título dela no texto: a definição de duas
-#   linhas não vira trecho sozinha.
+#   linhas não vira trecho sozinha. A que recebe põe o próprio título no começo do trecho da seção (#2786), depois do
+#   corte: o primeiro pedaço pode passar do MAXIMO pelo tamanho desse título, o que não muda nada na busca.
 # - Cada trecho começa pelo caminho (Documento › Seção › Subseção), que vai ao embedding: é ele que faz "franquia" achar
 #   o trecho da seção FRANQUIA. As páginas do trecho vão ao metadado (`paginas_do_trecho`), não ao texto. A chave
 #   `paginas` é outra coisa: a seção de 25 páginas do material grande, que o Ingestor põe (ResumoPorSecao e Revisor
