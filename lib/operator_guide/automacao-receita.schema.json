@@ -283,6 +283,16 @@
         }
       }
     },
+    "de_novo": {
+      "description": "G31: decidir a cada resposta. Quando a IA escolhe um dos caminhos daqui (a chave, ou \"nenhum\"), a automação não segue por ele: espera a próxima resposta do cliente, até o prazo, e decide de novo. Cada volta é uma ida paga à IA. O caminho daqui não tem passos (\"nenhum\" vazio), e sobra pelo menos uma saída sem marcar, para a automação seguir: um caminho ou o \"nenhum\", que também é saída. Vencido o prazo sem resposta, a execução encerra sem mandar nada: os passos depois do decidir não rodam.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caminhos", "prazo"],
+      "properties": {
+        "caminhos": { "type": "array", "minItems": 1, "maxItems": 9, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 40 } },
+        "prazo": { "$ref": "#/definitions/duracao" }
+      }
+    },
     "campos_extrair": {
       "description": "O que o extrair procura na conversa (F7) e onde grava.",
       "type": "array",
@@ -514,7 +524,8 @@
             "le": { "$ref": "#/definitions/leituras" },
             "pergunta": { "$ref": "#/definitions/instrucao" },
             "caminhos": { "$ref": "#/definitions/caminhos" },
-            "nenhum": { "$ref": "#/definitions/passos_opcionais" }
+            "nenhum": { "$ref": "#/definitions/passos_opcionais" },
+            "de_novo": { "$ref": "#/definitions/de_novo" }
           }
         },
         {

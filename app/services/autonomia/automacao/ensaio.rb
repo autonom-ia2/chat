@@ -243,13 +243,11 @@ class Autonomia::Automacao::Ensaio
   end
 
   # A IA escolheria o caminho: o ensaio mostra todos, sem chamar modelo nenhum.
+  # G31: o caminho que decide de novo espera a próxima resposta e não roda passo nenhum; vencido o prazo, a execução
+  # acaba sem mandar nada (DecidirDeNovo.ramos_do_ensaio).
   def decidir(passo, valores)
-    caminhos = Array(passo['caminhos']).map do |item|
-      { chave: item['chave'], nome: item['nome'], passos: caminho(Array(item['passos']).first || @roteiro.seguinte(passo['id']), valores) }
-    end
-    chave = ::Autonomia::Automacao::Receita::NENHUM
-    nenhum = { chave: chave, passos: caminho(@roteiro.entrar(passo, chave), valores) }
-    no(passo, 'decidir', anexos(passo, ::Autonomia::Automacao::PassoDeDecidir), ramos: caminhos << nenhum)
+    ramos = ::Autonomia::Automacao::DecidirDeNovo.ramos_do_ensaio(passo, @roteiro) { |primeiro| caminho(primeiro, valores) }
+    no(passo, 'decidir', anexos(passo, ::Autonomia::Automacao::PassoDeDecidir), ramos: ramos)
   end
 
   # O que a IA faria, só com o que a receita diz. O passo que manda mensagem ou aviso (regras da F4) sem a mensagem

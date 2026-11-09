@@ -656,6 +656,10 @@ en:
         caminho_repetido: "Step %{passo}: there is already a path named %{nome}."
         caminho_reservado: "Step %{passo}: the name %{nome} is already the path for when nothing applies. Pick another name."
         caminho_sem_letra: "Step %{passo}: the path name needs at least one letter (%{nome})."
+        de_novo_caminho_desconhecido: "Step %{passo}: \"decide again\" points to a path this step doesn't have (%{chave})."
+        de_novo_com_passos: "Step %{passo}: the path %{nome} decides again, so it can't have steps. Remove its steps or unmark it."
+        de_novo_todos: "Step %{passo}: leave at least one way out unmarked (a path or \"None applies\"), so the automation can move on."
+        caminho_nenhum: "None applies"
         destino_invalido: "Step %{passo}: %{destino} is not a place where the AI can save."
         campo_repetido: "Step %{passo}: %{chave} appears twice."
       nota:

@@ -210,8 +210,9 @@ module FechamentoAutomacao::Lacunas
     # G30 (#2702): o card do lead nasce com o dono que a Atribuição do funil daria (o corretor), para o retorno e o link
     # da agenda. Ponta a ponta em spec/fechamento/automacao/g30_dono_do_lead_spec.rb.
     'G30' => -> { lead_ganha_dono_pela_atribuicao? },
-    # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando".
-    'G31' => nil,
+    # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando" (o `de_novo` do
+    # decidir); prova ponta a ponta em spec/fechamento/automacao/g31_decidir_a_cada_resposta_spec.rb.
+    'G31' => -> { campo_do_passo?('decidir', 'de_novo') },
     # G32 (#2703): a reunião marcada como condição do "esperar até", no meio da execução; prova ponta a ponta em
     # spec/fechamento/automacao/g32_reuniao_spec.rb.
     'G32' => -> { valor?('card.tem_reuniao_marcada') },
