@@ -235,9 +235,8 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 6, passos 8 e 9 (#2650): a reunião registrada como atendida ("Aconteceu", outcome held) não gera evento
     # nem gatilho; a etapa "Atendida" no lugar dela adaptaria o termo.
     'G56' => nil,
-    # Do exemplo 1, passo 12 (#2721): o resumo lê tudo o que a execução tentou, até o e-mail em conversa própria. Fica
-    # com a F7 (#2763); sem ela, o exemplo 1 segue pendente.
-    'G42' => nil,
+    # Do exemplo 1, passo 12 (#2721, #2763): o resumo lê tudo o que a execução tentou, até o e-mail em conversa própria.
+    'G42' => -> { Autonomia::Automacao::EnviosDaExecucao.method_defined?(:dados) },
     # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7). Fica
     # com a Gatilhos, depois do lote 3 (#2689), que traz a porta da frente da conversa nova.
     'G43' => nil,
