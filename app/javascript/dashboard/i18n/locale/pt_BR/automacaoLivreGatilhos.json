@@ -44,7 +44,12 @@
       "SAIU": "saiu, sem confirmação ainda",
       "ENTREGUE": "entregue",
       "LIDA": "lida",
-      "FALHOU": "falhou"
+      "FALHOU": "falhou",
+      "FORMULARIO_DE_ANUNCIO": "um formulário de anúncio",
+      "CONVERSA": "uma conversa",
+      "AGENDA": "a agenda",
+      "PROSPECCAO": "a prospecção",
+      "OUTRO": "outro lugar"
     },
     "OPERADOR_DA_MENSAGEM": {
       "IGUAL": "é",

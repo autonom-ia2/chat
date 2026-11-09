@@ -41,6 +41,9 @@ class Autonomia::Automacao::Valores
     # G32: o card tem reunião marcada e ainda por vir (não cancelada nem remarcada para outra). O "esperar até" que lê
     # este valor acorda quando uma reunião do card é marcada, remarcada ou cancelada (Escuta#acordar_o_card).
     'card.tem_reuniao_marcada' => ->(card) { ::Autonomia::Automacao::ValoresDaReuniao.marcada_no_card?(card) },
+    # G29 (#2702): de onde o card veio (OrigemDoCard) e o nome do anúncio do formulário (Crm::MetaAds::LeadForms::Importer).
+    'card.origem' => ->(card) { ::Autonomia::Automacao::OrigemDoCard.de(card.source) },
+    'card.anuncio' => ->(card) { card.metadata.to_h.dig('meta_lead_form', 'ad_name') },
     # G12: a reunião da atividade que disparou o gatilho de reunião (Contexto#reuniao). O início sai no fuso da reunião,
     # o mesmo do convite que o cliente recebeu.
     'reuniao.inicio' => ->(reuniao) { ::Autonomia::Automacao::ValoresDaReuniao.inicio(reuniao) },
@@ -131,6 +134,7 @@ class Autonomia::Automacao::Valores
     'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'conversa.responsavel_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'gatilho.repetiu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'card.origem' => { 'opcoes' => ::Autonomia::Automacao::OrigemDoCard::GRUPOS, 'operadores' => %w[igual diferente] },
     'card.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'contato.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'envio.situacao' => { 'opcoes' => ::Autonomia::Automacao::Envio::SITUACOES.values, 'operadores' => %w[igual diferente] }
