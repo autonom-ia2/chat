@@ -13,6 +13,7 @@
     "SEM_LISTA": "There is no list yet. Create the first one.",
     "PESSOAS": "Nobody on the list now | 1 person on the list now | {n} people on the list now",
     "COM_EMAIL": "none with e-mail | 1 with e-mail | {n} with e-mail",
+    "PESSOAS_E_EMAIL": "{pessoas} · {comEmail}",
     "REGRA": "It goes to whoever is on the list when it is sent. People who asked not to receive messages are left out.",
     "FALHOU_CARREGAR": "Could not load the lists. Reload the page.",
     "FALHOU_CRIAR": "Could not create the list. Try again.",

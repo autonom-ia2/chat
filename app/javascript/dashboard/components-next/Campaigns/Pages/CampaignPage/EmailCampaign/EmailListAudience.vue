@@ -66,6 +66,19 @@ const semEmail = computed(
     temNumeros(escolhida.value) &&
     escolhida.value.recebem_count < escolhida.value.contatos_count
 );
+// O separador fica no catálogo: texto solto no template não passa no lint.
+const numeros = computed(() => {
+  const lista = escolhida.value;
+  if (!semEmail.value) return pessoas(lista);
+  return t('EMAIL_LISTS.PESSOAS_E_EMAIL', {
+    pessoas: pessoas(lista),
+    comEmail: t(
+      'EMAIL_LISTS.COM_EMAIL',
+      { n: lista.recebem_count },
+      lista.recebem_count
+    ),
+  });
+});
 
 const erroDoNome = erros => {
   if (erros?.name?.includes('taken')) return t('EMAIL_LISTS.NOME_REPETIDO');
@@ -227,17 +240,7 @@ const cancelar = () => {
           class="mb-1 text-sm font-medium text-n-slate-12"
           data-lista-numeros
         >
-          {{ pessoas(escolhida) }}
-          <template v-if="semEmail">
-            ·
-            {{
-              t(
-                'EMAIL_LISTS.COM_EMAIL',
-                { n: escolhida.recebem_count },
-                escolhida.recebem_count
-              )
-            }}
-          </template>
+          {{ numeros }}
         </p>
         <p class="mb-0 text-xs text-n-slate-11">{{ t('EMAIL_LISTS.REGRA') }}</p>
       </div>

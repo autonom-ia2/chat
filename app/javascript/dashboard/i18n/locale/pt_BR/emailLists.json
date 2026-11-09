@@ -13,6 +13,7 @@
     "SEM_LISTA": "Ainda não há lista. Crie a primeira.",
     "PESSOAS": "Ninguém na lista agora | 1 pessoa na lista agora | {n} pessoas na lista agora",
     "COM_EMAIL": "nenhuma com e-mail | 1 com e-mail | {n} com e-mail",
+    "PESSOAS_E_EMAIL": "{pessoas} · {comEmail}",
     "REGRA": "Vai para quem estiver na lista na hora do envio. Quem pediu para não receber fica de fora.",
     "FALHOU_CARREGAR": "Não deu para carregar as listas. Recarregue a página.",
     "FALHOU_CRIAR": "Não deu para criar a lista. Tente de novo.",
