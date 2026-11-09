@@ -146,6 +146,7 @@ fora:
       - crm/integration_tokens
       - crm/meta_ads_connections
       - crm/meta_ads_pagina
+      - crm/meta_ads_instagram
       - integrations/dyte
       - integrations/hooks
       - integrations/linear

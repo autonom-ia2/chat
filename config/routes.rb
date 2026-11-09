@@ -451,6 +451,8 @@ Rails.application.routes.draw do
               # Login único (#2338): a Página vem do mesmo login dos Anúncios.
               get :paginas, to: 'meta_ads_pagina#index'
               post :pagina, to: 'meta_ads_pagina#create'
+              # Instagram pelo login único (#2406).
+              post :instagram, to: 'meta_ads_instagram#create'
               # Destino (#2338): ligar a página do site sem sair de Anúncios.
               get :site_pages, to: 'meta_ads_site_pages#index'
               post :site_pages, to: 'meta_ads_site_pages#create'

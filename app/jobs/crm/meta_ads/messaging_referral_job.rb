@@ -38,13 +38,12 @@ class Crm::MetaAds::MessagingReferralJob < ApplicationJob
     Crm::MetaAds::ReferralImageJob.enqueue_for_ad(inboxes.first.account_id, ad_id, 'image_url' => photo)
   end
 
-  # Como na mensagem: a Página pode ser caixa de mais de uma conta (Integrations::Facebook::MessageCreator); no
-  # Instagram vale o canal que o InstagramEventsJob acha (login do Instagram primeiro, depois a Página).
+  # Como na mensagem: a Página pode ser caixa de mais de uma conta (Integrations::Facebook::MessageCreator), e o
+  # Instagram também (#2781): um canal por conta, o do login do Instagram primeiro e a Página depois.
   def self.inboxes_for(network, recipient_id)
     return Channel::FacebookPage.where(page_id: recipient_id).filter_map(&:inbox) if network == 'messenger'
 
-    channel = Channel::Instagram.find_by(instagram_id: recipient_id) || Channel::FacebookPage.find_by(instagram_id: recipient_id)
-    [channel&.inbox].compact
+    Instagram::ConnectedChannels.for(recipient_id).filter_map(&:inbox)
   end
 
   def perform(network, recipient_id, sender_id, referral, timestamp)

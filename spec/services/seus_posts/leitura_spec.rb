@@ -74,6 +74,15 @@ RSpec.describe SeusPosts::Leitura do
       stub_request(:get, "#{ig}/me/media").with(query: hash_including({})).to_return(json(midias))
     end
 
+    # #2406: a caixa do login único lê os posts em graph.facebook.com, pelo id do Instagram (o `me` seria a Página).
+    it 'no login do Facebook lê os posts pelo id do Instagram em graph.facebook.com' do
+      canal.update!(login: 'facebook', page_id: '104000000000001', instagram_id: '178400')
+      posts = stub_request(:get, "#{fb}/178400/media").with(query: hash_including({})).to_return(json([]))
+
+      expect(leitura(days: 30)[:perfil]).to include(posts_status: 'ok')
+      expect(posts).to have_been_requested
+    end
+
     it 'traz só os posts do período, com os números de cada um' do
       perfil = leitura(days: 30)[:perfil]
 
