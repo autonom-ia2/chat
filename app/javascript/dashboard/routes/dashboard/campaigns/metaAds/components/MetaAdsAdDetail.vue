@@ -34,6 +34,8 @@ import comentariosFacebook from './comentarios/comentariosFacebook';
 import MetaAdsAdStatus from './MetaAdsAdStatus.vue';
 import MetaAdsAdPost from './MetaAdsAdPost.vue';
 import MetaAdsBudget from './MetaAdsBudget.vue';
+import MetaAdsAdCare from './MetaAdsAdCare.vue';
+import MetaAdsCareOutside from './MetaAdsCareOutside.vue';
 import { lerOrcamento } from '../criacaoNaMeta';
 
 // Anúncios da Meta (#1088, F3b): o anúncio por dentro, passos 3 e 4 da jornada "O painel do dia a dia". A
@@ -362,6 +364,8 @@ const commentTabs = computed(() =>
   )
 );
 const gestao = ref(null);
+// A foto nova depois de trocar (#2778), enquanto a Meta analisa.
+const swappedImage = ref('');
 
 // Comentários só com conexão, que é quem tem token para ler na Meta (#2196). O sinal é a gestão, que leu o anúncio
 // ao vivo agora, ou o gasto, que só vem de anúncio sincronizado por uma conexão (sem login, #1960, ele é nil). A
@@ -388,6 +392,7 @@ const showCare = computed(
 
 const loadGestao = async () => {
   gestao.value = null;
+  swappedImage.value = '';
   if (!gestaoOn.value) return;
   const asked = props.adId;
   const data = await lerGestao(asked);
@@ -422,6 +427,31 @@ const loadBudget = async () => {
 };
 watch(() => props.adId, loadBudget);
 
+// Duplicar e trocar foto ou texto (#2778): com a flag de criar, para quem pode mexer, quando a conexão pode mudar o
+// anúncio. Só nos anúncios criados pelo Chat2You (opção a do Rodrigo, 09/11, `created_here`); nos outros, uma linha
+// diz para usar o Gerenciador de Anúncios. Depois de trocar, o detalhe já mostra a foto nova e a situação "em análise".
+// A gestão primeiro: sem ela (Anúncios sem login, #1960) não há o que cuidar, e a permissão nem é lida.
+const careAllowed = computed(
+  () => budgetOn.value && Boolean(gestao.value?.can_change) && canManage.value
+);
+const showAdCare = computed(
+  () => careAllowed.value && Boolean(gestao.value?.created_here)
+);
+const showCareOutside = computed(
+  () => careAllowed.value && !gestao.value?.created_here
+);
+// O texto novo também: a próxima troca abre com ele (e não manda o antigo de volta).
+const reviewing = ({ effective_status: effective, image: newImage, text }) => {
+  const post = gestao.value?.post;
+  gestao.value = {
+    ...gestao.value,
+    effective_status: effective,
+    creative_text: text,
+    ...(post ? { post: { ...post, message: text } } : {}),
+  };
+  swappedImage.value = newImage;
+};
+
 watch(() => props.adId, loadGestao);
 
 // A entrega (`effective_status`) é a Meta quem diz: depois de mudar, a situação é lida de novo, sem tirar o selo.
@@ -441,7 +471,9 @@ onMounted(() => {
 // Link de imagem da Meta vencido: mostra o quadro de reserva (guarda a URL que falhou, então um link novo volta
 // a tentar).
 const brokenImages = ref([]);
-const image = computed(() => adImage(ad.value, brokenImages.value));
+const image = computed(
+  () => swappedImage.value || adImage(ad.value, brokenImages.value)
+);
 </script>
 
 <template>
@@ -511,6 +543,24 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
         :budget="budget"
         :can-manage="canManage"
         @changed="budget = $event"
+      />
+      <MetaAdsAdCare
+        v-if="showAdCare"
+        :ad-id="adId"
+        :ad-name="gestao.name || ''"
+        :image="swappedImage || gestao.creative_image || ''"
+        :text="gestao.post?.message || gestao.creative_text || ''"
+        :budget="budget"
+        :original-status="gestao.status || ''"
+        :manager-url="gestao.ads_manager_url || ''"
+        :active-copy="gestao.active_copy || null"
+        :creative-kind="gestao.creative_kind || ''"
+        @reviewing="reviewing"
+        @original-paused="statusChanged('PAUSED')"
+      />
+      <MetaAdsCareOutside
+        v-else-if="showCareOutside"
+        :url="gestao.ads_manager_url"
       />
       <MetaAdsAdPost v-if="gestao?.post" :post="gestao.post" />
       <CuidarAnuncioEntrada
@@ -631,6 +681,24 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
             :budget="budget"
             :can-manage="canManage"
             @changed="budget = $event"
+          />
+          <MetaAdsAdCare
+            v-if="showAdCare"
+            :ad-id="adId"
+            :ad-name="ad.name || ''"
+            :image="image"
+            :text="gestao.post?.message || gestao.creative_text || ''"
+            :budget="budget"
+            :original-status="gestao.status || ''"
+            :manager-url="gestao.ads_manager_url || ''"
+            :active-copy="gestao.active_copy || null"
+            :creative-kind="gestao.creative_kind || ''"
+            @reviewing="reviewing"
+            @original-paused="statusChanged('PAUSED')"
+          />
+          <MetaAdsCareOutside
+            v-else-if="showCareOutside"
+            :url="gestao.ads_manager_url"
           />
           <span
             v-if="ad.verdict"

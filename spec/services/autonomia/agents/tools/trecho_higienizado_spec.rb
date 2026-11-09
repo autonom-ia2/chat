@@ -35,6 +35,19 @@ RSpec.describe Autonomia::Agents::Tools::TrechoHigienizado do
     expect(resultado).to eq('token [oculto] recusado')
   end
 
+  # Revisão adversarial do #1430: com a chave delegada, o valor do cabeçalho (até 16 KB) é de quem cadastra, e procurar
+  # cada começo dele no fim de um trecho de 2 KB levava meio segundo por cabeçalho. Começo maior que o trecho não cabe.
+  it 'looks only for beginnings that fit in the excerpt' do
+    segredo = "abcdefghij#{'"' * 16_000}"
+    inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    resultado = trecho("#{'x' * 1990}abcdefghij", segredos: [segredo], limite: 3000, cortado: true)
+
+    expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio).to be < 0.1
+    expect(resultado).to end_with('[oculto]')
+    expect(resultado).not_to include('abcdefghij')
+  end
+
   it 'keeps a value shorter than 4 characters' do
     expect(trecho('id abc inválido', segredos: ['abc'])).to eq('id abc inválido')
   end

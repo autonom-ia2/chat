@@ -190,6 +190,24 @@ describe('Anúncios da Meta · situação do anúncio (#2161)', () => {
 
     expect(wrapper.find('[data-ad-status-toggle]').text()).toBe(`${KEY}.PAUSE`);
     expect(wrapper.find('[data-ad-status-review]').exists()).toBe(false);
+    // #2778: depois de trocar a foto, o selo diz "Em análise da Meta" e que volta sozinho.
+    expect(wrapper.find('[data-status]').attributes('data-status')).toBe(
+      'REVIEW'
+    );
+    expect(wrapper.find('[data-ad-status-reviewing]').text()).toBe(
+      `${KEY}.REVIEW_HINT`
+    );
+  });
+
+  it('a copy made from "change the photo" reminds to pause the original when turning it on (#2778)', () => {
+    const wrapper = mountStatus({
+      gestao: { ...GESTAO, status: 'PAUSED', effective_status: 'PAUSED' },
+      activateNote: 'Pause o original.',
+    });
+
+    expect(wrapper.find('[data-dialog]').attributes('description')).toBe(
+      `${KEY}.ACTIVATE_HINT Pause o original.`
+    );
   });
 
   // #2354: o servidor recusa ligar um anúncio que a Meta ainda analisa.

@@ -16,6 +16,14 @@ if tipo == 'link'
   Autonomia::Agents::Knowledge::Processors::Link.prepend(Module.new { define_method(:extract) { visible_text(pagina) } })
 end
 
+# RAG_SEGMENTO=seguros/corretora (#2801): o agente nasce com a marca de base desse segmento, como na conta de seguros em
+# produção, e a resposta recebe o bloco do segmento. Sem ela, o agente fica sem base (conta geral). Resolvido antes de
+# criar a conta, para um nome errado não deixar registro órfão.
+if (segmento = ENV['RAG_SEGMENTO'].presence)
+  texto = Autonomia::Segmentos::Bloco.for_segmento(segmento) || abort("segmento sem texto: #{segmento}")
+  base = { 'segmento' => segmento, 'versao' => Autonomia::Segmentos::Bloco.versao(segmento), 'texto' => texto }
+end
+
 conta = Account.create!(name: "Placar #{tipo} #{Time.current.to_i}")
 Autonomia::Agents::Fase2.ligar!(conta)
 # RAG_FLAGS=rag_corte_por_estrutura,... liga as flags na conta da rodada: mede o mesmo código com e sem a mudança.
@@ -23,6 +31,7 @@ flags = ENV.fetch('RAG_FLAGS', '').split(',').map(&:strip).reject(&:empty?)
 conta.enable_features!(*flags) if flags.any?
 agente = Autonomia::Agents::Agent.create!(account: conta, name: 'Placar', agent_type: 'support', status: :active,
                                           human_card: "Agente da régua do RAG (#{tipo}).")
+agente.update!(config: agente.config.to_h.merge('base' => base)) if base
 
 trechos = caminhos.sum do |caminho|
   fonte = Autonomia::Agents::Source.create!(account: conta, agent: agente, source_type: tipo,

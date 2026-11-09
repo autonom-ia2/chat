@@ -1,7 +1,4 @@
 module Enterprise::Whatsapp::OneoffCampaignService
-  # Motivo gravado no destinatário pulado porque o contato recusou mensagens ativas (chat#737).
-  OPTED_OUT_REASON = 'opted_out'.freeze
-
   def perform
     validate_campaign!
     recipients = create_recipients(extract_audience_labels)
@@ -14,7 +11,9 @@ module Enterprise::Whatsapp::OneoffCampaignService
   def process_recipient(recipient)
     contact = recipient.contact
     Rails.logger.info "Processing contact: #{contact.name} (#{contact.phone_number})"
-    return recipient.mark_skipped!(OPTED_OUT_REASON) if contact_opted_out_now?(contact)
+    # Pulado com o motivo: 'opted_out' (recusou mensagens ativas, chat#737) ou 'blocked' (bloqueado, chat#2733).
+    refusal = campaign_refusal_now(contact)
+    return recipient.mark_skipped!(refusal) if refusal
 
     destination, destination_error = campaign_destination(contact)
     if destination.blank?

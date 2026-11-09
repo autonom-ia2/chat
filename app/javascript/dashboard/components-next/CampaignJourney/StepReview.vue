@@ -54,6 +54,7 @@ const confirmRef = ref(null);
 const REASON_ORDER = [
   'channel_disabled',
   'opted_out',
+  'blocked',
   'unsubscribed',
   'bounced',
   'suppressed',

@@ -14,6 +14,8 @@ const AcharPortaPage = () => import('./pages/AcharPortaPage.vue');
 const AcharConfiraPage = () => import('./pages/AcharConfiraPage.vue');
 const AcharBuscasPage = () => import('./pages/AcharBuscasPage.vue');
 const ParaChamarPage = () => import('./pages/ParaChamarPage.vue');
+const AcharListasPage = () => import('./pages/AcharListasPage.vue');
+const AcharListaPage = () => import('./pages/AcharListaPage.vue');
 
 const meta = {
   permissions: ['administrator', ...PROSPECTING_PERMISSIONS],
@@ -53,6 +55,21 @@ export const acharRoutes = [
     meta,
     beforeEnter,
     component: AcharConfiraPage,
+  },
+  // "Suas listas" (#2775, F6): a aba ao lado de "Suas buscas" e a lista aberta.
+  {
+    path: frontendURL(`${base}/achar/listas`),
+    name: ROTAS.LISTAS,
+    meta,
+    beforeEnter,
+    component: AcharListasPage,
+  },
+  {
+    path: frontendURL(`${base}/achar/listas/:listaId`),
+    name: ROTAS.LISTA,
+    meta,
+    beforeEnter,
+    component: AcharListaPage,
   },
   {
     path: frontendURL(`${base}/para-chamar`),
