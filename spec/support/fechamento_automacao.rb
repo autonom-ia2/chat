@@ -93,6 +93,109 @@ module FechamentoAutomacao
   end
 end
 
+# As sondas de comportamento do placar: cada uma monta o cenário mínimo, roda o caminho de produção e confere o efeito,
+# em vez de só procurar o nome no esquema. Lacuna aberta responde false, nunca erro.
+module FechamentoAutomacao::Comportamento
+  extend CrmHelpers
+
+  module_function
+
+  # A automação ligada como a tela liga: a receita passa pela conferência do salvar. A receita que o salvar recusa
+  # devolve nil (a lacuna segue aberta), nunca erro.
+  def ligada(account, dono, gatilho, passos)
+    definicao = FactoryBot.create(:autonomia_automacao, account: account, ligada_por: dono)
+    versao = definicao.versoes.create(account: account, numero: 1, receita: { 'gatilho' => gatilho, 'passos' => passos }, autor: dono)
+    return unless versao.persisted?
+
+    definicao.update!(versao_ativa: versao, ativa: true)
+    definicao
+  end
+
+  # A rodada que a Partida enfileirou, um job por vez, como no Sidekiq.
+  def rodar_as_rodadas
+    fila = ActiveJob::Base.queue_adapter.enqueued_jobs
+    FechamentoAutomacao::LIMITE_DE_JOBS.times do
+      job = fila.find { |item| item[:job] == Autonomia::Automacao::AvancarJob }
+      return unless job
+
+      fila.delete(job)
+      job[:job].perform_now(*ActiveJob::Arguments.deserialize(job[:args]))
+    end
+  end
+
+  WEBHOOK_DA_SONDA = 'https://93.184.216.34/sonda-g13'.freeze
+
+  # G13: a conversa resolvida dispara a automação, o passo "webhook" manda o corpo ao outro sistema (um receptor WebMock
+  # num IP público, sem DNS, que grava o pedido) e o histórico registra o envio com o host e o código. Roda na transação
+  # do exemplo, que desfaz tudo.
+  def webhook_envia_e_registra?
+    recebidos = receptor_da_sonda
+    account = FactoryBot.create(:account)
+    account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_gatilhos')
+    dono = FactoryBot.create(:user, account: account, role: :administrator)
+    conversa = FactoryBot.create(:conversation, account: account)
+    conversa.contact.update!(name: 'Sonda G13')
+    passo = { 'id' => 'sonda', 'tipo' => 'webhook', 'descricao' => 'Sonda', 'url' => WEBHOOK_DA_SONDA,
+              'corpo' => { 'nome' => { '$valor' => 'contato.nome' } } }
+    definicao = ligada(account, dono, { 'tipo' => 'conversa.resolvida' }, [passo])
+    return false unless definicao
+
+    Autonomia::Automacao::Partida.new(definicao: definicao, alvo: conversa, chave_gatilho: 'conversa.resolvida').call
+    rodar_as_rodadas
+    registro = Autonomia::Automacao::Registro.find_by(automacao_id: definicao.id, passo: 'sonda')
+    recebidos == [{ 'nome' => 'Sonda G13' }] && registro&.resultado == 'ok' &&
+      registro.dados.slice('host', 'codigo') == { 'host' => '93.184.216.34', 'codigo' => 200 }
+  ensure
+    Current.reset
+  end
+
+  # O outro sistema da sonda G13: grava o corpo de cada pedido e responde 200.
+  def receptor_da_sonda
+    [].tap do |recebidos|
+      WebMock::API.stub_request(:post, WEBHOOK_DA_SONDA).to_return do |pedido|
+        recebidos << JSON.parse(pedido.body)
+        { status: 200, body: { ok: true }.to_json, headers: { 'Content-Type' => 'application/json' } }
+      end
+    end
+  end
+
+  # G45: a automação que começa pela mensagem da conversa tem no "Só se" a etapa do card da conversa e a foto ou PDF. O
+  # texto não a começa; a foto, com o card na etapa, começa. A receita que o salvar recusa (o card fora do alcance da
+  # conversa) é lacuna aberta. Roda na transação do exemplo, que desfaz tudo; a rodada só fica na fila.
+  def so_se_da_conversa_le_o_card?
+    ClimateControl.modify(CRM_KANBAN_ENABLED: 'true') do
+      account = FactoryBot.create(:account)
+      account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_gatilhos')
+      dona = FactoryBot.create(:user, account: account, role: :administrator)
+      funil, etapa = create_crm_pipeline(account: account, user: dona)
+      conversa = FactoryBot.create(:conversation, account: account)
+      account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'Sonda G45', currency: 'BRL', primary_conversation: conversa,
+                                contact: conversa.contact, inbox: conversa.inbox)
+      espera = { 'id' => 'p1', 'tipo' => 'esperar', 'duracao' => { 'valor' => 1, 'unidade' => 'dias' } }
+      definicao = ligada(account, dona, filtro_do_card_e_do_anexo(etapa), [espera])
+      definicao.present? && [nil, 'sample.png'].map { |arquivo| comecou?(definicao, conversa, arquivo) } == [false, true]
+    end
+  end
+
+  def filtro_do_card_e_do_anexo(etapa)
+    { 'tipo' => 'mensagem.criada', 'filtros' => [{ 'campo' => { '$valor' => 'mensagem.tem_anexo' }, 'op' => 'igual', 'valor' => true },
+                                                 { 'campo' => { '$valor' => 'card.etapa_id' }, 'op' => 'igual', 'valor' => etapa.id }] }
+  end
+
+  # A mensagem do cliente (só texto, ou a foto `arquivo`) passa pela Partida: a execução abriu?
+  def comecou?(definicao, conversa, arquivo)
+    mensagem = conversa.messages.new(account: conversa.account, inbox: conversa.inbox, message_type: :incoming, sender: conversa.contact,
+                                     content: arquivo ? nil : 'Já mando')
+    if arquivo
+      anexo = mensagem.attachments.new(account_id: conversa.account_id, file_type: :image)
+      anexo.file.attach(io: Rails.root.join('spec/assets', arquivo).open, filename: arquivo, content_type: 'image/png')
+    end
+    mensagem.save!
+    Autonomia::Automacao::Partida.new(definicao: definicao, alvo: conversa, chave_gatilho: 'mensagem.criada', mensagem: mensagem).call
+    Autonomia::Automacao::Execucao.exists?(automacao_id: definicao.id)
+  end
+end
+
 # As lacunas do placar (G*, seção 5 do doc), cada uma com a sonda que diz se ela já fechou na main. O exemplo pendente
 # confere as sondas das lacunas dele: quando todas fecham, o pendente passa, o RSpec acusa ("Expected pending ... to
 # fail") e o exemplo ganha o spec de verdade. A frente que fecha uma lacuna ajusta a sonda no mesmo PR, se o nome que
@@ -162,7 +265,9 @@ module FechamentoAutomacao::Lacunas
       gatilho?('card.reuniao_marcada') && gatilho?('card.reuniao_cancelada') &&
         %w[card.link_da_agenda conversa.link_da_agenda].any? { |caminho| valor?(caminho) }
     },
-    'G13' => -> { passo?('webhook') },
+    # G13 (#2670): o passo manda de verdade e o histórico registra; o ponta a ponta está em
+    # spec/fechamento/automacao/g13_webhook_spec.rb.
+    'G13' => -> { FechamentoAutomacao::Comportamento.webhook_envia_e_registra? },
     # Fechada com prova (#2630): o passo existe no esquema e o motor o roda; o ponta a ponta está em
     # spec/fechamento/automacao/g14_campanhas_spec.rb.
     'G14' => -> { passo?('campanha') && Autonomia::Automacao::Executor::NATIVOS.key?('campanha') },
@@ -222,7 +327,7 @@ module FechamentoAutomacao::Lacunas
     'G41' => -> { campo_do_passo?('resumir', 'instrucao') && I18n.exists?('autonomia.automacao.motivos.sem_responsavel', :pt_BR) },
     # Da auditoria dos termos (07/11, #2716): a automação que começa pela conversa lê o card dela no "Só se" (exemplo 14,
     # passo 2) e o filtro sabe se a mensagem tem anexo (exemplo 18, começo).
-    'G45' => -> { valor?('mensagem.tem_anexo') && Autonomia::Automacao::Valores::BASES_DO_ALVO['Conversation'].include?('card') },
+    'G45' => -> { FechamentoAutomacao::Comportamento.so_se_da_conversa_le_o_card? },
     # Da auditoria dos termos (07/11, #2716 PR2): a espera para quando chega anexo, não qualquer resposta (exemplo 14,
     # passo 5: um "já mando" não pode zerar os 2 dias).
     'G46' => nil,
