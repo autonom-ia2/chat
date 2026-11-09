@@ -5,6 +5,7 @@ import { entradaDoPasso, lerCampo } from './catalogo';
 import { comColchetes } from './texto';
 import { fraseDaCampanha } from './campanha';
 import { fraseDoRetorno } from './retorno';
+import { SEM_PRAZO } from './receita';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
 
@@ -381,6 +382,10 @@ export const fraseDoPasso = (passo, catalogo, t) => {
   if (passo.tipo === 'esperar')
     return t(`${P}.ESPERAR`, {
       duracao: fraseDaDuracao(passo.duracao, catalogo, t),
+    });
+  if (passo.tipo === 'esperar_ate' && passo.prazo === SEM_PRAZO)
+    return t(`${P}.ESPERAR_ATE_SEM_PRAZO`, {
+      condicao: fraseDaCondicao(passo.condicao, catalogo, t),
     });
   if (passo.tipo === 'esperar_ate')
     return t(`${P}.ESPERAR_ATE`, {

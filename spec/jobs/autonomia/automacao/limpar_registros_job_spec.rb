@@ -2,12 +2,22 @@ require 'rails_helper'
 
 RSpec.describe Autonomia::Automacao::LimparRegistrosJob do
   it 'apaga os registros com mais de 30 dias e mantém os mais novos (F2.4)' do
-    velho = travel_to(31.days.ago) { create(:autonomia_automacao_registro) }
-    novo = travel_to(29.days.ago) { create(:autonomia_automacao_registro, execucao: velho.execucao) }
+    execucao = create(:autonomia_automacao_execucao, estado: 'concluida')
+    velho = travel_to(31.days.ago) { create(:autonomia_automacao_registro, execucao: execucao) }
+    novo = travel_to(29.days.ago) { create(:autonomia_automacao_registro, execucao: execucao) }
 
     described_class.perform_now
 
     expect(Autonomia::Automacao::Registro.where(id: [velho.id, novo.id])).to contain_exactly(novo)
+  end
+
+  it 'mantém o registro velho da execução ainda aberta: a espera longa guarda nele o começo (#2750)' do
+    aberta = create(:autonomia_automacao_execucao, estado: 'esperando')
+    velho = travel_to(31.days.ago) { create(:autonomia_automacao_registro, execucao: aberta) }
+
+    described_class.perform_now
+
+    expect(Autonomia::Automacao::Registro.where(id: velho.id)).to exist
   end
 
   it 'apaga as execuções finalizadas há mais de 90 dias que já não têm registro (#2459)', :aggregate_failures do

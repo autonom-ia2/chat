@@ -63,6 +63,19 @@ const hora = iso =>
     timeStyle: 'short',
   });
 
+// #2750: a espera sem prazo não tem hora para mostrar.
+const estadoDe = execucao => {
+  if (execucao.esperando_sem_prazo)
+    return t('AUTOMACAO_LIVRE.HISTORICO.ESPERANDO_SEM_PRAZO');
+  if (execucao.esperando_ate)
+    return t('AUTOMACAO_LIVRE.HISTORICO.ESPERANDO_ATE', {
+      quando: hora(execucao.esperando_ate),
+    });
+  return t(
+    `AUTOMACAO_LIVRE.HISTORICO.ESTADOS.${execucao.estado.toUpperCase()}`
+  );
+};
+
 const custoDaIa = valor =>
   t(
     abaixoDoMinimo(valor)
@@ -239,15 +252,7 @@ onMounted(() => carregar());
               class="px-2.5 py-0.5 text-xs font-semibold rounded-full"
               :class="ESTADO[execucao.estado]"
             >
-              {{
-                execucao.esperando_ate
-                  ? $t('AUTOMACAO_LIVRE.HISTORICO.ESPERANDO_ATE', {
-                      quando: hora(execucao.esperando_ate),
-                    })
-                  : $t(
-                      `AUTOMACAO_LIVRE.HISTORICO.ESTADOS.${execucao.estado.toUpperCase()}`
-                    )
-              }}
+              {{ estadoDe(execucao) }}
             </span>
           </button>
           <div
@@ -283,6 +288,13 @@ onMounted(() => carregar());
                         ramo: ramoDe(execucao, passo),
                       })
                     }}
+                  </span>
+                  <span
+                    v-if="passo.dados.sem_prazo"
+                    data-sem-prazo
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{ $t('AUTOMACAO_LIVRE.HISTORICO.ESPERA_SEM_PRAZO') }}
                   </span>
                   <span v-if="passo.dados.ate" class="text-sm text-n-slate-11">
                     {{

@@ -18,7 +18,8 @@
 #
 # O cursor é o passo onde a execução parou (uma espera ou a ação que vai ser tentada de novo). Ao retomar:
 # - o "esperar" já cumpriu o tempo e segue;
-# - o "esperar até" confere a condição de novo e, vencido o prazo, segue pelo caminho "se vencer";
+# - o "esperar até" confere a condição de novo e, vencido o prazo, segue pelo caminho "se vencer" (sem prazo, volta a
+#   esperar: ver EsperaNoExecutor);
 # - a ação roda de novo.
 class Autonomia::Automacao::Executor
   TENTATIVAS = 3
@@ -204,8 +205,9 @@ class Autonomia::Automacao::Executor
     aguardar(passo, Time.current + INTERVALOS[tentativa - 1], registrar: false)
   end
 
-  def aguardar(passo, ate, registrar: true)
-    registrar(passo['id'], 'ok', nil, 'ate' => ate.iso8601) if registrar
+  # `dados`: o que fica no registro da espera; sem eles, o prazo (o "esperar até" sem prazo grava o começo, EsperaNoExecutor).
+  def aguardar(passo, ate, registrar: true, dados: nil)
+    registrar(passo['id'], 'ok', nil, dados || { 'ate' => ate.iso8601 }) if registrar
     gravar(estado: 'esperando', cursor: passo['id'], due_at: ate, travada_em: nil, tentativas: @tentativas)
     nil
   end

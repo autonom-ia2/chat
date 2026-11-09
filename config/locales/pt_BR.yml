@@ -1092,6 +1092,7 @@ pt_BR:
         inicio_da_reuniao: '%d/%m/%Y às %H:%M'
       receita:
         id_repetido: 'Passo %{passo}: o id já é de outro passo.'
+        sem_prazo_com_se_vencer: 'Passo %{passo}: a espera sem prazo nunca vence. Tire os passos de "Se o prazo acabar" ou ponha um prazo.'
         sem_criar_card: 'Passo %{passo}: você não pode criar card no CRM, e o passo "Criar card" pede isso.'
         etapa_do_card_de_fora: 'Passo %{passo}: a etapa %{id} não é desta conta.'
         card_desligado: 'Passo %{passo}: o passo "Criar card" está desligado nesta conta (gatilhos de card ou CRM desligados).'

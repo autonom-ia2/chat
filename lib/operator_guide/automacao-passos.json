@@ -1096,7 +1096,7 @@
         },
         {
           "nome": "prazo",
-          "peca": "duracao",
+          "peca": "prazo",
           "obrigatorio": true,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PRAZO"
         },
