@@ -81,6 +81,10 @@ ou a menos é ruído. As respostas por pergunta e as posições de antes e depoi
 - **Erro de SQL** na busca por palavra sobe como o erro da busca de hoje (`RetrievalError`): mesma recuperação, sem caminho novo.
 - **Termos com `&`** (um endereço na pergunta): o OU é montado termo a termo, para o `&` de dentro do termo continuar
   parte dele. O placar da busca foi medido de novo depois dessa troca e deu o mesmo número.
+- **Pergunta colada longa** (6 mil caracteres repetindo as mesmas palavras, 2 mil trechos): o termo repetido entra uma
+  vez no OU. Com o OU da primeira versão, que repetia o termo, levava 6 s; com o de agora, cerca de 0,2 s (tester).
+- **Byte nulo na pergunta** (o Guia e o Ajudante passam texto que não foi gravado antes): vira espaço antes da busca.
+  Na primeira versão, derrubava a busca com a flag ligada (tester).
 
 ## O que ficou de fora
 
