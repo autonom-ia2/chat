@@ -62,6 +62,17 @@ RSpec.describe Autonomia::Agents::PromptBuilder do
       expect(entrada[-2][:content].to_s).to include('Bati o carro')
     end
 
+    it 'sends one reminder only, with both rules, when agente_material_primeiro (#2801) is also on', :aggregate_failures do
+      account.enable_features!('agente_material_primeiro')
+      entrada = montar.input
+      lembretes = entrada.select { |item| item[:role] == 'developer' && item[:content].to_s.include?('Antes de responder') }
+
+      expect(lembretes.size).to eq(1)
+      expect(entrada.last).to eq(lembretes.first)
+      expect(lembretes.first[:content].to_s).to include('`used_snippet_ids`', 'regra de quando não souber')
+      expect(montar.instructions).to include('ORDEM DAS FONTES', regra)
+    end
+
     it 'sends no reminder at the end without pieces of the material' do
       expect(montar(snippets: []).input.last[:role]).to eq('user')
     end
