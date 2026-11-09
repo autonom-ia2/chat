@@ -59,7 +59,7 @@ module Autonomia::Automacao::Resposta
   end
 
   def responsavel?(conversa, espera)
-    return false if conversa&.assignee_id.nil?
+    return false if conversa.nil? || conversa.assignee_id.nil?
 
     candidatas = conversa.messages.chat.outgoing.where(sender_type: 'User', sender_id: conversa.assignee_id).where.not(status: :failed)
     na_janela(candidatas, espera).find_each.any? { |mensagem| ::Autonomia::Agents::Operate::PessoaDaEquipe.da_pessoa?(mensagem) }

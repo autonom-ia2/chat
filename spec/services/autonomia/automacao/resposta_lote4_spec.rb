@@ -101,15 +101,25 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
       automacao_ligada(account, admin, [esperar_ate(condicao('gatilho.repetiu'), 30, 'dias'), prioridade_passo('repetiu', 'low')])
     end
 
-    it 'o gatilho acontece de novo durante a espera: segue na hora, e o histórico fica com uma linha', :aggregate_failures do
+    it 'o gatilho acontece de novo durante a espera: segue na hora', :aggregate_failures do
       rodar(definicao)
       execucao = execucao_de(definicao)
 
       travel(3.days) { rodar(definicao) }
-      travel(4.days) { rodar(definicao) }
 
       expect(execucao.reload.estado).to eq('concluida')
       expect(conversa.reload.priority).to eq('low')
+    end
+
+    it 'o gatilho repete duas vezes com a espera ainda de pé: o histórico fica com uma linha', :aggregate_failures do
+      outra = automacao_ligada(account, admin, [esperar_ate(condicao('conversa.responsavel_respondeu'), 30, 'dias'), prioridade_passo('ok', 'low')])
+      rodar(outra)
+      execucao = execucao_de(outra)
+
+      travel(3.days) { rodar(outra) }
+      travel(4.days) { rodar(outra) }
+
+      expect(execucao.reload.estado).to eq('esperando')
       expect(Autonomia::Automacao::Registro.where(execucao: execucao, motivo: 'ja_aberta').count).to eq(1)
     end
 
@@ -174,6 +184,44 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
 
       expect(execucao_de(definicao).estado).to eq('concluida')
       expect(conversa.reload.priority).to eq('low')
+    end
+
+    it 'duas gravações na mesma transação: a 1ª muda o campo lido, a 2ª não, e a espera acorda', :aggregate_failures do
+      rodar_no_card
+
+      travel(2.hours) do
+        perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) do
+          Crm::Card.transaction do
+            card.update!(custom_attributes: { 'impressao' => 'gostou' })
+            card.update!(score: 40)
+          end
+        end
+      end
+
+      expect(execucao_de(definicao).estado).to eq('concluida')
+      expect(conversa.reload.priority).to eq('low')
+    end
+
+    it 'o card muda entre a leitura da condição e a gravação da espera: a rodada reconfere e segue', :aggregate_failures do
+      allow(Autonomia::Automacao::Execucao).to receive(:gravar_na_rodada).and_wrap_original do |original, *args, **atributos|
+        # O corretor salva enquanto a execução ainda está andando: o aviso do card não acha ninguém esperando.
+        Crm::Card.find(card.id).update!(custom_attributes: { 'impressao' => 'gostou' }) if atributos[:estado] == 'esperando'
+        original.call(*args, **atributos)
+      end
+
+      rodar_no_card
+
+      expect(Autonomia::Automacao::Execucao).to have_received(:gravar_na_rodada).with(anything, anything, hash_including(estado: 'esperando'))
+      expect(execucao_de(definicao).estado).to eq('concluida')
+      expect(conversa.reload.priority).to eq('low')
+      expect(Autonomia::Automacao::Registro.where(execucao: execucao_de(definicao), passo: 'espera', resultado: 'ok').count).to eq(2)
+    end
+
+    it 'no card sem conversa principal, a responsável nunca respondeu' do
+      sem_conversa = Crm::Card.create!(account: account, pipeline: funil.first, stage: funil.last, title: 'Sem conversa', currency: 'BRL')
+      valores = Autonomia::Automacao::Valores.new(alvo: sem_conversa, quem: admin, espera: (1.hour.ago..))
+
+      expect(valores.ler('conversa.responsavel_respondeu')).to be(false)
     end
 
     it 'mudança que a receita não lê (a nota de qualificação) não acorda a espera' do
