@@ -1475,6 +1475,7 @@ pt_BR:
           no_members: 'Escolha pelo menos uma empresa da lista.'
           all_already_in_list: 'Essas empresas já estavam nesta lista.'
           too_many_members: 'Escolha até %{max} empresas por vez.'
+          invalid_cursor: 'Não deu para trazer mais listas. Abra a página de novo.'
       campaign_errors:
         forbidden: 'Seu perfil não pode alterar campanhas. Peça a um administrador a permissão de gerenciar campanhas.'
       score_bands:

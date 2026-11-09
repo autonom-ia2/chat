@@ -325,8 +325,9 @@
   "autonomia/prospecting/audiences": {
     "controller": "api/v1/accounts/autonomia/prospecting/audiences#index",
     "parametros": [
-      "lead_ids",
-      "page"
+      "before_at",
+      "before_id",
+      "lead_ids"
     ]
   },
   "autonomia/prospecting/audiences/:id": {

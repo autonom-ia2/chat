@@ -10,6 +10,10 @@ import {
 } from '../composables/useFolhaDaLista';
 import { TEXTO_DO_ERRO } from '../composables/useDonoDaLista';
 import { foraDoPublico } from '../utils/acharConfiraEstados';
+import { MAX_PAGINAS_DE_LISTAS } from '../utils/listasDaFolha';
+
+const pagina = n =>
+  Array.from({ length: 25 }, (_, i) => ({ id: n * 100 + i, nome: `L${i}` }));
 
 // #2775 — F6, "Para qual lista?" no Guardar lista: "Lista nova" ou uma que já
 // existe, com os números; a já enviada fica desligada. Numa lista que já
@@ -119,7 +123,10 @@ describe('Guardar lista: lista nova ou uma que já existe', () => {
     await flushPromises();
 
     expect(fonte.listas).toHaveBeenCalledTimes(1);
-    expect(fonte.listas).toHaveBeenCalledWith(1, { empresaIds: [1, 2] });
+    expect(fonte.listas).toHaveBeenCalledWith({
+      depois: null,
+      empresaIds: [1, 2],
+    });
     expect(folha.value.listas.map(lista => [lista.id, lista.entram])).toEqual([
       [4, 1],
       [5, 2],
@@ -128,19 +135,20 @@ describe('Guardar lista: lista nova ou uma que já existe', () => {
   });
 
   // Revisão do #2775, item 1: quem tem mais de 25 listas acha todas.
-  it('lê todas as páginas de listas até o servidor dizer que acabou', async () => {
-    const pagina = n =>
-      Array.from({ length: 25 }, (_, i) => ({
-        id: n * 100 + i,
-        nome: `L${i}`,
-      }));
+  it('lê todas as páginas de listas, pelo cursor, até o servidor dizer que acabou', async () => {
+    const cursor = { em: '2026-11-09T10:00:00.000001Z', id: 124 };
     const fonte = {
       listas: vi
         .fn()
-        .mockResolvedValueOnce({ listas: pagina(1), temMais: true })
+        .mockResolvedValueOnce({
+          listas: pagina(1),
+          temMais: true,
+          depois: cursor,
+        })
         .mockResolvedValueOnce({
           listas: [{ id: 999, nome: 'A 26ª' }],
           temMais: false,
+          depois: null,
         }),
     };
     const { folha } = montarComposable(fonte);
@@ -149,9 +157,58 @@ describe('Guardar lista: lista nova ou uma que já existe', () => {
     await flushPromises();
 
     expect(fonte.listas).toHaveBeenCalledTimes(2);
-    expect(fonte.listas).toHaveBeenLastCalledWith(2, { empresaIds: [1, 2] });
+    expect(fonte.listas).toHaveBeenLastCalledWith({
+      depois: cursor,
+      empresaIds: [1, 2],
+    });
     expect(folha.value.listas).toHaveLength(26);
     expect(folha.value.listas.at(-1)).toMatchObject({ id: 999, entram: 2 });
+    expect(folha.value.listasIncompletas).toBe(false);
+  });
+
+  // Revisão do #2775, rodada 2, item 2: página que falha no meio.
+  it('uma página que falha no meio guarda as que vieram e avisa que nem todas apareceram', async () => {
+    const fonte = {
+      listas: vi
+        .fn()
+        .mockResolvedValueOnce({
+          listas: pagina(1),
+          temMais: true,
+          depois: { em: 'x', id: 1 },
+        })
+        .mockRejectedValueOnce(new Error('rede')),
+    };
+    const { folha } = montarComposable(fonte);
+
+    folha.value = folhaNova('lista');
+    await flushPromises();
+
+    expect(folha.value.listas).toHaveLength(25);
+    expect(folha.value.listasIncompletas).toBe(true);
+
+    const wrapper = montarFolha({ listasIncompletas: true });
+    expect(wrapper.find('[data-listas-incompletas]').text()).toBe(
+      'Nem todas as suas listas apareceram. Feche e abra de novo para ver as outras.'
+    );
+    wrapper.unmount();
+  });
+
+  it('passar do teto de páginas guarda as que vieram e avisa', async () => {
+    const fonte = {
+      listas: vi.fn(async ({ depois }) => ({
+        listas: [{ id: (depois?.id || 0) + 1, nome: 'L' }],
+        temMais: true,
+        depois: { em: 'x', id: (depois?.id || 0) + 1 },
+      })),
+    };
+    const { folha } = montarComposable(fonte);
+
+    folha.value = folhaNova('lista');
+    await flushPromises();
+
+    expect(fonte.listas).toHaveBeenCalledTimes(MAX_PAGINAS_DE_LISTAS);
+    expect(folha.value.listas).toHaveLength(MAX_PAGINAS_DE_LISTAS);
+    expect(folha.value.listasIncompletas).toBe(true);
   });
 
   // Revisão do #2775, item 8: singular e plural, e o n só de quem entra.

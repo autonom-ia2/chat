@@ -300,7 +300,8 @@
       "POR_NA_LISTA": "Add {n} business to the list | Add {n} businesses to the list",
       "ERRO_LISTA_ENVIADA": "This list was already used in a sent campaign and cannot change. Choose another one or a new list.",
       "TODAS_JA_ESTAO": "These businesses are already on this list",
-      "ERRO_LISTA_JA_ESTAVAM": "These businesses were already on this list."
+      "ERRO_LISTA_JA_ESTAVAM": "These businesses were already on this list.",
+      "LISTAS_INCOMPLETAS": "Not all of your lists showed up. Close and open again to see the others."
     },
     "PARA_ONDE_PAINEL": {
       "TITULO": "Where do they go?",

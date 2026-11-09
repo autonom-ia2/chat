@@ -26,6 +26,21 @@ class Autonomia::Prospecting::AudienceLists
             .order(created_at: :desc, id: :desc)
   end
 
+  # Uma página das listas, do mais novo ao mais velho, a partir de antes da lista (before_at, before_id): cursor pela
+  # mesma ordem do scope (created_at, id). Apagar uma lista entre um "Ver mais" e outro não faz pular nenhuma, como
+  # faria um offset. next: o cursor da última lista da página, ou nil quando não há mais.
+  def lists_page(before_at:, before_id:, per_page:)
+    rows = scope
+    if before_at && before_id
+      rows = rows.where('campaign_imports.created_at < :at OR (campaign_imports.created_at = :at AND campaign_imports.id < :id)',
+                        at: before_at, id: before_id)
+    end
+    page_rows = rows.limit(per_page + 1).to_a
+    audiences = page_rows.first(per_page)
+    last = audiences.last if page_rows.size > per_page
+    { audiences: audiences, next: last && { before_at: last.created_at.utc.iso8601(6), before_id: last.id } }
+  end
+
   # { id => { companies:, whatsapp:, email:, in_crm:, locked: } }, com uma consulta por número.
   def numbers(audiences)
     ids = audiences.map(&:id)

@@ -15,7 +15,7 @@ import { ROTAS } from '../utils/acharRotas';
 // Prospecção (os Públicos de Campanhas que ela criou), da mais nova para a mais
 // velha, com os números de cada uma. Uma ação principal: "Abrir". Sem a
 // permissão de guardar listas, a tela diz por que não mostra nada. O servidor
-// manda 25 por vez: "Ver mais listas" traz a próxima página.
+// manda 25 por vez: "Ver mais listas" traz as seguintes, pelo cursor.
 const { t } = useI18n();
 const { demo, fonte, permissoes, irPara, mudarEstado } = useAcharTela();
 
@@ -23,7 +23,7 @@ const NS = 'PROSPECTING_ACHAR.LISTAS';
 const carregando = ref(true);
 const erro = ref(false);
 const listas = ref([]);
-const pagina = ref(1);
+const depois = ref(null);
 const temMais = ref(false);
 const carregandoMais = ref(false);
 
@@ -43,27 +43,30 @@ const carregar = async () => {
   carregando.value = true;
   erro.value = false;
   try {
-    const lidas = await fonte.value.listas(1);
+    const lidas = await fonte.value.listas();
     listas.value = lidas.listas;
     temMais.value = lidas.temMais;
-    pagina.value = 1;
+    depois.value = lidas.depois;
   } catch {
     erro.value = true;
   }
   carregando.value = false;
 };
 
+// Por cursor (a última lista mostrada), e um pedido por vez: o clique duplo
+// não pede a mesma página duas vezes nem pula uma.
 const verMais = async () => {
+  if (carregandoMais.value) return;
   carregandoMais.value = true;
   try {
-    const lidas = await fonte.value.listas(pagina.value + 1);
+    const lidas = await fonte.value.listas({ depois: depois.value });
     const jaTem = new Set(listas.value.map(lista => lista.id));
     listas.value = [
       ...listas.value,
       ...lidas.listas.filter(lista => !jaTem.has(lista.id)),
     ];
-    temMais.value = lidas.temMais && lidas.listas.length > 0;
-    pagina.value += 1;
+    temMais.value = lidas.temMais && Boolean(lidas.depois);
+    depois.value = lidas.depois;
   } catch {
     useAlert(t(`${NS}.ERRO_VER_MAIS`));
   } finally {
@@ -139,6 +142,7 @@ watch(demo, carregar);
           v-if="!carregando && !erro && permissoes.lista && temMais"
           :label="$t(`${NS}.VER_MAIS`)"
           :is-loading="carregandoMais"
+          :disabled="carregandoMais"
           slate
           faded
           class="!min-h-12 !rounded-xl !text-base self-center"

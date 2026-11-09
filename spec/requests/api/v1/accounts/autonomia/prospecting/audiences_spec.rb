@@ -66,18 +66,40 @@ RSpec.describe 'Autonomia prospecting audiences', type: :request do
       expect(response.parsed_body['meta']).to include('total_count' => 1, 'has_more' => false)
     end
 
-    it 'pagina: has_more enquanto há mais listas, e a página seguinte traz o resto' do
+    it 'pagina por cursor: has_more enquanto há mais listas, e o cursor traz o resto' do
       stub_const('Api::V1::Accounts::Autonomia::Prospecting::AudiencesController::DEFAULT_PER_PAGE', 1)
       older = save_list([create_lead(1)], name: 'Antiga')
       newer = save_list([create_lead(2)], name: 'Nova')
 
-      call(:get, '/audiences', params: { page: 1 })
+      call(:get, '/audiences')
       expect(payload.map { |item| item['id'] }).to eq([newer.id])
-      expect(response.parsed_body['meta']).to include('has_more' => true, 'total_count' => 2)
+      meta = response.parsed_body['meta']
+      expect(meta).to include('has_more' => true, 'total_count' => 2, 'next_before_id' => newer.id)
 
-      call(:get, '/audiences', params: { page: 2 })
+      call(:get, '/audiences', params: { before_at: meta['next_before_at'], before_id: meta['next_before_id'] })
       expect(payload.map { |item| item['id'] }).to eq([older.id])
-      expect(response.parsed_body['meta']).to include('has_more' => false)
+      expect(response.parsed_body['meta']).to include('has_more' => false, 'next_before_id' => nil)
+    end
+
+    # Revisão do #2775, rodada 2, item 3: com offset, apagar uma lista já mostrada fazia a página seguinte pular uma.
+    it 'uma lista apagada entre um "Ver mais" e outro não faz pular nenhuma' do
+      stub_const('Api::V1::Accounts::Autonomia::Prospecting::AudiencesController::DEFAULT_PER_PAGE', 2)
+      oldest, middle, newer, newest = (1..4).map { |index| save_list([create_lead(index)], name: "L#{index}") }
+
+      call(:get, '/audiences')
+      expect(payload.map { |item| item['id'] }).to eq([newest.id, newer.id])
+      meta = response.parsed_body['meta']
+      newest.destroy!
+
+      call(:get, '/audiences', params: { before_at: meta['next_before_at'], before_id: meta['next_before_id'] })
+      expect(payload.map { |item| item['id'] }).to eq([middle.id, oldest.id])
+    end
+
+    it 'cursor inválido: 422 invalid_cursor' do
+      call(:get, '/audiences', params: { before_at: 'ontem', before_id: 1 })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('prospecting.audience.invalid_cursor')
     end
 
     it 'com lead_ids, diz quais desses leads já estão em cada lista' do
@@ -88,6 +110,24 @@ RSpec.describe 'Autonomia prospecting audiences', type: :request do
       call(:get, '/audiences', params: { lead_ids: [inside.id, outside.id] })
 
       expect(payload.first).to include('id' => list.id, 'already_lead_ids' => [inside.id])
+    end
+
+    # Revisão do #2775, rodada 2, item 4: already_lead_ids só fala de leads que quem pede vê.
+    it 'lead de outra conta ou que a pessoa não vê não aparece em already_lead_ids' do
+      foreign_account = create(:account)
+      foreign_lead = Autonomia::Prospecting::Lead.create!(account: foreign_account, provider: 'mock', provider_place_id: 'req-lists-leak',
+                                                          name: 'Fora', country: 'BR')
+      hidden = create_lead(1)
+      list = save_list([hidden])
+      # O pior caso: um lead de outra conta apontando para o mesmo contato (a validação do modelo impede; a consulta também).
+      foreign_lead.update_columns(contact_id: hidden.reload.contact_id) # rubocop:disable Rails/SkipsModelValidations
+      agent = agent_with(%w[prospecting_view prospecting_manage campaign_manage])
+
+      call(:get, '/audiences', params: { lead_ids: [foreign_lead.id] })
+      expect(payload.first).to include('id' => list.id, 'already_lead_ids' => [])
+
+      call(:get, '/audiences', user: agent, params: { lead_ids: [hidden.id] })
+      expect(payload.first).to include('id' => list.id, 'already_lead_ids' => [])
     end
 
     it 'com mais lead_ids que o teto: 422 too_many_members' do

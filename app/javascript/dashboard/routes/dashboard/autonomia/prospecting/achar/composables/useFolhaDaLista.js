@@ -40,6 +40,7 @@ export const folhaNova = (escolha = null, mostrarFora = false) => ({
   erro: null,
   foraDoErro: [],
   listas: null,
+  listasIncompletas: false,
   listaId: LISTA_NOVA,
 });
 
@@ -137,15 +138,21 @@ export function useFolhaDaLista({
 
   // As listas que já existem, ao abrir a folha (também na demonstração): todas
   // as páginas, e quantas das escolhidas entram em cada uma. Falha ao ler não
-  // trava: fica só "Lista nova".
+  // trava: fica só "Lista nova"; falha no meio guarda as que vieram e avisa.
   const carregarListas = async () => {
-    let listas = [];
+    let lidas = { listas: [], incompleta: false };
     try {
-      listas = await lerListasDaFolha(fonte.value, escolhidas.value);
+      lidas = await lerListasDaFolha(fonte.value, escolhidas.value);
     } catch {
-      listas = [];
+      lidas = { listas: [], incompleta: false };
     }
-    if (folha.value) folha.value = { ...folha.value, listas };
+    if (folha.value) {
+      folha.value = {
+        ...folha.value,
+        listas: lidas.listas,
+        listasIncompletas: lidas.incompleta,
+      };
+    }
   };
   watch(
     () => Boolean(folha.value) && folha.value.listas == null,

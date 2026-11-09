@@ -16,7 +16,10 @@ const LISTA_DA_API = {
 
 const apiFalsa = () => ({
   getAudiences: vi.fn().mockResolvedValue({
-    data: { payload: [LISTA_DA_API], meta: { has_more: true } },
+    data: {
+      payload: [LISTA_DA_API],
+      meta: { has_more: true, next_before_at: 'T1', next_before_id: 4 },
+    },
   }),
   getAudience: vi.fn().mockResolvedValue({
     data: {
@@ -102,9 +105,14 @@ describe('acharFonteListas', () => {
     const api = apiFalsa();
     const fonte = criarFonte({ api, crm: {} });
 
-    const pagina = await fonte.listas(2, { empresaIds: [7, 8] });
-    expect(api.getAudiences).toHaveBeenCalledWith({ page: 2, leadIds: [7, 8] });
+    const cursor = { em: 'T0', id: 9 };
+    const pagina = await fonte.listas({ depois: cursor, empresaIds: [7, 8] });
+    expect(api.getAudiences).toHaveBeenCalledWith({
+      depois: cursor,
+      leadIds: [7, 8],
+    });
     expect(pagina.temMais).toBe(true);
+    expect(pagina.depois).toEqual({ em: 'T1', id: 4 });
     expect(pagina.listas[0]).toMatchObject({ id: 4, enviada: true });
 
     // Revisão do #2775, item 2: as empresas vêm pelo cursor (a última linha).

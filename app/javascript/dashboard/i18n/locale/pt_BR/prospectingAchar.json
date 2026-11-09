@@ -300,7 +300,8 @@
       "POR_NA_LISTA": "Pôr {n} empresa na lista | Pôr {n} empresas na lista",
       "ERRO_LISTA_ENVIADA": "Esta lista já foi usada numa campanha enviada e não muda mais. Escolha outra ou uma lista nova.",
       "TODAS_JA_ESTAO": "Essas empresas já estão nesta lista",
-      "ERRO_LISTA_JA_ESTAVAM": "Essas empresas já estavam nesta lista."
+      "ERRO_LISTA_JA_ESTAVAM": "Essas empresas já estavam nesta lista.",
+      "LISTAS_INCOMPLETAS": "Nem todas as suas listas apareceram. Feche e abra de novo para ver as outras."
     },
     "PARA_ONDE_PAINEL": {
       "TITULO": "Para onde elas vão?",

@@ -49,17 +49,19 @@ const recusa = (erro, nome) => {
   });
 };
 
-// Uma página das listas, da mais nova para a mais velha; temMais diz se há
-// outra página (o servidor pagina de 25 em 25).
+// Uma página das listas, da mais nova para a mais velha, por cursor: depois é
+// { em, id } da última lista já mostrada (null na primeira página). Apagar uma
+// lista no meio não faz pular nenhuma. temMais diz se há outra página.
 export const listasDaApi = api => ({
-  async listas(pagina = 1, { empresaIds = [] } = {}) {
-    const { data } = await api.getAudiences({
-      page: pagina,
-      leadIds: empresaIds,
-    });
+  async listas({ depois = null, empresaIds = [] } = {}) {
+    const { data } = await api.getAudiences({ depois, leadIds: empresaIds });
+    const meta = data.meta || {};
     return {
       listas: (data.payload || []).map(daLista),
-      temMais: data.meta?.has_more === true,
+      temMais: meta.has_more === true,
+      depois: meta.next_before_id
+        ? { em: meta.next_before_at, id: meta.next_before_id }
+        : null,
     };
   },
   // As empresas vêm por cursor: depois é a linha (row_number) da última
@@ -151,8 +153,10 @@ export const listasDaDemo = ({
     async listas() {
       const demo = await dados();
       if (estado === 'listas-erro') throw falha();
-      if (estado === 'listas-vazio') return { listas: [], temMais: false };
-      return { listas: demo.LISTAS.map(daLista), temMais: false };
+      if (estado === 'listas-vazio') {
+        return { listas: [], temMais: false, depois: null };
+      }
+      return { listas: demo.LISTAS.map(daLista), temMais: false, depois: null };
     },
     async lista(id) {
       const demo = await dados();

@@ -2,7 +2,9 @@
 # (source 'prospecting'); o de outra origem ou de outra conta é 404. Pede a prospecção (prospecting_manage, no
 # BaseController) e gerenciar campanhas (campaign_manage), a mesma chave do "Guardar lista" (LeadAudiencesController).
 #
-# - GET    audiences?lead_ids[]=     as listas, do mais novo ao mais velho, paginadas, com os números (AudienceLists);
+# - GET    audiences?lead_ids[]=     as listas, do mais novo ao mais velho, com os números (AudienceLists), 25 por vez
+#                                     por cursor (before_at e before_id, de meta.next_before_at/next_before_id: apagar
+#                                     uma lista no meio não faz pular nenhuma); cursor inválido é 422 invalid_cursor;
 #                                     com lead_ids, cada lista diz quais desses leads já estão nela (already_lead_ids),
 #                                     para o "Pôr N empresas na lista" contar só quem entra;
 # - GET    audiences/:id?after=      a lista com os números e uma página das empresas depois da linha `after` (cursor:
@@ -23,14 +25,10 @@ class Api::V1::Accounts::Autonomia::Prospecting::AudiencesController < Api::V1::
 
   def index
     return render_too_many if too_many?(raw_lead_ids)
+    return render_list_error('invalid_cursor') if params[:before_at].present? && (before_at.nil? || before_id.nil?)
 
-    scope = lists.scope
-    audiences = scope.offset((page - 1) * DEFAULT_PER_PAGE).limit(DEFAULT_PER_PAGE).to_a
-    total = scope.count
-    render json: {
-      payload: index_payload(audiences),
-      meta: { page: page, per_page: DEFAULT_PER_PAGE, total_count: total, has_more: page * DEFAULT_PER_PAGE < total }
-    }
+    result = lists.lists_page(before_at: before_at, before_id: before_id, per_page: DEFAULT_PER_PAGE)
+    render json: { payload: index_payload(result[:audiences]), meta: index_meta(result[:next]) }
   end
 
   def show
@@ -99,8 +97,21 @@ class Api::V1::Accounts::Autonomia::Prospecting::AudiencesController < Api::V1::
     @audience = lists.scope.find(params[:id])
   end
 
-  def page
-    @page ||= [params[:page].to_i, 1].max
+  # O cursor das listas (de meta.next_before_at e next_before_id); nil quando ausente ou inválido.
+  def before_at
+    @before_at ||= Time.iso8601(params[:before_at].to_s)
+  rescue ArgumentError
+    nil
+  end
+
+  def before_id
+    id = Integer(params[:before_id].to_s, 10, exception: false)
+    id if id&.positive?
+  end
+
+  def index_meta(next_cursor)
+    { per_page: DEFAULT_PER_PAGE, total_count: lists.scope.count, has_more: !next_cursor.nil?,
+      next_before_at: next_cursor&.dig(:before_at), next_before_id: next_cursor&.dig(:before_id) }
   end
 
   # Os ids como vieram no pedido, antes de filtrar: o teto conta estes, como o do Guardar lista (AudienceFromLeads).

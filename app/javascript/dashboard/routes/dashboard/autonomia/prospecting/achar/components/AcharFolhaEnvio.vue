@@ -51,6 +51,8 @@ const props = defineProps({
   // #2775 (F6): as listas que já existem (null até chegarem) e a escolhida.
   listas: { type: Array, default: null },
   listaId: { type: [String, Number], default: LISTA_NOVA },
+  // Uma página das listas falhou ou passou do teto: nem todas apareceram.
+  listasIncompletas: { type: Boolean, default: false },
 });
 const emit = defineEmits([
   'escolher',
@@ -281,6 +283,14 @@ watch(
         :listas="listas"
         @update:model-value="emit('update:listaId', $event)"
       />
+      <p
+        v-if="listasIncompletas"
+        role="status"
+        class="m-0 text-sm text-n-amber-11"
+        data-listas-incompletas
+      >
+        {{ $t(`${NS}.LISTAS_INCOMPLETAS`) }}
+      </p>
       <AcharLinhaFrase
         v-if="listaEscolhida"
         icone="i-lucide-list-plus"

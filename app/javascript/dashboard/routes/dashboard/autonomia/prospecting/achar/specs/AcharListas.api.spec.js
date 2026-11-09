@@ -191,15 +191,18 @@ describe('Suas listas e a lista aberta', () => {
   });
 
   // Revisão do #2775, item 1: quem tem mais de 25 listas acha todas.
-  it('"Ver mais listas" traz a próxima página até acabar', async () => {
+  it('"Ver mais listas" traz as seguintes pelo cursor até acabar', async () => {
     AutonomiaProspectingAPI.getAudiences
       .mockResolvedValueOnce({
-        data: { payload: [LISTA], meta: { has_more: true } },
+        data: {
+          payload: [LISTA],
+          meta: { has_more: true, next_before_at: 'T1', next_before_id: 4 },
+        },
       })
       .mockResolvedValueOnce({
         data: {
           payload: [{ ...LISTA, id: 26, name: 'A 26ª' }],
-          meta: { has_more: false },
+          meta: { has_more: false, next_before_id: null },
         },
       });
 
@@ -210,12 +213,44 @@ describe('Suas listas e a lista aberta', () => {
     await flushPromises();
 
     expect(AutonomiaProspectingAPI.getAudiences).toHaveBeenLastCalledWith({
-      page: 2,
+      depois: { em: 'T1', id: 4 },
       leadIds: [],
     });
     expect(wrapper.findAll('[data-lista]')).toHaveLength(2);
     expect(wrapper.text()).toContain('A 26ª');
     expect(wrapper.find('[data-ver-mais-listas]').exists()).toBe(false);
+  });
+
+  // Revisão do #2775, rodada 2, item 1: o clique duplo não pula uma página.
+  it('clique duplo em "Ver mais listas" pede uma página só e desliga o botão', async () => {
+    AutonomiaProspectingAPI.getAudiences.mockResolvedValueOnce({
+      data: {
+        payload: [LISTA],
+        meta: { has_more: true, next_before_at: 'T1', next_before_id: 4 },
+      },
+    });
+    let terminar;
+    AutonomiaProspectingAPI.getAudiences.mockReturnValueOnce(
+      new Promise(resolve => {
+        terminar = resolve;
+      })
+    );
+
+    const wrapper = await montar(AcharListasPage);
+    const botao = wrapper.find('[data-ver-mais-listas]');
+    await botao.trigger('click');
+    await botao.trigger('click');
+    expect(botao.attributes('disabled')).toBeDefined();
+    terminar({
+      data: {
+        payload: [{ ...LISTA, id: 26, name: 'A 26ª' }],
+        meta: { has_more: false, next_before_id: null },
+      },
+    });
+    await flushPromises();
+
+    expect(AutonomiaProspectingAPI.getAudiences).toHaveBeenCalledTimes(2);
+    expect(wrapper.findAll('[data-lista]')).toHaveLength(2);
   });
 
   it('sem gerenciar campanhas, a aba diz por que não mostra nada e não pede listas', async () => {

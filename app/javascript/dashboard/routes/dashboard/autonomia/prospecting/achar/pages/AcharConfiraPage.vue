@@ -545,6 +545,7 @@ watch(estado, async (novo, antigo) => {
       v-model:mostrar-fora="folha.mostrarFora"
       v-model:lista-id="folha.listaId"
       :listas="folha.listas"
+      :listas-incompletas="folha.listasIncompletas"
       :n="escolhidas.length"
       :pode-funil="permissoes.funil"
       :pode-lista="permissoes.lista"
