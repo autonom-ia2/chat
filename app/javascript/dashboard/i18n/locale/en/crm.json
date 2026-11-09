@@ -3422,10 +3422,13 @@
           "SWAP_REFUSED": "Meta did not accept changing the photo on this ad. You can create a paused copy with the new photo.",
           "COPY_UNCONFIRMED": "We could not confirm with Meta whether the copy was created. Look in the Ads Manager for an ad whose name ends in \"- Cópia\". If it is not there, create it again.",
           "RECREATE": "Not in the Ads Manager, create it again",
-          "PAUSE_ORIGINAL_HINT": "You turned the copy on. Pause the original so you do not pay twice.",
+          "PAUSE_ORIGINAL_HINT": "The copy \"{name}\" is on. Pause the original so you do not pay twice.",
           "PAUSE_ORIGINAL": "Pause the original",
           "PAUSE_ORIGINAL_DONE": "Original paused. Now only the copy spends.",
-          "COPY_FOUND": "The copy is there"
+          "COPY_FOUND": "The copy is there",
+          "SWAP_REFUSED_TEXT": "Meta did not accept changing the text on this ad. You can create a paused copy with the new text.",
+          "SWAP_AS_COPY_CONFIRM_TITLE_TEXT": "Create the paused copy with the new text?",
+          "SWAP_AS_COPY_DONE_TEXT": "Copy with the new text created and paused: \"{name}\""
         }
       },
       "AD_DETAIL": {

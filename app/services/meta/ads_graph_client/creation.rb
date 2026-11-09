@@ -81,6 +81,11 @@ module Meta::AdsGraphClient::Creation
     paged("#{object_id}/ads", fields: 'effective_status')
   end
 
+  # Grupos de uma campanha (#2804): a cópia achada na Meta continua de onde parou, sem copiar o grupo de novo.
+  def adsets_of(campaign_id)
+    paged("#{campaign_id}/adsets", fields: 'effective_status')
+  end
+
   # Cópia pausada de uma campanha ou de um grupo (#2778, Fluxo 5) → { copied_campaign_id } ou { copied_adset_id }.
   def copy_campaign(campaign_id, params)
     post("#{campaign_id}/copies", params)

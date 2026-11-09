@@ -18,7 +18,8 @@ import MetaAdsMediaPicker from './MetaAdsMediaPicker.vue';
 // - Trocar foto ou texto (ligado para todos em #2804): a Meta não muda o criativo; o servidor cria outro e põe no
 //   anúncio. A Meta analisa de novo, e a confirmação diz isso antes. Se a Meta recusar trocar neste anúncio
 //   (`swap_refused`), o mesmo diálogo oferece a cópia pausada já com a foto e o texto novos, e a confirmação lembra de
-//   pausar este quando ativar a cópia. Com a cópia no ar, o botão "Pausar o original" fica ali mesmo.
+//   pausar este quando ativar a cópia. Com a cópia no ar, o botão "Pausar o original" fica ali mesmo, e volta depois de
+//   recarregar pela gestão (`activeCopy`, #2804). Só o texto mudou: as frases falam do texto novo, não de foto.
 // - Cópia não confirmada (a Meta não respondeu e ela não apareceu na busca): a pessoa confere no Gerenciador de
 //   Anúncios e cria de novo pela tela, com a mesma chave (#2804).
 // - Carrossel e post impulsionado (`creativeKind` vazio) não têm uma foto para trocar: só o "Duplicar".
@@ -35,6 +36,8 @@ const props = defineProps({
   originalStatus: { type: String, default: '' },
   // O anúncio no Gerenciador de Anúncios da Meta, para conferir a cópia não confirmada.
   managerUrl: { type: String, default: '' },
+  // { ad_id, name } da cópia com a foto ou o texto novos que está ligada no lugar deste (a gestão diz, #2804).
+  activeCopy: { type: Object, default: null },
 });
 
 const emit = defineEmits(['reviewing', 'originalPaused']);
@@ -50,6 +53,8 @@ const copyGestao = ref(null);
 // de pausar o original).
 const copyImage = ref('');
 const fromSwap = ref(false);
+// A cópia desta vez saiu só com o texto novo (a foto ficou a mesma).
+const copyTextOnly = ref(false);
 
 const duplicateHint = computed(() => {
   const budget = props.budget;
@@ -73,12 +78,24 @@ const current = computed(() => {
     : { kind: 'image', url: props.image, source: 'current' };
 });
 
+// A mídia escolhida não é a de agora. Pela origem, e não pela identidade: o ref devolve o objeto embrulhado (proxy), que
+// nunca é o mesmo da foto atual.
+const isNewMedia = item => Boolean(item) && item.source !== 'current';
+
 const showCopy = (created, gestao, { image = '', swap = false } = {}) => {
   copy.value = created;
   copyGestao.value = gestao;
   copyImage.value = image;
   fromSwap.value = swap;
+  copyTextOnly.value = swap && !image;
 };
+
+const copyDoneKey = computed(() => {
+  if (copyImage.value) return `${KEY}.SWAP_AS_COPY_DONE`;
+  return copyTextOnly.value
+    ? `${KEY}.SWAP_AS_COPY_DONE_TEXT`
+    : `${KEY}.DUPLICATE_DONE`;
+});
 
 const copyHint = computed(() => {
   const budget = props.budget;
@@ -127,7 +144,7 @@ const runCopy = async (creative, { swap = false, recriar = false } = {}) => {
   try {
     const created = await duplicarAnuncio(props.adId, creative, { recriar });
     // Só o texto mudou: a cópia não tem foto nova para mostrar.
-    const newPhoto = creative && creative.media !== current.value;
+    const newPhoto = creative && isNewMedia(creative.media);
     showCopy(
       created,
       { status: 'PAUSED', effective_status: 'PAUSED', can_change: true },
@@ -167,14 +184,17 @@ const copyChanged = status => {
   copyGestao.value = { ...copyGestao.value, status, effective_status: status };
 };
 
-// A cópia com a foto nova está no ar e o original também: o botão para pausar o original, com confirmação.
+// A cópia com a foto ou o texto novos está ligada e o original também: o botão para pausar o original, com confirmação.
+// A cópia feita agora vale pelo que a tela sabe dela; depois de recarregar, pela gestão (`activeCopy`).
 const pauseDialog = ref(null);
-const showPauseOriginal = computed(
-  () =>
-    fromSwap.value &&
-    copyGestao.value?.status === 'ACTIVE' &&
-    props.originalStatus === 'ACTIVE'
-);
+const replacementName = computed(() => {
+  if (props.originalStatus !== 'ACTIVE') return '';
+  if (copy.value && fromSwap.value) {
+    return copyGestao.value?.status === 'ACTIVE' ? copy.value.name : '';
+  }
+  return props.activeCopy?.name || '';
+});
+const showPauseOriginal = computed(() => Boolean(replacementName.value));
 const pauseOriginal = async () => {
   saving.value = true;
   try {
@@ -205,11 +225,23 @@ const changed = computed(
   () =>
     Boolean(media.value) &&
     newText.value.trim() !== '' &&
-    (media.value !== current.value || newText.value.trim() !== props.text)
+    (isNewMedia(media.value) || newText.value.trim() !== props.text)
+);
+
+// A foto escolhida não é a de agora: as frases da cópia falam de foto; senão, de texto.
+const photoChanged = computed(() => isNewMedia(media.value));
+const refusedNote = computed(() =>
+  t(photoChanged.value ? `${KEY}.SWAP_REFUSED` : `${KEY}.SWAP_REFUSED_TEXT`)
 );
 
 const changeTitle = computed(() => {
-  if (asCopy.value) return t(`${KEY}.SWAP_AS_COPY_CONFIRM_TITLE`);
+  if (asCopy.value) {
+    return t(
+      photoChanged.value
+        ? `${KEY}.SWAP_AS_COPY_CONFIRM_TITLE`
+        : `${KEY}.SWAP_AS_COPY_CONFIRM_TITLE_TEXT`
+    );
+  }
   return t(
     confirming.value ? `${KEY}.CHANGE_CONFIRM_TITLE` : `${KEY}.CHANGE_TITLE`
   );
@@ -227,7 +259,7 @@ const openChange = () => {
   changeDialog.value?.open();
 };
 const closeChange = () => {
-  if (media.value !== current.value) soltarMidia(media.value);
+  if (isNewMedia(media.value)) soltarMidia(media.value);
   changeDialog.value?.close();
 };
 
@@ -369,11 +401,7 @@ const saveChange = async () => {
           class="size-14 shrink-0 rounded-lg object-cover"
         />
         <p class="m-0 text-sm font-semibold text-n-slate-12">
-          {{
-            copyImage
-              ? $t(`${KEY}.SWAP_AS_COPY_DONE`, { name: copy.name })
-              : $t(`${KEY}.DUPLICATE_DONE`, { name: copy.name })
-          }}
+          {{ $t(copyDoneKey, { name: copy.name }) }}
         </p>
       </div>
       <p class="m-0 text-xs text-n-slate-11">
@@ -389,23 +417,24 @@ const saveChange = async () => {
         :can-manage="!showPauseOriginal"
         @changed="copyChanged"
       />
-      <!-- A cópia com a foto nova no ar: pausar o original para não gastar em dobro, ali mesmo. -->
-      <div
-        v-if="showPauseOriginal"
-        data-ad-care-pause-original
-        class="flex w-full flex-col items-start gap-2 border-t border-n-weak pt-3"
-      >
-        <p class="m-0 text-sm text-n-slate-12">
-          {{ $t(`${KEY}.PAUSE_ORIGINAL_HINT`) }}
-        </p>
-        <!-- Enquanto isso, a cópia mostra só o selo: o único botão é este. -->
-        <Button
-          icon="i-lucide-pause"
-          :label="$t(`${KEY}.PAUSE_ORIGINAL`)"
-          class="w-full sm:w-auto"
-          @click="pauseDialog?.open()"
-        />
-      </div>
+    </div>
+
+    <!-- A cópia com a foto ou o texto novos ligada: pausar o original para não gastar em dobro, ali mesmo. -->
+    <div
+      v-if="showPauseOriginal"
+      data-ad-care-pause-original
+      class="flex flex-col items-start gap-2 rounded-xl bg-n-alpha-1 p-4"
+    >
+      <p class="m-0 text-sm text-n-slate-12">
+        {{ $t(`${KEY}.PAUSE_ORIGINAL_HINT`, { name: replacementName }) }}
+      </p>
+      <!-- Enquanto isso, a cópia mostra só o selo: o único botão é este. -->
+      <Button
+        icon="i-lucide-pause"
+        :label="$t(`${KEY}.PAUSE_ORIGINAL`)"
+        class="w-full sm:w-auto"
+        @click="pauseDialog?.open()"
+      />
     </div>
 
     <Dialog
@@ -457,11 +486,7 @@ const saveChange = async () => {
           class="i-lucide-clock mt-0.5 size-4 shrink-0"
           aria-hidden="true"
         />
-        {{
-          asCopy
-            ? `${$t(`${KEY}.SWAP_REFUSED`)} ${copyHint}`
-            : $t(`${KEY}.CHANGE_REVIEW`)
-        }}
+        {{ asCopy ? `${refusedNote} ${copyHint}` : $t(`${KEY}.CHANGE_REVIEW`) }}
       </p>
       <div v-else class="flex min-w-0 flex-col gap-4">
         <MetaAdsMediaPicker

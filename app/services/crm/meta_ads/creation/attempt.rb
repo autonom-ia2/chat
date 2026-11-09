@@ -13,6 +13,10 @@
 #   só com uma linha `unconfirmed` desta chave) depois de conferir no Gerenciador. Aí, se a campanha antiga aparecer
 #   mais tarde, as duas existem: a Auditoria guarda o nome com a marca da tentativa antiga para achá-la.
 #
+# Adotar (#2804, só a cópia, `adopt: true`): numa tentativa não confirmada, a campanha achada na Meta (pela marca, ou o
+# id que a tentativa parada já tinha gravado) não é apagada. A tentativa continua dela, sem criar outra, e quem chama
+# completa o que faltar. Achou mais de uma com a marca: `unconfirmed`, sem apagar nada.
+#
 # O mesmo pedido com outra chave (outra aba, outro aparelho, a tela reaberta) não cria a segunda campanha: cada linha
 # guarda o SHA-256 do pedido validado (`request_digest`), e o índice único parcial em (conta, conta de anúncios, digest)
 # para `creating`, `unconfirmed` e `rollback_failed` deixa só uma tentativa viva por pedido, mesmo com dois pedidos no
@@ -42,11 +46,16 @@ class Crm::MetaAds::Creation::Attempt
 
   # A linha da tentativa, pronta para criar, ou já criada. `recreate`: a pessoa conferiu no Gerenciador de Anúncios
   # que a campanha da tentativa não confirmada não está lá e pediu para criar de novo.
-  def claim!(key, attributes, recreate: false)
+  def claim!(key, attributes, recreate: false, adopt: false)
     digest = attributes[:request_digest]
     recreate ? ensure_recreatable!(key) : @twin.check!(key, digest)
     record, claimed = locked_by_digest(key, digest) { find_or_claim(key, attributes) }
-    claimed || record.status == 'created' ? record : recover!(record, recreate)
+    claimed || record.status == 'created' ? record : recover!(record, recreate, adopt)
+  end
+
+  # true quando o último `claim!` adotou a campanha achada na Meta.
+  def adopted?
+    @adopted == true
   end
 
   # Um passo falhou. `unknown`: a campanha ficou sem resposta e pode existir mesmo sem id. Devolve o erro para a tela,
@@ -98,13 +107,38 @@ class Crm::MetaAds::Creation::Attempt
     record.status == 'creating' && record.updated_at >= STALE_AFTER.ago
   end
 
-  def recover!(record, recreate)
+  def recover!(record, recreate, adopt)
     status = record.status
     raise Crm::MetaAds::Creation::Error, 'in_progress' if fresh_creating?(record)
 
     locked_by_digest(record.idempotency_key, record.request_digest) { take!(record, status) }
+    adopted = adopt_leftover!(record, status) if adopt && UNCONFIRMED_LIKE.include?(status)
+    return adopt!(record, adopted) if adopted
+
     clear_leftover!(record, status, recreate) if LEFTOVER_STATUSES.include?(status)
     record.update!(error_code: nil, campaign_id: nil, adset_id: nil, creative_id: nil, ad_id: nil)
+    record
+  end
+
+  # A campanha desta tentativa já existe na Meta: nil quando não há nenhuma. Sem resposta da Meta ou com mais de uma, a
+  # linha volta para a situação de antes, sem apagar nada.
+  def adopt_leftover!(record, status)
+    return record.campaign_id if record.campaign_id.present?
+
+    found = @undo.live_campaigns(record)
+    raise Crm::MetaAds::Creation::Error.new('meta_unavailable', nothing_created: false) if found.nil?
+    raise unconfirmed_error if found.many?
+
+    found.first
+  rescue StandardError
+    record.update!(status: status == 'creating' ? 'unconfirmed' : status)
+    raise
+  end
+
+  # Os ids já gravados (grupo, criativo, anúncio) ficam: quem chama completa só o que falta.
+  def adopt!(record, campaign_id)
+    record.update!(error_code: nil, campaign_id: campaign_id)
+    @adopted = true
     record
   end
 

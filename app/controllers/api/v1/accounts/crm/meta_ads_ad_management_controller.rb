@@ -2,7 +2,7 @@
 #
 # GET  meta_ads_connection/ads/:ad_id/management → situação do anúncio e post da Página (Crm::MetaAds::AdManagement).
 #      Ver: administrador ou `meta_ads_view`; `can_change` só vem true para quem também pode mudar (`meta_ads_manage`).
-#      Com `meta_ads_criar`, também `created_here` e `creative_kind` (Crm::MetaAds::Creation::CareState).
+#      Com `meta_ads_criar`, também `created_here`, `creative_kind` e `active_copy` (Crm::MetaAds::Creation::CareState).
 # POST meta_ads_connection/ads/:ad_id/status      → status=ACTIVE|PAUSED. Administrador ou `meta_ads_manage`.
 # GET  meta_ads_connection/pages                  → Páginas que a pessoa concedeu ao entrar com o Facebook.
 #
@@ -20,7 +20,7 @@ class Api::V1::Accounts::Crm::MetaAdsAdManagementController < Api::V1::Accounts:
     payload = management.payload(params[:ad_id].to_s)
     return render json: { error: 'ad_not_found' }, status: :not_found if payload.nil?
 
-    render json: { management: payload.merge(can_change: payload[:can_change] && manage?).merge(care_state) }
+    render json: { management: payload.merge(can_change: payload[:can_change] && manage?).merge(care_state(payload[:status])) }
   rescue ::Crm::MetaAds::AdManagement::Error => e
     render_unprocessable(e.code)
   end
@@ -84,10 +84,10 @@ class Api::V1::Accounts::Crm::MetaAdsAdManagementController < Api::V1::Accounts:
   end
 
   # Cuidar do anúncio (#2778): só com a flag de criar e para quem pode mudar; senão, nada a oferecer.
-  def care_state
+  def care_state(status)
     return ::Crm::MetaAds::Creation::CareState::NONE unless criar? && manage?
 
-    ::Crm::MetaAds::Creation::CareState.new(@connection).payload(params[:ad_id].to_s)
+    ::Crm::MetaAds::Creation::CareState.new(@connection).payload(params[:ad_id].to_s, original_status: status)
   end
 
   def criar?

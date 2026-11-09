@@ -290,6 +290,61 @@ describe('Anúncios da Meta · cuidar do anúncio (#2778)', () => {
     expect(paused.find('[data-ad-care-pause-original]').exists()).toBe(false);
   });
 
+  it('pause the original after a reload: the management says the copy is on (activeCopy)', async () => {
+    mudarStatus.mockResolvedValue({});
+    const wrapper = mountCare({
+      activeCopy: { ad_id: '9', name: 'Bolo - Cópia' },
+    });
+
+    expect(wrapper.find('[data-ad-care-copy]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-care-pause-original]').exists()).toBe(true);
+    dialogs(wrapper)[2].vm.$emit('confirm');
+    await flushPromises();
+    expect(mudarStatus).toHaveBeenCalledWith('1', 'PAUSED');
+
+    await wrapper.setProps({ originalStatus: 'PAUSED' });
+    expect(wrapper.find('[data-ad-care-pause-original]').exists()).toBe(false);
+  });
+
+  it('nothing changed yet: Continue stays off (the current photo is not a new one)', async () => {
+    const wrapper = mountCare();
+
+    await wrapper.find('[data-ad-care-change]').trigger('click');
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-ad-care-change-save]').attributes('disabled')
+    ).toBeDefined();
+  });
+
+  it('only the text changed: the copy texts talk about the new text, not a new photo', async () => {
+    trocarCriativo.mockRejectedValue(refusal({ error: 'swap_refused' }));
+    duplicarAnuncio.mockResolvedValue(COPY);
+    const wrapper = mountCare();
+
+    await wrapper.find('[data-ad-care-change]').trigger('click');
+    wrapper.find('[data-ad-care-text] textarea').setValue('Texto novo');
+    await flushPromises();
+    dialogs(wrapper)[1].vm.$emit('confirm');
+    await flushPromises();
+    dialogs(wrapper)[1].vm.$emit('confirm');
+    await flushPromises();
+
+    expect(dialogs(wrapper)[1].props('title')).toBe(
+      `${KEY}.SWAP_AS_COPY_CONFIRM_TITLE_TEXT`
+    );
+    const note = wrapper.find('[data-ad-care-change-review]').text();
+    expect(note).toContain(`${KEY}.SWAP_REFUSED_TEXT`);
+    expect(note).not.toContain(`${KEY}.SWAP_REFUSED `);
+
+    dialogs(wrapper)[1].vm.$emit('confirm');
+    await flushPromises();
+    expect(wrapper.find('[data-ad-care-copy-image]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-care-copy]').text()).toContain(
+      `${KEY}.SWAP_AS_COPY_DONE_TEXT`
+    );
+  });
+
   it('errors: an ended ad says so; no answer from Meta asks to check the Ads Manager', async () => {
     duplicarAnuncio
       .mockRejectedValueOnce(refusal({ error: 'invalid_dates' }))

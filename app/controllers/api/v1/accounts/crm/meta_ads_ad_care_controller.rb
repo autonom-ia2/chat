@@ -13,7 +13,7 @@
 # Administrador ou `meta_ads_manage`. O que muda fica na Auditoria da conta com quem fez (nunca o token). Sem conexão
 # ativa com conta de anúncios: 404 not_connected. Mesma chave em andamento: 409 in_progress.
 class Api::V1::Accounts::Crm::MetaAdsAdCareController < Api::V1::Accounts::Crm::BaseController
-  COPIED_ACTION = 'meta_ads_ad_copied'.freeze
+  COPIED_ACTION = ::Crm::MetaAds::Creation::Copy::COPIED_ACTION
   SWAPPED_ACTION = 'meta_ads_creative_swapped'.freeze
 
   before_action :ensure_feature

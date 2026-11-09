@@ -3423,10 +3423,13 @@
           "SWAP_REFUSED": "A Meta não aceitou trocar a foto neste anúncio. Dá para criar uma cópia pausada com a foto nova.",
           "COPY_UNCONFIRMED": "Não deu para confirmar com a Meta se a cópia foi criada. Procure no Gerenciador de Anúncios um anúncio com o nome terminado em \"- Cópia\". Se não estiver lá, crie de novo.",
           "RECREATE": "Não está no Gerenciador, criar de novo",
-          "PAUSE_ORIGINAL_HINT": "Você ativou a cópia. Pause o original para não gastar em dobro.",
+          "PAUSE_ORIGINAL_HINT": "A cópia \"{name}\" está ligada. Pause o original para não gastar em dobro.",
           "PAUSE_ORIGINAL": "Pausar o original",
           "PAUSE_ORIGINAL_DONE": "Original pausado. Agora só a cópia gasta.",
-          "COPY_FOUND": "A cópia está lá"
+          "COPY_FOUND": "A cópia está lá",
+          "SWAP_REFUSED_TEXT": "A Meta não aceitou trocar o texto neste anúncio. Dá para criar uma cópia pausada com o texto novo.",
+          "SWAP_AS_COPY_CONFIRM_TITLE_TEXT": "Criar a cópia pausada com o texto novo?",
+          "SWAP_AS_COPY_DONE_TEXT": "Cópia com o texto novo criada e pausada: \"{name}\""
         }
       },
       "AD_DETAIL": {

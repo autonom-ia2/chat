@@ -6,13 +6,15 @@
 #   (Crm::MetaAds::Creation::CreativeChange e CreativeSwap; ligado para todos em #2804); nil em carrossel, post
 #   impulsionado ou quando a Meta não respondeu (aí só o duplicar). Se a Meta recusar a troca, a tela oferece a cópia. `creative_image` e
 #   `creative_text`: a miniatura e o texto de agora, para o anúncio sem números no período (a tela não tem outra foto).
+# - `active_copy`: { ad_id, name } da cópia com a foto ou o texto novos que está no ar enquanto este também está
+#   (Crm::MetaAds::Creation::ActiveCopy, #2804). Com ela, a tela mostra "Pausar o original", mesmo depois de recarregar.
 # - `ads_manager_url`: o anúncio no Gerenciador de Anúncios, o mesmo endereço do consultor (Crm::MetaAds::Advisor::Advice).
 #   É o "Abrir no Gerenciador" da linha que aparece nos anúncios criados fora.
 #
 # A leitura do criativo fica guardada por CACHE_FOR, por conta e anúncio: cada abertura do detalhe chamava a Graph e
 # gastava o limite de uso da Meta. Só leitura que deu certo fica guardada. Duplicar e trocar apagam (`forget`).
 class Crm::MetaAds::Creation::CareState
-  NONE = { created_here: false, creative_kind: nil, creative_image: nil, creative_text: nil }.freeze
+  NONE = { created_here: false, creative_kind: nil, creative_image: nil, creative_text: nil, active_copy: nil }.freeze
 
   CACHE_FOR = 5.minutes
 
@@ -28,14 +30,16 @@ class Crm::MetaAds::Creation::CareState
     @connection = connection
   end
 
-  def payload(ad_id)
+  # `original_status`: a situação escolhida deste anúncio, já lida pela gestão. Só ativo pode ter a cópia no lugar.
+  def payload(ad_id, original_status: nil)
     record = Crm::MetaAds::Creation::Activation.new(@connection).created_here(ad_id)
     return NONE.merge(ads_manager_url: ads_manager_url(ad_id)) if record.nil?
 
     creative = read_creative(record)
     kind = Crm::MetaAds::Creation::CreativeChange.kind_of(creative['object_story_spec'])
     { created_here: true, creative_kind: kind, creative_image: creative['thumbnail_url'].presence,
-      creative_text: (Crm::MetaAds::Creation::CreativeChange.text_of(creative) if kind), ads_manager_url: ads_manager_url(ad_id) }
+      creative_text: (Crm::MetaAds::Creation::CreativeChange.text_of(creative) if kind), ads_manager_url: ads_manager_url(ad_id),
+      active_copy: (Crm::MetaAds::Creation::ActiveCopy.new(@connection).find(ad_id) if original_status == 'ACTIVE') }
   end
 
   private

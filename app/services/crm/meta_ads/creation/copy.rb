@@ -14,9 +14,12 @@
 # Idempotência, desfazer e "não confirmada" são os do criar (Crm::MetaAds::Creation::Attempt): uma linha `kind: copy`
 # em Crm::MetaAdsCreatedObject, que também faz a cópia aparecer em "Pausados" e ser ativada pelos três níveis. A cópia
 # não confirmada a pessoa refaz pela tela (#2804): confere no Gerenciador e pede de novo com a mesma chave e
-# `recreate_unconfirmed`, como no criar.
+# `recreate_unconfirmed`, como no criar. Se a campanha da tentativa aparecer na Meta, ela é adotada (#2804): a mesma
+# chave continua dela, completa o grupo e o anúncio que faltarem e nunca a apaga (Crm::MetaAds::Creation::Attempt).
 class Crm::MetaAds::Creation::Copy
   KIND = 'copy'.freeze
+  # A Auditoria da cópia criada: liga a cópia ao original (Crm::MetaAds::Creation::ActiveCopy).
+  COPIED_ACTION = 'meta_ads_ad_copied'.freeze
   # Vai para a Meta, no nome da cópia (como a marca da tentativa).
   SUFFIX = ' - Cópia'.freeze
   NAME_LIMIT = Crm::MetaAds::Creation::Draft::NAME_LIMIT
@@ -67,7 +70,7 @@ class Crm::MetaAds::Creation::Copy
 
     @end_time = end_time!(@budget[:end_time])
     creative = change && new_creative_params(source, change)
-    record = @attempt.claim!(key, copy_attributes(source), recreate: recreate)
+    record = @attempt.claim!(key, copy_attributes(source), recreate: recreate, adopt: true)
     return result(record) if record.status == 'created'
 
     build!(record, source, creative)
@@ -119,19 +122,55 @@ class Crm::MetaAds::Creation::Copy
     Digest::SHA256.hexdigest([KIND, source.ad_id, change&.values].to_json)
   end
 
+  # Com a campanha adotada (`@adopted`), só o que falta: o grupo e o anúncio que já estiverem nela são usados.
   def build!(record, source, creative)
-    step!(record, :campaign_id, 'copied_campaign_id') { client.copy_campaign(source.campaign_id, campaign_copy_params(record)) }
-    step!(record, :adset_id, 'copied_adset_id') { client.copy_adset(source.adset_id, adset_copy_params(record)) }
+    @adopted = @attempt.adopted?
+    build_levels!(record, source)
     build_ad!(record, source, creative)
     @reread = Crm::MetaAds::Creation::Levels.new(client, account: @account, user: @user).ensure_paused!(record)
     record.update!(status: 'created')
   rescue Crm::MetaAds::Creation::Error => e
+    raise keep_adopted!(record, e) if @adopted
+
     drop_new_creative(record, source)
     raise @attempt.rollback!(record, e, unknown: @campaign_unknown)
   rescue StandardError => e
+    @adopted ? keep_adopted!(record, e) : rollback_unexpected!(record, source)
+    raise e
+  end
+
+  # A campanha e o grupo copiados (só o que faltar na cópia adotada).
+  def build_levels!(record, source)
+    if record.campaign_id.blank?
+      step!(record, :campaign_id, 'copied_campaign_id') { client.copy_campaign(source.campaign_id, campaign_copy_params(record)) }
+    end
+    found!(record, :adset_id) { client.adsets_of(record.campaign_id) }
+    return if record.adset_id.present?
+
+    step!(record, :adset_id, 'copied_adset_id') { client.copy_adset(source.adset_id, adset_copy_params(record)) }
+  end
+
+  def rollback_unexpected!(record, source)
     drop_new_creative(record, source)
     @attempt.rollback!(record, Crm::MetaAds::Creation::Error.new('meta_refused'), unknown: @campaign_unknown)
-    raise e
+  end
+
+  # A cópia adotada nunca é apagada: a falha deixa a tentativa não confirmada, e a mesma chave continua dela.
+  def keep_adopted!(record, error)
+    code = error.is_a?(Crm::MetaAds::Creation::Error) ? error.code : 'meta_refused'
+    record.update!(status: 'unconfirmed', error_code: code)
+    Crm::MetaAds::Creation::Error.new(code, nothing_created: false)
+  end
+
+  # Na cópia adotada, o grupo ou o anúncio podem já existir (a resposta se perdeu depois de a Meta criar): usa o que achar.
+  def found!(record, column)
+    return unless @adopted && record.public_send(column).blank?
+
+    result = yield
+    raise Crm::MetaAds::Creation::Error.from_result(result, nothing_created: false) unless result.ok
+
+    id = Array(result.data['data']).filter_map { |row| row['id'].presence }.first
+    record.update!(column => id.to_s) if id
   end
 
   # O desfazer apaga a campanha; o criativo novo não vai junto. O do original nunca é apagado. Sem conseguir, ele fica
@@ -145,15 +184,20 @@ class Crm::MetaAds::Creation::Copy
   # O criativo do original, ou o novo; e o anúncio pausado no grupo da cópia.
   def build_ad!(record, source, creative)
     if creative
-      step!(record, :creative_id, 'id') { client.create_creative(@connection.ad_account_id, creative) }
+      step!(record, :creative_id, 'id') { client.create_creative(@connection.ad_account_id, creative) } if record.creative_id.blank?
     else
       record.update!(creative_id: source.creative_id)
     end
+    found!(record, :ad_id) { client.ads_of(record.adset_id) }
+    create_ad!(record) if record.ad_id.blank?
+    record.update!(updated_at: Time.current)
+  end
+
+  def create_ad!(record)
     step!(record, :ad_id, 'id') do
       client.create_ad(@connection.ad_account_id, name: record.name, adset_id: record.adset_id,
                                                   creative: { creative_id: record.creative_id }.to_json, status: 'PAUSED')
     end
-    record.update!(updated_at: Time.current)
   end
 
   # Como no criar (Crm::MetaAds::Creation::NewAd#step!): renova a linha, chama a Meta e grava o id que voltou. A campanha
