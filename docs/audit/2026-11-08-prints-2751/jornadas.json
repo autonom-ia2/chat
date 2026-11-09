@@ -1,0 +1,122 @@
+{
+  "pasta": "docs/audit/2026-11-08-prints-2751",
+  "conta": 1,
+  "larguras": [
+    1440,
+    390
+  ],
+  "temas": [
+    "light"
+  ],
+  "jornadas": [
+    {
+      "nome": "gatilho-reuniao-do-card",
+      "etapas": [
+        {
+          "nome": "automacao",
+          "url": "/app/accounts/{conta}/automacoes/livre/2",
+          "esperar": "[data-mostrar-tudo]",
+          "pausa": 3000,
+          "pagina_inteira": true
+        },
+        {
+          "nome": "alterar-gatilho",
+          "url": "/app/accounts/{conta}/automacoes/livre/2?alterar=gatilho",
+          "esperar": "[data-alterar]",
+          "pausa": 3000,
+          "pagina_inteira": true
+        },
+        {
+          "nome": "alterar-mensagem",
+          "url": "/app/accounts/{conta}/automacoes/livre/2?alterar=confirma",
+          "esperar": "[data-alterar]",
+          "pausa": 3000,
+          "pagina_inteira": true
+        }
+      ]
+    },
+    {
+      "nome": "lembrete-antes-da-reuniao",
+      "etapas": [
+        {
+          "nome": "automacao",
+          "url": "/app/accounts/{conta}/automacoes/livre/1",
+          "esperar": "[data-mostrar-tudo]",
+          "pausa": 3000,
+          "pagina_inteira": true
+        },
+        {
+          "nome": "alterar-gatilho",
+          "url": "/app/accounts/{conta}/automacoes/livre/1?alterar=gatilho",
+          "esperar": "[data-alterar]",
+          "pausa": 3000,
+          "pagina_inteira": true
+        },
+        {
+          "nome": "alterar-modelo",
+          "url": "/app/accounts/{conta}/automacoes/livre/1?alterar=lembra",
+          "esperar": "[data-alterar]",
+          "pausa": 3000,
+          "pagina_inteira": true
+        }
+      ]
+    },
+    {
+      "nome": "contato-tem-reuniao-marcada",
+      "etapas": [
+        {
+          "nome": "automacao",
+          "url": "/app/accounts/{conta}/automacoes/livre/3",
+          "esperar": "[data-mostrar-tudo]",
+          "pausa": 3000,
+          "pagina_inteira": true
+        },
+        {
+          "nome": "alterar-espera",
+          "url": "/app/accounts/{conta}/automacoes/livre/3?alterar=marcou",
+          "esperar": "[data-alterar]",
+          "pausa": 3000,
+          "pagina_inteira": true
+        }
+      ]
+    },
+    {
+      "nome": "execucao-real",
+      "etapas": [
+        {
+          "nome": "lista",
+          "url": "/app/accounts/{conta}/automacoes",
+          "pausa": 4000
+        },
+        {
+          "nome": "historico-cliente-novo",
+          "url": "/app/accounts/{conta}/automacoes/livre/3",
+          "esperar": "[data-execucao]",
+          "passos": [
+            {
+              "clicar": "[data-execucao]"
+            },
+            {
+              "esperar": "[data-passo]"
+            }
+          ],
+          "pausa": 3000
+        },
+        {
+          "nome": "historico-lembrete",
+          "url": "/app/accounts/{conta}/automacoes/livre/1",
+          "esperar": "[data-execucao]",
+          "passos": [
+            {
+              "clicar": "[data-execucao]"
+            },
+            {
+              "esperar": "[data-passo]"
+            }
+          ],
+          "pausa": 3000
+        }
+      ]
+    }
+  ]
+}

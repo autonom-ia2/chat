@@ -38,9 +38,35 @@ export const filtrosDosAjustes = (ajustes = {}) => ({
   ...(ajustes.mostraHorario ? { has_opening_hours: SIM } : {}),
 });
 
+// O caminho de volta (#2696): os advanced_filters que a IA da conta entendeu
+// viram as escolhas de "Mais ajustes". Valor que a tela não tem fica de fora.
+const escolhaDe = (tabela, filtros) =>
+  Object.keys(tabela).find(chave =>
+    Object.entries(tabela[chave]).every(
+      ([filtro, valor]) => filtros[filtro] === valor
+    )
+  );
+const temOuNao = valor =>
+  Object.keys(TEM_OU_NAO).find(chave => TEM_OU_NAO[chave] === valor);
+
+export const ajustesDosFiltros = (filtros = {}) => {
+  const ajustes = {
+    nota: escolhaDe(NOTA, filtros),
+    avaliacoes: escolhaDe(AVALIACOES, filtros),
+    site: temOuNao(filtros.has_website),
+    fotos: temOuNao(filtros.has_photos),
+    aberta: filtros.open_now === SIM || undefined,
+    mostraHorario: filtros.has_opening_hours === SIM || undefined,
+  };
+  return Object.fromEntries(
+    Object.entries(ajustes).filter(([, valor]) => valor !== undefined)
+  );
+};
+
 // A presença fraca é o modo gbp; o padrão continua o modo geral.
 export const modoDaOrdem = primeiro =>
   primeiro === 'pouco' ? 'gbp' : 'general';
+export const ordemDoModo = modo => (modo === 'gbp' ? 'pouco' : 'melhores');
 
 export const montarPedido = ({ oQue, lugar, como }) => {
   const centro =

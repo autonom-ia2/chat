@@ -567,6 +567,7 @@ en:
         retorno_sem_responsavel: "The follow-up was not created: it was for the owner, and no one owns this yet."
         sem_conversa: "There is no conversation to act on: the card has no main conversation, or the contact has none, and the automation has no inbox chosen to open one. Nothing was sent."
         contato_sem_telefone: "The contact has no phone number, so the conversation was not opened. Nothing was sent."
+        sem_responsavel: "The AI agent is handling this conversation, and its card has no owner (or there is no card). No one was alerted."
         texto_vazio: "The text came out blank after it was built. The message was not sent."
         dado_ausente: 'The AI did not find any of the requested data in the conversation. Nothing was saved.'
         ia_chave_recusada: "The AI provider refused the account's key. Check the AI key in the integrations."
@@ -633,6 +634,7 @@ en:
         modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility and with these variables."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
+        da_reuniao_so_no_gatilho: "Step %{passo}: notifying who attends the meeting only works in meeting triggers."
         gatilho_desligado: 'Card and time triggers are off for this account.'
         reunioes_desligadas: 'Meetings are off in this installation, so the meeting triggers cannot be used.'
         etapa_de_fora: 'Trigger: stage %{id} is not from this account.'
@@ -646,6 +648,7 @@ en:
         etiqueta_de_fora: 'Trigger: label %{etiqueta} does not exist in this account.'
         atributo_de_fora: 'Trigger: field %{campo} is not a contact field of this account.'
         funil_de_fora: 'Trigger: pipeline %{id} is not from this account.'
+        pagina_de_fora: 'Trigger: booking page %{id} is not from this account.'
         ia_desligada: "Step %{passo}: AI steps are off for this account."
         caminho_repetido: "Step %{passo}: there is already a path named %{nome}."
         caminho_reservado: "Step %{passo}: the name %{nome} is already the path for when nothing applies. Pick another name."
@@ -805,6 +808,8 @@ en:
       # #1479: text of the button that opens the list of options the AI sends, when the AI does not choose one.
       botao_das_opcoes: 'See options'
       instrucao_mantida: "The Quote Agent's instruction is maintained by Autonom.ia and cannot be edited here. Its name, business hours and behavior were chosen in the Quotes tab when the agent was created."
+      # #1430: an HTTP tool cannot use the name of a native tool.
+      slug_reservado: 'is the name of a platform tool'
       # #1428 — "Change by chatting" (pilot): messages the builder shows the owner after an adjustment.
       ajuste:
         sem_pedido: 'I did not find a change to make in that message. What do you want to change in the agent?'
@@ -957,6 +962,8 @@ en:
           pipeline_not_found: 'O funil ou o estágio escolhido não existe mais. Escolha outro e envie de novo.'
           crm_disabled: 'O CRM está desligado nesta conta.'
           forbidden: 'Seu perfil não pode criar cards no CRM. Peça a um administrador a permissão de gerenciar cards.'
+          owner_forbidden: 'Só quem gerencia os funis pode escolher com quem os cards ficam. Mande sem trocar: eles ficam com você.'
+          owner_not_allowed: 'A pessoa escolhida não tem acesso a este funil. Escolha outra pessoa ou outro funil.'
         card_description:
           score: 'Nota da prospecção: %{score}'
           decision: 'Decisor: %{name}'
@@ -979,26 +986,32 @@ en:
         errors:
           no_leads: 'Escolha pelo menos um lead para criar contatos.'
           too_many_leads: 'Crie até %{max} contatos por vez.'
-      campaign_blocked:
-        not_found: 'Lead não encontrado nesta conta.'
-        discarded: 'Lead descartado.'
-        opt_out: 'O contato pediu para não receber mensagens.'
-        contact_blocked: 'O contato está bloqueado no chat2you.'
-        no_phone: 'Lead sem telefone.'
-        no_whatsapp: 'Telefone sem WhatsApp confirmado.'
-        not_ready: 'Lead ainda não está pronto para campanha.'
+      interpret:
+        errors:
+          text_blank: 'Write what you are looking for.'
+          text_too_long: 'Write your request in up to %{max} characters.'
+          ai_not_configured: 'The account AI is not turned on. Fill in the fields.'
+          ai_failed: 'The AI did not answer now. Fill in the fields.'
+      audience:
+        left_out:
+          not_found: 'Não está mais na sua lista.'
+          discarded: 'Você tirou esta empresa da lista.'
+          opt_out: 'Pediu para não receber mensagens.'
+          contact_blocked: 'O contato está bloqueado.'
+          no_channel: 'Não tem celular nem e-mail.'
+          invalid_data: 'O contato foi recusado. Confira nome, telefone e e-mail.'
+          unexpected_error: 'Não deu para guardar esta agora. Tente de novo.'
+          same_contact: 'É a mesma pessoa de outra empresa da lista: entrou uma vez só.'
+        errors:
+          no_leads: 'Escolha pelo menos uma empresa para guardar.'
+          too_many_leads: 'Guarde até %{max} empresas por vez.'
+          name_required: 'Dê um nome para a lista.'
+          no_rows: 'Nenhuma destas pode receber mensagem: pediram para não receber ou não têm celular nem e-mail.'
+          foreign_contact: 'Um dos contatos foi apagado enquanto a lista era guardada. Tente de novo.'
+          disabled: 'Os Públicos de Campanhas não estão ligados nesta conta.'
+          contacts_saved: 'Os contatos criados até aqui ficaram gravados.'
       campaign_errors:
         forbidden: 'Seu perfil não pode alterar campanhas. Peça a um administrador a permissão de gerenciar campanhas.'
-        # Recusas do público de campanha (#682): a tela mostra a frase; o código segue em `code`.
-        not_found: 'A campanha escolhida não existe mais. Escolha outra.'
-        empty_list: 'Esta lista ainda não tem leads. Adicione leads antes de criar o público.'
-        no_eligible_leads: 'Nenhum lead da seleção pode entrar na campanha.'
-        label_collision_visible_on_sidebar: 'Já existe uma etiqueta com esse nome no menu. Escolha outro nome para o segmento.'
-        unsupported_campaign: 'Só campanhas de envio único ou da API do WhatsApp recebem leads da prospecção.'
-        campaign_not_active: 'A campanha escolhida não está ativa ou já começou a enviar. Escolha outra ou crie só o segmento.'
-        too_many_leads: 'Selecione até %{max} leads por vez.'
-        empty_selection: 'Selecione pelo menos um lead.'
-      selection_list_name: 'Seleção da busca %{date}'
       score_bands:
         very_hot: 'Lead muito quente'
         high: 'Oportunidade alta'

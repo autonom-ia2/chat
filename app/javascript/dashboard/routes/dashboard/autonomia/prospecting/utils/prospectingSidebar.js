@@ -10,9 +10,9 @@ const SETTINGS_ROUTES = [
 ];
 
 // #2692 — com a flag prospeccao_nova (protótipo), o menu abre as telas novas:
-// "Achar empresas" (só quem busca) e "Suas buscas", e mantém "Listas", que
-// ninguém decidiu tirar (revisão do #2712). "Para chamar" (a fila) é fase 5:
-// fora do menu, e a rota só abre na demonstração.
+// "Achar empresas" (só quem busca), "Suas buscas", "Listas" (que ninguém
+// decidiu tirar, revisão do #2712) e, desde a fase 5 (#2697), "Para chamar"
+// (a fila, para todos que veem a Prospecção).
 // Configurações saem do menu lateral e continuam em Configurações da conta.
 const ACHAR_ROUTES = [
   'autonomia_prospecting_achar',
@@ -29,8 +29,8 @@ const acharItems = ({ podeBuscar, t, accountScopedRoute }) => [
     label: t('SIDEBAR.PROSPECTING'),
     icon: 'i-lucide-search',
     activeOn: ACHAR_ROUTES,
-    // Fase 1: Achar empresas, Suas buscas e Listas. "Para chamar" (fase 5)
-    // abre pela URL e não entra no menu (decisão da rodada 3).
+    // Na fase 1: Achar empresas, Suas buscas e Listas (decisão da rodada 3);
+    // a fila entrou com a fase 5, quando passou a abrir fora da demonstração.
     children: [
       ...(podeBuscar
         ? [
@@ -60,6 +60,12 @@ const acharItems = ({ podeBuscar, t, accountScopedRoute }) => [
         label: t('SIDEBAR.PROSPECTING_LISTS'),
         to: accountScopedRoute('autonomia_prospecting_lists'),
         activeOn: ['autonomia_prospecting_lists'],
+      },
+      {
+        name: 'Prospecting Para Chamar',
+        label: t('PROSPECTING_ACHAR.MENU.FILA'),
+        to: accountScopedRoute('autonomia_prospecting_para_chamar'),
+        activeOn: ['autonomia_prospecting_para_chamar'],
       },
     ],
   },

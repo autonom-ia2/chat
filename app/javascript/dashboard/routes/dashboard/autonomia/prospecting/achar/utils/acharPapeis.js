@@ -4,7 +4,7 @@
 //   buscar: fazer busca nova e escolher quem vai (prospecting_manage)
 //   funil: mandar para o funil (can_send_to_crm)
 //   lista: "Guardar para mandar mensagem" (campaign_manage + jornada de Campanhas)
-//   trocarDono: "Com quem fica · Alterar" (caso A, decisão do Rodrigo pendente)
+//   trocarDono: "Com quem fica · Alterar" (crm_manage_pipelines, #2694)
 //   verTodas: "Ver buscas de todos" (mostra "Feita por" e "Achado por")
 export const PAPEIS = [
   'dono',

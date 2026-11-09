@@ -6,6 +6,11 @@ import AcharPainel from './AcharPainel.vue';
 import AcharEscolhaGrande from './AcharEscolhaGrande.vue';
 import AcharLinhaFrase from './AcharLinhaFrase.vue';
 import AcharEstado from './AcharEstado.vue';
+import {
+  LIMITE_DO_PUBLICO,
+  TEXTO_DO_ERRO,
+} from '../composables/useDonoDaLista';
+import { foraDoPublico } from '../utils/acharConfiraEstados';
 
 // #2692 — F1, a folha "O que fazer com as {n} empresas?" (v4). Dois cartões
 // grandes e, abaixo do escolhido, a prévia em linhas-frase com "Alterar". Com
@@ -38,6 +43,8 @@ const props = defineProps({
   enviando: { type: Object, default: null },
   guardando: { type: Boolean, default: false },
   erro: { type: String, default: null },
+  // Quem ficou de fora na recusa do Público (#2695 r1), dito abaixo do erro.
+  foraDoErro: { type: Array, default: () => [] },
   mostrarFora: { type: Boolean, default: false },
 });
 const emit = defineEmits([
@@ -89,6 +96,9 @@ const CHAVES_FORA = {
   sem_contato: 'SEM_CONTATO',
 };
 const enviando = computed(() => Boolean(props.enviando));
+const frasesForaDoErro = computed(() =>
+  props.erro ? foraDoPublico(t, props.foraDoErro) : []
+);
 
 const botao = computed(() => {
   if (!escolhaFinal.value) {
@@ -319,8 +329,25 @@ watch(
         v-if="erro"
         faixa
         tom="erro"
-        :texto="$t(erro === 'lista' ? `${NS}.ERRO_LISTA` : `${NS}.ERRO_FUNIL`)"
+        :texto="
+          $t(TEXTO_DO_ERRO[erro] || TEXTO_DO_ERRO.funil, {
+            max: LIMITE_DO_PUBLICO,
+          })
+        "
       />
+      <ul
+        v-if="frasesForaDoErro.length"
+        class="flex flex-col gap-1 p-0 m-0 list-none"
+        data-fora-do-erro
+      >
+        <li
+          v-for="frase in frasesForaDoErro"
+          :key="frase"
+          class="text-sm text-n-slate-11"
+        >
+          {{ frase }}
+        </li>
+      </ul>
       <p
         v-if="botao.dica"
         class="m-0 text-sm text-center text-n-slate-11"

@@ -8,11 +8,7 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import { mergeDisjoint } from '../utils/mergeDisjoint';
-import {
-  canAddToCampaign,
-  canChooseCampaign,
-  canSendToCrm,
-} from '../utils/prospectingPermissions';
+import { canSendToCrm } from '../utils/prospectingPermissions';
 import { createSearchState } from './createSearchState';
 import { useSearchCrm } from './useSearchCrm';
 import { useSearchForm } from './useSearchForm';
@@ -63,10 +59,6 @@ export const useProspectingSearch = () => {
     canManage,
     canSendToCrm: computed(() =>
       canSendToCrm(canManage.value, state.settings.value)
-    ),
-    canAddToCampaign: computed(() => canAddToCampaign(canManage.value)),
-    canChooseCampaign: computed(() =>
-      canChooseCampaign(canManage.value, state.settings.value)
     ),
   };
 

@@ -12,6 +12,8 @@ defineProps({
   botao: { type: String, default: '' },
   link: { type: String, default: '' },
   faixa: { type: Boolean, default: false },
+  // #2697: o botão da faixa desligado (ex.: "Desfazer" com a fila gravando).
+  desligado: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['acao', 'link']);
@@ -55,6 +57,7 @@ const TONS = {
       :label="botao"
       slate
       faded
+      :disabled="desligado"
       class="!min-h-11 !rounded-xl ms-8 md:ms-0"
       @click="emit('acao')"
     />

@@ -1219,3 +1219,14 @@
   display_name: Agentes › ferramentas geridas pela conta
   enabled: false
   column: feature_flags_ext_2
+
+# Agentes: a ferramenta HTTP consulta em segundo plano (#1430, tema 9 do épico #1424). Ligada: numa conversa, toda
+# chamada de ferramenta HTTP vira uma execução na fila própria `agent_tools`; o turno espera até 8 s por rodada e, se a
+# resposta não chegar, avisa que está consultando e fala o resultado depois, num evento. Desligada: a chamada roda
+# dentro do turno, como antes. A Lia fica fora. Rollback: desligar a flag na conta. Com migration 20261108830000
+# (coluna `autonomia_agent_tool_id` em `autonomia_tool_runs`). Posição 32 (2147483648, 1 << 31), dada pela Orquestração
+# em 08/11. Depois do deploy liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: agente_ferramenta_em_segundo_plano
+  display_name: Agentes › ferramenta consulta em segundo plano
+  enabled: false
+  column: feature_flags_ext_2

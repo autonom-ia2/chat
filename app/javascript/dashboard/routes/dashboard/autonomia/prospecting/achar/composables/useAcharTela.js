@@ -5,6 +5,12 @@ import {
   usePermissionGranted,
 } from 'dashboard/composables/useCanManage';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import {
+  isCampaignImportEnabled,
+  isCampaignJourneyEnabled,
+} from 'dashboard/routes/dashboard/campaigns/journey/campaignJourney.routes';
 import { criarFonte, demoPedido } from '../utils/acharFonte';
 import { papelValido, permissoesDoPapel } from '../utils/acharPapeis';
 
@@ -26,25 +32,44 @@ export const useAcharTela = () => {
   const usuario = useMapGetter('getCurrentUser');
   const usuarioId = computed(() => usuario.value?.id);
   const fonte = computed(() =>
-    criarFonte({ demo: demo.value, usuarioId: usuarioId.value })
+    criarFonte({
+      demo: demo.value,
+      usuarioId: usuarioId.value,
+      usuarioNome: usuario.value?.name || '',
+    })
   );
   const podeBuscarNaConta = useCanManage('prospecting_manage');
   // Espelho de Visibility#all_searches?: administrador ou "Ver buscas de todos".
   const veTodasNoServidor = usePermissionGranted(
     'prospecting_view_all_searches'
   );
+  // Trocar o dono do card (#2694): só quem gere funis (crm_manage_pipelines;
+  // crm_admin e o administrador passam), a mesma chave do servidor.
+  const { canManagePipelines } = useCrmPermissions();
   const ajustes = ref(null);
+  // "Guardar para mandar mensagem" (#2695): o mesmo que o servidor pede
+  // (campaign_manage) e o que a Nova campanha precisa para abrir o Público
+  // (Campanhas na conta, jornada e Públicos ligados).
+  const podeCampanha = usePermissionGranted('campaign_manage');
+  const flagLigada = useMapGetter('accounts/isFeatureEnabledonAccount');
+  const publicosLigados = computed(
+    () =>
+      isCampaignJourneyEnabled() &&
+      isCampaignImportEnabled() &&
+      flagLigada.value(contaId.value, FEATURE_FLAGS.CAMPAIGNS)
+  );
 
   // Fora da demonstração: Editar busca e escolhe; mandar ao funil é o que o
-  // servidor diz (can_send_to_crm). Público e dono escolhido na hora são
-  // backend novo (v4, fases 2 e 3): até lá ficam desligados.
+  // servidor diz (can_send_to_crm); trocar o dono, quem gere funis (#2694).
   const permissoes = computed(() => {
     if (fonte.value.usaDemo) return permissoesDoPapel(papel.value);
+    const funil = podeBuscarNaConta.value && ajustes.value?.podeFunil === true;
     return {
       buscar: podeBuscarNaConta.value,
-      funil: podeBuscarNaConta.value && ajustes.value?.podeFunil === true,
-      lista: false,
-      trocarDono: false,
+      funil,
+      lista:
+        podeBuscarNaConta.value && podeCampanha.value && publicosLigados.value,
+      trocarDono: funil && canManagePipelines.value,
       verTodas: veTodasNoServidor.value,
     };
   });

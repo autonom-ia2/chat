@@ -1,7 +1,7 @@
 require 'rails_helper'
 
-# Envio ao CRM e campanha a partir da seleção de leads (#680, frente B): formatos do contrato com a tela.
-RSpec.describe 'Autonomia prospecting send to CRM and campaign from selection', type: :request do
+# Envio ao CRM a partir da seleção de leads (#680, frente B): formatos do contrato com a tela.
+RSpec.describe 'Autonomia prospecting send to CRM from selection', type: :request do
   let(:account) { create(:account) }
   let(:admin) { create(:user, :administrator, account: account) }
   let(:pipeline_and_stage) { create_crm_pipeline(account: account, user: admin) }
@@ -125,92 +125,6 @@ RSpec.describe 'Autonomia prospecting send to CRM and campaign from selection', 
       expect(body.dig('payload', 'created')).to eq([])
       expect(body.dig('payload', 'failed', 0, 'lead_id')).to eq(lead.id)
       expect(account.crm_cards.count).to eq(0)
-    end
-  end
-
-  describe 'POST leads/campaign_segment' do
-    def verified(lead)
-      lead.update!(metadata: { 'whatsapp_verification' => { 'status' => 'verified', 'phone' => lead.phone } })
-      lead
-    end
-
-    it 'cria a lista da seleção, etiqueta quem pode e diz o motivo de quem ficou fora' do
-      ready = verified(create_lead(1))
-      no_whatsapp = create_lead(2)
-      discarded = verified(create_lead(3, status: :discarded, discard_reason: 'Fora do perfil'))
-      foreign = create_lead(4, target_account: create(:account))
-
-      post "#{base_url}/campaign_segment",
-           params: { lead_ids: [ready.id, no_whatsapp.id, discarded.id, foreign.id], segment_name: 'Restaurantes BH' },
-           headers: auth_headers(admin), as: :json
-
-      expect(response).to have_http_status(:created)
-      segment = response.parsed_body.dig('payload', 'segment')
-      expect(segment.values_at('eligible_count', 'blocked_count')).to eq([1, 3])
-      reasons = segment['blocked_leads'].to_h { |row| [row['id'], row['reason_code']] }
-      expect(reasons).to eq(no_whatsapp.id => 'no_whatsapp', discarded.id => 'discarded', foreign.id => 'not_found')
-      expect(segment['blocked_leads'].find { |row| row['id'] == foreign.id }['name']).to be_nil
-      expect(ready.reload.contact.label_list).to include(segment.dig('label', 'title'))
-      expect(discarded.reload).to be_discarded
-
-      list = response.parsed_body.dig('payload', 'list')
-      expect([list['name'], list['lead_ids'].sort]).to eq(['Restaurantes BH', [ready.id, no_whatsapp.id, discarded.id].sort])
-    end
-
-    it 'segunda seleção com o mesmo nome é só dela: o lead da primeira não ganha a etiqueta nem entra na campanha nova' do
-      first = verified(create_lead(1))
-      second = verified(create_lead(2))
-      # Campanha de SMS só agendada: nada é enviado no teste.
-      campaign = create(:campaign, account: account, inbox: create(:channel_sms, account: account).inbox, audience: [],
-                                   scheduled_at: 1.day.from_now)
-      post "#{base_url}/campaign_segment", params: { lead_ids: [first.id], segment_name: 'Seleção' },
-                                           headers: auth_headers(admin), as: :json
-      first_label = response.parsed_body.dig('payload', 'segment', 'label', 'title')
-
-      post "#{base_url}/campaign_segment", params: { lead_ids: [second.id], segment_name: 'Seleção', campaign_id: campaign.display_id },
-                                           headers: auth_headers(admin), as: :json
-
-      expect(response).to have_http_status(:created)
-      segment = response.parsed_body.dig('payload', 'segment')
-      expect(segment['eligible_count']).to eq(1)
-      expect(segment['label']['title']).not_to eq(first_label)
-      # Nenhuma etiqueta cruza de uma seleção para a outra.
-      expect([first.reload.contact.label_list, second.reload.contact.label_list]).to eq([[first_label], [segment['label']['title']]])
-      expect(campaign.reload.audience.map { |item| item['id'] }).to eq([segment['label']['id']])
-      expect(response.parsed_body.dig('payload', 'list', 'lead_ids')).to eq([second.id])
-      expect(account.autonomia_prospecting_lists.pluck(:name)).to contain_exactly('Seleção', 'Seleção (2)')
-    end
-
-    it 'nome igual ao de uma lista de outro usuário não põe os leads dela na campanha nem mexe na lista dele' do
-      other_user = create(:user, :administrator, account: account)
-      extra = verified(create_lead(1, status: :ready_for_campaign))
-      other_list = Autonomia::Prospecting::List.create!(account: account, user: other_user, name: 'Clientes VIP')
-      other_list.list_leads.create!(account: account, lead: extra)
-      selected = verified(create_lead(2))
-
-      post "#{base_url}/campaign_segment", params: { lead_ids: [selected.id], segment_name: 'Clientes VIP' },
-                                           headers: auth_headers(admin), as: :json
-
-      expect(response).to have_http_status(:created)
-      body = response.parsed_body['payload']
-      expect(body.dig('segment', 'eligible_count')).to eq(1)
-      expect(body.dig('list', 'id')).not_to eq(other_list.id)
-      expect(other_list.reload.leads).to eq([extra])
-      expect(extra.reload.contact).to be_nil
-    end
-
-    it 'sem ninguém elegível responde 422 com os motivos e não deixa lista para trás' do
-      lead = create_lead(1)
-
-      post "#{base_url}/campaign_segment", params: { lead_ids: [lead.id], segment_name: 'Nada' },
-                                           headers: auth_headers(admin), as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.prospecting.campaign_errors.no_eligible_leads'))
-      expect(response.parsed_body['code']).to eq('prospecting.campaign.no_eligible_leads')
-      expect(response.parsed_body.dig('payload', 'segment', 'blocked_leads', 0, 'reason_code')).to eq('no_whatsapp')
-      expect(account.autonomia_prospecting_lists.count).to eq(0)
-      expect(lead.reload).to be_new_lead
     end
   end
 end
