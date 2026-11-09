@@ -112,6 +112,21 @@ RSpec.describe CustomRole, type: :model do
     end
   end
 
+  # #1430: quem gerencia ferramentas abre a gaveta na página do agente, então vê o agente. Editar o agente não vem junto.
+  describe 'tools key implies autonomia_view' do
+    it 'stores autonomia_view with autonomia_tools_manage, and not autonomia_manage' do
+      role = create(:custom_role, permissions: %w[autonomia_tools_manage])
+
+      expect(role.reload.permissions).to contain_exactly('autonomia_tools_manage', 'autonomia_view')
+    end
+
+    it 'keeps a single autonomia_view' do
+      role = create(:custom_role, permissions: %w[autonomia_view autonomia_tools_manage])
+
+      expect(role.reload.permissions).to contain_exactly('autonomia_view', 'autonomia_tools_manage')
+    end
+  end
+
   describe 'filtered unread count invalidation' do
     let(:account) { create(:account) }
     let(:custom_role) { create(:custom_role, account: account, permissions: ['conversation_manage']) }

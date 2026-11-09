@@ -47,6 +47,8 @@ const CONVERSATION_KEYS = [
 ];
 
 const CRM_VIEW = 'crm_view';
+const AUTONOMIA_VIEW = 'autonomia_view';
+const AUTONOMIA_TOOLS_MANAGE = 'autonomia_tools_manage';
 const CRM_MANAGE_CARDS = 'crm_manage_cards';
 const CRM_MOVE_CARDS = 'crm_move_cards';
 const CRM_ADMIN = 'crm_admin';
@@ -75,6 +77,9 @@ export const SENSITIVE_EXTRAS = [
   'campaign_send',
   CUSTOM_ROLE_MANAGE_PERMISSION,
   GRANT_ABOVE_OWN_PERMISSION,
+  // #1430: quem tem a chave escolhe para onde vão dados das conversas. É nível, não ajuste: entra aqui para o
+  // resumo e o cartão da função contarem como sensível.
+  AUTONOMIA_TOOLS_MANAGE,
 ];
 
 export const MODULE_GROUPS = [
@@ -145,7 +150,21 @@ export const MODULE_GROUPS = [
       {
         key: 'AUTONOMIA',
         icon: 'i-lucide-bot',
-        levels: { view: 'autonomia_view', manage: 'autonomia_manage' },
+        levels: { view: AUTONOMIA_VIEW, manage: 'autonomia_manage' },
+      },
+      {
+        // #1430 — linha própria, separada de Agentes: quem tem esta chave escolhe para onde vão dados das conversas.
+        // Nenhum modelo pronto a inclui e "Editar" em Agentes não a liga. Só aparece com a flag da conta (o editor
+        // filtra por `featureFlag`). O servidor grava autonomia_view junto (IMPLIED_VIEWS em custom_role.rb), porque
+        // as ferramentas ficam na página do agente; por isso não há item próprio no menu (`menu: false`).
+        key: 'AUTONOMIA_TOOLS',
+        icon: 'i-lucide-wrench',
+        sensitive: true,
+        menu: false,
+        featureFlag: 'agente_ferramentas_delegadas',
+        levelLabels: [LEVELS.MANAGE],
+        levels: { manage: AUTONOMIA_TOOLS_MANAGE },
+        impliedView: AUTONOMIA_VIEW,
       },
       {
         // #2251 — painel de desempenho do agente e a exportação dele. Só ver; independente de Agentes.
@@ -328,6 +347,12 @@ export const MODULES = MODULE_GROUPS.flatMap(group => group.modules);
 
 export const moduleByKey = key => MODULES.find(module => module.key === key);
 
+// As áreas que a conta mostra: uma área com `featureFlag` só aparece com a flag ligada.
+export const listedModules = (modules, hasFeature) =>
+  modules.filter(
+    module => !module.featureFlag || hasFeature(module.featureFlag)
+  );
+
 // As chaves de uma área: as dos níveis e os ajustes.
 export const keysOf = module => [
   ...Object.values(module.levels || {}),
@@ -369,6 +394,16 @@ export const slotLevel = (module, level) =>
   module.type === 'conversations' && isConversationManaging(level)
     ? LEVELS.MANAGE
     : level;
+
+// Rótulo de um nível: "Sem acesso" vira o básico da área (baseline) e uma área pode dar nome próprio a um nível
+// (Ferramentas dos agentes: "Gerenciar" no lugar de "Editar").
+export const levelLabelKey = (module, option) => {
+  if (option === LEVELS.NONE && module.baseline)
+    return `CUSTOM_ROLE.MATRIX.BASELINE.${module.baseline}`;
+  if (module.levelLabels?.includes(option))
+    return `CUSTOM_ROLE.MATRIX.MODULES.${module.key}.LEVEL_LABEL_${option.toUpperCase()}`;
+  return `CUSTOM_ROLE.MATRIX.LEVELS.${option.toUpperCase()}`;
+};
 
 export const levelSlots = (module, current = null) => {
   if (module.type === 'conversations')
@@ -450,6 +485,24 @@ const setCrmLevel = (module, level, permissions) => {
   return unique([...base, CRM_VIEW, CRM_MANAGE_CARDS, CRM_MOVE_CARDS]);
 };
 
+// Uma área com `impliedView` precisa do ver de outra área guardado junto, como o servidor grava
+// (IMPLIED_VIEWS em custom_role.rb, #1430); é o mesmo que o CRM faz com crm_view (#2124).
+const VIEW_DEPENDENTS = MODULES.filter(module => module.impliedView);
+
+const withImpliedViews = permissions =>
+  unique([
+    ...permissions,
+    ...VIEW_DEPENDENTS.filter(module =>
+      keysOf(module).some(key => permissions.includes(key))
+    ).map(module => module.impliedView),
+  ]);
+
+// Tirar o ver de que outra área precisa tira essa área junto (sem Agentes, sem ferramentas).
+const dependentKeys = removed =>
+  VIEW_DEPENDENTS.filter(module =>
+    removed.includes(module.impliedView)
+  ).flatMap(keysOf);
+
 export const setLevel = (module, level, permissions) => {
   if (module.type === 'conversations')
     return setConversationLevel(level, permissions);
@@ -459,11 +512,11 @@ export const setLevel = (module, level, permissions) => {
   const manageOnly = level === LEVELS.VIEW ? module.manageOnlyExtras || [] : [];
   const cleared =
     level === LEVELS.NONE
-      ? keysOf(module)
+      ? [...keysOf(module), ...dependentKeys(keysOf(module))]
       : [...Object.values(module.levels), ...manageOnly];
   const rest = withoutKeys(permissions, cleared);
   const key = module.levels[level];
-  return key ? [...rest, key] : rest;
+  return withImpliedViews(key ? [...rest, key] : rest);
 };
 
 // Extras are the fine-grained toggles shown under a module once it has access.
