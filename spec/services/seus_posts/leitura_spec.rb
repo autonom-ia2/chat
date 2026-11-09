@@ -48,6 +48,12 @@ RSpec.describe SeusPosts::Leitura do
     { query: hash_including('fields' => Meta::AdsGraphClient::SeusPosts.const_get("SEUS_POSTS_#{nome}_FIELDS")) }
   end
 
+  # #2522: anúncio que a plataforma criou ao impulsionar o post, já ativado (ou não).
+  def impulsionado_aqui(post_id, network, activated_at: 1.day.ago, conta: account)
+    Crm::MetaAdsCreatedObject.create!(account: conta, idempotency_key: SecureRandom.uuid, status: 'created', ad_id: "ad-#{post_id}",
+                                      source_post_id: post_id, source_post_network: network, activated_at: activated_at)
+  end
+
   describe 'Instagram' do
     # A factory do Instagram já cria a caixa nesta conta.
     let!(:canal) { create(:channel_instagram, account: account) }
@@ -85,6 +91,18 @@ RSpec.describe SeusPosts::Leitura do
 
       expect(normal30).to eq(views: 600, likes: 60, comments: 6)
       expect(normal7).to eq(normal30)
+    end
+
+    it 'post impulsionado por aqui e ativado: Teve anúncio e sai do normal; pausado sem rodar, de outra conta ou rede, não' do
+      impulsionado_aqui('m1', 'instagram')
+      impulsionado_aqui('m2', 'instagram', activated_at: nil)
+      impulsionado_aqui('m2', 'instagram', conta: create(:account))
+      impulsionado_aqui('m2', 'facebook')
+
+      perfil = leitura(days: 90)[:perfil]
+
+      expect(perfil[:posts].to_h { |post| [post[:id], post[:boosted]] }).to eq('m4' => nil, 'm1' => true, 'm3' => nil, 'm2' => nil)
+      expect(perfil[:normal]).to eq(views: 300, likes: 30, comments: 3)
     end
 
     it 'guarda o nome do perfil para a escolha no topo' do
@@ -259,6 +277,18 @@ RSpec.describe SeusPosts::Leitura do
       canal.update!(instagram_id: '178400')
 
       expect(leitura[:perfis].pluck(:id)).to eq(["facebook-#{canal.id}"])
+    end
+
+    it 'post impulsionado por aqui sem o recorte da Meta: Teve anúncio; o que a Meta disse fica' do
+      impulsionado_aqui('p1', 'facebook')
+      # p2: a Meta diz 0 vez de anúncio (ativado, mas não entregou); o anúncio de outra rede também não conta.
+      impulsionado_aqui('p2', 'facebook')
+      impulsionado_aqui('p2', 'instagram')
+
+      perfil = leitura[:perfil]
+
+      expect(perfil[:posts].to_h { |post| [post[:id], post[:boosted]] }).to eq('p1' => true, 'p2' => false, 'p3' => true)
+      expect(perfil[:normal]).to eq(views: 1000, reach: 700, likes: 60, comments: 6, clicks: 30)
     end
 
     it 'o post impulsionado fica fora do normal' do

@@ -43,16 +43,21 @@ describe('doAlvoDoGatilho', () => {
         Conversation: ['conversa', 'contato', 'card'],
       },
     };
-    expect(caminhos(doAlvoDoGatilho(comCard, 'conversa.criada', true))).toEqual(
-      ['conversa.status', 'card.valor', 'contato.nome', 'mensagem.tipo']
-    );
+    expect(
+      caminhos(doAlvoDoGatilho(comCard, 'conversa.criada', false, true))
+    ).toEqual([
+      'conversa.status',
+      'card.valor',
+      'contato.nome',
+      'mensagem.tipo',
+    ]);
     expect(caminhos(doAlvoDoGatilho(comCard, 'conversa.criada'))).toEqual([
       'conversa.status',
       'contato.nome',
       'mensagem.tipo',
     ]);
     expect(
-      caminhos(doAlvoDoGatilho(comCard, 'card.entrou_na_etapa', false))
+      caminhos(doAlvoDoGatilho(comCard, 'card.entrou_na_etapa', false, false))
     ).toContain('card.valor');
   });
 

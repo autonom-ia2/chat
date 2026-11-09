@@ -78,7 +78,8 @@ class Crm::MetaAds::ComentariosIa::NoAgentes
   def comentarios
     payload = @painel.payload
     to_see = Array(payload[:to_see])
-    { status: payload[:status], results: payload[:results], no_privado: @no_privado.call,
+    # #2522: o status de cada rede, para a gaveta avisar qual faltou no anúncio nas duas redes.
+    { status: payload[:status], network_status: payload[:network_status], results: payload[:results], no_privado: @no_privado.call,
       esperando: to_see.reject { |linha| linha[:kind] == NAO_ERA_O_CASO },
       nao_respondo: to_see.select { |linha| linha[:kind] == NAO_ERA_O_CASO } + Array(payload[:hidden]).map { |linha| linha.merge(kind: 'hidden') } }
   end

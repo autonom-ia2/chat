@@ -94,5 +94,12 @@ RSpec.describe Autonomia::Automacao::Receita do
       expect(valido?({ '$valor' => 'contato.nome', 'extra' => 1 })).to be(false)
       expect(valido?({ '$texto' => [] })).to be(false)
     end
+
+    it 'o "fim do" aceita só o mês (#2705)', :aggregate_failures do
+      expect(valido?(data('hoje').deep_merge('$data' => { 'fim_do' => 'mes' }))).to be(true)
+      expect(valido?({ '$data' => { 'de' => 'hoje', 'fim_do' => 'mes' } })).to be(true)
+      expect(valido?({ '$data' => { 'de' => 'hoje', 'fim_do' => 'semana' } })).to be(false)
+      expect(valido?({ '$data' => { 'de' => 'hoje', 'fim_do' => true } })).to be(false)
+    end
   end
 end

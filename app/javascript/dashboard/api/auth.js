@@ -87,6 +87,13 @@ export default {
     });
   },
 
+  // #2737 G23: o "ausente até" da própria pessoa nesta conta; null limpa.
+  updateAusencia(accountId, ausenteAte) {
+    return axios.post(endPoints('ausencia').url, {
+      profile: { account_id: accountId, ausente_ate: ausenteAte },
+    });
+  },
+
   deleteAvatar() {
     return axios.delete(endPoints('deleteAvatar').url);
   },

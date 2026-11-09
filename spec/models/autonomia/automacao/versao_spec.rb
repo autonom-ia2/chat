@@ -203,11 +203,16 @@ RSpec.describe Autonomia::Automacao::Versao do
       .to include('Passo gatilho: a automação não sabe ler card.senha')
   end
 
-  it 'recusa o caminho do card num gatilho de conversa (#2499): o alvo não tem card' do
+  # #2499 recusava o card em todo gatilho de conversa; desde o #2716 a conversa lê o card dela (só para ler). O
+  # gatilho do contato continua sem card.
+  it 'lê o card da conversa no gatilho de conversa e recusa no gatilho do contato (#2716)' do
+    do_contato = { 'tipo' => 'contato.data', 'campo' => 'nascimento', 'quando' => 'antes', 'dias' => 1, 'hora' => 9 }
     condicao = { 'campo' => { '$valor' => 'card.valor' }, 'op' => 'maior', 'valor' => 10 }
     se = { 'id' => 'p2', 'tipo' => 'se', 'condicao' => condicao, 'entao' => [por_etiqueta('p3')] }
 
-    expect(erros(receita(se))).to include('Passo p2: card.valor não dá para ler')
+    expect(erros(receita(se))).not_to include('card.valor')
+    expect(erros(receita(se, gatilho: do_contato)))
+      .to include('Passo p2: card.valor não dá para ler')
   end
 
   it 'recusa id repetido, mesmo dentro de um ramo' do

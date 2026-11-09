@@ -174,20 +174,37 @@ export const comPermissoes = (dados, podeLer) => {
   };
 };
 
-// G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião.
+// G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião. G32: o tipo
+// do gatilho segue junto, para o "avisar" oferecer quem atende a reunião.
+// #2680: com a caixa da conversa nova, o contato alcança a conversa que ela
+// abre; e "o cliente respondeu" sai do contato, então vale onde há contato.
 // #2716: o card da conversa (gatilho de conversa) só para quem tem a chave de
 // funis (`podeLerCard`), a mesma pergunta que o salvar faz.
-export const doAlvoDoGatilho = (dados, tipoDoGatilho, podeLerCard = false) => {
+const RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu';
+export const doAlvoDoGatilho = (
+  dados,
+  tipoDoGatilho,
+  comConversaNova = false,
+  podeLerCard = false
+) => {
   const alvo = dados?.gatilhos?.find(item => item.tipo === tipoDoGatilho)?.alvo;
-  const bases = alvo && dados.alvos?.[alvo];
-  if (!bases) return dados;
+  const doAlvo = alvo && dados.alvos?.[alvo];
+  if (!doAlvo) return dados;
+  const bases = comConversaNova
+    ? [...new Set([...doAlvo, 'conversa'])]
+    : doAlvo;
   const semCard = alvo === 'Conversation' && !podeLerCard;
+  const alcanca = item =>
+    !(semCard && item.base === 'card') &&
+    (!item.base ||
+      bases.includes(item.base) ||
+      (item.caminho === RESPOSTA_DO_CONTATO && bases.includes('contato')));
   return {
     ...dados,
+    gatilho: tipoDoGatilho,
     valores: dados.valores.filter(
       item =>
-        (!item.base || bases.includes(item.base)) &&
-        !(semCard && item.base === 'card') &&
+        alcanca(item) &&
         (!item.so_nos_gatilhos || item.so_nos_gatilhos.includes(tipoDoGatilho))
     ),
   };

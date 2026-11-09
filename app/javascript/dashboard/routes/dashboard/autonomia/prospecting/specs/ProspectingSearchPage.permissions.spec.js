@@ -1,10 +1,8 @@
 // Botões pela regra do servidor (#682): Enviar ao CRM só para quem pode criar
-// card (Crm::CardPolicy#create?); Adicionar à campanha para quem gerencia a
-// prospecção, e a escolha da campanha, dentro da janela, só com campaign_manage.
-// O servidor diz as duas coisas no payload das configurações.
+// card (Crm::CardPolicy#create?), dito no payload das configurações.
+// Adicionar à campanha por etiqueta saiu (#2695): a lista vira Público pelo
+// "Guardar para mandar mensagem" da tela Achar empresas.
 import { flushPromises } from '@vue/test-utils';
-import CampaignsAPI from 'dashboard/api/campaigns';
-import CampaignSelectionModal from '../components/campaign/CampaignSelectionModal.vue';
 import BulkActionsBar from '../components/search/BulkActionsBar.vue';
 import {
   buttonWithText,
@@ -31,9 +29,6 @@ vi.mock('dashboard/api/autonomiaProspecting', async () =>
 vi.mock('dashboard/api/crmKanban', async () =>
   (await import('./support/searchPageMocks')).crmKanbanApiMock()
 );
-vi.mock('dashboard/api/campaigns', () => ({
-  default: { get: vi.fn().mockResolvedValue({ data: [] }) },
-}));
 
 const SEND = 'PROSPECTING.SEARCH.SEND_TO_CRM';
 const ADD = 'PROSPECTING.SEARCH.ADD_TO_CAMPAIGN';
@@ -52,10 +47,8 @@ const visibleButtons = async (wrapper, text) => {
   return { card: !!card, bar: !!bar, panel: !!panel };
 };
 
-const mountWith = (can_send_to_crm, can_manage_campaigns) =>
-  mountSearchPage({
-    settings: settingsFixture({ can_send_to_crm, can_manage_campaigns }),
-  });
+const mountWith = can_send_to_crm =>
+  mountSearchPage({ settings: settingsFixture({ can_send_to_crm }) });
 
 describe('ProspectingSearchPage · botões por permissão', () => {
   beforeEach(() => {
@@ -67,7 +60,7 @@ describe('ProspectingSearchPage · botões por permissão', () => {
   });
 
   it('sem permissão de criar card, Enviar ao CRM some da barra, do card e do painel', async () => {
-    const wrapper = await mountWith(false, true);
+    const wrapper = await mountWith(false);
 
     expect(await visibleButtons(wrapper, SEND)).toEqual({
       card: false,
@@ -77,7 +70,7 @@ describe('ProspectingSearchPage · botões por permissão', () => {
   });
 
   it('com permissão de criar card, Enviar ao CRM aparece nos três lugares', async () => {
-    const wrapper = await mountWith(true, false);
+    const wrapper = await mountWith(true);
 
     expect(await visibleButtons(wrapper, SEND)).toEqual({
       card: true,
@@ -86,42 +79,22 @@ describe('ProspectingSearchPage · botões por permissão', () => {
     });
   });
 
-  // O servidor só exige campaign_manage quando vem uma campanha
-  // (authorize_campaign_update!): sem ela, o segmento sai só com a prospecção.
-  // O botão segue essa regra; a escolha da campanha, dentro da janela, não.
-  it('sem campaign_manage, Adicionar à campanha continua e a janela só cria o segmento, sem pedir as campanhas', async () => {
-    const wrapper = await mountWith(true, false);
+  it('Adicionar à campanha não aparece mais na barra, no card nem no painel', async () => {
+    const wrapper = await mountWith(true);
 
-    await leadCheckbox(wrapper, 'Padaria Sol').trigger('change');
-    await buttonWithText(wrapper, ADD).trigger('click');
-    await flushPromises();
-
-    const modal = wrapper.findComponent(CampaignSelectionModal);
-    expect(modal.props('canChooseCampaign')).toBe(false);
-    expect(CampaignsAPI.get).not.toHaveBeenCalled();
-    expect(buttonWithText(wrapper, SEND)).toBeTruthy();
+    expect(await visibleButtons(wrapper, ADD)).toEqual({
+      card: false,
+      bar: false,
+      panel: false,
+    });
   });
 
-  it('com campaign_manage, a janela oferece também a escolha da campanha', async () => {
-    const wrapper = await mountWith(false, true);
-
-    await leadCheckbox(wrapper, 'Padaria Sol').trigger('change');
-    await buttonWithText(wrapper, ADD).trigger('click');
-    await flushPromises();
-
-    const modal = wrapper.findComponent(CampaignSelectionModal);
-    expect(modal.props('canChooseCampaign')).toBe(true);
-    expect(CampaignsAPI.get).toHaveBeenCalled();
-    expect(buttonWithText(wrapper, SEND)).toBeUndefined();
-  });
-
-  it('quem só vê a prospecção não tem nenhum dos dois, mesmo com as permissões dos outros módulos', async () => {
+  it('quem só vê a prospecção não tem Enviar ao CRM, mesmo com a permissão do CRM', async () => {
     permission.canManage = false;
-    const wrapper = await mountWith(true, true);
+    const wrapper = await mountWith(true);
 
     await leadCheckbox(wrapper, 'Padaria Sol').trigger('change');
 
     expect(buttonWithText(wrapper, SEND)).toBeUndefined();
-    expect(buttonWithText(wrapper, ADD)).toBeUndefined();
   });
 });

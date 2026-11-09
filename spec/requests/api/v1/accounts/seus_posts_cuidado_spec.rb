@@ -380,7 +380,7 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     get "#{base}/resumo", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body).to eq('status' => 'ready', 'waiting' => 3, 'private_window' => 2)
+    expect(response.parsed_body).to eq('status' => 'ready', 'waiting' => 3, 'private_window' => 2, 'network_status' => { 'instagram' => 'ready' })
     expect(Crm::MetaAds::ComentariosIa::Classificador).not_to have_received(:new)
     expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
     expect(Crm::AiUsageEvent.count).to eq(0)

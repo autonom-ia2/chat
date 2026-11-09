@@ -21,7 +21,10 @@ Rails.application.config.filter_parameters += [
   :email, :content,
   # #2469 — a pergunta do Testar do cuidado dos comentários (POST agentes_do_post/:id/testar) é texto de quem testa,
   # nunca gravado nem logado.
-  :pergunta
+  :pergunta,
+  # #2696 — o pedido em uma frase da Prospecção (POST searches/interpret { frase }) é texto livre de quem busca. A chave
+  # é `frase`, e não `text`, que casaria também com `context` e outras.
+  :frase
 ]
 
 # Regex to filter all occurrences of 'token' in keys except for 'website_token'
