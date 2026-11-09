@@ -1,5 +1,3 @@
-import parsePhoneNumber from 'libphonenumber-js';
-
 // O dia da reunião da página de agendamento (#1193, J4): quando oferecer
 // "Lembrar", "Enviar link para marcar outro horário" e "Chamar no WhatsApp", e
 // como mostrar a recusa do servidor em frase leiga. Funções puras.
@@ -57,18 +55,6 @@ export const refusalFrom = error => {
     key: REFUSALS[data.error] || 'OTHER',
     url: typeof data.url === 'string' ? data.url : '',
   };
-};
-
-// Número do cliente para ler (+55 11 91234 5678). O E.164 vem gravado na
-// reunião; a biblioteca de telefone só formata. Sem formato conhecido, mostra
-// como veio.
-export const formatClientPhone = phone => {
-  if (!phone) return '';
-  try {
-    return parsePhoneNumber(phone)?.formatInternational() || phone;
-  } catch {
-    return phone;
-  }
 };
 
 // Id da reunião num evento do calendário (`meeting_12`) ou na própria reunião.
