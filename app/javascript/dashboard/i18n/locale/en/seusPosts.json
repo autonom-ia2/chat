@@ -174,7 +174,8 @@
         "TEXT": "The ad's comments are on the ad, not on this post.",
         "OPEN": "See the ad's comments",
         "TEXT_MANY": "This post became {count} ads. Each one's comments are on that ad, not on this post.",
-        "ITEM": "{name}, created on {date}"
+        "ITEM": "{name}, created on {date}",
+        "UNNAMED": "Ad"
       },
       "COMMENTS": {
         "TITLE": "Comments",

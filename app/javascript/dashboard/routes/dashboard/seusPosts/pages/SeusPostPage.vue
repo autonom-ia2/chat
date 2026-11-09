@@ -257,19 +257,25 @@ const ladoDoAnuncio = computed(() => {
 const anunciosDoPost = computed(() => {
   const ads = dados.value?.ads || [];
   if (!ads.length || !isCrmKanbanEnabled()) return [];
-  return ads.map(ad => ({
-    id: String(ad.id),
-    name: ad.name || t('SEUS_POSTS.POST.AD_COMMENTS.OPEN'),
-    criado: new Date(ad.created_at).toLocaleDateString(
-      intlLocale(locale.value),
-      { day: 'numeric', month: 'long' }
-    ),
-    to: {
-      name: 'campaigns_meta_ads_index',
-      params: { accountId: route.params.accountId },
-      query: { aba: 'resultado', anuncio: String(ad.id) },
-    },
-  }));
+  const anoAtual = new Date().getFullYear();
+  return ads.map(ad => {
+    const criadoEm = new Date(ad.created_at);
+    return {
+      id: String(ad.id),
+      name: ad.name || t('SEUS_POSTS.POST.AD_COMMENTS.UNNAMED'),
+      // O ano só aparece quando não é o atual: dois anúncios de anos diferentes no mesmo dia não ficam iguais.
+      criado: criadoEm.toLocaleDateString(intlLocale(locale.value), {
+        day: 'numeric',
+        month: 'long',
+        ...(criadoEm.getFullYear() === anoAtual ? {} : { year: 'numeric' }),
+      }),
+      to: {
+        name: 'campaigns_meta_ads_index',
+        params: { accountId: route.params.accountId },
+        query: { aba: 'resultado', anuncio: String(ad.id) },
+      },
+    };
+  });
 });
 
 // Comentários: filtro simples, contado da lista que já veio. Aba sem nada não aparece (Todos sempre).

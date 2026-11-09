@@ -95,6 +95,18 @@ RSpec.describe Crm::MetaAds::Creation::PausedAds do
     end
   end
 
+  it 'não conseguiu gravar a ativação: a lista sai mesmo assim e o erro vai ao rastreador' do
+    record = created('1')
+    stub_ad('1', 'ACTIVE')
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: nil)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+    allow_any_instance_of(Crm::MetaAdsCreatedObject).to receive(:update!).and_raise(ActiveRecord::StatementInvalid) # rubocop:disable RSpec/AnyInstance
+
+    expect(described_class.new(connection).list).to eq([])
+    expect(tracker).to have_received(:capture_exception)
+    expect(record.reload.activated_at).to be_nil
+  end
+
   it 'anúncio que já foi ativado aqui não é lido de novo' do
     created('1').update!(activated_at: Time.current)
 
