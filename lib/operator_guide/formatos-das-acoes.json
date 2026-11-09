@@ -197,10 +197,10 @@
     "controller": "api/v1/accounts/autonomia/prospecting/audiences#remove_members",
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:49",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:101",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:97",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:89"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:55",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:112",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:108",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:99"
     ],
     "sem_corpo": false
   },
@@ -11887,8 +11887,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/prospecting/audiences#copy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:70",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:89"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:80",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:99"
     ],
     "sem_corpo": true
   },
@@ -11902,9 +11902,9 @@
     "controller": "api/v1/accounts/autonomia/prospecting/audiences#add_leads",
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:39",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:41",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:89"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:45",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:47",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:99"
     ],
     "sem_corpo": false
   },
@@ -11917,9 +11917,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/prospecting/audiences#restore_members",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:59",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:97",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:89"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:67",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:108",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/audiences_controller.rb:99"
     ],
     "sem_corpo": false
   },

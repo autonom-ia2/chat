@@ -2,13 +2,17 @@
 # (source 'prospecting'); o de outra origem ou de outra conta é 404. Pede a prospecção (prospecting_manage, no
 # BaseController) e gerenciar campanhas (campaign_manage), a mesma chave do "Guardar lista" (LeadAudiencesController).
 #
-# - GET    audiences                 as listas, do mais novo ao mais velho, paginadas, com os números (AudienceLists);
-# - GET    audiences/:id?page=       a lista com os números e uma página das empresas;
+# - GET    audiences?lead_ids[]=     as listas, do mais novo ao mais velho, paginadas, com os números (AudienceLists);
+#                                     com lead_ids, cada lista diz quais desses leads já estão nela (already_lead_ids),
+#                                     para o "Pôr N empresas na lista" contar só quem entra;
+# - GET    audiences/:id?after=      a lista com os números e uma página das empresas depois da linha `after` (cursor:
+#                                     tirar alguém no meio não faz pular ninguém); meta.next_after é o próximo cursor;
 # - POST   audiences/:id/leads       { lead_ids } acrescenta leads (LeadsIntoAudience: mesmo teto e left_out do Guardar lista);
 # - DELETE audiences/:id/members     { contact_ids } ou { lead_ids } tira da lista (a linha fica como removed);
 # - POST   audiences/:id/members     { contact_ids } devolve quem foi tirado (o "Desfazer");
 # - POST   audiences/:id/copy        cria uma cópia para editar (a lista já enviada não muda).
-# Lista já usada em campanha que saiu: 422 audience_locked (CampaignJourney::AudienceUsage).
+# Lista já usada em campanha que saiu: 422 audience_locked (CampaignJourney::AudienceUsage). Mais de MAX_IDS ids em
+# contact_ids ou lead_ids: 422 too_many_members (nada é cortado em silêncio).
 class Api::V1::Accounts::Autonomia::Prospecting::AudiencesController < Api::V1::Accounts::Autonomia::Prospecting::BaseController
   DEFAULT_PER_PAGE = 25
   MAX_IDS = ::Autonomia::Prospecting::AudienceFromLeads::MAX_LEADS
@@ -18,21 +22,23 @@ class Api::V1::Accounts::Autonomia::Prospecting::AudiencesController < Api::V1::
   before_action :fetch_audience, except: [:index]
 
   def index
+    return render_too_many if too_many?(raw_lead_ids)
+
     scope = lists.scope
     audiences = scope.offset((page - 1) * DEFAULT_PER_PAGE).limit(DEFAULT_PER_PAGE).to_a
-    numbers = lists.numbers(audiences)
     total = scope.count
     render json: {
-      payload: audiences.map { |audience| list_payload(audience, numbers[audience.id]) },
+      payload: index_payload(audiences),
       meta: { page: page, per_page: DEFAULT_PER_PAGE, total_count: total, has_more: page * DEFAULT_PER_PAGE < total }
     }
   end
 
   def show
-    members = lists.members(@audience, page: page, leads_scope: leads_scope)
+    members = lists.members(@audience, after: params[:after], leads_scope: leads_scope)
     render json: {
       payload: list_payload(@audience, lists.numbers([@audience])[@audience.id]).merge(members: members[:members]),
-      meta: { page: page, per_page: ::Autonomia::Prospecting::AudienceLists::MEMBERS_PER_PAGE, total_count: members[:total] }
+      meta: { per_page: ::Autonomia::Prospecting::AudienceLists::MEMBERS_PER_PAGE, total_count: members[:total],
+              next_after: members[:next_after], has_more: !members[:next_after].nil? }
     }
   end
 
@@ -47,6 +53,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::AudiencesController < Api::V1::
   end
 
   def remove_members
+    return render_too_many if too_many?(raw_contact_ids) || too_many?(raw_lead_ids)
+
     contact_ids = member_contact_ids
     return render_list_error('no_members') if contact_ids.empty?
 
@@ -57,6 +65,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::AudiencesController < Api::V1::
   end
 
   def restore_members
+    return render_too_many if too_many?(raw_contact_ids)
+
     contact_ids = permitted_contact_ids
     return render_list_error('no_members') if contact_ids.empty?
 
@@ -93,17 +103,35 @@ class Api::V1::Accounts::Autonomia::Prospecting::AudiencesController < Api::V1::
     @page ||= [params[:page].to_i, 1].max
   end
 
+  # Os ids como vieram no pedido, antes de filtrar: o teto conta estes, como o do Guardar lista (AudienceFromLeads).
+  def raw_contact_ids
+    Array(params.permit(contact_ids: [])[:contact_ids])
+  end
+
+  def raw_lead_ids
+    Array(params.permit(lead_ids: [])[:lead_ids])
+  end
+
   def permitted_contact_ids
-    ids_from(params.permit(contact_ids: [])[:contact_ids])
+    ids_from(raw_contact_ids)
   end
 
   def permitted_lead_ids
-    ids_from(params.permit(lead_ids: [])[:lead_ids])
+    ids_from(raw_lead_ids)
   end
 
-  # Ids inteiros e positivos, até o teto do pedido; o resto (texto, lista, negativo) não vale como id.
+  # Ids inteiros e positivos; o resto (texto, lista, negativo) não vale como id. O teto é conferido antes (too_many?).
   def ids_from(values)
-    Array(values).filter_map { |value| Integer(value.to_s, 10, exception: false) }.select(&:positive?).uniq.first(MAX_IDS)
+    values.filter_map { |value| Integer(value.to_s, 10, exception: false) }.select(&:positive?).uniq
+  end
+
+  def too_many?(values)
+    values.size > MAX_IDS
+  end
+
+  def render_too_many
+    render json: { error: I18n.t('autonomia.prospecting.audience.errors.too_many_members', max: MAX_IDS),
+                   code: 'prospecting.audience.too_many_members' }, status: :unprocessable_entity
   end
 
   # Tirar pelo contato (a aba "Suas listas") ou pelo lead (a gaveta): o lead só alcança o contato se quem pede o vê.
@@ -112,6 +140,13 @@ class Api::V1::Accounts::Autonomia::Prospecting::AudiencesController < Api::V1::
     lead_ids = permitted_lead_ids
     contact_ids += leads_scope.where(id: lead_ids).where.not(contact_id: nil).pluck(:contact_id) if lead_ids.any?
     contact_ids.uniq
+  end
+
+  # Cada lista com os números e, dos lead_ids pedidos, os que já estão nela.
+  def index_payload(audiences)
+    numbers = lists.numbers(audiences)
+    already = lists.lead_ids_in(audiences, permitted_lead_ids, leads_scope: leads_scope)
+    audiences.map { |audience| list_payload(audience, numbers[audience.id]).merge(already_lead_ids: already[audience.id]) }
   end
 
   def list_payload(audience, numbers)

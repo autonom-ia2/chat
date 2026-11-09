@@ -49,11 +49,9 @@ RSpec.describe 'Autonomia prospecting audiences', type: :request do
   end
 
   describe 'GET audiences' do
-    it 'lista só as da Prospecção desta conta, com os números' do
+    it 'lista só as da Prospecção desta conta, com os números (sem número de "já chamadas")' do
       first = create_lead(1, enriched_email: 'a@empresa1.com.br')
-      called = create_lead(2)
-      list = save_list([first, called])
-      called.reload.update!(status: :qualified)
+      list = save_list([first, create_lead(2)])
       pipeline, stage = create_crm_pipeline(account: account, user: admin)
       Crm::Card.create!(account: account, pipeline: pipeline, stage: stage, title: 'Card', currency: 'BRL', contact: first.reload.contact)
       other_origin_list(first.contact)
@@ -63,8 +61,39 @@ RSpec.describe 'Autonomia prospecting audiences', type: :request do
       expect(response).to have_http_status(:ok)
       expect(payload.map { |item| item['id'] }).to eq([list.id])
       expect(payload.first).to include('name' => 'Padarias', 'companies' => 2, 'whatsapp' => 2, 'email' => 1,
-                                       'in_crm' => 1, 'called' => 1, 'locked' => false)
+                                       'in_crm' => 1, 'locked' => false)
+      expect(payload.first).not_to have_key('called')
       expect(response.parsed_body['meta']).to include('total_count' => 1, 'has_more' => false)
+    end
+
+    it 'pagina: has_more enquanto há mais listas, e a página seguinte traz o resto' do
+      stub_const('Api::V1::Accounts::Autonomia::Prospecting::AudiencesController::DEFAULT_PER_PAGE', 1)
+      older = save_list([create_lead(1)], name: 'Antiga')
+      newer = save_list([create_lead(2)], name: 'Nova')
+
+      call(:get, '/audiences', params: { page: 1 })
+      expect(payload.map { |item| item['id'] }).to eq([newer.id])
+      expect(response.parsed_body['meta']).to include('has_more' => true, 'total_count' => 2)
+
+      call(:get, '/audiences', params: { page: 2 })
+      expect(payload.map { |item| item['id'] }).to eq([older.id])
+      expect(response.parsed_body['meta']).to include('has_more' => false)
+    end
+
+    it 'com lead_ids, diz quais desses leads já estão em cada lista' do
+      inside = create_lead(1)
+      list = save_list([inside])
+      outside = create_lead(2)
+
+      call(:get, '/audiences', params: { lead_ids: [inside.id, outside.id] })
+
+      expect(payload.first).to include('id' => list.id, 'already_lead_ids' => [inside.id])
+    end
+
+    it 'com mais lead_ids que o teto: 422 too_many_members' do
+      call(:get, '/audiences', params: { lead_ids: (1..101).to_a })
+
+      expect(response.parsed_body['code']).to eq('prospecting.audience.too_many_members')
     end
 
     it 'marca a lista já enviada' do
@@ -99,7 +128,25 @@ RSpec.describe 'Autonomia prospecting audiences', type: :request do
 
       expect(payload['members'].map { |member| [member['row_number'], member['lead_id'], member['whatsapp']] })
         .to eq([[1, leads[0].id, true], [2, leads[1].id, true]])
-      expect(response.parsed_body['meta']).to include('total_count' => 2, 'page' => 1)
+      expect(payload['members'].first).not_to have_key('called')
+      expect(response.parsed_body['meta']).to include('total_count' => 2, 'next_after' => nil, 'has_more' => false)
+    end
+
+    # Revisão do #2775, item 2: com offset, tirar alguém da 1ª página fazia a 2ª pular uma empresa.
+    it 'pagina pelo cursor: tirar alguém da página aberta não faz a próxima pular ninguém' do
+      stub_const('Autonomia::Prospecting::AudienceLists::MEMBERS_PER_PAGE', 2)
+      leads = [create_lead(1), create_lead(2), create_lead(3)]
+      list = save_list(leads)
+
+      call(:get, "/audiences/#{list.id}")
+      expect(payload['members'].pluck('row_number')).to eq([1, 2])
+      expect(response.parsed_body['meta']).to include('next_after' => 2, 'has_more' => true)
+
+      call(:delete, "/audiences/#{list.id}/members", params: { lead_ids: [leads[0].id] })
+      call(:get, "/audiences/#{list.id}", params: { after: 2 })
+
+      expect(payload['members'].map { |member| [member['row_number'], member['lead_id']] }).to eq([[3, leads[2].id]])
+      expect(response.parsed_body['meta']).to include('next_after' => nil, 'has_more' => false, 'total_count' => 2)
     end
 
     it 'lista de outra conta ou de outra origem: 404' do
@@ -133,6 +180,18 @@ RSpec.describe 'Autonomia prospecting audiences', type: :request do
       expect(list.campaign_import_rows.order(:row_number).map { |row| [row.contact_id, row.row_number] })
         .to eq([[first.reload.contact_id, 1], [second.reload.contact_id, 2]])
       expect(list.reload.valid_rows).to eq(2)
+    end
+
+    it 'todas já estavam na lista: 422 all_already_in_list, com a frase certa' do
+      first = create_lead(1)
+      list = save_list([first])
+
+      call(:post, "/audiences/#{list.id}/leads", params: { lead_ids: [first.id] })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('prospecting.audience.all_already_in_list')
+      expect(response.parsed_body['error']).to start_with(I18n.t('autonomia.prospecting.audience.errors.all_already_in_list'))
+      expect(response.parsed_body['left_out'].map { |item| item['reason_code'] }).to eq(['already_in_list'])
     end
 
     it 'o mesmo teto do Guardar lista' do
@@ -198,6 +257,36 @@ RSpec.describe 'Autonomia prospecting audiences', type: :request do
       expect(response.parsed_body['code']).to eq('prospecting.audience.audience_locked')
     end
 
+    it 'lead_ids de outra conta não tiram ninguém: 422 no_members' do
+      lead = create_lead(1)
+      list = save_list([lead])
+      foreign_account = create(:account)
+      foreign_lead = Autonomia::Prospecting::Lead.create!(account: foreign_account, provider: 'mock', provider_place_id: 'req-lists-fora',
+                                                          name: 'Fora', country: 'BR',
+                                                          contact: create(:contact, account: foreign_account))
+
+      call(:delete, "/audiences/#{list.id}/members", params: { lead_ids: [foreign_lead.id] })
+
+      expect(response.parsed_body['code']).to eq('prospecting.audience.no_members')
+      expect(list.campaign_import_rows.pluck(:status)).to eq(['imported'])
+    end
+
+    it 'mais ids que o teto: 422 too_many_members, sem cortar em silêncio' do
+      list = save_list([create_lead(1)])
+      ids = (1..101).to_a
+
+      call(:delete, "/audiences/#{list.id}/members", params: { contact_ids: ids })
+      expect(response.parsed_body['code']).to eq('prospecting.audience.too_many_members')
+
+      call(:delete, "/audiences/#{list.id}/members", params: { lead_ids: ids })
+      expect(response.parsed_body['code']).to eq('prospecting.audience.too_many_members')
+
+      call(:post, "/audiences/#{list.id}/members", params: { contact_ids: ids })
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('prospecting.audience.too_many_members')
+      expect(list.campaign_import_rows.pluck(:status)).to eq(['imported'])
+    end
+
     it 'sem ninguém para tirar: 422 no_members' do
       list = save_list([create_lead(1)])
 
@@ -208,7 +297,8 @@ RSpec.describe 'Autonomia prospecting audiences', type: :request do
   end
 
   describe 'POST audiences/:id/copy' do
-    it 'cria uma lista nova da Prospecção com quem está hoje' do
+    it 'cria uma lista nova da Prospecção com quem está hoje, com o nome no idioma da conta' do
+      account.update!(locale: 'pt_BR')
       leads = [create_lead(1), create_lead(2)]
       list = save_list(leads)
       lock!(list)
@@ -220,6 +310,41 @@ RSpec.describe 'Autonomia prospecting audiences', type: :request do
       expect(copy.name).to eq('Padarias (cópia)')
       expect(copy.options['source']).to eq('prospecting')
       expect(payload).to include('companies' => 2, 'locked' => false)
+    end
+
+    # Revisão do #2775, item 10: o writer liga todo canal com gente; a cópia segue o ligado/desligado da original.
+    it 'a cópia herda o canal desligado da original' do
+      list = save_list([create_lead(1, enriched_email: 'a@empresa1.com.br')])
+      list.update!(channels: list.channels.merge('whatsapp' => list.channels['whatsapp'].merge('enabled' => false)))
+
+      call(:post, "/audiences/#{list.id}/copy")
+
+      copy = account.campaign_imports.find(payload['id'])
+      expect(copy.channels['whatsapp']).to include('enabled' => false, 'count' => 1)
+      expect(copy.channels['email']).to include('enabled' => true, 'count' => 1)
+    end
+  end
+
+  describe 'escrita sem campaign_manage' do
+    let(:agent) { agent_with(%w[prospecting_view prospecting_manage]) }
+
+    it '403 em pôr, tirar, devolver e copiar, sem mudar a lista' do
+      lead = create_lead(1)
+      list = save_list([lead])
+      contact_id = lead.reload.contact_id
+
+      [
+        [:post, "/audiences/#{list.id}/leads", { lead_ids: [lead.id] }],
+        [:delete, "/audiences/#{list.id}/members", { contact_ids: [contact_id] }],
+        [:post, "/audiences/#{list.id}/members", { contact_ids: [contact_id] }],
+        [:post, "/audiences/#{list.id}/copy", {}]
+      ].each do |verb, path, params|
+        call(verb, path, user: agent, params: params)
+        expect(response).to have_http_status(:forbidden), "#{verb} #{path}"
+        expect(response.parsed_body['code']).to eq('prospecting.campaign.forbidden')
+      end
+      expect(list.campaign_import_rows.pluck(:status)).to eq(['imported'])
+      expect(account.campaign_imports.count).to eq(1)
     end
   end
 
