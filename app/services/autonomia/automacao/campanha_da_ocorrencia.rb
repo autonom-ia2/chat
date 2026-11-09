@@ -38,6 +38,9 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
   Execucao = ::Autonomia::Automacao::Execucao
   Registro = ::Autonomia::Automacao::Registro
   AGUARDANDO = 'campanha_da_vez_aguardando'.freeze
+  # Os registros que a própria vez grava na execução dona (EstadoDaVez#dona): não são a execução passando pelo passo.
+  DA_VEZ = %w[campanha_da_vez_saiu campanha_da_vez_saiu_pela_rede campanha_da_vez_saiu_sem_contar_lotes campanha_da_vez_nao_saiu
+              campanha_da_vez_falhou campanha_da_vez_desistiu].freeze
 
   class << self
     # A varredura, antes dos lotes: uma linha por passo de disparar da receita. Nada fora do recorrente de card ou
@@ -86,7 +89,7 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
     # Fecha a vez quando o estado deixa. Devolve :fechada, :aberta (ainda há quem segure) ou :falhou (a nova tentativa
     # já está marcada, ou a vez desistiu).
     def conferir(id, rede: false)
-      situacao, posterior = travado(id) { |vez| fechar_se_puder(vez, rede) }
+      situacao, posterior = travado(id) { |vez| fechar_se_puder(vez, rede).tap { zerar_tentativas(vez) } }
       posterior&.call
       situacao
     rescue StandardError => e
@@ -103,7 +106,7 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
       na_hora = travado(id) { |vez| vez.fechada_em.nil? && vez.conferir_em.present? && !vez.conferir_em.future? }
       return unless na_hora
 
-      marcar(id, REDE, trocar: true)
+      marcar_a_rede(id)
       conferir(id, rede: true)
     end
 
@@ -143,6 +146,22 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
         vez.update!(conferir_em: quando)
       end
       ::Autonomia::Automacao::FecharVezJob.set(wait_until: quando).perform_later(id) if marcou
+    end
+
+    # A próxima conferência da rede, no FecharVezJob. Se marcar falhar (erro passageiro no banco), a vez não pode ficar
+    # sem rede: o job da próxima vai para a fila em TENTAR_DE_NOVO sem mexer na marca vencida (ele a acha na hora e
+    # confere), e o erro sobe para o log e para o Sidekiq.
+    def marcar_a_rede(id)
+      marcar(id, REDE, trocar: true)
+    rescue StandardError => e
+      Rails.logger.error("[automacao][campanha_da_vez] não marcou a rede vez=#{id} #{e.class} em #{e.backtrace&.first}")
+      ::Autonomia::Automacao::FecharVezJob.set(wait: TENTAR_DE_NOVO).perform_later(id)
+      raise
+    end
+
+    # A conferência que rodou sem erro zera a conta: só erros seguidos levam a vez a desistir.
+    def zerar_tentativas(vez)
+      vez.update!(tentativas: 0) if vez.tentativas.positive?
     end
 
     # Há conferência marcada até `quando`. A marca vencida há mais de TENTAR_DE_NOVO é de um job que se perdeu (a fila
@@ -223,27 +242,31 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
       Rails.logger.error("[automacao][campanha_da_vez] falhou vez=#{id} #{erro.class} em #{erro.backtrace&.first}")
       return unless Vez.exists?(id: id)
 
-      tentativa = travado(id) { |vez| contar_tentativa(vez, erro) }
-      marcar(id, TENTAR_DE_NOVO) if tentativa == :de_novo
+      quando = travado(id) { |vez| contar_tentativa(vez, erro) }
+      ::Autonomia::Automacao::FecharVezJob.set(wait_until: quando).perform_later(id) if quando
     end
 
+    # Sob a trava da vez: conta a tentativa e grava a marca da nova (o erro que chega em paralelo já a vê). Devolve a hora
+    # da nova tentativa, ou nil (mesma tentativa, vez fechada, ou desistiu).
     def contar_tentativa(vez, erro)
-      return if vez.fechada_em || marcada_ate?(vez, Time.current + TENTAR_DE_NOVO)
+      quando = Time.current + TENTAR_DE_NOVO
+      return if vez.fechada_em || marcada_ate?(vez, quando)
 
       vez.update!(tentativas: vez.tentativas + 1)
       estado = ::Autonomia::Automacao::EstadoDaVez.new(vez)
       dados = { 'erro' => erro.class.name, 'tentativas' => vez.tentativas }
       return desistir(vez, estado, dados) if vez.tentativas >= TENTATIVAS
 
+      vez.update!(conferir_em: quando)
       registrar(vez, estado, 'falhou', 'campanha_da_vez_falhou', dados)
-      :de_novo
+      quando
     end
 
     def desistir(vez, estado, dados)
       vez.update!(fechada_em: Time.current, conferir_em: nil)
       registrar(vez, estado, 'falhou', 'campanha_da_vez_desistiu', dados)
       Rails.logger.error("[automacao][campanha_da_vez] desistiu automacao=#{vez.automacao_id} vez=#{vez.id} tentativas=#{vez.tentativas}")
-      :desistiu
+      nil
     end
   end
 end

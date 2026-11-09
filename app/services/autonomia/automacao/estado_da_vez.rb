@@ -54,7 +54,13 @@ class Autonomia::Automacao::EstadoDaVez
     Execucao.where(automacao_id: @vez.automacao_id).where('autonomia_automacao_execucoes.evento LIKE ?', padrao)
   end
 
-  def passaram = Registro.where(execucao_id: execucoes.select(:id), passo: @vez.passo).select(:execucao_id)
+  # Passou pelo passo quem tem o registro dele gravado pelo Executor (inclusive o pulado que segue adiante). Os registros
+  # que a própria vez grava na execução dona (Ocorrencia::DA_VEZ) não contam: ela pode nem ter chegado ao passo ainda.
+  def passaram
+    Registro.where(execucao_id: execucoes.select(:id), passo: @vez.passo)
+            .where('autonomia_automacao_registros.motivo IS NULL OR autonomia_automacao_registros.motivo NOT IN (?)', Ocorrencia::DA_VEZ)
+            .select(:execucao_id)
+  end
 
   def abertas_antes = execucoes.where(finalizada_em: nil).where.not(id: passaram)
 

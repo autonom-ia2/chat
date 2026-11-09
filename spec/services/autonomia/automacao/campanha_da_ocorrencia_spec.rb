@@ -91,6 +91,13 @@ RSpec.describe Autonomia::Automacao::CampanhaDaOcorrencia, :automacao_motor do
 
   def fecha_vez_na_fila = enqueued_jobs.count { |job| job[:job] == Autonomia::Automacao::FecharVezJob }
 
+  # A conferência dá erro no meio (o banco), depois de a vez ser lida: EstadoDaVez#pronta? levanta.
+  def falhar_a_conferencia
+    allow(Autonomia::Automacao::EstadoDaVez).to receive(:new).and_wrap_original do |original, *args, **opcoes|
+      original.call(*args, **opcoes).tap { |estado| allow(estado).to receive(:pronta?).and_raise(ActiveRecord::ConnectionTimeoutError) }
+    end
+  end
+
   def falhar_ao_montar
     allow_any_instance_of(Autonomia::Automacao::PassoDeCampanha).to receive(:montar) # rubocop:disable RSpec/AnyInstance
       .and_raise(ActiveRecord::ConnectionTimeoutError, 'banco ocupado')
@@ -297,14 +304,21 @@ RSpec.describe Autonomia::Automacao::CampanhaDaOcorrencia, :automacao_motor do
     expect(texto).to include('não registrou quantos lotes tinha')
   end
 
-  it 'as execuções da vez saem do índice pelo começo da marca' do
+  # O banco de teste usa a collation C, onde o índice comum também serve ao LIKE com prefixo; em produção não. Por isso,
+  # dentro da transação do exemplo, os outros índices que começam por automacao_id saem, e o plano tem de usar o da vez
+  # com o começo da marca na condição do índice.
+  it 'as execuções da vez saem do índice pelo começo da marca (text_pattern_ops)', :aggregate_failures do
     linha = varredura
-    execucoes
-    relacao = Autonomia::Automacao::EstadoDaVez.new(linha).send(:execucoes)
-    ActiveRecord::Base.connection.execute('SET LOCAL enable_seqscan = off')
-    plano = ActiveRecord::Base.connection.select_values("EXPLAIN #{relacao.to_sql}").join("\n")
+    conexao = ActiveRecord::Base.connection
+    definicao_do_indice = conexao.select_value("SELECT indexdef FROM pg_indexes WHERE indexname = 'idx_autonomia_automacao_execucoes_vez'")
+    expect(definicao_do_indice).to include('text_pattern_ops')
 
-    expect(plano).to include('idx_autonomia_automacao_execucoes_vez')
+    conexao.execute('DROP INDEX idx_autonomia_automacao_execucoes_evento, index_autonomia_automacao_execucoes_on_automacao_id')
+    conexao.execute('SET LOCAL enable_seqscan = off')
+    relacao = Autonomia::Automacao::EstadoDaVez.new(linha).send(:execucoes)
+    plano = conexao.select_values("EXPLAIN #{relacao.to_sql}").join("\n")
+
+    expect(plano).to include('idx_autonomia_automacao_execucoes_vez').and include('Index Cond').and include('~>=~')
   end
 
   it 'quem chega depois: "já saiu" só se a campanha saiu; senão, "fechou sem mandar"', :aggregate_failures do
@@ -315,5 +329,56 @@ RSpec.describe Autonomia::Automacao::CampanhaDaOcorrencia, :automacao_motor do
 
     linha.reload.update!(campanha_display_id: nil) # a vez que fechou sem mandar (desligada, motor desligado)
     expect(passo_em(execucoes.last)).to have_attributes(tipo: :pulado, motivo: 'campanha_da_vez_fechou_sem_enviar')
+  end
+
+  it 'a conferência que roda sem erro zera as tentativas: erros isolados não somam até desistir', :aggregate_failures do
+    linha = varredura
+    falhar_a_conferencia
+    described_class.conferir(linha.id)
+    expect(linha.reload.tentativas).to eq(1)
+
+    allow(Autonomia::Automacao::EstadoDaVez).to receive(:new).and_call_original
+    described_class.conferir(linha.id)
+
+    expect(linha.reload).to have_attributes(tentativas: 0, fechada_em: nil)
+  end
+
+  it 'o registro de erro da vez na primeira execução não a conta como chegada: a vez espera ela chegar', :aggregate_failures do
+    linha = varredura
+    falhar_a_conferencia
+    described_class.conferir(linha.id)
+    expect(registro_da_vez('campanha_da_vez_falhou')).to be_present
+
+    allow(Autonomia::Automacao::EstadoDaVez).to receive(:new).and_call_original
+    execucoes.last(2).each { |execucao| termina(execucao) }
+    expect(linha.reload.fechada_em).to be_nil
+
+    chega(execucoes[0])
+
+    expect(account.campaigns.count).to eq(1)
+    expect(registro_da_vez('campanha_da_vez_saiu').dados).to include('chegaram' => 1, 'sairam' => 2)
+  end
+
+  it 'o erro grava a marca da nova tentativa sob a mesma trava que conta a tentativa', :aggregate_failures do
+    linha = varredura
+    falhar_ao_montar
+    allow(described_class).to receive(:marcar).and_call_original
+
+    execucoes.each { |execucao| chega(execucao) }
+
+    expect(described_class).not_to have_received(:marcar)
+    expect(linha.reload.conferir_em).to be_within(1.second).of(Time.current + described_class::TENTAR_DE_NOVO)
+    expect(Autonomia::Automacao::FecharVezJob).to have_been_enqueued.with(linha.id).at_least(:once)
+  end
+
+  it 'a rede que não consegue marcar a próxima põe o job de novo na fila e levanta o erro', :aggregate_failures do
+    linha = varredura
+    allow(described_class).to receive(:marcar).and_raise(ActiveRecord::ConnectionTimeoutError, 'banco ocupado')
+    clear_enqueued_jobs
+    marca = linha.reload.conferir_em
+
+    expect { na_hora_marcada(linha) }.to raise_error(ActiveRecord::ConnectionTimeoutError)
+    expect(fecha_vez_na_fila).to eq(1)
+    expect(linha.reload.conferir_em).to eq(marca)
   end
 end
