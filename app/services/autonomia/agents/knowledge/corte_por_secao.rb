@@ -75,18 +75,18 @@ class Autonomia::Agents::Knowledge::CortePorSecao
       next secao unless secao.paragrafos.empty? && secao.caminho.any?
       next secao if seguinte && seguinte.caminho.size > secao.caminho.size
 
-      secao.class.new(**secao.to_h, paragrafos: [{ tipo: :paragrafo, texto: secao.caminho.last, pagina: secao.pagina }])
+      secao.class.new(**secao.to_h, paragrafos: [{ tipo: :paragrafo, texto: secao.caminho.last, pagina: secao.pagina, titulo_solto: true }])
     end
   end
 
   # Seção pequena entra no começo da irmã seguinte, com o próprio título como primeira linha. Uma vez só: a seção que
   # recebeu uma irmã não vai adiante, para o texto não acabar sob o caminho de uma seção duas casas à frente.
   # A que recebe também põe o próprio título antes do texto dela (#2786): no glossário, sem isso a definição dela ficava
-  # sem o termo, e a da irmã, sob o caminho dela.
+  # sem o termo, e a da irmã, sob o caminho dela. Nos itens dela, não: o trecho de item já começa pelo título da seção.
   def juntar_pequenas(lista)
     recebida = nil
     lista.each_with_index.filter_map do |secao, indice|
-      secao = secao.class.new(**secao.to_h, paragrafos: como_paragrafos_da_irma(recebida) + como_paragrafos_da_irma(secao)) if recebida
+      secao = secao.class.new(**secao.to_h, paragrafos: com_titulo(recebida) + com_titulo(secao, nos_itens: false)) if recebida
       juntar = recebida.nil? && pequena?(secao) && irmas?(secao, lista[indice + 1])
       recebida = juntar ? secao : nil
       secao unless juntar
@@ -102,13 +102,15 @@ class Autonomia::Agents::Knowledge::CortePorSecao
       secao.caminho[0...-1] == seguinte.caminho[0...-1]
   end
 
-  # O título da irmã entra no começo do texto dela e do primeiro item.
-  def como_paragrafos_da_irma(secao)
+  # O título da seção entra no começo do texto dela e, na irmã que se junta, do primeiro item (na que recebe, o trecho de
+  # item já começa pelo título, e a fileira da tabela fica como está). O título solto já é o próprio texto: não se repete.
+  def com_titulo(secao, nos_itens: true)
     primeiro, *resto = secao.paragrafos
-    titulo = secao.caminho.last
-    junto = primeiro.merge(texto: "#{titulo}\n#{primeiro[:texto]}")
-    junto = junto.merge(itens: ["#{titulo}\n#{primeiro[:itens].first}", *primeiro[:itens].drop(1)]) if primeiro[:itens].present?
-    [junto, *resto]
+    return secao.paragrafos if primeiro[:titulo_solto]
+
+    itens = primeiro[:itens] if nos_itens
+    junto = primeiro.merge(texto: "#{secao.caminho.last}\n#{primeiro[:texto]}")
+    [itens.present? ? junto.merge(itens: ["#{secao.caminho.last}\n#{itens.first}", *itens.drop(1)]) : junto, *resto]
   end
 
   def trechos_da(secao)

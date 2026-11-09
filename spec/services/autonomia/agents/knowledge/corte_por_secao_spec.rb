@@ -108,6 +108,14 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
                                        "\n\nSinistro\nO acontecimento que causa o prejuizo coberto.")
   end
 
+  it 'never repeats the text of a title read as content when it joins or receives a sibling' do
+    trechos = cortar([titulo('5. EXCLUSOES', 1), titulo('j) Perdas em competicoes', 2), titulo('k) Dirigir sem habilitacao', 2),
+                      titulo('6. ACEITACAO', 1), paragrafo(franquia)])
+
+    expect(trechos.first[:text]).to eq("Condicoes Gerais › 5. EXCLUSOES › k) Dirigir sem habilitacao\n\n" \
+                                       "j) Perdas em competicoes\n\nk) Dirigir sem habilitacao")
+  end
+
   it 'joins a small section only once, so its text never ends under a section two places ahead', :aggregate_failures do
     trechos = cortar([titulo('Definicoes', 1), titulo('Avaria', 2), paragrafo('Dano ao veiculo.'),
                       titulo('Bonus', 2), paragrafo('Desconto na renovacao.'), titulo('Franquia', 2), paragrafo(franquia)])
@@ -196,6 +204,15 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
       expect(corpos).to include('Nota')
     end
 
+    it 'writes the title of a long section that receives a sibling in its text, but not again in its item pieces', :aggregate_failures do
+      trechos = cortar([titulo('Definicoes', 1), titulo('Avaria', 2), paragrafo('Dano ao veiculo.'), titulo('Exclusoes', 2), exclusoes])
+      item = trechos.find { |trecho| trecho[:metadata][:material_type] == 'item' && trecho[:text].include?(itens[1]) }
+
+      expect(trechos.first[:text]).to include("Avaria\nDano ao veiculo.\n\nExclusoes\n#{abertura}")
+      expect(item[:text]).to eq("Exclusoes\n\n#{abertura}\n#{itens[1]}")
+      expect(item[:metadata][:trecho_da_secao]).to eq(0)
+    end
+
     it 'gives no item pieces to a short section' do
       curta = { tipo: :paragrafo, texto: itens.first(3).join("\n"), itens: itens.first(3), pagina: 7 }
 
@@ -221,6 +238,15 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
       de_item = cortar([titulo('5.1 Prazo curto', 1, 31), tabela]).select { |trecho| trecho[:metadata][:material_type] == 'item' }
 
       expect(de_item.map { |trecho| trecho[:text].split("\n\n", 2).last }).to eq(tabela[:itens])
+    end
+
+    it 'keeps the rows of a table that receives a sibling as they are, with the title only in the section text', :aggregate_failures do
+      curta = { tipo: :tabela, texto: fileiras.first(3).join("\n"), itens: fileiras.first(3), pagina: 31 }
+      trechos = cortar([titulo('Prazos', 1), titulo('Aviso', 2), paragrafo('Leia antes.'), titulo('Prazo curto', 2), curta])
+      de_item = trechos.select { |trecho| trecho[:metadata][:material_type] == 'item' }
+
+      expect(trechos.first[:text]).to include("Aviso\nLeia antes.\n\nPrazo curto\n#{fileiras.first}")
+      expect(de_item.map { |trecho| trecho[:text] }).to eq(fileiras.first(3).map { |fileira| "Prazo curto\n\n#{fileira}" })
     end
 
     it 'points every item to the piece of its section that holds it' do
