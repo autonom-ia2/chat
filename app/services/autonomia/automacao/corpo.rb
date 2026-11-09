@@ -109,7 +109,7 @@ class Autonomia::Automacao::Corpo
   end
 
   def lido(folha)
-    return @valores.ler(folha['$valor']) if folha.key?('$valor')
+    return @valores.ler_para_escrever(folha['$valor']) if folha.key?('$valor')
     return ::Autonomia::Automacao::Texto.new(folha['$texto'], @valores).montar if folha.key?('$texto')
 
     data(folha['$data'])
@@ -136,7 +136,7 @@ class Autonomia::Automacao::Corpo
   # O atributo de data guarda "AAAA-MM-DD" (a tela corta a hora, como aqui; o que vem depois de "T" ou de espaço). Fora
   # disso, não é data: pula com o motivo.
   def lida(caminho)
-    texto = @valores.ler(caminho).to_s
+    texto = @valores.ler_para_escrever(caminho).to_s
     raise Pula, 'faltou_valor' if texto.strip.empty?
 
     Date.iso8601(texto.split('T').first.split.first)

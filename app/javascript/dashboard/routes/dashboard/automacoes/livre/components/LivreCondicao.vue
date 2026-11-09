@@ -36,14 +36,15 @@ const composta = computed(() =>
 
 // O valor que só o Guia monta (`so_guia`) e o que a pessoa não pode ler
 // (`sem_permissao`, #2597) não entram na escolha; a condição que já usa um
-// deles continua mostrando o que olha.
+// deles continua mostrando o que olha. O que só decide (#2780) entra aqui.
 const opcoesDeCampo = computed(() => {
   const lista = opcoesDosValores(
     props.catalogo,
     props.atributosDo,
     t,
     props.gatilho,
-    props.naEspera
+    props.naEspera,
+    true
   );
   const campo = props.modelValue?.campo?.$valor;
   const foraDaEscolha = props.catalogo.valores?.find(

@@ -66,6 +66,43 @@ RSpec.describe 'IA lê o card e as notas', :automacao_motor do # rubocop:disable
     expect(entrada).not_to include('12345')
   end
 
+  # #2780 (Rodrigo, 09/11): na automação de conversa, o valor da venda só decide. O passo de IA que escreve não o leva à
+  # IA; o "decidir" leva; a automação de card segue como antes (o caso acima, com o resumir no gatilho de card).
+  describe 'o valor da venda na automação de conversa' do
+    let(:da_conversa) { { 'tipo' => 'conversa.resolvida' } }
+    let(:escrever) { { 'id' => 'e1', 'tipo' => 'escrever', 'le' => %w[card], 'instrucao' => 'Escreva ao cliente', 'destino' => 'guardar' } }
+    let(:decidir) do
+      { 'id' => 'd1', 'tipo' => 'decidir', 'le' => %w[card], 'pergunta' => 'É venda grande?', 'nenhum' => [],
+        'caminhos' => [{ 'nome' => 'Grande', 'chave' => 'grande', 'descricao' => 'valor alto', 'passos' => [] },
+                       { 'nome' => 'Pequena', 'chave' => 'pequena', 'descricao' => 'valor baixo', 'passos' => [] }] }
+    end
+
+    before { card.update!(value_cents: 1_234_500) }
+
+    it 'o escrever e o resumir não levam o valor ao texto da IA', :aggregate_failures do
+      rodar([escrever], conversa, gatilho: da_conversa)
+      expect(entrada).to include('Festa da Lara')
+      expect(entrada).not_to include('12345')
+
+      corpos.clear
+      rodar([resumir(%w[card])], conversa, gatilho: da_conversa)
+      expect(entrada).to include('Festa da Lara')
+      expect(entrada).not_to include('12345')
+    end
+
+    it 'o decidir leva o valor: só decide' do
+      rodar([decidir], conversa, gatilho: da_conversa)
+
+      expect(entrada).to include('12345')
+    end
+
+    it 'na automação de card, o escrever segue levando o valor' do
+      rodar([escrever], card)
+
+      expect(entrada).to include('12345')
+    end
+  end
+
   it 'quem ligou e não vê o card: a IA lê o resto, sem o card', :aggregate_failures do
     create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :incoming, content: 'Quero mudar o tema')
     allow(Autonomia::Automacao::ComIa).to receive(:ve_o_card?).and_return(false)

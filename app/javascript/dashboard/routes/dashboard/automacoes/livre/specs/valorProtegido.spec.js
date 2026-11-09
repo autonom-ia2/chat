@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { comPermissoes } from '../catalogo';
+import { comPermissoes, doAlvoDoGatilho } from '../catalogo';
 import { opcoesDosValores } from '../texto';
 import { podeLerComChave } from '../usePodeLerValor';
 import LivreTexto from '../components/LivreTexto.vue';
@@ -131,5 +131,70 @@ describe('valor que pede permissão', () => {
     });
 
     expect(wrapper.find('[data-opcoes]').text()).not.toContain('VALOR');
+  });
+
+  // #2780 (Rodrigo, 09/11): no gatilho de conversa, o valor da venda só decide.
+  describe('no gatilho de conversa, só para decidir', () => {
+    const comGatilhos = {
+      ...com,
+      gatilhos: [
+        { tipo: 'mensagem.criada', alvo: 'Conversation' },
+        { tipo: 'card.ganho', alvo: 'Crm::Card' },
+      ],
+      alvos: { Conversation: ['conversa', 'card'], 'Crm::Card': ['card'] },
+    };
+    const daConversa = doAlvoDoGatilho(
+      comGatilhos,
+      'mensagem.criada',
+      false,
+      true
+    );
+    const doCard = doAlvoDoGatilho(comGatilhos, 'card.ganho');
+
+    it('o texto e o corpo não oferecem o valor; a condição, sim', () => {
+      expect(rotulos(daConversa)).toEqual(['TITULO']);
+      expect(
+        opcoesDosValores(daConversa, () => [], t, null, false, true).map(
+          item => item.label
+        )
+      ).toEqual(['TITULO', 'VALOR']);
+    });
+
+    it('no gatilho de card, o texto segue oferecendo o valor', () => {
+      expect(rotulos(doCard)).toEqual(['TITULO', 'VALOR']);
+    });
+
+    it('a condição nova oferece o valor no gatilho de conversa', () => {
+      const wrapper = mount(LivreCondicao, {
+        props: {
+          modelValue: {
+            campo: { $valor: 'card.titulo' },
+            op: 'igual',
+            valor: '',
+          },
+          catalogo: daConversa,
+          atributosDo: () => [],
+        },
+        global: { mocks: { $t: chave => chave }, stubs: STUBS },
+      });
+
+      expect(wrapper.find('[data-opcoes]').text()).toContain('VALOR');
+    });
+
+    it('o texto que já usa o valor mostra o nome e não o oferece no "Pôr um dado"', () => {
+      const wrapper = mount(LivreTexto, {
+        props: {
+          rotulo: 'TEXTO',
+          modelValue: ['Valor: ', { $valor: 'card.valor' }],
+          catalogo: daConversa,
+          atributosDo: () => [],
+        },
+        global: { mocks: { $t: chave => chave }, stubs: STUBS },
+      });
+
+      expect(wrapper.find('textarea').element.value).toBe('Valor: [VALOR]');
+      expect(wrapper.find('[data-dado-apagado]').exists()).toBe(false);
+      expect(wrapper.find('[data-opcoes]').text()).not.toContain('VALOR');
+    });
   });
 });

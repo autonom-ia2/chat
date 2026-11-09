@@ -262,7 +262,8 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
     def card_lido_no_teste(quem)
       card
       passo = { 'id' => 'r1', 'tipo' => 'resumir', 'le' => %w[card], 'linhas' => 2, 'destino' => 'nota' }
-      teste = Autonomia::Automacao::TestarPasso.new(receita: receita([passo]), passo_id: 'r1', conta: account, account_user: na_conta(quem))
+      pedido = Autonomia::Automacao::TestarPasso::Pedido.new(receita: receita([passo]), passo_id: 'r1')
+      teste = Autonomia::Automacao::TestarPasso.new(pedido: pedido, conta: account, account_user: na_conta(quem))
       teste.send(:leitura, conversa).conversa[:card]
     end
 

@@ -65,7 +65,7 @@
         "filtros": {
           "type": "array",
           "items": { "$ref": "#/definitions/condicao" },
-          "description": "Só aqui a receita lê mensagem.tipo, mensagem.privada e mensagem.primeira (a primeira mensagem de verdade da conversa, sem nota nem atividade), e só no gatilho mensagem.criada."
+          "description": "Só aqui a receita lê mensagem.tipo, mensagem.privada, mensagem.primeira (a primeira mensagem de verdade da conversa, sem nota nem atividade) e mensagem.tem_anexo (a mensagem traz foto ou PDF; áudio e outro arquivo não contam), e só no gatilho mensagem.criada. No gatilho de conversa, card.* lê o card da conversa (o assunto atual dela), só para ler: no filtro, nas condições, nos textos e copiando um campo dele; nunca no caminho de uma ação, nem card.id no corpo; pede a chave de funis."
         }
       },
       "allOf": [

@@ -3,12 +3,12 @@
 # A lista de caminhos é fechada: a receita só lê o que está aqui, e o salvar recusa caminho desconhecido. Não é Liquid
 # nem texto livre; cada caminho é um campo do modelo. Os atributos personalizados entram pela chave
 # (`contato.atributos.placa`). A mensagem do gatilho `mensagem.criada` só existe no filtro do gatilho
-# (`mensagem.tipo`: recebida, enviada ou nota; `mensagem.privada`; `mensagem.primeira`); nos passos ela já passou, e o
-# salvar recusa ler a mensagem fora dali.
+# (`mensagem.tipo`: recebida, enviada ou nota; `mensagem.privada`; `mensagem.primeira`; `mensagem.tem_anexo`); nos
+# passos ela já passou, e o salvar recusa ler a mensagem fora dali.
 #
 # #2499 (F6): cada caminho começa pela base (`conversa`, `contato` ou `card`), lida do alvo pelas pontes do Contexto.
-# A base que o alvo não alcança (card num gatilho de conversa) o salvar recusa; a ponte vazia ao rodar (card sem
-# conversa) chega como valor vazio.
+# A base que o alvo não alcança (card num gatilho de contato) o salvar recusa; a ponte vazia ao rodar (card sem
+# conversa) chega como valor vazio. O card da conversa (#2716) é só para ler: CardDaConversa.
 class Autonomia::Automacao::Valores
   # `conversa.id` é o número que a pessoa vê (#123) e o que as rotas da conversa recebem, não o id do banco.
   CAMPOS = {
@@ -83,9 +83,9 @@ class Autonomia::Automacao::Valores
   IA = 'ia.'.freeze
   PASSOS_QUE_ESCREVEM = %w[escrever resumir].freeze
 
-  # O que cada alvo alcança, pelas pontes do Contexto.
+  # O que cada alvo alcança, pelas pontes do Contexto. O card da conversa (#2716) só para ler: CardDaConversa.
   BASES_DO_ALVO = {
-    'Conversation' => %w[conversa contato envio gatilho],
+    'Conversation' => %w[conversa contato card envio gatilho],
     'Crm::Card' => %w[card conversa contato reuniao envio gatilho],
     'Contact' => %w[contato envio gatilho]
   }.freeze
@@ -99,7 +99,9 @@ class Autonomia::Automacao::Valores
     end,
     'mensagem.privada' => ->(mensagem) { mensagem.private? },
     # A mensagem é a primeira de verdade da conversa (#2527)? A nota e a atividade nunca são.
-    'mensagem.primeira' => ->(mensagem) { ::Autonomia::Automacao::PrimeiraMensagem.primeira?(mensagem) }
+    'mensagem.primeira' => ->(mensagem) { ::Autonomia::Automacao::PrimeiraMensagem.primeira?(mensagem) },
+    # A mensagem traz foto ou PDF (#2716, a régua do ex.14): FotoOuPdf. Áudio, figurinha e outro arquivo não contam.
+    'mensagem.tem_anexo' => ->(mensagem) { ::Autonomia::Automacao::FotoOuPdf.mensagem?(mensagem) }
   }.freeze
 
   # O gatilho cuja mensagem o filtro lê.
@@ -111,6 +113,7 @@ class Autonomia::Automacao::Valores
     'mensagem.tipo' => { 'opcoes' => %w[recebida enviada nota], 'operadores' => %w[igual diferente] },
     'mensagem.privada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'mensagem.primeira' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'mensagem.tem_anexo' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'conversa.iniciada_por' => { 'opcoes' => %w[cliente equipe], 'operadores' => %w[igual diferente] },
     'conversa.cliente_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
@@ -128,6 +131,11 @@ class Autonomia::Automacao::Valores
   PROTEGIDOS = {
     'card.valor' => ::Crm::ValorDeVenda
   }.freeze
+
+  # Decisão do Rodrigo (#2780, 09/11): na automação de conversa, o valor protegido só decide (filtro, condição, "Só se").
+  # Ele não vai para mensagem, texto, nota nem campo: o salvar recusa (`valor_protegido_so_decide`) e, na versão antiga
+  # que o tenha, a execução não o escreve (`ler_para_escrever`). A automação de card segue só com a permissão.
+  SO_DECIDE_NO_ALVO = 'Conversation'.freeze
 
   # Os atributos personalizados (`contato.atributos.placa`) ficam em Valores::Atributos.
   MODELOS = ::Autonomia::Automacao::Valores::Atributos::MODELOS
@@ -178,6 +186,13 @@ class Autonomia::Automacao::Valores
       :valor_de_venda if account_user && !pode_ler?(caminho, account_user)
     end
 
+    # O caminho só pode decidir, nunca ir para um texto ou campo? Pelo tipo do gatilho da receita (`mensagem.criada`),
+    # o mesmo que o salvar olha: o ponto único do salvar (CardDaConversa.problema), da execução (`ler_para_escrever`) e
+    # dos passos de IA (ComIa.leva_o_valor?).
+    def so_decide?(caminho, gatilho)
+      ::Autonomia::Automacao::Gatilhos.alvo(gatilho) == SO_DECIDE_NO_ALVO && PROTEGIDOS.key?(caminho.to_s)
+    end
+
     # `account_user` pode ler o caminho? Sem pessoa (nil), o valor protegido fica fechado.
     def pode_ler?(caminho, account_user)
       regra = PROTEGIDOS[caminho.to_s]
@@ -212,6 +227,15 @@ class Autonomia::Automacao::Valores
     valor = self.class.da_ia?(caminho) ? @contexto.texto_da_ia(self.class.passo_da_ia(caminho)) : lido(caminho)
     @vazios << caminho.to_s if valor.blank?
     valor
+  end
+
+  # O valor que vai para um texto ou um campo (Texto, Corpo). O que só decide (`so_decide?`) lê vazio: o passo pula com
+  # `faltou_valor` em vez de escrever o valor. A condição continua com `ler`.
+  def ler_para_escrever(caminho)
+    return ler(caminho) unless self.class.so_decide?(caminho, @contexto.gatilho)
+
+    @vazios << caminho.to_s
+    nil
   end
 
   private
@@ -262,12 +286,15 @@ class Autonomia::Automacao::Valores
     objeto && yield(objeto)
   end
 
+  # O card da conversa (#2716), quando o alvo é uma conversa. Buscado uma vez: a lista guarda também a resposta vazia.
+  def card_da_conversa = (@card_da_conversa ||= [::Autonomia::Automacao::CardDaConversa.ler(@contexto.alvo, account_user)]).first
+
   # A ponte vazia (card sem conversa, conversa sem contato) lê vazio.
   def da_base(caminho)
     case caminho.to_s.split('.', 2).first
     when 'conversa' then @contexto.conversa
     when 'contato' then @contexto.contato
-    when 'card' then @contexto.card
+    when 'card' then @contexto.card || card_da_conversa
     when 'reuniao' then @contexto.reuniao
     when 'envio' then @contexto.ultimo_envio
     end
