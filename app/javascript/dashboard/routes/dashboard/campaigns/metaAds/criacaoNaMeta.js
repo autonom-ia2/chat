@@ -212,10 +212,20 @@ const comChave = async (signature, call) => {
 };
 
 // Cópia pausada da campanha inteira, com orçamento próprio; com `creative`, já nasce com a foto e o texto novos.
-export const duplicarAnuncio = async (adId, creative = null) => {
+// `recriar` (#2804): a cópia ficou não confirmada, a pessoa conferiu no Gerenciador de Anúncios que ela não está lá e
+// pediu para criar de novo (mesma chave; o servidor grava na Auditoria).
+export const duplicarAnuncio = async (
+  adId,
+  creative = null,
+  { recriar = false } = {}
+) => {
   const body = creative ? { creative: criativoNoPedido(creative) } : {};
   const data = await comChave(JSON.stringify(['copy', adId, body]), key =>
-    CrmMetaAdsConnectionAPI.copyAd(adId, { ...body, idempotency_key: key })
+    CrmMetaAdsConnectionAPI.copyAd(adId, {
+      ...body,
+      idempotency_key: key,
+      ...(recriar ? { recreate_unconfirmed: true } : {}),
+    })
   );
   return { ...data, budget: orcamentoNaTela(data.budget) };
 };

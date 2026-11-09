@@ -2,20 +2,16 @@
 # (Crm::MetaAds::Creation::CreativeChange) e põe no anúncio (`POST /{ad_id}` com `creative`). A Meta analisa de novo, e
 # a resposta traz a situação relida (`effective_status`, em geral PENDING_REVIEW).
 #
-# `CONFIRMED` fica false até a chamada real confirmar o `POST /{ad_id}` com `creative` (item 3 de "Confirmar na chamada
-# real", docs/crm/anuncios-meta-criar-2198.md). Enquanto isso a gestão diz `can_swap_creative: false`, a tela oferece
-# "Trocar a foto (cria uma cópia)" (Crm::MetaAds::Creation::Copy) e esta troca recusa (`cannot_swap`).
+# Ligado para todos (#2804, decisão do Rodrigo de 09/11). O `creative` ({ creative_id }) está entre os campos que o SDK
+# oficial da Meta manda ao atualizar um anúncio (facebook-python-business-sdk, Ad#api_update). Quando a Meta recusa pôr o
+# criativo novo neste anúncio, a resposta é `swap_refused` (nada mudou), e a tela oferece a cópia pausada com a foto e o
+# texto novos (Crm::MetaAds::Creation::Copy).
 #
 # A mesma chave troca uma vez só: a resposta fica guardada por um dia, e um segundo toque durante a troca recebe
 # `in_progress`. Se a Meta recusar pôr o criativo novo no anúncio, ele é apagado e o anúncio fica como estava.
 class Crm::MetaAds::Creation::CreativeSwap
-  CONFIRMED = false
   KEEP = 1.day
   LOCK_FOR = 2.minutes
-
-  def self.confirmed?
-    CONFIRMED
-  end
 
   def initialize(connection)
     @connection = connection
@@ -26,8 +22,6 @@ class Crm::MetaAds::Creation::CreativeSwap
   attr_reader :swapped_now
 
   def swap!(ad_id, params)
-    raise Crm::MetaAds::Creation::Error, 'cannot_swap' unless self.class.confirmed?
-
     params = params.to_h.with_indifferent_access
     record = Crm::MetaAds::Creation::Activation.new(@connection).created_here(ad_id) || raise(Crm::MetaAds::Creation::Error, 'ad_not_found')
     key = Crm::MetaAds::Creation::Draft.key!(params[:idempotency_key])
@@ -73,6 +67,8 @@ class Crm::MetaAds::Creation::CreativeSwap
 
   def swap_creative!(record, change, stored_key)
     raise Crm::MetaAds::Creation::Error, 'cannot_change' unless @access.can_change_ads?
+    # Post impulsionado não tem criativo próprio para trocar (a tela nem oferece; Crm::MetaAds::Creation::CareState).
+    raise Crm::MetaAds::Creation::Error, 'invalid_creative' if record.creative_id.blank? || record.source_post_id.present?
 
     read = client.creative_spec(record.creative_id)
     raise Crm::MetaAds::Creation::Error.from_result(read) unless read.ok
@@ -85,15 +81,18 @@ class Crm::MetaAds::Creation::CreativeSwap
     swapped
   end
 
+  # Sem resposta ao criar, o criativo pode ter ficado na conta (solto, sem gastar): a tela não diz "segue como estava".
   def create_creative!(params)
     result = client.create_creative(@connection.ad_account_id, params)
     id = result.data['id'].presence if result.ok
-    raise Crm::MetaAds::Creation::Error.from_result(result) if id.nil?
+    raise Crm::MetaAds::Creation::Error.from_result(result, nothing_created: !result.transient?) if id.nil?
 
     id.to_s
   end
 
-  # Recusa clara: o criativo novo, que ninguém usa, é apagado (sem conseguir, fica solto na conta, sem gastar nada).
+  # Recusa clara: o criativo novo, que ninguém usa, é apagado (sem conseguir, fica solto na conta, sem gastar nada), e a
+  # tela oferece a cópia (`swap_refused`). Token recusado ou sem permissão não é recusa deste anúncio: a cópia falharia
+  # igual, então a resposta é a recusa de sempre (`meta_refused`); anúncio apagado na Meta, `ad_not_found`.
   # Sem resposta (tempo esgotado, 5xx): a Meta pode ter trocado, então o criativo fica e a tela não diz "segue como
   # estava" (`nothing_created: false`).
   def put_on_ad!(record, creative_id, stored_key)
@@ -105,7 +104,11 @@ class Crm::MetaAds::Creation::CreativeSwap
 
     unless result.ok
       client.delete_object(creative_id)
-      raise Crm::MetaAds::Creation::Error.from_result(result)
+      raise Crm::MetaAds::Creation::Error.from_result(result) if result.token_invalid? || result.scope_error?
+      # O anúncio sumiu na Meta (apagado): a cópia falharia igual.
+      raise Crm::MetaAds::Creation::Error, 'ad_not_found' if result.missing_object?
+
+      raise Crm::MetaAds::Creation::Error, 'swap_refused'
     end
 
     record.update!(creative_id: creative_id)
