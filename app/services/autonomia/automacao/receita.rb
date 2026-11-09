@@ -161,11 +161,7 @@ class Autonomia::Automacao::Receita
   end
 
   def destinatarios_de_fora(passo)
-    para = passo['para'].to_h
-    times = Array(para['times']) - @conta.teams.where(id: para['times']).pluck(:id)
-    pessoas = Array(para['pessoas']) - @conta.users.where(id: para['pessoas']).pluck(:id)
-    times.map { |time| texto(:time_de_fora, passo: passo['id'], id: time) } +
-      pessoas.map { |pessoa| texto(:pessoa_de_fora, passo: passo['id'], id: pessoa) }
+    ::Autonomia::Automacao::DestinatariosDoAviso.new(@conta, @receita.dig('gatilho', 'tipo')).problemas(passo['id'], passo['para'])
   end
 
   # O caminho que não vale ali já diz o que corrigir; o valor fora só aparece depois.

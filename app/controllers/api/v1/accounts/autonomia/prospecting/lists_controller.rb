@@ -1,7 +1,6 @@
 class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Accounts::Autonomia::Prospecting::BaseController
   include ::Autonomia::Prospecting::LeadExport
 
-  before_action -> { authorize_campaign_update!(campaign_segment_params[:campaign_id]) }, only: [:campaign_segment]
   # Baixar a planilha de leads é exportar: pede prospecting_manage, não só ver (#2147).
   before_action -> { check_permission_granted!('prospecting_manage') }, only: [:export]
 
@@ -51,43 +50,10 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
     render json: { payload: list_payload(list.reload, include_leads: true) }
   end
 
-  def campaign_segment
-    builder = ::Autonomia::Prospecting::CampaignSegmentBuilder.new(
-      list: lists_scope.find(params[:id]),
-      user: Current.user,
-      campaign_id: campaign_segment_params[:campaign_id],
-      campaign_type: campaign_segment_params[:campaign_type],
-      segment_name: campaign_segment_params[:segment_name]
-    )
-    # Lista já na audiência de uma campanha: reaplicar a etiqueta aumenta quem recebe, mesmo sem campaign_id (#680).
-    return render_campaign_forbidden if builder.feeds_existing_campaign? && !campaign_manage?
-
-    result = builder.perform
-
-    render json: {
-      payload: {
-        list: list_payload(result.list, include_leads: true),
-        segment: campaign_segment_payload(result)
-      }
-    }, status: :created
-  rescue ActiveRecord::RecordNotFound
-    render_campaign_error('prospecting.campaign.not_found', status: :not_found)
-  rescue ActiveRecord::RecordInvalid => e
-    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
-  rescue ::Autonomia::Prospecting::CampaignSegmentBuilder::Error => e
-    render_campaign_error(e.message)
-  end
-
   private
 
   def list_params
     params.require(:list).permit(:name, :description, metadata: {})
-  end
-
-  def campaign_segment_params
-    return {} if params[:campaign_segment].blank?
-
-    params.require(:campaign_segment).permit(:campaign_id, :campaign_type, :segment_name)
   end
 
   def list_payload(list, include_leads: false)
@@ -116,9 +82,5 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
     ).merge(
       lead_payload_builder.crm_presence(lead)
     )
-  end
-
-  def campaign_segment_payload(result)
-    ::Autonomia::Prospecting::CampaignSegmentPayload.build(result)
   end
 end

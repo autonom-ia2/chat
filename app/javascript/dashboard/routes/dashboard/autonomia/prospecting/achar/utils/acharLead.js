@@ -137,6 +137,13 @@ export const empresaDoLead = lead => {
   };
 };
 
+// O cartão da fila "Para chamar" (#2697): a empresa de sempre e quem fez a
+// busca de onde ela veio ("Achada por", found_by_name do servidor).
+export const cartaoDaFila = lead => ({
+  ...empresaDoLead(lead),
+  achadoPor: lead.found_by_name || '',
+});
+
 export const buscaDoPayload = search => ({
   id: search.id,
   oQue: search.query || '',

@@ -118,6 +118,9 @@
       "file": "automacaoLivreProspeccao.json"
     },
     {
+      "file": "ausencia.json"
+    },
+    {
       "file": "prospectingAchar.json"
     }
   ],

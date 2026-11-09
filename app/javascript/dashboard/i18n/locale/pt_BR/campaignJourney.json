@@ -419,6 +419,7 @@
         "LOAD_ERROR": "Não deu para carregar agora. Tente de novo daqui a pouco.",
         "ACTION_ERROR": "Não deu para fazer isso agora. Tente de novo.",
         "SAVE_ERROR": "Não deu para salvar o público agora. Tente de novo.",
+        "SAVE_ERROR_FOREIGN_CONTACT": "Um dos contatos foi apagado enquanto o público era salvo. Tente de novo.",
         "SEARCH_IN_PROGRESS": "Você já tem uma procura em andamento. Espere terminar ou pare a procura antes."
       },
       "SOURCE": {

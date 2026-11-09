@@ -85,6 +85,12 @@ class Rack::Attack
     req.ip if req.post? && req.path.include?('/messages/') && req.path.end_with?('/translate')
   end
 
+  # Pedido em uma frase da Prospecção (#2696): cada um é uma chamada paga na IA da conta. Contra defeito ou script, não
+  # contra uso: uma pessoa escrevendo e conferindo não chega a isso.
+  throttle('prospeccao_frase/ip', limit: 30, period: 1.minute) do |req|
+    req.ip if req.post? && req.path.include?('/autonomia/prospecting/searches/interpret')
+  end
+
   # Abrir um modelo de e-mail (#1786) pode chamar a IA da conta para sugerir os campos. A prévia (miniatura) não chama.
   throttle('conversa_canal_modelos_de_email/ip', limit: 30, period: 1.minute) do |req|
     req.ip if req.get? && req.path.include?('/conversa_canal/modelos_de_email/') && !req.path.end_with?('/previa')

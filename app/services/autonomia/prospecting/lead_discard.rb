@@ -1,6 +1,6 @@
 # Descartar leads (#732, item 10), no painel do lead e em lote, sempre com motivo. Descartado continua visível na busca,
-# marcado, e sai das ações de envio: o CRM (CrmCardBatch), os contatos em lote (ContactBatch) e a campanha
-# (CampaignSegmentBuilder) recusam lead descartado. Na campanha já montada, o contato perde a etiqueta do segmento e
+# marcado, e sai das ações de envio: o CRM (CrmCardBatch), os contatos em lote (ContactBatch) e o Público de Campanhas
+# (AudienceFromLeads) recusam lead descartado. Na campanha já montada por etiqueta, o contato perde a etiqueta e
 # sai dos pendentes da campanha da API do WhatsApp em andamento (SegmentRefusalSync, fora da requisição). Lead fora da
 # conta, ou que a pessoa não vê, volta como não encontrado, sem ser tocado.
 class Autonomia::Prospecting::LeadDiscard

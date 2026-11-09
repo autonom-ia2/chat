@@ -70,10 +70,12 @@ class Autonomia::Prospecting::CompanyUpserter
     companies.find_by(id: company_id) if company_id.present?
   end
 
+  # Grava só a chave da empresa no jsonb, sem reescrever o metadata lido antes (o padrão do WhatsappVerifier#persist!):
+  # outra escrita no mesmo lead, como o "Depois" da fila Para chamar (#2697), não se perde.
   def remember!(company)
     return if @lead.metadata.to_h[COMPANY_KEY] == company.id
 
-    @lead.update!(metadata: @lead.metadata.to_h.merge(COMPANY_KEY => company.id))
+    Autonomia::Prospecting::Lead.write_metadata_key!(@lead, COMPANY_KEY, company.id)
   end
 
   def linked_company

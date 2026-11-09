@@ -178,6 +178,12 @@ const ACTIVITY_META = {
     icon: 'i-lucide-user-check',
     tone: 'info',
   },
+  // #2694: a automação ia trocar o dono, mas quem a pessoa escolheu fica.
+  automation_owner_kept: {
+    key: 'ACTIVITY_AUTOMATION_OWNER_KEPT',
+    icon: 'i-lucide-user-check',
+    tone: 'info',
+  },
   automation_stage_moved: {
     key: 'ACTIVITY_AUTOMATION_STAGE_MOVED',
     icon: 'i-lucide-arrow-right',
@@ -403,7 +409,8 @@ export const useCardHistorico = ({
         const to = activityLabelValue(activity, 'target_stage_id');
         return to ? detalhe('ACTIVITY_DETAIL_STAGE_TO', { to }) : '';
       }
-      case 'automation_owner_assigned': {
+      case 'automation_owner_assigned':
+      case 'automation_owner_kept': {
         const owner = activityLabelValue(activity, 'owner_id');
         return owner ? detalhe('ACTIVITY_DETAIL_OWNER', { owner }) : '';
       }

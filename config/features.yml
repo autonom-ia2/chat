@@ -1200,3 +1200,33 @@
   display_name: Prospecção › achar empresas (nova)
   enabled: true
   column: feature_flags_ext_2
+
+# RAG v2, F1 (#1431): o material da base é lido pela estrutura que o próprio formato tem (título, lista e tabela) e
+# cortado por seção, com o caminho e a página em cada trecho. Ligada: o material novo, ou lido de novo, entra pelo
+# corte novo. Desligada: o corte de hoje. O que já foi lido fica como está até ser lido de novo. Rollback: desligar a
+# flag na conta. Bit: posição 30 (536870912), dada pela Orquestração. Liga em todas as contas das 2 stacks.
+- name: rag_corte_por_estrutura
+  display_name: Agentes › base lida pela estrutura
+  enabled: true
+  column: feature_flags_ext_2
+
+# Agentes: ferramentas geridas pela conta (#1430, tema 9 do épico #1424). Ligada: o administrador da conta e quem tem a
+# chave `autonomia_tools_manage` (protegida, só o administrador entrega) criam, editam, testam, ligam e apagam as
+# ferramentas HTTP dos agentes. Desligada: como antes, só a equipe da plataforma. Sem migration. Rollback: desligar a
+# flag na conta. Posição 31 (1073741824, 1 << 30), dada pela Orquestração em 08/11. Depois do deploy liga em todas as
+# contas ativas das 2 stacks (regra de 07/11).
+- name: agente_ferramentas_delegadas
+  display_name: Agentes › ferramentas geridas pela conta
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: a ferramenta HTTP consulta em segundo plano (#1430, tema 9 do épico #1424). Ligada: numa conversa, toda
+# chamada de ferramenta HTTP vira uma execução na fila própria `agent_tools`; o turno espera até 8 s por rodada e, se a
+# resposta não chegar, avisa que está consultando e fala o resultado depois, num evento. Desligada: a chamada roda
+# dentro do turno, como antes. A Lia fica fora. Rollback: desligar a flag na conta. Com migration 20261108830000
+# (coluna `autonomia_agent_tool_id` em `autonomia_tool_runs`). Posição 32 (2147483648, 1 << 31), dada pela Orquestração
+# em 08/11. Depois do deploy liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: agente_ferramenta_em_segundo_plano
+  display_name: Agentes › ferramenta consulta em segundo plano
+  enabled: false
+  column: feature_flags_ext_2

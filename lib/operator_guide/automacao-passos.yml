@@ -36,7 +36,8 @@ nativos:
   decidir: { grupo: IA, requer: automacao_ia }
   extrair: { grupo: IA, requer: automacao_ia }
   escrever: { grupo: IA, requer: automacao_ia }
-  resumir: { grupo: IA, requer: automacao_ia }
+  # G41: `rotulos` troca o rótulo de um campo só neste passo (a instrução do resumo é opcional e diz o que mais trazer).
+  resumir: { grupo: IA, requer: automacao_ia, rotulos: { instrucao: instrucao_do_resumo } }
   # G15: passar a conversa à agente de IA, pela Atribuição. Sem flag própria: o painel diz quando a conta não tem agente
   # que receba conversa, e o motor pula com o motivo.
   ia_assumir: { grupo: EQUIPE }
