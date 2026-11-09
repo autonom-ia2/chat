@@ -78,7 +78,8 @@ class CampaignImportPolicy < ApplicationPolicy
     permission_granted?('campaign_view')
   end
 
-  # #993 side panel: who is in the audience, for whoever can see the audience.
+  # #993 side panel: who is in the audience, for whoever can see the audience; without contact reading the controller
+  # masks phone and e-mail and hides the company (ConversationAudience::Access.hides_contact_data?, #2414 review).
   def contacts?
     permission_granted?('campaign_view')
   end
