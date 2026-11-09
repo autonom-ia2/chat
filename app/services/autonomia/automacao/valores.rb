@@ -70,7 +70,8 @@ class Autonomia::Automacao::Valores
   # false: nunca "respondeu", e "diferente de true" não vira resposta. O cliente responde de qualquer conversa dele
   # (#2680: o e-mail abre outra), então a resposta dele sai do contato, nas conversas que `quem` vê, e vale também no
   # alvo contato. Lote 4 (#2682): a resposta da pessoa atribuída e o gatilho que aconteceu de novo durante a espera
-  # (`gatilho.repetiu`, da execução; no ensaio, sem execução, false).
+  # (`gatilho.repetiu`, da execução; no ensaio, sem execução, false). G59: a reunião do contato que aconteceu durante a
+  # espera (`contato.reuniao_atendida`), só nos cards que quem ligou vê.
   RESPOSTA = ::Autonomia::Automacao::Resposta::VALORES
   RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu'.freeze
 
@@ -116,6 +117,7 @@ class Autonomia::Automacao::Valores
     'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'conversa.responsavel_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'gatilho.repetiu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'contato.reuniao_atendida' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'card.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'contato.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'envio.situacao' => { 'opcoes' => ::Autonomia::Automacao::Envio::SITUACOES.values, 'operadores' => %w[igual diferente] }

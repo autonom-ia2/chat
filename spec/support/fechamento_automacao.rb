@@ -236,7 +236,12 @@ module FechamentoAutomacao::Lacunas
     'G47' => nil,
     # Do exemplo 6, passo 8 (G56): o gatilho "reunião atendida", o primeiro "Aconteceu" da reunião na Agenda; prova ponta
     # a ponta em spec/fechamento/automacao/g56_reuniao_atendida_spec.rb.
-    'G56' => -> { gatilho?('card.reuniao_atendida') }
+    'G56' => -> { gatilho?('card.reuniao_atendida') },
+    # Do exemplo 6, passo 8, numa automação só (G59): esperar a reunião do contato acontecer, no meio da execução, e o
+    # resultado da reunião acordar essa espera; prova em spec/fechamento/automacao/g59_reuniao_atendida_na_espera_spec.rb.
+    'G59' => lambda {
+      valor?('contato.reuniao_atendida') && Autonomia::Automacao::EsperaDaReuniao::VALORES.include?('contato.reuniao_atendida')
+    }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".
