@@ -113,7 +113,7 @@ conversa e do contato), os passos esperar, esperar até, se e parar, a ação da
 (etiquetas, atributos, contato, empresa, conversa, atribuição, card alterar e mover, etapa, agente na caixa), mensagem
 ao cliente dentro da janela, aviso à equipe pelo sino e os quatro passos de IA.
 
-**Placar em 09/11: 2 de 20 inteiros (3 e 13).** O 9 tem spec próprio com a G21 (#2706), mas o passo 4 manda a campanha a todo contato com a etiqueta, não só às empresas da execução: segue pendente pela G58. **Placar em 07/11, depois da auditoria dos termos (#2678): 0 de 20 inteiros.** O ex. 10 e o ex. 13 voltaram a pendente pela G28 (lote 2, #2679): no 10, os passos 4, 6 e 7 montam só aproximados; no 13, o resumo da festa (a IA não lê o card) e o extrair que grava no card em 2 passos. Os specs próprios deles seguem rodando os passos que montam, e o 13 agora fecha a festa (card ganho) antes dos passos de data. Base: a auditoria dos termos de 07/11 (Issue #2678). Lacunas fechadas: G1, G2, G3, G4, G5, G6, G11, G14, G16. Exemplo só conta inteiro e com spec verde; parcial não conta.
+**Placar em 09/11: 2 de 20 inteiros (3 e 13).** O 9 tem spec próprio com a G21 (#2706), mas o passo 4 manda a campanha a todo contato com a etiqueta, não só às empresas da execução: **o exemplo 9 só fecha junto com a G58 (#2784)**, o público da execução (a campanha de cada segunda vai só às empresas criadas nesta execução). A G21 sozinha não o fecha. **Placar em 07/11, depois da auditoria dos termos (#2678): 0 de 20 inteiros.** O ex. 10 e o ex. 13 voltaram a pendente pela G28 (lote 2, #2679): no 10, os passos 4, 6 e 7 montam só aproximados; no 13, o resumo da festa (a IA não lê o card) e o extrair que grava no card em 2 passos. Os specs próprios deles seguem rodando os passos que montam, e o 13 agora fecha a festa (card ganho) antes dos passos de data. Base: a auditoria dos termos de 07/11 (Issue #2678). Lacunas fechadas: G1, G2, G3, G4, G5, G6, G11, G14, G16. Exemplo só conta inteiro e com spec verde; parcial não conta.
 
 Com a G4 (#2628), **o exemplo 10 (cliente bravo) roda inteiro**: o passo 8 (card no quadro "Melhorias") roda desde a
 G4; o 2 (tirar da agente de IA), desde a G15. Os outros 19 começam por um gatilho
@@ -171,7 +171,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G53 | **O conteúdo da mensagem que falhou** como valor da receita (ex. 19, passo 2: "manda por e-mail o mesmo conteúdo") | F8 | A fazer: a mensagem do gatilho só tem tipo, privada e primeira (`valores.rb`); o `envio.texto` (G34) é o da própria execução, e a mensagem que falhou foi de outra | Gatilhos | 19 |
 | G54 | **Esperar a entrega** da mensagem (ex. 19, passo 5: "Chegou: tira a etiqueta") | F8 | **Fechada** pela G34 (#2680): "esperar até `envio.situacao` igual a entregue"; a mudança de situação acorda a espera | Gatilhos | 19 |
 | G47 | **Card criado pela página de agendamento ganha a conversa do contato** ("revisão cancelada: manda o link da agenda de novo") | novo | A fazer, PR próprio depois da G32: com o card do serviço já ganho, a página cria um card novo para a reunião, sem conversa, e a mensagem do gatilho de reunião pula com `sem_conversa` (achado no exemplo 5, passo 8). Caminho: o Booker liga ao card novo a conversa do contato na caixa da página | Agendamento | 5 |
-| G58 | **Campanha só aos contatos que a execução criou** (ex. 9, passo 4: a apresentação vai às empresas novas da semana, não a todas com a etiqueta) | F5 | A fazer: o público do `campanha` faz `disparar` é só etiqueta (`passo_de_campanha.rb`); falta o público "contatos desta execução" (os cards que o `buscar` criou). Decisão da Automação, 09/11 | Campanhas | 9 |
+| G58 | **Campanha só aos contatos que a execução criou** (ex. 9, passo 4: a apresentação vai às empresas novas da semana, não a todas com a etiqueta) | F5 | A fazer (#2784): o público do `campanha` faz `disparar` é só etiqueta (`passo_de_campanha.rb`); falta o público "contatos desta execução" (os cards que o `buscar` criou). Decisão da Automação, 09/11. O exemplo 9 só fecha com ela | Campanhas | 9 |
 
 ### 5.1 A sonda de cada lacuna
 
@@ -199,7 +199,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 6 | Aniversário | ⛔ G6 (data de nascimento do contato) | escrever ✅, etiqueta ✅, decidir ✅, extrair ✅, avisar ✅ | G1, G4, G6, G12, G14, G16, G25, G33 | Não |
 | 7 | Black Friday | 🟡 G7 (toda quinta 9h, #2635); ⛔ G39 (só a quinta antes da Black) | decidir ✅, extrair ✅ (card), etiqueta ✅, mensagem ✅ (na janela), disparar campanha ✅ (G14) | G5, G7, G14, G15, G37, G38, G39 | Não |
 | 8 | Funcionário novo no plano | ✅ mensagem do RH (1ª); ⛔ G24 (2ª) | decidir ✅, mensagem ao RH ✅ | G1, G4, G5, G7, G13, G17, G20, G22, G24, G27 | Não |
-| 9 | Prospecção semanal | ✅ G7 (`conta.recorrente`, segunda 8h) | buscar e conferir WhatsApp ✅ (G21), card com etiqueta no contato ✅ (G21), campanha pelo modelo ✅ (G14), mas para toda a etiqueta, decidir ✅, link da agenda ✅ (G12), etiqueta ✅, retorno ✅ (G3), recusa na Prospecção ✅ (G21), mover ✅, resumir/avisar ✅, reunião cancelada ✅ (G12) | G58 (passo 4: campanha só às empresas desta execução) | Não (spec próprio `exemplo_09_prospeccao_semanal_spec.rb`; falta a G58) |
+| 9 | Prospecção semanal | ✅ G7 (`conta.recorrente`, segunda 8h) | buscar e conferir WhatsApp ✅ (G21), card com etiqueta no contato ✅ (G21), campanha pelo modelo ✅ (G14), mas para toda a etiqueta, decidir ✅, link da agenda ✅ (G12), etiqueta ✅, retorno ✅ (G3), recusa na Prospecção ✅ (G21), mover ✅, resumir/avisar ✅, reunião cancelada ✅ (G12) | G58 (#2784, passo 4: campanha só às empresas desta execução) | Não (spec próprio `exemplo_09_prospeccao_semanal_spec.rb`; fecha só junto com a G58, #2784) |
 | 10 | **Cliente bravo** | ✅ mensagem do cliente | decidir ✅, atribuir ✅, prioridade ✅, etiqueta ✅, resumir+avisar ✅, mensagem ✅, o mesmo resumo à dona sem outra ida à IA ✅ (G28) | G40 (passo 6: esperar só a Fernanda), G41 (passo 4: a instrução no resumir; passo 7: avisar com a agente de IA atendendo) | Não (#2678: voltou a pendente) |
 | 11 | Indicação que vira presente | ✅ mensagem do cliente | decidir ✅, extrair ✅, mensagem a Maria ✅ | G1, G4, G5, G12, G16, G17, G18 | Não |
 | 12 | Visita que aconteceu | 🟡 G5 (entrou em "Visita feita") | mensagem ✅ (na janela), decidir ✅, extrair ✅, mover ✅, etiqueta ✅, avisar ✅ | G2, G3, G5, G11, G14, G25, G35 (a IA lê a frase do corretor no card) | Não |
@@ -270,10 +270,11 @@ Google Places, a WAHA da conferência de WhatsApp, a Graph e a OpenAI.
 - **O mundo usa o "Outro canal" do CRM** (`crm_outro_canal`): ele liga a conversa da resposta ao card da prospecção.
   Sem ele, a deduplicação da caixa só reaproveita card da mesma caixa (`AutoCreateDeduplicator`), o card da prospecção
   nasce sem caixa, e a resposta abre um segundo card para a mesma empresa.
-- **Passo 4 em aberto (G58).** A campanha de cada segunda vai para todo contato com a etiqueta: a empresa da semana
-  anterior que não recusou recebe a apresentação de novo. A Automação decidiu (09/11): vai só às empresas criadas nesta
-  execução. O spec confere hoje que a nova recebe e que a que recusou nunca recebe (2ª segunda); quando a G58 entrar,
-  confere também que a da semana anterior não recebe, e o exemplo sai do `pendentes_spec`.
+- **Passo 4 em aberto (G58, #2784): o exemplo 9 só fecha junto com ela.** A campanha de cada segunda vai para todo
+  contato com a etiqueta: a empresa da semana anterior que não recusou recebe a apresentação de novo. A Automação
+  decidiu (09/11): o público é o da execução, a campanha de cada segunda vai só às empresas criadas nesta execução. A
+  G21 (#2706) não fecha o exemplo sozinha. O spec confere hoje que a nova recebe e que a que recusou nunca recebe (2ª
+  segunda); quando a G58 entrar, confere também que a da semana anterior não recebe, e o exemplo sai do `pendentes_spec`.
 
 ## 7. Os 5 itens "a conferir" (Parte A do #2570)
 

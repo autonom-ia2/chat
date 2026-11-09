@@ -16,8 +16,9 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     8 => ['Funcionário novo no plano da empresa', 'G24 (2ª automação em cada card criado), G1, G4, G5, G7, G13, G17, G20, G22, G27'],
     # #2678 (auditoria dos termos, 07/11): o 10 tem spec próprio dos passos que montam, mas não segue o termo à risca.
     # O 13 saiu com o lote 2 (#2679): o spec dele roda à risca, com o card ganho e a IA lendo o card.
-    # O 9 tem spec próprio (exemplo_09_prospeccao_semanal_spec.rb, G21 #2706); falta só o passo 4 à risca.
-    9 => ['Prospecção que roda sozinha toda semana', 'G58 (campanha só às empresas desta execução)'],
+    # O 9 tem spec próprio (exemplo_09_prospeccao_semanal_spec.rb, G21 #2706), mas só fecha junto com a G58 (#2784): o
+    # público da execução, a campanha de cada segunda vai só às empresas criadas nesta execução (passo 4 à risca).
+    9 => ['Prospecção que roda sozinha toda semana', 'G58 (#2784: campanha só às empresas desta execução)'],
     10 => ['Cliente bravo vai direto para a gerente',
            'G40 (esperar só a Fernanda), G41 (a instrução no resumir e avisar com a agente de IA atendendo), G28'],
     11 => ['Indicação que vira presente', 'G4, G17, G18 (criar o contato e o card do amigo e agir no card dele), G1, G5, G12, G16'],
@@ -35,6 +36,11 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     stub_const('FechamentoAutomacao::Lacunas::SONDAS', { 'GX' => -> { raise NameError, 'classe renomeada' } })
 
     expect { FechamentoAutomacao::Lacunas.abertas(%w[GX]) }.to raise_error(NameError)
+  end
+
+  # G21 (#2706) não segura nenhum pendente: a sonda roda aqui para que a prova de comportamento dela não fique sem dono.
+  it 'G21 fechada: o passo prospecção busca e cria o card' do
+    expect(FechamentoAutomacao::Lacunas.abertas(%w[G21])).to be_empty
   end
 
   pendentes.each do |numero, (nome, lacunas)|
