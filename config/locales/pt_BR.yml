@@ -1146,6 +1146,10 @@ pt_BR:
         caminho_repetido: "Passo %{passo}: já existe um caminho com o nome %{nome}."
         caminho_reservado: "Passo %{passo}: o nome %{nome} já é o caminho de quando nada se aplica. Escolha outro nome."
         caminho_sem_letra: "Passo %{passo}: o nome do caminho precisa ter pelo menos uma letra (%{nome})."
+        de_novo_caminho_desconhecido: "Passo %{passo}: o \"decidir de novo\" aponta para um caminho que este passo não tem (%{chave})."
+        de_novo_com_passos: "Passo %{passo}: o caminho %{nome} decide de novo, então não pode ter passos. Tire os passos dele ou desmarque."
+        de_novo_todos: "Passo %{passo}: deixe pelo menos um caminho que não decide de novo, para a automação seguir."
+        caminho_nenhum: "Nenhum se aplica"
         destino_invalido: "Passo %{passo}: a IA não pode gravar em %{destino}."
         campo_repetido: "Passo %{passo}: %{chave} aparece duas vezes."
       nota:

@@ -29,6 +29,8 @@
       "SE_VENCER": "If the deadline passes:",
       "SE_CAMINHO": "If the AI picks \"{nome}\":",
       "SE_NENHUM": "If none applies:",
+      "SE_CAMINHO_DE_NOVO": "If the AI picks \"{nome}\": waits for the next reply and decides again.",
+      "SE_NENHUM_DE_NOVO": "If none applies: waits for the next reply and decides again.",
       "NAO_SAIRIA": "Wouldn't go out: automatic messages aren't turned on in this account yet.",
       "FALTOU_VALOR": "Wouldn't go out: the text is missing a detail from this conversation.",
       "RETORNO_SEM_RESPONSAVEL": "Would not create the follow-up: this conversation has no assignee.",

@@ -19,7 +19,8 @@
 # O cursor é o passo onde a execução parou (uma espera ou a ação que vai ser tentada de novo). Ao retomar:
 # - o "esperar" já cumpriu o tempo e segue;
 # - o "esperar até" confere a condição de novo e, vencido o prazo, segue pelo caminho "se vencer";
-# - a ação roda de novo.
+# - a ação roda de novo;
+# - o "decidir" que decide a cada resposta (G31) decide de novo se ela chegou, ou segue esperando até o prazo.
 class Autonomia::Automacao::Executor
   TENTATIVAS = 3
   # Espera antes da 2ª e da 3ª tentativa de um erro passageiro (F3.6).
@@ -35,6 +36,8 @@ class Autonomia::Automacao::Executor
   include ::Autonomia::Automacao::IaNoExecutor
   # O "criar card" (G4).
   include ::Autonomia::Automacao::CardNoExecutor
+  # O "decidir" que volta a esperar a próxima resposta e decide de novo (G31).
+  include ::Autonomia::Automacao::DecidirDeNovo
 
   # Chamado pelo AvancarJob com a marca de quem reservou a execução (Partida ou VarreduraJob). A execução lida antes
   # da troca guarda o `due_at` da espera, que o "esperar até" usa como prazo.

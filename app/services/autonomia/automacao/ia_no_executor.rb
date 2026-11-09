@@ -13,8 +13,11 @@ module Autonomia::Automacao::IaNoExecutor
 
   # Reconferem tudo como a ação. Sem a flag da F7 fecham sem chamar a IA (rollback); os que falam com gente (escrever ao
   # cliente, resumo em aviso) pedem também a da F4. O erro passageiro da IA tenta de novo, como a ação, e paga de novo:
-  # nada foi mandado nem gravado antes da resposta.
+  # nada foi mandado nem gravado antes da resposta. O "decidir" que espera a próxima resposta (G31) confere ao retomar
+  # se ela chegou antes de ir à IA (DecidirDeNovo).
   def passo_de_ia(passo, classe)
+    return retomar_decisao(passo) if @retomando && ::Autonomia::Automacao::DecidirDeNovo.espera?(passo)
+
     reconferir
     return if impedida?(passo['id'])
     return encerrar(passo['id'], 'parada', 'ia_desligada') unless ::Autonomia::Automacao::Motor.ia?(@account)
@@ -23,6 +26,7 @@ module Autonomia::Automacao::IaNoExecutor
     end
 
     executor = classe.new(execucao: @execucao, passo: passo, alvo: alvo, acesso: @acesso)
+    @decidido_em = Time.current
     depois_da_ia(passo, executor, executor.executar)
   end
 
@@ -39,10 +43,13 @@ module Autonomia::Automacao::IaNoExecutor
   end
 
   # O registro com o caminho vem antes da nota do motivo: se a nota falhar, a automação segue pelo caminho, e o registro
-  # diz `nota_faltou`. A nota nunca fica duplicada.
+  # diz `nota_faltou`. A nota nunca fica duplicada. O caminho que decide de novo (G31) não deixa nota: "ainda
+  # conversando" deixaria uma por mensagem, como o "nenhum" (#2578).
   def seguir_pelo_caminho(passo, executor, resultado)
     @tentativas = 0
     registro = registrar(passo['id'], resultado.tipo == :pulado ? 'pulado' : 'ok', resultado.motivo, resultado.dados)
+    return esperar_resposta(passo) if ::Autonomia::Automacao::DecidirDeNovo.repete?(passo, resultado.dados['ramo'])
+
     nota = anotar(executor, resultado.dados['ramo'])
     registro.update!(dados: registro.dados.merge(nota ? { 'nota_id' => nota.id } : { 'nota_faltou' => true })) unless nota == false
     @roteiro.entrar_no_caminho(passo, resultado.dados['ramo'])

@@ -9,7 +9,8 @@
 #   de "hoje" ou de um atributo do tipo data;
 # - todo `$valor` do caminho, do corpo e das condições é um caminho que a automação sabe ler;
 # - a condição sobre um valor fechado (`mensagem.tipo`) usa uma das opções e um dos operadores dele (#2496);
-# - o gatilho de card só com a flag da F6, e a etapa ou o funil escolhidos nele são da conta (#2499).
+# - o gatilho de card só com a flag da F6, e a etapa ou o funil escolhidos nele são da conta (#2499);
+# - o "decidir" a cada resposta (G31) só repete caminhos dele, sem passos, e deixa um para seguir (DecidirDeNovo).
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
   RAMOS = %w[entao senao se_vencer].freeze
@@ -117,6 +118,7 @@ class Autonomia::Automacao::Receita
      *(fala_com_gente?(passo) && !::Autonomia::Automacao::Motor.mensagens?(@conta) ? [texto(:passo_desligado, passo: id)] : []),
      *caminhos_repetidos(id, Array(passo['caminhos'])),
      *caminhos_sem_chave_boa(id, Array(passo['caminhos'])),
+     *::Autonomia::Automacao::DecidirDeNovo.problemas_ao_salvar(passo),
      *repetidos(id, Array(passo['campos']).pluck('chave'), :campo_repetido),
      *Array(passo['campos']).flat_map { |campo| destino_invalido(id, campo['destino']) },
      *destinatarios_de_fora('id' => id, 'para' => avisar_do_resumir(passo))]

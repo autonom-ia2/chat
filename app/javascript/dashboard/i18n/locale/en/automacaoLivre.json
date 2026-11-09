@@ -168,7 +168,8 @@
       "AGENTE_ID": "Which AI agent",
       "CAIXA_ID": "From which e-mail inbox",
       "ASSUNTO": "Subject",
-      "MODELO": "If the 24-hour window is closed"
+      "MODELO": "If the 24-hour window is closed",
+      "DE_NOVO": "At each reply, decide again"
     },
     "OPCOES": {
       "STATUS": {
@@ -312,6 +313,8 @@
       "FALTA_TEXTO": "the text is missing",
       "DECIDIR": "AI decides: “{pergunta}” ({n} paths)",
       "DECIDIR_SEM_PERGUNTA": "AI chooses the path: the question is missing ({n} paths)",
+      "DECIDIR_DE_NOVO": "{frase}; if {caminhos}, waits for the next reply (up to {prazo}) and decides again",
+      "NENHUM_SE_APLICA": "none applies",
       "EXTRAIR": "AI looks in the conversation for: {lista}",
       "ESCREVER_MENSAGEM": "AI writes and sends to the customer: “{instrucao}”",
       "ESCREVER_MENSAGEM_SEM_INSTRUCAO": "AI writes and sends to the customer: the instruction is missing",

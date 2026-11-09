@@ -168,7 +168,8 @@
       "AGENTE_ID": "Qual agente de IA",
       "CAIXA_ID": "Por qual caixa de e-mail",
       "ASSUNTO": "Assunto",
-      "MODELO": "Se a janela de 24 h estiver fechada"
+      "MODELO": "Se a janela de 24 h estiver fechada",
+      "DE_NOVO": "A cada resposta, decidir de novo"
     },
     "OPCOES": {
       "STATUS": {
@@ -312,6 +313,8 @@
       "FALTA_TEXTO": "falta escrever o texto",
       "DECIDIR": "A IA decide: “{pergunta}” ({n} caminhos)",
       "DECIDIR_SEM_PERGUNTA": "A IA decide o caminho: falta escrever a pergunta ({n} caminhos)",
+      "DECIDIR_DE_NOVO": "{frase}; se {caminhos}, espera a próxima resposta (até {prazo}) e decide de novo",
+      "NENHUM_SE_APLICA": "nenhum se aplica",
       "EXTRAIR": "A IA procura na conversa: {lista}",
       "ESCREVER_MENSAGEM": "A IA escreve e manda ao cliente: “{instrucao}”",
       "ESCREVER_MENSAGEM_SEM_INSTRUCAO": "A IA escreve e manda ao cliente: falta escrever a instrução",
