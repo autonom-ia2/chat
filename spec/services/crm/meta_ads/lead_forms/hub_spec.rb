@@ -136,7 +136,7 @@ RSpec.describe Crm::MetaAds::LeadForms::Hub do
 
     it 'salvar o mesmo destino de novo esquece a recusa' do
       save!
-      refused.remember!('L1')
+      refused.remember!('L1', :lead)
 
       travel(1.second) { save! }
 
@@ -145,7 +145,7 @@ RSpec.describe Crm::MetaAds::LeadForms::Hub do
 
     it 'sem salvar de novo, a recusa fica' do
       save!
-      refused.remember!('L1')
+      refused.remember!('L1', :lead)
 
       expect(refused.ids(['L1'])).to eq(['L1'])
     end

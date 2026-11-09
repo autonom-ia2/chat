@@ -41,6 +41,8 @@
       "CONVERSA_INICIADA_POR": "Who started the conversation",
       "CONVERSA_CLIENTE_RESPONDEU": "The customer replied during the wait",
       "CONVERSA_EQUIPE_RESPONDEU": "The team replied during the wait",
+      "CONVERSA_RESPONSAVEL_RESPONDEU": "The assigned person replied during the wait",
+      "GATILHO_REPETIU": "The trigger happened again during the wait",
       "CONTATO_ID": "The contact",
       "CONTATO_NOME": "Contact name",
       "CONTATO_EMAIL": "Contact email",
@@ -62,16 +64,20 @@
       "CARD_MOTIVO_DA_PERDA": "Lost reason",
       "CARD_TEM_REUNIAO_MARCADA": "The card has a meeting scheduled",
       "CONTATO_TEM_REUNIAO_MARCADA": "The contact has a meeting scheduled (any card)",
+      "CARD_ORIGEM": "Where the card came from",
+      "CARD_ANUNCIO": "Ad of the form",
       "CARD_ATRIBUTOS": "Card custom field",
       "MENSAGEM_TIPO": "Message type",
       "MENSAGEM_PRIVADA": "Private message",
       "MENSAGEM_PRIMEIRA": "First message of the conversation",
+      "MENSAGEM_TEM_ANEXO": "Message has a photo or PDF",
       "CARD_LINK_DA_AGENDA": "Booking link of the card owner (at step time)",
       "CONVERSA_LINK_DA_AGENDA": "Booking link of the conversation assignee (at step time)",
       "REUNIAO_INICIO": "Meeting date and time",
       "REUNIAO_LINK_DA_REUNIAO": "Meeting call link",
       "ENVIO_TEXTO": "Text of the last message the automation sent",
-      "ENVIO_SITUACAO": "Status of the last message the automation sent"
+      "ENVIO_SITUACAO": "Status of the last message the automation sent",
+      "FALHOU_TEXTO": "Text of the message that wasn't delivered"
     },
     "PASSOS": {
       "ESPERAR": "Wait for a while",
@@ -171,7 +177,8 @@
       "AGENTE_ID": "Which AI agent",
       "CAIXA_ID": "From which e-mail inbox",
       "ASSUNTO": "Subject",
-      "MODELO": "If the 24-hour window is closed"
+      "MODELO": "If the 24-hour window is closed",
+      "DE_NOVO": "At each reply, decide again"
     },
     "OPCOES": {
       "STATUS": {
@@ -319,6 +326,8 @@
       "FALTA_TEXTO": "the text is missing",
       "DECIDIR": "AI decides: “{pergunta}” ({n} paths)",
       "DECIDIR_SEM_PERGUNTA": "AI chooses the path: the question is missing ({n} paths)",
+      "DECIDIR_DE_NOVO": "{frase}; if {caminhos}, waits for the next reply (up to {prazo}) and decides again; with no reply by then, it ends without sending anything",
+      "NENHUM_SE_APLICA": "none applies",
       "EXTRAIR": "AI looks in the conversation for: {lista}",
       "ESCREVER_MENSAGEM": "AI writes and sends to the customer: “{instrucao}”",
       "ESCREVER_MENSAGEM_SEM_INSTRUCAO": "AI writes and sends to the customer: the instruction is missing",
@@ -361,6 +370,8 @@
       "DA_CONVERSA": "Comes from the conversation: {valor}",
       "BUSCA_FALHOU": "Could not search right now. Try again.",
       "POR_VALOR": "Add a conversation detail",
+      "POR_DADO_NA_ETIQUETA": "Add a label named after a data field",
+      "POR_DADO_AJUDA": "The label uses the data without spaces or punctuation (\"Black Friday, 50% off\" becomes black_friday_50_off). The original text goes in the label description.",
       "TEXTO_DICA": "Anything in brackets, like [Contact name], is replaced by the detail at that moment. If the detail is empty, this step does not happen.",
       "RESPONSAVEL": "Whoever handles the conversation",
       "DA_REUNIAO": "Who attends the meeting",

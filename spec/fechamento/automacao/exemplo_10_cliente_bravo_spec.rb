@@ -39,7 +39,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
               { id: 'prioridade', tipo: 'acao', acao: 'POST conversations/:id/toggle_priority', descricao: 'Marcar como prioridade',
                 caminho: { id: { '$valor' => 'conversa.id' } }, corpo: { priority: 'urgent' } },
               etiqueta('etiqueta_reclamacao', 'reclamacao'),
-              { id: 'resumo', tipo: 'resumir', le: %w[mensagens_recentes], linhas: 3, destino: { avisar: { pessoas: [fernanda.id] } } },
+              { id: 'resumo', tipo: 'resumir', le: %w[mensagens_recentes], linhas: 3, instrucao: 'Inclua o que já foi prometido ao cliente.',
+                destino: { avisar: { pessoas: [fernanda.id] } } },
               { id: 'acalmar', tipo: 'mensagem',
                 texto: ['Entendi, ', { '$valor' => 'contato.nome' }, '. A Fernanda, gerente, já está vendo seu caso'] },
               *depois_de_acalmar
@@ -95,10 +96,13 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
       expect(conversa.label_list).to include('reclamacao')
     end
 
-    it 'a Fernanda recebe no sino o resumo do problema' do
+    # Passo 4 (G41): o resumo em 3 linhas vai com o que já foi prometido ao cliente (a instrução da dona, junto do texto fixo).
+    it 'a Fernanda recebe no sino o resumo do problema, pedido em 3 linhas com o que já foi prometido', :aggregate_failures do
       expect(mencoes_para(fernanda).count).to eq(1)
       resumo = conversa.messages.where(private: true).find_by('content LIKE ?', '%mention://user/%')
       expect(resumo.content).to include('Resumo', 'cobrado duas vezes', "mention://user/#{fernanda.id}/")
+      pedido = ia_recebeu.find { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_resumir' }
+      expect(pedido['instructions']).to include('até 3 linhas', 'Inclua o que já foi prometido ao cliente.')
     end
 
     it 'o cliente recebe pelo WhatsApp oficial a mensagem com o nome dele, sem a palavra Automação', :aggregate_failures do
@@ -123,13 +127,14 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
       expect(custo).to include('tokens_entrada' => 800, 'tokens_saida' => 120)
     end
 
-    # Passo 6 (G11, a metade "a equipe respondeu"): depois do "acalmar", espera a Fernanda responder por até 30
-    # minutos; sem resposta, avisa a dona com o mesmo resumo: o que a IA escreveu no passo "resumo" (`ia.resumo`, G28,
-    # #2679), sem outra ida à IA. O eco do "acalmar" não conta como resposta da equipe.
+    # Passo 6 (G11 + lote 4, #2682): depois do "acalmar", espera A FERNANDA responder por até 30 minutos (a pessoa
+    # responsável, a quem o passo 2 passou a conversa); sem resposta, avisa a dona com o mesmo resumo: o que a IA
+    # escreveu no passo "resumo" (`ia.resumo`, G28, #2679), sem outra ida à IA. O eco do "acalmar" e a resposta de
+    # outra pessoa da equipe não contam.
     context 'with a espera pela resposta da Fernanda (passo 6)' do
       let(:depois_de_acalmar) do
         [{ id: 'espera_fernanda', tipo: 'esperar_ate',
-           condicao: { campo: { '$valor' => 'conversa.equipe_respondeu' }, op: 'igual', valor: true },
+           condicao: { campo: { '$valor' => 'conversa.responsavel_respondeu' }, op: 'igual', valor: true },
            prazo: { valor: 30, unidade: 'minutos' },
            se_vencer: [{ id: 'resumo_dona', tipo: 'avisar', para: { pessoas: [dona.id] },
                          texto: ['Ninguém respondeu o cliente bravo em 30 minutos. ', { '$valor' => 'ia.resumo' }] }] }]
@@ -160,6 +165,17 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
 
         expect(execucao.reload.estado).to eq('concluida')
         expect(historico_de(automacao).map(&:first)).not_to include('resumo_dona')
+        expect(mencoes_para(dona)).to be_empty
+      end
+
+      it 'o Rafael responde no lugar dela: a espera continua, porque o termo espera a Fernanda', :aggregate_failures do
+        passar(10.minutes) do
+          create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :outgoing, sender: rafael,
+                           content: 'Paulo, já estou vendo isso.')
+          rodar_jobs
+        end
+
+        expect(execucao.reload.estado).to eq('esperando')
         expect(mencoes_para(dona)).to be_empty
       end
 
@@ -244,7 +260,11 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
   end
 
   context 'with o cliente irritado, sem reclamação grave' do
+    # O card da conversa, quando há: nasce antes da mensagem do cliente.
+    let(:card) { nil }
+
     before do
+      card
       ia_responde(account, 'automacao_decidir' => tom('irritado'))
       cliente_escreve(conversa, 'Já é a terceira vez que pergunto e ninguém me responde direito.')
     end
@@ -255,6 +275,31 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
       expect(conversa.assignee).to eq(rafael)
       expect(mencoes_para(rafael).count).to eq(1)
       expect(chamadas_para('graph.facebook.com')).to be_empty
+    end
+
+    # Passo 7 (G41): com a agente de IA atendendo, o responsável é o dono do card da conversa; ela segue com a agente.
+    context 'with a agente de IA atendendo' do
+      around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
+
+      let(:robo) { create(:agent_bot, account: account) }
+      let(:conversa) do
+        create(:conversation, account: account, inbox: inbox, contact: paulo, contact_inbox: contact_inbox, ai_assignee: robo, status: :open)
+      end
+      let(:card) do
+        funil = account.crm_pipelines.create!(name: 'Vendas', created_by: dona, status: :active)
+        etapa = account.crm_pipeline_stages.create!(pipeline: funil, name: 'Em conversa', position: 0)
+        Crm::Card.create!(account: account, pipeline: funil, stage: etapa, title: 'Pedido do Paulo', currency: 'BRL',
+                          contact: paulo, primary_conversation: conversa, owner: rafael)
+      end
+
+      it 'avisa o dono do card, sem tirar a conversa da agente', :aggregate_failures do
+        conversa.reload
+        expect(conversa.label_list).to include('atencao')
+        expect(conversa.ai_assignee).to eq(robo)
+        expect(conversa.assignee).to be_nil
+        expect(mencoes_para(card.owner).count).to eq(1)
+        expect(historico_de(automacao).map(&:second).uniq).to eq(['ok'])
+      end
     end
   end
 

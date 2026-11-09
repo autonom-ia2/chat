@@ -20,6 +20,8 @@ const props = defineProps({
   base: { type: String, required: true },
   erro: { type: String, default: '' },
   erroChave: { type: String, default: '' },
+  // O link ou o método da ferramenta mudou: a chave guardada não vai junto (decisão do Rodrigo, 09/11).
+  destinoMudou: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:cabecalho', 'remover']);
@@ -37,7 +39,9 @@ const quem = computed(() =>
     : t(`${NS}.ITEM`, { n: props.indice + 1 })
 );
 
-const redigitar = computed(() => precisaRedigitar(props.cabecalho));
+const redigitar = computed(() =>
+  precisaRedigitar(props.cabecalho, props.destinoMudou)
+);
 const renomeado = computed(
   () =>
     props.cabecalho.guardado &&
@@ -52,7 +56,8 @@ const mostraGuardado = computed(
 );
 const avisoRedigitar = computed(() => {
   if (renomeado.value) return t(`${NS}.RENOMEADO`);
-  if (redigitar.value) return t(`${NS}.DESLIGOU`);
+  if (redigitar.value && !props.cabecalho.segredo) return t(`${NS}.DESLIGOU`);
+  if (redigitar.value) return t(`${NS}.LINK_MUDOU`);
   return '';
 });
 const ajudaDaChave = computed(() => {

@@ -63,7 +63,7 @@ class Crm::MetaAds::LeadForms::Hub
   # destination_set_at (#2285): a reconciliação não relê antes dele, e quem preencheu antes de salvar só entra pelo
   # "trazer quem já preencheu". Quando ele nasce de novo: Crm::MetaAdsLeadForm#next_destination_set_at.
   # Salvar o destino, mesmo igual, muda o updated_at: os leads recusados (RefusedLeads, #2740) voltam a ser tentados,
-  # porque a recusa pode ter sido do destino.
+  # tanto os recusados pelo destino quanto os recusados pelo próprio dado (uma tentativa a mais).
   def save_destination!(form_id, pipeline:, stage:, import_past:)
     page, form = find_form!(form_id)
     raise Crm::MetaAds::LeadForms::Error, 'form_archived' unless form['status'] == ACTIVE
