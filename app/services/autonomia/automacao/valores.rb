@@ -92,6 +92,9 @@ class Autonomia::Automacao::Valores
     'falhou.texto' => ->(mensagem) { mensagem.content unless mensagem.content_attributes.to_h['deleted'] }
   }.freeze
 
+  # Os valores que uma lambda lê direto do objeto da base (o contexto, na troca).
+  LEITURA_DIRETA = [CAMPOS, ENVIO, TROCA, FALHOU].freeze
+
   # #2679: o texto que um passo de IA ("escrever", "resumir") desta execução produziu: `ia.<id do passo>`. Vale em
   # qualquer alvo: fica na execução, não no alvo. O salvar confere que o id é de um passo que escreve (Receita); antes de
   # ele rodar, ou num caminho em que ele não rodou, lê vazio, e o passo pula com `faltou_valor`.
@@ -100,7 +103,7 @@ class Autonomia::Automacao::Valores
 
   # O que cada alvo alcança, pelas pontes do Contexto. O card da conversa (#2716) só para ler: CardDaConversa.
   # De onde cada base lê no contexto da execução. O `card` fica fora: na conversa, ele cai no card dela (#2716). O
-  # `gatilho` é o próprio contexto: a troca de quem cuida do card (G9) sai da marca do fato.
+  # `gatilho` (G9) lê o próprio contexto, que guarda a marca da troca.
   LEITURA_DA_BASE = {
     'conversa' => :conversa, 'contato' => :contato, 'reuniao' => :reuniao, 'envio' => :ultimo_envio, 'falhou' => :mensagem_que_falhou,
     'gatilho' => :itself
@@ -252,13 +255,13 @@ class Autonomia::Automacao::Valores
     do_objeto(caminho) { |objeto| ::Autonomia::Automacao::Valores::Atributos.ler(base, chave, objeto) }
   end
 
-  def campo?(chave) = [CAMPOS, AGENDA, ENVIO, DO_QUE_QUEM_VE, TROCA, FALHOU].any? { |lista| lista.key?(chave) }
+  def campo?(chave) = [AGENDA, DO_QUE_QUEM_VE, *LEITURA_DIRETA].any? { |lista| lista.key?(chave) }
 
   def do_campo(chave)
     return do_objeto(chave) { |objeto| DO_QUE_QUEM_VE[chave].call(objeto, account_user) } if DO_QUE_QUEM_VE.key?(chave)
     return do_objeto(chave) { |objeto| link_da_agenda(objeto, AGENDA[chave].call(objeto)) } if AGENDA.key?(chave)
 
-    do_objeto(chave) { |objeto| (CAMPOS[chave] || ENVIO[chave] || TROCA[chave] || FALHOU[chave]).call(objeto) }
+    do_objeto(chave) { |objeto| LEITURA_DIRETA.find { |lista| lista.key?(chave) }.fetch(chave).call(objeto) }
   end
 
   def link_da_agenda(objeto, pessoa)

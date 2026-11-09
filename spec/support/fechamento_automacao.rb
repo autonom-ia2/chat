@@ -261,14 +261,18 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 17, achadas na G9 (#2707). G62 (#2829): o campo do card do tipo pessoa da equipe, com o nome e a
     # ausência dela (passos 3, 5 e 6). G63 (#2830): o galho "a cada mensagem do cliente" do "esperar até" (passo 4).
     # G64 (#2839): a conferência toda manhã, numa hora marcada, na mesma automação (passo 5). Prova ponta a ponta em
-    # spec/fechamento/automacao/exemplo_17_ferias_spec.rb. G66: a troca do dono do card não leva a conversa, que segue
-    # com a antiga; "espera a Renata responder" e "passa para a agente de IA" (passo 4) leem quem atende a conversa. G67:
-    # o resumo da volta (passo 6) lê as últimas mensagens da conversa (5), não as das férias inteiras.
+    # spec/fechamento/automacao/exemplo_17_ferias_spec.rb. G66 (#2843, decisão 14): o passo "passar a conversa para o
+    # responsável do card" leva a conversa da antiga dona à nova, e "espera a Renata responder" (passo 4) lê a Renata.
+    # G67 (#2844): o resumo da volta (passo 6) lê as mensagens desde o começo da execução (as férias), com teto.
     'G62' => -> { FechamentoAutomacao::SondasDaTroca.campo_pessoa_le_na_conta? },
-    'G63' => -> { FechamentoAutomacao::Ex17.galho_a_cada_mensagem? },
-    'G64' => -> { FechamentoAutomacao::Ex17.conferencia_marcada? },
-    'G66' => nil,
-    'G67' => nil,
+    'G63' => -> { FechamentoAutomacao::SondasDoExemplo17.galho_a_cada_mensagem? },
+    'G64' => -> { FechamentoAutomacao::SondasDoExemplo17.conferencia_marcada? },
+    # Com a decisão 18, corrigida: a agente de IA cobre a Renata (opção do passo) e, quando ela escreve, a conversa volta
+    # sozinha para ela.
+    'G66' => lambda {
+      FechamentoAutomacao::SondasDoExemplo17.conversa_acompanha_o_responsavel? && FechamentoAutomacao::SondasDoExemplo17.ia_assume_e_devolve?
+    },
+    'G67' => -> { FechamentoAutomacao::SondasDoExemplo17.resumo_le_o_periodo? },
     # Do exemplo 14, passo 5 (#2791): o laço dos documentos numa automação só. O "esperar até" lê o documento novo, e o
     # "decidir" volta a ele (`de_novo.desde`). Prova em spec/fechamento/automacao/exemplo_14_documentacao_spec.rb.
     'G46' => lambda {

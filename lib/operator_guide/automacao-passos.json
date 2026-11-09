@@ -1514,8 +1514,22 @@
           "peca": "agente_de_ia",
           "obrigatorio": true,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.AGENTE_ID"
+        },
+        {
+          "nome": "cobrir_pessoa",
+          "peca": "sim_nao",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.COBRIR_PESSOA"
         }
       ]
+    },
+    {
+      "tipo": "conversa_ao_responsavel",
+      "grupo": "EQUIPE",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONVERSA_AO_RESPONSAVEL",
+      "campos": []
     },
     {
       "tipo": "decidir",

@@ -55,8 +55,9 @@ module Autonomia::Automacao::Catalogo
                        'de_novo' => 'de_novo' }.freeze
   # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2), a
   # etapa do "card" (G4) e a hora da conferência do "esperar até" sem prazo (G64, mostrada pela peça do prazo).
+  # O "Cobrir a pessoa enquanto ela não responde" do "Passar para a agente de IA" (decisão 18) é um sim/não.
   PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email',
-                          'etapa_id' => 'etapa', 'conferir_as' => 'conferir_as' }.freeze
+                          'etapa_id' => 'etapa', 'conferir_as' => 'conferir_as', 'cobrir_pessoa' => 'sim_nao' }.freeze
 
   module_function
 

@@ -27,6 +27,10 @@
 #
 # `motivo_da_perda: true` (#2679, só os passos de IA da Automação): o card leva o motivo da perda. Sem ele, igual.
 #
+# `periodo: { desde:, teto: }` (G67, #2844, só o "resumir" da Automação): as mensagens vão desde o começo do período (o
+# da execução), nunca menos que as `max_mensagens` de sempre e no máximo `teto`, as mais recentes. As do período que o
+# teto deixou de fora viram `omitted_older_messages`, para a IA saber que houve corte. Sem ele, igual.
+#
 # `anuncio: true` (#2558): o card leva o anúncio de origem do formulário da Meta (formulário, anúncio e campanha em
 # metadata.meta_lead_form). Sem ele, só a hora da captura (Crm::MetaAds::LeadForms::Answers): fechado por padrão. Só a
 # resposta de opção fechada recebe o anúncio, pela chave do responsável (Crm::AnuncioDeOrigem.ve?): a rodada do Decisor
@@ -65,7 +69,7 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
 
   def initialize(conversation: nil, message: nil, card: nil, contact: nil, texto: nil, # rubocop:disable Metrics/ParameterLists
                  leituras: Autonomia::Decisor::LEITURAS_PADRAO, max_mensagens: MAX_MENSAGENS, max_caracteres_anteriores: MAX_CARACTERES,
-                 papeis: false, com_midia: false, fuso: nil, valor_do_card: true, anuncio: false, motivo_da_perda: false)
+                 papeis: false, com_midia: false, fuso: nil, valor_do_card: true, anuncio: false, motivo_da_perda: false, periodo: nil)
     @conversation = conversation
     @message = message
     @card = card
@@ -80,6 +84,7 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
     @valor_do_card = valor_do_card
     @anuncio = anuncio
     @motivo_da_perda = motivo_da_perda
+    @periodo = periodo
   end
 
   # #936 — o registro de uma tarefa longa vai ao Jev inteiro, como texto: sem vazio e sem valor com
@@ -152,11 +157,11 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
   end
 
   def ler_mensagens
-    { channel: canal, subject: assunto, messages: textos(recebidas) }
+    { channel: canal, subject: assunto, messages: textos(recebidas), omitted_older_messages: @omitidas }
   end
 
   def ler_mensagens_com_respostas
-    { channel: canal, subject: assunto, messages: textos(dos_dois_lados, com_autor: true) }
+    { channel: canal, subject: assunto, messages: textos(dos_dois_lados, com_autor: true), omitted_older_messages: @omitidas }
   end
 
   def ler_ultima_mensagem
@@ -264,21 +269,30 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
   def email_autoria = (@email_autoria ||= Crm::Email::Autoria.new(conversation&.account))
 
   def recebidas
-    ultimas(conversation&.messages&.incoming)
+    ultimas(conversation&.messages&.incoming, periodo: true)
   end
 
   def dos_dois_lados
     escopo = conversation&.messages&.where(message_type: %i[incoming outgoing], private: false)
     escopo = escopo&.where('messages.status IS DISTINCT FROM ?', Message.statuses[:failed]) if @rotulo
-    ultimas(escopo)
+    ultimas(escopo, periodo: true)
   end
 
-  def ultimas(escopo)
+  # `periodo` (G67): só as mensagens ao cliente e dele leem o período; as notas seguem na janela de sempre.
+  def ultimas(escopo, periodo: false)
     return [] if escopo.nil?
 
     escopo = @com_midia ? com_texto_ou_anexo(escopo) : escopo.where.not(content: [nil, ''])
     escopo = escopo.where(id: ..message.id) if message
-    escopo.reorder(id: :desc).limit(@max_mensagens).to_a.reverse
+    escopo.reorder(id: :desc).limit(periodo && @periodo ? limite_do_periodo(escopo) : @max_mensagens).to_a.reverse
+  end
+
+  # G67: as do período, nunca menos que a janela de sempre e no máximo o teto. Guarda quantas do período ficaram de fora.
+  def limite_do_periodo(escopo)
+    no_periodo = escopo.where('messages.created_at >= ?', @periodo.fetch(:desde)).count
+    limite = no_periodo.clamp(@max_mensagens, [@periodo.fetch(:teto), @max_mensagens].max)
+    @omitidas = (no_periodo - limite if no_periodo > limite)
+    limite
   end
 
   def com_texto_ou_anexo(escopo)

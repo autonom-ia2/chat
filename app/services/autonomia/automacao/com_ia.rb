@@ -82,8 +82,11 @@ module Autonomia::Automacao::ComIa
   # `le: card` (#2679): no gatilho de card, o próprio card; no de conversa, o card dela (o Estado acha).
   def estado_com(leituras, fuso)
     ::Autonomia::Decisores::Estado.new(conversation: @conversa, card: (@alvo if @alvo.is_a?(::Crm::Card)), leituras: leituras, fuso: fuso,
-                                       valor_do_card: ve_o_valor_do_card?, motivo_da_perda: true)
+                                       valor_do_card: ve_o_valor_do_card?, motivo_da_perda: true, **janela)
   end
+
+  # A janela das mensagens além da de sempre (G67: o "resumir" lê o período da execução). Vazia: a de sempre.
+  def janela = {}
 
   # O card vai à IA só se quem ligou a automação o vê (a pergunta do resto do CRM); senão o passo lê o resto.
   def card_visivel?(leituras, estado)

@@ -554,7 +554,17 @@
           "properties": {
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "ia_assumir" },
-            "agente_id": { "$ref": "#/definitions/agente_de_ia" }
+            "agente_id": { "$ref": "#/definitions/agente_de_ia" },
+            "cobrir_pessoa": { "type": "boolean", "description": "Cobrir a pessoa enquanto ela não responde (decisão 18, ex. 17): ligado, a agente assume a conversa mesmo com uma pessoa no nome e fica com ela; quando essa pessoa escrever na conversa, ela volta sozinha para a pessoa, e o histórico registra de quem foi tirada e a volta. Enquanto a agente cobre, a mensagem do cliente não abre o galho \"a cada mensagem\" da mesma automação. Desligado (o padrão), a pessoa fica e o passo pula com pessoa_atribuida." }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "conversa_ao_responsavel", "description": "Passar a conversa para o responsável do card (G66; só com gatilho de card): a conversa principal do card passa para quem cuida do card agora, pelo mesmo pedido do Atribuir da conversa, como quem ligou. A troca do dono do card feita fora da automação não mexe na conversa; ponha este passo depois da troca. Pula sem conversa, com o card sem responsável ou se o responsável não enxerga a conversa; já com ele, segue sem trocar." }
           }
         },
         {

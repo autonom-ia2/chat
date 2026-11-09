@@ -11,15 +11,24 @@
 # G42 (#2721): lê também o que a própria execução mandou ao cliente (EnviosDaExecucao): o e-mail em conversa própria, o
 # modelo recusado (marcado como não entregue) e as respostas nessas conversas, só das que quem ligou vê. A resposta de
 # outra conversa só entra se todos que veem a conversa do alvo também a veem, e o resumo que a leu não fica guardado.
+#
+# G67 (#2844, exemplo 17, passo 6: "o que aconteceu durante as férias"): na execução, as mensagens vão desde o começo
+# dela, nunca menos que as 5 de sempre, até MAX_MENSAGENS_DO_PERIODO, as mais recentes; as além das 5 mais recentes vão
+# cortadas em MAX_CARACTERES_ANTERIORES. Passou do teto, a IA recebe quantas ficaram de fora (omitted_older_messages) e
+# diz que o resumo começa depois delas. O "Testar este passo" não tem execução: lê a janela de sempre.
 class Autonomia::Automacao::PassoDeResumir
   include ::Autonomia::Automacao::ComIa
 
   MODELO = ::Crm::Ai::Config::MODEL_SUMMARY
   LINHAS = 3
+  # G67: o teto do período, para a entrada da IA não crescer sem fim numa execução longa (40 mensagens, ~46 mil caracteres).
+  MAX_MENSAGENS_DO_PERIODO = 40
+  MAX_CARACTERES_ANTERIORES = 600
   INSTRUCOES = <<~TEXTO.freeze
     Resuma a conversa para a equipe de atendimento, em português, em até %<linhas>d linhas curtas. Responda só com JSON no schema.
     Diga o que o cliente quer e em que pé está. Só o que está escrito: nunca invente.
     Em automation_sends estão as mensagens que esta automação mandou ao cliente; com not_delivered, o canal recusou e ela não chegou.
+    Com omitted_older_messages, as mensagens mais antigas do período ficaram de fora por tamanho: diga que o resumo começa depois delas.
   TEXTO
   SCHEMA = {
     name: 'automacao_resumir',
@@ -68,6 +77,11 @@ class Autonomia::Automacao::PassoDeResumir
   def antes_da_ia(aviso, estado) = aviso&.ninguem_para_avisar || (nada_para_ler if estado.vazio?)
 
   def passo_do_aviso = { 'id' => @passo['id'], 'para' => @passo.dig('destino', 'avisar') }
+
+  # G67: o período da execução, com o teto.
+  def janela
+    { periodo: { desde: @execucao.created_at, teto: MAX_MENSAGENS_DO_PERIODO }, max_caracteres_anteriores: MAX_CARACTERES_ANTERIORES }
+  end
 
   def entregar(aviso, texto, custo)
     return Resultado.new(tipo: :pulado, motivo: 'texto_vazio', dados: { 'ia' => custo }) if texto.empty?

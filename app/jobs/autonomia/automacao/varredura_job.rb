@@ -11,6 +11,8 @@
 # 3. Fecha como "interrompida" a aberta cujo alvo foi apagado (alvo sumiu), entre as de `due_at` já vencido, em lote,
 #    pelo índice parcial do `due_at` (#2750, revisão): a que ainda não venceu fecha quando vencer (aqui, ou na rodada,
 #    pelo Executor#impedimento). A espera sem prazo vence uma vez por dia (EsperaNoExecutor::CONFERENCIA).
+# 4. A cobertura da agente de IA (decisão 18) da execução fechada aqui, ou da conta que desligou o Motor, devolve a
+#    conversa à pessoa tirada (Cobertura): a IA não fica presa.
 #
 # Cada linha que falha vai para o log e não para as outras. As contas sem o motor também passam por aqui: o executor
 # fecha a execução delas como parada (rollback da flag).
@@ -25,6 +27,7 @@ class Autonomia::Automacao::VarreduraJob < ApplicationJob
     acordar(agora).each { |id| enfileirar(id, agora) }
     interromper(travadas(agora), 'travada')
     interromper(orfas(agora), 'alvo_sumiu')
+    coberturas_sem_motor
   end
 
   private
@@ -74,9 +77,16 @@ class Autonomia::Automacao::VarreduraJob < ApplicationJob
 
       ::Autonomia::Automacao::Registro.create!(account_id: execucao.account_id, automacao_id: execucao.automacao_id, execucao: execucao,
                                                passo: execucao.cursor || 'inicio', resultado: 'falhou', motivo: motivo)
+      ::Autonomia::Automacao::Cobertura.encerrar([execucao.id])
     rescue StandardError => e
       Rails.logger.error("[automacao][varredura] não fechou execucao=#{execucao.id} motivo=#{motivo} #{e.class}: #{e.message}")
     end
+  end
+
+  def coberturas_sem_motor
+    ::Autonomia::Automacao::Cobertura.encerrar_sem_motor
+  rescue StandardError => e
+    Rails.logger.error("[automacao][varredura] não encerrou as coberturas sem motor #{e.class}: #{e.message}")
   end
 
   # Só fecha se ela continua como foi lida: a rodada que terminou nesse meio-tempo vence. Sem callback (a órfã não

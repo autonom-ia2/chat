@@ -58,6 +58,7 @@ RSpec.describe Autonomia::Agents::PassarParaIa, :um_turno do
       resultado = passar(por: :pessoa, origem: pessoa, pedida_por: pessoa)
 
       expect(resultado.codigo).to eq(:passou)
+      expect(resultado.pessoa_tirada_id).to eq(pessoa.id)
       expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: espelho_area)
       expect(contrato).to have_received(:registrar_passagem!).with(hash_including(de: pessoa, pedida_por: pessoa, para: area))
     end
@@ -275,7 +276,7 @@ RSpec.describe Autonomia::Agents::PassarParaIa, :um_turno do
       %i[crm ia].each do |por|
         resultado = passar(por: por, origem: agente_da_porta)
 
-        expect(resultado).to have_attributes(ok?: false, trocou?: false, codigo: :pessoa_atribuida)
+        expect(resultado).to have_attributes(ok?: false, trocou?: false, codigo: :pessoa_atribuida, pessoa_tirada_id: nil)
         expect(conversation.reload).to have_attributes(assignee_id: pessoa.id, ai_assignee: nil)
       end
       expect(contrato).not_to have_received(:registrar_passagem!)

@@ -27,7 +27,7 @@ module Autonomia::Automacao::LugarDoValor
 
   # O valor fora do lugar dele: a mensagem fora do filtro do gatilho dela (`mensagem`: a receita está lá), a resposta
   # fora do "esperar até" (`na_espera`), a reunião, o que era antes da troca e a mensagem que falhou em outro gatilho
-  # (`gatilho`), e a mensagem que falhou no filtro do gatilho (`no_filtro`). Devolve a chave da frase do salvar, ou nil.
+  # (`gatilho`), e a mensagem que falhou no "Só se" do gatilho (`no_filtro`). Devolve a chave da frase do salvar, ou nil.
   def fora_do_lugar(caminho, mensagem:, na_espera:, gatilho: nil, no_filtro: false)
     return :mensagem_so_no_gatilho if da_mensagem?(caminho) && !mensagem
     return :resposta_so_na_espera if da_resposta?(caminho) && !na_espera

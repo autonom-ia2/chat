@@ -534,6 +534,11 @@ en:
         prazo_vencido: 'The wait ended without the condition.'
         mensagem_do_cliente: 'The customer wrote during the wait: the steps for each customer message ran.'
         voltou_a_esperar: 'Went back to waiting.'
+        ia_cobrindo: 'The customer wrote while the AI agent is covering the conversation: the agent keeps answering.'
+        pessoa_voltou: 'The person wrote in the conversation, and it went back to them.'
+        cobrindo_pessoa: 'The AI agent took the conversation in place of the person, until they write.'
+        cobertura_encerrada: 'The automation ended, and the conversation went back to the person the AI agent was covering.'
+        devolver_falhou: 'Could not give the conversation back to the person the AI agent was covering.'
         teto_a_cada: 'The steps for each customer message already ran 200 times in this run. From now on the wait goes on only for the condition.'
         quem_ligou_saiu_da_conta: 'The person who turned on the automation left the account. Take over and turn it back on.'
         quem_ligou_sem_acesso: 'The person who turned on the automation has no access here anymore. Take over and turn it back on.'
@@ -574,6 +579,8 @@ en:
         sem_conversa: "There is no conversation to act on: the card has no main conversation, or the contact has none, and the automation has no inbox chosen to open one. Nothing was sent."
         contato_sem_telefone: "The contact has no phone number, so the conversation was not opened. Nothing was sent."
         sem_responsavel: "The AI agent is handling this conversation, and its card has no owner (or there is no card). No one was alerted."
+        card_sem_responsavel: "The card has no owner. The conversation stayed with whoever had it."
+        responsavel_nao_ve_a_conversa: "The card owner cannot see this conversation (they are not in its inbox). The conversation stayed with whoever had it."
         texto_vazio: "The text came out blank after it was built. The message was not sent."
         dado_ausente: 'The AI did not find any of the requested data in the conversation. Nothing was saved.'
         ia_chave_recusada: "The AI provider refused the account's key. Check the AI key in the integrations."
@@ -593,7 +600,7 @@ en:
         pessoa_atribuida: 'A person has the conversation and keeps it. The AI agent did not take over.'
         sem_vinculo_na_caixa: 'The AI agent does not work in this conversation''s inbox. The conversation stayed as it was.'
         nao_atende_cliente: 'The AI agent is not answering customers right now. The conversation stayed as it was.'
-        conversa_resolvida: 'The conversation is resolved. The AI agent did not take over.'
+        conversa_resolvida: 'The conversation is resolved. No one took it over.'
         outra_conta: 'The AI agent belongs to another account. The conversation stayed as it was.'
         campo_proibido: 'The action sends a field the automation does not change.'
       alvo:
@@ -641,6 +648,7 @@ en:
         passo_desligado: "Step %{passo}: message and alert steps are off for this account."
         agente_de_ia_invalido: 'Step %{passo}: AI agent %{id} is not from this account.'
         retorno_mensagem_sem_card: "Step %{passo}: the follow-up message only goes out with a card trigger. Use a card trigger or turn the message off."
+        responsavel_so_com_card: "Step %{passo}: handing the conversation to the card owner only works with a card trigger."
         sem_criar_retorno: 'Step %{passo}: you cannot create follow-ups in the CRM, which the "Create follow-up" step needs.'
         modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility and with these variables."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
@@ -689,6 +697,8 @@ en:
         resumo: "Automation summary:\n\n%{texto}"
       ia:
         gravar: 'Save what the AI found in the conversation'
+      descricoes:
+        conversa_ao_responsavel: 'Hand the conversation to the card owner'
     automacoes:
       ensaio:
         condicoes_invalidas: 'This automation has a condition the platform does not accept, so it cannot be tested. Fix it in manual mode.'

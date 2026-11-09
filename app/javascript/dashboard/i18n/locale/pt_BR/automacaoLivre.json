@@ -120,6 +120,7 @@
       "CARD": "Criar um card no funil",
       "RESUMIR": "A IA resume a conversa",
       "IA_ASSUMIR": "Passar para a agente de IA",
+      "CONVERSA_AO_RESPONSAVEL": "Passar a conversa para o responsável do card",
       "EMAIL": "Mandar e-mail ao cliente",
       "RETORNO": "Criar um retorno para a equipe"
     },
@@ -183,6 +184,7 @@
       "LINHAS": "Tamanho do resumo (linhas)",
       "ETAPA_ID": "Em qual etapa o card nasce",
       "AGENTE_ID": "Qual agente de IA",
+      "COBRIR_PESSOA": "Cobrir a pessoa enquanto ela não responde",
       "CAIXA_ID": "Por qual caixa de e-mail",
       "ASSUNTO": "Assunto",
       "MODELO": "Se a janela de 24 h estiver fechada",

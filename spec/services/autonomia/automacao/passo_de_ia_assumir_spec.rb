@@ -61,6 +61,64 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
     expect(conversation.reload.assignee).to eq(pessoa)
   end
 
+  # Decisão 18 (exemplo 17): a opção "Cobrir a pessoa enquanto ela não responde", desligada por padrão, deixa a agente
+  # assumir a conversa de uma pessoa, pedida por quem ligou (como o "Passar para…" da tela). O histórico guarda de quem,
+  # no registro da cobertura, gravado com a troca. Com um "esperar" depois, a execução segue aberta e a cobertura vale.
+  context 'with a opção cobrir a pessoa' do
+    let(:passo) { { 'id' => 'p1', 'tipo' => 'ia_assumir', 'agente_id' => area.id, 'cobrir_pessoa' => true } }
+    let(:cobrindo) { automacao_ligada(account, admin, [passo, esperar_passo('p2')]) }
+
+    def do_passo(execucao) = Autonomia::Automacao::Registro.find_by!(execucao: execucao, passo: 'p1', motivo: nil)
+    def da_cobertura(execucao) = Autonomia::Automacao::Registro.where(execucao: execucao, motivo: Autonomia::Automacao::Cobertura::COMECOU)
+
+    it 'tira a conversa da pessoa, pedida por quem ligou, e registra de quem foi tirada', :aggregate_failures do
+      conversation.update!(assignee: pessoa)
+
+      execucao = rodar(cobrindo)
+
+      expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: espelho_area)
+      expect(do_passo(execucao)).to have_attributes(resultado: 'ok',
+                                                    dados: { 'agente_id' => area.id, 'tirada_de' => pessoa.id, 'trocou' => true })
+      expect(da_cobertura(execucao).pluck(:passo, :resultado, :dados))
+        .to eq([['p1', 'ok', { 'agente_id' => area.id, 'tirada_de' => pessoa.id, 'cobrindo_conversa' => conversation.id }]])
+      expect(da_cobertura(execucao).first.id).to be < do_passo(execucao).id
+      expect(contrato).to have_received(:registrar_passagem!).with(hash_including(para: area, pedida_por: admin))
+    end
+
+    it 'sem passo depois, a execução termina e a conversa volta para a pessoa (cobertura_encerrada)', :aggregate_failures do
+      conversation.update!(assignee: pessoa)
+
+      execucao = rodar
+
+      expect(execucao.reload.estado).to eq('concluida')
+      expect(conversation.reload.assignee_id).to eq(pessoa.id)
+      expect(Autonomia::Automacao::Registro.where(execucao: execucao, motivo: Autonomia::Automacao::Cobertura::ENCERRADA).count).to eq(1)
+    end
+
+    it 'sem pessoa no nome, passa como sempre, pelo CRM, sem tirada_de e sem cobertura', :aggregate_failures do
+      execucao = rodar(cobrindo)
+
+      expect(do_passo(execucao).dados).to eq('agente_id' => area.id, 'trocou' => true)
+      expect(da_cobertura(execucao)).to be_empty
+      expect(contrato).to have_received(:registrar_passagem!).with(hash_including(para: area, pedida_por: nil))
+    end
+
+    it 'no ensaio, com pessoa no nome, diz que passaria' do
+      conversation.update!(assignee: pessoa)
+
+      expect(described_class.ensaiar(passo, conversation)).to eq(['ia_assumir', { agente: 'Área Suporte' }])
+    end
+  end
+
+  it 'a opção desligada (false) é o padrão: a pessoa fica', :aggregate_failures do
+    conversation.update!(assignee: pessoa)
+
+    execucao = rodar(automacao_ligada(account, admin, [passo.merge('cobrir_pessoa' => false)]))
+
+    expect(registro(execucao)).to have_attributes(resultado: 'pulado', motivo: 'pessoa_atribuida')
+    expect(conversation.reload.assignee).to eq(pessoa)
+  end
+
   it 'agente sem vínculo na caixa da conversa: pula com o código, nunca passa para outra' do
     automacao = automacao_ligada(account, admin, [passo])
     area_sumiu!
@@ -94,7 +152,7 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
 
   it 'erro inesperado na passagem sobe: a execução fica com a falha à vista, nunca concluída' do
     automacao = automacao_ligada(account, admin, [passo])
-    allow(Crm::Entrega::ParaIa).to receive(:passar!).and_raise(ActiveRecord::StatementInvalid, 'caiu')
+    allow(Crm::Entrega::ParaIa).to receive(:resultado!).and_raise(ActiveRecord::StatementInvalid, 'caiu')
 
     comecar(automacao, conversation)
     job = enqueued_jobs.find { |enfileirado| enfileirado['job_class'] == Autonomia::Automacao::AvancarJob.name }
@@ -118,7 +176,7 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
     conversation.update!(status: :pending)
     automacao = automacao_ligada(account, admin, [passo], gatilho: { 'tipo' => 'conversa.aberta' })
     assinada = nil
-    allow(Crm::Entrega::ParaIa).to receive(:passar!).and_wrap_original do |original, **args|
+    allow(Crm::Entrega::ParaIa).to receive(:resultado!).and_wrap_original do |original, **args|
       assinada = Autonomia::Automacao::Ato.automacao_id
       original.call(**args)
     end
@@ -205,7 +263,7 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
 
   describe '.ensaiar' do
     it 'diz para quem passaria, ou o motivo, sem chamar a passagem' do
-      expect(Crm::Entrega::ParaIa).not_to receive(:passar!)
+      expect(Crm::Entrega::ParaIa).not_to receive(:resultado!)
 
       expect(described_class.ensaiar(passo, conversation)).to eq(['ia_assumir', { agente: 'Área Suporte' }])
       conversation.update!(assignee: pessoa)

@@ -120,6 +120,7 @@
       "CARD": "Create a card in the pipeline",
       "RESUMIR": "AI summarizes the conversation",
       "IA_ASSUMIR": "Hand over to the AI agent",
+      "CONVERSA_AO_RESPONSAVEL": "Hand the conversation to the card owner",
       "EMAIL": "Send an e-mail to the customer",
       "RETORNO": "Create a follow-up for the team"
     },
@@ -183,6 +184,7 @@
       "LINHAS": "Summary length (lines)",
       "ETAPA_ID": "In which stage the card starts",
       "AGENTE_ID": "Which AI agent",
+      "COBRIR_PESSOA": "Cover for the person until they reply",
       "CAIXA_ID": "From which e-mail inbox",
       "ASSUNTO": "Subject",
       "MODELO": "If the 24-hour window is closed",

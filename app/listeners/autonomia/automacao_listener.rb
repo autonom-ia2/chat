@@ -16,7 +16,10 @@ class Autonomia::AutomacaoListener < BaseListener
     escuta.acordar(conversa, [conversa.id])
   end
 
+  # A pessoa que a agente de IA cobria escreveu (Cobertura, decisão 18): a conversa volta para ela antes de acordar
+  # quem espera, e o "a pessoa respondeu" já a vê no nome.
   def message_created(event)
+    cobertura.pessoa_escreveu(event.data[:message])
     escuta.mensagem_criada(event.data[:message])
     falhou.criada(event.data[:message])
   end
@@ -55,4 +58,5 @@ class Autonomia::AutomacaoListener < BaseListener
 
   def escuta = ::Autonomia::Automacao::Escuta
   def falhou = ::Autonomia::Automacao::MensagemQueFalhou
+  def cobertura = ::Autonomia::Automacao::Cobertura
 end

@@ -1027,6 +1027,11 @@ pt_BR:
         prazo_vencido: 'A espera acabou sem a condição.'
         mensagem_do_cliente: 'O cliente escreveu durante a espera: rodaram os passos de cada mensagem do cliente.'
         voltou_a_esperar: 'Voltou a esperar.'
+        ia_cobrindo: 'O cliente escreveu, e a agente de IA está cobrindo a conversa: ela segue respondendo.'
+        pessoa_voltou: 'A pessoa escreveu na conversa, e a conversa voltou para ela.'
+        cobrindo_pessoa: 'A agente de IA ficou com a conversa no lugar da pessoa, até ela escrever.'
+        cobertura_encerrada: 'A automação terminou, e a conversa voltou para a pessoa que a agente de IA cobria.'
+        devolver_falhou: 'Não deu para devolver a conversa à pessoa que a agente de IA cobria.'
         teto_a_cada: 'Os passos de cada mensagem do cliente já rodaram 200 vezes nesta execução. Daqui em diante a espera segue só pela condição.'
         quem_ligou_saiu_da_conta: 'Quem ligou a automação saiu da conta. Assuma e religue.'
         quem_ligou_sem_acesso: 'Quem ligou a automação não tem mais acesso aqui. Assuma e religue.'
@@ -1067,6 +1072,8 @@ pt_BR:
         sem_conversa: "Não há conversa onde agir: o card não tem conversa principal, ou o contato não tem conversa, e a automação não escolheu caixa para abrir uma. Nada foi mandado."
         contato_sem_telefone: "O contato não tem telefone, e a conversa não foi aberta. Nada foi mandado."
         sem_responsavel: "A agente de IA atende esta conversa, e o card dela não tem responsável (ou não há card). Ninguém foi avisado."
+        card_sem_responsavel: "O card não tem responsável. A conversa ficou com quem já estava."
+        responsavel_nao_ve_a_conversa: "O responsável do card não enxerga esta conversa (não está na caixa dela). A conversa ficou com quem já estava."
         texto_vazio: "O texto ficou em branco depois de montado. A mensagem não foi mandada."
         dado_ausente: 'A IA não achou na conversa nenhum dos dados pedidos. Nada foi gravado.'
         ia_chave_recusada: 'O provedor de IA recusou a chave da conta. Confira a chave de IA nas integrações.'
@@ -1086,7 +1093,7 @@ pt_BR:
         pessoa_atribuida: 'A conversa está com uma pessoa, e ela continua com a conversa. A agente de IA não assumiu.'
         sem_vinculo_na_caixa: 'A agente de IA não trabalha na caixa desta conversa. A conversa ficou como estava.'
         nao_atende_cliente: 'A agente de IA não está atendendo clientes agora. A conversa ficou como estava.'
-        conversa_resolvida: 'A conversa está resolvida. A agente de IA não assumiu.'
+        conversa_resolvida: 'A conversa está resolvida. Ninguém assumiu a conversa.'
         outra_conta: 'A agente de IA é de outra conta. A conversa ficou como estava.'
         campo_proibido: 'A ação manda um campo que a automação não muda.'
       alvo:
@@ -1134,6 +1141,7 @@ pt_BR:
         passo_desligado: "Passo %{passo}: mensagem e aviso estão desligados nesta conta."
         agente_de_ia_invalido: 'Passo %{passo}: a agente de IA %{id} não é desta conta.'
         retorno_mensagem_sem_card: "Passo %{passo}: a mensagem do retorno só sai com gatilho de card. Use um gatilho de card ou desligue a mensagem."
+        responsavel_so_com_card: "Passo %{passo}: passar a conversa para o responsável do card só vale com gatilho de card."
         sem_criar_retorno: 'Passo %{passo}: você não pode criar retorno no CRM, e o passo "Criar retorno" pede isso.'
         modelo_indisponivel: "Passo %{passo}: nenhuma caixa do WhatsApp oficial tem o modelo %{nome} aprovado, de utilidade e com estas variáveis."
         time_de_fora: "Passo %{passo}: o time %{id} não é desta conta."
@@ -1182,6 +1190,8 @@ pt_BR:
         resumo: "Resumo da automação:\n\n%{texto}"
       ia:
         gravar: 'Gravar o que a IA achou na conversa'
+      descricoes:
+        conversa_ao_responsavel: 'Passar a conversa para o responsável do card'
     automacoes:
       ensaio:
         condicoes_invalidas: 'Esta automação tem uma condição que a plataforma não aceita, então não dá para testar. Corrija no modo manual.'
