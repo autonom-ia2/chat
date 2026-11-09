@@ -348,7 +348,7 @@ RSpec.describe 'Automação livre: card atualizado', :automacao_motor, type: :re
 
       expect(jobs_da_automacao).to eq(1)
       dados = ActiveJob::Arguments.deserialize(enqueued_jobs.find { |job| job[:job] == Autonomia::Automacao::EventoDoCardJob }[:args]).first
-      expect(dados.dig('changed_attributes', 'mudancas')).to eq('valor' => [1_000_000, 6_000_000], 'atributo:plano' => [nil, 'ouro'])
+      expect(dados.dig('changed_attributes', 'mudancas')).to eq('valor' => ['passou_de:50000'], 'atributo:plano' => [nil, 'ouro'])
       drenar
       expect(vezes(definicao)).to eq(1)
     end
@@ -379,7 +379,35 @@ RSpec.describe 'Automação livre: card atualizado', :automacao_motor, type: :re
 
       expect(jobs_da_automacao).to eq(1)
       dados = ActiveJob::Arguments.deserialize(enqueued_jobs.find { |job| job[:job] == Autonomia::Automacao::EventoDoCardJob }[:args]).first
-      expect(dados.dig('changed_attributes', 'mudancas')).to eq('valor' => [1_000_000, 3_000_000])
+      expect(dados.dig('changed_attributes', 'mudancas')).to eq('valor' => ['mudou:'])
+    end
+  end
+
+  # #2750, revisão: o valor de venda é protegido (#2597). O job, a fila e o log do ActiveJob guardam os argumentos; o
+  # evento leva só que o valor mudou e quais condições casaram, conferidas no commit.
+  describe 'o valor de venda fora do evento' do
+    def argumentos_do_job = enqueued_jobs.find { |job| job[:job] == Autonomia::Automacao::EventoDoCardJob }[:args]
+
+    it 'o evento não leva o valor, nem em centavos nem em reais, e o gatilho dispara', :aggregate_failures do
+      definicao = atualizado({ 'campo' => 'valor', 'condicao' => 'passou_de', 'valor' => '50000' })
+      atualizado({ 'campo' => 'valor', 'condicao' => 'maior_que', 'valor' => '90000' })
+
+      card.update!(value_cents: 6_543_210)
+
+      expect(argumentos_do_job.to_json).not_to include('6543210', '65432.1', '1000000', '10000.0')
+      dados = ActiveJob::Arguments.deserialize(argumentos_do_job).first
+      expect(dados.dig('changed_attributes', 'mudancas')).to eq('valor' => ['passou_de:50000'])
+      drenar
+      expect(vezes(definicao)).to eq(1)
+    end
+
+    it 'sem condição no valor, o evento diz só que o valor mudou', :aggregate_failures do
+      atualizado({ 'campo' => 'atributo', 'chave' => 'plano', 'condicao' => 'mudou' })
+
+      card.update!(value_cents: 6_543_210, custom_attributes: { 'plano' => 'ouro' })
+
+      dados = ActiveJob::Arguments.deserialize(argumentos_do_job).first
+      expect(dados.dig('changed_attributes', 'mudancas')).to eq('valor' => [], 'atributo:plano' => [nil, 'ouro'])
     end
   end
 

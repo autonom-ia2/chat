@@ -40,12 +40,19 @@ module Crm
       def perform
         raise InvalidAction, "unknown action: #{@action}" unless ACTIONS.include?(@action)
 
-        updated = []
-        failed = []
-
         # Resolve the target stage once for `move` (shared across all ids); a bad
         # stage_id fails the whole request fast rather than per-card.
         target_stage = resolve_target_stage if @action == 'move'
+
+        # O gate da Automação livre e a conta do emissor, uma vez por lote, não uma por card (#2750).
+        ::Autonomia::Automacao::EmLote.durante { apply_each(target_stage) }
+      end
+
+      private
+
+      def apply_each(target_stage)
+        updated = []
+        failed = []
 
         @ids.each do |id|
           card = visible_cards_by_id[id]
@@ -67,8 +74,6 @@ module Crm
 
         { updated: updated, failed: failed }
       end
-
-      private
 
       def apply_action!(card, target_stage:)
         case @action
