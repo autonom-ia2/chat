@@ -49,15 +49,14 @@ const props = defineProps({
   // #2500 C2: o rascunho inteiro com o passo do painel, para o "Testar", e o
   // custo de cada passo ({ com_valores, custos }).
   receitaDoTeste: { type: Function, default: null },
-  // A automação já salva, para o "Testar este passo" (#2780).
+  // A automação já salva, para o "Testar este passo" (#2780) e o segredo do
+  // "webhook" (G13, #2670).
   automacaoId: { type: Number, default: null },
   custos: { type: Object, default: () => ({ com_valores: false, custos: {} }) },
   // #2499: os gatilhos que esta pessoa pode escolher (com a flag e a chave de
   // funis, os de card) e as escolhas deles. Sem a lista, todos os do catálogo.
   gatilhos: { type: Array, default: null },
   escolhasDoGatilho: { type: Object, default: () => ({}) },
-  // G13 (#2670): o segredo do "webhook" é da automação salva.
-  automacaoId: { type: Number, default: null },
 });
 
 const emit = defineEmits(['salvar', 'tirar', 'close']);

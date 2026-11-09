@@ -614,7 +614,6 @@ onMounted(() => {
                 ...escolhasDoGatilho,
                 caixas: opcoes.caixaDaConversa,
               }"
-              :automacao-id="automacao?.id ?? null"
               @salvar="salvar"
               @tirar="tirar"
               @close="fecharPainel('alterar')"
