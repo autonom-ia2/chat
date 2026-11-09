@@ -259,8 +259,9 @@ const saveChange = async () => {
     <h3 class="m-0 text-base font-semibold text-n-slate-12">
       {{ $t(`${KEY}.TITLE`) }}
     </h3>
+    <!-- Com uma cópia não confirmada, a única ação é resolver ela: nada de criar outra no meio. -->
     <Button
-      v-if="!creativeKind"
+      v-if="!creativeKind && !unconfirmed"
       data-ad-care-duplicate
       :variant="copy ? 'faded' : null"
       :color="copy ? 'slate' : null"
@@ -269,7 +270,10 @@ const saveChange = async () => {
       class="w-full sm:w-auto sm:self-start"
       @click="duplicateDialog?.open()"
     />
-    <div v-else class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+    <div
+      v-else-if="!unconfirmed"
+      class="flex flex-col gap-2 sm:flex-row sm:flex-wrap"
+    >
       <Button
         data-ad-care-duplicate
         variant="faded"
@@ -289,7 +293,7 @@ const saveChange = async () => {
         @click="openChange"
       />
     </div>
-    <p class="m-0 text-sm text-n-slate-11">
+    <p v-if="!unconfirmed" class="m-0 text-sm text-n-slate-11">
       {{ $t(creativeKind ? `${KEY}.HINT` : `${KEY}.HINT_DUPLICATE`) }}
     </p>
 

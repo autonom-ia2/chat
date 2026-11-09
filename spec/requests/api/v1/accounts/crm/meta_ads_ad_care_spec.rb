@@ -266,6 +266,36 @@ RSpec.describe 'CRM meta_ads_connection cuidar do anúncio (#2778)', type: :requ
         expect(source.reload.creative_id).to eq(creative_id)
       end
 
+      it 'token sem permissão ao pôr no anúncio: meta_refused, sem oferecer a cópia (ela falharia igual)' do
+        stub_post(ad_id, meta_graph_error(200), status: 403)
+        stub_request(:delete, meta_graph_url(new_creative)).to_return(status: 200, body: { success: true }.to_json, headers: json)
+
+        swap!
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq('meta_refused')
+      end
+
+      it 'sem resposta ao criar o criativo novo: não diz que nada foi criado' do
+        stub_request(:post, meta_graph_url("act_#{connection.ad_account_id}/adcreatives")).to_timeout
+
+        swap!
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body).to include('error' => 'meta_unavailable', 'nothing_created' => false)
+        expect(a_request(:post, meta_graph_url(ad_id))).not_to have_been_made
+      end
+
+      it 'anúncio de post impulsionado: invalid_creative, sem criar criativo' do
+        source.update!(source_post_id: '111_222', source_post_network: 'facebook')
+
+        swap!
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq('invalid_creative')
+        expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+      end
+
       it 'a Meta recusa criar o criativo novo: meta_refused, sem tocar no anúncio (a cópia também precisaria dele)' do
         stub_post("act_#{connection.ad_account_id}/adcreatives", meta_graph_error(100), status: 400)
 

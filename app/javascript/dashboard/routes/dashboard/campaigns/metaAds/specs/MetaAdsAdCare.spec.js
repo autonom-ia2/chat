@@ -212,6 +212,9 @@ describe('Anúncios da Meta · cuidar do anúncio (#2778)', () => {
 
     const block = wrapper.find('[data-ad-care-unconfirmed]');
     expect(useAlert).not.toHaveBeenCalled();
+    // Uma ação só: enquanto a cópia não for resolvida, não dá para criar outra.
+    expect(wrapper.find('[data-ad-care-duplicate]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-care-change]').exists()).toBe(false);
     expect(block.text()).toContain(`${KEY}.COPY_UNCONFIRMED`);
     expect(block.find('a').attributes('href')).toBe(
       'https://adsmanager.facebook.com/x'

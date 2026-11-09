@@ -67,6 +67,8 @@ class Crm::MetaAds::Creation::CreativeSwap
 
   def swap_creative!(record, change, stored_key)
     raise Crm::MetaAds::Creation::Error, 'cannot_change' unless @access.can_change_ads?
+    # Post impulsionado não tem criativo próprio para trocar (a tela nem oferece; Crm::MetaAds::Creation::CareState).
+    raise Crm::MetaAds::Creation::Error, 'invalid_creative' if record.creative_id.blank? || record.source_post_id.present?
 
     read = client.creative_spec(record.creative_id)
     raise Crm::MetaAds::Creation::Error.from_result(read) unless read.ok
@@ -79,16 +81,18 @@ class Crm::MetaAds::Creation::CreativeSwap
     swapped
   end
 
+  # Sem resposta ao criar, o criativo pode ter ficado na conta (solto, sem gastar): a tela não diz "segue como estava".
   def create_creative!(params)
     result = client.create_creative(@connection.ad_account_id, params)
     id = result.data['id'].presence if result.ok
-    raise Crm::MetaAds::Creation::Error.from_result(result) if id.nil?
+    raise Crm::MetaAds::Creation::Error.from_result(result, nothing_created: !result.transient?) if id.nil?
 
     id.to_s
   end
 
   # Recusa clara: o criativo novo, que ninguém usa, é apagado (sem conseguir, fica solto na conta, sem gastar nada), e a
-  # tela oferece a cópia (`swap_refused`).
+  # tela oferece a cópia (`swap_refused`). Token recusado ou sem permissão não é recusa deste anúncio: a cópia falharia
+  # igual, então a resposta é a recusa de sempre (`meta_refused`).
   # Sem resposta (tempo esgotado, 5xx): a Meta pode ter trocado, então o criativo fica e a tela não diz "segue como
   # estava" (`nothing_created: false`).
   def put_on_ad!(record, creative_id, stored_key)
@@ -100,6 +104,8 @@ class Crm::MetaAds::Creation::CreativeSwap
 
     unless result.ok
       client.delete_object(creative_id)
+      raise Crm::MetaAds::Creation::Error.from_result(result) if result.token_invalid? || result.scope_error?
+
       raise Crm::MetaAds::Creation::Error, 'swap_refused'
     end
 

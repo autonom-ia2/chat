@@ -3423,7 +3423,7 @@
           "SWAP_REFUSED": "A Meta não aceitou trocar a foto neste anúncio. Dá para criar uma cópia pausada com a foto nova.",
           "COPY_UNCONFIRMED": "Não deu para confirmar com a Meta se a cópia foi criada. Confira no Gerenciador de Anúncios. Se ela não estiver lá, crie de novo.",
           "RECREATE": "Não está no Gerenciador, criar de novo",
-          "PAUSE_ORIGINAL_HINT": "A cópia está no ar. Pause o original para não gastar em dobro.",
+          "PAUSE_ORIGINAL_HINT": "Você ativou a cópia. Pause o original para não gastar em dobro.",
           "PAUSE_ORIGINAL": "Pausar o original",
           "PAUSE_ORIGINAL_DONE": "Original pausado. Agora só a cópia gasta."
         }
