@@ -5,8 +5,8 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 716 |
-| Sem corpo | 207 |
+| No catálogo | 717 |
+| Sem corpo | 208 |
 | Com corpo | 509 |
 | Com corpo e formato completo | 421 (82,7%) |
 | Com corpo e formato incompleto | 88 |
@@ -224,8 +224,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 441 |
-| Com parâmetros conhecidos | 390 |
+| No catálogo | 442 |
+| Com parâmetros conhecidos | 391 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos
