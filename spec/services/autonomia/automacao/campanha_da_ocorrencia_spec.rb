@@ -48,8 +48,9 @@ RSpec.describe Autonomia::Automacao::CampanhaDaOcorrencia, :automacao_motor do
 
   after { Current.reset }
 
-  # A varredura de um lote só, que rodou.
+  # A varredura de um lote só, que rodou. O lote abre as execuções antes de marcar que rodou, como no RecorrenteLoteJob.
   def varredura(lotes: 1, rodaram: [0])
+    execucoes
     linhas = described_class.abrir(definicao, vez)
     described_class.lotes(linhas, lotes)
     rodaram.each { |indice| described_class.lote_feito(definicao, 'card.recorrente', vez, indice) }
@@ -81,6 +82,18 @@ RSpec.describe Autonomia::Automacao::CampanhaDaOcorrencia, :automacao_motor do
 
   def rede_passa(linha)
     travel_to(Time.current + described_class::REDE + 1.minute) { Autonomia::Automacao::FecharVezJob.perform_now(linha.id) }
+  end
+
+  # A conferência marcada da vez, na hora dela.
+  def na_hora_marcada(linha)
+    travel_to(linha.reload.conferir_em + 1.second) { Autonomia::Automacao::FecharVezJob.perform_now(linha.id) }
+  end
+
+  def fecha_vez_na_fila = enqueued_jobs.count { |job| job[:job] == Autonomia::Automacao::FecharVezJob }
+
+  def falhar_ao_montar
+    allow_any_instance_of(Autonomia::Automacao::PassoDeCampanha).to receive(:montar) # rubocop:disable RSpec/AnyInstance
+      .and_raise(ActiveRecord::ConnectionTimeoutError, 'banco ocupado')
   end
 
   it 'a vez com N cards sai uma vez, depois do N-ésimo', :aggregate_failures do
@@ -197,17 +210,83 @@ RSpec.describe Autonomia::Automacao::CampanhaDaOcorrencia, :automacao_motor do
     expect(registro_da_vez('campanha_da_vez_falhou').dados).to include('erro' => 'ActiveRecord::ConnectionTimeoutError')
 
     falhar = false
-    Autonomia::Automacao::FecharVezJob.perform_now(linha.id)
+    Autonomia::Automacao::FecharVezJob.perform_now(linha.id) # antes da hora marcada: nada
+    expect(account.campaigns).to be_empty
+
+    na_hora_marcada(linha)
 
     expect(account.campaigns.count).to eq(1)
     expect(linha.reload.campanha_display_id).to eq(account.campaigns.last.display_id)
   end
 
-  it 'sem chegada nenhuma, a vez não fecha nem manda' do
+  it 'sem chegada nenhuma, a vez fecha sem mandar, com o motivo no registro da primeira execução', :aggregate_failures do
     linha = varredura
     execucoes.each { |execucao| termina(execucao) }
 
-    expect([account.campaigns.count, linha.reload.fechada_em]).to eq([0, nil])
+    expect(account.campaigns).to be_empty
+    expect(linha.reload.fechada_em).to be_present
+    expect(registro_da_vez('campanha_da_vez_nao_saiu').dados).to include('por' => 'sem_chegada', 'chegaram' => 0, 'sairam' => 3)
+    expect(linha.conferir_em).to be_nil
+  end
+
+  it 'o erro que se repete: uma tentativa por vez marcada, até TENTATIVAS, e a vez desiste com o registro final', :aggregate_failures do
+    linha = varredura
+    falhar_ao_montar
+    execucoes.each { |execucao| chega(execucao) }
+    5.times { described_class.conferir_execucao(execucoes[0]) } # cada card que termina confere de novo: mesma tentativa
+
+    expect(Autonomia::Automacao::Registro.where(motivo: 'campanha_da_vez_falhou').count).to eq(1)
+    expect(linha.reload.tentativas).to eq(1)
+
+    (described_class::TENTATIVAS - 1).times { na_hora_marcada(linha) }
+
+    expect(linha.reload).to have_attributes(tentativas: described_class::TENTATIVAS, conferir_em: nil)
+    expect(linha.fechada_em).to be_present
+    expect(Autonomia::Automacao::Registro.where(motivo: 'campanha_da_vez_falhou').count).to eq(described_class::TENTATIVAS - 1)
+    expect(registro_da_vez('campanha_da_vez_desistiu').dados).to include('tentativas' => described_class::TENTATIVAS)
+    expect { described_class.conferir_execucao(execucoes[0]) }.not_to change(Autonomia::Automacao::Registro, :count)
+    expect(account.campaigns).to be_empty
+  end
+
+  it 'uma conferência marcada por vez: a vez que já existe não marca outra, e o job fora da hora não confere', :aggregate_failures do
+    linha = varredura
+    expect(fecha_vez_na_fila).to eq(1)
+
+    described_class.abrir(definicao, vez)
+    expect(fecha_vez_na_fila).to eq(1)
+
+    allow(Autonomia::Automacao::EstadoDaVez).to receive(:new).and_call_original
+    Autonomia::Automacao::FecharVezJob.perform_now(linha.id)
+    expect(Autonomia::Automacao::EstadoDaVez).not_to have_received(:new)
+    expect(fecha_vez_na_fila).to eq(1)
+
+    na_hora_marcada(linha)
+    expect(Autonomia::Automacao::EstadoDaVez).to have_received(:new)
+    expect(fecha_vez_na_fila).to eq(2)
+  end
+
+  it 'a vez sem a contagem dos lotes (varredura antes da atualização) sai pela rede com o texto disso', :aggregate_failures do
+    linha = described_class.send(:garantir, definicao, Autonomia::Automacao::Gatilhos.marca_da_vez('card.recorrente', vez), 'c1')
+    execucoes.each { |execucao| chega(execucao) }
+    expect(account.campaigns).to be_empty
+
+    rede_passa(linha)
+
+    expect(account.campaigns.count).to eq(1)
+    resumo = registro_da_vez('campanha_da_vez_saiu_sem_contar_lotes')
+    historico = Autonomia::Automacao::Historico.new(automacao: definicao, usuario: dona)
+    texto = I18n.with_locale(:pt_BR) { historico.send(:passo, resumo, visivel: true)[:motivo] }
+    expect(texto).to include('não registrou quantos lotes tinha')
+  end
+
+  it 'as execuções da vez saem do índice pelo começo da marca' do
+    linha = varredura
+    execucoes
+    relacao = Autonomia::Automacao::EstadoDaVez.new(linha).send(:execucoes)
+    ActiveRecord::Base.connection.execute('SET LOCAL enable_seqscan = off')
+    plano = ActiveRecord::Base.connection.select_values("EXPLAIN #{relacao.to_sql}").join("\n")
+
+    expect(plano).to include('idx_autonomia_automacao_execucoes_vez')
   end
 
   it 'quem chega depois: "já saiu" só se a campanha saiu; senão, "fechou sem mandar"', :aggregate_failures do

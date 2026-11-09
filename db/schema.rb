@@ -610,6 +610,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_955500) do
     t.jsonb "lotes_feitos", default: [], null: false
     t.integer "campanha_display_id"
     t.datetime "fechada_em"
+    t.datetime "conferir_em"
+    t.integer "tentativas", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_autonomia_automacao_campanhas_da_vez_on_account_id"
@@ -651,6 +653,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_955500) do
     t.index ["alvo_type", "alvo_id"], name: "index_autonomia_automacao_execucoes_on_alvo"
     t.index ["automacao_id", "alvo_type", "alvo_id", "chave_gatilho"], name: "idx_autonomia_automacao_execucoes_abertas", unique: true, where: "(finalizada_em IS NULL)"
     t.index ["automacao_id", "evento"], name: "idx_autonomia_automacao_execucoes_evento", unique: true, where: "(evento IS NOT NULL)"
+    t.index ["automacao_id", "evento"], name: "idx_autonomia_automacao_execucoes_vez", opclass: { evento: :text_pattern_ops }, where: "(evento IS NOT NULL)"
     t.index ["automacao_id"], name: "index_autonomia_automacao_execucoes_on_automacao_id"
     t.index ["due_at"], name: "idx_autonomia_automacao_execucoes_esperando", where: "(finalizada_em IS NULL)"
     t.index ["versao_id"], name: "index_autonomia_automacao_execucoes_on_versao_id"
