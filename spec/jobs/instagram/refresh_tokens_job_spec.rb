@@ -27,6 +27,17 @@ RSpec.describe Instagram::RefreshTokensJob do
     expect(channel.expires_at).to be > 59.days.from_now
   end
 
+  # #2406: o token da Página (login do Facebook) não se renova pelo Instagram nem pede reconexão por isso.
+  it 'skips Facebook-login inboxes' do
+    channel = channel_expiring_in(1.day, token_age: 55.days)
+    channel.update_columns(login: 'facebook', page_id: '104000000000001') # rubocop:disable Rails/SkipsModelValidations
+
+    described_class.perform_now
+
+    expect(a_request(:get, refresh_url)).not_to have_been_made
+    expect(channel.reload.reauthorization_required?).to be(false)
+  end
+
   it 'does not touch a token that expires later' do
     channel = channel_expiring_in(40.days, token_age: 20.days)
     stub = stub_refresh(status: 200, body: { access_token: 'renewed-token', expires_in: 60.days.to_i })

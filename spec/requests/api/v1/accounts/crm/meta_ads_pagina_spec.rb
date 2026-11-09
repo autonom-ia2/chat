@@ -66,6 +66,16 @@ RSpec.describe 'CRM meta_ads_connection página do login único (#2338)', type: 
     expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
   end
 
+  # #2406: o Instagram que já tem caixa nesta conta pelo login único sai marcado, para o pronto não pedir o toque.
+  it 'marca o Instagram que já tem caixa pelo login único' do
+    stub_pages
+    create(:channel_instagram, account: account, instagram_id: '1784', login: 'facebook', page_id: page_id)
+
+    get "#{path}/paginas", headers: admin.create_new_auth_token, as: :json
+
+    expect(response.parsed_body['pages'].first['instagram']).to include('linked' => true)
+  end
+
   it 'lista as Páginas com o Instagram ligado, se já têm caixa e o que a pessoa recusou' do
     stub_pages(declined: ['read_insights'])
     create(:channel_facebook_page, account: account, page_id: '104000000000002')
@@ -76,7 +86,7 @@ RSpec.describe 'CRM meta_ads_connection página do login único (#2338)', type: 
     expect(response.parsed_body['pages']).to eq(
       [
         { 'id' => page_id, 'name' => 'Loja Exemplo', 'category' => 'Loja de roupas', 'followers' => 12_940,
-          'instagram' => { 'username' => 'lojaexemplo', 'followers' => 4820 }, 'linked' => false },
+          'instagram' => { 'username' => 'lojaexemplo', 'followers' => 4820, 'linked' => false }, 'linked' => false },
         { 'id' => '104000000000002', 'name' => 'Blog', 'category' => 'Blog pessoal', 'followers' => nil,
           'instagram' => nil, 'linked' => true }
       ]
