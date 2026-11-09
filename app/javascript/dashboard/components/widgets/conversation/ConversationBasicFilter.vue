@@ -25,16 +25,12 @@ const emit = defineEmits(['changeFilter']);
 const store = useStore();
 const { t } = useI18n();
 
-const { updateUISettings } = useUISettings();
+const { uiSettings, updateUISettings } = useUISettings();
 
 const chatStatusFilter = useMapGetter('getChatStatusFilter');
 const chatSortFilter = useMapGetter('getChatSortFilter');
 
 const [showActionsDropdown, toggleDropdown] = useToggle();
-
-const currentStatusFilter = computed(() => {
-  return chatStatusFilter.value || wootConstants.STATUS_TYPE.OPEN;
-});
 
 const currentSortBy = computed(() => {
   return (
@@ -120,10 +116,15 @@ const activeChatSortLabel = computed(
     ''
 );
 
+// Trocar a ordem grava o status salvo, não o da tela: o filtro do link (Números, Seus posts) abre num status próprio
+// que não é escolha da pessoa. Sem status salvo, Abertas (o mesmo padrão do ChatList#setFiltersFromUISettings).
 const saveSelectedFilter = (type, value) => {
+  const statusSalvo =
+    uiSettings.value.conversations_filter_by?.status ||
+    wootConstants.STATUS_TYPE.OPEN;
   updateUISettings({
     conversations_filter_by: {
-      status: type === 'status' ? value : currentStatusFilter.value,
+      status: type === 'status' ? value : statusSalvo,
       order_by: type === 'sort' ? value : currentSortBy.value,
     },
   });

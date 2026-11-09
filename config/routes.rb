@@ -451,6 +451,8 @@ Rails.application.routes.draw do
               # Login único (#2338): a Página vem do mesmo login dos Anúncios.
               get :paginas, to: 'meta_ads_pagina#index'
               post :pagina, to: 'meta_ads_pagina#create'
+              # Instagram pelo login único (#2406).
+              post :instagram, to: 'meta_ads_instagram#create'
               # Destino (#2338): ligar a página do site sem sair de Anúncios.
               get :site_pages, to: 'meta_ads_site_pages#index'
               post :site_pages, to: 'meta_ads_site_pages#create'
@@ -825,6 +827,17 @@ Rails.application.routes.draw do
                 post :discard, on: :collection, controller: :lead_batches, action: :discard
                 post :contacts, on: :collection, controller: :lead_batches, action: :contacts
                 post :audience, on: :collection, controller: :lead_audiences, action: :create
+                # Em quais listas a empresa está, para a gaveta (#2775, F6).
+                get :audiences, on: :member, controller: :lead_audiences, action: :index
+              end
+              # "Suas listas" (#2775, F6): os Públicos criados pela Prospecção; pôr, tirar, devolver e copiar.
+              resources :audiences, only: [:index, :show] do
+                member do
+                  post :leads, action: :add_leads
+                  delete :members, action: :remove_members
+                  post :members, action: :restore_members
+                  post :copy
+                end
               end
               resources :lists, only: [:index, :show, :create] do
                 post 'leads', on: :member, action: :add_lead

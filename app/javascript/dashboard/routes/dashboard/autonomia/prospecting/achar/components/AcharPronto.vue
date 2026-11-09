@@ -6,6 +6,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 // círculo verde-água com visto, título, detalhe, um botão principal e um link.
 // Rodada 4: nas páginas, o botão principal vai para o rodapé fixo (AcharRodape)
 // e o cartão fica com o texto e o link; `principal` vazio não desenha botão.
+// O slot vem depois dos detalhes (o aviso de canal desligado, #2797).
 defineProps({
   titulo: { type: String, required: true },
   detalhes: { type: Array, default: () => [] },
@@ -38,6 +39,7 @@ const emit = defineEmits(['principal', 'link']);
     >
       {{ detalhe }}
     </p>
+    <slot />
     <div
       v-if="principal || link"
       class="flex flex-col w-full gap-2 mt-2 sm:w-auto"
