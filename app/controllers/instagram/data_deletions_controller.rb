@@ -42,7 +42,8 @@ class Instagram::DataDeletionsController < ActionController::API
     user_id = @signed_payload['user_id'].to_s
     return [] if user_id.blank?
 
-    channels = Channel::Instagram.where(app_scoped_user_id: user_id).or(Channel::Instagram.where(instagram_id: user_id)).order(:id).to_a
+    channels = Channel::Instagram.where(app_scoped_user_id: user_id).order(:id).to_a
+    channels = Channel::Instagram.where(instagram_id: user_id).order(:id).to_a if channels.empty?
     Rails.logger.warn("Instagram #{action_name} callback: no channel for user_id #{user_id}") if channels.empty?
     channels
   end

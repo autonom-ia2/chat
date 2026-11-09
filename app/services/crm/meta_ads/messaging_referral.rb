@@ -124,20 +124,24 @@ module Crm::MetaAds::MessagingReferral
   end
 
   # A mesma Página pode ser caixa de mais de uma conta (Integrations::Facebook::MessageCreator grava a mensagem em
-  # todas): se alguma conta da Página conhece o anúncio (gasto ou nome), ele vai só para a conversa dela (:mine ou
-  # :foreign). Se nenhuma conhece (anúncio novo, antes da coleta), :ask: a Graph diz de qual conta de anúncios ele é
-  # (`owner?`). Página de uma conta só é sempre :mine.
+  # todas), e o mesmo Instagram também (#2781): se alguma conta conhece o anúncio (gasto ou nome), ele vai só para a
+  # conversa dela (:mine ou :foreign). Se nenhuma conhece (anúncio novo, antes da coleta), :ask: a Graph diz de qual
+  # conta de anúncios ele é (`owner?`). Caixa de uma conta só é sempre :mine.
   def ownership(conversation, ad_id)
-    channel = conversation.inbox&.channel
-    return :mine unless channel.is_a?(Channel::FacebookPage)
-
-    others = Inbox.where(channel_type: channel.class.name,
-                         channel_id: Channel::FacebookPage.where(page_id: channel.page_id).where.not(id: channel.id).select(:id))
-                  .pluck(:account_id)
+    others = other_accounts(conversation.inbox&.channel, conversation.account_id)
     return :mine if others.empty? || known_ad?(conversation.account_id, ad_id)
     return :foreign if known_ad?(others, ad_id)
 
     :ask
+  end
+
+  # As contas das outras caixas com a mesma Página ou o mesmo Instagram (a Página com Instagram ligado conta pelos dois).
+  def other_accounts(channel, account_id)
+    return [] unless channel.is_a?(Channel::FacebookPage) || channel.is_a?(Channel::Instagram)
+
+    siblings = Instagram::ConnectedChannels.for(channel.instagram_id)
+    siblings += Channel::FacebookPage.where(page_id: channel.page_id).to_a if channel.is_a?(Channel::FacebookPage)
+    siblings.reject { |sibling| sibling == channel }.filter_map { |sibling| sibling.inbox&.account_id }.uniq - [account_id]
   end
 
   # O anúncio é da conta de anúncios conectada nesta conta? GET /<ad_id>?fields=account_id com o token da conexão.
