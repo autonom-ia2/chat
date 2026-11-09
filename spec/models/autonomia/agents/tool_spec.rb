@@ -103,6 +103,14 @@ RSpec.describe Autonomia::Agents::Tool do
       expect(tool.errors.attribute_names).to include(:request_body_template, :response_mapping)
     end
 
+    it 'recusa faixa grande no valor de uma chave de acesso' do
+      tool = described_class.new(base.merge(endpoint_url: 'https://a.test/x',
+                                            headers_config: [{ key: 'x-a', value: enorme, secret: false }]))
+
+      expect(tool).not_to be_valid
+      expect(tool.errors[:headers_config]).to be_present
+    end
+
     it 'recusa faixa montada com o que o agente preenche' do
       tool = described_class.new(base.merge(endpoint_url: 'https://a.test/x', http_method: 'POST',
                                             request_body_template: '{% for i in (1..n) %}x{% endfor %}'))

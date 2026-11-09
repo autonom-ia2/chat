@@ -206,7 +206,12 @@ class Autonomia::Agents::Tools::HttpExecutor
   def render_response_mapping(response)
     parsed = JSON.parse(response)
     modelo = Autonomia::Agents::Tools::ModeloLiquid.conferir_faixas!(Liquid::Template.parse(mapping_template, error_mode: :strict))
-    modelo.render({ 'response' => parsed, 'r' => parsed }, strict_variables: false, strict_filters: true)
+    filtros = Autonomia::Agents::Tools::ModeloLiquid::FILTROS
+    saida = modelo.render({ 'response' => parsed, 'r' => parsed }, strict_variables: false, strict_filters: true, filters: filtros)
+    # O `render` (sem !) escreve o erro de limite no texto; aqui ele vira recusa, e o agente não recebe pedaço.
+    raise ValorRecusado, 'limite_do_modelo' if modelo.resource_limits.reached? || modelo.errors.any?(Liquid::MemoryError)
+
+    saida
   end
 
   def log_success(started_at, bytes)

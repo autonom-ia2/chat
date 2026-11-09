@@ -385,6 +385,8 @@ describe('regras das Ferramentas', () => {
       ['tool_execution_error: argument_error', 'VALOR', 'PREENCHE', false],
       ['tool_execution_error: zero_division_error', 'VALOR', 'PREENCHE', false],
       ['tool_execution_error: faixa_grande', 'FAIXA', 'ONDE', false],
+      ['tool_execution_error: memory_error', 'FAIXA', 'ONDE', false],
+      ['tool_execution_error: limite_do_modelo', 'FAIXA', 'ONDE', false],
       ['tool_execution_error: internal_error', 'GENERICO', null, false],
       ['outra coisa', 'GENERICO', null, false],
     ])('%s → %s', (erro, chave, corrigir, ambar) => {

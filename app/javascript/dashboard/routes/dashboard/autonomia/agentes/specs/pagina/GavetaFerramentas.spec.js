@@ -258,10 +258,8 @@ describe('GavetaFerramentas · nova ferramenta (F03–F06)', () => {
     expect(no('[data-campo-informacao]').value).toBe('O que a pessoa procura');
     await clicarNoTexto('Continuar', rodape());
     expect(texto()).toContain('Passo 3 de 4');
+    // O campo mostra a informação pelo nome de gente; {{termo}} só vai ao salvar.
     expect(no('[data-campo-endereco]').value).toBe(
-      'https://api.sualoja.com.br/estoque/busca?termo={{termo}}'
-    );
-    expect(no('[data-link-legivel]').textContent).toContain(
       'https://api.sualoja.com.br/estoque/busca?termo=[O que a pessoa procura]'
     );
     expect(texto()).not.toContain('gira');
@@ -283,6 +281,8 @@ describe('GavetaFerramentas · nova ferramenta (F03–F06)', () => {
       7,
       expect.objectContaining({
         name: 'Busca no estoque',
+        endpoint_url:
+          'https://api.sualoja.com.br/estoque/busca?termo={{termo}}',
         enabled: false,
         http_method: 'GET',
         headers_config: [{ key: 'x-api-key', value: 'sk_teste', secret: true }],
@@ -342,6 +342,9 @@ describe('GavetaFerramentas · nova ferramenta (F03–F06)', () => {
       'https://api.loja.com.br/b?t={{termo}}'
     );
     expect(no('[data-aviso-codificar]')).toBeNull();
+    expect(no('[data-campo-endereco]').value).toBe(
+      'https://api.loja.com.br/b?t=[termo]'
+    );
     expect(no('[data-avisos-informacoes]').textContent).toContain(
       'O link usa [termo], mas essa informação não existe no passo 2.'
     );
@@ -366,10 +369,16 @@ describe('GavetaFerramentas · nova ferramenta (F03–F06)', () => {
     expect(botao.getAttribute('aria-label')).toBe('Pôr CEP no link');
     await clicar('[data-encaixar-informacao]');
     expect(no('[data-campo-endereco]').value).toBe(
-      'https://viacep.com.br/ws/{{cep}}/json/'
-    );
-    expect(no('[data-link-legivel]').textContent).toContain(
       'https://viacep.com.br/ws/[CEP]/json/'
+    );
+    expect(no('[data-link-legivel]')).toBeNull();
+    // Digitar o nome entre colchetes também vale, como o botão.
+    await digitar(
+      '[data-campo-endereco]',
+      'https://viacep.com.br/ws/[CEP]/json/?v=[1]'
+    );
+    expect(no('[data-campo-endereco]').value).toBe(
+      'https://viacep.com.br/ws/[CEP]/json/?v=[1]'
     );
     expect(no('[data-avisos-informacoes]')).toBeNull();
 

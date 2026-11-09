@@ -878,7 +878,6 @@
               "ENCAIXAR": "Toque numa informação para pôr no link, no lugar onde o outro sistema espera. O agente troca pelo que a pessoa disser.",
               "ENCAIXAR_SR": "Pôr {rotulo} no link",
               "SEM_INFORMACOES": "Se o link muda conforme a conversa, volte ao passo 2 e diga o que o agente descobre.",
-              "COMO_FICA": "Como o agente usa:",
               "SEM_INFORMACAO_ENDERECO": "O link usa [{nome}], mas essa informação não existe no passo 2. A chamada vai falhar.",
               "SEM_INFORMACAO_CORPO": "O que vai junto usa [{nome}], mas essa informação não existe no passo 2. A chamada vai falhar.",
               "SEM_INFORMACAO_CABECALHO": "A chave de acesso usa [{nome}], mas essa informação não existe no passo 2. A chamada vai falhar.",
@@ -909,14 +908,15 @@
               "DESCRICAO_EXEMPLO": "A peça que a pessoa procura, do jeito que ela falou.",
               "PODE_FALTAR": "Pode faltar",
               "PODE_FALTAR_SR": "Pode faltar: {item}",
-              "PODE_FALTAR_SIM": "Ligado: o agente pode chamar sem essa informação. Ela vai vazia.",
-              "PODE_FALTAR_NAO": "Desligado: o agente sempre manda um valor. Para ele perguntar à pessoa quando não souber, diga isso em \"Como o agente descobre isso\".",
+              "PODE_FALTAR_SIM": "Ligado: o agente pode chamar sem essa informação.",
+              "PODE_FALTAR_NAO": "Desligado: o agente sempre manda um valor. Para ele perguntar antes, diga em \"Como o agente descobre isso\".",
               "ADICIONAR": "Adicionar informação",
               "REMOVIDA": "Informação removida.",
               "ERRO": {
                 "VAZIO": "Escreva um nome.",
                 "FORMATO": "Use só letras sem acento, números e _. Ex.: termo_busca",
-                "REPETIDO": "Já existe uma informação com esse nome."
+                "REPETIDO": "Já existe uma informação com esse nome.",
+                "COLCHETE": "Não use [ nem ] no nome."
               },
               "NOME_AJUDA": "Como você chama. Ex.: CEP",
               "FALTANDO": "A ferramenta usa [{nome}], que não está mais aqui. Ponha de volta, ou tire do link no passo 3. Senão, a chamada vai falhar."

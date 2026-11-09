@@ -1,8 +1,10 @@
 import {
   PASSOS,
   corpoPadrao,
+  enderecoDaTela,
+  enderecoNaTela,
   enderecoLegivel,
-  inserirInformacao,
+  inserirNoCursor,
   mudarRotulo,
   novaInformacao,
   paraApi,
@@ -101,11 +103,73 @@ describe('linguagem das Ferramentas (#1430)', () => {
     it('puts the information where the cursor is', () => {
       const link = 'https://viacep.com.br/ws//json/';
 
-      expect(inserirInformacao(link, 25, 'cep')).toBe(
-        'https://viacep.com.br/ws/{{cep}}/json/'
+      expect(inserirNoCursor(link, 25, '[CEP]')).toEqual({
+        texto: 'https://viacep.com.br/ws/[CEP]/json/',
+        cursor: 30,
+      });
+      expect(inserirNoCursor('https://a.com/', null, '[CEP]').texto).toBe(
+        'https://a.com/[CEP]'
       );
-      expect(inserirInformacao('https://a.com/', null, 'cep')).toBe(
-        'https://a.com/{{cep}}'
+      expect(inserirNoCursor('https://a.com/xx/', 14, '[CEP]', 16)).toEqual({
+        texto: 'https://a.com/[CEP]/',
+        cursor: 19,
+      });
+    });
+
+    // Pedido da coordenadora (09/11): o campo nunca mostra {{ }}. Mostra [CEP]; ao salvar, volta a {{cep}}.
+    it('shows the link field with [label] and turns it back into {{name}}', () => {
+      const numero = {
+        ...novaInformacao(),
+        rotulo: 'Número do pedido',
+        nome: 'numero_do_pedido',
+      };
+      const salvo =
+        'https://a.com/{{cep}}/p/{{ numero_do_pedido | url_encode }}?x={{solta}}';
+
+      const naTela = enderecoNaTela(salvo, [cep, numero]);
+
+      expect(naTela).toBe('https://a.com/[CEP]/p/[Número do pedido]?x=[solta]');
+      expect(enderecoDaTela(naTela, [cep, numero], salvo)).toBe(
+        'https://a.com/{{cep}}/p/{{numero_do_pedido}}?x={{solta}}'
+      );
+    });
+
+    // Revisão do delta: colchete que já é do link (filter[status]) nunca vira informação na volta.
+    it('keeps a bracket that belongs to the link itself', () => {
+      const status = { ...novaInformacao(), rotulo: 'Status', nome: 'status' };
+      const salvo = 'https://a.com/?filter[status]=open&q={{status}}';
+
+      const naTela = enderecoNaTela(salvo, [status]);
+
+      expect(naTela).toBe('https://a.com/?filter[status]=open&q=[Status]');
+      expect(enderecoDaTela(naTela, [status], salvo)).toBe(salvo);
+
+      const igual = { ...status, rotulo: 'status' };
+      const ambiguo = enderecoNaTela(salvo, [igual]);
+      expect(ambiguo).toBe('https://a.com/?filter%5Bstatus%5D=open&q=[status]');
+      expect(enderecoDaTela(ambiguo, [igual], salvo)).toBe(
+        'https://a.com/?filter%5Bstatus%5D=open&q={{status}}'
+      );
+    });
+
+    it('step 2 refuses brackets and repeated labels', () => {
+      const pedido = { ...cep, id: 'p', rotulo: 'Pedido [nº]', nome: 'pedido' };
+      const outro = { ...cep, id: 'o', rotulo: 'cep ', nome: 'cep_entrega' };
+
+      expect(
+        validarPasso(2, { ...rascunhoVazio(), informacoes: [pedido] }).erros
+      ).toEqual({ i0: 'COLCHETE' });
+      expect(
+        validarPasso(2, { ...rascunhoVazio(), informacoes: [cep, outro] }).erros
+      ).toEqual({ i0: 'REPETIDO', i1: 'REPETIDO' });
+    });
+
+    it('keeps brackets that are not information, and other filters raw', () => {
+      expect(enderecoDaTela('https://a.com/[1]/[CEP]', [cep], '')).toBe(
+        'https://a.com/[1]/{{cep}}'
+      );
+      expect(enderecoNaTela('https://a.com/{{ cep | upcase }}', [cep])).toBe(
+        'https://a.com/{{ cep | upcase }}'
       );
     });
 

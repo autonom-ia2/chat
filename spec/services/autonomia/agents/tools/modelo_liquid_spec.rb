@@ -16,6 +16,10 @@ RSpec.describe Autonomia::Agents::Tools::ModeloLiquid do
       expect(described_class.faixa_grande?('{% for i in (1..2 %}')).to be(false)
     end
 
+    it 'counts tablerow like for' do
+      expect(described_class.faixa_grande?('{% tablerow i in (1..2000000000) %}x{% endtablerow %}')).to be(true)
+    end
+
     it 'refuses it when reading the template' do
       expect { described_class.ler('{% for i in (1..2000000000) %}x{% endfor %}', recusa: 'x') }
         .to raise_error(Autonomia::Agents::Tools::HttpExecutor::ValorRecusado, 'faixa_grande')

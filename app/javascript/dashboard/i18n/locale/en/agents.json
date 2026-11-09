@@ -878,7 +878,6 @@
               "ENCAIXAR": "Tap a piece of information to put it in the link, where the other system expects it. The agent swaps it for what the person said.",
               "ENCAIXAR_SR": "Put {rotulo} in the link",
               "SEM_INFORMACOES": "If the link changes with the conversation, go back to step 2 and say what the agent finds out.",
-              "COMO_FICA": "How the agent uses it:",
               "SEM_INFORMACAO_ENDERECO": "The link uses [{nome}], but that information is not in step 2. The call will fail.",
               "SEM_INFORMACAO_CORPO": "What goes along uses [{nome}], but that information is not in step 2. The call will fail.",
               "SEM_INFORMACAO_CABECALHO": "The access key uses [{nome}], but that information is not in step 2. The call will fail.",
@@ -909,14 +908,15 @@
               "DESCRICAO_EXEMPLO": "The part the person is looking for, the way they said it.",
               "PODE_FALTAR": "Can be missing",
               "PODE_FALTAR_SR": "Can be missing: {item}",
-              "PODE_FALTAR_SIM": "On: the agent can call without this information. It goes empty.",
-              "PODE_FALTAR_NAO": "Off: the agent always sends a value. For it to ask the person when it does not know, say so in \"How the agent finds this out\".",
+              "PODE_FALTAR_SIM": "On: the agent can call without this information.",
+              "PODE_FALTAR_NAO": "Off: the agent always sends a value. For it to ask first, say so in \"How the agent finds this out\".",
               "ADICIONAR": "Add information",
               "REMOVIDA": "Information removed.",
               "ERRO": {
                 "VAZIO": "Write a name.",
                 "FORMATO": "Use only letters without accents, numbers and _. E.g.: search_term",
-                "REPETIDO": "There is already information with this name."
+                "REPETIDO": "There is already information with this name.",
+                "COLCHETE": "Don't use [ or ] in the name."
               },
               "NOME_AJUDA": "What you call it. E.g. ZIP code",
               "FALTANDO": "The tool uses [{nome}], which is no longer here. Put it back, or remove it from the link in step 3. Otherwise the call will fail."

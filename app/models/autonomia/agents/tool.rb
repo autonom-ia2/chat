@@ -145,13 +145,16 @@ class Autonomia::Agents::Tool < ApplicationRecord
     Liquid::Template.parse(endpoint_url.to_s, error_mode: :strict)
     return errors.add(:endpoint_url, I18n.t('autonomia.agents.ferramenta.informacao_no_site')) if informacao_no_site?
 
-    uri = URI.parse(sem_modelo(endpoint_url.to_s))
+    conferir_endereco(URI.parse(sem_modelo(endpoint_url.to_s)))
+  rescue URI::InvalidURIError, Liquid::Error
+    errors.add(:endpoint_url, 'não é válido')
+  end
+
+  def conferir_endereco(uri)
     errors.add(:endpoint_url, 'deve usar HTTPS') unless uri.is_a?(URI::HTTPS)
     errors.add(:endpoint_url, 'deve possuir host') if uri.host.blank?
     errors.add(:endpoint_url, 'não pode apontar para localhost') if uri.host.to_s.match?(/\Alocalhost\z|\.local\z/i)
     errors.add(:endpoint_url, 'não pode usar IP direto') if ip_host?(uri.host)
-  rescue URI::InvalidURIError, Liquid::Error
-    errors.add(:endpoint_url, 'não é válido')
   end
 
   MODELO = { '{{' => '}}', '{%' => '%}' }.freeze
@@ -183,8 +186,9 @@ class Autonomia::Agents::Tool < ApplicationRecord
   # #1430 (revisão adversarial): faixa enorme num `for` no endereço, no que vai junto ou no recorte da resposta.
   def validate_faixas
     { endpoint_url: endpoint_url, request_body_template: request_body_template,
-      response_mapping: response_mapping.to_h.stringify_keys['template'] }.each do |campo, texto|
-      next unless Autonomia::Agents::Tools::ModeloLiquid.faixa_grande?(texto)
+      response_mapping: response_mapping.to_h.stringify_keys['template'],
+      headers_config: Array(headers_config).map { |header| header['value'] } }.each do |campo, texto|
+      next unless Array(texto).any? { |pedaco| Autonomia::Agents::Tools::ModeloLiquid.faixa_grande?(pedaco) }
 
       errors.add(campo, I18n.t('autonomia.agents.ferramenta.faixa_grande', maximo: Autonomia::Agents::Tools::ModeloLiquid::FAIXA_MAXIMA))
     end
@@ -195,11 +199,14 @@ class Autonomia::Agents::Tool < ApplicationRecord
   # de novo.
   def validate_segredo_no_mesmo_site
     return unless will_save_change_to_endpoint_url? && site(endpoint_url_in_database) != site(endpoint_url)
-
-    guardadas = Array(headers_config_in_database).select { |header| header['secret'] }.map { |header| header.values_at('key', 'value') }
-    return unless headers_config.any? { |header| header['secret'] && guardadas.include?(header.values_at('key', 'value')) }
+    return unless chave_guardada_reaproveitada?
 
     errors.add(:headers_config, I18n.t('autonomia.agents.ferramenta.chave_de_novo_outro_site'))
+  end
+
+  def chave_guardada_reaproveitada?
+    guardadas = Array(headers_config_in_database).select { |header| header['secret'] }.map { |header| header.values_at('key', 'value') }
+    headers_config.any? { |header| header['secret'] && guardadas.include?(header.values_at('key', 'value')) }
   end
 
   # A máscara voltou sem chave guardada com o mesmo nome (renomeou, ou desligou o segredo): seria gravada como a chave.

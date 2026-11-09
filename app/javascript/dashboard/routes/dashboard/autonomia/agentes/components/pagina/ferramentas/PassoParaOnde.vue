@@ -9,8 +9,9 @@ import {
   avisosDasInformacoes,
   conferirEndereco,
   corpoPadrao,
-  enderecoLegivel,
-  inserirInformacao,
+  enderecoDaTela,
+  enderecoNaTela,
+  inserirNoCursor,
   jsonValido,
   nomeTecnico,
   variaveisEm,
@@ -19,7 +20,8 @@ import {
 // #1301 (protótipo F04) — buscar ou mandar informação, e o link. O link é conferido ao sair do campo
 // (parser URL do navegador, sem regex); cada valor é codificado pelo backend conforme a posição (#1425).
 // #1430: é o passo 3. A pessoa cola o link e toca na informação do passo 2 para encaixá-la onde o
-// cursor está: ela nunca digita {{ }}. Logo abaixo, o link como o agente usa, com [CEP] no lugar.
+// cursor está: ela nunca digita nem vê {{ }}. O campo mostra [CEP]; só o que é salvo leva {{cep}}.
+// Um link colado com {{x}} aparece como [x].
 // Nome técnico, o que vai junto (já pronto com as informações) e o recorte da resposta ficam em Avançado.
 const props = defineProps({
   rascunho: { type: Object, required: true },
@@ -60,36 +62,43 @@ const informacoes = computed(() =>
   props.rascunho.informacoes.filter(i => preenchido(i.nome))
 );
 
+const linkNaTela = computed(() =>
+  enderecoNaTela(props.rascunho.endereco, props.rascunho.informacoes)
+);
+
+// Toda informação que entrou no link fixa o nome técnico, com o botão ou digitada como [CEP]:
+// mudar o nome de gente depois não quebra o link.
+const mudarLink = texto => {
+  const endereco = enderecoDaTela(
+    texto,
+    props.rascunho.informacoes,
+    props.rascunho.endereco
+  );
+  const usadas = variaveisEm(endereco);
+  emit('update:rascunho', {
+    ...props.rascunho,
+    endereco,
+    informacoes: props.rascunho.informacoes.map(i =>
+      usadas.includes(i.nome) ? { ...i, fixo: true } : i
+    ),
+  });
+};
+
 // O cursor do link fica guardado no próprio campo, mesmo depois do toque no botão.
 const encaixar = async informacao => {
   const campo = document.getElementById(idDoLink.value);
-  const posicao = campo ? campo.selectionStart : null;
-  const novo = inserirInformacao(
-    props.rascunho.endereco,
-    posicao,
-    informacao.nome
+  const { texto, cursor } = inserirNoCursor(
+    linkNaTela.value,
+    campo?.selectionStart,
+    `[${informacao.rotulo || informacao.nome}]`,
+    campo?.selectionEnd
   );
-  // Encaixada no link, a informação fixa o nome técnico: mudar o nome de gente depois não quebra o link.
-  emit('update:rascunho', {
-    ...props.rascunho,
-    endereco: novo,
-    informacoes: props.rascunho.informacoes.map(i =>
-      i.id === informacao.id ? { ...i, fixo: true } : i
-    ),
-  });
+  mudarLink(texto);
   await nextTick();
   if (!campo) return;
-  const depois = novo.length - String(props.rascunho.endereco ?? '').length;
-  const fim = (Number.isInteger(posicao) ? posicao : novo.length) + depois;
   campo.focus();
-  campo.setSelectionRange(fim, fim);
+  campo.setSelectionRange(cursor, cursor);
 };
-
-const legivel = computed(() =>
-  variaveisEm(props.rascunho.endereco).length
-    ? enderecoLegivel(props.rascunho.endereco, props.rascunho.informacoes)
-    : ''
-);
 
 // Erro do campo: o da conferência ao sair do campo vale até o próximo "Continuar".
 const conferido = ref(null);
@@ -160,14 +169,14 @@ const avancadoAberto = computed(
         <FerramentaEntrada
           :id="idDoLink"
           data-campo-endereco
-          :model-value="rascunho.endereco"
+          :model-value="linkNaTela"
           :linhas="2"
           mono
           inputmode="url"
           :placeholder="INICIO"
           :descricao="descricao"
           :invalido="invalido"
-          @update:model-value="mudar('endereco', $event)"
+          @update:model-value="mudarLink"
           @blur="conferirAoSair"
         />
       </template>
@@ -200,14 +209,6 @@ const avancadoAberto = computed(
         </div>
         <p v-else data-sem-informacoes class="m-0 text-sm text-n-slate-11">
           {{ t(`${NS}.SEM_INFORMACOES`) }}
-        </p>
-        <p
-          v-if="legivel"
-          data-link-legivel
-          class="m-0 text-sm break-words text-n-slate-11 [overflow-wrap:anywhere]"
-        >
-          {{ t(`${NS}.COMO_FICA`) }}
-          <span class="font-mono text-n-slate-12">{{ legivel }}</span>
         </p>
       </template>
     </FerramentaCampo>

@@ -219,14 +219,84 @@ export const enderecoLegivel = (endereco, informacoes) => {
   }, partes[0]);
 };
 
-// Encaixa a informação onde o cursor está; sem posição, no fim.
-export const inserirInformacao = (texto, posicao, nome) => {
+// O que vale entre colchetes no campo do link: o rótulo de cada informação e, para variável do link sem
+// informação no passo 2, o próprio nome. O nome técnico de uma informação não vale: filter[status] é do link.
+const marcasDoLink = (informacoes, endereco) => {
+  const marcas = new Map(
+    variaveisEm(endereco).map(nome => [
+      String(rotuloDe(nome, informacoes)).trim(),
+      nome,
+    ])
+  );
+  (informacoes || [])
+    .filter(i => preenchido(i.nome) && preenchido(i.rotulo))
+    .forEach(i => marcas.set(i.rotulo.trim(), i.nome));
+  return marcas;
+};
+
+// Troca cada [x] do texto: `trocar(x)` devolve o substituto, ou null para deixar como está.
+const trocarColchetes = (texto, trocar) => {
+  const partes = String(texto ?? '').split('[');
+  return partes.slice(1).reduce((saida, pedaco) => {
+    const fim = pedaco.indexOf(']');
+    const novo = fim < 0 ? null : trocar(pedaco.slice(0, fim));
+    return novo === null
+      ? `${saida}[${pedaco}`
+      : `${saida}${novo}${pedaco.slice(fim + 1)}`;
+  }, partes[0]);
+};
+
+// O campo do link nunca mostra {{ }} (pedido da coordenadora, 09/11): cada {{ informação }} aparece como [Rótulo].
+// Variável com filtro além de url_encode (o backend já codifica pela posição) fica crua, para não perder o filtro.
+// Colchete do próprio link igual a um rótulo vira %5B…%5D (o mesmo para o outro sistema), para a volta não confundir.
+export const enderecoNaTela = (endereco, informacoes) => {
+  const marcas = marcasDoLink(informacoes, endereco);
+  const literal = texto =>
+    trocarColchetes(texto, x => (marcas.has(x.trim()) ? `%5B${x}%5D` : null));
+  const partes = String(endereco ?? '').split('{{');
+  return partes.slice(1).reduce((saida, pedaco) => {
+    const fim = pedaco.indexOf('}}');
+    if (fim < 0) return `${saida}{{${literal(pedaco)}`;
+    const [nome, ...filtros] = pedaco
+      .slice(0, fim)
+      .split('|')
+      .map(p => p.trim());
+    const depois = literal(pedaco.slice(fim + 2));
+    if (!nome || !filtros.every(f => f === 'url_encode')) {
+      return `${saida}{{${pedaco.slice(0, fim + 2)}${depois}`;
+    }
+    return `${saida}[${rotuloDe(nome, informacoes)}]${depois}`;
+  }, literal(partes[0]));
+};
+
+// O caminho de volta: [Rótulo] de uma informação, ou [nome] de uma variável que o link já tinha, vira {{nome}}.
+// Colchete que não é informação ([1], filter[status]) fica como está.
+export const enderecoDaTela = (texto, informacoes, anterior) => {
+  const marcas = marcasDoLink(informacoes, anterior);
+  return trocarColchetes(texto, x => {
+    const nome = marcas.get(x.trim());
+    return nome ? `{{${nome}}}` : null;
+  });
+};
+
+// Encaixa o trecho onde o cursor está (no lugar do que estiver selecionado); sem posição, no fim.
+// Devolve o texto e onde o cursor fica.
+export const inserirNoCursor = (texto, posicao, trecho, fimDaSelecao) => {
   const atual = String(texto ?? '');
   const onde =
     Number.isInteger(posicao) && posicao >= 0 && posicao <= atual.length
       ? posicao
       : atual.length;
-  return `${atual.slice(0, onde)}{{${nome}}}${atual.slice(onde)}`;
+  const ate =
+    Number.isInteger(fimDaSelecao) &&
+    fimDaSelecao >= onde &&
+    fimDaSelecao <= atual.length
+      ? fimDaSelecao
+      : onde;
+  return {
+    texto: `${atual.slice(0, onde)}${trecho}${atual.slice(ate)}`,
+    cursor: onde + trecho.length,
+  };
 };
 
 // "Mandar informação": o que vai junto já nasce com todas as informações. Número e sim/não sem
@@ -361,6 +431,24 @@ const validarCabecalho = cabecalho => {
 // Informação com rótulo apagado conta como sem nome (a de antes do #1430 não tem rótulo).
 const semRotulo = info => 'rotulo' in info && !preenchido(info.rotulo);
 
+// O rótulo vira [Rótulo] no campo do link: com colchete ele não volta, e repetido (sem olhar maiúscula)
+// faria um [CEP] valer por duas informações.
+const comparavel = rotulo =>
+  String(rotulo ?? '')
+    .trim()
+    .toLocaleLowerCase();
+const conferirRotulo = (info, lista, indice) => {
+  if (!preenchido(info.rotulo)) return '';
+  if (info.rotulo.includes('[') || info.rotulo.includes(']')) return 'COLCHETE';
+  const repetido = lista.some(
+    (item, j) =>
+      j !== indice &&
+      preenchido(item.rotulo) &&
+      comparavel(item.rotulo) === comparavel(info.rotulo)
+  );
+  return repetido ? 'REPETIDO' : '';
+};
+
 const VALIDACOES = {
   1: (rascunho, tentou) => {
     if (!preenchido(rascunho.nome)) return { erros: { nome: 'NOME' } };
@@ -384,7 +472,7 @@ const VALIDACOES = {
             semRotulo(info) ? '' : info.nome,
             rascunho.informacoes,
             i
-          ),
+          ) || conferirRotulo(info, rascunho.informacoes, i),
         ])
         .filter(([, erro]) => erro)
     ),

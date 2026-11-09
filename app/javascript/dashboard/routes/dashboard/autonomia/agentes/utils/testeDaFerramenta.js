@@ -45,6 +45,9 @@ const ERROS_DE_EXECUCAO = {
   zero_division_error: ['VALOR', 'PREENCHE'],
   // #1430 (revisão adversarial): `for` sobre faixa enorme ou montada com informação do agente.
   faixa_grande: ['FAIXA', 'ONDE'],
+  // Revisão do delta: o modelo passou do limite de recursos (Liquid::MemoryError) no envio ou no recorte.
+  memory_error: ['FAIXA', 'ONDE'],
+  limite_do_modelo: ['FAIXA', 'ONDE'],
 };
 
 const lerPrefixo = erro => {
