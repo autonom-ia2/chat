@@ -203,6 +203,29 @@
       ]
     },
     {
+      "tipo": "card.reuniao_atendida",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_REUNIAO_ATENDIDA",
+      "grupo": "reuniao",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "reunioes": true,
+      "parametros": [
+        {
+          "nome": "funil_id",
+          "peca": "funil",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
+        },
+        {
+          "nome": "pagina_id",
+          "peca": "pagina",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.PAGINA_ID"
+        }
+      ]
+    },
+    {
       "tipo": "card.responsavel_mudou",
       "alvo": "Crm::Card",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_RESPONSAVEL_MUDOU",
@@ -767,6 +790,7 @@
         "card.reuniao_marcada",
         "card.reuniao_remarcada",
         "card.reuniao_cancelada",
+        "card.reuniao_atendida",
         "card.antes_da_reuniao"
       ]
     },
@@ -778,6 +802,7 @@
         "card.reuniao_marcada",
         "card.reuniao_remarcada",
         "card.reuniao_cancelada",
+        "card.reuniao_atendida",
         "card.antes_da_reuniao"
       ]
     },
@@ -974,6 +999,32 @@
       "caminho": "conversa.cliente_mandou_documento",
       "base": "conversa",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_CLIENTE_MANDOU_DOCUMENTO",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ],
+      "so_na_espera": true
+    },
+    {
+      "caminho": "contato.reuniao_atendida",
+      "base": "contato",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_REUNIAO_ATENDIDA",
       "opcoes": [
         {
           "valor": true,
