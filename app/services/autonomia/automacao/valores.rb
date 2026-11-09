@@ -159,7 +159,8 @@ class Autonomia::Automacao::Valores
       caminho.to_s == RESPOSTA_DO_CONTATO && BASES_DO_ALVO.fetch(alvo_type, []).include?('contato')
     end
 
-    def fechado(caminho) = FECHADOS[caminho.to_s]
+    # A ausência da pessoa num campo do card (G62) fecha como a G23.
+    def fechado(caminho) = FECHADOS[caminho.to_s] || (FECHADOS['card.responsavel_ausente'] if ::Autonomia::Automacao::Valores::Atributos.ausente_da_pessoa?(caminho))
 
     # O que impede a receita de ler o caminho que já vale ali: o atributo que a conta não tem, ou o valor que pede
     # permissão (#2597) para quem salva sem ela. Sem pessoa (`account_user` nil: o catálogo), a permissão não é

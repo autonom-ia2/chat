@@ -48,6 +48,8 @@
       "GATILHO_RESPONSAVEL_ANTERIOR_AUSENTE": "Quem cuidava do card antes da troca está ausente",
       "GATILHO_TIME_ANTERIOR_ID": "Time do card antes da troca",
       "GATILHO_TIME_ANTERIOR_NOME": "Nome do time do card antes da troca",
+      "PESSOA_NOME": "Nome da pessoa em {campo}",
+      "PESSOA_AUSENTE": "A pessoa em {campo} está ausente",
       "CONTATO_ID": "O contato",
       "CONTATO_NOME": "Nome do contato",
       "CONTATO_EMAIL": "E-mail do contato",

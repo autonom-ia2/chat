@@ -201,6 +201,7 @@ pt_BR:
     custom_attribute_definition:
       attribute_key_format: deve conter apenas letras, números, sublinhados, hífens, e pontos
       key_conflict: A chave fornecida não é permitida pois pode entrar em conflito com os atributos padrão.
+      pessoa_so_no_card: 'O campo de pessoa da equipe só existe no card.'
     mfa:
       already_enabled: MFA já está habilitado
       not_enabled: MFA não está habilitado
@@ -230,6 +231,7 @@ pt_BR:
       contact_identity_taken: "Já existe um contato com esses dados. Use o contato existente."
       invalid_contact_input: "Informe um contato com nome preenchido, e-mail e telefone opcionais em texto e atributos válidos."
       contact_conversation_conflict: "não pode ser alterado enquanto este card tiver conversas de outro contato. Revise primeiro os vínculos das conversas."
+      pessoa_de_fora: 'campo %{chave}: a pessoa não é da equipe desta conta.'
   profile:
     mfa:
       enabled: MFA habilitado com sucesso
