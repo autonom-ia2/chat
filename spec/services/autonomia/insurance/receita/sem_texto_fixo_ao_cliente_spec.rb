@@ -52,10 +52,11 @@ module TextoAoCliente
     'app/services/autonomia/automacao/passo_de_email.rb::Autonomia::Automacao::PassoDeEmail#mandar' =>
       { tipo: :outro, motivo: 'o texto que o dono da conta escreveu no passo "email" da automação (#2414 G2), ao contato ' \
                               'pela caixa de e-mail da conta: nunca texto nosso; a receita de ramo não o usa' },
-    'app/services/autonomia/automacao/passo_de_mensagem.rb::Autonomia::Automacao::PassoDeMensagem#mandar' =>
+    'app/services/autonomia/automacao/passo_de_mensagem.rb::Autonomia::Automacao::PassoDeMensagem#mandar_aqui' =>
       { tipo: :outro, motivo: 'o texto que o dono da conta escreveu no passo "mensagem" da automação (#2414 F4), ou o que ' \
-                              'o modelo escreveu no passo "escrever" (#2500 F7): nunca texto nosso; a receita de ramo não ' \
-                              'usa nenhum dos dois' },
+                              'o modelo escreveu no passo "escrever" (#2500 F7), na conversa do alvo, na nova (#2680) ou ' \
+                              'na do número novo do contato (G43): nunca texto nosso; a receita de ramo não usa nenhum ' \
+                              'dos dois' },
     'app/services/autonomia/automacao/passo_de_mensagem.rb::Autonomia::Automacao::PassoDeMensagem#mandar_modelo' =>
       { tipo: :outro, motivo: 'o modelo aprovado na Meta que o dono da conta escolheu no passo "mensagem", com os valores ' \
                               'que ele pôs em cada variável (#2468): nunca texto nosso' },
