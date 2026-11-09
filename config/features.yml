@@ -1269,10 +1269,11 @@
   column: feature_flags_ext_2
 
 # RAG: busca híbrida (#2810, Refs #1431). Ligada: os candidatos do vetor e os da busca por palavra (texto em português,
-# índice GIN da migration 20261109910000) entram juntos e a ordem sai da fusão por posição (RRF, k = 60), no lugar do
+# índice GIN da migration 20261108910000) entram juntos e a ordem sai da fusão por posição (RRF, k = 60), no lugar do
 # bônus por metadado e do reforço lexical. O teto de distância, as seções dos itens, o material reprovado e o isolamento
-# por agente continuam valendo. Desligada: a busca de hoje. Rollback: desligar a flag na conta. Posição pedida à
-# Orquestração em 09/11 (36, depois da agente_usa_o_trecho).
+# por agente continuam valendo. Desligada: a busca de hoje. Rollback: desligar a flag na conta. Posição 36
+# (34359738368, 1 << 35), dada pela Orquestração em 09/11: entra na fila depois do #2811. Depois do NO AR, a
+# Orquestração liga em todas as contas (regra C).
 - name: rag_busca_hibrida
   display_name: RAG › busca híbrida
   enabled: false
