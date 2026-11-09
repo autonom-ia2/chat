@@ -34,4 +34,32 @@ RSpec.describe Autonomia::Automacao::Receita do
     expect(problemas('result' => 'won', 'force' => true))
       .to include(I18n.t('autonomia.automacao.receita.proibido', passo: 'f1', campo: 'force'))
   end
+
+  # Decisão 19 (09/11): o card da conversa (#2716) é só para ler. O fechar o card, que leva `card.id` no caminho, fica
+  # fora do gatilho de conversa, também dentro de um ramo; no gatilho de card, entra.
+  describe 'o card da conversa não fecha' do
+    def fechar_pelo_card(id = 'f1')
+      { 'id' => id, 'tipo' => 'acao', 'acao' => 'POST crm/cards/:id/close', 'descricao' => 'Fechar o card',
+        'caminho' => { 'id' => { '$valor' => 'card.id' } }, 'corpo' => { 'result' => 'won' } }
+    end
+
+    def problemas_no(gatilho, *passos)
+      receita = { 'gatilho' => { 'tipo' => gatilho }, 'passos' => passos }
+      described_class.new(receita, conta: account, account_user: nil).problemas
+    end
+
+    def so_le(passo) = I18n.t('autonomia.automacao.receita.card_da_conversa_so_le', passo: passo, caminho: 'card.id')
+
+    it 'recusa no gatilho de conversa, no passo e no ramo', :aggregate_failures do
+      condicao = { 'campo' => { '$valor' => 'conversa.status' }, 'op' => 'igual', 'valor' => 'resolved' }
+      ramo = { 'id' => 's1', 'tipo' => 'se', 'condicao' => condicao, 'entao' => [fechar_pelo_card('f2')], 'senao' => [] }
+
+      expect(problemas_no('conversa.resolvida', fechar_pelo_card)).to include(so_le('f1'))
+      expect(problemas_no('conversa.resolvida', ramo)).to include(so_le('f2'))
+    end
+
+    it 'aceita no gatilho de card' do
+      expect(problemas_no('card.ganho', fechar_pelo_card)).not_to include(so_le('f1'))
+    end
+  end
 end

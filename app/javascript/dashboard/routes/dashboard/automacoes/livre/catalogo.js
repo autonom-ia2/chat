@@ -175,7 +175,11 @@ export const comPermissoes = (dados, podeLer) => {
 };
 
 // G25: o mesmo vale para a ação que lê o alvo no caminho (`card.id` no fechar
-// o card): no gatilho de conversa, o seletor nem a oferece.
+// o card): no gatilho de conversa, o seletor nem a oferece. O card da conversa
+// (#2716) é só para ler: para ação, ele não conta como base do alvo.
+const basesDaAcao = (alvo, bases) =>
+  alvo === 'Conversation' ? bases.filter(base => base !== 'card') : bases;
+
 const caminhoNoAlvo = (passo, bases) =>
   Object.values(passo.caminho || {}).every(
     origem => !origem.$valor || bases.includes(origem.$valor.split('.')[0])
@@ -214,7 +218,9 @@ export const doAlvoDoGatilho = (
         alcanca(item) &&
         (!item.so_nos_gatilhos || item.so_nos_gatilhos.includes(tipoDoGatilho))
     ),
-    passos: (dados.passos || []).filter(passo => caminhoNoAlvo(passo, bases)),
+    passos: (dados.passos || []).filter(passo =>
+      caminhoNoAlvo(passo, basesDaAcao(alvo, bases))
+    ),
   };
 };
 
