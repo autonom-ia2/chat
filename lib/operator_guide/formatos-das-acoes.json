@@ -123,9 +123,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/tools#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:37",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:85",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:89"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:42",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
     ],
     "sem_corpo": true
   },
@@ -3608,10 +3608,10 @@
     "envelope": "tool",
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:28",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:97",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:85",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:89"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:31",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:102",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
     ],
     "sem_corpo": false
   },
@@ -11222,8 +11222,8 @@
     "envelope": "tool",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:19",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:97",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:85"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:102",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90"
     ],
     "sem_corpo": false
   },
@@ -11237,10 +11237,10 @@
       "leitura crua sem tipo: params"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:45",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:130",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:85",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:89"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:50",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:135",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
     ],
     "sem_corpo": false
   },
@@ -23396,10 +23396,10 @@
     "envelope": "tool",
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:28",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:97",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:85",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:89"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:31",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:102",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
     ],
     "sem_corpo": false
   },

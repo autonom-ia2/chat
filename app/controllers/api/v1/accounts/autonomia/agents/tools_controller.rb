@@ -25,10 +25,15 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
     render_recusa(e.record)
   end
 
+  # Revisão adversarial do #1430: com a trava, a ferramenta é relida antes de trocar a máscara pela chave guardada. Sem ela,
+  # um PATCH que só reordena os cabeçalhos, lido antes e gravado depois de outro que muda o link, devolveria a chave
+  # guardada ao link novo (o Rails grava só a coluna que mudou).
   def update
-    @tool.chaves_digitadas = chaves_digitadas
-    @tool.assign_attributes(merged_tool_params)
-    @tool.save!
+    @tool.with_lock do
+      @tool.chaves_digitadas = chaves_digitadas
+      @tool.assign_attributes(merged_tool_params)
+      @tool.save!
+    end
     render :show
   rescue ActiveRecord::RecordInvalid => e
     render_recusa(e.record)
