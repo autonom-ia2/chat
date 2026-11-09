@@ -202,7 +202,7 @@ class Autonomia::Automacao::Receita
   # o começo da espera, e ela leria sempre vazio. O texto da IA (#2679) só vem de um passo que escreve. `onde`: :caminho
   # ou :corpo da ação, :texto (mensagem, aviso, e-mail, retorno); nil é o que decide (filtro e condição). Na ação, a
   # automação de conversa não usa o card para agir (#2716): nenhum `card.*` no caminho e nenhum `card.id` no corpo;
-  # copiar um campo do card é ler. No corpo e no texto, o valor protegido da automação de conversa só decide (#2780).
+  # copiar um campo do card é ler.
   def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false, onde: nil)
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)

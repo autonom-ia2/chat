@@ -26,7 +26,7 @@ class Autonomia::Automacao::Texto
   def lido(parte)
     return parte unless parte.is_a?(Hash)
 
-    valor = @valores.ler_para_escrever(parte['$valor'])
+    valor = @valores.ler(parte['$valor'])
     valor.is_a?(Array) ? valor.join(', ').presence : valor.presence&.to_s
   end
 end

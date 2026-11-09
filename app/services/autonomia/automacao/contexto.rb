@@ -21,8 +21,7 @@ class Autonomia::Automacao::Contexto
   # `execucao`: a execução em que o passo roda, quando há uma. A reunião do gatilho (G12), o texto da IA (#2679) e o
   # "gatilho repetiu" (lote 4) leem dela.
   # `textos`: no ensaio, que não tem execução, o texto que cada passo de IA produziria (só para mostrar).
-  # `gatilho`: o tipo do gatilho da receita, quando não há execução (o ensaio); com ela, o da versão dela.
-  def self.de(alvo, execucao: nil, textos: nil, gatilho: nil) = new(alvo, execucao: execucao, textos: textos, gatilho: gatilho)
+  def self.de(alvo, execucao: nil, textos: nil) = new(alvo, execucao: execucao, textos: textos)
 
   # Os `textos` do ensaio (#2679): ele não chama a IA, e no lugar do texto de cada passo que escreve vai a marca de onde
   # ele entraria.
@@ -32,15 +31,11 @@ class Autonomia::Automacao::Contexto
                                    .to_h { |passo| [passo['id'], I18n.t('autonomia.automacao.ensaio.texto_da_ia', passo: passo['id'])] }
   end
 
-  def initialize(alvo, execucao: nil, textos: nil, gatilho: nil)
+  def initialize(alvo, execucao: nil, textos: nil)
     @alvo = alvo
     @execucao = execucao
     @textos = textos
-    @gatilho = gatilho
   end
-
-  # O tipo do gatilho da receita (#2780: o valor protegido só decide na automação de conversa, Valores.so_decide?).
-  def gatilho = @gatilho || @execucao&.versao&.receita&.dig('gatilho', 'tipo')
 
   def conversa
     return @alvo if @alvo.is_a?(::Conversation)

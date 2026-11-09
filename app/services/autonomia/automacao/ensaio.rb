@@ -72,7 +72,7 @@ class Autonomia::Automacao::Ensaio
 
     @contados = 0
     @conversa = conversa
-    contexto = ::Autonomia::Automacao::Contexto.de(conversa, textos: textos_da_ia, gatilho: @receita.dig('gatilho', 'tipo'))
+    contexto = ::Autonomia::Automacao::Contexto.de(conversa, textos: textos_da_ia)
     valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem, quem: @usuario)
     base.merge(entraria: true, motivo: nil, passos: caminho(@roteiro.primeiro, valores))
   end

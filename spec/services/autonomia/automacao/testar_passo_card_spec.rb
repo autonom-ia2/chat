@@ -10,6 +10,10 @@ RSpec.describe Autonomia::Automacao::TestarPasso, :automacao_motor do
   let(:conversa) { create_crm_conversation(account: account, inbox: inbox, contact: contato) }
   let(:corpos) { [] }
   let(:resumir) { { 'id' => 'p1', 'tipo' => 'resumir', 'le' => %w[card mensagens_recentes], 'linhas' => 2, 'destino' => 'nota' } }
+  let(:decidir) do
+    { 'id' => 'p1', 'tipo' => 'decidir', 'le' => %w[card], 'pergunta' => 'É venda grande?', 'nenhum' => [],
+      'caminhos' => [{ 'nome' => 'Grande', 'chave' => 'grande', 'descricao' => 'valor alto', 'passos' => [] }] }
+  end
 
   around { |exemplo| with_modified_env(CRM_KANBAN_ENABLED: 'true') { exemplo.run } }
 
@@ -21,7 +25,9 @@ RSpec.describe Autonomia::Automacao::TestarPasso, :automacao_motor do
     create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account, settings: { 'api_key' => 'chave-de-teste' })
     stub_request(:post, 'https://api.openai.com/v1/responses').to_return do |request|
       corpos << JSON.parse(request.body)
-      payload = { id: "resp_#{corpos.size}", output_text: { resumo: 'Festa Frozen.' }.to_json, usage: { input_tokens: 10, output_tokens: 5 } }
+      decide = request.body.include?('automacao_decidir')
+      saida = (decide ? { caminho: 'grande', motivo: 'valor' } : { resumo: 'Festa Frozen.' }).to_json
+      payload = { id: "resp_#{corpos.size}", output_text: saida, usage: { input_tokens: 10, output_tokens: 5 } }
       { status: 200, body: payload.to_json, headers: { 'Content-Type' => 'application/json' } }
     end
     funil, etapa = create_crm_pipeline(account: account, user: admin)
@@ -32,8 +38,8 @@ RSpec.describe Autonomia::Automacao::TestarPasso, :automacao_motor do
 
   after { Current.reset }
 
-  def testar(gatilho: 'conversa.resolvida', quem: admin, ligada_por: nil)
-    receita = { 'gatilho' => { 'tipo' => gatilho }, 'passos' => [resumir] }
+  def testar(gatilho: 'conversa.resolvida', quem: admin, ligada_por: nil, passo: resumir)
+    receita = { 'gatilho' => { 'tipo' => gatilho }, 'passos' => [passo] }
     pedido = described_class::Pedido.new(receita: receita, passo_id: 'p1', conversa_id: conversa.display_id, ligada_por: ligada_por)
     described_class.new(pedido: pedido, conta: account, account_user: quem.account_users.first).resultado(com_valores: false)[:conversa]
   end
@@ -54,8 +60,8 @@ RSpec.describe Autonomia::Automacao::TestarPasso, :automacao_motor do
     expect(corpos.sole['input'].to_json).not_to include('Festa da Lara')
   end
 
-  # #2780: o teste leva o valor da venda só se quem testa e quem ligou podem, e nunca mais que a execução: na automação
-  # de conversa, o passo que escreve não o leva.
+  # #2780: o teste leva o valor da venda só ao decidir, só se quem testa e quem ligou podem, e nunca mais que a
+  # execução: em qualquer automação, o passo que escreve não o leva.
   describe 'o valor da venda' do
     let(:agente) { create(:user, account: account, role: :agent) }
 
@@ -68,28 +74,32 @@ RSpec.describe Autonomia::Automacao::TestarPasso, :automacao_motor do
       expect(entrada).not_to include('12345')
     end
 
-    it 'na automação de card, quem testa e pode ver leva o valor' do
+    it 'na automação de card, o passo que escreve também não leva o valor; o decidir leva', :aggregate_failures do
       testar(gatilho: 'card.ganho')
-
-      expect(entrada).to include('12345')
-    end
-
-    it 'na automação de card, quem testa sem permissão não leva o valor' do
-      allow(Crm::ValorDeVenda).to receive(:ve?).and_return(false)
-
-      testar(gatilho: 'card.ganho')
-
-      expect(entrada).not_to include('12345')
-    end
-
-    it 'na automação de card, quem ligou sem permissão também tira o valor do teste', :aggregate_failures do
-      allow(Crm::ValorDeVenda).to receive(:ve?) { |account_user| account_user&.user_id == admin.id }
-
-      testar(gatilho: 'card.ganho', ligada_por: agente)
+      expect(entrada).to include('Festa da Lara')
       expect(entrada).not_to include('12345')
 
       corpos.clear
-      testar(gatilho: 'card.ganho', ligada_por: admin)
+      testar(gatilho: 'card.ganho', passo: decidir)
+      expect(entrada).to include('12345')
+    end
+
+    it 'no decidir, quem testa sem permissão não leva o valor' do
+      allow(Crm::ValorDeVenda).to receive(:ve?).and_return(false)
+
+      testar(gatilho: 'card.ganho', passo: decidir)
+
+      expect(entrada).not_to include('12345')
+    end
+
+    it 'no decidir, quem ligou sem permissão também tira o valor do teste', :aggregate_failures do
+      allow(Crm::ValorDeVenda).to receive(:ve?) { |account_user| account_user&.user_id == admin.id }
+
+      testar(gatilho: 'card.ganho', ligada_por: agente, passo: decidir)
+      expect(entrada).not_to include('12345')
+
+      corpos.clear
+      testar(gatilho: 'card.ganho', ligada_por: admin, passo: decidir)
       expect(entrada).to include('12345')
     end
   end

@@ -260,6 +260,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
   end
 
   it 'passo 4: o PDF da CNH chega legível, e a IA escreve só o que falta, lendo o card', :aggregate_failures do
+    card.update!(value_cents: 1_234_500)
     respostas['automacao_extrair'] << extraiu('cnh' => 'recebido')
     respostas['automacao_decidir'] << { 'caminho' => 'falta_algo', 'motivo' => 'Só chegou a CNH.' }
     respostas['automacao_escrever'] << { 'texto' => 'Recebi a CNH. Faltam o documento do carro e o comprovante de endereço.' }
@@ -271,6 +272,9 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
     expect(pedidos('automacao_escrever').sole.to_json).to include('Peça só os documentos da lista que ainda não chegaram.')
     expect(card_lido(pedidos('automacao_escrever').sole)).to eq('cnh' => 'recebido')
     expect(card_lido(pedidos('automacao_decidir').sole)).to eq('cnh' => 'recebido')
+    # Decisão 9 (#2780): o valor da venda só decide; a IA nunca o recebe para escrever.
+    expect(pedidos('automacao_escrever').sole.to_json).not_to include('12345')
+    expect(pedidos('automacao_decidir').sole.to_json).to include('12345')
     expect(pedidos('automacao_decidir').sole['input'].first['content'].pluck('type')).to eq(%w[input_text])
     expect(lidos_pelo_extrair).to eq([%w[cnh.pdf]])
     expect([execucao.reload.estado, execucao.cursor]).to eq(%w[esperando espera_doc])

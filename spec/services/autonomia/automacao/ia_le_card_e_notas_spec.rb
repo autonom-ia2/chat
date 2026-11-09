@@ -66,9 +66,9 @@ RSpec.describe 'IA lê o card e as notas', :automacao_motor do # rubocop:disable
     expect(entrada).not_to include('12345')
   end
 
-  # #2780 (Rodrigo, 09/11): na automação de conversa, o valor da venda só decide. O passo de IA que escreve não o leva à
-  # IA; o "decidir" leva; a automação de card segue como antes (o caso acima, com o resumir no gatilho de card).
-  describe 'o valor da venda na automação de conversa' do
+  # #2780 (Rodrigo, 09/11): o valor da venda só decide, em qualquer automação. O passo de IA que escreve não o leva à
+  # IA; o "decidir" leva.
+  describe 'o valor da venda só decide' do
     let(:da_conversa) { { 'tipo' => 'conversa.resolvida' } }
     let(:escrever) { { 'id' => 'e1', 'tipo' => 'escrever', 'le' => %w[card], 'instrucao' => 'Escreva ao cliente', 'destino' => 'guardar' } }
     let(:decidir) do
@@ -96,9 +96,14 @@ RSpec.describe 'IA lê o card e as notas', :automacao_motor do # rubocop:disable
       expect(entrada).to include('12345')
     end
 
-    it 'na automação de card, o escrever segue levando o valor' do
+    # Decisão 3 (09/11): em qualquer automação. Quem ligou tem a chave do valor e, mesmo assim, só o decidir o recebe.
+    it 'na automação de card, com a chave de quem ligou, o escrever não leva o valor e o decidir leva', :aggregate_failures do
       rodar([escrever], card)
+      expect(entrada).to include('Festa da Lara')
+      expect(entrada).not_to include('12345')
 
+      corpos.clear
+      rodar([decidir], card)
       expect(entrada).to include('12345')
     end
   end
