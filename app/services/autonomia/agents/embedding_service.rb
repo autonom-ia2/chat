@@ -115,6 +115,7 @@ class Autonomia::Agents::EmbeddingService
       cred = Crm::Ai::CredentialResolver.new(account: @account).resolve
       raise EmbeddingError, 'ai_not_configured' if cred.blank?
 
+      @api_host = host_da(cred)
       base = cred[:api_base].to_s.chomp('/')
       base = nil if base.blank? || base == OPENAI_DEFAULT_BASE
       # SSRF: api_base custom controlado pela conta é validado (HTTPS + bloqueio de host/IP
@@ -158,11 +159,14 @@ class Autonomia::Agents::EmbeddingService
     )
   end
 
-  def api_host
-    cred = Crm::Ai::CredentialResolver.new(account: @account).resolve
+  # #2850 — o host do log sai da credencial já lida pelo `context`. Relê-la aqui somaria outra consulta ao banco depois do
+  # prazo estourado, fora do orçamento do turno.
+  attr_reader :api_host
+
+  def host_da(cred)
     base = cred.to_h[:api_base].to_s.strip.presence || OPENAI_DEFAULT_BASE
     URI.parse(base).host
-  rescue StandardError
+  rescue URI::InvalidURIError
     nil
   end
 end

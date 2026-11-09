@@ -82,6 +82,18 @@ RSpec.describe Autonomia::Agents::EmbeddingService do
     it 'keeps the defaults of RubyLLM without a deadline (the ingestion in background)' do
       expect(described_class.new(account: account).send(:context).config.request_timeout).to eq(RubyLLM.config.request_timeout)
     end
+
+    # A credencial fica fora do prazo: relê-la no log da falha somaria outra consulta ao banco depois do prazo estourado.
+    it 'reads the credential once, even when the attempt fails and is logged', :aggregate_failures do
+      allow(RubyLLM).to receive(:context).and_wrap_original do |original, &bloco|
+        original.call(&bloco).tap { |ctx| allow(ctx).to receive(:embed).and_raise(Faraday::TimeoutError.new('execution expired')) }
+      end
+      allow(Rails.logger).to receive(:error)
+
+      expect { described_class.new(account: account, prazo: 2.0).embed('pergunta') }.to raise_error(described_class::Passageira)
+      expect(Crm::Ai::CredentialResolver).to have_received(:new).once
+      expect(Rails.logger).to have_received(:error).with(include('api_host=api.openai.com'))
+    end
   end
 
   describe 'passing failures (#2850)' do
