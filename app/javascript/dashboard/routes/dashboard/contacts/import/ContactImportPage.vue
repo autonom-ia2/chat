@@ -2,9 +2,11 @@
 // Importar contatos (#1006, PRD §8.7): upload → reading → columns, other columns (contact
 // attributes), people, companies → "Importar" → result. Same reading as "Novo público";
 // the screen never names the engine that reads the columns (B1a).
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+// With an id in the address (Contatos > Importações, #2771), it opens that import where it is;
+// one written by the automation shows its result and who was left out.
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import ContactImportsAPI from 'dashboard/api/contactImports';
 import { downloadCsvFile } from 'dashboard/helper/downloadHelper';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -27,6 +29,7 @@ import {
   globalErrors,
   formatCount,
 } from 'dashboard/components-next/ContactImport/contactImportView';
+import { CONTACT_IMPORTS_LIST_ROUTE } from './contactImport.routes';
 
 const POLL_MS = 2000;
 const MAX_FILE_MB = 10;
@@ -35,23 +38,31 @@ const NS = 'CONTACT_IMPORT_JOURNEY';
 const { t, te, locale } = useI18n();
 const n = value => formatCount(locale.value, value);
 const router = useRouter();
+const route = useRoute();
 
 const contactImport = ref(null);
 const mapping = ref(currentMapping(null));
 const createCompanies = ref(true);
 const sending = ref(false);
+const opening = ref(false);
 const errorMessage = ref('');
 const fileInput = ref(null);
 let pollTimer = null;
 
 const stage = computed(() =>
-  sending.value ? 'reading' : stageFor(contactImport.value)
+  sending.value || opening.value ? 'reading' : stageFor(contactImport.value)
 );
 const status = computed(() => contactImport.value?.status);
 const needsChoice = computed(() => status.value === 'needs_column_choice');
 const isReady = computed(() => status.value === 'ready_to_confirm');
 const refused = computed(() => status.value === 'validation_failed');
 const people = computed(() => peopleCounts(contactImport.value));
+const fromAutomation = computed(
+  () => contactImport.value?.origin === 'automation'
+);
+const leftOut = computed(() =>
+  fromAutomation.value ? contactImport.value.problem_rows || [] : []
+);
 const fileErrors = computed(() =>
   refused.value ? globalErrors(contactImport.value) : []
 );
@@ -189,6 +200,7 @@ const downloadProblems = async () => {
 
 const startOver = () => {
   stopPolling();
+  if (route.params.importId) router.replace({ name: route.name });
   contactImport.value = null;
   mapping.value = currentMapping(null);
   createCompanies.value = true;
@@ -196,7 +208,24 @@ const startOver = () => {
 };
 
 const backToContacts = () => router.push({ name: 'contacts_dashboard_index' });
+const backToImports = () => router.push({ name: CONTACT_IMPORTS_LIST_ROUTE });
 
+const openById = async () => {
+  const id = route.params.importId;
+  if (!id) return;
+  opening.value = true;
+  try {
+    const { data } = await ContactImportsAPI.show(id);
+    apply(data.payload);
+    poll();
+  } catch {
+    fail();
+  } finally {
+    opening.value = false;
+  }
+};
+
+onMounted(openById);
 onBeforeUnmount(stopPolling);
 </script>
 
@@ -219,6 +248,17 @@ onBeforeUnmount(stopPolling);
           {{ t(`${NS}.CONTACTS`) }}
         </button>
         <span class="i-lucide-chevron-right size-3.5" aria-hidden="true" />
+        <template v-if="route.params.importId">
+          <button
+            type="button"
+            class="min-h-11 text-n-slate-11 hover:text-n-slate-12"
+            data-test="crumb-imports"
+            @click="backToImports"
+          >
+            {{ t(`${NS}.IMPORTS`) }}
+          </button>
+          <span class="i-lucide-chevron-right size-3.5" aria-hidden="true" />
+        </template>
         <span class="font-medium text-n-blue-11" aria-current="page">
           {{ t(`${NS}.TITLE`) }}
         </span>
@@ -231,9 +271,11 @@ onBeforeUnmount(stopPolling);
         </h1>
         <p class="mb-0 mt-2 text-sm leading-6 text-n-slate-11">
           {{
-            stage === 'review'
-              ? t(`${NS}.REVIEW_SUBTITLE`)
-              : t(`${NS}.SUBTITLE`)
+            fromAutomation
+              ? t(`${NS}.LIST.FROM_AUTOMATION`, { name: contactImport.name })
+              : stage === 'review'
+                ? t(`${NS}.REVIEW_SUBTITLE`)
+                : t(`${NS}.SUBTITLE`)
           }}
         </p>
       </header>
@@ -285,7 +327,13 @@ onBeforeUnmount(stopPolling);
         data-test="reading"
       >
         <Spinner />
-        {{ sending ? t(`${NS}.UPLOAD.SENDING`) : t(`${NS}.READING`) }}
+        {{
+          sending
+            ? t(`${NS}.UPLOAD.SENDING`)
+            : opening
+              ? t(`${NS}.LIST.OPENING`)
+              : t(`${NS}.READING`)
+        }}
       </div>
 
       <template v-else-if="stage === 'review'">
@@ -430,13 +478,37 @@ onBeforeUnmount(stopPolling);
         {{ t(`${NS}.ACTIONS.IMPORTING`) }}
       </div>
 
-      <ContactImportResult
-        v-else-if="stage === 'done'"
-        :contact-import="contactImport"
-        @see-contacts="backToContacts"
-        @new-import="startOver"
-        @download="downloadProblems"
-      />
+      <template v-else-if="stage === 'done'">
+        <ContactImportResult
+          :contact-import="contactImport"
+          @see-contacts="backToContacts"
+          @new-import="startOver"
+          @download="downloadProblems"
+        />
+        <section
+          v-if="leftOut.length"
+          class="flex flex-col gap-2 rounded-2xl border border-n-weak bg-n-solid-1 p-5"
+          data-test="left-out"
+        >
+          <h2 class="mb-0 text-sm font-semibold text-n-slate-12">
+            {{ t(`${NS}.LIST.LEFT_OUT_TITLE`) }}
+          </h2>
+          <ul class="m-0 flex list-none flex-col gap-1 p-0 text-sm">
+            <li
+              v-for="row in leftOut"
+              :key="row.row_number"
+              class="flex flex-wrap justify-between gap-2 border-t border-n-weak py-2 first:border-t-0"
+            >
+              <span class="tabular-nums text-n-slate-12">
+                {{ row.phone || t(`${NS}.PEOPLE.EMPTY_CONTACT`) }}
+              </span>
+              <span class="text-n-slate-11">
+                {{ row.errors.map(reasonText).join(' · ') }}
+              </span>
+            </li>
+          </ul>
+        </section>
+      </template>
 
       <div
         v-else

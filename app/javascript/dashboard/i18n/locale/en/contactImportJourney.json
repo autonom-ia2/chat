@@ -107,8 +107,39 @@
         "unsupported_file_format": "Use a CSV or Excel (.xlsx) file",
         "file_could_not_be_processed": "The file could not be read",
         "missing_contact_column": "Choose the mobile or the e-mail column",
-        "invalid_column_choice": "That column choice is not valid"
+        "invalid_column_choice": "That column choice is not valid",
+        "contact_rejected": "The contact could not be saved"
       }
+    },
+    "IMPORTS": "Imports",
+    "LIST": {
+      "MENU": "Imports",
+      "TITLE": "Imports",
+      "SUBTITLE": "Every contact list that came in: from a spreadsheet or from an automation. Open one to see the result.",
+      "NEW_IMPORT": "Import contacts",
+      "EMPTY": "No contact list came in yet.",
+      "LOADING": "Loading imports…",
+      "ERROR": "Could not load the imports. Try again.",
+      "MORE": "Show more",
+      "NO_NAME": "Untitled import",
+      "BY": "{date} · by {name}",
+      "COUNTS": "{imported} came in · {failed} left out",
+      "OPEN": "Open import {name}",
+      "ORIGIN": {
+        "file": "Spreadsheet",
+        "automation": "Automation"
+      },
+      "STATUS": {
+        "reading": "Reading",
+        "review": "Waiting for you to check",
+        "importing": "Importing",
+        "completed": "Done",
+        "completed_with_failures": "Done, some left out",
+        "failed": "Stopped"
+      },
+      "FROM_AUTOMATION": "List read by the automation {name}.",
+      "LEFT_OUT_TITLE": "Left out",
+      "OPENING": "Opening the import…"
     }
   }
 }

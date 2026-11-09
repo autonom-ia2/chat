@@ -107,8 +107,39 @@
         "unsupported_file_format": "Use um arquivo CSV ou Excel (.xlsx)",
         "file_could_not_be_processed": "Não deu para ler o arquivo",
         "missing_contact_column": "Escolha a coluna de celular ou de e-mail",
-        "invalid_column_choice": "Essa escolha de colunas não vale"
+        "invalid_column_choice": "Essa escolha de colunas não vale",
+        "contact_rejected": "Não deu para salvar o contato"
       }
+    },
+    "IMPORTS": "Importações",
+    "LIST": {
+      "MENU": "Importações",
+      "TITLE": "Importações",
+      "SUBTITLE": "Toda lista de contatos que entrou: por planilha ou por uma automação. Abra uma para ver o resultado.",
+      "NEW_IMPORT": "Importar contatos",
+      "EMPTY": "Nenhuma lista de contatos entrou ainda.",
+      "LOADING": "Carregando as importações…",
+      "ERROR": "Não deu para carregar as importações. Tente de novo.",
+      "MORE": "Mostrar mais",
+      "NO_NAME": "Importação sem nome",
+      "BY": "{date} · por {name}",
+      "COUNTS": "{imported} entraram · {failed} ficaram de fora",
+      "OPEN": "Abrir a importação {name}",
+      "ORIGIN": {
+        "file": "Planilha",
+        "automation": "Automação"
+      },
+      "STATUS": {
+        "reading": "Lendo",
+        "review": "Esperando você conferir",
+        "importing": "Importando",
+        "completed": "Concluída",
+        "completed_with_failures": "Concluída, alguns ficaram de fora",
+        "failed": "Parou"
+      },
+      "FROM_AUTOMATION": "Lista lida pela automação {name}.",
+      "LEFT_OUT_TITLE": "Ficaram de fora",
+      "OPENING": "Abrindo a importação…"
     }
   }
 }

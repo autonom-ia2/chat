@@ -6,7 +6,8 @@
 #   tem; nome e telefone preenchidos nunca são trocados. A exceção da D4 A (o telefone vindo da IA) vale só por essa
 #   régua. O item sem telefone vira um contato só com o nome. O telefone que não é celular do Brasil
 #   (CampaignImports::PhoneNormalizer, o mesmo do import) pula o item: um contato só com o nome duplicaria quem já existe.
-#   Só a régua da linha: não há registro de importação (CampaignImport), e a lista não aparece em Contatos > Importações.
+#   Cada item vira uma linha do registro de importação da rodada (ImportacaoDoParaCada): a lista aparece em
+#   Contatos > Importações, com quem entrou e quem ficou de fora (decisão 15).
 # - Os outros campos (a data de nascimento do exemplo 8) vão para o contato como as colunas extras do Importar contatos
 #   (ContactImports::CustomAttributes): a chave do campo é o cabeçalho da coluna, o atributo que não existe nasce como
 #   texto, o atributo com tipo (data, número) converte o valor ou o deixa de fora, e o contato só ganha o que não tem.
@@ -23,10 +24,11 @@ class Autonomia::Automacao::ItemDoParaCada
 
   attr_reader :contagem
 
-  def initialize(execucao:, passo:, etapa:, acesso:, solicitante:)
+  # passo: a receita do passo, com o `etapa_id` da etapa já conferida.
+  def initialize(execucao:, passo:, acesso:, solicitante:, importacao:)
     @execucao = execucao
+    @importacao = importacao
     @passo = passo
-    @etapa = etapa
     @acesso = acesso
     @empresa = solicitante.try(:company)&.name
     @contagem = { 'cards_criados' => 0, 'contatos_novos' => 0, 'empresas_ligadas' => 0, 'pulados' => {}, 'card_ids' => [] }
@@ -34,13 +36,14 @@ class Autonomia::Automacao::ItemDoParaCada
 
   # nil, ou o Negado quando quem ligou perdeu a permissão no meio: a automação pausa. O atributo que a conta recusa criar
   # não é do contato: levanta a Falha (`atributo_recusado`) e o passo falha, em vez de pular cada item.
-  def abrir(valores)
+  # numero: a posição do item na lista (1, 2…), a linha dele no registro de importação.
+  def abrir(valores, numero)
     telefone = telefone(valores[TELEFONE])
-    return pular('telefone_invalido') if telefone == false
+    return de_fora(numero, valores, ::Autonomia::Automacao::ImportacaoDoParaCada::TELEFONE_INVALIDO, 'telefone_invalido') if telefone == false
 
     extras = valores.except(NOME, TELEFONE).compact
     preparar_atributos if extras.any? && linha.allowed?
-    escrever({ name: valores[NOME], phone_number: telefone, email: nil, company_name: @empresa }, extras)
+    escrever(numero, valores, { name: valores[NOME], phone_number: telefone, email: nil, company_name: @empresa }, extras)
   rescue ::CampaignImports::ContactRow::NotAllowed
     Negado.new('quem_ligou_sem_permissao_importar')
   end
@@ -48,16 +51,23 @@ class Autonomia::Automacao::ItemDoParaCada
   private
 
   # Contato, empresa e atributos juntos, como na savepoint de cada linha do import.
-  def escrever(linha_do_item, extras)
+  def escrever(numero, valores, linha_do_item, extras)
     escrito = ActiveRecord::Base.transaction { linha.write(linha_do_item).tap { |feito| gravar_extras(feito.contact, extras) } }
+    @importacao.entrou(numero, escrito, nome: valores[NOME], telefone: linha_do_item[:phone_number])
     contar_contato(escrito)
     card(escrito.contact)
   rescue ActiveRecord::RecordInvalid
-    pular('contato_recusado')
+    de_fora(numero, valores, ::Autonomia::Automacao::ImportacaoDoParaCada::CONTATO_RECUSADO, 'contato_recusado')
+  end
+
+  # O item fica de fora da importação (com o motivo dela) e pula (com o motivo do registro da execução).
+  def de_fora(numero, valores, motivo_da_importacao, motivo)
+    @importacao.ficou_de_fora(numero, nome: valores[NOME], telefone_escrito: valores[TELEFONE], motivo: motivo_da_importacao)
+    pular(motivo)
   end
 
   def card(contato)
-    passo = { 'id' => @passo['id'], 'etapa_id' => @etapa.id }
+    passo = { 'id' => @passo['id'], 'etapa_id' => @passo['etapa_id'] }
     resultado = ::Autonomia::Automacao::PassoDeCard.new(execucao: @execucao, passo: passo, alvo: contato, acesso: @acesso).executar
     return Negado.new(resultado.motivo) if resultado.tipo == :sem_acesso
     return pular(resultado.motivo) unless resultado.tipo == :ok
@@ -92,7 +102,9 @@ class Autonomia::Automacao::ItemDoParaCada
 
   # Uma vez por rodada, antes do 1º item com campo extra: cria os atributos de texto que ainda não existem.
   def preparar_atributos
-    @atributos ||= ::ContactImports::CustomAttributes.for_columns(@execucao.account, chaves_extras).tap(&:prepare!)
+    @atributos ||= ::ContactImports::CustomAttributes.for_columns(@execucao.account, chaves_extras).tap do |atributos|
+      @importacao.atributos_criados(atributos.prepare!)
+    end
   rescue ActiveRecord::RecordInvalid
     raise ::Autonomia::Automacao::PassoDeIa::Falha.new(:permanente, 'atributo_recusado')
   end

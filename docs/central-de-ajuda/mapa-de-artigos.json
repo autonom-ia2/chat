@@ -2291,7 +2291,8 @@
      "prioridade": "P1",
      "assuntos": [],
      "rotas": [
-      "contacts_import_journey"
+      "contacts_import_journey",
+      "contacts_imports_list"
      ],
      "me_leve_ate_la": {
       "rota": "contacts_import_journey",
@@ -2300,7 +2301,8 @@
      "requer": "crm",
      "prints": [],
      "fontes": [
-      "porques: Importar contatos com colunas, atributos e empresas"
+      "porques: Importar contatos com colunas, atributos e empresas",
+      "porques: Ver as importações de contatos (planilha e automação)"
      ],
      "revisar": false,
      "nota": null

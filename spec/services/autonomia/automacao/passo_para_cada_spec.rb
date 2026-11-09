@@ -74,6 +74,45 @@ RSpec.describe Autonomia::Automacao::PassoParaCada, :automacao_motor do
     expect(execucao.textos).to eq({})
   end
 
+  it 'grava a rodada como importação de contatos da automação (Contatos > Importações), uma linha por item', :aggregate_failures do
+    joao = create(:contact, account: account, name: 'João', phone_number: '+5511988880001', email: nil)
+    openai_devolve([item('João Lima', '11 98888-0001'), item('Maria Souza', '(11) 98888-0002'), item('Zé', '123')])
+
+    execucao = rodar
+
+    importacao = account.campaign_imports.contact_imports.sole
+    expect(importacao).to be_from_automation
+    expect(importacao).to have_attributes(
+      user_id: admin.id, name: execucao.automacao.nome, status: 'completed_with_failures', total_rows: 3, valid_rows: 2,
+      invalid_rows: 1, imported_contacts_count: 2, existing_contacts_count: 1, failed_contacts_count: 0,
+      companies_reused_count: 1, company_contacts_linked_count: 2, source_filename: nil
+    )
+    expect(importacao.options).to include('automacao_id' => execucao.automacao_id, 'execucao_id' => execucao.id)
+    linhas = importacao.campaign_import_rows.order(:row_number)
+    maria = account.contacts.find_by!(phone_number: '+5511988880002')
+    expect(linhas.map { |linha| [linha.row_number, linha.status, linha.contact_id, linha.was_existing_contact] })
+      .to eq([[1, 'imported', joao.id, true], [2, 'imported', maria.id, false], [3, 'invalid', nil, false]])
+    expect(linhas.map(&:raw_phone_masked)).to all(include('•'))
+    expect(linhas.map(&:raw_phone_masked).join).not_to include('98888')
+    expect(linhas.last.error_messages).to eq(['invalid_brazilian_mobile_number'])
+    expect(dados_do(execucao)['importacao_id']).to eq(importacao.id)
+    expect(account.campaign_imports.campaign_flows).to be_empty
+  end
+
+  it 'a nova tentativa da rodada usa a mesma importação, sem duplicar linhas', :aggregate_failures do
+    openai_devolve([item('Outro Nome')])
+    execucao = comecar(automacao_ligada(account, admin, [para_cada]), conversa)
+    execucao.guardar_texto!('lista.itens', [item('João Lima', '11 98888-0001')])
+    anterior = Autonomia::Automacao::ImportacaoDoParaCada.abrir(execucao: execucao, passo_id: 'lista',
+                                                                account_user: admin.account_users.first, total: 1)
+
+    perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob)
+
+    expect(account.campaign_imports.contact_imports.sole).to eq(anterior.campaign_import)
+    expect(anterior.campaign_import.reload).to have_attributes(status: 'completed', imported_contacts_count: 1)
+    expect(anterior.campaign_import.campaign_import_rows.count).to eq(1)
+  end
+
   it 'o registro e o pedido à IA não levam nome nem telefone de ninguém da lista', :aggregate_failures do
     openai_devolve([item('Maria Souza', '11 98888-0002')])
 

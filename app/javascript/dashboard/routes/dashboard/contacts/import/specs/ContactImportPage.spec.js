@@ -5,7 +5,15 @@ import ptBR from 'dashboard/i18n/locale/pt_BR/contactImportJourney.json';
 import ContactImportPage from '../ContactImportPage.vue';
 
 const push = vi.fn();
-vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
+const replace = vi.fn();
+const route = vi.hoisted(() => ({
+  name: 'contacts_import_journey',
+  params: {},
+}));
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push, replace }),
+  useRoute: () => route,
+}));
 
 const api = vi.hoisted(() => ({
   upload: vi.fn(),
@@ -25,7 +33,10 @@ beforeAll(() => {
 afterAll(() => {
   config.global.plugins = defaultPlugins;
 });
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+  route.params = {};
+});
 
 const columns = [
   {
@@ -314,6 +325,65 @@ describe('ContactImportPage (#1006)', () => {
 
     expect(wrapper.get('[data-result="CREATED"]').text()).toContain('57');
     expect(wrapper.get('[data-result="ATTRIBUTES"]').text()).toContain('1');
+    expect(wrapper.find('[data-test="left-out"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  // Contatos > Importações (#2771): opened by id, an automation import shows its result and who was left out.
+  it('opens an automation import by id with the result and the rows left out', async () => {
+    route.params = { accountId: 1, importId: 42 };
+    api.show.mockResolvedValue({
+      data: {
+        payload: {
+          id: 42,
+          status: 'completed_with_failures',
+          flow: 'contacts',
+          origin: 'automation',
+          name: 'Lista do RH',
+          total_rows: 3,
+          imported_contacts_count: 2,
+          existing_contacts_count: 1,
+          failed_contacts_count: 0,
+          invalid_rows: 1,
+          downloads: { error_csv: false },
+          problem_rows: [
+            {
+              row_number: 3,
+              phone: '+55 •• •••••-0123',
+              email: null,
+              errors: ['invalid_brazilian_mobile_number'],
+            },
+          ],
+        },
+      },
+    });
+
+    const wrapper = mountPage();
+    await flushPromises();
+
+    expect(api.show).toHaveBeenCalledWith(42);
+    expect(wrapper.text()).toContain(
+      'List read by the automation Lista do RH.'
+    );
+    expect(wrapper.get('[data-result="IMPORTED"]').text()).toContain('2');
+    expect(wrapper.get('[data-result="FAILED"]').text()).toContain('1');
+    const leftOut = wrapper.get('[data-test="left-out"]');
+    expect(leftOut.text()).toContain('+55 •• •••••-0123');
+    expect(leftOut.text()).toContain('Not a Brazilian mobile');
+    expect(wrapper.text()).not.toContain('Download');
+
+    await wrapper.get('[data-test="crumb-imports"]').trigger('click');
+    expect(push).toHaveBeenCalledWith({ name: 'contacts_imports_list' });
+    wrapper.unmount();
+  });
+
+  it('without an id, opens on the upload and does not fetch', async () => {
+    const wrapper = mountPage();
+    await flushPromises();
+
+    expect(api.show).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-test="drop-zone"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="crumb-imports"]').exists()).toBe(false);
     wrapper.unmount();
   });
 });

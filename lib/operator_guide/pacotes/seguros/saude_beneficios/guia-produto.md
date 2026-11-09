@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (252 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (253 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -229,12 +229,22 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 ### Importar contatos com colunas, atributos e empresas
 - intent: Como importo uma planilha de contatos com empresa?; As colunas extras da planilha viram atributos do contato?; Por que a importação pediu para escolher as colunas?; Como importo contatos de um Excel?
 - onde_fica: Contatos > Todos os contatos > menu de ações (três pontos) > Importar contatos (com a jornada de campanhas ligada)
-- rota: `contacts_import_journey` - `/app/accounts/:accountId/contacts/import`
+- rota: `contacts_import_journey` - `/app/accounts/:accountId/contacts/import/:importId?`
 - gate: feature flag `crm`; papel `administrator` ou `contact_manage`
 - pre_requisitos: administrador ou função com gestão de contatos; planilha CSV ou Excel (.xlsx) até 10 MB com celular ou e-mail em cada linha
 - passos: 1. Abra Contatos; 2. No menu de três pontos, clique em Importar contatos; 3. Escolha a planilha; 4. Confira as Colunas encontradas e use Trocar se alguma estiver errada (ou Não tem); 5. Veja quais Outras colunas viram atributos do contato e quais são atributos novos; 6. Confira contatos prontos, linhas com problema e o bloco Empresas (Criar e ligar); 7. Clique em Importar e veja o resumo.
 - gotchas: com a jornada de campanhas desligada o menu abre a importação nativa do Chatwoot; quando o sistema não tem certeza das colunas, pede a escolha antes de seguir; contato que já existe (celular com ou sem o 9, ou e-mail) só ganha o que falta e não perde valores de atributos; contato que já tem outra empresa mantém a dele; atributos novos são criados como texto com o nome da coluna; nada entra na base antes de clicar em Importar; essa importação não vira público nem aparece em Campanhas.
 - nav_target: `contacts_import_journey`
+
+### Ver as importações de contatos (planilha e automação)
+- intent: Onde vejo as listas de contatos que importei?; A lista que a automação leu entrou nos contatos?; Quem ficou de fora da importação?; Onde vejo o resultado de uma importação antiga?
+- onde_fica: Contatos > Todos os contatos > menu de ações (três pontos) > Importações (com a jornada de campanhas ligada)
+- rota: `contacts_imports_list` - `/app/accounts/:accountId/contacts/imports`
+- gate: feature flag `crm`; papel `administrator` ou `contact_manage`
+- pre_requisitos: administrador ou função com gestão de contatos
+- passos: 1. Abra Contatos; 2. No menu de três pontos, clique em Importações; 3. Veja cada lista, a origem (Planilha ou Automação), a data, quem importou, quantos entraram e quantos ficaram de fora; 4. Clique numa importação para ver o resultado e quem ficou de fora.
+- gotchas: a origem Automação é a lista que o passo "Para cada item" leu na conversa, importada em nome de quem ligou a automação; quem ficou de fora aparece com o celular mascarado e o motivo; os públicos e as bases de campanha não aparecem aqui; uma planilha que ainda espera conferência abre na etapa em que parou.
+- nav_target: `contacts_imports_list`
 
 ### Convidar e gerenciar agentes
 - intent: Como convido um agente?; Onde vejo usuarios da conta?; Como desativo ou edito um agente?

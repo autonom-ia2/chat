@@ -19,16 +19,19 @@ require 'rails_helper'
 # - O modelo aprovado da lista de documentos tem na Meta o nome `documentos_da_inclusao`.
 # - O "quadro" é o funil "Inclusão de vidas"; o card nasce na primeira etapa dele.
 # - A data de nascimento vai para o contato como a coluna "data_nascimento" do Importar contatos (atributo do contato).
-# - Passo 3: os contatos entram pelas regras de linha do Importar contatos (CampaignImports::ContactRow), sem registro de
-#   importação (CampaignImport). A lista não aparece em Contatos > Importações. Se "pela mesma importação da tela
-#   Contatos" exige esse registro, o passo 3 ainda não cumpre o termo à risca (decisão pendente do Rodrigo).
+# - Passo 3, à risca pela decisão 15 do Rodrigo: os contatos entram pelas regras de linha do Importar contatos
+#   (CampaignImports::ContactRow) e a lista fica registrada como importação de contatos (CampaignImport, flow "contacts",
+#   origem "automacao"), que aparece em Contatos > Importações com o rótulo "Automação", quem ligou e quantos entraram.
 #
 # Passos 6 a 9 em aberto (pendentes_spec): a 2ª automação não volta a esperar a cada documento (G31: a receita não tem
 # laço), não há gatilho de card completo (G27) e o aviso de sexta ao RH, que não está na conversa do card, é a G22.
 RSpec.describe 'Fechamento #2414 · exemplo 8: funcionário novo no plano da empresa', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 
-  around { |exemplo| with_modified_env(CRM_KANBAN_ENABLED: 'true') { exemplo.run } }
+  # A jornada de campanhas e o import ligados: Contatos > Importações (decisão 15) abre como na conta real.
+  around do |exemplo|
+    with_modified_env(CRM_KANBAN_ENABLED: 'true', CAMPAIGN_JOURNEY_ENABLED: 'true', CAMPAIGN_IMPORT_ENABLED: 'true') { exemplo.run }
+  end
 
   let(:canal) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
   let(:account) { canal.account }
@@ -165,6 +168,15 @@ RSpec.describe 'Fechamento #2414 · exemplo 8: funcionário novo no plano da emp
     expect(contatos.map(&:company_id)).to all(eq(empresa.id))
     expect(contatos.map { |contato| contato.custom_attributes['data_nascimento'] }).to eq(%w[12/03/1990 05/07/1985 23/11/1998 30/01/2001])
     expect(account.custom_attribute_definitions.contact_attribute.find_by!(attribute_key: 'data_nascimento').attribute_display_type).to eq('text')
+    # Passo 3, "pela mesma importação da tela Contatos": a lista está em Contatos > Importações, como importação da automação.
+    get "/api/v1/accounts/#{account.id}/contact_imports", headers: { 'api_access_token' => luciana.access_token.token }
+    importacao = response.parsed_body['payload'].sole
+    expect(importacao).to include('origin' => 'automation', 'name' => 'Lista do RH', 'status' => 'completed', 'total_rows' => 4,
+                                  'imported_contacts_count' => 4, 'failed_count' => 0)
+    expect(importacao['created_by']['id']).to eq(luciana.id)
+    linhas = CampaignImport.find(importacao['id']).campaign_import_rows.order(:row_number)
+    expect(linhas.map(&:contact_id)).to eq(contatos.map(&:id))
+    expect(linhas.map(&:was_existing_contact)).to eq([false, true, false, false])
     cards = funil.cards.order(:id)
     expect(cards.map(&:contact)).to eq(contatos)
     expect(cards.map(&:stage_id).uniq).to eq([etapa.id])

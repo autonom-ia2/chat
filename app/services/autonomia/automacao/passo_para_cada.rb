@@ -12,6 +12,8 @@
 # - Cada item (ItemDoParaCada) acha ou cria o contato pela mesma linha do Importar contatos e abre o card pelo "criar
 #   card" (PassoDeCard), numa raiz própria da cadeia (Cadeia.em_raiz_nova): na raiz da rodada, a automação seguinte
 #   rodaria só no 1º card.
+# - A rodada grava um registro de importação de contatos (ImportacaoDoParaCada, decisão 15): a lista aparece em
+#   Contatos > Importações, com a origem "Automação", quem ligou, quantos entraram e quais ficaram de fora.
 # - Age como quem ligou, conferido antes de pagar a IA: a chave de funis, criar card e importar contatos (a pergunta da
 #   tela de Contatos). Faltou uma, a automação pausa (`sem_acesso`), como nos outros passos.
 # - O registro leva contagens e ids, nunca nome nem telefone: eles ficam no contato e no card, onde o acesso de sempre vale.
@@ -107,15 +109,28 @@ class Autonomia::Automacao::PassoParaCada
   end
 
   def abrir_cards(itens, etapa, dados)
-    item = ::Autonomia::Automacao::ItemDoParaCada.new(execucao: @execucao, passo: @passo, etapa: etapa, acesso: @acesso,
-                                                      solicitante: @conversa.contact)
-    itens.each do |valores|
-      negado = ::Autonomia::Automacao::Cadeia.em_raiz_nova { item.abrir(valores) }
+    importacao = importacao_da_rodada(itens.size)
+    dados = dados.merge('importacao_id' => importacao.campaign_import.id)
+    item = item_da_rodada(etapa, importacao)
+    itens.each.with_index(1) do |valores, numero|
+      negado = ::Autonomia::Automacao::Cadeia.em_raiz_nova { item.abrir(valores, numero) }
       return Resultado.new(tipo: :sem_acesso, motivo: negado.motivo, dados: dados.merge(item.contagem)) if negado
     end
     Resultado.new(tipo: :ok, motivo: nil, dados: dados.merge(item.contagem))
   rescue Falha => e
     Resultado.new(tipo: e.tipo, motivo: e.motivo, dados: dados.merge(item.contagem))
+  ensure
+    importacao&.fechar!
+  end
+
+  # O registro em Contatos > Importações (decisão 15): o mesmo na nova tentativa da rodada.
+  def importacao_da_rodada(total)
+    ::Autonomia::Automacao::ImportacaoDoParaCada.abrir(execucao: @execucao, passo_id: id, account_user: @acesso.account_user, total: total)
+  end
+
+  def item_da_rodada(etapa, importacao)
+    ::Autonomia::Automacao::ItemDoParaCada.new(execucao: @execucao, passo: @passo.merge('etapa_id' => etapa.id), acesso: @acesso,
+                                               solicitante: @conversa.contact, importacao: importacao)
   end
 
   def instrucoes

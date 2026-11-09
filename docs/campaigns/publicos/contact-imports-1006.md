@@ -26,6 +26,11 @@ Automação: acha pelo telefone (com ou sem o nono dígito) e depois pelo e-mail
 existe só ganha o que não tem (nome, telefone e e-mail preenchidos nunca são trocados); a empresa
 só vai para quem não tem empresa.
 
+O passo "Para cada item" da Automação (#2771, decisão 15) grava a rodada como importação de
+contatos: `options.origem = "automacao"`, com `automacao_id` e `execucao_id`; `user` é quem ligou a
+automação; uma linha por item (telefone mascarado e em hash, sem arquivo). Item com telefone que não
+é celular do Brasil ou contato recusado fica `invalid` com o motivo (`problem_rows` do `GET /:id`).
+
 ## Endpoints
 
 Base: `/api/v1/accounts/:account_id/contact_imports`. Resposta: `{ payload: <campaign_import> }`,
@@ -33,6 +38,7 @@ o mesmo objeto de `api-992.md` §4 com `flow: "contacts"`.
 
 | Método | Caminho | Corpo | |
 |---|---|---|---|
+| GET | `/?page=` | | Contatos > Importações (#2771): as importações de contatos da conta, da planilha e da automação, 25 por página, mais novas primeiro; `origin` `file` ou `automation`, `failed_count`, `created_by`; `meta.count` |
 | POST | `/` | multipart `import_file` (.csv/.xlsx), `create_companies` (`"false"` desliga) | `201`; validação em segundo plano |
 | GET | `/:id` | | acompanhar o status |
 | PATCH | `/:id/columns` | `{ name, phone, email, company }` (índice ou `null`) | mesmas regras de `api-992.md` §5 |

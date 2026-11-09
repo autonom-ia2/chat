@@ -928,6 +928,12 @@
     "controller": "api/v1/accounts#cache_keys",
     "parametros": []
   },
+  "contact_imports": {
+    "controller": "api/v1/accounts/contact_imports#index",
+    "parametros": [
+      "page"
+    ]
+  },
   "contact_imports/:id": {
     "controller": "api/v1/accounts/contact_imports#show",
     "parametros": []
