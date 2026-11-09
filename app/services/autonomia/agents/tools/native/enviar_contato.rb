@@ -1,11 +1,12 @@
-# O CARTÃO DE CONTATO DA PÁGINA DE AGENDAMENTO (#1479 F3), numa mensagem própria logo depois da resposta.
+# O CARTÃO DE CONTATO DO ATENDIMENTO (#1479 F3), numa mensagem própria logo depois da resposta.
 #
-# Manda SÓ o `contact_phone` da página, com o título dela (ou o nome da conta) como nome do cartão
-# (`CartaoDaPagina.contato`); nunca o telefone de uma pessoa da equipe. Como `enviar_localizacao`: marca o cartão no
-# contexto do turno, um só por turno, e sem contexto de entrega devolve o erro nomeado `cartao_sem_conversa`. Só entra
-# no turno quando o telefone da página serve para o cartão ("+" e 8 a 15 dígitos).
+# Manda o telefone do AGENTE (bloco "Endereço e telefone", `config['atendimento']`) e, sem ele, o `contact_phone` da
+# página de agendamento, com o título da página (ou o nome da conta) como nome do cartão
+# (`CartaoDaPagina.contato_do_agente`); nunca o telefone de uma pessoa da equipe. Como `enviar_localizacao`: marca o
+# cartão no contexto do turno, um só por turno, e sem contexto de entrega devolve o erro nomeado `cartao_sem_conversa`.
+# Só entra no turno quando um dos dois telefones serve para o cartão ("+" e 8 a 15 dígitos).
 class Autonomia::Agents::Tools::Native::EnviarContato < Autonomia::Agents::Tools::Native::Base
-  SEM_TELEFONE = 'Esta página de agendamento não tem telefone de contato agora. Não invente um número; se o cliente ' \
+  SEM_TELEFONE = 'Este atendimento não tem telefone de contato agora. Não invente um número; se o cliente ' \
                  'precisar falar por telefone, passe para uma pessoa da equipe.'.freeze
 
   class << self
@@ -27,7 +28,7 @@ class Autonomia::Agents::Tools::Native::EnviarContato < Autonomia::Agents::Tools
     end
 
     def contato_de(agent)
-      ::Autonomia::Agents::Tools::Native::CartaoDaPagina.contato(::Autonomia::Agents::Tools::Native::CartaoDaPagina.pagina(agent))
+      ::Autonomia::Agents::Tools::Native::CartaoDaPagina.contato_do_agente(agent)
     end
   end
 

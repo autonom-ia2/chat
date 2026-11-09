@@ -1697,6 +1697,33 @@
             "AMOSTRA": "The test is a sample; check the answers."
           },
           "TUDO_CERTO": "All good. {nome} uses all the material with your customers."
+        },
+        "ATENDIMENTO": {
+          "TITULO": "Address and phone",
+          "TEXTO": "{nome} knows these details and gives them when the customer asks.",
+          "VAZIO": "{nome} has no address or phone to send to customers yet.",
+          "ENDERECO": "Address: {endereco}",
+          "TELEFONE": "Phone: {telefone}",
+          "ADICIONAR": "Add",
+          "ALTERAR_ARIA": "Change address and phone",
+          "GAVETA_TITULO": "Address and phone for {nome}",
+          "GAVETA_DICA": "{nome} gives these details to the customer when they ask. You can leave them blank.",
+          "SALVAR": "Save",
+          "SALVANDO": "Saving…",
+          "SALVO": "Saved.",
+          "ERRO": "Could not save.",
+          "ERRO_GARANTIA": "Nothing changed.",
+          "CAMPOS": {
+            "ENDERECO": "Service address",
+            "ENDERECO_EXEMPLO": "E.g.: 120 Flower Street, Downtown, Springfield",
+            "ENDERECO_DICA": "{nome} writes this address in the chat when the customer asks where you are. No map is sent for it.",
+            "TELEFONE": "Contact phone",
+            "PAIS": "Phone country",
+            "TELEFONE_DICA": "{nome} sends this number as a contact card when the customer asks for a phone.",
+            "TELEFONE_INCOMPLETO": "The number is incomplete. Check the digits or clear the field.",
+            "TELEFONE_RECUSADO": "This phone does not look right. Check the number or leave it blank.",
+            "ENDERECO_RECUSADO": "This address is too long. Make it shorter."
+          }
         }
       },
       "CRIAR": {
