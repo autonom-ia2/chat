@@ -96,10 +96,13 @@ RSpec.describe Autonomia::Automacao::Receita do
       expect(described_class.esquema_valido?(de_card('tipo' => 'card.saiu_da_etapa', 'etapa_id' => 1))).to be(true)
     end
 
-    it 'card.* vale no gatilho de card e não no de conversa', :aggregate_failures do
+    # #2716: a conversa lê o card dela (o assunto atual); o contato não chega a card nenhum.
+    it 'card.* vale no gatilho de card e no de conversa, e não no de contato', :aggregate_failures do
       filtro = [{ 'campo' => { '$valor' => 'card.valor' }, 'op' => 'maior', 'valor' => 0 }]
       expect(problemas('tipo' => 'card.ganho', 'filtros' => filtro)).to be_empty
-      expect(problemas('tipo' => 'conversa.criada', 'filtros' => filtro)).to include(a_string_including('card.valor'))
+      expect(problemas('tipo' => 'conversa.criada', 'filtros' => filtro)).to be_empty
+      expect(problemas('tipo' => 'contato.data', 'campo' => 'nascimento', 'quando' => 'no_dia', 'filtros' => filtro))
+        .to include(I18n.t('autonomia.automacao.receita.valor_fora_do_alvo', passo: 'gatilho', caminho: 'card.valor'))
     end
   end
 

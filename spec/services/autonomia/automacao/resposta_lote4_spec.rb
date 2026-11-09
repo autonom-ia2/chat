@@ -1,0 +1,291 @@
+require 'rails_helper'
+
+# Lote 4 da Automação livre (#2682), o "esperar até" que espera:
+# - a pessoa responsável responder (ex. 10, passo 6: a Fernanda; ex. 15, passo 7: o Carlos), não qualquer pessoa da equipe;
+# - o gatilho acontecer de novo (ex. 4, passos 1 e 10: a 2ª falta dentro dos 30 dias);
+# - o card mudar (ex. 12, passo 3: o corretor preenche o campo, e a espera vê na hora, não no fim das 24 h).
+RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
+  include ActiveJob::TestHelper
+
+  let(:listener) { Autonomia::AutomacaoListener.instance }
+  let(:account) { create(:account) }
+  let(:admin) { create(:user, account: account, role: :administrator) }
+  let(:fernanda) { create(:user, account: account, role: :agent) }
+  let(:rafael) { create(:user, account: account, role: :agent) }
+  let(:conversa) { create(:conversation, account: account, status: :open, assignee: fernanda) }
+
+  before do
+    ligar_motor(account)
+    conversa.inbox.add_members([fernanda.id, rafael.id])
+  end
+
+  after { Current.reset }
+
+  def condicao(caminho, operador: 'igual', valor: true) = { 'campo' => { '$valor' => caminho }, 'op' => operador, 'valor' => valor }
+
+  def esperar_ate(condicao, prazo = 30, unidade = 'minutos')
+    { 'id' => 'espera', 'tipo' => 'esperar_ate', 'condicao' => condicao, 'prazo' => { 'valor' => prazo, 'unidade' => unidade },
+      'se_vencer' => [prioridade_passo('venceu', 'high'), { 'id' => 'fim', 'tipo' => 'parar' }] }
+  end
+
+  def rodar(definicao, alvo = conversa)
+    perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(definicao, alvo) }
+  end
+
+  def evento(nome, **dados) = Events::Base.new(nome, Time.zone.now, dados)
+
+  def escreve(**atributos)
+    mensagem = create(:message, account: account, conversation: conversa, inbox: conversa.inbox, **atributos)
+    perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { listener.message_created(evento('message.created', message: mensagem)) }
+  end
+
+  def execucao_de(definicao) = Autonomia::Automacao::Execucao.find_by!(automacao: definicao)
+
+  describe 'até a pessoa responsável responder' do
+    let(:definicao) do
+      automacao_ligada(account, admin, [esperar_ate(condicao('conversa.responsavel_respondeu')), prioridade_passo('respondeu', 'low')])
+    end
+
+    it 'outra pessoa da equipe responde: continua esperando a responsável', :aggregate_failures do
+      rodar(definicao)
+
+      travel(5.minutes) { escreve(message_type: :outgoing, sender: rafael) }
+
+      expect(execucao_de(definicao).estado).to eq('esperando')
+      expect(conversa.reload.priority).to be_nil
+    end
+
+    it 'a responsável responde: segue na hora', :aggregate_failures do
+      rodar(definicao)
+
+      travel(5.minutes) { escreve(message_type: :outgoing, sender: fernanda) }
+
+      expect(execucao_de(definicao).estado).to eq('concluida')
+      expect(conversa.reload.priority).to eq('low')
+    end
+
+    it 'não contam a nota da responsável, o eco do celular e a mensagem que falhou', :aggregate_failures do
+      rodar(definicao)
+
+      travel(5.minutes) do
+        escreve(message_type: :outgoing, sender: fernanda, private: true)
+        escreve(message_type: :outgoing, sender: fernanda, status: :failed)
+        escreve(message_type: :outgoing, sender: nil, content_attributes: { 'external_echo' => true }, source_id: 'wamid.celular')
+      end
+
+      expect(execucao_de(definicao).estado).to eq('esperando')
+    end
+
+    it 'a conversa passa para outra pessoa: vale a resposta de quem está com ela agora', :aggregate_failures do
+      rodar(definicao)
+      conversa.update!(assignee: rafael)
+
+      travel(5.minutes) { escreve(message_type: :outgoing, sender: rafael) }
+
+      expect(execucao_de(definicao).estado).to eq('concluida')
+    end
+
+    it 'sem ninguém atribuído, ninguém é a responsável: segue pelo "se vencer"', :aggregate_failures do
+      conversa.update!(assignee: nil)
+      rodar(definicao)
+
+      travel(5.minutes) { escreve(message_type: :outgoing, sender: rafael) }
+      travel(31.minutes) { varrer }
+
+      expect(conversa.reload.priority).to eq('high')
+    end
+  end
+
+  describe 'até o gatilho acontecer de novo' do
+    let(:definicao) do
+      automacao_ligada(account, admin, [esperar_ate(condicao('gatilho.repetiu'), 30, 'dias'), prioridade_passo('repetiu', 'low')])
+    end
+
+    it 'o gatilho acontece de novo durante a espera: segue na hora', :aggregate_failures do
+      rodar(definicao)
+      execucao = execucao_de(definicao)
+
+      travel(3.days) { rodar(definicao) }
+
+      expect(execucao.reload.estado).to eq('concluida')
+      expect(conversa.reload.priority).to eq('low')
+    end
+
+    it 'o gatilho repete duas vezes com a espera ainda de pé: o histórico fica com uma linha', :aggregate_failures do
+      outra = automacao_ligada(account, admin, [esperar_ate(condicao('conversa.responsavel_respondeu'), 30, 'dias'), prioridade_passo('ok', 'low')])
+      rodar(outra)
+      execucao = execucao_de(outra)
+
+      travel(3.days) { rodar(outra) }
+      travel(4.days) { rodar(outra) }
+
+      expect(execucao.reload.estado).to eq('esperando')
+      expect(Autonomia::Automacao::Registro.where(execucao: execucao, motivo: 'ja_aberta').count).to eq(1)
+    end
+
+    it 'sem repetição no prazo: segue pelo "se vencer"' do
+      rodar(definicao)
+
+      travel(30.days + 1.minute) { varrer }
+
+      expect(conversa.reload.priority).to eq('high')
+    end
+
+    it 'a repetição de antes da espera não conta', :aggregate_failures do
+      passos = [esperar_passo('antes', 1, 'horas'), esperar_ate(condicao('gatilho.repetiu'), 30, 'dias'), prioridade_passo('repetiu', 'low')]
+      antes = automacao_ligada(account, admin, passos)
+      rodar(antes)
+
+      travel(10.minutes) { rodar(antes) }
+      travel(61.minutes) { varrer }
+
+      expect(execucao_de(antes).reload.estado).to eq('esperando')
+      expect(conversa.reload.priority).to be_nil
+    end
+
+    it 'no ensaio, sem execução, o gatilho nunca repetiu' do
+      valores = Autonomia::Automacao::Valores.new(alvo: conversa, quem: nil, espera: (1.hour.ago..))
+
+      expect(valores.ler('gatilho.repetiu')).to be(false)
+    end
+  end
+
+  describe 'o card mudou' do
+    around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
+
+    let(:funil) { create_crm_pipeline(account: account, user: admin) }
+    let(:card) do
+      Crm::Card.create!(account: account, pipeline: funil.first, stage: funil.last, title: 'Apartamento Jardim', currency: 'BRL',
+                        primary_conversation: conversa, contact: conversa.contact)
+    end
+    let(:definicao) do
+      passos = [esperar_ate(condicao('card.atributos.impressao', valor: 'gostou'), 24, 'horas'), prioridade_passo('preenchido', 'low')]
+      automacao_ligada(account, admin, passos, gatilho: { 'tipo' => 'card.entrou_na_etapa', 'etapa_id' => funil.last.id })
+    end
+
+    def rodar_no_card
+      partida = Autonomia::Automacao::Partida.new(definicao: definicao, alvo: card, chave_gatilho: 'card.entrou_na_etapa')
+      perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { partida.call }
+    end
+
+    before do
+      account.enable_features!('automacao_gatilhos')
+      create(:custom_attribute_definition, account: account, attribute_model: 'card_attribute', attribute_key: 'impressao',
+                                           attribute_display_type: 'text')
+    end
+
+    it 'o corretor preenche o campo: a espera vê na hora, sem esperar as 24 h', :aggregate_failures do
+      rodar_no_card
+      expect(execucao_de(definicao).estado).to eq('esperando')
+
+      travel(2.hours) do
+        perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { card.update!(custom_attributes: { 'impressao' => 'gostou' }) }
+      end
+
+      expect(execucao_de(definicao).estado).to eq('concluida')
+      expect(conversa.reload.priority).to eq('low')
+    end
+
+    it 'duas gravações na mesma transação: a 1ª muda o campo lido, a 2ª não, e a espera acorda', :aggregate_failures do
+      rodar_no_card
+
+      travel(2.hours) do
+        perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) do
+          Crm::Card.transaction do
+            card.update!(custom_attributes: { 'impressao' => 'gostou' })
+            card.update!(score: 40)
+          end
+        end
+      end
+
+      expect(execucao_de(definicao).estado).to eq('concluida')
+      expect(conversa.reload.priority).to eq('low')
+    end
+
+    it 'o card muda entre a leitura da condição e a gravação da espera: a rodada reconfere e segue', :aggregate_failures do
+      allow(Autonomia::Automacao::Execucao).to receive(:gravar_na_rodada).and_wrap_original do |original, *args, **atributos|
+        # O corretor salva enquanto a execução ainda está andando: o aviso do card não acha ninguém esperando.
+        Crm::Card.find(card.id).update!(custom_attributes: { 'impressao' => 'gostou' }) if atributos[:estado] == 'esperando'
+        original.call(*args, **atributos)
+      end
+
+      rodar_no_card
+
+      expect(Autonomia::Automacao::Execucao).to have_received(:gravar_na_rodada).with(anything, anything, hash_including(estado: 'esperando'))
+      expect(execucao_de(definicao).estado).to eq('concluida')
+      expect(conversa.reload.priority).to eq('low')
+      expect(Autonomia::Automacao::Registro.where(execucao: execucao_de(definicao), passo: 'espera', resultado: 'ok').count).to eq(2)
+    end
+
+    it 'no card sem conversa principal, a responsável nunca respondeu' do
+      sem_conversa = Crm::Card.create!(account: account, pipeline: funil.first, stage: funil.last, title: 'Sem conversa', currency: 'BRL')
+      valores = Autonomia::Automacao::Valores.new(alvo: sem_conversa, quem: admin, espera: (1.hour.ago..))
+
+      expect(valores.ler('conversa.responsavel_respondeu')).to be(false)
+    end
+
+    it 'a gravação da espera quebra: o erro sobe e a execução não termina concluída', :aggregate_failures do
+      allow(Autonomia::Automacao::Execucao).to receive(:gravar_na_rodada).and_wrap_original do |original, *args, **atributos|
+        raise ActiveRecord::StatementInvalid, 'falha ao gravar' if atributos[:estado] == 'esperando'
+
+        original.call(*args, **atributos)
+      end
+
+      Autonomia::Automacao::Partida.new(definicao: definicao, alvo: card, chave_gatilho: 'card.entrou_na_etapa').call
+      job = enqueued_jobs.find { |enfileirado| enfileirado[:job] == Autonomia::Automacao::AvancarJob }
+
+      expect { Autonomia::Automacao::Executor.rodar(*ActiveJob::Arguments.deserialize(job[:args])) }.to raise_error(ActiveRecord::StatementInvalid)
+      expect(execucao_de(definicao).estado).not_to eq('concluida')
+      expect(Autonomia::Automacao::Registro.where(execucao: execucao_de(definicao), motivo: 'erro_inesperado').count).to eq(1)
+    end
+
+    it 'gravação desfeita (rollback) não fica anotada: a gravação seguinte, sem campo lido, não acorda' do
+      rodar_no_card
+      Crm::Card.transaction do
+        card.update!(custom_attributes: { 'impressao' => 'gostou' })
+        raise ActiveRecord::Rollback
+      end
+      card.reload
+
+      expect { card.update!(score: 40) }.not_to have_enqueued_job(Autonomia::Automacao::AvancarJob)
+    end
+
+    it 'mudança que a receita não lê (a nota de qualificação) não acorda a espera' do
+      rodar_no_card
+
+      expect { card.update!(score: 40) }.not_to have_enqueued_job(Autonomia::Automacao::AvancarJob)
+    end
+
+    it 'sem execução esperando no card, a mudança só faz a consulta pelo alvo: nem lê a flag' do
+      allow(Autonomia::Automacao::Motor).to receive(:ligado?).and_call_original
+
+      card.update!(custom_attributes: { 'impressao' => 'gostou' })
+
+      expect(Autonomia::Automacao::Motor).not_to have_received(:ligado?)
+    end
+
+    it 'a mudança no card não acorda quem espera em outro card' do
+      rodar_no_card
+      outro = Crm::Card.create!(account: account, pipeline: funil.first, stage: funil.last, title: 'Outro', currency: 'BRL')
+
+      expect { outro.update!(custom_attributes: { 'impressao' => 'x' }) }.not_to have_enqueued_job(Autonomia::Automacao::AvancarJob)
+    end
+
+    it 'o card muda: acorda a espera que lê o card, não a que lê só a resposta do cliente', :aggregate_failures do
+      resposta = automacao_ligada(account, admin, [esperar_ate(condicao('conversa.cliente_respondeu'), 24, 'horas')],
+                                  gatilho: { 'tipo' => 'card.entrou_na_etapa', 'etapa_id' => funil.last.id })
+      perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) do
+        Autonomia::Automacao::Partida.new(definicao: resposta, alvo: card, chave_gatilho: 'card.entrou_na_etapa').call
+      end
+      rodar_no_card
+      allow(Autonomia::Automacao::Escuta).to receive(:reservar).and_call_original
+
+      perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { card.update!(custom_attributes: { 'impressao' => 'gostou' }) }
+
+      expect(Autonomia::Automacao::Escuta).to have_received(:reservar).with(have_attributes(id: execucao_de(definicao).id))
+      expect(Autonomia::Automacao::Escuta).not_to have_received(:reservar).with(have_attributes(id: execucao_de(resposta).id))
+      expect(execucao_de(definicao).estado).to eq('concluida')
+      expect(execucao_de(resposta).estado).to eq('esperando')
+    end
+  end
+end

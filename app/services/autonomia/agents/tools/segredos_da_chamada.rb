@@ -4,9 +4,16 @@
 #
 # `endereco` é o renderizador do executor (`HttpExecutor#render_template`): o endereço do cadastro com cada {{ }} vazio.
 class Autonomia::Agents::Tools::SegredosDaChamada
-  # O nome do parâmetro da query que é credencial, comparado inteiro (`casecmp?`): a query não tem o flag `secret`.
-  NOMES_DE_CREDENCIAL = %w[token api_key apikey key secret password senha access_token].freeze
+  # O nome do parâmetro da query que é credencial, comparado inteiro (`casecmp?`, sem o `[]` do fim): a query não tem o
+  # flag `secret`. A mesma lista recusa senha no link (`SegredoDaFerramenta`) e está no painel (`utils/ferramentas.js`).
+  NOMES_DE_CREDENCIAL = %w[token api_key apikey api_token key secret client_secret password senha pwd access_token auth_token
+                           access_key private_token hapikey x-api-key authorization].freeze
   CABECALHOS_DE_AUTENTICACAO = %w[authorization proxy-authorization].freeze
+
+  def self.credencial?(nome)
+    sem_colchetes = nome.to_s.delete_suffix('[]')
+    NOMES_DE_CREDENCIAL.any? { |credencial| credencial.casecmp?(sem_colchetes) }
+  end
 
   def initialize(tool:, headers:, corpo:, endereco:)
     @tool = tool
@@ -68,7 +75,7 @@ class Autonomia::Agents::Tools::SegredosDaChamada
     return [] unless uri
 
     pares = URI.decode_www_form(uri.query.to_s)
-    pares.select { |nome, _| NOMES_DE_CREDENCIAL.any? { |credencial| credencial.casecmp?(nome) } }.map(&:last)
+    pares.select { |nome, _| self.class.credencial?(nome) }.map(&:last)
   rescue ArgumentError
     []
   end

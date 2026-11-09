@@ -77,9 +77,12 @@ class Api::V1::Accounts::Autonomia::AutomacoesIaController < Api::V1::Accounts::
     ::Autonomia::Automacao::Receita.new(receita, conta: Current.account, account_user: Current.account_user).problemas
   end
 
+  # `automacao_id`: a automação já salva que está sendo editada; quem a ligou também precisa poder ver o valor do card
+  # (#2780). Sem ela (a nova), só quem testa.
   def teste
-    ::Autonomia::Automacao::TestarPasso.new(receita: receita, passo_id: params[:passo_id], conta: Current.account,
-                                            account_user: Current.account_user, conversa_id: params[:conversa_id])
+    pedido = ::Autonomia::Automacao::TestarPasso::Pedido.new(receita: receita, passo_id: params[:passo_id], conversa_id: params[:conversa_id],
+                                                             ligada_por: escopo.find_by(id: params[:automacao_id])&.ligada_por)
+    ::Autonomia::Automacao::TestarPasso.new(pedido: pedido, conta: Current.account, account_user: Current.account_user)
   end
 
   def recusar(chave, problemas = [])
