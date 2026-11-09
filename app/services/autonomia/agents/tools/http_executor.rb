@@ -41,7 +41,12 @@ class Autonomia::Agents::Tools::HttpExecutor
     @higienizar = higienizar
   end
 
+  # Todos os renders da chamada dividem um prazo só (`ModeloLiquid.com_orcamento`).
   def call
+    Autonomia::Agents::Tools::ModeloLiquid.com_orcamento { chamar }
+  end
+
+  def chamar
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     conferir_recorte!
     body = render_body

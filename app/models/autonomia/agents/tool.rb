@@ -32,6 +32,8 @@
 #  fk_rails_...  (autonomia_agent_id => autonomia_agents.id) ON DELETE => cascade
 #
 class Autonomia::Agents::Tool < ApplicationRecord
+  include Autonomia::Agents::CabecalhosDaFerramenta
+
   self.table_name = 'autonomia_agent_tools'
 
   MAX_SLUG_LENGTH = 64
@@ -42,6 +44,11 @@ class Autonomia::Agents::Tool < ApplicationRecord
   # banco só valeu para as linhas que existiam quando a coluna nasceu).
   TEMPO_PADRAO = 30
   ALCANCE_DO_INTEIRO = (2**31) - 1
+  # Revisão do #1430: link sem teto deixava a conferência do endereço girar sobre milhares de {{ }}. Navegadores e
+  # servidores costumam recusar acima disto.
+  MAX_ENDPOINT_URL = 2048
+  # Revisão adversarial do #1430: o estrago de um modelo crescia com o tamanho dele. Folga larga para um corpo de pedido.
+  MAX_MODELO = 16_384
 
   attribute :timeout_seconds, :integer, default: -> { TEMPO_PADRAO }
 
@@ -58,7 +65,7 @@ class Autonomia::Agents::Tool < ApplicationRecord
   validates :slug, presence: true, uniqueness: { scope: :autonomia_agent_id },
                    length: { maximum: MAX_SLUG_LENGTH }, format: { with: SLUG_FORMAT }
   validates :http_method, inclusion: { in: HTTP_METHODS }
-  validates :endpoint_url, presence: true
+  validates :endpoint_url, presence: true, length: { maximum: MAX_ENDPOINT_URL }
   # #1430: quanto o agente espera pela resposta. Sem máximo (decisão do Rodrigo, 31/10); zero ou negativo é defeito. O
   # alcance da coluna `integer` não é teto: acima dele o save estouraria com 500.
   validates :timeout_seconds, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: ALCANCE_DO_INTEIRO }
@@ -67,7 +74,6 @@ class Autonomia::Agents::Tool < ApplicationRecord
   validate :validate_chave_mascarada
   validate :validate_segredo_no_mesmo_site, on: :update
   validate :validate_param_schema
-  validate :validate_headers_config
   validate :validate_slug_livre, if: :will_save_change_to_slug?
 
   scope :enabled, -> { where(enabled: true) }
@@ -164,14 +170,15 @@ class Autonomia::Agents::Tool < ApplicationRecord
     MODELO.reduce(texto) { |atual, (abre, fecha)| sem_trechos(atual, abre, fecha) }
   end
 
+  # Em laço, não em recursão: cada trecho a mais seria um nível de pilha.
   def sem_trechos(texto, abre, fecha)
-    inicio = texto.index(abre)
-    return texto unless inicio
-
-    fim = texto.index(fecha, inicio + abre.length)
-    return texto unless fim
-
-    texto[0...inicio] + sem_trechos(texto[(fim + fecha.length)..], abre, fecha)
+    saida = +''
+    resto = texto
+    while (inicio = resto.index(abre)) && (fim = resto.index(fecha, inicio + abre.length))
+      saida << resto[0...inicio]
+      resto = resto[(fim + fecha.length)..]
+    end
+    saida << resto
   end
 
   # O site (entre :// e o primeiro /, ? ou #) e o que vem depois do # não podem ter {{ }} nem {% %}.
@@ -188,6 +195,7 @@ class Autonomia::Agents::Tool < ApplicationRecord
     { endpoint_url: endpoint_url, request_body_template: request_body_template,
       response_mapping: response_mapping.to_h.stringify_keys['template'],
       headers_config: Array(headers_config).map { |header| header['value'] } }.each do |campo, texto|
+      errors.add(campo, :too_long, count: MAX_MODELO) if Array(texto).any? { |pedaco| pedaco.to_s.bytesize > MAX_MODELO }
       next unless Array(texto).any? { |pedaco| Autonomia::Agents::Tools::ModeloLiquid.faixa_grande?(pedaco) }
 
       errors.add(campo, I18n.t('autonomia.agents.ferramenta.faixa_grande', maximo: Autonomia::Agents::Tools::ModeloLiquid::FAIXA_MAXIMA))
@@ -235,15 +243,6 @@ class Autonomia::Agents::Tool < ApplicationRecord
     return if names.all? { |name| name.match?(/\A[a-zA-Z_][a-zA-Z0-9_]*\z/) }
 
     errors.add(:param_schema, 'possui nomes inválidos')
-  end
-
-  def validate_headers_config
-    nomes_validos = headers_config.all? { |header| header['key'].to_s.match?(/\A[A-Za-z0-9-]+\z/) }
-    errors.add(:headers_config, 'possui cabeçalhos inválidos') unless nomes_validos
-    # #1430: a plataforma manda o dela em toda chamada (`ChaveDeIdempotencia`).
-    return unless headers_config.any? { |header| header['key'].to_s.casecmp?('Idempotency-Key') }
-
-    errors.add(:headers_config, 'não pode ter Idempotency-Key: a plataforma já manda um em toda chamada')
   end
 
   # #1430: o nome de uma nativa é reservado. Pelo nome, a execução desta cairia em quem lê as nativas pelo slug (a

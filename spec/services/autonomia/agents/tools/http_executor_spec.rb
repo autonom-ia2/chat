@@ -132,6 +132,14 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
     tempfile&.close!
   end
 
+  it 'gives the whole call one render budget' do
+    allow(Autonomia::Agents::Tools::ModeloLiquid).to receive(:com_orcamento).and_call_original
+    allow(SafeFetch).to receive(:fetch).and_raise(SafeFetch::FetchError, 'x')
+
+    expect { described_class.new(tool: tool, params: { q: 'freio' }).call }.to raise_error(described_class::Error)
+    expect(Autonomia::Agents::Tools::ModeloLiquid).to have_received(:com_orcamento).once
+  end
+
   it 'keeps everyday arithmetic in the mapping' do
     tempfile = Tempfile.new('tool-response')
     tempfile.write('{"preco":89.9,"qtd":3}')

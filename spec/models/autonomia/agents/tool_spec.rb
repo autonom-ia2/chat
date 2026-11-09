@@ -103,6 +103,45 @@ RSpec.describe Autonomia::Agents::Tool do
       expect(tool.errors.attribute_names).to include(:request_body_template, :response_mapping)
     end
 
+    # Revisão adversarial do #1430: o `Host` do cadastro substituía o do endereço e levava a chave guardada a outro site
+    # sem passar pela regra de digitar de novo.
+    it 'recusa cabeçalho que muda para onde ou como o pedido vai' do
+      %w[Host content-length Transfer-Encoding Connection X-Forwarded-Host Forwarded X-Original-URL X-Rewrite-URL].each do |nome|
+        tool = described_class.new(base.merge(endpoint_url: 'https://a.test/x', headers_config: [{ key: nome, value: 'b.test', secret: false }]))
+
+        expect(tool).not_to be_valid
+        expect(tool.errors[:headers_config]).to be_present
+      end
+    end
+
+    it 'recusa modelo longo demais no que vai junto, no recorte e na chave de acesso' do
+      longo = "{{ q }}#{'x' * Autonomia::Agents::Tool::MAX_MODELO}"
+      tool = described_class.new(base.merge(endpoint_url: 'https://a.test/x', http_method: 'POST', request_body_template: longo,
+                                            response_mapping: { 'template' => longo },
+                                            headers_config: [{ key: 'x-a', value: longo, secret: false }]))
+
+      expect(tool).not_to be_valid
+      expect(tool.errors.attribute_names).to include(:request_body_template, :response_mapping, :headers_config)
+    end
+
+    it 'recusa mais de 20 cabeçalhos' do
+      cabecalhos = Array.new(21) { |i| { key: "x-#{i}", value: 'a', secret: false } }
+      tool = described_class.new(base.merge(endpoint_url: 'https://a.test/x', headers_config: cabecalhos))
+
+      expect(tool).not_to be_valid
+      expect(tool.errors[:headers_config]).to be_present
+    end
+
+    it 'recusa link longo demais sem estourar a pilha' do
+      cheio = described_class.new(base.merge(endpoint_url: "https://a.test/#{'{{q}}' * 3000}"))
+      parametro = [{ name: 'q', type: 'string', required: true }]
+      no_teto = described_class.new(base.merge(endpoint_url: "https://a.test/#{'{{q}}/' * 330}", param_schema: parametro))
+
+      expect(cheio).not_to be_valid
+      expect(cheio.errors[:endpoint_url]).to be_present
+      expect(no_teto).to be_valid
+    end
+
     it 'recusa faixa grande no valor de uma chave de acesso' do
       tool = described_class.new(base.merge(endpoint_url: 'https://a.test/x',
                                             headers_config: [{ key: 'x-a', value: enorme, secret: false }]))

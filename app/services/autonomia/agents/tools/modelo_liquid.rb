@@ -21,36 +21,20 @@ module Autonomia::Agents::Tools::ModeloLiquid
   # recorte de 500 itens leva milissegundos.
   PRAZO = 1.0
 
-  # Os LIMITES do Liquid mais o PRAZO. O Liquid zera os contadores (`reset`) no começo de cada render: o prazo conta dali.
-  class LimitesComPrazo < Liquid::ResourceLimits
-    def reset
-      super
-      @prazo = Process.clock_gettime(Process::CLOCK_MONOTONIC) + PRAZO
-    end
+  # Revisão adversarial do #1430: o que um filtro devolve também tem teto — texto do tamanho da saída inteira, lista com
+  # até ITENS_MAXIMOS itens. A resposta do sistema já chega cortada em 256 KB.
+  TAMANHO_MAXIMO = LIMITES[:render_length_limit]
+  ITENS_MAXIMOS = 100_000
 
-    def increment_render_score(amount)
-      super
-      conferir_prazo
-    end
-
-    def increment_write_score(output)
-      super
-      conferir_prazo
-    end
-
-    private
-
-    def conferir_prazo
-      raise_limits_reached if Process.clock_gettime(Process::CLOCK_MONOTONIC) > @prazo
-    end
-  end
   REPETEM = [Liquid::For, Liquid::TableRow].freeze
 
-  # Revisão do delta (2ª): `{% assign n = n | times: n %}` em volta dobra o tamanho do número a cada volta, sem escrever
-  # nada nem contar no `assign_score` — 30 voltas são segundos de CPU e memória sem teto. Estes filtros substituem os do
-  # Liquid e param com `Liquid::MemoryError` quando o número inteiro passa de DIGITOS_MAXIMOS dígitos (preço, quantidade
-  # e soma de lista ficam muito abaixo). `plus` e `minus` crescem devagar, mas entram para fechar a conta.
-  module ContaLimitada
+  # Filtros do Liquid que multiplicam o que recebem, trocados por versões com teto.
+  # - Revisão do delta (2ª): `{% assign n = n | times: n %}` em volta dobra o tamanho do número a cada volta, sem escrever
+  #   nada nem contar no `assign_score`. `times`, `plus` e `minus` param quando o inteiro passa de DIGITOS_MAXIMOS dígitos
+  #   (preço, quantidade e soma de lista ficam muito abaixo).
+  # - Revisão adversarial: `replace` e `join` podem passar do TAMANHO_MAXIMO de uma vez só (10 MB num filtro); o tamanho
+  #   do resultado é calculado antes de montar o texto.
+  module FiltrosLimitados
     DIGITOS_MAXIMOS = 30
     TETO = 10**DIGITOS_MAXIMOS
 
@@ -62,8 +46,26 @@ module Autonomia::Agents::Tools::ModeloLiquid
         resultado
       end
     end
+
+    def replace(input, string, replacement = '')
+      texto = input.to_s
+      busca = string.to_s
+      vezes = Autonomia::Agents::Tools::ModeloLiquid.ocorrencias(texto, busca)
+      previsto = texto.bytesize + (vezes * (replacement.to_s.bytesize - busca.bytesize))
+      raise Liquid::MemoryError, 'Memory limits exceeded' if previsto > TAMANHO_MAXIMO
+
+      super
+    end
+
+    def join(input, glue = ' ')
+      itens = input.respond_to?(:to_ary) ? input.to_ary : Array(input)
+      cola = [itens.size - 1, 0].max * glue.to_s.bytesize
+      raise Liquid::MemoryError, 'Memory limits exceeded' if cola > TAMANHO_MAXIMO || Autonomia::Agents::Tools::ModeloLiquid.pesado?(itens, cola)
+
+      super
+    end
   end
-  FILTROS = [ContaLimitada].freeze
+  FILTROS = [FiltrosLimitados].freeze
 
   module_function
 
@@ -86,7 +88,7 @@ module Autonomia::Agents::Tools::ModeloLiquid
   # linha onde quebrou vão para o log, sem a mensagem, que pode ter valor da conversa: um defeito nosso num filtro não
   # some no código. `cause: nil` para a mensagem também não seguir pendurada no erro novo.
   def renderizar(template, params, filtro)
-    template.render!(contexto(params), strict_variables: true, strict_filters: true, global_filter: filtro, filters: FILTROS)
+    medir { template.render!(contexto(params), strict_variables: true, strict_filters: true, global_filter: filtro, filters: FILTROS) }
   rescue Liquid::Error
     raise
   rescue StandardError => e
@@ -98,12 +100,37 @@ module Autonomia::Agents::Tools::ModeloLiquid
   # modelo — o `render` escreve esse erro no texto, e o agente não pode receber pedaço.
   def recortar(template, dados)
     limites = contexto(dados)
-    saida = template.render(limites, strict_variables: false, strict_filters: true, filters: FILTROS)
+    saida = medir { template.render(limites, strict_variables: false, strict_filters: true, filters: FILTROS) }
     saida unless limites.resource_limits.reached? || template.errors.any?(Liquid::MemoryError)
   end
 
+  # Revisão adversarial (3ª): uma chamada faz vários renders (um por cabeçalho, o corpo três vezes). Dentro de
+  # `com_orcamento` (o `HttpExecutor#call`) eles dividem um PRAZO só. Conta só o tempo de render (`medir`): a espera
+  # pela rede não gasta o orçamento do recorte da resposta.
+  GASTO = :autonomia_agent_tool_render_gasto
+
+  def com_orcamento
+    anterior = Thread.current[GASTO]
+    Thread.current[GASTO] = 0.0
+    yield
+  ensure
+    Thread.current[GASTO] = anterior
+  end
+
+  def medir
+    inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    yield
+  ensure
+    Thread.current[GASTO] += Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio if Thread.current[GASTO]
+  end
+
+  # O que sobra do PRAZO para o próximo render. Fora de uma chamada, cada render tem o PRAZO inteiro.
+  def prazo_restante
+    PRAZO - Thread.current[GASTO].to_f
+  end
+
   def contexto(dados)
-    Liquid::Context.build(environments: dados, resource_limits: LimitesComPrazo.new(LIMITES))
+    ContextoLimitado.build(environments: dados, resource_limits: LimitesComPrazo.new(LIMITES))
   end
 
   # Recusa (`faixa_grande`) o modelo com faixa maior que FAIXA_MAXIMA ou montada com variável EM QUALQUER LUGAR — `for`,
@@ -147,6 +174,43 @@ module Autonomia::Agents::Tools::ModeloLiquid
     return true if colecao.is_a?(Liquid::RangeLookup)
 
     colecao.is_a?(Range) && colecao.size.to_i > FAIXA_MAXIMA
+  end
+
+  # O peso de um valor do modelo: bytes dos textos, dentro de listas e Hash, contando cada referência (a saída escreve
+  # cada uma). Para assim que passa de TAMANHO_MAXIMO bytes ou ITENS_MAXIMOS itens, sem percorrer o resto.
+  def pesado?(valor, peso_inicial = 0)
+    pilha = [valor]
+    peso = peso_inicial
+    itens = 0
+    until pilha.empty?
+      atual = pilha.pop
+      peso += atual.bytesize if atual.is_a?(String)
+      filhos = filhos_de(atual)
+      itens += filhos.size
+      return true if peso > TAMANHO_MAXIMO || itens > ITENS_MAXIMOS
+
+      pilha.concat(filhos)
+    end
+    false
+  end
+
+  def filhos_de(valor)
+    return valor if valor.is_a?(Array)
+
+    valor.is_a?(Hash) ? valor.to_a.flatten(1) : []
+  end
+
+  # Quantas vezes `busca` aparece no texto, sem montar a lista das ocorrências. Busca vazia: entre cada letra.
+  def ocorrencias(texto, busca)
+    return texto.length + 1 if busca.empty?
+
+    vezes = 0
+    posicao = 0
+    while (posicao = texto.index(busca, posicao))
+      vezes += 1
+      posicao += busca.length
+    end
+    vezes
   end
 
   # Há {{ }} ou {% %} no texto?
