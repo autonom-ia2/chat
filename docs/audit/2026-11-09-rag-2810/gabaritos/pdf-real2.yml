@@ -1,0 +1,62 @@
+---
+perguntas:
+- pergunta: mandei toda a documentacao do sinistro e a seguradora demorou 45 dias pra pagar, tenho direito a algo?
+  tipo: cruza_secoes
+  esperado: O prazo é de 30 dias após o último documento pendente; passando disso há multa de 2%, correção monetária e juros (1% ao mês mais IPCA).
+  ancoras:
+  - contado da data em que lhe tiver sido entregue o último documento
+  - O índice de juros aplicado será de 1% (um por cento) ao mês
+- pergunta: o seguro vale pra casa de praia que tenho no Uruguai?
+  tipo: fato_simples
+  esperado: Não. Vale só para sinistros ocorridos em território brasileiro, salvo disposição em contrário nas condições especiais.
+  ancoras:
+  - exclusivamente para Sinistros ocorridos no território brasileiro
+- pergunta: o carro na garagem da casa entra no seguro? quando é perda total?
+  tipo: fato_simples
+  esperado: Só com a cobertura Veículo em Garagem (imóvel tipo casa). A perda total ocorre quando o custo de reparação superar 75% do valor de reposição.
+  ancoras:
+  - caracterizada quando o custo de reparação do automóvel superar 75%
+- pergunta: vendi o imovel segurado, e o seguro?
+  tipo: secao_longa
+  esperado: Se a seguradora não for avisada da venda/cessão, a apólice é cancelada sem devolução de prêmio. Se avisada, pode resolver a apólice (responde em 15 dias) ou aceitar; a transferência exige anuência quando o novo ocupante aumenta o risco.
+  ancoras:
+  - sobre a venda, alienação ou cessão do bem
+- pergunta: qual o telefone do SAC 24 horas da seguradora?
+  tipo: fato_simples
+  esperado: 'SAC 24 Horas: 0800 775 1000.'
+  ancoras:
+  - SAC 24 Horas – 0800 775 1000
+- pergunta: se minha casa ficar inabitavel o seguro paga aluguel por quanto tempo?
+  tipo: fato_simples
+  esperado: 'Com a cobertura de Perda e/ou Pagamento de Aluguel: no máximo 6 meses a contar do evento, e o valor do aluguel é de no máximo 1/6 do limite da cobertura.'
+  ancoras:
+  - O período máximo de indenização será de 6 (seis) meses
+- pergunta: posso alugar a casa pelo airbnb e continuar coberto?
+  tipo: secao_longa
+  esperado: Só se for contratada a modalidade compatível com atividade comercial e o uso como hospedagem estiver comprovadamente registrado no site/aplicativo ou formalizado por contrato de locação.
+  ancoras:
+  - haverá cobertura somente se for contratada a modalidade compatível
+- pergunta: cancelei meu seguro anual com 20 dias de vigencia, quanto do premio eu perco?
+  tipo: tabela_valor
+  esperado: Retém 20% do prêmio (plano anual, faixa de 16 a 30 dias da Tabela de Prazo Curto).
+  ancoras:
+  - calculado de acordo com a Tabela de Prazo Curto
+  - período estabelecido na Tabela de Prazo Curto acima
+- pergunta: quanto fica o seguro por mes pra um apartamento de 60 metros?
+  tipo: fora
+  fora: true
+- pergunta: tem desconto pra quem nunca usou o seguro?
+  tipo: fora
+  fora: true
+- pergunta: posso pagar o seguro no pix?
+  tipo: fora
+  fora: true
+- pergunta: o seguro inclui encanador ou eletricista 24h?
+  tipo: fora
+  fora: true
+- pergunta: cobre tratamento veterinario do meu cachorro?
+  tipo: fora
+  fora: true
+- pergunta: onde fica a agencia de voces em Recife?
+  tipo: fora
+  fora: true

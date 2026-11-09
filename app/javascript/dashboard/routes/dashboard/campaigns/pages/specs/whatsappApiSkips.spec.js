@@ -14,6 +14,15 @@ describe('whatsappApiSkipLines', () => {
     ]);
   });
 
+  it('mostra quem está bloqueado (chat#2733)', () => {
+    expect(
+      whatsappApiSkipLines({ opted_out_count: 1, blocked_count: 2 }, t)
+    ).toEqual([
+      'CAMPAIGN.WHATSAPP_API.TABLE.OPTED_OUT:1',
+      'CAMPAIGN.WHATSAPP_API.TABLE.BLOCKED:2',
+    ]);
+  });
+
   it('não mostra motivo sem ninguém', () => {
     expect(
       whatsappApiSkipLines({ opted_out_count: 0, discarded_count: 1 }, t)

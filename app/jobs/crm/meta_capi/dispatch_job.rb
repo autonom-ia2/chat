@@ -2,10 +2,12 @@
 # attribution. Enqueued by Crm::MetaCapiListener with IDS ONLY.
 #
 # Flow: reload card -> claim a ledger row atomically by event_id (the unique index is the
-# lock) -> find the conversation carrying the ctwa_clid (primary or linked, #1940) and take
-# token + WABA from ITS inbox (skip + record when absent) -> resolve the canonical Meta
-# event_name (nil => nothing to send) -> the dataset of that WABA (Crm::MetaCapi::WabaDataset)
-# -> POST -> record the outcome.
+# lock, see Crm::MetaConversionEvent.claim) -> find the conversation carrying the ctwa_clid
+# (primary or linked, #1940) and take token + WABA from ITS inbox (skip + record when
+# absent) -> resolve the canonical Meta event_name (nil => nothing to send) -> the dataset of
+# that WABA (Crm::MetaCapi::WabaDataset) -> POST -> record the outcome.
+# Only clicks made up to the event count (#2738), website ones too (#2799): a click after the
+# sale did not bring it.
 # Without ctwa_clid, a card that came from a website button (#1011) goes to the funnel's
 # Pixel with the browser signals the page captured (see #deliver_website); the CTWA path
 # itself is unchanged.
@@ -35,7 +37,7 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
     # so rapid successive moves each report their own stage, not the card's current.
     activity = Crm::Activity.find_by(id: activity_id, account_id: account_id)
     event_id = build_event_id(card_id, event_type, activity_id)
-    row = claim_row(event_id, card, event_type, source, activity)
+    row = Crm::MetaConversionEvent.claim(event_id) { |claimed| assign_context(claimed, card, event_type, source, activity) }
     return if row.nil?
 
     deliver(row, card, event_id, event_type, activity)
@@ -43,45 +45,34 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
     raise
   rescue StandardError => e
     Rails.logger.error("Crm::MetaCapi::DispatchJob error card=#{card_id} event=#{event_type}: #{sanitize(e.message)}")
+    release(row, e)
     raise DispatchError.new("Crm::MetaCapi::DispatchJob failed card=#{card_id} event=#{event_type}"), cause: nil
   end
 
   private
 
-  # Atomically claim the ledger row. The unique index on event_id is the lock for a new
-  # row: the first worker inserts it `pending`; a concurrent worker hits RecordNotUnique and
-  # backs off (nil). An existing row is re-read under a row lock, so two retries (or a retry
-  # and the backfill) cannot both re-claim it. It short-circuits when accepted (already
-  # delivered) AND when still pending (another worker owns the in-flight POST — re-claiming
-  # it would double-send, and Meta does not dedup). Only error/skipped rows are re-claimed.
-  def claim_row(event_id, card, event_type, source, activity)
-    row = Crm::MetaConversionEvent.find_or_initialize_by(event_id: event_id)
-    return claim_new_row(row, card, event_type, source, activity) unless row.persisted?
+  # A claimed row must not stay pending after an unexpected failure (#2738): see
+  # Crm::MetaConversionEvent.release_pending!. The last Meta answer tells if it was accepted.
+  def release(row, error)
+    return if row.nil? || row.id.nil?
 
-    row.with_lock do
-      next nil if row.accepted? || row.pending?
-
-      assign_context(row, card, event_type, source, activity)
-      row.update!(status: :pending)
-      row
-    end
+    accepted_http_code = @last_response.http_code if @last_response&.ok
+    Crm::MetaConversionEvent.release_pending!(row.id, reason: release_reason(error), accepted_http_code: accepted_http_code)
+  rescue StandardError => e
+    Rails.logger.error("Crm::MetaCapi::DispatchJob could not release event=#{row.event_id}: #{e.class.name}")
   end
 
-  def claim_new_row(row, card, event_type, source, activity)
-    assign_context(row, card, event_type, source, activity)
-    row.status = :pending
-    row.save!
-    row
-  rescue ActiveRecord::RecordNotUnique
-    nil
+  def release_reason(error)
+    @last_response&.unknown_outcome ? Crm::MetaConversionEvent::UNKNOWN_OUTCOME : "unexpected: #{error.class.name}"
   end
 
   def deliver(row, card, event_id, event_type, activity)
     # The newest click that can be reported: through an official WhatsApp inbox with a token
     # and a WABA (sources come newest first). Token, WABA and dataset come from that inbox.
-    sources = Crm::MetaCapi::CtwaClidResolver.sources(card)
+    up_to = event_time(card, event_type, activity)
+    sources = Crm::MetaCapi::CtwaClidResolver.sources(card, up_to: up_to)
     source = sources.find { |candidate| Crm::MetaCapi::InboxCredentials.reportable?(candidate.conversation.inbox) }
-    return deliver_website(row, card, event_id, event_type, activity) if source.nil? && website_fallback?(sources, card)
+    return deliver_website(row, card, event_id, event_type, activity) if source.nil? && website_fallback?(sources, card, up_to)
     return skip(row, 'missing_credentials') if source.nil?
 
     credentials = Crm::MetaCapi::InboxCredentials.for(source.conversation.inbox)
@@ -98,8 +89,9 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
 
   # No click can be reported: a card that also came through the website still goes to the
   # funnel Pixel; one that only has an unreportable click says so ('missing_credentials').
-  def website_fallback?(sources, card)
-    sources.empty? || Crm::MetaCapi::WebsiteSignalResolver.resolve(card).present?
+  # Website clicks have the same cut as WhatsApp ones (#2799).
+  def website_fallback?(sources, card, up_to)
+    sources.empty? || Crm::MetaCapi::WebsiteSignalResolver.resolve(card, up_to: up_to).present?
   end
 
   # The WABA dataset, or nil once the row was skipped. A passing lookup failure (outage, rate
@@ -122,8 +114,27 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
       card: card, event_name: event_name, event_type: row.event_type, event_id: row.event_id,
       attribution: { ctwa_clid: row.ctwa_clid, waba_id: credentials[:waba_id] }
     )
-    apply_transition_time!(payload, row.event_type, activity)
+    apply_transition_time!(payload, card, row.event_type, activity)
+    response = post_events(credentials[:access_token], row, payload)
+    return record_result(row, response) unless response.dataset_gone?
+
+    post_to_fresh_dataset(row, credentials, payload, response)
+  end
+
+  # Meta dropped the kept dataset without the WABA changing (#2738): ask for the WABA's
+  # dataset once more and, when it is another one, send there once. Otherwise the first
+  # refusal stands: the row becomes an error and the Sidekiq retry tries again. A dead token
+  # or missing permission on that lookup skips as 'missing_credentials', like the first one.
+  def post_to_fresh_dataset(row, credentials, payload, refusal)
+    fresh = Crm::MetaCapi::WabaDataset.replacement(credentials[:channel], stale_id: row.dataset_id,
+                                                                          **credentials.slice(:access_token, :waba_id))
+    return record_result(row, refusal) if fresh.blank?
+
+    row.update!(dataset_id: fresh)
     record_result(row, post_events(credentials[:access_token], row, payload))
+  rescue Crm::MetaCapi::WabaDataset::AccessDenied => e
+    Rails.logger.warn("Crm::MetaCapi::DispatchJob dataset access denied event=#{row.event_id}: #{sanitize(e.message)}")
+    skip(row, 'missing_credentials')
   end
 
   # Website mode (#1011, docs/crm/ponte-lp-atribuicao.md section 6): no ctwa_clid, so we
@@ -133,8 +144,9 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
   # today's 'missing_ctwa_clid' skip. The event goes to the funnel's Pixel with the account's
   # Meta Ads token when connected (see post_website_event), else the WhatsApp token.
   def deliver_website(row, card, event_id, event_type, activity)
-    signals = Crm::MetaCapi::WebsiteSignalResolver.resolve(card)
-    return skip_without_signals(row, card) if signals.empty?
+    up_to = event_time(card, event_type, activity)
+    signals = Crm::MetaCapi::WebsiteSignalResolver.resolve(card, up_to: up_to)
+    return skip_without_signals(row, card, up_to) if signals.empty?
 
     row.assign_attributes(attribution_mode: 'website', ctwa_clid: nil, dataset_id: website_pixel_id(card))
     return skip(row, 'missing_pixel') if row.dataset_id.blank?
@@ -147,7 +159,7 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
 
     payload = Crm::MetaCapi::WebsitePayloadBuilder.build(card: card, event_name: event_name, event_type: event_type,
                                                          event_id: event_id, signals: signals)
-    apply_transition_time!(payload, event_type, activity)
+    apply_transition_time!(payload, card, event_type, activity)
     return skip(row, 'event_too_old') if event_too_old?(payload)
 
     row.save!
@@ -158,12 +170,13 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
   # its system user; the WhatsApp token predates that and carries WhatsApp scopes only. So the
   # account's Meta Ads token (#1034) goes first. If Meta refuses it as dead (190) the connection
   # is marked invalid; dead or without access to this Pixel, the WhatsApp token gets one try.
-  # A passing outage (5xx, rate limit, network) never switches tokens: Sidekiq retries.
+  # A passing outage (rate limit, network before sending) never switches tokens: Sidekiq retries.
+  # Nor does a 5xx or a cut after sending, which end as an unknown outcome (#2799).
   def post_website_event(row, payload, ads_connection, whatsapp_token)
     return post_events(whatsapp_token, row, payload) unless ads_token_for?(ads_connection, row)
 
     response = post_events(ads_connection.read_token, row, payload)
-    return response if response.ok || !ads_token_refused?(response)
+    return response if response.ok || response.unknown_outcome || !ads_token_refused?(response)
 
     ads_connection.mark_invalid!(response.error) if response.error_code == Meta::AdsGraphClient::TOKEN_INVALID_CODE
     whatsapp_token.present? ? post_events(whatsapp_token, row, payload) : response
@@ -182,8 +195,9 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
     [::Crm::MetaAdsConnection.active_for(card.account_id), Crm::MetaCapi::InboxCredentials.for(inbox)[:access_token]]
   end
 
+  # The last answer is kept so an unexpected failure after it knows whether Meta accepted the event.
   def post_events(token, row, payload)
-    Meta::ConversionsApiClient.new(access_token: token, dataset_id: row.dataset_id).post_events([payload])
+    @last_response = Meta::ConversionsApiClient.new(access_token: token, dataset_id: row.dataset_id).post_events([payload])
   end
 
   def ads_token_refused?(response)
@@ -191,14 +205,10 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
     code == Meta::AdsGraphClient::TOKEN_INVALID_CODE || Meta::AdsGraphClient::SCOPE_ERROR_CODES.include?(code)
   end
 
-  # A card from a website button without signals says so ('missing_signals', CA-3.4);
-  # any other card keeps today's 'missing_ctwa_clid'.
-  def skip_without_signals(row, card)
-    conversation_ids = Crm::MetaCapi::WebsiteSignalResolver.conversation_ids_for(card)
-    website = conversation_ids.any? &&
-              Ctwa::TrackedLinkClick.joins(:tracked_link)
-                                    .exists?(account_id: card.account_id, conversation_id: conversation_ids, ctwa_tracked_links: { usage: 'website' })
-    skip(row, website ? 'missing_signals' : 'missing_ctwa_clid')
+  # A card from a website button (clicked by the event) without signals says so
+  # ('missing_signals', CA-3.4); any other card keeps today's 'missing_ctwa_clid'.
+  def skip_without_signals(row, card, up_to)
+    skip(row, Crm::MetaCapi::WebsiteSignalResolver.website_click?(card, up_to: up_to) ? 'missing_signals' : 'missing_ctwa_clid')
   end
 
   # Pixel id per funnel, digits only (sanitized on write by the pipelines controller).
@@ -212,17 +222,27 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
     payload['event_time'].to_i < WEBSITE_EVENT_MAX_AGE.ago.to_i
   end
 
-  # 'moved' must report the TRANSITION instant, not the card's state when the job
-  # runs — anchor event_time on the activity that logged the move.
-  def apply_transition_time!(payload, event_type, activity)
-    payload['event_time'] = activity.created_at.to_i if event_type == 'moved' && activity
+  # When the reported transition happened: the instant sent as event_time and the cut for clicks.
+  def event_time(card, event_type, activity)
+    Crm::MetaCapi::PayloadBuilder.event_time_for(card, event_type, activity)
+  end
+
+  # 'moved' must report the TRANSITION instant, not the card's state when the job runs, and a
+  # close without closed_at the instant of its activity, not "now" (#2799).
+  def apply_transition_time!(payload, card, event_type, activity)
+    payload['event_time'] = event_time(card, event_type, activity).to_i
   end
 
   # Persists the delivery outcome. A rejected event raises (sanitized, cause-less) so
   # Sidekiq retries with its default backoff; the ledger row keeps the last http_code.
+  # A call that may have reached Meta without an answer (#2738), or answered with a 5xx (#2799),
+  # is never retried: the row ends as an error the card explains, since a second send could
+  # count the sale twice. A 5xx keeps its HTTP code.
   def record_result(row, response)
     if response.ok
       row.update!(status: :accepted, http_code: response.http_code, sent_at: Time.current, error_message: nil)
+    elsif response.unknown_outcome
+      row.update!(status: :error, http_code: response.http_code, error_message: Crm::MetaConversionEvent::UNKNOWN_OUTCOME)
     else
       row.update!(status: :error, http_code: response.http_code, error_message: sanitize(response.error))
       raise DispatchError.new("Meta CAPI rejected event=#{row.event_id} http=#{response.http_code}"), cause: nil

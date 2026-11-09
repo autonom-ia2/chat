@@ -303,6 +303,7 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       stub_comment('c1')
       stub_request(:post, %r{#{ig}/c1\?}).to_return(status: 200, headers: json, body: { success: true }.to_json)
       stub_request(:delete, %r{#{ig}/c1\?}).to_return(status: 200, headers: json, body: { success: true }.to_json)
+      allow(SeusPosts::Leitura).to receive(:esquecer_esperando)
 
       expect(service.hide!(ad_id, 'c1', hidden: true, user: user)).to eq(id: 'c1', hidden: true)
       expect(service.hide!(ad_id, 'c1', hidden: false, user: user)).to eq(id: 'c1', hidden: false)
@@ -310,6 +311,8 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       # #2519: cada ação da pessoa fica no comentário (o Esperando e o Cuidar a leem).
       expect(Crm::MetaAdsCommentAction.where(comment_id: 'c1').order(:id).pluck(:action, :actor, :ad_id, :user_id))
         .to eq([['hide', 'user', ad_id, user.id], ['show', 'user', ad_id, user.id], ['delete', 'user', ad_id, user.id]])
+      # #2804: o "Esperando você" de Seus posts conta os comentários do anúncio; é lido de novo na próxima vez.
+      expect(SeusPosts::Leitura).to have_received(:esquecer_esperando).with(account, channel).exactly(3).times
     end
 
     # #2358: agir em comentário pede ver a caixa do Instagram, não só o privado.

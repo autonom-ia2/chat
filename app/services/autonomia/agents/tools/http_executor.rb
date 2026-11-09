@@ -41,8 +41,14 @@ class Autonomia::Agents::Tools::HttpExecutor
     @higienizar = higienizar
   end
 
+  # Todos os renders da chamada dividem um prazo só (`ModeloLiquid.com_orcamento`).
   def call
+    Autonomia::Agents::Tools::ModeloLiquid.com_orcamento { chamar }
+  end
+
+  def chamar
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    conferir_recorte!
     body = render_body
     headers = request_headers(body)
     url = rendered_url
@@ -146,7 +152,7 @@ class Autonomia::Agents::Tools::HttpExecutor
 
   # Erro de render recusa a chamada em vez de virar "Liquid error: ..." no cabeçalho (#1444).
   def render_template(template, global_filter: nil)
-    modelo = Liquid::Template.parse(template, error_mode: :strict)
+    modelo = Autonomia::Agents::Tools::ModeloLiquid.conferir_faixas!(Liquid::Template.parse(template, error_mode: :strict))
     Autonomia::Agents::Tools::ModeloLiquid.renderizar(modelo, params, global_filter)
   end
 
@@ -195,11 +201,19 @@ class Autonomia::Agents::Tools::HttpExecutor
   # Campo que a resposta não trouxe vira vazio (`strict_variables: false`): a resposta de um
   # sistema de fora muda sem aviso, e um campo a menos não pode derrubar a ferramenta. Modelo
   # com erro de sintaxe continua erro (`error_mode: :strict`, na leitura).
+  # #1430 (revisão adversarial): o recorte só roda depois da resposta; a faixa enorme nele é recusada antes de enviar.
+  def conferir_recorte!
+    return if mapping_template.blank?
+
+    Autonomia::Agents::Tools::ModeloLiquid.conferir_faixas!(Liquid::Template.parse(mapping_template, error_mode: :strict))
+  end
+
   def render_response_mapping(response)
     parsed = JSON.parse(response)
-    Liquid::Template.parse(mapping_template, error_mode: :strict)
-                    .render({ 'response' => parsed, 'r' => parsed },
-                            strict_variables: false, strict_filters: true)
+    modelo = Autonomia::Agents::Tools::ModeloLiquid.conferir_faixas!(Liquid::Template.parse(mapping_template, error_mode: :strict))
+    # Parado por limite ou prazo: vira recusa, e o agente não recebe pedaço.
+    Autonomia::Agents::Tools::ModeloLiquid.recortar(modelo, { 'response' => parsed, 'r' => parsed }) ||
+      raise(ValorRecusado, 'limite_do_modelo')
   end
 
   def log_success(started_at, bytes)

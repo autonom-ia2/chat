@@ -49,6 +49,19 @@ describe Instagram::SendOnInstagramService do
     )
   end
 
+  # #2406: no login do Facebook o Direct sai pela Página, em graph.facebook.com.
+  describe 'Facebook login' do
+    it 'sends through the Page on graph.facebook.com' do
+      instagram_channel.update!(login: 'facebook', page_id: '104000000000001')
+      message = create(:message, message_type: 'outgoing', inbox: instagram_inbox, account: account, conversation: conversation)
+      allow(HTTParty).to receive(:post).and_return(mock_response)
+
+      described_class.new(message: message).perform
+
+      expect(HTTParty).to have_received(:post).with('https://graph.facebook.com/v22.0/104000000000001/messages', anything)
+    end
+  end
+
   describe '#perform' do
     context 'with reply' do
       before do

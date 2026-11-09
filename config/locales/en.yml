@@ -532,7 +532,7 @@ en:
         quem_ligou_saiu_da_conta: 'The person who turned on the automation left the account. Take over and turn it back on.'
         quem_ligou_sem_acesso: 'The person who turned on the automation has no access here anymore. Take over and turn it back on.'
         quem_ligou_sem_permissao: 'The person who turned on the automation can no longer manage automations. Take over and turn it back on.'
-        sem_permissao_funil: 'The person who turned on the automation can no longer edit the pipeline, which card triggers need. Take over and turn it back on.'
+        sem_permissao_funil: 'The person who turned on the automation can no longer edit the pipeline, which card triggers and reading the card need. Take over and turn it back on.'
         quem_ligou_sem_permissao_card: 'The person who turned on the automation can no longer create cards in this pipeline, which the "Create card" step needs. Take over and turn it back on.'
         card_desligado: 'The "Create card" step is off for this account (card triggers or the CRM are off). No card was created.'
         card_ja_existe: 'There was already an open card in this pipeline for this conversation (or contact). No new card was created.'
@@ -622,8 +622,11 @@ en:
         fixo: 'Step %{passo}: %{campo} must be %{valor}.'
         mensagem_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the filter of the "message created" trigger.'
         reuniao_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the meeting triggers (scheduled, rescheduled, canceled).'
+        falhou_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the trigger of a message that wasn''t delivered.'
+        falhou_no_filtro: 'Step %{passo}: %{caminho} can only be used in the steps, not in the trigger''s "Only if".'
         resposta_so_na_espera: 'Step %{passo}: %{caminho} only exists in the condition of a "wait until" step.'
         valor_fora_do_alvo: 'Step %{passo}: %{caminho} cannot be read from what this trigger starts on (conversation, card or contact).'
+        card_da_conversa_so_le: 'Step %{passo}: an automation that starts on a conversation only reads the card (%{caminho}). To change the card, use an automation that starts on the card.'
         operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'
         valor_fora: 'Step %{passo}: %{caminho} has no value "%{valor}". Use one of: %{opcoes}.'
         proibido: 'Step %{passo}: the automation cannot change %{campo}.'
@@ -642,6 +645,7 @@ en:
         campo_de_fora: 'Trigger: field %{campo} is not a date field of this account.'
         faixa_invertida: 'Trigger: in "closed between", the first number (%{de}) is greater than the second (%{ate}). That way it never picks any card.'
         passo_pede_alvo: 'Step %{passo}: this trigger runs on the account, with no conversation, card or contact. Only wait, find companies and send campaign fit here.'
+        data_passada: 'Trigger: the date %{data} has already passed. Choose a date from today on, at an hour still to come.'
         selecao_vazia: 'Trigger: choose at least one condition for which cards or contacts it runs on. With none, it would run on the whole account.'
         selecao_de_outro_alvo: 'Trigger: these conditions do not apply here: %{condicoes}.'
         responsavel_de_fora: 'Trigger: the chosen owner is not in this account.'
@@ -653,6 +657,10 @@ en:
         caminho_repetido: "Step %{passo}: there is already a path named %{nome}."
         caminho_reservado: "Step %{passo}: the name %{nome} is already the path for when nothing applies. Pick another name."
         caminho_sem_letra: "Step %{passo}: the path name needs at least one letter (%{nome})."
+        de_novo_caminho_desconhecido: "Step %{passo}: \"decide again\" points to a path this step doesn't have (%{chave})."
+        de_novo_com_passos: "Step %{passo}: the path %{nome} decides again, so it can't have steps. Remove its steps or unmark it."
+        de_novo_todos: "Step %{passo}: leave at least one way out unmarked (a path or \"None applies\"), so the automation can move on."
+        caminho_nenhum: "None applies"
         destino_invalido: "Step %{passo}: %{destino} is not a place where the AI can save."
         campo_repetido: "Step %{passo}: %{chave} appears twice."
       nota:
@@ -804,6 +812,7 @@ en:
     agents:
       modo_manual: 'This agent is in manual mode: its instruction was written by hand. Edit the instruction by hand or switch the agent back to guided mode to change it by chatting.'
       conflito_de_trava: 'The agent changed at the same time. Try again.'
+      ferramenta_na_cotacao: 'The quote agent keeps its own tools. Add the tool to another agent.'
       # #1479: text of the button that opens the list of options the AI sends, when the AI does not choose one.
       botao_das_opcoes: 'See options'
       instrucao_mantida: "The Quote Agent's instruction is maintained by Autonom.ia and cannot be edited here. Its name, business hours and behavior were chosen in the Quotes tab when the agent was created."
@@ -1001,6 +1010,10 @@ en:
           invalid_data: 'O contato foi recusado. Confira nome, telefone e e-mail.'
           unexpected_error: 'Não deu para guardar esta agora. Tente de novo.'
           same_contact: 'É a mesma pessoa de outra empresa da lista: entrou uma vez só.'
+          already_in_list: 'Já estava nesta lista.'
+          blocked: 'Bloqueado: não recebe mensagem.'
+          unreachable: 'Não pode receber mensagem.'
+        copy_name: '%{name} (cópia)'
         errors:
           no_leads: 'Escolha pelo menos uma empresa para guardar.'
           too_many_leads: 'Guarde até %{max} empresas por vez.'
@@ -1009,6 +1022,12 @@ en:
           foreign_contact: 'Um dos contatos foi apagado enquanto a lista era guardada. Tente de novo.'
           disabled: 'Os Públicos de Campanhas não estão ligados nesta conta.'
           contacts_saved: 'Os contatos criados até aqui ficaram gravados.'
+          audience_locked: 'Esta lista já foi usada numa campanha enviada e não muda mais. Crie uma cópia para editar.'
+          not_audience: 'Esta lista não pode ser mudada.'
+          no_members: 'Escolha pelo menos uma empresa da lista.'
+          all_already_in_list: 'Essas empresas já estavam nesta lista.'
+          too_many_members: 'Escolha até %{max} empresas por vez.'
+          invalid_cursor: 'Não deu para trazer mais listas. Abra a página de novo.'
       campaign_errors:
         forbidden: 'Seu perfil não pode alterar campanhas. Peça a um administrador a permissão de gerenciar campanhas.'
       score_bands:

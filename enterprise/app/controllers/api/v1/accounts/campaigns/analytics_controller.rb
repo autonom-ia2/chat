@@ -65,17 +65,28 @@ class Api::V1::Accounts::Campaigns::AnalyticsController < Api::V1::Accounts::Bas
 
   def recipient_payload(recipient)
     {
-      contact: {
-        id: recipient.contact.id,
-        name: recipient.contact.name,
-        phone_number: recipient.contact.phone_number
-      },
+      contact: contact_payload(recipient.contact),
       status: recipient.status,
-      message_content: recipient.message_content,
+      # The message carries the person's own values (name and the audience columns) once its variables are filled.
+      message_content: contact_data_hidden? ? nil : recipient.message_content,
       error_code: recipient.error_code,
       error_title: recipient.error_title,
       error_message: recipient.error_message
     }
+  end
+
+  # #2802: who does not read contacts sees the name and phone masked (ConversationAudience::Access).
+  def contact_payload(contact)
+    return { id: contact.id, name: contact.name, phone_number: contact.phone_number } unless contact_data_hidden?
+
+    { id: contact.id, name: ConversationAudience::Access.masked_name(contact.name),
+      phone_number: ConversationAudience::Access.masked_phone(contact.phone_number) }
+  end
+
+  def contact_data_hidden?
+    return @contact_data_hidden if defined?(@contact_data_hidden)
+
+    @contact_data_hidden = ConversationAudience::Access.hides_contact_data?(Current.account_user)
   end
 
   def current_page

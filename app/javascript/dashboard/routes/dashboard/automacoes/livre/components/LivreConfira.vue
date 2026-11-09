@@ -19,7 +19,7 @@ defineProps({
 
 const emit = defineEmits(['alterar', 'inserir']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const BLOCOS = {
   QUANDO: { icone: 'i-lucide-zap', tom: 'bg-n-blue-3 text-n-blue-11' },
@@ -51,7 +51,15 @@ const BLOCOS = {
           "
         >
           <p data-gatilho class="flex-1 mb-0 text-base text-n-slate-12">
-            {{ fraseDoGatilho(receita.gatilho, catalogo, t, nomesDoGatilho) }}
+            {{
+              fraseDoGatilho(
+                receita.gatilho,
+                catalogo,
+                t,
+                nomesDoGatilho,
+                locale
+              )
+            }}
           </p>
           <Button
             v-if="podeMudar"

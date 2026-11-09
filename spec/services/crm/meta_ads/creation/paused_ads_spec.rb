@@ -75,6 +75,53 @@ RSpec.describe Crm::MetaAds::Creation::PausedAds do
     expect(described_class.new(connection).list).to eq([])
   end
 
+  # #2739: ativado no Gerenciador da Meta, fora do Chat2You. A leitura que já se faz aqui grava a ativação, como o Ativar
+  # daqui grava: o post impulsionado passa a "Teve anúncio" em Seus posts, e o anúncio não é lido de novo.
+  it 'anúncio ligado fora do Chat2You fica marcado como ativado; pausado ou recusado, não' do
+    lido_ativo = created('1')
+    lido_em_analise = created('2')
+    pausado = created('3')
+    recusado = created('4')
+    stub_ad('1', 'ACTIVE')
+    stub_ad('2', 'IN_PROCESS', status: 'ACTIVE')
+    stub_ad('3', 'PAUSED')
+    stub_ad('4', 'DISAPPROVED', status: 'PAUSED')
+
+    freeze_time do
+      expect(described_class.new(connection).list.pluck(:ad_id)).to eq(%w[3])
+
+      expect([lido_ativo, lido_em_analise].map { |record| record.reload.activated_at }).to all(eq(Time.current))
+      expect([pausado, recusado].map { |record| record.reload.activated_at }).to all(be_nil)
+    end
+  end
+
+  it 'não conseguiu gravar a ativação: a lista sai mesmo assim e o erro vai ao rastreador' do
+    record = created('1')
+    stub_ad('1', 'ACTIVE')
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: nil)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+    allow_any_instance_of(Crm::MetaAdsCreatedObject).to receive(:update!).and_raise(ActiveRecord::StatementInvalid) # rubocop:disable RSpec/AnyInstance
+
+    expect(described_class.new(connection).list).to eq([])
+    expect(tracker).to have_received(:capture_exception)
+    expect(record.reload.activated_at).to be_nil
+  end
+
+  # #2804: a mídia do anúncio no Instagram vem na mesma leitura e fica guardada para o "Esperando você" de Seus posts.
+  it 'guarda a mídia do anúncio do Instagram que veio na leitura' do
+    allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+    created('1').update!(source_post_id: '1790', source_post_network: 'instagram')
+    stub_request(:get, meta_graph_url('1')).with(query: { fields: Meta::AdsGraphClient::AD_MANAGEMENT_FIELDS })
+                                           .to_return(status: 200, headers: json, body: {
+                                             id: '1', status: 'PAUSED', effective_status: 'PAUSED',
+                                             creative: { effective_instagram_media_id: '7701' }
+                                           }.to_json)
+
+    described_class.new(connection).list
+
+    expect(Crm::MetaAds::Creation::AdMedia.of(account.id, ['1'])).to eq('1' => '7701')
+  end
+
   it 'anúncio que já foi ativado aqui não é lido de novo' do
     created('1').update!(activated_at: Time.current)
 

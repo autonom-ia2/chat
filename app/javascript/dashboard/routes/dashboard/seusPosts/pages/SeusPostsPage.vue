@@ -355,7 +355,8 @@ const vereditoDe = post => {
   return { nivel, texto: t(`SEUS_POSTS.VS_NORMAL.${nivel}`, { times: vezes }) };
 };
 
-// "Ver conversas": a caixa abre em "Todas" (?aba=todas), como na aba de Anúncios.
+// "Ver conversas" (#2209): a caixa abre com as conversas que começaram no período do cartão (?desde_dias=), em
+// "Todas" e em todos os status, para a lista bater com "N pessoas mandaram mensagem".
 const verConversas = computed(
   () => resumo.value?.mensagens !== null && perfil.value?.inboxId
 );
@@ -364,7 +365,7 @@ const abrirConversas = () =>
     path: frontendURL(
       `accounts/${route.params.accountId}/inbox/${perfil.value.inboxId}`
     ),
-    query: { aba: 'todas' },
+    query: { desde_dias: String(dias.value) },
   });
 const abrirNaRede = () => window.open(perfil.value.link, '_blank', 'noopener');
 

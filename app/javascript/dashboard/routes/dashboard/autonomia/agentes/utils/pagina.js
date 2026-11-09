@@ -53,28 +53,31 @@ export const podeMudarConversando = agente =>
 // O agente recebe a agenda da IA (#1196): o servidor manda `booking_available: false` quando não.
 export const recebeAgenda = agente => agente?.booking_available !== false;
 
-// Quem vê "Ferramentas": o mesmo critério da aba do painel antigo (AgentPanelPage) — usuário
-// SuperAdmin que gerencia, em qualquer tipo de agente (cotação e interno inclusive). O backend
-// (Agents::ToolsController) recusa quem não é SuperAdmin.
+// Quem vê "Ferramentas": o SuperAdmin que gerencia, em qualquer tipo de agente (cotação e interno inclusive), como a
+// aba do painel antigo (AgentPanelPage). Com a flag agente_ferramentas_delegadas (#1430), também o administrador e quem
+// tem a chave autonomia_tools_manage (`ferramentas`), mesmo sem Editar em Agentes; a Lia (cotação) fica de fora, com a
+// lista fixa dela. O backend (Agents::ToolsController#check_tools_permission) aplica a mesma regra.
 export const ehSuperAdmin = usuario => usuario?.type === 'SuperAdmin';
 
 // Gavetas que cada tipo de agente e cada papel podem abrir. Quem só vê testa e lê; a cotação mostra
 // só nome, foto, horário, estado e números; o interno não tem canal. A agenda (#1253) só abre para
 // quem gerencia, com a agenda nova na conta e para o agente que recebe a agenda. Ferramentas, só
-// para o SuperAdmin que gerencia.
+// para o SuperAdmin que gerencia e, com a flag da conta, para quem tem a chave de ferramentas.
 export const gavetasPermitidas = (
   agente,
   podeGerenciar,
-  { agendaNova = false, superAdmin = false } = {}
+  { agendaNova = false, superAdmin = false, ferramentas: chave = false } = {}
 ) => {
-  const ferramentas = podeGerenciar && superAdmin ? [GAVETA.FERRAMENTAS] : [];
   if (ehCotacao(agente)) {
+    const daCotacao = podeGerenciar && superAdmin ? [GAVETA.FERRAMENTAS] : [];
     return podeGerenciar
-      ? [GAVETA.ONDE, GAVETA.VOLTAR, GAVETA.FOTO, ...ferramentas]
+      ? [GAVETA.ONDE, GAVETA.VOLTAR, GAVETA.FOTO, ...daCotacao]
       : [];
   }
+  const ferramentas =
+    (podeGerenciar && superAdmin) || chave ? [GAVETA.FERRAMENTAS] : [];
   const leitura = [GAVETA.TESTAR, GAVETA.SABE, GAVETA.VERSOES];
-  if (!podeGerenciar) return leitura;
+  if (!podeGerenciar) return [...leitura, ...ferramentas];
   const escrita = [
     GAVETA.CONVERSAS,
     GAVETA.FOTO,

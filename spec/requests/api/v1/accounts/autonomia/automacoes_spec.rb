@@ -402,6 +402,20 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
     end
 
+    # #2716: ler o card a partir da conversa pede a mesma chave do gatilho de card.
+    it 'automação de conversa que lê o card no "Só se": recusa sem a chave de funis, aceita com ela', :aggregate_failures do
+      filtro = [{ campo: { '$valor' => 'card.etapa_id' }, op: 'igual', valor: 1 }]
+      le_o_card = receita.merge(gatilho: { tipo: 'conversa.criada', filtros: filtro })
+
+      post base, params: { nome: 'x', receita: le_o_card }, headers: montador.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
+      montador.account_users.find_by(account: account).custom_role.update!(permissions: %w[automation_manage crm_manage_pipelines])
+      post base, params: { nome: 'x', receita: le_o_card }, headers: montador.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:created)
+    end
+
     # G4: o passo "criar card" é passo de funil, como a ação de card.
     it 'recusa salvar o passo "criar card" pela API direta' do
       account.enable_features!('automacao_gatilhos')

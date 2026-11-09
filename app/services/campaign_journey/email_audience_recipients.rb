@@ -7,7 +7,7 @@
 # Who is eligible is CampaignJourney::AudienceContacts (the row brought the contact's current
 # e-mail; the audience e-mail channel is on — fails closed). Suppressed addresses (unsubscribe,
 # bounce, complaint) are written as `suppressed`, like the spreadsheet import; contacts that
-# refused active messages (#737) stay out of the list.
+# refused active messages (#737) or are blocked (chat#2733) stay out of the list.
 class CampaignJourney::EmailAudienceRecipients
   BATCH_SIZE = 500
   # Placeholders the renderer already provides (EmailCampaigns::TemplateValidator::DEFAULT_KEYS).
@@ -19,7 +19,7 @@ class CampaignJourney::EmailAudienceRecipients
     return [] unless CampaignJourney::AudienceContacts.email_enabled?(campaign_import)
 
     matches = CampaignJourney::AudienceContacts.email_matches(campaign_import, account: campaign_import.account)
-    contacts = campaign_import.account.contacts.not_opted_out.where(id: matches.map(&:contact_id)).index_by(&:id)
+    contacts = campaign_import.account.contacts.campaign_reachable.where(id: matches.map(&:contact_id)).index_by(&:id)
     matches.filter_map do |match|
       contact = contacts[match.contact_id]
       contact && Candidate.new(contact: contact, email: match.email, row: match.row)
