@@ -178,7 +178,7 @@ describe('Seus posts: o post (#2305)', () => {
 
     it('com o anúncio e o CRM ligado: Teve anúncio, e o atalho leva aos comentários do anúncio', async () => {
       window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
-      responder({ ad_id: '903' }, { boosted: true });
+      responder({ ads: [{ id: '903', name: 'Promoção' }] }, { boosted: true });
       const wrapper = await montar();
 
       const atalho = wrapper.findComponent('[data-seus-posts-ver-anuncio]');
@@ -198,6 +198,49 @@ describe('Seus posts: o post (#2305)', () => {
       );
     });
 
+    // #2739: cada anúncio tem os próprios comentários; um atalho por anúncio, com o nome, o mais novo primeiro.
+    it('post impulsionado mais de uma vez: um atalho por anúncio, com o nome e o dia (o ano só quando não é o atual)', async () => {
+      window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
+      const anoAtual = new Date().getFullYear();
+      responder(
+        {
+          ads: [
+            {
+              id: '905',
+              name: null,
+              created_at: `${anoAtual}-11-03T12:00:00Z`,
+            },
+            {
+              id: '904',
+              name: 'Promoção',
+              created_at: `${anoAtual}-10-20T12:00:00Z`,
+            },
+            { id: '903', name: 'Promoção', created_at: '2024-10-20T12:00:00Z' },
+          ],
+        },
+        { boosted: true }
+      );
+      const wrapper = await montar();
+
+      const atalhos = wrapper.findAllComponents(
+        '[data-seus-posts-ver-anuncio]'
+      );
+      expect(atalhos.map(atalho => atalho.props('to').query.anuncio)).toEqual([
+        '905',
+        '904',
+        '903',
+      ]);
+      // Sem nome, "Anúncio"; o ano só quando não é o atual.
+      expect(atalhos.map(atalho => atalho.text())).toEqual([
+        'Anúncio, criado em 3 de novembro',
+        'Promoção, criado em 20 de outubro',
+        'Promoção, criado em 20 de outubro de 2024',
+      ]);
+      expect(
+        wrapper.find('[data-seus-posts-comentarios-do-anuncio]').text()
+      ).toContain('Este post virou 3 anúncios');
+    });
+
     it('sem o anúncio (quem não vê Anúncios da Meta) ou sem o CRM: nenhum atalho', async () => {
       window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
       responder();
@@ -207,7 +250,7 @@ describe('Seus posts: o post (#2305)', () => {
       ).toBe(false);
 
       window.globalConfig = { CRM_KANBAN_ENABLED: 'false' };
-      responder({ ad_id: '903' });
+      responder({ ads: [{ id: '903', name: 'Promoção' }] });
       wrapper = await montar();
       expect(
         wrapper.find('[data-seus-posts-comentarios-do-anuncio]').exists()

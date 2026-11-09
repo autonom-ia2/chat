@@ -5,7 +5,8 @@
 # - Seção até MAXIMO caracteres vira um trecho só; maior, divide por parágrafo, e o último parágrafo de um trecho abre o
 #   seguinte (a resposta que cruza a divisa cabe inteira num dos dois).
 # - Seção com corpo abaixo de PISO se junta à irmã seguinte (mesmo pai), com o título dela no texto: a definição de duas
-#   linhas não vira trecho sozinha.
+#   linhas não vira trecho sozinha. A que recebe põe o próprio título no começo do trecho da seção (#2786), depois do
+#   corte: o primeiro pedaço pode passar do MAXIMO pelo tamanho desse título, o que não muda nada na busca.
 # - Cada trecho começa pelo caminho (Documento › Seção › Subseção), que vai ao embedding: é ele que faz "franquia" achar
 #   o trecho da seção FRANQUIA. As páginas do trecho vão ao metadado (`paginas_do_trecho`), não ao texto. A chave
 #   `paginas` é outra coisa: a seção de 25 páginas do material grande, que o Ingestor põe (ResumoPorSecao e Revisor
@@ -35,6 +36,8 @@ class Autonomia::Agents::Knowledge::CortePorSecao
   ABRE_LISTA = ':'.freeze
 
   Secao = Struct.new(:caminho, :paragrafos, :id, :pagina, keyword_init: true)
+
+  include Juncao
 
   def initialize(blocos, documento:, maximo: MAXIMO)
     @blocos = blocos
@@ -75,38 +78,8 @@ class Autonomia::Agents::Knowledge::CortePorSecao
       next secao unless secao.paragrafos.empty? && secao.caminho.any?
       next secao if seguinte && seguinte.caminho.size > secao.caminho.size
 
-      secao.class.new(**secao.to_h, paragrafos: [{ tipo: :paragrafo, texto: secao.caminho.last, pagina: secao.pagina }])
+      secao.class.new(**secao.to_h, paragrafos: [{ tipo: :paragrafo, texto: secao.caminho.last, pagina: secao.pagina, titulo_solto: true }])
     end
-  end
-
-  # Seção pequena entra no começo da irmã seguinte, com o próprio título como primeira linha. Uma vez só: a seção que
-  # recebeu uma irmã não vai adiante, para o texto não acabar sob o caminho de uma seção duas casas à frente.
-  def juntar_pequenas(lista)
-    recebida = nil
-    lista.each_with_index.filter_map do |secao, indice|
-      secao = secao.class.new(**secao.to_h, paragrafos: como_paragrafos_da_irma(recebida) + secao.paragrafos) if recebida
-      juntar = recebida.nil? && pequena?(secao) && irmas?(secao, lista[indice + 1])
-      recebida = juntar ? secao : nil
-      secao unless juntar
-    end
-  end
-
-  def pequena?(secao)
-    secao.paragrafos.sum { |paragrafo| paragrafo[:texto].length } < PISO
-  end
-
-  def irmas?(secao, seguinte)
-    !seguinte.nil? && secao.caminho.any? && secao.caminho.size == seguinte.caminho.size &&
-      secao.caminho[0...-1] == seguinte.caminho[0...-1]
-  end
-
-  # O título da irmã entra no começo do texto dela e do primeiro item.
-  def como_paragrafos_da_irma(secao)
-    primeiro, *resto = secao.paragrafos
-    titulo = secao.caminho.last
-    junto = primeiro.merge(texto: "#{titulo}\n#{primeiro[:texto]}")
-    junto = junto.merge(itens: ["#{titulo}\n#{primeiro[:itens].first}", *primeiro[:itens].drop(1)]) if primeiro[:itens].present?
-    [junto, *resto]
   end
 
   def trechos_da(secao)
@@ -200,6 +173,7 @@ class Autonomia::Agents::Knowledge::CortePorSecao
   def pedacos(paragrafos)
     paragrafos.flat_map do |paragrafo|
       textos = paragrafo[:tipo] == :tabela ? partes_da_tabela(paragrafo) : fatias(paragrafo[:texto])
+      textos = ["#{paragrafo[:titulo]}\n#{textos.first}", *textos.drop(1)] if paragrafo[:titulo]
       textos.map { |texto| paragrafo.merge(texto: texto) }
     end
   end

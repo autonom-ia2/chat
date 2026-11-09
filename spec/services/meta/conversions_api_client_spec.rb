@@ -54,6 +54,14 @@ RSpec.describe Meta::ConversionsApiClient do
       end
     end
 
+    it "exposes Meta's error subcode, used to tell a dataset that no longer exists (#2738)" do
+      stub_request(:post, endpoint).to_return(status: 400, body: '{"error":{"code":100,"error_subcode":33,"message":"does not exist"}}')
+
+      result = client.post_events([event])
+
+      expect([result.error_code, result.error_subcode]).to eq([100, 33])
+    end
+
     it 'has no error code on success' do
       stub_request(:post, endpoint).to_return(status: 200, body: '{"events_received":1}')
 
@@ -69,6 +77,26 @@ RSpec.describe Meta::ConversionsApiClient do
       expect(result.http_code).to be_nil
       expect(result.error).to include('<REDACTED>')
       expect(result.error).not_to include(token)
+    end
+
+    it 'marks the outcome unknown when the call may have reached Meta (#2738)' do
+      [Net::ReadTimeout, Net::WriteTimeout, Errno::ECONNRESET].each do |error|
+        allow(HTTParty).to receive(:post).and_raise(error)
+
+        expect(client.post_events([event]).unknown_outcome).to be(true), error.name
+      end
+    end
+
+    it 'keeps the outcome known when the connection never opened' do
+      allow(HTTParty).to receive(:post).and_raise(Net::OpenTimeout)
+
+      expect(client.post_events([event])).to have_attributes(ok: false, unknown_outcome: false)
+    end
+
+    it 'keeps the outcome known when Meta answers' do
+      stub_request(:post, endpoint).to_return(status: 400, body: '{"error":{"code":100}}')
+
+      expect(client.post_events([event]).unknown_outcome).to be_falsey
     end
   end
 
