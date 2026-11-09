@@ -2,9 +2,20 @@
 # Público de Campanhas com os leads escolhidos (AudienceFromLeads). Pede a prospecção (prospecting_manage, no
 # BaseController) e gerenciar campanhas (campaign_manage), a mesma chave de criar Público em Campanhas. Sem os Públicos
 # ligados (CAMPAIGN_JOURNEY_ENABLED e CAMPAIGN_IMPORT_ENABLED), 404 com a frase.
+#
+# GET leads/:id/audiences (#2775, F6): em quais listas da Prospecção a empresa está, para a gaveta ("Está na lista X ·
+# Tirar"). O lead é o que a pessoa vê (leads_scope); sem contato, nenhuma lista.
 class Api::V1::Accounts::Autonomia::Prospecting::LeadAudiencesController < Api::V1::Accounts::Autonomia::Prospecting::BaseController
   before_action :ensure_audiences_enabled
   before_action :authorize_campaign_manage!
+
+  def index
+    lead = leads_scope.find(params[:id])
+    lists = ::Autonomia::Prospecting::AudienceLists.new(Current.account)
+    audiences = lists.containing(lead.contact_id).to_a
+    locked = ::CampaignJourney::AudienceUsage.locked_ids(audiences)
+    render json: { payload: audiences.map { |audience| { id: audience.id, name: audience.name, locked: locked.include?(audience.id) } } }
+  end
 
   def create
     permitted = params.permit(:name, lead_ids: [])
@@ -19,30 +30,11 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadAudiencesController < Api::
 
   private
 
-  def ensure_audiences_enabled
-    return if ::CampaignJourney::Config.enabled? && ::CampaignImports::Config.enabled?
-
-    render json: { error: I18n.t('autonomia.prospecting.audience.errors.disabled'), code: 'prospecting.audience.disabled' },
-           status: :not_found
-  end
-
-  def authorize_campaign_manage!
-    render_campaign_forbidden unless campaign_manage?
-  end
-
   def audience_payload(result)
     {
       audience: { id: result.audience.id, name: result.audience.name, count: result.audience.valid_rows },
       entered_lead_ids: result.entered_lead_ids,
       left_out: result.left_out
     }
-  end
-
-  # A frase do I18n em `error` (com o aviso de que os contatos criados ficaram, quando a recusa veio depois deles), o
-  # código de máquina em `code` e quem ficou de fora e por quê.
-  def render_audience_error(error)
-    message = I18n.t("autonomia.prospecting.audience.errors.#{error.message}", max: ::Autonomia::Prospecting::AudienceFromLeads::MAX_LEADS)
-    message = "#{message} #{I18n.t('autonomia.prospecting.audience.errors.contacts_saved')}" if error.contacts_saved
-    render json: { error: message, code: "prospecting.audience.#{error.message}", left_out: error.left_out }, status: :unprocessable_entity
   end
 end

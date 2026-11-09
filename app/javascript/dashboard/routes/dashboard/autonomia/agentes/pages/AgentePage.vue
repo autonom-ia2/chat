@@ -40,6 +40,7 @@ import { useSalvarEquipe } from '../composables/useSalvarEquipe';
 import { useAjudaDoAgente } from '../composables/useAjudaDoAgente';
 import { useFase2 } from '../composables/useFase2';
 import { usePainelDesempenho } from '../composables/usePainelDesempenho';
+import { useFerramentasDelegadas } from '../composables/useFerramentasDelegadas';
 import { precisaDeVoce } from '../utils/estadoDoMaterial';
 import { useConferenciasDoMaterial } from '../composables/useConferenciasDoMaterial';
 import {
@@ -99,6 +100,7 @@ const caixas = useMapGetter('inboxes/getInboxes');
 const fontes = useMapGetter('autonomiaSources/getKnowledgeSources');
 const flagsFontes = useMapGetter('autonomiaSources/getUIFlags');
 const agendaNova = useAgendaNovaNaConta();
+const ferramentasDelegadas = useFerramentasDelegadas();
 const usuario = useMapGetter('getCurrentUser');
 
 const aberta = ref(null);
@@ -192,6 +194,7 @@ const permitidas = computed(() =>
   gavetasPermitidas(agente.value, podeGerenciar.value, {
     agendaNova: agendaNova.value,
     superAdmin: superAdmin.value,
+    ferramentas: ferramentasDelegadas.value,
   })
 );
 
@@ -306,16 +309,7 @@ const itensMais = computed(() => {
     texto: t('AGENTS.JORNADA.PAGINA.VERSOES.TITULO'),
     icone: 'i-lucide-history',
   };
-  if (!podeGerenciar.value) return cotacao.value ? [] : [versoes];
-  const soNome = usaFotoDoCanal(agente.value);
-  const fotoENome = {
-    chave: GAVETA.FOTO,
-    texto: soNome
-      ? t('AGENTS.JORNADA.PAGINA.FOTO.TITULO_NOME')
-      : t('AGENTS.JORNADA.PAGINA.FOTO.TITULO'),
-    icone: soNome ? 'i-lucide-user-pen' : 'i-lucide-image',
-  };
-  // Ferramentas: só o SuperAdmin que gerencia (gavetasPermitidas), como a aba do painel antigo.
+  // Ferramentas: o SuperAdmin que gerencia e, com a flag da conta, quem tem a chave (#1430) — regra em gavetasPermitidas.
   const ferramentas = permitidas.value.includes(GAVETA.FERRAMENTAS)
     ? [
         {
@@ -325,6 +319,16 @@ const itensMais = computed(() => {
         },
       ]
     : [];
+  if (!podeGerenciar.value)
+    return cotacao.value ? [] : [versoes, ...ferramentas];
+  const soNome = usaFotoDoCanal(agente.value);
+  const fotoENome = {
+    chave: GAVETA.FOTO,
+    texto: soNome
+      ? t('AGENTS.JORNADA.PAGINA.FOTO.TITULO_NOME')
+      : t('AGENTS.JORNADA.PAGINA.FOTO.TITULO'),
+    icone: soNome ? 'i-lucide-user-pen' : 'i-lucide-image',
+  };
   if (cotacao.value) return [fotoENome, ...ferramentas];
   return [
     fotoENome,
@@ -883,7 +887,11 @@ const tirarPergunta = id => {
             class="i-lucide-lock size-5 shrink-0 text-n-blue-11"
             aria-hidden="true"
           />
-          {{ t('AGENTS.JORNADA.PAGINA.SO_VER') }}
+          {{
+            permitidas.includes(GAVETA.FERRAMENTAS)
+              ? t('AGENTS.JORNADA.PAGINA.SO_VER_COM_FERRAMENTAS')
+              : t('AGENTS.JORNADA.PAGINA.SO_VER')
+          }}
         </p>
         <AgenteSemana
           :numeros="semana.numerosDe(agente.id)"

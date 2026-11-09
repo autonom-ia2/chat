@@ -29,7 +29,7 @@ RSpec.describe Webhooks::InstagramCommentJob do
     stub_request(:get, graph).to_return(status: 200, headers: json, body: graph_comment.to_json)
   end
 
-  after { Redis::Alfred.delete("instagram:comment_received:#{ig_id}:#{comment_id}") }
+  after { Redis::Alfred.delete("instagram:comment_received:#{ig_id}:#{channel.id}:#{comment_id}") }
 
   it 'não grava os argumentos no log' do
     expect(described_class.log_arguments?).to be(false)
@@ -86,7 +86,7 @@ RSpec.describe Webhooks::InstagramCommentJob do
     allow(Rails.configuration.dispatcher).to receive(:dispatch).and_raise(Interrupt)
     expect { described_class.new.perform(ig_id, 'comments', value_ids, time) }.to raise_error(Interrupt)
 
-    expect(Redis::Alfred.get("instagram:comment_received:#{ig_id}:#{comment_id}")).to be_nil
+    expect(Redis::Alfred.get("instagram:comment_received:#{ig_id}:#{channel.id}:#{comment_id}")).to be_nil
   end
 
   it 'Graph fora do ar sobe para o retry; sem permissão ou comentário apagado não publica e não prende a chave' do
@@ -100,6 +100,26 @@ RSpec.describe Webhooks::InstagramCommentJob do
 
     described_class.new.perform(ig_id, 'comments', value_ids, time)
     expect(Rails.configuration.dispatcher).to have_received(:dispatch).once
+  end
+
+  # #2781: o mesmo Instagram ligado em duas contas. O comentário vai às duas (cada uma lê com o próprio token), e o
+  # dedupe de uma não cala a outra; a conta sem a flag continua de fora.
+  it 'mesmo Instagram em duas contas: publica em cada uma com a flag, uma vez por caixa' do
+    other_account = create(:account)
+    other_account.enable_features!('meta_ads_comentarios_instagram')
+    other = create(:channel_instagram, account: other_account, instagram_id: ig_id)
+    create(:channel_instagram, account: create(:account), instagram_id: ig_id)
+
+    2.times { described_class.perform_now(ig_id, 'comments', value_ids, time) }
+
+    comment_event = Events::Types::META_ADS_COMMENT_RECEIVED
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(comment_event, anything, anything).twice
+    [channel, other].each do |caixa|
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+        .with(comment_event, anything, hash_including(account_id: caixa.account_id, inbox_id: caixa.inbox.id)).once
+    end
+  ensure
+    Redis::Alfred.delete("instagram:comment_received:#{ig_id}:#{other.id}:#{comment_id}") if other
   end
 
   it 'ignora o eco da própria conta sem ler a Graph' do

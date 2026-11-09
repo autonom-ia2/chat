@@ -1,5 +1,6 @@
 # Seus posts (#2199): o Instagram da caixa, com o token do login do Instagram (instagram_business_manage_insights), em
-# graph.instagram.com. Formatos conferidos com chamada real na v23.0 (27/10/2026): com metric_type=total_value a Meta
+# graph.instagram.com (no login do Facebook, #2406, graph.facebook.com pelo id do Instagram). Formatos conferidos
+# com chamada real na v23.0 (27/10/2026): com metric_type=total_value a Meta
 # devolve um total por métrica no período, inclusive em 90 dias; follows_and_unfollows e o recorte follow_type vêm em
 # total_value.breakdowns. Com menos de 100 seguidores a Meta não manda follows_and_unfollows: seguidores novos nulos.
 # Em 90 dias não há período anterior (a Meta guarda 90 dias do Instagram).
@@ -120,6 +121,6 @@ class Crm::MetaAds::Organico::Instagram < Crm::MetaAds::Organico::Lugar
   end
 
   def api
-    @api ||= client(base_uri: Crm::MetaAds::Organico::INSTAGRAM_BASE_URI)
+    @api ||= client(base_uri: channel.graph_host, instagram_node: channel.graph_node)
   end
 end
