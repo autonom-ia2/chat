@@ -786,7 +786,11 @@ const BOTAO_DE_BORDA =
               class="flex flex-col gap-2 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak"
             >
               <h2 class="m-0 text-sm font-semibold text-n-slate-11">
-                {{ $t('SEUS_POSTS.POST.CARE_OFFER.TITLE') }}
+                {{
+                  anunciosDoPost.length
+                    ? $t('SEUS_POSTS.POST.CARE_OFFER.TITLE_WITH_ADS')
+                    : $t('SEUS_POSTS.POST.CARE_OFFER.TITLE')
+                }}
               </h2>
               <div
                 v-if="lendoResumo && !oQueTem"

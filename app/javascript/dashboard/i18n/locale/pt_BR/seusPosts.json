@@ -244,7 +244,8 @@
         }
       },
       "CARE_OFFER": {
-        "TITLE": "O que tem nos comentários",
+        "TITLE": "O que tem nos comentários deste post",
+        "TITLE_WITH_ADS": "O que tem nos comentários deste post (os do anúncio ficam no anúncio)",
         "WAITING": "{count} comentário espera resposta | {count} comentários esperam resposta",
         "NONE_WAITING": "Nenhum comentário esperando resposta.",
         "PRIVATE_WINDOW": "{count} cabe no privado (até 7 dias) | {count} cabem no privado (até 7 dias)",
