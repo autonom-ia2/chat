@@ -87,13 +87,19 @@ RSpec.describe Autonomia::Agents::Retriever do
       expect(resultado.map(&:id).first).to eq(aviso.id)
     end
 
-    # Cliente que cola a apólice: termos repetidos entram uma vez só no OU.
-    it 'answers a long question that repeats its words without slowing down' do
-      entry(0, 'Aviso de sinistro: comunique a seguradora pelo telefone 0800 000 0000.', meio)
+    # Cliente que cola a apólice: termo repetido entra uma vez só no OU (repetido, o OU de 1.500 nós levava segundos).
+    it 'puts each word of a long question once in the word search', :aggregate_failures do
+      entry(0, 'Reboque e chaveiro em todo o Brasil.', perto)
+      aviso = entry(1, 'Aviso de sinistro: comunique a seguradora pelo telefone 0800 000 0000.', meio)
+      sqls = []
+      contar = ->(*, payload) { sqls << payload[:sql] if payload[:sql].include?('tsvector_to_array') }
 
-      tempo = Benchmark.realtime { described_class.new(agent: agent.reload).retrieve('aviso de sinistro telefone ' * 300) }
+      resultado = ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') do
+        described_class.new(agent: agent.reload).retrieve('aviso de sinistro telefone ' * 300)
+      end
 
-      expect(tempo).to be < 2
+      expect(resultado.map(&:id).first).to eq(aviso.id)
+      expect(sqls.size).to eq(1)
     end
 
     it 'answers with the vector alone when the question has no searchable word' do

@@ -86,6 +86,17 @@ ou a menos é ruído. As respostas por pergunta e as posições de antes e depoi
 - **Byte nulo na pergunta** (o Guia e o Ajudante passam texto que não foi gravado antes): vira espaço antes da busca.
   Na primeira versão, derrubava a busca com a flag ligada (tester).
 
+- **Pergunta longa com palavras diferentes** (6 mil caracteres, 2 mil trechos, tester): 110 a 130 ms com a flag, 17 a
+  22 ms sem. Não foi medida numa tabela do tamanho da de produção.
+- **Pedaço de palavra deixa de casar**: com a flag, o reforço lexical antigo (`ILIKE '%termo%'`, que só rodava quando o
+  vetor vinha fraco) não roda. "dermato" casava "dermatologista" por ele; a busca por palavra casa pelo radical da palavra
+  inteira. Aceito: o placar subiu sem ele.
+- **Outros usos do Retriever na mesma conta**: a extração de FAQ, o diagnóstico do Guia e o Ajudante pedem 3 trechos.
+  Com a fusão, o 1º do vetor que não repete as palavras pode cair para fora dos 3 (soma 1/61; quem está nas duas listas
+  soma mais). Na extração de FAQ, isso pode sugerir uma pergunta que a base já responde. Só a resposta foi medida.
+- **Ligar em todas as contas (regra C)**: por esses números (hit@1 do auto caiu, amostra de 8 perguntas por base, os
+  usos com 3 trechos sem medida), ligar em todas é decisão do Rodrigo, não automática.
+
 ## O que ficou de fora
 
 - O reparo antes de avisar e o âmbito territorial (Uruguai) continuam fora dos 12. A pergunta do cliente não se parece com o trecho nem no sentido nem na palavra.

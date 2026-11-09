@@ -34,7 +34,7 @@ class Autonomia::Agents::BuscaHibrida
         trechos[trecho.id] ||= trecho
       end
     end
-    trechos.values.select { |trecho| dentro_do_teto?(trecho) }.sort_by { |trecho| [-pontos[trecho.id], trecho.neighbor_distance.to_f] }
+    trechos.values.select { |trecho| dentro_do_teto?(trecho) }.sort_by { |trecho| [-pontos[trecho.id], trecho.neighbor_distance.to_f, trecho.id] }
   end
 
   private
