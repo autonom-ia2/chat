@@ -64,6 +64,69 @@ const ehIpV4 = host =>
 const DENTRO_DA_REDE = ['.local', '.internal', '.localhost'];
 
 // Mesmas regras do model (HTTPS, com host, sem localhost/.local, sem IP), antes de salvar.
+// Decisão do Rodrigo (09/11): senha no link fica legível para quem tem a chave; o lugar dela é a Chave de acesso. Mesma
+// lista do backend (`SegredosDaChamada::NOMES_DE_CREDENCIAL`, conferida por spec), lida pelo parser de URL do
+// navegador, sem regex. `token[]` conta como `token`. Valor que só tem informação da conversa ({{t}}, com ou sem
+// url_encode) vale; texto fixo, mesmo dentro de {{ "abc" }}, é senha.
+export const NOMES_DE_CREDENCIAL = [
+  'token',
+  'api_key',
+  'apikey',
+  'api_token',
+  'key',
+  'secret',
+  'client_secret',
+  'password',
+  'senha',
+  'pwd',
+  'access_token',
+  'auth_token',
+  'access_key',
+  'private_token',
+  'hapikey',
+  'x-api-key',
+  'authorization',
+];
+
+const soInformacao = dentro => {
+  const [nome, ...filtros] = dentro.split('|').map(p => p.trim());
+  const primeiro = nome.charAt(0);
+  return (
+    nome !== '' &&
+    primeiro !== '"' &&
+    primeiro !== "'" &&
+    !ehDigito(primeiro) &&
+    filtros.every(f => f === 'url_encode')
+  );
+};
+
+// O que sobra do valor sem as informações da conversa.
+export const valorFixo = valor => {
+  const partes = String(valor ?? '').split('{{');
+  return partes.slice(1).reduce((saida, pedaco) => {
+    const fim = pedaco.indexOf('}}');
+    if (fim < 0) return `${saida}{{${pedaco}`;
+    const dentro = pedaco.slice(0, fim);
+    return `${saida}${soInformacao(dentro) ? '' : dentro}${pedaco.slice(fim + 2)}`;
+  }, partes[0]);
+};
+
+// Nome montado com {{ }} (`?{{ "tok" | append: "en" }}=abc` vira `token=abc` na chamada) não tem como ser conferido
+// antes: com texto fixo no valor, conta como senha. `token[]` conta como `token`.
+const nomeDeCredencial = nome => {
+  if (nome.includes('{{') || nome.includes('{%')) return true;
+  const minusculo = nome.toLowerCase();
+  return NOMES_DE_CREDENCIAL.includes(
+    minusculo.endsWith('[]') ? minusculo.slice(0, -2) : minusculo
+  );
+};
+
+const senhaNoLink = url =>
+  Boolean(url.username || url.password) ||
+  [...url.searchParams].some(
+    ([nome, valor]) => preenchido(valorFixo(valor)) && nomeDeCredencial(nome)
+  );
+
 export const conferirEndereco = endereco => {
   const texto = String(endereco ?? '').trim();
   if (!texto) return 'VAZIO';
@@ -80,6 +143,7 @@ export const conferirEndereco = endereco => {
   }
   if (host.startsWith('[') || ehIpV4(host)) return 'IP';
   if (!host.includes('.')) return 'INCOMPLETO';
+  if (senhaNoLink(url)) return 'SENHA';
   return '';
 };
 
@@ -321,6 +385,21 @@ const ehAutomatico = cabecalho =>
       .toLowerCase()
   );
 
+// O pedido pelos cabeçalhos, como no backend: o segredo conta pelo nome, o comum pelo nome e pelo valor. Um cabeçalho
+// novo, tirado ou com o segredo ligado/desligado muda o pedido (X-HTTP-Method-Override troca o método sem mexer no
+// método); trocar só o valor de uma chave, não.
+const cabecalhosComuns = lista =>
+  JSON.stringify(
+    lista
+      .filter(c => preenchido(c.chave))
+      .map(c => [
+        String(c.chave).trim().toLowerCase(),
+        c.segredo ? 1 : 0,
+        c.segredo ? '' : String(c.valor ?? ''),
+      ])
+      .sort()
+  );
+
 export const paraRascunho = ferramenta => {
   const cabecalhos = ferramenta.headers_config || [];
   const mapeamento = ferramenta.response_mapping || {};
@@ -340,6 +419,19 @@ export const paraRascunho = ferramenta => {
       podeFaltar: p.required === false,
     })),
     corpo: ferramenta.request_body_template || '',
+    // Para saber se o pedido mudou: a chave guardada não vai para um pedido novo.
+    destinoOriginal: {
+      endereco: String(ferramenta.endpoint_url || '').trim(),
+      metodo: ferramenta.http_method === 'POST' ? 'POST' : 'GET',
+      corpo: ferramenta.request_body_template || '',
+      cabecalhos: cabecalhosComuns(
+        cabecalhos.map(c => ({
+          chave: c.key,
+          valor: c.value,
+          segredo: c.secret,
+        }))
+      ),
+    },
     mapeamento: mapeamento.template || '',
     mapeamentoOriginal: { ...mapeamento },
     automaticos: cabecalhos.filter(ehAutomatico).map(c => ({ ...c })),
@@ -363,21 +455,43 @@ const renomeado = cabecalho =>
   Boolean(cabecalho.guardado) &&
   String(cabecalho.chave ?? '').trim() !== cabecalho.chaveOriginal;
 
+// Decisão do Rodrigo (09/11) e revisão adversarial: mudou o pedido (link, método, o que vai junto ou um cabeçalho que
+// não é segredo), a chave guardada é digitada de novo; o backend recusa a chave guardada num pedido novo. Ferramenta
+// nova não tem pedido original.
+export const destinoMudou = rascunho => {
+  const original = rascunho.destinoOriginal;
+  if (!original) return false;
+  return (
+    String(rascunho.endereco ?? '').trim() !== original.endereco ||
+    rascunho.metodo !== original.metodo ||
+    (rascunho.corpo ?? '') !== original.corpo ||
+    cabecalhosComuns([
+      ...(rascunho.automaticos || []).map(c => ({
+        chave: c.key,
+        valor: c.value,
+        segredo: c.secret,
+      })),
+      ...rascunho.cabecalhos,
+    ]) !== original.cabecalhos
+  );
+};
+
 // O backend casa o segredo guardado pela chave e só o preserva com secret=true. Renomear a chave ou
 // desligar "É segredo" exige digitar o valor de novo (senão o mascarado vira o valor de verdade).
-export const precisaRedigitar = cabecalho =>
-  renomeado(cabecalho) || (Boolean(cabecalho.guardado) && !cabecalho.segredo);
+export const precisaRedigitar = (cabecalho, mudouDestino = false) =>
+  renomeado(cabecalho) ||
+  (Boolean(cabecalho.guardado) && (!cabecalho.segredo || mudouDestino));
 
 // Segredo guardado, intocado: volta a máscara com a mesma chave e o backend mantém o valor.
-const mantemGuardado = cabecalho =>
+const mantemGuardado = (cabecalho, mudouDestino) =>
   cabecalho.segredo &&
   cabecalho.guardado &&
   !cabecalho.trocando &&
-  !precisaRedigitar(cabecalho);
+  !precisaRedigitar(cabecalho, mudouDestino);
 
-const cabecalhoParaApi = cabecalho => {
+const cabecalhoParaApi = (cabecalho, mudouDestino) => {
   const key = String(cabecalho.chave).trim();
-  if (mantemGuardado(cabecalho)) {
+  if (mantemGuardado(cabecalho, mudouDestino)) {
     return { key, value: MASCARA_DO_SEGREDO, secret: true };
   }
   return {
@@ -413,16 +527,24 @@ export const paraApi = rascunho => ({
     ...(rascunho.automaticos || []),
     ...rascunho.cabecalhos
       .filter(c => preenchido(c.chave))
-      .map(cabecalhoParaApi),
+      .map(c => cabecalhoParaApi(c, destinoMudou(rascunho))),
   ],
   response_mapping: mapeamentoParaApi(rascunho),
 });
 
-const validarCabecalho = cabecalho => {
+// O sistema de fora recebe um valor por nome: dois com o mesmo nome (sem olhar maiúscula) são recusados no cadastro.
+const nomeDoCabecalho = chave =>
+  String(chave ?? '')
+    .trim()
+    .toLowerCase();
+
+const validarCabecalho = (cabecalho, mudouDestino, nomesDosOutros = []) => {
   if (!preenchido(cabecalho.chave)) return '';
   if (!chaveValida(cabecalho.chave.trim())) return 'CHAVE';
+  if (nomesDosOutros.includes(nomeDoCabecalho(cabecalho.chave)))
+    return 'REPETIDO';
   if (preenchido(cabecalho.valor)) return '';
-  if (precisaRedigitar(cabecalho)) return 'REDIGITAR';
+  if (precisaRedigitar(cabecalho, mudouDestino)) return 'REDIGITAR';
   const pedeValor =
     cabecalho.segredo && (cabecalho.trocando || !cabecalho.guardado);
   return pedeValor ? 'VALOR' : '';
@@ -480,7 +602,15 @@ const VALIDACOES = {
   4: rascunho => ({
     erros: Object.fromEntries(
       rascunho.cabecalhos
-        .map((cabecalho, i) => [`c${i}`, validarCabecalho(cabecalho)])
+        .map((cabecalho, i) => [
+          `c${i}`,
+          validarCabecalho(cabecalho, destinoMudou(rascunho), [
+            ...(rascunho.automaticos || []).map(c => nomeDoCabecalho(c.key)),
+            ...rascunho.cabecalhos
+              .filter((_, j) => j < i)
+              .map(c => nomeDoCabecalho(c.chave)),
+          ]),
+        ])
         .filter(([, erro]) => erro)
     ),
   }),

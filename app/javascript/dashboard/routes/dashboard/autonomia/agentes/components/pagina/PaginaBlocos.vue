@@ -8,6 +8,14 @@ import ResumoOndeTrabalha from '../onde/ResumoOndeTrabalha.vue';
 import { usePermissoesDaJornada } from '../../composables/usePermissoesDaJornada';
 import { useAgendaDoAgente } from '../../composables/useAgendaDoAgente';
 import { useAgendaNovaNaConta } from '../../composables/useAgendaNovaNaConta';
+import {
+  lerAtendimento,
+  useDadosDoAtendimentoLigado,
+} from '../../composables/useDadosDoAtendimento';
+import {
+  formatarNoPais,
+  separarTelefone,
+} from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 
 // #1181 PR3 (protótipo T07, blocksT07) — os blocos claros da página do agente:
 // - Testar: a pergunta vai para a gaveta Testar;
@@ -53,6 +61,7 @@ const emit = defineEmits([
   'escolherCanal',
   'mudarEquipe',
   'mudarAjuda',
+  'alterarAtendimento',
 ]);
 
 const { t } = useI18n();
@@ -62,6 +71,22 @@ const { podeEscolherQuemRecebe, podeAbrirAgendamento, crmLigado } =
 const NS = 'AGENTS.JORNADA.PAGINA';
 const base = `blocos-${useId()}`;
 const pergunta = ref('');
+
+// #1479 (opção B): com a flag E a Fase 2, bloco próprio "Endereço e telefone", nos dois modos (manual e conversando).
+// Fica fora da cotação (a Lia não recebe as ferramentas), do interno (copiloto) e do ajudante: nenhum fala com o
+// cliente, e o servidor também os pula. Lidos de agente.config.atendimento (useDadosDoAtendimento). Telefone gravado
+// que não formata no país aparece como está (E.164), nunca como "ainda não tem telefone".
+const comAtendimento = useDadosDoAtendimentoLigado();
+const atendimento = computed(() => {
+  if (!comAtendimento.value || !props.fase2) return null;
+  if (props.cotacao || props.interno || props.ajuda) return null;
+  const { endereco, telefone } = lerAtendimento(props.agente);
+  const separado = telefone ? separarTelefone(telefone) : null;
+  const formatado = separado
+    ? formatarNoPais(separado.digitos, separado.pais)
+    : '';
+  return { endereco, telefone: formatado || telefone };
+});
 
 const linkQuemRecebe = computed(
   () => router.resolve({ name: 'crm_handoff_settings_index' }).href
@@ -526,6 +551,87 @@ onMounted(() => {
             {{ t(`${NS}.ALTERAR`) }}
           </AgenteBotao>
         </template>
+      </div>
+
+      <div
+        v-if="atendimento"
+        data-linha="atendimento"
+        role="group"
+        :aria-labelledby="`${base}-atendimento`"
+        class="flex flex-col gap-3 p-5 sm:flex-row sm:items-start"
+      >
+        <div class="flex items-start flex-1 min-w-0 gap-3">
+          <span
+            class="grid rounded-lg place-items-center size-9 shrink-0 bg-n-alpha-2"
+            aria-hidden="true"
+          >
+            <span class="i-lucide-contact size-5 text-n-slate-11" />
+          </span>
+          <div class="flex flex-col flex-1 min-w-0 gap-1">
+            <h3
+              :id="`${base}-atendimento`"
+              class="m-0 text-sm font-semibold text-n-slate-11"
+            >
+              {{ t(`${NS}.ATENDIMENTO.TITULO`) }}
+            </h3>
+            <template v-if="atendimento.endereco || atendimento.telefone">
+              <p class="m-0 text-sm text-n-slate-12">
+                {{ t(`${NS}.ATENDIMENTO.TEXTO`, { nome }) }}
+              </p>
+              <p
+                v-if="atendimento.endereco"
+                data-resumo-endereco
+                class="flex items-start gap-1 m-0 text-sm text-n-slate-11"
+              >
+                <span
+                  class="i-lucide-map-pin size-4 shrink-0 mt-0.5"
+                  aria-hidden="true"
+                />
+                {{
+                  t(`${NS}.ATENDIMENTO.ENDERECO`, {
+                    endereco: atendimento.endereco,
+                  })
+                }}
+              </p>
+              <p
+                v-if="atendimento.telefone"
+                data-resumo-telefone
+                class="flex items-start gap-1 m-0 text-sm text-n-slate-11"
+              >
+                <span
+                  class="i-lucide-phone size-4 shrink-0 mt-0.5"
+                  aria-hidden="true"
+                />
+                {{
+                  t(`${NS}.ATENDIMENTO.TELEFONE`, {
+                    telefone: atendimento.telefone,
+                  })
+                }}
+              </p>
+            </template>
+            <p
+              v-else
+              data-atendimento-vazio
+              class="m-0 text-sm text-n-slate-12"
+            >
+              {{ t(`${NS}.ATENDIMENTO.VAZIO`, { nome }) }}
+            </p>
+          </div>
+        </div>
+        <AgenteBotao
+          v-if="podeGerenciar"
+          data-alterar="atendimento"
+          class="max-sm:w-full max-sm:ring-1 max-sm:ring-inset max-sm:ring-n-blue-9 shrink-0"
+          variante="fantasma"
+          :aria-label="t(`${NS}.ATENDIMENTO.ALTERAR_ARIA`)"
+          @click="emit('alterarAtendimento')"
+        >
+          {{
+            atendimento.endereco || atendimento.telefone
+              ? t(`${NS}.ALTERAR`)
+              : t(`${NS}.ATENDIMENTO.ADICIONAR`)
+          }}
+        </AgenteBotao>
       </div>
 
       <!-- #1429 F3: a linha "Base de seguros" (BaseDoAgenteLinha), quando a página a manda. -->

@@ -345,8 +345,13 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob, type: :job do
   end
 
   describe 'D4: a resposta 2xx so perde os segredos do cadastro' do
+    # Ferramenta cadastrada antes da regra de #2841, com a credencial no link: hoje o cadastro recusa, mas a gravada
+    # continua chamando, e a resposta ainda tem de perder esse valor. Gravada sem validacao, como estava no banco.
+    before do
+      tool.update_columns(endpoint_url: 'https://erp.exemplo.test/pedidos?token=qk9zzqueryvalor') # rubocop:disable Rails/SkipsModelValidations
+    end
+
     it 'UUID, PIX, linha digitavel e id e assinatura em endereco chegam inteiros; cabecalho e query do cadastro, nao' do
-      tool.update!(endpoint_url: 'https://erp.exemplo.test/pedidos?token=qk9zzqueryvalor')
       run = consulta_aberta
       dados = {
         'uuid' => '3f2b8c1e-9a4d-4e7f-b6c5-1d2e3f4a5b6c',

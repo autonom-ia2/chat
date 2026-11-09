@@ -124,8 +124,12 @@ RSpec.describe 'Audience preview endpoints (#993)', :aggregate_failures, type: :
   end
 
   describe 'side panel (PRD §6.6)' do
+    # #2802: without contact_view the names come masked, as in the contact base (#1849).
     it 'lists the contacts saved by the audience, paged, for campaign_view' do
       get audience_url('/contacts'), headers: headers_for(agent_with(['campaign_view']))
+      expect(response.parsed_body['payload'].pluck('name')).to eq(['Ana S.', 'Caio R.'])
+
+      get audience_url('/contacts'), headers: headers_for(agent_with(%w[campaign_view contact_view]))
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body['payload'].pluck('name')).to eq(['Ana Souza', 'Caio Reis'])

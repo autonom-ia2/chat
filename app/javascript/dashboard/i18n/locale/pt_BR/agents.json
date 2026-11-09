@@ -870,7 +870,8 @@
                 "HTTPS": "Use um link que comece com https://.",
                 "INCOMPLETO": "Esse link está incompleto. Confira o que vem depois de https://.",
                 "REDE": "Esse link não pode ser usado: aponta para dentro da própria rede.",
-                "IP": "Use o nome do site, não um número de IP."
+                "IP": "Use o nome do site, não um número de IP.",
+                "SENHA": "Coloque a senha em Chave de acesso, não no link."
               },
               "SLUG": "Nome técnico",
               "SLUG_AJUDA": "É o nome da ferramenta para o agente. Se ficar vazio, criamos a partir do nome. Só letras, números e _.",
@@ -950,10 +951,12 @@
               "ERRO": {
                 "VALOR": "Digite a chave.",
                 "REDIGITAR": "Digite a chave de novo para salvar.",
+                "REPETIDO": "Já tem uma chave com esse nome. Use outro nome.",
                 "CHAVE": "Use só letras sem acento, números e hífen. Ex.: x-api-key"
               },
               "REMOVER_TITULO": "Remover esta chave?",
-              "REMOVER_TEXTO": "A chave guardada é apagada quando você salvar."
+              "REMOVER_TEXTO": "A chave guardada é apagada quando você salvar.",
+              "LINK_MUDOU": "Você mudou o link ou o que a ferramenta faz. Digite a chave de novo: a guardada não vai para um link novo."
             }
           },
           "TESTE": {
@@ -1694,6 +1697,33 @@
             "AMOSTRA": "O teste é uma amostra; confira as respostas."
           },
           "TUDO_CERTO": "Tudo certo. {nome} usa todo o material com seus clientes."
+        },
+        "ATENDIMENTO": {
+          "TITULO": "Endereço e telefone",
+          "TEXTO": "{nome} já sabe estes dados e passa ao cliente quando ele pedir.",
+          "VAZIO": "{nome} ainda não tem endereço nem telefone para mandar ao cliente.",
+          "ENDERECO": "Endereço: {endereco}",
+          "TELEFONE": "Telefone: {telefone}",
+          "ADICIONAR": "Adicionar",
+          "ALTERAR_ARIA": "Alterar endereço e telefone",
+          "GAVETA_TITULO": "Endereço e telefone de {nome}",
+          "GAVETA_DICA": "{nome} passa estes dados ao cliente quando ele pedir. Pode deixar em branco.",
+          "SALVAR": "Salvar",
+          "SALVANDO": "Salvando…",
+          "SALVO": "Salvo.",
+          "ERRO": "Não deu para salvar.",
+          "ERRO_GARANTIA": "Nada mudou.",
+          "CAMPOS": {
+            "ENDERECO": "Endereço do atendimento",
+            "ENDERECO_EXEMPLO": "Ex.: Rua das Flores, 120, Centro, Campinas",
+            "ENDERECO_DICA": "{nome} escreve este endereço na conversa quando o cliente perguntar onde fica. Não vai mapa dele.",
+            "TELEFONE": "Telefone de contato",
+            "PAIS": "País do telefone",
+            "TELEFONE_DICA": "{nome} manda este número como contato quando o cliente pedir um telefone.",
+            "TELEFONE_INCOMPLETO": "O número está incompleto. Confira os dígitos ou apague o campo.",
+            "TELEFONE_RECUSADO": "Este telefone não parece certo. Confira o número ou deixe em branco.",
+            "ENDERECO_RECUSADO": "Este endereço está longo demais. Deixe mais curto."
+          }
         }
       },
       "CRIAR": {

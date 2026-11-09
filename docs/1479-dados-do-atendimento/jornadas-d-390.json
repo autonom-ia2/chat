@@ -1,0 +1,122 @@
+{
+  "pasta": "docs/1479-dados-do-atendimento/prints-d",
+  "conta": 1,
+  "larguras": [390],
+  "temas": ["light"],
+  "jornadas": [
+    {
+      "nome": "manual-com-pagina",
+      "etapas": [
+        {
+          "nome": "pagina-bloco-vazio",
+          "url": "/app/accounts/{conta}/agents/1",
+          "esperar": "[data-alterar=\"atendimento\"]",
+          "passos": [{ "clicar": "[data-atendimento-vazio]" }],
+          "pausa": 4000
+        },
+        {
+          "nome": "gaveta-vazia",
+          "passos": [
+            { "clicar": "[data-alterar=\"atendimento\"]" },
+            { "esperar": "[data-dados-do-atendimento]" }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "telefone-recusado-pelo-servidor",
+          "passos": [
+            { "preencher": ["input[data-campo-endereco]", "Rua das Flores, 120, Centro, Campinas - SP"] },
+            { "preencher": ["[data-campo-telefone-atendimento] input[data-numero-do-telefone]", "11200001234"] },
+            { "clicar": "[data-salvar]" },
+            { "esperar": "[data-campo-telefone-atendimento] >> text=Este telefone não parece certo" }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "telefone-valido",
+          "passos": [
+            { "preencher": ["[data-campo-telefone-atendimento] input[data-numero-do-telefone]", "19987654321"] },
+            { "clicar": "[data-campo-telefone-atendimento] p[aria-live]" }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "salvo-bloco-preenchido",
+          "passos": [
+            { "clicar": "[data-salvar]" },
+            { "esperar": "[data-resumo-telefone]" },
+            { "clicar": "[data-resumo-telefone]" }
+          ],
+          "pausa": 800
+        }
+      ]
+    },
+    {
+      "nome": "manual-sem-pagina",
+      "etapas": [
+        {
+          "nome": "pagina-bloco-vazio",
+          "url": "/app/accounts/{conta}/agents/2",
+          "esperar": "[data-alterar=\"atendimento\"]",
+          "passos": [{ "clicar": "[data-atendimento-vazio]" }],
+          "pausa": 4000
+        },
+        {
+          "nome": "salvo-so-telefone",
+          "passos": [
+            { "clicar": "[data-alterar=\"atendimento\"]" },
+            { "esperar": "[data-dados-do-atendimento]" },
+            { "preencher": ["[data-campo-telefone-atendimento] input[data-numero-do-telefone]", "11987654321"] },
+            { "clicar": "[data-salvar]" },
+            { "esperar": "[data-resumo-telefone]" },
+            { "clicar": "[data-resumo-telefone]" }
+          ],
+          "pausa": 800
+        }
+      ]
+    },
+    {
+      "nome": "conversando-com-pagina",
+      "etapas": [
+        {
+          "nome": "pagina-bloco-vazio",
+          "url": "/app/accounts/{conta}/agents/3",
+          "esperar": "[data-alterar=\"atendimento\"]",
+          "passos": [{ "clicar": "[data-atendimento-vazio]" }],
+          "pausa": 4000
+        },
+        {
+          "nome": "gaveta-vazia",
+          "passos": [
+            { "clicar": "[data-alterar=\"atendimento\"]" },
+            { "esperar": "[data-dados-do-atendimento]" }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "salvo-bloco-preenchido",
+          "passos": [
+            { "preencher": ["input[data-campo-endereco]", "Avenida Brasil, 500, Sala 3, Curitiba - PR"] },
+            { "preencher": ["[data-campo-telefone-atendimento] input[data-numero-do-telefone]", "41998887777"] },
+            { "clicar": "[data-salvar]" },
+            { "esperar": "[data-resumo-telefone]" },
+            { "clicar": "[data-resumo-telefone]" }
+          ],
+          "pausa": 800
+        }
+      ]
+    },
+    {
+      "nome": "conversando-sem-pagina",
+      "etapas": [
+        {
+          "nome": "pagina-bloco-vazio",
+          "url": "/app/accounts/{conta}/agents/4",
+          "esperar": "[data-alterar=\"atendimento\"]",
+          "passos": [{ "clicar": "[data-atendimento-vazio]" }],
+          "pausa": 4000
+        }
+      ]
+    }
+  ]
+}

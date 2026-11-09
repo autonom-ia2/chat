@@ -26,6 +26,14 @@ module Autonomia::Agents::CabecalhosDaFerramenta
       errors.add(:headers_config, 'não pode ter Idempotency-Key: a plataforma já manda um em toda chamada')
     end
     validate_cabecalhos_do_transporte
+    validate_nomes_repetidos
+  end
+
+  # Revisão do #1430: o executor manda um valor por nome (o último vence). Dois `x-api-key`, um digitado e outro com a
+  # máscara, levariam a chave guardada para um link novo como se ela tivesse sido digitada.
+  def validate_nomes_repetidos
+    nomes = headers_config.map { |header| header.to_h.stringify_keys['key'].to_s.strip.downcase }
+    errors.add(:headers_config, 'não pode repetir o nome de um cabeçalho') if nomes.uniq.size != nomes.size
   end
 
   def validate_cabecalhos_do_transporte

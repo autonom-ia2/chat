@@ -181,6 +181,49 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     expect(resultado[:conversas].first).to include(entraria: false, motivo: 'sem_mensagem')
   end
 
+  # G53: no gatilho "mensagem que falhou" o ensaio usa a última mensagem recusada da conversa, e o passo mostra o texto
+  # real dela (o ex. 19, passo 2: "manda por e-mail o mesmo conteúdo").
+  describe 'no gatilho "mensagem que falhou"' do
+    let(:caixa_de_email) { create(:channel_email, account: account).inbox }
+    let(:pergunta) { ' Você trocou de WhatsApp? Me responde com o número novo.' }
+    let(:email) do
+      { 'id' => 'email', 'tipo' => 'email', 'caixa_id' => caixa_de_email.id, 'assunto' => ['Você trocou de WhatsApp?'],
+        'texto' => [{ '$valor' => 'falhou.texto' }, pergunta] }
+    end
+    let(:falhou) { receita(email, gatilho: { 'tipo' => 'mensagem.falhou' }) }
+
+    def mensagem(**atributos)
+      create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :outgoing, **atributos)
+    end
+
+    before { contato.update!(email: 'maria@exemplo.com.br') }
+
+    it 'o e-mail mostra o texto da última mensagem recusada, não da última da conversa', :aggregate_failures do
+      mensagem(content: 'Primeira recusa.', status: :failed)
+      mensagem(content: 'Seu boleto vence amanhã.', status: :failed)
+      mensagem(content: 'Esta chegou.', status: :delivered)
+      create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :incoming, content: 'Oi')
+
+      no = passos_de(falhou).first
+
+      expect(no[:faria]).to eq('email')
+      expect(no[:dados]).to include(texto: "Seu boleto vence amanhã.#{pergunta}", assunto: 'Você trocou de WhatsApp?')
+    end
+
+    it 'sem mensagem recusada que saiu para o cliente, não entraria; a nota recusada não conta' do
+      mensagem(content: 'Chegou.', status: :delivered)
+      mensagem(content: 'Nota.', status: :failed, private: true)
+
+      expect(ensaio(falhou)[:conversas].first).to include(entraria: false, motivo: 'sem_mensagem_que_falhou', passos: [])
+    end
+
+    it 'a recusada só com anexo pularia, como no motor' do
+      mensagem(content: nil, status: :failed)
+
+      expect(passos_de(falhou).first[:faria]).to eq('faltou_valor')
+    end
+  end
+
   describe 'quais conversas' do
     let(:agente) { create(:user, account: account, role: :agent) }
     let(:outra_caixa) { create(:inbox, account: account) }
