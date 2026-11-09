@@ -32,10 +32,10 @@
         "HORA_ITEM": "At {hora}:00",
         "DICA": "Uses the account time zone. If today’s time has already passed, the follow-up is due right away, never tomorrow.",
         "FRASE_DAQUI": "in {quando}",
-        "FRASE_HOJE": "for today, by the end of the day",
-        "FRASE_HOJE_AS": "for today at {hora}:00",
-        "FRASE_AMANHA": "for tomorrow, by the end of the day",
-        "FRASE_AMANHA_AS": "for tomorrow at {hora}:00"
+        "FRASE_HOJE": "due today, by the end of the day",
+        "FRASE_HOJE_AS": "due today at {hora}:00",
+        "FRASE_AMANHA": "due tomorrow, by the end of the day",
+        "FRASE_AMANHA_AS": "due tomorrow at {hora}:00"
       }
     }
   }

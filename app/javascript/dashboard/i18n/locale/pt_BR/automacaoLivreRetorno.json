@@ -32,10 +32,10 @@
         "HORA_ITEM": "Às {hora}h",
         "DICA": "Vale o horário da conta. Se a hora de hoje já tiver passado, o retorno fica para agora, nunca para amanhã.",
         "FRASE_DAQUI": "daqui a {quando}",
-        "FRASE_HOJE": "para hoje, até o fim do dia",
-        "FRASE_HOJE_AS": "para hoje às {hora}h",
-        "FRASE_AMANHA": "para amanhã, até o fim do dia",
-        "FRASE_AMANHA_AS": "para amanhã às {hora}h"
+        "FRASE_HOJE": "com prazo hoje, até o fim do dia",
+        "FRASE_HOJE_AS": "com prazo hoje às {hora}h",
+        "FRASE_AMANHA": "com prazo amanhã, até o fim do dia",
+        "FRASE_AMANHA_AS": "com prazo amanhã às {hora}h"
       }
     }
   }
