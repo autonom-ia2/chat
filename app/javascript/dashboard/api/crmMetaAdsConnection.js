@@ -68,6 +68,12 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     return axios.post(`${this.url}/pagina`, { page_id: pageId });
   }
 
+  // Instagram pelo login único (#2406): liga o Instagram da Página escolhida com este mesmo login → { inbox_id, name }.
+  // 422 com error 'missing_permissions' quando o login veio sem as permissões do Instagram.
+  linkInstagram(pageId) {
+    return axios.post(`${this.url}/instagram`, { page_id: pageId });
+  }
+
   // { whatsapp: bool, site: bool }
   updateDestinations(destinations) {
     return axios.patch(`${this.url}/destinations`, { destinations });
