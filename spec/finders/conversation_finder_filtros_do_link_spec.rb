@@ -153,6 +153,48 @@ RSpec.describe ConversationFinder do
     end
   end
 
+  # Seus posts (#2209): "Ver conversas" abre a lista com as conversas que começaram no período do cartão.
+  describe 'desde_dias' do
+    # 06/11 01:00 UTC = 05/11 22:00 em São Paulo: 7 dias começam em 30/10 00:00 SP (03:00 UTC).
+    let(:agora) { Time.utc(2026, 11, 6, 1, 0) }
+    let!(:no_periodo) { travel_to(Time.utc(2026, 10, 30, 4, 0)) { conversa } }
+    let!(:antes_pelo_fuso) { travel_to(Time.utc(2026, 10, 30, 2, 0)) { conversa } }
+    let!(:resolvida_no_periodo) { travel_to(Time.utc(2026, 11, 2, 12, 0)) { conversa.tap(&:resolved!) } }
+    let!(:fora_da_caixa) { travel_to(Time.utc(2026, 11, 2, 12, 0)) { conversa(caixa: outra_inbox) } }
+
+    before do
+      account.update!(reporting_timezone: 'America/Sao_Paulo')
+      travel_to(Time.utc(2026, 9, 1)) { conversa }
+      travel_to(agora)
+    end
+
+    it 'traz só as criadas no período, no fuso dos relatórios da conta, de qualquer status' do
+      result = perform(admin, desde_dias: '7', status: 'all')
+
+      expect(result[:conversations]).to contain_exactly(no_periodo, resolvida_no_periodo, fora_da_caixa)
+    end
+
+    it 'a lista da caixa bate com o número do cartão de Seus posts, para quem pede' do
+      Current.user = agent
+      viewer = { user: agent, account: account, account_user: agent.account_users.find_by(account: account) }
+      cartao = SeusPosts::Caixa.new(inbox: inbox, viewer: viewer)
+                               .conversas(Crm::MetaAds::Organico::Periodo.new(7, zona: ActiveSupport::TimeZone['America/Sao_Paulo']).intervalo)
+
+      result = perform(agent, desde_dias: '7', status: 'all', inbox_id: inbox.id)
+
+      expect(result[:conversations]).to contain_exactly(no_periodo, resolvida_no_periodo)
+      expect(result[:count][:all_count]).to eq(cartao)
+    end
+
+    it 'só 7, 30 ou 90; outro valor é ignorado' do
+      expect(perform(admin, desde_dias: '30', status: 'all')[:conversations]).to contain_exactly(
+        no_periodo, antes_pelo_fuso, resolvida_no_periodo, fora_da_caixa
+      )
+      expect(perform(admin, desde_dias: '10', status: 'all')[:conversations].size).to eq(5)
+      expect(perform(admin, desde_dias: ' 7', status: 'all')[:conversations].size).to eq(5)
+    end
+  end
+
   describe 'com as pastas do e-mail ligadas' do
     let!(:no_spam) { conversa }
     let!(:na_entrada_da_ia) { conversa.tap { |c| passagem(c, de_type: 'AgentBot', motivo: 'n8n') } }

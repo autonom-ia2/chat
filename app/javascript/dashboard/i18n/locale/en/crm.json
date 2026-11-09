@@ -7247,7 +7247,8 @@
     "FILTRO_DO_LINK": {
       "DA_IA": "Handed over by AI",
       "ESPERANDO": "Waiting over {n} min",
-      "DA_IA_ESPERANDO": "From AI, waiting {n}+ min"
+      "DA_IA_ESPERANDO": "From AI, waiting {n}+ min",
+      "DESDE_DIAS": "Started in the last {n} days"
     }
   },
   "CRM_NUMEROS_V2": {
