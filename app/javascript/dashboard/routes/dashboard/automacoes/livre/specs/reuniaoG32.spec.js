@@ -233,11 +233,12 @@ describe('G32 — a reunião deste card', () => {
     expect(doAlvoDoGatilho(CATALOGO, 'card.ganho').gatilho).toBe('card.ganho');
   });
 
-  it('"quem atende a reunião" aparece só nos gatilhos de reunião e libera o salvar', async () => {
+  // G61: fora dos gatilhos de reunião vale a próxima reunião marcada do contato.
+  it('"quem atende a reunião" aparece em qualquer gatilho e libera o salvar', async () => {
     const noGanho = montar(doAlvoDoGatilho(CATALOGO, 'card.ganho'));
     noGanho.vm.abrir({ tipo: 'passo', valor: avisar });
     await flushPromises();
-    expect(noGanho.find('[data-da-reuniao]').exists()).toBe(false);
+    expect(noGanho.find('[data-da-reuniao]').exists()).toBe(true);
 
     const naReuniao = montar(doAlvoDoGatilho(CATALOGO, 'card.reuniao_marcada'));
     naReuniao.vm.abrir({ tipo: 'passo', valor: avisar });
@@ -261,7 +262,7 @@ describe('G32 — a reunião deste card', () => {
     });
   });
 
-  it('marcado e fora do gatilho de reunião, continua à vista para ser tirado', () => {
+  it('marcado, a chave tira quem atende a reunião sem mexer no resto', () => {
     const wrapper = mount(LivreDestinatarios, {
       props: {
         rotulo: 'PARA',

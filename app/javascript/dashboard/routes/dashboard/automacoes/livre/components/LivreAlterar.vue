@@ -115,15 +115,6 @@ const frase = computed(() => {
   return fraseDaCondicao(rascunho.value, props.catalogo, t);
 });
 
-// G32: "quem atende a reunião" só nos gatilhos de reunião — os mesmos em que o
-// catálogo oferece os valores da reunião.
-const deReuniao = computed(() =>
-  Boolean(
-    props.catalogo.valores
-      ?.find(item => item.so_nos_gatilhos)
-      ?.so_nos_gatilhos.includes(props.catalogo.gatilho)
-  )
-);
 const gatilhosDoSeletor = computed(
   () => props.gatilhos || props.catalogo.gatilhos
 );
@@ -434,7 +425,6 @@ defineExpose({ abrir, fechar });
           :rotulo="$t(campo.rotulo)"
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
-          :de-reuniao="deReuniao"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreCampanha

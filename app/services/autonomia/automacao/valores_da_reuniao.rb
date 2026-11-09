@@ -38,6 +38,14 @@ module Autonomia::Automacao::ValoresDaReuniao
     (espera.end ? atendidas.where('crm_activities.created_at <= ?', espera.end) : atendidas).exists?
   end
 
+  # G61: a próxima reunião marcada do contato (ainda por vir), em card que `quem` (quem ligou) vê; nil sem ela.
+  def proxima_do_contato(contato, quem)
+    account_user = contato && quem && contato.account.account_users.find_by(user_id: quem.id)
+    return if account_user.nil?
+
+    contato.account.crm_meetings.upcoming.where(card_id: cards_que_ve(contato, account_user).select(:id)).reorder(:starts_at).first
+  end
+
   # Os cards do contato que quem ligou vê, pela mesma pergunta do resto do CRM (Crm::CardPolicy::Scope).
   def cards_que_ve(contato, account_user)
     acesso = { user: account_user.user, account: contato.account, account_user: account_user }

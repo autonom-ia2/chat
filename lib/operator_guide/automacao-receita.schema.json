@@ -461,7 +461,7 @@
                 "responsavel": { "type": "boolean" },
                 "times": { "$ref": "#/definitions/ids" },
                 "pessoas": { "$ref": "#/definitions/ids" },
-                "da_reuniao": { "type": "boolean", "description": "Só nos gatilhos de reunião (G32): quem atende a reunião do gatilho (a pessoa da página de agendamento, ou quem marcou na tela)." }
+                "da_reuniao": { "type": "boolean", "description": "Quem atende a reunião (a pessoa da página de agendamento, ou quem marcou na tela). Nos gatilhos de reunião (G32), a reunião do gatilho; nos outros (G61), a próxima reunião marcada do contato, em card que quem ligou vê. Sem reunião, ninguém." }
               }
             }
           }

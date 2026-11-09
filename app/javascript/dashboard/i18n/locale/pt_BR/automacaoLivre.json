@@ -360,7 +360,7 @@
       "TEXTO_DICA": "O que estiver entre colchetes, como [Nome do contato], é trocado pelo dado na hora. Se o dado estiver vazio, este passo não acontece.",
       "RESPONSAVEL": "Quem cuida da conversa",
       "DA_REUNIAO": "Quem atende a reunião",
-      "DA_REUNIAO_AJUDA": "A pessoa da página de agendamento, ou quem marcou a reunião na tela.",
+      "DA_REUNIAO_AJUDA": "A pessoa da página de agendamento, ou quem marcou a reunião na tela. Fora dos gatilhos de reunião, vale a próxima reunião marcada do contato.",
       "TIMES": "Times",
       "PESSOAS": "Pessoas",
       "SO_A_EQUIPE": "Só a equipe vê este aviso. O cliente não recebe nada.",

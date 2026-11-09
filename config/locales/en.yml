@@ -634,7 +634,6 @@ en:
         modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility and with these variables."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
-        da_reuniao_so_no_gatilho: "Step %{passo}: notifying who attends the meeting only works in meeting triggers."
         gatilho_desligado: 'Card and time triggers are off for this account.'
         reunioes_desligadas: 'Meetings are off in this installation, so the meeting triggers cannot be used.'
         etapa_de_fora: 'Trigger: stage %{id} is not from this account.'

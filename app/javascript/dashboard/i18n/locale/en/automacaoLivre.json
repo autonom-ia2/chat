@@ -360,7 +360,7 @@
       "TEXTO_DICA": "Anything in brackets, like [Contact name], is replaced by the detail at that moment. If the detail is empty, this step does not happen.",
       "RESPONSAVEL": "Whoever handles the conversation",
       "DA_REUNIAO": "Who attends the meeting",
-      "DA_REUNIAO_AJUDA": "The person on the booking page, or who scheduled the meeting on screen.",
+      "DA_REUNIAO_AJUDA": "The person on the booking page, or who scheduled the meeting on screen. Outside meeting triggers, the contact's next scheduled meeting.",
       "TIMES": "Teams",
       "PESSOAS": "People",
       "SO_A_EQUIPE": "Only the team sees this notice. The customer gets nothing.",
