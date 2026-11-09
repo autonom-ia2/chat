@@ -22,6 +22,7 @@ class ConversationApi extends ApiClient {
       daIa,
       esperandoMin,
       noFunil,
+      desdeDias,
     },
     options = {}
   ) {
@@ -44,6 +45,8 @@ class ConversationApi extends ApiClient {
         da_ia: daIa ? 1 : undefined,
         esperando_min: esperandoMin || undefined,
         no_funil: noFunil ? 1 : undefined,
+        // #2209: "Ver conversas" de Seus posts (as que começaram no período do cartão).
+        desde_dias: desdeDias || undefined,
       },
     });
   }
@@ -129,6 +132,7 @@ class ConversationApi extends ApiClient {
     daIa,
     esperandoMin,
     noFunil,
+    desdeDias,
   }) {
     return axios.get(`${this.url}/meta`, {
       params: {
@@ -142,6 +146,8 @@ class ConversationApi extends ApiClient {
         da_ia: daIa ? 1 : undefined,
         esperando_min: esperandoMin || undefined,
         no_funil: noFunil ? 1 : undefined,
+        // #2209: "Ver conversas" de Seus posts (as que começaram no período do cartão).
+        desde_dias: desdeDias || undefined,
       },
     });
   }

@@ -106,7 +106,8 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     expect(stubs[:adset].with(&adset_ok)).to have_been_made.once
     expect(stubs[:creative].with(&creative_ok)).to have_been_made.once
     expect(stubs[:ad].with { |req| form(req)['status'] == 'PAUSED' }).to have_been_made.once
-    expect(Crm::MetaAdsCreatedObject.last).to have_attributes(status: 'created', ad_id: '903')
+    expect(Crm::MetaAdsCreatedObject.last).to have_attributes(status: 'created', ad_id: '903', source_post_id: '1790',
+                                                              source_post_network: 'instagram')
   end
 
   it 'post da Página: object_story_id, só no Facebook, engajamento no post e sem WhatsApp' do
@@ -127,6 +128,7 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     end
     expect(stubs[:adset].with(&adset_ok)).to have_been_made.once
     expect(stubs[:creative].with(&creative_ok)).to have_been_made.once
+    expect(Crm::MetaAdsCreatedObject.last).to have_attributes(source_post_id: page_post_id, source_post_network: 'facebook')
   end
 
   it 'post do Instagram numa conta sem número: engajamento no post, sem botão' do

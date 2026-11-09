@@ -102,6 +102,14 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     expect(passos.pluck('grupo') - declarado['grupos']).to be_empty
   end
 
+  # G41: a instrução do resumo tem rótulo próprio; o "escrever" segue com o dele.
+  it 'troca o rótulo de um campo só no passo que declara rotulos' do
+    rotulo = ->(tipo) { passos.find { |passo| passo['tipo'] == tipo }['campos'].find { |campo| campo['nome'] == 'instrucao' }['rotulo'] }
+
+    expect(rotulo.call('resumir')).to eq('AUTOMACAO_LIVRE.CAMPOS.INSTRUCAO_DO_RESUMO')
+    expect(rotulo.call('escrever')).to eq('AUTOMACAO_LIVRE.CAMPOS.INSTRUCAO')
+  end
+
   # A tela esconde o passo sem a flag; a flag tem que existir, senão o passo some de todas as contas sem aviso.
   it 'só pede flag que existe, e mensagem, avisar e email pedem a da F4' do
     flags = YAML.load_file(Rails.root.join('config/features.yml')).pluck('name')

@@ -4,10 +4,12 @@
 // navegam pelos números e somem no painel vazio (#2301).
 export const VARIANTES = {
   sem_conversas: { chave: 'SEM_CONVERSAS', icone: 'i-lucide-calendar-search' },
+  // #2719 — a leitura só é ligada pelo suporte: ninguém liga pelo painel, então sem botão.
   leitura_desligada: {
     chave: 'LEITURA_DESLIGADA',
     icone: 'i-lucide-book-open',
     soQuemGerencia: true,
+    semBotao: true,
   },
   // #2301 — a leitura automática ainda não leu este agente: não há o que ver, então sem botão.
   lendo: { chave: 'LENDO', icone: 'i-lucide-hourglass', semBotao: true },

@@ -17,6 +17,11 @@ vi.mock('vue-i18n', () => ({
   }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// Os nomes das caixas (#2680) vêm do store; aqui a conta não tem nenhuma.
+vi.mock('dashboard/composables/store', async () => {
+  const vue = await import('vue');
+  return { useMapGetter: () => vue.ref([]) };
+});
 vi.mock(
   'dashboard/routes/dashboard/crm/composables/useCrmPermissions',
   async () => {
@@ -59,9 +64,10 @@ const parametro = (nome, peca) => ({
   obrigatorio: true,
   frase: `AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.${nome.toUpperCase()}`,
 });
-const DA_DATA = ['campo', 'dias', 'quando', 'hora'].map(nome =>
-  parametro(nome, nome)
-);
+const DA_DATA = [
+  ...['campo', 'dias', 'quando', 'hora'].map(nome => parametro(nome, nome)),
+  { ...parametro('repete', 'repete'), obrigatorio: false },
+];
 const deTempo = (tipo, alvo, chave, parametros) => ({
   tipo,
   alvo,
@@ -273,6 +279,26 @@ describe('gatilhos de tempo', () => {
     });
   });
 
+  it('"repete" começa em uma vez, grava todo ano e volta a tirar a chave', async () => {
+    const wrapper = await montar();
+    await escolherTipo(wrapper, 'contato.data');
+    await escolher(seletorDo(wrapper, 'campo'), 'aniversario');
+
+    expect(seletorDo(wrapper, 'repete').props('modelValue')).toBe('uma_vez');
+    expect(seletorDo(wrapper, 'repete').props('options')).toEqual([
+      { value: 'uma_vez', label: 'AUTOMACAO_LIVRE.REPETE_DA_DATA.UMA_VEZ' },
+      { value: 'todo_ano', label: 'AUTOMACAO_LIVRE.REPETE_DA_DATA.TODO_ANO' },
+    ]);
+    await escolher(seletorDo(wrapper, 'repete'), 'todo_ano');
+    expect(await salvo(wrapper)).toMatchObject({ repete: 'todo_ano' });
+
+    await escolher(seletorDo(wrapper, 'repete'), 'uma_vez');
+    await wrapper.find('[data-salvar]').trigger('click');
+    expect(wrapper.emitted('salvar').at(-1)[0].valor).not.toHaveProperty(
+      'repete'
+    );
+  });
+
   it('"data do contato" só oferece campos de data do contato', async () => {
     const wrapper = await montar();
     await escolherTipo(wrapper, 'contato.data');
@@ -346,6 +372,19 @@ describe('gatilhos de tempo', () => {
     it('com dias, diz os dias, o quando, o campo e a hora', () => {
       expect(fraseDoGatilho(doContato({ dias: 5 }), CATALOGO, t, NOMES)).toBe(
         'AUTOMACAO_LIVRE.GATILHO_COM.CONTATO_DATA Aniversário 5 AUTOMACAO_LIVRE.QUANDO_DA_DATA.ANTES 9'
+      );
+    });
+
+    it('todo ano diz isso no fim da frase', () => {
+      expect(
+        fraseDoGatilho(
+          doContato({ dias: 0, repete: 'todo_ano' }),
+          CATALOGO,
+          t,
+          NOMES
+        )
+      ).toBe(
+        'AUTOMACAO_LIVRE.GATILHO_TODO_ANO AUTOMACAO_LIVRE.GATILHO_NO_DIA.CONTATO_DATA Aniversário 0 AUTOMACAO_LIVRE.QUANDO_DA_DATA.ANTES 9'
       );
     });
 

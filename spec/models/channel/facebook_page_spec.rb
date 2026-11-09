@@ -32,6 +32,24 @@ RSpec.describe Channel::FacebookPage do
     end
   end
 
+  describe 'token length (#2683)' do
+    it 'accepts Facebook Login for Business tokens longer than 255 characters' do
+      page = build(:channel_facebook_page, user_access_token: 'E' * 400, page_access_token: 'P' * 300)
+      page.valid?
+
+      expect(page.errors[:user_access_token]).to be_empty
+      expect(page.errors[:page_access_token]).to be_empty
+    end
+
+    it 'still rejects absurdly long tokens' do
+      page = build(:channel_facebook_page, user_access_token: 'E' * 4097)
+
+      page.valid?
+
+      expect(page.errors[:user_access_token]).to be_present
+    end
+  end
+
   it 'has a valid name' do
     expect(channel.name).to eq('Facebook')
   end
@@ -57,6 +75,14 @@ RSpec.describe Channel::FacebookPage do
       channel.unsubscribe
 
       expect(subscription).to have_received(:remove!).with(Channel::FacebookPage::MESSENGER_FIELDS + Channel::FacebookPage::REFERRAL_FIELDS)
+    end
+
+    it 'keeps the messenger fields while an Instagram inbox of the single login uses the page (#2406)' do
+      create(:channel_instagram, login: 'facebook', page_id: channel.page_id)
+
+      channel.unsubscribe
+
+      expect(subscription).not_to have_received(:remove!)
     end
 
     it 'keeps the messenger fields when the page is still an inbox of another account' do

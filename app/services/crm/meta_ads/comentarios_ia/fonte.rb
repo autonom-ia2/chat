@@ -8,6 +8,9 @@
 # escondidos. Cada linha: `{ id:, network:, author:, text:, momento:, inbox_id:, post_id:, respostas: }` (a caixa e o
 # post de onde veio, para o "Ler e mandar" cuidar dele como um comentário novo; `respostas`: as de outras pessoas dentro
 # dele, `{ author:, text: }`, para a prévia, #2454). O anúncio que roda nas duas redes junta as listas.
+# `status_das_redes` (#2522): o status de cada rede, `{ rede => status }`. No anúncio nas duas redes, a falha numa
+# (por exemplo `needs_login` do Facebook) não esconde a outra: `status` fica 'ready' e as linhas são as da rede que
+# leu; quem mostra a lista diz qual rede faltou. Só quando nenhuma rede leu, `status` é o da primeira que falhou.
 #
 # `respostas_que_esperam` (#2454, o fio conta): as respostas de outra pessoa dentro de um comentário (até dentro de um
 # da própria conta) que esperam o dono: à mostra, com texto, sem privado e sem a conta responder no fio depois dela.
@@ -72,18 +75,17 @@ class Crm::MetaAds::ComentariosIa::Fonte
   end
 
   # leituras: { rede => { ler: -> { payload da tela }, inbox_id:, post_id: } }.
-  # Erro da Meta vira o status. AdManagement::Error cobre também o FacebookComments::Error (do anúncio e da Página do
-  # Seus posts), que é filho dele. O leitor do Instagram devolve nil quando o anúncio sumiu da conta: `ad_not_found`.
+  # Cada rede é lida por conta própria (#2522): o erro de uma vira o status dela e a outra segue.
   def ler
     lidas = ler_cada_rede
-    falha = lidas.map { |_network, _leitura, payload| payload[:status] }.find { |status| status != 'ready' }
-    return { status: falha, linhas: [], escondidas: [] } if falha
+    status_das_redes = lidas.to_h { |network, _leitura, payload| [network, payload[:status]] }
+    prontas = lidas.select { |_network, _leitura, payload| payload[:status] == 'ready' }
+    return { status: status_das_redes.values.first, linhas: [], escondidas: [], status_das_redes: status_das_redes } if prontas.empty? && lidas.any?
 
-    linhas = lidas.flat_map { |network, leitura, payload| de_outra_pessoa(network, leitura, payload[:comments]) }
-    respostas = lidas.flat_map { |network, leitura, payload| respostas_que_esperam(network, leitura, payload[:comments]) }
-    { status: 'ready', linhas: so(linhas, :espera), escondidas: so(linhas, :escondida), respostas_que_esperam: mais_novos_antes(respostas) }
-  rescue Crm::MetaAds::InstagramPrivateReply::Error, Crm::MetaAds::AdManagement::Error => e
-    { status: e.code, linhas: [], escondidas: [] }
+    linhas = prontas.flat_map { |network, leitura, payload| de_outra_pessoa(network, leitura, payload[:comments]) }
+    respostas = prontas.flat_map { |network, leitura, payload| respostas_que_esperam(network, leitura, payload[:comments]) }
+    { status: 'ready', linhas: so(linhas, :espera), escondidas: so(linhas, :escondida), respostas_que_esperam: mais_novos_antes(respostas),
+      status_das_redes: status_das_redes }
   end
 
   # A legenda do primeiro post (o anúncio nas duas redes é o mesmo criativo), ou nil. Na tela, a Meta fora do ar não
@@ -140,7 +142,16 @@ class Crm::MetaAds::ComentariosIa::Fonte
   end
 
   def ler_cada_rede
-    @leituras.map { |network, leitura| [network, leitura, leitura[:ler].call || SUMIU] }
+    @leituras.map { |network, leitura| [network, leitura, ler_a_rede(leitura)] }
+  end
+
+  # Erro da Meta vira o status da rede. AdManagement::Error cobre também o FacebookComments::Error (do anúncio e da
+  # Página do Seus posts), que é filho dele. O leitor do Instagram devolve nil quando o anúncio sumiu da conta:
+  # `ad_not_found`.
+  def ler_a_rede(leitura)
+    leitura[:ler].call || SUMIU
+  rescue Crm::MetaAds::InstagramPrivateReply::Error, Crm::MetaAds::AdManagement::Error => e
+    { status: e.code }
   end
 
   def de_outra_pessoa(network, leitura, comments)

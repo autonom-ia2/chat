@@ -4,6 +4,10 @@
 #   "Automação", janela, contato que pediu para não receber, tweet e anti-laço. As conferências que não dependem do texto
 #   vêm antes da IA: fora da janela, a execução para sem gastar (#2573). Pede também a flag da F4 (o executor confere).
 # - `destino: sugestao`: o texto vira uma nota privada para a equipe revisar e mandar (D5 A).
+# - `destino: guardar` (#2679): o texto só fica guardado. Um passo seguinte o lê como `ia.<passo>`: por exemplo, a
+#   "mensagem" com modelo aprovado, que fora da janela leva o texto numa variável do modelo.
+#
+# Nos três, o texto fica na execução (ComIa#guardar) para os passos seguintes.
 class Autonomia::Automacao::PassoDeEscrever
   include ::Autonomia::Automacao::ComIa
 
@@ -51,7 +55,14 @@ class Autonomia::Automacao::PassoDeEscrever
   def entregar(mensagem, texto, custo)
     return Resultado.new(tipo: :pulado, motivo: 'texto_vazio', dados: { 'ia' => custo }) if texto.empty?
 
-    resultado = mensagem ? mensagem.mandar(texto) : Resultado.new(tipo: :ok, dados: { 'nota_id' => nota(frase(:sugestao, texto: texto)).id })
+    guardar(texto)
+    resultado = mensagem ? mensagem.mandar(texto) : sem_mandar(texto)
     Resultado.new(tipo: resultado.tipo, motivo: resultado.motivo, dados: resultado.dados.merge('ia' => custo))
+  end
+
+  def sem_mandar(texto)
+    return Resultado.new(tipo: :ok, dados: {}) if @passo['destino'] == 'guardar'
+
+    Resultado.new(tipo: :ok, dados: { 'nota_id' => nota(frase(:sugestao, texto: texto)).id })
   end
 end

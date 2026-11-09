@@ -1,5 +1,6 @@
 require Rails.root.join('lib/redis/config')
 require Rails.root.join('lib/captain_response_dequeued_logger')
+require Rails.root.join('lib/agent_tools_queue')
 
 schedule_file = 'config/schedule.yml'
 
@@ -24,6 +25,9 @@ Sidekiq.configure_server do |config|
 
     chain.add ChatwootDequeuedLogger if ActiveModel::Type::Boolean.new.cast(ENV.fetch('ENABLE_SIDEKIQ_DEQUEUE_LOGGER', false))
   end
+
+  # #1430: a fila própria das ferramentas HTTP assíncronas, com threads só dela (lib/agent_tools_queue.rb).
+  AgentToolsQueue.configurar(config)
 
   # skip the default start stop logging
   if Rails.env.production?

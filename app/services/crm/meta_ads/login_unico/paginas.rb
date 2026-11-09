@@ -35,10 +35,16 @@ class Crm::MetaAds::LoginUnico::Paginas
     end
   end
 
+  # `linked` (#2406): o Instagram já tem caixa nesta conta pelo login único.
   def instagram(account)
     return unless account.is_a?(Hash) && account['username'].present?
 
-    { username: account['username'], followers: account['followers_count'] }
+    { username: account['username'], followers: account['followers_count'], linked: instagram_linked?(account['id']) }
+  end
+
+  def instagram_linked?(instagram_id)
+    instagram_id.present? &&
+      Channel::Instagram.exists?(account_id: @connection.account_id, instagram_id: instagram_id.to_s, login: 'facebook')
   end
 
   # Sem a lista de permissões o passo segue: a Página vale do mesmo jeito, só não dá para dizer o que faltou.

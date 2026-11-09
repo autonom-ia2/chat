@@ -188,6 +188,22 @@ describe('LivreIaTestar', () => {
     );
   });
 
+  it('#2414 G20: o anexo que não pôde ir à IA usa a frase do ensaio', async () => {
+    AutomacoesAPI.testarPasso.mockResolvedValueOnce({
+      data: {
+        candidatas: [7],
+        aviso: null,
+        conversa: { conversa_id: 7, motivo: 'anexo_fora_do_formato' },
+      },
+    });
+    const wrapper = montar();
+    await wrapper.find('[data-testar]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-teste-resultado]').text()).toBe(
+      'AUTOMACAO_LIVRE.IA.ANEXOS.ANEXO_FORA_DO_FORMATO'
+    );
+  });
+
   it('a falha de uma conversa vira frase; a recusa da API mostra o erro', async () => {
     AutomacoesAPI.testarPasso.mockResolvedValueOnce({
       data: {

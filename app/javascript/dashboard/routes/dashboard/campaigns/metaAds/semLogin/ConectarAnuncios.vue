@@ -65,6 +65,12 @@ const { isCloudFeatureEnabled } = useAccount();
 const loginUnico = computed(() =>
   isCloudFeatureEnabled(FEATURE_FLAGS.ANUNCIOS_LOGIN_UNICO)
 );
+// #2406: o Instagram da Página liga por este mesmo login, sem o login do Instagram.
+const instagramPelaPagina = computed(
+  () =>
+    loginUnico.value &&
+    isCloudFeatureEnabled(FEATURE_FLAGS.INSTAGRAM_LOGIN_UNICO)
+);
 const facebookSteps = computed(() =>
   loginUnico.value
     ? FACEBOOK_STEPS
@@ -178,27 +184,73 @@ const pageChoices = computed(() =>
     hint: row.instagram ? `@${row.instagram.username}` : row.category,
   }))
 );
+// O id da Página cujo Instagram este toque ligou: vale só para ela.
+const instagramLigadoDe = ref(null);
+const savingInstagram = ref(false);
+const instagramError = ref(null);
 const works = computed(() =>
   recursosDoLogin({
     page: chosenPage.value,
     granted: granted.value,
     declined: declined.value,
+    pelaPagina: instagramPelaPagina.value,
+    instagramLigado:
+      Boolean(chosenPage.value) &&
+      instagramLigadoDe.value === chosenPage.value.id,
   })
 );
 const worksMissingPermission = computed(() =>
   works.value.some(item => item.falta === 'PERMISSION')
 );
-// Instagram por toque à parte (#2338, decisão do Rodrigo): o login único não liga o Direct nem os comentários do
-// Instagram; o pronto leva ao login do Instagram de hoje, o da caixa de entrada.
+// Instagram por toque à parte (#2338, decisão do Rodrigo): sem a flag do #2406, o pronto leva ao login do Instagram
+// de hoje, o da caixa de entrada. Com ela, o toque liga o Instagram da Página aqui mesmo, com este login.
 const instagramToConnect = computed(() =>
   works.value.some(item => item.falta === 'INSTAGRAM_TAP')
 );
-const connectInstagram = () =>
-  router.push(
+// O erro de uma Página não vale para outra.
+watch(chosenPage, () => {
+  instagramError.value = null;
+});
+// Ligado agora: o bloco do toque sai e o aviso de pronto recebe o foco, para o leitor de tela anunciar.
+const instagramJustLinked = computed(
+  () =>
+    Boolean(chosenPage.value) && instagramLigadoDe.value === chosenPage.value.id
+);
+const instagramDone = ref(null);
+const INSTAGRAM_ERRORS = {
+  missing_permissions: 'MISSING_PERMISSIONS',
+  not_own_token: 'NOT_OWN_TOKEN',
+  no_instagram: 'NO_INSTAGRAM',
+  page_not_granted: 'NOT_GRANTED',
+  reconnect: 'RECONNECT',
+  forbidden: 'FORBIDDEN',
+  limit: 'LIMIT',
+};
+const linkInstagram = async () => {
+  savingInstagram.value = true;
+  instagramError.value = null;
+  try {
+    await CrmMetaAdsConnectionAPI.linkInstagram(chosenPage.value.id);
+    instagramLigadoDe.value = chosenPage.value.id;
+    await nextTick();
+    instagramDone.value?.focus();
+  } catch (error) {
+    const code =
+      error?.response?.status === 402 ? 'limit' : error?.response?.data?.error;
+    instagramError.value = INSTAGRAM_ERRORS[code] || 'FAILED';
+  } finally {
+    savingInstagram.value = false;
+  }
+};
+const connectInstagram = () => {
+  if (instagramPelaPagina.value) return linkInstagram();
+  return router.push(
     frontendURL(
       `accounts/${route.params.accountId}/settings/inboxes/new/instagram`
     )
   );
+};
+const instagramKey = key => (instagramPelaPagina.value ? `${key}_PAGINA` : key);
 const count = value =>
   new Intl.NumberFormat(intlLocale(locale.value)).format(value);
 // Depois de conectar, voltar sairia do passo a passo com a conta já ligada: o "Voltar" some.
@@ -1372,13 +1424,31 @@ onBeforeUnmount(stopRecheck);
             </span>
           </li>
         </ul>
+        <p
+          v-if="instagramJustLinked"
+          ref="instagramDone"
+          data-conectar-instagram-ligado
+          role="status"
+          tabindex="-1"
+          class="m-0 border-t border-solid border-n-weak pt-3 text-sm text-n-teal-11"
+        >
+          {{
+            $t(`${C}.DONE.WORKS.INSTAGRAM_LINKED`, {
+              username: chosenPage.instagram?.username,
+            })
+          }}
+        </p>
         <div
           v-if="instagramToConnect"
           data-conectar-ligar-instagram
           class="flex flex-col gap-2 border-t border-solid border-n-weak pt-3"
         >
           <p class="m-0 text-sm text-n-slate-11">
-            {{ $t(`${C}.DONE.WORKS.INSTAGRAM_TEXT`) }}
+            {{
+              $t(`${C}.DONE.WORKS.${instagramKey('INSTAGRAM_TEXT')}`, {
+                username: chosenPage?.instagram?.username,
+              })
+            }}
           </p>
           <Button
             data-conectar-instagram-ligar
@@ -1386,9 +1456,19 @@ onBeforeUnmount(stopRecheck);
             size="sm"
             class="!min-h-11 self-start"
             icon="i-ri-instagram-line"
-            :label="$t(`${C}.DONE.WORKS.INSTAGRAM_CTA`)"
+            :is-loading="savingInstagram"
+            :disabled="savingInstagram"
+            :label="$t(`${C}.DONE.WORKS.${instagramKey('INSTAGRAM_CTA')}`)"
             @click="connectInstagram"
           />
+          <p
+            v-if="instagramError"
+            data-conectar-instagram-erro
+            role="alert"
+            class="m-0 text-sm text-n-ruby-11"
+          >
+            {{ $t(`${C}.DONE.WORKS.INSTAGRAM_ERROR.${instagramError}`) }}
+          </p>
         </div>
         <div
           v-if="worksMissingPermission"

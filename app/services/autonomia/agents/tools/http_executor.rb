@@ -30,26 +30,39 @@ class Autonomia::Agents::Tools::HttpExecutor
 
   # `turno`: o `Delivery` de onde sai o `Idempotency-Key` (`ChaveDeIdempotencia`); sem ele, uma chave nova por
   # chamada. `segundos`: o teto desta chamada; sem ele, o tempo da ferramenta (`Tool#timeout_seconds`).
-  def initialize(tool:, params: {}, turno: nil, segundos: nil)
+  # #1430, a consulta em segundo plano: `chave` é o `Idempotency-Key` gravado na abertura (o job não tem turno), e
+  # `higienizar` mascara na resposta 2xx os segredos do cadastro (`resposta`).
+  def initialize(tool:, params: {}, turno: nil, segundos: nil, chave: nil, higienizar: false) # rubocop:disable Metrics/ParameterLists
     @tool = tool
     @params_do_modelo = params.to_h.deep_stringify_keys
     @turno = turno
     @segundos = segundos || tool.timeout_seconds
+    @chave = chave
+    @higienizar = higienizar
   end
 
   def call
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     body = render_body
     headers = request_headers(body)
-    SafeFetch.fetch(rendered_url, **fetch_options(body, headers)) do |result|
+    url = rendered_url
+    opcoes = fetch_options(body, headers)
+    @enviada = true
+    SafeFetch.fetch(url, **opcoes) do |result|
       response = result.tempfile.read.to_s
       Autonomia::Agents::Tools::ChaveDeIdempotencia.concluir(tool: @tool, turno: @turno, params: params)
       log_success(started_at, response.bytesize)
-      return format_response(response)
+      return resposta(format_response(response), headers)
     end
   rescue ValorRecusado, SafeFetch::Error, Liquid::Error, JSON::JSONError, EncodingError => e
     log_failure(started_at, e.class.name)
     raise erro_da_ferramenta(e, headers)
+  end
+
+  # O pedido saiu (ou ia sair) para o sistema de fora: tudo o que vem antes — o corpo, os cabeçalhos, o endereço — já foi
+  # montado. #1430: o defeito antes disto é falha certa; depois, a consulta em segundo plano não sabe o que chegou lá.
+  def enviada?
+    @enviada == true
   end
 
   private
@@ -114,8 +127,13 @@ class Autonomia::Agents::Tools::HttpExecutor
     headers['Content-Type'] ||= 'application/json' if body.present?
     headers['Accept'] ||= 'application/json'
     # O cadastro não aceita um `Idempotency-Key` próprio (`Tool#validate_headers_config`): a chave é da plataforma.
-    headers[IDEMPOTENCY_HEADER] = Autonomia::Agents::Tools::ChaveDeIdempotencia.para(tool: @tool, turno: @turno, params: params)
+    headers[IDEMPOTENCY_HEADER] = idempotency_key
     headers
+  end
+
+  # A chave pronta (a da consulta assíncrona, #1430) ou a do turno.
+  def idempotency_key
+    @chave.presence || Autonomia::Agents::Tools::ChaveDeIdempotencia.para(tool: @tool, turno: @turno, params: params)
   end
 
   # Quebra de linha num valor de cabeçalho abriria um cabeçalho novo. O Net::HTTP recusa com
@@ -137,77 +155,22 @@ class Autonomia::Agents::Tools::HttpExecutor
   def trecho_do_erro(error, headers)
     return unless error.status.to_i.between?(400, 499)
 
-    opcoes = { segredos: segredos(headers), literais: literais_do_cadastro, limite: MAX_TRECHO_DO_ERRO, cortado: error.body_excerpt_truncated }
-    Autonomia::Agents::Tools::TrechoHigienizado.new(error.body_excerpt, **opcoes).to_s
+    segredos_da_chamada(headers).higienizar(error.body_excerpt, limite: MAX_TRECHO_DO_ERRO, cortado: error.body_excerpt_truncated)
   end
 
-  # SEGREDO FORTE, sempre oculto: os valores de cabeçalho (menos os automáticos) em todas as formas
-  # de autenticação, o usuário e a senha do endereço (e o Basic que o SafeFetch monta com eles) e os
-  # valores da query do cadastro — chave em query pode ser só letras, e aí não tem "cara" nenhuma.
-  def segredos(headers)
-    cabecalhos = Array(headers).reject { |key, _| %w[content-type accept].include?(key.to_s.downcase) }.map(&:last)
-    cabecalhos.flat_map { |valor| formas_de_autenticacao(valor) } + usuario_e_senha + valores_da_query
+  # Os segredos e os literais desta chamada, para o `TrechoHigienizado` (#1425; #1430: também a resposta 2xx da
+  # consulta em segundo plano, que fica gravada e é mostrada).
+  def segredos_da_chamada(headers)
+    Autonomia::Agents::Tools::SegredosDaChamada.new(tool: @tool, headers: headers, corpo: corpo, endereco: method(:render_template))
   end
 
-  # "Bearer x" -> o valor e x; "Basic b64" -> também o base64 decodificado ("usuario:senha"), o
-  # usuário e a senha.
-  def formas_de_autenticacao(valor)
-    esquema, token = valor.to_s.split(' ', 2)
-    return [valor] if token.blank?
+  # #1430: a consulta em segundo plano grava a resposta 2xx e a mostra ao modelo e a quem atende (a nota privada): os
+  # segredos do cadastro saem, e só eles — UUID, PIX, linha digitável e id em endereço chegam inteiros, como no
+  # síncrono. Sem corte aqui: quem corta é o `Bound#cabendo`, no teto e com o aviso do síncrono.
+  def resposta(texto, headers)
+    return texto unless @higienizar
 
-    token = token.strip
-    formas = [valor, token]
-    esquema.casecmp?('basic') ? formas + basic_decodificado(token) : formas
-  end
-
-  def basic_decodificado(token)
-    texto = Base64.strict_decode64(token).force_encoding(Encoding::UTF_8)
-    texto.valid_encoding? ? [texto, *texto.split(':', 2)] : []
-  rescue ArgumentError
-    []
-  end
-
-  # LITERAL DO CADASTRO (pedaços do caminho e valores do corpo): o `TrechoHigienizado` só
-  # o oculta quando ele tem cara de credencial — "clientes" ou "ativo" continuam legíveis no erro.
-  def literais_do_cadastro
-    uri = endereco_do_cadastro
-    caminho = uri ? uri.path.to_s.split('/').map { |parte| URI.decode_www_form_component(parte) } : []
-    caminho + literais_do_corpo
-  rescue ArgumentError
-    literais_do_corpo
-  end
-
-  def usuario_e_senha
-    uri = endereco_do_cadastro
-    return [] unless uri
-
-    crus = [uri.user, uri.password].compact
-    partes = crus.map { |parte| URI.decode_www_form_component(parte) }
-    return crus + partes if uri.user.blank?
-
-    crus + partes + [Base64.strict_encode64("#{partes.first}:#{partes.second}")]
-  rescue ArgumentError
-    []
-  end
-
-  def valores_da_query
-    uri = endereco_do_cadastro
-    uri ? URI.decode_www_form(uri.query.to_s).map(&:last) : []
-  rescue ArgumentError
-    []
-  end
-
-  # O endereço com cada {{ }} vazio: sobra só o que está escrito no cadastro.
-  def endereco_do_cadastro
-    @endereco_do_cadastro ||= URI.parse(render_template(@tool.endpoint_url.to_s, global_filter: ->(_valor) {}))
-  rescue URI::InvalidURIError, Liquid::Error
-    nil
-  end
-
-  def literais_do_corpo
-    corpo.literais
-  rescue ValorRecusado, Liquid::Error
-    []
+    segredos_da_chamada(headers).mascarar(texto)
   end
 
   # Sem corte aqui: quem corta é o `Bound#cabendo`, com o aviso de corte que o modelo precisa ler
