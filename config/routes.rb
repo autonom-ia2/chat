@@ -822,6 +822,17 @@ Rails.application.routes.draw do
                 post :discard, on: :collection, controller: :lead_batches, action: :discard
                 post :contacts, on: :collection, controller: :lead_batches, action: :contacts
                 post :audience, on: :collection, controller: :lead_audiences, action: :create
+                # Em quais listas a empresa está, para a gaveta (#2775, F6).
+                get :audiences, on: :member, controller: :lead_audiences, action: :index
+              end
+              # "Suas listas" (#2775, F6): os Públicos criados pela Prospecção; pôr, tirar, devolver e copiar.
+              resources :audiences, only: [:index, :show] do
+                member do
+                  post :leads, action: :add_leads
+                  delete :members, action: :remove_members
+                  post :members, action: :restore_members
+                  post :copy
+                end
               end
               resources :lists, only: [:index, :show, :create] do
                 post 'leads', on: :member, action: :add_lead

@@ -18,6 +18,8 @@
 #   mesma pessoa.
 # - Isolamento por lead, de propósito: a falha de um lead (dado recusado ou erro inesperado) fica só nele, em left_out,
 #   e os outros entram. Um lead ruim não derruba o pedido inteiro.
+# - Lista que já existe (#2775, F6): Autonomia::Prospecting::LeadsIntoAudience, a subclasse que usa este mesmo caminho
+#   e troca só o alvo (check_target!, members e write).
 # - O Público é gravado de uma vez, no fim. Recusa do writer (contato apagado no meio, por exemplo) vira Error com o
 #   mesmo código e contacts_saved: os contatos já criados ficam.
 class Autonomia::Prospecting::AudienceFromLeads
@@ -58,8 +60,8 @@ class Autonomia::Prospecting::AudienceFromLeads
   def perform
     raise Error, 'no_leads' if @requested.empty?
     raise Error, 'too_many_leads' if @requested.size > MAX_LEADS
-    raise Error, 'name_required' if @name.blank?
 
+    check_target!
     rows = {}
     left_out = invalid_ids.map { |value| left(value, 'not_found') }
     @lead_ids.each { |lead_id| place(lead_id, rows, left_out) }
@@ -69,6 +71,16 @@ class Autonomia::Prospecting::AudienceFromLeads
   end
 
   private
+
+  # O que precisa estar certo no destino antes de criar qualquer contato. No Público novo, o nome.
+  def check_target!
+    raise Error, 'name_required' if @name.blank?
+  end
+
+  # Os contatos que já estão no destino; nenhum no Público novo.
+  def members
+    Set.new
+  end
 
   # O que veio no pedido e não é id: sai como not_found, com o valor como veio.
   def invalid_ids
@@ -112,26 +124,15 @@ class Autonomia::Prospecting::AudienceFromLeads
 
   def add_row(lead_id, contact, rows, left_out)
     reason = REACH_REASONS[ConversationAudience::Reach.reason_for(contact)]
+    reason ||= 'already_in_list' if members.include?(contact.id)
     reason ||= 'same_contact' if rows.each_value.any? { |row| row.contact_id == contact.id }
     return left_out << left(lead_id, reason) if reason
 
-    rows[lead_id] = row_for(contact)
+    rows[lead_id] = Autonomia::Prospecting::AudienceRows.row_for(contact)
   end
 
   def converter_for(lead)
     Autonomia::Prospecting::ContactConverter.new(lead: lead, user: @user, consent_veto: eligibility.consent_veto)
-  end
-
-  def row_for(contact)
-    CampaignJourney::AudienceWriter::Row.new(
-      contact_id: contact.id, name: contact.name, phone: ConversationAudience::Reach.phone(contact),
-      email: ConversationAudience::Reach.email(contact), company_name: company_name(contact), extra_values: {}
-    )
-  end
-
-  # A mesma leitura da mensagem para empresa_cliente.nome (TemplateFields::ContactResolver).
-  def company_name(contact)
-    contact.try(:company)&.name.presence || contact.additional_attributes.to_h['company_name'].to_s.squish.presence
   end
 
   def left(lead_id, reason_code)
