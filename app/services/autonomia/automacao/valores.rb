@@ -183,8 +183,12 @@ class Autonomia::Automacao::Valores
       :valor_de_venda if account_user && !pode_ler?(caminho, account_user)
     end
 
-    # O caminho, no alvo (`Conversation`, `Crm::Card`, `Contact`), só pode decidir, nunca ir para um texto ou campo?
-    def so_decide?(caminho, alvo_type) = alvo_type.to_s == SO_DECIDE_NO_ALVO && PROTEGIDOS.key?(caminho.to_s)
+    # O caminho só pode decidir, nunca ir para um texto ou campo? Pelo tipo do gatilho da receita (`mensagem.criada`),
+    # o mesmo que o salvar olha: o ponto único do salvar (CardDaConversa.problema), da execução (`ler_para_escrever`) e
+    # dos passos de IA (ComIa.leva_o_valor?).
+    def so_decide?(caminho, gatilho)
+      ::Autonomia::Automacao::Gatilhos.alvo(gatilho) == SO_DECIDE_NO_ALVO && PROTEGIDOS.key?(caminho.to_s)
+    end
 
     # `account_user` pode ler o caminho? Sem pessoa (nil), o valor protegido fica fechado.
     def pode_ler?(caminho, account_user)
@@ -225,7 +229,7 @@ class Autonomia::Automacao::Valores
   # O valor que vai para um texto ou um campo (Texto, Corpo). O que só decide (`so_decide?`) lê vazio: o passo pula com
   # `faltou_valor` em vez de escrever o valor. A condição continua com `ler`.
   def ler_para_escrever(caminho)
-    return ler(caminho) unless self.class.so_decide?(caminho, @contexto.alvo.class.name)
+    return ler(caminho) unless self.class.so_decide?(caminho, @contexto.gatilho)
 
     @vazios << caminho.to_s
     nil

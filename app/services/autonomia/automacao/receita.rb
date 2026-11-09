@@ -211,7 +211,7 @@ class Autonomia::Automacao::Receita
     return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
 
-    no_lugar = ::Autonomia::Automacao::CardDaConversa.problema(caminho, onde, alvo_do_gatilho)
+    no_lugar = ::Autonomia::Automacao::CardDaConversa.problema(caminho, onde, @receita.dig('gatilho', 'tipo'))
     return [texto(no_lugar, passo: id, caminho: caminho)] if no_lugar
 
     Array(valores.problema_de_leitura(caminho, conta: @conta, account_user: @account_user)).map { |chave| texto(chave, passo: id, caminho: caminho) }

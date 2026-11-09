@@ -416,6 +416,9 @@ ex.14 continua no `pendentes_spec`.
   Os passos de IA seguem o mesmo critério (`ComIa.leva_o_valor?`, também no "Testar este passo"): na automação de
   conversa, o `le: card` do escrever, do resumir e do extrair vai sem o valor; o decidir o recebe. Essa brecha já
   existia na main desde o #2679 (o `Estado` acha o card da conversa); fechada aqui.
+  A decisão vem sempre do tipo do gatilho da receita (`Valores.so_decide?(caminho, gatilho)`, com `Contexto#gatilho`),
+  no salvar, na execução, no ensaio e nos passos de IA. No "Testar este passo", o valor só vai se quem testa e quem
+  ligou a automação já salva (`automacao_id`) podem vê-lo.
 - `mensagem.tem_anexo` (sim ou não, só no filtro de `mensagem.criada`): a mensagem traz foto ou PDF (a régua do
   ex.14: "a cada foto ou PDF que chega"). Foto é o anexo `image` com arquivo; PDF é o `file` com `application/pdf`.
   Áudio, vídeo, figurinha e outro arquivo não contam. A figurinha do WhatsApp chega como `image`

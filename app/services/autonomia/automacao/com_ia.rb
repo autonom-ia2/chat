@@ -21,10 +21,10 @@ module Autonomia::Automacao::ComIa
 
   # O valor do card vai à IA? Só com a chave de quem lê (#2597, Valores.pode_ler?) e, na automação de conversa, só no
   # passo que decide (#2780, Valores.so_decide?): o que escreve (escrever, resumir, extrair) não o leva ao texto. A
-  # automação de card segue só com a chave. `alvo_type`: o alvo do gatilho (`Conversation`, `Crm::Card`, `Contact`).
-  def self.leva_o_valor?(passo, alvo_type, account_user)
+  # automação de card segue só com a chave. `gatilho`: o tipo do gatilho da receita, como no salvar.
+  def self.leva_o_valor?(passo, gatilho, account_user)
     valores = ::Autonomia::Automacao::Valores
-    valores.pode_ler?(VALOR, account_user) && (passo['tipo'] == DECIDE || !valores.so_decide?(VALOR, alvo_type))
+    valores.pode_ler?(VALOR, account_user) && (passo['tipo'] == DECIDE || !valores.so_decide?(VALOR, gatilho))
   end
 
   # `usuario` vê o card? A pergunta do resto do CRM (Crm::CardPolicy#show?). Quem saiu da conta não vê.
@@ -75,7 +75,8 @@ module Autonomia::Automacao::ComIa
   def ve_o_valor_do_card?
     quem = @execucao.automacao.ligada_por
     na_conta = quem && @conversa.account.account_users.find_by(user_id: quem.id)
-    ::Autonomia::Automacao::ComIa.leva_o_valor?(@passo, @alvo.class.name, na_conta)
+    gatilho = ::Autonomia::Automacao::Contexto.de(@alvo, execucao: @execucao).gatilho
+    ::Autonomia::Automacao::ComIa.leva_o_valor?(@passo, gatilho, na_conta)
   end
 
   # O fuso que a tela grava na conta (#954, o mesmo do Guia); sem ele, o padrão da plataforma (Crm::Timezone::Resolver).

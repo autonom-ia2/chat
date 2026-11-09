@@ -23,12 +23,13 @@ module Autonomia::Automacao::CardDaConversa
   end
 
   # O que o salvar recusa no caminho, pelo lugar em que ele é lido (`onde`: :caminho ou :corpo da ação, :texto; nil é
-  # decidir): a ação que apontaria para o card da conversa, e o valor protegido escrito num corpo ou num texto, que na
-  # automação de conversa só decide (#2780, Valores.so_decide?). Devolve a chave da frase, ou nil.
-  def problema(caminho, onde, alvo_type)
-    return :card_da_conversa_so_le if NA_ACAO.include?(onde) && age?(caminho, onde, alvo_type)
+  # decidir), no gatilho da receita (`gatilho`: o tipo): a ação que apontaria para o card da conversa, e o valor
+  # protegido escrito num corpo ou num texto, que na automação de conversa só decide (#2780, Valores.so_decide?).
+  # Devolve a chave da frase, ou nil.
+  def problema(caminho, onde, gatilho)
+    return :card_da_conversa_so_le if NA_ACAO.include?(onde) && age?(caminho, onde, ::Autonomia::Automacao::Gatilhos.alvo(gatilho))
 
-    :valor_protegido_so_decide if ESCREVE.include?(onde) && ::Autonomia::Automacao::Valores.so_decide?(caminho, alvo_type)
+    :valor_protegido_so_decide if ESCREVE.include?(onde) && ::Autonomia::Automacao::Valores.so_decide?(caminho, gatilho)
   end
 
   # Algum `$valor` da receita lê o card? Anda pela receita inteira (gatilho, filtros, condições, textos, caminhos e

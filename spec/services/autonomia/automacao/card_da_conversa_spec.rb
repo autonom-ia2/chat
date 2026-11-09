@@ -218,13 +218,25 @@ RSpec.describe 'Automação livre: o card da conversa e o anexo da mensagem', :a
 
     it 'o valor calculado do corpo também não o escreve, e a condição o lê', :aggregate_failures do
       card(documentacao).update!(value_cents: 250_000)
-      valores = Autonomia::Automacao::Valores.new(alvo: conversa, quem: admin)
+      contexto = Autonomia::Automacao::Contexto.de(conversa, gatilho: 'mensagem.criada')
+      valores = Autonomia::Automacao::Valores.new(alvo: contexto, quem: admin)
       folha = { 'custom_attributes' => { 'valor' => { '$valor' => 'card.valor' } } }
       corpo = Autonomia::Automacao::Corpo.new(folha, valores: valores, conta: account)
 
       expect(corpo.montar.motivo).to eq('faltou_valor')
       expect(Autonomia::Automacao::Texto.new(['Valor: ', { '$valor' => 'card.valor' }], valores).montar).to be_nil
       expect(valores.ler('card.valor')).to eq(2500)
+    end
+
+    # A decisão vem do tipo do gatilho da receita, como no salvar, e não do objeto em que a execução roda: o ensaio de
+    # uma automação de card roda numa conversa e escreve o valor como a execução no card escreveria.
+    it 'decide pelo tipo do gatilho, não pelo alvo', :aggregate_failures do
+      card(documentacao).update!(value_cents: 250_000)
+      no_gatilho = ->(gatilho) { Autonomia::Automacao::Contexto.de(conversa, gatilho: gatilho) }
+      escrito = ->(gatilho) { Autonomia::Automacao::Valores.new(alvo: no_gatilho.call(gatilho), quem: admin).ler_para_escrever('card.valor') }
+
+      expect(escrito.call('mensagem.criada')).to be_nil
+      expect(escrito.call('card.ganho')).to eq(2500)
     end
   end
 

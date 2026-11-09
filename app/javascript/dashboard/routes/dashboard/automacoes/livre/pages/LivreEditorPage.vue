@@ -599,6 +599,7 @@ onMounted(() => {
               :atributos-da-peca="atributosDaPeca"
               :atributos-do="atributosDo"
               :receita-do-teste="receitaDoSalvar"
+              :automacao-id="automacao?.id ?? null"
               :custos="custos"
               :gatilhos="gatilhos"
               :escolhas-do-gatilho="{
