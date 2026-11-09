@@ -265,6 +265,24 @@ RSpec.describe Autonomia::Automacao::CampanhaDaOcorrencia, :automacao_motor do
     expect(fecha_vez_na_fila).to eq(2)
   end
 
+  it 'na rede, quem ainda espera depois de ESPERA_MAXIMA fica de fora, e o registro diz quantos', :aggregate_failures do
+    linha = varredura
+    execucoes.first(2).each { |execucao| chega(execucao) }
+    execucoes.last.update_columns(estado: 'esperando', due_at: 1.day.from_now) # rubocop:disable Rails/SkipsModelValidations
+
+    travel_to(Time.current + described_class::ESPERA_MAXIMA + 1.hour) do
+      execucoes.last.update_columns(due_at: 1.day.from_now, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      Autonomia::Automacao::FecharVezJob.perform_now(linha.id)
+    end
+
+    expect(account.campaigns.count).to eq(1)
+    resumo = registro_da_vez('campanha_da_vez_saiu_pela_rede')
+    expect(resumo.dados).to include('chegaram' => 2, 'esperaram' => 1, 'dias' => 30)
+    historico = Autonomia::Automacao::Historico.new(automacao: definicao, usuario: dona)
+    texto = I18n.with_locale(:pt_BR) { historico.send(:passo, resumo, visivel: true)[:motivo] }
+    expect(texto).to include('1 ficaram de fora por ainda estarem esperando depois de 30 dias')
+  end
+
   it 'a vez sem a contagem dos lotes (varredura antes da atualização) sai pela rede com o texto disso', :aggregate_failures do
     linha = described_class.send(:garantir, definicao, Autonomia::Automacao::Gatilhos.marca_da_vez('card.recorrente', vez), 'c1')
     execucoes.each { |execucao| chega(execucao) }

@@ -26,11 +26,13 @@
 # Uma conferência marcada por vez (`conferir_em`): a mais cedo vale, e o FecharVezJob que acorda fora da hora marcada
 # não faz nada. Rede de segurança (a cada REDE enquanto a vez está aberta): a execução TRAVADA (aberta, sem espera e
 # sem andar há mais de REDE) e o lote que não rodou em REDE contam como fora, e o registro diz quantos. A execução que
-# espera ("esperar" antes da campanha) segura a vez pelo tempo que for.
+# espera ("esperar" antes da campanha) segura a vez até ESPERA_MAXIMA depois de a vez abrir; daí em diante, na rede,
+# também conta como fora (a espera sem prazo renova o prazo e seguraria a vez para sempre).
 class Autonomia::Automacao::CampanhaDaOcorrencia
   REDE = 2.hours
   TENTAR_DE_NOVO = 5.minutes
   TENTATIVAS = 5
+  ESPERA_MAXIMA = 30.days
   Vez = ::Autonomia::Automacao::CampanhaDaVez
   Gatilhos = ::Autonomia::Automacao::Gatilhos
   Execucao = ::Autonomia::Automacao::Execucao

@@ -4,7 +4,8 @@
 # resposta, repetida quantas vezes for.
 #
 # `rede`: na rede de segurança (CampanhaDaOcorrencia::REDE), a execução travada (aberta, sem espera, sem andar há mais de
-# REDE) e o lote que não rodou depois de REDE contam como fora. A que espera segura a vez.
+# REDE) e o lote que não rodou depois de REDE contam como fora. A que espera segura a vez até ESPERA_MAXIMA depois de a
+# vez abrir; daí em diante também conta como fora (a espera sem prazo renova o `due_at` e seguraria a vez para sempre).
 #
 # As execuções da vez são achadas pelo começo da marca (`evento LIKE`), pelo índice idx_autonomia_automacao_execucoes_vez
 # (text_pattern_ops), sem ler as das outras vezes da automação.
@@ -38,11 +39,12 @@ class Autonomia::Automacao::EstadoDaVez
   def motivo_da_saida
     return 'campanha_da_vez_saiu_sem_contar_lotes' if @rede && @vez.lotes.nil?
 
-    fora.positive? || lotes_fora.positive? ? 'campanha_da_vez_saiu_pela_rede' : 'campanha_da_vez_saiu'
+    fora.positive? || lotes_fora.positive? || esperaram.positive? ? 'campanha_da_vez_saiu_pela_rede' : 'campanha_da_vez_saiu'
   end
 
   def contagem
-    { 'chegaram' => chegaram, 'sairam' => sairam, 'fora' => fora, 'lotes_fora' => lotes_fora, 'horas' => Ocorrencia::REDE.in_hours.to_i }
+    { 'chegaram' => chegaram, 'sairam' => sairam, 'fora' => fora, 'lotes_fora' => lotes_fora, 'esperaram' => esperaram,
+      'horas' => Ocorrencia::REDE.in_hours.to_i, 'dias' => Ocorrencia::ESPERA_MAXIMA.in_days.to_i }
   end
 
   private
@@ -59,7 +61,12 @@ class Autonomia::Automacao::EstadoDaVez
   # As travadas: abertas, sem espera e sem andar há mais de REDE.
   def travadas = abertas_antes.where.not(estado: 'esperando').where(updated_at: ...@limite)
 
-  def seguram = @rede ? abertas_antes.where.not(id: travadas.select(:id)) : abertas_antes
+  # As que esperam depois de ESPERA_MAXIMA da vez (só na rede).
+  def esperas_longas = esgotada? ? abertas_antes.where(estado: 'esperando') : Execucao.none
+
+  def esgotada? = @rede && @vez.created_at <= Time.current - Ocorrencia::ESPERA_MAXIMA
+
+  def seguram = @rede ? abertas_antes.where.not(id: travadas.select(:id)).where.not(id: esperas_longas.select(:id)) : abertas_antes
 
   def lotes_ok? = @vez.lotes_rodaram? || (@rede && @vez.created_at <= @limite)
 
@@ -70,6 +77,8 @@ class Autonomia::Automacao::EstadoDaVez
   def sairam = execucoes.where.not(finalizada_em: nil).where.not(id: passaram).count
 
   def fora = @rede ? travadas.count : 0
+
+  def esperaram = esgotada? ? esperas_longas.count : 0
 
   def lotes_fora = @rede && !@vez.lotes_rodaram? ? @vez.lotes_fora : 0
 end
