@@ -58,8 +58,7 @@ class ConversaCanal::ReacaoNoInstagram
   end
 
   def url
-    versao = GlobalConfigService.load('INSTAGRAM_API_VERSION', 'v22.0')
-    "https://graph.instagram.com/#{versao}/#{canal.instagram_id.presence || 'me'}/messages"
+    "#{canal.graph_base_uri}/#{canal.messages_node}/messages"
   end
 
   def corpo(emoji)
