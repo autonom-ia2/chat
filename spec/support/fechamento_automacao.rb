@@ -235,9 +235,12 @@ module FechamentoAutomacao::Lacunas
     # nasce sem conversa, e a mensagem do gatilho de reunião nele pula com `sem_conversa`. Caminho escolhido: o Booker
     # liga ao card novo a conversa do contato na caixa da página, quando ela existe. A frente dona troca o nil pela sonda.
     'G47' => nil,
-    # Do exemplo 14, passo 5: "2 dias sem documento novo" conta do último documento (foto ou PDF) e recomeça a cada um.
-    # Gatilho de tempo próprio, no molde do card.parado; prova em spec/fechamento/automacao/exemplo_14_documentos_passo_5_spec.rb.
-    'G46' => -> { gatilho?('card.sem_documento') && Autonomia::Automacao::Gatilhos.entrada('card.sem_documento').origem == :tempo }
+    # Do exemplo 14, passo 5 (#2791): o laço dos documentos numa automação só. O "esperar até" lê o documento novo, e o
+    # "decidir" volta a ele (`de_novo.desde`). Prova em spec/fechamento/automacao/exemplo_14_documentacao_spec.rb.
+    'G46' => lambda {
+      opcoes = Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'de_novo', 'oneOf')
+      valor?('conversa.cliente_mandou_documento') && Array(opcoes).any? { |opcao| opcao.dig('properties', 'desde') }
+    }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

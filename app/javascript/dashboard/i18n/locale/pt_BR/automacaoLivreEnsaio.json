@@ -31,6 +31,7 @@
       "SE_NENHUM": "Se nenhum se aplicar:",
       "SE_CAMINHO_DE_NOVO": "Se a IA escolher \"{nome}\": espera a próxima resposta e decide de novo. Sem resposta no prazo, encerra sem mandar nada.",
       "SE_NENHUM_DE_NOVO": "Se nenhum se aplicar: espera a próxima resposta e decide de novo. Sem resposta no prazo, encerra sem mandar nada.",
+      "VOLTA": "Depois volta a esperar: {passo}",
       "NAO_SAIRIA": "Não sairia: a mensagem automática ainda não está ligada nesta conta.",
       "FALTOU_VALOR": "Não sairia: falta um dado desta conversa no texto.",
       "TEXTO_VAZIO": "Não sairia: o texto ficaria vazio.",

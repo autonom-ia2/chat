@@ -641,7 +641,6 @@ en:
         reunioes_desligadas: 'Meetings are off in this installation, so the meeting triggers cannot be used.'
         etapa_de_fora: 'Trigger: stage %{id} is not from this account.'
         parado_sem_dias: 'Trigger: a stuck card needs at least 1 day.'
-        sem_documento_sem_dias: 'Trigger: a card without a document needs at least 1 day.'
         campo_de_fora: 'Trigger: field %{campo} is not a date field of this account.'
         faixa_invertida: 'Trigger: in "closed between", the first number (%{de}) is greater than the second (%{ate}). That way it never picks any card.'
         passo_pede_alvo: 'Step %{passo}: this trigger runs on the account, with no conversation, card or contact. Only wait and send campaign fit here.'
@@ -659,6 +658,9 @@ en:
         de_novo_caminho_desconhecido: "Step %{passo}: \"decide again\" points to a path this step doesn't have (%{chave})."
         de_novo_com_passos: "Step %{passo}: the path %{nome} decides again, so it can't have steps. Remove its steps or unmark it."
         de_novo_todos: "Step %{passo}: leave at least one path that doesn't decide again, so the automation can move on."
+        de_novo_desde_desconhecido: "Step %{passo}: \"go back to wait\" points to a step this automation doesn't have (%{desde})."
+        de_novo_desde_nao_anterior: "Step %{passo}: \"go back to wait\" must be a \"wait until\" that comes before this step, in the same list (%{desde} isn't)."
+        de_novo_desde_sem_resposta: "Step %{passo}: the \"wait until\" %{desde} must wait for the customer: \"the customer replied\" or \"the customer sent a photo or PDF\" equal to yes. Otherwise the automation would go around without the customer."
         caminho_nenhum: "None applies"
         destino_invalido: "Step %{passo}: %{destino} is not a place where the AI can save."
         campo_repetido: "Step %{passo}: %{chave} appears twice."

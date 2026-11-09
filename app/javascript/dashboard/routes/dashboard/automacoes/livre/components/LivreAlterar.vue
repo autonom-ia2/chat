@@ -19,7 +19,7 @@ import LivreIaCampo from './LivreIaCampo.vue';
 import LivreDecidirDeNovo from './LivreDecidirDeNovo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
-import { caminhosProntos, deNovoPronto } from '../ia';
+import { caminhosProntos, deNovoPronto, esperasAnteriores } from '../ia';
 import { campanhaPronta } from '../campanha';
 import { envioPronto, paraPronto } from '../retorno';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
@@ -305,6 +305,17 @@ const receitaParaTestar = computed(() =>
     : null
 );
 
+// G46: os "esperar até" de antes do "decidir" para onde o caminho pode voltar,
+// com a frase de cada um, lidos do rascunho inteiro.
+const esperasDoDecidir = computed(() =>
+  esperasAnteriores(receitaParaTestar.value, rascunho.value?.id).map(
+    espera => ({
+      value: espera.id,
+      label: fraseDoPasso(espera, props.catalogo, t),
+    })
+  )
+);
+
 defineExpose({ abrir, fechar });
 </script>
 
@@ -507,6 +518,7 @@ defineExpose({ abrir, fechar });
           :model-value="rascunho[campo.nome]"
           :passo="rascunho"
           :unidades="catalogo.unidades"
+          :esperas="esperasDoDecidir"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreIaCampo

@@ -1134,7 +1134,6 @@ pt_BR:
         reunioes_desligadas: 'As reuniões estão desligadas nesta instalação, e os gatilhos de reunião não podem ser usados.'
         etapa_de_fora: 'Gatilho: a etapa %{id} não é desta conta.'
         parado_sem_dias: 'Gatilho: card parado pede pelo menos 1 dia.'
-        sem_documento_sem_dias: 'Gatilho: card sem documento pede pelo menos 1 dia.'
         campo_de_fora: 'Gatilho: o campo %{campo} não é um campo de data desta conta.'
         faixa_invertida: 'Gatilho: em "fechado entre", o primeiro número (%{de}) é maior que o segundo (%{ate}). Assim não pega nenhum card.'
         passo_pede_alvo: 'Passo %{passo}: este gatilho roda na conta, sem conversa, card ou contato. Aqui só cabem esperar e disparar campanha.'
@@ -1152,6 +1151,9 @@ pt_BR:
         de_novo_caminho_desconhecido: "Passo %{passo}: o \"decidir de novo\" aponta para um caminho que este passo não tem (%{chave})."
         de_novo_com_passos: "Passo %{passo}: o caminho %{nome} decide de novo, então não pode ter passos. Tire os passos dele ou desmarque."
         de_novo_todos: "Passo %{passo}: deixe pelo menos um caminho que não decide de novo, para a automação seguir."
+        de_novo_desde_desconhecido: "Passo %{passo}: o \"voltar a esperar\" aponta para um passo que esta automação não tem (%{desde})."
+        de_novo_desde_nao_anterior: "Passo %{passo}: o \"voltar a esperar\" precisa ser um \"esperar até\" que vem antes deste passo, na mesma lista (%{desde} não é)."
+        de_novo_desde_sem_resposta: "Passo %{passo}: o \"esperar até\" %{desde} precisa esperar o cliente: \"o cliente respondeu\" ou \"o cliente mandou foto ou PDF\" igual a sim. Senão a automação daria voltas sem o cliente."
         caminho_nenhum: "Nenhum se aplica"
         destino_invalido: "Passo %{passo}: a IA não pode gravar em %{destino}."
         campo_repetido: "Passo %{passo}: %{chave} aparece duas vezes."

@@ -10,7 +10,7 @@
 # - todo `$valor` do caminho, do corpo e das condições é um caminho que a automação sabe ler;
 # - a condição sobre um valor fechado (`mensagem.tipo`) usa uma das opções e um dos operadores dele (#2496);
 # - o gatilho de card só com a flag da F6, e a etapa ou o funil escolhidos nele são da conta (#2499);
-# - o "decidir" a cada resposta (G31) só repete caminhos dele, sem passos, e deixa um para seguir (DecidirDeNovo).
+# - o "decidir" a cada resposta (G31/G46) repete caminhos dele e deixa um para seguir (DecidirDeNovo).
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
   RAMOS = %w[entao senao se_vencer].freeze
@@ -118,7 +118,7 @@ class Autonomia::Automacao::Receita
      *(fala_com_gente?(passo) && !::Autonomia::Automacao::Motor.mensagens?(@conta) ? [texto(:passo_desligado, passo: id)] : []),
      *caminhos_repetidos(id, Array(passo['caminhos'])),
      *caminhos_sem_chave_boa(id, Array(passo['caminhos'])),
-     *::Autonomia::Automacao::DecidirDeNovo.problemas_ao_salvar(passo),
+     *::Autonomia::Automacao::DecidirDeNovo.problemas_ao_salvar(passo, @receita),
      *repetidos(id, Array(passo['campos']).pluck('chave'), :campo_repetido),
      *Array(passo['campos']).flat_map { |campo| destino_invalido(id, campo['destino']) },
      *destinatarios_de_fora('id' => id, 'para' => avisar_do_resumir(passo))]
@@ -176,10 +176,9 @@ class Autonomia::Automacao::Receita
   end
 
   # O caminho que não vale ali já diz o que corrigir; o valor fora só aparece depois.
-  def problemas_da_condicao(id, condicao, no_gatilho: false, na_espera: false)
-    lidos = ::Autonomia::Automacao::Condicao.caminhos(condicao).flat_map do |caminho|
-      problemas_do_caminho(id, caminho, no_gatilho: no_gatilho, na_espera: na_espera)
-    end
+  # `opcoes`: no_gatilho e na_espera, as de problemas_do_caminho.
+  def problemas_da_condicao(id, condicao, **opcoes)
+    lidos = ::Autonomia::Automacao::Condicao.caminhos(condicao).flat_map { |caminho| problemas_do_caminho(id, caminho, **opcoes) }
     lidos.presence || fora_do_fechado(id, condicao)
   end
 

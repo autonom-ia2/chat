@@ -10,6 +10,8 @@
 #   Fernanda", depois de passar a conversa para ela). O eco do celular não conta: ele não diz quem mandou.
 # - Gatilho repetiu (lote 4): o gatilho da execução aconteceu de novo durante a espera (a 2ª falta dentro dos 30 dias).
 #   A Partida grava a hora em `repetiu_em`; lida do banco, porque a execução em memória é de antes da repetição.
+# - Documento (G46, exemplo 14): mensagem recebida com foto ou PDF (FotoOuPdf, a régua do `mensagem.tem_anexo`), só na
+#   conversa da execução, a mesma que o `le: anexos` lê, e só se quem ligou a vê. Texto e áudio ("já mando") não contam.
 #
 # O eco de uma mensagem NOSSA (IA, automação, robô) não é a equipe respondendo. Normalmente ele nem vira mensagem: o
 # reconciliador o junta à bolha que já existe (WhatsappHybrid::EchoReconcilerExtension; na Cloud, o mesmo source_id).
@@ -31,7 +33,8 @@ module Autonomia::Automacao::Resposta
     'conversa.cliente_respondeu' => ->(contexto, espera, quem) { cliente?(contexto.contato, espera, quem) },
     'conversa.equipe_respondeu' => ->(contexto, espera, _quem) { equipe_na?(contexto.conversa, espera) },
     'conversa.responsavel_respondeu' => ->(contexto, espera, _quem) { responsavel?(contexto.conversa, espera) },
-    'gatilho.repetiu' => ->(contexto, espera, _quem) { repetiu?(contexto.execucao, espera) }
+    'gatilho.repetiu' => ->(contexto, espera, _quem) { repetiu?(contexto.execucao, espera) },
+    'conversa.cliente_mandou_documento' => ->(contexto, espera, quem) { documento?(contexto.conversa, espera, quem) }
   }.freeze
 
   # Em qualquer conversa do contato na conta que `quem` (quem ligou) vê, pelo filtro da lista de conversas (#2680): o
@@ -47,9 +50,18 @@ module Autonomia::Automacao::Resposta
   end
 
   # As conversas de `escopo` que `quem` vê, pelo filtro da lista de conversas (#2680). É a régua do "cliente
-  # respondeu" e do último documento do cliente (G46, Tempo::SemDocumento).
+  # respondeu" e do "cliente mandou documento" (G46).
   def conversas_que_ve(escopo, quem, conta)
     ::Conversations::PermissionFilterService.new(escopo, quem, conta, for_reading: true).perform
+  end
+
+  # Sem conversa (o card sem conversa principal) ou sem quem ligou, nenhum documento chegou.
+  def documento?(conversa, espera, quem)
+    return false if conversa.nil? || quem.nil?
+    return false unless conversas_que_ve(::Conversation.where(id: conversa.id), quem, conversa.account).exists?
+
+    recebidas = ::Message.incoming.where(account_id: conversa.account_id, conversation_id: conversa.id)
+    na_janela(::Autonomia::Automacao::FotoOuPdf.escopo(recebidas), espera).exists?
   end
 
   # Sem conversa (o card sem conversa principal, o contato antes da conversa nova), a equipe nunca respondeu.

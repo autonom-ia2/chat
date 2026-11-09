@@ -13,25 +13,37 @@
 # - Vencido o prazo sem resposta, a execução acaba ('concluida') sem mandar nada, com o registro pulado 'prazo_vencido'
 #   (decisão do Rodrigo, 09/11): os passos depois do "decidir" não rodam. É uma regra só, não configurável por caminho.
 # - A nova tentativa de um erro passageiro da IA roda direto, sem pedir outra resposta.
+#
+# O laço dos documentos (G46, exemplo 14) é o `de_novo` com `desde` no lugar do `prazo`: o caminho marcado roda os passos
+# dele e volta ao "esperar até" `desde` (Roteiro), que é quem espera o próximo documento ou a próxima resposta. Sem
+# espera própria no "decidir": `espera?` vale só sem `desde`. As conferências do `desde` ficam em DecidirDeNovo::Desde.
 # Fica fora do Executor para ele seguir sendo a lista dos passos; usa os métodos dele (aguardar, registrar, contexto).
 module Autonomia::Automacao::DecidirDeNovo
   NENHUM = ::Autonomia::Automacao::Receita::NENHUM
 
-  # O passo é um "decidir" que pode voltar a esperar.
-  def self.espera?(passo) = passo.is_a?(Hash) && passo['tipo'] == 'decidir' && passo['de_novo'].is_a?(Hash)
+  # O passo é um "decidir" com `de_novo`, com ou sem `desde`.
+  def self.de_novo?(passo) = passo.is_a?(Hash) && passo['tipo'] == 'decidir' && passo['de_novo'].is_a?(Hash)
 
-  # A IA escolheu um caminho que decide de novo.
-  def self.repete?(passo, ramo) = espera?(passo) && Array(passo.dig('de_novo', 'caminhos')).include?(ramo)
+  # O "decidir" que espera ele mesmo a próxima resposta (G31): o `de_novo` sem `desde`.
+  def self.espera?(passo) = de_novo?(passo) && passo.dig('de_novo', 'desde').blank?
+
+  # A IA escolheu um caminho marcado no `de_novo`.
+  def self.marcado?(passo, ramo) = de_novo?(passo) && Array(passo.dig('de_novo', 'caminhos')).include?(ramo)
+
+  # A IA escolheu um caminho que espera a próxima resposta e decide de novo (G31).
+  def self.repete?(passo, ramo) = espera?(passo) && marcado?(passo, ramo)
 
   # O que o esquema não sabe dizer, conferido ao salvar: a chave é de um caminho do passo (ou "nenhum"), o caminho que
-  # decide de novo não tem passos (sem "voltar para", eles nunca voltariam ao decidir) e sobra um caminho para seguir.
-  def self.problemas_ao_salvar(passo)
-    return [] unless espera?(passo)
+  # decide de novo sem `desde` não tem passos (eles nunca voltariam ao decidir), sobra um caminho para seguir e o
+  # `desde` é um "esperar até" de antes que espera o cliente (Desde). `receita`: a receita inteira.
+  def self.problemas_ao_salvar(passo, receita)
+    return [] unless de_novo?(passo)
 
     caminhos = Array(passo['caminhos'])
     marcados = Array(passo.dig('de_novo', 'caminhos'))
-    [*desconhecidos(passo['id'], caminhos, marcados), *com_passos(passo, caminhos, marcados),
-     *(caminhos.all? { |caminho| marcados.include?(caminho['chave']) } ? [texto(:de_novo_todos, passo: passo['id'])] : [])]
+    [*desconhecidos(passo['id'], caminhos, marcados), *(espera?(passo) ? com_passos(passo, caminhos, marcados) : []),
+     *(caminhos.all? { |caminho| marcados.include?(caminho['chave']) } ? [texto(:de_novo_todos, passo: passo['id'])] : []),
+     *::Autonomia::Automacao::DecidirDeNovo::Desde.problemas(passo, receita)]
   end
 
   def self.desconhecidos(id, caminhos, marcados)
@@ -45,13 +57,15 @@ module Autonomia::Automacao::DecidirDeNovo
   end
 
   # Os ramos do "decidir" no ensaio (Ensaio#decidir), um por caminho e o "nenhum": os passos que o bloco ensaia a partir
-  # do primeiro. O caminho que decide de novo não roda passo nenhum: espera a próxima resposta e, vencido o prazo, a
-  # execução acaba sem mandar nada. A marca `de_novo` faz a tela dizer isso.
+  # do primeiro. O caminho que decide de novo (G31) não roda passo nenhum: espera a próxima resposta e, vencido o prazo,
+  # a execução acaba sem mandar nada; a marca `de_novo` faz a tela dizer isso. O caminho que volta (G46) roda os passos
+  # dele e para (o roteiro do ensaio não volta); a marca `volta` diz a qual "esperar até".
   def self.ramos_do_ensaio(passo, roteiro)
-    caminhos = Array(passo['caminhos']).map { |item| [item['chave'], item['nome'], Array(item['passos']).first || roteiro.seguinte(passo['id'])] }
-    [*caminhos, [NENHUM, nil, roteiro.entrar(passo, NENHUM)]].map do |chave, nome, primeiro|
+    chaves = Array(passo['caminhos']).map { |item| [item['chave'], item['nome']] } << [NENHUM, nil]
+    chaves.map do |chave, nome|
       de_novo = repete?(passo, chave)
-      { chave: chave, nome: nome, de_novo: de_novo || nil, passos: de_novo ? [] : yield(primeiro) }.compact
+      { chave: chave, nome: nome, de_novo: de_novo || nil, volta: roteiro.volta(passo, chave),
+        passos: de_novo ? [] : yield(roteiro.entrar_no_caminho(passo, chave)) }.compact
     end
   end
 

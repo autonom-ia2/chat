@@ -46,8 +46,6 @@ module Autonomia::Automacao::Gatilhos
     Entrada.new(tipo: 'card.reuniao_remarcada', alvo: CARD, origem: :evento, parametros: %w[funil_id pagina_id]),
     Entrada.new(tipo: 'card.reuniao_cancelada', alvo: CARD, origem: :evento, parametros: %w[funil_id pagina_id]),
     Entrada.new(tipo: 'card.parado', alvo: CARD, origem: :tempo, parametros: %w[etapa_id dias]),
-    # G46: o card na etapa há `dias` dias sem o cliente mandar foto ou PDF, contados do último que chegou.
-    Entrada.new(tipo: 'card.sem_documento', alvo: CARD, origem: :tempo, parametros: %w[etapa_id dias]),
     Entrada.new(tipo: 'card.data', alvo: CARD, origem: :tempo, parametros: DA_DATA),
     Entrada.new(tipo: 'contato.data', alvo: CONTATO, origem: :tempo, parametros: DA_DATA),
     # #2709: o lembrete antes da reunião. A varredura acha a reunião agendada cujo início menos `antes` já chegou.
@@ -143,10 +141,6 @@ module Autonomia::Automacao::Gatilhos
 
   # Parado: o instante em que o card entrou na etapa. Se ele sair e voltar, o instante muda e conta de novo.
   def marca_do_parado(card) = "card.parado:#{card.id}:#{card.entered_stage_at.utc.iso8601(6)}"
-
-  # Sem documento (G46): `desde` é o mais recente entre a entrada na etapa e o último documento do cliente. Cada
-  # documento novo muda o `desde`, e a conta recomeça; no mesmo silêncio, a marca é a mesma e não repete.
-  def marca_do_sem_documento(card, desde) = "card.sem_documento:#{card.id}:#{desde.utc.iso8601(6)}"
 
   # A data do campo: uma vez por alvo, campo e dia.
   def marca_da_data(tipo, alvo, campo, dia) = "#{tipo}:#{alvo.id}:#{campo}:#{dia.iso8601}"

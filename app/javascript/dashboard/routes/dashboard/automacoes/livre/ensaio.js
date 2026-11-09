@@ -136,5 +136,14 @@ export const linhasDoEnsaio = (nos, fraseDe, t, nivel = 0) =>
     ...(no.ramos || []).flatMap(ramo => [
       { nivel: nivel + 1, caminho: true, texto: rotuloDoCaminho(no, ramo, t) },
       ...linhasDoEnsaio(ramo.passos, fraseDe, t, nivel + 2),
+      // G46: o caminho que volta a um "esperar até" acaba dizendo para onde.
+      ...(ramo.volta
+        ? [
+            {
+              nivel: nivel + 2,
+              texto: t(`${E}.VOLTA`, { passo: fraseDe(ramo.volta) }),
+            },
+          ]
+        : []),
     ]),
   ]);

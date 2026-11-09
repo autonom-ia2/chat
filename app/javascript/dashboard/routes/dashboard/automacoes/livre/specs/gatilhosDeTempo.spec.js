@@ -98,11 +98,6 @@ const CATALOGO = {
       parametro('etapa_id', 'etapa'),
       parametro('dias', 'dias'),
     ]),
-    // G46: o "sem documento" pede a etapa e os dias, como o "parado".
-    deTempo('card.sem_documento', 'Crm::Card', 'CARD_SEM_DOCUMENTO', [
-      parametro('etapa_id', 'etapa'),
-      parametro('dias', 'dias'),
-    ]),
     deTempo('card.data', 'Crm::Card', 'CARD_DATA', DA_DATA),
     deTempo('contato.data', 'Contact', 'CONTATO_DATA', DA_DATA),
   ],
@@ -237,29 +232,6 @@ describe('gatilhos de tempo', () => {
       tipo: 'card.parado',
       etapa_id: 12,
       dias: 7,
-    });
-  });
-
-  it('"sem documento" pede a etapa e os dias, de 1 em diante, com o aviso do "parado"', async () => {
-    const wrapper = await montar();
-    await escolherTipo(wrapper, 'card.sem_documento');
-
-    const dias = wrapper.find('[data-parametro="dias"]').findComponent(Input);
-    expect(dias.props('min')).toBe('1');
-    expect(aviso(wrapper).text()).toBe(
-      'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_PARADO'
-    );
-    expect(wrapper.find('[data-nao-dispara]').exists()).toBe(false);
-
-    await escolher(seletorDo(wrapper, 'etapa_id'), 12);
-    await digitarDias(wrapper, 2);
-    expect(wrapper.find('[data-frase-alterar]').text()).toBe(
-      'AUTOMACAO_LIVRE.GATILHO_COM.CARD_SEM_DOCUMENTO Orçamento 2'
-    );
-    expect(await salvo(wrapper)).toEqual({
-      tipo: 'card.sem_documento',
-      etapa_id: 12,
-      dias: 2,
     });
   });
 

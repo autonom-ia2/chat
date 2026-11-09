@@ -10,7 +10,6 @@
 # rodar.
 class Autonomia::Automacao::ProblemasDoGatilho
   Gatilhos = ::Autonomia::Automacao::Gatilhos
-  SEM_DIAS = { 'card.parado' => :parado_sem_dias, 'card.sem_documento' => :sem_documento_sem_dias }.freeze
 
   # `passos`: todos os passos da receita, inclusive os dos ramos (Receita#passos).
   def initialize(gatilho, conta, passos: [])
@@ -57,10 +56,8 @@ class Autonomia::Automacao::ProblemasDoGatilho
     pagina && !@conta.crm_agent_booking_profiles.new_pages.exists?(id: pagina) ? [texto(:pagina_de_fora, id: pagina)] : []
   end
 
-  # O "parado" e o "sem documento" (G46) contam de 1 dia em diante.
   def parado_sem_dias
-    chave = SEM_DIAS[@tipo]
-    chave && @gatilho['dias'].to_i < 1 ? [texto(chave)] : []
+    @tipo == 'card.parado' && @gatilho['dias'].to_i < 1 ? [texto(:parado_sem_dias)] : []
   end
 
   # O campo do card.data e do contato.data é um atributo personalizado de tipo data, do card ou do contato.

@@ -346,13 +346,16 @@ const FRASE_DA_IA = {
         n: (passo.caminhos || []).length,
       }
     );
-    return passo.de_novo
-      ? t(`${P}.DECIDIR_DE_NOVO`, {
-          frase,
-          caminhos: nomesDoDeNovo(passo, t) || '…',
-          prazo: fraseDaDuracao(passo.de_novo.prazo, catalogo, t),
-        })
-      : frase;
+    if (!passo.de_novo) return frase;
+    const caminhos = nomesDoDeNovo(passo, t) || '…';
+    // G46: o caminho marcado roda os passos dele e volta a um "esperar até".
+    if (passo.de_novo.desde)
+      return t(`${P}.DECIDIR_VOLTA`, { frase, caminhos });
+    return t(`${P}.DECIDIR_DE_NOVO`, {
+      frase,
+      caminhos,
+      prazo: fraseDaDuracao(passo.de_novo.prazo, catalogo, t),
+    });
   },
   extrair: (passo, t) =>
     t(`${P}.EXTRAIR`, {
