@@ -1573,6 +1573,7 @@
       "tipo": "prospeccao",
       "grupo": "FUNIL",
       "frase": "AUTOMACAO_LIVRE.PASSOS.PROSPECCAO",
+      "cria_contatos": true,
       "campos": [
         {
           "nome": "faz",
