@@ -63,6 +63,23 @@ RSpec.describe WhatsappApiCampaigns::DeliveryEngine do
     expect(campaign.reload).to be_completed
   end
 
+  it 'não envia ao destinatário pendente cujo contato foi bloqueado depois (chat#2733)' do
+    account, campaign, (ana, bia) = running_campaign_with(['Ana Silva', '+5511987654321'], ['Bia Souza', '+5521987654321'])
+
+    described_class.new(campaign).perform
+    expect(campaign.whatsapp_api_campaign_recipients.find_by(contact: ana)).to be_sent
+
+    bia.update!(blocked: true)
+    described_class.new(campaign).perform
+
+    recipient = campaign.whatsapp_api_campaign_recipients.find_by(contact: bia)
+    expect(recipient).to be_cancelled
+    expect(recipient.last_error_message).to eq('blocked')
+    expect(recipient.message_id).to be_nil
+    expect(Message.where(account_id: account.id).count).to eq(1)
+    expect(campaign.reload.failed_count).to eq(0)
+  end
+
   it 'envia normalmente a quem não recusou' do
     account, campaign, contacts = running_campaign_with(['Ana Silva', '+5511987654321'])
 

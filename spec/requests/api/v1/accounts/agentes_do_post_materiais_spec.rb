@@ -53,6 +53,9 @@ RSpec.describe 'Agentes: o material só do post', type: :request do
     account.enable_features!('seus_posts', 'seus_posts_comentarios', 'meta_ads_comentarios_ia',
                              'meta_ads_comentarios_instagram', 'meta_ads_comentarios_facebook')
     create_meta_ads_insights_connection(account)
+    # #2307: o cartão pergunta à Meta se a Página tem a pages_messaging (/me/permissions); nunca rede real.
+    stub_request(:get, meta_graph_url('me/permissions'))
+      .to_return(status: 200, headers: { 'Content-Type' => 'application/json' }, body: { data: [] }.to_json)
     allow(Autonomia::Agents::Config).to receive(:enabled?).and_call_original
     allow(Autonomia::Agents::Config).to receive(:enabled?).with(account).and_return(true)
     allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)

@@ -101,7 +101,7 @@ class Crm::MetaAds::LeadForms::PastLeads
       questions = client.lead_form_questions(@form['id'])
       Crm::MetaAds::LeadForms::Importer.new(
         account: @account, pipeline: pipeline, stage: stage, form_name: @form['name'], page_id: @page['id'],
-        questions: questions.ok ? Array(questions.data.to_h['questions']) : [], refused: refused
+        questions: questions.ok ? Array(questions.data.to_h['questions']) : [], em_lote: true, refused: refused
       )
     end
   end

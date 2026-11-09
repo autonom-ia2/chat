@@ -32,10 +32,13 @@ class EmailCampaigns::Reports::ImportIssuesQuery
     EmailCampaigns::Reports::Parameters.meta(call.count, page, applied_filters)
   end
 
-  def self.present(rows)
+  # masked: who reads does not read contacts (#2802); the address and the suggested address go out masked.
+  def self.present(rows, masked: false)
+    mask = ->(address) { masked ? ConversationAudience::Access.masked_email(address) : address }
     rows.map do |issue|
-      { id: issue.id, row_number: issue.row_number, raw_email: issue.raw_address, email: issue.raw_address,
-        reason_code: issue.reason_code, suggestion: issue.suggestion, classification: CLASSIFICATIONS.fetch(issue.reason_code, 'unknown') }
+      { id: issue.id, row_number: issue.row_number, raw_email: mask.call(issue.raw_address), email: mask.call(issue.raw_address),
+        reason_code: issue.reason_code, suggestion: mask.call(issue.suggestion),
+        classification: CLASSIFICATIONS.fetch(issue.reason_code, 'unknown') }
     end
   end
 end

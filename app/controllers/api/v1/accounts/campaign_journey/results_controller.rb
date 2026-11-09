@@ -27,7 +27,8 @@ class Api::V1::Accounts::CampaignJourney::ResultsController < Api::V1::Accounts:
   end
 
   def recipients
-    render json: { payload: @result.page(filter: status_filter, page: page_param, visible_conversations: visible_conversations) }
+    page = @result.page(filter: status_filter, page: page_param, visible_conversations: visible_conversations)
+    render json: { payload: ConversationAudience::Access.hides_contact_data?(Current.account_user) ? masked_page(page) : page }
   end
 
   def export
@@ -51,6 +52,19 @@ class Api::V1::Accounts::CampaignJourney::ResultsController < Api::V1::Accounts:
 
   def fetch_result
     @result = ::CampaignJourney::ResultFinder.new(Current.account).find!(params[:channel].to_s, params[:id])
+  end
+
+  # #2802: phone and e-mail already go out masked. For who does not read contacts the name too, and the message sent,
+  # which carries the person's own values once its variables are filled.
+  def masked_page(page)
+    page.merge(rows: page[:rows].map { |row| masked_row(row) })
+  end
+
+  def masked_row(row)
+    row = row.merge(message_content: nil) if row.key?(:message_content)
+    return row unless row[:contact]
+
+    row.merge(contact: row[:contact].merge(name: ConversationAudience::Access.masked_name(row[:contact][:name])))
   end
 
   def status_filter

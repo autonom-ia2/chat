@@ -1,11 +1,11 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { telefoneParaLer } from 'dashboard/helper/telefoneParaLer';
 import {
   canCall,
   canRebook,
   canRemind,
-  formatClientPhone,
   meetingIdOf,
 } from '../../helpers/meetingDay';
 import CrmMeetingCallButton from './CrmMeetingCallButton.vue';
@@ -28,7 +28,7 @@ const { t } = useI18n();
 
 const id = computed(() => meetingIdOf(props.meeting));
 const client = computed(() => props.meeting.client || {});
-const phone = computed(() => formatClientPhone(client.value.phone));
+const phone = computed(() => telefoneParaLer(client.value.phone));
 const showCall = computed(
   () => props.meeting.status === 'scheduled' && canCall(props.meeting)
 );
