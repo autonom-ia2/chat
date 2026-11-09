@@ -218,14 +218,16 @@ RSpec.describe 'Fechamento #2414 · G9: troca de responsável do card (exemplo 1
       end
     end
 
-    def execucoes_da_manha = Autonomia::Automacao::Execucao.where(automacao_id: @da_manha['id'])
+    def execucoes_da_manha
+      da_manha = Autonomia::Automacao::Definicao.find_by!(account_id: account.id, nome: 'Volta das férias')
+      Autonomia::Automacao::Execucao.where(automacao_id: da_manha.id)
+    end
 
     before do
       account.update!(reporting_timezone: fuso.name)
       travel_to(fuso.local(2026, 11, 2, 10)) { paula_passa_para(renata, [card_da_maria]) }
       travel_to(fuso.local(2026, 11, 2, 11)) do
-        @da_manha = montar_automacao(paula, account, nome: 'Volta das férias', receita: receita_da_manha)
-        ligar_automacao(paula, account, @da_manha)
+        ligar_automacao(paula, account, montar_automacao(paula, account, nome: 'Volta das férias', receita: receita_da_manha))
       end
       AccountUser.find_by!(account: account, user: julia).update!(ausente_ate: fuso.local(2026, 11, 10, 18))
     end

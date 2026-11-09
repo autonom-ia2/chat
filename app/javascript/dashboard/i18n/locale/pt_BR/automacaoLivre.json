@@ -207,7 +207,8 @@
         "LINK": "Link",
         "DATE": "Data",
         "LIST": "Lista",
-        "CHECKBOX": "Sim ou não"
+        "CHECKBOX": "Sim ou não",
+        "PESSOA": "Pessoa da equipe"
       }
     },
     "LIGADA": "Ligada",

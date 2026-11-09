@@ -2157,6 +2157,10 @@
             {
               "valor": "checkbox",
               "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_DISPLAY_TYPE.CHECKBOX"
+            },
+            {
+              "valor": "pessoa",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_DISPLAY_TYPE.PESSOA"
             }
           ],
           "padrao": "text"

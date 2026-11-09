@@ -32,6 +32,15 @@ RSpec.describe 'Automação livre: campo do card do tipo pessoa da equipe', :aut
       expect(card.errors[:custom_attributes].join).to include('original')
     end
 
+    it 'a pessoa que saiu da conta depois de gravada não trava a edição de outro campo do card' do
+      create(:custom_attribute_definition, account: account, attribute_model: :card_attribute, attribute_key: 'placa',
+                                           attribute_display_type: :text)
+      card.update!(custom_attributes: { 'original' => julia.id })
+      AccountUser.find_by!(account: account, user: julia).destroy!
+
+      expect(card.reload.update(custom_attributes: card.custom_attributes.merge('placa' => 'ABC1D23'))).to be(true)
+    end
+
     it 'vazio apaga' do
       card.update!(custom_attributes: { 'original' => julia.id })
       card.update!(custom_attributes: { 'original' => nil })

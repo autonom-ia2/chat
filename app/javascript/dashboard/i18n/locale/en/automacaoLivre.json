@@ -207,7 +207,8 @@
         "LINK": "Link",
         "DATE": "Date",
         "LIST": "List",
-        "CHECKBOX": "Yes or no"
+        "CHECKBOX": "Yes or no",
+        "PESSOA": "Team member"
       }
     },
     "LIGADA": "On",

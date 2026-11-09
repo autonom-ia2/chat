@@ -97,7 +97,7 @@ class Crm::Card < ApplicationRecord
   include Crm::CardMemoria
   # Automação livre (lote 4, #2682): o "esperar até" que espera neste card confere quando ele muda.
   include Crm::CardAvisaAutomacao
-  # Campo do tipo pessoa (G62, #2829): só gente da conta.
+  # Campos personalizados do card: o tamanho, e o tipo pessoa (G62, #2829) só com gente da conta.
   include Crm::CardCampoPessoa
 
   enum status: { open: 0, won: 1, lost: 2, archived: 3, resolved: 4, cancelled: 5 }
@@ -128,7 +128,6 @@ class Crm::Card < ApplicationRecord
   validates :value_cents, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :score, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
   validates :metadata, jsonb_attributes_length: true
-  validates :custom_attributes, jsonb_attributes_length: true
   validate :linked_records_must_belong_to_account
   validate :stage_must_belong_to_pipeline
   validate :outcome_must_match_pipeline

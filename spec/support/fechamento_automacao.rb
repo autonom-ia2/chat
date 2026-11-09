@@ -241,7 +241,10 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 17, achadas na G9 (#2707). G62 (#2829): o campo do card do tipo pessoa da equipe, com o nome e a
     # ausência dela (passos 3, 5 e 6). G63 (#2830): repetir a espera a cada mensagem do cliente na mesma automação
     # (passo 4); o laço do #2791 (G46) só volta pelo caminho de um "decidir", e o passo 4 não tem decisão.
-    'G62' => -> { CustomAttributeDefinition.attribute_display_types.key?('pessoa') && valor?('card.responsavel_nome') },
+    'G62' => lambda {
+      CustomAttributeDefinition.attribute_display_types.key?('pessoa') &&
+        Autonomia::Automacao::Valores::Atributos.respond_to?(:ausente_da_pessoa?)
+    },
     'G63' => nil
   }.freeze
 
