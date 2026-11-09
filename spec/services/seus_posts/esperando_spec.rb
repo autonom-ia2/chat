@@ -66,6 +66,78 @@ RSpec.describe SeusPosts::Esperando do
       expect(resultado[:pendentes]).to eq('p1' => { ids: [], mais: true })
     end
 
+    # #2804: o post impulsionado por aqui tem os comentários do anúncio noutra mídia, uma por anúncio.
+    describe 'comentários do anúncio do post' do
+      let(:connection) { create_meta_ads_insights_connection(account) }
+
+      def anuncio(ad_id, media_id, ad_account_id: connection.ad_account_id)
+        record = Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: SecureRandom.uuid, status: 'created', ad_id: ad_id,
+                                                   ad_account_id: ad_account_id, source_post_id: 'p1', source_post_network: 'instagram',
+                                                   activated_at: 1.day.ago)
+        Crm::MetaAds::Creation::AdMedia.remember(record, { 'creative' => { 'effective_instagram_media_id' => media_id } })
+      end
+
+      def stub_midia(media_id, linhas)
+        stub_request(:get, "#{ig}/#{media_id}").with(query: hash_including('fields' => comentarios_ig))
+                                               .to_return(json({ 'id' => media_id, 'comments' => { 'data' => linhas } }))
+      end
+
+      before do
+        allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+        stub_comentarios([{ 'id' => 'p1', 'comments' => { 'data' => [comentario('c1', '501')] } }])
+        anuncio('903', '7903')
+        anuncio('904', '7904', ad_account_id: 'act_outra')
+        stub_midia('7903', [comentario('a1', '601'), comentario('a2', '602', 'replies' => { 'data' => [comentario('ra2', '900')] })])
+      end
+
+      it 'vêm à parte, por anúncio, só os da conta de anúncios conectada agora' do
+        account.enable_features!('meta_ads_hub', 'meta_ads_comentarios_instagram')
+
+        resultado = described_class.new(channel: canal, periodo: periodo).perform
+
+        expect(resultado[:pendentes]).to eq('p1' => { ids: %w[c1], mais: false, anuncios: { '903' => { ids: %w[a1], mais: false } } })
+        expect(a_request(:get, "#{ig}/7904").with(query: hash_including({}))).not_to have_been_made
+      end
+
+      it 'mídia de anúncio fora do ar: os comentários do post continuam; outro anúncio com a mesma mídia não conta em dobro' do
+        account.enable_features!('meta_ads_hub', 'meta_ads_comentarios_instagram')
+        anuncio('905', '7903')
+        anuncio('906', '7906')
+        stub_request(:get, "#{ig}/7906").with(query: hash_including('fields' => comentarios_ig))
+                                        .to_return(json({ 'error' => { 'code' => 2, 'message' => 'x' } }, status: 503))
+
+        pendentes = described_class.new(channel: canal, periodo: periodo).perform[:pendentes]
+
+        expect(pendentes['p1'][:ids]).to eq(%w[c1])
+        expect(pendentes['p1'][:anuncios].size).to eq(1)
+        expect(pendentes['p1'][:anuncios].keys.first).to eq('903').or eq('905')
+      end
+
+      it 'anúncio sem a mídia guardada ou além do teto: o post vem com anuncios_mais ("pelo menos")' do
+        account.enable_features!('meta_ads_hub', 'meta_ads_comentarios_instagram')
+        stub_const("#{described_class}::ANUNCIOS_POR_LEITURA", 1)
+        anuncio('905', '7905')
+        stub_midia('7905', [comentario('a9', '609')])
+        Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: SecureRandom.uuid, status: 'created', ad_id: '906',
+                                          ad_account_id: connection.ad_account_id, source_post_id: 'p1', source_post_network: 'instagram',
+                                          activated_at: 1.hour.ago)
+
+        pendentes = described_class.new(channel: canal, periodo: periodo).perform[:pendentes]
+
+        expect(pendentes['p1']).to include(anuncios_mais: true)
+        expect(pendentes['p1'][:anuncios].size).to eq(1)
+      end
+
+      it 'sem Anúncios da Meta ou os comentários do Instagram no anúncio ligados, nem lê a mídia do anúncio' do
+        account.enable_features!('meta_ads_hub')
+
+        resultado = described_class.new(channel: canal, periodo: periodo).perform
+
+        expect(resultado[:pendentes]).to eq('p1' => { ids: %w[c1], mais: false })
+        expect(a_request(:get, "#{ig}/7903").with(query: hash_including({}))).not_to have_been_made
+      end
+    end
+
     it 'sem a permissão de ler comentários: needs_permission, sem quebrar' do
       stub_request(:get, "#{ig}/me/media").with(query: hash_including('fields' => comentarios_ig))
                                           .to_return(json({ 'error' => { 'code' => 10, 'message' => 'x' } }, status: 403))
@@ -131,6 +203,41 @@ RSpec.describe SeusPosts::Esperando do
 
         expect(perfil[:waiting_status]).to eq('ok')
         expect(perfil[:posts].first).to include(waiting: 1, waiting_more: false)
+      end
+
+      # #2804: os comentários do anúncio entram no "esperando você" de quem pode abrir Anúncios, onde eles estão.
+      describe 'com comentários do anúncio' do
+        let(:agent) { create(:user, account: account, role: :agent) }
+
+        before do
+          account.enable_features!('meta_ads_hub', 'meta_ads_comentarios_instagram')
+          pendentes = { 'p1' => { ids: %w[c1], mais: false, anuncios: { '903' => { ids: %w[a1 a2], mais: true } } } }
+          allow(described_class).to receive(:new).and_return(instance_double(described_class, perform: { status: 'ok', pendentes: pendentes }))
+          Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: 'a2', action: 'private_reply', actor: 'user',
+                                            user: admin, attempted_at: Time.current, confirmed_at: Time.current)
+        end
+
+        it 'quem abre Anúncios: somam no post, sem quem já recebeu o privado, e cada anúncio diz os seus' do
+          expect(lista[:posts].first).to include(waiting: 2, waiting_more: true, waiting_ads: { '903' => 1 })
+        end
+
+        it 'anúncio que não deu para ler: "ou mais" só para quem abre Anúncios' do
+          pendentes = { 'p1' => { ids: %w[c1], mais: false, anuncios_mais: true } }
+          allow(described_class).to receive(:new).and_return(instance_double(described_class, perform: { status: 'ok', pendentes: pendentes }))
+          create(:inbox_member, user: agent, inbox: Inbox.last)
+
+          expect(lista[:posts].first).to include(waiting: 1, waiting_more: true)
+          expect(lista(user: agent)[:posts].first).to include(waiting: 1, waiting_more: false)
+        end
+
+        it 'quem não abre Anúncios: só os do post' do
+          create(:inbox_member, user: agent, inbox: Inbox.last)
+
+          post = lista(user: agent)[:posts].first
+
+          expect(post).to include(waiting: 1, waiting_more: false)
+          expect(post).not_to have_key(:waiting_ads)
+        end
       end
 
       it 'sem a permissão de ler comentários: waiting nulo (nunca 0), os posts continuam, e a Meta não é chamada a cada lista' do

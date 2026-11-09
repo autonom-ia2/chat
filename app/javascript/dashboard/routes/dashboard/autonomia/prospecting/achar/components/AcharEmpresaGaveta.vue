@@ -6,6 +6,7 @@ import AcharPainel from './AcharPainel.vue';
 import AcharLinhaFrase from './AcharLinhaFrase.vue';
 import AcharMotivos from './AcharMotivos.vue';
 import AcharOutrasPessoas from './AcharOutrasPessoas.vue';
+import AcharListasDaEmpresa from './AcharListasDaEmpresa.vue';
 import { seloDe } from '../utils/acharChance';
 
 // #2692 — T1d, a gaveta da empresa (v4): tudo da empresa e uma ação principal,
@@ -263,6 +264,9 @@ const textoDoDono = computed(() => {
             : $t(`${NS}.NO_FUNIL_SEM_NOME`)
         }}
       </p>
+
+      <!-- #2775 (F6): "Está na lista X · Tirar", com Desfazer. -->
+      <AcharListasDaEmpresa :empresa-id="empresa.id" />
 
       <section
         v-if="!empresa.noFunil && passo !== 'mandou'"

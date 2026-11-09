@@ -117,6 +117,29 @@ RSpec.describe CampaignJourney::SmsOneoffRecipients, :aggregate_failures do
     expect(recipients(campaign).keys).to eq(['Caio Reis'])
   end
 
+  # chat#2733: blocked is like refused — out of the recipients, and skipped "blocked" if blocked during the send.
+  it 'leaves blocked contacts out of the recipients' do
+    sent = stub_twilio_sms
+    contact_named('Ana Souza').update!(blocked: true)
+
+    send_sms(campaign = sms_campaign(defaults: { 'publico.vencimento' => 'em breve' }))
+
+    expect(recipients(campaign).keys).to eq(['Caio Reis'])
+    expect(sent.pluck('To')).to eq(['+5531987654321'])
+  end
+
+  it 'skips a contact blocked in the middle of the send' do
+    caio = contact_named('Caio Reis')
+    sent = stub_twilio_sms(on_send: ->(_body) { caio.update!(blocked: true) unless caio.reload.blocked? })
+    campaign = sms_campaign(defaults: { 'publico.vencimento' => 'em breve' })
+
+    send_sms(campaign)
+
+    expect(sent.size).to eq(1)
+    expect(recipients(campaign)['Caio Reis'].status).to eq('skipped')
+    expect(recipients(campaign)['Caio Reis'].error_message).to eq('blocked')
+  end
+
   # B1b: no value and no default → skipped with "falta <coluna>" / "falta empresa".
   it 'skips a person without a token value and without a default' do
     sent = stub_twilio_sms

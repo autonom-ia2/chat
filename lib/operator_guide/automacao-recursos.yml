@@ -258,6 +258,7 @@ fora:
       - crm/meta_ads_whatsapp_reports
       - crm/meta_ads_ad_management
       - crm/meta_ads_creation
+      - crm/meta_ads_ad_care
       - crm/meta_ads_cuidado
       - crm/meta_ads_lead_forms
       - crm/meta_ads_site_pages
@@ -347,6 +348,7 @@ fora:
       - conversations/passar_para
       - conversa_canal/pastas_do_email
       - autonomia/avisos
+      - autonomia/prospecting/audiences
       - autonomia/prospecting/lead_audiences
       - autonomia/prospecting/lead_batches
       - autonomia/prospecting/lead_consent_refusals

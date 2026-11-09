@@ -172,7 +172,11 @@
       },
       "AD_COMMENTS": {
         "TEXT": "The ad's comments are on the ad, not on this post.",
-        "OPEN": "See the ad's comments"
+        "OPEN": "See the ad's comments",
+        "TEXT_MANY": "This post became {count} ads. Each one's comments are on that ad, not on this post.",
+        "ITEM": "{name}, created on {date}",
+        "UNNAMED": "Ad",
+        "WAITING": "{count} comment waiting for you | {count} comments waiting for you"
       },
       "COMMENTS": {
         "TITLE": "Comments",
@@ -240,7 +244,8 @@
         }
       },
       "CARE_OFFER": {
-        "TITLE": "What's in the comments",
+        "TITLE": "What's in this post's comments",
+        "TITLE_WITH_ADS": "What's in this post's comments (the ad's comments are on the ad)",
         "WAITING": "{count} comment is waiting for a reply | {count} comments are waiting for a reply",
         "NONE_WAITING": "No comments waiting for a reply.",
         "PRIVATE_WINDOW": "{count} can still get a private message (up to 7 days) | {count} can still get a private message (up to 7 days)",
@@ -248,7 +253,7 @@
         "TEXT_ONLY_NEW": "If you turn it on, I answer new questions privately. The ones already here are older than 7 days: answer them on the comment.",
         "TEXT_FUTURE": "If you turn it on, I answer new questions privately.",
         "BUTTON": "Take care of comments",
-        "TEXT_SOON": "Sending it privately on Messenger isn't available yet. As soon as Meta allows it, you turn it on here.",
+        "TEXT_SOON": "Sending it privately on Messenger isn't available for this Page yet. When Meta allows it, sign in with the Page again and turn it on here.",
         "LOADING": "I'm reading the comments…",
         "NEEDS_PERMISSION": "To tell you what's in the comments, I need access to them.",
         "UNAVAILABLE": "I couldn't read the comments right now."

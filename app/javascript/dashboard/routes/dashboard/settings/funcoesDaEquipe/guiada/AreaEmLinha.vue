@@ -113,6 +113,17 @@ const alternar = chave => {
             {{ $t('FUNCOES_EQUIPE.GUIADA.VOCE_MUDOU') }}
           </span>
         </p>
+        <p
+          v-if="module.sensitive"
+          data-area-sensivel
+          class="flex items-start gap-1.5 m-0 text-sm text-n-amber-11"
+        >
+          <span
+            class="i-lucide-shield-alert size-4 shrink-0 mt-0.5"
+            aria-hidden="true"
+          />
+          {{ $t(`FUNCOES_EQUIPE.AREAS.${module.key}.AVISO`) }}
+        </p>
         <p v-if="mudou" class="m-0 text-sm text-n-slate-11">
           {{
             $t('FUNCOES_EQUIPE.GUIADA.ANTES_DE', {

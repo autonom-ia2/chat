@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-# Filtros pelo link na caixa (Números F2, #1883): a lista e o meta aceitam da_ia e esperando_min.
+# Filtros pelo link na caixa (Números F2, #1883): a lista e o meta aceitam da_ia, esperando_min e desde_dias (#2209).
 RSpec.describe 'Conversations API: filtros pelo link', type: :request do
   let(:account) { create(:account) }
   let(:agent) { create(:user, account: account, role: :agent) }
@@ -44,5 +44,13 @@ RSpec.describe 'Conversations API: filtros pelo link', type: :request do
 
   it 'esperando_min fora do limite é ignorado' do
     expect(get_json('', esperando_min: '5000')['data']['meta']['all_count']).to eq(3)
+  end
+
+  it 'desde_dias filtra a lista e o meta pelo período de Seus posts' do
+    antiga = conversa(nil).tap { |c| c.update!(created_at: 40.days.ago) }
+
+    expect(get_json('', desde_dias: '30', status: 'all')['data']['payload'].pluck('id')).not_to include(antiga.display_id)
+    expect(get_json('/meta', desde_dias: '30', status: 'all')['meta']['all_count']).to eq(3)
+    expect(get_json('/meta', status: 'all')['meta']['all_count']).to eq(4)
   end
 end

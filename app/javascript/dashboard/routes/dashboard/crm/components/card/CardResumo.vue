@@ -6,7 +6,7 @@ import CustomerBadge from 'dashboard/components-next/customer-badge/CustomerBadg
 import CardCartao from './CardCartao.vue';
 import CardMaisDetalhes from './CardMaisDetalhes.vue';
 import { atrasado } from './proximoPasso';
-import { formatClientPhone } from '../../helpers/meetingDay';
+import { telefoneParaLer } from 'dashboard/helper/telefoneParaLer';
 import { promessaDoCard } from './useCardNegocio';
 import { textoDoFechamento } from './sugestaoDeFechar';
 
@@ -267,7 +267,7 @@ const temConversa = computed(() =>
           </template>
           <template #telefone>
             {{
-              formatClientPhone(contato.phone_number) ||
+              telefoneParaLer(contato.phone_number) ||
               contato.email ||
               t(`${R}.SEM_TELEFONE`)
             }}

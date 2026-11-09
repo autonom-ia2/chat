@@ -26,10 +26,10 @@ class CampaignJourney::ConversaAberta::Contagem
 
   private
 
-  # Quem pode receber WhatsApp pelo Público (a mesma regra do envio), sem quem pediu para parar.
+  # Quem pode receber WhatsApp pelo Público (a mesma regra do envio), sem quem pediu para parar nem quem está bloqueado.
   def contact_ids
     ids = CampaignJourney::AudienceContacts.whatsapp_contact_ids(@campaign_import, account: @account)
-    @account.contacts.where(id: ids).not_opted_out.pluck(:id)
+    @account.contacts.where(id: ids).campaign_reachable.pluck(:id)
   end
 
   def precos
