@@ -15,6 +15,7 @@ import ListAttribute from 'dashboard/components-next/CustomAttributes/ListAttrib
 import CheckboxAttribute from 'dashboard/components-next/CustomAttributes/CheckboxAttribute.vue';
 import DateAttribute from 'dashboard/components-next/CustomAttributes/DateAttribute.vue';
 import OtherAttribute from 'dashboard/components-next/CustomAttributes/OtherAttribute.vue';
+import CampoContato from './CampoContato.vue';
 
 const props = defineProps({
   card: { type: Object, required: true },
@@ -55,7 +56,11 @@ const componentMap = {
   list: ListAttribute,
   checkbox: CheckboxAttribute,
   date: DateAttribute,
+  contato: CampoContato,
 };
+// Decisão 16: o campo do tipo contato mostra o nome, não o id, também para quem
+// só lê.
+const ehContato = field => field.attributeDisplayType === 'contato';
 
 const values = ref({ ...(props.card.custom_attributes || {}) });
 watch(
@@ -185,8 +190,9 @@ onMounted(() => {
         </span>
         <component
           :is="componentMap[field.attributeDisplayType] || OtherAttribute"
-          v-if="canManage"
+          v-if="canManage || ehContato(field)"
           :attribute="field"
+          :editavel="ehContato(field) ? canManage : undefined"
           is-editing-view
           @update="value => updateField(field, value)"
           @delete="clearField(field)"

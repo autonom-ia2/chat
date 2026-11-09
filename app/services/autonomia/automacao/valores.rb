@@ -255,7 +255,8 @@ class Autonomia::Automacao::Valores
   # A página de agendamento em que a reunião do gatilho foi marcada, quando veio de uma.
   def pagina_da_reuniao = @contexto.reuniao&.metadata.to_h['booking_profile_id']
 
-  # G65: o registro de origem (o alvo da mãe), lido com a mesma pessoa; fora da filha, nil e o valor lê vazio.
+  # G65: o registro de origem (o alvo da mãe), lido com a mesma pessoa; fora da filha, ou com quem ligou sem alcançar mais
+  # esse registro (Contexto#origem), nil e o valor lê vazio.
   def origem
     return @origem if defined?(@origem)
 

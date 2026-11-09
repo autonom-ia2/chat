@@ -16,6 +16,18 @@ module Autonomia::Automacao::Valores::Origem
   # "origem.contato.nome" => "contato.nome".
   def sem_prefixo(caminho) = caminho.to_s.delete_prefix(PREFIXO)
 
+  # O passo lê o registro de origem em algum campo dele (texto, corpo, condição)? Os passos dos ramos ficam de fora: cada
+  # um responde por si quando chega a vez dele (Executor, `origem_fora_do_alcance`).
+  def no_passo?(passo) = lido_em?(passo.except(*::Autonomia::Automacao::Receita::RAMOS, 'caminhos', ::Autonomia::Automacao::Receita::NENHUM))
+
+  def lido_em?(dado)
+    case dado
+    when Hash then dado.any? { |chave, valor| (chave == '$valor' && do_caminho?(valor)) || lido_em?(valor) }
+    when Array then dado.any? { |item| lido_em?(item) }
+    else false
+    end
+  end
+
   # O caminho (sem o prefixo) pode ser lido no registro de origem?
   def le?(caminho)
     valores = ::Autonomia::Automacao::Valores

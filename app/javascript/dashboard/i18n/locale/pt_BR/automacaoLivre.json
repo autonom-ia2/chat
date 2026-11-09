@@ -200,7 +200,8 @@
         "LINK": "Link",
         "DATE": "Data",
         "LIST": "Lista",
-        "CHECKBOX": "Sim ou não"
+        "CHECKBOX": "Sim ou não",
+        "CONTATO": "Contato"
       }
     },
     "LIGADA": "Ligada",

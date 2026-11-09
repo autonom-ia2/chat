@@ -9,6 +9,8 @@ require 'rails_helper'
 #   Maria, que é a dona dele;
 # - exemplo 16, passo 4: "a IA escreve uma resposta que fala do motivo da perda gravado no card antigo", na conversa em
 #   que o cliente escreveu.
+# - exemplo 11, passo 3: "com 'indicado por Maria' gravado no card", num campo do card do tipo Contato (decisão 16):
+#   o card só guarda contato da conta, e o "em outro registro" só aceita esse tipo de campo.
 # Os dois exemplos inteiros ficam no pendentes_spec até as outras lacunas deles fecharem.
 RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
@@ -105,7 +107,7 @@ RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_au
 
     before do
       create(:custom_attribute_definition, account: account, attribute_key: 'indicado_por', attribute_display_name: 'Indicado por',
-                                           attribute_model: :card_attribute, attribute_display_type: :number)
+                                           attribute_model: :card_attribute, attribute_display_type: :contato)
       create(:custom_attribute_definition, account: account, attribute_key: 'nome_do_pet', attribute_display_name: 'Nome do pet',
                                            attribute_model: :contact_attribute, attribute_display_type: :text)
       maria.update!(custom_attributes: { 'nome_do_pet' => 'Thor' })
@@ -149,7 +151,9 @@ RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_au
     end
 
     it 'quem indicou foi apagado: nenhuma filha, e a mãe diz por quê', :aggregate_failures do
-      card_do_joao.update!(custom_attributes: { 'indicado_por' => maria.id + 1000 })
+      apagada = contato('Bia', '11900000014')
+      card_do_joao.update!(custom_attributes: { 'indicado_por' => apagada.id })
+      apagada.destroy!
       automacao = ligada(so_o_presente)
 
       Crm::Cards::Closer.new(card: card_do_joao, actor: dona, result: 'won').perform
@@ -171,6 +175,40 @@ RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_au
       expect(historico_de(automacao)).to eq([['outro', 'ok', nil], %w[outro pulado contato_ligado_sem_conversa]])
       expect(filhas(automacao)).to be_empty
       expect(chamadas_para('graph.facebook.com')).to be_empty
+    end
+
+    # Decisão 16: o "indicado por Maria" é um campo do card do tipo Contato, gravado pela tela (a API do card). A equipe
+    # escolhe a Maria numa lista; o card guarda o id dela e recusa contato de outra conta, para um engano nunca mandar a
+    # mensagem do passo 7 a outro cliente.
+    it 'passo 3: "indicado por Maria" fica gravado no card do João num campo do tipo Contato, só com contato da conta',
+       :aggregate_failures do
+      card_do_joao.update!(custom_attributes: {})
+      de_outra_conta = create(:contact, account: create(:account), name: 'Maria de fora')
+      url = "/api/v1/accounts/#{account.id}/crm/cards/#{card_do_joao.id}"
+
+      patch url, params: { card: { custom_attributes: { indicado_por: maria.id.to_s } } }, headers: dona.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+      expect(card_do_joao.reload.custom_attributes).to eq('indicado_por' => maria.id)
+
+      patch url, params: { card: { custom_attributes: { indicado_por: de_outra_conta.id } } }, headers: dona.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(card_do_joao.reload.custom_attributes).to eq('indicado_por' => maria.id)
+    end
+
+    # Quem ligou perdeu o funil do João (o card ganho) entre a mãe e a filha: a filha não manda os dados dele à Maria. O
+    # passo que lê a origem pula com o motivo próprio; o que não lê (a etiqueta) segue.
+    it 'quem ligou perdeu o acesso ao card do João depois de a filha abrir: o presente não sai, com o motivo', :aggregate_failures do
+      automacao = ligada(receita)
+      perde_o_card_quando_a_filha_abre(card_do_joao)
+
+      Crm::Cards::Closer.new(card: card_do_joao, actor: dona, result: 'won').perform
+      drenar
+
+      expect(saidas(conversa_da_maria)).to be_empty
+      expect(chamadas_para('graph.facebook.com')).to be_empty
+      expect(historico_de(automacao)).to eq([['outro', 'ok', nil], %w[inicio ok em_outro_registro], %w[presente pulado origem_fora_do_alcance],
+                                             ['etiqueta', 'ok', nil]])
+      expect(maria.reload.label_list).to eq(['indicou_e_fechou'])
     end
   end
 
@@ -332,6 +370,17 @@ RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_au
       expect(saidas(conversa_antiga)).to be_empty
     end
   end
+
+  # Quem ligou deixa de ver o card (o funil dele) assim que a primeira filha existe: a mãe já rodou e abriu a filha.
+  def perde_o_card_quando_a_filha_abre(card)
+    allow(Crm::CardPolicy).to receive(:new).and_wrap_original do |original, contexto, registro|
+      politica = original.call(contexto, registro)
+      allow(politica).to(receive(:show?).and_wrap_original { |show| !filha_aberta? && show.call }) if registro == card
+      politica
+    end
+  end
+
+  def filha_aberta? = Autonomia::Automacao::Execucao.exists?(['evento LIKE ?', 'em:%'])
 
   # Quem ligou deixa de ver só esta conversa; o card e a conversa principal dele continuam à vista.
   def sem_ver(escondida)

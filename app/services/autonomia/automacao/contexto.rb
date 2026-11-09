@@ -62,12 +62,20 @@ class Autonomia::Automacao::Contexto
   end
 
   # G65 (#2842): na filha do "em outro registro", o Contexto do alvo da mãe (o registro de origem), com as pontes dela;
-  # fora da filha, nil.
+  # fora da filha, nil. Só com quem ligou ainda alcançando esse registro (a mesma pergunta do impedimento,
+  # Acesso#alcanca?): quem perdeu o funil do João entre a mãe e a filha não manda os dados dele à Maria. Fora do alcance,
+  # nil (lê vazio), e o Executor pula o passo que lê a origem com o motivo próprio (`origem_fora_do_alcance?`).
   def origem
     return @origem if defined?(@origem)
 
-    mae = ::Autonomia::Automacao::EmOutroRegistro.mae(@execucao)
-    @origem = mae&.alvo && self.class.de(mae.alvo, execucao: mae)
+    mae = mae_com_alvo
+    @origem = mae && origem_ao_alcance?(mae) ? self.class.de(mae.alvo, execucao: mae) : nil
+  end
+
+  # A filha tem registro de origem, e quem ligou deixou de alcançá-lo.
+  def origem_fora_do_alcance?
+    mae = mae_com_alvo
+    mae.present? && !origem_ao_alcance?(mae)
   end
 
   # A conta do alvo; no conta.recorrente, a própria.
@@ -156,6 +164,19 @@ class Autonomia::Automacao::Contexto
   end
 
   private
+
+  def mae_com_alvo
+    return @mae_com_alvo if defined?(@mae_com_alvo)
+
+    mae = ::Autonomia::Automacao::EmOutroRegistro.mae(@execucao)
+    @mae_com_alvo = (mae if mae&.alvo)
+  end
+
+  def origem_ao_alcance?(mae)
+    return @origem_ao_alcance if defined?(@origem_ao_alcance)
+
+    @origem_ao_alcance = ::Autonomia::Automacao::Acesso.new(mae.automacao, chave_gatilho: mae.chave_gatilho).alcanca?(mae.alvo, mae)
+  end
 
   def reuniao_da_atividade
     reuniao = ::Autonomia::Automacao::ReuniaoDaAtividade

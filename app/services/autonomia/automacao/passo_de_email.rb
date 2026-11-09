@@ -53,8 +53,9 @@ class Autonomia::Automacao::PassoDeEmail
 
   private
 
+  # O assunto lê com os mesmos valores do texto (NaConversa#valores): o Contexto com a execução, para a filha do "em
+  # outro registro" ler o registro de origem (G65, `origem.*`), a reunião do gatilho e o texto da IA.
   def mandar(caixa, contato)
-    valores = ::Autonomia::Automacao::Valores.new(alvo: @alvo, quem: @execucao.automacao.ligada_por)
     assunto = ::Autonomia::Automacao::Texto.new(@passo['assunto'], valores).montar
     texto = texto_pronto
     return pulado('faltou_valor') if assunto.nil? || texto.nil?

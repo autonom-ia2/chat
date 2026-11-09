@@ -2008,6 +2008,10 @@
             {
               "valor": "checkbox",
               "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_DISPLAY_TYPE.CHECKBOX"
+            },
+            {
+              "valor": "contato",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_DISPLAY_TYPE.CONTATO"
             }
           ],
           "padrao": "text"

@@ -17374,7 +17374,8 @@
           "link",
           "date",
           "list",
-          "checkbox"
+          "checkbox",
+          "contato"
         ]
       },
       "attribute_key": {

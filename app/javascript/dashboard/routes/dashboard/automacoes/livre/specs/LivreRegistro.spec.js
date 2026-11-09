@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils';
 import LivreRegistro from '../components/LivreRegistro.vue';
 
 // G18 (#2671) — a peça "onde fazer os passos de dentro": o contato guardado num
-// campo de número do alvo, ou os outros cards do contato (só para quem mexe no
+// campo do card do tipo contato (decisão 16), ou os outros cards do contato (só para quem mexe no
 // funil). Cada troca sai inteira, só com o que a ligação usa.
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
@@ -27,13 +27,14 @@ const CATALOGO = {
 };
 const ATRIBUTOS = {
   card_attribute: [
-    { attribute_key: 'indicado_por', attribute_display_type: 'number' },
+    { attribute_key: 'indicado_por', attribute_display_type: 'contato' },
+    // Campo de número não aponta contato (decisão 16): o servidor recusa.
+    { attribute_key: 'numero_do_cliente', attribute_display_type: 'number' },
     { attribute_key: 'placa', attribute_display_type: 'text' },
   ],
   contact_attribute: [
     { attribute_key: 'quem_indicou', attribute_display_type: 'number' },
   ],
-  // O número da conversa nunca guarda contato (o servidor recusa).
   conversation_attribute: [
     { attribute_key: 'numero_do_pedido', attribute_display_type: 'number' },
   ],
@@ -87,16 +88,13 @@ describe('LivreRegistro', () => {
     ]);
   });
 
-  it('o campo oferece só os campos de número do contato e do card', () => {
+  it('o campo oferece só os campos do card do tipo contato', () => {
     const wrapper = montar({
       modelValue: { de: 'contato_do_campo', usar: 'conversa' },
     });
     const campos = escolha(wrapper, '[data-campo]').props('options');
 
-    expect(valores(campos)).toEqual([
-      'card.atributos.indicado_por',
-      'contato.atributos.quem_indicou',
-    ]);
+    expect(valores(campos)).toEqual(['card.atributos.indicado_por']);
     escolha(wrapper, '[data-campo]').vm.$emit(
       'update:modelValue',
       'card.atributos.indicado_por'
@@ -110,10 +108,13 @@ describe('LivreRegistro', () => {
     ]);
   });
 
-  it('sem campo de número, diz o que fazer em vez de uma lista vazia', () => {
+  it('sem campo do tipo contato, diz o que fazer em vez de uma lista vazia', () => {
     const wrapper = montar({
       modelValue: { de: 'contato_do_campo' },
-      atributosDo: () => [],
+      // Só campos de número: nenhum serve para apontar o contato.
+      atributosDo: () => [
+        { attribute_key: 'indicado_por', attribute_display_type: 'number' },
+      ],
     });
 
     expect(wrapper.find('[data-sem-campo]').exists()).toBe(true);

@@ -95,6 +95,8 @@ class Crm::Card < ApplicationRecord
 
   # Memória das IAs (#1601): campo editado à mão e pedido encerrado.
   include Crm::CardMemoria
+  # Campo personalizado do tipo contato (decisão 16, ex. 11): só contato da conta.
+  include Crm::CardCampoContato
 
   enum status: { open: 0, won: 1, lost: 2, archived: 3, resolved: 4, cancelled: 5 }
   enum priority: { low: 0, medium: 1, high: 2, urgent: 3 }

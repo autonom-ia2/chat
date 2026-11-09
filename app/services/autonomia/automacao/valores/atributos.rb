@@ -39,12 +39,12 @@ class Autonomia::Automacao::Valores::Atributos
                                                                   attribute_display_type: :date)
     end
 
-    # O caminho lê um atributo do tipo número da conta? O "em outro registro" (G18) acha o contato ligado pelo id guardado
-    # num deles.
-    def numero?(caminho, conta)
+    # O caminho lê um atributo do tipo contato da conta (decisão 16)? O "em outro registro" (G18) acha o contato ligado
+    # pelo id guardado num deles.
+    def contato?(caminho, conta)
       base, chave = do_caminho(caminho)
       base.present? && conta.custom_attribute_definitions.exists?(attribute_model: MODELOS.fetch(base), attribute_key: chave,
-                                                                  attribute_display_type: :number)
+                                                                  attribute_display_type: :contato)
     end
 
     # O valor do atributo no objeto da base (a conversa, o contato ou o card).

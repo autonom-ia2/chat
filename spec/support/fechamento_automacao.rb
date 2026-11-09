@@ -164,27 +164,33 @@ module FechamentoAutomacao::Lacunas
     lido == 'João'
   end
 
-  # A execução filha aberta na Maria pelo passo da mãe, que roda na conversa do João (quem ela indicou).
+  # A execução filha aberta na Maria pelo passo da mãe, que roda no card do João (quem ela indicou). A Maria fica no
+  # campo do card do tipo contato (decisão 16).
   def filha_na_maria
     account = FactoryBot.create(:account)
     account.enable_features!('automacao_fundacao', 'automacao_motor')
     FactoryBot.create(:custom_attribute_definition, account: account, attribute_key: 'indicado_por', attribute_display_name: 'Indicado por',
-                                                    attribute_model: 'contact_attribute', attribute_display_type: 'number')
+                                                    attribute_model: 'card_attribute', attribute_display_type: 'contato')
     maria = account.contacts.create!(name: 'Maria')
-    joao = account.contacts.create!(name: 'João', custom_attributes: { 'indicado_por' => maria.id })
-    mae = mae_com_passo_em_outro(account, FactoryBot.create(:conversation, account: account, contact: joao))
+    dona = FactoryBot.create(:user, account: account, role: :administrator)
+    mae = mae_com_passo_em_outro(account, card_do_joao(account, dona, maria), dona)
     abrir_filhas(mae) && Autonomia::Automacao::Execucao.find_by(automacao_id: mae.automacao_id, alvo: maria)
   end
 
-  def mae_com_passo_em_outro(account, conversa)
+  def card_do_joao(account, dona, maria)
+    funil, etapa = create_crm_pipeline(account: account, user: dona)
+    account.crm_cards.create!(pipeline: funil, stage: etapa, contact: account.contacts.create!(name: 'João'), title: 'Banho do Rex',
+                              currency: 'BRL', custom_attributes: { 'indicado_por' => maria.id })
+  end
+
+  def mae_com_passo_em_outro(account, card, dona)
     ramo = { 'id' => 'na_maria', 'tipo' => 'esperar', 'duracao' => { 'valor' => 1, 'unidade' => 'dias' } }
     passo = { 'id' => 'outro', 'tipo' => 'em_outro_registro', 'passos' => [ramo],
-              'registro' => { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'contato.atributos.indicado_por' }, 'usar' => 'contato' } }
-    receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [passo, { 'id' => 'na_mae', 'tipo' => 'parar' }] }
-    dona = FactoryBot.create(:user, account: account, role: :administrator)
+              'registro' => { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'card.atributos.indicado_por' }, 'usar' => 'contato' } }
+    receita = { 'gatilho' => { 'tipo' => 'card.ganho' }, 'passos' => [passo, { 'id' => 'na_mae', 'tipo' => 'parar' }] }
     automacao = FactoryBot.create(:autonomia_automacao, account: account, ativa: true, ligada_por: dona)
     versao = FactoryBot.create(:autonomia_automacao_versao, automacao: automacao, receita: receita)
-    FactoryBot.create(:autonomia_automacao_execucao, versao: versao, alvo: conversa)
+    FactoryBot.create(:autonomia_automacao_execucao, versao: versao, alvo: card)
   end
 
   # O passo da mãe como o Executor o roda, e o job que ele enfileira, com o contato que o passo leu.

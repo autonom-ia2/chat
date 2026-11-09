@@ -12,4 +12,6 @@ export const ATTRIBUTE_TYPES = [
   { id: 5, key: 'DATE' },
   { id: 6, key: 'LIST' },
   { id: 7, key: 'CHECKBOX' },
+  // Decisão 16 (ex. 11): um contato da conta; só no card (CARD_MODEL_ID).
+  { id: 9, key: 'CONTATO', soNoModelo: 3 },
 ];

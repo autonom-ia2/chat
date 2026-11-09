@@ -20,7 +20,8 @@
       "LINK": "Link",
       "DATE": "Date",
       "LIST": "List",
-      "CHECKBOX": "Checkbox"
+      "CHECKBOX": "Checkbox",
+      "CONTATO": "Contact"
     },
     "ADD": {
       "TITLE": "Add Custom Attribute",

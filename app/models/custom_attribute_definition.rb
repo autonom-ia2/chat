@@ -43,10 +43,13 @@ class CustomAttributeDefinition < ApplicationRecord
   validates :attribute_display_type, presence: true
   validates :attribute_model, presence: true
   validate :attribute_must_not_conflict, on: :create
+  validate :contato_so_no_card
 
   # card_attribute (#1146): campos próprios de cada card do CRM.
   enum attribute_model: { conversation_attribute: 0, contact_attribute: 1, company_attribute: 2, card_attribute: 3 }
-  enum attribute_display_type: { text: 0, number: 1, currency: 2, percent: 3, link: 4, date: 5, list: 6, checkbox: 7 }
+  # contato (decisão 16 da Automação, ex. 11): um contato da conta, guardado pelo id dele ("indicado por Maria"). Só no
+  # card, como o tipo pessoa da equipe (G62, 8); o card confere que o contato é da conta (Crm::CardCampoContato).
+  enum attribute_display_type: { text: 0, number: 1, currency: 2, percent: 3, link: 4, date: 5, list: 6, checkbox: 7, contato: 9 }
 
   belongs_to :account
   after_update :update_widget_pre_chat_custom_fields, unless: :outside_pre_chat?
@@ -55,6 +58,10 @@ class CustomAttributeDefinition < ApplicationRecord
   after_destroy_commit :invalidate_filtered_unread_count_filters_destroy, if: :conversation_attribute?
 
   private
+
+  def contato_so_no_card
+    errors.add(:attribute_display_type, I18n.t('errors.custom_attribute_definition.contato_so_no_card')) if contato? && !card_attribute?
+  end
 
   # O formulário de pré-chat do widget só usa campos de contato e de conversa: empresa e card ficam de fora, mesmo com
   # a mesma chave de um campo de contato.

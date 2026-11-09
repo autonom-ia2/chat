@@ -7,7 +7,7 @@
         "CARDS_DO_CONTATO": "On this contact's other cards"
       },
       "CAMPO": "Which field holds the contact?",
-      "SEM_CAMPO": "No number field here can hold a contact. Create a number field first.",
+      "SEM_CAMPO": "No card field of the Contact type here. Create one in Settings > Custom Attributes (on the card, type Contact) so your team picks the contact from a list.",
       "AVISO_DO_CAMPO": "If this field is filled in from what the customer writes (by AI, for example), the customer could point to another contact in the account. Prefer a field only your team fills in.",
       "USAR": "Where?",
       "USOS": {

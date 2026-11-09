@@ -21,10 +21,10 @@ module Autonomia::Automacao::EmOutroRegistro
   MARCA = 'em'.freeze
   # A base de cada alvo possível da filha, para a marca (o nome da classe tem "::", que a marca usa como separador).
   BASES = { 'Contact' => 'contato', 'Conversation' => 'conversa', 'Crm::Card' => 'card' }.freeze
-  # Onde o `contato_do_campo` acha o id do contato: um atributo de número do contato ou do card, que guardam quem é a
-  # pessoa ligada (quem indicou). O da conversa não: o número dela é de outra coisa (um pedido, um protocolo), e a
-  # mensagem sairia a um cliente qualquer da conta.
-  CAMPOS_DO_CONTATO = %w[contato.atributos card.atributos].freeze
+  # Onde o `contato_do_campo` acha o id do contato: só um campo do card do tipo contato (decisão 16), que a equipe
+  # preenche escolhendo um contato da conta numa lista, e o card recusa contato de fora (Crm::CardCampoContato). Campo
+  # de número não serve: um engano (o número de um pedido, um protocolo) mandaria a mensagem a outro cliente da conta.
+  CAMPOS_DO_CONTATO = %w[card.atributos].freeze
 
   module_function
 
@@ -84,9 +84,9 @@ module Autonomia::Automacao::EmOutroRegistro
     chave + do_funil(id, registro, conta)
   end
 
-  # O campo guarda o id do contato: só um atributo do tipo número do contato ou do card (CAMPOS_DO_CONTATO), como a tela
-  # oferece. O resto (o telefone, o nome, o próprio contato do alvo, o texto da IA, o número da conversa) nunca é o
-  # contato ligado, e o passo pularia sempre ou acharia outro contato.
+  # O campo guarda o id do contato: só um campo do card do tipo contato (CAMPOS_DO_CONTATO), como a tela oferece. O resto
+  # (um campo de número, o telefone, o nome, o próprio contato do alvo, o texto da IA) nunca é o contato ligado, e o
+  # passo pularia sempre ou acharia outro contato.
   def do_campo(id, caminho, conta)
     lidos = [*yield(caminho)]
     return lidos if lidos.any?
@@ -97,7 +97,7 @@ module Autonomia::Automacao::EmOutroRegistro
   def campo_do_contato?(caminho, conta)
     atributos = ::Autonomia::Automacao::Valores::Atributos
     base, = atributos.do_caminho(caminho)
-    CAMPOS_DO_CONTATO.include?(base) && atributos.numero?(caminho, conta)
+    CAMPOS_DO_CONTATO.include?(base) && atributos.contato?(caminho, conta)
   end
 
   def do_funil(id, registro, conta)

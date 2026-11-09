@@ -81,6 +81,32 @@ RSpec.describe Autonomia::Automacao::EmOutroRegistro do
     it 'fora da filha, origem.* lê vazio' do
       expect(ler(mae, 'origem.contato.nome')).to be_nil
     end
+
+    # Quem ligou perdeu o funil do João entre a mãe e a filha: a filha não leva os dados dele à Maria.
+    it 'quem ligou deixou de alcançar o registro de origem: origem.* lê vazio, e o Contexto diz por quê', :aggregate_failures do
+      filha
+      allow(Crm::CardPolicy).to receive(:new).and_wrap_original do |original, contexto, registro|
+        politica = original.call(contexto, registro)
+        allow(politica).to receive(:show?).and_return(false) if registro == card
+        politica
+      end
+
+      expect(ler(filha, 'origem.contato.nome')).to be_nil
+      expect(ler(filha, 'origem.card.titulo')).to be_nil
+      expect(ler(filha, 'contato.nome')).to eq('Maria')
+      expect(Autonomia::Automacao::Contexto.de(filha.alvo, execucao: filha).origem_fora_do_alcance?).to be(true)
+      expect(Autonomia::Automacao::Contexto.de(mae.alvo, execucao: mae).origem_fora_do_alcance?).to be(false)
+    end
+
+    it 'o passo lê a origem pelo texto, corpo ou condição dele, nunca pelos passos dos ramos', :aggregate_failures do
+      origem = Autonomia::Automacao::Valores::Origem
+      com_origem = { 'id' => 'm1', 'tipo' => 'mensagem', 'texto' => ['O ', { '$valor' => 'origem.contato.nome' }] }
+
+      expect(origem.no_passo?(com_origem)).to be(true)
+      expect(origem.no_passo?({ 'id' => 'se', 'tipo' => 'se', 'condicao' => { 'campo' => { '$valor' => 'origem.card.status' } } })).to be(true)
+      expect(origem.no_passo?({ 'id' => 'se', 'tipo' => 'se', 'condicao' => { 'campo' => { '$valor' => 'contato.nome' } },
+                                'entao' => [com_origem] })).to be(false)
+    end
   end
 
   it 'a filha nunca abre neta: o passo dentro dela é pulado na rodada, sem procurar nada', :aggregate_failures do
