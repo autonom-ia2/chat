@@ -2,7 +2,7 @@
 #
 # GET  meta_ads_connection/ads/:ad_id/management → situação do anúncio e post da Página (Crm::MetaAds::AdManagement).
 #      Ver: administrador ou `meta_ads_view`; `can_change` só vem true para quem também pode mudar (`meta_ads_manage`).
-#      Com `meta_ads_criar`, também `created_here`, `creative_kind` e `can_swap_creative` (Crm::MetaAds::Creation::CareState).
+#      Com `meta_ads_criar`, também `created_here` e `creative_kind` (Crm::MetaAds::Creation::CareState).
 # POST meta_ads_connection/ads/:ad_id/status      → status=ACTIVE|PAUSED. Administrador ou `meta_ads_manage`.
 # GET  meta_ads_connection/pages                  → Páginas que a pessoa concedeu ao entrar com o Facebook.
 #

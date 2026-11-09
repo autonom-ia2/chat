@@ -8,7 +8,8 @@ quatro PRs, nesta ordem:
    `20261108580000` e a flag).
 2. Impulsionar post do Instagram e do Facebook.
 3. Criar post (e "Publicar e impulsionar").
-4. Cuidar: duplicar e trocar a foto como cópia (`can_swap_creative`).
+4. Cuidar: duplicar e trocar a foto ou o texto no próprio anúncio (#2804); se a
+   Meta recusar a troca, a cópia pausada com a foto nova.
 
 Este documento guarda o que a implementação precisa cumprir e que a tela já
 promete ao cliente. O que o servidor faz está em "Servidor do PR 1" e
@@ -151,14 +152,16 @@ Mais quatro pontos, que a tela já supõe:
     WhatsApp usa os lugares de `WHATSAPP`; post sem botão, os três. O
     rascunho nasce com o primeiro destino que veio. Sem nenhum, o cartão
     "Anúncio novo" fica apagado, com o motivo (cena `?demo=sem-destino`).
-13. **A gestão do anúncio traz `can_swap_creative`.** Com `true`, o "Trocar foto
-    ou texto" troca o criativo no próprio anúncio. Com `false`, o mesmo diálogo
-    vira "Trocar a foto (cria uma cópia)", com "Duplicar" como link: cria a
-    cópia pausada (Fluxo 5) já com a mídia e o texto novos, e o anúncio
-    original continua como está. A confirmação diz o valor e pede para pausar
-    este quando ativar a cópia, para não gastar em dobro. O
-    campo fica na gestão, e não nas opções de criar, porque é o detalhe do
-    anúncio que mostra o botão, e ele não carrega as opções de criar.
+13. **A gestão do anúncio traz `creative_kind`.** Com `image` ou `video`, o
+    "Trocar foto ou texto" troca o criativo no próprio anúncio (ligado para
+    todos em #2804; o `can_swap_creative` saiu). Se a Meta recusar pôr o
+    criativo novo no anúncio (`swap_refused`), o mesmo diálogo vira "Criar a
+    cópia pausada com a foto nova?": cria a cópia pausada (Fluxo 5) já com a
+    mídia e o texto novos, e o anúncio original continua como está. A
+    confirmação diz o valor e pede para pausar este quando ativar a cópia;
+    com a cópia no ar, o botão "Pausar o original" fica ali mesmo. O campo
+    fica na gestão, e não nas opções de criar, porque é o detalhe do anúncio
+    que mostra o botão, e ele não carrega as opções de criar.
 14. **Publicar devolve o resultado por rede**: `{ instagram, facebook,
     failed: ["instagram"] }`. Nenhuma rede publicada é erro ("Nada foi
     publicado"). Uma só: a tela diz qual não deu e tenta de novo só nela. Se
@@ -360,9 +363,11 @@ botão de WhatsApp e post impulsionado não levam ao site: o campo não vai
   `POST /{adset_id}/copies` para dentro da campanha nova, começando agora; e o
   anúncio novo, pausado, com o criativo do original ou um novo (`POST
   act_{id}/ads`, a mesma chamada do criar). Assim a cópia com foto nova não
-  depende do `POST /{ad_id}` com `creative`, que ainda não foi confirmado. A
-  idempotência, o desfazer e o "não confirmada" são os do criar (a marca no fim
-  do nome acha a campanha). A cópia tem orçamento próprio, igual ao do original;
+  depende do `POST /{ad_id}` com `creative`. A idempotência, o desfazer e o
+  "não confirmada" são os do criar (a marca no fim do nome acha a campanha). A
+  cópia não confirmada a pessoa refaz pela tela (#2804): confere no Gerenciador
+  e toca em "Não está no Gerenciador, criar de novo" (`recreate_unconfirmed`,
+  mesma chave, na Auditoria). A cópia tem orçamento próprio, igual ao do original;
   copiar só o anúncio dividiria o dinheiro do grupo. A confirmação diz o valor
   por extenso, e o "Ativar" da cópia fica ali mesmo. Original que já terminou
   não é copiado (`invalid_dates`). Confirmar na chamada real o `start_time` do
@@ -372,9 +377,13 @@ botão de WhatsApp e post impulsionado não levam ao site: o campo não vai
   O servidor relê o `effective_status` da cópia, como no criar (ponto 2).
 - **Trocar foto ou texto:** o criativo só aceita mudar `name` e `status`, então
   o servidor cria outro criativo e troca no anúncio (`POST /{ad_id}` com
-  `creative`). O exemplo oficial desse `POST` **não está confirmado**: confirmar
-  na chamada real. Se não der, a saída é "Trocar a foto (cria uma cópia)"
-  (`can_swap_creative: false`, ponto 13). Mudar o criativo leva a nova análise
+  `creative` = `{"creative_id": ...}`). A página de referência do anúncio não
+  lista os campos do update, mas o SDK oficial da Meta, gerado da especificação
+  da Graph API, manda `creative` no `Ad#api_update`
+  ([facebook-python-business-sdk](https://github.com/facebook/facebook-python-business-sdk/blob/main/facebook_business/adobjects/ad.py)).
+  Ligado para todos em #2804 (decisão do Rodrigo, 09/11). Recusa clara da Meta
+  ao pôr no anúncio: o criativo novo é apagado e a tela oferece a cópia
+  (`swap_refused`, ponto 13). Mudar o criativo leva a nova análise
   da Meta, e a tela avisa antes. Depois da troca, o detalhe já mostra a foto
   nova e a situação "Em análise da Meta", com "Volta ao ar sozinho quando a
   Meta aprovar." (`effective_status` `PENDING_REVIEW` ou `IN_PROCESS`).
@@ -433,7 +442,7 @@ Na conta de teste, com os testadores do app:
 16. A Meta busca o vídeo pelo endereço assinado do S3 (`file_url`).
 
 Os itens 1, 2, 3 e 9 já viram dado: o que não passar fica fora de `destinations`,
-`placements_by_destination` ou `can_swap_creative` (pontos 12 e 13), e a tela
+`placements_by_destination` ou `creative_kind` (pontos 12 e 13), e a tela
 não oferece. Nos outros, se algum não passar, a frase ou a opção da tela muda
 antes da flag.
 

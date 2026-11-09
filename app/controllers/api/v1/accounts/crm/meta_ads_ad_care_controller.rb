@@ -2,12 +2,13 @@
 # a Meta. Só anúncio criado pelo Chat2You nesta conta de anúncios (opção a do Rodrigo, 09/11); outro anúncio: 404
 # ad_not_found, e a tela diz para usar o Gerenciador de Anúncios.
 #
-# POST meta_ads_connection/ads/:ad_id/copies   → { idempotency_key, creative?: { text, media? } } → cópia pausada da
-#                                                campanha, com orçamento próprio: { ad_id, name, status, budget, in_review }
-#                                                (Crm::MetaAds::Creation::Copy).
+# POST meta_ads_connection/ads/:ad_id/copies   → { idempotency_key, creative?: { text, media? }, recreate_unconfirmed? }
+#                                                → cópia pausada da campanha, com orçamento próprio:
+#                                                { ad_id, name, status, budget, in_review } (Crm::MetaAds::Creation::Copy).
+#                                                `recreate_unconfirmed`: refaz a cópia não confirmada desta chave (#2804).
 # PUT  meta_ads_connection/ads/:ad_id/creative → { idempotency_key, text, media? } → { effective_status }
-#                                                (Crm::MetaAds::Creation::CreativeSwap; recusa `cannot_swap` até a
-#                                                chamada real confirmar).
+#                                                (Crm::MetaAds::Creation::CreativeSwap). A Meta recusou trocar neste
+#                                                anúncio: 422 `swap_refused`, e a tela oferece a cópia.
 #
 # Administrador ou `meta_ads_manage`. O que muda fica na Auditoria da conta com quem fez (nunca o token). Sem conexão
 # ativa com conta de anúncios: 404 not_connected. Mesma chave em andamento: 409 in_progress.
@@ -38,7 +39,7 @@ class Api::V1::Accounts::Crm::MetaAdsAdCareController < Api::V1::Accounts::Crm::
   private
 
   def copy_params
-    params.permit(:idempotency_key, creative: [:text, { media: [:kind, :hash, :video_id, :image_hash] }]).to_h
+    params.permit(:idempotency_key, :recreate_unconfirmed, creative: [:text, { media: [:kind, :hash, :video_id, :image_hash] }]).to_h
   end
 
   def creative_params

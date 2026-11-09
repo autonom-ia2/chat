@@ -3407,8 +3407,6 @@
           "CHANGE_CONFIRM": "Trocar e mandar para análise",
           "CHANGE_DONE": "Trocado. A Meta está analisando o anúncio de novo.",
           "CHANGE_ERROR": "A Meta não trocou agora. O anúncio segue como estava. Tente de novo daqui a pouco.",
-          "HINT_COPY": "A Meta não troca a foto de um anúncio pronto. Criamos uma cópia pausada com a foto nova.",
-          "SWAP_AS_COPY": "Trocar a foto (cria uma cópia)",
           "SWAP_AS_COPY_CONFIRM_TITLE": "Criar a cópia pausada com a foto nova?",
           "SWAP_AS_COPY_HINT": "A cópia tem orçamento próprio: {value} por dia. Ela não gasta nada até você ativar. Quando ativar a cópia, pause este para não gastar em dobro.",
           "SWAP_AS_COPY_HINT_TOTAL": "A cópia tem orçamento próprio: {value} no total. Ela não gasta nada até você ativar. Quando ativar a cópia, pause este para não gastar em dobro.",
@@ -3421,7 +3419,13 @@
           "ENDED": "O anúncio original já terminou, então não há o que copiar. Crie um anúncio novo.",
           "UNSURE": "A Meta não respondeu a tempo. Confira no Gerenciador de Anúncios se a cópia apareceu antes de tentar de novo.",
           "CHANGE_UNSURE": "A Meta não respondeu a tempo. Abra o anúncio de novo daqui a pouco para ver se a troca entrou.",
-          "OPEN_MANAGER": "Abrir no Gerenciador"
+          "OPEN_MANAGER": "Abrir no Gerenciador",
+          "SWAP_REFUSED": "A Meta não aceitou trocar a foto neste anúncio. Dá para criar uma cópia pausada com a foto nova.",
+          "COPY_UNCONFIRMED": "Não deu para confirmar com a Meta se a cópia foi criada. Confira no Gerenciador de Anúncios. Se ela não estiver lá, crie de novo.",
+          "RECREATE": "Não está no Gerenciador, criar de novo",
+          "PAUSE_ORIGINAL_HINT": "A cópia está no ar. Pause o original para não gastar em dobro.",
+          "PAUSE_ORIGINAL": "Pausar o original",
+          "PAUSE_ORIGINAL_DONE": "Original pausado. Agora só a cópia gasta."
         }
       },
       "AD_DETAIL": {

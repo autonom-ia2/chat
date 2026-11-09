@@ -216,17 +216,10 @@ RSpec.describe 'CRM meta_ads_connection cuidar do anúncio (#2778)', type: :requ
       put "#{path}/ads/#{ad_id}/creative", params: { idempotency_key: key }.merge(body), headers: admin.create_new_auth_token, as: :json
     end
 
-    it 'sem a chamada real confirmada, recusa (cannot_swap) e não chama a Meta' do
-      swap!
-
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body['error']).to eq('cannot_swap')
-      expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
-    end
-
-    context 'when a chamada real confirmou' do
+    # Ligado para todos (#2804, decisão do Rodrigo de 09/11): `POST /{ad_id}` com `creative` ({ creative_id }), como no
+    # SDK oficial da Meta (Ad#api_update aceita `creative`). Recusa clara cai na cópia pausada, pela tela.
+    context 'when ligado para todos' do
       before do
-        stub_const('Crm::MetaAds::Creation::CreativeSwap::CONFIRMED', true)
         stub_graph('me/permissions', { data: [{ permission: 'ads_management', status: 'granted' }] })
         stub_graph(creative_id, spec_image, fields: Meta::AdsGraphClient::CREATIVE_SPEC_FIELDS)
         stub_post("act_#{connection.ad_account_id}/adcreatives", { id: new_creative })
@@ -261,17 +254,68 @@ RSpec.describe 'CRM meta_ads_connection cuidar do anúncio (#2778)', type: :requ
         expect(a_request(:post, meta_graph_url(ad_id))).to have_been_made.once
       end
 
-      it 'a Meta recusa pôr no anúncio: apaga o criativo novo e o anúncio fica como estava' do
+      it 'a Meta recusa pôr no anúncio: apaga o criativo novo, o anúncio fica como estava e a tela oferece a cópia' do
         stub_post(ad_id, meta_graph_error(100), status: 400)
         drop = stub_request(:delete, meta_graph_url(new_creative)).to_return(status: 200, body: { success: true }.to_json, headers: json)
 
         swap!
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(response.parsed_body['error']).to eq('meta_refused')
+        expect(response.parsed_body).to include('error' => 'swap_refused', 'nothing_created' => true)
         expect(drop).to have_been_made.once
         expect(source.reload.creative_id).to eq(creative_id)
       end
+
+      it 'a Meta recusa criar o criativo novo: meta_refused, sem tocar no anúncio (a cópia também precisaria dele)' do
+        stub_post("act_#{connection.ad_account_id}/adcreatives", meta_graph_error(100), status: 400)
+
+        swap!
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body).to include('error' => 'meta_refused', 'nothing_created' => true)
+        expect(a_request(:post, meta_graph_url(ad_id))).not_to have_been_made
+      end
+    end
+  end
+
+  # A cópia ficou sem resposta da Meta e a busca pela marca veio vazia (#2804): a pessoa confere no Gerenciador e cria
+  # de novo pela tela, com a mesma chave. Sem pedir, a mesma chave continua "não confirmada".
+  describe 'cópia não confirmada' do
+    before do
+      stub_budget
+      stub_graph("act_#{connection.ad_account_id}/campaigns", { data: [] })
+      stub_request(:post, meta_graph_url("#{campaign_id}/copies")).to_timeout
+    end
+
+    it 'sem resposta da Meta: unconfirmed; a mesma chave sem pedir para recriar não copia de novo' do
+      copy!
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('error' => 'unconfirmed', 'nothing_created' => false)
+      expect(Crm::MetaAdsCreatedObject.find_by(idempotency_key: key).status).to eq('unconfirmed')
+
+      copy!
+      expect(response.parsed_body['error']).to eq('unconfirmed')
+      expect(a_request(:post, meta_graph_url("#{campaign_id}/copies"))).to have_been_made.once
+    end
+
+    it 'a pessoa pede para criar de novo: copia com a mesma chave e grava na Auditoria' do
+      copy!
+      stub_copy_calls
+
+      copy!({ recreate_unconfirmed: true })
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include('ad_id' => copy_ad, 'status' => 'PAUSED')
+      expect(Crm::MetaAdsCreatedObject.find_by(idempotency_key: key)).to have_attributes(kind: 'copy', status: 'created')
+      expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_create_recreated').count).to eq(1)
+    end
+
+    it 'recriar sem uma tentativa não confirmada desta chave: invalid_params, sem chamar a Meta' do
+      copy!({ recreate_unconfirmed: true })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('invalid_params')
+      expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
     end
   end
 
@@ -288,8 +332,9 @@ RSpec.describe 'CRM meta_ads_connection cuidar do anúncio (#2778)', type: :requ
       response.parsed_body['management']
     end
 
-    it 'criado aqui: created_here, a foto trocável e a troca como cópia' do
-      expect(management(ad_id)).to include('created_here' => true, 'creative_kind' => 'image', 'can_swap_creative' => false,
+    it 'criado aqui: created_here e a foto trocável no próprio anúncio' do
+      expect(management(ad_id)).not_to have_key('can_swap_creative')
+      expect(management(ad_id)).to include('created_here' => true, 'creative_kind' => 'image',
                                            'creative_image' => 'https://x/thumb.jpg', 'creative_text' => 'Texto antigo')
     end
 
@@ -324,7 +369,6 @@ RSpec.describe 'CRM meta_ads_connection cuidar do anúncio (#2778)', type: :requ
     end
 
     it 'trocar no anúncio apaga a leitura guardada' do
-      stub_const('Crm::MetaAds::Creation::CreativeSwap::CONFIRMED', true)
       management(ad_id)
       stub_post("act_#{connection.ad_account_id}/adcreatives", { id: new_creative })
       stub_post(ad_id, { success: true })

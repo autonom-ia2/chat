@@ -12,7 +12,9 @@
 # Depois, relê os três e pausa o que não vier pausado (Crm::MetaAds::Creation::Levels), como o criar (ponto 2).
 #
 # Idempotência, desfazer e "não confirmada" são os do criar (Crm::MetaAds::Creation::Attempt): uma linha `kind: copy`
-# em Crm::MetaAdsCreatedObject, que também faz a cópia aparecer em "Pausados" e ser ativada pelos três níveis.
+# em Crm::MetaAdsCreatedObject, que também faz a cópia aparecer em "Pausados" e ser ativada pelos três níveis. A cópia
+# não confirmada a pessoa refaz pela tela (#2804): confere no Gerenciador e pede de novo com a mesma chave e
+# `recreate_unconfirmed`, como no criar.
 class Crm::MetaAds::Creation::Copy
   KIND = 'copy'.freeze
   # Vai para a Meta, no nome da cópia (como a marca da tentativa).
@@ -39,7 +41,7 @@ class Crm::MetaAds::Creation::Copy
     done = same_request!(key)
     return result(done) if done&.status == 'created'
 
-    build_copy!(source, key, change)
+    build_copy!(source, key, change, recreate: ActiveModel::Type::Boolean.new.cast(params[:recreate_unconfirmed]) == true)
   end
 
   private
@@ -57,7 +59,7 @@ class Crm::MetaAds::Creation::Copy
     @access.client
   end
 
-  def build_copy!(source, key, change)
+  def build_copy!(source, key, change, recreate:)
     raise Crm::MetaAds::Creation::Error, 'cannot_change' unless @access.can_change_ads?
 
     @budget = Crm::MetaAds::Creation::Budget.new(@connection).read(source.ad_id)
@@ -65,14 +67,18 @@ class Crm::MetaAds::Creation::Copy
 
     @end_time = end_time!(@budget[:end_time])
     creative = change && new_creative_params(source, change)
-    record = @attempt.claim!(key, { kind: KIND, name: copy_name(source), budget: stored_budget, request_digest: @digest,
-                                    source_post_id: source.source_post_id, source_post_network: source.source_post_network })
+    record = @attempt.claim!(key, copy_attributes(source), recreate: recreate)
     return result(record) if record.status == 'created'
 
     build!(record, source, creative)
     Crm::MetaAds::Creation::CareState.forget(@account.id, source.ad_id)
     @created_now = true
     result(record)
+  end
+
+  def copy_attributes(source)
+    { kind: KIND, name: copy_name(source), budget: stored_budget, request_digest: @digest,
+      source_post_id: source.source_post_id, source_post_network: source.source_post_network }
   end
 
   # O fim do original vale para a cópia; já passou, não há o que copiar (a Meta recusaria).

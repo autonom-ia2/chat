@@ -2,17 +2,17 @@
 #
 # - `created_here`: o anúncio foi criado pelo Chat2You nesta conta de anúncios (opção a do Rodrigo, 09/11). Só nele a
 #   tela mostra o cartão; nos outros, uma linha diz para usar o Gerenciador de Anúncios da Meta.
-# - `creative_kind`: 'image' ou 'video' quando dá para trocar a foto ou o texto (Crm::MetaAds::Creation::CreativeChange);
-#   nil em carrossel, post impulsionado ou quando a Meta não respondeu (aí só o duplicar). `creative_image` e
+# - `creative_kind`: 'image' ou 'video' quando dá para trocar a foto ou o texto no próprio anúncio
+#   (Crm::MetaAds::Creation::CreativeChange e CreativeSwap; ligado para todos em #2804); nil em carrossel, post
+#   impulsionado ou quando a Meta não respondeu (aí só o duplicar). Se a Meta recusar a troca, a tela oferece a cópia. `creative_image` e
 #   `creative_text`: a miniatura e o texto de agora, para o anúncio sem números no período (a tela não tem outra foto).
-# - `can_swap_creative`: trocar no próprio anúncio (Crm::MetaAds::Creation::CreativeSwap); senão, a troca cria uma cópia.
 # - `ads_manager_url`: o anúncio no Gerenciador de Anúncios, o mesmo endereço do consultor (Crm::MetaAds::Advisor::Advice).
 #   É o "Abrir no Gerenciador" da linha que aparece nos anúncios criados fora.
 #
 # A leitura do criativo fica guardada por CACHE_FOR, por conta e anúncio: cada abertura do detalhe chamava a Graph e
 # gastava o limite de uso da Meta. Só leitura que deu certo fica guardada. Duplicar e trocar apagam (`forget`).
 class Crm::MetaAds::Creation::CareState
-  NONE = { created_here: false, creative_kind: nil, can_swap_creative: false, creative_image: nil, creative_text: nil }.freeze
+  NONE = { created_here: false, creative_kind: nil, creative_image: nil, creative_text: nil }.freeze
 
   CACHE_FOR = 5.minutes
 
@@ -34,9 +34,8 @@ class Crm::MetaAds::Creation::CareState
 
     creative = read_creative(record)
     kind = Crm::MetaAds::Creation::CreativeChange.kind_of(creative['object_story_spec'])
-    { created_here: true, creative_kind: kind, can_swap_creative: kind.present? && Crm::MetaAds::Creation::CreativeSwap.confirmed?,
-      creative_image: creative['thumbnail_url'].presence, creative_text: (Crm::MetaAds::Creation::CreativeChange.text_of(creative) if kind),
-      ads_manager_url: ads_manager_url(ad_id) }
+    { created_here: true, creative_kind: kind, creative_image: creative['thumbnail_url'].presence,
+      creative_text: (Crm::MetaAds::Creation::CreativeChange.text_of(creative) if kind), ads_manager_url: ads_manager_url(ad_id) }
   end
 
   private

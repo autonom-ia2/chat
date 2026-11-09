@@ -267,7 +267,8 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
 
   // New creative on the same ad (#2778): { text, media? } →
   // { effective_status } (Meta reviews it again). Only when the management
-  // says can_swap_creative. The same idempotency_key changes it once.
+  // says creative_kind. The same idempotency_key changes it once; Meta refusing
+  // to change this ad → 422 { error: 'swap_refused' } (the screen offers a copy).
   swapAdCreative(adId, body) {
     return axios.put(
       `${this.url}/ads/${encodeURIComponent(adId)}/creative`,
