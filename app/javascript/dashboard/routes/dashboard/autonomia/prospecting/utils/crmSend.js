@@ -11,11 +11,14 @@ const chunk = (items, size) =>
     items.slice(index * size, (index + 1) * size)
   );
 
+// O código da recusa (`code`) segue junto: a tela nova diz uma frase própria
+// para o dono recusado (#2694).
 const failedBatch = (leadIds, error) =>
   leadIds.map(leadId => ({
     lead_id: leadId,
     reason_code: REQUEST_FAILED,
     message: error?.response?.data?.error || null,
+    code: error?.response?.data?.code || null,
   }));
 
 const batchResult = async (leadIds, request) => {

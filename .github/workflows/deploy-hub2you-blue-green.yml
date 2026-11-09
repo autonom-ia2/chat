@@ -258,8 +258,9 @@ jobs:
               "CRM_CALENDAR_MEETINGS_ENABLED": "true",
               # 30 threads no worker (Rodrigo, 23/09/2026): com 10, vinte clientes cotando juntos
               # esperavam fila — um turno da Lia segura uma thread por ate 28 s e a abertura da
-              # cotacao por ate 24 s. O pool do banco acompanha (`config/database.yml`); o RDS
-              # aceita 79 conexoes e o pior caso, no deploy com as duas instancias, fica em ~50.
+              # cotacao por ate 24 s. O pool do banco acompanha (`config/database.yml`, que soma o
+              # capsule `agent_tools`, #1430). hub: max_connections 181; teto worker 30+10 + web 5
+              # por instancia (2 na troca) ≈ 50.
               "SIDEKIQ_CONCURRENCY": "30",
               # WhatsApp Hibrido (#1067): aba "WhatsApp API" nas caixas WhatsApp Oficial.
               # Liberado para todas as contas (Rodrigo, 07/10/2026). Restringir = ids separados por virgula.

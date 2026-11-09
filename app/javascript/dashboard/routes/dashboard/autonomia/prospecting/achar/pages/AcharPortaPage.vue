@@ -5,6 +5,7 @@ import { useDebounceFn } from '@vueuse/core';
 import Button from 'dashboard/components-next/button/Button.vue';
 import AcharHeroi from '../components/AcharHeroi.vue';
 import AcharOndeCampo from '../components/AcharOndeCampo.vue';
+import AcharFraseCampo from '../components/AcharFraseCampo.vue';
 import AcharLinhaFrase from '../components/AcharLinhaFrase.vue';
 import AcharBuscaCartao from '../components/AcharBuscaCartao.vue';
 import AcharRodape from '../components/AcharRodape.vue';
@@ -73,9 +74,16 @@ const ultimasDoPapel = computed(() =>
 );
 const googlePronto = ref(true);
 const emTeste = ref(false);
+// Pedido em uma frase (#2696): só com a IA da conta ligada. Enquanto a IA lê,
+// "O quê?", as ideias e "Onde?" ficam travados. O lugar que veio da frase não
+// é escolhido sozinho, nem com uma sugestão só: a pessoa toca.
+const iaPronta = ref(false);
+const lendoFrase = ref(false);
+const ondeDaFrase = ref(null);
 const ondeCampo = ref(null);
 
 const escolherLugar = async sugestao => {
+  if (lendoFrase.value) return;
   sugestoes.value = [];
   naoAchou.value = false;
   try {
@@ -86,7 +94,7 @@ const escolherLugar = async sugestao => {
 };
 
 const procurarLugares = useDebounceFn(async texto => {
-  if (lugar.value || congelado.value) return;
+  if (lugar.value || congelado.value || lendoFrase.value) return;
   if (texto.trim().length < MIN_LETRAS) {
     sugestoes.value = [];
     naoAchou.value = false;
@@ -99,7 +107,9 @@ const procurarLugares = useDebounceFn(async texto => {
     if (texto !== ondeTexto.value) return;
     sugestoes.value = achados;
     naoAchou.value = achados.length === 0;
-    if (achados.length === 1) await escolherLugar(achados[0]);
+    if (achados.length === 1 && texto !== ondeDaFrase.value) {
+      await escolherLugar(achados[0]);
+    }
   } catch {
     sugestoes.value = [];
     naoAchou.value = true;
@@ -112,7 +122,44 @@ watch(ondeTexto, texto => {
   if (!congelado.value) procurarLugares(texto);
 });
 
+// O que a IA entendeu da frase preenche os campos, chave por chave. Quando a
+// frase pede um ajuste, ela troca só aquela chave (pedir "com site" muda o
+// site e deixa a nota escolhida à mão). O que a frase não diz fica como
+// estava: o quê, o onde, cada ajuste e a ordem ("primeiro", que só muda
+// quando a frase pede a presença fraca). O lugar volta a ser texto: as
+// sugestões do Google aparecem e a pessoa toca no certo.
+const usarFrase = ({ oQue: entendido, onde, ajustes, primeiro }) => {
+  if (entendido) oQue.value = entendido;
+  if (onde) {
+    congelado.value = false;
+    lugar.value = null;
+    sugestoes.value = [];
+    ondeDaFrase.value = onde;
+    ondeTexto.value = onde;
+    procurarLugares(onde);
+  }
+  como.value = {
+    ...como.value,
+    ajustes: { ...(como.value.ajustes || {}), ...ajustes },
+    ...(primeiro ? { primeiro } : {}),
+  };
+};
+
+// Enviar a frase fecha os painéis de "Como procurar": nada muda o pedido
+// enquanto a IA lê. As sugestões ficam (o "Onde?" travado as esconde). Ao
+// destravar, a busca de lugares é reagendada para o texto de "Onde?": cobre a
+// frase que não trouxe o lugar e a busca que caiu durante a leitura.
+watch(lendoFrase, lendo => {
+  if (lendo) {
+    rascunhoComo.value = null;
+    painel.value = null;
+    return;
+  }
+  if (!lugar.value && ondeTexto.value.trim()) procurarLugares(ondeTexto.value);
+});
+
 const alterarLugar = () => {
+  if (lendoFrase.value) return;
   lugar.value = null;
   ondeTexto.value = '';
   sugestoes.value = [];
@@ -123,7 +170,7 @@ const falta = computed(() => {
   if (lugar.value) return null;
   if (!ondeTexto.value.trim()) return 'ONDE';
   if (procurando.value) return 'PROCURANDO';
-  if (sugestoes.value.length > 1) return 'TOCAR';
+  if (sugestoes.value.length > 0) return 'TOCAR';
   return 'EXISTA';
 });
 
@@ -133,6 +180,7 @@ const rotuloDoBotao = computed(() =>
 // D2 (crítica r5): todo botão desligado diz o motivo numa linha acima dele,
 // também enquanto procura o lugar e quando o lugar não foi achado.
 const dica = computed(() => {
+  if (lendoFrase.value) return t(`${NS}.FRASE.LENDO`);
   if (!falta.value || ocupado.value) return '';
   return t(`${NS}.FALTA.${falta.value}`);
 });
@@ -150,6 +198,7 @@ const ideiaEscolhida = ideia =>
   oQue.value.trim() === t(`${NS}.IDEIAS.${ideia}`);
 
 const achar = async () => {
+  if (lendoFrase.value) return;
   if (falta.value === 'TOCAR') {
     ondeCampo.value?.focarPrimeira();
     return;
@@ -172,6 +221,7 @@ const achar = async () => {
 };
 
 const abrirComo = () => {
+  if (lendoFrase.value) return;
   rascunhoComo.value = { ...como.value };
   painel.value = 'como';
 };
@@ -235,6 +285,7 @@ const preencher = ({ dados, preenchido = { usarSalvo: true } }) => {
     ...como.value,
     n: dados.limite || como.value.n,
     primeiro: preenchido.primeiro || 'melhores',
+    ...(preenchido.ajustes ? { ajustes: preenchido.ajustes } : {}),
   };
 };
 
@@ -244,6 +295,7 @@ const carregar = async () => {
     ultimas.value = dados.ultimas;
     googlePronto.value = dados.googlePronto;
     emTeste.value = dados.emTeste;
+    iaPronta.value = dados.iaPronta === true;
     modelos.value = dados.modelos || [];
     preencher({ dados, preenchido: dados.preenchido });
   } catch {
@@ -300,6 +352,12 @@ watch(demo, carregar);
             data-cartao-porta
             @submit.prevent="achar"
           >
+            <AcharFraseCampo
+              v-if="iaPronta"
+              v-model:ocupado="lendoFrase"
+              :interpretar="texto => fonte.interpretar(texto)"
+              @entendeu="usarFrase"
+            />
             <div class="grid grid-cols-1 gap-4 md:grid-cols-[2fr_3fr]">
               <div class="flex flex-col gap-1.5">
                 <label
@@ -314,6 +372,7 @@ watch(demo, carregar);
                   type="text"
                   autocomplete="off"
                   :placeholder="$t(`${NS}.O_QUE.PLACEHOLDER`)"
+                  :disabled="lendoFrase"
                   class="w-full !h-12 px-3 text-base border outline-none !mb-0 rounded-xl border-n-slate-6 bg-n-solid-1 text-n-slate-12 placeholder:text-n-slate-10 focus:border-n-blue-9"
                   data-campo-o-que
                 />
@@ -326,6 +385,7 @@ watch(demo, carregar);
                 :procurando="procurando"
                 :nao-achou="naoAchou"
                 :destacar="falta === 'TOCAR'"
+                :bloqueado="lendoFrase"
                 @escolher="escolherLugar"
                 @alterar="alterarLugar"
               />
@@ -340,6 +400,7 @@ watch(demo, carregar);
                 :key="ideia"
                 type="button"
                 :aria-pressed="ideiaEscolhida(ideia)"
+                :disabled="lendoFrase"
                 class="flex items-center gap-1.5 px-4 text-sm font-medium border border-solid rounded-full min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
                 :class="
                   ideiaEscolhida(ideia)
@@ -364,6 +425,7 @@ watch(demo, carregar);
               :texto="fraseComo"
               pode-alterar
               alterar-embaixo
+              :bloqueado="lendoFrase"
               @alterar="abrirComo"
             />
           </form>
@@ -410,7 +472,7 @@ watch(demo, carregar);
           v-if="googlePronto"
           :rotulo="rotuloDoBotao"
           :dica="dica"
-          :desabilitado="Boolean(falta)"
+          :desabilitado="Boolean(falta) || lendoFrase"
           :ocupado="ocupado"
           icone="i-lucide-search"
           @principal="achar"

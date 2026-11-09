@@ -65,6 +65,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
     t.bigint "custom_role_id"
     t.bigint "agent_capacity_policy_id"
     t.boolean "integration", default: false, null: false
+    t.datetime "ausente_ate"
     t.index ["account_id", "user_id"], name: "uniq_user_id_per_account_id", unique: true
     t.index ["account_id"], name: "index_account_users_on_account_id"
     t.index ["agent_capacity_policy_id"], name: "index_account_users_on_agent_capacity_policy_id"
@@ -538,7 +539,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
     t.datetime "updated_at", null: false
     t.string "faixa", default: "", null: false
     t.bigint "card_id"
+    t.bigint "autonomia_agent_tool_id"
     t.index ["account_id", "slug", "created_at"], name: "idx_autonomia_tool_runs_account_slug"
+    t.index ["autonomia_agent_tool_id"], name: "idx_autonomia_tool_runs_agent_tool"
     t.index ["conversation_id", "created_at"], name: "idx_autonomia_tool_runs_conversation"
     t.index ["conversation_id", "slug", "faixa"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('running'::character varying)::text]))"
     t.index ["execution_key"], name: "idx_autonomia_tool_runs_execution_key", unique: true

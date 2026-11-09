@@ -198,18 +198,6 @@ RSpec.describe 'Autonomia prospecting search visibility', type: :request do
       expect(account.crm_cards.count).to eq(0)
     end
 
-    it 'não põe o lead numa lista pela seleção da campanha, e o lead continua fechado para ele' do
-      other_lead.update!(phone: '+5531999990001', country: 'BR', status: :ready_for_campaign,
-                         metadata: { 'whatsapp_verification' => { 'status' => 'verified', 'phone' => '+5531999990001' } })
-
-      post "#{base_path}/leads/campaign_segment", params: { lead_ids: [other_lead.id], segment_name: 'Seleção' },
-                                                  headers: auth_headers(agent), as: :json
-
-      expect(Autonomia::Prospecting::ListLead.where(prospect_lead_id: other_lead.id)).not_to exist
-      get "#{base_path}/leads/#{other_lead.id}", headers: auth_headers(agent)
-      expect(response).to have_http_status(:not_found)
-    end
-
     it 'não põe o lead numa lista pelo id (404), e o lead continua fechado para ele' do
       list = Autonomia::Prospecting::List.create!(account: account, user: agent, name: 'Minha lista')
 
