@@ -414,7 +414,8 @@ const situacaoDoCuidado = computed(() => {
 const cuidando = computed(() =>
   ['on', 'paused'].includes(situacaoDoCuidado.value)
 );
-// O privado no Facebook só sai na conta com a flag (#2613, o servidor decide); antes de ler, o resumo não promete.
+// O privado no Facebook só sai na Página com a permissão da Meta (#2307, o servidor decide); antes de ler, o resumo
+// não promete.
 const privadoLiberado = computed(
   () => cuidado.value?.private_available ?? rede.value !== 'facebook'
 );
