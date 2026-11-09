@@ -26,7 +26,8 @@
 # o erro subir. Vale para o método inteiro (o Motor.ligado? e as consultas
 # também) e, dentro dele, para cada automação e cada execução. O log leva a classe do erro e onde ele saiu, nunca a
 # mensagem: a de uma consulta traz os valores, que podem ser do cliente. A automação que não começou por erro não
-# deixa registro (não há execução onde pôr); o "esperar até" que não acordou segue pelo relógio.
+# deixa registro (não há execução onde pôr); o "esperar até" que não acordou segue pelo relógio, com a falha também
+# no histórico da execução (Despertador.nao_acordou).
 #
 # A execução acordada não herda a cadeia de quem a acordou: retoma a dela, gravada na Partida. A proteção contra
 # laço vale nas partidas; cada receita tem um número finito de esperas, então o despertar não gira sem fim.
@@ -97,7 +98,7 @@ module Autonomia::Automacao::Escuta
     return unless mudou.to_h.key?('status')
 
     execucao = execucao_do_envio(mensagem)
-    reservar(execucao) if execucao && esperando_condicao?(execucao)
+    acordar_a_execucao(execucao) if execucao
   rescue StandardError => e
     registrar_erro("não acordou pelo envio mensagem=#{mensagem&.id}", e)
   end
@@ -132,11 +133,14 @@ module Autonomia::Automacao::Escuta
 
   # `filtro`: só reserva a execução que ele aceita (a reunião acorda só quem lê reunião).
   def acordar_quem_espera(execucoes, filtro: nil)
-    execucoes.includes(:versao).find_each do |execucao|
-      reservar(execucao) if esperando_condicao?(execucao) && (filtro.nil? || filtro.call(execucao))
-    rescue StandardError => e
-      registrar_erro("não acordou execucao=#{execucao.id}", e)
-    end
+    execucoes.includes(:versao).find_each { |execucao| acordar_a_execucao(execucao, filtro) }
+  end
+
+  # O erro de uma execução não para as outras: fica no log e no histórico dela, e a espera segue pelo relógio.
+  def acordar_a_execucao(execucao, filtro = nil)
+    reservar(execucao) if esperando_condicao?(execucao) && (filtro.nil? || filtro.call(execucao))
+  rescue StandardError => e
+    ::Autonomia::Automacao::Despertador.nao_acordou(execucao, e)
   end
 
   # O listener só enfileira o evento do card, e só na conta com os gatilhos de card ligados. A cadeia em curso (que o

@@ -543,6 +543,7 @@ en:
         sem_chave_de_funis: 'The person who turned on the automation can no longer edit the pipeline, and this step changes the pipeline. Take over and turn it back on.'
         gatilho_desligado: 'Card and time triggers are off for this account. The automation did not continue.'
         ja_aberta: 'The trigger happened again, but the automation was already running here and did not start again.'
+        nao_acordou: 'An error kept the automation from checking this wait early. It keeps waiting until the deadline.'
         receita_com_problema: 'This version no longer runs as it was saved. Fix it and save again before turning it on.'
         sem_quem_ligou: 'Nobody turned this automation on. Take over and turn it back on.'
         sem_versao: 'This automation has no saved steps yet.'

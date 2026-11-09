@@ -34,13 +34,14 @@ module Autonomia::Automacao::EsperaNoExecutor
     nil
   end
 
-  # Só depois da espera gravada: erro aqui vai para o log, e o prazo segue pelo relógio.
+  # Só depois da espera gravada: erro aqui vai para o log e para o histórico da execução (Despertador.nao_acordou), e o
+  # prazo segue pelo relógio.
   def reconferir_a_espera(passo, espera)
     esperando = ::Autonomia::Automacao::Execucao.find_by(id: @execucao.id, estado: 'esperando')
     @alvo = @contexto = nil
     ::Autonomia::Automacao::Despertador.acordar(esperando) if esperando && alvo && condicao?(passo['condicao'], valores(espera: espera))
   rescue StandardError => e
-    ::Autonomia::Automacao::Escuta.registrar_erro("não reconferiu ao esperar execucao=#{@execucao.id}", e)
+    ::Autonomia::Automacao::Despertador.nao_acordou(@execucao, e, passo: passo['id'])
   end
 
   # A janela do "esperar até", para a resposta que chegou durante ele (G11): na primeira conferência, de agora em diante;

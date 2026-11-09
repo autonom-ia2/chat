@@ -9,7 +9,8 @@
 # - Responsável (lote 4, #2682): a mesma régua, só da pessoa atribuída à conversa na hora da conferência ("espera a
 #   Fernanda", depois de passar a conversa para ela). O eco do celular não conta: ele não diz quem mandou.
 # - Gatilho repetiu (lote 4): o gatilho da execução aconteceu de novo durante a espera (a 2ª falta dentro dos 30 dias).
-#   A Partida grava a hora em `repetiu_em`; lida do banco, porque a execução em memória é de antes da repetição.
+#   A Partida grava a hora em `repetiu_em` (Despertador.gatilho_repetiu, só na receita que lê a repetição); lida do
+#   banco, porque a execução em memória é de antes da repetição.
 # - Reunião atendida (G59): o primeiro "Aconteceu" de uma reunião do contato durante a espera (ValoresDaReuniao).
 #
 # O eco de uma mensagem NOSSA (IA, automação, robô) não é a equipe respondendo. Normalmente ele nem vira mensagem: o
