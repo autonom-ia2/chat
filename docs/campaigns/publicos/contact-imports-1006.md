@@ -17,6 +17,14 @@ continua sendo o usado quando a tela nova está desligada.
 
 Permissão: a mesma da importação do Chatwoot (`ContactPolicy#import?` — administrador ou função
 com `contact_manage`). Sem ela → `401`. `campaign_manage` sozinho não basta.
+A gravação (#2771) pergunta de novo, a quem subiu o arquivo, na hora do job: quem perdeu a
+permissão ou saiu da conta antes disso não grava nada, e a importação inteira fica `failed` com
+`validation_summary.import_error = "import_not_allowed"`.
+
+A linha gravada (`CampaignImports::ContactRow`, #2771) é a mesma do passo "Para cada item" da
+Automação: acha pelo telefone (com ou sem o nono dígito) e depois pelo e-mail; contato que já
+existe só ganha o que não tem (nome, telefone e e-mail preenchidos nunca são trocados); a empresa
+só vai para quem não tem empresa.
 
 ## Endpoints
 
