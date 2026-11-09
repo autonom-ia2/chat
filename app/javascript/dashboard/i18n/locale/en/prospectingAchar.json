@@ -2,7 +2,8 @@
   "PROSPECTING_ACHAR": {
     "MENU": {
       "ACHAR": "Find businesses",
-      "BUSCAS": "Searches"
+      "BUSCAS": "Searches",
+      "FILA": "To call"
     },
     "COMUM": {
       "ALTERAR": "Change",
@@ -42,6 +43,17 @@
     },
     "PORTA": {
       "TITULO": "Which businesses do you want to find?",
+      "FRASE": {
+        "ROTULO": "Describe what you are looking for",
+        "PLACEHOLDER": "E.g.: bakeries near Paulista Avenue with good ratings",
+        "BOTAO": "Fill in the fields",
+        "BOTAO_OCUPADO": "Reading…",
+        "CONFIRA": "Done. Check the fields below before searching.",
+        "NAO_ENTENDEU": "We did not understand. Write it another way or fill in the fields below.",
+        "ERRO": "The AI did not answer now. Fill in the fields below.",
+        "SEM_IA": "The account AI is not turned on. Fill in the fields below.",
+        "LENDO": "Reading your sentence…"
+      },
       "O_QUE": {
         "ROTULO": "What?",
         "PLACEHOLDER": "E.g. offices"
@@ -269,7 +281,12 @@
       "ESCOLHA_O_QUE": "Choose what to do",
       "NINGUEM": "None of these can receive messages",
       "ERRO_FUNIL": "Could not send. None went in.",
+      "ERRO_DONO_SEM_CHAVE": "Only people who manage the funnels can choose someone else. Send without changing it: they stay with you.",
+      "ERRO_DONO_SEM_FUNIL": "This person can't see this funnel. Choose someone else or another funnel.",
       "ERRO_LISTA": "We could not save the list.",
+      "ERRO_LISTA_NINGUEM": "None of these can receive messages: they asked not to, or have no mobile or e-mail.",
+      "ERRO_LISTA_DEMAIS": "Save up to {max} companies at a time. Turn some off and try again.",
+      "ERRO_LISTA_CONTATO_APAGADO": "A contact was deleted while the list was being saved. The contacts created so far were kept. Try again.",
       "NAO_VAO_LINK": "Why {n} is not going | Why {n} are not going",
       "TENTAR": "Try again",
       "VAO": "{n} companies will go",
@@ -284,7 +301,9 @@
     "COM_QUEM_PAINEL": {
       "TITULO": "Who keeps the businesses?",
       "VOCE": "{nome} (you)",
-      "PESSOA": "Person"
+      "PESSOA": "Person",
+      "SEM_O_FUNIL": "{nome} can't see this funnel. The businesses will stay with you.",
+      "ERRO_LISTA": "Could not load who can receive them. The businesses will stay with you."
     },
     "PRONTO": {
       "VARIAS": "Done. {n} companies went into the {funil} pipeline. They stay with {pessoa}.",
@@ -295,7 +314,16 @@
       "LISTA": {
         "TITULO": "Done. The message list is saved.",
         "DETALHE": "{nome} · {n} businesses",
-        "ESCREVER": "Create the message"
+        "ESCREVER": "Create the message",
+        "FORA": {
+          "NAO_QUER": "{n} asked not to receive messages and was left out. | {n} asked not to receive messages and were left out.",
+          "BLOQUEADO": "{n} is blocked and was left out. | {n} are blocked and were left out.",
+          "SEM_CONTATO": "{n} has no mobile or e-mail and was left out. | {n} have no mobile or e-mail and were left out.",
+          "TIRADA": "{n} had been taken off the list and was left out. | {n} had been taken off the list and were left out.",
+          "MESMA_PESSOA": "{n} is the same person as another company on the list and went in once. | {n} are the same person as other companies on the list and went in once.",
+          "SUMIU": "{n} is no longer in your list. | {n} are no longer in your list.",
+          "NAO_DEU": "Could not save {n}. Try again. | Could not save {n}. Try again."
+        }
       },
       "NENHUMA_NOVA": "No new company entered the {funil} pipeline.",
       "FALHARAM": "{n} company didn't get into the pipeline. | {n} companies didn't get into the pipeline.",
@@ -353,7 +381,14 @@
         "VOLTAM": "{n} comes back tomorrow. | {n} come back tomorrow.",
         "NAO_SERVE": "{n} not a fit. | {n} not a fit."
       },
-      "POSSIVEL": "May be the owner: {nome}"
+      "POSSIVEL": "May be the owner: {nome}",
+      "CARREGANDO": "Opening the businesses to call…",
+      "ERRO": "We could not open the businesses to call. Try again.",
+      "ERRO_ACAO": "We could not save it. Try again.",
+      "MANDOU": "Done. {nome} is in the {funil} pipeline.",
+      "ETAPA_E_DONO": "It went to the {etapa} stage, with {pessoa}.",
+      "TRUNCADA": "Showing the first {max}. Finish these to see more.",
+      "JA_ESTAVA": "This business was already in the pipeline."
     },
     "MOTIVOS": {
       "OUTRO": "Other reason",

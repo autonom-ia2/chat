@@ -39,6 +39,17 @@ vi.mock('dashboard/composables/store', async () => {
   const valores = { getCurrentAccountId: 1, getCurrentUser: { id: 7 } };
   return { useMapGetter: nome => computed(() => valores[nome]) };
 });
+// Trocar o dono (#2694) é crm_manage_pipelines: aqui ninguém gere funis
+// (o "Com quem fica" de verdade está em AcharConfiraPage.dono.spec.js).
+vi.mock(
+  'dashboard/routes/dashboard/crm/composables/useCrmPermissions',
+  async () => {
+    const { computed } = await import('vue');
+    return {
+      useCrmPermissions: () => ({ canManagePipelines: computed(() => false) }),
+    };
+  }
+);
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
   return {

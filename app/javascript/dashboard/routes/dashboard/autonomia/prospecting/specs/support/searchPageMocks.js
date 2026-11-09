@@ -11,7 +11,6 @@ export const prospectingApiMock = () => ({
     updateSearch: vi.fn(),
     deleteSearch: vi.fn(),
     createCrmCards: vi.fn(),
-    addLeadsToCampaign: vi.fn(),
     adoptOwner: vi.fn(),
     verifyLeadWhatsApp: vi.fn(),
     enrichLead: vi.fn(),

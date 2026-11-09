@@ -1,0 +1,16 @@
+{
+  "AUSENCIA": {
+    "CAMPO": {
+      "LABEL": "Away until",
+      "DICA": "Vacation or leave. After this date the person counts as present again on their own. Automations can check \"owner is away\".",
+      "LIMPAR": "Not away"
+    },
+    "PERFIL": {
+      "TITULO": "Away",
+      "NOTA": "Mark until when you are away from this account. Leave it empty when you are not.",
+      "SALVAR": "Save",
+      "SALVO": "Saved.",
+      "ERRO": "Could not save. Check the date and try again."
+    }
+  }
+}
