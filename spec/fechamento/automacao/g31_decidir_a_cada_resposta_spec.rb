@@ -6,7 +6,8 @@ require 'rails_helper'
 #
 # Os passos 3 e 6 rodam como o termo diz: espera a resposta por até 2 horas; a cada resposta, a IA decide, e "ainda
 # conversando" volta a esperar a próxima. O prazo do "decidir de novo" (2 horas, o número do passo 3) é um exemplo: o
-# termo não diz quanto esperar nem o que fazer quando vence (pergunta ao Rodrigo no PR); vencido, segue sem fazer nada.
+# termo não diz quanto esperar nem o que fazer quando vence (pergunta ao Rodrigo no PR); vencido, segue para o passo
+# depois do decidir, que no exemplo 2 não há: a execução acaba.
 # Fora daqui: o passo 5 (passar a conversa à Sofia) é a G15, provada em passo_de_ia_assumir_spec.rb; aqui a Sofia é uma
 # mensagem de saída de um robô. O link da agenda (passo 7) é a G12; no lugar dele, um aviso marca que o caminho rodou.
 # O exemplo 2 inteiro nasce quando G29, G30 e G32 fecharem. As bordas (rajada, prazo, caixa que quem ligou não vê, nova

@@ -126,14 +126,18 @@ RSpec.describe Autonomia::Automacao::DecidirDeNovo, :automacao_motor do
     expect([execucao.estado, execucao.cursor]).to eq(%w[esperando decide])
   end
 
-  it 'sem resposta até o prazo, segue para depois do decidir sem fazer nada', :aggregate_failures do
+  # Leitura literal do termo: vencido o prazo, o "decidir" é como um caminho sem passos. O passo de depois roda sem a
+  # resposta do cliente (sem passo depois, a execução acaba).
+  it 'sem resposta até o prazo, segue para o passo depois do decidir, sem outra ida à IA', :aggregate_failures do
     ia_escolhe('ainda_conversando')
-    execucao = comecar_e_rodar
+    execucao = comecar_e_rodar(automacao_ligada(account, admin, [decide, prioridade_passo('depois')]))
+    expect(conversa.reload.priority).not_to eq('urgent')
 
     travel(2.hours + 1.minute) { varrer }
 
     expect(execucao.reload.estado).to eq('concluida')
-    expect(registros(execucao)).to eq([['decide', 'ok', nil], %w[decide pulado prazo_vencido]])
+    expect(registros(execucao)).to eq([['decide', 'ok', nil], %w[decide pulado prazo_vencido], ['depois', 'ok', nil]])
+    expect(conversa.reload.priority).to eq('urgent')
     expect(corpos.size).to eq(1)
   end
 
@@ -169,14 +173,14 @@ RSpec.describe Autonomia::Automacao::DecidirDeNovo, :automacao_motor do
     expect(ramos(execucao)).to eq(%w[ainda_conversando quer_visitar])
   end
 
-  it 'no ensaio, o caminho que decide de novo não segue em frente; os outros seguem pelos passos deles' do
-    roteiro = Autonomia::Automacao::Roteiro.new('passos' => [decide])
+  it 'no ensaio, o caminho que decide de novo leva aos passos de depois do decidir, os do prazo vencido' do
+    roteiro = Autonomia::Automacao::Roteiro.new('passos' => [decide, prioridade_passo('depois')])
     ramos = described_class.ramos_do_ensaio(decide, roteiro) { |primeiro| [primeiro&.fetch('id')] }
 
     expect(ramos).to eq([{ chave: 'quer_visitar', nome: 'Quer visitar', passos: ['visita'] },
-                         { chave: 'so_curiosidade', nome: 'Só curiosidade', passos: [nil] },
-                         { chave: 'ainda_conversando', nome: 'Ainda conversando', de_novo: true, passos: [] },
-                         { chave: 'nenhum', passos: [nil] }])
+                         { chave: 'so_curiosidade', nome: 'Só curiosidade', passos: ['depois'] },
+                         { chave: 'ainda_conversando', nome: 'Ainda conversando', de_novo: true, passos: ['depois'] },
+                         { chave: 'nenhum', passos: ['depois'] }])
   end
 
   describe 'o salvar' do

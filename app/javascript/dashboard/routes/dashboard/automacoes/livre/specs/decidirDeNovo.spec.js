@@ -175,14 +175,15 @@ describe('frase e ensaio do decidir que decide de novo', () => {
     });
 
     expect(fraseDoPasso(passo, catalogo, tReal)).toBe(
-      'A IA decide: “O que a Ana quer?” (2 caminhos); se Ainda conversando e nenhum se aplica, espera a próxima resposta (até 2 horas) e decide de novo'
+      'A IA decide: “O que a Ana quer?” (2 caminhos); se Ainda conversando e nenhum se aplica, espera a próxima resposta (até 2 horas) e decide de novo; sem resposta no prazo, segue em frente'
     );
     expect(fraseDoPasso(decidir(), catalogo, tReal)).toBe(
       'A IA decide: “O que a Ana quer?” (2 caminhos)'
     );
   });
 
-  it('no ensaio, o caminho que decide de novo diz que espera a próxima resposta', () => {
+  it('no ensaio, o caminho que decide de novo espera a próxima resposta e mostra o que roda se o prazo vencer', () => {
+    const depois = { id: 'p2', tipo: 'acao', faria: 'acao' };
     const no = {
       id: 'p1',
       tipo: 'decidir',
@@ -193,20 +194,26 @@ describe('frase e ensaio do decidir que decide de novo', () => {
           chave: 'ainda_conversando',
           nome: 'Ainda conversando',
           de_novo: true,
-          passos: [],
+          passos: [depois],
         },
-        { chave: 'nenhum', de_novo: true, passos: [] },
+        { chave: 'nenhum', de_novo: true, passos: [depois] },
       ],
     };
 
-    const caminhos = linhasDoEnsaio([no], () => 'frase', tReal)
-      .filter(linha => linha.caminho)
-      .map(linha => linha.texto);
+    const linhas = linhasDoEnsaio([no], id => `frase ${id}`, tReal).slice(1);
 
-    expect(caminhos).toEqual([
-      'Se a IA escolher "Quer visitar":',
-      'Se a IA escolher "Ainda conversando": espera a próxima resposta e decide de novo.',
-      'Se nenhum se aplicar: espera a próxima resposta e decide de novo.',
+    expect(linhas.map(({ nivel, texto }) => [nivel, texto])).toEqual([
+      [1, 'Se a IA escolher "Quer visitar":'],
+      [
+        1,
+        'Se a IA escolher "Ainda conversando": espera a próxima resposta e decide de novo. Se o prazo vencer sem resposta:',
+      ],
+      [2, 'frase p2'],
+      [
+        1,
+        'Se nenhum se aplicar: espera a próxima resposta e decide de novo. Se o prazo vencer sem resposta:',
+      ],
+      [2, 'frase p2'],
     ]);
   });
 });

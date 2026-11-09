@@ -10,7 +10,8 @@
 # - Ao retomar, a janela é do instante da leitura até o prazo (`due_at`). A resposta conta pela régua da G11
 #   (Resposta.cliente?, só nas conversas que quem ligou vê). Acordada por outra coisa (a resposta da agente de IA, o
 #   contato mudando), volta a esperar sem chamar a IA.
-# - Vencido o prazo sem resposta, segue para o passo depois do "decidir" sem fazer nada (leitura literal do termo).
+# - Vencido o prazo sem resposta, segue para o passo depois do "decidir", como um caminho sem passos (leitura literal
+#   do termo): os passos de depois rodam sem a resposta; sem passo depois, a execução acaba.
 # - A nova tentativa de um erro passageiro da IA roda direto, sem pedir outra resposta.
 # Fica fora do Executor para ele seguir sendo a lista dos passos; usa os métodos dele (aguardar, registrar, contexto).
 module Autonomia::Automacao::DecidirDeNovo
@@ -44,11 +45,12 @@ module Autonomia::Automacao::DecidirDeNovo
   end
 
   # Os ramos do "decidir" no ensaio (Ensaio#decidir), um por caminho e o "nenhum": os passos que o bloco ensaia a partir
-  # do primeiro. O caminho que decide de novo não segue em frente: a tela diz que ele espera a próxima resposta.
+  # do primeiro. O caminho que decide de novo não tem passos (conferido ao salvar), então os dele são os de depois do
+  # "decidir": é o que roda se o prazo vencer sem resposta. A marca `de_novo` faz a tela dizer que antes ele espera.
   def self.ramos_do_ensaio(passo, roteiro)
     caminhos = Array(passo['caminhos']).map { |item| [item['chave'], item['nome'], Array(item['passos']).first || roteiro.seguinte(passo['id'])] }
     [*caminhos, [NENHUM, nil, roteiro.entrar(passo, NENHUM)]].map do |chave, nome, primeiro|
-      { chave: chave, nome: nome, **(repete?(passo, chave) ? { de_novo: true, passos: [] } : { passos: yield(primeiro) }) }.compact
+      { chave: chave, nome: nome, de_novo: repete?(passo, chave) || nil, passos: yield(primeiro) }.compact
     end
   end
 
