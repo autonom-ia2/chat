@@ -17,6 +17,14 @@ module Autonomia
         authorized_agent_inbox(conversation)
       end
 
+      # O vínculo `agent_inbox` ainda responde a conversa: o contrato inteiro (`eligible_agent_inbox`), com estado fresco,
+      # na MESMA caixa do agente. Usado a cada pedaço (ChunkedDeliveryJob) e antes da interação que sai depois do áudio
+      # (InteracaoDepoisDoAudio, #1479).
+      def self.no_comando?(conversation, agent_inbox)
+        fresh = eligible_agent_inbox(conversation)
+        fresh.present? && fresh.id == agent_inbox&.id
+      end
+
       # AUTORIZAÇÃO, sem a POSSE DO TURNO (#313). É o contrato inteiro do `eligible_agent_inbox`
       # MENOS a exigência de a conversa estar sem responsável: feature ligada na conta + tenancy
       # fail-closed + agente ligado/ativo/não-interno/não-sistema + allowlist de teste.

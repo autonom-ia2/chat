@@ -46,6 +46,13 @@ RSpec.describe CampaignJourney::ConversaAberta::Contagem, :aggregate_failures do
     expect(contar.slice(:dentro, :fora)).to eq(dentro: 0, fora: 2)
   end
 
+  it 'deixa de fora quem está bloqueado (chat#2733)' do
+    falou(contato('Ana Souza'), at: now - 1.hour)
+    contato('Ana Souza').update!(blocked: true)
+
+    expect(contar.slice(:dentro, :fora)).to eq(dentro: 0, fora: 2)
+  end
+
   it 'traz o preço do modelo pela categoria, o da mensagem escrita e a franquia do número' do
     resultado = contar('MARKETING')
 

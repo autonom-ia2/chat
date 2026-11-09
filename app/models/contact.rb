@@ -52,6 +52,7 @@ class Contact < ApplicationRecord
   include Labelable
   include LlmFormattable
   include ContactOptOut
+  include ContactCampaignReach
   include ContactCustomer
   include ContactMemoria
   # Antes das associações: com a flag crm_arquivados, os cards perdem o dado pessoal antes de qualquer outra dependência
