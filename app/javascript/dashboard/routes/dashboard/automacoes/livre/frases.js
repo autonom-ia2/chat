@@ -429,10 +429,16 @@ export const fraseDoPasso = (passo, catalogo, t) => {
     return t(`${P}.ESPERAR`, {
       duracao: fraseDaDuracao(passo.duracao, catalogo, t),
     });
+  // G64: a hora da conferência diária, quando marcada.
   if (passo.tipo === 'esperar_ate' && passo.prazo === SEM_PRAZO)
-    return t(`${P}.ESPERAR_ATE_SEM_PRAZO`, {
-      condicao: fraseDaCondicao(passo.condicao, catalogo, t),
-    });
+    return Number.isInteger(passo.conferir_as)
+      ? t(`${P}.ESPERAR_ATE_SEM_PRAZO_AS`, {
+          condicao: fraseDaCondicao(passo.condicao, catalogo, t),
+          hora: passo.conferir_as,
+        })
+      : t(`${P}.ESPERAR_ATE_SEM_PRAZO`, {
+          condicao: fraseDaCondicao(passo.condicao, catalogo, t),
+        });
   if (passo.tipo === 'esperar_ate')
     return t(`${P}.ESPERAR_ATE`, {
       condicao: fraseDaCondicao(passo.condicao, catalogo, t),

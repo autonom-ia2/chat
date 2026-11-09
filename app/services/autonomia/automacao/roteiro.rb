@@ -7,6 +7,9 @@
 # quando acaba; volta ao "esperar até" `desde`, irmão anterior do "decidir" (DecidirDeNovo confere ao salvar). O caminho
 # vazio volta direto. O ensaio (`voltar: false`) para no fim do caminho e diz para onde ele voltaria, em vez de rodar o
 # laço de novo.
+#
+# O galho "a cada mensagem do cliente" do "esperar até" (G63, EnquantoEspera) volta do mesmo jeito, ao próprio "esperar
+# até" que o abriu: acabados os passos dele, a execução segue esperando.
 class Autonomia::Automacao::Roteiro
   def initialize(receita, voltar: true)
     @receita = receita
@@ -51,15 +54,36 @@ class Autonomia::Automacao::Roteiro
     lista ? lista.first(indice).reverse : []
   end
 
-  # O passo para onde o caminho `chave` do "decidir" volta (G46), ou nil quando ele segue em frente.
+  # O passo para onde o caminho `chave` do "decidir" volta (G46), ou o galho do "esperar até" (G63); nil quando ele
+  # segue em frente.
   def volta(passo, chave)
+    return passo['id'] if passo['tipo'] == 'esperar_ate' && chave == ::Autonomia::Automacao::EnquantoEspera::A_CADA
+
     desde = passo.dig('de_novo', 'desde') if passo['tipo'] == 'decidir'
     desde if desde.present? && Array(passo.dig('de_novo', 'caminhos')).include?(chave)
   end
 
+  # O "esperar até" cujo galho "a cada mensagem" tem `id` dentro, em qualquer nível; nil fora de galho.
+  def galho_de(id)
+    _passo, lista, _indice, pai = @lugares[id]
+    return unless pai
+    return pai if passo(pai)[::Autonomia::Automacao::EnquantoEspera::A_CADA].equal?(lista)
+
+    galho_de(pai)
+  end
+
+  # `id` está dentro do galho do "esperar até" `espera_id`, em qualquer nível?
+  def no_galho?(id, espera_id)
+    _passo, lista, _indice, pai = @lugares[id]
+    return false unless pai
+    return passo(pai)[::Autonomia::Automacao::EnquantoEspera::A_CADA].equal?(lista) if pai == espera_id
+
+    no_galho?(pai, espera_id)
+  end
+
   private
 
-  # Acabou o caminho `chave` do "decidir": volta ao `desde` (no ensaio, para) ou segue depois do "decidir".
+  # Acabou o caminho `chave` do "decidir" (ou o galho do "esperar até"): volta ao `desde` (no ensaio, para) ou segue depois do "decidir".
   def fim_do_caminho(decidir, chave)
     desde = volta(decidir, chave)
     return seguinte(decidir['id']) unless desde
@@ -67,8 +91,11 @@ class Autonomia::Automacao::Roteiro
     passo(desde) if @voltar
   end
 
-  # A chave do caminho do "decidir" cuja lista de passos é `lista` (a mesma lista da receita); nil fora do "decidir".
+  # A chave do caminho do "decidir" cuja lista de passos é `lista` (a mesma lista da receita), ou o galho do "esperar
+  # até"; nil fora deles.
   def chave_do_caminho(pai, lista)
+    a_cada = ::Autonomia::Automacao::EnquantoEspera::A_CADA
+    return a_cada if pai['tipo'] == 'esperar_ate' && pai[a_cada].equal?(lista)
     return unless pai['tipo'] == 'decidir'
     return ::Autonomia::Automacao::Receita::NENHUM if pai[::Autonomia::Automacao::Receita::NENHUM].equal?(lista)
 

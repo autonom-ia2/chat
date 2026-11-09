@@ -65,7 +65,8 @@
         "VALOR": "US$ {valor}",
         "VALOR_MENOS_DE": "menos de US$ {valor}",
         "MEDIA": "Cerca de {custo} por vez, na chave de IA da sua conta.",
-        "PRIMEIRA": "O custo aparece depois da primeira vez."
+        "PRIMEIRA": "O custo aparece depois da primeira vez.",
+        "POR_MENSAGEM": "Este passo roda a cada mensagem do cliente enquanto a automação espera: cada mensagem é uma ida paga à IA."
       },
       "TESTAR": {
         "BOTAO": "Testar este passo",

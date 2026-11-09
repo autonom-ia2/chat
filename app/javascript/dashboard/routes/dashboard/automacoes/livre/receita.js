@@ -9,9 +9,16 @@ export const copiar = valor => JSON.parse(JSON.stringify(valor));
 // "decidir" (F7, #2500) abre ainda um galho por caminho, antes do "nenhum".
 export const RAMOS = {
   se: ['entao', 'senao'],
-  esperar_ate: ['se_vencer'],
+  esperar_ate: ['se_vencer', 'a_cada_mensagem'],
   decidir: ['nenhum'],
 };
+
+// G63 (#2830): o galho do "esperar até" que roda a cada mensagem do cliente
+// enquanto espera e, no fim, volta à mesma espera. G64 (#2839): sem prazo, a
+// hora cheia da conferência diária (no fuso da conta); nasce às 8h (decisão
+// 12 do Rodrigo, 09/11).
+export const A_CADA = 'a_cada_mensagem';
+export const HORA_DA_CONFERENCIA = 8;
 
 // #2750: o "esperar até" sem prazo só termina pela condição (o esquema:
 // `prazo_da_espera`). Não vence, então não tem "se o prazo acabar".
@@ -48,7 +55,9 @@ const galhoDoCaminho = (caminho, indice) => ({
 // que devolve o passo com o galho trocado. É a única travessia da árvore no
 // editor; o servidor tem a sua em Autonomia::Automacao::Receita.ramos.
 export const galhosDe = passo => {
-  const fixos = semSeVencer(passo) ? [] : RAMOS[passo.tipo] || [];
+  const fixos = (RAMOS[passo.tipo] || []).filter(
+    ramo => ramo !== 'se_vencer' || !semSeVencer(passo)
+  );
   return [
     ...fixos.filter(ramo => ramo !== 'nenhum').map(r => galhoFixo(passo, r)),
     ...(passo.caminhos || []).map((caminho, i) =>
@@ -99,6 +108,15 @@ export const todosOsPassos = (passos = []) =>
 
 export const acharPasso = (passos, id) =>
   todosOsPassos(passos).find(passo => passo.id === id) || null;
+
+// O passo `id` está dentro do galho "a cada mensagem" de algum "esperar até"
+// (em qualquer nível)? Ele roda uma vez por mensagem do cliente.
+export const noGalhoACada = (passos, id) =>
+  todosOsPassos(passos).some(
+    passo =>
+      passo.tipo === 'esperar_ate' &&
+      todosOsPassos(passo[A_CADA] || []).some(dentro => dentro.id === id)
+  );
 
 // Id curto e único na receita: o cursor da execução aponta para ele.
 export const novoId = passos => {

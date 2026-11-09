@@ -531,6 +531,9 @@ en:
         faltou_valor: 'A value this step needs was empty, so the step was skipped.'
         motor_desligado: 'Automations are off for this account.'
         prazo_vencido: 'The wait ended without the condition.'
+        mensagem_do_cliente: 'The customer wrote during the wait: the steps for each customer message ran.'
+        voltou_a_esperar: 'Went back to waiting.'
+        teto_a_cada: 'The steps for each customer message already ran 200 times in this run. From now on the wait goes on only for the condition.'
         quem_ligou_saiu_da_conta: 'The person who turned on the automation left the account. Take over and turn it back on.'
         quem_ligou_sem_acesso: 'The person who turned on the automation has no access here anymore. Take over and turn it back on.'
         quem_ligou_sem_permissao: 'The person who turned on the automation can no longer manage automations. Take over and turn it back on.'
@@ -668,6 +671,10 @@ en:
         de_novo_desde_desconhecido: "Step %{passo}: \"go back to wait\" points to a step this automation doesn't have (%{desde})."
         de_novo_desde_nao_anterior: "Step %{passo}: \"go back to wait\" must be a \"wait until\" that comes before this step, in the same list (%{desde} isn't)."
         de_novo_desde_sem_resposta: "Step %{passo}: the \"wait until\" %{desde} must wait for the customer: \"the customer replied\" or \"the customer sent a photo or PDF\" equal to yes. Otherwise the automation would go around without the customer."
+        conferir_as_com_prazo: 'Step %{passo}: the daily check time only works with "No deadline". Remove the time or the deadline.'
+        a_cada_aninhado: 'Step %{passo}: "For each customer message" can''t be inside another "For each customer message".'
+        a_cada_sem_contato: 'Step %{passo}: "For each customer message" needs a customer, and this trigger runs on the account, with no customer.'
+        de_novo_desde_no_galho: "Step %{passo}: \"go back to wait\" can't point to a step inside \"For each customer message\" (%{desde}): the automation would never go back to waiting."
         caminho_nenhum: "None applies"
         destino_invalido: "Step %{passo}: %{destino} is not a place where the AI can save."
         campo_repetido: "Step %{passo}: %{chave} appears twice."

@@ -65,7 +65,8 @@
         "VALOR": "US$ {valor}",
         "VALOR_MENOS_DE": "less than US$ {valor}",
         "MEDIA": "About {custo} per run, on your account AI key.",
-        "PRIMEIRA": "The cost shows up after the first run."
+        "PRIMEIRA": "The cost shows up after the first run.",
+        "POR_MENSAGEM": "This step runs for each customer message while the automation waits: each message is a paid call to the AI."
       },
       "TESTAR": {
         "BOTAO": "Test this step",

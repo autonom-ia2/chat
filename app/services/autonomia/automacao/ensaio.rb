@@ -234,7 +234,8 @@ class Autonomia::Automacao::Ensaio
   end
 
   # Já vale agora: segue na hora, como o motor. Não vale: os dois caminhos possíveis; sem prazo (#2750), só o de quando
-  # chegar, porque ela não vence.
+  # chegar, porque ela não vence. Com o galho "a cada mensagem" (G63), mais um caminho: os passos dele, que param no fim
+  # com a marca `volta` (o roteiro do ensaio não volta a esperar).
   def esperar_ate(passo, valores)
     return [no(passo, 'esperar_ate_ja_vale'), @roteiro.seguinte(passo['id'])] if condicao?(passo['condicao'], valores)
 
@@ -242,7 +243,13 @@ class Autonomia::Automacao::Ensaio
     unless ::Autonomia::Automacao::Duracao.sem_prazo?(passo['prazo'])
       ramos << { chave: 'se_vencer', passos: caminho(@roteiro.entrar(passo, 'se_vencer'), valores) }
     end
+    ramos << galho_do_ensaio(passo, valores) if ::Autonomia::Automacao::EnquantoEspera.a_cada?(passo)
     [no(passo, 'esperar_ate', ramos: ramos), nil]
+  end
+
+  def galho_do_ensaio(passo, valores)
+    chave = ::Autonomia::Automacao::EnquantoEspera::A_CADA
+    { chave: chave, volta: @roteiro.volta(passo, chave), passos: caminho(@roteiro.entrar(passo, chave), valores) }
   end
 
   # A IA escolheria o caminho: o ensaio mostra todos, sem chamar modelo nenhum.

@@ -1284,6 +1284,18 @@
           "peca": "passos",
           "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SE_VENCER"
+        },
+        {
+          "nome": "a_cada_mensagem",
+          "peca": "passos",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.A_CADA_MENSAGEM"
+        },
+        {
+          "nome": "conferir_as",
+          "peca": "conferir_as",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CONFERIR_AS"
         }
       ]
     },

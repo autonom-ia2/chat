@@ -144,6 +144,46 @@ module FechamentoAutomacao::Lacunas
       montado.corpo&.dig('custom_attributes', 'revisao') == Time.current.utc.to_date.advance(months: 6).iso8601
   end
 
+  # G63 e G64 (#2830, #2839; exemplo 17, passos 4 e 5): a rodada do motor de verdade, numa conversa. O "esperar até" sem
+  # prazo, com a condição já cumprida, espera a próxima conferência das 8h no fuso da conta (só ali confere) e, com a
+  # mensagem nova do cliente, entra no galho "a cada mensagem".
+  def espera_enquanto_espera(campos)
+    conta = FactoryBot.create(:account, reporting_timezone: 'America/Sao_Paulo')
+    conta.enable_features!('automacao_fundacao', 'automacao_motor')
+    conversa = FactoryBot.create(:conversation, account: conta, status: :open, priority: :urgent)
+    urgente = { 'campo' => { '$valor' => 'conversa.prioridade' }, 'op' => 'igual', 'valor' => 'urgent' }
+    espera = { 'id' => 'espera', 'tipo' => 'esperar_ate', 'prazo' => 'sem_prazo', 'condicao' => urgente }.merge(campos)
+    execucao = rodada_da_sonda(conta, conversa, [espera], nil)
+    [conta, conversa, execucao]
+  end
+
+  def rodada_da_sonda(conta, conversa, passos, execucao)
+    marca = Time.current.floor(6)
+    unless execucao
+      definicao = FactoryBot.create(:autonomia_automacao, account: conta,
+                                                          ligada_por: FactoryBot.create(:user, account: conta, role: :administrator))
+      versao = definicao.salvar_versao!(receita: { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => passos }, autor: nil)
+      definicao.update!(ativa: true)
+      execucao = FactoryBot.create(:autonomia_automacao_execucao, versao: versao, alvo: conversa, chave_gatilho: 'conversa.resolvida')
+    end
+    execucao.update!(estado: 'andando', travada_em: marca)
+    Autonomia::Automacao::Executor.rodar(execucao.id, marca.iso8601(6))
+    execucao.reload
+  end
+
+  def conferencia_marcada?
+    conta, _conversa, execucao = espera_enquanto_espera('conferir_as' => 8)
+    execucao.estado == 'esperando' && execucao.due_at == Autonomia::Automacao::Tempo.proxima_hora(conta, 8)
+  end
+
+  def galho_a_cada_mensagem?
+    galho = [{ 'id' => 'galho', 'tipo' => 'esperar', 'duracao' => { 'valor' => 1, 'unidade' => 'dias' } }]
+    conta, conversa, execucao = espera_enquanto_espera('conferir_as' => 8, 'a_cada_mensagem' => galho)
+    FactoryBot.create(:message, account: conta, conversation: conversa, inbox: conversa.inbox, message_type: :incoming,
+                                sender: conversa.contact)
+    rodada_da_sonda(conta, conversa, nil, execucao).cursor == 'galho'
+  end
+
   SONDAS = {
     # O modelo aprovado entrou como campo do passo "mensagem" (F4b, #2468/#2586), não como passo próprio.
     'G1' => -> { campo_do_passo?('mensagem', 'modelo') },
@@ -240,13 +280,19 @@ module FechamentoAutomacao::Lacunas
     # liga ao card novo a conversa do contato na caixa da página, quando ela existe. A frente dona troca o nil pela sonda.
     'G47' => nil,
     # Do exemplo 17, achadas na G9 (#2707). G62 (#2829): o campo do card do tipo pessoa da equipe, com o nome e a
-    # ausência dela (passos 3, 5 e 6). G63 (#2830): repetir a espera a cada mensagem do cliente na mesma automação
-    # (passo 4); o laço do #2791 (G46) só volta pelo caminho de um "decidir", e o passo 4 não tem decisão.
+    # ausência dela (passos 3, 5 e 6). G63 (#2830): o galho "a cada mensagem do cliente" do "esperar até" (passo 4).
+    # G64 (#2839): a conferência toda manhã, numa hora marcada, na mesma automação (passo 5). Prova ponta a ponta em
+    # spec/fechamento/automacao/exemplo_17_ferias_spec.rb. G65: a troca do dono do card não leva a conversa, que segue
+    # com a antiga; "espera a Renata responder" e "passa para a agente de IA" (passo 4) leem quem atende a conversa. G66:
+    # o resumo da volta (passo 6) lê as últimas mensagens da conversa (5), não as das férias inteiras.
     'G62' => lambda {
       CustomAttributeDefinition.attribute_display_types.key?('pessoa') &&
         Autonomia::Automacao::Valores::Atributos.respond_to?(:ausente_da_pessoa?)
     },
-    'G63' => nil
+    'G63' => -> { galho_a_cada_mensagem? },
+    'G64' => -> { conferencia_marcada? },
+    'G65' => nil,
+    'G66' => nil,
     # Do exemplo 14, passo 5 (#2791): o laço dos documentos numa automação só. O "esperar até" lê o documento novo, e o
     # "decidir" volta a ele (`de_novo.desde`). Prova em spec/fechamento/automacao/exemplo_14_documentacao_spec.rb.
     'G46' => lambda {

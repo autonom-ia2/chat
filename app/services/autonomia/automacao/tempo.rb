@@ -17,6 +17,18 @@ module Autonomia::Automacao::Tempo
 
   def fuso(conta) = ActiveSupport::TimeZone[conta.reporting_timezone.to_s] || Time.zone
 
+  # A hora cheia `hora` do `dia`, no `fuso`. Montada pelo dia e pela hora (TimeZone#local), nunca somando horas: na troca
+  # do horário de verão cai sempre na hora local escolhida, e a hora ambígua dá sempre o mesmo instante.
+  def na_hora(fuso, dia, hora) = fuso.local(dia.year, dia.month, dia.day, hora.to_i)
+
+  # A próxima `hora` cheia depois de `agora`, no fuso da conta: hoje, se ainda não passou; senão, amanhã. A conferência
+  # marcada do "esperar até" sem prazo (G64, EnquantoEspera).
+  def proxima_hora(conta, hora, agora = Time.current)
+    fuso = fuso(conta)
+    hoje = agora.in_time_zone(fuso).to_date
+    [hoje, hoje + 1].map { |dia| na_hora(fuso, dia, hora) }.find { |instante| instante > agora }
+  end
+
   # Desde quando a versão ativa está ligada: o mais recente entre ligar e salvar a versão (quem ligou salva por cima sem
   # desligar). A automação ligada antes da coluna ligada_em fica só com a hora da versão.
   def ligada_desde(definicao) = [definicao.ligada_em, definicao.versao_ativa&.created_at].compact.max

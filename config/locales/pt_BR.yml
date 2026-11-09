@@ -1024,6 +1024,9 @@ pt_BR:
         faltou_valor: 'Um valor de que este passo precisa estava vazio, e o passo foi pulado.'
         motor_desligado: 'As automações estão desligadas nesta conta.'
         prazo_vencido: 'A espera acabou sem a condição.'
+        mensagem_do_cliente: 'O cliente escreveu durante a espera: rodaram os passos de cada mensagem do cliente.'
+        voltou_a_esperar: 'Voltou a esperar.'
+        teto_a_cada: 'Os passos de cada mensagem do cliente já rodaram 200 vezes nesta execução. Daqui em diante a espera segue só pela condição.'
         quem_ligou_saiu_da_conta: 'Quem ligou a automação saiu da conta. Assuma e religue.'
         quem_ligou_sem_acesso: 'Quem ligou a automação não tem mais acesso aqui. Assuma e religue.'
         quem_ligou_sem_permissao: 'Quem ligou a automação não pode mais gerenciar automações. Assuma e religue.'
@@ -1161,6 +1164,10 @@ pt_BR:
         de_novo_desde_desconhecido: "Passo %{passo}: o \"voltar a esperar\" aponta para um passo que esta automação não tem (%{desde})."
         de_novo_desde_nao_anterior: "Passo %{passo}: o \"voltar a esperar\" precisa ser um \"esperar até\" que vem antes deste passo, na mesma lista (%{desde} não é)."
         de_novo_desde_sem_resposta: "Passo %{passo}: o \"esperar até\" %{desde} precisa esperar o cliente: \"o cliente respondeu\" ou \"o cliente mandou foto ou PDF\" igual a sim. Senão a automação daria voltas sem o cliente."
+        conferir_as_com_prazo: 'Passo %{passo}: a hora da conferência diária só vale com "Sem prazo". Tire a hora ou o prazo.'
+        a_cada_aninhado: 'Passo %{passo}: "A cada mensagem do cliente" não pode ficar dentro de outro "A cada mensagem do cliente".'
+        a_cada_sem_contato: 'Passo %{passo}: "A cada mensagem do cliente" precisa de um cliente, e este gatilho roda na conta, sem cliente.'
+        de_novo_desde_no_galho: "Passo %{passo}: o \"voltar a esperar\" não pode apontar para um passo dentro de \"A cada mensagem do cliente\" (%{desde}): a automação nunca voltaria a esperar."
         caminho_nenhum: "Nenhum se aplica"
         destino_invalido: "Passo %{passo}: a IA não pode gravar em %{destino}."
         campo_repetido: "Passo %{passo}: %{chave} aparece duas vezes."

@@ -421,13 +421,15 @@
           "type": "object",
           "additionalProperties": false,
           "required": ["id", "tipo", "condicao", "prazo"],
-          "description": "Espera a condição ficar verdadeira, até o prazo; vencido, segue pelo se_vencer e depois continua. Com prazo \"sem_prazo\", espera só pela condição e não tem se_vencer. Para esperar a resposta de alguém, a condição lê conversa.cliente_respondeu ou conversa.equipe_respondeu (igual a true): a resposta que chegou durante esta espera. Esses dois valores só valem aqui. Para \"não marcou em N dias\", a condição lê card.tem_reuniao_marcada (igual a true): o card tem reunião marcada e ainda por vir; a espera confere de novo quando uma reunião do card é marcada, remarcada ou cancelada. card.tem_reuniao_marcada vale também no se, em qualquer gatilho com card.",
+          "description": "Espera a condição ficar verdadeira, até o prazo; vencido, segue pelo se_vencer e depois continua. Com prazo \"sem_prazo\", espera só pela condição e não tem se_vencer. Enquanto espera, a_cada_mensagem roda passos a cada mensagem do cliente e volta a esperar; conferir_as marca a hora da conferência diária da espera sem prazo. Para esperar a resposta de alguém, a condição lê conversa.cliente_respondeu ou conversa.equipe_respondeu (igual a true): a resposta que chegou durante esta espera. Esses dois valores só valem aqui. Para \"não marcou em N dias\", a condição lê card.tem_reuniao_marcada (igual a true): o card tem reunião marcada e ainda por vir; a espera confere de novo quando uma reunião do card é marcada, remarcada ou cancelada. card.tem_reuniao_marcada vale também no se, em qualquer gatilho com card.",
           "properties": {
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "esperar_ate" },
             "condicao": { "$ref": "#/definitions/condicao" },
             "prazo": { "$ref": "#/definitions/prazo_da_espera" },
-            "se_vencer": { "$ref": "#/definitions/passos_opcionais" }
+            "se_vencer": { "$ref": "#/definitions/passos_opcionais" },
+            "a_cada_mensagem": { "$ref": "#/definitions/passos_opcionais", "description": "Opcional (G63): os passos que rodam a cada mensagem nova do cliente que chega durante a espera, como \"a cada mensagem do cliente, espera a Renata responder por até 2 horas; sem resposta, passa para a agente de IA\". Acabados os passos, a automação volta a esperar no mesmo passo, com o mesmo prazo. A mensagem que chega enquanto esses passos rodam não abre outra rodada. Lê as conversas do contato que quem ligou vê. Até 200 vezes por execução; depois, a espera segue só pela condição. Não vale no gatilho da conta (sem cliente) nem dentro de outro a_cada_mensagem, e o de_novo.desde de um decidir não aponta para dentro dele." },
+            "conferir_as": { "type": "integer", "minimum": 0, "maximum": 23, "description": "Opcional (G64), só com prazo \"sem_prazo\": a hora cheia, no fuso da conta, em que a espera confere a condição, todo dia (8 = toda manhã às 8h). Só nessa hora: a mensagem e a mudança do card não conferem antes. A volta do a_cada_mensagem confere na hora. Sem ele, a espera sem prazo confere a cada mudança." }
           }
         },
         {

@@ -27,6 +27,7 @@ import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { temDataIncompleta } from '../texto';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
 import { SEM_PRAZO, copiar, filtrosDoGatilho } from '../receita';
+import { custoPorMensagem } from '../custoDaIa';
 
 // #2414 F5 — o painel do "Alterar": os campos do item escolhido (o gatilho, uma
 // condição do "Só se" ou um passo), já preenchidos. Nada muda até "Salvar".
@@ -417,8 +418,10 @@ defineExpose({ abrir, fechar });
           :rotulo="$t(campo.rotulo)"
           :model-value="rascunho[campo.nome]"
           :unidades="catalogo.unidades"
+          :conferir-as="rascunho.conferir_as ?? null"
           :tem-se-vencer="Boolean(rascunho.se_vencer?.length)"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
+          @update:conferir-as="novo => mudarNativo('conferir_as', novo)"
         />
         <LivreCondicao
           v-else-if="campo.peca === 'condicao'"
@@ -591,6 +594,7 @@ defineExpose({ abrir, fechar });
         :receita="receitaParaTestar"
         :custo="custos.custos[rascunho.id]"
         :mostra-custo="custos.com_valores"
+        :por-mensagem="custoPorMensagem(receitaParaTestar, rascunho.id)"
         :pronto="podeSalvar"
         :automacao-id="automacaoId"
       />

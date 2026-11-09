@@ -72,4 +72,34 @@ RSpec.describe Autonomia::Automacao::Roteiro do
       expect(roteiro.anteriores('decide').pluck('id')).to eq(%w[espera lista])
     end
   end
+
+  # G63: o galho "a cada mensagem do cliente" do "esperar até" volta à própria espera quando acaba.
+  describe 'o galho a cada mensagem' do
+    let(:espera) do
+      { 'id' => 'espera', 'tipo' => 'esperar_ate', 'se_vencer' => [{ 'id' => 'venceu' }],
+        'a_cada_mensagem' => [{ 'id' => 'g1' }, { 'id' => 'g2', 'tipo' => 'se', 'entao' => [{ 'id' => 'g3' }] }] }
+    end
+    let(:receita) { { 'passos' => [espera, { 'id' => 'fim' }] } }
+
+    it 'entra no galho e, no fim dele (também de dentro de um ramo), volta ao esperar até', :aggregate_failures do
+      expect(roteiro.entrar(espera, 'a_cada_mensagem')['id']).to eq('g1')
+      expect(roteiro.seguinte('g1')['id']).to eq('g2')
+      expect(roteiro.seguinte('g2')['id']).to eq('espera')
+      expect(roteiro.seguinte('g3')['id']).to eq('espera')
+      expect(roteiro.seguinte('venceu')['id']).to eq('fim')
+      expect(roteiro.volta(espera, 'a_cada_mensagem')).to eq('espera')
+    end
+
+    it 'sabe o galho de cada passo, em qualquer nível', :aggregate_failures do
+      expect(roteiro.galho_de('g3')).to eq('espera')
+      expect(roteiro.galho_de('venceu')).to be_nil
+      expect(roteiro.no_galho?('g3', 'espera')).to be(true)
+      expect(roteiro.no_galho?('venceu', 'espera')).to be(false)
+      expect(roteiro.no_galho?('espera', 'espera')).to be(false)
+    end
+
+    it 'no ensaio (voltar: false), o galho para no fim' do
+      expect(described_class.new(receita, voltar: false).seguinte('g2')).to be_nil
+    end
+  end
 end

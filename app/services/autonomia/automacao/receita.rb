@@ -11,10 +11,12 @@
 # - a condição sobre um valor fechado (`mensagem.tipo`) usa uma das opções e um dos operadores dele (#2496);
 # - o gatilho de card só com a flag da F6, e a etapa ou o funil escolhidos nele são da conta (#2499);
 # - o "esperar até" sem prazo não tem passos em "se vencer", que nunca rodariam (#2750);
-# - o "decidir" a cada resposta (G31/G46) repete caminhos dele e deixa um para seguir (DecidirDeNovo).
+# - o "decidir" a cada resposta (G31/G46) repete caminhos dele e deixa um para seguir (DecidirDeNovo);
+# - o que o "esperar até" faz enquanto espera (G63, G64): a hora da conferência só sem prazo, o galho "a cada mensagem"
+#   só com cliente e fora de outro galho (EnquantoEspera).
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
-  RAMOS = %w[entao senao se_vencer].freeze
+  RAMOS = %w[entao senao se_vencer a_cada_mensagem].freeze
   # O "decidir" (F7, #2500) abre um ramo por caminho (`caminhos[].passos`) e o de "nenhum se aplica" (`nenhum`).
   NENHUM = 'nenhum'.freeze
   # Os passos de IA (F7), só com a flag da F7.
@@ -52,7 +54,8 @@ class Autonomia::Automacao::Receita
   # Frases para a pessoa (ou o Guia) corrigir. Vazio = pode salvar. Só roda com a receita já no esquema.
   def problemas
     [*ids_repetidos, *gatilho_novo, *conversa_nova, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) },
-     *::Autonomia::Automacao::Duracao.sem_prazo_que_vence(passos).map { |id| texto(:sem_prazo_com_se_vencer, passo: id) }]
+     *::Autonomia::Automacao::Duracao.sem_prazo_que_vence(passos).map { |id| texto(:sem_prazo_com_se_vencer, passo: id) },
+     *::Autonomia::Automacao::EnquantoEspera.problemas_ao_salvar(@receita, passos)]
   end
 
   # Todos os passos, inclusive os de dentro dos ramos, na ordem em que aparecem.
@@ -62,9 +65,7 @@ class Autonomia::Automacao::Receita
 
   private
 
-  def ids_repetidos
-    passos.pluck('id').tally.select { |_id, vezes| vezes > 1 }.keys.map { |id| texto(:id_repetido, passo: id) }
-  end
+  def ids_repetidos = passos.pluck('id').tally.select { |_id, vezes| vezes > 1 }.keys.map { |id| texto(:id_repetido, passo: id) }
 
   # O gatilho de card e o de tempo (#2499): a flag, a etapa, o funil e o campo de data são da conta; no da conta (G7),
   # os passos que ele aceita.
@@ -164,9 +165,7 @@ class Autonomia::Automacao::Receita
     end
   end
 
-  def repetidos(id, chaves, motivo)
-    chaves.tally.select { |_chave, vezes| vezes > 1 }.keys.map { |chave| texto(motivo, passo: id, chave: chave) }
-  end
+  def repetidos(id, chaves, motivo) = chaves.tally.select { |_chave, vezes| vezes > 1 }.keys.map { |chave| texto(motivo, passo: id, chave: chave) }
 
   def destino_invalido(id, destino)
     base = DESTINOS_DE_ATRIBUTO.find { |prefixo| destino.to_s.start_with?("#{prefixo}.") }
