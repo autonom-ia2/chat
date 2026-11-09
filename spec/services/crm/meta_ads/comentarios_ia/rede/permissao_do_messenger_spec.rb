@@ -60,22 +60,10 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede::PermissaoDoMessenger do
     expect(described_class.new(channel).liberada?).to be(true)
   end
 
-  it 'a Meta recusou o privado por permissão: a Página fica sem o privado, sem ler a lista de novo' do
-    pedido = stub_permissoes(linhas: [%w[pages_messaging granted]])
+  it 'a Meta lenta: a leitura tem prazo curto, e sem resposta libera (a chamada do privado decide)' do
+    stub_request(:get, meta_graph_url('me/permissions')).to_timeout
 
-    permissao.recusou!
-
-    expect(described_class.new(channel).liberada?).to be(false)
-    expect(pedido).not_to have_been_made
-  end
-
-  it 'a recusa vale até a caixa mudar (entrar de novo com a permissão)' do
-    stub_permissoes(linhas: [%w[pages_messaging granted]])
-    permissao.recusou!
-
-    channel.update!(updated_at: 1.minute.from_now)
-
-    expect(described_class.new(channel).liberada?).to be(true)
+    expect(permissao.liberada?).to be(true)
   end
 
   it 'caixa que não é de Página, ou sem o token do login: nada de Meta' do

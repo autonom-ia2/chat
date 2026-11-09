@@ -101,18 +101,13 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(rede.privado_disponivel?).to be(true)
     end
 
-    it 'a Meta recusou por permissão (#2307): a Página fica sem o privado; recusa de janela não conta' do
-      permissao = instance_double(described_class::PermissaoDoMessenger, recusou!: true)
-      allow(described_class::PermissaoDoMessenger).to receive(:new).with(canal).and_return(permissao)
-      allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: false, erro: '230 - Requires', codigo: 230),
-                                                          described_class::Envio.new(ok: false, erro: '10 - Fora', codigo: 10,
-                                                                                     subcodigo: 2_018_278))
+    it 'a Meta recusou por permissão (#2307): o envio volta com o código, e a Página não perde o privado' do
+      allow(described_class::PermissaoDoMessenger).to receive(:new)
+      allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: false, erro: '230 - Requires', codigo: 230))
 
-      expect(rede.privado(care).ok).to be(false)
-      expect(permissao).to have_received(:recusou!).once
-
-      expect(rede.privado(care).ok).to be(false)
-      expect(permissao).to have_received(:recusou!).once
+      expect(rede.privado(care)).to have_attributes(ok: false, codigo: 230)
+      expect(registro).to have_received(:soltar!).with(anything, 'private_reply')
+      expect(described_class::PermissaoDoMessenger).not_to have_received(:new)
     end
 
     it 'reivindica, manda o privado com o botão do WhatsApp e abre a conversa no Messenger' do

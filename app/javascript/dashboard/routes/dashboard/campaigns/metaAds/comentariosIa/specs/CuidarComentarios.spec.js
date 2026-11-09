@@ -491,7 +491,7 @@ describe('CuidarComentarios (#2212)', () => {
     expect(
       wrapper.find('[data-ia-to-see-row="no_permission"]').text()
     ).toContain(
-      'A Meta não deixou mandar no privado por esta Página: responda no comentário.'
+      'A Meta não deixou mandar este privado pela Página: responda no comentário.'
     );
   });
 

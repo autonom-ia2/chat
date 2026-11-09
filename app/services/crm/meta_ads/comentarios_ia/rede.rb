@@ -56,9 +56,9 @@ module Crm::MetaAds::ComentariosIa::Rede
     privado_liberado?(network, inbox_id && Inbox.find_by(id: inbox_id, account_id: account.id))
   end
 
-  # A recusa do privado por falta de permissão (#2307): (#200–299) "Requires pages_messaging permission" e o (#10) sem
-  # subcódigo, "Application does not have permission". O (#10) com subcódigo é outra coisa (fora da janela de 7 dias,
-  # já respondido) e não tira o privado da Página.
+  # A recusa do privado por falta de permissão (#2307), pela tabela de erros da Graph: (#200–299) e o (#10) sem
+  # subcódigo, "a permissão não foi concedida ou foi removida". O (#10) com subcódigo é outra coisa (fora da janela de
+  # 7 dias, já respondido). O Painel diz o porquê só daquele comentário.
   def sem_permissao?(codigo, subcodigo)
     return false if codigo.nil?
 

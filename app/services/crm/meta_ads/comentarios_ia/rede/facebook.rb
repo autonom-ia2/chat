@@ -126,15 +126,9 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     return envio if envio.talvez_entregue
 
     REGISTRO.soltar!(@comentario, 'private_reply')
-    # #2307: a Meta disse que a Página não tem a permissão: os próximos comentários ficam com o dono, sem tentar de novo.
-    Crm::MetaAds::ComentariosIa::Rede::PermissaoDoMessenger.new(@inbox.channel).recusou! if sem_permissao?(envio)
     # Como o motor: só a recusa com código da Meta fica gravada.
     REGISTRO.recusa_do_privado!(@comentario, codigo: envio.codigo, subcodigo: envio.subcodigo) if @comentario.resposta? && envio.codigo
     envio
-  end
-
-  def sem_permissao?(envio)
-    Crm::MetaAds::ComentariosIa::Rede.sem_permissao?(envio.codigo, envio.subcodigo)
   end
 
   # O resultado do privado em resposta (2º nível, #2454), como no InstagramPrivateReply. Só registro: o privado já saiu,

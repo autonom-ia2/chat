@@ -1174,7 +1174,8 @@
 # IA cuida dos comentários (#2613, parte do #2212): o privado pelo Messenger no Facebook. Desde o #2307 o código não
 # lê mais esta flag: o privado sai na Página cujo login tem a pages_messaging concedida pela Meta
 # (Crm::MetaAds::ComentariosIa::Rede::PermissaoDoMessenger). A entrada fica porque o bit é a posição na coluna: tirar
-# daqui mudaria as flags que vêm depois. Bit: posição 27 (67108864).
+# daqui mudaria as flags que vêm depois. Bit: posição 27 (67108864). Rollback do #2307: reverter o PR (sem migration);
+# a flag continua ligada nas contas internas, e o código de antes volta a lê-la.
 - name: meta_ads_comentarios_privado_facebook
   display_name: Anúncios › privado no Facebook pela IA
   enabled: true
