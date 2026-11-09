@@ -56,7 +56,7 @@ class Autonomia::Automacao::PassoDeEmail
   private
 
   def mandar(caixa, contato)
-    valores = ::Autonomia::Automacao::Valores.new(alvo: @alvo, quem: @execucao.automacao.ligada_por)
+    # Os mesmos valores do texto (NaConversa#valores), com a execução: o assunto também lê `ia.*`, `envio.*` e `falhou.*`.
     assunto = ::Autonomia::Automacao::Texto.new(@passo['assunto'], valores).montar
     texto = texto_pronto
     return pulado('faltou_valor') if assunto.nil? || texto.nil?

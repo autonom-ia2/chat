@@ -1025,7 +1025,7 @@ pt_BR:
         quem_ligou_saiu_da_conta: 'Quem ligou a automação saiu da conta. Assuma e religue.'
         quem_ligou_sem_acesso: 'Quem ligou a automação não tem mais acesso aqui. Assuma e religue.'
         quem_ligou_sem_permissao: 'Quem ligou a automação não pode mais gerenciar automações. Assuma e religue.'
-        sem_permissao_funil: 'Quem ligou a automação não pode mais editar o funil, e os gatilhos de card pedem isso. Assuma e religue.'
+        sem_permissao_funil: 'Quem ligou a automação não pode mais editar o funil, e o gatilho de card e a leitura do card pedem isso. Assuma e religue.'
         quem_ligou_sem_permissao_card: 'Quem ligou a automação não pode mais criar card neste funil, e o passo "Criar card" pede isso. Assuma e religue.'
         card_desligado: 'O passo "Criar card" está desligado nesta conta (gatilhos de card ou CRM desligados). Nenhum card foi criado.'
         card_ja_existe: 'Esta conversa (ou contato) já tinha card aberto neste funil. Nenhum card novo foi criado.'
@@ -1116,8 +1116,11 @@ pt_BR:
         fixo: 'Passo %{passo}: %{campo} tem de ser %{valor}.'
         mensagem_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no filtro do gatilho "mensagem criada".'
         reuniao_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe nos gatilhos de reunião (marcada, remarcada, cancelada).'
+        falhou_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no gatilho de mensagem que não chegou.'
+        falhou_no_filtro: 'Passo %{passo}: %{caminho} só pode ser usado nos passos, não no "Só se" do gatilho.'
         resposta_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até".'
         valor_fora_do_alvo: 'Passo %{passo}: %{caminho} não dá para ler naquilo em que este gatilho começa (conversa, card ou contato).'
+        card_da_conversa_so_le: 'Passo %{passo}: a automação que começa numa conversa só lê o card (%{caminho}). Para mexer no card, use uma automação que começa no card.'
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'
         valor_fora: 'Passo %{passo}: %{caminho} não tem o valor "%{valor}". Use um destes: %{opcoes}.'
         proibido: 'Passo %{passo}: a automação não muda %{campo}.'
@@ -1136,6 +1139,7 @@ pt_BR:
         campo_de_fora: 'Gatilho: o campo %{campo} não é um campo de data desta conta.'
         faixa_invertida: 'Gatilho: em "fechado entre", o primeiro número (%{de}) é maior que o segundo (%{ate}). Assim não pega nenhum card.'
         passo_pede_alvo: 'Passo %{passo}: este gatilho roda na conta, sem conversa, card ou contato. Aqui só cabem esperar e disparar campanha.'
+        data_passada: 'Gatilho: a data %{data} já passou. Escolha uma data a partir de hoje, numa hora que ainda vai chegar.'
         selecao_vazia: 'Gatilho: escolha pelo menos uma condição de quais cards ou contatos ele pega. Sem nenhuma, pegaria a conta inteira.'
         selecao_de_outro_alvo: 'Gatilho: estas condições não valem aqui: %{condicoes}.'
         responsavel_de_fora: 'Gatilho: o responsável escolhido não é desta conta.'
@@ -1147,6 +1151,10 @@ pt_BR:
         caminho_repetido: "Passo %{passo}: já existe um caminho com o nome %{nome}."
         caminho_reservado: "Passo %{passo}: o nome %{nome} já é o caminho de quando nada se aplica. Escolha outro nome."
         caminho_sem_letra: "Passo %{passo}: o nome do caminho precisa ter pelo menos uma letra (%{nome})."
+        de_novo_caminho_desconhecido: "Passo %{passo}: o \"decidir de novo\" aponta para um caminho que este passo não tem (%{chave})."
+        de_novo_com_passos: "Passo %{passo}: o caminho %{nome} decide de novo, então não pode ter passos. Tire os passos dele ou desmarque."
+        de_novo_todos: "Passo %{passo}: deixe sem marcar pelo menos uma saída (um caminho ou o \"Nenhum se aplica\"), para a automação seguir."
+        caminho_nenhum: "Nenhum se aplica"
         destino_invalido: "Passo %{passo}: a IA não pode gravar em %{destino}."
         campo_repetido: "Passo %{passo}: %{chave} aparece duas vezes."
       nota:

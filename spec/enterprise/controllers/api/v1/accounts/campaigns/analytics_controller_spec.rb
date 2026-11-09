@@ -70,5 +70,28 @@ RSpec.describe 'Campaign analytics API', type: :request do
       )
       expect(response.parsed_body['meta']).to include('current_page' => 1, 'total_pages' => 1, 'total_count' => 1)
     end
+
+    # #2802: who does not read contacts sees name and phone masked, and not the message (it carries their values).
+    it 'masks name, phone and message for a campaign_view role without contact_view' do
+      read_contact.update!(name: 'Ana Maria Souza', phone_number: '+5511987654321')
+      CampaignRecipient.find_by(contact: read_contact).update!(message_content: 'Olá Ana')
+      path = "/api/v1/accounts/#{account.id}/campaigns/#{campaign.display_id}/analytics/contacts"
+      users = [%w[campaign_view], %w[campaign_view contact_view]].map do |permissions|
+        create(:user, account: account, role: :agent).tap do |user|
+          user.account_users.find_by(account: account).update!(custom_role: create(:custom_role, account: account, permissions: permissions))
+        end
+      end
+
+      get path, params: { status: 'read' }, headers: users.first.create_new_auth_token
+      expect(response.parsed_body['payload'].sole).to include(
+        'contact' => include('name' => 'Ana S.', 'phone_number' => '+55 •• •••••-4321'), 'message_content' => nil
+      )
+      expect(response.body).not_to include('Ana Maria Souza', '987654321', 'Olá Ana')
+
+      get path, params: { status: 'read' }, headers: users.last.create_new_auth_token
+      expect(response.parsed_body['payload'].sole).to include(
+        'contact' => include('name' => 'Ana Maria Souza', 'phone_number' => '+5511987654321'), 'message_content' => 'Olá Ana'
+      )
+    end
   end
 end
