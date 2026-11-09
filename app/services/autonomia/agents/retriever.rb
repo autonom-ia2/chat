@@ -60,7 +60,7 @@ class Autonomia::Agents::Retriever
     # MESMO modelo (coerência dimensão↔coluna), mesmo se a config global virar no meio da operação.
     model = Autonomia::Agents::Config.active_embedding_model
     query = Autonomia::Agents::Config.truncate_text(query, Autonomia::Agents::Config::MAX_QUERY_CHARS)
-    vector = Autonomia::Agents::VetorDaPergunta.new(embedding_service(model, prazo), agent: @agent)
+    vector = Autonomia::Agents::VetorDaPergunta.new(embedding_service(model, prazo), agent: @agent, contar: !prazo.nil?)
                                                .calcular(query, so_palavra_sem_vetor: so_palavra_sem_vetor)
     # nil: o embedding falhou e a busca segue só pela palavra (#2850).
     return so_pela_palavra(query, top_k, model) if vector.nil?

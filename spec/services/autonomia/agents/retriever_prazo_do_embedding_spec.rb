@@ -167,6 +167,19 @@ RSpec.describe Autonomia::Agents::Retriever do
       Redis::Alfred.delete(chave)
     end
 
+    it 'keeps the words when the counter of the failure is slow (Redis pool busy)' do
+      allow(Redis::Alfred).to receive(:incr).and_raise(ConnectionPool::TimeoutError)
+
+      expect(buscar.map(&:content)).to eq(['Aviso de sinistro: ligue para o telefone 0800 000 0000.'])
+    end
+
+    it 'does not count the failures of the placar with the traffic of the customers' do
+      allow(Redis::Alfred).to receive(:incr)
+
+      expect { retriever.retrieve!(pergunta, top_k: 3) }.to raise_error(Autonomia::Agents::EmbeddingService::Passageira)
+      expect(Redis::Alfred).not_to have_received(:incr)
+    end
+
     it 'keeps another account out, even with the same words' do
       outra = create(:account)
       dono = Autonomia::Agents::Agent.create!(account: outra, name: 'Outro', agent_type: 'custom', status: :active, enabled: true,

@@ -118,7 +118,7 @@ RSpec.describe Autonomia::Agents::EmbeddingService do
 
       expect { service.embed('pergunta') }
         .to raise_error(described_class::EmbeddingError) do |falha|
-          expect([falha.class, falha.motivo]).to eq([described_class::EmbeddingError, 'provedor_recusou'])
+          expect([falha.class, falha.motivo]).to eq([described_class::EmbeddingError, 'rede'])
         end
       expect(Rails.logger).to have_received(:error).with(include('error_type=Faraday::ParsingError'))
     end
@@ -131,6 +131,19 @@ RSpec.describe Autonomia::Agents::EmbeddingService do
       inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       expect { lento.embed('pergunta') }.to raise_error(described_class::Passageira) { |falha| expect(falha.motivo).to eq('prazo') }
       expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio).to be < 1
+    end
+
+    # A credencial (banco) e o guarda do api_base (DNS) ficam fora do prazo: interromper uma consulta no meio deixaria a
+    # conexão do banco quebrada pelo resto do job.
+    it 'reads the credential before the deadline starts counting' do
+      lento = described_class.new(account: account, prazo: 0.2)
+      allow(lento).to receive(:context) do
+        sleep 0.4
+        ctx
+      end
+      allow(ctx).to receive(:embed).and_return(instance_double(RubyLLM::Embedding, vectors: [1.0]))
+
+      expect(lento.embed('pergunta')).to eq([1.0])
     end
 
     it 'gives the label of a lasting failure without the message of the provider', :aggregate_failures do

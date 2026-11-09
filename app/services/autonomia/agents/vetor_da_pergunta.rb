@@ -19,9 +19,11 @@ class Autonomia::Agents::VetorDaPergunta
     "autonomia:retriever:sem_vetor:#{dia.iso8601}:#{account_id}:#{motivo}:#{segue}"
   end
 
-  def initialize(servico, agent:)
+  # `contar:` — false no placar, para a medição não se misturar ao tráfego dos clientes no contador.
+  def initialize(servico, agent:, contar: true)
     @servico = servico
     @agent = agent
+    @contar = contar
   end
 
   # -> Array<Float> ([] para pergunta vazia), ou nil quando a busca segue só pela palavra.
@@ -49,7 +51,7 @@ class Autonomia::Agents::VetorDaPergunta
     segue = so_palavra_sem_vetor ? 'so_palavra' : 'sem_busca'
     Rails.logger.warn("[autonomia][retriever] embedding_falhou agent=#{@agent.id} motivo=#{erro.motivo} " \
                       "tentativas=#{tentativas} ms=#{((self.class.agora - inicio) * 1000).round} segue=#{segue}")
-    contar(erro.motivo, segue)
+    contar(erro.motivo, segue) if @contar
     raise erro unless so_palavra_sem_vetor
 
     nil
@@ -59,7 +61,7 @@ class Autonomia::Agents::VetorDaPergunta
     chave = self.class.chave(@agent.account_id, motivo, segue)
     Redis::Alfred.incr(chave)
     Redis::Alfred.expire(chave, GUARDA.to_i)
-  rescue Redis::BaseError => e
+  rescue Redis::BaseError, ConnectionPool::TimeoutError => e
     Rails.logger.warn("[autonomia][retriever] telemetria_falhou agent=#{@agent.id} #{e.class}")
   end
 end
