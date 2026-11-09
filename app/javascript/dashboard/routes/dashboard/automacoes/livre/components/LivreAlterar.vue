@@ -40,6 +40,8 @@ const props = defineProps({
   // #2500 C2: o rascunho inteiro com o passo do painel, para o "Testar", e o
   // custo de cada passo ({ com_valores, custos }).
   receitaDoTeste: { type: Function, default: null },
+  // A automação já salva, para o "Testar este passo" (#2780).
+  automacaoId: { type: Number, default: null },
   custos: { type: Object, default: () => ({ com_valores: false, custos: {} }) },
   // #2499: os gatilhos que esta pessoa pode escolher (com a flag e a chave de
   // funis, os de card) e as escolhas deles. Sem a lista, todos os do catálogo.
@@ -559,6 +561,7 @@ defineExpose({ abrir, fechar });
         :custo="custos.custos[rascunho.id]"
         :mostra-custo="custos.com_valores"
         :pronto="podeSalvar"
+        :automacao-id="automacaoId"
       />
     </div>
 

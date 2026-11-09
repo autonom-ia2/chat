@@ -11369,7 +11369,7 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:96",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:170",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:175",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:138",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:97",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:120"
@@ -11401,13 +11401,17 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:101",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:170",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:175",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:138"
     ],
     "sem_corpo": false
   },
   "POST autonomia/automacoes/testar_passo": {
     "campos": {
+      "automacao_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
       "conversa_id": {
         "tipo": "id",
         "tipo_pela_leitura": "nome"
@@ -11420,13 +11424,14 @@
     },
     "completo": false,
     "controller": "api/v1/accounts/autonomia/automacoes_ia#testar_passo",
+    "modelo": "Autonomia::Automacao::Definicao",
     "motivos": [
       "leitura crua sem tipo: receita"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:20",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:82",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:81",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:84",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:83",
       "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:70"
     ],
     "sem_corpo": false

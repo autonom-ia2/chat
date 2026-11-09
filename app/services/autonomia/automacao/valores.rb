@@ -3,12 +3,12 @@
 # A lista de caminhos é fechada: a receita só lê o que está aqui, e o salvar recusa caminho desconhecido. Não é Liquid
 # nem texto livre; cada caminho é um campo do modelo. Os atributos personalizados entram pela chave
 # (`contato.atributos.placa`). A mensagem do gatilho `mensagem.criada` só existe no filtro do gatilho
-# (`mensagem.tipo`: recebida, enviada ou nota; `mensagem.privada`; `mensagem.primeira`); nos passos ela já passou, e o
-# salvar recusa ler a mensagem fora dali.
+# (`mensagem.tipo`: recebida, enviada ou nota; `mensagem.privada`; `mensagem.primeira`; `mensagem.tem_anexo`); nos
+# passos ela já passou, e o salvar recusa ler a mensagem fora dali.
 #
 # #2499 (F6): cada caminho começa pela base (`conversa`, `contato` ou `card`), lida do alvo pelas pontes do Contexto.
-# A base que o alvo não alcança (card num gatilho de conversa) o salvar recusa; a ponte vazia ao rodar (card sem
-# conversa) chega como valor vazio.
+# A base que o alvo não alcança (card num gatilho de contato) o salvar recusa; a ponte vazia ao rodar (card sem
+# conversa) chega como valor vazio. O card da conversa (#2716) é só para ler: CardDaConversa.
 class Autonomia::Automacao::Valores
   # `conversa.id` é o número que a pessoa vê (#123) e o que as rotas da conversa recebem, não o id do banco.
   CAMPOS = {
@@ -90,9 +90,14 @@ class Autonomia::Automacao::Valores
   IA = 'ia.'.freeze
   PASSOS_QUE_ESCREVEM = %w[escrever resumir].freeze
 
-  # O que cada alvo alcança, pelas pontes do Contexto.
+  # O que cada alvo alcança, pelas pontes do Contexto. O card da conversa (#2716) só para ler: CardDaConversa.
+  # De onde cada base lê no contexto da execução. O `card` fica fora: na conversa, ele cai no card dela (#2716).
+  LEITURA_DA_BASE = {
+    'conversa' => :conversa, 'contato' => :contato, 'reuniao' => :reuniao, 'envio' => :ultimo_envio, 'falhou' => :mensagem_que_falhou
+  }.freeze
+
   BASES_DO_ALVO = {
-    'Conversation' => %w[conversa contato envio gatilho falhou],
+    'Conversation' => %w[conversa contato card envio gatilho falhou],
     'Crm::Card' => %w[card conversa contato reuniao envio gatilho],
     'Contact' => %w[contato envio gatilho]
   }.freeze
@@ -106,7 +111,9 @@ class Autonomia::Automacao::Valores
     end,
     'mensagem.privada' => ->(mensagem) { mensagem.private? },
     # A mensagem é a primeira de verdade da conversa (#2527)? A nota e a atividade nunca são.
-    'mensagem.primeira' => ->(mensagem) { ::Autonomia::Automacao::PrimeiraMensagem.primeira?(mensagem) }
+    'mensagem.primeira' => ->(mensagem) { ::Autonomia::Automacao::PrimeiraMensagem.primeira?(mensagem) },
+    # A mensagem traz foto ou PDF (#2716, a régua do ex.14): FotoOuPdf. Áudio, figurinha e outro arquivo não contam.
+    'mensagem.tem_anexo' => ->(mensagem) { ::Autonomia::Automacao::FotoOuPdf.mensagem?(mensagem) }
   }.freeze
 
   # O gatilho cuja mensagem o filtro lê.
@@ -118,6 +125,7 @@ class Autonomia::Automacao::Valores
     'mensagem.tipo' => { 'opcoes' => %w[recebida enviada nota], 'operadores' => %w[igual diferente] },
     'mensagem.privada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'mensagem.primeira' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'mensagem.tem_anexo' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'conversa.iniciada_por' => { 'opcoes' => %w[cliente equipe], 'operadores' => %w[igual diferente] },
     'conversa.cliente_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
@@ -135,6 +143,10 @@ class Autonomia::Automacao::Valores
   PROTEGIDOS = {
     'card.valor' => ::Crm::ValorDeVenda
   }.freeze
+
+  # Decisão 9 do Rodrigo (#2780, 09/11): o texto que a pessoa escreve (mensagem, e-mail, corpo) pode levar o valor
+  # protegido, em qualquer automação, com a permissão de quem salva e de quem ligou. A IA nunca o recebe para escrever
+  # (ComIa.leva_o_valor?): só o "decidir" o lê.
 
   # Os atributos personalizados (`contato.atributos.placa`) ficam em Valores::Atributos.
   MODELOS = ::Autonomia::Automacao::Valores::Atributos::MODELOS
@@ -281,15 +293,15 @@ class Autonomia::Automacao::Valores
     objeto && yield(objeto)
   end
 
+  # O card da conversa (#2716), quando o alvo é uma conversa. Buscado uma vez: a lista guarda também a resposta vazia.
+  def card_da_conversa = (@card_da_conversa ||= [::Autonomia::Automacao::CardDaConversa.ler(@contexto.alvo, account_user)]).first
+
   # A ponte vazia (card sem conversa, conversa sem contato) lê vazio.
   def da_base(caminho)
-    case caminho.to_s.split('.', 2).first
-    when 'conversa' then @contexto.conversa
-    when 'contato' then @contexto.contato
-    when 'card' then @contexto.card
-    when 'reuniao' then @contexto.reuniao
-    when 'envio' then @contexto.ultimo_envio
-    when 'falhou' then @contexto.mensagem_que_falhou
-    end
+    base = caminho.to_s.split('.', 2).first
+    return @contexto.card || card_da_conversa if base == 'card'
+
+    leitura = LEITURA_DA_BASE[base]
+    leitura && @contexto.public_send(leitura)
   end
 end
