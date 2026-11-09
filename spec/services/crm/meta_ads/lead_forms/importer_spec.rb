@@ -157,6 +157,77 @@ RSpec.describe Crm::MetaAds::LeadForms::Importer do
     expect(Crm::MetaAdsLead.count).to eq(0)
   end
 
+  # #2804: a recusa diz de onde veio, para a reconciliação saber quando tentar de novo (RefusedLeads).
+  describe 'tipo da recusa' do
+    let(:refused) { instance_double(Crm::MetaAds::LeadForms::RefusedLeads, remember!: true) }
+    let(:importer) do
+      described_class.new(account: account, pipeline: pipeline, stage: stage, form_name: form.form_name, page_id: '104882',
+                          questions: questions, refused: refused)
+    end
+
+    before do
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
+    end
+
+    def recusa(record, attribute, error)
+      record.errors.add(attribute, error)
+      ActiveRecord::RecordInvalid.new(record)
+    end
+
+    it 'card recusado pelo funil ou pela etapa: recusa do destino' do
+      allow(Crm::Cards::Creator).to receive(:new).and_raise(recusa(Crm::Card.new, :stage, :invalid))
+
+      expect(importer.import(lead)).to eq(:failed)
+      expect(refused).to have_received(:remember!).with('L1', :destination)
+    end
+
+    it 'card recusado só pelo título ou pelas respostas: recusa do lead' do
+      allow(Crm::Cards::Creator).to receive(:new).and_raise(recusa(Crm::Card.new, :metadata, :invalid))
+
+      importer.import(lead)
+
+      expect(refused).to have_received(:remember!).with('L1', :lead)
+    end
+
+    it 'contato recusado pelo dado do lead: recusa do lead' do
+      allow_any_instance_of(Contact).to receive(:save!).and_raise(recusa(Contact.new, :name, :too_long)) # rubocop:disable RSpec/AnyInstance
+
+      importer.import(lead)
+
+      expect(refused).to have_received(:remember!).with('L1', :lead)
+    end
+
+    it 'contato que outro processo acabou de gravar (unicidade): recusa passageira' do
+      allow_any_instance_of(Contact).to receive(:save!).and_raise(recusa(Contact.new, :phone_number, :taken)) # rubocop:disable RSpec/AnyInstance
+
+      importer.import(lead)
+
+      expect(refused).to have_received(:remember!).with('L1', :transient)
+    end
+
+    it 'índice único fora da reserva do lead (corrida no banco): :failed passageiro, sem derrubar o lote' do
+      allow(Crm::Cards::Creator).to receive(:new).and_raise(ActiveRecord::RecordNotUnique, 'duplicate key')
+
+      expect(importer.import(lead)).to eq(:failed)
+      expect(refused).to have_received(:remember!).with('L1', :transient)
+      expect(Crm::MetaAdsLead.count).to eq(0)
+    end
+
+    it 'outra recusa do banco (dado que o Postgres não grava): recusa do lead, sem derrubar o lote' do
+      allow(Crm::Cards::Creator).to receive(:new).and_raise(ActiveRecord::StatementInvalid, 'invalid byte sequence')
+
+      expect(importer.import(lead)).to eq(:failed)
+      expect(refused).to have_received(:remember!).with('L1', :lead)
+    end
+
+    it 'impasse no banco (deadlock): :failed passageiro' do
+      allow(Crm::Cards::Creator).to receive(:new).and_raise(ActiveRecord::Deadlocked, 'deadlock detected')
+
+      expect(importer.import(lead)).to eq(:failed)
+      expect(refused).to have_received(:remember!).with('L1', :transient)
+    end
+  end
+
   it 'telefone com espaço e traço vira E.164' do
     importer.import(lead(phone: '+55 11 98765-1201'))
 

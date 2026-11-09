@@ -44,6 +44,7 @@ class Crm::Pipeline < ApplicationRecord
 
   before_validation :initialize_followup_days, on: :create
   before_save :turn_off_conversion_sync, unless: :counts_as_sale?
+  after_update :restart_lead_form_marks, if: -> { saved_change_to_status?(from: 'archived', to: 'active') }
 
   MAX_WHEN_TO_USE = 1_000
   # Modelo escolhido ao criar o funil (#1498), guardado em metadata['template']. De Vender: VENDAS e RENOVACAO; os outros
@@ -98,6 +99,11 @@ class Crm::Pipeline < ApplicationRecord
     return if labels.nil? || (self.class.outcome_labels_valid?(labels) && labels.values.all? { |label| label.length <= OUTCOME_LABEL_MAX_LENGTH })
 
     errors.add(:base, I18n.t('crm.pipelines.outcome_labels_invalid'))
+  end
+
+  # Formulários da Meta com destino neste funil (#2804): reativado, o marco da reconciliação nasce de novo.
+  def restart_lead_form_marks
+    Crm::MetaAdsLeadForm.restart_marks!(id)
   end
 
   # Funil que não conta como venda (#1144) não manda nada para Meta nem Google, nem mudança de etapa: a sincronização

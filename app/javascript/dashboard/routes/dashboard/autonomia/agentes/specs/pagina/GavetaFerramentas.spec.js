@@ -604,6 +604,51 @@ describe('GavetaFerramentas · ver e alterar (F09, F10, F11)', () => {
     wrapper.unmount();
   });
 
+  // Decisão do Rodrigo (09/11): mudou o link, a chave guardada não vai junto.
+  it('asks to retype the stored key after the link changes', async () => {
+    api.updateTool.mockResolvedValue({ data: { ...ESTOQUE, enabled: false } });
+    const wrapper = await abrirDetalhe();
+    await clicar('[data-linha="3"] [data-alterar]');
+    await digitar(
+      '[data-campo-endereco]',
+      'https://api.sualoja.com.br/clientes?termo=[termo]'
+    );
+    await clicarNoTexto('Desligar, salvar e testar', rodape());
+    expect(api.updateTool).not.toHaveBeenCalled();
+    expect(no('[data-redigitar]').textContent).toContain('Você mudou o link');
+    expect(no('[data-erro-campo]').textContent.trim()).toBe(
+      'Digite a chave de novo para salvar.'
+    );
+    await digitar('[data-campo-valor]', 'nova-chave');
+    await clicarNoTexto('Desligar, salvar e testar', rodape());
+    const enviado = api.updateTool.mock.calls[0][2];
+    expect(enviado.endpoint_url).toBe(
+      'https://api.sualoja.com.br/clientes?termo={{termo}}'
+    );
+    expect(enviado.headers_config).toEqual([
+      { key: 'x-api-key', value: 'nova-chave', secret: true },
+    ]);
+    wrapper.unmount();
+  });
+
+  it('refuses a password in the link, in plain words', async () => {
+    const wrapper = await montar();
+    await clicar('#ferramentas-adicionar');
+    await digitar('[data-campo-nome]', 'Clientes');
+    await digitar('[data-campo-quando]', 'Use para clientes.');
+    await clicarNoTexto('Continuar', rodape());
+    await clicarNoTexto('Continuar', rodape());
+    await digitar(
+      '[data-campo-endereco]',
+      'https://api.loja.com.br/c?token=abc123'
+    );
+    await clicarNoTexto('Continuar', rodape());
+    expect(no('[data-erro-campo]').textContent.trim()).toBe(
+      'Coloque a senha em Chave de acesso, não no link.'
+    );
+    wrapper.unmount();
+  });
+
   it('treats turning off "É segredo" of a stored value like a rename', async () => {
     const wrapper = await abrirDetalhe();
     await clicar('[data-linha="4"] [data-alterar]');

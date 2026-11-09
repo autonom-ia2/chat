@@ -102,6 +102,10 @@ RSpec.describe Crm::Cards::Anonimizador do
     create(:crm_google_conversion_event, account: account, card_id: card.id, gclid: marcador, status: 'ready')
     Crm::MetaConversionEvent.create!(account: account, card: card, event_id: "crm-#{card.id}-won-1", event_type: 'won',
                                      status: :pending, ctwa_clid: marcador, value_cents: 150_000, currency: 'BRL')
+    Crm::MetaConversionEvent.create!(account: account, card: card, event_id: "crm-#{card.id}-moved-2", event_type: 'moved',
+                                     status: :error, ctwa_clid: marcador, error_message: 'unknown_outcome')
+    Crm::MetaConversionEvent.create!(account: account, card: card, event_id: "crm-#{card.id}-moved-3", event_type: 'moved',
+                                     status: :error, ctwa_clid: marcador, error_message: "recusado #{marcador}")
   end
   # rubocop:enable Metrics/AbcSize
 
@@ -177,9 +181,15 @@ RSpec.describe Crm::Cards::Anonimizador do
       it 'a conversão fica sem o clique e não é mais enviada; decisões do decisor saem' do
         expect(Crm::GoogleConversionEvent.find_by(card_id: card.id).attributes.slice('status', 'skip_reason', 'gclid'))
           .to eq('status' => 'skipped', 'skip_reason' => 'contact_removed', 'gclid' => nil)
-        expect(Crm::MetaConversionEvent.find_by(card_id: card.id).attributes.slice('status', 'ctwa_clid'))
-          .to eq('status' => 'skipped', 'ctwa_clid' => nil)
+        expect(Crm::MetaConversionEvent.where(card_id: card.id).order(:event_id).pluck(:event_type, :status, :ctwa_clid))
+          .to eq([%w[moved error] + [nil], %w[moved error] + [nil], ['won', 'skipped', nil]])
         expect(Autonomia::DecisorDecisao.where(crm_card_id: card.id)).to be_empty
+      end
+
+      # #2799: "não sabemos se o aviso chegou" não é dado da pessoa; o cartão continua dizendo isso.
+      it 'a conversão sem resposta da Meta continua dizendo isso; a recusa perde o texto' do
+        expect(Crm::MetaConversionEvent.where(card_id: card.id, event_type: 'moved').order(:event_id).pluck(:error_message))
+          .to eq(['unknown_outcome', nil])
       end
     end
   end

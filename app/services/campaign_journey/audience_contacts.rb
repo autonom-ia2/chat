@@ -8,7 +8,8 @@ require 'digest'
 # Who may receive WhatsApp (consent, review A1): only contacts of imported rows that HAD a valid
 # mobile in the spreadsheet (normalized_phone_hash) and whose stored phone is still that mobile
 # (same number, with or without the 9th digit). A row with only an email never receives
-# WhatsApp. Contacts that refused active messages (#737) stay out of the total (PRD B8).
+# WhatsApp. Contacts that refused active messages (#737) or are blocked (chat#2733) stay out of
+# the total (PRD B8; Contact.campaign_reachable).
 # The audience's WhatsApp channel must be on at send time; off → nobody, every eligible contact
 # is recorded as skipped with CHANNEL_DISABLED_REASON (fails closed).
 #
@@ -35,7 +36,7 @@ module CampaignJourney::AudienceContacts
             else
               email_matches(link.campaign_import, account: account).map(&:contact_id)
             end
-      account.contacts.where(id: ids).not_opted_out
+      account.contacts.where(id: ids).campaign_reachable
     end
 
     # Contact ids whose row had a valid mobile that the contact still has. Same rule for the

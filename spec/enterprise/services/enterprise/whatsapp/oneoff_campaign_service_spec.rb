@@ -128,4 +128,38 @@ RSpec.describe Enterprise::Whatsapp::OneoffCampaignService do
       expect(CampaignRecipient.find_by!(campaign: campaign, contact: contact)).to be_sent
     end
   end
+
+  describe 'contato bloqueado (chat#2733)' do
+    it 'pula o contato bloqueado, com motivo próprio, e não envia' do
+      contact = create(:contact, :with_phone_number, account: account, blocked: true)
+      contact.update_labels([label.title])
+
+      expect(whatsapp_channel).not_to receive(:send_template)
+
+      Whatsapp::OneoffCampaignService.new(campaign: campaign).perform
+
+      recipient = CampaignRecipient.find_by!(campaign: campaign, contact: contact)
+      expect(recipient).to be_skipped
+      expect(recipient.error_message).to eq('blocked')
+    end
+
+    it 'reconfere antes de cada mensagem: quem é bloqueado durante o disparo não recebe' do
+      first, second = create_list(:contact, 2, :with_phone_number, account: account)
+      [first, second].each { |contact| contact.update_labels([label.title]) }
+      sent_to = []
+      allow(whatsapp_channel).to receive(:send_template) do |to, *_args|
+        sent_to << to
+        second.update!(blocked: true)
+        'wamid.primeiro'
+      end
+
+      Whatsapp::OneoffCampaignService.new(campaign: campaign).perform
+
+      expect(sent_to.size).to eq(1)
+      expect(CampaignRecipient.find_by!(campaign: campaign, contact: first)).to be_sent
+      recipient = CampaignRecipient.find_by!(campaign: campaign, contact: second)
+      expect(recipient).to be_skipped
+      expect(recipient.error_message).to eq('blocked')
+    end
+  end
 end
