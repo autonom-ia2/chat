@@ -17,7 +17,6 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     9 => ['Prospecção que roda sozinha toda semana', 'G7 (segunda às 8h), G3, G4, G12, G14, G21'],
     11 => ['Indicação que vira presente', 'G4, G17, G18 (criar o contato e o card do amigo e agir no card dele), G1, G5, G12, G16'],
     12 => ['Visita que aconteceu decide o próximo passo', 'G5 (entrou em "Visita feita"), G2, G3, G11, G14, G25'],
-    13 => ['Festa do contrato ao depoimento', 'G5 (card ganho), G6 (datas da festa), G1, G2, G16'],
     14 => ['Documentação completa para emitir', 'G5 (entrou em "Documentação"), G1, G3, G13, G20'],
     15 => ['Cliente grande, atendimento de dono', 'G5 (card criado ou valor mudou), G3, G11, G12, G15'],
     16 => ['Reconquistar quem foi para o concorrente', 'G7 (todo dia 1º), G3, G4, G12, G14, G16, G18'],

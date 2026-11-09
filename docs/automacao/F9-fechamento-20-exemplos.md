@@ -179,7 +179,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 10 | **Cliente bravo** | ✅ mensagem do cliente | decidir ✅, atribuir ✅, prioridade ✅, etiqueta ✅, resumir+avisar ✅, mensagem ✅ | G4 (passo 8), G15 (tirar da agente de IA, a conferir) | **Parcial: passos 1 e 3–7**; no 2, passar para a Fernanda ✅, tirar da agente de IA a conferir (G15) |
 | 11 | Indicação que vira presente | ✅ mensagem do cliente | decidir ✅, extrair ✅, mensagem a Maria ✅ | G1, G4, G5, G12, G16, G17, G18 | Não |
 | 12 | Visita que aconteceu | 🟡 G5 (entrou em "Visita feita") | mensagem ✅ (na janela), decidir ✅, extrair ✅, mover ✅, etiqueta ✅, avisar ✅ | G2, G3, G5, G11, G14, G25 | Não |
-| 13 | Festa do contrato ao depoimento | 🟡 G5 (card ganho) + ⛔ G6 (datas da festa) | extrair ✅, resumir/avisar ✅, decidir ✅, etiqueta ✅ | G1, G2, G5, G6, G16 | Não |
+| 13 | Festa do contrato ao depoimento | ✅ G5 (card ganho) + ✅ G6 (datas da festa) | e-mail ✅ (G2), modelo fora da janela ✅ (G1), data calculada ✅ (G16), extrair → copiar ao card (2 passos) ✅, resumir/avisar ✅, decidir ✅, etiqueta ✅ | — | **Sim** (`exemplo_13_festa_do_contrato_spec.rb`) |
 | 14 | Documentação para emitir | 🟡 G5 (entrou em "Documentação") | extrair ✅, escrever ✅, etiqueta ✅, mover ✅, avisar ✅ | G1, G3, G5, G13, G20 | Não |
 | 15 | Cliente grande | 🟡 G5 (card criado/valor mudou) | se com etiqueta ✅, atribuir ✅, etiqueta ✅, prioridade ✅, resumir ✅, mensagem ✅ | G3, G5, G11, G12, G15 | Não |
 | 16 | Reconquistar | ⛔ G7 (dia 1º, perdidos há 11 meses) | etiqueta ✅, decidir ✅, escrever ✅ | G3, G4, G7, G12, G14, G16, G18 | Não |

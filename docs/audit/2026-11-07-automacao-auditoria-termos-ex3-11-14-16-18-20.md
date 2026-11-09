@@ -1,0 +1,77 @@
+## Exemplos 3, 11, 14, 16, 18, 20 (main `87384b75c4`, com o #2685, + 11 PRs do trem)
+
+Feita pela frente F9, em 07/11. Leitura de código, sem rspec. Os PRs do trem foram lidos nestes heads: #2652 `60f449c95f`
+(G7), #2654 `623664332d` (G25), #2644 `ea17251e9e` (G19), #2664 `e62e46af00` (lote B), #2675 `9aed29fd63` (G18), #2673
+`5c2a51d059` (G20), #2676 `1367ba262d` (G13), #2686 `3dcd4621ca` (lote 5), #2687 `35e9f56f93` (lote 4), #2688
+`8ce6c164de` (lote 2) e #2689 `97b6abe31f` (lote 3). "PR" quer dizer só no PR, ainda não na main.
+
+| Exemplo | Passo | Peça | Prova | Monta à risca? |
+|---|---|---|---|---|
+| 3 | Começa: o card entra em "Atendida" (o pós-reunião move) | G5 `card.entrou_na_etapa` | `gatilhos.rb:31` (main); `exemplo_03_pos_procedimento_spec.rb:52` (#2673) | sim |
+| 3 | 1. A IA extrai da agenda e da conversa o procedimento e grava no card | extrair + PATCH card com `$valor` (2 passos). NOVA: a IA lê a reunião ou o serviço da agenda | `spec:53-60` (#2673): o extrair lê só `mensagens_recentes`, grava na conversa e copia para o card. `le` não tem agenda nem reunião (`schema:180`, #2688). Fora dos gatilhos de reunião, o contexto nem tem a reunião, e a reunião só dá `inicio` e `link_da_reuniao` (`valores.rb:43-44`, main) | parcial (só da conversa) |
+| 3 | 2. No dia seguinte, a IA escreve os cuidados e manda pelo modelo "Cuidados" | `esperar` + `escrever` com `destino: guardar` + `mensagem` com modelo e `$valor ia.cuidados` (G28) | `schema:216-218` (#2688); spec `:43,63` (#2688) | sim (PR #2688) |
+| 3 | 3. No 3º dia, pergunta pelo modelo | `esperar` + G1 | spec `:64-65` (#2673) | sim |
+| 3 | 4. A IA decide pela resposta (com a foto) | `esperar_ate` (G11) + `decidir` com `le: anexos` (G20) | `schema:179` (#2673); spec `:66-75` (#2673) | sim (PR #2673) |
+| 3 | 5. Reação: etiqueta "atenção", prioridade e aviso à doutora | etiqueta + `toggle_priority` + `avisar` com pessoas | spec `:77-79` (#2673); `schema:370-382` (main) | sim |
+| 3 | 6. Dúvida: retorno para a recepção ainda hoje | G3 `retorno` para um time | spec `:83-84` (#2673); `schema:99-112` (main) | sim |
+| 3 | 7. Tudo bem: etiqueta "satisfeita" | etiqueta | spec `:86` (#2673) | sim |
+| 3 | 8. No 25º dia, o link da agenda pelo modelo | G16 `$data hoje +25 dias` no card + G6 `card.data` + G1 + G12 | spec `:58,94-96` (#2673); `valores.rb:51` (main) | sim |
+| 3 | 9. Sem agendar em 7 dias: põe na campanha de e-mail "Manutenção" | `esperar_ate card.etapa_id = Retorno marcado` + G2 `email`. NOVA: campanha de e-mail | spec `:97-102` (#2673): manda **um** e-mail pelo passo `email`, não uma campanha. A campanha da plataforma só sai pelo WhatsApp oficial (`passo_de_campanha.rb:76-77`, main), e não existe campanha de e-mail | parcial (um e-mail) |
+| 3 | 10. Agendou: move para "Retorno marcado" e tira da campanha | G12 `card.reuniao_marcada` (automação separada) + mover | spec `:107-108` (#2673). A reunião entra no card aberto do contato no funil da página (`booker.rb:157-159`, main). "Tirar da campanha" não tem o que tirar: o e-mail é avulso | parcial (herda o passo 9) |
+| 11 | Começa: toda mensagem do cliente | nativo `mensagem.criada` | `schema:14` (main) | sim |
+| 11 | 1. A IA decide se é indicação; se não for, para | `decidir` + `nenhum` vazio | `schema:422-433` (main) | sim |
+| 11 | 2. A IA extrai o nome do amigo, o telefone e o pet | `extrair` na conversa | `passo_de_extrair.rb:1-3` (main): telefone e e-mail não são destino do contato. Vão como atributo da conversa | sim (na conversa) |
+| 11 | 3. Cria o contato do amigo e um card em "Indicações" com "indicado por Maria" | lote B `POST contacts` + G4 `card` + NOVA: o id do que o passo criou | `POST contacts` em `automacao-recursos.yml` (#2664). A resposta da ação não fica guardada para os passos seguintes, e o passo `card` cria o card na conversa e no contato do alvo, a Maria (`schema:472`, main). O card do João com `indicado_por` só existe no spec da G18 porque a factory o cria (`g18_em_outro_registro_spec.rb:81`, #2675) | não |
+| 11 | 4. Agradece à Maria | `mensagem` | `schema:347-356` (main) | sim |
+| 11 | 5. Manda ao João, pelo modelo, o desconto e o link da agenda | G1 (propaganda, #2686) + G12 + G33 do lote 3 | A conversa nova do lote 3 só vale em gatilho de card ou de contato: o gatilho de conversa é recusado ao salvar (`conversa_nova.rb:32`, #2689). Sem o id do João (passo 3), nem a G18 o alcança | não |
+| 11 | 6. O João marcou: move o card dele para "Agendado" | G12 `card.reuniao_marcada` no funil "Indicações" + mover | `gatilhos.rb:35` (main) | sim (se o card existir) |
+| 11 | 7. Card do João ganho: manda à Maria o presente com o link da agenda | G5 `card.ganho` + G18 `contato_do_campo` (`card.atributos.indicado_por`, `usar: conversa`) + G1 | `schema:123-130` (#2675); spec `:85,99` (#2675). Na filha, o alvo é a conversa da Maria, então o link é o de quem atende essa conversa (`valores.rb:52`, main). Com a agente de IA ou sem ninguém atendendo, pula | sim (PR #2675; o `indicado_por` depende do passo 3) |
+| 11 | 8. Etiqueta "indicou e fechou" na Maria e aviso à Lu | etiqueta na filha + `avisar` com pessoas | spec `:99` (#2675); `schema:370-382` (main) | sim (PR #2675) |
+| 11 | 9. Card do João perdido: agradece à Maria sem presente | G5 `card.perdido` + G18 | igual ao passo 7 | sim (PR #2675) |
+| 14 | Começa: o card entra em "Documentação" | G5 `card.entrou_na_etapa` | `gatilhos.rb:31` (main) | sim |
+| 14 | 1. Modelo aprovado com a lista do ramo | `se card.atributos.ramo` + G1, um modelo por ramo | `schema:240-260,347-356` (main) | sim |
+| 14 | 2. A cada foto ou PDF, a IA extrai qual documento é e se dá para ler | `mensagem.criada` (2ª automação) + `extrair` com `le: anexos` (G20) + NOVA: o gatilho de conversa lê o card | `schema:179` (#2673). "A cada" é outra automação, porque na mesma execução a 2ª mensagem cai em `ja_aberta` (G31). Mas a conversa não lê o card (`valores.rb:65`, main), então o filtro "card em Documentação" não existe: o extrair roda, e cobra, em toda mensagem da conta. A G18 (`cards_do_contato` com etapa, `schema:140`, #2675) só filtra depois que a execução começou | parcial |
+| 14 | 3. Não deu para ler: pede de novo, explicando | `escrever` com `le: anexos` e `destino: mensagem` (na janela, porque a cliente acabou de mandar) | `schema:447-457` (main) + `schema:179` (#2673) | sim (PR #2673) |
+| 14 | 4. Faltando algo: a IA escreve o pedido só do que falta | `escrever` com `le: conversa` (os atributos já extraídos) | O extrair só preenche e mantém o que já existia (`passo_de_extrair.rb:8`, main), então a lista se acumula na conversa | sim |
+| 14 | 5. 2 dias sem documento novo: lembra pelo modelo; 4 dias: retorno | 2 `esperar_ate conversa.cliente_respondeu` + G1 + G3. NOVA (menor): "chegou anexo" na espera | Qualquer texto da cliente conta como resposta (`valores.rb:59`, main; `resposta.rb`, #2689). Um "já mando" zera os 2 dias | parcial |
+| 14 | 6. Tudo recebido: etiqueta "docs ok" e move para "Emissão" | `se` nos atributos + etiqueta + G18 `cards_do_contato` (etapa Documentação) + mover na filha | `schema:140,490` (#2675). Da conversa, o `crm/cards/:id` não monta: `card.id` não é valor dela (`receita.rb:190`, #2654; `valores.rb:65`, main) | sim (PR #2675) |
+| 14 | 7. Manda os dados à seguradora e grava no card o número da proposta | G13 `webhook` com `gravar` em `card.atributos` (gatilho `entrou_na_etapa` Emissão) | `docs/automacao/G13-webhook.md:11-25` (#2676) | sim (PR #2676) |
+| 14 | 8. A seguradora recusou: avisa a Dona Cida com o motivo | G13 `se_recusar` + `gravar` do erro + `avisar` | `G13-webhook.md:17-18,26` (#2676) | sim (PR #2676) |
+| 16 | Começa: dia 1º, cada card perdido há 11 meses com motivo "fechou com outro" ou "achou caro" | G7 `card.recorrente` (`situacao: perdido`, `fechado_entre_dias` 330-360) + `se card.motivo_da_perda` + `parar` | `selecao.rb:4,8-9,57-62` (#2652). A seleção não filtra o motivo: o 1º passo confere (`valores.rb:40`, main) | sim (PR #2652, com o `se`) |
+| 16 | 1. Etiqueta "reconquista" no contato | etiqueta do contato | `automacao-recursos.yml:32-35` (main) | sim |
+| 16 | 2. Campanha "Seu seguro está vencendo" para todos com a etiqueta | G14 `disparar` em `conta.recorrente` (2ª automação, mais tarde no dia 1º) | O disparo só vale em gatilho sem alvo (`schema:388`, main; `passo_de_campanha.rb:84-85`) | sim (2 automações, PR #2652) |
+| 16 | 3. Cada resposta: a IA decide | `mensagem.criada` + filtro `mensagem.campanha` + `decidir` | `valores.rb:82` (#2686) | sim (PR #2686) |
+| 16 | 4. Quer cotação: a IA escreve citando o motivo da perda do card antigo | G18 `cards_do_contato` (perdido, só o mais recente) + `escrever` com `le: card` (lote 2) | `schema:140` (#2675); `schema:180` (#2688). O spec da G18 prova com o `$valor card.motivo_da_perda` numa mensagem (spec `:141`, #2675), não com a IA. As duas peças estão em PRs diferentes | sim (PRs #2675 e #2688, sem prova juntas) |
+| 16 | 5. Card novo no Comercial, com a origem "reconquista", passado ao corretor de antes | G4 `card` + atribuir a conversa (`$valor card.responsavel_id` na filha) + NOVA: id do que o passo criou | O passo `card` só recebe `etapa_id` (`schema:468-473`, main): sem dono e sem atributo, e o card criado não vira valor para um PATCH depois. A conversa pode ir ao corretor antigo (`automacao-recursos.yml:62-65`, main) | parcial (sem origem e sem dono no card) |
+| 16 | 6. Ficou satisfeito: agradece e retorno daqui a 11 meses | `mensagem` + G3 `retorno` (`daqui` em dias, até 3650) | `schema:58-66,481-487` (main) | sim |
+| 16 | 7. Não quer contato: registra e nunca mais manda | etiqueta + G14 `nao_receber` | `schema:388-392` (main) | sim |
+| 16 | 8. Card novo sem resposta do corretor em 4 h: link da agenda ao cliente | `card.criado` no Comercial + `esperar_ate conversa.responsavel_respondeu` (lote 4) + G12 | `valores.rb:62` (#2687). Separar o card da reconquista dos outros cards novos depende da origem do passo 5 | parcial (herda o passo 5) |
+| 18 | Começa: mensagem com currículo na caixa de vagas | `mensagem.criada` + `se conversa.caixa_id`. NOVA (menor): "a mensagem tem anexo" | `valores.rb:18,72-79` (main): a mensagem não diz se tem anexo. Dá para o `decidir` com `le: anexos` parar quem não mandou currículo | parcial |
+| 18 | 1. A IA extrai do currículo nome, bairro, experiência e curso | `extrair` com `le: anexos` | `schema:179` (#2673); `g20_ler_anexo_spec.rb` (#2673) | sim (PR #2673) |
+| 18 | 2. Cria o card em "Seleção – Recepcionista" | G4 `card` | `schema:468-473` (main) | sim |
+| 18 | 3. A IA decide pelos requisitos que a doutora escreveu | `decidir` (requisitos na pergunta e nas opções) + `le: anexos` | `schema:422-433` (main) | sim |
+| 18 | 4. Atende o perfil: link da agenda de entrevistas e etiqueta | `mensagem` com link literal + etiqueta | `conversa.link_da_agenda` é de quem atende a conversa (`valores.rb:52`, main), e na caixa de vagas pode não haver ninguém | sim (link literal) |
+| 18 | 5. Talvez: avisa a doutora com resumo de 3 linhas | `resumir` (`linhas: 3`) para pessoas | `schema:459-467` (main) | sim |
+| 18 | 6. Não atende: agradece e fecha o card | `mensagem` + G18 `cards_do_contato` (funil Seleção) + G25 `close` (perdido) na filha | O fechar não aparece em gatilho de conversa (`receita.rb:190,203-204`, #2654). Pela filha no card, sim: `automacao-recursos.yml:76` (#2654) e `schema:140` (#2675) | sim (PRs #2654 e #2675) |
+| 18 | 7. Salário e horário: passa para a agente de IA | `mensagem.criada` (outra automação) + `decidir` + `ia_assumir` | `schema:412-420` (main) | sim |
+| 18 | 8. 1 dia antes da entrevista, lembra o endereço pelo modelo | NOVA: lembrete antes da reunião | `reuniao.inicio` é texto ("10/11/2026 às 09:00", `valores.rb:124-129`, main) e não vira data de atributo, que precisa de AAAA-MM-DD (`tempo/data.rb:23-25`, main). Nenhum gatilho olha a data da reunião (`schema:14`, main e PRs) | não |
+| 18 | 9. A recepção arrasta para "Não compareceu": fecha com esse motivo | G5 `entrou_na_etapa` + G25 `close` (lost, `lost_reason`) | `automacao-recursos.yml:76` (#2654) | sim (PR #2654) |
+| 20 | Começa: card ganho | G5 `card.ganho` | `gatilhos.rb:33` (main) | sim |
+| 20 | 1. A IA extrai CNPJ, e-mail do financeiro e plano, se faltarem no card | `se card.atributos.* vazio` + `extrair` na conversa + PATCH card com `$valor` (2 passos) | `passo_de_extrair.rb:1-3` (main), como no ex. 13 | sim (2 passos) |
+| 20 | 2. Faltou dado: pergunta só o que falta e espera até 2 dias | `escrever` (`le: card`, `destino: guardar`) + G1 com `ia.<id>` + G11 | `schema:180,216-218` (#2688) | sim (PR #2688) |
+| 20 | 3. Manda ao sistema de cobrança e grava o número de cliente no card | G13 `webhook` + `gravar` | `G13-webhook.md:11-16` (#2676): é o próprio exemplo | sim (PR #2676) |
+| 20 | 4. A cobrança recusou: avisa o financeiro com o motivo | G13 `se_recusar` + `avisar` | `G13-webhook.md:17-18` (#2676) | sim (PR #2676) |
+| 20 | 5. E-mail de boas-vindas com o link da agenda | G2 `email` + `card.link_da_agenda` | `schema:358-366` (main); `valores.rb:51` (main) | sim |
+| 20 | 6. Reunião marcada: move para "Implantação" e etiqueta "cliente novo" | G12 `card.reuniao_marcada` + mover + etiqueta | A reunião só entra em card **aberto** do contato no funil da página. Com o card ganho, a página cria outro card (`booker.rb:157-159`, `card.rb:132`, main), e a automação roda nesse card novo, não no ganho | parcial (card duplicado) |
+| 20 | 7. 30 dias depois, pelo modelo, pergunta o uso; a IA decide | `esperar 30 dias` + G1 + G11 + `decidir` | `schema:282-297,422-433` (main) | sim |
+| 20 | 8. Dificuldade: link do treinamento. Quer cancelar: avisa o Ricardo com resumo | `mensagem` com link literal + `resumir` → `avisar` | `schema:459-467` (main) | sim |
+| 20 | 9. Bem: põe na campanha de e-mail "Dicas do mês" | NOVA: campanha de e-mail | Não existe campanha de e-mail (`passo_de_campanha.rb:76-77`, main). Só monta como etiqueta + G7 `contato.recorrente` mensal (#2652) + G2 `email` | parcial (contorno de 2 automações) |
+
+Lacunas novas:
+- **Id do que o passo criou** (o contato e o card criados por um passo viram valor para os passos seguintes gravarem neles, darem dono e mandarem mensagem): segura o 11 nos passos 3 e 5 (e, por tabela, o `indicado_por` dos passos 7 a 9) e o 16 nos passos 5 e 8.
+- **Mandar a quem não tem conversa a partir de um gatilho de conversa** (o lote 3 recusa a caixa em gatilho de conversa, `conversa_nova.rb:32`, #2689): segura o 11, passo 5.
+- **Campanha de e-mail** (pôr e tirar alguém de uma série de e-mails; a da plataforma é só WhatsApp): segura o 3 nos passos 9 e 10 e o 20 no passo 9. Hoje o spec do 3 manda um e-mail avulso. Pede decisão: criar a campanha de e-mail, ou aceitar no termo "etiqueta + recorrente + e-mail".
+- **Lembrete antes da reunião** (a data da reunião como gatilho ou como data, não como texto): segura o 18, passo 8.
+- **O gatilho de conversa lê o card da conversa** (etapa e funil no "Só se"): segura o 14 no passo 2. Sem ele, a IA roda e cobra em toda mensagem da conta.
+- **Menores:** a IA lê a reunião e o serviço da agenda (3, passo 1); "chegou anexo" na espera, não qualquer resposta (14, passo 5); "a mensagem tem anexo" no filtro (18, começo); a reunião marcada depois do ganho abre card novo (20, passo 6).
+- **Conflito de nomes no trem:** o #2688 chama de G33 e G34 a IA lendo o card e as notas, e o #2689 chama de G33 e G34 a conversa de quem não tem e a resposta em outra conversa. Um dos dois precisa renumerar antes do 2º merge.
