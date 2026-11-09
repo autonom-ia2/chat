@@ -1,6 +1,9 @@
 import {
+  MASCARA_DO_SEGREDO,
   PASSOS,
+  conferirEndereco,
   corpoPadrao,
+  destinoMudou,
   enderecoDaTela,
   enderecoNaTela,
   enderecoLegivel,
@@ -12,6 +15,7 @@ import {
   passosProvaveisDoErro,
   rascunhoVazio,
   validarPasso,
+  valorFixo,
 } from '../../../utils/ferramentas';
 import {
   passoDaCorrecao,
@@ -289,6 +293,135 @@ describe('linguagem das Ferramentas (#1430)', () => {
     it('gives up on text or nothing readable, and the screen shows it as it came', () => {
       expect(respostaLegivel('Rua X, 10')).toBeNull();
       expect(respostaLegivel('{"a":{"b":1}}')).toBeNull();
+    });
+  });
+
+  // Decisão do Rodrigo (09/11, repassada): a chave guardada não vai para link nem método novos, e senha não fica no link.
+  describe('chave de acesso e link', () => {
+    const salva = paraRascunho({
+      http_method: 'GET',
+      endpoint_url: 'https://api.loja.com/leads',
+      headers_config: [
+        { key: 'x-api-key', value: MASCARA_DO_SEGREDO, secret: true },
+      ],
+    });
+
+    it('asks for the key again when the link or the method changes', () => {
+      expect(destinoMudou(salva)).toBe(false);
+      expect(
+        destinoMudou({ ...salva, endereco: 'https://api.loja.com/persons' })
+      ).toBe(true);
+      expect(destinoMudou({ ...salva, metodo: 'POST' })).toBe(true);
+      expect(destinoMudou(rascunhoVazio())).toBe(false);
+      expect(
+        validarPasso(4, { ...salva, endereco: 'https://api.loja.com/persons' })
+          .erros
+      ).toEqual({ c0: 'REDIGITAR' });
+      expect(validarPasso(4, salva).erros).toEqual({});
+    });
+
+    it('never sends the stored key to a new link', () => {
+      const enviado = paraApi({
+        ...salva,
+        nome: 'X',
+        endereco: 'https://api.loja.com/persons',
+      });
+
+      expect(enviado.headers_config).toEqual([
+        { key: 'x-api-key', value: '', secret: true },
+      ]);
+    });
+
+    it('refuses a password in the link, by the URL parser and a list of names', () => {
+      expect(conferirEndereco('https://a.com/x?token=abc')).toBe('SENHA');
+      expect(conferirEndereco('https://a.com/x?API_KEY=abc&q=1')).toBe('SENHA');
+      expect(conferirEndereco('https://ana:segredo@a.com/x')).toBe('SENHA');
+      expect(conferirEndereco('https://a.com/x?token={{t}}')).toBe('');
+      expect(
+        conferirEndereco('https://a.com/x?keyword=pastilha&author=1')
+      ).toBe('');
+    });
+
+    it('asks for the key again when what goes with the call changes', () => {
+      const post = paraRascunho({
+        http_method: 'POST',
+        endpoint_url: 'https://api.loja.com/graphql',
+        request_body_template: '{"query":"{ pedido }"}',
+        headers_config: [
+          { key: 'x-api-key', value: MASCARA_DO_SEGREDO, secret: true },
+          { key: 'x-loja', value: '7', secret: false },
+        ],
+      });
+      const comum = c =>
+        c.chave === 'x-loja' ? { ...c, valor: '8' } : { ...c };
+
+      expect(destinoMudou(post)).toBe(false);
+      expect(destinoMudou({ ...post, corpo: '{"query":"{ clientes }"}' })).toBe(
+        true
+      );
+      expect(
+        destinoMudou({ ...post, cabecalhos: post.cabecalhos.map(comum) })
+      ).toBe(true);
+      expect(
+        destinoMudou({
+          ...post,
+          cabecalhos: [
+            ...post.cabecalhos,
+            { chave: 'X-HTTP-Method-Override', valor: 'DELETE' },
+          ],
+        })
+      ).toBe(true);
+    });
+
+    it('keeps only fixed text when it looks for a password in the link', () => {
+      expect(valorFixo('{{t}}')).toBe('');
+      expect(valorFixo('{{ t | url_encode }}')).toBe('');
+      expect(valorFixo('abc{{t}}')).toBe('abc');
+      expect(valorFixo('{{ "abc" }}')).toBe(' "abc" ');
+      expect(valorFixo('{{ t | append: "x" }}')).toBe(' t | append: "x" ');
+      [
+        'https://a.com/x?api_token=abc',
+        'https://a.com/x?token[]=abc',
+        'https://a.com/x?client_secret=abc',
+        'https://a.com/x?api_key=abc{{t}}',
+        'https://a.com/x?token={{ "abc" }}',
+      ].forEach(link => expect(conferirEndereco(link)).toBe('SENHA'));
+      expect(
+        conferirEndereco('https://a.com/x?token={{ t | url_encode }}')
+      ).toBe('');
+    });
+
+    it('counts a new secret header as a new call and refuses repeated names', () => {
+      const salva2 = paraRascunho({
+        http_method: 'POST',
+        endpoint_url: 'https://api.loja.com/leads',
+        headers_config: [
+          { key: 'x-api-key', value: MASCARA_DO_SEGREDO, secret: true },
+        ],
+      });
+      const override = {
+        ...salva2,
+        cabecalhos: [
+          ...salva2.cabecalhos,
+          { chave: 'X-HTTP-Method-Override', valor: 'DELETE', segredo: true },
+        ],
+      };
+      const repetido = {
+        ...salva2,
+        cabecalhos: [
+          { chave: 'x-api-key', valor: 'lixo', segredo: true },
+          ...salva2.cabecalhos,
+        ],
+      };
+
+      expect(destinoMudou(override)).toBe(true);
+      expect(validarPasso(4, repetido).erros.c1).toBe('REPETIDO');
+      expect(conferirEndereco('https://a.com/x?{{ "token" }}=abc')).toBe(
+        'SENHA'
+      );
+      expect(
+        conferirEndereco('https://a.com/x?{{ "tok" | append: "en" }}=abc')
+      ).toBe('SENHA');
     });
   });
 

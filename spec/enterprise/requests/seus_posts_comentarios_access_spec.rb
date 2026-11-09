@@ -81,8 +81,10 @@ RSpec.describe 'Seus posts: comentários de cada post só para quem vê a caixa 
   it 'anúncio do post: só com meta_ads_view (ou meta_ads_manage); só posts_view recebe a lista vazia' do
     stub_lista
     account.enable_features!('meta_ads_hub', 'meta_ads_comentarios_instagram')
+    connection = create_meta_ads_insights_connection(account)
     Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: SecureRandom.uuid, status: 'created', ad_id: '903',
-                                      source_post_id: post_id, source_post_network: 'instagram', activated_at: 1.day.ago)
+                                      source_post_id: post_id, source_post_network: 'instagram', activated_at: 1.day.ago,
+                                      ad_account_id: connection.ad_account_id)
 
     ad_ids = [%w[posts_view], %w[posts_view meta_ads_view], %w[posts_view meta_ads_manage]].map do |permissions|
       get base, params: { perfil: perfil }, headers: member_with(permissions).create_new_auth_token, as: :json

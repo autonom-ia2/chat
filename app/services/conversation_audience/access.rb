@@ -4,8 +4,6 @@
 module ConversationAudience::Access
   PERMISSIONS = %w[campaign_manage conversation_view].freeze
   ERROR = 'no_access'.freeze
-  # The contact's own data (company, city, custom attributes) is contact reading; contact_manage implies it.
-  CONTACTS = 'contact_view'.freeze
   # Where a saved audience says it came from the conversations (ConversationAudience::Save).
   SOURCE = 'conversations'.freeze
 
@@ -16,8 +14,13 @@ module ConversationAudience::Access
     account_user.present? && PERMISSIONS.all? { |key| account_user.permission_granted?(key) }
   end
 
+  # The contact's own data (name, phone, e-mail, company, custom attributes) is contact reading: the same rule as the
+  # contact base, ContactPolicy#index? (EE: contact_view, which contact_manage implies; administrator and plain agent keep it).
   def reads_contacts?(account_user)
-    account_user.present? && account_user.permission_granted?(CONTACTS)
+    return false if account_user.nil?
+
+    context = { user: account_user.user, account: account_user.account, account_user: account_user }
+    Pundit.policy!(context, Contact).index?
   end
 
   def from_conversations?(campaign_import)
@@ -36,9 +39,24 @@ module ConversationAudience::Access
     people.where(conversation_id: visible.to_a).pluck(:contact_id).to_set
   end
 
-  # An audience built from the conversations takes its columns from the contacts, not from a file someone uploaded:
-  # only who reads contacts sees their values (access review of #2303, Funções personalizadas, 28/10).
-  def hides_contact_data?(campaign_import, account_user)
-    from_conversations?(campaign_import) && !reads_contacts?(account_user)
+  # Whatever the audience's origin (conversations, prospecting, automation, a file), its people are contacts of the base:
+  # only who reads contacts sees their phone, e-mail, company and columns (access review of #2303; #2414 review).
+  def hides_contact_data?(account_user)
+    !reads_contacts?(account_user)
+  end
+
+  # The masks shown to who does not read contacts, the ones of the campaign result export (#1007): first name and the
+  # initial of the last one; e-mail with only its first letter and the domain.
+  def masked_name(name)
+    CampaignJourney::ResultExport.masked_name(name)
+  end
+
+  def masked_email(email)
+    email.present? ? EmailCampaigns::EmailNormalizer.mask(email.to_s.strip.downcase) : email
+  end
+
+  # The only phone mask of the campaign features (CampaignImports::PhoneMask): country code and the last 4 digits.
+  def masked_phone(phone)
+    phone.present? ? CampaignImports::PhoneMask.mask(phone) : phone
   end
 end

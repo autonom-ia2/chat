@@ -54,8 +54,8 @@ class Autonomia::Automacao::PassoDeEmail
   private
 
   def mandar(caixa, contato)
-    # Os mesmos valores do texto (NaConversa#valores): o link da agenda vazio, no assunto ou no texto, pula com o motivo
-    # dele, como no ensaio.
+    # Os mesmos valores do texto (NaConversa#valores), com a execução: o assunto também lê `ia.*`, `envio.*` e `falhou.*`.
+    # O link da agenda vazio, no assunto ou no texto, pula com o motivo dele, como no ensaio.
     assunto = ::Autonomia::Automacao::Texto.new(@passo['assunto'], valores).montar
     texto = texto_pronto
     return faltou_valor if assunto.nil? || texto.nil?

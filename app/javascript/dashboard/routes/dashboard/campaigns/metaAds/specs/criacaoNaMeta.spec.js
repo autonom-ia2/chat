@@ -485,6 +485,27 @@ describe('duplicar e trocar foto ou texto (#2778)', () => {
     expect(keys).toEqual(['key-1', 'key-1']);
   });
 
+  it('an unconfirmed copy is recreated with the same key and recreate_unconfirmed (#2804)', async () => {
+    CrmMetaAdsConnectionAPI.copyAd
+      .mockRejectedValueOnce(
+        Object.assign(new Error('x'), {
+          response: {
+            status: 422,
+            data: { error: 'unconfirmed', nothing_created: false },
+          },
+        })
+      )
+      .mockResolvedValueOnce({ data: { ad_id: '9' } });
+
+    await expect(duplicarAnuncio('1')).rejects.toThrow();
+    await duplicarAnuncio('1', null, { recriar: true });
+
+    expect(CrmMetaAdsConnectionAPI.copyAd.mock.calls).toEqual([
+      ['1', { idempotency_key: 'key-1' }],
+      ['1', { idempotency_key: 'key-1', recreate_unconfirmed: true }],
+    ]);
+  });
+
   it('swaps on the ad itself with the text and the new photo', async () => {
     CrmMetaAdsConnectionAPI.swapAdCreative.mockResolvedValue({
       data: { effective_status: 'PENDING_REVIEW' },

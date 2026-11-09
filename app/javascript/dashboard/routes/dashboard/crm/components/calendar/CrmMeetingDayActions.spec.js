@@ -68,7 +68,7 @@ describe('CrmMeetingDayActions', () => {
       const wrapper = mountActions();
 
       expect(find(wrapper, 'meeting-client-phone').text()).toContain(
-        '+55 11 91234 5678'
+        '(11) 91234-5678'
       );
       expect(find(wrapper, 'meeting-call').text()).toContain(
         `${DAY}.CALL_HINT`

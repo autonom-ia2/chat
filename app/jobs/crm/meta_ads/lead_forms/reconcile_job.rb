@@ -5,9 +5,12 @@
 # nesta conta (leadgen_receiving_since). Assim só traz o que o webhook traria: quem preencheu antes de salvar o destino
 # (sem "trazer quem já preencheu") ou com a Página parada fica de fora. Marco nulo não chega aqui: o scope
 # reconcilable o deixa de fora. Os formulários com destino e as Páginas recebendo de antes do #2285 ganharam o
-# momento do deploy do #2740; sem destino ou com a Página parada, o marco nasce quando voltarem. Exceção
-# conhecida: funil arquivado e reativado sem salvar o destino de novo relê as 48 h, inclusive quem preencheu com o
-# funil fechado.
+# momento do deploy do #2740; sem destino ou com a Página parada, o marco nasce quando voltarem. Funil arquivado e
+# reativado: o marco nasce na reativação (Crm::MetaAdsLeadForm.restart_marks!, #2804), e o que ficou de antes de
+# arquivar não é relido.
+#
+# Lead que o banco recusa fica lembrado pelo tipo da recusa (RefusedLeads): passageira volta na rodada seguinte; a do
+# destino, quando o funil ou a etapa mudam; a do lead, depois do prazo.
 #
 # A janela cobre bem mais que o intervalo entre rodadas (1 hora): Meta fora do ar agora, a próxima rodada relê as mesmas
 # horas. Por isso a queda não tenta de novo aqui; só fica no log. Token recusado (190) marca a conexão como inválida,
