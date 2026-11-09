@@ -116,6 +116,12 @@
     },
     {
       "file": "automacaoLivreOutroRegistro.json"
+    },
+    {
+      "file": "ausencia.json"
+    },
+    {
+      "file": "prospectingAchar.json"
     }
   ],
   "pacotes": {

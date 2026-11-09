@@ -1331,6 +1331,11 @@
       "SITUACOES": {
         "WON": "Com o plano implantado"
       }
+    },
+    "SELECAO": {
+      "SITUACOES": {
+        "GANHO": "Plano implantado"
+      }
     }
   }
 }

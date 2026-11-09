@@ -178,26 +178,43 @@ export const comPermissoes = (dados, podeLer) => {
   };
 };
 
-// G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião.
+// G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião. G32: o tipo
+// do gatilho segue junto, para o "avisar" oferecer quem atende a reunião.
+// #2680: com a caixa da conversa nova, o contato alcança a conversa que ela
+// abre; e "o cliente respondeu" sai do contato, então vale onde há contato.
 // G18 (#2671): dentro do "em outro registro", vale o registro em que o ramo roda
-// (`alvoDoRamo`), não o alvo do gatilho; lá não há a reunião do gatilho. `alvo`
-// volta junto, para a peça que precisa saber de onde lê (o campo do contato).
-export const doAlvoDoGatilho = (dados, tipoDoGatilho, alvoDoRamo = null) => {
+// (`alvoDoRamo`), não o alvo do gatilho; lá não há a reunião do gatilho nem a
+// conversa nova. `alvo` volta junto, para a peça que precisa saber de onde lê
+// (o campo do contato).
+const RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu';
+export const doAlvoDoGatilho = (
+  dados,
+  tipoDoGatilho,
+  comConversaNova = false,
+  alvoDoRamo = null
+) => {
   const doGatilho = dados?.gatilhos?.find(
     item => item.tipo === tipoDoGatilho
   )?.alvo;
   const alvo = alvoDoRamo || doGatilho;
-  const bases = alvo && dados.alvos?.[alvo];
-  if (!bases) return dados;
+  const doAlvo = alvo && dados.alvos?.[alvo];
+  if (!doAlvo) return dados;
+  const bases =
+    comConversaNova && !alvoDoRamo
+      ? [...new Set([...doAlvo, 'conversa'])]
+      : doAlvo;
+  const alcanca = item =>
+    !item.base ||
+    bases.includes(item.base) ||
+    (item.caminho === RESPOSTA_DO_CONTATO && bases.includes('contato'));
   const daReuniao = item =>
     !item.so_nos_gatilhos ||
     (!alvoDoRamo && item.so_nos_gatilhos.includes(tipoDoGatilho));
   return {
     ...dados,
     alvo,
-    valores: dados.valores.filter(
-      item => (!item.base || bases.includes(item.base)) && daReuniao(item)
-    ),
+    gatilho: alvoDoRamo ? null : tipoDoGatilho,
+    valores: dados.valores.filter(item => alcanca(item) && daReuniao(item)),
   };
 };
 

@@ -438,6 +438,7 @@ const montar = ({
   papel = 'administrator',
   funcao = null,
   chaves = [],
+  prospeccaoNova = false,
 }) => {
   estado.relacionamentos = relacionamentos;
   window.globalConfig = {
@@ -465,9 +466,13 @@ const montar = ({
       autonomia_insurance_enabled: true,
       features: { crm_booking_v2: agendamento },
     })),
-    // Todas as flags de conta ligadas, menos a jornada dos agentes quando a variante pede o menu antigo.
+    // Todas as flags de conta ligadas, menos a jornada dos agentes quando a variante pede o menu antigo. A Prospecção
+    // nova (prospeccao_nova, #2692) fica desligada: o retrato abaixo é o menu de hoje no main, com a Prospecção de
+    // antes; o menu dela com a flag tem spec próprio (prospecting/achar/specs/acharMenu.spec.js).
     'accounts/isFeatureEnabledonAccount': ref(
-      (_id, flag) => jornadas || flag !== 'autonomia_agents_journey'
+      (_id, flag) =>
+        (prospeccaoNova || flag !== 'prospeccao_nova') &&
+        (jornadas || flag !== 'autonomia_agents_journey')
     ),
     'inboxes/getInboxes': ref([]),
     'labels/getLabelsOnSidebar': ref([]),
@@ -630,6 +635,7 @@ const VARIANTES = [
     funcao: 7,
     chaves: ['crm_manage_ai', 'crm_view', 'agendamento_view'],
   },
+  { prospeccaoNova: true },
 ];
 
 describe('camada do fork contra o Sidebar.vue de verdade', () => {
@@ -639,7 +645,7 @@ describe('camada do fork contra o Sidebar.vue de verdade', () => {
 
   const listas = () => VARIANTES.map(montar);
 
-  it('com a flag ligada, o menu novo recebe a mesma lista do menu de sempre e a organiza', () => {
+  it('com menu_lateral_novo ligado (e prospeccao_nova desligada), o menu novo recebe a mesma lista do menu de sempre e a organiza', () => {
     const itens = montar({});
     expect(
       itens.map(item => ({
@@ -704,6 +710,34 @@ describe('camada do fork contra o Sidebar.vue de verdade', () => {
       ...Object.values(FILHOS_CONHECIDOS).flat(),
     ].filter(nome => !existentes.has(nome));
     expect([...new Set(sumiram)]).toEqual([]);
+  });
+
+  it('com prospeccao_nova ligada, Prospecção fica em Acompanhar com "Achar empresas", "Suas buscas", "Listas" e "Para chamar" (#2693, #2697)', () => {
+    const itens = montar({ prospeccaoNova: true });
+    const prospeccao = itens.find(item => item.name === 'Prospecting');
+    expect(prospeccao.children.map(filho => filho.name)).toEqual([
+      'Prospecting Achar',
+      'Prospecting Buscas',
+      'Prospecting Lists',
+      'Prospecting Para Chamar',
+    ]);
+
+    const menu = organizeForkMenu(itens, ctx);
+    const acompanhar = menu.grupos.find(grupo => grupo.id === 'ACOMPANHAR');
+    expect(nomes(acompanhar.itens)).toEqual([
+      'CRM',
+      'Prospecting',
+      'Contacts',
+      'Companies',
+      'Agenda',
+    ]);
+    const noGrupo = acompanhar.itens.find(item => item.name === 'Prospecting');
+    expect(noGrupo.children.map(filho => filho.name)).toEqual([
+      'Prospecting Achar',
+      'Prospecting Buscas',
+      'Prospecting Lists',
+      'Prospecting Para Chamar',
+    ]);
   });
 
   it('com a flag desligada, o menu de sempre continua igual ao do main (nomes e filhos)', () => {

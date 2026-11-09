@@ -1,5 +1,6 @@
 <script setup>
 import { useI18n } from 'vue-i18n';
+import { useMapGetter } from 'dashboard/composables/store';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import * as formatters from '../../utils/searchFormatters';
 import SearchPresetChip from './SearchPresetChip.vue';
@@ -27,6 +28,12 @@ const {
 const formatSearchArea = search => formatters.formatSearchArea(search, t);
 const formatRelativeTime = value => formatters.formatRelativeTime(value, t);
 const searchPreset = search => findSearchPreset(search.preset_id);
+
+// O servidor só apaga a busca de quem a fez (searches#destroy, #2693): o botão
+// aparece só nela. Busca antiga sem dono (user_id vazio) fica sem o botão.
+const currentUser = useMapGetter('getCurrentUser');
+const canDeleteSearch = search =>
+  search.user_id != null && search.user_id === currentUser.value?.id;
 </script>
 
 <template>
@@ -157,6 +164,7 @@ const searchPreset = search => findSearchPreset(search.preset_id);
             {{ t('PROSPECTING.SEARCH.CONFIGURE_SEARCH') }}
           </button>
           <button
+            v-if="canDeleteSearch(search)"
             type="button"
             class="inline-flex h-8 items-center gap-1.5 rounded-md border border-red-100 bg-red-50 px-2.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
             :title="t('PROSPECTING.SEARCH.DELETE_SEARCH')"

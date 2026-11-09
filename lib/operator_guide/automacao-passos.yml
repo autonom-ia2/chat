@@ -36,7 +36,8 @@ nativos:
   decidir: { grupo: IA, requer: automacao_ia }
   extrair: { grupo: IA, requer: automacao_ia }
   escrever: { grupo: IA, requer: automacao_ia }
-  resumir: { grupo: IA, requer: automacao_ia }
+  # G41: `rotulos` troca o rótulo de um campo só neste passo (a instrução do resumo é opcional e diz o que mais trazer).
+  resumir: { grupo: IA, requer: automacao_ia, rotulos: { instrucao: instrucao_do_resumo } }
   # G15: passar a conversa à agente de IA, pela Atribuição. Sem flag própria: o painel diz quando a conta não tem agente
   # que receba conversa, e o motor pula com o motivo.
   ia_assumir: { grupo: EQUIPE }
@@ -105,6 +106,11 @@ acoes:
     grupo: CONTATO
     caminho: { contact_id: contato.id }
     campos: { por: etiquetas, tirar: etiquetas }
+  contato_nota:
+    acao: POST contacts/:contact_id/notes
+    grupo: CONTATO
+    caminho: { contact_id: contato.id }
+    campos: { content: texto }
   contato_alterar:
     acao: PATCH contacts/:id
     grupo: CONTATO
@@ -127,6 +133,45 @@ acoes:
       domain: texto
       custom_attributes: atributos_da_empresa
     escondidos: [additional_attributes]
+  # #2660 lote B (G17): criar contato e empresa, marcar cliente e criar o contato do card (ex. 8 e 11). O que o passo cria
+  # não vira alvo da execução; agir no registro novo é a G18.
+  contato_criar:
+    acao: POST contacts
+    grupo: CONTATO
+    campos:
+      name: texto
+      email: texto
+      phone_number: texto
+      company_id: empresa
+      custom_attributes: atributos_do_contato
+    # Dados técnicos do canal e da integração, como no "Atualizar o contato", e a caixa (`inbox_id`), que a peça da
+    # caixa não aceita pelo tipo. O Guia continua alcançando.
+    escondidos: [additional_attributes, identifier, inbox_id]
+  empresa_criar:
+    acao: POST companies
+    grupo: CONTATO
+    campos:
+      name: texto
+      description: texto
+      domain: texto
+      custom_attributes: atributos_da_empresa
+    escondidos: [additional_attributes]
+  contato_cliente:
+    acao: POST contacts/:contact_id/customer
+    grupo: CONTATO
+    caminho: { contact_id: contato.id }
+    campos: {}
+  card_contato_criar:
+    acao: POST crm/cards/:card_id/contact
+    grupo: FUNIL
+    caminho: { card_id: card.id }
+    campos:
+      name: texto
+      email: texto
+      phone_number: texto
+      custom_attributes: atributos_do_contato
+    # Cidade e país: o catálogo tipa como lista, mas o campo é objeto (#2663).
+    escondidos: [additional_attributes.city, additional_attributes.country]
   etiqueta_criar:
     acao: POST labels
     grupo: ETIQUETA
@@ -176,3 +221,14 @@ so_guia:
   POST crm/pipelines/:pipeline_id/stages: Etapa é estrutura do funil; entra no editor com os passos de funil (F6), quando a tela filtrar por crm_manage_pipelines.
   PATCH crm/stages/:id: Etapa é estrutura do funil; entra no editor com os passos de funil (F6), quando a tela filtrar por crm_manage_pipelines.
   PUT crm/stages/:id: Etapa é estrutura do funil; entra no editor com os passos de funil (F6), quando a tela filtrar por crm_manage_pipelines.
+  # #2660 lote B: liberadas no motor, fora do editor. Nenhum dos 20 exemplos usa; são ajuste e manutenção de registro.
+  POST companies/:company_id/contacts: Pôr o contato na empresa; o editor já faz pelo "Atualizar o contato", no campo Empresa.
+  POST crm/cards/:id/link_contact: Ligar outro contato ao card é ajuste de cadastro; nenhum dos 20 exemplos usa.
+  POST crm/cards/:id/unlink_contact: Desligar o contato do card é ajuste de cadastro; nenhum dos 20 exemplos usa.
+  POST crm/cards/:id/link_conversation: Ligar outra conversa ao card é ajuste de cadastro; nenhum dos 20 exemplos usa.
+  POST crm/cards/:id/unlink_conversation: Desligar a conversa do card é ajuste de cadastro; nenhum dos 20 exemplos usa.
+  POST crm/cards/:id/restore: Restaurar card arquivado é manutenção; nenhum dos 20 exemplos usa.
+  POST crm/cards/restore: Restaurar cards arquivados em lote é manutenção; nenhum dos 20 exemplos usa.
+  POST crm/memoria/cards/:card_id/fatos/:id/aceitar: O fato da memória é escolhido pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  POST crm/memoria/cards/:card_id/fatos/:id/destravar: O fato da memória é escolhido pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  POST crm/memoria/cards/:card_id/fatos/:id/nao_vale_mais: O fato da memória é escolhido pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.

@@ -130,7 +130,7 @@ describe('doAlvoDoGatilho dentro do ramo', () => {
   };
 
   it('oferece os valores do registro do ramo, sem a reunião do gatilho', () => {
-    const doRamo = doAlvoDoGatilho(CATALOGO, 'mensagem.criada', 'Crm::Card');
+    const doRamo = doAlvoDoGatilho(CATALOGO, 'mensagem.criada', false, 'Crm::Card');
 
     expect(doRamo.alvo).toBe('Crm::Card');
     expect(doRamo.valores.map(item => item.caminho)).toEqual([

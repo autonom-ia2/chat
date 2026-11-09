@@ -4,6 +4,7 @@
 #
 #  id                       :bigint           not null, primary key
 #  active_at                :datetime
+#  ausente_ate              :datetime
 #  auto_offline             :boolean          default(TRUE), not null
 #  availability             :integer          default("online"), not null
 #  integration              :boolean          default(FALSE), not null
@@ -28,6 +29,7 @@
 
 class AccountUser < ApplicationRecord
   include AvailabilityStatusable
+  include AusenciaDaPessoa
 
   belongs_to :account
   belongs_to :user

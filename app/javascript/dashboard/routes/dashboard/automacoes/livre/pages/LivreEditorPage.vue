@@ -111,6 +111,7 @@ const catalogoDoAlvo = computed(() =>
     doAlvoDoGatilho(
       comPermissoes(catalogo.value, podeLerValor.value),
       receita.value.gatilho?.tipo,
+      Boolean(receita.value.gatilho?.conversa_nova),
       alvoDaLista(receita.value.passos, listaDoPainel())
     ),
     passosDaExecucao(receita.value.passos, listaDoPainel()),
@@ -629,7 +630,10 @@ onMounted(() => {
               :receita-do-teste="receitaDoSalvar"
               :custos="custos"
               :gatilhos="gatilhos"
-              :escolhas-do-gatilho="escolhasDoGatilho"
+              :escolhas-do-gatilho="{
+                ...escolhasDoGatilho,
+                caixas: opcoes.caixaDaConversa,
+              }"
               :pode-ler-cards="canManagePipelines"
               @salvar="salvar"
               @tirar="tirar"

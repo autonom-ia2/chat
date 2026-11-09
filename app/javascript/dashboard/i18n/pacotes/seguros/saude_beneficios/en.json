@@ -1331,6 +1331,11 @@
       "SITUACOES": {
         "WON": "With the plan implemented"
       }
+    },
+    "SELECAO": {
+      "SITUACOES": {
+        "GANHO": "Plan implemented"
+      }
     }
   }
 }

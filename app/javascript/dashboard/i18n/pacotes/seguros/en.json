@@ -284,6 +284,13 @@
         "WON": "That closed the policy",
         "LOST": "That did not close"
       }
+    },
+    "SELECAO": {
+      "SITUACOES": {
+        "GANHO": "Closed the policy",
+        "PERDIDO": "Did not close"
+      },
+      "FECHADO_ENTRE": "Closed or did not close between"
     }
   }
 }

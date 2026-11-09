@@ -202,7 +202,7 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
 
 - **16.01** — Montar e rodar uma busca de leads. Configurar termo, localização, área e limite, e executar a primeira busca.
 - **16.02** — Trabalhar os resultados: enriquecer, contato, card, CSV. Transformar um resultado de busca em contato, card do CRM ou planilha.
-- **16.03** — Listas de leads e público de campanha. Organizar leads em listas e gerar um público etiquetado para usar numa campanha existente.
+- **16.03** — Listas de leads. Organizar leads em listas e mandá-las ao CRM.
 - **16.04** — Configurações da Prospecção. Consultar o que precisa estar configurado para a Prospecção funcionar: chaves do Google, enriquecimento e score.
 
 ## 17 — Financeiro (2 artigos)
