@@ -20,7 +20,8 @@ class Autonomia::Automacao::Contexto
 
   # `execucao`: a execução em que o passo roda, quando há uma. A reunião do gatilho (G12) e o texto da IA (#2679) leem dela.
   # `textos`: no ensaio, que não tem execução, o texto que cada passo de IA produziria (só para mostrar).
-  def self.de(alvo, execucao: nil, textos: nil) = new(alvo, execucao: execucao, textos: textos)
+  # `falhou`: no ensaio, a última mensagem recusada da conversa (G53), que o Ensaio acha pela régua do gatilho.
+  def self.de(alvo, execucao: nil, textos: nil, falhou: nil) = new(alvo, execucao: execucao, textos: textos, falhou: falhou)
 
   # Os `textos` do ensaio (#2679): ele não chama a IA, e no lugar do texto de cada passo que escreve vai a marca de onde
   # ele entraria.
@@ -30,10 +31,11 @@ class Autonomia::Automacao::Contexto
                                    .to_h { |passo| [passo['id'], I18n.t('autonomia.automacao.ensaio.texto_da_ia', passo: passo['id'])] }
   end
 
-  def initialize(alvo, execucao: nil, textos: nil)
+  def initialize(alvo, execucao: nil, textos: nil, falhou: nil)
     @alvo = alvo
     @execucao = execucao
     @textos = textos
+    @mensagem_que_falhou = falhou if falhou
   end
 
   def conversa
@@ -87,7 +89,7 @@ class Autonomia::Automacao::Contexto
 
   # G53: a mensagem que disparou o gatilho "mensagem que falhou", achada pela marca da execução (o passo roda depois, sem
   # ela). Sempre presa à conta e à conversa do alvo, e só a que saiu para o cliente, nunca só pelo id (a mesma regra da
-  # reunião). Fora desse gatilho, ou sem a mensagem, nil.
+  # reunião). Fora desse gatilho, ou sem a mensagem, nil. No ensaio, a que chegou em `falhou`.
   def mensagem_que_falhou
     return @mensagem_que_falhou if defined?(@mensagem_que_falhou)
 

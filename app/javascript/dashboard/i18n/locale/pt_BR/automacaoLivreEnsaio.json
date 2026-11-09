@@ -19,6 +19,7 @@
       "FORA": {
         "SPAM": "Nada: a conversa está no Spam.",
         "SEM_MENSAGEM": "Nada: a conversa ainda não tem mensagem.",
+        "SEM_MENSAGEM_QUE_FALHOU": "Nada: nenhuma mensagem desta conversa deixou de chegar ao cliente.",
         "FORA_DO_FILTRO": "Nada: a conversa não passa no \"Só se\" do gatilho.",
         "RESPOSTA_AUTOMATICA": "Nada: a última mensagem é uma resposta automática de e-mail (fora do escritório, aviso do servidor)."
       },

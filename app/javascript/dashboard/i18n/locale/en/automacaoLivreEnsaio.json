@@ -19,6 +19,7 @@
       "FORA": {
         "SPAM": "Nothing: the conversation is in Spam.",
         "SEM_MENSAGEM": "Nothing: the conversation has no message yet.",
+        "SEM_MENSAGEM_QUE_FALHOU": "Nothing: no message in this conversation failed to reach the customer.",
         "FORA_DO_FILTRO": "Nothing: the conversation doesn't pass the trigger's \"Only if\".",
         "RESPOSTA_AUTOMATICA": "Nothing: the last message is an automatic e-mail reply (out of office, server notice)."
       },
