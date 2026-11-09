@@ -226,8 +226,8 @@ module FechamentoAutomacao::Lacunas
     # com a Gatilhos, depois do lote 3 (#2689), que traz a porta da frente da conversa nova.
     'G43' => nil,
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
-    # (passo 2, "manda por e-mail o mesmo conteúdo").
-    'G53' => nil,
+    # (passo 2, "manda por e-mail o mesmo conteúdo"): `falhou.texto`, prova em g53_conteudo_da_falha_spec.rb.
+    'G53' => -> { valor?('falhou.texto') },
     # G54: esperar a entrega da mensagem (passo 5, "Chegou: tira a etiqueta e grava uma nota"); fechada pela G34.
     'G54' => -> { valor?('envio.situacao') },
     # Do exemplo 5, passo 8 (#2703): o card que a página de agendamento cria para a reunião (card do serviço já ganho)

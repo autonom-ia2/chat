@@ -35,6 +35,12 @@ module Autonomia::Automacao::MensagemQueFalhou
     Rails.logger.error("[Automacao::MensagemQueFalhou] não ouviu mensagem=#{mensagem&.id} #{e.class}")
   end
 
+  # G53: o id da mensagem que falhou, lido da marca do evento ("mensagem.falhou:<id>"). Outra marca, nil.
+  def id_da_marca(marca)
+    tipo, id = marca.to_s.split(':', 2)
+    Integer(id, 10, exception: false) if tipo == TIPO && id
+  end
+
   def execucao_que_mandou(mensagem)
     id = mensagem.content_attributes.to_h.with_indifferent_access[:execucao_id]
     ::Autonomia::Automacao::Execucao.find_by(id: id, account_id: mensagem.account_id) if id

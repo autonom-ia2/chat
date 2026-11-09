@@ -71,7 +71,8 @@
       "REUNIAO_INICIO": "Dia e hora da reunião",
       "REUNIAO_LINK_DA_REUNIAO": "Link da chamada da reunião",
       "ENVIO_TEXTO": "Texto da última mensagem que a automação mandou",
-      "ENVIO_SITUACAO": "Situação da última mensagem que a automação mandou"
+      "ENVIO_SITUACAO": "Situação da última mensagem que a automação mandou",
+      "FALHOU_TEXTO": "Texto da mensagem que não chegou"
     },
     "PASSOS": {
       "ESPERAR": "Esperar um tempo",
