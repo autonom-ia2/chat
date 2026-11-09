@@ -12,7 +12,6 @@ RSpec.describe Crm::MetaAds::LeadForms::DonoDoLead do
   let(:funil) { funil_e_etapa.first }
   let(:etapa) { funil_e_etapa.last }
   let(:caixa) { create_crm_whatsapp_api_inbox(account: account, members: [ana, bruno]) }
-  let(:importer) { Crm::MetaAds::LeadForms::Importer.new(account: account, pipeline: funil, stage: etapa, form_name: 'Visitas') }
 
   def lead(id, telefone)
     { 'id' => id, 'created_time' => '2026-11-08T12:00:00+0000', 'form_id' => '9001', 'ad_name' => 'Apartamento Jardim',
@@ -27,8 +26,9 @@ RSpec.describe Crm::MetaAds::LeadForms::DonoDoLead do
     allow(OnlineStatusTracker).to receive(:get_available_users).and_return(pessoas.to_h { |pessoa| [pessoa.id.to_s, 'online'] })
   end
 
+  # Um importer por lead, como o webhook (FacebookLeadgenJob): cada um lê a regra e a fila de novo.
   def dono_do_lead(id, telefone)
-    importer.import(lead(id, telefone))
+    Crm::MetaAds::LeadForms::Importer.new(account: account, pipeline: funil, stage: etapa, form_name: 'Visitas').import(lead(id, telefone))
     Crm::MetaAdsLead.find_by(leadgen_id: id).card.owner
   end
 
@@ -51,6 +51,20 @@ RSpec.describe Crm::MetaAds::LeadForms::DonoDoLead do
     account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'Card da Ana', currency: 'BRL', owner: ana)
 
     expect(dono_do_lead('L1', '+5511987650001')).to eq(ana)
+  end
+
+  # Revisão da Meta aprovar: no "trazer quem já preencheu" (até 90 dias de leads), preferir online mandaria o lote inteiro
+  # para quem estivesse online na hora. Em lote vale a fila inteira, e a fila é lida uma vez só.
+  it 'em lote, divide pela fila inteira sem olhar quem está online e lê a fila uma vez', :aggregate_failures do
+    atribuicao(prefer_online: true)
+    online(ana)
+    allow(Crm::Entrega::QuemCuida).to receive(:na_caixa).and_call_original
+    em_lote = Crm::MetaAds::LeadForms::Importer.new(account: account, pipeline: funil, stage: etapa, form_name: 'Visitas', em_lote: true)
+
+    %w[L1 L2 L3 L4].each_with_index { |id, indice| em_lote.import(lead(id, "+551198765000#{indice}")) }
+
+    expect(account.crm_cards.group(:owner_id).count).to eq({ ana.id => 2, bruno.id => 2 })
+    expect(Crm::Entrega::QuemCuida).to have_received(:na_caixa).once
   end
 
   it 'a regra com pessoa fixa dá o lead a ela; fora de quem cuida do funil, vale a fila', :aggregate_failures do

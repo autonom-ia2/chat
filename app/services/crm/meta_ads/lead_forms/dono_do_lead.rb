@@ -12,27 +12,30 @@
 class Crm::MetaAds::LeadForms::DonoDoLead
   NUNCA_RECEBEU = Time.zone.at(0)
 
-  def self.para(pipeline:, stage:) = new(pipeline: pipeline, stage: stage).pessoa
-
-  def initialize(pipeline:, stage:)
+  # `em_lote`: o "trazer quem já preencheu" e a reconciliação (PastLeads). Um objeto serve o lote inteiro: a regra e a
+  # fila são lidas uma vez, e só a contagem de cards anda a cada lead. Em lote, "preferir online" não vale: o lote inteiro
+  # iria para quem estivesse online na hora (revisão da Meta aprovar).
+  def initialize(pipeline:, stage:, em_lote: false)
     @pipeline = pipeline
     @stage = stage
+    @em_lote = em_lote
   end
 
   def pessoa
-    regra = Crm::Ai::Config.handoff_settings(@stage, @pipeline)
     return unless regra[:enabled]
-
-    fila = quem_cuida
     return if fila.empty?
 
-    fixa(regra, fila) || com_menos_cards(regra[:prefer_online] ? online_ou_todos(fila) : fila)
+    fixa || com_menos_cards(regra[:prefer_online] && !@em_lote ? online_ou_todos(fila) : fila)
   end
 
   private
 
   # Só quem abre o card (parecer da Funções): função sem `crm_view` não abre (CardPolicy#index? do EE), e o lead com
   # um dono que não o abre ficaria preso. Mesma conferência do Autonomia::Prospecting::CrmCardOwner#sees_crm?.
+  def regra = (@regra ||= Crm::Ai::Config.handoff_settings(@stage, @pipeline))
+
+  def fila = (@fila ||= quem_cuida)
+
   def quem_cuida
     cuidam = @pipeline.inboxes.flat_map { |inbox| Crm::Entrega::QuemCuida.na_caixa(inbox: inbox, pipeline_id: @pipeline.id) }.uniq(&:id)
     vinculos = AccountUser.where(account_id: @pipeline.account_id, user_id: cuidam.map(&:id)).includes(:user).index_by(&:user_id)
@@ -43,7 +46,7 @@ class Crm::MetaAds::LeadForms::DonoDoLead
     Pundit.policy!({ user: account_user.user, account: @pipeline.account, account_user: account_user }, Crm::Card).index?
   end
 
-  def fixa(regra, fila)
+  def fixa
     return unless regra[:pool_type] == 'user'
 
     fila.find { |pessoa| pessoa.id == regra[:pool_id].to_i }

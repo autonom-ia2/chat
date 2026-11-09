@@ -17,8 +17,10 @@ class Crm::MetaAds::LeadForms::Importer
   EMAIL_KEY = 'email'.freeze
   E164_DIGITS = (8..15)
 
-  def initialize(account:, pipeline:, stage:, form_name:, page_id: nil, questions: []) # rubocop:disable Metrics/ParameterLists
+  # `em_lote`: o "trazer quem já preencheu" e a reconciliação (PastLeads); o dono do card sai pela fila inteira (DonoDoLead).
+  def initialize(account:, pipeline:, stage:, form_name:, page_id: nil, questions: [], em_lote: false) # rubocop:disable Metrics/ParameterLists
     @account = account
+    @em_lote = em_lote
     @page_id = page_id
     @pipeline = pipeline
     @stage = stage
@@ -91,11 +93,15 @@ class Crm::MetaAds::LeadForms::Importer
       account: @account, user: nil,
       params: { pipeline_id: @pipeline.id, stage_id: @stage.id, contact_id: contact.id, source: SOURCE,
                 # G30 (#2702): o dono que a Atribuição do funil daria; ninguém pode receber, sem dono.
-                owner_id: Crm::MetaAds::LeadForms::DonoDoLead.para(pipeline: @pipeline, stage: @stage)&.id,
+                owner_id: dono_do_lead.pessoa&.id,
                 # #2562: sem nome, nunca o do formulário: ele costuma repetir a campanha e o título todos veem (#2558).
                 title: title_name(lead) || "Lead #{lead['id']}",
                 metadata: { 'meta_lead_form' => origin(lead) } }
     ).perform
+  end
+
+  def dono_do_lead
+    @dono_do_lead ||= Crm::MetaAds::LeadForms::DonoDoLead.new(pipeline: @pipeline, stage: @stage, em_lote: @em_lote)
   end
 
   def origin(lead)
