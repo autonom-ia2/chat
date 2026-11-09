@@ -26,17 +26,21 @@ module Autonomia::Automacao::EsperaNoExecutor
   # `esperando`. O card, a conversa ou o gatilho que mudam nessa janela acham a execução ainda andando, e ninguém a
   # acorda. Por isso, já gravada a espera, confere uma vez de novo com o alvo relido; cumprida, reserva pela mesma
   # reserva da Escuta (o Despertador), e a rodada nova segue pelo caminho normal. A reserva só troca `esperando` por
-  # `andando` uma vez: o aviso que chegar junto não roda a execução duas vezes. A espera já está gravada: erro aqui só
-  # vai para o log, e o prazo segue pelo relógio.
+  # `andando` uma vez: o aviso que chegar junto não roda a execução duas vezes. O erro ao gravar a espera sobe, como em
+  # qualquer passo (a rodada registra a quebra).
   def aguardar_condicao(passo, espera, ate, registrar: true)
     aguardar(passo, ate, registrar: registrar)
+    reconferir_a_espera(passo, espera)
+    nil
+  end
+
+  # Só depois da espera gravada: erro aqui vai para o log, e o prazo segue pelo relógio.
+  def reconferir_a_espera(passo, espera)
     esperando = ::Autonomia::Automacao::Execucao.find_by(id: @execucao.id, estado: 'esperando')
     @alvo = @contexto = nil
     ::Autonomia::Automacao::Despertador.acordar(esperando) if esperando && alvo && condicao?(passo['condicao'], valores(espera: espera))
-    nil
   rescue StandardError => e
     ::Autonomia::Automacao::Escuta.registrar_erro("não reconferiu ao esperar execucao=#{@execucao.id}", e)
-    nil
   end
 
   # A janela do "esperar até", para a resposta que chegou durante ele (G11): na primeira conferência, de agora em diante;

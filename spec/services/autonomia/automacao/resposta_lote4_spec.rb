@@ -224,6 +224,32 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
       expect(valores.ler('conversa.responsavel_respondeu')).to be(false)
     end
 
+    it 'a gravação da espera quebra: o erro sobe e a execução não termina concluída', :aggregate_failures do
+      allow(Autonomia::Automacao::Execucao).to receive(:gravar_na_rodada).and_wrap_original do |original, *args, **atributos|
+        raise ActiveRecord::StatementInvalid, 'falha ao gravar' if atributos[:estado] == 'esperando'
+
+        original.call(*args, **atributos)
+      end
+
+      Autonomia::Automacao::Partida.new(definicao: definicao, alvo: card, chave_gatilho: 'card.entrou_na_etapa').call
+      job = enqueued_jobs.find { |enfileirado| enfileirado[:job] == Autonomia::Automacao::AvancarJob }
+
+      expect { Autonomia::Automacao::Executor.rodar(*ActiveJob::Arguments.deserialize(job[:args])) }.to raise_error(ActiveRecord::StatementInvalid)
+      expect(execucao_de(definicao).estado).not_to eq('concluida')
+      expect(Autonomia::Automacao::Registro.where(execucao: execucao_de(definicao), motivo: 'erro_inesperado').count).to eq(1)
+    end
+
+    it 'gravação desfeita (rollback) não fica anotada: a gravação seguinte, sem campo lido, não acorda' do
+      rodar_no_card
+      Crm::Card.transaction do
+        card.update!(custom_attributes: { 'impressao' => 'gostou' })
+        raise ActiveRecord::Rollback
+      end
+      card.reload
+
+      expect { card.update!(score: 40) }.not_to have_enqueued_job(Autonomia::Automacao::AvancarJob)
+    end
+
     it 'mudança que a receita não lê (a nota de qualificação) não acorda a espera' do
       rodar_no_card
 
