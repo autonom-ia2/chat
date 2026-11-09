@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
+import { useMapGetter } from 'dashboard/composables/store';
 import {
   CONVERSATION_LEVELS,
   LEVELS,
@@ -36,6 +37,9 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:permissions', 'alterar', 'continuar']);
+const contaAtual = useMapGetter('getCurrentAccountId');
+const flagLigada = useMapGetter('accounts/isFeatureEnabledonAccount');
+const temFlag = flag => flagLigada.value(contaAtual.value, flag);
 const { t, lista, maiuscula, minuscula, rotuloDoNivel, antesDoNivel } =
   useTextos();
 const raiz = ref(null);
@@ -175,6 +179,7 @@ const areas = computed(() =>
     permissions: props.permissions,
     inicial: props.inicial,
     comCotacoes: props.comCotacoes,
+    temFlag,
   })
 );
 const resumo = computed(() =>

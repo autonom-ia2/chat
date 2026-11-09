@@ -53,6 +53,29 @@ RSpec.describe Meta::WabaDatasetClient do
     expect(result.error).to eq('invalid_waba_id')
   end
 
+  # #2799: Integer() accepts surrounding spaces, which would then land in the Graph path.
+  it 'refuses a WABA id with spaces or that is not positive, without calling Meta' do
+    [' 111', '111 ', '1 11', '0', '-5', ''].each do |waba_id|
+      result = described_class.new(access_token: token, waba_id: waba_id, api_version: 'v22.0').find_or_create
+
+      expect(result.error).to eq('invalid_waba_id'), waba_id.inspect
+    end
+  end
+
+  # #2799: 100/33 on the WABA itself means the token cannot reach it: reconnect, not "no dataset".
+  it 'marks a WABA the token cannot reach (100/33) as access denied' do
+    stub_request(:get, endpoint).to_return(status: 400, body: { error: { message: 'does not exist', code: 100, error_subcode: 33 } }.to_json)
+
+    expect(client.find_or_create).to have_attributes(access_denied: true, transient: false)
+  end
+
+  # #2799: only a network failure is passing; a bug in our code must not be retried as if it were.
+  it 'lets an error of our own code raise instead of calling it a passing failure' do
+    allow(HTTParty).to receive(:get).and_raise(NoMethodError)
+
+    expect { client.find_or_create }.to raise_error(NoMethodError)
+  end
+
   it 'reads the listing even without a JSON Content-Type' do
     stub_request(:get, endpoint).to_return(status: 200, body: { data: [{ id: '42' }] }.to_json, headers: { 'Content-Type' => 'text/javascript' })
 
@@ -75,13 +98,13 @@ RSpec.describe Meta::WabaDatasetClient do
     expect(client.find_or_create).to have_attributes(transient: false, access_denied: false)
   end
 
-  it 'turns a network failure into an error result' do
-    stub_request(:get, endpoint).to_raise(Net::OpenTimeout)
+  it 'turns a network failure into a passing error result' do
+    [Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNRESET, OpenSSL::SSL::SSLError, EOFError].each do |error|
+      stub_request(:get, endpoint).to_raise(error)
 
-    result = client.find_or_create
+      result = client.find_or_create
 
-    expect(result.dataset_id).to be_nil
-    expect(result.error).to be_present
-    expect(result.transient).to be(true)
+      expect([result.dataset_id, result.error.present?, result.transient]).to eq([nil, true, true]), error.name
+    end
   end
 end

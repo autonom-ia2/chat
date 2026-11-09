@@ -17,7 +17,7 @@ import CrmRelationshipLinkForm from './CrmRelationshipLinkForm.vue';
 import CrmRelationshipResources from './CrmRelationshipResources.vue';
 import CrmRelationshipCompanyForm from './CrmRelationshipCompanyForm.vue';
 import RecordReadOnly from 'dashboard/components-next/Relationships/RecordReadOnly.vue';
-import { formatClientPhone } from '../helpers/meetingDay';
+import { telefoneParaLer } from 'dashboard/helper/telefoneParaLer';
 import { textosCom } from './card/textos';
 
 const props = defineProps({
@@ -202,9 +202,7 @@ const linked = card => {
 const details = computed(() => [
   {
     key: 'PHONE',
-    value:
-      formatClientPhone(person.value?.phone_number) ||
-      person.value?.phone_number,
+    value: telefoneParaLer(person.value?.phone_number),
     icon: 'i-lucide-phone',
   },
   { key: 'EMAIL', value: person.value?.email, icon: 'i-lucide-mail' },

@@ -241,6 +241,38 @@ describe('Seus posts: o post (#2305)', () => {
       ).toContain('Este post virou 3 anúncios');
     });
 
+    // #2804: os comentários do anúncio entram no "esperando você"; o atalho diz quantos esperam em cada anúncio.
+    it('o atalho diz quantos comentários esperam no anúncio; sem nenhum, não diz nada', async () => {
+      window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
+      responder({ ads: [{ id: '903', name: 'Promoção', waiting: 2 }] });
+      let wrapper = await montar();
+      expect(wrapper.find('[data-seus-posts-anuncio-esperando]').text()).toBe(
+        '2 comentários esperando você'
+      );
+
+      responder({
+        ads: [
+          {
+            id: '904',
+            name: 'Promoção',
+            waiting: 1,
+            created_at: '2024-10-20T12:00:00Z',
+          },
+          {
+            id: '903',
+            name: 'Promoção',
+            waiting: 0,
+            created_at: '2024-10-19T12:00:00Z',
+          },
+        ],
+      });
+      wrapper = await montar();
+      const esperando = wrapper.findAll('[data-seus-posts-anuncio-esperando]');
+      expect(esperando.map(item => item.text())).toEqual([
+        '1 comentário esperando você',
+      ]);
+    });
+
     it('sem o anúncio (quem não vê Anúncios da Meta) ou sem o CRM: nenhum atalho', async () => {
       window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
       responder();

@@ -94,6 +94,14 @@ RSpec.describe 'Campaign journey e-mail campaigns (#999)', :aggregate_failures, 
       expect(CampaignJourney::EmailAudienceRecipients.candidates(audience)).to eq([])
     end
 
+    it 'leaves blocked contacts out of the recipients (chat#2733)' do
+      audience
+      account.contacts.find_by(name: 'Ana Souza').update!(blocked: true)
+
+      expect(CampaignJourney::EmailAudienceRecipients.candidates(audience).map(&:email))
+        .to contain_exactly('caio@gama.com.br', 'dani@sup.com.br', 'eva@out.com.br')
+    end
+
     # J4: the API refuses a channel the audience does not have.
     it 'refuses an audience without e-mail, or with the e-mail channel off, with channel_not_in_audience' do
       phones_only = saved_audience(account: account, user: user, content: "Nome,Celular\nAna,11987654321\n")

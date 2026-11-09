@@ -3,7 +3,11 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgenteBotao from '../../AgenteBotao.vue';
 import FerramentaInterruptor from './FerramentaInterruptor.vue';
-import { hostDoEndereco, paraRascunho } from '../../../utils/ferramentas';
+import {
+  enderecoLegivel,
+  hostDoEndereco,
+  paraRascunho,
+} from '../../../utils/ferramentas';
 
 // #1301 (protótipo F09) — a ferramenta em frases, como a página do agente (T07): o interruptor é a
 // primeira linha e cada parte tem "Alterar", que abre só aquele passo. "Últimas chamadas" (F14)
@@ -31,7 +35,7 @@ const textoPreenche = computed(() => {
         i.podeFaltar
           ? `${NS}.DETALHE.INFORMACAO_FALTA`
           : `${NS}.DETALHE.INFORMACAO`,
-        { nome: i.nome, tipo: t(`${NS}.DETALHE.TIPOS.${i.tipo}`) }
+        { nome: i.rotulo, tipo: t(`${NS}.DETALHE.TIPOS.${i.tipo}`) }
       )
     )
     .join(', ');
@@ -77,6 +81,12 @@ const linhas = computed(() => [
   },
   {
     passo: 2,
+    chave: 'PREENCHE',
+    icone: 'i-lucide-pencil',
+    texto: textoPreenche.value,
+  },
+  {
+    passo: 3,
     chave: 'PARA_ONDE',
     icone:
       props.ferramenta.http_method === 'POST'
@@ -88,13 +98,10 @@ const linhas = computed(() => [
         : `${NS}.DETALHE.BUSCA_EM`,
       { host: hostDoEndereco(props.ferramenta.endpoint_url) }
     ),
-    codigo: props.ferramenta.endpoint_url,
-  },
-  {
-    passo: 3,
-    chave: 'PREENCHE',
-    icone: 'i-lucide-pencil',
-    texto: textoPreenche.value,
+    codigo: enderecoLegivel(
+      props.ferramenta.endpoint_url,
+      rascunho.value.informacoes
+    ),
   },
   {
     passo: 4,
