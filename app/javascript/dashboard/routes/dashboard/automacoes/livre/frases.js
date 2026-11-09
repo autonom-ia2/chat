@@ -4,7 +4,7 @@
 import { entradaDoPasso, lerCampo } from './catalogo';
 import { comColchetes } from './texto';
 import { fraseDaCampanha } from './campanha';
-import { fraseDoRetorno } from './retorno';
+import { fraseDoRetorno, quandoDoRetorno } from './retorno';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
 
@@ -386,7 +386,11 @@ export const fraseDoPasso = (passo, catalogo, t) => {
   if (passo.tipo === 'campanha') return fraseDaCampanha(passo, t);
   if (passo.tipo === 'retorno')
     return fraseDoRetorno(passo, t, {
-      quando: fraseDaDuracao(passo.daqui, catalogo, t),
+      quando: quandoDoRetorno(
+        passo,
+        t,
+        fraseDaDuracao(passo.daqui, catalogo, t)
+      ),
       titulo: fraseDoTexto(passo.titulo, catalogo, t),
       mensagem: passo.envio && fraseDoTexto(passo.envio.mensagem, catalogo, t),
     });

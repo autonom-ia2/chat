@@ -233,7 +233,9 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 5, passo 8 (#2703): o card que a página de agendamento cria para a reunião (card do serviço já ganho)
     # nasce sem conversa, e a mensagem do gatilho de reunião nele pula com `sem_conversa`. Caminho escolhido: o Booker
     # liga ao card novo a conversa do contato na caixa da página, quando ela existe. A frente dona troca o nil pela sonda.
-    'G47' => nil
+    'G47' => nil,
+    # G57 (#2769, ex. 1, passo 7): o retorno "para hoje" (ou amanhã), numa hora ou no fim do dia, no fuso da conta.
+    'G57' => -> { campo_do_passo?('retorno', 'quando') }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

@@ -68,7 +68,7 @@ export const gravarCampo = (passo, entrada, nome, valor) => ({
   corpo: gravar(passo.corpo, caminhoNoCorpo(entrada, nome), valor),
 });
 
-const DURACAO_PADRAO = { valor: 1, unidade: 'dias' };
+export const DURACAO_PADRAO = { valor: 1, unidade: 'dias' };
 
 // Um passo novo, a partir da entrada do catálogo. A descrição é a frase do
 // passo (o esquema pede uma); o parâmetro do caminho que vem do alvo e o padrão

@@ -1330,8 +1330,14 @@
         {
           "nome": "daqui",
           "peca": "duracao",
-          "obrigatorio": true,
+          "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DAQUI"
+        },
+        {
+          "nome": "quando",
+          "peca": "quando_do_retorno",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.QUANDO"
         },
         {
           "nome": "para",

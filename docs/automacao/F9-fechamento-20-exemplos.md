@@ -171,6 +171,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G53 | **O conteúdo da mensagem que falhou** como valor da receita (ex. 19, passo 2: "manda por e-mail o mesmo conteúdo") | F8 | A fazer: a mensagem do gatilho só tem tipo, privada e primeira (`valores.rb`); o `envio.texto` (G34) é o da própria execução, e a mensagem que falhou foi de outra | Gatilhos | 19 |
 | G54 | **Esperar a entrega** da mensagem (ex. 19, passo 5: "Chegou: tira a etiqueta") | F8 | **Fechada** pela G34 (#2680): "esperar até `envio.situacao` igual a entregue"; a mudança de situação acorda a espera | Gatilhos | 19 |
 | G47 | **Card criado pela página de agendamento ganha a conversa do contato** ("revisão cancelada: manda o link da agenda de novo") | novo | A fazer, PR próprio depois da G32: com o card do serviço já ganho, a página cria um card novo para a reunião, sem conversa, e a mensagem do gatilho de reunião pula com `sem_conversa` (achado no exemplo 5, passo 8). Caminho: o Booker liga ao card novo a conversa do contato na caixa da página | Agendamento | 5 |
+| G57 | **Retorno para hoje** (ou amanhã), numa hora ou no fim do dia, no fuso da conta (ex. 1, passo 7: "recotar para hoje") | F7 | Em PR (#2769): `quando: { dia: 'hoje' \| 'amanha', hora? }` no retorno, além do `daqui`; hora de hoje que já passou vale em seguida | F7 | 1 |
 
 ### 5.1 A sonda de cada lacuna
 
@@ -190,7 +191,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 
 | # | Exemplo | Começa | Passos que já rodam na main | Faltam | Roda hoje |
 |---|---|---|---|---|---|
-| 1 | Renovação do seguro | ✅ G6 (30 dias antes do vencimento) | mover card ✅, etiqueta ✅, modelo fora da janela ✅ (G1), recusado vai por e-mail ✅ (G34, G2), esperar a resposta ✅ (G11), extrair → copiar ao card ✅, decidir ✅, retorno ✅ (G3), avisar ✅, link da agenda e reunião marcada/cancelada ✅ (G12), resumo de tudo o que a execução tentou ✅ (G42) | — | **Sim** (`exemplo_01_renovacao_do_seguro_spec.rb`) |
+| 1 | Renovação do seguro | ✅ G6 (30 dias antes do vencimento) | mover card ✅, etiqueta ✅, modelo fora da janela ✅ (G1), recusado vai por e-mail ✅ (G34, G2), esperar a resposta ✅ (G11), extrair → copiar ao card ✅, decidir ✅, retorno ✅ (G3), avisar ✅, link da agenda e reunião marcada/cancelada ✅ (G12), resumo de tudo o que a execução tentou ✅ (G42), retorno "para hoje" no fuso da conta ✅ (G57) | — | **Sim** (`exemplo_01_renovacao_do_seguro_spec.rb`) |
 | 2 | Lead do anúncio | ✅ G5 (card criado), ⛔ G29 ("pelo formulário de um anúncio") | etiqueta ✅, mensagem pelo modelo ✅ (G1), mensagem ao lead sem conversa ✅ (G33), esperar a resposta ✅ (G11), retorno ✅ (G3), passar para a agente de IA ✅ (G15), decidir ✅, link da agenda ✅ (G12), mover ✅, resumir/avisar ✅, extrair ✅, etiqueta da campanha ✅ (G14) | G29, G30, G31, G32 | Não |
 | 3 | Pós-procedimento da clínica | ✅ G5 (entrou em "Atendida") | extrair ✅, escrever ✅, decidir ✅ (lendo a foto, G20), etiqueta ✅, prioridade ✅, avisar ✅, retorno ✅, e-mail no lugar da campanha "Manutenção" ✅, mover ✅ | — | **Sim** (`exemplo_03_pos_procedimento_spec.rb`) |
 | 4 | Aluno que começa a faltar | 🟡 G5 (entrou em "Faltou") | se com etiqueta do contato ✅, etiqueta pôr/tirar ✅, escrever ✅, decidir ✅, avisar ✅, esperar 30 dias ✅ | G1, G3, G4, G5, G12, G15, G25, G28 (a IA escreve a pergunta e manda pelo modelo) | Não |
