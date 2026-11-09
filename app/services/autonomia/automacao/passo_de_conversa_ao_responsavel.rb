@@ -3,13 +3,16 @@
 # sem mexer na conversa; quem quer que ela acompanhe põe este passo na receita, depois da troca. Exemplo 17, passo 4: a
 # Paula troca os cards da Júlia para a Renata, e "espera a Renata responder" lê quem atende a conversa.
 #
-# Só com gatilho de card (conferido ao salvar): o card é o alvo, e a conversa é a principal dele (ou a que a receita
-# abriu, #2680). Vira o mesmo pedido do "Atribuir" da conversa, `POST conversations/:conversation_id/assignments`, pela
+# Só com gatilho de card (conferido ao salvar): o card é o alvo, lido do banco pelo executor a cada passo (o dono que um
+# passo anterior da mesma rodada trocou já vale), e a conversa é só a principal dele. A conversa nova da receita (#2680)
+# não conta: ela é qualquer conversa aberta do contato na caixa, e o passo daria ao responsável uma conversa que não é a
+# do card. Vira o mesmo pedido do "Atribuir" da conversa, `POST conversations/:conversation_id/assignments`, pela
 # porta da ação (PassoDeAcao, como o "criar retorno" do G3): como quem ligou, com a lista de ações permitidas, a chave de
 # automações, a política da conversa no endpoint e o caderno do Guia (desfaz por 5 dias). Sem acesso, a automação pausa.
 #
-# Pula, com o motivo no histórico: sem conversa, card sem responsável, ou o responsável não enxerga a conversa (fora da
-# caixa: a conversa ficaria com quem não a vê). Já com o responsável, segue sem pedir nada (`trocou: false`).
+# Pula, com o motivo no histórico: card sem conversa principal, conversa resolvida (como o "Passar para a agente de IA"),
+# card sem responsável, ou o responsável não enxerga a conversa (fora da caixa ou de outra conta: a conversa ficaria com
+# quem não a vê). Já com o responsável, segue sem pedir nada (`trocou: false`).
 class Autonomia::Automacao::PassoDeConversaAoResponsavel
   TIPO = 'conversa_ao_responsavel'.freeze
   ACAO = 'POST conversations/:conversation_id/assignments'.freeze
@@ -22,19 +25,21 @@ class Autonomia::Automacao::PassoDeConversaAoResponsavel
     [I18n.t('autonomia.automacao.receita.responsavel_so_com_card', passo: passo['id'])]
   end
 
-  def initialize(execucao:, passo:, valores:, acesso:)
+  # `alvo`: o card relido pelo executor (Executor#alvo), não o da execução em memória.
+  def initialize(execucao:, passo:, valores:, acesso:, alvo:)
     @execucao = execucao
     @passo = passo
     @valores = valores
     @acesso = acesso
-    @contexto = ::Autonomia::Automacao::Contexto.de(execucao.alvo, execucao: execucao)
+    @card = alvo
   end
 
   def executar
-    conversa = @contexto.conversa
+    conversa = @card.primary_conversation
     return pulado('sem_conversa') if conversa.nil?
+    return pulado('conversa_resolvida') if conversa.resolved?
 
-    dono = @contexto.card&.owner
+    dono = @card.owner
     return pulado('card_sem_responsavel') if dono.nil?
     return Resultado.new(tipo: :ok, dados: { 'responsavel_id' => dono.id, 'trocou' => false }) if conversa.assignee_id == dono.id
     return pulado('responsavel_nao_ve_a_conversa', 'responsavel_id' => dono.id) unless ::Autonomia::Automacao::Acesso.alcanca?(dono, conversa)

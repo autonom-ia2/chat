@@ -150,9 +150,9 @@ describe('LivreAlterar', () => {
     expect(salvarDesligado(wrapper)).toBe(false);
   });
 
-  // Decisão 18 — "Mesmo com uma pessoa na conversa": um sim/não do design
+  // Decisão 18 — "Cobrir a pessoa enquanto ela não responde": um sim/não do design
   // system (sem <select>), desligado por padrão; desligar tira a chave.
-  it('liga e desliga a opção "mesmo com uma pessoa na conversa"', async () => {
+  it('liga e desliga a opção "cobrir a pessoa"', async () => {
     const COM_OPCAO = {
       ...CATALOGO,
       passos: [
@@ -162,10 +162,10 @@ describe('LivreAlterar', () => {
           campos: [
             ...IA_ASSUMIR.campos,
             {
-              nome: 'mesmo_com_pessoa',
+              nome: 'cobrir_pessoa',
               peca: 'sim_nao',
               obrigatorio: false,
-              rotulo: 'MESMO_COM_PESSOA',
+              rotulo: 'COBRIR_PESSOA',
             },
           ],
         },
@@ -177,7 +177,7 @@ describe('LivreAlterar', () => {
     wrapper.vm.abrir({ tipo: 'passo', valor: { ...PASSO_IA, agente_id: 3 } });
     await flushPromises();
 
-    const opcao = wrapper.find('[data-peca="mesmo_com_pessoa"]');
+    const opcao = wrapper.find('[data-peca="cobrir_pessoa"]');
     expect(opcao.exists()).toBe(true);
     expect(wrapper.find('select').exists()).toBe(false);
     const chave = opcao.findComponent({ name: 'Switch' });
@@ -188,7 +188,7 @@ describe('LivreAlterar', () => {
     expect(wrapper.emitted('salvar')[0][0].valor).toEqual({
       ...PASSO_IA,
       agente_id: 3,
-      mesmo_com_pessoa: true,
+      cobrir_pessoa: true,
     });
 
     await chave.vm.$emit('update:modelValue', false);

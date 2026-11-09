@@ -18,13 +18,14 @@ class Autonomia::Automacao::PassoDeAcao
 
   # O passo "criar retorno" (G3, #2629) tem objeto próprio, que chega à mesma porta (AcoesDoRetorno); o "passar a conversa
   # para o responsável do card" (G66, #2843) também, pela porta da ação.
-  def self.executar(passo:, **)
-    classe = case passo['tipo']
-             when 'retorno' then ::Autonomia::Automacao::PassoDeRetorno
-             when ::Autonomia::Automacao::PassoDeConversaAoResponsavel::TIPO then ::Autonomia::Automacao::PassoDeConversaAoResponsavel
-             else self
-             end
-    classe.new(passo: passo, **).executar
+  # `alvo`: o alvo relido pelo executor; só o G66 o usa (o dono do card que um passo anterior trocou).
+  def self.executar(passo:, alvo: nil, **)
+    case passo['tipo']
+    when 'retorno' then ::Autonomia::Automacao::PassoDeRetorno.new(passo: passo, **).executar
+    when ::Autonomia::Automacao::PassoDeConversaAoResponsavel::TIPO
+      ::Autonomia::Automacao::PassoDeConversaAoResponsavel.new(passo: passo, alvo: alvo, **).executar
+    else new(passo: passo, **).executar
+    end
   end
 
   # `acoes`: a porta que executa. O passo "criar retorno" (G3) passa a dele, liberada só para o retorno.

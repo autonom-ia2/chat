@@ -1446,10 +1446,10 @@
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.AGENTE_ID"
         },
         {
-          "nome": "mesmo_com_pessoa",
+          "nome": "cobrir_pessoa",
           "peca": "sim_nao",
           "obrigatorio": false,
-          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.MESMO_COM_PESSOA"
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.COBRIR_PESSOA"
         }
       ]
     },

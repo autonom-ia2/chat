@@ -61,10 +61,10 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
     expect(conversation.reload.assignee).to eq(pessoa)
   end
 
-  # Decisão 18 (exemplo 17): a opção "mesmo com uma pessoa na conversa", desligada por padrão, deixa a agente assumir
-  # a conversa de uma pessoa, pedida por quem ligou (como o "Passar para…" da tela). O histórico guarda de quem.
-  context 'with a opção mesmo com uma pessoa na conversa' do
-    let(:passo) { { 'id' => 'p1', 'tipo' => 'ia_assumir', 'agente_id' => area.id, 'mesmo_com_pessoa' => true } }
+  # Decisão 18 (exemplo 17): a opção "Cobrir a pessoa enquanto ela não responde", desligada por padrão, deixa a agente
+  # assumir a conversa de uma pessoa, pedida por quem ligou (como o "Passar para…" da tela). O histórico guarda de quem.
+  context 'with a opção cobrir a pessoa' do
+    let(:passo) { { 'id' => 'p1', 'tipo' => 'ia_assumir', 'agente_id' => area.id, 'cobrir_pessoa' => true } }
 
     it 'tira a conversa da pessoa, pedida por quem ligou, e registra de quem foi tirada', :aggregate_failures do
       conversation.update!(assignee: pessoa)
@@ -73,7 +73,8 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
 
       expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: espelho_area)
       expect(registro(execucao)).to have_attributes(resultado: 'ok',
-                                                    dados: { 'agente_id' => area.id, 'tirada_de' => pessoa.id, 'trocou' => true })
+                                                    dados: { 'agente_id' => area.id, 'tirada_de' => pessoa.id,
+                                                             'cobrindo_conversa' => conversation.id, 'trocou' => true })
       expect(contrato).to have_received(:registrar_passagem!).with(hash_including(para: area, pedida_por: admin))
     end
 
@@ -94,7 +95,7 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
   it 'a opção desligada (false) é o padrão: a pessoa fica', :aggregate_failures do
     conversation.update!(assignee: pessoa)
 
-    execucao = rodar(automacao_ligada(account, admin, [passo.merge('mesmo_com_pessoa' => false)]))
+    execucao = rodar(automacao_ligada(account, admin, [passo.merge('cobrir_pessoa' => false)]))
 
     expect(registro(execucao)).to have_attributes(resultado: 'pulado', motivo: 'pessoa_atribuida')
     expect(conversation.reload.assignee).to eq(pessoa)
@@ -133,7 +134,7 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
 
   it 'erro inesperado na passagem sobe: a execução fica com a falha à vista, nunca concluída' do
     automacao = automacao_ligada(account, admin, [passo])
-    allow(Crm::Entrega::ParaIa).to receive(:passar!).and_raise(ActiveRecord::StatementInvalid, 'caiu')
+    allow(Crm::Entrega::ParaIa).to receive(:resultado!).and_raise(ActiveRecord::StatementInvalid, 'caiu')
 
     comecar(automacao, conversation)
     job = enqueued_jobs.find { |enfileirado| enfileirado['job_class'] == Autonomia::Automacao::AvancarJob.name }
@@ -157,7 +158,7 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
     conversation.update!(status: :pending)
     automacao = automacao_ligada(account, admin, [passo], gatilho: { 'tipo' => 'conversa.aberta' })
     assinada = nil
-    allow(Crm::Entrega::ParaIa).to receive(:passar!).and_wrap_original do |original, **args|
+    allow(Crm::Entrega::ParaIa).to receive(:resultado!).and_wrap_original do |original, **args|
       assinada = Autonomia::Automacao::Ato.automacao_id
       original.call(**args)
     end
@@ -244,7 +245,7 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
 
   describe '.ensaiar' do
     it 'diz para quem passaria, ou o motivo, sem chamar a passagem' do
-      expect(Crm::Entrega::ParaIa).not_to receive(:passar!)
+      expect(Crm::Entrega::ParaIa).not_to receive(:resultado!)
 
       expect(described_class.ensaiar(passo, conversation)).to eq(['ia_assumir', { agente: 'Área Suporte' }])
       conversation.update!(assignee: pessoa)

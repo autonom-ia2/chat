@@ -88,6 +88,72 @@ RSpec.describe Autonomia::Automacao::PassoDeConversaAoResponsavel, :automacao_mo
     expect(registros(execucao)).to eq([%w[conversa pulado sem_conversa]])
   end
 
+  # Revisão: a conversa nova da receita (#2680) é qualquer conversa aberta do contato na caixa, não a do card.
+  it 'card sem conversa principal, com outra conversa aberta do contato na caixa: pula sem mexer nela', :aggregate_failures do
+    outra = create_crm_conversation(account: account, inbox: inbox, contact: contato, assignee: julia)
+    sem_conversa = account.crm_cards.create!(pipeline: funil_e_etapa.first, stage: funil_e_etapa.last, contact: contato,
+                                             title: 'Sem conversa', owner: renata)
+    definicao = automacao_ligada(account, admin, [passo], gatilho: gatilho.merge('conversa_nova' => { 'caixa_id' => inbox.id }))
+
+    perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) do
+      Autonomia::Automacao::Partida.new(definicao: definicao, alvo: sem_conversa, chave_gatilho: 'card.responsavel_mudou').call
+    end
+
+    expect(registros(Autonomia::Automacao::Execucao.find_by!(automacao: definicao))).to eq([%w[conversa pulado sem_conversa]])
+    expect(outra.reload.assignee).to eq(julia)
+  end
+
+  it 'conversa resolvida: pula com conversa_resolvida, sem mexer em quem está nela', :aggregate_failures do
+    card.update!(owner: renata)
+    conversa.update!(status: :resolved)
+
+    execucao = rodar
+
+    expect(registros(execucao)).to eq([%w[conversa pulado conversa_resolvida]])
+    expect(conversa.reload.assignee).to eq(julia)
+  end
+
+  it 'o pedido volta 403 (quem ligou sem acesso à conversa): a automação pausa', :aggregate_failures do
+    card.update!(owner: renata)
+    proibido = Autonomia::Guide::ChamadaInterna::Resposta.new(codigo: '403', corpo: { 'error' => 'proibido' })
+    allow(Autonomia::Guide::ChamadaInterna).to receive(:new).and_wrap_original do |original, **argumentos|
+      original.call(**argumentos).tap { |chamada| allow(chamada).to receive(:chamar).and_return(proibido) }
+    end
+
+    execucao = rodar
+
+    expect(registros(execucao)).to eq([%w[conversa falhou quem_ligou_sem_acesso]])
+    expect([execucao.reload.estado, execucao.automacao.ativa]).to eq(['parada', false])
+    expect(conversa.reload.assignee).to eq(julia)
+  end
+
+  it 'responsável de outra conta (id gravado por baixo): pula, a conversa fica com quem estava', :aggregate_failures do
+    de_fora = create(:user, account: create(:account), role: :agent)
+    card.update_column(:owner_id, de_fora.id) # rubocop:disable Rails/SkipsModelValidations
+
+    execucao = rodar
+
+    expect(registros(execucao).first.last(2)).to eq(%w[pulado responsavel_nao_ve_a_conversa])
+    expect(conversa.reload.assignee).to eq(julia)
+  end
+
+  # Revisão: o passo lê o card relido pelo executor, não o da execução em memória. Devolver o card e passar a conversa
+  # na mesma rodada (exemplo 17, passo 5) leva a conversa ao dono novo.
+  it 'muda o dono do card e passa a conversa na mesma rodada: a conversa vai ao dono novo', :aggregate_failures do
+    troca = { 'id' => 'dono', 'tipo' => 'acao', 'acao' => 'PATCH crm/cards/:id', 'descricao' => 'Passar o card à Renata',
+              'caminho' => { 'id' => { '$valor' => 'card.id' } }, 'corpo' => { 'card' => { 'owner_id' => renata.id } } }
+    definicao = automacao_ligada(account, admin, [troca, passo], gatilho: gatilho)
+
+    perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) do
+      Autonomia::Automacao::Partida.new(definicao: definicao, alvo: card, chave_gatilho: 'card.responsavel_mudou').call
+    end
+
+    execucao = Autonomia::Automacao::Execucao.find_by!(automacao: definicao)
+    expect(registros(execucao)).to eq([['dono', 'ok', nil], ['conversa', 'ok', nil]])
+    expect(card.reload.owner).to eq(renata)
+    expect(conversa.reload.assignee).to eq(renata)
+  end
+
   it 'a conversa com a agente de IA (robô no nome) passa para a pessoa e tira o robô', :aggregate_failures do
     robo = create(:agent_bot, account: account)
     conversa.update!(assignee: nil, ai_assignee: robo)

@@ -181,7 +181,7 @@
       "LINHAS": "Summary length (lines)",
       "ETAPA_ID": "In which stage the card starts",
       "AGENTE_ID": "Which AI agent",
-      "MESMO_COM_PESSOA": "Even if a person has the conversation (the agent takes it over)",
+      "COBRIR_PESSOA": "Cover for the person until they reply",
       "CAIXA_ID": "From which e-mail inbox",
       "ASSUNTO": "Subject",
       "MODELO": "If the 24-hour window is closed",

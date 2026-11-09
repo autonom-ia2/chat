@@ -181,7 +181,7 @@
       "LINHAS": "Tamanho do resumo (linhas)",
       "ETAPA_ID": "Em qual etapa o card nasce",
       "AGENTE_ID": "Qual agente de IA",
-      "MESMO_COM_PESSOA": "Mesmo com uma pessoa na conversa (a agente assume a conversa dela)",
+      "COBRIR_PESSOA": "Cobrir a pessoa enquanto ela não responde",
       "CAIXA_ID": "Por qual caixa de e-mail",
       "ASSUNTO": "Assunto",
       "MODELO": "Se a janela de 24 h estiver fechada",

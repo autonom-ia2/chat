@@ -165,7 +165,7 @@ class Autonomia::Automacao::Executor
     reconferir
     return if impedida?(passo['id'])
 
-    resultado = ::Autonomia::Automacao::PassoDeAcao.executar(execucao: @execucao, passo: passo, valores: valores, acesso: @acesso)
+    resultado = ::Autonomia::Automacao::PassoDeAcao.executar(execucao: @execucao, passo: passo, valores: valores, acesso: @acesso, alvo: alvo)
     case resultado.tipo
     when :ok, :pulado then seguir_depois_da_acao(passo, resultado)
     when :permanente then encerrar(passo['id'], 'falhou', resultado.motivo, 'falhou', resultado.dados)

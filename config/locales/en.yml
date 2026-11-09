@@ -533,6 +533,8 @@ en:
         prazo_vencido: 'The wait ended without the condition.'
         mensagem_do_cliente: 'The customer wrote during the wait: the steps for each customer message ran.'
         voltou_a_esperar: 'Went back to waiting.'
+        ia_cobrindo: 'The customer wrote while the AI agent is covering the conversation: the agent keeps answering.'
+        pessoa_voltou: 'The person wrote in the conversation, and it went back to them.'
         teto_a_cada: 'The steps for each customer message already ran 200 times in this run. From now on the wait goes on only for the condition.'
         quem_ligou_saiu_da_conta: 'The person who turned on the automation left the account. Take over and turn it back on.'
         quem_ligou_sem_acesso: 'The person who turned on the automation has no access here anymore. Take over and turn it back on.'
@@ -594,7 +596,7 @@ en:
         pessoa_atribuida: 'A person has the conversation and keeps it. The AI agent did not take over.'
         sem_vinculo_na_caixa: 'The AI agent does not work in this conversation''s inbox. The conversation stayed as it was.'
         nao_atende_cliente: 'The AI agent is not answering customers right now. The conversation stayed as it was.'
-        conversa_resolvida: 'The conversation is resolved. The AI agent did not take over.'
+        conversa_resolvida: 'The conversation is resolved. No one took it over.'
         outra_conta: 'The AI agent belongs to another account. The conversation stayed as it was.'
         campo_proibido: 'The action sends a field the automation does not change.'
       alvo:

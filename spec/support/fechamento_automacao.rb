@@ -291,7 +291,8 @@ module FechamentoAutomacao::Lacunas
     },
     'G63' => -> { galho_a_cada_mensagem? },
     'G64' => -> { conferencia_marcada? },
-    # Com a decisão 18: a agente de IA assume mesmo com a Renata no nome (opção do passo), e o G66 devolve.
+    # Com a decisão 18, corrigida: a agente de IA cobre a Renata (opção do passo) e, quando ela escreve, a conversa volta
+    # sozinha para ela.
     'G66' => lambda {
       FechamentoAutomacao::SondasDoExemplo17.conversa_acompanha_o_responsavel? && FechamentoAutomacao::SondasDoExemplo17.ia_assume_e_devolve?
     },

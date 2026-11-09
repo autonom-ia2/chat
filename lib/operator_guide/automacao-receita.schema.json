@@ -549,7 +549,7 @@
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "ia_assumir" },
             "agente_id": { "$ref": "#/definitions/agente_de_ia" },
-            "mesmo_com_pessoa": { "type": "boolean", "description": "Mesmo com uma pessoa na conversa (decisão 18, ex. 17): ligado, a agente assume a conversa que está no nome de uma pessoa, como se quem ligou a automação passasse pela tela, e o histórico guarda de quem ela foi tirada. Desligado (o padrão), a pessoa fica e o passo pula com pessoa_atribuida." }
+            "cobrir_pessoa": { "type": "boolean", "description": "Cobrir a pessoa enquanto ela não responde (decisão 18, ex. 17): ligado, a agente assume a conversa mesmo com uma pessoa no nome e fica com ela; quando essa pessoa escrever na conversa, ela volta sozinha para a pessoa, e o histórico registra de quem foi tirada e a volta. Enquanto a agente cobre, a mensagem do cliente não abre o galho \"a cada mensagem\" da mesma automação. Desligado (o padrão), a pessoa fica e o passo pula com pessoa_atribuida." }
           }
         },
         {

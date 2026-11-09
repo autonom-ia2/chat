@@ -20,23 +20,39 @@ module FechamentoAutomacao::SondasDoExemplo17
     end
   end
 
-  # Decisão 18 (G66, ex. 17, passos 4 e 5): numa execução só, a conversa vai para a Renata, a agente de IA a assume
-  # mesmo com a Renata no nome (a opção do passo) e registra de quem tirou, e o passo G66 a devolve à Renata, como no
-  # começo do galho e depois da devolução do card.
+  # Decisão 18, corrigida (G66, ex. 17, passos 4 e 5): numa execução só, a conversa vai para a Renata, a agente de IA a
+  # assume mesmo com a Renata no nome (a opção "cobrir a pessoa") e registra de quem tirou, e a execução segue aberta
+  # (esperando). A Renata escreve na conversa: a conversa volta sozinha para ela, sem passo na receita, e o histórico
+  # registra a volta.
   def ia_assume_e_devolve?
     ClimateControl.modify(CRM_KANBAN_ENABLED: 'true', AUTONOMIA_AGENTS_ENABLED: 'true') do
       conta = FactoryBot.create(:account)
       conta.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_gatilhos')
       paula, julia, renata = %i[administrator agent agent].map { |papel| FactoryBot.create(:user, account: conta, role: papel) }
       card = card_da_cobertura(conta, paula, julia, renata)
-      agente = agente_de_ia_na_caixa(conta, card.primary_conversation.inbox)
+      conversa = card.primary_conversation
+      agente = agente_de_ia_na_caixa(conta, conversa.inbox)
       passos = [{ 'id' => 'conversa', 'tipo' => 'conversa_ao_responsavel' },
-                { 'id' => 'sofia', 'tipo' => 'ia_assumir', 'agente_id' => agente.id, 'mesmo_com_pessoa' => true },
-                { 'id' => 'de_volta', 'tipo' => 'conversa_ao_responsavel' }]
-      execucao = rodada_no_card(conta, paula, card, passos)
-      assumiu = Autonomia::Automacao::Registro.find_by(execucao: execucao, passo: 'sofia')&.dados.to_h['tirada_de'] == renata.id
-      assumiu && card.primary_conversation.reload.assignee_id == renata.id
+                { 'id' => 'sofia', 'tipo' => 'ia_assumir', 'agente_id' => agente.id, 'cobrir_pessoa' => true },
+                { 'id' => 'espera', 'tipo' => 'esperar', 'duracao' => { 'valor' => 1, 'unidade' => 'dias' } }]
+      cobre_e_devolve?(rodada_no_card(conta, paula, card, passos), conversa, renata)
     end
+  end
+
+  # A agente tirou a conversa da Renata e ficou com ela; a Renata escreve, e a conversa volta, com o registro da volta.
+  def cobre_e_devolve?(execucao, conversa, renata)
+    assumiu = Autonomia::Automacao::Registro.find_by(execucao: execucao, passo: 'sofia')&.dados.to_h['tirada_de'] == renata.id
+    com_a_ia = conversa.reload.assignee_id.nil? && conversa.ai_assignee_id.present?
+    renata_escreve(conversa, renata)
+    voltou = Autonomia::Automacao::Registro.exists?(execucao: execucao, motivo: Autonomia::Automacao::Cobertura::VOLTOU)
+    assumiu && com_a_ia && voltou && conversa.reload.assignee_id == renata.id
+  end
+
+  # A Renata responde o cliente na conversa; a Escuta ouve a mensagem como em produção.
+  def renata_escreve(conversa, renata)
+    mensagem = FactoryBot.create(:message, conversation: conversa, account: conversa.account, inbox: conversa.inbox,
+                                           message_type: :outgoing, sender: renata, content: 'Oi, Maria! Voltei.')
+    Autonomia::Automacao::Cobertura.pessoa_escreveu(mensagem)
   end
 
   # Os Agentes e as áreas de IA ligados na conta, e uma agente atendendo cliente na caixa.

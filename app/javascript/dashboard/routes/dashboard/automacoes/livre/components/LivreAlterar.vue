@@ -548,9 +548,9 @@ defineExpose({ abrir, fechar });
           :esperas="esperasDoDecidir"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
-        <!-- Decisão 18: o sim/não de um passo fora da IA ("Mesmo com uma
-        pessoa na conversa", no "Passar para a agente de IA"). Desligado tira a
-        chave da receita. -->
+        <!-- Decisão 18: o sim/não de um passo fora da IA ("Cobrir a pessoa
+        enquanto ela não responde", no "Passar para a agente de IA"). Desligado
+        tira a chave da receita. -->
         <label
           v-else-if="campo.peca === 'sim_nao' && !ehDeIa"
           class="flex items-center justify-between gap-3 cursor-pointer min-h-11"

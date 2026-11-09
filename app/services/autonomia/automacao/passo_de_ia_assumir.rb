@@ -2,10 +2,12 @@
 # (Crm::Entrega::ParaIa, o motor único de entrega), nunca pela atribuição direta ao robô.
 #
 # Pede como o CRM (`por: :crm`): pessoa no nome vence, e o passo pula com `pessoa_atribuida` (D1). A exceção é a opção
-# `mesmo_com_pessoa` (decisão 18 do Rodrigo, exemplo 17: "sem resposta da Renata, passa para a agente de IA"), desligada
-# por padrão: com ela e uma pessoa no nome, quem pede é quem ligou a automação (`por: :pessoa`, como o "Passar para…" da
-# tela), a agente fica com a conversa e o registro guarda de quem ela foi tirada (`tirada_de`). Sem pessoa no nome, a
-# opção não muda nada. Fora deste passo, nada muda. Toda recusa do serviço
+# `cobrir_pessoa`, "Cobrir a pessoa enquanto ela não responde" (decisão 18 do Rodrigo, exemplo 17), desligada por
+# padrão: com ela e uma pessoa no nome, quem pede é quem ligou a automação (`por: :pessoa`, como o "Passar para…" da
+# tela), a agente fica com a conversa e o registro guarda de quem ela foi tirada (`tirada_de`, lida sob a trava da troca)
+# e qual conversa ela cobre. Quando essa pessoa escrever na conversa, ela volta para ela (Cobertura). A agente fala com
+# o cliente pelo turno de quem recebe a passagem (Operate::AoReceberPassagem), sabendo quem passou. Sem pessoa no nome,
+# a opção não muda nada. Fora deste passo, nada muda. Toda recusa do serviço
 # dos Agentes (sem vínculo na caixa, não atende cliente, Fase 2 desligada, conversa resolvida) vira pulo com o código,
 # nunca outro agente. Erro inesperado sobe ao executor, como nos outros passos.
 #
@@ -45,17 +47,17 @@ class Autonomia::Automacao::PassoDeIaAssumir
     agente = agente(conversa.account, passo['agente_id'])
     return ['agente_sumiu', {}] if agente.nil?
 
-    [motivo_no_ensaio(conversa, agente, mesmo_com_pessoa?(passo)) || 'ia_assumir', { agente: agente.name }]
+    [motivo_no_ensaio(conversa, agente, cobrir_pessoa?(passo)) || 'ia_assumir', { agente: agente.name }]
   end
 
   # Decisão 18: a opção do passo, desligada por padrão.
-  def self.mesmo_com_pessoa?(passo) = passo['mesmo_com_pessoa'] == true
+  def self.cobrir_pessoa?(passo) = passo['cobrir_pessoa'] == true
 
-  def self.motivo_no_ensaio(conversa, agente, mesmo_com_pessoa)
+  def self.motivo_no_ensaio(conversa, agente, cobrir_pessoa)
     return 'fase2_desligada' unless ::Crm::AgentesIa.ligado?(conversa.account)
     return 'nao_atende_cliente' unless agente.atende_cliente?
     return 'conversa_resolvida' if conversa.resolved?
-    return 'pessoa_atribuida' if conversa.assignee_id.present? && !mesmo_com_pessoa
+    return 'pessoa_atribuida' if conversa.assignee_id.present? && !cobrir_pessoa
 
     'sem_vinculo_na_caixa' unless ::Autonomia::Agents::AgentInbox.kept.exists?(account_id: conversa.account_id, inbox_id: conversa.inbox_id,
                                                                                autonomia_agent_id: agente.id)
@@ -77,31 +79,34 @@ class Autonomia::Automacao::PassoDeIaAssumir
 
   private
 
-  # Quem estava no nome é lido antes da troca: depois dela, a conversa relida já não tem a pessoa.
+  # A pessoa tirada vem do serviço, lida sob a trava da troca (PassarParaIa), não da conversa lida antes dela.
   def assumir(agente)
-    tirada_de = (@conversa.assignee_id if tira_da_pessoa?)
-    codigo = passar(agente, tirada_de)
-    dados = { 'agente_id' => agente.id }
-    dados['tirada_de'] = tirada_de if tirada_de && codigo == ::Crm::Entrega::ParaIa::PASSOU
+    resultado = passar(agente)
+    codigo = resultado.codigo.to_s
+    dados = { 'agente_id' => agente.id, **cobertura(resultado.pessoa_tirada_id) }
     return Resultado.new(tipo: :ok, dados: dados.merge('trocou' => codigo != JA_E_O_DONO)) if OK.include?(codigo)
 
     pulado(codigo, dados)
   end
 
   # Quem estava com a conversa, lido do banco agora: o agente de IA dono, a pessoa no nome ou o robô.
-  def passar(agente, tirada_de)
+  def passar(agente)
     origem = ::Crm::AgentesIa.dono(@conversa) || @conversa.assignee || @conversa.ai_assignee
     ::Autonomia::Automacao::Ato.da(@execucao.automacao_id) do
-      ::Crm::Entrega::ParaIa.passar!(conversation: @conversa, agent: agente, motivo: MOTIVO, origem: origem, **quem_pede(tirada_de))
+      ::Crm::Entrega::ParaIa.resultado!(conversation: @conversa, agent: agente, motivo: MOTIVO, origem: origem, **quem_pede)
     end
   end
 
-  # Decisão 18: com a opção e uma pessoa no nome, quem ligou pede, como na tela; senão, o CRM (pessoa no nome vence).
-  def quem_pede(tirada_de)
-    tirada_de ? { por: :pessoa, pedida_por: @execucao.automacao.ligada_por } : { por: :crm }
+  # Decisão 18: com a opção e uma pessoa no nome, quem ligou pede, como na tela; senão, o CRM (pessoa no nome vence). Se a
+  # pessoa sair antes da trava, a troca segue como pedida pela tela, e `tirada_de` fica vazio (o serviço não tirou ninguém).
+  def quem_pede
+    tira_da_pessoa? ? { por: :pessoa, pedida_por: @execucao.automacao.ligada_por } : { por: :crm }
   end
 
-  def tira_da_pessoa? = self.class.mesmo_com_pessoa?(@passo) && @conversa.assignee_id.present?
+  # Decisão 18: a pessoa tirada e a conversa coberta, que a Cobertura lê para a volta.
+  def cobertura(pessoa_id) = pessoa_id ? { 'tirada_de' => pessoa_id, 'cobrindo_conversa' => @conversa.id } : {}
+
+  def tira_da_pessoa? = self.class.cobrir_pessoa?(@passo) && @conversa.assignee_id.present?
 
   def pulado(motivo, dados = {}) = Resultado.new(tipo: :pulado, motivo: motivo, dados: dados)
 end
