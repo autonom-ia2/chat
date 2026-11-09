@@ -5,8 +5,10 @@ require 'digest'
 # - WhatsApp: rows whose mobile belongs to a contact of the account that refused active
 #   messages (#737, `opted_out_at`) or is blocked (chat#2733, `blocked`), with or without the
 #   9th digit; refused and blocked at once counts as refused (each row in one reason);
-# - e-mail: rows whose address is suppressed in the account (EmailSuppression and blocking
-#   EmailSuppressionState), split into unsubscribed, bounced and other suppressions.
+# - e-mail: like the send (EmailCampaigns::DeliveryClaim), rows whose address belongs to a contact
+#   of the account that refused (#737) or is blocked (chat#2733), then rows whose address is
+#   suppressed in the account (EmailSuppression and blocking EmailSuppressionState), split into
+#   unsubscribed, bounced and other suppressions; each row in one reason, in this order.
 # `receive` = channel count − not receiving; a channel switched off receives nobody.
 class CampaignImports::AudienceReachability
   ROW_STATUSES = %i[valid imported].freeze
@@ -68,9 +70,29 @@ class CampaignImports::AudienceReachability
   end
 
   def email
-    by_reason = suppressed_hashes_by_reason
-    counts = by_reason.transform_values { |hashes| hashes.empty? ? 0 : rows.where(normalized_email_hash: hashes).count }
-    summary('email', counts)
+    opted_out = email_hashes(@account.contacts.opted_out)
+    blocked = email_hashes(@account.contacts.campaign_unreachable.not_opted_out) - opted_out
+    refused = opted_out | blocked
+    by_reason = { 'opted_out' => opted_out, 'blocked' => blocked }
+                .merge(suppressed_hashes_by_reason.transform_values { |hashes| hashes - refused })
+    summary('email', by_reason.transform_values { |hashes| email_rows_count(hashes) })
+  end
+
+  def email_rows_count(hashes)
+    hashes.empty? ? 0 : rows.where(normalized_email_hash: hashes).count
+  end
+
+  # Hashes of the contacts' addresses, normalized like the rows (CampaignJourney::AudienceContacts).
+  def email_hashes(contacts)
+    contacts.where.not(email: [nil, '']).pluck(:email)
+            .filter_map { |address| normalized_email(address) }
+            .map { |address| Digest::SHA256.hexdigest(address) }.uniq
+  end
+
+  def normalized_email(address)
+    EmailCampaigns::EmailNormalizer.normalize!(address).email
+  rescue EmailCampaigns::EmailNormalizer::Error
+    nil
   end
 
   # { 'unsubscribed' => [hash], 'bounced' => [hash], 'suppressed' => [hash] }; one bucket per address.

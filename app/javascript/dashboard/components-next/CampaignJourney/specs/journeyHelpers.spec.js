@@ -636,6 +636,22 @@ describe('notReceiving (chat#2733)', () => {
     });
   });
 
+  it('lists e-mail refusals and blocks apart from WhatsApp', () => {
+    expect(
+      notReceiving({
+        whatsapp: { opted_out: 0, blocked: 0 },
+        email: { opted_out: 1, blocked: 3, unsubscribed: 2 },
+      })
+    ).toEqual({
+      items: [
+        { key: 'EMAIL_OPTED_OUT', count: 1 },
+        { key: 'EMAIL_BLOCKED', count: 3 },
+        { key: 'UNSUBSCRIBED', count: 2 },
+      ],
+      total: 6,
+    });
+  });
+
   it('is null while the backend has not counted', () => {
     expect(notReceiving(null)).toBeNull();
   });

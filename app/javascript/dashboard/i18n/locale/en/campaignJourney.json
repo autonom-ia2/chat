@@ -217,6 +217,8 @@
         "NOT_RECEIVING_HINT": "They stay in the audience but are left out of sends.",
         "OPTED_OUT": "WhatsApp: refused messages · {count}",
         "BLOCKED": "WhatsApp: blocked contacts · {count}",
+        "EMAIL_OPTED_OUT": "Email: refused messages · {count}",
+        "EMAIL_BLOCKED": "Email: blocked contacts · {count}",
         "UNSUBSCRIBED": "Email: unsubscribed · {count}",
         "BOUNCED": "Email: address bounced · {count}",
         "SUPPRESSED": "Email: blocked by the provider · {count}"

@@ -154,6 +154,8 @@ export const isRefused = campaignImport =>
 const NOT_RECEIVING = [
   ['whatsapp', 'opted_out', 'OPTED_OUT'],
   ['whatsapp', 'blocked', 'BLOCKED'],
+  ['email', 'opted_out', 'EMAIL_OPTED_OUT'],
+  ['email', 'blocked', 'EMAIL_BLOCKED'],
   ['email', 'unsubscribed', 'UNSUBSCRIBED'],
   ['email', 'bounced', 'BOUNCED'],
   ['email', 'suppressed', 'SUPPRESSED'],

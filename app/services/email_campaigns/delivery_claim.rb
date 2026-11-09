@@ -65,9 +65,12 @@ class EmailCampaigns::DeliveryClaim
   end
 
   # chat#737, chat#2733: o destinatário vem de CSV, sem contact_id; liga pelo e-mail aos contatos da mesma conta. Não
-  # recebe se o contato com aquele e-mail recusou mensagens ativas ou está bloqueado. Roda a cada autorização.
+  # recebe se o contato com aquele e-mail recusou mensagens ativas ou está bloqueado. Roda a cada autorização: duas
+  # consultas em vez de um OR, para a da recusa usar o índice parcial de contatos recusados por conta.
   def contact_refuses_campaign?(email)
-    @campaign.account.contacts.campaign_unreachable.exists?(['lower(email) = ?', email.to_s.strip.downcase])
+    by_email = ['lower(email) = ?', email.to_s.strip.downcase]
+    contacts = @campaign.account.contacts
+    contacts.opted_out.exists?(by_email) || contacts.where(blocked: true).exists?(by_email)
   end
 
   def unreceipted?(recipient)
