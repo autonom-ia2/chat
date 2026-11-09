@@ -27,10 +27,12 @@ module Autonomia::Automacao::CardAtualizado
     escuta.registrar_erro("card atualizado não enfileirou Crm::Card=#{card&.id}", e)
   end
 
-  # A `mudanca` do gatilho de cada automação de card atualizado ligada na conta, numa consulta.
+  # A `mudanca` do gatilho de cada automação de card atualizado ligada na conta, numa consulta. A condição no valor de
+  # quem ligou sem ver os valores (#2597) fica de fora: nem a faixa dela vai no evento.
   def mudancas_escolhidas(account_id)
     escuta.automacoes_do_gatilho(account_id, ::Autonomia::Automacao::Gatilhos::ATUALIZADO)
-          .pluck(Arel.sql("autonomia_automacao_versoes.receita -> 'gatilho' -> 'mudanca'"))
+          .pluck(Arel.sql("autonomia_automacao_versoes.receita -> 'gatilho' -> 'mudanca'"), 'autonomia_automacoes.ligada_por_id')
+          .filter_map { |mudanca, quem| mudanca if ::Autonomia::Automacao::MudancaDoCard.le_a_mudanca?(mudanca, account_id, quem) }
   end
 
   def dados(card, mudancas)

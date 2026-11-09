@@ -50,10 +50,14 @@ module Autonomia::Automacao::MudancaDoCard
   # O "card atualizado" no valor de venda só dispara se quem ligou vê os valores (#2597): o disparo diria a quem não vê
   # que o card passou do limite. Os outros gatilhos e o campo personalizado passam.
   def quem_ligou_le?(definicao)
-    gatilho = definicao.versao_ativa.receita['gatilho'].to_h
-    return true unless gatilho.dig('mudanca', 'campo') == VALOR
+    le_a_mudanca?(definicao.versao_ativa.receita['gatilho'].to_h['mudanca'], definicao.account_id, definicao.ligada_por_id)
+  end
 
-    quem = AccountUser.find_by(account_id: definicao.account_id, user_id: definicao.ligada_por_id)
+  # A mesma pergunta pela `mudanca` do gatilho e por quem ligou, sem carregar a automação (CardAtualizado, no commit).
+  def le_a_mudanca?(mudanca, account_id, ligada_por_id)
+    return true unless mudanca.to_h['campo'] == VALOR
+
+    quem = AccountUser.find_by(account_id: account_id, user_id: ligada_por_id)
     ::Autonomia::Automacao::Valores.pode_ler?('card.valor', quem)
   end
 
@@ -127,10 +131,11 @@ module Autonomia::Automacao::MudancaDoCard
     nil
   end
 
-  # Centavos que não são número (pedido malformado) ficam vazios: não derrubam as outras automações do evento.
+  # Centavos que não são número (pedido malformado) ficam vazios: não derrubam as outras automações do evento. A divisão
+  # é decimal: 5_000_050 centavos são 50000.5 reais, não 50000.
   def reais(centavos)
     lido = numero(centavos)
-    lido.nil? ? nil : lido / CENTAVOS
+    lido && (lido.to_d / CENTAVOS)
   end
 
   def texto(valor) = valor.to_s.strip
