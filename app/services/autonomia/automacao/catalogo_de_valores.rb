@@ -19,7 +19,8 @@ module Autonomia::Automacao::CatalogoDeValores
         'so_nos_gatilhos' => valores.so_nos_gatilhos(caminho) }.compact
     end
     atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
-      { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base) }
+      { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base),
+        'da_pessoa' => (da_pessoa if base == ::Autonomia::Automacao::Valores::Atributos::CARD) }.compact
     end
     campos + atributos + valores_do_gatilho
   end
@@ -30,6 +31,13 @@ module Autonomia::Automacao::CatalogoDeValores
   def caminhos_dos_campos(valores)
     valores::CAMPOS.keys + valores::DO_QUE_QUEM_VE.keys + valores::AGENDA.keys + valores::RESPOSTA.keys + valores::ENVIO.keys +
       valores::TROCA.keys
+  end
+
+  # O campo de pessoa da equipe do card (G62): além do campo (o id), o nome e a ausência, com as opções da G23.
+  def da_pessoa
+    ::Autonomia::Automacao::Valores::Atributos::SUFIXOS_DA_PESSOA.map do |sufixo|
+      { 'sufixo' => sufixo, 'frase' => chave('VALORES', "pessoa.#{sufixo}"), **do_fechado("card.atributos.x.#{sufixo}") }
+    end
   end
 
   def valores_do_gatilho

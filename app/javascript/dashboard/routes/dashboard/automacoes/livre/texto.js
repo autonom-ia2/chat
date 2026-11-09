@@ -48,14 +48,28 @@ export const opcoesDosValores = (
         return [{ value: item.caminho, chave: item.chave, label: item.rotulo }];
       if (!item.atributos)
         return [{ value: item.caminho, label: t(item.frase) }];
-      return atributosDo(item.atributos).map(atributo => ({
-        value: `${item.caminho}.${atributo.attribute_key}`,
-        chave: atributo.attribute_key,
-        label: t('AUTOMACAO_LIVRE.FRASES.ATRIBUTO', {
-          base: t(item.frase),
-          chave: atributo.attribute_display_name,
-        }),
-      }));
+      return atributosDo(item.atributos).flatMap(atributo => {
+        const valor = `${item.caminho}.${atributo.attribute_key}`;
+        const campo = {
+          value: valor,
+          chave: atributo.attribute_key,
+          label: t('AUTOMACAO_LIVRE.FRASES.ATRIBUTO', {
+            base: t(item.frase),
+            chave: atributo.attribute_display_name,
+          }),
+        };
+        // G62: o campo de pessoa da equipe dá também o nome e a ausência dela.
+        if (atributo.attribute_display_type !== 'pessoa' || !item.da_pessoa)
+          return [campo];
+        return [
+          campo,
+          ...item.da_pessoa.map(sufixo => ({
+            value: `${valor}.${sufixo.sufixo}`,
+            chave: `${atributo.attribute_key}.${sufixo.sufixo}`,
+            label: t(sufixo.frase, { campo: atributo.attribute_display_name }),
+          })),
+        ];
+      });
     })
   );
 

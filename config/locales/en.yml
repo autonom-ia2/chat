@@ -88,6 +88,7 @@ en:
       contact_identity_taken: 'A contact with these details already exists. Use the existing contact instead.'
       invalid_contact_input: 'Provide a contact object with a non-empty name, optional email and phone strings, and valid attribute objects.'
       contact_conversation_conflict: 'cannot be changed while this card has conversations belonging to another contact. Review the conversation links first.'
+      pessoa_de_fora: 'field %{chave}: the person is not on this account team.'
     account:
       not_authorized: You are not authorized to access this account
       email_limit_exceeded: The daily email limit for this account has been reached
@@ -220,6 +221,7 @@ en:
     custom_attribute_definition:
       attribute_key_format: must only contain letters, numbers, underscores, hyphens, and dots
       key_conflict: The provided key is not allowed as it might conflict with default attributes.
+      pessoa_so_no_card: 'Team member fields exist only on cards.'
     mfa:
       already_enabled: MFA is already enabled
       not_enabled: MFA is not enabled

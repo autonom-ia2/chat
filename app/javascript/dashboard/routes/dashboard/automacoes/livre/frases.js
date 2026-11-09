@@ -161,6 +161,22 @@ const fraseSemPagina = (gatilho, catalogo, t, nomes) => {
 export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) =>
   comPagina(fraseSemPagina(gatilho, catalogo, t, nomes), gatilho, t, nomes);
 
+// G62 (#2829): `card.atributos.<campo>.nome` e `.ausente`, o nome e a ausência da
+// pessoa num campo do tipo pessoa da equipe. Devolve o sufixo do catálogo e o
+// campo, ou null.
+export const daPessoa = (caminho, catalogo) => {
+  const base = (catalogo?.valores || []).find(
+    item => item.da_pessoa && caminho?.startsWith(`${item.caminho}.`)
+  );
+  const resto = base && caminho.slice(base.caminho.length + 1);
+  const sufixo = base?.da_pessoa.find(item =>
+    resto.endsWith(`.${item.sufixo}`)
+  );
+  return sufixo
+    ? { sufixo, campo: resto.slice(0, -(sufixo.sufixo.length + 1)) }
+    : null;
+};
+
 // "Status da conversa", ou "Campo personalizado do contato: placa".
 export const fraseDoValor = (caminho, catalogo, t) => {
   const valores = catalogo?.valores || [];
@@ -169,6 +185,8 @@ export const fraseDoValor = (caminho, catalogo, t) => {
   );
   // #2679: o texto da IA (comTextosDaIa) chega com o rótulo pronto, sem frase.
   if (fixo) return fixo.rotulo || t(fixo.frase);
+  const pessoa = daPessoa(caminho, catalogo);
+  if (pessoa) return t(pessoa.sufixo.frase, { campo: pessoa.campo });
   const base = valores.find(
     item => item.atributos && caminho?.startsWith(`${item.caminho}.`)
   );
@@ -192,6 +210,8 @@ export const opcoesDoValor = (caminho, catalogo) => {
     item => item.caminho === caminho
   )?.opcoes;
   if (proprias) return proprias;
+  const pessoa = daPessoa(caminho, catalogo);
+  if (pessoa) return pessoa.sufixo.opcoes || null;
   const [nome, campo] = ESCOLHA_DO_VALOR[caminho] || [];
   const passo = catalogo?.passos.find(item => item.nome === nome);
   return passo?.campos.find(item => item.nome === campo)?.opcoes || null;
@@ -201,9 +221,9 @@ export const opcoesDoValor = (caminho, catalogo) => {
 // outros, por todos. `pede_valor` vem sempre do operador do esquema.
 export const operadoresDoValor = (caminho, catalogo) => {
   const todos = catalogo?.operadores || [];
-  const proprios = catalogo?.valores?.find(
-    item => item.caminho === caminho
-  )?.operadores;
+  const proprios =
+    catalogo?.valores?.find(item => item.caminho === caminho)?.operadores ||
+    daPessoa(caminho, catalogo)?.sufixo.operadores;
   if (!proprios) return todos;
   return proprios.map(item => ({
     ...todos.find(op => op.op === item.op),

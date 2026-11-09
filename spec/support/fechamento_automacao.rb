@@ -238,9 +238,10 @@ module FechamentoAutomacao::Lacunas
     # nasce sem conversa, e a mensagem do gatilho de reunião nele pula com `sem_conversa`. Caminho escolhido: o Booker
     # liga ao card novo a conversa do contato na caixa da página, quando ela existe. A frente dona troca o nil pela sonda.
     'G47' => nil,
-    # Do exemplo 17, achadas na G9 (#2707). G62 (#2829): devolver o card à responsável original gravada nele quando ela
-    # volta (passos 5 e 6). G63 (#2830): repetir a espera a cada mensagem do cliente na mesma automação (passo 4).
-    'G62' => nil,
+    # Do exemplo 17, achadas na G9 (#2707). G62 (#2829): o campo do card do tipo pessoa da equipe, com o nome e a
+    # ausência dela (passos 3, 5 e 6). G63 (#2830): repetir a espera a cada mensagem do cliente na mesma automação
+    # (passo 4); o laço do #2791 (G46) só volta pelo caminho de um "decidir", e o passo 4 não tem decisão.
+    'G62' => -> { CustomAttributeDefinition.attribute_display_types.key?('pessoa') && valor?('card.responsavel_nome') },
     'G63' => nil
   }.freeze
 

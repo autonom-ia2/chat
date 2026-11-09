@@ -9,8 +9,10 @@ require 'rails_helper'
 #
 # Montado como a Paula montaria, pela API da tela, e disparado como ela dispara: com a Júlia marcada "ausente até" (G23),
 # troca todos os cards dela para a Renata de uma vez, pela Lista do CRM (o lote). A IA é o dublê; o WhatsApp oficial
-# para no receptor de teste. O passo 4 ("a cada mensagem do cliente") espera a G63 (#2830); o 5 e o 6 (a original
-# volta), a G62 (#2829): ficam no pendentes_spec.
+# para no receptor de teste. O passo 3 grava a Júlia num campo do card do tipo pessoa da equipe (G62, #2829), e os
+# passos 5 e 6, "toda manhã", leem se ela voltou e devolvem o card a ela: o termo dá a eles outro começo ("toda manhã"),
+# então rodam na automação da manhã. O passo 4 ("a cada mensagem do cliente") espera a G63 (#2830): fica no
+# pendentes_spec.
 RSpec.describe 'Fechamento #2414 · G9: troca de responsável do card (exemplo 17, passos 1 a 3)', :fechamento_automacao,
                type: :request do
   include ActiveJob::TestHelper
@@ -47,7 +49,7 @@ RSpec.describe 'Fechamento #2414 · G9: troca de responsável do card (exemplo 1
                 valor('card.responsavel_nome'), ' vai cuidar de você até ela voltar. Ela já está a par de tudo'] },
       { id: 'original', tipo: 'acao', acao: 'PATCH crm/cards/:id', descricao: 'Gravar no card quem é a responsável original',
         caminho: { id: valor('card.id') },
-        corpo: { card: { custom_attributes: { responsavel_original: valor('gatilho.responsavel_anterior_nome') } } } },
+        corpo: { card: { custom_attributes: { responsavel_original: valor('gatilho.responsavel_anterior_id') } } } },
       { id: 'etiqueta', tipo: 'acao', acao: 'PATCH conversations/:conversation_id/labels/alterar',
         descricao: 'Pôr a etiqueta cobertura de férias', caminho: { conversation_id: valor('conversa.id') },
         corpo: { por: ['cobertura-de-ferias'] } }
@@ -103,7 +105,7 @@ RSpec.describe 'Fechamento #2414 · G9: troca de responsável do card (exemplo 1
     [julia, renata].each { |agente| create(:inbox_member, user: agente, inbox: inbox) }
     create(:label, account: account, title: 'cobertura-de-ferias', description: 'Cliente em cobertura de férias')
     create(:custom_attribute_definition, account: account, attribute_model: :card_attribute, attribute_key: 'responsavel_original',
-                                         attribute_display_name: 'Responsável original', attribute_display_type: :text)
+                                         attribute_display_name: 'Responsável original', attribute_display_type: :pessoa)
     AccountUser.find_by!(account: account, user: julia).update!(ausente_ate: 15.days.from_now)
     receptor_whatsapp_cloud
     cliente_escreveu(conversa_da_maria, 'Pode me mandar a proposta revisada até sexta?')
@@ -149,7 +151,7 @@ RSpec.describe 'Fechamento #2414 · G9: troca de responsável do card (exemplo 1
 
     it 'o card guarda quem é a responsável original e a conversa ganha a etiqueta cobertura de férias', :aggregate_failures do
       expect(card_da_maria.reload.owner).to eq(renata)
-      expect(card_da_maria.custom_attributes['responsavel_original']).to eq('Júlia')
+      expect(card_da_maria.custom_attributes['responsavel_original']).to eq(julia.id)
       expect(conversa_da_maria.reload.label_list).to include('cobertura-de-ferias')
     end
 
@@ -184,6 +186,68 @@ RSpec.describe 'Fechamento #2414 · G9: troca de responsável do card (exemplo 1
     rodar_jobs_do_card
 
     expect(execucoes).to be_empty
+  end
+
+  # Passos 5 e 6: "Toda manhã, para cada card com a etiqueta 'cobertura de férias': se a responsável original já está
+  # disponível de novo, devolve o card a ela e tira a etiqueta" e "A IA resume para a Júlia o que aconteceu".
+  context 'when a Júlia volta das férias' do
+    let(:fuso) { ActiveSupport::TimeZone['America/Sao_Paulo'] }
+    let(:receita_da_manha) do
+      { gatilho: { tipo: 'card.recorrente', frequencia: 'diaria', hora: 8, selecao: { situacao: 'aberto' },
+                   filtros: [{ campo: valor('conversa.etiquetas'), op: 'contem', valor: 'cobertura-de-ferias' }] },
+        passos: [{ id: 'voltou', tipo: 'se', condicao: { campo: valor('card.atributos.responsavel_original.ausente'), op: 'igual', valor: false },
+                   entao: passos_da_volta }] }
+    end
+
+    def passos_da_volta
+      [{ id: 'devolve', tipo: 'acao', acao: 'PATCH crm/cards/:id', descricao: 'Devolver o card à responsável original',
+         caminho: { id: valor('card.id') }, corpo: { card: { owner_id: valor('card.atributos.responsavel_original') } } },
+       { id: 'tira', tipo: 'acao', acao: 'PATCH conversations/:conversation_id/labels/alterar',
+         descricao: 'Tirar a etiqueta cobertura de férias', caminho: { conversation_id: valor('conversa.id') },
+         corpo: { tirar: ['cobertura-de-ferias'] } },
+       { id: 'conta', tipo: 'resumir', le: %w[conversa], linhas: 4, destino: { avisar: { responsavel_do_card: true } } }]
+    end
+
+    def varrer_em(momento)
+      travel_to(momento) do
+        Autonomia::Automacao::TempoJob.perform_now
+        perform_enqueued_jobs(only: Autonomia::Automacao::TempoDaAutomacaoJob)
+        perform_enqueued_jobs(only: Autonomia::Automacao::RecorrenteLoteJob)
+        rodar_jobs
+        rodar_jobs_do_card
+      end
+    end
+
+    def execucoes_da_manha = Autonomia::Automacao::Execucao.where(automacao_id: @da_manha['id'])
+
+    before do
+      account.update!(reporting_timezone: fuso.name)
+      travel_to(fuso.local(2026, 11, 2, 10)) { paula_passa_para(renata, [card_da_maria]) }
+      travel_to(fuso.local(2026, 11, 2, 11)) do
+        @da_manha = montar_automacao(paula, account, nome: 'Volta das férias', receita: receita_da_manha)
+        ligar_automacao(paula, account, @da_manha)
+      end
+      AccountUser.find_by!(account: account, user: julia).update!(ausente_ate: fuso.local(2026, 11, 10, 18))
+    end
+
+    it 'com a Júlia ainda de férias, a manhã não mexe no card', :aggregate_failures do
+      varrer_em(fuso.local(2026, 11, 5, 8, 5))
+
+      expect(card_da_maria.reload.owner).to eq(renata)
+      expect(conversa_da_maria.reload.label_list).to include('cobertura-de-ferias')
+      registro = Autonomia::Automacao::Registro.find_by!(execucao: execucoes_da_manha.sole, passo: 'voltou')
+      expect(registro.dados['ramo']).to eq('senao')
+    end
+
+    it 'na manhã depois da volta, o card é dela de novo, sem a etiqueta, e ela recebe o resumo', :aggregate_failures do
+      varrer_em(fuso.local(2026, 11, 11, 8, 5))
+
+      expect(card_da_maria.reload.owner).to eq(julia)
+      expect(conversa_da_maria.reload.label_list).not_to include('cobertura-de-ferias')
+      expect(mencoes_para(julia).count).to eq(1)
+      # A volta é outra troca, com a Renata (presente) como anterior: a cobertura não recomeça.
+      expect(execucoes.count).to eq(1)
+    end
   end
 
   # "A responsável anterior está marcada como ausente": trocar o card de quem está trabalhando não começa nada.

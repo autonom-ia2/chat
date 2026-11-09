@@ -48,6 +48,8 @@
       "GATILHO_RESPONSAVEL_ANTERIOR_AUSENTE": "The card owner before the change is away",
       "GATILHO_TIME_ANTERIOR_ID": "Card team before the change",
       "GATILHO_TIME_ANTERIOR_NOME": "Name of the card team before the change",
+      "PESSOA_NOME": "Name of the person in {campo}",
+      "PESSOA_AUSENTE": "The person in {campo} is away",
       "CONTATO_ID": "The contact",
       "CONTATO_NOME": "Contact name",
       "CONTATO_EMAIL": "Contact email",
