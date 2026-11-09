@@ -112,10 +112,15 @@ class Crm::MetaAds::Creation::Attempt
     raise Crm::MetaAds::Creation::Error, 'in_progress' if fresh_creating?(record)
 
     locked_by_digest(record.idempotency_key, record.request_digest) { take!(record, status) }
-    adopted = adopt_leftover!(record, status) if adopt && UNCONFIRMED_LIKE.include?(status)
-    return adopt!(record, adopted) if adopted
+    if adopt && UNCONFIRMED_LIKE.include?(status)
+      adopted = adopt_leftover!(record, status)
+      return adopt!(record, adopted) if adopted
 
-    clear_leftover!(record, status, recreate) if LEFTOVER_STATUSES.include?(status)
+      # Adotar nunca apaga: com a busca vazia, não há segunda busca nem desfazer (a campanha podia aparecer entre as duas).
+      nothing_found!(record, status, recreate)
+    elsif LEFTOVER_STATUSES.include?(status)
+      clear_leftover!(record, status, recreate)
+    end
     record.update!(error_code: nil, campaign_id: nil, adset_id: nil, creative_id: nil, ad_id: nil)
     record
   end
@@ -123,13 +128,32 @@ class Crm::MetaAds::Creation::Attempt
   # A campanha desta tentativa já existe na Meta: nil quando não há nenhuma. Sem resposta da Meta ou com mais de uma, a
   # linha volta para a situação de antes, sem apagar nada.
   def adopt_leftover!(record, status)
-    return record.campaign_id if record.campaign_id.present?
+    return stored_campaign(record) if record.campaign_id.present?
 
     found = @undo.live_campaigns(record)
     raise Crm::MetaAds::Creation::Error.new('meta_unavailable', nothing_created: false) if found.nil?
     raise unconfirmed_error if found.many?
 
     found.first
+  rescue StandardError
+    record.update!(status: status == 'creating' ? 'unconfirmed' : status)
+    raise
+  end
+
+  # O id que a tentativa já tinha gravado, se a campanha ainda existe. Apagada ou arquivada no Gerenciador: nil, e o
+  # recriar decide.
+  def stored_campaign(record)
+    alive = @undo.alive?(record.campaign_id)
+    raise Crm::MetaAds::Creation::Error.new('meta_unavailable', nothing_created: false) if alive.nil?
+
+    record.campaign_id if alive
+  end
+
+  # Nada da tentativa na Meta: só o recriar cria de novo (com a Auditoria); sem ele, continua não confirmada.
+  def nothing_found!(record, status, recreate)
+    raise unconfirmed_error unless recreate
+
+    audit_recreate!(record)
   rescue StandardError
     record.update!(status: status == 'creating' ? 'unconfirmed' : status)
     raise

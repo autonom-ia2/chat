@@ -367,7 +367,12 @@ botão de WhatsApp e post impulsionado não levam ao site: o campo não vai
   "não confirmada" são os do criar (a marca no fim do nome acha a campanha). A
   cópia não confirmada a pessoa refaz pela tela (#2804): confere no Gerenciador
   e toca em "Não está no Gerenciador, criar de novo" (`recreate_unconfirmed`,
-  mesma chave, na Auditoria). A cópia tem orçamento próprio, igual ao do original;
+  mesma chave, na Auditoria). Se a campanha da tentativa aparecer na Meta, ela é
+  adotada: a mesma chave completa o grupo e o anúncio que faltarem e nunca a
+  apaga, nem no recriar. Cada recriar usa uma marca nova no nome (a chave mais
+  quantas vezes foi recriada), e a Auditoria guarda a antiga. Com a cópia de
+  foto ou texto novos ligada e o original ativo, a gestão traz `active_copy`, e
+  o "Pausar o original" continua na tela depois de recarregar. A cópia tem orçamento próprio, igual ao do original;
   copiar só o anúncio dividiria o dinheiro do grupo. A confirmação diz o valor
   por extenso, e o "Ativar" da cópia fica ali mesmo. Original que já terminou
   não é copiado (`invalid_dates`). Confirmar na chamada real o `start_time` do

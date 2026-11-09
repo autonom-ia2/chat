@@ -155,22 +155,33 @@ class Crm::MetaAds::Creation::Copy
     @attempt.rollback!(record, Crm::MetaAds::Creation::Error.new('meta_refused'), unknown: @campaign_unknown)
   end
 
-  # A cópia adotada nunca é apagada: a falha deixa a tentativa não confirmada, e a mesma chave continua dela.
+  # A cópia adotada nunca é apagada: a falha deixa a tentativa não confirmada, e a tela mostra o cartão de conferir no
+  # Gerenciador; o recriar (ou a mesma chave) continua dela.
   def keep_adopted!(record, error)
     code = error.is_a?(Crm::MetaAds::Creation::Error) ? error.code : 'meta_refused'
     record.update!(status: 'unconfirmed', error_code: code)
-    Crm::MetaAds::Creation::Error.new(code, nothing_created: false)
+    Crm::MetaAds::Creation::Error.new('unconfirmed', nothing_created: false, attempt_key: record.idempotency_key)
   end
 
   # Na cópia adotada, o grupo ou o anúncio podem já existir (a resposta se perdeu depois de a Meta criar): usa o que achar.
+  # Mais de um e nenhum com o nome da cópia: não adivinha (`unconfirmed`).
   def found!(record, column)
     return unless @adopted && record.public_send(column).blank?
 
     result = yield
     raise Crm::MetaAds::Creation::Error.from_result(result, nothing_created: false) unless result.ok
 
-    id = Array(result.data['data']).filter_map { |row| row['id'].presence }.first
-    record.update!(column => id.to_s) if id
+    row = only_row(Array(result.data['data']).select { |item| item['id'].present? }, record.name)
+    record.update!(column => row['id'].to_s) if row
+  end
+
+  def only_row(rows, name)
+    return rows.first unless rows.many?
+
+    named = rows.select { |row| row['name'] == name }
+    raise Crm::MetaAds::Creation::Error.new('unconfirmed', nothing_created: false) unless named.one?
+
+    named.first
   end
 
   # O desfazer apaga a campanha; o criativo novo não vai junto. O do original nunca é apagado. Sem conseguir, ele fica
@@ -188,7 +199,7 @@ class Crm::MetaAds::Creation::Copy
     else
       record.update!(creative_id: source.creative_id)
     end
-    found!(record, :ad_id) { client.ads_of(record.adset_id) }
+    found!(record, :ad_id) { client.ads_of(record.adset_id, fields: 'name,effective_status') }
     create_ad!(record) if record.ad_id.blank?
     record.update!(updated_at: Time.current)
   end

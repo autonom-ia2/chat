@@ -76,14 +76,14 @@ module Meta::AdsGraphClient::Creation
     get(ad_id.to_s, fields: AD_BUDGET_FIELDS)
   end
 
-  # Anúncios de um grupo ou de uma campanha, só com a situação de entrega.
-  def ads_of(object_id)
-    paged("#{object_id}/ads", fields: 'effective_status')
+  # Anúncios de um grupo ou de uma campanha, só com a situação de entrega (a cópia adotada pede também o nome, #2804).
+  def ads_of(object_id, fields: 'effective_status')
+    paged("#{object_id}/ads", fields: fields)
   end
 
   # Grupos de uma campanha (#2804): a cópia achada na Meta continua de onde parou, sem copiar o grupo de novo.
   def adsets_of(campaign_id)
-    paged("#{campaign_id}/adsets", fields: 'effective_status')
+    paged("#{campaign_id}/adsets", fields: 'name,effective_status')
   end
 
   # Cópia pausada de uma campanha ou de um grupo (#2778, Fluxo 5) → { copied_campaign_id } ou { copied_adset_id }.

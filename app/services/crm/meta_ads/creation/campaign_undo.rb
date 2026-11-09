@@ -34,12 +34,6 @@ class Crm::MetaAds::Creation::CampaignUndo
            .where("audited_changes ->> 'idempotency_key' = ?", record.idempotency_key).count
   end
 
-  # A campanha desta tentativa: o nome termina com a marca. A cópia (#2778) não escolhe o nome inteiro: a Meta junta o
-  # nome da campanha de origem com o fim que a cópia pede (Crm::MetaAds::Creation::Copy), e esse fim leva a marca.
-  def self.marked?(campaign_name, record)
-    campaign_name.to_s.end_with?(" [#{mark(record)}]")
-  end
-
   def initialize(client, ad_account_id)
     @client = client
     @ad_account_id = ad_account_id
@@ -56,14 +50,26 @@ class Crm::MetaAds::Creation::CampaignUndo
     ids.empty? ? :none : remove(ids)
   end
 
-  # Ids das campanhas vivas com a marca desta tentativa; nil quando a Meta não respondeu.
+  # Ids das campanhas vivas com a marca desta tentativa; nil quando a Meta não respondeu. O nome termina com a marca (a
+  # cópia, #2778, não escolhe o nome inteiro: a Meta junta o nome da origem com o fim que a cópia pede, e esse fim leva a
+  # marca). A marca sai uma vez só por busca.
   def live_campaigns(record)
-    result = @client.campaigns_named(@ad_account_id, self.class.mark(record))
+    mark = self.class.mark(record)
+    result = @client.campaigns_named(@ad_account_id, mark)
     return unless result.ok
 
     Array(result.data['data']).filter_map do |campaign|
-      campaign['id'].to_s if self.class.marked?(campaign['name'], record) && GONE_STATUSES.exclude?(campaign['effective_status'])
+      campaign['id'].to_s if campaign['name'].to_s.end_with?(" [#{mark}]") && GONE_STATUSES.exclude?(campaign['effective_status'])
     end
+  end
+
+  # A campanha ainda existe e não foi apagada nem arquivada: true/false; nil quando a Meta não respondeu.
+  def alive?(id)
+    result = @client.object_status(id)
+    return false if !result.ok && result.missing_object?
+    return unless result.ok
+
+    GONE_STATUSES.exclude?(result.data['effective_status'])
   end
 
   private

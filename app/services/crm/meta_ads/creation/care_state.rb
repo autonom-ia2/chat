@@ -24,6 +24,7 @@ class Crm::MetaAds::Creation::CareState
 
   def self.forget(account_id, ad_id)
     Redis::Alfred.delete(cache_key(account_id, ad_id))
+    Redis::Alfred.delete(Crm::MetaAds::Creation::ActiveCopy.cache_key(account_id, ad_id))
   end
 
   def initialize(connection)

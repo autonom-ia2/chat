@@ -189,10 +189,12 @@ const copyChanged = status => {
 const pauseDialog = ref(null);
 const replacementName = computed(() => {
   if (props.originalStatus !== 'ACTIVE') return '';
-  if (copy.value && fromSwap.value) {
-    return copyGestao.value?.status === 'ACTIVE' ? copy.value.name : '';
+  // A cópia desta vez, ligada; senão, a que a gestão diz que está ligada (pode ser outra, de antes).
+  if (copy.value && fromSwap.value && copyGestao.value?.status === 'ACTIVE') {
+    return copy.value.name;
   }
-  return props.activeCopy?.name || '';
+  const other = props.activeCopy;
+  return other && other.ad_id !== copy.value?.ad_id ? other.name : '';
 });
 const showPauseOriginal = computed(() => Boolean(replacementName.value));
 const pauseOriginal = async () => {
