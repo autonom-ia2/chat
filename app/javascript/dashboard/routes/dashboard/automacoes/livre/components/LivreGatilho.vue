@@ -5,6 +5,7 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import LivreDuracao from './LivreDuracao.vue';
 import LivreSelecao from './LivreSelecao.vue';
+import { mostraNaFrequencia } from '../recorrente';
 
 // #2499 — o gatilho no "Alterar": o seletor, agrupado quando há mais de um
 // grupo (conversa e mensagem, card do funil), e o que o gatilho escolhido pede
@@ -54,13 +55,9 @@ const pedePeca = (item, peca) =>
 
 const entrada = computed(() => entradaDo(props.modelValue?.tipo));
 const pede = peca => pedePeca(entrada.value, peca);
-// O dia da semana só no semanal; o do mês, só no mensal.
-const DIA_DA_FREQUENCIA = { dia_da_semana: 'semanal', dia_do_mes: 'mensal' };
 const parametros = computed(() =>
-  (entrada.value?.parametros || []).filter(
-    parametro =>
-      !DIA_DA_FREQUENCIA[parametro.nome] ||
-      DIA_DA_FREQUENCIA[parametro.nome] === props.modelValue?.frequencia
+  (entrada.value?.parametros || []).filter(parametro =>
+    mostraNaFrequencia(parametro.nome, props.modelValue?.frequencia)
   )
 );
 // O aviso de mover a etapa vale para "entrou" e "saiu da etapa". O "parado na
@@ -68,10 +65,16 @@ const parametros = computed(() =>
 const deEtapa = computed(() => pede('etapa') && !pede('dias'));
 const avisoDeTempo = computed(() => {
   if (pede('antes')) return 'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_LEMBRETE';
-  if (pede('frequencia'))
+  if (pede('frequencia')) {
+    // G39: o "uma vez só" não tem dia 29 a 31 nem vez anterior.
+    if (props.modelValue?.frequencia === 'uma_vez')
+      return pede('selecao')
+        ? 'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_UMA_VEZ'
+        : 'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_UMA_VEZ_CONTA';
     return pede('selecao')
       ? 'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO'
       : 'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_CONTA';
+  }
   if (pede('campo')) return 'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_DATA';
   if (pede('dias')) return 'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_PARADO';
   return null;
@@ -100,7 +103,7 @@ const quando = computed(() =>
     label: t(`AUTOMACAO_LIVRE.QUANDO_DA_DATA.${valor.toUpperCase()}`),
   }))
 );
-const FREQUENCIAS = ['diaria', 'semanal', 'mensal'];
+const FREQUENCIAS = ['diaria', 'semanal', 'mensal', 'uma_vez'];
 const frequencias = computed(() =>
   FREQUENCIAS.map(valor => ({
     value: valor,
@@ -221,12 +224,13 @@ const trocarTipo = tipo => {
   emit('update:modelValue', filtros ? { ...novo, filtros } : novo);
 };
 // Trocar a frequência troca o dia que ela pede: segunda no semanal, dia 1 no
-// mensal; o diário não pede dia.
+// mensal; o diário não pede dia, e o "uma vez" espera a pessoa escolher a data.
 const DIA_PADRAO = { semanal: { dia_da_semana: 1 }, mensal: { dia_do_mes: 1 } };
 const trocarFrequencia = frequencia => {
   const {
     dia_da_semana: _semana,
     dia_do_mes: _mes,
+    data: _data,
     ...resto
   } = props.modelValue || {};
   emit('update:modelValue', {
@@ -322,6 +326,15 @@ const mudar = (nome, valor) => {
         :aria-label="$t(parametro.frase)"
         :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
         :options="diasDoMes"
+        @update:model-value="valor => mudar(parametro.nome, valor)"
+      />
+      <Input
+        v-else-if="parametro.peca === 'data'"
+        :model-value="modelValue?.data ?? ''"
+        type="date"
+        class="w-44"
+        :aria-label="$t(parametro.frase)"
+        data-gatilho-data
         @update:model-value="valor => mudar(parametro.nome, valor)"
       />
       <LivreSelecao

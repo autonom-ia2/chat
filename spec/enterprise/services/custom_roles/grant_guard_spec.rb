@@ -27,6 +27,15 @@ RSpec.describe CustomRoles::GrantGuard do
     expect(described_class.new(actor: membership.reload).reach?(%w[crm_manage_cards])).to be(false)
   end
 
+  # #1430: a chave de ferramentas é de delegação. Ter a chave não basta para entregá-la; precisa de grant_above_own.
+  it 'não deixa quem tem a chave de ferramentas entregá-la sem grant_above_own' do
+    give_giver(%w[autonomia_tools_manage autonomia_view custom_role_manage])
+    expect(described_class.new(actor: membership.reload).reach?(%w[autonomia_tools_manage])).to be(false)
+
+    give_giver(%w[autonomia_tools_manage autonomia_view custom_role_manage grant_above_own])
+    expect(described_class.new(actor: membership.reload).reach?(%w[autonomia_tools_manage])).to be(true)
+  end
+
   it 'continua negando chave que quem dá não tem' do
     give_giver(%w[crm_view custom_role_manage])
 

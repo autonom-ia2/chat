@@ -12,6 +12,7 @@ import CrmBookingPagesAPI from 'dashboard/api/crmBookingPages';
 // reunião, e "quem atende a reunião" no "avisar", só nos gatilhos de reunião.
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
+    locale: { value: 'pt_BR' },
     t: (chave, valores) =>
       valores ? `${chave} ${Object.values(valores).join(' ')}` : chave,
   }),

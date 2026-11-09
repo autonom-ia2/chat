@@ -2,7 +2,12 @@
 import { computed } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import PermissionRow from './PermissionRow.vue';
-import { LEVELS, getLevel, hasAccess } from '../permissionMatrix';
+import {
+  LEVELS,
+  getLevel,
+  hasAccess,
+  levelLabelKey,
+} from '../permissionMatrix';
 
 const props = defineProps({
   group: { type: Object, required: true },
@@ -28,7 +33,7 @@ const withAccess = computed(() =>
 
 const levelLabel = module => {
   const level = getLevel(module, props.permissions);
-  return level === LEVELS.NONE ? '' : level.toUpperCase();
+  return level === LEVELS.NONE ? '' : levelLabelKey(module, level);
 };
 </script>
 
@@ -82,7 +87,7 @@ const levelLabel = module => {
                 {{ $t(`CUSTOM_ROLE.MATRIX.MODULES.${module.key}.NAME`) }}
               </span>
               <span class="font-semibold text-n-blue-11">
-                {{ $t(`CUSTOM_ROLE.MATRIX.LEVELS.${levelLabel(module)}`) }}
+                {{ $t(levelLabel(module)) }}
               </span>
             </span>
           </span>

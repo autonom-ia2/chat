@@ -44,6 +44,7 @@ const CHAVES_DA_RECOLHIDA = [
   'posts_manage',
   'inbox_manage',
   'autonomia_manage',
+  'autonomia_tools_manage',
   'automation_manage',
   'label_manage',
   'macro_manage',
@@ -274,6 +275,8 @@ const MENU = [
   ['CAMPAIGNS', 'CAMPANHAS'],
   ['META_ADS', 'ANUNCIOS'],
   ['AUTONOMIA', 'ROBOS'],
+  // #1430: as ferramentas moram na página do robô, não em Configurações.
+  ['AUTONOMIA_TOOLS', 'ROBOS'],
   ['INSURANCE', 'COTACOES'],
   ['REPORTS', 'RELATORIOS'],
   ['DESEMPENHO', 'RELATORIOS'],

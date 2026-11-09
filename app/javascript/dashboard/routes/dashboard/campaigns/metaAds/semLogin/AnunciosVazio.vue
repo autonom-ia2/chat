@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
-import { SEM_LOGIN, phoneLabel } from './anunciosSemLogin';
+import { telefoneParaLer } from 'dashboard/helper/telefoneParaLer';
+import { SEM_LOGIN } from './anunciosSemLogin';
 
 // Anúncios sem login (#1960), tela "pronto": o WhatsApp oficial está pronto, mas ninguém veio de anúncio em 90
 // dias. Diz que o resultado aparece aqui e oferece o exemplo. Quem já anuncia para fora do WhatsApp (site, perfil,
@@ -14,7 +15,7 @@ const props = defineProps({
 const emit = defineEmits(['example', 'connect']);
 
 const phone = computed(() =>
-  props.inboxes.length === 1 ? phoneLabel(props.inboxes[0].phone) : null
+  props.inboxes.length === 1 ? telefoneParaLer(props.inboxes[0].phone) : null
 );
 
 const readyText = computed(() => {

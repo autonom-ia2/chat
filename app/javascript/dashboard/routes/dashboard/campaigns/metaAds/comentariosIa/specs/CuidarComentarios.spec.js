@@ -468,6 +468,33 @@ describe('CuidarComentarios (#2212)', () => {
     );
   });
 
+  it('#2307 · privado que a Meta recusou por permissão da Página: em "Esperando você", dizendo que a Meta não deixou', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({
+        care: 'on',
+        network: 'facebook',
+        private_available: true,
+        para_quem: 'Quem pedir o e-book',
+        to_see: [
+          {
+            id: 'c-1',
+            network: 'facebook',
+            author: 'Carla',
+            text: 'Quanto custa?',
+            kind: 'no_permission',
+          },
+        ],
+      }),
+    });
+    const wrapper = await montar();
+
+    expect(
+      wrapper.find('[data-ia-to-see-row="no_permission"]').text()
+    ).toContain(
+      'A Meta não deixou mandar este privado pela Página: responda no comentário.'
+    );
+  });
+
   const falhaCom = (status, error) =>
     Object.assign(new Error('x'), { response: { status, data: { error } } });
 

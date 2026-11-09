@@ -42,6 +42,15 @@ RSpec.describe Crm::MetaCapi::WebsiteSignalResolver do
     expect(described_class.resolve(card)).to eq(newer)
   end
 
+  # #2799: same cut as the WhatsApp click (#2738): a click after the sale did not bring it.
+  it 'only counts the clicks made up to the given instant' do
+    click(conversation: conversation, meta_signals: signals, created_at: 2.hours.ago)
+    click(conversation: conversation, meta_signals: signals.merge('fbc' => 'fb.1.1759660000000.AFTER'), created_at: 10.minutes.ago)
+
+    expect(described_class.resolve(card, up_to: 1.hour.ago)).to eq(signals)
+    expect(described_class.resolve(card, up_to: 3.hours.ago)).to eq({})
+  end
+
   it 'ignores clicks of conversations that are not on the card' do
     click(conversation: other_conversation, meta_signals: signals)
 
