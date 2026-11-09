@@ -174,9 +174,11 @@ class Autonomia::Automacao::PassoDeMensagem
   end
 
   # A janela da conversa onde a mensagem vai sair. O "escrever" pergunta antes da IA, ainda na conversa do número antigo:
-  # com o número trocado (G43), vale a do número novo, e a conversa que ainda vai ser aberta não tem mensagem do cliente.
+  # com o número trocado (G43), vale a do número novo, nas duas perguntas (a janela oficial e o WhatsApp API da caixa
+  # híbrida), e a conversa que ainda vai ser aberta não tem mensagem do cliente.
   def janela_aberta?
-    ::Conversations::MessageWindowService.new(conversa_do_envio, automatic: true).can_reply? || @conversa.whatsapp_api_reply?
+    destino = conversa_do_envio
+    ::Conversations::MessageWindowService.new(destino, automatic: true).can_reply? || destino.whatsapp_api_reply?
   end
 
   def conversa_do_envio

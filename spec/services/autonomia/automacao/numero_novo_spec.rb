@@ -206,6 +206,37 @@ RSpec.describe Autonomia::Automacao::NumeroNovo, :automacao_motor do
         expect(registros(execucao)).to eq([%w[recado falhou fora_da_janela]])
         expect(Autonomia::Automacao::PassoDeEscrever).not_to have_received(:consulta)
       end
+
+      # A janela oficial do número antigo está aberta (o cliente escreveu há 1 hora), então ali o WhatsApp API não responde;
+      # no número novo a janela oficial está fechada e o WhatsApp API da caixa híbrida responde. As duas perguntas do
+      # "escrever" são do número novo, onde a mensagem vai sair.
+      context 'with a caixa híbrida pronta (WAHA)' do
+        around { |exemplo| with_modified_env(WHATSAPP_HYBRID_ACCOUNT_IDS: account.id.to_s) { exemplo.run } }
+
+        before do
+          canal = whatsapp.inbox.channel
+          WhatsappHybrid::Connection.create!(
+            account: account, inbox: whatsapp.inbox, session_name: "hybrid-#{SecureRandom.hex(3)}", status: 'connected',
+            connected_phone: canal.phone_number.delete('^0-9'), risk_accepted_at: Time.current, status_checked_at: Time.current
+          )
+          WhatsappHybrid::Config.forget_inbox(whatsapp.inbox.id)
+        end
+
+        it 'o "escrever" chama a IA e o texto sai na conversa do número novo', :aggregate_failures do
+          account.enable_features!('automacao_ia')
+          escrever = { 'id' => 'recado', 'tipo' => 'escrever', 'destino' => 'mensagem', 'instrucao' => 'Retome o contato.' }
+          ia = instance_double(Autonomia::Automacao::PassoDeIa, perguntar: [{ 'texto' => 'Oi Bruno, retomando o contato.' }, {}])
+          allow(Autonomia::Automacao::PassoDeIa).to receive(:new).and_return(ia)
+
+          execucao = rodar([escrever], whatsapp)
+          nova = Conversation.joins(:contact_inbox).find_by!(contact_inboxes: { source_id: '5511988880000' })
+
+          expect(registros(execucao)).to eq([['recado', 'ok', nil]])
+          expect(nova.whatsapp_api_reply?).to be(true)
+          expect(nova).to have_attributes(inbox_id: whatsapp.inbox.id, contact_id: contato.id)
+          expect(nova.messages.outgoing.sole.content).to eq('Oi Bruno, retomando o contato.')
+        end
+      end
     end
 
     # O contato com dois números (o merge guardou o outro no telefone) escreve do número da conversa: a resposta volta a ele.

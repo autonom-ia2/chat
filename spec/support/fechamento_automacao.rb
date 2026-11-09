@@ -144,6 +144,33 @@ module FechamentoAutomacao::Lacunas
       montado.corpo&.dig('custom_attributes', 'revisao') == Time.current.utc.to_date.advance(months: 6).iso8601
   end
 
+  # G43: o número da conversa morreu (a última mensagem da empresa nela falhou) e o telefone do contato é outro; o passo
+  # "mensagem" manda na conversa do número novo, na mesma caixa. No SMS, que não tem janela. Roda na transação do
+  # exemplo, que desfaz tudo; o envio ao canal só fica na fila.
+  def mensagem_vai_ao_numero_novo?
+    account = FactoryBot.create(:account)
+    caixa = FactoryBot.create(:channel_sms, account: account).inbox
+    contato = FactoryBot.create(:contact, account: account, phone_number: '+5511900000043')
+    conversa = conversa_com_o_numero_morto(caixa, contato)
+    contato.update!(phone_number: '+5511988880043')
+    automacao = FactoryBot.create(:autonomia_automacao, account: account,
+                                                        ligada_por: FactoryBot.create(:user, account: account, role: :administrator))
+    execucao = FactoryBot.create(:autonomia_automacao_execucao, automacao: automacao, alvo: conversa,
+                                                                versao: FactoryBot.create(:autonomia_automacao_versao, automacao: automacao))
+    passo = { 'id' => 'sonda', 'tipo' => 'mensagem', 'texto' => ['Sonda G43'] }
+    Autonomia::Automacao::PassoDeMensagem.new(execucao: execucao, passo: passo, alvo: conversa).executar
+    novo = ContactInbox.find_by(inbox: caixa, contact: contato, source_id: '+5511988880043')
+    novo.present? && Message.exists?(conversation: novo.conversations, message_type: :outgoing, content: 'Sonda G43')
+  end
+
+  def conversa_com_o_numero_morto(caixa, contato)
+    antigo = FactoryBot.create(:contact_inbox, inbox: caixa, contact: contato, source_id: contato.phone_number)
+    conversa = FactoryBot.create(:conversation, account: caixa.account, inbox: caixa, contact: contato, contact_inbox: antigo)
+    FactoryBot.create(:message, conversation: conversa, account: caixa.account, inbox: caixa, message_type: :outgoing,
+                                content: 'Sonda G43, antes', status: :failed)
+    conversa
+  end
+
   SONDAS = {
     # O modelo aprovado entrou como campo do passo "mensagem" (F4b, #2468/#2586), não como passo próprio.
     'G1' => -> { campo_do_passo?('mensagem', 'modelo') },
@@ -224,7 +251,7 @@ module FechamentoAutomacao::Lacunas
     'G42' => -> { Autonomia::Automacao::EnviosDaExecucao.method_defined?(:dados) },
     # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7),
     # só quando o número da conversa morreu (a última mensagem da empresa nela falhou).
-    'G43' => -> { ::Autonomia::Automacao::NumeroNovo.respond_to?(:numero_morto?) },
+    'G43' => -> { mensagem_vai_ao_numero_novo? },
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
     # (passo 2, "manda por e-mail o mesmo conteúdo").
     'G53' => nil,
