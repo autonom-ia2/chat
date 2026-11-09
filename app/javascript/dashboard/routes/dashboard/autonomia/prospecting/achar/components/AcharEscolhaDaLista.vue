@@ -19,11 +19,11 @@ const NS = 'PROSPECTING_ACHAR.FOLHA';
 const campoId = useId();
 
 const numeros = lista =>
-  t(`${NS}.NUMEROS_LISTA`, {
-    empresas: lista.empresas,
-    whatsapp: lista.whatsapp,
-    email: lista.email,
-  });
+  t(
+    `${NS}.NUMEROS_LISTA`,
+    { empresas: lista.empresas, whatsapp: lista.whatsapp, email: lista.email },
+    lista.empresas
+  );
 
 const opcoes = computed(() => [
   { value: LISTA_NOVA, label: t(`${NS}.LISTA_NOVA`) },

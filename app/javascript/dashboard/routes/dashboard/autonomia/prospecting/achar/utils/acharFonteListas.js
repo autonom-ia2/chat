@@ -19,8 +19,9 @@ export const daLista = (item = {}) => ({
   whatsapp: item.whatsapp || 0,
   email: item.email || 0,
   noCrm: item.in_crm || 0,
-  chamadas: item.called || 0,
   enviada: item.locked === true,
+  // Dos leads pedidos (empresaIds), os que já estão nesta lista.
+  jaNaLista: item.already_lead_ids || [],
 });
 
 export const doMembro = (item = {}) => ({
@@ -31,7 +32,6 @@ export const doMembro = (item = {}) => ({
   whatsapp: item.whatsapp === true,
   email: item.email === true,
   noCrm: item.in_crm === true,
-  chamada: item.called === true,
   leadId: item.lead_id || null,
 });
 
@@ -49,19 +49,31 @@ const recusa = (erro, nome) => {
   });
 };
 
+// Uma página das listas, da mais nova para a mais velha; temMais diz se há
+// outra página (o servidor pagina de 25 em 25).
 export const listasDaApi = api => ({
-  async listas() {
-    const { data } = await api.getAudiences({ page: 1 });
-    return (data.payload || []).map(daLista);
+  async listas(pagina = 1, { empresaIds = [] } = {}) {
+    const { data } = await api.getAudiences({
+      page: pagina,
+      leadIds: empresaIds,
+    });
+    return {
+      listas: (data.payload || []).map(daLista),
+      temMais: data.meta?.has_more === true,
+    };
   },
-  async lista(id, pagina = 1) {
-    const { data } = await api.getAudience(id, { page: pagina });
+  // As empresas vêm por cursor: depois é a linha (row_number) da última
+  // empresa já mostrada. Tirar alguém da página aberta não faz a próxima pular
+  // ninguém, como faria um número de página.
+  async lista(id, { depois = null } = {}) {
+    const { data } = await api.getAudience(id, depois ? { after: depois } : {});
     const payload = data.payload || {};
     return {
       lista: daLista(payload),
       membros: (payload.members || []).map(doMembro),
       total: data.meta?.total_count || 0,
-      porPagina: data.meta?.per_page || 25,
+      depois: data.meta?.next_after ?? null,
+      temMais: data.meta?.has_more === true,
     };
   },
   async acrescentarNaLista({ listaId, ids }) {
@@ -104,9 +116,18 @@ export const listasDaApi = api => ({
       throw recusa(erro, 'devolver');
     }
   },
+  // deFora: quantos da original não foram para a cópia (pediram para não
+  // receber ou ficaram sem telefone e sem e-mail desde então).
   async copiarLista(listaId) {
-    const { data } = await api.copyAudience(listaId);
-    return daLista(data.payload);
+    try {
+      const { data } = await api.copyAudience(listaId);
+      return {
+        lista: daLista(data.payload),
+        deFora: (data.payload?.skipped_contact_ids || []).length,
+      };
+    } catch (erro) {
+      throw recusa(erro, 'copiar');
+    }
   },
   async listasDaEmpresa(empresaId) {
     const { data } = await api.getLeadAudiences(empresaId);
@@ -130,8 +151,8 @@ export const listasDaDemo = ({
     async listas() {
       const demo = await dados();
       if (estado === 'listas-erro') throw falha();
-      if (estado === 'listas-vazio') return [];
-      return demo.LISTAS.map(daLista);
+      if (estado === 'listas-vazio') return { listas: [], temMais: false };
+      return { listas: demo.LISTAS.map(daLista), temMais: false };
     },
     async lista(id) {
       const demo = await dados();
@@ -141,7 +162,8 @@ export const listasDaDemo = ({
         lista: daLista(item),
         membros: demo.MEMBROS.map(doMembro),
         total: demo.MEMBROS.length,
-        porPagina: 25,
+        depois: null,
+        temMais: false,
       };
     },
     async acrescentarNaLista({ listaId, ids }) {
@@ -166,12 +188,13 @@ export const listasDaDemo = ({
       const demo = await dados();
       await esperar(atraso);
       const item = demo.LISTAS.find(lista => lista.id === listaId) || {};
-      return daLista({
+      const lista = daLista({
         ...item,
         id: demo.COPIA_ID,
         name: `${item.name} (cópia)`,
         locked: false,
       });
+      return { lista, deFora: 0 };
     },
     async listasDaEmpresa() {
       const demo = await dados();

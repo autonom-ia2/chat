@@ -4,7 +4,10 @@ import { ref, watch } from 'vue';
 // grava na hora e deixa "Saiu da lista X · Desfazer"; o Desfazer devolve a
 // empresa à mesma linha da lista (o servidor só devolve quem foi tirado).
 // Lista já enviada não oferece "Tirar" (ela não muda mais). Falha ao ler não
-// mostra nada; falha ao tirar ou desfazer mostra a frase de erro.
+// mostra nada; falha ao tirar ou desfazer mostra a frase de erro. A lista que
+// virou "já enviada" com a gaveta aberta diz isso e a gaveta relê as listas
+// (a enviada volta sem "Tirar").
+const LISTA_ENVIADA = 'prospecting.audience.audience_locked';
 export function useListasDaEmpresa({ fonte, empresaId, podeLista }) {
   const listas = ref([]);
   const saida = ref(null);
@@ -24,6 +27,15 @@ export function useListasDaEmpresa({ fonte, empresaId, podeLista }) {
   };
   watch([empresaId, podeLista], carregar, { immediate: true });
 
+  const falhou = async (erroDaFonte, chave) => {
+    if (erroDaFonte?.codigo !== LISTA_ENVIADA) {
+      erro.value = chave;
+      return;
+    }
+    await carregar();
+    erro.value = 'ENVIADA';
+  };
+
   const tirar = async lista => {
     ocupado.value = true;
     erro.value = null;
@@ -34,8 +46,8 @@ export function useListasDaEmpresa({ fonte, empresaId, podeLista }) {
       });
       listas.value = listas.value.filter(item => item.id !== lista.id);
       saida.value = { lista, contatoIds: tirados };
-    } catch {
-      erro.value = 'TIRAR';
+    } catch (erroDaFonte) {
+      await falhou(erroDaFonte, 'TIRAR');
     } finally {
       ocupado.value = false;
     }
@@ -49,8 +61,8 @@ export function useListasDaEmpresa({ fonte, empresaId, podeLista }) {
       await fonte.value.devolverNaLista({ listaId: lista.id, contatoIds });
       listas.value = [...listas.value, lista];
       saida.value = null;
-    } catch {
-      erro.value = 'DESFAZER';
+    } catch (erroDaFonte) {
+      await falhou(erroDaFonte, 'DESFAZER');
     } finally {
       ocupado.value = false;
     }

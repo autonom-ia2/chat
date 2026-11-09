@@ -128,12 +128,17 @@ class AutonomiaProspectingAPI extends ApiClient {
   }
 
   // "Suas listas" (#2775, F6): os Públicos da Prospecção, com os números.
-  getAudiences({ page = 1 } = {}) {
-    return axios.get(`${this.url}/audiences`, { params: { page } });
+  // leadIds: a lista diz quais desses leads já estão nela (already_lead_ids).
+  getAudiences({ page = 1, leadIds = [] } = {}) {
+    const params = leadIds.length ? { page, lead_ids: leadIds } : { page };
+    return axios.get(`${this.url}/audiences`, { params });
   }
 
-  getAudience(id, { page = 1 } = {}) {
-    return axios.get(`${this.url}/audiences/${id}`, { params: { page } });
+  // after: a linha da última empresa já mostrada (cursor das empresas).
+  getAudience(id, { after = null } = {}) {
+    return axios.get(`${this.url}/audiences/${id}`, {
+      params: after ? { after } : {},
+    });
   }
 
   addLeadsToAudience(id, { leadIds }) {

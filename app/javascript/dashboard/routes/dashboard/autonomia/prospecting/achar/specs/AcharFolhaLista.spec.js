@@ -8,6 +8,8 @@ import {
   folhaNova,
   useFolhaDaLista,
 } from '../composables/useFolhaDaLista';
+import { TEXTO_DO_ERRO } from '../composables/useDonoDaLista';
+import { foraDoPublico } from '../utils/acharConfiraEstados';
 
 // #2775 — F6, "Para qual lista?" no Guardar lista: "Lista nova" ou uma que já
 // existe, com os números; a já enviada fica desligada. Numa lista que já
@@ -104,21 +106,112 @@ describe('Guardar lista: lista nova ou uma que já existe', () => {
     wrapper.unmount();
   });
 
-  it('ao abrir a folha, as listas chegam pela fonte', async () => {
-    const fonte = { listas: vi.fn().mockResolvedValue(LISTAS) };
+  it('ao abrir a folha, as listas chegam pela fonte, com quantas das escolhidas entram', async () => {
+    const fonte = {
+      listas: vi.fn().mockResolvedValue({
+        listas: [{ ...LISTAS[0], jaNaLista: [2] }, LISTAS[1]],
+        temMais: false,
+      }),
+    };
     const { folha } = montarComposable(fonte);
 
     folha.value = folhaNova('lista');
     await flushPromises();
 
     expect(fonte.listas).toHaveBeenCalledTimes(1);
-    expect(folha.value.listas).toEqual(LISTAS);
+    expect(fonte.listas).toHaveBeenCalledWith(1, { empresaIds: [1, 2] });
+    expect(folha.value.listas.map(lista => [lista.id, lista.entram])).toEqual([
+      [4, 1],
+      [5, 2],
+    ]);
     expect(folha.value.listaId).toBe(LISTA_NOVA);
+  });
+
+  // Revisão do #2775, item 1: quem tem mais de 25 listas acha todas.
+  it('lê todas as páginas de listas até o servidor dizer que acabou', async () => {
+    const pagina = n =>
+      Array.from({ length: 25 }, (_, i) => ({
+        id: n * 100 + i,
+        nome: `L${i}`,
+      }));
+    const fonte = {
+      listas: vi
+        .fn()
+        .mockResolvedValueOnce({ listas: pagina(1), temMais: true })
+        .mockResolvedValueOnce({
+          listas: [{ id: 999, nome: 'A 26ª' }],
+          temMais: false,
+        }),
+    };
+    const { folha } = montarComposable(fonte);
+
+    folha.value = folhaNova('lista');
+    await flushPromises();
+
+    expect(fonte.listas).toHaveBeenCalledTimes(2);
+    expect(fonte.listas).toHaveBeenLastCalledWith(2, { empresaIds: [1, 2] });
+    expect(folha.value.listas).toHaveLength(26);
+    expect(folha.value.listas.at(-1)).toMatchObject({ id: 999, entram: 2 });
+  });
+
+  // Revisão do #2775, item 8: singular e plural, e o n só de quem entra.
+  it('o botão conta só quem entra, no singular e no plural', () => {
+    const uma = montarFolha({
+      listaId: 4,
+      listas: [{ ...LISTAS[0], empresas: 1, entram: 1 }, LISTAS[1]],
+    });
+    expect(uma.find('[data-principal-folha]').text()).toBe(
+      'Pôr 1 empresa na lista'
+    );
+    expect(uma.find('[data-lista-escolhida]').text()).toContain(
+      '1 empresa · 9 com WhatsApp'
+    );
+    uma.unmount();
+
+    const duas = montarFolha({
+      listaId: 4,
+      listas: [{ ...LISTAS[0], entram: 2 }, LISTAS[1]],
+    });
+    expect(duas.find('[data-principal-folha]').text()).toBe(
+      'Pôr 2 empresas na lista'
+    );
+    duas.unmount();
+
+    const nenhuma = montarFolha({
+      listaId: 4,
+      listas: [{ ...LISTAS[0], entram: 0 }, LISTAS[1]],
+    });
+    const botao = nenhuma.find('[data-principal-folha]');
+    expect(botao.text()).toBe('Essas empresas já estão nesta lista');
+    expect(botao.attributes('disabled')).toBeDefined();
+    nenhuma.unmount();
+  });
+
+  it('todas já estavam na lista (servidor): a frase própria', async () => {
+    const fonte = {
+      listas: vi.fn().mockResolvedValue({ listas: LISTAS, temMais: false }),
+      acrescentarNaLista: vi.fn().mockRejectedValue(
+        Object.assign(new Error('x'), {
+          codigo: 'prospecting.audience.all_already_in_list',
+          fora: [{ id: 1, motivo: 'already_in_list' }],
+        })
+      ),
+    };
+    const { folha, acoes } = montarComposable(fonte);
+    folha.value = { ...folhaNova('lista'), listaId: 4 };
+    await flushPromises();
+
+    await acoes.guardarDaFolha();
+
+    expect(folha.value.erro).toBe('lista_ja_estavam');
+    expect(TEXTO_DO_ERRO.lista_ja_estavam).toBe(
+      'PROSPECTING_ACHAR.FOLHA.ERRO_LISTA_JA_ESTAVAM'
+    );
   });
 
   it('guardar numa lista que já existe usa acrescentarNaLista e o pronto leva o nome dela', async () => {
     const fonte = {
-      listas: vi.fn().mockResolvedValue(LISTAS),
+      listas: vi.fn().mockResolvedValue({ listas: LISTAS, temMais: false }),
       guardarLista: vi.fn(),
       acrescentarNaLista: vi.fn().mockResolvedValue({
         publicoId: 4,
@@ -149,7 +242,7 @@ describe('Guardar lista: lista nova ou uma que já existe', () => {
 
   it('lista que passou a ser enviada no meio do caminho: a frase própria', async () => {
     const fonte = {
-      listas: vi.fn().mockResolvedValue(LISTAS),
+      listas: vi.fn().mockResolvedValue({ listas: LISTAS, temMais: false }),
       acrescentarNaLista: vi.fn().mockRejectedValue(
         Object.assign(new Error('x'), {
           codigo: 'prospecting.audience.audience_locked',
@@ -164,5 +257,24 @@ describe('Guardar lista: lista nova ou uma que já existe', () => {
     await acoes.guardarDaFolha();
 
     expect(folha.value.erro).toBe('lista_enviada');
+  });
+
+  // #2775, item 16: bloqueado (#2733) e motivo novo da régua têm frase própria.
+  it('quem ficou de fora por bloqueio ou por não poder receber ganha a frase certa', () => {
+    const t = (chave, _named, n) => `${chave}:${n}`;
+
+    expect(
+      foraDoPublico(t, [
+        { id: 1, motivo: 'blocked' },
+        { id: 2, motivo: 'unreachable' },
+        { id: 3, motivo: 'unreachable' },
+      ])
+    ).toEqual([
+      'PROSPECTING_ACHAR.PRONTO.LISTA.FORA.BLOQUEADO:1',
+      'PROSPECTING_ACHAR.PRONTO.LISTA.FORA.NAO_RECEBE:2',
+    ]);
+    expect(ptBR.PROSPECTING_ACHAR.PRONTO.LISTA.FORA.NAO_RECEBE).toContain(
+      'não pode receber mensagem'
+    );
   });
 });

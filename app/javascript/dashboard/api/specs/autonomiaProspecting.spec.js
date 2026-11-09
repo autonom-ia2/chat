@@ -153,7 +153,9 @@ describe('#AutonomiaProspectingAPI', () => {
   it('chama as rotas das listas da Prospecção', () => {
     const base = '/api/v1/accounts/85/autonomia/prospecting';
     prospecting.getAudiences({ page: 2 });
-    prospecting.getAudience(4, { page: 3 });
+    prospecting.getAudiences({ page: 1, leadIds: [7, 8] });
+    prospecting.getAudience(4, { after: 25 });
+    prospecting.getAudience(5);
     prospecting.addLeadsToAudience(4, { leadIds: [1, 2] });
     prospecting.removeFromAudience(4, { leadIds: [1] });
     prospecting.restoreToAudience(4, { contactIds: [9] });
@@ -163,8 +165,14 @@ describe('#AutonomiaProspectingAPI', () => {
     expect(axiosMock.get).toHaveBeenCalledWith(`${base}/audiences`, {
       params: { page: 2 },
     });
+    expect(axiosMock.get).toHaveBeenCalledWith(`${base}/audiences`, {
+      params: { page: 1, lead_ids: [7, 8] },
+    });
     expect(axiosMock.get).toHaveBeenCalledWith(`${base}/audiences/4`, {
-      params: { page: 3 },
+      params: { after: 25 },
+    });
+    expect(axiosMock.get).toHaveBeenCalledWith(`${base}/audiences/5`, {
+      params: {},
     });
     expect(axiosMock.post).toHaveBeenCalledWith(`${base}/audiences/4/leads`, {
       lead_ids: [1, 2],

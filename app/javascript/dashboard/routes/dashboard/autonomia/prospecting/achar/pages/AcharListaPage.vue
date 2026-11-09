@@ -43,11 +43,6 @@ const numeros = computed(() =>
         t('PROSPECTING_ACHAR.LISTAS.COM_WHATSAPP', { n: lista.value.whatsapp }),
         t('PROSPECTING_ACHAR.LISTAS.COM_EMAIL', { n: lista.value.email }),
         t('PROSPECTING_ACHAR.LISTAS.NO_FUNIL', { n: lista.value.noCrm }),
-        t(
-          'PROSPECTING_ACHAR.LISTAS.CHAMADAS',
-          { n: lista.value.chamadas },
-          lista.value.chamadas
-        ),
       ]
     : []
 );
@@ -180,7 +175,7 @@ watch(() => [route.params.listaId, demo.value], carregar);
           :rotulo="$t(enviada ? `${NS}.COPIAR` : `${NS}.ESCREVER`)"
           :icone="enviada ? 'i-lucide-copy' : 'i-lucide-send'"
           :ocupado="copiando"
-          :desabilitado="!enviada && !lista.empresas"
+          :desabilitado="copiando || (!enviada && !lista.empresas)"
           @principal="principal"
         />
         <AcharFaixaDoMenu v-if="!mostraRodape" />

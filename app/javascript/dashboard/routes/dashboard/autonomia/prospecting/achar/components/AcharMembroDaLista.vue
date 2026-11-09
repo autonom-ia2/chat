@@ -21,11 +21,6 @@ const SELOS = [
   },
   { id: 'email', chave: 'SELO_EMAIL', classe: 'bg-n-blue-3 text-n-blue-11' },
   { id: 'noCrm', chave: 'SELO_FUNIL', classe: 'bg-n-iris-3 text-n-iris-11' },
-  {
-    id: 'chamada',
-    chave: 'SELO_CHAMADA',
-    classe: 'bg-n-amber-3 text-n-amber-11',
-  },
 ];
 const selos = computed(() => SELOS.filter(selo => props.membro[selo.id]));
 const mostraEmpresa = computed(

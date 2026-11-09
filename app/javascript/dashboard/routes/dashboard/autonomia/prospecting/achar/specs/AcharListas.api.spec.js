@@ -83,7 +83,6 @@ const LISTA = {
   whatsapp: 2,
   email: 1,
   in_crm: 1,
-  called: 1,
   locked: false,
 };
 const membro = (id, extra = {}) => ({
@@ -94,24 +93,40 @@ const membro = (id, extra = {}) => ({
   whatsapp: true,
   email: false,
   in_crm: false,
-  called: false,
   lead_id: id + 100,
   ...extra,
 });
-const aberta = (extra = {}, membros = [membro(1), membro(2)]) => ({
+const aberta = (extra = {}, membros = [membro(1), membro(2)], meta = {}) => ({
   data: {
     payload: { ...LISTA, ...extra, members: membros },
-    meta: { total_count: membros.length, per_page: 25 },
+    meta: {
+      total_count: membros.length,
+      per_page: 25,
+      has_more: false,
+      ...meta,
+    },
   },
 });
+const travada = () =>
+  Object.assign(new Error('x'), {
+    response: { data: { code: 'prospecting.audience.audience_locked' } },
+  });
 
+// As páginas montadas saem no fim de cada teste: uma página esquecida
+// continuaria vigiando a rota (compartilhada) e pediria a lista de novo.
+const montadas = [];
 const montar = async pagina => {
   const wrapper = mount(pagina, { attachTo: document.body });
+  montadas.push(wrapper);
   await flushPromises();
   return wrapper;
 };
 
 describe('Suas listas e a lista aberta', () => {
+  afterEach(() => {
+    montadas.splice(0).forEach(wrapper => wrapper.unmount());
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     permissao.campanha = true;
@@ -128,6 +143,7 @@ describe('Suas listas e a lista aberta', () => {
     AutonomiaProspectingAPI.getAudiences.mockResolvedValue({
       data: {
         payload: [LISTA, { ...LISTA, id: 5, name: 'Antiga', locked: true }],
+        meta: { has_more: false },
       },
     });
 
@@ -137,8 +153,9 @@ describe('Suas listas e a lista aberta', () => {
     expect(cartoes).toHaveLength(2);
     expect(cartoes[0].find('[data-empresas]').text()).toBe('2 empresas');
     expect(cartoes[0].find('[data-numeros]').text()).toBe(
-      '2 com WhatsApp · 1 com e-mail · 1 já no funil · 1 já chamada'
+      '2 com WhatsApp · 1 com e-mail · 1 já no funil'
     );
+    expect(wrapper.find('[data-ver-mais-listas]').exists()).toBe(false);
     expect(cartoes[0].find('[data-enviada]').exists()).toBe(false);
     expect(cartoes[1].find('[data-enviada]').text()).toBe('Já enviada');
     expect(wrapper.find('[data-aba="listas"]').attributes('aria-current')).toBe(
@@ -152,6 +169,53 @@ describe('Suas listas e a lista aberta', () => {
         params: expect.objectContaining({ listaId: 4 }),
       })
     );
+  });
+
+  // Revisão do #2775, item 13: um foco de teclado só por cartão.
+  it('cada cartão tem um foco de teclado só, o "Abrir"', async () => {
+    AutonomiaProspectingAPI.getAudiences.mockResolvedValue({
+      data: { payload: [LISTA], meta: { has_more: false } },
+    });
+
+    const wrapper = await montar(AcharListasPage);
+
+    const cartao = wrapper.find('[data-lista]');
+    const focaveis = cartao.findAll('button, a[href], [tabindex]');
+    expect(focaveis).toHaveLength(1);
+    expect(focaveis[0].attributes('data-abrir-lista')).toBeDefined();
+
+    await cartao.find('[data-lista-corpo]').trigger('click');
+    expect(push).toHaveBeenCalledTimes(1);
+    await cartao.find('[data-abrir-lista]').trigger('click');
+    expect(push).toHaveBeenCalledTimes(2);
+  });
+
+  // Revisão do #2775, item 1: quem tem mais de 25 listas acha todas.
+  it('"Ver mais listas" traz a próxima página até acabar', async () => {
+    AutonomiaProspectingAPI.getAudiences
+      .mockResolvedValueOnce({
+        data: { payload: [LISTA], meta: { has_more: true } },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          payload: [{ ...LISTA, id: 26, name: 'A 26ª' }],
+          meta: { has_more: false },
+        },
+      });
+
+    const wrapper = await montar(AcharListasPage);
+    expect(wrapper.findAll('[data-lista]')).toHaveLength(1);
+
+    await wrapper.find('[data-ver-mais-listas]').trigger('click');
+    await flushPromises();
+
+    expect(AutonomiaProspectingAPI.getAudiences).toHaveBeenLastCalledWith({
+      page: 2,
+      leadIds: [],
+    });
+    expect(wrapper.findAll('[data-lista]')).toHaveLength(2);
+    expect(wrapper.text()).toContain('A 26ª');
+    expect(wrapper.find('[data-ver-mais-listas]').exists()).toBe(false);
   });
 
   it('sem gerenciar campanhas, a aba diz por que não mostra nada e não pede listas', async () => {
@@ -209,6 +273,61 @@ describe('Suas listas e a lista aberta', () => {
     expect(wrapper.findAll('[data-membro]')).toHaveLength(2);
   });
 
+  // Revisão do #2775, item 2: "Ver mais" pelo cursor, sem pular quem vem depois.
+  it('"Ver mais" pede as empresas depois da última linha, mesmo depois de tirar', async () => {
+    rota.name = 'autonomia_prospecting_achar_lista';
+    rota.params = { accountId: '1', listaId: '4' };
+    AutonomiaProspectingAPI.getAudience
+      .mockResolvedValueOnce(
+        aberta({}, [membro(1), membro(2)], {
+          total_count: 3,
+          next_after: 2,
+          has_more: true,
+        })
+      )
+      .mockResolvedValueOnce(aberta({}, [membro(3)], { total_count: 2 }));
+    AutonomiaProspectingAPI.removeFromAudience.mockResolvedValue({
+      data: { payload: { audience: LISTA, removed_contact_ids: [1] } },
+    });
+
+    const wrapper = await montar(AcharListaPage);
+    await wrapper.find('[data-tirar]').trigger('click');
+    await flushPromises();
+    await wrapper.find('[data-ver-mais]').trigger('click');
+    await flushPromises();
+
+    expect(AutonomiaProspectingAPI.getAudience).toHaveBeenLastCalledWith('4', {
+      after: 2,
+    });
+    expect(wrapper.findAll('[data-membro]').map(item => item.text())).toEqual([
+      expect.stringContaining('Pessoa 2'),
+      expect.stringContaining('Pessoa 3'),
+    ]);
+    expect(wrapper.find('[data-ver-mais]').exists()).toBe(false);
+  });
+
+  // Revisão do #2775, item 12: a lista virou "já enviada" com a tela aberta.
+  it('tirar de uma lista que virou enviada: a frase própria e a tela recarrega enviada', async () => {
+    rota.name = 'autonomia_prospecting_achar_lista';
+    rota.params = { accountId: '1', listaId: '4' };
+    AutonomiaProspectingAPI.getAudience
+      .mockResolvedValueOnce(aberta())
+      .mockResolvedValueOnce(aberta({ locked: true }));
+    AutonomiaProspectingAPI.removeFromAudience.mockRejectedValue(travada());
+
+    const wrapper = await montar(AcharListaPage);
+    await wrapper.find('[data-tirar]').trigger('click');
+    await flushPromises();
+
+    expect(useAlert).toHaveBeenCalledWith(
+      'Esta lista acabou de ser usada numa campanha enviada e não muda mais. Para mudar, crie uma cópia.'
+    );
+    expect(AutonomiaProspectingAPI.getAudience).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-aviso-enviada]').exists()).toBe(true);
+    expect(wrapper.find('[data-tirar]').exists()).toBe(false);
+    expect(wrapper.findAll('[data-membro]')).toHaveLength(2);
+  });
+
   it('a lista editável abre a Nova campanha com ela no "Criar a mensagem"', async () => {
     rota.name = 'autonomia_prospecting_achar_lista';
     rota.params = { accountId: '1', listaId: '4' };
@@ -253,6 +372,37 @@ describe('Suas listas e a lista aberta', () => {
         name: 'autonomia_prospecting_achar_lista',
         params: expect.objectContaining({ listaId: 9 }),
       })
+    );
+  });
+
+  // Revisão do #2775, itens 3 e 10: um clique duplo cria uma cópia só, e a tela
+  // diz quantas empresas não foram para a cópia.
+  it('clique duplo em "Criar uma cópia" cria uma só e diz quem ficou de fora', async () => {
+    rota.name = 'autonomia_prospecting_achar_lista';
+    rota.params = { accountId: '1', listaId: '4' };
+    AutonomiaProspectingAPI.getAudience.mockResolvedValue(
+      aberta({ locked: true })
+    );
+    let terminar;
+    AutonomiaProspectingAPI.copyAudience.mockReturnValue(
+      new Promise(resolve => {
+        terminar = resolve;
+      })
+    );
+
+    const wrapper = await montar(AcharListaPage);
+    const botao = wrapper.find('[data-rodape] button');
+    await botao.trigger('click');
+    await botao.trigger('click');
+    expect(botao.attributes('disabled')).toBeDefined();
+    terminar({
+      data: { payload: { ...LISTA, id: 9, skipped_contact_ids: [7] } },
+    });
+    await flushPromises();
+
+    expect(AutonomiaProspectingAPI.copyAudience).toHaveBeenCalledTimes(1);
+    expect(useAlert).toHaveBeenCalledWith(
+      'Pronto. A cópia foi criada sem 1 empresa que não pode mais receber mensagem.'
     );
   });
 

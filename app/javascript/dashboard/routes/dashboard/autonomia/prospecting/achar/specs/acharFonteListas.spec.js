@@ -10,14 +10,14 @@ const LISTA_DA_API = {
   whatsapp: 9,
   email: 5,
   in_crm: 3,
-  called: 2,
   locked: true,
+  already_lead_ids: [7],
 };
 
 const apiFalsa = () => ({
-  getAudiences: vi
-    .fn()
-    .mockResolvedValue({ data: { payload: [LISTA_DA_API] } }),
+  getAudiences: vi.fn().mockResolvedValue({
+    data: { payload: [LISTA_DA_API], meta: { has_more: true } },
+  }),
   getAudience: vi.fn().mockResolvedValue({
     data: {
       payload: {
@@ -31,12 +31,11 @@ const apiFalsa = () => ({
             whatsapp: true,
             email: false,
             in_crm: true,
-            called: false,
             lead_id: 3,
           },
         ],
       },
-      meta: { total_count: 1, per_page: 25 },
+      meta: { total_count: 30, per_page: 25, next_after: 25, has_more: true },
     },
   }),
   addLeadsToAudience: vi.fn().mockResolvedValue({
@@ -55,7 +54,14 @@ const apiFalsa = () => ({
     data: { payload: { audience: LISTA_DA_API } },
   }),
   copyAudience: vi.fn().mockResolvedValue({
-    data: { payload: { ...LISTA_DA_API, id: 5, locked: false } },
+    data: {
+      payload: {
+        ...LISTA_DA_API,
+        id: 5,
+        locked: false,
+        skipped_contact_ids: [8, 9],
+      },
+    },
   }),
   getLeadAudiences: vi.fn().mockResolvedValue({
     data: { payload: [{ id: 4, name: 'Padarias', locked: false }] },
@@ -71,27 +77,47 @@ describe('acharFonteListas', () => {
       whatsapp: 9,
       email: 5,
       noCrm: 3,
-      chamadas: 2,
       enviada: true,
+      jaNaLista: [7],
     });
+    // Revisão do #2775, item 4: sem número de "já chamadas".
+    expect(daLista({ ...LISTA_DA_API, called: 2 })).not.toHaveProperty(
+      'chamadas'
+    );
     expect(
-      doMembro({ contact_id: 9, row_number: 2, lead_id: null })
-    ).toMatchObject({ contatoId: 9, linha: 2, leadId: null, whatsapp: false });
+      doMembro({ contact_id: 9, row_number: 2, lead_id: null, called: true })
+    ).toEqual({
+      contatoId: 9,
+      linha: 2,
+      nome: '',
+      empresa: '',
+      whatsapp: false,
+      email: false,
+      noCrm: false,
+      leadId: null,
+    });
   });
 
   it('a fonte da API chama as rotas das listas e devolve o formato da tela', async () => {
     const api = apiFalsa();
     const fonte = criarFonte({ api, crm: {} });
 
-    expect((await fonte.listas())[0]).toMatchObject({ id: 4, enviada: true });
-    const aberta = await fonte.lista(4, 2);
-    expect(api.getAudience).toHaveBeenCalledWith(4, { page: 2 });
+    const pagina = await fonte.listas(2, { empresaIds: [7, 8] });
+    expect(api.getAudiences).toHaveBeenCalledWith({ page: 2, leadIds: [7, 8] });
+    expect(pagina.temMais).toBe(true);
+    expect(pagina.listas[0]).toMatchObject({ id: 4, enviada: true });
+
+    // Revisão do #2775, item 2: as empresas vêm pelo cursor (a última linha).
+    const aberta = await fonte.lista(4);
+    expect(api.getAudience).toHaveBeenLastCalledWith(4, {});
+    expect(aberta).toMatchObject({ total: 30, depois: 25, temMais: true });
+    await fonte.lista(4, { depois: 25 });
+    expect(api.getAudience).toHaveBeenLastCalledWith(4, { after: 25 });
     expect(aberta.membros[0]).toMatchObject({
       contatoId: 9,
       noCrm: true,
       leadId: 3,
     });
-    expect(aberta.total).toBe(1);
 
     const posta = await fonte.acrescentarNaLista({ listaId: 4, ids: [1, 2] });
     expect(api.addLeadsToAudience).toHaveBeenCalledWith(4, { leadIds: [1, 2] });
@@ -107,7 +133,9 @@ describe('acharFonteListas', () => {
 
     await fonte.devolverNaLista({ listaId: 4, contatoIds: [9] });
     expect(api.restoreToAudience).toHaveBeenCalledWith(4, { contactIds: [9] });
-    expect(await fonte.copiarLista(4)).toMatchObject({ id: 5, enviada: false });
+    const copia = await fonte.copiarLista(4);
+    expect(copia.lista).toMatchObject({ id: 5, enviada: false });
+    expect(copia.deFora).toBe(2);
     expect(await fonte.listasDaEmpresa(3)).toEqual([
       { id: 4, nome: 'Padarias', enviada: false },
     ]);
@@ -135,8 +163,9 @@ describe('acharFonteListas', () => {
       carregarDemo: async () => ({}),
       atraso: 0,
     });
-    const listas = await fonte.listas();
+    const { listas, temMais } = await fonte.listas();
 
+    expect(temMais).toBe(false);
     expect(listas.map(lista => lista.id)).toEqual(
       demoDasListas.LISTAS.map(lista => lista.id)
     );

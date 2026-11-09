@@ -276,7 +276,7 @@
       "ONDE_FICA": "It stays in Campaigns.",
       "MANDAR": "Send {n} to the pipeline",
       "MANDANDO": "Sending {feitas} of {total}…",
-      "GUARDAR": "Save {n} businesses",
+      "GUARDAR": "Save {n} business | Save {n} businesses",
       "GUARDANDO": "Saving…",
       "ESCOLHA_O_QUE": "Choose what to do",
       "NINGUEM": "None of these can receive messages",
@@ -294,11 +294,13 @@
       "DICA_FUNIL": "Choose the pipeline.",
       "QUAL_LISTA": "Which list?",
       "LISTA_NOVA": "New list",
-      "NUMEROS_LISTA": "{empresas} businesses · {whatsapp} with WhatsApp · {email} with e-mail",
+      "NUMEROS_LISTA": "{empresas} business · {whatsapp} with WhatsApp · {email} with e-mail | {empresas} businesses · {whatsapp} with WhatsApp · {email} with e-mail",
       "LISTA_ENVIADA_DICA": "Already sent. It cannot change anymore.",
       "QUEM_JA_ESTA": "Businesses already on the list are not added again",
-      "POR_NA_LISTA": "Add {n} businesses to the list",
-      "ERRO_LISTA_ENVIADA": "This list was already used in a sent campaign and cannot change. Choose another one or a new list."
+      "POR_NA_LISTA": "Add {n} business to the list | Add {n} businesses to the list",
+      "ERRO_LISTA_ENVIADA": "This list was already used in a sent campaign and cannot change. Choose another one or a new list.",
+      "TODAS_JA_ESTAO": "These businesses are already on this list",
+      "ERRO_LISTA_JA_ESTAVAM": "These businesses were already on this list."
     },
     "PARA_ONDE_PAINEL": {
       "TITULO": "Where do they go?",
@@ -330,7 +332,8 @@
           "MESMA_PESSOA": "{n} is the same person as another company on the list and went in once. | {n} are the same person as other companies on the list and went in once.",
           "SUMIU": "{n} is no longer in your list. | {n} are no longer in your list.",
           "NAO_DEU": "Could not save {n}. Try again. | Could not save {n}. Try again.",
-          "JA_ESTAVA": "{n} was already on the list and was not added again. | {n} were already on the list and were not added again."
+          "JA_ESTAVA": "{n} was already on the list and was not added again. | {n} were already on the list and were not added again.",
+          "NAO_RECEBE": "{n} cannot receive messages and was left out. | {n} cannot receive messages and were left out."
         }
       },
       "NENHUMA_NOVA": "No new company entered the {funil} pipeline.",
@@ -451,7 +454,8 @@
       "TIRAR": "Remove",
       "SAIU": "Removed from the list {nome}.",
       "ERRO_TIRAR": "Could not remove it from the list. Try again.",
-      "ERRO_DESFAZER": "Could not undo. Try again."
+      "ERRO_DESFAZER": "Could not undo. Try again.",
+      "ERRO_ENVIADA": "This list was already used in a sent campaign and can no longer change."
     },
     "ABAS": {
       "ROTULO": "Searches and lists",
@@ -468,7 +472,8 @@
       "COM_WHATSAPP": "{n} with WhatsApp",
       "COM_EMAIL": "{n} with e-mail",
       "NO_FUNIL": "{n} already in the pipeline",
-      "CHAMADAS": "{n} already called | {n} already called"
+      "VER_MAIS": "Show more lists",
+      "ERRO_VER_MAIS": "Could not load more lists."
     },
     "LISTA": {
       "VOLTAR": "Your lists",
@@ -489,7 +494,8 @@
       "SELO_WHATSAPP": "WhatsApp",
       "SELO_EMAIL": "E-mail",
       "SELO_FUNIL": "In the pipeline",
-      "SELO_CHAMADA": "Already called"
+      "ERRO_ENVIADA": "This list was just used in a sent campaign and can no longer change. To change it, create a copy.",
+      "COPIADA_COM_FORA": "Done. The copy was created without {n} business that can no longer receive messages. | Done. The copy was created without {n} businesses that can no longer receive messages."
     }
   }
 }

@@ -13,7 +13,6 @@ export const LISTAS = [
     whatsapp: 9,
     email: 5,
     in_crm: 3,
-    called: 2,
     locked: false,
   },
   {
@@ -23,7 +22,6 @@ export const LISTAS = [
     whatsapp: 6,
     email: 2,
     in_crm: 1,
-    called: 1,
     locked: true,
   },
 ];
@@ -38,7 +36,6 @@ const MEMBRO = (linha, nome, empresa, extra = {}) => ({
   whatsapp: true,
   email: false,
   in_crm: false,
-  called: false,
   lead_id: linha,
   ...extra,
 });
@@ -47,7 +44,6 @@ export const MEMBROS = [
   MEMBRO(1, 'Marta Ribeiro', 'Padaria Pão da Praça', {
     email: true,
     in_crm: true,
-    called: true,
   }),
   MEMBRO(2, 'Padaria Doce Esquina', 'Padaria Doce Esquina'),
   MEMBRO(3, 'Jorge Alencar', 'Panificadora Trigo Bom', { email: true }),

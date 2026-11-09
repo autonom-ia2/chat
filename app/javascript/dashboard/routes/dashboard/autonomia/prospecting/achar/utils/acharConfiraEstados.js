@@ -142,6 +142,8 @@ const tituloDoFunil = (t, { pronto, base }) => {
 const FORA_DO_PUBLICO = {
   opt_out: 'NAO_QUER',
   contact_blocked: 'BLOQUEADO',
+  blocked: 'BLOQUEADO',
+  unreachable: 'NAO_RECEBE',
   no_channel: 'SEM_CONTATO',
   same_contact: 'MESMA_PESSOA',
   discarded: 'TIRADA',

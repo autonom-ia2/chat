@@ -1,5 +1,8 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useAlert } from 'dashboard/composables';
+import Button from 'dashboard/components-next/button/Button.vue';
 import AcharAbasDasBuscas from '../components/AcharAbasDasBuscas.vue';
 import AcharListaCartao from '../components/AcharListaCartao.vue';
 import AcharEstado from '../components/AcharEstado.vue';
@@ -11,13 +14,18 @@ import { ROTAS } from '../utils/acharRotas';
 // #2775 — F6, a aba "Suas listas" de "Suas buscas": as listas guardadas pela
 // Prospecção (os Públicos de Campanhas que ela criou), da mais nova para a mais
 // velha, com os números de cada uma. Uma ação principal: "Abrir". Sem a
-// permissão de guardar listas, a tela diz por que não mostra nada.
+// permissão de guardar listas, a tela diz por que não mostra nada. O servidor
+// manda 25 por vez: "Ver mais listas" traz a próxima página.
+const { t } = useI18n();
 const { demo, fonte, permissoes, irPara, mudarEstado } = useAcharTela();
 
 const NS = 'PROSPECTING_ACHAR.LISTAS';
 const carregando = ref(true);
 const erro = ref(false);
 const listas = ref([]);
+const pagina = ref(1);
+const temMais = ref(false);
+const carregandoMais = ref(false);
 
 const temRodape = computed(
   () =>
@@ -35,11 +43,32 @@ const carregar = async () => {
   carregando.value = true;
   erro.value = false;
   try {
-    listas.value = await fonte.value.listas();
+    const lidas = await fonte.value.listas(1);
+    listas.value = lidas.listas;
+    temMais.value = lidas.temMais;
+    pagina.value = 1;
   } catch {
     erro.value = true;
   }
   carregando.value = false;
+};
+
+const verMais = async () => {
+  carregandoMais.value = true;
+  try {
+    const lidas = await fonte.value.listas(pagina.value + 1);
+    const jaTem = new Set(listas.value.map(lista => lista.id));
+    listas.value = [
+      ...listas.value,
+      ...lidas.listas.filter(lista => !jaTem.has(lista.id)),
+    ];
+    temMais.value = lidas.temMais && lidas.listas.length > 0;
+    pagina.value += 1;
+  } catch {
+    useAlert(t(`${NS}.ERRO_VER_MAIS`));
+  } finally {
+    carregandoMais.value = false;
+  }
 };
 
 const abrir = lista =>
@@ -106,6 +135,16 @@ watch(demo, carregar);
             @abrir="abrir(lista)"
           />
         </ul>
+        <Button
+          v-if="!carregando && !erro && permissoes.lista && temMais"
+          :label="$t(`${NS}.VER_MAIS`)"
+          :is-loading="carregandoMais"
+          slate
+          faded
+          class="!min-h-12 !rounded-xl !text-base self-center"
+          data-ver-mais-listas
+          @click="verMais"
+        />
 
         <AcharRodape
           v-if="temRodape"

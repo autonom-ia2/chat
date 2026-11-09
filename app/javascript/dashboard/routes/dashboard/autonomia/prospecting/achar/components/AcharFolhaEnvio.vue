@@ -72,6 +72,13 @@ const listaEscolhida = computed(() =>
   (props.listas || []).find(lista => lista.id === props.listaId)
 );
 
+const numerosDaEscolhida = computed(() => {
+  const lista = listaEscolhida.value;
+  if (!lista) return '';
+  const { empresas, whatsapp, email } = lista;
+  return t(`${NS}.NUMEROS_LISTA`, { empresas, whatsapp, email }, empresas);
+});
+
 const dois = computed(() => props.podeFunil && props.podeLista);
 const escolhaFinal = computed(() => {
   if (dois.value) return props.escolha;
@@ -140,9 +147,15 @@ const botao = computed(() => {
   if (!props.entramLista) {
     return { rotulo: t(`${NS}.NINGUEM`), desabilitado: true };
   }
-  const chave = listaEscolhida.value ? 'POR_NA_LISTA' : 'GUARDAR';
+  // Numa lista que já existe, só conta quem entra: quem já está nela não
+  // (entram vem de lerListasDaFolha; sem ele, contam todas com contato).
+  const lista = listaEscolhida.value;
+  const n = lista ? (lista.entram ?? props.entramLista) : props.entramLista;
+  if (lista && !n) {
+    return { rotulo: t(`${NS}.TODAS_JA_ESTAO`), desabilitado: true };
+  }
   return {
-    rotulo: t(`${NS}.${chave}`, { n: props.entramLista }),
+    rotulo: t(`${NS}.${lista ? 'POR_NA_LISTA' : 'GUARDAR'}`, { n }, n),
     acao: 'guardar',
   };
 });
@@ -273,7 +286,7 @@ watch(
         icone="i-lucide-list-plus"
         tom="verde"
         :rotulo="$t(`${NS}.QUEM_JA_ESTA`)"
-        :texto="$t(`${NS}.NUMEROS_LISTA`, listaEscolhida)"
+        :texto="numerosDaEscolhida"
         data-lista-escolhida
       />
       <AcharLinhaFrase

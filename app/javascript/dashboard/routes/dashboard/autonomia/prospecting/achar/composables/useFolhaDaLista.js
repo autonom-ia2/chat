@@ -2,6 +2,7 @@ import { watch } from 'vue';
 import { lembrarDestino } from '../utils/destinoPronto';
 import { marcarEnviadas } from '../utils/acharConfiraEstados';
 import { erroDoDono, LIMITE_DO_PUBLICO } from './useDonoDaLista';
+import { lerListasDaFolha } from '../utils/listasDaFolha';
 
 // #2692 — as ações da folha "O que fazer com as {n} empresas?" (F1) e dos dois
 // painéis que abrem de dentro dela ("Com quem ficam" e "Para onde vão"). Saiu
@@ -24,6 +25,7 @@ const ERRO_DO_PUBLICO = {
   'prospecting.audience.too_many_leads': 'lista_demais',
   'prospecting.audience.foreign_contact': 'lista_contato_apagado',
   'prospecting.audience.audience_locked': 'lista_enviada',
+  'prospecting.audience.all_already_in_list': 'lista_ja_estavam',
 };
 
 // #2775 (F6): "Para qual lista?" — a lista nova (o padrão) ou uma que já
@@ -133,12 +135,13 @@ export function useFolhaDaLista({
   const mandarDaFolha = () =>
     demo.value ? mudarEstado('folha-enviando') : enviar();
 
-  // As listas que já existem, ao abrir a folha (também na demonstração). Falha
-  // ao ler não trava: fica só "Lista nova".
+  // As listas que já existem, ao abrir a folha (também na demonstração): todas
+  // as páginas, e quantas das escolhidas entram em cada uma. Falha ao ler não
+  // trava: fica só "Lista nova".
   const carregarListas = async () => {
     let listas = [];
     try {
-      listas = await fonte.value.listas();
+      listas = await lerListasDaFolha(fonte.value, escolhidas.value);
     } catch {
       listas = [];
     }

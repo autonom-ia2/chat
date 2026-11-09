@@ -74,4 +74,25 @@ describe('useListasDaEmpresa', () => {
     expect(listas.erro.value).toBe('TIRAR');
     expect(listas.listas.value).toHaveLength(2);
   });
+
+  // Revisão do #2775, item 12: a lista virou "já enviada" com a gaveta aberta.
+  it('lista que virou enviada: frase própria e as listas lidas de novo', async () => {
+    const { fonte, listas } = montar();
+    await flushPromises();
+    fonte.tirarDaLista.mockRejectedValue(
+      Object.assign(new Error('x'), {
+        codigo: 'prospecting.audience.audience_locked',
+      })
+    );
+    fonte.listasDaEmpresa.mockResolvedValue([
+      { id: 4, nome: 'Padarias', enviada: true },
+      { id: 5, nome: 'Antiga', enviada: true },
+    ]);
+
+    await listas.tirar(listas.listas.value[0]);
+
+    expect(listas.erro.value).toBe('ENVIADA');
+    expect(fonte.listasDaEmpresa).toHaveBeenCalledTimes(2);
+    expect(listas.listas.value[0]).toMatchObject({ id: 4, enviada: true });
+  });
 });
