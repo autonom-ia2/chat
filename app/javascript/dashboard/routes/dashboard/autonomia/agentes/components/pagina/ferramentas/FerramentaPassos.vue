@@ -187,7 +187,7 @@ const garantia = computed(() =>
   novo.value ? t(`${NS}.PASSOS.NADA_SALVO`) : t(`${NS}.PASSOS.CONTINUA_VALENDO`)
 );
 const passosDoErro = computed(() =>
-  passosProvaveisDoErro(erroAoSalvar.value?.mensagem)
+  passosProvaveisDoErro(erroAoSalvar.value?.campos)
 );
 </script>
 

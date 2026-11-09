@@ -436,16 +436,23 @@ export const avisosDasInformacoes = rascunho => {
   };
 };
 
-// O 422 traz full_messages: o começo da frase diz o atributo e, com ele, o passo provável.
-export const passosProvaveisDoErro = mensagem => {
-  const texto = String(mensagem ?? '');
-  const comeca = prefixos => prefixos.some(p => texto.startsWith(p));
-  if (comeca(['Endpoint url', 'Slug', 'Http method', 'Request body'])) {
-    return [3];
-  }
-  if (comeca(['Param schema'])) return [2];
-  if (comeca(['Headers config'])) return [4];
-  return [2, 3];
+// O 422 do salvar traz os campos recusados (`campos`, nomes do model): cada um aponta o passo dele. Sem campos
+// conhecidos, os dois passos prováveis.
+const PASSO_DO_CAMPO = {
+  param_schema: 2,
+  endpoint_url: 3,
+  slug: 3,
+  http_method: 3,
+  request_body_template: 3,
+  response_mapping: 3,
+  headers_config: 4,
+};
+export const passosProvaveisDoErro = (campos = []) => {
+  const passos = (campos || [])
+    .map(campo => PASSO_DO_CAMPO[campo])
+    .filter(Boolean);
+  const unicos = passos.filter((n, i) => passos.indexOf(n) === i).sort();
+  return unicos.length ? unicos : [2, 3];
 };
 
 // Rascunho sem os ids dos cartões: serve para saber se algo mudou.

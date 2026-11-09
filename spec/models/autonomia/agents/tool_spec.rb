@@ -74,8 +74,80 @@ RSpec.describe Autonomia::Agents::Tool do
 
       I18n.with_locale(:pt_BR) do
         expect(tool).not_to be_valid
-        expect(tool.errors.full_messages.join).to eq('Endereço não é válido')
+        expect(tool.errors.full_messages.join).to eq('Link não é válido')
       end
+    end
+  end
+
+  # #1430 (revisão adversarial): salvar não roda o modelo. Um `for` sobre uma faixa enorme vira um array de bilhões
+  # de números (Liquid `For#render_segment` faz `to_a` na faixa) e derruba o processo. Faixa grande é recusada no
+  # endereço, no que vai junto e no recorte da resposta; a pequena continua valendo.
+  describe 'repetição sem limite' do
+    let(:base) { { account: account, agent: agent, name: 'Faixa', slug: 'faixa' } }
+    let(:enorme) { '{% for i in (1..2000000000) %}x{% endfor %}' }
+
+    it 'recusa no endereço sem rodar o modelo' do
+      tool = described_class.new(base.merge(endpoint_url: "https://a.test/#{enorme}"))
+
+      inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      expect(tool).not_to be_valid
+      expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio).to be < 1
+      expect(tool.errors[:endpoint_url]).to be_present
+    end
+
+    it 'recusa no que vai junto e no recorte da resposta' do
+      tool = described_class.new(base.merge(endpoint_url: 'https://a.test/x', http_method: 'POST',
+                                            request_body_template: enorme, response_mapping: { 'template' => enorme }))
+
+      expect(tool).not_to be_valid
+      expect(tool.errors.attribute_names).to include(:request_body_template, :response_mapping)
+    end
+
+    it 'recusa faixa montada com o que o agente preenche' do
+      tool = described_class.new(base.merge(endpoint_url: 'https://a.test/x', http_method: 'POST',
+                                            request_body_template: '{% for i in (1..n) %}x{% endfor %}'))
+
+      expect(tool).not_to be_valid
+    end
+
+    it 'aceita faixa pequena' do
+      tool = described_class.new(base.merge(endpoint_url: 'https://a.test/x', http_method: 'POST',
+                                            request_body_template: '[{% for i in (1..3) %}{{ i }}{% endfor %}]'))
+
+      expect(tool).to be_valid
+    end
+  end
+
+  # #1430 (revisão adversarial): quem tem a chave não pode trocar o site e levar a chave guardada junto.
+  describe 'segredo guardado e endereço em outro site' do
+    let!(:tool) do
+      described_class.create!(account: account, agent: agent, name: 'Frete', slug: 'frete', endpoint_url: 'https://api.loja.test/frete',
+                              headers_config: [{ key: 'x-api-key', value: 'guardado-123', secret: true }])
+    end
+
+    it 'recusa trocar o site mantendo a chave guardada' do
+      tool.endpoint_url = 'https://coletor.test/x'
+
+      expect(tool).not_to be_valid
+      expect(tool.errors[:headers_config]).to be_present
+    end
+
+    it 'aceita trocar o site com a chave digitada de novo' do
+      tool.assign_attributes(endpoint_url: 'https://outro.test/x', headers_config: [{ key: 'x-api-key', value: 'nova-456', secret: true }])
+
+      expect(tool).to be_valid
+    end
+
+    it 'aceita mudar o caminho no mesmo site' do
+      tool.endpoint_url = 'https://api.loja.test/frete/v2?cep={{cep}}'
+
+      expect(tool).to be_valid
+    end
+
+    it 'recusa trocar a porta ou o esquema do mesmo host' do
+      tool.endpoint_url = 'https://api.loja.test:8443/frete'
+
+      expect(tool).not_to be_valid
     end
   end
 

@@ -334,17 +334,12 @@ describe('regras das Ferramentas', () => {
     });
   });
 
-  it('guesses the step from the API message, by its start', () => {
-    expect(passosProvaveisDoErro('Endpoint url deve usar HTTPS')).toEqual([3]);
-    expect(
-      passosProvaveisDoErro('Param schema possui nomes inválidos')
-    ).toEqual([2]);
-    expect(
-      passosProvaveisDoErro('Headers config possui cabeçalhos inválidos')
-    ).toEqual([4]);
-    expect(passosProvaveisDoErro('Nome não pode ficar em branco')).toEqual([
-      2, 3,
-    ]);
+  // #1430: pelo campo recusado (`campos` do 422), não pelo texto traduzido.
+  it('guesses the step from the refused fields', () => {
+    expect(passosProvaveisDoErro(['endpoint_url'])).toEqual([3]);
+    expect(passosProvaveisDoErro(['param_schema'])).toEqual([2]);
+    expect(passosProvaveisDoErro(['headers_config'])).toEqual([4]);
+    expect(passosProvaveisDoErro([])).toEqual([2, 3]);
   });
 
   describe('teste da ferramenta', () => {
@@ -389,6 +384,7 @@ describe('regras das Ferramentas', () => {
       ],
       ['tool_execution_error: argument_error', 'VALOR', 'PREENCHE', false],
       ['tool_execution_error: zero_division_error', 'VALOR', 'PREENCHE', false],
+      ['tool_execution_error: faixa_grande', 'FAIXA', 'ONDE', false],
       ['tool_execution_error: internal_error', 'GENERICO', null, false],
       ['outra coisa', 'GENERICO', null, false],
     ])('%s → %s', (erro, chave, corrigir, ambar) => {

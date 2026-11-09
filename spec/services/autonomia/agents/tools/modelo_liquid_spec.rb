@@ -5,6 +5,23 @@ require 'rails_helper'
 RSpec.describe Autonomia::Agents::Tools::ModeloLiquid do
   let(:modelo) { described_class.ler('a {{ q }} b', recusa: 'x') }
 
+  # #1430 (revisão adversarial): `for` sobre faixa grande vira um array de bilhões de números antes da primeira volta.
+  describe 'faixa grande' do
+    it 'tells the dangerous ranges apart from the small ones' do
+      expect(described_class.faixa_grande?('{% for i in (1..2000000000) %}x{% endfor %}')).to be(true)
+      expect(described_class.faixa_grande?('{% for i in (1..n) %}x{% endfor %}')).to be(true)
+      expect(described_class.faixa_grande?('{% if a %}{% for i in (1..5000) %}{% endfor %}{% endif %}')).to be(true)
+      expect(described_class.faixa_grande?('{% for i in (1..3) %}x{% endfor %}')).to be(false)
+      expect(described_class.faixa_grande?('{% for i in response.itens %}x{% endfor %}')).to be(false)
+      expect(described_class.faixa_grande?('{% for i in (1..2 %}')).to be(false)
+    end
+
+    it 'refuses it when reading the template' do
+      expect { described_class.ler('{% for i in (1..2000000000) %}x{% endfor %}', recusa: 'x') }
+        .to raise_error(Autonomia::Agents::Tools::HttpExecutor::ValorRecusado, 'faixa_grande')
+    end
+  end
+
   it 'raises the Liquid error of a missing variable' do
     expect { described_class.renderizar(modelo, {}, nil) }.to raise_error(Liquid::UndefinedVariable)
   end

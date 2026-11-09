@@ -69,7 +69,14 @@ const encaixar = async informacao => {
     posicao,
     informacao.nome
   );
-  mudar('endereco', novo);
+  // Encaixada no link, a informação fixa o nome técnico: mudar o nome de gente depois não quebra o link.
+  emit('update:rascunho', {
+    ...props.rascunho,
+    endereco: novo,
+    informacoes: props.rascunho.informacoes.map(i =>
+      i.id === informacao.id ? { ...i, fixo: true } : i
+    ),
+  });
   await nextTick();
   if (!campo) return;
   const depois = novo.length - String(props.rascunho.endereco ?? '').length;

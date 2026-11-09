@@ -395,7 +395,7 @@ describe('GavetaFerramentas · nova ferramenta (F03–F06)', () => {
     api.createTool.mockRejectedValue({
       response: {
         status: 422,
-        data: { error: 'Endpoint url deve usar HTTPS' },
+        data: { error: 'Link deve usar HTTPS', campos: ['endpoint_url'] },
       },
     });
     const wrapper = await montar();
@@ -409,7 +409,7 @@ describe('GavetaFerramentas · nova ferramenta (F03–F06)', () => {
     const erro = no('[data-erro-salvar]');
     expect(erro.textContent).toContain('Não consegui salvar. Nada foi salvo.');
     expect(erro.textContent).toContain(
-      'O sistema disse: “Endpoint url deve usar HTTPS”.'
+      'O sistema disse: “Link deve usar HTTPS”.'
     );
     expect(
       todos('[data-ir-para-passo]').map(b => b.textContent.trim())

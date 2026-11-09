@@ -46,6 +46,24 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
     tempfile&.close!
   end
 
+  # #1430 (revisão adversarial): ferramenta antiga gravada com faixa grande é recusada antes de montar o pedido.
+  it 'refuses a huge range in the address, the body or the mapping without running it' do
+    enorme = '{% for i in (1..2000000000) %}x{% endfor %}'
+    allow(SafeFetch).to receive(:fetch)
+    [{ endpoint_url: "https://a.test/#{enorme}" }, { request_body_template: enorme },
+     { response_mapping: { 'template' => enorme } }].each do |campo|
+      legado = tool.dup.tap { |copia| copia.slug = "legado_#{SecureRandom.hex(3)}" }
+      legado.save!
+      legado.update_columns(campo) # rubocop:disable Rails/SkipsModelValidations
+
+      inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      expect { described_class.new(tool: legado.reload, params: { q: 'freio' }).call }
+        .to raise_error(described_class::Error, /faixa_grande/)
+      expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio).to be < 1
+    end
+    expect(SafeFetch).not_to have_received(:fetch)
+  end
+
   it 'raises a compact execution error without leaking secrets' do
     allow(SafeFetch).to receive(:fetch).and_raise(SafeFetch::FetchError, 'token-secreto failed')
 

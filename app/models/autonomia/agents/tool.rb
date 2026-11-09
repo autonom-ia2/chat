@@ -63,6 +63,9 @@ class Autonomia::Agents::Tool < ApplicationRecord
   # alcance da coluna `integer` não é teto: acima dele o save estouraria com 500.
   validates :timeout_seconds, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: ALCANCE_DO_INTEIRO }
   validate :validate_endpoint_url
+  validate :validate_faixas
+  validate :validate_chave_mascarada
+  validate :validate_segredo_no_mesmo_site, on: :update
   validate :validate_param_schema
   validate :validate_headers_config
   validate :validate_slug_livre, if: :will_save_change_to_slug?
@@ -134,16 +137,82 @@ class Autonomia::Agents::Tool < ApplicationRecord
     label.present? ? { 'label' => label } : {}
   end
 
-  # O endereço é validado como o executor o usa: com cada {{ }} vazio (HttpExecutor#endereco_do_cadastro). O texto cru,
-  # com as chaves, não é um URI e recusava todo endereço com informação preenchida pelo agente (#1430).
+  # O endereço é validado como o executor o usa: cada {{ }} e {% %} vira vazio (HttpExecutor#endereco_do_cadastro). O
+  # texto cru, com as chaves, não é um URI e recusava todo endereço com informação preenchida pelo agente (#1430). Nada
+  # é renderizado aqui: um `for` sobre faixa enorme derrubaria o processo (revisão adversarial do #1430). O site e o que
+  # vem depois do # não aceitam informação, como na execução (`EnderecoDaFerramenta#origem`).
   def validate_endpoint_url
-    uri = URI.parse(Liquid::Template.parse(endpoint_url.to_s, error_mode: :strict).render({}))
+    Liquid::Template.parse(endpoint_url.to_s, error_mode: :strict)
+    return errors.add(:endpoint_url, I18n.t('autonomia.agents.ferramenta.informacao_no_site')) if informacao_no_site?
+
+    uri = URI.parse(sem_modelo(endpoint_url.to_s))
     errors.add(:endpoint_url, 'deve usar HTTPS') unless uri.is_a?(URI::HTTPS)
     errors.add(:endpoint_url, 'deve possuir host') if uri.host.blank?
     errors.add(:endpoint_url, 'não pode apontar para localhost') if uri.host.to_s.match?(/\Alocalhost\z|\.local\z/i)
     errors.add(:endpoint_url, 'não pode usar IP direto') if ip_host?(uri.host)
   rescue URI::InvalidURIError, Liquid::Error
     errors.add(:endpoint_url, 'não é válido')
+  end
+
+  MODELO = { '{{' => '}}', '{%' => '%}' }.freeze
+
+  # O texto sem nenhum trecho {{ }} ou {% %}; trecho que não fecha fica como está.
+  def sem_modelo(texto)
+    MODELO.reduce(texto) { |atual, (abre, fecha)| sem_trechos(atual, abre, fecha) }
+  end
+
+  def sem_trechos(texto, abre, fecha)
+    inicio = texto.index(abre)
+    return texto unless inicio
+
+    fim = texto.index(fecha, inicio + abre.length)
+    return texto unless fim
+
+    texto[0...inicio] + sem_trechos(texto[(fim + fecha.length)..], abre, fecha)
+  end
+
+  # O site (entre :// e o primeiro /, ? ou #) e o que vem depois do # não podem ter {{ }} nem {% %}.
+  def informacao_no_site?
+    texto = endpoint_url.to_s
+    depois = texto.split('://', 2)[1].to_s
+    site = depois.split('/', 2).first.to_s.split('?', 2).first.to_s.split('#', 2).first.to_s
+    fragmento = texto.split('#', 2)[1].to_s
+    [site, fragmento].any? { |parte| MODELO.keys.any? { |abre| parte.include?(abre) } }
+  end
+
+  # #1430 (revisão adversarial): faixa enorme num `for` no endereço, no que vai junto ou no recorte da resposta.
+  def validate_faixas
+    { endpoint_url: endpoint_url, request_body_template: request_body_template,
+      response_mapping: response_mapping.to_h.stringify_keys['template'] }.each do |campo, texto|
+      next unless Autonomia::Agents::Tools::ModeloLiquid.faixa_grande?(texto)
+
+      errors.add(campo, I18n.t('autonomia.agents.ferramenta.faixa_grande', maximo: Autonomia::Agents::Tools::ModeloLiquid::FAIXA_MAXIMA))
+    end
+  end
+
+  # #1430 (revisão adversarial): com a chave delegada, trocar o site e manter a chave guardada levaria a chave para o
+  # site novo no Testar ou no atendimento. Trocou o site (esquema, host ou porta): a chave guardada precisa ser digitada
+  # de novo.
+  def validate_segredo_no_mesmo_site
+    return unless will_save_change_to_endpoint_url? && site(endpoint_url_in_database) != site(endpoint_url)
+
+    guardadas = Array(headers_config_in_database).select { |header| header['secret'] }.map { |header| header.values_at('key', 'value') }
+    return unless headers_config.any? { |header| header['secret'] && guardadas.include?(header.values_at('key', 'value')) }
+
+    errors.add(:headers_config, I18n.t('autonomia.agents.ferramenta.chave_de_novo_outro_site'))
+  end
+
+  # A máscara voltou sem chave guardada com o mesmo nome (renomeou, ou desligou o segredo): seria gravada como a chave.
+  def validate_chave_mascarada
+    mascarada = headers_config.any? { |header| header['value'] == self.class.masked_header_value }
+    errors.add(:headers_config, I18n.t('autonomia.agents.ferramenta.chave_de_novo')) if mascarada
+  end
+
+  def site(texto)
+    uri = URI.parse(sem_modelo(texto.to_s))
+    [uri.scheme.to_s.downcase, uri.host.to_s.downcase, uri.port]
+  rescue URI::InvalidURIError
+    nil
   end
 
   def ip_host?(host)

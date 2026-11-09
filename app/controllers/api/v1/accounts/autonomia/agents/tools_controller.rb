@@ -7,7 +7,7 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
   skip_before_action :check_autonomia_permission
   before_action :check_tools_permission
   before_action :fetch_agent
-  before_action :refuse_quote_agent, only: :create
+  before_action :refuse_quote_agent
   before_action :fetch_tool, only: %i[show update destroy test]
 
   def index
@@ -22,7 +22,7 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
     @tool.save!
     render :show, status: :created
   rescue ActiveRecord::RecordInvalid => e
-    render_unprocessable(e.record.errors.full_messages.to_sentence)
+    render_recusa(e.record)
   end
 
   def update
@@ -30,7 +30,7 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
     @tool.save!
     render :show
   rescue ActiveRecord::RecordInvalid => e
-    render_unprocessable(e.record.errors.full_messages.to_sentence)
+    render_recusa(e.record)
   end
 
   def destroy
@@ -63,8 +63,18 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
     check_permission_granted!('autonomia_tools_manage')
   end
 
-  # A Lia (Agente de Cotação) fica com a lista fixa de ferramentas dela nesta fase (#1430).
+  # #1430: os campos recusados vão junto, para a tela apontar o passo sem ler o texto traduzido.
+  def render_recusa(tool)
+    render json: { error: tool.errors.full_messages.to_sentence, campos: tool.errors.attribute_names.map(&:to_s) },
+           status: :unprocessable_entity
+  end
+
+  # A Lia (Agente de Cotação) fica com a lista fixa de ferramentas dela nesta fase (#1430): para a conta, em toda ação
+  # (trocar o endereço de uma ferramenta dela levaria a conversa de cotação para outro sistema). A equipe da plataforma
+  # continua cuidando dela.
   def refuse_quote_agent
+    return if Current.user.is_a?(SuperAdmin)
+
     render_unprocessable(I18n.t('autonomia.agents.ferramenta_na_cotacao')) if @agent.agent_type == 'insurance_quote'
   end
 

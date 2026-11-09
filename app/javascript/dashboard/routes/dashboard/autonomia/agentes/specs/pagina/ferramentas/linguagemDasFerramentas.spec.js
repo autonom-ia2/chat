@@ -13,6 +13,7 @@ import {
 } from '../../../utils/ferramentas';
 import {
   passoDaCorrecao,
+  respostaDeixaDeFora,
   respostaLegivel,
 } from '../../../utils/testeDaFerramenta';
 import ptBR from 'dashboard/i18n/locale/pt_BR/agents.json';
@@ -136,10 +137,10 @@ describe('linguagem das Ferramentas (#1430)', () => {
     });
 
     it('opens the right step after the order changed', () => {
-      expect(passosProvaveisDoErro('Endpoint url não é válido')).toEqual([3]);
-      expect(
-        passosProvaveisDoErro('Param schema possui nomes inválidos')
-      ).toEqual([2]);
+      expect(passosProvaveisDoErro(['endpoint_url'])).toEqual([3]);
+      expect(passosProvaveisDoErro(['param_schema'])).toEqual([2]);
+      expect(passosProvaveisDoErro(['headers_config', 'slug'])).toEqual([3, 4]);
+      expect(passosProvaveisDoErro(['name'])).toEqual([2, 3]);
       expect(passoDaCorrecao('ENDERECO')).toBe(3);
       expect(passoDaCorrecao('PREENCHE')).toBe(2);
       expect(passoDaCorrecao('ONDE')).toBe(3);
@@ -192,6 +193,33 @@ describe('linguagem das Ferramentas (#1430)', () => {
           { rotulo: 'Preco', valor: '89.9' },
         ],
       ]);
+    });
+
+    it('keeps acronyms as they come', () => {
+      const corpo = JSON.stringify({
+        CEP: '1',
+        UF: 'SP',
+        NOME_COMPLETO: 'Ana',
+        nomeDaMae: 'Bia',
+      });
+
+      expect(respostaLegivel(corpo)[0].map(c => c.rotulo)).toEqual([
+        'CEP',
+        'UF',
+        'NOME COMPLETO',
+        'Nome da mae',
+      ]);
+    });
+
+    it('says when the lines leave something out, so the details open', () => {
+      expect(respostaDeixaDeFora('{"cep":"1","uf":"SP"}')).toBe(false);
+      expect(respostaDeixaDeFora('{"itens":[{"a":1}]}')).toBe(false);
+      expect(respostaDeixaDeFora('{"total":3,"itens":[{"a":1}]}')).toBe(true);
+      expect(respostaDeixaDeFora('{"itens":[{"a":{"b":1}}]}')).toBe(true);
+      expect(respostaDeixaDeFora(JSON.stringify(Array(6).fill({ a: 1 })))).toBe(
+        true
+      );
+      expect(respostaDeixaDeFora('texto')).toBe(false);
     });
 
     it('gives up on text or nothing readable, and the screen shows it as it came', () => {

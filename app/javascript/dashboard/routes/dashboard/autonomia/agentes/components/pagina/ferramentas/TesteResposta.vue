@@ -2,7 +2,10 @@
 import { computed, h } from 'vue';
 import { useI18n } from 'vue-i18n';
 import TesteChamada from './TesteChamada.vue';
-import { respostaLegivel } from '../../../utils/testeDaFerramenta';
+import {
+  respostaDeixaDeFora,
+  respostaLegivel,
+} from '../../../utils/testeDaFerramenta';
 
 // #1301 (protótipo F07-ok) — o teste deu certo: um bloco só com o estado e "O que o agente recebe".
 // O /test devolve o texto que o agente lê: já mapeado e, se passar de 8.000, cortado com o aviso
@@ -54,6 +57,11 @@ TextoCru.props = ['texto'];
 
 const grupos = computed(() =>
   props.resposta.cortada ? null : respostaLegivel(props.resposta.texto)
+);
+
+// Lista ou objeto que as linhas não mostram: "Ver detalhes" já abre, para ninguém ligar sem ver.
+const deixaDeFora = computed(
+  () => !props.resposta.cortada && respostaDeixaDeFora(props.resposta.texto)
 );
 
 const linhas = computed(() =>
@@ -111,7 +119,7 @@ const linhas = computed(() =>
         v-if="chamada || resposta.json"
         data-detalhes-resposta
         class="group rounded-xl ring-1 ring-inset ring-n-weak"
-        :open="!grupos && Boolean(resposta.json)"
+        :open="Boolean(resposta.json) && (!grupos || deixaDeFora)"
       >
         <summary
           class="flex items-center gap-2 px-3 text-sm font-semibold list-none cursor-pointer rounded-xl min-h-11 text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"

@@ -918,7 +918,8 @@
                 "FORMATO": "Use só letras sem acento, números e _. Ex.: termo_busca",
                 "REPETIDO": "Já existe uma informação com esse nome."
               },
-              "NOME_AJUDA": "Como você chama. Ex.: CEP"
+              "NOME_AJUDA": "Como você chama. Ex.: CEP",
+              "FALTANDO": "A ferramenta usa [{nome}], que não está mais aqui. Ponha de volta, ou tire do link no passo 3. Senão, a chamada vai falhar."
             },
             "QUATRO": {
               "INTRO": "Se o outro sistema te deu uma chave de acesso, coloque aqui. Se não deu, é só salvar.",
@@ -964,7 +965,7 @@
             "NAO": "Não",
             "FAZER": "Fazer chamada de teste",
             "CHAMANDO": "Chamando…",
-            "CHAMANDO_LONGO": "Chamando… pode levar até 10 segundos.",
+            "CHAMANDO_LONGO": "Chamando… pode levar alguns segundos.",
             "DEU_CERTO": "Deu certo.",
             "DEU_CERTO_TEXTO": "O sistema respondeu.",
             "RECEBE": "O que o agente recebe",
@@ -1000,9 +1001,10 @@
               "NAO_JSON": "A resposta do sistema não veio no formato que o recorte de Avançado espera.",
               "URL_INVALIDA": "O link ficou inválido com o valor digitado.",
               "REDE": "Esse link aponta para dentro da própria rede e não pode ser usado.",
-              "SEM_RESPOSTA": "O sistema não respondeu em 10 segundos ou recusou a conexão.",
+              "SEM_RESPOSTA": "O sistema não respondeu a tempo ou recusou a conexão.",
               "NAO_EXISTE": "O link ou Avançado usa uma informação que não existe.",
-              "GENERICO": "Não consegui fazer a chamada."
+              "GENERICO": "Não consegui fazer a chamada.",
+              "FAIXA": "Um trecho de Avançado repete coisa demais e foi recusado. Confira em Avançado, no passo 3."
             },
             "CORRIGIR": {
               "CHAVE": "Corrigir a chave",

@@ -129,6 +129,59 @@ RSpec.describe 'Autonomia agent tools permission', type: :request do
       expect(lia.tools.count).to eq(0)
     end
 
+    # #1430 (revisão): a Lia fica fora em TODA ação para a conta; a equipe da plataforma continua cuidando dela.
+    context 'with the quote agent (Lia)' do
+      let(:lia) { Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'insurance_quote') }
+      let(:lia_base) { "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}/tools" }
+      let!(:da_lia) do
+        Autonomia::Agents::Tool.create!(account: account, agent: lia, name: 'Cotar', endpoint_url: 'https://api.loja.test/cotar',
+                                        headers_config: [{ key: 'x-api-key', value: segredo, secret: true }])
+      end
+
+      it 'refuses list, change, test and delete to the key holder' do
+        token = com_funcao(%w[autonomia_tools_manage]).create_new_auth_token
+
+        get lia_base, headers: token, as: :json
+        expect(response).to have_http_status(:unprocessable_entity)
+        patch "#{lia_base}/#{da_lia.id}", params: { tool: { endpoint_url: 'https://outro.test/x' } }, headers: token, as: :json
+        expect(response).to have_http_status(:unprocessable_entity)
+        post "#{lia_base}/#{da_lia.id}/test", headers: token, as: :json
+        expect(response).to have_http_status(:unprocessable_entity)
+        delete "#{lia_base}/#{da_lia.id}", headers: token, as: :json
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(da_lia.reload.endpoint_url).to eq('https://api.loja.test/cotar')
+      end
+
+      it 'keeps the platform team managing her tools' do
+        create(:account_user, account: account, user: super_admin, role: :administrator)
+
+        post lia_base, params: corpo, headers: super_admin.create_new_auth_token, as: :json
+
+        expect(response).to have_http_status(:created)
+      end
+    end
+
+    # #1430 (revisão adversarial): o segredo guardado não segue o endereço para outro site.
+    it 'refuses moving a tool to another site while keeping the stored secret' do
+      token = com_funcao(%w[autonomia_tools_manage]).create_new_auth_token
+
+      patch "#{base}/#{ferramenta.id}", params: { tool: { endpoint_url: 'https://coletor.test/x' } }, headers: token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['campos']).to eq(['headers_config'])
+      expect(ferramenta.reload.endpoint_url).to eq('https://api.loja.test/frete')
+    end
+
+    it 'lets the key holder test a tool without the secret coming back' do
+      executor = instance_double(Autonomia::Agents::Tools::HttpExecutor, call: '{"ok":true}')
+      allow(Autonomia::Agents::Tools::HttpExecutor).to receive(:new).and_return(executor)
+
+      post "#{base}/#{ferramenta.id}/test", headers: com_funcao(%w[autonomia_tools_manage]).create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include(segredo)
+    end
+
     it 'does not reach the tools of another account' do
       outra = create(:account, internal_attributes: { 'autonomia_agents_enabled' => true })
       outra.enable_features!('agente_ferramentas_delegadas')

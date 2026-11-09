@@ -43,6 +43,8 @@ const ERROS_DE_EXECUCAO = {
   // #1444: com o erro de render recusado, um filtro que falha no valor digitado também chega aqui.
   argument_error: ['VALOR', 'PREENCHE'],
   zero_division_error: ['VALOR', 'PREENCHE'],
+  // #1430 (revisão adversarial): `for` sobre faixa enorme ou montada com informação do agente.
+  faixa_grande: ['FAIXA', 'ONDE'],
 };
 
 const lerPrefixo = erro => {
@@ -243,16 +245,22 @@ export const montarChamada = (rascunho, valores) => {
 // Texto, campo aninhado ou nada legível: null, e a tela mostra como veio.
 const MAX_ITENS = 5;
 const ehMaiuscula = c => c !== c.toLowerCase() && c === c.toUpperCase();
+// Sigla (CEP, UF, NOME_COMPLETO) fica como veio; camelCase vira palavras soltas.
+const ehSigla = palavra =>
+  palavra !== palavra.toLowerCase() && palavra === palavra.toUpperCase();
+const separarCamelCase = palavra =>
+  [...palavra]
+    .map((c, i) => (i > 0 && ehMaiuscula(c) ? ` ${c.toLowerCase()}` : c))
+    .join('');
 const nomeLegivel = chave => {
-  const palavras = [...String(chave)]
-    .map(c => (ehMaiuscula(c) ? ` ${c.toLowerCase()}` : c))
-    .join('')
+  const palavras = String(chave)
     .split('_')
     .join(' ')
     .split('-')
     .join(' ')
     .split(' ')
     .filter(Boolean)
+    .map(palavra => (ehSigla(palavra) ? palavra : separarCamelCase(palavra)))
     .join(' ');
   return palavras.charAt(0).toUpperCase() + palavras.slice(1);
 };
@@ -278,6 +286,29 @@ const listaDe = dados => {
   if (camposDe(dados).length) return [dados];
   const embrulhada = Object.values(dados || {}).find(Array.isArray);
   return embrulhada || [dados];
+};
+
+// A leitura em linhas deixou algo de fora (lista ou objeto dentro, ou mais de 5 itens): a tela abre "Ver detalhes".
+const ehSimples = valor => valor === null || typeof valor !== 'object';
+const temAninhado = item =>
+  !ehSimples(item) && !Object.values(item).every(ehSimples);
+export const respostaDeixaDeFora = corpo => {
+  let dados;
+  try {
+    dados = JSON.parse(String(corpo ?? ''));
+  } catch {
+    return false;
+  }
+  const itens = listaDe(dados);
+  const naoSimples = Array.isArray(dados)
+    ? 0
+    : Object.values(dados || {}).filter(v => !ehSimples(v)).length;
+  const embrulhada = itens !== dados && itens[0] !== dados;
+  return (
+    itens.length > MAX_ITENS ||
+    itens.some(temAninhado) ||
+    naoSimples > (embrulhada ? 1 : 0)
+  );
 };
 
 export const respostaLegivel = corpo => {

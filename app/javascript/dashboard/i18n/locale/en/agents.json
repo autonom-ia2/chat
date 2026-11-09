@@ -918,7 +918,8 @@
                 "FORMATO": "Use only letters without accents, numbers and _. E.g.: search_term",
                 "REPETIDO": "There is already information with this name."
               },
-              "NOME_AJUDA": "What you call it. E.g. ZIP code"
+              "NOME_AJUDA": "What you call it. E.g. ZIP code",
+              "FALTANDO": "The tool uses [{nome}], which is no longer here. Put it back, or remove it from the link in step 3. Otherwise the call will fail."
             },
             "QUATRO": {
               "INTRO": "If the other system gave you an access key, put it here. If not, just save.",
@@ -964,7 +965,7 @@
             "NAO": "No",
             "FAZER": "Make test call",
             "CHAMANDO": "Calling…",
-            "CHAMANDO_LONGO": "Calling… it can take up to 10 seconds.",
+            "CHAMANDO_LONGO": "Calling… this can take a few seconds.",
             "DEU_CERTO": "It worked.",
             "DEU_CERTO_TEXTO": "The system answered.",
             "RECEBE": "What the agent gets",
@@ -1000,9 +1001,10 @@
               "NAO_JSON": "The system answer did not come in the format the Advanced selection expects.",
               "URL_INVALIDA": "The link became invalid with the typed value.",
               "REDE": "This link points inside the private network and cannot be used.",
-              "SEM_RESPOSTA": "The system did not answer within 10 seconds or refused the connection.",
+              "SEM_RESPOSTA": "The system did not answer in time or refused the connection.",
               "NAO_EXISTE": "The link or Advanced uses information that does not exist.",
-              "GENERICO": "Could not make the call."
+              "GENERICO": "Could not make the call.",
+              "FAIXA": "A part of Advanced repeats too much and was refused. Check Advanced, in step 3."
             },
             "CORRIGIR": {
               "CHAVE": "Fix the key",

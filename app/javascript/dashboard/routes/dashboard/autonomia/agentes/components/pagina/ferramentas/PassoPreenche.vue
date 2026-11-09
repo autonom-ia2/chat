@@ -1,8 +1,13 @@
 <script setup>
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgenteBotao from '../../AgenteBotao.vue';
 import CartaoInformacao from './CartaoInformacao.vue';
-import { novaInformacao } from '../../../utils/ferramentas';
+import FerramentaFaixa from './FerramentaFaixa.vue';
+import {
+  avisosDasInformacoes,
+  novaInformacao,
+} from '../../../utils/ferramentas';
 
 // #1301 (protótipo F05) — as informações que o agente tira da conversa. #1430: é o passo 2, antes do
 // link, para o passo 3 oferecer cada uma pelo nome de gente ("CEP") na hora de montar o link. O que
@@ -31,6 +36,11 @@ const mudarInformacao = (indice, informacao) =>
 const adicionar = () =>
   mudarInformacoes([...props.rascunho.informacoes, novaInformacao()]);
 
+// Na edição, este passo abre sozinho: tirar a informação que o link usa precisa de aviso aqui também.
+const faltando = computed(
+  () => avisosDasInformacoes(props.rascunho).semInformacao
+);
+
 const remover = indice => {
   mudarInformacoes(props.rascunho.informacoes.filter((_, i) => i !== indice));
   emit('anunciar', t(`${NS}.REMOVIDA`));
@@ -42,6 +52,11 @@ const remover = indice => {
     <p class="m-0 text-sm text-n-slate-11">
       {{ t(`${NS}.INTRO`) }}
     </p>
+    <FerramentaFaixa v-if="faltando" data-aviso-faltando tom="ambar" solta>
+      <p class="m-0 break-words">
+        {{ t(`${NS}.FALTANDO`, { nome: faltando.nome }) }}
+      </p>
+    </FerramentaFaixa>
     <div class="flex flex-col gap-3">
       <CartaoInformacao
         v-for="(informacao, indice) in rascunho.informacoes"

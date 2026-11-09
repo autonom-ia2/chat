@@ -9,12 +9,15 @@ module Autonomia::Agents::Tools::ModeloLiquid
     String, Liquid::Document, Liquid::BlockBody, Liquid::Variable, Liquid::Echo, Liquid::If, Liquid::Unless,
     Liquid::For, Liquid::Raw, Liquid::Comment
   ].freeze
+  # #1430 (revisão adversarial): o Liquid faz `to_a` da faixa de um `for` antes da primeira volta. `(1..2000000000)`
+  # pede ~16 GB e derruba o processo; faixa com o que o agente preenche (`(1..n)`) pode virar isso. Até esta, vale.
+  FAIXA_MAXIMA = 1000
 
   module_function
 
   # -> Liquid::Template; levanta `HttpExecutor::ValorRecusado` com `recusa` se usar tag fora da lista.
   def ler(texto, recusa:, sem_url_encode_final: false)
-    template = Liquid::Template.parse(texto.to_s, error_mode: :strict)
+    template = conferir_faixas!(Liquid::Template.parse(texto.to_s, error_mode: :strict))
     nos = todos_os_nos(template.root)
     permitido = nos.all? { |no| NOS_PERMITIDOS.any? { |classe| no.instance_of?(classe) } }
     raise Autonomia::Agents::Tools::HttpExecutor::ValorRecusado, recusa unless permitido
@@ -37,6 +40,31 @@ module Autonomia::Agents::Tools::ModeloLiquid
   rescue StandardError => e
     Rails.logger.warn("[autonomia][agent_tool] erro fora do Liquid no render original=#{e.class} em=#{e.backtrace&.first}")
     raise Liquid::InternalError, 'internal', cause: nil
+  end
+
+  # Recusa (`faixa_grande`) o modelo com `for` sobre faixa maior que FAIXA_MAXIMA ou montada com variável. Só lê a
+  # árvore: nada é renderizado.
+  def conferir_faixas!(template)
+    perigosa = todos_os_nos(template.root).grep(Liquid::For).any? { |no| faixa_perigosa?(no.collection_name) }
+    raise Autonomia::Agents::Tools::HttpExecutor::ValorRecusado, 'faixa_grande' if perigosa
+
+    template
+  end
+
+  # Para o cadastro: o texto tem faixa perigosa? Modelo que nem abre fica para a validação de cada campo.
+  def faixa_grande?(texto)
+    conferir_faixas!(Liquid::Template.parse(texto.to_s, error_mode: :strict))
+    false
+  rescue Autonomia::Agents::Tools::HttpExecutor::ValorRecusado
+    true
+  rescue Liquid::Error
+    false
+  end
+
+  def faixa_perigosa?(colecao)
+    return true if colecao.is_a?(Liquid::RangeLookup)
+
+    colecao.is_a?(Range) && colecao.size.to_i > FAIXA_MAXIMA
   end
 
   # Há {{ }} ou {% %} no texto?

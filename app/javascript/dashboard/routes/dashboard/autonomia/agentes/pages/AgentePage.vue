@@ -888,7 +888,7 @@ const tirarPergunta = id => {
             aria-hidden="true"
           />
           {{
-            ferramentasDelegadas
+            permitidas.includes(GAVETA.FERRAMENTAS)
               ? t('AGENTS.JORNADA.PAGINA.SO_VER_COM_FERRAMENTAS')
               : t('AGENTS.JORNADA.PAGINA.SO_VER')
           }}
