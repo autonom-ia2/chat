@@ -88,15 +88,18 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
       # Só o tipo e os ids: o `messaging` inteiro traz o texto e, no anúncio (#2521), links assinados da Meta.
       Rails.logger.info("Instagram Events Job Messaging: event=#{event_name(messaging).inspect} mid=#{messaging.dig(:message, :mid)}")
 
-      instagram_id = instagram_id(messaging)
-      channel = find_channel(instagram_id)
-
-      next if channel.blank?
-
-      if (event_name = event_name(messaging))
-        send(event_name, messaging, channel)
-      end
+      deliver(messaging, ::Instagram::ConnectedChannels.for(instagram_id(messaging)))
     end
+  end
+
+  # O mesmo Instagram pode estar em mais de uma conta (#2781): o evento vai a um canal por conta, como o Messenger. O
+  # referral sai uma vez só, porque o MessagingReferralJob já percorre as caixas de todas as contas.
+  def deliver(messaging, channels)
+    event_name = event_name(messaging)
+    return if event_name.nil? || channels.empty?
+    return referral(messaging, channels.first) if event_name == :referral
+
+    channels.each { |channel| send(event_name, messaging, channel) }
   end
 
   def agent_message_via_echo?(messaging)
@@ -140,17 +143,6 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
 
   def sender_id
     @entries&.dig(0, :messaging, 0, :sender, :id)
-  end
-
-  def find_channel(instagram_id)
-    # There will be chances for the instagram account to be connected to a facebook page,
-    # so we need to check for both instagram and facebook page channels
-    # priority is for instagram channel which created via instagram login
-    channel = Channel::Instagram.find_by(instagram_id: instagram_id)
-    # If not found, fallback to the facebook page channel
-    channel ||= Channel::FacebookPage.find_by(instagram_id: instagram_id)
-
-    channel
   end
 
   def event_name(messaging)
