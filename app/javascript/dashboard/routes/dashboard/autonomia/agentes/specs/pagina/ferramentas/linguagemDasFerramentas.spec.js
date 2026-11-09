@@ -419,6 +419,9 @@ describe('linguagem das Ferramentas (#1430)', () => {
       expect(conferirEndereco('https://a.com/x?{{ "token" }}=abc')).toBe(
         'SENHA'
       );
+      expect(
+        conferirEndereco('https://a.com/x?{{ "tok" | append: "en" }}=abc')
+      ).toBe('SENHA');
     });
   });
 

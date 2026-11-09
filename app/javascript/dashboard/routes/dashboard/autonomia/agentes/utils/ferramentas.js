@@ -111,22 +111,20 @@ export const valorFixo = valor => {
   }, partes[0]);
 };
 
-// `?{{ "token" }}=abc` vira `token=abc` na chamada.
-const nomeDoParametro = nome => {
-  const minusculo = valorFixo(nome)
-    .replaceAll('"', '')
-    .replaceAll("'", '')
-    .trim()
-    .toLowerCase();
-  return minusculo.endsWith('[]') ? minusculo.slice(0, -2) : minusculo;
+// Nome montado com {{ }} (`?{{ "tok" | append: "en" }}=abc` vira `token=abc` na chamada) não tem como ser conferido
+// antes: com texto fixo no valor, conta como senha. `token[]` conta como `token`.
+const nomeDeCredencial = nome => {
+  if (nome.includes('{{') || nome.includes('{%')) return true;
+  const minusculo = nome.toLowerCase();
+  return NOMES_DE_CREDENCIAL.includes(
+    minusculo.endsWith('[]') ? minusculo.slice(0, -2) : minusculo
+  );
 };
 
 const senhaNoLink = url =>
   Boolean(url.username || url.password) ||
   [...url.searchParams].some(
-    ([nome, valor]) =>
-      preenchido(valorFixo(valor)) &&
-      NOMES_DE_CREDENCIAL.includes(nomeDoParametro(nome))
+    ([nome, valor]) => preenchido(valorFixo(valor)) && nomeDeCredencial(nome)
   );
 
 export const conferirEndereco = endereco => {

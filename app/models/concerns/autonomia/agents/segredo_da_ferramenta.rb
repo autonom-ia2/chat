@@ -91,7 +91,7 @@ module Autonomia::Agents::SegredoDaFerramenta
   def credencial_na_busca?
     busca = endpoint_url.to_s.split('#', 2).first.to_s.split('?', 2).second.to_s.tr(';', '&')
     URI.decode_www_form(busca).any? do |nome, valor|
-      Autonomia::Agents::Tools::SegredosDaChamada.credencial?(nome_fixo(nome)) && valor_fixo(valor).strip.present?
+      nome_de_credencial?(nome) && valor_fixo(valor).strip.present?
     end
   end
 
@@ -107,9 +107,10 @@ module Autonomia::Agents::SegredoDaFerramenta
     end
   end
 
-  # `?{{ "token" }}=abc` vira `token=abc` na chamada.
-  def nome_fixo(nome)
-    valor_fixo(nome).delete(%('")).strip
+  # Nome montado com {{ }} (`?{{ "tok" | append: "en" }}=abc` vira `token=abc` na chamada) não tem como ser conferido
+  # antes: com texto fixo no valor, conta como senha.
+  def nome_de_credencial?(nome)
+    nome.include?('{{') || nome.include?('{%') || Autonomia::Agents::Tools::SegredosDaChamada.credencial?(nome)
   end
 
   def so_informacao?(dentro)

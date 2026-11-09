@@ -280,7 +280,7 @@ RSpec.describe Autonomia::Agents::Tool do
       ['https://ana:segredo@a.test/x', 'https://a.test/x?token=abc', 'https://a.test/x?q=1&API_KEY=abc{{t}}',
        'https://a.test/x?api_token=abc', 'https://a.test/x?client_secret=abc', 'https://a.test/x?q=1;token=abc',
        'https://a.test/x?token[]=abc', 'https://a.test/x?token={{ "abc" }}', 'https://a.test/x?token={{ t | append: "x" }}',
-       'https://a.test/x?{{ "token" }}=abc'].each do |link|
+       'https://a.test/x?{{ "token" }}=abc', 'https://a.test/x?{{ "tok" | append: "en" }}=abc'].each do |link|
         tool = described_class.new(base.merge(endpoint_url: link))
 
         expect(tool).not_to be_valid
