@@ -254,7 +254,7 @@
       ]
     },
     "leituras": {
-      "description": "O que a IA lê do alvo (F7), da lista fechada do Decisor. E-mail e telefone do contato nunca vão. Sem a lista, as mensagens recentes do cliente. \"anexos\" (G20): a foto, o PDF e a transcrição do áudio que o cliente mandou nas últimas mensagens da conversa. \"anexos_novos\" (G46): só os que chegaram no \"esperar até\" cumprido logo antes (sem ele, os da execução inteira); o laço dos documentos lê assim e nunca manda o mesmo anexo duas vezes. \"card\" (#2679): o card do alvo (no gatilho de conversa, o card da conversa), com título, etapa, funil, status e campos; o valor só quando quem ligou pode vê-lo. \"notas\" (#2679): as notas internas recentes da conversa.",
+      "description": "O que a IA lê do alvo (F7), da lista fechada do Decisor. E-mail e telefone do contato nunca vão. Sem a lista, as mensagens recentes do cliente. \"anexos\" (G20): a foto, o PDF e a transcrição do áudio que o cliente mandou nas últimas mensagens da conversa. \"anexos_novos\" (G46): só os que este passo ainda não leu nesta execução (na primeira vez, os da execução inteira), sem o teto das últimas mensagens; o laço dos documentos lê assim e nunca manda o mesmo anexo duas vezes. \"card\" (#2679): o card do alvo (no gatilho de conversa, o card da conversa), com título, etapa, funil, status e campos; o valor só quando quem ligou pode vê-lo. \"notas\" (#2679): as notas internas recentes da conversa.",
       "type": "array",
       "uniqueItems": true,
       "items": { "enum": ["mensagens_recentes", "mensagens_com_respostas", "ultima_mensagem", "conversa", "contato", "empresa", "anexos", "anexos_novos", "card", "notas"] }

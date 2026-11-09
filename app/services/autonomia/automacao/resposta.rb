@@ -56,9 +56,15 @@ module Autonomia::Automacao::Resposta
     recebidas = do_cliente(contato, quem)
     return false if recebidas.nil?
 
-    na_margem = recebidas.where('messages.created_at > ?', inicio_da_margem(marco)).where.not(id: marco.fetch('lidas_na_margem'))
-    novas = recebidas.where('messages.id > ?', marco.fetch('lido_ate')).or(na_margem)
+    novas = novas_desde(recebidas, marco)
     (ate ? novas.where('messages.created_at <= ?', ate) : novas).exists?
+  end
+
+  # As mensagens de `escopo` que o `marco` não viu: id maior que o último lido, ou gravadas na margem antes dele sem
+  # estar entre as vistas. A régua do G31 e dos anexos novos do G46 (AnexosDaConversa), numa consulta só.
+  def novas_desde(escopo, marco)
+    na_margem = escopo.where('messages.created_at > ?', inicio_da_margem(marco)).where.not(id: marco.fetch('lidas_na_margem'))
+    escopo.where('messages.id > ?', marco.fetch('lido_ate')).or(na_margem)
   end
 
   # O marco da leitura do G31, como fica gravado no registro: o id da última mensagem do cliente visível agora (0 sem

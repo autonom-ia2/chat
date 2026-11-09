@@ -25,9 +25,18 @@ module Autonomia::Automacao::IaNoExecutor
       return encerrar(passo['id'], 'parada', 'mensagens_desligadas')
     end
 
-    executor = classe.new(execucao: @execucao, passo: passo, alvo: alvo, acesso: @acesso, pausa: @pausa)
+    executor = classe.new(execucao: @execucao, passo: passo, alvo: alvo, acesso: @acesso)
     marcar_leitura(passo)
-    depois_da_ia(passo, executor, executor.executar)
+    depois_da_ia(passo, executor, com_marco_dos_anexos(executor, executor.executar))
+  end
+
+  # G46: o passo que leu os anexos novos grava o marco no registro, e a próxima leitura parte dele. Só quando o passo
+  # andou (ok ou pulado): na nova tentativa de um erro passageiro, os mesmos anexos vão de novo.
+  def com_marco_dos_anexos(executor, resultado)
+    registro = executor.registro_dos_anexos
+    return resultado unless registro && %i[ok pulado].include?(resultado.tipo)
+
+    resultado.class.new(tipo: resultado.tipo, motivo: resultado.motivo, dados: resultado.dados.to_h.merge(registro))
   end
 
   # O "escrever" ao cliente com a janela fechada para antes de pagar a IA, como a mensagem (F4.4, #2573).

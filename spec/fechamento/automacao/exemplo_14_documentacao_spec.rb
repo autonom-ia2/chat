@@ -13,8 +13,8 @@ require 'rails_helper'
 # O laço: o "esperar até o cliente mandar foto ou PDF" (2 dias) e o "decidir" que volta a ele (`de_novo.desde`) nos
 # caminhos "ilegível", "falta algo" e "nenhum". O lembrete é uma vez por pausa, e o prazo recomeça a cada documento
 # (decisão do Rodrigo, 09/11); depois do retorno, a automação encerra. O lembrete, o retorno e o "tudo recebido" só agem
-# com o card ainda em "Documentação" (um "se" na receita, decisão do Rodrigo). O extrair lê só os anexos da pausa
-# (`anexos_novos`) e grava cada documento no seu campo do card; o "decidir" lê o card. A etiqueta é "docs-ok": o nome de
+# com o card ainda em "Documentação" (um "se" na receita, decisão do Rodrigo). O extrair lê só os anexos que ainda não
+# leu (`anexos_novos`) e grava cada documento no seu campo do card; o "decidir" lê o card. A etiqueta é "docs-ok": o nome de
 # etiqueta não aceita espaço, como no exemplo 1. Montada e ligada pela API da tela; o card entra pelo Creator; as esperas
 # andam pela varredura do motor; a IA é o dublê no endereço da OpenAI (nenhuma chamada paga); o WhatsApp oficial para no
 # receptor.
@@ -89,7 +89,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
     chegou_documento('espera_doc', [so_se_em_documentacao('ainda_la', [lembrete, segunda])])
   end
 
-  # Lê só os anexos que chegaram na pausa (`anexos_novos`): nenhum vai duas vezes à IA, e com 6 ou mais nada fica de fora.
+  # Lê só os anexos que ainda não leu (`anexos_novos`): nenhum vai duas vezes à IA, e com 6 ou mais nada fica de fora.
   def extrai
     campos = documentos.map do |chave, nome|
       { chave: chave, descricao: "se chegou #{nome}: \"recebido\" se dá para ler, ou o que não deu para ler; vazio se não chegou",
@@ -98,7 +98,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
     { id: 'extrai', tipo: 'extrair', le: %w[anexos_novos], trocar: true, campos: campos }
   end
 
-  # Um passo por documento: o que não chegou nesta pausa fica vazio, e o passo dele pula sem apagar o que o card já tem.
+  # Um passo por documento: o que não chegou nesta leitura fica vazio, e o passo dele pula sem apagar o que o card já tem.
   def no_card
     documentos.map do |chave, nome|
       { id: "no_card_#{chave}", tipo: 'acao', acao: 'PATCH crm/cards/:id', descricao: "Gravar no card #{nome}",
@@ -178,6 +178,12 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
   def ramos = Autonomia::Automacao::Registro.where(passo: 'decide').order(:id).map { |item| item.dados['ramo'] }
   def idas(nome) = ia_recebeu.count { |corpo| corpo.dig('text', 'format', 'name') == nome }
   def pedidos(nome) = ia_recebeu.select { |corpo| corpo.dig('text', 'format', 'name') == nome }
+
+  # Os campos do card que a IA recebeu (a leitura "card" vai como JSON no texto da entrada).
+  def card_lido(corpo)
+    texto = corpo['input'].first['content'].find { |parte| parte['type'] == 'input_text' }['text']
+    JSON.parse(texto).dig('conversa', 'card', 'attributes')
+  end
 
   # O que cada ida do extrair levou: o nome de cada PDF, "foto" por imagem.
   def lidos_pelo_extrair
@@ -263,8 +269,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
     expect(ramos).to eq(%w[falta_algo])
     expect(textos).to eq(['Recebi a CNH. Faltam o documento do carro e o comprovante de endereço.'])
     expect(pedidos('automacao_escrever').sole.to_json).to include('Peça só os documentos da lista que ainda não chegaram.')
-      .and include('cnh').and include('recebido')
-    expect(pedidos('automacao_decidir').sole.to_json).to include('cnh').and include('recebido')
+    expect(card_lido(pedidos('automacao_escrever').sole)).to eq('cnh' => 'recebido')
+    expect(card_lido(pedidos('automacao_decidir').sole)).to eq('cnh' => 'recebido')
     expect(pedidos('automacao_decidir').sole['input'].first['content'].pluck('type')).to eq(%w[input_text])
     expect(lidos_pelo_extrair).to eq([%w[cnh.pdf]])
     expect([execucao.reload.estado, execucao.cursor]).to eq(%w[esperando espera_doc])
@@ -366,8 +372,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
     pdfs.each_with_index { |nome, indice| manda(:pdf, nome, quando: entrada + (indice + 1).hours) }
 
     expect(lidos_pelo_extrair).to eq(pdfs.zip)
-    ultima = pedidos('automacao_decidir').last.to_json
-    expect(ultima).to include('cnh').and include('doc_carro').and include('comprovante')
+    expect(Autonomia::Automacao::Registro.where(passo: 'extrai').map { |item| item.dados.key?('marco_dos_anexos') }).to eq([true] * 7)
+    expect(card_lido(pedidos('automacao_decidir').last)).to eq('cnh' => 'recebido', 'doc_carro' => 'recebido', 'comprovante' => 'recebido')
     expect(card.reload.custom_attributes).to eq('cnh' => 'recebido', 'doc_carro' => 'recebido', 'comprovante' => 'recebido')
     expect(ramos.last).to eq('tudo_recebido')
     expect(card.stage_id).to eq(emissao.id)

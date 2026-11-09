@@ -35,11 +35,19 @@ module Autonomia::Automacao::ComIa
     ::Crm::CardPolicy.new({ user: usuario, account: card.account, account_user: account_user }, card).show?
   end
 
-  # `pausa`: a janela do "esperar até" cumprido logo antes nesta rodada, para `le: anexos_novos` (AnexosDaConversa).
-  def initialize(execucao:, passo:, alvo:, acesso:, pausa: nil)
+  # O que a leitura dos anexos novos (G46) deixa no registro do passo: o marco, de onde a próxima leitura parte, e
+  # quantos ficaram fora e para depois. nil quando o passo não leu anexos novos.
+  def registro_dos_anexos
+    anexos = @leitura&.anexos
+    return unless anexos&.novos?
+
+    { 'marco_dos_anexos' => anexos.marco_lido, 'anexos_fora' => anexos.fora, 'anexos_para_depois' => anexos.para_depois }
+      .reject { |_chave, valor| valor.is_a?(Integer) && valor.zero? }
+  end
+
+  def initialize(execucao:, passo:, alvo:, acesso:)
     super(execucao: execucao, passo: passo, alvo: alvo)
     @acesso = acesso
-    @pausa = pausa
   end
 
   # nil quando o passo pode seguir para a IA; senão o Resultado (sem conversa, quem ligou não a vê).
@@ -52,12 +60,25 @@ module Autonomia::Automacao::ComIa
   private
 
   # Com `fuso`, cada mensagem vai com a data e a hora dela (o extrair precisa para "ontem"). Com `le: anexos` (G20), os
-  # anexos da conversa vão junto (AnexosDaConversa); com `anexos_novos` (G46), os da pausa, ou os da execução inteira.
+  # anexos da conversa vão junto (AnexosDaConversa); com `anexos_novos` (G46), só os que este passo ainda não leu.
   def leitura(fuso: nil)
     leituras = ::Autonomia::Automacao::ComIa.leituras(@passo)
     estado = estado_com(leituras, fuso)
     estado = estado_com(leituras - ['card'], fuso) unless card_visivel?(leituras, estado)
-    @leitura = ::Autonomia::Automacao::AnexosDaConversa.leitura(estado, @passo, @conversa, pausa: @pausa || (@execucao.created_at..))
+    @leitura = ::Autonomia::Automacao::AnexosDaConversa.leitura(estado, @passo, @conversa, novos: anexos_novos)
+  end
+
+  # Do marco da leitura anterior deste passo (ou do começo da execução) até o marco de agora, pela régua do G31.
+  def anexos_novos
+    return unless ::Autonomia::Automacao::AnexosDaConversa.novos?(@passo)
+
+    marco = ::Autonomia::Automacao::Resposta.marco(@conversa.contact, @execucao.automacao.ligada_por)
+    { depois_de: marco_anterior || @execucao.created_at, ate: marco }
+  end
+
+  def marco_anterior
+    registros = ::Autonomia::Automacao::Registro.where(execucao: @execucao, passo: @passo['id'])
+    registros.where("dados ->> 'marco_dos_anexos' IS NOT NULL").order(:id).last&.dados&.fetch('marco_dos_anexos')
   end
 
   # `le: card` (#2679): no gatilho de card, o próprio card; no de conversa, o card dela (o Estado acha).

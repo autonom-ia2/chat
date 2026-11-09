@@ -21,7 +21,7 @@
         "CONTATO": "Nome e campos do contato (nunca e-mail ou telefone)",
         "EMPRESA": "Nome e campos da empresa",
         "ANEXOS": "Fotos, PDFs e áudios que o cliente mandou",
-        "ANEXOS_NOVOS": "Só as fotos, os PDFs e os áudios que chegaram no “esperar até” logo antes",
+        "ANEXOS_NOVOS": "Só as fotos, os PDFs e os áudios que este passo ainda não leu",
         "CARD": "O card: título, etapa, funil, status e campos",
         "NOTAS": "As notas internas da conversa (no texto ao cliente, a IA pode repetir o que elas dizem)"
       },
