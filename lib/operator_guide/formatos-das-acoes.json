@@ -279,7 +279,7 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:33",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:141"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:137"
     ],
     "sem_corpo": true
   },
@@ -12748,9 +12748,9 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:20",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:190",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:186",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:25",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:174",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:170",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:22",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:21"
     ],
@@ -12762,7 +12762,7 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:58",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:141"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:137"
     ],
     "sem_corpo": true
   },
@@ -12772,7 +12772,7 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:79",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:141"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:137"
     ],
     "sem_corpo": true
   },
@@ -17898,7 +17898,7 @@
     "completo": true,
     "controller": "api/v1/accounts/email_campaigns/recipients#create",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:84"
+      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:85"
     ],
     "sem_corpo": true
   },
@@ -17906,7 +17906,7 @@
     "completo": true,
     "controller": "api/v1/accounts/email_campaigns/recipients#retry_import",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:84"
+      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:85"
     ],
     "sem_corpo": true
   },
