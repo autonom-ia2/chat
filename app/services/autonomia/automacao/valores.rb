@@ -126,23 +126,8 @@ class Autonomia::Automacao::Valores
   # O gatilho cuja mensagem o filtro lê.
   GATILHO_DA_MENSAGEM = 'mensagem.criada'.freeze
 
-  # Valores fechados (#2496): fora destas opções e destes operadores a condição nunca casa, e a automação falharia em
-  # silêncio. O salvar recusa o resto; o editor mostra só isto.
-  FECHADOS = {
-    'mensagem.tipo' => { 'opcoes' => %w[recebida enviada nota], 'operadores' => %w[igual diferente] },
-    'mensagem.privada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'mensagem.primeira' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'mensagem.tem_anexo' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'conversa.iniciada_por' => { 'opcoes' => %w[cliente equipe], 'operadores' => %w[igual diferente] },
-    'conversa.cliente_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'conversa.responsavel_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'gatilho.repetiu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'card.origem' => { 'opcoes' => ::Autonomia::Automacao::OrigemDoCard::GRUPOS, 'operadores' => %w[igual diferente] },
-    'card.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'contato.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'envio.situacao' => { 'opcoes' => ::Autonomia::Automacao::Envio::SITUACOES.values, 'operadores' => %w[igual diferente] }
-  }.merge(::Autonomia::Automacao::Ausencia::FECHADOS).freeze
+  # Valores fechados (#2496): a lista mora em Valores::Fechados.
+  FECHADOS = ::Autonomia::Automacao::Valores::Fechados::LISTA
 
   # Os valores que pedem permissão para ler (#2597): a pergunta é a mesma do resto do CRM, feita a quem salva a receita
   # e a quem ligou a automação. O dono de um card não ganha, pela automação, o valor dos cards alheios: `ve?`, não

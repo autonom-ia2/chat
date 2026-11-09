@@ -22,8 +22,6 @@ class Autonomia::Automacao::Receita
   # Onde o extrair pode gravar, além dos atributos do contato e da conversa (`<base>.atributos.<chave>`).
   DESTINOS_FIXOS = %w[contato.nome empresa.nome].freeze
   DESTINOS_DE_ATRIBUTO = %w[contato.atributos conversa.atributos].freeze
-  # A chave do caminho sai do nome (minúscula, sem acento) e precisa de pelo menos uma letra.
-  LETRAS = ('a'..'z')
 
   # As listas de passos que um passo abre, na ordem em que aparecem. É a única travessia da receita: o salvar, o ligar, a
   # chave de funis (sem_funil? do controller) e o Roteiro andam por aqui. Um ramo que ficasse de fora deixaria a ação
@@ -126,8 +124,7 @@ class Autonomia::Automacao::Receita
     id = passo['id']
     [*(::Autonomia::Automacao::Motor.ia?(@conta) ? [] : [texto(:ia_desligada, passo: id)]),
      *(fala_com_gente?(passo) && !::Autonomia::Automacao::Motor.mensagens?(@conta) ? [texto(:passo_desligado, passo: id)] : []),
-     *caminhos_repetidos(id, Array(passo['caminhos'])),
-     *caminhos_sem_chave_boa(id, Array(passo['caminhos'])),
+     *::Autonomia::Automacao::CaminhosDoDecidir.problemas(id, Array(passo['caminhos'])),
      *::Autonomia::Automacao::DecidirDeNovo.problemas_ao_salvar(passo),
      *repetidos(id, Array(passo['campos']).pluck('chave'), :campo_repetido),
      *Array(passo['campos']).flat_map { |campo| destino_invalido(id, campo['destino']) },
@@ -139,30 +136,6 @@ class Autonomia::Automacao::Receita
 
   def fala_com_gente?(passo)
     (passo['tipo'] == 'escrever' && passo['destino'] == 'mensagem') || (passo['tipo'] == 'resumir' && passo['destino'].is_a?(Hash))
-  end
-
-  # Dois caminhos com a mesma chave ("Cotação" e "cotacao" viram cotacao) ou com o mesmo nome à vista (quem chama a API
-  # pode mandar chaves diferentes): uma frase por grupo, com o nome do primeiro, que é o que a pessoa vê.
-  def caminhos_repetidos(id, caminhos)
-    primeiros = caminhos.each_index.filter_map do |indice|
-      caminhos.first(indice).index { |outro| mesmo_caminho?(outro, caminhos[indice]) }
-    end
-    primeiros.uniq.map { |indice| texto(:caminho_repetido, passo: id, nome: caminhos[indice]['nome']) }
-  end
-
-  def mesmo_caminho?(primeiro, outro) = primeiro['chave'] == outro['chave'] || nome_comparavel(primeiro) == nome_comparavel(outro)
-
-  def nome_comparavel(caminho) = caminho['nome'].to_s.strip.downcase
-
-  # A chave "nenhum" é do ramo "nenhum se aplica": um caminho com ela deixaria a resposta da IA e o histórico ambíguos.
-  # E a chave precisa de letra: "!!!" vira vazia e "123" fica só com dígitos.
-  def caminhos_sem_chave_boa(id, caminhos)
-    caminhos.filter_map do |caminho|
-      chave = caminho['chave'].to_s
-      next texto(:caminho_reservado, passo: id, nome: caminho['nome']) if chave == NENHUM
-
-      texto(:caminho_sem_letra, passo: id, nome: caminho['nome']) if chave.each_char.none? { |letra| LETRAS.cover?(letra) }
-    end
   end
 
   def repetidos(id, chaves, motivo)
@@ -207,27 +180,35 @@ class Autonomia::Automacao::Receita
   # vazio no motor, com o motivo no registro. A resposta (G11) só existe na condição do "esperar até": fora dele não há
   # o começo da espera, e ela leria sempre vazio. O texto da IA (#2679) só vem de um passo que escreve; o registro criado
   # (G49), de um passo que cria, e do `tipo` pedido quando o lugar só aceita um (o contato do "criar card"). A mensagem
-  # que falhou (G53) não vale no "Só se" do gatilho (`no_gatilho`): a Partida filtra sem ela. `onde`: :caminho ou :corpo
-  # da ação, :texto (mensagem, aviso, e-mail, retorno); nil é o que decide (filtro e condição). Na ação, a automação de
-  # conversa não usa o card para agir (#2716): nenhum `card.*` no caminho e nenhum `card.id` no corpo; copiar um campo
-  # do card é ler.
-  def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false, tipo: nil, onde: nil)
+  # que falhou (G53) não vale no "Só se" do gatilho (`no_gatilho`): a Partida filtra sem ela. `lugar`: `tipo` (G49) e
+  # `onde`: :caminho ou :corpo da ação, :texto (mensagem, aviso, e-mail, retorno); sem `onde` é o que decide (filtro e
+  # condição). Na ação, a automação de conversa não usa o card para agir (#2716): nenhum `card.*` no caminho e nenhum
+  # `card.id` no corpo; copiar um campo do card é ler.
+  def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false, **lugar)
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
-    return ::Autonomia::Automacao::TextoDaIaNaReceita.new(self, @receita).problemas(id, caminho, no_gatilho: no_gatilho) if valores.da_ia?(caminho)
-    if ::Autonomia::Automacao::RegistroCriado.caminho?(caminho)
-      return ::Autonomia::Automacao::RegistroCriadoNaReceita.new(self, @receita, tipo: tipo).problemas(id, caminho, no_gatilho: no_gatilho)
-    end
+
+    de_passo = de_outro_passo(id, caminho, no_gatilho, lugar[:tipo])
+    return de_passo if de_passo
 
     fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera,
                                           gatilho: @receita.dig('gatilho', 'tipo'), no_filtro: no_gatilho)
     return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
 
-    no_lugar = ::Autonomia::Automacao::CardDaConversa.problema(caminho, onde, @receita.dig('gatilho', 'tipo'))
+    no_lugar = ::Autonomia::Automacao::CardDaConversa.problema(caminho, lugar[:onde], @receita.dig('gatilho', 'tipo'))
     return [texto(no_lugar, passo: id, caminho: caminho)] if no_lugar
 
     Array(valores.problema_de_leitura(caminho, conta: @conta, account_user: @account_user)).map { |chave| texto(chave, passo: id, caminho: caminho) }
+  end
+
+  # O valor que vem de outro passo desta execução: o texto da IA (#2679) ou o registro criado (G49); nil nos outros.
+  def de_outro_passo(id, caminho, no_gatilho, tipo)
+    if ::Autonomia::Automacao::Valores.da_ia?(caminho)
+      ::Autonomia::Automacao::TextoDaIaNaReceita.new(self, @receita).problemas(id, caminho, no_gatilho: no_gatilho)
+    elsif ::Autonomia::Automacao::RegistroCriado.caminho?(caminho)
+      ::Autonomia::Automacao::RegistroCriadoNaReceita.new(self, @receita, tipo: tipo).problemas(id, caminho, no_gatilho: no_gatilho)
+    end
   end
 
   def problemas_da_acao(passo)

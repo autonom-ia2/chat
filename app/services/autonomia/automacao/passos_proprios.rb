@@ -39,7 +39,9 @@ class Autonomia::Automacao::PassosProprios
   end
 
   def retorno(passo)
-    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @receita, @account_user) { |c| @caminho.call(passo['id'], c, onde: :texto) }
+    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @receita, @account_user) do |c|
+      @caminho.call(passo['id'], c, onde: :texto)
+    end
   end
 
   def outro_registro(passo)

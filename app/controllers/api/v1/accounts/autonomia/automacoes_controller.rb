@@ -155,9 +155,14 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     return true if de_conversa?(receita) && ::Autonomia::Automacao::CardDaConversa.le?(receita)
 
     ::Autonomia::Automacao::Receita.new(receita, conta: Current.account, account_user: Current.account_user).passos.any? do |passo|
-      PASSOS_DE_FUNIL.include?(passo['tipo']) || ::Autonomia::Automacao::EmOutroRegistro.de_funil?(passo, receita) ||
-        (passo['tipo'] == 'acao' && ::Autonomia::Automacao::AcoesPermitidas.de_funil?(passo['acao']))
+      passo_de_funil?(passo, receita)
     end
+  end
+
+  # O passo de funil, o "em outro registro" que lê cards (G18) e a ação de funil.
+  def passo_de_funil?(passo, receita)
+    PASSOS_DE_FUNIL.include?(passo['tipo']) || ::Autonomia::Automacao::EmOutroRegistro.de_funil?(passo, receita) ||
+      (passo['tipo'] == 'acao' && ::Autonomia::Automacao::AcoesPermitidas.de_funil?(passo['acao']))
   end
 
   # Só a conversa lê o card dela (#2716); no gatilho de contato, `card.*` é o valor_fora_do_alvo da Receita.
