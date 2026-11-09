@@ -210,7 +210,7 @@ RSpec.describe Autonomia::Automacao::Versao do
     condicao = { 'campo' => { '$valor' => 'card.valor' }, 'op' => 'maior', 'valor' => 10 }
     se = { 'id' => 'p2', 'tipo' => 'se', 'condicao' => condicao, 'entao' => [por_etiqueta('p3')] }
 
-    expect(erros(receita(se))).not_to include('card.valor')
+    expect(erros(receita(se))).to eq('')
     expect(erros(receita(se, gatilho: do_contato)))
       .to include('Passo p2: card.valor não dá para ler')
   end

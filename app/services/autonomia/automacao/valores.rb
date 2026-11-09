@@ -99,7 +99,7 @@ class Autonomia::Automacao::Valores
     'mensagem.privada' => ->(mensagem) { mensagem.private? },
     # A mensagem é a primeira de verdade da conversa (#2527)? A nota e a atividade nunca são.
     'mensagem.primeira' => ->(mensagem) { ::Autonomia::Automacao::PrimeiraMensagem.primeira?(mensagem) },
-    # A mensagem traz foto ou PDF (#2716, a régua do ex.14): FotoOuPdf. Áudio e outro arquivo não contam.
+    # A mensagem traz foto ou PDF (#2716, a régua do ex.14): FotoOuPdf. Áudio, figurinha e outro arquivo não contam.
     'mensagem.tem_anexo' => ->(mensagem) { ::Autonomia::Automacao::FotoOuPdf.mensagem?(mensagem) }
   }.freeze
 

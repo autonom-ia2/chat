@@ -4,8 +4,8 @@
 # no corpo) o salvar recusa (`card_da_conversa_so_le`); mexer no card é o passo "em outro registro".
 #
 # Ler pede a chave de funis (RegraDoFunil.chave?: `crm_manage_pipelines` ou `crm_admin`) de quem salva (controller) e de
-# quem ligou (Acesso pausa sem ela), como o gatilho de card. Ao rodar, sem a chave, sem ver o card (Crm::CardPolicy) ou
-# sem card na conversa, lê vazio.
+# quem ligou (Acesso pausa sem ela), como o gatilho de card. Ao rodar, sem a chave ou sem card que ele veja (Crm::CardPolicy)
+# na conversa, lê vazio; entre os cards da conversa, vale o primeiro que ele vê.
 module Autonomia::Automacao::CardDaConversa
   module_function
 
@@ -29,11 +29,15 @@ module Autonomia::Automacao::CardDaConversa
     end
   end
 
-  # O card da conversa que `account_user` pode ler, ou nil.
+  # O card da conversa que `account_user` pode ler, ou nil. Os cards que ele não vê (o escopo do Crm::CardPolicy) saem
+  # antes de escolher o assunto atual: o de topo oculto não esconde o próximo visível. O `show?` no escolhido confere o
+  # resto da regra (no EE, a chave `crm_view` da função).
   def ler(conversa, account_user)
     return unless conversa.is_a?(::Conversation) && ::Autonomia::Automacao::RegraDoFunil.chave?(account_user)
 
-    card = ::Crm::Cards::ConversationCardFinder.new(account: conversa.account).all(conversa).first
-    card if card && ::Crm::CardPolicy.new({ user: account_user.user, account: conversa.account, account_user: account_user }, card).show?
+    contexto = { user: account_user.user, account: conversa.account, account_user: account_user }
+    visiveis = ::Crm::CardPolicy::Scope.new(contexto, ::Crm::Card).resolve.select(:id)
+    card = ::Crm::Cards::ConversationCardFinder.new(account: conversa.account).all(conversa).where(id: visiveis).first
+    card if card && ::Crm::CardPolicy.new(contexto, card).show?
   end
 end

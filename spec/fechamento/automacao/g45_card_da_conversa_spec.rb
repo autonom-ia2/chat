@@ -1,16 +1,13 @@
 require 'rails_helper'
 
-# Fechamento do épico #2414 (#2570), exemplo 14 dos termos de aceite, passo 2 (#2716): "Documentação completa para
-# emitir".
+# Fechamento do épico #2414 (#2570), lacuna G45 (#2716): o gatilho de conversa lê o card da conversa, e o filtro da
+# mensagem separa foto ou PDF do resto.
 #
-# > "Quando o cliente fecha, eu perco dias esperando documento. Quero que o sistema peça, confira e me avise só quando
-# > estiver tudo certo." — Dona Cida, dona da corretora
-#
-# Passo 2 do termo: "A cada foto ou PDF que chega, a IA extrai, do que o leitor de mídia leu, qual documento é e se os
-# dados dão para ler." O card está em "Documentação" (o começo do termo); "a cada" é uma segunda automação, que começa
-# na mensagem e só segue com anexo e com o card da conversa em "Documentação" (#2716). Sem esse filtro a IA rodaria, e
-# cobraria, em toda mensagem da conta. Os outros passos seguem no pendentes_spec.
-RSpec.describe 'Fechamento #2414 · exemplo 14, passo 2: a cada documento, a IA confere qual é', :fechamento_automacao,
+# Prova a capacidade, não um exemplo dos termos de aceite. O cenário usa o tema do exemplo 14 ("Documentação completa
+# para emitir"), mas o ex.14 à risca é UMA automação, que começa quando o card entra em "Documentação" e faz o laço dos
+# documentos dentro dela. Aqui é uma automação de `mensagem.criada` à parte, que não fecha o ex.14: ele continua no
+# pendentes_spec, e o laço dentro de uma automação só é lacuna própria.
+RSpec.describe 'Fechamento #2414 · G45: a automação de conversa lê o card dela e filtra foto ou PDF', :fechamento_automacao,
                type: :request do
   include ActiveJob::TestHelper
 
@@ -52,12 +49,12 @@ RSpec.describe 'Fechamento #2414 · exemplo 14, passo 2: a cada documento, a IA 
 
   let(:automacao) { montar_automacao(cida, account, nome: 'Conferir cada documento', receita: receita) }
 
-  let(:file_types) { { 'image/png' => :image, 'application/pdf' => :file, 'audio/mpeg' => :audio } }
+  let(:file_types) { { 'image/png' => :image, 'image/webp' => :image, 'application/pdf' => :file, 'audio/mpeg' => :audio } }
 
   # O documento chega como o canal grava a mídia: a mensagem sem texto, com o arquivo, antes de os jobs rodarem.
-  def cliente_manda(arquivo, tipo, nome)
+  def cliente_manda(arquivo, tipo, nome, meta: {})
     mensagem = conversa.messages.new(account: account, inbox: inbox, message_type: :incoming, sender: cliente, content: nil)
-    anexo = mensagem.attachments.new(account_id: account.id, file_type: file_types.fetch(tipo))
+    anexo = mensagem.attachments.new(account_id: account.id, file_type: file_types.fetch(tipo), meta: meta)
     anexo.file.attach(io: Rails.root.join("spec/assets/#{arquivo}").open, filename: nome, content_type: tipo)
     mensagem.save!
     rodar_jobs
@@ -105,9 +102,16 @@ RSpec.describe 'Fechamento #2414 · exemplo 14, passo 2: a cada documento, a IA 
     expect([historico_de(automacao), ia_recebeu]).to eq([[], []])
   end
 
-  # O termo fala em "foto ou PDF": o áudio do cliente não é documento e não chama a IA.
+  # "Foto ou PDF": o áudio do cliente não é documento e não chama a IA.
   it 'áudio não chama a IA' do
     cliente_manda('sample.mp3', 'audio/mpeg', 'audio.mp3')
+
+    expect([historico_de(automacao), ia_recebeu]).to eq([[], []])
+  end
+
+  # A figurinha do WhatsApp chega como imagem, com a marca `meta.is_sticker` do recebimento.
+  it 'figurinha não chama a IA' do
+    cliente_manda('booking_small.webp', 'image/webp', 'sticker.webp', meta: { 'is_sticker' => true })
 
     expect([historico_de(automacao), ia_recebeu]).to eq([[], []])
   end

@@ -383,9 +383,12 @@ ainda sem mensagem, e "quem começou" não sai do gatilho: sai da primeira mensa
 
 ## 15. A conversa lê o card dela, e a mensagem diz se tem anexo (#2716)
 
-Achado na auditoria dos exemplos 14 e 18 (Issue #2716). O 14 confere, a cada
-documento que chega, que o card da conversa está em "Documentação"; sem isso, a IA roda (e cobra) em toda mensagem da
-conta. O 18 só começa com o currículo, em PDF ou foto.
+Achado na auditoria dos exemplos 14 e 18 (Issue #2716): uma automação de mensagem precisa saber em que etapa está o
+card da conversa e se chegou um documento; sem isso, uma IA no passo roda (e cobra) em toda mensagem da conta. O 18 só
+começa com o currículo, em PDF ou foto. Esta é a capacidade (G45). Ela não fecha o ex.14: à risca, o ex.14 é UMA
+automação, que começa quando o card entra em "Documentação" e faz o laço dos documentos dentro dela. Partir o passo 2
+numa segunda automação de `mensagem.criada` adapta o termo; o laço dentro de uma automação só vira lacuna nova, e o
+ex.14 continua no `pendentes_spec`.
 
 - `card.*` vale no gatilho de conversa (`Valores::BASES_DO_ALVO`). O card é o assunto atual da conversa, a mesma regra
   do selo da lista (`Crm::Cards::ConversationCardFinder`: o aberto antes do encerrado, depois o foco mais recente).
@@ -398,12 +401,16 @@ conta. O 18 só começa com o currículo, em PDF ou foto.
 - Ler o card pede a chave de funis (`crm_manage_pipelines` ou `crm_admin`), como o gatilho de card: o salvar recusa sem
   ela (`sem_funil`), e a automação pausa (`sem_permissao_funil`) quando quem ligou a perde, em vez de ler vazio e
   deixar o "Só se" falso em silêncio. A pausa olha a versão ativa e a das execuções em andamento (cada uma segue a
-  versão em que começou). Ao rodar, sem card na conversa ou sem ver o card (`Crm::CardPolicy#show?`), lê
-  vazio.
+  versão em que começou). Ao rodar, os cards que quem ligou não vê (o escopo do `Crm::CardPolicy`) saem antes de
+  escolher o assunto atual; sem card visível na conversa, lê vazio.
 - O editor oferece os valores do card no gatilho de conversa só a quem tem a chave de funis (`doAlvoDoGatilho`).
 - `mensagem.tem_anexo` (sim ou não, só no filtro de `mensagem.criada`): a mensagem traz foto ou PDF (a régua do
-  ex.14: "a cada foto ou PDF que chega"). Foto é o anexo `image`; PDF é o `file` com `application/pdf`. Áudio,
-  vídeo e outro arquivo não contam. Mora em `Autonomia::Automacao::FotoOuPdf`, que a espera pelo próximo documento
+  ex.14: "a cada foto ou PDF que chega"). Foto é o anexo `image` com arquivo; PDF é o `file` com `application/pdf`.
+  Áudio, vídeo, figurinha e outro arquivo não contam. A figurinha do WhatsApp chega como `image`
+  (`file_content_type` junta image e sticker); a marca dela é `meta.is_sticker`, gravada no recebimento por
+  `ConversaCanal::FigurinhaRecebida` (Cloud, 360dialog e Híbrido, com a flag `conversa_cara_do_canal`) e por
+  `Waha::RichNative::Inbound::Media` (caixa WAHA, com `whatsapp_rich_native`). Sem a flag, a marca não é gravada e a
+  figurinha conta como foto. Mora em `Autonomia::Automacao::FotoOuPdf`, que a espera pelo próximo documento
   (G46) reusa. Lê o anexo no instante do evento `mensagem.criada`. Valem os canais que gravam o anexo junto com a mensagem:
   WhatsApp Cloud (`Whatsapp::IncomingMessageBaseService`), o conector WAHA/Híbrido e a API e o widget
   (`messages#create` → `Messages::MessageBuilder`). **Limite conhecido:** o e-mail cria a mensagem e só depois anexa os
@@ -414,6 +421,6 @@ conta. O 18 só começa com o currículo, em PDF ou foto.
   em que começou.
 - Decisão da Automação: id fixo de card numa ação de uma automação de conversa continua permitido. Age com os direitos
   de quem ligou, como a pessoa faria à mão.
-- Provas: `spec/fechamento/automacao/exemplo_14_documentos_passo_2_spec.rb`,
+- Provas: `spec/fechamento/automacao/g45_card_da_conversa_spec.rb`,
   `spec/fechamento/automacao/exemplo_18_curriculo_comeco_spec.rb` e
   `spec/services/autonomia/automacao/card_da_conversa_spec.rb`.

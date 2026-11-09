@@ -48,13 +48,27 @@ RSpec.describe 'Automação livre: o card da conversa e o anexo da mensagem', :a
       create(:inbox_member, user: agente, inbox: conversa.inbox)
       expect(ler('card.etapa_id', quem: agente)).to eq(documentacao.id)
     end
+
+    # Revisão do #2780: escolher o card antes de olhar a visibilidade lia vazio quando o de topo era de outra caixa.
+    it 'pula o card de topo que quem lê não vê e lê o próximo que ele vê', :aggregate_failures do
+      oculto = account.crm_cards.create!(pipeline: documentacao.pipeline, stage: documentacao, title: 'De outra caixa', currency: 'BRL',
+                                         status: :open, primary_conversation: conversa, contact: conversa.contact,
+                                         inbox: create(:inbox, account: account))
+      visivel = card(documentacao, titulo: 'Da caixa da conversa')
+      funcao = create(:custom_role, account: account, permissions: %w[automation_manage crm_manage_pipelines])
+      agente.account_users.find_by(account: account).update!(custom_role: funcao)
+      create(:inbox_member, user: agente, inbox: conversa.inbox)
+
+      expect(ler('card.titulo')).to eq(oculto.title)
+      expect(ler('card.titulo', quem: agente)).to eq(visivel.title)
+    end
   end
 
   describe 'a mensagem tem foto ou PDF' do
-    def mensagem_com(arquivo, tipo, file_type)
+    def mensagem_com(arquivo, tipo, file_type, meta: {})
       mensagem = create(:message, conversation: conversa, account: account, message_type: :incoming, content: nil)
       upload = Rack::Test::UploadedFile.new(Rails.root.join("spec/assets/#{arquivo}"), tipo)
-      mensagem.attachments.create!(account: account, file_type: file_type, file: upload)
+      mensagem.attachments.create!(account: account, file_type: file_type, file: upload, meta: meta)
       mensagem
     end
 
@@ -67,6 +81,18 @@ RSpec.describe 'Automação livre: o card da conversa e o anexo da mensagem', :a
       expect(ler('mensagem.tem_anexo', mensagem: mensagem_com('sample.mp3', 'audio/mpeg', :audio))).to be(false)
       expect(ler('mensagem.tem_anexo', mensagem: mensagem_com('contacts.csv', 'text/csv', :file))).to be(false)
       expect(ler('mensagem.tem_anexo', mensagem: texto)).to be(false)
+    end
+
+    # Revisão do #2780: a figurinha do WhatsApp chega como `image` (com `meta.is_sticker`) e não é documento; a imagem
+    # sem arquivo (só o link externo) também não.
+    it 'diz não para figurinha e para imagem sem arquivo, e sim para a foto', :aggregate_failures do
+      figurinha = mensagem_com('booking_small.webp', 'image/webp', :image, meta: { 'is_sticker' => true })
+      sem_arquivo = create(:message, conversation: conversa, account: account, message_type: :incoming, content: nil)
+      sem_arquivo.attachments.create!(account: account, file_type: :image, external_url: 'https://example.com/foto.png')
+
+      expect(ler('mensagem.tem_anexo', mensagem: figurinha)).to be(false)
+      expect(ler('mensagem.tem_anexo', mensagem: sem_arquivo)).to be(false)
+      expect(ler('mensagem.tem_anexo', mensagem: mensagem_com('booking_small.jpg', 'image/jpeg', :image))).to be(true)
     end
   end
 
