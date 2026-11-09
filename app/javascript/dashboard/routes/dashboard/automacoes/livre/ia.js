@@ -49,7 +49,8 @@ export const caminhosProntos = caminhos =>
 // #2414 G31 — o "decidir" que espera a próxima resposta e decide de novo
 // quando a IA escolhe um dos caminhos marcados. As mesmas regras a Receita
 // confere no servidor (DecidirDeNovo): o caminho marcado não tem passos, e
-// sobra pelo menos um caminho para a automação seguir.
+// sobra pelo menos uma saída sem marcar para a automação seguir (um caminho
+// ou o "nenhum", que também é saída).
 export { NENHUM };
 
 // Os nomes dos caminhos marcados que ainda têm passos ("nenhum" pelo galho
