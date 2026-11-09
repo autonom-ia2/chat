@@ -5,10 +5,10 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 713 |
+| No catálogo | 714 |
 | Sem corpo | 207 |
-| Com corpo | 506 |
-| Com corpo e formato completo | 418 (82,6%) |
+| Com corpo | 507 |
+| Com corpo e formato completo | 419 (82,6%) |
 | Com corpo e formato incompleto | 88 |
 
 ## Por dentro dos campos
@@ -16,7 +16,7 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 210 |
-| Leituras cruas tipadas | 214 de 307 |
+| Leituras cruas tipadas | 215 de 308 |
 
 ## Incompletas por motivo
 

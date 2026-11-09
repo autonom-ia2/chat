@@ -167,6 +167,27 @@ RSpec.describe Instagram::CallbacksController do
         expect(Channel::Instagram.last.app_scoped_user_id).to eq('98765')
       end
 
+      # #2781: o mesmo Instagram já ligado em outra conta não impede ligar nesta; a caixa da outra fica como estava.
+      it 'creates the channel when the same Instagram is already connected in another account' do
+        other = create(:channel_instagram, instagram_id: '12345', access_token: 'other_token')
+
+        expect do
+          get :show, params: valid_params
+        end.to change(Channel::Instagram, :count).by(1).and change(Inbox, :count).by(1)
+
+        expect(Channel::Instagram.last.account).to eq(account)
+        expect(other.reload.access_token).to eq('other_token')
+      end
+
+      # #2406: entrar pelo login do Instagram numa caixa trocada para o login do Facebook a devolve.
+      it 'brings a Facebook-login inbox back to the Instagram login' do
+        existing = create(:channel_instagram, account: account, instagram_id: '12345', login: 'facebook', page_id: '104000000000001')
+
+        get :show, params: valid_params
+
+        expect(existing.reload).to have_attributes(login: 'instagram', page_id: nil, access_token: 'long_lived_test_token')
+      end
+
       it 'updates existing channel with new token' do
         existing_channel = create(:channel_instagram, account: account, instagram_id: '12345', access_token: 'old_token')
         existing_channel.inbox.update!(name: 'Custom Inbox Name')
