@@ -15,9 +15,10 @@
 class Crm::MetaAds::LeadForms::Importer
   SOURCE = 'meta_lead_form'.freeze
   # O que o card recebe do lead e não do destino: recusa só nesses campos é do lead.
-  LEAD_CARD_ATTRIBUTES = %i[title metadata].freeze
-  # Corrida com outro processo no banco: some na próxima tentativa.
-  TRANSIENT_ERRORS = [ActiveRecord::RecordNotUnique, ActiveRecord::Deadlocked, ActiveRecord::LockWaitTimeout].freeze
+  LEAD_CARD_ATTRIBUTES = %i[title metadata contact].freeze
+  # Corrida com outro processo, prazo do banco ou conexão caída: some na próxima tentativa.
+  TRANSIENT_ERRORS = [ActiveRecord::RecordNotUnique, ActiveRecord::Deadlocked, ActiveRecord::LockWaitTimeout,
+                      ActiveRecord::QueryCanceled, ActiveRecord::ConnectionFailed].freeze
   NAME_KEYS = %w[full_name first_name last_name].freeze
   PHONE_KEY = 'phone_number'.freeze
   EMAIL_KEY = 'email'.freeze
@@ -54,6 +55,9 @@ class Crm::MetaAds::LeadForms::Importer
     refused!(lead, e, refusal_kind(e.record))
   rescue *TRANSIENT_ERRORS => e
     refused!(lead, e, :transient)
+  rescue ActiveRecord::StatementInvalid => e
+    # Outra recusa do banco (ex.: um caractere que o Postgres não grava) vem do dado do lead.
+    refused!(lead, e, :lead)
   end
 
   private

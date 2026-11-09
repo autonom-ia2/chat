@@ -235,7 +235,7 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
 
   # #2740: lead que o banco recusa (dado inválido) não é tentado de novo a cada hora; vai ao rastreador uma vez.
   describe 'lead que não dá para gravar' do
-    let(:recusa) { ActiveRecord::RecordInvalid.new(Crm::Card.new) }
+    let(:recusa) { ActiveRecord::RecordInvalid.new(Crm::Card.new.tap { |card| card.errors.add(:title, :blank) }) }
 
     it 'a rodada seguinte não tenta de novo, e o lead novo bom entra', :aggregate_failures do
       stub_leads(leads: [lead('L1', 'Ana', '+5511987650001')])
@@ -256,9 +256,9 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
       expect(ChatwootExceptionTracker).to have_received(:new).once
     end
 
-    def recusar_ana!
+    def recusar_ana!(erro = recusa)
       stub_leads(leads: [lead('L1', 'Ana', '+5511987650001')])
-      allow_any_instance_of(Crm::Cards::Creator).to receive(:perform).and_raise(recusa) # rubocop:disable RSpec/AnyInstance
+      allow_any_instance_of(Crm::Cards::Creator).to receive(:perform).and_raise(erro) # rubocop:disable RSpec/AnyInstance
       allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
       described_class.perform_now(form.id)
       allow_any_instance_of(Crm::Cards::Creator).to receive(:perform).and_call_original # rubocop:disable RSpec/AnyInstance
@@ -289,7 +289,7 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
     # #2804: o funil consertado (a etapa, o dono, o funil reativado) muda a linha do funil, e a recusa do destino não
     # vale mais, mesmo sem salvar o destino de novo no formulário.
     it 'funil consertado sem salvar o destino: a rodada seguinte tenta de novo e o lead entra' do
-      recusar_ana!
+      recusar_ana!(ActiveRecord::RecordInvalid.new(Crm::Card.new.tap { |card| card.errors.add(:stage, :invalid) }))
 
       travel(1.second) { pipeline.update!(name: 'Vendas consertado') }
       described_class.perform_now(form.id)

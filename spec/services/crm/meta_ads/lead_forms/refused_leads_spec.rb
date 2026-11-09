@@ -115,6 +115,15 @@ RSpec.describe Crm::MetaAds::LeadForms::RefusedLeads do
       end
     end
 
+    it 'salvar o destino de novo não zera a conta' do
+      (described_class::TRANSIENT_ATTEMPTS - 1).times { described_class.new(form).remember!('L1', :transient) }
+      travel(1.second) { form.update!(updated_at: Time.current) }
+
+      described_class.new(form.reload).remember!('L1', :transient)
+
+      expect(described_class.new(form).ids(['L1'])).to eq(['L1'])
+    end
+
     it 'cada lead conta as suas tentativas' do
       (described_class::TRANSIENT_ATTEMPTS - 1).times { described_class.new(form).remember!('L1', :transient) }
       described_class.new(form).remember!('L2', :transient)

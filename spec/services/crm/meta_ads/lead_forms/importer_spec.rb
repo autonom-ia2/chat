@@ -213,6 +213,13 @@ RSpec.describe Crm::MetaAds::LeadForms::Importer do
       expect(Crm::MetaAdsLead.count).to eq(0)
     end
 
+    it 'outra recusa do banco (dado que o Postgres não grava): recusa do lead, sem derrubar o lote' do
+      allow(Crm::Cards::Creator).to receive(:new).and_raise(ActiveRecord::StatementInvalid, 'invalid byte sequence')
+
+      expect(importer.import(lead)).to eq(:failed)
+      expect(refused).to have_received(:remember!).with('L1', :lead)
+    end
+
     it 'impasse no banco (deadlock): :failed passageiro' do
       allow(Crm::Cards::Creator).to receive(:new).and_raise(ActiveRecord::Deadlocked, 'deadlock detected')
 

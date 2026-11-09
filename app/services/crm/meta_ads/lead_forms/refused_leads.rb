@@ -29,7 +29,8 @@ class Crm::MetaAds::LeadForms::RefusedLeads
     @scopes = {
       lead: [*base, 'lead'],
       destination: [*base, 'destination', stamp(form_record.pipeline), stamp(form_record.stage)],
-      transient: [*base, 'transient']
+      # Sem a versão da linha: salvar o destino de novo não zera a conta.
+      transient: [*base.first(4), 'transient']
     }
   end
 
