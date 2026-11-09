@@ -5,15 +5,16 @@
 #   palavras dele, e as frases públicas, no idioma da tela. O servidor não monta frase.
 # - O resto é lido na hora: os comentários do alvo (Fonte, ao vivo, nunca gravados) e o que a IA fez com cada um
 #   (Crm::MetaAdsCommentAction, actor 'ai'). Recebeu no privado e respondeu: pelas conversas que nasceram do cuidado.
-# - "Esperando você" (`to_see`) é o que ficou com o dono, com o porquê: reclamação, privado recusado, privado que pode
-#   ter saído (a Meta não respondeu), não cuidei (Meta ou IA fora do ar, teto do dia, sem certeza), mais de 7 dias,
+# - "Esperando você" (`to_see`) é o que ficou com o dono, com o porquê: reclamação, privado recusado, privado recusado
+#   por falta de permissão da Página (`no_permission`, #2307), privado que pode ter saído (a Meta não respondeu), não
+#   cuidei (Meta ou IA fora do ar, teto do dia, sem certeza), mais de 7 dias,
 #   era o caso do privado, mas ele não sai ali (`no_private`), não era o caso (a IA leu e não agiu), chegou antes de
 #   ligar (`started_at`) ou chegou com o cuidado pausado (`paused`). O que chegou depois de ligar, com o cuidado ligado,
 #   e a IA ainda não leu está na fila dela: não entra por ESPERA_DA_IA; depois, entra (`not_caught`, #2519).
 #   "Escondi" (`hidden`): o que a IA escondeu.
 # - "Ler e mandar": uma vez por cuidado ligado (trava atômica em `read_old_at`), o LerAntigosJob põe os comentários de
 #   até 7 dias que chegaram antes de ligar na fila do motor, como comentários novos. Quem não é o caso fica com o dono.
-class Crm::MetaAds::ComentariosIa::Painel
+class Crm::MetaAds::ComentariosIa::Painel # rubocop:disable Metrics/ClassLength -- no teto (175) antes do #2307; ele soma 3 linhas
   class Error < StandardError
     attr_reader :code
 
@@ -28,6 +29,9 @@ class Crm::MetaAds::ComentariosIa::Painel
     'to_you' => 'complaint', 'private_reply_failed' => 'failed', 'private_reply_unsure' => 'unsure',
     'kept_for_owner' => 'no_private', 'ai_unread' => 'unread', 'private_reply_already' => 'already_sent'
   }.freeze
+
+  # O privado recusado porque a Página não tem a permissão (#2307): a tela diz isso, não "não consegui".
+  SEM_PERMISSAO = 'no_permission'.freeze
 
   # Quanto o comentário espera na fila da IA antes de vir para o dono, no "Esperando você" (#2519).
   ESPERA_DA_IA = 10.minutes
@@ -88,7 +92,8 @@ class Crm::MetaAds::ComentariosIa::Painel
     lido = @fonte.ler
     return cuidado_payload.merge(status: lido[:status], unanswered: 0, older: 0, to_see: [], hidden: []) unless lido[:status] == 'ready'
 
-    cuidado_payload.merge(lista(lido))
+    # #2522: no anúncio nas duas redes, a lista pode ser só a da rede que leu: a tela avisa qual faltou.
+    cuidado_payload.merge(lista(lido), network_status: lido[:status_das_redes])
   end
 
   # escrita (#2458): { temas:, assunto_proibido:, tom: } do passo 2, só os que vieram: o que não veio fica como estava.
@@ -186,8 +191,9 @@ class Crm::MetaAds::ComentariosIa::Painel
   def cuidado_payload
     escrito = cuidado || Crm::MetaAdsCommentCare.new
     {
-      # O privado sai em alguma rede do alvo: no Facebook, só com a flag da conta (Rede.privado_liberado?, #2613).
-      private_available: @networks.any? { |rede| Crm::MetaAds::ComentariosIa::Rede.privado_liberado?(@account, rede) },
+      # O privado sai em alguma rede do alvo: no Facebook, só na Página com a `pages_messaging` concedida
+      # (Rede.privado_liberado?, #2307).
+      private_available: @networks.any? { |rede| Crm::MetaAds::ComentariosIa::Rede.privado_na_fonte?(@account, rede, @fonte) },
       network: rede_do_cuidado, care: cuidado ? escrito.status : 'off',
       message: escrito.message.to_s, para_quem: escrito.para_quem.to_s, phrases: Array(escrito.phrases),
       read_old: escrito.read_old_at.present?, results: resultados.merge(skipped: 0),
@@ -220,6 +226,7 @@ class Crm::MetaAds::ComentariosIa::Painel
     kind = acoes.keys.filter_map { |acao| MOTIVO_DA_ACAO[acao] }.first || tipo_sem_acao(linha, acoes)
     return if kind.nil?
 
+    kind = SEM_PERMISSAO if kind == 'failed' && @sem_permissao.include?(linha[:id].to_s)
     comentario(linha).merge(kind: kind, conversation_path: caminho(acoes.values.compact.first))
   end
 
@@ -245,8 +252,9 @@ class Crm::MetaAds::ComentariosIa::Painel
     { id: linha[:id].to_s, network: linha[:network], author: linha[:author], text: linha[:text], created_time: linha[:momento]&.iso8601 }
   end
 
-  # { comment_id => { ação => conversa } }, só as da IA nesta conta.
+  # { comment_id => { ação => conversa } }, só as da IA nesta conta. De passagem, os recusados por permissão (#2307).
   def acoes_da_ia(ids)
+    @sem_permissao = Crm::MetaAds::ComentariosIa::Registro.sem_permissao(@account.id, ids)
     Crm::MetaAdsCommentAction.where(account_id: @account.id, actor: Crm::MetaAds::ComentariosIa::Registro::ACTOR, comment_id: ids.map(&:to_s))
                              .includes(:conversation)
                              .each_with_object(Hash.new { |hash, key| hash[key] = {} }) do |acao, por_comentario|

@@ -9,7 +9,8 @@
 #   de "hoje" ou de um atributo do tipo data;
 # - todo `$valor` do caminho, do corpo e das condições é um caminho que a automação sabe ler;
 # - a condição sobre um valor fechado (`mensagem.tipo`) usa uma das opções e um dos operadores dele (#2496);
-# - o gatilho de card só com a flag da F6, e a etapa ou o funil escolhidos nele são da conta (#2499).
+# - o gatilho de card só com a flag da F6, e a etapa ou o funil escolhidos nele são da conta (#2499);
+# - o "decidir" a cada resposta (G31) só repete caminhos dele, sem passos, e deixa um para seguir (DecidirDeNovo).
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
   RAMOS = %w[entao senao se_vencer].freeze
@@ -49,7 +50,7 @@ class Autonomia::Automacao::Receita
 
   # Frases para a pessoa (ou o Guia) corrigir. Vazio = pode salvar. Só roda com a receita já no esquema.
   def problemas
-    [*ids_repetidos, *gatilho_novo, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) }]
+    [*ids_repetidos, *gatilho_novo, *conversa_nova, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) }]
   end
 
   # Todos os passos, inclusive os de dentro dos ramos, na ordem em que aparecem.
@@ -63,8 +64,12 @@ class Autonomia::Automacao::Receita
     passos.pluck('id').tally.select { |_id, vezes| vezes > 1 }.keys.map { |id| texto(:id_repetido, passo: id) }
   end
 
-  # O gatilho de card e o de tempo (#2499): a flag, a etapa, o funil e o campo de data são da conta.
-  def gatilho_novo = ::Autonomia::Automacao::ProblemasDoGatilho.new(@receita['gatilho'].to_h, @conta).problemas
+  # O gatilho de card e o de tempo (#2499): a flag, a etapa, o funil e o campo de data são da conta; no da conta (G7),
+  # os passos que ele aceita.
+  def gatilho_novo = ::Autonomia::Automacao::ProblemasDoGatilho.new(@receita['gatilho'].to_h, @conta, passos: passos).problemas
+
+  # A caixa por onde abrir a conversa de quem não tem (#2680): da conta, e quem salva pode começar conversa nela.
+  def conversa_nova = ::Autonomia::Automacao::ConversaNova.problemas_ao_salvar(@conta, @receita['gatilho'].to_h, @account_user)
 
   def filtros_do_gatilho
     Array(@receita.dig('gatilho', 'filtros')).flat_map { |condicao| problemas_da_condicao('gatilho', condicao, no_gatilho: true) }
@@ -99,7 +104,7 @@ class Autonomia::Automacao::Receita
     id = passo['id']
     desligado = ::Autonomia::Automacao::Motor.mensagens?(@conta) ? [] : [texto(:passo_desligado, passo: id)]
     textos = [passo['texto'], passo['assunto'], *Array(passo.dig('modelo', 'variaveis'))]
-    lidos = textos.flat_map { |partes| ::Autonomia::Automacao::Texto.caminhos(partes) }.flat_map { |caminho| problemas_do_caminho(id, caminho) }
+    lidos = textos.flat_map { |partes| ::Autonomia::Automacao::Texto.caminhos(partes) }.flat_map(&no_texto(id))
     caixa = passo['tipo'] == 'email' ? ::Autonomia::Automacao::PassoDeEmail.problemas_ao_salvar(@conta, passo) : []
     modelo = ::Autonomia::Automacao::ModeloWhatsapp.problemas_ao_salvar(@conta, id, passo['modelo'])
     desligado + lidos + destinatarios_de_fora(passo) + modelo + caixa
@@ -113,6 +118,7 @@ class Autonomia::Automacao::Receita
      *(fala_com_gente?(passo) && !::Autonomia::Automacao::Motor.mensagens?(@conta) ? [texto(:passo_desligado, passo: id)] : []),
      *caminhos_repetidos(id, Array(passo['caminhos'])),
      *caminhos_sem_chave_boa(id, Array(passo['caminhos'])),
+     *::Autonomia::Automacao::DecidirDeNovo.problemas_ao_salvar(passo),
      *repetidos(id, Array(passo['campos']).pluck('chave'), :campo_repetido),
      *Array(passo['campos']).flat_map { |campo| destino_invalido(id, campo['destino']) },
      *destinatarios_de_fora('id' => id, 'para' => avisar_do_resumir(passo))]
@@ -120,7 +126,7 @@ class Autonomia::Automacao::Receita
 
   # "criar retorno" (G3): a conferência mora no PassoDeRetorno; os caminhos lidos, pela régua daqui.
   def problemas_do_retorno(passo)
-    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @receita, @account_user) { |c| problemas_do_caminho(passo['id'], c) }
+    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @receita, @account_user, &no_texto(passo['id']))
   end
 
   # O destino do resumir é "nota" (texto) ou { avisar: ... }; o do escrever é sempre texto.
@@ -166,11 +172,7 @@ class Autonomia::Automacao::Receita
   end
 
   def destinatarios_de_fora(passo)
-    para = passo['para'].to_h
-    times = Array(para['times']) - @conta.teams.where(id: para['times']).pluck(:id)
-    pessoas = Array(para['pessoas']) - @conta.users.where(id: para['pessoas']).pluck(:id)
-    times.map { |time| texto(:time_de_fora, passo: passo['id'], id: time) } +
-      pessoas.map { |pessoa| texto(:pessoa_de_fora, passo: passo['id'], id: pessoa) }
+    ::Autonomia::Automacao::DestinatariosDoAviso.new(@conta, @receita.dig('gatilho', 'tipo')).problemas(passo['id'], passo['para'])
   end
 
   # O caminho que não vale ali já diz o que corrigir; o valor fora só aparece depois.
@@ -198,15 +200,23 @@ class Autonomia::Automacao::Receita
 
   # Caminho que a automação não sabe ler, ou atributo que a conta não tem. O atributo apagado depois de salvar chega
   # vazio no motor, com o motivo no registro. A resposta (G11) só existe na condição do "esperar até": fora dele não há
-  # o começo da espera, e ela leria sempre vazio. O texto da IA (#2679) só vem de um passo que escreve.
-  def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false)
+  # o começo da espera, e ela leria sempre vazio. O texto da IA (#2679) só vem de um passo que escreve. A mensagem que
+  # falhou (G53) não vale no "Só se" do gatilho (`no_gatilho`): a Partida filtra sem ela. `onde`: :caminho ou :corpo da
+  # ação, :texto (mensagem, aviso, e-mail, retorno); nil é o que decide (filtro e condição). Na ação, a automação de
+  # conversa não usa o card para agir (#2716): nenhum `card.*` no caminho e nenhum `card.id` no corpo; copiar um campo
+  # do card é ler.
+  def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false, onde: nil)
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
     return ::Autonomia::Automacao::TextoDaIaNaReceita.new(self, @receita).problemas(id, caminho, no_gatilho: no_gatilho) if valores.da_ia?(caminho)
 
-    fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera, gatilho: @receita.dig('gatilho', 'tipo'))
+    fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera,
+                                          gatilho: @receita.dig('gatilho', 'tipo'), no_filtro: no_gatilho)
     return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
+
+    no_lugar = ::Autonomia::Automacao::CardDaConversa.problema(caminho, onde, @receita.dig('gatilho', 'tipo'))
+    return [texto(no_lugar, passo: id, caminho: caminho)] if no_lugar
 
     Array(valores.problema_de_leitura(caminho, conta: @conta, account_user: @account_user)).map { |chave| texto(chave, passo: id, caminho: caminho) }
   end
@@ -219,10 +229,16 @@ class Autonomia::Automacao::Receita
   end
 
   # #2499: `card.*` num gatilho de conversa não tem de onde ler. Gatilho desconhecido o esquema já recusou.
+  # A conversa nova (#2680) dá ao alvo sem conversa (o contato) a ponte para a que ela abre.
   def no_alvo_do_gatilho?(caminho)
     alvo = ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
-    alvo.nil? || ::Autonomia::Automacao::Valores.no_alvo?(caminho, alvo)
+    return true if alvo.nil? || ::Autonomia::Automacao::Valores.no_alvo?(caminho, alvo)
+
+    ::Autonomia::Automacao::ConversaNova.caixa_id(@receita).present? && caminho.to_s.start_with?('conversa.')
   end
+
+  # A conferência do caminho que vai para um texto (mensagem, aviso, e-mail, retorno).
+  def no_texto(id) = ->(caminho) { problemas_do_caminho(id, caminho, onde: :texto) }
 
   def mensagem_no_gatilho?(no_gatilho) = no_gatilho && @receita.dig('gatilho', 'tipo') == ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM
 
@@ -231,7 +247,7 @@ class Autonomia::Automacao::Receita
     faltando = parametros(passo['acao']).reject { |nome| valores[nome].present? }
                                         .map { |nome| texto(:caminho_faltando, passo: passo['id'], campo: nome) }
     lidos = valores.values.filter_map { |valor| valor['$valor'] if valor.is_a?(Hash) }
-    faltando + lidos.flat_map { |caminho| problemas_do_caminho(passo['id'], caminho) }
+    faltando + lidos.flat_map { |caminho| problemas_do_caminho(passo['id'], caminho, onde: :caminho) }
   end
 
   # O formato confere o corpo com um exemplo no lugar de cada valor calculado (Corpo.exemplo): chave fora do formato e
@@ -240,7 +256,7 @@ class Autonomia::Automacao::Receita
     corpo = passo['corpo'].to_h
     exemplo = ::Autonomia::Automacao::Corpo.exemplo(passo['acao'], corpo)
     conferencia = ::Autonomia::Guide::Formatos::Conferencia.new(passo['acao'], exemplo, conta: @conta)
-    calculo = ::Autonomia::Automacao::ProblemasDoCorpo.new(passo, conta: @conta) { |caminho| problemas_do_caminho(passo['id'], caminho) }
+    calculo = ::Autonomia::Automacao::ProblemasDoCorpo.new(passo, conta: @conta) { |lido| problemas_do_caminho(passo['id'], lido, onde: :corpo) }
     calculo.problemas +
       conferencia.problemas_em_texto.map { |problema| texto(:corpo, passo: passo['id'], problema: problema) } +
       regras_da_lista(passo['id'], passo['acao'], conferencia.valores)

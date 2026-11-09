@@ -437,6 +437,11 @@ describe('catálogo do editor livre', () => {
         'Na conversa, pôr billing e tirar lead',
       ],
       [{}, 'ETIQUETAS'],
+      // #2702 G29: a etiqueta com o nome de um dado sai pelo nome dele.
+      [
+        { por: ['vip', { $valor: 'conversa.status' }] },
+        'Pôr as etiquetas vip e [STATUS] na conversa',
+      ],
     ])('%j vira "%s"', (corpo, frase) => {
       expect(fraseDoPasso(etiquetas(corpo), CATALOGO, tReal)).toBe(frase);
     });

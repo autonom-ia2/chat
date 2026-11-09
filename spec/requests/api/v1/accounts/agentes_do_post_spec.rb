@@ -67,7 +67,16 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
     post "#{base}/#{care.id}/testar", params: params, headers: quem.create_new_auth_token, as: :json
   end
 
+  # #2307: o privado da Página vale pelo que a Meta concedeu ao login dela (/me/permissions), nunca rede real. Sem dizer,
+  # a Página não tem a pages_messaging.
+  def permissao_da_pagina(status)
+    stub_request(:get, meta_graph_url('me/permissions'))
+      .to_return(status: 200, headers: { 'Content-Type' => 'application/json' },
+                 body: { data: [{ permission: 'pages_messaging', status: status }] }.to_json)
+  end
+
   before do
+    permissao_da_pagina('declined')
     account.enable_features!('seus_posts', 'seus_posts_comentarios', 'meta_ads_comentarios_ia',
                              'meta_ads_comentarios_instagram', 'meta_ads_comentarios_facebook')
     create_meta_ads_insights_connection(account)
@@ -219,6 +228,7 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
     it 'os comentários nos grupos da tela: "não era o caso" e escondido em "não respondo", o resto esperando você' do
       painel = instance_double(Crm::MetaAds::ComentariosIa::Painel, payload: {
                                  status: 'ready', results: { sent: 3, replied: 1, skipped: 1 },
+                                 network_status: { 'instagram' => 'ready', 'facebook' => 'needs_login' },
                                  to_see: [linha('1', 'complaint'), linha('2', 'skipped'), linha('3', 'waiting')], hidden: [linha('4')]
                                })
       allow(Crm::MetaAds::ComentariosIa::Painel).to receive(:new).and_return(painel)
@@ -229,6 +239,8 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       expect(comentarios['esperando'].pluck('id')).to eq(%w[1 3])
       expect(comentarios['nao_respondo'].map { |item| [item['id'], item['kind']] }).to eq([%w[2 skipped], %w[4 hidden]])
       expect(comentarios['results']).to eq('sent' => 3, 'replied' => 1, 'skipped' => 1)
+      # #2522: o status de cada rede, para a gaveta avisar qual faltou.
+      expect(comentarios['network_status']).to eq('instagram' => 'ready', 'facebook' => 'needs_login')
     end
 
     it '#2481: "no privado" lista as conversas do privado deste cuidado que a pessoa vê, com o comentário do topo' do
@@ -492,7 +504,7 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       na_porta(pagina.inbox, 'Bia')
     end
 
-    it 'no Testar o privado do Facebook não sai: fica com você, sem escrever' do
+    it 'no Testar o privado do Facebook não sai sem a pages_messaging: fica com você, sem escrever' do
       decide('price')
 
       testar(pergunta: 'Quanto custa?')
@@ -501,8 +513,8 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       expect(Autonomia::Agents::Answerer).not_to have_received(:new)
     end
 
-    it 'com a flag do privado no Facebook (#2613), o Testar decide e escreve o privado, como no Instagram' do
-      account.enable_features!('meta_ads_comentarios_privado_facebook')
+    it 'com a pages_messaging concedida à Página (#2307), o Testar decide e escreve o privado, como no Instagram' do
+      permissao_da_pagina('granted')
       care.update!(para_quem: 'Quem perguntar o preço')
       decide('price')
 

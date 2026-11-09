@@ -38,7 +38,7 @@ module Autonomia::Insurance::CotacoesDoMesmoPedido
   def outras(run)
     return [] if run.origin_message_id.blank? || run.conversation_id.blank?
 
-    ::Autonomia::Agents::ToolRun.for_conversation(run.conversation_id)
+    ::Autonomia::Agents::ToolRun.nativas.for_conversation(run.conversation_id) # #1430: a HTTP homônima não é cotação
                                 .where(slug: run.slug, origin_message_id: run.origin_message_id)
                                 .where.not(id: run.id).where.not(status: FORA).order(:created_at, :id).to_a
   end

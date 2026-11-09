@@ -319,7 +319,8 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
       expect(execucao.reload.estado).to eq('concluida')
     end
 
-    it 'a mensagem de outra conversa não acorda o card' do
+    # #2680: o e-mail da automação abre outra conversa do mesmo contato, e a resposta chega nela.
+    it 'a resposta do mesmo contato em outra conversa acorda o card na hora' do
       execucao = comecar_e_rodar(definicao, card)
       outra = create(:conversation, account: account, inbox: conversa.inbox, contact: conversa.contact)
 
@@ -328,7 +329,46 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
         perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { listener.message_created(evento('message.created', message: mensagem)) }
       end
 
+      expect(execucao.reload.estado).to eq('concluida')
+    end
+
+    it 'a mensagem de outro contato não acorda o card' do
+      execucao = comecar_e_rodar(definicao, card)
+      outra = create(:conversation, account: account, inbox: conversa.inbox)
+
+      travel(10.minutes) do
+        mensagem = create(:message, account: account, conversation: outra, inbox: outra.inbox, message_type: :incoming)
+        perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { listener.message_created(evento('message.created', message: mensagem)) }
+      end
+
       expect(execucao.reload.estado).to eq('esperando')
+    end
+  end
+
+  # Parecer da Funções no #2689: a resposta numa caixa que quem ligou não abre não decide o ramo.
+  describe 'nas conversas que quem ligou vê' do
+    let(:espera) { 1.hour.ago.. }
+    let(:outra_caixa) { create(:inbox, account: account) }
+
+    before do
+      conversa.inbox.add_members([atendente.id])
+      outra = create(:conversation, account: account, inbox: outra_caixa, contact: conversa.contact)
+      create(:message, account: account, conversation: outra, inbox: outra_caixa, message_type: :incoming)
+    end
+
+    it 'a resposta na caixa que ele não abre não conta; para o administrador, conta', :aggregate_failures do
+      expect(described_class.cliente?(conversa.contact, espera, atendente)).to be(false)
+      expect(described_class.cliente?(conversa.contact, espera, admin)).to be(true)
+    end
+
+    it 'a resposta na caixa dele conta' do
+      create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming)
+
+      expect(described_class.cliente?(conversa.contact, espera, atendente)).to be(true)
+    end
+
+    it 'sem quem ligou, nunca respondeu' do
+      expect(described_class.cliente?(conversa.contact, espera, nil)).to be(false)
     end
   end
 
@@ -369,5 +409,25 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
 
     expect(valores.new(alvo: conversa, quem: nil).ler('conversa.cliente_respondeu')).to be(false)
     expect(valores.new(alvo: sem_conversa, quem: nil, espera: (1.hour.ago..)).ler('conversa.equipe_respondeu')).to be(false)
+  end
+
+  # G31 (#2800): o marco do "decidir" que decide de novo. O último id e os da margem saem da mesma leitura.
+  describe '.marco' do
+    it 'o último id e os ids da margem saem de uma consulta só às mensagens', :aggregate_failures do
+      antiga = create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming, created_at: 1.hour.ago)
+      recente = create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming)
+      consultas = []
+      contar = ->(*, dados) { consultas << dados[:sql] if dados[:sql].include?('FROM "messages"') }
+
+      marco = ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') { described_class.marco(conversa.contact, admin) }
+
+      expect(consultas.size).to eq(1)
+      expect(marco).to include('lido_ate' => recente.id, 'lidas_na_margem' => [recente.id])
+      expect(marco['lidas_na_margem']).not_to include(antiga.id)
+    end
+
+    it 'sem mensagem do cliente, o marco é zero e a margem vazia' do
+      expect(described_class.marco(conversa.contact, admin)).to include('lido_ate' => 0, 'lidas_na_margem' => [])
+    end
   end
 end

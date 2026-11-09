@@ -113,7 +113,7 @@ module Crm
       # fires, in the stage or pipeline of this event. The flag is read first (no query for accounts without it); then
       # one exists? on (account_id, ativa). On error it answers true (fail-open): the async job decides.
       def automacao_subscribed?(event)
-        Autonomia::Automacao::Escuta.assinante?(account, event, @changed_attributes)
+        Autonomia::Automacao::Escuta.assinante?(account, event, @changed_attributes, card_id: @card_id)
       end
 
       def sync_subscribed?(event, metadata_key)

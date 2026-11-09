@@ -54,7 +54,7 @@ class Autonomia::Automacao::PassoDeEmail
   private
 
   def mandar(caixa, contato)
-    valores = ::Autonomia::Automacao::Valores.new(alvo: @alvo, quem: @execucao.automacao.ligada_por)
+    # Os mesmos valores do texto (NaConversa#valores), com a execução: o assunto também lê `ia.*`, `envio.*` e `falhou.*`.
     assunto = ::Autonomia::Automacao::Texto.new(@passo['assunto'], valores).montar
     texto = texto_pronto
     return pulado('faltou_valor') if assunto.nil? || texto.nil?
@@ -68,15 +68,10 @@ class Autonomia::Automacao::PassoDeEmail
     Resultado.new(tipo: :ok, dados: { 'mensagem_id' => mensagem.id, 'conversa_id' => conversa.display_id })
   end
 
-  # As mesmas perguntas do "Nova conversa" do painel: administrador ou membro da caixa (o controller confere), e a
-  # ConversationPolicy deixa começar conversa (o EE recusa a função que só lê).
   def na_caixa?(caixa)
     usuario = @execucao.automacao.ligada_por
     account_user = usuario && @execucao.account.account_users.find_by(user_id: usuario.id)
-    return false unless account_user
-    return false unless account_user.administrator? || usuario.inboxes.exists?(id: caixa.id)
-
-    ConversationPolicy.new({ user: usuario, account: @execucao.account, account_user: account_user }, Conversation).create?
+    account_user.present? && ::Autonomia::Automacao::Acesso.comeca_conversa?(account_user, caixa)
   end
 
   # A caixa que trava numa conversa só devolve a dela: o assunto deste envio passa a ser o dela, porque o envio lê o

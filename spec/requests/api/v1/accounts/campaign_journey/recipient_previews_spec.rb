@@ -46,6 +46,25 @@ RSpec.describe 'Journey recipient preview (#993)', :aggregate_failures, type: :r
                                'missing_by_variable' => { '1' => 1 })
   end
 
+  # chat#2733: blocked has its own reason, after refused, before missing variables.
+  it 'WhatsApp Oficial: a blocked person is counted once, as blocked' do
+    contact_named('Caio Reis').update!(blocked: true)
+
+    payload = preview(channel: 'whatsapp_cloud',
+                      variable_bindings: { '1' => { 'source' => 'column', 'value' => 'Vencimento' } })
+
+    expect(payload).to include('total' => 3, 'receive' => 1, 'reasons' => { 'opted_out' => 1, 'blocked' => 1 },
+                               'missing_by_variable' => {})
+  end
+
+  it 'e-mail: a blocked person is out, as blocked' do
+    contact_named('Caio Reis').update!(blocked: true)
+
+    payload = preview(channel: 'email')
+
+    expect(payload).to include('total' => 3, 'receive' => 1, 'reasons' => { 'opted_out' => 1, 'blocked' => 1 })
+  end
+
   it 'a default text brings the person back' do
     payload = preview(channel: 'whatsapp_cloud',
                       variable_bindings: { '1' => { 'source' => 'column', 'value' => 'Vencimento' } },

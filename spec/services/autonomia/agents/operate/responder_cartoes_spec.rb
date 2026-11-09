@@ -80,7 +80,9 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   end
 
   def jobs_dos_cartoes
-    ActiveJob::Base.queue_adapter.enqueued_jobs.select { |item| item[:job] == Autonomia::Agents::Operate::EnviarCartoesJob }
+    ActiveJob::Base.queue_adapter.enqueued_jobs.select do |item|
+      [Autonomia::Agents::Operate::EnviarCartoesJob, Autonomia::Agents::Operate::EnviarInteracaoJob].include?(item[:job])
+    end
   end
 
   # O canal confirma o envio do que o robô postou (o `source_id` da Meta) e os jobs dos cartões rodam, como o Sidekiq
@@ -90,7 +92,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       enviadas.each { |mensagem| mensagem.update_column(:source_id, "wamid.#{mensagem.id}") if mensagem.source_id.blank? } # rubocop:disable Rails/SkipsModelValidations
       jobs = jobs_dos_cartoes
       ActiveJob::Base.queue_adapter.enqueued_jobs.delete_if { |item| jobs.include?(item) }
-      jobs.each { |item| Autonomia::Agents::Operate::EnviarCartoesJob.perform_now(*ActiveJob::Arguments.deserialize(item[:args])) }
+      jobs.each { |item| item[:job].perform_now(*ActiveJob::Arguments.deserialize(item[:args])) }
     end
   end
 
@@ -299,12 +301,68 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(linhas.sole).to include('motivo=pessoa_respondeu')
     end
 
+    # O ChunkedDeliveryJob morreu depois de postar o último pedaço e antes de enfileirar os cartões: o retry do mesmo
+    # pedaço cai em `ja_postado` e enfileira mesmo assim (o job dos cartões é idempotente).
+    it 'o job morreu entre o último pedaço e o enfileirar: o retry enfileira, e o cartão sai uma vez' do
+      responde('Fica no Centro.', [mapa])
+      perform
+      pedacos = pedacos_agendados
+      chamadas = 0
+      allow(Autonomia::Agents::Operate::CartoesDoTurno).to receive(:enfileirar).and_wrap_original do |original, *args|
+        chamadas += 1
+        raise 'o worker morreu' if chamadas == 1
+
+        original.call(*args)
+      end
+      expect { entregar(pedacos) }.to raise_error(RuntimeError)
+      expect(jobs_dos_cartoes).to be_empty
+
+      2.times { entregar(pedacos) }
+      expect(jobs_dos_cartoes.map { |item| item[:args] }).to eq([[enviadas.sole.id]] * 2)
+      rodar_cartoes
+      expect(tipos).to eq(%w[texto location])
+    end
+
     it 'sem cartão marcado: os mesmos pedaços de antes' do
       responde('Fica no Centro.', [])
       perform
       expect(pedacos_agendados.size).to eq(1)
       expect(pedacos_agendados.sole).not_to have_key('rich_message')
       expect(pedacos_agendados.sole).not_to have_key('marca')
+    end
+  end
+
+  # #1479 (LOW a da F3): a guarda "já respondido" só procura a âncora quando o turno pode ter cartão ou interação pendente.
+  describe 'a guarda "já respondido" e a busca da âncora' do
+    before { allow(Autonomia::Agents::Operate::CartoesDoTurno).to receive(:ancora_do_turno).and_call_original }
+
+    context 'without the cards flag and with the interaction off' do
+      let(:account) { conta_da_fase2 }
+
+      it 'o retry não consulta a âncora' do
+        allow(Autonomia::Agents::Operate::InteracaoDepoisDoAudio).to receive(:ligada?).and_return(false)
+        responde('Fica no Centro.', [])
+        2.times { perform }
+        expect(enviadas.size).to eq(1)
+        expect(Autonomia::Agents::Operate::CartoesDoTurno).not_to have_received(:ancora_do_turno)
+      end
+    end
+
+    # A voz do agente não entra: ela pode ter sido desligada entre o áudio e o retry.
+    context 'without the cards flag, with the interaction on' do
+      let(:account) { conta_da_fase2 }
+
+      it 'o retry consulta a âncora (pode haver interação depois do áudio)' do
+        responde('Fica no Centro.', [])
+        2.times { perform }
+        expect(Autonomia::Agents::Operate::CartoesDoTurno).to have_received(:ancora_do_turno).once
+      end
+    end
+
+    it 'com a flag dos cartões, o retry consulta a âncora' do
+      responde('Fica no Centro.', [])
+      2.times { perform }
+      expect(Autonomia::Agents::Operate::CartoesDoTurno).to have_received(:ancora_do_turno).once
     end
   end
 
@@ -332,9 +390,10 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     it 'com a interação, a âncora continua o áudio: áudio, interação, depois o cartão' do
       responde('Temos vaga amanhã.', [mapa], interacao: opcoes)
       perform
+      expect(enviadas.size).to eq(1)
       expect(gravados(enviadas.first)).not_to be_empty
-      expect(gravados(enviadas.second)).to be_empty
       rodar_cartoes
+      expect(gravados(enviadas.second)).to be_empty
       expect(enviadas.size).to eq(3)
       expect(enviadas.second.content_attributes['rich_message']).to include('type' => 'options')
       expect(enviadas.last.content_attributes['rich_message']).to eq(mapa['rich_message'])

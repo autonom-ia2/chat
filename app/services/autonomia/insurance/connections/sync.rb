@@ -21,12 +21,15 @@ class Autonomia::Insurance::Connections::Sync
   EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/
   LONG_TOKEN = /[A-Za-z0-9_\-.]{32,}/
 
-  def initialize(connection, connector: ::Autonomia::Insurance::Connector.client, scan_capabilities: true)
+  # `espera_do_login:` é quanto este chamador aguarda o login de outro processo (ver `Session`). A tela
+  # (requisição web, Rack::Timeout de 15 s) passa menos que o padrão dos jobs.
+  def initialize(connection, connector: ::Autonomia::Insurance::Connector.client, scan_capabilities: true,
+                 espera_do_login: ::Autonomia::Insurance::Connections::Session::TRAVA_DO_LOGIN)
     @connection = connection
     @connector = connector
     @renovou = false
     @scan_capabilities = scan_capabilities
-    @sessions = ::Autonomia::Insurance::Connections::Session.new(connection, connector: connector)
+    @sessions = ::Autonomia::Insurance::Connections::Session.new(connection, connector: connector, espera: espera_do_login)
   end
 
   # Abre (ou reusa) A sessão da conexão e consulta o portal com ELA. Antes, este método fazia dois
@@ -66,7 +69,7 @@ class Autonomia::Insurance::Connections::Sync
     # operação tentar de novo com um portador que o portal já não aceita.
     @connection.forget_session! if e.kind == :auth_required
     mark!(status: STATUS_BY_ERROR.fetch(e.kind, 'degraded'), error: "#{e.kind}: #{e.message}",
-          failure: e.details.to_h['failure'])
+          failure: diagnostico_do_erro(e))
   rescue StandardError => e
     # Formato inesperado, validação do model ou bug: registra a CLASSE, nunca a mensagem (que pode
     # carregar payload do portal), e deixa a conexão num estado consultável em vez de estourar 500.
@@ -92,13 +95,15 @@ class Autonomia::Insurance::Connections::Sync
   # multiplica login no portal.
   def consultar_status(session)
     payload = @connector.connection_status(provider: @connection.provider, session: session)
-    return payload unless sessao_perdida?(payload) && !@renovou
+    # Só renova sessão REUSADA, como o `with_fresh_session`: uma que acabou de nascer e já voltou
+    # recusada não melhora com outro login (o portal devolveria a mesma).
+    return payload unless sessao_perdida?(payload) && !@renovou && @sessions.sessao_reusada?
 
     # UMA renovação por sincronização, contada aqui e não no fluxo. `with_fresh_session` também
     # renova, mas só quando o adapter LEVANTA — se as duas renovações puderem correr no mesmo
     # `call`, o portal leva três logins onde a regra diz um.
     @renovou = true
-    @connector.connection_status(provider: @connection.provider, session: @sessions.renew!)
+    @connector.connection_status(provider: @connection.provider, session: @sessions.renew!(session))
   end
 
   def sessao_perdida?(payload)
@@ -131,13 +136,21 @@ class Autonomia::Insurance::Connections::Sync
       @connection.update!(
         status: status,
         external_account_label: payload['account_label'].to_s.truncate(120).presence,
-        session_expires_at: payload['session_expires_at'],
+        session_expires_at: prazo_da_sessao(payload),
         last_authenticated_at: Time.current,
         last_healthcheck_at: Time.current,
         last_error: ok ? nil : sanitize(payload['reason'].presence || "status #{status}"),
         metadata: @connection.metadata.to_h.merge(diagnostico(payload, ok))
       )
     end
+  end
+
+  # Resposta sem prazo NÃO apaga o prazo gravado (auditoria da conexão, 05/11/2026, achado 9). O adapter
+  # só manda `session_expires_at` quando abriu ou leu uma sessão; numa resposta de falha o campo não vem,
+  # e gravar nil fazia placa, CEP, atividade e proposta perderem a sessão viva até o próximo login. Quem
+  # invalida a sessão de verdade é o `forget_session!`, na recusa.
+  def prazo_da_sessao(payload)
+    payload['session_expires_at'].presence || @connection.session_expires_at
   end
 
   # O diagnostico estruturado que a tela usa (criterios 1.1, 1.2 e 1.6). Vai em `metadata` porque e
@@ -254,6 +267,15 @@ class Autonomia::Insurance::Connections::Sync
     Rails.logger.info({ evento: 'insurance.connection.status', connection_id: @connection.id,
                         account_id: @connection.account_id, de: anterior, para: atual,
                         causa: falha.is_a?(Hash) ? falha['cause'] : nil }.to_json)
+  end
+
+  # Esgotar a espera pelo login de OUTRO processo não é notícia do portal: o diagnóstico gravado (um
+  # `sessions_full`, por exemplo) continua sendo o fato mais recente, e o login do outro ainda vai gravar
+  # o seu. Os demais erros trazem a falha que o adapter classificou, ou nada.
+  def diagnostico_do_erro(erro)
+    return :manter if erro.causa == :espera_do_login
+
+    erro.details.to_h['failure']
   end
 
   # Só Hash é diagnóstico: um adapter que mandasse texto no lugar viraria `last_failure` String, e a

@@ -97,3 +97,25 @@ describe('StepReview ready to send (#1898)', () => {
     ).not.toContain(PRONTA.DEIXAR);
   });
 });
+
+describe('StepReview reasons (chat#2733)', () => {
+  it('shows blocked contacts as their own reason, after who refused', () => {
+    const wrapper = montar(
+      { when: 'now', scheduledAt: '' },
+      {
+        preview: {
+          total: 5,
+          receive: 2,
+          reasons: { blocked: 2, opted_out: 1 },
+        },
+      }
+    );
+    const reasons = wrapper
+      .findAll('[data-reason]')
+      .map(item => item.attributes('data-reason'));
+    expect(reasons).toEqual(['opted_out', 'blocked']);
+    expect(wrapper.text()).toContain(
+      en.CAMPAIGN_JOURNEY.NEW_CAMPAIGN.REVIEW.REASONS.BLOCKED
+    );
+  });
+});

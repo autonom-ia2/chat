@@ -7,6 +7,11 @@
 # The website mode (#1011) reuses this client with the funnel's Pixel id as dataset_id:
 # same POST /{id}/events shape, events built by Crm::MetaCapi::WebsitePayloadBuilder.
 #
+# Whether Meta may have kept the event decides if it can be sent again (#2738, #2799), since
+# Meta does not dedup: the connection (TCP and the SSL handshake) is opened before the request
+# is written, so a failure there surely sent nothing and can be retried. Any failure after it,
+# and a 5xx answer (Meta may have stored the event before failing), is an unknown outcome.
+#
 # The access token is a Meta secret: it travels only in the Authorization header (never
 # the query string, which leaks through access logs/proxies/referrers) and is NEVER
 # returned or logged. Every string that leaves this client (body/error) is scrubbed of
@@ -17,13 +22,24 @@ class Meta::ConversionsApiClient
   # WhatsApp Cloud client reads, so the whole Meta surface moves versions together.
   DEFAULT_API_VERSION = 'v22.0'.freeze
   DEFAULT_TIMEOUT_SECONDS = 8
+  # Meta answered, but failed on its side after it may have stored the event (#2799).
+  SERVER_ERROR_HTTP = (500..599)
   # Any run of 20+ non-space chars is treated as a possible secret and redacted. Broad
   # on purpose: Meta tokens can carry -, _, |, +, /, = so a [A-Za-z0-9] class misses them.
   SENSITIVE_PATTERN = %r{[A-Za-z0-9_\-|+/=.]{20,}}
 
   # error_code: Meta's numeric error code (190 invalid token, 10/200-299 permission, …), nil on
   # success or network failure. Lets callers tell a dead token from a passing outage.
-  Result = Struct.new(:ok, :http_code, :body, :error, :error_code, keyword_init: true)
+  # error_subcode refines it (100 with 33: the dataset no longer exists or cannot be reached).
+  # unknown_outcome: the call failed after it may have reached Meta (no answer read, #2738) or
+  # Meta answered a 5xx (#2799), so the event may have been kept; sending it again could count
+  # it twice.
+  Result = Struct.new(:ok, :http_code, :body, :error, :error_code, :error_subcode, :unknown_outcome, keyword_init: true) do
+    # Never on an unknown outcome: a 5xx carrying 100/33 may still have kept the event (#2799).
+    def dataset_gone?
+      !unknown_outcome && error_code == 100 && error_subcode == 33
+    end
+  end
 
   def initialize(access_token:, dataset_id:, api_version: nil)
     @access_token = access_token
@@ -32,32 +48,70 @@ class Meta::ConversionsApiClient
   end
 
   # events: an array of CAPI-BM event hashes (see Crm::MetaCapi::PayloadBuilder#build).
+  # The request is built and the connection opened before anything is written, so a failure
+  # there never reads as an unknown outcome.
   def post_events(events)
-    response = HTTParty.post(
-      "#{BASE_URI}/#{@api_version}/#{@dataset_id}/events",
-      headers: {
-        'Content-Type' => 'application/json',
-        'Authorization' => "Bearer #{@access_token}"
-      },
-      body: { data: Array(events) }.to_json,
-      timeout: DEFAULT_TIMEOUT_SECONDS
-    )
-
-    body = sanitize(response.body)
-    Result.new(ok: response.success?, http_code: response.code, body: body, error: response.success? ? nil : body,
-               error_code: response.success? ? nil : meta_error_code(response.body))
+    request = build_request(events)
+    http = connection
+    http.start
+    connected = true
+    answer(http.request(request))
   rescue StandardError => e
-    Result.new(ok: false, http_code: nil, body: nil, error: sanitize(e.message))
+    Result.new(ok: false, http_code: nil, body: nil, error: sanitize(e.message), unknown_outcome: connected == true)
+  ensure
+    close(http)
   end
 
   private
 
-  def meta_error_code(raw_body)
+  def uri
+    URI("#{BASE_URI}/#{@api_version}/#{@dataset_id}/events")
+  end
+
+  def build_request(events)
+    Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json', 'Authorization' => "Bearer #{@access_token}").tap do |request|
+      request.body = { data: Array(events) }.to_json
+    end
+  end
+
+  # No proxy from the environment (nil), as with HTTParty before.
+  def connection
+    Net::HTTP.new(uri.host, uri.port, nil).tap do |http|
+      http.use_ssl = true
+      http.open_timeout = http.read_timeout = http.write_timeout = DEFAULT_TIMEOUT_SECONDS
+    end
+  end
+
+  # Closing must not turn an answer already read into an error.
+  def close(http)
+    http.finish if http&.started?
+  rescue IOError, SystemCallError, OpenSSL::SSL::SSLError
+    nil
+  end
+
+  def answer(response)
+    http_code = response.code.to_i
+    raw = text(response.body)
+    body = sanitize(raw)
+    return Result.new(ok: true, http_code: http_code, body: body) if response.is_a?(Net::HTTPSuccess)
+
+    error = meta_error(raw)
+    Result.new(ok: false, http_code: http_code, body: body, error: body, error_code: error['code'], error_subcode: error['error_subcode'],
+               unknown_outcome: SERVER_ERROR_HTTP.cover?(http_code))
+  end
+
+  # Net::HTTP hands the body over as binary; Meta answers UTF-8 (HTTParty used to decode it).
+  def text(raw)
+    raw.to_s.dup.force_encoding(Encoding::UTF_8).scrub
+  end
+
+  # The `error` object of Meta's answer, or {} when the body has none it can read.
+  def meta_error(raw_body)
     error = JSON.parse(raw_body.to_s)
     error = error['error'] if error.is_a?(Hash)
-    error.is_a?(Hash) ? error['code'] : nil
+    error.is_a?(Hash) ? error : {}
   rescue JSON::ParserError
-    nil
+    {}
   end
 
   def sanitize(text)

@@ -462,6 +462,102 @@ describe('CustomRoleEditor', () => {
     });
   });
 
+  // #1430: Ferramentas dos agentes só aparece com a flag da conta; liberar pede confirmação.
+  describe('ferramentas dos agentes (#1430)', () => {
+    const role = { id: 3, name: 'Operação', permissions: ['crm_view'] };
+    const withFlag = {
+      features: { custom_roles: true, agente_ferramentas_delegadas: true },
+    };
+    const tools = MODULES.find(module => module.key === 'AUTONOMIA_TOOLS');
+    const agentsGroup = wrapper =>
+      wrapper
+        .findAllComponents(PermissionGroup)
+        .find(group => group.props('group').key === 'AUTONOMIA');
+
+    beforeEach(() => {
+      route.params = { roleId: '3' };
+    });
+
+    it('hides the row when the account does not have the flag', async () => {
+      const { store } = buildStore([role]);
+      const wrapper = await mountEditor(store);
+      const group = agentsGroup(wrapper);
+
+      expect(group.props('modules')).not.toContain(tools);
+      expect(group.props('group').modules).not.toContain(tools);
+    });
+
+    it('shows the row when the account has the flag', async () => {
+      const { store } = buildStore([role], withFlag);
+      const wrapper = await mountEditor(store);
+
+      expect(agentsGroup(wrapper).props('modules')).toContain(tools);
+    });
+
+    it('asks before granting and saves the tools key with the agents view', async () => {
+      const { store, actions } = buildStore([role], withFlag);
+      const wrapper = await mountEditor(store);
+      agentsGroup(wrapper).vm.$emit('selectLevel', tools, 'manage');
+      await flushPromises();
+
+      expect(dialogCalls.open).toBe(1);
+      const dialog = wrapper.find('.dialog-stub').text();
+      expect(dialog).toContain(
+        'CUSTOM_ROLE.EDITOR.SENSITIVE_CONFIRM.TITLE:CUSTOM_ROLE.PERMISSIONS.AUTONOMIA_TOOLS_MANAGE'
+      );
+      expect(dialog).toContain(
+        'CUSTOM_ROLE.MATRIX.MODULES.AUTONOMIA_TOOLS.CONFIRM'
+      );
+
+      await wrapper.find('.dialog-confirm').trigger('click');
+      await buttonWith(wrapper, 'CUSTOM_ROLE.EDIT.SUBMIT').trigger('click');
+      await flushPromises();
+
+      expect(
+        actions.updateCustomRole.mock.calls[0][1].permissions.sort()
+      ).toEqual(
+        ['autonomia_tools_manage', 'autonomia_view', 'crm_view'].sort()
+      );
+    });
+
+    it('does not grant when the confirmation is not given', async () => {
+      const { store, actions } = buildStore([role], withFlag);
+      const wrapper = await mountEditor(store);
+      agentsGroup(wrapper).vm.$emit('selectLevel', tools, 'manage');
+      await flushPromises();
+
+      await buttonWith(wrapper, 'CUSTOM_ROLE.EDIT.SUBMIT').trigger('click');
+      await flushPromises();
+
+      expect(actions.updateCustomRole.mock.calls[0][1].permissions).toEqual([
+        'crm_view',
+      ]);
+    });
+
+    it('turns the tools off without asking and keeps the agents view', async () => {
+      const { store, actions } = buildStore(
+        [
+          {
+            ...role,
+            permissions: ['autonomia_view', 'autonomia_tools_manage'],
+          },
+        ],
+        withFlag
+      );
+      const wrapper = await mountEditor(store);
+      agentsGroup(wrapper).vm.$emit('selectLevel', tools, 'none');
+      await flushPromises();
+
+      expect(dialogCalls.open).toBe(0);
+      await buttonWith(wrapper, 'CUSTOM_ROLE.EDIT.SUBMIT').trigger('click');
+      await flushPromises();
+
+      expect(actions.updateCustomRole.mock.calls[0][1].permissions).toEqual([
+        'autonomia_view',
+      ]);
+    });
+  });
+
   it('goes back to the list when the plan has no custom roles', async () => {
     const { store, actions } = buildStore([], { features: {} });
     await mountEditor(store);

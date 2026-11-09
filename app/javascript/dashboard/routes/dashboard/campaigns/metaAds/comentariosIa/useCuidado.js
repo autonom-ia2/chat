@@ -20,6 +20,11 @@ export const MOTIVOS = [
   'ad_not_found',
   'meta_unavailable',
 ];
+// "Tentar de novo" só no que passa sozinho (a Meta fora do ar, a rede, o código que a tela não conhece): o resto (sem
+// post, sem caixa, sem login) não cura tentando.
+const PASSAGEIROS = ['meta_unavailable'];
+export const podeTentarDeNovo = codigo =>
+  !codigo || !MOTIVOS.includes(codigo) || PASSAGEIROS.includes(codigo);
 const conhecido = codigo => (MOTIVOS.includes(codigo) ? codigo : null);
 export const motivoDaResposta = error =>
   conhecido(error?.response?.data?.error);

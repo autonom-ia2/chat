@@ -5,6 +5,7 @@ import { entradaDoPasso, lerCampo } from './catalogo';
 import { comColchetes } from './texto';
 import { fraseDaCampanha } from './campanha';
 import { fraseDoRetorno } from './retorno';
+import { formatAttributeDate } from 'dashboard/helper/attributeDate';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
 
@@ -26,6 +27,18 @@ const VALOR_DA_PECA = {
       ? t(`AUTOMACAO_LIVRE.QUANDO_DA_DATA.${valor.toUpperCase()}`)
       : undefined,
   campo: (valor, t, nomes, alvo) => nomes.campo?.[alvo]?.[valor],
+  // #2709: o lembrete diz quanto tempo antes da reunião ("1 dia").
+  antes: (valor, t) =>
+    Number.isInteger(valor?.valor) && valor?.unidade
+      ? t(`${P}.DURACAO`, {
+          valor: valor.valor,
+          unidade: t(
+            `AUTOMACAO_LIVRE.UNIDADES.${valor.unidade.toUpperCase()}`,
+            {},
+            valor.valor
+          ),
+        })
+      : undefined,
 };
 const valorNaFrase = (peca, valor, t, nomes, alvo) =>
   VALOR_DA_PECA[peca]
@@ -41,12 +54,69 @@ const chaveDaFrase = (entrada, gatilho) => {
     : `AUTOMACAO_LIVRE.GATILHO_COM.${chave}`;
 };
 
-export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
+// G32: a página de agendamento entra só como fim da frase ("..., pela página
+// Renovação"), como o "repete": ela é opcional e não muda a frase do funil.
+const FIM_DA_FRASE = ['repete', 'pagina'];
+// Sem o nome (página que a pessoa não lê ou que saiu), a frase diz que há
+// filtro de página em vez de parecer "qualquer reunião".
+const comPagina = (frase, gatilho, t, nomes) => {
+  if (!gatilho?.pagina_id) return frase;
+  const pagina =
+    nomes.pagina?.[gatilho.pagina_id] ||
+    t('AUTOMACAO_LIVRE.GATILHO_DE_REUNIAO.PAGINA_SEM_NOME');
+  return t('AUTOMACAO_LIVRE.GATILHO_NA_PAGINA', { frase, pagina });
+};
+
+// #2680: a caixa por onde a mensagem abre a conversa de quem não tem uma.
+const comCaixa = (frase, gatilho, t, nomes) => {
+  const caixa = nomes.caixa?.[gatilho.conversa_nova?.caixa_id];
+  return caixa
+    ? t('AUTOMACAO_LIVRE.CONVERSA_NOVA.NA_FRASE', { frase, caixa })
+    : frase;
+};
+
+// #2635 (G7): o recorrente diz quando ("Toda segunda, às 8h") e em quem ("nos
+// cards escolhidos"). A seleção fica no "Alterar"; aqui, só se é card, contato
+// ou a conta (o da conta roda uma vez, sem seleção).
+const R = 'AUTOMACAO_LIVRE.GATILHO_RECORRENTE';
+const DIA_DO_RECORRENTE = {
+  semanal: (gatilho, t) =>
+    Number.isInteger(gatilho.dia_da_semana)
+      ? t(`${R}.DIAS_DA_SEMANA.${gatilho.dia_da_semana}`)
+      : undefined,
+  mensal: gatilho =>
+    Number.isInteger(gatilho.dia_do_mes) ? gatilho.dia_do_mes : undefined,
+  diaria: () => '',
+  // #2681: a data no idioma do painel ("26/11/2026", "11/26/2026").
+  uma_vez: (gatilho, _t, idioma) =>
+    formatAttributeDate(gatilho.data, idioma) || undefined,
+};
+const fraseDoRecorrente = (gatilho, entrada, t, idioma) => {
+  const dia = DIA_DO_RECORRENTE[gatilho.frequencia]?.(gatilho, t, idioma);
+  if (dia === undefined || !Number.isInteger(gatilho.hora))
+    return t(entrada.frase);
+  const ALVOS = { Contact: 'CONTATOS', Account: 'CONTA' };
+  const alvo = t(`${R}.${ALVOS[entrada.alvo] || 'CARDS'}`);
+  return t(`${R}.FRASE.${gatilho.frequencia.toUpperCase()}`, {
+    dia,
+    hora: gatilho.hora,
+    alvo,
+  });
+};
+
+const fraseSemPagina = (gatilho, catalogo, t, nomes, idioma) => {
   const entrada = catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo);
   if (!entrada) return t(`${P}.FALTA_GATILHO`);
+  if ((entrada.parametros || []).some(item => item.peca === 'frequencia'))
+    return comCaixa(
+      fraseDoRecorrente(gatilho, entrada, t, idioma),
+      gatilho,
+      t,
+      nomes
+    );
   // #2678: o "repete" é opcional e entra só como fim da frase ("..., todo ano").
   const parametros = (entrada.parametros || []).filter(
-    item => item.peca !== 'repete'
+    item => !FIM_DA_FRASE.includes(item.peca)
   );
   const escolhidos = Object.fromEntries(
     parametros.map(item => [
@@ -57,16 +127,31 @@ export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
   const completo = Object.values(escolhidos).every(
     valor => valor !== undefined && valor !== null && valor !== ''
   );
-  if (!parametros.length || !completo) return t(entrada.frase);
+  if (!parametros.length || !completo)
+    return comCaixa(t(entrada.frase), gatilho, t, nomes);
   const base = t(chaveDaFrase(entrada, gatilho), escolhidos);
   const frase =
     gatilho.repete === 'todo_ano'
       ? t('AUTOMACAO_LIVRE.GATILHO_TODO_ANO', { frase: base })
       : base;
   const funil = nomes.funilDaEtapa?.[gatilho.etapa_id];
-  return funil
-    ? t('AUTOMACAO_LIVRE.GATILHO_NO_FUNIL', { frase, funil })
-    : frase;
+  return comCaixa(
+    funil ? t('AUTOMACAO_LIVRE.GATILHO_NO_FUNIL', { frase, funil }) : frase,
+    gatilho,
+    t,
+    nomes
+  );
+};
+
+// `idioma`: o locale do painel, para a data da frase ("pt_BR").
+export const fraseDoGatilho = (gatilho, catalogo, t, nomes, idioma) => {
+  const daConta = nomes || {};
+  return comPagina(
+    fraseSemPagina(gatilho, catalogo, t, daConta, idioma),
+    gatilho,
+    t,
+    daConta
+  );
 };
 
 // "Status da conversa", ou "Campo personalizado do contato: placa".
@@ -182,10 +267,14 @@ const emLista = (nomes, t) =>
         ultimo: nomes[nomes.length - 1],
       })
     : nomes[0];
-const fraseDasEtiquetas = (passo, entrada, t) => {
+// #2702 G29: a etiqueta com o nome de um dado ({ $valor }) sai pelo nome dele,
+// entre colchetes, como no texto da mensagem.
+const fraseDasEtiquetas = (passo, entrada, catalogo, t) => {
   const chave = `${P}.${ETIQUETAS_DE[entrada.nome]}`;
-  const [por, tirar] = ['por', 'tirar'].map(
-    nome => lerCampo(passo, entrada, nome) || []
+  const nomeDaEtiqueta = item =>
+    item?.$valor ? comColchetes(fraseDoValor(item.$valor, catalogo, t)) : item;
+  const [por, tirar] = ['por', 'tirar'].map(nome =>
+    (lerCampo(passo, entrada, nome) || []).map(nomeDaEtiqueta)
   );
   if (por.length && tirar.length)
     return t(`${chave}.POR_E_TIRAR`, {
@@ -258,12 +347,34 @@ const curto = texto =>
     : texto || '';
 // Ainda sem pergunta ou instrução, a linha diz o que falta, sem aspas vazias.
 const escrito = texto => (texto || '').trim();
+// G31: os nomes dos caminhos que decidem de novo ("nenhum" pelo nome da tela).
+const nomesDoDeNovo = (passo, t) =>
+  emLista(
+    (passo.de_novo.caminhos || []).map(chave =>
+      chave === 'nenhum'
+        ? t(`${P}.NENHUM_SE_APLICA`)
+        : (passo.caminhos || []).find(caminho => caminho.chave === chave)
+            ?.nome || chave
+    ),
+    t
+  );
 const FRASE_DA_IA = {
-  decidir: (passo, t) =>
-    t(`${P}.${escrito(passo.pergunta) ? 'DECIDIR' : 'DECIDIR_SEM_PERGUNTA'}`, {
-      pergunta: curto(escrito(passo.pergunta)),
-      n: (passo.caminhos || []).length,
-    }),
+  decidir: (passo, t, catalogo) => {
+    const frase = t(
+      `${P}.${escrito(passo.pergunta) ? 'DECIDIR' : 'DECIDIR_SEM_PERGUNTA'}`,
+      {
+        pergunta: curto(escrito(passo.pergunta)),
+        n: (passo.caminhos || []).length,
+      }
+    );
+    return passo.de_novo
+      ? t(`${P}.DECIDIR_DE_NOVO`, {
+          frase,
+          caminhos: nomesDoDeNovo(passo, t) || '…',
+          prazo: fraseDaDuracao(passo.de_novo.prazo, catalogo, t),
+        })
+      : frase;
+  },
   extrair: (passo, t) =>
     t(`${P}.EXTRAIR`, {
       lista:
@@ -314,7 +425,8 @@ export const fraseDoPasso = (passo, catalogo, t) => {
       quem: quemAvisar(passo.para, t),
       texto: fraseDoTexto(passo.texto, catalogo, t),
     });
-  if (FRASE_DA_IA[passo.tipo]) return FRASE_DA_IA[passo.tipo](passo, t);
+  if (FRASE_DA_IA[passo.tipo])
+    return FRASE_DA_IA[passo.tipo](passo, t, catalogo);
   if (passo.tipo === 'campanha') return fraseDaCampanha(passo, t);
   if (passo.tipo === 'retorno')
     return fraseDoRetorno(passo, t, {
@@ -323,7 +435,8 @@ export const fraseDoPasso = (passo, catalogo, t) => {
       mensagem: passo.envio && fraseDoTexto(passo.envio.mensagem, catalogo, t),
     });
   if (passo.tipo !== 'acao') return t(entrada.frase);
-  if (ETIQUETAS_DE[entrada.nome]) return fraseDasEtiquetas(passo, entrada, t);
+  if (ETIQUETAS_DE[entrada.nome])
+    return fraseDasEtiquetas(passo, entrada, catalogo, t);
   return [t(entrada.frase), ...resumoDaAcao(passo, entrada, t)].join(' · ');
 };
 
@@ -338,15 +451,22 @@ export const fraseDaData = (
   t,
   rotular = caminho => fraseDoValor(caminho, catalogo, t)
 ) => {
-  const { de, mais } = data || {};
+  const { de, mais, fim_do: fimDo } = data || {};
   const inicio = de === 'hoje' ? t(`${A}.HOJE`) : rotular(de?.$valor);
-  if (!mais?.valor) return inicio;
-  const n = Math.abs(mais.valor);
-  return t(`${A}.DATA_${mais.valor < 0 ? 'MENOS' : 'MAIS'}`, {
-    de: inicio,
-    n,
-    unidade: t(`AUTOMACAO_LIVRE.UNIDADES.${mais.unidade.toUpperCase()}`, {}, n),
-  });
+  const n = Math.abs(mais?.valor || 0);
+  const somada = n
+    ? t(`${A}.DATA_${mais.valor < 0 ? 'MENOS' : 'MAIS'}`, {
+        de: inicio,
+        n,
+        unidade: t(
+          `AUTOMACAO_LIVRE.UNIDADES.${mais.unidade.toUpperCase()}`,
+          {},
+          n
+        ),
+      })
+    : inicio;
+  // #2705: "hoje + 1 mês, no fim do mês".
+  return fimDo === 'mes' ? t(`${A}.DATA_FIM_DO_MES`, { data: somada }) : somada;
 };
 
 // #2414 G16 — o valor calculado que o Guia montou num campo da ação, em frase:

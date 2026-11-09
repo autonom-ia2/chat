@@ -141,7 +141,8 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
 
   # Passo de funil exige também a chave de funis (D2), de quem salva e de quem liga: as mesmas CHAVES da regra do funil
   # (crm_manage_pipelines ou crm_admin). O catálogo esconder o passo não autoriza nada: a API confere aqui. O gatilho de
-  # card (#2499) também pede a chave, e o retorno (G3), que cria pelo crm/follow_ups, e o "criar card" (G4).
+  # card (#2499) também pede a chave, e o retorno (G3), que cria pelo crm/follow_ups, e o "criar card" (G4). Ler o card
+  # a partir de uma conversa (#2716) também.
   def sem_funil?(receita)
     return false unless receita.is_a?(Hash) && ::Autonomia::Automacao::Receita.esquema_valido?(receita)
     return false if ::Autonomia::Automacao::RegraDoFunil.chave?(Current.account_user)
@@ -151,11 +152,15 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
 
   def de_funil?(receita)
     return true if ::Autonomia::Automacao::Gatilhos.do_card?(receita.dig('gatilho', 'tipo'))
+    return true if de_conversa?(receita) && ::Autonomia::Automacao::CardDaConversa.le?(receita)
 
     ::Autonomia::Automacao::Receita.new(receita, conta: Current.account, account_user: Current.account_user).passos.any? do |passo|
       PASSOS_DE_FUNIL.include?(passo['tipo']) || (passo['tipo'] == 'acao' && ::Autonomia::Automacao::AcoesPermitidas.de_funil?(passo['acao']))
     end
   end
+
+  # Só a conversa lê o card dela (#2716); no gatilho de contato, `card.*` é o valor_fora_do_alvo da Receita.
+  def de_conversa?(receita) = ::Autonomia::Automacao::Gatilhos.alvo(receita.dig('gatilho', 'tipo')) == 'Conversation'
 
   # O rascunho passa pela mesma conferência do salvar (esquema + Receita); a versão salva já passou por ela, e assim o
   # passo de mensagem de uma conta que desligou a flag ainda aparece, com o "não sairia". Só gatilho de conversa: o de
@@ -163,12 +168,25 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   def ensaiar(receita, conferir:)
     problemas = problemas_do_ensaio(receita, conferir)
     return recusar_ensaio('receita_invalida', problemas) if problemas.any?
+    return render(json: recorrente_no_ensaio(receita)) if ::Autonomia::Automacao::Gatilhos.recorrente?(receita.dig('gatilho', 'tipo'))
     return recusar_ensaio('gatilho_de_card') unless ::Autonomia::Automacao::Ensaio.gatilho_suportado?(receita)
 
     render json: ::Autonomia::Automacao::Ensaio.new(receita: receita, conta: Current.account, usuario: Current.user,
                                                     conversa_id: params[:conversa_id]).resultado
   rescue ActiveRecord::RecordNotFound
     head :not_found
+  end
+
+  # O recorrente (#2635, G7): quantos cards ou contatos a seleção pegaria agora, para o dono ver antes de ligar.
+  def recorrente_no_ensaio(receita)
+    tipo = receita.dig('gatilho', 'tipo')
+    alvo = ::Autonomia::Automacao::Gatilhos.alvo(tipo)
+    # O da conta (G7) roda uma vez por ocorrência, sem seleção.
+    return { 'recorrente' => { 'alvo' => alvo, 'pegaria' => 1 } } if ::Autonomia::Automacao::Gatilhos.da_conta?(tipo)
+
+    contexto = { user: Current.user, account: Current.account, account_user: Current.account_user }
+    selecao = ::Autonomia::Automacao::Tempo::Selecao.new(Current.account, receita['gatilho'])
+    { 'recorrente' => { 'alvo' => alvo, 'pegaria' => selecao.quantos_para(contexto) } }
   end
 
   def problemas_do_ensaio(receita, conferir)

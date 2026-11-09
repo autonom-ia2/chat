@@ -200,8 +200,22 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       stub_ad
       stub_comments(status: 400, body: { error: { code: 10, message: 'no permission' } })
 
-      expect(service.payload(ad_id)).to include(status: 'needs_login', inbox_id: channel.inbox.id,
-                                                account: { username: 'lojaexemplo', name: channel.inbox.name })
+      expect(service.payload(ad_id)).to include(status: 'needs_login', account: { username: 'lojaexemplo', name: channel.inbox.name })
+    end
+
+    # #2365: o id da caixa no needs_login é o que a régua de quem chama devolver (SeusPosts::Caixa#id_para_quem_age no
+    # controller); sem régua (a IA dos comentários), nil.
+    it 'needs_login: o inbox_id segue a régua de quem chama, recebendo a caixa do Instagram' do
+      stub_ad
+      allow(Channel::Instagram).to receive(:find_by).and_return(channel)
+      allow(channel).to receive(:reauthorization_required?).and_return(true)
+      allowed = described_class.new(connection, inbox_access: ->(_inbox) { true }, can_manage: true,
+                                                inbox_id_for: ->(inbox) { inbox.id })
+      refused = described_class.new(connection, inbox_access: ->(_inbox) { false }, can_manage: true, inbox_id_for: ->(_inbox) {})
+
+      expect(allowed.payload(ad_id)).to include(status: 'needs_login', inbox_id: channel.inbox.id)
+      expect(refused.payload(ad_id)).to include(status: 'needs_login', inbox_id: nil)
+      expect(service.payload(ad_id)).to include(status: 'needs_login', inbox_id: nil)
     end
 
     it 'caixa esperando nova autorização: needs_login, sem chamar o Instagram' do
@@ -289,6 +303,7 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       stub_comment('c1')
       stub_request(:post, %r{#{ig}/c1\?}).to_return(status: 200, headers: json, body: { success: true }.to_json)
       stub_request(:delete, %r{#{ig}/c1\?}).to_return(status: 200, headers: json, body: { success: true }.to_json)
+      allow(SeusPosts::Leitura).to receive(:esquecer_esperando)
 
       expect(service.hide!(ad_id, 'c1', hidden: true, user: user)).to eq(id: 'c1', hidden: true)
       expect(service.hide!(ad_id, 'c1', hidden: false, user: user)).to eq(id: 'c1', hidden: false)
@@ -296,6 +311,8 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       # #2519: cada ação da pessoa fica no comentário (o Esperando e o Cuidar a leem).
       expect(Crm::MetaAdsCommentAction.where(comment_id: 'c1').order(:id).pluck(:action, :actor, :ad_id, :user_id))
         .to eq([['hide', 'user', ad_id, user.id], ['show', 'user', ad_id, user.id], ['delete', 'user', ad_id, user.id]])
+      # #2804: o "Esperando você" de Seus posts conta os comentários do anúncio; é lido de novo na próxima vez.
+      expect(SeusPosts::Leitura).to have_received(:esquecer_esperando).with(account, channel).exactly(3).times
     end
 
     # #2358: agir em comentário pede ver a caixa do Instagram, não só o privado.

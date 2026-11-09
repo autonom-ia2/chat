@@ -364,6 +364,7 @@
       "SKIP_MISSING_PIXEL": "The funnel has no website Pixel.",
       "SKIP_EVENT_TOO_OLD": "Older than 7 days. Meta no longer accepts it.",
       "SKIP_MISSING_CREDENTIALS": "The WhatsApp connection has no access to Meta.",
+      "SKIP_MISSING_DATASET": "Meta did not return a sales record for this WhatsApp.",
       "SKIP_NO_META_EVENT": "This stage does not send an event to Meta.",
       "SKIP_MISSING_SIGNALS": "The website did not send the ad data (for example, no cookie consent). Nothing was sent to Meta.",
       "EVENT_WON": "Sale",
@@ -1451,6 +1452,7 @@
       "ACTIVITY_MEETING_HOST_REASSIGNED": "Meeting moved to someone else",
       "ACTIVITY_MEETING_HOST_REASSIGNED_TO": "Meeting moved to {name}",
       "ACTIVITY_AUTOMATION_OWNER_ASSIGNED": "Owner assigned by automation",
+      "ACTIVITY_AUTOMATION_OWNER_KEPT": "Owner kept: chosen by a person, not by the automation",
       "ACTIVITY_AUTOMATION_STAGE_MOVED": "Stage changed by automation",
       "ACTIVITY_AUTOMATION_FOLLOW_UP_CREATED": "Follow-up created by automation",
       "ACTIVITY_AI_AUTO_MOVED": "Card moved by AI",
@@ -1716,9 +1718,6 @@
       "META_STAGE_TYPE_NEGOTIATION": "In negotiation",
       "META_SYNC_TITLE": "Meta Ads",
       "META_SYNC_HELP": "When a card is won, lost or moved, send the conversion back to Meta so it optimizes your Click-to-WhatsApp ads by real closers.",
-      "META_SYNC_DATASET": "Dataset ID (advanced)",
-      "META_SYNC_DATASET_PLACEHOLDER": "Leave empty to use the WhatsApp connection dataset",
-      "META_SYNC_DATASET_HELP": "Leave empty to derive it from the WhatsApp connection. Only set this if Meta gave you a specific dataset.",
       "MOVE_STAGE_UP": "Move stage up",
       "MOVE_STAGE_DOWN": "Move stage down",
       "DELETE_STAGE": "Delete stage",
@@ -2569,7 +2568,20 @@
               "FIX": "Sign in again",
               "MISSING_INSTAGRAM_TAP": "One more tap",
               "INSTAGRAM_TEXT": "Instagram Direct and comments arrive here after you link Instagram, with one tap.",
-              "INSTAGRAM_CTA": "Link Instagram"
+              "INSTAGRAM_CTA": "Link Instagram",
+              "INSTAGRAM_TEXT_PAGINA": "Link {'@'}{username} with this same Facebook sign-in. Direct messages and comments arrive here.",
+              "INSTAGRAM_CTA_PAGINA": "Link Instagram",
+              "INSTAGRAM_LINKED": "{'@'}{username} is linked. Direct messages and comments arrive here.",
+              "INSTAGRAM_ERROR": {
+                "MISSING_PERMISSIONS": "Instagram was left unchecked in the Facebook window. Sign in again and keep Instagram checked.",
+                "NOT_OWN_TOKEN": "Your ads are shared with the partner. Sign in with your own Facebook to link Instagram here.",
+                "NO_INSTAGRAM": "This Page has no Instagram linked on Facebook. Link it on Facebook, or use the Instagram sign-in.",
+                "NOT_GRANTED": "This Page was not checked in the Facebook window. Sign in again and check it.",
+                "RECONNECT": "Your Facebook access expired. Sign in again.",
+                "FORBIDDEN": "You cannot link inboxes. Ask an administrator.",
+                "LIMIT": "Your plan reached its inbox limit.",
+                "FAILED": "We could not link Instagram now. Try again in a few minutes."
+              }
             }
           },
           "GUIDE": {
@@ -3230,7 +3242,9 @@
           "HELD": {
             "CAMPAIGN": "Ad activated, but the campaign is paused in Meta Ads Manager. Turn the campaign on there for the ad to start running.",
             "ADSET": "Ad activated, but the ad set is paused in Meta Ads Manager. Turn the ad set on there for the ad to start running."
-          }
+          },
+          "REVIEW": "In Meta review",
+          "REVIEW_HINT": "Goes back live on its own when Meta approves it."
         },
         "POST": {
           "TITLE": "Ad post",
@@ -3383,6 +3397,51 @@
             "PRIVATE_REPLY_RETRY": "Someone else was sending this private reply at the same time. Reload the comments and try again.",
             "PRIVATE_REPLY_NOT_PENDING": "This private reply is no longer waiting for confirmation. Reload the comments."
           }
+        },
+        "CARE": {
+          "TITLE": "Take care of the ad",
+          "HINT": "Duplicate makes a paused copy with its own budget. Changing the photo or text sends the ad to Meta's review again.",
+          "DUPLICATE": "Duplicate",
+          "CHANGE": "Change photo or text",
+          "CANCEL": "Cancel",
+          "DUPLICATE_TITLE": "Make a paused copy of \"{name}\"?",
+          "DUPLICATE_HINT": "The copy gets its own budget, the same as the original: {value} per day. It spends nothing until you turn it on.",
+          "DUPLICATE_HINT_TOTAL": "The copy gets its own budget, the same as the original: {value} in total. It spends nothing until you turn it on.",
+          "DUPLICATE_HINT_NO_BUDGET": "The copy gets its own budget, the same as the original. It spends nothing until you turn it on.",
+          "DUPLICATE_CONFIRM": "Create paused copy",
+          "DUPLICATE_DONE": "Copy created and paused: \"{name}\"",
+          "DUPLICATE_DONE_HINT": "It also shows on the dashboard, under Paused. Check the budget before turning it on.",
+          "DUPLICATE_ERROR": "Meta didn't create the copy now. Nothing was spent. Try again in a little while.",
+          "CHANGE_TITLE": "Change photo or text",
+          "TEXT": "Text",
+          "CHANGE_CONFIRM_TITLE": "Send the ad to review again?",
+          "CHANGE_REVIEW": "With the change, Meta reviews the ad again, usually within a day. Meanwhile, it may be off.",
+          "CHANGE_CONFIRM": "Change and send to review",
+          "CHANGE_DONE": "Changed. Meta is reviewing the ad again.",
+          "CHANGE_ERROR": "Meta didn't make the change now. The ad stays as it was. Try again in a little while.",
+          "SWAP_AS_COPY_CONFIRM_TITLE": "Create the paused copy with the new photo?",
+          "SWAP_AS_COPY_HINT": "The copy has its own budget: {value} per day. It spends nothing until you turn it on. When you turn the copy on, pause this ad so you don't spend twice.",
+          "SWAP_AS_COPY_HINT_TOTAL": "The copy has its own budget: {value} in total. It spends nothing until you turn it on. When you turn the copy on, pause this ad so you don't spend twice.",
+          "SWAP_AS_COPY_HINT_NO_BUDGET": "The copy has its own budget. It spends nothing until you turn it on. When you turn the copy on, pause this ad so you don't spend twice.",
+          "SWAP_AS_COPY_DONE": "Copy with the new photo created and paused: \"{name}\"",
+          "CONTINUE": "Continue",
+          "SWAP_AS_COPY_ACTIVATE": "Then pause the original ad so you don't spend twice.",
+          "OUTSIDE": "Duplicate and change photo are for ads created here. For this one, use Meta Ads Manager.",
+          "HINT_DUPLICATE": "Duplicate makes a paused copy with its own budget.",
+          "ENDED": "The original ad has already ended, so there's nothing to copy. Create a new ad instead.",
+          "UNSURE": "Meta didn't answer in time. Check Meta Ads Manager to see if the copy showed up before trying again.",
+          "CHANGE_UNSURE": "Meta didn't answer in time. Open the ad again in a little while to see if the change went through.",
+          "OPEN_MANAGER": "Open in Ads Manager",
+          "SWAP_REFUSED": "Meta did not accept changing the photo on this ad. You can create a paused copy with the new photo.",
+          "COPY_UNCONFIRMED": "We could not confirm with Meta whether the copy was created. Look in the Ads Manager for an ad whose name ends in \"- Cópia\". If it is not there, create it again.",
+          "RECREATE": "Not in the Ads Manager, create it again",
+          "PAUSE_ORIGINAL_HINT": "The copy \"{name}\" is on. Pause the original so you do not pay twice.",
+          "PAUSE_ORIGINAL": "Pause the original",
+          "PAUSE_ORIGINAL_DONE": "Original paused. Now only the copy spends.",
+          "COPY_FOUND": "The copy is there",
+          "SWAP_REFUSED_TEXT": "Meta did not accept changing the text on this ad. You can create a paused copy with the new text.",
+          "SWAP_AS_COPY_CONFIRM_TITLE_TEXT": "Create the paused copy with the new text?",
+          "SWAP_AS_COPY_DONE_TEXT": "Copy with the new text created and paused: \"{name}\""
         }
       },
       "AD_DETAIL": {
@@ -3827,7 +3886,9 @@
             "VIDEO_SIZE": "This video is too heavy. Trim it in your phone's photos app and choose it again.",
             "VIDEO_LONG": "The video is longer than 1 minute. Trim it in your phone's photos app and choose it again.",
             "READ": "We couldn't open this file. Try another one.",
-            "UPLOAD": "We couldn't send this file to Meta right now. Try again."
+            "UPLOAD": "We couldn't send this file to Meta right now. Try again.",
+            "ONLY_IMAGE": "This ad uses a photo: choose a JPG or PNG photo.",
+            "ONLY_VIDEO": "This ad uses a video: choose an MP4 or MOV video."
           },
           "DROP_WHERE": "From your phone or computer: tap here or drag the file.",
           "CAROUSEL": {
@@ -3837,7 +3898,9 @@
             "HINT": "With 2 or more, it becomes a carousel: people swipe sideways. Up to 10.",
             "FULL": "You reached the maximum: 10 cards."
           },
-          "UPLOADING": "Uploading to Meta…"
+          "UPLOADING": "Uploading to Meta…",
+          "CHOSEN_CURRENT": "Current photo",
+          "CHOSEN_NEW": "New photo"
         },
         "DESTINATION": {
           "GOES_TO": "People who tap go to:",
@@ -5778,8 +5841,6 @@
       "SITE": "Does your website have the Facebook code?",
       "PIXEL": "Website Pixel number",
       "PIXEL_AJUDA": "Numbers only. It is in Facebook Events Manager.",
-      "DATASET": "Dataset (only if Facebook asked for one)",
-      "DATASET_EXEMPLO": "E.g.: 123456789012345",
       "POR_QUE": {
         "WON": "The main one. Your ads start looking for people like those who bought.",
         "MOVED": "Helps your ads find people who want to buy, even before the sale.",
@@ -6390,11 +6451,14 @@
         "RECUSADO": "The notice was not accepted",
         "NAO_ENVIADO": "We did not tell them",
         "RECUSADO_DICA": "Facebook did not accept the notice. Ask whoever runs your ads to check the link with your website.",
+        "SEM_CONFIRMACAO": "We don't know if the notice arrived",
+        "SEM_CONFIRMACAO_DICA": "Facebook did not answer. So the sale is not counted twice, we did not send it again.",
         "VER_MOTIVO": "See the reason",
         "MOTIVO": {
           "SEM_PIXEL": "Your website is not connected to Facebook in this funnel yet. Ask whoever runs your ads.",
           "VELHO": "More than 7 days have passed. Facebook no longer takes this notice.",
           "SEM_ACESSO": "The WhatsApp connection is not allowed to tell Facebook. Ask whoever runs your ads.",
+          "SEM_DATASET": "Facebook did not return a sales record for this WhatsApp.",
           "ETAPA_NAO_AVISA": "This stage is not set to tell Facebook.",
           "SEM_SINAIS": "The website did not send the ad details (for example, the person did not accept cookies). Nothing was sent."
         },
@@ -6458,6 +6522,7 @@
         "ACTIVITY_MEETING_RESCHEDULED": "The meeting changed time",
         "ACTIVITY_MEETING_OUTCOME": "How the meeting went was noted",
         "ACTIVITY_AUTOMATION_OWNER_ASSIGNED": "An automatic rule picked who takes care",
+        "ACTIVITY_AUTOMATION_OWNER_KEPT": "An automatic rule would change who takes care, but the person chosen stays",
         "ACTIVITY_AUTOMATION_STAGE_MOVED": "An automatic rule changed the stage",
         "ACTIVITY_AUTOMATION_FOLLOW_UP_CREATED": "An automatic rule set a follow-up",
         "ACTIVITY_AI_FOLLOWUP_FAILED": "The assistant message did not go out",
@@ -7233,7 +7298,8 @@
     "FILTRO_DO_LINK": {
       "DA_IA": "Handed over by AI",
       "ESPERANDO": "Waiting over {n} min",
-      "DA_IA_ESPERANDO": "From AI, waiting {n}+ min"
+      "DA_IA_ESPERANDO": "From AI, waiting {n}+ min",
+      "DESDE_DIAS": "Started in the last {n} days"
     }
   },
   "CRM_NUMEROS_V2": {

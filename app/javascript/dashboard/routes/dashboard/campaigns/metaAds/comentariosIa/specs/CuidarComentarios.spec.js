@@ -468,6 +468,33 @@ describe('CuidarComentarios (#2212)', () => {
     );
   });
 
+  it('#2307 · privado que a Meta recusou por permissão da Página: em "Esperando você", dizendo que a Meta não deixou', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({
+        care: 'on',
+        network: 'facebook',
+        private_available: true,
+        para_quem: 'Quem pedir o e-book',
+        to_see: [
+          {
+            id: 'c-1',
+            network: 'facebook',
+            author: 'Carla',
+            text: 'Quanto custa?',
+            kind: 'no_permission',
+          },
+        ],
+      }),
+    });
+    const wrapper = await montar();
+
+    expect(
+      wrapper.find('[data-ia-to-see-row="no_permission"]').text()
+    ).toContain(
+      'A Meta não deixou mandar este privado pela Página: responda no comentário.'
+    );
+  });
+
   const falhaCom = (status, error) =>
     Object.assign(new Error('x'), { response: { status, data: { error } } });
 
@@ -534,5 +561,102 @@ describe('CuidarComentarios (#2212)', () => {
     await wrapper.find('[data-ia-painel-problem] button').trigger('click');
     await flushPromises();
     expect(wrapper.find('[data-ia-painel-problem]').exists()).toBe(false);
+  });
+
+  // #2522: no anúncio nas duas redes, a falha numa não esconde a outra. A lista é a da rede que leu, e a tela diz qual
+  // rede faltou e por quê.
+  it('anúncio nas duas redes com o Facebook sem login: a lista do Instagram e o aviso do Facebook', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({
+        care: 'on',
+        para_quem: 'x',
+        network: 'both',
+        status: 'ready',
+        network_status: { instagram: 'ready', facebook: 'needs_login' },
+      }),
+    });
+    const wrapper = await montar({ origin: 'anuncio' });
+
+    const avisos = wrapper.findAll('[data-ia-rede-faltou]');
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0].attributes('data-network')).toBe('facebook');
+    expect(avisos[0].text()).toContain(
+      'Só consegui ler os comentários do Instagram. Os do Facebook ficaram de fora.'
+    );
+    expect(avisos[0].text()).toContain('Entre de novo na Meta');
+    expect(avisos[0].find('button').exists()).toBe(false);
+    expect(wrapper.find('[data-ia-painel-problem]').exists()).toBe(false);
+    expect(wrapper.find('[data-ia-on]').exists()).toBe(true);
+  });
+
+  it('rede que faltou por Meta fora do ar: o aviso oferece tentar de novo; as duas lidas, sem aviso', async () => {
+    ComentariosIaAPI.getCuidado
+      .mockResolvedValueOnce({
+        data: painel({
+          care: 'on',
+          status: 'ready',
+          network_status: { instagram: 'meta_unavailable', facebook: 'ready' },
+        }),
+      })
+      .mockResolvedValueOnce({
+        data: painel({
+          care: 'on',
+          status: 'ready',
+          network_status: { instagram: 'ready', facebook: 'ready' },
+        }),
+      });
+    const wrapper = await montar({ origin: 'anuncio' });
+
+    const aviso = wrapper.find('[data-ia-rede-faltou]');
+    expect(aviso.text()).toContain(
+      'Só consegui ler os comentários do Facebook'
+    );
+    await aviso.find('button').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-ia-rede-faltou]').exists()).toBe(false);
+  });
+
+  it('rede que faltou por um código que a tela não conhece: o aviso sem o genérico do anúncio, com tentar de novo', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({
+        care: 'on',
+        status: 'ready',
+        network_status: { instagram: 'ready', facebook: 'meta_refused' },
+      }),
+    });
+    const wrapper = await montar({ origin: 'anuncio' });
+
+    const aviso = wrapper.find('[data-ia-rede-faltou]');
+    expect(aviso.text()).toContain('Os do Facebook ficaram de fora.');
+    expect(aviso.text()).not.toContain('Não consegui ler o anúncio agora');
+    expect(aviso.find('button').exists()).toBe(true);
+  });
+
+  it('desligado e sem poder ligar: nenhuma lista na tela, nenhum aviso de rede', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({
+        care: 'off',
+        status: 'ready',
+        network_status: { instagram: 'ready', facebook: 'needs_login' },
+      }),
+    });
+    const wrapper = await montar({ origin: 'anuncio', canManage: false });
+
+    expect(wrapper.find('[data-ia-off-readonly]').exists()).toBe(true);
+    expect(wrapper.find('[data-ia-rede-faltou]').exists()).toBe(false);
+  });
+
+  it('desligado e com poder ligar: o aviso de rede continua, porque o "Ler e mandar" conta só a rede que leu', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({
+        care: 'off',
+        status: 'ready',
+        network_status: { instagram: 'ready', facebook: 'needs_login' },
+      }),
+    });
+    const wrapper = await montar({ origin: 'anuncio' });
+
+    expect(wrapper.find('[data-ia-off-readonly]').exists()).toBe(false);
+    expect(wrapper.find('[data-ia-rede-faltou]').exists()).toBe(true);
   });
 });
