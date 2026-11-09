@@ -19,6 +19,25 @@
 class Crm::Email::Destinatarios
   CHAVE = 'email_saiu_da_copia'.freeze
 
+  # #1828 (flag `email_autoria`): os destinatários da resposta da IA como parâmetros do MessageBuilder (`to_emails`,
+  # `cc_emails`, `bcc_emails`), como o "Responder a todos" do painel, sem quem pediu para sair. Fora do e-mail, ou sem a
+  # flag, {}: a resposta vai só ao cliente. Usado pela resposta do turno (Responder#post_reply!) e pela interação que sai
+  # depois do áudio (Operate::InteracaoDepoisDoAudio), calculado na hora de postar.
+  def self.da_ia(conversation)
+    return {} unless conversation.inbox&.email? && Crm::Email::Autoria.ligada?(conversation.account)
+
+    new(conversation).para_a_ia.to_h { |campo, enderecos| [:"#{campo}_emails", enderecos.join(',')] }
+  end
+
+  # Os destinatários da IA calculados antes (`da_ia`, gravados na âncora da voz: #1479), sem quem pediu para sair da
+  # cópia depois. O cliente nunca sai. Fora do e-mail, ou sem a flag, {}.
+  def self.gravados_da_ia(conversation, gravados)
+    return {} unless conversation.inbox&.email? && Crm::Email::Autoria.ligada?(conversation.account)
+
+    saiu = saiu_da_copia(conversation) - [conversation.contact&.email.to_s.strip.downcase]
+    gravados.to_h.to_h { |campo, enderecos| [campo.to_sym, (enderecos.to_s.split(',') - saiu).join(',')] }
+  end
+
   def self.saiu_da_copia(conversation)
     Array(conversation&.additional_attributes.to_h[CHAVE]).map { |endereco| endereco.to_s.strip.downcase }
   end

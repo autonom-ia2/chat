@@ -6,6 +6,8 @@ import AcharPainel from './AcharPainel.vue';
 import AcharEscolhaGrande from './AcharEscolhaGrande.vue';
 import AcharLinhaFrase from './AcharLinhaFrase.vue';
 import AcharEstado from './AcharEstado.vue';
+import AcharEscolhaDaLista from './AcharEscolhaDaLista.vue';
+import { LISTA_NOVA } from '../composables/useFolhaDaLista';
 import {
   LIMITE_DO_PUBLICO,
   TEXTO_DO_ERRO,
@@ -46,6 +48,11 @@ const props = defineProps({
   // Quem ficou de fora na recusa do Público (#2695 r1), dito abaixo do erro.
   foraDoErro: { type: Array, default: () => [] },
   mostrarFora: { type: Boolean, default: false },
+  // #2775 (F6): as listas que já existem (null até chegarem) e a escolhida.
+  listas: { type: Array, default: null },
+  listaId: { type: [String, Number], default: LISTA_NOVA },
+  // Uma página das listas falhou ou passou do teto: nem todas apareceram.
+  listasIncompletas: { type: Boolean, default: false },
 });
 const emit = defineEmits([
   'escolher',
@@ -56,11 +63,44 @@ const emit = defineEmits([
   'close',
   'update:nomeLista',
   'update:mostrarFora',
+  'update:listaId',
 ]);
 
 const { t } = useI18n();
 const NS = 'PROSPECTING_ACHAR.FOLHA';
 const editandoNome = ref(false);
+// Numa lista que já existe, o nome é o dela e o botão diz "Pôr".
+const listaEscolhida = computed(() =>
+  (props.listas || []).find(lista => lista.id === props.listaId)
+);
+
+// Uma conta só para o topo ("Entram 16 das 20 · 4 já estavam na lista") e o
+// botão ("Pôr 16 empresas na lista"): numa lista que já existe, quem já está
+// nela não entra (entram vem de lerListasDaFolha; sem ele, contam todas com
+// contato).
+const quantasEntram = computed(() => {
+  const lista = listaEscolhida.value;
+  return lista ? (lista.entram ?? props.entramLista) : props.entramLista;
+});
+const jaEstavam = computed(() =>
+  listaEscolhida.value ? props.entramLista - quantasEntram.value : 0
+);
+// Duas frases, cada uma com o próprio plural (#2834): "Entra 1 das 3" segue
+// quantas entram; "2 já estavam na lista", quantas já estavam.
+const textoEntram = computed(() => {
+  const n = quantasEntram.value;
+  const entram = t(`${NS}.ENTRAM`, { n, total: props.n }, n);
+  if (!jaEstavam.value) return entram;
+  const ja = t(`${NS}.JA_ESTAVAM`, { n: jaEstavam.value }, jaEstavam.value);
+  return `${entram} · ${ja}`;
+});
+
+const numerosDaEscolhida = computed(() => {
+  const lista = listaEscolhida.value;
+  if (!lista) return '';
+  const { empresas, whatsapp, email } = lista;
+  return t(`${NS}.NUMEROS_LISTA`, { empresas, whatsapp, email }, empresas);
+});
 
 const dois = computed(() => props.podeFunil && props.podeLista);
 const escolhaFinal = computed(() => {
@@ -68,7 +108,7 @@ const escolhaFinal = computed(() => {
   return props.podeFunil ? 'funil' : 'lista';
 });
 const titulo = computed(() => {
-  if (dois.value) return t(`${NS}.TITULO`, { n: props.n });
+  if (dois.value) return t(`${NS}.TITULO`, { n: props.n }, props.n);
   return t(`${NS}.${props.podeFunil ? 'FUNIL' : 'LISTA'}.TITULO`);
 });
 // Lista: a base é a seleção ("Entram 12 das 14"); só quem não tem contato
@@ -130,8 +170,15 @@ const botao = computed(() => {
   if (!props.entramLista) {
     return { rotulo: t(`${NS}.NINGUEM`), desabilitado: true };
   }
+  // Numa lista que já existe, só conta quem entra: quem já está nela não
+  // (entram vem de lerListasDaFolha; sem ele, contam todas com contato).
+  const lista = listaEscolhida.value;
+  const n = quantasEntram.value;
+  if (lista && !n) {
+    return { rotulo: t(`${NS}.TODAS_JA_ESTAO`), desabilitado: true };
+  }
   return {
-    rotulo: t(`${NS}.GUARDAR`, { n: props.entramLista }),
+    rotulo: t(`${NS}.${lista ? 'POR_NA_LISTA' : 'GUARDAR'}`, { n }, n),
     acao: 'guardar',
   };
 });
@@ -251,7 +298,30 @@ watch(
       class="flex flex-col gap-3"
       data-previa-lista
     >
+      <AcharEscolhaDaLista
+        v-if="listas?.length"
+        :model-value="listaId"
+        :listas="listas"
+        @update:model-value="emit('update:listaId', $event)"
+      />
+      <p
+        v-if="listasIncompletas"
+        role="status"
+        class="m-0 text-sm text-n-amber-11"
+        data-listas-incompletas
+      >
+        {{ $t(`${NS}.LISTAS_INCOMPLETAS`) }}
+      </p>
       <AcharLinhaFrase
+        v-if="listaEscolhida"
+        icone="i-lucide-list-plus"
+        tom="verde"
+        :rotulo="$t(`${NS}.QUEM_JA_ESTA`)"
+        :texto="numerosDaEscolhida"
+        data-lista-escolhida
+      />
+      <AcharLinhaFrase
+        v-else
         icone="i-lucide-list"
         tom="verde"
         :rotulo="$t(`${NS}.NOME_LISTA_ROTULO`)"
@@ -260,7 +330,7 @@ watch(
         @alterar="editandoNome = !editandoNome"
       />
       <input
-        v-if="editandoNome"
+        v-if="editandoNome && !listaEscolhida"
         :value="nomeLista"
         type="text"
         :aria-label="$t(`${NS}.NOME_LISTA_ROTULO`)"
@@ -269,7 +339,8 @@ watch(
       />
       <AcharLinhaFrase
         icone="i-lucide-users"
-        :texto="$t(`${NS}.ENTRAM`, { n: entramLista, total: n })"
+        :texto="textoEntram"
+        data-entram
       />
     </div>
 

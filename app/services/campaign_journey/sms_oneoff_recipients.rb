@@ -8,11 +8,12 @@
 #
 # - Who receives: the audience's contacts by the phone rule (CampaignJourney::AudienceContacts,
 #   same as WhatsApp: the row brought that mobile and the contact still has it); who refused
-#   messages (#737) stays out of the total. The audience SMS badge (`channels.sms`) must be on at
-#   send time; off → everyone skipped with CHANNEL_DISABLED_REASON.
+#   messages (#737) or is blocked (chat#2733) stays out of the total. The audience SMS badge
+#   (`channels.sms`) must be on at send time; off → everyone skipped with CHANNEL_DISABLED_REASON.
 # - D2: one `queued` CampaignRecipient per contact before the first SMS; after the run everyone
 #   has a final status (CampaignJourney::RecipientTracking).
-# - D5: refusal is read again right before each SMS → skipped "opted_out".
+# - D5: refusal and block are read again right before each SMS → skipped "opted_out" / "blocked"
+#   (Contact.campaign_refusal_now).
 # - B1b: tokens per person (CampaignJourney::SmsMessage); missing value without default →
 #   skipped "falta empresa" / "falta <coluna>".
 # - D4: provider refusal → failed with the provider's reason (CampaignJourney::SmsSender);
@@ -29,7 +30,6 @@
 module CampaignJourney::SmsOneoffRecipients
   include CampaignJourney::RecipientTracking
 
-  OPTED_OUT_REASON = 'opted_out'.freeze
   NO_PHONE_REASON = 'Contact has no phone number'.freeze
   CHANNEL_DISABLED_REASON = 'Canal SMS desligado no público'.freeze
 
@@ -64,7 +64,8 @@ module CampaignJourney::SmsOneoffRecipients
 
   def process_sms_recipient(recipient)
     contact = recipient.contact
-    return recipient.mark_skipped!(OPTED_OUT_REASON) if Contact.opted_out.exists?(id: contact.id)
+    refusal = Contact.campaign_refusal_now(contact.id)
+    return recipient.mark_skipped!(refusal) if refusal
     return recipient.mark_skipped!(NO_PHONE_REASON) if contact.phone_number.blank?
 
     content, missing = sms_message.render_for(contact)
@@ -103,7 +104,7 @@ module CampaignJourney::SmsOneoffRecipients
     return unless audience_sms_enabled?
 
     CampaignJourney::AudienceContacts.contacts_for(sms_audience_link, channel: :sms).find_each do |contact|
-      next if Contact.opted_out.exists?(id: contact.id) || contact.phone_number.blank?
+      next if Contact.campaign_refusal_now(contact.id) || contact.phone_number.blank?
 
       content, missing = sms_message.render_for(contact)
       CampaignJourney::SmsSender.new(channel).deliver(to: contact.phone_number, body: content) if missing.empty?

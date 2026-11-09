@@ -6,6 +6,7 @@ import {
   LEVELS,
   getLevel,
   hasAccess,
+  levelLabelKey,
   visibleExtras,
   sensitiveExtrasOn,
 } from '../permissionMatrix';
@@ -16,7 +17,8 @@ const props = defineProps({
 
 const { t } = useI18n();
 
-const levelKey = module => getLevel(module, props.permissions).toUpperCase();
+const levelKey = module =>
+  levelLabelKey(module, getLevel(module, props.permissions));
 
 // Mid-sentence labels start lowercase but keep acronyms like CRM intact.
 const lowerFirst = text => text.charAt(0).toLowerCase() + text.slice(1);
@@ -24,7 +26,7 @@ const lowerFirst = text => text.charAt(0).toLowerCase() + text.slice(1);
 // Built in one string so the template whitespace never lands before the comma.
 const detailOf = (module, extras) =>
   [
-    t(`CUSTOM_ROLE.MATRIX.LEVELS.${levelKey(module)}`),
+    t(levelKey(module)),
     ...extras.map(key => t(`CUSTOM_ROLE.PERMISSIONS.${key.toUpperCase()}`)),
   ]
     .map(lowerFirst)
@@ -53,7 +55,8 @@ const sensitive = computed(() => sensitiveExtrasOn(props.permissions));
 const allModules = MODULE_GROUPS.flatMap(group => group.modules);
 const menuItems = computed(() =>
   allModules
-    .filter(module => !module.settings)
+    // Uma área sem item próprio no menu (`menu: false`) não entra na prévia.
+    .filter(module => !module.settings && module.menu !== false)
     .map(module => ({
       key: module.key,
       icon: module.icon,

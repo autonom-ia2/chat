@@ -1,11 +1,12 @@
 # Who of a search's people can receive (#2277), by the rule of a spreadsheet audience (CampaignImports::AudienceRowContacts):
 # a phone OR an e-mail. The campaign then sends each person by the channel they have (WhatsApp and SMS need a valid
 # mobile, e-mail a valid address), so an account that only sends e-mail gets its whole audience. Nobody who asked not
-# to receive active messages counts. Those people never enter the list on the screen nor the saved audience; the screen
-# only names them, by reason, at the end ("sem_contato", "nao_quer").
+# to receive active messages counts, nor anyone blocked (chat#2733). Those people never enter the list on the screen nor
+# the saved audience; the screen only names them, by reason, at the end ("sem_contato", "nao_quer", "bloqueado").
 module ConversationAudience::Reach
   NO_CONTACT = 'sem_contato'.freeze
   OPTED_OUT = 'nao_quer'.freeze
+  BLOCKED = 'bloqueado'.freeze
 
   module_function
 
@@ -19,6 +20,7 @@ module ConversationAudience::Reach
 
   def reason_for(contact)
     return OPTED_OUT if contact.opted_out?
+    return BLOCKED if contact.blocked?
 
     NO_CONTACT if phone(contact).nil? && email(contact).nil?
   end

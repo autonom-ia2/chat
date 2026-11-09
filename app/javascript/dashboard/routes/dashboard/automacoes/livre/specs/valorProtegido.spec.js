@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { comPermissoes } from '../catalogo';
+import { comPermissoes, doAlvoDoGatilho } from '../catalogo';
 import { opcoesDosValores } from '../texto';
 import { podeLerComChave } from '../usePodeLerValor';
 import LivreTexto from '../components/LivreTexto.vue';
@@ -131,5 +131,23 @@ describe('valor que pede permissão', () => {
     });
 
     expect(wrapper.find('[data-opcoes]').text()).not.toContain('VALOR');
+  });
+  // #2780, decisão 9 (Rodrigo, 09/11): o texto que a pessoa escreve oferece o
+  // valor a quem pode lê-lo, na automação de conversa e na de card.
+  describe('em qualquer gatilho, o texto oferece o valor a quem pode ler', () => {
+    const gatilhos = {
+      gatilhos: [
+        { tipo: 'mensagem.criada', alvo: 'Conversation' },
+        { tipo: 'card.ganho', alvo: 'Crm::Card' },
+      ],
+      alvos: { Conversation: ['conversa', 'card'], 'Crm::Card': ['card'] },
+    };
+    const no = (catalogo, tipo) =>
+      doAlvoDoGatilho({ ...catalogo, ...gatilhos }, tipo, false, true);
+
+    it.each(['mensagem.criada', 'card.ganho'])('%s', tipo => {
+      expect(rotulos(no(com, tipo))).toEqual(['TITULO', 'VALOR']);
+      expect(rotulos(no(sem, tipo))).toEqual(['TITULO']);
+    });
   });
 });
