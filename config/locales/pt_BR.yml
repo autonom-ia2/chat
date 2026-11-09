@@ -1150,7 +1150,7 @@ pt_BR:
         caminho_sem_letra: "Passo %{passo}: o nome do caminho precisa ter pelo menos uma letra (%{nome})."
         de_novo_caminho_desconhecido: "Passo %{passo}: o \"decidir de novo\" aponta para um caminho que este passo não tem (%{chave})."
         de_novo_com_passos: "Passo %{passo}: o caminho %{nome} decide de novo, então não pode ter passos. Tire os passos dele ou desmarque."
-        de_novo_todos: "Passo %{passo}: deixe pelo menos um caminho que não decide de novo, para a automação seguir."
+        de_novo_todos: "Passo %{passo}: deixe sem marcar pelo menos uma saída (um caminho ou o \"Nenhum se aplica\"), para a automação seguir."
         de_novo_desde_desconhecido: "Passo %{passo}: o \"voltar a esperar\" aponta para um passo que esta automação não tem (%{desde})."
         de_novo_desde_nao_anterior: "Passo %{passo}: o \"voltar a esperar\" precisa ser um \"esperar até\" que vem antes deste passo, na mesma lista (%{desde} não é)."
         de_novo_desde_sem_resposta: "Passo %{passo}: o \"esperar até\" %{desde} precisa esperar o cliente: \"o cliente respondeu\" ou \"o cliente mandou foto ou PDF\" igual a sim. Senão a automação daria voltas sem o cliente."

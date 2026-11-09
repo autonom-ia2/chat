@@ -7,7 +7,7 @@
         "PRAZO": "Wait for the next reply at most",
         "DESCONHECIDO": "A marked path no longer exists ({chave}). Unmark it.",
         "COM_PASSOS": "“{nome}” decides again, so it can't have steps. Remove its steps in the list.",
-        "TODOS": "Leave at least one path unmarked, so the automation can move on.",
+        "TODOS": "Leave at least one way out unmarked (a path or \"None applies\"), so the automation can move on.",
         "VOLTAR": "After the path, go back to wait at",
         "NAO_VOLTA": "Don’t go back: wait for the next reply here",
         "DICA_VOLTA": "When the AI picks one of these paths, the automation runs its steps and goes back to wait at the step chosen below. Each round waits for the customer again and costs the AI calls of the path’s steps.",

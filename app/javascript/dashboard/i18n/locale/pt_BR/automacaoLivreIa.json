@@ -7,7 +7,7 @@
         "PRAZO": "Esperar a próxima resposta por até",
         "DESCONHECIDO": "Um caminho marcado não existe mais ({chave}). Desmarque.",
         "COM_PASSOS": "“{nome}” decide de novo, então não pode ter passos. Tire os passos dele na lista.",
-        "TODOS": "Deixe pelo menos um caminho sem marcar, para a automação seguir.",
+        "TODOS": "Deixe sem marcar pelo menos uma saída (um caminho ou o \"Nenhum se aplica\"), para a automação seguir.",
         "VOLTAR": "Depois do caminho, voltar a esperar em",
         "NAO_VOLTA": "Não volta: espera a próxima resposta aqui",
         "DICA_VOLTA": "Quando a IA escolher um destes caminhos, a automação faz os passos dele e volta a esperar no passo escolhido abaixo. Cada volta espera o cliente de novo e custa as consultas à IA dos passos do caminho.",

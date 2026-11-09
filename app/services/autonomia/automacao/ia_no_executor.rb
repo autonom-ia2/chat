@@ -26,7 +26,7 @@ module Autonomia::Automacao::IaNoExecutor
     end
 
     executor = classe.new(execucao: @execucao, passo: passo, alvo: alvo, acesso: @acesso, pausa: @pausa)
-    @decidido_em = Time.current
+    marcar_leitura(passo)
     depois_da_ia(passo, executor, executor.executar)
   end
 
@@ -49,7 +49,7 @@ module Autonomia::Automacao::IaNoExecutor
   def seguir_pelo_caminho(passo, executor, resultado)
     @tentativas = 0
     ramo = resultado.dados['ramo']
-    registro = registrar(passo['id'], resultado.tipo == :pulado ? 'pulado' : 'ok', resultado.motivo, resultado.dados)
+    registro = registrar(passo['id'], resultado.tipo == :pulado ? 'pulado' : 'ok', resultado.motivo, dados_do_caminho(passo, resultado.dados))
     if ::Autonomia::Automacao::DecidirDeNovo.marcado?(passo, ramo)
       return ::Autonomia::Automacao::DecidirDeNovo.espera?(passo) ? esperar_resposta(passo) : @roteiro.entrar_no_caminho(passo, ramo)
     end

@@ -112,12 +112,24 @@ describe('LivreDecidirDeNovo', () => {
       {
         ...decidir(),
         caminhos: [caminho('A', 'a'), caminho('B', 'b')],
-        de_novo: { caminhos: ['a', 'b'], prazo: DUAS_HORAS },
+        de_novo: { caminhos: ['a', 'b', 'nenhum'], prazo: DUAS_HORAS },
       }
     );
     expect(todos.findAll('[data-aviso-de-novo]').map(p => p.text())).toEqual([
       'AUTOMACAO_LIVRE.IA.DE_NOVO.TODOS',
     ]);
+  });
+
+  it('não avisa com todos os caminhos marcados e o "nenhum" livre: ele é a saída', () => {
+    const saidaNoNenhum = montar(
+      { caminhos: ['a', 'b'], prazo: DUAS_HORAS },
+      {
+        ...decidir(),
+        caminhos: [caminho('A', 'a'), caminho('B', 'b')],
+        de_novo: { caminhos: ['a', 'b'], prazo: DUAS_HORAS },
+      }
+    );
+    expect(saidaNoNenhum.findAll('[data-aviso-de-novo]')).toHaveLength(0);
   });
 });
 
@@ -147,6 +159,22 @@ describe('deNovoPronto', () => {
     [
       'caminho que não existe mais',
       decidir({ caminhos: ['sumiu'], prazo: DUAS_HORAS }),
+      false,
+    ],
+    [
+      'todos os caminhos marcados, com o "nenhum" livre',
+      {
+        ...decidir({ caminhos: ['a', 'b'], prazo: DUAS_HORAS }),
+        caminhos: [caminho('A', 'a'), caminho('B', 'b')],
+      },
+      true,
+    ],
+    [
+      'todas as saídas marcadas, até o "nenhum"',
+      {
+        ...decidir({ caminhos: ['a', 'b', 'nenhum'], prazo: DUAS_HORAS }),
+        caminhos: [caminho('A', 'a'), caminho('B', 'b')],
+      },
       false,
     ],
     [

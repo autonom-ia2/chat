@@ -75,11 +75,12 @@ export const marcadosDesconhecidos = passo => {
   );
 };
 
-export const todosMarcados = passo =>
-  (passo.caminhos || []).length > 0 &&
-  (passo.caminhos || []).every(caminho =>
-    (passo.de_novo?.caminhos || []).includes(caminho.chave)
-  );
+// Todas as saídas marcadas: os caminhos e o "nenhum", que também é saída.
+export const todosMarcados = passo => {
+  const marcados = passo.de_novo?.caminhos || [];
+  const saidas = [...(passo.caminhos || []).map(item => item.chave), NENHUM];
+  return saidas.every(chave => marcados.includes(chave));
+};
 
 // Desligado (sem `de_novo`) está pronto; ligado, pede um caminho marcado, o
 // prazo ou o "voltar a esperar" e nenhum dos problemas acima.
