@@ -25,7 +25,9 @@
 #
 # Indexes
 #
+# rubocop:disable Layout/LineLength
 #  idx_wa_api_recipients_active_phone_hash                    (whatsapp_api_campaign_id,phone_hash) UNIQUE WHERE ((phone_hash IS NOT NULL) AND (status = ANY (ARRAY[0, 1, 2])))
+# rubocop:enable Layout/LineLength
 #  idx_wa_api_recipients_campaign_contact                     (whatsapp_api_campaign_id,contact_id) UNIQUE
 #  idx_wa_api_recipients_campaign_id                          (whatsapp_api_campaign_id)
 #  idx_wa_api_recipients_campaign_message                     (whatsapp_api_campaign_id,message_id) UNIQUE WHERE (message_id IS NOT NULL)
