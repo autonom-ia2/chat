@@ -270,5 +270,22 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
 
       expect { outro.update!(custom_attributes: { 'impressao' => 'x' }) }.not_to have_enqueued_job(Autonomia::Automacao::AvancarJob)
     end
+
+    it 'o card muda: acorda a espera que lê o card, não a que lê só a resposta do cliente', :aggregate_failures do
+      resposta = automacao_ligada(account, admin, [esperar_ate(condicao('conversa.cliente_respondeu'), 24, 'horas')],
+                                  gatilho: { 'tipo' => 'card.entrou_na_etapa', 'etapa_id' => funil.last.id })
+      perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) do
+        Autonomia::Automacao::Partida.new(definicao: resposta, alvo: card, chave_gatilho: 'card.entrou_na_etapa').call
+      end
+      rodar_no_card
+      allow(Autonomia::Automacao::Escuta).to receive(:reservar).and_call_original
+
+      perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { card.update!(custom_attributes: { 'impressao' => 'gostou' }) }
+
+      expect(Autonomia::Automacao::Escuta).to have_received(:reservar).with(have_attributes(id: execucao_de(definicao).id))
+      expect(Autonomia::Automacao::Escuta).not_to have_received(:reservar).with(have_attributes(id: execucao_de(resposta).id))
+      expect(execucao_de(definicao).estado).to eq('concluida')
+      expect(execucao_de(resposta).estado).to eq('esperando')
+    end
   end
 end
