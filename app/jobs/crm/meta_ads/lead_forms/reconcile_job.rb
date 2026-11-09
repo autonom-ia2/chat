@@ -4,7 +4,8 @@
 # Lê desde o mais recente entre: as últimas WINDOW, o destino salvo (destination_set_at) e a Página voltar a receber
 # nesta conta (leadgen_receiving_since). Assim só traz o que o webhook traria: quem preencheu antes de salvar o destino
 # (sem "trazer quem já preencheu") ou com a Página parada fica de fora. Marco nulo não chega aqui: o scope
-# reconcilable o deixa de fora (as linhas de antes do #2285 ganharam o momento do deploy do #2740). Exceção
+# reconcilable o deixa de fora. Os formulários com destino e as Páginas recebendo de antes do #2285 ganharam o
+# momento do deploy do #2740; sem destino ou com a Página parada, o marco nasce quando voltarem. Exceção
 # conhecida: funil arquivado e reativado sem salvar o destino de novo relê as 48 h, inclusive quem preencheu com o
 # funil fechado.
 #
@@ -40,7 +41,7 @@ class Crm::MetaAds::LeadForms::ReconcileJob < ApplicationJob
                                                   form_name: form.form_name, since: since)
     return if past.nil?
 
-    result = past.import!(pipeline: form.pipeline, stage: form.stage)
+    result = past.import!(pipeline: form.pipeline, stage: form.stage, refused: Crm::MetaAds::LeadForms::RefusedLeads.new(form))
     Rails.logger.info("[MetaAds::LeadForms::Reconcile] form_id=#{form.form_id} imported=#{result[:imported]}") if result[:imported].positive?
     Rails.logger.warn("[MetaAds::LeadForms::Reconcile] form_id=#{form.form_id} leitura parou no teto de páginas") if result[:truncated]
   rescue Crm::MetaAds::LeadForms::Unavailable

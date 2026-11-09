@@ -212,12 +212,14 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
       expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
     end
 
-    it 'ao ler os leads com o token da Página: a conexão fica inválida' do
+    it 'ao ler os leads com o token da Página: a conexão fica inválida, sem rastreador' do
       token_recusado('9001/leads', hash_including({}))
+      allow(ChatwootExceptionTracker).to receive(:new)
 
       described_class.perform_now(form.id)
 
       expect(Crm::MetaAdsConnection.find_by(account: account).status).to eq('invalid')
+      expect(ChatwootExceptionTracker).not_to have_received(:new)
     end
 
     it 'recusa que não é de token (permissão): a conexão continua ativa' do
@@ -251,6 +253,35 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
       expect(account.crm_cards.pluck(:title)).to eq(['Bia'])
       expect(Crm::MetaAdsLead.where(account: account).pluck(:leadgen_id)).to eq(['L2'])
       expect(ChatwootExceptionTracker).to have_received(:new).once
+    end
+
+    def recusar_ana!
+      stub_leads(leads: [lead('L1', 'Ana', '+5511987650001')])
+      allow_any_instance_of(Crm::Cards::Creator).to receive(:perform).and_raise(recusa) # rubocop:disable RSpec/AnyInstance
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
+      described_class.perform_now(form.id)
+      allow_any_instance_of(Crm::Cards::Creator).to receive(:perform).and_call_original # rubocop:disable RSpec/AnyInstance
+    end
+
+    # A recusa pode ser do destino (funil ou etapa): consertado e salvo de novo, o lead bom não fica preso.
+    it 'destino salvo de novo: a rodada seguinte tenta de novo e o lead entra' do
+      recusar_ana!
+
+      travel(1.second) { form.update!(updated_at: Time.current) } # o Hub muda a linha ao salvar o destino (hub_spec)
+      described_class.perform_now(form.id)
+
+      expect(account.crm_cards.pluck(:title)).to eq(['Ana'])
+    end
+
+    it 'passado o prazo da recusa, a reconciliação tenta de novo' do
+      recusar_ana!
+
+      travel_to((Crm::MetaAds::LeadForms::RefusedLeads::TTL + 1.minute).from_now) do
+        cache.write(lock_key, true)
+        described_class.perform_now(form.id)
+      end
+
+      expect(account.crm_cards.pluck(:title)).to eq(['Ana'])
     end
 
     it 'lead só com recusa: a rodada seguinte nem lê as perguntas do formulário' do
