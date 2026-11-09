@@ -53,12 +53,51 @@ RSpec.describe Autonomia::Automacao::Receita do
   # A tela só oferece campo de número; o servidor é a barreira de verdade (o Guia e a API montam sem a tela).
   it 'o campo que guarda o contato tem de ser um campo de número: o servidor recusa o resto', :aggregate_failures do
     atributo('telefone_de_quem_indicou', 'contact_attribute', 'text')
+    # O número da conversa (um pedido, um protocolo) não guarda contato: a mensagem sairia a um cliente qualquer da conta.
+    atributo('numero_do_pedido', 'conversation_attribute', 'number')
     campo = ->(caminho) { { 'de' => 'contato_do_campo', 'campo' => { '$valor' => caminho }, 'usar' => 'conversa' } }
     recusado = [I18n.t("#{frase}.em_outro_registro.campo_sem_contato", passo: 'outro')]
 
     expect(problemas(receita('mensagem.criada', em_outro(campo.call('contato.atributos.indicado_por'))))).to be_empty
-    %w[contato.id contato.telefone contato.atributos.telefone_de_quem_indicou].each do |caminho|
+    %w[contato.id contato.telefone contato.atributos.telefone_de_quem_indicou conversa.atributos.numero_do_pedido].each do |caminho|
       expect(problemas(receita('mensagem.criada', em_outro(campo.call(caminho))))).to eq(recusado)
+    end
+  end
+
+  describe 'G65 (#2842): o ramo lê o registro de origem com origem.*' do
+    let(:no_contato) { { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'contato.atributos.indicado_por' }, 'usar' => 'conversa' } }
+
+    def texto(chave, id, caminho) = I18n.t("#{frase}.#{chave}", passo: id, caminho: caminho)
+
+    it 'vale só dentro do ramo, com o caminho que o alvo do gatilho da mãe alcança', :aggregate_failures do
+      expect(problemas(receita('mensagem.criada', em_outro(no_contato, mensagem('m1', 'origem.contato.nome'))))).to be_empty
+      expect(problemas(receita('mensagem.criada', mensagem('m0', 'origem.contato.nome'), em_outro(no_contato, mensagem('m1', 'contato.nome')))))
+        .to eq([texto(:origem_fora_do_ramo, 'm0', 'origem.contato.nome')])
+      expect(problemas(receita('mensagem.criada', em_outro(no_contato, mensagem('m1', 'origem.card.titulo')))))
+        .to eq([texto(:valor_fora_do_alvo, 'm1', 'origem.card.titulo')])
+    end
+
+    it 'só campos e atributos da conversa, do contato e do card: o resto é da execução da mãe', :aggregate_failures do
+      %w[origem.mensagem.tipo origem.ia.p1 origem.envio.texto origem.conversa.cliente_respondeu origem.conversa.link_da_agenda
+         origem.origem.contato.nome].each do |caminho|
+        expect(problemas(receita('mensagem.criada', em_outro(no_contato, mensagem('m1', caminho)))))
+          .to eq([texto(:valor_desconhecido, 'm1', caminho)])
+      end
+      expect(problemas(receita('mensagem.criada', em_outro(no_contato, mensagem('m1', 'origem.contato.atributos.sumiu')))))
+        .to eq([texto(:atributo_inexistente, 'm1', 'origem.contato.atributos.sumiu')])
+    end
+
+    it 'o valor protegido do registro de origem segue a permissão de quem salva', :aggregate_failures do
+      account.enable_features!('automacao_gatilhos')
+      no_card = { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'card.atributos.indicado_por' }, 'usar' => 'conversa' }
+      atributo('indicado_por', 'card_attribute', 'number')
+      lida = receita('card.ganho', em_outro(no_card, mensagem('m1', 'origem.card.valor')))
+      sem_valor = create(:account_user, account: account, role: :agent,
+                                        custom_role: create(:custom_role, account: account, permissions: %w[automation_manage crm_view]))
+      dona = create(:account_user, account: account, role: :administrator)
+
+      expect(problemas(lida, account_user: sem_valor)).to include(texto(:valor_de_venda, 'm1', 'origem.card.valor'))
+      expect(problemas(lida, account_user: dona)).not_to include(texto(:valor_de_venda, 'm1', 'origem.card.valor'))
     end
   end
 

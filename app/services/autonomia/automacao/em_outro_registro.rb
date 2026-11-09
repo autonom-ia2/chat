@@ -21,6 +21,10 @@ module Autonomia::Automacao::EmOutroRegistro
   MARCA = 'em'.freeze
   # A base de cada alvo possível da filha, para a marca (o nome da classe tem "::", que a marca usa como separador).
   BASES = { 'Contact' => 'contato', 'Conversation' => 'conversa', 'Crm::Card' => 'card' }.freeze
+  # Onde o `contato_do_campo` acha o id do contato: um atributo de número do contato ou do card, que guardam quem é a
+  # pessoa ligada (quem indicou). O da conversa não: o número dela é de outra coisa (um pedido, um protocolo), e a
+  # mensagem sairia a um cliente qualquer da conta.
+  CAMPOS_DO_CONTATO = %w[contato.atributos card.atributos].freeze
 
   module_function
 
@@ -45,26 +49,32 @@ module Autonomia::Automacao::EmOutroRegistro
     [mae_id.to_i, passo_id] if prefixo == MARCA && passo_id.present?
   end
 
+  # A execução mãe da filha, sempre na conta dela; nil na execução que não é filha.
+  def mae(execucao)
+    mae_id, = da(execucao)
+    mae_id && ::Autonomia::Automacao::Execucao.find_by(id: mae_id, account_id: execucao.account_id)
+  end
+
   # A conversa em que a filha num card age (decisão da Automação, 07/11): a da mãe, quando o card é do mesmo contato
   # do alvo dela (a resposta do exemplo 16 sai na conversa em que o cliente escreveu); senão nil, e vale a do card.
   def conversa_da_mae(execucao, card)
-    mae_id, = da(execucao)
-    mae = mae_id && ::Autonomia::Automacao::Execucao.find_by(id: mae_id, account_id: card.account_id)
-    return unless mae&.alvo
+    alvo_da_mae = mae(execucao)&.alvo
+    return unless alvo_da_mae
 
-    contexto = ::Autonomia::Automacao::Contexto.de(mae.alvo)
+    contexto = ::Autonomia::Automacao::Contexto.de(alvo_da_mae)
     contexto.conversa if contexto.contato && contexto.contato.id == card.contact_id
   end
 
   # Frases do salvar. `dentro`: o passo está no ramo de outro "em outro registro". O ramo é conferido como uma receita
   # cujo alvo é o registro (Receita com `alvo:`); o valor da âncora, pela régua do alvo da mãe (o bloco).
-  def problemas_ao_salvar(passo, conta:, account_user:, dentro:, &)
+  # `origem`: o tipo do alvo do gatilho da mãe, onde o ramo lê `origem.*` (G65).
+  def problemas_ao_salvar(passo, conta:, account_user:, dentro:, origem:, &)
     id = passo['id']
     return [texto(:aninhado, passo: id)] if dentro
 
     ramo = { 'gatilho' => {}, 'passos' => passo['passos'] }
     [*da_ligacao(id, passo['registro'].to_h, conta, account_user, &),
-     *::Autonomia::Automacao::Receita.new(ramo, conta: conta, account_user: account_user, alvo: alvo_do_ramo(passo)).problemas]
+     *::Autonomia::Automacao::Receita.new(ramo, conta: conta, account_user: account_user, alvo: alvo_do_ramo(passo), origem: origem).problemas]
   end
 
   def da_ligacao(id, registro, conta, account_user, &)
@@ -74,13 +84,20 @@ module Autonomia::Automacao::EmOutroRegistro
     chave + do_funil(id, registro, conta)
   end
 
-  # O campo guarda o id do contato: só um atributo do tipo número, como a tela oferece. O resto (o telefone, o nome, o
-  # próprio contato do alvo, o texto da IA) nunca é o contato ligado, e o passo pularia sempre ou acharia outro contato.
+  # O campo guarda o id do contato: só um atributo do tipo número do contato ou do card (CAMPOS_DO_CONTATO), como a tela
+  # oferece. O resto (o telefone, o nome, o próprio contato do alvo, o texto da IA, o número da conversa) nunca é o
+  # contato ligado, e o passo pularia sempre ou acharia outro contato.
   def do_campo(id, caminho, conta)
     lidos = [*yield(caminho)]
     return lidos if lidos.any?
 
-    ::Autonomia::Automacao::Valores::Atributos.numero?(caminho, conta) ? [] : [texto(:campo_sem_contato, passo: id)]
+    campo_do_contato?(caminho, conta) ? [] : [texto(:campo_sem_contato, passo: id)]
+  end
+
+  def campo_do_contato?(caminho, conta)
+    atributos = ::Autonomia::Automacao::Valores::Atributos
+    base, = atributos.do_caminho(caminho)
+    CAMPOS_DO_CONTATO.include?(base) && atributos.numero?(caminho, conta)
   end
 
   def do_funil(id, registro, conta)

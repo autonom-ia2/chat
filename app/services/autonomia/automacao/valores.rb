@@ -132,8 +132,13 @@ class Autonomia::Automacao::Valores
   class << self
     def caminho_valido?(caminho)
       [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA, ENVIO].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? ||
-        da_ia?(caminho)
+        da_ia?(caminho) || (da_origem?(caminho) && na_origem?(caminho_da_origem(caminho)))
     end
+
+    # G65: o registro de origem da filha do "em outro registro" (Valores::Origem).
+    def da_origem?(caminho) = ::Autonomia::Automacao::Valores::Origem.do_caminho?(caminho)
+    def caminho_da_origem(caminho) = ::Autonomia::Automacao::Valores::Origem.sem_prefixo(caminho)
+    def na_origem?(caminho) = ::Autonomia::Automacao::Valores::Origem.le?(caminho)
 
     def da_ia?(caminho) = caminho.to_s.start_with?(IA) && caminho.to_s.length > IA.length
 
@@ -206,12 +211,19 @@ class Autonomia::Automacao::Valores
   def falta_da_agenda = (@por_da_agenda if @vazios.any? && @vazios.all? { |caminho| AGENDA.key?(caminho) })
 
   def ler(caminho)
-    valor = self.class.da_ia?(caminho) ? @contexto.texto_da_ia(self.class.passo_da_ia(caminho)) : lido(caminho)
+    valor = valor_de(caminho)
     @vazios << caminho.to_s if valor.blank?
     valor
   end
 
   private
+
+  def valor_de(caminho)
+    return @contexto.texto_da_ia(self.class.passo_da_ia(caminho)) if self.class.da_ia?(caminho)
+    return origem&.ler(self.class.caminho_da_origem(caminho)) if self.class.da_origem?(caminho)
+
+    lido(caminho)
+  end
 
   def lido(caminho)
     return unless permitido?(caminho)
@@ -242,6 +254,13 @@ class Autonomia::Automacao::Valores
 
   # A página de agendamento em que a reunião do gatilho foi marcada, quando veio de uma.
   def pagina_da_reuniao = @contexto.reuniao&.metadata.to_h['booking_profile_id']
+
+  # G65: o registro de origem (o alvo da mãe), lido com a mesma pessoa; fora da filha, nil e o valor lê vazio.
+  def origem
+    return @origem if defined?(@origem)
+
+    @origem = (contexto = @contexto.origem) && self.class.new(alvo: contexto, quem: @quem)
+  end
 
   def resposta(caminho) = !@espera.nil? && RESPOSTA.fetch(caminho.to_s).call(@contexto, @espera, @quem) == true
 

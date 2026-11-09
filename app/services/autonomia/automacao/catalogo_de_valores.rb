@@ -9,16 +9,19 @@ module Autonomia::Automacao::CatalogoDeValores
   # O que a receita lê do alvo, para o editor mostrar como chip. Os atributos entram pela base mais a chave. A `base`
   # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499). A resposta durante a espera
   # (G11) vem marcada `so_na_espera`: o editor só a oferece na condição do "esperar até". A reunião (G12) vem com
-  # `so_nos_gatilhos`: o editor só a oferece nos gatilhos de reunião.
+  # `so_nos_gatilhos`: o editor só a oferece nos gatilhos de reunião. O que a filha do "em outro registro" lê do
+  # registro de origem (G65, `origem.<caminho>`) vem com `na_origem`: o editor o oferece dentro do ramo, com o prefixo.
   def todos
     valores = ::Autonomia::Automacao::Valores
     campos = caminhos_dos_campos(valores).map do |caminho|
       { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho),
         **do_protegido(caminho), 'so_na_espera' => (true if valores.da_resposta?(caminho)),
-        'so_nos_gatilhos' => (::Autonomia::Automacao::Gatilhos::DE_REUNIAO if valores.da_reuniao?(caminho)) }.compact
+        'so_nos_gatilhos' => (::Autonomia::Automacao::Gatilhos::DE_REUNIAO if valores.da_reuniao?(caminho)),
+        'na_origem' => (true if valores.na_origem?(caminho)) }.compact
     end
     atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
-      { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base) }
+      { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base),
+        'na_origem' => (true if valores::Origem::BASES.include?(base.split('.').first)) }.compact
     end
     campos + atributos + valores_do_gatilho
   end

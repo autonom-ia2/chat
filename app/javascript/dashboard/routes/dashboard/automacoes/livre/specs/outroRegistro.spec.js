@@ -6,6 +6,8 @@ import {
   passosDaExecucao,
 } from '../outroRegistro';
 import { doAlvoDoGatilho, novoPasso } from '../catalogo';
+import { fraseDoValor } from '../frases';
+import { opcoesDosValores } from '../texto';
 import { falta, galhosDe, inserirPasso } from '../receita';
 
 // G18 (#2671) — o "em outro registro" na tela: em que registro o ramo roda (é
@@ -147,6 +149,75 @@ describe('doAlvoDoGatilho dentro do ramo', () => {
         item => item.caminho
       )
     ).toEqual(['conversa.status']);
+  });
+});
+
+// G65 (#2842): dentro do ramo, os valores do registro de origem (o alvo do
+// gatilho), com o prefixo e a marca no nome; fora dele, nada de origem.
+describe('valores do registro de origem', () => {
+  const CATALOGO = {
+    gatilhos: [{ tipo: 'card.ganho', alvo: 'Crm::Card' }],
+    alvos: {
+      Contact: ['contato'],
+      Conversation: ['conversa', 'contato'],
+      'Crm::Card': ['card', 'conversa', 'contato', 'reuniao'],
+    },
+    valores: [
+      {
+        caminho: 'contato.nome',
+        base: 'contato',
+        frase: 'NOME',
+        na_origem: true,
+      },
+      {
+        caminho: 'card.valor',
+        base: 'card',
+        frase: 'VALOR',
+        na_origem: true,
+        sem_permissao: true,
+      },
+      { caminho: 'card.link_da_agenda', base: 'card', frase: 'AGENDA' },
+      {
+        caminho: 'card.atributos',
+        base: 'card',
+        frase: 'CAMPO_DO_CARD',
+        atributos: 'card_attribute',
+        na_origem: true,
+      },
+    ],
+  };
+
+  it('no ramo, oferece origem.* do alvo do gatilho, com a permissão do valor', () => {
+    const doRamo = doAlvoDoGatilho(CATALOGO, 'card.ganho', false, 'Contact');
+    const opcoes = opcoesDosValores(
+      doRamo,
+      () => [{ attribute_key: 'pet', attribute_display_name: 'Pet' }],
+      t
+    );
+
+    expect(opcoes).toEqual([
+      { value: 'contato.nome', label: 'NOME' },
+      {
+        value: 'origem.contato.nome',
+        label: 'AUTOMACAO_LIVRE.OUTRO_REGISTRO.DA_ORIGEM(NOME)',
+      },
+      {
+        value: 'origem.card.atributos.pet',
+        label:
+          'AUTOMACAO_LIVRE.FRASES.ATRIBUTO(AUTOMACAO_LIVRE.OUTRO_REGISTRO.DA_ORIGEM(CAMPO_DO_CARD),Pet)',
+      },
+    ]);
+    expect(fraseDoValor('origem.contato.nome', doRamo, t)).toBe(
+      'AUTOMACAO_LIVRE.OUTRO_REGISTRO.DA_ORIGEM(NOME)'
+    );
+  });
+
+  it('fora do ramo, nenhum valor de origem', () => {
+    const caminhos = doAlvoDoGatilho(CATALOGO, 'card.ganho').valores.map(
+      item => item.caminho
+    );
+
+    expect(caminhos.some(caminho => caminho.startsWith('origem.'))).toBe(false);
   });
 });
 

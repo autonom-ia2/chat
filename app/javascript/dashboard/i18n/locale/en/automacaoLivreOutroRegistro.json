@@ -38,7 +38,8 @@
         "CARD_MAIS_RECENTE": "On this contact's most recent card",
         "NO_FUNIL": "in the chosen pipeline",
         "SEM_LIGACAO": "On another contact or card: choose where"
-      }
+      },
+      "DA_ORIGEM": "{valor} (from the original record)"
     }
   }
 }

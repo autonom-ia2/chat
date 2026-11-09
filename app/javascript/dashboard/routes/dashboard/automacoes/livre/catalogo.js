@@ -187,6 +187,19 @@ export const comPermissoes = (dados, podeLer) => {
 // conversa nova. `alvo` volta junto, para a peça que precisa saber de onde lê
 // (o campo do contato).
 const RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu';
+// G65 (#2842): dentro do ramo, também os valores do registro de origem (o alvo
+// do gatilho), com o prefixo `origem.`. O servidor marca quais (`na_origem`); a
+// permissão (`sem_permissao`) segue a do valor sem o prefixo.
+export const ORIGEM = 'origem.';
+const daOrigem = (valores, bases) =>
+  valores
+    .filter(item => item.na_origem && bases.includes(item.base))
+    .map(item => ({
+      ...item,
+      caminho: `${ORIGEM}${item.caminho}`,
+      base: null,
+      origem: true,
+    }));
 export const doAlvoDoGatilho = (
   dados,
   tipoDoGatilho,
@@ -214,7 +227,12 @@ export const doAlvoDoGatilho = (
     ...dados,
     alvo,
     gatilho: alvoDoRamo ? null : tipoDoGatilho,
-    valores: dados.valores.filter(item => alcanca(item) && daReuniao(item)),
+    valores: [
+      ...dados.valores.filter(item => alcanca(item) && daReuniao(item)),
+      ...(alvoDoRamo && dados.alvos?.[doGatilho]
+        ? daOrigem(dados.valores, dados.alvos[doGatilho])
+        : []),
+    ],
   };
 };
 

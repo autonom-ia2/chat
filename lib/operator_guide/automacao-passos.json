@@ -483,37 +483,44 @@
     {
       "caminho": "conversa.id",
       "base": "conversa",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_ID"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_ID",
+      "na_origem": true
     },
     {
       "caminho": "conversa.status",
       "base": "conversa",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_STATUS"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_STATUS",
+      "na_origem": true
     },
     {
       "caminho": "conversa.prioridade",
       "base": "conversa",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_PRIORIDADE"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_PRIORIDADE",
+      "na_origem": true
     },
     {
       "caminho": "conversa.caixa_id",
       "base": "conversa",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_CAIXA_ID"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_CAIXA_ID",
+      "na_origem": true
     },
     {
       "caminho": "conversa.responsavel_id",
       "base": "conversa",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_RESPONSAVEL_ID"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_RESPONSAVEL_ID",
+      "na_origem": true
     },
     {
       "caminho": "conversa.time_id",
       "base": "conversa",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_TIME_ID"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_TIME_ID",
+      "na_origem": true
     },
     {
       "caminho": "conversa.etiquetas",
       "base": "conversa",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_ETIQUETAS"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_ETIQUETAS",
+      "na_origem": true
     },
     {
       "caminho": "conversa.iniciada_por",
@@ -538,88 +545,105 @@
           "op": "diferente",
           "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
         }
-      ]
+      ],
+      "na_origem": true
     },
     {
       "caminho": "contato.id",
       "base": "contato",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ID"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ID",
+      "na_origem": true
     },
     {
       "caminho": "contato.nome",
       "base": "contato",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_NOME"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_NOME",
+      "na_origem": true
     },
     {
       "caminho": "contato.email",
       "base": "contato",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_EMAIL"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_EMAIL",
+      "na_origem": true
     },
     {
       "caminho": "contato.telefone",
       "base": "contato",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_TELEFONE"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_TELEFONE",
+      "na_origem": true
     },
     {
       "caminho": "contato.empresa_id",
       "base": "contato",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_EMPRESA_ID"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_EMPRESA_ID",
+      "na_origem": true
     },
     {
       "caminho": "contato.etiquetas",
       "base": "contato",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ETIQUETAS"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ETIQUETAS",
+      "na_origem": true
     },
     {
       "caminho": "card.id",
       "base": "card",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ID"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ID",
+      "na_origem": true
     },
     {
       "caminho": "card.titulo",
       "base": "card",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_TITULO"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_TITULO",
+      "na_origem": true
     },
     {
       "caminho": "card.etapa_id",
       "base": "card",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ETAPA_ID"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ETAPA_ID",
+      "na_origem": true
     },
     {
       "caminho": "card.funil_id",
       "base": "card",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_FUNIL_ID"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_FUNIL_ID",
+      "na_origem": true
     },
     {
       "caminho": "card.status",
       "base": "card",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_STATUS"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_STATUS",
+      "na_origem": true
     },
     {
       "caminho": "card.valor",
       "base": "card",
       "frase": "AUTOMACAO_LIVRE.VALORES.CARD_VALOR",
-      "permissao": "sales_value_view"
+      "permissao": "sales_value_view",
+      "na_origem": true
     },
     {
       "caminho": "card.responsavel_id",
       "base": "card",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_RESPONSAVEL_ID"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_RESPONSAVEL_ID",
+      "na_origem": true
     },
     {
       "caminho": "card.time_id",
       "base": "card",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_TIME_ID"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_TIME_ID",
+      "na_origem": true
     },
     {
       "caminho": "card.dias_na_etapa",
       "base": "card",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_DIAS_NA_ETAPA"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_DIAS_NA_ETAPA",
+      "na_origem": true
     },
     {
       "caminho": "card.motivo_da_perda",
       "base": "card",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_MOTIVO_DA_PERDA"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_MOTIVO_DA_PERDA",
+      "na_origem": true
     },
     {
       "caminho": "card.tem_reuniao_marcada",
@@ -644,7 +668,8 @@
           "op": "diferente",
           "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
         }
-      ]
+      ],
+      "na_origem": true
     },
     {
       "caminho": "reuniao.inicio",
@@ -691,7 +716,8 @@
           "op": "diferente",
           "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
         }
-      ]
+      ],
+      "na_origem": true
     },
     {
       "caminho": "card.responsavel_ausente",
@@ -716,7 +742,8 @@
           "op": "diferente",
           "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
         }
-      ]
+      ],
+      "na_origem": true
     },
     {
       "caminho": "contato.tem_reuniao_marcada",
@@ -847,19 +874,22 @@
       "caminho": "conversa.atributos",
       "base": "conversa",
       "atributos": "conversation_attribute",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_ATRIBUTOS"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_ATRIBUTOS",
+      "na_origem": true
     },
     {
       "caminho": "contato.atributos",
       "base": "contato",
       "atributos": "contact_attribute",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ATRIBUTOS"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ATRIBUTOS",
+      "na_origem": true
     },
     {
       "caminho": "card.atributos",
       "base": "card",
       "atributos": "card_attribute",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ATRIBUTOS"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ATRIBUTOS",
+      "na_origem": true
     },
     {
       "caminho": "mensagem.tipo",

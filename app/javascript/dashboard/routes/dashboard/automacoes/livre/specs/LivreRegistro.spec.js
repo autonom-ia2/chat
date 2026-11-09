@@ -33,6 +33,10 @@ const ATRIBUTOS = {
   contact_attribute: [
     { attribute_key: 'quem_indicou', attribute_display_type: 'number' },
   ],
+  // O número da conversa nunca guarda contato (o servidor recusa).
+  conversation_attribute: [
+    { attribute_key: 'numero_do_pedido', attribute_display_type: 'number' },
+  ],
 };
 
 const montar = (props = {}) =>
@@ -83,7 +87,7 @@ describe('LivreRegistro', () => {
     ]);
   });
 
-  it('o campo oferece só os campos de número das bases do alvo', () => {
+  it('o campo oferece só os campos de número do contato e do card', () => {
     const wrapper = montar({
       modelValue: { de: 'contato_do_campo', usar: 'conversa' },
     });

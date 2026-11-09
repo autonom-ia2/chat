@@ -4,9 +4,9 @@ require 'rails_helper'
 # exemplos que dependem dela, montados e ligados pela API da tela, com o gatilho chegando pelo despacho da plataforma e a
 # mensagem parando no receptor do WhatsApp oficial:
 # - exemplo 11, passo 7: "Card do João ganho: manda à Maria 'O João virou cliente! O próximo banho do Thor é por nossa
-#   conta', com o link da agenda", e "põe na Maria a etiqueta" (passo 8). Os nomes vêm de valores: o do João, do card
-#   ganho, que a mãe guarda no contato da Maria antes de abrir a filha (a filha só lê o próprio registro); o do Thor, do
-#   contato da Maria, que é a dona dele;
+#   conta', com o link da agenda", e "põe na Maria a etiqueta" (passo 8). Os nomes vêm de valores: o do João, do
+#   registro de origem (o card ganho), que a filha lê com `origem.contato.nome` (G65, #2842); o do Thor, do contato da
+#   Maria, que é a dona dele;
 # - exemplo 16, passo 4: "a IA escreve uma resposta que fala do motivo da perda gravado no card antigo", na conversa em
 #   que o cliente escreveu.
 # Os dois exemplos inteiros ficam no pendentes_spec até as outras lacunas deles fecharem.
@@ -85,14 +85,12 @@ RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_au
     let(:pagina_da_lu) { create_booking_profile(account: account, host: dona) }
     let(:indicado_por) { { '$valor' => 'card.atributos.indicado_por' } }
 
-    # A mãe guarda no contato da Maria o nome de quem ela indicou e fechou; a filha, na conversa da Maria, manda o presente
-    # com o nome do João, o do pet dela e o link da agenda de quem a atende, e põe a etiqueta nela.
+    # A filha, na conversa da Maria, manda o presente com o nome do João (lido no card ganho, o registro de origem), o do
+    # pet dela e o link da agenda de quem a atende, e põe a etiqueta nela.
     let(:receita) do
       { gatilho: { tipo: 'card.ganho', funil_id: funil.id },
-        passos: [{ id: 'quem_fechou', tipo: 'acao', acao: 'PATCH contacts/:id', descricao: 'Guardar na Maria quem ela indicou e fechou',
-                   caminho: { id: indicado_por }, corpo: { custom_attributes: { indicou_e_fechou: { '$valor' => 'contato.nome' } } } },
-                 em_outro({ de: 'contato_do_campo', campo: indicado_por, usar: 'conversa' },
-                          mensagem('presente', 'O ', { '$valor' => 'contato.atributos.indicou_e_fechou' },
+        passos: [em_outro({ de: 'contato_do_campo', campo: indicado_por, usar: 'conversa' },
+                          mensagem('presente', 'O ', { '$valor' => 'origem.contato.nome' },
                                    ' virou cliente! O próximo banho do ', { '$valor' => 'contato.atributos.nome_do_pet' },
                                    ' é por nossa conta: ', { '$valor' => 'conversa.link_da_agenda' }),
                           { id: 'etiqueta', tipo: 'acao', acao: 'PATCH contacts/:contact_id/labels/alterar', descricao: 'Indicou e fechou',
@@ -108,10 +106,8 @@ RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_au
     before do
       create(:custom_attribute_definition, account: account, attribute_key: 'indicado_por', attribute_display_name: 'Indicado por',
                                            attribute_model: :card_attribute, attribute_display_type: :number)
-      { 'indicou_e_fechou' => 'Indicou e fechou', 'nome_do_pet' => 'Nome do pet' }.each do |chave, nome|
-        create(:custom_attribute_definition, account: account, attribute_key: chave, attribute_display_name: nome,
-                                             attribute_model: :contact_attribute, attribute_display_type: :text)
-      end
+      create(:custom_attribute_definition, account: account, attribute_key: 'nome_do_pet', attribute_display_name: 'Nome do pet',
+                                           attribute_model: :contact_attribute, attribute_display_type: :text)
       maria.update!(custom_attributes: { 'nome_do_pet' => 'Thor' })
       conversa_da_maria.update!(assignee: dona)
       pagina_da_lu
@@ -137,8 +133,8 @@ RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_au
       filha = filhas(automacao).sole
       expect(filha).to have_attributes(alvo: conversa_da_maria, estado: 'concluida', cadeia: execucoes(automacao).first.cadeia)
       expect(inicio_da(filha)).to include('conversa_id' => conversa_da_maria.display_id, 'conversa_de' => 'registro')
-      expect(historico_de(automacao)).to eq([['quem_fechou', 'ok', nil], ['outro', 'ok', nil], %w[inicio ok em_outro_registro],
-                                             ['presente', 'ok', nil], ['etiqueta', 'ok', nil]])
+      expect(historico_de(automacao)).to eq([['outro', 'ok', nil], %w[inicio ok em_outro_registro], ['presente', 'ok', nil],
+                                             ['etiqueta', 'ok', nil]])
     end
 
     it 'o card sem quem indicou não abre filha: o passo pula com o motivo', :aggregate_failures do
@@ -148,7 +144,7 @@ RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_au
       Crm::Cards::Closer.new(card: card_do_joao, actor: dona, result: 'won').perform
       drenar
 
-      expect(historico_de(automacao)).to eq([%w[quem_fechou pulado faltou_valor], %w[outro pulado faltou_valor]])
+      expect(historico_de(automacao)).to eq([%w[outro pulado faltou_valor]])
       expect(filhas(automacao)).to be_empty
     end
 
@@ -205,7 +201,11 @@ RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_au
       cliente_escreve(conversa, 'Quero uma cotação')
 
       expect(ia_recebeu.size).to eq(1)
-      lido = JSON.parse(ia_recebeu.sole['input'].sole['content'].sole['text'])
+      # Sem anexos, o PassoDeIa manda a entrada como texto JSON (entrada_com), e o cliente da IA a embrulha numa mensagem
+      # do usuário com uma parte de texto (ResponsesClient#normalize_input): é o que chega à OpenAI.
+      parte = ia_recebeu.sole['input'].sole.fetch('content').sole
+      expect(parte['type']).to eq('input_text')
+      lido = JSON.parse(parte['text'])
       expect(lido.dig('conversa', 'card')).to include('title' => 'Seguro 2025', 'status' => 'lost', 'lost_reason' => 'achou caro')
       expect(ia_recebeu.sole['instructions']).to include('motivo da perda gravado no card antigo')
       expect(saidas(conversa)).to eq([texto_da_ia])

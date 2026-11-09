@@ -38,7 +38,8 @@
         "CARD_MAIS_RECENTE": "No card mais recente deste contato",
         "NO_FUNIL": "no funil escolhido",
         "SEM_LIGACAO": "Em outro contato ou card: escolha onde"
-      }
+      },
+      "DA_ORIGEM": "{valor} (do registro de origem)"
     }
   }
 }

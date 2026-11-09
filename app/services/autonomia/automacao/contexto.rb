@@ -61,6 +61,15 @@ class Autonomia::Automacao::Contexto
     @conversa_do_card = ::Autonomia::Automacao::EmOutroRegistro.conversa_da_mae(@execucao, @alvo) || @alvo.primary_conversation
   end
 
+  # G65 (#2842): na filha do "em outro registro", o Contexto do alvo da mãe (o registro de origem), com as pontes dela;
+  # fora da filha, nil.
+  def origem
+    return @origem if defined?(@origem)
+
+    mae = ::Autonomia::Automacao::EmOutroRegistro.mae(@execucao)
+    @origem = mae&.alvo && self.class.de(mae.alvo, execucao: mae)
+  end
+
   # A conta do alvo; no conta.recorrente, a própria.
   def conta = (@alvo.is_a?(::Account) ? @alvo : @alvo.account)
 

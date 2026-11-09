@@ -25,8 +25,9 @@ const emit = defineEmits(['update:modelValue']);
 const { t } = useI18n();
 
 const O = 'AUTOMACAO_LIVRE.OUTRO_REGISTRO';
+// Só o campo do contato ou do card guarda quem é a pessoa ligada; o número da
+// conversa é de outra coisa, e o servidor o recusa (CAMPOS_DO_CONTATO).
 const MODELO_DA_BASE = {
-  conversa: 'conversation_attribute',
   contato: 'contact_attribute',
   card: 'card_attribute',
 };

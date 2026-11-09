@@ -151,6 +151,21 @@ module FechamentoAutomacao::Lacunas
   # contato ligado, que anda só no ramo do passo (nunca nos passos da mãe). Roda na transação do exemplo, que desfaz
   # tudo; a primeira rodada da filha só fica na fila.
   def filha_anda_no_registro_ligado?
+    filha = filha_na_maria
+    roteiro = filha && Autonomia::Automacao::Roteiro.da(filha)
+    roteiro.present? && roteiro.primeiro['id'] == 'na_maria' && roteiro.seguinte('na_maria').nil?
+  end
+
+  # G65: a filha, na Maria, lê o nome do João no registro de origem, como o Executor lê.
+  def filha_le_a_origem?
+    filha = filha_na_maria
+    contexto = filha && Autonomia::Automacao::Contexto.de(filha.alvo, execucao: filha)
+    lido = contexto && Autonomia::Automacao::Valores.new(alvo: contexto, quem: filha.automacao.ligada_por).ler('origem.contato.nome')
+    lido == 'João'
+  end
+
+  # A execução filha aberta na Maria pelo passo da mãe, que roda na conversa do João (quem ela indicou).
+  def filha_na_maria
     account = FactoryBot.create(:account)
     account.enable_features!('automacao_fundacao', 'automacao_motor')
     FactoryBot.create(:custom_attribute_definition, account: account, attribute_key: 'indicado_por', attribute_display_name: 'Indicado por',
@@ -158,9 +173,7 @@ module FechamentoAutomacao::Lacunas
     maria = account.contacts.create!(name: 'Maria')
     joao = account.contacts.create!(name: 'João', custom_attributes: { 'indicado_por' => maria.id })
     mae = mae_com_passo_em_outro(account, FactoryBot.create(:conversation, account: account, contact: joao))
-    filha = abrir_filhas(mae) && Autonomia::Automacao::Execucao.find_by(automacao_id: mae.automacao_id, alvo: maria)
-    roteiro = filha && Autonomia::Automacao::Roteiro.da(filha)
-    roteiro.present? && roteiro.primeiro['id'] == 'na_maria' && roteiro.seguinte('na_maria').nil?
+    abrir_filhas(mae) && Autonomia::Automacao::Execucao.find_by(automacao_id: mae.automacao_id, alvo: maria)
   end
 
   def mae_com_passo_em_outro(account, conversa)
@@ -271,6 +284,8 @@ module FechamentoAutomacao::Lacunas
     # G49 (ex. 11, passo 3): agir no contato que um passo da execução criou (POST contacts), levando um valor da mãe
     # ("indicado por Maria") ao card dele. Hoje o contato criado não é valor da receita, e a filha só lê o próprio alvo.
     'G49' => nil,
+    # G65 (#2842, ex. 11, passo 7): a filha lê o registro de origem (o João, no card ganho) com `origem.*`.
+    'G65' => -> { filha_le_a_origem? },
     # G55 (ex. 16, passo 2): disparar a campanha da etiqueta a partir de um gatilho de card. A campanha só sai do
     # conta.recorrente (`campanha_so_sem_alvo`), e o "para cada card perdido" é o card.recorrente.
     'G55' => nil,

@@ -35,8 +35,8 @@ class Autonomia::Automacao::PassosProprios
   end
 
   def outro_registro(passo)
-    ::Autonomia::Automacao::EmOutroRegistro.problemas_ao_salvar(passo, conta: @conta, account_user: @account_user, dentro: @dentro) do |c|
-      @caminho.call(passo['id'], c)
-    end
+    contexto = { conta: @conta, account_user: @account_user, dentro: @dentro,
+                 origem: ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo')) }
+    ::Autonomia::Automacao::EmOutroRegistro.problemas_ao_salvar(passo, **contexto) { |c| @caminho.call(passo['id'], c) }
   end
 end
