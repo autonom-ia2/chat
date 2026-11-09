@@ -146,6 +146,33 @@ module FechamentoAutomacao::Lacunas
       montado.corpo&.dig('custom_attributes', 'revisao') == Time.current.utc.to_date.advance(months: 6).iso8601
   end
 
+  # G48: uma execução espera até o campo do card ser preenchido; o card grava o campo, e o gancho do modelo
+  # (Crm::CardAvisaAutomacao, depois do commit) a tira da espera na hora, sem a varredura do relógio. Roda na transação
+  # do exemplo, que desfaz tudo; o AvancarJob só fica na fila.
+  def campo_do_card_acorda_a_espera?
+    ClimateControl.modify(CRM_KANBAN_ENABLED: 'true') do
+      account = FactoryBot.create(:account)
+      account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_gatilhos')
+      FactoryBot.create(:custom_attribute_definition, account: account, attribute_key: 'como_foi', attribute_display_name: 'Como foi',
+                                                      attribute_model: 'card_attribute', attribute_display_type: 'text')
+      funil, etapa = create_crm_pipeline(account: account, user: FactoryBot.create(:user, account: account, role: :administrator))
+      card = account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'Sonda G48', currency: 'BRL')
+      execucao = esperando_o_campo_como_foi(card, etapa)
+      card.update!(custom_attributes: { 'como_foi' => 'Gostou' })
+      execucao.reload.estado != 'esperando'
+    end
+  end
+
+  def esperando_o_campo_como_foi(card, etapa)
+    espera = { 'id' => 'espera', 'tipo' => 'esperar_ate', 'prazo' => { 'valor' => 1, 'unidade' => 'horas' },
+               'condicao' => { 'campo' => { '$valor' => 'card.atributos.como_foi' }, 'op' => 'preenchido' } }
+    receita = { 'gatilho' => { 'tipo' => 'card.entrou_na_etapa', 'etapa_id' => etapa.id }, 'passos' => [espera] }
+    automacao = FactoryBot.create(:autonomia_automacao, account: card.account)
+    versao = FactoryBot.create(:autonomia_automacao_versao, automacao: automacao, receita: receita)
+    FactoryBot.create(:autonomia_automacao_execucao, versao: versao, alvo: card, estado: 'esperando', cursor: 'espera',
+                                                     due_at: 1.hour.from_now)
+  end
+
   # G30: o lead do formulário entra pelo Importer, como no webhook, num funil com a Atribuição ligada e um corretor que
   # cuida dele; o card nasce com esse corretor de dono. Roda na transação do exemplo, que desfaz tudo.
   def lead_ganha_dono_pela_atribuicao?
@@ -249,6 +276,9 @@ module FechamentoAutomacao::Lacunas
     # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7). Fica
     # com a Gatilhos, depois do lote 3 (#2689), que traz a porta da frente da conversa nova.
     'G43' => nil,
+    # G48 (do exemplo 12, passo 3): o campo do card preenchido acorda o "esperar até" na hora, pelo gancho único do card
+    # (Crm::CardAvisaAutomacao, lote 4, #2682); prova ponta a ponta em spec/fechamento/automacao/g48_campo_do_card_spec.rb.
+    'G48' => -> { campo_do_card_acorda_a_espera? },
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
     # (passo 2, "manda por e-mail o mesmo conteúdo"): `falhou.texto`, prova em g53_conteudo_da_falha_spec.rb.
     'G53' => -> { valor?('falhou.texto') },
