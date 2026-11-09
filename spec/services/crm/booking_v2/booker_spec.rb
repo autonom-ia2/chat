@@ -358,6 +358,15 @@ RSpec.describe Crm::BookingV2::Booker do
       expect(Crm::CardConversation.where(card: card).pluck(:conversation_id, :is_primary)).to eq([[recente.id, true]])
     end
 
+    it 'a caixa dos avisos da página (o WhatsApp escolhido na tela) vale mais que a da agenda' do
+      avisos = create_crm_whatsapp_api_inbox(account: account)
+      profile.update!(notice_inbox: avisos)
+      create_crm_conversation(account: account, inbox: caixa, contact: ana)
+      no_whatsapp = create_crm_conversation(account: account, inbox: avisos, contact: ana)
+
+      expect(book.card.conversation_id).to eq(no_whatsapp.id)
+    end
+
     it 'não liga a conversa do contato em outra caixa' do
       create_crm_conversation(account: account, inbox: create_crm_inbox(account: account, name: 'Outra'), contact: ana)
 
@@ -376,6 +385,44 @@ RSpec.describe Crm::BookingV2::Booker do
       do_convite = create_crm_conversation(account: account, inbox: create_crm_inbox(account: account, name: 'Convite'), contact: ana)
 
       expect(book(conversation: do_convite, source: 'invite').card.conversation_id).to eq(do_convite.id)
+    end
+
+    it 'card aberto do contato sem conversa: ganha a da caixa da página, como principal', :aggregate_failures do
+      aberto = create_booking_card(account: account, pipeline: world.pipeline, stage: world.stage, contact: ana)
+      conversa = create_crm_conversation(account: account, inbox: caixa, contact: ana)
+
+      result = book
+
+      expect(result.card).to eq(aberto)
+      expect(aberto.reload).to have_attributes(conversation_id: conversa.id, inbox_id: caixa.id)
+      expect(Crm::CardConversation.where(card: aberto).pluck(:conversation_id, :is_primary)).to eq([[conversa.id, true]])
+    end
+
+    it 'card aberto do contato que já tem conversa: fica com a dele', :aggregate_failures do
+      dele = create_crm_conversation(account: account, inbox: create_crm_inbox(account: account, name: 'Dele'), contact: ana)
+      aberto = create_booking_card(account: account, pipeline: world.pipeline, stage: world.stage, contact: ana, primary_conversation: dele)
+      create_crm_conversation(account: account, inbox: caixa, contact: ana)
+
+      result = book
+
+      expect(result.card).to eq(aberto)
+      expect(aberto.reload.conversation_id).to eq(dele.id)
+    end
+  end
+
+  describe 'título do card novo da página sem título' do
+    before { profile.update!(title: '') }
+
+    it 'conta em português: Agendamento' do
+      account.update!(locale: 'pt_BR')
+
+      expect(book.card.title).to eq('Ana Souza - Agendamento')
+    end
+
+    it 'conta em inglês: Booking' do
+      account.update!(locale: 'en')
+
+      expect(book.card.title).to eq('Ana Souza - Booking')
     end
   end
 

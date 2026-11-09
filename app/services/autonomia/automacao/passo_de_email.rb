@@ -54,10 +54,11 @@ class Autonomia::Automacao::PassoDeEmail
   private
 
   def mandar(caixa, contato)
-    valores = ::Autonomia::Automacao::Valores.new(alvo: @alvo, quem: @execucao.automacao.ligada_por)
+    # Os mesmos valores do texto (NaConversa#valores): o link da agenda vazio, no assunto ou no texto, pula com o motivo
+    # dele, como no ensaio.
     assunto = ::Autonomia::Automacao::Texto.new(@passo['assunto'], valores).montar
     texto = texto_pronto
-    return pulado('faltou_valor') if assunto.nil? || texto.nil?
+    return faltou_valor if assunto.nil? || texto.nil?
     return pulado('texto_vazio') if assunto.strip.empty? || texto.strip.empty?
 
     # Juntas: um erro na mensagem não deixa conversa vazia na caixa. O envio (SendReplyJob) sai depois do commit.

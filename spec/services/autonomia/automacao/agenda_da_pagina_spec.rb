@@ -179,6 +179,52 @@ RSpec.describe Autonomia::Automacao::AgendaDaPagina, :automacao_motor do
     end
   end
 
+  # O e-mail lê o assunto e o texto com os mesmos valores: o link da agenda vazio em qualquer um dos dois pula com o motivo
+  # dele, no motor e no ensaio.
+  describe 'no passo de e-mail' do
+    let(:caixa_de_email) { create(:channel_email, account: account).inbox }
+    let(:link) { { '$valor' => caminho } }
+
+    def email_passo(assunto, texto) = { 'id' => 'e1', 'tipo' => 'email', 'caixa_id' => caixa_de_email.id, 'assunto' => assunto, 'texto' => texto }
+
+    before do
+      ligar_motor(account)
+      ligar_mensagens(account)
+      account.enable_features!('automacao_gatilhos')
+      world.contact.update!(email: 'marcos@exemplo.com')
+    end
+
+    def enviar(passo)
+      treinamento.update!(enabled: true)
+      definicao = automacao_ligada(account, admin, [passo], gatilho: { 'tipo' => 'card.ganho' })
+      treinamento.update!(enabled: false)
+      execucao = Autonomia::Automacao::Execucao.create!(account: account, automacao: definicao, versao: definicao.versao_ativa, alvo: card,
+                                                        chave_gatilho: 'card.ganho', evento: "card.ganho:atividade:#{definicao.id}")
+      Autonomia::Automacao::PassoDeEmail.new(execucao: execucao.reload, passo: passo, alvo: card).executar
+    end
+
+    def ensaiar_email(passo)
+      treinamento.update!(enabled: false)
+      conversa = create(:conversation, account: account, contact: world.contact, status: :resolved)
+      receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [passo] }
+      Autonomia::Automacao::Ensaio.new(receita: receita, conta: account, usuario: admin, conversa_id: conversa.display_id)
+                                  .resultado[:conversas].sole[:passos].sole.slice(:faria, :dados)
+    end
+
+    it 'motor: página fora do ar, no texto ou no assunto, pula com faltou_link_da_agenda e o por', :aggregate_failures do
+      [[['Treinamento'], ['Marque: ', link]], [['Marque: ', link], ['Oi']]].each do |assunto, texto|
+        resultado = enviar(email_passo(assunto, texto))
+
+        expect([resultado.tipo, resultado.motivo, resultado.dados]).to eq([:pulado, 'faltou_link_da_agenda', { 'por' => 'sem_pagina' }])
+      end
+      expect(Conversation.where(inbox: caixa_de_email)).to be_empty
+    end
+
+    it 'ensaio: o link vazio no assunto dá o mesmo motivo do motor' do
+      expect(ensaiar_email(email_passo(['Marque: ', link], ['Oi']))).to eq(faria: 'faltou_link_da_agenda', dados: { por: 'sem_pagina' })
+    end
+  end
+
   describe 'no ensaio: o mesmo motivo do motor' do
     def ensaiar(quem)
       ligar_motor(account)

@@ -172,7 +172,7 @@ class Autonomia::Automacao::Ensaio
     return no(passo, motivo) if motivo
 
     assunto = ::Autonomia::Automacao::Texto.new(passo['assunto'], valores).montar
-    return no(passo, 'faltou_valor') if assunto.nil?
+    return no(passo, *::Autonomia::Automacao::AgendaDaPagina.do_vazio(valores.falta_da_agenda)) if assunto.nil?
     return no(passo, 'texto_vazio') if assunto.strip.empty?
 
     pronto.merge(dados: pronto[:dados].merge(assunto: assunto.squish, caixa: caixa.name))
