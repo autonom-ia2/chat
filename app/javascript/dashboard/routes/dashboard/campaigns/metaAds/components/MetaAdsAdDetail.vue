@@ -35,6 +35,7 @@ import MetaAdsAdStatus from './MetaAdsAdStatus.vue';
 import MetaAdsAdPost from './MetaAdsAdPost.vue';
 import MetaAdsBudget from './MetaAdsBudget.vue';
 import MetaAdsAdCare from './MetaAdsAdCare.vue';
+import MetaAdsCareOutside from './MetaAdsCareOutside.vue';
 import { lerOrcamento } from '../criacaoNaMeta';
 
 // Anúncios da Meta (#1088, F3b): o anúncio por dentro, passos 3 e 4 da jornada "O painel do dia a dia". A
@@ -554,13 +555,10 @@ const image = computed(
         :creative-kind="gestao.creative_kind || ''"
         @reviewing="reviewing"
       />
-      <p
+      <MetaAdsCareOutside
         v-else-if="showCareOutside"
-        data-ad-care-outside
-        class="m-0 text-sm text-n-slate-11"
-      >
-        {{ $t('CRM_KANBAN.META_ADS_HUB.GESTAO.CARE.OUTSIDE') }}
-      </p>
+        :url="gestao.ads_manager_url"
+      />
       <MetaAdsAdPost v-if="gestao?.post" :post="gestao.post" />
       <CuidarAnuncioEntrada
         v-if="showCare"
@@ -692,13 +690,10 @@ const image = computed(
             :creative-kind="gestao.creative_kind || ''"
             @reviewing="reviewing"
           />
-          <p
+          <MetaAdsCareOutside
             v-else-if="showCareOutside"
-            data-ad-care-outside
-            class="m-0 text-sm text-n-slate-11"
-          >
-            {{ $t('CRM_KANBAN.META_ADS_HUB.GESTAO.CARE.OUTSIDE') }}
-          </p>
+            :url="gestao.ads_manager_url"
+          />
           <span
             v-if="ad.verdict"
             :data-verdict="ad.verdict"

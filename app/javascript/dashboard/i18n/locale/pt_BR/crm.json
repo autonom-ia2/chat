@@ -3420,7 +3420,8 @@
           "HINT_DUPLICATE": "Duplicar cria uma cópia pausada, com orçamento próprio.",
           "ENDED": "O anúncio original já terminou, então não há o que copiar. Crie um anúncio novo.",
           "UNSURE": "A Meta não respondeu a tempo. Confira no Gerenciador de Anúncios se a cópia apareceu antes de tentar de novo.",
-          "CHANGE_UNSURE": "A Meta não respondeu a tempo. Abra o anúncio de novo daqui a pouco para ver se a troca entrou."
+          "CHANGE_UNSURE": "A Meta não respondeu a tempo. Abra o anúncio de novo daqui a pouco para ver se a troca entrou.",
+          "OPEN_MANAGER": "Abrir no Gerenciador"
         }
       },
       "AD_DETAIL": {

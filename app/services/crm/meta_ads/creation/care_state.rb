@@ -6,6 +6,8 @@
 #   nil em carrossel, post impulsionado ou quando a Meta não respondeu (aí só o duplicar). `creative_image` e
 #   `creative_text`: a miniatura e o texto de agora, para o anúncio sem números no período (a tela não tem outra foto).
 # - `can_swap_creative`: trocar no próprio anúncio (Crm::MetaAds::Creation::CreativeSwap); senão, a troca cria uma cópia.
+# - `ads_manager_url`: o anúncio no Gerenciador de Anúncios, o mesmo endereço do consultor (Crm::MetaAds::Advisor::Advice).
+#   É o "Abrir no Gerenciador" da linha que aparece nos anúncios criados fora.
 class Crm::MetaAds::Creation::CareState
   NONE = { created_here: false, creative_kind: nil, can_swap_creative: false, creative_image: nil, creative_text: nil }.freeze
 
@@ -15,15 +17,21 @@ class Crm::MetaAds::Creation::CareState
 
   def payload(ad_id)
     record = Crm::MetaAds::Creation::Activation.new(@connection).created_here(ad_id)
-    return NONE if record.nil?
+    return NONE.merge(ads_manager_url: ads_manager_url(ad_id)) if record.nil?
 
     creative = read_creative(record)
     kind = Crm::MetaAds::Creation::CreativeChange.kind_of(creative['object_story_spec'])
     { created_here: true, creative_kind: kind, can_swap_creative: kind.present? && Crm::MetaAds::Creation::CreativeSwap.confirmed?,
-      creative_image: creative['thumbnail_url'].presence, creative_text: (Crm::MetaAds::Creation::CreativeChange.text_of(creative) if kind) }
+      creative_image: creative['thumbnail_url'].presence, creative_text: (Crm::MetaAds::Creation::CreativeChange.text_of(creative) if kind),
+      ads_manager_url: ads_manager_url(ad_id) }
   end
 
   private
+
+  def ads_manager_url(ad_id)
+    query = { act: @connection.ad_account_id.to_s.delete_prefix('act_'), selected_ad_ids: ad_id }.to_query
+    "#{Crm::MetaAds::Advisor::Advice::ADS_MANAGER_URL}?#{query}"
+  end
 
   # Post impulsionado não tem criativo próprio para trocar; sem leitura, {}.
   def read_creative(record)

@@ -775,13 +775,23 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     });
 
     it('created elsewhere: no card, a line pointing to the Ads Manager', async () => {
-      lerGestao.mockResolvedValue(gestaoWith({ created_here: false }));
+      const url =
+        'https://adsmanager.facebook.com/adsmanager/manage/ads?act=1&selected_ad_ids=1';
+      lerGestao.mockResolvedValue(
+        gestaoWith({ created_here: false, ads_manager_url: url })
+      );
       const wrapper = await mountDetail();
 
       expect(wrapper.find('[data-ad-care]').exists()).toBe(false);
       expect(wrapper.find('[data-ad-care-outside]').text()).toContain(
         'CRM_KANBAN.META_ADS_HUB.GESTAO.CARE.OUTSIDE'
       );
+      const link = wrapper.find('[data-ad-care-outside-link]');
+      expect(link.attributes()).toMatchObject({
+        href: url,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      });
     });
 
     it('without meta_ads_manage: neither the card nor the line', async () => {

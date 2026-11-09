@@ -294,7 +294,10 @@ RSpec.describe 'CRM meta_ads_connection cuidar do anúncio (#2778)', type: :requ
     end
 
     it 'criado fora: o cartão não aparece, nem o criativo é lido' do
-      expect(management('120000000000999999')).to include('created_here' => false, 'creative_kind' => nil)
+      expect(management('120000000000999999')).to include(
+        'created_here' => false, 'creative_kind' => nil,
+        'ads_manager_url' => "https://adsmanager.facebook.com/adsmanager/manage/ads?act=#{connection.ad_account_id}&selected_ad_ids=120000000000999999"
+      )
       expect(a_request(:get, meta_graph_url(creative_id)).with(query: hash_including({}))).not_to have_been_made
     end
   end
