@@ -9,6 +9,12 @@ describe('deliveryReason', () => {
     );
   });
 
+  it('traduz o motivo de quem está bloqueado (chat#2733)', () => {
+    expect(deliveryReason({ error_message: 'blocked' }, t)).toBe(
+      't:CAMPAIGN.WHATSAPP.ANALYTICS.TABLE.REASON_BLOCKED'
+    );
+  });
+
   it('mantém o texto do provedor nos demais motivos', () => {
     expect(
       deliveryReason({ error_message: 'Template parameters are missing' }, t)

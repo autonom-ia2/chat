@@ -372,6 +372,33 @@ describe('Guardar lista: lista nova ou uma que já existe', () => {
     nova.unmount();
   });
 
+  // #2834 (teste da F6 em produção): com 1 empresa, singular em cada frase.
+  it('com 1 empresa o título e o topo ficam no singular', () => {
+    const uma = montarFolha({ n: 1, entramLista: 1, podeFunil: true });
+    expect(uma.text()).toContain('O que fazer com esta empresa?');
+    expect(uma.text()).not.toContain('as 1 empresas');
+    uma.unmount();
+
+    const varias = montarFolha({ n: 3, entramLista: 3, podeFunil: true });
+    expect(varias.text()).toContain('O que fazer com as 3 empresas?');
+    varias.unmount();
+
+    const entraUma = montarFolha({
+      n: 3,
+      entramLista: 3,
+      listaId: 4,
+      listas: [{ ...LISTAS[0], entram: 1 }, LISTAS[1]],
+    });
+    expect(entraUma.find('[data-entram]').text()).toContain(
+      'Entra 1 das 3 · 2 já estavam na lista'
+    );
+    entraUma.unmount();
+
+    const soUma = montarFolha({ n: 1, entramLista: 1 });
+    expect(soUma.find('[data-entram]').text()).toContain('Entra 1 das 1');
+    soUma.unmount();
+  });
+
   // Vídeo da F6: o pronto da lista que já existia diz o que entrou e o
   // tamanho que o servidor devolve.
   it('o pronto da lista que já existia diz quantas entraram e o tamanho real', () => {

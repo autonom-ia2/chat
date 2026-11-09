@@ -296,7 +296,8 @@
           "REASON": "Reason",
           "ERROR_CODE": "Code {code}",
           "EMPTY_REASON": "-",
-          "REASON_OPTED_OUT": "Contact does not want outbound messages"
+          "REASON_OPTED_OUT": "Contact does not want outbound messages",
+          "REASON_BLOCKED": "Contact blocked"
         }
       }
     },
@@ -335,6 +336,7 @@
         "MEDIA_ONLY": "Media only",
         "FAILURES": "{count} failures",
         "OPTED_OUT": "Opted out of outbound messages: {count}",
+        "BLOCKED": "Blocked contacts: {count}",
         "DISCARDED": "Discarded in Prospecting: {count}"
       },
       "ACTIONS": {

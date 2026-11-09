@@ -1,6 +1,6 @@
 <script setup>
-// Who matches but will not receive (#2277): no WhatsApp, or asked not to receive. One quiet line at the end of
-// the list, counted by reason, with "Ver quem" for the names. They never count in the audience.
+// Who matches but will not receive (#2277): no WhatsApp, asked not to receive, or blocked (chat#2733). One quiet
+// line at the end of the list, counted by reason, with "Ver quem" for the names. They never count in the audience.
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -9,7 +9,11 @@ const props = defineProps({
 });
 
 const NS = 'CAMPAIGN_JOURNEY.NEW_AUDIENCE.FROM_CONVERSATIONS';
-const REASONS = { sem_contato: 'OUT_NO_CONTACT', nao_quer: 'OUT_OPTED_OUT' };
+const REASONS = {
+  sem_contato: 'OUT_NO_CONTACT',
+  nao_quer: 'OUT_OPTED_OUT',
+  bloqueado: 'OUT_BLOCKED',
+};
 const { t } = useI18n();
 const showWho = ref(false);
 
