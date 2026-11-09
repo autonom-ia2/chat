@@ -42,8 +42,8 @@ class Autonomia::Automacao::AgendaDaPagina
       ::Autonomia::Automacao::LinkDaAgenda.da_pagina(contexto.conta, responsavel(contexto), pagina_id(caminho))
     end
 
-    # O motivo do passo que ficou só sem o link: sem a permissão, o próprio; o resto, o do link da agenda (G12).
-    def motivo(por) = por == SEM_ACESSO ? SEM_ACESSO : 'faltou_link_da_agenda'
+    # O motivo do passo que ficou só sem o link: sem a permissão, o próprio; o resto, o do link da agenda (LinkDaAgenda).
+    def motivo(por) = ::Autonomia::Automacao::LinkDaAgenda.motivo(por)
 
     # O ensaio do texto que ficou sem um valor, como o motor: sem o link da agenda (`por` de Valores#falta_da_agenda),
     # o motivo próprio e o porquê; senão, faltou_valor.

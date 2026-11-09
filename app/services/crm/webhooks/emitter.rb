@@ -30,7 +30,9 @@ module Crm
       AUTOMACAO_EVENT_MAP = {
         'meeting_scheduled' => Events::Types::CRM_MEETING_SCHEDULED,
         'meeting_rescheduled' => Events::Types::CRM_MEETING_RESCHEDULED,
-        'meeting_canceled' => Events::Types::CRM_MEETING_CANCELED
+        'meeting_canceled' => Events::Types::CRM_MEETING_CANCELED,
+        # G56: "Aconteceu" / "Não compareceu". The automation job keeps only the first "Aconteceu" (payload first_held).
+        'meeting_outcome_recorded' => Events::Types::CRM_MEETING_OUTCOME_RECORDED
       }.freeze
 
       # Dispatcher event -> pipeline.metadata['meta_sync']['events'] token consumed by

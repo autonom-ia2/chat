@@ -309,7 +309,26 @@ module FechamentoAutomacao::Lacunas
     'G44' => -> { FechamentoAutomacao::SondasDaAgenda.link_da_pagina_escolhida? },
     # Do exemplo 5, passo 8 (#2755): o card em que a página põe a reunião ganha a conversa do contato no WhatsApp dos
     # avisos da página; prova ponta a ponta no passo 8 de spec/fechamento/automacao/exemplo_05_revisao_do_carro_spec.rb.
-    'G47' => -> { FechamentoAutomacao::SondasDaAgenda.card_da_pagina_ganha_a_conversa? }
+    'G47' => -> { FechamentoAutomacao::SondasDaAgenda.card_da_pagina_ganha_a_conversa? },
+    # Do exemplo 6, passo 8 (G56): o gatilho "reunião atendida", o primeiro "Aconteceu" da reunião na Agenda; prova ponta
+    # a ponta em spec/fechamento/automacao/g56_reuniao_atendida_spec.rb.
+    'G56' => -> { gatilho?('card.reuniao_atendida') },
+    # G49: o registro que a automação criou vira alvo dos passos seguintes (ex. 6, passos 5 e 6: gravar no card criado;
+    # ex. 11). Em construção em outra frente; a dona troca o nil pela sonda.
+    'G49' => nil,
+    # Do exemplo 6, passo 8, numa automação só (G59): esperar a reunião do contato acontecer, no meio da execução, e o
+    # resultado da reunião acordar essa espera; prova em spec/fechamento/automacao/g59_reuniao_atendida_na_espera_spec.rb.
+    'G59' => lambda {
+      valor?('contato.reuniao_atendida') && Autonomia::Automacao::EsperaDaReuniao::VALORES.include?('contato.reuniao_atendida')
+    },
+    # Do exemplo 6, passo 2 (G60): o link da agenda numa automação que roda no contato, pela ponte da conversa nova
+    # (#2680) até a conversa dele na caixa escolhida; prova no mesmo spec da G59. A sonda passa pelo salvar
+    # (Receita#problemas): a receita com a página de reserva da conta no gatilho sai sem problema.
+    'G60' => -> { valor?('conversa.link_da_agenda') && FechamentoAutomacao::SondasDaAgenda.reserva_no_gatilho_salva? },
+    # Do exemplo 6, passo 6 (G61): avisar quem atende a reunião fora dos gatilhos de reunião (a próxima marcada do contato,
+    # em card que quem ligou vê); prova no mesmo spec da G59. A sonda passa pelo salvar (Receita#problemas): o "quem atende
+    # a reunião" num gatilho de conversa sai sem problema (antes da G61, recusava com da_reuniao_so_no_gatilho).
+    'G61' => -> { FechamentoAutomacao::SondasDaAgenda.da_reuniao_em_qualquer_gatilho_salva? }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

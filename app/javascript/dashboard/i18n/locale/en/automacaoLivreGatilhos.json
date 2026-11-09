@@ -17,6 +17,7 @@
       "CARD_REUNIAO_CANCELADA": "When a meeting is canceled",
       "CARD_RESPONSAVEL_MUDOU": "When the card owner changes",
       "CARD_TIME_MUDOU": "When the card team changes",
+      "CARD_REUNIAO_ATENDIDA": "When a meeting is held",
       "CARD_PARADO": "When the card is stuck in a stage",
       "CARD_DATA": "Around a card date",
       "CONTATO_DATA": "Around a contact date",
@@ -35,6 +36,11 @@
       "NENHUMA": "None (with no conversation, the message is not sent)",
       "NA_FRASE": "{frase} (with no conversation, opens one in {caixa})",
       "AJUDA": "If the card or the contact has no conversation yet, the first message opens one in this inbox. On the official WhatsApp, it only goes out with an approved template."
+    },
+    "AGENDA_DE_RESERVA": {
+      "TITULO": "Backup booking page",
+      "NENHUMA": "None (with nobody attending, the booking link stays empty)",
+      "AJUDA": "Goes in the booking link when nobody attends the conversation, or the contact has no conversation yet. Whoever attends always sends their own page."
     },
     "VALOR_DA_MENSAGEM": {
       "RECEBIDA": "from the customer",
@@ -92,6 +98,7 @@
       "CARD_REUNIAO_CANCELADA": "When a meeting is canceled on a {funil} card",
       "CARD_RESPONSAVEL_MUDOU": "When the owner of a card in {funil} changes",
       "CARD_TIME_MUDOU": "When the team of a card in {funil} changes",
+      "CARD_REUNIAO_ATENDIDA": "When a meeting is held on a {funil} card",
       "CARD_PARADO": "When the card is stuck in {etapa} for {dias} days",
       "CARD_DATA": "{dias} days {quando} the card {campo}, from {hora}h",
       "CONTATO_DATA": "{dias} days {quando} the contact {campo}, from {hora}h",

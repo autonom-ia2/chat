@@ -68,12 +68,11 @@ class Autonomia::Automacao::Partida
 
   # O gatilho aconteceu de novo com a execução ainda rodando (esperando, por exemplo): não abre outra, e o histórico da
   # que está aberta diz isso ao dono. Uma linha por execução: a mensagem nova numa conversa com a execução aberta é o
-  # caso comum, e não pode encher o histórico. A hora da repetição fica na execução, e o "esperar até" que espera por
-  # ela (`gatilho.repetiu`, lote 4) acorda agora.
+  # caso comum, e não pode encher o histórico. Só a receita que espera a repetição (`gatilho.repetiu`, lote 4) guarda a
+  # hora dela e acorda a espera (Despertador.gatilho_repetiu).
   def ja_aberta
     execucao = execucao_aberta
-    execucao.update_columns(repetiu_em: Time.current) # rubocop:disable Rails/SkipsModelValidations
-    ::Autonomia::Automacao::Despertador.acordar(execucao)
+    ::Autonomia::Automacao::Despertador.gatilho_repetiu(execucao)
     return if ::Autonomia::Automacao::Registro.exists?(execucao: execucao, resultado: 'pulado', motivo: 'ja_aberta')
 
     ::Autonomia::Automacao::Registro.create!(account: @account, automacao: @definicao, execucao: execucao, passo: 'inicio',

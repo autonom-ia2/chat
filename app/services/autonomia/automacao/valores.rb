@@ -74,7 +74,8 @@ class Autonomia::Automacao::Valores
   # false: nunca "respondeu", e "diferente de true" não vira resposta. O cliente responde de qualquer conversa dele
   # (#2680: o e-mail abre outra), então a resposta dele sai do contato, nas conversas que `quem` vê, e vale também no
   # alvo contato. Lote 4 (#2682): a resposta da pessoa atribuída e o gatilho que aconteceu de novo durante a espera
-  # (`gatilho.repetiu`, da execução; no ensaio, sem execução, false).
+  # (`gatilho.repetiu`, da execução; no ensaio, sem execução, false). G59: a reunião do contato que aconteceu durante a
+  # espera (`contato.reuniao_atendida`), só nos cards que quem ligou vê.
   RESPOSTA = ::Autonomia::Automacao::Resposta::VALORES
   RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu'.freeze
 
@@ -135,24 +136,8 @@ class Autonomia::Automacao::Valores
   # O gatilho cuja mensagem o filtro lê.
   GATILHO_DA_MENSAGEM = 'mensagem.criada'.freeze
 
-  # Valores fechados (#2496): fora destas opções e destes operadores a condição nunca casa, e a automação falharia em
-  # silêncio. O salvar recusa o resto; o editor mostra só isto.
-  FECHADOS = {
-    'mensagem.tipo' => { 'opcoes' => %w[recebida enviada nota], 'operadores' => %w[igual diferente] },
-    'mensagem.privada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'mensagem.primeira' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'mensagem.tem_anexo' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'conversa.iniciada_por' => { 'opcoes' => %w[cliente equipe], 'operadores' => %w[igual diferente] },
-    'conversa.cliente_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'conversa.responsavel_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'gatilho.repetiu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'conversa.cliente_mandou_documento' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'card.origem' => { 'opcoes' => ::Autonomia::Automacao::OrigemDoCard::GRUPOS, 'operadores' => %w[igual diferente] },
-    'card.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'contato.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'envio.situacao' => { 'opcoes' => ::Autonomia::Automacao::Envio::SITUACOES.values, 'operadores' => %w[igual diferente] }
-  }.merge(::Autonomia::Automacao::Ausencia::FECHADOS, ::Autonomia::Automacao::TrocaNoCard::FECHADOS).freeze
+  # Valores fechados (#2496): Valores::Fechados.
+  FECHADOS = ::Autonomia::Automacao::Valores::Fechados::TABELA
 
   # Os valores que pedem permissão para ler (#2597): a pergunta é a mesma do resto do CRM, feita a quem salva a receita
   # e a quem ligou a automação. O dono de um card não ganha, pela automação, o valor dos cards alheios: `ve?`, não
@@ -267,16 +252,27 @@ class Autonomia::Automacao::Valores
   def do_campo(chave)
     return guardar_link(PAGINA.resultado(chave, contexto: @contexto, account_user: account_user)) if PAGINA.caminho?(chave)
     return do_objeto(chave) { |objeto| DO_QUE_QUEM_VE[chave].call(objeto, account_user) } if DO_QUE_QUEM_VE.key?(chave)
-    return do_objeto(chave) { |objeto| link_da_agenda(objeto, AGENDA[chave].call(objeto)) } if AGENDA.key?(chave)
+    return link_da_agenda(chave) if AGENDA.key?(chave)
 
     do_objeto(chave) { |objeto| LEITURA_DIRETA.find { |lista| lista.key?(chave) }.fetch(chave).call(objeto) }
   end
 
-  def link_da_agenda(objeto, pessoa)
-    guardar_link(::Autonomia::Automacao::LinkDaAgenda.resultado(objeto.account, pessoa, pagina_id: pagina_da_reuniao))
+  # G60: a página de quem atende; sem ninguém (ou sem a ponte: o contato ainda sem conversa na caixa escolhida), a página
+  # de agenda de reserva da receita (AgendaDeReserva); sem ela, vazio por `sem_responsavel`.
+  def link_da_agenda(chave)
+    objeto = da_base(chave)
+    pessoa = objeto && AGENDA[chave].call(objeto)
+    guardar_link(pessoa ? ::Autonomia::Automacao::LinkDaAgenda.resultado(@contexto.conta, pessoa, pagina_id: pagina_da_reuniao) : sem_quem_atenda)
   end
 
-  # O link da agenda (do responsável, G12, ou da página escolhida, G44) e, vazio, o porquê.
+  def sem_quem_atenda
+    reserva = ::Autonomia::Automacao::AgendaDeReserva.pagina_id(@contexto.execucao&.versao&.receita)
+    return ::Autonomia::Automacao::AgendaDeReserva.resultado(@contexto.conta, reserva, @quem) if reserva
+
+    ::Autonomia::Automacao::LinkDaAgenda::Resultado.new(url: nil, por: 'sem_responsavel')
+  end
+
+  # O link da agenda (do responsável, G12, da página de reserva, G60, ou da página escolhida, G44) e, vazio, o porquê.
   def guardar_link(resultado) = resultado.url.tap { @por_da_agenda = resultado.por if @por_da_agenda.nil? }
 
   # A página de agendamento em que a reunião do gatilho foi marcada, quando veio de uma.

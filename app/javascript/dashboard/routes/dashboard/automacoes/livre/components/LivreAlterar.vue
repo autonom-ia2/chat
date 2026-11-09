@@ -123,16 +123,6 @@ const frase = computed(() => {
   return fraseDaCondicao(rascunho.value, props.catalogo, t);
 });
 
-// G32: "quem atende a reunião" só nos gatilhos de reunião — os mesmos em que o
-// catálogo oferece os valores da reunião. Pela base: o que era antes da troca
-// (G9) também é `so_nos_gatilhos`.
-const deReuniao = computed(() =>
-  Boolean(
-    props.catalogo.valores
-      ?.find(item => item.base === 'reuniao' && item.so_nos_gatilhos)
-      ?.so_nos_gatilhos.includes(props.catalogo.gatilho)
-  )
-);
 // G9 (#2707): "quem cuida do card" só nos gatilhos de card.
 const doCard = computed(
   () =>
@@ -481,7 +471,6 @@ defineExpose({ abrir, fechar });
           :do-card="doCard"
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
-          :de-reuniao="deReuniao"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreCampanha

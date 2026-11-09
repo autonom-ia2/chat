@@ -17,6 +17,7 @@
       "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada",
       "CARD_RESPONSAVEL_MUDOU": "Quando muda quem cuida do card",
       "CARD_TIME_MUDOU": "Quando muda o time do card",
+      "CARD_REUNIAO_ATENDIDA": "Quando uma reunião acontece",
       "CARD_PARADO": "Quando o card fica parado numa etapa",
       "CARD_DATA": "Perto de uma data do card",
       "CONTATO_DATA": "Perto de uma data do contato",
@@ -35,6 +36,11 @@
       "NENHUMA": "Nenhuma (sem conversa, a mensagem não sai)",
       "NA_FRASE": "{frase} (sem conversa, abre uma em {caixa})",
       "AJUDA": "Se o card ou o contato ainda não tem conversa, a primeira mensagem abre uma nesta caixa. No WhatsApp oficial, ela só sai com um modelo aprovado."
+    },
+    "AGENDA_DE_RESERVA": {
+      "TITULO": "Página de agenda de reserva",
+      "NENHUMA": "Nenhuma (sem ninguém atendendo, o link da agenda fica vazio)",
+      "AJUDA": "Vai no link da agenda quando ninguém atende a conversa, ou o contato ainda não tem conversa. Quem atende sempre manda a própria página."
     },
     "VALOR_DA_MENSAGEM": {
       "RECEBIDA": "do cliente",
@@ -92,6 +98,7 @@
       "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada num card de {funil}",
       "CARD_RESPONSAVEL_MUDOU": "Quando muda quem cuida de um card de {funil}",
       "CARD_TIME_MUDOU": "Quando muda o time de um card de {funil}",
+      "CARD_REUNIAO_ATENDIDA": "Quando uma reunião acontece num card de {funil}",
       "CARD_PARADO": "Quando o card fica {dias} dias parado em {etapa}",
       "CARD_DATA": "{dias} dias {quando} de {campo} do card, a partir das {hora}h",
       "CONTATO_DATA": "{dias} dias {quando} de {campo} do contato, a partir das {hora}h",

@@ -35,7 +35,7 @@ module Autonomia::Automacao::NaConversa
   # O texto ficou sem um valor: o link da agenda vazio diz por quê (G12); o resto é o faltou_valor de sempre.
   def faltou_valor
     por = valores.falta_da_agenda
-    return Resultado.new(tipo: :pulado, motivo: ::Autonomia::Automacao::AgendaDaPagina.motivo(por), dados: { 'por' => por }) if por
+    return Resultado.new(tipo: :pulado, motivo: ::Autonomia::Automacao::LinkDaAgenda.motivo(por), dados: { 'por' => por }) if por
 
     Resultado.new(tipo: :pulado, motivo: 'faltou_valor', dados: {})
   end

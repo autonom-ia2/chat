@@ -51,6 +51,8 @@ module Autonomia::Automacao::Gatilhos
     # G9 (#2707): mudou quem cuida do card, o dono ou o time (Autonomia::Automacao::TrocaNoCard).
     Entrada.new(tipo: ::Autonomia::Automacao::TrocaNoCard::RESPONSAVEL, alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: ::Autonomia::Automacao::TrocaNoCard::TIME, alvo: CARD, origem: :evento, parametros: %w[funil_id]),
+    # G56: o primeiro "Aconteceu" da reunião na Agenda (ReuniaoDaAtividade.atendida_agora?).
+    Entrada.new(tipo: 'card.reuniao_atendida', alvo: CARD, origem: :evento, parametros: %w[funil_id pagina_id]),
     Entrada.new(tipo: 'card.parado', alvo: CARD, origem: :tempo, parametros: %w[etapa_id dias]),
     Entrada.new(tipo: 'card.data', alvo: CARD, origem: :tempo, parametros: DA_DATA),
     Entrada.new(tipo: 'contato.data', alvo: CONTATO, origem: :tempo, parametros: DA_DATA),
@@ -75,12 +77,15 @@ module Autonomia::Automacao::Gatilhos
     Events::Types::CRM_MEETING_RESCHEDULED => %w[card.reuniao_remarcada],
     Events::Types::CRM_MEETING_CANCELED => %w[card.reuniao_cancelada],
     ::Autonomia::Automacao::TrocaNoCard::RESPONSAVEL => [::Autonomia::Automacao::TrocaNoCard::RESPONSAVEL],
-    ::Autonomia::Automacao::TrocaNoCard::TIME => [::Autonomia::Automacao::TrocaNoCard::TIME]
+    ::Autonomia::Automacao::TrocaNoCard::TIME => [::Autonomia::Automacao::TrocaNoCard::TIME],
+    Events::Types::CRM_MEETING_OUTCOME_RECORDED => %w[card.reuniao_atendida]
   }.freeze
 
   # Os gatilhos de reunião (G12): só neles a receita lê `reuniao.*`, a reunião da atividade que disparou (no lembrete,
-  # #2709, a reunião da marca).
-  DE_REUNIAO = %w[card.reuniao_marcada card.reuniao_remarcada card.reuniao_cancelada card.antes_da_reuniao].freeze
+  # #2709, a reunião da marca). A atendida (G56) está aqui: o resultado da reunião também acorda quem espera nela
+  # (Escuta#acordar_o_card, EsperaDaReuniao.no_card?), e a espera relê a condição.
+  DE_REUNIAO = %w[card.reuniao_marcada card.reuniao_remarcada card.reuniao_cancelada card.reuniao_atendida card.antes_da_reuniao].freeze
+  ATENDIDA = 'card.reuniao_atendida'.freeze
   LEMBRETE = 'card.antes_da_reuniao'.freeze
 
   # O pedaço da marca entre o tipo e o id da atividade (marca_da_atividade).

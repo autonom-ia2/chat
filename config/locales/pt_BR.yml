@@ -1023,6 +1023,7 @@ pt_BR:
         data_invalida: 'A data que este passo lê não é uma data, e o passo foi pulado.'
         faltou_link_da_agenda: 'O link da agenda ficou vazio (sem responsável, sem página de agendamento, com a página fora do ar ou com mais de uma página), e o passo foi pulado.'
         sem_acesso_agenda: 'Quem ligou a automação não vê mais as páginas de agendamento: o link da agenda não foi mandado, e o passo foi pulado.'
+        agenda_de_reserva_indisponivel: 'Ninguém atende a conversa, e a página de agenda de reserva escolhida no gatilho está desligada, foi apagada ou quem ligou a automação não lê mais as páginas. O passo foi pulado. Escolha outra página no gatilho.'
         faltou_valor: 'Um valor de que este passo precisa estava vazio, e o passo foi pulado.'
         motor_desligado: 'As automações estão desligadas nesta conta.'
         prazo_vencido: 'A espera acabou sem a condição.'
@@ -1047,6 +1048,7 @@ pt_BR:
         sem_chave_de_funis: 'Quem ligou a automação não pode mais editar o funil, e este passo mexe no funil. Assuma e religue.'
         gatilho_desligado: 'Os gatilhos de card e de tempo estão desligados nesta conta. A automação não seguiu.'
         ja_aberta: 'O gatilho aconteceu de novo, mas a automação já estava rodando aqui e não começou outra vez.'
+        nao_acordou: 'Um erro impediu a automação de conferir esta espera antes do prazo. Ela segue esperando até o fim do prazo.'
         receita_com_problema: 'A receita desta versão não roda mais do jeito que foi salva. Corrija e salve de novo antes de ligar.'
         sem_quem_ligou: 'Ninguém ligou esta automação. Assuma e religue.'
         sem_versao: 'Esta automação ainda não tem passos salvos.'
@@ -1114,6 +1116,9 @@ pt_BR:
         caixa_de_email_invalida: 'Passo %{passo}: a caixa %{id} não é uma caixa de e-mail desta conta.'
         conversa_nova_sem_alvo: 'Gatilho: a caixa para abrir conversa só vale em gatilho de card ou de contato.'
         conversa_nova_caixa_invalida: 'Gatilho: a caixa %{id} não é uma caixa de WhatsApp, SMS ou API desta conta.'
+        agenda_de_reserva_sem_alvo: 'Gatilho: a página de agenda de reserva só vale em gatilho de conversa, de card ou de contato.'
+        agenda_de_reserva_de_fora: 'Gatilho: a página de agendamento %{id} não é desta conta.'
+        agenda_de_reserva_sem_acesso: 'Gatilho: você não vê as páginas de agendamento, então não pode escolher a página %{id} como reserva.'
         conversa_nova_sem_acesso: 'Gatilho: você não pode começar conversa na caixa %{id}. Peça para entrar nela ou escolha outra.'
         atributo_inexistente: 'Passo %{passo}: a conta não tem o atributo de %{caminho}. Crie o atributo antes ou corrija a chave.'
         acao_fora: 'Passo %{passo}: %{acao} não pode ser passo de automação.'
@@ -1153,7 +1158,6 @@ pt_BR:
         time_de_fora: "Passo %{passo}: o time %{id} não é desta conta."
         pessoa_de_fora: "Passo %{passo}: a pessoa %{id} não é desta conta."
         responsavel_do_card_sem_card: 'Passo %{passo}: "quem cuida do card" só vale quando o gatilho é de card.'
-        da_reuniao_so_no_gatilho: "Passo %{passo}: avisar quem atende a reunião só vale nos gatilhos de reunião."
         gatilho_desligado: 'Os gatilhos de card e de tempo estão desligados nesta conta.'
         reunioes_desligadas: 'As reuniões estão desligadas nesta instalação, e os gatilhos de reunião não podem ser usados.'
         etapa_de_fora: 'Gatilho: a etapa %{id} não é desta conta.'

@@ -1,6 +1,7 @@
 # O "para" do avisar e do resumir avisando (#2486) que não vale nesta receita: time ou pessoa que não são da conta, e
-# "quem atende a reunião" (G32) fora dos gatilhos de reunião e "quem cuida do card" (G9) fora dos gatilhos de card: ali
-# o aviso sairia para ninguém, calado. Saiu da Receita para ela caber no tamanho.
+# "quem cuida do card" (G9) fora dos gatilhos de card, onde o aviso sairia para ninguém, calado. "Quem atende a reunião"
+# vale em qualquer gatilho (G61): fora dos de reunião, é a próxima reunião marcada do contato (PassoDeAviso#quem_atende).
+# Saiu da Receita para ela caber no tamanho.
 class Autonomia::Automacao::DestinatariosDoAviso
   def initialize(conta, tipo_do_gatilho)
     @conta = conta
@@ -13,16 +14,10 @@ class Autonomia::Automacao::DestinatariosDoAviso
     times = Array(para['times']) - @conta.teams.where(id: para['times']).pluck(:id)
     pessoas = Array(para['pessoas']) - @conta.users.where(id: para['pessoas']).pluck(:id)
     times.map { |time| texto(:time_de_fora, passo: id, id: time) } +
-      pessoas.map { |pessoa| texto(:pessoa_de_fora, passo: id, id: pessoa) } + da_reuniao_fora(id, para) + do_card_fora(id, para)
+      pessoas.map { |pessoa| texto(:pessoa_de_fora, passo: id, id: pessoa) } + do_card_fora(id, para)
   end
 
   private
-
-  def da_reuniao_fora(id, para)
-    return [] if !para['da_reuniao'] || ::Autonomia::Automacao::Gatilhos.de_reuniao?(@tipo_do_gatilho)
-
-    [texto(:da_reuniao_so_no_gatilho, passo: id)]
-  end
 
   def do_card_fora(id, para)
     return [] if !para['responsavel_do_card'] || ::Autonomia::Automacao::Gatilhos.do_card?(@tipo_do_gatilho)

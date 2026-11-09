@@ -9,9 +9,11 @@
 # - Responsável (lote 4, #2682): a mesma régua, só da pessoa atribuída à conversa na hora da conferência ("espera a
 #   Fernanda", depois de passar a conversa para ela). O eco do celular não conta: ele não diz quem mandou.
 # - Gatilho repetiu (lote 4): o gatilho da execução aconteceu de novo durante a espera (a 2ª falta dentro dos 30 dias).
-#   A Partida grava a hora em `repetiu_em`; lida do banco, porque a execução em memória é de antes da repetição.
+#   A Partida grava a hora em `repetiu_em` (Despertador.gatilho_repetiu, só na receita que lê a repetição); lida do
+#   banco, porque a execução em memória é de antes da repetição.
 # - Documento (G46, exemplo 14): mensagem recebida com foto ou PDF (FotoOuPdf, a régua do `mensagem.tem_anexo`), só na
 #   conversa da execução, a mesma que o `le: anexos` lê, e só se quem ligou a vê. Texto e áudio ("já mando") não contam.
+# - Reunião atendida (G59): o primeiro "Aconteceu" de uma reunião do contato durante a espera (ValoresDaReuniao).
 #
 # O eco de uma mensagem NOSSA (IA, automação, robô) não é a equipe respondendo. Normalmente ele nem vira mensagem: o
 # reconciliador o junta à bolha que já existe (WhatsappHybrid::EchoReconcilerExtension; na Cloud, o mesmo source_id).
@@ -38,7 +40,10 @@ module Autonomia::Automacao::Resposta
     'conversa.equipe_respondeu' => ->(contexto, espera, _quem) { equipe_na?(contexto.conversa, espera) },
     'conversa.responsavel_respondeu' => ->(contexto, espera, _quem) { responsavel?(contexto.conversa, espera) },
     'gatilho.repetiu' => ->(contexto, espera, _quem) { repetiu?(contexto.execucao, espera) },
-    'conversa.cliente_mandou_documento' => ->(contexto, espera, quem) { documento?(contexto.conversa, espera, quem) }
+    'conversa.cliente_mandou_documento' => ->(contexto, espera, quem) { documento?(contexto.conversa, espera, quem) },
+    'contato.reuniao_atendida' => lambda do |contexto, espera, quem|
+      ::Autonomia::Automacao::ValoresDaReuniao.atendida_no_contato?(contexto.contato, espera, quem)
+    end
   }.freeze
 
   # Em qualquer conversa do contato na conta que `quem` (quem ligou) vê, pelo filtro da lista de conversas (#2680): o

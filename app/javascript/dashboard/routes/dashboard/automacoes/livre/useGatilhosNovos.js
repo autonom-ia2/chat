@@ -57,13 +57,15 @@ export function useGatilhosNovos(isCloudFeatureEnabled, catalogo) {
       ? catalogo.value.gatilhos.filter(liberado).map(semPaginaSeNaoLe)
       : null
   );
-  // As peças que os gatilhos oferecidos pedem (etapa, funil, campo...).
+  // As peças que os gatilhos oferecidos pedem (etapa, funil, campo...). G60:
+  // as páginas também para a página de agenda de reserva, para quem as lê.
   const pecasPedidas = computed(() => [
-    ...new Set(
-      (gatilhos.value || []).flatMap(item =>
+    ...new Set([
+      ...(gatilhos.value || []).flatMap(item =>
         (item.parametros || []).map(parametro => parametro.peca)
-      )
-    ),
+      ),
+      ...(lePaginas.value ? ['pagina'] : []),
+    ]),
   ]);
 
   // Cada leitura uma vez, quando alguma peça passa a pedi-la (a flag e a

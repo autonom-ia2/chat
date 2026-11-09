@@ -1,4 +1,4 @@
-# As sondas da página de agendamento (G44, G47): rodam o código de verdade e conferem o efeito. Ficam fora do
+# As sondas da página de agendamento (G44, G47, G60, G61): rodam o código de verdade e conferem o efeito. Ficam fora do
 # FechamentoAutomacao::Lacunas, que já está no limite de tamanho; o SONDAS de lá chama as daqui.
 module FechamentoAutomacao::SondasDaAgenda
   extend CrmHelpers
@@ -38,5 +38,46 @@ module FechamentoAutomacao::SondasDaAgenda
                                               host: dono, source: 'public_link', fallback_name: 'Sonda').perform
       card.conversation_id == conversa.id
     end
+  end
+
+  # G60: a receita com a página de reserva da conta no gatilho sai do salvar sem problema.
+  def reserva_no_gatilho_salva?
+    numa_conta_de_teste do |conta, pessoa|
+      gatilho = { 'tipo' => 'conversa.criada', 'agenda_de_reserva' => { 'pagina_id' => pagina_de_agendamento(conta, pessoa).id } }
+      problemas_ao_salvar(conta, gatilho, { 'pessoas' => [pessoa.id] }) == []
+    end
+  end
+
+  # G61: o "quem atende a reunião" num gatilho de conversa sai do salvar sem problema.
+  def da_reuniao_em_qualquer_gatilho_salva?
+    numa_conta_de_teste { |conta, _pessoa| problemas_ao_salvar(conta, { 'tipo' => 'conversa.criada' }, { 'da_reuniao' => true }) == [] }
+  end
+
+  # Os problemas que o salvar acusa (Receita#problemas, depois do esquema) numa receita de um "avisar" só, com o gatilho e
+  # o `para` dados; nil fora do esquema (sondas G60 e G61). Sem pessoa: a sonda não confere a permissão de quem salva.
+  def problemas_ao_salvar(conta, gatilho, para)
+    receita = { 'gatilho' => gatilho, 'passos' => [{ 'id' => 'aviso', 'tipo' => 'avisar', 'para' => para, 'texto' => ['Oi'] }] }
+    return unless Autonomia::Automacao::Receita.esquema_valido?(receita)
+
+    Autonomia::Automacao::Receita.new(receita, conta: conta, account_user: nil).problemas
+  end
+
+  # Uma conta com o passo "avisar" ligado e uma pessoa, desfeitas no fim (sondas G60 e G61).
+  def numa_conta_de_teste
+    resultado = nil
+    ActiveRecord::Base.transaction(requires_new: true) do
+      conta = FactoryBot.create(:account)
+      conta.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_mensagens')
+      resultado = yield(conta, FactoryBot.create(:user, account: conta))
+      raise ActiveRecord::Rollback
+    end
+    resultado
+  end
+
+  def pagina_de_agendamento(conta, pessoa)
+    conta.crm_agent_booking_profiles.create!(
+      page_version: Crm::AgentBookingProfile::NEW_PAGE, title: 'Agenda', duration_minutes: 30, timezone: 'America/Sao_Paulo',
+      default_assignee: pessoa, locations: [{ 'type' => 'whatsapp_video' }], enabled: true, close_holidays: false
+    )
   end
 end

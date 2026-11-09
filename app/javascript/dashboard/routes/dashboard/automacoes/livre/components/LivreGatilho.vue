@@ -19,6 +19,7 @@ import { mostraNaFrequencia } from '../recorrente';
 // (LivreSelecao). O "card atualizado" (G27, #2661) pede a mudança: o campo do
 // card, a condição e o valor (LivreMudanca). #2680: no gatilho de card ou de
 // contato, a caixa por onde a mensagem abre a conversa de quem ainda não tem uma.
+// G60: a página de agenda de reserva, para o link da agenda quando ninguém atende.
 const props = defineProps({
   modelValue: { type: Object, default: null },
   gatilhos: { type: Array, required: true },
@@ -35,6 +36,7 @@ const emit = defineEmits(['update:modelValue']);
 const { t } = useI18n();
 const idTipo = useId();
 const idCaixa = useId();
+const idAgenda = useId();
 
 const opcao = item => ({ value: item.tipo, label: t(item.frase) });
 const grupos = computed(() => {
@@ -189,16 +191,40 @@ const caixasDaConversa = computed(() => [
   ...(props.escolhas.caixas || []),
 ]);
 
+// G60 (decisão 10): a página fixa do link da agenda quando ninguém atende.
+// Vale onde há conversa, card ou contato; só aparece para quem lê as páginas
+// (a lista vem vazia para quem não lê).
+const ALVOS_DA_AGENDA = ['Conversation', 'Crm::Card', 'Contact'];
+const temAgenda = tipo => ALVOS_DA_AGENDA.includes(entradaDo(tipo)?.alvo);
+const pedeAgendaDeReserva = computed(
+  () =>
+    temAgenda(props.modelValue?.tipo) &&
+    ((props.escolhas.paginas || []).length > 0 ||
+      Boolean(props.modelValue?.agenda_de_reserva))
+);
+const paginasDeReserva = computed(() => [
+  { value: '', label: t('AUTOMACAO_LIVRE.AGENDA_DE_RESERVA.NENHUMA') },
+  ...(props.escolhas.paginas || []),
+]);
+
 // Trocar o tipo apaga o que o anterior pedia (etapa, funil), mas mantém os
 // filtros: o painel mostra o que entra e o que sai deles. A caixa da conversa
-// nova fica enquanto o novo gatilho também pode não ter conversa.
+// nova fica enquanto o novo gatilho também pode não ter conversa; a página de
+// reserva, enquanto ele tem conversa, card ou contato.
 const trocarTipo = tipo => {
-  const { filtros, conversa_nova: conversaNova } = props.modelValue || {};
+  const {
+    filtros,
+    conversa_nova: conversaNova,
+    agenda_de_reserva: agendaDeReserva,
+  } = props.modelValue || {};
   const novo = {
     tipo,
     ...padraoDo(tipo),
     ...(conversaNova && podeNaoTerConversa(tipo)
       ? { conversa_nova: conversaNova }
+      : {}),
+    ...(agendaDeReserva && temAgenda(tipo)
+      ? { agenda_de_reserva: agendaDeReserva }
       : {}),
   };
   emit('update:modelValue', filtros ? { ...novo, filtros } : novo);
@@ -410,6 +436,32 @@ const mudar = (nome, valor) => {
       />
       <p class="mb-0 text-sm text-n-slate-11">
         {{ $t('AUTOMACAO_LIVRE.CONVERSA_NOVA.AJUDA') }}
+      </p>
+    </div>
+
+    <div
+      v-if="pedeAgendaDeReserva"
+      class="flex flex-col gap-1.5"
+      data-parametro="agenda_de_reserva"
+    >
+      <label :for="idAgenda" class="text-sm font-medium text-n-slate-12">
+        {{ $t('AUTOMACAO_LIVRE.AGENDA_DE_RESERVA.TITULO') }}
+      </label>
+      <ChoiceSelect
+        :model-value="modelValue?.agenda_de_reserva?.pagina_id ?? ''"
+        :trigger-id="idAgenda"
+        :aria-label="$t('AUTOMACAO_LIVRE.AGENDA_DE_RESERVA.TITULO')"
+        :options="paginasDeReserva"
+        @update:model-value="
+          valor =>
+            mudar(
+              'agenda_de_reserva',
+              valor === '' ? null : { pagina_id: valor }
+            )
+        "
+      />
+      <p class="mb-0 text-sm text-n-slate-11">
+        {{ $t('AUTOMACAO_LIVRE.AGENDA_DE_RESERVA.AJUDA') }}
       </p>
     </div>
 

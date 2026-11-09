@@ -530,6 +530,7 @@ en:
         data_invalida: 'The date this step reads is not a date, so the step was skipped.'
         faltou_link_da_agenda: 'The booking link was empty (no owner, no booking page, a page that is off, or more than one page), so the step was skipped.'
         sem_acesso_agenda: 'Whoever turned on the automation can no longer see the booking pages, so the booking link was not sent and the step was skipped.'
+        agenda_de_reserva_indisponivel: 'Nobody attends the conversation and the backup booking page chosen in the trigger is off, was deleted or can no longer be read by who turned the automation on, so the step was skipped. Choose another page in the trigger.'
         faltou_valor: 'A value this step needs was empty, so the step was skipped.'
         motor_desligado: 'Automations are off for this account.'
         prazo_vencido: 'The wait ended without the condition.'
@@ -554,6 +555,7 @@ en:
         sem_chave_de_funis: 'The person who turned on the automation can no longer edit the pipeline, and this step changes the pipeline. Take over and turn it back on.'
         gatilho_desligado: 'Card and time triggers are off for this account. The automation did not continue.'
         ja_aberta: 'The trigger happened again, but the automation was already running here and did not start again.'
+        nao_acordou: 'An error kept the automation from checking this wait early. It keeps waiting until the deadline.'
         receita_com_problema: 'This version no longer runs as it was saved. Fix it and save again before turning it on.'
         sem_quem_ligou: 'Nobody turned this automation on. Take over and turn it back on.'
         sem_versao: 'This automation has no saved steps yet.'
@@ -621,6 +623,9 @@ en:
         caixa_de_email_invalida: 'Step %{passo}: inbox %{id} is not an e-mail inbox of this account.'
         conversa_nova_sem_alvo: 'Trigger: the inbox to open a conversation only applies to card or contact triggers.'
         conversa_nova_caixa_invalida: 'Trigger: inbox %{id} is not a WhatsApp, SMS or API inbox of this account.'
+        agenda_de_reserva_sem_alvo: 'Trigger: the backup booking page only applies to conversation, card or contact triggers.'
+        agenda_de_reserva_de_fora: 'Trigger: booking page %{id} is not from this account.'
+        agenda_de_reserva_sem_acesso: 'Trigger: you cannot see the booking pages, so you cannot choose booking page %{id} as the backup.'
         conversa_nova_sem_acesso: 'Trigger: you cannot start conversations in inbox %{id}. Ask to join it or choose another.'
         atributo_inexistente: 'Step %{passo}: the account has no attribute for %{caminho}. Create it first or fix the key.'
         acao_fora: 'Step %{passo}: %{acao} cannot be an automation step.'
@@ -660,7 +665,6 @@ en:
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
         responsavel_do_card_sem_card: 'Step %{passo}: "whoever owns the card" only works when the trigger is a card trigger.'
-        da_reuniao_so_no_gatilho: "Step %{passo}: notifying who attends the meeting only works in meeting triggers."
         gatilho_desligado: 'Card and time triggers are off for this account.'
         reunioes_desligadas: 'Meetings are off in this installation, so the meeting triggers cannot be used.'
         etapa_de_fora: 'Trigger: stage %{id} is not from this account.'
