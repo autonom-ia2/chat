@@ -13,7 +13,8 @@ class Instagram::RefreshTokensJob < ApplicationJob
   MINIMUM_TOKEN_AGE = 24.hours
 
   def perform
-    Channel::Instagram.where(expires_at: Time.current..REFRESH_WINDOW.from_now).find_each do |channel|
+    # O login do Facebook (#2406) usa o token da Página, que não se renova aqui.
+    Channel::Instagram.where(login: 'instagram', expires_at: Time.current..REFRESH_WINDOW.from_now).find_each do |channel|
       refresh(channel)
     end
   end

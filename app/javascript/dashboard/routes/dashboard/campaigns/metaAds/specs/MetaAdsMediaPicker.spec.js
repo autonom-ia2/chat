@@ -135,4 +135,21 @@ describe('Anúncios da Meta · foto ou vídeo do anúncio (#2198)', () => {
     ]);
     expect(wrapper.emitted('uploading')).toEqual([[true], [false]]);
   });
+
+  // Trocar a mídia de um anúncio (#2778): foto por foto, vídeo por vídeo.
+  it('with only="image", accepts only photos and refuses a video without uploading', async () => {
+    lerMidia.mockResolvedValue({ kind: 'video', url: 'blob:v', duration: 10 });
+    const wrapper = mountPicker({ only: 'image' });
+
+    expect(wrapper.find('[data-create-media-input]').attributes('accept')).toBe(
+      'image/jpeg,image/png'
+    );
+    await choose(wrapper, '[data-create-media-input]', PHOTO);
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.uploadMedia).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-create-media-error]').text()).toBe(
+      `${KEY}.ERRORS.ONLY_IMAGE`
+    );
+  });
 });

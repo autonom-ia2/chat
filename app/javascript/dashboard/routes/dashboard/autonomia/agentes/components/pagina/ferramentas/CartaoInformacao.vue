@@ -5,10 +5,11 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import FerramentaCampo from './FerramentaCampo.vue';
 import FerramentaEntrada from './FerramentaEntrada.vue';
 import FerramentaInterruptor from './FerramentaInterruptor.vue';
-import { TIPOS } from '../../../utils/ferramentas';
+import { TIPOS, mudarRotulo } from '../../../utils/ferramentas';
 
 // #1301 (protótipo F05) — uma informação que o agente preenche: nome, tipo em português (escolha do
-// produto, sem <select>), como o agente descobre e "Pode faltar". "Remover" é discreto: neutro,
+// produto, sem <select>), como o agente descobre e "Pode faltar". #1430: o nome é de gente ("CEP");
+// o técnico, que vai no link, sai dele (mudarRotulo) e não aparece. "Remover" é discreto: neutro,
 // rubi só no hover/foco, alvo de 44 px.
 const props = defineProps({
   informacao: { type: Object, required: true },
@@ -25,8 +26,8 @@ const { t } = useI18n();
 const id = computed(() => `${props.base}-info-${props.indice}`);
 const preenchido = valor => String(valor ?? '').trim() !== '';
 const quem = computed(() =>
-  preenchido(props.informacao.nome)
-    ? props.informacao.nome
+  preenchido(props.informacao.rotulo)
+    ? props.informacao.rotulo
     : t(`${NS}.ITEM`, { n: props.indice + 1 })
 );
 const tipos = computed(() =>
@@ -35,6 +36,8 @@ const tipos = computed(() =>
 
 const mudar = (campo, valor) =>
   emit('update:informacao', { ...props.informacao, [campo]: valor });
+const mudarNome = rotulo =>
+  emit('update:informacao', mudarRotulo(props.informacao, rotulo));
 </script>
 
 <template>
@@ -47,10 +50,11 @@ const mudar = (campo, valor) =>
     <div class="flex items-center justify-between gap-2">
       <p
         :id="`${id}-titulo`"
-        class="m-0 text-sm font-semibold break-all text-n-slate-12"
-        :class="preenchido(informacao.nome) ? 'font-mono' : ''"
+        class="m-0 text-sm font-semibold break-words text-n-slate-12"
       >
-        {{ preenchido(informacao.nome) ? informacao.nome : t(`${NS}.NOVA`) }}
+        {{
+          preenchido(informacao.rotulo) ? informacao.rotulo : t(`${NS}.NOVA`)
+        }}
       </p>
       <button
         type="button"
@@ -69,18 +73,17 @@ const mudar = (campo, valor) =>
       <FerramentaCampo
         :id="`${id}-nome`"
         :rotulo="t(`${NS}.NOME`)"
+        :ajuda="t(`${NS}.NOME_AJUDA`)"
         :erro="erro"
       >
         <template #default="{ descricao, invalido }">
           <FerramentaEntrada
             :id="`${id}-nome`"
             data-campo-informacao
-            :model-value="informacao.nome"
-            mono
-            :placeholder="t(`${NS}.ITEM`, { n: indice + 1 })"
+            :model-value="informacao.rotulo"
             :descricao="descricao"
             :invalido="invalido"
-            @update:model-value="mudar('nome', $event)"
+            @update:model-value="mudarNome"
           />
         </template>
       </FerramentaCampo>

@@ -21,7 +21,11 @@ export const motivoDoErro = erro => {
   const mensagem = String(resposta.data?.error ?? '');
   // #1425: o teste da ferramenta manda também o que o agente recebe nessa falha.
   const agenteRecebe = String(resposta.data?.agente_recebe ?? '');
-  return { tipo: 'API', mensagem, agenteRecebe };
+  // #1430: os campos recusados no salvar, para a tela apontar o passo sem ler o texto traduzido.
+  const campos = Array.isArray(resposta.data?.campos)
+    ? resposta.data.campos
+    : [];
+  return { tipo: 'API', mensagem, agenteRecebe, campos };
 };
 
 export const useFerramentasDoAgente = agenteId => {

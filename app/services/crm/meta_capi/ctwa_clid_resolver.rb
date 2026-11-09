@@ -10,6 +10,8 @@
 #
 # `sources` also returns each click's conversation, newest first: the event must go out
 # through THAT inbox (token, WABA and dataset), or Meta cannot tie the clid to the WABA.
+# `up_to` keeps only the clicks made by that instant (#2738): a click after the sale did not
+# bring it, so it must not choose where a retry or the backfill sends it.
 module Crm::MetaCapi::CtwaClidResolver
   module_function
 
@@ -19,23 +21,29 @@ module Crm::MetaCapi::CtwaClidResolver
     sources(card).first&.ctwa_clid
   end
 
-  def sources(card)
+  def sources(card, up_to: nil)
     return [] if card.blank?
 
     [card.primary_conversation, *card.linked_conversations].compact.uniq
-                                                           .filter_map { |conversation| source_for(conversation) }
+                                                           .filter_map { |conversation| source_for(conversation, up_to) }
                                                            .sort_by { |source| [-source.clicked_at.to_f, -source.conversation.id] }
   end
 
   # The newest click of the conversation, among the origin and the later touches. Touches
   # are appended in order, so a tie (missing touched_at) goes to the later one.
-  def source_for(conversation)
-    attrs = conversation.additional_attributes || {}
-    clicks = [attrs['campaign'], *Array(attrs['campaign_touches'])].select { |touch| touch.is_a?(Hash) && touch['ctwa_clid'].present? }
+  def source_for(conversation, up_to = nil)
+    clicks = clicks(conversation, up_to)
     return if clicks.empty?
 
     newest = clicks.each_with_index.max_by { |touch, index| [clicked_at(touch, conversation).to_f, index] }.first
     Source.new(conversation: conversation, ctwa_clid: newest['ctwa_clid'], clicked_at: clicked_at(newest, conversation))
+  end
+
+  # The clicks of the conversation carrying a clid, only those made by `up_to` when given.
+  def clicks(conversation, up_to)
+    attrs = conversation.additional_attributes || {}
+    clicks = [attrs['campaign'], *Array(attrs['campaign_touches'])].select { |touch| touch.is_a?(Hash) && touch['ctwa_clid'].present? }
+    up_to ? clicks.select { |touch| clicked_at(touch, conversation) <= up_to } : clicks
   end
 
   def clicked_at(touch, conversation)

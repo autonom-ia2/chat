@@ -4,10 +4,14 @@
 #
 # The id is kept in the channel's provider_config ('meta_dataset') together with the WABA
 # it belongs to, so Meta is asked once per inbox and a reauthorization onto another WABA
-# looks it up again instead of reusing the old one. Written straight in SQL on purpose:
+# looks it up again instead of reusing the old one (or a dataset refused as gone, see
+# `refresh`). Written straight in SQL on purpose:
 # saving the channel normally re-validates the provider config against Meta, and a jsonb
 # merge does not lose a concurrent write to another key. Failing to keep it only costs a
 # lookup next time, so it never fails the send.
+#
+# `refresh` asks Meta again even with a dataset kept (#2738): Meta can drop a dataset without
+# the WABA changing, and the kept id would be repeated on every retry.
 #
 # A passing lookup failure raises LookupError (the caller retries). A dead token or a
 # missing permission raises AccessDenied (the inbox must be reconnected). Any other failure
@@ -22,15 +26,27 @@ module Crm::MetaCapi::WabaDataset
   class AccessDenied < StandardError; end
 
   def for(channel, access_token:, waba_id:)
-    cached = cached_id(channel, waba_id)
-    return cached if cached
+    cached_id(channel, waba_id) || refresh(channel, access_token: access_token, waba_id: waba_id)
+  end
 
+  def refresh(channel, access_token:, waba_id:)
     result = Meta::WabaDatasetClient.new(access_token: access_token, waba_id: waba_id).find_or_create
     raise_on_failure!(result)
     return log_unavailable(channel, result.error) if result.dataset_id.blank?
 
     remember(channel, waba_id, result.dataset_id)
     result.dataset_id
+  end
+
+  # The WABA's dataset after Meta refused the kept one as gone, or nil when Meta answers the
+  # same id or the lookup fails in passing: the caller keeps the refusal and the retry asks
+  # again. AccessDenied still raises: retrying would repeat the refusal until Sidekiq gives up.
+  def replacement(channel, stale_id:, access_token:, waba_id:)
+    fresh = refresh(channel, access_token: access_token, waba_id: waba_id)
+    fresh unless fresh == stale_id
+  rescue LookupError => e
+    Rails.logger.warn("Crm::MetaCapi::WabaDataset refresh failed channel=#{channel.id}: #{e.message}")
+    nil
   end
 
   def cached_id(channel, waba_id)
