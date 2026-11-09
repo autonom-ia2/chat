@@ -39,6 +39,11 @@ require 'rails_helper'
 # que não vê `faltou-1x` (o passo 2 a trocou) e volta ao passo 1, como o termo diz. Ponta a ponta da peça:
 # g50_reentrada_spec.rb.
 #
+# Os 30 dias do passo 1 são o mesmo "esperar até" `card.entrou_de_novo`, e não um "esperar" fixo: a etiqueta-contador só
+# sai se nesse tempo o aluno não faltou de novo. Se faltou, a nova execução achou `faltou-1x` e o passo 2 já a trocou; a
+# execução velha acorda e para sem tirar nada. Com o "esperar" fixo, ela acordava no dia 30 e tirava a `faltou-1x` que
+# uma falta mais nova tinha acabado de pôr, e a falta seguinte voltava ao passo 1 em vez de ir ao passo 2.
+#
 # O que ainda não monta, cada um no exemplo do passo, escrito como o termo pede:
 # - Passos 6 e 8 (G44): "as turmas de outros horários" e "a agenda do professor" são páginas escolhidas; o
 #   `card.link_da_agenda` é a página do responsável do card (a recepção, que atende só em "Remarcar aula"), e o link sai,
@@ -104,6 +109,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fec
   def card_id = { '$valor' => 'card.id' }
   def link_da_agenda = { '$valor' => 'card.link_da_agenda' }
   def sem_faltou_1x = { campo: { '$valor' => 'contato.etiquetas' }, op: 'nao_contem', valor: 'faltou-1x' }
+  def entrou_de_novo = { campo: { '$valor' => 'card.entrou_de_novo' }, op: 'igual', valor: true }
 
   def etiquetas(id, descricao, por: [], tirar: [])
     { id: id, tipo: 'acao', acao: 'PATCH contacts/:contact_id/labels/alterar', descricao: descricao,
@@ -129,20 +135,21 @@ RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fec
 
   # Passo 10.
   def nao_entrou_de_novo
-    { id: 'nao_entrou_de_novo', tipo: 'esperar_ate', condicao: { campo: { '$valor' => 'card.entrou_de_novo' }, op: 'igual', valor: true },
-      prazo: { valor: 30, unidade: 'dias' }, se_vencer: [
-        etiquetas('tira_risco', 'Tirar as etiquetas de risco', tirar: ['risco-de-sair']),
-        *([fechar_a_retencao] if fecha_a_retencao)
-      ] }
+    { id: 'nao_entrou_de_novo', tipo: 'esperar_ate', condicao: entrou_de_novo, prazo: { valor: 30, unidade: 'dias' }, se_vencer: [
+      etiquetas('tira_risco', 'Tirar as etiquetas de risco', tirar: ['risco-de-sair']),
+      *([fechar_a_retencao] if fecha_a_retencao)
+    ] }
   end
 
-  # Passo 1.
+  # Passo 1. A etiqueta sai em 30 dias só se o aluno não faltou de novo nesse tempo: se faltou, o passo 2 da nova
+  # execução já a trocou, e esta não tira a de uma falta mais nova.
   def primeira_falta
     { id: 'primeira_falta', tipo: 'se', condicao: sem_faltou_1x, entao: [
       etiquetas('faltou_1x', 'Pôr faltou 1x', por: ['faltou-1x']),
       { id: 'sentimos_sua_falta', tipo: 'mensagem', texto: ['Sentimos sua falta! Quer remarcar? ', link_da_agenda] },
-      { id: 'trinta_dias', tipo: 'esperar', duracao: { valor: 30, unidade: 'dias' } },
-      etiquetas('tira_faltou_1x', 'Tirar faltou 1x', tirar: ['faltou-1x']),
+      { id: 'trinta_dias', tipo: 'esperar_ate', condicao: entrou_de_novo, prazo: { valor: 30, unidade: 'dias' }, se_vencer: [
+        etiquetas('tira_faltou_1x', 'Tirar faltou 1x', tirar: ['faltou-1x'])
+      ] },
       { id: 'fim_da_primeira', tipo: 'parar' }
     ] }
   end
@@ -305,6 +312,31 @@ RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fec
 
       expect(etiquetas_do_aluno).to eq(['risco-de-sair'])
       expect(card_de_retencao).to have_attributes(stage_id: em_risco.id, contact_id: aluno.id, status: 'open')
+    end
+
+    # Três faltas com as execuções lado a lado (dias 0, 5 e 10): a 3ª não acha `faltou-1x` (a 2ª a trocou) e a põe de
+    # novo. No dia 30 a execução da 1ª não tira essa etiqueta, que é da 3ª; a 4ª falta, no dia 32, vai ao passo 2. O
+    # passo 1 roda duas vezes (dias 0 e 10), o passo 2 duas (dias 5 e 32), e nenhuma execução tira a `faltou-1x`.
+    it 'passo 1: a etiqueta posta por uma falta mais nova não sai nos 30 dias da 1ª, e a 4ª falta vai ao passo 2',
+       :aggregate_failures do
+      roteiro['automacao_decidir'] = { 'caminho' => 'horario', 'motivo' => 'o que o aluno respondeu' }
+      [%w[2026-11-12 2026-11-15], %w[2026-11-17 2026-11-20]].each do |aula, falta|
+        recepcao_move_as("#{aula} 10:00", em_aula)
+        recepcao_move_as("#{falta} 19:00", faltou)
+      end
+      expect(etiquetas_do_aluno).to contain_exactly('risco-de-sair', 'faltou-1x')
+
+      varredura_as('2026-12-10 19:05')
+      expect(etiquetas_do_aluno).to include('faltou-1x')
+
+      recepcao_move_as('2026-12-11 10:00', em_aula)
+      recepcao_move_as('2026-12-12 19:00', faltou)
+
+      expect(etiquetas_do_aluno).to include('risco-de-sair')
+      expect(etiquetas_do_aluno).not_to include('faltou-1x')
+      expect(historico.count { |passo, resultado, _| passo == 'faltou_1x' && resultado == 'ok' }).to eq(2)
+      expect(historico.count { |passo, resultado, _| passo == 'risco' && resultado == 'ok' }).to eq(2)
+      expect(historico).not_to include(['tira_faltou_1x', 'ok', nil])
     end
   end
 
