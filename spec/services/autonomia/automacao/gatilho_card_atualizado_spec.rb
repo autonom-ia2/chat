@@ -131,6 +131,24 @@ RSpec.describe 'Automação livre: card atualizado', :automacao_motor, type: :re
 
       expect(vezes(definicao)).to eq(1)
     end
+
+    # #2750, revisão: os centavos contam. R$ 5.000,50 não é "igual a 5000"; de R$ 49.999,99 para R$ 50.000,50 o valor
+    # "passou de 50000", e de R$ 50.000,50 para R$ 60.000 não passa de novo.
+    it 'os centavos contam na comparação em reais', :aggregate_failures do
+      igual = atualizado({ 'campo' => 'valor', 'condicao' => 'igual', 'valor' => '5000' })
+      passou = atualizado({ 'campo' => 'valor', 'condicao' => 'passou_de', 'valor' => '50000' })
+
+      editar(card, value_cents: 500_050)
+      editar(card, value_cents: 4_999_999)
+      expect([vezes(igual), vezes(passou)]).to eq([0, 0])
+
+      editar(card, value_cents: 5_000_050)
+      expect(vezes(passou)).to eq(1)
+      concluir_abertas
+
+      editar(card, value_cents: 6_000_000)
+      expect(vezes(passou)).to eq(1)
+    end
   end
 
   # Exemplo 15 ("Cliente grande"): "card criado ou atualizado com valor acima de R$ 50 mil".
@@ -353,6 +371,22 @@ RSpec.describe 'Automação livre: card atualizado', :automacao_motor, type: :re
       expect(vezes(definicao)).to eq(1)
     end
 
+    # #2750, revisão: o savepoint que deu certo (requires_new) dentro da transação desfeita sai junto com ela; o save
+    # seguinte do mesmo objeto não leva o valor que nunca foi gravado.
+    it 'o savepoint liberado dentro da transação desfeita não deixa evento para o save seguinte', :aggregate_failures do
+      atualizado({ 'campo' => 'valor', 'condicao' => 'mudou' })
+
+      Crm::Card.transaction do
+        Crm::Card.transaction(requires_new: true) { card.update!(value_cents: 2_000_000) }
+        raise ActiveRecord::Rollback
+      end
+      card.reload.save!
+      card.update!(title: 'Outro título')
+
+      expect(card.reload.value_cents).to eq(1_000_000)
+      expect(jobs_da_automacao).to eq(0)
+    end
+
     it 'a gravação desfeita (rollback) não enfileira' do
       atualizado({ 'campo' => 'valor', 'condicao' => 'mudou' })
 
@@ -399,6 +433,20 @@ RSpec.describe 'Automação livre: card atualizado', :automacao_motor, type: :re
       expect(dados.dig('changed_attributes', 'mudancas')).to eq('valor' => ['passou_de:50000'])
       drenar
       expect(vezes(definicao)).to eq(1)
+    end
+
+    # A faixa da condição no valor (o "passou de 50000") também diria o valor a quem não o vê (#2597).
+    it 'a condição no valor de quem ligou sem ver os valores não vai no evento' do
+      agente = create(:user, account: account, role: :agent)
+      funcao = create(:custom_role, account: account,
+                                    permissions: %w[automation_manage conversation_manage crm_view crm_manage_cards crm_manage_pipelines])
+      account.account_users.find_by(user: agente).update!(custom_role: funcao)
+      atualizado({ 'campo' => 'valor', 'condicao' => 'passou_de', 'valor' => '50000' }).update!(ligada_por: agente)
+      atualizado({ 'campo' => 'valor', 'condicao' => 'mudou' })
+
+      card.update!(value_cents: 6_000_000)
+
+      expect(ActiveJob::Arguments.deserialize(argumentos_do_job).first.dig('changed_attributes', 'mudancas')).to eq('valor' => ['mudou:'])
     end
 
     it 'sem condição no valor, o evento diz só que o valor mudou', :aggregate_failures do
