@@ -42,7 +42,7 @@ const escolhida = computed({
       color="ruby"
       icon="i-lucide-trash"
       size="xs"
-      class="flex-shrink-0 opacity-0 group-hover/attribute:opacity-100 hover:no-underline"
+      class="flex-shrink-0 opacity-0 group-hover/attribute:opacity-100 focus-visible:opacity-100 hover:no-underline"
       :aria-label="t('CRM_KANBAN.DRAWER.CARD_FIELDS.LIMPAR_PESSOA')"
       @click="emit('delete')"
     />
