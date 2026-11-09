@@ -64,6 +64,28 @@ const ehIpV4 = host =>
 const DENTRO_DA_REDE = ['.local', '.internal', '.localhost'];
 
 // Mesmas regras do model (HTTPS, com host, sem localhost/.local, sem IP), antes de salvar.
+// Decisão do Rodrigo (09/11): senha no link fica legível para quem tem a chave; o lugar dela é a Chave de acesso. Mesma
+// lista do backend (`SegredosDaChamada::NOMES_DE_CREDENCIAL`), lida pelo parser de URL do navegador, sem regex. Valor
+// com {{ }} vem da conversa e vale.
+const NOMES_DE_CREDENCIAL = [
+  'token',
+  'api_key',
+  'apikey',
+  'key',
+  'secret',
+  'password',
+  'senha',
+  'access_token',
+];
+const senhaNoLink = url =>
+  Boolean(url.username || url.password) ||
+  [...url.searchParams].some(
+    ([nome, valor]) =>
+      preenchido(valor) &&
+      !valor.includes('{{') &&
+      NOMES_DE_CREDENCIAL.includes(nome.toLowerCase())
+  );
+
 export const conferirEndereco = endereco => {
   const texto = String(endereco ?? '').trim();
   if (!texto) return 'VAZIO';
@@ -80,6 +102,7 @@ export const conferirEndereco = endereco => {
   }
   if (host.startsWith('[') || ehIpV4(host)) return 'IP';
   if (!host.includes('.')) return 'INCOMPLETO';
+  if (senhaNoLink(url)) return 'SENHA';
   return '';
 };
 
@@ -340,6 +363,11 @@ export const paraRascunho = ferramenta => {
       podeFaltar: p.required === false,
     })),
     corpo: ferramenta.request_body_template || '',
+    // Para saber se o link ou o método mudou: a chave guardada não vai para um destino novo.
+    destinoOriginal: {
+      endereco: ferramenta.endpoint_url || '',
+      metodo: ferramenta.http_method === 'POST' ? 'POST' : 'GET',
+    },
     mapeamento: mapeamento.template || '',
     mapeamentoOriginal: { ...mapeamento },
     automaticos: cabecalhos.filter(ehAutomatico).map(c => ({ ...c })),
@@ -363,21 +391,30 @@ const renomeado = cabecalho =>
   Boolean(cabecalho.guardado) &&
   String(cabecalho.chave ?? '').trim() !== cabecalho.chaveOriginal;
 
+// Decisão do Rodrigo (09/11): mudou o link ou o método, a chave guardada é digitada de novo (o backend recusa a
+// chave guardada num destino novo). Ferramenta nova não tem destino original.
+export const destinoMudou = rascunho =>
+  Boolean(rascunho.destinoOriginal) &&
+  (String(rascunho.endereco ?? '').trim() !==
+    rascunho.destinoOriginal.endereco ||
+    rascunho.metodo !== rascunho.destinoOriginal.metodo);
+
 // O backend casa o segredo guardado pela chave e só o preserva com secret=true. Renomear a chave ou
 // desligar "É segredo" exige digitar o valor de novo (senão o mascarado vira o valor de verdade).
-export const precisaRedigitar = cabecalho =>
-  renomeado(cabecalho) || (Boolean(cabecalho.guardado) && !cabecalho.segredo);
+export const precisaRedigitar = (cabecalho, mudouDestino = false) =>
+  renomeado(cabecalho) ||
+  (Boolean(cabecalho.guardado) && (!cabecalho.segredo || mudouDestino));
 
 // Segredo guardado, intocado: volta a máscara com a mesma chave e o backend mantém o valor.
-const mantemGuardado = cabecalho =>
+const mantemGuardado = (cabecalho, mudouDestino) =>
   cabecalho.segredo &&
   cabecalho.guardado &&
   !cabecalho.trocando &&
-  !precisaRedigitar(cabecalho);
+  !precisaRedigitar(cabecalho, mudouDestino);
 
-const cabecalhoParaApi = cabecalho => {
+const cabecalhoParaApi = (cabecalho, mudouDestino) => {
   const key = String(cabecalho.chave).trim();
-  if (mantemGuardado(cabecalho)) {
+  if (mantemGuardado(cabecalho, mudouDestino)) {
     return { key, value: MASCARA_DO_SEGREDO, secret: true };
   }
   return {
@@ -413,16 +450,16 @@ export const paraApi = rascunho => ({
     ...(rascunho.automaticos || []),
     ...rascunho.cabecalhos
       .filter(c => preenchido(c.chave))
-      .map(cabecalhoParaApi),
+      .map(c => cabecalhoParaApi(c, destinoMudou(rascunho))),
   ],
   response_mapping: mapeamentoParaApi(rascunho),
 });
 
-const validarCabecalho = cabecalho => {
+const validarCabecalho = (cabecalho, mudouDestino) => {
   if (!preenchido(cabecalho.chave)) return '';
   if (!chaveValida(cabecalho.chave.trim())) return 'CHAVE';
   if (preenchido(cabecalho.valor)) return '';
-  if (precisaRedigitar(cabecalho)) return 'REDIGITAR';
+  if (precisaRedigitar(cabecalho, mudouDestino)) return 'REDIGITAR';
   const pedeValor =
     cabecalho.segredo && (cabecalho.trocando || !cabecalho.guardado);
   return pedeValor ? 'VALOR' : '';
@@ -480,7 +517,10 @@ const VALIDACOES = {
   4: rascunho => ({
     erros: Object.fromEntries(
       rascunho.cabecalhos
-        .map((cabecalho, i) => [`c${i}`, validarCabecalho(cabecalho)])
+        .map((cabecalho, i) => [
+          `c${i}`,
+          validarCabecalho(cabecalho, destinoMudou(rascunho)),
+        ])
         .filter(([, erro]) => erro)
     ),
   }),

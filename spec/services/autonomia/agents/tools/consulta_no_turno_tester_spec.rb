@@ -26,10 +26,13 @@ RSpec.describe Autonomia::Agents::Tools::ConsultaNoTurno, type: :job do
   def ferramenta(conta, dono)
     Autonomia::Agents::Tool.create!(
       account: conta, agent: dono, name: 'Consultar pedido', slug: 'consultar_pedido', timeout_seconds: 60,
-      endpoint_url: "https://erp.exemplo.test/pedidos?token=#{segredo_query}",
+      endpoint_url: 'https://erp.exemplo.test/legado',
       headers_config: [{ key: 'x-api-key', value: segredo_header, secret: true }],
       param_schema: [{ name: 'numero', type: 'integer', description: 'Número', required: true }]
-    )
+    ).tap do |legado|
+      # Ferramenta de antes da regra "senha fora do link" (#1430): a máscara em tempo de execução continua valendo.
+      legado.update_column(:endpoint_url, "https://erp.exemplo.test/pedidos?token=#{segredo_query}") # rubocop:disable Rails/SkipsModelValidations
+    end
   end
 
   def turno(origem = 77, conversa: conversation, vinculo: agent_inbox)

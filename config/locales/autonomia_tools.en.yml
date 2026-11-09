@@ -12,4 +12,5 @@ en:
         informacao_no_site: "cannot have agent information in the site name or after the #"
         faixa_grande: "repeats more than %{maximo} times, uses a range built from agent information, or repeats with nothing inside"
         chave_de_novo: "must be typed again"
-        chave_de_novo_outro_site: "must be typed again: the link now points to another site"
+        chave_de_novo_destino: "must be typed again, because the link or what the tool does changed"
+        senha_no_link: "can't hold a password: put it in Access key, not in the link"

@@ -172,6 +172,16 @@ RSpec.describe 'Autonomia agent tools permission', type: :request do
       expect(ferramenta.reload.endpoint_url).to eq('https://api.loja.test/frete')
     end
 
+    it 'refuses changing the path on the same site while keeping the stored secret' do
+      token = com_funcao(%w[autonomia_tools_manage]).create_new_auth_token
+
+      patch "#{base}/#{ferramenta.id}", params: { tool: { endpoint_url: 'https://api.loja.test/clientes' } }, headers: token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['campos']).to eq(['headers_config'])
+      expect(ferramenta.reload.endpoint_url).to eq('https://api.loja.test/frete')
+    end
+
     it 'lets the key holder test a tool without the secret coming back' do
       executor = instance_double(Autonomia::Agents::Tools::HttpExecutor, call: '{"ok":true}')
       allow(Autonomia::Agents::Tools::HttpExecutor).to receive(:new).and_return(executor)
