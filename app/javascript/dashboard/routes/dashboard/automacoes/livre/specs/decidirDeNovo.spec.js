@@ -39,6 +39,7 @@ const decidir = deNovo => ({
   ...(deNovo && { de_novo: deNovo }),
 });
 const DUAS_HORAS = { valor: 2, unidade: 'horas' };
+const UM_DIA = { valor: 24, unidade: 'horas' };
 
 const unidades = ['minutos', 'horas', 'dias'].map(item => ({
   valor: item,
@@ -55,7 +56,7 @@ const montar = (modelValue, passo = decidir(modelValue)) =>
   });
 
 describe('LivreDecidirDeNovo', () => {
-  it('ligado, nasce sem caminho marcado e com o prazo de 2 horas', async () => {
+  it('ligado, nasce sem caminho marcado e com o prazo de 24 horas', async () => {
     const wrapper = montar(null);
     expect(wrapper.find('[data-de-novo-caminhos]').exists()).toBe(false);
 
@@ -64,7 +65,7 @@ describe('LivreDecidirDeNovo', () => {
       .vm.$emit('update:modelValue', true);
 
     expect(wrapper.emitted('update:modelValue').at(-1)).toEqual([
-      { caminhos: [], prazo: DUAS_HORAS },
+      { caminhos: [], prazo: UM_DIA },
     ]);
   });
 
@@ -175,15 +176,14 @@ describe('frase e ensaio do decidir que decide de novo', () => {
     });
 
     expect(fraseDoPasso(passo, catalogo, tReal)).toBe(
-      'A IA decide: “O que a Ana quer?” (2 caminhos); se Ainda conversando e nenhum se aplica, espera a próxima resposta (até 2 horas) e decide de novo; sem resposta no prazo, segue em frente'
+      'A IA decide: “O que a Ana quer?” (2 caminhos); se Ainda conversando e nenhum se aplica, espera a próxima resposta (até 2 horas) e decide de novo; sem resposta no prazo, encerra sem mandar nada'
     );
     expect(fraseDoPasso(decidir(), catalogo, tReal)).toBe(
       'A IA decide: “O que a Ana quer?” (2 caminhos)'
     );
   });
 
-  it('no ensaio, o caminho que decide de novo espera a próxima resposta e mostra o que roda se o prazo vencer', () => {
-    const depois = { id: 'p2', tipo: 'acao', faria: 'acao' };
+  it('no ensaio, o caminho que decide de novo espera a próxima resposta e diz que, sem ela, encerra', () => {
     const no = {
       id: 'p1',
       tipo: 'decidir',
@@ -194,9 +194,9 @@ describe('frase e ensaio do decidir que decide de novo', () => {
           chave: 'ainda_conversando',
           nome: 'Ainda conversando',
           de_novo: true,
-          passos: [depois],
+          passos: [],
         },
-        { chave: 'nenhum', de_novo: true, passos: [depois] },
+        { chave: 'nenhum', de_novo: true, passos: [] },
       ],
     };
 
@@ -206,14 +206,12 @@ describe('frase e ensaio do decidir que decide de novo', () => {
       [1, 'Se a IA escolher "Quer visitar":'],
       [
         1,
-        'Se a IA escolher "Ainda conversando": espera a próxima resposta e decide de novo. Se o prazo vencer sem resposta:',
+        'Se a IA escolher "Ainda conversando": espera a próxima resposta e decide de novo. Sem resposta no prazo, encerra sem mandar nada.',
       ],
-      [2, 'frase p2'],
       [
         1,
-        'Se nenhum se aplicar: espera a próxima resposta e decide de novo. Se o prazo vencer sem resposta:',
+        'Se nenhum se aplicar: espera a próxima resposta e decide de novo. Sem resposta no prazo, encerra sem mandar nada.',
       ],
-      [2, 'frase p2'],
     ]);
   });
 });

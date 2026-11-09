@@ -2,7 +2,7 @@
   "AUTOMACAO_LIVRE": {
     "IA": {
       "DE_NOVO": {
-        "DICA": "Quando a IA escolher um destes caminhos, a automação espera a próxima resposta do cliente e decide de novo. Cada vez custa uma consulta à IA.",
+        "DICA": "Quando a IA escolher um destes caminhos, a automação espera a próxima resposta do cliente e decide de novo. Sem resposta no prazo, ela encerra sem mandar nada. Cada vez custa uma consulta à IA.",
         "QUANDO": "Decidir de novo quando a IA escolher",
         "PRAZO": "Esperar a próxima resposta por até",
         "DESCONHECIDO": "Um caminho marcado não existe mais ({chave}). Desmarque.",

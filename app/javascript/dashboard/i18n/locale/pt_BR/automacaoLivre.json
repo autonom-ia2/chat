@@ -313,7 +313,7 @@
       "FALTA_TEXTO": "falta escrever o texto",
       "DECIDIR": "A IA decide: “{pergunta}” ({n} caminhos)",
       "DECIDIR_SEM_PERGUNTA": "A IA decide o caminho: falta escrever a pergunta ({n} caminhos)",
-      "DECIDIR_DE_NOVO": "{frase}; se {caminhos}, espera a próxima resposta (até {prazo}) e decide de novo; sem resposta no prazo, segue em frente",
+      "DECIDIR_DE_NOVO": "{frase}; se {caminhos}, espera a próxima resposta (até {prazo}) e decide de novo; sem resposta no prazo, encerra sem mandar nada",
       "NENHUM_SE_APLICA": "nenhum se aplica",
       "EXTRAIR": "A IA procura na conversa: {lista}",
       "ESCREVER_MENSAGEM": "A IA escreve e manda ao cliente: “{instrucao}”",

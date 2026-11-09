@@ -13,8 +13,9 @@ import {
 
 // #2414 G31 — "a cada resposta, a IA decide": quando a IA escolhe um dos
 // caminhos marcados ("ainda conversando"), a automação espera a próxima
-// resposta do cliente, até o prazo, e decide de novo. Desligado, o campo sai da
-// receita. O caminho marcado não tem passos, e um caminho fica de fora.
+// resposta do cliente, até o prazo, e decide de novo; sem resposta no prazo, a
+// execução encerra sem mandar nada. Desligado, o campo sai da receita. O
+// caminho marcado não tem passos, e um caminho fica de fora.
 const props = defineProps({
   rotulo: { type: String, required: true },
   modelValue: { type: Object, default: null },
@@ -27,9 +28,9 @@ const emit = defineEmits(['update:modelValue']);
 
 const { t } = useI18n();
 const D = 'AUTOMACAO_LIVRE.IA.DE_NOVO';
-// O prazo nasce com o do "esperar a resposta" do exemplo 2 (2 horas); quem
-// monta a automação troca.
-const PRAZO_INICIAL = { valor: 2, unidade: 'horas' };
+// O prazo nasce com as 24 horas de silêncio do exemplo 2 (decisão do Rodrigo,
+// 09/11); quem monta a automação troca.
+const PRAZO_INICIAL = { valor: 24, unidade: 'horas' };
 
 const ligado = computed(() => Boolean(props.modelValue));
 const ligar = valor =>

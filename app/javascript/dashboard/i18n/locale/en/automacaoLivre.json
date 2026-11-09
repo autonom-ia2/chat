@@ -313,7 +313,7 @@
       "FALTA_TEXTO": "the text is missing",
       "DECIDIR": "AI decides: “{pergunta}” ({n} paths)",
       "DECIDIR_SEM_PERGUNTA": "AI chooses the path: the question is missing ({n} paths)",
-      "DECIDIR_DE_NOVO": "{frase}; if {caminhos}, waits for the next reply (up to {prazo}) and decides again; with no reply by then, it moves on",
+      "DECIDIR_DE_NOVO": "{frase}; if {caminhos}, waits for the next reply (up to {prazo}) and decides again; with no reply by then, it ends without sending anything",
       "NENHUM_SE_APLICA": "none applies",
       "EXTRAIR": "AI looks in the conversation for: {lista}",
       "ESCREVER_MENSAGEM": "AI writes and sends to the customer: “{instrucao}”",

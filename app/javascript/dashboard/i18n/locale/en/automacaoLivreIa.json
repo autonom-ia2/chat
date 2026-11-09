@@ -2,7 +2,7 @@
   "AUTOMACAO_LIVRE": {
     "IA": {
       "DE_NOVO": {
-        "DICA": "When the AI picks one of these paths, the automation waits for the customer's next reply and decides again. Each time costs one AI call.",
+        "DICA": "When the AI picks one of these paths, the automation waits for the customer's next reply and decides again. With no reply by the deadline, it ends without sending anything. Each time costs one AI call.",
         "QUANDO": "Decide again when the AI picks",
         "PRAZO": "Wait for the next reply at most",
         "DESCONHECIDO": "A marked path no longer exists ({chave}). Unmark it.",

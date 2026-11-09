@@ -21,7 +21,7 @@
 # - o "esperar até" confere a condição de novo e, vencido o prazo, segue pelo caminho "se vencer";
 # - a ação roda de novo;
 # - o "decidir" que decide a cada resposta (G31) decide de novo se ela chegou, ou segue esperando até o prazo; vencido,
-#   segue para o passo depois dele.
+#   a execução acaba sem mandar nada.
 class Autonomia::Automacao::Executor
   TENTATIVAS = 3
   # Espera antes da 2ª e da 3ª tentativa de um erro passageiro (F3.6).

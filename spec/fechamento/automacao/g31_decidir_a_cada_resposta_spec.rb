@@ -5,9 +5,8 @@ require 'rails_helper'
 # (G33), e o resto chega pelo despacho da plataforma, um job por vez. A IA é o dublê no endereço da OpenAI.
 #
 # Os passos 3 e 6 rodam como o termo diz: espera a resposta por até 2 horas; a cada resposta, a IA decide, e "ainda
-# conversando" volta a esperar a próxima. O prazo do "decidir de novo" (2 horas, o número do passo 3) é um exemplo: o
-# termo não diz quanto esperar nem o que fazer quando vence (pergunta ao Rodrigo no PR); vencido, segue para o passo
-# depois do decidir, que no exemplo 2 não há: a execução acaba.
+# conversando" volta a esperar a próxima. O termo não diz quanto esperar nem o que fazer quando o prazo vence; decidido
+# pelo Rodrigo em 09/11: 24 horas de silêncio encerram a execução sem mandar nada.
 # Fora daqui: o passo 5 (passar a conversa à Sofia) é a G15, provada em passo_de_ia_assumir_spec.rb; aqui a Sofia é uma
 # mensagem de saída de um robô. O link da agenda (passo 7) é a G12; no lugar dele, um aviso marca que o caminho rodou.
 # O exemplo 2 inteiro nasce quando G29, G30 e G32 fecharem. As bordas (rajada, prazo, caixa que quem ligou não vê, nova
@@ -66,7 +65,7 @@ RSpec.describe 'Fechamento #2414 · G31: decidir a cada resposta', :automacao_mo
     { nome: nome, chave: chave, descricao: descricao, passos: passos }
   end
 
-  def receita(de_novo: { caminhos: ['ainda_conversando'], prazo: { valor: 2, unidade: 'horas' } })
+  def receita(de_novo: { caminhos: ['ainda_conversando'], prazo: { valor: 24, unidade: 'horas' } })
     oi = { id: 'oi', tipo: 'mensagem',
            texto: ['Oi, ', { '$valor' => 'contato.nome' }, '! Vi que você se interessou pelo apartamento do Jardim. Posso te ajudar?'] }
     espera = { id: 'espera', tipo: 'esperar_ate', prazo: { valor: 2, unidade: 'horas' },
@@ -98,7 +97,7 @@ RSpec.describe 'Fechamento #2414 · G31: decidir a cada resposta', :automacao_mo
     travel(20.minutes) { chega_mensagem(conversa, message_type: :incoming, sender: ana, content: 'Qual o valor do condomínio?') }
     prazo = execucao.due_at
     expect([execucao.estado, execucao.cursor]).to eq(%w[esperando decide])
-    expect(prazo).to be_within(1.minute).of(20.minutes.from_now + 2.hours)
+    expect(prazo).to be_within(1.minute).of(20.minutes.from_now + 24.hours)
     expect(historico_de(automacao).last).to eq(['decide', 'ok', nil])
     expect(conversa.messages.where(private: true)).to be_empty
 
@@ -117,8 +116,35 @@ RSpec.describe 'Fechamento #2414 · G31: decidir a cada resposta', :automacao_mo
     expect(ia_recebeu.last.to_json).to include('Quero visitar sábado')
   end
 
+  it '24 horas sem resposta depois de "ainda conversando" encerram a execução sem mandar nada', :aggregate_failures do
+    automacao = montar_automacao(dona, account, nome: 'Lead do anúncio', receita: receita)
+    ligar_automacao(dona, account, automacao)
+    lead_chega
+    conversa = account.crm_cards.find_by!(contact: ana).primary_conversation
+    escolhas << 'ainda_conversando'
+    travel(20.minutes) { chega_mensagem(conversa, message_type: :incoming, sender: ana, content: 'Qual o valor do condomínio?') }
+    enviadas = conversa.messages.where(message_type: :outgoing).count
+    expect(execucao.estado).to eq('esperando')
+
+    travel(20.minutes + 23.hours + 50.minutes) do
+      Autonomia::Automacao::VarreduraJob.perform_now
+      drenar
+    end
+    expect(execucao.reload.estado).to eq('esperando')
+
+    travel(20.minutes + 24.hours + 1.minute) do
+      Autonomia::Automacao::VarreduraJob.perform_now
+      drenar
+    end
+    expect(execucao.reload.estado).to eq('concluida')
+    expect(historico_de(automacao).last).to eq(%w[decide pulado prazo_vencido])
+    expect(conversa.messages.where(message_type: :outgoing).count).to eq(enviadas)
+    expect(conversa.messages.where(private: true)).to be_empty
+    expect(ia_recebeu.size).to eq(1)
+  end
+
   it 'o salvar recusa o caminho que decide de novo e tem passos', :aggregate_failures do
-    errada = receita(de_novo: { caminhos: ['quer_visitar'], prazo: { valor: 2, unidade: 'horas' } })
+    errada = receita(de_novo: { caminhos: ['quer_visitar'], prazo: { valor: 24, unidade: 'horas' } })
     post api_automacoes(account), params: { nome: 'Lead', receita: errada }, headers: dona.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:unprocessable_content)

@@ -48,8 +48,8 @@ RSpec.describe Autonomia::Automacao::DecidirDeNovo, :automacao_motor do
     { 'nome' => nome, 'chave' => chave, 'descricao' => "quando é #{nome}", 'passos' => passos }
   end
 
-  # O passo 6 do exemplo 2, com um marcador no lugar do link da agenda (G12) e o prazo do termo como exemplo.
-  def decide(prazo = { 'valor' => 2, 'unidade' => 'horas' })
+  # O passo 6 do exemplo 2, com um marcador no lugar do link da agenda (G12) e as 24 horas decididas pelo Rodrigo (09/11).
+  def decide(prazo = { 'valor' => 24, 'unidade' => 'horas' })
     { 'id' => 'decide', 'tipo' => 'decidir', 'le' => %w[mensagens_recentes], 'pergunta' => 'O que a Ana quer?',
       'caminhos' => [caminho('Quer visitar', 'quer_visitar', [prioridade_passo('visita')]), caminho('Só curiosidade', 'so_curiosidade'),
                      caminho('Ainda conversando', 'ainda_conversando')],
@@ -80,7 +80,7 @@ RSpec.describe Autonomia::Automacao::DecidirDeNovo, :automacao_motor do
     execucao = comecar_e_rodar
 
     expect([execucao.estado, execucao.cursor]).to eq(%w[esperando decide])
-    expect(execucao.due_at).to be_between(2.hours.since(antes), 2.hours.from_now)
+    expect(execucao.due_at).to be_between(24.hours.since(antes), 24.hours.from_now)
     expect(registros(execucao)).to eq([['decide', 'ok', nil]])
     expect(ramos(execucao)).to eq(['ainda_conversando'])
     expect(Autonomia::Automacao::Registro.find_by!(execucao: execucao).dados.keys).not_to include('nota_id', 'nota_faltou')
@@ -126,18 +126,20 @@ RSpec.describe Autonomia::Automacao::DecidirDeNovo, :automacao_motor do
     expect([execucao.estado, execucao.cursor]).to eq(%w[esperando decide])
   end
 
-  # Leitura literal do termo: vencido o prazo, o "decidir" é como um caminho sem passos. O passo de depois roda sem a
-  # resposta do cliente (sem passo depois, a execução acaba).
-  it 'sem resposta até o prazo, segue para o passo depois do decidir, sem outra ida à IA', :aggregate_failures do
+  # Decisão do Rodrigo (09/11): 24 horas de silêncio encerram sem mandar nada. Os passos depois do "decidir" não rodam.
+  it 'sem resposta em 24 horas, a execução acaba sem mandar nada e o passo depois do decidir não roda', :aggregate_failures do
     ia_escolhe('ainda_conversando')
-    execucao = comecar_e_rodar(automacao_ligada(account, admin, [decide, prioridade_passo('depois')]))
-    expect(conversa.reload.priority).not_to eq('urgent')
+    execucao = comecar_e_rodar(automacao_ligada(account, admin, [decide, mensagem_passo('depois', 'Ainda está aí?')]))
+    enviadas = conversa.messages.where(message_type: :outgoing).count
 
-    travel(2.hours + 1.minute) { varrer }
+    travel(23.hours + 59.minutes) { varrer }
+    expect(execucao.reload.estado).to eq('esperando')
+
+    travel(24.hours + 1.minute) { varrer }
 
     expect(execucao.reload.estado).to eq('concluida')
-    expect(registros(execucao)).to eq([['decide', 'ok', nil], %w[decide pulado prazo_vencido], ['depois', 'ok', nil]])
-    expect(conversa.reload.priority).to eq('urgent')
+    expect(registros(execucao)).to eq([['decide', 'ok', nil], %w[decide pulado prazo_vencido]])
+    expect(conversa.messages.where(message_type: :outgoing).count).to eq(enviadas)
     expect(corpos.size).to eq(1)
   end
 
@@ -173,13 +175,13 @@ RSpec.describe Autonomia::Automacao::DecidirDeNovo, :automacao_motor do
     expect(ramos(execucao)).to eq(%w[ainda_conversando quer_visitar])
   end
 
-  it 'no ensaio, o caminho que decide de novo leva aos passos de depois do decidir, os do prazo vencido' do
+  it 'no ensaio, o caminho que decide de novo não roda passo nenhum: vencido o prazo, encerra' do
     roteiro = Autonomia::Automacao::Roteiro.new('passos' => [decide, prioridade_passo('depois')])
     ramos = described_class.ramos_do_ensaio(decide, roteiro) { |primeiro| [primeiro&.fetch('id')] }
 
     expect(ramos).to eq([{ chave: 'quer_visitar', nome: 'Quer visitar', passos: ['visita'] },
                          { chave: 'so_curiosidade', nome: 'Só curiosidade', passos: ['depois'] },
-                         { chave: 'ainda_conversando', nome: 'Ainda conversando', de_novo: true, passos: ['depois'] },
+                         { chave: 'ainda_conversando', nome: 'Ainda conversando', de_novo: true, passos: [] },
                          { chave: 'nenhum', passos: ['depois'] }])
   end
 

@@ -10,8 +10,8 @@
 # - Ao retomar, a janela é do instante da leitura até o prazo (`due_at`). A resposta conta pela régua da G11
 #   (Resposta.cliente?, só nas conversas que quem ligou vê). Acordada por outra coisa (a resposta da agente de IA, o
 #   contato mudando), volta a esperar sem chamar a IA.
-# - Vencido o prazo sem resposta, segue para o passo depois do "decidir", como um caminho sem passos (leitura literal
-#   do termo): os passos de depois rodam sem a resposta; sem passo depois, a execução acaba.
+# - Vencido o prazo sem resposta, a execução acaba ('concluida') sem mandar nada, com o registro pulado 'prazo_vencido'
+#   (decisão do Rodrigo, 09/11): os passos depois do "decidir" não rodam. É uma regra só, não configurável por caminho.
 # - A nova tentativa de um erro passageiro da IA roda direto, sem pedir outra resposta.
 # Fica fora do Executor para ele seguir sendo a lista dos passos; usa os métodos dele (aguardar, registrar, contexto).
 module Autonomia::Automacao::DecidirDeNovo
@@ -45,12 +45,13 @@ module Autonomia::Automacao::DecidirDeNovo
   end
 
   # Os ramos do "decidir" no ensaio (Ensaio#decidir), um por caminho e o "nenhum": os passos que o bloco ensaia a partir
-  # do primeiro. O caminho que decide de novo não tem passos (conferido ao salvar), então os dele são os de depois do
-  # "decidir": é o que roda se o prazo vencer sem resposta. A marca `de_novo` faz a tela dizer que antes ele espera.
+  # do primeiro. O caminho que decide de novo não roda passo nenhum: espera a próxima resposta e, vencido o prazo, a
+  # execução acaba sem mandar nada. A marca `de_novo` faz a tela dizer isso.
   def self.ramos_do_ensaio(passo, roteiro)
     caminhos = Array(passo['caminhos']).map { |item| [item['chave'], item['nome'], Array(item['passos']).first || roteiro.seguinte(passo['id'])] }
     [*caminhos, [NENHUM, nil, roteiro.entrar(passo, NENHUM)]].map do |chave, nome, primeiro|
-      { chave: chave, nome: nome, de_novo: repete?(passo, chave) || nil, passos: yield(primeiro) }.compact
+      de_novo = repete?(passo, chave)
+      { chave: chave, nome: nome, de_novo: de_novo || nil, passos: de_novo ? [] : yield(primeiro) }.compact
     end
   end
 
@@ -73,8 +74,7 @@ module Autonomia::Automacao::DecidirDeNovo
     return passo_de_ia(passo, ::Autonomia::Automacao::PassoDeDecidir) if @tentativas.positive? || respondeu_na_espera?(passo)
     return aguardar(passo, @execucao.due_at, registrar: false) if @execucao.due_at&.future?
 
-    registrar(passo['id'], 'pulado', 'prazo_vencido')
-    @roteiro.seguinte(passo['id'])
+    encerrar(passo['id'], 'concluida', 'prazo_vencido')
   end
 
   def respondeu_na_espera?(passo) = cliente_respondeu?(::Autonomia::Automacao::Duracao.janela(passo.dig('de_novo', 'prazo'), @execucao.due_at))

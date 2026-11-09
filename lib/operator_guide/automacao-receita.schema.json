@@ -278,7 +278,7 @@
       }
     },
     "de_novo": {
-      "description": "G31: decidir a cada resposta. Quando a IA escolhe um dos caminhos daqui (a chave, ou \"nenhum\"), a automação não segue por ele: espera a próxima resposta do cliente, até o prazo, e decide de novo. Cada volta é uma ida paga à IA. O caminho daqui não tem passos (\"nenhum\" vazio), e pelo menos um caminho fica fora, para a automação seguir. Vencido o prazo sem resposta, segue para o passo depois do decidir.",
+      "description": "G31: decidir a cada resposta. Quando a IA escolhe um dos caminhos daqui (a chave, ou \"nenhum\"), a automação não segue por ele: espera a próxima resposta do cliente, até o prazo, e decide de novo. Cada volta é uma ida paga à IA. O caminho daqui não tem passos (\"nenhum\" vazio), e pelo menos um caminho fica fora, para a automação seguir. Vencido o prazo sem resposta, a execução encerra sem mandar nada: os passos depois do decidir não rodam.",
       "type": "object",
       "additionalProperties": false,
       "required": ["caminhos", "prazo"],
