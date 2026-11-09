@@ -4,6 +4,7 @@ en:
     automacao:
       motivos:
         atributo_recusado: 'The account refused to create a contact field for this list. The items from there on were not handled; check the field names of the step.'
+        execucao_encerrada: 'The automation was stopped while reading the list. No contact or card was saved.'
         lista_vazia: 'The AI found no list in the conversation. No card was created.'
         quem_ligou_sem_permissao_importar: 'The person who turned on the automation can no longer import contacts. Take over and turn it back on.'
       receita:

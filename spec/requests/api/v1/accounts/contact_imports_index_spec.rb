@@ -45,8 +45,8 @@ RSpec.describe 'Contact imports list API (#2771)', :aggregate_failures, type: :r
     expect(payload.first).to include('origin' => 'automation', 'name' => 'Lista do RH', 'status' => 'completed',
                                      'imported_contacts_count' => 3, 'failed_count' => 1, 'total_rows' => 4)
     expect(payload.first['created_by']).to eq('id' => admin.id, 'name' => admin.name)
-    expect(payload.last).to include('origin' => 'file', 'source_filename' => 'clientes.csv', 'imported_contacts_count' => 2,
-                                    'failed_count' => 1)
+    expect(payload.last).to include('origin' => 'file', 'imported_contacts_count' => 2, 'failed_count' => 1)
+    expect(payload.map(&:keys).flatten).not_to include('source_filename')
     expect(response.parsed_body['meta']).to eq('count' => 2, 'current_page' => 1, 'per_page' => 25)
   end
 
@@ -73,6 +73,18 @@ RSpec.describe 'Contact imports list API (#2771)', :aggregate_failures, type: :r
     expect(payload['problem_rows']).to eq([{ 'row_number' => 2, 'phone' => '+55 •••••-0123', 'email' => nil,
                                              'errors' => ['invalid_brazilian_mobile_number'] }])
     expect(payload['problem_rows'].to_json).not_to include('Zé')
+  end
+
+  it 'answers 404 when the id is of another account or of a Públicos audience' do
+    other_account = create(:account)
+    from_other_account = import_of(other_account, user: create(:user, account: other_account))
+    audience = import_of(account, options: { flow: CampaignImport::AUDIENCE_FLOW })
+
+    [from_other_account, audience].each do |campaign_import|
+      get "/api/v1/accounts/#{account.id}/contact_imports/#{campaign_import.id}", headers: auth_headers(admin)
+
+      expect(response).to have_http_status(:not_found)
+    end
   end
 
   describe 'permissions (same as the contact import)' do

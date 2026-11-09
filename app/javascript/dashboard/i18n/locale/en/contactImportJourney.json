@@ -138,8 +138,10 @@
         "failed": "Stopped"
       },
       "FROM_AUTOMATION": "List read by the automation {name}.",
-      "LEFT_OUT_TITLE": "Left out",
-      "OPENING": "Opening the import…"
+      "LEFT_OUT_TITLE": "Left out: {count}",
+      "OPENING": "Opening the import…",
+      "LEFT_OUT_MORE": "and {count} more",
+      "FILE_TITLE": "Spreadsheet import"
     }
   }
 }

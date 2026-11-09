@@ -63,6 +63,13 @@ const fromAutomation = computed(
 const leftOut = computed(() =>
   fromAutomation.value ? contactImport.value.problem_rows || [] : []
 );
+// The API sends the first rows only (PROBLEM_ROWS_SHOWN); the total is invalid_rows.
+const leftOutTotal = computed(() =>
+  Math.max(contactImport.value?.invalid_rows || 0, leftOut.value.length)
+);
+const leftOutHidden = computed(
+  () => leftOutTotal.value - leftOut.value.length
+);
 const fileErrors = computed(() =>
   refused.value ? globalErrors(contactImport.value) : []
 );
@@ -491,7 +498,7 @@ onBeforeUnmount(stopPolling);
           data-test="left-out"
         >
           <h2 class="mb-0 text-sm font-semibold text-n-slate-12">
-            {{ t(`${NS}.LIST.LEFT_OUT_TITLE`) }}
+            {{ t(`${NS}.LIST.LEFT_OUT_TITLE`, { count: n(leftOutTotal) }) }}
           </h2>
           <ul class="m-0 flex list-none flex-col gap-1 p-0 text-sm">
             <li
@@ -507,6 +514,13 @@ onBeforeUnmount(stopPolling);
               </span>
             </li>
           </ul>
+          <p
+            v-if="leftOutHidden > 0"
+            class="mb-0 text-xs text-n-slate-11"
+            data-test="left-out-more"
+          >
+            {{ t(`${NS}.LIST.LEFT_OUT_MORE`, { count: n(leftOutHidden) }) }}
+          </p>
         </section>
       </template>
 

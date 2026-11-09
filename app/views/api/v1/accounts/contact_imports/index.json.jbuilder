@@ -1,11 +1,10 @@
-# Contatos > Importações (#2771): one line per import, counts only. No file, row or contact data.
+# Contatos > Importações (#2771): one line per import, counts only. No file name (GET /:id has it), row or contact data.
 json.payload do
   json.array! @campaign_imports do |campaign_import|
     json.id campaign_import.id
     json.status campaign_import.status
     json.origin campaign_import.from_automation? ? 'automation' : 'file'
     json.name campaign_import.name
-    json.source_filename campaign_import.source_filename
     json.total_rows campaign_import.total_rows
     json.imported_contacts_count campaign_import.imported_contacts_count
     json.failed_count campaign_import.failed_contacts_count + campaign_import.invalid_rows

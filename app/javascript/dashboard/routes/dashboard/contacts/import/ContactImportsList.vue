@@ -25,19 +25,30 @@ const n = value => formatCount(locale.value, value);
 const imports = ref([]);
 const total = ref(0);
 const page = ref(0);
+const perPage = ref(25);
 const loading = ref(false);
 const failed = ref(false);
 
-const hasMore = computed(() => imports.value.length < total.value);
+// By page, not by the rows shown: a repeated row is dropped and must not ask for more forever.
+const hasMore = computed(
+  () => page.value < Math.ceil(total.value / perPage.value)
+);
+
+// An import created between two pages shifts the next page by one: the repeated row goes.
+const withoutRepeated = (current, incoming) => {
+  const seen = new Set(current.map(item => item.id));
+  return [...current, ...incoming.filter(item => !seen.has(item.id))];
+};
 
 const load = async () => {
   loading.value = true;
   failed.value = false;
   try {
     const { data } = await ContactImportsAPI.list(page.value + 1);
-    imports.value = [...imports.value, ...data.payload];
+    imports.value = withoutRepeated(imports.value, data.payload);
     total.value = data.meta.count;
     page.value = data.meta.current_page;
+    perPage.value = data.meta.per_page || perPage.value;
   } catch {
     failed.value = true;
   } finally {
@@ -45,9 +56,11 @@ const load = async () => {
   }
 };
 
+// The file name stays on the import itself (show): the list names a spreadsheet import by its kind.
 const titleOf = item =>
-  (item.origin === 'automation' ? item.name : item.source_filename) ||
-  t(`${LIST}.NO_NAME`);
+  item.origin === 'automation'
+    ? item.name || t(`${LIST}.NO_NAME`)
+    : t(`${LIST}.FILE_TITLE`);
 
 const statusOf = item => {
   if (DONE_STATUSES.includes(item.status))

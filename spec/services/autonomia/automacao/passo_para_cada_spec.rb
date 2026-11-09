@@ -113,6 +113,68 @@ RSpec.describe Autonomia::Automacao::PassoParaCada, :automacao_motor do
     expect(anterior.campaign_import.campaign_import_rows.count).to eq(1)
   end
 
+  # O passo direto, numa execução aberta: a mesma execução roda de novo, como na nova tentativa do executor.
+  def rodar_o_passo(execucao)
+    acesso = Autonomia::Automacao::Acesso.new(execucao.automacao.reload)
+    described_class.new(execucao: execucao, passo: para_cada, alvo: conversa, acesso: acesso).executar
+  end
+
+  # Quem ligou perde a permissão de importar no meio: o 2º contato da rodada é negado.
+  def negar_o_segundo_contato
+    escritos = 0
+    allow(CampaignImports::ContactRow).to receive(:new).and_wrap_original do |novo, *args, **opcoes|
+      novo.call(*args, **opcoes).tap do |linha|
+        allow(linha).to receive(:write).and_wrap_original do |escrever, row|
+          escritos += 1
+          raise CampaignImports::ContactRow::NotAllowed if escritos == 2
+
+          escrever.call(row)
+        end
+      end
+    end
+  end
+
+  it 'a rodada que pausa no 2º item deixa a importação em andamento, e a nova tentativa fecha sem duplicar linhas',
+     :aggregate_failures do
+    execucao = comecar(automacao_ligada(account, admin, [para_cada]), conversa)
+    execucao.guardar_texto!('lista.itens', [item('João Lima', '11 98888-0001'), item('Maria Souza', '11 98888-0002'),
+                                            item('Pedro Alves', '11 98888-0003')])
+    negar_o_segundo_contato
+
+    pausada = rodar_o_passo(execucao)
+
+    importacao = account.campaign_imports.contact_imports.sole
+    expect([pausada.tipo, pausada.motivo]).to eq([:sem_acesso, 'quem_ligou_sem_permissao_importar'])
+    expect(importacao).to have_attributes(status: 'importing', import_finished_at: nil, total_rows: 3,
+                                          imported_contacts_count: 1, invalid_rows: 0, failed_contacts_count: 0)
+    expect(importacao.campaign_import_rows.pluck(:row_number)).to eq([1])
+
+    allow(CampaignImports::ContactRow).to receive(:new).and_call_original
+    retomada = rodar_o_passo(execucao)
+
+    expect(retomada.tipo).to eq(:ok)
+    expect(account.campaign_imports.contact_imports.sole).to eq(importacao)
+    expect(importacao.reload).to have_attributes(status: 'completed', imported_contacts_count: 3, failed_contacts_count: 0)
+    expect(importacao.import_finished_at).to be_present
+    expect(importacao.campaign_import_rows.order(:row_number).pluck(:row_number)).to eq([1, 2, 3])
+    expect(funil.cards.count).to eq(3)
+  end
+
+  it 'execução já encerrada não deixa importação órfã e o passo não grava nada', :aggregate_failures do
+    execucao = comecar(automacao_ligada(account, admin, [para_cada]), conversa)
+    execucao.guardar_texto!('lista.itens', [item('João Lima', '11 98888-0001')])
+    acesso = Autonomia::Automacao::Acesso.new(execucao.automacao.reload)
+    passo = described_class.new(execucao: execucao, passo: para_cada, alvo: conversa, acesso: acesso)
+    Autonomia::Automacao::Execucao.where(id: execucao.id).update_all(estado: 'interrompida', finalizada_em: Time.current) # rubocop:disable Rails/SkipsModelValidations
+
+    resultado = passo.executar
+
+    expect([resultado.tipo, resultado.motivo]).to eq([:pulado, 'execucao_encerrada'])
+    expect(CampaignImport.count).to eq(0)
+    expect(account.contacts.where(name: 'João Lima')).to be_empty
+    expect(funil.cards).to be_empty
+  end
+
   it 'o registro e o pedido à IA não levam nome nem telefone de ninguém da lista', :aggregate_failures do
     openai_devolve([item('Maria Souza', '11 98888-0002')])
 

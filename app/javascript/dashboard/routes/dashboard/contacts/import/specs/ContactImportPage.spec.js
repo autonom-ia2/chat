@@ -368,12 +368,49 @@ describe('ContactImportPage (#1006)', () => {
     expect(wrapper.get('[data-result="IMPORTED"]').text()).toContain('2');
     expect(wrapper.get('[data-result="FAILED"]').text()).toContain('1');
     const leftOut = wrapper.get('[data-test="left-out"]');
+    expect(leftOut.text()).toContain('Left out: 1');
+    expect(leftOut.find('[data-test="left-out-more"]').exists()).toBe(false);
     expect(leftOut.text()).toContain('+55 •• •••••-0123');
     expect(leftOut.text()).toContain('Not a Brazilian mobile');
     expect(wrapper.text()).not.toContain('Download');
 
     await wrapper.get('[data-test="crumb-imports"]').trigger('click');
     expect(push).toHaveBeenCalledWith({ name: 'contacts_imports_list' });
+    wrapper.unmount();
+  });
+
+  it('says how many more were left out than the rows the API sends', async () => {
+    route.params = { accountId: 1, importId: 43 };
+    const rows = Array.from({ length: 20 }, (_, index) => ({
+      row_number: index + 1,
+      phone: null,
+      email: null,
+      errors: ['invalid_brazilian_mobile_number'],
+    }));
+    api.show.mockResolvedValue({
+      data: {
+        payload: {
+          id: 43,
+          status: 'completed_with_failures',
+          flow: 'contacts',
+          origin: 'automation',
+          name: 'Lista do RH',
+          invalid_rows: 25,
+          downloads: { error_csv: false },
+          problem_rows: rows,
+        },
+      },
+    });
+
+    const wrapper = mountPage();
+    await flushPromises();
+
+    const leftOut = wrapper.get('[data-test="left-out"]');
+    expect(leftOut.text()).toContain('Left out: 25');
+    expect(leftOut.findAll('li')).toHaveLength(20);
+    expect(leftOut.get('[data-test="left-out-more"]').text()).toBe(
+      'and 5 more'
+    );
     wrapper.unmount();
   });
 

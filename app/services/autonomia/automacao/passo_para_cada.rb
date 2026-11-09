@@ -108,19 +108,26 @@ class Autonomia::Automacao::PassoParaCada
     @execucao.guardar_texto!("#{id}.nomes", itens.pluck(NOME).join(', '))
   end
 
+  # A importação fecha só no fim real (a rodada inteira, ou a falha definitiva); a pausa e o erro passageiro a deixam
+  # em `importing` (ImportacaoDoParaCada). Execução encerrada no meio (desligaram): nada é gravado.
   def abrir_cards(itens, etapa, dados)
     importacao = importacao_da_rodada(itens.size)
+    return Resultado.new(tipo: :pulado, motivo: 'execucao_encerrada', dados: dados) if importacao.nil?
+
     dados = dados.merge('importacao_id' => importacao.campaign_import.id)
     item = item_da_rodada(etapa, importacao)
+    cada_item(itens, item, dados).tap { |resultado| resultado.tipo == :ok ? importacao.fechar! : importacao.pausar! }
+  rescue Falha => e
+    e.tipo == :permanente ? importacao.fechar! : importacao.pausar!
+    Resultado.new(tipo: e.tipo, motivo: e.motivo, dados: dados.merge(item.contagem))
+  end
+
+  def cada_item(itens, item, dados)
     itens.each.with_index(1) do |valores, numero|
       negado = ::Autonomia::Automacao::Cadeia.em_raiz_nova { item.abrir(valores, numero) }
       return Resultado.new(tipo: :sem_acesso, motivo: negado.motivo, dados: dados.merge(item.contagem)) if negado
     end
     Resultado.new(tipo: :ok, motivo: nil, dados: dados.merge(item.contagem))
-  rescue Falha => e
-    Resultado.new(tipo: e.tipo, motivo: e.motivo, dados: dados.merge(item.contagem))
-  ensure
-    importacao&.fechar!
   end
 
   # O registro em Contatos > Importações (decisão 15): o mesmo na nova tentativa da rodada.

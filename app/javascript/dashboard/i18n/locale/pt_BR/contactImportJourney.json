@@ -138,8 +138,10 @@
         "failed": "Parou"
       },
       "FROM_AUTOMATION": "Lista lida pela automação {name}.",
-      "LEFT_OUT_TITLE": "Ficaram de fora",
-      "OPENING": "Abrindo a importação…"
+      "LEFT_OUT_TITLE": "Ficaram de fora: {count}",
+      "OPENING": "Abrindo a importação…",
+      "LEFT_OUT_MORE": "e mais {count}",
+      "FILE_TITLE": "Importação de planilha"
     }
   }
 }

@@ -3,11 +3,16 @@
 # "automacao", os ids da automação e da execução, e quem ligou como quem importou. Uma linha por item, como a da
 # planilha: telefone só mascarado e em hash (PhoneMask, o mesmo do import), o contato, se já existia e a empresa.
 #
-# - Um registro por rodada do passo. A nova tentativa (erro passageiro, ou a automação religada depois de `sem_acesso`)
-#   acha o mesmo registro pelo id guardado na execução e reescreve as linhas pelo número delas: nada duplica.
+# - Um registro por rodada do passo. A nova tentativa na mesma execução (erro passageiro) acha o mesmo registro pelo id
+#   guardado nela e reescreve as linhas pelo número delas: nada duplica. A automação religada depois de `sem_acesso`
+#   começa outra execução e outro registro; o da rodada pausada fica em `importing` com o que entrou.
 # - O item sem telefone de celular do Brasil e o contato que a conta recusa ficam de fora (linha `invalid`, com o
 #   motivo), como as linhas com problema da planilha. O item que não chegou a rodar (quem ligou perdeu a permissão no
-#   meio) conta em `failed_contacts_count`.
+#   meio) não conta como falha: a rodada que pausou (`sem_acesso`) ou deu erro passageiro deixa a importação em
+#   `importing`, com os números do que já rodou (#pausar!). Só o fim real fecha (#fechar!): a rodada que terminou, ou a
+#   falha definitiva, quando o que não rodou conta em `failed_contacts_count`.
+# - O registro nasce junto com o id guardado na execução. Execução já encerrada (desligaram no meio) não guarda o id:
+#   o registro não fica (sem órfão) e `abrir` devolve nil.
 # - Sem arquivo: não há CSV de problemas, nem `source_filename`. O nome é o da automação.
 class Autonomia::Automacao::ImportacaoDoParaCada
   TELEFONE_INVALIDO = 'invalid_brazilian_mobile_number'.freeze
@@ -15,9 +20,13 @@ class Autonomia::Automacao::ImportacaoDoParaCada
 
   def self.abrir(execucao:, passo_id:, account_user:, total:)
     chave = "#{passo_id}.importacao"
-    importacao = execucao.account.campaign_imports.contact_imports.find_by(id: execucao.textos.to_h[chave])
-    importacao ||= criar(execucao, account_user, total).tap { |nova| execucao.guardar_texto!(chave, nova.id.to_s) }
-    new(importacao)
+    existente = execucao.account.campaign_imports.contact_imports.find_by(id: execucao.textos.to_h[chave])
+    return new(existente) if existente
+
+    nova = ActiveRecord::Base.transaction(requires_new: true) do
+      criar(execucao, account_user, total).tap { |importacao| raise ActiveRecord::Rollback unless execucao.guardar_texto!(chave, importacao.id.to_s) }
+    end
+    nova && new(nova)
   end
 
   def self.criar(execucao, account_user, total)
@@ -58,22 +67,28 @@ class Autonomia::Automacao::ImportacaoDoParaCada
     campaign_import.update!(validation_summary: resumo.merge('contact_attributes_created' => resumo['contact_attributes_created'].to_i + quantos))
   end
 
-  # Os números saem das linhas gravadas, como no fim do import da planilha.
+  # O fim real: os números saem das linhas gravadas, como no fim do import da planilha, e o que não rodou é falha.
   def fechar!
-    linhas = campaign_import.campaign_import_rows
-    entraram = linhas.status_imported.count
-    de_fora = linhas.status_invalid.count
-    nao_rodaram = [campaign_import.total_rows - entraram - de_fora, 0].max
-    campaign_import.update!(
-      status: (de_fora + nao_rodaram).zero? ? :completed : :completed_with_failures,
-      valid_rows: campaign_import.total_rows - de_fora, invalid_rows: de_fora,
-      imported_contacts_count: entraram, existing_contacts_count: linhas.status_imported.where(was_existing_contact: true).count,
-      failed_contacts_count: nao_rodaram, import_finished_at: Time.current,
-      **::CampaignImports::ImportCompanies.new(campaign_import).counters
-    )
+    numeros = contagem
+    nao_rodaram = [campaign_import.total_rows - numeros[:imported_contacts_count] - numeros[:invalid_rows], 0].max
+    status = (numeros[:invalid_rows] + nao_rodaram).zero? ? :completed : :completed_with_failures
+    campaign_import.update!(**numeros, failed_contacts_count: nao_rodaram, import_finished_at: Time.current, status: status)
+  end
+
+  # A rodada parou no meio e pode voltar: segue `importing`, só com os números do que já rodou.
+  def pausar!
+    campaign_import.update!(**contagem, failed_contacts_count: 0)
   end
 
   private
+
+  def contagem
+    linhas = campaign_import.campaign_import_rows
+    de_fora = linhas.status_invalid.count
+    { valid_rows: campaign_import.total_rows - de_fora, invalid_rows: de_fora, imported_contacts_count: linhas.status_imported.count,
+      existing_contacts_count: linhas.status_imported.where(was_existing_contact: true).count,
+      **::CampaignImports::ImportCompanies.new(campaign_import).counters }
+  end
 
   def linha(numero, nome, telefone_mascarado)
     campaign_import.campaign_import_rows.find_or_initialize_by(row_number: numero).tap do |registro|

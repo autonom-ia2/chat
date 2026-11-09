@@ -77,7 +77,7 @@ describe('ContactImportsList (#2771)', () => {
     expect(automation.get('[data-test="status"]').text()).toBe(
       'Done, some left out'
     );
-    expect(file.text()).toContain('clientes.xlsx');
+    expect(file.text()).toContain('Spreadsheet import');
     expect(file.get('[data-test="origin"]').text()).toBe('Spreadsheet');
     expect(file.get('[data-test="status"]').text()).toBe('Done');
     expect(wrapper.find('[data-test="more"]').exists()).toBe(false);
@@ -100,8 +100,8 @@ describe('ContactImportsList (#2771)', () => {
 
   it('shows more on request, adding the next page', async () => {
     api.list
-      .mockResolvedValueOnce(page([fromAutomation], { count: 2 }))
-      .mockResolvedValueOnce(page([fromFile], { count: 2, current: 2 }));
+      .mockResolvedValueOnce(page([fromAutomation], { count: 26 }))
+      .mockResolvedValueOnce(page([fromFile], { count: 26, current: 2 }));
     const wrapper = mountList();
     await flushPromises();
 
@@ -110,6 +110,25 @@ describe('ContactImportsList (#2771)', () => {
 
     expect(api.list).toHaveBeenLastCalledWith(2);
     expect(wrapper.findAll('[data-import]')).toHaveLength(2);
+    expect(wrapper.find('[data-test="more"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('does not repeat an import that moved to the next page', async () => {
+    api.list
+      .mockResolvedValueOnce(page([fromAutomation], { count: 27 }))
+      .mockResolvedValueOnce(
+        page([fromAutomation, fromFile], { count: 27, current: 2 })
+      );
+    const wrapper = mountList();
+    await flushPromises();
+
+    await wrapper.get('[data-test="more"]').trigger('click');
+    await flushPromises();
+
+    expect(
+      wrapper.findAll('[data-import]').map(row => row.attributes('data-import'))
+    ).toEqual(['9', '7']);
     expect(wrapper.find('[data-test="more"]').exists()).toBe(false);
     wrapper.unmount();
   });

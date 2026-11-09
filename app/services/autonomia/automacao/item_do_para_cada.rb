@@ -51,13 +51,21 @@ class Autonomia::Automacao::ItemDoParaCada
   private
 
   # Contato, empresa e atributos juntos, como na savepoint de cada linha do import.
+  # A linha da importação fica fora do rescue: não conseguir gravá-la é falha do passo, não contato recusado.
   def escrever(numero, valores, linha_do_item, extras)
-    escrito = ActiveRecord::Base.transaction { linha.write(linha_do_item).tap { |feito| gravar_extras(feito.contact, extras) } }
+    escrito = contato(linha_do_item, extras)
+    return de_fora(numero, valores, ::Autonomia::Automacao::ImportacaoDoParaCada::CONTATO_RECUSADO, 'contato_recusado') if escrito.nil?
+
     @importacao.entrou(numero, escrito, nome: valores[NOME], telefone: linha_do_item[:phone_number])
     contar_contato(escrito)
     card(escrito.contact)
+  end
+
+  # O ContactRow::Result, ou nil quando a conta recusa o contato.
+  def contato(linha_do_item, extras)
+    ActiveRecord::Base.transaction { linha.write(linha_do_item).tap { |feito| gravar_extras(feito.contact, extras) } }
   rescue ActiveRecord::RecordInvalid
-    de_fora(numero, valores, ::Autonomia::Automacao::ImportacaoDoParaCada::CONTATO_RECUSADO, 'contato_recusado')
+    nil
   end
 
   # O item fica de fora da importação (com o motivo dela) e pula (com o motivo do registro da execução).

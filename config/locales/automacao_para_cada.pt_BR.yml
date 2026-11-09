@@ -4,6 +4,7 @@ pt_BR:
     automacao:
       motivos:
         atributo_recusado: 'A conta recusou criar um campo do contato para esta lista. Os itens dali em diante não foram tratados; confira os nomes dos campos do passo.'
+        execucao_encerrada: 'A automação foi encerrada enquanto lia a lista. Nenhum contato nem card foi gravado.'
         lista_vazia: 'A IA não achou lista na conversa. Nenhum card foi criado.'
         quem_ligou_sem_permissao_importar: 'Quem ligou a automação não pode mais importar contatos. Assuma e religue.'
       receita:
