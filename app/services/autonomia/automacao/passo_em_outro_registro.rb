@@ -4,7 +4,8 @@
 #
 # O resultado segue o do PassoDeAcao:
 # - :ok com a ligação nos dados (a procura e as filhas ficam com o job);
-# - :pulado `faltou_valor` sem âncora (o campo do card vazio, o alvo sem contato);
+# - :pulado `faltou_valor` sem âncora (o campo do card vazio, o alvo sem contato, o passo que devia criar o registro
+#   não criou: G49);
 # - :sem_acesso `sem_chave_de_funis` quando a ligação lê cards e quem ligou perdeu a chave de funis: pausa, como a ação
 #   de funil (#2633).
 class Autonomia::Automacao::PassoEmOutroRegistro
@@ -23,24 +24,31 @@ class Autonomia::Automacao::PassoEmOutroRegistro
     return Resultado.new(tipo: :sem_acesso, motivo: 'sem_chave_de_funis', dados: {}) if sem_chave?
 
     # Só um número inteiro de verdade: "12abc" não vira o contato 12.
-    contato_id = Integer(ancora.to_s, 10, exception: false).to_i
-    return Resultado.new(tipo: :pulado, motivo: 'faltou_valor', dados: {}) unless contato_id.positive?
+    ancora_id = Integer(ancora.to_s, 10, exception: false).to_i
+    return Resultado.new(tipo: :pulado, motivo: 'faltou_valor', dados: {}) unless ancora_id.positive?
 
-    ::Autonomia::Automacao::EmOutroRegistroJob.perform_later(@execucao.account_id, @execucao.id, @passo['id'], contato_id)
-    Resultado.new(tipo: :ok, dados: { 'ligacao' => registro['de'], 'contato_id' => contato_id })
+    ::Autonomia::Automacao::EmOutroRegistroJob.perform_later(@execucao.account_id, @execucao.id, @passo['id'], ancora_id)
+    Resultado.new(tipo: :ok, dados: { 'ligacao' => registro['de'], chave_da_ancora => ancora_id })
   end
 
   private
 
   def registro = @passo['registro'].to_h
 
+  def criado? = registro['de'] == ::Autonomia::Automacao::EmOutroRegistro::CRIADO
+
+  def chave_da_ancora = criado? ? 'registro_id' : 'contato_id'
+
   def sem_chave?
-    ::Autonomia::Automacao::EmOutroRegistro.de_funil?(@passo) && !::Autonomia::Automacao::RegraDoFunil.chave?(@acesso.account_user)
+    ::Autonomia::Automacao::EmOutroRegistro.de_funil?(@passo, @execucao.versao.receita) &&
+      !::Autonomia::Automacao::RegraDoFunil.chave?(@acesso.account_user)
   end
 
-  # O contato de onde a procura parte: o do campo (`contato_do_campo`) ou o do alvo (`cards_do_contato`).
+  # O contato de onde a procura parte: o do campo (`contato_do_campo`) ou o do alvo (`cards_do_contato`). No
+  # `criado_no_passo` (G49), o próprio registro que o passo criou nesta execução.
   def ancora
     return @valores.ler(registro.dig('campo', '$valor')) if registro['de'] == 'contato_do_campo'
+    return @valores.ler("#{::Autonomia::Automacao::RegistroCriado::PREFIXO}#{registro['passo']}") if criado?
 
     @valores.ler('contato.id')
   end

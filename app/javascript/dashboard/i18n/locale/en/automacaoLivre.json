@@ -171,7 +171,8 @@
       "ASSUNTO": "Subject",
       "MODELO": "If the 24-hour window is closed",
       "REGISTRO": "Where to run the steps inside",
-      "PASSOS": "Steps inside"
+      "PASSOS": "Steps inside",
+      "CONTATO": "In which contact the card starts"
     },
     "OPCOES": {
       "STATUS": {
@@ -411,7 +412,8 @@
       "SEM_AGENTE_DE_IA": "No AI agent receives conversations in this account yet. Add an agent to an inbox, in AI Agents, to use this step.",
       "AGENTES_DE_IA_FALHOU": "Could not load the AI agents. Reload the page to try again.",
       "POR_VALOR_EM": "Add a conversation detail to “{campo}”",
-      "SEM_CAIXA_DE_EMAIL": "This account has no e-mail inbox yet. Create one in Inboxes to use this step."
+      "SEM_CAIXA_DE_EMAIL": "This account has no e-mail inbox yet. Create one in Inboxes to use this step.",
+      "CONTATO_DO_ALVO": "The contact of this automation"
     },
     "LIGAR": {
       "BOTAO": "Turn on",
@@ -423,6 +425,10 @@
       "DESLIGAR": "Turn off",
       "SO_LEITURA": "You can see this automation. To change it, ask who looks after automations.",
       "FALTA_COMPLETAR": "A step is incomplete: choose the condition and, in \"If\", add at least one step under Then."
+    },
+    "CRIADO": {
+      "CONTATO": "Contact created by this automation",
+      "CARD": "Card created by this automation"
     }
   }
 }

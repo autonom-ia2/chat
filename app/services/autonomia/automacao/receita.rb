@@ -77,8 +77,12 @@ class Autonomia::Automacao::Receita
   # os passos que ele aceita.
   def gatilho_novo = ::Autonomia::Automacao::ProblemasDoGatilho.new(@receita['gatilho'].to_h, @conta, passos: passos).problemas
 
-  # A caixa por onde abrir a conversa de quem não tem (#2680): da conta, e quem salva pode começar conversa nela.
-  def conversa_nova = ::Autonomia::Automacao::ConversaNova.problemas_ao_salvar(@conta, @receita['gatilho'].to_h, @account_user)
+  # A caixa por onde abrir a conversa de quem não tem (#2680): da conta, e quem salva pode começar conversa nela. O ramo
+  # do "em outro registro" num card ou contato também pode não ter conversa (G49).
+  def conversa_nova
+    ramos = ::Autonomia::Automacao::EmOutroRegistro.alvos_dos_ramos(passos, @receita)
+    ::Autonomia::Automacao::ConversaNova.problemas_ao_salvar(@conta, @receita['gatilho'].to_h, @account_user, ramos: ramos)
+  end
 
   def filtros_do_gatilho
     Array(@receita.dig('gatilho', 'filtros')).flat_map { |condicao| problemas_da_condicao('gatilho', condicao, no_gatilho: true) }
@@ -97,7 +101,9 @@ class Autonomia::Automacao::Receita
   # Os passos com conferência própria (PassosProprios); os caminhos que eles leem passam pela régua daqui.
   def passos_proprios
     @passos_proprios ||= ::Autonomia::Automacao::PassosProprios.new(conta: @conta, account_user: @account_user, receita: @receita,
-                                                                    dentro: @alvo.present?) { |id, c| problemas_do_caminho(id, c) }
+                                                                    dentro: @alvo.present?) do |id, c, **opcoes|
+                                                                      problemas_do_caminho(id, c, **opcoes)
+                                                                    end
   end
 
   # "mensagem", "avisar" e "email" (F4, G2): só com a flag da F4, os valores do texto (do assunto do e-mail e de cada
@@ -197,11 +203,15 @@ class Autonomia::Automacao::Receita
 
   # Caminho que a automação não sabe ler, ou atributo que a conta não tem. O atributo apagado depois de salvar chega
   # vazio no motor, com o motivo no registro. A resposta (G11) só existe na condição do "esperar até": fora dele não há
-  # o começo da espera, e ela leria sempre vazio. O texto da IA (#2679) só vem de um passo que escreve.
-  def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false)
+  # o começo da espera, e ela leria sempre vazio. O texto da IA (#2679) só vem de um passo que escreve; o registro criado
+  # (G49), de um passo que cria, e do `tipo` pedido quando o lugar só aceita um (o contato do "criar card").
+  def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false, tipo: nil)
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
     return ::Autonomia::Automacao::TextoDaIaNaReceita.new(self, @receita).problemas(id, caminho, no_gatilho: no_gatilho) if valores.da_ia?(caminho)
+    if ::Autonomia::Automacao::RegistroCriado.caminho?(caminho)
+      return ::Autonomia::Automacao::RegistroCriadoNaReceita.new(self, @receita, tipo: tipo).problemas(id, caminho, no_gatilho: no_gatilho)
+    end
 
     fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera, gatilho: @receita.dig('gatilho', 'tipo'))
     return [texto(fora, passo: id, caminho: caminho)] if fora

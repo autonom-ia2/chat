@@ -145,6 +145,14 @@ const trocaDoGatilho = computed(() => {
 
 // Campo opcional que volta vazio (o modelo da F4b) sai da receita: o esquema
 // não aceita null.
+// G49: o contato em que o "criar card" nasce: o do alvo (padrão) ou o que um
+// passo anterior desta execução criou.
+const opcoesDoContatoCriado = computed(() => [
+  { value: '', label: t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.CONTATO_DO_ALVO') },
+  ...(props.catalogo.valores || [])
+    .filter(item => item.criado === 'Contact')
+    .map(item => ({ value: item.caminho, label: item.rotulo })),
+]);
 const mudarNativo = (nome, novo) => {
   if (novo === null) {
     const { [nome]: _tirado, ...resto } = rascunho.value;
@@ -448,6 +456,23 @@ defineExpose({ abrir, fechar });
           :etiquetas="opcoes.etiqueta"
           @update:model-value="novo => (rascunho = novo)"
         />
+        <div
+          v-else-if="campo.peca === 'contato_criado'"
+          class="flex flex-col gap-1.5"
+          data-peca="contato_criado"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(campo.rotulo) }}
+          </span>
+          <ChoiceSelect
+            :model-value="rascunho[campo.nome]?.$valor ?? ''"
+            :aria-label="$t(campo.rotulo)"
+            :options="opcoesDoContatoCriado"
+            @update:model-value="
+              novo => mudarNativo(campo.nome, novo ? { $valor: novo } : null)
+            "
+          />
+        </div>
         <LivreEtapa
           v-else-if="campo.peca === 'etapa'"
           :rotulo="$t(campo.rotulo)"

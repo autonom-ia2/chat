@@ -96,6 +96,9 @@ class Autonomia::Automacao::Contexto
   # nil.
   def texto_da_ia(passo_id) = (@textos || @execucao&.textos).to_h[passo_id.to_s]
 
+  # G49: o id do registro que o passo `passo_id` criou nesta execução; sem execução (o ensaio) ou antes do passo, nil.
+  def criado(passo_id) = ::Autonomia::Automacao::RegistroCriado.da_execucao(@execucao, passo_id)&.dig('id')
+
   # "conversa", "card" ou "contato": a base dos caminhos do Valores que o alvo tem sem ponte.
   def base
     BASES.find { |classe, _| @alvo.is_a?(classe) }&.last

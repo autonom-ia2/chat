@@ -6,6 +6,8 @@
 #   ramo roda: no contato, ou na conversa mais recente dele (onde a mensagem sai);
 # - `cards_do_contato`: os cards do contato do alvo (menos o próprio alvo), filtrados por funil, etapa e situação, ou só
 #   o mais recente deles.
+# - `criado_no_passo` (G49): o registro que um passo anterior desta execução criou (`passo`: o id dele): o contato do
+#   `POST contacts` ou o card do "criar card" (RegistroCriado). Exemplo 11, passo 5: a mensagem ao João sai no card dele.
 #
 # O ramo (`passos`) roda numa execução própria por registro achado: a "filha". A mãe só lê a âncora (o id do contato) e
 # segue; quem procura os registros e abre as filhas é o EmOutroRegistroJob, fora da rodada da mãe. A filha:
@@ -26,16 +28,27 @@ module Autonomia::Automacao::EmOutroRegistro
 
   def do_tipo?(passo) = passo['tipo'] == TIPO
 
-  # O tipo do registro em que o ramo roda: é contra ele que o salvar confere os valores lidos no ramo.
-  def alvo_do_ramo(passo)
+  # O tipo do registro em que o ramo roda: é contra ele que o salvar confere os valores lidos no ramo. No
+  # `criado_no_passo` (G49), o do registro que o passo cria, achado na `receita` (nil se o passo não cria).
+  def alvo_do_ramo(passo, receita)
     registro = passo['registro'].to_h
     return 'Crm::Card' if registro['de'] == 'cards_do_contato'
+    return criado_pelo(registro['passo'], receita) if registro['de'] == CRIADO
 
     registro['usar'] == 'conversa' ? 'Conversation' : 'Contact'
   end
 
+  CRIADO = 'criado_no_passo'.freeze
+
+  def criado_pelo(passo_id, receita)
+    ::Autonomia::Automacao::RegistroCriado.tipo_do_passo(::Autonomia::Automacao::Roteiro.new(receita.to_h).passo(passo_id))
+  end
+
+  # O tipo do registro de cada "em outro registro" dos `passos` (a conversa nova, G49).
+  def alvos_dos_ramos(passos, receita) = passos.filter_map { |passo| alvo_do_ramo(passo, receita) if do_tipo?(passo) }
+
   # A ligação lê cards do CRM: pede a chave de funis, como o gatilho de card e a ação de funil (controller#de_funil?).
-  def de_funil?(passo) = do_tipo?(passo) && alvo_do_ramo(passo) == 'Crm::Card'
+  def de_funil?(passo, receita) = do_tipo?(passo) && alvo_do_ramo(passo, receita) == 'Crm::Card'
 
   def marca(mae, registro, passo_id) = [MARCA, mae.id, BASES.fetch(registro.class.name), registro.id, passo_id].join(':')
 
@@ -58,17 +71,24 @@ module Autonomia::Automacao::EmOutroRegistro
 
   # Frases do salvar. `dentro`: o passo está no ramo de outro "em outro registro". O ramo é conferido como uma receita
   # cujo alvo é o registro (Receita com `alvo:`); o valor da âncora, pela régua do alvo da mãe (o bloco).
-  def problemas_ao_salvar(passo, conta:, account_user:, dentro:, &)
+  # `receita`: a receita inteira, de onde sai o tipo do registro criado (G49).
+  def problemas_ao_salvar(passo, conta:, account_user:, dentro:, receita:, &)
     id = passo['id']
     return [texto(:aninhado, passo: id)] if dentro
 
+    ligacao = da_ligacao(id, passo['registro'].to_h, conta, account_user, &)
+    alvo = alvo_do_ramo(passo, receita)
+    return ligacao if alvo.nil?
+
     ramo = { 'gatilho' => {}, 'passos' => passo['passos'] }
-    [*da_ligacao(id, passo['registro'].to_h, conta, account_user, &),
-     *::Autonomia::Automacao::Receita.new(ramo, conta: conta, account_user: account_user, alvo: alvo_do_ramo(passo)).problemas]
+    [*ligacao, *::Autonomia::Automacao::Receita.new(ramo, conta: conta, account_user: account_user, alvo: alvo).problemas]
   end
 
-  def da_ligacao(id, registro, conta, account_user)
-    return [*yield(registro.dig('campo', '$valor'))] if registro['de'] == 'contato_do_campo'
+  # O campo do contato só aceita o contato criado (G49); o `criado_no_passo` é conferido como o valor `criado.<passo>`.
+  def da_ligacao(id, registro, conta, account_user, &)
+    criado = ::Autonomia::Automacao::RegistroCriado
+    return [*yield(registro.dig('campo', '$valor'), tipo: criado::CONTATO)] if registro['de'] == 'contato_do_campo'
+    return [*yield("#{criado::PREFIXO}#{registro['passo']}")] if registro['de'] == CRIADO
 
     chave = account_user && !::Autonomia::Automacao::RegraDoFunil.chave?(account_user) ? [texto(:sem_chave_de_funis, passo: id)] : []
     chave + do_funil(id, registro, conta)

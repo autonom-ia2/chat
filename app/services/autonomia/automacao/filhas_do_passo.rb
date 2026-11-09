@@ -11,10 +11,11 @@ class Autonomia::Automacao::FilhasDoPasso
   # O filtro da ligação `cards_do_contato` e a coluna do card que ele filtra.
   FILTROS = { 'funil_id' => :pipeline_id, 'etapa_id' => :stage_id, 'situacao' => :status }.freeze
 
-  def initialize(mae, passo, contato_id)
+  # `ancora_id`: o id do contato de onde a procura parte; no `criado_no_passo` (G49), o do registro criado.
+  def initialize(mae, passo, ancora_id)
     @mae = mae
     @passo = passo
-    @contato_id = contato_id
+    @ancora_id = ancora_id
     @account = mae.account
     @acesso = ::Autonomia::Automacao::Acesso.new(mae.automacao, chave_gatilho: mae.chave_gatilho)
   end
@@ -33,16 +34,23 @@ class Autonomia::Automacao::FilhasDoPasso
 
   def registro = @passo['registro'].to_h
 
-  def contato = (@contato ||= @account.contacts.find_by(id: @contato_id))
+  def contato = (@contato ||= @account.contacts.find_by(id: @ancora_id))
 
   # Um Enumerator, para os cards irem em lotes (find_each), sem teto.
   def registros
+    return Array(criado) if registro['de'] == ::Autonomia::Automacao::EmOutroRegistro::CRIADO
     return [] unless contato
 
     case registro['de']
     when 'contato_do_campo' then [registro['usar'] == 'conversa' ? conversa_mais_recente : contato].compact
     else cards
     end
+  end
+
+  # G49: o registro que o passo criou, do tipo que esse passo cria, sempre na conta da mãe.
+  def criado
+    tipo = ::Autonomia::Automacao::EmOutroRegistro.alvo_do_ramo(@passo, @mae.versao.receita)
+    { 'Contact' => @account.contacts, 'Crm::Card' => @account.crm_cards }[tipo]&.find_by(id: @ancora_id)
   end
 
   def conversa_mais_recente

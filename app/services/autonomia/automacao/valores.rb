@@ -82,6 +82,10 @@ class Autonomia::Automacao::Valores
   IA = 'ia.'.freeze
   PASSOS_QUE_ESCREVEM = %w[escrever resumir].freeze
 
+  # G49: o id do registro que um passo desta execução criou (`criado.<id do passo>`: o contato do `POST contacts`, o
+  # card do "criar card"). Como o texto da IA, vale em qualquer alvo e só na execução que criou (RegistroCriado).
+  CRIADO = ::Autonomia::Automacao::RegistroCriado
+
   # O que cada alvo alcança, pelas pontes do Contexto.
   BASES_DO_ALVO = {
     'Conversation' => %w[conversa contato envio],
@@ -132,7 +136,7 @@ class Autonomia::Automacao::Valores
   class << self
     def caminho_valido?(caminho)
       [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA, ENVIO].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? ||
-        da_ia?(caminho)
+        da_ia?(caminho) || CRIADO.caminho?(caminho)
     end
 
     def da_ia?(caminho) = caminho.to_s.start_with?(IA) && caminho.to_s.length > IA.length
@@ -158,7 +162,7 @@ class Autonomia::Automacao::Valores
 
     # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.
     def no_alvo?(caminho, alvo_type)
-      return true if da_mensagem?(caminho) || da_ia?(caminho)
+      return true if da_mensagem?(caminho) || da_ia?(caminho) || CRIADO.caminho?(caminho)
       return true if BASES_DO_ALVO.fetch(alvo_type, []).include?(caminho.to_s.split('.', 2).first)
 
       caminho.to_s == RESPOSTA_DO_CONTATO && BASES_DO_ALVO.fetch(alvo_type, []).include?('contato')
@@ -206,12 +210,20 @@ class Autonomia::Automacao::Valores
   def falta_da_agenda = (@por_da_agenda if @vazios.any? && @vazios.all? { |caminho| AGENDA.key?(caminho) })
 
   def ler(caminho)
-    valor = self.class.da_ia?(caminho) ? @contexto.texto_da_ia(self.class.passo_da_ia(caminho)) : lido(caminho)
+    valor = do_passo(caminho)
     @vazios << caminho.to_s if valor.blank?
     valor
   end
 
   private
+
+  # O texto da IA e o registro criado ficam na execução; o resto, no alvo.
+  def do_passo(caminho)
+    return @contexto.texto_da_ia(self.class.passo_da_ia(caminho)) if self.class.da_ia?(caminho)
+    return @contexto.criado(CRIADO.passo_do(caminho)) if CRIADO.caminho?(caminho)
+
+    lido(caminho)
+  end
 
   def lido(caminho)
     return unless permitido?(caminho)

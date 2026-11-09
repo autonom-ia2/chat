@@ -153,7 +153,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     return true if ::Autonomia::Automacao::Gatilhos.do_card?(receita.dig('gatilho', 'tipo'))
 
     ::Autonomia::Automacao::Receita.new(receita, conta: Current.account, account_user: Current.account_user).passos.any? do |passo|
-      PASSOS_DE_FUNIL.include?(passo['tipo']) || ::Autonomia::Automacao::EmOutroRegistro.de_funil?(passo) ||
+      PASSOS_DE_FUNIL.include?(passo['tipo']) || ::Autonomia::Automacao::EmOutroRegistro.de_funil?(passo, receita) ||
         (passo['tipo'] == 'acao' && ::Autonomia::Automacao::AcoesPermitidas.de_funil?(passo['acao']))
     end
   end

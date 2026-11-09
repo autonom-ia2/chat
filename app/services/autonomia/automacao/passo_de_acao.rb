@@ -96,13 +96,16 @@ class Autonomia::Automacao::PassoDeAcao
 
   def classificar(resultado, codigo, caderno)
     dados = { 'acao' => @passo['acao'], 'codigo' => codigo, 'registro' => resultado.registro, 'caderno_id' => caderno.id }
-    return Resultado.new(tipo: :ok, dados: dados) if resultado.ok
+    # G49: o registro que a ação criou vira valor dos passos seguintes (`criado.<passo>`).
+    return Resultado.new(tipo: :ok, dados: dados.merge({ 'criado' => criado(caderno) }.compact)) if resultado.ok
     return Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_acesso', dados: dados) if [401, 403].include?(codigo)
     return Resultado.new(tipo: :permanente, motivo: 'erro_permanente', dados: dados) if permanente?(codigo)
     return Resultado.new(tipo: :permanente, motivo: 'erro_depois_de_gravar', dados: dados) if caderno.mudancas.exists?
 
     Resultado.new(tipo: :passageiro, motivo: 'erro_passageiro', dados: dados)
   end
+
+  def criado(caderno) = ::Autonomia::Automacao::RegistroCriado.do_caderno(@passo['acao'], caderno)
 
   def permanente?(codigo)
     codigo.to_i.between?(400, 499) && PASSAGEIROS.exclude?(codigo)

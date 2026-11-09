@@ -119,6 +119,7 @@ export const receitaVazia = () => ({ gatilho: null, passos: [] });
 // os cards do contato valem sem filtro.
 export const registroPronto = registro => {
   if (registro?.de === 'cards_do_contato') return true;
+  if (registro?.de === 'criado_no_passo') return Boolean(registro.passo);
   return registro?.de === 'contato_do_campo' && Boolean(registro.campo?.$valor);
 };
 

@@ -395,7 +395,10 @@ export const fraseDoPasso = (passo, catalogo, t) => {
       mensagem: passo.envio && fraseDoTexto(passo.envio.mensagem, catalogo, t),
     });
   if (passo.tipo === EM_OUTRO_REGISTRO) {
-    const campo = passo.registro?.campo?.$valor;
+    // G49: no `criado_no_passo`, o nome do registro criado (`criado.<passo>`).
+    const campo =
+      passo.registro?.campo?.$valor ||
+      (passo.registro?.passo && `criado.${passo.registro.passo}`);
     return fraseDoOutroRegistro(
       passo,
       t,

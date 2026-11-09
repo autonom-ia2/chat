@@ -4,6 +4,7 @@
 // o ramo roda (é ele que diz quais dados os passos de dentro podem usar), a
 // frase da linha e o "pronto" da peça do painel. A régua de verdade é a do
 // servidor (Autonomia::Automacao::EmOutroRegistro).
+import { tipoCriado } from './catalogo';
 import {
   OUTRO_REGISTRO,
   RAIZ,
@@ -19,14 +20,22 @@ export { registroPronto };
 const O = 'AUTOMACAO_LIVRE.OUTRO_REGISTRO';
 
 export const TIPO = OUTRO_REGISTRO;
-export const LIGACOES = ['contato_do_campo', 'cards_do_contato'];
+// G49: `criado_no_passo`, o contato ou o card que um passo anterior criou.
+export const LIGACOES = [
+  'contato_do_campo',
+  'cards_do_contato',
+  'criado_no_passo',
+];
 export const USOS = ['conversa', 'contato'];
 export const SITUACOES = ['open', 'won', 'lost'];
 
-// O tipo do registro em que o ramo roda, como no servidor (alvo_do_ramo).
-export const alvoDoRamo = passo => {
+// O tipo do registro em que o ramo roda, como no servidor (alvo_do_ramo). No
+// `criado_no_passo` (G49), o do registro que o passo escolhido cria.
+export const alvoDoRamo = (passo, passos = []) => {
   const registro = passo?.registro || {};
   if (registro.de === 'cards_do_contato') return 'Crm::Card';
+  if (registro.de === 'criado_no_passo')
+    return tipoCriado(acharPasso(passos, registro.passo));
   return registro.usar === 'contato' ? 'Contact' : 'Conversation';
 };
 
@@ -55,7 +64,7 @@ export const alvoDaLista = (passos, listaId) => {
   if (!listaId || listaId === RAIZ) return null;
   const dono = acharPasso(passos, listaId.slice(0, listaId.lastIndexOf(':')));
   if (!dono) return null;
-  if (dono.tipo === TIPO) return alvoDoRamo(dono);
+  if (dono.tipo === TIPO) return alvoDoRamo(dono, passos);
   return alvoDaLista(passos, listaDoPasso(passos, dono.id));
 };
 
@@ -70,7 +79,8 @@ export const passosDaExecucao = (passos, listaId) => {
   return passosDaExecucao(passos, listaDoPasso(passos, dono.id));
 };
 
-// `campo`: o nome do campo que guarda o contato, já em palavras.
+// `campo`: o nome do campo que guarda o contato, já em palavras; no
+// `criado_no_passo` (G49), o nome do registro criado ("Card criado…").
 export const fraseDoOutroRegistro = (passo, t, campo = '') => {
   const registro = passo.registro || {};
   if (registro.de === 'contato_do_campo')
@@ -80,6 +90,8 @@ export const fraseDoOutroRegistro = (passo, t, campo = '') => {
         campo: campo || '…',
       }
     );
+  if (registro.de === 'criado_no_passo')
+    return t(`${O}.FRASE.CRIADO`, { registro: campo || '…' });
   if (registro.de !== 'cards_do_contato') return t(`${O}.FRASE.SEM_LIGACAO`);
   const filtros = [
     ...(registro.situacao || []).map(valor =>

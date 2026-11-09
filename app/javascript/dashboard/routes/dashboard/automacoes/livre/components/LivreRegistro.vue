@@ -7,8 +7,9 @@ import { fraseDoValor } from '../frases';
 import { LIGACOES, SITUACOES, USOS } from '../outroRegistro';
 
 // G18 (#2671) — onde os passos de dentro do "em outro registro" rodam: no
-// contato guardado num campo (o card do João guarda quem o indicou) ou nos
-// outros cards do mesmo contato. Os cards pedem a chave de funis, como o
+// contato guardado num campo (o card do João guarda quem o indicou), nos
+// outros cards do mesmo contato ou (G49) no contato ou card que um passo
+// anterior criou. Os cards pedem a chave de funis, como o
 // gatilho de card: sem ela, a opção não aparece (o servidor recusa também).
 const props = defineProps({
   rotulo: { type: String, required: true },
@@ -33,10 +34,19 @@ const MODELO_DA_BASE = {
 
 const registro = computed(() => props.modelValue || {});
 const de = computed(() => registro.value.de || null);
+// G49: os registros que os passos desta execução criam (`criado.<passo>`).
+const opcoesDeCriado = computed(() =>
+  (props.catalogo.valores || [])
+    .filter(item => item.criado)
+    .map(item => ({ value: item.chave, label: item.rotulo }))
+);
+const disponivel = valor => {
+  if (valor === 'cards_do_contato') return props.podeLerCards;
+  if (valor === 'criado_no_passo') return opcoesDeCriado.value.length > 0;
+  return true;
+};
 const opcoesDeLigacao = computed(() =>
-  LIGACOES.filter(
-    valor => valor !== 'cards_do_contato' || props.podeLerCards
-  ).map(valor => ({
+  LIGACOES.filter(disponivel).map(valor => ({
     value: valor,
     label: t(`${O}.LIGACOES.${valor.toUpperCase()}`),
   }))
@@ -165,6 +175,20 @@ const trocarFunil = valor => trocar({ funil_id: valor, etapa_id: null });
         />
       </div>
     </template>
+
+    <div v-if="de === 'criado_no_passo'" class="flex flex-col gap-1.5">
+      <span class="text-sm font-medium text-n-slate-12">
+        {{ $t(`${O}.CRIADO`) }}
+      </span>
+      <ChoiceSelect
+        data-criado
+        :model-value="registro.passo ?? ''"
+        :aria-label="$t(`${O}.CRIADO`)"
+        :placeholder="$t(`${O}.ESCOLHA`)"
+        :options="opcoesDeCriado"
+        @update:model-value="valor => trocar({ passo: valor })"
+      />
+    </div>
 
     <template v-if="de === 'cards_do_contato'">
       <LivreMarcar

@@ -18,10 +18,7 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # O 13 saiu com o lote 2 (#2679): o spec dele roda à risca, com o card ganho e a IA lendo o card.
     10 => ['Cliente bravo vai direto para a gerente',
            'G40 (esperar só a Fernanda), G41 (a instrução no resumir e avisar com a agente de IA atendendo), G28'],
-    # #2675 (09/11): com a G18, o 11 ainda para no passo 3. O POST contacts cria o João, mas nenhum passo seguinte o alcança
-    # (o contato criado não é valor da receita), e a filha não lê a Maria para gravar "indicado por Maria" no card dele.
-    11 => ['Indicação que vira presente',
-           'G49 (passo 3: agir no contato que o passo criou e gravar quem indicou no card dele), G1, G4, G5, G12, G16, G17, G18'],
+    # O 11 saiu com a G49: o spec dele roda à risca (exemplo_11_indicacao_spec.rb).
     12 => ['Visita que aconteceu decide o próximo passo', 'G5 (entrou em "Visita feita"), G2, G3, G11, G14, G25, G35'],
     14 => ['Documentação completa para emitir', 'G5 (entrou em "Documentação"), G1, G3, G13, G20'],
     15 => ['Cliente grande, atendimento de dono', 'G27 (card atualizado com valor acima de R$ 50 mil), G3, G5, G11, G12, G15, G35'],

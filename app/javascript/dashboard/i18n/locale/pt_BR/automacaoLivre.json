@@ -171,7 +171,8 @@
       "ASSUNTO": "Assunto",
       "MODELO": "Se a janela de 24 h estiver fechada",
       "REGISTRO": "Onde fazer os passos de dentro",
-      "PASSOS": "Passos de dentro"
+      "PASSOS": "Passos de dentro",
+      "CONTATO": "Em qual contato o card nasce"
     },
     "OPCOES": {
       "STATUS": {
@@ -411,7 +412,8 @@
       "SEM_AGENTE_DE_IA": "Nenhuma agente de IA recebe conversas nesta conta ainda. Ponha uma agente numa caixa, em Agentes de IA, para usar este passo.",
       "AGENTES_DE_IA_FALHOU": "Não deu para carregar as agentes de IA. Recarregue a página para tentar de novo.",
       "POR_VALOR_EM": "Pôr um dado da conversa em “{campo}”",
-      "SEM_CAIXA_DE_EMAIL": "A conta ainda não tem caixa de e-mail. Crie uma em Caixas de entrada para usar este passo."
+      "SEM_CAIXA_DE_EMAIL": "A conta ainda não tem caixa de e-mail. Crie uma em Caixas de entrada para usar este passo.",
+      "CONTATO_DO_ALVO": "O contato desta automação"
     },
     "LIGAR": {
       "BOTAO": "Ligar",
@@ -423,6 +425,10 @@
       "DESLIGAR": "Desligar",
       "SO_LEITURA": "Você pode ver esta automação. Para mudar, peça a quem cuida das automações.",
       "FALTA_COMPLETAR": "Falta completar um passo: escolha a condição e, no \"Se\", ponha pelo menos um passo em Então."
+    },
+    "CRIADO": {
+      "CONTATO": "Contato criado por esta automação",
+      "CARD": "Card criado por esta automação"
     }
   }
 }

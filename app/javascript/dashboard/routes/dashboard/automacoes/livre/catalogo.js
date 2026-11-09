@@ -236,16 +236,42 @@ const rotuloDoTexto = (passo, t) => {
     : t('AUTOMACAO_LIVRE.IA.TEXTO_DA_IA.ESCREVER_SEM_INSTRUCAO');
 };
 
+// G49 — o registro que um passo cria (o card do "criar card", o contato de uma
+// ação que cria contato) vira um dado dos passos seguintes: `criado.<id>`, o id
+// dele. `criado` diz o tipo, para a peça que só aceita contato. A mesma lista
+// fechada do servidor (RegistroCriado).
+const ACOES_QUE_CRIAM = {
+  'POST contacts': 'Contact',
+  'POST crm/cards/:card_id/contact': 'Contact',
+};
+export const tipoCriado = passo => {
+  if (passo?.tipo === 'card') return 'Crm::Card';
+  return (passo?.tipo === 'acao' && ACOES_QUE_CRIAM[passo.acao]) || null;
+};
+const ROTULO_DO_CRIADO = { Contact: 'CONTATO', 'Crm::Card': 'CARD' };
+
 // `achatar`: como a lista vira os passos de onde vêm os textos; o "Alterar"
-// passa a lista já pronta da execução do passo (passosDaExecucao, G18).
+// passa a lista já pronta da execução do passo (passosDaExecucao, G18). Junto
+// com os textos da IA vêm os registros criados (G49): os dois ficam na execução.
 export const comTextosDaIa = (dados, passos, t, achatar = todosOsPassos) => {
   if (!dados?.valores) return dados;
-  const textos = achatar(passos)
+  const lista = achatar(passos);
+  const textos = lista
     .filter(passo => ['escrever', 'resumir'].includes(passo.tipo))
     .map(passo => ({
       caminho: `ia.${passo.id}`,
       chave: passo.id,
       rotulo: rotuloDoTexto(passo, t),
     }));
-  return { ...dados, valores: [...dados.valores, ...textos] };
+  const criados = lista
+    .filter(passo => tipoCriado(passo))
+    .map(passo => ({
+      caminho: `criado.${passo.id}`,
+      chave: passo.id,
+      criado: tipoCriado(passo),
+      rotulo: t(
+        `AUTOMACAO_LIVRE.CRIADO.${ROTULO_DO_CRIADO[tipoCriado(passo)]}`
+      ),
+    }));
+  return { ...dados, valores: [...dados.valores, ...textos, ...criados] };
 };

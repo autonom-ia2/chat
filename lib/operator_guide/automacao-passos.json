@@ -1313,6 +1313,12 @@
           "peca": "etapa",
           "obrigatorio": true,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ETAPA_ID"
+        },
+        {
+          "nome": "contato",
+          "peca": "contato_criado",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CONTATO"
         }
       ]
     },

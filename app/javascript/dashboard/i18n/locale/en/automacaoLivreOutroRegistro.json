@@ -4,7 +4,8 @@
       "ESCOLHA": "Choose",
       "LIGACOES": {
         "CONTATO_DO_CAMPO": "On the contact saved in a field",
-        "CARDS_DO_CONTATO": "On this contact's other cards"
+        "CARDS_DO_CONTATO": "On this contact's other cards",
+        "CRIADO_NO_PASSO": "In the contact or card a step created"
       },
       "CAMPO": "Which field holds the contact?",
       "SEM_CAMPO": "No number field here can hold a contact. Create a number field first.",
@@ -14,6 +15,7 @@
         "CONVERSA": "In their most recent conversation",
         "CONTATO": "On the contact record"
       },
+      "CRIADO": "Which record?",
       "SITUACAO": "Which cards? With none marked, any card counts.",
       "SITUACOES": {
         "OPEN": "Open",
@@ -29,7 +31,8 @@
       "SO_O_MAIS_RECENTE": "Only the most recent",
       "EXPLICACAO": {
         "CONTATO_DO_CAMPO": "The steps inside run on the contact whose number is in that field. The automation goes on without waiting for them.",
-        "CARDS_DO_CONTATO": "The steps inside run on each matching card, one at a time. The current card is left out. Messages go to the current conversation."
+        "CARDS_DO_CONTATO": "The steps inside run on each matching card, one at a time. The current card is left out. Messages go to the current conversation.",
+        "CRIADO_NO_PASSO": "The steps inside run in the contact or card that an earlier step of this automation created. The automation goes on without waiting for them."
       },
       "FRASE": {
         "CONVERSA": "In the conversation of whoever is in {campo}",
@@ -37,7 +40,8 @@
         "CARDS": "On each other card of this contact",
         "CARD_MAIS_RECENTE": "On this contact's most recent card",
         "NO_FUNIL": "in the chosen pipeline",
-        "SEM_LIGACAO": "On another contact or card: choose where"
+        "SEM_LIGACAO": "On another contact or card: choose where",
+        "CRIADO": "In the {registro}"
       }
     }
   }

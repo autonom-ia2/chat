@@ -52,10 +52,10 @@ module Autonomia::Automacao::Catalogo
                        'para_do_retorno' => 'quem_recebe_retorno', 'envio_do_retorno' => 'envio_do_retorno',
                        # G18 (#2671): onde roda o "em outro registro".
                        'registro_ligado' => 'registro_ligado' }.freeze
-  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2) e a
-  # etapa do "card" (G4).
+  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2), a
+  # etapa do "card" (G4) e o contato em que ele nasce (G49).
   PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email',
-                          'etapa_id' => 'etapa' }.freeze
+                          'etapa_id' => 'etapa', 'contato' => 'contato_criado' }.freeze
 
   module_function
 

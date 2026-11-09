@@ -29,10 +29,16 @@ module Autonomia::Automacao::ConversaNova
   # (`account_user`; nil no catálogo) pode começar conversa nela.
   ALVOS = [::Autonomia::Automacao::Gatilhos::CARD, ::Autonomia::Automacao::Gatilhos::CONTATO].freeze
 
-  def problemas_ao_salvar(conta, gatilho, account_user)
+  # `ramos`: o tipo do registro em que cada "em outro registro" da receita roda (G18). G49: o ramo no card ou no contato
+  # que um passo criou (o card do João, sem conversa) abre a conversa por esta caixa, mesmo num gatilho de conversa.
+  RAMOS = %w[Crm::Card Contact].freeze
+
+  def problemas_ao_salvar(conta, gatilho, account_user, ramos: [])
     id = gatilho.to_h.dig('conversa_nova', 'caixa_id')
     return [] if id.nil?
-    return [frase(:conversa_nova_sem_alvo)] unless ALVOS.include?(::Autonomia::Automacao::Gatilhos.alvo(gatilho['tipo']))
+
+    sem_conversa = ALVOS.include?(::Autonomia::Automacao::Gatilhos.alvo(gatilho['tipo'])) || ramos.intersect?(RAMOS)
+    return [frase(:conversa_nova_sem_alvo)] unless sem_conversa
 
     escolhida = caixa(conta, id)
     return [frase(:conversa_nova_caixa_invalida, id: id)] if escolhida.nil?
