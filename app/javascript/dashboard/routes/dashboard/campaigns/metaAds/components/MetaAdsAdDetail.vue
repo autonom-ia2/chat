@@ -34,6 +34,7 @@ import comentariosFacebook from './comentarios/comentariosFacebook';
 import MetaAdsAdStatus from './MetaAdsAdStatus.vue';
 import MetaAdsAdPost from './MetaAdsAdPost.vue';
 import MetaAdsBudget from './MetaAdsBudget.vue';
+import MetaAdsAdCare from './MetaAdsAdCare.vue';
 import { lerOrcamento } from '../criacaoNaMeta';
 
 // Anúncios da Meta (#1088, F3b): o anúncio por dentro, passos 3 e 4 da jornada "O painel do dia a dia". A
@@ -362,6 +363,8 @@ const commentTabs = computed(() =>
   )
 );
 const gestao = ref(null);
+// A foto nova depois de trocar (#2778), enquanto a Meta analisa.
+const swappedImage = ref('');
 
 // Comentários só com conexão, que é quem tem token para ler na Meta (#2196). O sinal é a gestão, que leu o anúncio
 // ao vivo agora, ou o gasto, que só vem de anúncio sincronizado por uma conexão (sem login, #1960, ele é nil). A
@@ -388,6 +391,7 @@ const showCare = computed(
 
 const loadGestao = async () => {
   gestao.value = null;
+  swappedImage.value = '';
   if (!gestaoOn.value) return;
   const asked = props.adId;
   const data = await lerGestao(asked);
@@ -422,6 +426,16 @@ const loadBudget = async () => {
 };
 watch(() => props.adId, loadBudget);
 
+// Duplicar e trocar foto ou texto (#2778): com a flag de criar, para quem pode mexer, quando a conexão pode mudar o
+// anúncio. Depois de trocar, o detalhe já mostra a foto nova e a situação "em análise".
+const showAdCare = computed(
+  () => budgetOn.value && canManage.value && Boolean(gestao.value?.can_change)
+);
+const reviewing = ({ effective_status: effective, image: newImage }) => {
+  gestao.value = { ...gestao.value, effective_status: effective };
+  swappedImage.value = newImage;
+};
+
 watch(() => props.adId, loadGestao);
 
 // A entrega (`effective_status`) é a Meta quem diz: depois de mudar, a situação é lida de novo, sem tirar o selo.
@@ -441,7 +455,9 @@ onMounted(() => {
 // Link de imagem da Meta vencido: mostra o quadro de reserva (guarda a URL que falhou, então um link novo volta
 // a tentar).
 const brokenImages = ref([]);
-const image = computed(() => adImage(ad.value, brokenImages.value));
+const image = computed(
+  () => swappedImage.value || adImage(ad.value, brokenImages.value)
+);
 </script>
 
 <template>
@@ -511,6 +527,16 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
         :budget="budget"
         :can-manage="canManage"
         @changed="budget = $event"
+      />
+      <MetaAdsAdCare
+        v-if="showAdCare"
+        :ad-id="adId"
+        :ad-name="gestao.name || ''"
+        :image="swappedImage"
+        :text="gestao.post?.message || ''"
+        :budget="budget"
+        :can-swap="Boolean(gestao.can_swap_creative)"
+        @reviewing="reviewing"
       />
       <MetaAdsAdPost v-if="gestao?.post" :post="gestao.post" />
       <CuidarAnuncioEntrada
@@ -631,6 +657,16 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
             :budget="budget"
             :can-manage="canManage"
             @changed="budget = $event"
+          />
+          <MetaAdsAdCare
+            v-if="showAdCare"
+            :ad-id="adId"
+            :ad-name="ad.name || ''"
+            :image="image"
+            :text="gestao.post?.message || ''"
+            :budget="budget"
+            :can-swap="Boolean(gestao.can_swap_creative)"
+            @reviewing="reviewing"
           />
           <span
             v-if="ad.verdict"
