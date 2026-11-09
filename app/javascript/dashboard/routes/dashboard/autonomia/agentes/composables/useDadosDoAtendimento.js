@@ -3,7 +3,6 @@ import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import AutonomiaAgentsAPI from 'dashboard/api/autonomia/agents';
 import { generateMutationTypes } from 'dashboard/store/storeFactory';
-import { mensagemDaRecusa } from './useComecarAAtender';
 
 // #1479 (opção B do Rodrigo, 01/11) / #2723 — "Endereço do atendimento" e "Telefone de contato" do agente, num bloco
 // próprio da página ("Endereço e telefone"), nos dois modos (manual e conversando). Só com a flag
@@ -43,8 +42,20 @@ export const temAtendimento = dados =>
 
 const { UPSERT } = generateMutationTypes('AutonomiaAgents');
 
-// Salva pelo servidor e põe o agente devolvido na lista do painel (a página relê dele). O erro sobe para quem chama:
-// `recusa(erro)` é a explicação do servidor quando ele recusou (422), ou null.
+// A recusa do servidor (422 do `render_record_invalid`): os atributos com erro (`telefone`, `endereco` ou outro) e a
+// mensagem dele. null quando não é recusa (rede, 500). A tela escolhe o campo pelo ATRIBUTO, nunca pelo texto.
+export const recusaDoServidor = falha => {
+  if (falha?.response?.status !== 422) return null;
+  const dados = falha.response.data || {};
+  return {
+    atributos: Array.isArray(dados.attributes) ? dados.attributes : [],
+    mensagem: dados.message || dados.error || '',
+  };
+};
+
+// Salva pelo servidor e põe o agente devolvido na lista do painel (a página relê dele). O erro sobe para quem chama.
+// Chama a API direto, e não o action `autonomiaAgents/update`: o action troca o erro por um `Error` só com o texto e
+// perde o status e os atributos da recusa.
 export function useSalvarAtendimento() {
   const store = useStore();
   const salvando = ref(false);
@@ -62,5 +73,5 @@ export function useSalvarAtendimento() {
     }
   };
 
-  return { salvando, salvar, recusa: mensagemDaRecusa };
+  return { salvando, salvar };
 }

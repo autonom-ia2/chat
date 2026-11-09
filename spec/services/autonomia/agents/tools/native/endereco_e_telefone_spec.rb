@@ -81,6 +81,41 @@ RSpec.describe Autonomia::Agents::Tools::Native::EnderecoETelefone do
     end
   end
 
+  describe 'quem fica fora e os tetos da instrução' do
+    it 'agente interno (copiloto) e ajudante ficam fora' do
+      copiloto = criar_copiloto(account)
+      ajudante = criar_ajudante(account)
+      [copiloto, ajudante].each do |agente|
+        agente.update!(config: agente.config.merge('atendimento' => dados, 'booking_page_id' => pagina.id))
+        expect(described_class.instrucao(agente.reload)).to be_nil
+      end
+    end
+
+    it 'agente de outra conta apontando para a página desta conta não recebe os locais' do
+      outra = conta_da_fase2.tap { |conta| conta.enable_features!('agentes_enviar_local_e_contato') }
+      estranho = criar_principal(outra, config: { 'with_knowledge' => false, 'atendimento' => dados })
+      estranho.update_columns(config: estranho.config.merge('booking_page_id' => pagina.id)) # rubocop:disable Rails/SkipsModelValidations
+
+      texto = described_class.instrucao(estranho.reload)
+
+      expect(texto).to include(dados['endereco'])
+      expect(texto).not_to include(centro['address'])
+    end
+
+    it 'teto de locais e de tamanho de cada endereço' do
+      maximo = Autonomia::Agents::DadosDoAtendimento::MAX_ENDERECO
+      muitos = Array.new(described_class::MAX_LOCAIS + 3) do |indice|
+        { 'type' => 'in_person', 'label' => "Unidade #{indice}", 'address' => "Rua #{indice}, #{'x' * (maximo + 50)}" }
+      end
+      pagina.update_column(:locations, muitos) # rubocop:disable Rails/SkipsModelValidations
+
+      texto = described_class.instrucao(com_pagina.reload)
+
+      expect(texto.scan('Unidade ').size).to eq(described_class::MAX_LOCAIS)
+      expect(texto).not_to include('x' * (maximo + 1))
+    end
+  end
+
   describe 'enviar_contato' do
     it 'o telefone do agente vence o da página, com o título da página como nome' do
       chamar_contato(com_pagina)
@@ -119,6 +154,23 @@ RSpec.describe Autonomia::Agents::Tools::Native::EnderecoETelefone do
       expect(contato.available_for?(agent)).to be(false)
     end
 
+    it 'com o telefone do agente preenchido e inválido, nunca cai no telefone da página' do
+      com_pagina.update_columns(config: com_pagina.config.merge('atendimento' => { 'endereco' => '', 'telefone' => '+55 11' })) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(Autonomia::Agents::Tools::Native::CartaoDaPagina.contato_do_agente(com_pagina.reload)).to be_nil
+      expect(contato.available_for?(com_pagina)).to be(false)
+    end
+
+    it 'com o telefone do agente, não pede coordenada da página' do
+      agente = com_pagina.reload # a página nasce antes (o salvar dela pede a coordenada por conta própria)
+      allow(Crm::BookingV2::GeocodificarLocaisJob).to receive(:pedir)
+
+      cartao = Autonomia::Agents::Tools::Native::CartaoDaPagina.contato_do_agente(agente)
+
+      expect(cartao).to include('name' => 'Clínica Sorriso', 'phone' => dados['telefone'])
+      expect(Crm::BookingV2::GeocodificarLocaisJob).not_to have_received(:pedir)
+    end
+
     it 'o endereço do agente não vira mapa' do
       expect(localizacao.available_for?(agent.reload)).to be(false)
     end
@@ -148,6 +200,14 @@ RSpec.describe Autonomia::Agents::Tools::Native::EnderecoETelefone do
 
       expect(perdidos).to eq(0)
       expect(cartoes.sole['rich_message']).to include('name' => account.name, 'phone' => dados['telefone'])
+    end
+
+    it 'a Lia não resolve cartão' do
+      lia = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'insurance_quote', status: :active,
+                                             enabled: true, instruction: 'Atenda.')
+      lia.update_columns(config: lia.config.to_h.merge('atendimento' => dados, 'booking_page_id' => pagina.id)) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(resolver.resolver([referencia], lia.reload)).to eq([[], 1])
     end
 
     it 'o telefone do agente sumiu e não há página: o cartão fica fora' do

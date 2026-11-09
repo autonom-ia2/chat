@@ -8,14 +8,15 @@ import AgenteErro from '../AgenteErro.vue';
 import DadosDoAtendimento from './DadosDoAtendimento.vue';
 import {
   lerAtendimento,
+  recusaDoServidor,
   useSalvarAtendimento,
 } from '../../composables/useDadosDoAtendimento';
 
 // #1479 (opção B do Rodrigo) — "Endereço e telefone de {nome}": gaveta curta do bloco próprio da página, nos dois
 // modos (manual e conversando). Só os dois campos, Salvar e Cancelar; o foco fica preso na AgenteGaveta. Telefone
 // incompleto não salva: leva ao campo com o aviso. Fechar sem salvar não grava nada.
-// Grava no servidor (`config.atendimento`). Telefone que o servidor recusa: a explicação dele aparece no próprio
-// campo, e o foco vai para lá; outra recusa ou falha de rede: o aviso de erro no rodapé, com "Tentar de novo".
+// Grava no servidor (`config.atendimento`). A recusa vai ao campo pelo ATRIBUTO do 422 (`telefone`, `endereco`), com
+// o aviso da própria tela; recusa de outro atributo ou falha de rede: o aviso de erro no rodapé, com "Tentar de novo".
 const props = defineProps({
   agente: { type: Object, required: true },
   nome: { type: String, required: true },
@@ -35,21 +36,31 @@ const conferir = ref(false);
 const falhou = ref(false);
 const tituloDoErro = ref('');
 const erroDoTelefone = ref('');
-const { salvando, salvar: gravar, recusa } = useSalvarAtendimento();
+const erroDoEndereco = ref('');
+const { salvando, salvar: gravar } = useSalvarAtendimento();
 
-// Mexeu no telefone: a recusa anterior do servidor não vale mais.
+// Mexeu no campo: a recusa anterior do servidor não vale mais.
 watch(telefone, () => {
   erroDoTelefone.value = '';
 });
+watch(endereco, () => {
+  erroDoEndereco.value = '';
+});
 
 const mostrarRecusa = falha => {
-  const explicacao = recusa(falha);
-  if (explicacao && telefone.value) {
-    erroDoTelefone.value = explicacao;
-    campos.value?.focarTelefone();
+  const recusa = recusaDoServidor(falha);
+  const atributos = recusa?.atributos || [];
+  const doTelefone = atributos.includes('telefone');
+  const doEndereco = atributos.includes('endereco');
+  if (doTelefone || doEndereco) {
+    if (doEndereco) erroDoEndereco.value = t(`${NS}.CAMPOS.ENDERECO_RECUSADO`);
+    if (doTelefone) {
+      erroDoTelefone.value = t(`${NS}.CAMPOS.TELEFONE_RECUSADO`);
+      campos.value?.focarTelefone();
+    }
     return;
   }
-  tituloDoErro.value = explicacao || t(`${NS}.ERRO`);
+  tituloDoErro.value = recusa?.mensagem || t(`${NS}.ERRO`);
   falhou.value = true;
 };
 
@@ -62,6 +73,7 @@ const salvar = async () => {
   }
   falhou.value = false;
   erroDoTelefone.value = '';
+  erroDoEndereco.value = '';
   try {
     await gravar(props.agente, {
       endereco: endereco.value,
@@ -91,6 +103,7 @@ const salvar = async () => {
       :conferir="conferir"
       :bloqueado="salvando"
       :erro-do-telefone="erroDoTelefone"
+      :erro-do-endereco="erroDoEndereco"
     />
     <template #rodape>
       <AgenteErro

@@ -24,7 +24,10 @@ Rails.application.config.filter_parameters += [
   :pergunta,
   # #2696 — o pedido em uma frase da Prospecção (POST searches/interpret { frase }) é texto livre de quem busca. A chave
   # é `frase`, e não `text`, que casaria também com `context` e outras.
-  :frase
+  :frase,
+  # #1479 — o "Endereço e telefone" do agente (`agent.config.atendimento`) é dado do negócio que não vai para o log.
+  # `telefone` e `endereco` não casam com outro parâmetro de entrada do app hoje (conferido em 09/11).
+  :telefone, :endereco
 ]
 
 # Regex to filter all occurrences of 'token' in keys except for 'website_token'

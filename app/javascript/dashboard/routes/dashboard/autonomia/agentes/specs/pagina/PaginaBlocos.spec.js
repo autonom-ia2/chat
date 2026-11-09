@@ -7,13 +7,17 @@ import PaginaBlocos from '../../components/pagina/PaginaBlocos.vue';
 const conta = vi.hoisted(() => ({
   agendaNova: true,
   podeAbrirAgendamento: true,
+  atendimento: false,
 }));
 vi.mock('dashboard/composables/store', async () => {
   const { computed } = await import('vue');
   const getters = {
     getCurrentAccountId: 1,
     'accounts/getAccount': () => ({
-      features: { crm_booking_v2: conta.agendaNova },
+      features: {
+        crm_booking_v2: conta.agendaNova,
+        agentes_enviar_local_e_contato: conta.atendimento,
+      },
     }),
   };
   return { useMapGetter: nome => computed(() => getters[nome]) };
@@ -304,5 +308,89 @@ describe('PaginaBlocos · resumo de onde atende (Fase 2)', () => {
       textoOnde: 'x',
     });
     expect(wrapper.find('[data-linha="onde-trabalha"]').exists()).toBe(false);
+  });
+});
+
+// #1479 / #2723 — o bloco "Endereço e telefone": só com a flag E a Fase 2, e nunca na cotação, no agente interno
+// (copiloto) nem no ajudante. Telefone que não formata aparece cru, nunca como "ainda não tem telefone".
+describe('PaginaBlocos · Endereço e telefone', () => {
+  const COM_DADOS = {
+    config: {
+      atendimento: {
+        endereco: 'Rua das Flores, 120',
+        telefone: '+5511940001234',
+      },
+    },
+  };
+  const linha = wrapper => wrapper.find('[data-linha="atendimento"]');
+
+  beforeEach(() => {
+    conta.atendimento = true;
+    conta.agendaNova = false;
+    paginasApi.get.mockReset();
+    paginasApi.get.mockResolvedValue({ data: { payload: [] } });
+  });
+
+  afterEach(() => {
+    conta.atendimento = false;
+    conta.agendaNova = true;
+  });
+
+  it('aparece com a flag e a Fase 2, com o endereço e o telefone', async () => {
+    const wrapper = await montar({ agente: COM_DADOS, fase2: true });
+
+    expect(linha(wrapper).exists()).toBe(true);
+    expect(wrapper.find('[data-resumo-endereco]').text()).toContain(
+      'Rua das Flores, 120'
+    );
+    expect(wrapper.find('[data-resumo-telefone]').exists()).toBe(true);
+  });
+
+  it('não aparece com a flag desligada', async () => {
+    conta.atendimento = false;
+    const wrapper = await montar({ agente: COM_DADOS, fase2: true });
+    expect(linha(wrapper).exists()).toBe(false);
+  });
+
+  it('não aparece sem a Fase 2', async () => {
+    const wrapper = await montar({ agente: COM_DADOS, fase2: false });
+    expect(linha(wrapper).exists()).toBe(false);
+  });
+
+  it('não aparece na cotação', async () => {
+    const wrapper = await montar({
+      agente: COM_DADOS,
+      fase2: true,
+      cotacao: true,
+    });
+    expect(linha(wrapper).exists()).toBe(false);
+  });
+
+  it('não aparece no agente interno nem no ajudante', async () => {
+    const interno = await montar({
+      agente: COM_DADOS,
+      fase2: true,
+      interno: true,
+    });
+    expect(linha(interno).exists()).toBe(false);
+
+    const ajudante = await montar({
+      agente: COM_DADOS,
+      fase2: true,
+      ajuda: { principais: [{ id: 1, name: 'Ana' }], quando: 'Sempre' },
+    });
+    expect(linha(ajudante).exists()).toBe(false);
+  });
+
+  it('telefone gravado que não formata aparece cru', async () => {
+    const wrapper = await montar({
+      agente: {
+        config: { atendimento: { endereco: '', telefone: '+999123' } },
+      },
+      fase2: true,
+    });
+
+    expect(wrapper.find('[data-resumo-telefone]').text()).toContain('+999123');
+    expect(wrapper.find('[data-atendimento-vazio]').exists()).toBe(false);
   });
 });

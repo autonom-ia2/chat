@@ -1710,7 +1710,7 @@
           "GAVETA_DICA": "{nome} gives these details to the customer when they ask. You can leave them blank.",
           "SALVAR": "Save",
           "SALVANDO": "Saving…",
-          "SALVO": "Address and phone saved.",
+          "SALVO": "Saved.",
           "ERRO": "Could not save.",
           "ERRO_GARANTIA": "Nothing changed.",
           "CAMPOS": {
@@ -1720,7 +1720,9 @@
             "TELEFONE": "Contact phone",
             "PAIS": "Phone country",
             "TELEFONE_DICA": "{nome} sends this number as a contact card when the customer asks for a phone.",
-            "TELEFONE_INCOMPLETO": "The number is incomplete. Check the digits or clear the field."
+            "TELEFONE_INCOMPLETO": "The number is incomplete. Check the digits or clear the field.",
+            "TELEFONE_RECUSADO": "This phone does not look right. Check the number or leave it blank.",
+            "ENDERECO_RECUSADO": "This address is too long. Make it shorter."
           }
         }
       },

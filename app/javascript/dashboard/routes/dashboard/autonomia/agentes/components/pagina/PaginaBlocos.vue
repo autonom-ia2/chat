@@ -72,17 +72,20 @@ const NS = 'AGENTS.JORNADA.PAGINA';
 const base = `blocos-${useId()}`;
 const pergunta = ref('');
 
-// #1479 (opção B): com a flag, bloco próprio "Endereço e telefone", nos dois modos (manual e conversando). Fica fora
-// da cotação (a Lia não recebe as ferramentas). Lidos de agente.config.atendimento (useDadosDoAtendimento).
+// #1479 (opção B): com a flag E a Fase 2, bloco próprio "Endereço e telefone", nos dois modos (manual e conversando).
+// Fica fora da cotação (a Lia não recebe as ferramentas), do interno (copiloto) e do ajudante: nenhum fala com o
+// cliente, e o servidor também os pula. Lidos de agente.config.atendimento (useDadosDoAtendimento). Telefone gravado
+// que não formata no país aparece como está (E.164), nunca como "ainda não tem telefone".
 const comAtendimento = useDadosDoAtendimentoLigado();
 const atendimento = computed(() => {
-  if (!comAtendimento.value || props.cotacao) return null;
+  if (!comAtendimento.value || !props.fase2) return null;
+  if (props.cotacao || props.interno || props.ajuda) return null;
   const { endereco, telefone } = lerAtendimento(props.agente);
   const separado = telefone ? separarTelefone(telefone) : null;
-  return {
-    endereco,
-    telefone: separado ? formatarNoPais(separado.digitos, separado.pais) : '',
-  };
+  const formatado = separado
+    ? formatarNoPais(separado.digitos, separado.pais)
+    : '';
+  return { endereco, telefone: formatado || telefone };
 });
 
 const linkQuemRecebe = computed(

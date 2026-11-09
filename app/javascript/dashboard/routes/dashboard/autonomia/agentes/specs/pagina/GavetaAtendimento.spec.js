@@ -48,9 +48,14 @@ const montar = (agente = AGENTE) =>
     props: { agente, nome: 'Bia' },
   });
 
-const recusa = mensagem => ({
-  response: { status: 422, data: { message: mensagem } },
+const recusa = (mensagem, atributos = ['base']) => ({
+  response: { status: 422, data: { message: mensagem, attributes: atributos } },
 });
+const CAMPOS = 'AGENTS.JORNADA.PAGINA.ATENDIMENTO.CAMPOS';
+const SEM_TELEFONE = {
+  ...AGENTE,
+  config: { atendimento: { endereco: 'Rua', telefone: '' } },
+};
 
 describe('useDadosDoAtendimento · leitura', () => {
   it('lê o par do servidor, com as duas chaves sempre em texto', () => {
@@ -125,18 +130,51 @@ describe('GavetaAtendimento', () => {
     expect(gaveta.emitted('fechar')).toHaveLength(1);
   });
 
-  it('telefone recusado pelo servidor: a explicação dele no campo, sem fechar', async () => {
-    api.update.mockRejectedValue(recusa('Este telefone não é válido.'));
+  it('telefone recusado pelo servidor (atributo telefone): o aviso no campo do telefone, sem fechar', async () => {
+    api.update.mockRejectedValue(
+      recusa('Telefone não parece certo.', ['telefone'])
+    );
     const gaveta = montar();
 
     await salvar();
 
     expect(no('[data-campo-telefone-atendimento]').textContent).toContain(
-      'Este telefone não é válido.'
+      `${CAMPOS}.TELEFONE_RECUSADO`
     );
     expect(no('[data-erro]')).toBeNull();
     expect(gaveta.emitted('fechar')).toBeUndefined();
     expect(alerta).not.toHaveBeenCalled();
+  });
+
+  it('endereço recusado (atributo endereco): o aviso no campo do endereço, mesmo com telefone', async () => {
+    api.update.mockRejectedValue(
+      recusa('Endereço está longo demais.', ['endereco'])
+    );
+    montar();
+
+    await salvar();
+
+    expect(no('[data-dados-do-atendimento]').textContent).toContain(
+      `${CAMPOS}.ENDERECO_RECUSADO`
+    );
+    expect(no('[data-campo-telefone-atendimento]').textContent).not.toContain(
+      `${CAMPOS}.TELEFONE_RECUSADO`
+    );
+    expect(no('[data-erro]')).toBeNull();
+  });
+
+  it('recusa de outro atributo, mesmo com telefone preenchido: a explicação do servidor no rodapé', async () => {
+    api.update.mockRejectedValue(recusa('Não deu para ler. Nada foi salvo.'));
+    montar();
+
+    await salvar();
+
+    expect(no('[data-erro]').textContent).toContain(
+      'Não deu para ler. Nada foi salvo.'
+    );
+    expect(no('[data-campo-telefone-atendimento]').textContent).not.toContain(
+      'Não deu para ler.'
+    );
   });
 
   it('falha sem explicação (rede): o aviso de erro no rodapé', async () => {
@@ -151,17 +189,31 @@ describe('GavetaAtendimento', () => {
     expect(gaveta.emitted('fechar')).toBeUndefined();
   });
 
-  it('recusa sem telefone preenchido: a explicação vai ao rodapé', async () => {
-    api.update.mockRejectedValue(recusa('O endereço está longo demais.'));
-    montar({
-      ...AGENTE,
-      config: { atendimento: { endereco: 'Rua', telefone: '' } },
-    });
+  it('enquanto salva, o telefone fica bloqueado', async () => {
+    api.update.mockReturnValue(new Promise(() => {}));
+    montar();
+
+    no('[data-salvar]').click();
+    await flushPromises();
+
+    expect(no('[data-campo-telefone-atendimento]').hasAttribute('inert')).toBe(
+      true
+    );
+  });
+
+  it('telefone incompleto não salva e leva o foco ao campo', async () => {
+    montar(SEM_TELEFONE);
+    const campo = no('input[data-numero-do-telefone]');
+    campo.value = '1199';
+    campo.dispatchEvent(new Event('input', { bubbles: true }));
+    await flushPromises();
 
     await salvar();
 
-    expect(no('[data-erro]').textContent).toContain(
-      'O endereço está longo demais.'
+    expect(api.update).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(campo);
+    expect(no('[data-campo-telefone-atendimento]').textContent).toContain(
+      `${CAMPOS}.TELEFONE_INCOMPLETO`
     );
   });
 });

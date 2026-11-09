@@ -27,32 +27,59 @@ RSpec.describe Autonomia::Agents::DadosDoAtendimento do
       expect(agent.reload.config['atendimento']).to eq('endereco' => '', 'telefone' => '')
     end
 
-    it 'recusa telefone inválido com a mensagem leiga, nos dois idiomas' do
-      ['1140000473', '+55 11', '+', 'ligue já'].each do |telefone|
-        agent.config = agent.config.merge('atendimento' => atendimento(telefone: telefone))
-        expect(agent).not_to be_valid
-        expect(agent.errors.full_messages).to include(I18n.t('autonomia.agents.atendimento.telefone_invalido'))
-      end
+    it 'aceita ponto, parênteses, hífen e espaço no telefone, e grava só os dígitos' do
+      agent.update!(config: agent.config.merge('atendimento' => atendimento(telefone: '+55.11.94000.1234')))
 
-      expect(I18n.t('autonomia.agents.atendimento.telefone_invalido', locale: :pt_BR)).to include('telefone')
-      expect(I18n.t('autonomia.agents.atendimento.telefone_invalido', locale: :en)).to include('phone')
+      expect(agent.reload.config.dig('atendimento', 'telefone')).to eq('+5511940001234')
     end
 
-    it 'recusa endereço maior que o limite' do
+    it 'recusa telefone inválido no atributo telefone, com a mensagem leiga, nos dois idiomas' do
+      ['1140000473', '+55 11', '+', 'ligue já', '+55 11 94000#1234', '+55 11 94000-1234 ramal 2', '++5511940001234',
+       '+5511'].each do |telefone|
+        agent.config = agent.config.merge('atendimento' => atendimento(telefone: telefone))
+        expect(agent).not_to be_valid, telefone
+        expect(agent.errors.of_kind?(:telefone, :invalid)).to be(true)
+        expect(agent.errors.messages_for(:telefone)).to eq([I18n.t('autonomia.agents.atendimento.telefone_invalido')])
+      end
+
+      expect(Autonomia::Agents::Agent.human_attribute_name(:telefone, locale: :pt_BR)).to eq('Telefone')
+      expect(Autonomia::Agents::Agent.human_attribute_name(:endereco, locale: :pt_BR)).to eq('Endereço')
+      expect(I18n.t('autonomia.agents.atendimento.telefone_invalido', locale: :pt_BR)).to include('Confira o número')
+      expect(I18n.t('autonomia.agents.atendimento.telefone_invalido', locale: :en)).to include('Check the number')
+    end
+
+    it 'o telefone gravado é sempre um que serve para o cartão de contato' do
+      agent.update!(config: agent.config.merge('atendimento' => atendimento))
+
+      telefone = agent.reload.config.dig('atendimento', 'telefone')
+      cartao = { 'type' => 'contact', 'name' => 'Clínica', 'phone' => telefone }
+      expect(RichMessages::Types::Contact.new(cartao).error_for('')).to be_nil
+    end
+
+    it 'recusa endereço maior que o limite, no atributo endereco' do
       limite = described_class::MAX_ENDERECO
       agent.config = agent.config.merge('atendimento' => atendimento(endereco: 'a' * (limite + 1)))
 
       expect(agent).not_to be_valid
-      expect(agent.errors.full_messages).to include(I18n.t('autonomia.agents.atendimento.endereco_longo', maximo: limite))
+      expect(agent.errors.messages_for(:endereco)).to eq([I18n.t('autonomia.agents.atendimento.endereco_longo', maximo: limite)])
       agent.config = agent.config.merge('atendimento' => atendimento(endereco: 'a' * limite))
       expect(agent).to be_valid
     end
 
-    it 'recusa atendimento que não é um par de campos' do
-      agent.config = agent.config.merge('atendimento' => 'Rua das Flores')
+    it 'recusa atendimento que não é um par de campos em texto' do
+      ['Rua das Flores', { 'endereco' => 123, 'telefone' => '' }, { 'endereco' => '', 'telefone' => ['+5511940001234'] },
+       { 'endereco' => { 'rua' => 'X' }, 'telefone' => nil }].each do |valor|
+        agent.config = agent.config.merge('atendimento' => valor)
 
-      expect(agent).not_to be_valid
-      expect(agent.errors.full_messages).to include(I18n.t('autonomia.agents.atendimento.invalido'))
+        expect(agent).not_to be_valid, valor.inspect
+        expect(agent.errors.messages_for(:base)).to include(I18n.t('autonomia.agents.atendimento.invalido'))
+      end
+    end
+
+    it 'aceita nil nos campos (vira vazio)' do
+      agent.update!(config: agent.config.merge('atendimento' => { 'endereco' => nil, 'telefone' => nil }))
+
+      expect(agent.reload.config['atendimento']).to eq('endereco' => '', 'telefone' => '')
     end
 
     it 'salvar outra coisa não apaga nem revalida o atendimento' do

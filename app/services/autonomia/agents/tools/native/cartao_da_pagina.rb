@@ -103,19 +103,30 @@ module Autonomia::Agents::Tools::Native::CartaoDaPagina
     Digest::SHA256.hexdigest(endereco).first(TAMANHO_DO_ID)
   end
 
-  # O cartão de contato do agente: o telefone do agente (`config['atendimento']`) e, sem ele, o da página. O nome é o
-  # título da página ou o nome da conta; sem página, o nome da conta. Só com a conta ligada e fora da Lia; senão nil.
-  # `pagina`: a de `pagina(agent)`, quando quem chama já a tem.
+  # O cartão de contato do agente: o telefone do agente (`config['atendimento']`) e, só quando ele falta, o da página.
+  # Com o telefone do agente preenchido, nunca cai no da página (se ele não servir, nil). O nome é o título da página ou
+  # o nome da conta; sem página, o nome da conta. Só com a conta ligada e fora da Lia; senão nil.
+  # `pagina`: a de `pagina(agent)`, quando quem chama já a tem. Sem ela: com o telefone do agente, só lê a página para o
+  # nome (`Agenda.pagina_de`, sem pedir coordenada); sem ele, `pagina(agent)`, como o cartão da página sempre fez.
   def contato_do_agente(agent, pagina = :buscar)
     return if agent.agent_type == LIA || !ligado?(agent.account)
 
-    pagina = pagina(agent) if pagina == :buscar
-    cartao_de_contato(nome_do_cartao(pagina, agent.account), telefone_do_agente(agent)) || contato(pagina)
+    telefone = telefone_do_agente(agent)
+    if telefone
+      pagina = ::Autonomia::Agents::Tools::Native::Agenda.pagina_de(agent) if pagina == :buscar
+      return cartao_de_contato(nome_do_cartao(pagina, agent.account), telefone)
+    end
+
+    contato(pagina == :buscar ? pagina(agent) : pagina)
   end
 
-  # O telefone do agente com "+" e só os dígitos, ou nil.
+  # O telefone do agente com "+" e só os dígitos; nil quando está vazio. Preenchido sem "+" (gravado por fora da
+  # validação) vira "" e o cartão não sai: nunca cai no da página.
   def telefone_do_agente(agent)
-    telefone(agent.dados_do_atendimento['telefone'])
+    valor = agent.dados_do_atendimento['telefone'].strip
+    return if valor.empty?
+
+    telefone(valor) || ''
   end
 
   # O cartão de contato da página: o nome (o título da página ou o nome da conta, até 100; nunca o nome público, que pode

@@ -44,8 +44,16 @@ RSpec.describe 'Autonomia agent dados do atendimento', type: :request do
     salvar({ atendimento: { endereco: 'Rua das Flores, 120', telefone: '+55 11' } })
 
     expect(response).to have_http_status(:unprocessable_entity)
-    expect(response.parsed_body['message']).to eq(I18n.t('autonomia.agents.atendimento.telefone_invalido'))
+    expect(response.parsed_body['attributes']).to eq(['telefone'])
+    expect(response.parsed_body['message']).to include(I18n.t('autonomia.agents.atendimento.telefone_invalido'))
     expect(agent.reload.config).not_to have_key('atendimento')
+  end
+
+  it 'endereço longo demais: 422 no atributo endereco' do
+    salvar({ atendimento: { endereco: 'a' * (Autonomia::Agents::DadosDoAtendimento::MAX_ENDERECO + 1), telefone: '' } })
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['attributes']).to eq(['endereco'])
   end
 
   it 'na criação, a mesma validação' do
@@ -55,8 +63,20 @@ RSpec.describe 'Autonomia agent dados do atendimento', type: :request do
          headers: administrator.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:unprocessable_entity)
-    expect(response.parsed_body['message']).to eq(I18n.t('autonomia.agents.atendimento.telefone_invalido'))
+    expect(response.parsed_body['attributes']).to eq(['telefone'])
     expect(Autonomia::Agents::Agent.where(account: account, name: 'Bia')).not_to exist
+  end
+
+  # T23: o endereço e o telefone não vão para a linha `Parameters:` do log do Rails.
+  it 'o endereço e o telefone saem filtrados do log, e o resto do config fica' do
+    filtro = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+    pedido = { 'agent' => { 'config' => { 'response_window' => 'always',
+                                          'atendimento' => { 'endereco' => 'Rua das Flores, 120',
+                                                             'telefone' => '+5511940001234' } } } }
+
+    expect(filtro.filter(pedido)).to eq('agent' => { 'config' => { 'response_window' => 'always',
+                                                                   'atendimento' => { 'endereco' => '[FILTERED]',
+                                                                                      'telefone' => '[FILTERED]' } } })
   end
 
   it 'quem só vê agentes não salva' do

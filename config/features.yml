@@ -1150,8 +1150,11 @@
 # Fase 2): o agente que tem página de agendamento ganha, sem configuração, `enviar_localizacao` (o mapa de um local
 # presencial da página, quando o endereço já tem coordenada) e `enviar_contato` (o cartão com o telefone de contato da
 # página); o cartão sai numa mensagem própria, logo depois da resposta. O endereço novo ou mudado da página é
-# convertido em coordenada por um job (Google Places), sem travar o salvar. A Lia fica fora. Desligada: nada muda, nem
-# o catálogo nem a página. Rollback: desligar a flag na conta. Sem migration. Fim da feature_flags_ext_2, depois de
+# convertido em coordenada por um job (Google Places), sem travar o salvar. A Lia fica fora. #1479/#2723: com ela, a
+# página do agente mostra o bloco "Endereço e telefone" (com a Fase 2; fora da cotação, do interno e do ajudante); o
+# agente diz em TEXTO, pela instrução, esse endereço e telefone e o endereço dos locais presenciais da página (sem
+# mapa do endereço do agente); `enviar_contato` leva o telefone do agente antes do da página, e o agente sem página mas
+# com telefone também o ganha. Desligada: nada muda, nem o catálogo, nem a instrução, nem a página. Rollback: desligar a flag na conta. Sem migration. Fim da feature_flags_ext_2, depois de
 # automacao_ia: posição 25 (valor 16777216, 1 << 24), dada pela Orquestração em 04/11. Nasce ligada no piloto (contas
 # 1, 16 e 18).
 - name: agentes_enviar_local_e_contato

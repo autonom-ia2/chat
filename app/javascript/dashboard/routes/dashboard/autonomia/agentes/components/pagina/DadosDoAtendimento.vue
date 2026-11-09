@@ -9,12 +9,14 @@ import { MAX_ENDERECO } from '../../composables/useDadosDoAtendimento';
 // página). Só com a flag agentes_enviar_local_e_contato. O telefone é o campo padrão do painel (CampoDeTelefone): o v-model fica
 // vazio enquanto o número não é válido, então "digitou" vem do próprio campo (como no NovaConversaContatoNovo)
 // para avisar "incompleto" em vez de salvar vazio calado. O aviso aparece quando a pessoa sai do campo ou tenta
-// salvar (`conferir`). `erroDoTelefone`: a explicação do servidor quando ele recusou o número.
+// salvar (`conferir`). `erroDoTelefone`/`erroDoEndereco`: o aviso quando o servidor recusou o campo. Salvando
+// (`bloqueado`), os dois campos ficam travados (o do telefone com `inert`, que pega também a escolha do país).
 const props = defineProps({
   nome: { type: String, required: true },
   conferir: { type: Boolean, default: false },
   bloqueado: { type: Boolean, default: false },
   erroDoTelefone: { type: String, default: '' },
+  erroDoEndereco: { type: String, default: '' },
 });
 
 const endereco = defineModel('endereco', { type: String, default: '' });
@@ -57,7 +59,8 @@ defineExpose({ incompleto, focarTelefone });
       data-campo-endereco
       :label="t(`${NS}.ENDERECO`)"
       :placeholder="t(`${NS}.ENDERECO_EXEMPLO`)"
-      :message="t(`${NS}.ENDERECO_DICA`, { nome })"
+      :message="erroDoEndereco || t(`${NS}.ENDERECO_DICA`, { nome })"
+      :message-type="erroDoEndereco ? 'error' : 'info'"
       :disabled="bloqueado"
       :maxlength="MAX_ENDERECO"
       wrap-message
@@ -65,6 +68,7 @@ defineExpose({ incompleto, focarTelefone });
     />
     <div
       data-campo-telefone-atendimento
+      :inert="bloqueado || undefined"
       @input="aoDigitarTelefone"
       @focusout="saiuDoTelefone = true"
     >

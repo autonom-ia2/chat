@@ -1710,7 +1710,7 @@
           "GAVETA_DICA": "{nome} passa estes dados ao cliente quando ele pedir. Pode deixar em branco.",
           "SALVAR": "Salvar",
           "SALVANDO": "Salvando…",
-          "SALVO": "Endereço e telefone salvos.",
+          "SALVO": "Salvo.",
           "ERRO": "Não deu para salvar.",
           "ERRO_GARANTIA": "Nada mudou.",
           "CAMPOS": {
@@ -1720,7 +1720,9 @@
             "TELEFONE": "Telefone de contato",
             "PAIS": "País do telefone",
             "TELEFONE_DICA": "{nome} manda este número como contato quando o cliente pedir um telefone.",
-            "TELEFONE_INCOMPLETO": "O número está incompleto. Confira os dígitos ou apague o campo."
+            "TELEFONE_INCOMPLETO": "O número está incompleto. Confira os dígitos ou apague o campo.",
+            "TELEFONE_RECUSADO": "Este telefone não parece certo. Confira o número ou deixe em branco.",
+            "ENDERECO_RECUSADO": "Este endereço está longo demais. Deixe mais curto."
           }
         }
       },
