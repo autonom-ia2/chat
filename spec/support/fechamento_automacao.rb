@@ -225,6 +225,12 @@ module FechamentoAutomacao::Lacunas
     # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7). Fica
     # com a Gatilhos, depois do lote 3 (#2689), que traz a porta da frente da conversa nova.
     'G43' => nil,
+    # G48 (do exemplo 12, passo 3): o campo do card preenchido acorda o "esperar até" na hora, pelo gancho único do card
+    # (Crm::CardAvisaAutomacao, lote 4, #2682); prova ponta a ponta em spec/fechamento/automacao/g48_campo_do_card_spec.rb.
+    'G48' => lambda {
+      Crm::CardAvisaAutomacao::LIDAS_PELA_AUTOMACAO.include?('custom_attributes') &&
+        Autonomia::Automacao::EsperaDoCard.respond_to?(:le_o_card?) && Autonomia::Automacao::Despertador.respond_to?(:card_mudou)
+    },
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
     # (passo 2, "manda por e-mail o mesmo conteúdo").
     'G53' => nil,
