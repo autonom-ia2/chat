@@ -148,6 +148,9 @@ describe('LivreProspeccao', () => {
     expect(getSearches).toHaveBeenCalledWith({ per_page: 50 });
     const opcoes = escolha(tela, 'data-prospeccao-busca').props('options');
     expect(opcoes.map(opcao => opcao.value)).toEqual([11]);
+    // Em duas linhas: o que buscou e, embaixo, onde e quando (o celular não corta a data).
+    expect(opcoes[0].label).toBe('escritório de contabilidade');
+    expect(opcoes[0].hint).toBe('AUTOMACAO_LIVRE.PROSPECCAO.BUSCA_DICA_OPCAO');
   });
 
   it('escolher a busca guarda o id e mantém o resto', async () => {
