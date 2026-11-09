@@ -1012,6 +1012,7 @@ pt_BR:
         acao_fora: 'Esta ação não pode mais ser passo de automação.'
         acao_recusada: 'A plataforma recusou esta ação do jeito que ela foi montada.'
         alvo_sumiu: 'A conversa não existe mais.'
+        alvo_arquivado: 'O card foi arquivado. A espera sem prazo terminou.'
         desligada: 'A automação foi desligada.'
         erro_depois_de_gravar: 'A plataforma deu erro depois de gravar parte da ação. A automação não repete, para não fazer duas vezes; confira e desfaça se precisar.'
         erro_inesperado: 'A automação parou no meio deste passo por um erro inesperado. Ela não repete o passo; confira o que já foi feito.'
@@ -1092,6 +1093,7 @@ pt_BR:
         inicio_da_reuniao: '%d/%m/%Y às %H:%M'
       receita:
         id_repetido: 'Passo %{passo}: o id já é de outro passo.'
+        sem_prazo_com_se_vencer: 'Passo %{passo}: a espera sem prazo nunca vence. Tire os passos de "Se o prazo acabar" ou ponha um prazo.'
         sem_criar_card: 'Passo %{passo}: você não pode criar card no CRM, e o passo "Criar card" pede isso.'
         etapa_do_card_de_fora: 'Passo %{passo}: a etapa %{id} não é desta conta.'
         card_desligado: 'Passo %{passo}: o passo "Criar card" está desligado nesta conta (gatilhos de card ou CRM desligados).'
@@ -1144,6 +1146,9 @@ pt_BR:
         responsavel_de_fora: 'Gatilho: o responsável escolhido não é desta conta.'
         etiqueta_de_fora: 'Gatilho: a etiqueta %{etiqueta} não existe nesta conta.'
         atributo_de_fora: 'Gatilho: o campo %{campo} não é um campo de contato desta conta.'
+        campo_do_card_de_fora: 'Gatilho: o campo %{campo} não é um campo de card desta conta.'
+        gatilho_valor_de_venda: 'Gatilho: só quem vê os valores de venda pode usar o valor de venda no gatilho. Peça a permissão ou escolha outro campo.'
+        mudanca_sem_numero: 'Gatilho: "maior que" e "passou de" (e o valor de venda) pedem um número, como 50000 ou 50000.5.'
         funil_de_fora: 'Gatilho: o funil %{id} não é desta conta.'
         pagina_de_fora: 'Gatilho: a página de agendamento %{id} não é desta conta.'
         ia_desligada: "Passo %{passo}: os passos de IA estão desligados nesta conta."

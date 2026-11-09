@@ -17,6 +17,8 @@ import { useEscolhasDosGatilhos } from './useEscolhasDosGatilhos';
 const LEITURAS = [
   { pecas: ['etapa', 'funil', 'selecao'], erro: 'GATILHO_DO_CARD.ERRO_FUNIS' },
   { pecas: ['campo'], erro: 'GATILHO_DE_TEMPO.ERRO_CAMPOS' },
+  // G27: o "card atualizado" (mudanca) escolhe entre os campos do card.
+  { pecas: ['mudanca'], erro: 'MUDANCA.ERRO_CAMPOS' },
   { pecas: ['pagina'], erro: 'GATILHO_DE_REUNIAO.ERRO_PAGINAS' },
 ];
 

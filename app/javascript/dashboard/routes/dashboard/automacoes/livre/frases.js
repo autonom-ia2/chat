@@ -5,6 +5,7 @@ import { entradaDoPasso, lerCampo } from './catalogo';
 import { comColchetes } from './texto';
 import { fraseDaCampanha } from './campanha';
 import { fraseDoRetorno } from './retorno';
+import { SEM_PRAZO } from './receita';
 import { formatAttributeDate } from 'dashboard/helper/attributeDate';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
@@ -104,12 +105,35 @@ const fraseDoRecorrente = (gatilho, entrada, t, idioma) => {
   });
 };
 
+// G27 (#2661): o card atualizado diz o campo e a condição ("Quando o valor de
+// venda do card passa de 50000"). O campo personalizado vai pelo nome, ou pela
+// chave quando o nome ainda não chegou. Sem campo ou sem condição, a frase do
+// catálogo.
+const M = 'AUTOMACAO_LIVRE.MUDANCA';
+const fraseDaMudanca = (gatilho, entrada, t, nomes) => {
+  const { campo, chave, condicao, valor } = gatilho.mudanca || {};
+  const nome =
+    campo === 'valor'
+      ? t(`${M}.VALOR_DE_VENDA`)
+      : chave && (nomes.campoDoCard?.[chave] || chave);
+  const precisaDeValor = condicao && condicao !== 'mudou';
+  if (!nome || !condicao || (precisaDeValor && !valor)) return t(entrada.frase);
+  return t(`${M}.FRASE.${condicao.toUpperCase()}`, { campo: nome, valor });
+};
+
 const fraseSemPagina = (gatilho, catalogo, t, nomes, idioma) => {
   const entrada = catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo);
   if (!entrada) return t(`${P}.FALTA_GATILHO`);
   if ((entrada.parametros || []).some(item => item.peca === 'frequencia'))
     return comCaixa(
       fraseDoRecorrente(gatilho, entrada, t, idioma),
+      gatilho,
+      t,
+      nomes
+    );
+  if ((entrada.parametros || []).some(item => item.peca === 'mudanca'))
+    return comCaixa(
+      fraseDaMudanca(gatilho, entrada, t, nomes),
       gatilho,
       t,
       nomes
@@ -401,6 +425,10 @@ export const fraseDoPasso = (passo, catalogo, t) => {
   if (passo.tipo === 'esperar')
     return t(`${P}.ESPERAR`, {
       duracao: fraseDaDuracao(passo.duracao, catalogo, t),
+    });
+  if (passo.tipo === 'esperar_ate' && passo.prazo === SEM_PRAZO)
+    return t(`${P}.ESPERAR_ATE_SEM_PRAZO`, {
+      condicao: fraseDaCondicao(passo.condicao, catalogo, t),
     });
   if (passo.tipo === 'esperar_ate')
     return t(`${P}.ESPERAR_ATE`, {

@@ -8,6 +8,7 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import LivreCampo from './LivreCampo.vue';
 import LivreCondicao from './LivreCondicao.vue';
 import LivreDuracao from './LivreDuracao.vue';
+import LivrePrazo from './LivrePrazo.vue';
 import LivreTexto from './LivreTexto.vue';
 import LivreModelo from './LivreModelo.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
@@ -26,7 +27,7 @@ import { faltaDaFrequencia } from '../recorrente';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { temDataIncompleta } from '../texto';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
-import { copiar, filtrosDoGatilho } from '../receita';
+import { SEM_PRAZO, copiar, filtrosDoGatilho } from '../receita';
 
 // #2414 F5 — o painel do "Alterar": os campos do item escolhido (o gatilho, uma
 // condição do "Só se" ou um passo), já preenchidos. Nada muda até "Salvar".
@@ -219,6 +220,11 @@ const rotuloDoDado = campo =>
 const nativoPronto = campo => {
   const valor = rascunho.value[campo.nome];
   if (campo.peca === 'duracao') return Number.isInteger(valor?.valor);
+  // #2750: sem prazo, o "se o prazo acabar" precisa estar vazio.
+  if (campo.peca === 'prazo')
+    return valor === SEM_PRAZO
+      ? !rascunho.value.se_vencer?.length
+      : Number.isInteger(valor?.valor);
   if (campo.peca === 'condicao') return condicaoPronta(valor);
   // O texto pede algo além de espaço; o aviso, alguém para chamar.
   if (TEXTOS.includes(campo.peca))
@@ -389,6 +395,14 @@ defineExpose({ abrir, fechar });
           :rotulo="$t(campo.rotulo)"
           :model-value="rascunho[campo.nome]"
           :unidades="catalogo.unidades"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivrePrazo
+          v-else-if="campo.peca === 'prazo'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :unidades="catalogo.unidades"
+          :tem-se-vencer="Boolean(rascunho.se_vencer?.length)"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreCondicao

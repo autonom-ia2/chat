@@ -13,6 +13,14 @@ export const RAMOS = {
   decidir: ['nenhum'],
 };
 
+// #2750: o "esperar até" sem prazo só termina pela condição (o esquema:
+// `prazo_da_espera`). Não vence, então não tem "se o prazo acabar".
+export const SEM_PRAZO = 'sem_prazo';
+const semSeVencer = passo =>
+  passo.tipo === 'esperar_ate' &&
+  passo.prazo === SEM_PRAZO &&
+  !passo.se_vencer?.length;
+
 // Lista raiz: 'raiz'. Lista de um galho: '<id do passo>:<ramo>'.
 export const RAIZ = 'raiz';
 export const idDaLista = (passoId, ramo) => `${passoId}:${ramo}`;
@@ -40,7 +48,7 @@ const galhoDoCaminho = (caminho, indice) => ({
 // que devolve o passo com o galho trocado. É a única travessia da árvore no
 // editor; o servidor tem a sua em Autonomia::Automacao::Receita.ramos.
 export const galhosDe = passo => {
-  const fixos = RAMOS[passo.tipo] || [];
+  const fixos = semSeVencer(passo) ? [] : RAMOS[passo.tipo] || [];
   return [
     ...fixos.filter(ramo => ramo !== 'nenhum').map(r => galhoFixo(passo, r)),
     ...(passo.caminhos || []).map((caminho, i) =>

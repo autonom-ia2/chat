@@ -61,6 +61,7 @@ const BLOCOS_POR_ARQUIVO = {
     'CONVERSA_NOVA',
     'GATILHO_RECORRENTE',
     'SELECAO',
+    'MUDANCA',
   ],
   'automacaoLivreIa.json': ['IA'],
   'automacaoLivreReceitas.json': ['RECEITAS'],

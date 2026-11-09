@@ -18,7 +18,8 @@
 #
 # O cursor é o passo onde a execução parou (uma espera ou a ação que vai ser tentada de novo). Ao retomar:
 # - o "esperar" já cumpriu o tempo e segue;
-# - o "esperar até" confere a condição de novo e, vencido o prazo, segue pelo caminho "se vencer";
+# - o "esperar até" confere a condição de novo e, vencido o prazo, segue pelo caminho "se vencer" (sem prazo, volta a
+#   esperar: ver EsperaNoExecutor);
 # - a ação roda de novo;
 # - o "decidir" que decide a cada resposta (G31) decide de novo se ela chegou, ou segue esperando até o prazo; vencido,
 #   a execução acaba sem mandar nada.
@@ -107,13 +108,23 @@ class Autonomia::Automacao::Executor
   end
 
   # Fecha a execução e devolve true quando ela não pode andar agora. A execução que já não é desta rodada (a varredura a
-  # fechou como travada, alguém a desligou) só para, sem gravar nada por cima.
+  # fechou como travada, alguém a desligou) para sem gravar nada na execução.
   def impedida?(passo_id)
-    return @parou = true unless desta_rodada?
+    return parou_por_fora(passo_id) unless desta_rodada?
 
     estado, motivo = impedimento
     encerrar(passo_id, estado, motivo) if estado
     estado.present?
+  end
+
+  # Desligada no meio da rodada: o desligar não registra a execução que está andando (o cursor dela não diz o passo,
+  # Definicao#desligar!), então o porquê fica aqui, no passo em que a rodada ia (#2750, revisão). A varredura que a
+  # fechou como travada já deixou o registro dela.
+  def parou_por_fora(passo_id)
+    @parou = true
+    desligada = Execucao.exists?(id: @execucao.id, estado: 'parada') && !@definicao.class.exists?(id: @definicao.id, ativa: true)
+    registrar(passo_id, 'pulado', 'desligada') if desligada
+    true
   end
 
   # [estado final, motivo] quando a execução não pode andar agora; nil quando pode.
@@ -208,8 +219,9 @@ class Autonomia::Automacao::Executor
     aguardar(passo, Time.current + INTERVALOS[tentativa - 1], registrar: false)
   end
 
-  def aguardar(passo, ate, registrar: true)
-    registrar(passo['id'], 'ok', nil, 'ate' => ate.iso8601) if registrar
+  # `dados`: o que fica no registro da espera; sem eles, o prazo (o "esperar até" sem prazo grava o começo, EsperaNoExecutor).
+  def aguardar(passo, ate, registrar: true, dados: nil)
+    registrar(passo['id'], 'ok', nil, dados || { 'ate' => ate.iso8601 }) if registrar
     gravar(estado: 'esperando', cursor: passo['id'], due_at: ate, travada_em: nil, tentativas: @tentativas)
     nil
   end

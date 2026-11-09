@@ -136,6 +136,34 @@ describe('LivreHistorico', () => {
     );
   });
 
+  // #2750: a espera sem prazo não mostra hora (o due_at é só a conferência).
+  it('a espera sem prazo diz "sem prazo", sem hora', async () => {
+    responder([
+      execucao(1, {
+        estado: 'esperando',
+        esperando_ate: null,
+        esperando_sem_prazo: true,
+        passos: [
+          {
+            passo: 'p1',
+            resultado: 'ok',
+            motivo: null,
+            dados: { sem_prazo: true },
+          },
+        ],
+      }),
+    ]);
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.find('[data-estado]').text()).toBe(
+      'AUTOMACAO_LIVRE.HISTORICO.ESPERANDO_SEM_PRAZO'
+    );
+    expect(wrapper.find('[data-sem-prazo]').text()).toBe(
+      'AUTOMACAO_LIVRE.HISTORICO.ESPERA_SEM_PRAZO'
+    );
+  });
+
   it('o "se" diz por qual caminho seguiu', async () => {
     responder([
       execucao(1, {

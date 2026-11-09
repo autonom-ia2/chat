@@ -519,6 +519,7 @@ en:
         acao_fora: 'This action is no longer allowed as an automation step.'
         acao_recusada: 'The platform refused this action as it was set up.'
         alvo_sumiu: 'The conversation no longer exists.'
+        alvo_arquivado: 'The card was archived. The wait with no deadline ended.'
         desligada: 'The automation was turned off.'
         erro_depois_de_gravar: 'The platform failed after saving part of the action. The automation does not repeat it, so it is not done twice; check and undo if needed.'
         erro_inesperado: 'The automation stopped in the middle of this step on an unexpected error. It does not repeat the step; check what was already done.'
@@ -599,6 +600,7 @@ en:
         inicio_da_reuniao: '%m/%d/%Y at %H:%M'
       receita:
         id_repetido: 'Step %{passo}: the id is used by another step.'
+        sem_prazo_com_se_vencer: 'Step %{passo}: a wait with no deadline never runs out. Remove the steps under "If time runs out" or set a deadline.'
         sem_criar_card: 'Step %{passo}: you cannot create cards in the CRM, which the "Create card" step needs.'
         etapa_do_card_de_fora: 'Step %{passo}: stage %{id} is not from this account.'
         card_desligado: 'Step %{passo}: the "Create card" step is off for this account (card triggers or the CRM are off).'
@@ -651,6 +653,9 @@ en:
         responsavel_de_fora: 'Trigger: the chosen owner is not in this account.'
         etiqueta_de_fora: 'Trigger: label %{etiqueta} does not exist in this account.'
         atributo_de_fora: 'Trigger: field %{campo} is not a contact field of this account.'
+        campo_do_card_de_fora: 'Trigger: field %{campo} is not a card field of this account.'
+        gatilho_valor_de_venda: 'Trigger: only people who see sales values can use the sale value in the trigger. Ask for the permission or choose another field.'
+        mudanca_sem_numero: 'Trigger: "greater than" and "went above" (and the sale value) need a number, like 50000 or 50000.5.'
         funil_de_fora: 'Trigger: pipeline %{id} is not from this account.'
         pagina_de_fora: 'Trigger: booking page %{id} is not from this account.'
         ia_desligada: "Step %{passo}: AI steps are off for this account."

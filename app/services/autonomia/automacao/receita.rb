@@ -10,6 +10,7 @@
 # - todo `$valor` do caminho, do corpo e das condições é um caminho que a automação sabe ler;
 # - a condição sobre um valor fechado (`mensagem.tipo`) usa uma das opções e um dos operadores dele (#2496);
 # - o gatilho de card só com a flag da F6, e a etapa ou o funil escolhidos nele são da conta (#2499);
+# - o "esperar até" sem prazo não tem passos em "se vencer", que nunca rodariam (#2750);
 # - o "decidir" a cada resposta (G31) só repete caminhos dele, sem passos, e deixa um para seguir (DecidirDeNovo).
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
@@ -21,8 +22,6 @@ class Autonomia::Automacao::Receita
   # Onde o extrair pode gravar, além dos atributos do contato e da conversa (`<base>.atributos.<chave>`).
   DESTINOS_FIXOS = %w[contato.nome empresa.nome].freeze
   DESTINOS_DE_ATRIBUTO = %w[contato.atributos conversa.atributos].freeze
-  # A chave do caminho sai do nome (minúscula, sem acento) e precisa de pelo menos uma letra.
-  LETRAS = ('a'..'z')
 
   # As listas de passos que um passo abre, na ordem em que aparecem. É a única travessia da receita: o salvar, o ligar, a
   # chave de funis (sem_funil? do controller) e o Roteiro andam por aqui. Um ramo que ficasse de fora deixaria a ação
@@ -50,7 +49,8 @@ class Autonomia::Automacao::Receita
 
   # Frases para a pessoa (ou o Guia) corrigir. Vazio = pode salvar. Só roda com a receita já no esquema.
   def problemas
-    [*ids_repetidos, *gatilho_novo, *conversa_nova, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) }]
+    [*ids_repetidos, *gatilho_novo, *conversa_nova, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) },
+     *::Autonomia::Automacao::Duracao.sem_prazo_que_vence(passos).map { |id| texto(:sem_prazo_com_se_vencer, passo: id) }]
   end
 
   # Todos os passos, inclusive os de dentro dos ramos, na ordem em que aparecem.
@@ -66,7 +66,9 @@ class Autonomia::Automacao::Receita
 
   # O gatilho de card e o de tempo (#2499): a flag, a etapa, o funil e o campo de data são da conta; no da conta (G7),
   # os passos que ele aceita.
-  def gatilho_novo = ::Autonomia::Automacao::ProblemasDoGatilho.new(@receita['gatilho'].to_h, @conta, passos: passos).problemas
+  def gatilho_novo
+    ::Autonomia::Automacao::ProblemasDoGatilho.new(@receita['gatilho'].to_h, @conta, passos: passos, account_user: @account_user).problemas
+  end
 
   # A caixa por onde abrir a conversa de quem não tem (#2680): da conta, e quem salva pode começar conversa nela.
   def conversa_nova = ::Autonomia::Automacao::ConversaNova.problemas_ao_salvar(@conta, @receita['gatilho'].to_h, @account_user)
@@ -116,8 +118,7 @@ class Autonomia::Automacao::Receita
     id = passo['id']
     [*(::Autonomia::Automacao::Motor.ia?(@conta) ? [] : [texto(:ia_desligada, passo: id)]),
      *(fala_com_gente?(passo) && !::Autonomia::Automacao::Motor.mensagens?(@conta) ? [texto(:passo_desligado, passo: id)] : []),
-     *caminhos_repetidos(id, Array(passo['caminhos'])),
-     *caminhos_sem_chave_boa(id, Array(passo['caminhos'])),
+     *::Autonomia::Automacao::CaminhosDoDecidir.problemas(id, Array(passo['caminhos'])),
      *::Autonomia::Automacao::DecidirDeNovo.problemas_ao_salvar(passo),
      *repetidos(id, Array(passo['campos']).pluck('chave'), :campo_repetido),
      *Array(passo['campos']).flat_map { |campo| destino_invalido(id, campo['destino']) },
@@ -134,30 +135,6 @@ class Autonomia::Automacao::Receita
 
   def fala_com_gente?(passo)
     (passo['tipo'] == 'escrever' && passo['destino'] == 'mensagem') || (passo['tipo'] == 'resumir' && passo['destino'].is_a?(Hash))
-  end
-
-  # Dois caminhos com a mesma chave ("Cotação" e "cotacao" viram cotacao) ou com o mesmo nome à vista (quem chama a API
-  # pode mandar chaves diferentes): uma frase por grupo, com o nome do primeiro, que é o que a pessoa vê.
-  def caminhos_repetidos(id, caminhos)
-    primeiros = caminhos.each_index.filter_map do |indice|
-      caminhos.first(indice).index { |outro| mesmo_caminho?(outro, caminhos[indice]) }
-    end
-    primeiros.uniq.map { |indice| texto(:caminho_repetido, passo: id, nome: caminhos[indice]['nome']) }
-  end
-
-  def mesmo_caminho?(primeiro, outro) = primeiro['chave'] == outro['chave'] || nome_comparavel(primeiro) == nome_comparavel(outro)
-
-  def nome_comparavel(caminho) = caminho['nome'].to_s.strip.downcase
-
-  # A chave "nenhum" é do ramo "nenhum se aplica": um caminho com ela deixaria a resposta da IA e o histórico ambíguos.
-  # E a chave precisa de letra: "!!!" vira vazia e "123" fica só com dígitos.
-  def caminhos_sem_chave_boa(id, caminhos)
-    caminhos.filter_map do |caminho|
-      chave = caminho['chave'].to_s
-      next texto(:caminho_reservado, passo: id, nome: caminho['nome']) if chave == NENHUM
-
-      texto(:caminho_sem_letra, passo: id, nome: caminho['nome']) if chave.each_char.none? { |letra| LETRAS.cover?(letra) }
-    end
   end
 
   def repetidos(id, chaves, motivo)

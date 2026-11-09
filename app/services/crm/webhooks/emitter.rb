@@ -81,10 +81,11 @@ module Crm
         )
       end
 
+      # In a bulk change (Autonomia::Automacao::EmLote) the account is loaded once for the whole batch, not once per card.
       def account
         return @account if defined?(@account)
 
-        @account = Account.find_by(id: @account_id)
+        @account = Autonomia::Automacao::EmLote.lembrar([:conta, @account_id]) { Account.find_by(id: @account_id) }
       end
 
       # Early-exit (plan R1): skip enqueuing EventDispatcherJob unless at least one

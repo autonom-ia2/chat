@@ -9,7 +9,7 @@
 #   falhou", G53), resposta automática de e-mail (a régua da Escuta) ou fora do "Só se" do gatilho;
 # - entraria: os passos em ordem, do jeito do Roteiro. O "se" vale agora e segue pelo ramo que valer. O "esperar até"
 #   que ainda não vale abre dois caminhos (se chegar a tempo: segue o resto; se o prazo vencer: o ramo e depois o
-#   resto), e o "decidir" da IA abre um caminho por saída, sem escolher. "Parar" acaba o caminho.
+#   resto; sem prazo, só o primeiro), e o "decidir" da IA abre um caminho por saída, sem escolher. "Parar" acaba o caminho.
 # - a ação com valor calculado no corpo (G16) mostra o valor que daria agora, com os dados da conversa e o "hoje" de
 #   agora, no fuso da conta; pula como o motor pularia.
 # - "extrair", "escrever" e "resumir" (#2500 F7) só dizem o que a IA faria e para onde iria, pelo `ensaiar` de cada
@@ -231,14 +231,15 @@ class Autonomia::Automacao::Ensaio
     [no(passo, 'se', { ramo: ramo }), @roteiro.entrar(passo, ramo)]
   end
 
-  # Já vale agora: segue na hora, como o motor. Não vale: os dois caminhos possíveis.
+  # Já vale agora: segue na hora, como o motor. Não vale: os dois caminhos possíveis; sem prazo (#2750), só o de quando
+  # chegar, porque ela não vence.
   def esperar_ate(passo, valores)
     return [no(passo, 'esperar_ate_ja_vale'), @roteiro.seguinte(passo['id'])] if condicao?(passo['condicao'], valores)
 
-    ramos = [
-      { chave: 'chegou', passos: caminho(@roteiro.seguinte(passo['id']), valores) },
-      { chave: 'se_vencer', passos: caminho(@roteiro.entrar(passo, 'se_vencer'), valores) }
-    ]
+    ramos = [{ chave: 'chegou', passos: caminho(@roteiro.seguinte(passo['id']), valores) }]
+    unless ::Autonomia::Automacao::Duracao.sem_prazo?(passo['prazo'])
+      ramos << { chave: 'se_vencer', passos: caminho(@roteiro.entrar(passo, 'se_vencer'), valores) }
+    end
     [no(passo, 'esperar_ate', ramos: ramos), nil]
   end
 

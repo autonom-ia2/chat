@@ -118,6 +118,22 @@
       ]
     },
     {
+      "tipo": "card.atualizado",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_ATUALIZADO",
+      "grupo": "card",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "mudanca",
+          "peca": "mudanca",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.MUDANCA"
+        }
+      ]
+    },
+    {
       "tipo": "card.reuniao_marcada",
       "alvo": "Crm::Card",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_REUNIAO_MARCADA",
@@ -1176,7 +1192,7 @@
         },
         {
           "nome": "prazo",
-          "peca": "duracao",
+          "peca": "prazo",
           "obrigatorio": true,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PRAZO"
         },
