@@ -623,6 +623,8 @@ en:
         mensagem_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the filter of the "message created" trigger.'
         reuniao_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the meeting triggers (scheduled, rescheduled, canceled).'
         resposta_so_na_espera: 'Step %{passo}: %{caminho} only exists in the condition of a "wait until" step.'
+        entrada_so_na_espera: 'Step %{passo}: %{caminho} only exists in the condition of a "wait until" step, in an automation that starts when the card enters a stage.'
+        se_repetir_fora: 'Starting again when the trigger repeats only works with event triggers, except "message created" (one run per message would loop) and the time triggers.'
         valor_fora_do_alvo: 'Step %{passo}: %{caminho} cannot be read from what this trigger starts on (conversation, card or contact).'
         operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'
         valor_fora: 'Step %{passo}: %{caminho} has no value "%{valor}". Use one of: %{opcoes}.'

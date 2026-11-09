@@ -33,6 +33,13 @@
       "NA_FRASE": "{frase} (with no conversation, opens one in {caixa})",
       "AJUDA": "If the card or the contact has no conversation yet, the first message opens one in this inbox. On the official WhatsApp, it only goes out with an approved template."
     },
+    "SE_REPETIR": {
+      "ROTULO": "If it happens again while it is still waiting",
+      "IGNORA": "Do not start again",
+      "COMECA_OUTRA": "Start again",
+      "AJUDA": "With \"Start again\", each new time runs the steps from the beginning, alongside the one that is still waiting.",
+      "NA_FRASE": "{frase} (starts again each time)"
+    },
     "VALOR_DA_MENSAGEM": {
       "RECEBIDA": "from the customer",
       "ENVIADA": "from the team to the customer",

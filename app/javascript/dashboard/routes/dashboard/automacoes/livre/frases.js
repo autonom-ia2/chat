@@ -134,8 +134,18 @@ const fraseSemPagina = (gatilho, catalogo, t, nomes) => {
   );
 };
 
+// G50: o gatilho que começa outra vez quando se repete diz isso no fim.
+const comRepeticao = (frase, gatilho, t) =>
+  gatilho?.se_repetir === 'comeca_outra'
+    ? t('AUTOMACAO_LIVRE.SE_REPETIR.NA_FRASE', { frase })
+    : frase;
+
 export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) =>
-  comPagina(fraseSemPagina(gatilho, catalogo, t, nomes), gatilho, t, nomes);
+  comRepeticao(
+    comPagina(fraseSemPagina(gatilho, catalogo, t, nomes), gatilho, t, nomes),
+    gatilho,
+    t
+  );
 
 // "Status da conversa", ou "Campo personalizado do contato: placa".
 export const fraseDoValor = (caminho, catalogo, t) => {

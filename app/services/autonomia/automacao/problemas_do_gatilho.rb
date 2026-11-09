@@ -8,6 +8,9 @@
 # conta não tem seleção (o esquema recusa) e roda sem conversa, card ou contato: só ficam o esperar e o disparar de
 # campanha (G14), que escolhe o público pela etiqueta. Recusar ao salvar é o que impede o passo de quebrar sem alvo ao
 # rodar.
+#
+# G50: "começa outra vez" (`se_repetir: comeca_outra`) só nos gatilhos de evento que aceitam (Gatilhos.pode_repetir?).
+# Na mensagem nova seria uma execução por mensagem; nos da varredura, a marca já é o fato.
 class Autonomia::Automacao::ProblemasDoGatilho
   Gatilhos = ::Autonomia::Automacao::Gatilhos
 
@@ -20,7 +23,15 @@ class Autonomia::Automacao::ProblemasDoGatilho
   end
 
   # Frases para a pessoa corrigir; vazio = pode salvar.
-  def problemas
+  def problemas = [*repeticao_fora, *do_card_ou_de_tempo]
+
+  private
+
+  def repeticao_fora
+    Gatilhos.comeca_outra?(@gatilho) && !Gatilhos.pode_repetir?(@tipo) ? [texto(:se_repetir_fora)] : []
+  end
+
+  def do_card_ou_de_tempo
     return [] unless Gatilhos.do_card?(@tipo) || Gatilhos.de_tempo?(@tipo)
 
     desligado = Gatilhos.desligado(@tipo, @conta)
@@ -31,8 +42,6 @@ class Autonomia::Automacao::ProblemasDoGatilho
 
     [*etapa_de_fora, *funil_de_fora, *pagina_de_fora, *parado_sem_dias, *campo_de_fora]
   end
-
-  private
 
   def passos_que_pedem_alvo
     @passos.reject { |passo| sem_alvo?(passo) }.map { |passo| texto(:passo_pede_alvo, passo: passo['id']) }

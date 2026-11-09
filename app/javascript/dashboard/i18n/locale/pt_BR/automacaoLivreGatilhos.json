@@ -33,6 +33,13 @@
       "NA_FRASE": "{frase} (sem conversa, abre uma em {caixa})",
       "AJUDA": "Se o card ou o contato ainda não tem conversa, a primeira mensagem abre uma nesta caixa. No WhatsApp oficial, ela só sai com um modelo aprovado."
     },
+    "SE_REPETIR": {
+      "ROTULO": "Se acontecer de novo enquanto ela ainda está esperando",
+      "IGNORA": "Não começa outra vez",
+      "COMECA_OUTRA": "Começa outra vez",
+      "AJUDA": "Com \"Começa outra vez\", cada nova vez roda os passos desde o começo, ao lado da que ainda está esperando.",
+      "NA_FRASE": "{frase} (começa outra vez a cada vez)"
+    },
     "VALOR_DA_MENSAGEM": {
       "RECEBIDA": "do cliente",
       "ENVIADA": "da equipe para o cliente",

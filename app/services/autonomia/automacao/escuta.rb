@@ -171,7 +171,16 @@ module Autonomia::Automacao::Escuta
       marca = ::Autonomia::Automacao::Gatilhos.marca_da_atividade(tipo, dados[:activity_id])
       cada_automacao(card, tipo, dados_do_card(tipo, card, mudou, dados[:activity_id])) { |definicao| partir(definicao, card, tipo, evento: marca) }
     end
+    acordar_pelo_evento(card, tipos)
+  end
+
+  # Depois das partidas: a reunião (G32) e a nova entrada na etapa (G50) acordam quem espera por elas. G50: quem espera
+  # no próprio card ("se nesse tempo não entrou de novo em Faltou", que lê `card.entrou_de_novo`) confere agora, depois
+  # da partida da nova entrada: a 2ª falta corta a espera na hora.
+  def acordar_pelo_evento(card, tipos)
     acordar_o_card(card) if tipos.any? { |tipo| ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo) }
+    entrada = ::Autonomia::Automacao::EsperaDaEntrada
+    acordar_quem_espera(entrada.de(card), filtro: entrada.method(:le_entrada?)) if tipos.include?(entrada::GATILHO)
   end
 
   # A etapa de onde o card saiu ou para onde entrou, e o funil, para os parâmetros do gatilho. O card criado traz a

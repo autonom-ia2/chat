@@ -116,11 +116,12 @@ const frase = computed(() => {
 });
 
 // G32: "quem atende a reunião" só nos gatilhos de reunião — os mesmos em que o
-// catálogo oferece os valores da reunião.
+// catálogo oferece os valores da reunião. G50: a nova entrada na etapa também
+// tem `so_nos_gatilhos`; a pergunta é pela reunião.
 const deReuniao = computed(() =>
   Boolean(
     props.catalogo.valores
-      ?.find(item => item.so_nos_gatilhos)
+      ?.find(item => item.base === 'reuniao' && item.so_nos_gatilhos)
       ?.so_nos_gatilhos.includes(props.catalogo.gatilho)
   )
 );

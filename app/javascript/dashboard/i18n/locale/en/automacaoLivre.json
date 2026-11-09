@@ -61,6 +61,7 @@
       "CARD_DIAS_NA_ETAPA": "Days in the stage",
       "CARD_MOTIVO_DA_PERDA": "Lost reason",
       "CARD_TEM_REUNIAO_MARCADA": "The card has a meeting scheduled",
+      "CARD_ENTROU_DE_NOVO": "The card entered the trigger stage again during the wait",
       "CONTATO_TEM_REUNIAO_MARCADA": "The contact has a meeting scheduled (any card)",
       "CARD_ATRIBUTOS": "Card custom field",
       "MENSAGEM_TIPO": "Message type",

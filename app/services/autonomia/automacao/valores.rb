@@ -73,6 +73,12 @@ class Autonomia::Automacao::Valores
   RESPOSTA = ::Autonomia::Automacao::Resposta::VALORES
   RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu'.freeze
 
+  # G50: o card entrou de novo na etapa do gatilho durante o "esperar até" (EsperaDaEntrada). Como a resposta, só existe
+  # na condição dele, onde há a janela; e só no gatilho card.entrou_na_etapa, que tem a etapa. Sem a janela, lê false.
+  ENTRADA = ::Autonomia::Automacao::EsperaDaEntrada::VALORES
+  # Os que leem a janela da espera: a resposta e a nova entrada.
+  DA_ESPERA = RESPOSTA.merge(ENTRADA).freeze
+
   # A última mensagem que a execução mandou ao cliente (#2680): o texto e a situação (Envio).
   ENVIO = ::Autonomia::Automacao::Envio::VALORES
 
@@ -115,6 +121,7 @@ class Autonomia::Automacao::Valores
     'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'card.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'contato.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'card.entrou_de_novo' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'envio.situacao' => { 'opcoes' => ::Autonomia::Automacao::Envio::SITUACOES.values, 'operadores' => %w[igual diferente] }
   }.merge(::Autonomia::Automacao::Ausencia::FECHADOS).freeze
 
@@ -131,7 +138,7 @@ class Autonomia::Automacao::Valores
 
   class << self
     def caminho_valido?(caminho)
-      [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA, ENVIO].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? ||
+      [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, ENTRADA, AGENDA, ENVIO].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? ||
         da_ia?(caminho)
     end
 
@@ -146,12 +153,21 @@ class Autonomia::Automacao::Valores
 
     def da_resposta?(caminho) = RESPOSTA.key?(caminho.to_s)
 
+    def da_entrada?(caminho) = ENTRADA.key?(caminho.to_s)
+
     # O valor que só existe num lugar da receita: a mensagem no filtro do gatilho dela (`mensagem`: a receita está lá);
-    # a resposta no "esperar até" (`na_espera`); a reunião nos gatilhos de reunião (`gatilho`). Devolve a chave da
-    # frase do salvar, ou nil.
+    # a resposta no "esperar até" (`na_espera`); a reunião nos gatilhos de reunião (`gatilho`); a nova entrada na etapa
+    # (G50) no "esperar até" do gatilho de etapa. Devolve a chave da frase do salvar, ou nil.
     def fora_do_lugar(caminho, mensagem:, na_espera:, gatilho: nil)
       return :mensagem_so_no_gatilho if da_mensagem?(caminho) && !mensagem
       return :reuniao_so_no_gatilho if da_reuniao?(caminho) && !::Autonomia::Automacao::Gatilhos.de_reuniao?(gatilho)
+
+      fora_da_espera(caminho, na_espera, gatilho)
+    end
+
+    # A resposta (G11) e a nova entrada na etapa (G50) só na condição do "esperar até"; a entrada, só no gatilho de etapa.
+    def fora_da_espera(caminho, na_espera, gatilho)
+      return :entrada_so_na_espera if da_entrada?(caminho) && !(na_espera && gatilho == ::Autonomia::Automacao::EsperaDaEntrada::GATILHO)
 
       :resposta_so_na_espera if da_resposta?(caminho) && !na_espera
     end
@@ -216,7 +232,7 @@ class Autonomia::Automacao::Valores
   def lido(caminho)
     return unless permitido?(caminho)
     return @mensagem && MENSAGEM.fetch(caminho.to_s).call(@mensagem) if MENSAGEM.key?(caminho.to_s)
-    return resposta(caminho) if RESPOSTA.key?(caminho.to_s)
+    return da_espera(caminho) if DA_ESPERA.key?(caminho.to_s)
     return do_campo(caminho.to_s) if campo?(caminho.to_s)
 
     base, chave = self.class.atributo(caminho)
@@ -243,7 +259,7 @@ class Autonomia::Automacao::Valores
   # A página de agendamento em que a reunião do gatilho foi marcada, quando veio de uma.
   def pagina_da_reuniao = @contexto.reuniao&.metadata.to_h['booking_profile_id']
 
-  def resposta(caminho) = !@espera.nil? && RESPOSTA.fetch(caminho.to_s).call(@contexto, @espera, @quem) == true
+  def da_espera(caminho) = !@espera.nil? && DA_ESPERA.fetch(caminho.to_s).call(@contexto, @espera, @quem) == true
 
   # A pessoa só é buscada quando o caminho pede permissão.
   def permitido?(caminho) = !PROTEGIDOS.key?(caminho.to_s) || self.class.pode_ler?(caminho, account_user)

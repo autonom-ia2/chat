@@ -7,8 +7,9 @@ require 'rails_helper'
 RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model do
   pendentes = {
     2 => ['Lead do anúncio atendido em 5 minutos', 'G29 (card criado pelo formulário de um anúncio e o nome dele), G30, G31, G32'],
-    # O 4 tem spec próprio à risca (exemplo_04_aluno_que_falta_spec.rb); esperam a G50 (a segunda falta com a primeira
-    # ainda esperando), a G44 (passos 6 e 8, link de uma página escolhida) e a G18 (passo 10, fechar o card de retenção).
+    # O 4 tem spec próprio à risca (exemplo_04_aluno_que_falta_spec.rb); a G50 (a segunda falta com a primeira ainda
+    # esperando) fechou com o g50_reentrada_spec.rb; esperam a G44 (passos 6 e 8, link de uma página escolhida) e a G18
+    # (passo 10, fechar o card de retenção).
     4 => ['Aluno que começa a faltar', 'G50 (reentrada no mesmo card), G44, G18, G5, G1, G3, G4, G12, G15, G25, G28'],
     # O 5 tem spec próprio à risca (exemplo_05_revisao_do_carro_spec.rb); só o passo 8 espera a G47.
     5 => ['Revisão do carro no tempo certo', 'G47 (a revisão cancelada no card que a página criou), G5, G1, G3, G6, G12, G16, G19, G28, G32, G36'],

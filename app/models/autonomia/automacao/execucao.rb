@@ -1,6 +1,8 @@
 # Uma automação rodando para um alvo: conversa, card ou contato (#2414, F2 #2452). Fica na versão em que entrou.
 #
 # Só pode haver uma aberta por automação, alvo e gatilho: o índice único do banco vale enquanto `finalizada_em` é nula.
+# A exceção (G50) é a `paralela`: o gatilho com `se_repetir: comeca_outra` abre outra execução no mesmo alvo enquanto a
+# primeira ainda espera, e o índice não conta as paralelas. O mesmo fato continua abrindo uma só (índice do evento).
 # Por isso `finalizada_em` sai daqui, a cada gravação, a partir do estado: nula num estado terminal travaria aquele
 # alvo para sempre. Quem grava sem callback (`update_columns`, `update_all`) tem de preencher as duas juntas; o CHECK
 # do banco recusa o par desencontrado. A lista de TERMINAIS é a mesma do CHECK da migration.

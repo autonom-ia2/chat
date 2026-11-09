@@ -15,7 +15,9 @@ import LivreSelecao from './LivreSelecao.vue';
 // tempo antes. O recorrente (#2635, G7) pede a frequência, o dia (da semana ou
 // do mês, conforme a frequência), a hora e a seleção dos cards ou contatos
 // (LivreSelecao). #2680: no gatilho de card ou de contato, a caixa por onde a
-// mensagem abre a conversa de quem ainda não tem uma.
+// mensagem abre a conversa de quem ainda não tem uma. G50: no gatilho que
+// aceita (`se_repetir` no catálogo), o que fazer quando ele acontece de novo
+// com a automação ainda esperando no mesmo card ou conversa.
 const props = defineProps({
   modelValue: { type: Object, default: null },
   gatilhos: { type: Array, required: true },
@@ -32,6 +34,7 @@ const emit = defineEmits(['update:modelValue']);
 const { t } = useI18n();
 const idTipo = useId();
 const idCaixa = useId();
+const idRepetir = useId();
 
 const opcao = item => ({ value: item.tipo, label: t(item.frase) });
 const grupos = computed(() => {
@@ -180,17 +183,34 @@ const caixasDaConversa = computed(() => [
   ...(props.escolhas.caixas || []),
 ]);
 
+// G50: "Não começa outra vez" é a ausência da chave na receita.
+const COMECA_OUTRA = 'comeca_outra';
+const podeRepetir = tipo => Boolean(entradaDo(tipo)?.se_repetir);
+const repetir = computed(() => podeRepetir(props.modelValue?.tipo));
+const opcoesDeRepetir = computed(() =>
+  ['ignora', COMECA_OUTRA].map(valor => ({
+    value: valor,
+    label: t(`AUTOMACAO_LIVRE.SE_REPETIR.${valor.toUpperCase()}`),
+  }))
+);
+
 // Trocar o tipo apaga o que o anterior pedia (etapa, funil), mas mantém os
 // filtros: o painel mostra o que entra e o que sai deles. A caixa da conversa
-// nova fica enquanto o novo gatilho também pode não ter conversa.
+// nova fica enquanto o novo gatilho também pode não ter conversa; o "começa
+// outra vez", enquanto o novo gatilho também aceita.
 const trocarTipo = tipo => {
-  const { filtros, conversa_nova: conversaNova } = props.modelValue || {};
+  const {
+    filtros,
+    conversa_nova: conversaNova,
+    se_repetir: seRepetir,
+  } = props.modelValue || {};
   const novo = {
     tipo,
     ...padraoDo(tipo),
     ...(conversaNova && podeNaoTerConversa(tipo)
       ? { conversa_nova: conversaNova }
       : {}),
+    ...(seRepetir && podeRepetir(tipo) ? { se_repetir: seRepetir } : {}),
   };
   emit('update:modelValue', filtros ? { ...novo, filtros } : novo);
 };
@@ -385,6 +405,28 @@ const mudar = (nome, valor) => {
       />
       <p class="mb-0 text-sm text-n-slate-11">
         {{ $t('AUTOMACAO_LIVRE.CONVERSA_NOVA.AJUDA') }}
+      </p>
+    </div>
+
+    <div
+      v-if="repetir"
+      class="flex flex-col gap-1.5"
+      data-parametro="se_repetir"
+    >
+      <label :for="idRepetir" class="text-sm font-medium text-n-slate-12">
+        {{ $t('AUTOMACAO_LIVRE.SE_REPETIR.ROTULO') }}
+      </label>
+      <ChoiceSelect
+        :model-value="modelValue?.se_repetir || 'ignora'"
+        :trigger-id="idRepetir"
+        :aria-label="$t('AUTOMACAO_LIVRE.SE_REPETIR.ROTULO')"
+        :options="opcoesDeRepetir"
+        @update:model-value="
+          valor => mudar('se_repetir', valor === COMECA_OUTRA ? valor : '')
+        "
+      />
+      <p class="mb-0 text-sm text-n-slate-11">
+        {{ $t('AUTOMACAO_LIVRE.SE_REPETIR.AJUDA') }}
       </p>
     </div>
 

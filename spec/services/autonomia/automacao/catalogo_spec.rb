@@ -158,13 +158,16 @@ RSpec.describe Autonomia::Automacao::Catalogo do
   end
 
   # G11: a resposta durante a espera vai ao catálogo como valor do alvo, sim/não, marcada para o editor só a oferecer
-  # na condição do "esperar até"; nunca como valor da mensagem do gatilho.
+  # na condição do "esperar até"; nunca como valor da mensagem do gatilho. G50: a nova entrada na etapa também, e só no
+  # gatilho de etapa.
   it 'leva a resposta durante a espera como valor do alvo, só para o "esperar até"', :aggregate_failures do
-    respostas = catalogo.gerado['valores'].select { |item| item['so_na_espera'] }
+    na_espera = catalogo.gerado['valores'].select { |item| item['so_na_espera'] }
+    respostas, entrada = na_espera.partition { |item| item['base'] == 'conversa' }
 
     expect(respostas.pluck('caminho')).to eq(%w[conversa.cliente_respondeu conversa.equipe_respondeu])
-    expect(respostas).to all(include('base' => 'conversa'))
-    expect(respostas).to all(satisfy { |item| item['so_no_gatilho'].nil? && item['opcoes'].pluck('valor') == [true, false] })
+    expect(entrada).to contain_exactly(include('caminho' => 'card.entrou_de_novo', 'base' => 'card',
+                                               'so_nos_gatilhos' => ['card.entrou_na_etapa']))
+    expect(na_espera).to all(satisfy { |item| item['so_no_gatilho'].nil? && item['opcoes'].pluck('valor') == [true, false] })
   end
 
   # A condição que o editor já põe ao escolher o gatilho tem que salvar.

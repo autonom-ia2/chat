@@ -1116,6 +1116,8 @@ pt_BR:
         mensagem_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no filtro do gatilho "mensagem criada".'
         reuniao_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe nos gatilhos de reunião (marcada, remarcada, cancelada).'
         resposta_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até".'
+        entrada_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até", numa automação que começa quando o card entra numa etapa.'
+        se_repetir_fora: 'Começar outra vez quando o gatilho se repete só vale nos gatilhos de evento, menos "mensagem criada" (uma execução por mensagem viraria laço) e os de tempo.'
         valor_fora_do_alvo: 'Passo %{passo}: %{caminho} não dá para ler naquilo em que este gatilho começa (conversa, card ou contato).'
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'
         valor_fora: 'Passo %{passo}: %{caminho} não tem o valor "%{valor}". Use um destes: %{opcoes}.'
