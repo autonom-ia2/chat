@@ -36,6 +36,8 @@
       "VOLTA": "Then goes back to wait: {passo}",
       "NAO_SAIRIA": "Wouldn't go out: automatic messages aren't turned on in this account yet.",
       "FALTOU_VALOR": "Wouldn't go out: the text is missing a detail from this conversation.",
+      "FALTOU_LINK_DA_AGENDA": "Wouldn't send: the booking link would be empty (page offline, or no link from the person in charge).",
+      "SEM_ACESSO_AGENDA": "Wouldn't send: you can't see the booking pages.",
       "RETORNO_SEM_RESPONSAVEL": "Would not create the follow-up: this conversation has no assignee.",
       "TEXTO_VAZIO": "Wouldn't go out: the text would be empty.",
       "CORTE": "The test stopped here: the automation has too many paths to show.",

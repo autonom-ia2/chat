@@ -82,6 +82,7 @@
       "MENSAGEM_TEM_ANEXO": "Message has a photo or PDF",
       "CARD_LINK_DA_AGENDA": "Booking link of the card owner (at step time)",
       "CONVERSA_LINK_DA_AGENDA": "Booking link of the conversation assignee (at step time)",
+      "AGENDA_DA_PAGINA": "Booking link: {titulo}",
       "REUNIAO_INICIO": "Meeting date and time",
       "REUNIAO_LINK_DA_REUNIAO": "Meeting call link",
       "ENVIO_TEXTO": "Text of the last message the automation sent",

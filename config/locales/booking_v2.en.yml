@@ -17,6 +17,9 @@ en:
         hours_minutes: '%{hours} h %{minutes} min'
       contact_request:
         follow_up_title: 'Call %{name}: asked to be contacted from the booking page'
+      # G47 (#2755): the title of the card the booking page creates, when the page has no title.
+      card:
+        default_title: 'Booking'
       invite:
         default_text: 'Hi, {nome}! Pick the best time for you: {link}'
         default_text_without_name: 'Hi! Pick the best time for you: {link}'

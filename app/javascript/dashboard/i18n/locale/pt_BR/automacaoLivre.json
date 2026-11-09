@@ -82,6 +82,7 @@
       "MENSAGEM_TEM_ANEXO": "A mensagem tem foto ou PDF",
       "CARD_LINK_DA_AGENDA": "Link da agenda do responsável pelo card (na hora do passo)",
       "CONVERSA_LINK_DA_AGENDA": "Link da agenda do responsável pela conversa (na hora do passo)",
+      "AGENDA_DA_PAGINA": "Link da agenda: {titulo}",
       "REUNIAO_INICIO": "Dia e hora da reunião",
       "REUNIAO_LINK_DA_REUNIAO": "Link da chamada da reunião",
       "ENVIO_TEXTO": "Texto da última mensagem que a automação mandou",

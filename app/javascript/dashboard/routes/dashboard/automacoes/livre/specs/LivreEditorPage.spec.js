@@ -70,6 +70,16 @@ vi.mock('../usePodeLerValor', async () => {
   const { ref: criarRef } = await import('vue');
   return { usePodeLerValor: () => criarRef(() => leValores.sim) };
 });
+// G44: as páginas de agendamento da conta (useAgendasDaConta tem spec próprio).
+vi.mock('../useAgendasDaConta', async () => {
+  const { ref: criarRef } = await import('vue');
+  return {
+    useAgendasDaConta: () => ({
+      paginas: criarRef([]),
+      carregarAgendas: vi.fn(),
+    }),
+  };
+});
 // #2499: os gatilhos de card pedem a chave de funis; as etapas vêm do CRM.
 vi.mock(
   'dashboard/routes/dashboard/crm/composables/useCrmPermissions',

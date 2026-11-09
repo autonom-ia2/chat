@@ -101,6 +101,9 @@ class Autonomia::Automacao::Valores
   IA = 'ia.'.freeze
   PASSOS_QUE_ESCREVEM = %w[escrever resumir].freeze
 
+  # G44: o link da agenda de uma página escolhida, `agenda.<id da página>` (AgendaDaPagina), em qualquer alvo.
+  PAGINA = ::Autonomia::Automacao::AgendaDaPagina
+
   # O que cada alvo alcança, pelas pontes do Contexto. O card da conversa (#2716) só para ler: CardDaConversa.
   # De onde cada base lê no contexto da execução. O `card` fica fora: na conversa, ele cai no card dela (#2716). O
   # `gatilho` (G9) lê o próprio contexto, que guarda a marca da troca.
@@ -173,17 +176,20 @@ class Autonomia::Automacao::Valores
   class << self
     def caminho_valido?(caminho)
       [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA, ENVIO, TROCA, FALHOU].any? { |lista| lista.key?(caminho.to_s) } ||
-        atributo(caminho).present? || da_ia?(caminho)
+        atributo(caminho).present? || livre?(caminho)
     end
 
     def da_ia?(caminho) = caminho.to_s.start_with?(IA) && caminho.to_s.length > IA.length
+
+    # O texto da IA e a página da agenda valem em qualquer alvo.
+    def livre?(caminho) = da_ia?(caminho) || PAGINA.caminho?(caminho)
 
     # "ia.p3" => "p3".
     def passo_da_ia(caminho) = caminho.to_s.delete_prefix(IA)
 
     # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.
     def no_alvo?(caminho, alvo_type)
-      return true if da_mensagem?(caminho) || da_ia?(caminho)
+      return true if da_mensagem?(caminho) || livre?(caminho)
       return true if BASES_DO_ALVO.fetch(alvo_type, []).include?(caminho.to_s.split('.', 2).first)
 
       caminho.to_s == RESPOSTA_DO_CONTATO && BASES_DO_ALVO.fetch(alvo_type, []).include?('contato')
@@ -198,8 +204,9 @@ class Autonomia::Automacao::Valores
 
     # O que impede a receita de ler o caminho que já vale ali: o atributo que a conta não tem, ou o valor que pede
     # permissão (#2597) para quem salva sem ela. Sem pessoa (`account_user` nil: o catálogo), a permissão não é
-    # conferida aqui; a execução lê vazio.
+    # conferida aqui; a execução lê vazio. A página da agenda (G44) tem a conferência dela (AgendaDaPagina).
     def problema_de_leitura(caminho, conta:, account_user:)
+      return PAGINA.problema_ao_salvar(caminho, conta: conta, account_user: account_user) if PAGINA.caminho?(caminho)
       return :atributo_inexistente unless atributo_definido?(caminho, conta)
 
       :valor_de_venda if account_user && !pode_ler?(caminho, account_user)
@@ -233,7 +240,7 @@ class Autonomia::Automacao::Valores
 
   # Por que o link da agenda lido ficou vazio (`por` do LinkDaAgenda), para o passo pular com o motivo próprio. Só
   # quando ele é o único valor vazio lido: com outro vazio junto, o motivo é o geral (`faltou_valor`).
-  def falta_da_agenda = (@por_da_agenda if @vazios.any? && @vazios.all? { |caminho| AGENDA.key?(caminho) })
+  def falta_da_agenda = (@por_da_agenda if @vazios.any? && @vazios.all? { |caminho| AGENDA.key?(caminho) || PAGINA.caminho?(caminho) })
 
   def ler(caminho)
     valor = self.class.da_ia?(caminho) ? @contexto.texto_da_ia(self.class.passo_da_ia(caminho)) : lido(caminho)
@@ -255,9 +262,10 @@ class Autonomia::Automacao::Valores
     do_objeto(caminho) { |objeto| ::Autonomia::Automacao::Valores::Atributos.ler(base, chave, objeto) }
   end
 
-  def campo?(chave) = [AGENDA, DO_QUE_QUEM_VE, *LEITURA_DIRETA].any? { |lista| lista.key?(chave) }
+  def campo?(chave) = [AGENDA, DO_QUE_QUEM_VE, *LEITURA_DIRETA].any? { |lista| lista.key?(chave) } || PAGINA.caminho?(chave)
 
   def do_campo(chave)
+    return guardar_link(PAGINA.resultado(chave, contexto: @contexto, account_user: account_user)) if PAGINA.caminho?(chave)
     return do_objeto(chave) { |objeto| DO_QUE_QUEM_VE[chave].call(objeto, account_user) } if DO_QUE_QUEM_VE.key?(chave)
     return do_objeto(chave) { |objeto| link_da_agenda(objeto, AGENDA[chave].call(objeto)) } if AGENDA.key?(chave)
 
@@ -265,10 +273,11 @@ class Autonomia::Automacao::Valores
   end
 
   def link_da_agenda(objeto, pessoa)
-    resultado = ::Autonomia::Automacao::LinkDaAgenda.resultado(objeto.account, pessoa, pagina_id: pagina_da_reuniao)
-    @por_da_agenda ||= resultado.por
-    resultado.url
+    guardar_link(::Autonomia::Automacao::LinkDaAgenda.resultado(objeto.account, pessoa, pagina_id: pagina_da_reuniao))
   end
+
+  # O link da agenda (do responsável, G12, ou da página escolhida, G44) e, vazio, o porquê.
+  def guardar_link(resultado) = resultado.url.tap { @por_da_agenda = resultado.por if @por_da_agenda.nil? }
 
   # A página de agendamento em que a reunião do gatilho foi marcada, quando veio de uma.
   def pagina_da_reuniao = @contexto.reuniao&.metadata.to_h['booking_profile_id']

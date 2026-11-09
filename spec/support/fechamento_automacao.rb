@@ -99,6 +99,7 @@ end
 # ela deu for outro. Sonda `nil` é lacuna sem pergunta que o código responda: a frente troca pela prova.
 module FechamentoAutomacao::Lacunas
   extend CrmHelpers
+  extend BookingHelpers
 
   module_function
 
@@ -171,6 +172,40 @@ module FechamentoAutomacao::Lacunas
     versao = FactoryBot.create(:autonomia_automacao_versao, automacao: automacao, receita: receita)
     FactoryBot.create(:autonomia_automacao_execucao, versao: versao, alvo: card, estado: 'esperando', cursor: 'espera',
                                                      due_at: 1.hour.from_now)
+  end
+
+  # G44 (#2756): o texto do card com o link de uma página escolhida na receita (`agenda.<id da página>`) sai com o link
+  # dessa página, lido com as permissões de quem ligou. Roda na transação do exemplo, que desfaz tudo.
+  def link_da_pagina_escolhida?
+    ClimateControl.modify(CRM_KANBAN_ENABLED: 'true', CRM_CALENDAR_MEETINGS_ENABLED: 'true') do
+      account = FactoryBot.create(:account)
+      account.enable_features!('crm_booking_v2')
+      dono = FactoryBot.create(:user, account: account, role: :administrator)
+      funil, etapa = create_crm_pipeline(account: account, user: dono)
+      card = account.crm_cards.create!(pipeline: funil, stage: etapa, owner: dono, title: 'Sonda G44', currency: 'BRL')
+      pagina = create_booking_profile(account: account, host: dono, title: 'Treinamento')
+      valores = Autonomia::Automacao::Valores.new(alvo: card, quem: dono)
+      texto = Autonomia::Automacao::Texto.new(['Marque: ', { '$valor' => "agenda.#{pagina.id}" }], valores).montar
+      texto == "Marque: #{Crm::BookingV2::ShortLink.url_for(pagina)}"
+    end
+  end
+
+  # G47 (#2755): a reserva pela página põe a reunião num card do contato, e o card nasce com a conversa dele no WhatsApp
+  # dos avisos da página. Roda na transação do exemplo, que desfaz tudo.
+  def card_da_pagina_ganha_a_conversa?
+    ClimateControl.modify(CRM_KANBAN_ENABLED: 'true') do
+      caixa = FactoryBot.create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false).inbox
+      account = caixa.account
+      dono = FactoryBot.create(:user, account: account, role: :administrator)
+      funil, etapa = create_crm_pipeline(account: account, user: dono)
+      contato = account.contacts.create!(name: 'Sonda G47', phone_number: '+5511900000047')
+      no_whatsapp = FactoryBot.create(:contact_inbox, inbox: caixa, contact: contato, source_id: '5511900000047')
+      conversa = FactoryBot.create(:conversation, account: account, inbox: caixa, contact: contato, contact_inbox: no_whatsapp)
+      pagina = create_booking_profile(account: account, host: dono, pipeline: funil, stage: etapa, notice_inbox: caixa)
+      card, = Crm::BookingV2::BookingCard.new(profile: pagina, contact: contato, target: { pipeline_id: funil.id, stage_id: etapa.id },
+                                              host: dono, source: 'public_link', fallback_name: 'Sonda').perform
+      card.conversation_id == conversa.id
+    end
   end
 
   # G30: o lead do formulário entra pelo Importer, como no webhook, num funil com a Atribuição ligada e um corretor que
@@ -284,10 +319,6 @@ module FechamentoAutomacao::Lacunas
     'G53' => -> { valor?('falhou.texto') },
     # G54: esperar a entrega da mensagem (passo 5, "Chegou: tira a etiqueta e grava uma nota"); fechada pela G34.
     'G54' => -> { valor?('envio.situacao') },
-    # Do exemplo 5, passo 8 (#2703): o card que a página de agendamento cria para a reunião (card do serviço já ganho)
-    # nasce sem conversa, e a mensagem do gatilho de reunião nele pula com `sem_conversa`. Caminho escolhido: o Booker
-    # liga ao card novo a conversa do contato na caixa da página, quando ela existe. A frente dona troca o nil pela sonda.
-    'G47' => nil,
     # Do exemplo 17, achadas na G9 (#2707). G62 (#2829): o campo do card do tipo pessoa da equipe, com o nome e a
     # ausência dela (passos 3, 5 e 6). G63 (#2830): o galho "a cada mensagem do cliente" do "esperar até" (passo 4).
     # G64 (#2839): a conferência toda manhã, numa hora marcada, na mesma automação (passo 5). Prova ponta a ponta em
@@ -308,7 +339,12 @@ module FechamentoAutomacao::Lacunas
     'G46' => lambda {
       opcoes = Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'de_novo', 'oneOf')
       valor?('conversa.cliente_mandou_documento') && Array(opcoes).any? { |opcao| opcao.dig('properties', 'desde') }
-    }
+    },
+    # Do exemplo 20, passos 5 e 8 (#2756): o link da agenda de uma página escolhida na receita, não só o do responsável.
+    'G44' => -> { link_da_pagina_escolhida? },
+    # Do exemplo 5, passo 8 (#2755): o card em que a página põe a reunião ganha a conversa do contato no WhatsApp dos
+    # avisos da página; prova ponta a ponta no passo 8 de spec/fechamento/automacao/exemplo_05_revisao_do_carro_spec.rb.
+    'G47' => -> { card_da_pagina_ganha_a_conversa? }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

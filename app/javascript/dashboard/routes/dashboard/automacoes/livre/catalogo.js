@@ -231,6 +231,33 @@ const rotuloDoTexto = (passo, t) => {
     : t('AUTOMACAO_LIVRE.IA.TEXTO_DA_IA.ESCREVER_SEM_INSTRUCAO');
 };
 
+// G44 (#2756) — o link da agenda de uma página escolhida (`agenda.<id>`), um
+// dado por página da conta (useAgendasDaConta), com o rótulo pronto. A escolha
+// (`soAsQueMarcam`) só oferece a página que recebe reserva (a regra de
+// Crm::BookingV2::InvitePages::SERVES); a frase dos passos mostra o nome de
+// qualquer uma. O salvar confere a página e a permissão de novo.
+const PAGINA_QUE_MARCA = ['ativa', 'agenda_pausada'];
+export const comAgendas = (
+  dados,
+  paginas,
+  t,
+  { soAsQueMarcam = false } = {}
+) => {
+  if (!dados?.valores || !paginas?.length) return dados;
+  const agendas = paginas
+    .filter(
+      pagina => !soAsQueMarcam || PAGINA_QUE_MARCA.includes(pagina.ai_status)
+    )
+    .map(pagina => ({
+      caminho: `agenda.${pagina.id}`,
+      chave: String(pagina.id),
+      rotulo: t('AUTOMACAO_LIVRE.VALORES.AGENDA_DA_PAGINA', {
+        titulo: pagina.title,
+      }),
+    }));
+  return { ...dados, valores: [...dados.valores, ...agendas] };
+};
+
 export const comTextosDaIa = (dados, passos, t) => {
   if (!dados?.valores) return dados;
   const textos = todosOsPassos(passos)

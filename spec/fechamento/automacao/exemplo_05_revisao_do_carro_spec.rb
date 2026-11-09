@@ -44,7 +44,10 @@ RSpec.describe 'Fechamento #2414 · exemplo 5: revisão do carro no tempo certo'
   let(:funil) { funil_e_entrada.first }
   let(:servico) { funil_e_entrada.last }
   let(:revisao_marcada) { create_crm_stage(account: account, pipeline: funil, name: 'Revisão marcada', position: 2) }
-  let(:agenda) { create_booking_profile(account: account, host: seu_ze, pipeline: funil, stage: servico, title: 'Revisão') }
+  # Na tela, o Seu Zé põe o WhatsApp da oficina como a caixa dos avisos da página.
+  let(:agenda) do
+    create_booking_profile(account: account, host: seu_ze, pipeline: funil, stage: servico, title: 'Revisão', notice_inbox: canal.inbox)
+  end
   let(:card) do
     account.crm_cards.create!(pipeline: funil, stage: servico, inbox: canal.inbox, contact: cliente, primary_conversation: conversa,
                               owner: seu_ze, title: 'Revisão do Gol', currency: 'BRL')
@@ -267,9 +270,9 @@ RSpec.describe 'Fechamento #2414 · exemplo 5: revisão do carro no tempo certo'
       expect(modelos_enviados).to eq(%w[revisao_lembrete revisao_lavagem])
     end
 
-    # G47: a reunião está no card que a página criou, sem conversa; a mensagem pula com `sem_conversa`.
+    # G47: a reunião está no card que a página criou, e ele nasce com a conversa da Carla no WhatsApp dos avisos da
+    # página. A última mensagem dela é de meses atrás: com a janela de 24 h fechada, sai o modelo aprovado com o link.
     it 'passo 8: marcou e cancelou; no dia seguinte o link da agenda vai de novo pelo modelo aprovado', :aggregate_failures do
-      pending 'G47: o card criado pela página de agendamento ainda não ganha a conversa do contato'
       carla_marca_as('2027-04-26 11:00', '2027-04-28 10:00')
       as('2027-04-27 08:00') do
         Crm::Meetings::CancelService.new(meeting: reuniao).perform
@@ -278,9 +281,13 @@ RSpec.describe 'Fechamento #2414 · exemplo 5: revisão do carro no tempo certo'
 
       varredura_as('2027-04-28 08:05')
 
+      expect(reuniao.card).to have_attributes(conversation_id: conversa.id)
+      expect(reuniao.card).not_to eq(card)
       expect(modelos_enviados).to eq(%w[revisao_lembrete revisao_agenda])
       expect(parametros(whatsapp.last)).to eq(['Carla', link])
-      expect(historico(:cancelamento)).to include(['de_novo', 'ok', nil])
+      expect(historico(:cancelamento)).to eq([['dia_seguinte', 'ok', nil], ['de_novo', 'ok', nil]])
+      expect(Autonomia::Automacao::Registro.find_by!(automacao_id: automacao_id(:cancelamento), passo: 'de_novo').dados)
+        .to include('modelo' => 'revisao_agenda')
     end
   end
 end

@@ -36,6 +36,8 @@
       "VOLTA": "Depois volta a esperar: {passo}",
       "NAO_SAIRIA": "Não sairia: a mensagem automática ainda não está ligada nesta conta.",
       "FALTOU_VALOR": "Não sairia: falta um dado desta conversa no texto.",
+      "FALTOU_LINK_DA_AGENDA": "Não sairia: o link da agenda ficaria vazio (página fora do ar, ou sem o link de quem cuida).",
+      "SEM_ACESSO_AGENDA": "Não sairia: você não vê as páginas de agendamento.",
       "TEXTO_VAZIO": "Não sairia: o texto ficaria vazio.",
       "RETORNO_SEM_RESPONSAVEL": "Não criaria o retorno: esta conversa não tem responsável.",
       "CORTE": "O ensaio parou aqui: a automação tem caminhos demais para mostrar.",
