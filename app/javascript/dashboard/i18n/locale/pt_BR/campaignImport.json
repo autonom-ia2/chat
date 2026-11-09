@@ -18,7 +18,8 @@
       "UNDO_ERROR": "Não foi possível desfazer as etiquetas.",
       "DELETE_SUCCESS": "Base removida.",
       "DELETE_ERROR": "Não foi possível remover a base.",
-      "DOWNLOAD_ERROR": "Não foi possível baixar o arquivo."
+      "DOWNLOAD_ERROR": "Não foi possível baixar o arquivo.",
+      "DOWNLOAD_HIDDEN": "Só quem pode ver contatos baixa este arquivo."
     },
     "DIALOG": {
       "TITLE": "Importar base de campanha",

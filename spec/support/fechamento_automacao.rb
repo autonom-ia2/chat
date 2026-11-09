@@ -98,6 +98,8 @@ end
 # fail") e o exemplo ganha o spec de verdade. A frente que fecha uma lacuna ajusta a sonda no mesmo PR, se o nome que
 # ela deu for outro. Sonda `nil` é lacuna sem pergunta que o código responda: a frente troca pela prova.
 module FechamentoAutomacao::Lacunas
+  extend CrmHelpers
+
   module_function
 
   def passo?(*tipos) = tipos.intersect?(tipos_de_passo(Autonomia::Automacao::Receita::ESQUEMA))
@@ -144,44 +146,18 @@ module FechamentoAutomacao::Lacunas
       montado.corpo&.dig('custom_attributes', 'revisao') == Time.current.utc.to_date.advance(months: 6).iso8601
   end
 
-  # G63 e G64 (#2830, #2839; exemplo 17, passos 4 e 5): a rodada do motor de verdade, numa conversa. O "esperar até" sem
-  # prazo, com a condição já cumprida, espera a próxima conferência das 8h no fuso da conta (só ali confere) e, com a
-  # mensagem nova do cliente, entra no galho "a cada mensagem".
-  def espera_enquanto_espera(campos)
-    conta = FactoryBot.create(:account, reporting_timezone: 'America/Sao_Paulo')
-    conta.enable_features!('automacao_fundacao', 'automacao_motor')
-    conversa = FactoryBot.create(:conversation, account: conta, status: :open, priority: :urgent)
-    urgente = { 'campo' => { '$valor' => 'conversa.prioridade' }, 'op' => 'igual', 'valor' => 'urgent' }
-    espera = { 'id' => 'espera', 'tipo' => 'esperar_ate', 'prazo' => 'sem_prazo', 'condicao' => urgente }.merge(campos)
-    execucao = rodada_da_sonda(conta, conversa, [espera], nil)
-    [conta, conversa, execucao]
-  end
-
-  def rodada_da_sonda(conta, conversa, passos, execucao)
-    marca = Time.current.floor(6)
-    unless execucao
-      definicao = FactoryBot.create(:autonomia_automacao, account: conta,
-                                                          ligada_por: FactoryBot.create(:user, account: conta, role: :administrator))
-      versao = definicao.salvar_versao!(receita: { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => passos }, autor: nil)
-      definicao.update!(ativa: true)
-      execucao = FactoryBot.create(:autonomia_automacao_execucao, versao: versao, alvo: conversa, chave_gatilho: 'conversa.resolvida')
-    end
-    execucao.update!(estado: 'andando', travada_em: marca)
-    Autonomia::Automacao::Executor.rodar(execucao.id, marca.iso8601(6))
-    execucao.reload
-  end
-
-  def conferencia_marcada?
-    conta, _conversa, execucao = espera_enquanto_espera('conferir_as' => 8)
-    execucao.estado == 'esperando' && execucao.due_at == Autonomia::Automacao::Tempo.proxima_hora(conta, 8)
-  end
-
-  def galho_a_cada_mensagem?
-    galho = [{ 'id' => 'galho', 'tipo' => 'esperar', 'duracao' => { 'valor' => 1, 'unidade' => 'dias' } }]
-    conta, conversa, execucao = espera_enquanto_espera('conferir_as' => 8, 'a_cada_mensagem' => galho)
-    FactoryBot.create(:message, account: conta, conversation: conversa, inbox: conversa.inbox, message_type: :incoming,
-                                sender: conversa.contact)
-    rodada_da_sonda(conta, conversa, nil, execucao).cursor == 'galho'
+  # G30: o lead do formulário entra pelo Importer, como no webhook, num funil com a Atribuição ligada e um corretor que
+  # cuida dele; o card nasce com esse corretor de dono. Roda na transação do exemplo, que desfaz tudo.
+  def lead_ganha_dono_pela_atribuicao?
+    account = FactoryBot.create(:account)
+    corretor = FactoryBot.create(:user, account: account, role: :agent)
+    funil, etapa = create_crm_pipeline(account: account, user: FactoryBot.create(:user, account: account, role: :administrator))
+    funil.update!(metadata: { 'ai' => { 'handoff' => { 'enabled' => true, 'prefer_online' => false } } })
+    account.crm_pipeline_inboxes.create!(pipeline: funil, inbox: create_crm_whatsapp_api_inbox(account: account, members: [corretor]))
+    lead = { 'id' => 'sonda-g30', 'created_time' => '2026-11-08T12:00:00+0000', 'form_id' => '9001',
+             'field_data' => [{ 'name' => 'phone_number', 'values' => ['+5511987650030'] }] }
+    Crm::MetaAds::LeadForms::Importer.new(account: account, pipeline: funil, stage: etapa, form_name: 'Sonda').import(lead)
+    Crm::MetaAdsLead.find_by(account: account, leadgen_id: 'sonda-g30')&.card&.owner_id == corretor.id
   end
 
   SONDAS = {
@@ -232,11 +208,13 @@ module FechamentoAutomacao::Lacunas
     # O texto da IA vira valor entre passos (`ia.<passo>`, #2679): fora da janela, a "mensagem" o leva no modelo aprovado
     # (exemplo 3, passo 2); o "mesmo resumo" não vai outra vez à IA (exemplo 10, passo 6).
     'G28' => -> { valor?('ia.cuidados') },
-    # Achadas no exemplo 2 (07/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
-    # G29: a origem do card do formulário (anúncio, formulário) como valor da receita, no filtro do gatilho e nos passos.
-    'G29' => nil,
-    # G30: o responsável por um anúncio (o corretor daquele anúncio), para o retorno e o link da agenda.
-    'G30' => nil,
+    # Achadas no exemplo 2 (07/11). As ainda sem desenho ficam nil: a frente dona troca pela sonda quando escolher o caminho.
+    # G29 (#2702): de onde o card veio e o anúncio do formulário, valores da receita. Ponta a ponta em
+    # spec/fechamento/automacao/g29_origem_do_card_spec.rb.
+    'G29' => -> { valor?('card.origem') && valor?('card.anuncio') },
+    # G30 (#2702): o card do lead nasce com o dono que a Atribuição do funil daria (o corretor), para o retorno e o link
+    # da agenda. Ponta a ponta em spec/fechamento/automacao/g30_dono_do_lead_spec.rb.
+    'G30' => -> { lead_ganha_dono_pela_atribuicao? },
     # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando" (o `de_novo` do
     # decidir); prova ponta a ponta em spec/fechamento/automacao/g31_decidir_a_cada_resposta_spec.rb.
     'G31' => -> { campo_do_passo?('decidir', 'de_novo') },
@@ -258,8 +236,12 @@ module FechamentoAutomacao::Lacunas
     'G37' => nil,
     # G38: o filtro "respondeu à campanha X" no gatilho da mensagem.
     'G38' => nil,
-    # G39: o gatilho que roda uma vez, numa data ("a quinta antes da Black Friday"), não toda semana.
-    'G39' => nil,
+    # G39 (#2753): o gatilho que roda uma vez, numa data ("a quinta antes da Black Friday"), não toda semana.
+    'G39' => lambda {
+      gatilho = { 'tipo' => 'conta.recorrente', 'frequencia' => 'uma_vez', 'data' => '2030-11-28', 'hora' => 9 }
+      passo = { 'id' => 'p1', 'tipo' => 'esperar', 'duracao' => { 'valor' => 1, 'unidade' => 'dias' } }
+      Autonomia::Automacao::Receita.esquema_valido?({ 'gatilho' => gatilho, 'passos' => [passo] })
+    },
     # Do exemplo 10 (#2678), fora do lote 2: esperar só a pessoa que atende a conversa (a Fernanda), não a equipe inteira.
     'G40' => -> { valor?('conversa.responsavel_respondeu') },
     # Do exemplo 10 (#2678, #2752): a instrução no resumir ("o que já foi prometido") e avisar o responsável quando a
@@ -271,8 +253,8 @@ module FechamentoAutomacao::Lacunas
     # com a Gatilhos, depois do lote 3 (#2689), que traz a porta da frente da conversa nova.
     'G43' => nil,
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
-    # (passo 2, "manda por e-mail o mesmo conteúdo").
-    'G53' => nil,
+    # (passo 2, "manda por e-mail o mesmo conteúdo"): `falhou.texto`, prova em g53_conteudo_da_falha_spec.rb.
+    'G53' => -> { valor?('falhou.texto') },
     # G54: esperar a entrega da mensagem (passo 5, "Chegou: tira a etiqueta e grava uma nota"); fechada pela G34.
     'G54' => -> { valor?('envio.situacao') },
     # Do exemplo 5, passo 8 (#2703): o card que a página de agendamento cria para a reunião (card do serviço já ganho)
@@ -289,8 +271,8 @@ module FechamentoAutomacao::Lacunas
       CustomAttributeDefinition.attribute_display_types.key?('pessoa') &&
         Autonomia::Automacao::Valores::Atributos.respond_to?(:ausente_da_pessoa?)
     },
-    'G63' => -> { galho_a_cada_mensagem? },
-    'G64' => -> { conferencia_marcada? },
+    'G63' => -> { FechamentoAutomacao::Ex17.galho_a_cada_mensagem? },
+    'G64' => -> { FechamentoAutomacao::Ex17.conferencia_marcada? },
     'G66' => nil,
     'G67' => nil,
     # Do exemplo 14, passo 5 (#2791): o laço dos documentos numa automação só. O "esperar até" lê o documento novo, e o

@@ -92,11 +92,22 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       allow(Crm::MetaAds::ComentariosIa::Conversa).to receive(:no_messenger!).and_return(conversation)
     end
 
-    it 'o privado pelo Messenger só sai na conta com a flag (#2613)' do
+    it 'o privado pelo Messenger sai na Página com a pages_messaging concedida (#2307)' do
+      permissao = instance_double(described_class::PermissaoDoMessenger, liberada?: false)
+      allow(described_class::PermissaoDoMessenger).to receive(:new).with(canal).and_return(permissao)
       expect(rede.privado_disponivel?).to be(false)
 
-      account.enable_features!('meta_ads_comentarios_privado_facebook')
+      allow(permissao).to receive(:liberada?).and_return(true)
       expect(rede.privado_disponivel?).to be(true)
+    end
+
+    it 'a Meta recusou por permissão (#2307): o envio volta com o código, e a Página não perde o privado' do
+      allow(described_class::PermissaoDoMessenger).to receive(:new)
+      allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: false, erro: '230 - Requires', codigo: 230))
+
+      expect(rede.privado(care)).to have_attributes(ok: false, codigo: 230)
+      expect(registro).to have_received(:soltar!).with(anything, 'private_reply')
+      expect(described_class::PermissaoDoMessenger).not_to have_received(:new)
     end
 
     it 'reivindica, manda o privado com o botão do WhatsApp e abre a conversa no Messenger' do
@@ -555,14 +566,39 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
     end
   end
 
-  describe '.privado_liberado? (#2613)' do
-    it 'no Instagram sempre; no Facebook só com a flag da conta; outra rede, nunca' do
-      expect(described_class.privado_liberado?(account, 'instagram')).to be(true)
-      expect(described_class.privado_liberado?(account, 'facebook')).to be(false)
+  describe '.privado_liberado? (#2307)' do
+    let(:pagina) { create(:inbox, account: account, channel: build(:channel_facebook_page, account: account)).channel }
 
+    it 'no Instagram sempre; no Facebook, o que a Meta concedeu à Página; sem caixa ou outra rede, nunca' do
+      permissao = instance_double(described_class::PermissaoDoMessenger, liberada?: true)
+      allow(described_class::PermissaoDoMessenger).to receive(:new).with(pagina).and_return(permissao)
+
+      expect(described_class.privado_liberado?('instagram', nil)).to be(true)
+      expect(described_class.privado_liberado?('facebook', pagina.inbox)).to be(true)
+      expect(described_class.privado_liberado?('facebook', nil)).to be(false)
+      expect(described_class.privado_liberado?('whatsapp', pagina.inbox)).to be(false)
+
+      allow(permissao).to receive(:liberada?).and_return(false)
+      expect(described_class.privado_liberado?('facebook', pagina.inbox)).to be(false)
+    end
+
+    it 'a flag antiga (#2613) não libera mais nada sozinha' do
+      allow(described_class::PermissaoDoMessenger).to receive(:new)
+        .and_return(instance_double(described_class::PermissaoDoMessenger, liberada?: false))
       account.enable_features!('meta_ads_comentarios_privado_facebook')
-      expect(described_class.privado_liberado?(account, 'facebook')).to be(true)
-      expect(described_class.privado_liberado?(account, 'whatsapp')).to be(false)
+
+      expect(described_class.privado_liberado?('facebook', pagina.inbox)).to be(false)
+    end
+  end
+
+  describe '.sem_permissao? (#2307)' do
+    it 'só a recusa por permissão: 200–299 e o 10 sem subcódigo' do
+      expect(described_class.sem_permissao?(230, nil)).to be(true)
+      expect(described_class.sem_permissao?(200, 1_545_041)).to be(true)
+      expect(described_class.sem_permissao?(10, nil)).to be(true)
+      expect(described_class.sem_permissao?(10, 2_018_278)).to be(false)
+      expect(described_class.sem_permissao?(100, 33)).to be(false)
+      expect(described_class.sem_permissao?(nil, nil)).to be(false)
     end
   end
 end

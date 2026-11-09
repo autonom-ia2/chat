@@ -114,7 +114,9 @@ class Autonomia::Agents::Tools::TrechoHigienizado
     baixo = texto.downcase(:ascii)
     @segredos.each do |segredo|
       procurado = segredo.downcase(:ascii)
-      tamanho = (MIN_SEGREDO...procurado.length).reverse_each.find { |n| baixo.end_with?(procurado[0, n]) }
+      # Começo maior que o trecho não cabe nele (revisão adversarial do #1430: valor de cabeçalho de 16 KB).
+      teto = [procurado.length, baixo.length + 1].min
+      tamanho = (MIN_SEGREDO...teto).reverse_each.find { |n| baixo.end_with?(procurado[0, n]) }
       return "#{texto[0, texto.length - tamanho]}#{OCULTO}" if tamanho
     end
     texto

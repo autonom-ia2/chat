@@ -32,10 +32,47 @@ RSpec.describe CampaignImports::AudienceReachability, :aggregate_failures do
     result = described_class.new(campaign_import).perform
 
     expect(campaign_import).to be_ready_to_confirm
-    expect(result['whatsapp']).to eq('total' => 4, 'receive' => 3, 'opted_out' => 1)
+    expect(result['whatsapp']).to eq('total' => 4, 'receive' => 3, 'opted_out' => 1, 'blocked' => 0)
     # SMS (#1004): same mobiles, off until switched on.
-    expect(result['sms']).to eq('total' => 4, 'receive' => 0, 'opted_out' => 1)
-    expect(result['email']).to eq('total' => 4, 'receive' => 1, 'unsubscribed' => 1, 'bounced' => 1, 'suppressed' => 1)
+    expect(result['sms']).to eq('total' => 4, 'receive' => 0, 'opted_out' => 1, 'blocked' => 0)
+    expect(result['email']).to eq('total' => 4, 'receive' => 1, 'opted_out' => 0, 'blocked' => 0,
+                                  'unsubscribed' => 1, 'bounced' => 1, 'suppressed' => 1)
+  end
+
+  # chat#2733: a blocked contact does not receive either; refused and blocked at once counts as refused.
+  it 'counts blocked contacts apart, without counting a person twice' do
+    account.contacts.create!(name: 'Bia', phone_number: '+5521987654321', blocked: true)
+    account.contacts.create!(name: 'Caio', phone_number: '+5531987654321', blocked: true).opt_out!(source: 'manual')
+    campaign_import = validated_audience
+    campaign_import.update!(channels: campaign_import.channels.merge('sms' => { 'enabled' => true, 'count' => 4 }))
+
+    result = described_class.new(campaign_import).perform
+
+    expect(result['whatsapp']).to eq('total' => 4, 'receive' => 2, 'opted_out' => 1, 'blocked' => 1)
+    expect(result['sms']).to eq('total' => 4, 'receive' => 2, 'opted_out' => 1, 'blocked' => 1)
+  end
+
+  # chat#2733: e-mail follows the send — the contact of the account with that address refused or is blocked → does not
+  # receive; refused before blocked, and someone refused or blocked is not counted again in a suppression bucket.
+  it 'leaves out e-mails of contacts that refused or are blocked, each person once' do
+    account.contacts.create!(name: 'Ana', email: 'ANA@alfa.com.br').opt_out!(source: 'manual')
+    account.contacts.create!(name: 'Bia', email: 'bia@beta.com.br', blocked: true)
+    account.contacts.create!(name: 'Caio', email: 'caio@gama.com.br', blocked: true).opt_out!(source: 'manual')
+    account.contacts.create!(name: 'Duda', email: 'duda@delta.com.br', blocked: true)
+    EmailSuppression.create!(account: account, email: 'duda@delta.com.br', reason: 'unsubscribe', source: 'manual')
+
+    result = described_class.new(validated_audience).perform
+
+    expect(result['email']).to eq('total' => 4, 'receive' => 0, 'opted_out' => 2, 'blocked' => 2,
+                                  'unsubscribed' => 0, 'bounced' => 0, 'suppressed' => 0)
+  end
+
+  it 'ignores refusals and blocks of contacts of other accounts on e-mail' do
+    create(:account).contacts.create!(name: 'Ana', email: 'ana@alfa.com.br', blocked: true)
+
+    result = described_class.new(validated_audience).perform
+
+    expect(result['email']).to include('receive' => 4, 'opted_out' => 0, 'blocked' => 0)
   end
 
   it 'gives nobody on a channel that is switched off' do

@@ -123,9 +123,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/tools#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:33",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:63"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:42",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
     ],
     "sem_corpo": true
   },
@@ -279,7 +279,7 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:33",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:141"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:137"
     ],
     "sem_corpo": true
   },
@@ -1184,11 +1184,11 @@
     "controller": "api/v1/accounts/seus_posts_comentarios#destroy",
     "modelo": "Channel::Instagram",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:88",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:193",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:189",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:124",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:134"
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:86",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:195",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:191",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:122",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:132"
     ],
     "sem_corpo": false
   },
@@ -3548,6 +3548,7 @@
         "tipo": "booleano"
       },
       "endpoint_url": {
+        "max_caracteres": 2048,
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
       },
@@ -3574,6 +3575,7 @@
       "param_schema": {
         "campos": {
           "description": {},
+          "label": {},
           "name": {},
           "required": {},
           "type": {}
@@ -3606,10 +3608,10 @@
     "envelope": "tool",
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:25",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:71",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:63"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:31",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:102",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
     ],
     "sem_corpo": false
   },
@@ -6655,6 +6657,7 @@
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
+          "autonomia_tools_manage",
           "desempenho_view",
           "campaign_view",
           "campaign_manage",
@@ -11199,6 +11202,7 @@
       "param_schema": {
         "campos": {
           "description": {},
+          "label": {},
           "name": {},
           "required": {},
           "type": {}
@@ -11217,9 +11221,9 @@
     "corpo_plano": true,
     "envelope": "tool",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:16",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:71",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:19",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:102",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90"
     ],
     "sem_corpo": false
   },
@@ -11233,10 +11237,10 @@
       "leitura crua sem tipo: params"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:41",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:97",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:63"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:50",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:135",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
     ],
     "sem_corpo": false
   },
@@ -12749,9 +12753,9 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:20",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:190",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:186",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:25",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:174",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:170",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:22",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:21"
     ],
@@ -12763,7 +12767,7 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:58",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:141"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:137"
     ],
     "sem_corpo": true
   },
@@ -12773,7 +12777,7 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:79",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:141"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:137"
     ],
     "sem_corpo": true
   },
@@ -16198,6 +16202,36 @@
     ],
     "sem_corpo": false
   },
+  "POST crm/meta_ads_connection/ads/:ad_id/copies": {
+    "campos": {
+      "creative": {
+        "campos": {
+          "media": {
+            "campos": {
+              "hash": {},
+              "image_hash": {},
+              "kind": {},
+              "video_id": {}
+            },
+            "tipo": "objeto"
+          },
+          "text": {}
+        },
+        "tipo": "objeto"
+      },
+      "idempotency_key": {},
+      "recreate_unconfirmed": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_ad_care#copy",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_care_controller.rb:25",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_care_controller.rb:42",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_care_controller.rb:72",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_care_controller.rb:27"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/meta_ads_connection/ads/:ad_id/cuidado/foto": {
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_cuidado#foto",
@@ -16359,10 +16393,10 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_ad_management#status",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:27",
-      "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:82",
-      "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:29",
-      "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:28"
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:28",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:83",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:30",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:29"
     ],
     "sem_corpo": false
   },
@@ -17546,6 +17580,7 @@
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
+          "autonomia_tools_manage",
           "desempenho_view",
           "campaign_view",
           "campaign_manage",
@@ -17869,7 +17904,7 @@
     "completo": true,
     "controller": "api/v1/accounts/email_campaigns/recipients#create",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:84"
+      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:85"
     ],
     "sem_corpo": true
   },
@@ -17877,7 +17912,7 @@
     "completo": true,
     "controller": "api/v1/accounts/email_campaigns/recipients#retry_import",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:84"
+      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:85"
     ],
     "sem_corpo": true
   },
@@ -20203,12 +20238,12 @@
     "controller": "api/v1/accounts/seus_posts_comentarios#hide",
     "modelo": "Channel::Instagram",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:79",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:193",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:189",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:80",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:124",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:134"
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:77",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:195",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:191",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:78",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:122",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:132"
     ],
     "sem_corpo": false
   },
@@ -20227,12 +20262,12 @@
     "controller": "api/v1/accounts/seus_posts_comentarios#private_reply",
     "modelo": "Channel::Instagram",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:63",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:193",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:189",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:198",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:124",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:134"
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:61",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:195",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:191",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:200",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:122",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:132"
     ],
     "sem_corpo": false
   },
@@ -20247,11 +20282,11 @@
     "controller": "api/v1/accounts/seus_posts_comentarios#release_private_reply",
     "modelo": "Channel::Instagram",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:71",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:193",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:189",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:124",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:134"
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:69",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:195",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:191",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:122",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:132"
     ],
     "sem_corpo": false
   },
@@ -20270,12 +20305,12 @@
     "controller": "api/v1/accounts/seus_posts_comentarios#reply",
     "modelo": "Channel::Instagram",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:57",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:193",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:189",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:198",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:124",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:134"
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:55",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:195",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:191",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:200",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:122",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:132"
     ],
     "sem_corpo": false
   },
@@ -20294,10 +20329,10 @@
     "controller": "api/v1/accounts/seus_posts_cuidado#foto",
     "origem": [
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:115",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:189",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:193",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:124",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:134"
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:191",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:195",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:122",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:132"
     ],
     "sem_corpo": false
   },
@@ -20316,10 +20351,10 @@
     "controller": "api/v1/accounts/seus_posts_cuidado#ler_antigos",
     "origem": [
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:129",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:189",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:193",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:124",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:134"
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:191",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:195",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:122",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:132"
     ],
     "sem_corpo": false
   },
@@ -20373,10 +20408,10 @@
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:173",
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:200",
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:197",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:189",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:193",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:124",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:134"
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:191",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:195",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:122",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:132"
     ],
     "sem_corpo": false
   },
@@ -20395,10 +20430,10 @@
     "controller": "api/v1/accounts/seus_posts_cuidado#rascunho",
     "origem": [
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:107",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:189",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:193",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:124",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:134"
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:191",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:195",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:122",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:132"
     ],
     "sem_corpo": false
   },
@@ -23308,6 +23343,7 @@
         "tipo": "booleano"
       },
       "endpoint_url": {
+        "max_caracteres": 2048,
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
       },
@@ -23334,6 +23370,7 @@
       "param_schema": {
         "campos": {
           "description": {},
+          "label": {},
           "name": {},
           "required": {},
           "type": {}
@@ -23366,10 +23403,10 @@
     "envelope": "tool",
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:25",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:71",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:63"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:31",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:102",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
     ],
     "sem_corpo": false
   },
@@ -25306,6 +25343,30 @@
     ],
     "sem_corpo": false
   },
+  "PUT crm/meta_ads_connection/ads/:ad_id/creative": {
+    "campos": {
+      "idempotency_key": {},
+      "media": {
+        "campos": {
+          "hash": {},
+          "image_hash": {},
+          "kind": {},
+          "video_id": {}
+        },
+        "tipo": "objeto"
+      },
+      "text": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_ad_care#creative",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_care_controller.rb:32",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_care_controller.rb:46",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_care_controller.rb:35",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_care_controller.rb:34"
+    ],
+    "sem_corpo": false
+  },
   "PUT crm/meta_ads_connection/ads/:ad_id/cuidado": {
     "campos": {
       "assunto_proibido": {},
@@ -26323,6 +26384,7 @@
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
+          "autonomia_tools_manage",
           "desempenho_view",
           "campaign_view",
           "campaign_manage",
@@ -27911,7 +27973,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:69",
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:173",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:134"
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:132"
     ],
     "sem_corpo": false
   },
@@ -27943,12 +28005,12 @@
     "origem": [
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:88",
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:173",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:189",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:191",
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:200",
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:197",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:193",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:124",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:134"
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:195",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:122",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:132"
     ],
     "sem_corpo": false
   },
@@ -27984,11 +28046,11 @@
     "origem": [
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:120",
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:173",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:189",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:191",
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:121",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:193",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:124",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:134"
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:195",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:122",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:132"
     ],
     "sem_corpo": false
   },

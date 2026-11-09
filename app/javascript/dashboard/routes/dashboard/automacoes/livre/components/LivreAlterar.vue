@@ -23,6 +23,7 @@ import LivreGatilho from './LivreGatilho.vue';
 import { caminhosProntos, deNovoPronto, esperasAnteriores } from '../ia';
 import { campanhaPronta } from '../campanha';
 import { envioPronto, paraPronto } from '../retorno';
+import { faltaDaFrequencia } from '../recorrente';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { temDataIncompleta } from '../texto';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
@@ -52,7 +53,7 @@ const props = defineProps({
 
 const emit = defineEmits(['salvar', 'tirar', 'close']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const painel = ref(null);
 
 // { tipo: 'gatilho' | 'condicao' | 'passo', indice?, novo?, listaId?, valor }
@@ -115,7 +116,8 @@ const frase = computed(() => {
       rascunho.value,
       props.catalogo,
       t,
-      props.escolhasDoGatilho.nomes
+      props.escolhasDoGatilho.nomes,
+      locale.value
     );
   return fraseDaCondicao(rascunho.value, props.catalogo, t);
 });
@@ -291,9 +293,11 @@ const acaoPronta = () =>
       campo => !vazio(lerCampo(rascunho.value, entrada.value, campo.nome))
     );
 
-// O que o gatilho pede e é obrigatório (a etapa) precisa vir antes do "Salvar".
+// O que o gatilho pede e é obrigatório (a etapa; no recorrente, o dia ou a data
+// da frequência escolhida) precisa vir antes do "Salvar".
 const gatilhoPronto = gatilho =>
   Boolean(gatilho.tipo) &&
+  !faltaDaFrequencia(gatilho) &&
   (
     props.catalogo.gatilhos.find(item => item.tipo === gatilho.tipo)
       ?.parametros || []

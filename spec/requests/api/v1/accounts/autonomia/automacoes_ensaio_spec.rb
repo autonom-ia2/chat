@@ -44,6 +44,16 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes ensaio', type: :request
     expect(response.parsed_body['conversas'].pluck('conversa_id')).to eq([conversa.display_id])
   end
 
+  # G53: o gatilho "mensagem que falhou" ensaia na última mensagem recusada da conversa.
+  it 'ensaia o gatilho "mensagem que falhou"', :aggregate_failures do
+    create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :outgoing, status: :failed, content: 'Oi')
+
+    ensaiar('ensaio', receita: receita.merge(gatilho: { tipo: 'mensagem.falhou' }))
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['conversas'].first).to include('conversa_id' => conversa.display_id, 'entraria' => true)
+  end
+
   it 'receita com problema volta 422 com a frase', :aggregate_failures do
     ensaiar('ensaio', receita: receita.merge(passos: [{ id: 'p1', tipo: 'acao', acao: 'DELETE agents/:id', descricao: 'x' }]))
 

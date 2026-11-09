@@ -33,7 +33,8 @@
 #      para este comentário (Escrita), as duas ANTES de qualquer envio. O que o agente não sabe, e o comentário sobre o
 #      assunto proibido do dono (`owner_topic`), ficam com o dono (`kept_for_owner`). O preço que o dono escreveu vale
 #      no lugar da frase escrita. Sem agente que possa escrever, as frases fixas (o motivo vai ao log).
-#    Sem oferta na ficha nem "para quem" do dono, ou na rede em que o privado não está liberado (Facebook sem a flag),
+#    Sem oferta na ficha nem "para quem" do dono, ou na rede em que o privado não está liberado (a Página sem a
+#    `pages_messaging` concedida, #2307),
 #    nunca manda privado: a pergunta fica com o dono (`kept_for_owner`, "Esperando você" no Painel).
 #
 # Erro antes de a IA agir na Meta solta a reivindicação e sobe: o job tenta de novo. Depois de agir, a reivindicação
@@ -262,7 +263,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
     @registro.soltar_pessoa!(registrado)
     return recusado_em_resposta(envio, decisao) if @comentario.resposta? && envio.codigo.present?
 
-    para_voce('private_reply_failed')
+    para_voce('private_reply_failed', recusa: { codigo: envio.codigo, subcodigo: envio.subcodigo })
   end
 
   # #2454: limite de chamadas da Meta no privado em resposta não é recusa. A leitura sai (para o job poder cuidar de
@@ -331,8 +332,11 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
   end
 
   # Uma vez só por comentário: o `ai_seen` já deixou um job só cuidando dele.
-  def para_voce(motivo)
-    @registro.gravar!(registrado, motivo, conversation: @conversa.para_voce!(@comentario, care, motivo))
+  # recusa: o código e o subcódigo da Meta no privado recusado (#2307); o Painel diz quando foi falta de permissão.
+  def para_voce(motivo, recusa: {})
+    codigos = recusa.compact
+    opcoes = { conversation: @conversa.para_voce!(@comentario, care, motivo) }.merge(codigos.empty? ? {} : { recusa: codigos })
+    @registro.gravar!(registrado, motivo, **opcoes)
   end
 
   def registrado
