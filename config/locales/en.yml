@@ -624,7 +624,7 @@ en:
         reuniao_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the meeting triggers (scheduled, rescheduled, canceled).'
         resposta_so_na_espera: 'Step %{passo}: %{caminho} only exists in the condition of a "wait until" step.'
         valor_fora_do_alvo: 'Step %{passo}: %{caminho} cannot be read from what this trigger starts on (conversation, card or contact).'
-        card_da_conversa_so_le: 'Step %{passo}: an automation that starts on a conversation only reads the card (%{caminho}). To change the card, use the "in another record" step.'
+        card_da_conversa_so_le: 'Step %{passo}: an automation that starts on a conversation only reads the card (%{caminho}). To change the card, use an automation that starts on the card.'
         operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'
         valor_fora: 'Step %{passo}: %{caminho} has no value "%{valor}". Use one of: %{opcoes}.'
         proibido: 'Step %{passo}: the automation cannot change %{campo}.'

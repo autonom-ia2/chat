@@ -66,7 +66,7 @@
       "MENSAGEM_TIPO": "Tipo da mensagem",
       "MENSAGEM_PRIVADA": "Mensagem interna",
       "MENSAGEM_PRIMEIRA": "Primeira mensagem da conversa",
-      "MENSAGEM_TEM_ANEXO": "A mensagem tem anexo (foto, PDF, áudio...)",
+      "MENSAGEM_TEM_ANEXO": "A mensagem tem foto ou PDF",
       "CARD_LINK_DA_AGENDA": "Link da agenda do responsável pelo card (na hora do passo)",
       "CONVERSA_LINK_DA_AGENDA": "Link da agenda do responsável pela conversa (na hora do passo)",
       "REUNIAO_INICIO": "Dia e hora da reunião",

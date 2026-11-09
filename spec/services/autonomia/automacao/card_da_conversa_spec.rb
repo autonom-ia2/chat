@@ -50,15 +50,23 @@ RSpec.describe 'Automação livre: o card da conversa e o anexo da mensagem', :a
     end
   end
 
-  describe 'a mensagem tem anexo' do
-    it 'diz sim só quando a mensagem traz arquivo', :aggregate_failures do
-      com = create(:message, conversation: conversa, account: account, message_type: :incoming, content: nil)
-      pdf = Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/sample.pdf'), 'application/pdf')
-      com.attachments.create!(account: account, file_type: :file, file: pdf)
-      sem = create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'já mando')
+  describe 'a mensagem tem foto ou PDF' do
+    def mensagem_com(arquivo, tipo, file_type)
+      mensagem = create(:message, conversation: conversa, account: account, message_type: :incoming, content: nil)
+      upload = Rack::Test::UploadedFile.new(Rails.root.join("spec/assets/#{arquivo}"), tipo)
+      mensagem.attachments.create!(account: account, file_type: file_type, file: upload)
+      mensagem
+    end
 
-      expect(ler('mensagem.tem_anexo', mensagem: com)).to be(true)
-      expect(ler('mensagem.tem_anexo', mensagem: sem)).to be(false)
+    # A régua do ex.14 (termos de aceite, passos 2 e 5): "a cada foto ou PDF que chega". O áudio não é documento.
+    it 'diz sim para foto e PDF, e não para áudio, outro arquivo e texto', :aggregate_failures do
+      texto = create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'já mando')
+
+      expect(ler('mensagem.tem_anexo', mensagem: mensagem_com('sample.png', 'image/png', :image))).to be(true)
+      expect(ler('mensagem.tem_anexo', mensagem: mensagem_com('sample.pdf', 'application/pdf', :file))).to be(true)
+      expect(ler('mensagem.tem_anexo', mensagem: mensagem_com('sample.mp3', 'audio/mpeg', :audio))).to be(false)
+      expect(ler('mensagem.tem_anexo', mensagem: mensagem_com('contacts.csv', 'text/csv', :file))).to be(false)
+      expect(ler('mensagem.tem_anexo', mensagem: texto)).to be(false)
     end
   end
 

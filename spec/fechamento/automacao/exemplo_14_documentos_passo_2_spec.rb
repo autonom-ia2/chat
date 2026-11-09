@@ -52,10 +52,12 @@ RSpec.describe 'Fechamento #2414 · exemplo 14, passo 2: a cada documento, a IA 
 
   let(:automacao) { montar_automacao(cida, account, nome: 'Conferir cada documento', receita: receita) }
 
+  let(:file_types) { { 'image/png' => :image, 'application/pdf' => :file, 'audio/mpeg' => :audio } }
+
   # O documento chega como o canal grava a mídia: a mensagem sem texto, com o arquivo, antes de os jobs rodarem.
   def cliente_manda(arquivo, tipo, nome)
     mensagem = conversa.messages.new(account: account, inbox: inbox, message_type: :incoming, sender: cliente, content: nil)
-    anexo = mensagem.attachments.new(account_id: account.id, file_type: tipo == 'application/pdf' ? :file : :image)
+    anexo = mensagem.attachments.new(account_id: account.id, file_type: file_types.fetch(tipo))
     anexo.file.attach(io: Rails.root.join("spec/assets/#{arquivo}").open, filename: nome, content_type: tipo)
     mensagem.save!
     rodar_jobs
@@ -99,6 +101,13 @@ RSpec.describe 'Fechamento #2414 · exemplo 14, passo 2: a cada documento, a IA 
 
   it 'mensagem só de texto não chama a IA' do
     cliente_escreve(conversa, 'Já mando os documentos')
+
+    expect([historico_de(automacao), ia_recebeu]).to eq([[], []])
+  end
+
+  # O termo fala em "foto ou PDF": o áudio do cliente não é documento e não chama a IA.
+  it 'áudio não chama a IA' do
+    cliente_manda('sample.mp3', 'audio/mpeg', 'audio.mp3')
 
     expect([historico_de(automacao), ia_recebeu]).to eq([[], []])
   end

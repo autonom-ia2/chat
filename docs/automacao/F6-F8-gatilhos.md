@@ -392,8 +392,8 @@ conta. O 18 só começa com o currículo, em PDF ou foto.
   Mora em `Autonomia::Automacao::CardDaConversa`.
 - Só para ler: no filtro do gatilho, no "Só se", na condição da espera, nos textos e copiando um campo dele no corpo
   de uma ação (o título do card num atributo da conversa). O que apontaria a ação para o card o salvar recusa
-  (`card_da_conversa_so_le`): `card.*` no caminho e `card.id` no corpo. Mexer no card é o passo "em outro registro"
-  (G18). O `Contexto` não muda: os passos continuam sem card na conversa. O card lido é o da hora do passo: um card
+  (`card_da_conversa_so_le`): `card.*` no caminho e `card.id` no corpo. Mexer no card é uma automação que começa no
+  card (o passo "em outro registro", G18, ainda não existe). O `Contexto` não muda: os passos continuam sem card na conversa. O card lido é o da hora do passo: um card
   criado pelo passo "card" num passo anterior já aparece.
 - Ler o card pede a chave de funis (`crm_manage_pipelines` ou `crm_admin`), como o gatilho de card: o salvar recusa sem
   ela (`sem_funil`), e a automação pausa (`sem_permissao_funil`) quando quem ligou a perde, em vez de ler vazio e
@@ -401,8 +401,10 @@ conta. O 18 só começa com o currículo, em PDF ou foto.
   versão em que começou). Ao rodar, sem card na conversa ou sem ver o card (`Crm::CardPolicy#show?`), lê
   vazio.
 - O editor oferece os valores do card no gatilho de conversa só a quem tem a chave de funis (`doAlvoDoGatilho`).
-- `mensagem.tem_anexo` (sim ou não, só no filtro de `mensagem.criada`): a mensagem traz foto, PDF, áudio ou outro
-  arquivo. Lê o anexo no instante do evento `mensagem.criada`. Valem os canais que gravam o anexo junto com a mensagem:
+- `mensagem.tem_anexo` (sim ou não, só no filtro de `mensagem.criada`): a mensagem traz foto ou PDF (a régua do
+  ex.14: "a cada foto ou PDF que chega"). Foto é o anexo `image`; PDF é o `file` com `application/pdf`. Áudio,
+  vídeo e outro arquivo não contam. Mora em `Autonomia::Automacao::FotoOuPdf`, que a espera pelo próximo documento
+  (G46) reusa. Lê o anexo no instante do evento `mensagem.criada`. Valem os canais que gravam o anexo junto com a mensagem:
   WhatsApp Cloud (`Whatsapp::IncomingMessageBaseService`), o conector WAHA/Híbrido e a API e o widget
   (`messages#create` → `Messages::MessageBuilder`). **Limite conhecido:** o e-mail cria a mensagem e só depois anexa os
   arquivos (`MailboxHelper`, `messages.create!` e depois `save!`), então ali o filtro lê `false`. Mudar a ordem do

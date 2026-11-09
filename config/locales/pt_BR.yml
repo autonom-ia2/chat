@@ -1117,7 +1117,7 @@ pt_BR:
         reuniao_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe nos gatilhos de reunião (marcada, remarcada, cancelada).'
         resposta_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até".'
         valor_fora_do_alvo: 'Passo %{passo}: %{caminho} não dá para ler naquilo em que este gatilho começa (conversa, card ou contato).'
-        card_da_conversa_so_le: 'Passo %{passo}: a automação que começa numa conversa só lê o card (%{caminho}). Para mexer no card, use o passo "em outro registro".'
+        card_da_conversa_so_le: 'Passo %{passo}: a automação que começa numa conversa só lê o card (%{caminho}). Para mexer no card, use uma automação que começa no card.'
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'
         valor_fora: 'Passo %{passo}: %{caminho} não tem o valor "%{valor}". Use um destes: %{opcoes}.'
         proibido: 'Passo %{passo}: a automação não muda %{campo}.'
