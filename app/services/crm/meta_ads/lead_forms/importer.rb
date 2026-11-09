@@ -11,7 +11,7 @@
 # - E-mail que o contato não aceita fica só nas respostas; o lead entra do mesmo jeito.
 # - Lead que não dá para gravar (:failed) vai para o rastreador de erros e não para os outros do mesmo lote. A recusa
 #   fica lembrada em `refused` (RefusedLeads, #2740), quando quem chama passa um: a reconciliação de hora em hora não
-#   o tenta de novo a cada rodada, até o destino ser salvo de novo ou o prazo vencer.
+#   o tenta de novo a cada rodada; tenta uma segunda vez depois do prazo, ou antes, se o destino for salvo de novo.
 class Crm::MetaAds::LeadForms::Importer
   SOURCE = 'meta_lead_form'.freeze
   NAME_KEYS = %w[full_name first_name last_name].freeze

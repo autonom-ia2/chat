@@ -2,12 +2,19 @@
 # tentar de novo a cada rodada. Só a reconciliação pula quem está aqui; o "trazer quem já preencheu" (ação de uma
 # pessoa) tenta sempre.
 #
+# TTL menor que a janela da reconciliação (48 h): o lead tem uma segunda tentativa dentro dela, para o caso de o defeito
+# ter sido corrigido (deploy, funil consertado). No máximo duas tentativas, e duas idas ao rastreador, por lead.
+#
 # A recusa pode ser do próprio lead ou do destino (funil ou etapa que o card não aceita). Por isso ela fica presa à
-# linha do formulário como foi lida junto com o destino (updated_at): salvar o destino de novo (Hub) muda a linha, e a
-# rodada seguinte tenta de novo todos os recusados. Uma rodada que leu o destino antigo grava a recusa na versão
-# antiga, e o destino novo não herda. Cache fora do ar: nada fica lembrado, e o lead só é tentado de novo.
+# linha do formulário como foi lida junto com o destino (updated_at). Qualquer mudança na linha (o destino salvo de
+# novo, mesmo igual, o nome, o "trazer" de arquivado) faz a rodada seguinte tentar de novo todos os recusados. Uma
+# rodada que leu o destino antigo grava a recusa na versão antiga, e o destino novo não herda. Cache fora do ar: nada
+# fica lembrado, e o lead só é tentado de novo.
+#
+# Risco conhecido: recusa passageira (corrida de unicidade no contato, que o lock_person! do Importer quase elimina)
+# também fica lembrada até o TTL.
 class Crm::MetaAds::LeadForms::RefusedLeads
-  TTL = 3.days
+  TTL = 1.day
 
   def initialize(form_record)
     @scope = ['crm_meta_ads_lead_forms', 'refused_lead', form_record.account_id, form_record.form_id.to_s,

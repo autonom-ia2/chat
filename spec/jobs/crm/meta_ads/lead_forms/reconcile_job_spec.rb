@@ -273,7 +273,8 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
       expect(account.crm_cards.pluck(:title)).to eq(['Ana'])
     end
 
-    it 'passado o prazo da recusa, a reconciliação tenta de novo' do
+    # O prazo (1 dia) é menor que a janela (48 h): o lead de 1 h atrás ainda está nela, e a Meta ainda o devolveria.
+    it 'passado o prazo da recusa, a reconciliação tenta de novo dentro da janela' do
       recusar_ana!
 
       travel_to((Crm::MetaAds::LeadForms::RefusedLeads::TTL + 1.minute).from_now) do
