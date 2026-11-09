@@ -19,8 +19,8 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     8 => ['Funcionário novo no plano da empresa',
           'G31 (passos 6 e 7: voltar a esperar a cada documento na 2ª automação), G27 (passo 8: card completo), G13, ' \
           'G22 (passo 9: avisar o RH toda sexta), G7, G24'],
-    # O 9 tem spec próprio (exemplo_09_prospeccao_semanal_spec.rb, G21 #2706); falta só o passo 4 à risca.
-    9 => ['Prospecção que roda sozinha toda semana', 'G58 (campanha só às empresas desta execução)'],
+    # O 9 saiu com a G58 (#2784) sobre a G21 (#2706): exemplo_09_prospeccao_semanal_spec.rb roda à risca, com a campanha
+    # só às empresas que a busca criou nesta execução (o registro real da busca grava os card_ids).
     # O 10 saiu com o lote 4 (#2682, G40) depois da G41 (#2759): o spec dele roda à risca, com a espera só pela Fernanda.
     # O 13 saiu com o lote 2 (#2679): o spec dele roda à risca, com o card ganho e a IA lendo o card.
     # O 11 saiu com a G49: o spec dele roda à risca (exemplo_11_indicacao_spec.rb).

@@ -203,6 +203,18 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
       expect(cards.map { |card| card.contact.label_list }).to all(eq(['prospeccao-novembro']))
     end
 
+    it 'grava no registro os ids dos cards criados agora, nunca o do card que já existia (contrato com a G58)', :aggregate_failures do
+      origem
+      execucao = execucao_da_conta
+      rodar(execucao)
+      conferir(buscas_da(execucao).sole, verificados: [0, 2], sem_whatsapp: [1])
+
+      resultado = rodar(execucao)
+
+      expect(resultado.dados['card_ids']).to match_array(Crm::Card.where(account: account, stage: etapa).ids)
+      expect(rodar(execucao).dados).to include('cards_criados' => 0, 'card_ids' => [])
+    end
+
     it 'repetir a rodada não cria card de novo' do
       origem
       execucao = execucao_da_conta

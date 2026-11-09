@@ -9,13 +9,9 @@ require 'rails_helper'
 #   ele pela Campanha da tela, e o modelo para no receptor de teste (F9.7) só para esses números. Na segunda seguinte,
 #   quem já tinha card (card_ja_existe) não recebe de novo, embora tenha a mesma etiqueta do mês.
 #
-# Limite desta prova, até a G21 (#2706): na main nenhum passo de um gatilho da conta grava card_ids (o "card" pede
-# alvo e o "prospeccao" ainda não entrou). O registro do passo que cria os cards é gravado aqui como o executor o
-# grava, com o contrato `card_ids` combinado com a G21, e a receita da versão vai direto ao banco, como fica com o passo
-# da G21. O exemplo 9 de ponta a ponta fica no pendentes_spec até lá.
-#
-# Pendente: o contrato `card_ids`/`contato_ids` com a G21 (#2706) só está provado com o registro montado aqui. Quando a
-# G21 entrar, um teste real precisa rodar o passo dela e ler o registro que ele grava de verdade.
+# Limite desta prova: o registro do passo que cria os cards é montado aqui, com o contrato `card_ids`, e a receita da
+# versão vai direto ao banco. O caminho real (a busca da G21 grava o registro e a campanha o lê) é provado no passo 4 e
+# no passo 8 do exemplo_09_prospeccao_semanal_spec.rb, e o registro da busca em passo_de_prospeccao_spec.rb.
 RSpec.describe 'Fechamento #2414 · G58: campanha só para quem a execução criou', :automacao_motor, :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 
@@ -100,7 +96,7 @@ RSpec.describe 'Fechamento #2414 · G58: campanha só para quem a execução cri
   end
 
   # Prova o passo campanha e o envio. Os cards criados entram pelo registro montado aqui (contrato da G21), não pelo
-  # passo que cria: esse ponta a ponta é o exemplo 9, ainda no pendentes_spec.
+  # passo que cria: esse ponta a ponta é o exemplo 9 (exemplo_09_prospeccao_semanal_spec.rb).
   it 'com o registro da G21 montado, a campanha vai só às empresas criadas nesta vez, não às da semana anterior', :aggregate_failures do
     definicao = automacao_da_prospeccao
     semana1 = [empresa('Padaria Cambuí', '+5519900000001'), empresa('Oficina Barão', '+5519900000002')]

@@ -147,9 +147,12 @@ class Autonomia::Automacao::BuscaDaProspeccao
     permanente('etapa_fora_do_alcance')
   end
 
+  # `card_ids`: só os cards criados nesta rodada (o que já existia é empresa já prospectada). É o contrato com a G58
+  # (ContatosDaExecucao): a campanha com o público desta execução lê esses cards do registro do passo.
   def dos_envios(envios)
     { 'cards_criados' => envios.sum { |envio| envio.created.size }, 'ja_tinham_card' => envios.sum { |envio| envio.existing.size },
-      'falharam' => envios.sum { |envio| envio.failed.size } }
+      'falharam' => envios.sum { |envio| envio.failed.size },
+      'card_ids' => envios.flat_map { |envio| envio.created.pluck(:card_id) } }
   end
 
   # Cada lote ganha as etiquetas logo depois de enviado: se um lote seguinte falhar, os cards já criados ficam com elas.

@@ -35,9 +35,10 @@ require 'rails_helper'
 # deduplicação da caixa só reaproveita card da mesma caixa (Crm::Conversations::AutoCreateDeduplicator), o card da
 # prospecção nasce sem caixa, e a resposta abriria um segundo card para a mesma empresa.
 #
-# Passo 4 em aberto (G58, decisão da Automação em 09/11): a campanha deve ir só às empresas criadas nesta execução. Hoje
-# o público da campanha é só a etiqueta, então a empresa da semana anterior que não recusou recebe a apresentação de
-# novo. O spec confere a empresa nova recebendo e a que recusou nunca; o exemplo segue no pendentes_spec até a G58.
+# Passo 4 à risca (G58, #2784, decisão da Automação em 09/11): a campanha usa o público desta execução
+# (`publico: desta_execucao`), não a etiqueta do mês. Vai só às empresas cujo card a busca da G21 criou nesta segunda:
+# o registro real do passo "prospecção" grava os `card_ids` (BuscaDaProspeccao), e a campanha da G58 lê esse registro
+# (ContatosDaExecucao). A empresa da semana anterior, com a mesma etiqueta, não recebe de novo (passo 8).
 RSpec.describe 'Fechamento #2414 · exemplo 9: prospecção que roda sozinha toda semana', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 
@@ -99,9 +100,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 9: prospecção que roda sozinha tod
     { gatilho: { tipo: 'conta.recorrente', frequencia: 'semanal', dia_da_semana: 1, hora: 8 }, passos: [
       { id: 'buscar', tipo: 'prospeccao', faz: 'buscar', busca_id: busca_salva.id, quantas: 20, etapa_id: etapa_nova.id,
         etiquetas: [etiqueta('prospecção-novembro').id] },
-      { id: 'apresentar', tipo: 'campanha', faz: 'disparar', titulo: 'Apresentação do escritório', caixa_id: canal.inbox.id,
-        modelo: { nome: 'apresentacao_do_escritorio', idioma: 'pt_BR', variaveis: [['Campinas']] },
-        etiquetas: [etiqueta('prospecção-novembro').id] }
+      { id: 'apresentar', tipo: 'campanha', faz: 'disparar', publico: 'desta_execucao', titulo: 'Apresentação do escritório',
+        caixa_id: canal.inbox.id, modelo: { nome: 'apresentacao_do_escritorio', idioma: 'pt_BR', variaveis: [['Campinas']] } }
     ] }
   end
 
@@ -317,8 +317,15 @@ RSpec.describe 'Fechamento #2414 · exemplo 9: prospecção que roda sozinha tod
     expect(cards.map(&:title)).to contain_exactly('Padaria Nova Campinas', 'Oficina Barão Geraldo', 'Studio Cambuí')
     expect(cards.map(&:stage_id).uniq).to eq([etapa_nova.id])
     expect(cards.map { |card| card.contact.label_list }).to all(eq(['prospecção-novembro']))
-    # Passo 4: a campanha com o modelo aprovado saiu só para elas.
-    expect(account.campaigns.sole).to have_attributes(title: 'Apresentação do escritório', campaign_status: 'completed')
+    # Passo 4: a campanha com o modelo aprovado saiu só para elas, pelo público desta execução: os cards que o registro
+    # real da busca gravou (`card_ids`), não a etiqueta.
+    registro = Autonomia::Automacao::Registro.find_by!(automacao_id: automacao_id('Segunda: prospecção'), passo: 'buscar', resultado: 'ok')
+    expect(registro.dados['card_ids']).to match_array(cards.ids)
+    campanha = account.campaigns.sole
+    expect(campanha).to have_attributes(title: 'Apresentação do escritório', campaign_status: 'completed')
+    publico = CampaignImport.find(CampaignAudienceLink.for_campaign(campanha).campaign_import_id)
+    expect(publico.options).to include('source' => 'automacao')
+    expect(publico.campaign_import_rows.pluck(:contact_id)).to match_array(cards.map(&:contact_id))
     enviados = saidas.map(&:corpo)
     expect(enviados.pluck('to')).to contain_exactly(numero(:padaria), numero(:oficina), numero(:studio))
     expect(enviados.map { |corpo| corpo.dig('template', 'name') }.uniq).to eq(['apresentacao_do_escritorio'])
@@ -369,6 +376,9 @@ RSpec.describe 'Fechamento #2414 · exemplo 9: prospecção que roda sozinha tod
       expect(card_de(:mercado).stage).to eq(etapa_nova)
       expect(modelos_para(:studio).size).to eq(1)
       expect(modelos_para(:mercado).size).to eq(1)
+      # Passo 4 à risca (G58): as empresas da semana anterior têm a mesma etiqueta, mas não recebem a apresentação de novo.
+      expect(modelos_para(:padaria).size).to eq(1)
+      expect(modelos_para(:oficina).size).to eq(1)
     end
 
     context 'with o interesse e a conversa com o André' do
