@@ -72,9 +72,12 @@ class Meta::AdsGraphClient
 
   # base_uri: o Instagram com o login do Instagram fala com graph.instagram.com (#2199), com as mesmas regras.
   # prazo: até quando quem chama espera (Meta::AdsGraphClient::Prazo).
-  def initialize(access_token:, api_version: nil, base_uri: BASE_URI, prazo: nil)
+  # instagram_node: o nó do Instagram nas leituras de Seus posts e dos números ('me' no login do Instagram; o id do
+  # Instagram no login do Facebook, #2406, onde o `me` seria a Página).
+  def initialize(access_token:, api_version: nil, base_uri: BASE_URI, prazo: nil, instagram_node: 'me')
     @access_token = access_token
     @base_uri = base_uri
+    @instagram_node = instagram_node
     @prazo = prazo
     @api_version = api_version.presence || GlobalConfigService.load('WHATSAPP_API_VERSION', Meta::ConversionsApiClient::DEFAULT_API_VERSION)
   end

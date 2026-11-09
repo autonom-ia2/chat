@@ -1231,6 +1231,20 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Instagram pelo login único (#2406, depois do #2338): quem tem Página com Instagram liga o Instagram com o mesmo
+# "Entrar com o Facebook" dos Anúncios. Só vale com anuncios_login_unico. Ligada: no pronto do passo a passo, "Ligar o
+# Instagram" liga ali mesmo uma caixa do Instagram com o token da Página (graph.facebook.com), ou troca para esse login
+# a caixa do mesmo Instagram que já existe na conta. Desligada: o botão leva ao login do Instagram, como antes. O login
+# do Instagram continua para quem só tem Instagram. Com migration 20261108900000 (colunas `login` e `page_id` em
+# channel_instagram). Rollback: desligar a flag na conta; a caixa já trocada volta ao reautorizar pelo login do
+# Instagram (docs/crm/instagram-login-unico-2406.md). Posição 33 (4294967296, 1 << 32), dada pela Orquestração em
+# 09/11. Nasce desligada e liga só na conta de teste do Rodrigo, com o OK dele: as permissões instagram_manage_* ainda
+# não passaram pelo App Review.
+- name: instagram_login_unico
+  display_name: Anúncios › Instagram pelo login único
+  enabled: false
+  column: feature_flags_ext_2
+
 # Agentes: o material do próprio agente vem primeiro (#2801, Refs #1431). Ligada: a regra de resposta dá a ordem das
 # fontes (material do agente > fatos-âncora das instruções > ferramentas > segmento da conta > conhecimento geral) e o
 # bloco do segmento passa a valer só quando o material não traz o assunto. Quando o [CONTEXTO] traz o que foi perguntado,
