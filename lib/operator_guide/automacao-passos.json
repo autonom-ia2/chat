@@ -828,6 +828,58 @@
       "so_na_espera": true
     },
     {
+      "caminho": "conversa.responsavel_respondeu",
+      "base": "conversa",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_RESPONSAVEL_RESPONDEU",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ],
+      "so_na_espera": true
+    },
+    {
+      "caminho": "gatilho.repetiu",
+      "base": "gatilho",
+      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_REPETIU",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ],
+      "so_na_espera": true
+    },
+    {
       "caminho": "envio.texto",
       "base": "envio",
       "frase": "AUTOMACAO_LIVRE.VALORES.ENVIO_TEXTO"
@@ -968,18 +1020,21 @@
     "Conversation": [
       "conversa",
       "contato",
-      "envio"
+      "envio",
+      "gatilho"
     ],
     "Crm::Card": [
       "card",
       "conversa",
       "contato",
       "reuniao",
-      "envio"
+      "envio",
+      "gatilho"
     ],
     "Contact": [
       "contato",
-      "envio"
+      "envio",
+      "gatilho"
     ]
   },
   "grupos": [

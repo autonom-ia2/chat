@@ -16,9 +16,10 @@ class Autonomia::Automacao::Contexto
   TIPOS = %w[Conversation Crm::Card Contact Account].freeze
   BASES = { ::Conversation => 'conversa', ::Crm::Card => 'card', ::Contact => 'contato', ::Account => 'conta' }.freeze
 
-  attr_reader :alvo
+  attr_reader :alvo, :execucao
 
-  # `execucao`: a execução em que o passo roda, quando há uma. A reunião do gatilho (G12) e o texto da IA (#2679) leem dela.
+  # `execucao`: a execução em que o passo roda, quando há uma. A reunião do gatilho (G12), o texto da IA (#2679) e o
+  # "gatilho repetiu" (lote 4) leem dela.
   # `textos`: no ensaio, que não tem execução, o texto que cada passo de IA produziria (só para mostrar).
   def self.de(alvo, execucao: nil, textos: nil) = new(alvo, execucao: execucao, textos: textos)
 

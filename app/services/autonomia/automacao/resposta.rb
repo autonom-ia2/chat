@@ -6,6 +6,10 @@
 # - Equipe: a mesma régua da IA que responde (Autonomia::Agents::Operate::PessoaDaEquipe): pessoa da equipe escrevendo
 #   ao cliente, ou o eco do que ela mandou pelo app do celular. Não contam a nota, o robô, o envio automático em nome
 #   de alguém (follow-up, campanha, regra), a mensagem da própria automação nem a que falhou: o cliente não a recebeu.
+# - Responsável (lote 4, #2682): a mesma régua, só da pessoa atribuída à conversa na hora da conferência ("espera a
+#   Fernanda", depois de passar a conversa para ela). O eco do celular não conta: ele não diz quem mandou.
+# - Gatilho repetiu (lote 4): o gatilho da execução aconteceu de novo durante a espera (a 2ª falta dentro dos 30 dias).
+#   A Partida grava a hora em `repetiu_em`; lida do banco, porque a execução em memória é de antes da repetição.
 #
 # O eco de uma mensagem NOSSA (IA, automação, robô) não é a equipe respondendo. Normalmente ele nem vira mensagem: o
 # reconciliador o junta à bolha que já existe (WhatsappHybrid::EchoReconcilerExtension; na Cloud, o mesmo source_id).
@@ -25,7 +29,9 @@ module Autonomia::Automacao::Resposta
   # da espera e quem ligou, e trata o vazio (sem contato, sem conversa) como "não respondeu".
   VALORES = {
     'conversa.cliente_respondeu' => ->(contexto, espera, quem) { cliente?(contexto.contato, espera, quem) },
-    'conversa.equipe_respondeu' => ->(contexto, espera, _quem) { equipe_na?(contexto.conversa, espera) }
+    'conversa.equipe_respondeu' => ->(contexto, espera, _quem) { equipe_na?(contexto.conversa, espera) },
+    'conversa.responsavel_respondeu' => ->(contexto, espera, _quem) { responsavel?(contexto.conversa, espera) },
+    'gatilho.repetiu' => ->(contexto, espera, _quem) { repetiu?(contexto.execucao, espera) }
   }.freeze
 
   # Em qualquer conversa do contato na conta que `quem` (quem ligou) vê, pelo filtro da lista de conversas (#2680): o
@@ -56,6 +62,20 @@ module Autonomia::Automacao::Resposta
     na_janela(candidatas, espera).find_each.any? do |mensagem|
       equipe.da_pessoa?(mensagem) || (equipe.eco_do_celular?(mensagem) && eco_de_pessoa?(mensagem))
     end
+  end
+
+  def responsavel?(conversa, espera)
+    return false if conversa.nil? || conversa.assignee_id.nil?
+
+    candidatas = conversa.messages.chat.outgoing.where(sender_type: 'User', sender_id: conversa.assignee_id).where.not(status: :failed)
+    na_janela(candidatas, espera).find_each.any? { |mensagem| ::Autonomia::Agents::Operate::PessoaDaEquipe.da_pessoa?(mensagem) }
+  end
+
+  def repetiu?(execucao, espera)
+    return false if execucao.nil?
+
+    em = ::Autonomia::Automacao::Execucao.where(id: execucao.id).where('repetiu_em > ?', espera.begin)
+    (espera.end ? em.where('repetiu_em <= ?', espera.end) : em).exists?
   end
 
   def eco_de_pessoa?(eco) = !eco_do_que_saiu_daqui?(eco) && !saida_nossa_sem_id_antes?(eco)

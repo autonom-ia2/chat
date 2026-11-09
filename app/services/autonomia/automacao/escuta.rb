@@ -14,6 +14,8 @@
 #   também quem espera pelo mesmo contato em outra conversa, no card ou no contato (#2680). Só o "esperar até": a ação
 #   que espera uma nova tentativa e o "esperar" de tempo seguem o relógio.
 # - `envio_atualizado`: a mensagem que a automação mandou foi entregue, lida ou falhou (#2680, `envio.situacao`).
+# O card que mudou e o gatilho que aconteceu de novo durante a espera (lote 4, #2682) acordam pelo Despertador, que
+# usa a mesma reserva daqui (`reservar`, `esperando_condicao?`).
 #
 # O gate é a flag do motor, lida da conta: conta sem o motor só lê a conta. Com o motor, uma consulta pela conta e pelo
 # tipo do gatilho; não há cache, porque a lista muda a cada automação ligada ou desligada, e uma lista velha ligaria o
