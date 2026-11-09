@@ -13,6 +13,7 @@ import LivreModelo from './LivreModelo.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
 import LivreCampanha from './LivreCampanha.vue';
 import LivreProspeccao from './LivreProspeccao.vue';
+import LivreParaCada from './LivreParaCada.vue';
 import LivreEtapa from './LivreEtapa.vue';
 import LivreRetornoPara from './LivreRetornoPara.vue';
 import LivreRetornoEnvio from './LivreRetornoEnvio.vue';
@@ -22,6 +23,7 @@ import LivreGatilho from './LivreGatilho.vue';
 import { caminhosProntos } from '../ia';
 import { campanhaPronta } from '../campanha';
 import { prospeccaoPronta } from '../prospeccao';
+import { paraCadaPronto } from '../paraCada';
 import { envioPronto, paraPronto } from '../retorno';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { temDataIncompleta } from '../texto';
@@ -236,6 +238,8 @@ const nativoPronto = campo => {
     return campanhaPronta(rascunho.value, caixasDaConta.value);
   // G21: a peça da prospecção também.
   if (campo.peca === 'prospeccao') return prospeccaoPronta(rascunho.value);
+  // G24: a peça do "para cada item" também.
+  if (campo.peca === 'para_cada') return paraCadaPronto(rascunho.value);
   if (campo.peca === 'quem_recebe_retorno') return paraPronto(valor);
   if (campo.peca === 'envio_do_retorno') return envioPronto(valor);
   if (campo.peca === 'destinatarios')
@@ -454,6 +458,14 @@ defineExpose({ abrir, fechar });
           :etapas="escolhasDoGatilho.etapas || []"
           @update:model-value="novo => (rascunho = novo)"
         />
+        <LivreParaCada
+          v-else-if="campo.peca === 'para_cada' && campo.nome === 'campos'"
+          :model-value="rascunho"
+          :etapas="escolhasDoGatilho.etapas || []"
+          :opcoes="opcoes"
+          :atributos-do="atributosDo"
+          @update:model-value="novo => (rascunho = novo)"
+        />
         <LivreEtapa
           v-else-if="campo.peca === 'etapa'"
           :rotulo="$t(campo.rotulo)"
@@ -508,7 +520,7 @@ defineExpose({ abrir, fechar });
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreIaCampo
-          v-else-if="ehDeIa"
+          v-else-if="ehDeIa && campo.peca !== 'para_cada'"
           :campo="campo"
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"

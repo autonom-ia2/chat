@@ -42,6 +42,7 @@
         "IA_ESCREVER_GUARDAR": "O texto ficaria guardado para os passos seguintes.",
         "IA_RESUMIR_NOTA": "Ficaria numa nota privada.",
         "IA_RESUMIR_AVISAR": "Avisaria a equipe.",
+        "IA_PARA_CADA": "Criaria um card para cada item da lista, até {maximo}.",
         "ONDE": {
           "CONVERSA": "{campo}, na conversa",
           "CONTATO": "{campo}, no contato",

@@ -118,6 +118,9 @@
       "file": "automacaoLivreProspeccao.json"
     },
     {
+      "file": "automacaoLivreParaCada.json"
+    },
+    {
       "file": "ausencia.json"
     },
     {

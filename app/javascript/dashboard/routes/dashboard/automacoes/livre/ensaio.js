@@ -54,6 +54,9 @@ const FARIA_DA_IA = {
     t(`${F}.IA_ESCREVER_${(dados.destino || 'sugestao').toUpperCase()}`),
   ia_resumir: (dados, t) =>
     t(`${F}.IA_RESUMIR_${dados.destino === 'avisar' ? 'AVISAR' : 'NOTA'}`),
+  // G24: um card por item da lista, até o máximo do passo.
+  ia_para_cada: (dados, t) =>
+    t(`${F}.IA_PARA_CADA`, { maximo: dados.maximo ?? '' }),
 };
 
 // #2414 G20 — o passo de IA que lê os anexos: quantos desta conversa a IA
