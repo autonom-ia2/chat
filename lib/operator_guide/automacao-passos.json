@@ -314,6 +314,12 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
         },
         {
+          "nome": "data",
+          "peca": "data",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DATA"
+        },
+        {
           "nome": "hora",
           "peca": "hora",
           "obrigatorio": true,
@@ -353,6 +359,12 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
         },
         {
+          "nome": "data",
+          "peca": "data",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DATA"
+        },
+        {
           "nome": "hora",
           "peca": "hora",
           "obrigatorio": true,
@@ -390,6 +402,12 @@
           "peca": "dia_do_mes",
           "obrigatorio": false,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
+        },
+        {
+          "nome": "data",
+          "peca": "data",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DATA"
         },
         {
           "nome": "hora",
@@ -938,6 +956,15 @@
       ]
     },
     {
+      "caminho": "falhou.texto",
+      "base": "falhou",
+      "frase": "AUTOMACAO_LIVRE.VALORES.FALHOU_TEXTO",
+      "so_nos_gatilhos": [
+        "mensagem.falhou"
+      ],
+      "so_nos_passos": true
+    },
+    {
       "caminho": "conversa.atributos",
       "base": "conversa",
       "atributos": "conversation_attribute",
@@ -1041,7 +1068,8 @@
       "conversa",
       "contato",
       "envio",
-      "gatilho"
+      "gatilho",
+      "falhou"
     ],
     "Crm::Card": [
       "card",
@@ -1311,6 +1339,12 @@
           "peca": "passos",
           "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.NENHUM"
+        },
+        {
+          "nome": "de_novo",
+          "peca": "de_novo",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DE_NOVO"
         }
       ]
     },

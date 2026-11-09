@@ -1115,6 +1115,8 @@ pt_BR:
         fixo: 'Passo %{passo}: %{campo} tem de ser %{valor}.'
         mensagem_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no filtro do gatilho "mensagem criada".'
         reuniao_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe nos gatilhos de reunião (marcada, remarcada, cancelada).'
+        falhou_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no gatilho de mensagem que não chegou.'
+        falhou_no_filtro: 'Passo %{passo}: %{caminho} só pode ser usado nos passos, não no "Só se" do gatilho.'
         resposta_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até".'
         valor_fora_do_alvo: 'Passo %{passo}: %{caminho} não dá para ler naquilo em que este gatilho começa (conversa, card ou contato).'
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'
@@ -1135,6 +1137,7 @@ pt_BR:
         campo_de_fora: 'Gatilho: o campo %{campo} não é um campo de data desta conta.'
         faixa_invertida: 'Gatilho: em "fechado entre", o primeiro número (%{de}) é maior que o segundo (%{ate}). Assim não pega nenhum card.'
         passo_pede_alvo: 'Passo %{passo}: este gatilho roda na conta, sem conversa, card ou contato. Aqui só cabem esperar e disparar campanha.'
+        data_passada: 'Gatilho: a data %{data} já passou. Escolha uma data a partir de hoje, numa hora que ainda vai chegar.'
         selecao_vazia: 'Gatilho: escolha pelo menos uma condição de quais cards ou contatos ele pega. Sem nenhuma, pegaria a conta inteira.'
         selecao_de_outro_alvo: 'Gatilho: estas condições não valem aqui: %{condicoes}.'
         responsavel_de_fora: 'Gatilho: o responsável escolhido não é desta conta.'
@@ -1146,6 +1149,10 @@ pt_BR:
         caminho_repetido: "Passo %{passo}: já existe um caminho com o nome %{nome}."
         caminho_reservado: "Passo %{passo}: o nome %{nome} já é o caminho de quando nada se aplica. Escolha outro nome."
         caminho_sem_letra: "Passo %{passo}: o nome do caminho precisa ter pelo menos uma letra (%{nome})."
+        de_novo_caminho_desconhecido: "Passo %{passo}: o \"decidir de novo\" aponta para um caminho que este passo não tem (%{chave})."
+        de_novo_com_passos: "Passo %{passo}: o caminho %{nome} decide de novo, então não pode ter passos. Tire os passos dele ou desmarque."
+        de_novo_todos: "Passo %{passo}: deixe sem marcar pelo menos uma saída (um caminho ou o \"Nenhum se aplica\"), para a automação seguir."
+        caminho_nenhum: "Nenhum se aplica"
         destino_invalido: "Passo %{passo}: a IA não pode gravar em %{destino}."
         campo_repetido: "Passo %{passo}: %{chave} aparece duas vezes."
       nota:

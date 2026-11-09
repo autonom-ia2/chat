@@ -75,7 +75,8 @@
       "REUNIAO_INICIO": "Meeting date and time",
       "REUNIAO_LINK_DA_REUNIAO": "Meeting call link",
       "ENVIO_TEXTO": "Text of the last message the automation sent",
-      "ENVIO_SITUACAO": "Status of the last message the automation sent"
+      "ENVIO_SITUACAO": "Status of the last message the automation sent",
+      "FALHOU_TEXTO": "Text of the message that wasn't delivered"
     },
     "PASSOS": {
       "ESPERAR": "Wait for a while",
@@ -172,7 +173,8 @@
       "AGENTE_ID": "Which AI agent",
       "CAIXA_ID": "From which e-mail inbox",
       "ASSUNTO": "Subject",
-      "MODELO": "If the 24-hour window is closed"
+      "MODELO": "If the 24-hour window is closed",
+      "DE_NOVO": "At each reply, decide again"
     },
     "OPCOES": {
       "STATUS": {
@@ -316,6 +318,8 @@
       "FALTA_TEXTO": "the text is missing",
       "DECIDIR": "AI decides: “{pergunta}” ({n} paths)",
       "DECIDIR_SEM_PERGUNTA": "AI chooses the path: the question is missing ({n} paths)",
+      "DECIDIR_DE_NOVO": "{frase}; if {caminhos}, waits for the next reply (up to {prazo}) and decides again; with no reply by then, it ends without sending anything",
+      "NENHUM_SE_APLICA": "none applies",
       "EXTRAIR": "AI looks in the conversation for: {lista}",
       "ESCREVER_MENSAGEM": "AI writes and sends to the customer: “{instrucao}”",
       "ESCREVER_MENSAGEM_SEM_INSTRUCAO": "AI writes and sends to the customer: the instruction is missing",

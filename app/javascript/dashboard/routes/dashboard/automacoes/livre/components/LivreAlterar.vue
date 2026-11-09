@@ -16,11 +16,13 @@ import LivreEtapa from './LivreEtapa.vue';
 import LivreRetornoPara from './LivreRetornoPara.vue';
 import LivreRetornoEnvio from './LivreRetornoEnvio.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
+import LivreDecidirDeNovo from './LivreDecidirDeNovo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
-import { caminhosProntos } from '../ia';
+import { caminhosProntos, deNovoPronto } from '../ia';
 import { campanhaPronta } from '../campanha';
 import { envioPronto, paraPronto } from '../retorno';
+import { faltaDaFrequencia } from '../recorrente';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { temDataIncompleta } from '../texto';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
@@ -47,7 +49,7 @@ const props = defineProps({
 
 const emit = defineEmits(['salvar', 'tirar', 'close']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const painel = ref(null);
 
 // { tipo: 'gatilho' | 'condicao' | 'passo', indice?, novo?, listaId?, valor }
@@ -110,7 +112,8 @@ const frase = computed(() => {
       rascunho.value,
       props.catalogo,
       t,
-      props.escolhasDoGatilho.nomes
+      props.escolhasDoGatilho.nomes,
+      locale.value
     );
   return fraseDaCondicao(rascunho.value, props.catalogo, t);
 });
@@ -247,6 +250,8 @@ const nativoPronto = campo => {
   // descrição e (no extrair) onde gravar; o destino escolhido.
   if (campo.peca === 'instrucao') return Boolean(valor?.trim());
   if (campo.peca === 'caminhos') return caminhosProntos(valor || []);
+  // G31: decidir de novo, se ligado, com caminho marcado sem passos e prazo.
+  if (campo.peca === 'de_novo') return deNovoPronto(rascunho.value);
   if (campo.peca === 'campos_extrair')
     return (
       (valor || []).length >= 1 &&
@@ -271,9 +276,11 @@ const acaoPronta = () =>
       campo => !vazio(lerCampo(rascunho.value, entrada.value, campo.nome))
     );
 
-// O que o gatilho pede e é obrigatório (a etapa) precisa vir antes do "Salvar".
+// O que o gatilho pede e é obrigatório (a etapa; no recorrente, o dia ou a data
+// da frequência escolhida) precisa vir antes do "Salvar".
 const gatilhoPronto = gatilho =>
   Boolean(gatilho.tipo) &&
+  !faltaDaFrequencia(gatilho) &&
   (
     props.catalogo.gatilhos.find(item => item.tipo === gatilho.tipo)
       ?.parametros || []
@@ -494,6 +501,14 @@ defineExpose({ abrir, fechar });
           :model-value="rascunho[campo.nome]"
           :catalogo="catalogo"
           :atributos-do="atributosDo"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreDecidirDeNovo
+          v-else-if="campo.peca === 'de_novo'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :passo="rascunho"
+          :unidades="catalogo.unidades"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreIaCampo
