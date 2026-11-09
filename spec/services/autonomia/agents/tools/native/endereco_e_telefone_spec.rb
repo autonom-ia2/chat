@@ -88,7 +88,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::EnderecoETelefone do
       [copiloto, ajudante].each do |agente|
         agente.update!(config: agente.config.merge('atendimento' => dados, 'booking_page_id' => pagina.id))
         expect(described_class.instrucao(agente.reload)).to be_nil
+        expect(Autonomia::Agents::Tools::Native::CartaoDaPagina.contato_do_agente(agente)).to be_nil
+        expect(Autonomia::Agents::Tools::Native::CartaoDaPagina.slugs_extras(agente)).to be_empty
       end
+    end
+
+    it 'agente de sistema fica fora' do
+      sistema = criar_principal(account, config: { 'with_knowledge' => false, 'atendimento' => dados })
+      sistema.update_columns(config: sistema.config.merge('system_key' => 'guia', 'booking_page_id' => pagina.id)) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(described_class.instrucao(sistema.reload)).to be_nil
+      expect(Autonomia::Agents::Tools::Native::CartaoDaPagina.contato_do_agente(sistema)).to be_nil
     end
 
     it 'agente de outra conta apontando para a página desta conta não recebe os locais' do
@@ -155,10 +165,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::EnderecoETelefone do
     end
 
     it 'com o telefone do agente preenchido e inválido, nunca cai no telefone da página' do
-      com_pagina.update_columns(config: com_pagina.config.merge('atendimento' => { 'endereco' => '', 'telefone' => '+55 11' })) # rubocop:disable Rails/SkipsModelValidations
+      ['+55 11', '11940001234'].each do |gravado|
+        com_pagina.update_columns(config: com_pagina.config.merge('atendimento' => { 'endereco' => '', 'telefone' => gravado })) # rubocop:disable Rails/SkipsModelValidations
 
-      expect(Autonomia::Agents::Tools::Native::CartaoDaPagina.contato_do_agente(com_pagina.reload)).to be_nil
-      expect(contato.available_for?(com_pagina)).to be(false)
+        expect(Autonomia::Agents::Tools::Native::CartaoDaPagina.contato_do_agente(com_pagina.reload)).to be_nil
+        expect(contato.available_for?(com_pagina)).to be(false)
+      end
     end
 
     it 'com o telefone do agente, não pede coordenada da página' do

@@ -7,7 +7,8 @@
 #
 # ZERO CONFIGURAÇÃO, como a agenda: com a Fase 2 e a flag `agentes_enviar_local_e_contato`, o agente que tem página
 # ganha os dois slugs (`com_cartoes`, lido por `Agent#ferramentas_nativas`), e cada ferramenta só entra no turno quando
-# a página tem o dado dela (`available_for?`). A Lia (`insurance_quote`) fica fora: a lista dela é a do deploy.
+# a página tem o dado dela (`available_for?`). Quem não fala com o cliente fica fora (`fora?`): a Lia, o interno, o
+# ajudante e o agente de sistema.
 #
 # O TELEFONE DO AGENTE VEM PRIMEIRO (#1479, bloco "Endereço e telefone"): o cartão de contato leva o
 # `config['atendimento']['telefone']` do agente e, sem ele, o `contact_phone` da página (`contato_do_agente`). O agente
@@ -50,8 +51,15 @@ module Autonomia::Agents::Tools::Native::CartaoDaPagina
     (Array(slugs) + extras).uniq
   end
 
+  # Quem não fala com o cliente fica fora do mapa, do cartão e do bloco "Endereço e telefone": a Lia (a lista dela é a
+  # do deploy), o interno (copiloto), o ajudante e o agente de sistema.
+  def fora?(agent)
+    agent.agent_type == LIA || agent.actuation_internal? || agent.ajudante_de_origem? ||
+      agent.config.to_h['system_key'].present?
+  end
+
   def slugs_extras(agent)
-    return [] if agent.agent_type == LIA
+    return [] if fora?(agent)
     return SLUGS if ::Autonomia::Agents::Tools::Native::Agenda.page_id(agent).present?
 
     telefone_do_agente(agent) ? [SLUGS.last] : []
@@ -61,7 +69,7 @@ module Autonomia::Agents::Tools::Native::CartaoDaPagina
   # com endereço presencial ainda sem coordenada (a que existia antes da flag) pede o job (`GeocodificarLocaisJob.pedir`,
   # uma vez por página e pendentes), e o mapa entra no catálogo de um turno seguinte. Sem pendente, nem o Redis é lido.
   def pagina(agent)
-    return if agent.agent_type == LIA || !ligado?(agent.account)
+    return if fora?(agent) || !ligado?(agent.account)
 
     ::Autonomia::Agents::Tools::Native::Agenda.pagina_de(agent).tap { |pagina| pedir_coordenada(pagina) }
   end
@@ -109,7 +117,7 @@ module Autonomia::Agents::Tools::Native::CartaoDaPagina
   # `pagina`: a de `pagina(agent)`, quando quem chama já a tem. Sem ela: com o telefone do agente, só lê a página para o
   # nome (`Agenda.pagina_de`, sem pedir coordenada); sem ele, `pagina(agent)`, como o cartão da página sempre fez.
   def contato_do_agente(agent, pagina = :buscar)
-    return if agent.agent_type == LIA || !ligado?(agent.account)
+    return if fora?(agent) || !ligado?(agent.account)
 
     telefone = telefone_do_agente(agent)
     if telefone

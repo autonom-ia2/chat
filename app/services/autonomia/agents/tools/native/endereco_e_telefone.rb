@@ -40,10 +40,9 @@ module Autonomia::Agents::Tools::Native::EnderecoETelefone
     ([CABECALHO] + linhas).join("\n")
   end
 
-  # Não fala com o cliente: a Lia, o interno (copiloto), o ajudante e o de sistema.
+  # Não fala com o cliente: a mesma regra do mapa e do cartão (`CartaoDaPagina.fora?`).
   def fora?(agent)
-    agent.agent_type == NATIVO::LIA || agent.actuation_internal? || agent.ajudante_de_origem? ||
-      agent.config.to_h['system_key'].present?
+    NATIVO.fora?(agent)
   end
 
   def linhas_do_agente(agent)
