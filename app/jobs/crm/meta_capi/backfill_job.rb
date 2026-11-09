@@ -15,6 +15,10 @@
 #   - STAGE axis:  'moved' for the CURRENT stage, only when that stage has a
 #     funnel_stage_type configured.
 # Both are gated by the pipeline's meta_sync config (enabled + event subscribed).
+# Only a click made up to the event counts, with the same cut as the live send (#2799,
+# PayloadBuilder.event_time_for): an event whose clicks all came after it is reported as
+# skipped_click_after_event, unless website signals made by then would carry it, as in
+# DispatchJob's website fallback.
 #
 # SECURITY: this job never touches the Meta access token — DispatchJob resolves and
 # posts it. Nothing token-shaped is ever logged here.
@@ -55,6 +59,11 @@ class Crm::MetaCapi::BackfillJob < ApplicationJob
   end
 
   def process_event(card, capi_event, activity, report)
+    unless clicked_by_event?(card, capi_event, activity)
+      report[:skipped_click_after_event] += 1
+      return
+    end
+
     event_id = build_event_id(card, capi_event, activity)
     if already_sent?(event_id)
       report[:already_sent] += 1
@@ -94,6 +103,12 @@ class Crm::MetaCapi::BackfillJob < ApplicationJob
 
   def latest_activity(card, event_types)
     card.activities.where(event_type: event_types).order(created_at: :desc).first
+  end
+
+  def clicked_by_event?(card, capi_event, activity)
+    up_to = Crm::MetaCapi::PayloadBuilder.event_time_for(card, capi_event, activity)
+    Crm::MetaCapi::CtwaClidResolver.sources(card, up_to: up_to).any? ||
+      Crm::MetaCapi::WebsiteSignalResolver.resolve(card, up_to: up_to).present?
   end
 
   # Mirrors Crm::MetaCapiListener#meta_sync_enabled?: the event must be subscribed
@@ -139,6 +154,7 @@ class Crm::MetaCapi::BackfillJob < ApplicationJob
       dry_run: dry_run,
       would_send: 0,
       skipped_no_clid: 0,
+      skipped_click_after_event: 0,
       already_sent: 0,
       enqueued: 0,
       by_event_type: Hash.new(0)
@@ -149,6 +165,7 @@ class Crm::MetaCapi::BackfillJob < ApplicationJob
     Rails.logger.info(
       "Crm::MetaCapi::BackfillJob account=#{report[:account_id]} dry_run=#{report[:dry_run]} " \
       "would_send=#{report[:would_send]} skipped_no_clid=#{report[:skipped_no_clid]} " \
+      "skipped_click_after_event=#{report[:skipped_click_after_event]} " \
       "already_sent=#{report[:already_sent]} enqueued=#{report[:enqueued]} by_event_type=#{report[:by_event_type]}"
     )
     report
