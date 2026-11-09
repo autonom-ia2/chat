@@ -33,6 +33,8 @@
 # laço vale nas partidas; cada receita tem um número finito de esperas, então o despertar não gira sem fim. O "decidir"
 # que decide a cada resposta (G31) volta à mesma espera, mas cada volta consome uma resposta nova do cliente.
 module Autonomia::Automacao::Escuta
+  GatilhoDoEvento = ::Autonomia::Automacao::GatilhoDoEvento
+
   module_function
 
   # `alvo`: a conversa, o card ou o contato do gatilho (Gatilhos). `evento`: a marca única do fato. `dados`: o que o
@@ -218,8 +220,8 @@ module Autonomia::Automacao::Escuta
     return true if ::Autonomia::Automacao::EsperaDaReuniao.no_card?(account, tipos, card_id)
 
     mudou = mudou.to_h.with_indifferent_access
-    ::Autonomia::Automacao::EmLote.lembrar([:assinante, account.id, evento, tipos.map { |tipo| parametro_do_evento(tipo, mudou) }]) do
-      automacoes_do_gatilho(account.id, tipos).where(tipos.map { |tipo| gatilho_casa_sql(tipo, mudou) }.join(' OR ')).exists?
+    ::Autonomia::Automacao::EmLote.lembrar([:assinante, account.id, evento, tipos.map { |tipo| GatilhoDoEvento.parametro(tipo, mudou) }]) do
+      automacoes_do_gatilho(account.id, tipos).where(tipos.map { |tipo| GatilhoDoEvento.casa_sql(tipo, mudou) }.join(' OR ')).exists?
     end
   rescue StandardError => e
     registrar_erro("gate do emissor falhou evento=#{evento} conta=#{account&.id}; despacha assim mesmo", e)
@@ -230,28 +232,6 @@ module Autonomia::Automacao::Escuta
   def tipos_ligados(account, evento)
     tipos = ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD[evento]
     tipos if tipos.present? && account.present? && ::Autonomia::Automacao::Motor.gatilhos?(account)
-  end
-
-  # "tipo = X AND (parâmetro vazio OR parâmetro = valor do evento)", com os valores escapados.
-  def gatilho_casa_sql(tipo, mudou)
-    nome, valor = parametro_do_evento(tipo, mudou)
-    gatilho = "autonomia_automacao_versoes.receita -> 'gatilho'"
-    return ::Autonomia::Automacao::Definicao.sanitize_sql_array(["(#{gatilho} ->> 'tipo' = ?)", tipo]) if valor.nil?
-
-    ::Autonomia::Automacao::Definicao.sanitize_sql_array(
-      ["(#{gatilho} ->> 'tipo' = ? AND (#{gatilho} ->> ? IS NULL OR #{gatilho} ->> ? = ?))", tipo, nome, nome, valor.to_s]
-    )
-  end
-
-  # O parâmetro do gatilho e o valor que o evento traz, sem reler o card. O atualizado (G27) não filtra aqui: o job
-  # confere a mudança.
-  def parametro_do_evento(tipo, mudou)
-    case tipo
-    when ::Autonomia::Automacao::Gatilhos::ATUALIZADO then [nil, nil]
-    when 'card.entrou_na_etapa' then ['etapa_id', mudou[:to_stage_id] || mudou[:stage_id]]
-    when 'card.saiu_da_etapa' then ['etapa_id', mudou[:from_stage_id]]
-    else ['funil_id', mudou[:pipeline_id]]
-    end
   end
 
   def registrar_erro(contexto, erro) = Rails.logger.error("[automacao][escuta] #{contexto} #{erro.class} em #{erro.backtrace&.first}")
