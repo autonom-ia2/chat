@@ -33,20 +33,35 @@ const RECURSOS = [
 // sai da lista, para não prometer o que este login não liga. Sem a lista de concedidas (a Meta não respondeu), mostra
 // tudo. O Instagram fica sempre: ele se liga por um toque à parte, com o login do próprio Instagram.
 // falta: null (funciona), 'PAGE', 'INSTAGRAM', 'INSTAGRAM_TAP' ou 'PERMISSION'.
+// pelaPagina (#2406, flag instagram_login_unico): o Instagram da Página liga por este mesmo login. Depois de ligado
+// (agora, ou antes: `page.instagram.linked`), conta como os recursos da Página.
 const pedidoNoLogin = ({ precisa, permissao }, granted, declined) =>
   precisa === 'instagram' ||
   !granted.length ||
   granted.includes(permissao) ||
   declined.includes(permissao);
 
-export const recursosDoLogin = ({ page, granted = [], declined = [] }) =>
+const faltaDoInstagram = (page, pelaPagina, instagramLigado) => {
+  if (!page.instagram) return 'INSTAGRAM';
+  const ligado = instagramLigado || page.instagram.linked;
+  return pelaPagina && ligado ? null : 'INSTAGRAM_TAP';
+};
+
+export const recursosDoLogin = ({
+  page,
+  granted = [],
+  declined = [],
+  pelaPagina = false,
+  instagramLigado = false,
+}) =>
   RECURSOS.filter(recurso => pedidoNoLogin(recurso, granted, declined)).map(
     ({ chave, precisa, permissao }) => {
       if (precisa && !page) return { chave, falta: 'PAGE' };
-      // Instagram por toque à parte (decisão do Rodrigo, 06/11): o login único não o liga.
-      if (precisa === 'instagram') {
-        return { chave, falta: page.instagram ? 'INSTAGRAM_TAP' : 'INSTAGRAM' };
-      }
+      const falta =
+        precisa === 'instagram'
+          ? faltaDoInstagram(page, pelaPagina, instagramLigado)
+          : null;
+      if (falta) return { chave, falta };
       return {
         chave,
         falta: declined.includes(permissao) ? 'PERMISSION' : null,

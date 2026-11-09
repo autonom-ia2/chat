@@ -4835,6 +4835,29 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "16.19",
+     "titulo": "Ver, abrir e mudar as suas listas para mensagem",
+     "para_que_serve": "Ver as listas guardadas pela Prospecção nova com os números de cada uma, tirar empresas com Desfazer e criar uma cópia da lista já enviada.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_prospecting_achar_listas",
+      "autonomia_prospecting_achar_lista"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_achar_listas",
+      "destaque": null
+     },
+     "requer": "prospeccao_nova",
+     "prints": [],
+     "fontes": [
+      "porques: Ver, abrir e mudar as listas para mensagem da Prospeccao nova"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

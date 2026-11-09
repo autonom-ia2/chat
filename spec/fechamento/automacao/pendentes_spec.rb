@@ -6,7 +6,6 @@ require 'rails_helper'
 # passando (F9.8).
 RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model do
   pendentes = {
-    1 => ['Renovação do seguro sem esquecer ninguém', 'G6 (30 dias antes do vencimento), G1, G2, G3, G8, G11, G12, G34, G42'],
     2 => ['Lead do anúncio atendido em 5 minutos', 'G29 (card criado pelo formulário de um anúncio e o nome dele), G30, G31, G32'],
     4 => ['Aluno que começa a faltar', 'G5 (entrou em "Faltou"), G1, G3, G4, G12, G15, G25, G28'],
     # O 5 tem spec próprio à risca (exemplo_05_revisao_do_carro_spec.rb); só o passo 8 espera a G47.
@@ -17,12 +16,10 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     8 => ['Funcionário novo no plano da empresa',
           'G31 (passos 6 e 7: voltar a esperar a cada documento na 2ª automação), G27 (passo 8: card completo), G13, ' \
           'G22 (passo 9: avisar o RH toda sexta), G7, G24'],
-    # #2678 (auditoria dos termos, 07/11): o 10 tem spec próprio dos passos que montam, mas não segue o termo à risca.
-    # O 13 saiu com o lote 2 (#2679): o spec dele roda à risca, com o card ganho e a IA lendo o card.
     # O 9 tem spec próprio (exemplo_09_prospeccao_semanal_spec.rb, G21 #2706); falta só o passo 4 à risca.
     9 => ['Prospecção que roda sozinha toda semana', 'G58 (campanha só às empresas desta execução)'],
-    10 => ['Cliente bravo vai direto para a gerente',
-           'G40 (esperar só a Fernanda), G41 (a instrução no resumir e avisar com a agente de IA atendendo), G28'],
+    # O 10 saiu com o lote 4 (#2682, G40) depois da G41 (#2759): o spec dele roda à risca, com a espera só pela Fernanda.
+    # O 13 saiu com o lote 2 (#2679): o spec dele roda à risca, com o card ganho e a IA lendo o card.
     11 => ['Indicação que vira presente', 'G4, G17, G18 (criar o contato e o card do amigo e agir no card dele), G1, G5, G12, G16'],
     12 => ['Visita que aconteceu decide o próximo passo', 'G5 (entrou em "Visita feita"), G2, G3, G11, G14, G25, G35'],
     14 => ['Documentação completa para emitir', 'G5 (entrou em "Documentação"), G1, G3, G13, G20'],

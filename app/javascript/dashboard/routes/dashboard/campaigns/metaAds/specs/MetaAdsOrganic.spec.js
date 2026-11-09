@@ -198,6 +198,18 @@ describe('Anúncios · Seus posts (#2199)', () => {
     );
   });
 
+  it('"Ver conversas" opens the inbox with the conversations of the period (#2209)', async () => {
+    answer(ready({ name: 'Studio Acme' }), { status: 'not_connected' });
+
+    const wrapper = await mountScreen();
+    await wrapper.find('[data-organic-main-conversations]').trigger('click');
+
+    expect(push).toHaveBeenCalledWith({
+      path: '/app/accounts/1/inbox/7',
+      query: { desde_dias: '30' },
+    });
+  });
+
   it('who cannot see the inbox reads "no access", never 0', async () => {
     answer(
       ready({ name: 'Studio Acme', messages: { count: null, inbox_id: null } }),

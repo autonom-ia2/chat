@@ -7,8 +7,9 @@
 const HTTP = 'tool_http_error:';
 const EXECUCAO = 'tool_execution_error:';
 
-// "corrigir" é a parte da ferramenta a abrir (passo 2, 3 ou 4); null = só testar de novo.
-const PASSO_DA_CORRECAO = { ENDERECO: 2, PREENCHE: 3, CHAVE: 4 };
+// "corrigir" é a parte da ferramenta a abrir; null = só testar de novo. #1430: o que o agente
+// descobre é o passo 2; o link, o que vai junto e o recorte da resposta (ONDE) são o passo 3.
+const PASSO_DA_CORRECAO = { PREENCHE: 2, ENDERECO: 3, ONDE: 3, CHAVE: 4 };
 export const passoDaCorrecao = corrigir => PASSO_DA_CORRECAO[corrigir];
 
 const erroHttp = codigo => {
@@ -28,13 +29,13 @@ const ERROS_DE_EXECUCAO = {
   // #1425: o HttpExecutor recusa redirecionamento para outro domínio, corpo que deixou de ser JSON
   // depois de preenchido e quebra de linha num cabeçalho.
   cross_origin_redirect_error: ['REDIRECIONA', 'ENDERECO'],
-  corpo_json_invalido: ['CORPO', 'PREENCHE'],
+  corpo_json_invalido: ['CORPO', 'ONDE'],
   cabecalho_invalido: ['CABECALHO', 'CHAVE'],
   // Revisão do #1425: valor fora do tipo da informação, corpo de tipo sem escape seguro com {{ }}, e
   // resposta que não é JSON numa ferramenta com mapeamento.
   parametro_invalido: ['VALOR', 'PREENCHE'],
   corpo_sem_escape: ['TIPO_DO_CORPO', null],
-  parser_error: ['NAO_JSON', 'PREENCHE'],
+  parser_error: ['NAO_JSON', 'ONDE'],
   endereco_invalido: ['URL_INVALIDA', 'ENDERECO'],
   undefined_variable: ['NAO_EXISTE', 'PREENCHE'],
   undefined_filter: ['NAO_EXISTE', 'PREENCHE'],
@@ -42,6 +43,11 @@ const ERROS_DE_EXECUCAO = {
   // #1444: com o erro de render recusado, um filtro que falha no valor digitado também chega aqui.
   argument_error: ['VALOR', 'PREENCHE'],
   zero_division_error: ['VALOR', 'PREENCHE'],
+  // #1430 (revisão adversarial): `for` sobre faixa enorme ou montada com informação do agente.
+  faixa_grande: ['FAIXA', 'ONDE'],
+  // Revisão do delta: o modelo passou do limite de recursos (Liquid::MemoryError) no envio ou no recorte.
+  memory_error: ['FAIXA', 'ONDE'],
+  limite_do_modelo: ['FAIXA', 'ONDE'],
 };
 
 const lerPrefixo = erro => {
@@ -234,6 +240,90 @@ export const montarChamada = (rascunho, valores) => {
     cabecalhos: [...cabecalhos, ...automaticos],
     corpo: comCorpo(rascunho) ? montarCorpo(rascunho, valores) : '',
   };
+};
+
+// #1430: a resposta lida por gente. Objeto: os campos de cima que têm valor, com o nome do campo
+// legível ("nomeDaCidade" e "nome_da_cidade" viram "Nome da cidade"). Lista (solta ou dentro de um
+// objeto): um grupo por item, até 5.
+// Texto, campo aninhado ou nada legível: null, e a tela mostra como veio.
+const MAX_ITENS = 5;
+const ehMaiuscula = c => c !== c.toLowerCase() && c === c.toUpperCase();
+// Sigla (CEP, UF, NOME_COMPLETO) fica como veio; camelCase vira palavras soltas.
+const ehSigla = palavra =>
+  palavra !== palavra.toLowerCase() && palavra === palavra.toUpperCase();
+const separarCamelCase = palavra =>
+  [...palavra]
+    .map((c, i) => (i > 0 && ehMaiuscula(c) ? ` ${c.toLowerCase()}` : c))
+    .join('');
+const nomeLegivel = chave => {
+  const palavras = String(chave)
+    .split('_')
+    .join(' ')
+    .split('-')
+    .join(' ')
+    .split(' ')
+    .filter(Boolean)
+    .map(palavra => (ehSigla(palavra) ? palavra : separarCamelCase(palavra)))
+    .join(' ');
+  return palavras.charAt(0).toUpperCase() + palavras.slice(1);
+};
+const valorLegivel = valor => {
+  if (typeof valor === 'boolean') return valor ? 'sim' : 'não';
+  if (typeof valor === 'number') return String(valor);
+  if (typeof valor === 'string') return valor.trim();
+  return '';
+};
+const camposDe = objeto =>
+  objeto && typeof objeto === 'object' && !Array.isArray(objeto)
+    ? Object.entries(objeto)
+        .map(([chave, valor]) => ({
+          rotulo: nomeLegivel(chave),
+          valor: valorLegivel(valor),
+        }))
+        .filter(campo => campo.valor)
+    : [];
+
+// Lista solta, ou embrulhada num objeto sem campo simples ({ "itens": [...] }); senão, o próprio objeto.
+const listaDe = dados => {
+  if (Array.isArray(dados)) return dados;
+  if (camposDe(dados).length) return [dados];
+  const embrulhada = Object.values(dados || {}).find(Array.isArray);
+  return embrulhada || [dados];
+};
+
+// A leitura em linhas deixou algo de fora (lista ou objeto dentro, ou mais de 5 itens): a tela abre "Ver detalhes".
+const ehSimples = valor => valor === null || typeof valor !== 'object';
+const temAninhado = item =>
+  !ehSimples(item) && !Object.values(item).every(ehSimples);
+export const respostaDeixaDeFora = corpo => {
+  let dados;
+  try {
+    dados = JSON.parse(String(corpo ?? ''));
+  } catch {
+    return false;
+  }
+  const itens = listaDe(dados);
+  const naoSimples = Array.isArray(dados)
+    ? 0
+    : Object.values(dados || {}).filter(v => !ehSimples(v)).length;
+  const embrulhada = itens !== dados && itens[0] !== dados;
+  return (
+    itens.length > MAX_ITENS ||
+    itens.some(temAninhado) ||
+    naoSimples > (embrulhada ? 1 : 0)
+  );
+};
+
+export const respostaLegivel = corpo => {
+  let dados;
+  try {
+    dados = JSON.parse(String(corpo ?? ''));
+  } catch {
+    return null;
+  }
+  const itens = listaDe(dados).slice(0, MAX_ITENS);
+  const grupos = itens.map(camposDe).filter(campos => campos.length);
+  return grupos.length ? grupos : null;
 };
 
 // O que o agente recebe: JSON indentado quando dá para ler; cortado ou texto, como veio.

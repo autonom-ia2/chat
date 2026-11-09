@@ -63,7 +63,7 @@ class Crm::MetaAds::InstagramComments
     raise Error, failure(result) unless result.ok
 
     Crm::MetaAdsCommentAction.record_reply(account: @connection.account, ad_id: ad_id, reply_id: result.data['id'], user: user)
-    record_action('reply', ad_id, comment_id, user)
+    record_action('reply', ad_id, comment_id, user, channel)
     rows(channel).row({ 'id' => result.data['id'].to_s, 'text' => text, 'timestamp' => Time.current.iso8601,
                         'from' => { 'id' => channel.instagram_id, 'username' => channel.provider_name } }, actions: {}, own: true)
   end
@@ -73,7 +73,7 @@ class Crm::MetaAds::InstagramComments
     result = client(channel).hide(comment_id, hidden: hidden)
     raise Error, failure(result) unless result.ok
 
-    record_action(hidden ? 'hide' : 'show', ad_id, comment_id, user)
+    record_action(hidden ? 'hide' : 'show', ad_id, comment_id, user, channel)
     { id: comment_id, hidden: hidden }
   end
 
@@ -83,7 +83,7 @@ class Crm::MetaAds::InstagramComments
     result = client(channel).delete(comment_id)
     raise Error, failure(result) unless result.ok
 
-    record_action('delete', ad_id, comment_id, user)
+    record_action('delete', ad_id, comment_id, user, channel)
     { id: comment_id }
   end
 
@@ -110,10 +110,19 @@ class Crm::MetaAds::InstagramComments
   private
 
   # O que a pessoa fez no comentário (#2519): ele sai do "esperando" (Esperando) e a IA não age mais nele (Cuidar). A Meta
-  # já agiu quando isto roda: falha ao gravar vai ao rastreador e a resposta continua dizendo a verdade.
-  def record_action(acao, ad_id, comment_id, user)
+  # já agiu quando isto roda: falha ao gravar vai ao rastreador e a resposta continua dizendo a verdade. O "Esperando você"
+  # de Seus posts conta também os comentários do anúncio (#2804): ele é lido de novo na próxima vez.
+  def record_action(acao, ad_id, comment_id, user, channel)
     Crm::MetaAdsCommentAction.record!(account: @connection.account, network: 'instagram', ad_id: ad_id.to_s, comment_id: comment_id.to_s,
                                       action: acao, actor: 'user', user: user)
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @connection.account).capture_exception
+  ensure
+    forget_waiting(channel)
+  end
+
+  def forget_waiting(channel)
+    SeusPosts::Leitura.esquecer_esperando(@connection.account, channel)
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: @connection.account).capture_exception
   end

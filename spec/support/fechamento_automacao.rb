@@ -194,6 +194,20 @@ module FechamentoAutomacao::Lacunas
     end
   end
 
+  # G30: o lead do formulário entra pelo Importer, como no webhook, num funil com a Atribuição ligada e um corretor que
+  # cuida dele; o card nasce com esse corretor de dono. Roda na transação do exemplo, que desfaz tudo.
+  def lead_ganha_dono_pela_atribuicao?
+    account = FactoryBot.create(:account)
+    corretor = FactoryBot.create(:user, account: account, role: :agent)
+    funil, etapa = create_crm_pipeline(account: account, user: FactoryBot.create(:user, account: account, role: :administrator))
+    funil.update!(metadata: { 'ai' => { 'handoff' => { 'enabled' => true, 'prefer_online' => false } } })
+    account.crm_pipeline_inboxes.create!(pipeline: funil, inbox: create_crm_whatsapp_api_inbox(account: account, members: [corretor]))
+    lead = { 'id' => 'sonda-g30', 'created_time' => '2026-11-08T12:00:00+0000', 'form_id' => '9001',
+             'field_data' => [{ 'name' => 'phone_number', 'values' => ['+5511987650030'] }] }
+    Crm::MetaAds::LeadForms::Importer.new(account: account, pipeline: funil, stage: etapa, form_name: 'Sonda').import(lead)
+    Crm::MetaAdsLead.find_by(account: account, leadgen_id: 'sonda-g30')&.card&.owner_id == corretor.id
+  end
+
   SONDAS = {
     # O modelo aprovado entrou como campo do passo "mensagem" (F4b, #2468/#2586), não como passo próprio.
     'G1' => -> { campo_do_passo?('mensagem', 'modelo') },
@@ -246,8 +260,9 @@ module FechamentoAutomacao::Lacunas
     # Achadas no exemplo 2 (07/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
     # G29: a origem do card do formulário (anúncio, formulário) como valor da receita, no filtro do gatilho e nos passos.
     'G29' => nil,
-    # G30: o responsável por um anúncio (o corretor daquele anúncio), para o retorno e o link da agenda.
-    'G30' => nil,
+    # G30 (#2702): o card do lead nasce com o dono que a Atribuição do funil daria (o corretor), para o retorno e o link
+    # da agenda. Ponta a ponta em spec/fechamento/automacao/g30_dono_do_lead_spec.rb.
+    'G30' => -> { lead_ganha_dono_pela_atribuicao? },
     # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando".
     'G31' => nil,
     # G32 (#2703): a reunião marcada como condição do "esperar até", no meio da execução; prova ponta a ponta em
@@ -275,9 +290,8 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 10 (#2678, #2752): a instrução no resumir ("o que já foi prometido") e avisar o responsável quando a
     # agente de IA atende a conversa (o dono do card; sem ele, o passo pula com sem_responsavel).
     'G41' => -> { campo_do_passo?('resumir', 'instrucao') && I18n.exists?('autonomia.automacao.motivos.sem_responsavel', :pt_BR) },
-    # Do exemplo 1, passo 12 (#2721): o resumo lê tudo o que a execução tentou, até o e-mail em conversa própria. Fica
-    # com a F7 (#2763); sem ela, o exemplo 1 segue pendente.
-    'G42' => nil,
+    # Do exemplo 1, passo 12 (#2721, #2763): o resumo lê tudo o que a execução tentou, até o e-mail em conversa própria.
+    'G42' => -> { Autonomia::Automacao::EnviosDaExecucao.method_defined?(:dados) },
     # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7). Fica
     # com a Gatilhos, depois do lote 3 (#2689), que traz a porta da frente da conversa nova.
     'G43' => nil,

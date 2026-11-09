@@ -32,6 +32,9 @@
 #  fk_rails_...  (autonomia_agent_id => autonomia_agents.id) ON DELETE => cascade
 #
 class Autonomia::Agents::Tool < ApplicationRecord
+  include Autonomia::Agents::CabecalhosDaFerramenta
+  include Autonomia::Agents::SegredoDaFerramenta
+
   self.table_name = 'autonomia_agent_tools'
 
   MAX_SLUG_LENGTH = 64
@@ -42,6 +45,11 @@ class Autonomia::Agents::Tool < ApplicationRecord
   # banco só valeu para as linhas que existiam quando a coluna nasceu).
   TEMPO_PADRAO = 30
   ALCANCE_DO_INTEIRO = (2**31) - 1
+  # Revisão do #1430: link sem teto deixava a conferência do endereço girar sobre milhares de {{ }}. Navegadores e
+  # servidores costumam recusar acima disto.
+  MAX_ENDPOINT_URL = 2048
+  # Revisão adversarial do #1430: o estrago de um modelo crescia com o tamanho dele. Folga larga para um corpo de pedido.
+  MAX_MODELO = 16_384
 
   attribute :timeout_seconds, :integer, default: -> { TEMPO_PADRAO }
 
@@ -58,13 +66,13 @@ class Autonomia::Agents::Tool < ApplicationRecord
   validates :slug, presence: true, uniqueness: { scope: :autonomia_agent_id },
                    length: { maximum: MAX_SLUG_LENGTH }, format: { with: SLUG_FORMAT }
   validates :http_method, inclusion: { in: HTTP_METHODS }
-  validates :endpoint_url, presence: true
+  validates :endpoint_url, presence: true, length: { maximum: MAX_ENDPOINT_URL }
   # #1430: quanto o agente espera pela resposta. Sem máximo (decisão do Rodrigo, 31/10); zero ou negativo é defeito. O
   # alcance da coluna `integer` não é teto: acima dele o save estouraria com 500.
   validates :timeout_seconds, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: ALCANCE_DO_INTEIRO }
   validate :validate_endpoint_url
+  validate :validate_faixas
   validate :validate_param_schema
-  validate :validate_headers_config
   validate :validate_slug_livre, if: :will_save_change_to_slug?
 
   scope :enabled, -> { where(enabled: true) }
@@ -125,17 +133,72 @@ class Autonomia::Agents::Tool < ApplicationRecord
       'type' => PARAM_TYPES.include?(item['type'].to_s) ? item['type'].to_s : 'string',
       'description' => item['description'].to_s,
       'required' => item.key?('required') ? ActiveModel::Type::Boolean.new.cast(item['required']) : true
-    }
+    }.merge(rotulo_do_param(item))
   end
 
+  # #1430: o nome de gente que a tela mostra ("CEP"). Só para a tela: param_property não o leva ao modelo.
+  def rotulo_do_param(item)
+    label = item['label'].to_s.strip
+    label.present? ? { 'label' => label } : {}
+  end
+
+  # O endereço é validado como o executor o usa: cada {{ }} e {% %} vira vazio (HttpExecutor#endereco_do_cadastro). O
+  # texto cru, com as chaves, não é um URI e recusava todo endereço com informação preenchida pelo agente (#1430). Nada
+  # é renderizado aqui: um `for` sobre faixa enorme derrubaria o processo (revisão adversarial do #1430). O site e o que
+  # vem depois do # não aceitam informação, como na execução (`EnderecoDaFerramenta#origem`).
   def validate_endpoint_url
-    uri = URI.parse(endpoint_url.to_s)
+    Liquid::Template.parse(endpoint_url.to_s, error_mode: :strict)
+    return errors.add(:endpoint_url, I18n.t('autonomia.agents.ferramenta.informacao_no_site')) if informacao_no_site?
+
+    conferir_endereco(URI.parse(sem_modelo(endpoint_url.to_s)))
+  rescue URI::InvalidURIError, Liquid::Error
+    errors.add(:endpoint_url, 'não é válido')
+  end
+
+  def conferir_endereco(uri)
     errors.add(:endpoint_url, 'deve usar HTTPS') unless uri.is_a?(URI::HTTPS)
     errors.add(:endpoint_url, 'deve possuir host') if uri.host.blank?
     errors.add(:endpoint_url, 'não pode apontar para localhost') if uri.host.to_s.match?(/\Alocalhost\z|\.local\z/i)
     errors.add(:endpoint_url, 'não pode usar IP direto') if ip_host?(uri.host)
-  rescue URI::InvalidURIError
-    errors.add(:endpoint_url, 'inválida')
+  end
+
+  MODELO = { '{{' => '}}', '{%' => '%}' }.freeze
+
+  # O texto sem nenhum trecho {{ }} ou {% %}; trecho que não fecha fica como está.
+  def sem_modelo(texto)
+    MODELO.reduce(texto) { |atual, (abre, fecha)| sem_trechos(atual, abre, fecha) }
+  end
+
+  # Em laço, não em recursão: cada trecho a mais seria um nível de pilha.
+  def sem_trechos(texto, abre, fecha)
+    saida = +''
+    resto = texto
+    while (inicio = resto.index(abre)) && (fim = resto.index(fecha, inicio + abre.length))
+      saida << resto[0...inicio]
+      resto = resto[(fim + fecha.length)..]
+    end
+    saida << resto
+  end
+
+  # O site (entre :// e o primeiro /, ? ou #) e o que vem depois do # não podem ter {{ }} nem {% %}.
+  def informacao_no_site?
+    texto = endpoint_url.to_s
+    depois = texto.split('://', 2)[1].to_s
+    site = depois.split('/', 2).first.to_s.split('?', 2).first.to_s.split('#', 2).first.to_s
+    fragmento = texto.split('#', 2)[1].to_s
+    [site, fragmento].any? { |parte| MODELO.keys.any? { |abre| parte.include?(abre) } }
+  end
+
+  # #1430 (revisão adversarial): faixa enorme num `for` no endereço, no que vai junto ou no recorte da resposta.
+  def validate_faixas
+    { endpoint_url: endpoint_url, request_body_template: request_body_template,
+      response_mapping: response_mapping.to_h.stringify_keys['template'],
+      headers_config: Array(headers_config).map { |header| header['value'] } }.each do |campo, texto|
+      errors.add(campo, :too_long, count: MAX_MODELO) if Array(texto).any? { |pedaco| pedaco.to_s.bytesize > MAX_MODELO }
+      next unless Array(texto).any? { |pedaco| Autonomia::Agents::Tools::ModeloLiquid.faixa_grande?(pedaco) }
+
+      errors.add(campo, I18n.t('autonomia.agents.ferramenta.faixa_grande', maximo: Autonomia::Agents::Tools::ModeloLiquid::FAIXA_MAXIMA))
+    end
   end
 
   def ip_host?(host)
@@ -151,15 +214,6 @@ class Autonomia::Agents::Tool < ApplicationRecord
     return if names.all? { |name| name.match?(/\A[a-zA-Z_][a-zA-Z0-9_]*\z/) }
 
     errors.add(:param_schema, 'possui nomes inválidos')
-  end
-
-  def validate_headers_config
-    nomes_validos = headers_config.all? { |header| header['key'].to_s.match?(/\A[A-Za-z0-9-]+\z/) }
-    errors.add(:headers_config, 'possui cabeçalhos inválidos') unless nomes_validos
-    # #1430: a plataforma manda o dela em toda chamada (`ChaveDeIdempotencia`).
-    return unless headers_config.any? { |header| header['key'].to_s.casecmp?('Idempotency-Key') }
-
-    errors.add(:headers_config, 'não pode ter Idempotency-Key: a plataforma já manda um em toda chamada')
   end
 
   # #1430: o nome de uma nativa é reservado. Pelo nome, a execução desta cairia em quem lê as nativas pelo slug (a

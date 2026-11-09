@@ -69,7 +69,8 @@ class Autonomia::Automacao::Valores
   # da espera (`espera`); o salvar recusa no resto. Sem a janela, ou sem conversa (card sem conversa principal), lê
   # false: nunca "respondeu", e "diferente de true" não vira resposta. O cliente responde de qualquer conversa dele
   # (#2680: o e-mail abre outra), então a resposta dele sai do contato, nas conversas que `quem` vê, e vale também no
-  # alvo contato.
+  # alvo contato. Lote 4 (#2682): a resposta da pessoa atribuída e o gatilho que aconteceu de novo durante a espera
+  # (`gatilho.repetiu`, da execução; no ensaio, sem execução, false).
   RESPOSTA = ::Autonomia::Automacao::Resposta::VALORES
   RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu'.freeze
 
@@ -85,9 +86,9 @@ class Autonomia::Automacao::Valores
 
   # O que cada alvo alcança, pelas pontes do Contexto.
   BASES_DO_ALVO = {
-    'Conversation' => %w[conversa contato envio],
-    'Crm::Card' => %w[card conversa contato reuniao envio],
-    'Contact' => %w[contato envio]
+    'Conversation' => %w[conversa contato envio gatilho],
+    'Crm::Card' => %w[card conversa contato reuniao envio gatilho],
+    'Contact' => %w[contato envio gatilho]
   }.freeze
 
   # A mensagem que disparou o gatilho, para o filtro separar a do cliente da resposta da equipe e da nota.
@@ -114,6 +115,8 @@ class Autonomia::Automacao::Valores
     'conversa.iniciada_por' => { 'opcoes' => %w[cliente equipe], 'operadores' => %w[igual diferente] },
     'conversa.cliente_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'conversa.responsavel_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'gatilho.repetiu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'card.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'contato.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'envio.situacao' => { 'opcoes' => ::Autonomia::Automacao::Envio::SITUACOES.values, 'operadores' => %w[igual diferente] }

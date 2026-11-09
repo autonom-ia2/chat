@@ -68,6 +68,13 @@ RSpec.describe Autonomia::Automacao::Historico do
     expect(sem_dizer[:execucoes].first[:passos].first[:dados]).to eq('ia' => { 'modelo' => 'm' })
   end
 
+  # G42: os ids das conversas que o resumo deixou de fora podem ser de conversas que quem vê não enxerga.
+  it 'conversas_fora sai só como quantidade' do
+    create(:autonomia_automacao_registro, execucao: execucao('a'), dados: { 'conversas_fora' => [41, 42] })
+
+    expect(historico[:execucoes].first[:passos].first[:dados]).to eq('conversas_fora' => 2)
+  end
+
   it 'tira o ia que não vem no formato de custo' do
     create(:autonomia_automacao_registro, execucao: execucao('a'), dados: { 'ia' => 'texto solto', 'ramo' => 'entao' })
 

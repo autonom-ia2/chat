@@ -1,7 +1,8 @@
 require 'rails_helper'
 
 # #1479 F1: a interação pedida pelo modelo sai na ÚLTIMA mensagem da resposta. Clássico: a resposta e a pergunta no
-# corpo. Em pedaços: a pergunta é o último pedaço, e só ele leva o formato. Em áudio: o áudio e, logo depois, a lista.
+# corpo. Em pedaços: a pergunta é o último pedaço, e só ele leva o formato. Em áudio: o áudio e, depois que ele sai
+# para o canal, a lista (`InteracaoDepoisDoAudio`, pelo `EnviarCartoesJob`).
 # Caixa que não leva o formato (e-mail, chat do site): texto, sem `rich_message`.
 RSpec.describe Autonomia::Agents::Operate::Responder do
   let(:account) { conta_da_fase2 }
@@ -149,9 +150,17 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       allow_any_instance_of(described_class).to receive(:synthesize_audio).and_return('OggS-bytes') # rubocop:disable RSpec/AnyInstance
     end
 
-    it 'o áudio e, logo depois, a lista numa mensagem própria' do
+    # O canal confirma o áudio (o `source_id` da Meta) e o job da âncora roda.
+    def depois_do_audio
+      enviadas.first.update_column(:source_id, 'wamid.AUDIO') # rubocop:disable Rails/SkipsModelValidations
+      Autonomia::Agents::Operate::EnviarCartoesJob.perform_now(enviadas.first.id)
+    end
+
+    it 'o áudio e, depois que ele sai, a lista numa mensagem própria' do
       responde('Temos vaga amanhã.', opcoes)
       resultado = perform
+      expect(enviadas.size).to eq(1)
+      depois_do_audio
       expect(enviadas.size).to eq(2)
       expect(enviadas.first.content_attributes['autonomia_voice']).to be(true)
       expect(resultado.message).to eq(enviadas.first)
@@ -162,6 +171,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     it 'link depois do áudio: o rótulo no corpo' do
       responde('Seu pedido saiu.', link)
       perform
+      depois_do_audio
       expect(enviadas.last.content).to eq('Ver pedido')
       expect(enviadas.last.content_attributes['rich_message']).to include('type' => 'link_button')
     end
@@ -187,6 +197,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       it 'link depois do áudio: só a versão em texto do link, sem repetir o rótulo' do
         responde('Seu pedido saiu.', link)
         perform
+        depois_do_audio
         expect(enviadas.last.content).to eq("Ver pedido: #{url}")
         expect(enviadas.last.content_attributes).not_to have_key('rich_message')
       end

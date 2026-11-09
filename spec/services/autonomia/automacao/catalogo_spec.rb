@@ -162,8 +162,10 @@ RSpec.describe Autonomia::Automacao::Catalogo do
   it 'leva a resposta durante a espera como valor do alvo, só para o "esperar até"', :aggregate_failures do
     respostas = catalogo.gerado['valores'].select { |item| item['so_na_espera'] }
 
-    expect(respostas.pluck('caminho')).to eq(%w[conversa.cliente_respondeu conversa.equipe_respondeu])
-    expect(respostas).to all(include('base' => 'conversa'))
+    expect(respostas.pluck('caminho')).to eq(%w[conversa.cliente_respondeu conversa.equipe_respondeu conversa.responsavel_respondeu
+                                                gatilho.repetiu])
+    expect(respostas.pluck('base')).to eq(%w[conversa conversa conversa gatilho])
+    expect(catalogo.gerado['alvos'].values).to all(include('gatilho'))
     expect(respostas).to all(satisfy { |item| item['so_no_gatilho'].nil? && item['opcoes'].pluck('valor') == [true, false] })
   end
 

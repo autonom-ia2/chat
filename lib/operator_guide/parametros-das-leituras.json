@@ -322,6 +322,20 @@
       "horas"
     ]
   },
+  "autonomia/prospecting/audiences": {
+    "controller": "api/v1/accounts/autonomia/prospecting/audiences#index",
+    "parametros": [
+      "before_at",
+      "before_id",
+      "lead_ids"
+    ]
+  },
+  "autonomia/prospecting/audiences/:id": {
+    "controller": "api/v1/accounts/autonomia/prospecting/audiences#show",
+    "parametros": [
+      "after"
+    ]
+  },
   "autonomia/prospecting/leads": {
     "controller": "api/v1/accounts/autonomia/prospecting/leads#index",
     "parametros": [
@@ -332,6 +346,10 @@
   },
   "autonomia/prospecting/leads/:id": {
     "controller": "api/v1/accounts/autonomia/prospecting/leads#show",
+    "parametros": []
+  },
+  "autonomia/prospecting/leads/:id/audiences": {
+    "controller": "api/v1/accounts/autonomia/prospecting/lead_audiences#index",
     "parametros": []
   },
   "autonomia/prospecting/leads/crm_owners": {
@@ -1086,6 +1104,7 @@
       "conversation_type",
       "crm_pipeline_id",
       "da_ia",
+      "desde_dias",
       "esperando_min",
       "inbox_id",
       "labels",
@@ -1153,6 +1172,7 @@
       "conversation_type",
       "crm_pipeline_id",
       "da_ia",
+      "desde_dias",
       "esperando_min",
       "inbox_id",
       "labels",
@@ -1174,6 +1194,7 @@
       "conversation_type",
       "crm_pipeline_id",
       "da_ia",
+      "desde_dias",
       "esperando_min",
       "inbox_id",
       "labels",

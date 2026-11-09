@@ -50,6 +50,29 @@ RSpec.describe EmailCampaigns::DeliveryClaim, type: :model do
     expect(recipient.reload).to be_suppressed
   end
 
+  # chat#2733: contato bloqueado com aquele e-mail também não recebe, na hora do envio.
+  it 'não envia e marca suppressed quando o contato da conta com aquele e-mail está bloqueado' do
+    create(:contact, account: account, email: 'Ana.Silva@Example.org', blocked: true)
+
+    engine.perform
+
+    expect(sender).not_to have_received(:deliver)
+    expect(recipient.reload).to be_suppressed
+  end
+
+  it 'reconfere na autorização final: quem é bloqueado durante a renderização não recebe' do
+    contact = create(:contact, account: account, email: 'ana.silva@example.org')
+    allow(engine).to receive(:render) do
+      contact.update!(blocked: true)
+      { subject: 'Synthetic', body_html: '<p>Synthetic</p>' }
+    end
+
+    engine.perform
+
+    expect(sender).not_to have_received(:deliver)
+    expect(recipient.reload).to be_suppressed
+  end
+
   it 'a recusa de outra conta não vale nesta' do
     create(:contact, account: create(:account), email: 'ana.silva@example.org').opt_out!(source: 'manual')
     create(:contact, account: account, email: 'ana.silva@example.org')

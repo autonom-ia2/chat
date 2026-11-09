@@ -10,6 +10,7 @@ import {
   pedidoSalvoDe,
 } from './acharPedido';
 import { demoPedido } from './acharRotas';
+import { listasDaApi, listasDaDemo } from './acharFonteListas';
 
 // #2692 — de onde a Prospecção nova lê (molde: agentes/utils/desempenhoFonte.js).
 // A tela recebe sempre o mesmo formato (acharLead.js), venha de onde vier:
@@ -133,6 +134,7 @@ const fonteDemo = ({ estado, carregarDemo, atraso, usuarioId }) => {
 
   return {
     usaDemo: true,
+    ...listasDaDemo({ estado, atraso }),
     async porta() {
       const demo = await dados();
       const primeira = estado === 'porta-primeira';
@@ -372,6 +374,7 @@ const pipelineComEtapas = async (crm, pipeline) => {
 
 const fonteApi = ({ api, crm, usuarioId, usuarioNome }) => ({
   usaDemo: false,
+  ...listasDaApi(api),
   async porta() {
     const [{ data: ajustes }, { data: buscas }] = await Promise.all([
       api.getSettings(),
