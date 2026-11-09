@@ -105,7 +105,17 @@ export const mutations = {
   [types.ADD_CAMPAIGN_IMPORT]: MutationHelpers.create,
   [types.SET_CAMPAIGN_IMPORTS]: MutationHelpers.set,
   [types.EDIT_CAMPAIGN_IMPORT]: MutationHelpers.update,
-  [types.DELETE_CAMPAIGN_IMPORT]: MutationHelpers.destroy,
+  // O total de "Públicos salvos" vem do meta da listagem; ao excluir, ele cai
+  // junto com a linha, sem esperar a próxima busca (#2834).
+  [types.DELETE_CAMPAIGN_IMPORT](_state, id) {
+    const existed = _state.records.some(record => record.id === id);
+    MutationHelpers.destroy(_state, id);
+    if (!existed) return;
+    _state.meta = {
+      ..._state.meta,
+      count: Math.max((_state.meta.count || 0) - 1, 0),
+    };
+  },
 };
 
 export default {

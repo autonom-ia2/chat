@@ -23,16 +23,22 @@ class Crm::MetaAdsCreatedObject < ApplicationRecord
   # { post_id => [ad_id, ...] }, o mais novo primeiro. Uma consulta, sem chamar a Meta. Ativado aqui
   # (Crm::MetaAds::Creation::Levels, ou Activation#held_by) ou no Gerenciador da Meta, visto pela leitura dos pausados
   # (#2739, Crm::MetaAds::Creation::PausedAds). "Ativado" é a pessoa ter ligado o anúncio, como no Ativar daqui.
-  def self.ads_by_post(account_id, network, post_ids)
-    boosting(account_id, network, post_ids).pluck(:source_post_id, :ad_id)
-                                           .each_with_object({}) { |(post_id, ad_id), ads| (ads[post_id] ||= []) << ad_id }
+  # Com `ad_account_id` (#2804), só os da conta de anúncios conectada agora: o "Esperando você" conta os comentários do
+  # anúncio que o atalho do post abre. Sem ele, todos: "Teve anúncio" é o que já aconteceu, de qualquer conta.
+  def self.ads_by_post(account_id, network, post_ids, ad_account_id: nil)
+    scope = boosting(account_id, network, post_ids)
+    scope = scope.where(ad_account_id: ad_account_id) if ad_account_id
+    scope.pluck(:source_post_id, :ad_id).each_with_object({}) { |(post_id, ad_id), ads| (ads[post_id] ||= []) << ad_id }
   end
 
   # Post impulsionado mais de uma vez (#2739): cada anúncio tem os próprios comentários, e o post leva a todos, sem
   # corte (um por vez que a pessoa impulsionou). [{ id:, name:, created_at: }], o mais novo primeiro; a data separa
-  # anúncios com o mesmo nome.
-  def self.ads_of_post(account_id, network, post_id)
-    boosting(account_id, network, [post_id]).pluck(:ad_id, :name, :created_at)
+  # anúncios com o mesmo nome. Só os da conta de anúncios conectada agora (#2804): o detalhe do anúncio não abre o de
+  # outra conta, e o atalho levaria a uma tela vazia. Sem conta de anúncios, nenhum.
+  def self.ads_of_post(account_id, network, post_id, ad_account_id:)
+    return [] if ad_account_id.blank?
+
+    boosting(account_id, network, [post_id]).where(ad_account_id: ad_account_id).pluck(:ad_id, :name, :created_at)
                                             .map { |id, name, created_at| { id: id, name: name, created_at: created_at.iso8601 } }
   end
 

@@ -175,7 +175,8 @@
         "OPEN": "See the ad's comments",
         "TEXT_MANY": "This post became {count} ads. Each one's comments are on that ad, not on this post.",
         "ITEM": "{name}, created on {date}",
-        "UNNAMED": "Ad"
+        "UNNAMED": "Ad",
+        "WAITING": "{count} comment waiting for you | {count} comments waiting for you"
       },
       "COMMENTS": {
         "TITLE": "Comments",
@@ -243,7 +244,8 @@
         }
       },
       "CARE_OFFER": {
-        "TITLE": "What's in the comments",
+        "TITLE": "What's in this post's comments",
+        "TITLE_WITH_ADS": "What's in this post's comments (the ad's comments are on the ad)",
         "WAITING": "{count} comment is waiting for a reply | {count} comments are waiting for a reply",
         "NONE_WAITING": "No comments waiting for a reply.",
         "PRIVATE_WINDOW": "{count} can still get a private message (up to 7 days) | {count} can still get a private message (up to 7 days)",

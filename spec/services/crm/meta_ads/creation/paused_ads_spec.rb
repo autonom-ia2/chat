@@ -107,6 +107,21 @@ RSpec.describe Crm::MetaAds::Creation::PausedAds do
     expect(record.reload.activated_at).to be_nil
   end
 
+  # #2804: a mídia do anúncio no Instagram vem na mesma leitura e fica guardada para o "Esperando você" de Seus posts.
+  it 'guarda a mídia do anúncio do Instagram que veio na leitura' do
+    allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+    created('1').update!(source_post_id: '1790', source_post_network: 'instagram')
+    stub_request(:get, meta_graph_url('1')).with(query: { fields: Meta::AdsGraphClient::AD_MANAGEMENT_FIELDS })
+                                           .to_return(status: 200, headers: json, body: {
+                                             id: '1', status: 'PAUSED', effective_status: 'PAUSED',
+                                             creative: { effective_instagram_media_id: '7701' }
+                                           }.to_json)
+
+    described_class.new(connection).list
+
+    expect(Crm::MetaAds::Creation::AdMedia.of(account.id, ['1'])).to eq('1' => '7701')
+  end
+
   it 'anúncio que já foi ativado aqui não é lido de novo' do
     created('1').update!(activated_at: Time.current)
 

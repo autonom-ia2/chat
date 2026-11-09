@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
-import { formatClientPhone } from '../../../helpers/meetingDay';
+import { telefoneParaLer } from 'dashboard/helper/telefoneParaLer';
 
 // A pessoa do card para quem não pode ver contatos (#1849, decisão D7): nome, telefone e e-mail, que já vêm com o
 // card. A ficha, a empresa e os campos ficam com quem tem "Ver contatos".
@@ -16,7 +16,7 @@ const linhas = computed(() =>
       chave: 'telefone',
       icone: 'i-lucide-phone',
       rotulo: t('CRM_KANBAN.RELATIONSHIP.PHONE'),
-      valor: formatClientPhone(props.contato?.phone_number),
+      valor: telefoneParaLer(props.contato?.phone_number),
       href: props.contato?.phone_number
         ? `tel:${props.contato.phone_number}`
         : '',

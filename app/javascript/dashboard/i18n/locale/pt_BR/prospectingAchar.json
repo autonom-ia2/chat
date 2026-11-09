@@ -250,7 +250,7 @@
       "ERRO_PROCURAR": "Não deu para buscar o dono de novo."
     },
     "FOLHA": {
-      "TITULO": "O que fazer com as {n} empresas?",
+      "TITULO": "O que fazer com esta empresa? | O que fazer com as {n} empresas?",
       "FUNIL": {
         "TITULO": "Mandar para o funil",
         "TEXTO": "Cada empresa entra no seu funil de vendas."
@@ -272,7 +272,7 @@
       },
       "NOME_LISTA": "{oQue} · {lugar} · {data}",
       "NOME_LISTA_ROTULO": "Nome",
-      "ENTRAM": "Entram {n} das {total}",
+      "ENTRAM": "Entra {n} das {total} | Entram {n} das {total}",
       "ONDE_FICA": "Ela fica em Campanhas.",
       "MANDAR": "Mandar {n} para o funil",
       "MANDANDO": "Mandando {feitas} de {total}…",
@@ -302,7 +302,7 @@
       "TODAS_JA_ESTAO": "Essas empresas já estão nesta lista",
       "ERRO_LISTA_JA_ESTAVAM": "Essas empresas já estavam nesta lista.",
       "LISTAS_INCOMPLETAS": "Nem todas as suas listas apareceram. Feche e abra de novo para ver as outras.",
-      "ENTRAM_JA_ESTAVAM": "Entram {entram} das {total} · {n} já estava na lista | Entram {entram} das {total} · {n} já estavam na lista"
+      "JA_ESTAVAM": "{n} já estava na lista | {n} já estavam na lista"
     },
     "PARA_ONDE_PAINEL": {
       "TITULO": "Para onde elas vão?",

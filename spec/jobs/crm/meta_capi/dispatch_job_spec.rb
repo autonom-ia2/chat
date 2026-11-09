@@ -229,6 +229,67 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
     end
   end
 
+  # #2799 (Rodrigo, 09/11): a 5xx from Meta is a doubt like a read timeout. Meta may have kept
+  # the event, and it does not dedup, so it is not sent again: the card says it is unknown.
+  describe 'server error from Meta (5xx)' do
+    let(:client) { instance_double(Meta::ConversionsApiClient) }
+
+    before do
+      allow(Meta::ConversionsApiClient).to receive(:new).and_return(client)
+      allow(client).to receive(:post_events)
+        .and_return(Meta::ConversionsApiClient::Result.new(ok: false, http_code: 503, error: 'unavailable', error_code: 2, unknown_outcome: true))
+    end
+
+    it 'marks the outcome unknown, keeps the HTTP code and never posts it again' do
+      expect { perform }.not_to raise_error
+
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id))
+        .to have_attributes(status: 'error', error_message: 'unknown_outcome', http_code: 503)
+
+      perform
+
+      expect(client).to have_received(:post_events).once
+    end
+
+    it 'does not look for another dataset nor post again when the 5xx body says 100/33' do
+      allow(client).to receive(:post_events)
+        .and_return(Meta::ConversionsApiClient::Result.new(ok: false, http_code: 500, error_code: 100, error_subcode: 33, unknown_outcome: true))
+      allow(Crm::MetaCapi::WabaDataset).to receive(:replacement)
+
+      expect { perform }.not_to raise_error
+
+      expect(Crm::MetaCapi::WabaDataset).not_to have_received(:replacement)
+      expect(client).to have_received(:post_events).once
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id).error_message).to eq('unknown_outcome')
+    end
+  end
+
+  # A won card without closed_at: the cut and event_time come from the activity that logged the
+  # win, not from "now", which would move on every retry (#2799).
+  describe 'won card without a close instant' do
+    let(:client) { instance_double(Meta::ConversionsApiClient) }
+    let(:won_at) { 3.hours.ago.change(usec: 0) }
+    let(:activity_id) { Crm::Activity.create!(account: account, card: card, event_type: 'won', created_at: won_at).id }
+
+    before do
+      allow(Meta::ConversionsApiClient).to receive(:new).and_return(client)
+      allow(client).to receive(:post_events).and_return(Meta::ConversionsApiClient::Result.new(ok: true, http_code: 200))
+    end
+
+    it 'sends the time of the win and ignores a click made after it' do
+      later = { 'ctwa_clid' => 'LATER', 'touched_at' => 1.hour.ago.iso8601 }
+      conversation.update!(additional_attributes: campaign_attributes.merge('campaign_touches' => [later]))
+      card.update_columns(closed_at: nil) # rubocop:disable Rails/SkipsModelValidations
+
+      perform
+
+      expect(client).to have_received(:post_events) do |events|
+        expect(events.sole).to include('event_time' => won_at.to_i)
+        expect(events.sole['user_data']).to include('ctwa_clid' => 'CLID123')
+      end
+    end
+  end
+
   describe 'delivery' do
     let(:client) { instance_double(Meta::ConversionsApiClient) }
 

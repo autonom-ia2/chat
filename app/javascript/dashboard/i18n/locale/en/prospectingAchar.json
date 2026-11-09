@@ -250,7 +250,7 @@
       "ERRO_PROCURAR": "We could not look for the owner again."
     },
     "FOLHA": {
-      "TITULO": "What to do with the {n} companies?",
+      "TITULO": "What to do with this company? | What to do with the {n} companies?",
       "FUNIL": {
         "TITULO": "Send to the pipeline",
         "TEXTO": "Each business enters your sales pipeline."
@@ -272,7 +272,7 @@
       },
       "NOME_LISTA": "{oQue} · {lugar} · {data}",
       "NOME_LISTA_ROTULO": "Name",
-      "ENTRAM": "{n} of {total} go in",
+      "ENTRAM": "{n} of {total} goes in | {n} of {total} go in",
       "ONDE_FICA": "It stays in Campaigns.",
       "MANDAR": "Send {n} to the pipeline",
       "MANDANDO": "Sending {feitas} of {total}…",
@@ -302,7 +302,7 @@
       "TODAS_JA_ESTAO": "These businesses are already on this list",
       "ERRO_LISTA_JA_ESTAVAM": "These businesses were already on this list.",
       "LISTAS_INCOMPLETAS": "Not all of your lists showed up. Close and open again to see the others.",
-      "ENTRAM_JA_ESTAVAM": "{entram} of {total} go in · {n} was already on the list | {entram} of {total} go in · {n} were already on the list"
+      "JA_ESTAVAM": "{n} was already on the list | {n} were already on the list"
     },
     "PARA_ONDE_PAINEL": {
       "TITULO": "Where do they go?",
