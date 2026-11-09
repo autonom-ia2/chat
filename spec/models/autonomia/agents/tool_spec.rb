@@ -165,7 +165,8 @@ RSpec.describe Autonomia::Agents::Tool do
     end
   end
 
-  # #1430 (revisão adversarial): quem tem a chave não pode trocar o site e levar a chave guardada junto.
+  # #1430 (revisão adversarial; decisão do Rodrigo, 09/11): a chave guardada não segue a ferramenta para outro site, outro
+  # caminho ou outro método. Mudou o link ou o método, a chave é digitada de novo.
   describe 'segredo guardado e endereço em outro site' do
     let!(:tool) do
       described_class.create!(account: account, agent: agent, name: 'Frete', slug: 'frete', endpoint_url: 'https://api.loja.test/frete',
@@ -185,8 +186,80 @@ RSpec.describe Autonomia::Agents::Tool do
       expect(tool).to be_valid
     end
 
-    it 'aceita mudar o caminho no mesmo site' do
-      tool.endpoint_url = 'https://api.loja.test/frete/v2?cep={{cep}}'
+    it 'recusa mudar o caminho ou a busca no mesmo site mantendo a chave' do
+      ['https://api.loja.test/persons', 'https://api.loja.test/frete?limit=500'].each do |novo|
+        tool.endpoint_url = novo
+
+        expect(tool).not_to be_valid
+        expect(tool.errors[:headers_config]).to be_present
+      end
+    end
+
+    it 'recusa mudar o método mantendo a chave' do
+      tool.http_method = 'GET'
+
+      expect(tool).not_to be_valid
+      expect(tool.errors[:headers_config]).to be_present
+    end
+
+    it 'aceita mudar o link com a chave digitada de novo, e mudar outra coisa mantendo a chave' do
+      tool.assign_attributes(endpoint_url: 'https://api.loja.test/persons', headers_config: [{ key: 'x-api-key', value: 'nova-1', secret: true }])
+      expect(tool).to be_valid
+
+      tool.reload.description = 'Use para o frete.'
+      expect(tool).to be_valid
+    end
+
+    it 'aceita a mesma chave digitada de novo num link novo' do
+      tool.assign_attributes(endpoint_url: 'https://api.loja.test/persons', chaves_digitadas: ['x-api-key'],
+                             headers_config: [{ key: 'x-api-key', value: 'guardado-123', secret: true }])
+
+      expect(tool).to be_valid
+    end
+
+    # Revisão adversarial: o corpo (GraphQL, RPC) e um cabeçalho comum (X-HTTP-Method-Override) mudam a operação sem
+    # mexer no link nem no método.
+    it 'recusa mudar o que vai junto ou um cabeçalho comum mantendo a chave' do
+      guardado = { key: 'x-api-key', value: 'guardado-123', secret: true }
+      [{ request_body_template: '{"query":"{ clientes }"}' },
+       { headers_config: [guardado, { key: 'X-HTTP-Method-Override', value: 'DELETE', secret: false }] }].each do |mudanca|
+        tool.reload.assign_attributes(mudanca)
+
+        expect(tool).not_to be_valid
+        expect(tool.errors[:headers_config]).to include(I18n.t('autonomia.agents.ferramenta.chave_de_novo_destino'))
+      end
+    end
+
+    it 'recusa segredo vazio, que apagaria a chave, com ou sem pedido novo' do
+      [{ endpoint_url: 'https://api.loja.test/persons' }, {}].each do |mudanca|
+        tool.reload.assign_attributes(mudanca.merge(chaves_digitadas: ['x-api-key'], headers_config: [{ key: 'x-api-key', value: '', secret: true }]))
+
+        expect(tool).not_to be_valid
+        expect(tool.errors[:headers_config]).to include(I18n.t('autonomia.agents.ferramenta.chave_vazia'))
+      end
+    end
+
+    # Revisão (3 revisores): um `x-api-key` digitado e outro com a máscara levariam a chave guardada como se fosse digitada.
+    it 'recusa nome de cabeçalho repetido, sem olhar maiúscula' do
+      tool.assign_attributes(endpoint_url: 'https://coletor.test/x', chaves_digitadas: ['x-api-key'],
+                             headers_config: [{ key: 'x-api-key', value: 'lixo', secret: true },
+                                              { key: 'X-Api-Key', value: 'guardado-123', secret: true }])
+
+      expect(tool).not_to be_valid
+      expect(tool.errors[:headers_config]).to include('não pode repetir o nome de um cabeçalho')
+    end
+
+    it 'recusa um cabeçalho novo marcado como segredo mantendo a chave' do
+      tool.headers_config = [{ key: 'x-api-key', value: 'guardado-123', secret: true },
+                             { key: 'X-HTTP-Method-Override', value: 'DELETE', secret: true }]
+
+      expect(tool).not_to be_valid
+      expect(tool.errors[:headers_config]).to include(I18n.t('autonomia.agents.ferramenta.chave_de_novo_destino'))
+    end
+
+    it 'trata corpo vazio e corpo nulo como o mesmo pedido' do
+      tool.update_column(:request_body_template, nil) # rubocop:disable Rails/SkipsModelValidations
+      tool.reload.assign_attributes(request_body_template: '', description: 'Use para o frete.')
 
       expect(tool).to be_valid
     end
@@ -195,6 +268,47 @@ RSpec.describe Autonomia::Agents::Tool do
       tool.endpoint_url = 'https://api.loja.test:8443/frete'
 
       expect(tool).not_to be_valid
+    end
+  end
+
+  # Decisão do Rodrigo (09/11): senha no link fica legível para quem tem a chave. O cadastro recusa e manda para a Chave
+  # de acesso. Lido pelo parser de URI e pela lista de nomes de credencial, sem regex.
+  describe 'senha no link' do
+    let(:base) { { account: account, agent: agent, name: 'Senha', slug: 'senha' } }
+
+    it 'recusa usuário e senha ou parâmetro de credencial com valor' do
+      ['https://ana:segredo@a.test/x', 'https://a.test/x?token=abc', 'https://a.test/x?q=1&API_KEY=abc{{t}}',
+       'https://a.test/x?api_token=abc', 'https://a.test/x?client_secret=abc', 'https://a.test/x?q=1;token=abc',
+       'https://a.test/x?token[]=abc', 'https://a.test/x?token={{ "abc" }}', 'https://a.test/x?token={{ t | append: "x" }}',
+       'https://a.test/x?{{ "token" }}=abc', 'https://a.test/x?{{ "tok" | append: "en" }}=abc'].each do |link|
+        tool = described_class.new(base.merge(endpoint_url: link))
+
+        expect(tool).not_to be_valid
+        expect(tool.errors[:endpoint_url]).to include(I18n.t('autonomia.agents.ferramenta.senha_no_link'))
+      end
+    end
+
+    it 'aceita parâmetro que o agente preenche e nomes que não são credencial' do
+      parametro = [{ name: 't', type: 'string', required: true }]
+      ['https://a.test/x?token={{t}}', 'https://a.test/x?token={{ t | url_encode }}', 'https://a.test/x?keyword={{t}}&author=1'].each do |link|
+        expect(described_class.new(base.merge(endpoint_url: link, param_schema: parametro))).to be_valid
+      end
+    end
+
+    it 'deixa desligar a ferramenta antiga que já tinha senha no link' do
+      tool = described_class.create!(base.merge(endpoint_url: 'https://a.test/x'))
+      tool.update_column(:endpoint_url, 'https://a.test/x?token=antigo') # rubocop:disable Rails/SkipsModelValidations
+
+      expect(tool.reload.update(enabled: false)).to be(true)
+    end
+
+    # A lista do painel (utils/ferramentas.js) é a mesma do backend: o painel avisa o que o cadastro recusa.
+    it 'tem a mesma lista de nomes no painel' do
+      js = Rails.root.join('app/javascript/dashboard/routes/dashboard/autonomia/agentes/utils/ferramentas.js').read
+      bloco = js.split('export const NOMES_DE_CREDENCIAL = [', 2).second.split('];', 2).first
+      nomes = bloco.split(',').map { |nome| nome.strip.delete("'") }.reject(&:empty?)
+
+      expect(nomes).to eq(Autonomia::Agents::Tools::SegredosDaChamada::NOMES_DE_CREDENCIAL)
     end
   end
 
