@@ -6,6 +6,7 @@ import {
   comFaz,
   comPublico,
   fraseDaCampanha,
+  publicoDaExecucaoNoCatalogo,
   serveNaCampanha,
 } from '../campanha';
 
@@ -106,6 +107,16 @@ describe('campanha.js', () => {
     expect(campanhaPronta(daExecucao, CAIXAS)).toBe(true);
   });
 
+  it('a escolha do público só vem com um passo que cria num gatilho da conta', () => {
+    const passos = tipos => ({ passos: tipos.map(tipo => ({ tipo })) });
+
+    expect(publicoDaExecucaoNoCatalogo(passos(['card', 'campanha']))).toBe(
+      false
+    );
+    expect(publicoDaExecucaoNoCatalogo(passos(['prospeccao']))).toBe(true);
+    expect(publicoDaExecucaoNoCatalogo(undefined)).toBe(false);
+  });
+
   it('voltar para as etiquetas tira o público e pede etiqueta de novo', () => {
     const deVolta = comPublico(
       comPublico(PRONTA, 'desta_execucao'),
@@ -130,9 +141,13 @@ describe('campanha.js', () => {
 });
 
 describe('LivreCampanha', () => {
-  const montar = modelValue =>
+  const montar = (modelValue, comPublicoDaExecucao = true) =>
     mount(LivreCampanha, {
-      props: { modelValue, etiquetas: [{ value: 7, label: 'ja_comprou' }] },
+      props: {
+        modelValue,
+        etiquetas: [{ value: 7, label: 'ja_comprou' }],
+        comPublicoDaExecucao,
+      },
     });
 
   it('"não receber" mostra só a explicação, sem os campos do disparo', () => {
@@ -181,6 +196,19 @@ describe('LivreCampanha', () => {
     expect(daExecucao.text()).toContain(
       'AUTOMACAO_LIVRE.CAMPANHA.PUBLICO_DESTA_EXECUCAO_DICA'
     );
+  });
+
+  it('sem passo que crie no catálogo, "Quem recebe" some e ficam as etiquetas', () => {
+    const tela = montar(PRONTA, false);
+
+    expect(tela.find('[data-campanha-publico]').exists()).toBe(false);
+    expect(tela.findComponent({ name: 'LivreMarcar' }).exists()).toBe(true);
+    // A receita que já tem o público mostra a escolha, para poder voltar.
+    expect(
+      montar(comPublico(PRONTA, 'desta_execucao'), false)
+        .find('[data-campanha-publico]')
+        .exists()
+    ).toBe(true);
   });
 
   it('escolher "só quem esta automação criou" emite o público sem etiquetas', () => {

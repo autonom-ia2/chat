@@ -19,7 +19,7 @@ import LivreIaCampo from './LivreIaCampo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
 import { caminhosProntos } from '../ia';
-import { campanhaPronta } from '../campanha';
+import { campanhaPronta, publicoDaExecucaoNoCatalogo } from '../campanha';
 import { envioPronto, paraPronto } from '../retorno';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { temDataIncompleta } from '../texto';
@@ -441,6 +441,7 @@ defineExpose({ abrir, fechar });
           v-else-if="campo.peca === 'campanha' && campo.nome === 'faz'"
           :model-value="rascunho"
           :etiquetas="opcoes.etiqueta"
+          :com-publico-da-execucao="publicoDaExecucaoNoCatalogo(catalogo)"
           @update:model-value="novo => (rascunho = novo)"
         />
         <LivreEtapa

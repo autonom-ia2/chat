@@ -26,3 +26,5 @@ pt_BR:
         campanha_modelo: 'Passo %{passo}: a caixa escolhida não tem o modelo %{nome} aprovado e pronto.'
         campanha_etiqueta_de_fora: 'Passo %{passo}: a etiqueta %{id} não é desta conta.'
         campanha_publico_sem_origem: 'Passo %{passo}: para mandar só a quem esta automação criou, ponha antes um passo que crie card ou contato.'
+      # G58: a data no nome do Público da execução ("<campanha> · <data>").
+      data_do_publico: '%d/%m/%Y'

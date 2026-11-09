@@ -488,7 +488,7 @@
             },
             {
               "if": { "required": ["publico"], "properties": { "publico": { "const": "desta_execucao" } } },
-              "then": { "properties": { "faz": { "const": "disparar" } }, "not": { "anyOf": [{ "required": ["etiquetas"] }, { "required": ["sem_etiquetas"] }] } },
+              "then": { "properties": { "faz": { "const": "disparar" } }, "not": { "required": ["etiquetas"] } },
               "else": {
                 "if": { "properties": { "faz": { "const": "disparar" } } },
                 "then": { "required": ["etiquetas"], "properties": { "etiquetas": { "minItems": 1 } } }

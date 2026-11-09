@@ -28,6 +28,9 @@ import {
 const props = defineProps({
   modelValue: { type: Object, required: true },
   etiquetas: { type: Array, default: () => [] },
+  // G58: o catálogo tem um passo que cria contato num gatilho da conta
+  // (publicoDaExecucaoNoCatalogo). Sem ele, "Quem recebe" não aparece.
+  comPublicoDaExecucao: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -56,6 +59,10 @@ const opcoesDoPublico = computed(() => [
   { value: PUBLICO_DESTA_EXECUCAO, label: t(`${C}.PUBLICO_DESTA_EXECUCAO`) },
 ]);
 const daExecucao = computed(() => publicoDaExecucao(passo.value));
+// Uma receita que já tem o público continua mostrando a escolha, para voltar.
+const escolheOPublico = computed(
+  () => props.comPublicoDaExecucao || daExecucao.value
+);
 const escolherPublico = publico =>
   emit('update:modelValue', comPublico(passo.value, publico));
 
@@ -221,7 +228,7 @@ const mudarVariavel = (indice, texto) => {
         />
       </template>
 
-      <div class="flex flex-col gap-1.5">
+      <div v-if="escolheOPublico" class="flex flex-col gap-1.5">
         <label :for="idPublico" class="text-sm font-medium text-n-slate-12">
           {{ $t('AUTOMACAO_LIVRE.CAMPOS.PUBLICO') }}
         </label>

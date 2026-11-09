@@ -72,22 +72,51 @@ RSpec.describe Autonomia::Automacao::CampanhaDaExecucao, :automacao_motor do
       expect(contatos.fora).to eq(0)
     end
 
-    it 'deixa de fora quem ligou não alcança e quem não pode receber', :aggregate_failures do
+    it 'deixa de fora quem não recebe no WhatsApp: pediu para não receber, só tem e-mail ou não tem canal', :aggregate_failures do
       ana = contato('Ana', '+5519900000001')
-      bia = contato('Bia', '+5519900000002')
+      recusou = contato('Recusou', '+5519900000002').tap { |pessoa| pessoa.opt_out!(source: 'manual') }
+      so_email = create(:contact, account: account, name: 'Só e-mail', phone_number: nil, email: 'so@email.com')
       sem_canal = create(:contact, account: account, name: 'Sem canal', phone_number: nil, email: nil)
-      registro('cards', 'ok', { 'contato_ids' => [ana.id, bia.id, sem_canal.id] })
-      allow_any_instance_of(Autonomia::Automacao::Acesso).to receive(:alcanca?) { |_acesso, alvo| alvo != bia } # rubocop:disable RSpec/AnyInstance
+      registro('cards', 'ok', { 'contato_ids' => [ana.id, recusou.id, so_email.id, sem_canal.id] })
 
       expect(contatos.dentro).to eq([ana])
-      expect(contatos.fora).to eq(2)
+      expect(contatos.fora).to eq(3)
+      expect(contatos.sem_alcance).to be_empty
     end
 
     it 'ignora card e contato de outra conta' do
       de_fora = create(:contact, phone_number: '+5519900000009')
-      registro('cards', 'ok', { 'contato_ids' => [de_fora.id] })
+      outra_conta = de_fora.account
+      outro_funil = create_crm_pipeline(account: outra_conta, user: create(:user, account: outra_conta, role: :administrator))
+      card_de_fora = outra_conta.crm_cards.create!(pipeline: outro_funil.first, stage: outro_funil.last, contact: de_fora,
+                                                   owner: outra_conta.users.first, title: 'De fora', currency: 'BRL')
+      registro('cards', 'ok', { 'contato_ids' => [de_fora.id], 'card_ids' => [card_de_fora.id] })
 
       expect(contatos.dentro).to be_empty
+    end
+  end
+
+  # A regra real, sem dublê: o contato vale pela função de quem ligou (ContactPolicy#update?; no EE, contact_manage).
+  describe 'quem ligou perde contact_manage' do
+    let(:agente) { create(:user, account: account, role: :agent) }
+
+    before do
+      funcao = create(:custom_role, account: account, permissions: %w[automation_manage campaign_manage])
+      account.account_users.find_by(user: agente).update!(custom_role: funcao)
+      definicao.update!(ligada_por: agente)
+    end
+
+    it 'não alcança nenhum contato e a automação pausa com sem_acesso, sem criar Público nem Campanha', :aggregate_failures do
+      ana = contato('Ana', '+5519900000001')
+      registro('cards', 'ok', { 'card_ids' => [card_de(ana).id] })
+      template_params = Autonomia::Automacao::PassoDeCampanha.modelo_pronto(caixa, campanha['modelo'])
+
+      expect(Autonomia::Automacao::ContatosDaExecucao.new(execucao: execucao).sem_alcance).to eq([ana])
+      resultado = described_class.new(execucao: execucao.reload, passo: campanha, caixa: caixa, template_params: template_params).disparar
+
+      expect(resultado).to have_attributes(tipo: :sem_acesso, motivo: 'quem_ligou_sem_acesso')
+      expect(CampaignImport.count).to eq(0)
+      expect(account.campaigns.count).to eq(0)
     end
   end
 
@@ -105,7 +134,10 @@ RSpec.describe Autonomia::Automacao::CampanhaDaExecucao, :automacao_motor do
       expect(publico).to have_attributes(status: 'completed', name: start_with('Apresentação · '))
       expect(publico.options).to include('source' => 'automacao', 'automacao_id' => definicao.id, 'execucao_id' => execucao.id)
       expect(publico.campaign_import_rows.pluck(:contact_id)).to eq([ana.id])
-      expect(campanha_criada).to have_attributes(title: 'Apresentação', inbox: caixa, message: 'Olá! Somos o escritório Conta Certa.')
+      # Quem ligou é o remetente (F3.9): cada mensagem enviada leva o nome dele (SentMessageRecorder usa campaign.sender).
+      expect(campanha_criada).to have_attributes(title: 'Apresentação', inbox: caixa, message: 'Olá! Somos o escritório Conta Certa.',
+                                                 sender: dona)
+      expect(publico.user_id).to eq(dona.id)
       expect(CampaignAudienceLink.for_campaign(campanha_criada).variable_bindings)
         .to eq({ '1' => { 'source' => 'fixed', 'value' => 'Conta Certa' } })
       expect(enqueued_jobs.pluck('job_class')).to include('Campaigns::TriggerOneoffCampaignJob')

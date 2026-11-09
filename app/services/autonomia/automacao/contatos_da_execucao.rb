@@ -7,8 +7,11 @@
 #   a empresa não foi criada nesta vez.
 # - Contrato com a G21 (#2706) e o G4: os dados do registro trazem `card_id`/`card_ids` e `contato_id`/`contato_ids`. O
 #   card vira o contato dele (Crm::Card#contact_id), na conta.
-# - Fica `fora` quem ligou a automação não alcança (Acesso#alcanca?, a mesma pergunta dos outros passos) e quem não
-#   pode receber (ConversationAudience::Reach: pediu para não receber, ou sem telefone e sem e-mail).
+# - Quem ligou a automação precisa alcançar cada contato (Acesso#alcanca?, a mesma pergunta dos outros passos). Quem
+#   não alcança vai para `sem_alcance`, e o passo pausa a automação (`sem_acesso`) em vez de mandar a menos gente: a
+#   pergunta é da função (ContactPolicy#update?: no EE, `contact_manage`), então quem não alcança um não alcança nenhum.
+# - Fica `fora` quem não recebe no WhatsApp: pediu para não receber, ou não tem celular válido
+#   (ConversationAudience::Reach.phone). Quem só tem e-mail fica de fora: a campanha é de WhatsApp.
 class Autonomia::Automacao::ContatosDaExecucao
   # `prospeccao` chega com a G21; até lá o esquema não tem esse passo, e a lista só casa com `card`.
   TIPOS_QUE_CRIAM = %w[card prospeccao].freeze
@@ -21,16 +24,21 @@ class Autonomia::Automacao::ContatosDaExecucao
   end
 
   # Os contatos que entram no Público, em ordem de id.
-  def dentro = separados.first
+  def dentro = recebem.first
 
-  # Quantos ficaram de fora (sem alcance de quem ligou ou sem poder receber).
-  def fora = separados.last.size
+  # Quantos ficaram de fora por não receber no WhatsApp.
+  def fora = recebem.last.size
+
+  # Os contatos que quem ligou não alcança.
+  def sem_alcance = alcancados.last
 
   private
 
-  def separados
-    @separados ||= todos.partition { |contato| acesso.alcanca?(contato) && ::ConversationAudience::Reach.reason_for(contato).nil? }
-  end
+  def alcancados = (@alcancados ||= todos.partition { |contato| acesso.alcanca?(contato) })
+
+  def recebem = (@recebem ||= alcancados.first.partition { |contato| recebe_no_whatsapp?(contato) })
+
+  def recebe_no_whatsapp?(contato) = !contato.opted_out? && ::ConversationAudience::Reach.phone(contato).present?
 
   def todos
     dados = registros

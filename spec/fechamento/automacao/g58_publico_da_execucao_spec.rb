@@ -96,7 +96,9 @@ RSpec.describe 'Fechamento #2414 · G58: campanha só para quem a execução cri
     expect(Autonomia::Automacao::Receita.esquema_valido?(receita)).to be(false)
   end
 
-  it 'toda segunda, a campanha vai só às empresas criadas nesta vez, nunca de novo às da semana anterior', :aggregate_failures do
+  # Prova o passo campanha e o envio. Os cards criados entram pelo registro montado aqui (contrato da G21), não pelo
+  # passo que cria: esse ponta a ponta é o exemplo 9, ainda no pendentes_spec.
+  it 'com o registro da G21 montado, a campanha vai só às empresas criadas nesta vez, não às da semana anterior', :aggregate_failures do
     definicao = automacao_da_prospeccao
     semana1 = [empresa('Padaria Cambuí', '+5519900000001'), empresa('Oficina Barão', '+5519900000002')]
 
@@ -105,11 +107,14 @@ RSpec.describe 'Fechamento #2414 · G58: campanha só para quem a execução cri
     publico1 = CampaignImport.find(resultado1.dados['publico_id'])
     expect(resultado1).to have_attributes(tipo: :ok, motivo: nil)
     expect(resultado1.dados).to include('contatos' => 2, 'fora' => 0)
+    hoje = Time.current.in_time_zone(Autonomia::Automacao::Tempo.fuso(account)).to_date
+    expect(publico1.name).to eq("Apresentação do escritório · #{hoje.strftime('%d/%m/%Y')}")
     expect(publico1.options).to include('source' => 'automacao', 'automacao_id' => definicao.id, 'execucao_id' => execucao1.id)
     expect(publico1.campaign_import_rows.pluck(:contact_id)).to match_array(semana1.map(&:contact_id))
     expect(CampaignAudienceLink.for_campaign(account.campaigns.find_by!(display_id: resultado1.dados['campanha_id'])).campaign_import_id)
       .to eq(publico1.id)
     expect(enviados).to contain_exactly('+5519900000001', '+5519900000002')
+    expect(account.campaigns.find_by!(display_id: resultado1.dados['campanha_id']).sender).to eq(andre)
     ja_enviados = enviados.size
 
     semana2 = [empresa('Clínica Taquaral', '+5519900000003'), empresa('Pet Shop Guanabara', '+5519900000004')]

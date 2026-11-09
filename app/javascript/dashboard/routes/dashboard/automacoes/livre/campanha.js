@@ -40,6 +40,14 @@ export const PUBLICO_DESTA_EXECUCAO = 'desta_execucao';
 export const publicoDaExecucao = passo =>
   passo?.publico === PUBLICO_DESTA_EXECUCAO;
 
+// A escolha só aparece quando o catálogo tem um passo que cria card ou contato
+// num gatilho da conta, o único em que a campanha dispara. O "card" pede alvo
+// (Autonomia::Automacao::ProblemasDoGatilho); o "prospeccao" chega com a G21
+// (#2706). Antes dele, a receita com esse público nunca salvaria.
+const CRIAM_SEM_ALVO = ['prospeccao'];
+export const publicoDaExecucaoNoCatalogo = catalogo =>
+  (catalogo?.passos || []).some(item => CRIAM_SEM_ALVO.includes(item.tipo));
+
 const sem = (passo, chave) =>
   Object.fromEntries(Object.entries(passo).filter(([nome]) => nome !== chave));
 
