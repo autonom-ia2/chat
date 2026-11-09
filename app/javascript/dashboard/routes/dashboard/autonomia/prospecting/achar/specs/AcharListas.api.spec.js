@@ -6,6 +6,7 @@ import { useAlert } from 'dashboard/composables';
 import AcharListasPage from '../pages/AcharListasPage.vue';
 import AcharListaPage from '../pages/AcharListaPage.vue';
 import AcharListasDaEmpresa from '../components/AcharListasDaEmpresa.vue';
+import AcharCanaisDesligados from '../components/AcharCanaisDesligados.vue';
 
 // #2775 — F6, a aba "Suas listas" e a lista aberta, pela API: os números de
 // cada lista, abrir, tirar com Desfazer e, na lista já enviada, "Criar uma
@@ -439,6 +440,36 @@ describe('Suas listas e a lista aberta', () => {
     expect(useAlert).toHaveBeenCalledWith(
       'Pronto. A cópia foi criada sem 1 empresa que não pode mais receber mensagem.'
     );
+  });
+
+  // Nota da Campanhas no #2797: quem cai num canal desligado fica sabendo.
+  it('no pronto, avisa o canal desligado que ganhou gente, com plural e o caminho para ligar', async () => {
+    rota.params = { accountId: '1' };
+    const aviso = mount(AcharCanaisDesligados, {
+      props: {
+        canais: [
+          { canal: 'email', n: 3 },
+          { canal: 'whatsapp', n: 1 },
+        ],
+      },
+    });
+
+    expect(aviso.find('[data-canal-desligado="email"]').text()).toBe(
+      '3 entraram, mas o e-mail desta lista está desligado. Para ligar, vá em Campanhas › Públicos.'
+    );
+    expect(aviso.find('[data-canal-desligado="whatsapp"]').text()).toBe(
+      '1 entrou, mas o WhatsApp desta lista está desligado. Para ligar, vá em Campanhas › Públicos.'
+    );
+    await aviso.find('[data-ir-para-publicos]').trigger('click');
+    expect(push).toHaveBeenCalledWith({
+      name: 'campaigns_journey_audiences',
+      params: { accountId: '1' },
+    });
+    aviso.unmount();
+
+    const nada = mount(AcharCanaisDesligados, { props: { canais: [] } });
+    expect(nada.find('[data-canais-desligados]').exists()).toBe(false);
+    nada.unmount();
   });
 
   it('na gaveta: "Está na lista X · Tirar", e a enviada só tem o selo', async () => {

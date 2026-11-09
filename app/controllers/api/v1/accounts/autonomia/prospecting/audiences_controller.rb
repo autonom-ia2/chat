@@ -10,6 +10,7 @@
 # - GET    audiences/:id?after=      a lista com os números e uma página das empresas depois da linha `after` (cursor:
 #                                     tirar alguém no meio não faz pular ninguém); meta.next_after é o próximo cursor;
 # - POST   audiences/:id/leads       { lead_ids } acrescenta leads (LeadsIntoAudience: mesmo teto e left_out do Guardar lista);
+#                                     channels_off diz os canais desligados que ganharam gente ([{ channel, count }]);
 # - DELETE audiences/:id/members     { contact_ids } ou { lead_ids } tira da lista (a linha fica como removed);
 # - POST   audiences/:id/members     { contact_ids } devolve quem foi tirado (o "Desfazer");
 # - POST   audiences/:id/copy        cria uma cópia para editar (a lista já enviada não muda).
@@ -45,7 +46,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::AudiencesController < Api::V1::
       account: Current.account, user: Current.user, lead_ids: params.permit(lead_ids: [])[:lead_ids],
       leads_scope: leads_scope, audience: @audience
     ).perform
-    render json: { payload: changed_payload(result.audience).merge(entered_lead_ids: result.entered_lead_ids, left_out: result.left_out) }
+    render json: { payload: changed_payload(result.audience).merge(entered_lead_ids: result.entered_lead_ids, left_out: result.left_out,
+                                                                   channels_off: result.channels_off) }
   rescue ::Autonomia::Prospecting::AudienceFromLeads::Error => e
     render_audience_error(e)
   end

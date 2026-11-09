@@ -20,13 +20,16 @@
 # Canal: aqui só se reconta. O canal nunca é ligado (nem fora do zero): o CampaignImport não registra se a pessoa
 # desligou o canal à mão (channels guarda só enabled e count), então ligar poderia desfazer a escolha dela. Quem passa a
 # ter gente num canal desligado o liga em Campanhas > Públicos. Um canal que fica sem ninguém desliga sozinho, como em
-# todo recount (CampaignJourney::AudienceContacts.recounted_channels).
+# todo recount (CampaignJourney::AudienceContacts.recounted_channels). Para quem pôs saber na hora, o add devolve em
+# channels_off os canais desligados que ganharam gente ([{ channel:, count: }], count = quantos a mais). Só WhatsApp e
+# e-mail: o SMS repete os celulares do WhatsApp e fica desligado em toda conta sem caixa de SMS, então avisaria sempre.
 module CampaignJourney::AudienceMembership
   Error = Class.new(StandardError)
   LOCKED = 'audience_locked'.freeze
   # O Público pronto: o da planilha que terminou (com ou sem falhas em algumas linhas) e o salvo pelo writer.
   EDITABLE_STATUSES = %w[completed completed_with_failures].freeze
-  AddResult = Struct.new(:audience, :added_contact_ids, :skipped_contact_ids, keyword_init: true)
+  AddResult = Struct.new(:audience, :added_contact_ids, :skipped_contact_ids, :channels_off, keyword_init: true)
+  WARNED_CHANNELS = %w[whatsapp email].freeze
   RemoveResult = Struct.new(:audience, :removed_contact_ids, keyword_init: true)
 
   module_function
@@ -40,10 +43,12 @@ module CampaignJourney::AudienceMembership
 
     ActiveRecord::Base.transaction do
       lock!(audience)
+      before = audience.channels.to_h
       added, skipped, existing_delta = place_rows(audience, rows)
       update_counters!(audience, added.size, existing_delta)
       CampaignJourney::AudienceWriter.recount_channels(audience)
-      AddResult.new(audience: audience, added_contact_ids: added, skipped_contact_ids: skipped)
+      AddResult.new(audience: audience, added_contact_ids: added, skipped_contact_ids: skipped,
+                    channels_off: channels_off(before, audience.channels.to_h))
     end
   end
 
@@ -57,6 +62,15 @@ module CampaignJourney::AudienceMembership
       update_counters!(audience, -rows.size, -rows.count(&:was_existing_contact))
       CampaignJourney::AudienceWriter.recount_channels(audience)
       RemoveResult.new(audience: audience, removed_contact_ids: rows.map(&:contact_id).uniq)
+    end
+  end
+
+  # Os canais desligados (WARNED_CHANNELS) cuja contagem subiu: quem entrou neles não recebe até alguém ligar.
+  def channels_off(before, after)
+    WARNED_CHANNELS.filter_map do |name|
+      channel = after[name].to_h
+      grew = channel['count'].to_i - before.dig(name, 'count').to_i
+      { channel: name, count: grew } if channel['enabled'] != true && grew.positive?
     end
   end
 

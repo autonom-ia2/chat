@@ -47,6 +47,7 @@ const apiFalsa = () => ({
         audience: LISTA_DA_API,
         entered_lead_ids: [1],
         left_out: [{ lead_id: 2, reason_code: 'already_in_list' }],
+        channels_off: [{ channel: 'email', count: 3 }],
       },
     },
   }),
@@ -131,6 +132,7 @@ describe('acharFonteListas', () => {
     expect(api.addLeadsToAudience).toHaveBeenCalledWith(4, { leadIds: [1, 2] });
     expect(posta).toMatchObject({ publicoId: 4, nome: 'Padarias', n: 1 });
     expect(posta.fora).toEqual([{ id: 2, motivo: 'already_in_list' }]);
+    expect(posta.canaisDesligados).toEqual([{ canal: 'email', n: 3 }]);
 
     const tirada = await fonte.tirarDaLista({ listaId: 4, empresaIds: [3] });
     expect(api.removeFromAudience).toHaveBeenCalledWith(4, {

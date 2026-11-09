@@ -335,6 +335,11 @@
           "NAO_DEU": "Could not save {n}. Try again. | Could not save {n}. Try again.",
           "JA_ESTAVA": "{n} was already on the list and was not added again. | {n} were already on the list and were not added again.",
           "NAO_RECEBE": "{n} cannot receive messages and was left out. | {n} cannot receive messages and were left out."
+        },
+        "CANAL_DESLIGADO": {
+          "WHATSAPP": "{n} was added, but WhatsApp is turned off on this list. To turn it on, go to Campaigns › Audiences. | {n} were added, but WhatsApp is turned off on this list. To turn it on, go to Campaigns › Audiences.",
+          "EMAIL": "{n} was added, but e-mail is turned off on this list. To turn it on, go to Campaigns › Audiences. | {n} were added, but e-mail is turned off on this list. To turn it on, go to Campaigns › Audiences.",
+          "IR": "Open Campaigns › Audiences"
         }
       },
       "NENHUMA_NOVA": "No new company entered the {funil} pipeline.",

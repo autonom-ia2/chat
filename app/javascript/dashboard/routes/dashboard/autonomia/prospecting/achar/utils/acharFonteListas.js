@@ -89,6 +89,11 @@ export const listasDaApi = api => ({
         n: (payload.entered_lead_ids || []).length,
         lista,
         fora: doFora(payload.left_out),
+        // Os canais desligados da lista que ganharam gente (channels_off).
+        canaisDesligados: (payload.channels_off || []).map(item => ({
+          canal: item.channel,
+          n: item.count,
+        })),
       };
     } catch (erro) {
       throw recusa(erro, 'lista');
@@ -178,7 +183,13 @@ export const listasDaDemo = ({
         ...item,
         companies: (item.companies || 0) + ids.length,
       });
-      return { publicoId: lista.id, nome: lista.nome, n: ids.length, lista };
+      return {
+        publicoId: lista.id,
+        nome: lista.nome,
+        n: ids.length,
+        lista,
+        canaisDesligados: [],
+      };
     },
     async tirarDaLista() {
       await esperar(atraso);

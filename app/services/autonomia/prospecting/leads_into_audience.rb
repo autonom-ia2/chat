@@ -8,7 +8,8 @@
 # - quando todos os que ficaram de fora já estavam na lista, a recusa é all_already_in_list ("Essas empresas já
 #   estavam nesta lista."), e não no_rows, que fala de quem não pode receber;
 # - as linhas são gravadas pelo CampaignJourney::AudienceMembership; a recusa dele vira Error com o mesmo código e
-#   contacts_saved (os contatos já criados ficam), como a do writer.
+#   contacts_saved (os contatos já criados ficam), como a do writer;
+# - channels_off: os canais desligados da lista que ganharam gente, para a tela avisar na hora.
 class Autonomia::Prospecting::LeadsIntoAudience < Autonomia::Prospecting::AudienceFromLeads
   ALREADY_IN_LIST = 'already_in_list'.freeze
   ALL_ALREADY_IN_LIST = 'all_already_in_list'.freeze
@@ -39,7 +40,8 @@ class Autonomia::Prospecting::LeadsIntoAudience < Autonomia::Prospecting::Audien
     left_out += already.map { |lead_id, _row| left(lead_id, ALREADY_IN_LIST) }
     raise Error.new(no_rows_code(left_out), left_out: left_out, contacts_saved: true) if entered.empty?
 
-    Result.new(audience: result.audience, entered_lead_ids: entered.map(&:first), left_out: left_out)
+    Result.new(audience: result.audience, entered_lead_ids: entered.map(&:first), left_out: left_out,
+               channels_off: result.channels_off)
   end
 
   def add(rows, left_out)

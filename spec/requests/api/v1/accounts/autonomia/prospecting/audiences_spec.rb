@@ -222,6 +222,25 @@ RSpec.describe 'Autonomia prospecting audiences', type: :request do
       expect(list.reload.valid_rows).to eq(2)
     end
 
+    # Nota da Campanhas no #2797: o canal desligado que ganhou gente volta na resposta, para a tela avisar.
+    it 'diz os canais desligados que ganharam gente (a lista nasceu só com WhatsApp)' do
+      list = save_list([create_lead(1)])
+      expect(list.reload.channels['email']).to include('enabled' => false)
+
+      call(:post, "/audiences/#{list.id}/leads", params: { lead_ids: [create_lead(2, enriched_email: 'b@empresa2.com.br').id] })
+
+      expect(response).to have_http_status(:ok)
+      expect(payload['channels_off']).to eq([{ 'channel' => 'email', 'count' => 1 }])
+    end
+
+    it 'sem canal desligado ganhando gente, channels_off vem vazio' do
+      list = save_list([create_lead(1)])
+
+      call(:post, "/audiences/#{list.id}/leads", params: { lead_ids: [create_lead(2).id] })
+
+      expect(payload['channels_off']).to eq([])
+    end
+
     it 'todas já estavam na lista: 422 all_already_in_list, com a frase certa' do
       first = create_lead(1)
       list = save_list([first])

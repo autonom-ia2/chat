@@ -12,6 +12,10 @@
 #   agendada que ainda não saiu, e não trava.
 # Vínculo sem campanha (campanha apagada) não trava; tipo desconhecido trava, pelo lado seguro.
 #
+# Corrida aceita: começar uma campanha não tranca a linha do Público, então uma mudança no mesmo segundo do disparo pode
+# entrar ou não naquele envio. Não causa dano: o envio confere de novo, contato por contato, quem pode receber (a régua
+# do envio vale outra vez), e a mudança seguinte já encontra o Público travado.
+#
 # Diferente de CampaignImports::AudienceUsage, que diz quais campanhas ainda dependem do Público (para não apagar nem
 # desligar canal): aqui a pergunta é se alguém já recebeu por ele.
 module CampaignJourney::AudienceUsage

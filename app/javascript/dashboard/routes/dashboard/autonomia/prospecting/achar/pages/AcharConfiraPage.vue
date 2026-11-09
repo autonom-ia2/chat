@@ -10,6 +10,7 @@ import AcharRodape from '../components/AcharRodape.vue';
 import AcharFaixaDoMenu from '../components/AcharFaixaDoMenu.vue';
 import AcharEmpresaGaveta from '../components/AcharEmpresaGaveta.vue';
 import AcharFolhaEnvio from '../components/AcharFolhaEnvio.vue';
+import AcharCanaisDesligados from '../components/AcharCanaisDesligados.vue';
 import AcharComQuemFica from '../components/AcharComQuemFica.vue';
 import AcharParaOndePainel from '../components/AcharParaOndePainel.vue';
 import AcharPronto from '../components/AcharPronto.vue';
@@ -372,7 +373,9 @@ watch(estado, async (novo, antigo) => {
             :link="$t('PROSPECTING_ACHAR.PRONTO.VOLTAR_LISTA')"
             class="w-full"
             @link="voltarParaLista"
-          />
+          >
+            <AcharCanaisDesligados :canais="pronto.canaisDesligados" />
+          </AcharPronto>
           <AcharRodape
             :rotulo="
               pronto.tipo === 'lista'

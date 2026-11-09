@@ -42,9 +42,18 @@ RSpec.describe CampaignJourney::AudienceMembership do
     it 'não liga o canal que estava em zero e ganhou gente (o e-mail do Público só de telefone)' do
       expect(audience.channels.dig('email', 'enabled')).to be(false)
 
-      described_class.add(audience, [row(bia)])
+      result = described_class.add(audience, [row(bia)])
 
       expect(audience.reload.channels['email']).to eq('enabled' => false, 'count' => 1)
+      # Nota da Campanhas no #2797: quem pôs fica sabendo do canal desligado que ganhou gente.
+      expect(result.channels_off).to eq([{ channel: 'email', count: 1 }])
+    end
+
+    it 'channels_off fica vazio quando ninguém cai num canal desligado' do
+      expect(described_class.add(audience, [row(caio)]).channels_off).to eq([{ channel: 'email', count: 1 }])
+      audience.update!(channels: audience.channels.merge('email' => { 'enabled' => true, 'count' => 1 }))
+
+      expect(described_class.add(audience.reload, [row(bia)]).channels_off).to eq([])
     end
 
     it 'não religa o canal que a pessoa desligou à mão, nem depois de zerar e voltar a ter gente' do

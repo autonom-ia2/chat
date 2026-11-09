@@ -276,6 +276,7 @@ describe('Guardar lista: lista nova ou uma que já existe', () => {
         n: 1,
         lista: LISTAS[0],
         fora: [{ id: 2, motivo: 'already_in_list' }],
+        canaisDesligados: [{ canal: 'email', n: 1 }],
       }),
     };
     const { folha, pronto, acoes } = montarComposable(fonte);
@@ -294,6 +295,7 @@ describe('Guardar lista: lista nova ou uma que já existe', () => {
       n: 1,
       publicoId: 4,
       nome: 'Padarias',
+      canaisDesligados: [{ canal: 'email', n: 1 }],
     });
   });
 

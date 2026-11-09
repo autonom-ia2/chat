@@ -335,6 +335,11 @@
           "NAO_DEU": "Não deu para guardar {n}. Tente de novo. | Não deu para guardar {n}. Tente de novo.",
           "JA_ESTAVA": "{n} já estava na lista e não entrou de novo. | {n} já estavam na lista e não entraram de novo.",
           "NAO_RECEBE": "{n} não pode receber mensagem e ficou de fora. | {n} não podem receber mensagem e ficaram de fora."
+        },
+        "CANAL_DESLIGADO": {
+          "WHATSAPP": "{n} entrou, mas o WhatsApp desta lista está desligado. Para ligar, vá em Campanhas › Públicos. | {n} entraram, mas o WhatsApp desta lista está desligado. Para ligar, vá em Campanhas › Públicos.",
+          "EMAIL": "{n} entrou, mas o e-mail desta lista está desligado. Para ligar, vá em Campanhas › Públicos. | {n} entraram, mas o e-mail desta lista está desligado. Para ligar, vá em Campanhas › Públicos.",
+          "IR": "Abrir Campanhas › Públicos"
         }
       },
       "NENHUMA_NOVA": "Nenhuma empresa nova entrou no funil {funil}.",

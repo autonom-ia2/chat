@@ -196,6 +196,7 @@ export function useFolhaDaLista({
         publicoId: guardado.publicoId,
         fora: guardado.fora,
         nome: guardado.lista ? guardado.nome : null,
+        canaisDesligados: guardado.canaisDesligados || [],
       };
       folha.value = null;
       if (demo.value) mudarEstado('guardada');

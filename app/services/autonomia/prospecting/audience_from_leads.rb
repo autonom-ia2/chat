@@ -39,7 +39,8 @@ class Autonomia::Prospecting::AudienceFromLeads
   }.freeze
   UNREACHABLE = 'unreachable'.freeze
 
-  Result = Struct.new(:audience, :entered_lead_ids, :left_out, keyword_init: true)
+  # channels_off: só na lista que já existe (LeadsIntoAudience), os canais desligados que ganharam gente.
+  Result = Struct.new(:audience, :entered_lead_ids, :left_out, :channels_off, keyword_init: true)
 
   # Recusa do pedido inteiro. left_out: quem ficou de fora e por quê, para a tela explicar mesmo quando ninguém entra.
   # contacts_saved: a recusa veio depois de criar os contatos (eles ficam gravados).
@@ -95,7 +96,7 @@ class Autonomia::Prospecting::AudienceFromLeads
 
   # Grava as linhas e diz quem entrou. No Público novo, todos os de rows entram.
   def finish(rows, left_out)
-    Result.new(audience: write(rows, left_out), entered_lead_ids: rows.keys, left_out: left_out)
+    Result.new(audience: write(rows, left_out), entered_lead_ids: rows.keys, left_out: left_out, channels_off: [])
   end
 
   # O que veio no pedido e não é id: sai como not_found, com o valor como veio.
