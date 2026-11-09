@@ -4,13 +4,12 @@
 # planilha: telefone só mascarado e em hash (PhoneMask, o mesmo do import), o contato, se já existia e a empresa.
 #
 # - Um registro por rodada do passo. A nova tentativa na mesma execução (erro passageiro) acha o mesmo registro pelo id
-#   guardado nela e reescreve as linhas pelo número delas: nada duplica. A automação religada depois de `sem_acesso`
-#   começa outra execução e outro registro; o da rodada pausada fica em `importing` com o que entrou.
+#   guardado nela, volta a `importing` e reescreve as linhas pelo número delas: nada duplica.
 # - O item sem telefone de celular do Brasil e o contato que a conta recusa ficam de fora (linha `invalid`, com o
-#   motivo), como as linhas com problema da planilha. O item que não chegou a rodar (quem ligou perdeu a permissão no
-#   meio) não conta como falha: a rodada que pausou (`sem_acesso`) ou deu erro passageiro deixa a importação em
-#   `importing`, com os números do que já rodou (#pausar!). Só o fim real fecha (#fechar!): a rodada que terminou, ou a
-#   falha definitiva, quando o que não rodou conta em `failed_contacts_count`.
+#   motivo), como as linhas com problema da planilha.
+# - Só a rodada inteira fecha (#fechar!). Qualquer outra saída (pausa por `sem_acesso`, falha, erro) marca "Parou"
+#   (#parou!, status `failed`, decisão do Rodrigo): fica o que entrou até ali, o motivo em `validation_summary.parou`, e
+#   o que não rodou não conta como falha. Nunca fica `importing` depois que a rodada sai do passo.
 # - O registro nasce junto com o id guardado na execução. Execução já encerrada (desligaram no meio) não guarda o id:
 #   o registro não fica (sem órfão) e `abrir` devolve nil.
 # - Sem arquivo: não há CSV de problemas, nem `source_filename`. O nome é o da automação.
@@ -21,7 +20,7 @@ class Autonomia::Automacao::ImportacaoDoParaCada
   def self.abrir(execucao:, passo_id:, account_user:, total:)
     chave = "#{passo_id}.importacao"
     existente = execucao.account.campaign_imports.contact_imports.find_by(id: execucao.textos.to_h[chave])
-    return new(existente) if existente
+    return new(existente).tap(&:reabrir!) if existente
 
     nova = ActiveRecord::Base.transaction(requires_new: true) do
       criar(execucao, account_user, total).tap { |importacao| raise ActiveRecord::Rollback unless execucao.guardar_texto!(chave, importacao.id.to_s) }
@@ -75,9 +74,22 @@ class Autonomia::Automacao::ImportacaoDoParaCada
     campaign_import.update!(**numeros, failed_contacts_count: nao_rodaram, import_finished_at: Time.current, status: status)
   end
 
-  # A rodada parou no meio e pode voltar: segue `importing`, só com os números do que já rodou.
-  def pausar!
-    campaign_import.update!(**contagem, failed_contacts_count: 0)
+  # O fim da rodada no passo: inteira (`ok`) fecha; qualquer outra saída, "Parou".
+  def terminar!(resultado)
+    resultado.tipo == :ok ? fechar! : parou!(resultado.motivo)
+  end
+
+  # A nova tentativa na mesma execução: volta a andar, sem o "Parou" da tentativa anterior.
+  def reabrir!
+    resumo = campaign_import.validation_summary.to_h.except('parou')
+    campaign_import.update!(status: :importing, import_finished_at: nil, validation_summary: resumo)
+  end
+
+  # A rodada saiu do passo sem terminar: "Parou", com o que entrou até ali; o que não rodou não é falha.
+  def parou!(motivo)
+    resumo = campaign_import.validation_summary.to_h.merge('parou' => motivo)
+    campaign_import.update!(**contagem, failed_contacts_count: 0, status: :failed, import_finished_at: Time.current,
+                                        validation_summary: resumo)
   end
 
   private

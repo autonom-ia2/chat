@@ -485,44 +485,13 @@ onBeforeUnmount(stopPolling);
         {{ t(`${NS}.ACTIONS.IMPORTING`) }}
       </div>
 
-      <template v-else-if="stage === 'done'">
-        <ContactImportResult
-          :contact-import="contactImport"
-          @see-contacts="backToContacts"
-          @new-import="startOver"
-          @download="downloadProblems"
-        />
-        <section
-          v-if="leftOut.length"
-          class="flex flex-col gap-2 rounded-2xl border border-n-weak bg-n-solid-1 p-5"
-          data-test="left-out"
-        >
-          <h2 class="mb-0 text-sm font-semibold text-n-slate-12">
-            {{ t(`${NS}.LIST.LEFT_OUT_TITLE`, { count: n(leftOutTotal) }) }}
-          </h2>
-          <ul class="m-0 flex list-none flex-col gap-1 p-0 text-sm">
-            <li
-              v-for="row in leftOut"
-              :key="row.row_number"
-              class="flex flex-wrap justify-between gap-2 border-t border-n-weak py-2 first:border-t-0"
-            >
-              <span class="tabular-nums text-n-slate-12">
-                {{ row.phone || t(`${NS}.PEOPLE.EMPTY_CONTACT`) }}
-              </span>
-              <span class="text-n-slate-11">
-                {{ row.errors.map(reasonText).join(' · ') }}
-              </span>
-            </li>
-          </ul>
-          <p
-            v-if="leftOutHidden > 0"
-            class="mb-0 text-xs text-n-slate-11"
-            data-test="left-out-more"
-          >
-            {{ t(`${NS}.LIST.LEFT_OUT_MORE`, { count: n(leftOutHidden) }) }}
-          </p>
-        </section>
-      </template>
+      <ContactImportResult
+        v-else-if="stage === 'done'"
+        :contact-import="contactImport"
+        @see-contacts="backToContacts"
+        @new-import="startOver"
+        @download="downloadProblems"
+      />
 
       <div
         v-else
@@ -530,15 +499,60 @@ onBeforeUnmount(stopPolling);
         class="flex flex-col items-start gap-3 rounded-2xl border border-n-weak bg-n-solid-1 p-5"
         data-test="failed"
       >
-        <p class="mb-0 text-sm text-n-ruby-11">
+        <p v-if="fromAutomation" class="mb-0 text-sm text-n-slate-12">
+          {{
+            t(`${NS}.LIST.STOPPED`, {
+              count: n(contactImport.imported_contacts_count || 0),
+            })
+          }}
+        </p>
+        <p v-else class="mb-0 text-sm text-n-ruby-11">
           {{ t(`${NS}.ERRORS.IMPORT_FAILED`) }}
         </p>
         <Button
+          v-if="fromAutomation"
+          :label="t(`${NS}.ACTIONS.SEE_CONTACTS`)"
+          class="!min-h-11"
+          @click="backToContacts"
+        />
+        <Button
+          v-else
           :label="t(`${NS}.ACTIONS.NEW_IMPORT`)"
           class="!min-h-11"
           @click="startOver"
         />
       </div>
+
+      <section
+        v-if="leftOut.length && ['done', 'failed'].includes(stage)"
+        class="flex flex-col gap-2 rounded-2xl border border-n-weak bg-n-solid-1 p-5"
+        data-test="left-out"
+      >
+        <h2 class="mb-0 text-sm font-semibold text-n-slate-12">
+          {{ t(`${NS}.LIST.LEFT_OUT_TITLE`, { count: n(leftOutTotal) }) }}
+        </h2>
+        <ul class="m-0 flex list-none flex-col gap-1 p-0 text-sm">
+          <li
+            v-for="row in leftOut"
+            :key="row.row_number"
+            class="flex flex-wrap justify-between gap-2 border-t border-n-weak py-2 first:border-t-0"
+          >
+            <span class="tabular-nums text-n-slate-12">
+              {{ row.phone || t(`${NS}.PEOPLE.EMPTY_CONTACT`) }}
+            </span>
+            <span class="text-n-slate-11">
+              {{ row.errors.map(reasonText).join(' · ') }}
+            </span>
+          </li>
+        </ul>
+        <p
+          v-if="leftOutHidden > 0"
+          class="mb-0 text-xs text-n-slate-11"
+          data-test="left-out-more"
+        >
+          {{ t(`${NS}.LIST.LEFT_OUT_MORE`, { count: n(leftOutHidden) }) }}
+        </p>
+      </section>
     </div>
   </section>
 </template>

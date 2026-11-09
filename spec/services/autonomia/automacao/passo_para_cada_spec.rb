@@ -134,7 +134,7 @@ RSpec.describe Autonomia::Automacao::PassoParaCada, :automacao_motor do
     end
   end
 
-  it 'a rodada que pausa no 2º item deixa a importação em andamento, e a nova tentativa fecha sem duplicar linhas',
+  it 'a rodada que pausa no 2º item deixa a importação "Parou" com o que entrou, e a nova tentativa fecha sem duplicar',
      :aggregate_failures do
     execucao = comecar(automacao_ligada(account, admin, [para_cada]), conversa)
     execucao.guardar_texto!('lista.itens', [item('João Lima', '11 98888-0001'), item('Maria Souza', '11 98888-0002'),
@@ -145,8 +145,11 @@ RSpec.describe Autonomia::Automacao::PassoParaCada, :automacao_motor do
 
     importacao = account.campaign_imports.contact_imports.sole
     expect([pausada.tipo, pausada.motivo]).to eq([:sem_acesso, 'quem_ligou_sem_permissao_importar'])
-    expect(importacao).to have_attributes(status: 'importing', import_finished_at: nil, total_rows: 3,
-                                          imported_contacts_count: 1, invalid_rows: 0, failed_contacts_count: 0)
+    # Decisão do Rodrigo: nunca "Importando" para sempre; o que não rodou não é falha.
+    expect(importacao).to have_attributes(status: 'failed', total_rows: 3, imported_contacts_count: 1, invalid_rows: 0,
+                                          failed_contacts_count: 0)
+    expect(importacao.import_finished_at).to be_present
+    expect(importacao.validation_summary['parou']).to eq('quem_ligou_sem_permissao_importar')
     expect(importacao.campaign_import_rows.pluck(:row_number)).to eq([1])
 
     allow(CampaignImports::ContactRow).to receive(:new).and_call_original
@@ -156,8 +159,21 @@ RSpec.describe Autonomia::Automacao::PassoParaCada, :automacao_motor do
     expect(account.campaign_imports.contact_imports.sole).to eq(importacao)
     expect(importacao.reload).to have_attributes(status: 'completed', imported_contacts_count: 3, failed_contacts_count: 0)
     expect(importacao.import_finished_at).to be_present
+    expect(importacao.validation_summary).not_to have_key('parou')
     expect(importacao.campaign_import_rows.order(:row_number).pluck(:row_number)).to eq([1, 2, 3])
     expect(funil.cards.count).to eq(3)
+  end
+
+  it 'pelo executor, a automação que pausa no meio da lista termina com a importação "Parou", nunca em andamento',
+     :aggregate_failures do
+    openai_devolve([item('João Lima', '11 98888-0001'), item('Maria Souza', '11 98888-0002')])
+    negar_o_segundo_contato
+
+    execucao = rodar
+
+    expect([execucao.reload.estado, registros(execucao)]).to eq(['parada', [%w[lista falhou quem_ligou_sem_permissao_importar]]])
+    expect(account.campaign_imports.contact_imports.sole).to have_attributes(status: 'failed', imported_contacts_count: 1,
+                                                                             failed_contacts_count: 0)
   end
 
   it 'execução já encerrada não deixa importação órfã e o passo não grava nada', :aggregate_failures do
@@ -251,6 +267,7 @@ RSpec.describe Autonomia::Automacao::PassoParaCada, :automacao_motor do
 
     expect([execucao.reload.estado, registros(execucao)]).to eq(['falhou', [%w[lista falhou atributo_recusado]]])
     expect(dados_do(execucao)['pulados']).to eq({})
+    expect(account.campaign_imports.contact_imports.sole).to have_attributes(status: 'failed', failed_contacts_count: 0)
     expect(account.contacts.where(name: 'Bruno Dias')).to be_empty
     expect(funil.cards).to be_empty
   end

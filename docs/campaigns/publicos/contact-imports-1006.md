@@ -30,6 +30,10 @@ O passo "Para cada item" da Automação (#2771, decisão 15) grava a rodada como
 contatos: `options.origem = "automacao"`, com `automacao_id` e `execucao_id`; `user` é quem ligou a
 automação; uma linha por item (telefone mascarado e em hash, sem arquivo). Item com telefone que não
 é celular do Brasil ou contato recusado fica `invalid` com o motivo (`problem_rows` do `GET /:id`).
+Só a rodada inteira fecha (`completed`/`completed_with_failures`). A rodada que sai do passo sem
+terminar (pausa por falta de permissão, falha, erro) fica `failed` ("Parou") com o que entrou até ali
+e `validation_summary.parou` = motivo; o que não rodou não conta em `failed_contacts_count`. A nova
+tentativa na mesma execução (erro passageiro) reabre o mesmo registro.
 
 ## Endpoints
 

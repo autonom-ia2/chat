@@ -141,7 +141,8 @@
       "LEFT_OUT_TITLE": "Ficaram de fora: {count}",
       "OPENING": "Abrindo a importação…",
       "LEFT_OUT_MORE": "e mais {count}",
-      "FILE_TITLE": "Importação de planilha"
+      "FILE_TITLE": "Importação de planilha",
+      "STOPPED": "Parou antes do fim: {count} contatos entraram até ali. O que não rodou não conta como falha."
     }
   }
 }

@@ -414,6 +414,39 @@ describe('ContactImportPage (#1006)', () => {
     wrapper.unmount();
   });
 
+  // Decision: an automation round that stopped midway shows "stopped" with who came in, never "importing".
+  it('an automation import that stopped shows how many came in, without counting what did not run', async () => {
+    route.params = { accountId: 1, importId: 44 };
+    api.show.mockResolvedValue({
+      data: {
+        payload: {
+          id: 44,
+          status: 'failed',
+          flow: 'contacts',
+          origin: 'automation',
+          name: 'Lista do RH',
+          total_rows: 3,
+          imported_contacts_count: 1,
+          failed_contacts_count: 0,
+          invalid_rows: 0,
+          problem_rows: [],
+        },
+      },
+    });
+
+    const wrapper = mountPage();
+    await flushPromises();
+
+    const stopped = wrapper.get('[data-test="failed"]');
+    expect(stopped.text()).toContain(
+      'It stopped before the end: 1 contacts came in up to there.'
+    );
+    expect(stopped.text()).not.toContain('Import another spreadsheet');
+    await stopped.get('button').trigger('click');
+    expect(push).toHaveBeenCalledWith({ name: 'contacts_dashboard_index' });
+    wrapper.unmount();
+  });
+
   it('without an id, opens on the upload and does not fetch', async () => {
     const wrapper = mountPage();
     await flushPromises();

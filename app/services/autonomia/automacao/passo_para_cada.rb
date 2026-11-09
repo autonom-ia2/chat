@@ -108,18 +108,21 @@ class Autonomia::Automacao::PassoParaCada
     @execucao.guardar_texto!("#{id}.nomes", itens.pluck(NOME).join(', '))
   end
 
-  # A importação fecha só no fim real (a rodada inteira, ou a falha definitiva); a pausa e o erro passageiro a deixam
-  # em `importing` (ImportacaoDoParaCada). Execução encerrada no meio (desligaram): nada é gravado.
+  # A rodada inteira fecha a importação; qualquer outra saída (pausa, falha, erro) a deixa "Parou" com o que entrou, e a
+  # nova tentativa na mesma execução a reabre (ImportacaoDoParaCada). Execução encerrada no meio: nada é gravado.
   def abrir_cards(itens, etapa, dados)
     importacao = importacao_da_rodada(itens.size)
     return Resultado.new(tipo: :pulado, motivo: 'execucao_encerrada', dados: dados) if importacao.nil?
 
     dados = dados.merge('importacao_id' => importacao.campaign_import.id)
     item = item_da_rodada(etapa, importacao)
-    cada_item(itens, item, dados).tap { |resultado| resultado.tipo == :ok ? importacao.fechar! : importacao.pausar! }
+    cada_item(itens, item, dados).tap { |resultado| importacao.terminar!(resultado) }
   rescue Falha => e
-    e.tipo == :permanente ? importacao.fechar! : importacao.pausar!
+    importacao.parou!(e.motivo)
     Resultado.new(tipo: e.tipo, motivo: e.motivo, dados: dados.merge(item.contagem))
+  rescue StandardError => e
+    importacao&.parou!(e.class.name)
+    raise
   end
 
   def cada_item(itens, item, dados)

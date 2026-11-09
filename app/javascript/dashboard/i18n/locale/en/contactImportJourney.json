@@ -141,7 +141,8 @@
       "LEFT_OUT_TITLE": "Left out: {count}",
       "OPENING": "Opening the import…",
       "LEFT_OUT_MORE": "and {count} more",
-      "FILE_TITLE": "Spreadsheet import"
+      "FILE_TITLE": "Spreadsheet import",
+      "STOPPED": "It stopped before the end: {count} contacts came in up to there. What did not run does not count as a failure."
     }
   }
 }

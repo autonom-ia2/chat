@@ -146,6 +146,20 @@ describe('ContactImportsList (#2771)', () => {
     wrapper.unmount();
   });
 
+  it('an automation import that stopped reads "Stopped"', async () => {
+    api.list.mockResolvedValue(
+      page([{ ...fromAutomation, status: 'failed', failed_count: 0 }])
+    );
+    const wrapper = mountList();
+    await flushPromises();
+
+    expect(wrapper.get('[data-test="status"]').text()).toBe('Stopped');
+    expect(wrapper.get('[data-test="counts"]').text()).toBe(
+      '3 came in · 0 left out'
+    );
+    wrapper.unmount();
+  });
+
   it('says when there is no import yet, in pt_BR', async () => {
     api.list.mockResolvedValue(page([]));
     const wrapper = mountList('pt_BR');
