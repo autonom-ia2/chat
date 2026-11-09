@@ -70,6 +70,7 @@ class Crm::MetaAds::Creation::Copy
     return result(record) if record.status == 'created'
 
     build!(record, source, creative)
+    Crm::MetaAds::Creation::CareState.forget(@account.id, source.ad_id)
     @created_now = true
     result(record)
   end

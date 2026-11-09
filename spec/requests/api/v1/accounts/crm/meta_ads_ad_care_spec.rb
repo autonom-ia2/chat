@@ -300,5 +300,41 @@ RSpec.describe 'CRM meta_ads_connection cuidar do anúncio (#2778)', type: :requ
       )
       expect(a_request(:get, meta_graph_url(creative_id)).with(query: hash_including({}))).not_to have_been_made
     end
+
+    # Cada abertura do detalhe lia o criativo na Graph: gasta o limite de uso da Meta.
+    it 'lê o criativo uma vez a cada 5 minutos por conta e anúncio' do
+      management(ad_id)
+      management(ad_id)
+      expect(a_request(:get, meta_graph_url(creative_id)).with(query: hash_including({}))).to have_been_made.once
+
+      travel 6.minutes
+      expect(management(ad_id)).to include('creative_kind' => 'image')
+      expect(a_request(:get, meta_graph_url(creative_id)).with(query: hash_including({}))).to have_been_made.twice
+    end
+
+    it 'duplicar apaga a leitura guardada do anúncio' do
+      management(ad_id)
+      stub_budget
+      stub_copy_calls
+      copy!
+      expect(response).to have_http_status(:ok)
+
+      management(ad_id)
+      expect(a_request(:get, meta_graph_url(creative_id)).with(query: hash_including({}))).to have_been_made.twice
+    end
+
+    it 'trocar no anúncio apaga a leitura guardada' do
+      stub_const('Crm::MetaAds::Creation::CreativeSwap::CONFIRMED', true)
+      management(ad_id)
+      stub_post("act_#{connection.ad_account_id}/adcreatives", { id: new_creative })
+      stub_post(ad_id, { success: true })
+      stub_graph(ad_id, { id: ad_id, status: 'ACTIVE', effective_status: 'PENDING_REVIEW' }, fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS)
+      stub_graph(new_creative, spec_image, fields: Meta::AdsGraphClient::CREATIVE_SPEC_FIELDS)
+      put "#{path}/ads/#{ad_id}/creative", params: { idempotency_key: key, text: 'Novo' }, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+
+      management(ad_id)
+      expect(a_request(:get, meta_graph_url(new_creative)).with(query: hash_including({}))).to have_been_made.once
+    end
   end
 end

@@ -109,6 +109,7 @@ class Crm::MetaAds::Creation::CreativeSwap
     end
 
     record.update!(creative_id: creative_id)
+    Crm::MetaAds::Creation::CareState.forget(@connection.account_id, record.ad_id)
   end
 
   # A troca já aconteceu e criativo novo sempre passa pela análise da Meta: sem conseguir reler, PENDING_REVIEW.
