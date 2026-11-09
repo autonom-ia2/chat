@@ -3,7 +3,6 @@
 // padrão da conta como sugestão. O que foi ganha o link do card.
 import { mount, flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
-import CampaignsAPI from 'dashboard/api/campaigns';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import CrmSendModal from '../components/crm/CrmSendModal.vue';
 import ProspectingListsPage from '../pages/ProspectingListsPage.vue';
@@ -38,7 +37,6 @@ vi.mock('dashboard/api/autonomiaProspecting', () => ({
     createCrmCards: vi.fn(),
   },
 }));
-vi.mock('dashboard/api/campaigns', () => ({ default: { get: vi.fn() } }));
 vi.mock('dashboard/api/crmKanban', () => ({
   default: { getPipelines: vi.fn(), getStages: vi.fn() },
 }));
@@ -74,7 +72,6 @@ const mountLists = async (
   AutonomiaProspectingAPI.verifyLeadWhatsApp.mockResolvedValue({
     data: { payload: {} },
   });
-  CampaignsAPI.get.mockResolvedValue({ data: [] });
   CrmKanbanAPI.getPipelines.mockResolvedValue({ data: { payload: PIPELINES } });
   CrmKanbanAPI.getStages.mockImplementation(pipelineId =>
     Promise.resolve({ data: { payload: STAGES_BY_PIPELINE[pipelineId] } })

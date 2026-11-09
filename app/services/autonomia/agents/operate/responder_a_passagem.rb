@@ -21,6 +21,9 @@
 #      (AoReceberPassagem: a próxima tentativa só viria de outra passagem, com outra chave).
 #   7. Sem as ferramentas que passam a conversa (`passa_a_conversa?`): o turno da passagem não abre assunto nem passa a
 #      conversa adiante, então não há vai e volta entre agentes sem o cliente (Tools::Delivery#turno_da_passagem?).
+#   8. A marca do turno em curso (`Operate::TurnoEmCurso`), aberta e solta aqui como o ReplyJob faz no turno da
+#      mensagem, com o valor da passagem: o resultado de uma consulta em segundo plano (#1430) que chega por evento não
+#      fala antes do "estou consultando" deste turno.
 class Autonomia::Agents::Operate::ResponderAPassagem < Autonomia::Agents::Operate::Responder
   CHAVE = 'autonomia_passagem_id'.freeze
 
@@ -34,7 +37,12 @@ class Autonomia::Agents::Operate::ResponderAPassagem < Autonomia::Agents::Operat
     return silencio_da_passagem('cliente_escreveu') if cliente_escreveu_depois?
     return silencio_da_passagem('turno_em_curso') unless posse_da_ultima_mensagem?
 
-    super
+    abrir_marca_do_turno
+    begin
+      super
+    ensure
+      soltar_marca_do_turno
+    end
   end
 
   private
@@ -65,6 +73,20 @@ class Autonomia::Agents::Operate::ResponderAPassagem < Autonomia::Agents::Operat
 
   def valor_da_posse
     "passagem:#{@passagem.id}"
+  end
+
+  def abrir_marca_do_turno
+    return unless ::Autonomia::Agents::Operate::TurnoEmCurso.marcar?(@conversation.account)
+
+    ::Autonomia::Agents::Operate::TurnoEmCurso.abrir(@conversation.id, valor_da_posse)
+  end
+
+  # Sempre, e só se a marca ainda é desta passagem (compare-and-delete): o turno da passagem não tem cadeia de pedaços, e
+  # o turno refeito por outro dono é o de uma mensagem, que abre a marca dele.
+  def soltar_marca_do_turno
+    return unless ::Autonomia::Agents::Operate::TurnoEmCurso.marcar?(@conversation.account)
+
+    ::Autonomia::Agents::Operate::TurnoEmCurso.soltar(@conversation.id, valor_da_posse)
   end
 
   # O turno falhou (Responder#falha_no_turno, SILENCIOS_DE_FALHA): solta a posse da última mensagem que este turno tomou,

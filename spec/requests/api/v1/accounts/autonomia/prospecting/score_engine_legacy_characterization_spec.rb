@@ -14,6 +14,21 @@ RSpec.describe 'Autonomia prospecting legacy score engine characterization', typ
     expect("#{JSON.pretty_generate(legacy_engine_snapshot)}\n").to eq(reference)
   end
 
+  # O retrato troca ids, datas e o autor por marcador; aqui eles são conferidos com o valor que a tela deve receber.
+  it 'devolve com o valor certo os campos que o retrato mascara' do
+    payloads = legacy_engine_payloads
+    profile_id = Autonomia::Prospecting::Setting.for_account(snapshot_account).scoring_profile_id
+    searches = [payloads['gbp']['search'], payloads['general']['search'], payloads['reopened'], *payloads['index']]
+
+    expect(searches.size).to eq(5)
+    searches.each do |search|
+      expect(search).to include('user_id' => snapshot_admin.id, 'user_name' => snapshot_admin.name, 'crm_pipeline_id' => nil,
+                                'crm_stage_id' => nil, 'scoring_profile_id' => profile_id)
+      expect(search['summary']).to include('cached_from_search_id' => nil)
+    end
+    expect(payloads['lead']).to include('contact_id' => nil, 'crm_card_id' => nil)
+  end
+
   # A nota sombra existe e é bem diferente da legada, e mesmo assim nada dela chega à tela.
   it 'devolve o mesmo payload de antes, byte a byte, com a nota do Orth calculada em sombra' do
     allow(orth_scorer).to receive(:new) do |leads:, **|

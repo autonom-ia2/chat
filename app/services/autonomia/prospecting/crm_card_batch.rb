@@ -11,14 +11,19 @@ class Autonomia::Prospecting::CrmCardBatch
   class NoLeads < Error; end
 
   # leads_scope: os leads que quem pede enxerga (Visibility, #732 item 6). O controller sempre passa; sem ele, a conta.
-  def initialize(account:, user:, lead_ids:, pipeline_id:, stage_id:, leads_scope: nil) # rubocop:disable Metrics/ParameterLists
+  # owner_id: com quem ficam os cards (#2694). Sem ele, com quem manda, como antes. Quem pode escolher o controller confere
+  # (CrmCardOwner.can_choose?); aqui o dono é conferido contra o funil (CrmCardOwner#ensure_allowed!).
+  # rubocop:disable Metrics/ParameterLists
+  def initialize(account:, user:, lead_ids:, pipeline_id:, stage_id:, leads_scope: nil, owner_id: nil)
     @account = account
     @leads_scope = leads_scope || Autonomia::Prospecting::Lead.where(account: account)
     @user = user
     @lead_ids = Array(lead_ids).map(&:to_i).uniq
     @pipeline_id = pipeline_id
     @stage_id = stage_id
+    @owner_id = owner_id
   end
+  # rubocop:enable Metrics/ParameterLists
 
   def perform
     raise NoLeads, 'prospecting.crm_send.no_leads' if @lead_ids.empty?
@@ -33,11 +38,14 @@ class Autonomia::Prospecting::CrmCardBatch
 
   private
 
-  # Funil e estágio errados valem para o lote inteiro: nada é tentado. Acesso por funil (#1148, PR D): só um funil que a
-  # pessoa enxerga.
+  # Funil, estágio e dono errados valem para o lote inteiro: nada é tentado. Acesso por funil (#1148, PR D): só um funil
+  # que a pessoa enxerga, e um dono que também o enxerga (#2694).
   def ensure_destination!
     pipeline = Crm::Access::VisiblePipelines.new(user: @user, account: @account).apply(@account.crm_pipelines).active.find(@pipeline_id)
     @account.crm_pipeline_stages.where(pipeline: pipeline).find(@stage_id)
+    return if @owner_id.blank?
+
+    @owner = Autonomia::Prospecting::CrmCardOwner.new(account: @account, user: @user, pipeline: pipeline).ensure_allowed!(@owner_id)
   end
 
   def leads_by_id
@@ -60,7 +68,9 @@ class Autonomia::Prospecting::CrmCardBatch
   end
 
   def convert(lead)
-    Autonomia::Prospecting::CrmCardConverter.new(lead: lead, user: @user, pipeline_id: @pipeline_id, stage_id: @stage_id).perform
+    Autonomia::Prospecting::CrmCardConverter.new(
+      lead: lead, user: @user, pipeline_id: @pipeline_id, stage_id: @stage_id, owner_id: @owner&.id
+    ).perform
   end
 
   def record(converted, result)

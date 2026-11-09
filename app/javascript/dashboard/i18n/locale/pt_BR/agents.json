@@ -2841,7 +2841,8 @@
         "ERRO": "Não consegui ler agora.",
         "SEM_ACESSO": "Sem acesso a este post ou anúncio.",
         "SUMIU": "Não está mais na conta.",
-        "SEM_LEITURA": "Não consegui ler os comentários agora"
+        "SEM_LEITURA": "Não consegui ler os comentários agora",
+        "FALTOU_REDE": "Faltaram os comentários do {rede}: não consegui lê-los."
       },
       "CRIAR": {
         "TITULO": "Criar agente",
