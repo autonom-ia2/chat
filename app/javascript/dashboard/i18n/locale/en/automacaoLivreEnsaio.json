@@ -110,6 +110,7 @@
       "VEZ": "Customer message no. {n} during the wait",
       "CONVERSAS_FORA": "The summary left out {n} conversation: not everyone who sees this conversation can see it. | The summary left out {n} conversations: not everyone who sees this conversation can see them.",
       "CONVERSA_PRINCIPAL": "Opened a conversation, which became the card main conversation",
+      "NUMERO_NOVO": "Sent to the contact's new number, in another conversation of the same inbox",
       "TENTATIVA": "Attempt {n}",
       "IA": "AI: US$ {valor}",
       "IA_MENOS_DE": "AI: less than US$ {valor}",

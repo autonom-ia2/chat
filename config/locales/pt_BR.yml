@@ -1075,6 +1075,7 @@ pt_BR:
         retorno_sem_responsavel: "O retorno não foi criado: ele era para o responsável, e ninguém é responsável aqui."
         sem_conversa: "Não há conversa onde agir: o card não tem conversa principal, ou o contato não tem conversa, e a automação não escolheu caixa para abrir uma. Nada foi mandado."
         contato_sem_telefone: "O contato não tem telefone, e a conversa não foi aberta. Nada foi mandado."
+        numero_de_outro_contato: "O número novo do contato já é de outro contato nesta caixa. Nada foi mandado, e o outro contato não foi mexido."
         sem_responsavel: "A agente de IA atende esta conversa, e o card dela não tem responsável (ou não há card). Ninguém foi avisado."
         card_sem_responsavel: "O card não tem responsável. A conversa ficou com quem já estava."
         responsavel_nao_ve_a_conversa: "O responsável do card não enxerga esta conversa (não está na caixa dela). A conversa ficou com quem já estava."

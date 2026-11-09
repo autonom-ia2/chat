@@ -29,7 +29,8 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # O 17 saiu com a G66 (#2843), a G67 (#2844) e a decisão 18: exemplo_17_ferias_spec.rb roda à risca numa automação
     # só, inteiro, sem pendente (a agente de IA cobre a Renata pela opção do passo, e a conversa volta quando ela escreve).
     18 => ['Seleção de candidatos sem planilha', 'G4, G20 (ler o currículo e criar o card), G1, G5, G6, G12, G15, G25'],
-    19 => ['Cliente que sumiu do WhatsApp', 'G43 (mandar ao número novo), G1, G2, G3, G8, G11, G19, G28, G34, G53'],
+    # O 19 saiu com a G43 (#2700), depois da G53: as lacunas fecharam; o spec de ponta a ponta dele fica com a sessão do
+    # fechamento (#2570). Por partes: g53_conteudo_da_falha_spec.rb (passos 1 e 2) e g43_numero_novo_spec.rb (4 e 7).
     20 => ['Venda fechada já entra no sistema da empresa', 'G5 (card ganho), G1, G2, G7, G11, G12, G13']
   }
 

@@ -110,6 +110,7 @@
       "VEZ": "{n}ª mensagem do cliente durante a espera",
       "CONVERSAS_FORA": "O resumo deixou de fora {n} conversa: nem todos que veem esta conversa podem vê-la. | O resumo deixou de fora {n} conversas: nem todos que veem esta conversa podem vê-las.",
       "CONVERSA_PRINCIPAL": "Abriu uma conversa, que virou a principal do card",
+      "NUMERO_NOVO": "Mandou ao número novo do contato, em outra conversa da mesma caixa",
       "TENTATIVA": "Tentativa {n}",
       "IA": "IA: US$ {valor}",
       "IA_MENOS_DE": "IA: menos de US$ {valor}",

@@ -2,9 +2,9 @@
 # outros dois quando há caminho até eles. O Valores, os passos e o Spam leem por aqui, nunca supondo a conversa.
 #
 # | alvo     | conversa                             | card | contato           |
-# | conversa | ela                                  | —    | conversa.contact  |
+# | conversa | ela (ou a do número novo, G43)       | —    | conversa.contact  |
 # | card     | card.primary_conversation (pode faltar) | ele | card.contact, senão o da conversa |
-# | contato  | — (a da conversa nova, #2680)        | —    | ele               |
+# | contato  | — (a da conversa nova, #2680, ou a do número novo) | — | ele    |
 # | conta    | —                                    | —    | —                 |
 #
 # A conta (#2635, G7) é o alvo do conta.recorrente: a execução da ocorrência, sem conversa, card nem contato. Nenhum
@@ -45,9 +45,23 @@ class Autonomia::Automacao::Contexto
   def evento = @evento || @execucao&.evento
 
   def conversa
-    return @alvo if @alvo.is_a?(::Conversation)
+    return numero_novo || @alvo if @alvo.is_a?(::Conversation)
+    return @alvo.primary_conversation || conversa_nova if @alvo.is_a?(::Crm::Card)
 
-    (@alvo.primary_conversation if @alvo.is_a?(::Crm::Card)) || conversa_nova
+    numero_novo || conversa_nova
+  end
+
+  # G43 (#2700): depois que o passo "mensagem" mandou no número novo do contato, os passos seguintes usam aquela
+  # conversa, achada pelo registro dele. O card não precisa: a conversa do número novo já virou a principal. Guarda só a
+  # achada: antes do passo "mensagem", a próxima pergunta procura de novo.
+  def numero_novo
+    return unless @execucao
+
+    @numero_novo ||= begin
+      registro = @execucao.registros.where(resultado: 'ok').where("dados ? 'numero_novo'").order(:id).last
+      id = registro&.dados&.dig('conversa_aberta')
+      id && ::Conversation.find_by(account_id: @execucao.account_id, display_id: id)
+    end
   end
 
   # Quem não tem conversa (o card sem conversa principal, o contato) usa a que a receita abriu na caixa da conversa nova
@@ -96,10 +110,12 @@ class Autonomia::Automacao::Contexto
   # G53: a mensagem que disparou o gatilho "mensagem que falhou", achada pela marca da execução (o passo roda depois, sem
   # ela). Sempre presa à conta e à conversa do alvo, e só a que saiu para o cliente, nunca só pelo id (a mesma regra da
   # reunião). Fora desse gatilho, ou sem a mensagem, nil. No ensaio, a que chegou em `falhou`.
+  # A conversa é a do alvo (a do gatilho), nunca `conversa`: depois do envio ao número novo (G43), `conversa` passa a
+  # ser a do número novo, e a mensagem que falhou ficou na antiga.
   def mensagem_que_falhou
     return @mensagem_que_falhou if defined?(@mensagem_que_falhou)
 
-    @mensagem_que_falhou = (buscar_mensagem_que_falhou if @execucao && conversa &&
+    @mensagem_que_falhou = (buscar_mensagem_que_falhou if @execucao && @alvo.is_a?(::Conversation) &&
                                                           @execucao.chave_gatilho == ::Autonomia::Automacao::MensagemQueFalhou::TIPO)
   end
 
@@ -161,7 +177,7 @@ class Autonomia::Automacao::Contexto
 
   def buscar_mensagem_que_falhou
     id = ::Autonomia::Automacao::MensagemQueFalhou.id_da_marca(@execucao.evento)
-    id && ::Message.find_by(account_id: conta_id, conversation_id: conversa.id, id: id, message_type: :outgoing, private: false)
+    id && ::Message.find_by(account_id: conta_id, conversation_id: @alvo.id, id: id, message_type: :outgoing, private: false)
   end
 
   def reuniao_da_atividade

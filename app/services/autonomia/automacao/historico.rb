@@ -16,7 +16,8 @@ class Autonomia::Automacao::Historico
   # `sem_prazo` (#2750): o "esperar até" sem prazo, que só termina pela condição. `conferir_as` (G64): a hora da
   # conferência dele. `vez` e `volta` (G63): a vez do galho "a cada mensagem" e a volta dele à espera. O marco das
   # mensagens não sai: são ids de mensagem.
-  CHAVES = %w[ramo ate sem_prazo conferir_as vez volta tentativa ia conversa_principal_do_card conversas_fora].freeze
+  # `numero_novo` (G43, #2700): a mensagem saiu no número novo do contato, em outra conversa da mesma caixa.
+  CHAVES = %w[ramo ate sem_prazo conferir_as vez volta tentativa ia conversa_principal_do_card conversas_fora numero_novo].freeze
   # Estas apontam para dentro da conversa: só saem para quem a enxerga.
   CHAVES_DA_CONVERSA = %w[mensagem_id nota_id conversa_aberta].freeze
   # Dentro de `ia`, só os números do custo: a razão da IA ou um trecho lido seriam texto da conversa.
