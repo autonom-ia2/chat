@@ -129,6 +129,12 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
       expect(conversas_de_email).to be_empty
     end
 
+    it 'contato bloqueado não recebe e-mail (decisão 5)' do
+      contato.update!(blocked: true)
+      expect(registros(rodar(conversa))).to eq([%w[p1 pulado contato_bloqueado]])
+      expect(conversas_de_email).to be_empty
+    end
+
     it 'e-mail bloqueado na conta (devolução, reclamação, descadastro)' do
       EmailSuppression.create!(account: account, email: 'Cliente@Exemplo.com', reason: 'hard_bounce')
       expect(registros(rodar(conversa))).to eq([%w[p1 pulado email_bloqueado]])
@@ -326,6 +332,11 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
       contato.update!(email: 'cliente@exemplo.com')
       caixa.update_column(:channel_type, 'Channel::Api') # rubocop:disable Rails/SkipsModelValidations
       expect(ensaio({ 'tipo' => 'conversa.criada' }, conversa)[:passos].sole).to include(faria: 'caixa_de_email_indisponivel')
+    end
+
+    it 'diz que não sairia ao contato bloqueado (decisão 5)' do
+      contato.update!(blocked: true)
+      expect(ensaio({ 'tipo' => 'conversa.criada' }, conversa)[:passos].sole).to include(faria: 'contato_bloqueado')
     end
 
     it 'a conversa de e-mail cuja última mensagem é resposta automática não entraria' do

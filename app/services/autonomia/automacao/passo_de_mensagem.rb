@@ -4,7 +4,7 @@
 #
 # Pula e segue, com o motivo no registro:
 # - valor vazio ou texto que ficou em branco;
-# - contato que pediu para não receber (o mesmo campo das campanhas);
+# - contato que pediu para não receber ou bloqueado (decisão 5: a regra das campanhas, RecusaDoContato);
 # - canal sem resposta (tweet);
 # - alvo sem conversa e sem a caixa da conversa nova na receita (`sem_conversa`); com ela (#2680), o passo abre a
 #   conversa (ConversaNova), e pula sem abrir se o contato não tem telefone (`contato_sem_telefone`) ou não recebe.
@@ -78,7 +78,8 @@ class Autonomia::Automacao::PassoDeMensagem
 
   # O que pula sem olhar o texto: o "escrever" confere antes de pagar a IA.
   def motivo_do_canal
-    return 'contato_nao_recebe' if Contact.opted_out.exists?(id: @conversa.contact_id)
+    recusa = ::Autonomia::Automacao::RecusaDoContato.motivo(@conversa.contact_id)
+    return recusa if recusa
     return 'canal_sem_resposta' if @conversa.additional_attributes.to_h['type'] == 'tweet'
 
     return if janela_aberta?

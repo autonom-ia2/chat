@@ -13,6 +13,8 @@ const AVISO = {
   // G2: o e-mail que não sairia para o contato desta conversa.
   contato_sem_email: 'CONTATO_SEM_EMAIL',
   contato_nao_recebe: 'CONTATO_NAO_RECEBE',
+  // Decisão 5 (#2414): o bloqueado não recebe nada da automação.
+  contato_bloqueado: 'CONTATO_BLOQUEADO',
   email_bloqueado: 'EMAIL_BLOQUEADO',
   caixa_de_email_indisponivel: 'CAIXA_DE_EMAIL_INDISPONIVEL',
   retorno_sem_responsavel: 'RETORNO_SEM_RESPONSAVEL',
