@@ -67,6 +67,21 @@ RSpec.describe Crm::MetaAds::LeadForms::DonoDoLead do
     expect(Crm::Entrega::QuemCuida).to have_received(:na_caixa).once
   end
 
+  # Dois FacebookLeadgenJob do mesmo funil em paralelo leriam a contagem antes do commit um do outro e cairiam na mesma
+  # pessoa: a fila trava por funil antes de contar, até o fim da transação que grava o card.
+  it 'trava a fila do funil antes de contar os cards, e só dentro de transação', :aggregate_failures do
+    atribuicao
+    conexao = Crm::Card.connection
+    allow(conexao).to receive(:execute).and_call_original
+
+    expect(dono_do_lead('L1', '+5511987650001')).to eq(ana)
+    expect(conexao).to have_received(:execute)
+      .with(a_string_including('pg_advisory_xact_lock', "crm_dono_do_lead:#{account.id}:#{funil.id}")).once
+
+    allow(conexao).to receive(:transaction_open?).and_return(false)
+    expect { described_class.new(pipeline: funil, stage: etapa).pessoa }.to raise_error(described_class::SemTransacao)
+  end
+
   it 'a regra com pessoa fixa dá o lead a ela; fora de quem cuida do funil, vale a fila', :aggregate_failures do
     atribuicao(pool_type: 'user', pool_id: ana.id)
     account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'Card da Ana', currency: 'BRL', owner: ana)

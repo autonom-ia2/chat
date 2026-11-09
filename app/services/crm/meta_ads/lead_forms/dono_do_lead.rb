@@ -11,6 +11,7 @@
 # Funil sem Atribuição ligada, ou sem ninguém que cuide dele: sem dono, como antes do G30.
 class Crm::MetaAds::LeadForms::DonoDoLead
   NUNCA_RECEBEU = Time.zone.at(0)
+  SemTransacao = Class.new(StandardError)
 
   # `em_lote`: o "trazer quem já preencheu" e a reconciliação (PastLeads). Um objeto serve o lote inteiro: a regra e a
   # fila são lidas uma vez, e só a contagem de cards anda a cada lead. Em lote, "preferir online" não vale: o lote inteiro
@@ -60,9 +61,21 @@ class Crm::MetaAds::LeadForms::DonoDoLead
   end
 
   def com_menos_cards(fila)
+    travar_a_fila!
     cards = @pipeline.cards.where(owner_id: fila.map(&:id))
     abertos = cards.where(closed_at: nil).group(:owner_id).count
     ultimo = cards.group(:owner_id).maximum(:created_at)
     fila.min_by { |pessoa| [abertos[pessoa.id] || 0, ultimo[pessoa.id] || NUNCA_RECEBEU, pessoa.id] }
+  end
+
+  # Dois leads do mesmo funil ao mesmo tempo (dois FacebookLeadgenJob): sem trava, os dois contam os cards antes de o
+  # outro gravar e caem na mesma pessoa. O segundo espera o primeiro gravar o card com o dono e conta de novo. A trava
+  # vale até o fim da transação do Importer, que grava o card; fora de transação ela soltaria na hora, por isso a recusa.
+  def travar_a_fila!
+    conexao = Crm::Card.connection
+    raise SemTransacao, 'a fila do funil só trava dentro da transação que grava o card' unless conexao.transaction_open?
+
+    chave = "crm_dono_do_lead:#{@pipeline.account_id}:#{@pipeline.id}"
+    conexao.execute(Crm::Card.sanitize_sql_array(['SELECT pg_advisory_xact_lock(hashtext(?))', chave]))
   end
 end
