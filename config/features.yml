@@ -1266,3 +1266,14 @@
   display_name: Agentes › usar o dado do trecho
   enabled: false
   column: feature_flags_ext_2
+
+# RAG: busca híbrida (#2810, Refs #1431). Ligada: os candidatos do vetor e os da busca por palavra (texto em português,
+# índice GIN da migration 20261108910000) entram juntos e a ordem sai da fusão por posição (RRF, k = 60), no lugar do
+# bônus por metadado e do reforço lexical. O teto de distância, as seções dos itens, o material reprovado e o isolamento
+# por agente continuam valendo. Desligada: a busca de hoje. Rollback: desligar a flag na conta. Posição 36
+# (34359738368, 1 << 35), dada pela Orquestração em 09/11: entra na fila depois do #2811. Ligar em todas as
+# contas é decisão do Rodrigo (o RESULTADO do #2810 diz por quê), não a regra C automática.
+- name: rag_busca_hibrida
+  display_name: RAG › busca híbrida
+  enabled: false
+  column: feature_flags_ext_2
