@@ -293,6 +293,21 @@
         }
       }
     },
+    "campos_para_cada": {
+      "description": "O que a IA tira de cada item do \"para cada item\" (G24). Uma chave precisa ser \"nome\"; \"telefone\" é por onde o contato é achado.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["chave", "descricao"],
+        "properties": {
+          "chave": { "type": "string", "minLength": 1, "maxLength": 40 },
+          "descricao": { "type": "string", "minLength": 1, "maxLength": 300 }
+        }
+      }
+    },
     "destino_escrever": {
       "description": "mensagem: o texto sai ao cliente. sugestao: vira nota para a equipe revisar. guardar (#2679): só fica guardado, para um passo seguinte ler como {\"$valor\": \"ia.<id deste passo>\"} (por exemplo, numa mensagem com modelo aprovado, para sair fora da janela).",
       "enum": ["mensagem", "sugestao", "guardar"]
@@ -542,6 +557,21 @@
             "le": { "$ref": "#/definitions/leituras" },
             "campos": { "$ref": "#/definitions/campos_extrair" },
             "trocar": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo", "descricao", "campos", "etapa_id", "maximo"],
+          "description": "Para cada item (G24; flags automacao_ia e automacao_gatilhos; pede de quem salva e de quem liga a chave de funis, criar card e importar contatos): a IA acha na conversa a lista descrita em descricao e devolve até maximo itens, com os campos pedidos (\"nome\" é obrigatório; \"telefone\" acha o contato). Cada item vira um card na etapa (etapa_id), ligado só ao contato do item: o contato com o mesmo celular (com ou sem o nono dígito) ou um contato novo, pela mesma régua do Importar contatos (contato que já existe só ganha o que não tem; nome e telefone preenchidos nunca são trocados). O contato vai para a empresa do contato da conversa, se ainda não tem empresa. Item sem telefone vira contato só com o nome. Contato com card aberto no funil da etapa não ganha outro. Cada card criado dispara o gatilho card.criado como uma mudança própria: a automação de card.criado roda em cada um. Os passos seguintes leem {\"$valor\": \"ia.<id>.quantos\"} (quantos itens) e {\"$valor\": \"ia.<id>.nomes\"} (os nomes, separados por vírgula).",
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "para_cada" },
+            "le": { "$ref": "#/definitions/leituras" },
+            "descricao": { "type": "string", "minLength": 1, "maxLength": 300 },
+            "campos": { "$ref": "#/definitions/campos_para_cada" },
+            "etapa_id": { "type": "integer", "minimum": 1 },
+            "maximo": { "type": "integer", "minimum": 1, "maximum": 50 }
           }
         },
         {

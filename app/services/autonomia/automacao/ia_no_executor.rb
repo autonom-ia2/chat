@@ -1,12 +1,14 @@
-# Os passos de IA no executor (#2500 F7): "decidir", "extrair", "escrever" e "resumir". Ficam fora do Executor para
-# ele seguir sendo a lista dos passos; os métodos usam os dele (reconferir, impedida?, encerrar, registrar).
+# Os passos de IA no executor (#2500 F7): "decidir", "extrair", "escrever", "resumir" e o "para cada item" (G24). Ficam
+# fora do Executor para ele seguir sendo a lista dos passos; os métodos usam os dele (reconferir, impedida?, encerrar,
+# registrar).
 module Autonomia::Automacao::IaNoExecutor
   # A parada fora da janela (F4.4): o "escrever" ao cliente usa aqui, e a mensagem no Executor.
   include ::Autonomia::Automacao::JanelaFechada
 
   IA = {
     'decidir' => ::Autonomia::Automacao::PassoDeDecidir, 'extrair' => ::Autonomia::Automacao::PassoDeExtrair,
-    'escrever' => ::Autonomia::Automacao::PassoDeEscrever, 'resumir' => ::Autonomia::Automacao::PassoDeResumir
+    'escrever' => ::Autonomia::Automacao::PassoDeEscrever, 'resumir' => ::Autonomia::Automacao::PassoDeResumir,
+    'para_cada' => ::Autonomia::Automacao::PassoParaCada
   }.freeze
 
   private

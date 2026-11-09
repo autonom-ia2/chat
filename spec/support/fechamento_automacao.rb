@@ -182,7 +182,9 @@ module FechamentoAutomacao::Lacunas
     'G22' => nil,
     # G23 (#2737): o "ausente até" de quem cuida, como valor da condição.
     'G23' => -> { valor?('card.responsavel_ausente') && valor?('conversa.responsavel_ausente') },
-    'G24' => nil,
+    # Fechada com prova (#2771): o "para cada item" abre um card por item, cada um numa raiz própria da cadeia, e a
+    # automação de card criado roda em todos (spec/services/autonomia/automacao/para_cada_cadeia_spec.rb).
+    'G24' => -> { passo?('para_cada') },
     'G25' => -> { acao?('POST crm/cards/:id/close') },
     'G26' => -> { passo?('sla') },
     # "Card criado ou atualizado com valor acima de R$ 50 mil" (15) e "card completo" (8, passo 8): só o card criado é a G5.

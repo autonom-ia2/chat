@@ -1,0 +1,10 @@
+# Free-form automation, "for each item" step (#2414 G24, #2771). Own file so it does not fight over en.yml with other work.
+en:
+  autonomia:
+    automacao:
+      motivos:
+        lista_vazia: 'The AI found no list in the conversation. No card was created.'
+        quem_ligou_sem_permissao_importar: 'The person who turned on the automation can no longer import contacts. Take over and turn it back on.'
+      receita:
+        para_cada_sem_nome: 'Step %{passo}: each item needs the "nome" field. The contact and the card are created from it.'
+        para_cada_sem_importar: 'Step %{passo}: to use this step you need permission to import contacts.'

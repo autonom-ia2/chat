@@ -1,0 +1,10 @@
+# Automação livre, passo "para cada item" (#2414 G24, #2771). Arquivo próprio para não disputar o pt_BR.yml com as outras frentes.
+pt_BR:
+  autonomia:
+    automacao:
+      motivos:
+        lista_vazia: 'A IA não achou lista na conversa. Nenhum card foi criado.'
+        quem_ligou_sem_permissao_importar: 'Quem ligou a automação não pode mais importar contatos. Assuma e religue.'
+      receita:
+        para_cada_sem_nome: 'Passo %{passo}: cada item precisa do campo "nome". O contato e o card nascem dele.'
+        para_cada_sem_importar: 'Passo %{passo}: para usar este passo você precisa da permissão de importar contatos.'

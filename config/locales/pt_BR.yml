@@ -1104,7 +1104,7 @@ pt_BR:
         caminho_faltando: 'Passo %{passo}: a ação precisa de %{campo}.'
         valor_desconhecido: 'Passo %{passo}: a automação não sabe ler %{caminho}.'
         texto_da_ia_no_gatilho: 'Passo %{passo}: %{caminho} é o texto de um passo de IA, e no "Só se" do gatilho nenhum passo rodou ainda. Use esse dado num passo depois dele.'
-        texto_da_ia_sem_passo: 'Passo %{passo}: %{caminho} precisa apontar um passo "Escrever" ou "Resumir" desta automação.'
+        texto_da_ia_sem_passo: 'Passo %{passo}: %{caminho} precisa apontar um passo "Escrever" ou "Resumir" desta automação, ou a quantidade (.quantos) ou os nomes (.nomes) de um passo "Para cada item".'
         texto_da_ia_depois: 'Passo %{passo}: %{caminho} aponta um passo de IA que nunca roda antes deste (vem depois, ou está noutro galho do mesmo passo). Ponha o passo que escreve antes do que lê.'
         valor_de_venda: 'Passo %{passo}: só quem vê os valores de venda pode ler %{caminho}. Peça a permissão ou tire esse valor.'
         corpo: 'Passo %{passo}: %{problema}'

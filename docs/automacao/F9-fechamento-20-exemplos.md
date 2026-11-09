@@ -148,7 +148,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G21 | **Prospecção**: rodar busca salva e conferência de WhatsApp como passo | novo | **Fechada** (#2706): passo `prospeccao` com `buscar` (repete uma busca do histórico, espera a conferência de WhatsApp até 2 h, card por empresa com WhatsApp e etiqueta no contato; só em gatilho sem alvo, G7) e `recusar` (recusa do lead); ponta a ponta do ex. 9 em `exemplo_09_prospeccao_semanal_spec.rb` | F5 | 9 |
 | G22 | **Avisar quem não está na conversa** (o RH da empresa cliente por mensagem; a equipe quando o alvo não tem conversa) | F4 | O "avisar" é nota com menção na conversa do alvo; card sem conversa pula com `sem_conversa` | F1 | 8 |
 | G23 | Condição sobre **disponibilidade de uma pessoa** (a responsável voltou de férias) | F8 | Fechada (#2737): "ausente até" na pessoa (Equipe e perfil) e os valores `card.responsavel_ausente` e `conversa.responsavel_ausente`. O "responsável anterior ausente" vem com a G9 (#2707) | Motor | 17 |
-| G24 | **Encadear duas automações** em que a primeira cria N registros e a segunda roda em cada um | F6/F8 | Depende de G4, G5 e G17 | Motor | 8 |
+| G24 | **Encadear duas automações** em que a primeira cria N registros e a segunda roda em cada um | F6/F8 | Fechada (#2771): o passo "para cada item" (`para_cada`) acha a lista na conversa pela IA e abre um card por item, com o contato achado pelo telefone ou criado pela linha do Importar contatos; cada card nasce numa raiz própria da cadeia, e a automação de `card.criado` roda em todos (`para_cada_cadeia_spec.rb`) | Motor | 8 |
 | G25 | **Fechar card** como ganho/perdido/resolvido com motivo | F6 (ação) | `PATCH crm/cards` aceita `lost_reason`, mas não muda o status; a conferir qual rota ganha/perde | F2 | 4, 6, 12, 18 |
 | G26 | **Aplicar SLA** à conversa | F3 (nativo) | Fora do catálogo do Guia (termo, nota da seção dos exemplos) | F2 | — |
 | G27 | Gatilho **card atualizado / campo mudou** (o valor passou de R$ 50 mil no 15; o card ficou completo no 8) | F6 | A fazer: a lista de gatilhos só tem card criado, etapa, ganho, perdido e reunião | Gatilhos | 8, 15 |
@@ -181,7 +181,7 @@ o RSpec acusa ("Expected pending … to fail", com a instrução do que fazer), 
 e sai da lista. A sonda roda antes do `pending`: sonda quebrada (classe renomeada) é erro vermelho, nunca pendente.
 
 A frente que fecha uma lacuna ajusta a sonda no mesmo PR se o nome que deu for outro (ex.: o passo se chama
-`criar_retorno`, não `retorno`). Sonda vazia (G16, G18, G22, G24) é lacuna que nenhuma pergunta simples
+`criar_retorno`, não `retorno`). Sonda vazia (G16, G18, G22) é lacuna que nenhuma pergunta simples
 responde: a frente troca a sonda pela prova.
 
 ## 6. Os 20 exemplos: o que existe e o que falta
@@ -197,7 +197,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 5 | Revisão do carro | 🟡 G5 (card ganho) | extrair ✅ (contato), etiqueta ✅, mover ✅ | G1, G3, G5, G6, G12, G16, G19, G28 (lembrete da IA pelo modelo), G32 ("não marcou em 5 dias", passos 6 e 7), G36 (nota do mecânico: `g35_g36_ia_le_card_e_nota_spec.rb`), G47 (passo 8). Spec à risca: `exemplo_05_revisao_do_carro_spec.rb`, passos 1 a 7 passam | Não |
 | 6 | Aniversário | ⛔ G6 (data de nascimento do contato) | escrever ✅, etiqueta ✅, decidir ✅, extrair ✅, avisar ✅ | G1, G4, G6, G12, G14, G16, G25, G33 | Não |
 | 7 | Black Friday | 🟡 G7 (toda quinta 9h, #2635); ⛔ G39 (só a quinta antes da Black) | decidir ✅, extrair ✅ (card), etiqueta ✅, mensagem ✅ (na janela), disparar campanha ✅ (G14) | G5, G7, G14, G15, G37, G38, G39 | Não |
-| 8 | Funcionário novo no plano | ✅ mensagem do RH (1ª); ⛔ G24 (2ª) | decidir ✅, mensagem ao RH ✅ | G1, G4, G5, G7, G13, G17, G20, G22, G24, G27 | Não |
+| 8 | Funcionário novo no plano | ✅ mensagem do RH (1ª); ✅ G24 (2ª, em cada card, #2771) | decidir ✅, mensagem ao RH ✅ | G1, G4, G5, G7, G13, G17, G20, G22, G24, G27 | Não |
 | 9 | Prospecção semanal | ✅ G7 (`conta.recorrente`, segunda 8h) | buscar e conferir WhatsApp ✅ (G21), card com etiqueta no contato ✅ (G21), campanha pelo modelo ✅ (G14), decidir ✅, link da agenda ✅ (G12), etiqueta ✅, retorno ✅ (G3), recusa na Prospecção ✅ (G21), mover ✅, resumir/avisar ✅, reunião cancelada ✅ (G12) | — | **Sim** (`exemplo_09_prospeccao_semanal_spec.rb`) |
 | 10 | **Cliente bravo** | ✅ mensagem do cliente | decidir ✅, atribuir ✅, prioridade ✅, etiqueta ✅, resumir+avisar ✅, mensagem ✅, o mesmo resumo à dona sem outra ida à IA ✅ (G28) | G40 (passo 6: esperar só a Fernanda), G41 (passo 4: a instrução no resumir; passo 7: avisar com a agente de IA atendendo) | Não (#2678: voltou a pendente) |
 | 11 | Indicação que vira presente | ✅ mensagem do cliente | decidir ✅, extrair ✅, mensagem a Maria ✅ | G1, G4, G5, G12, G16, G17, G18 | Não |

@@ -611,7 +611,7 @@ en:
         caminho_faltando: 'Step %{passo}: the action needs %{campo}.'
         valor_desconhecido: 'Step %{passo}: the automation cannot read %{caminho}.'
         texto_da_ia_no_gatilho: 'Step %{passo}: %{caminho} is the text of an AI step, and no step has run yet in the trigger "Only if". Use it in a step after that one.'
-        texto_da_ia_sem_passo: 'Step %{passo}: %{caminho} must point to a "Write" or "Summarize" step of this automation.'
+        texto_da_ia_sem_passo: 'Step %{passo}: %{caminho} must point to a "Write" or "Summarize" step of this automation, or to the count (.quantos) or the names (.nomes) of a "For each item" step.'
         texto_da_ia_depois: 'Step %{passo}: %{caminho} points to an AI step that never runs before this one (it comes later, or sits in another branch of the same step). Move the step that writes before the one that reads it.'
         valor_de_venda: 'Step %{passo}: only people who see sales values can read %{caminho}. Ask for the permission or remove this value.'
         corpo: 'Step %{passo}: %{problema}'
