@@ -216,17 +216,10 @@ RSpec.describe 'CRM meta_ads_connection cuidar do anúncio (#2778)', type: :requ
       put "#{path}/ads/#{ad_id}/creative", params: { idempotency_key: key }.merge(body), headers: admin.create_new_auth_token, as: :json
     end
 
-    it 'sem a chamada real confirmada, recusa (cannot_swap) e não chama a Meta' do
-      swap!
-
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body['error']).to eq('cannot_swap')
-      expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
-    end
-
-    context 'when a chamada real confirmou' do
+    # Ligado para todos (#2804, decisão do Rodrigo de 09/11): `POST /{ad_id}` com `creative` ({ creative_id }), como no
+    # SDK oficial da Meta (Ad#api_update aceita `creative`). Recusa clara cai na cópia pausada, pela tela.
+    context 'when ligado para todos' do
       before do
-        stub_const('Crm::MetaAds::Creation::CreativeSwap::CONFIRMED', true)
         stub_graph('me/permissions', { data: [{ permission: 'ads_management', status: 'granted' }] })
         stub_graph(creative_id, spec_image, fields: Meta::AdsGraphClient::CREATIVE_SPEC_FIELDS)
         stub_post("act_#{connection.ad_account_id}/adcreatives", { id: new_creative })
@@ -261,17 +254,241 @@ RSpec.describe 'CRM meta_ads_connection cuidar do anúncio (#2778)', type: :requ
         expect(a_request(:post, meta_graph_url(ad_id))).to have_been_made.once
       end
 
-      it 'a Meta recusa pôr no anúncio: apaga o criativo novo e o anúncio fica como estava' do
+      it 'a Meta recusa pôr no anúncio: apaga o criativo novo, o anúncio fica como estava e a tela oferece a cópia' do
         stub_post(ad_id, meta_graph_error(100), status: 400)
         drop = stub_request(:delete, meta_graph_url(new_creative)).to_return(status: 200, body: { success: true }.to_json, headers: json)
 
         swap!
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(response.parsed_body['error']).to eq('meta_refused')
+        expect(response.parsed_body).to include('error' => 'swap_refused', 'nothing_created' => true)
         expect(drop).to have_been_made.once
         expect(source.reload.creative_id).to eq(creative_id)
       end
+
+      it 'token sem permissão ao pôr no anúncio: meta_refused, sem oferecer a cópia (ela falharia igual)' do
+        stub_post(ad_id, meta_graph_error(200), status: 403)
+        stub_request(:delete, meta_graph_url(new_creative)).to_return(status: 200, body: { success: true }.to_json, headers: json)
+
+        swap!
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq('meta_refused')
+      end
+
+      it 'o anúncio sumiu na Meta: ad_not_found, sem oferecer a cópia' do
+        stub_post(ad_id, meta_graph_error(100, subcode: 33), status: 400)
+        stub_request(:delete, meta_graph_url(new_creative)).to_return(status: 200, body: { success: true }.to_json, headers: json)
+
+        swap!
+
+        expect(response).to have_http_status(:not_found)
+        expect(response.parsed_body['error']).to eq('ad_not_found')
+      end
+
+      it 'sem resposta ao criar o criativo novo: não diz que nada foi criado' do
+        stub_request(:post, meta_graph_url("act_#{connection.ad_account_id}/adcreatives")).to_timeout
+
+        swap!
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body).to include('error' => 'meta_unavailable', 'nothing_created' => false)
+        expect(a_request(:post, meta_graph_url(ad_id))).not_to have_been_made
+      end
+
+      it 'anúncio de post impulsionado: invalid_creative, sem criar criativo' do
+        source.update!(source_post_id: '111_222', source_post_network: 'facebook')
+
+        swap!
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq('invalid_creative')
+        expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+      end
+
+      it 'a Meta recusa criar o criativo novo: meta_refused, sem tocar no anúncio (a cópia também precisaria dele)' do
+        stub_post("act_#{connection.ad_account_id}/adcreatives", meta_graph_error(100), status: 400)
+
+        swap!
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body).to include('error' => 'meta_refused', 'nothing_created' => true)
+        expect(a_request(:post, meta_graph_url(ad_id))).not_to have_been_made
+      end
+    end
+  end
+
+  # A cópia ficou sem resposta da Meta e a busca pela marca veio vazia (#2804): a pessoa confere no Gerenciador e cria
+  # de novo pela tela, com a mesma chave. Sem pedir, a mesma chave continua "não confirmada".
+  describe 'cópia não confirmada' do
+    before do
+      stub_budget
+      stub_graph("act_#{connection.ad_account_id}/campaigns", { data: [] })
+      stub_request(:post, meta_graph_url("#{campaign_id}/copies")).to_timeout
+    end
+
+    it 'sem resposta da Meta: unconfirmed; a mesma chave sem pedir para recriar não copia de novo' do
+      copy!
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('error' => 'unconfirmed', 'nothing_created' => false)
+      expect(Crm::MetaAdsCreatedObject.find_by(idempotency_key: key).status).to eq('unconfirmed')
+
+      copy!
+      expect(response.parsed_body['error']).to eq('unconfirmed')
+      expect(a_request(:post, meta_graph_url("#{campaign_id}/copies"))).to have_been_made.once
+      # Uma busca no desfazer da 1ª vez e uma só na 2ª: adotar não busca de novo para apagar.
+      expect(a_request(:get, meta_graph_url("act_#{connection.ad_account_id}/campaigns")).with(query: hash_including({})))
+        .to have_been_made.twice
+    end
+
+    def found_campaigns(*marks)
+      rows = marks.map.with_index do |mark, i|
+        { id: (copy_campaign.to_i + i).to_s, name: "Vendas [abc] - Cópia [#{mark}]", effective_status: 'PAUSED' }
+      end
+      stub_graph("act_#{connection.ad_account_id}/campaigns", { data: rows })
+    end
+
+    def suffix_with(mark)
+      { rename_strategy: 'ONLY_TOP_LEVEL_RENAME', rename_suffix: " - Cópia [#{mark}]" }.to_json
+    end
+
+    it 'a pessoa pede para criar de novo: copia com uma marca nova e grava a antiga na Auditoria' do
+      copy!
+      stub_copy_calls
+
+      copy!({ recreate_unconfirmed: true })
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include('ad_id' => copy_ad, 'status' => 'PAUSED')
+      expect(Crm::MetaAdsCreatedObject.find_by(idempotency_key: key)).to have_attributes(kind: 'copy', status: 'created')
+      expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_create_recreated').sole.audited_changes)
+        .to include('kind' => 'copy', 'idempotency_key' => key, 'mark' => key.first(8))
+      new_mark = Digest::SHA256.hexdigest("#{key}:1").first(8)
+      expect(a_request(:post, meta_graph_url("#{campaign_id}/copies"))
+        .with(body: hash_including('rename_options' => suffix_with(new_mark)))).to have_been_made.once
+    end
+
+    # A campanha antiga, se aparecer depois do recriar, tem a marca antiga: a busca da tentativa nova não a vê.
+    it 'depois de recriar, a busca não confunde a campanha antiga com a nova' do
+      copy!
+      stub_request(:post, meta_graph_url("#{campaign_id}/copies")).to_timeout
+      copy!({ recreate_unconfirmed: true })
+      found_campaigns(key.first(8))
+
+      copy!
+
+      expect(response.parsed_body['error']).to eq('unconfirmed')
+      expect(a_request(:delete, /graph\.facebook\.com/)).not_to have_been_made
+    end
+
+    it 'a cópia aparece depois: a mesma chave adota a campanha, completa o grupo e o anúncio e não apaga nada' do
+      copy!
+      found_campaigns(key.first(8))
+      stub_copy_calls
+      stub_graph("#{copy_campaign}/adsets", { data: [] })
+      stub_graph("#{copy_adset}/ads", { data: [] })
+
+      copy!
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['ad_id']).to eq(copy_ad)
+      expect(Crm::MetaAdsCreatedObject.find_by(idempotency_key: key))
+        .to have_attributes(status: 'created', campaign_id: copy_campaign, adset_id: copy_adset, ad_id: copy_ad)
+      expect(a_request(:post, meta_graph_url("#{campaign_id}/copies"))).to have_been_made.once
+      expect(a_request(:delete, /graph\.facebook\.com/)).not_to have_been_made
+    end
+
+    it 'adota o grupo e o anúncio que já estão na campanha achada, sem copiar de novo' do
+      copy!
+      found_campaigns(key.first(8))
+      stub_graph("#{copy_campaign}/adsets", { data: [{ id: copy_adset }] })
+      stub_graph("#{copy_adset}/ads", { data: [{ id: copy_ad }] })
+      [copy_campaign, copy_adset, copy_ad].each do |id|
+        stub_graph(id, { id: id, status: 'PAUSED', effective_status: 'PAUSED' }, fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS)
+      end
+
+      copy!
+
+      expect(response).to have_http_status(:ok)
+      expect(Crm::MetaAdsCreatedObject.find_by(idempotency_key: key)).to have_attributes(status: 'created', ad_id: copy_ad)
+      expect(a_request(:post, meta_graph_url("#{adset_id}/copies"))).not_to have_been_made
+      expect(a_request(:post, meta_graph_url("act_#{connection.ad_account_id}/ads"))).not_to have_been_made
+    end
+
+    it 'recriar com a campanha achada: adota, sem apagar nem criar outra' do
+      copy!
+      found_campaigns(key.first(8))
+      stub_copy_calls
+      stub_graph("#{copy_campaign}/adsets", { data: [] })
+      stub_graph("#{copy_adset}/ads", { data: [] })
+
+      copy!({ recreate_unconfirmed: true })
+
+      expect(response).to have_http_status(:ok)
+      expect(a_request(:post, meta_graph_url("#{campaign_id}/copies"))).to have_been_made.once
+      expect(a_request(:delete, /graph\.facebook\.com/)).not_to have_been_made
+      expect(Audited.audit_class.where(action: 'meta_ads_create_recreated')).to be_empty
+    end
+
+    it 'mais de uma campanha com a marca: unconfirmed, sem apagar nem criar' do
+      copy!
+      found_campaigns(key.first(8), key.first(8))
+
+      copy!
+
+      expect(response.parsed_body).to include('error' => 'unconfirmed', 'nothing_created' => false)
+      expect(a_request(:delete, /graph\.facebook\.com/)).not_to have_been_made
+      expect(a_request(:post, meta_graph_url("#{campaign_id}/copies"))).to have_been_made.once
+    end
+
+    it 'a cópia adotada falha ao completar: não é apagada e a mesma chave continua dela' do
+      copy!
+      found_campaigns(key.first(8))
+      stub_graph("#{copy_campaign}/adsets", { data: [] })
+      stub_post("#{adset_id}/copies", meta_graph_error(100), status: 400)
+
+      copy!
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('error' => 'unconfirmed', 'nothing_created' => false, 'idempotency_key' => key)
+      expect(a_request(:delete, /graph\.facebook\.com/)).not_to have_been_made
+      expect(Crm::MetaAdsCreatedObject.find_by(idempotency_key: key)).to have_attributes(status: 'unconfirmed', campaign_id: copy_campaign)
+    end
+
+    it 'a cópia adotada foi apagada no Gerenciador: o recriar cria outra, sem ficar preso' do
+      gone = '120000000000000099'
+      copy!
+      Crm::MetaAdsCreatedObject.find_by(idempotency_key: key).update!(campaign_id: gone)
+      stub_request(:get, meta_graph_url(gone)).with(query: hash_including(fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS))
+                                              .to_return(status: 400, body: meta_graph_error(100, subcode: 33).to_json, headers: json)
+      stub_copy_calls
+
+      copy!({ recreate_unconfirmed: true })
+
+      expect(response).to have_http_status(:ok)
+      expect(Crm::MetaAdsCreatedObject.find_by(idempotency_key: key)).to have_attributes(status: 'created', campaign_id: copy_campaign)
+      expect(a_request(:post, meta_graph_url("#{campaign_id}/copies"))).to have_been_made.twice
+      expect(Audited.audit_class.where(action: 'meta_ads_create_recreated').count).to eq(1)
+    end
+
+    it 'dois grupos na campanha achada, nenhum com o nome da cópia: não adivinha' do
+      copy!
+      found_campaigns(key.first(8))
+      stub_graph("#{copy_campaign}/adsets", { data: [{ id: '1', name: 'A' }, { id: '2', name: 'B' }] })
+
+      copy!
+
+      expect(response.parsed_body).to include('error' => 'unconfirmed', 'nothing_created' => false)
+      expect(a_request(:post, meta_graph_url("#{adset_id}/copies"))).not_to have_been_made
+      expect(a_request(:delete, /graph\.facebook\.com/)).not_to have_been_made
+    end
+
+    it 'recriar sem uma tentativa não confirmada desta chave: invalid_params, sem chamar a Meta' do
+      copy!({ recreate_unconfirmed: true })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('invalid_params')
+      expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
     end
   end
 
@@ -281,16 +498,65 @@ RSpec.describe 'CRM meta_ads_connection cuidar do anúncio (#2778)', type: :requ
       stub_graph(creative_id, spec_image, fields: Meta::AdsGraphClient::CREATIVE_SPEC_FIELDS)
     end
 
-    def management(id)
-      stub_graph(id, { id: id, name: 'Bolo', account_id: connection.ad_account_id, status: 'ACTIVE', effective_status: 'ACTIVE' },
+    def management(id, status: 'ACTIVE')
+      stub_graph(id, { id: id, name: 'Bolo', account_id: connection.ad_account_id, status: status, effective_status: status },
                  fields: Meta::AdsGraphClient::AD_MANAGEMENT_FIELDS)
       get "#{path}/ads/#{id}/management", headers: admin.create_new_auth_token, as: :json
       response.parsed_body['management']
     end
 
-    it 'criado aqui: created_here, a foto trocável e a troca como cópia' do
-      expect(management(ad_id)).to include('created_here' => true, 'creative_kind' => 'image', 'can_swap_creative' => false,
+    it 'criado aqui: created_here e a foto trocável no próprio anúncio' do
+      expect(management(ad_id)).not_to have_key('can_swap_creative')
+      expect(management(ad_id)).to include('created_here' => true, 'creative_kind' => 'image',
                                            'creative_image' => 'https://x/thumb.jpg', 'creative_text' => 'Texto antigo')
+    end
+
+    describe 'a cópia com a foto nova no ar (#2804)' do
+      before do
+        Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: SecureRandom.uuid, status: 'created', kind: 'copy',
+                                          name: 'Bolo de pote - Cópia', ad_id: copy_ad, campaign_id: copy_campaign, adset_id: copy_adset,
+                                          ad_account_id: connection.ad_account_id, activated_at: 1.hour.ago)
+      end
+
+      def copied!(new_creative: true)
+        Audited.audit_class.create!(auditable: account, action: 'meta_ads_ad_copied',
+                                    audited_changes: { 'source_ad_id' => ad_id, 'ad_id' => copy_ad, 'new_creative' => new_creative })
+      end
+
+      def copy_status(status)
+        stub_graph(copy_ad, { id: copy_ad, status: status, effective_status: status }, fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS)
+      end
+
+      it 'ativa e o original também: active_copy, para o "Pausar o original" depois de recarregar' do
+        copied!
+        copy_status('ACTIVE')
+
+        expect(management(ad_id)['active_copy']).to eq('ad_id' => copy_ad, 'name' => 'Bolo de pote - Cópia')
+        # Guardada por 5 minutos: a segunda abertura não lê a cópia na Meta de novo.
+        expect(management(ad_id)['active_copy']).to include('ad_id' => copy_ad)
+        expect(a_request(:get, meta_graph_url(copy_ad)).with(query: hash_including({}))).to have_been_made.once
+      end
+
+      it 'cópia ativa mas com a campanha pausada: nada no ar, sem active_copy' do
+        copied!
+        stub_graph(copy_ad, { id: copy_ad, status: 'ACTIVE', effective_status: 'CAMPAIGN_PAUSED' },
+                   fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS)
+
+        expect(management(ad_id)['active_copy']).to be_nil
+      end
+
+      it 'sem active_copy: original pausado, cópia pausada na Meta ou duplicar comum' do
+        copied!
+        copy_status('PAUSED')
+        expect(management(ad_id)['active_copy']).to be_nil
+
+        copy_status('ACTIVE')
+        expect(management(ad_id, status: 'PAUSED')['active_copy']).to be_nil
+
+        Audited.audit_class.where(action: 'meta_ads_ad_copied').delete_all
+        copied!(new_creative: false)
+        expect(management(ad_id)['active_copy']).to be_nil
+      end
     end
 
     it 'criado fora: o cartão não aparece, nem o criativo é lido' do
@@ -324,7 +590,6 @@ RSpec.describe 'CRM meta_ads_connection cuidar do anúncio (#2778)', type: :requ
     end
 
     it 'trocar no anúncio apaga a leitura guardada' do
-      stub_const('Crm::MetaAds::Creation::CreativeSwap::CONFIRMED', true)
       management(ad_id)
       stub_post("act_#{connection.ad_account_id}/adcreatives", { id: new_creative })
       stub_post(ad_id, { success: true })

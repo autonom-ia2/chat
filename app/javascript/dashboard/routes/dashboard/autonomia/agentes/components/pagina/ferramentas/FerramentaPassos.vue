@@ -145,6 +145,16 @@ const salvar = async ({ desligar = false } = {}) => {
   const resultado = validarPasso(passo.value, rascunho.value, true);
   erros.value = resultado.erros;
   if (focarPrimeiroErro(resultado.erros)) return;
+  // Salvar de um passo só confere também a chave de acesso (passo 4): mudou o pedido, a chave guardada não vai junto,
+  // e o passo 4 abre pedindo a chave de novo antes de qualquer envio (sem isso, ela iria vazia e se perderia).
+  const daChave =
+    passo.value === 4 ? {} : validarPasso(4, rascunho.value, true).erros;
+  if (Object.keys(daChave).length) {
+    await irParaPasso(4);
+    erros.value = daChave;
+    focarPrimeiroErro(daChave);
+    return;
+  }
   if (segredosSemNome(rascunho.value).length) {
     salvarDepois.value = { desligar };
     confirmacaoDeRemover.value?.abrir();

@@ -1,7 +1,8 @@
 # "Vão receber" before creating a journey campaign (#993, PRD §6.4, B8, B1b; decision of 05/10):
 # the exact number the send will reach, with the same rules the creators and the send use, and
 # each person counted in ONE reason only, in this order:
-#   channel_disabled → opted_out (#737) → suppressed e-mail (unsubscribed / bounced / suppressed)
+#   channel_disabled → opted_out (#737) → blocked (chat#2733) → suppressed e-mail (unsubscribed /
+#   bounced / suppressed)
 #   → missing_variables (a variable without value and without default, "falta {{N}}").
 # Eligibility is CampaignJourney::AudienceContacts (row consent: the row had that mobile/e-mail
 # and the contact still has it). Variables: CampaignJourney::VariableBindings (WhatsApp Oficial)
@@ -46,9 +47,19 @@ class CampaignJourney::RecipientPreview
     return result(ids.size, 'channel_disabled' => ids.size) unless phone_channel_enabled?
 
     contacts = @account.contacts.where(id: ids)
-    opted_out = contacts.where.not(opted_out_at: nil).count
-    missing, by_variable = missing_variables(contacts.where(opted_out_at: nil))
-    result(ids.size, { 'opted_out' => opted_out, 'missing_variables' => missing }, by_variable)
+    refusals = refusal_counts(refusals_by_id(contacts).values)
+    missing, by_variable = missing_variables(contacts.campaign_reachable)
+    result(ids.size, refusals.merge('missing_variables' => missing), by_variable)
+  end
+
+  # { contact_id => 'opted_out' | 'blocked' } of who cannot receive (Contact#campaign_refusal: refused before blocked).
+  def refusals_by_id(contacts)
+    contacts.campaign_unreachable.select(:id, :opted_out_at, :blocked).to_h { |contact| [contact.id, contact.campaign_refusal] }
+  end
+
+  # { 'opted_out' => n, 'blocked' => n }: each person in one reason only.
+  def refusal_counts(refusals)
+    [ContactCampaignReach::OPTED_OUT, ContactCampaignReach::BLOCKED].index_with { |reason| refusals.count(reason) }
   end
 
   def missing_variables(contacts)
@@ -119,10 +130,10 @@ class CampaignJourney::RecipientPreview
     matches = CampaignJourney::AudienceContacts.email_matches(@campaign_import, account: @account)
     return result(matches.size, 'channel_disabled' => matches.size) unless CampaignJourney::AudienceContacts.email_enabled?(@campaign_import)
 
-    opted_ids = @account.contacts.where(id: matches.map(&:contact_id)).where.not(opted_out_at: nil).pluck(:id).to_set
-    reachable = matches.reject { |match| opted_ids.include?(match.contact_id) }
-    suppressed = suppression_buckets(reachable.map(&:email))
-    result(matches.size, { 'opted_out' => matches.size - reachable.size }.merge(suppressed))
+    by_id = refusals_by_id(@account.contacts.where(id: matches.map(&:contact_id)))
+    reachable = matches.reject { |match| by_id.key?(match.contact_id) }
+    refusals = refusal_counts(matches.filter_map { |match| by_id[match.contact_id] })
+    result(matches.size, refusals.merge(suppression_buckets(reachable.map(&:email))))
   end
 
   def suppression_buckets(emails)

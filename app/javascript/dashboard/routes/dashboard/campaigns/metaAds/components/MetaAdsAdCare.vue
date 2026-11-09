@@ -8,16 +8,20 @@ import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import { withWords } from '../dinheiroDoAnuncio';
 import { soltarMidia } from '../midiaDoAnuncio';
 import { duplicarAnuncio, trocarCriativo } from '../criacaoNaMeta';
+import { mudarStatus } from '../gestaoDoAnuncio';
 import MetaAdsAdStatus from './MetaAdsAdStatus.vue';
 import MetaAdsMediaPicker from './MetaAdsMediaPicker.vue';
 
 // Anúncios da Meta (#2198, #2778): cuidar de um anúncio que já existe, além de pausar e do orçamento.
 // - Duplicar: cópia da campanha inteira, pausada, com orçamento próprio igual ao do original. A confirmação diz o
 //   valor por extenso; depois, o "Ativar anúncio" da cópia fica ali mesmo.
-// - Trocar foto ou texto: a Meta não muda o criativo; o servidor cria outro e põe no anúncio. A Meta analisa de novo,
-//   e a confirmação diz isso antes. Só quando a chamada real confirmou (`can_swap_creative`); sem isso, um botão só,
-//   "Trocar a foto (cria uma cópia)": o mesmo diálogo cria uma cópia pausada já com a foto e o texto novos, e a
-//   confirmação lembra de pausar este quando ativar a cópia, para não gastar em dobro. "Duplicar" fica como link.
+// - Trocar foto ou texto (ligado para todos em #2804): a Meta não muda o criativo; o servidor cria outro e põe no
+//   anúncio. A Meta analisa de novo, e a confirmação diz isso antes. Se a Meta recusar trocar neste anúncio
+//   (`swap_refused`), o mesmo diálogo oferece a cópia pausada já com a foto e o texto novos, e a confirmação lembra de
+//   pausar este quando ativar a cópia. Com a cópia no ar, o botão "Pausar o original" fica ali mesmo, e volta depois de
+//   recarregar pela gestão (`activeCopy`, #2804). Só o texto mudou: as frases falam do texto novo, não de foto.
+// - Cópia não confirmada (a Meta não respondeu e ela não apareceu na busca): a pessoa confere no Gerenciador de
+//   Anúncios e cria de novo pela tela, com a mesma chave (#2804).
 // - Carrossel e post impulsionado (`creativeKind` vazio) não têm uma foto para trocar: só o "Duplicar".
 // Só aparece em anúncio criado pelo Chat2You (opção a do Rodrigo, 09/11); a gestão diz isso (`created_here`).
 const props = defineProps({
@@ -26,12 +30,17 @@ const props = defineProps({
   image: { type: String, default: '' },
   text: { type: String, default: '' },
   budget: { type: Object, default: null },
-  canSwap: { type: Boolean, default: false },
   // 'image' ou 'video': o que dá para trocar (foto por foto, vídeo por vídeo). Vazio: só duplicar.
   creativeKind: { type: String, default: '' },
+  // A situação escolhida do original ('ACTIVE' | 'PAUSED' …): o "Pausar o original" só aparece com ele ativo.
+  originalStatus: { type: String, default: '' },
+  // O anúncio no Gerenciador de Anúncios da Meta, para conferir a cópia não confirmada.
+  managerUrl: { type: String, default: '' },
+  // { ad_id, name } da cópia com a foto ou o texto novos que está ligada no lugar deste (a gestão diz, #2804).
+  activeCopy: { type: Object, default: null },
 });
 
-const emit = defineEmits(['reviewing']);
+const emit = defineEmits(['reviewing', 'originalPaused']);
 
 const { t, locale } = useI18n();
 const KEY = 'CRM_KANBAN.META_ADS_HUB.GESTAO.CARE';
@@ -44,6 +53,8 @@ const copyGestao = ref(null);
 // de pausar o original).
 const copyImage = ref('');
 const fromSwap = ref(false);
+// A cópia desta vez saiu só com o texto novo (a foto ficou a mesma).
+const copyTextOnly = ref(false);
 
 const duplicateHint = computed(() => {
   const budget = props.budget;
@@ -54,12 +65,37 @@ const duplicateHint = computed(() => {
     : t(`${KEY}.DUPLICATE_HINT`, { value });
 });
 
+// A foto atual do anúncio, como o seletor de mídia mostra.
+const current = computed(() => {
+  if (!props.image) return null;
+  return props.creativeKind === 'video'
+    ? {
+        kind: 'video',
+        url: props.image,
+        poster: props.image,
+        source: 'current',
+      }
+    : { kind: 'image', url: props.image, source: 'current' };
+});
+
+// A mídia escolhida não é a de agora. Pela origem, e não pela identidade: o ref devolve o objeto embrulhado (proxy), que
+// nunca é o mesmo da foto atual.
+const isNewMedia = item => Boolean(item) && item.source !== 'current';
+
 const showCopy = (created, gestao, { image = '', swap = false } = {}) => {
   copy.value = created;
   copyGestao.value = gestao;
   copyImage.value = image;
   fromSwap.value = swap;
+  copyTextOnly.value = swap && !image;
 };
+
+const copyDoneKey = computed(() => {
+  if (copyImage.value) return `${KEY}.SWAP_AS_COPY_DONE`;
+  return copyTextOnly.value
+    ? `${KEY}.SWAP_AS_COPY_DONE_TEXT`
+    : `${KEY}.DUPLICATE_DONE`;
+});
 
 const copyHint = computed(() => {
   const budget = props.budget;
@@ -85,60 +121,127 @@ const copyError = error => {
   return t(surelyNothing(error) ? `${KEY}.DUPLICATE_ERROR` : `${KEY}.UNSURE`);
 };
 
+// A cópia que ficou não confirmada: o pedido como foi (`creative` e se veio de "Trocar"), para o recriar mandar igual.
+const unconfirmed = ref(null);
+// A cópia é outra campanha: o Gerenciador abre na lista de anúncios da conta, sem marcar o original.
+const managerListUrl = computed(() => {
+  try {
+    const url = new URL(props.managerUrl);
+    url.searchParams.delete('selected_ad_ids');
+    return url.toString();
+  } catch {
+    return props.managerUrl;
+  }
+});
+// A pessoa achou a cópia no Gerenciador: o cartão fecha, sem chamar a Meta.
+const copyFound = () => {
+  unconfirmed.value = null;
+};
+
+// Duplicar, a cópia com a foto nova e o recriar passam por aqui. Não confirmada: no lugar do aviso que some, o cartão
+// diz para conferir no Gerenciador e oferece criar de novo.
+const runCopy = async (creative, { swap = false, recriar = false } = {}) => {
+  try {
+    const created = await duplicarAnuncio(props.adId, creative, { recriar });
+    // Só o texto mudou: a cópia não tem foto nova para mostrar.
+    const newPhoto = creative && isNewMedia(creative.media);
+    showCopy(
+      created,
+      { status: 'PAUSED', effective_status: 'PAUSED', can_change: true },
+      {
+        image: newPhoto ? creative.media.poster || creative.media.url : '',
+        swap,
+      }
+    );
+    unconfirmed.value = null;
+    return true;
+  } catch (error) {
+    if (error?.response?.data?.error === 'unconfirmed') {
+      unconfirmed.value = { creative, swap };
+      return true;
+    }
+    useAlert(copyError(error));
+    return false;
+  }
+};
+
 const duplicate = async () => {
   saving.value = true;
-  try {
-    showCopy(await duplicarAnuncio(props.adId), {
-      status: 'PAUSED',
-      effective_status: 'PAUSED',
-      can_change: true,
-    });
-    duplicateDialog.value?.close();
-  } catch (error) {
-    useAlert(copyError(error));
-  } finally {
-    saving.value = false;
-  }
+  if (await runCopy(null)) duplicateDialog.value?.close();
+  saving.value = false;
+};
+
+const recreate = async () => {
+  saving.value = true;
+  await runCopy(unconfirmed.value.creative, {
+    swap: unconfirmed.value.swap,
+    recriar: true,
+  });
+  saving.value = false;
 };
 
 const copyChanged = status => {
   copyGestao.value = { ...copyGestao.value, status, effective_status: status };
 };
 
+// A cópia com a foto ou o texto novos está ligada e o original também: o botão para pausar o original, com confirmação.
+// A cópia feita agora vale pelo que a tela sabe dela; depois de recarregar, pela gestão (`activeCopy`).
+const pauseDialog = ref(null);
+const replacementName = computed(() => {
+  if (props.originalStatus !== 'ACTIVE') return '';
+  // A cópia desta vez, ligada; senão, a que a gestão diz que está ligada (pode ser outra, de antes).
+  if (copy.value && fromSwap.value && copyGestao.value?.status === 'ACTIVE') {
+    return copy.value.name;
+  }
+  const other = props.activeCopy;
+  return other && other.ad_id !== copy.value?.ad_id ? other.name : '';
+});
+const showPauseOriginal = computed(() => Boolean(replacementName.value));
+const pauseOriginal = async () => {
+  saving.value = true;
+  try {
+    await mudarStatus(props.adId, 'PAUSED');
+    emit('originalPaused');
+    pauseDialog.value?.close();
+    useAlert(t(`${KEY}.PAUSE_ORIGINAL_DONE`));
+  } catch {
+    useAlert(t('CRM_KANBAN.META_ADS_HUB.GESTAO.STATUS.ERROR'));
+  } finally {
+    saving.value = false;
+  }
+};
+
 // Trocar: a mídia e o texto atuais já vêm na tela; "Continuar" só liga quando algo mudou, e pede a confirmação. A foto
 // atual chega só com o endereço (`source: 'current'`): sem as medidas, o seletor não diz o formato dela, e ela não vai
 // no pedido (o servidor mantém a do anúncio).
 const changeDialog = ref(null);
-const current = computed(() => {
-  if (!props.image) return null;
-  return props.creativeKind === 'video'
-    ? {
-        kind: 'video',
-        url: props.image,
-        poster: props.image,
-        source: 'current',
-      }
-    : { kind: 'image', url: props.image, source: 'current' };
-});
 const media = ref(null);
 // Enquanto a foto nova sobe para a Meta, o "Continuar" espera.
 const uploading = ref(false);
 const newText = ref('');
 const confirming = ref(false);
+// A Meta recusou trocar neste anúncio: o diálogo vira a confirmação da cópia com a foto nova.
+const asCopy = ref(false);
 // Texto vazio não vale: o anúncio precisa de texto.
 const changed = computed(
   () =>
     Boolean(media.value) &&
     newText.value.trim() !== '' &&
-    (media.value !== current.value || newText.value.trim() !== props.text)
+    (isNewMedia(media.value) || newText.value.trim() !== props.text)
+);
+
+// A foto escolhida não é a de agora: as frases da cópia falam de foto; senão, de texto.
+const photoChanged = computed(() => isNewMedia(media.value));
+const refusedNote = computed(() =>
+  t(photoChanged.value ? `${KEY}.SWAP_REFUSED` : `${KEY}.SWAP_REFUSED_TEXT`)
 );
 
 const changeTitle = computed(() => {
-  if (!props.canSwap) {
+  if (asCopy.value) {
     return t(
-      confirming.value
+      photoChanged.value
         ? `${KEY}.SWAP_AS_COPY_CONFIRM_TITLE`
-        : `${KEY}.SWAP_AS_COPY`
+        : `${KEY}.SWAP_AS_COPY_CONFIRM_TITLE_TEXT`
     );
   }
   return t(
@@ -147,38 +250,18 @@ const changeTitle = computed(() => {
 });
 const saveLabel = computed(() => {
   if (!confirming.value) return t(`${KEY}.CONTINUE`);
-  return t(
-    props.canSwap ? `${KEY}.CHANGE_CONFIRM` : `${KEY}.DUPLICATE_CONFIRM`
-  );
-});
-
-const hintKey = computed(() => {
-  if (!props.creativeKind) return `${KEY}.HINT_DUPLICATE`;
-  return props.canSwap ? `${KEY}.HINT` : `${KEY}.HINT_COPY`;
+  return t(asCopy.value ? `${KEY}.DUPLICATE_CONFIRM` : `${KEY}.CHANGE_CONFIRM`);
 });
 
 const openChange = () => {
   media.value = current.value;
   newText.value = props.text;
   confirming.value = false;
+  asCopy.value = false;
   changeDialog.value?.open();
 };
 const closeChange = () => {
-  if (media.value !== current.value) soltarMidia(media.value);
-  changeDialog.value?.close();
-};
-
-const saveAsCopy = async creative => {
-  // Só o texto mudou: a cópia não tem foto nova para mostrar.
-  const newPhoto = creative.media !== current.value;
-  showCopy(
-    await duplicarAnuncio(props.adId, creative),
-    { status: 'PAUSED', effective_status: 'PAUSED', can_change: true },
-    {
-      image: newPhoto ? creative.media.poster || creative.media.url : '',
-      swap: true,
-    }
-  );
+  if (isNewMedia(media.value)) soltarMidia(media.value);
   changeDialog.value?.close();
 };
 
@@ -189,14 +272,9 @@ const saveChange = async () => {
   }
   saving.value = true;
   const creative = { media: media.value, text: newText.value.trim() };
-  if (!props.canSwap) {
-    try {
-      await saveAsCopy(creative);
-    } catch (error) {
-      useAlert(copyError(error));
-    } finally {
-      saving.value = false;
-    }
+  if (asCopy.value) {
+    if (await runCopy(creative, { swap: true })) changeDialog.value?.close();
+    saving.value = false;
     return;
   }
   try {
@@ -209,9 +287,12 @@ const saveChange = async () => {
     useAlert(t(`${KEY}.CHANGE_DONE`));
     changeDialog.value?.close();
   } catch (error) {
-    useAlert(
-      t(surelyNothing(error) ? `${KEY}.CHANGE_ERROR` : `${KEY}.CHANGE_UNSURE`)
-    );
+    if (error?.response?.data?.error === 'swap_refused') asCopy.value = true;
+    else {
+      useAlert(
+        t(surelyNothing(error) ? `${KEY}.CHANGE_ERROR` : `${KEY}.CHANGE_UNSURE`)
+      );
+    }
   } finally {
     saving.value = false;
   }
@@ -226,8 +307,9 @@ const saveChange = async () => {
     <h3 class="m-0 text-base font-semibold text-n-slate-12">
       {{ $t(`${KEY}.TITLE`) }}
     </h3>
+    <!-- Com uma cópia não confirmada, a única ação é resolver ela: nada de criar outra no meio. -->
     <Button
-      v-if="!creativeKind"
+      v-if="!creativeKind && !unconfirmed"
       data-ad-care-duplicate
       :variant="copy ? 'faded' : null"
       :color="copy ? 'slate' : null"
@@ -237,7 +319,7 @@ const saveChange = async () => {
       @click="duplicateDialog?.open()"
     />
     <div
-      v-else-if="canSwap"
+      v-else-if="!unconfirmed"
       class="flex flex-col gap-2 sm:flex-row sm:flex-wrap"
     >
       <Button
@@ -259,30 +341,52 @@ const saveChange = async () => {
         @click="openChange"
       />
     </div>
-    <!-- Com a cópia criada, o "Ativar anúncio" dela é o único botão azul. -->
-    <Button
-      v-else
-      data-ad-care-change
-      :variant="copy ? 'faded' : null"
-      :color="copy ? 'slate' : null"
-      icon="i-lucide-image"
-      :label="$t(`${KEY}.SWAP_AS_COPY`)"
-      class="w-full sm:w-auto sm:self-start"
-      @click="openChange"
-    />
-    <p class="m-0 text-sm text-n-slate-11">
-      {{ $t(hintKey) }}
+    <p v-if="!unconfirmed" class="m-0 text-sm text-n-slate-11">
+      {{ $t(creativeKind ? `${KEY}.HINT` : `${KEY}.HINT_DUPLICATE`) }}
     </p>
-    <button
-      v-if="creativeKind && !canSwap"
-      type="button"
-      data-ad-care-duplicate
-      class="inline-flex min-h-11 items-center gap-1.5 self-start rounded-lg border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-      @click="duplicateDialog?.open()"
+
+    <!-- Cópia não confirmada: conferir no Gerenciador e, se ela não estiver lá, criar de novo. -->
+    <div
+      v-if="unconfirmed"
+      data-ad-care-unconfirmed
+      role="status"
+      class="flex flex-col items-start gap-3 rounded-xl bg-n-amber-2 p-4"
     >
-      <span class="i-lucide-copy size-4" aria-hidden="true" />
-      {{ $t(`${KEY}.DUPLICATE`) }}
-    </button>
+      <p class="m-0 flex gap-2 text-sm text-n-amber-12">
+        <span
+          class="i-lucide-circle-help mt-0.5 size-4 shrink-0"
+          aria-hidden="true"
+        />
+        {{ $t(`${KEY}.COPY_UNCONFIRMED`) }}
+      </p>
+      <a
+        v-if="managerUrl"
+        :href="managerListUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+      >
+        {{ $t(`${KEY}.OPEN_MANAGER`) }}
+        <span class="i-lucide-external-link size-4" aria-hidden="true" />
+      </a>
+      <Button
+        data-ad-care-recreate
+        outline
+        :label="$t(`${KEY}.RECREATE`)"
+        :is-loading="saving"
+        :disabled="saving"
+        class="w-full sm:w-auto"
+        @click="recreate"
+      />
+      <button
+        type="button"
+        data-ad-care-copy-found
+        class="inline-flex min-h-11 items-center self-start rounded-lg border-0 bg-transparent p-0 text-sm font-medium text-n-slate-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+        @click="copyFound"
+      >
+        {{ $t(`${KEY}.COPY_FOUND`) }}
+      </button>
+    </div>
 
     <!-- A cópia recém-criada: pausada, com o "Ativar anúncio" dela à mão. -->
     <div
@@ -299,11 +403,7 @@ const saveChange = async () => {
           class="size-14 shrink-0 rounded-lg object-cover"
         />
         <p class="m-0 text-sm font-semibold text-n-slate-12">
-          {{
-            copyImage
-              ? $t(`${KEY}.SWAP_AS_COPY_DONE`, { name: copy.name })
-              : $t(`${KEY}.DUPLICATE_DONE`, { name: copy.name })
-          }}
+          {{ $t(copyDoneKey, { name: copy.name }) }}
         </p>
       </div>
       <p class="m-0 text-xs text-n-slate-11">
@@ -316,8 +416,26 @@ const saveChange = async () => {
         :budget="copy.budget"
         :activate-note="fromSwap ? $t(`${KEY}.SWAP_AS_COPY_ACTIVATE`) : ''"
         tone="light"
-        can-manage
+        :can-manage="!showPauseOriginal"
         @changed="copyChanged"
+      />
+    </div>
+
+    <!-- A cópia com a foto ou o texto novos ligada: pausar o original para não gastar em dobro, ali mesmo. -->
+    <div
+      v-if="showPauseOriginal"
+      data-ad-care-pause-original
+      class="flex flex-col items-start gap-2 rounded-xl bg-n-alpha-1 p-4"
+    >
+      <p class="m-0 text-sm text-n-slate-12">
+        {{ $t(`${KEY}.PAUSE_ORIGINAL_HINT`, { name: replacementName }) }}
+      </p>
+      <!-- Enquanto isso, a cópia mostra só o selo: o único botão é este. -->
+      <Button
+        icon="i-lucide-pause"
+        :label="$t(`${KEY}.PAUSE_ORIGINAL`)"
+        class="w-full sm:w-auto"
+        @click="pauseDialog?.open()"
       />
     </div>
 
@@ -370,7 +488,7 @@ const saveChange = async () => {
           class="i-lucide-clock mt-0.5 size-4 shrink-0"
           aria-hidden="true"
         />
-        {{ canSwap ? $t(`${KEY}.CHANGE_REVIEW`) : copyHint }}
+        {{ asCopy ? `${refusedNote} ${copyHint}` : $t(`${KEY}.CHANGE_REVIEW`) }}
       </p>
       <div v-else class="flex min-w-0 flex-col gap-4">
         <MetaAdsMediaPicker
@@ -411,5 +529,20 @@ const saveChange = async () => {
         </div>
       </template>
     </Dialog>
+    <!-- Pausar o original (#2804): a mesma confirmação do topo do anúncio. -->
+    <Dialog
+      ref="pauseDialog"
+      type="alert"
+      :title="
+        $t('CRM_KANBAN.META_ADS_HUB.GESTAO.STATUS.PAUSE_TITLE', {
+          name: adName,
+        })
+      "
+      :description="$t('CRM_KANBAN.META_ADS_HUB.GESTAO.STATUS.PAUSE_HINT')"
+      :confirm-button-label="$t(`${KEY}.PAUSE_ORIGINAL`)"
+      :cancel-button-label="$t(`${KEY}.CANCEL`)"
+      :is-loading="saving"
+      @confirm="pauseOriginal"
+    />
   </section>
 </template>
