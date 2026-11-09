@@ -162,9 +162,12 @@ RSpec.describe Autonomia::Automacao::Catalogo do
   # gatilho de etapa.
   it 'leva a resposta durante a espera como valor do alvo, só para o "esperar até"', :aggregate_failures do
     na_espera = catalogo.gerado['valores'].select { |item| item['so_na_espera'] }
-    respostas, entrada = na_espera.partition { |item| item['base'] == 'conversa' }
+    entrada, respostas = na_espera.partition { |item| item['base'] == 'card' }
 
-    expect(respostas.pluck('caminho')).to eq(%w[conversa.cliente_respondeu conversa.equipe_respondeu])
+    expect(respostas.pluck('caminho')).to eq(%w[conversa.cliente_respondeu conversa.equipe_respondeu conversa.responsavel_respondeu
+                                                gatilho.repetiu])
+    expect(respostas.pluck('base')).to eq(%w[conversa conversa conversa gatilho])
+    expect(catalogo.gerado['alvos'].values).to all(include('gatilho'))
     expect(entrada).to contain_exactly(include('caminho' => 'card.entrou_de_novo', 'base' => 'card',
                                                'so_nos_gatilhos' => ['card.entrou_na_etapa']))
     expect(na_espera).to all(satisfy { |item| item['so_no_gatilho'].nil? && item['opcoes'].pluck('valor') == [true, false] })

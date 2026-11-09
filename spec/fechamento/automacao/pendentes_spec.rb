@@ -6,7 +6,7 @@ require 'rails_helper'
 # passando (F9.8).
 RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model do
   pendentes = {
-    2 => ['Lead do anúncio atendido em 5 minutos', 'G29 (card criado pelo formulário de um anúncio e o nome dele), G30, G31, G32'],
+    # O 2 saiu com o #2762 (G29), depois do #2773 (G30) e do #2800 (G32); o spec de ponta a ponta dele é o #2856.
     # O 4 tem spec próprio à risca (exemplo_04_aluno_que_falta_spec.rb); a G50 (a segunda falta com a primeira ainda
     # esperando) fechou com o g50_reentrada_spec.rb; esperam a G44 (passos 6 e 8, link de uma página escolhida) e a G18
     # (passo 10, fechar o card de retenção).
@@ -19,10 +19,8 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     7 => ['Black Friday para os clientes antigos primeiro', 'G37 (público com exclusão), G38, G39, G5, G7, G14, G15'],
     8 => ['Funcionário novo no plano da empresa', 'G24 (2ª automação em cada card criado), G1, G4, G5, G7, G13, G17, G20, G22, G27'],
     9 => ['Prospecção que roda sozinha toda semana', 'G7 (segunda às 8h), G3, G4, G12, G14, G21'],
-    # #2678 (auditoria dos termos, 07/11): o 10 tem spec próprio dos passos que montam, mas não segue o termo à risca.
+    # O 10 saiu com o lote 4 (#2682, G40) depois da G41 (#2759): o spec dele roda à risca, com a espera só pela Fernanda.
     # O 13 saiu com o lote 2 (#2679): o spec dele roda à risca, com o card ganho e a IA lendo o card.
-    10 => ['Cliente bravo vai direto para a gerente',
-           'G40 (esperar só a Fernanda), G41 (a instrução no resumir e avisar com a agente de IA atendendo), G28'],
     11 => ['Indicação que vira presente', 'G4, G17, G18 (criar o contato e o card do amigo e agir no card dele), G1, G5, G12, G16'],
     # O 12 tem spec próprio à risca (exemplo_12_visita_feita_spec.rb); só o campo do card no passo 3 espera a G48.
     12 => ['Visita que aconteceu decide o próximo passo', 'G48 (o campo do card acorda a espera), G5, G2, G3, G11, G14, G25, G35'],

@@ -633,6 +633,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_960000) do
     t.datetime "updated_at", null: false
     t.string "evento"
     t.jsonb "textos", default: {}, null: false
+    t.datetime "repetiu_em"
     t.boolean "paralela", default: false, null: false
     t.index ["account_id"], name: "index_autonomia_automacao_execucoes_on_account_id"
     t.index ["alvo_type", "alvo_id"], name: "index_autonomia_automacao_execucoes_on_alvo"

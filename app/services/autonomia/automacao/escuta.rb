@@ -14,6 +14,8 @@
 #   também quem espera pelo mesmo contato em outra conversa, no card ou no contato (#2680). Só o "esperar até": a ação
 #   que espera uma nova tentativa e o "esperar" de tempo seguem o relógio.
 # - `envio_atualizado`: a mensagem que a automação mandou foi entregue, lida ou falhou (#2680, `envio.situacao`).
+# O card que mudou e o gatilho que aconteceu de novo durante a espera (lote 4, #2682) acordam pelo Despertador, que
+# usa a mesma reserva daqui (`reservar`, `esperando_condicao?`).
 #
 # O gate é a flag do motor, lida da conta: conta sem o motor só lê a conta. Com o motor, uma consulta pela conta e pelo
 # tipo do gatilho; não há cache, porque a lista muda a cada automação ligada ou desligada, e uma lista velha ligaria o
@@ -27,7 +29,8 @@
 # deixa registro (não há execução onde pôr); o "esperar até" que não acordou segue pelo relógio.
 #
 # A execução acordada não herda a cadeia de quem a acordou: retoma a dela, gravada na Partida. A proteção contra
-# laço vale nas partidas; cada receita tem um número finito de esperas, então o despertar não gira sem fim.
+# laço vale nas partidas; cada receita tem um número finito de esperas, então o despertar não gira sem fim. O "decidir"
+# que decide a cada resposta (G31) volta à mesma espera, mas cada volta consome uma resposta nova do cliente.
 module Autonomia::Automacao::Escuta
   module_function
 
@@ -250,8 +253,11 @@ module Autonomia::Automacao::Escuta
                                      .where("autonomia_automacao_versoes.receita -> 'gatilho' ->> 'tipo' IN (?)", Array(tipo))
   end
 
+  # O "esperar até" e o "decidir" que espera a próxima resposta (G31). Este, só sem nova tentativa marcada: a do erro
+  # passageiro da IA segue o relógio, como a da ação.
   def esperando_condicao?(execucao)
-    ::Autonomia::Automacao::Roteiro.new(execucao.versao.receita).passo(execucao.cursor)&.fetch('tipo', nil) == 'esperar_ate'
+    passo = ::Autonomia::Automacao::Roteiro.new(execucao.versao.receita).passo(execucao.cursor)
+    passo&.fetch('tipo', nil) == 'esperar_ate' || (::Autonomia::Automacao::DecidirDeNovo.espera?(passo) && execucao.tentativas.zero?)
   end
 
   # A mesma reserva da varredura (marca nova, só se continua esperando), mantendo o `due_at`: é o prazo do "esperar até",

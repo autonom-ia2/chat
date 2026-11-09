@@ -72,6 +72,69 @@ describe('doAlvoDoGatilho', () => {
     ]);
   });
 
+  // #2716: o gatilho de conversa lê o card da conversa, só com a chave de funis.
+  it('no gatilho de conversa, oferece o card só a quem tem a chave de funis', () => {
+    const comCard = {
+      ...catalogo,
+      alvos: {
+        ...catalogo.alvos,
+        Conversation: ['conversa', 'contato', 'card'],
+      },
+    };
+    expect(
+      caminhos(doAlvoDoGatilho(comCard, 'conversa.criada', false, true))
+    ).toEqual([
+      'conversa.status',
+      'card.valor',
+      'contato.nome',
+      'mensagem.tipo',
+    ]);
+    expect(caminhos(doAlvoDoGatilho(comCard, 'conversa.criada'))).toEqual([
+      'conversa.status',
+      'contato.nome',
+      'mensagem.tipo',
+    ]);
+    expect(
+      caminhos(doAlvoDoGatilho(comCard, 'card.entrou_na_etapa', false, false))
+    ).toContain('card.valor');
+  });
+
+  // Decisão 19: o card da conversa (#2716) é só para ler. Mesmo com a base
+  // 'card' nos alvos da conversa e a chave de funis, a ação que lê o card no
+  // caminho fica fora do gatilho de conversa.
+  it('com o card da conversa, a ação no card continua fora do gatilho de conversa', () => {
+    const comCardEPassos = {
+      ...catalogo,
+      alvos: {
+        ...catalogo.alvos,
+        Conversation: ['conversa', 'contato', 'card'],
+      },
+      passos: [
+        {
+          tipo: 'acao',
+          nome: 'card_fechar',
+          caminho: { id: { $valor: 'card.id' } },
+        },
+        {
+          tipo: 'acao',
+          nome: 'conversa_status',
+          caminho: { id: { $valor: 'conversa.id' } },
+        },
+      ],
+    };
+    const nomes = dados => dados.passos.map(item => item.nome);
+
+    expect(
+      nomes(doAlvoDoGatilho(comCardEPassos, 'conversa.criada', false, true))
+    ).toEqual(['conversa_status']);
+    expect(
+      nomes(doAlvoDoGatilho(comCardEPassos, 'conversa.criada', true, true))
+    ).toEqual(['conversa_status']);
+    expect(
+      nomes(doAlvoDoGatilho(comCardEPassos, 'card.entrou_na_etapa'))
+    ).toEqual(['card_fechar', 'conversa_status']);
+  });
+
   it('sem gatilho escolhido, devolve o catálogo como veio', () => {
     expect(doAlvoDoGatilho(catalogo, undefined)).toBe(catalogo);
     expect(doAlvoDoGatilho(null, 'conversa.criada')).toBeNull();

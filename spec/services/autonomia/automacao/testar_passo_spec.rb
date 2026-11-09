@@ -51,8 +51,8 @@ RSpec.describe Autonomia::Automacao::TestarPasso, :automacao_motor do
       definicao = automacao_ligada(account, admin, [passos[tipo]])
 
       perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(definicao, conversa) }
-      teste = described_class.new(receita: definicao.versao_ativa.receita, passo_id: 'p1', conta: account,
-                                  account_user: admin.account_users.first).resultado(com_valores: true)
+      pedido = described_class::Pedido.new(receita: definicao.versao_ativa.receita, passo_id: 'p1')
+      teste = described_class.new(pedido: pedido, conta: account, account_user: admin.account_users.first).resultado(com_valores: true)
 
       expect(corpos.size).to eq(2)
       expect(o_que_vai_a_ia(corpos.last)).to eq(o_que_vai_a_ia(corpos.first))
@@ -66,8 +66,8 @@ RSpec.describe Autonomia::Automacao::TestarPasso, :automacao_motor do
     receita = { 'gatilho' => { 'tipo' => 'card.criado' }, 'passos' => [passos['resumir']] }
     allow(Autonomia::Automacao::Ensaio).to receive(:gatilho_suportado?).and_return(false)
 
-    teste = described_class.new(receita: receita, passo_id: 'p1', conta: account,
-                                account_user: admin.account_users.first).resultado(com_valores: false)
+    pedido = described_class::Pedido.new(receita: receita, passo_id: 'p1')
+    teste = described_class.new(pedido: pedido, conta: account, account_user: admin.account_users.first).resultado(com_valores: false)
 
     expect(teste).to include(aviso: 'gatilho_sem_conversa', candidatas: [conversa.display_id])
   end
@@ -77,8 +77,8 @@ RSpec.describe Autonomia::Automacao::TestarPasso, :automacao_motor do
     conversa.messages.destroy_all
     receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [passos['resumir'].merge('le' => %w[mensagens_recentes])] }
 
-    teste = described_class.new(receita: receita, passo_id: 'p1', conta: account,
-                                account_user: admin.account_users.first).resultado(com_valores: true)
+    pedido = described_class::Pedido.new(receita: receita, passo_id: 'p1')
+    teste = described_class.new(pedido: pedido, conta: account, account_user: admin.account_users.first).resultado(com_valores: true)
 
     expect([teste[:conversa][:motivo], corpos]).to eq(['nada_para_ler', []])
   end

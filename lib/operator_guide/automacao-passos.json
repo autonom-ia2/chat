@@ -4,22 +4,19 @@
       "tipo": "conversa.criada",
       "alvo": "Conversation",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_CRIADA",
-      "grupo": "conversa",
-      "se_repetir": true
+      "grupo": "conversa"
     },
     {
       "tipo": "conversa.aberta",
       "alvo": "Conversation",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_ABERTA",
-      "grupo": "conversa",
-      "se_repetir": true
+      "grupo": "conversa"
     },
     {
       "tipo": "conversa.resolvida",
       "alvo": "Conversation",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_RESOLVIDA",
-      "grupo": "conversa",
-      "se_repetir": true
+      "grupo": "conversa"
     },
     {
       "tipo": "mensagem.criada",
@@ -38,8 +35,7 @@
       "tipo": "mensagem.falhou",
       "alvo": "Conversation",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.MENSAGEM_FALHOU",
-      "grupo": "conversa",
-      "se_repetir": true
+      "grupo": "conversa"
     },
     {
       "tipo": "card.criado",
@@ -48,7 +44,6 @@
       "grupo": "card",
       "requer": "automacao_gatilhos",
       "funil": true,
-      "se_repetir": true,
       "parametros": [
         {
           "nome": "funil_id",
@@ -65,7 +60,6 @@
       "grupo": "card",
       "requer": "automacao_gatilhos",
       "funil": true,
-      "se_repetir": true,
       "parametros": [
         {
           "nome": "etapa_id",
@@ -82,7 +76,6 @@
       "grupo": "card",
       "requer": "automacao_gatilhos",
       "funil": true,
-      "se_repetir": true,
       "parametros": [
         {
           "nome": "etapa_id",
@@ -99,7 +92,6 @@
       "grupo": "card",
       "requer": "automacao_gatilhos",
       "funil": true,
-      "se_repetir": true,
       "parametros": [
         {
           "nome": "funil_id",
@@ -116,7 +108,6 @@
       "grupo": "card",
       "requer": "automacao_gatilhos",
       "funil": true,
-      "se_repetir": true,
       "parametros": [
         {
           "nome": "funil_id",
@@ -134,7 +125,6 @@
       "requer": "automacao_gatilhos",
       "funil": true,
       "reunioes": true,
-      "se_repetir": true,
       "parametros": [
         {
           "nome": "funil_id",
@@ -158,7 +148,6 @@
       "requer": "automacao_gatilhos",
       "funil": true,
       "reunioes": true,
-      "se_repetir": true,
       "parametros": [
         {
           "nome": "funil_id",
@@ -182,7 +171,6 @@
       "requer": "automacao_gatilhos",
       "funil": true,
       "reunioes": true,
-      "se_repetir": true,
       "parametros": [
         {
           "nome": "funil_id",
@@ -326,6 +314,12 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
         },
         {
+          "nome": "data",
+          "peca": "data",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DATA"
+        },
+        {
           "nome": "hora",
           "peca": "hora",
           "obrigatorio": true,
@@ -365,6 +359,12 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
         },
         {
+          "nome": "data",
+          "peca": "data",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DATA"
+        },
+        {
           "nome": "hora",
           "peca": "hora",
           "obrigatorio": true,
@@ -402,6 +402,12 @@
           "peca": "dia_do_mes",
           "obrigatorio": false,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
+        },
+        {
+          "nome": "data",
+          "peca": "data",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DATA"
         },
         {
           "nome": "hora",
@@ -659,6 +665,48 @@
       ]
     },
     {
+      "caminho": "card.origem",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ORIGEM",
+      "opcoes": [
+        {
+          "valor": "formulario_de_anuncio",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FORMULARIO_DE_ANUNCIO"
+        },
+        {
+          "valor": "conversa",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.CONVERSA"
+        },
+        {
+          "valor": "agenda",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.AGENDA"
+        },
+        {
+          "valor": "prospeccao",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.PROSPECCAO"
+        },
+        {
+          "valor": "outro",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.OUTRO"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
+      "caminho": "card.anuncio",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ANUNCIO"
+    },
+    {
       "caminho": "reuniao.inicio",
       "base": "reuniao",
       "frase": "AUTOMACAO_LIVRE.VALORES.REUNIAO_INICIO",
@@ -818,9 +866,9 @@
       "so_na_espera": true
     },
     {
-      "caminho": "card.entrou_de_novo",
-      "base": "card",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ENTROU_DE_NOVO",
+      "caminho": "conversa.responsavel_respondeu",
+      "base": "conversa",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_RESPONSAVEL_RESPONDEU",
       "opcoes": [
         {
           "valor": true,
@@ -841,10 +889,33 @@
           "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
         }
       ],
-      "so_na_espera": true,
-      "so_nos_gatilhos": [
-        "card.entrou_na_etapa"
-      ]
+      "so_na_espera": true
+    },
+    {
+      "caminho": "gatilho.repetiu",
+      "base": "gatilho",
+      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_REPETIU",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ],
+      "so_na_espera": true
     },
     {
       "caminho": "envio.texto",
@@ -883,6 +954,15 @@
           "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
         }
       ]
+    },
+    {
+      "caminho": "falhou.texto",
+      "base": "falhou",
+      "frase": "AUTOMACAO_LIVRE.VALORES.FALHOU_TEXTO",
+      "so_nos_gatilhos": [
+        "mensagem.falhou"
+      ],
+      "so_nos_passos": true
     },
     {
       "caminho": "conversa.atributos",
@@ -957,6 +1037,31 @@
       ]
     },
     {
+      "caminho": "mensagem.tem_anexo",
+      "frase": "AUTOMACAO_LIVRE.VALORES.MENSAGEM_TEM_ANEXO",
+      "so_no_gatilho": "mensagem.criada",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
       "caminho": "mensagem.privada",
       "frase": "AUTOMACAO_LIVRE.VALORES.MENSAGEM_PRIVADA",
       "so_no_gatilho": "mensagem.criada",
@@ -987,18 +1092,23 @@
     "Conversation": [
       "conversa",
       "contato",
-      "envio"
+      "card",
+      "envio",
+      "gatilho",
+      "falhou"
     ],
     "Crm::Card": [
       "card",
       "conversa",
       "contato",
       "reuniao",
-      "envio"
+      "envio",
+      "gatilho"
     ],
     "Contact": [
       "contato",
-      "envio"
+      "envio",
+      "gatilho"
     ]
   },
   "grupos": [
@@ -1255,6 +1365,12 @@
           "peca": "passos",
           "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.NENHUM"
+        },
+        {
+          "nome": "de_novo",
+          "peca": "de_novo",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DE_NOVO"
         }
       ]
     },
@@ -2048,45 +2164,6 @@
           "nome": "custom_attribute_definition.attribute_values",
           "peca": "lista_de_textos",
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ATTRIBUTE_VALUES",
-          "obrigatorio": false
-        }
-      ]
-    },
-    {
-      "tipo": "acao",
-      "nome": "card_fechar",
-      "acao": "POST crm/cards/:id/close",
-      "grupo": "FUNIL",
-      "frase": "AUTOMACAO_LIVRE.PASSOS.CARD_FECHAR",
-      "requer": "automacao_gatilhos",
-      "funil": true,
-      "caminho": {
-        "id": {
-          "$valor": "card.id"
-        }
-      },
-      "fixos": {},
-      "campos": [
-        {
-          "nome": "result",
-          "peca": "escolha",
-          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.RESULT",
-          "obrigatorio": true,
-          "opcoes": [
-            {
-              "valor": "won",
-              "frase": "AUTOMACAO_LIVRE.OPCOES.RESULT.WON"
-            },
-            {
-              "valor": "lost",
-              "frase": "AUTOMACAO_LIVRE.OPCOES.RESULT.LOST"
-            }
-          ]
-        },
-        {
-          "nome": "lost_reason",
-          "peca": "texto",
-          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.LOST_REASON",
           "obrigatorio": false
         }
       ]

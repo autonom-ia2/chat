@@ -16,11 +16,13 @@ import LivreEtapa from './LivreEtapa.vue';
 import LivreRetornoPara from './LivreRetornoPara.vue';
 import LivreRetornoEnvio from './LivreRetornoEnvio.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
+import LivreDecidirDeNovo from './LivreDecidirDeNovo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
-import { caminhosProntos } from '../ia';
+import { caminhosProntos, deNovoPronto } from '../ia';
 import { campanhaPronta } from '../campanha';
 import { envioPronto, paraPronto } from '../retorno';
+import { faltaDaFrequencia } from '../recorrente';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { temDataIncompleta } from '../texto';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
@@ -38,6 +40,8 @@ const props = defineProps({
   // #2500 C2: o rascunho inteiro com o passo do painel, para o "Testar", e o
   // custo de cada passo ({ com_valores, custos }).
   receitaDoTeste: { type: Function, default: null },
+  // A automação já salva, para o "Testar este passo" (#2780).
+  automacaoId: { type: Number, default: null },
   custos: { type: Object, default: () => ({ com_valores: false, custos: {} }) },
   // #2499: os gatilhos que esta pessoa pode escolher (com a flag e a chave de
   // funis, os de card) e as escolhas deles. Sem a lista, todos os do catálogo.
@@ -47,7 +51,7 @@ const props = defineProps({
 
 const emit = defineEmits(['salvar', 'tirar', 'close']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const painel = ref(null);
 
 // { tipo: 'gatilho' | 'condicao' | 'passo', indice?, novo?, listaId?, valor }
@@ -110,7 +114,8 @@ const frase = computed(() => {
       rascunho.value,
       props.catalogo,
       t,
-      props.escolhasDoGatilho.nomes
+      props.escolhasDoGatilho.nomes,
+      locale.value
     );
   return fraseDaCondicao(rascunho.value, props.catalogo, t);
 });
@@ -248,6 +253,8 @@ const nativoPronto = campo => {
   // descrição e (no extrair) onde gravar; o destino escolhido.
   if (campo.peca === 'instrucao') return Boolean(valor?.trim());
   if (campo.peca === 'caminhos') return caminhosProntos(valor || []);
+  // G31: decidir de novo, se ligado, com caminho marcado sem passos e prazo.
+  if (campo.peca === 'de_novo') return deNovoPronto(rascunho.value);
   if (campo.peca === 'campos_extrair')
     return (
       (valor || []).length >= 1 &&
@@ -272,9 +279,11 @@ const acaoPronta = () =>
       campo => !vazio(lerCampo(rascunho.value, entrada.value, campo.nome))
     );
 
-// O que o gatilho pede e é obrigatório (a etapa) precisa vir antes do "Salvar".
+// O que o gatilho pede e é obrigatório (a etapa; no recorrente, o dia ou a data
+// da frequência escolhida) precisa vir antes do "Salvar".
 const gatilhoPronto = gatilho =>
   Boolean(gatilho.tipo) &&
+  !faltaDaFrequencia(gatilho) &&
   (
     props.catalogo.gatilhos.find(item => item.tipo === gatilho.tipo)
       ?.parametros || []
@@ -497,6 +506,14 @@ defineExpose({ abrir, fechar });
           :atributos-do="atributosDo"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
+        <LivreDecidirDeNovo
+          v-else-if="campo.peca === 'de_novo'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :passo="rascunho"
+          :unidades="catalogo.unidades"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
         <LivreIaCampo
           v-else-if="ehDeIa"
           :campo="campo"
@@ -545,6 +562,7 @@ defineExpose({ abrir, fechar });
         :custo="custos.custos[rascunho.id]"
         :mostra-custo="custos.com_valores"
         :pronto="podeSalvar"
+        :automacao-id="automacaoId"
       />
     </div>
 

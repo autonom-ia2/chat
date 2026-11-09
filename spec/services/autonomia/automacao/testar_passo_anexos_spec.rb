@@ -34,8 +34,8 @@ RSpec.describe Autonomia::Automacao::TestarPasso, :automacao_motor do
   end
 
   def testar(definicao)
-    described_class.new(receita: definicao.versao_ativa.receita, passo_id: 'p1', conta: account, account_user: admin.account_users.first,
-                        conversa_id: conversa.display_id).resultado(com_valores: false)[:conversa]
+    pedido = described_class::Pedido.new(receita: definicao.versao_ativa.receita, passo_id: 'p1', conversa_id: conversa.display_id)
+    described_class.new(pedido: pedido, conta: account, account_user: admin.account_users.first).resultado(com_valores: false)[:conversa]
   end
 
   it 'o teste manda à IA os mesmos anexos que a execução', :aggregate_failures do
