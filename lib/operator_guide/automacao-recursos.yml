@@ -257,6 +257,7 @@ fora:
       - crm/meta_ads_whatsapp_reports
       - crm/meta_ads_ad_management
       - crm/meta_ads_creation
+      - crm/meta_ads_ad_care
       - crm/meta_ads_cuidado
       - crm/meta_ads_lead_forms
       - crm/meta_ads_site_pages

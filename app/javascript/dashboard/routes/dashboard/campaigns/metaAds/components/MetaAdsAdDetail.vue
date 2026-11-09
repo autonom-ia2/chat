@@ -429,8 +429,9 @@ watch(() => props.adId, loadBudget);
 // Duplicar e trocar foto ou texto (#2778): com a flag de criar, para quem pode mexer, quando a conexão pode mudar o
 // anúncio. Só nos anúncios criados pelo Chat2You (opção a do Rodrigo, 09/11, `created_here`); nos outros, uma linha
 // diz para usar o Gerenciador de Anúncios. Depois de trocar, o detalhe já mostra a foto nova e a situação "em análise".
+// A gestão primeiro: sem ela (Anúncios sem login, #1960) não há o que cuidar, e a permissão nem é lida.
 const careAllowed = computed(
-  () => budgetOn.value && canManage.value && Boolean(gestao.value?.can_change)
+  () => budgetOn.value && Boolean(gestao.value?.can_change) && canManage.value
 );
 const showAdCare = computed(
   () => careAllowed.value && Boolean(gestao.value?.created_here)

@@ -87,7 +87,8 @@ connection.update!(
 
 # ---------- nomes e imagens (cache da Graph) ----------
 now = Time.current
-Crm::MetaAdObject.create!(account: account, meta_object_id: CAMPAIGN_ID, object_type: 'campaign', name: 'Vendas pelo WhatsApp · Outubro', fetched_at: now)
+Crm::MetaAdObject.create!(account: account, meta_object_id: CAMPAIGN_ID, object_type: 'campaign', name: 'Vendas pelo WhatsApp · Outubro',
+                          fetched_at: now)
 ADSETS.each do |id, name|
   Crm::MetaAdObject.create!(account: account, meta_object_id: id, object_type: 'adset', name: name, campaign_id: CAMPAIGN_ID,
                             destination_type: 'WHATSAPP', fetched_at: now)
