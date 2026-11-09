@@ -147,4 +147,51 @@ describe('#AutonomiaProspectingAPI', () => {
       { timeout: 20000 }
     );
   });
+
+  // "Suas listas" (#2775): listar, abrir, pôr, tirar, devolver, copiar e as
+  // listas da empresa.
+  it('chama as rotas das listas da Prospecção', () => {
+    const base = '/api/v1/accounts/85/autonomia/prospecting';
+    prospecting.getAudiences();
+    prospecting.getAudiences({
+      depois: { em: '2026-11-09T10:00:00.000001Z', id: 3 },
+      leadIds: [7, 8],
+    });
+    prospecting.getAudience(4, { after: 25 });
+    prospecting.getAudience(5);
+    prospecting.addLeadsToAudience(4, { leadIds: [1, 2] });
+    prospecting.removeFromAudience(4, { leadIds: [1] });
+    prospecting.restoreToAudience(4, { contactIds: [9] });
+    prospecting.copyAudience(4);
+    prospecting.getLeadAudiences(1);
+
+    expect(axiosMock.get).toHaveBeenCalledWith(`${base}/audiences`, {
+      params: {},
+    });
+    expect(axiosMock.get).toHaveBeenCalledWith(`${base}/audiences`, {
+      params: {
+        before_at: '2026-11-09T10:00:00.000001Z',
+        before_id: 3,
+        lead_ids: [7, 8],
+      },
+    });
+    expect(axiosMock.get).toHaveBeenCalledWith(`${base}/audiences/4`, {
+      params: { after: 25 },
+    });
+    expect(axiosMock.get).toHaveBeenCalledWith(`${base}/audiences/5`, {
+      params: {},
+    });
+    expect(axiosMock.post).toHaveBeenCalledWith(`${base}/audiences/4/leads`, {
+      lead_ids: [1, 2],
+    });
+    expect(axiosMock.delete).toHaveBeenCalledWith(
+      `${base}/audiences/4/members`,
+      { data: { contact_ids: [], lead_ids: [1] } }
+    );
+    expect(axiosMock.post).toHaveBeenCalledWith(`${base}/audiences/4/members`, {
+      contact_ids: [9],
+    });
+    expect(axiosMock.post).toHaveBeenCalledWith(`${base}/audiences/4/copy`);
+    expect(axiosMock.get).toHaveBeenCalledWith(`${base}/leads/1/audiences`);
+  });
 });

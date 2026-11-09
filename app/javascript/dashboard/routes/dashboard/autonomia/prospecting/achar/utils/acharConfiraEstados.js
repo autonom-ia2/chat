@@ -142,12 +142,15 @@ const tituloDoFunil = (t, { pronto, base }) => {
 const FORA_DO_PUBLICO = {
   opt_out: 'NAO_QUER',
   contact_blocked: 'BLOQUEADO',
+  blocked: 'BLOQUEADO',
+  unreachable: 'NAO_RECEBE',
   no_channel: 'SEM_CONTATO',
   same_contact: 'MESMA_PESSOA',
   discarded: 'TIRADA',
   not_found: 'SUMIU',
   invalid_data: 'NAO_DEU',
   unexpected_error: 'NAO_DEU',
+  already_in_list: 'JA_ESTAVA',
 };
 
 export const foraDoPublico = (t, fora = []) => {
@@ -164,11 +167,31 @@ export const foraDoPublico = (t, fora = []) => {
 export const textosDoPronto = (t, { pronto, destino, pessoa, nomeLista }) => {
   if (!pronto) return { titulo: '', detalhes: [] };
   const NS = 'PROSPECTING_ACHAR.PRONTO';
+  if (pronto.tipo === 'lista' && pronto.naLista != null) {
+    // Lista que já existia (#2775): o que entrou e o tamanho real dela agora
+    // (o número do servidor, não uma soma na tela).
+    return {
+      titulo: t(
+        `${NS}.LISTA.TITULO_EXISTENTE`,
+        { n: pronto.n, nome: pronto.nome },
+        pronto.n
+      ),
+      detalhes: [
+        t(`${NS}.LISTA.AGORA_TEM`, { n: pronto.naLista }, pronto.naLista),
+        ...foraDoPublico(t, pronto.fora),
+        t('PROSPECTING_ACHAR.FOLHA.ONDE_FICA'),
+      ],
+    };
+  }
   if (pronto.tipo === 'lista') {
     return {
       titulo: t(`${NS}.LISTA.TITULO`),
       detalhes: [
-        t(`${NS}.LISTA.DETALHE`, { nome: nomeLista, n: pronto.n }),
+        // Numa lista que já existia (#2775), o nome é o dela.
+        t(`${NS}.LISTA.DETALHE`, {
+          nome: pronto.nome || nomeLista,
+          n: pronto.n,
+        }),
         ...foraDoPublico(t, pronto.fora),
         t('PROSPECTING_ACHAR.FOLHA.ONDE_FICA'),
       ],
