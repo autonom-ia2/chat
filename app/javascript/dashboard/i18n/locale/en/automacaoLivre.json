@@ -133,6 +133,7 @@
       "TITULO": "Campaign name",
       "CAIXA_ID": "WhatsApp inbox",
       "ETIQUETAS": "Who has these labels",
+      "PUBLICO": "Who receives it",
       "NAME": "Name",
       "EMAIL": "Email",
       "PHONE_NUMBER": "Phone",

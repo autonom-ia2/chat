@@ -45,6 +45,20 @@ class Autonomia::Prospecting::AudienceFromLeads
     end
   end
 
+  # A linha de um contato no Público: nome, telefone e e-mail (hash e máscara) e a empresa. Também do passo campanha da
+  # Automação livre (G58, #2779), que grava o Público dos contatos que a execução criou.
+  def self.row_for(contact)
+    CampaignJourney::AudienceWriter::Row.new(
+      contact_id: contact.id, name: contact.name, phone: ConversationAudience::Reach.phone(contact),
+      email: ConversationAudience::Reach.email(contact), company_name: company_name(contact), extra_values: {}
+    )
+  end
+
+  # A mesma leitura da mensagem para empresa_cliente.nome (TemplateFields::ContactResolver).
+  def self.company_name(contact)
+    contact.try(:company)&.name.presence || contact.additional_attributes.to_h['company_name'].to_s.squish.presence
+  end
+
   # leads_scope: os leads que quem pede enxerga (Visibility, #732 item 6). O controller sempre passa; sem ele, a conta.
   def initialize(account:, user:, lead_ids:, name:, leads_scope: nil)
     @account = account
@@ -115,23 +129,11 @@ class Autonomia::Prospecting::AudienceFromLeads
     reason ||= 'same_contact' if rows.each_value.any? { |row| row.contact_id == contact.id }
     return left_out << left(lead_id, reason) if reason
 
-    rows[lead_id] = row_for(contact)
+    rows[lead_id] = self.class.row_for(contact)
   end
 
   def converter_for(lead)
     Autonomia::Prospecting::ContactConverter.new(lead: lead, user: @user, consent_veto: eligibility.consent_veto)
-  end
-
-  def row_for(contact)
-    CampaignJourney::AudienceWriter::Row.new(
-      contact_id: contact.id, name: contact.name, phone: ConversationAudience::Reach.phone(contact),
-      email: ConversationAudience::Reach.email(contact), company_name: company_name(contact), extra_values: {}
-    )
-  end
-
-  # A mesma leitura da mensagem para empresa_cliente.nome (TemplateFields::ContactResolver).
-  def company_name(contact)
-    contact.try(:company)&.name.presence || contact.additional_attributes.to_h['company_name'].to_s.squish.presence
   end
 
   def left(lead_id, reason_code)

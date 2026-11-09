@@ -233,7 +233,10 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 5, passo 8 (#2703): o card que a página de agendamento cria para a reunião (card do serviço já ganho)
     # nasce sem conversa, e a mensagem do gatilho de reunião nele pula com `sem_conversa`. Caminho escolhido: o Booker
     # liga ao card novo a conversa do contato na caixa da página, quando ela existe. A frente dona troca o nil pela sonda.
-    'G47' => nil
+    'G47' => nil,
+    # Do exemplo 9, passo 4 (#2779): a campanha vai só a quem os passos anteriores desta execução criaram
+    # (`publico: desta_execucao`), não a todo contato com a etiqueta do mês. Prova em g58_publico_da_execucao_spec.rb.
+    'G58' => -> { campo_do_passo?('campanha', 'publico') }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

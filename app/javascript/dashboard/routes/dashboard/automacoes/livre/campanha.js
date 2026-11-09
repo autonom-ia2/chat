@@ -33,11 +33,32 @@ export const modelosDaCaixa = caixa =>
 export const ehPropaganda = modelo =>
   String(modelo?.category).toUpperCase() === 'MARKETING';
 
+// G58 (#2779): quem recebe. "desta_execucao" manda só a quem os passos
+// anteriores desta vez criaram, sem etiquetas (o servidor recusa as duas
+// juntas).
+export const PUBLICO_DESTA_EXECUCAO = 'desta_execucao';
+export const publicoDaExecucao = passo =>
+  passo?.publico === PUBLICO_DESTA_EXECUCAO;
+
+const sem = (passo, chave) =>
+  Object.fromEntries(Object.entries(passo).filter(([nome]) => nome !== chave));
+
 // Só o que cada escolha precisa: o "não receber" não leva os campos do disparo.
-export const comFaz = (passo, faz) =>
-  faz === 'disparar'
-    ? { ...passo, faz, etiquetas: passo.etiquetas || [] }
-    : { id: passo.id, tipo: passo.tipo, faz };
+export const comFaz = (passo, faz) => {
+  if (faz !== 'disparar') return { id: passo.id, tipo: passo.tipo, faz };
+  if (publicoDaExecucao(passo)) return { ...sem(passo, 'etiquetas'), faz };
+  return { ...passo, faz, etiquetas: passo.etiquetas || [] };
+};
+
+// Trocar quem recebe: com as etiquetas, a lista volta (vazia se não havia);
+// desta execução, as etiquetas saem.
+export const comPublico = (passo, publico) =>
+  comFaz(
+    publico === PUBLICO_DESTA_EXECUCAO
+      ? { ...passo, publico }
+      : sem(passo, 'publico'),
+    'disparar'
+  );
 
 const escrito = texto => typeof texto === 'string' && texto.trim() !== '';
 
@@ -64,7 +85,7 @@ export const campanhaPronta = (passo, caixas) => {
     (passo.modelo.variaveis || []).every(partes =>
       (partes || []).some(escrito)
     ) &&
-    (passo.etiquetas || []).length > 0
+    (publicoDaExecucao(passo) || (passo.etiquetas || []).length > 0)
   );
 };
 

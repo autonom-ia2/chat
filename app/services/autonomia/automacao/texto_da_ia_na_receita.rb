@@ -18,15 +18,10 @@ class Autonomia::Automacao::TextoDaIaNaReceita
     [texto(:texto_da_ia_depois, id, caminho)]
   end
 
-  private
-
-  def escreve?(passo_id)
-    ::Autonomia::Automacao::Valores::PASSOS_QUE_ESCREVEM.include?(@receita.passos.find { |passo| passo['id'] == passo_id }&.dig('tipo'))
-  end
-
   # Os passos que podem ter rodado antes do passo `id`, em algum caminho: os anteriores da mesma lista, o passo que abre
   # o galho dele, e o que veio antes desse passo, com tudo o que estava dentro dos galhos dele. Os galhos de um mesmo
   # passo (então e senão, os caminhos do decidir, o "se vencer") nunca rodam juntos. nil quando o id não está na receita.
+  # Público: o passo campanha com o público desta execução (G58) pergunta aqui também.
   def rodam_antes(id, lista = @conteudo['passos'], antes = [])
     Array(lista).each do |passo|
       return antes if passo['id'] == id
@@ -38,6 +33,12 @@ class Autonomia::Automacao::TextoDaIaNaReceita
       antes += @receita.passos([passo])
     end
     nil
+  end
+
+  private
+
+  def escreve?(passo_id)
+    ::Autonomia::Automacao::Valores::PASSOS_QUE_ESCREVEM.include?(@receita.passos.find { |passo| passo['id'] == passo_id }&.dig('tipo'))
   end
 
   def texto(chave, id, caminho) = I18n.t("autonomia.automacao.receita.#{chave}", passo: id, caminho: caminho)
