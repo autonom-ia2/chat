@@ -86,6 +86,14 @@ const escolhasDoCaminho = computed(() =>
     .filter(([, origem]) => origem.escolher)
     .map(([param, origem]) => ({ param, ...origem }))
 );
+// #2660 lote B: ação sem nada a preencher ("marcar como cliente") diz isso,
+// em vez de abrir o painel vazio.
+const acaoSemCampos = computed(
+  () =>
+    entrada.value?.tipo === 'acao' &&
+    !camposDaAcao.value.length &&
+    !escolhasDoCaminho.value.length
+);
 
 const titulo = computed(() =>
   alvo.value
@@ -107,6 +115,15 @@ const frase = computed(() => {
   return fraseDaCondicao(rascunho.value, props.catalogo, t);
 });
 
+// G32: "quem atende a reunião" só nos gatilhos de reunião — os mesmos em que o
+// catálogo oferece os valores da reunião.
+const deReuniao = computed(() =>
+  Boolean(
+    props.catalogo.valores
+      ?.find(item => item.so_nos_gatilhos)
+      ?.so_nos_gatilhos.includes(props.catalogo.gatilho)
+  )
+);
 const gatilhosDoSeletor = computed(
   () => props.gatilhos || props.catalogo.gatilhos
 );
@@ -219,7 +236,10 @@ const nativoPronto = campo => {
   if (campo.peca === 'envio_do_retorno') return envioPronto(valor);
   if (campo.peca === 'destinatarios')
     return Boolean(
-      valor?.responsavel || valor?.times?.length || valor?.pessoas?.length
+      valor?.responsavel ||
+        valor?.da_reuniao ||
+        valor?.times?.length ||
+        valor?.pessoas?.length
     );
   // G15: a agente de IA escolhida.
   if (campo.peca === 'agente_de_ia') return Number.isInteger(valor);
@@ -259,7 +279,11 @@ const gatilhoPronto = gatilho =>
       ?.parametros || []
   )
     .filter(parametro => parametro.obrigatorio)
-    .every(parametro => !vazio(gatilho[parametro.nome]));
+    .every(parametro =>
+      parametro.peca === 'antes'
+        ? Number.isInteger(gatilho[parametro.nome]?.valor)
+        : !vazio(gatilho[parametro.nome])
+    );
 
 const podeSalvar = computed(() => {
   if (avancada.value || !rascunho.value) return false;
@@ -296,6 +320,14 @@ defineExpose({ abrir, fechar });
         class="mb-0 text-[0.9375rem] text-n-slate-11"
       >
         {{ $t('AUTOMACAO_LIVRE.CONFIRA.AVANCADA_DICA') }}
+      </p>
+
+      <p
+        v-if="acaoSemCampos"
+        data-sem-campos-dica
+        class="mb-0 text-[0.9375rem] text-n-slate-11"
+      >
+        {{ $t('AUTOMACAO_LIVRE.CONFIRA.SEM_CAMPOS_DICA') }}
       </p>
 
       <LivreGatilho
@@ -402,6 +434,7 @@ defineExpose({ abrir, fechar });
           :rotulo="$t(campo.rotulo)"
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
+          :de-reuniao="deReuniao"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreCampanha

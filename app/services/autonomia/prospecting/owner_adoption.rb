@@ -33,7 +33,10 @@ class Autonomia::Prospecting::OwnerAdoption
       raise NotAnOwner if owner.nil?
 
       previous_line = card_decision_line
+      record = adoption(owner)
       @lead.update!(decision_attributes(owner))
+      # Só a chave da troca no jsonb, sem reescrever o metadata lido antes (#2697: o "Depois" da fila não se perde).
+      Autonomia::Prospecting::Lead.write_metadata_key!(@lead, 'decision_adoption', record)
       contact = Autonomia::Prospecting::ContactConverter.new(lead: @lead, user: @user).perform.contact
       refresh_card!(previous_line)
       outcome(contact, owner)
@@ -54,8 +57,7 @@ class Autonomia::Prospecting::OwnerAdoption
   def decision_attributes(owner)
     attributes = {
       decision_name: owner['name'], decision_role: owner['qualification'], decision_source_url: nil,
-      decision_research_status: FOUND.include?(@lead.decision_research_status) ? @lead.decision_research_status : @lead.company_research_status,
-      metadata: @lead.metadata.to_h.merge('decision_adoption' => adoption(owner))
+      decision_research_status: FOUND.include?(@lead.decision_research_status) ? @lead.decision_research_status : @lead.company_research_status
     }
     return attributes if @lead.decision_name == owner['name']
 

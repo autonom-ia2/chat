@@ -51,6 +51,8 @@ export const FEATURE_FLAGS = {
   META_ADS_HUB: 'meta_ads_hub',
   ANUNCIOS_SEM_LOGIN: 'anuncios_sem_login',
   ANUNCIOS_LOGIN_UNICO: 'anuncios_login_unico',
+  INSTAGRAM_LOGIN_UNICO: 'instagram_login_unico',
+  PROSPECCAO_NOVA: 'prospeccao_nova',
   EMAIL_TEMPLATE_IMPORT: 'email_template_import',
   AUTONOMIA_AGENTS_JOURNEY: 'autonomia_agents_journey',
   WHATSAPP_TEMPLATES_JOURNEY: 'whatsapp_templates_journey',

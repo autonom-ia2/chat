@@ -67,12 +67,10 @@ class Api::V1::Accounts::Autonomia::Prospecting::SettingsController < Api::V1::A
     ::Autonomia::Prospecting::SavedPreset.where(account: Current.account).newest_first.map(&:as_payload)
   end
 
-  # A tela esconde o que o servidor recusaria (#682): Enviar ao CRM pela mesma regra de authorize_crm_card_create! e
-  # Adicionar à campanha pela de authorize_campaign_update!. O detalhe técnico da nota segue a mesma regra do payload
-  # do lead (#732, item 9).
+  # A tela esconde o que o servidor recusaria (#682): Enviar ao CRM pela mesma regra de authorize_crm_card_create!. O
+  # detalhe técnico da nota segue a mesma regra do payload do lead (#732, item 9).
   def permissions_payload
-    { can_send_to_crm: Pundit.policy!(pundit_user, ::Crm::Card).create?, can_manage_campaigns: campaign_manage?,
-      can_view_score_details: visibility.score_details? }
+    { can_send_to_crm: Pundit.policy!(pundit_user, ::Crm::Card).create?, can_view_score_details: visibility.score_details? }
   end
 
   # Só os globais e os restritos desta conta (#681). O payload não diz a que outras contas um perfil pertence.

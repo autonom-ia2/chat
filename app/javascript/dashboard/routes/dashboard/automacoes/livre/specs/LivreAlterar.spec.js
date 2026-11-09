@@ -94,6 +94,48 @@ describe('LivreAlterar', () => {
   const COM_IA = { ...CATALOGO, passos: [...CATALOGO.passos, IA_ASSUMIR] };
   const PASSO_IA = { id: 'g1', tipo: 'ia_assumir', agente_id: null };
 
+  // #2660 lote B — ação sem nada a preencher diz isso e salva direto.
+  it('ação sem campo diz que não pede nada e deixa salvar', async () => {
+    const CLIENTE = {
+      tipo: 'acao',
+      nome: 'contato_cliente',
+      acao: 'POST contacts/:contact_id/customer',
+      grupo: 'CONTATO',
+      frase: 'CONTATO_CLIENTE',
+      caminho: { contact_id: { $valor: 'contato.id' } },
+      fixos: {},
+      campos: [],
+    };
+    const wrapper = montar({ ...CATALOGO, passos: [CLIENTE] });
+    wrapper.vm.abrir({
+      tipo: 'passo',
+      valor: {
+        id: 'c1',
+        tipo: 'acao',
+        acao: CLIENTE.acao,
+        caminho: { contact_id: { $valor: 'contato.id' } },
+        corpo: {},
+      },
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-sem-campos-dica]').exists()).toBe(true);
+    expect(salvarDesligado(wrapper)).toBe(false);
+
+    const comCampo = montar();
+    comCampo.vm.abrir({
+      tipo: 'passo',
+      valor: {
+        id: 'e1',
+        tipo: 'acao',
+        acao: 'PATCH labels/:id',
+        caminho: { id: 7 },
+        corpo: { title: 'vip' },
+      },
+    });
+    await flushPromises();
+    expect(comCampo.find('[data-sem-campos-dica]').exists()).toBe(false);
+  });
+
   it('espera escolher a agente de IA antes de salvar', async () => {
     const wrapper = montar(COM_IA, {
       agenteDeIa: [{ value: 3, label: 'Área Suporte' }],
@@ -304,6 +346,37 @@ describe('LivreAlterar', () => {
       tipo: 'conversa.resolvida',
       filtros: [],
     });
+  });
+
+  // #2680: o topo do painel diz a caixa que abre a conversa nova, como a lista.
+  it('a frase do gatilho no topo diz a caixa da conversa nova', async () => {
+    const catalogo = {
+      ...CATALOGO,
+      gatilhos: [{ tipo: 'conversa.resolvida', frase: 'RESOLVIDA' }],
+    };
+    const wrapper = mount(LivreAlterar, {
+      props: {
+        catalogo,
+        opcoes: {},
+        escolhasDoGatilho: { nomes: { caixa: { 5: 'WhatsApp Vendas' } } },
+        atributosDaPeca: () => [],
+        atributosDo: () => [],
+      },
+      global: {
+        stubs: { SidePanel: PainelFalso },
+        mocks: { $t: chave => chave },
+      },
+    });
+
+    wrapper.vm.abrir({
+      tipo: 'gatilho',
+      valor: { tipo: 'conversa.resolvida', conversa_nova: { caixa_id: 5 } },
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-frase-alterar]').text()).toBe(
+      'AUTOMACAO_LIVRE.CONVERSA_NOVA.NA_FRASE(RESOLVIDA,WhatsApp Vendas)'
+    );
   });
 
   // G11: a resposta durante a espera só vale na condição do "esperar até".

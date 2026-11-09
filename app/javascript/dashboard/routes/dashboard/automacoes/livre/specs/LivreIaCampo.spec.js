@@ -47,3 +47,36 @@ describe('LivreIaCampo, caminhos do decidir', () => {
     expect(lista[1]).toEqual(caminho('Sinistro', 'sinistro'));
   });
 });
+
+// G41 (#2752): a instrução é opcional no "resumir". Apagada, volta null para sair
+// da receita (o esquema recusa texto vazio).
+describe('LivreIaCampo, instrução', () => {
+  const montarInstrucao = modelValue =>
+    mount(LivreIaCampo, {
+      props: {
+        campo: { peca: 'instrucao', rotulo: 'INSTRUCAO' },
+        modelValue,
+        opcoes: {},
+        atributosDo: () => [],
+      },
+      global: { mocks: { $t: chave => chave } },
+    });
+
+  it('manda o texto escrito', async () => {
+    const wrapper = montarInstrucao('');
+
+    await wrapper.find('textarea').setValue('Inclua o que foi prometido.');
+
+    expect(wrapper.emitted('update:modelValue').at(-1)).toEqual([
+      'Inclua o que foi prometido.',
+    ]);
+  });
+
+  it('apagada, manda null', async () => {
+    const wrapper = montarInstrucao('Inclua o que foi prometido.');
+
+    await wrapper.find('textarea').setValue('');
+
+    expect(wrapper.emitted('update:modelValue').at(-1)).toEqual([null]);
+  });
+});

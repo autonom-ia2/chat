@@ -35,6 +35,22 @@ module Autonomia::Automacao::MudancaDoCard
     end
   end
 
+  # Os dados do gatilho no evento do card (Escuta): o que mudou e de quanto. O card criado conta como tudo vindo do vazio.
+  def do_evento(payload, card, evento, atividade_id)
+    criado = evento == Events::Types::CRM_CARD_CREATED
+    { 'mudancas' => da_atividade(payload, card, criado: criado, atividade_id: atividade_id) }
+  end
+
+  # O "card atualizado" no valor de venda só dispara se quem ligou vê os valores (#2597): o disparo diria a quem não vê
+  # que o card passou do limite. Os outros gatilhos e o campo personalizado passam.
+  def quem_ligou_le?(definicao)
+    gatilho = definicao.versao_ativa.receita['gatilho'].to_h
+    return true unless gatilho.dig('mudanca', 'campo') == VALOR
+
+    quem = AccountUser.find_by(account_id: definicao.account_id, user_id: definicao.ligada_por_id)
+    ::Autonomia::Automacao::Valores.pode_ler?('card.valor', quem)
+  end
+
   # O que a atividade diz que mudou. criado: o card acabou de nascer (o payload não traz os campos; vêm do card, como
   # estavam na criação).
   def da_atividade(payload, card, criado:, atividade_id: nil)

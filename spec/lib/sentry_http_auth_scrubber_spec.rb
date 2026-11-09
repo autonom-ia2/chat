@@ -265,6 +265,16 @@ RSpec.describe SentryHttpAuthScrubber do
     expect(JSON.parse(JSON.parse(payload.lines.fetch(2)).dig('request', 'data'))).to eq('content' => '[FILTERED]', 'hidden' => true)
   end
 
+  # #2696 — o pedido em uma frase da Prospecção vai em `frase`: o log do Rails filtra, e o Sentry, que lê o corpo JSON
+  # cru, também precisa filtrar.
+  it 'filters the prospecting request sentence (frase) from a JSON body' do
+    data = { body: JSON.generate(frase: 'padarias perto da casa da Carla', hidden: true) }
+
+    filtered = JSON.parse(described_class.scrub(data)[:body])
+
+    expect(filtered).to eq('frase' => '[FILTERED]', 'hidden' => true)
+  end
+
   %i[before_send before_send_transaction].each do |callback_name|
     it "preserves #{callback_name} behavior and sanitizes its returned event" do
       hint = { background: false }

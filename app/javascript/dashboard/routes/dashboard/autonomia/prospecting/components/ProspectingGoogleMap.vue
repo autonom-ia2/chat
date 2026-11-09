@@ -32,6 +32,23 @@ const props = defineProps({
     type: String,
     default: 'h-80',
   },
+  // #2692 — opcionais, para a lista da Prospecção nova. Sem eles, o mapa de
+  // hoje continua igual: pino padrão com o número da fila, agrupado.
+  // pinStyle(lead) => { color, dimmed, featured }: pino redondo na cor dada,
+  // apagado (dimmed) ou maior (featured). selectedId destaca um pino sem
+  // reenquadrar o mapa.
+  pinStyle: {
+    type: Function,
+    default: null,
+  },
+  selectedId: {
+    type: [Number, String],
+    default: null,
+  },
+  cluster: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(['selectLead', 'viewportChange']);
@@ -47,6 +64,7 @@ let map = null;
 let circle = null;
 let rectangle = null;
 let markers = [];
+let markerLeads = [];
 let clusterer = null;
 let idleListener = null;
 
@@ -81,6 +99,37 @@ const clearMarkers = () => {
   clusterer = null;
   markers.forEach(marker => marker.setMap(null));
   markers = [];
+  markerLeads = [];
+};
+
+const PIN_SIZE = 8;
+const PIN_SIZE_BIG = 11;
+
+const pinIcon = lead => {
+  const style = props.pinStyle(lead);
+  const selected = props.selectedId != null && lead.id === props.selectedId;
+  return {
+    path: window.google.maps.SymbolPath.CIRCLE,
+    fillColor: style.color,
+    fillOpacity: style.dimmed ? 0.35 : 1,
+    strokeColor: selected ? '#11181c' : '#ffffff',
+    strokeOpacity: style.dimmed && !selected ? 0.6 : 1,
+    strokeWeight: selected ? 3 : 2,
+    scale: selected || style.featured ? PIN_SIZE_BIG : PIN_SIZE,
+  };
+};
+
+const pinZIndex = lead => {
+  if (props.selectedId != null && lead.id === props.selectedId) return 3;
+  return props.pinStyle(lead).featured ? 2 : 1;
+};
+
+const updatePinIcons = () => {
+  if (!props.pinStyle) return;
+  markers.forEach((marker, index) => {
+    marker.setIcon(pinIcon(markerLeads[index]));
+    marker.setZIndex(pinZIndex(markerLeads[index]));
+  });
 };
 
 const clearCircle = () => {
@@ -202,7 +251,7 @@ const renderMap = async () => {
   // Como no Orth (MapResults.tsx): com mais de um pino, o clusterer junta os
   // próximos e é ele quem os põe no mapa. O número do pino é a posição do lead
   // na fila, o mesmo "Posição N" do card.
-  const shouldCluster = leads.length > 1;
+  const shouldCluster = props.cluster && leads.length > 1;
   leads.forEach((lead, index) => {
     const position = {
       lat: Number(lead.latitude),
@@ -215,10 +264,13 @@ const renderMap = async () => {
       map: shouldCluster ? undefined : map,
       position,
       title: lead.name || '',
-      label: String(lead.priority_position || index + 1),
+      ...(props.pinStyle
+        ? { icon: pinIcon(lead), zIndex: pinZIndex(lead) }
+        : { label: String(lead.priority_position || index + 1) }),
     });
     marker.addListener('click', () => emit('selectLead', lead));
     markers.push(marker);
+    markerLeads.push(lead);
   });
   if (shouldCluster) clusterer = new MarkerClusterer({ map, markers });
 
@@ -300,6 +352,8 @@ watch(
   },
   { deep: true }
 );
+
+watch(() => props.selectedId, updatePinIcons);
 
 onBeforeUnmount(() => {
   clearMarkers();

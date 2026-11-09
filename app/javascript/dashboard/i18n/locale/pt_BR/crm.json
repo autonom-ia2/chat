@@ -1452,6 +1452,7 @@
       "ACTIVITY_MEETING_HOST_REASSIGNED": "Reunião passou para outra pessoa",
       "ACTIVITY_MEETING_HOST_REASSIGNED_TO": "Reunião passou para {name}",
       "ACTIVITY_AUTOMATION_OWNER_ASSIGNED": "Responsável atribuído por automação",
+      "ACTIVITY_AUTOMATION_OWNER_KEPT": "Responsável mantido: escolhido por uma pessoa, não pela automação",
       "ACTIVITY_AUTOMATION_STAGE_MOVED": "Etapa alterada por automação",
       "ACTIVITY_AUTOMATION_FOLLOW_UP_CREATED": "Retorno criado por automação",
       "ACTIVITY_AI_AUTO_MOVED": "Card movido pela IA",
@@ -2568,7 +2569,20 @@
               "FIX": "Entrar de novo",
               "MISSING_INSTAGRAM_TAP": "Falta um toque",
               "INSTAGRAM_TEXT": "O Direct e os comentários do Instagram chegam aqui depois de ligar o Instagram, com um toque.",
-              "INSTAGRAM_CTA": "Ligar o Instagram"
+              "INSTAGRAM_CTA": "Ligar o Instagram",
+              "INSTAGRAM_TEXT_PAGINA": "Ligue o {'@'}{username} com este mesmo login do Facebook. O Direct e os comentários chegam aqui.",
+              "INSTAGRAM_CTA_PAGINA": "Ligar o Instagram",
+              "INSTAGRAM_LINKED": "O {'@'}{username} está ligado. O Direct e os comentários chegam aqui.",
+              "INSTAGRAM_ERROR": {
+                "MISSING_PERMISSIONS": "O Instagram ficou desmarcado na janela do Facebook. Entre de novo e deixe o Instagram marcado.",
+                "NOT_OWN_TOKEN": "Os seus anúncios estão compartilhados com a parceira. Entre com o seu Facebook para ligar o Instagram aqui.",
+                "NO_INSTAGRAM": "Esta Página não tem Instagram ligado no Facebook. Ligue lá, ou use o login do Instagram.",
+                "NOT_GRANTED": "Esta Página ficou desmarcada na janela do Facebook. Entre de novo e marque a Página.",
+                "RECONNECT": "O seu acesso ao Facebook venceu. Entre de novo.",
+                "FORBIDDEN": "Você não pode ligar caixas. Peça a um administrador.",
+                "LIMIT": "O seu plano chegou ao limite de caixas.",
+                "FAILED": "Não deu para ligar o Instagram agora. Tente de novo em alguns minutos."
+              }
             }
           },
           "GUIDE": {
@@ -6387,6 +6401,8 @@
         "RECUSADO": "O aviso não foi aceito",
         "NAO_ENVIADO": "Não avisamos",
         "RECUSADO_DICA": "O Facebook não aceitou o aviso. Peça a quem cuida dos anúncios para conferir a ligação com o site.",
+        "SEM_CONFIRMACAO": "Não sabemos se o aviso chegou",
+        "SEM_CONFIRMACAO_DICA": "O Facebook não respondeu. Para não contar a venda duas vezes, não mandamos de novo.",
         "VER_MOTIVO": "Ver o motivo",
         "MOTIVO": {
           "SEM_PIXEL": "Falta ligar o seu site ao Facebook neste funil. Peça a quem cuida dos anúncios.",
@@ -6456,6 +6472,7 @@
         "ACTIVITY_MEETING_RESCHEDULED": "A reunião mudou de horário",
         "ACTIVITY_MEETING_OUTCOME": "Anotaram como foi a reunião",
         "ACTIVITY_AUTOMATION_OWNER_ASSIGNED": "Uma regra automática escolheu quem cuida",
+        "ACTIVITY_AUTOMATION_OWNER_KEPT": "Uma regra automática ia trocar quem cuida, mas fica quem foi escolhido",
         "ACTIVITY_AUTOMATION_STAGE_MOVED": "Uma regra automática mudou a etapa",
         "ACTIVITY_AUTOMATION_FOLLOW_UP_CREATED": "Uma regra automática marcou um retorno",
         "ACTIVITY_AI_FOLLOWUP_FAILED": "A mensagem do assistente não saiu",
@@ -7231,7 +7248,8 @@
     "FILTRO_DO_LINK": {
       "DA_IA": "Recebidas da IA",
       "ESPERANDO": "Esperando há mais de {n} min",
-      "DA_IA_ESPERANDO": "Da IA, esperando +{n} min"
+      "DA_IA_ESPERANDO": "Da IA, esperando +{n} min",
+      "DESDE_DIAS": "Começaram nos últimos {n} dias"
     }
   },
   "CRM_NUMEROS_V2": {

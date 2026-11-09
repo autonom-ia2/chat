@@ -326,12 +326,19 @@
     "controller": "api/v1/accounts/autonomia/prospecting/leads#index",
     "parametros": [
       "list_id",
-      "status"
+      "status",
+      "view"
     ]
   },
   "autonomia/prospecting/leads/:id": {
     "controller": "api/v1/accounts/autonomia/prospecting/leads#show",
     "parametros": []
+  },
+  "autonomia/prospecting/leads/crm_owners": {
+    "controller": "api/v1/accounts/autonomia/prospecting/crm_owners#index",
+    "parametros": [
+      "pipeline_id"
+    ]
   },
   "autonomia/prospecting/lists": {
     "controller": "api/v1/accounts/autonomia/prospecting/lists#index",
@@ -1073,6 +1080,7 @@
       "conversation_type",
       "crm_pipeline_id",
       "da_ia",
+      "desde_dias",
       "esperando_min",
       "inbox_id",
       "labels",
@@ -1140,6 +1148,7 @@
       "conversation_type",
       "crm_pipeline_id",
       "da_ia",
+      "desde_dias",
       "esperando_min",
       "inbox_id",
       "labels",
@@ -1161,6 +1170,7 @@
       "conversation_type",
       "crm_pipeline_id",
       "da_ia",
+      "desde_dias",
       "esperando_min",
       "inbox_id",
       "labels",

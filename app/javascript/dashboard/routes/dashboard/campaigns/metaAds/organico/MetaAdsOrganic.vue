@@ -156,15 +156,16 @@ const bestPost = computed(() => {
   return { text: shorten(best.text), place: PLACES[best.source] };
 });
 
-// "Ver conversas": a caixa abre em "Todas" (?aba=todas), para a pessoa ver a lista inteira, não só as dela.
+// "Ver conversas" (#2209): a caixa abre com as conversas que começaram no período (?desde_dias=), em "Todas" e em
+// todos os status, para a lista bater com o número do cartão.
 const openConversations = inboxId =>
   router.push({
     path: frontendURL(`accounts/${route.params.accountId}/inbox/${inboxId}`),
-    query: { aba: 'todas' },
+    query: { desde_dias: String(days.value) },
   });
 
 // O botão do topo, a ação principal da tela: as conversas do lugar com mais mensagens no período; no empate, o
-// Instagram (onde a maioria responde post). Sem número no botão: a lista da caixa não filtra por período.
+// Instagram (onde a maioria responde post). Sem número no botão: o número fica no cartão.
 const mainConversations = computed(
   () =>
     ['instagram', 'page']
