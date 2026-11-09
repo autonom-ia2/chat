@@ -9,7 +9,9 @@
 #   escreveu, se não parecer e-mail nem telefone; sem ele, o nome do formulário; sem os dois, "Lead <id>". Nunca
 #   telefone nem e-mail: o título e o nome do contato vão à IA (Decisor, IA de etapa) e a quem não vê o contato.
 # - E-mail que o contato não aceita fica só nas respostas; o lead entra do mesmo jeito.
-# - Lead que não dá para gravar (:failed) vai para o rastreador de erros e não para os outros do mesmo lote.
+# - Lead que não dá para gravar (:failed) vai para o rastreador de erros e não para os outros do mesmo lote. A recusa
+#   fica lembrada em `refused` (RefusedLeads, #2740), quando quem chama passa um: a reconciliação de hora em hora não
+#   o tenta de novo a cada rodada; tenta uma segunda vez depois do prazo, ou antes, se o destino for salvo de novo.
 class Crm::MetaAds::LeadForms::Importer
   SOURCE = 'meta_lead_form'.freeze
   NAME_KEYS = %w[full_name first_name last_name].freeze
@@ -17,14 +19,17 @@ class Crm::MetaAds::LeadForms::Importer
   EMAIL_KEY = 'email'.freeze
   E164_DIGITS = (8..15)
 
-  def initialize(account:, pipeline:, stage:, form_name:, page_id: nil, questions: []) # rubocop:disable Metrics/ParameterLists
+  # rubocop:disable Metrics/ParameterLists
+  def initialize(account:, pipeline:, stage:, form_name:, page_id: nil, questions: [], refused: nil)
     @account = account
+    @refused = refused
     @page_id = page_id
     @pipeline = pipeline
     @stage = stage
     @form_name = form_name
     @labels = Array(questions).each_with_object({}) { |question, labels| labels[question['key'].to_s] = question['label'] }
   end
+  # rubocop:enable Metrics/ParameterLists
 
   def import(lead)
     ActiveRecord::Base.transaction(requires_new: true) do
@@ -42,11 +47,16 @@ class Crm::MetaAds::LeadForms::Importer
       outcome
     end
   rescue ActiveRecord::RecordInvalid => e
-    ChatwootExceptionTracker.new(e, account: @account).capture_exception
-    :failed
+    refused!(lead, e)
   end
 
   private
+
+  def refused!(lead, error)
+    ChatwootExceptionTracker.new(error, account: @account).capture_exception
+    @refused&.remember!(lead['id'])
+    :failed
+  end
 
   # Reserva o lead no seu próprio savepoint: só o índice único do leadgen_id vira :duplicate; qualquer outra recusa do
   # banco no contato ou no card sobe como erro.
