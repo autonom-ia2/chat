@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # Fechamento do épico #2414, exemplo 17 dos termos de aceite, "Vendedora de férias, cliente bem cuidado", à risca e numa
-# automação só (G63 #2830, G64 #2839, G66 #2843):
+# automação só (G63 #2830, G64 #2839, G66 #2843, G67 #2844):
 #
 # > "Quando alguém sai de férias eu passo os clientes para outra pessoa, mas o cliente fica perdido e a colega não sabe
 # > o que foi combinado. E quando ela volta, quero que os clientes voltem pra ela." — Paula, gerente comercial
@@ -12,7 +12,7 @@ require 'rails_helper'
 # conversa para o responsável do card", o único passo a mais que o termo. O passo 4 é o galho "a cada mensagem do
 # cliente" (G63) do "esperar até" que espera a Júlia voltar, e "espera a Renata responder" lê quem atende a conversa,
 # agora a Renata; o passo 5, "toda manhã", é a conferência às 8h no fuso da conta (G64, decisão 12); o 6, o resumo para a
-# Júlia depois de devolver o card.
+# Júlia depois de devolver o card, que lê as férias inteiras (G67).
 #
 # A IA é o dublê; o WhatsApp oficial para no receptor de teste. Fica pendente, com o motivo, o "passa a conversa para a
 # agente de IA" do passo 4: com a Renata no nome da conversa, o ia_assumir pula com `pessoa_atribuida` ("pessoa no nome
@@ -238,11 +238,9 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
     expect(ia_recebeu.last.to_json).to include('Já voltou a Júlia?')
   end
 
-  # G67: "a IA resume para a Júlia o que aconteceu durante as férias" (passo 6). O resumir lê as últimas mensagens da
-  # conversa (Decisores::Estado::MAX_MENSAGENS, 5), sem a janela da execução: em férias com mais mensagens, o começo
-  # delas não chega à IA.
+  # G67 (#2844): "a IA resume para a Júlia o que aconteceu durante as férias" (passo 6). O resumir lê as mensagens desde
+  # o começo da execução (a troca), não só as 5 últimas: a primeira das férias chega à IA.
   it 'o resumo da volta lê as mensagens das férias desde a primeira' do
-    pending 'G67: o resumir lê só as 5 últimas mensagens, não o período da execução (as férias)'
     escreve_em(fuso.local(2026, 11, 3, 10), 'Primeira mensagem das férias')
     (4..9).each { |dia| escreve_em(fuso.local(2026, 11, dia, 10), "Mensagem do dia #{dia}") }
     AccountUser.find_by!(account: account, user: julia).update!(ausente_ate: fuso.local(2026, 11, 9, 18))

@@ -284,7 +284,7 @@ module FechamentoAutomacao::Lacunas
     # G64 (#2839): a conferência toda manhã, numa hora marcada, na mesma automação (passo 5). Prova ponta a ponta em
     # spec/fechamento/automacao/exemplo_17_ferias_spec.rb. G66 (#2843, decisão 14): o passo "passar a conversa para o
     # responsável do card" leva a conversa da antiga dona à nova, e "espera a Renata responder" (passo 4) lê a Renata.
-    # G67: o resumo da volta (passo 6) lê as últimas mensagens da conversa (5), não as das férias inteiras.
+    # G67 (#2844): o resumo da volta (passo 6) lê as mensagens desde o começo da execução (as férias), com teto.
     'G62' => lambda {
       CustomAttributeDefinition.attribute_display_types.key?('pessoa') &&
         Autonomia::Automacao::Valores::Atributos.respond_to?(:ausente_da_pessoa?)
@@ -292,7 +292,7 @@ module FechamentoAutomacao::Lacunas
     'G63' => -> { galho_a_cada_mensagem? },
     'G64' => -> { conferencia_marcada? },
     'G66' => -> { FechamentoAutomacao::SondasDoExemplo17.conversa_acompanha_o_responsavel? },
-    'G67' => nil,
+    'G67' => -> { FechamentoAutomacao::SondasDoExemplo17.resumo_le_o_periodo? },
     # Do exemplo 14, passo 5 (#2791): o laço dos documentos numa automação só. O "esperar até" lê o documento novo, e o
     # "decidir" volta a ele (`de_novo.desde`). Prova em spec/fechamento/automacao/exemplo_14_documentacao_spec.rb.
     'G46' => lambda {

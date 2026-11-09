@@ -22,10 +22,8 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # Os passos 1 a 6 têm spec próprio à risca, numa automação só (G46): exemplo_14_documentacao_spec.rb.
     14 => ['Documentação completa para emitir', 'G13 (passos 7 e 8: mandar à seguradora e gravar a proposta; a recusa avisa a Dona Cida)'],
     16 => ['Reconquistar quem foi para o concorrente', 'G7 (todo dia 1º), G3, G4, G12, G14, G16, G18'],
-    # O 17 roda numa automação só (exemplo_17_ferias_spec.rb, G63, G64 e G66: o passo "passar a conversa para o
-    # responsável do card" faz "espera a Renata" ler a Renata), menos a janela do passo 6 (G67: o resumo lê as 5 últimas
-    # mensagens, não as férias inteiras).
-    17 => ['Vendedora de férias, cliente bem cuidado', 'G67 (o resumo lê as férias inteiras), G9, G15, G40, G62, G63, G64, G66'],
+    # O 17 saiu com a G66 (#2843) e a G67 (#2844): exemplo_17_ferias_spec.rb roda à risca numa automação só, menos o
+    # "passa para a agente de IA" do passo 4, pendente lá com o motivo (D1, decisão do Rodrigo, não lacuna de código).
     18 => ['Seleção de candidatos sem planilha', 'G4, G20 (ler o currículo e criar o card), G1, G5, G6, G12, G15, G25'],
     19 => ['Cliente que sumiu do WhatsApp', 'G43 (mandar ao número novo), G1, G2, G3, G8, G11, G19, G28, G34, G53'],
     20 => ['Venda fechada já entra no sistema da empresa', 'G5 (card ganho), G1, G2, G7, G11, G12, G13']
@@ -35,6 +33,11 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     stub_const('FechamentoAutomacao::Lacunas::SONDAS', { 'GX' => -> { raise NameError, 'classe renomeada' } })
 
     expect { FechamentoAutomacao::Lacunas.abertas(%w[GX]) }.to raise_error(NameError)
+  end
+
+  # As sondas do 17 rodam o código de verdade; com o exemplo fora da lista, a prova delas fica aqui.
+  it 'exemplo 17: as lacunas fechadas por comportamento continuam fechadas' do
+    expect(FechamentoAutomacao::Lacunas.abertas(%w[G63 G64 G66 G67])).to be_empty
   end
 
   pendentes.each do |numero, (nome, lacunas)|

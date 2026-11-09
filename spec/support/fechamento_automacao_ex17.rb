@@ -1,4 +1,4 @@
-# As sondas das lacunas do exemplo 17 achadas na G63 (G66, G67): rodam o motor de verdade e conferem o efeito. Ficam
+# As sondas das lacunas do exemplo 17 achadas na G63 (G66, G67): rodam o código de verdade e conferem o efeito. Ficam
 # fora do FechamentoAutomacao::Lacunas, que já está no limite de tamanho; o SONDAS de lá chama as daqui.
 module FechamentoAutomacao::SondasDoExemplo17
   extend CrmHelpers
@@ -37,5 +37,36 @@ module FechamentoAutomacao::SondasDoExemplo17
     definicao.update!(ativa: true)
     execucao = FactoryBot.create(:autonomia_automacao_execucao, versao: versao, alvo: card, chave_gatilho: gatilho)
     FechamentoAutomacao::Lacunas.rodada_da_sonda(conta, card, nil, execucao)
+  end
+
+  # G67 (#2844; exemplo 17, passo 6): o "resumir" de uma execução que começou há 10 dias lê as 8 mensagens que chegaram
+  # desde então, inclusive a primeira, e não as 5 últimas só. Monta o que iria à IA, sem chamá-la.
+  def resumo_le_o_periodo?
+    conta = FactoryBot.create(:account)
+    conversa = FactoryBot.create(:conversation, account: conta)
+    quem = FactoryBot.create(:user, account: conta, role: :administrator)
+    passo = { 'id' => 'conta', 'tipo' => 'resumir', 'le' => %w[mensagens_com_respostas], 'destino' => 'nota' }
+    execucao = execucao_de_10_dias(conta, quem, conversa, passo)
+    (1..8).each do |dia|
+      FactoryBot.create(:message, conversation: conversa, account: conta, inbox: conversa.inbox, sender: conversa.contact,
+                                  message_type: :incoming, content: "Dia #{dia} das férias",
+                                  created_at: (10 - dia).days.ago)
+    end
+    lidas = o_que_o_resumo_le(execucao, passo, conversa)
+    lidas.size == 8 && lidas.first.end_with?('Dia 1 das férias')
+  end
+
+  def execucao_de_10_dias(conta, quem, conversa, passo)
+    definicao = FactoryBot.create(:autonomia_automacao, account: conta, ligada_por: quem)
+    versao = definicao.salvar_versao!(receita: { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [passo] }, autor: nil)
+    FactoryBot.create(:autonomia_automacao_execucao, versao: versao, alvo: conversa, chave_gatilho: 'conversa.resolvida',
+                                                     created_at: 10.days.ago)
+  end
+
+  # A leitura do passo, a mesma que vai à IA na execução (PassoDeResumir#leitura_da_execucao, privada).
+  def o_que_o_resumo_le(execucao, passo, conversa)
+    acesso = Autonomia::Automacao::Acesso.new(execucao.automacao, chave_gatilho: execucao.chave_gatilho)
+    resumir = Autonomia::Automacao::PassoDeResumir.new(execucao: execucao, passo: passo, alvo: conversa, acesso: acesso)
+    Array(resumir.send(:leitura_da_execucao).conversa[:messages])
   end
 end
