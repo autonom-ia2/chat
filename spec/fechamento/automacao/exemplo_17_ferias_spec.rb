@@ -204,9 +204,10 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
     escreve_em(fuso.local(2026, 11, 4, 10), 'Oi, alguém aí?')
     varrer_em(fuso.local(2026, 11, 4, 12, 1))
 
-    expect(registros.where(passo: 'sofia').pluck(:resultado, :motivo)).to eq([['ok', nil]])
-    expect(registros.find_by!(passo: 'sofia').dados).to include('tirada_de' => renata.id, 'cobrindo_conversa' => conversa.id,
-                                                                'trocou' => true)
+    expect(registros.where(passo: 'sofia').pluck(:resultado, :motivo)).to eq([%w[ok cobrindo_pessoa], ['ok', nil]])
+    expect(registros.find_by!(passo: 'sofia', motivo: 'cobrindo_pessoa').dados)
+      .to include('tirada_de' => renata.id, 'cobrindo_conversa' => conversa.id, 'agente_id' => sofia.id)
+    expect(assumiu.sole.dados).to include('tirada_de' => renata.id, 'trocou' => true)
     expect(conversa.reload).to have_attributes(assignee_id: nil, ai_assignee: robo_da_sofia)
   end
 

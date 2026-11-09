@@ -1,8 +1,11 @@
 require 'rails_helper'
 
 # "Cobrir a pessoa enquanto ela não responde" (decisão 18, corrigida; exemplo 17): a conversa só volta para a pessoa que
-# a agente de IA tirou, quando ela escreve ao cliente, na conversa coberta por uma execução aberta da mesma conta.
+# a agente de IA tirou, quando ela escreve ao cliente, na conversa coberta por uma execução aberta da mesma conta; e
+# volta também quando a execução fecha, a automação é desligada ou o Motor sai, para a IA nunca ficar presa.
 RSpec.describe Autonomia::Automacao::Cobertura do
+  include ActiveJob::TestHelper
+
   let(:account) { create(:account) }
   let(:renata) { create(:user, account: account, role: :agent, name: 'Renata') }
   let(:paula) { create(:user, account: account, role: :agent, name: 'Paula') }
@@ -15,10 +18,9 @@ RSpec.describe Autonomia::Automacao::Cobertura do
     create(:autonomia_automacao_execucao, versao: versao, alvo: alvo, estado: 'esperando')
   end
 
-  # O registro do passo da agente que tirou a conversa da Renata (PassoDeIaAssumir, opção cobrir_pessoa).
-  def cobrir(exec = execucao)
-    create(:autonomia_automacao_registro, execucao: exec, passo: 'sofia', resultado: 'ok',
-                                          dados: { 'agente_id' => 1, 'tirada_de' => renata.id, 'cobrindo_conversa' => conversa.id })
+  # O registro do começo da cobertura, como o PassoDeIaAssumir grava na troca (opção cobrir_pessoa).
+  def cobrir(exec = execucao, agente_id: 1)
+    described_class.comecar!(exec, 'sofia', conversa, renata.id, agente_id)
   end
 
   def mensagem(tipo: :outgoing, sender: renata, privada: false, content_attributes: {})
@@ -26,7 +28,9 @@ RSpec.describe Autonomia::Automacao::Cobertura do
                      private: privada, content: 'Oi, Maria!', content_attributes: content_attributes)
   end
 
-  def voltas = Autonomia::Automacao::Registro.where(motivo: described_class::VOLTOU)
+  def registros(motivo) = Autonomia::Automacao::Registro.where(motivo: motivo)
+  def voltas = registros(described_class::VOLTOU)
+  def encerradas = registros(described_class::ENCERRADA)
 
   before do
     account.enable_features!(Autonomia::Automacao::FLAG_FUNDACAO, Autonomia::Automacao::Motor::FLAG)
@@ -35,120 +39,254 @@ RSpec.describe Autonomia::Automacao::Cobertura do
     conversa.update!(ai_assignee: robo)
   end
 
-  it 'a pessoa tirada escreve: a conversa volta para ela e o histórico registra', :aggregate_failures do
-    cobrir
-    described_class.pessoa_escreveu(mensagem)
+  describe 'a pessoa escreve' do
+    it 'a pessoa tirada escreve: a conversa volta para ela e o histórico registra', :aggregate_failures do
+      cobrir
+      described_class.pessoa_escreveu(mensagem)
 
-    expect(conversa.reload.assignee_id).to eq(renata.id)
-    expect(voltas.pluck(:execucao_id, :passo, :resultado, :dados))
-      .to eq([[execucao.id, 'sofia', 'ok', { 'pessoa_id' => renata.id, 'conversa_id' => conversa.id }]])
-    expect(described_class.vigente(conversa)).to be_nil
-  end
-
-  it 'ela já ficou com a conversa ao enviar: só registra a volta, sem atribuir de novo', :aggregate_failures do
-    cobrir
-    conversa.update!(assignee: renata)
-    allow(Conversations::AssignmentService).to receive(:new).and_call_original
-
-    described_class.pessoa_escreveu(mensagem)
-
-    expect(Conversations::AssignmentService).not_to have_received(:new)
-    expect(voltas.count).to eq(1)
-  end
-
-  it 'depois da volta, a mensagem seguinte dela não registra outra volta' do
-    cobrir
-    2.times { described_class.pessoa_escreveu(mensagem) }
-
-    expect(voltas.count).to eq(1)
-  end
-
-  it 'nota privada dela não devolve a conversa', :aggregate_failures do
-    cobrir
-    described_class.pessoa_escreveu(mensagem(privada: true))
-
-    expect(conversa.reload.assignee_id).to be_nil
-    expect(voltas).to be_empty
-  end
-
-  it 'mensagem do cliente, da IA, de bot sem remetente ou envio automático no nome dela não devolve', :aggregate_failures do
-    cobrir
-    [mensagem(tipo: :incoming, sender: conversa.contact),
-     mensagem(sender: robo),
-     mensagem(sender: nil),
-     mensagem(content_attributes: { 'automacao_id' => execucao.automacao_id })].each do |outra|
-      described_class.pessoa_escreveu(outra)
+      expect(conversa.reload).to have_attributes(assignee_id: renata.id, ai_assignee_id: nil)
+      expect(voltas.pluck(:execucao_id, :passo, :resultado, :dados))
+        .to eq([[execucao.id, 'sofia', 'ok', { 'pessoa_id' => renata.id, 'conversa_id' => conversa.id }]])
+      expect(described_class.vigente(conversa)).to be_nil
     end
 
-    expect(conversa.reload).to have_attributes(assignee_id: nil, ai_assignee: robo)
-    expect(voltas).to be_empty
+    it 'depois da volta, a mensagem seguinte dela não registra outra volta' do
+      cobrir
+      2.times { described_class.pessoa_escreveu(mensagem) }
+
+      expect(voltas.count).to eq(1)
+    end
+
+    it 'nota privada dela não devolve a conversa', :aggregate_failures do
+      cobrir
+      described_class.pessoa_escreveu(mensagem(privada: true))
+
+      expect(conversa.reload.assignee_id).to be_nil
+      expect(voltas).to be_empty
+    end
+
+    it 'mensagem do cliente, da IA, de bot sem remetente ou envio automático no nome dela não devolve', :aggregate_failures do
+      cobrir
+      [mensagem(tipo: :incoming, sender: conversa.contact),
+       mensagem(sender: robo),
+       mensagem(sender: nil),
+       mensagem(content_attributes: { 'automacao_id' => execucao.automacao_id })].each do |outra|
+        described_class.pessoa_escreveu(outra)
+      end
+
+      expect(conversa.reload).to have_attributes(assignee_id: nil, ai_assignee: robo)
+      expect(voltas).to be_empty
+    end
+
+    it 'outra pessoa da equipe escrevendo não devolve a conversa', :aggregate_failures do
+      cobrir
+      described_class.pessoa_escreveu(mensagem(sender: paula))
+
+      expect(conversa.reload.assignee_id).to be_nil
+      expect(voltas).to be_empty
+      expect(described_class.vigente(conversa)).to be_present
+    end
+
+    it 'a cobertura gravada em outra conta não devolve a conversa desta', :aggregate_failures do
+      outra_conta = create(:account)
+      cobrir(execucao_aberta(outra_conta, create(:conversation, account: outra_conta)))
+
+      described_class.pessoa_escreveu(mensagem)
+
+      expect(conversa.reload.assignee_id).to be_nil
+      expect(voltas).to be_empty
+    end
+
+    it 'execução já fechada não devolve pela mensagem', :aggregate_failures do
+      cobrir
+      execucao.update!(estado: 'concluida')
+
+      described_class.pessoa_escreveu(mensagem)
+
+      expect(conversa.reload.assignee_id).to be_nil
+      expect(voltas).to be_empty
+    end
+
+    it 'sem cobertura ativa, nada muda', :aggregate_failures do
+      escrita = mensagem
+      allow(Conversations::AssignmentService).to receive(:new).and_call_original
+
+      described_class.pessoa_escreveu(escrita)
+
+      expect(Conversations::AssignmentService).not_to have_received(:new)
+      expect(conversa.reload.assignee_id).to be_nil
+      expect(voltas).to be_empty
+    end
+
+    it 'mensagem que não é de pessoa sai cedo, sem procurar cobertura', :aggregate_failures do
+      do_cliente = mensagem(tipo: :incoming, sender: conversa.contact)
+      allow(Autonomia::Automacao::Registro).to receive(:where).and_call_original
+      allow(Autonomia::Automacao::Execucao).to receive(:abertas).and_call_original
+
+      described_class.pessoa_escreveu(do_cliente)
+
+      expect(Autonomia::Automacao::Registro).not_to have_received(:where)
+      expect(Autonomia::Automacao::Execucao).not_to have_received(:abertas)
+    end
+
+    it 'conversa sem a IA, ou com uma pessoa no nome, sai cedo, sem procurar cobertura', :aggregate_failures do
+      cobrir
+      escrita = mensagem
+      allow(Autonomia::Automacao::Execucao).to receive(:abertas).and_call_original
+
+      conversa.update!(ai_assignee: nil)
+      described_class.pessoa_escreveu(escrita.reload)
+      conversa.update!(ai_assignee: robo, assignee: paula)
+      described_class.pessoa_escreveu(escrita.reload)
+
+      expect(Autonomia::Automacao::Execucao).not_to have_received(:abertas)
+    end
+
+    it 'com a automação desligada na conta, a mensagem sai cedo e não devolve', :aggregate_failures do
+      cobrir
+      escrita = mensagem
+      account.disable_features!(Autonomia::Automacao::Motor::FLAG)
+      allow(Autonomia::Automacao::Execucao).to receive(:abertas).and_call_original
+
+      described_class.pessoa_escreveu(escrita.reload)
+
+      expect(Autonomia::Automacao::Execucao).not_to have_received(:abertas)
+      expect(voltas).to be_empty
+    end
   end
 
-  it 'outra pessoa da equipe escrevendo não devolve a conversa', :aggregate_failures do
-    cobrir
-    described_class.pessoa_escreveu(mensagem(sender: paula))
+  describe 'o fim da cobertura' do
+    it 'a execução fecha: a conversa volta para a pessoa tirada, com cobertura_encerrada', :aggregate_failures do
+      cobrir
+      execucao.update!(estado: 'concluida')
 
-    expect(conversa.reload.assignee_id).to be_nil
-    expect(voltas).to be_empty
-    expect(described_class.vigente(conversa)).to be_present
+      described_class.encerrar([execucao.id])
+
+      expect(conversa.reload).to have_attributes(assignee_id: renata.id, ai_assignee_id: nil)
+      expect(encerradas.pluck(:execucao_id, :resultado, :dados))
+        .to eq([[execucao.id, 'ok', { 'pessoa_id' => renata.id, 'conversa_id' => conversa.id }]])
+    end
+
+    it 'a automação é desligada: as coberturas das execuções abertas devolvem a conversa', :aggregate_failures do
+      cobrir
+
+      execucao.automacao.desligar!
+
+      expect(conversa.reload.assignee_id).to eq(renata.id)
+      expect(encerradas.count).to eq(1)
+    end
+
+    it 'o Motor sai da conta: a varredura devolve a conversa, uma vez só', :aggregate_failures do
+      cobrir
+      account.disable_features!(Autonomia::Automacao::Motor::FLAG)
+
+      2.times { Autonomia::Automacao::VarreduraJob.perform_now }
+
+      expect(conversa.reload.assignee_id).to eq(renata.id)
+      expect(encerradas.count).to eq(1)
+    end
+
+    it 'com o Motor ligado, a varredura não mexe na cobertura', :aggregate_failures do
+      cobrir
+
+      Autonomia::Automacao::VarreduraJob.perform_now
+
+      expect(conversa.reload.assignee_id).to be_nil
+      expect(encerradas).to be_empty
+    end
+
+    it 'cobertura que já terminou, ou conversa que outra pessoa pegou, não muda no fim', :aggregate_failures do
+      cobrir
+      described_class.pessoa_escreveu(mensagem)
+      conversa.update!(assignee: paula)
+
+      described_class.encerrar([execucao.id])
+
+      expect(conversa.reload.assignee_id).to eq(paula.id)
+      expect(encerradas).to be_empty
+    end
   end
 
-  it 'a cobertura gravada em outra conta não devolve a conversa desta', :aggregate_failures do
-    outra_conta = create(:account)
-    cobrir(execucao_aberta(outra_conta, create(:conversation, account: outra_conta)))
+  describe 'a volta, sob a trava' do
+    it 'trava a conversa e devolve uma vez só, mesmo chamada duas vezes com a cobertura já lida', :aggregate_failures do
+      cobertura = cobrir
+      allow(conversa).to receive(:with_lock).and_call_original
+      allow(Conversations::AssignmentService).to receive(:new).and_call_original
 
-    described_class.pessoa_escreveu(mensagem)
+      2.times { described_class.devolver(cobertura, conversa, described_class::VOLTOU) }
 
-    expect(conversa.reload.assignee_id).to be_nil
-    expect(voltas).to be_empty
+      expect(conversa).to have_received(:with_lock).twice
+      expect(Conversations::AssignmentService).to have_received(:new).once
+      expect(voltas.count).to eq(1)
+    end
+
+    it 'a volta que falha grava falhou na execução, com o motivo, e a cobertura continua', :aggregate_failures do
+      cobrir
+      escrita = mensagem
+      allow(Conversations::AssignmentService).to receive(:new).and_raise(ActiveRecord::StatementInvalid, 'dado do cliente')
+
+      described_class.pessoa_escreveu(escrita)
+
+      expect(registros(described_class::NAO_DEVOLVEU).pluck(:execucao_id, :resultado, :dados))
+        .to eq([[execucao.id, 'falhou', { 'para' => described_class::VOLTOU, 'erro' => 'ActiveRecord::StatementInvalid',
+                                          'conversa_id' => conversa.id }]])
+      expect(voltas).to be_empty
+      expect(described_class.vigente(conversa)).to be_present
+    end
+
+    it 'o fim que falha também grava falhou, e não levanta para quem fecha a execução', :aggregate_failures do
+      cobrir
+      allow(Conversations::AssignmentService).to receive(:new).and_raise(ActiveRecord::StatementInvalid)
+
+      expect { described_class.encerrar([execucao.id]) }.not_to raise_error
+      expect(registros(described_class::NAO_DEVOLVEU).pick(:dados)).to include('para' => described_class::ENCERRADA)
+    end
   end
 
-  it 'execução já fechada não devolve a conversa', :aggregate_failures do
-    cobrir
-    execucao.update!(estado: 'concluida')
+  # Decisão 18, revisão: a IA só segura o galho "a cada mensagem" enquanto pode atender a conversa.
+  describe 'cobrindo? (o galho do "esperar até")' do
+    around do |exemplo|
+      with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true') { exemplo.run }
+    end
 
-    described_class.pessoa_escreveu(mensagem)
+    let(:sofia) do
+      account.update!(internal_attributes: account.internal_attributes.to_h.merge(Autonomia::Agents::Config::INTERNAL_ATTR_KEY => true))
+      Autonomia::Agents::Fase2.ligar!(account)
+      Autonomia::Agents::Agent.create!(account: account, name: 'Sofia', agent_type: 'custom', status: :active, enabled: true)
+    end
+    let(:vinculo) { Autonomia::Agents::Areas.vincular!(agent: sofia, inbox: conversa.inbox) }
 
-    expect(conversa.reload.assignee_id).to be_nil
-    expect(voltas).to be_empty
-  end
+    before do
+      conversa.update!(ai_assignee: vinculo.agent_bot)
+      cobrir(agente_id: sofia.id)
+    end
 
-  it 'sem cobertura ativa, nada muda', :aggregate_failures do
-    allow(Conversations::AssignmentService).to receive(:new).and_call_original
+    it 'a agente pode atender: cobre' do
+      expect(described_class.cobrindo?(conversa.reload, execucao)).to be(true)
+    end
 
-    described_class.pessoa_escreveu(mensagem)
+    it 'Fase 2 desligada: não cobre, e o galho abre' do
+      Autonomia::Agents::Fase2.desligar!(account)
 
-    expect(Conversations::AssignmentService).not_to have_received(:new)
-    expect(conversa.reload.assignee_id).to be_nil
-    expect(voltas).to be_empty
-  end
+      expect(described_class.cobrindo?(conversa.reload, execucao)).to be(false)
+    end
 
-  it 'mensagem que não é de pessoa sai cedo, sem procurar cobertura', :aggregate_failures do
-    allow(Autonomia::Automacao::Registro).to receive(:where).and_call_original
-    allow(Autonomia::Automacao::Execucao).to receive(:abertas).and_call_original
+    it 'a agente parou de atender: não cobre' do
+      sofia.update_columns(status: Autonomia::Agents::Agent.statuses[:paused]) # rubocop:disable Rails/SkipsModelValidations
 
-    described_class.pessoa_escreveu(mensagem(tipo: :incoming, sender: conversa.contact))
+      expect(described_class.cobrindo?(conversa.reload, execucao)).to be(false)
+    end
 
-    expect(Autonomia::Automacao::Registro).not_to have_received(:where)
-    expect(Autonomia::Automacao::Execucao).not_to have_received(:abertas)
-  end
+    it 'a agente perdeu o vínculo com a caixa: não cobre' do
+      vinculo.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
 
-  it 'conversa com outra pessoa no nome sai cedo, sem procurar cobertura' do
-    cobrir
-    conversa.update!(assignee: paula)
-    allow(Autonomia::Automacao::Execucao).to receive(:abertas).and_call_original
+      expect(described_class.cobrindo?(conversa.reload, execucao)).to be(false)
+    end
 
-    described_class.pessoa_escreveu(mensagem)
+    it 'cobertura de outra execução não conta para esta' do
+      outra = execucao_aberta(account, create(:conversation, account: account))
 
-    expect(Autonomia::Automacao::Execucao).not_to have_received(:abertas)
-  end
-
-  it 'com a automação desligada na conta, não devolve' do
-    cobrir
-    account.disable_features!(Autonomia::Automacao::Motor::FLAG)
-
-    described_class.pessoa_escreveu(mensagem)
-
-    expect(voltas).to be_empty
+      expect(described_class.cobrindo?(conversa.reload, outra)).to be(false)
+    end
   end
 end

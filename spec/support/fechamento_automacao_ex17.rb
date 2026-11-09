@@ -41,18 +41,21 @@ module FechamentoAutomacao::SondasDoExemplo17
 
   # A agente tirou a conversa da Renata e ficou com ela; a Renata escreve, e a conversa volta, com o registro da volta.
   def cobre_e_devolve?(execucao, conversa, renata)
-    assumiu = Autonomia::Automacao::Registro.find_by(execucao: execucao, passo: 'sofia')&.dados.to_h['tirada_de'] == renata.id
+    cobertura = Autonomia::Automacao::Registro.find_by(execucao: execucao, motivo: Autonomia::Automacao::Cobertura::COMECOU)
+    assumiu = cobertura&.dados.to_h['tirada_de'] == renata.id
     com_a_ia = conversa.reload.assignee_id.nil? && conversa.ai_assignee_id.present?
     renata_escreve(conversa, renata)
     voltou = Autonomia::Automacao::Registro.exists?(execucao: execucao, motivo: Autonomia::Automacao::Cobertura::VOLTOU)
     assumiu && com_a_ia && voltou && conversa.reload.assignee_id == renata.id
   end
 
-  # A Renata responde o cliente na conversa; a Escuta ouve a mensagem como em produção.
+  # A Renata responde o cliente na conversa; o evento message.created chega à escuta da automação
+  # (AutomacaoListener#message_created), como em produção.
   def renata_escreve(conversa, renata)
     mensagem = FactoryBot.create(:message, conversation: conversa, account: conversa.account, inbox: conversa.inbox,
                                            message_type: :outgoing, sender: renata, content: 'Oi, Maria! Voltei.')
-    Autonomia::Automacao::Cobertura.pessoa_escreveu(mensagem)
+    evento = Events::Base.new('message.created', Time.zone.now, { message: mensagem })
+    Autonomia::AutomacaoListener.instance.message_created(evento)
   end
 
   # Os Agentes e as áreas de IA ligados na conta, e uma agente atendendo cliente na caixa.

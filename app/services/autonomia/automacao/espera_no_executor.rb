@@ -13,8 +13,8 @@
 # 1. confere a condição. Com `conferir_as`, só na conferência marcada (o `due_at` chegou) ou na volta do galho; acordada
 #    por mensagem ou pelo card antes da hora, não confere;
 # 2. com `a_cada_mensagem`, a mensagem do cliente depois do marco (a régua do G31, Resposta.novas_desde) entra no galho,
-#    com o registro `mensagem_do_cliente` e a vez. Se a agente de IA cobre a conversa por esta execução (Cobertura,
-#    decisão 18), a mensagem fica com ela: o galho não abre, e o marco anda (`ia_cobrindo`);
+#    com o registro `mensagem_do_cliente` e a vez. Se a agente de IA cobre a conversa por esta execução e ainda pode
+#    atendê-la (Cobertura, decisão 18), a mensagem fica com ela: o galho não abre, e o marco anda (`ia_cobrindo`);
 # 3. senão, volta a esperar: com `conferir_as`, até a próxima hora marcada no fuso da conta (Tempo.proxima_hora).
 # O marco fica no registro do próprio "esperar até": gravado na entrada e de novo a cada volta do galho, que registra
 # `voltou_a_esperar` com o marco lido no fim do último passo dele. A mensagem que chegou enquanto o galho rodava não

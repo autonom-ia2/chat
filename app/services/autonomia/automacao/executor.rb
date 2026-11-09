@@ -225,14 +225,17 @@ class Autonomia::Automacao::Executor
     nil
   end
 
+  # Fechou nesta rodada: a cobertura da agente de IA que ainda valer devolve a conversa à pessoa (decisão 18).
   def finalizar(estado)
-    gravar(estado: estado, travada_em: nil)
+    ::Autonomia::Automacao::Cobertura.encerrar([@execucao.id]) if gravar(estado: estado, travada_em: nil)
   end
 
   # Só grava na rodada que tomou a execução: se alguém a desligou no meio, nada muda e a rodada para do mesmo jeito.
+  # Devolve se gravou.
   def gravar(**atributos)
-    Execucao.gravar_na_rodada(@execucao.id, @marca, **atributos)
+    gravou = Execucao.gravar_na_rodada(@execucao.id, @marca, **atributos)
     @parou = true
+    gravou
   end
 
   # Quem ligou não pode mais agir: a automação desliga até alguém assumir e religar (F3.7). Devolve o motivo.

@@ -4,8 +4,10 @@
 # Pede como o CRM (`por: :crm`): pessoa no nome vence, e o passo pula com `pessoa_atribuida` (D1). A exceção é a opção
 # `cobrir_pessoa`, "Cobrir a pessoa enquanto ela não responde" (decisão 18 do Rodrigo, exemplo 17), desligada por
 # padrão: com ela e uma pessoa no nome, quem pede é quem ligou a automação (`por: :pessoa`, como o "Passar para…" da
-# tela), a agente fica com a conversa e o registro guarda de quem ela foi tirada (`tirada_de`, lida sob a trava da troca)
-# e qual conversa ela cobre. Quando essa pessoa escrever na conversa, ela volta para ela (Cobertura). A agente fala com
+# tela), a agente fica com a conversa e o registro da cobertura (`cobrindo_pessoa`, Cobertura) guarda de quem ela foi
+# tirada e qual conversa ela cobre. A conversa fica travada do começo ao fim: quem pede, a troca e o registro da
+# cobertura saem da mesma leitura e da mesma transação. Quando essa pessoa escrever na conversa, ela volta para ela
+# (Cobertura). A agente fala com
 # o cliente pelo turno de quem recebe a passagem (Operate::AoReceberPassagem), sabendo quem passou. Sem pessoa no nome,
 # a opção não muda nada. Fora deste passo, nada muda. Toda recusa do serviço
 # dos Agentes (sem vínculo na caixa, não atende cliente, Fase 2 desligada, conversa resolvida) vira pulo com o código,
@@ -53,6 +55,12 @@ class Autonomia::Automacao::PassoDeIaAssumir
   # Decisão 18: a opção do passo, desligada por padrão.
   def self.cobrir_pessoa?(passo) = passo['cobrir_pessoa'] == true
 
+  # Cobertura (decisão 18): a agente que cobre ainda pode atender esta conversa, pelas mesmas perguntas do ensaio.
+  def self.pode_cobrir?(conversa, agente_id)
+    agente = agente(conversa.account, agente_id)
+    agente.present? && motivo_no_ensaio(conversa, agente, true).nil?
+  end
+
   def self.motivo_no_ensaio(conversa, agente, cobrir_pessoa)
     return 'fase2_desligada' unless ::Crm::AgentesIa.ligado?(conversa.account)
     return 'nao_atende_cliente' unless agente.atende_cliente?
@@ -79,11 +87,16 @@ class Autonomia::Automacao::PassoDeIaAssumir
 
   private
 
-  # A pessoa tirada vem do serviço, lida sob a trava da troca (PassarParaIa), não da conversa lida antes dela.
+  # Sob a trava da conversa: quem pede lê a pessoa no nome agora, e a pessoa tirada (lida pelo serviço sob a mesma trava)
+  # grava a cobertura na transação da troca. Sem return dentro do with_lock (dispararia ROLLBACK).
   def assumir(agente)
-    resultado = passar(agente)
+    resultado = nil
+    @conversa.with_lock do
+      resultado = passar(agente)
+      cobrir(agente, resultado.pessoa_tirada_id) if resultado.pessoa_tirada_id
+    end
     codigo = resultado.codigo.to_s
-    dados = { 'agente_id' => agente.id, **cobertura(resultado.pessoa_tirada_id) }
+    dados = { 'agente_id' => agente.id, **tirada(resultado.pessoa_tirada_id) }
     return Resultado.new(tipo: :ok, dados: dados.merge('trocou' => codigo != JA_E_O_DONO)) if OK.include?(codigo)
 
     pulado(codigo, dados)
@@ -97,14 +110,17 @@ class Autonomia::Automacao::PassoDeIaAssumir
     end
   end
 
-  # Decisão 18: com a opção e uma pessoa no nome, quem ligou pede, como na tela; senão, o CRM (pessoa no nome vence). Se a
-  # pessoa sair antes da trava, a troca segue como pedida pela tela, e `tirada_de` fica vazio (o serviço não tirou ninguém).
+  # Decisão 18: com a opção e uma pessoa no nome (lida sob a trava), quem ligou pede, como na tela; senão, o CRM (pessoa
+  # no nome vence).
   def quem_pede
     tira_da_pessoa? ? { por: :pessoa, pedida_por: @execucao.automacao.ligada_por } : { por: :crm }
   end
 
-  # Decisão 18: a pessoa tirada e a conversa coberta, que a Cobertura lê para a volta.
-  def cobertura(pessoa_id) = pessoa_id ? { 'tirada_de' => pessoa_id, 'cobrindo_conversa' => @conversa.id } : {}
+  def cobrir(agente, pessoa_id)
+    ::Autonomia::Automacao::Cobertura.comecar!(@execucao, @passo['id'], @conversa, pessoa_id, agente.id)
+  end
+
+  def tirada(pessoa_id) = pessoa_id ? { 'tirada_de' => pessoa_id } : {}
 
   def tira_da_pessoa? = self.class.cobrir_pessoa?(@passo) && @conversa.assignee_id.present?
 
