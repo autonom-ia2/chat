@@ -213,6 +213,14 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
       expect(item[:metadata][:trecho_da_secao]).to eq(0)
     end
 
+    it 'does not repeat the title in the item piece of a receiving paragraph with no marked items' do
+      corrido = paragrafo(('O segurado perde o direito se agravar o risco de proposito. ' * 12).strip)
+      trechos = cortar([titulo('Definicoes', 1), titulo('Avaria', 2), paragrafo('Dano ao veiculo.'), titulo('Perda', 2), corrido])
+      item = trechos.find { |trecho| trecho[:metadata][:material_type] == 'item' && trecho[:text].include?('agravar') }
+
+      expect(item[:text]).to eq("Perda\n\n#{corrido[:texto]}")
+    end
+
     it 'gives no item pieces to a short section' do
       curta = { tipo: :paragrafo, texto: itens.first(3).join("\n"), itens: itens.first(3), pagina: 7 }
 
@@ -247,6 +255,13 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
 
       expect(trechos.first[:text]).to include("Aviso\nLeia antes.\n\nPrazo curto\n#{fileiras.first}")
       expect(de_item.map { |trecho| trecho[:text] }).to eq(fileiras.first(3).map { |fileira| "Prazo curto\n\n#{fileira}" })
+    end
+
+    it 'writes the title of a receiving table that splits at the start of its first part' do
+      trechos = cortar([titulo('Prazos', 1), titulo('Aviso', 2), paragrafo('Leia antes.'), titulo('Prazo curto', 2), tabela],
+                       maximo: 300)
+
+      expect(trechos.find { |trecho| trecho[:text].include?(fileiras.first) }[:text]).to include("Prazo curto\n#{fileiras.first}")
     end
 
     it 'points every item to the piece of its section that holds it' do
