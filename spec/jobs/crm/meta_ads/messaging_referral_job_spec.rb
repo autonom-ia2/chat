@@ -43,6 +43,16 @@ RSpec.describe Crm::MetaAds::MessagingReferralJob do
     expect(conversation.reload.additional_attributes['campaign_touches'].sole).to include('source' => 'meta_ctd')
   end
 
+  # #2781: o mesmo Instagram em duas contas. Cada conta recebe pelo seu canal: o do login do Instagram, ou a Página.
+  it 'Instagram em duas contas: uma caixa por conta, login do Instagram antes da Página' do
+    direct = create(:channel_instagram, instagram_id: 'ig-shared')
+    create(:channel_instagram_fb_page, account: direct.account, instagram_id: 'ig-shared')
+    page = create(:channel_instagram_fb_page, instagram_id: 'ig-shared')
+    create(:inbox, channel: page, account: page.account)
+
+    expect(described_class.inboxes_for('instagram', 'ig-shared')).to eq([direct.inbox, page.inbox])
+  end
+
   it 'a foto do anúncio vai direto para o job da foto, só quando a Página é de uma conta só' do
     page = create(:channel_facebook_page, page_id: 'page-1')
     allow(Crm::MetaAds::SemLogin).to receive(:enabled?).and_return(true)

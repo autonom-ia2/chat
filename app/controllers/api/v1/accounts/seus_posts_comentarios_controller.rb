@@ -1,10 +1,11 @@
 # Seus posts F2 (#2305): um post do perfil e os comentários dele. Atrás das flags `seus_posts` e
 # `seus_posts_comentarios` (404 sem elas: nada aqui chama a Meta). Todos com ?perfil=<id> (SeusPosts::Perfil).
 #
-# GET    seus_posts/posts/:post_id                                         → { perfil, status, post, normal, comments, can_manage, ad_id }
-#        `ad_id` (#2522): no Instagram, o anúncio que impulsionou o post por aqui, cujos comentários ficam noutra mídia;
+# GET    seus_posts/posts/:post_id                                         → { perfil, status, post, normal, comments, can_manage, ads }
+#        `ads` (#2522, #2739): no Instagram, os anúncios que impulsionaram o post por aqui ([{ id, name, created_at }], o mais novo
+#        primeiro), cujos comentários ficam noutra mídia, uma por anúncio;
 #        só para quem vê Anúncios da Meta (flag meta_ads_hub e Crm::MetaAdsConnectionPolicy#show?) e com os comentários
-#        do Instagram no anúncio ligados (flag meta_ads_comentarios_instagram). Senão, nulo.
+#        do Instagram no anúncio ligados (flag meta_ads_comentarios_instagram). Senão, lista vazia.
 # GET    seus_posts/posts/:post_id/comments?after=                         → a página seguinte de comentários.
 #        Ver: administrador ou `posts_view` (SeusPostsPolicy#index?).
 # POST   seus_posts/posts/:post_id/comments/:comment_id/reply              content= → responder em público.
@@ -50,7 +51,7 @@ class Api::V1::Accounts::SeusPostsComentariosController < Api::V1::Accounts::Bas
     base = { perfil: perfil, status: lido[:status], can_manage: manage? }
     return render json: base unless lido[:status] == 'ok'
 
-    render json: base.merge(post: lido[:post], normal: lido[:normal], comments: primeiros_comentarios, ad_id: anuncio_do_post)
+    render json: base.merge(post: lido[:post], normal: lido[:normal], comments: primeiros_comentarios, ads: anuncios_do_post)
   end
 
   def reply
@@ -167,13 +168,13 @@ class Api::V1::Accounts::SeusPostsComentariosController < Api::V1::Accounts::Bas
     Pundit.policy!(pundit_user, conversation).view?
   end
 
-  # O anúncio mais novo que impulsionou o post por aqui e já rodou (Crm::MetaAdsCreatedObject.ads_by_post), do banco.
+  # Os anúncios que impulsionaram o post por aqui e já foram ativados (Crm::MetaAdsCreatedObject.ads_of_post), do banco.
   # No Facebook o anúncio usa o próprio post, e os comentários já estão nele.
-  def anuncio_do_post
-    return unless instagram? && AD_COMMENT_FLAGS.all? { |flag| Current.account.feature_enabled?(flag) }
-    return unless Pundit.policy!(pundit_user, ::Crm::MetaAdsConnection).show?
+  def anuncios_do_post
+    return [] unless instagram? && AD_COMMENT_FLAGS.all? { |flag| Current.account.feature_enabled?(flag) }
+    return [] unless Pundit.policy!(pundit_user, ::Crm::MetaAdsConnection).show?
 
-    ::Crm::MetaAdsCreatedObject.ads_by_post(Current.account.id, 'instagram', [post_id])[post_id]&.first
+    ::Crm::MetaAdsCreatedObject.ads_of_post(Current.account.id, 'instagram', post_id)
   end
 
   def instagram?

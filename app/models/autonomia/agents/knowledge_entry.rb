@@ -18,7 +18,6 @@
 # Indexes
 #
 #  idx_autonomia_knowledge_agent_status                   (autonomia_agent_id,status)
-#  idx_autonomia_knowledge_embedding                      (embedding) USING ivfflat
 #  idx_autonomia_knowledge_embedding_large                (embedding_large) USING hnsw
 #  index_autonomia_agent_knowledge_on_account_id          (account_id)
 #  index_autonomia_agent_knowledge_on_autonomia_agent_id  (autonomia_agent_id)
@@ -43,6 +42,11 @@ module Autonomia
                           foreign_key: :source_id, optional: true
 
       enum status: { pending: 0, ready: 1 }
+
+      # #1431 (PR 1b) — o trecho de item (CortePorSecao: item de lista, verbete, fileira de tabela) existe só para a busca
+      # achar a seção; o texto dele já está no trecho da seção. Quem lê o material (resumo, Revisor, autoteste,
+      # contradições) lê sem ele, para não ler o texto duas vezes.
+      scope :do_material, -> { where("(metadata->>'material_type') IS DISTINCT FROM 'item'") }
     end
   end
 end
