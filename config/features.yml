@@ -1255,3 +1255,15 @@
   display_name: Agentes › material do agente primeiro
   enabled: false
   column: feature_flags_ext_2
+
+# Agentes: com o fato do negócio no trecho, a resposta usa o dado (#2807, Refs #1431). Ligada: a regra de resposta manda
+# afirmar o fato do negócio que o [CONTEXTO] traz, sem "preciso confirmar" e sem atribuir o dado além do que o trecho
+# diz; o fato que não está no material, nos fatos-âncora nem em ferramenta segue a regra de quando não souber, sem
+# palpite. Só no atendimento ao cliente; fora da Lia, do Guia e do copiloto. Desligada: como antes. Sem migration.
+# Rollback: desligar a flag na conta. Posição 35 (17179869184, 1 << 34), dada pela Orquestração em 09/11: só entra na
+# fila depois do #2801 na main, que traz a 34 (agente_material_primeiro). Depois do NO AR, a Orquestração liga em todas
+# as contas ativas das 2 stacks (regra C de 09/11).
+- name: agente_usa_o_trecho
+  display_name: Agentes › usar o dado do trecho
+  enabled: false
+  column: feature_flags_ext_2

@@ -314,6 +314,7 @@ RSpec.describe Account do
       # #1430: agente_ferramenta_em_segundo_plano depois dela, 32 (1 << 31 = 2147483648), dada pela Orquestração (08/11).
       # #2406: instagram_login_unico depois dela, 33 (1 << 32 = 4294967296), dada pela Orquestração (09/11).
       # #2801: agente_material_primeiro depois dela, 34 (1 << 33 = 8589934592), dada pela Orquestração (09/11).
+      # #2807: agente_usa_o_trecho depois dela, 35 (1 << 34 = 17179869184), dada pela Orquestração (09/11).
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
         feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,
@@ -328,7 +329,8 @@ RSpec.describe Account do
         feature_meta_ads_comentarios_privado_facebook: 67_108_864, feature_anuncios_login_unico: 134_217_728,
         feature_prospeccao_nova: 268_435_456, feature_rag_corte_por_estrutura: 536_870_912,
         feature_agente_ferramentas_delegadas: 1_073_741_824, feature_agente_ferramenta_em_segundo_plano: 2_147_483_648,
-        feature_instagram_login_unico: 4_294_967_296, feature_agente_material_primeiro: 8_589_934_592
+        feature_instagram_login_unico: 4_294_967_296, feature_agente_material_primeiro: 8_589_934_592,
+        feature_agente_usa_o_trecho: 17_179_869_184
       )
     end
 
