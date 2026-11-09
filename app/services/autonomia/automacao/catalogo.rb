@@ -53,6 +53,8 @@ module Autonomia::Automacao::Catalogo
                        'para_do_retorno' => 'quem_recebe_retorno', 'envio_do_retorno' => 'envio_do_retorno',
                        # G18 (#2671): onde roda o "em outro registro".
                        'registro_ligado' => 'registro_ligado',
+                       # G57 (#2769): hoje ou amanhã; a peça mostra também o `daqui`.
+                       'quando_do_retorno' => 'quando_do_retorno',
                        # G31: o "decidir" que espera a próxima resposta e decide de novo.
                        'de_novo' => 'de_novo' }.freeze
   # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2), a

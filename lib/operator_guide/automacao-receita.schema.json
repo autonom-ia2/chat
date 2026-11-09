@@ -164,6 +164,16 @@
     "passos": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/passo" } },
     "passos_opcionais": { "type": "array", "items": { "$ref": "#/definitions/passo" } },
     "id": { "type": "string", "minLength": 1, "maxLength": 40 },
+    "quando_do_retorno": {
+      "description": "Quando vence o retorno (G57), no fuso da conta: hoje ou amanhã, numa hora (0 a 23) ou, sem ela, no fim do dia. Hora de hoje que já passou vale em seguida, nunca amanhã. O retorno leva este ou o `daqui`.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dia"],
+      "properties": {
+        "dia": { "enum": ["hoje", "amanha"] },
+        "hora": { "type": "integer", "minimum": 0, "maximum": 23 }
+      }
+    },
     "duracao": {
       "description": "Teto de 3650 de cada unidade (10 anos em dias): proteção contra erro de digitação que travaria a execução, não limite de uso.",
       "type": "object",
@@ -726,12 +736,14 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["id", "tipo", "titulo", "daqui"],
+          "required": ["id", "tipo", "titulo"],
+          "oneOf": [{ "required": ["daqui"] }, { "required": ["quando"] }],
           "properties": {
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "retorno" },
             "titulo": { "$ref": "#/definitions/texto" },
             "daqui": { "$ref": "#/definitions/duracao" },
+            "quando": { "$ref": "#/definitions/quando_do_retorno" },
             "para": { "$ref": "#/definitions/para_do_retorno" },
             "envio": { "$ref": "#/definitions/envio_do_retorno" }
           }

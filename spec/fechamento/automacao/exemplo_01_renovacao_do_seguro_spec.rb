@@ -151,7 +151,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 1: renovação do seguro sem esquece
     { id: 'o_que_quer', tipo: 'decidir', le: %w[mensagens_recentes], pergunta: 'O que o cliente respondeu sobre a renovação do seguro?',
       caminhos: [
         { nome: 'Mudou algo', chave: 'mudou_algo', descricao: 'trocou de carro, de endereço ou de condutor', passos: [
-          { id: 'recotar', tipo: 'retorno', titulo: ['Recotar o seguro de ', nome], daqui: { valor: 1, unidade: 'horas' },
+          { id: 'recotar', tipo: 'retorno', titulo: ['Recotar o seguro de ', nome], quando: { dia: 'hoje' },
             para: { quem: 'pessoas', pessoas: [marcos.id] } }
         ] },
         { nome: 'Quer renovar igual', chave: 'renovar_igual', descricao: 'quer renovar sem mudar nada', passos: [
@@ -320,10 +320,20 @@ RSpec.describe 'Fechamento #2414 · exemplo 1: renovação do seguro sem esquece
       expect(card.reload.custom_attributes).to include('carro' => 'Compass 2024', 'endereco' => 'Rua das Flores, 10',
                                                        'condutor' => 'Daniel', 'vencimento' => '2026-12-20')
       expect(Crm::FollowUp.sole).to have_attributes(card_id: card.id, title: 'Recotar o seguro de Daniel', recipient_mode: 'users',
-                                                    recipient_user_ids: [marcos.id], due_at: fuso.parse('2026-11-22 15:00'))
+                                                    recipient_user_ids: [marcos.id], due_at: fuso.parse('2026-11-22 23:59:59'))
       expect(historico(:vencimento).last(6)).to eq([['mudancas', 'ok', nil], ['carro_no_card', 'ok', nil],
                                                     %w[endereco_no_card pulado faltou_valor], %w[condutor_no_card pulado faltou_valor],
                                                     ['o_que_quer', 'ok', nil], ['recotar', 'ok', nil]])
+    end
+
+    # G57 (#2769): "para hoje" é o dia no fuso da conta; a resposta às 23h30 não joga o retorno para amanhã.
+    it 'passo 7: respondeu às 23h30 e o retorno "recotar" continua para hoje' do
+      roteiro['automacao_extrair'] = { 'carro' => 'Compass 2024', 'endereco' => nil, 'condutor' => nil }
+      roteiro['automacao_decidir'] = { 'caminho' => 'mudou_algo', 'motivo' => 'trocou de carro' }
+
+      cliente_responde_as('2026-11-22 23:30', 'Troquei de carro.')
+
+      expect(Crm::FollowUp.sole.due_at).to eq(fuso.parse('2026-11-22 23:59:59'))
     end
 
     it 'passo 8: quer renovar igual; o card vai para "Renovar igual" e o Marcos é avisado', :aggregate_failures do

@@ -20,6 +20,7 @@ import LivreEtapa from './LivreEtapa.vue';
 import LivreRetornoPara from './LivreRetornoPara.vue';
 import LivreRetornoEnvio from './LivreRetornoEnvio.vue';
 import LivreRegistro from './LivreRegistro.vue';
+import LivreRetornoQuando from './LivreRetornoQuando.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
 import LivreDecidirDeNovo from './LivreDecidirDeNovo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
@@ -28,7 +29,7 @@ import { caminhosProntos, deNovoPronto, esperasAnteriores } from '../ia';
 import { campanhaPronta } from '../campanha';
 import { prospeccaoPronta } from '../prospeccao';
 import { paraCadaPronto } from '../paraCada';
-import { envioPronto, paraPronto } from '../retorno';
+import { envioPronto, paraPronto, quandoPronto } from '../retorno';
 import { registroPronto } from '../outroRegistro';
 import { faltaDaFrequencia } from '../recorrente';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
@@ -76,10 +77,18 @@ const entrada = computed(() =>
 );
 const avancada = computed(() => alvo.value?.tipo === 'passo' && !entrada.value);
 
-// Os galhos ("então", "senão") ficam na própria lista do Confira, não aqui.
+// Os galhos ("então", "senão") ficam na própria lista do Confira, não aqui. O
+// `daqui` do retorno vai dentro da peça do "Quando" (G57), que cuida dos dois.
+const temQuando = computed(() =>
+  entrada.value?.campos?.some(campo => campo.peca === 'quando_do_retorno')
+);
 const camposNativos = computed(() =>
   entrada.value && entrada.value.tipo !== 'acao'
-    ? entrada.value.campos.filter(campo => campo.peca !== 'passos')
+    ? entrada.value.campos.filter(
+        campo =>
+          campo.peca !== 'passos' &&
+          !(temQuando.value && campo.nome === 'daqui')
+      )
     : []
 );
 const ehDeIa = computed(() => entrada.value?.grupo === 'IA');
@@ -265,6 +274,7 @@ const nativoPronto = campo => {
   if (campo.peca === 'quem_recebe_retorno') return paraPronto(valor);
   if (campo.peca === 'envio_do_retorno') return envioPronto(valor);
   if (campo.peca === 'registro_ligado') return registroPronto(valor);
+  if (campo.peca === 'quando_do_retorno') return quandoPronto(rascunho.value);
   if (campo.peca === 'destinatarios')
     return Boolean(
       valor?.responsavel ||
@@ -586,6 +596,19 @@ defineExpose({ abrir, fechar });
           :escolhas="escolhasDoGatilho"
           :pode-ler-cards="podeLerCards"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreRetornoQuando
+          v-else-if="campo.peca === 'quando_do_retorno'"
+          :rotulo="$t(campo.rotulo)"
+          :daqui="rascunho.daqui"
+          :quando="rascunho.quando"
+          :unidades="catalogo.unidades"
+          @update="
+            novo => {
+              mudarNativo('daqui', novo.daqui);
+              mudarNativo('quando', novo.quando);
+            }
+          "
         />
         <LivreRetornoEnvio
           v-else-if="campo.peca === 'envio_do_retorno'"

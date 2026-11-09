@@ -369,7 +369,9 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 9, passo 4 (decisão da Automação, 09/11): a campanha vai só às empresas que a execução criou agora, não a
     # todo contato com a etiqueta (o público da campanha hoje é só etiqueta). Mandar de novo às da semana anterior quebra
     # o "empresas novas" do termo. A frente dona troca o nil pela sonda.
-    'G58' => nil
+    'G58' => nil,
+    # G57 (#2769, ex. 1, passo 7): o retorno "para hoje" (ou amanhã), numa hora ou no fim do dia, no fuso da conta.
+    'G57' => -> { campo_do_passo?('retorno', 'quando') }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

@@ -5,7 +5,8 @@
 # na tela. O que a plataforma recusa vira motivo no histórico.
 #
 # - título e mensagem: pedaços e valores do alvo, como o texto da mensagem; valor vazio pula o passo;
-# - quando: daqui a N minutos, horas ou dias, no fuso da conta;
+# - quando: daqui a N minutos, horas ou dias; ou (G57) hoje ou amanhã, numa hora ou no fim do dia, no fuso da conta. A
+#   hora de hoje que já passou vale em seguida, nunca amanhã;
 # - para: o responsável (no card, quem cuida do cliente; na conversa, o responsável dela), pessoas ou um time; sem
 #   responsável, o passo pula;
 # - no card, o retorno é dele (e da conversa principal); na conversa e no contato, é do contato, só como lembrete. Por
@@ -128,7 +129,19 @@ class Autonomia::Automacao::PassoDeRetorno
   end
 
   def quando
-    Time.current + ::Autonomia::Automacao::Duracao.de(@passo['daqui'])
+    return Time.current + ::Autonomia::Automacao::Duracao.de(@passo['daqui']) if @passo['daqui']
+
+    no_dia(@passo['quando'])
+  end
+
+  # G57: o dia no fuso da conta; sem hora, o fim dele; hora que já passou, agora.
+  def no_dia(quando)
+    agora = Time.current.in_time_zone(fuso)
+    dia = quando['dia'] == 'amanha' ? agora.to_date.tomorrow : agora.to_date
+    hora = quando['hora']
+    return fuso.local(dia.year, dia.month, dia.day).end_of_day if hora.nil?
+
+    [fuso.local(dia.year, dia.month, dia.day, hora), agora].max
   end
 
   # O fuso que a tela grava na conta (#954), o mesmo do extrair e do Guia.

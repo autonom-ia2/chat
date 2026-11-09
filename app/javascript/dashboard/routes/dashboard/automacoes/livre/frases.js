@@ -6,7 +6,7 @@ import { comColchetes } from './texto';
 import { fraseDaCampanha } from './campanha';
 import { fraseDaProspeccao } from './prospeccao';
 import { fraseDoParaCada } from './paraCada';
-import { fraseDoRetorno } from './retorno';
+import { fraseDoRetorno, quandoDoRetorno } from './retorno';
 import { SEM_PRAZO } from './receita';
 import {
   TIPO as EM_OUTRO_REGISTRO,
@@ -496,7 +496,11 @@ export const fraseDoPasso = (passo, catalogo, t) => {
   if (passo.tipo === 'para_cada') return fraseDoParaCada(passo, t);
   if (passo.tipo === 'retorno')
     return fraseDoRetorno(passo, t, {
-      quando: fraseDaDuracao(passo.daqui, catalogo, t),
+      quando: quandoDoRetorno(
+        passo,
+        t,
+        fraseDaDuracao(passo.daqui, catalogo, t)
+      ),
       titulo: fraseDoTexto(passo.titulo, catalogo, t),
       mensagem: passo.envio && fraseDoTexto(passo.envio.mensagem, catalogo, t),
     });
