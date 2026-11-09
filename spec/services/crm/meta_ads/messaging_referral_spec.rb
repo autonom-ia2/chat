@@ -228,6 +228,19 @@ RSpec.describe Crm::MetaAds::MessagingReferral do
     expect(described_class.attribute!(theirs, ad_referral, source: messenger, event_id: 'mid.1')).to be(false)
   end
 
+  # #2781: o mesmo Instagram em duas contas. O clique vai só para a conta que conhece o anúncio, como na Página.
+  it 'Instagram de duas contas: o anúncio vai só para a conta que o conhece' do
+    instagram = Crm::MetaAds::MessagingReferral::INSTAGRAM_SOURCE
+    first = create(:channel_instagram, instagram_id: 'ig-shared')
+    second = create(:channel_instagram, instagram_id: 'ig-shared')
+    mine = create(:conversation, account: first.account, inbox: first.inbox)
+    theirs = create(:conversation, account: second.account, inbox: second.inbox)
+    Crm::MetaAdObject.create!(account: mine.account, meta_object_id: '120200000000000001', object_type: 'ad', fetched_at: Time.current)
+
+    expect(described_class.attribute!(mine, ad_referral, source: instagram, event_id: 'mid.1')).to be(true)
+    expect(described_class.attribute!(theirs, ad_referral, source: instagram, event_id: 'mid.1')).to be(false)
+  end
+
   # Anúncio novo, que nenhuma conta da Página conhece: a Graph diz de qual conta de anúncios ele é; sem conexão, não grava.
   it 'Página de duas contas e anúncio novo: grava só na conta cuja conta de anúncios é a do anúncio' do
     page = create(:channel_facebook_page)

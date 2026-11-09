@@ -440,6 +440,63 @@ describe Webhooks::InstagramEventsJob do
         expect(instagram_inbox.messages.last.content_attributes['is_unsupported']).to be_nil
       end
 
+      # #2781: o mesmo Instagram ligado em duas contas recebe nas duas, como a Página no Messenger. Na conta que só tem a
+      # Página com esse Instagram, a Página recebe; na conta com o login do Instagram, a Página da mesma conta não.
+      context 'when the same Instagram is connected in other accounts' do
+        let!(:other_channel) { create(:channel_instagram, account: create(:account), instagram_id: 'chatwoot-app-user-id-1') }
+        let!(:same_account_page) { create(:channel_instagram_fb_page, account: account, instagram_id: 'chatwoot-app-user-id-1') }
+        let!(:page_only) { create(:channel_instagram_fb_page, account: create(:account), instagram_id: 'chatwoot-app-user-id-1') }
+        let!(:page_only_inbox) { create(:inbox, channel: page_only, account: page_only.account, greeting_enabled: false) }
+        let!(:same_account_page_inbox) { create(:inbox, channel: same_account_page, account: account, greeting_enabled: false) }
+
+        before do
+          other_channel.update(access_token: 'valid_instagram_token')
+          koala = double
+          allow(Koala::Facebook::API).to receive(:new).and_return(koala)
+          allow(koala).to receive(:get_object).and_return(
+            { name: 'Jane', id: 'Sender-id-shared', account_id: page_only.account_id, username: 'some_user_name' }.with_indifferent_access
+          )
+        end
+
+        it 'creates the incoming message once in each account' do
+          dm_event = build(:instagram_message_create_event, sender_id: 'Sender-id-shared').with_indifferent_access
+          instagram_webhook.perform_now(dm_event[:entry])
+
+          expect([instagram_inbox, other_channel.inbox, page_only_inbox].map { |inbox| inbox.messages.count }).to eq([1, 1, 1])
+          expect(same_account_page_inbox.messages.count).to eq 0
+        end
+
+        it 'keeps the echo of a reply sent by one account only in that account' do
+          instagram_webhook.perform_now(build(:instagram_message_create_event, sender_id: 'Sender-id-shared').with_indifferent_access[:entry])
+          conversation = instagram_inbox.conversations.sole
+          create(:message, conversation: conversation, inbox: instagram_inbox, account: account, message_type: :outgoing,
+                           source_id: 'mid-echo-1', content: 'Resposta da conta 1')
+          echo = [{ id: 'chatwoot-app-user-id-1', time: 1_700_000_000,
+                    messaging: [{ sender: { id: 'chatwoot-app-user-id-1' }, recipient: { id: 'Sender-id-shared' }, timestamp: 1_700_000_000_000,
+                                  message: { mid: 'mid-echo-1', text: 'Resposta da conta 1', is_echo: true } }] }.with_indifferent_access]
+
+          expect { instagram_webhook.perform_now(echo) }
+            .not_to(change { [instagram_inbox, other_channel.inbox, page_only_inbox].map { |inbox| inbox.messages.count } })
+        end
+
+        it 'still delivers to the other accounts when one fails, and raises for the retry' do
+          allow(Instagram::MessageText).to receive(:new).and_call_original
+          allow(Instagram::MessageText).to receive(:new).with(anything, instagram_channel).and_raise(ActiveRecord::Deadlocked)
+          dm_event = build(:instagram_message_create_event, sender_id: 'Sender-id-shared').with_indifferent_access
+
+          expect { instagram_webhook.perform_now(dm_event[:entry]) }.to raise_error(ActiveRecord::Deadlocked)
+          expect([other_channel.inbox, page_only_inbox].map { |inbox| inbox.messages.count }).to eq([1, 1])
+        end
+
+        it 'enqueues the referral only once, for every account' do
+          entry = [{ id: 'chatwoot-app-user-id-1', time: 1_700_000_000,
+                     messaging: [{ sender: { id: 'Sender-id-1' }, recipient: { id: 'chatwoot-app-user-id-1' }, timestamp: 1_700_000_000_000,
+                                   referral: { source: 'ADS', ad_id: '120200000000000001', type: 'OPEN_THREAD' } }] }.with_indifferent_access]
+
+          expect { instagram_webhook.perform_now(entry) }.to have_enqueued_job(Crm::MetaAds::MessagingReferralJob).exactly(:once)
+        end
+      end
+
       it 'handles instagram postback event and creates a message with the postback title' do
         postback_event = build(:instagram_postback_event).with_indifferent_access
 

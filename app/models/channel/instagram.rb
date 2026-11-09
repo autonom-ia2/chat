@@ -13,7 +13,7 @@
 #
 # Indexes
 #
-#  index_channel_instagram_on_instagram_id  (instagram_id) UNIQUE
+#  index_channel_instagram_on_instagram_id_and_account_id  (instagram_id,account_id) UNIQUE
 #
 class Channel::Instagram < ApplicationRecord
   include Channelable
@@ -26,7 +26,8 @@ class Channel::Instagram < ApplicationRecord
   AUTHORIZATION_ERROR_THRESHOLD = 1
 
   validates :access_token, presence: true
-  validates :instagram_id, uniqueness: true, presence: true
+  # #2781: o mesmo Instagram pode estar em mais de uma conta, como a Página do Facebook; numa conta, uma vez só.
+  validates :instagram_id, uniqueness: { scope: :account_id }, presence: true
 
   after_create_commit :subscribe
   before_destroy :unsubscribe
@@ -61,7 +62,11 @@ class Channel::Instagram < ApplicationRecord
     true
   end
 
+  # A inscrição vale para o Instagram, não para a caixa: com o mesmo Instagram ligado noutra conta desta stack (#2781),
+  # cancelar aqui calaria a outra. Como na Página (Channel::FacebookPage#unsubscribe), só este banco é conferido.
   def unsubscribe
+    return true if Channel::Instagram.where(instagram_id: instagram_id).where.not(id: id).exists?
+
     HTTParty.delete(
       "#{base_uri}/#{instagram_id}/subscribed_apps",
       query: {
