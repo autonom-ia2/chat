@@ -46,7 +46,7 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
     since = nil
 
     freeze_time do
-      since = 48.hours.ago.to_i
+      since = 48.hours.ago.to_i - 1
       described_class.perform_now(form.id)
     end
 
@@ -55,8 +55,9 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
     expect(a_request(:get, meta_graph_url('9001/leads')).with(query: hash_including('filtering' => filtering))).to have_been_made.once
   end
 
+  # A Meta guarda o created_time em segundos: o filtro começa um segundo antes do marco (#2804, item 5 da #2740).
   def filtering(since)
-    [{ field: 'time_created', operator: 'GREATER_THAN', value: since.to_i }].to_json
+    [{ field: 'time_created', operator: 'GREATER_THAN', value: since.to_i - 1 }].to_json
   end
 
   def read_since?(since)
@@ -234,7 +235,7 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
 
   # #2740: lead que o banco recusa (dado inválido) não é tentado de novo a cada hora; vai ao rastreador uma vez.
   describe 'lead que não dá para gravar' do
-    let(:recusa) { ActiveRecord::RecordInvalid.new(Crm::Card.new) }
+    let(:recusa) { ActiveRecord::RecordInvalid.new(Crm::Card.new.tap { |card| card.errors.add(:title, :blank) }) }
 
     it 'a rodada seguinte não tenta de novo, e o lead novo bom entra', :aggregate_failures do
       stub_leads(leads: [lead('L1', 'Ana', '+5511987650001')])
@@ -255,9 +256,9 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
       expect(ChatwootExceptionTracker).to have_received(:new).once
     end
 
-    def recusar_ana!
+    def recusar_ana!(erro = recusa)
       stub_leads(leads: [lead('L1', 'Ana', '+5511987650001')])
-      allow_any_instance_of(Crm::Cards::Creator).to receive(:perform).and_raise(recusa) # rubocop:disable RSpec/AnyInstance
+      allow_any_instance_of(Crm::Cards::Creator).to receive(:perform).and_raise(erro) # rubocop:disable RSpec/AnyInstance
       allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
       described_class.perform_now(form.id)
       allow_any_instance_of(Crm::Cards::Creator).to receive(:perform).and_call_original # rubocop:disable RSpec/AnyInstance
@@ -285,6 +286,59 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
       expect(account.crm_cards.pluck(:title)).to eq(['Ana'])
     end
 
+    # #2804: o funil consertado (a etapa, o dono, o funil reativado) muda a linha do funil, e a recusa do destino não
+    # vale mais, mesmo sem salvar o destino de novo no formulário.
+    it 'funil consertado sem salvar o destino: a rodada seguinte tenta de novo e o lead entra' do
+      recusar_ana!(ActiveRecord::RecordInvalid.new(Crm::Card.new.tap { |card| card.errors.add(:stage, :invalid) }))
+
+      travel(1.second) { pipeline.update!(name: 'Vendas consertado') }
+      described_class.perform_now(form.id)
+
+      expect(account.crm_cards.pluck(:title)).to eq(['Ana'])
+    end
+
+    it 'recusa do próprio lead: consertar o funil não o traz de volta' do
+      contato = Contact.new.tap { |record| record.errors.add(:name, :too_long) }
+      stub_leads(leads: [lead('L1', 'Ana', '+5511987650001')])
+      allow_any_instance_of(Contact).to receive(:save!).and_raise(ActiveRecord::RecordInvalid.new(contato)) # rubocop:disable RSpec/AnyInstance
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
+      described_class.perform_now(form.id)
+
+      travel(1.second) { pipeline.update!(name: 'Vendas consertado') }
+      described_class.perform_now(form.id)
+
+      expect(ChatwootExceptionTracker).to have_received(:new).once
+    end
+
+    # #2804: corrida no banco é passageira. A rodada seguinte tenta sozinha; só depois de algumas seguidas o lead fica
+    # lembrado, para não voltar o laço da #2740.
+    describe 'erro passageiro' do
+      let(:corrida) { Contact.new.tap { |record| record.errors.add(:phone_number, :taken) } }
+
+      before do
+        stub_leads(leads: [lead('L1', 'Ana', '+5511987650001')])
+        allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
+      end
+
+      it 'a rodada seguinte tenta de novo e o lead entra' do
+        allow_any_instance_of(Contact).to receive(:save!).and_raise(ActiveRecord::RecordInvalid.new(corrida)) # rubocop:disable RSpec/AnyInstance
+        described_class.perform_now(form.id)
+        allow_any_instance_of(Contact).to receive(:save!).and_call_original # rubocop:disable RSpec/AnyInstance
+
+        described_class.perform_now(form.id)
+
+        expect(account.crm_cards.pluck(:title)).to eq(['Ana'])
+      end
+
+      it 'passageira que se repete vira recusa do lead depois de TRANSIENT_ATTEMPTS rodadas' do
+        allow_any_instance_of(Contact).to receive(:save!).and_raise(ActiveRecord::RecordInvalid.new(corrida)) # rubocop:disable RSpec/AnyInstance
+
+        (Crm::MetaAds::LeadForms::RefusedLeads::TRANSIENT_ATTEMPTS + 2).times { described_class.perform_now(form.id) }
+
+        expect(ChatwootExceptionTracker).to have_received(:new).exactly(Crm::MetaAds::LeadForms::RefusedLeads::TRANSIENT_ATTEMPTS).times
+      end
+    end
+
     it 'lead só com recusa: a rodada seguinte nem lê as perguntas do formulário' do
       stub_leads(leads: [lead('L1', 'Ana', '+5511987650001')])
       allow_any_instance_of(Crm::Cards::Creator).to receive(:perform).and_raise(recusa) # rubocop:disable RSpec/AnyInstance
@@ -295,6 +349,23 @@ RSpec.describe Crm::MetaAds::LeadForms::ReconcileJob do
       described_class.perform_now(form.id)
 
       expect(a_request(:get, meta_graph_url('9001')).with(query: hash_including({}))).not_to have_been_made
+    end
+  end
+
+  # Item 4 da #2740 (#2804): funil arquivado e reativado sem salvar o destino de novo. Com ele fechado o webhook não
+  # trouxe ninguém; reativado, a reconciliação lê só desde a reativação, como se o destino fosse salvo naquela hora.
+  it 'funil arquivado e reativado: lê só desde a reativação' do
+    reactivated_at = 2.hours.ago.change(usec: 0)
+    travel_to(10.hours.ago) { pipeline.archived! }
+    travel_to(reactivated_at) { pipeline.active! }
+
+    freeze_time do
+      stub_leads_by_since(48.hours.ago, reactivated_at)
+
+      described_class.perform_now(form.id)
+
+      expect(read_since?(reactivated_at)).to have_been_made.once
+      expect(account.crm_cards.count).to eq(0)
     end
   end
 

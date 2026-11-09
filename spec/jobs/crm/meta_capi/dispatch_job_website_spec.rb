@@ -40,7 +40,9 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
   before do
     link = create(:ctwa_tracked_link, account: account, inbox: channel.inbox, usage: 'website',
                                       allowed_origins: ['https://placement.com.br'])
-    create(:ctwa_tracked_link_click, account: account, tracked_link: link, conversation: conversation, meta_signals: click_signals)
+    # Only website clicks made by the event count (#2799): this one is a day before the sale.
+    create(:ctwa_tracked_link_click, account: account, tracked_link: link, conversation: conversation, meta_signals: click_signals,
+                                     created_at: 1.day.ago)
     allow(Meta::ConversionsApiClient).to receive(:new).and_return(client)
     allow(client).to receive(:post_events)
       .and_return(Meta::ConversionsApiClient::Result.new(ok: true, http_code: 200, body: 'ok', error: nil))
@@ -246,15 +248,39 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
       expect(row.status).to eq('accepted')
     end
 
-    it 'does not switch tokens on a passing Meta failure (5xx) and lets Sidekiq retry' do
+    # #2799: Meta may have kept an event it answered with a 5xx, so it is not sent again.
+    it 'does not switch tokens nor retry on a Meta server error (5xx): the outcome is unknown' do
       connection = create_meta_ads_connection(account, token: ads_token)
-      answer(ads_token, refuse(nil, http: 503))
+      answer(ads_token, Meta::ConversionsApiClient::Result.new(ok: false, http_code: 503, body: 'no', error: 'down', unknown_outcome: true))
 
-      expect { perform }.to raise_error(described_class::DispatchError)
+      expect { perform }.not_to raise_error
 
       expect(Meta::ConversionsApiClient).not_to have_received(:new).with(access_token: whatsapp_token, dataset_id: anything)
       expect(connection.reload.status).to eq('active')
-      expect(row.status).to eq('error')
+      expect(row).to have_attributes(status: 'error', error_message: 'unknown_outcome', http_code: 503)
+    end
+
+    it 'neither marks the connection invalid nor tries the WhatsApp token on a 5xx that carries a token code' do
+      connection = create_meta_ads_connection(account, token: ads_token)
+      answer(ads_token, Meta::ConversionsApiClient::Result.new(ok: false, http_code: 500, error: 'x', error_code: 190, unknown_outcome: true))
+
+      perform
+
+      expect(Meta::ConversionsApiClient).not_to have_received(:new).with(access_token: whatsapp_token, dataset_id: anything)
+      expect(connection.reload.status).to eq('active')
+      expect(row.error_message).to eq('unknown_outcome')
+    end
+  end
+
+  # #2799: same cut as the WhatsApp click (#2738): a website click after the sale did not bring it.
+  context 'when the only website click came after the sale' do
+    before { Ctwa::TrackedLinkClick.update_all(created_at: 1.hour.ago) } # rubocop:disable Rails/SkipsModelValidations
+
+    it 'sends nothing and says the card has no click' do
+      perform
+
+      expect(Meta::ConversionsApiClient).not_to have_received(:new)
+      expect(row).to have_attributes(status: 'skipped', error_message: 'missing_ctwa_clid')
     end
   end
 
@@ -289,6 +315,8 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
 
   context 'when the event is older than 7 days at send time' do
     let(:closed_at) { 8.days.ago }
+
+    before { Ctwa::TrackedLinkClick.update_all(created_at: 9.days.ago) } # rubocop:disable Rails/SkipsModelValidations
 
     it 'skips with event_too_old without raising, so Sidekiq does not retry' do
       expect { perform }.not_to raise_error

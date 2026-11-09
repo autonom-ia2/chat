@@ -465,6 +465,9 @@ Rails.application.routes.draw do
               get 'ads/:ad_id/budget', to: 'meta_ads_creation#budget'
               patch 'ads/:ad_id/budget', to: 'meta_ads_creation#update_budget'
               get :paused_ads, to: 'meta_ads_creation#paused'
+              # Cuidar do anúncio criado aqui (#2778): duplicar e trocar a foto ou o texto.
+              post 'ads/:ad_id/copies', to: 'meta_ads_ad_care#copy'
+              put 'ads/:ad_id/creative', to: 'meta_ads_ad_care#creative'
               # Comentários do anúncio no Instagram (#2196): ler, responder, ocultar, apagar e responder no privado.
               get 'ads/:ad_id/instagram_comments', to: 'meta_ads_instagram_comments#index'
               post 'ads/:ad_id/instagram_comments/:comment_id/reply', to: 'meta_ads_instagram_comments#reply'
@@ -827,6 +830,17 @@ Rails.application.routes.draw do
                 post :discard, on: :collection, controller: :lead_batches, action: :discard
                 post :contacts, on: :collection, controller: :lead_batches, action: :contacts
                 post :audience, on: :collection, controller: :lead_audiences, action: :create
+                # Em quais listas a empresa está, para a gaveta (#2775, F6).
+                get :audiences, on: :member, controller: :lead_audiences, action: :index
+              end
+              # "Suas listas" (#2775, F6): os Públicos criados pela Prospecção; pôr, tirar, devolver e copiar.
+              resources :audiences, only: [:index, :show] do
+                member do
+                  post :leads, action: :add_leads
+                  delete :members, action: :remove_members
+                  post :members, action: :restore_members
+                  post :copy
+                end
               end
               resources :lists, only: [:index, :show, :create] do
                 post 'leads', on: :member, action: :add_lead
