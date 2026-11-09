@@ -137,10 +137,94 @@ RSpec.describe 'Automação livre: o card da conversa e o anexo da mensagem', :a
       expect(problemas(copiar)).to eq([])
     end
 
+    describe 'o valor da venda só decide (#2780, Rodrigo 09/11)' do
+      let(:valor) { { '$valor' => 'card.valor' } }
+      let(:caro) { { 'campo' => valor, 'op' => 'maior', 'valor' => 1000 } }
+
+      def so_decide(passo) = I18n.t('autonomia.automacao.receita.valor_protegido_so_decide', passo: passo, caminho: 'card.valor')
+
+      def gravar(id, folha)
+        { 'id' => id, 'tipo' => 'acao', 'acao' => 'POST conversations/:id/custom_attributes', 'descricao' => 'Gravar',
+          'caminho' => { 'id' => { '$valor' => 'conversa.id' } }, 'corpo' => { 'merge' => true, 'custom_attributes' => { 'valor' => folha } } }
+      end
+
+      it 'aceita o valor da venda no "Só se" do gatilho e na condição de um passo' do
+        se = { 'id' => 's1', 'tipo' => 'se', 'condicao' => caro, 'entao' => [mensagem_passo('m1', 'Cliente especial')], 'senao' => [] }
+
+        expect(problemas(se, filtros: [caro])).to eq([])
+      end
+
+      it 'recusa o valor da venda no texto da mensagem, do aviso e do retorno', :aggregate_failures do
+        retorno = { 'id' => 'r1', 'tipo' => 'retorno', 'titulo' => ['Ligar: ', valor], 'daqui' => { 'valor' => 1, 'unidade' => 'dias' },
+                    'para' => { 'quem' => 'responsavel' } }
+
+        expect(problemas(mensagem_passo('m1', 'Valor: ', valor))).to include(so_decide('m1'))
+        expect(problemas(avisar_passo('v1', { 'pessoas' => [admin.id] }, 'Valor: ', valor))).to include(so_decide('v1'))
+        expect(problemas(retorno)).to include(so_decide('r1'))
+      end
+
+      it 'recusa o valor da venda num atributo da conversa, copiado ou dentro de um texto', :aggregate_failures do
+        account.custom_attribute_definitions.create!(attribute_key: 'valor', attribute_display_name: 'Valor',
+                                                     attribute_model: 'conversation_attribute', attribute_display_type: 'text')
+
+        expect(problemas(gravar('a1', valor))).to include(so_decide('a1'))
+        expect(problemas(gravar('a2', { '$texto' => ['R$ ', valor] }))).to include(so_decide('a2'))
+      end
+    end
+
     it 'aceita "tem anexo" só com uma das opções', :aggregate_failures do
       fora = { 'campo' => { '$valor' => 'mensagem.tem_anexo' }, 'op' => 'igual', 'valor' => 'pdf' }
 
       expect(problemas(filtros: [fora])).to include(a_string_including('mensagem.tem_anexo'))
+    end
+  end
+
+  # #2780: a versão gravada antes da decisão, com o valor da venda no texto, não o escreve ao rodar. O "Só se" segue
+  # decidindo por ele.
+  describe 'a versão antiga com o valor da venda no texto' do
+    include ActiveJob::TestHelper
+
+    before do
+      ligar_motor(account)
+      ligar_mensagens(account)
+    end
+
+    def versao_antiga(passos)
+      definicao = create(:autonomia_automacao, account: account, ligada_por: admin)
+      versao = definicao.versoes.new(account: account, numero: 1, autor: admin, digest: SecureRandom.hex(32),
+                                     receita: { 'gatilho' => { 'tipo' => 'mensagem.criada' }, 'passos' => passos })
+      versao.save!(validate: false)
+      definicao.update!(versao_ativa: versao, ativa: true)
+      definicao
+    end
+
+    it 'decide pelo valor, mas a mensagem que o escreveria pula sem mandar nada', :aggregate_failures do
+      card(documentacao).update!(value_cents: 250_000)
+      valor = { '$valor' => 'card.valor' }
+      se = { 'id' => 's1', 'tipo' => 'se', 'condicao' => { 'campo' => valor, 'op' => 'maior', 'valor' => 1000 },
+             'entao' => [mensagem_passo('m1', 'Valor: ', valor)], 'senao' => [] }
+      definicao = versao_antiga([se])
+      mensagem = create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'oi')
+
+      perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) do
+        Autonomia::Automacao::Partida.new(definicao: definicao, alvo: conversa, chave_gatilho: 'mensagem.criada', mensagem: mensagem).call
+      end
+      execucao = Autonomia::Automacao::Execucao.where(automacao: definicao).last
+
+      expect(Autonomia::Automacao::Registro.where(execucao: execucao).order(:id).pluck(:passo, :resultado, :motivo).last)
+        .to eq(%w[m1 pulado faltou_valor])
+      expect(conversa.messages.where(message_type: :outgoing).pluck(:content).join).not_to include('2500')
+    end
+
+    it 'o valor calculado do corpo também não o escreve, e a condição o lê', :aggregate_failures do
+      card(documentacao).update!(value_cents: 250_000)
+      valores = Autonomia::Automacao::Valores.new(alvo: conversa, quem: admin)
+      folha = { 'custom_attributes' => { 'valor' => { '$valor' => 'card.valor' } } }
+      corpo = Autonomia::Automacao::Corpo.new(folha, valores: valores, conta: account)
+
+      expect(corpo.montar.motivo).to eq('faltou_valor')
+      expect(Autonomia::Automacao::Texto.new(['Valor: ', { '$valor' => 'card.valor' }], valores).montar).to be_nil
+      expect(valores.ler('card.valor')).to eq(2500)
     end
   end
 

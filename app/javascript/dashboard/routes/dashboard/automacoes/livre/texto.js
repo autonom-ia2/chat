@@ -28,17 +28,20 @@ const comChaveSeRepetido = opcoes => {
 // e nos passos, `gatilho` não vem e ele fica de fora. O que só o Guia monta
 // (`so_guia`) e o que a pessoa não pode ler (`sem_permissao`, #2597) nunca
 // entram na escolha. A resposta durante a espera (G11, `so_na_espera`) só
-// aparece na condição do "esperar até" (`naEspera`).
+// aparece na condição do "esperar até" (`naEspera`). O que só decide
+// (`so_para_decidir`, #2780) só aparece na condição (`paraDecidir`).
 export const opcoesDosValores = (
   catalogo,
   atributosDo,
   t,
   gatilho = null,
-  naEspera = false
+  naEspera = false,
+  paraDecidir = false
 ) =>
   comChaveSeRepetido(
     (catalogo?.valores || []).flatMap(item => {
       if (item.so_guia || item.sem_permissao) return [];
+      if (item.so_para_decidir && !paraDecidir) return [];
       if (item.so_no_gatilho && item.so_no_gatilho !== gatilho) return [];
       if (item.so_na_espera && !naEspera) return [];
       // #2679: o texto da IA já chega com o rótulo pronto (comTextosDaIa). No
@@ -107,15 +110,20 @@ export const temDataIncompleta = valor => {
   return Object.values(valor).some(temDataIncompleta);
 };
 
-// O valor que a pessoa não pode ler (#2597) e que o texto já usa, com o nome
-// dele: mostra o nome, não "apagado". Só o que já está nas partes entra, para
+// O valor que a pessoa não pode ler (#2597), ou que só decide (#2780), e que
+// o texto já usa, com o nome dele: mostra o nome, não "apagado", e o salvar
+// recusa até a pessoa tirar. Só o que já está nas partes entra, para
 // digitar o nome entre colchetes não criar o dado.
 export const valoresSemPermissao = (catalogo, t, partes = []) => {
   const usados = partes
     .filter(parte => typeof parte !== 'string')
     .map(parte => parte.$valor);
   return (catalogo?.valores || [])
-    .filter(item => item.sem_permissao && usados.includes(item.caminho))
+    .filter(
+      item =>
+        (item.sem_permissao || item.so_para_decidir) &&
+        usados.includes(item.caminho)
+    )
     .map(item => ({ value: item.caminho, label: t(item.frase) }));
 };
 
