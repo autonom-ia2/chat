@@ -366,7 +366,7 @@
       "COM_PRAZO": "Up to a deadline",
       "SEM_PRAZO": "No deadline",
       "QUANTO_TEMPO": "How long",
-      "SEM_PRAZO_DICA": "Waits until the condition is true, for as long as it takes. It stops on its own, and shows in the history, if the conversation or card is deleted, the automation is turned off or the person who turned it on loses access.",
+      "SEM_PRAZO_DICA": "Waits until the condition is true, for as long as it takes, with no limit. It only ends earlier, and the history says why, if the card is archived, the conversation or card is deleted, the automation is turned off or the person who turned it on loses access.",
       "SEM_PRAZO_TIRE_SE_VENCER": "With no deadline, the wait never runs out. First remove the steps under \"If time runs out\".",
       "COMPOSTA": "This condition has several parts. Only the Guide changes it; here it stays as is.",
       "DA_CONVERSA": "Comes from the conversation: {valor}",

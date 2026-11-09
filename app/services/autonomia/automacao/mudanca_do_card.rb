@@ -11,6 +11,10 @@
 # valor e de cada campo personalizado (`somar`, no after_save); no commit, o que de fato mudou (`do_commit`) vira um
 # evento só. O card criado conta como tudo vindo do vazio: o que já nasce com R$ 80 mil "passou de R$ 50 mil". Número
 # que não é número (texto num campo, condição sem valor) não casa: nada dispara por engano.
+#
+# O valor de venda é protegido (#2597) e não vai no evento (#2750, revisão): o job e a fila guardam os argumentos, e o
+# ActiveJob os loga. No commit, a condição de cada gatilho no valor é conferida com o par (`conferir_valor`), e o evento
+# leva só que o valor mudou e quais condições casaram. O campo personalizado vai com o par.
 module Autonomia::Automacao::MudancaDoCard
   CONDICOES = %w[mudou igual maior_que passou_de].freeze
   NUMERICAS = %w[maior_que passou_de].freeze
@@ -20,9 +24,16 @@ module Autonomia::Automacao::MudancaDoCard
 
   module_function
 
-  # mudanca: a `mudanca` do gatilho. mudancas: { 'valor' => [antes, agora], 'atributo:<chave>' => [antes, agora] }.
+  # No job. mudanca: a `mudanca` do gatilho. mudancas: o que o evento traz, { 'valor' => [as condições que casaram],
+  # 'atributo:<chave>' => [antes, agora] }.
   def casa?(mudanca, mudancas)
-    par = mudancas.to_h[chave(mudanca)]
+    return Array(mudancas.to_h[VALOR]).include?(assinatura(mudanca)) if mudanca['campo'] == VALOR
+
+    par_casa?(mudanca, mudancas.to_h[chave(mudanca)])
+  end
+
+  # par: [antes, agora] do campo; no valor de venda, em reais.
+  def par_casa?(mudanca, par)
     return false if par.nil?
 
     antes, agora = par
@@ -72,10 +83,19 @@ module Autonomia::Automacao::MudancaDoCard
     end
   end
 
-  # No job: o par do valor em reais, como a condição compara.
-  def em_reais(mudancas)
-    mudancas.to_h.to_h { |chave, (antes, agora)| [chave, chave == VALOR ? [reais(antes), reais(agora)] : [antes, agora]] }
+  # No commit (CardAtualizado): troca o par do valor, em centavos, pelas condições dos `gatilhos` (a `mudanca` de cada
+  # automação de card atualizado ligada) que ele cumpre, comparadas em reais. Sem condição no valor, a lista fica vazia:
+  # o evento diz só que o valor mudou.
+  def conferir_valor(mudancas, gatilhos)
+    return mudancas unless mudancas.key?(VALOR)
+
+    par = mudancas[VALOR].map { |centavos| reais(centavos) }
+    casadas = gatilhos.map(&:to_h).select { |mudanca| mudanca['campo'] == VALOR && par_casa?(mudanca, par) }
+    mudancas.merge(VALOR => casadas.map { |mudanca| assinatura(mudanca) }.uniq)
   end
+
+  # A condição no valor, como o evento a leva: "passou_de:50000", "mudou:".
+  def assinatura(mudanca) = "#{mudanca['condicao']}:#{mudanca['valor']}"
 
   def chave(mudanca)
     mudanca['campo'] == VALOR ? VALOR : "#{ATRIBUTO}:#{mudanca['chave']}"

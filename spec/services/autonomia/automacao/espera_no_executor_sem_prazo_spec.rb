@@ -92,13 +92,14 @@ RSpec.describe Autonomia::Automacao::EsperaNoExecutor, :automacao_motor do
   describe 'nunca fica aberta para sempre' do
     before { comecar_e_rodar }
 
-    it 'a conversa apagada: a varredura fecha com o motivo', :aggregate_failures do
+    # Na conferência, a rodada acordada vê o alvo sumido (Executor#impedimento) antes da busca das órfãs.
+    it 'a conversa apagada: a conferência fecha com o motivo', :aggregate_failures do
       conversa.destroy!
 
-      varrer
+      travel(1.day + 1.minute) { varrer }
 
       expect(execucao.estado).to eq('interrompida')
-      expect(registros.last).to eq(%w[espera falhou alvo_sumiu])
+      expect(registros.last).to eq(%w[espera pulado alvo_sumiu])
     end
 
     it 'a automação desligada: fecha na hora, com o motivo no histórico', :aggregate_failures do
@@ -125,6 +126,48 @@ RSpec.describe Autonomia::Automacao::EsperaNoExecutor, :automacao_motor do
       expect(execucao.estado).to eq('parada')
       expect(registros.last).to eq(%w[espera pulado quem_ligou_saiu_da_conta])
       expect(definicao.reload.ativa).to be(false)
+    end
+  end
+
+  describe 'no card' do
+    around { |exemplo| with_modified_env(CRM_KANBAN_ENABLED: 'true') { exemplo.run } }
+
+    let(:funil) { create_crm_pipeline(account: account, user: admin) }
+    let(:card) do
+      Crm::Card.create!(account: account, pipeline: funil.first, stage: funil.last, title: 'Pedido grande', currency: 'BRL',
+                        primary_conversation: conversa, contact: conversa.contact)
+    end
+    let(:ganho) { { 'campo' => { '$valor' => 'card.status' }, 'op' => 'igual', 'valor' => 'won' } }
+    let(:definicao) do
+      automacao_ligada(account, admin, [espera.merge('condicao' => ganho), prioridade_passo('depois', 'low')],
+                       gatilho: { 'tipo' => 'card.entrou_na_etapa', 'etapa_id' => funil.last.id })
+    end
+
+    before do
+      account.enable_features!('automacao_gatilhos')
+      partida = Autonomia::Automacao::Partida.new(definicao: definicao, alvo: card, chave_gatilho: 'card.entrou_na_etapa')
+      perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { partida.call }
+    end
+
+    it 'a condição que nunca acontece segue esperando enquanto o card existe e está ativo, sem teto', :aggregate_failures do
+      [1.day + 1.minute, 400.days, 10.years].each { |tempo| travel(tempo) { varrer } }
+
+      expect(execucao).to have_attributes(estado: 'esperando', cursor: 'espera')
+      expect(registros).to eq([['espera', 'ok', nil]])
+    end
+
+    it 'o card arquivado fecha a espera na hora, com o motivo', :aggregate_failures do
+      perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { card.update!(status: :archived) }
+
+      expect(execucao.estado).to eq('interrompida')
+      expect(registros.last).to eq(%w[espera pulado alvo_arquivado])
+      expect(conversa.reload.priority).to be_nil
+    end
+
+    it 'o card ganho acorda e segue' do
+      perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { card.update!(status: :won) }
+
+      expect(execucao.estado).to eq('concluida')
     end
   end
 

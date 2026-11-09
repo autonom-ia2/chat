@@ -8,6 +8,9 @@
 # nada mudou, volta a esperar, sem registro novo. Assim a espera sem prazo nunca fica aberta para sempre depois que a
 # automação parou ou quem ligou perdeu o acesso (fecha com registro e motivo), o aviso perdido (fila fora do ar) é
 # recuperado em até um dia, e a varredura, a reserva da Escuta e o índice seguem contando com o `due_at` preenchido.
+# O card arquivado fecha a espera sem prazo nele (`alvo_arquivado`, o Despertador acorda no arquivar); o card apagado,
+# pela varredura (`alvo_sumiu`). Enquanto o alvo existe e está ativo, a condição que nunca acontece segue esperando,
+# sem teto: não há limite de uso.
 module Autonomia::Automacao::EsperaNoExecutor
   Duracao = ::Autonomia::Automacao::Duracao
   CONFERENCIA = 1.day
@@ -23,7 +26,7 @@ module Autonomia::Automacao::EsperaNoExecutor
   def esperar_ate(passo)
     espera = janela_da_espera(passo)
     return cumprida(passo) if condicao?(passo['condicao'], valores(espera: espera))
-    return aguardar_sem_prazo(passo, espera) if Duracao.sem_prazo?(passo['prazo'])
+    return esperar_sem_prazo(passo, espera) if Duracao.sem_prazo?(passo['prazo'])
     return aguardar_condicao(passo, espera, espera.begin + Duracao.de(passo['prazo'])) unless @retomando
     return aguardar_condicao(passo, espera, @execucao.due_at, registrar: false) if @execucao.due_at&.future?
 
@@ -50,6 +53,13 @@ module Autonomia::Automacao::EsperaNoExecutor
     ::Autonomia::Automacao::Despertador.acordar(esperando) if esperando && alvo && condicao?(passo['condicao'], valores(espera: espera))
   rescue StandardError => e
     ::Autonomia::Automacao::Escuta.registrar_erro("não reconferiu ao esperar execucao=#{@execucao.id}", e)
+  end
+
+  # O card arquivado não volta a andar sozinho: a espera sem prazo nele fecha, com o motivo no histórico.
+  def esperar_sem_prazo(passo, espera)
+    return encerrar(passo['id'], 'interrompida', 'alvo_arquivado') if alvo.is_a?(::Crm::Card) && alvo.archived?
+
+    aguardar_sem_prazo(passo, espera)
   end
 
   # Registra só ao entrar: o começo da espera fica no registro (`desde`), porque o `due_at` muda a cada conferência.

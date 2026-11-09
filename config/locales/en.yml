@@ -521,6 +521,7 @@ en:
         acao_fora: 'This action is no longer allowed as an automation step.'
         acao_recusada: 'The platform refused this action as it was set up.'
         alvo_sumiu: 'The conversation no longer exists.'
+        alvo_arquivado: 'The card was archived. The wait with no deadline ended.'
         desligada: 'The automation was turned off.'
         erro_depois_de_gravar: 'The platform failed after saving part of the action. The automation does not repeat it, so it is not done twice; check and undo if needed.'
         erro_inesperado: 'The automation stopped in the middle of this step on an unexpected error. It does not repeat the step; check what was already done.'

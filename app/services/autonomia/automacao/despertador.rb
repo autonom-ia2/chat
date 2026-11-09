@@ -6,12 +6,13 @@ module Autonomia::Automacao::Despertador
   module_function
 
   # Roda a cada mudança lida do card: primeiro a consulta pelo índice do alvo; sem execução esperando nele (o caso comum),
-  # para aí, sem ler a conta nem a flag. Só acorda a espera cuja condição lê o card (EsperaDoCard.le_o_card?).
+  # para aí, sem ler a conta nem a flag. Só acorda a espera cuja condição lê o card (EsperaDoCard.le_o_card?). O card
+  # arquivado acorda todas (#2750): a espera sem prazo nele fecha na hora, com o motivo (EsperaNoExecutor).
   def card_mudou(card)
     esperando = ::Autonomia::Automacao::Execucao.where(alvo_type: 'Crm::Card', alvo_id: card.id, estado: 'esperando')
     return unless esperando.exists? && ::Autonomia::Automacao::Motor.ligado?(card.account)
 
-    escuta.acordar_quem_espera(esperando, filtro: ::Autonomia::Automacao::EsperaDoCard.method(:le_o_card?))
+    escuta.acordar_quem_espera(esperando, filtro: (::Autonomia::Automacao::EsperaDoCard.method(:le_o_card?) unless card.archived?))
   rescue StandardError => e
     escuta.registrar_erro("não acordou Crm::Card=#{card&.id}", e)
   end

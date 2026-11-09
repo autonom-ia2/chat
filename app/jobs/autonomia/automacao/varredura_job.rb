@@ -8,7 +8,9 @@
 #    perde ninguém (F3.3). Vem primeiro: um erro nos passos de baixo não para as esperas.
 # 2. Fecha como "interrompida" a execução que começou e está andando há mais de TRAVADA: a rodada quebrou no meio, e
 #    repeti-la faria de novo o que ela já fez. Nunca é repetida. Começou = `due_at` vazio (ver Executor).
-# 3. Fecha como "interrompida" a aberta cujo alvo foi apagado (alvo sumiu).
+# 3. Fecha como "interrompida" a aberta cujo alvo foi apagado (alvo sumiu), entre as de `due_at` já vencido, em lote,
+#    pelo índice parcial do `due_at` (#2750, revisão): a que ainda não venceu fecha quando vencer (aqui, ou na rodada,
+#    pelo Executor#impedimento). A espera sem prazo vence uma vez por dia (EsperaNoExecutor::CONFERENCIA).
 #
 # Cada linha que falha vai para o log e não para as outras. As contas sem o motor também passam por aqui: o executor
 # fecha a execução delas como parada (rollback da flag).
@@ -22,7 +24,7 @@ class Autonomia::Automacao::VarreduraJob < ApplicationJob
     agora = Time.current.floor(6)
     acordar(agora).each { |id| enfileirar(id, agora) }
     interromper(travadas(agora), 'travada')
-    interromper(orfas, 'alvo_sumiu')
+    interromper(orfas(agora), 'alvo_sumiu')
   end
 
   private
@@ -53,12 +55,13 @@ class Autonomia::Automacao::VarreduraJob < ApplicationJob
     execucoes.where(estado: 'andando', due_at: nil, travada_em: ...(agora - TRAVADA)).limit(LOTE)
   end
 
-  def orfas
-    execucoes.abertas.distinct.pluck(:alvo_type).flat_map do |tipo|
+  def orfas(agora)
+    vencidas = execucoes.abertas.where(due_at: ..agora)
+    vencidas.distinct.pluck(:alvo_type).flat_map do |tipo|
       tabela = tipo.constantize.table_name
-      execucoes.abertas.where(alvo_type: tipo)
-               .where("NOT EXISTS (SELECT 1 FROM #{tabela} alvo WHERE alvo.id = autonomia_automacao_execucoes.alvo_id)")
-               .limit(LOTE).to_a
+      vencidas.where(alvo_type: tipo)
+              .where("NOT EXISTS (SELECT 1 FROM #{tabela} alvo WHERE alvo.id = autonomia_automacao_execucoes.alvo_id)")
+              .limit(LOTE).to_a
     rescue NameError => e
       Rails.logger.error("[automacao][varredura] alvo_type desconhecido #{tipo}: #{e.message}")
       []

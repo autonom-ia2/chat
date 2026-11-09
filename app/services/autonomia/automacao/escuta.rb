@@ -183,11 +183,12 @@ module Autonomia::Automacao::Escuta
   end
 
   # A etapa de onde o card saiu ou para onde entrou, e o funil, para os parâmetros do gatilho. O card criado traz a
-  # etapa em que nasceu (stage_id); o movido, as duas pontas. O atualizado (G27), o que mudou e de quanto. A reunião
-  # (G32) traz também a página de agendamento.
+  # etapa em que nasceu (stage_id); o movido, as duas pontas. O atualizado (G27), o que mudou: o par [antes, agora] do
+  # campo e, no valor de venda, as condições que casaram, sem o valor (MudancaDoCard.conferir_valor). A reunião (G32)
+  # traz também a página de agendamento.
   def dados_do_card(tipo, card, mudou, atividade_id = nil)
     case tipo
-    when ::Autonomia::Automacao::Gatilhos::ATUALIZADO then { 'mudancas' => ::Autonomia::Automacao::MudancaDoCard.em_reais(mudou[:mudancas]) }
+    when ::Autonomia::Automacao::Gatilhos::ATUALIZADO then { 'mudancas' => mudou[:mudancas] }
     when 'card.entrou_na_etapa' then { 'etapa_id' => mudou[:to_stage_id] || mudou[:stage_id] || card.stage_id }
     when 'card.saiu_da_etapa' then { 'etapa_id' => mudou[:from_stage_id] }
     else { 'funil_id' => mudou[:pipeline_id] || card.pipeline_id, **::Autonomia::Automacao::ReuniaoDaAtividade.do_gatilho(tipo, card, atividade_id) }
@@ -202,14 +203,17 @@ module Autonomia::Automacao::Escuta
   # Roda no after_commit do card: um erro aqui não pode quebrar o pedido de quem moveu o card, nem perder o evento. Em
   # erro, despacha assim mesmo (o job assíncrono decide) e loga só a classe.
   # A reunião (G32) assina também quando há execução esperando no card ou no contato dele (#2710): ela acorda para
-  # conferir a condição.
+  # conferir a condição. Na troca em lote (EmLote), a resposta vale para os outros cards com o mesmo evento e os mesmos
+  # parâmetros: uma consulta por lote, não uma por card.
   def assinante?(account, evento, mudou = {}, card_id: nil)
     tipos = tipos_ligados(account, evento)
     return false if tipos.blank?
     return true if ::Autonomia::Automacao::EsperaDaReuniao.no_card?(account, tipos, card_id)
 
     mudou = mudou.to_h.with_indifferent_access
-    automacoes_do_gatilho(account.id, tipos).where(tipos.map { |tipo| gatilho_casa_sql(tipo, mudou) }.join(' OR ')).exists?
+    ::Autonomia::Automacao::EmLote.lembrar([:assinante, account.id, evento, tipos.map { |tipo| parametro_do_evento(tipo, mudou) }]) do
+      automacoes_do_gatilho(account.id, tipos).where(tipos.map { |tipo| gatilho_casa_sql(tipo, mudou) }.join(' OR ')).exists?
+    end
   rescue StandardError => e
     registrar_erro("gate do emissor falhou evento=#{evento} conta=#{account&.id}; despacha assim mesmo", e)
     true
@@ -243,9 +247,7 @@ module Autonomia::Automacao::Escuta
     end
   end
 
-  def registrar_erro(contexto, erro)
-    Rails.logger.error("[automacao][escuta] #{contexto} #{erro.class} em #{erro.backtrace&.first}")
-  end
+  def registrar_erro(contexto, erro) = Rails.logger.error("[automacao][escuta] #{contexto} #{erro.class} em #{erro.backtrace&.first}")
 
   # `tipo`: um tipo ou a lista dos que o evento dispara.
   def automacoes_do_gatilho(account_id, tipo)

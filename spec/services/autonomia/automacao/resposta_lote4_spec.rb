@@ -256,14 +256,16 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
       expect { card.update!(score: 40) }.not_to have_enqueued_job(Autonomia::Automacao::AvancarJob)
     end
 
-    # O Despertador; o gatilho "card atualizado" (G27, CardAtualizado) tem gate próprio, que lê a flag da conta antes.
-    it 'sem execução esperando no card, a mudança só faz a consulta pelo alvo: nem lê a flag' do
-      allow(Autonomia::Automacao::CardAtualizado).to receive(:avisar)
+    # O Despertador e o gatilho "card atualizado" (G27): sem execução esperando e sem automação de card atualizado ligada
+    # na conta, a mudança só faz as consultas, sem ler flag nenhuma.
+    it 'sem execução esperando no card nem automação de card atualizado, a mudança não lê flag', :aggregate_failures do
       allow(Autonomia::Automacao::Motor).to receive(:ligado?).and_call_original
+      allow(Autonomia::Automacao::Motor).to receive(:gatilhos?).and_call_original
 
       card.update!(custom_attributes: { 'impressao' => 'gostou' })
 
       expect(Autonomia::Automacao::Motor).not_to have_received(:ligado?)
+      expect(Autonomia::Automacao::Motor).not_to have_received(:gatilhos?)
     end
 
     it 'a mudança no card não acorda quem espera em outro card' do

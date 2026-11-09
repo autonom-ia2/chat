@@ -1014,6 +1014,7 @@ pt_BR:
         acao_fora: 'Esta ação não pode mais ser passo de automação.'
         acao_recusada: 'A plataforma recusou esta ação do jeito que ela foi montada.'
         alvo_sumiu: 'A conversa não existe mais.'
+        alvo_arquivado: 'O card foi arquivado. A espera sem prazo terminou.'
         desligada: 'A automação foi desligada.'
         erro_depois_de_gravar: 'A plataforma deu erro depois de gravar parte da ação. A automação não repete, para não fazer duas vezes; confira e desfaça se precisar.'
         erro_inesperado: 'A automação parou no meio deste passo por um erro inesperado. Ela não repete o passo; confira o que já foi feito.'
