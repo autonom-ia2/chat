@@ -190,7 +190,7 @@
       "POSTS_MANAGE": "Reply to, hide and delete the comments on the posts",
       "INBOX_MANAGE": "Set up the channels",
       "AUTONOMIA_MANAGE": "Create and train the AI bots",
-      "AUTONOMIA_TOOLS_MANAGE": "Connect the AI bots to other company systems",
+      "AUTONOMIA_TOOLS_MANAGE": "Create and turn on the agent tools",
       "AUTOMATION_MANAGE": "Create and change the automatic rules",
       "LABEL_MANAGE": "Create and change labels",
       "MACRO_MANAGE": "Create and change message shortcuts",
@@ -266,8 +266,8 @@
         "NA_FRASE": "AI bots"
       },
       "AUTONOMIA_TOOLS": {
-        "NOME": "Bots connected to other systems",
-        "NA_FRASE": "how the bots connect to other systems",
+        "NOME": "Agent tools",
+        "NA_FRASE": "the agent tools",
         "AVISO": "Whoever has this chooses where conversation data goes. Only the administrator can grant it."
       },
       "DESEMPENHO": {

@@ -123,9 +123,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/tools#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:33",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:63"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:36",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:72",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:76"
     ],
     "sem_corpo": true
   },
@@ -3543,6 +3543,7 @@
       "param_schema": {
         "campos": {
           "description": {},
+          "label": {},
           "name": {},
           "required": {},
           "type": {}
@@ -3575,10 +3576,10 @@
     "envelope": "tool",
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:25",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:71",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:63"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:28",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:84",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:72",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:76"
     ],
     "sem_corpo": false
   },
@@ -6624,6 +6625,7 @@
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
+          "autonomia_tools_manage",
           "desempenho_view",
           "campaign_view",
           "campaign_manage",
@@ -11168,6 +11170,7 @@
       "param_schema": {
         "campos": {
           "description": {},
+          "label": {},
           "name": {},
           "required": {},
           "type": {}
@@ -11186,9 +11189,9 @@
     "corpo_plano": true,
     "envelope": "tool",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:16",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:71",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:19",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:84",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:72"
     ],
     "sem_corpo": false
   },
@@ -11202,10 +11205,10 @@
       "leitura crua sem tipo: params"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:41",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:97",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:63"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:44",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:110",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:72",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:76"
     ],
     "sem_corpo": false
   },
@@ -17448,6 +17451,7 @@
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
+          "autonomia_tools_manage",
           "desempenho_view",
           "campaign_view",
           "campaign_manage",
@@ -23235,6 +23239,7 @@
       "param_schema": {
         "campos": {
           "description": {},
+          "label": {},
           "name": {},
           "required": {},
           "type": {}
@@ -23267,10 +23272,10 @@
     "envelope": "tool",
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:25",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:71",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:63"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:28",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:84",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:72",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:76"
     ],
     "sem_corpo": false
   },
@@ -26224,6 +26229,7 @@
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
+          "autonomia_tools_manage",
           "desempenho_view",
           "campaign_view",
           "campaign_manage",

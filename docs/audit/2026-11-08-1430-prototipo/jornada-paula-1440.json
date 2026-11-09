@@ -31,7 +31,7 @@
           "nome": "ferramentas-vazia",
           "passos": [
             {
-              "clicar": "[role=\"menuitem\"]:has-text(\"Ferramentas\")"
+              "clicar": "[role=\"menuitem\"]:has-text(\"Ferramentas dos agentes\")"
             }
           ],
           "esperar": "[role=\"dialog\"] button:has-text(\"Adicionar ferramenta\")",
@@ -59,22 +59,7 @@
           "pausa": 1500
         },
         {
-          "nome": "passo-2-para-onde",
-          "passos": [
-            {
-              "clicar": "[role=\"dialog\"] button:has-text(\"Continuar\")"
-            },
-            {
-              "preencher": [
-                "[role=\"dialog\"] textarea[placeholder=\"https://\"]",
-                "https://viacep.com.br/ws/{{cep}}/json/"
-              ]
-            }
-          ],
-          "pausa": 1500
-        },
-        {
-          "nome": "passo-3-o-que-preenche",
+          "nome": "passo-2-o-que-descobre",
           "passos": [
             {
               "clicar": "[role=\"dialog\"] button:has-text(\"Continuar\")"
@@ -84,8 +69,8 @@
             },
             {
               "preencher": [
-                "[role=\"dialog\"] input[placeholder=\"informação 1\"]",
-                "cep"
+                "[role=\"dialog\"] [data-campo-informacao]",
+                "CEP"
               ]
             },
             {
@@ -98,7 +83,52 @@
           "pausa": 1500
         },
         {
-          "nome": "passo-4-como-entra",
+          "nome": "passo-3-cola-o-link",
+          "passos": [
+            {
+              "clicar": "[role=\"dialog\"] button:has-text(\"Continuar\")"
+            },
+            {
+              "preencher": [
+                "[role=\"dialog\"] textarea[placeholder=\"https://\"]",
+                "https://viacep.com.br/ws//json/"
+              ]
+            },
+            {
+              "tecla": "End"
+            },
+            {
+              "tecla": "ArrowLeft"
+            },
+            {
+              "tecla": "ArrowLeft"
+            },
+            {
+              "tecla": "ArrowLeft"
+            },
+            {
+              "tecla": "ArrowLeft"
+            },
+            {
+              "tecla": "ArrowLeft"
+            },
+            {
+              "tecla": "ArrowLeft"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "passo-3-toca-no-cep",
+          "passos": [
+            {
+              "clicar": "[role=\"dialog\"] [data-encaixar-informacao]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "passo-4-chave-de-acesso",
           "passos": [
             {
               "clicar": "[role=\"dialog\"] button:has-text(\"Continuar\")"
@@ -135,6 +165,15 @@
             }
           ],
           "pausa": 2000
+        },
+        {
+          "nome": "ver-detalhes",
+          "passos": [
+            {
+              "clicar": "[role=\"dialog\"] [data-detalhes-resposta] summary"
+            }
+          ],
+          "pausa": 1500
         },
         {
           "nome": "ligada",

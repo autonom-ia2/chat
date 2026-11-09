@@ -126,7 +126,7 @@ describe('recolhida de Ajustes (Carla + Atendente)', () => {
 
   // #1430: a área de ferramentas só entra com a flag agente_ferramentas_delegadas. A chave é de delegação: quem não é
   // administrador vê com cadeado; o administrador vê como as outras, logo depois de Robôs de IA.
-  it('Robôs ligados a outros sistemas: só com a flag, com cadeado para quem não é administrador', () => {
+  it('Ferramentas dos agentes: só com a flag, com cadeado para quem não é administrador', () => {
     const comFlag = flag => flag === 'agente_ferramentas_delegadas';
     const daCarla = areasDaRecolhida({
       giver: CARLA,

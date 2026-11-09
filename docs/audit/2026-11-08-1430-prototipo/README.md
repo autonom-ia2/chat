@@ -8,9 +8,9 @@ Tela real do painel, rodando na demo local (`bin/demo`, slug `1430-ferramentas`)
 Hoje só a equipe da plataforma cria ferramentas dos agentes. Com a flag ligada na conta:
 
 - **O administrador** cria ferramentas, como hoje faz a plataforma.
-- **O administrador entrega** a outras pessoas a área "Robôs ligados a outros sistemas" na função delas. Quem não é
+- **O administrador entrega** a outras pessoas a área "Ferramentas dos agentes" na função delas. Quem não é
   administrador vê essa área com cadeado: a chave é de delegação.
-- **Quem recebe** abre Mais opções › Ferramentas na página do agente, mesmo sem poder editar o agente, e cria, testa e
+- **Quem recebe** abre Mais opções › Ferramentas dos agentes na página do agente, mesmo sem poder editar o agente, e cria, testa e
   liga a ferramenta. A Lia (cotação) fica de fora.
 
 ## Jornada 1 — o administrador libera (`prints/1-admin-libera`)
@@ -18,8 +18,8 @@ Hoje só a equipe da plataforma cria ferramentas dos agentes. Com a flag ligada 
 1. Funções da equipe › Alterar "Supervisão".
 2. Abre "mais 15 áreas". A área nova fica logo depois de "Robôs de IA", com o aviso: *"Quem tem isto escolhe para onde
    vão os dados das conversas. Só o administrador libera."*
-3. Escolhe "Pode mexer". A linha sobe com "você mudou", e "Como vai ficar" ganha *"Ligar os robôs de IA a outros
-   sistemas da empresa"* com o selo "novo".
+3. Escolhe "Pode mexer". A linha sobe com "você mudou", e "Como vai ficar" ganha *"Criar e ligar as ferramentas
+   dos agentes"* com o selo "novo".
 4. Confira. O menu continua "Conversas e Robôs de IA": a área não abre item novo, porque as ferramentas moram na
    página do agente.
 
@@ -29,11 +29,27 @@ A Paula tem a função "Sistemas": vê os agentes e tem a chave, mas não edita 
 
 1. Página da Ana. A faixa diz *"Você pode ver, testar e cuidar das ferramentas. O resto fica com quem administra a
    conta."*
-2. Mais opções › Ferramentas. Lista vazia, com uma frase e um botão.
-3. Os 4 passos do cadastro, com uma ferramenta de exemplo que todo mundo entende: **endereço pelo CEP**
-   (`https://viacep.com.br/ws/{{cep}}/json/`).
-4. Teste com o CEP 01001000: "Deu certo", e o que o agente recebe (rua, bairro, cidade).
-5. Ligar ferramenta.
+2. Mais opções › Ferramentas dos agentes. Lista vazia, com uma frase e um botão.
+3. Passo 1, o que ela faz: nome e quando usar.
+4. Passo 2, o que o agente descobre: uma informação chamada **CEP**, com nome de gente.
+5. Passo 3, onde buscar: "Buscar informação" ou "Mandar informação"; cola o link que o outro sistema deu
+   (`https://viacep.com.br/ws//json/`), deixa o cursor no lugar e toca no botão **CEP**. Logo abaixo aparece como o
+   agente usa: `https://viacep.com.br/ws/[CEP]/json/`. Ela nunca digita chaves.
+6. Passo 4, chave de acesso (se o sistema pedir). O ViaCEP não pede.
+7. Teste com o CEP 01001000: "Deu certo", e o que o agente recebe em linhas (Cep, Logradouro, Bairro, Localidade…).
+   O que foi para o outro sistema e a resposta completa ficam em "Ver detalhes".
+8. Ligar ferramenta.
+
+## Linguagem (decisão do Rodrigo, 09/11: "1A 2 recomendado")
+
+- Fora da tela que a pessoa percorre: GET/POST, corpo, cabeçalho, Content-Type/Accept, JSON e chaves duplas. Um teste
+  (`linguagemDasFerramentas.spec.js`) trava a volta dessas palavras nos passos e no teste.
+- Nome técnico, o formato do que vai junto (já pronto com as informações do passo 2) e o recorte da resposta ficam em
+  "Avançado", no passo 3.
+- Cada informação tem o nome de gente ("CEP") guardado como `label`; o nome técnico sai dele e não aparece. Numa
+  ferramenta salva, o técnico fica fixo, para o link montado não quebrar. O `label` nunca vai ao modelo.
+- O nome dos campos na resposta do teste vem do próprio sistema ("Logradouro", "Localidade"): não há tradução de
+  palavra para palavra.
 
 ## Achados que o protótipo pegou (já corrigidos no PR2a)
 
@@ -45,19 +61,10 @@ A Paula tem a função "Sistemas": vê os agentes e tem a chave, mas não edita 
    feita, com cada `{{ }}` vazio, e a mensagem diz "Endereço não é válido".
 3. **Textos que diziam "só a equipe da plataforma"** agora apontam a permissão e o administrador.
 
-## Para o Rodrigo decidir
+## Decidido
 
-1. **Jargão no cadastro da ferramenta.** O assistente (feito no PR1 para a equipe da plataforma) ainda mostra "Só buscar
-   (GET)", "Enviar dados (POST)", "Nome técnico", "Corpo da chamada… em JSON", "cabeçalho", "Content-Type" e
-   "mapeamento", e o exemplo do passo 3 usa `{{termo}}`. Quem liga o agente a outro sistema precisa do endereço e da
-   chave que esse sistema dá; mas a regra de ouro pede tela sem jargão.
-   - **A (recomendo):** PR2a sai com o assistente como está e abrimos uma Issue de linguagem: GET/POST viram só "Buscar
-     um dado" / "Enviar dados"; "Nome técnico", corpo, cabeçalho e mapeamento vão para "Avançado"; a chave vira
-     "Chave de acesso que o sistema te deu". Não atrasa a entrega da permissão.
-   - **B:** fazer a revisão de linguagem dentro do PR2a, com novo protótipo antes do PR.
-2. **Nome da área na função:** "Robôs ligados a outros sistemas" (segue "Robôs de IA" da tela guiada). Na tela antiga
-   ela se chama "Ferramentas dos agentes", e no agente o menu diz "Ferramentas". Manter assim, ou "Ferramentas dos
-   robôs" nos dois lugares?
+1. Jargão: sai dentro do PR2a (acima).
+2. Nome da área: "Ferramentas dos agentes" na função e na página do agente.
 
 ## Como reproduzir
 

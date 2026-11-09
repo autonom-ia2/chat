@@ -79,6 +79,30 @@ RSpec.describe Autonomia::Agents::Tool do
     end
   end
 
+  # #1430: a tela mostra cada informação pelo nome de gente ("CEP"). O rótulo fica guardado, mas nunca vai ao
+  # modelo: o schema da OpenAI continua só com tipo e descrição.
+  describe 'rótulo da informação' do
+    let(:tool) do
+      described_class.create!(
+        account: account, agent: agent, name: 'CEP', slug: 'cep', endpoint_url: 'https://viacep.com.br/ws/{{cep}}/json/',
+        param_schema: [{ name: 'cep', type: 'string', description: 'O CEP', required: true, label: '  CEP  ' },
+                       { name: 'uf', type: 'string', description: 'Estado', required: true }]
+      )
+    end
+
+    it 'guarda o rótulo sem espaços e omite quando não veio' do
+      expect(tool.param_schema).to eq([
+                                        { 'name' => 'cep', 'type' => 'string', 'description' => 'O CEP', 'required' => true,
+                                          'label' => 'CEP' },
+                                        { 'name' => 'uf', 'type' => 'string', 'description' => 'Estado', 'required' => true }
+                                      ])
+    end
+
+    it 'não manda o rótulo ao modelo' do
+      expect(tool.openai_schema.dig(:parameters, :properties, 'cep')).to eq('type' => 'string', 'description' => 'O CEP')
+    end
+  end
+
   # O MESMO DEFEITO QUE DEIXOU UM AGENTE MUDO EM PRODUÇÃO, por outro caminho.
   #
   # Em 08/09/2026 uma ferramenta NATIVA com um parâmetro opcional derrubou a chamada inteira à

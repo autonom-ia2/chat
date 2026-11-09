@@ -124,7 +124,13 @@ class Autonomia::Agents::Tool < ApplicationRecord
       'type' => PARAM_TYPES.include?(item['type'].to_s) ? item['type'].to_s : 'string',
       'description' => item['description'].to_s,
       'required' => item.key?('required') ? ActiveModel::Type::Boolean.new.cast(item['required']) : true
-    }
+    }.merge(rotulo_do_param(item))
+  end
+
+  # #1430: o nome de gente que a tela mostra ("CEP"). Só para a tela: param_property não o leva ao modelo.
+  def rotulo_do_param(item)
+    label = item['label'].to_s.strip
+    label.present? ? { 'label' => label } : {}
   end
 
   # O endereço é validado como o executor o usa: com cada {{ }} vazio (HttpExecutor#endereco_do_cadastro). O texto cru,

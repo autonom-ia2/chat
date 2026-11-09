@@ -125,9 +125,10 @@ describe('regras das Ferramentas', () => {
   it('starts from a generic example, never a real customer address', () => {
     const exemplo = rascunhoDeExemplo(t);
     expect(exemplo.endereco).toBe(
-      'https://api.sualoja.com.br/estoque/busca?termo={{ termo | url_encode }}'
+      'https://api.sualoja.com.br/estoque/busca?termo={{termo}}'
     );
     expect(exemplo.informacoes.map(i => i.nome)).toEqual(['termo']);
+    expect(exemplo.informacoes[0].rotulo).toBe('O que a pessoa procura');
     expect(JSON.stringify(exemplo)).not.toContain('gira');
   });
 
@@ -151,7 +152,7 @@ describe('regras das Ferramentas', () => {
     );
     expect(exemplo.nome).toBe('Consulta de apólice');
     expect(exemplo.endereco).toBe(
-      'https://api.suacorretora.com.br/apolices/busca?termo={{ termo | url_encode }}'
+      'https://api.suacorretora.com.br/apolices/busca?termo={{termo}}'
     );
     expect(exemplo.informacoes.map(i => i.nome)).toEqual(['termo']);
     expect(conferirEndereco(exemplo.endereco)).toBe('');
@@ -197,11 +198,18 @@ describe('regras das Ferramentas', () => {
       expect(api.param_schema).toEqual([
         {
           name: 'termo',
+          label: 'termo',
           type: 'string',
           description: 'A peça',
           required: true,
         },
-        { name: 'ano', type: 'integer', description: 'Ano', required: false },
+        {
+          name: 'ano',
+          label: 'ano',
+          type: 'integer',
+          description: 'Ano',
+          required: false,
+        },
       ]);
       expect(api.response_mapping).toEqual({
         template: '{{ response.total }}',
@@ -263,21 +271,22 @@ describe('regras das Ferramentas', () => {
       });
     });
 
-    it('step 2: address and technical name', () => {
+    // #1430: o passo 3 é o link; o 2, o que o agente descobre.
+    it('step 3: address and technical name', () => {
       expect(
-        validarPasso(2, { ...base(), endereco: 'http://x.com' }).erros
+        validarPasso(3, { ...base(), endereco: 'http://x.com' }).erros
       ).toEqual({ endereco: 'HTTPS' });
-      expect(validarPasso(2, { ...base(), slug: 'com espaço' }).erros).toEqual({
+      expect(validarPasso(3, { ...base(), slug: 'com espaço' }).erros).toEqual({
         slug: 'SLUG',
       });
     });
 
-    it('step 3: each information name', () => {
+    it('step 2: each information name', () => {
       const r = {
         ...base(),
         informacoes: [{ nome: 'ano carro', tipo: 'string', descricao: '' }],
       };
-      expect(validarPasso(3, r).erros).toEqual({ i0: 'FORMATO' });
+      expect(validarPasso(2, r).erros).toEqual({ i0: 'FORMATO' });
     });
 
     it('step 4: a secret needs a value; a renamed saved one needs it again', () => {
@@ -326,10 +335,10 @@ describe('regras das Ferramentas', () => {
   });
 
   it('guesses the step from the API message, by its start', () => {
-    expect(passosProvaveisDoErro('Endpoint url deve usar HTTPS')).toEqual([2]);
+    expect(passosProvaveisDoErro('Endpoint url deve usar HTTPS')).toEqual([3]);
     expect(
       passosProvaveisDoErro('Param schema possui nomes inválidos')
-    ).toEqual([3]);
+    ).toEqual([2]);
     expect(
       passosProvaveisDoErro('Headers config possui cabeçalhos inválidos')
     ).toEqual([4]);
@@ -367,11 +376,11 @@ describe('regras das Ferramentas', () => {
         'ENDERECO',
         false,
       ],
-      ['tool_execution_error: corpo_json_invalido', 'CORPO', 'PREENCHE', false],
+      ['tool_execution_error: corpo_json_invalido', 'CORPO', 'ONDE', false],
       ['tool_execution_error: cabecalho_invalido', 'CABECALHO', 'CHAVE', false],
       ['tool_execution_error: parametro_invalido', 'VALOR', 'PREENCHE', false],
       ['tool_execution_error: corpo_sem_escape', 'TIPO_DO_CORPO', null, false],
-      ['tool_execution_error: parser_error', 'NAO_JSON', 'PREENCHE', false],
+      ['tool_execution_error: parser_error', 'NAO_JSON', 'ONDE', false],
       [
         'tool_execution_error: endereco_invalido',
         'URL_INVALIDA',
@@ -629,13 +638,13 @@ describe('regras das Ferramentas', () => {
       expect(nomeTecnico('123 estoque')).toBe('f_123_estoque');
       expect(nomeTecnico('Estoque')).toBe('estoque');
       expect(
-        validarPasso(2, { ...rascunhoDeExemplo(t), slug: '1abc' }).erros
+        validarPasso(3, { ...rascunhoDeExemplo(t), slug: '1abc' }).erros
       ).toEqual({ slug: 'SLUG' });
       expect(
-        validarPasso(2, { ...rascunhoDeExemplo(t), slug: '_abc' }).erros
+        validarPasso(3, { ...rascunhoDeExemplo(t), slug: '_abc' }).erros
       ).toEqual({ slug: 'SLUG' });
       expect(
-        validarPasso(2, { ...rascunhoDeExemplo(t), slug: 'a'.repeat(65) }).erros
+        validarPasso(3, { ...rascunhoDeExemplo(t), slug: 'a'.repeat(65) }).erros
       ).toEqual({ slug: 'SLUG' });
       expect(
         paraApi({ ...rascunhoDeExemplo(t), nome: '123 estoque', slug: '' }).slug

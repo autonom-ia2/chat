@@ -146,7 +146,7 @@ export const areasDaRecolhida = ({
   comCotacoes,
   temFlag = () => true,
 }) => {
-  // Área atrás de flag (Robôs ligados a outros sistemas, #1430) só entra na conta com a flag.
+  // Área atrás de flag (Ferramentas dos agentes, #1430) só entra na conta com a flag.
   const candidatas = listedModules(
     [...RECOLHIDA, ...(comCotacoes ? CONDICIONAL : []), ...SO_ADMIN].map(
       moduleByKey

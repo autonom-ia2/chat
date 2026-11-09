@@ -51,6 +51,16 @@ RSpec.describe 'Autonomia agent tools permission', type: :request do
   context 'with the flag on' do
     before { ligar_flag }
 
+    # #1430: a tela manda o nome de gente de cada informação ("CEP"), e ele volta na leitura.
+    it 'keeps the label of each piece of information' do
+      com_rotulo = corpo.deep_merge(tool: { endpoint_url: 'https://api.loja.test/cep/{{cep}}',
+                                            param_schema: [{ name: 'cep', label: 'CEP', type: 'string', required: true }] })
+      post base, params: com_rotulo, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:created)
+      expect(response.parsed_body['param_schema'].first).to include('name' => 'cep', 'label' => 'CEP')
+    end
+
     it 'lets the administrator list and create tools' do
       get base, headers: admin.create_new_auth_token, as: :json
       expect(response).to have_http_status(:ok)

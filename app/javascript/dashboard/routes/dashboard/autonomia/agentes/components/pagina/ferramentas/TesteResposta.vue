@@ -1,6 +1,8 @@
 <script setup>
 import { computed, h } from 'vue';
 import { useI18n } from 'vue-i18n';
+import TesteChamada from './TesteChamada.vue';
+import { respostaLegivel } from '../../../utils/testeDaFerramenta';
 
 // #1301 (protótipo F07-ok) — o teste deu certo: um bloco só com o estado e "O que o agente recebe".
 // O /test devolve o texto que o agente lê: já mapeado e, se passar de 8.000, cortado com o aviso
@@ -8,8 +10,11 @@ import { useI18n } from 'vue-i18n';
 // linhas indentadas (a linha que quebra continua no próprio recuo), cortado ou texto vai como veio.
 // Cresce dentro da gaveta, sem segunda rolagem. Linhas montadas por funções (h): o espaço da
 // formatação do template não entra no texto.
+// #1430: a resposta aparece em linhas de gente ("Logradouro: Praça da Sé"); o que foi ao outro
+// sistema e a resposta completa ficam em "Ver detalhes". Sem leitura possível, vai como veio.
 const props = defineProps({
   resposta: { type: Object, required: true },
+  chamada: { type: Object, default: null },
   mapeada: { type: Boolean, default: false },
 });
 
@@ -47,6 +52,10 @@ const TextoCru = ({ texto }) =>
   );
 TextoCru.props = ['texto'];
 
+const grupos = computed(() =>
+  props.resposta.cortada ? null : respostaLegivel(props.resposta.texto)
+);
+
 const linhas = computed(() =>
   (props.resposta.json || '').split('\n').map(linha => {
     const texto = linha.trimStart();
@@ -78,17 +87,61 @@ const linhas = computed(() =>
       <p v-if="mapeada" class="m-0 text-sm text-n-slate-11">
         {{ t(`${NS}.MAPEADA`) }}
       </p>
-      <div
-        v-if="resposta.json"
-        data-resposta-json
-        class="font-mono text-xs leading-relaxed text-n-slate-12"
-      >
-        <Linhas :linhas="linhas" />
+      <div v-if="grupos" data-resposta-legivel class="flex flex-col gap-3">
+        <dl
+          v-for="(campos, indice) in grupos"
+          :key="indice"
+          class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 m-0 text-sm"
+        >
+          <template v-for="campo in campos" :key="campo.rotulo">
+            <dt class="font-medium text-n-slate-11">{{ campo.rotulo }}</dt>
+            <dd
+              class="m-0 break-words text-n-slate-12 [overflow-wrap:anywhere]"
+            >
+              {{ campo.valor }}
+            </dd>
+          </template>
+        </dl>
       </div>
-      <TextoCru v-else :texto="resposta.texto" />
+      <TextoCru v-else-if="!resposta.json" :texto="resposta.texto" />
       <p v-if="resposta.cortada" class="m-0 text-sm text-n-slate-11">
         {{ t(`${NS}.CORTADA`) }}
       </p>
+      <details
+        v-if="chamada || resposta.json"
+        data-detalhes-resposta
+        class="group rounded-xl ring-1 ring-inset ring-n-weak"
+        :open="!grupos && Boolean(resposta.json)"
+      >
+        <summary
+          class="flex items-center gap-2 px-3 text-sm font-semibold list-none cursor-pointer rounded-xl min-h-11 text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+        >
+          <span
+            aria-hidden="true"
+            class="transition i-lucide-chevron-right size-4 group-open:rotate-90 shrink-0"
+          />
+          {{ t(`${NS}.VER_DETALHES`) }}
+        </summary>
+        <div class="flex flex-col gap-3 px-3 pb-3">
+          <template v-if="chamada">
+            <p class="m-0 text-sm font-semibold text-n-slate-11">
+              {{ t(`${NS}.DETALHES_CHAMADA`) }}
+            </p>
+            <TesteChamada :chamada="chamada" />
+          </template>
+          <template v-if="resposta.json">
+            <p class="m-0 text-sm font-semibold text-n-slate-11">
+              {{ t(`${NS}.DETALHES_RESPOSTA`) }}
+            </p>
+            <div
+              data-resposta-json
+              class="font-mono text-xs leading-relaxed text-n-slate-12"
+            >
+              <Linhas :linhas="linhas" />
+            </div>
+          </template>
+        </div>
+      </details>
     </div>
   </section>
 </template>
