@@ -56,9 +56,13 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
     return if row.nil? || row.id.nil?
 
     accepted_http_code = @last_response.http_code if @last_response&.ok
-    Crm::MetaConversionEvent.release_pending!(row.id, reason: "unexpected: #{error.class.name}", accepted_http_code: accepted_http_code)
+    Crm::MetaConversionEvent.release_pending!(row.id, reason: release_reason(error), accepted_http_code: accepted_http_code)
   rescue StandardError => e
     Rails.logger.error("Crm::MetaCapi::DispatchJob could not release event=#{row.event_id}: #{e.class.name}")
+  end
+
+  def release_reason(error)
+    @last_response&.unknown_outcome ? Crm::MetaConversionEvent::UNKNOWN_OUTCOME : "unexpected: #{error.class.name}"
   end
 
   def deliver(row, card, event_id, event_type, activity)
@@ -232,9 +236,13 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
 
   # Persists the delivery outcome. A rejected event raises (sanitized, cause-less) so
   # Sidekiq retries with its default backoff; the ledger row keeps the last http_code.
+  # A call that may have reached Meta without an answer is never retried (#2738): the row ends
+  # as an error the card explains, since a second send could count the sale twice.
   def record_result(row, response)
     if response.ok
       row.update!(status: :accepted, http_code: response.http_code, sent_at: Time.current, error_message: nil)
+    elsif response.unknown_outcome
+      row.update!(status: :error, http_code: nil, error_message: Crm::MetaConversionEvent::UNKNOWN_OUTCOME)
     else
       row.update!(status: :error, http_code: response.http_code, error_message: sanitize(response.error))
       raise DispatchError.new("Meta CAPI rejected event=#{row.event_id} http=#{response.http_code}"), cause: nil

@@ -17,6 +17,8 @@ class Meta::ConversionsApiClient
   # WhatsApp Cloud client reads, so the whole Meta surface moves versions together.
   DEFAULT_API_VERSION = 'v22.0'.freeze
   DEFAULT_TIMEOUT_SECONDS = 8
+  # Failures before the request could leave: Meta surely did not get the event.
+  NOT_SENT_ERRORS = [Net::OpenTimeout, SocketError, Errno::ECONNREFUSED, Errno::EHOSTUNREACH, Errno::ENETUNREACH].freeze
   # Any run of 20+ non-space chars is treated as a possible secret and redacted. Broad
   # on purpose: Meta tokens can carry -, _, |, +, /, = so a [A-Za-z0-9] class misses them.
   SENSITIVE_PATTERN = %r{[A-Za-z0-9_\-|+/=.]{20,}}
@@ -24,7 +26,9 @@ class Meta::ConversionsApiClient
   # error_code: Meta's numeric error code (190 invalid token, 10/200-299 permission, …), nil on
   # success or network failure. Lets callers tell a dead token from a passing outage.
   # error_subcode refines it (100 with 33: the dataset no longer exists or cannot be reached).
-  Result = Struct.new(:ok, :http_code, :body, :error, :error_code, :error_subcode, keyword_init: true) do
+  # unknown_outcome: the call failed after it may have reached Meta (no answer read), so the
+  # event may have been received; sending it again could count it twice (#2738).
+  Result = Struct.new(:ok, :http_code, :body, :error, :error_code, :error_subcode, :unknown_outcome, keyword_init: true) do
     def dataset_gone?
       error_code == 100 && error_subcode == 33
     end
@@ -37,14 +41,16 @@ class Meta::ConversionsApiClient
   end
 
   # events: an array of CAPI-BM event hashes (see Crm::MetaCapi::PayloadBuilder#build).
+  # The body is built before the call, so a failure there never reads as an unknown outcome.
   def post_events(events)
+    body = { data: Array(events) }.to_json
     response = HTTParty.post(
       "#{BASE_URI}/#{@api_version}/#{@dataset_id}/events",
       headers: {
         'Content-Type' => 'application/json',
         'Authorization' => "Bearer #{@access_token}"
       },
-      body: { data: Array(events) }.to_json,
+      body: body,
       timeout: DEFAULT_TIMEOUT_SECONDS
     )
 
@@ -54,7 +60,7 @@ class Meta::ConversionsApiClient
     error = meta_error(response.body)
     Result.new(ok: false, http_code: response.code, body: body, error: body, error_code: error['code'], error_subcode: error['error_subcode'])
   rescue StandardError => e
-    Result.new(ok: false, http_code: nil, body: nil, error: sanitize(e.message))
+    Result.new(ok: false, http_code: nil, body: nil, error: sanitize(e.message), unknown_outcome: NOT_SENT_ERRORS.none? { |klass| e.is_a?(klass) })
   end
 
   private

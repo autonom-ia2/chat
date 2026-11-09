@@ -78,6 +78,26 @@ RSpec.describe Meta::ConversionsApiClient do
       expect(result.error).to include('<REDACTED>')
       expect(result.error).not_to include(token)
     end
+
+    it 'marks the outcome unknown when the call may have reached Meta (#2738)' do
+      [Net::ReadTimeout, Net::WriteTimeout, Errno::ECONNRESET].each do |error|
+        allow(HTTParty).to receive(:post).and_raise(error)
+
+        expect(client.post_events([event]).unknown_outcome).to be(true), error.name
+      end
+    end
+
+    it 'keeps the outcome known when the connection never opened' do
+      allow(HTTParty).to receive(:post).and_raise(Net::OpenTimeout)
+
+      expect(client.post_events([event])).to have_attributes(ok: false, unknown_outcome: false)
+    end
+
+    it 'keeps the outcome known when Meta answers' do
+      stub_request(:post, endpoint).to_return(status: 400, body: '{"error":{"code":100}}')
+
+      expect(client.post_events([event]).unknown_outcome).to be_falsey
+    end
   end
 
   describe 'api_version resolution' do

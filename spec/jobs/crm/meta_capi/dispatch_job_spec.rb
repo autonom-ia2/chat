@@ -187,6 +187,46 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
 
       expect(Crm::MetaConversionEvent.find_by(event_id: event_id).status).to eq('pending')
     end
+
+    it 'ends an old pending row as an error without posting it again (#2738)' do
+      Crm::MetaConversionEvent.create!(account: account, card: card, event_id: event_id, event_type: 'won',
+                                       status: :pending, updated_at: 11.minutes.ago)
+      expect(Meta::ConversionsApiClient).not_to receive(:new)
+
+      expect { perform }.not_to raise_error
+
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id)).to have_attributes(status: 'error', error_message: 'unknown_outcome')
+    end
+
+    it 'never posts again an event whose outcome at Meta is unknown (#2738)' do
+      Crm::MetaConversionEvent.create!(account: account, card: card, event_id: event_id, event_type: 'won',
+                                       status: :error, error_message: 'unknown_outcome')
+      expect(Meta::ConversionsApiClient).not_to receive(:new)
+
+      perform
+
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id).status).to eq('error')
+    end
+  end
+
+  describe 'answer from Meta that may or may not have arrived (#2738)' do
+    let(:client) { instance_double(Meta::ConversionsApiClient) }
+
+    before do
+      allow(Meta::ConversionsApiClient).to receive(:new).and_return(client)
+      allow(client).to receive(:post_events)
+        .and_return(Meta::ConversionsApiClient::Result.new(ok: false, error: 'Net::ReadTimeout', unknown_outcome: true))
+    end
+
+    it 'marks the row as an error with the reason and does not retry, so the sale is never counted twice' do
+      expect { perform }.not_to raise_error
+
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id)).to have_attributes(status: 'error', error_message: 'unknown_outcome')
+
+      perform
+
+      expect(client).to have_received(:post_events).once
+    end
   end
 
   describe 'delivery' do
@@ -394,6 +434,23 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
 
       expect { perform }.to raise_error(Crm::MetaCapi::DispatchJob::DispatchError)
       expect(Crm::MetaConversionEvent.find_by(event_id: event_id)).to have_attributes(status: 'accepted', http_code: 200)
+
+      perform
+
+      expect(client).to have_received(:post_events).once
+    end
+
+    it 'keeps an unknown outcome when recording it fails, so the retry never posts it twice' do
+      allow(client).to receive(:post_events)
+        .and_return(Meta::ConversionsApiClient::Result.new(ok: false, error: 'Net::ReadTimeout', unknown_outcome: true))
+      allow_any_instance_of(Crm::MetaConversionEvent).to receive(:update!).and_wrap_original do |original, *args, **kwargs| # rubocop:disable RSpec/AnyInstance
+        raise ActiveRecord::ConnectionNotEstablished, 'db gone' if (args.first || kwargs)[:error_message] == 'unknown_outcome'
+
+        original.call(*args, **kwargs)
+      end
+
+      expect { perform }.to raise_error(Crm::MetaCapi::DispatchJob::DispatchError)
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id)).to have_attributes(status: 'error', error_message: 'unknown_outcome')
 
       perform
 

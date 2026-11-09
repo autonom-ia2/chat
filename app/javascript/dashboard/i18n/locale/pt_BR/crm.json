@@ -6388,6 +6388,8 @@
         "RECUSADO": "O aviso não foi aceito",
         "NAO_ENVIADO": "Não avisamos",
         "RECUSADO_DICA": "O Facebook não aceitou o aviso. Peça a quem cuida dos anúncios para conferir a ligação com o site.",
+        "SEM_CONFIRMACAO": "Não sabemos se o aviso chegou",
+        "SEM_CONFIRMACAO_DICA": "O Facebook não respondeu. Para não contar a venda duas vezes, não mandamos de novo.",
         "VER_MOTIVO": "Ver o motivo",
         "MOTIVO": {
           "SEM_PIXEL": "Falta ligar o seu site ao Facebook neste funil. Peça a quem cuida dos anúncios.",
