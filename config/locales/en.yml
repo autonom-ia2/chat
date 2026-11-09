@@ -623,6 +623,7 @@ en:
         mensagem_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the filter of the "message created" trigger.'
         reuniao_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the meeting triggers (scheduled, rescheduled, canceled).'
         resposta_so_na_espera: 'Step %{passo}: %{caminho} only exists in the condition of a "wait until" step.'
+        solicitados_so_no_recorrente: 'Step %{passo}: %{caminho} only works in the recurring contact trigger with the condition "asked for a card in the pipeline".'
         valor_fora_do_alvo: 'Step %{passo}: %{caminho} cannot be read from what this trigger starts on (conversation, card or contact).'
         operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'
         valor_fora: 'Step %{passo}: %{caminho} has no value "%{valor}". Use one of: %{opcoes}.'
@@ -647,6 +648,8 @@ en:
         responsavel_de_fora: 'Trigger: the chosen owner is not in this account.'
         etiqueta_de_fora: 'Trigger: label %{etiqueta} does not exist in this account.'
         atributo_de_fora: 'Trigger: field %{campo} is not a contact field of this account.'
+        faltando_de_fora: 'Trigger: field %{campo} is not a checkbox field of the card in this account.'
+        solicitante_sem_gravador: 'Trigger: the condition "asked for a card in the pipeline" is not available yet. No step records who asked for the card, so it would never find anyone.'
         funil_de_fora: 'Trigger: pipeline %{id} is not from this account.'
         pagina_de_fora: 'Trigger: booking page %{id} is not from this account.'
         ia_desligada: "Step %{passo}: AI steps are off for this account."

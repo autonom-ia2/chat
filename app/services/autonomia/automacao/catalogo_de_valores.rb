@@ -15,7 +15,7 @@ module Autonomia::Automacao::CatalogoDeValores
     campos = caminhos_dos_campos(valores).map do |caminho|
       { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho),
         **do_protegido(caminho), 'so_na_espera' => (true if valores.da_resposta?(caminho)),
-        'so_nos_gatilhos' => (::Autonomia::Automacao::Gatilhos::DE_REUNIAO if valores.da_reuniao?(caminho)) }.compact
+        'so_nos_gatilhos' => so_nos_gatilhos(valores, caminho) }.compact
     end
     atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
       { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base) }
@@ -27,7 +27,16 @@ module Autonomia::Automacao::CatalogoDeValores
   # a tela não a oferece, mas mostra a frase, abre a condição que já a usa e a tira do "Só se" quando o gatilho muda.
   # Os valores de leitura direta: os campos, os que dependem de quem vê, a agenda, a resposta e o envio.
   def caminhos_dos_campos(valores)
-    valores::CAMPOS.keys + valores::DO_QUE_QUEM_VE.keys + valores::AGENDA.keys + valores::RESPOSTA.keys + valores::ENVIO.keys
+    valores::CAMPOS.keys + valores::DO_QUE_QUEM_VE.keys + valores::DA_SELECAO.keys + valores::AGENDA.keys + valores::RESPOSTA.keys +
+      valores::ENVIO.keys
+  end
+
+  # A reunião (G12) só nos gatilhos de reunião; os pedidos do RH (G22) só no contato.recorrente (o salvar pede ainda a
+  # condição `solicitante_de` na seleção).
+  def so_nos_gatilhos(valores, caminho)
+    return ::Autonomia::Automacao::Gatilhos::DE_REUNIAO if valores.da_reuniao?(caminho)
+
+    [valores::GATILHO_DOS_SOLICITADOS] if caminho == valores::SOLICITADOS
   end
 
   def valores_do_gatilho

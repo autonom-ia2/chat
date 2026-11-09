@@ -1116,6 +1116,7 @@ pt_BR:
         mensagem_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no filtro do gatilho "mensagem criada".'
         reuniao_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe nos gatilhos de reunião (marcada, remarcada, cancelada).'
         resposta_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até".'
+        solicitados_so_no_recorrente: 'Passo %{passo}: %{caminho} só vale no gatilho recorrente de contato com a condição "pediu card no funil".'
         valor_fora_do_alvo: 'Passo %{passo}: %{caminho} não dá para ler naquilo em que este gatilho começa (conversa, card ou contato).'
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'
         valor_fora: 'Passo %{passo}: %{caminho} não tem o valor "%{valor}". Use um destes: %{opcoes}.'
@@ -1140,6 +1141,8 @@ pt_BR:
         responsavel_de_fora: 'Gatilho: o responsável escolhido não é desta conta.'
         etiqueta_de_fora: 'Gatilho: a etiqueta %{etiqueta} não existe nesta conta.'
         atributo_de_fora: 'Gatilho: o campo %{campo} não é um campo de contato desta conta.'
+        faltando_de_fora: 'Gatilho: o campo %{campo} não é um campo de marcar do card nesta conta.'
+        solicitante_sem_gravador: 'Gatilho: a condição "pediu card no funil" ainda não está disponível. Nenhum passo grava quem pediu o card, então ela nunca acharia ninguém.'
         funil_de_fora: 'Gatilho: o funil %{id} não é desta conta.'
         pagina_de_fora: 'Gatilho: a página de agendamento %{id} não é desta conta.'
         ia_desligada: "Passo %{passo}: os passos de IA estão desligados nesta conta."

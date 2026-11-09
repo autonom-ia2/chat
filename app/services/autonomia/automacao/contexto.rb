@@ -54,6 +54,9 @@ class Autonomia::Automacao::Contexto
 
   def card = (@alvo if @alvo.is_a?(::Crm::Card))
 
+  # A seleção do gatilho recorrente na versão desta execução (G22: a condição `solicitante_de`). Sem execução, nil.
+  def selecao = @execucao&.versao&.receita.to_h.dig('gatilho', 'selecao')
+
   # A conta do alvo; no conta.recorrente, a própria.
   def conta = (@alvo.is_a?(::Account) ? @alvo : @alvo.account)
 

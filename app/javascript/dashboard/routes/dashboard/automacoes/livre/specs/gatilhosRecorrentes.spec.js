@@ -219,12 +219,111 @@ describe('seleção do recorrente', () => {
   it('contato: só as condições do contato; o campo vai com o valor', () => {
     const wrapper = montarSelecao('Contact');
     expect(condicao(wrapper, 'funil_id').exists()).toBe(false);
+    // G22: sem passo que grave quem pediu o card (G24), o "pediu card" some.
+    expect(condicao(wrapper, 'solicitante_de').exists()).toBe(false);
 
     condicao(wrapper, 'atributo')
       .findComponent({ name: 'ChoiceSelect' })
       .vm.$emit('update:modelValue', 'plano');
     expect(ultimoDa(wrapper)).toEqual({
       atributo: { chave: 'plano', valor: '' },
+    });
+  });
+
+  // G22 (exemplo 8, passo 9): o RH que pediu card no funil e ainda tem campo
+  // de marcar em branco. Sem o funil, não há condição; trocar o funil tira a
+  // etapa; os campos são só os de marcar do card.
+  describe('contato: pediu card no funil', () => {
+    const montarPedido = (modelValue = {}) =>
+      mount(LivreSelecao, {
+        props: {
+          modelValue,
+          alvo: 'Contact',
+          escolhas: {
+            funis: [
+              { value: 3, label: 'Inclusão de vidas' },
+              { value: 4, label: 'Vendas' },
+            ],
+            etapas: [],
+            // Como ficará com a G24 gravando quem pediu o card.
+            solicitanteLigado: true,
+            etapasPorFunil: { 3: [{ value: 31, label: 'Documentos' }] },
+            camposDeMarcar: [
+              { value: 'rg', label: 'RG' },
+              { value: 'cpf', label: 'CPF' },
+            ],
+          },
+          opcoes: {},
+        },
+        global: { mocks: { $t: chave => chave } },
+      });
+    const pedido = wrapper => condicao(wrapper, 'solicitante_de');
+    const marcar = (wrapper, chave, sim) =>
+      pedido(wrapper)
+        .find(`[data-campo="${chave}"]`)
+        .findComponent({ name: 'Checkbox' })
+        .vm.$emit('update:modelValue', sim);
+
+    it('o funil abre a condição, sem campos ainda', () => {
+      const wrapper = montarPedido();
+      expect(pedido(wrapper).find('[data-solicitante]').exists()).toBe(false);
+
+      pedido(wrapper)
+        .findComponent({ name: 'ChoiceSelect' })
+        .vm.$emit('update:modelValue', 3);
+      expect(ultimoDa(wrapper)).toEqual({
+        solicitante_de: { funil_id: 3, faltando: [] },
+      });
+    });
+
+    it('marca e desmarca os campos que contam como documento', async () => {
+      const wrapper = montarPedido({
+        solicitante_de: { funil_id: 3, faltando: ['rg'] },
+      });
+      expect(pedido(wrapper).find('[data-campo="rg"]').text()).toContain('RG');
+
+      marcar(wrapper, 'cpf', true);
+      expect(ultimoDa(wrapper)).toEqual({
+        solicitante_de: { funil_id: 3, faltando: ['rg', 'cpf'] },
+      });
+
+      await wrapper.setProps({ modelValue: ultimoDa(wrapper) });
+      marcar(wrapper, 'rg', false);
+      expect(ultimoDa(wrapper)).toEqual({
+        solicitante_de: { funil_id: 3, faltando: ['cpf'] },
+      });
+    });
+
+    it('a etapa é do funil escolhido; trocar o funil a tira; sem funil, sai tudo', async () => {
+      const wrapper = montarPedido({
+        solicitante_de: { funil_id: 3, faltando: ['rg'] },
+      });
+      const etapa = () =>
+        pedido(wrapper)
+          .find('[data-solicitante="etapa"]')
+          .findComponent({ name: 'ChoiceSelect' });
+      expect(etapa().props('options')).toEqual([
+        { value: '', label: 'AUTOMACAO_LIVRE.SELECAO.QUALQUER' },
+        { value: 31, label: 'Documentos' },
+      ]);
+
+      etapa().vm.$emit('update:modelValue', 31);
+      expect(ultimoDa(wrapper)).toEqual({
+        solicitante_de: { funil_id: 3, etapa_id: 31, faltando: ['rg'] },
+      });
+
+      await wrapper.setProps({ modelValue: ultimoDa(wrapper) });
+      pedido(wrapper)
+        .findComponent({ name: 'ChoiceSelect' })
+        .vm.$emit('update:modelValue', 4);
+      expect(ultimoDa(wrapper)).toEqual({
+        solicitante_de: { funil_id: 4, faltando: ['rg'] },
+      });
+
+      pedido(wrapper)
+        .findComponent({ name: 'ChoiceSelect' })
+        .vm.$emit('update:modelValue', '');
+      expect(ultimoDa(wrapper)).toEqual({});
     });
   });
 });

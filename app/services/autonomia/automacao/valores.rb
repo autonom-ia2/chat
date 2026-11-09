@@ -57,6 +57,18 @@ class Autonomia::Automacao::Valores
     end
   }.freeze
 
+  # G22 (exemplo 8, passo 9): quem o RH pediu e ainda falta mandar documento, com o que falta de cada um
+  # (Solicitados#texto). Lê outros cards, só os que quem ligou vê, com a condição `solicitante_de` do gatilho da
+  # execução (Contexto#selecao); por isso só vale no contato.recorrente com ela, e o salvar recusa no resto. Sem
+  # execução (o ensaio) ou sem pendente na hora, lê vazio, e o passo pula com `faltou_valor`.
+  SOLICITADOS = 'contato.solicitados_faltando'.freeze
+  DA_SELECAO = {
+    SOLICITADOS => lambda do |contato, account_user, selecao|
+      ::Autonomia::Automacao::Solicitados.texto_para(contato, account_user, selecao.to_h['solicitante_de'])
+    end
+  }.freeze
+  GATILHO_DOS_SOLICITADOS = 'contato.recorrente'.freeze
+
   # G12: o link da agenda (LinkDaAgenda) de quem cuida: o responsável do card ou a pessoa da conversa. Vale em qualquer
   # gatilho com card ou conversa: vai no texto para o cliente marcar, quando ainda não há reunião. A página da reunião
   # do gatilho, quando há, desempata entre as páginas da pessoa.
@@ -131,8 +143,8 @@ class Autonomia::Automacao::Valores
 
   class << self
     def caminho_valido?(caminho)
-      [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA, ENVIO].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? ||
-        da_ia?(caminho)
+      [CAMPOS, DO_QUE_QUEM_VE, DA_SELECAO, MENSAGEM, RESPOSTA, AGENDA, ENVIO].any? { |lista| lista.key?(caminho.to_s) } ||
+        atributo(caminho).present? || da_ia?(caminho)
     end
 
     def da_ia?(caminho) = caminho.to_s.start_with?(IA) && caminho.to_s.length > IA.length
@@ -148,12 +160,22 @@ class Autonomia::Automacao::Valores
 
     # O valor que só existe num lugar da receita: a mensagem no filtro do gatilho dela (`mensagem`: a receita está lá);
     # a resposta no "esperar até" (`na_espera`); a reunião nos gatilhos de reunião (`gatilho`). Devolve a chave da
-    # frase do salvar, ou nil.
-    def fora_do_lugar(caminho, mensagem:, na_espera:, gatilho: nil)
+    # frase do salvar, ou nil. Os pedidos do RH (G22) só no contato.recorrente com `solicitante_de` na `selecao`.
+    def fora_do_lugar(caminho, mensagem:, na_espera:, gatilho: nil, selecao: nil)
       return :mensagem_so_no_gatilho if da_mensagem?(caminho) && !mensagem
+      return :resposta_so_na_espera if da_resposta?(caminho) && !na_espera
+
+      fora_do_gatilho(caminho, gatilho, selecao)
+    end
+
+    def fora_do_gatilho(caminho, gatilho, selecao)
       return :reuniao_so_no_gatilho if da_reuniao?(caminho) && !::Autonomia::Automacao::Gatilhos.de_reuniao?(gatilho)
 
-      :resposta_so_na_espera if da_resposta?(caminho) && !na_espera
+      :solicitados_so_no_recorrente if solicitados_fora?(caminho, gatilho, selecao)
+    end
+
+    def solicitados_fora?(caminho, gatilho, selecao)
+      caminho.to_s == SOLICITADOS && !(gatilho.to_s == GATILHO_DOS_SOLICITADOS && selecao.to_h.key?('solicitante_de'))
     end
 
     # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.
@@ -225,9 +247,10 @@ class Autonomia::Automacao::Valores
     do_objeto(caminho) { |objeto| ::Autonomia::Automacao::Valores::Atributos.ler(base, chave, objeto) }
   end
 
-  def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave) || ENVIO.key?(chave) || DO_QUE_QUEM_VE.key?(chave)
+  def campo?(chave) = [CAMPOS, AGENDA, ENVIO, DO_QUE_QUEM_VE, DA_SELECAO].any? { |lista| lista.key?(chave) }
 
   def do_campo(chave)
+    return do_objeto(chave) { |objeto| DA_SELECAO[chave].call(objeto, account_user, @contexto.selecao) } if DA_SELECAO.key?(chave)
     return do_objeto(chave) { |objeto| DO_QUE_QUEM_VE[chave].call(objeto, account_user) } if DO_QUE_QUEM_VE.key?(chave)
     return do_objeto(chave) { |objeto| link_da_agenda(objeto, AGENDA[chave].call(objeto)) } if AGENDA.key?(chave)
 

@@ -62,6 +62,7 @@
       "CARD_MOTIVO_DA_PERDA": "Lost reason",
       "CARD_TEM_REUNIAO_MARCADA": "The card has a meeting scheduled",
       "CONTATO_TEM_REUNIAO_MARCADA": "The contact has a meeting scheduled (any card)",
+      "CONTATO_SOLICITADOS_FALTANDO": "Who is still missing documents (from the cards this contact asked for)",
       "CARD_ATRIBUTOS": "Card custom field",
       "MENSAGEM_TIPO": "Message type",
       "MENSAGEM_PRIVADA": "Private message",

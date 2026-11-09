@@ -744,6 +744,14 @@
       ]
     },
     {
+      "caminho": "contato.solicitados_faltando",
+      "base": "contato",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_SOLICITADOS_FALTANDO",
+      "so_nos_gatilhos": [
+        "contato.recorrente"
+      ]
+    },
+    {
       "caminho": "card.link_da_agenda",
       "base": "card",
       "frase": "AUTOMACAO_LIVRE.VALORES.CARD_LINK_DA_AGENDA"

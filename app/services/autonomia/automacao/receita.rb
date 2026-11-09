@@ -204,7 +204,8 @@ class Autonomia::Automacao::Receita
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
     return ::Autonomia::Automacao::TextoDaIaNaReceita.new(self, @receita).problemas(id, caminho, no_gatilho: no_gatilho) if valores.da_ia?(caminho)
 
-    fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera, gatilho: @receita.dig('gatilho', 'tipo'))
+    fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera,
+                                          gatilho: @receita.dig('gatilho', 'tipo'), selecao: @receita.dig('gatilho', 'selecao'))
     return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
 

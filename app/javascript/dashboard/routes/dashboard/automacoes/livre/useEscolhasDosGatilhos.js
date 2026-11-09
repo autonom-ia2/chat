@@ -44,6 +44,23 @@ const camposDeData = (definicoes, modelo) =>
       value: item.attribute_key,
       label: item.attribute_display_name,
     }));
+// G22: a condição "pediu card no funil" fica fora da tela até um passo gravar
+// quem pediu o card (o "para cada item" da G24). Sem isso ela nunca acha
+// ninguém, e o servidor recusa (Solicitados::GRAVADORES). A G24 liga os dois.
+const SOLICITANTE_LIGADO = false;
+// G22: os campos de marcar do card, que a seleção "pediu card no funil" usa
+// para saber o que ainda falta (o documento que o passo 6 marca).
+const camposDeMarcarDoCard = definicoes =>
+  definicoes
+    .filter(
+      item =>
+        item.attribute_model === 'card_attribute' &&
+        item.attribute_display_type === 'checkbox'
+    )
+    .map(item => ({
+      value: item.attribute_key,
+      label: item.attribute_display_name,
+    }));
 const porAlvo = (definicoes, montar) =>
   Object.fromEntries(
     Object.entries(MODELO_DO_ALVO).map(([alvo, modelo]) => [
@@ -102,6 +119,15 @@ export function useEscolhasDosGatilhos() {
       label: funil.name,
       options: comNome(etapasPorFunil.value[funil.id]),
     })),
+    // As etapas de cada funil, pelo id do funil (G22: a etapa do "pediu card").
+    etapasPorFunil: Object.fromEntries(
+      funis.value.map(funil => [
+        funil.id,
+        comNome(etapasPorFunil.value[funil.id]),
+      ])
+    ),
+    camposDeMarcar: camposDeMarcarDoCard(definicoes.value),
+    solicitanteLigado: SOLICITANTE_LIGADO,
     // Os campos de data, pelo alvo do gatilho: { 'Crm::Card': [...], Contact }.
     campos: porAlvo(definicoes.value, lista => lista),
     // Pela peça do parâmetro (etapa, funil): o id escolhido e o nome dele. O

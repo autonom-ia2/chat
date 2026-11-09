@@ -58,9 +58,27 @@
               "required": ["chave", "valor"],
               "properties": { "chave": { "type": "string", "minLength": 1, "maxLength": 255 }, "valor": { "type": "string", "maxLength": 255 } },
               "description": "Contato: o atributo personalizado chave vale exatamente valor."
+            },
+            "solicitante_de": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["funil_id", "faltando"],
+              "properties": {
+                "funil_id": { "type": "integer", "description": "O funil dos cards pedidos (id)." },
+                "etapa_id": { "type": "integer", "description": "Opcional: só os cards nesta etapa do funil (id)." },
+                "faltando": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 20,
+                  "uniqueItems": true,
+                  "items": { "type": "string", "minLength": 1, "maxLength": 255 },
+                  "description": "As chaves dos campos de marcar do card (atributo personalizado do card, tipo marcar) que contam como documento: falta quem tem algum deles sem marcar."
+                }
+              },
+              "description": "Contato: pediu card aberto no funil_id (o solicitante do card, gravado pela criação dos cards da lista) e algum campo de faltando ainda não está marcado. Um contato por empresa: entre duas pessoas da mesma empresa, a do pedido pendente mais novo. Conta só os cards que quem ligou vê. Só aqui a receita lê contato.solicitados_faltando, a lista de quem falta e o que falta (Ana Souza (CPF, comprovante); Carla Dias (RG, CPF, comprovante)), dos cards da empresa desse contato."
             }
           },
-          "description": "Só nos recorrentes, obrigatória, com pelo menos uma condição: quais cards ou contatos da conta. Card: funil_id, etapa_id, situacao, responsavel_id, fechado_entre_dias. Contato: etiqueta, sem_etiqueta, atributo."
+          "description": "Só nos recorrentes, obrigatória, com pelo menos uma condição: quais cards ou contatos da conta. Card: funil_id, etapa_id, situacao, responsavel_id, fechado_entre_dias. Contato: etiqueta, sem_etiqueta, atributo, solicitante_de."
         },
         "filtros": {
           "type": "array",
