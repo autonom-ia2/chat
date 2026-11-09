@@ -99,7 +99,8 @@ RSpec.describe 'Audience preview endpoints (#993)', :aggregate_failures, type: :
       expect(examples).to include(['Nome', 'Aaa Aaaaa'], ['Email', '[email address]'])
       expect(response.body).not_to include('ana@alfa.com.br')
       expect(payload.dig('reachability', 'whatsapp')).to include('total' => 2, 'opted_out' => 1, 'receive' => 1)
-      expect(payload.dig('reachability', 'email')).to include('total' => 2, 'unsubscribed' => 1, 'receive' => 1)
+      # chat#2733: Ana refused, so her e-mail does not receive either (like the send).
+      expect(payload.dig('reachability', 'email')).to include('total' => 2, 'opted_out' => 1, 'unsubscribed' => 1, 'receive' => 0)
     end
   end
 
@@ -123,8 +124,12 @@ RSpec.describe 'Audience preview endpoints (#993)', :aggregate_failures, type: :
   end
 
   describe 'side panel (PRD §6.6)' do
+    # #2802: without contact_view the names come masked, as in the contact base (#1849).
     it 'lists the contacts saved by the audience, paged, for campaign_view' do
       get audience_url('/contacts'), headers: headers_for(agent_with(['campaign_view']))
+      expect(response.parsed_body['payload'].pluck('name')).to eq(['Ana S.', 'Caio R.'])
+
+      get audience_url('/contacts'), headers: headers_for(agent_with(%w[campaign_view contact_view]))
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body['payload'].pluck('name')).to eq(['Ana Souza', 'Caio Reis'])

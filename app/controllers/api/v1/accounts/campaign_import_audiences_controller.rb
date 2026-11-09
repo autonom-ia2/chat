@@ -96,7 +96,7 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   end
 
   # GET /campaign_imports/:id/people_sheet (#2332, side panel "Baixar lista"): who the audience holds, as an Excel file.
-  # The same contacts the panel lists; an audience from the conversations needs contact_view (#2277).
+  # The same contacts the panel lists; any audience needs contact reading (#2277, #2414 review).
   def people_sheet
     return render json: { error: 'campaign_import.contacts_hidden' }, status: :forbidden if contact_data_hidden?
 
@@ -191,9 +191,16 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
     payload = { id: contact.id, name: contact.name, email: contact.email, phone_number: contact.phone_number, company_name: company }
     return payload unless contact_data_hidden?
 
-    # #2277: phone and e-mail as the audience keeps them (masked), never the contact's own.
+    # #2277 / #2414 review: without contact reading, phone and e-mail as the audience keeps them (masked), never the
+    # contact's own, for any origin.
     phone, email = masked_reach[contact.id]
-    payload.merge(email: email, phone_number: phone, company_name: nil)
+    payload.merge(name: listed_name(contact.name), email: email, phone_number: phone, company_name: nil)
+  end
+
+  # #2802: the name stays whole only where the viewer opens the person's conversation (an audience from the
+  # conversations, #2277); elsewhere it is masked like the contact base masks it without contact_view (#1849).
+  def listed_name(name)
+    named_contact_ids ? name : ConversationAudience::Access.masked_name(name)
   end
 
   # { contact_id => [raw_phone_masked, email_masked] } of this audience's rows.
@@ -215,18 +222,23 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   def contact_data_hidden?
     return @contact_data_hidden if defined?(@contact_data_hidden)
 
-    @contact_data_hidden = ConversationAudience::Access.hides_contact_data?(@campaign_import, Current.account_user)
+    @contact_data_hidden = ConversationAudience::Access.hides_contact_data?(Current.account_user)
   end
 
   def sample_payload(row)
-    name = (row.contact&.name.presence || row.normalized_name.presence || row.raw_name).to_s.squish
+    name = sample_name(row)
     payload = {
       name: name, first_name: name.split.first.to_s,
       company_name: row.contact.try(:company)&.name.presence || row.company_name,
       extra_values: row.extra_values.to_h
     }
-    # #2277: the columns of an audience built from the conversations are the contact's data.
+    # #2277 / #2414 review: without contact reading, the columns are the contact's data, for any origin.
     contact_data_hidden? ? payload.merge(company_name: nil, extra_values: {}) : payload
+  end
+
+  def sample_name(row)
+    name = (row.contact&.name.presence || row.normalized_name.presence || row.raw_name).to_s.squish
+    contact_data_hidden? ? listed_name(name) : name
   end
 
   # Free-form maps keyed by template variable; the services check every key and value.

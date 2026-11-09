@@ -38,15 +38,20 @@ class Autonomia::Automacao::TestarPasso
     end
   end
 
+  # O que a tela pede: o rascunho (`receita`), o passo, a conversa escolhida (nil no 1º pedido) e quem ligou a automação
+  # já salva (`ligada_por`, nil na nova ou nunca ligada; o valor do card só vai se ele também pode, #2780).
+  Pedido = Struct.new(:receita, :passo_id, :conversa_id, :ligada_por, keyword_init: true)
+
   # `account_user` é quem pede, na conta: dele saem a pessoa e o que ela enxerga.
-  def initialize(receita:, passo_id:, conta:, account_user:, conversa_id: nil)
-    @receita = receita
-    passos = ::Autonomia::Automacao::Receita.new(receita, conta: conta, account_user: account_user).passos
-    @passo = passos.find { |passo| passo['id'] == passo_id.to_s }
+  def initialize(pedido:, conta:, account_user:)
+    @receita = pedido.receita
+    passos = ::Autonomia::Automacao::Receita.new(@receita, conta: conta, account_user: account_user).passos
+    @passo = passos.find { |passo| passo['id'] == pedido.passo_id.to_s }
     @conta = conta
     @account_user = account_user
     @usuario = account_user.user
-    @conversa_id = conversa_id.presence
+    @conversa_id = pedido.conversa_id.presence
+    @ligada_por = pedido.ligada_por
   end
 
   # Sem `conversa_id`: { conversa:, candidatas: [ids], aviso: }. Com ele: { conversa: }. A conversa é
@@ -98,8 +103,8 @@ class Autonomia::Automacao::TestarPasso
     base.merge(motivo: e.motivo)
   end
 
-  # O valor do card só com a chave de quem pede (#2597), a mesma regra do Valores. O anúncio de origem nunca (#2558),
-  # como no passo de verdade (ComIa).
+  # O valor do card só com a chave de quem pede (#2597), a mesma regra do Valores, e só no "decidir", em qualquer
+  # gatilho (#2780). O anúncio de origem nunca (#2558), como no passo de verdade (ComIa.leva_o_valor?).
   # Com `le: anexos` (G20), os anexos da conversa, como no passo de verdade.
   def leitura(conversa)
     leituras = ::Autonomia::Automacao::ComIa.leituras(@passo)
@@ -110,7 +115,14 @@ class Autonomia::Automacao::TestarPasso
 
   def estado_de(conversa, leituras)
     ::Autonomia::Decisores::Estado.new(conversation: conversa, leituras: leituras, motivo_da_perda: true,
-                                       valor_do_card: ::Autonomia::Automacao::Valores.pode_ler?('card.valor', @account_user))
+                                       valor_do_card: leva_o_valor?)
+  end
+
+  # O valor vai só se quem testa e quem ligou (quando já há) podem: o teste nunca mostra a quem não pode, nem mais que a
+  # execução. Quem ligou e saiu da conta não pode.
+  def leva_o_valor?
+    pessoas = @ligada_por ? [@account_user, @conta.account_users.find_by(user_id: @ligada_por.id)] : [@account_user]
+    pessoas.all? { |pessoa| ::Autonomia::Automacao::ComIa.leva_o_valor?(@passo, pessoa) }
   end
 
   def ve_o_card?(card) = ::Autonomia::Automacao::ComIa.ve_o_card?(@usuario, card)

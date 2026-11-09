@@ -314,6 +314,12 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
         },
         {
+          "nome": "data",
+          "peca": "data",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DATA"
+        },
+        {
           "nome": "hora",
           "peca": "hora",
           "obrigatorio": true,
@@ -353,6 +359,12 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
         },
         {
+          "nome": "data",
+          "peca": "data",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DATA"
+        },
+        {
           "nome": "hora",
           "peca": "hora",
           "obrigatorio": true,
@@ -390,6 +402,12 @@
           "peca": "dia_do_mes",
           "obrigatorio": false,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
+        },
+        {
+          "nome": "data",
+          "peca": "data",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DATA"
         },
         {
           "nome": "hora",
@@ -647,6 +665,48 @@
       ]
     },
     {
+      "caminho": "card.origem",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ORIGEM",
+      "opcoes": [
+        {
+          "valor": "formulario_de_anuncio",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FORMULARIO_DE_ANUNCIO"
+        },
+        {
+          "valor": "conversa",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.CONVERSA"
+        },
+        {
+          "valor": "agenda",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.AGENDA"
+        },
+        {
+          "valor": "prospeccao",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.PROSPECCAO"
+        },
+        {
+          "valor": "outro",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.OUTRO"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
+      "caminho": "card.anuncio",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ANUNCIO"
+    },
+    {
       "caminho": "reuniao.inicio",
       "base": "reuniao",
       "frase": "AUTOMACAO_LIVRE.VALORES.REUNIAO_INICIO",
@@ -806,6 +866,58 @@
       "so_na_espera": true
     },
     {
+      "caminho": "conversa.responsavel_respondeu",
+      "base": "conversa",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_RESPONSAVEL_RESPONDEU",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ],
+      "so_na_espera": true
+    },
+    {
+      "caminho": "gatilho.repetiu",
+      "base": "gatilho",
+      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_REPETIU",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ],
+      "so_na_espera": true
+    },
+    {
       "caminho": "envio.texto",
       "base": "envio",
       "frase": "AUTOMACAO_LIVRE.VALORES.ENVIO_TEXTO"
@@ -842,6 +954,15 @@
           "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
         }
       ]
+    },
+    {
+      "caminho": "falhou.texto",
+      "base": "falhou",
+      "frase": "AUTOMACAO_LIVRE.VALORES.FALHOU_TEXTO",
+      "so_nos_gatilhos": [
+        "mensagem.falhou"
+      ],
+      "so_nos_passos": true
     },
     {
       "caminho": "conversa.atributos",
@@ -916,6 +1037,31 @@
       ]
     },
     {
+      "caminho": "mensagem.tem_anexo",
+      "frase": "AUTOMACAO_LIVRE.VALORES.MENSAGEM_TEM_ANEXO",
+      "so_no_gatilho": "mensagem.criada",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
       "caminho": "mensagem.privada",
       "frase": "AUTOMACAO_LIVRE.VALORES.MENSAGEM_PRIVADA",
       "so_no_gatilho": "mensagem.criada",
@@ -946,18 +1092,23 @@
     "Conversation": [
       "conversa",
       "contato",
-      "envio"
+      "card",
+      "envio",
+      "gatilho",
+      "falhou"
     ],
     "Crm::Card": [
       "card",
       "conversa",
       "contato",
       "reuniao",
-      "envio"
+      "envio",
+      "gatilho"
     ],
     "Contact": [
       "contato",
-      "envio"
+      "envio",
+      "gatilho"
     ]
   },
   "grupos": [
@@ -1220,6 +1371,12 @@
           "peca": "passos",
           "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.NENHUM"
+        },
+        {
+          "nome": "de_novo",
+          "peca": "de_novo",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DE_NOVO"
         }
       ]
     },

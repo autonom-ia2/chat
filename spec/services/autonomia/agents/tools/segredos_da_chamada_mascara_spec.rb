@@ -12,14 +12,17 @@ RSpec.describe Autonomia::Agents::Tools::SegredosDaChamada do
   let(:tool) do
     Autonomia::Agents::Tool.create!(
       account: account, agent: agent, name: 'Clientes', slug: 'buscar_clientes',
-      endpoint_url: 'https://erp.exemplo.test/clientes?status=ativo&limite=1000&token=tokQuery77abc',
+      endpoint_url: 'https://erp.exemplo.test/legado',
       headers_config: [
         { key: 'Authorization', value: 'Bearer bearerSecreto99', secret: true },
         { key: 'X-Api-Key', value: 'chaveDaApi-123', secret: true },
         { key: 'X-Api-Version', value: '2024-01', secret: false }
       ],
       param_schema: [{ name: 'q', type: 'string', description: 'Busca', required: true }]
-    )
+    ).tap do |legado|
+      # Ferramenta de antes da regra "senha fora do link" (#1430): a máscara em tempo de execução continua valendo.
+      legado.update_column(:endpoint_url, 'https://erp.exemplo.test/clientes?status=ativo&limite=1000&token=tokQuery77abc') # rubocop:disable Rails/SkipsModelValidations
+    end
   end
   let(:resposta) do
     '{"situacao":"INATIVO","saldo":"1000,00","versao":"2024-01","eco":"bearerSecreto99","chave":"chaveDaApi-123",' \
@@ -76,13 +79,16 @@ RSpec.describe Autonomia::Agents::Tools::SegredosDaChamada do
     let(:tool) do
       Autonomia::Agents::Tool.create!(
         account: account, agent: agent, name: 'Pedidos', slug: 'buscar_pedidos',
-        endpoint_url: "https://erp.exemplo.test/pedidos?pedido=#{uuid}&keyword=boleto&author=maria&api_key=chaveQuery55",
+        endpoint_url: 'https://erp.exemplo.test/legado',
         headers_config: [
           { key: 'X-Cliente', value: 'valorGuardado-777', secret: true },
           { key: 'X-Keyword', value: 'campanhaPublica', secret: false }
         ],
         param_schema: [{ name: 'q', type: 'string', description: 'Busca', required: true }]
-      )
+      ).tap do |legado|
+        # Ferramenta de antes da regra "senha fora do link" (#1430).
+        legado.update_column(:endpoint_url, "https://erp.exemplo.test/pedidos?pedido=#{uuid}&keyword=boleto&author=maria&api_key=chaveQuery55") # rubocop:disable Rails/SkipsModelValidations
+      end
     end
 
     it 'UUID da query, keyword e author chegam inteiros; o cabecalho marcado secret e a api_key saem' do
