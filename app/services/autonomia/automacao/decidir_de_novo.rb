@@ -5,10 +5,11 @@
 # É uma opção do próprio "decidir", não um passo "voltar para": toda volta consome uma mensagem nova do cliente, então
 # o laço acaba por construção e nunca gira pago sem resposta. Cada volta é uma ida paga à IA.
 #
-# - O marco da leitura é o id da última mensagem do cliente que já existia antes da ida à IA (`@lido_ate`, gravado
-#   no registro do caminho), não a hora: a mensagem gravada depois tem id maior, mesmo com `created_at` de antes. A que
-#   chegou enquanto a IA pensava (rajada) faz decidir de novo na mesma rodada, sem esperar. O prazo conta do instante
-#   da leitura (`@decidido_em`).
+# - O marco da leitura (Resposta.marco, gravado no registro do caminho) é o id da última mensagem do cliente visível
+#   antes da ida à IA, o instante e as mensagens da margem de segundos antes dele. Nova é a de id maior (mesmo com
+#   `created_at` de antes) ou a da margem que não estava visível (commit atrasado); a que a IA já leu nunca reconta. A
+#   que chegou enquanto a IA pensava (rajada) faz decidir de novo na mesma rodada, sem esperar. O prazo conta do
+#   instante da leitura (`@decidido_em`).
 # - Ao retomar, conta a resposta depois do marco e até o prazo (`due_at`), pela régua da G11 (só nas conversas que
 #   quem ligou vê). Acordada por outra coisa (a resposta da agente de IA, o contato mudando), volta a esperar sem
 #   chamar a IA.
@@ -65,24 +66,24 @@ module Autonomia::Automacao::DecidirDeNovo
 
   private
 
-  # Antes da ida à IA: o instante (o prazo conta dele) e o id da última mensagem do cliente (a resposta nova é a de id
-  # maior). A mensagem gravada entre o marco e a leitura da IA também decide de novo: paga uma volta, nunca some.
+  # Antes da ida à IA: o instante (o prazo conta dele) e o marco das mensagens do cliente. A mensagem gravada entre o
+  # marco e a leitura da IA também decide de novo: paga uma volta, nunca some.
   def marcar_leitura(passo)
     return unless ::Autonomia::Automacao::DecidirDeNovo.espera?(passo)
 
     @decidido_em = Time.current
-    @lido_ate = ::Autonomia::Automacao::Resposta.ultima_do_cliente_id(contexto.contato, @definicao.ligada_por)
+    @marco = ::Autonomia::Automacao::Resposta.marco(contexto.contato, @definicao.ligada_por, @decidido_em)
   end
 
   # Os dados do registro do caminho que decide de novo levam o marco: a espera confere a partir dele ao retomar.
   def dados_do_caminho(passo, dados)
-    ::Autonomia::Automacao::DecidirDeNovo.repete?(passo, dados['ramo']) ? dados.merge('lido_ate' => @lido_ate) : dados
+    ::Autonomia::Automacao::DecidirDeNovo.repete?(passo, dados['ramo']) ? dados.merge(@marco) : dados
   end
 
   # Depois de registrar o caminho (sem nota do motivo: "ainda conversando" deixaria uma por mensagem). A resposta que
   # chegou durante a ida à IA decide de novo já; senão, espera até o prazo, contado do instante da leitura.
   def esperar_resposta(passo)
-    return passo if cliente_respondeu?(@lido_ate, nil)
+    return passo if cliente_respondeu?(@marco, nil)
 
     aguardar(passo, @decidido_em + prazo_de_novo(passo), registrar: false)
   end
@@ -96,17 +97,17 @@ module Autonomia::Automacao::DecidirDeNovo
     encerrar(passo['id'], 'concluida', 'prazo_vencido')
   end
 
-  def respondeu_na_espera?(passo) = cliente_respondeu?(lido_ate_gravado(passo), @execucao.due_at)
+  def respondeu_na_espera?(passo) = cliente_respondeu?(marco_gravado(passo), @execucao.due_at)
 
-  # O marco do último caminho registrado no passo (o que pôs a execução a esperar). Sem ele, quebra visível.
-  def lido_ate_gravado(passo)
-    ::Autonomia::Automacao::Registro.where(execucao: @execucao, passo: passo['id']).order(:id).last.dados.fetch('lido_ate')
+  # O marco do último caminho registrado no passo (o que pôs a execução a esperar). Sem ele, quebra visível (fetch).
+  def marco_gravado(passo)
+    ::Autonomia::Automacao::Registro.where(execucao: @execucao, passo: passo['id']).order(:id).last.dados
   end
 
   # `ligada_por` não chega nil aqui: sem quem ligou, a rodada pausa antes com `sem_quem_ligou` (Executor#rodar e
   # IaNoExecutor#passo_de_ia, pelo impedida? → Acesso#motivo).
-  def cliente_respondeu?(depois_de, ate)
-    ::Autonomia::Automacao::Resposta.cliente_depois?(contexto.contato, depois_de, ate, @definicao.ligada_por)
+  def cliente_respondeu?(marco, ate)
+    ::Autonomia::Automacao::Resposta.cliente_depois?(contexto.contato, marco, ate, @definicao.ligada_por)
   end
 
   def prazo_de_novo(passo) = ::Autonomia::Automacao::Duracao.de(passo.dig('de_novo', 'prazo'))

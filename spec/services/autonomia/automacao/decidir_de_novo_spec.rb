@@ -144,6 +144,49 @@ RSpec.describe Autonomia::Automacao::DecidirDeNovo, :automacao_motor do
       .to eq(conversa.messages.incoming.reorder(:id).pluck(:id).first(2))
   end
 
+  # Revisão do #2800: o id reservado antes da leitura e visível só depois (commit atrasado) fica abaixo do marco; a
+  # margem de segundos antes da leitura o pega, sem recontar o que a IA já leu.
+  def id_reservado = Message.connection.select_value("SELECT nextval('messages_id_seq')")
+
+  it 'a mensagem com id reservado antes da leitura e visível só depois decide de novo', :aggregate_failures do
+    reservado = id_reservado
+    create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'E a vaga na garagem?')
+    atrasada = lambda do
+      create(:message, id: reservado, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming,
+                       content: 'E o IPTU?', created_at: 3.seconds.ago)
+      'ainda_conversando'
+    end
+    ia_escolhe(atrasada, 'ainda_conversando')
+
+    execucao = comecar_e_rodar
+
+    expect(reservado).to be < Autonomia::Automacao::Registro.where(execucao: execucao, passo: 'decide').order(:id).first.dados['lido_ate']
+    expect(corpos.size).to eq(2)
+    expect(ramos(execucao)).to eq(%w[ainda_conversando ainda_conversando])
+  end
+
+  it 'a mensagem que a IA já leu, gravada na margem antes da leitura, não decide de novo', :aggregate_failures do
+    lida = create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'Tem vaga?', created_at: 2.seconds.ago)
+    ia_escolhe('ainda_conversando')
+
+    execucao = comecar_e_rodar
+
+    expect(Autonomia::Automacao::Registro.find_by!(execucao: execucao).dados['lidas_na_margem']).to include(lida.id)
+    expect(corpos.size).to eq(1)
+    expect([execucao.estado, execucao.cursor]).to eq(%w[esperando decide])
+  end
+
+  it 'na espera, a mensagem com id reservado antes da leitura acorda e decide de novo' do
+    reservado = id_reservado
+    create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'E a vaga na garagem?')
+    ia_escolhe('ainda_conversando', 'quer_visitar')
+    execucao = comecar_e_rodar
+
+    escreve(id: reservado, message_type: :incoming, sender: ana, content: 'Quero visitar', created_at: 1.second.ago)
+
+    expect(ramos(execucao.reload)).to eq(%w[ainda_conversando quer_visitar])
+  end
+
   it 'na espera, a resposta com a hora de antes da leitura acorda e decide de novo', :aggregate_failures do
     ia_escolhe('ainda_conversando', 'quer_visitar')
     execucao = comecar_e_rodar
