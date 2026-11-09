@@ -2568,7 +2568,20 @@
               "FIX": "Sign in again",
               "MISSING_INSTAGRAM_TAP": "One more tap",
               "INSTAGRAM_TEXT": "Instagram Direct and comments arrive here after you link Instagram, with one tap.",
-              "INSTAGRAM_CTA": "Link Instagram"
+              "INSTAGRAM_CTA": "Link Instagram",
+              "INSTAGRAM_TEXT_PAGINA": "Link {'@'}{username} with this same Facebook sign-in. Direct messages and comments arrive here.",
+              "INSTAGRAM_CTA_PAGINA": "Link Instagram",
+              "INSTAGRAM_LINKED": "{'@'}{username} is linked. Direct messages and comments arrive here.",
+              "INSTAGRAM_ERROR": {
+                "MISSING_PERMISSIONS": "Instagram was left unchecked in the Facebook window. Sign in again and keep Instagram checked.",
+                "NOT_OWN_TOKEN": "Your ads are shared with the partner. Sign in with your own Facebook to link Instagram here.",
+                "NO_INSTAGRAM": "This Page has no Instagram linked on Facebook. Link it on Facebook, or use the Instagram sign-in.",
+                "NOT_GRANTED": "This Page was not checked in the Facebook window. Sign in again and check it.",
+                "RECONNECT": "Your Facebook access expired. Sign in again.",
+                "FORBIDDEN": "You cannot link inboxes. Ask an administrator.",
+                "LIMIT": "Your plan reached its inbox limit.",
+                "FAILED": "We could not link Instagram now. Try again in a few minutes."
+              }
             }
           },
           "GUIDE": {
