@@ -147,54 +147,6 @@ module FechamentoAutomacao::Lacunas
       montado.corpo&.dig('custom_attributes', 'revisao') == Time.current.utc.to_date.advance(months: 6).iso8601
   end
 
-  # G24: a 1ª automação abre um card por item da lista ("para cada item"), e a 2ª, de card criado, roda em cada card. A
-  # lista já guardada na execução não vai à IA. Os jobs do caminho rodam um por vez, na transação do exemplo.
-  def segunda_automacao_em_cada_card?
-    ClimateControl.modify(CRM_KANBAN_ENABLED: 'true', CRM_AI_ENABLED: 'true') do
-      account, admin, funil, etapa = conta_da_sonda_g24
-      lista = automacao_da_sonda(account, admin, { 'tipo' => 'conversa.resolvida' }, [para_cada_da_sonda(etapa)])
-      em_cada_card = automacao_da_sonda(account, admin, { 'tipo' => 'card.criado', 'funil_id' => funil.id }, [{ 'id' => 'fim', 'tipo' => 'parar' }])
-      conversa = FactoryBot.create(:conversation, account: account)
-      Autonomia::Automacao::Partida.new(definicao: lista, alvo: conversa, chave_gatilho: 'conversa.resolvida').call
-                                   &.guardar_texto!('lista.itens', [{ 'nome' => 'Sonda Um' }, { 'nome' => 'Sonda Dois' }])
-      rodar_jobs_da_sonda
-      cards = funil.cards.order(:id).to_a
-      cards.size == 2 && Autonomia::Automacao::Execucao.where(automacao: em_cada_card).order(:id).map(&:alvo) == cards
-    end
-  end
-
-  def conta_da_sonda_g24
-    account = FactoryBot.create(:account)
-    account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_ia', 'automacao_gatilhos')
-    admin = FactoryBot.create(:user, account: account, role: :administrator)
-    [account, admin, *create_crm_pipeline(account: account, user: admin)]
-  end
-
-  def automacao_da_sonda(account, admin, gatilho, passos)
-    definicao = FactoryBot.create(:autonomia_automacao, account: account, ligada_por: admin)
-    definicao.salvar_versao!(receita: { 'gatilho' => gatilho, 'passos' => passos }, autor: admin)
-    definicao.update!(ativa: true)
-    definicao
-  end
-
-  def para_cada_da_sonda(etapa)
-    { 'id' => 'lista', 'tipo' => 'para_cada', 'le' => %w[mensagens_recentes], 'descricao' => 'Cada pessoa da lista',
-      'campos' => [{ 'chave' => 'nome', 'descricao' => 'Nome' }], 'etapa_id' => etapa.id, 'maximo' => 10 }
-  end
-
-  JOBS_DA_SONDA = %w[Autonomia::Automacao::AvancarJob EventDispatcherJob Autonomia::Automacao::EventoDoCardJob].freeze
-
-  def rodar_jobs_da_sonda
-    fila = ActiveJob::Base.queue_adapter.enqueued_jobs
-    FechamentoAutomacao::LIMITE_DE_JOBS.times do
-      job = fila.find { |item| JOBS_DA_SONDA.include?(item[:job].to_s) }
-      return unless job
-
-      fila.delete(job)
-      job[:job].perform_now(*ActiveJob::Arguments.deserialize(job[:args]))
-    end
-  end
-
   # G30: o lead do formulário entra pelo Importer, como no webhook, num funil com a Atribuição ligada e um corretor que
   # cuida dele; o card nasce com esse corretor de dono. Roda na transação do exemplo, que desfaz tudo.
   def lead_ganha_dono_pela_atribuicao?
@@ -251,7 +203,7 @@ module FechamentoAutomacao::Lacunas
     # Fechada com prova (#2771): o "para cada item" abre um card por item, cada um numa raiz própria da cadeia, e a
     # automação de card criado roda em todos (spec/services/autonomia/automacao/para_cada_cadeia_spec.rb; exemplo 8,
     # passos 1 a 5, em spec/fechamento/automacao/exemplo_08_funcionario_novo_spec.rb).
-    'G24' => -> { segunda_automacao_em_cada_card? },
+    'G24' => -> { FechamentoAutomacao::SondasDoExemplo8.segunda_automacao_em_cada_card? },
     'G25' => -> { acao?('POST crm/cards/:id/close') },
     'G26' => -> { passo?('sla') },
     # "Card criado ou atualizado com valor acima de R$ 50 mil" (15) e "card completo" (8, passo 8): só o card criado é a G5.
@@ -366,10 +318,9 @@ module FechamentoAutomacao::Lacunas
     # em card que quem ligou vê); prova no mesmo spec da G59. A sonda passa pelo salvar (Receita#problemas): o "quem atende
     # a reunião" num gatilho de conversa sai sem problema (antes da G61, recusava com da_reuniao_so_no_gatilho).
     'G61' => -> { FechamentoAutomacao::SondasDaAgenda.da_reuniao_em_qualquer_gatilho_salva? },
-    # Do exemplo 9, passo 4 (decisão da Automação, 09/11): a campanha vai só às empresas que a execução criou agora, não a
-    # todo contato com a etiqueta (o público da campanha hoje é só etiqueta). Mandar de novo às da semana anterior quebra
-    # o "empresas novas" do termo. A frente dona troca o nil pela sonda.
-    'G58' => nil,
+    # Do exemplo 9, passo 4 (#2779): a campanha vai só a quem os passos anteriores desta execução criaram
+    # (`publico: desta_execucao`), não a todo contato com a etiqueta do mês. Prova em g58_publico_da_execucao_spec.rb.
+    'G58' => -> { campo_do_passo?('campanha', 'publico') },
     # G57 (#2769, ex. 1, passo 7): o retorno "para hoje" (ou amanhã), numa hora ou no fim do dia, no fuso da conta.
     'G57' => -> { campo_do_passo?('retorno', 'quando') }
   }.freeze

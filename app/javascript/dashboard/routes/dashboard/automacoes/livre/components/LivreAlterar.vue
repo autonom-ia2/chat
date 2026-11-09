@@ -26,7 +26,7 @@ import LivreDecidirDeNovo from './LivreDecidirDeNovo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
 import { caminhosProntos, deNovoPronto, esperasAnteriores } from '../ia';
-import { campanhaPronta } from '../campanha';
+import { campanhaPronta, publicoDaExecucaoNoCatalogo } from '../campanha';
 import { prospeccaoPronta } from '../prospeccao';
 import { paraCadaPronto } from '../paraCada';
 import { envioPronto, paraPronto, quandoPronto } from '../retorno';
@@ -508,6 +508,7 @@ defineExpose({ abrir, fechar });
           v-else-if="campo.peca === 'campanha' && campo.nome === 'faz'"
           :model-value="rascunho"
           :etiquetas="opcoes.etiqueta"
+          :com-publico-da-execucao="publicoDaExecucaoNoCatalogo(catalogo)"
           @update:model-value="novo => (rascunho = novo)"
         />
         <div

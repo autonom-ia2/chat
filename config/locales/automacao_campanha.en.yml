@@ -14,6 +14,7 @@ en:
         campanha_modelo_de_categoria_fora: 'The chosen template is not a utility or marketing template. The campaign was not created.'
         campanha_modelo_mudou: "The template asks for different variables than the step's. Choose the template again. The campaign was not created."
         campanha_variavel_vazia: "A template variable has no text. Write the fixed text of each variable. The campaign was not created."
+        campanha_execucao_sem_contatos: 'The previous steps did not create any company or contact that can receive this time. The campaign was not created.'
         sem_contato: 'There is no contact here to mark.'
         contato_ja_nao_recebe: 'The contact was already marked as not receiving messages.'
       receita:
@@ -24,3 +25,6 @@ en:
         campanha_sem_caixa: 'Step %{passo}: choose an official WhatsApp inbox of this account.'
         campanha_modelo: 'Step %{passo}: the chosen inbox does not have the template %{nome} approved and ready.'
         campanha_etiqueta_de_fora: 'Step %{passo}: the label %{id} is not from this account.'
+        campanha_publico_sem_origem: 'Step %{passo}: to send only to who this automation created, add a step that creates a card or contact before it.'
+      # G58: the date in the name of the run's audience ("<campaign> · <date>").
+      data_do_publico: '%m/%d/%Y'

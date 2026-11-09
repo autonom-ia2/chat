@@ -8,6 +8,9 @@
 #   conversa, card ou contato, cada execução criaria uma campanha
 #   nova para o mesmo público, o mesmo envio N vezes. A Receita recusa ao salvar; a receita que chegar assim mesmo pula
 #   com `campanha_so_sem_alvo`. Não é teto de uso, é a regra de não repetir o mesmo envio.
+#   `publico: desta_execucao` (G58, #2779) troca as etiquetas pelos contatos que os passos anteriores desta execução
+#   criaram (Autonomia::Automacao::CampanhaDaExecucao): a campanha da 2ª segunda não volta a quem recebeu na 1ª só por
+#   ter a etiqueta do mês.
 # - `nao_receber`: marca o contato do alvo como "não recebe" (a recusa das campanhas e mensagens ativas), como o botão
 #   do contato (Contacts::OptOutsController): origem manual, feita por quem ligou, desfeita pelo mesmo botão.
 #
@@ -27,6 +30,7 @@ class Autonomia::Automacao::PassoDeCampanha
   PROVEDOR = 'whatsapp_cloud'.freeze
   FLAG_DA_CAMPANHA = :whatsapp_campaign
   ALVO_DA_CONTA = 'Account'.freeze
+  PUBLICO_DESTA_EXECUCAO = 'desta_execucao'.freeze
 
   # O que a Receita confere ao salvar (#2630). Sem conta (o catálogo das receitas prontas), só o que não depende dela.
   def self.problemas_ao_salvar(passo, receita, conta:, account_user:)
@@ -35,8 +39,20 @@ class Autonomia::Automacao::PassoDeCampanha
     desligado = conta && !::Autonomia::Automacao::Motor.mensagens?(conta) ? [frase(:passo_desligado, passo: id)] : []
     return desligado unless passo['faz'] == 'disparar'
 
-    desligado + problemas_do_disparo(passo, conta, gatilho, account_user)
+    desligado + problemas_do_disparo(passo, conta, gatilho, account_user) + problemas_do_publico(passo, receita)
   end
+
+  # G58: o público desta execução precisa de um passo antes dele que crie card ou contato; sem ele, sairia sempre vazio.
+  def self.problemas_do_publico(passo, receita)
+    return [] unless desta_execucao?(passo)
+
+    receita_obj = ::Autonomia::Automacao::Receita.new(receita, conta: nil, account_user: nil)
+    antes = ::Autonomia::Automacao::TextoDaIaNaReceita.new(receita_obj, receita).rodam_antes(passo['id'])
+    criam = ::Autonomia::Automacao::ContatosDaExecucao::TIPOS_QUE_CRIAM
+    Array(antes).any? { |anterior| criam.include?(anterior['tipo']) } ? [] : [frase(:campanha_publico_sem_origem, passo: passo['id'])]
+  end
+
+  def self.desta_execucao?(passo) = passo['publico'] == PUBLICO_DESTA_EXECUCAO
 
   def self.problemas_do_disparo(passo, conta, gatilho, account_user)
     id = passo['id']
@@ -138,7 +154,14 @@ class Autonomia::Automacao::PassoDeCampanha
     template_params = self.class.modelo_pronto(caixa, @passo['modelo'])
     return pulado("campanha_#{template_params}") if template_params.is_a?(String)
 
-    criar_e_disparar(caixa, template_params)
+    publico_escolhido(caixa, template_params)
+  end
+
+  # Quem recebe: quem tem as etiquetas (G14) ou só quem os passos anteriores desta execução criaram (G58).
+  def publico_escolhido(caixa, template_params)
+    return criar_e_disparar(caixa, template_params) unless self.class.desta_execucao?(@passo)
+
+    ::Autonomia::Automacao::CampanhaDaExecucao.new(execucao: @execucao, passo: @passo, caixa: caixa, template_params: template_params).disparar
   end
 
   def criar_e_disparar(caixa, template_params)
