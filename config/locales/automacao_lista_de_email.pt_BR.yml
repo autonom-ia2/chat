@@ -13,3 +13,11 @@ pt_BR:
         lista_de_email_desligada: 'Passo %{passo}: as campanhas de e-mail estão desligadas.'
         lista_de_email_sem_permissao: 'Passo %{passo}: para usar este passo você precisa da permissão de gerenciar campanhas.'
         lista_de_email_de_fora: 'Passo %{passo}: a lista de e-mail %{id} não é desta conta.'
+  activerecord:
+    errors:
+      models:
+        label:
+          attributes:
+            title:
+              email_list_locked: 'é de uma lista de e-mail e não pode ser renomeada. Renomeie a lista.'
+              email_list_reserved: 'não pode começar com "lista-email-": esse nome é das listas de e-mail.'

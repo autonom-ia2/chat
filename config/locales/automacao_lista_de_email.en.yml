@@ -1,4 +1,4 @@
-# Free automation, "Add to e-mail list" step (G52, #2760). Own file so it does not compete for en.yml with the other
+# Free automation, "Add to e-mail list" step, and the e-mail list label (G52, #2760). Own file so it does not compete for en.yml with the other
 # fronts.
 en:
   autonomia:
@@ -13,3 +13,11 @@ en:
         lista_de_email_desligada: 'Step %{passo}: e-mail campaigns are turned off.'
         lista_de_email_sem_permissao: 'Step %{passo}: to use this step you need permission to manage campaigns.'
         lista_de_email_de_fora: 'Step %{passo}: the e-mail list %{id} is not from this account.'
+  activerecord:
+    errors:
+      models:
+        label:
+          attributes:
+            title:
+              email_list_locked: 'belongs to an e-mail list and cannot be renamed. Rename the list instead.'
+              email_list_reserved: 'cannot start with "lista-email-": that name is reserved for e-mail lists.'

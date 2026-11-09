@@ -118,6 +118,17 @@ RSpec.describe EmailLists::Recipients, :aggregate_failures do
       expect(campanha.reload).to be_sending
     end
 
+    it 'o agendador não manda para ninguém: a lista que esvaziou até a hora do envio faz a campanha falhar' do
+      campanha.update!(status: :scheduled, scheduled_at: 1.minute.ago)
+      account.contacts.from_email('ana@exemplo.com').update_labels([])
+
+      EmailCampaigns::Scheduler.new.perform
+
+      expect(campanha.reload).to be_failed
+      expect(campanha.last_error).to eq('email_list_empty')
+      expect(emails).to be_empty
+    end
+
     it 'com a higiene em enforce, o agendador espera enquanto há pendente sem checagem' do
       campanha.update!(status: :scheduled, scheduled_at: 1.minute.ago)
 

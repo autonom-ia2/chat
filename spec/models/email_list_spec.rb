@@ -13,8 +13,9 @@ RSpec.describe EmailList do
       expect(lista.label).to have_attributes(account_id: account.id, title: 'lista-email-dicas-do-mes')
     end
 
-    it 'reaproveita a etiqueta que já existe, com quem já estava nela' do
-      etiqueta = create(:label, account: account, title: 'lista-email-dicas-do-mes')
+    it 'reaproveita a etiqueta da lista apagada, com quem já estava nela' do
+      etiqueta = described_class.criar(account: account, name: 'Dicas do mês').label
+      etiqueta.email_list.destroy!
 
       expect(described_class.criar(account: account, name: 'Dicas do mês').label).to eq(etiqueta)
     end
@@ -40,6 +41,31 @@ RSpec.describe EmailList do
       described_class.criar(account: create(:account), name: 'Dicas do mês')
 
       expect(described_class.criar(account: account, name: 'Dicas do mês')).to be_persisted
+    end
+  end
+
+  describe 'a etiqueta da lista' do
+    it 'não troca de título: o público da campanha mudaria sem a lista mudar' do
+      etiqueta = described_class.criar(account: account, name: 'Dicas do mês').label
+
+      expect(etiqueta.update(title: 'outra')).to be(false)
+      expect(etiqueta.errors.details[:title]).to include(a_hash_including(error: :email_list_locked))
+      expect(etiqueta.reload.title).to eq('lista-email-dicas-do-mes')
+    end
+
+    it 'o prefixo das listas não vale para etiqueta criada ou renomeada à mão' do
+      criada = account.labels.new(title: 'lista-email-vip')
+      renomeada = create(:label, account: account, title: 'vip')
+
+      expect(criada).not_to be_valid
+      expect(criada.errors.details[:title]).to include(a_hash_including(error: :email_list_reserved))
+      expect(renomeada.update(title: 'lista-email-vip')).to be(false)
+    end
+
+    it 'etiqueta comum continua livre para renomear' do
+      etiqueta = create(:label, account: account, title: 'vip')
+
+      expect(etiqueta.update(title: 'cliente-vip')).to be(true)
     end
   end
 

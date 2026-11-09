@@ -11,7 +11,9 @@ class Api::V1::Accounts::EmailCampaigns::ListsController < Api::V1::Accounts::Em
 
   def index
     authorize EmailList
-    render json: list_scope.includes(:label).order(:name).map { |lista| list_json(lista) }
+    listas = list_scope.includes(:label).order(:name).to_a
+    contagens = EmailList.contagens(Current.account, listas)
+    render json: listas.map { |lista| list_json(lista, contagens[lista.id]) }
   end
 
   def create
@@ -57,9 +59,9 @@ class Api::V1::Accounts::EmailCampaigns::ListsController < Api::V1::Accounts::Em
     params.require(:email_list).permit(:name)
   end
 
-  def list_json(lista)
+  def list_json(lista, contagem = EmailList.contagens(Current.account, [lista])[lista.id])
     { id: lista.id, name: lista.name, label_id: lista.label_id,
-      contatos_count: lista.contatos.count, recebem_count: lista.elegiveis.count }
+      contatos_count: contagem[:contatos], recebem_count: contagem[:recebem] }
   end
 
   def render_invalid(lista)

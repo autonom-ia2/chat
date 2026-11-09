@@ -48,16 +48,16 @@ class EmailLists::Recipients
     end
   end
 
-  # Quem entra, em lotes e só com as colunas que o destinatário usa (sem carregar o contato inteiro).
-  def self.candidates(lista)
-    vistos = Set.new
-    lista.elegiveis.in_batches(of: BATCH_SIZE).flat_map do |lote|
-      lote.joins(SEM_EMPRESA_OU_COM).pluck(*COLUNAS).filter_map do |id, email, name, *empresas|
+  # Quem entra, lote a lote e só com as colunas que o destinatário usa (sem carregar o contato inteiro nem a lista
+  # inteira na memória). Pula o endereço já visto: os que a campanha já tem e os repetidos entre contatos.
+  def self.each_lote_de_candidatos(lista, vistos = Set.new)
+    lista.elegiveis.in_batches(of: BATCH_SIZE) do |lote|
+      yield(lote.joins(SEM_EMPRESA_OU_COM).pluck(*COLUNAS).filter_map do |id, email, name, *empresas|
         email = email.to_s.strip.downcase
         next if email.blank? || !vistos.add?(email)
 
         Candidate.new(contact_id: id, email: email, name: name, empresa: empresas.compact_blank.first.to_s)
-      end
+      end)
     end
   end
 
@@ -85,12 +85,16 @@ class EmailLists::Recipients
 
     suppressed = EmailSuppression.suppressed_set_for(@campaign.account)
     existing = @campaign.email_campaign_recipients.pluck(:email).to_set(&:downcase)
-    novos = self.class.candidates(@lista).reject { |candidate| existing.include?(candidate.email) }
-    rows = novos.map { |candidate| attributes(candidate, suppressed) }
-    # Outro processo pode ter posto o mesmo endereço: pula (índice único), nunca quebra.
-    rows.each_slice(BATCH_SIZE).sum do |batch|
-      EmailCampaignRecipient.insert_all(batch, unique_by: :idx_email_campaign_recipients_campaign_email).rows.size # rubocop:disable Rails/SkipsModelValidations
+    added = 0
+    self.class.each_lote_de_candidatos(@lista, existing) do |novos|
+      next if novos.empty?
+
+      # Outro processo pode ter posto o mesmo endereço: pula (índice único), nunca quebra.
+      added += EmailCampaignRecipient.insert_all( # rubocop:disable Rails/SkipsModelValidations
+        novos.map { |candidate| attributes(candidate, suppressed) }, unique_by: :idx_email_campaign_recipients_campaign_email
+      ).rows.size
     end
+    added
   end
 
   def attributes(candidate, suppressed)

@@ -56,7 +56,10 @@ class EmailList < ApplicationRecord
     return lista.tap { |invalida| invalida.errors.add(:name, invalida.name.blank? ? :blank : :invalid) } if titulo.nil?
 
     transaction do
-      lista.label = account.labels.find_or_create_by!(title: titulo) { |etiqueta| etiqueta.show_on_sidebar = false }
+      lista.label = account.labels.find_or_create_by!(title: titulo) do |etiqueta|
+        etiqueta.show_on_sidebar = false
+        etiqueta.da_lista_de_email = true
+      end
       raise ActiveRecord::Rollback unless lista.save
     end
     lista
@@ -68,6 +71,21 @@ class EmailList < ApplicationRecord
     "#{PREFIXO_DA_ETIQUETA}-#{parte}" if parte.present?
   end
 
+  # Quantos estão em cada lista e quantos receberiam, em duas consultas para todas as listas (a tela abre com a lista
+  # inteira). => { lista.id => { contatos: 3, recebem: 2 } }
+  def self.contagens(account, listas)
+    por_etiqueta = account.contacts.joins(:labels).where(tags: { name: listas.map { |lista| lista.label.title } }).group('tags.name')
+    contatos = por_etiqueta.count
+    recebem = elegiveis_de(por_etiqueta).count
+    listas.to_h do |lista|
+      [lista.id, { contatos: contatos.fetch(lista.label.title, 0), recebem: recebem.fetch(lista.label.title, 0) }]
+    end
+  end
+
+  def self.elegiveis_de(contatos)
+    contatos.not_opted_out.where.not(email: [nil, ''])
+  end
+
   # Quem está na lista agora: os contatos da conta com a etiqueta.
   def contatos
     account.contacts.tagged_with(label.title, on: :labels)
@@ -76,7 +94,7 @@ class EmailList < ApplicationRecord
   # Quem receberia agora: com e-mail e sem ter pedido para não receber. O descadastro e o bloqueio (EmailSuppression)
   # ficam para o envio, que os grava como `suppressed`.
   def elegiveis
-    contatos.not_opted_out.where.not(email: [nil, ''])
+    self.class.elegiveis_de(contatos)
   end
 
   # Roda o bloco com a trava de envio de cada campanha que usa a lista, em ordem de id (a mesma ordem em todo lugar,

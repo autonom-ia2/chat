@@ -77,6 +77,33 @@ RSpec.describe 'Email lists', :aggregate_failures, type: :request do
       expect(response.parsed_body).to be_empty
       patch "#{base}/lists/#{outra.id}", params: { email_list: { name: 'X' } }, headers: admin.create_new_auth_token, as: :json
       expect(response).to have_http_status(:not_found)
+      delete "#{base}/lists/#{outra.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:not_found)
+      expect(EmailList.exists?(outra.id)).to be(true)
+    end
+
+    it 'conta cada lista à parte, sem somar contato de outra lista nem de outra conta' do
+      dicas = EmailList.criar(account: account, name: 'Dicas do mês')
+      saudade = EmailList.criar(account: account, name: 'Saudade')
+      fora = EmailList.criar(account: create(:account), name: 'Dicas do mês')
+      create(:contact, account: account, email: 'ana@exemplo.com').update_labels([dicas.label.title, saudade.label.title])
+      create(:contact, account: account, email: 'bia@exemplo.com').tap { |bia| bia.update_labels([dicas.label.title]) }.opt_out!(source: 'manual')
+      create(:contact, account: fora.account, email: 'caio@exemplo.com').update_labels([fora.label.title])
+
+      get "#{base}/lists", headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body.map { |lista| lista.values_at('name', 'contatos_count', 'recebem_count') })
+        .to eq([['Dicas do mês', 2, 1], ['Saudade', 1, 1]])
+    end
+
+    it 'a etiqueta da lista não troca de título pela tela de etiquetas' do
+      lista = EmailList.criar(account: account, name: 'Dicas do mês')
+
+      patch "/api/v1/accounts/#{account.id}/labels/#{lista.label_id}",
+            params: { label: { title: 'outra' } }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(lista.label.reload.title).to eq('lista-email-dicas-do-mes')
     end
 
     it 'no OSS, o agente não vê nem cria lista (campaign_view e campaign_manage são do administrador)' do

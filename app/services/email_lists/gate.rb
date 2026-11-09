@@ -47,6 +47,8 @@ module EmailLists::Gate
   # reputação. Se entrou alguém, os endereços novos ganham a checagem e o envio espera o próximo ciclo (em vez de pausar
   # a campanha); com a higiene em modo enforce, espera enquanto houver pendente sem checagem.
   module Scheduler
+    LISTA_VAZIA = 'email_list_empty'.freeze
+
     private
 
     def start(campaign)
@@ -57,11 +59,8 @@ module EmailLists::Gate
     end
 
     def esperar_a_lista?(campaign)
-      adicionados = campaign.with_delivery_lock do
-        campaign.reload
-        campaign.scheduled? ? EmailLists::Gate.sync!(campaign)[:added] : 0
-      end
-      return true if adicionados.positive?
+      adicionados = campaign.with_delivery_lock { montar_a_lista(campaign) }
+      return true if adicionados.nil? || adicionados.positive?
 
       lista_aguardando_checagem?(campaign)
     # Como o rescue do próprio Scheduler: a campanha que não consegue montar a lista falha com o erro limpo, em vez de
@@ -73,6 +72,20 @@ module EmailLists::Gate
         campaign.update(status: :failed, last_error: safe_message) if campaign.scheduled? || campaign.sending?
       end
       true
+    end
+
+    # Quantos entraram, ou nil quando a campanha falhou: a lista que esvaziou entre o agendamento e a hora do envio
+    # (todos saíram, ou só sobrou quem está bloqueado) não sai com zero envios, e a campanha falha com o motivo gravado
+    # em vez de virar "enviada" para ninguém. Roda sob a trava de envio.
+    def montar_a_lista(campaign)
+      campaign.reload
+      return 0 unless campaign.scheduled?
+
+      added = EmailLists::Gate.sync!(campaign)[:added]
+      return added if added.positive? || campaign.delivery_history? || campaign.email_campaign_recipients.pending.exists?
+
+      campaign.update!(status: :failed, last_error: LISTA_VAZIA)
+      nil
     end
 
     def lista_aguardando_checagem?(campaign)
