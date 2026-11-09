@@ -48,7 +48,7 @@ const props = defineProps({
 
 const emit = defineEmits(['salvar', 'tirar', 'close']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const painel = ref(null);
 
 // { tipo: 'gatilho' | 'condicao' | 'passo', indice?, novo?, listaId?, valor }
@@ -111,7 +111,8 @@ const frase = computed(() => {
       rascunho.value,
       props.catalogo,
       t,
-      props.escolhasDoGatilho.nomes
+      props.escolhasDoGatilho.nomes,
+      locale.value
     );
   return fraseDaCondicao(rascunho.value, props.catalogo, t);
 });

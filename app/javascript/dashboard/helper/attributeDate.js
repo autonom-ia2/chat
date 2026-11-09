@@ -22,12 +22,15 @@ export function attributeDate(value) {
     : '';
 }
 
-export function formatAttributeDate(value) {
+// `locale` is the dashboard locale ("pt_BR"); without it, the browser's.
+export function formatAttributeDate(value, locale) {
   const day = attributeDate(value);
   if (!day) return '';
   const [year, month, date] = day.split('-').map(Number);
   const local = new Date(0);
   local.setFullYear(year, month - 1, date);
   local.setHours(12, 0, 0, 0);
-  return local.toLocaleDateString();
+  return local.toLocaleDateString(
+    locale ? String(locale).replace('_', '-') : undefined
+  );
 }

@@ -16,7 +16,7 @@ class Autonomia::Automacao::RecorrenteLoteJob < ApplicationJob
 
     tipo = definicao.versao_ativa.receita.dig('gatilho', 'tipo')
     instante = Time.zone.parse(ocorrencia)
-    return if outra_data?(definicao, instante)
+    return if outra_ocorrencia?(definicao, instante)
 
     erro = alvos(definicao, instante, ids).filter_map { |alvo| comecar(definicao, alvo, tipo, instante) }.first
     raise erro if erro
@@ -31,11 +31,14 @@ class Autonomia::Automacao::RecorrenteLoteJob < ApplicationJob
     definicao if ::Autonomia::Automacao::Gatilhos.recorrente?(definicao.versao_ativa.receita.dig('gatilho', 'tipo'))
   end
 
-  # A data única (G39) trocada entre a varredura e o lote: a ocorrência enfileirada é da data antiga e não dispara; a
-  # nova roda no dia dela, com a marca dela.
-  def outra_data?(definicao, instante)
-    data = definicao.versao_ativa.receita.dig('gatilho', 'data')
-    data.present? && instante.in_time_zone(::Autonomia::Automacao::Tempo.fuso(definicao.account)).to_date.iso8601 != data
+  # A data única (G39) trocada entre a varredura e o lote: a ocorrência enfileirada é da data (ou da hora) antiga e não
+  # dispara; a nova roda no dia e na hora dela, com a marca dela. Compara o instante inteiro, no fuso da conta.
+  def outra_ocorrencia?(definicao, instante)
+    gatilho = definicao.versao_ativa.receita['gatilho']
+    return false if gatilho['data'].blank?
+
+    dia = Date.iso8601(gatilho['data'])
+    ::Autonomia::Automacao::Tempo.fuso(definicao.account).local(dia.year, dia.month, dia.day, gatilho['hora'].to_i) != instante
   end
 
   def alvos(definicao, instante, ids)

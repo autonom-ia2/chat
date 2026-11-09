@@ -184,11 +184,10 @@ describe('gatilho recorrente', () => {
     );
   });
 
-  it('a frase da data única mostra o dia por extenso no formato do Brasil', () => {
+  it('a frase da data única mostra o dia no idioma do painel', () => {
     const t = (chave, valores) =>
       valores ? `${chave} ${Object.values(valores).join(' ')}` : chave;
-
-    expect(
+    const naData = idioma =>
       fraseDoGatilho(
         {
           tipo: 'conta.recorrente',
@@ -197,11 +196,16 @@ describe('gatilho recorrente', () => {
           hora: 9,
         },
         CATALOGO,
-        t
-      )
-    ).toBe(
-      'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.FRASE.UMA_VEZ 26/11/2026 9 AUTOMACAO_LIVRE.GATILHO_RECORRENTE.CONTA'
-    );
+        t,
+        {},
+        idioma
+      );
+    const frase = dia =>
+      `AUTOMACAO_LIVRE.GATILHO_RECORRENTE.FRASE.UMA_VEZ ${dia} 9 AUTOMACAO_LIVRE.GATILHO_RECORRENTE.CONTA`;
+
+    expect(naData('pt_BR')).toBe(frase('26/11/2026'));
+    expect(naData('en')).toBe(frase('11/26/2026'));
+    expect(naData('de')).toBe(frase('26.11.2026'));
     expect(
       fraseDoGatilho(
         { tipo: 'conta.recorrente', frequencia: 'uma_vez', hora: 9 },

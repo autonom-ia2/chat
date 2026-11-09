@@ -95,6 +95,21 @@ RSpec.describe 'Automação livre: gatilho numa data única', :automacao_motor d
       expect(execucoes.pluck(:evento)).to eq(['recorrente:2026-11-28:conta.recorrente'])
     end
 
+    # O mesmo com a hora: a pessoa passou das 9h para as 15h do mesmo dia depois da varredura das 9h, e o lote das 9h
+    # rodou atrasado. Ele não dispara; as 15h rodam na hora delas.
+    it 'o lote da hora antiga que roda depois da troca de hora não dispara', :aggregate_failures do
+      definicao = ligar
+      travel_to(fuso.local(2026, 11, 26, 9, 1)) do
+        definicao.salvar_versao!(receita: { 'gatilho' => gatilho(hora: 15), 'passos' => [esperar_passo('p1')] }, autor: admin)
+        instante = fuso.local(2026, 11, 26, 9).utc.iso8601
+        Autonomia::Automacao::RecorrenteLoteJob.perform_now(definicao.id, [account.id], instante)
+      end
+      expect(execucoes.count).to eq(0)
+
+      varrer_em(fuso.local(2026, 11, 26, 15, 5))
+      expect(execucoes.pluck(:evento)).to eq(['recorrente:2026-11-26:conta.recorrente'])
+    end
+
     # No contato, a data nova é outra ocorrência para cada contato da seleção, inclusive quem já recebeu na antiga.
     it 'no contato, trocar a data roda de novo em cada contato, na nova data', :aggregate_failures do
       create(:label, account: account, title: 'ja-comprou')
