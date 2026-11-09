@@ -233,11 +233,11 @@ class Autonomia::Automacao::Ensaio
     [no(passo, 'se', { ramo: ramo }), @roteiro.entrar(passo, ramo)]
   end
 
-  # Já vale agora: segue na hora, como o motor. Não vale: os dois caminhos possíveis; sem prazo (#2750), só o de quando
-  # chegar, porque ela não vence. Com o galho "a cada mensagem" (G63), mais um caminho: os passos dele, que param no fim
-  # com a marca `volta` (o roteiro do ensaio não volta a esperar).
+  # Já vale agora: segue na hora, como o motor; com hora marcada (G64), não: o motor só confere na hora. Não vale: os
+  # caminhos possíveis; sem prazo (#2750), sem o "se vencer". Com o galho "a cada mensagem" (G63), mais um caminho: os
+  # passos dele, que param no fim com a marca `volta` (o roteiro do ensaio não volta a esperar).
   def esperar_ate(passo, valores)
-    return [no(passo, 'esperar_ate_ja_vale'), @roteiro.seguinte(passo['id'])] if condicao?(passo['condicao'], valores)
+    return [no(passo, 'esperar_ate_ja_vale'), @roteiro.seguinte(passo['id'])] if segue_na_hora?(passo, valores)
 
     ramos = [{ chave: 'chegou', passos: caminho(@roteiro.seguinte(passo['id']), valores) }]
     unless ::Autonomia::Automacao::Duracao.sem_prazo?(passo['prazo'])
@@ -247,8 +247,9 @@ class Autonomia::Automacao::Ensaio
     [no(passo, 'esperar_ate', ramos: ramos), nil]
   end
 
-  def galho_do_ensaio(passo, valores)
-    chave = ::Autonomia::Automacao::EnquantoEspera::A_CADA
+  def segue_na_hora?(passo, valores) = !::Autonomia::Automacao::EnquantoEspera.conferir_as?(passo) && condicao?(passo['condicao'], valores)
+
+  def galho_do_ensaio(passo, valores, chave = ::Autonomia::Automacao::EnquantoEspera::A_CADA)
     { chave: chave, volta: @roteiro.volta(passo, chave), passos: caminho(@roteiro.entrar(passo, chave), valores) }
   end
 

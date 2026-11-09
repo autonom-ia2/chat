@@ -16,7 +16,8 @@
 #    com o registro `mensagem_do_cliente` e a vez;
 # 3. senão, volta a esperar: com `conferir_as`, até a próxima hora marcada no fuso da conta (Tempo.proxima_hora).
 # O marco fica no registro do próprio "esperar até": gravado na entrada e de novo a cada volta do galho, que registra
-# `voltou_a_esperar`. A mensagem que chegou enquanto o galho rodava não abre outra rodada (decisão 11).
+# `voltou_a_esperar` com o marco lido no fim do último passo dele. A mensagem que chegou enquanto o galho rodava não
+# abre outra rodada (decisão 11); a que chega depois do fim do galho, sim.
 module Autonomia::Automacao::EsperaNoExecutor
   Duracao = ::Autonomia::Automacao::Duracao
   EnquantoEspera = ::Autonomia::Automacao::EnquantoEspera
@@ -32,6 +33,7 @@ module Autonomia::Automacao::EsperaNoExecutor
 
   def esperar_ate(passo)
     voltou = voltou_do_galho?(passo)
+    @marco_da_volta = marco_novo(passo) if voltou
     espera = janela_da_espera(passo, voltou)
     return cumprida(passo) if conferir_agora?(passo, voltou) && condicao?(passo['condicao'], valores(espera: espera))
     return entrar_no_galho(passo) if mensagem_para_o_galho?(passo)
@@ -139,9 +141,11 @@ module Autonomia::Automacao::EsperaNoExecutor
     @roteiro.entrar(passo, EnquantoEspera::A_CADA)
   end
 
-  # A volta do galho: o marco passa a ser agora, e a espera segue com o mesmo prazo (ou a próxima conferência).
+  # A volta do galho: o marco é o do fim do último passo dele, lido em esperar_ate antes de conferir a condição. A
+  # mensagem que chega depois do galho e antes da espera gravada fica depois do marco: a reconferência a vê e ela abre a
+  # próxima volta, em vez de ser absorvida. A espera segue com o mesmo prazo (ou a próxima conferência).
   def voltar_a_esperar(passo, espera, ate, dados)
-    registrar(passo['id'], 'ok', 'voltou_a_esperar', dados.merge({ 'volta' => voltas_do_galho(passo), **marco_novo(passo) }))
+    registrar(passo['id'], 'ok', 'voltou_a_esperar', dados.merge({ 'volta' => voltas_do_galho(passo), **@marco_da_volta }))
     aguardar_condicao(passo, espera, ate, registrar: false)
   end
 

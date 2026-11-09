@@ -17,8 +17,10 @@ module Autonomia::Automacao::Tempo
 
   def fuso(conta) = ActiveSupport::TimeZone[conta.reporting_timezone.to_s] || Time.zone
 
-  # A hora cheia `hora` do `dia`, no `fuso`. Montada pelo dia e pela hora (TimeZone#local), nunca somando horas: na troca
-  # do horário de verão cai sempre na hora local escolhida, e a hora ambígua dá sempre o mesmo instante.
+  # A hora cheia `hora` do `dia`, no `fuso`. Montada pelo dia e pela hora (TimeZone#local), nunca somando horas: nos dias
+  # comuns e na saída do horário de verão cai na hora local escolhida (a hora repetida dá sempre o mesmo instante). Na
+  # entrada do horário de verão a hora que não existe (2h em America/New_York em 08/03/2026) avança 1 h e cai às 3h:
+  # aceitar esse avanço é a decisão, para a conferência daquele dia não sumir.
   def na_hora(fuso, dia, hora) = fuso.local(dia.year, dia.month, dia.day, hora.to_i)
 
   # A próxima `hora` cheia depois de `agora`, no fuso da conta: hoje, se ainda não passou; senão, amanhã. A conferência

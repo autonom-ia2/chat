@@ -121,6 +121,15 @@ RSpec.describe Autonomia::Automacao::EsperaNoExecutor, :automacao_motor do
         expect(execucao.due_at).to eq(fuso.local(2026, 11, 1, 8))
         expect(execucao.due_at.utc.hour).to eq(13)
       end
+
+      # A hora que não existe (2h na entrada do horário de verão) avança 1 h: a decisão é aceitar, e a conferência do
+      # dia não some (Tempo.na_hora).
+      it 'conferir_as 2 em 08/03/2026 cai às 3h locais', :aggregate_failures do
+        conferencia = Autonomia::Automacao::Tempo.proxima_hora(account, 2, fuso.local(2026, 3, 8, 0, 30))
+
+        expect(conferencia.in_time_zone(fuso).strftime('%Y-%m-%d %H:%M')).to eq('2026-03-08 03:00')
+        expect(conferencia.utc.hour).to eq(7)
+      end
     end
   end
 
@@ -172,6 +181,27 @@ RSpec.describe Autonomia::Automacao::EsperaNoExecutor, :automacao_motor do
 
       expect(execucao.estado).to eq('concluida')
       expect(linhas.last(2)).to eq([['espera', 'ok', nil], ['depois', 'ok', nil]])
+    end
+
+    # A mensagem que chega entre o fim do último passo do galho e a espera gravada: o marco da volta é lido antes de
+    # conferir a condição, então ela fica depois dele, a reconferência a vê e ela abre a próxima volta.
+    it 'a mensagem que chega depois do fim do galho, antes de a espera ser gravada, abre a próxima volta', :aggregate_failures do
+      chegou = false
+      allow(Autonomia::Automacao::Condicao).to receive(:new).and_wrap_original do |original, *argumentos|
+        if !chegou && voltas == 1
+          chegou = true
+          create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming,
+                           sender: conversa.contact, content: 'Mais uma coisa')
+        end
+        original.call(*argumentos)
+      end
+
+      travel_to(fuso.local(2026, 11, 9, 11)) { escreve }
+
+      expect(chegou).to be(true)
+      expect(voltas).to eq(2)
+      expect(registros.where(motivo: 'mensagem_do_cliente').map { |registro| registro.dados['vez'] }).to eq([1, 2])
+      expect(execucao).to have_attributes(estado: 'esperando', cursor: 'espera', due_at: fuso.local(2026, 11, 10, 8))
     end
 
     it 'passado o teto, registra uma vez e segue esperando só pela condição', :aggregate_failures do

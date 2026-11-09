@@ -285,4 +285,21 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
     expect(galho[:volta]).to eq('ferias')
     expect(galho[:passos].first).to include(id: 'espera_a_renata', faria: 'esperar_ate')
   end
+
+  # Com a hora marcada, o motor só confere às 8h: o ensaio não diz "já vale, seguiria na hora" mesmo com a condição
+  # valendo agora; mostra a espera até a hora. Sem a hora, o "já vale" de sempre.
+  it 'no ensaio, a condição que já vale com hora marcada mostra a espera até a hora, não "seguiria na hora"', :aggregate_failures do
+    ja_vale = { campo: valor('conversa.status'), op: 'igual', valor: 'open' }
+    ensaiar = lambda do |espera|
+      receita = JSON.parse({ gatilho: { tipo: 'conversa.criada' }, passos: [espera] }.to_json)
+      Autonomia::Automacao::Ensaio.new(receita: receita, conta: account, usuario: paula, conversa_id: conversa.display_id)
+                                  .resultado[:conversas].first[:passos].first
+    end
+
+    com_hora = ensaiar.call(ferias.merge(condicao: ja_vale))
+    expect(com_hora).to include(id: 'ferias', faria: 'esperar_ate')
+    expect(com_hora[:ramos].map { |ramo| ramo[:chave] }).to eq(%w[chegou a_cada_mensagem])
+
+    expect(ensaiar.call(ferias.merge(condicao: ja_vale).except(:conferir_as, :a_cada_mensagem))).to include(faria: 'esperar_ate_ja_vale')
+  end
 end
