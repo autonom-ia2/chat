@@ -67,9 +67,7 @@ const leftOut = computed(() =>
 const leftOutTotal = computed(() =>
   Math.max(contactImport.value?.invalid_rows || 0, leftOut.value.length)
 );
-const leftOutHidden = computed(
-  () => leftOutTotal.value - leftOut.value.length
-);
+const leftOutHidden = computed(() => leftOutTotal.value - leftOut.value.length);
 const fileErrors = computed(() =>
   refused.value ? globalErrors(contactImport.value) : []
 );
