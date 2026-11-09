@@ -95,6 +95,37 @@ RSpec.describe Autonomia::Automacao::PassoParaCada, :automacao_motor do
     expect(dados_do(execucao)).to include('contatos_novos' => 0, 'empresas_ligadas' => 0, 'cards_criados' => 1)
   end
 
+  it 'os outros campos vão para o contato como as colunas extras do Importar contatos, só o que ele não tem', :aggregate_failures do
+    nascimento = { 'chave' => 'data_nascimento', 'descricao' => 'Data de nascimento' }
+    passo = para_cada.merge('campos' => para_cada['campos'] + [nascimento])
+    joao = create(:contact, account: account, name: 'João', phone_number: '+5511988880001', email: nil,
+                            custom_attributes: { 'data_nascimento' => '01/01/1980' })
+    openai_devolve([item('João Lima', '11 98888-0001').merge('data_nascimento' => '12/03/1990'),
+                    item('Maria Souza', '11 98888-0002').merge('data_nascimento' => '05/07/1985'),
+                    item('Pedro Alves').merge('data_nascimento' => nil)])
+
+    rodar([passo])
+
+    expect(joao.reload.custom_attributes).to eq('data_nascimento' => '01/01/1980')
+    expect(account.contacts.find_by!(phone_number: '+5511988880002').custom_attributes).to eq('data_nascimento' => '05/07/1985')
+    expect(account.contacts.find_by!(name: 'Pedro Alves').custom_attributes).to eq({})
+    definicao = account.custom_attribute_definitions.contact_attribute.sole
+    expect(definicao).to have_attributes(attribute_key: 'data_nascimento', attribute_display_type: 'text')
+  end
+
+  it 'o campo extra com atributo de data já na conta é convertido como no import, e o que não serve fica de fora' do
+    account.custom_attribute_definitions.create!(attribute_model: :contact_attribute, attribute_key: 'data_nascimento',
+                                                 attribute_display_name: 'Data de nascimento', attribute_display_type: :date)
+    passo = para_cada.merge('campos' => para_cada['campos'] + [{ 'chave' => 'data_nascimento', 'descricao' => 'Data de nascimento' }])
+    openai_devolve([item('Maria Souza', '11 98888-0002').merge('data_nascimento' => 'quando der'),
+                    item('Pedro Alves').merge('data_nascimento' => '12/03/1990')])
+
+    rodar([passo])
+
+    expect([account.contacts.find_by!(name: 'Maria Souza'), account.contacts.find_by!(name: 'Pedro Alves')].map(&:custom_attributes))
+      .to eq([{}, { 'data_nascimento' => ContactImports::AttributeValue.new(account.custom_attribute_definitions.sole).cast('12/03/1990') }])
+  end
+
   it 'os passos seguintes leem quantos e os nomes da lista', :aggregate_failures do
     ligar_mensagens(account)
     openai_devolve([item('João Lima'), item('Maria Souza')])

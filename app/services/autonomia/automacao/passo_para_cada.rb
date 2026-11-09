@@ -2,8 +2,8 @@
 # passo abre um card por item, na etapa escolhida. Uma segunda automação de `card.criado` roda então em cada card.
 #
 # - A resposta é `{ itens: [ { chave: valor, ... } ] }`, um campo por chave da receita, nulo quando o dado não está escrito.
-#   `nome` é obrigatório; `telefone`, quando a receita o pede, é por onde o contato é achado. Os outros campos guiam a
-#   IA, e nada é gravado com eles.
+#   `nome` é obrigatório; `telefone`, quando a receita o pede, é por onde o contato é achado. Os outros campos (a data
+#   de nascimento) vão para o contato como as colunas extras do Importar contatos (ItemDoParaCada).
 # - `maximo` (1 a 50) é o teto técnico: o tamanho de uma resposta da IA, não freio de uso (ver o cabeçalho do AntiLaco).
 #   O pedido não leva o teto no schema, porque a resposta que passasse dele seria recusada inteira: a IA ouve o número
 #   na instrução, o passo fica com os primeiros e conta o resto em `passou_do_limite`.

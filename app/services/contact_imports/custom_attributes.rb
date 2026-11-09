@@ -4,16 +4,22 @@
 # (ContactImports::AttributeColumns), so the values show on the contact page. merge! runs
 # inside each row savepoint: a contact gains the values it does not have yet; a value it
 # already has is kept, the same rule as name, phone and email (ContactBlankFields).
+#
+# The automation step "para_cada" (#2771, G24) writes the extra fields of each item the same way, with the field keys
+# as the column headers and no import record (`for_columns`).
 class ContactImports::CustomAttributes
-  def initialize(campaign_import)
+  def self.for_columns(account, extra_columns) = new(nil, account: account, extra_columns: extra_columns)
+
+  def initialize(campaign_import, account: campaign_import.account, extra_columns: campaign_import.extra_columns)
     @campaign_import = campaign_import
-    @account = campaign_import.account
+    @account = account
+    @extra_columns = extra_columns
   end
 
   # Returns how many attributes it created.
   def prepare!
     created = columns.reject(&:existing).count { |column| create_definition(column) }
-    @campaign_import.update!(validation_summary: @campaign_import.validation_summary.to_h.merge('contact_attributes_created' => created))
+    @campaign_import&.update!(validation_summary: @campaign_import.validation_summary.to_h.merge('contact_attributes_created' => created))
     created
   end
 
@@ -35,7 +41,7 @@ class ContactImports::CustomAttributes
   private
 
   def columns
-    @columns ||= ContactImports::AttributeColumns.new(@account, @campaign_import.extra_columns).perform
+    @columns ||= ContactImports::AttributeColumns.new(@account, @extra_columns).perform
   end
 
   def columns_by_header

@@ -13,7 +13,10 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     5 => ['Revisão do carro no tempo certo', 'G47 (a revisão cancelada no card que a página criou), G5, G1, G3, G6, G12, G16, G19, G28, G32, G36'],
     6 => ['Aniversário que vira horário marcado', 'G6 (data de nascimento do contato), G1, G4, G12, G14, G16, G25, G33'],
     7 => ['Black Friday para os clientes antigos primeiro', 'G37 (público com exclusão), G38, G39, G5, G7, G14, G15'],
-    8 => ['Funcionário novo no plano da empresa', 'G24 (2ª automação em cada card criado), G1, G4, G5, G7, G13, G17, G20, G22, G27'],
+    # O 8 tem spec próprio dos passos 1 a 5 (exemplo_08_funcionario_novo_spec.rb, G24 #2771); faltam os passos 6 a 9.
+    8 => ['Funcionário novo no plano da empresa',
+          'G31 (passos 6 e 7: voltar a esperar a cada documento na 2ª automação), G27 (passo 8: card completo), G13, ' \
+          'G22 (passo 9: avisar o RH toda sexta), G7, G24'],
     # #2678 (auditoria dos termos, 07/11): o 10 tem spec próprio dos passos que montam, mas não segue o termo à risca.
     # O 13 saiu com o lote 2 (#2679): o spec dele roda à risca, com o card ganho e a IA lendo o card.
     # O 9 tem spec próprio (exemplo_09_prospeccao_semanal_spec.rb, G21 #2706); falta só o passo 4 à risca.

@@ -6,6 +6,9 @@
 #   tem; nome e telefone preenchidos nunca são trocados. A exceção da D4 A (o telefone vindo da IA) vale só por essa
 #   régua. O item sem telefone vira um contato só com o nome. O telefone que não é celular do Brasil
 #   (CampaignImports::PhoneNormalizer, o mesmo do import) pula o item: um contato só com o nome duplicaria quem já existe.
+# - Os outros campos (a data de nascimento do exemplo 8) vão para o contato como as colunas extras do Importar contatos
+#   (ContactImports::CustomAttributes): a chave do campo é o cabeçalho da coluna, o atributo que não existe nasce como
+#   texto, o atributo com tipo (data, número) converte o valor ou o deixa de fora, e o contato só ganha o que não tem.
 # - A empresa é a do solicitante (o contato da conversa, quem mandou a lista), pelo mesmo CompanyLinker do import: vai
 #   para o contato sem empresa; o de outra empresa fica como está (decisão e).
 # - O card nasce na etapa pelo "criar card" (PassoDeCard), ligado só ao contato. O card aberto do contato no mesmo funil
@@ -13,6 +16,7 @@
 # - O solicitante não fica no card: o card não tem campo para isso, e o histórico da execução já liga a conversa dele
 #   aos cards (`card_ids`).
 class Autonomia::Automacao::ItemDoParaCada
+  NOME = ::Autonomia::Automacao::PassoParaCada::NOME
   TELEFONE = 'telefone'.freeze
   Negado = Struct.new(:motivo)
 
@@ -32,9 +36,11 @@ class Autonomia::Automacao::ItemDoParaCada
     telefone = telefone(valores[TELEFONE])
     return pular('telefone_invalido') if telefone == false
 
-    linha_do_item = { name: valores[::Autonomia::Automacao::PassoParaCada::NOME], phone_number: telefone, email: nil, company_name: @empresa }
-    # Contato e empresa juntos, como na savepoint de cada linha do import.
-    escrito = ActiveRecord::Base.transaction { linha.write(linha_do_item) }
+    linha_do_item = { name: valores[NOME], phone_number: telefone, email: nil, company_name: @empresa }
+    extras = valores.except(NOME, TELEFONE).compact
+    atributos if extras.any? && linha.allowed?
+    # Contato, empresa e atributos juntos, como na savepoint de cada linha do import.
+    escrito = ActiveRecord::Base.transaction { linha.write(linha_do_item).tap { |feito| gravar_extras(feito.contact, extras) } }
     contar_contato(escrito)
     card(escrito.contact)
   rescue ::CampaignImports::ContactRow::NotAllowed
@@ -74,6 +80,17 @@ class Autonomia::Automacao::ItemDoParaCada
     @contagem['pulados'][motivo] = @contagem['pulados'].fetch(motivo, 0) + 1
     nil
   end
+
+  def gravar_extras(contato, extras)
+    atributos.merge!(contato, extras) if extras.any?
+  end
+
+  # Uma vez por rodada, antes do 1º item com campo extra: cria os atributos de texto que ainda não existem.
+  def atributos
+    @atributos ||= ::ContactImports::CustomAttributes.for_columns(@execucao.account, chaves_extras).tap(&:prepare!)
+  end
+
+  def chaves_extras = Array(@passo['campos']).pluck('chave') - [NOME, TELEFONE]
 
   def linha
     @linha ||= ::CampaignImports::ContactRow.new(@execucao.account, account_user: @acesso.account_user, linker: linker)
