@@ -34,6 +34,35 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
 
   def conversas_de_email = Conversation.where(inbox: caixa)
 
+  # #2780: o assunto lê pelos valores da execução (NaConversa#valores), com quem ligou e o gatilho da receita.
+  describe 'o assunto' do
+    it 'com um valor comum, sai com o valor' do
+      rodar(conversa, [email_passo('p1', assunto: ['Pedido de ', { '$valor' => 'contato.nome' }])])
+
+      expect(conversas_de_email.sole.additional_attributes['mail_subject']).to eq('Pedido de Carla')
+    end
+
+    # #2780, decisão 9: o assunto escrito pela pessoa leva o valor da venda, com a chave de quem ligou.
+    it 'com o valor da venda numa automação de conversa, quem ligou com a chave: o assunto sai com o valor', :aggregate_failures do
+      with_modified_env(CRM_KANBAN_ENABLED: 'true') do
+        funil, etapa = create_crm_pipeline(account: account, user: admin)
+        account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'Pedido', currency: 'BRL', value_cents: 250_000, status: :open,
+                                  primary_conversation: conversa, contact: contato, inbox: whatsapp)
+        definicao = create(:autonomia_automacao, account: account, ligada_por: admin)
+        receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' },
+                    'passos' => [email_passo('p1', assunto: ['Valor ', { '$valor' => 'card.valor' }])] }
+        versao = definicao.versoes.new(account: account, numero: 1, autor: admin, digest: SecureRandom.hex(32), receita: receita)
+        versao.save!(validate: false)
+        definicao.update!(versao_ativa: versao, ativa: true)
+
+        perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(definicao, conversa) }
+
+        expect(registros(Autonomia::Automacao::Execucao.where(automacao: definicao).last)).to eq([['p1', 'ok', nil]])
+        expect(conversas_de_email.sole.additional_attributes['mail_subject']).to include('2500')
+      end
+    end
+  end
+
   describe 'envio' do
     it 'abre conversa nova na caixa de e-mail com o assunto e manda o texto com os valores, sem remetente e com a marca',
        :aggregate_failures do

@@ -6,7 +6,7 @@ require 'rails_helper'
 # passando (F9.8).
 RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model do
   pendentes = {
-    2 => ['Lead do anúncio atendido em 5 minutos', 'G29 (card criado pelo formulário de um anúncio e o nome dele), G30, G31, G32'],
+    2 => ['Lead do anúncio atendido em 5 minutos', 'G29 (card criado pelo formulário de um anúncio e o nome dele), G30, G32'],
     4 => ['Aluno que começa a faltar', 'G5 (entrou em "Faltou"), G1, G3, G4, G12, G15, G25, G28'],
     # O 5 tem spec próprio à risca (exemplo_05_revisao_do_carro_spec.rb); só o passo 8 espera a G47.
     5 => ['Revisão do carro no tempo certo', 'G47 (a revisão cancelada no card que a página criou), G5, G1, G3, G6, G12, G16, G19, G28, G32, G36'],
@@ -18,8 +18,9 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # O 13 saiu com o lote 2 (#2679): o spec dele roda à risca, com o card ganho e a IA lendo o card.
     11 => ['Indicação que vira presente', 'G4, G17, G18 (criar o contato e o card do amigo e agir no card dele), G1, G5, G12, G16'],
     12 => ['Visita que aconteceu decide o próximo passo', 'G5 (entrou em "Visita feita"), G2, G3, G11, G14, G25, G35'],
-    14 => ['Documentação completa para emitir', 'G5 (entrou em "Documentação"), G1, G3, G13, G20'],
     # O 15 saiu com o G27 (#2661) sobre o lote 4 (#2687, G40): exemplo_15_cliente_grande_spec.rb roda à risca.
+    # Os passos 1 a 6 têm spec próprio à risca, numa automação só (G46): exemplo_14_documentacao_spec.rb.
+    14 => ['Documentação completa para emitir', 'G13 (passos 7 e 8: mandar à seguradora e gravar a proposta; a recusa avisa a Dona Cida)'],
     16 => ['Reconquistar quem foi para o concorrente', 'G7 (todo dia 1º), G3, G4, G12, G14, G16, G18'],
     # O 17 roda no começo e nos passos 1, 2, 3, 5 e 6 (g9_troca_de_responsavel_spec.rb), mas o 5 e o 6 ("toda manhã")
     # rodam numa segunda automação: falta decidir se isso adapta o termo. O 4 espera a G63.

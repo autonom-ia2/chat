@@ -371,12 +371,37 @@ const curto = texto =>
     : texto || '';
 // Ainda sem pergunta ou instrução, a linha diz o que falta, sem aspas vazias.
 const escrito = texto => (texto || '').trim();
+// G31: os nomes dos caminhos que decidem de novo ("nenhum" pelo nome da tela).
+const nomesDoDeNovo = (passo, t) =>
+  emLista(
+    (passo.de_novo.caminhos || []).map(chave =>
+      chave === 'nenhum'
+        ? t(`${P}.NENHUM_SE_APLICA`)
+        : (passo.caminhos || []).find(caminho => caminho.chave === chave)
+            ?.nome || chave
+    ),
+    t
+  );
 const FRASE_DA_IA = {
-  decidir: (passo, t) =>
-    t(`${P}.${escrito(passo.pergunta) ? 'DECIDIR' : 'DECIDIR_SEM_PERGUNTA'}`, {
-      pergunta: curto(escrito(passo.pergunta)),
-      n: (passo.caminhos || []).length,
-    }),
+  decidir: (passo, t, catalogo) => {
+    const frase = t(
+      `${P}.${escrito(passo.pergunta) ? 'DECIDIR' : 'DECIDIR_SEM_PERGUNTA'}`,
+      {
+        pergunta: curto(escrito(passo.pergunta)),
+        n: (passo.caminhos || []).length,
+      }
+    );
+    if (!passo.de_novo) return frase;
+    const caminhos = nomesDoDeNovo(passo, t) || '…';
+    // G46: o caminho marcado roda os passos dele e volta a um "esperar até".
+    if (passo.de_novo.desde)
+      return t(`${P}.DECIDIR_VOLTA`, { frase, caminhos });
+    return t(`${P}.DECIDIR_DE_NOVO`, {
+      frase,
+      caminhos,
+      prazo: fraseDaDuracao(passo.de_novo.prazo, catalogo, t),
+    });
+  },
   extrair: (passo, t) =>
     t(`${P}.EXTRAIR`, {
       lista:
@@ -431,7 +456,8 @@ export const fraseDoPasso = (passo, catalogo, t) => {
       quem: quemAvisar(passo.para, t),
       texto: fraseDoTexto(passo.texto, catalogo, t),
     });
-  if (FRASE_DA_IA[passo.tipo]) return FRASE_DA_IA[passo.tipo](passo, t);
+  if (FRASE_DA_IA[passo.tipo])
+    return FRASE_DA_IA[passo.tipo](passo, t, catalogo);
   if (passo.tipo === 'campanha') return fraseDaCampanha(passo, t);
   if (passo.tipo === 'retorno')
     return fraseDoRetorno(passo, t, {

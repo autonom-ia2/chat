@@ -50,6 +50,7 @@
       "GATILHO_TIME_ANTERIOR_NOME": "Nome do time do card antes da troca",
       "PESSOA_NOME": "Nome da pessoa em {campo}",
       "PESSOA_AUSENTE": "A pessoa em {campo} está ausente",
+      "CONVERSA_CLIENTE_MANDOU_DOCUMENTO": "O cliente mandou foto ou PDF durante a espera",
       "CONTATO_ID": "O contato",
       "CONTATO_NOME": "Nome do contato",
       "CONTATO_EMAIL": "E-mail do contato",
@@ -76,6 +77,7 @@
       "MENSAGEM_TIPO": "Tipo da mensagem",
       "MENSAGEM_PRIVADA": "Mensagem interna",
       "MENSAGEM_PRIMEIRA": "Primeira mensagem da conversa",
+      "MENSAGEM_TEM_ANEXO": "A mensagem tem foto ou PDF",
       "CARD_LINK_DA_AGENDA": "Link da agenda do responsável pelo card (na hora do passo)",
       "CONVERSA_LINK_DA_AGENDA": "Link da agenda do responsável pela conversa (na hora do passo)",
       "REUNIAO_INICIO": "Dia e hora da reunião",
@@ -178,7 +180,8 @@
       "AGENTE_ID": "Qual agente de IA",
       "CAIXA_ID": "Por qual caixa de e-mail",
       "ASSUNTO": "Assunto",
-      "MODELO": "Se a janela de 24 h estiver fechada"
+      "MODELO": "Se a janela de 24 h estiver fechada",
+      "DE_NOVO": "A cada resposta, decidir de novo"
     },
     "OPCOES": {
       "STATUS": {
@@ -325,6 +328,9 @@
       "FALTA_TEXTO": "falta escrever o texto",
       "DECIDIR": "A IA decide: “{pergunta}” ({n} caminhos)",
       "DECIDIR_SEM_PERGUNTA": "A IA decide o caminho: falta escrever a pergunta ({n} caminhos)",
+      "DECIDIR_DE_NOVO": "{frase}; se {caminhos}, espera a próxima resposta (até {prazo}) e decide de novo; sem resposta no prazo, encerra sem mandar nada",
+      "DECIDIR_VOLTA": "{frase}; se {caminhos}, faz o caminho e volta a esperar no “esperar até” de antes",
+      "NENHUM_SE_APLICA": "nenhum se aplica",
       "EXTRAIR": "A IA procura na conversa: {lista}",
       "ESCREVER_MENSAGEM": "A IA escreve e manda ao cliente: “{instrucao}”",
       "ESCREVER_MENSAGEM_SEM_INSTRUCAO": "A IA escreve e manda ao cliente: falta escrever a instrução",

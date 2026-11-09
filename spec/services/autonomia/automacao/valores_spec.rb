@@ -95,7 +95,8 @@ RSpec.describe Autonomia::Automacao::Valores do
     end
 
     it 'diz o que cada alvo alcança' do
-      expect(described_class.no_alvo?('card.valor', 'Conversation')).to be(false)
+      expect(described_class.no_alvo?('card.valor', 'Conversation')).to be(true) # #2716: o card da conversa, só para ler
+      expect(described_class.no_alvo?('card.valor', 'Contact')).to be(false)
       expect(described_class.no_alvo?('contato.nome', 'Crm::Card')).to be(true)
       expect(described_class.no_alvo?('conversa.status', 'Contact')).to be(false)
       expect(described_class.no_alvo?('mensagem.tipo', 'Conversation')).to be(true)

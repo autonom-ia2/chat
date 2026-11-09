@@ -17,9 +17,10 @@ import LivreEtapa from './LivreEtapa.vue';
 import LivreRetornoPara from './LivreRetornoPara.vue';
 import LivreRetornoEnvio from './LivreRetornoEnvio.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
+import LivreDecidirDeNovo from './LivreDecidirDeNovo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
-import { caminhosProntos } from '../ia';
+import { caminhosProntos, deNovoPronto, esperasAnteriores } from '../ia';
 import { campanhaPronta } from '../campanha';
 import { envioPronto, paraPronto } from '../retorno';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
@@ -39,6 +40,8 @@ const props = defineProps({
   // #2500 C2: o rascunho inteiro com o passo do painel, para o "Testar", e o
   // custo de cada passo ({ com_valores, custos }).
   receitaDoTeste: { type: Function, default: null },
+  // A automação já salva, para o "Testar este passo" (#2780).
+  automacaoId: { type: Number, default: null },
   custos: { type: Object, default: () => ({ com_valores: false, custos: {} }) },
   // #2499: os gatilhos que esta pessoa pode escolher (com a flag e a chave de
   // funis, os de card) e as escolhas deles. Sem a lista, todos os do catálogo.
@@ -261,6 +264,8 @@ const nativoPronto = campo => {
   // descrição e (no extrair) onde gravar; o destino escolhido.
   if (campo.peca === 'instrucao') return Boolean(valor?.trim());
   if (campo.peca === 'caminhos') return caminhosProntos(valor || []);
+  // G31: decidir de novo, se ligado, com caminho marcado sem passos e prazo.
+  if (campo.peca === 'de_novo') return deNovoPronto(rascunho.value);
   if (campo.peca === 'campos_extrair')
     return (
       (valor || []).length >= 1 &&
@@ -312,6 +317,17 @@ const receitaParaTestar = computed(() =>
   ehDeIa.value && props.receitaDoTeste && rascunho.value
     ? props.receitaDoTeste({ ...alvo.value, valor: rascunho.value })
     : null
+);
+
+// G46: os "esperar até" de antes do "decidir" para onde o caminho pode voltar,
+// com a frase de cada um, lidos do rascunho inteiro.
+const esperasDoDecidir = computed(() =>
+  esperasAnteriores(receitaParaTestar.value, rascunho.value?.id).map(
+    espera => ({
+      value: espera.id,
+      label: fraseDoPasso(espera, props.catalogo, t),
+    })
+  )
 );
 
 defineExpose({ abrir, fechar });
@@ -519,6 +535,15 @@ defineExpose({ abrir, fechar });
           :atributos-do="atributosDo"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
+        <LivreDecidirDeNovo
+          v-else-if="campo.peca === 'de_novo'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :passo="rascunho"
+          :unidades="catalogo.unidades"
+          :esperas="esperasDoDecidir"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
         <LivreIaCampo
           v-else-if="ehDeIa"
           :campo="campo"
@@ -567,6 +592,7 @@ defineExpose({ abrir, fechar });
         :custo="custos.custos[rascunho.id]"
         :mostra-custo="custos.com_valores"
         :pronto="podeSalvar"
+        :automacao-id="automacaoId"
       />
     </div>
 

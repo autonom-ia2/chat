@@ -911,6 +911,32 @@
       "so_na_espera": true
     },
     {
+      "caminho": "conversa.cliente_mandou_documento",
+      "base": "conversa",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_CLIENTE_MANDOU_DOCUMENTO",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ],
+      "so_na_espera": true
+    },
+    {
       "caminho": "envio.texto",
       "base": "envio",
       "frase": "AUTOMACAO_LIVRE.VALORES.ENVIO_TEXTO"
@@ -1111,6 +1137,31 @@
       ]
     },
     {
+      "caminho": "mensagem.tem_anexo",
+      "frase": "AUTOMACAO_LIVRE.VALORES.MENSAGEM_TEM_ANEXO",
+      "so_no_gatilho": "mensagem.criada",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
       "caminho": "mensagem.privada",
       "frase": "AUTOMACAO_LIVRE.VALORES.MENSAGEM_PRIVADA",
       "so_no_gatilho": "mensagem.criada",
@@ -1141,6 +1192,7 @@
     "Conversation": [
       "conversa",
       "contato",
+      "card",
       "envio",
       "gatilho"
     ],
@@ -1412,6 +1464,12 @@
           "peca": "passos",
           "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.NENHUM"
+        },
+        {
+          "nome": "de_novo",
+          "peca": "de_novo",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DE_NOVO"
         }
       ]
     },

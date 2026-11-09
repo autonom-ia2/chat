@@ -1,6 +1,18 @@
 {
   "AUTOMACAO_LIVRE": {
     "IA": {
+      "DE_NOVO": {
+        "DICA": "Quando a IA escolher um destes caminhos, a automação espera a próxima resposta do cliente e decide de novo. Sem resposta no prazo, ela encerra sem mandar nada. Cada vez custa uma consulta à IA.",
+        "QUANDO": "Decidir de novo quando a IA escolher",
+        "PRAZO": "Esperar a próxima resposta por até",
+        "DESCONHECIDO": "Um caminho marcado não existe mais ({chave}). Desmarque.",
+        "COM_PASSOS": "“{nome}” decide de novo, então não pode ter passos. Tire os passos dele na lista.",
+        "TODOS": "Deixe sem marcar pelo menos uma saída (um caminho ou o \"Nenhum se aplica\"), para a automação seguir.",
+        "VOLTAR": "Depois do caminho, voltar a esperar em",
+        "NAO_VOLTA": "Não volta: espera a próxima resposta aqui",
+        "DICA_VOLTA": "Quando a IA escolher um destes caminhos, a automação faz os passos dele e volta a esperar no passo escolhido abaixo. Cada volta espera o cliente de novo e custa as consultas à IA dos passos do caminho.",
+        "VOLTA_FORA": "O passo escolhido para voltar não serve mais: escolha um “esperar até” de antes que espere o cliente."
+      },
       "LEITURAS": {
         "MENSAGENS_RECENTES": "As últimas mensagens do cliente",
         "MENSAGENS_COM_RESPOSTAS": "As últimas mensagens do cliente e da equipe",
@@ -9,6 +21,7 @@
         "CONTATO": "Nome e campos do contato (nunca e-mail ou telefone)",
         "EMPRESA": "Nome e campos da empresa",
         "ANEXOS": "Fotos, PDFs e áudios que o cliente mandou",
+        "ANEXOS_NOVOS": "Só as fotos, os PDFs e os áudios que este passo ainda não leu",
         "CARD": "O card: título, etapa, funil, status e campos",
         "NOTAS": "As notas internas da conversa (no texto ao cliente, a IA pode repetir o que elas dizem)"
       },

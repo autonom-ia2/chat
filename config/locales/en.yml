@@ -534,7 +534,7 @@ en:
         quem_ligou_saiu_da_conta: 'The person who turned on the automation left the account. Take over and turn it back on.'
         quem_ligou_sem_acesso: 'The person who turned on the automation has no access here anymore. Take over and turn it back on.'
         quem_ligou_sem_permissao: 'The person who turned on the automation can no longer manage automations. Take over and turn it back on.'
-        sem_permissao_funil: 'The person who turned on the automation can no longer edit the pipeline, which card triggers need. Take over and turn it back on.'
+        sem_permissao_funil: 'The person who turned on the automation can no longer edit the pipeline, which card triggers and reading the card need. Take over and turn it back on.'
         quem_ligou_sem_permissao_card: 'The person who turned on the automation can no longer create cards in this pipeline, which the "Create card" step needs. Take over and turn it back on.'
         card_desligado: 'The "Create card" step is off for this account (card triggers or the CRM are off). No card was created.'
         card_ja_existe: 'There was already an open card in this pipeline for this conversation (or contact). No new card was created.'
@@ -628,6 +628,7 @@ en:
         troca_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the trigger for the change it describes ("When the card owner changes" or "When the card team changes").'
         resposta_so_na_espera: 'Step %{passo}: %{caminho} only exists in the condition of a "wait until" step.'
         valor_fora_do_alvo: 'Step %{passo}: %{caminho} cannot be read from what this trigger starts on (conversation, card or contact).'
+        card_da_conversa_so_le: 'Step %{passo}: an automation that starts on a conversation only reads the card (%{caminho}). To change the card, use an automation that starts on the card.'
         operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'
         valor_fora: 'Step %{passo}: %{caminho} has no value "%{valor}". Use one of: %{opcoes}.'
         proibido: 'Step %{passo}: the automation cannot change %{campo}.'
@@ -661,6 +662,13 @@ en:
         caminho_repetido: "Step %{passo}: there is already a path named %{nome}."
         caminho_reservado: "Step %{passo}: the name %{nome} is already the path for when nothing applies. Pick another name."
         caminho_sem_letra: "Step %{passo}: the path name needs at least one letter (%{nome})."
+        de_novo_caminho_desconhecido: "Step %{passo}: \"decide again\" points to a path this step doesn't have (%{chave})."
+        de_novo_com_passos: "Step %{passo}: the path %{nome} decides again, so it can't have steps. Remove its steps or unmark it."
+        de_novo_todos: "Step %{passo}: leave at least one way out unmarked (a path or \"None applies\"), so the automation can move on."
+        de_novo_desde_desconhecido: "Step %{passo}: \"go back to wait\" points to a step this automation doesn't have (%{desde})."
+        de_novo_desde_nao_anterior: "Step %{passo}: \"go back to wait\" must be a \"wait until\" that comes before this step, in the same list (%{desde} isn't)."
+        de_novo_desde_sem_resposta: "Step %{passo}: the \"wait until\" %{desde} must wait for the customer: \"the customer replied\" or \"the customer sent a photo or PDF\" equal to yes. Otherwise the automation would go around without the customer."
+        caminho_nenhum: "None applies"
         destino_invalido: "Step %{passo}: %{destino} is not a place where the AI can save."
         campo_repetido: "Step %{passo}: %{chave} appears twice."
       nota:
@@ -1009,6 +1017,10 @@ en:
           invalid_data: 'O contato foi recusado. Confira nome, telefone e e-mail.'
           unexpected_error: 'Não deu para guardar esta agora. Tente de novo.'
           same_contact: 'É a mesma pessoa de outra empresa da lista: entrou uma vez só.'
+          already_in_list: 'Já estava nesta lista.'
+          blocked: 'Bloqueado: não recebe mensagem.'
+          unreachable: 'Não pode receber mensagem.'
+        copy_name: '%{name} (cópia)'
         errors:
           no_leads: 'Escolha pelo menos uma empresa para guardar.'
           too_many_leads: 'Guarde até %{max} empresas por vez.'
@@ -1017,6 +1029,12 @@ en:
           foreign_contact: 'Um dos contatos foi apagado enquanto a lista era guardada. Tente de novo.'
           disabled: 'Os Públicos de Campanhas não estão ligados nesta conta.'
           contacts_saved: 'Os contatos criados até aqui ficaram gravados.'
+          audience_locked: 'Esta lista já foi usada numa campanha enviada e não muda mais. Crie uma cópia para editar.'
+          not_audience: 'Esta lista não pode ser mudada.'
+          no_members: 'Escolha pelo menos uma empresa da lista.'
+          all_already_in_list: 'Essas empresas já estavam nesta lista.'
+          too_many_members: 'Escolha até %{max} empresas por vez.'
+          invalid_cursor: 'Não deu para trazer mais listas. Abra a página de novo.'
       campaign_errors:
         forbidden: 'Seu perfil não pode alterar campanhas. Peça a um administrador a permissão de gerenciar campanhas.'
       score_bands:

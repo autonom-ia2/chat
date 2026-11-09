@@ -62,18 +62,34 @@ module Autonomia::Automacao::EsperaNoExecutor
   # ao retomar, do começo (o prazo gravado menos a duração dele, na versão em que a execução entrou) até o prazo. A
   # execução foi lida antes da troca, com o `due_at` da espera. Resposta depois do prazo não conta: o prazo venceu. Sem
   # prazo, do começo gravado no registro em diante.
+  #
+  # A volta ao mesmo "esperar até" na mesma rodada (o laço dos documentos, G46) começa no instante em que ele foi
+  # cumprido, não agora: a 2ª e a 3ª foto que chegaram enquanto a IA lia a 1ª (a execução andando, sem ninguém para
+  # acordar) contam, e o laço roda de novo para elas.
   def janela_da_espera(passo)
-    return Duracao.janela(passo['prazo'], (@execucao.due_at if @retomando)) unless Duracao.sem_prazo?(passo['prazo'])
+    return janela_sem_prazo(passo) if Duracao.sem_prazo?(passo['prazo'])
+    return Duracao.janela(passo['prazo'], @execucao.due_at) if @retomando
+
+    @cumprida_em&.key?(passo['id']) ? (@cumprida_em[passo['id']]..) : Duracao.janela(passo['prazo'], nil)
+  end
+
+  def janela_sem_prazo(passo)
+    return @cumprida_em[passo['id']].. if @cumprida_em&.key?(passo['id'])
 
     (@retomando ? inicio_da_espera(passo) : Time.current)..
   end
 
-  # O registro da execução aberta não sai pela limpeza (LimparRegistrosJob): o começo fica enquanto ela espera.
+  # O registro da execução aberta não sai pela limpeza (LimparRegistrosJob): o começo fica enquanto ela espera. O da
+  # última entrada: o laço dos documentos (G46) volta ao mesmo "esperar até" e grava um começo novo.
   def inicio_da_espera(passo)
-    entrada = ::Autonomia::Automacao::Registro.where(execucao_id: @execucao.id, passo: passo['id'], resultado: 'ok').order(:id).first
+    entradas = ::Autonomia::Automacao::Registro.where(execucao_id: @execucao.id, passo: passo['id'], resultado: 'ok')
+    entrada = entradas.where("dados ->> 'desde' IS NOT NULL").order(:id).last
     desde = entrada&.dados&.dig('desde')
     desde ? Time.zone.parse(desde) : @execucao.created_at
   end
 
-  def cumprida(passo) = registrar(passo['id'], 'ok').then { @roteiro.seguinte(passo['id']) }
+  def cumprida(passo)
+    (@cumprida_em ||= {})[passo['id']] = Time.current
+    registrar(passo['id'], 'ok').then { @roteiro.seguinte(passo['id']) }
+  end
 end
