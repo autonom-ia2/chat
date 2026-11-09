@@ -208,7 +208,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 16 | Reconquistar | ⛔ G7 (dia 1º, perdidos há 11 meses) | etiqueta ✅, decidir ✅, escrever ✅ | G3, G4, G7, G12, G14, G16, G18 | Não |
 | 17 | Vendedora de férias | ⛔ G9 (troca de responsável) | resumir ✅, mensagem ✅, etiqueta ✅ | G7 (toda manhã, por card com a etiqueta), G9, G11, G15, G16, G23 | Não |
 | 18 | Seleção de candidatos | ✅ mensagem na caixa de vagas | decidir ✅, etiqueta ✅, avisar ✅ | G1, G4, G5, G6, G12, G15, G20, G25 | Não |
-| 19 | Cliente que sumiu do WhatsApp | ⛔ G8 (mensagem falhou) | etiqueta ✅, extrair ✅ (telefone), escrever ✅, avisar ✅ | G1, G2, G3, G8, G11, G19, G28 (o recado da IA pelo modelo), G34, G43 (o número novo), G53 (o mesmo conteúdo no e-mail) | Não |
+| 19 | Cliente que sumiu do WhatsApp | ✅ G8 (mensagem falhou) | etiqueta ✅, extrair ✅ (telefone), escrever ✅, avisar ✅, o mesmo conteúdo no e-mail ✅ (G53), mandar ao número novo ✅ (G43) | — (lacunas fechadas; por partes em `g53_conteudo_da_falha_spec.rb` e `g43_numero_novo_spec.rb`) | Lacunas fechadas; saiu do pendentes com a G43 (#2700). Spec de ponta a ponta: sessão do fechamento (#2570) |
 | 20 | Venda fechada no sistema da empresa | 🟡 G5 (card ganho) | extrair ✅, decidir ✅, mover ✅, etiqueta ✅, avisar ✅ | G1, G2 (boas-vindas e "Dicas do mês" por e-mail), G5, G7 (todo mês, por contato com a etiqueta), G11, G12, G13 | Não |
 
 ### 6.1 As lacunas que destravam mais exemplos
