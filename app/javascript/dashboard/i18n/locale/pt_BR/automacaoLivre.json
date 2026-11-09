@@ -356,7 +356,7 @@
       "COM_PRAZO": "Até um prazo",
       "SEM_PRAZO": "Sem prazo",
       "QUANTO_TEMPO": "Quanto tempo",
-      "SEM_PRAZO_DICA": "Espera até a condição valer, pelo tempo que for. Para sozinha, e fica no histórico, se a conversa ou o card for apagado, se a automação for desligada ou se quem a ligou ficar sem acesso.",
+      "SEM_PRAZO_DICA": "Espera até a condição valer, pelo tempo que for, sem limite. Só termina antes, e o histórico diz por quê, se o card for arquivado, se a conversa ou o card for apagado, se a automação for desligada ou se quem a ligou ficar sem acesso.",
       "SEM_PRAZO_TIRE_SE_VENCER": "Sem prazo, a espera nunca acaba pelo tempo. Tire antes os passos de \"Se o prazo acabar\".",
       "COMPOSTA": "Esta condição tem várias partes. Só o Guia muda; aqui ela fica como está.",
       "DA_CONVERSA": "Vem da conversa: {valor}",

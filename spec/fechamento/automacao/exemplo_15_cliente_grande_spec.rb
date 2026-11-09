@@ -57,7 +57,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 15: cliente grande, atendimento de d
   end
 
   def receita
-    { gatilho: { tipo: 'card.atualizado', mudanca: { campo: 'valor', condicao: 'passou_de', valor: '50000' } },
+    { gatilho: { tipo: 'card.atualizado', mudanca: { campo: 'valor', condicao: 'maior_que', valor: '50000' } },
       passos: [*passos_1_a_6, espera_do_carlos, *quando_fechar] }
   end
 
@@ -300,6 +300,34 @@ RSpec.describe 'Fechamento #2414 · exemplo 15: cliente grande, atendimento de d
       expect(execucao).to have_attributes(alvo_type: 'Crm::Card', alvo_id: card_novo.id)
       expect(passos_feitos.first(4)).to eq(%w[ja_e_grande para_o_carlos cliente_grande prioridade])
       expect(conversa.reload.assignee).to eq(carlos)
+    end
+  end
+
+  # "Valor acima de R$ 50 mil" é `maior_que`, não "passou de": o card que já estava acima quando a automação ligou começa
+  # na próxima mudança do valor, e quem segura a repetição é o passo 1 (a etiqueta "cliente grande").
+  context 'with o card que já estava acima de R$ 50 mil quando a automação ligou' do
+    let(:card) do
+      account.crm_cards.create!(pipeline: funil, stage: funil.stages.first, inbox: inbox, contact: cliente, primary_conversation: conversa,
+                                title: 'Pedido do Mercado', currency: 'BRL', value_cents: 8_000_000, owner: vendedor)
+    end
+
+    def execucoes = Autonomia::Automacao::Execucao.where(automacao_id: automacao['id']).order(:id)
+    def passos_da(execucao) = Autonomia::Automacao::Registro.where(execucao: execucao).order(:id).pluck(:passo)
+
+    it 'começa na próxima mudança do valor, e na seguinte o passo 1 para', :aggregate_failures do
+      expect(execucoes).to be_empty
+
+      vendedor_muda_o_valor(8_500_000)
+      expect(passos_da(execucoes.first).first(4)).to eq(%w[ja_e_grande para_o_carlos cliente_grande prioridade])
+
+      passar(20.minutes) { carlos_responde }
+      travel(1.day) do
+        fechar('won')
+        vendedor_muda_o_valor(9_000_000)
+      end
+
+      expect(execucoes.map(&:estado)).to eq(%w[concluida concluida])
+      expect(passos_da(execucoes.last)).to eq(%w[ja_e_grande uma_vez])
     end
   end
 

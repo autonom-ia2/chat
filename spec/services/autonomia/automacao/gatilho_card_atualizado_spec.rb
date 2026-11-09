@@ -363,6 +363,24 @@ RSpec.describe 'Automação livre: card atualizado', :automacao_motor, type: :re
 
       expect(jobs_da_automacao).to eq(0)
     end
+
+    # #2750, revisão: o savepoint desfeito leva só as gravações dele; as da transação de fora seguem no evento.
+    it 'o savepoint desfeito (requires_new) não apaga o que a transação de fora gravou', :aggregate_failures do
+      atualizado({ 'campo' => 'valor', 'condicao' => 'mudou' })
+
+      Crm::Card.transaction do
+        card.update!(value_cents: 3_000_000)
+        Crm::Card.transaction(requires_new: true) do
+          Crm::Card.find(card.id).update!(custom_attributes: { 'plano' => 'ouro' })
+          card.update!(value_cents: 9_000_000)
+          raise ActiveRecord::Rollback
+        end
+      end
+
+      expect(jobs_da_automacao).to eq(1)
+      dados = ActiveJob::Arguments.deserialize(enqueued_jobs.find { |job| job[:job] == Autonomia::Automacao::EventoDoCardJob }[:args]).first
+      expect(dados.dig('changed_attributes', 'mudancas')).to eq('valor' => [1_000_000, 3_000_000])
+    end
   end
 
   describe 'o salvar' do

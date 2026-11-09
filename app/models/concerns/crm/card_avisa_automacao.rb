@@ -4,8 +4,10 @@
 # da Automação livre para "o card mudou", venha da tela, da API, da IA ou do lote.
 #
 # Na transação com várias gravações do mesmo card, o after_commit só vê em `saved_changes` a última. Por isso cada
-# gravação anota, no after_save, se mudou uma coluna lida; o after_commit confere a anotação e a limpa (o rollback
-# também limpa). Assim a 1ª gravação que mudou a etapa acorda, mesmo que a 2ª só tenha mexido em outra coluna.
+# gravação anota, no after_save, o que mudou, junto com a transação (ou o savepoint) em que gravou; o after_commit junta
+# as anotações e as limpa. Assim a 1ª gravação que mudou a etapa acorda, mesmo que a 2ª só tenha mexido em outra coluna.
+# O rollback tira só as gravações da transação desfeita: o savepoint (`requires_new`) desfeito leva as dele, e as da
+# transação de fora continuam valendo (#2750, revisão).
 #
 # O gatilho "card atualizado" (G27, #2661) nasce aqui também (Autonomia::Automacao::CardAtualizado): cada gravação soma
 # o par [antes, agora] do valor e dos campos personalizados, e o commit vira um evento só, com o `antes` da 1ª gravação.
@@ -31,25 +33,25 @@ module Crm::CardAvisaAutomacao
 
   # O card novo não tem quem espere nele, mas conta para o "card atualizado".
   def anotar_mudanca_lida
-    @criado_na_transacao ||= previously_new_record?
-    @mudancas_do_card = ::Autonomia::Automacao::MudancaDoCard.somar(@mudancas_do_card, saved_changes)
-    return if previously_new_record? || !saved_changes.keys.intersect?(LIDAS_PELA_AUTOMACAO)
-
-    @mudou_o_que_a_automacao_le = true
+    gravacao = { transacao: self.class.connection.current_transaction.state, criado: previously_new_record?,
+                 lida: !previously_new_record? && saved_changes.keys.intersect?(LIDAS_PELA_AUTOMACAO),
+                 soma: ::Autonomia::Automacao::MudancaDoCard.somar(nil, saved_changes) }
+    @gravacoes_do_card = [*@gravacoes_do_card, gravacao]
   end
 
   def avisar_automacao_livre
-    mudou = @mudou_o_que_a_automacao_le
-    soma = @mudancas_do_card
-    criado = @criado_na_transacao
-    esquecer_mudanca_lida
-    ::Autonomia::Automacao::Despertador.card_mudou(self) if mudou
-    ::Autonomia::Automacao::CardAtualizado.avisar(self, soma, criado: criado) if soma.present?
+    gravacoes = gravacoes_valendo
+    @gravacoes_do_card = nil
+    soma = gravacoes.reduce({}) { |junta, gravacao| junta.merge(gravacao[:soma]) { |_chave, antes, agora| [antes.first, agora.last] } }
+    ::Autonomia::Automacao::Despertador.card_mudou(self) if gravacoes.any? { |gravacao| gravacao[:lida] }
+    ::Autonomia::Automacao::CardAtualizado.avisar(self, soma, criado: gravacoes.any? { |gravacao| gravacao[:criado] }) if soma.present?
   end
 
+  # Só as gravações da transação desfeita saem (o estado do savepoint desfeito passa a `rolledback?`, e o da transação
+  # de fora desfeita leva junto os de dentro).
   def esquecer_mudanca_lida
-    @mudou_o_que_a_automacao_le = nil
-    @mudancas_do_card = nil
-    @criado_na_transacao = nil
+    @gravacoes_do_card = gravacoes_valendo.presence
   end
+
+  def gravacoes_valendo = Array(@gravacoes_do_card).reject { |gravacao| gravacao[:transacao].rolledback? }
 end

@@ -4,8 +4,9 @@
 # passam por ele, porque todos gravam pelo modelo. `update_all` e `update_columns` não passam (ver o concern).
 #
 # Um evento por commit: a marca é o card e o `updated_at` da gravação (índice único automacao_id + evento na Partida).
-# Só enfileira com automação de card atualizado ligada na conta (o mesmo gate do emissor do CRM, Escuta.assinante?). O
-# erro é logado e nunca desfaz a edição.
+# Só enfileira com automação de card atualizado ligada na conta. A ordem importa (#2750, revisão): primeiro a consulta
+# pela automação ligada (uma linha, pelo índice account_id + ativa), e só quando há uma, as flags da conta. A conta sem
+# automação de card atualizado não lê flag a cada edição de valor ou de campo. O erro é logado e nunca desfaz a edição.
 module Autonomia::Automacao::CardAtualizado
   module_function
 
@@ -13,8 +14,10 @@ module Autonomia::Automacao::CardAtualizado
     mudancas = ::Autonomia::Automacao::MudancaDoCard.do_commit(soma, criado: criado)
     return if mudancas.empty?
 
+    return unless escuta.automacoes_do_gatilho(card.account_id, ::Autonomia::Automacao::Gatilhos::ATUALIZADO).exists?
+
     evento = Events::Types::CRM_CARD_UPDATED
-    return unless escuta.assinante?(card.account, evento, {}, card_id: card.id)
+    return unless escuta.tipos_ligados(card.account, evento)
 
     escuta.enfileirar_evento_do_card(dados(card, mudancas), evento)
   rescue StandardError => e
