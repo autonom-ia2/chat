@@ -1,0 +1,260 @@
+{
+  "bases": {
+    "auto": [
+      {
+        "pergunta": "Bati o carro agora, pra qual número eu ligo pra avisar?",
+        "fora_do_material": false,
+        "posicao_antes": null,
+        "posicao_depois": 3,
+        "resposta_antes": "errado",
+        "resposta_depois": "certo",
+        "texto_depois": "Para avisar a Suhai sobre a batida, ligue imediatamente:\n• São Paulo e Rio de Janeiro: 3003-0335\n• Demais regiões do Brasil: 0800-784-2410"
+      },
+      {
+        "pergunta": "Roubaram meu carro e ele tem rastreador, o que eu faço?",
+        "fora_do_material": false,
+        "posicao_antes": 1,
+        "posicao_depois": 1,
+        "resposta_antes": "errado",
+        "resposta_depois": "errado",
+        "texto_depois": "Sinto muito pelo que aconteceu. Faça o seguinte o quanto antes:\n\n1. Acione a empresa do rastreador para as providências de bloqueio e localização: São Paulo e Rio de Janeiro: 3003-0335; demais regiões do Brasil: 0800-784-241.\n2. Avise imediatamente a polícia e registre o boletim de ocorrência do roubo.\n3. Comunique imediatamente o roubo à seguradora, pela via mais rápida possível, e depois formalize por escrito.\n\nSe o carro for localizado, avise a seguradora, mesmo que já tenha recebido a indenização. Se houver danos, aguarde a vistoria e a autorização da seguradora antes de iniciar os reparos."
+      },
+      {
+        "pergunta": "Mandei arrumar o carro na oficina do meu cunhado antes de avisar vocês, tem problema?",
+        "fora_do_material": false,
+        "posicao_antes": null,
+        "posicao_depois": null,
+        "resposta_antes": "errado",
+        "resposta_depois": "errado",
+        "texto_depois": "Pode haver problema, sim. O sinistro deve ser comunicado à seguradora assim que você souber do ocorrido, e os reparos precisam aguardar a autorização dela.\n\nComo você já mandou arrumar, não consigo garantir se haverá impacto na indenização. Eu encaminharia o caso à equipe para avaliação com a seguradora, sem afirmar que você perdeu a cobertura automaticamente."
+      },
+      {
+        "pergunta": "A partir de quanto de estrago o carro vira perda total?",
+        "fora_do_material": false,
+        "posicao_antes": 2,
+        "posicao_depois": 2,
+        "resposta_antes": "errado",
+        "resposta_depois": "errado",
+        "texto_depois": "Na cobertura exclusiva de roubo ou furto, se o carro for recuperado antes do pagamento da indenização, é considerado perda total quando os danos são superiores a 75% do Limite Máximo de Indenização da apólice. Os danos precisam ser atestados por uma empresa especializada."
+      },
+      {
+        "pergunta": "Se eu perder o movimento de um braço inteiro, quanto % do capital eu recebo?",
+        "fora_do_material": false,
+        "posicao_antes": 2,
+        "posicao_depois": 2,
+        "resposta_antes": "errado",
+        "resposta_depois": "errado",
+        "texto_depois": "Não tenho aqui o percentual para a perda total do movimento de um braço inteiro. Eu encaminharia a dúvida à equipe para verificar o percentual aplicável, sem confundir com o valor previsto para perda do uso da mão."
+      },
+      {
+        "pergunta": "O seguro vale se eu viajar de carro pra Argentina?",
+        "fora_do_material": false,
+        "posicao_antes": 2,
+        "posicao_depois": 5,
+        "resposta_antes": "certo",
+        "resposta_depois": "certo",
+        "texto_depois": "Sim, o seguro vale na Argentina para os eventos cobertos e dentro das coberturas contratadas."
+      },
+      {
+        "pergunta": "Posso fazer um acordo direto com o outro motorista depois da batida?",
+        "fora_do_material": false,
+        "posicao_antes": 1,
+        "posicao_depois": 2,
+        "resposta_antes": "certo",
+        "resposta_depois": "certo",
+        "texto_depois": "Só com autorização da seguradora. Não faça acordo direto com o outro motorista sem essa autorização, mesmo que seja um acerto amigável ou fora da Justiça."
+      },
+      {
+        "pergunta": "Se eu bater o carro bêbado o seguro paga?",
+        "fora_do_material": false,
+        "posicao_antes": 3,
+        "posicao_depois": 7,
+        "resposta_antes": "certo",
+        "resposta_depois": "certo",
+        "texto_depois": "Se a seguradora comprovar que a embriaguez teve relação com a batida, você perde o direito à indenização, e a apólice é cancelada sem devolução do valor já pago. A negativa por embriaguez depende dessa comprovação, não apenas de ter bebido."
+      },
+      {
+        "pergunta": "Quanto fica o seguro de um Onix 2022 pra mim?",
+        "fora_do_material": true,
+        "posicao_antes": null,
+        "posicao_depois": null,
+        "resposta_antes": "recusou",
+        "resposta_depois": "recusou",
+        "texto_depois": "Não tenho o valor do seguro do Onix 2022 para o seu perfil. Para te passar um preço, precisaria encaminhar seu pedido à equipe para fazer a cotação."
+      },
+      {
+        "pergunta": "Vocês fazem seguro residencial também?",
+        "fora_do_material": true,
+        "posicao_antes": null,
+        "posicao_depois": null,
+        "resposta_antes": "recusou",
+        "resposta_depois": "recusou",
+        "texto_depois": "Não tenho essa informação aqui. Vou precisar passar sua pergunta para a equipe confirmar se também trabalhamos com seguro residencial."
+      },
+      {
+        "pergunta": "Qual o horário de atendimento da loja de vocês?",
+        "fora_do_material": true,
+        "posicao_antes": null,
+        "posicao_depois": null,
+        "resposta_antes": "recusou",
+        "resposta_depois": "recusou",
+        "texto_depois": "Não tenho o horário de atendimento da loja aqui. Vou precisar passar sua pergunta para uma pessoa da equipe confirmar."
+      },
+      {
+        "pergunta": "O seguro paga carro reserva enquanto o meu fica na oficina?",
+        "fora_do_material": true,
+        "posicao_antes": null,
+        "posicao_depois": null,
+        "resposta_antes": "recusou",
+        "resposta_depois": "recusou",
+        "texto_depois": "Não tenho a informação sobre carro reserva no seu seguro. Vou precisar passar essa dúvida para a equipe verificar se a sua apólice inclui esse benefício e em quais condições."
+      },
+      {
+        "pergunta": "Quebrou o parabrisa, vocês trocam? Quanto custa?",
+        "fora_do_material": true,
+        "posicao_antes": null,
+        "posicao_depois": null,
+        "resposta_antes": "recusou",
+        "resposta_depois": "recusou",
+        "texto_depois": "Não tenho a informação sobre a troca do para-brisa nem o valor para o seu seguro. Vou precisar passar seu caso para a equipe verificar se a troca está coberta e qual seria o custo para você."
+      },
+      {
+        "pergunta": "Qual é o valor da minha franquia?",
+        "fora_do_material": true,
+        "posicao_antes": null,
+        "posicao_depois": null,
+        "resposta_antes": "recusou",
+        "resposta_depois": "recusou",
+        "texto_depois": "O valor da sua franquia está especificado na apólice. Não tenho acesso ao valor da sua aqui; precisaria passar para uma pessoa da equipe consultar e te informar."
+      }
+    ],
+    "residencial": [
+      {
+        "pergunta": "mandei toda a documentacao do sinistro e a seguradora demorou 45 dias pra pagar, tenho direito a algo?",
+        "fora_do_material": false,
+        "posicao_antes": 7,
+        "posicao_depois": 2,
+        "resposta_antes": "errado",
+        "resposta_depois": "errado",
+        "texto_depois": "O prazo é de até 30 dias a partir da entrega do último documento pendente para a seguradora concluir a análise do sinistro e se manifestar sobre a cobertura. Esse prazo não é, por si só, o prazo para pagar. Se houver pedido justificado de documentos complementares, a contagem pode ser suspensa.\n\nSó com os 45 dias até o pagamento, não consigo afirmar se você tem direito a juros, correção ou outra compensação. Eu encaminharia o caso à equipe para analisar as datas da entrega completa dos documentos, da decisão sobre a cobertura e do pagamento."
+      },
+      {
+        "pergunta": "o seguro vale pra casa de praia que tenho no Uruguai?",
+        "fora_do_material": false,
+        "posicao_antes": null,
+        "posicao_depois": null,
+        "resposta_antes": "errado",
+        "resposta_depois": "errado",
+        "texto_depois": "Não tenho informação que confirme se esse seguro vale para sua casa de praia no Uruguai. Eu encaminharia essa dúvida à equipe para verificar a abrangência territorial e a aceitação do imóvel."
+      },
+      {
+        "pergunta": "o carro na garagem da casa entra no seguro? quando é perda total?",
+        "fora_do_material": false,
+        "posicao_antes": null,
+        "posicao_depois": 1,
+        "resposta_antes": "errado",
+        "resposta_depois": "certo",
+        "texto_depois": "Sim, desde que a cobertura **Veículo em Garagem** esteja expressamente incluída na apólice e o imóvel seja do tipo casa. Ela cobre danos ao carro estacionado dentro da garagem quando incêndio, queda de raio dentro do terreno, explosão ou fumaça atingirem a edificação principal e se estenderem ao veículo. Não é uma cobertura para qualquer dano ao carro.\n\nA **perda total** ocorre quando o custo do reparo supera **75% do valor do veículo**. Para a indenização, considera-se a tabela FIPE vigente na data do sinistro, respeitando o limite específico contratado na apólice."
+      },
+      {
+        "pergunta": "vendi o imovel segurado, e o seguro?",
+        "fora_do_material": false,
+        "posicao_antes": 11,
+        "posicao_depois": 6,
+        "resposta_antes": "certo",
+        "resposta_depois": "errado",
+        "texto_depois": "Você precisa comunicar a venda à seguradora por escrito em até 8 dias da ocorrência. Se a venda não for comunicada, o seguro poderá ser cancelado.\n\nApós a comunicação, a seguradora pode optar pelo cancelamento. Nesse caso, ela deve se manifestar em até 15 dias corridos do recebimento, avisando por escrito você e o comprador. O cancelamento terá efeito 15 dias após o recebimento dessa notificação, com devolução proporcional do valor do seguro conforme a tabela de prazo curto prevista no contrato."
+      },
+      {
+        "pergunta": "qual o telefone do SAC 24 horas da seguradora?",
+        "fora_do_material": false,
+        "posicao_antes": 4,
+        "posicao_depois": 1,
+        "resposta_antes": "certo",
+        "resposta_depois": "certo",
+        "texto_depois": "O telefone do SAC 24 horas da MAPFRE é 0800 775 1000."
+      },
+      {
+        "pergunta": "se minha casa ficar inabitavel o seguro paga aluguel por quanto tempo?",
+        "fora_do_material": false,
+        "posicao_antes": 1,
+        "posicao_depois": 1,
+        "resposta_antes": "certo",
+        "resposta_depois": "certo",
+        "texto_depois": "Se você tiver a cobertura de Perda/Pagamento de Aluguel e a casa ficar inabitável por um evento coberto, o seguro paga por até 6 meses a partir da data do evento, limitado ao tempo necessário para a reforma ou reconstrução.\n\nO pagamento é mensal, e o valor do aluguel indenizável fica limitado a 1/6 do limite máximo de indenização dessa cobertura por mês."
+      },
+      {
+        "pergunta": "posso alugar a casa pelo airbnb e continuar coberto?",
+        "fora_do_material": false,
+        "posicao_antes": 2,
+        "posicao_depois": 4,
+        "resposta_antes": "certo",
+        "resposta_depois": "certo",
+        "texto_depois": "Pode, desde que o seguro tenha sido contratado na modalidade compatível com atividade comercial. Isso vale mesmo se você alugar só parte da casa ou por poucos dias. A hospedagem também precisa estar comprovadamente registrada no Airbnb ou formalizada por contrato de locação ou outro documento que comprove a atividade.\n\nNão é automático: se o uso da casa não corresponder ao tipo de residência indicado na apólice, não haverá cobertura em caso de sinistro."
+      },
+      {
+        "pergunta": "cancelei meu seguro anual com 20 dias de vigencia, quanto do premio eu perco?",
+        "fora_do_material": false,
+        "posicao_antes": 1,
+        "posicao_depois": 2,
+        "resposta_antes": "certo",
+        "resposta_depois": "certo",
+        "texto_depois": "Com 20 dias de vigência no seguro anual, a seguradora retém 20% do prêmio no cancelamento a seu pedido, além dos emolumentos. Se você pagou o prêmio integral, a devolução é de 80%, descontados esses emolumentos."
+      },
+      {
+        "pergunta": "quanto fica o seguro por mes pra um apartamento de 60 metros?",
+        "fora_do_material": true,
+        "posicao_antes": null,
+        "posicao_depois": null,
+        "resposta_antes": "recusou",
+        "resposta_depois": "recusou",
+        "texto_depois": "Não tenho o valor mensal do seguro para um apartamento de 60 m². Para saber quanto fica, eu encaminharia seu pedido à equipe para uma cotação."
+      },
+      {
+        "pergunta": "tem desconto pra quem nunca usou o seguro?",
+        "fora_do_material": true,
+        "posicao_antes": null,
+        "posicao_depois": null,
+        "resposta_antes": "recusou",
+        "resposta_depois": "recusou",
+        "texto_depois": "Não tenho a informação se há desconto para quem nunca usou o seguro. Vou precisar passar essa dúvida para a equipe confirmar no seu caso."
+      },
+      {
+        "pergunta": "posso pagar o seguro no pix?",
+        "fora_do_material": true,
+        "posicao_antes": null,
+        "posicao_depois": null,
+        "resposta_antes": "recusou",
+        "resposta_depois": "recusou",
+        "texto_depois": "O seguro pode ser pago à vista ou parcelado, pela rede bancária, cartão de crédito ou outras formas disponibilizadas pela seguradora na contratação. Não tenho confirmação de que Pix esteja disponível; precisaria verificar essa opção com a equipe."
+      },
+      {
+        "pergunta": "o seguro inclui encanador ou eletricista 24h?",
+        "fora_do_material": true,
+        "posicao_antes": null,
+        "posicao_depois": null,
+        "resposta_antes": "recusou",
+        "resposta_depois": "recusou",
+        "texto_depois": "Não tenho a informação de que o seguro inclua encanador ou eletricista 24h. Preciso encaminhar essa dúvida à equipe para verificar se esses serviços estão incluídos na sua apólice."
+      },
+      {
+        "pergunta": "cobre tratamento veterinario do meu cachorro?",
+        "fora_do_material": true,
+        "posicao_antes": null,
+        "posicao_depois": null,
+        "resposta_antes": "recusou",
+        "resposta_depois": "recusou",
+        "texto_depois": "Não tenho a informação sobre cobertura de tratamento veterinário do seu cachorro. Vou precisar passar essa dúvida para a equipe verificar o que está incluído no seu seguro."
+      },
+      {
+        "pergunta": "onde fica a agencia de voces em Recife?",
+        "fora_do_material": true,
+        "posicao_antes": null,
+        "posicao_depois": null,
+        "resposta_antes": "recusou",
+        "resposta_depois": "recusou",
+        "texto_depois": "Não tenho o endereço de uma agência nossa em Recife. Eu precisaria passar sua pergunta para a equipe confirmar essa informação."
+      }
+    ]
+  }
+}

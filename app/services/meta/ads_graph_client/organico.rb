@@ -1,7 +1,8 @@
 # Seus posts (#2199), parte do Meta::AdsGraphClient: o que os posts da Página e do Instagram alcançam, sem anúncio.
 # Mesmas regras de token, versão e limpeza de erro (usa o `get`/`paged` privados dele).
 # - Página: token da Página, com read_insights. graph.facebook.com.
-# - Instagram: token do login do Instagram, com instagram_business_manage_insights. graph.instagram.com (base_uri).
+# - Instagram: token do login do Instagram, com instagram_business_manage_insights. graph.instagram.com (base_uri). No
+#   login do Facebook (#2406), o token da Página, graph.facebook.com e o id do Instagram no lugar do `me`.
 module Meta::AdsGraphClient::Organico
   ORGANIC_PAGE_PROFILE_FIELDS = 'name,link,followers_count'.freeze
   ORGANIC_PAGE_POST_FIELDS = 'id,message,created_time,permalink_url,full_picture,shares,' \
@@ -26,15 +27,15 @@ module Meta::AdsGraphClient::Organico
   end
 
   def instagram_profile
-    get('me', fields: ORGANIC_INSTAGRAM_PROFILE_FIELDS)
+    get(@instagram_node, fields: ORGANIC_INSTAGRAM_PROFILE_FIELDS)
   end
 
   def instagram_insights(query)
-    get('me/insights', query)
+    get("#{@instagram_node}/insights", query)
   end
 
   def instagram_media(window)
-    organic_posts('me/media', window.merge(fields: ORGANIC_INSTAGRAM_MEDIA_FIELDS))
+    organic_posts("#{@instagram_node}/media", window.merge(fields: ORGANIC_INSTAGRAM_MEDIA_FIELDS))
   end
 
   def instagram_media_reach(media_id)

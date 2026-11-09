@@ -126,7 +126,7 @@ describe('GavetaFerramentas · lista (F01)', () => {
   it('lists each tool with its sentence and the On/Off switch', async () => {
     const wrapper = await montar();
     expect(api.getTools).toHaveBeenCalledWith(7);
-    expect(no('aside h2').textContent.trim()).toBe('Ferramentas');
+    expect(no('aside h2').textContent.trim()).toBe('Ferramentas dos agentes');
     expect(texto()).toContain(
       'Ferramentas deixam Bia consultar outros sistemas durante a conversa'
     );
@@ -188,7 +188,7 @@ describe('GavetaFerramentas · lista (F01)', () => {
     wrapper.unmount();
   });
 
-  it('explains, without the list, when the API refuses (not a super admin)', async () => {
+  it('explains, without the list, when the API refuses (no tools key)', async () => {
     // Pundit::NotAuthorizedError → render_unauthorized: o backend responde 401.
     api.getTools.mockRejectedValueOnce({ response: { status: 401 } });
     const wrapper = mount(GavetaFerramentas, {
@@ -197,7 +197,7 @@ describe('GavetaFerramentas · lista (F01)', () => {
     });
     await flushPromises();
     expect(no('[data-sem-permissao]').textContent).toContain(
-      'Ferramentas são configuradas só pela equipe da plataforma'
+      'Só quem tem a permissão Gerenciar ferramentas mexe aqui'
     );
     expect(texto()).not.toContain('Sua permissão mudou');
     await clicarNoTexto('Voltar ao agente');
@@ -253,14 +253,17 @@ describe('GavetaFerramentas · nova ferramenta (F03–F06)', () => {
     await clicar('[data-usar-exemplo]');
     expect(no('[data-exemplo-aplicado]')).not.toBeNull();
     await clicarNoTexto('Continuar', rodape());
+    // #1430: o passo 2 é o que o agente descobre, pelo nome de gente; o 3, o link.
     expect(texto()).toContain('Passo 2 de 4');
-    expect(no('[data-campo-endereco]').value).toBe(
-      'https://api.sualoja.com.br/estoque/busca?termo={{ termo | url_encode }}'
-    );
-    expect(texto()).not.toContain('gira');
+    expect(no('[data-campo-informacao]').value).toBe('O que a pessoa procura');
     await clicarNoTexto('Continuar', rodape());
     expect(texto()).toContain('Passo 3 de 4');
-    expect(no('[data-sem-corpo]')).not.toBeNull();
+    // O campo mostra a informação pelo nome de gente; {{termo}} só vai ao salvar.
+    expect(no('[data-campo-endereco]').value).toBe(
+      'https://api.sualoja.com.br/estoque/busca?termo=[O que a pessoa procura]'
+    );
+    expect(texto()).not.toContain('gira');
+    expect(texto()).not.toContain('GET');
     await clicarNoTexto('Continuar', rodape());
     expect(texto()).toContain('Passo 4 de 4');
     expect(no('[data-salva-desligada]')).not.toBeNull();
@@ -268,7 +271,7 @@ describe('GavetaFerramentas · nova ferramenta (F03–F06)', () => {
     await clicarNoTexto('Salvar e testar', rodape());
     expect(
       no('[data-cabecalho="0"] [data-erro-campo]').textContent.trim()
-    ).toBe('Digite o valor.');
+    ).toBe('Digite a chave.');
     expect(api.createTool).not.toHaveBeenCalled();
     expect(no('[data-campo-valor]').type).toBe('password');
     await digitar('[data-campo-valor]', 'sk_teste');
@@ -278,11 +281,17 @@ describe('GavetaFerramentas · nova ferramenta (F03–F06)', () => {
       7,
       expect.objectContaining({
         name: 'Busca no estoque',
+        endpoint_url:
+          'https://api.sualoja.com.br/estoque/busca?termo={{termo}}',
         enabled: false,
         http_method: 'GET',
         headers_config: [{ key: 'x-api-key', value: 'sk_teste', secret: true }],
         param_schema: [
-          expect.objectContaining({ name: 'termo', required: true }),
+          expect.objectContaining({
+            name: 'termo',
+            label: 'O que a pessoa procura',
+            required: true,
+          }),
         ],
       })
     );
@@ -322,19 +331,59 @@ describe('GavetaFerramentas · nova ferramenta (F03–F06)', () => {
     await digitar('[data-campo-nome]', 'Estoque');
     await digitar('[data-campo-quando]', 'Use para estoque.');
     await clicarNoTexto('Continuar', rodape());
+    await clicarNoTexto('Continuar', rodape());
     await digitar('[data-campo-endereco]', 'http://192.168.0.1/x');
     await clicarNoTexto('Continuar', rodape());
     expect(no('[data-erro-campo]').textContent.trim()).toBe(
-      'Use um endereço que comece com https://.'
+      'Use um link que comece com https://.'
     );
     await digitar(
       '[data-campo-endereco]',
       'https://api.loja.com.br/b?t={{termo}}'
     );
     expect(no('[data-aviso-codificar]')).toBeNull();
-    expect(no('[data-aviso-criar]').textContent).toContain(
-      'Você vai criar {{termo}} no próximo passo.'
+    expect(no('[data-campo-endereco]').value).toBe(
+      'https://api.loja.com.br/b?t=[termo]'
     );
+    expect(no('[data-avisos-informacoes]').textContent).toContain(
+      'O link usa [termo], mas essa informação não existe no passo 2.'
+    );
+    wrapper.unmount();
+  });
+
+  // #1430: a pessoa não digita {{ }}: toca na informação e ela entra onde o cursor está.
+  it('puts the information in the link with a tap, where the cursor is', async () => {
+    const wrapper = await montar();
+    await clicar('#ferramentas-adicionar');
+    await digitar('[data-campo-nome]', 'Endereço pelo CEP');
+    await digitar('[data-campo-quando]', 'Use quando a pessoa mandar o CEP.');
+    await clicarNoTexto('Continuar', rodape());
+    await clicar('[data-adicionar-informacao]');
+    await digitar('[data-campo-informacao]', 'CEP');
+    await clicarNoTexto('Continuar', rodape());
+    expect(texto()).toContain('Passo 3 de 4');
+    await digitar('[data-campo-endereco]', 'https://viacep.com.br/ws//json/');
+    no('[data-campo-endereco]').setSelectionRange(25, 25);
+    const botao = no('[data-encaixar-informacao]');
+    expect(botao.textContent.trim()).toBe('CEP');
+    expect(botao.getAttribute('aria-label')).toBe('Pôr CEP no link');
+    await clicar('[data-encaixar-informacao]');
+    expect(no('[data-campo-endereco]').value).toBe(
+      'https://viacep.com.br/ws/[CEP]/json/'
+    );
+    expect(no('[data-link-legivel]')).toBeNull();
+    // Digitar o nome entre colchetes também vale, como o botão.
+    await digitar(
+      '[data-campo-endereco]',
+      'https://viacep.com.br/ws/[CEP]/json/?v=[1]'
+    );
+    expect(no('[data-campo-endereco]').value).toBe(
+      'https://viacep.com.br/ws/[CEP]/json/?v=[1]'
+    );
+    expect(no('[data-avisos-informacoes]')).toBeNull();
+
+    await clicar('[role="radio"][aria-checked="false"]');
+    expect(no('[data-campo-corpo]').value).toContain('"cep": "{{cep}}"');
     wrapper.unmount();
   });
 
@@ -355,7 +404,7 @@ describe('GavetaFerramentas · nova ferramenta (F03–F06)', () => {
     api.createTool.mockRejectedValue({
       response: {
         status: 422,
-        data: { error: 'Endpoint url deve usar HTTPS' },
+        data: { error: 'Link deve usar HTTPS', campos: ['endpoint_url'] },
       },
     });
     const wrapper = await montar();
@@ -369,11 +418,11 @@ describe('GavetaFerramentas · nova ferramenta (F03–F06)', () => {
     const erro = no('[data-erro-salvar]');
     expect(erro.textContent).toContain('Não consegui salvar. Nada foi salvo.');
     expect(erro.textContent).toContain(
-      'O sistema disse: “Endpoint url deve usar HTTPS”.'
+      'O sistema disse: “Link deve usar HTTPS”.'
     );
     expect(
       todos('[data-ir-para-passo]').map(b => b.textContent.trim())
-    ).toEqual(['Ir para o passo 2, para onde chama']);
+    ).toEqual(['Ir para o passo 3, onde buscar']);
     wrapper.unmount();
   });
 });
@@ -389,7 +438,7 @@ describe('GavetaFerramentas · teste (F07)', () => {
   it('asks for the values, warns it is a real call and previews what the backend builds', async () => {
     const wrapper = await abrirTeste();
     expect(no('[data-chamada-real]').textContent).toContain(
-      'Esta é uma chamada de verdade, com as chaves salvas.'
+      'Esta é uma chamada de verdade, com a chave salva.'
     );
     await clicarNoTexto('Fazer chamada de teste', rodape());
     expect(api.testTool).not.toHaveBeenCalled();
@@ -420,6 +469,9 @@ describe('GavetaFerramentas · teste (F07)', () => {
     expect(no('[data-deu-certo]').textContent).toContain(
       'O que o agente recebe'
     );
+    expect(no('[data-resposta-legivel]').textContent).toContain('Nome');
+    expect(no('[data-resposta-legivel]').textContent).toContain('Pastilha');
+    expect(no('[data-detalhes-resposta]').open).toBe(false);
     expect(no('[data-resposta-json]').textContent).toContain(
       '"nome": "Pastilha"'
     );
@@ -459,13 +511,13 @@ describe('GavetaFerramentas · teste (F07)', () => {
     const falha = no('[data-falha]');
     expect(falha.textContent).toContain('O sistema recusou a chave de acesso.');
     expect(falha.textContent).toContain(
-      'A ferramenta continua ligada, como estava. Corrija em Como entra no sistema.'
+      'A ferramenta continua ligada, como estava. Corrija em Chave de acesso (se o sistema pedir).'
     );
     expect(falha.textContent).toContain('tool_http_error: 401 Unauthorized');
     expect(rodape().textContent).not.toContain('Ligar ferramenta');
     await clicarNoTexto('Corrigir a chave', rodape());
     expect(no('aside h2').textContent.trim()).toBe('Alterar Busca no estoque');
-    expect(no('[data-guardado]').textContent).toContain('Guardado');
+    expect(no('[data-guardado]').textContent).toContain('Guardada');
     wrapper.unmount();
   });
 });
@@ -484,14 +536,17 @@ describe('GavetaFerramentas · ver e alterar (F09, F10, F11)', () => {
     expect(detalhe).toContain('Bia usa nas conversas.');
     expect(detalhe).toContain('Busca em api.sualoja.com.br');
     expect(detalhe).toContain('1 informação: termo (texto).');
+    expect(normalizar(no('[data-endereco]').textContent)).toBe(
+      'https://api.sualoja.com.br/estoque/busca?termo=[termo]'
+    );
     expect(detalhe).toContain('Com 1 chave secreta (x-api-key).');
     expect(
       todos('[data-alterar]').map(b => b.getAttribute('aria-label'))
     ).toEqual([
       'Alterar o que faz',
-      'Alterar para onde chama',
-      'Alterar o que o agente preenche',
-      'Alterar como entra',
+      'Alterar o que o agente descobre',
+      'Alterar onde busca',
+      'Alterar chave de acesso',
     ]);
     wrapper.unmount();
   });
@@ -525,16 +580,16 @@ describe('GavetaFerramentas · ver e alterar (F09, F10, F11)', () => {
     const wrapper = await abrirDetalhe();
     await clicar('[data-linha="4"] [data-alterar]');
     expect(texto()).toContain(
-      'Se mudar este nome, você vai precisar digitar o valor de novo.'
+      'Se mudar este nome, você vai precisar digitar a chave de novo.'
     );
     await digitar('[data-campo-chave]', 'x-api-token');
     expect(no('[data-redigitar]').textContent).toContain(
-      'Você mudou o nome do cabeçalho. Digite o valor de novo'
+      'Você mudou o nome da chave. Digite a chave de novo'
     );
     await clicarNoTexto('Desligar, salvar e testar', rodape());
     expect(api.updateTool).not.toHaveBeenCalled();
     expect(no('[data-erro-campo]').textContent.trim()).toBe(
-      'Digite o valor de novo para salvar.'
+      'Digite a chave de novo para salvar.'
     );
     await digitar('[data-campo-valor]', 'novo-segredo');
     await clicarNoTexto('Desligar, salvar e testar', rodape());
@@ -554,7 +609,7 @@ describe('GavetaFerramentas · ver e alterar (F09, F10, F11)', () => {
     await clicar('[data-linha="4"] [data-alterar]');
     await clicar('[data-segredo]');
     expect(no('[data-redigitar]').textContent).toContain(
-      'Você desligou "É segredo". Digite o valor de novo'
+      'Você desligou "Esconder depois de salvar". Digite a chave de novo'
     );
     expect(no('[data-campo-valor]').value).toBe('');
     wrapper.unmount();
@@ -638,7 +693,7 @@ describe('GavetaFerramentas · revisão independente', () => {
     await clicarNoTexto('Desligar, salvar e testar', rodape());
     expect(api.updateTool).not.toHaveBeenCalled();
     const dialogo = no('dialog[open]');
-    expect(dialogo.textContent).toContain('Remover este cabeçalho?');
+    expect(dialogo.textContent).toContain('Remover esta chave?');
     await clicarNoTexto('Remover', dialogo);
     expect(api.updateTool).toHaveBeenCalledTimes(1);
     expect(api.updateTool.mock.calls[0][2].headers_config).toEqual([]);
@@ -695,7 +750,9 @@ describe('GavetaFerramentas · revisão independente', () => {
     await digitar('[data-campo-nome]', 'X');
     await clicarNoTexto('Continuar', rodape());
     await clicarNoTexto('Continuar', rodape());
+    await clicarNoTexto('Continuar', rodape());
     await clicar('[role="radio"][aria-checked="false"]');
+    await clicarNoTexto('Voltar', rodape());
     await clicarNoTexto('Voltar', rodape());
     await digitar('[data-campo-nome]', '');
     await clicarNoTexto('Cancelar', rodape());

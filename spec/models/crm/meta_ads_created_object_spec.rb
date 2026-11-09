@@ -55,5 +55,17 @@ RSpec.describe Crm::MetaAdsCreatedObject do
     it 'sem posts, nem consulta' do
       expect(described_class.ads_by_post(account.id, 'instagram', [])).to eq({})
     end
+
+    # #2739: post impulsionado mais de uma vez. Cada anúncio tem os próprios comentários; o post leva a todos.
+    it '.ads_of_post: todos os anúncios ativados de um post, com o nome, o mais novo primeiro' do
+      boosted('1790', '901', activated_at: 2.days.ago, name: 'Promoção outubro')
+      boosted('1790', '902', activated_at: 1.hour.ago, name: 'Promoção outubro (2)')
+      boosted('1790', '903', activated_at: nil)
+      boosted('1791', '904')
+
+      expect(described_class.ads_of_post(account.id, 'instagram', '1790').map { |ad| ad.slice(:id, :name) })
+        .to eq([{ id: '902', name: 'Promoção outubro (2)' }, { id: '901', name: 'Promoção outubro' }])
+      expect(described_class.ads_of_post(account.id, 'instagram', '1790').first[:created_at]).to be_a(String)
+    end
   end
 end
