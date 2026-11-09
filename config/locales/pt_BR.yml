@@ -1263,6 +1263,7 @@ pt_BR:
     agents:
       modo_manual: 'Este agente está no modo manual: a instrução foi escrita à mão. Edite a instrução à mão ou volte o agente para o modo guiado para mudar conversando.'
       conflito_de_trava: 'O agente mudou ao mesmo tempo. Tente de novo.'
+      ferramenta_na_cotacao: 'O Agente de Cotação usa as ferramentas dele. Adicione a ferramenta em outro agente.'
       # #1479: texto do botão que abre a lista de opções que a IA manda, quando a IA não escolhe um.
       botao_das_opcoes: 'Ver opções'
       instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
@@ -1459,6 +1460,10 @@ pt_BR:
           invalid_data: 'O contato foi recusado. Confira nome, telefone e e-mail.'
           unexpected_error: 'Não deu para guardar esta agora. Tente de novo.'
           same_contact: 'É a mesma pessoa de outra empresa da lista: entrou uma vez só.'
+          already_in_list: 'Já estava nesta lista.'
+          blocked: 'Bloqueado: não recebe mensagem.'
+          unreachable: 'Não pode receber mensagem.'
+        copy_name: '%{name} (cópia)'
         errors:
           no_leads: 'Escolha pelo menos uma empresa para guardar.'
           too_many_leads: 'Guarde até %{max} empresas por vez.'
@@ -1467,6 +1472,12 @@ pt_BR:
           foreign_contact: 'Um dos contatos foi apagado enquanto a lista era guardada. Tente de novo.'
           disabled: 'Os Públicos de Campanhas não estão ligados nesta conta.'
           contacts_saved: 'Os contatos criados até aqui ficaram gravados.'
+          audience_locked: 'Esta lista já foi usada numa campanha enviada e não muda mais. Crie uma cópia para editar.'
+          not_audience: 'Esta lista não pode ser mudada.'
+          no_members: 'Escolha pelo menos uma empresa da lista.'
+          all_already_in_list: 'Essas empresas já estavam nesta lista.'
+          too_many_members: 'Escolha até %{max} empresas por vez.'
+          invalid_cursor: 'Não deu para trazer mais listas. Abra a página de novo.'
       campaign_errors:
         forbidden: 'Seu perfil não pode alterar campanhas. Peça a um administrador a permissão de gerenciar campanhas.'
       score_bands:
