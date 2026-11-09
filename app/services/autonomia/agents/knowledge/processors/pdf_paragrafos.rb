@@ -93,7 +93,7 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
   def linha(trechos)
     texto = Autonomia::Agents::Knowledge::Processors::PdfTrechos.juntar(trechos, sobreposto: true).strip
     { y: trechos.first.y, direita: trechos.map { |trecho| trecho.x + trecho.width }.max, letra: letra_da_linha(trechos),
-      fonte: fonte_da_linha(trechos), texto: texto,
+      fonte: fonte_da_linha(trechos), fonte_principal: fonte_principal(trechos), texto: texto,
       trechos: trechos.map { |trecho| { x: trecho.x, fim: trecho.x + trecho.width, texto: texto_do(trecho).strip } } }
   end
 
@@ -105,6 +105,12 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
   # As fontes da linha: a que cobre mais caracteres em cada trecho (o acento ou a pontuação noutra fonte não conta).
   def fonte_da_linha(trechos)
     trechos.to_set { |trecho| trecho.fontes.max_by(&:last).first }
+  end
+
+  # #2845 — a fonte que cobre mais caracteres na linha inteira. O número do item em negrito no começo da linha de texto
+  # comum ("1.3.1. As condições…") não a torna uma linha em negrito: o título de cima, todo em negrito, fecha o parágrafo.
+  def fonte_principal(trechos)
+    trechos.each_with_object(Hash.new(0)) { |trecho, soma| trecho.fontes.each { |fonte, vezes| soma[fonte] += vezes } }.max_by(&:last)&.first
   end
 
   def letra_do(trecho)
@@ -141,12 +147,12 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
     espacos.empty? ? 0 : espacos[(espacos.size - 1) / 2]
   end
 
-  # Fecha o parágrafo: espaço de parágrafo, outro tamanho de letra, ou outra fonte quando a linha de cima termina antes da
-  # margem direita (título, ou fim de parágrafo). Linha cheia até a margem com outra fonte (trecho em negrito no meio do
-  # parágrafo) continua.
+  # Fecha o parágrafo: espaço de parágrafo, outro tamanho de letra, ou outra fonte principal quando a linha de cima termina
+  # antes da margem direita (título, ou fim de parágrafo). Linha cheia até a margem com outra fonte (trecho em negrito no
+  # meio do parágrafo) continua.
   def quebra?(anterior, atual, pagina)
     separado?(anterior, atual, pagina[:normal]) || !mesmo_tamanho?(anterior, atual) ||
-      (!anterior[:fonte].intersect?(atual[:fonte]) && troca_de_bloco?(anterior, atual, pagina))
+      (anterior[:fonte_principal] != atual[:fonte_principal] && troca_de_bloco?(anterior, atual, pagina))
   end
 
   def mesmo_tamanho?(anterior, atual)

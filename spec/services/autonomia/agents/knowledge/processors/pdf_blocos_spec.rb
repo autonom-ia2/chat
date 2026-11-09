@@ -198,6 +198,19 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       end
     end
 
+    # #2845 — o título curto em negrito, seguido do item que começa com o número em negrito e segue no texto comum.
+    context 'with a bold title followed by an item that starts with a bold number' do
+      let(:pdf) do
+        pdf_com([[['1.3. AMBITO GEOGRAFICO DA COBERTURA', topo, 'F2', 10],
+                  ['1.3.1.', topo - linha, 'F2', 10], ['As condicoes desta cobertura valem em todo o territorio', topo - linha, 'F1', 10, 100],
+                  ['nacional, salvo quando a apolice disser outra coisa sobre o local do evento.', topo - (2 * linha), 'F1', 10]]])
+      end
+
+      it 'reads the title as a title, apart from the item' do
+        expect(blocos_gravados).to include(a_hash_including(tipo: :titulo, texto: '1.3. AMBITO GEOGRAFICO DA COBERTURA', pagina: 1))
+      end
+    end
+
     it 'gives no blocks to the protected agent (Lia)' do
       allow(bia).to receive(:instrucao_mantida?).and_return(true)
 
