@@ -6400,6 +6400,8 @@
         "RECUSADO": "The notice was not accepted",
         "NAO_ENVIADO": "We did not tell them",
         "RECUSADO_DICA": "Facebook did not accept the notice. Ask whoever runs your ads to check the link with your website.",
+        "SEM_CONFIRMACAO": "We don't know if the notice arrived",
+        "SEM_CONFIRMACAO_DICA": "Facebook did not answer. So the sale is not counted twice, we did not send it again.",
         "VER_MOTIVO": "See the reason",
         "MOTIVO": {
           "SEM_PIXEL": "Your website is not connected to Facebook in this funnel yet. Ask whoever runs your ads.",
@@ -7245,7 +7247,8 @@
     "FILTRO_DO_LINK": {
       "DA_IA": "Handed over by AI",
       "ESPERANDO": "Waiting over {n} min",
-      "DA_IA_ESPERANDO": "From AI, waiting {n}+ min"
+      "DA_IA_ESPERANDO": "From AI, waiting {n}+ min",
+      "DESDE_DIAS": "Started in the last {n} days"
     }
   },
   "CRM_NUMEROS_V2": {

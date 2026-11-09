@@ -1244,3 +1244,14 @@
   display_name: Anúncios › Instagram pelo login único
   enabled: false
   column: feature_flags_ext_2
+
+# Agentes: o material do próprio agente vem primeiro (#2801, Refs #1431). Ligada: a regra de resposta dá a ordem das
+# fontes (material do agente > fatos-âncora das instruções > ferramentas > segmento da conta > conhecimento geral) e o
+# bloco do segmento passa a valer só quando o material não traz o assunto. Quando o [CONTEXTO] traz o que foi perguntado,
+# inclusive uma definição, a resposta segue o material e marca a fonte. Fora da Lia e do Guia. Desligada: como antes.
+# Sem migration. Rollback: desligar a flag na conta. Posição 34 (8589934592, 1 << 33), dada pela Orquestração em
+# 09/11. Depois do deploy liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: agente_material_primeiro
+  display_name: Agentes › material do agente primeiro
+  enabled: false
+  column: feature_flags_ext_2
