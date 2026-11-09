@@ -1,12 +1,13 @@
 # The Meta credential behind an inbox, for the Conversions API sends (#1940): the official
 # WhatsApp channel, its token and its WABA id. Reuses the channel credential (no new secret
-# storage). Any other kind of inbox (API, WAHA, SMS) has no Meta token, so it yields nils.
+# storage). Any other kind of inbox (API, WAHA, SMS) has no Meta token, so it yields nils; so does
+# a 360dialog WhatsApp inbox, whose api_key is not a Meta token (#2799).
 module Crm::MetaCapi::InboxCredentials
   module_function
 
   def for(inbox)
     channel = inbox&.channel
-    return { channel: nil, access_token: nil, waba_id: nil } unless channel.is_a?(Channel::Whatsapp)
+    return { channel: nil, access_token: nil, waba_id: nil } unless channel.is_a?(Channel::Whatsapp) && channel.provider == 'whatsapp_cloud'
 
     config = channel.provider_config.to_h
     { channel: channel, access_token: config['api_key'].presence, waba_id: config['business_account_id'].presence }

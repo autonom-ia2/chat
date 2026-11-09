@@ -25,6 +25,16 @@ class Crm::MetaAdsLeadForm < ApplicationRecord
                     .where(receiving.arel.exists)
   }
 
+  # Funil reativado (#2804, item 4 da #2740): com ele arquivado o webhook não trouxe ninguém. Reativar vale como salvar o
+  # destino naquela hora, e o marco nasce de novo, como em next_destination_set_at: a reconciliação não relê quem
+  # preencheu com o funil fechado. Só nos formulários com destino completo; só o marco, sem callbacks nem updated_at.
+  # Custo aceito: a janela é uma só, desde o marco. O que a última rodada antes de arquivar não pegou (menos de 1 hora)
+  # e os leads recusados antes de arquivar não são relidos; para esses, o "trazer quem já preencheu".
+  def self.restart_marks!(pipeline_id)
+    where(pipeline_id: pipeline_id).where.not(stage_id: nil)
+                                   .update_all(destination_set_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
   def destination?
     pipeline_id.present? && stage_id.present?
   end

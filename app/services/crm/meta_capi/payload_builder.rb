@@ -64,6 +64,17 @@ module Crm::MetaCapi::PayloadBuilder
     anchor || Time.current
   end
 
+  # When the reported transition happened (#2738, #2799): the instant sent as event_time and the
+  # cut for the clicks that count, in the live send and in the backfill. 'moved' takes the
+  # activity that logged the move; won/lost take closed_at and, without it, the activity that
+  # logged the close, so the cut does not move with "now" on every retry.
+  def event_time_for(card, event_type, activity)
+    return activity.created_at if MOVEMENT_EVENT_TYPES.include?(event_type) && activity
+
+    anchor = RESULT_EVENT_NAMES.key?(event_type) ? card.closed_at : card.entered_stage_at
+    anchor || activity&.created_at || Time.current
+  end
+
   # Value is sent in the card's currency (cents -> major units) only when present; a
   # zero-value funnel event carries neither value nor currency.
   def custom_data(card)

@@ -2,10 +2,10 @@
 # `seus_posts_comentarios` (404 sem elas: nada aqui chama a Meta). Todos com ?perfil=<id> (SeusPosts::Perfil).
 #
 # GET    seus_posts/posts/:post_id                                         → { perfil, status, post, normal, comments, can_manage, ads }
-#        `ads` (#2522, #2739): no Instagram, os anúncios que impulsionaram o post por aqui ([{ id, name, created_at }], o mais novo
-#        primeiro), cujos comentários ficam noutra mídia, uma por anúncio;
-#        só para quem vê Anúncios da Meta (flag meta_ads_hub e Crm::MetaAdsConnectionPolicy#show?) e com os comentários
-#        do Instagram no anúncio ligados (flag meta_ads_comentarios_instagram). Senão, lista vazia.
+#        `ads` (#2522, #2739, #2804): no Instagram, os anúncios que impulsionaram o post por aqui, da conta de anúncios
+#        conectada agora ([{ id, name, created_at, waiting }], o mais novo primeiro), cujos comentários ficam noutra
+#        mídia, uma por anúncio; só para quem vê Anúncios da Meta, com os comentários do Instagram no anúncio ligados
+#        (SeusPosts::Anuncios.visiveis?). Senão, lista vazia.
 # GET    seus_posts/posts/:post_id/comments?after=                         → a página seguinte de comentários.
 #        Ver: administrador ou `posts_view` (SeusPostsPolicy#index?).
 # POST   seus_posts/posts/:post_id/comments/:comment_id/reply              content= → responder em público.
@@ -22,8 +22,6 @@
 class Api::V1::Accounts::SeusPostsComentariosController < Api::V1::Accounts::BaseController
   AUDIT_ACTION = 'seus_posts_comment'.freeze
   FLAGS = %w[seus_posts seus_posts_comentarios].freeze
-  # O anúncio por dentro e a aba de comentários do Instagram dele (MetaAdsAdDetail).
-  AD_COMMENT_FLAGS = %w[meta_ads_hub meta_ads_comentarios_instagram].freeze
   NOT_FOUND = %w[post_not_found comment_not_found].freeze
   # Um id da Graph: dígitos, ou dígitos_dígitos (post e comentário da Página). Nada que vire outro caminho na chamada.
   ID_PARTS = (1..2)
@@ -51,7 +49,7 @@ class Api::V1::Accounts::SeusPostsComentariosController < Api::V1::Accounts::Bas
     base = { perfil: perfil, status: lido[:status], can_manage: manage? }
     return render json: base unless lido[:status] == 'ok'
 
-    render json: base.merge(post: lido[:post], normal: lido[:normal], comments: primeiros_comentarios, ads: anuncios_do_post)
+    render json: base.merge(post: lido[:post], normal: lido[:normal], comments: primeiros_comentarios, ads: anuncios_do_post(lido[:post]))
   end
 
   def reply
@@ -168,13 +166,17 @@ class Api::V1::Accounts::SeusPostsComentariosController < Api::V1::Accounts::Bas
     Pundit.policy!(pundit_user, conversation).view?
   end
 
-  # Os anúncios que impulsionaram o post por aqui e já foram ativados (Crm::MetaAdsCreatedObject.ads_of_post), do banco.
-  # No Facebook o anúncio usa o próprio post, e os comentários já estão nele.
-  def anuncios_do_post
-    return [] unless instagram? && AD_COMMENT_FLAGS.all? { |flag| Current.account.feature_enabled?(flag) }
-    return [] unless Pundit.policy!(pundit_user, ::Crm::MetaAdsConnection).show?
+  # Os anúncios que impulsionaram o post por aqui e já foram ativados (Crm::MetaAdsCreatedObject.ads_of_post), do banco,
+  # só os da conta de anúncios conectada agora (#2804), cada um com quantos comentários dele esperam a conta (`waiting`,
+  # da mesma contagem do post; nil quando não se sabe). No Facebook o anúncio usa o próprio post, e os comentários já
+  # estão nele.
+  def anuncios_do_post(post)
+    return [] unless instagram? && SeusPosts::Anuncios.visiveis?(Current.account, pundit_user)
 
-    ::Crm::MetaAdsCreatedObject.ads_of_post(Current.account.id, 'instagram', post_id)
+    esperando = post[:waiting_ads] || {}
+    ::Crm::MetaAdsCreatedObject.ads_of_post(Current.account.id, 'instagram', post_id,
+                                            ad_account_id: SeusPosts::Anuncios.conta_de_anuncios(Current.account.id))
+                               .map { |ad| ad.merge(waiting: esperando[ad[:id].to_s]) }
   end
 
   def instagram?

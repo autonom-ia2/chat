@@ -115,7 +115,7 @@ RSpec.describe Crm::MetaAds::LeadForms::ImportPastJob do
   it 'lead recusado antes: o "trazer quem já preencheu" tenta de novo e traz' do
     cache = ActiveSupport::Cache::MemoryStore.new
     allow(Rails).to receive(:cache).and_return(cache)
-    Crm::MetaAds::LeadForms::RefusedLeads.new(form).remember!('L1')
+    Crm::MetaAds::LeadForms::RefusedLeads.new(form).remember!('L1', :lead)
     stub_leads
 
     run
