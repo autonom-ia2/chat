@@ -23,6 +23,9 @@ class Autonomia::Automacao::Receita
   DESTINOS_FIXOS = %w[contato.nome empresa.nome].freeze
   DESTINOS_DE_ATRIBUTO = %w[contato.atributos conversa.atributos].freeze
 
+  # O passo "ação" ao salvar (AcaoNaReceita): a ação da lista, o caminho e o corpo.
+  include ::Autonomia::Automacao::AcaoNaReceita
+
   # As listas de passos que um passo abre, na ordem em que aparecem. É a única travessia da receita: o salvar, o ligar, a
   # chave de funis (sem_funil? do controller) e o Roteiro andam por aqui. Um ramo que ficasse de fora deixaria a ação
   # dentro dele sem conferência.
@@ -198,13 +201,6 @@ class Autonomia::Automacao::Receita
     Array(valores.problema_de_leitura(caminho, conta: @conta, account_user: @account_user)).map { |chave| texto(chave, passo: id, caminho: caminho) }
   end
 
-  def problemas_da_acao(passo)
-    acao = passo['acao']
-    return [texto(:acao_fora, passo: passo['id'], acao: acao)] unless ::Autonomia::Automacao::AcoesPermitidas.permitida?(acao)
-
-    [*caminho_da_acao(passo), *corpo_da_acao(passo)]
-  end
-
   # #2499: `card.*` num gatilho de conversa não tem de onde ler. Gatilho desconhecido o esquema já recusou.
   # A conversa nova (#2680) dá ao alvo sem conversa (o contato) a ponte para a que ela abre.
   def no_alvo_do_gatilho?(caminho)
@@ -218,41 +214,6 @@ class Autonomia::Automacao::Receita
   def no_texto(id) = ->(caminho) { problemas_do_caminho(id, caminho, onde: :texto) }
 
   def mensagem_no_gatilho?(no_gatilho) = no_gatilho && @receita.dig('gatilho', 'tipo') == ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM
-
-  def caminho_da_acao(passo)
-    valores = passo['caminho'].to_h
-    faltando = parametros(passo['acao']).reject { |nome| valores[nome].present? }
-                                        .map { |nome| texto(:caminho_faltando, passo: passo['id'], campo: nome) }
-    lidos = valores.values.filter_map { |valor| valor['$valor'] if valor.is_a?(Hash) }
-    faltando + lidos.flat_map { |caminho| problemas_do_caminho(passo['id'], caminho, onde: :caminho) }
-  end
-
-  # O formato confere o corpo com um exemplo no lugar de cada valor calculado (Corpo.exemplo): chave fora do formato e
-  # opção fora da lista continuam pegas. O valor de verdade é conferido de novo ao executar.
-  def corpo_da_acao(passo)
-    corpo = passo['corpo'].to_h
-    exemplo = ::Autonomia::Automacao::Corpo.exemplo(passo['acao'], corpo)
-    conferencia = ::Autonomia::Guide::Formatos::Conferencia.new(passo['acao'], exemplo, conta: @conta)
-    calculo = ::Autonomia::Automacao::ProblemasDoCorpo.new(passo, conta: @conta) { |lido| problemas_do_caminho(passo['id'], lido, onde: :corpo) }
-    calculo.problemas +
-      conferencia.problemas_em_texto.map { |problema| texto(:corpo, passo: passo['id'], problema: problema) } +
-      regras_da_lista(passo['id'], passo['acao'], conferencia.valores)
-  end
-
-  def regras_da_lista(id, acao, valores)
-    permitidas = ::Autonomia::Automacao::AcoesPermitidas
-    exigidos = permitidas.exige(acao).select { |campo| valores[campo].blank? }
-    fixos = permitidas.fixos(acao).reject { |campo, valor| valores[campo] == valor }
-    proibidos = permitidas.proibidos(acao, valores)
-
-    exigidos.map { |campo| texto(:exige, passo: id, campo: campo) } +
-      fixos.map { |campo, valor| texto(:fixo, passo: id, campo: campo, valor: valor) } +
-      proibidos.map { |campo| texto(:proibido, passo: id, campo: campo) }
-  end
-
-  def parametros(acao)
-    acao.split(' ', 2).last.split('/').filter_map { |segmento| segmento.delete_prefix(':') if segmento.start_with?(':') }
-  end
 
   def texto(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", **valores)
 end

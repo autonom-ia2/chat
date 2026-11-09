@@ -13,6 +13,9 @@
 # o par [antes, agora] do valor e dos campos personalizados, e o commit vira um evento só, com o `antes` da 1ª gravação.
 # O card criado também conta (tudo vindo do vazio); ele não acorda espera, só dispara o gatilho.
 #
+# A troca de quem cuida do card (G9, #2707: o dono ou o time) também nasce aqui (Autonomia::Automacao::TrocaNoCard),
+# somada do mesmo jeito, com o anterior da 1ª gravação. O card criado não é troca.
+#
 # Limite: só a escrita que passa pelos callbacks do modelo. `update_all` e `update_columns` não passam, como a soltura
 # dos cards de quem saiu (Agents::DestroyJob, `owner_id`) e a anonimização (Crm::Cards::Anonimizador). Nesses casos
 # ninguém acorda agora, e o "esperar até" confere no prazo, pela varredura do relógio.
@@ -35,16 +38,22 @@ module Crm::CardAvisaAutomacao
   def anotar_mudanca_lida
     gravacao = { transacao: self.class.connection.current_transaction.state, criado: previously_new_record?,
                  lida: !previously_new_record? && saved_changes.keys.intersect?(LIDAS_PELA_AUTOMACAO),
-                 soma: ::Autonomia::Automacao::MudancaDoCard.somar(nil, saved_changes) }
+                 soma: ::Autonomia::Automacao::MudancaDoCard.somar(nil, saved_changes),
+                 troca: ::Autonomia::Automacao::TrocaNoCard.somar(nil, saved_changes) }
     @gravacoes_do_card = [*@gravacoes_do_card, gravacao]
   end
 
+  # A gravação que criou o card não é troca (G9): só o "card atualizado" conta o que ele nasceu tendo. A troca feita
+  # depois dela, na mesma transação, é.
   def avisar_automacao_livre
     gravacoes = gravacoes_valendo
     @gravacoes_do_card = nil
-    soma = gravacoes.reduce({}) { |junta, gravacao| junta.merge(gravacao[:soma]) { |_chave, antes, agora| [antes.first, agora.last] } }
+    criado = gravacoes.any? { |gravacao| gravacao[:criado] }
+    soma = juntar(gravacoes, :soma)
+    trocas = juntar(gravacoes.reject { |gravacao| gravacao[:criado] }, :troca)
     ::Autonomia::Automacao::Despertador.card_mudou(self) if gravacoes.any? { |gravacao| gravacao[:lida] }
-    ::Autonomia::Automacao::CardAtualizado.avisar(self, soma, criado: gravacoes.any? { |gravacao| gravacao[:criado] }) if soma.present?
+    ::Autonomia::Automacao::CardAtualizado.avisar(self, soma, criado: criado) if soma.present?
+    ::Autonomia::Automacao::TrocaNoCard.avisar(self, trocas) if trocas.present?
   end
 
   # Só as gravações da transação desfeita saem (o estado do savepoint desfeito passa a `rolledback?`, e o da transação
@@ -54,4 +63,9 @@ module Crm::CardAvisaAutomacao
   end
 
   def gravacoes_valendo = Array(@gravacoes_do_card).reject { |gravacao| gravacao[:transacao].rolledback? }
+
+  # O par [antes, agora] de cada coluna, com o `antes` da 1ª gravação e o `agora` da última.
+  def juntar(gravacoes, parte)
+    gravacoes.reduce({}) { |junta, gravacao| junta.merge(gravacao[parte]) { |_chave, antes, agora| [antes.first, agora.last] } }
+  end
 end

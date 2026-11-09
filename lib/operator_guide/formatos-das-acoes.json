@@ -17473,7 +17473,8 @@
           "link",
           "date",
           "list",
-          "checkbox"
+          "checkbox",
+          "pessoa"
         ]
       },
       "attribute_key": {

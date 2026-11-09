@@ -1382,6 +1382,8 @@
         "DELETE_SUCCESS": "Campo do card limpo",
         "DELETE_ERROR": "Não foi possível limpar o campo do card",
         "HELP_ATENDER": "Informações próprias deste atendimento.",
+        "ESCOLHER_PESSOA": "Escolher uma pessoa",
+        "LIMPAR_PESSOA": "Tirar a pessoa",
         "ORIGEM": {
           "CLIENTE": "cliente informou em {quando}",
           "EQUIPE": "equipe informou em {quando}",

@@ -201,6 +201,7 @@ pt_BR:
     custom_attribute_definition:
       attribute_key_format: deve conter apenas letras, números, sublinhados, hífens, e pontos
       key_conflict: A chave fornecida não é permitida pois pode entrar em conflito com os atributos padrão.
+      pessoa_so_no_card: 'O campo de pessoa da equipe só existe no card.'
     mfa:
       already_enabled: MFA já está habilitado
       not_enabled: MFA não está habilitado
@@ -230,6 +231,7 @@ pt_BR:
       contact_identity_taken: "Já existe um contato com esses dados. Use o contato existente."
       invalid_contact_input: "Informe um contato com nome preenchido, e-mail e telefone opcionais em texto e atributos válidos."
       contact_conversation_conflict: "não pode ser alterado enquanto este card tiver conversas de outro contato. Revise primeiro os vínculos das conversas."
+      pessoa_de_fora: 'campo %{chave}: a pessoa não é da equipe desta conta.'
   profile:
     mfa:
       enabled: MFA habilitado com sucesso
@@ -1117,6 +1119,7 @@ pt_BR:
         fixo: 'Passo %{passo}: %{campo} tem de ser %{valor}.'
         mensagem_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no filtro do gatilho "mensagem criada".'
         reuniao_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe nos gatilhos de reunião (marcada, remarcada, cancelada).'
+        troca_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no gatilho da troca que ele descreve ("Quando muda quem cuida do card" ou "Quando muda o time do card").'
         falhou_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no gatilho de mensagem que não chegou.'
         falhou_no_filtro: 'Passo %{passo}: %{caminho} só pode ser usado nos passos, não no "Só se" do gatilho.'
         resposta_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até".'
@@ -1132,6 +1135,7 @@ pt_BR:
         modelo_indisponivel: "Passo %{passo}: nenhuma caixa do WhatsApp oficial tem o modelo %{nome} aprovado, de utilidade e com estas variáveis."
         time_de_fora: "Passo %{passo}: o time %{id} não é desta conta."
         pessoa_de_fora: "Passo %{passo}: a pessoa %{id} não é desta conta."
+        responsavel_do_card_sem_card: 'Passo %{passo}: "quem cuida do card" só vale quando o gatilho é de card.'
         da_reuniao_so_no_gatilho: "Passo %{passo}: avisar quem atende a reunião só vale nos gatilhos de reunião."
         gatilho_desligado: 'Os gatilhos de card e de tempo estão desligados nesta conta.'
         reunioes_desligadas: 'As reuniões estão desligadas nesta instalação, e os gatilhos de reunião não podem ser usados.'

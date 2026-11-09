@@ -122,13 +122,20 @@ const frase = computed(() => {
 });
 
 // G32: "quem atende a reunião" só nos gatilhos de reunião — os mesmos em que o
-// catálogo oferece os valores da reunião.
+// catálogo oferece os valores da reunião. Pela base: o que era antes da troca
+// (G9) também é `so_nos_gatilhos`.
 const deReuniao = computed(() =>
   Boolean(
     props.catalogo.valores
-      ?.find(item => item.so_nos_gatilhos)
+      ?.find(item => item.base === 'reuniao' && item.so_nos_gatilhos)
       ?.so_nos_gatilhos.includes(props.catalogo.gatilho)
   )
+);
+// G9 (#2707): "quem cuida do card" só nos gatilhos de card.
+const doCard = computed(
+  () =>
+    props.catalogo.gatilhos?.find(item => item.tipo === props.catalogo.gatilho)
+      ?.alvo === 'Crm::Card'
 );
 const gatilhosDoSeletor = computed(
   () => props.gatilhos || props.catalogo.gatilhos
@@ -249,6 +256,7 @@ const nativoPronto = campo => {
     return Boolean(
       valor?.responsavel ||
         valor?.da_reuniao ||
+        valor?.responsavel_do_card ||
         valor?.times?.length ||
         valor?.pessoas?.length
     );
@@ -455,6 +463,7 @@ defineExpose({ abrir, fechar });
         <LivreDestinatarios
           v-else-if="campo.peca === 'destinatarios'"
           :rotulo="$t(campo.rotulo)"
+          :do-card="doCard"
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
           :de-reuniao="deReuniao"

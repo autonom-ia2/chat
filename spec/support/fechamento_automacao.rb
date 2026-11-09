@@ -171,7 +171,8 @@ module FechamentoAutomacao::Lacunas
     'G6' => -> { gatilho_de?(:tempo) },
     'G7' => -> { gatilho_de?(:recorrente) },
     'G8' => -> { gatilho?('mensagem.falhou') },
-    'G9' => -> { gatilho?('card.responsavel_mudou', 'conversa.responsavel_mudou') },
+    # A troca de dono e a de time do card: a receita do ex. 17 (quem cuidava antes ausente) dispara e lê os nomes.
+    'G9' => -> { FechamentoAutomacao::SondasDaTroca.troca_de_responsavel_dispara? && gatilho?('card.time_mudou') },
     'G10' => -> { gatilho?('etiqueta.posta', 'conversa.etiqueta_posta', 'contato.etiqueta_posta') },
     'G11' => -> { valor?('conversa.equipe_respondeu') && valor?('conversa.cliente_respondeu') },
     'G12' => lambda {
@@ -256,7 +257,12 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 5, passo 8 (#2703): o card que a página de agendamento cria para a reunião (card do serviço já ganho)
     # nasce sem conversa, e a mensagem do gatilho de reunião nele pula com `sem_conversa`. Caminho escolhido: o Booker
     # liga ao card novo a conversa do contato na caixa da página, quando ela existe. A frente dona troca o nil pela sonda.
-    'G47' => nil
+    'G47' => nil,
+    # Do exemplo 17, achadas na G9 (#2707). G62 (#2829): o campo do card do tipo pessoa da equipe, com o nome e a
+    # ausência dela (passos 3, 5 e 6). G63 (#2830): repetir a espera a cada mensagem do cliente na mesma automação
+    # (passo 4); o laço do #2791 (G46) só volta pelo caminho de um "decidir", e o passo 4 não tem decisão.
+    'G62' => -> { FechamentoAutomacao::SondasDaTroca.campo_pessoa_le_na_conta? },
+    'G63' => nil
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

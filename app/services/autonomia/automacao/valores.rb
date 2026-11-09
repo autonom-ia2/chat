@@ -35,6 +35,7 @@ class Autonomia::Automacao::Valores
     'card.status' => ->(card) { card.status },
     'card.valor' => ->(card) { card.value_cents.to_d / 100 },
     'card.responsavel_id' => ->(card) { card.owner_id },
+    'card.responsavel_nome' => ->(card) { card.owner&.name },
     'card.time_id' => ->(card) { card.team_id },
     'card.dias_na_etapa' => ->(card) { card.entered_stage_at && ((Time.current - card.entered_stage_at) / 1.day).floor },
     'card.motivo_da_perda' => ->(card) { card.lost_reason },
@@ -80,6 +81,10 @@ class Autonomia::Automacao::Valores
   # A última mensagem que a execução mandou ao cliente (#2680): o texto e a situação (Envio).
   ENVIO = ::Autonomia::Automacao::Envio::VALORES
 
+  # G9 (#2707): quem cuidava do card e o time de antes da troca que disparou o gatilho (TrocaNoCard), lidos da marca
+  # do fato: na partida (o filtro do gatilho) e nos passos da execução. Só nos gatilhos da troca (LugarDoValor).
+  TROCA = ::Autonomia::Automacao::TrocaNoCard::VALORES
+
   # G53: a mensagem que disparou o gatilho "mensagem que falhou" (Contexto#mensagem_que_falhou), para os passos depois
   # dele ("manda por e-mail o mesmo conteúdo"). Só existe nesse gatilho; o salvar recusa no resto. A mensagem apagada
   # e a que só tem anexo leem vazio, e o passo pula com `faltou_valor`: nunca sai pela metade.
@@ -94,9 +99,11 @@ class Autonomia::Automacao::Valores
   PASSOS_QUE_ESCREVEM = %w[escrever resumir].freeze
 
   # O que cada alvo alcança, pelas pontes do Contexto. O card da conversa (#2716) só para ler: CardDaConversa.
-  # De onde cada base lê no contexto da execução. O `card` fica fora: na conversa, ele cai no card dela (#2716).
+  # De onde cada base lê no contexto da execução. O `card` fica fora: na conversa, ele cai no card dela (#2716). O
+  # `gatilho` é o próprio contexto: a troca de quem cuida do card (G9) sai da marca do fato.
   LEITURA_DA_BASE = {
-    'conversa' => :conversa, 'contato' => :contato, 'reuniao' => :reuniao, 'envio' => :ultimo_envio, 'falhou' => :mensagem_que_falhou
+    'conversa' => :conversa, 'contato' => :contato, 'reuniao' => :reuniao, 'envio' => :ultimo_envio, 'falhou' => :mensagem_que_falhou,
+    'gatilho' => :itself
   }.freeze
 
   BASES_DO_ALVO = {
@@ -138,7 +145,7 @@ class Autonomia::Automacao::Valores
     'card.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'contato.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'envio.situacao' => { 'opcoes' => ::Autonomia::Automacao::Envio::SITUACOES.values, 'operadores' => %w[igual diferente] }
-  }.merge(::Autonomia::Automacao::Ausencia::FECHADOS).freeze
+  }.merge(::Autonomia::Automacao::Ausencia::FECHADOS, ::Autonomia::Automacao::TrocaNoCard::FECHADOS).freeze
 
   # Os valores que pedem permissão para ler (#2597): a pergunta é a mesma do resto do CRM, feita a quem salva a receita
   # e a quem ligou a automação. O dono de um card não ganha, pela automação, o valor dos cards alheios: `ve?`, não
@@ -155,9 +162,14 @@ class Autonomia::Automacao::Valores
   # Os atributos personalizados (`contato.atributos.placa`) ficam em Valores::Atributos.
   MODELOS = ::Autonomia::Automacao::Valores::Atributos::MODELOS
 
+  # Onde cada valor existe na receita (LugarDoValor): a mensagem, a resposta, a reunião e a troca de quem cuida do card;
+  # a mensagem que falhou (G53).
+  extend ::Autonomia::Automacao::LugarDoValor
+
   class << self
     def caminho_valido?(caminho)
-      [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA, ENVIO, FALHOU].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? ||
+      [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA, ENVIO, TROCA, FALHOU].any? { |lista| lista.key?(caminho.to_s) } ||
+        atributo(caminho).present? ||
         da_ia?(caminho)
     end
 
@@ -165,34 +177,6 @@ class Autonomia::Automacao::Valores
 
     # "ia.p3" => "p3".
     def passo_da_ia(caminho) = caminho.to_s.delete_prefix(IA)
-
-    def da_reuniao?(caminho) = caminho.to_s.start_with?('reuniao.')
-
-    def da_mensagem?(caminho) = MENSAGEM.key?(caminho.to_s)
-
-    def da_resposta?(caminho) = RESPOSTA.key?(caminho.to_s)
-
-    def da_falha?(caminho) = FALHOU.key?(caminho.to_s)
-
-    # O valor que só existe num lugar da receita: a mensagem no filtro do gatilho dela (`mensagem`: a receita está lá);
-    # a resposta no "esperar até" (`na_espera`); a reunião nos gatilhos de reunião e a mensagem que falhou no gatilho
-    # dela (`gatilho`). A mensagem que falhou fica só nos passos (`no_filtro`): o "Só se" roda na Partida, antes de
-    # haver a execução de onde ela é lida, e leria sempre vazio. Devolve a chave da frase do salvar, ou nil.
-    def fora_do_lugar(caminho, mensagem:, na_espera:, gatilho: nil, no_filtro: false)
-      return :mensagem_so_no_gatilho if da_mensagem?(caminho) && !mensagem
-      return :resposta_so_na_espera if da_resposta?(caminho) && !na_espera
-
-      fora_do_gatilho(caminho, gatilho) || falhou_no_filtro(caminho, no_filtro)
-    end
-
-    def falhou_no_filtro(caminho, no_filtro) = (:falhou_no_filtro if no_filtro && da_falha?(caminho))
-
-    # O valor que só existe em certos gatilhos: a reunião e a mensagem que falhou.
-    def fora_do_gatilho(caminho, gatilho)
-      return :reuniao_so_no_gatilho if da_reuniao?(caminho) && !::Autonomia::Automacao::Gatilhos.de_reuniao?(gatilho)
-
-      :falhou_so_no_gatilho if da_falha?(caminho) && gatilho != ::Autonomia::Automacao::MensagemQueFalhou::TIPO
-    end
 
     # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.
     def no_alvo?(caminho, alvo_type)
@@ -202,7 +186,12 @@ class Autonomia::Automacao::Valores
       caminho.to_s == RESPOSTA_DO_CONTATO && BASES_DO_ALVO.fetch(alvo_type, []).include?('contato')
     end
 
-    def fechado(caminho) = FECHADOS[caminho.to_s]
+    # A ausência da pessoa num campo do card (G62) fecha como a G23.
+    def fechado(caminho)
+      return FECHADOS['card.responsavel_ausente'] if ::Autonomia::Automacao::Valores::Atributos.ausente_da_pessoa?(caminho)
+
+      FECHADOS[caminho.to_s]
+    end
 
     # O que impede a receita de ler o caminho que já vale ali: o atributo que a conta não tem, ou o valor que pede
     # permissão (#2597) para quem salva sem ela. Sem pessoa (`account_user` nil: o catálogo), a permissão não é
@@ -263,13 +252,15 @@ class Autonomia::Automacao::Valores
     do_objeto(caminho) { |objeto| ::Autonomia::Automacao::Valores::Atributos.ler(base, chave, objeto) }
   end
 
-  def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave) || ENVIO.key?(chave) || FALHOU.key?(chave) || DO_QUE_QUEM_VE.key?(chave)
+  def campo?(chave)
+    [CAMPOS, AGENDA, ENVIO, FALHOU, DO_QUE_QUEM_VE, TROCA].any? { |lista| lista.key?(chave) }
+  end
 
   def do_campo(chave)
     return do_objeto(chave) { |objeto| DO_QUE_QUEM_VE[chave].call(objeto, account_user) } if DO_QUE_QUEM_VE.key?(chave)
     return do_objeto(chave) { |objeto| link_da_agenda(objeto, AGENDA[chave].call(objeto)) } if AGENDA.key?(chave)
 
-    do_objeto(chave) { |objeto| (CAMPOS[chave] || ENVIO[chave] || FALHOU[chave]).call(objeto) }
+    do_objeto(chave) { |objeto| (CAMPOS[chave] || ENVIO[chave] || FALHOU[chave] || TROCA[chave]).call(objeto) }
   end
 
   def link_da_agenda(objeto, pessoa)

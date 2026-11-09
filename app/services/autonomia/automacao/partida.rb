@@ -82,7 +82,8 @@ class Autonomia::Automacao::Partida
   end
 
   def no_filtro?
-    valores = ::Autonomia::Automacao::Valores.new(alvo: @alvo, mensagem: @mensagem, quem: @definicao.ligada_por)
+    alvo = ::Autonomia::Automacao::Contexto.de(@alvo, evento: @evento)
+    valores = ::Autonomia::Automacao::Valores.new(alvo: alvo, mensagem: @mensagem, quem: @definicao.ligada_por)
     Array(gatilho['filtros']).all? do |condicao|
       ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira?
     end

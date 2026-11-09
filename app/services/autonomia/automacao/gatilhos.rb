@@ -48,6 +48,9 @@ module Autonomia::Automacao::Gatilhos
     Entrada.new(tipo: 'card.reuniao_marcada', alvo: CARD, origem: :evento, parametros: %w[funil_id pagina_id]),
     Entrada.new(tipo: 'card.reuniao_remarcada', alvo: CARD, origem: :evento, parametros: %w[funil_id pagina_id]),
     Entrada.new(tipo: 'card.reuniao_cancelada', alvo: CARD, origem: :evento, parametros: %w[funil_id pagina_id]),
+    # G9 (#2707): mudou quem cuida do card, o dono ou o time (Autonomia::Automacao::TrocaNoCard).
+    Entrada.new(tipo: ::Autonomia::Automacao::TrocaNoCard::RESPONSAVEL, alvo: CARD, origem: :evento, parametros: %w[funil_id]),
+    Entrada.new(tipo: ::Autonomia::Automacao::TrocaNoCard::TIME, alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.parado', alvo: CARD, origem: :tempo, parametros: %w[etapa_id dias]),
     Entrada.new(tipo: 'card.data', alvo: CARD, origem: :tempo, parametros: DA_DATA),
     Entrada.new(tipo: 'contato.data', alvo: CONTATO, origem: :tempo, parametros: DA_DATA),
@@ -60,7 +63,8 @@ module Autonomia::Automacao::Gatilhos
 
   # O evento do emissor do CRM (Crm::Webhooks::Emitter) e os gatilhos que ele pode disparar. O card criado já nasce
   # numa etapa: conta como "entrou" nela, venha da tela, da API, da IA ou de uma automação. O "atualizado" (G27) não vem
-  # do emissor: nasce do próprio card (Autonomia::Automacao::CardAtualizado), na criação e em toda edição.
+  # do emissor: nasce do próprio card (Autonomia::Automacao::CardAtualizado), na criação e em toda edição. A troca de
+  # quem cuida (G9) também: o evento é o próprio tipo (TrocaNoCard).
   DO_EVENTO_DO_CARD = {
     Events::Types::CRM_CARD_CREATED => %w[card.criado card.entrou_na_etapa],
     Events::Types::CRM_CARD_UPDATED => [ATUALIZADO],
@@ -69,7 +73,9 @@ module Autonomia::Automacao::Gatilhos
     Events::Types::CRM_CARD_LOST => %w[card.perdido],
     Events::Types::CRM_MEETING_SCHEDULED => %w[card.reuniao_marcada],
     Events::Types::CRM_MEETING_RESCHEDULED => %w[card.reuniao_remarcada],
-    Events::Types::CRM_MEETING_CANCELED => %w[card.reuniao_cancelada]
+    Events::Types::CRM_MEETING_CANCELED => %w[card.reuniao_cancelada],
+    ::Autonomia::Automacao::TrocaNoCard::RESPONSAVEL => [::Autonomia::Automacao::TrocaNoCard::RESPONSAVEL],
+    ::Autonomia::Automacao::TrocaNoCard::TIME => [::Autonomia::Automacao::TrocaNoCard::TIME]
   }.freeze
 
   # Os gatilhos de reunião (G12): só neles a receita lê `reuniao.*`, a reunião da atividade que disparou (no lembrete,
