@@ -135,16 +135,32 @@ class SeusPosts::Leitura
     { posts: posts.map { |post| post.merge(waiting: nil) }, waiting_status: status }
   end
 
-  # Post que não veio na leitura dos comentários (publicado depois dela): sem número, nunca 0.
+  # Post que não veio na leitura dos comentários (publicado depois dela): sem número, nunca 0. Os comentários do
+  # anúncio do post (#2804) entram só para quem pode abrir Anúncios, que é onde eles estão; `waiting_ads` diz quantos
+  # esperam em cada anúncio.
   def contagem(pendente, privado)
     return { waiting: nil } if pendente.nil?
 
-    { waiting: (pendente[:ids] - privado).size, waiting_more: pendente[:mais] }
+    ve = ve_anuncios?(pendente)
+    por_anuncio = ve ? pendente[:anuncios].to_h.transform_values { |anuncio| (anuncio[:ids] - privado).size } : {}
+    base = { waiting: (pendente[:ids] - privado).size + por_anuncio.values.sum, waiting_more: pendente[:mais] || (ve && anuncios_mais?(pendente)) }
+    por_anuncio.empty? ? base : base.merge(waiting_ads: por_anuncio)
+  end
+
+  def anuncios_mais?(pendente)
+    pendente[:anuncios_mais] == true || pendente[:anuncios].to_h.values.any? { |anuncio| anuncio[:mais] }
+  end
+
+  def ve_anuncios?(pendente)
+    return false if pendente[:anuncios].blank? && !pendente[:anuncios_mais]
+
+    @anuncios_visiveis = SeusPosts::Anuncios.visiveis?(@account, @viewer) unless defined?(@anuncios_visiveis)
+    @anuncios_visiveis
   end
 
   # Quem já recebeu o privado não espera mais. Lido do banco a cada vez: o privado de agora já conta.
   def com_privado(canal, pendentes)
-    ids = pendentes.values.flat_map { |pendente| pendente[:ids] }
+    ids = pendentes.values.flat_map { |pendente| pendente[:ids] + pendente[:anuncios].to_h.values.flat_map { |anuncio| anuncio[:ids] } }
     return [] if ids.empty?
 
     Crm::MetaAdsCommentAction.where(account_id: @account.id, network: rede(canal), action: 'private_reply', comment_id: ids)

@@ -99,7 +99,8 @@ RSpec.describe 'Audience preview endpoints (#993)', :aggregate_failures, type: :
       expect(examples).to include(['Nome', 'Aaa Aaaaa'], ['Email', '[email address]'])
       expect(response.body).not_to include('ana@alfa.com.br')
       expect(payload.dig('reachability', 'whatsapp')).to include('total' => 2, 'opted_out' => 1, 'receive' => 1)
-      expect(payload.dig('reachability', 'email')).to include('total' => 2, 'unsubscribed' => 1, 'receive' => 1)
+      # chat#2733: Ana refused, so her e-mail does not receive either (like the send).
+      expect(payload.dig('reachability', 'email')).to include('total' => 2, 'opted_out' => 1, 'unsubscribed' => 1, 'receive' => 0)
     end
   end
 

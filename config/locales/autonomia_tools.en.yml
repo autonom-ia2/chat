@@ -1,0 +1,15 @@
+en:
+  activerecord:
+    attributes:
+      autonomia/agents/tool:
+        endpoint_url: "Link"
+        headers_config: "Access key"
+        request_body_template: "What goes along"
+        response_mapping: "Answer selection"
+  autonomia:
+    agents:
+      ferramenta:
+        informacao_no_site: "cannot have agent information in the site name or after the #"
+        faixa_grande: "repeats more than %{maximo} times, uses a range built from agent information, or repeats with nothing inside"
+        chave_de_novo: "must be typed again"
+        chave_de_novo_outro_site: "must be typed again: the link now points to another site"

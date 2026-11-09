@@ -27,9 +27,10 @@ module Meta::AdsGraphClient::LeadForms
   end
 
   # Quem preencheu desde `since` (leads_retrieval), página a página até o fim. Devolve o último Result e se parou no
-  # teto com mais páginas na Meta (truncated).
+  # teto com mais páginas na Meta (truncated). O created_time da Meta é em segundos: o filtro começa um segundo antes,
+  # para o lead do mesmo segundo de `since` entrar (#2804). Quem chama não duplica quem já entrou.
   def each_form_lead(form_id, since:)
-    filtering = [{ field: 'time_created', operator: 'GREATER_THAN', value: since.to_i }].to_json
+    filtering = [{ field: 'time_created', operator: 'GREATER_THAN', value: since.to_i - 1 }].to_json
     pages = 0
     result = each_page("#{form_id}/leads", { fields: LEAD_FIELDS, filtering: filtering, limit: LEADS_PAGE_LIMIT },
                        max_pages: LEADS_MAX_PAGES) do |batch|
