@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 707 |
-| Sem corpo | 204 |
+| No catálogo | 709 |
+| Sem corpo | 206 |
 | Com corpo | 503 |
-| Com corpo e formato completo | 414 (82,3%) |
-| Com corpo e formato incompleto | 89 |
+| Com corpo e formato completo | 415 (82,5%) |
+| Com corpo e formato incompleto | 88 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 210 |
-| Leituras cruas tipadas | 216 de 311 |
+| Leituras cruas tipadas | 214 de 307 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 75 |
+| leitura crua sem tipo | 74 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -59,7 +59,6 @@ Uma ação pode ter mais de um motivo.
 - `POST autonomia/conversations/:conversation_id/copilot/chat` — leitura crua sem tipo: message
 - `POST autonomia/insurance/quote_agent` — leitura crua sem tipo: quote_agent.behavior (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new), quote_agent.broker_name (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new), quote_agent.business_hours (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new), quote_agent.name (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new)
 - `POST autonomia/prospecting/leads/:id/adopt_owner` — leitura crua sem tipo: owner_name (repassada a ::Autonomia::Prospecting::OwnerAdoption.new)
-- `POST autonomia/prospecting/leads/campaign_segment` — leitura crua sem tipo: campaign_type, segment_name (repassada a ::Autonomia::Prospecting::SelectionCampaignSegment.new)
 - `POST autonomia/prospecting/leads/discard` — leitura crua sem tipo: reason (repassada a ::Autonomia::Prospecting::LeadDiscard.new)
 - `POST callbacks/facebook_pages` — leitura crua sem tipo: omniauth_token
 - `POST callbacks/reauthorize_page` — leitura crua sem tipo: omniauth_token
@@ -151,8 +150,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/autonomia/insurance/quote_agent#create` quote_agent.name — repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new
 - `api/v1/accounts/autonomia/prospecting/lead_batches#discard` reason — repassada a ::Autonomia::Prospecting::LeadDiscard.new
 - `api/v1/accounts/autonomia/prospecting/leads#adopt_owner` owner_name — repassada a ::Autonomia::Prospecting::OwnerAdoption.new
-- `api/v1/accounts/autonomia/prospecting/leads#create_campaign_segment` campaign_type — o código não converte nem compara o valor
-- `api/v1/accounts/autonomia/prospecting/leads#create_campaign_segment` segment_name — repassada a ::Autonomia::Prospecting::SelectionCampaignSegment.new
 - `api/v1/accounts/callbacks#facebook_pages` omniauth_token — o código não converte nem compara o valor
 - `api/v1/accounts/callbacks#reauthorize_page` omniauth_token — o código não converte nem compara o valor
 - `api/v1/accounts/callbacks#register_facebook_page` inbox_name — o código não converte nem compara o valor
@@ -227,8 +224,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 437 |
-| Com parâmetros conhecidos | 386 |
+| No catálogo | 438 |
+| Com parâmetros conhecidos | 387 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

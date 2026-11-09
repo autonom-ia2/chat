@@ -4,7 +4,6 @@
 // como decisor quando a pesquisa terminou sem dono.
 import { mount, flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
-import CampaignsAPI from 'dashboard/api/campaigns';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import ProspectingListsPage from '../pages/ProspectingListsPage.vue';
 import { ChoiceSelectStub, moonLead } from './support/searchPageHarness';
@@ -27,7 +26,6 @@ vi.mock('dashboard/api/autonomiaProspecting', () => ({
     verifyLeadWhatsApp: vi.fn(),
   },
 }));
-vi.mock('dashboard/api/campaigns', () => ({ default: { get: vi.fn() } }));
 vi.mock('dashboard/api/crmKanban', () => ({
   default: { getPipelines: vi.fn(), getStages: vi.fn() },
 }));
@@ -50,7 +48,6 @@ const mountWith = async lead => {
   AutonomiaProspectingAPI.verifyLeadWhatsApp.mockResolvedValue({
     data: { payload: {} },
   });
-  CampaignsAPI.get.mockResolvedValue({ data: [] });
   CrmKanbanAPI.getPipelines.mockResolvedValue({ data: { payload: [] } });
   CrmKanbanAPI.getStages.mockResolvedValue({ data: { payload: [] } });
 

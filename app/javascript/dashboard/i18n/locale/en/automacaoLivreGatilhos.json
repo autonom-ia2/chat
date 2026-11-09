@@ -5,6 +5,7 @@
       "CONVERSA_ABERTA": "When a conversation is reopened",
       "CONVERSA_RESOLVIDA": "When a conversation is resolved",
       "MENSAGEM_CRIADA": "When a message arrives",
+      "MENSAGEM_FALHOU": "When a message to the client fails",
       "CARD_CRIADO": "When a card is created",
       "CARD_ENTROU_NA_ETAPA": "When the card enters a stage",
       "CARD_SAIU_DA_ETAPA": "When the card leaves a stage",
@@ -16,6 +17,7 @@
       "CARD_PARADO": "When the card is stuck in a stage",
       "CARD_DATA": "Around a card date",
       "CONTATO_DATA": "Around a contact date",
+      "CARD_ANTES_DA_REUNIAO": "Before a meeting",
       "CARD_RECORRENTE": "Every day, week or month, on cards",
       "CONTATO_RECORRENTE": "Every day, week or month, on contacts",
       "CONTA_RECORRENTE": "Every day, week or month, on the account"
@@ -25,6 +27,12 @@
       "CARD": "From a pipeline card",
       "ANTIGO": "The old way"
     },
+    "CONVERSA_NOVA": {
+      "CAIXA": "Inbox to reach someone with no conversation yet",
+      "NENHUMA": "None (with no conversation, the message is not sent)",
+      "NA_FRASE": "{frase} (with no conversation, opens one in {caixa})",
+      "AJUDA": "If the card or the contact has no conversation yet, the first message opens one in this inbox. On the official WhatsApp, it only goes out with an approved template."
+    },
     "VALOR_DA_MENSAGEM": {
       "RECEBIDA": "from the customer",
       "ENVIADA": "from the team to the customer",
@@ -33,6 +41,10 @@
       "FALSE": "no",
       "CLIENTE": "the customer",
       "EQUIPE": "the team",
+      "SAIU": "sent, not confirmed yet",
+      "ENTREGUE": "delivered",
+      "LIDA": "read",
+      "FALHOU": "failed",
       "FORMULARIO_DE_ANUNCIO": "an ad form",
       "CONVERSA": "a conversation",
       "AGENDA": "the calendar",
@@ -54,7 +66,9 @@
       "DIA_DA_SEMANA": "Day of the week",
       "DIA_DO_MES": "Day of the month",
       "SELECAO": "Which ones",
-      "REPETE": "Repeats"
+      "REPETE": "Repeats",
+      "PAGINA_ID": "Booking page",
+      "ANTES": "How long before it starts"
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversation and message",
@@ -73,9 +87,11 @@
       "CARD_REUNIAO_CANCELADA": "When a meeting is canceled on a {funil} card",
       "CARD_PARADO": "When the card is stuck in {etapa} for {dias} days",
       "CARD_DATA": "{dias} days {quando} the card {campo}, from {hora}h",
-      "CONTATO_DATA": "{dias} days {quando} the contact {campo}, from {hora}h"
+      "CONTATO_DATA": "{dias} days {quando} the contact {campo}, from {hora}h",
+      "CARD_ANTES_DA_REUNIAO": "{antes} before a meeting"
     },
     "GATILHO_NO_FUNIL": "{frase}, in the {funil} pipeline",
+    "GATILHO_NA_PAGINA": "{frase}, from the {pagina} page",
     "GATILHO_NAO_DISPARA": "Does not trigger when many cards are archived at once, when the stage is deleted or when another system changes the stage.",
     "GATILHO_DO_CARD": {
       "TODOS_OS_FUNIS": "All pipelines",
@@ -99,7 +115,13 @@
       "AVISO_DATA": "Checked every 15 minutes, in the account time zone. A date written in another format does not count.",
       "SEM_CAMPO": "There is no date field here. Create one in Settings › Custom attributes.",
       "HORA": "{hora}h",
-      "ERRO_CAMPOS": "Could not load the date fields. Close and open it again."
+      "ERRO_CAMPOS": "Could not load the date fields. Close and open it again.",
+      "AVISO_LEMBRETE": "Checked every 15 minutes. If the meeting is rescheduled, it reminds at the new time; if canceled, it does not remind. A meeting booked with less time than this is reminded right away."
+    },
+    "GATILHO_DE_REUNIAO": {
+      "QUALQUER_PAGINA": "Any page",
+      "PAGINA_SEM_NOME": "a booking page",
+      "ERRO_PAGINAS": "Could not load the booking pages. Close and open again."
     },
     "GATILHO_RECORRENTE": {
       "DIARIA": "Every day",

@@ -26,6 +26,18 @@ const VALOR_DA_PECA = {
       ? t(`AUTOMACAO_LIVRE.QUANDO_DA_DATA.${valor.toUpperCase()}`)
       : undefined,
   campo: (valor, t, nomes, alvo) => nomes.campo?.[alvo]?.[valor],
+  // #2709: o lembrete diz quanto tempo antes da reunião ("1 dia").
+  antes: (valor, t) =>
+    Number.isInteger(valor?.valor) && valor?.unidade
+      ? t(`${P}.DURACAO`, {
+          valor: valor.valor,
+          unidade: t(
+            `AUTOMACAO_LIVRE.UNIDADES.${valor.unidade.toUpperCase()}`,
+            {},
+            valor.valor
+          ),
+        })
+      : undefined,
 };
 const valorNaFrase = (peca, valor, t, nomes, alvo) =>
   VALOR_DA_PECA[peca]
@@ -39,6 +51,27 @@ const chaveDaFrase = (entrada, gatilho) => {
   return temQuando && gatilho.dias === 0
     ? `AUTOMACAO_LIVRE.GATILHO_NO_DIA.${chave}`
     : `AUTOMACAO_LIVRE.GATILHO_COM.${chave}`;
+};
+
+// G32: a página de agendamento entra só como fim da frase ("..., pela página
+// Renovação"), como o "repete": ela é opcional e não muda a frase do funil.
+const FIM_DA_FRASE = ['repete', 'pagina'];
+// Sem o nome (página que a pessoa não lê ou que saiu), a frase diz que há
+// filtro de página em vez de parecer "qualquer reunião".
+const comPagina = (frase, gatilho, t, nomes) => {
+  if (!gatilho?.pagina_id) return frase;
+  const pagina =
+    nomes.pagina?.[gatilho.pagina_id] ||
+    t('AUTOMACAO_LIVRE.GATILHO_DE_REUNIAO.PAGINA_SEM_NOME');
+  return t('AUTOMACAO_LIVRE.GATILHO_NA_PAGINA', { frase, pagina });
+};
+
+// #2680: a caixa por onde a mensagem abre a conversa de quem não tem uma.
+const comCaixa = (frase, gatilho, t, nomes) => {
+  const caixa = nomes.caixa?.[gatilho.conversa_nova?.caixa_id];
+  return caixa
+    ? t('AUTOMACAO_LIVRE.CONVERSA_NOVA.NA_FRASE', { frase, caixa })
+    : frase;
 };
 
 // #2635 (G7): o recorrente diz quando ("Toda segunda, às 8h") e em quem ("nos
@@ -67,14 +100,14 @@ const fraseDoRecorrente = (gatilho, entrada, t) => {
   });
 };
 
-export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
+const fraseSemPagina = (gatilho, catalogo, t, nomes) => {
   const entrada = catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo);
   if (!entrada) return t(`${P}.FALTA_GATILHO`);
   if ((entrada.parametros || []).some(item => item.peca === 'frequencia'))
-    return fraseDoRecorrente(gatilho, entrada, t);
+    return comCaixa(fraseDoRecorrente(gatilho, entrada, t), gatilho, t, nomes);
   // #2678: o "repete" é opcional e entra só como fim da frase ("..., todo ano").
   const parametros = (entrada.parametros || []).filter(
-    item => item.peca !== 'repete'
+    item => !FIM_DA_FRASE.includes(item.peca)
   );
   const escolhidos = Object.fromEntries(
     parametros.map(item => [
@@ -85,17 +118,24 @@ export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
   const completo = Object.values(escolhidos).every(
     valor => valor !== undefined && valor !== null && valor !== ''
   );
-  if (!parametros.length || !completo) return t(entrada.frase);
+  if (!parametros.length || !completo)
+    return comCaixa(t(entrada.frase), gatilho, t, nomes);
   const base = t(chaveDaFrase(entrada, gatilho), escolhidos);
   const frase =
     gatilho.repete === 'todo_ano'
       ? t('AUTOMACAO_LIVRE.GATILHO_TODO_ANO', { frase: base })
       : base;
   const funil = nomes.funilDaEtapa?.[gatilho.etapa_id];
-  return funil
-    ? t('AUTOMACAO_LIVRE.GATILHO_NO_FUNIL', { frase, funil })
-    : frase;
+  return comCaixa(
+    funil ? t('AUTOMACAO_LIVRE.GATILHO_NO_FUNIL', { frase, funil }) : frase,
+    gatilho,
+    t,
+    nomes
+  );
 };
+
+export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) =>
+  comPagina(fraseSemPagina(gatilho, catalogo, t, nomes), gatilho, t, nomes);
 
 // "Status da conversa", ou "Campo personalizado do contato: placa".
 export const fraseDoValor = (caminho, catalogo, t) => {

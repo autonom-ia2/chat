@@ -1,0 +1,51 @@
+{
+  "pasta": "docs/audit/2026-11-08-prints-2751",
+  "conta": 1,
+  "larguras": [
+    1440,
+    390
+  ],
+  "temas": [
+    "light"
+  ],
+  "jornadas": [
+    {
+      "nome": "execucao-real",
+      "etapas": [
+        {
+          "nome": "lista",
+          "url": "/app/accounts/{conta}/automacoes",
+          "pausa": 4000
+        },
+        {
+          "nome": "historico-cliente-novo",
+          "url": "/app/accounts/{conta}/automacoes/livre/3",
+          "esperar": "[data-execucao]",
+          "passos": [
+            {
+              "clicar": "[data-execucao]"
+            },
+            {
+              "esperar": "[data-passo]"
+            }
+          ],
+          "pausa": 3000
+        },
+        {
+          "nome": "historico-lembrete",
+          "url": "/app/accounts/{conta}/automacoes/livre/1",
+          "esperar": "[data-execucao]",
+          "passos": [
+            {
+              "clicar": "[data-execucao]"
+            },
+            {
+              "esperar": "[data-passo]"
+            }
+          ],
+          "pausa": 3000
+        }
+      ]
+    }
+  ]
+}

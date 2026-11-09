@@ -31,6 +31,7 @@ import automacaoLivreReceitas from './automacaoLivreReceitas.json';
 import automacaoLivreEnsaio from './automacaoLivreEnsaio.json';
 import automacaoLivreCampanha from './automacaoLivreCampanha.json';
 import automacaoLivreRetorno from './automacaoLivreRetorno.json';
+import ausencia from './ausencia.json';
 import brandKits from './brandKits.json';
 import booking from './booking.json';
 import resultJourney from './resultJourney.json';
@@ -66,6 +67,7 @@ import login from './login.json';
 import macros from './macros.json';
 import report from './report.json';
 import prospecting from './prospecting.json';
+import prospectingAchar from './prospectingAchar.json';
 import resetPassword from './resetPassword.json';
 import search from './search.json';
 import setNewPassword from './setNewPassword.json';
@@ -120,6 +122,7 @@ export default {
     ...automacaoLivreCampanha.AUTOMACAO_LIVRE,
     ...automacaoLivreRetorno.AUTOMACAO_LIVRE,
   },
+  ...ausencia,
   ...brandKits,
   ...booking,
   ...resultJourney,
@@ -154,6 +157,7 @@ export default {
   ...login,
   ...macros,
   ...prospecting,
+  ...prospectingAchar,
   ...report,
   ...resetPassword,
   ...search,

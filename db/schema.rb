@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_840000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -65,6 +65,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_840000) do
     t.bigint "custom_role_id"
     t.bigint "agent_capacity_policy_id"
     t.boolean "integration", default: false, null: false
+    t.datetime "ausente_ate"
     t.index ["account_id", "user_id"], name: "uniq_user_id_per_account_id", unique: true
     t.index ["account_id"], name: "index_account_users_on_account_id"
     t.index ["agent_capacity_policy_id"], name: "index_account_users_on_agent_capacity_policy_id"
@@ -539,7 +540,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_840000) do
     t.datetime "updated_at", null: false
     t.string "faixa", default: "", null: false
     t.bigint "card_id"
+    t.bigint "autonomia_agent_tool_id"
     t.index ["account_id", "slug", "created_at"], name: "idx_autonomia_tool_runs_account_slug"
+    t.index ["autonomia_agent_tool_id"], name: "idx_autonomia_tool_runs_agent_tool"
     t.index ["conversation_id", "created_at"], name: "idx_autonomia_tool_runs_conversation"
     t.index ["conversation_id", "slug", "faixa"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('running'::character varying)::text]))"
     t.index ["execution_key"], name: "idx_autonomia_tool_runs_execution_key", unique: true
@@ -3042,9 +3045,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_840000) do
     t.string "request_digest", limit: 64
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "source_post_id"
+    t.string "source_post_network"
     t.index ["account_id", "ad_account_id", "request_digest"], name: "idx_crm_meta_ads_created_objects_digest", unique: true, where: "((status)::text = ANY (ARRAY[('creating'::character varying)::text, ('unconfirmed'::character varying)::text, ('rollback_failed'::character varying)::text]))"
     t.index ["account_id", "ad_id"], name: "idx_crm_meta_ads_created_objects_ad"
     t.index ["account_id", "idempotency_key"], name: "idx_crm_meta_ads_created_objects_key", unique: true
+    t.index ["account_id", "source_post_id"], name: "idx_crm_meta_ads_created_objects_source_post"
   end
 
   create_table "crm_meta_ads_lead_forms", force: :cascade do |t|
