@@ -70,7 +70,10 @@ RSpec.describe 'Autonomia prospecting error messages', type: :request do
     keys = %w[errors.disabled errors.enrichment_disabled errors.query_required errors.limit_invalid errors.limit_too_high
               errors.unsupported_provider errors.lead_required campaign_errors.forbidden audience.errors.no_leads
               audience.errors.too_many_leads audience.errors.no_rows audience.errors.foreign_contact audience.errors.contacts_saved
-              audience.left_out.same_contact]
+              audience.left_out.same_contact audience.left_out.already_in_list audience.left_out.blocked
+              audience.left_out.unreachable audience.errors.audience_locked audience.errors.not_audience
+              audience.errors.no_members audience.errors.all_already_in_list audience.errors.too_many_members
+              audience.errors.invalid_cursor]
 
     keys.each do |key|
       english = I18n.t("autonomia.prospecting.#{key}", locale: :en, max: 1, raise: true)
