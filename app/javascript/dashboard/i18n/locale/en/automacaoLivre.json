@@ -73,6 +73,8 @@
       "CARD_MOTIVO_DA_PERDA": "Lost reason",
       "CARD_TEM_REUNIAO_MARCADA": "The card has a meeting scheduled",
       "CONTATO_TEM_REUNIAO_MARCADA": "The contact has a meeting scheduled (any card)",
+      "CARD_ORIGEM": "Where the card came from",
+      "CARD_ANUNCIO": "Ad of the form",
       "CARD_ATRIBUTOS": "Card custom field",
       "MENSAGEM_TIPO": "Message type",
       "MENSAGEM_PRIVADA": "Private message",
@@ -83,7 +85,8 @@
       "REUNIAO_INICIO": "Meeting date and time",
       "REUNIAO_LINK_DA_REUNIAO": "Meeting call link",
       "ENVIO_TEXTO": "Text of the last message the automation sent",
-      "ENVIO_SITUACAO": "Status of the last message the automation sent"
+      "ENVIO_SITUACAO": "Status of the last message the automation sent",
+      "FALHOU_TEXTO": "Text of the message that wasn't delivered"
     },
     "PASSOS": {
       "ESPERAR": "Wait for a while",
@@ -390,6 +393,8 @@
       "DA_CONVERSA": "Comes from the conversation: {valor}",
       "BUSCA_FALHOU": "Could not search right now. Try again.",
       "POR_VALOR": "Add a conversation detail",
+      "POR_DADO_NA_ETIQUETA": "Add a label named after a data field",
+      "POR_DADO_AJUDA": "The label uses the data without spaces or punctuation (\"Black Friday, 50% off\" becomes black_friday_50_off). The original text goes in the label description.",
       "TEXTO_DICA": "Anything in brackets, like [Contact name], is replaced by the detail at that moment. If the detail is empty, this step does not happen.",
       "RESPONSAVEL": "Whoever handles the conversation",
       "RESPONSAVEL_DO_CARD": "Whoever owns the card",

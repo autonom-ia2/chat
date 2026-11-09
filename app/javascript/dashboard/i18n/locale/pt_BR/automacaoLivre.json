@@ -73,6 +73,8 @@
       "CARD_MOTIVO_DA_PERDA": "Motivo da perda",
       "CARD_TEM_REUNIAO_MARCADA": "O card tem reunião marcada",
       "CONTATO_TEM_REUNIAO_MARCADA": "O contato tem reunião marcada (em qualquer card)",
+      "CARD_ORIGEM": "De onde o card veio",
+      "CARD_ANUNCIO": "Anúncio do formulário",
       "CARD_ATRIBUTOS": "Campo personalizado do card",
       "MENSAGEM_TIPO": "Tipo da mensagem",
       "MENSAGEM_PRIVADA": "Mensagem interna",
@@ -83,7 +85,8 @@
       "REUNIAO_INICIO": "Dia e hora da reunião",
       "REUNIAO_LINK_DA_REUNIAO": "Link da chamada da reunião",
       "ENVIO_TEXTO": "Texto da última mensagem que a automação mandou",
-      "ENVIO_SITUACAO": "Situação da última mensagem que a automação mandou"
+      "ENVIO_SITUACAO": "Situação da última mensagem que a automação mandou",
+      "FALHOU_TEXTO": "Texto da mensagem que não chegou"
     },
     "PASSOS": {
       "ESPERAR": "Esperar um tempo",
@@ -390,6 +393,8 @@
       "DA_CONVERSA": "Vem da conversa: {valor}",
       "BUSCA_FALHOU": "Não deu para procurar agora. Tente de novo.",
       "POR_VALOR": "Pôr um dado da conversa",
+      "POR_DADO_NA_ETIQUETA": "Pôr uma etiqueta com o nome de um dado",
+      "POR_DADO_AJUDA": "A etiqueta sai com o dado sem espaço nem pontuação (\"Black Friday, 50% off\" vira black_friday_50_off). O texto original fica na descrição da etiqueta.",
       "TEXTO_DICA": "O que estiver entre colchetes, como [Nome do contato], é trocado pelo dado na hora. Se o dado estiver vazio, este passo não acontece.",
       "RESPONSAVEL": "Quem cuida da conversa",
       "RESPONSAVEL_DO_CARD": "Quem cuida do card",

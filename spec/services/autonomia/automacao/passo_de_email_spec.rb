@@ -95,6 +95,13 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
       expect(mensagem.reload).to have_attributes(status: 'sent', source_id: 'mid-1')
     end
 
+    # O assunto lê os mesmos valores do texto, com a execução (NaConversa#valores): aqui o `envio.texto` do passo antes.
+    it 'o assunto lê os valores da execução, como o texto' do
+      rodar(conversa, [mensagem_passo('oi', 'Seu pedido saiu'), email_passo('p1', assunto: ['Sobre: ', { '$valor' => 'envio.texto' }])])
+
+      expect(conversas_de_email.sole.additional_attributes['mail_subject']).to eq('Sobre: Seu pedido saiu')
+    end
+
     it 'cada envio abre conversa nova; a caixa que trava numa conversa só reaproveita a dela' do
       rodar(conversa)
       rodar(conversa)

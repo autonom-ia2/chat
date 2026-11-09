@@ -10,7 +10,7 @@ import LivreEmpresa from './LivreEmpresa.vue';
 import LivreTexto from './LivreTexto.vue';
 import LivreData from './LivreData.vue';
 import { fraseDoCalculado } from '../frases';
-import { campoDasPartes, partesDoCampo } from '../texto';
+import { campoDasPartes, opcoesDosValores, partesDoCampo } from '../texto';
 
 // #2414 F5 — um campo de uma ação, desenhado pela peça que o catálogo deu a ele.
 // Escolha de uma é sempre o ChoiceSelect, nunca <select>; de várias, botões que
@@ -45,6 +45,12 @@ const soMostra = computed(
   () => calculado(props.modelValue) && !comoTexto.value
 );
 const mudar = novo => emit('update:modelValue', novo);
+// #2702 G29 — o "Pôr" etiqueta aceita um dado: a etiqueta com o nome do anúncio.
+const dadosDaEtiqueta = computed(() =>
+  peca.value === 'etiquetas' && props.campo.nome === 'por'
+    ? opcoesDosValores(props.catalogo, props.atributosDo, t)
+    : []
+);
 
 const UMA = { pessoa: 'pessoa', time: 'time', caixa: 'caixa' };
 const opcoesDeUma = computed(() => {
@@ -157,6 +163,7 @@ const opcoesDoAtributo = atributo =>
       :opcoes="opcoesDeVarias"
       :model-value="modelValue || []"
       :bloqueadas="bloqueadas"
+      :dados="dadosDaEtiqueta"
       @update:model-value="mudar"
     />
 

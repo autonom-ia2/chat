@@ -118,22 +118,6 @@
       ]
     },
     {
-      "tipo": "card.atualizado",
-      "alvo": "Crm::Card",
-      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_ATUALIZADO",
-      "grupo": "card",
-      "requer": "automacao_gatilhos",
-      "funil": true,
-      "parametros": [
-        {
-          "nome": "mudanca",
-          "peca": "mudanca",
-          "obrigatorio": true,
-          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.MUDANCA"
-        }
-      ]
-    },
-    {
       "tipo": "card.reuniao_marcada",
       "alvo": "Crm::Card",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_REUNIAO_MARCADA",
@@ -199,38 +183,6 @@
           "peca": "pagina",
           "obrigatorio": false,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.PAGINA_ID"
-        }
-      ]
-    },
-    {
-      "tipo": "card.responsavel_mudou",
-      "alvo": "Crm::Card",
-      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_RESPONSAVEL_MUDOU",
-      "grupo": "card",
-      "requer": "automacao_gatilhos",
-      "funil": true,
-      "parametros": [
-        {
-          "nome": "funil_id",
-          "peca": "funil",
-          "obrigatorio": false,
-          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
-        }
-      ]
-    },
-    {
-      "tipo": "card.time_mudou",
-      "alvo": "Crm::Card",
-      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_TIME_MUDOU",
-      "grupo": "card",
-      "requer": "automacao_gatilhos",
-      "funil": true,
-      "parametros": [
-        {
-          "nome": "funil_id",
-          "peca": "funil",
-          "obrigatorio": false,
-          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
         }
       ]
     },
@@ -362,6 +314,12 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
         },
         {
+          "nome": "data",
+          "peca": "data",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DATA"
+        },
+        {
           "nome": "hora",
           "peca": "hora",
           "obrigatorio": true,
@@ -401,6 +359,12 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
         },
         {
+          "nome": "data",
+          "peca": "data",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DATA"
+        },
+        {
           "nome": "hora",
           "peca": "hora",
           "obrigatorio": true,
@@ -438,6 +402,12 @@
           "peca": "dia_do_mes",
           "obrigatorio": false,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
+        },
+        {
+          "nome": "data",
+          "peca": "data",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DATA"
         },
         {
           "nome": "hora",
@@ -655,11 +625,6 @@
       "frase": "AUTOMACAO_LIVRE.VALORES.CARD_RESPONSAVEL_ID"
     },
     {
-      "caminho": "card.responsavel_nome",
-      "base": "card",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_RESPONSAVEL_NOME"
-    },
-    {
       "caminho": "card.time_id",
       "base": "card",
       "frase": "AUTOMACAO_LIVRE.VALORES.CARD_TIME_ID"
@@ -698,6 +663,48 @@
           "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
         }
       ]
+    },
+    {
+      "caminho": "card.origem",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ORIGEM",
+      "opcoes": [
+        {
+          "valor": "formulario_de_anuncio",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FORMULARIO_DE_ANUNCIO"
+        },
+        {
+          "valor": "conversa",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.CONVERSA"
+        },
+        {
+          "valor": "agenda",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.AGENDA"
+        },
+        {
+          "valor": "prospeccao",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.PROSPECCAO"
+        },
+        {
+          "valor": "outro",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.OUTRO"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
+      "caminho": "card.anuncio",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ANUNCIO"
     },
     {
       "caminho": "reuniao.inicio",
@@ -911,32 +918,6 @@
       "so_na_espera": true
     },
     {
-      "caminho": "conversa.cliente_mandou_documento",
-      "base": "conversa",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_CLIENTE_MANDOU_DOCUMENTO",
-      "opcoes": [
-        {
-          "valor": true,
-          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
-        },
-        {
-          "valor": false,
-          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
-        }
-      ],
-      "operadores": [
-        {
-          "op": "igual",
-          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
-        },
-        {
-          "op": "diferente",
-          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
-        }
-      ],
-      "so_na_espera": true
-    },
-    {
       "caminho": "envio.texto",
       "base": "envio",
       "frase": "AUTOMACAO_LIVRE.VALORES.ENVIO_TEXTO"
@@ -975,64 +956,13 @@
       ]
     },
     {
-      "caminho": "gatilho.responsavel_anterior_id",
-      "base": "gatilho",
-      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_RESPONSAVEL_ANTERIOR_ID",
+      "caminho": "falhou.texto",
+      "base": "falhou",
+      "frase": "AUTOMACAO_LIVRE.VALORES.FALHOU_TEXTO",
       "so_nos_gatilhos": [
-        "card.responsavel_mudou"
-      ]
-    },
-    {
-      "caminho": "gatilho.responsavel_anterior_nome",
-      "base": "gatilho",
-      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_RESPONSAVEL_ANTERIOR_NOME",
-      "so_nos_gatilhos": [
-        "card.responsavel_mudou"
-      ]
-    },
-    {
-      "caminho": "gatilho.responsavel_anterior_ausente",
-      "base": "gatilho",
-      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_RESPONSAVEL_ANTERIOR_AUSENTE",
-      "opcoes": [
-        {
-          "valor": true,
-          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
-        },
-        {
-          "valor": false,
-          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
-        }
+        "mensagem.falhou"
       ],
-      "operadores": [
-        {
-          "op": "igual",
-          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
-        },
-        {
-          "op": "diferente",
-          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
-        }
-      ],
-      "so_nos_gatilhos": [
-        "card.responsavel_mudou"
-      ]
-    },
-    {
-      "caminho": "gatilho.time_anterior_id",
-      "base": "gatilho",
-      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_TIME_ANTERIOR_ID",
-      "so_nos_gatilhos": [
-        "card.time_mudou"
-      ]
-    },
-    {
-      "caminho": "gatilho.time_anterior_nome",
-      "base": "gatilho",
-      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_TIME_ANTERIOR_NOME",
-      "so_nos_gatilhos": [
-        "card.time_mudou"
-      ]
+      "so_nos_passos": true
     },
     {
       "caminho": "conversa.atributos",
@@ -1050,37 +980,7 @@
       "caminho": "card.atributos",
       "base": "card",
       "atributos": "card_attribute",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ATRIBUTOS",
-      "da_pessoa": [
-        {
-          "sufixo": "nome",
-          "frase": "AUTOMACAO_LIVRE.VALORES.PESSOA_NOME"
-        },
-        {
-          "sufixo": "ausente",
-          "frase": "AUTOMACAO_LIVRE.VALORES.PESSOA_AUSENTE",
-          "opcoes": [
-            {
-              "valor": true,
-              "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
-            },
-            {
-              "valor": false,
-              "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
-            }
-          ],
-          "operadores": [
-            {
-              "op": "igual",
-              "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
-            },
-            {
-              "op": "diferente",
-              "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
-            }
-          ]
-        }
-      ]
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ATRIBUTOS"
     },
     {
       "caminho": "mensagem.tipo",
@@ -1194,7 +1094,8 @@
       "contato",
       "card",
       "envio",
-      "gatilho"
+      "gatilho",
+      "falhou"
     ],
     "Crm::Card": [
       "card",
@@ -1275,7 +1176,7 @@
         },
         {
           "nome": "prazo",
-          "peca": "prazo",
+          "peca": "duracao",
           "obrigatorio": true,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PRAZO"
         },
@@ -1284,18 +1185,6 @@
           "peca": "passos",
           "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SE_VENCER"
-        },
-        {
-          "nome": "a_cada_mensagem",
-          "peca": "passos",
-          "obrigatorio": false,
-          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.A_CADA_MENSAGEM"
-        },
-        {
-          "nome": "conferir_as",
-          "peca": "conferir_as",
-          "obrigatorio": false,
-          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CONFERIR_AS"
         }
       ]
     },
@@ -1444,22 +1333,8 @@
           "peca": "agente_de_ia",
           "obrigatorio": true,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.AGENTE_ID"
-        },
-        {
-          "nome": "cobrir_pessoa",
-          "peca": "sim_nao",
-          "obrigatorio": false,
-          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.COBRIR_PESSOA"
         }
       ]
-    },
-    {
-      "tipo": "conversa_ao_responsavel",
-      "grupo": "EQUIPE",
-      "requer": "automacao_gatilhos",
-      "funil": true,
-      "frase": "AUTOMACAO_LIVRE.PASSOS.CONVERSA_AO_RESPONSAVEL",
-      "campos": []
     },
     {
       "tipo": "decidir",
@@ -2241,10 +2116,6 @@
             {
               "valor": "checkbox",
               "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_DISPLAY_TYPE.CHECKBOX"
-            },
-            {
-              "valor": "pessoa",
-              "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_DISPLAY_TYPE.PESSOA"
             }
           ],
           "padrao": "text"

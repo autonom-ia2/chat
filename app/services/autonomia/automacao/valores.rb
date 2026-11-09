@@ -42,6 +42,9 @@ class Autonomia::Automacao::Valores
     # G32: o card tem reunião marcada e ainda por vir (não cancelada nem remarcada para outra). O "esperar até" que lê
     # este valor acorda quando uma reunião do card é marcada, remarcada ou cancelada (Escuta#acordar_o_card).
     'card.tem_reuniao_marcada' => ->(card) { ::Autonomia::Automacao::ValoresDaReuniao.marcada_no_card?(card) },
+    # G29 (#2702): de onde o card veio (OrigemDoCard) e o nome do anúncio do formulário (Crm::MetaAds::LeadForms::Importer).
+    'card.origem' => ->(card) { ::Autonomia::Automacao::OrigemDoCard.de(card.source) },
+    'card.anuncio' => ->(card) { card.metadata.to_h.dig('meta_lead_form', 'ad_name') },
     # G12: a reunião da atividade que disparou o gatilho de reunião (Contexto#reuniao). O início sai no fuso da reunião,
     # o mesmo do convite que o cliente recebeu.
     'reuniao.inicio' => ->(reuniao) { ::Autonomia::Automacao::ValoresDaReuniao.inicio(reuniao) },
@@ -82,6 +85,16 @@ class Autonomia::Automacao::Valores
   # do fato: na partida (o filtro do gatilho) e nos passos da execução. Só nos gatilhos da troca (LugarDoValor).
   TROCA = ::Autonomia::Automacao::TrocaNoCard::VALORES
 
+  # G53: a mensagem que disparou o gatilho "mensagem que falhou" (Contexto#mensagem_que_falhou), para os passos depois
+  # dele ("manda por e-mail o mesmo conteúdo"). Só existe nesse gatilho; o salvar recusa no resto. A mensagem apagada
+  # e a que só tem anexo leem vazio, e o passo pula com `faltou_valor`: nunca sai pela metade.
+  FALHOU = {
+    'falhou.texto' => ->(mensagem) { mensagem.content unless mensagem.content_attributes.to_h['deleted'] }
+  }.freeze
+
+  # Os valores que uma lambda lê direto do objeto da base (o contexto, na troca).
+  LEITURA_DIRETA = [CAMPOS, ENVIO, TROCA, FALHOU].freeze
+
   # #2679: o texto que um passo de IA ("escrever", "resumir") desta execução produziu: `ia.<id do passo>`. Vale em
   # qualquer alvo: fica na execução, não no alvo. O salvar confere que o id é de um passo que escreve (Receita); antes de
   # ele rodar, ou num caminho em que ele não rodou, lê vazio, e o passo pula com `faltou_valor`.
@@ -89,8 +102,15 @@ class Autonomia::Automacao::Valores
   PASSOS_QUE_ESCREVEM = %w[escrever resumir].freeze
 
   # O que cada alvo alcança, pelas pontes do Contexto. O card da conversa (#2716) só para ler: CardDaConversa.
+  # De onde cada base lê no contexto da execução. O `card` fica fora: na conversa, ele cai no card dela (#2716). O
+  # `gatilho` (G9) lê o próprio contexto, que guarda a marca da troca.
+  LEITURA_DA_BASE = {
+    'conversa' => :conversa, 'contato' => :contato, 'reuniao' => :reuniao, 'envio' => :ultimo_envio, 'falhou' => :mensagem_que_falhou,
+    'gatilho' => :itself
+  }.freeze
+
   BASES_DO_ALVO = {
-    'Conversation' => %w[conversa contato card envio gatilho],
+    'Conversation' => %w[conversa contato card envio gatilho falhou],
     'Crm::Card' => %w[card conversa contato reuniao envio gatilho],
     'Contact' => %w[contato envio gatilho]
   }.freeze
@@ -125,6 +145,7 @@ class Autonomia::Automacao::Valores
     'conversa.responsavel_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'gatilho.repetiu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'conversa.cliente_mandou_documento' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'card.origem' => { 'opcoes' => ::Autonomia::Automacao::OrigemDoCard::GRUPOS, 'operadores' => %w[igual diferente] },
     'card.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'contato.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'envio.situacao' => { 'opcoes' => ::Autonomia::Automacao::Envio::SITUACOES.values, 'operadores' => %w[igual diferente] }
@@ -150,8 +171,8 @@ class Autonomia::Automacao::Valores
 
   class << self
     def caminho_valido?(caminho)
-      [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA, ENVIO, TROCA].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? ||
-        da_ia?(caminho)
+      [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA, ENVIO, TROCA, FALHOU].any? { |lista| lista.key?(caminho.to_s) } ||
+        atributo(caminho).present? || da_ia?(caminho)
     end
 
     def da_ia?(caminho) = caminho.to_s.start_with?(IA) && caminho.to_s.length > IA.length
@@ -233,13 +254,13 @@ class Autonomia::Automacao::Valores
     do_objeto(caminho) { |objeto| ::Autonomia::Automacao::Valores::Atributos.ler(base, chave, objeto) }
   end
 
-  def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave) || ENVIO.key?(chave) || DO_QUE_QUEM_VE.key?(chave) || TROCA.key?(chave)
+  def campo?(chave) = [AGENDA, DO_QUE_QUEM_VE, *LEITURA_DIRETA].any? { |lista| lista.key?(chave) }
 
   def do_campo(chave)
     return do_objeto(chave) { |objeto| DO_QUE_QUEM_VE[chave].call(objeto, account_user) } if DO_QUE_QUEM_VE.key?(chave)
     return do_objeto(chave) { |objeto| link_da_agenda(objeto, AGENDA[chave].call(objeto)) } if AGENDA.key?(chave)
 
-    do_objeto(chave) { |objeto| (CAMPOS[chave] || ENVIO[chave] || TROCA[chave]).call(objeto) }
+    do_objeto(chave) { |objeto| LEITURA_DIRETA.find { |lista| lista.key?(chave) }.fetch(chave).call(objeto) }
   end
 
   def link_da_agenda(objeto, pessoa)
@@ -272,13 +293,10 @@ class Autonomia::Automacao::Valores
 
   # A ponte vazia (card sem conversa, conversa sem contato) lê vazio.
   def da_base(caminho)
-    case caminho.to_s.split('.', 2).first
-    when 'conversa' then @contexto.conversa
-    when 'contato' then @contexto.contato
-    when 'card' then @contexto.card || card_da_conversa
-    when 'reuniao' then @contexto.reuniao
-    when 'envio' then @contexto.ultimo_envio
-    when 'gatilho' then @contexto
-    end
+    base = caminho.to_s.split('.', 2).first
+    return @contexto.card || card_da_conversa if base == 'card'
+
+    leitura = LEITURA_DA_BASE[base]
+    leitura && @contexto.public_send(leitura)
   end
 end

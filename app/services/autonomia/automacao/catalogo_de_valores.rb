@@ -10,13 +10,13 @@ module Autonomia::Automacao::CatalogoDeValores
   # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499). A resposta durante a espera
   # (G11) vem marcada `so_na_espera`: o editor só a oferece na condição do "esperar até". A reunião (G12) vem com
   # `so_nos_gatilhos`: o editor só a oferece nos gatilhos de reunião. O que era antes da troca (G9), só no gatilho da
-  # troca.
+  # troca. A mensagem que falhou (G53), só no gatilho dela e com `so_nos_passos`: fora do "Só se" do gatilho, que a
+  # Partida confere sem ela.
   def todos
     valores = ::Autonomia::Automacao::Valores
     campos = caminhos_dos_campos(valores).map do |caminho|
       { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho),
-        **do_protegido(caminho), 'so_na_espera' => (true if valores.da_resposta?(caminho)),
-        'so_nos_gatilhos' => valores.so_nos_gatilhos(caminho) }.compact
+        **do_protegido(caminho), **lugares(valores, caminho) }.compact
     end
     atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
       { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base),
@@ -27,10 +27,17 @@ module Autonomia::Automacao::CatalogoDeValores
 
   # A mensagem do gatilho (#2496), com as opções e os operadores do valor fechado. A que só o Guia monta vem marcada:
   # a tela não a oferece, mas mostra a frase, abre a condição que já a usa e a tira do "Só se" quando o gatilho muda.
-  # Os valores de leitura direta: os campos, os que dependem de quem vê, a agenda, a resposta, o envio e a troca.
+  # Os valores de leitura direta: os campos, os que dependem de quem vê, a agenda, a resposta, o envio, a troca e a
+  # mensagem que falhou.
   def caminhos_dos_campos(valores)
     valores::CAMPOS.keys + valores::DO_QUE_QUEM_VE.keys + valores::AGENDA.keys + valores::RESPOSTA.keys + valores::ENVIO.keys +
-      valores::TROCA.keys
+      valores::TROCA.keys + valores::FALHOU.keys
+  end
+
+  # Onde a receita pode ler o valor: na espera, em certos gatilhos (LugarDoValor), só nos passos.
+  def lugares(valores, caminho)
+    { 'so_na_espera' => (true if valores.da_resposta?(caminho)), 'so_nos_gatilhos' => valores.so_nos_gatilhos(caminho),
+      'so_nos_passos' => (true if valores.da_falha?(caminho)) }
   end
 
   # O campo de pessoa da equipe do card (G62): além do campo (o id), o nome e a ausência, com as opções da G23.
