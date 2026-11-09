@@ -138,6 +138,88 @@ RSpec.describe Autonomia::Agents::Knowledge::Ingestor do
     end
   end
 
+  # #1431 (F1) — o processor entregou blocos (flag rag_corte_por_estrutura): o corte é por seção, e não pelo Chunker.
+  describe '#perform with the blocks the processor read' do
+    let(:blocos) do
+      [{ tipo: :titulo, nivel: 1, texto: 'COBERTURAS', pagina: 3 },
+       { tipo: :paragrafo, texto: 'A cobertura basica protege o veiculo contra colisao, incendio e roubo total. ' * 4, pagina: 3 },
+       { tipo: :titulo, nivel: 1, texto: 'ASSISTENCIA 24 HORAS', pagina: 9 },
+       { tipo: :paragrafo, texto: 'O guincho atende ate duzentos quilometros da residencia do segurado. ' * 4, pagina: 9 }]
+    end
+
+    before do
+      allow(processor).to receive(:extract) do
+        source.blocos = blocos
+        blocos.pluck(:texto).join("\n\n")
+      end
+    end
+
+    it 'cuts by section, with the path and the pages on every piece', :aggregate_failures do
+      source.update!(reference: 'condicoes-gerais.pdf')
+      run!
+
+      guincho = source.reload.knowledge_entries.order(:chunk_index).last
+      expect(guincho.content).to start_with("condicoes-gerais › ASSISTENCIA 24 HORAS\n\n")
+      expect(guincho.metadata).to include('paginas_do_trecho' => [9, 9], 'section_heading' => 'ASSISTENCIA 24 HORAS',
+                                          'material_type' => 'secao')
+      expect(guincho.metadata['caminho']).to eq(['condicoes-gerais', 'ASSISTENCIA 24 HORAS'])
+      expect(guincho.metadata['secao_id']).to be_present
+    end
+
+    # PR 1b: o trecho de item aponta para o chunk_index do trecho da seção; o vetor vazio no meio não pode deslocá-lo, e o
+    # "N trechos" do material não conta item.
+    context 'with item pieces' do
+      let(:fileiras) { (1..4).map { |n| "Prazo: #{n * 15} dias | % do premio: #{n * 10}%" } }
+      let(:blocos) do
+        [{ tipo: :titulo, nivel: 1, texto: 'COBERTURAS', pagina: 3 },
+         { tipo: :paragrafo, texto: 'A cobertura basica protege o veiculo contra colisao, incendio e roubo total. ' * 4, pagina: 3 },
+         { tipo: :titulo, nivel: 1, texto: 'PRAZO CURTO', pagina: 9 },
+         { tipo: :tabela, texto: fileiras.join("\n"), itens: fileiras, pagina: 9 }]
+      end
+
+      it 'keeps the pointer of every item on its section piece, even after an empty vector', :aggregate_failures do
+        allow(embedder).to receive(:embed_batch) { |chunks| chunks.each_with_index.map { |_, indice| indice.zero? ? [] : fake_vector } }
+
+        count = run!
+        entries = source.reload.knowledge_entries.order(:chunk_index).to_a
+        itens = entries.select { |entry| entry.metadata['material_type'] == 'item' }
+
+        expect(itens.size).to eq(4)
+        pai = ->(item) { entries.find { |e| e.chunk_index == item.metadata['trecho_da_secao'] } }
+        expect(itens).to all(satisfy { |item| pai.call(item)&.content&.include?(item.content.split("\n\n", 2).last) })
+        expect(count).to eq(1)
+      end
+    end
+
+    # A chave `paginas` é a seção de 25 páginas do material grande: o ResumoPorSecao agrupa por ela (chamada paga por
+    # seção) e o Revisor reconhece o material grande por ela. PDF pequeno não a recebe só por ter sido cortado por seção.
+    it 'gives a small PDF no `paginas`, so the summary by section and the Reviewer see a small material' do
+      run!
+
+      expect(source.reload.knowledge_entries.where("metadata ? 'paginas'")).to be_empty
+    end
+
+    it 'stamps the 25-page section where each piece starts on a large PDF', :aggregate_failures do
+      allow(processor).to receive(:extract) do
+        source.blocos = blocos
+        source.secoes = [{ 'paginas' => [1, 5], 'texto' => 'COBERTURAS' }, { 'paginas' => [6, 10], 'texto' => 'ASSISTENCIA' }]
+        blocos.pluck(:texto).join("\n\n")
+      end
+      run!
+
+      entries = source.reload.knowledge_entries.order(:chunk_index)
+      expect(entries.first.metadata).to include('paginas' => [1, 5], 'paginas_do_trecho' => [3, 3])
+      expect(entries.last.metadata).to include('paginas' => [6, 10], 'paginas_do_trecho' => [9, 9])
+    end
+
+    it 'leaves the document name out of the path when the material has none' do
+      source.update!(reference: nil)
+      run!
+
+      expect(source.reload.knowledge_entries.order(:chunk_index).last.content).to start_with("ASSISTENCIA 24 HORAS\n\n")
+    end
+  end
+
   it 'leaves the pages out of the metadata when the material has no sections' do
     run!
 

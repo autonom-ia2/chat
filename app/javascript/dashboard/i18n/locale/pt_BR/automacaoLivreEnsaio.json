@@ -96,6 +96,7 @@
       "PASSO_SUMIU": "Um passo que não está nesta versão",
       "SEGUIU_POR": "Seguiu por: {ramo}",
       "ESPERA_ATE": "Espera até {quando}",
+      "CONVERSAS_FORA": "O resumo deixou de fora {n} conversa: nem todos que veem esta conversa podem vê-la. | O resumo deixou de fora {n} conversas: nem todos que veem esta conversa podem vê-las.",
       "CONVERSA_PRINCIPAL": "Abriu uma conversa, que virou a principal do card",
       "TENTATIVA": "Tentativa {n}",
       "IA": "IA: US$ {valor}",
