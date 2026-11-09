@@ -27,9 +27,11 @@ class Autonomia::Automacao::PassoDeResumir
   def self.ensaiar(passo) = { destino: fala_com_gente?(passo) ? 'avisar' : 'nota' }
 
   # O que vai à IA: o mesmo na execução e no "Testar este passo" (#2500 C2).
+  # A instrução da pessoa (G41, opcional) vem depois do texto fixo, como no "escrever".
   def self.consulta(passo, estado)
-    { modelo: MODELO, instrucoes: format(INSTRUCOES, linhas: passo['linhas'] || LINHAS), entrada: { conversa: estado.conversa },
-      schema: SCHEMA }
+    instrucoes = format(INSTRUCOES, linhas: passo['linhas'] || LINHAS)
+    instrucoes = "#{instrucoes}\nInstrução: #{passo['instrucao']}" if passo['instrucao'].present?
+    { modelo: MODELO, instrucoes: instrucoes, entrada: { conversa: estado.conversa }, schema: SCHEMA }
   end
 
   def executar

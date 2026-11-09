@@ -117,16 +117,17 @@ module Autonomia::Automacao::Catalogo
 
       { 'tipo' => tipo, 'grupo' => declarado.dig('nativos', tipo, 'grupo'), 'requer' => declarado.dig('nativos', tipo, 'requer'),
         'funil' => declarado.dig('nativos', tipo, 'funil'), 'frase' => chave('PASSOS', tipo),
-        'campos' => campos_nativos(forma, declarado.dig('nativos', tipo, 'peca')) }.compact
+        'campos' => campos_nativos(forma, declarado.dig('nativos', tipo, 'peca'), declarado.dig('nativos', tipo, 'rotulos')) }.compact
     end
   end
 
-  # `peca` no yml (a campanha, G14): uma peça só mostra o passo inteiro.
-  def campos_nativos(forma, peca_do_passo = nil)
+  # `peca` no yml (a campanha, G14): uma peça só mostra o passo inteiro. `rotulos` (G41): o rótulo próprio de um campo
+  # neste passo.
+  def campos_nativos(forma, peca_do_passo = nil, rotulos = nil)
     forma['properties'].except('id', 'tipo').map do |nome, propriedade|
       peca = peca_do_passo || PECAS_DO_ESQUEMA[propriedade['$ref'].to_s.split('/').last] || PECAS_SEM_DEFINICAO[nome]
       { 'nome' => nome, 'peca' => peca,
-        'obrigatorio' => forma['required'].include?(nome), 'rotulo' => chave('CAMPOS', nome) }
+        'obrigatorio' => forma['required'].include?(nome), 'rotulo' => chave('CAMPOS', rotulos.to_h[nome] || nome) }
     end
   end
 

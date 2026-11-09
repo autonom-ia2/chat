@@ -24,6 +24,8 @@ defineProps({
   // Rodada 4: no celular o texto ganha a largura toda e "Alterar" desce,
   // alinhado à direita ("Como vamos procurar" em até 2 linhas).
   alterarEmbaixo: { type: Boolean, default: false },
+  // Enquanto a IA lê o pedido em uma frase (#2696), "Alterar" não abre nada.
+  bloqueado: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['alterar']);
@@ -52,6 +54,7 @@ const TONS = {
       faded
       size="sm"
       class="!min-h-11 !rounded-xl shrink-0"
+      :disabled="bloqueado"
       data-alterar
       @click="emit('alterar')"
     />
@@ -93,6 +96,7 @@ const TONS = {
       size="sm"
       class="!min-h-11 !rounded-xl shrink-0"
       :class="{ 'ms-auto md:ms-0': alterarEmbaixo }"
+      :disabled="bloqueado"
       data-alterar
       @click="emit('alterar')"
     />

@@ -34,7 +34,6 @@ require 'rails_helper'
 #   quem entrevista é o do card da seleção, e o card não é o alvo da automação da mensagem.
 # - Passo 6 (G18): fechar o card criado no passo 2 é agir no card a partir da conversa; o salvar recusa `card.id`, e a
 #   receita inteira não salva com ele. Por isso a receita dos outros passos vem sem o fechar.
-# - Passo 8 (G32): o gatilho "antes da reunião" (`card.antes_da_reuniao`) ainda não está nesta base.
 RSpec.describe 'Fechamento #2414 · exemplo 18: seleção de candidatos sem planilha', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 
@@ -148,7 +147,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 18: seleção de candidatos sem plan
     ] }
   end
 
-  # Passo 8, como o PR da G32 desenha o gatilho (#2709).
+  # Passo 8, com o gatilho "antes da reunião" da G32 (#2751).
   def receita_do_lembrete
     { gatilho: { tipo: 'card.antes_da_reuniao', antes: { valor: 1, unidade: 'dias' }, pagina_id: entrevistas.id }, passos: [
       { id: 'lembra_o_endereco', tipo: 'mensagem', texto: ['Amanhã é a sua entrevista. Endereço: ', endereco],
@@ -378,7 +377,6 @@ RSpec.describe 'Fechamento #2414 · exemplo 18: seleção de candidatos sem plan
   end
 
   it 'passo 8: 1 dia antes da entrevista, a candidata recebe pelo modelo aprovado o endereço', :aggregate_failures do
-    pending 'G32: o gatilho "antes da reunião" ainda não existe nesta base'
     ligada('Lembrete da entrevista', receita_do_lembrete)
     candidata_manda_o_curriculo
     entrevista = fuso.parse('2026-11-13 09:00')

@@ -419,6 +419,7 @@
         "LOAD_ERROR": "Could not load now. Try again in a moment.",
         "ACTION_ERROR": "Could not do that now. Try again.",
         "SAVE_ERROR": "Could not save the audience now. Try again.",
+        "SAVE_ERROR_FOREIGN_CONTACT": "One of the contacts was deleted while the audience was being saved. Try again.",
         "SEARCH_IN_PROGRESS": "You already have a search running. Wait for it to finish or stop it first."
       },
       "SOURCE": {

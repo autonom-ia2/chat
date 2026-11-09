@@ -8,14 +8,17 @@ module Crm
       # novas tentativas daqui (rede, tempo esgotado, 408, 429 e 5xx); quem chama decide se tenta de novo mais tarde
       # (o leitor de mídia do CRM, #2109). Sem `status:` nem `rede:`, como antes: não é passageira. `tempo_esgotado?`: o
       # pedido chegou e a resposta não voltou a tempo (Net::ReadTimeout): a OpenAI pode ter processado e cobrado (#2301).
+      # `incomplete_reason`: a OpenAI parou a resposta no meio (status incomplete; por exemplo, max_output_tokens) e não
+      # sobrou texto. Vem só o motivo que ela manda, nunca o texto (#2696).
       class Error < StandardError
-        attr_reader :status
+        attr_reader :status, :incomplete_reason
 
-        def initialize(message = nil, status: nil, rede: false, tempo_esgotado: false)
+        def initialize(message = nil, status: nil, rede: false, tempo_esgotado: false, incomplete_reason: nil)
           super(message)
           @status = status
           @rede = rede
           @tempo_esgotado = tempo_esgotado
+          @incomplete_reason = incomplete_reason
         end
 
         def passageira?
@@ -77,13 +80,18 @@ module Crm
 
       # `tool_choice:` (#1367) desliga as ferramentas de UMA chamada ('none') sem tirá-las da lista: a lista faz parte
       # do prefixo em cache, e mudá-la faria a chamada seguinte, com as ferramentas, perder o cache. Ausente, o corpo
-      # é exatamente o de antes.
+      # é exatamente o de antes. `max_output_tokens:` (#2696) é o teto de saída da chamada (raciocínio incluído); nil,
+      # o padrão, não vai no corpo. `total_timeout:` (#2696) é o prazo da chamada HTTP inteira, em segundos (o `timeout:`
+      # vale por operação: abrir, escrever, ler); nil, o padrão, não muda nada. Ver `with_total_timeout`.
       def create(model:, instructions:, input:, schema: nil, reasoning_effort: 'low', tools: nil, timeout: REQUEST_TIMEOUT,
-                 tool_choice: nil)
+                 tool_choice: nil, max_output_tokens: nil, total_timeout: nil)
         body = base_body(model, instructions, input, schema, reasoning_effort, tools).merge(store: false)
         body[:tool_choice] = tool_choice if tool_choice.present? && tools.present?
+        body[:max_output_tokens] = max_output_tokens if max_output_tokens.present?
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        response = post_responses(body, timeout: timeout, operation: 'responses.create', started_at: started_at)
+        response = with_total_timeout(total_timeout, model: model, started_at: started_at) do
+          post_responses(body, timeout: timeout, operation: 'responses.create', started_at: started_at)
+        end
         parse_response(response, model: model, requested_tools: tools, started_at: started_at, reasoning_effort: reasoning_effort)
       end
 
@@ -249,6 +257,20 @@ module Crm
         raise
       end
 
+      # O prazo total envolve SÓ a ida HTTP, nunca o registro de uso nem outra escrita no banco (o mesmo padrão do
+      # Autonomia::Prospecting::SafePageFetcher#fetch). A classe do estouro é própria: o Net::HTTP pega Timeout::Error e
+      # Net::ReadTimeout lá dentro. Estourou, sai o mesmo erro de prazo da rede (`network_timeout:`, tempo esgotado).
+      class TotalTimeout < StandardError; end
+
+      def with_total_timeout(seconds, model:, started_at:, &)
+        return yield if seconds.nil?
+
+        Timeout.timeout(seconds, TotalTimeout, &)
+      rescue TotalTimeout
+        log_failure('responses.create', model: model, error_type: 'total_timeout', started_at: started_at)
+        raise Error.new('network_timeout: total_timeout', rede: true, tempo_esgotado: true)
+      end
+
       # Até duas novas tentativas só do HTTP; nunca repete o executor de ferramentas.
       # Erros permanentes (400/401/403/404/422) seguem direto ao tratamento existente.
       # Timeout e erro HTTP (aqui e no parse_raw) não gravam consumo: sem `usage` no payload não há
@@ -329,26 +351,36 @@ module Crm
         # Grava ANTES de checar o texto: a ida que volta vazia também foi cobrada (#1656).
         record_usage(payload['usage'], model, reasoning_effort, started_at) if registrar_uso
         text = payload['output_text'].presence || extract_output_text(payload)
+        incomplete = incomplete_reason(payload)
         if text.blank?
           log_failure(
             'responses.create',
             model: model,
             response_id: payload['id'],
             error_code: 'empty_response',
+            error_type: incomplete && "incomplete_#{incomplete}",
             error_message: 'empty_response',
             started_at: started_at
           )
-          raise Error, 'empty_response'
+          raise Error.new('empty_response', incomplete_reason: incomplete)
         end
 
         used = tools_used(payload)
         log_call(model, requested_tools, used, started_at)
-        {
+        result = {
           text: text,
           usage: payload['usage'] || {},
           response_id: payload['id'],
           tools_used: used
         }
+        # Só quando a resposta veio cortada (#2696): o texto pode ser um pedaço. Sem corte, o hash é o de antes.
+        incomplete ? result.merge(incomplete_reason: incomplete) : result
+      end
+
+      def incomplete_reason(payload)
+        return unless payload['status'] == 'incomplete'
+
+        payload.dig('incomplete_details', 'reason').presence || 'unknown'
       end
 
       def function_calls(payload)
@@ -398,9 +430,15 @@ module Crm
           request_id: response.headers['x-request-id'] || response.headers['openai-request-id'],
           error_code: error.is_a?(Hash) ? error['code'] : nil,
           error_type: error.is_a?(Hash) ? error['type'] : nil,
-          error_message: extract_error_message(response),
+          error_message: http_error_message(response),
           started_at: started_at
         )
+      end
+
+      # No 4xx a mensagem da OpenAI pode ecoar o input (o texto do cliente): o log fica com error_code e error_type.
+      # No 5xx a mensagem é do lado deles e continua no log.
+      def http_error_message(response)
+        response.code.to_i.between?(400, 499) ? nil : extract_error_message(response)
       end
 
       def log_exception(operation, exception, model: nil, response_id: nil, started_at: nil)

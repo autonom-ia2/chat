@@ -11,7 +11,8 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # O 4 tem spec próprio à risca (exemplo_04_aluno_que_falta_spec.rb); esperam a G50 (a segunda falta com a primeira
     # ainda esperando), a G44 (passos 6 e 8, link de uma página escolhida) e a G18 (passo 10, fechar o card de retenção).
     4 => ['Aluno que começa a faltar', 'G50 (reentrada no mesmo card), G44, G18, G5, G1, G3, G4, G12, G15, G25, G28'],
-    5 => ['Revisão do carro no tempo certo', 'G5 (card ganho), G1, G3, G6, G12, G16, G19, G28, G32, G36'],
+    # O 5 tem spec próprio à risca (exemplo_05_revisao_do_carro_spec.rb); só o passo 8 espera a G47.
+    5 => ['Revisão do carro no tempo certo', 'G47 (a revisão cancelada no card que a página criou), G5, G1, G3, G6, G12, G16, G19, G28, G32, G36'],
     # O 6 tem spec próprio à risca (exemplo_06_aniversario_spec.rb); a conversa é a da G33 (#2680); esperam a G56
     # (passos 8 e 9, reunião atendida), a G44 (passo 2), a G18 (passo 5) e a G32 (passos 6, 7 e 10).
     6 => ['Aniversário que vira horário marcado', 'G56 (reunião atendida), G44, G18, G32, G6, G1, G4, G12, G14, G16, G25, G33'],

@@ -421,6 +421,60 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
     end
   end
 
+  # G41 (#2752, exemplo 10, passo 7): com a agente de IA atendendo, ninguém é a pessoa da conversa. O responsável é o
+  # dono do card da conversa, o "Responsável" do CRM. Sem card ou sem dono, o passo pula com sem_responsavel.
+  describe 'avisar o responsável com a agente de IA atendendo' do
+    let(:inbox) { conversa.inbox }
+    let(:dona_do_card) { create(:user, account: account, role: :agent, name: 'Fernanda') }
+    let(:funil) { create_crm_pipeline(account: account, user: admin) }
+    let(:passo) { avisar_passo('p1', { 'responsavel' => true }, 'O cliente ', { '$valor' => 'contato.nome' }, ' está irritado') }
+
+    around { |exemplo| with_modified_env(CRM_KANBAN_ENABLED: 'true') { exemplo.run } }
+
+    before do
+      create(:inbox_member, user: dona_do_card, inbox: inbox)
+      conversa.update!(assignee: nil, ai_assignee: create(:agent_bot, account: account))
+    end
+
+    def card_da_conversa(dono)
+      Crm::Card.create!(account: account, pipeline: funil.first, stage: funil.last, title: 'Pedido', currency: 'BRL',
+                        contact: contato, primary_conversation: conversa, owner: dono)
+    end
+
+    it 'avisa a dona do card, sem tirar a conversa da agente', :aggregate_failures do
+      card_da_conversa(dona_do_card)
+
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [passo]))
+
+      expect(registros(execucao)).to eq([['p1', 'ok', nil]])
+      expect(conversa.messages.where(private: true).last.content).to include("mention://user/#{dona_do_card.id}/")
+      expect(dados_do(execucao)).to include('pessoas' => [dona_do_card.id])
+      expect(conversa.reload.ai_assignee).to be_present
+    end
+
+    it 'card sem dono: pula com sem_responsavel, sem nota', :aggregate_failures do
+      card_da_conversa(nil)
+
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [passo]))
+
+      expect(registros(execucao)).to eq([%w[p1 pulado sem_responsavel]])
+      expect(conversa.messages.where(private: true)).to be_empty
+    end
+
+    it 'conversa sem card: pula com sem_responsavel' do
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [passo]))
+
+      expect(registros(execucao)).to eq([%w[p1 pulado sem_responsavel]])
+    end
+
+    it 'com outras pessoas na lista, elas recebem mesmo sem responsável', :aggregate_failures do
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [avisar_passo('p1', { 'responsavel' => true, 'pessoas' => [admin.id] }, 'Oi')]))
+
+      expect(registros(execucao)).to eq([['p1', 'ok', nil]])
+      expect(dados_do(execucao)).to include('pessoas' => [admin.id])
+    end
+  end
+
   describe 'alvo card' do
     let(:execucao) { comecar(automacao_ligada(account, admin, [esperar_passo('p0')]), conversa) }
     let(:funil) { create_crm_pipeline(account: account, user: admin) }

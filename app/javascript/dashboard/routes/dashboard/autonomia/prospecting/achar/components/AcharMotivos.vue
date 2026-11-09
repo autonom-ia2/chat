@@ -8,6 +8,9 @@ import Button from 'dashboard/components-next/button/Button.vue';
 // "Outro motivo" (v4), que abre um campo para escrever.
 defineProps({
   titulo: { type: String, required: true },
+  // #2697: na fila, com uma gravação em voo, os motivos e o "Confirmar" ficam
+  // desligados. A gaveta não passa nada e não muda.
+  ocupado: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['escolher']);
@@ -37,6 +40,7 @@ const outro = ref('');
         type="button"
         class="flex flex-col items-start gap-3 p-4 transition border-2 border-solid text-start min-h-24 rounded-2xl border-n-slate-6 bg-n-solid-1 hover:border-n-slate-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand"
         :data-motivo="motivo.id"
+        :disabled="ocupado"
         @click="emit('escolher', motivo.id)"
       >
         <span
@@ -70,11 +74,12 @@ const outro = ref('');
         id="achar-outro-motivo"
         v-model="outro"
         rows="2"
+        maxlength="255"
         class="w-full px-3 py-2 text-base border outline-none !mb-0 rounded-xl border-n-slate-6 bg-n-solid-1 text-n-slate-12 focus:border-n-blue-9"
       />
       <Button
         :label="$t('PROSPECTING_ACHAR.COMUM.CONFIRMAR')"
-        :disabled="!outro.trim()"
+        :disabled="ocupado || !outro.trim()"
         class="self-start !min-h-12 !rounded-xl !px-6 !text-base"
         @click="emit('escolher', 'other', outro.trim())"
       />

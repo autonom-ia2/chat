@@ -1,7 +1,8 @@
 require 'rails_helper'
 
-# A tela esconde Enviar ao CRM e Adicionar à campanha de quem o servidor recusaria (#682). O payload das configurações
-# diz o que o próprio servidor decide: Crm::CardPolicy#create? para o CRM e campaign_manage para a campanha.
+# A tela esconde Enviar ao CRM de quem o servidor recusaria (#682). O payload das configurações diz o que o próprio
+# servidor decide: Crm::CardPolicy#create?. O "Adicionar à campanha" saiu com o segmento por etiqueta (#2695), e com ele
+# o can_manage_campaigns.
 RSpec.describe 'Autonomia prospecting settings permissions', type: :request do
   let(:account) { create(:account) }
   let(:settings_url) { "/api/v1/accounts/#{account.id}/autonomia/prospecting/settings" }
@@ -18,26 +19,22 @@ RSpec.describe 'Autonomia prospecting settings permissions', type: :request do
   def permissions_for(user)
     get settings_url, headers: auth_headers(user)
     expect(response).to have_http_status(:ok)
-    response.parsed_body['payload'].slice('can_send_to_crm', 'can_manage_campaigns')
+    response.parsed_body['payload']
   end
 
-  it 'administrador pode enviar ao CRM e mexer em campanha' do
-    expect(permissions_for(create(:user, :administrator, account: account)))
-      .to eq('can_send_to_crm' => true, 'can_manage_campaigns' => true)
+  it 'administrador pode enviar ao CRM' do
+    expect(permissions_for(create(:user, :administrator, account: account))).to include('can_send_to_crm' => true)
   end
 
-  it 'papel só com a prospecção não pode nenhum dos dois' do
-    expect(permissions_for(agent_with(['prospecting_view'])))
-      .to eq('can_send_to_crm' => false, 'can_manage_campaigns' => false)
+  it 'papel só com a prospecção não pode enviar ao CRM' do
+    expect(permissions_for(agent_with(['prospecting_view']))).to include('can_send_to_crm' => false)
   end
 
-  it 'papel com crm_manage_cards pode enviar ao CRM, sem campanha' do
-    expect(permissions_for(agent_with(%w[prospecting_manage crm_manage_cards])))
-      .to eq('can_send_to_crm' => true, 'can_manage_campaigns' => false)
+  it 'papel com crm_manage_cards pode enviar ao CRM' do
+    expect(permissions_for(agent_with(%w[prospecting_manage crm_manage_cards]))).to include('can_send_to_crm' => true)
   end
 
-  it 'papel com campaign_manage mexe em campanha, sem CRM' do
-    expect(permissions_for(agent_with(%w[prospecting_manage campaign_manage])))
-      .to eq('can_send_to_crm' => false, 'can_manage_campaigns' => true)
+  it 'o payload não diz mais nada de campanha' do
+    expect(permissions_for(agent_with(%w[prospecting_manage campaign_manage]))).not_to have_key('can_manage_campaigns')
   end
 end

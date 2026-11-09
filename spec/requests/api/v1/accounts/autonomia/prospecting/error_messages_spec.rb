@@ -66,42 +66,11 @@ RSpec.describe 'Autonomia prospecting error messages', type: :request do
     expect(response.parsed_body['error']).to eq(I18n.t('autonomia.prospecting.errors.lead_required'))
   end
 
-  it 'público de campanha de lista vazia responde com a frase e o código' do
-    list = Autonomia::Prospecting::List.create!(account: account, user: admin, name: 'Vazia')
-
-    post "#{base_url}/lists/#{list.id}/campaign_segment", headers: auth_headers(admin)
-
-    expect(response).to have_http_status(:unprocessable_entity)
-    expect(error_and_code).to eq('error' => I18n.t('autonomia.prospecting.campaign_errors.empty_list'),
-                                 'code' => 'prospecting.campaign.empty_list')
-  end
-
-  it 'campanha que não existe responde com a frase e o código' do
-    lead.update!(status: 'ready_for_campaign',
-                 metadata: { 'whatsapp_verification' => { 'status' => 'verified', 'phone' => '+55 31 99999-0001' } })
-
-    post "#{base_url}/leads/campaign_segment", params: { lead_ids: [lead.id], campaign_id: 999_999, segment_name: 'Sel' },
-                                               headers: auth_headers(admin), as: :json
-
-    expect(response).to have_http_status(:not_found)
-    expect(error_and_code).to eq('error' => I18n.t('autonomia.prospecting.campaign_errors.not_found'),
-                                 'code' => 'prospecting.campaign.not_found')
-  end
-
-  it 'seleção vazia para a campanha responde com a frase e o código' do
-    post "#{base_url}/leads/campaign_segment", params: { lead_ids: [], segment_name: 'Sel' }, headers: auth_headers(admin), as: :json
-
-    expect(response).to have_http_status(:unprocessable_entity)
-    expect(error_and_code).to eq('error' => I18n.t('autonomia.prospecting.campaign_errors.empty_selection'),
-                                 'code' => 'prospecting.campaign.empty_selection')
-  end
-
   it 'as frases existem em en e em pt_BR, iguais' do
     keys = %w[errors.disabled errors.enrichment_disabled errors.query_required errors.limit_invalid errors.limit_too_high
-              errors.unsupported_provider errors.lead_required campaign_errors.not_found campaign_errors.empty_list
-              campaign_errors.no_eligible_leads campaign_errors.label_collision_visible_on_sidebar
-              campaign_errors.unsupported_campaign campaign_errors.campaign_not_active campaign_errors.too_many_leads
-              campaign_errors.empty_selection]
+              errors.unsupported_provider errors.lead_required campaign_errors.forbidden audience.errors.no_leads
+              audience.errors.too_many_leads audience.errors.no_rows audience.errors.foreign_contact audience.errors.contacts_saved
+              audience.left_out.same_contact]
 
     keys.each do |key|
       english = I18n.t("autonomia.prospecting.#{key}", locale: :en, max: 1, raise: true)

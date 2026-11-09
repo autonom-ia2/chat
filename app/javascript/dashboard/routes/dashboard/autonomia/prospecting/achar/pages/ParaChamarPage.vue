@@ -1,7 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import AcharEstado from '../components/AcharEstado.vue';
 import AcharRodape from '../components/AcharRodape.vue';
@@ -9,48 +8,92 @@ import AcharFaixaDoMenu from '../components/AcharFaixaDoMenu.vue';
 import AcharLinhaFrase from '../components/AcharLinhaFrase.vue';
 import AcharMotivos from '../components/AcharMotivos.vue';
 import AcharParaOndePainel from '../components/AcharParaOndePainel.vue';
+import AcharComQuemFica from '../components/AcharComQuemFica.vue';
 import AcharEmpresaGaveta from '../components/AcharEmpresaGaveta.vue';
 import ParaChamarCartao from '../components/ParaChamarCartao.vue';
 import ParaChamarFim from '../components/ParaChamarFim.vue';
 import AcharBarra from '../components/AcharBarra.vue';
 import { useAcharTela } from '../composables/useAcharTela';
-import { escolherDestino } from '../utils/destinoPronto';
+import { useDonoDaLista } from '../composables/useDonoDaLista';
+import { useFilaParaChamar } from '../composables/useFilaParaChamar';
 import { ROTAS } from '../utils/acharRotas';
 
 // #2692 — T5, a fila "Para chamar" (v4, fase 5): uma empresa por vez, sem
 // pensar em busca. Um botão principal no rodapé ("Mandar para o funil"); depois
 // de mandar, o principal vira "Chamar no WhatsApp" (ou "Ligar") e o link
 // "Próxima empresa" anda. "Não serve" pede um dos 4 motivos e a fila anda;
-// "Depois" volta amanhã. Fora da demonstração a fila vem vazia: ela pede o
-// backend leads#index com view=queue (v4, PR 5a).
+// "Depois" volta amanhã.
 // Rodada 2: o aviso guarda a chave do texto (não o texto pronto), para nunca
 // ficar na língua de antes de o idioma da conta carregar; "Ver mais sobre a
 // empresa" abre a gaveta; o fim do dia sai da própria jornada.
+// #2697 (F5): a fila vem do servidor (leads?view=queue) e as ações gravam; a
+// lógica mora em useFilaParaChamar. Quem gere funis escolhe com quem a empresa
+// fica ("Com quem fica", #2694).
 const { t } = useI18n();
-const { route, router, demo, fonte, permissoes, irPara, mudarEstado } =
-  useAcharTela();
+const {
+  route,
+  router,
+  demo,
+  fonte,
+  permissoes,
+  ajustes,
+  carregarAjustes,
+  irPara,
+  mudarEstado,
+  contaId,
+  usuarioId,
+} = useAcharTela();
 
 const NS = 'PROSPECTING_ACHAR.FILA';
-const ESPERA = 500;
 
-const carregando = ref(true);
-const cartoes = ref([]);
-const indice = ref(0);
-const fase = ref('cartao');
-const mandando = ref(false);
-const aviso = ref(null);
-const foram = ref(0);
-const voltam = ref(0);
-const naoServem = ref(0);
-const funis = ref([]);
 const destino = ref(null);
-const painelDestino = ref(false);
+const painel = ref(null);
 const gavetaAberta = ref(false);
-
-const estado = computed(() => demo.value || '');
 const pode = computed(() => permissoes.value);
-const atual = computed(() => cartoes.value[indice.value] || null);
-const temWhatsapp = computed(() => atual.value?.whatsapp === 'tem');
+
+const { pessoas, pessoaId, pessoaNome, donoId } = useDonoDaLista({
+  fonte,
+  permissoes,
+  destino,
+});
+const {
+  carregando,
+  erro,
+  cartoes,
+  truncada,
+  teto,
+  indice,
+  fase,
+  mandando,
+  ocupado,
+  gravando,
+  aviso,
+  foram,
+  voltam,
+  naoServem,
+  funis,
+  mandado,
+  atual,
+  temWhatsapp,
+  andar,
+  carregar,
+  mandar,
+  chamar,
+  tirar,
+  depois,
+  desfazer,
+} = useFilaParaChamar({
+  demo,
+  fonte,
+  carregarAjustes,
+  ajustes,
+  contaId,
+  usuarioId,
+  destino,
+  donoId,
+  pessoaNome,
+});
+
 const rotuloChamar = computed(() =>
   temWhatsapp.value
     ? t('PROSPECTING_ACHAR.COMUM.CHAMAR_WHATSAPP')
@@ -83,123 +126,40 @@ const empresaDaGaveta = computed(() => ({
 const temRodape = computed(
   () =>
     !carregando.value &&
+    !erro.value &&
     (fase.value === 'fim' ? cartoes.value.length > 0 : Boolean(atual.value))
 );
+const linhasDoRodape = computed(
+  () => pode.value.funil && destino.value && fase.value === 'cartao'
+);
 
-const ESTADOS = {
-  'fila-sucesso': { fase: 'sucesso' },
-  'fila-sucesso-ligar': { indice: 2, fase: 'sucesso' },
-  'fila-nao-serve': { fase: 'nao-serve' },
-  'fila-depois': { indice: 1, depois: true },
-  'fila-procurando-dono': { indice: 3 },
-  'fila-sem-dono': { indice: 2 },
-  'fila-so-telefone': { indice: 2 },
-  'fila-fim': { fase: 'fim' },
-  'fila-fim-adiados': { fase: 'fim' },
-};
-
-const andar = () => {
-  fase.value = 'cartao';
-  if (indice.value + 1 >= cartoes.value.length) {
-    fase.value = 'fim';
-    return;
-  }
-  indice.value += 1;
-};
-
-const carregar = async () => {
-  carregando.value = true;
-  try {
-    const [fila, lista] = await Promise.all([
-      fonte.value.fila(),
-      fonte.value.funis(),
-    ]);
-    cartoes.value = fila.cartoes;
-    funis.value = lista;
-    destino.value = escolherDestino({ funis: lista });
-    const preset = ESTADOS[estado.value] || {};
-    indice.value = preset.indice || 0;
-    fase.value = preset.fase || 'cartao';
-    foram.value = preset.fase === 'fim' ? fila.fim?.foramParaOFunil || 0 : 0;
-    voltam.value = preset.fase === 'fim' ? fila.fim?.voltamAmanha || 0 : 0;
-    naoServem.value = preset.fase === 'fim' ? fila.fim?.naoServem || 0 : 0;
-    aviso.value = preset.depois
-      ? {
-          chave: `${NS}.DEPOIS_AVISO`,
-          params: { nome: fila.cartoes[0]?.nome },
-          desfazer: () => {
-            indice.value -= 1;
-          },
-        }
-      : null;
-  } catch {
-    cartoes.value = [];
-  }
-  carregando.value = false;
-};
-
-const mandar = async () => {
-  if (mandando.value) return;
-  mandando.value = true;
-  await new Promise(resolve => {
-    setTimeout(resolve, demo.value ? ESPERA : 0);
-  });
-  mandando.value = false;
-  foram.value += 1;
-  fase.value = 'sucesso';
-};
-const chamar = () => useAlert(t('PROSPECTING_ACHAR.COMUM.DEMO_WHATSAPP'));
 const agir = () => {
   const acoes = {
-    chamar,
+    chamar: () => chamar(),
     mandar,
     destino: () => {
-      painelDestino.value = true;
+      painel.value = 'destino';
     },
   };
   acoes[principal.value.acao]();
-};
-
-const tirar = () => {
-  const voltar = indice.value;
-  naoServem.value += 1;
-  andar();
-  aviso.value = {
-    chave: `${NS}.SAIU`,
-    desfazer: () => {
-      naoServem.value -= 1;
-      indice.value = voltar;
-      fase.value = 'cartao';
-    },
-  };
-};
-const depois = () => {
-  const voltar = indice.value;
-  const nome = atual.value?.nome;
-  voltam.value += 1;
-  andar();
-  aviso.value = {
-    chave: `${NS}.DEPOIS_AVISO`,
-    params: { nome },
-    desfazer: () => {
-      voltam.value -= 1;
-      indice.value = voltar;
-      fase.value = 'cartao';
-    },
-  };
-};
-const desfazer = () => {
-  aviso.value?.desfazer();
-  aviso.value = null;
 };
 
 const verFunil = () =>
   router.push({
     name: 'crm_kanban_index',
     params: { accountId: route.params.accountId },
+    query: destino.value ? { pipeline_id: destino.value.funil.id } : {},
   });
 const acharMais = () => irPara(ROTAS.PORTA, { estado: 'porta' });
 const atualizar = () => (demo.value ? mudarEstado('fila') : carregar());
+const salvarDestino = novo => {
+  destino.value = novo;
+  painel.value = null;
+};
+const salvarPessoa = id => {
+  pessoaId.value = id;
+  painel.value = null;
+};
 
 onMounted(carregar);
 watch(demo, carregar);
@@ -232,6 +192,18 @@ watch(demo, carregar);
         <div
           v-if="carregando"
           class="h-80 rounded-3xl bg-n-slate-3 animate-pulse"
+          role="status"
+          :aria-label="$t(`${NS}.CARREGANDO`)"
+          data-carregando
+        />
+
+        <AcharEstado
+          v-else-if="erro"
+          tom="erro"
+          :texto="$t(`${NS}.ERRO`)"
+          :botao="$t('PROSPECTING_ACHAR.COMUM.TENTAR_DE_NOVO')"
+          data-erro-fila
+          @acao="carregar"
         />
 
         <AcharEstado
@@ -282,14 +254,25 @@ watch(demo, carregar);
               "
               tom="verde"
             />
+            <p
+              v-if="truncada && teto"
+              class="m-0 text-sm text-n-slate-11"
+              data-fila-truncada
+            >
+              {{ $t(`${NS}.TRUNCADA`, { max: teto }) }}
+            </p>
           </div>
 
           <AcharEstado
             v-if="aviso"
             faixa
-            tom="feito"
+            :tom="aviso.tom || 'feito'"
             :texto="$t(aviso.chave, aviso.params || {})"
-            :botao="$t('PROSPECTING_ACHAR.COMUM.DESFAZER')"
+            :botao="
+              aviso.desfazer ? $t('PROSPECTING_ACHAR.COMUM.DESFAZER') : ''
+            "
+            :desligado="gravando"
+            data-aviso-fila
             @acao="desfazer"
           />
 
@@ -299,6 +282,7 @@ watch(demo, carregar);
           >
             <AcharMotivos
               :titulo="$t(`${NS}.NAO_SERVE_TITULO`, { nome: atual.nome })"
+              :ocupado="gravando"
               @escolher="tirar"
             />
           </section>
@@ -315,15 +299,23 @@ watch(demo, carregar);
             >
               <span class="i-lucide-check size-7" />
             </span>
-            <p class="m-0 text-xl font-semibold text-n-slate-12">
-              {{
-                $t('PROSPECTING_ACHAR.GAVETA.MANDOU', {
-                  nome: atual.nome,
-                  funil: destino?.funil.nome,
-                  pessoa: $t('PROSPECTING_ACHAR.COMUM.VOCE'),
-                })
-              }}
-            </p>
+            <div class="flex flex-col gap-1">
+              <p class="m-0 text-xl font-semibold text-n-slate-12">
+                {{
+                  $t(`${NS}.MANDOU`, {
+                    nome: atual.nome,
+                    funil: destino?.funil.nome,
+                  })
+                }}
+              </p>
+              <p
+                v-if="mandado?.etapa"
+                class="m-0 text-base text-n-slate-11"
+                data-etapa-e-dono
+              >
+                {{ $t(`${NS}.ETAPA_E_DONO`, mandado) }}
+              </p>
+            </div>
             <div class="flex flex-wrap gap-x-6">
               <Button
                 :label="$t(`${NS}.PROXIMA`)"
@@ -349,6 +341,7 @@ watch(demo, carregar);
             :primeiro="indice === 0"
             :achado-por="pode.verTodas ? atual.achadoPor : ''"
             :pode-decidir="pode.buscar"
+            :ocupado="mandando || ocupado"
             @nao-serve="fase = 'nao-serve'"
             @depois="depois"
             @ver-mais="gavetaAberta = true"
@@ -374,17 +367,29 @@ watch(demo, carregar);
           <AcharRodape
             v-else
             :rotulo="principal.rotulo"
-            :ocupado="mandando"
+            :ocupado="mandando || ocupado"
             @principal="agir"
           >
-            <AcharLinhaFrase
-              v-if="pode.funil && destino && fase === 'cartao'"
-              compacta
-              icone="i-lucide-columns-3"
-              :texto="$t(`${NS}.DESTINO`, { funil: destino.funil.nome })"
-              pode-alterar
-              @alterar="painelDestino = true"
-            />
+            <div v-if="linhasDoRodape" class="flex flex-col gap-1">
+              <AcharLinhaFrase
+                compacta
+                icone="i-lucide-columns-3"
+                :texto="$t(`${NS}.DESTINO`, { funil: destino.funil.nome })"
+                pode-alterar
+                @alterar="painel = 'destino'"
+              />
+              <AcharLinhaFrase
+                v-if="pode.trocarDono"
+                compacta
+                icone="i-lucide-user-round"
+                :texto="
+                  $t('PROSPECTING_ACHAR.FOLHA.COM_QUEM', { pessoa: pessoaNome })
+                "
+                pode-alterar
+                data-com-quem
+                @alterar="painel = 'pessoa'"
+              />
+            </div>
           </AcharRodape>
         </template>
         <AcharFaixaDoMenu v-if="!temRodape" />
@@ -401,11 +406,18 @@ watch(demo, carregar);
       @chamar="chamar"
     />
     <AcharParaOndePainel
-      v-if="painelDestino"
+      v-if="painel === 'destino'"
       :funis="funis"
       :destino="destino"
-      @salvar="(destino = $event), (painelDestino = false)"
-      @close="painelDestino = false"
+      @salvar="salvarDestino"
+      @close="painel = null"
+    />
+    <AcharComQuemFica
+      v-if="painel === 'pessoa'"
+      :pessoas="pessoas"
+      :escolhida="pessoaId"
+      @salvar="salvarPessoa"
+      @close="painel = null"
     />
   </section>
 </template>

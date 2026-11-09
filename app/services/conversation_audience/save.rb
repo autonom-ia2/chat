@@ -27,8 +27,12 @@ class ConversationAudience::Save
     raise Error, 'no_people' if people.empty?
 
     @columns = ConversationAudience::Columns.new(@account, reads_contacts? ? people : [])
-    rows = people.map { |contact| row_for(contact) }
+    save(people.map { |contact| row_for(contact) })
+  end
 
+  private
+
+  def save(rows)
     ActiveRecord::Base.transaction do
       # Two clicks on "Salvar" never make two audiences: the second waits here and finds the search saved.
       @search.lock!
@@ -39,9 +43,10 @@ class ConversationAudience::Save
       @search.update!(status: ConversationAudienceSearch::SAVED, campaign_import: audience)
       audience
     end
+  rescue CampaignJourney::AudienceWriter::Error => e
+    # A contact deleted between the query and the writer (foreign_contact) is a refusal the controller answers, not a 500.
+    raise Error, e.message
   end
-
-  private
 
   def contacts
     people = @search.people.where(id: @person_ids)
