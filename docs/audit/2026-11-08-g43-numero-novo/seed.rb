@@ -15,6 +15,9 @@ definicao = Autonomia::Automacao::Definicao.create!(account: conta, nome: 'Clien
 passos = [{ 'id' => 'retomar', 'tipo' => 'mensagem', 'texto' => ['Oi, Bruno! O recado da renovação: sua apólice vence em 30 dias.'] }]
 definicao.salvar_versao!(receita: { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => passos }, autor: dona)
 definicao.update!(ativa: true)
+# O número antigo morreu: a última mensagem da empresa nele falhou (G43 só troca com esse sinal).
+conversa.messages.create!(account: conta, inbox: caixa, message_type: :outgoing, content: 'Sua apólice vence em 30 dias.',
+                          status: :failed)
 bruno.update!(phone_number: '+5511988880019')
 Autonomia::Automacao::Partida.new(definicao: definicao, alvo: conversa, chave_gatilho: 'conversa.resolvida').call
 ActiveJob::Base.queue_adapter.enqueued_jobs.select { |job| job[:job] == Autonomia::Automacao::AvancarJob }.each do |job|

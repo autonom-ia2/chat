@@ -2,10 +2,13 @@
 # que nasceu (`ContactInbox.source_id`); trocar o telefone do contato não muda a conversa. Sem isto, o passo "mensagem"
 # mandava no número antigo, que acabou de falhar.
 #
-# - `trocou?`: o número da conversa não é mais o telefone do contato. Vale nas caixas que acham o contato pelo telefone
-#   (as da conversa nova, ConversaNova::PELO_TELEFONE). No WhatsApp o número vem sem o "+", e o nono dígito do Brasil
-#   (e as variações da Argentina e do México) conta como o mesmo número: são os candidatos que o recebimento já usa
-#   (Whatsapp::PhoneNumberNormalizationService). Contato sem telefone não trocou.
+# - `trocou?`: o número da conversa morreu e o telefone do contato é outro. Vale nas caixas que acham o contato pelo
+#   telefone (as da conversa nova, ConversaNova::PELO_TELEFONE). No WhatsApp o número vem sem o "+", e o nono dígito do
+#   Brasil (e as variações da Argentina e do México) conta como o mesmo número: são os candidatos que o recebimento já
+#   usa (Whatsapp::PhoneNumberNormalizationService). Contato sem telefone não trocou.
+# - `numero_morto?`: a última mensagem da empresa nessa conversa falhou, e o cliente não escreveu depois. Telefone
+#   diferente sozinho não basta: o contato com dois números (o merge de contatos guarda um só, a edição à mão, a
+#   importação) continua escrevendo do número da conversa, e a resposta tem de voltar para ele.
 # - `conversa`: a do número novo na mesma caixa. Reaproveita a aberta mais recente; sem ela, abre como a conversa nova
 #   (o número no formato do canal, o mesmo do ContactInboxBuilder, + ConversationBuilder). `existente` só procura.
 # - `de_outro_contato?`: o número novo já é de outro contato nesta caixa. O passo pula e não mexe no outro contato (o
@@ -27,7 +30,14 @@ module Autonomia::Automacao::NumeroNovo
     numero = numero_da_conversa(conversa)
     return false if telefone.empty? || numero.empty?
 
-    !mesmo_numero?(conversa.inbox, telefone, numero)
+    !mesmo_numero?(conversa.inbox, telefone, numero) && numero_morto?(conversa)
+  end
+
+  def numero_morto?(conversa)
+    ultima = conversa.messages.where(message_type: :outgoing, private: false).reorder(created_at: :desc, id: :desc).first
+    return false unless ultima&.failed?
+
+    !conversa.messages.where(message_type: :incoming).exists?(['created_at > ?', ultima.created_at])
   end
 
   # Os algarismos do número com que a conversa nasceu; vazio quando ele é um identificador do WhatsApp (`@lid`, `@c.us`).

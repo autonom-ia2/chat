@@ -1,8 +1,10 @@
 require 'rails_helper'
 
-# G43 (#2700): no WhatsApp e no SMS a conversa fica presa ao número com que nasceu (`ContactInbox.source_id`). Depois
-# que o telefone do contato muda, o passo "mensagem" manda no número novo: reaproveita ou abre a conversa dele na mesma
-# caixa, pela porta da frente (a mesma da conversa nova, #2680), e os passos seguintes usam essa conversa.
+# G43 (#2700): no WhatsApp e no SMS a conversa fica presa ao número com que nasceu (`ContactInbox.source_id`). Quando o
+# número da conversa morreu (a última mensagem da empresa nela falhou, e o cliente não escreveu depois) e o telefone do
+# contato é outro, o passo "mensagem" manda no número novo: reaproveita ou abre a conversa dele na mesma caixa, pela
+# porta da frente (a mesma da conversa nova, #2680), e os passos seguintes usam essa conversa. Telefone diferente
+# sozinho não troca: o contato com dois números continua recebendo no número de onde escreve.
 RSpec.describe Autonomia::Automacao::NumeroNovo, :automacao_motor do
   include ActiveJob::TestHelper
 
@@ -21,12 +23,19 @@ RSpec.describe Autonomia::Automacao::NumeroNovo, :automacao_motor do
     ligar_mensagens(account)
     create(:message, conversation: conversa, account: account, inbox: caixa, message_type: :incoming, content: 'oi',
                      source_id: 'in-1', created_at: 1.hour.ago)
+    falhou_em(conversa)
+  end
+
+  # A última mensagem da empresa na conversa, recusada pelo canal: o número morreu.
+  def falhou_em(alvo, quando = 30.minutes.ago)
+    create(:message, conversation: alvo, account: account, inbox: alvo.inbox, message_type: :outgoing, content: 'Sua apólice',
+                     status: :failed, created_at: quando)
   end
 
   def whatsapp_com(numero)
     canal = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
     no_whatsapp = create(:contact_inbox, inbox: canal.inbox, contact: contato, source_id: numero)
-    create(:conversation, account: account, inbox: canal.inbox, contact: contato, contact_inbox: no_whatsapp)
+    create(:conversation, account: account, inbox: canal.inbox, contact: contato, contact_inbox: no_whatsapp).tap { |nova| falhou_em(nova) }
   end
 
   after { Current.reset }
@@ -65,6 +74,17 @@ RSpec.describe Autonomia::Automacao::NumeroNovo, :automacao_motor do
       expect(described_class.trocou?(whatsapp_com('5511937016094'))).to be(true)
     end
 
+    it 'telefone diferente com o número da conversa vivo não trocou: a última mensagem chegou, ou o cliente escreveu depois',
+       :aggregate_failures do
+      contato.update!(phone_number: '+5511988880000')
+      conversa.messages.outgoing.sole.update!(status: :delivered)
+      expect(described_class.trocou?(conversa.reload)).to be(false)
+
+      conversa.messages.outgoing.sole.update!(status: :failed)
+      create(:message, conversation: conversa, account: account, inbox: caixa, message_type: :incoming, content: 'oi de novo')
+      expect(described_class.trocou?(conversa.reload)).to be(false)
+    end
+
     it 'contato sem telefone, ou caixa que não acha o contato pelo telefone, não trocou', :aggregate_failures do
       contato.update!(phone_number: nil)
       expect(described_class.trocou?(conversa.reload)).to be(false)
@@ -85,7 +105,7 @@ RSpec.describe Autonomia::Automacao::NumeroNovo, :automacao_motor do
       expect(registros(execucao)).to eq([['oi', 'ok', nil]])
       expect(nova).to have_attributes(inbox_id: caixa.id, contact_id: contato.id)
       expect(nova.messages.outgoing.sole.content).to eq('Oi Bruno, a sua apólice venceu.')
-      expect(conversa.messages.outgoing).to be_empty
+      expect(conversa.messages.outgoing.pluck(:status)).to eq(['failed'])
       expect(dados_do(execucao, 'oi')).to include('numero_novo' => true, 'conversa_aberta' => nova.display_id)
     end
 
@@ -173,7 +193,7 @@ RSpec.describe Autonomia::Automacao::NumeroNovo, :automacao_motor do
 
         expect(registros(execucao)).to eq([%w[oi falhou fora_da_janela]])
         expect(ContactInbox.where(contact: contato, inbox: whatsapp.inbox).count).to eq(1)
-        expect(whatsapp.messages.outgoing).to be_empty
+        expect(whatsapp.messages.outgoing.pluck(:status)).to eq(['failed'])
       end
 
       it 'o "escrever" confere a janela do número novo antes de chamar a IA', :aggregate_failures do
@@ -188,12 +208,23 @@ RSpec.describe Autonomia::Automacao::NumeroNovo, :automacao_motor do
       end
     end
 
+    # O contato com dois números (o merge guardou o outro no telefone) escreve do número da conversa: a resposta volta a ele.
+    it 'o contato que escreve do número da conversa recebe nela, mesmo com outro telefone no cadastro', :aggregate_failures do
+      create(:message, conversation: conversa, account: account, inbox: caixa, message_type: :incoming, content: 'oi de novo')
+
+      execucao = rodar([oi])
+
+      expect(conversa.messages.outgoing.last.content).to eq('Oi Bruno, a sua apólice venceu.')
+      expect(no_numero_novo).to be_nil
+      expect(dados_do(execucao, 'oi').keys).not_to include('numero_novo')
+    end
+
     it 'com o mesmo número, manda na conversa de sempre, sem a marca do número novo', :aggregate_failures do
       contato.update!(phone_number: '+5511937016094')
 
       execucao = rodar([oi])
 
-      expect(conversa.messages.outgoing.sole.content).to eq('Oi Bruno, a sua apólice venceu.')
+      expect(conversa.messages.outgoing.last.content).to eq('Oi Bruno, a sua apólice venceu.')
       expect(dados_do(execucao, 'oi').keys).not_to include('numero_novo')
     end
   end
