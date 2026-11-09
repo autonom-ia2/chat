@@ -916,13 +916,13 @@ const BOTAO_DE_BORDA =
                 <router-link
                   :to="anuncio.to"
                   data-seus-posts-ver-anuncio
-                  class="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl text-sm font-medium text-n-brand outline-none hover:underline focus-visible:ring-2 focus-visible:ring-n-brand"
+                  class="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl py-2 text-sm font-medium text-n-brand outline-none hover:underline focus-visible:ring-2 focus-visible:ring-n-brand"
                 >
                   <span
                     class="i-lucide-megaphone size-4 shrink-0"
                     aria-hidden="true"
                   />
-                  <span class="truncate">{{
+                  <span class="min-w-0 break-words">{{
                     $t('SEUS_POSTS.POST.AD_COMMENTS.ITEM', {
                       name: anuncio.name,
                       date: anuncio.criado,
