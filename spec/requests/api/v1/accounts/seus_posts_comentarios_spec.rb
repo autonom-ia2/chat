@@ -89,11 +89,40 @@ RSpec.describe 'Seus posts: comentários de cada post', type: :request do
 
   # #2522: os comentários do anúncio que impulsionou o post por aqui ficam noutra mídia; o post leva ao anúncio.
   describe 'anúncio criado aqui a partir do post' do
+    let(:connection) { create_meta_ads_insights_connection(account) }
+
     before do
       stub_request(:get, %r{#{ig}/#{post_id}/comments}).to_return(status: 503, headers: json, body: { error: { code: 2 } }.to_json)
       Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: SecureRandom.uuid, status: 'created', ad_id: '903',
                                         name: 'Promoção', source_post_id: post_id, source_post_network: 'instagram',
-                                        activated_at: 1.day.ago)
+                                        activated_at: 1.day.ago, ad_account_id: connection.ad_account_id)
+    end
+
+    # #2804: o detalhe do anúncio não abre o de outra conta de anúncios; os comentários dele que esperam vêm no atalho.
+    it 'só os da conta de anúncios conectada agora, cada um com quantos comentários dele esperam' do
+      account.enable_features!('meta_ads_hub', 'meta_ads_comentarios_instagram')
+      Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: SecureRandom.uuid, status: 'created', ad_id: '905',
+                                        name: 'Antiga', source_post_id: post_id, source_post_network: 'instagram',
+                                        activated_at: 1.hour.ago, ad_account_id: 'act_anterior')
+      allow(SeusPosts::Esperando).to receive(:new).and_return(
+        instance_double(SeusPosts::Esperando, perform: { status: 'ok', pendentes: { post_id => {
+                          ids: [], mais: false, anuncios: { '903' => { ids: %w[18000000000000009], mais: false } }
+                        } } })
+      )
+
+      get base, params: { perfil: perfil }, headers: headers, as: :json
+
+      expect(response.parsed_body['ads'].map { |ad| ad.slice('id', 'waiting') }).to eq([{ 'id' => '903', 'waiting' => 1 }])
+      expect(response.parsed_body['post']).to include('waiting' => 1)
+    end
+
+    it 'sem conexão com Anúncios da Meta, nenhum atalho' do
+      account.enable_features!('meta_ads_hub', 'meta_ads_comentarios_instagram')
+      connection.update!(status: 'invalid')
+
+      get base, params: { perfil: perfil }, headers: headers, as: :json
+
+      expect(response.parsed_body['ads']).to eq([])
     end
 
     it 'com Anúncios da Meta e os comentários do Instagram no anúncio ligados, traz o anúncio do post' do
@@ -109,7 +138,7 @@ RSpec.describe 'Seus posts: comentários de cada post', type: :request do
       account.enable_features!('meta_ads_hub', 'meta_ads_comentarios_instagram')
       Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: SecureRandom.uuid, status: 'created', ad_id: '904',
                                         name: 'Promoção (2)', source_post_id: post_id, source_post_network: 'instagram',
-                                        activated_at: 1.hour.ago)
+                                        activated_at: 1.hour.ago, ad_account_id: connection.ad_account_id)
 
       get base, params: { perfil: perfil }, headers: headers, as: :json
 

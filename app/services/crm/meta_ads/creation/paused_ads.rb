@@ -3,7 +3,9 @@
 # por aqui não é lido de novo; ativado no Gerenciador da Meta (`status` ACTIVE) some porque já não está pausado, e a
 # leitura grava a ativação (#2739), como o Ativar daqui: o post impulsionado ganha "Teve anúncio" em Seus posts e o
 # anúncio não é lido de novo. Só os da conta de anúncios conectada agora: depois de trocar de conta, os da anterior
-# não aparecem.
+# não aparecem. Esta lista só lê os LIMIT mais novos: os outros são lidos de hora em hora por
+# Crm::MetaAds::Creation::ActivationSweep (#2804). A mídia do anúncio no Instagram, que veio na mesma leitura, fica
+# guardada (Crm::MetaAds::Creation::AdMedia).
 #
 # Por classe de `effective_status` (#2354, enum da doc do Ad), com o próprio anúncio PAUSED: `PAUSED`, `CAMPAIGN_PAUSED`
 # e `ADSET_PAUSED` estão prontos para ativar (os dois últimos por regra, não vistos em leitura real: o Ativar de um
@@ -25,6 +27,7 @@ class Crm::MetaAds::Creation::PausedAds
       raise Crm::MetaAds::Creation::Error, 'meta_unavailable' if result.transient?
       next unless result.ok
 
+      Crm::MetaAds::Creation::AdMedia.remember(record, result.data)
       result.data['status'] == 'ACTIVE' ? activated!(record) : paused_row(record, result.data)
     end
   end

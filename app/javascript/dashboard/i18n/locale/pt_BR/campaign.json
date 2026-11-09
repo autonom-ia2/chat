@@ -296,7 +296,8 @@
           "REASON": "Motivo",
           "ERROR_CODE": "Código {code}",
           "EMPTY_REASON": "-",
-          "REASON_OPTED_OUT": "Contato não quer receber mensagens ativas"
+          "REASON_OPTED_OUT": "Contato não quer receber mensagens ativas",
+          "REASON_BLOCKED": "Contato bloqueado"
         }
       }
     },
@@ -335,6 +336,7 @@
         "MEDIA_ONLY": "Somente mídia",
         "FAILURES": "{count} falhas",
         "OPTED_OUT": "Recusaram mensagens ativas: {count}",
+        "BLOCKED": "Contatos bloqueados: {count}",
         "DISCARDED": "Descartados na Prospecção: {count}"
       },
       "ACTIONS": {

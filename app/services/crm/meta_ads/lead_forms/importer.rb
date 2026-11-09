@@ -10,10 +10,15 @@
 #   telefone nem e-mail: o título e o nome do contato vão à IA (Decisor, IA de etapa) e a quem não vê o contato.
 # - E-mail que o contato não aceita fica só nas respostas; o lead entra do mesmo jeito.
 # - Lead que não dá para gravar (:failed) vai para o rastreador de erros e não para os outros do mesmo lote. A recusa
-#   fica lembrada em `refused` (RefusedLeads, #2740), quando quem chama passa um: a reconciliação de hora em hora não
-#   o tenta de novo a cada rodada; tenta uma segunda vez depois do prazo, ou antes, se o destino for salvo de novo.
+#   fica lembrada em `refused` (RefusedLeads, #2740), quando quem chama passa um, com o tipo dela (#2804): do próprio
+#   lead, do destino (funil ou etapa) ou passageira (corrida no banco). O tipo diz quando a reconciliação tenta de novo.
 class Crm::MetaAds::LeadForms::Importer
   SOURCE = 'meta_lead_form'.freeze
+  # O que o card recebe do lead e não do destino: recusa só nesses campos é do lead.
+  LEAD_CARD_ATTRIBUTES = %i[title metadata contact].freeze
+  # Corrida com outro processo, prazo do banco ou conexão caída: some na próxima tentativa.
+  TRANSIENT_ERRORS = [ActiveRecord::RecordNotUnique, ActiveRecord::Deadlocked, ActiveRecord::LockWaitTimeout,
+                      ActiveRecord::QueryCanceled, ActiveRecord::ConnectionFailed].freeze
   NAME_KEYS = %w[full_name first_name last_name].freeze
   PHONE_KEY = 'phone_number'.freeze
   EMAIL_KEY = 'email'.freeze
@@ -47,15 +52,32 @@ class Crm::MetaAds::LeadForms::Importer
       outcome
     end
   rescue ActiveRecord::RecordInvalid => e
-    refused!(lead, e)
+    refused!(lead, e, refusal_kind(e.record))
+  rescue *TRANSIENT_ERRORS => e
+    refused!(lead, e, :transient)
+  rescue ActiveRecord::StatementInvalid => e
+    # Outra recusa do banco (ex.: um caractere que o Postgres não grava) vem do dado do lead.
+    refused!(lead, e, :lead)
   end
 
   private
 
-  def refused!(lead, error)
+  def refused!(lead, error, kind)
     ChatwootExceptionTracker.new(error, account: @account).capture_exception
-    @refused&.remember!(lead['id'])
+    @refused&.remember!(lead['id'], kind)
     :failed
+  end
+
+  # Unicidade (:taken) é o contato que outro processo gravou no mesmo instante: passageira. O card recusado por outro
+  # campo que não os do lead, ou sem dizer o campo, é do destino (funil, etapa, dono). O resto (o contato, a linha do
+  # lead) é do lead.
+  def refusal_kind(record)
+    errors = record.errors
+    return :transient if errors.details.values.flatten.any? { |detail| detail[:error] == :taken }
+    return :lead unless record.is_a?(Crm::Card)
+
+    names = errors.attribute_names
+    names.any? && (names - LEAD_CARD_ATTRIBUTES).empty? ? :lead : :destination
   end
 
   # Reserva o lead no seu próprio savepoint: só o índice único do leadgen_id vira :duplicate; qualquer outra recusa do

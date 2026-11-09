@@ -1,4 +1,3 @@
-import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { intlLocale } from '../metaAdsHelpers';
 
 // Anúncios sem login (#1960, degrau 0): o resultado sai do WhatsApp (de qual anúncio veio cada
@@ -6,16 +5,6 @@ import { intlLocale } from '../metaAdsHelpers';
 // anúncio (MetaAdsAdDetail).
 
 export const SEM_LOGIN = 'CRM_KANBAN.META_ADS_HUB.SEM_LOGIN';
-
-// Telefone como a pessoa fala: "(11) 98888-7777" no Brasil, internacional fora dele.
-export const phoneLabel = phone => {
-  if (!phone) return null;
-  const parsed = parsePhoneNumberFromString(String(phone));
-  if (!parsed) return String(phone);
-  return parsed.country === 'BR'
-    ? parsed.formatNational()
-    : parsed.formatInternational();
-};
 
 // "12/10", no fuso da conta; null sem data válida.
 export const dayMonth = (value, timeZone, locale) => {
