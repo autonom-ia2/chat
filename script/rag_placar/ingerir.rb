@@ -23,6 +23,13 @@ flags = ENV.fetch('RAG_FLAGS', '').split(',').map(&:strip).reject(&:empty?)
 conta.enable_features!(*flags) if flags.any?
 agente = Autonomia::Agents::Agent.create!(account: conta, name: 'Placar', agent_type: 'support', status: :active,
                                           human_card: "Agente da régua do RAG (#{tipo}).")
+# RAG_SEGMENTO=seguros/corretora (#2801): o agente nasce com a marca de base desse segmento, como na conta de seguros em
+# produção, e a resposta recebe o bloco do segmento. Sem ela, o agente fica sem base (conta geral).
+if (segmento = ENV['RAG_SEGMENTO'].presence)
+  texto = Autonomia::Segmentos::Bloco.for_segmento(segmento) || abort("segmento sem texto: #{segmento}")
+  base = { 'segmento' => segmento, 'versao' => Autonomia::Segmentos::Bloco.versao(segmento), 'texto' => texto }
+  agente.update!(config: agente.config.to_h.merge('base' => base))
+end
 
 trechos = caminhos.sum do |caminho|
   fonte = Autonomia::Agents::Source.create!(account: conta, agent: agente, source_type: tipo,
