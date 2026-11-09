@@ -142,6 +142,20 @@ RSpec.describe 'Automação livre: gatilho troca de responsável do card', :auto
     expect(execucoes.count).to eq(0)
   end
 
+  # #2832, revisão: a criação não é troca, mas a troca feita depois dela, na mesma transação, é.
+  it 'card criado e trocado na mesma transação: a troca depois da criação começa', :aggregate_failures do
+    da_troca
+    novo = ActiveRecord::Base.transaction do
+      criado = account.crm_cards.create!(pipeline: funil.first, stage: funil.last, title: 'Novo', currency: 'BRL', owner: julia)
+      criado.update!(owner: renata)
+      criado
+    end
+    drenar
+
+    expect(execucoes.sole.alvo).to eq(novo)
+    expect(anterior(execucoes.sole)).to eq(julia.id)
+  end
+
   it 'a troca sem atividade (a saída da triagem grava o card direto) também começa' do
     da_troca
     card.update!(owner_id: nil)

@@ -43,13 +43,14 @@ module Crm::CardAvisaAutomacao
     @gravacoes_do_card = [*@gravacoes_do_card, gravacao]
   end
 
-  # O card criado na transação não é troca (G9): só o "card atualizado" conta o que ele nasceu tendo.
+  # A gravação que criou o card não é troca (G9): só o "card atualizado" conta o que ele nasceu tendo. A troca feita
+  # depois dela, na mesma transação, é.
   def avisar_automacao_livre
     gravacoes = gravacoes_valendo
     @gravacoes_do_card = nil
     criado = gravacoes.any? { |gravacao| gravacao[:criado] }
     soma = juntar(gravacoes, :soma)
-    trocas = criado ? {} : juntar(gravacoes, :troca)
+    trocas = juntar(gravacoes.reject { |gravacao| gravacao[:criado] }, :troca)
     ::Autonomia::Automacao::Despertador.card_mudou(self) if gravacoes.any? { |gravacao| gravacao[:lida] }
     ::Autonomia::Automacao::CardAtualizado.avisar(self, soma, criado: criado) if soma.present?
     ::Autonomia::Automacao::TrocaNoCard.avisar(self, trocas) if trocas.present?
