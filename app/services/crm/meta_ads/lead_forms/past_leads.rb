@@ -28,9 +28,12 @@ class Crm::MetaAds::LeadForms::PastLeads
         since: since)
   end
 
+  # Token recusado (190) sobe como TokenRefused, que é um Error: a tela e os outros jobs seguem iguais, e a
+  # reconciliação marca a conexão (#2740).
   def self.check!(result)
     return if result.ok
     raise Crm::MetaAds::LeadForms::Unavailable if result.transient?
+    raise Crm::MetaAds::LeadForms::TokenRefused, result.error_message if result.token_invalid?
 
     raise Crm::MetaAds::LeadForms::Error, 'meta_refused'
   end
@@ -72,11 +75,12 @@ class Crm::MetaAds::LeadForms::PastLeads
   # Quantos viraram card novo (os repetidos e quem já tinha card aberto no funil não contam). Quem já entrou (o
   # leadgen_id está guardado) nem passa pelo Importer, e as perguntas do formulário só são lidas quando sobra alguém:
   # a reconciliação de hora em hora (#2285) relê leads que o webhook já trouxe, e cada chamada a mais gasta o limite
-  # de uso da Meta.
-  def import!(pipeline:, stage:)
+  # de uso da Meta. refused (RefusedLeads, #2740): só a reconciliação passa; ela pula o lead que o banco recusou há
+  # pouco e lembra quem for recusado agora. O "trazer quem já preencheu" é uma pessoa pedindo e tenta todos.
+  def import!(pipeline:, stage:, refused: nil)
     rows, truncated = read
-    fresh = new_leads(rows)
-    imported = fresh.empty? ? 0 : fresh.count { |lead| importer(pipeline, stage).import(lead) == :created }
+    fresh = new_leads(rows, refused)
+    imported = fresh.empty? ? 0 : fresh.count { |lead| importer(pipeline, stage, refused).import(lead) == :created }
     Rails.cache.delete(self.class.cache_key(@account.id, @form['id']))
     { imported: imported, truncated: truncated }
   end
@@ -84,19 +88,20 @@ class Crm::MetaAds::LeadForms::PastLeads
   private
 
   # Em lotes: o "trazer quem já preencheu" lê até 50 mil leads, e um IN só passaria perto do limite de binds do Postgres.
-  def new_leads(rows)
+  def new_leads(rows, refused)
     known = rows.map { |lead| lead['id'].to_s }.each_slice(KNOWN_BATCH).with_object(Set.new) do |ids, set|
       set.merge(Crm::MetaAdsLead.where(account_id: @account.id, leadgen_id: ids).pluck(:leadgen_id))
+      set.merge(refused.ids(ids)) if refused
     end
     rows.reject { |lead| known.include?(lead['id'].to_s) }
   end
 
-  def importer(pipeline, stage)
+  def importer(pipeline, stage, refused)
     @importer ||= begin
       questions = client.lead_form_questions(@form['id'])
       Crm::MetaAds::LeadForms::Importer.new(
         account: @account, pipeline: pipeline, stage: stage, form_name: @form['name'], page_id: @page['id'],
-        questions: questions.ok ? Array(questions.data.to_h['questions']) : []
+        questions: questions.ok ? Array(questions.data.to_h['questions']) : [], em_lote: true, refused: refused
       )
     end
   end

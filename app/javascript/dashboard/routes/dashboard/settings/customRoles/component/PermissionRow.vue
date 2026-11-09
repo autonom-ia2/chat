@@ -7,6 +7,7 @@ import {
   SENSITIVE_EXTRAS,
   getLevel,
   isExtraLocked,
+  levelLabelKey as labelKeyOf,
   levelSlots,
   setLevel,
   slotLevel,
@@ -92,11 +93,9 @@ const pickLevel = option => {
 
 const moduleKey = props.module.key;
 const levelLabelKey = option => {
-  if (option === LEVELS.NONE && props.module.baseline)
-    return `CUSTOM_ROLE.MATRIX.BASELINE.${props.module.baseline}`;
   if (isConversations && option !== LEVELS.NONE)
     return `CUSTOM_ROLE.MATRIX.MODULES.${moduleKey}.SLOT_${option.toUpperCase()}`;
-  return `CUSTOM_ROLE.MATRIX.LEVELS.${option.toUpperCase()}`;
+  return labelKeyOf(props.module, option);
 };
 const descriptionKey = computed(() =>
   hasAccess.value
@@ -135,11 +134,28 @@ const onArrow = (event, option) => {
           <span :class="module.icon" class="size-4" />
         </span>
         <div class="min-w-0">
-          <span class="text-heading-3 text-n-slate-12">
-            {{ $t(`CUSTOM_ROLE.MATRIX.MODULES.${moduleKey}.NAME`) }}
+          <span class="flex flex-wrap items-center gap-1.5">
+            <span class="text-heading-3 text-n-slate-12">
+              {{ $t(`CUSTOM_ROLE.MATRIX.MODULES.${moduleKey}.NAME`) }}
+            </span>
+            <span
+              v-if="module.sensitive"
+              data-sensitive-module
+              class="inline-flex items-center h-5 gap-1 px-1.5 rounded-md text-label-small bg-n-ruby-9/10 text-n-ruby-11"
+            >
+              <span class="i-lucide-shield-alert size-3" />
+              {{ $t('CUSTOM_ROLE.EDITOR.SENSITIVE') }}
+            </span>
           </span>
           <p class="mb-0 mt-0.5 text-label-small text-n-slate-11">
             {{ $t(descriptionKey) }}
+          </p>
+          <p
+            v-if="module.sensitive"
+            data-sensitive-note
+            class="mb-0 mt-0.5 text-label-small text-n-slate-11"
+          >
+            {{ $t(`CUSTOM_ROLE.MATRIX.MODULES.${moduleKey}.NOTE`) }}
           </p>
         </div>
       </div>

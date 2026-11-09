@@ -205,6 +205,20 @@ module FechamentoAutomacao::Lacunas
     true
   end
 
+  # G30: o lead do formulário entra pelo Importer, como no webhook, num funil com a Atribuição ligada e um corretor que
+  # cuida dele; o card nasce com esse corretor de dono. Roda na transação do exemplo, que desfaz tudo.
+  def lead_ganha_dono_pela_atribuicao?
+    account = FactoryBot.create(:account)
+    corretor = FactoryBot.create(:user, account: account, role: :agent)
+    funil, etapa = create_crm_pipeline(account: account, user: FactoryBot.create(:user, account: account, role: :administrator))
+    funil.update!(metadata: { 'ai' => { 'handoff' => { 'enabled' => true, 'prefer_online' => false } } })
+    account.crm_pipeline_inboxes.create!(pipeline: funil, inbox: create_crm_whatsapp_api_inbox(account: account, members: [corretor]))
+    lead = { 'id' => 'sonda-g30', 'created_time' => '2026-11-08T12:00:00+0000', 'form_id' => '9001',
+             'field_data' => [{ 'name' => 'phone_number', 'values' => ['+5511987650030'] }] }
+    Crm::MetaAds::LeadForms::Importer.new(account: account, pipeline: funil, stage: etapa, form_name: 'Sonda').import(lead)
+    Crm::MetaAdsLead.find_by(account: account, leadgen_id: 'sonda-g30')&.card&.owner_id == corretor.id
+  end
+
   SONDAS = {
     # O modelo aprovado entrou como campo do passo "mensagem" (F4b, #2468/#2586), não como passo próprio.
     'G1' => -> { campo_do_passo?('mensagem', 'modelo') },
@@ -249,13 +263,16 @@ module FechamentoAutomacao::Lacunas
     # O texto da IA vira valor entre passos (`ia.<passo>`, #2679): fora da janela, a "mensagem" o leva no modelo aprovado
     # (exemplo 3, passo 2); o "mesmo resumo" não vai outra vez à IA (exemplo 10, passo 6).
     'G28' => -> { valor?('ia.cuidados') },
-    # Achadas no exemplo 2 (07/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
-    # G29: a origem do card do formulário (anúncio, formulário) como valor da receita, no filtro do gatilho e nos passos.
-    'G29' => nil,
-    # G30: o responsável por um anúncio (o corretor daquele anúncio), para o retorno e o link da agenda.
-    'G30' => nil,
-    # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando".
-    'G31' => nil,
+    # Achadas no exemplo 2 (07/11). As ainda sem desenho ficam nil: a frente dona troca pela sonda quando escolher o caminho.
+    # G29 (#2702): de onde o card veio e o anúncio do formulário, valores da receita. Ponta a ponta em
+    # spec/fechamento/automacao/g29_origem_do_card_spec.rb.
+    'G29' => -> { valor?('card.origem') && valor?('card.anuncio') },
+    # G30 (#2702): o card do lead nasce com o dono que a Atribuição do funil daria (o corretor), para o retorno e o link
+    # da agenda. Ponta a ponta em spec/fechamento/automacao/g30_dono_do_lead_spec.rb.
+    'G30' => -> { lead_ganha_dono_pela_atribuicao? },
+    # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando" (o `de_novo` do
+    # decidir); prova ponta a ponta em spec/fechamento/automacao/g31_decidir_a_cada_resposta_spec.rb.
+    'G31' => -> { campo_do_passo?('decidir', 'de_novo') },
     # G32 (#2703): a reunião marcada como condição do "esperar até", no meio da execução; prova ponta a ponta em
     # spec/fechamento/automacao/g32_reuniao_spec.rb.
     'G32' => -> { valor?('card.tem_reuniao_marcada') },
@@ -274,8 +291,12 @@ module FechamentoAutomacao::Lacunas
     'G37' => nil,
     # G38: o filtro "respondeu à campanha X" no gatilho da mensagem.
     'G38' => nil,
-    # G39: o gatilho que roda uma vez, numa data ("a quinta antes da Black Friday"), não toda semana.
-    'G39' => nil,
+    # G39 (#2753): o gatilho que roda uma vez, numa data ("a quinta antes da Black Friday"), não toda semana.
+    'G39' => lambda {
+      gatilho = { 'tipo' => 'conta.recorrente', 'frequencia' => 'uma_vez', 'data' => '2030-11-28', 'hora' => 9 }
+      passo = { 'id' => 'p1', 'tipo' => 'esperar', 'duracao' => { 'valor' => 1, 'unidade' => 'dias' } }
+      Autonomia::Automacao::Receita.esquema_valido?({ 'gatilho' => gatilho, 'passos' => [passo] })
+    },
     # Do exemplo 10 (#2678), fora do lote 2: esperar só a pessoa que atende a conversa (a Fernanda), não a equipe inteira.
     'G40' => -> { valor?('conversa.responsavel_respondeu') },
     # Do exemplo 10 (#2678, #2752): a instrução no resumir ("o que já foi prometido") e avisar o responsável quando a
@@ -296,8 +317,8 @@ module FechamentoAutomacao::Lacunas
     # conta.recorrente (`campanha_so_sem_alvo`), e o "para cada card perdido" é o card.recorrente.
     'G55' => nil,
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
-    # (passo 2, "manda por e-mail o mesmo conteúdo").
-    'G53' => nil,
+    # (passo 2, "manda por e-mail o mesmo conteúdo"): `falhou.texto`, prova em g53_conteudo_da_falha_spec.rb.
+    'G53' => -> { valor?('falhou.texto') },
     # G54: esperar a entrega da mensagem (passo 5, "Chegou: tira a etiqueta e grava uma nota"); fechada pela G34.
     'G54' => -> { valor?('envio.situacao') },
     # Do exemplo 5, passo 8 (#2703): o card que a página de agendamento cria para a reunião (card do serviço já ganho)

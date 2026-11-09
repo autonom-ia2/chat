@@ -4,3 +4,6 @@ json.partial! 'api/v1/accounts/autonomia/agents/agent', agent: @agent
 # resumos do que entrou; nunca o campo, a instrução ou o andaime. Fora do piloto (ou já sem Desfazer), não vem.
 ultima_mudanca = Autonomia::Agents::ResultadoDoAjuste.ultima_mudanca_desfazivel(@agent)
 json.ultima_mudanca_desfazivel ultima_mudanca if ultima_mudanca
+# #1430: quantas ferramentas estão ligadas, para quem vê o agente sem a chave de ferramentas. Só o número: endereço,
+# cabeçalho e nome ficam na API de ferramentas.
+json.ferramentas_ligadas @agent.tools.enabled.count

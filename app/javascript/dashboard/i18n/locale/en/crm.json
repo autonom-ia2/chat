@@ -3250,7 +3250,9 @@
           "HELD": {
             "CAMPAIGN": "Ad activated, but the campaign is paused in Meta Ads Manager. Turn the campaign on there for the ad to start running.",
             "ADSET": "Ad activated, but the ad set is paused in Meta Ads Manager. Turn the ad set on there for the ad to start running."
-          }
+          },
+          "REVIEW": "In Meta review",
+          "REVIEW_HINT": "Goes back live on its own when Meta approves it."
         },
         "POST": {
           "TITLE": "Ad post",
@@ -3403,6 +3405,51 @@
             "PRIVATE_REPLY_RETRY": "Someone else was sending this private reply at the same time. Reload the comments and try again.",
             "PRIVATE_REPLY_NOT_PENDING": "This private reply is no longer waiting for confirmation. Reload the comments."
           }
+        },
+        "CARE": {
+          "TITLE": "Take care of the ad",
+          "HINT": "Duplicate makes a paused copy with its own budget. Changing the photo or text sends the ad to Meta's review again.",
+          "DUPLICATE": "Duplicate",
+          "CHANGE": "Change photo or text",
+          "CANCEL": "Cancel",
+          "DUPLICATE_TITLE": "Make a paused copy of \"{name}\"?",
+          "DUPLICATE_HINT": "The copy gets its own budget, the same as the original: {value} per day. It spends nothing until you turn it on.",
+          "DUPLICATE_HINT_TOTAL": "The copy gets its own budget, the same as the original: {value} in total. It spends nothing until you turn it on.",
+          "DUPLICATE_HINT_NO_BUDGET": "The copy gets its own budget, the same as the original. It spends nothing until you turn it on.",
+          "DUPLICATE_CONFIRM": "Create paused copy",
+          "DUPLICATE_DONE": "Copy created and paused: \"{name}\"",
+          "DUPLICATE_DONE_HINT": "It also shows on the dashboard, under Paused. Check the budget before turning it on.",
+          "DUPLICATE_ERROR": "Meta didn't create the copy now. Nothing was spent. Try again in a little while.",
+          "CHANGE_TITLE": "Change photo or text",
+          "TEXT": "Text",
+          "CHANGE_CONFIRM_TITLE": "Send the ad to review again?",
+          "CHANGE_REVIEW": "With the change, Meta reviews the ad again, usually within a day. Meanwhile, it may be off.",
+          "CHANGE_CONFIRM": "Change and send to review",
+          "CHANGE_DONE": "Changed. Meta is reviewing the ad again.",
+          "CHANGE_ERROR": "Meta didn't make the change now. The ad stays as it was. Try again in a little while.",
+          "SWAP_AS_COPY_CONFIRM_TITLE": "Create the paused copy with the new photo?",
+          "SWAP_AS_COPY_HINT": "The copy has its own budget: {value} per day. It spends nothing until you turn it on. When you turn the copy on, pause this ad so you don't spend twice.",
+          "SWAP_AS_COPY_HINT_TOTAL": "The copy has its own budget: {value} in total. It spends nothing until you turn it on. When you turn the copy on, pause this ad so you don't spend twice.",
+          "SWAP_AS_COPY_HINT_NO_BUDGET": "The copy has its own budget. It spends nothing until you turn it on. When you turn the copy on, pause this ad so you don't spend twice.",
+          "SWAP_AS_COPY_DONE": "Copy with the new photo created and paused: \"{name}\"",
+          "CONTINUE": "Continue",
+          "SWAP_AS_COPY_ACTIVATE": "Then pause the original ad so you don't spend twice.",
+          "OUTSIDE": "Duplicate and change photo are for ads created here. For this one, use Meta Ads Manager.",
+          "HINT_DUPLICATE": "Duplicate makes a paused copy with its own budget.",
+          "ENDED": "The original ad has already ended, so there's nothing to copy. Create a new ad instead.",
+          "UNSURE": "Meta didn't answer in time. Check Meta Ads Manager to see if the copy showed up before trying again.",
+          "CHANGE_UNSURE": "Meta didn't answer in time. Open the ad again in a little while to see if the change went through.",
+          "OPEN_MANAGER": "Open in Ads Manager",
+          "SWAP_REFUSED": "Meta did not accept changing the photo on this ad. You can create a paused copy with the new photo.",
+          "COPY_UNCONFIRMED": "We could not confirm with Meta whether the copy was created. Look in the Ads Manager for an ad whose name ends in \"- Cópia\". If it is not there, create it again.",
+          "RECREATE": "Not in the Ads Manager, create it again",
+          "PAUSE_ORIGINAL_HINT": "The copy \"{name}\" is on. Pause the original so you do not pay twice.",
+          "PAUSE_ORIGINAL": "Pause the original",
+          "PAUSE_ORIGINAL_DONE": "Original paused. Now only the copy spends.",
+          "COPY_FOUND": "The copy is there",
+          "SWAP_REFUSED_TEXT": "Meta did not accept changing the text on this ad. You can create a paused copy with the new text.",
+          "SWAP_AS_COPY_CONFIRM_TITLE_TEXT": "Create the paused copy with the new text?",
+          "SWAP_AS_COPY_DONE_TEXT": "Copy with the new text created and paused: \"{name}\""
         }
       },
       "AD_DETAIL": {
@@ -3847,7 +3894,9 @@
             "VIDEO_SIZE": "This video is too heavy. Trim it in your phone's photos app and choose it again.",
             "VIDEO_LONG": "The video is longer than 1 minute. Trim it in your phone's photos app and choose it again.",
             "READ": "We couldn't open this file. Try another one.",
-            "UPLOAD": "We couldn't send this file to Meta right now. Try again."
+            "UPLOAD": "We couldn't send this file to Meta right now. Try again.",
+            "ONLY_IMAGE": "This ad uses a photo: choose a JPG or PNG photo.",
+            "ONLY_VIDEO": "This ad uses a video: choose an MP4 or MOV video."
           },
           "DROP_WHERE": "From your phone or computer: tap here or drag the file.",
           "CAROUSEL": {
@@ -3857,7 +3906,9 @@
             "HINT": "With 2 or more, it becomes a carousel: people swipe sideways. Up to 10.",
             "FULL": "You reached the maximum: 10 cards."
           },
-          "UPLOADING": "Uploading to Meta…"
+          "UPLOADING": "Uploading to Meta…",
+          "CHOSEN_CURRENT": "Current photo",
+          "CHOSEN_NEW": "New photo"
         },
         "DESTINATION": {
           "GOES_TO": "People who tap go to:",

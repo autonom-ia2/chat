@@ -48,6 +48,9 @@ export const opcoesDosValores = (
       if (item.so_guia || item.sem_permissao) return [];
       if (item.so_no_gatilho && item.so_no_gatilho !== gatilho) return [];
       if (item.so_na_espera && !naEspera) return [];
+      // G53: a mensagem que falhou (`so_nos_passos`) não entra no "Só se" do
+      // gatilho: o filtro roda antes de ela ser lida.
+      if (item.so_nos_passos && gatilho) return [];
       // #2679: o texto da IA já chega com o rótulo pronto (comTextosDaIa). No
       // "Só se" do gatilho nenhum passo rodou: ele não entra.
       if (item.rotulo && gatilho) return [];

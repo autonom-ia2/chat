@@ -136,6 +136,7 @@ describe('doAlvoDoGatilho dentro do ramo', () => {
       CATALOGO,
       'mensagem.criada',
       false,
+      false,
       'Crm::Card'
     );
 
@@ -188,7 +189,13 @@ describe('valores do registro de origem', () => {
   };
 
   it('no ramo, oferece origem.* do alvo do gatilho, com a permissão do valor', () => {
-    const doRamo = doAlvoDoGatilho(CATALOGO, 'card.ganho', false, 'Contact');
+    const doRamo = doAlvoDoGatilho(
+      CATALOGO,
+      'card.ganho',
+      false,
+      false,
+      'Contact'
+    );
     const opcoes = opcoesDosValores(
       doRamo,
       () => [{ attribute_key: 'pet', attribute_display_name: 'Pet' }],

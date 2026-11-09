@@ -52,7 +52,13 @@ class Autonomia::Automacao::PassoDeAcao
   def agir(caminho, corpo)
     caderno = ::Autonomia::Guide::Execucao.abrir(account: @execucao.account, user: @acesso.usuario)
     resultado = no_caderno(caderno) { motor.executar(@passo['acao'], dados(caminho, corpo)) }
+    cadastrar_etiquetas if resultado.ok
     classificar(resultado, motor.codigo, caderno)
+  end
+
+  def cadastrar_etiquetas
+    ::Autonomia::Automacao::EtiquetasDoDado.cadastrar(@etiquetas_do_dado.to_h, account: @execucao.account,
+                                                                               account_user: @acesso.account_user)
   end
 
   def motor
@@ -79,7 +85,20 @@ class Autonomia::Automacao::PassoDeAcao
     return pulado(montado.motivo) if montado.motivo
 
     fora = fora_do_formato(montado.corpo)
-    fora.any? ? pulado('valor_fora_do_formato', 'problemas' => fora) : montado.corpo
+    return pulado('valor_fora_do_formato', 'problemas' => fora) if fora.any?
+
+    etiquetas_prontas(montado.corpo)
+  end
+
+  # G29 (#2702): a etiqueta com o nome de um dado sai pela regra da tela de etiquetas (EtiquetasDoDado).
+  def etiquetas_prontas(corpo)
+    return corpo unless ::Autonomia::Automacao::EtiquetasDoDado.aplica?(@passo['acao'])
+
+    pronto = ::Autonomia::Automacao::EtiquetasDoDado.preparar(@passo['corpo'], corpo)
+    return pulado(pronto.motivo) if pronto.motivo
+
+    @etiquetas_do_dado = pronto.originais
+    pronto.corpo
   end
 
   # O corpo literal o salvar já conferiu. O calculado só existe agora: confere com o valor de verdade (opção fora da

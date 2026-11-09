@@ -113,7 +113,7 @@ describe('CrmMeetingDetail: dia da reunião', () => {
     const wrapper = await mountDetail(finished());
 
     expect(wrapper.find('[data-test="meeting-client-phone"]').text()).toContain(
-      '+55 11 98888 7777'
+      '(11) 98888-7777'
     );
   });
 });

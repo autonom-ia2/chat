@@ -21,6 +21,8 @@ const props = defineProps({
   mostraCusto: { type: Boolean, default: false },
   // O passo está completo (o mesmo que libera o "Salvar").
   pronto: { type: Boolean, default: false },
+  // A automação já salva (nil na nova): o servidor confere quem a ligou.
+  automacaoId: { type: Number, default: null },
 });
 
 const { t, locale } = useI18n();
@@ -60,6 +62,7 @@ const pedir = conversaId =>
     receita: props.receita,
     passoId: props.passo.id,
     conversaId,
+    automacaoId: props.automacaoId,
   });
 
 // A mesma conversa nunca aparece duas vezes, mesmo se o servidor repetir.

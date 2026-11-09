@@ -25,6 +25,8 @@ describe('CardPessoaBasica (#1849)', () => {
       custom_attributes: { cpf: '000' },
     });
     expect(wrapper.text()).toContain('Juliana Prado');
+    // #2213: o mesmo formato do resto do card.
+    expect(wrapper.text()).toContain('(11) 98765-0042');
     expect(wrapper.find('a[href="tel:+5511987650042"]').exists()).toBe(true);
     expect(wrapper.find('a[href="mailto:juliana@example.test"]').exists()).toBe(
       true

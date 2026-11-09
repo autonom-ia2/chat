@@ -1,0 +1,11 @@
+# #2801 — prova da causa: o glossário sintético da conferência pós-deploy do #2788 (material criado para teste, sem
+# dado real). O caso de produção: "franquia" respondida sem a fonte, com a base do segmento ligada.
+perguntas:
+  - pergunta: "O que é franquia?"
+    tipo: definicao
+    esperado: "Valor que fica por conta do segurado em cada sinistro; se o prejuízo for menor que a franquia, o seguro não paga."
+    ancoras: ["Valor que fica por conta do segurado em cada sinistro"]
+  - pergunta: "O que é sinistro?"
+    tipo: definicao
+    esperado: "O acontecimento que causa o prejuízo coberto pelo seguro, como um incêndio ou um roubo."
+    ancoras: ["O acontecimento que causa o prejuízo coberto pelo seguro"]
