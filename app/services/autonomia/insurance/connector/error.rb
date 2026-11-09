@@ -17,6 +17,8 @@
 #   :status_do_handler— o handler respondeu com status de erro (é aqui que mora a recusa de negócio).
 #   :excecao_local    — exceção antes ou durante a chamada, do nosso lado (rede, DNS, credencial).
 #   :timeout          — estourou o tempo de leitura ou de conexão.
+#   :espera_do_login  — nem chegou ao portal: esgotou a espera pelo login que OUTRO processo fazia
+#                       (`connections/session.rb`).
 class Autonomia::Insurance::Connector::Error < StandardError
   # A invocação foi recusada pelo próprio serviço: o código do adapter não chegou a rodar, então
   # nenhuma cotação foi criada no portal. É o que separa "não fez" de "pode ter feito".

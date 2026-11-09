@@ -157,6 +157,7 @@
         "BELOW": "This post showed up less than your posts usually do.",
         "NEW": "This post is new: Meta’s numbers arrive within 2 days.",
         "BOOSTED": "This post had an ad. Times shown counts only what was not from the ad; the other numbers include the ad.",
+        "BOOSTED_INSTAGRAM": "You boosted this post through the platform. The ad has its own numbers and comments.",
         "TIMES": "This post did well: it showed up {times} times more than your posts usually do.",
         "DOUBLE": "This post did well: it showed up twice as much as your posts usually do.",
         "WELL_ABOVE": "This post did well: it showed up much more than your posts usually do.",
@@ -166,7 +167,15 @@
       },
       "SIDE": {
         "BOOSTED": "Had an ad: only “{name}” is without the ad.",
-        "INSTAGRAM": "Times shown, likes and comments are without ads. People who saw it, saves and shares may include ads."
+        "BOOSTED_INSTAGRAM": "Numbers for this post only.",
+        "INSTAGRAM": "Times shown is without ads. People who saw it, likes, comments, saves and shares may include ads."
+      },
+      "AD_COMMENTS": {
+        "TEXT": "The ad's comments are on the ad, not on this post.",
+        "OPEN": "See the ad's comments",
+        "TEXT_MANY": "This post became {count} ads. Each one's comments are on that ad, not on this post.",
+        "ITEM": "{name}, created on {date}",
+        "UNNAMED": "Ad"
       },
       "COMMENTS": {
         "TITLE": "Comments",

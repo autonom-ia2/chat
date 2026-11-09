@@ -175,14 +175,14 @@ module Autonomia
         # ANTES de agendá-lo, só se ainda é deste turno (compare-and-expire), e o turno segue na cadeia.
         def renovar_o_turno(conversation, reply_to_message_id)
           @turno_segue = true
-          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+          return unless ::Autonomia::Agents::Operate::TurnoEmCurso.marcar?(conversation.account)
 
           ::Autonomia::Agents::Operate::TurnoEmCurso.renovar(conversation.id, reply_to_message_id)
         end
 
         # A cadeia terminou, por qualquer motivo: solta a marca, só se ainda é deste turno (compare-and-delete).
         def soltar_o_turno(conversation, reply_to_message_id)
-          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+          return unless ::Autonomia::Agents::Operate::TurnoEmCurso.marcar?(conversation.account)
 
           ::Autonomia::Agents::Operate::TurnoEmCurso.soltar(conversation.id, reply_to_message_id)
         end

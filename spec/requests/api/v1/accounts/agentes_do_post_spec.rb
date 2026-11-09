@@ -219,6 +219,7 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
     it 'os comentários nos grupos da tela: "não era o caso" e escondido em "não respondo", o resto esperando você' do
       painel = instance_double(Crm::MetaAds::ComentariosIa::Painel, payload: {
                                  status: 'ready', results: { sent: 3, replied: 1, skipped: 1 },
+                                 network_status: { 'instagram' => 'ready', 'facebook' => 'needs_login' },
                                  to_see: [linha('1', 'complaint'), linha('2', 'skipped'), linha('3', 'waiting')], hidden: [linha('4')]
                                })
       allow(Crm::MetaAds::ComentariosIa::Painel).to receive(:new).and_return(painel)
@@ -229,6 +230,8 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       expect(comentarios['esperando'].pluck('id')).to eq(%w[1 3])
       expect(comentarios['nao_respondo'].map { |item| [item['id'], item['kind']] }).to eq([%w[2 skipped], %w[4 hidden]])
       expect(comentarios['results']).to eq('sent' => 3, 'replied' => 1, 'skipped' => 1)
+      # #2522: o status de cada rede, para a gaveta avisar qual faltou.
+      expect(comentarios['network_status']).to eq('instagram' => 'ready', 'facebook' => 'needs_login')
     end
 
     it '#2481: "no privado" lista as conversas do privado deste cuidado que a pessoa vê, com o comentário do topo' do

@@ -278,6 +278,13 @@
     "GATILHO_COM": {
       "CARD_GANHO": "When a card in {funil} closes the policy",
       "CARD_PERDIDO": "When a card in {funil} does not close"
+    },
+    "SELECAO": {
+      "SITUACOES": {
+        "GANHO": "Closed the policy",
+        "PERDIDO": "Did not close"
+      },
+      "FECHADO_ENTRE": "Closed or did not close between"
     }
   }
 }

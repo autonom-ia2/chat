@@ -1,6 +1,8 @@
-# Seus posts (#2302): os posts do Instagram da caixa (login do Instagram, graph.instagram.com). Pela regra da Meta,
-# vezes, curtidas e comentários do post são só sem anúncio, mas a chamada real de 27/10 só viu posts nunca
-# impulsionados: a tela segue marcando "pode incluir anúncio". O login do Instagram não diz se o post foi impulsionado
+# Seus posts (#2302): os posts do Instagram da caixa (login do Instagram, graph.instagram.com; no login do Facebook,
+# #2406, graph.facebook.com pelo id do Instagram, Channel::Instagram#graph_node). Só as vezes são sem
+# anúncio; curtidas, comentários, pessoas, salvos e compartilhamentos podem incluir (#2522: a chamada real de 27/10 só
+# viu posts nunca impulsionados, e a tela marca "pode incluir anúncio" até haver chamada real num post impulsionado,
+# com o mesmo texto ao lado dos números). O login do Instagram não diz se o post foi impulsionado
 # (sem boost_ads_list): boosted é nil ("não se sabe"), e nenhum sai da média. Só vezes, curtidas e comentários se
 # comparam com o normal: pessoas, salvos e compartilhamentos de um post impulsionado sem a gente saber puxariam a média.
 class SeusPosts::PostsInstagram < SeusPosts::Posts
@@ -29,6 +31,6 @@ class SeusPosts::PostsInstagram < SeusPosts::Posts
   end
 
   def api
-    @api ||= client(base_uri: Crm::MetaAds::Organico::INSTAGRAM_BASE_URI)
+    @api ||= client(base_uri: channel.graph_host, instagram_node: channel.graph_node)
   end
 end

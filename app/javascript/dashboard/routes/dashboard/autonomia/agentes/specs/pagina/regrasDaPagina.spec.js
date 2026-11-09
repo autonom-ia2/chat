@@ -105,6 +105,31 @@ describe('regras da página do agente', () => {
     expect(ehSuperAdmin(null)).toBe(false);
   });
 
+  // #1430: com a flag agente_ferramentas_delegadas, o administrador e quem tem a chave "Gerenciar ferramentas" abrem a
+  // gaveta, mesmo sem Editar em Agentes. A Lia (cotação) fica de fora: a lista dela é fixa nesta fase.
+  it('opens Tools for whoever holds the tools key, without Edit, except on the quoting agent', () => {
+    const chave = { ferramentas: true };
+    const guiado = { mode: 'guided' };
+    const interno = { actuation: 'internal' };
+    const cotacao = { agent_type: 'insurance_quote' };
+    expect(gavetasPermitidas(guiado, false, chave)).toEqual([
+      GAVETA.TESTAR,
+      GAVETA.SABE,
+      GAVETA.VERSOES,
+      GAVETA.FERRAMENTAS,
+    ]);
+    expect(gavetasPermitidas(guiado, true, chave)).toContain(
+      GAVETA.FERRAMENTAS
+    );
+    expect(gavetasPermitidas(interno, false, chave)).toContain(
+      GAVETA.FERRAMENTAS
+    );
+    expect(gavetasPermitidas(cotacao, true, chave)).not.toContain(
+      GAVETA.FERRAMENTAS
+    );
+    expect(gavetasPermitidas(cotacao, false, chave)).toEqual([]);
+  });
+
   it('opens the booking drawer only for managers, with the new booking on the account', () => {
     const comAgenda = { agendaNova: true };
     expect(gavetasPermitidas({ mode: 'guided' }, true, comAgenda)).toContain(

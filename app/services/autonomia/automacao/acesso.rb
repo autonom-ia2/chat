@@ -30,9 +30,10 @@ class Autonomia::Automacao::Acesso
 
   # O alvo é uma conversa, um card ou um contato (#2499). No card, valem o próprio card e a conversa principal dele, em
   # que os passos agem: a pergunta vai a cada política, e quem não vê um dos dois pausa a automação em vez de quebrar a
-  # rodada. O contato pergunta à política do contato se pode mudá-lo (update?): o motor age, não só lê.
+  # rodada. O contato pergunta à política do contato se pode mudá-lo (update?): o motor age, não só lê. A conta
+  # (conta.recorrente, G7) é a da automação: quem ligou já passou pelo `motivo`.
   def alcanca?(alvo)
-    contexto = { user: @usuario, account: @account, account_user: @account_user }
+    return alvo.id == @account.id if alvo.is_a?(::Account)
     return ContactPolicy.new(contexto, alvo).update? if alvo.is_a?(::Contact)
     return ConversationPolicy.new(contexto, alvo).show? unless alvo.is_a?(::Crm::Card)
 
@@ -44,12 +45,24 @@ class Autonomia::Automacao::Acesso
   # (Crm::StageAutomationPolicy#create?): no EE, crm_permission?('crm_manage_pipelines'), que conta o crm_admin e nega o
   # agente comum, junto com automation_manage; no OSS, só o administrador.
   def mexe_no_funil?
-    contexto = { user: @usuario, account: @account, account_user: @account_user }
     ::Crm::StageAutomationPolicy.new(contexto, ::Crm::StageAutomation.new(account: @account)).create?
   end
 
+  # O contexto do Pundit de quem ligou: o mesmo que o endpoint montaria para essa pessoa.
+  def contexto = { user: @usuario, account: @account, account_user: @account_user }
+
   def gatilho_de_card?
     ::Autonomia::Automacao::Gatilhos.do_card?(@chave_gatilho || @definicao.versao_ativa&.receita&.dig('gatilho', 'tipo'))
+  end
+
+  # As mesmas perguntas do "Nova conversa" do painel: administrador ou membro da caixa (o controller confere), e a
+  # ConversationPolicy deixa começar conversa (o EE recusa a função que só lê). O passo "email" e a conversa nova de
+  # quem não tem conversa (ConversaNova, #2680) perguntam aqui, ao salvar e a cada abertura.
+  def self.comeca_conversa?(account_user, caixa)
+    usuario = account_user.user
+    return false unless account_user.administrator? || usuario.inboxes.exists?(id: caixa.id)
+
+    ConversationPolicy.new({ user: usuario, account: account_user.account, account_user: account_user }, Conversation).create?
   end
 
   # A mesma pergunta para outra pessoa da conta (quem o passo "avisar" menciona, F4).

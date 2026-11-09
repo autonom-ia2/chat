@@ -40,10 +40,11 @@ module Autonomia
 
           contents = entries.pluck(:text)
           vectors = Autonomia::Agents::EmbeddingService.new(account: @account, model: @model).embed_batch(contents)
-          pairs = entries.zip(vectors).select { |_, vector| vector.present? }
-          raise EmptyExtraction, 'empty_embeddings' if pairs.empty?
+          raise EmptyExtraction, 'empty_embeddings' if vectors.none?(&:present?)
 
-          replace_knowledge(pairs.map(&:first), pairs.map(&:last))
+          # #1431 (PR 1b) — o vetor vazio é pulado no replace_knowledge sem renumerar: o chunk_index fica o índice da
+          # lista, que é para onde aponta o `trecho_da_secao` do trecho de item.
+          replace_knowledge(entries, vectors)
         end
 
         private
@@ -52,12 +53,25 @@ module Autonomia
         # trechos levam as páginas dela (o `char_span` de cada trecho continua sendo o tamanho dele). Sem seções, o texto
         # inteiro vai ao Chunker, como antes.
         def trechos(text)
+          return trechos_por_secao if @source.respond_to?(:blocos) && @source.blocos.present?
+
           secoes = @source.respond_to?(:secoes) ? @source.secoes : nil
           return Chunker.new(text, source_type: @source.source_type).chunks_with_metadata if secoes.blank?
 
           secoes.flat_map do |secao|
             Chunker.new(secao['texto'], source_type: @source.source_type).chunks_with_metadata
                    .map { |entry| entry.merge(paginas: secao['paginas']) }
+          end
+        end
+
+        # #1431 (F1) — o processor leu os blocos do formato: corte por seção, cada trecho com o caminho e as páginas dele
+        # (`paginas_do_trecho`). No material grande, o trecho leva também a seção de 25 páginas onde começa (`paginas`),
+        # como no corte de hoje: é por ela que o ResumoPorSecao agrupa e o Revisor reconhece o material grande.
+        def trechos_por_secao
+          secoes = @source.respond_to?(:secoes) ? Array(@source.secoes) : []
+          CortePorSecao.new(@source.blocos, documento: File.basename(@source.reference.to_s, '.*').presence).trechos.map do |trecho|
+            faixa = secoes.find { |secao| Range.new(*secao['paginas']).cover?(trecho[:paginas].first) }&.dig('paginas')
+            { text: trecho[:text], metadata: trecho[:metadata], paginas_do_trecho: trecho[:paginas], paginas: faixa }.compact
           end
         end
 
@@ -79,7 +93,8 @@ module Autonomia
               next if vector.blank?
 
               create_entry(entry, vector, index)
-              count += 1
+              # O "N trechos" do material (chunk_count) conta o material, não os trechos de item (só para a busca).
+              count += 1 unless entry.dig(:metadata, :material_type) == 'item'
             end
           end
           count
@@ -126,7 +141,8 @@ module Autonomia
             char_span: chunk_meta[:char_span],
             chunk_index: index,
             doc: doc_metadata
-          }.merge(entry[:paginas] ? { paginas: entry[:paginas] } : {})
+          }.merge(entry.slice(:paginas, :paginas_do_trecho).compact)
+            .merge(chunk_meta.slice(:caminho, :secao_id, :trecho_da_secao))
         end
 
         # Sub-hash da classificação do documento (B2.3), com chaves de string (jsonb) e à prova de nil.

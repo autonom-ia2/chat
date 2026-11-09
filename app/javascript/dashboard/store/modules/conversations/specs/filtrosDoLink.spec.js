@@ -215,6 +215,25 @@ describe('filtros pelo link (#1883)', () => {
       expect(releituras(dispatch)).toBe(2);
     });
 
+    it('com só o desde_dias (Seus posts), conversa nova relê; atualização não', () => {
+      const dispatch = vi.fn();
+      const contexto = {
+        commit: vi.fn(),
+        dispatch,
+        state: estado({ desdeDias: 30 }),
+        rootState: naCaixa({ desde_dias: '30' }),
+        rootGetters: {},
+      };
+
+      actions.updateConversation(contexto, conversa(4));
+      vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+      expect(releituras(dispatch)).toBe(0);
+
+      actions.addConversation(contexto, conversa(8));
+      vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+      expect(releituras(dispatch)).toBe(1);
+    });
+
     it('sem o filtro do link, com o filtro avançado, ou fora da caixa (CRM), não relê', () => {
       const dispatch = vi.fn();
       const contexto = { commit: vi.fn(), dispatch, rootGetters: {} };

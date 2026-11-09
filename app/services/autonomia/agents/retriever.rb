@@ -48,6 +48,8 @@ class Autonomia::Agents::Retriever
     vector = embedding_service(model).embed(query)
     return [] if vector.blank?
 
+    return busca_hibrida(vector, query, top_k, model) if busca_hibrida?
+
     # folga (top_k*4) p/ rerank, dedup por fonte e merge lexical
     rank_candidates(candidate_rows(vector, top_k, model), query, top_k)
   rescue ActiveRecord::ActiveRecordError => e
@@ -65,6 +67,18 @@ class Autonomia::Agents::Retriever
 
   private
 
+  # #2810 — com a flag, a ordem sai da fusão do vetor com a busca por palavra (BuscaHibrida), no lugar do bônus por
+  # metadado e do reforço lexical; as seções dos itens e o dedup por fonte seguem como no caminho de hoje.
+  def busca_hibrida?
+    @agent.account&.feature_enabled?(Autonomia::Agents::BuscaHibrida::FLAG)
+  end
+
+  def busca_hibrida(vector, query, top_k, model)
+    busca = Autonomia::Agents::BuscaHibrida.new(escopo: escopo_da_base, vector: vector, model: model, query: query)
+    fundidos = busca.fundir(candidate_rows(vector, top_k, model).to_a, top_k * 4)
+    dedup_by_source(secoes_dos_itens(fundidos)).first(top_k)
+  end
+
   # Pipeline de ranqueamento sobre os candidatos vetoriais (top_k*4): teto frouxo -> rerank por
   # metadata -> dedup por fonte -> reforço lexical. Extraído do retrieve p/ manter cada método focado.
   def rank_candidates(rows, query, top_k)
@@ -76,6 +90,7 @@ class Autonomia::Agents::Retriever
     # B3 — rerank ADITIVO por metadata (nunca filtro que zera — lição P1.1b): reordena os candidatos já
     # dentro do teto, promovendo o chunk cujo heading/keywords/topics casam com os termos da query.
     kept = rerank_by_metadata(kept, query)
+    kept = secoes_dos_itens(kept)
     result = dedup_by_source(kept).first(top_k)
     # P1.1c — complemento lexical p/ termos exatos que o embedding raso perde (SKU, "domingo",
     # "dermato"): só quando o vetorial veio fraco/incompleto. Roda sobre o MESMO escopo filtrado.
@@ -151,6 +166,10 @@ class Autonomia::Agents::Retriever
   # TIPO, mesmo negócio) que NÃO isola — ver scope_mismatched_source_ids. Salvaguarda anti-regressão
   # idêntica à do topic_map: só exclui mismatched quando RESTA conhecimento em escopo — nunca esvazia tudo.
   def rejected_source_ids
+    @rejected_source_ids ||= ids_reprovados
+  end
+
+  def ids_reprovados
     fontes = @care_id ? @agent.sources.or(fontes_do_cuidado) : @agent.sources
     fontes.where(review_status: %w[needs_resend needs_review]).pluck(:id) +
       scope_mismatched_source_ids
@@ -191,10 +210,10 @@ class Autonomia::Agents::Retriever
 
     seen = vector_hits.map(&:id)
     clause = terms.map { 'content ILIKE ?' }.join(' OR ')
-    lex = escopo_da_base
-          .where(clause, *terms.map { |t| "%#{t}%" })
-          .limit(top_k)
-          .reject { |e| seen.include?(e.id) }
+    lex = escopo_da_base.do_material
+                        .where(clause, *terms.map { |t| "%#{t}%" })
+                        .limit(top_k)
+                        .reject { |e| seen.include?(e.id) }
     # Hit lexical não passou pelo nearest_neighbors → o atributo SQL `neighbor_distance` (alias do
     # SELECT) não existe nessas instâncias. Define um reader singleton com o patamar de match forte
     # p/ uniformizar com os hits vetoriais (P2.1 lê .neighbor_distance p/ ancorar confiança):
@@ -254,6 +273,11 @@ class Autonomia::Agents::Retriever
     doc = meta[:doc] || {}
     parts = [meta[:section_heading], meta[:material_type], meta[:keywords], doc[:topics], doc[:entities]]
     parts.flatten.compact.join(' ').downcase
+  end
+
+  # #1431 (PR 1b) — o item volta como o trecho da seção que o contém (SecoesDosItens, extraído no #2810).
+  def secoes_dos_itens(entries)
+    Autonomia::Agents::SecoesDosItens.new(escopo_da_base).trocar(entries)
   end
 
   # Dedup por fonte (P2): 1 melhor trecho por fonte primeiro (já ordenados por distância pelo

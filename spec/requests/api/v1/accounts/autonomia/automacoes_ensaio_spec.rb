@@ -69,6 +69,39 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes ensaio', type: :request
     expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.ensaio.gatilho_de_card'))
   end
 
+  # #2635 (G7): o recorrente não ensaia passos; mostra quantos a seleção pegaria agora, só entre os que quem pede vê.
+  describe 'recorrente', :automacao_motor do
+    let(:contatos) { create_list(:contact, 2, account: account) }
+    let(:do_contato) do
+      { gatilho: { tipo: 'contato.recorrente', frequencia: 'diaria', hora: 8, selecao: { etiqueta: 'newsletter' } }, passos: [esperar] }
+    end
+
+    before do
+      ligar_motor(account)
+      account.enable_features!('automacao_gatilhos')
+      create(:label, account: account, title: 'newsletter')
+      contatos.each { |contato| contato.update!(label_list: ['newsletter']) }
+      create(:contact, account: account)
+    end
+
+    it 'contato: quantos a seleção pegaria agora, sem a lista' do
+      ensaiar('ensaio', receita: do_contato)
+
+      expect(response.parsed_body).to eq('recorrente' => { 'alvo' => 'Contact', 'pegaria' => 2 })
+    end
+
+    it 'card: conta os cards da seleção' do
+      with_modified_env(CRM_KANBAN_ENABLED: 'true') do
+        funil, etapa = create_crm_pipeline(account: account, user: admin)
+        2.times { account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'C', currency: 'BRL') }
+        ensaiar('ensaio', receita: do_contato.merge(gatilho: { tipo: 'card.recorrente', frequencia: 'diaria', hora: 8,
+                                                               selecao: { funil_id: funil.id, situacao: 'aberto' } }))
+      end
+
+      expect(response.parsed_body['recorrente']).to eq('alvo' => 'Crm::Card', 'pegaria' => 2)
+    end
+  end
+
   it 'pede automation_view' do
     ensaiar('ensaio', quem: agente, receita: receita)
 

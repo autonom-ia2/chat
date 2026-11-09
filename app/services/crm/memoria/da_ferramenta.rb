@@ -34,8 +34,9 @@ module Crm::Memoria::DaFerramenta
     )
   end
 
+  # #1430: só a nativa — uma consulta HTTP com o mesmo nome não é cotação.
   def leitura(run)
-    return unless run.slug == Autonomia::Insurance::ResultadoDaCotacao.cotacao.slug
+    return if run.consulta_http? || run.slug != Autonomia::Insurance::ResultadoDaCotacao.cotacao.slug
 
     cotacao(run)
   end

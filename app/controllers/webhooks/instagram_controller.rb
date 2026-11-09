@@ -94,13 +94,11 @@ class Webhooks::InstagramController < ActionController::API
 
   def instagram_channels_from_payload
     Array(params.to_unsafe_hash[:entry]).flat_map do |entry|
+      # Todas as caixas com o Instagram, de todas as contas (#2781): qualquer uma pode ter o segredo que assinou.
       instagram_ids_from_entry(entry.with_indifferent_access).flat_map do |instagram_id|
-        [
-          Channel::Instagram.find_by(instagram_id: instagram_id),
-          Channel::FacebookPage.find_by(instagram_id: instagram_id)
-        ]
+        Channel::Instagram.where(instagram_id: instagram_id).to_a + Channel::FacebookPage.where(instagram_id: instagram_id).to_a
       end
-    end.compact.uniq
+    end.uniq
   end
 
   def instagram_ids_from_entry(entry)

@@ -126,7 +126,8 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     expect(stubs[:creative].with(&creative_ok)).to have_been_made.once
     expect(stubs[:ad].with { |req| form(req).values_at('status', 'adset_id') == %w[PAUSED 901] }).to have_been_made.once
     expect(Crm::MetaAdsCreatedObject.last).to have_attributes(status: 'created', campaign_id: '900', adset_id: '901',
-                                                              creative_id: '902', ad_id: '903', user_id: user.id)
+                                                              creative_id: '902', ad_id: '903', user_id: user.id,
+                                                              source_post_id: nil, source_post_network: nil)
   end
 
   it 'anúncio que não voltou pausado é pausado na hora e fica na Auditoria (ponto 2)' do

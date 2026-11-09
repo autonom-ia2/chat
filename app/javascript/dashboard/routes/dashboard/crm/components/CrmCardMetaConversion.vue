@@ -22,6 +22,7 @@ const SKIP_REASONS = {
   missing_pixel: 'SKIP_MISSING_PIXEL',
   event_too_old: 'SKIP_EVENT_TOO_OLD',
   missing_credentials: 'SKIP_MISSING_CREDENTIALS',
+  missing_dataset: 'SKIP_MISSING_DATASET',
   no_meta_event: 'SKIP_NO_META_EVENT',
   missing_signals: 'SKIP_MISSING_SIGNALS',
 };

@@ -30,10 +30,9 @@ class Webhooks::InstagramCommentJob < ApplicationJob
     ids = ids(value)
     return unless valid?(ids, time) && ids[:from_id] != instagram_id.to_s
 
-    channel = channel_for(instagram_id)
-    return if channel.nil? || !first_time?(instagram_id, ids[:comment_id])
-
-    publish(channel, instagram_id, ids, time)
+    channels_for(instagram_id).each do |channel|
+      publish(channel, instagram_id, ids, time) if first_time?(channel, ids[:comment_id])
+    end
   end
 
   private
@@ -53,9 +52,12 @@ class Webhooks::InstagramCommentJob < ApplicationJob
     value.present? && value.each_char.all? { |char| char.between?('0', '9') }
   end
 
-  def channel_for(instagram_id)
-    channel = Channel::Instagram.find_by(instagram_id: instagram_id.to_s)
-    channel if channel&.inbox.present? && channel.account.feature_enabled?('meta_ads_comentarios_instagram')
+  # O mesmo Instagram pode ser caixa de mais de uma conta (#2781): o comentário vai a cada uma que tem a flag, e cada
+  # uma lê com o próprio token.
+  def channels_for(instagram_id)
+    Channel::Instagram.where(instagram_id: instagram_id.to_s).includes(:inbox, :account).order(:id).select do |channel|
+      channel.inbox.present? && channel.account.feature_enabled?('meta_ads_comentarios_instagram')
+    end
   end
 
   # A chave do dedupe só fica se o evento saiu: em qualquer outro desfecho (sem resultado, eco, erro, desligamento do
@@ -69,19 +71,20 @@ class Webhooks::InstagramCommentJob < ApplicationJob
                                             payload(channel, comment, time, ids[:ad_id]))
     dispatched = true
   ensure
-    release(instagram_id, ids[:comment_id]) unless dispatched
+    release(channel, ids[:comment_id]) unless dispatched
   end
 
-  def dedup_key(instagram_id, comment_id)
-    "instagram:comment_received:#{instagram_id}:#{comment_id}"
+  # Por caixa (#2781): com o mesmo Instagram em duas contas, a primeira não pode calar a segunda.
+  def dedup_key(channel, comment_id)
+    "instagram:comment_received:#{channel.instagram_id}:#{channel.id}:#{comment_id}"
   end
 
-  def first_time?(instagram_id, comment_id)
-    Redis::Alfred.set(dedup_key(instagram_id, comment_id), 1, nx: true, ex: DEDUP.to_i) ? true : false
+  def first_time?(channel, comment_id)
+    Redis::Alfred.set(dedup_key(channel, comment_id), 1, nx: true, ex: DEDUP.to_i) ? true : false
   end
 
-  def release(instagram_id, comment_id)
-    Redis::Alfred.delete(dedup_key(instagram_id, comment_id))
+  def release(channel, comment_id)
+    Redis::Alfred.delete(dedup_key(channel, comment_id))
     nil
   end
 

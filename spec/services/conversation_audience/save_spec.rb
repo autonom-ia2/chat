@@ -112,4 +112,17 @@ RSpec.describe ConversationAudience::Save do
     expect { described_class.new(search, user: user, name: ' ', person_ids: [found(mobile).id]).perform }
       .to raise_error(described_class::Error, 'name_required')
   end
+
+  it 'turns a refusal of the writer (a contact deleted meanwhile) into its own error, leaving the search unsaved' do
+    person = found(mobile)
+    allow(CampaignJourney::AudienceWriter).to receive(:new).and_wrap_original do |original, *args, **kwargs|
+      original.call(*args, **kwargs).tap do |writer|
+        allow(writer).to receive(:perform).and_raise(CampaignJourney::AudienceWriter::Error, 'foreign_contact')
+      end
+    end
+
+    expect { described_class.new(search, user: user, name: 'X', person_ids: [person.id]).perform }
+      .to raise_error(described_class::Error, 'foreign_contact')
+    expect(search.reload.status).to eq('done')
+  end
 end

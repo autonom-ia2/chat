@@ -12,9 +12,10 @@ class Autonomia::Automacao::Historico
   PAROU = %w[parada falhou interrompida].freeze
   # As chaves de `dados` que a tela sabe dizer. Chave fora da lista não sai: o passo novo (os `campos` da F7, por
   # exemplo) declara a dele e a frase no próprio PR.
-  CHAVES = %w[ramo ate tentativa ia].freeze
+  # `conversa_principal_do_card` (#2680): a mensagem abriu a conversa e ela virou a principal do card.
+  CHAVES = %w[ramo ate tentativa ia conversa_principal_do_card conversas_fora].freeze
   # Estas apontam para dentro da conversa: só saem para quem a enxerga.
-  CHAVES_DA_CONVERSA = %w[mensagem_id nota_id].freeze
+  CHAVES_DA_CONVERSA = %w[mensagem_id nota_id conversa_aberta].freeze
   # Dentro de `ia`, só os números do custo: a razão da IA ou um trecho lido seriam texto da conversa.
   IA = %w[custo_usd modelo tokens_entrada tokens_saida].freeze
   # O valor em dinheiro é custo da conta: só sai com `com_valores` (administrador ou financial_view, #1969, #2557). Os
@@ -95,8 +96,10 @@ class Autonomia::Automacao::Historico
     { tipo: 'conversa', visivel: true, conversa_id: conversa.display_id, nome: conversa.contact&.name }
   end
 
+  # `conversas_fora` (G42) sai só como quantidade: os ids são de conversas que quem vê pode não enxergar.
   def dados_para_tela(dados, chaves)
     lidos = dados.slice(*chaves)
+    lidos['conversas_fora'] = Array(lidos['conversas_fora']).size if lidos.key?('conversas_fora')
     ia = lidos.delete('ia')
     ia.is_a?(Hash) ? lidos.merge('ia' => ia.slice(*@ia)) : lidos
   end

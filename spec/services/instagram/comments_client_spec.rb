@@ -61,6 +61,22 @@ RSpec.describe Instagram::CommentsClient do
     expect([reply, hide, delete, private_reply]).to all(have_been_requested.once)
   end
 
+  # #2406: a caixa do login único fala com graph.facebook.com, e a resposta no privado sai pela Página.
+  it 'no login do Facebook usa graph.facebook.com e manda o privado pela Página' do
+    facebook = create(:channel_instagram, instagram_id: '17841400000000002', login: 'facebook', page_id: '104000000000001')
+    facebook_base = 'https://graph.facebook.com/v22.0'
+    read = stub_request(:get, "#{facebook_base}/1").with(query: hash_including({}))
+                                                   .to_return(status: 200, body: { id: '1' }.to_json, headers: json)
+    private_reply = stub_request(:post, "#{facebook_base}/104000000000001/messages").with(query: hash_including({}))
+                                                                                    .to_return(status: 200, body: {}.to_json, headers: json)
+
+    client = described_class.new(facebook)
+    client.comment('1')
+    client.private_reply('1', 'Oi!')
+
+    expect([read, private_reply]).to all(have_been_requested.once)
+  end
+
   it 'falta de permissão vem com o código e sem o token no log' do
     stub_request(:get, %r{#{base}/1790000000000001/comments})
       .to_return(status: 400, headers: json, body: { error: { code: 10, message: "sem permissão #{channel.access_token}" } }.to_json)

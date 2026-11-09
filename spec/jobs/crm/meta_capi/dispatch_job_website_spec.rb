@@ -4,9 +4,14 @@ require 'rails_helper'
 # O caminho CTWA continua coberto por dispatch_job_spec.rb, sem alteração.
 RSpec.describe Crm::MetaCapi::DispatchJob do
   let(:account) { create(:account) }
-  let(:pipeline_metadata) { { 'meta_sync' => { 'dataset_id' => 'DS123', 'pixel_id' => '2164882667623689' } } }
+  let(:pipeline_metadata) { { 'meta_sync' => { 'pixel_id' => '2164882667623689' } } }
+  # The WhatsApp (CTWA) path reads the dataset of the inbox WABA (#1940), kept on the channel.
   let(:channel) do
     create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false)
+      .tap do |created|
+        dataset = { 'waba_id' => created.provider_config['business_account_id'], 'id' => 'DS123' }
+        created.update_columns(provider_config: created.provider_config.merge('meta_dataset' => dataset)) # rubocop:disable Rails/SkipsModelValidations
+      end
   end
   let(:conversation) { create(:conversation, account: account, inbox: channel.inbox) }
   let(:pipeline) do
@@ -337,9 +342,24 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
     expect(client).to have_received(:post_events).once
   end
 
+  context 'when the only click is in a linked conversation of a non-official inbox (#1940)' do
+    it 'still sends the website event to the funnel Pixel' do
+      api_conversation = create(:conversation, account: account, inbox: create_crm_inbox(account: account),
+                                               additional_attributes: { 'campaign' => { 'ctwa_clid' => 'API1' } })
+      Crm::CardConversation.create!(account: account, card: card, conversation: api_conversation)
+
+      perform
+
+      expect(Meta::ConversionsApiClient).to have_received(:new).with(access_token: anything, dataset_id: '2164882667623689')
+      expect(row).to have_attributes(status: 'accepted', attribution_mode: 'website')
+    end
+  end
+
   context 'when the card also carries a ctwa_clid' do
     let(:conversation) do
-      create(:conversation, account: account, inbox: channel.inbox, additional_attributes: { 'campaign' => { 'ctwa_clid' => 'CLID1' } })
+      # Started before the sale: only clicks made by the event count (#2738).
+      create(:conversation, account: account, inbox: channel.inbox, additional_attributes: { 'campaign' => { 'ctwa_clid' => 'CLID1' } },
+                            created_at: 1.day.ago)
     end
 
     it 'keeps the CTWA path: business_messaging to the dataset with the click id' do

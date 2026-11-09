@@ -9,12 +9,78 @@ const SETTINGS_ROUTES = [
   'autonomia_prospecting_settings',
 ];
 
+// #2692 — com a flag prospeccao_nova (protótipo), o menu abre as telas novas:
+// "Achar empresas" (só quem busca), "Suas buscas" e, desde a fase 5 (#2697),
+// "Para chamar" (a fila, para todos que veem a Prospecção). Desde a F6
+// (#2775), as listas moram na aba "Suas listas" de "Suas buscas", e a página
+// Listas antiga sai deste menu; a rota dela continua existindo (e no menu de
+// sempre, com a flag desligada).
+// Configurações saem do menu lateral e continuam em Configurações da conta.
+const ACHAR_ROUTES = [
+  'autonomia_prospecting_achar',
+  'autonomia_prospecting_achar_buscas',
+  'autonomia_prospecting_achar_busca',
+  'autonomia_prospecting_achar_nova',
+  'autonomia_prospecting_achar_listas',
+  'autonomia_prospecting_achar_lista',
+  'autonomia_prospecting_para_chamar',
+];
+
+const acharItems = ({ podeBuscar, t, accountScopedRoute }) => [
+  {
+    name: 'Prospecting',
+    label: t('SIDEBAR.PROSPECTING'),
+    icon: 'i-lucide-search',
+    activeOn: ACHAR_ROUTES,
+    // Na fase 1: Achar empresas, Suas buscas e Listas (decisão da rodada 3);
+    // a fila entrou com a fase 5, quando passou a abrir fora da demonstração;
+    // Listas saiu com a F6 (#2775).
+    children: [
+      ...(podeBuscar
+        ? [
+            {
+              name: 'Prospecting Achar',
+              label: t('PROSPECTING_ACHAR.MENU.ACHAR'),
+              to: accountScopedRoute('autonomia_prospecting_achar'),
+              // A lista logo depois de buscar também marca "Achar empresas".
+              activeOn: [
+                'autonomia_prospecting_achar',
+                'autonomia_prospecting_achar_nova',
+              ],
+            },
+          ]
+        : []),
+      {
+        name: 'Prospecting Buscas',
+        label: t('PROSPECTING_ACHAR.MENU.BUSCAS'),
+        to: accountScopedRoute('autonomia_prospecting_achar_buscas'),
+        // A aba "Suas listas" (#2775) também marca "Suas buscas".
+        activeOn: [
+          'autonomia_prospecting_achar_buscas',
+          'autonomia_prospecting_achar_busca',
+          'autonomia_prospecting_achar_listas',
+          'autonomia_prospecting_achar_lista',
+        ],
+      },
+      {
+        name: 'Prospecting Para Chamar',
+        label: t('PROSPECTING_ACHAR.MENU.FILA'),
+        to: accountScopedRoute('autonomia_prospecting_para_chamar'),
+        activeOn: ['autonomia_prospecting_para_chamar'],
+      },
+    ],
+  },
+];
+
 export const prospectingSidebarItems = ({
   isVisible,
   t,
   accountScopedRoute,
+  novaOn = false,
+  podeBuscar = false,
 }) => {
   if (!isVisible) return [];
+  if (novaOn) return acharItems({ podeBuscar, t, accountScopedRoute });
 
   return [
     {

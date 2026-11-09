@@ -80,6 +80,13 @@ module Autonomia
           end
         end
 
+        # Top KEYWORD_MAX termos de conteúdo (>= KEYWORD_MIN_LEN, sem stopwords PT), dedup, ordem de aparição. Mesma
+        # tokenização do Retriever#lexical_terms. Na classe porque o CortePorSecao (#1431) carimba as mesmas keywords.
+        def self.keywords_for(text)
+          text.to_s.downcase.scan(/[\p{Alnum}]{#{KEYWORD_MIN_LEN},}/o)
+              .reject { |w| KEYWORD_STOPWORDS.include?(w) }.uniq.first(KEYWORD_MAX)
+        end
+
         private
 
         # Pipeline estrutural único (fonte de verdade p/ chunks e chunks_with_metadata). Devolve
@@ -118,8 +125,7 @@ module Autonomia
         # Top KEYWORD_MAX termos de conteúdo (>= KEYWORD_MIN_LEN, sem stopwords PT), dedup, ordem de
         # aparição. Mesma tokenização do Retriever#lexical_terms (casamento léxico query↔chunk).
         def keywords_for(text)
-          text.to_s.downcase.scan(/[\p{Alnum}]{#{KEYWORD_MIN_LEN},}/o)
-              .reject { |w| KEYWORD_STOPWORDS.include?(w) }.uniq.first(KEYWORD_MAX)
+          self.class.keywords_for(text)
         end
 
         # Novo cabeçalho fecha a seção anterior (se o acumulado já pode virar chunk; senão segue

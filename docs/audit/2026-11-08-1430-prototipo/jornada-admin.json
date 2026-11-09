@@ -1,0 +1,20 @@
+{
+  "pasta": "docs/audit/2026-11-08-1430-prototipo/prints/1-admin-libera",
+  "conta": 1,
+  "usuario": "john@acme.inc",
+  "larguras": [1440, 390],
+  "temas": ["light"],
+  "jornadas": [
+    {
+      "nome": "admin-libera",
+      "etapas": [
+        { "nome": "funcoes-da-equipe", "url": "/app/accounts/{conta}/settings/funcoes-da-equipe", "esperar": "button[aria-label=\"Alterar a função Supervisão\"]", "pausa": 3000 },
+        { "nome": "alterar-supervisao", "passos": [{ "clicar": "button[aria-label=\"Alterar a função Supervisão\"]" }], "esperar": "text=Alterar Supervisão", "pausa": 2500 },
+        { "nome": "abre-mais-areas", "passos": [{ "clicar": "button:has-text(\"mais 15 áreas\")" }, { "esperar": "[data-area=\"AUTONOMIA_TOOLS\"]" }], "pausa": 1500 },
+        { "nome": "linha-nova", "passos": [{ "clicar": "[data-area=\"AUTONOMIA_TOOLS\"] [role=\"radio\"]:has-text(\"Não vê\")" }], "pausa": 1500 },
+        { "nome": "escolhe-pode-mexer", "passos": [{ "clicar": "[data-area=\"AUTONOMIA_TOOLS\"] [role=\"radio\"]:has-text(\"Pode mexer\")" }], "pausa": 2000 },
+        { "nome": "confira", "passos": [{ "clicar": "button:has-text(\"Continuar\")" }], "pausa": 2500, "pagina_inteira": true }
+      ]
+    }
+  ]
+}

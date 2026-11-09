@@ -110,4 +110,27 @@ RSpec.describe Crm::MetaAds::LeadForms::ImportPastJob do
     expect(last_audit).to have_attributes(user_id: admin.id)
     expect(form.reload.pipeline_id).to eq(pipeline.id)
   end
+
+  # #2740: só a reconciliação pula o lead recusado há pouco. Quem clica em "trazer quem já preencheu" tenta de novo.
+  it 'lead recusado antes: o "trazer quem já preencheu" tenta de novo e traz' do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    allow(Rails).to receive(:cache).and_return(cache)
+    Crm::MetaAds::LeadForms::RefusedLeads.new(form).remember!('L1')
+    stub_leads
+
+    run
+
+    expect(account.crm_cards.where(stage: stage).pluck(:title)).to eq(['Ana'])
+    expect(last_audit.audited_changes).to include('imported' => 1)
+  end
+
+  # #2740: o token recusado (190) sobe como TokenRefused, mas a tela lê o mesmo código das outras recusas.
+  it 'token recusado pela Meta (190): a Auditoria registra meta_refused, como nas outras recusas' do
+    stub_request(:get, meta_graph_url('104882')).with(query: { fields: 'access_token' })
+                                                .to_return(status: 400, headers: json, body: meta_graph_error(190, 'Token expirado').to_json)
+
+    run
+
+    expect(last_audit.audited_changes).to include('import_error' => 'meta_refused')
+  end
 end

@@ -1191,3 +1191,90 @@
   display_name: Anúncios › login único
   enabled: true
   column: feature_flags_ext_2
+
+# Prospecção nova, "Achar empresas" (#2692, F1 #2693): ligada, o menu Prospecção abre as telas novas (porta com "O quê?"
+# e "Onde?", lista com mapa que se completa ao vivo, gaveta da empresa, envio ao funil e Suas buscas). Desligada: as telas
+# de hoje, intactas. Rollback: desligar a flag na conta. Sem migration. Bit: posição 29 (268435456), dada pela
+# Orquestração. Depois do deploy liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: prospeccao_nova
+  display_name: Prospecção › achar empresas (nova)
+  enabled: true
+  column: feature_flags_ext_2
+
+# RAG v2, F1 (#1431): o material da base é lido pela estrutura que o próprio formato tem (título, lista e tabela) e
+# cortado por seção, com o caminho e a página em cada trecho. Ligada: o material novo, ou lido de novo, entra pelo
+# corte novo. Desligada: o corte de hoje. O que já foi lido fica como está até ser lido de novo. Rollback: desligar a
+# flag na conta. Bit: posição 30 (536870912), dada pela Orquestração. Liga em todas as contas das 2 stacks.
+- name: rag_corte_por_estrutura
+  display_name: Agentes › base lida pela estrutura
+  enabled: true
+  column: feature_flags_ext_2
+
+# Agentes: ferramentas geridas pela conta (#1430, tema 9 do épico #1424). Ligada: o administrador da conta e quem tem a
+# chave `autonomia_tools_manage` (protegida, só o administrador entrega) criam, editam, testam, ligam e apagam as
+# ferramentas HTTP dos agentes. Desligada: como antes, só a equipe da plataforma. Sem migration. Rollback: desligar a
+# flag na conta. Posição 31 (1073741824, 1 << 30), dada pela Orquestração em 08/11. Depois do deploy liga em todas as
+# contas ativas das 2 stacks (regra de 07/11).
+- name: agente_ferramentas_delegadas
+  display_name: Agentes › ferramentas geridas pela conta
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: a ferramenta HTTP consulta em segundo plano (#1430, tema 9 do épico #1424). Ligada: numa conversa, toda
+# chamada de ferramenta HTTP vira uma execução na fila própria `agent_tools`; o turno espera até 8 s por rodada e, se a
+# resposta não chegar, avisa que está consultando e fala o resultado depois, num evento. Desligada: a chamada roda
+# dentro do turno, como antes. A Lia fica fora. Rollback: desligar a flag na conta. Com migration 20261108830000
+# (coluna `autonomia_agent_tool_id` em `autonomia_tool_runs`). Posição 32 (2147483648, 1 << 31), dada pela Orquestração
+# em 08/11. Depois do deploy liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: agente_ferramenta_em_segundo_plano
+  display_name: Agentes › ferramenta consulta em segundo plano
+  enabled: false
+  column: feature_flags_ext_2
+
+# Instagram pelo login único (#2406, depois do #2338): quem tem Página com Instagram liga o Instagram com o mesmo
+# "Entrar com o Facebook" dos Anúncios. Só vale com anuncios_login_unico. Ligada: no pronto do passo a passo, "Ligar o
+# Instagram" liga ali mesmo uma caixa do Instagram com o token da Página (graph.facebook.com), ou troca para esse login
+# a caixa do mesmo Instagram que já existe na conta. Desligada: o botão leva ao login do Instagram, como antes. O login
+# do Instagram continua para quem só tem Instagram. Com migration 20261108900000 (colunas `login` e `page_id` em
+# channel_instagram). Rollback: desligar a flag na conta; a caixa já trocada volta ao reautorizar pelo login do
+# Instagram (docs/crm/instagram-login-unico-2406.md). Posição 33 (4294967296, 1 << 32), dada pela Orquestração em
+# 09/11. Nasce desligada e liga só na conta de teste do Rodrigo, com o OK dele: as permissões instagram_manage_* ainda
+# não passaram pelo App Review.
+- name: instagram_login_unico
+  display_name: Anúncios › Instagram pelo login único
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: o material do próprio agente vem primeiro (#2801, Refs #1431). Ligada: a regra de resposta dá a ordem das
+# fontes (material do agente > fatos-âncora das instruções > ferramentas > segmento da conta > conhecimento geral) e o
+# bloco do segmento passa a valer só quando o material não traz o assunto. Quando o [CONTEXTO] traz o que foi perguntado,
+# inclusive uma definição, a resposta segue o material e marca a fonte. Fora da Lia e do Guia. Desligada: como antes.
+# Sem migration. Rollback: desligar a flag na conta. Posição 34 (8589934592, 1 << 33), dada pela Orquestração em
+# 09/11. Depois do deploy liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: agente_material_primeiro
+  display_name: Agentes › material do agente primeiro
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: com o fato do negócio no trecho, a resposta usa o dado (#2807, Refs #1431). Ligada: a regra de resposta manda
+# afirmar o fato do negócio que o [CONTEXTO] traz, sem "preciso confirmar" e sem atribuir o dado além do que o trecho
+# diz; o fato que não está no material, nos fatos-âncora nem em ferramenta segue a regra de quando não souber, sem
+# palpite. Só no atendimento ao cliente; fora da Lia, do Guia e do copiloto. Desligada: como antes. Sem migration.
+# Rollback: desligar a flag na conta. Posição 35 (17179869184, 1 << 34), dada pela Orquestração em 09/11: só entra na
+# fila depois do #2801 na main, que traz a 34 (agente_material_primeiro). Depois do NO AR, a Orquestração liga em todas
+# as contas ativas das 2 stacks (regra C de 09/11).
+- name: agente_usa_o_trecho
+  display_name: Agentes › usar o dado do trecho
+  enabled: false
+  column: feature_flags_ext_2
+
+# RAG: busca híbrida (#2810, Refs #1431). Ligada: os candidatos do vetor e os da busca por palavra (texto em português,
+# índice GIN da migration 20261108910000) entram juntos e a ordem sai da fusão por posição (RRF, k = 60), no lugar do
+# bônus por metadado e do reforço lexical. O teto de distância, as seções dos itens, o material reprovado e o isolamento
+# por agente continuam valendo. Desligada: a busca de hoje. Rollback: desligar a flag na conta. Posição 36
+# (34359738368, 1 << 35), dada pela Orquestração em 09/11: entra na fila depois do #2811. Ligar em todas as
+# contas é decisão do Rodrigo (o RESULTADO do #2810 diz por quê), não a regra C automática.
+- name: rag_busca_hibrida
+  display_name: RAG › busca híbrida
+  enabled: false
+  column: feature_flags_ext_2
