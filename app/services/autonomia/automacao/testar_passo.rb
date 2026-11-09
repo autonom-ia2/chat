@@ -38,17 +38,20 @@ class Autonomia::Automacao::TestarPasso
     end
   end
 
-  # `account_user` é quem pede, na conta: dele saem a pessoa e o que ela enxerga. `ligada_por`: quem ligou a automação
-  # já salva (nil: nova ou nunca ligada); o valor do card só vai se os dois podem (#2780).
-  def initialize(receita:, passo_id:, conta:, account_user:, conversa_id: nil, ligada_por: nil) # rubocop:disable Metrics/ParameterLists
-    @receita = receita
-    passos = ::Autonomia::Automacao::Receita.new(receita, conta: conta, account_user: account_user).passos
-    @passo = passos.find { |passo| passo['id'] == passo_id.to_s }
+  # O que a tela pede: o rascunho (`receita`), o passo, a conversa escolhida (nil no 1º pedido) e quem ligou a automação
+  # já salva (`ligada_por`, nil na nova ou nunca ligada; o valor do card só vai se ele também pode, #2780).
+  Pedido = Struct.new(:receita, :passo_id, :conversa_id, :ligada_por, keyword_init: true)
+
+  # `account_user` é quem pede, na conta: dele saem a pessoa e o que ela enxerga.
+  def initialize(pedido:, conta:, account_user:)
+    @receita = pedido.receita
+    passos = ::Autonomia::Automacao::Receita.new(@receita, conta: conta, account_user: account_user).passos
+    @passo = passos.find { |passo| passo['id'] == pedido.passo_id.to_s }
     @conta = conta
     @account_user = account_user
     @usuario = account_user.user
-    @conversa_id = conversa_id.presence
-    @ligada_por = ligada_por
+    @conversa_id = pedido.conversa_id.presence
+    @ligada_por = pedido.ligada_por
   end
 
   # Sem `conversa_id`: { conversa:, candidatas: [ids], aviso: }. Com ele: { conversa: }. A conversa é

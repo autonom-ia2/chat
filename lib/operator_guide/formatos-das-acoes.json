@@ -11406,7 +11406,6 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:20",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:85",
       "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:84",
       "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:83",
       "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:70"

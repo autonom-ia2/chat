@@ -34,8 +34,8 @@ RSpec.describe Autonomia::Automacao::TestarPasso, :automacao_motor do
 
   def testar(gatilho: 'conversa.resolvida', quem: admin, ligada_por: nil)
     receita = { 'gatilho' => { 'tipo' => gatilho }, 'passos' => [resumir] }
-    described_class.new(receita: receita, passo_id: 'p1', conta: account, account_user: quem.account_users.first,
-                        conversa_id: conversa.display_id, ligada_por: ligada_por).resultado(com_valores: false)[:conversa]
+    pedido = described_class::Pedido.new(receita: receita, passo_id: 'p1', conversa_id: conversa.display_id, ligada_por: ligada_por)
+    described_class.new(pedido: pedido, conta: account, account_user: quem.account_users.first).resultado(com_valores: false)[:conversa]
   end
 
   def entrada = corpos.sole['input'].to_json
