@@ -16,6 +16,23 @@ RSpec.describe Autonomia::Agents::Tools::ModeloLiquid do
       expect(described_class.faixa_grande?('{% for i in (1..2 %}')).to be(false)
     end
 
+    # Tester do #1430: a faixa guardada num `assign` (ou passada a um filtro) também vira lista inteira, e a repetição
+    # sem nada dentro não soma no limite de render (5 milhões de voltas em segundos).
+    it 'finds the range anywhere in the template, and refuses a loop with nothing inside' do
+      expect(described_class.faixa_grande?('{% assign r = (1..2000000000) %}{% for i in r %}x{% endfor %}')).to be(true)
+      expect(described_class.faixa_grande?('{{ (1..2000000000) | join }}')).to be(true)
+      expect(described_class.faixa_grande?('{% if (1..n) contains 3 %}x{% endif %}')).to be(true)
+    end
+
+    it 'refuses a loop with nothing inside, which the render limit does not count' do
+      expect(described_class.faixa_grande?('{% for a in (1..1000) %}{% for b in (1..1000) %}{% endfor %}{% endfor %}')).to be(true)
+      expect(described_class.faixa_grande?('{% for a in response.itens %} {% endfor %}')).to be(true)
+      expect(described_class.faixa_grande?('{% tablerow a in response.itens %}{% endtablerow %}')).to be(true)
+      expect(described_class.faixa_grande?('{% tablerow a in response.itens %}{{ a }}{% endtablerow %}')).to be(false)
+      expect(described_class.faixa_grande?('{% for a in response.itens %}{% else %}nada{% endfor %}')).to be(true)
+      expect(described_class.faixa_grande?('{% assign r = (1..10) %}{% for i in r %}{{ i }}{% endfor %}')).to be(false)
+    end
+
     it 'counts tablerow like for' do
       expect(described_class.faixa_grande?('{% tablerow i in (1..2000000000) %}x{% endtablerow %}')).to be(true)
     end

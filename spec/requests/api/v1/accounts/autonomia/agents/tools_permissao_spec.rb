@@ -180,6 +180,8 @@ RSpec.describe 'Autonomia agent tools permission', type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).not_to include(segredo)
+      # Tester do #1430: um site que repete os cabeçalhos devolveria a chave na resposta 2xx do Testar.
+      expect(Autonomia::Agents::Tools::HttpExecutor).to have_received(:new).with(hash_including(higienizar: true))
     end
 
     it 'does not reach the tools of another account' do

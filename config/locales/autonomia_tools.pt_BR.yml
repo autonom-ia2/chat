@@ -10,6 +10,6 @@ pt_BR:
     agents:
       ferramenta:
         informacao_no_site: "não pode ter informação do agente no nome do site nem depois do #"
-        faixa_grande: "repete mais de %{maximo} vezes ou usa uma faixa montada com informação do agente"
+        faixa_grande: "repete mais de %{maximo} vezes, usa uma faixa montada com informação do agente ou repete sem nada dentro"
         chave_de_novo: "precisa ser digitada de novo"
         chave_de_novo_outro_site: "precisa ser digitada de novo: o link agora aponta para outro site"

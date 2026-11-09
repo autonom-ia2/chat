@@ -66,15 +66,32 @@ module Autonomia::Agents::Tools::ModeloLiquid
     raise Liquid::InternalError, 'internal', cause: nil
   end
 
-  # Recusa (`faixa_grande`) o modelo com `for` ou `tablerow` sobre faixa maior que FAIXA_MAXIMA ou montada com
-  # variável: o Liquid monta o array da faixa inteira antes de qualquer limite contar. Só lê a árvore: nada é
-  # renderizado. Devolve o template já com os LIMITES, para todo render da ferramenta passar por aqui.
+  # Recusa (`faixa_grande`) o modelo com faixa maior que FAIXA_MAXIMA ou montada com variável EM QUALQUER LUGAR — `for`,
+  # `assign`, filtro, condição (tester do #1430: guardada num `assign`, ela passava): o Liquid monta o array da faixa
+  # inteira antes de qualquer limite contar. Recusa também `for`/`tablerow` sem nada dentro: o limite de render soma os nós
+  # do corpo a cada volta, e corpo vazio soma zero (5 milhões de voltas em segundos). Só lê a árvore, pelo visitante do
+  # próprio Liquid: nada é renderizado. Devolve o template já com os LIMITES, para todo render da ferramenta passar por aqui.
   def conferir_faixas!(template)
-    repeticoes = todos_os_nos(template.root).select { |no| REPETEM.any? { |classe| no.instance_of?(classe) } }
-    raise Autonomia::Agents::Tools::HttpExecutor::ValorRecusado, 'faixa_grande' if repeticoes.any? { |no| faixa_perigosa?(no.collection_name) }
+    raise Autonomia::Agents::Tools::HttpExecutor::ValorRecusado, 'faixa_grande' if faixa_perigosa_no?(template) || repete_sem_corpo?(template)
 
     LIMITES.each { |limite, valor| template.resource_limits.public_send(:"#{limite}=", valor) }
     template
+  end
+
+  def faixa_perigosa_no?(template)
+    faixas = []
+    Liquid::ParseTreeVisitor.for(template.root).add_callback_for(Range, Liquid::RangeLookup) { |faixa| faixas << faixa }.visit
+    faixas.any? { |faixa| faixa_perigosa?(faixa) }
+  end
+
+  # No `for`, `nodelist` são os blocos (o corpo e o `else`); no `tablerow`, já é o corpo. O Liquid tira do corpo o texto
+  # só de espaços.
+  def repete_sem_corpo?(template)
+    todos_os_nos(template.root).any? do |no|
+      next no.nodelist.first.nodelist.empty? if no.instance_of?(Liquid::For)
+
+      no.instance_of?(Liquid::TableRow) && no.nodelist.empty?
+    end
   end
 
   # Para o cadastro: o texto tem faixa perigosa? Modelo que nem abre fica para a validação de cada campo.

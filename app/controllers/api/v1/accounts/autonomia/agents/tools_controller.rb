@@ -44,7 +44,9 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
   def test
     bound = Autonomia::Agents::Tools::Bound.new(agent: @agent, record: @tool)
     segundos = [@tool.timeout_seconds, SEGUNDOS_DO_TESTE].min
-    result = Autonomia::Agents::Tools::HttpExecutor.new(tool: @tool, params: test_params, segundos: segundos).call.to_s
+    # Tester do #1430: com a chave delegada, quem testa pode não ser quem cadastrou a chave. Um site que repete os
+    # cabeçalhos devolveria o segredo na resposta 2xx: ela sai mascarada, como na consulta em segundo plano.
+    result = Autonomia::Agents::Tools::HttpExecutor.new(tool: @tool, params: test_params, segundos: segundos, higienizar: true).call.to_s
     render json: { status: 'ok', body: bound.cabendo(result), segundos_do_teste: segundos,
                    cortada: result.length > Autonomia::Agents::Tools::Bound::MAX_OUTPUT_CHARS }
   rescue Autonomia::Agents::Tools::HttpExecutor::Error => e
