@@ -93,8 +93,9 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   end
 
   # O mesmo Instagram pode estar em mais de uma conta (#2781): o evento vai a um canal por conta, como o Messenger. O
-  # referral sai uma vez só, porque o MessagingReferralJob já percorre as caixas de todas as contas. Uma conta que
-  # falha não impede as outras: o primeiro erro sobe no fim e o retry refaz o lote (a mensagem é deduplicada na caixa).
+  # referral sai uma vez só, porque o MessagingReferralJob já percorre as caixas de todas as contas. Um erro que escapa
+  # do serviço de uma conta não impede as outras: o primeiro sobe no fim e o retry refaz o lote (a mensagem é
+  # deduplicada na caixa). O construtor da mensagem trata os próprios erros, como antes.
   def deliver(messaging, channels)
     event_name = event_name(messaging)
     return if event_name.nil? || channels.empty?
@@ -115,11 +116,12 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
 
   # O eco de uma resposta enviada por uma conta fica só nela, como no Messenger (que ignora o eco do próprio app): a
   # outra conta não vê a resposta da primeira. O eco que nenhuma caixa conhece (resposta pelo celular ou pelo app do
-  # Instagram) vai a todas, como no Messenger.
+  # Instagram) vai a todas, como no Messenger. Limite: o eco que chega antes de a resposta gravar o mid (o job do eco já
+  # espera 2 s) também vai a todas.
   def echo_channels(messaging, channels)
-    return channels unless agent_message_via_echo?(messaging) && channels.many?
-
     mid = messaging.dig(:message, :mid)
+    return channels unless agent_message_via_echo?(messaging) && channels.many? && mid.present?
+
     owners = channels.select { |channel| channel.inbox.present? && channel.inbox.messages.exists?(source_id: mid) }
     owners.presence || channels
   end

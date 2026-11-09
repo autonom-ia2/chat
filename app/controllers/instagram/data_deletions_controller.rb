@@ -10,12 +10,12 @@ class Instagram::DataDeletionsController < ActionController::API
   before_action :verify_signed_request!, only: [:deauthorize, :create]
 
   def deauthorize
-    instagram_channels.each(&:prompt_reauthorization!)
+    each_channel(&:prompt_reauthorization!)
     head :ok
   end
 
   def create
-    instagram_channels.each(&:revoke_access!)
+    each_channel(&:revoke_access!)
     code = status_verifier.generate({ 'processed_at' => Time.current.iso8601 })
 
     render json: { url: "#{base_url}/instagram/data_deletion_status?code=#{CGI.escape(code)}", confirmation_code: code }
@@ -42,10 +42,19 @@ class Instagram::DataDeletionsController < ActionController::API
     user_id = @signed_payload['user_id'].to_s
     return [] if user_id.blank?
 
-    channels = Channel::Instagram.where(app_scoped_user_id: user_id).order(:id).to_a
-    channels = Channel::Instagram.where(instagram_id: user_id).order(:id).to_a if channels.empty?
+    channels = Channel::Instagram.where(app_scoped_user_id: user_id).or(Channel::Instagram.where(instagram_id: user_id)).order(:id).to_a
     Rails.logger.warn("Instagram #{action_name} callback: no channel for user_id #{user_id}") if channels.empty?
     channels
+  end
+
+  # Uma caixa que falha não impede as outras: o erro fica no log e no rastreador, e a Meta recebe a resposta.
+  def each_channel
+    instagram_channels.each do |channel|
+      yield channel
+    rescue StandardError => e
+      Rails.logger.warn("Instagram #{action_name} callback: channel #{channel.id} failed with #{e.class}")
+      ChatwootExceptionTracker.new(e, account: channel.account).capture_exception
+    end
   end
 
   def status_verifier

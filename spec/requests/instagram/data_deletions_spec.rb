@@ -51,10 +51,11 @@ RSpec.describe 'Instagram::DataDeletionsController', type: :request do
     # #2781: o mesmo Instagram pode ser caixa de mais de uma conta; o pedido é da pessoa e vale para todas.
     it 'flags every channel of the same Instagram, in every account' do
       other = create(:channel_instagram, instagram_id: channel.instagram_id, app_scoped_user_id: 'app-scoped-123')
+      legacy = create(:channel_instagram, instagram_id: 'app-scoped-123')
 
       post_signed '/instagram/deauthorize', signed_request_for(payload_for('app-scoped-123'))
 
-      expect([channel, other].map { |c| c.reload.reauthorization_required? }).to eq([true, true])
+      expect([channel, other, legacy].map { |c| c.reload.reauthorization_required? }).to eq([true, true, true])
     end
 
     it 'returns ok when no channel matches the user' do

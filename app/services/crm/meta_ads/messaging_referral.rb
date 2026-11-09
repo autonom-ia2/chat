@@ -126,7 +126,8 @@ module Crm::MetaAds::MessagingReferral
   # A mesma Página pode ser caixa de mais de uma conta (Integrations::Facebook::MessageCreator grava a mensagem em
   # todas), e o mesmo Instagram também (#2781): se alguma conta conhece o anúncio (gasto ou nome), ele vai só para a
   # conversa dela (:mine ou :foreign). Se nenhuma conhece (anúncio novo, antes da coleta), :ask: a Graph diz de qual
-  # conta de anúncios ele é (`owner?`). Caixa de uma conta só é sempre :mine.
+  # conta de anúncios ele é (`owner?`). Página ou Instagram sem caixa em outra conta é sempre :mine. A Página de outra
+  # conta com o mesmo Instagram conta como outra conta: ela também recebe o Direct desse Instagram.
   def ownership(conversation, ad_id)
     others = other_accounts(conversation.inbox&.channel, conversation.account_id)
     return :mine if others.empty? || known_ad?(conversation.account_id, ad_id)
