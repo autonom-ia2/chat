@@ -4460,8 +4460,8 @@
     },
     {
      "id": "16.03",
-     "titulo": "Listas de leads e público de campanha",
-     "para_que_serve": "Juntar leads em listas e gerar, a partir delas, o público etiquetado de uma campanha.",
+     "titulo": "Listas de leads",
+     "para_que_serve": "Juntar leads em listas, mandá-las ao CRM e entender o selo dos segmentos por etiqueta criados antes.",
      "publico": "ambos",
      "prioridade": "P2",
      "assuntos": [
@@ -4477,7 +4477,7 @@
      "requer": "autonomia_prospecting",
      "prints": [],
      "fontes": [
-      "porques: Juntar leads em listas e preparar um publico de campanha"
+      "porques: Juntar leads em listas"
      ],
      "revisar": false,
      "nota": null
@@ -4628,8 +4628,8 @@
     },
     {
      "id": "16.10",
-     "titulo": "Colocar leads da busca numa campanha",
-     "para_que_serve": "Levar leads da busca para uma campanha nova ou existente e entender quem fica de fora.",
+     "titulo": "Levar leads da busca para uma campanha",
+     "para_que_serve": "Saber que Adicionar à campanha saiu, levar as empresas a um Público pela tela Achar empresas e o que acontece com os segmentos por etiqueta antigos.",
      "publico": "ambos",
      "prioridade": "P2",
      "assuntos": [
@@ -4645,7 +4645,7 @@
      "requer": "autonomia_prospecting",
      "prints": [],
      "fontes": [
-      "porques: Colocar leads da busca numa campanha"
+      "porques: Levar leads da busca para uma campanha"
      ],
      "revisar": false,
      "nota": null
@@ -4786,6 +4786,73 @@
      "prints": [],
      "fontes": [
       "porques: Ver, abrir e apagar as suas buscas da Prospeccao nova"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.17",
+     "titulo": "Guardar as empresas achadas para mandar mensagem",
+     "para_que_serve": "Guardar as empresas da Prospecção nova num Público de Campanhas, entender quem fica de fora e abrir a Nova campanha com ele.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_prospecting_achar_busca"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_achar_busca",
+      "destaque": null
+     },
+     "requer": "prospeccao_nova",
+     "prints": [],
+     "fontes": [
+      "porques: Guardar as empresas da Prospeccao nova para mandar mensagem"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.18",
+     "titulo": "Chamar as empresas uma por vez em Para chamar",
+     "para_que_serve": "Passar pelas empresas achadas e ainda não tratadas, uma por vez: mandar para o funil, chamar, marcar Não serve ou deixar para Depois.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_prospecting_para_chamar"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_para_chamar",
+      "destaque": null
+     },
+     "requer": "prospeccao_nova",
+     "prints": [],
+     "fontes": [
+      "porques: Chamar as empresas uma por vez na fila Para chamar da Prospeccao nova"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.19",
+     "titulo": "Ver, abrir e mudar as suas listas para mensagem",
+     "para_que_serve": "Ver as listas guardadas pela Prospecção nova com os números de cada uma, tirar empresas com Desfazer e criar uma cópia da lista já enviada.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_prospecting_achar_listas",
+      "autonomia_prospecting_achar_lista"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_achar_listas",
+      "destaque": null
+     },
+     "requer": "prospeccao_nova",
+     "prints": [],
+     "fontes": [
+      "porques: Ver, abrir e mudar as listas para mensagem da Prospeccao nova"
      ],
      "revisar": false,
      "nota": null

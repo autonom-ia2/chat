@@ -451,6 +451,8 @@ Rails.application.routes.draw do
               # Login único (#2338): a Página vem do mesmo login dos Anúncios.
               get :paginas, to: 'meta_ads_pagina#index'
               post :pagina, to: 'meta_ads_pagina#create'
+              # Instagram pelo login único (#2406).
+              post :instagram, to: 'meta_ads_instagram#create'
               # Destino (#2338): ligar a página do site sem sair de Anúncios.
               get :site_pages, to: 'meta_ads_site_pages#index'
               post :site_pages, to: 'meta_ads_site_pages#create'
@@ -463,6 +465,9 @@ Rails.application.routes.draw do
               get 'ads/:ad_id/budget', to: 'meta_ads_creation#budget'
               patch 'ads/:ad_id/budget', to: 'meta_ads_creation#update_budget'
               get :paused_ads, to: 'meta_ads_creation#paused'
+              # Cuidar do anúncio criado aqui (#2778): duplicar e trocar a foto ou o texto.
+              post 'ads/:ad_id/copies', to: 'meta_ads_ad_care#copy'
+              put 'ads/:ad_id/creative', to: 'meta_ads_ad_care#creative'
               # Comentários do anúncio no Instagram (#2196): ler, responder, ocultar, apagar e responder no privado.
               get 'ads/:ad_id/instagram_comments', to: 'meta_ads_instagram_comments#index'
               post 'ads/:ad_id/instagram_comments/:comment_id/reply', to: 'meta_ads_instagram_comments#reply'
@@ -801,6 +806,8 @@ Rails.application.routes.draw do
               resources :searches, only: [:index, :show, :create, :update, :destroy] do
                 get :location_suggestions, on: :collection
                 get :location_details, on: :collection
+                # Pedido em uma frase (#2696): a IA da conta preenche os campos; não cria a busca.
+                post :interpret, on: :collection, controller: :search_interpretations, action: :create
                 get :export, on: :member
               end
               resources :leads, only: [:index, :show, :update] do
@@ -812,15 +819,29 @@ Rails.application.routes.draw do
                 post :adopt_owner, on: :member
                 post :consent_refusal, on: :member, controller: :lead_consent_refusals, action: :create
                 delete :consent_refusal, on: :member, controller: :lead_consent_refusals, action: :destroy
+                # "Depois" da fila Para chamar (#2697): some da fila de quem pediu até amanhã; o DELETE é o "Desfazer".
+                post :queue_postponement, on: :member, controller: :lead_queue_postponements, action: :create
+                delete :queue_postponement, on: :member, controller: :lead_queue_postponements, action: :destroy
                 post :crm_cards, on: :collection, action: :create_crm_cards
-                post :campaign_segment, on: :collection, action: :create_campaign_segment
+                get :crm_owners, on: :collection, controller: :crm_owners, action: :index
                 post :discard, on: :collection, controller: :lead_batches, action: :discard
                 post :contacts, on: :collection, controller: :lead_batches, action: :contacts
+                post :audience, on: :collection, controller: :lead_audiences, action: :create
+                # Em quais listas a empresa está, para a gaveta (#2775, F6).
+                get :audiences, on: :member, controller: :lead_audiences, action: :index
+              end
+              # "Suas listas" (#2775, F6): os Públicos criados pela Prospecção; pôr, tirar, devolver e copiar.
+              resources :audiences, only: [:index, :show] do
+                member do
+                  post :leads, action: :add_leads
+                  delete :members, action: :remove_members
+                  post :members, action: :restore_members
+                  post :copy
+                end
               end
               resources :lists, only: [:index, :show, :create] do
                 post 'leads', on: :member, action: :add_lead
                 delete 'leads/:lead_id', on: :member, action: :remove_lead
-                post :campaign_segment, on: :member
                 get :export, on: :member
               end
               resource :settings, only: [:show, :update]
@@ -1304,6 +1325,7 @@ Rails.application.routes.draw do
         delete :avatar, on: :collection
         member do
           post :availability
+          post :ausencia
           post :auto_offline
           put :set_active_account
           post :resend_confirmation

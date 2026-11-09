@@ -37,8 +37,5 @@
   - active_storage_purge
   - action_mailbox_incineration
 
-# you can override concurrency based on environment
-production:
-  :concurrency: <%= ENV.fetch("SIDEKIQ_CONCURRENCY", 10) %>
-staging:
-  :concurrency: <%= ENV.fetch("SIDEKIQ_CONCURRENCY", 10) %>
+# A concorrência é a do topo (`:concurrency:`), em todos os ambientes: uma fonte só, que o pool do banco do worker
+# também lê (lib/agent_tools_queue.rb, #1430).

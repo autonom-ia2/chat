@@ -712,13 +712,13 @@ describe('camada do fork contra o Sidebar.vue de verdade', () => {
     expect([...new Set(sumiram)]).toEqual([]);
   });
 
-  it('com prospeccao_nova ligada, Prospecção fica em Acompanhar com "Achar empresas", "Suas buscas" e "Listas" (#2693)', () => {
+  it('com prospeccao_nova ligada, Prospecção fica em Acompanhar com "Achar empresas", "Suas buscas" e "Para chamar"; Listas sai (#2693, #2697, #2775)', () => {
     const itens = montar({ prospeccaoNova: true });
     const prospeccao = itens.find(item => item.name === 'Prospecting');
     expect(prospeccao.children.map(filho => filho.name)).toEqual([
       'Prospecting Achar',
       'Prospecting Buscas',
-      'Prospecting Lists',
+      'Prospecting Para Chamar',
     ]);
 
     const menu = organizeForkMenu(itens, ctx);
@@ -734,7 +734,7 @@ describe('camada do fork contra o Sidebar.vue de verdade', () => {
     expect(noGrupo.children.map(filho => filho.name)).toEqual([
       'Prospecting Achar',
       'Prospecting Buscas',
-      'Prospecting Lists',
+      'Prospecting Para Chamar',
     ]);
   });
 

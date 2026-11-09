@@ -3,7 +3,7 @@ require 'rails_helper'
 # Recusa depois do segmento (#732, revisão da E8), o trabalho do job: tirar a etiqueta de segmento só dos contatos que os
 # leads recusados alcançam, em todas as listas cuja etiqueta está neles, sem salvar o contato inteiro e sem reprocessar a
 # lista inteira.
-RSpec.describe Autonomia::Prospecting::SegmentRefusalSync do
+RSpec.describe Autonomia::Prospecting::SegmentRefusalSync, :legacy_prospecting_segment do
   include ProspectingEventLogHelpers
 
   let(:account) { create(:account) }
@@ -25,7 +25,7 @@ RSpec.describe Autonomia::Prospecting::SegmentRefusalSync do
   def phone(index) = format('+55319%08d', index)
 
   def generate_segment(list)
-    Autonomia::Prospecting::CampaignSegmentBuilder.new(list: list, user: admin).perform.label.title
+    legacy_prospecting_segment(list: list, user: admin).title
   end
 
   def refuse(*leads)

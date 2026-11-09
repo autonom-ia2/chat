@@ -10,6 +10,7 @@ import AcharRodape from '../components/AcharRodape.vue';
 import AcharFaixaDoMenu from '../components/AcharFaixaDoMenu.vue';
 import AcharEmpresaGaveta from '../components/AcharEmpresaGaveta.vue';
 import AcharFolhaEnvio from '../components/AcharFolhaEnvio.vue';
+import AcharCanaisDesligados from '../components/AcharCanaisDesligados.vue';
 import AcharComQuemFica from '../components/AcharComQuemFica.vue';
 import AcharParaOndePainel from '../components/AcharParaOndePainel.vue';
 import AcharPronto from '../components/AcharPronto.vue';
@@ -18,9 +19,10 @@ import { useListaDaBusca } from '../composables/useListaDaBusca';
 import { useFolhaDaLista } from '../composables/useFolhaDaLista';
 import { useSobreDaLista } from '../composables/useSobreDaLista';
 import { useGavetaDaLista } from '../composables/useGavetaDaLista';
+import { useDonoDaLista } from '../composables/useDonoDaLista';
 import { useRepetirBusca } from '../composables/useRepetirBusca';
+import { useNomeDaLista } from '../composables/useNomeDaLista';
 import { ROTAS } from '../utils/acharRotas';
-import { diaEMes } from '../utils/acharQuando';
 import {
   ESTADOS_LEITURA,
   contasDaLista,
@@ -36,7 +38,7 @@ import { escolherDestino, lerUltimoDestino } from '../utils/destinoPronto';
 // (T1d), a folha "O que fazer com as {n}?" (F1) e o pronto (T2/T3) por cima.
 // A pessoa só tira quem não quer ("Vai / Não vai") e continua. Quem só vê (ou
 // não tem destino) vê a mesma lista em leitura, sem interruptor nem rodapé.
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const {
   route,
   router,
@@ -65,10 +67,7 @@ const folha = ref(null);
 const pronto = ref(null);
 const subpainel = ref(null);
 const funis = ref([]);
-const pessoas = ref([]);
 const destino = ref(null);
-const pessoaId = ref('voce');
-const nomeLista = ref('');
 const enviandoUma = ref(false);
 // A frase depois de "Usar esta pessoa" (P1); some ao fechar ou trocar de empresa.
 const recado = ref('');
@@ -77,6 +76,8 @@ const destacada = ref(null);
 const estadoDaLista = ref(null);
 
 const estado = computed(() => demo.value || '');
+// O nome sugerido é lido na língua de agora (useNomeDaLista), nunca guardado cedo.
+const nomeLista = useNomeDaLista({ busca });
 const leitura = computed(
   () =>
     ESTADOS_LEITURA.includes(estado.value) ||
@@ -115,13 +116,8 @@ const {
   guardaSelecao: () => !demo.value,
 });
 
-const pessoaNome = computed(() => {
-  if (pessoaId.value === 'voce') return t('PROSPECTING_ACHAR.COMUM.VOCE');
-  return (
-    pessoas.value.find(pessoa => pessoa.id === pessoaId.value)?.nome ||
-    t('PROSPECTING_ACHAR.COMUM.VOCE')
-  );
-});
+const { pessoas, pessoaId, pessoaNome, donoId, carregarPessoas } =
+  useDonoDaLista({ fonte, permissoes, destino });
 const podeTrocarPessoa = computed(() => permissoes.value.trocarDono);
 const empresaDaGaveta = computed(() =>
   gaveta.value
@@ -160,21 +156,12 @@ const aplicarLista = dados => {
     todasFora: estado.value === 'confira-todas-fora',
     soComWhatsapp: estado.value === 'confira-so-whatsapp',
   });
-  nomeLista.value = t('PROSPECTING_ACHAR.FOLHA.NOME_LISTA', {
-    oQue: dados.busca.oQue,
-    lugar: dados.busca.lugar.split(',')[0],
-    data: diaEMes(new Date(), locale.value),
-  });
 };
 
 const carregarDestino = async () => {
   try {
-    const [lista, gente] = await Promise.all([
-      fonte.value.funis(),
-      fonte.value.pessoas(),
-    ]);
+    const [lista] = await Promise.all([fonte.value.funis(), carregarPessoas()]);
     funis.value = lista;
-    pessoas.value = gente;
     destino.value = escolherDestino({
       funis: lista,
       ultimo: demo.value
@@ -208,6 +195,7 @@ const {
   destino,
   pessoaId,
   pessoaNome,
+  donoId,
   nomeLista,
   folha,
   pronto,
@@ -295,6 +283,8 @@ const {
   gaveta,
   empresaDaGaveta,
   destino,
+  donoId,
+  pessoaNome,
   enviandoUma,
   aviso,
   recado,
@@ -306,10 +296,16 @@ const voltarParaLista = () => {
   if (demo.value) voltarParaAListaDaDemo();
   else pronto.value = null;
 };
+// Com o Público guardado (#2695), a Nova campanha abre com ele escolhido. Na
+// demonstração o Público é de exemplo: a Nova campanha abre sem ele.
 const escreverMensagem = () =>
   router.push({
     name: 'campaigns_journey_new',
     params: { accountId: route.params.accountId },
+    query:
+      pronto.value?.publicoId && !demo.value
+        ? { audience: String(pronto.value.publicoId) }
+        : {},
   });
 const mudarPedido = () => irPara(ROTAS.PORTA, { estado: 'porta' });
 const voltarParaBuscas = () =>
@@ -377,7 +373,9 @@ watch(estado, async (novo, antigo) => {
             :link="$t('PROSPECTING_ACHAR.PRONTO.VOLTAR_LISTA')"
             class="w-full"
             @link="voltarParaLista"
-          />
+          >
+            <AcharCanaisDesligados :canais="pronto.canaisDesligados" />
+          </AcharPronto>
           <AcharRodape
             :rotulo="
               pronto.tipo === 'lista'
@@ -548,6 +546,9 @@ watch(estado, async (novo, antigo) => {
       v-if="folha && !subpainel"
       v-model:nome-lista="nomeLista"
       v-model:mostrar-fora="folha.mostrarFora"
+      v-model:lista-id="folha.listaId"
+      :listas="folha.listas"
+      :listas-incompletas="folha.listasIncompletas"
       :n="escolhidas.length"
       :pode-funil="permissoes.funil"
       :pode-lista="permissoes.lista"
@@ -562,6 +563,7 @@ watch(estado, async (novo, antigo) => {
       :enviando="folha.enviando"
       :guardando="folha.guardando"
       :erro="folha.erro"
+      :fora-do-erro="folha.foraDoErro"
       @escolher="escolherDestinoDaFolha"
       @alterar-destino="abrirSubpainel('destino')"
       @alterar-pessoa="abrirSubpainel('pessoa')"

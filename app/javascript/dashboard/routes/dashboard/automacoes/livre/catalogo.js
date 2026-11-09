@@ -174,7 +174,8 @@ export const comPermissoes = (dados, podeLer) => {
   };
 };
 
-// G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião.
+// G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião. G32: o tipo
+// do gatilho segue junto, para o "avisar" oferecer quem atende a reunião.
 // #2680: com a caixa da conversa nova, o contato alcança a conversa que ela
 // abre; e "o cliente respondeu" sai do contato, então vale onde há contato.
 const RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu';
@@ -195,6 +196,7 @@ export const doAlvoDoGatilho = (
     (item.caminho === RESPOSTA_DO_CONTATO && bases.includes('contato'));
   return {
     ...dados,
+    gatilho: tipoDoGatilho,
     valores: dados.valores.filter(
       item =>
         alcanca(item) &&

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_910000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -65,6 +65,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
     t.bigint "custom_role_id"
     t.bigint "agent_capacity_policy_id"
     t.boolean "integration", default: false, null: false
+    t.datetime "ausente_ate"
     t.index ["account_id", "user_id"], name: "uniq_user_id_per_account_id", unique: true
     t.index ["account_id"], name: "index_account_users_on_account_id"
     t.index ["agent_capacity_policy_id"], name: "index_account_users_on_agent_capacity_policy_id"
@@ -458,10 +459,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.halfvec "embedding_large", limit: 3072
+    t.index "to_tsvector('portuguese'::regconfig, content)", name: "index_autonomia_agent_knowledge_on_texto_pt", using: :gin
     t.index ["account_id"], name: "index_autonomia_agent_knowledge_on_account_id"
     t.index ["autonomia_agent_id", "status"], name: "idx_autonomia_knowledge_agent_status"
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_knowledge_on_autonomia_agent_id"
-    t.index ["embedding"], name: "idx_autonomia_knowledge_embedding", using: :ivfflat
     t.index ["embedding_large"], name: "idx_autonomia_knowledge_embedding_large", opclass: :halfvec_cosine_ops, using: :hnsw
     t.index ["source_id"], name: "index_autonomia_agent_knowledge_on_source_id"
   end
@@ -539,7 +540,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
     t.datetime "updated_at", null: false
     t.string "faixa", default: "", null: false
     t.bigint "card_id"
+    t.bigint "autonomia_agent_tool_id"
     t.index ["account_id", "slug", "created_at"], name: "idx_autonomia_tool_runs_account_slug"
+    t.index ["autonomia_agent_tool_id"], name: "idx_autonomia_tool_runs_agent_tool"
     t.index ["conversation_id", "created_at"], name: "idx_autonomia_tool_runs_conversation"
     t.index ["conversation_id", "slug", "faixa"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('running'::character varying)::text]))"
     t.index ["execution_key"], name: "idx_autonomia_tool_runs_execution_key", unique: true
@@ -1806,8 +1809,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
     t.datetime "updated_at", null: false
     t.string "provider_name"
     t.string "app_scoped_user_id"
+    t.string "login", default: "instagram", null: false
+    t.string "page_id"
     t.index ["app_scoped_user_id"], name: "index_channel_instagram_on_app_scoped_user_id"
-    t.index ["instagram_id"], name: "index_channel_instagram_on_instagram_id", unique: true
+    t.index ["instagram_id", "account_id"], name: "index_channel_instagram_on_instagram_id_and_account_id", unique: true
   end
 
   create_table "channel_line", force: :cascade do |t|

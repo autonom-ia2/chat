@@ -9,8 +9,9 @@ import AcharEscolhaCartao from './AcharEscolhaCartao.vue';
 // #2692 — painel "Com quem ficam as empresas?" (v4, F1; molde
 // crm/components/card/telas/TelaQuemCuida.vue). Só pessoas da conta com acesso
 // ao funil, "Você" no topo. Até 6 pessoas, cartões de um toque com avatar;
-// mais que isso, ChoiceSelect. O "Alterar" que abre este painel é decisão do
-// Rodrigo (caso A); o servidor ainda não aceita o dono escolhido (v4, PR 2a).
+// mais que isso, ChoiceSelect. O "Alterar" que abre este painel só aparece a
+// quem gere funis (#2694); a lista vem do servidor (leads/crm_owners) e ele
+// confere o dono de novo ao mandar.
 // Rodada 2: aberto de dentro da folha, tem "Voltar" no topo e "Cancelar" no
 // rodapé (uma saída de cada tipo); cada pessoa com borda e iniciais.
 const props = defineProps({

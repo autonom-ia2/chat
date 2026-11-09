@@ -68,7 +68,7 @@ class Instagram::CommentsClient
 
   # → { recipient_id, message_id }: o IGSID de quem comentou e a mensagem no Direct.
   def private_reply(comment_id, text)
-    request(:post, "#{@channel.instagram_id}/messages", {},
+    request(:post, "#{@channel.messages_node}/messages", {},
             body: { recipient: { comment_id: comment_id }, message: { text: text } }.to_json,
             headers: { 'Content-Type' => 'application/json' })
   end
@@ -107,6 +107,6 @@ class Instagram::CommentsClient
   end
 
   def base_uri
-    "https://graph.instagram.com/#{GlobalConfigService.load('INSTAGRAM_API_VERSION', 'v22.0')}"
+    @channel.graph_base_uri
   end
 end

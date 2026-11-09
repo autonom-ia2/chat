@@ -1,9 +1,16 @@
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { sendInBatches, CRM_BATCH_SIZE } from '../../utils/crmSend';
-import { buscaDoPayload, empresaDoLead } from './acharLead';
-import { montarPedido, pedidoDeNovo, pedidoSalvoDe } from './acharPedido';
+import { buscaDoPayload, cartaoDaFila, empresaDoLead } from './acharLead';
+import {
+  ajustesDosFiltros,
+  montarPedido,
+  ordemDoModo,
+  pedidoDeNovo,
+  pedidoSalvoDe,
+} from './acharPedido';
 import { demoPedido } from './acharRotas';
+import { listasDaApi, listasDaDemo } from './acharFonteListas';
 
 // #2692 — de onde a Prospecção nova lê (molde: agentes/utils/desempenhoFonte.js).
 // A tela recebe sempre o mesmo formato (acharLead.js), venha de onde vier:
@@ -32,7 +39,18 @@ const diasDesde = data =>
 
 const ESTADOS_SEM_BUSCAS = ['buscas-vazio', 'buscas-so-ver-vazio'];
 const ESTADOS_SEM_FILA = ['fila-vazia', 'fila-vazia-so-ver'];
+// O teto da fila na demonstração, o mesmo do servidor (ParaChamar::MAX_LEADS).
+const TETO_DA_FILA_DEMO = 100;
 const ESTADOS_COM_DOIS_FUNIS = ['folha-sem-destino', 'folha-para-onde'];
+const ESTADOS_DE_UMA_SUGESTAO = [
+  'porta-uma-sugestao',
+  'porta-frase-uma-sugestao',
+];
+// A recusa da frase na demonstração, com o código que o servidor manda.
+const ERROS_DA_FRASE = {
+  'porta-frase-erro': 'prospecting.interpret.ai_failed',
+  'porta-frase-sem-ia': 'prospecting.interpret.ai_not_configured',
+};
 // Antes de a pessoa tirar alguém, a lista vem inteira; da jornada em diante
 // (confira-tirou, gaveta, folha, pronto) as 2 tiradas ficam em "Não vai".
 const ANTES_DE_TIRAR = ['buscando', 'chegando', 'confira', 'leitura'];
@@ -62,8 +80,45 @@ const salvarArquivo = (blob, nome) => {
 const doEnvio = ({ created = [], existing = [], failed = [] }) => ({
   created: created.map(item => ({ id: item.lead_id, cardId: item.card_id })),
   existing: existing.map(item => ({ id: item.lead_id, cardId: item.card_id })),
-  failed: failed.map(item => ({ id: item.lead_id, motivo: item.reason_code })),
+  failed: failed.map(item => ({
+    id: item.lead_id,
+    motivo: item.reason_code,
+    codigo: item.code || null,
+  })),
 });
+
+// O Público guardado (#2695), igual na demonstração e na API: o id para abrir
+// a Nova campanha com ele, quantas pessoas entraram e quem ficou de fora.
+const doPublico = ({ audience = {}, left_out: fora = [] }) => ({
+  publicoId: audience.id || null,
+  nome: audience.name || '',
+  n: audience.count || 0,
+  fora: fora.map(item => ({ id: item.lead_id, motivo: item.reason_code })),
+});
+
+// O pedido em uma frase (#2696), igual na demonstração e na API: o que a IA da
+// conta entendeu, nos nomes da porta. "Não entendi" volta sem nada preenchido.
+// `primeiro` só vem quando a frase pediu a presença fraca (gbp); o modo geral
+// é o padrão do servidor e não diz nada sobre a ordem escolhida à mão.
+const daFrase = ({
+  status,
+  what: oQue = null,
+  where: onde = null,
+  advanced_filters: filtros = {},
+  score_mode: modo = 'general',
+  left_out: ficouDeFora = null,
+}) => ({
+  entendeu: status === 'understood',
+  oQue,
+  onde,
+  ajustes: ajustesDosFiltros(filtros),
+  primeiro: modo === 'gbp' ? ordemDoModo(modo) : null,
+  ficouDeFora,
+});
+
+// O id do Público de exemplo da demonstração: nada é gravado, e "Criar a
+// mensagem" não o leva para a Nova campanha (AcharConfiraPage).
+const PUBLICO_DA_DEMO = 9001;
 
 const comDias = search => ({
   ...buscaDoPayload(search),
@@ -79,6 +134,7 @@ const fonteDemo = ({ estado, carregarDemo, atraso, usuarioId }) => {
 
   return {
     usaDemo: true,
+    ...listasDaDemo({ estado, atraso }),
     async porta() {
       const demo = await dados();
       const primeira = estado === 'porta-primeira';
@@ -90,13 +146,24 @@ const fonteDemo = ({ estado, carregarDemo, atraso, usuarioId }) => {
         preenchido: demo.PORTA[estado] || demo.PORTA.porta,
         modelos: demo.PORTA[estado]?.modelos ? demo.MODELOS : [],
         limite: demo.LIMITE,
+        iaPronta: estado !== 'porta-sem-ia',
       };
+    },
+    async interpretar() {
+      const demo = await dados();
+      await esperar(atraso);
+      if (ERROS_DA_FRASE[estado]) {
+        throw Object.assign(new Error('demo'), {
+          codigo: ERROS_DA_FRASE[estado],
+        });
+      }
+      return daFrase(demo.FRASE_POR_ESTADO[estado] || demo.FRASE_ENTENDIDA);
     },
     async sugestoesDeLugar() {
       const demo = await dados();
       await esperar(atraso);
       if (estado === 'porta-lugar-nao-achado') return [];
-      return estado === 'porta-uma-sugestao'
+      return ESTADOS_DE_UMA_SUGESTAO.includes(estado)
         ? demo.SUGESTAO_UNICA
         : demo.SUGESTOES;
     },
@@ -239,14 +306,49 @@ const fonteDemo = ({ estado, carregarDemo, atraso, usuarioId }) => {
     async baixarBusca() {
       await esperar(atraso);
     },
+    // Como a API: um Público de exemplo e, com mais de uma, a última fica de
+    // fora por não ter celular nem e-mail (para dar para ver a frase).
     async guardarLista({ nome, ids }) {
       await esperar(atraso * 2);
-      return { nome, n: ids.length };
+      const fora =
+        ids.length > 1
+          ? [{ lead_id: ids[ids.length - 1], reason_code: 'no_channel' }]
+          : [];
+      return doPublico({
+        audience: {
+          id: PUBLICO_DA_DEMO,
+          name: nome,
+          count: ids.length - fora.length,
+        },
+        left_out: fora,
+      });
     },
     async fila() {
       const demo = await dados();
-      if (ESTADOS_SEM_FILA.includes(estado)) return { cartoes: [], fim: null };
-      return { cartoes: demo.FILA, fim: demo.FIM_DO_DIA };
+      if (estado === 'fila-erro') throw new Error('demo');
+      if (ESTADOS_SEM_FILA.includes(estado)) {
+        return {
+          cartoes: [],
+          fim: null,
+          truncada: false,
+          teto: TETO_DA_FILA_DEMO,
+        };
+      }
+      return {
+        cartoes: demo.FILA,
+        fim: demo.FIM_DO_DIA,
+        truncada: estado === 'fila-truncada',
+        teto: TETO_DA_FILA_DEMO,
+      };
+    },
+    async voltarNaoServe() {
+      await esperar(atraso);
+    },
+    async depois() {
+      await esperar(atraso);
+    },
+    async desfazerDepois() {
+      await esperar(atraso);
     },
     async configuracoes() {
       return { padrao: null };
@@ -270,8 +372,9 @@ const pipelineComEtapas = async (crm, pipeline) => {
   };
 };
 
-const fonteApi = ({ api, crm, usuarioId }) => ({
+const fonteApi = ({ api, crm, usuarioId, usuarioNome }) => ({
   usaDemo: false,
+  ...listasDaApi(api),
   async porta() {
     const [{ data: ajustes }, { data: buscas }] = await Promise.all([
       api.getSettings(),
@@ -297,7 +400,21 @@ const fonteApi = ({ api, crm, usuarioId }) => ({
       googlePronto:
         ajustes.payload?.platform_google_places_configured !== false,
       emTeste: ajustes.payload?.mock_provider === true,
+      // Sem a IA do Kanban CRM, o campo da frase não aparece (#2696).
+      iaPronta: ajustes.payload?.ai_credential_configured === true,
     };
+  },
+  // Na recusa, o erro leva o código do servidor (ai_failed,
+  // ai_not_configured...); a porta escolhe a frase.
+  async interpretar(texto) {
+    try {
+      const { data } = await api.interpretSearch(texto);
+      return daFrase(data.payload || {});
+    } catch (erro) {
+      throw Object.assign(new Error('frase'), {
+        codigo: erro?.response?.data?.code || null,
+      });
+    }
   },
   async sugestoesDeLugar(texto) {
     const { data } = await api.getLocationSuggestions(texto);
@@ -351,12 +468,23 @@ const fonteApi = ({ api, crm, usuarioId }) => ({
       (data.payload || []).map(pipeline => pipelineComEtapas(crm, pipeline))
     );
   },
-  // Fase 1 (só front): o card fica com quem manda; a lista de pessoas entra com
-  // o backend do dono escolhido na hora (v4, PR 2a).
-  async pessoas() {
-    return [{ id: 'voce', nome: 'Você', voce: true }];
+  // Com quem fica (#2694): "você" no topo e as pessoas da conta que enxergam o
+  // funil (leads/crm_owners). Sem funil (ou sem poder trocar, quando a tela
+  // não pede a lista), só "você".
+  async pessoas({ funilId = null } = {}) {
+    if (!funilId) return [{ id: 'voce', nome: usuarioNome || '', voce: true }];
+    const { data } = await api.getCrmOwners(funilId);
+    const lista = data.payload || [];
+    const eu = lista.find(pessoa => pessoa.id === usuarioId);
+    return [
+      { id: 'voce', nome: eu?.name || usuarioNome || '', voce: true },
+      ...lista
+        .filter(pessoa => pessoa.id !== usuarioId)
+        .map(pessoa => ({ id: pessoa.id, nome: pessoa.name })),
+    ];
   },
-  async mandarParaFunil({ ids, funilId, etapaId, onProgresso }) {
+  // donoId: com quem ficam os cards (#2694); sem ele, com quem manda.
+  async mandarParaFunil({ ids, funilId, etapaId, donoId = null, onProgresso }) {
     const resumo = await sendInBatches(
       ids,
       lote =>
@@ -364,6 +492,7 @@ const fonteApi = ({ api, crm, usuarioId }) => ({
           leadIds: lote,
           pipelineId: funilId,
           stageId: etapaId,
+          ownerId: donoId,
         }),
       onProgresso
     );
@@ -371,6 +500,12 @@ const fonteApi = ({ api, crm, usuarioId }) => ({
   },
   async descartar({ id, motivo }) {
     await api.discardLeads({ leadIds: [id], reason: motivo });
+  },
+  // O "Desfazer" do "Não serve" da fila (#2697): o lead volta a new_lead. O
+  // servidor limpa o motivo junto (leads#update apaga discard_reason quando o
+  // status não é discarded); não precisa de endpoint novo.
+  async voltarNaoServe({ id }) {
+    await api.updateLead(id, { status: 'new_lead' });
   },
   async naoQuer({ id }) {
     await api.refuseLeadConsent(id);
@@ -398,14 +533,40 @@ const fonteApi = ({ api, crm, usuarioId }) => ({
     const { data } = await api.exportSearch(id, { format: 'xlsx' });
     salvarArquivo(data, `prospeccao-${id}.xlsx`);
   },
-  // O Público a partir de empresas é backend novo (v4, fase 3). Até lá o cartão
-  // "Guardar para mandar mensagem" não aparece fora da demonstração.
-  async guardarLista() {
-    throw new Error('publico_de_empresas_indisponivel');
+  // "Guardar para mandar mensagem" (#2695): as empresas viram um Público de
+  // Campanhas. Na recusa, o erro leva o código do servidor (no_rows,
+  // too_many_leads, foreign_contact...; a folha escolhe a frase em
+  // useFolhaDaLista) e quem ficou de fora.
+  async guardarLista({ nome, ids }) {
+    try {
+      const { data } = await api.createAudience({ leadIds: ids, name: nome });
+      return doPublico(data.payload || {});
+    } catch (erro) {
+      const recusa = erro?.response?.data || {};
+      throw Object.assign(new Error('publico'), {
+        codigo: recusa.code || null,
+        fora: doPublico({ left_out: recusa.left_out || [] }).fora,
+      });
+    }
   },
-  // A fila "Para chamar" pede leads#index com view=queue (v4, fase 5).
+  // A fila "Para chamar" (#2697): leads#index com view=queue, no mesmo
+  // formato da demonstração. O fim do dia sai da própria passada pela fila
+  // (useFilaParaChamar), então o servidor não manda `fim`. `truncada`: havia
+  // mais que o teto do servidor (meta.truncated); `teto` é esse teto (meta.max).
   async fila() {
-    return { cartoes: [], fim: null };
+    const { data } = await api.getQueue();
+    return {
+      cartoes: (data.payload || []).map(cartaoDaFila),
+      fim: null,
+      truncada: data.meta?.truncated === true,
+      teto: data.meta?.max ?? null,
+    };
+  },
+  async depois({ id }) {
+    await api.postponeQueueLead(id);
+  },
+  async desfazerDepois({ id }) {
+    await api.resumeQueueLead(id);
   },
   async configuracoes() {
     const { data } = await api.getSettings();
@@ -429,7 +590,8 @@ export const criarFonte = ({
   crm = CrmKanbanAPI,
   atraso = 400,
   usuarioId = null,
+  usuarioNome = '',
 } = {}) =>
   demo && carregarDemo
     ? fonteDemo({ estado: demo, carregarDemo, atraso, usuarioId })
-    : fonteApi({ api, crm, usuarioId });
+    : fonteApi({ api, crm, usuarioId, usuarioNome });

@@ -19,6 +19,9 @@ const endPoints = {
   autoOffline: {
     url: '/api/v1/profile/auto_offline',
   },
+  ausencia: {
+    url: '/api/v1/profile/ausencia',
+  },
   logout: {
     url: 'auth/sign_out',
   },

@@ -1,3 +1,4 @@
+import { nextTick } from 'vue';
 import { config, flushPromises, mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import ptBR from 'dashboard/i18n/locale/pt_BR/prospectingAchar.json';
@@ -29,6 +30,16 @@ vi.mock('dashboard/composables/store', async () => {
   const valores = { getCurrentAccountId: 1, getCurrentUser: { id: 7 } };
   return { useMapGetter: nome => computed(() => valores[nome]) };
 });
+// Trocar o dono (#2694) é crm_manage_pipelines: aqui ninguém gere funis.
+vi.mock(
+  'dashboard/routes/dashboard/crm/composables/useCrmPermissions',
+  async () => {
+    const { computed } = await import('vue');
+    return {
+      useCrmPermissions: () => ({ canManagePipelines: computed(() => false) }),
+    };
+  }
+);
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
   return {
@@ -129,6 +140,34 @@ describe('Suas buscas pela API', () => {
       'Feita por Paula',
       '',
     ]);
+  });
+
+  // Vídeo da F6: o título não aparece como "Suas buscas" e depois vira "Buscas
+  // da equipe"; até a primeira leitura, um esqueleto.
+  it('o título não troca: esqueleto até as buscas chegarem, depois "Buscas da equipe"', async () => {
+    permissao.verTodas = true;
+    let responderBuscas;
+    AutonomiaProspectingAPI.getSearches.mockReturnValueOnce(
+      new Promise(resolve => {
+        responderBuscas = resolve;
+      })
+    );
+    const wrapper = mount(AcharBuscasPage);
+    const vistos = [];
+    const anotar = () => vistos.push(titulo(wrapper));
+    await nextTick();
+    anotar();
+    expect(wrapper.find('[data-titulo-carregando]').exists()).toBe(true);
+
+    responderBuscas({
+      data: { payload: [MINHA, DA_PAULA], meta: { has_more: false } },
+    });
+    await flushPromises();
+    anotar();
+
+    expect(vistos).toEqual(['', 'Buscas da equipe']);
+    expect(wrapper.find('[data-titulo-carregando]').exists()).toBe(false);
+    wrapper.unmount();
   });
 
   it('"Apagar" só no menu da busca de quem está logado', async () => {

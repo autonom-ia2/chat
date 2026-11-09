@@ -77,6 +77,14 @@ RSpec.describe Channel::FacebookPage do
       expect(subscription).to have_received(:remove!).with(Channel::FacebookPage::MESSENGER_FIELDS + Channel::FacebookPage::REFERRAL_FIELDS)
     end
 
+    it 'keeps the messenger fields while an Instagram inbox of the single login uses the page (#2406)' do
+      create(:channel_instagram, login: 'facebook', page_id: channel.page_id)
+
+      channel.unsubscribe
+
+      expect(subscription).not_to have_received(:remove!)
+    end
+
     it 'keeps the messenger fields when the page is still an inbox of another account' do
       create(:channel_facebook_page, page_id: channel.page_id)
 

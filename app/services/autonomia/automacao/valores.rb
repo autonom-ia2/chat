@@ -38,10 +38,23 @@ class Autonomia::Automacao::Valores
     'card.time_id' => ->(card) { card.team_id },
     'card.dias_na_etapa' => ->(card) { card.entered_stage_at && ((Time.current - card.entered_stage_at) / 1.day).floor },
     'card.motivo_da_perda' => ->(card) { card.lost_reason },
+    # G32: o card tem reunião marcada e ainda por vir (não cancelada nem remarcada para outra). O "esperar até" que lê
+    # este valor acorda quando uma reunião do card é marcada, remarcada ou cancelada (Escuta#acordar_o_card).
+    'card.tem_reuniao_marcada' => ->(card) { ::Autonomia::Automacao::ValoresDaReuniao.marcada_no_card?(card) },
     # G12: a reunião da atividade que disparou o gatilho de reunião (Contexto#reuniao). O início sai no fuso da reunião,
     # o mesmo do convite que o cliente recebeu.
-    'reuniao.inicio' => ->(reuniao) { ::Autonomia::Automacao::Valores.inicio_da_reuniao(reuniao) },
+    'reuniao.inicio' => ->(reuniao) { ::Autonomia::Automacao::ValoresDaReuniao.inicio(reuniao) },
     'reuniao.link_da_reuniao' => ->(reuniao) { reuniao.online_meeting_url }
+  }.merge(::Autonomia::Automacao::Ausencia::VALORES).freeze
+
+  # Os valores que leem outros registros além do alvo: só os que quem ligou a automação vê (ValoresDaReuniao).
+  # #2710: a página de agendamento põe a reunião no card aberto do funil e, sem ele (o card já ganho), cria outro: quem
+  # espera no card ganho lê o valor do contato, não o do card. O "esperar até" acorda com a reunião de qualquer card do
+  # contato (Escuta#acordar_o_card).
+  DO_QUE_QUEM_VE = {
+    'contato.tem_reuniao_marcada' => lambda do |contato, account_user|
+      ::Autonomia::Automacao::ValoresDaReuniao.marcada_no_contato?(contato, account_user)
+    end
   }.freeze
 
   # G12: o link da agenda (LinkDaAgenda) de quem cuida: o responsável do card ou a pessoa da conversa. Vale em qualquer
@@ -103,8 +116,10 @@ class Autonomia::Automacao::Valores
     'conversa.iniciada_por' => { 'opcoes' => %w[cliente equipe], 'operadores' => %w[igual diferente] },
     'conversa.cliente_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'card.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'contato.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'envio.situacao' => { 'opcoes' => ::Autonomia::Automacao::Envio::SITUACOES.values, 'operadores' => %w[igual diferente] }
-  }.freeze
+  }.merge(::Autonomia::Automacao::Ausencia::FECHADOS).freeze
 
   # Os valores que pedem permissão para ler (#2597): a pergunta é a mesma do resto do CRM, feita a quem salva a receita
   # e a quem ligou a automação. O dono de um card não ganha, pela automação, o valor dos cards alheios: `ve?`, não
@@ -119,7 +134,8 @@ class Autonomia::Automacao::Valores
 
   class << self
     def caminho_valido?(caminho)
-      [CAMPOS, MENSAGEM, RESPOSTA, AGENDA, ENVIO].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? || livre?(caminho)
+      [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA, ENVIO].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present? ||
+        livre?(caminho)
     end
 
     def da_ia?(caminho) = caminho.to_s.start_with?(IA) && caminho.to_s.length > IA.length
@@ -131,13 +147,6 @@ class Autonomia::Automacao::Valores
     def passo_da_ia(caminho) = caminho.to_s.delete_prefix(IA)
 
     def da_reuniao?(caminho) = caminho.to_s.start_with?('reuniao.')
-
-    # "10/11/2026 às 09:00", no fuso e no idioma da reunião e da conta.
-    def inicio_da_reuniao(reuniao)
-      inicio = reuniao.starts_at.in_time_zone(ActiveSupport::TimeZone[reuniao.timezone.to_s] || Time.zone)
-      formato = I18n.t('autonomia.automacao.valores.inicio_da_reuniao', locale: reuniao.account.locale.presence || I18n.default_locale)
-      inicio.strftime(formato)
-    end
 
     def da_mensagem?(caminho) = MENSAGEM.key?(caminho.to_s)
 
@@ -223,10 +232,11 @@ class Autonomia::Automacao::Valores
     do_objeto(caminho) { |objeto| ::Autonomia::Automacao::Valores::Atributos.ler(base, chave, objeto) }
   end
 
-  def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave) || ENVIO.key?(chave) || PAGINA.caminho?(chave)
+  def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave) || ENVIO.key?(chave) || DO_QUE_QUEM_VE.key?(chave) || PAGINA.caminho?(chave)
 
   def do_campo(chave)
     return guardar_link(PAGINA.resultado(chave, contexto: @contexto, account_user: account_user)) if PAGINA.caminho?(chave)
+    return do_objeto(chave) { |objeto| DO_QUE_QUEM_VE[chave].call(objeto, account_user) } if DO_QUE_QUEM_VE.key?(chave)
     return do_objeto(chave) { |objeto| link_da_agenda(objeto, AGENDA[chave].call(objeto)) } if AGENDA.key?(chave)
 
     do_objeto(chave) { |objeto| (CAMPOS[chave] || ENVIO[chave]).call(objeto) }

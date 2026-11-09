@@ -23,6 +23,7 @@ const getViewKey = ({
   daIa,
   esperandoMin,
   noFunil,
+  desdeDias,
 }) =>
   JSON.stringify([
     ConversationApi.url,
@@ -36,6 +37,7 @@ const getViewKey = ({
       daIa,
       esperandoMin,
       noFunil,
+      desdeDias,
     },
   ]);
 

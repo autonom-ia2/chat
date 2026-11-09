@@ -137,15 +137,62 @@ const tituloDoFunil = (t, { pronto, base }) => {
   return t(`${NS}.VARIAS`, { ...base, n: pronto.n });
 };
 
+// Quem ficou fora do Público (#2695), pelo motivo do servidor, em frases de
+// leigo: uma linha por motivo, com quantas. As falhas do servidor viram uma.
+const FORA_DO_PUBLICO = {
+  opt_out: 'NAO_QUER',
+  contact_blocked: 'BLOQUEADO',
+  blocked: 'BLOQUEADO',
+  unreachable: 'NAO_RECEBE',
+  no_channel: 'SEM_CONTATO',
+  same_contact: 'MESMA_PESSOA',
+  discarded: 'TIRADA',
+  not_found: 'SUMIU',
+  invalid_data: 'NAO_DEU',
+  unexpected_error: 'NAO_DEU',
+  already_in_list: 'JA_ESTAVA',
+};
+
+export const foraDoPublico = (t, fora = []) => {
+  const porChave = fora.reduce((contas, { motivo }) => {
+    const chave = FORA_DO_PUBLICO[motivo] || 'NAO_DEU';
+    return { ...contas, [chave]: (contas[chave] || 0) + 1 };
+  }, {});
+  return Object.entries(porChave).map(([chave, n]) =>
+    t(`PROSPECTING_ACHAR.PRONTO.LISTA.FORA.${chave}`, { n }, n)
+  );
+};
+
 // Título e detalhes de T2 (funil) e T3 (lista guardada).
 export const textosDoPronto = (t, { pronto, destino, pessoa, nomeLista }) => {
   if (!pronto) return { titulo: '', detalhes: [] };
   const NS = 'PROSPECTING_ACHAR.PRONTO';
+  if (pronto.tipo === 'lista' && pronto.naLista != null) {
+    // Lista que já existia (#2775): o que entrou e o tamanho real dela agora
+    // (o número do servidor, não uma soma na tela).
+    return {
+      titulo: t(
+        `${NS}.LISTA.TITULO_EXISTENTE`,
+        { n: pronto.n, nome: pronto.nome },
+        pronto.n
+      ),
+      detalhes: [
+        t(`${NS}.LISTA.AGORA_TEM`, { n: pronto.naLista }, pronto.naLista),
+        ...foraDoPublico(t, pronto.fora),
+        t('PROSPECTING_ACHAR.FOLHA.ONDE_FICA'),
+      ],
+    };
+  }
   if (pronto.tipo === 'lista') {
     return {
       titulo: t(`${NS}.LISTA.TITULO`),
       detalhes: [
-        t(`${NS}.LISTA.DETALHE`, { nome: nomeLista, n: pronto.n }),
+        // Numa lista que já existia (#2775), o nome é o dela.
+        t(`${NS}.LISTA.DETALHE`, {
+          nome: pronto.nome || nomeLista,
+          n: pronto.n,
+        }),
+        ...foraDoPublico(t, pronto.fora),
         t('PROSPECTING_ACHAR.FOLHA.ONDE_FICA'),
       ],
     };

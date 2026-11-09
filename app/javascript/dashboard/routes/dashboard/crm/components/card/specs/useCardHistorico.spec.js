@@ -64,6 +64,22 @@ describe('useCardHistorico — texto de cada evento', () => {
     expect(texto).not.toContain('131047');
   });
 
+  // #2694: o dono escolhido por uma pessoa vence o "atribuir dono" da automação.
+  it('says the chosen owner stayed when the stage automation kept it', () => {
+    const kept = activity(
+      1,
+      'automation_owner_kept',
+      { owner_id: 8 },
+      { labels: { owner_id: 'Paula Ribeiro' } }
+    );
+    const { title, detail } = describeActivity(kept);
+
+    expect(title).toBe(
+      'An automatic rule would change who takes care, but the person chosen stays'
+    );
+    expect(detail).toContain('Paula Ribeiro');
+  });
+
   it('shows the follow-up title on a failed manual follow-up', () => {
     const failed = activity(1, 'follow_up_message_failed', {
       follow_up_id: 7,

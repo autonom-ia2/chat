@@ -1,5 +1,6 @@
 # Desfazer a campanha de uma tentativa de criar (#2198). O nome da campanha leva a marca da tentativa
-# ("Nome [1a2b3c4d]", os 8 primeiros caracteres da chave de idempotência), gravada antes da primeira chamada. Assim, se a
+# ("Nome [1a2b3c4d]", os 8 primeiros caracteres da chave de idempotência; na cópia, "Origem - Cópia [1a2b3c4d]"),
+# gravada antes da primeira chamada. Assim, se a
 # resposta da criação se perde (tempo esgotado) ou o id não chega a ser gravado, a campanha ainda é achada na Meta.
 #
 # `undo` apaga a campanha (o grupo e o anúncio vão junto) ou, se a Meta não deixar, arquiva. Devolve:
@@ -20,6 +21,12 @@ class Crm::MetaAds::Creation::CampaignUndo
 
   def self.mark(record)
     record.idempotency_key.first(MARK_LENGTH)
+  end
+
+  # A campanha desta tentativa: o nome termina com a marca. A cópia (#2778) não escolhe o nome inteiro: a Meta junta o
+  # nome da campanha de origem com o fim que a cópia pede (Crm::MetaAds::Creation::Copy), e esse fim leva a marca.
+  def self.marked?(campaign_name, record)
+    campaign_name.to_s.end_with?(" [#{mark(record)}]")
   end
 
   def initialize(client, ad_account_id)
@@ -59,12 +66,11 @@ class Crm::MetaAds::Creation::CampaignUndo
 
   # Ids das campanhas vivas com o nome desta tentativa; nil quando a Meta não respondeu.
   def campaigns_of(record)
-    name = self.class.name_for(record)
     result = @client.campaigns_named(@ad_account_id, self.class.mark(record))
     return unless result.ok
 
     Array(result.data['data']).filter_map do |campaign|
-      campaign['id'].to_s if campaign['name'] == name && GONE_STATUSES.exclude?(campaign['effective_status'])
+      campaign['id'].to_s if self.class.marked?(campaign['name'], record) && GONE_STATUSES.exclude?(campaign['effective_status'])
     end
   end
 end

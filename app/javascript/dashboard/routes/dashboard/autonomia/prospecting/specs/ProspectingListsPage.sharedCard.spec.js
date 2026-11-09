@@ -3,7 +3,6 @@
 // Listas continuam: remover o lead da lista e montar o segmento de campanha.
 import { mount, flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
-import CampaignsAPI from 'dashboard/api/campaigns';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import CrmSendModal from '../components/crm/CrmSendModal.vue';
 import LeadCard from '../components/search/LeadCard.vue';
@@ -43,7 +42,6 @@ vi.mock('dashboard/api/autonomiaProspecting', () => ({
     createCrmCards: vi.fn(),
   },
 }));
-vi.mock('dashboard/api/campaigns', () => ({ default: { get: vi.fn() } }));
 vi.mock('dashboard/api/crmKanban', () => ({
   default: { getPipelines: vi.fn(), getStages: vi.fn() },
 }));
@@ -82,7 +80,6 @@ const mountLists = async (leads = [sunLead(), hotBreadLead(), moonLead()]) => {
   AutonomiaProspectingAPI.verifyLeadWhatsApp.mockResolvedValue({
     data: { payload: {} },
   });
-  CampaignsAPI.get.mockResolvedValue({ data: [] });
   CrmKanbanAPI.getPipelines.mockResolvedValue({ data: { payload: PIPELINES } });
   CrmKanbanAPI.getStages.mockImplementation(pipelineId =>
     Promise.resolve({ data: { payload: STAGES_BY_PIPELINE[pipelineId] } })
@@ -212,28 +209,20 @@ describe('ProspectingListsPage · mesmo card e painel da busca', () => {
     expect(wrapper.findComponent(LeadDetailDrawer).exists()).toBe(false);
   });
 
-  it('campanha continua na lista e abre o segmento de campanha', async () => {
+  // O público por etiqueta saiu (#2695): a lista não oferece mais campanha;
+  // o selo do segmento antigo continua só para mostrar o que já foi gravado.
+  it('a lista não oferece mais criar público de campanha', async () => {
     const wrapper = await mountLists();
 
-    await buttonWithText(
-      wrapper,
-      'PROSPECTING.LISTS.CAMPAIGN_SEGMENT_TITLE'
-    ).trigger('click');
-    await flushPromises();
-
-    expect(wrapper.text()).toContain(
-      'PROSPECTING.LISTS.CAMPAIGN_SEGMENT_CREATE'
-    );
+    expect(wrapper.find('.i-lucide-megaphone').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('PROSPECTING.LISTS.CAMPAIGN_SEGMENT');
   });
 
-  it('quem só vê não tem remover nem campanha, mas abre o painel', async () => {
+  it('quem só vê não tem remover, mas abre o painel', async () => {
     permission.canManage = false;
     const wrapper = await mountLists();
 
     expect(buttonWithText(wrapper, REMOVE)).toBeUndefined();
-    expect(
-      buttonWithText(wrapper, 'PROSPECTING.LISTS.CAMPAIGN_SEGMENT_TITLE')
-    ).toBeUndefined();
     expect(AutonomiaProspectingAPI.verifyLeadWhatsApp).not.toHaveBeenCalled();
 
     await buttonWithText(cardOf(wrapper, 'Padaria Sol'), OPEN_DETAILS).trigger(
