@@ -25,7 +25,10 @@ module Autonomia::Automacao::Despertador
     return unless espera.na_receita?(execucao.versao.receita)
 
     execucao.update_columns(repetiu_em: Time.current) # rubocop:disable Rails/SkipsModelValidations
-    escuta.reservar(execucao) if execucao.estado == 'esperando' && espera.esperando_a_repeticao?(execucao)
+    # Relida depois de gravar a hora: a execução da Partida foi lida antes, e a rodada pode ter gravado a espera (e
+    # reconferido sem a repetição) no meio. A reserva decide com o estado e o prazo de agora.
+    relida = ::Autonomia::Automacao::Execucao.find_by(id: execucao.id, estado: 'esperando')
+    escuta.reservar(relida) if relida && espera.esperando_a_repeticao?(relida)
   rescue StandardError => e
     nao_acordou(execucao, e)
   end
@@ -40,11 +43,12 @@ module Autonomia::Automacao::Despertador
 
   # A execução que não acordou por erro (revisão do #2816): além do log, uma linha no histórico dela ("O que
   # aconteceu"), no passo em que espera, com o motivo e a classe do erro, nunca a mensagem (pode trazer dado do
-  # cliente). A espera segue pelo relógio. Se nem o histórico grava, fica só o log. `passo`: a rodada que acabou de
+  # cliente). Uma linha por execução: o erro que persiste (a fila fora) não enche o histórico a cada mensagem. A
+  # espera segue pelo relógio. Se nem o histórico grava, fica só o log. `passo`: a rodada que acabou de
   # gravar a espera o passa, porque a execução em memória é de antes da gravação.
   def nao_acordou(execucao, erro, passo: execucao&.cursor)
     escuta.registrar_erro("não acordou execucao=#{execucao&.id}", erro)
-    return unless execucao
+    return if execucao.nil? || ::Autonomia::Automacao::Registro.exists?(execucao: execucao, resultado: 'falhou', motivo: 'nao_acordou')
 
     ::Autonomia::Automacao::Registro.create!(account_id: execucao.account_id, automacao_id: execucao.automacao_id, execucao: execucao,
                                              passo: passo.presence || 'inicio', resultado: 'falhou', motivo: 'nao_acordou',

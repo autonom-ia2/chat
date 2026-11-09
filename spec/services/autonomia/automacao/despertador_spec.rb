@@ -73,6 +73,21 @@ RSpec.describe Autonomia::Automacao::Despertador, :automacao_motor do
       expect(execucao_de(definicao).repetiu_em).to be_present
       expect(execucao_de(definicao).cursor).to eq('antes')
     end
+
+    it 'a Partida leu a execução andando e a rodada gravou a espera no meio: decide com a linha relida e acorda', :aggregate_failures do
+      definicao = automacao_ligada(account, admin, [esperar_ate('gatilho.repetiu'), prioridade_passo('repetiu', 'low')])
+      rodar(definicao)
+      # O retrato que a Partida tinha antes de a rodada gravar a espera (e reconferir sem a repetição).
+      lida_antes = Autonomia::Automacao::Execucao.find(execucao_de(definicao).id)
+      lida_antes.assign_attributes(estado: 'andando', due_at: nil, cursor: nil)
+
+      travel(2.days) do
+        perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { described_class.gatilho_repetiu(lida_antes) }
+      end
+
+      expect(execucao_de(definicao).estado).to eq('concluida')
+      expect(conversa.reload.priority).to eq('low')
+    end
   end
 
   describe 'a falha ao acordar' do
@@ -87,6 +102,17 @@ RSpec.describe Autonomia::Automacao::Despertador, :automacao_motor do
       registro = Autonomia::Automacao::Registro.find_by!(execucao: execucao, motivo: 'nao_acordou')
       expect([registro.passo, registro.resultado, registro.dados]).to eq(['espera', 'falhou', { 'erro' => 'ActiveRecord::StatementInvalid' }])
       expect(execucao.estado).to eq('esperando')
+    end
+
+    it 'o erro que persiste não enche o histórico: dois erros seguidos, uma linha' do
+      definicao = automacao_ligada(account, admin, [esperar_ate('gatilho.repetiu'), prioridade_passo('repetiu', 'low')])
+      rodar(definicao)
+      allow(Autonomia::Automacao::Escuta).to receive(:reservar).and_raise(ActiveRecord::StatementInvalid, 'falha')
+
+      travel(2.days) { rodar(definicao) }
+      travel(3.days) { rodar(definicao) }
+
+      expect(Autonomia::Automacao::Registro.where(execucao: execucao_de(definicao), resultado: 'falhou', motivo: 'nao_acordou').count).to eq(1)
     end
 
     it 'a reconferência ao gravar a espera quebra: fica no histórico, e a espera segue pelo relógio', :aggregate_failures do

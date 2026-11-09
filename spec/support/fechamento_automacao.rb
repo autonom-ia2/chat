@@ -130,10 +130,31 @@ module FechamentoAutomacao::Lacunas
   def acao?(acao) = Autonomia::Automacao::AcoesPermitidas.permitida?(acao)
   def valor?(caminho) = Autonomia::Automacao::Valores.caminho_valido?(caminho)
 
-  # A receita de um "avisar" só, com o gatilho e o `para` dados, passa no esquema (sondas G60 e G61).
-  def receita_no_esquema?(gatilho, para)
-    Autonomia::Automacao::Receita.esquema_valido?(
-      'gatilho' => gatilho, 'passos' => [{ 'id' => 'aviso', 'tipo' => 'avisar', 'para' => para, 'texto' => ['Oi'] }]
+  # Os problemas que o salvar acusa (Receita#problemas, depois do esquema) numa receita de um "avisar" só, com o gatilho e
+  # o `para` dados; nil fora do esquema (sondas G60 e G61). Sem pessoa: a sonda não confere a permissão de quem salva.
+  def problemas_ao_salvar(conta, gatilho, para)
+    receita = { 'gatilho' => gatilho, 'passos' => [{ 'id' => 'aviso', 'tipo' => 'avisar', 'para' => para, 'texto' => ['Oi'] }] }
+    return unless Autonomia::Automacao::Receita.esquema_valido?(receita)
+
+    Autonomia::Automacao::Receita.new(receita, conta: conta, account_user: nil).problemas
+  end
+
+  # Uma conta com o passo "avisar" ligado e uma pessoa, desfeitas no fim (sondas G60 e G61).
+  def numa_conta_de_teste
+    resultado = nil
+    ActiveRecord::Base.transaction(requires_new: true) do
+      conta = FactoryBot.create(:account)
+      conta.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_mensagens')
+      resultado = yield(conta, FactoryBot.create(:user, account: conta))
+      raise ActiveRecord::Rollback
+    end
+    resultado
+  end
+
+  def pagina_de_agendamento(conta, pessoa)
+    conta.crm_agent_booking_profiles.create!(
+      page_version: Crm::AgentBookingProfile::NEW_PAGE, title: 'Agenda', duration_minutes: 30, timezone: 'America/Sao_Paulo',
+      default_assignee: pessoa, locations: [{ 'type' => 'whatsapp_video' }], enabled: true, close_holidays: false
     )
   end
 
@@ -253,21 +274,20 @@ module FechamentoAutomacao::Lacunas
       valor?('contato.reuniao_atendida') && Autonomia::Automacao::EsperaDaReuniao::VALORES.include?('contato.reuniao_atendida')
     },
     # Do exemplo 6, passo 2 (G60): o link da agenda numa automação que roda no contato, pela ponte da conversa nova
-    # (#2680) até a conversa dele na caixa escolhida; prova no mesmo spec da G59. A sonda roda o mínimo, sem banco: a
-    # receita com a página de reserva no gatilho passa no esquema, e o salvar a recusa no gatilho sem alvo.
+    # (#2680) até a conversa dele na caixa escolhida; prova no mesmo spec da G59. A sonda passa pelo salvar
+    # (Receita#problemas): a receita com a página de reserva da conta no gatilho sai sem problema.
     'G60' => lambda {
-      gatilho = { 'tipo' => 'conversa.criada', 'agenda_de_reserva' => { 'pagina_id' => 7 } }
-      sem_alvo = Autonomia::Automacao::AgendaDeReserva.problemas_ao_salvar(nil, gatilho.merge('tipo' => 'conta.recorrente'), nil)
-      valor?('conversa.link_da_agenda') && receita_no_esquema?(gatilho, { 'pessoas' => [1] }) &&
-        sem_alvo == [I18n.t('autonomia.automacao.receita.agenda_de_reserva_sem_alvo')]
+      salva = numa_conta_de_teste do |conta, pessoa|
+        gatilho = { 'tipo' => 'conversa.criada', 'agenda_de_reserva' => { 'pagina_id' => pagina_de_agendamento(conta, pessoa).id } }
+        problemas_ao_salvar(conta, gatilho, { 'pessoas' => [pessoa.id] }) == []
+      end
+      valor?('conversa.link_da_agenda') && salva
     },
     # Do exemplo 6, passo 6 (G61): avisar quem atende a reunião fora dos gatilhos de reunião (a próxima marcada do contato,
-    # em card que quem ligou vê); prova no mesmo spec da G59. A sonda roda o mínimo, sem banco: o salvar aceita o "quem
-    # atende a reunião" num gatilho de conversa (antes da G61, recusava com da_reuniao_so_no_gatilho).
+    # em card que quem ligou vê); prova no mesmo spec da G59. A sonda passa pelo salvar (Receita#problemas): o "quem atende
+    # a reunião" num gatilho de conversa sai sem problema (antes da G61, recusava com da_reuniao_so_no_gatilho).
     'G61' => lambda {
-      para = { 'da_reuniao' => true }
-      receita_no_esquema?({ 'tipo' => 'conversa.criada' }, para) &&
-        Autonomia::Automacao::DestinatariosDoAviso.new(Account.new, 'conversa.criada').problemas('aviso', para).empty?
+      numa_conta_de_teste { |conta, _pessoa| problemas_ao_salvar(conta, { 'tipo' => 'conversa.criada' }, { 'da_reuniao' => true }) == [] }
     }
   }.freeze
 
