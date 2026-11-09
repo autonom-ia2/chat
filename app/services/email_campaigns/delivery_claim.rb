@@ -51,7 +51,7 @@ class EmailCampaigns::DeliveryClaim
     return :skipped unless recipient.email_campaign_id == @campaign.id && recipient.status == expected_status.to_s
     return :skipped unless unreceipted?(recipient)
     return suppress(recipient) if EmailSuppression.suppressed?(@campaign.account, recipient.email)
-    return suppress(recipient) if contact_opted_out?(recipient.email)
+    return suppress(recipient) if contact_refuses_campaign?(recipient.email)
     return :skipped unless @campaign.sending?
     return :skipped if @campaign.recipient_import_active?
     return :paused if @admission.park_if_blocked!
@@ -64,10 +64,13 @@ class EmailCampaigns::DeliveryClaim
     :paused
   end
 
-  # chat#737: o destinatário vem de CSV, sem contact_id; liga pelo e-mail aos contatos da mesma conta.
-  # O índice parcial de contatos recusados por conta deixa a consulta barata, e ela roda a cada autorização.
-  def contact_opted_out?(email)
-    @campaign.account.contacts.opted_out.exists?(['lower(email) = ?', email.to_s.strip.downcase])
+  # chat#737, chat#2733: o destinatário vem de CSV, sem contact_id; liga pelo e-mail aos contatos da mesma conta. Não
+  # recebe se o contato com aquele e-mail recusou mensagens ativas ou está bloqueado. Roda a cada autorização: duas
+  # consultas em vez de um OR, para a da recusa usar o índice parcial de contatos recusados por conta.
+  def contact_refuses_campaign?(email)
+    by_email = ['lower(email) = ?', email.to_s.strip.downcase]
+    contacts = @campaign.account.contacts
+    contacts.opted_out.exists?(by_email) || contacts.where(blocked: true).exists?(by_email)
   end
 
   def unreceipted?(recipient)

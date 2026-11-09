@@ -69,8 +69,10 @@ module WhatsappApiCampaigns
         return
       end
 
-      # chat#737: o público foi resolvido no início; quem recusou depois não recebe. Lê do banco a cada mensagem.
-      return recipient.mark_opted_out! if Contact.opted_out.exists?(id: recipient.contact_id)
+      # chat#737, chat#2733: o público foi resolvido no início; quem recusou ou foi bloqueado depois não recebe. Lê do banco
+      # a cada mensagem.
+      refusal = Contact.campaign_refusal_now(recipient.contact_id)
+      return recipient.mark_refused!(refusal) if refusal
 
       rendered_body = TemplateRenderer.new(template: @campaign.message_body, contact: recipient.contact,
                                            variables: recipient_variables(recipient)).render
