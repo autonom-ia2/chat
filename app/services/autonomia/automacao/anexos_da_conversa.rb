@@ -17,10 +17,11 @@
 # já vê. Na primeira leitura, os da execução inteira. O anexo de commit atrasado (id reservado antes do marco, visível
 # depois) entra na leitura seguinte, e o já lido nunca volta à IA. Sem o teto de mensagens. Só foto e PDF
 # (FotoOuPdf): figurinha, áudio e outro arquivo ficam fora, e o anexo que não dá para mandar (sem arquivo, fora do
-# formato, grande demais) sai do conjunto sem pular o passo, para a foto boa da mesma leitura ir. O que passar do teto
-# somado fica para a próxima ida: o marco gravado para na última mensagem que foi (`marco_lido`), e o registro conta
-# os dois (`fora`, `para_depois`). Sem execução (o ensaio, o "Testar este passo"), lê como `anexos`. Com as duas
-# leituras, vale a dos novos.
+# formato, grande demais, o arquivo que sumiu entre a escolha e o envio) sai do conjunto sem pular o passo, para a foto
+# boa da mesma leitura ir. O que passar do teto somado fica para a próxima ida: o marco gravado para na última mensagem
+# que foi (`marco_lido`). A mensagem que sozinha passa do teto vai com os anexos dela que cabem, e o resto sai. O
+# registro do passo lista o que saiu para sempre (`fora`: mensagem, anexo e motivo) e conta o que ficou para depois.
+# Sem execução (o ensaio, o "Testar este passo"), lê como `anexos`. Com as duas leituras, vale a dos novos.
 class Autonomia::Automacao::AnexosDaConversa
   LEITURA = 'anexos'.freeze
   NOVOS = 'anexos_novos'.freeze
@@ -71,8 +72,9 @@ class Autonomia::Automacao::AnexosDaConversa
 
   def novos? = @novos.present?
 
-  # Os anexos novos que não foram (fora da régua ou sem como mandar) e os que ficaram para a próxima ida (o teto).
-  def fora = anexos.then { @fora.to_a.size }
+  # Os anexos novos que saíram para sempre, um por item: { message_id, attachment_id, motivo }. E quantos ficaram para a
+  # próxima ida (o teto).
+  def fora = anexos.then { @fora.to_a }
 
   def para_depois = anexos.then { @para_depois.to_a.size }
 
@@ -90,8 +92,9 @@ class Autonomia::Automacao::AnexosDaConversa
   def partes(modelo:)
     erro = motivo(modelo: modelo)
     raise Recusa, erro if erro
+    return anexos.map { |anexo| parte(anexo) } unless @novos
 
-    anexos.map { |anexo| parte(anexo) }
+    @partes ||= anexos.filter_map { |anexo| parte_ou_fora(anexo) }
   end
 
   # O motivo de o passo pular, sem baixar nada (o ensaio): o formato, o tamanho e a transcrição. nil quando todos vão.
@@ -116,31 +119,63 @@ class Autonomia::Automacao::AnexosDaConversa
 
   # Só foto e PDF que dá para mandar; o resto sai do conjunto, sem pular o passo.
   def que_vao(lista)
-    vao, @fora = lista.partition { |anexo| ::Autonomia::Automacao::FotoOuPdf.anexo?(anexo) && conferido?(anexo) }
-    vao
+    @fora = []
+    lista.select do |anexo|
+      motivo = motivo_de_fora(anexo)
+      motivo ? tirar(anexo, motivo) : true
+    end
   end
 
-  def conferido?(anexo)
+  def motivo_de_fora(anexo)
+    return 'anexo_sem_leitura' unless anexo.file.attached?
+    return 'nao_e_foto_nem_pdf' unless ::Autonomia::Automacao::FotoOuPdf.anexo?(anexo)
+
     conferir(anexo)
-    true
-  rescue Recusa
+    nil
+  rescue Recusa => e
+    e.motivo
+  end
+
+  # Tira do conjunto para sempre, com o registro de qual foi e por quê. Devolve false (para o select).
+  def tirar(anexo, motivo)
+    @fora << { 'message_id' => anexo.message_id, 'attachment_id' => anexo.id, 'motivo' => motivo }
     false
   end
 
   # Mensagem inteira por vez, na ordem, até o teto somado; o resto fica para a próxima ida. A mensagem que sozinha passa
-  # do teto nunca caberia: sai do conjunto, como o anexo que não dá para mandar.
+  # do teto vai primeiro, com os anexos dela que cabem; o resto dela sai (`passa_do_teto`).
   def que_cabem(lista)
-    mensagens = lista.chunk_while { |um, outro| um.message_id == outro.message_id }.to_a
-    grandes, mensagens = mensagens.partition { |mensagem| tamanho(mensagem) > LIMITE_DOS_ARQUIVOS }
-    @fora.concat(grandes.flatten)
     vao = []
+    mensagens = lista.chunk_while { |um, outro| um.message_id == outro.message_id }.to_a
     mensagens.each do |mensagem|
+      if tamanho(mensagem) > LIMITE_DOS_ARQUIVOS && vao.empty?
+        vao = repartir(mensagem)
+        break
+      end
       break if tamanho(vao) + tamanho(mensagem) > LIMITE_DOS_ARQUIVOS
 
       vao.concat(mensagem)
     end
-    @para_depois = mensagens.flatten - vao
+    @para_depois = lista - vao - fora_ids(lista)
     vao
+  end
+
+  def repartir(mensagem)
+    mensagem.each_with_object([]) do |anexo, vao|
+      tamanho(vao + [anexo]) > LIMITE_DOS_ARQUIVOS ? tirar(anexo, 'passa_do_teto') : vao << anexo
+    end
+  end
+
+  def fora_ids(lista)
+    ids = @fora.to_set { |item| item['attachment_id'] }
+    lista.select { |anexo| ids.include?(anexo.id) }
+  end
+
+  # O arquivo que sumiu entre a escolha e o envio sai do conjunto, e o passo segue com os outros.
+  def parte_ou_fora(anexo)
+    parte(anexo)
+  rescue Recusa => e
+    tirar(anexo, e.motivo) || nil
   end
 
   def tamanho(lista) = lista.reject { |anexo| anexo.file_type.to_s == 'audio' }.sum { |anexo| anexo.file.blob.byte_size }

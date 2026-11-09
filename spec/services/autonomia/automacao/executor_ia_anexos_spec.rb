@@ -72,6 +72,24 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
     expect([execucao.reload.estado, registros(execucao).last.last]).to eq(%w[parada quem_ligou_sem_acesso])
   end
 
+  # G46: o que sai da leitura para sempre fica no histórico da execução, com qual anexo e por quê.
+  it 'com anexos_novos, o registro do passo lista o anexo que ficou de fora e guarda o marco', :aggregate_failures do
+    openai_devolve('caminho' => 'perfil', 'motivo' => 'tem experiência')
+    execucao = rodar_como(admin, esperar_passo('espera'), decidir(%w[anexos_novos]))
+    mensagem_com('sample.pdf', :file, 'application/pdf')
+    audio = create(:message, conversation: conversa, account: account, message_type: :incoming, content: nil)
+    fora = audio.attachments.new(account_id: account.id, file_type: :audio)
+    fora.file.attach(io: Rails.root.join('spec/assets/sample.ogg').open, filename: 'sample.ogg', content_type: 'audio/ogg')
+    fora.save!
+
+    travel(1.day + 1.minute) { varrer }
+
+    expect(conteudo(corpos.sole).pluck('type')).to include('input_file')
+    dados = Autonomia::Automacao::Registro.find_by(execucao: execucao, passo: 'p1').dados
+    expect(dados['anexos_fora']).to eq([{ 'message_id' => audio.id, 'attachment_id' => fora.id, 'motivo' => 'nao_e_foto_nem_pdf' }])
+    expect(dados['marco_dos_anexos']).to include('lido_ate')
+  end
+
   it 'o currículo em PDF, sem uma palavra, vai inteiro à IA e decide o caminho', :aggregate_failures do
     mensagem_com('sample.pdf', :file, 'application/pdf')
     openai_devolve('caminho' => 'perfil', 'motivo' => 'tem experiência')

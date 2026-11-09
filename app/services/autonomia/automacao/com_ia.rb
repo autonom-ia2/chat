@@ -42,7 +42,7 @@ module Autonomia::Automacao::ComIa
     return unless anexos&.novos?
 
     { 'marco_dos_anexos' => anexos.marco_lido, 'anexos_fora' => anexos.fora, 'anexos_para_depois' => anexos.para_depois }
-      .reject { |_chave, valor| valor.is_a?(Integer) && valor.zero? }
+      .reject { |_chave, valor| valor.blank? || valor.try(:zero?) }
   end
 
   def initialize(execucao:, passo:, alvo:, acesso:)

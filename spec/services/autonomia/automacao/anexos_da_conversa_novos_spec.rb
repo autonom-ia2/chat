@@ -69,19 +69,36 @@ RSpec.describe Autonomia::Automacao::AnexosDaConversa do
 
   def mensagem = create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :incoming, content: nil)
 
-  it 'só foto e PDF que dá para mandar: o resto sai do conjunto, e a foto boa da mesma leitura vai', :aggregate_failures do
-    anexo(mensagem, 'booking_small.webp', :image, 'image/webp', meta: { 'is_sticker' => true })
+  def motivos(lidos) = lidos.fora.map { |item| item.values_at('attachment_id', 'motivo') }
+
+  it 'só foto e PDF que dá para mandar: o resto sai do conjunto, com qual e por quê, e a foto boa vai', :aggregate_failures do
+    figurinha = anexo(mensagem, 'booking_small.webp', :image, 'image/webp', meta: { 'is_sticker' => true })
     sem_arquivo = anexo(mensagem, 'avatar.png', :image, 'image/png')
     ActiveStorage::Attachment.where(record: sem_arquivo).delete_all
-    anexo(mensagem, 'sample.pdf', :file, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-    anexo(mensagem, 'sample.ogg', :audio, 'audio/ogg')
+    docx = anexo(mensagem, 'sample.pdf', :file, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    audio = anexo(mensagem, 'sample.ogg', :audio, 'audio/ogg')
     anexo(mensagem, 'avatar.png', :image, 'image/png')
 
     lidos = novos(inicio)
 
     expect(lidos.motivo(modelo: modelo)).to be_nil
     expect(lidos.partes(modelo: modelo).pluck(:type)).to eq(%w[input_image])
-    expect([lidos.fora, lidos.para_depois]).to eq([4, 0])
+    expect(motivos(lidos)).to eq([[figurinha.id, 'nao_e_foto_nem_pdf'], [sem_arquivo.id, 'anexo_sem_leitura'],
+                                  [docx.id, 'nao_e_foto_nem_pdf'], [audio.id, 'nao_e_foto_nem_pdf']])
+    expect(lidos.fora.first['message_id']).to eq(figurinha.message_id)
+    expect(lidos.para_depois).to eq(0)
+  end
+
+  it 'o arquivo que some entre a escolha e o envio sai do conjunto, e a foto boa da mesma leitura vai', :aggregate_failures do
+    sumiu = anexo(mensagem, 'avatar.png', :image, 'image/png')
+    anexo(mensagem, 'sample.pdf', :file, 'application/pdf')
+    lidos = novos(inicio)
+    expect(lidos.quantos).to eq(2)
+
+    sumiu.file.blob.service.delete(sumiu.file.blob.key)
+
+    expect(lidos.partes(modelo: modelo).pluck(:type)).to eq(%w[input_file])
+    expect(motivos(lidos)).to eq([[sumiu.id, 'anexo_sem_leitura']])
   end
 
   it 'o que passa do teto somado (fotos e PDFs) fica para a próxima ida, sem se perder', :aggregate_failures do
@@ -89,23 +106,27 @@ RSpec.describe Autonomia::Automacao::AnexosDaConversa do
     stub_const("#{described_class}::LIMITE_DOS_ARQUIVOS", 2 * File.size(Rails.root.join('spec/assets/avatar.png')))
 
     primeira = novos(inicio)
-    expect([primeira.quantos, primeira.para_depois]).to eq([2, 1])
+    expect([primeira.quantos, primeira.para_depois, primeira.fora]).to eq([2, 1, []])
     segunda = novos(primeira.marco_lido)
 
     expect([segunda.quantos, segunda.para_depois]).to eq([1, 0])
     expect(novos(segunda.marco_lido).quantos).to eq(0)
   end
 
-  it 'a mensagem que sozinha passa do teto sai do conjunto, e a seguinte vai', :aggregate_failures do
+  it 'a mensagem que sozinha passa do teto vai com os anexos que cabem; o resto dela sai, e a seguinte fica para depois',
+     :aggregate_failures do
     grande = mensagem
-    2.times { anexo(grande, 'avatar.png', :image, 'image/png') }
-    anexo(mensagem, 'sample.pdf', :file, 'application/pdf')
+    cabe = anexo(grande, 'avatar.png', :image, 'image/png')
+    sobra = anexo(grande, 'avatar.png', :image, 'image/png')
+    seguinte = anexo(mensagem, 'sample.pdf', :file, 'application/pdf')
     stub_const("#{described_class}::LIMITE_DOS_ARQUIVOS", File.size(Rails.root.join('spec/assets/avatar.png')) + 1)
 
     lidos = novos(inicio)
 
-    expect(lidos.partes(modelo: modelo).pluck(:type)).to eq(%w[input_file])
-    expect([lidos.fora, lidos.para_depois]).to eq([2, 0])
+    expect(lidos.partes(modelo: modelo).pluck(:type)).to eq(%w[input_image])
+    expect(motivos(lidos)).to eq([[sobra.id, 'passa_do_teto']])
+    expect([lidos.para_depois, lidos.marco_lido['lido_ate']]).to eq([1, cabe.message_id])
+    expect(nomes(novos(lidos.marco_lido))).to eq([seguinte.file.filename.to_s])
   end
 
   it 'sem `novos`, lê como `anexos`: as últimas mensagens; as duas leituras saem do Estado', :aggregate_failures do
