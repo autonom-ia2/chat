@@ -247,6 +247,9 @@ const respondeuErrado = () => {
       </p>
     </div>
 
+    <!-- #2776 J6: as ferramentas com que o agente já nasce (a página decide o que entra). -->
+    <slot name="ferramentas" />
+
     <CelularConversa
       :mensagens="celularMensagens"
       :digitando="digitando"

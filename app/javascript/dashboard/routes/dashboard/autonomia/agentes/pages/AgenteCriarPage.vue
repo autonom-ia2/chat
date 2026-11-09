@@ -47,6 +47,7 @@ import {
   temCanalParaEscolher,
   tipoDoCanalParaTexto,
 } from '../utils/criacao';
+import VitrineNoConstrutor from '../vitrine/components/VitrineNoConstrutor.vue';
 import AgenteBotao from '../components/AgenteBotao.vue';
 import AgenteConfirmacao from '../components/AgenteConfirmacao.vue';
 import AgenteErro from '../components/AgenteErro.vue';
@@ -1068,7 +1069,16 @@ onMounted(() => {
           @respondeu-errado="respondeuErrado"
           @comecar="abrirComece"
           @ajustes="fazerAjustesAvancados"
-        />
+        >
+          <template #ferramentas>
+            <VitrineNoConstrutor
+              v-if="conversa.agenteId.value"
+              :agente-id="conversa.agenteId.value"
+              :nome="nome"
+              :sugeridas="agente?.ferramentas_sugeridas || []"
+            />
+          </template>
+        </EtapaConfira>
 
         <aside
           v-else-if="!celular"

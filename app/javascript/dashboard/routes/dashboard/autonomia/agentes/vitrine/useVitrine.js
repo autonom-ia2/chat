@@ -16,6 +16,16 @@ const ler = () => {
 };
 
 const incluidas = ref(ler());
+// Sugestões que a pessoa dispensou ("Agora não"), por agente: o cartão não volta para a mesma ferramenta.
+const GUARDA_DISPENSADAS = `${GUARDA}-dispensadas`;
+const lerDispensadas = () => {
+  try {
+    return JSON.parse(window.localStorage.getItem(GUARDA_DISPENSADAS) || '{}');
+  } catch {
+    return {};
+  }
+};
+const dispensadas = ref(lerDispensadas());
 
 const gravar = proximo => {
   incluidas.value = proximo;
@@ -66,8 +76,27 @@ export const useVitrine = () => {
       );
     });
 
+  const dispensar = (agenteId, ferramentaId) => {
+    const chave = String(agenteId);
+    const proximo = {
+      ...dispensadas.value,
+      [chave]: [...(dispensadas.value[chave] || []), ferramentaId],
+    };
+    dispensadas.value = proximo;
+    try {
+      window.localStorage.setItem(GUARDA_DISPENSADAS, JSON.stringify(proximo));
+    } catch {
+      // Sem armazenamento: some só nesta página.
+    }
+  };
+
+  const dispensada = (agenteId, ferramentaId) =>
+    (dispensadas.value[String(agenteId)] || []).includes(ferramentaId);
+
   return {
     doAgente,
+    dispensar,
+    dispensada,
     tem: (agenteId, ferramentaId) => !naoTem(agenteId, ferramentaId),
     incluir,
     mudarLigada,

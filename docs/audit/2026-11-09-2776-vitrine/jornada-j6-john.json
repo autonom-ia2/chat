@@ -1,0 +1,43 @@
+{
+  "pasta": "docs/audit/2026-11-09-2776-vitrine/prints/j6-cartao",
+  "conta": 1,
+  "usuario": "john@acme.inc",
+  "larguras": [
+    1440,
+    390
+  ],
+  "temas": [
+    "light"
+  ],
+  "jornadas": [
+    {
+      "nome": "j6-pode-ganhar",
+      "etapas": [
+        {
+          "nome": "pagina-da-ana-com-sugestao",
+          "url": "/app/accounts/{conta}/agents/1",
+          "esperar": "[data-vitrine-sugestao]",
+          "pausa": 3500
+        },
+        {
+          "nome": "incluiu-com-um-toque",
+          "passos": [
+            {
+              "clicar": "[data-vitrine-sugestao-incluir]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "proxima-sugestao-agora-nao",
+          "passos": [
+            {
+              "clicar": "[data-vitrine-sugestao-dispensar]"
+            }
+          ],
+          "pausa": 1500
+        }
+      ]
+    }
+  ]
+}

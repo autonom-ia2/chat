@@ -3409,6 +3409,21 @@
           "EXEMPLO": "padariapaodeouro.com.br",
           "CONSULTAS": ""
         }
+      },
+      "JA_VEM": {
+        "TITULO": "{nome} já vem com estas ferramentas",
+        "TEXTO": "Escolhemos pelo que você contou. Tire o que não quiser.",
+        "TIRAR": "Tirar",
+        "TIRAR_SR": "Tirar {ferramenta}",
+        "VER_MAIS": "Ver mais ferramentas",
+        "TIRADA": "{ferramenta} saiu."
+      },
+      "SUGESTAO": {
+        "ROTULO": "Sugestão de ferramenta",
+        "TEXTO": "{nome} pode ganhar: {ferramenta}. Incluir?",
+        "INCLUIR": "Incluir",
+        "AGORA_NAO": "Agora não",
+        "INCLUIDA": "Pronto! {nome} já consulta {ferramenta}."
       }
     }
   }

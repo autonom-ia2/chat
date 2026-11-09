@@ -3409,6 +3409,21 @@
           "EXEMPLO": "padariapaodeouro.com.br",
           "CONSULTAS": ""
         }
+      },
+      "JA_VEM": {
+        "TITULO": "{nome} comes with these tools",
+        "TEXTO": "We picked them from what you told us. Remove any you don’t want.",
+        "TIRAR": "Remove",
+        "TIRAR_SR": "Remove {ferramenta}",
+        "VER_MAIS": "See more tools",
+        "TIRADA": "{ferramenta} removed."
+      },
+      "SUGESTAO": {
+        "ROTULO": "Tool suggestion",
+        "TEXTO": "{nome} can get: {ferramenta}. Add it?",
+        "INCLUIR": "Add",
+        "AGORA_NAO": "Not now",
+        "INCLUIDA": "Done! {nome} can now look up {ferramenta}."
       }
     }
   }

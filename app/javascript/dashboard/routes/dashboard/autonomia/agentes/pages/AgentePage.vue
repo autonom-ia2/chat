@@ -21,6 +21,7 @@ import GavetaFotoNome from '../components/pagina/GavetaFotoNome.vue';
 import GavetaVersoes from '../components/pagina/GavetaVersoes.vue';
 import GavetaInstrucoes from '../components/pagina/GavetaInstrucoes.vue';
 import GavetaAgenda from '../components/pagina/GavetaAgenda.vue';
+import VitrineSugestaoDoAgente from '../vitrine/components/VitrineSugestaoDoAgente.vue';
 import GavetaFerramentas from '../components/pagina/GavetaFerramentas.vue';
 import MudarConversando from '../components/pagina/MudarConversando.vue';
 import AgenteGaveta from '../components/AgenteGaveta.vue';
@@ -906,6 +907,11 @@ const tirarPergunta = id => {
           :nome="nome"
           :numeros="semana.numerosDe(agente.id)"
           :fala-com-cliente="mostraSilencios"
+        />
+        <VitrineSugestaoDoAgente
+          :agente-id="agente.id"
+          :nome="nome"
+          :pode="!cotacao && permitidas.includes(GAVETA.FERRAMENTAS)"
         />
         <PaginaBlocos
           :agente="agente"

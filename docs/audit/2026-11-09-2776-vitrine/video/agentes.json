@@ -1,0 +1,92 @@
+{
+  "_nota": "Roteiro dos clipes do #2776 (protótipo). Tudo fictício: nomes, empresas, CNPJ, CPF, valores e datas. As respostas do Construtor e do Testar são simuladas na rede pelo gravar.cjs (a demo não tem IA).",
+  "agentes": [
+    {
+      "clipe": "1-garantia",
+      "id": 9101,
+      "nome": "Gael",
+      "conta": "Atender empresas que precisam de seguro garantia para licitação e contrato com o governo.",
+      "pergunta": "Como o Gael vai se apresentar? Mais formal ou mais leve?",
+      "jeito": "Formal, mas simpático. Ele se chama Gael.",
+      "ferramentas": ["CNPJ", "LICITACOES", "FERIADOS"],
+      "teste": "Minha empresa ganhou a licitação da reforma da escola em Uberlândia. CNPJ 12.345.678/0001-90.",
+      "resposta": [
+        "Parabéns! Achei a Construtora Horizonte Ltda, ativa, em Uberlândia – MG.",
+        "A licitação é o pregão 045/2026 da Prefeitura de Uberlândia, com contrato de R$ 1,2 milhão. A garantia costuma ser 5% do contrato: R$ 60 mil.",
+        "O contrato pede a garantia em 10 dias úteis, até 24/11 (dia 20 é feriado). Posso começar a cotação?"
+      ]
+    },
+    {
+      "clipe": "2-auto",
+      "id": 9102,
+      "nome": "Ana",
+      "conta": "Atender quem quer seguro de carro: tirar dúvidas e já começar a cotação.",
+      "pergunta": "Como a Ana vai falar com os clientes?",
+      "jeito": "Simpática e direta. Ela se chama Ana.",
+      "ferramentas": ["FIPE", "CEP", "CPF"],
+      "teste": "Quanto vale meu Onix 2020? Moro no CEP 01001-000.",
+      "resposta": [
+        "Seu Onix LT 1.0 2020 vale R$ 74.312 na tabela FIPE de novembro.",
+        "O CEP 01001-000 é da Praça da Sé, em São Paulo – SP. Para cotar, me passa o CPF de quem vai ser o segurado?"
+      ]
+    },
+    {
+      "clipe": "3-residencial",
+      "id": 9103,
+      "nome": "Rita",
+      "conta": "Cuidar do seguro residencial: cotação, dúvidas de cobertura e primeiro atendimento de sinistro.",
+      "pergunta": "Como a Rita vai falar com os clientes?",
+      "jeito": "Acolhedora e calma. Ela se chama Rita.",
+      "ferramentas": ["CEP", "CHUVA", "BANCO_CENTRAL"],
+      "teste": "Choveu muito ontem e entrou água em casa. Meu CEP é 86010-000. O seguro cobre?",
+      "resposta": [
+        "Sinto muito! O CEP 86010-000 é no Centro de Londrina – PR.",
+        "Ontem, 08/11, choveu 92 mm aí: conta como chuva forte. A cobertura de alagamento cobre esse caso.",
+        "Me manda fotos de onde a água entrou que eu já abro o aviso para você?"
+      ]
+    },
+    {
+      "clipe": "4-carga",
+      "id": 9104,
+      "nome": "Caio",
+      "conta": "Atender transportadoras que precisam de seguro de carga para cada viagem.",
+      "pergunta": "Como o Caio vai falar com os clientes?",
+      "jeito": "Prático e rápido. Ele se chama Caio.",
+      "ferramentas": ["TRANSPORTADORAS", "NCM", "CNPJ"],
+      "teste": "Sou da TransRota, de Cascavel. Vou levar 200 notebooks para Curitiba. Quanto fica o seguro?",
+      "resposta": [
+        "Achei a TransRota Cargas Ltda, em Cascavel – PR, com 34 caminhões no cadastro da ANTT.",
+        "Notebook é o código 8471.30.12: carga eletrônica, com risco alto de roubo.",
+        "Qual o valor total das notas fiscais dessa viagem?"
+      ]
+    },
+    {
+      "clipe": "5-vida-e-saude",
+      "id": 9105,
+      "nome": "Lívia",
+      "conta": "Atender clientes de plano de saúde e seguro de vida: cobertura de exames, hospitais e doenças.",
+      "pergunta": "Como a Lívia vai falar com os clientes?",
+      "jeito": "Cuidadosa e clara. Ela se chama Lívia.",
+      "ferramentas": ["CNES", "TUSS", "CID"],
+      "teste": "O plano cobre a ressonância de joelho, código 41101170, no Hospital Santa Clara?",
+      "resposta": [
+        "O código 41101170 é ressonância magnética de joelho.",
+        "O Hospital Santa Clara, em Curitiba – PR, faz esse exame. Vou conferir se ele é da rede do seu plano e já te confirmo."
+      ]
+    },
+    {
+      "clipe": "6-solar",
+      "id": 9106,
+      "nome": "Sol",
+      "conta": "Vender seguro para quem tem placas solares em casa ou na empresa.",
+      "pergunta": "Como o Sol vai falar com os clientes?",
+      "jeito": "Animado e direto. Ele se chama Sol.",
+      "ferramentas": ["SOLAR", "CEP"],
+      "teste": "Instalei placas solares em casa, CEP 56304-000. Quero fazer o seguro.",
+      "resposta": [
+        "Ótima escolha! O CEP 56304-000 é em Petrolina – PE, cidade com 1.284 instalações solares só em 2026.",
+        "Quantas placas são e quanto custou a instalação?"
+      ]
+    }
+  ]
+}
