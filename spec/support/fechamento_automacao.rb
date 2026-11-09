@@ -193,8 +193,9 @@ module FechamentoAutomacao::Lacunas
     'G29' => nil,
     # G30: o responsável por um anúncio (o corretor daquele anúncio), para o retorno e o link da agenda.
     'G30' => nil,
-    # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando".
-    'G31' => nil,
+    # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando" (o `de_novo` do
+    # decidir); prova ponta a ponta em spec/fechamento/automacao/g31_decidir_a_cada_resposta_spec.rb.
+    'G31' => -> { campo_do_passo?('decidir', 'de_novo') },
     # G32 (#2703): a reunião marcada como condição do "esperar até", no meio da execução; prova ponta a ponta em
     # spec/fechamento/automacao/g32_reuniao_spec.rb.
     'G32' => -> { valor?('card.tem_reuniao_marcada') },

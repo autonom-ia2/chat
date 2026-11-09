@@ -1240,6 +1240,12 @@
           "peca": "passos",
           "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.NENHUM"
+        },
+        {
+          "nome": "de_novo",
+          "peca": "de_novo",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DE_NOVO"
         }
       ]
     },
