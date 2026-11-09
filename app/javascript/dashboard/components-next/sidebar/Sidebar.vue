@@ -226,6 +226,16 @@ const autonomiaAgentsEnabled = computed(
     autonomiaAgentsFlag.value &&
     (isAdministrator.value || hasAnyPermission(AUTONOMIA_PERMISSIONS))
 );
+// #2776 — vitrine de ferramentas prontas (protótipo): quem cuida das ferramentas dos agentes, com a flag na conta.
+const vitrineOn = computed(
+  () =>
+    autonomiaAgentsEnabled.value &&
+    isFeatureEnabledonAccount.value(
+      accountId.value,
+      FEATURE_FLAGS.AGENTE_VITRINE_FERRAMENTAS
+    ) &&
+    (isAdministrator.value || hasAnyPermission(['autonomia_tools_manage']))
+);
 // Campaign Management (in the Campaigns group since #725) reads campaign reports and CTWA links,
 // gated by campaign_view (#452).
 const canViewCampaigns = computed(
@@ -890,6 +900,17 @@ const menuItems = computed(() => {
       t,
       accountScopedRoute,
     }),
+    ...(vitrineOn.value
+      ? [
+          {
+            name: 'FerramentasProntas',
+            label: t('AGENTS.VITRINE.MENU'),
+            icon: 'i-lucide-package-open',
+            to: accountScopedRoute('autonomia_agents_vitrine'),
+            activeOn: ['autonomia_agents_vitrine'],
+          },
+        ]
+      : []),
     ...prospectingSidebarItems({
       isVisible: autonomiaProspectingEnabled.value,
       t,

@@ -2994,6 +2994,422 @@
         "RESPONDEU": "Respondeu a mensagem",
         "VER_CONVERSA_DE": "Ver a conversa com {contato}"
       }
+    },
+    "VITRINE": {
+      "MENU": "Ferramentas prontas",
+      "HEROI": {
+        "TITULO": "Ensine coisas novas aos seus agentes",
+        "TEXTO": "Escolha o que o agente passa a saber consultar. A plataforma cuida do resto.",
+        "BUSCA": "O que você quer que o agente consiga fazer?",
+        "BUSCA_EXEMPLO": "Ex.: saber quanto vale um carro",
+        "LIMPAR": "Limpar a busca"
+      },
+      "PARA": {
+        "TEXTO": "Escolhendo para {nome}",
+        "TROCAR": "Trocar de agente"
+      },
+      "FILTRO": {
+        "ROTULO": "Mostrar",
+        "TODAS": "Todas"
+      },
+      "DESTAQUE": {
+        "RAMO": "Mais usadas no seu ramo",
+        "GERAL": "Mais escolhidas"
+      },
+      "CARTAO": {
+        "CONSULTAS": "Responde {n} tipos de pergunta",
+        "ATUALIZADO": "Atualizado em {data}",
+        "JA_SABE": "{nome} já sabe"
+      },
+      "BUSCA": {
+        "NADA": "Nada com “{termo}” por aqui ainda.",
+        "VER_TODAS": "Ver todas",
+        "ACHADAS": "Achamos {n} para “{termo}”"
+      },
+      "SEM_AGENTE": {
+        "TEXTO": "Crie um agente primeiro. Depois é só escolher o que ele vai saber.",
+        "BOTAO": "Criar agente"
+      },
+      "AVANCADO": {
+        "TEXTO": "Não achou o que precisa?",
+        "BOTAO": "Criar a minha (avançado)"
+      },
+      "GRUPOS": {
+        "PESSOAS": {
+          "NOME": "Pessoas e empresas",
+          "TEXTO": "Conferir quem é quem."
+        },
+        "LUGAR": {
+          "NOME": "Endereço e lugar",
+          "TEXTO": "Achar endereço, cidade e região."
+        },
+        "VEICULOS": {
+          "NOME": "Veículos",
+          "TEXTO": "Valor de carro, moto e caminhão."
+        },
+        "SAUDE": {
+          "NOME": "Saúde",
+          "TEXTO": "Hospitais, exames, doenças e planos."
+        },
+        "CLIMA": {
+          "NOME": "Clima",
+          "TEXTO": "Chuva, tempo e queimadas."
+        },
+        "DINHEIRO": {
+          "NOME": "Dinheiro e prazos",
+          "TEXTO": "Dólar, juros, feriados e bancos."
+        },
+        "CLIENTES": {
+          "NOME": "Achar clientes",
+          "TEXTO": "Quem está comprando e quem pode comprar."
+        },
+        "SEGUROS": {
+          "NOME": "Seguros",
+          "TEXTO": "Coberturas, corretores e seguradoras."
+        },
+        "OUTROS": {
+          "NOME": "Outros",
+          "TEXTO": "Mercadorias e sites."
+        }
+      },
+      "DETALHE": {
+        "CONSEGUE": "O que o agente passa a conseguir",
+        "CLIENTE": "Cliente",
+        "AGENTE": "Agente",
+        "CONSULTAS": "Ele escolhe sozinho o que perguntar: {lista}.",
+        "ARQUIVO": "A plataforma guarda uma cópia e atualiza sozinha. Última atualização: {data}.",
+        "EXPERIMENTE": "Experimente",
+        "EXPERIMENTAR": "Experimentar",
+        "EXPERIMENTANDO": "Consultando…",
+        "DEU_CERTO": "Deu certo. É isto que o agente recebe:",
+        "QUAL_AGENTE": "Em qual agente?",
+        "JA_TEM": "Já tem esta ferramenta",
+        "QUANDO": "Quando usar",
+        "QUANDO_AJUDA": "O agente decide pela conversa. Ajuste a frase se quiser.",
+        "QUANDO_VAZIO": "Escreva quando o agente deve usar.",
+        "ENSINAR": "Ensinar para {nome}",
+        "ESCOLHA_AGENTE": "Escolha um agente acima.",
+        "SUCESSO_TITULO": "Pronto!",
+        "SUCESSO_TEXTO": "{agente} já consegue {consegue}.",
+        "SUCESSO_LIGADA": "A ferramenta já está ligada. Você pode desligar quando quiser.",
+        "VER_FERRAMENTAS": "Ver ferramentas de {nome}",
+        "OUTRA": "Escolher outra"
+      },
+      "PRONTAS": {
+        "TITULO": "Prontas",
+        "TIRAR": "Tirar",
+        "TIRAR_SR": "Tirar {ferramenta} de {agente}",
+        "CONFIRMA_TITULO": "Tirar {ferramenta}?",
+        "CONFIRMA_TEXTO": "{agente} para de consultar isto. Dá para incluir de novo quando quiser.",
+        "CONFIRMA_SIM": "Tirar",
+        "CONFIRMA_NAO": "Manter",
+        "TIRADA": "{ferramenta} saiu de {agente}.",
+        "CRIAR_MINHA": "Criar a minha (avançado)",
+        "VAZIO": "{nome} ainda não consulta nada fora da conversa.",
+        "ESCOLHER": "Escolher ferramenta pronta"
+      },
+      "FERRAMENTAS": {
+        "CNPJ": {
+          "NOME": "Dados de uma empresa",
+          "APOIO": "pelo CNPJ",
+          "FAZ": "Descobre nome, situação e cidade de uma empresa.",
+          "CONSEGUE": "conferir os dados de uma empresa",
+          "CLIENTE": "Meu CNPJ é 12.345.678/0001-90, está tudo certo?",
+          "AGENTE": "Está sim! Padaria Pão de Ouro Ltda, ativa, em Campinas.",
+          "USE_QUANDO": "Use quando o cliente informar um CNPJ ou pedir para conferir os dados de uma empresa.",
+          "ROTULO": "CNPJ",
+          "EXEMPLO": "12.345.678/0001-90",
+          "CONSULTAS": "situação da empresa, sócios"
+        },
+        "CPF": {
+          "NOME": "Situação de um CPF",
+          "APOIO": "na Receita Federal",
+          "FAZ": "Confere se um CPF está regular.",
+          "CONSEGUE": "conferir se um CPF está regular",
+          "CLIENTE": "Pode ver se meu CPF está ok? 123.456.789-09",
+          "AGENTE": "Seu CPF está regular, Maria.",
+          "USE_QUANDO": "Use quando o cliente informar um CPF e for preciso saber se ele está regular.",
+          "ROTULO": "CPF",
+          "EXEMPLO": "123.456.789-09",
+          "CONSULTAS": ""
+        },
+        "CEP": {
+          "NOME": "Endereço pelo CEP",
+          "APOIO": "",
+          "FAZ": "Acha rua, bairro e cidade a partir do CEP.",
+          "CONSEGUE": "achar um endereço pelo CEP",
+          "CLIENTE": "Meu CEP é 01001-000.",
+          "AGENTE": "Achei: Praça da Sé, bairro Sé, São Paulo. Qual o número?",
+          "USE_QUANDO": "Use quando o cliente informar um CEP ou quando for preciso completar um endereço.",
+          "ROTULO": "CEP",
+          "EXEMPLO": "01001-000",
+          "CONSULTAS": ""
+        },
+        "IBGE": {
+          "NOME": "Cidades e população",
+          "APOIO": "dados do IBGE",
+          "FAZ": "Conta quantas pessoas moram numa cidade e quanto ganham.",
+          "CONSEGUE": "falar da população e da renda de uma cidade",
+          "CLIENTE": "Quantas pessoas moram em Ribeirão Preto?",
+          "AGENTE": "Cerca de 711 mil pessoas, com renda média de R$ 3.412.",
+          "USE_QUANDO": "Use quando a conversa precisar de dados de uma cidade, como população ou renda.",
+          "ROTULO": "Cidade",
+          "EXEMPLO": "Ribeirão Preto",
+          "CONSULTAS": "cidades de um estado, população, renda"
+        },
+        "LOCAL": {
+          "NOME": "Cidade pela localização",
+          "APOIO": "",
+          "FAZ": "Diz em que cidade e bairro fica uma localização enviada.",
+          "CONSEGUE": "dizer onde fica uma localização",
+          "CLIENTE": "(enviou a localização)",
+          "AGENTE": "Você está na Savassi, em Belo Horizonte. Já anotei!",
+          "USE_QUANDO": "Use quando o cliente enviar a localização dele pelo WhatsApp.",
+          "ROTULO": "Localização",
+          "EXEMPLO": "-19.9372, -43.9345",
+          "CONSULTAS": ""
+        },
+        "DDD": {
+          "NOME": "Cidade pelo DDD",
+          "APOIO": "",
+          "FAZ": "Diz de que região é um telefone pelo DDD.",
+          "CONSEGUE": "dizer de que região é um telefone",
+          "CLIENTE": "Meu número é 19 99999-0000.",
+          "AGENTE": "Anotado! O 19 é de Campinas e região.",
+          "USE_QUANDO": "Use quando for útil saber a região de um telefone.",
+          "ROTULO": "DDD",
+          "EXEMPLO": "19",
+          "CONSULTAS": ""
+        },
+        "FIPE": {
+          "NOME": "Valor do carro",
+          "APOIO": "tabela FIPE",
+          "FAZ": "Diz quanto vale um carro, uma moto ou um caminhão.",
+          "CONSEGUE": "dizer quanto vale um carro",
+          "CLIENTE": "Quanto vale meu Onix 2020?",
+          "AGENTE": "O Onix LT 1.0 2020 vale R$ 74.312 na tabela deste mês.",
+          "USE_QUANDO": "Use quando o cliente quiser saber quanto vale um carro, moto ou caminhão.",
+          "ROTULO": "Carro e ano",
+          "EXEMPLO": "Onix 2020",
+          "CONSULTAS": "marcas, modelos, anos, valor"
+        },
+        "CNES": {
+          "NOME": "Hospitais e clínicas",
+          "APOIO": "cadastro do Ministério da Saúde",
+          "FAZ": "Acha hospitais e clínicas perto de um endereço.",
+          "CONSEGUE": "achar hospitais e clínicas",
+          "CLIENTE": "Tem hospital com maternidade em Curitiba?",
+          "AGENTE": "Tem sim: o Hospital Santa Clara atende pronto-socorro e maternidade.",
+          "USE_QUANDO": "Use quando o cliente procurar um hospital, uma clínica ou um pronto-socorro.",
+          "ROTULO": "Cidade ou bairro",
+          "EXEMPLO": "Curitiba",
+          "CONSULTAS": ""
+        },
+        "TUSS": {
+          "NOME": "Nome de exames e procedimentos",
+          "APOIO": "tabela TUSS",
+          "FAZ": "Traduz o código de um exame ou procedimento para o nome.",
+          "CONSEGUE": "dizer o nome de um exame pelo código",
+          "CLIENTE": "O que é o código 41101170 do meu pedido?",
+          "AGENTE": "É uma ressonância magnética de joelho.",
+          "USE_QUANDO": "Use quando o cliente mandar o código de um exame ou procedimento.",
+          "ROTULO": "Código ou nome",
+          "EXEMPLO": "41101170",
+          "CONSULTAS": ""
+        },
+        "CID": {
+          "NOME": "Nome de doenças",
+          "APOIO": "CID-10",
+          "FAZ": "Traduz o código de uma doença para o nome.",
+          "CONSEGUE": "dizer o nome de uma doença pelo código",
+          "CLIENTE": "No meu atestado está J45. O que é?",
+          "AGENTE": "J45 é asma.",
+          "USE_QUANDO": "Use quando o cliente mandar o código de uma doença, como num atestado.",
+          "ROTULO": "Código",
+          "EXEMPLO": "J45",
+          "CONSULTAS": ""
+        },
+        "ANS": {
+          "NOME": "Planos de saúde",
+          "APOIO": "operadoras da ANS",
+          "FAZ": "Confere se uma operadora de plano de saúde está ativa.",
+          "CONSEGUE": "conferir uma operadora de plano de saúde",
+          "CLIENTE": "A Vida Plena Saúde é confiável?",
+          "AGENTE": "Ela está ativa na ANS e tem cerca de 182 mil clientes.",
+          "USE_QUANDO": "Use quando o cliente perguntar sobre uma operadora de plano de saúde.",
+          "ROTULO": "Operadora",
+          "EXEMPLO": "Vida Plena Saúde",
+          "CONSULTAS": ""
+        },
+        "CHUVA": {
+          "NOME": "Quanto choveu",
+          "APOIO": "histórico do INMET",
+          "FAZ": "Diz quanto choveu numa cidade em um período.",
+          "CONSEGUE": "dizer quanto choveu numa cidade",
+          "CLIENTE": "Choveu muito em Londrina em outubro?",
+          "AGENTE": "Choveu 168 mm em outubro. O dia mais chuvoso foi 21.",
+          "USE_QUANDO": "Use quando a conversa precisar saber quanto choveu num lugar.",
+          "ROTULO": "Cidade",
+          "EXEMPLO": "Londrina",
+          "CONSULTAS": ""
+        },
+        "ESTACOES": {
+          "NOME": "Tempo agora",
+          "APOIO": "estações do INMET",
+          "FAZ": "Diz a temperatura e se está chovendo agora numa cidade.",
+          "CONSEGUE": "dizer como está o tempo agora",
+          "CLIENTE": "Como está o tempo em Sorriso agora?",
+          "AGENTE": "Está 31 °C e sem chuva em Sorriso.",
+          "USE_QUANDO": "Use quando o cliente perguntar como está o tempo agora.",
+          "ROTULO": "Cidade",
+          "EXEMPLO": "Sorriso",
+          "CONSULTAS": ""
+        },
+        "QUEIMADAS": {
+          "NOME": "Focos de queimada",
+          "APOIO": "monitoramento do INPE",
+          "FAZ": "Conta os focos de queimada perto de uma cidade.",
+          "CONSEGUE": "contar focos de queimada",
+          "CLIENTE": "Tem queimada perto de Sinop?",
+          "AGENTE": "Foram 12 focos nos últimos 7 dias perto de Sinop.",
+          "USE_QUANDO": "Use quando a conversa precisar saber de queimadas numa região.",
+          "ROTULO": "Cidade",
+          "EXEMPLO": "Sinop",
+          "CONSULTAS": ""
+        },
+        "BANCO_CENTRAL": {
+          "NOME": "Dólar, juros e inflação",
+          "APOIO": "Banco Central",
+          "FAZ": "Traz o dólar do dia, os juros e a inflação.",
+          "CONSEGUE": "dizer o dólar, os juros e a inflação",
+          "CLIENTE": "Quanto está o dólar hoje?",
+          "AGENTE": "O dólar está R$ 5,42 hoje.",
+          "USE_QUANDO": "Use quando o cliente perguntar sobre dólar, juros, inflação ou IGP-M.",
+          "ROTULO": "O que consultar",
+          "EXEMPLO": "dólar hoje",
+          "CONSULTAS": "dólar, juros, inflação, IGP-M"
+        },
+        "FERIADOS": {
+          "NOME": "Feriados e dias úteis",
+          "APOIO": "",
+          "FAZ": "Diz se um dia é feriado e conta os dias úteis.",
+          "CONSEGUE": "contar dias úteis e achar feriados",
+          "CLIENTE": "Dia 20 de novembro tem expediente?",
+          "AGENTE": "Dia 20 é feriado em São Paulo. Voltamos no dia 23.",
+          "USE_QUANDO": "Use quando for preciso saber se um dia é feriado ou contar um prazo em dias úteis.",
+          "ROTULO": "Data e cidade",
+          "EXEMPLO": "20/11 em São Paulo",
+          "CONSULTAS": "feriados, dias úteis"
+        },
+        "BANCOS": {
+          "NOME": "Nome do banco",
+          "APOIO": "pelo código",
+          "FAZ": "Diz o nome de um banco pelo código.",
+          "CONSEGUE": "dizer o nome de um banco pelo código",
+          "CLIENTE": "Meu banco é o 341.",
+          "AGENTE": "O 341 é o Banco Exemplo.",
+          "USE_QUANDO": "Use quando o cliente informar o código de um banco.",
+          "ROTULO": "Código",
+          "EXEMPLO": "341",
+          "CONSULTAS": ""
+        },
+        "LICITACOES": {
+          "NOME": "Compras do governo",
+          "APOIO": "licitações do PNCP",
+          "FAZ": "Acha compras abertas de prefeituras e órgãos públicos.",
+          "CONSEGUE": "achar compras abertas do governo",
+          "CLIENTE": "Tem prefeitura comprando uniforme?",
+          "AGENTE": "Uberlândia abriu uma compra de uniformes, com prazo até 28/11.",
+          "USE_QUANDO": "Use quando a conversa for sobre vender para o governo.",
+          "ROTULO": "O que procurar",
+          "EXEMPLO": "uniformes",
+          "CONSULTAS": ""
+        },
+        "TRANSPORTADORAS": {
+          "NOME": "Transportadoras",
+          "APOIO": "cadastro da ANTT",
+          "FAZ": "Acha transportadoras de uma cidade e o tamanho da frota.",
+          "CONSEGUE": "achar transportadoras",
+          "CLIENTE": "Quais transportadoras grandes tem em Cascavel?",
+          "AGENTE": "A TransRota Cargas tem 34 caminhões em Cascavel.",
+          "USE_QUANDO": "Use quando a conversa precisar achar transportadoras de uma região.",
+          "ROTULO": "Cidade",
+          "EXEMPLO": "Cascavel",
+          "CONSULTAS": ""
+        },
+        "SOLAR": {
+          "NOME": "Placas solares instaladas",
+          "APOIO": "dados da ANEEL",
+          "FAZ": "Conta as placas solares instaladas numa cidade.",
+          "CONSEGUE": "contar placas solares numa cidade",
+          "CLIENTE": "Muita gente pôs placa solar em Petrolina?",
+          "AGENTE": "Foram 1.284 instalações em Petrolina este ano.",
+          "USE_QUANDO": "Use quando a conversa precisar saber de placas solares numa região.",
+          "ROTULO": "Cidade",
+          "EXEMPLO": "Petrolina",
+          "CONSULTAS": ""
+        },
+        "AERONAVES": {
+          "NOME": "Aviões e helicópteros",
+          "APOIO": "registro da ANAC",
+          "FAZ": "Diz o modelo e o dono de um avião pela matrícula.",
+          "CONSEGUE": "achar um avião pela matrícula",
+          "CLIENTE": "O avião PR-ABC é de quem?",
+          "AGENTE": "É um Cessna 172 do Aeroclube Exemplo.",
+          "USE_QUANDO": "Use quando o cliente informar a matrícula de um avião ou helicóptero.",
+          "ROTULO": "Matrícula",
+          "EXEMPLO": "PR-ABC",
+          "CONSULTAS": ""
+        },
+        "SEGURADORAS": {
+          "NOME": "Produtos das seguradoras",
+          "APOIO": "Open Insurance",
+          "FAZ": "Mostra o que cada seguro cobre, direto das seguradoras.",
+          "CONSEGUE": "dizer o que cada seguro cobre",
+          "CLIENTE": "O seguro Auto Completo cobre vidro?",
+          "AGENTE": "Cobre sim: roubo, colisão e vidros.",
+          "USE_QUANDO": "Use quando o cliente perguntar o que um seguro cobre.",
+          "ROTULO": "Seguro",
+          "EXEMPLO": "Auto Completo",
+          "CONSULTAS": "produtos, coberturas"
+        },
+        "SUSEP": {
+          "NOME": "Corretores e seguradoras",
+          "APOIO": "registro da SUSEP",
+          "FAZ": "Confere se um corretor ou uma seguradora tem registro.",
+          "CONSEGUE": "conferir um corretor ou uma seguradora",
+          "CLIENTE": "A corretora Ana Paula Ribeiro é registrada?",
+          "AGENTE": "É sim, com registro ativo desde 2014.",
+          "USE_QUANDO": "Use quando o cliente quiser conferir um corretor ou uma seguradora.",
+          "ROTULO": "Nome",
+          "EXEMPLO": "Ana Paula Ribeiro",
+          "CONSULTAS": "corretores, seguradoras, números do mercado"
+        },
+        "NCM": {
+          "NOME": "Código de mercadoria",
+          "APOIO": "NCM",
+          "FAZ": "Acha o código fiscal de uma mercadoria.",
+          "CONSEGUE": "achar o código de uma mercadoria",
+          "CLIENTE": "Qual o NCM de notebook?",
+          "AGENTE": "Notebook é 8471.30.12.",
+          "USE_QUANDO": "Use quando a conversa precisar do código fiscal de uma mercadoria.",
+          "ROTULO": "Mercadoria",
+          "EXEMPLO": "notebook",
+          "CONSULTAS": ""
+        },
+        "DOMINIO": {
+          "NOME": "Endereço de site",
+          "APOIO": "domínios .br",
+          "FAZ": "Diz se um endereço de site está registrado.",
+          "CONSEGUE": "conferir um endereço de site",
+          "CLIENTE": "O site padariapaodeouro.com.br é meu?",
+          "AGENTE": "Ele está registrado até março de 2027.",
+          "USE_QUANDO": "Use quando o cliente perguntar sobre um endereço de site .br.",
+          "ROTULO": "Site",
+          "EXEMPLO": "padariapaodeouro.com.br",
+          "CONSULTAS": ""
+        }
+      }
     }
   }
 }

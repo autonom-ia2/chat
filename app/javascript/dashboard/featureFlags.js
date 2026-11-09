@@ -95,6 +95,8 @@ export const FEATURE_FLAGS = {
   CRM_LISTA_ACAO: 'crm_lista_acao',
   AGENTES_PAINEL_DESEMPENHO: 'agentes_painel_desempenho',
   AGENTE_FERRAMENTAS_DELEGADAS: 'agente_ferramentas_delegadas',
+  // #2776 — vitrine de ferramentas prontas (protótipo, adaptador falso).
+  AGENTE_VITRINE_FERRAMENTAS: 'agente_vitrine_ferramentas',
   CAMPANHAS_PUBLICO_POR_CONVERSA: 'campanhas_publico_por_conversa',
   FUNCOES_GUIADAS: 'funcoes_guiadas',
   AUTOMACAO_EDITOR: 'automacao_editor',

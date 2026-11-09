@@ -25,6 +25,8 @@ const AgentePaginaEntrada = () =>
   import('./agentes/entrada/AgentePaginaEntrada.vue');
 // #2226 — painel de desempenho do agente (PR 1: protótipo com dados inventados).
 const DesempenhoPage = () => import('./agentes/pages/DesempenhoPage.vue');
+// #2776 — vitrine de ferramentas prontas (protótipo, adaptador falso).
+const VitrinePage = () => import('./agentes/vitrine/pages/VitrinePage.vue');
 // #2469 (PR 3a do #2436) — a página do cartão de um post ou anúncio com o cuidado dos comentários.
 const AgenteDoPostPage = () => import('./agentes/pages/AgenteDoPostPage.vue');
 const ProspectingSearchPage = () =>
@@ -123,6 +125,20 @@ export const routes = [
     meta: agentsMeta,
     beforeEnter: ensureAutonomiaEnabled,
     component: AgentesListaEntrada,
+  },
+  {
+    // #2776 — protótipo atrás da flag agente_vitrine_ferramentas; quem vê é quem cuida das ferramentas (#1430).
+    path: frontendURL('accounts/:accountId/agents/ferramentas-prontas'),
+    name: 'autonomia_agents_vitrine',
+    meta: {
+      ...agentsMeta,
+      featureFlag: FEATURE_FLAGS.AGENTE_VITRINE_FERRAMENTAS,
+    },
+    beforeEnter: [
+      ensureAutonomiaEnabled,
+      comFlags(FEATURE_FLAGS.AGENTE_VITRINE_FERRAMENTAS),
+    ],
+    component: VitrinePage,
   },
   {
     path: frontendURL('accounts/:accountId/agents/new'),

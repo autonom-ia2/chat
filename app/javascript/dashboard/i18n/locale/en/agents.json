@@ -2994,6 +2994,422 @@
         "RESPONDEU": "Replied to the message",
         "VER_CONVERSA_DE": "See the conversation with {contato}"
       }
+    },
+    "VITRINE": {
+      "MENU": "Ready-made tools",
+      "HEROI": {
+        "TITULO": "Teach your agents new things",
+        "TEXTO": "Choose what the agent can look up. The platform takes care of the rest.",
+        "BUSCA": "What do you want the agent to be able to do?",
+        "BUSCA_EXEMPLO": "E.g.: know how much a car is worth",
+        "LIMPAR": "Clear search"
+      },
+      "PARA": {
+        "TEXTO": "Choosing for {nome}",
+        "TROCAR": "Change agent"
+      },
+      "FILTRO": {
+        "ROTULO": "Show",
+        "TODAS": "All"
+      },
+      "DESTAQUE": {
+        "RAMO": "Most used in your field",
+        "GERAL": "Most chosen"
+      },
+      "CARTAO": {
+        "CONSULTAS": "Answers {n} kinds of question",
+        "ATUALIZADO": "Updated on {data}",
+        "JA_SABE": "{nome} already knows"
+      },
+      "BUSCA": {
+        "NADA": "Nothing with “{termo}” here yet.",
+        "VER_TODAS": "See all",
+        "ACHADAS": "Found {n} for “{termo}”"
+      },
+      "SEM_AGENTE": {
+        "TEXTO": "Create an agent first. Then just choose what it will know.",
+        "BOTAO": "Create agent"
+      },
+      "AVANCADO": {
+        "TEXTO": "Didn't find what you need?",
+        "BOTAO": "Create my own (advanced)"
+      },
+      "GRUPOS": {
+        "PESSOAS": {
+          "NOME": "People and companies",
+          "TEXTO": "Check who is who."
+        },
+        "LUGAR": {
+          "NOME": "Address and place",
+          "TEXTO": "Find addresses, cities and regions."
+        },
+        "VEICULOS": {
+          "NOME": "Vehicles",
+          "TEXTO": "Car, motorcycle and truck values."
+        },
+        "SAUDE": {
+          "NOME": "Health",
+          "TEXTO": "Hospitals, exams, diseases and plans."
+        },
+        "CLIMA": {
+          "NOME": "Weather",
+          "TEXTO": "Rain, weather and fires."
+        },
+        "DINHEIRO": {
+          "NOME": "Money and deadlines",
+          "TEXTO": "Dollar, interest, holidays and banks."
+        },
+        "CLIENTES": {
+          "NOME": "Find customers",
+          "TEXTO": "Who is buying and who could buy."
+        },
+        "SEGUROS": {
+          "NOME": "Insurance",
+          "TEXTO": "Coverages, brokers and insurers."
+        },
+        "OUTROS": {
+          "NOME": "Other",
+          "TEXTO": "Goods and websites."
+        }
+      },
+      "DETALHE": {
+        "CONSEGUE": "What the agent will be able to do",
+        "CLIENTE": "Customer",
+        "AGENTE": "Agent",
+        "CONSULTAS": "It picks what to ask on its own: {lista}.",
+        "ARQUIVO": "The platform keeps a copy and updates it on its own. Last update: {data}.",
+        "EXPERIMENTE": "Try it",
+        "EXPERIMENTAR": "Try",
+        "EXPERIMENTANDO": "Looking up…",
+        "DEU_CERTO": "It worked. This is what the agent receives:",
+        "QUAL_AGENTE": "Which agent?",
+        "JA_TEM": "Already has this tool",
+        "QUANDO": "When to use",
+        "QUANDO_AJUDA": "The agent decides from the conversation. Adjust the sentence if you want.",
+        "QUANDO_VAZIO": "Write when the agent should use it.",
+        "ENSINAR": "Teach {nome}",
+        "ESCOLHA_AGENTE": "Choose an agent above.",
+        "SUCESSO_TITULO": "Done!",
+        "SUCESSO_TEXTO": "{agente} can now {consegue}.",
+        "SUCESSO_LIGADA": "The tool is already on. You can turn it off anytime.",
+        "VER_FERRAMENTAS": "See {nome}'s tools",
+        "OUTRA": "Choose another"
+      },
+      "PRONTAS": {
+        "TITULO": "Ready-made",
+        "TIRAR": "Remove",
+        "TIRAR_SR": "Remove {ferramenta} from {agente}",
+        "CONFIRMA_TITULO": "Remove {ferramenta}?",
+        "CONFIRMA_TEXTO": "{agente} stops looking this up. You can add it again anytime.",
+        "CONFIRMA_SIM": "Remove",
+        "CONFIRMA_NAO": "Keep",
+        "TIRADA": "{ferramenta} was removed from {agente}.",
+        "CRIAR_MINHA": "Create my own (advanced)",
+        "VAZIO": "{nome} does not look anything up outside the conversation yet.",
+        "ESCOLHER": "Choose a ready-made tool"
+      },
+      "FERRAMENTAS": {
+        "CNPJ": {
+          "NOME": "Company details",
+          "APOIO": "by CNPJ",
+          "FAZ": "Finds the name, status and city of a company.",
+          "CONSEGUE": "check a company",
+          "CLIENTE": "My CNPJ is 12.345.678/0001-90, is everything fine?",
+          "AGENTE": "Yes! Padaria Pão de Ouro Ltda, active, in Campinas.",
+          "USE_QUANDO": "Use when the customer gives a CNPJ or asks to check a company.",
+          "ROTULO": "CNPJ",
+          "EXEMPLO": "12.345.678/0001-90",
+          "CONSULTAS": "company status, partners"
+        },
+        "CPF": {
+          "NOME": "CPF status",
+          "APOIO": "at the Federal Revenue",
+          "FAZ": "Checks whether a CPF is regular.",
+          "CONSEGUE": "check whether a CPF is regular",
+          "CLIENTE": "Can you check my CPF? 123.456.789-09",
+          "AGENTE": "Your CPF is regular, Maria.",
+          "USE_QUANDO": "Use when the customer gives a CPF and you need to know whether it is regular.",
+          "ROTULO": "CPF",
+          "EXEMPLO": "123.456.789-09",
+          "CONSULTAS": ""
+        },
+        "CEP": {
+          "NOME": "Address by ZIP code",
+          "APOIO": "",
+          "FAZ": "Finds street, district and city from a ZIP code.",
+          "CONSEGUE": "find an address by ZIP code",
+          "CLIENTE": "My ZIP code is 01001-000.",
+          "AGENTE": "Found it: Praça da Sé, Sé district, São Paulo. What number?",
+          "USE_QUANDO": "Use when the customer gives a ZIP code or an address needs completing.",
+          "ROTULO": "ZIP code",
+          "EXEMPLO": "01001-000",
+          "CONSULTAS": ""
+        },
+        "IBGE": {
+          "NOME": "Cities and population",
+          "APOIO": "IBGE data",
+          "FAZ": "Tells how many people live in a city and how much they earn.",
+          "CONSEGUE": "talk about a city's population and income",
+          "CLIENTE": "How many people live in Ribeirão Preto?",
+          "AGENTE": "About 711 thousand people, with an average income of R$ 3,412.",
+          "USE_QUANDO": "Use when the conversation needs city data, such as population or income.",
+          "ROTULO": "City",
+          "EXEMPLO": "Ribeirão Preto",
+          "CONSULTAS": "cities in a state, population, income"
+        },
+        "LOCAL": {
+          "NOME": "City from a location",
+          "APOIO": "",
+          "FAZ": "Tells which city and district a shared location is in.",
+          "CONSEGUE": "tell where a location is",
+          "CLIENTE": "(shared the location)",
+          "AGENTE": "You are in Savassi, Belo Horizonte. Noted!",
+          "USE_QUANDO": "Use when the customer shares their location on WhatsApp.",
+          "ROTULO": "Location",
+          "EXEMPLO": "-19.9372, -43.9345",
+          "CONSULTAS": ""
+        },
+        "DDD": {
+          "NOME": "City from area code",
+          "APOIO": "",
+          "FAZ": "Tells which region a phone number is from.",
+          "CONSEGUE": "tell which region a phone is from",
+          "CLIENTE": "My number is 19 99999-0000.",
+          "AGENTE": "Noted! 19 is Campinas and region.",
+          "USE_QUANDO": "Use when it helps to know the region of a phone number.",
+          "ROTULO": "Area code",
+          "EXEMPLO": "19",
+          "CONSULTAS": ""
+        },
+        "FIPE": {
+          "NOME": "Car value",
+          "APOIO": "FIPE table",
+          "FAZ": "Tells how much a car, motorcycle or truck is worth.",
+          "CONSEGUE": "tell how much a car is worth",
+          "CLIENTE": "How much is my 2020 Onix worth?",
+          "AGENTE": "The 2020 Onix LT 1.0 is worth R$ 74,312 in this month's table.",
+          "USE_QUANDO": "Use when the customer wants to know how much a car, motorcycle or truck is worth.",
+          "ROTULO": "Car and year",
+          "EXEMPLO": "Onix 2020",
+          "CONSULTAS": "makes, models, years, value"
+        },
+        "CNES": {
+          "NOME": "Hospitals and clinics",
+          "APOIO": "Ministry of Health registry",
+          "FAZ": "Finds hospitals and clinics near an address.",
+          "CONSEGUE": "find hospitals and clinics",
+          "CLIENTE": "Is there a hospital with maternity care in Curitiba?",
+          "AGENTE": "Yes: Hospital Santa Clara has an emergency room and maternity care.",
+          "USE_QUANDO": "Use when the customer looks for a hospital, a clinic or an emergency room.",
+          "ROTULO": "City or district",
+          "EXEMPLO": "Curitiba",
+          "CONSULTAS": ""
+        },
+        "TUSS": {
+          "NOME": "Exam and procedure names",
+          "APOIO": "TUSS table",
+          "FAZ": "Turns an exam or procedure code into its name.",
+          "CONSEGUE": "name an exam by its code",
+          "CLIENTE": "What is code 41101170 on my order?",
+          "AGENTE": "It is a knee MRI.",
+          "USE_QUANDO": "Use when the customer sends an exam or procedure code.",
+          "ROTULO": "Code or name",
+          "EXEMPLO": "41101170",
+          "CONSULTAS": ""
+        },
+        "CID": {
+          "NOME": "Disease names",
+          "APOIO": "ICD-10",
+          "FAZ": "Turns a disease code into its name.",
+          "CONSEGUE": "name a disease by its code",
+          "CLIENTE": "My certificate says J45. What is it?",
+          "AGENTE": "J45 is asthma.",
+          "USE_QUANDO": "Use when the customer sends a disease code, as on a medical certificate.",
+          "ROTULO": "Code",
+          "EXEMPLO": "J45",
+          "CONSULTAS": ""
+        },
+        "ANS": {
+          "NOME": "Health plans",
+          "APOIO": "ANS operators",
+          "FAZ": "Checks whether a health plan operator is active.",
+          "CONSEGUE": "check a health plan operator",
+          "CLIENTE": "Is Vida Plena Saúde reliable?",
+          "AGENTE": "It is active at ANS and has about 182 thousand customers.",
+          "USE_QUANDO": "Use when the customer asks about a health plan operator.",
+          "ROTULO": "Operator",
+          "EXEMPLO": "Vida Plena Saúde",
+          "CONSULTAS": ""
+        },
+        "CHUVA": {
+          "NOME": "How much it rained",
+          "APOIO": "INMET history",
+          "FAZ": "Tells how much it rained in a city over a period.",
+          "CONSEGUE": "tell how much it rained in a city",
+          "CLIENTE": "Did it rain a lot in Londrina in October?",
+          "AGENTE": "It rained 168 mm in October. The rainiest day was the 21st.",
+          "USE_QUANDO": "Use when the conversation needs to know how much it rained somewhere.",
+          "ROTULO": "City",
+          "EXEMPLO": "Londrina",
+          "CONSULTAS": ""
+        },
+        "ESTACOES": {
+          "NOME": "Weather now",
+          "APOIO": "INMET stations",
+          "FAZ": "Tells the temperature and whether it is raining now in a city.",
+          "CONSEGUE": "tell the weather now",
+          "CLIENTE": "What is the weather in Sorriso now?",
+          "AGENTE": "It is 31 °C and dry in Sorriso.",
+          "USE_QUANDO": "Use when the customer asks about the weather right now.",
+          "ROTULO": "City",
+          "EXEMPLO": "Sorriso",
+          "CONSULTAS": ""
+        },
+        "QUEIMADAS": {
+          "NOME": "Wildfires",
+          "APOIO": "INPE monitoring",
+          "FAZ": "Counts wildfire spots near a city.",
+          "CONSEGUE": "count wildfire spots",
+          "CLIENTE": "Are there fires near Sinop?",
+          "AGENTE": "There were 12 spots in the last 7 days near Sinop.",
+          "USE_QUANDO": "Use when the conversation needs to know about fires in a region.",
+          "ROTULO": "City",
+          "EXEMPLO": "Sinop",
+          "CONSULTAS": ""
+        },
+        "BANCO_CENTRAL": {
+          "NOME": "Dollar, interest and inflation",
+          "APOIO": "Central Bank",
+          "FAZ": "Brings today's dollar, interest rates and inflation.",
+          "CONSEGUE": "tell the dollar, interest and inflation",
+          "CLIENTE": "How much is the dollar today?",
+          "AGENTE": "The dollar is R$ 5.42 today.",
+          "USE_QUANDO": "Use when the customer asks about the dollar, interest, inflation or IGP-M.",
+          "ROTULO": "What to look up",
+          "EXEMPLO": "dollar today",
+          "CONSULTAS": "dollar, interest, inflation, IGP-M"
+        },
+        "FERIADOS": {
+          "NOME": "Holidays and business days",
+          "APOIO": "",
+          "FAZ": "Tells whether a day is a holiday and counts business days.",
+          "CONSEGUE": "count business days and find holidays",
+          "CLIENTE": "Are you open on November 20?",
+          "AGENTE": "The 20th is a holiday in São Paulo. We are back on the 23rd.",
+          "USE_QUANDO": "Use when you need to know whether a day is a holiday or to count a deadline in business days.",
+          "ROTULO": "Date and city",
+          "EXEMPLO": "11/20 in São Paulo",
+          "CONSULTAS": "holidays, business days"
+        },
+        "BANCOS": {
+          "NOME": "Bank name",
+          "APOIO": "by code",
+          "FAZ": "Tells a bank's name from its code.",
+          "CONSEGUE": "name a bank by its code",
+          "CLIENTE": "My bank is 341.",
+          "AGENTE": "341 is Banco Exemplo.",
+          "USE_QUANDO": "Use when the customer gives a bank code.",
+          "ROTULO": "Code",
+          "EXEMPLO": "341",
+          "CONSULTAS": ""
+        },
+        "LICITACOES": {
+          "NOME": "Government purchases",
+          "APOIO": "PNCP tenders",
+          "FAZ": "Finds open purchases by city halls and public bodies.",
+          "CONSEGUE": "find open government purchases",
+          "CLIENTE": "Is any city hall buying uniforms?",
+          "AGENTE": "Uberlândia opened a uniform purchase, open until 11/28.",
+          "USE_QUANDO": "Use when the conversation is about selling to the government.",
+          "ROTULO": "What to look for",
+          "EXEMPLO": "uniforms",
+          "CONSULTAS": ""
+        },
+        "TRANSPORTADORAS": {
+          "NOME": "Carriers",
+          "APOIO": "ANTT registry",
+          "FAZ": "Finds carriers in a city and the size of their fleet.",
+          "CONSEGUE": "find carriers",
+          "CLIENTE": "Which big carriers are there in Cascavel?",
+          "AGENTE": "TransRota Cargas has 34 trucks in Cascavel.",
+          "USE_QUANDO": "Use when the conversation needs to find carriers in a region.",
+          "ROTULO": "City",
+          "EXEMPLO": "Cascavel",
+          "CONSULTAS": ""
+        },
+        "SOLAR": {
+          "NOME": "Solar panels installed",
+          "APOIO": "ANEEL data",
+          "FAZ": "Counts solar panels installed in a city.",
+          "CONSEGUE": "count solar panels in a city",
+          "CLIENTE": "Have many people installed solar panels in Petrolina?",
+          "AGENTE": "There were 1,284 installations in Petrolina this year.",
+          "USE_QUANDO": "Use when the conversation needs to know about solar panels in a region.",
+          "ROTULO": "City",
+          "EXEMPLO": "Petrolina",
+          "CONSULTAS": ""
+        },
+        "AERONAVES": {
+          "NOME": "Planes and helicopters",
+          "APOIO": "ANAC registry",
+          "FAZ": "Tells the model and owner of a plane by its registration.",
+          "CONSEGUE": "find a plane by its registration",
+          "CLIENTE": "Who owns plane PR-ABC?",
+          "AGENTE": "It is a Cessna 172 from Aeroclube Exemplo.",
+          "USE_QUANDO": "Use when the customer gives the registration of a plane or helicopter.",
+          "ROTULO": "Registration",
+          "EXEMPLO": "PR-ABC",
+          "CONSULTAS": ""
+        },
+        "SEGURADORAS": {
+          "NOME": "Insurers' products",
+          "APOIO": "Open Insurance",
+          "FAZ": "Shows what each insurance covers, straight from the insurers.",
+          "CONSEGUE": "tell what each insurance covers",
+          "CLIENTE": "Does Auto Completo cover glass?",
+          "AGENTE": "Yes: theft, collision and glass.",
+          "USE_QUANDO": "Use when the customer asks what an insurance covers.",
+          "ROTULO": "Insurance",
+          "EXEMPLO": "Auto Completo",
+          "CONSULTAS": "products, coverages"
+        },
+        "SUSEP": {
+          "NOME": "Brokers and insurers",
+          "APOIO": "SUSEP registry",
+          "FAZ": "Checks whether a broker or an insurer is registered.",
+          "CONSEGUE": "check a broker or an insurer",
+          "CLIENTE": "Is broker Ana Paula Ribeiro registered?",
+          "AGENTE": "Yes, registered since 2014.",
+          "USE_QUANDO": "Use when the customer wants to check a broker or an insurer.",
+          "ROTULO": "Name",
+          "EXEMPLO": "Ana Paula Ribeiro",
+          "CONSULTAS": "brokers, insurers, market numbers"
+        },
+        "NCM": {
+          "NOME": "Goods code",
+          "APOIO": "NCM",
+          "FAZ": "Finds the tax code of a product.",
+          "CONSEGUE": "find a product's code",
+          "CLIENTE": "What is the NCM for a notebook?",
+          "AGENTE": "Notebook is 8471.30.12.",
+          "USE_QUANDO": "Use when the conversation needs the tax code of a product.",
+          "ROTULO": "Product",
+          "EXEMPLO": "notebook",
+          "CONSULTAS": ""
+        },
+        "DOMINIO": {
+          "NOME": "Website address",
+          "APOIO": ".br domains",
+          "FAZ": "Tells whether a website address is registered.",
+          "CONSEGUE": "check a website address",
+          "CLIENTE": "Is padariapaodeouro.com.br mine?",
+          "AGENTE": "It is registered until March 2027.",
+          "USE_QUANDO": "Use when the customer asks about a .br website address.",
+          "ROTULO": "Website",
+          "EXEMPLO": "padariapaodeouro.com.br",
+          "CONSULTAS": ""
+        }
+      }
     }
   }
 }

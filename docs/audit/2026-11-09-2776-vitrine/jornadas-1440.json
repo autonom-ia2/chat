@@ -1,0 +1,227 @@
+{
+  "pasta": "docs/audit/2026-11-09-2776-vitrine/prints/1440",
+  "conta": 1,
+  "usuario": "paula@acme.inc",
+  "larguras": [
+    1440
+  ],
+  "temas": [
+    "light"
+  ],
+  "jornadas": [
+    {
+      "nome": "j1-vitrine-ate-a-ana",
+      "etapas": [
+        {
+          "nome": "vitrine",
+          "url": "/app/accounts/{conta}/agents/ferramentas-prontas",
+          "esperar": "[data-vitrine-cartao=\"FIPE\"]",
+          "pausa": 3500
+        },
+        {
+          "nome": "busca-carro",
+          "passos": [
+            {
+              "preencher": [
+                "[data-vitrine-busca]",
+                "carro"
+              ]
+            }
+          ],
+          "esperar": "[data-vitrine-cartao=\"FIPE\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "detalhe-fipe",
+          "passos": [
+            {
+              "clicar": "[data-vitrine-cartao=\"FIPE\"]"
+            }
+          ],
+          "esperar": "[role=\"dialog\"] [data-vitrine-ensinar]",
+          "pausa": 2000
+        },
+        {
+          "nome": "escolhe-agente-e-frase",
+          "passos": [
+            {
+              "clicar": "[data-vitrine-agentes] >> text=Ana"
+            },
+            {
+              "clicar": "[data-vitrine-quando]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "pronto",
+          "passos": [
+            {
+              "clicar": "[data-vitrine-ensinar]"
+            }
+          ],
+          "esperar": "[data-vitrine-sucesso]",
+          "pausa": 1500
+        },
+        {
+          "nome": "ferramentas-da-ana",
+          "passos": [
+            {
+              "clicar": "[data-vitrine-ver-agente]"
+            }
+          ],
+          "esperar": "[data-pronta=\"FIPE\"]",
+          "pausa": 3000
+        },
+        {
+          "nome": "j4-desliga",
+          "passos": [
+            {
+              "clicar": "[data-pronta=\"FIPE\"] [role=\"switch\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "j4-tirar-pergunta",
+          "passos": [
+            {
+              "clicar": "[data-pronta=\"FIPE\"] [data-tirar]"
+            }
+          ],
+          "esperar": "dialog[open] >> text=Manter",
+          "pausa": 1500
+        },
+        {
+          "nome": "j4-tirada",
+          "passos": [
+            {
+              "clicar": "dialog[open] button:has-text(\"Tirar\")"
+            }
+          ],
+          "esperar": "[data-vazia]",
+          "pausa": 2000
+        }
+      ]
+    },
+    {
+      "nome": "j2-pela-pagina-da-ana",
+      "etapas": [
+        {
+          "nome": "ferramentas-vazia",
+          "url": "/app/accounts/{conta}/agents/1?gaveta=ferramentas",
+          "esperar": "[data-vazia]",
+          "pausa": 3500
+        },
+        {
+          "nome": "vitrine-para-ana",
+          "passos": [
+            {
+              "clicar": "[data-vazia] [data-adicionar]"
+            }
+          ],
+          "esperar": "[data-vitrine-para]",
+          "pausa": 3000
+        },
+        {
+          "nome": "detalhe-cep-com-ana",
+          "passos": [
+            {
+              "clicar": "[data-vitrine-cartao=\"CEP\"]"
+            }
+          ],
+          "esperar": "[role=\"dialog\"] [data-vitrine-ensinar]",
+          "pausa": 2000
+        },
+        {
+          "nome": "ensinou",
+          "passos": [
+            {
+              "clicar": "[data-vitrine-ensinar]"
+            }
+          ],
+          "esperar": "[data-vitrine-sucesso]",
+          "pausa": 1500
+        },
+        {
+          "nome": "cartao-ja-sabe",
+          "passos": [
+            {
+              "clicar": "[data-vitrine-outra]"
+            }
+          ],
+          "esperar": "[data-vitrine-cartao=\"CEP\"]",
+          "pausa": 2000
+        }
+      ]
+    },
+    {
+      "nome": "j3-experimente",
+      "etapas": [
+        {
+          "nome": "detalhe-cep",
+          "url": "/app/accounts/{conta}/agents/ferramentas-prontas?ferramenta=CEP",
+          "esperar": "[data-experimentar]",
+          "pausa": 3500
+        },
+        {
+          "nome": "resultado",
+          "passos": [
+            {
+              "preencher": [
+                "[data-experimente-valor]",
+                "01001000"
+              ]
+            },
+            {
+              "clicar": "[data-experimentar]"
+            }
+          ],
+          "esperar": "[data-experimente-resultado]",
+          "pausa": 1500
+        }
+      ]
+    },
+    {
+      "nome": "j5-sem-resultado",
+      "etapas": [
+        {
+          "nome": "busca-sem-nada",
+          "url": "/app/accounts/{conta}/agents/ferramentas-prontas",
+          "passos": [
+            {
+              "esperar": "[data-vitrine-busca]"
+            },
+            {
+              "preencher": [
+                "[data-vitrine-busca]",
+                "passagem de avião"
+              ]
+            }
+          ],
+          "esperar": "[data-vitrine-nada]",
+          "pausa": 1500
+        },
+        {
+          "nome": "ver-todas",
+          "passos": [
+            {
+              "clicar": "[data-vitrine-nada] button"
+            }
+          ],
+          "esperar": "[data-vitrine-cartao=\"FIPE\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "criar-a-minha",
+          "passos": [
+            {
+              "clicar": "[data-vitrine-criar]"
+            }
+          ],
+          "pausa": 1500
+        }
+      ]
+    }
+  ]
+}

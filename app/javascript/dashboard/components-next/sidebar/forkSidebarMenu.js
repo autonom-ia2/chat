@@ -96,7 +96,11 @@ export const FORK_LAYOUT = {
     },
     {
       id: 'AUTOMATICO',
-      itens: [{ pega: 'Agents', rotulo: 'AGENTES' }, { pega: 'Automacoes' }],
+      itens: [
+        { pega: 'Agents', rotulo: 'AGENTES' },
+        { pega: 'FerramentasProntas' },
+        { pega: 'Automacoes' },
+      ],
     },
     {
       id: 'RESULTADOS',

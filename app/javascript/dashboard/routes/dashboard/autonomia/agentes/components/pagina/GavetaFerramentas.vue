@@ -12,6 +12,10 @@ import FerramentaPassos from './ferramentas/FerramentaPassos.vue';
 import FerramentaTeste from './ferramentas/FerramentaTeste.vue';
 import FerramentasLista from './ferramentas/FerramentasLista.vue';
 import { useFerramentasDoAgente } from '../../composables/useFerramentasDoAgente';
+import { useRouter } from 'vue-router';
+import { useVitrineLigada } from '../../vitrine/useVitrineLigada';
+import { useVitrine } from '../../vitrine/useVitrine';
+import { ferramentaPorId } from '../../vitrine/catalogo';
 
 // #1301 (Fase 2, protótipo ferramentas.html) — gaveta de Ferramentas, só SuperAdmin (a página só
 // a oferece a ele e o ToolsController recusa os outros com 403). Uma gaveta, várias vistas: lista
@@ -30,6 +34,23 @@ const NS = 'AGENTS.JORNADA.PAGINA.FERRAMENTAS';
 const { t } = useI18n();
 
 const api = useFerramentasDoAgente(Number(props.agente.id));
+
+// #2776 (protótipo): com a vitrine, "Adicionar ferramenta" abre a vitrine já com este agente, e as prontas que ele
+// tem aparecem na lista. O cadastro livre continua em "Criar a minha (avançado)".
+const router = useRouter();
+const { ligada: vitrineOn, contaId } = useVitrineLigada();
+const vitrine = useVitrine();
+const prontas = computed(() =>
+  vitrineOn.value
+    ? vitrine
+        .doAgente(props.agente.id)
+        .map(item => ({ ...item, icone: ferramentaPorId(item.id)?.icone }))
+    : []
+);
+const dialogoTirar = ref(null);
+const prontaAlvo = ref(null);
+const nomeDaPronta = item =>
+  item ? t(`AGENTS.VITRINE.FERRAMENTAS.${item.id}.NOME`) : '';
 const nomeDoAgente = computed(() => props.nome || props.agente.name || '');
 const rodape = `ferramentas-rodape-${useId()}`;
 
@@ -111,7 +132,34 @@ const anunciar = texto => {
 };
 
 const abrir = item => ir({ tipo: 'detalhe', id: item.id });
-const adicionar = () => ir({ tipo: 'passos', modo: 'novo', passo: 1 });
+const criarAMinha = () => ir({ tipo: 'passos', modo: 'novo', passo: 1 });
+const adicionar = () => {
+  if (!vitrineOn.value) {
+    criarAMinha();
+    return;
+  }
+  router.push({
+    name: 'autonomia_agents_vitrine',
+    params: { accountId: contaId.value },
+    query: { agente: props.agente.id },
+  });
+};
+const alternarPronta = (item, ligar) =>
+  vitrine.mudarLigada(props.agente.id, item.id, ligar);
+const pedirTirar = item => {
+  prontaAlvo.value = item;
+  dialogoTirar.value?.abrir();
+};
+const tirarPronta = async () => {
+  const item = prontaAlvo.value;
+  vitrine.tirar(props.agente.id, item.id);
+  useAlert(
+    t('AGENTS.VITRINE.PRONTAS.TIRADA', {
+      ferramenta: nomeDaPronta(item),
+      agente: nomeDoAgente.value,
+    })
+  );
+};
 const cancelarNovo = () => {
   if (liberado('lista')) ir({ tipo: 'lista' }, 'ferramentas-adicionar');
 };
@@ -226,9 +274,14 @@ onMounted(api.carregar);
         :carregando="api.carregando.value"
         :erro="api.erroAoCarregar.value"
         :rodape="rodape"
+        :vitrine="vitrineOn"
+        :prontas="prontas"
         @abrir="abrir"
         @alternar="alternar"
         @adicionar="adicionar"
+        @criar="criarAMinha"
+        @alternar-pronta="alternarPronta"
+        @tirar-pronta="pedirTirar"
         @tentar="api.carregar"
       />
       <FerramentaPassos
@@ -296,6 +349,21 @@ onMounted(api.carregar);
       :erro-titulo="t(`${NS}.DESLIGAR.ERRO`)"
       :erro-garantia="t(`${NS}.DESLIGAR.ERRO_GARANTIA`)"
       :executar="desligar"
+    />
+    <DialogoAcao
+      ref="dialogoTirar"
+      variante="perigo"
+      :titulo="
+        t('AGENTS.VITRINE.PRONTAS.CONFIRMA_TITULO', {
+          ferramenta: nomeDaPronta(prontaAlvo),
+        })
+      "
+      :texto="
+        t('AGENTS.VITRINE.PRONTAS.CONFIRMA_TEXTO', { agente: nomeDoAgente })
+      "
+      :confirmar="t('AGENTS.VITRINE.PRONTAS.CONFIRMA_SIM')"
+      :cancelar="t('AGENTS.VITRINE.PRONTAS.CONFIRMA_NAO')"
+      :executar="tirarPronta"
     />
     <DialogoAcao
       ref="dialogoExcluir"

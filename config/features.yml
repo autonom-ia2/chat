@@ -1277,3 +1277,12 @@
   display_name: RAG › busca híbrida
   enabled: false
   column: feature_flags_ext_2
+
+# Agentes: vitrine de ferramentas prontas (#2776, Refs #1424). PROTÓTIPO: tela real com adaptador falso e dados
+# fictícios, para aprovação do Rodrigo antes de qualquer backend. Ligada: menu "Ferramentas prontas" em No automático,
+# a vitrine e o "Adicionar ferramenta" da página do agente abrindo a vitrine. Desligada: como antes. Sem migration.
+# Rollback: desligar a flag na conta. Posição 37 PROVISÓRIA (1 << 36): a definitiva vem da Orquestração quando virar PR.
+- name: agente_vitrine_ferramentas
+  display_name: Agentes › vitrine de ferramentas prontas (protótipo)
+  enabled: false
+  column: feature_flags_ext_2
