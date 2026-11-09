@@ -16,10 +16,10 @@ require 'rails_helper'
 #   9. Card perdido: a IA resume o motivo para o Carlos.
 #
 # Uma automação só, montada e ligada pelo Carlos pela API da tela. Etiqueta não tem espaço: "cliente-grande" e
-# "conta-grande". Os passos 8 e 9 esperam o card fechar ("esperar até" ganho ou perdido): o motor pede um prazo, e vai o
-# teto (3650 dias), que o esquema diz ser proteção contra erro de digitação, não limite de uso; a mudança do card acorda
-# a espera (#2687). O cliente escreve pelo WhatsApp oficial, o que sai para ele para no receptor de teste, e a IA é o
-# dublê. Desenho e lacunas: docs/automacao/F9-fechamento-20-exemplos.md.
+# "conta-grande". Os passos 8 e 9 esperam o card fechar ("esperar até" ganho ou perdido, sem prazo: o termo não dá
+# prazo, e a espera só termina pela condição); a mudança do card acorda a espera (#2687). O cliente escreve pelo
+# WhatsApp oficial, o que sai para ele para no receptor de teste, e a IA é o dublê. Desenho e lacunas:
+# docs/automacao/F9-fechamento-20-exemplos.md.
 RESUMO_DA_IA = 'Quer 400 caixas de óleo, entrega até sexta, pagamento em boleto 30 dias.'.freeze
 
 RSpec.describe 'Fechamento #2414 · exemplo 15: cliente grande, atendimento de dono', :fechamento_automacao, type: :request do
@@ -87,13 +87,13 @@ RSpec.describe 'Fechamento #2414 · exemplo 15: cliente grande, atendimento de d
                     texto: ['O Carlos não respondeu em 1 hora o cliente grande ', { '$valor' => 'contato.nome' }, '.'] }] }
   end
 
-  # Passos 8 e 9: espera o card fechar (o teto do prazo) e segue pelo que aconteceu.
+  # Passos 8 e 9: espera o card fechar, sem prazo, e segue pelo que aconteceu.
   def quando_fechar
     perdido = { id: 'perdeu', tipo: 'se', condicao: status_do_card('lost'),
                 entao: [{ id: 'motivo', tipo: 'resumir', le: %w[card], linhas: 2, instrucao: 'Diga o motivo da perda do pedido.',
                           destino: { avisar: { pessoas: [carlos.id] } } }] }
     [{ id: 'fechou', tipo: 'esperar_ate', condicao: { alguma: [status_do_card('won'), status_do_card('lost')] },
-       prazo: { valor: 3650, unidade: 'dias' } },
+       prazo: 'sem_prazo' },
      { id: 'ganhou', tipo: 'se', condicao: status_do_card('won'),
        entao: [etiqueta_no_contato('conta_grande', 'conta-grande'),
                { id: 'pos_venda', tipo: 'retorno', titulo: ['Pós-venda: ', { '$valor' => 'contato.nome' }], daqui: { valor: 15, unidade: 'dias' } }],
@@ -245,6 +245,19 @@ RSpec.describe 'Fechamento #2414 · exemplo 15: cliente grande, atendimento de d
         expect(passos_feitos).not_to include('motivo')
         expect(execucao.reload.estado).to eq('concluida')
       end
+    end
+
+    it 'passos 8 e 9: sem prazo, a espera atravessa mais de um ano sem vencer, e o card ganho ainda acorda', :aggregate_failures do
+      passar(20.minutes) { carlos_responde }
+      [2.days, 40.days, 400.days].each { |tempo| passar(tempo) }
+
+      expect(execucao.reload).to have_attributes(estado: 'esperando', cursor: 'fechou')
+      expect(passos_feitos.count('fechou')).to eq(1)
+
+      travel(401.days) { fechar('won') }
+
+      expect(passos_feitos.last(4)).to eq(%w[fechou ganhou conta_grande pos_venda])
+      expect(execucao.reload.estado).to eq('concluida')
     end
 
     it 'passo 9: card perdido, a IA lê o card e resume o motivo para o Carlos', :aggregate_failures do
