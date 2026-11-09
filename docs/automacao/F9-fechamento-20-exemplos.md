@@ -171,6 +171,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G53 | **O conteúdo da mensagem que falhou** como valor da receita (ex. 19, passo 2: "manda por e-mail o mesmo conteúdo") | F8 | A fazer: a mensagem do gatilho só tem tipo, privada e primeira (`valores.rb`); o `envio.texto` (G34) é o da própria execução, e a mensagem que falhou foi de outra | Gatilhos | 19 |
 | G54 | **Esperar a entrega** da mensagem (ex. 19, passo 5: "Chegou: tira a etiqueta") | F8 | **Fechada** pela G34 (#2680): "esperar até `envio.situacao` igual a entregue"; a mudança de situação acorda a espera | Gatilhos | 19 |
 | G47 | **Card criado pela página de agendamento ganha a conversa do contato** ("revisão cancelada: manda o link da agenda de novo") | novo | A fazer, PR próprio depois da G32: com o card do serviço já ganho, a página cria um card novo para a reunião, sem conversa, e a mensagem do gatilho de reunião pula com `sem_conversa` (achado no exemplo 5, passo 8). Caminho: o Booker liga ao card novo a conversa do contato na caixa da página | Agendamento | 5 |
+| G46 | **Esperar o próximo documento** do cliente (ex. 14, passo 5: "2 dias sem documento novo: lembra uma vez [...] 4 dias: cria retorno"): a conta recomeça a cada foto ou PDF; texto e áudio ("já mando") não recomeçam | F6 | **Em PR**: gatilho de tempo `card.sem_documento` (`etapa_id`, `dias`), no molde do `card.parado`, contado do último documento (foto ou PDF) do contato numa conversa que quem ligou vê; uma vez a cada silêncio. Prova em `exemplo_14_documentos_passo_5_spec.rb`. O "esperar até" não serve: a conta não recomeça | Motor | 14 |
 
 ### 5.1 A sonda de cada lacuna
 
@@ -203,7 +204,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 11 | Indicação que vira presente | ✅ mensagem do cliente | decidir ✅, extrair ✅, mensagem a Maria ✅ | G1, G4, G5, G12, G16, G17, G18 | Não |
 | 12 | Visita que aconteceu | 🟡 G5 (entrou em "Visita feita") | mensagem ✅ (na janela), decidir ✅, extrair ✅, mover ✅, etiqueta ✅, avisar ✅ | G2, G3, G5, G11, G14, G25, G35 (a IA lê a frase do corretor no card) | Não |
 | 13 | Festa do contrato ao depoimento | ✅ G5 (card ganho) + ✅ G6 (datas da festa) | e-mail ✅ (G2), modelo fora da janela ✅ (G1), data calculada ✅ (G16), extrair → copiar ao card (2 passos) ✅, resumir/avisar lendo o card ✅ (G35), decidir ✅, etiqueta ✅ | — | **Sim** (`exemplo_13_festa_do_contrato_spec.rb`) |
-| 14 | Documentação para emitir | 🟡 G5 (entrou em "Documentação") | extrair ✅, escrever ✅, etiqueta ✅, mover ✅, avisar ✅ | G1, G3, G5, G13, G20 | Não |
+| 14 | Documentação para emitir | 🟡 G5 (entrou em "Documentação") | extrair ✅, escrever ✅, etiqueta ✅, mover ✅, avisar ✅ | G1, G3, G5, G13, G20, G46 (passo 5: `exemplo_14_documentos_passo_5_spec.rb`) | Não |
 | 15 | Cliente grande | 🟡 G5 (card criado) + ⛔ G27 (valor mudou) | se com etiqueta ✅, atribuir ✅, etiqueta ✅, prioridade ✅, resumir ✅, mensagem ✅ | G3, G5, G11, G12, G15, G27, G35 (a IA resume o motivo da perda: `g35_g36_ia_le_card_e_nota_spec.rb`) | Não |
 | 16 | Reconquistar | ⛔ G7 (dia 1º, perdidos há 11 meses) | etiqueta ✅, decidir ✅, escrever ✅ | G3, G4, G7, G12, G14, G16, G18 | Não |
 | 17 | Vendedora de férias | ⛔ G9 (troca de responsável) | resumir ✅, mensagem ✅, etiqueta ✅ | G7 (toda manhã, por card com a etiqueta), G9, G11, G15, G16, G23 | Não |

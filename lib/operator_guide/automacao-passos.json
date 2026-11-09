@@ -209,6 +209,28 @@
       ]
     },
     {
+      "tipo": "card.sem_documento",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_SEM_DOCUMENTO",
+      "grupo": "tempo",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "etapa_id",
+          "peca": "etapa",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.ETAPA_ID"
+        },
+        {
+          "nome": "dias",
+          "peca": "dias",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIAS"
+        }
+      ]
+    },
+    {
       "tipo": "card.data",
       "alvo": "Crm::Card",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_DATA",

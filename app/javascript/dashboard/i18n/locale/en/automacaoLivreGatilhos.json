@@ -15,6 +15,7 @@
       "CARD_REUNIAO_REMARCADA": "When a meeting is rescheduled",
       "CARD_REUNIAO_CANCELADA": "When a meeting is canceled",
       "CARD_PARADO": "When the card is stuck in a stage",
+      "CARD_SEM_DOCUMENTO": "When the customer goes days without sending a document",
       "CARD_DATA": "Around a card date",
       "CONTATO_DATA": "Around a contact date",
       "CARD_ANTES_DA_REUNIAO": "Before a meeting",
@@ -81,6 +82,7 @@
       "CARD_REUNIAO_REMARCADA": "When a meeting is rescheduled on a {funil} card",
       "CARD_REUNIAO_CANCELADA": "When a meeting is canceled on a {funil} card",
       "CARD_PARADO": "When the card is stuck in {etapa} for {dias} days",
+      "CARD_SEM_DOCUMENTO": "When the card is in {etapa} for {dias} days without the customer sending a photo or PDF",
       "CARD_DATA": "{dias} days {quando} the card {campo}, from {hora}h",
       "CONTATO_DATA": "{dias} days {quando} the contact {campo}, from {hora}h",
       "CARD_ANTES_DA_REUNIAO": "{antes} before a meeting"

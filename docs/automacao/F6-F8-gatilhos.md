@@ -79,6 +79,7 @@ Nada muda na Partida, no Executor nem na varredura.
 | `card.ganho` / `card.perdido` | card | evento | atividade `won` / `lost` (Closer) | `funil_id` (opcional) | `atividade:<activity id>` |
 | `reuniao.marcada` / `.remarcada` / `.cancelada` | card | evento | atividades `meeting_scheduled` / `_rescheduled` / `_canceled` | — | `atividade:<activity id>` |
 | `card.parado` | card | tempo | `entered_stage_at` (índice `idx_crm_cards_entered_stage`) | `etapa_id`, `dias` | `parado:<card>:<entered_stage_at µs>` |
+| `card.sem_documento` (G46) | card | tempo | `entered_stage_at` e o último documento do cliente (foto ou PDF) | `etapa_id`, `dias` | `card.sem_documento:<card>:<desde µs>` |
 | `card.data` / `contato.data` | card / contato | tempo | `custom_attributes` (atributo de tipo data) | `campo`, `dias`, `antes`/`depois`, `hora`, `repete` (opcional: `todo_ano`) | `data:<alvo>:<campo>:<data>` |
 | `recorrente` | card ou contato | tempo | relógio no fuso da conta | `frequencia`, `dia`, `hora`, `alvo`, filtros | `recorrente:<ocorrência local>:<alvo>` |
 
@@ -164,6 +165,9 @@ A tela da etapa avisa o que não dispara. Ver a pergunta P5 sobre o upsert.
 - **Tudo no SQL, em lote** (`find_each`): o filtro da janela, da etapa, da data e dos filtros simples vai na consulta. Nunca se carrega a conta inteira no Ruby. Contatos passam de 100 mil por conta, e a varredura roda a cada 15 minutos. É proteção contra defeito, não teto. O PR leva um spec com volume e o `EXPLAIN` de cada consulta.
   - **parado:** `entered_stage_at` entre `agora − dias − janela` e `agora − dias`, na etapa escolhida, com o card aberto. Usa o índice `idx_crm_cards_entered_stage`.
     - O card que chegou ao prazo antes de a automação ser ligada **nunca dispara**: ligar não age no passado (`ligada_em`, ou a hora da versão ativa, o que for mais recente). A tela do gatilho diz isso.
+  - **sem documento (G46, exemplo 14, passo 5):** o mesmo molde do parado, com `desde` no lugar da entrada na etapa. `desde` é o mais recente entre `entered_stage_at` e o último documento do contato do card que chegou depois dela: mensagem recebida com foto (anexo `image`, sem a figurinha marcada em `meta.is_sticker`) ou PDF (anexo `file` com o blob `application/pdf`), numa conversa que quem ligou vê (`Resposta.conversas_que_ve`, a régua do "cliente respondeu"). Texto, áudio, vídeo e outro arquivo não recomeçam a conta.
+    - Uma consulta só: o último documento é uma subconsulta correlacionada sobre os cards candidatos (abertos, na etapa, com `entered_stage_at` até `agora − dias`); nunca uma ida ao banco por card.
+    - A marca leva o `desde`: uma vez a cada silêncio. O documento seguinte muda a marca, e o gatilho volta a contar. Ligar não age no passado, como no parado.
   - **data:** a data-alvo é calculada no Ruby (hoje no fuso da conta ∓ `dias`) e entra no SQL como igualdade: `custom_attributes->>'<campo>' = '<AAAA-MM-DD>'`. Vale para card e contato.
     - #2678: no card, entram o aberto e o que **deu certo**: ganho, resolvido (o ganho do funil que não conta como venda) e o arquivado depois de fechado assim (`Crm::Card.com_desfecho`). A festa, a revisão e a renovação vêm depois da venda. O perdido, o cancelado e o arquivado sem desfecho ficam de fora.
     - #2678: com `repete: todo_ano`, compara só mês e dia (`substr(campo, 6, 5)`), com o formato ISO conferido antes. Em ano que não é bissexto, o dia 28/02 também pega quem tem 29/02. A marca leva o dia-alvo com o ano: uma vez por ano.
@@ -272,7 +276,7 @@ O protótipo é em tela real: componentes Vue do fork, kit `bin/demo`, dados do 
 - `app/services/autonomia/automacao/gatilhos.rb`
 - `app/services/autonomia/automacao/contexto.rb`
 - `app/jobs/autonomia/automacao/tempo_job.rb`
-- `app/services/autonomia/automacao/tempo/{parado,data,recorrente}.rb`
+- `app/services/autonomia/automacao/tempo/{parado,sem_documento,data,recorrente}.rb`
 - o componente do gatilho no editor (`LivreGatilho.vue`) e os painéis novos (`EtapaAutomacoes.vue`, `TelaAutomacoesDoCard.vue`)
 - os specs desses arquivos
 

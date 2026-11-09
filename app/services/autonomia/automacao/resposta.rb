@@ -36,8 +36,14 @@ module Autonomia::Automacao::Resposta
 
     conta = contato.account
     do_contato = ::Conversation.where(account_id: conta.id, contact_id: contato.id)
-    conversas = ::Conversations::PermissionFilterService.new(do_contato, quem, conta, for_reading: true).perform.select(:id)
+    conversas = conversas_que_ve(do_contato, quem, conta).select(:id)
     na_janela(::Message.incoming.where(account_id: conta.id, conversation_id: conversas), espera).exists?
+  end
+
+  # As conversas de `escopo` que `quem` vê, pelo filtro da lista de conversas (#2680). É a régua do "cliente
+  # respondeu" e do último documento do cliente (G46, Tempo::SemDocumento).
+  def conversas_que_ve(escopo, quem, conta)
+    ::Conversations::PermissionFilterService.new(escopo, quem, conta, for_reading: true).perform
   end
 
   # Sem conversa (o card sem conversa principal, o contato antes da conversa nova), a equipe nunca respondeu.

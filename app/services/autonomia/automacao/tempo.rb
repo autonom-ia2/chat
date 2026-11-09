@@ -30,6 +30,7 @@ module Autonomia::Automacao::Tempo
     return Autonomia::Automacao::Tempo::Recorrente if Autonomia::Automacao::Gatilhos.recorrente?(tipo)
 
     { 'card.parado' => Autonomia::Automacao::Tempo::Parado, 'card.data' => Autonomia::Automacao::Tempo::Data,
+      'card.sem_documento' => Autonomia::Automacao::Tempo::SemDocumento,
       'contato.data' => Autonomia::Automacao::Tempo::Data,
       'card.antes_da_reuniao' => Autonomia::Automacao::Tempo::AntesDaReuniao }.fetch(tipo)
   end
