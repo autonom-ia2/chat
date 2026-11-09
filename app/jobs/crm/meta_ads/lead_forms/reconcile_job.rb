@@ -3,13 +3,16 @@
 #
 # Lê desde o mais recente entre: as últimas WINDOW, o destino salvo (destination_set_at) e a Página voltar a receber
 # nesta conta (leadgen_receiving_since). Assim só traz o que o webhook traria: quem preencheu antes de salvar o destino
-# (sem "trazer quem já preencheu") ou com a Página parada fica de fora. Marco nulo (linha de antes do #2285) não chega
-# aqui: o scope reconcilable o deixa de fora até o destino ser salvo de novo. Exceção conhecida: funil arquivado e
-# reativado sem salvar o destino de novo relê as 48 h, inclusive quem preencheu com o funil fechado.
+# (sem "trazer quem já preencheu") ou com a Página parada fica de fora. Marco nulo não chega aqui: o scope
+# reconcilable o deixa de fora. Os formulários com destino e as Páginas recebendo de antes do #2285 ganharam o
+# momento do deploy do #2740; sem destino ou com a Página parada, o marco nasce quando voltarem. Exceção
+# conhecida: funil arquivado e reativado sem salvar o destino de novo relê as 48 h, inclusive quem preencheu com o
+# funil fechado.
 #
 # A janela cobre bem mais que o intervalo entre rodadas (1 hora): Meta fora do ar agora, a próxima rodada relê as mesmas
-# horas. Por isso a queda não tenta de novo aqui; só fica no log. Recusa da Meta (token, permissão) vai ao rastreador,
-# uma vez por dia por formulário: sem ela resolvida, a reconciliação não traz ninguém. A trava da rodada sai no fim.
+# horas. Por isso a queda não tenta de novo aqui; só fica no log. Token recusado (190) marca a conexão como inválida,
+# igual ao webhook (#2740). Outra recusa da Meta (permissão) vai ao rastreador, uma vez por dia por formulário: sem ela
+# resolvida, a reconciliação não traz ninguém. A trava da rodada sai no fim.
 class Crm::MetaAds::LeadForms::ReconcileJob < ApplicationJob
   queue_as :low
 
@@ -38,13 +41,21 @@ class Crm::MetaAds::LeadForms::ReconcileJob < ApplicationJob
                                                   form_name: form.form_name, since: since)
     return if past.nil?
 
-    result = past.import!(pipeline: form.pipeline, stage: form.stage)
+    result = past.import!(pipeline: form.pipeline, stage: form.stage, refused: Crm::MetaAds::LeadForms::RefusedLeads.new(form))
     Rails.logger.info("[MetaAds::LeadForms::Reconcile] form_id=#{form.form_id} imported=#{result[:imported]}") if result[:imported].positive?
     Rails.logger.warn("[MetaAds::LeadForms::Reconcile] form_id=#{form.form_id} leitura parou no teto de páginas") if result[:truncated]
   rescue Crm::MetaAds::LeadForms::Unavailable
     Rails.logger.warn("[MetaAds::LeadForms::Reconcile] Meta fora do ar (form_id=#{form.form_id}); a próxima rodada relê")
+  rescue Crm::MetaAds::LeadForms::TokenRefused => e
+    token_refused!(form, e)
   rescue Crm::MetaAds::LeadForms::Error => e
     notify_refused(form, e)
+  end
+
+  # #2740: como o webhook leadgen, o token recusado marca a conexão. A tela pede para conectar de novo e as próximas
+  # rodadas param de chamar a Meta (PastLeads.for só lê de conexão ativa). Sem rastreador: não é defeito nosso.
+  def token_refused!(form, error)
+    Crm::MetaAdsConnection.active.find_by(account_id: form.account_id)&.mark_invalid!(error.meta_message)
   end
 
   def notify_refused(form, error)

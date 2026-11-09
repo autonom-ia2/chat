@@ -79,6 +79,19 @@ RSpec.describe 'Crm::MetaCapi resolvers' do # rubocop:disable RSpec/DescribeClas
       expect(described_class.resolve(card)).to eq('FRESH')
     end
 
+    it 'counts only the clicks made up to the given instant, inside a conversation and across them (#2738)' do
+      sale = 2.days.ago
+      card = card_with_conversation('campaign' => { 'ctwa_clid' => 'BEFORE', 'touched_at' => 5.days.ago.iso8601 },
+                                    'campaign_touches' => [{ 'ctwa_clid' => 'AFTER', 'touched_at' => 1.day.ago.iso8601 }])
+      later = create(:conversation, account: account, inbox: card.primary_conversation.inbox,
+                                    additional_attributes: { 'campaign' => { 'ctwa_clid' => 'LATER', 'touched_at' => 1.hour.ago.iso8601 } })
+      Crm::CardConversation.create!(account: account, card: card, conversation: later)
+
+      expect(described_class.sources(card, up_to: sale).map(&:ctwa_clid)).to eq(%w[BEFORE])
+      expect(described_class.sources(card, up_to: 10.days.ago)).to be_empty
+      expect(described_class.resolve(card)).to eq('LATER')
+    end
+
     it 'returns nil for a standalone card without a conversation' do
       card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Standalone', currency: 'BRL')
 
