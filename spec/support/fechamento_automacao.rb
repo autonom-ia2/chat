@@ -282,8 +282,8 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 17, achadas na G9 (#2707). G62 (#2829): o campo do card do tipo pessoa da equipe, com o nome e a
     # ausência dela (passos 3, 5 e 6). G63 (#2830): o galho "a cada mensagem do cliente" do "esperar até" (passo 4).
     # G64 (#2839): a conferência toda manhã, numa hora marcada, na mesma automação (passo 5). Prova ponta a ponta em
-    # spec/fechamento/automacao/exemplo_17_ferias_spec.rb. G65: a troca do dono do card não leva a conversa, que segue
-    # com a antiga; "espera a Renata responder" e "passa para a agente de IA" (passo 4) leem quem atende a conversa. G66:
+    # spec/fechamento/automacao/exemplo_17_ferias_spec.rb. G66: a troca do dono do card não leva a conversa, que segue
+    # com a antiga; "espera a Renata responder" e "passa para a agente de IA" (passo 4) leem quem atende a conversa. G67:
     # o resumo da volta (passo 6) lê as últimas mensagens da conversa (5), não as das férias inteiras.
     'G62' => lambda {
       CustomAttributeDefinition.attribute_display_types.key?('pessoa') &&
@@ -291,8 +291,8 @@ module FechamentoAutomacao::Lacunas
     },
     'G63' => -> { galho_a_cada_mensagem? },
     'G64' => -> { conferencia_marcada? },
-    'G65' => nil,
     'G66' => nil,
+    'G67' => nil,
     # Do exemplo 14, passo 5 (#2791): o laço dos documentos numa automação só. O "esperar até" lê o documento novo, e o
     # "decidir" volta a ele (`de_novo.desde`). Prova em spec/fechamento/automacao/exemplo_14_documentacao_spec.rb.
     'G46' => lambda {

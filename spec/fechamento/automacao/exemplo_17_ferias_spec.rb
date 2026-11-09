@@ -12,7 +12,7 @@ require 'rails_helper'
 # da conta (G64, decisão 12); o 6, o resumo para a Júlia depois de devolver o card.
 #
 # A IA é o dublê; o WhatsApp oficial para no receptor de teste. Os cenários que esbarram em quem atende a conversa
-# (a Júlia, que segue no nome dela depois da troca do card) ficam pendentes com o motivo: lacuna G65.
+# (a Júlia, que segue no nome dela depois da troca do card) ficam pendentes com o motivo: lacuna G66.
 RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa automação só', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 
@@ -159,10 +159,10 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
     expect(conversa.reload.label_list).to include('cobertura-de-ferias')
   end
 
-  # G65: a troca do dono do card não leva a conversa. Quem atende a conversa segue a Júlia, então
+  # G66: a troca do dono do card não leva a conversa. Quem atende a conversa segue a Júlia, então
   # `conversa.responsavel_respondeu` espera a Júlia, não a Renata, e a resposta da Renata não conta.
   it 'o cliente escreve e a Renata responde em 1 h: a agente de IA não entra', :aggregate_failures do
-    pending 'G65: a conversa segue com a Júlia depois da troca do card; "a Renata respondeu" lê quem atende a conversa'
+    pending 'G66: a conversa segue com a Júlia depois da troca do card; "a Renata respondeu" lê quem atende a conversa'
     escreve_em(fuso.local(2026, 11, 4, 10), 'Oi, alguém aí?')
     expect(execucao.cursor).to eq('espera_a_renata')
 
@@ -184,10 +184,10 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
     expect(execucao).to have_attributes(estado: 'esperando', cursor: 'ferias', due_at: fuso.local(2026, 11, 5, 8))
   end
 
-  # G65: a agente de IA não entra com uma pessoa no nome da conversa (PassoDeIaAssumir: "pessoa no nome vence", D1),
+  # G66: a agente de IA não entra com uma pessoa no nome da conversa (PassoDeIaAssumir: "pessoa no nome vence", D1),
   # e a conversa segue no nome da Júlia.
   it 'ninguém responde em 2 h: a conversa passa para a agente de IA', :aggregate_failures do
-    pending 'G65: ia_assumir pula com pessoa_atribuida, porque a conversa segue no nome da Júlia'
+    pending 'G66: ia_assumir pula com pessoa_atribuida, porque a conversa segue no nome da Júlia'
     escreve_em(fuso.local(2026, 11, 4, 10), 'Oi, alguém aí?')
     varrer_em(fuso.local(2026, 11, 4, 12, 1))
 
@@ -229,11 +229,11 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
     expect(ia_recebeu.last.to_json).to include('Já voltou a Júlia?')
   end
 
-  # G66: "a IA resume para a Júlia o que aconteceu durante as férias" (passo 6). O resumir lê as últimas mensagens da
+  # G67: "a IA resume para a Júlia o que aconteceu durante as férias" (passo 6). O resumir lê as últimas mensagens da
   # conversa (Decisores::Estado::MAX_MENSAGENS, 5), sem a janela da execução: em férias com mais mensagens, o começo
   # delas não chega à IA.
   it 'o resumo da volta lê as mensagens das férias desde a primeira' do
-    pending 'G66: o resumir lê só as 5 últimas mensagens, não o período da execução (as férias)'
+    pending 'G67: o resumir lê só as 5 últimas mensagens, não o período da execução (as férias)'
     escreve_em(fuso.local(2026, 11, 3, 10), 'Primeira mensagem das férias')
     (4..9).each { |dia| escreve_em(fuso.local(2026, 11, dia, 10), "Mensagem do dia #{dia}") }
     AccountUser.find_by!(account: account, user: julia).update!(ausente_ate: fuso.local(2026, 11, 9, 18))
