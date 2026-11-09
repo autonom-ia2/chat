@@ -1,4 +1,4 @@
-# A sonda da G21, do exemplo 9 (#2414 F9): roda o código de verdade e confere o efeito. Fica fora do
+# As sondas da G21 e da G58, do exemplo 9 (#2414 F9): roda o código de verdade e confere o efeito. Fica fora do
 # FechamentoAutomacao::Lacunas, que já está no limite de tamanho; o SONDAS de lá chama a daqui.
 module FechamentoAutomacao::SondasDoExemplo9
   extend CrmHelpers
@@ -22,6 +22,32 @@ module FechamentoAutomacao::SondasDoExemplo9
     end
   end
 
+  # G58 (#2779): o público `desta_execucao` é só quem a busca desta execução criou. O registro do passo é gravado com os
+  # dados que a busca de verdade devolve (os `card_ids` do BuscaDaProspeccao), como o executor grava; o contato que já
+  # existia na conta não entra. Roda na transação do exemplo, que desfaz tudo.
+  def publico_so_dos_criados?
+    ClimateControl.modify(CRM_KANBAN_ENABLED: 'true', WAHA_API_URL: 'https://waha.sonda.test', WAHA_API_KEY: 'sonda-g58') do
+      account, dona, etapa = conta_da_prospeccao
+      antigo = FactoryBot.create(:contact, account: account, phone_number: '+5511900000058')
+      execucao, resultado = buscar_e_registrar(account, dona, etapa)
+      criados = account.crm_cards.where(id: resultado.dados['card_ids']).pluck(:contact_id)
+      publico = Autonomia::Automacao::ContatosDaExecucao.new(execucao: execucao).dentro.map(&:id)
+      criados.any? && publico.sort == criados.sort && publico.exclude?(antigo.id)
+    end
+  end
+
+  def buscar_e_registrar(account, dona, etapa)
+    origem = Autonomia::Prospecting::SearchRunner.new(account: account, user: dona,
+                                                      params: { query: 'contabilidade', location: 'Campinas, SP',
+                                                                requested_limit: 2 }).perform.search
+    passo = { 'id' => 'p1', 'tipo' => 'prospeccao', 'faz' => 'buscar', 'busca_id' => origem.id, 'quantas' => 2,
+              'etapa_id' => etapa.id, 'etiquetas' => [] }
+    execucao, resultado = buscar_e_conferir(account, dona, passo)
+    Autonomia::Automacao::Registro.create!(account: account, automacao: execucao.automacao, execucao: execucao, passo: passo['id'],
+                                           resultado: resultado.tipo.to_s, motivo: resultado.motivo, dados: resultado.dados)
+    [execucao, resultado]
+  end
+
   def conta_da_prospeccao
     account = FactoryBot.create(:account)
     account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_gatilhos')
@@ -43,7 +69,7 @@ module FechamentoAutomacao::SondasDoExemplo9
     Autonomia::Prospecting::Lead.where(account: account).find_each do |lead|
       lead.update!(metadata: lead.metadata.to_h.merge('whatsapp_verification' => { 'status' => 'verified' }))
     end
-    rodar_o_passo(execucao, passo)
+    [execucao, rodar_o_passo(execucao, passo)]
   end
 
   def rodar_o_passo(execucao, passo)

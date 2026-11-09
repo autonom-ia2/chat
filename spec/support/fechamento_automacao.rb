@@ -197,10 +197,9 @@ module FechamentoAutomacao::Lacunas
     # Fechada com prova (#2706): o passo roda e cria o card; o ponta a ponta do exemplo 9 está em
     # spec/fechamento/automacao/exemplo_09_prospeccao_semanal_spec.rb.
     'G21' => -> { FechamentoAutomacao::SondasDoExemplo9.prospeccao_cria_o_card? },
-    # G22 (exemplo 8, passo 9): toda sexta, o RH de cada empresa recebe quem ainda falta mandar documento. Ponta a ponta
-    # do passo em spec/fechamento/automacao/g22_avisar_o_rh_spec.rb. Só fecha com um passo gravando o solicitante (G24):
-    # sem ele, o salvar recusa a condição e o aviso nunca sai.
-    'G22' => -> { Autonomia::Automacao::Solicitados.gravado? && FechamentoAutomacao::SondasDoExemplo8.rh_avisado_do_que_falta? },
+    # G22 (exemplo 8, passo 9): desligada nesta entrega (Solicitados::GRAVADORES vazio). Liga quando o "para cada item"
+    # (G24) gravar o solicitante no card; aí a sonda volta a ser SondasDoExemplo8.rh_avisado_do_que_falta?.
+    'G22' => nil,
     # G23 (#2737): o "ausente até" de quem cuida, como valor da condição.
     'G23' => -> { valor?('card.responsavel_ausente') && valor?('conversa.responsavel_ausente') },
     # Fechada com prova (#2771): o "para cada item" abre um card por item, cada um numa raiz própria da cadeia, e a
@@ -323,9 +322,9 @@ module FechamentoAutomacao::Lacunas
     'G61' => -> { FechamentoAutomacao::SondasDaAgenda.da_reuniao_em_qualquer_gatilho_salva? },
     # Do exemplo 9, passo 4 (#2779): a campanha vai só a quem os passos anteriores desta execução criaram
     # (`publico: desta_execucao`), não a todo contato com a etiqueta do mês. Prova em g58_publico_da_execucao_spec.rb.
-    'G58' => -> { campo_do_passo?('campanha', 'publico') },
+    'G58' => -> { FechamentoAutomacao::SondasDoExemplo9.publico_so_dos_criados? },
     # G57 (#2769, ex. 1, passo 7): o retorno "para hoje" (ou amanhã), numa hora ou no fim do dia, no fuso da conta.
-    'G57' => -> { campo_do_passo?('retorno', 'quando') }
+    'G57' => -> { FechamentoAutomacao::SondasDoExemplo1.hora_de_hoje_que_passou_vence_agora? }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

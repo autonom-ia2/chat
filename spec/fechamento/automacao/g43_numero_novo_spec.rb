@@ -12,8 +12,8 @@ require 'rails_helper'
 # começa outra execução da mesma automação (a cadeia segue a de quem mandou).
 # O resumo do passo 7 é o "resumir" da G42 (EnviosDaExecucao): lê o e-mail que a execução mandou (passo 2, em conversa
 # própria) e o modelo recusado no número novo. O e-mail aqui só pergunta pelo número: "o mesmo conteúdo" é a G53.
-# A dona monta e liga pela API da tela; a IA é o dublê. Com a G53 o exemplo saiu do pendentes_spec; o spec de ponta a
-# ponta dele fica com a sessão do fechamento (#2570).
+# A dona monta e liga pela API da tela; a IA é o dublê. O exemplo segue no pendentes_spec até o spec
+# de ponta a ponta dele, que fica com a sessão do fechamento (#2570).
 RSpec.describe 'Fechamento #2414 · G43: mandar ao número novo', :automacao_motor, :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 

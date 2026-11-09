@@ -8,8 +8,8 @@ require 'rails_helper'
 #   2. Tem e-mail: manda por e-mail o mesmo conteúdo e pergunta "Você trocou de WhatsApp? Me responde com o número novo".
 #
 # A dona monta e liga pela API da tela. O cliente escreve pelo webhook da Cloud, a agente responde pela API, a resposta
-# sai pela Graph (receptor), e a recusa volta pelo webhook de status da Cloud, como a Meta manda. Com a G43 (#2700) o
-# exemplo saiu do pendentes_spec; o spec de ponta a ponta dele fica com a sessão do fechamento (#2570).
+# sai pela Graph (receptor), e a recusa volta pelo webhook de status da Cloud, como a Meta manda. O exemplo segue no
+# pendentes_spec até o spec de ponta a ponta dele, que fica com a sessão do fechamento (#2570).
 #
 # - A etiqueta se escreve `número-com-problema`: nome de etiqueta na plataforma é minúsculo e sem espaço.
 # - O e-mail pede assunto; o termo não diz qual, e vai a pergunta dele. Ele sai pelo envio de sempre da caixa

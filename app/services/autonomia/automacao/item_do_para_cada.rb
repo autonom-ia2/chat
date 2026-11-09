@@ -15,8 +15,9 @@
 #   para o contato sem empresa; o de outra empresa fica como está (decisão e).
 # - O card nasce na etapa pelo "criar card" (PassoDeCard), ligado só ao contato. O card aberto do contato no mesmo funil
 #   já conta, e o item pula com `card_ja_existe`, sem duplicar.
-# - O solicitante não fica no card: o card não tem campo para isso, e o histórico da execução já liga a conversa dele
-#   aos cards (`card_ids`).
+# - O solicitante ainda não é gravado no card: a coluna existe (crm_cards.solicitante_contact_id, G22), mas este passo
+#   não a preenche, e por isso a G22 segue desligada (Solicitados::GRAVADORES vazio). Por ora o histórico da execução
+#   liga a conversa dele aos cards (`card_ids`).
 class Autonomia::Automacao::ItemDoParaCada
   NOME = ::Autonomia::Automacao::PassoParaCada::NOME
   TELEFONE = 'telefone'.freeze

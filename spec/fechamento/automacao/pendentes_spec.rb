@@ -37,8 +37,11 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # O 17 saiu com a G66 (#2843), a G67 (#2844) e a decisão 18: exemplo_17_ferias_spec.rb roda à risca numa automação
     # só, inteiro, sem pendente (a agente de IA cobre a Renata pela opção do passo, e a conversa volta quando ela escreve).
     18 => ['Seleção de candidatos sem planilha', 'G4, G20 (ler o currículo e criar o card), G1, G5, G6, G12, G15, G25'],
-    # O 19 saiu com a G43 (#2700), depois da G53: as lacunas fecharam; o spec de ponta a ponta dele fica com a sessão do
-    # fechamento (#2570). Por partes: g53_conteudo_da_falha_spec.rb (passos 1 e 2) e g43_numero_novo_spec.rb (4 e 7).
+    # O 19 fica até ter o spec de ponta a ponta (#2570). Por partes: g53_conteudo_da_falha_spec.rb (passos 1 e 2) e
+    # g43_numero_novo_spec.rb (4 e 7); sem prova, os passos 3, 5 e 6.
+    19 => ['Cliente que sumiu do WhatsApp',
+           'G34 (passo 3: a resposta na conversa do e-mail), G28 (passo 3: extrair o número novo), G19 (passo 5: nota no contato), ' \
+           'G3 (passo 6: retorno), G11 (passo 6: sem resposta em 3 dias), G53, G43, G8, G1, G2'],
     20 => ['Venda fechada já entra no sistema da empresa', 'G5 (card ganho), G1, G2, G7, G11, G12, G13']
   }
 
@@ -56,6 +59,11 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
   # G21 (#2706) não segura nenhum pendente: a sonda roda aqui para que a prova de comportamento dela não fique sem dono.
   it 'G21 fechada: o passo prospecção busca e cria o card' do
     expect(FechamentoAutomacao::Lacunas.abertas(%w[G21])).to be_empty
+  end
+
+  # G57 (#2769) e G58 (#2779) também não seguram pendente: as sondas rodam o motor e a busca de verdade aqui.
+  it 'G57 e G58 fechadas: a hora de hoje que passou vence em seguida; o público da execução é só o que ela criou' do
+    expect(FechamentoAutomacao::Lacunas.abertas(%w[G57 G58])).to be_empty
   end
 
   pendentes.each do |numero, (nome, lacunas)|

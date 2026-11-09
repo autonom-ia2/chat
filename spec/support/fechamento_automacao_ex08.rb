@@ -54,7 +54,8 @@ module FechamentoAutomacao::SondasDoExemplo8
   end
 
   # G22 (exemplo 8, passo 9): o RH que pediu dois cards, um completo e um sem o CPF. A seleção do contato.recorrente
-  # pega o RH, e o valor lista só quem falta, com o que falta. Roda na transação do exemplo, que desfaz tudo.
+  # pega o RH, e o valor lista só quem falta, com o que falta. Roda na transação do exemplo, que desfaz tudo. Fora do
+  # SONDAS enquanto a G22 está desligada: volta para lá quando o "para cada item" gravar o solicitante.
   def rh_avisado_do_que_falta?
     rh, contexto, selecao = rh_com_dois_pedidos
     Autonomia::Automacao::Tempo::Selecao.new(rh.account, { 'tipo' => 'contato.recorrente', 'selecao' => selecao })
