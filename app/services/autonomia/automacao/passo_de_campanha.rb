@@ -6,9 +6,11 @@
 #   disparo, relê a recusa de cada contato antes de mandar e manda o modelo. Nada sai por um caminho próprio daqui.
 #   `sem_etiquetas` (lote 5, #2681) deixa de fora quem tem uma delas, mesmo com etiqueta do público
 #   (Autonomia::Automacao::CampanhaSemEtiquetas).
-#   Só em gatilho da conta (o recorrente da G7, `conta.recorrente`, alvo = a própria Account): num gatilho de
-#   conversa, card ou contato, cada execução criaria uma campanha
-#   nova para o mesmo público, o mesmo envio N vezes. A Receita recusa ao salvar; a receita que chegar assim mesmo pula
+#   Só em gatilho recorrente (G7). No `conta.recorrente` (alvo = a própria Account) a execução é uma por vez e cria a
+#   campanha na hora. No `card.recorrente` e no `contato.recorrente` (G55, exemplo 16) há uma execução por card ou
+#   contato da vez, e a campanha é uma só para a vez inteira (Autonomia::Automacao::CampanhaDaOcorrencia). Num gatilho
+#   de evento (conversa, card ou contato que muda), cada execução criaria uma campanha nova para o mesmo público, o
+#   mesmo envio N vezes, e não há "vez" que as junte. A Receita recusa ao salvar; a receita que chegar assim mesmo pula
 #   com `campanha_so_sem_alvo`. Não é teto de uso, é a regra de não repetir o mesmo envio.
 # - `nao_receber`: marca o contato do alvo como "não recebe" (a recusa das campanhas e mensagens ativas), como o botão
 #   do contato (Contacts::OptOutsController): origem manual, feita por quem ligou, desfeita pelo mesmo botão.
@@ -42,7 +44,7 @@ class Autonomia::Automacao::PassoDeCampanha
 
   def self.problemas_do_disparo(passo, conta, gatilho, account_user)
     id = passo['id']
-    lista = [*(frase(:campanha_so_sem_alvo, passo: id) unless gatilho_da_conta?(gatilho)),
+    lista = [*(frase(:campanha_so_sem_alvo, passo: id) unless gatilho_da_vez?(gatilho)),
              *(frase(:campanha_variavel_fixa, passo: id) unless variaveis_escritas?(passo['modelo']))]
     return lista if conta.nil?
 
@@ -88,6 +90,12 @@ class Autonomia::Automacao::PassoDeCampanha
     ::Autonomia::Automacao::Gatilhos.alvo(tipo) == ALVO_DA_CONTA
   end
 
+  # O gatilho que roda por vez (G7): o da conta e, desde a G55, o recorrente de card ou contato, em que a campanha é
+  # uma só para a vez inteira.
+  def self.gatilho_da_vez?(tipo)
+    gatilho_da_conta?(tipo) || ::Autonomia::Automacao::Gatilhos.recorrente?(tipo)
+  end
+
   def self.pode_disparar?(usuario, conta)
     account_user = usuario && conta.account_users.find_by(user_id: usuario.id)
     account_user.present? && CampaignPolicy.new({ user: usuario, account: conta, account_user: account_user }, Campaign).send_campaign?
@@ -130,7 +138,7 @@ class Autonomia::Automacao::PassoDeCampanha
   private
 
   def disparar
-    return pulado('campanha_so_sem_alvo') unless @alvo.is_a?(::Account)
+    return pulado('campanha_so_sem_alvo') unless da_vez?
     return sem_acesso('quem_ligou_sem_permissao_campanha') unless self.class.pode_disparar?(@quem, @conta)
 
     caixa = self.class.caixa_da_campanha(@conta, @passo['caixa_id'])
@@ -149,19 +157,49 @@ class Autonomia::Automacao::PassoDeCampanha
     return pulado('campanha_sem_etiqueta') if etiquetas.empty?
 
     sem = @conta.labels.where(id: @passo['sem_etiquetas']).pluck(:id)
-    campanha = criar_campanha(caixa, template_params, audiencia(etiquetas, sem))
-    ::Campaigns::TriggerOneoffCampaignJob.perform_later(campanha)
-    Resultado.new(tipo: :ok, motivo: nil, dados: { 'campanha_id' => campanha.display_id, 'etiquetas' => etiquetas, 'sem_etiquetas' => sem })
+    dados = { 'etiquetas' => etiquetas, 'sem_etiquetas' => sem }
+    publico = audiencia(etiquetas, sem)
+    da_conta? ? campanha_da_conta(caixa, template_params, publico, dados) : campanha_da_vez(caixa, template_params, publico, dados)
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.info("[automacao][campanha] recusada automacao=#{@automacao.id} erro=#{e.record.errors.attribute_names.join(',')}")
     pulado('campanha_recusada')
   end
 
-  def criar_campanha(caixa, template_params, audiencia)
+  def criar_campanha(caixa, template_params, audiencia, saida = Time.current)
     @conta.campaigns.create!(
-      title: @passo['titulo'], inbox: caixa, sender: @quem, scheduled_at: Time.current, template_params: template_params,
+      title: @passo['titulo'], inbox: caixa, sender: @quem, scheduled_at: saida, template_params: template_params,
       message: self.class.texto_do_modelo(caixa, template_params), audience: audiencia
     )
+  end
+
+  # O conta.recorrente: uma execução por vez, a campanha sai na hora.
+  def campanha_da_conta(caixa, template_params, audiencia, dados)
+    campanha = criar_campanha(caixa, template_params, audiencia)
+    ::Campaigns::TriggerOneoffCampaignJob.perform_later(campanha)
+    Resultado.new(tipo: :ok, motivo: nil, dados: { 'campanha_id' => campanha.display_id, **dados })
+  end
+
+  def da_conta? = @alvo.is_a?(::Account)
+
+  # Roda por vez: na conta (conta.recorrente) ou num card ou contato do recorrente (G55).
+  def da_vez? = da_conta? || ocorrencia.present?
+
+  # G55: a campanha da vez no card.recorrente e no contato.recorrente. Quem cria ou entra nela grava o id no registro;
+  # o agendador das campanhas a manda quando a vez para de juntar gente (CampanhaDaOcorrencia).
+  def campanha_da_vez(caixa, template_params, audiencia, dados)
+    vez = ::Autonomia::Automacao::CampanhaDaOcorrencia.new(execucao: @execucao, passo_id: @passo['id'], ocorrencia: ocorrencia)
+    campanha, situacao = vez.juntar { |saida| criar_campanha(caixa, template_params, audiencia, saida) }
+    tipo, motivo = situacao == :ja_saiu ? [:pulado, 'campanha_da_vez_ja_saiu'] : [:ok, nil]
+    Resultado.new(tipo: tipo, motivo: motivo, dados: { 'campanha_id' => campanha.display_id, **dados })
+  end
+
+  # A vez do recorrente de card ou contato desta execução (Gatilhos.ocorrencia_da_marca), ou nil fora dele.
+  def ocorrencia
+    return @ocorrencia if defined?(@ocorrencia)
+
+    tipo = @execucao.chave_gatilho
+    recorrente = ::Autonomia::Automacao::Gatilhos.recorrente?(tipo) && !::Autonomia::Automacao::Gatilhos.da_conta?(tipo)
+    @ocorrencia = (::Autonomia::Automacao::Gatilhos.ocorrencia_da_marca(@execucao.evento, @execucao.alvo_id) if recorrente)
   end
 
   # As etiquetas do público e as excluídas (lote 5, #2681: ExcludeLabel, tirado pelo CampanhaSemEtiquetas no envio).

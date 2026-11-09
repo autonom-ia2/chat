@@ -22,7 +22,11 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     12 => ['Visita que aconteceu decide o próximo passo', 'G5 (entrou em "Visita feita"), G2, G3, G11, G14, G25, G35'],
     14 => ['Documentação completa para emitir', 'G5 (entrou em "Documentação"), G1, G3, G13, G20'],
     15 => ['Cliente grande, atendimento de dono', 'G27 (card atualizado com valor acima de R$ 50 mil), G3, G5, G11, G12, G15, G35'],
-    16 => ['Reconquistar quem foi para o concorrente', 'G7 (todo dia 1º), G3, G4, G12, G14, G16, G18'],
+    # #2675 (09/11): o "Começa quando" monta (card.recorrente com fechado_entre_dias e o "Só se" no card.motivo_da_perda).
+    # O passo 2 (a campanha da vez num gatilho de card) é a G55 (g55_campanha_no_card_spec.rb); o 3, a resposta à campanha.
+    16 => ['Reconquistar quem foi para o concorrente',
+           'G55 (passo 2: disparar a campanha da etiqueta num gatilho de card), G38 (passo 3: cada resposta à campanha), ' \
+           'G3, G4, G7, G12, G14, G16, G18'],
     17 => ['Vendedora de férias, cliente bem cuidado', 'G9 (troca de responsável), G7, G11, G15, G16, G23'],
     18 => ['Seleção de candidatos sem planilha', 'G4, G20 (ler o currículo e criar o card), G1, G5, G6, G12, G15, G25'],
     19 => ['Cliente que sumiu do WhatsApp', 'G43 (mandar ao número novo), G1, G2, G3, G8, G11, G19, G28, G34, G53'],

@@ -3,7 +3,8 @@ pt_BR:
   autonomia:
     automacao:
       motivos:
-        campanha_so_sem_alvo: 'Esta automação roda em cada conversa, card ou contato, então mandaria a mesma campanha de novo a cada vez. Mandar campanha só vale numa automação recorrente. Nada foi mandado.'
+        campanha_so_sem_alvo: 'Esta automação roda a cada conversa, card ou contato que muda, então mandaria a mesma campanha de novo a cada vez. Mandar campanha só vale numa automação recorrente (por data). Nada foi mandado.'
+        campanha_da_vez_ja_saiu: 'A campanha desta vez já tinha saído quando este card ou contato chegou aqui. Ele não recebeu esta campanha.'
         quem_ligou_sem_permissao_campanha: 'Quem ligou a automação não pode mais enviar campanhas. Assuma e religue.'
         campanha_sem_caixa: 'A caixa escolhida não existe mais ou não é do WhatsApp oficial. A campanha não foi criada.'
         campanha_desligada: 'As campanhas de WhatsApp estão desligadas nesta conta. A campanha não foi criada.'
@@ -17,7 +18,7 @@ pt_BR:
         sem_contato: 'Aqui não há contato para marcar.'
         contato_ja_nao_recebe: 'O contato já estava marcado como "não recebe".'
       receita:
-        campanha_so_sem_alvo: 'Passo %{passo}: mandar campanha só vale numa automação recorrente. Num gatilho de conversa, card ou contato, cada execução mandaria a mesma campanha de novo.'
+        campanha_so_sem_alvo: 'Passo %{passo}: mandar campanha só vale numa automação recorrente (por data). Num gatilho de conversa, card ou contato que muda, cada execução mandaria a mesma campanha de novo.'
         campanha_variavel_fixa: 'Passo %{passo}: a campanha vai para muita gente de uma vez, então cada variável do modelo precisa ser texto fixo.'
         campanha_sem_permissao: 'Passo %{passo}: para usar este passo você precisa da permissão de enviar campanhas.'
         campanha_desligada: 'Passo %{passo}: as campanhas de WhatsApp estão desligadas nesta conta.'

@@ -4,7 +4,7 @@
       "DISPARAR": "Mandar uma campanha de WhatsApp",
       "NAO_RECEBER": "Marcar o contato como “não recebe”",
       "NAO_RECEBER_DICA": "O contato sai de todas as campanhas e não recebe mais mensagens ativas. Dá para desfazer no contato.",
-      "SO_RECORRENTE": "Mandar campanha só vale numa automação que roda sozinha, por data. Com gatilho de conversa ou de card, cada vez mandaria a mesma campanha de novo, então não dá para salvar.",
+      "SO_RECORRENTE": "Mandar campanha só vale numa automação que roda sozinha, por data. Se ela roda em cada card ou contato, sai uma campanha só por vez, para todos com as etiquetas, 15 minutos depois do último que passar por aqui. Com gatilho de conversa, card ou contato que muda, cada vez mandaria a mesma campanha de novo, então não dá para salvar.",
       "CAIXA_DICA": "Só caixas do WhatsApp oficial.",
       "SEM_CAIXA": "Esta conta não tem caixa do WhatsApp oficial.",
       "MODELO": "Modelo aprovado",

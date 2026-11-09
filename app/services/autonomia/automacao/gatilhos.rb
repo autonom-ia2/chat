@@ -160,4 +160,12 @@ module Autonomia::Automacao::Gatilhos
     marca = "recorrente:#{ocorrencia.utc.iso8601}:#{tipo}"
     da_conta?(tipo) ? marca : "#{marca}:#{alvo_id}"
   end
+
+  # A ocorrência de uma marca de marca_do_recorrente de card ou contato: a marca sem o alvo, a mesma para todos os
+  # alvos daquela vez (G55: a campanha da vez é uma só). nil em marca de outro formato.
+  def ocorrencia_da_marca(marca, alvo_id)
+    fim = ":#{alvo_id}"
+    texto = marca.to_s
+    texto.delete_suffix(fim) if texto.start_with?('recorrente:') && texto.end_with?(fim)
+  end
 end

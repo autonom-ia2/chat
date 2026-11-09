@@ -3,7 +3,8 @@ en:
   autonomia:
     automacao:
       motivos:
-        campanha_so_sem_alvo: 'This automation runs on each conversation, card or contact, so it would send the same campaign again every time. Sending a campaign only works in a recurring automation. Nothing was sent.'
+        campanha_so_sem_alvo: 'This automation runs every time a conversation, card or contact changes, so it would send the same campaign again every time. Sending a campaign only works in a recurring (scheduled) automation. Nothing was sent.'
+        campanha_da_vez_ja_saiu: 'This round''s campaign had already gone out when this card or contact got here. It did not receive this campaign.'
         quem_ligou_sem_permissao_campanha: 'The person who turned on the automation can no longer send campaigns. Take over and turn it back on.'
         campanha_sem_caixa: 'The chosen inbox no longer exists or is not an official WhatsApp inbox. The campaign was not created.'
         campanha_desligada: 'WhatsApp campaigns are off for this account. The campaign was not created.'
@@ -17,7 +18,7 @@ en:
         sem_contato: 'There is no contact here to mark.'
         contato_ja_nao_recebe: 'The contact was already marked as not receiving messages.'
       receita:
-        campanha_so_sem_alvo: 'Step %{passo}: sending a campaign only works in a recurring automation. In a conversation, card or contact trigger, each run would send the same campaign again.'
+        campanha_so_sem_alvo: 'Step %{passo}: sending a campaign only works in a recurring (scheduled) automation. With a trigger on a conversation, card or contact that changes, each run would send the same campaign again.'
         campanha_variavel_fixa: 'Step %{passo}: the campaign goes to many people at once, so each template variable must be fixed text.'
         campanha_sem_permissao: 'Step %{passo}: you need permission to send campaigns to use this step.'
         campanha_desligada: 'Step %{passo}: WhatsApp campaigns are off for this account.'
