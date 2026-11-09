@@ -207,8 +207,19 @@ const worksMissingPermission = computed(() =>
 const instagramToConnect = computed(() =>
   works.value.some(item => item.falta === 'INSTAGRAM_TAP')
 );
+// O erro de uma Página não vale para outra.
+watch(chosenPage, () => {
+  instagramError.value = null;
+});
+// Ligado agora: o bloco do toque sai e o aviso de pronto recebe o foco, para o leitor de tela anunciar.
+const instagramJustLinked = computed(
+  () =>
+    Boolean(chosenPage.value) && instagramLigadoDe.value === chosenPage.value.id
+);
+const instagramDone = ref(null);
 const INSTAGRAM_ERRORS = {
   missing_permissions: 'MISSING_PERMISSIONS',
+  not_own_token: 'NOT_OWN_TOKEN',
   no_instagram: 'NO_INSTAGRAM',
   page_not_granted: 'NOT_GRANTED',
   reconnect: 'RECONNECT',
@@ -221,6 +232,8 @@ const linkInstagram = async () => {
   try {
     await CrmMetaAdsConnectionAPI.linkInstagram(chosenPage.value.id);
     instagramLigadoDe.value = chosenPage.value.id;
+    await nextTick();
+    instagramDone.value?.focus();
   } catch (error) {
     const code =
       error?.response?.status === 402 ? 'limit' : error?.response?.data?.error;
@@ -1411,6 +1424,20 @@ onBeforeUnmount(stopRecheck);
             </span>
           </li>
         </ul>
+        <p
+          v-if="instagramJustLinked"
+          ref="instagramDone"
+          data-conectar-instagram-ligado
+          role="status"
+          tabindex="-1"
+          class="m-0 border-t border-solid border-n-weak pt-3 text-sm text-n-teal-11"
+        >
+          {{
+            $t(`${C}.DONE.WORKS.INSTAGRAM_LINKED`, {
+              username: chosenPage.instagram?.username,
+            })
+          }}
+        </p>
         <div
           v-if="instagramToConnect"
           data-conectar-ligar-instagram

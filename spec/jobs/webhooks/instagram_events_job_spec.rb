@@ -497,6 +497,20 @@ describe Webhooks::InstagramEventsJob do
         end
       end
 
+      # #2406: a caixa do login único lê o perfil de quem mandou em graph.facebook.com, com o token da Página.
+      it 'reads the sender profile on graph.facebook.com for a Facebook-login inbox' do
+        instagram_channel.update!(login: 'facebook', page_id: '104000000000001')
+        profile = stub_request(:get, %r{https://graph\.facebook\.com/v22\.0/Sender-id-fb\?.*})
+                  .to_return(status: 200, headers: { 'Content-Type' => 'application/json' },
+                             body: { name: 'Jane', username: 'jane_fb', id: 'Sender-id-fb' }.to_json)
+
+        instagram_webhook.perform_now(build(:instagram_message_create_event, sender_id: 'Sender-id-fb').with_indifferent_access[:entry])
+
+        expect(profile).to have_been_requested
+        expect(instagram_inbox.contacts.last.additional_attributes['social_instagram_user_name']).to eq 'jane_fb'
+        expect(instagram_inbox.messages.count).to eq 1
+      end
+
       it 'handles instagram postback event and creates a message with the postback title' do
         postback_event = build(:instagram_postback_event).with_indifferent_access
 

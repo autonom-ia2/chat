@@ -84,6 +84,11 @@ A troca da configuração é feita no painel da Meta, pelo Rodrigo. O código n�
 
 ## 5. Rollback
 
+- **Antes de reverter o código:** nenhuma caixa pode estar no login do Facebook. O código antigo falaria com
+  `graph.instagram.com` usando o token da Página, e o envio quebraria. Conferir em produção, só leitura:
+  `SELECT id, account_id FROM channel_instagram WHERE login = 'facebook';`. Cada caixa listada volta pelo login do
+  Instagram (reautorizar), ou é desligada. Escrita direta no banco só com backup e com o OK do Rodrigo. Com a flag só
+  na conta de teste, é no máximo uma caixa.
 - Desligar a flag `instagram_login_unico` na conta. O botão volta a levar ao login do Instagram. As caixas já
   trocadas continuam no login do Facebook até a pessoa reautorizar pelo login do Instagram.
 - Migration: `bundle exec rails db:migrate:down VERSION=20261108900000` apaga as duas colunas. Antes, as caixas do
@@ -95,6 +100,10 @@ A troca da configuração é feita no painel da Meta, pelo Rodrigo. O código n�
 - Reação e leitura (`message_reactions`, `messaging_seen`) dependem dos campos do Instagram marcados no painel do app
   do login de empresa (Webhooks > Instagram). A Página se inscreve com os campos do Messenger. Se esses campos não
   estiverem marcados no app, o Direct chega, mas a reação e o "visto" não.
+- O token da Página não expira. Se a pessoa tirar o app ou trocar a senha, a caixa só descobre no próximo envio ou
+  leitura recusada (erro 190), que marca a caixa para reautorizar, como hoje.
+- Apagar a caixa do Instagram do login único não tira os campos do Messenger da Página (podem servir à caixa da
+  Página e aos leads). Sem nenhuma caixa da Página, eles ficam inscritos e os eventos são ignorados.
 - As chamadas vão sem `appsecret_proof`, como as outras do login de empresa (Anúncios, token da Página). Se o app
   passar a exigir a chave secreta, todas param juntas.
 - O formato das respostas da Graph pelo `graph.facebook.com` foi lido na documentação, não numa chamada real. O teste

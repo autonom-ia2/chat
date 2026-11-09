@@ -334,9 +334,12 @@ describe('Anúncios · login único (#2338)', () => {
     expect(wrapper.find('[data-conectar-ligar-instagram]').exists()).toBe(
       false
     );
+    expect(wrapper.find('[data-conectar-instagram-ligado]').text()).toBe(
+      'O @lojaexemplo está ligado. O Direct e os comentários chegam aqui.'
+    );
   });
 
-  it('with Instagram by the Page: a login without Instagram says to sign in again and keep it checked', async () => {
+  it('with Instagram by the Page: Instagram left unchecked says to sign in again, and the tap stays', async () => {
     flags.add('instagram_login_unico');
     CrmMetaAdsConnectionAPI.linkInstagram.mockRejectedValue({
       response: { status: 422, data: { error: 'missing_permissions' } },
@@ -348,6 +351,12 @@ describe('Anúncios · login único (#2338)', () => {
 
     expect(wrapper.find('[data-conectar-instagram-erro]').text()).toBe(
       'O Instagram ficou desmarcado na janela do Facebook. Entre de novo e deixe o Instagram marcado.'
+    );
+    expect(
+      wrapper.find('[data-conectar-instagram-ligar]').attributes('disabled')
+    ).toBeUndefined();
+    expect(wrapper.find('[data-conectar-instagram-ligado]').exists()).toBe(
+      false
     );
     expect(
       wrapper

@@ -82,6 +82,20 @@ RSpec.describe 'CRM meta_ads_connection Instagram do login único (#2406)', type
     expect(response.parsed_body['inbox_id']).to eq(existing.inbox.id)
   end
 
+  # Corrida: os dois toques passam pela busca vazia, e o segundo bate no índice único (instagram_id, account_id).
+  it 'dois toques juntos: o segundo vira troca na caixa do primeiro' do
+    stub_meta
+    existing = create(:channel_instagram, account: account, instagram_id: instagram_id)
+    allow(Channel::Instagram).to receive(:find_by).and_call_original
+    allow(Channel::Instagram).to receive(:find_by).with(account_id: account.id, instagram_id: instagram_id).and_return(nil)
+    allow_any_instance_of(Channel::Instagram).to receive(:run_validations!).and_return(true) # rubocop:disable RSpec/AnyInstance
+
+    expect { link }.not_to change(Channel::Instagram, :count)
+
+    expect(response).to have_http_status(:ok)
+    expect(existing.reload).to have_attributes(login: 'facebook', page_id: page_id)
+  end
+
   it 'sem a flag do login único responde 404' do
     account.disable_features!('anuncios_login_unico')
 

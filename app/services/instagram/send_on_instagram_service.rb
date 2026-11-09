@@ -5,8 +5,10 @@ class Instagram::SendOnInstagramService < Instagram::BaseSendService
   def send_sender_action(recipient_id, action, timeout: nil)
     return if recipient_id.blank? || channel.blank?
 
+    # O login do Instagram fica na v22.0 de antes; o login do Facebook (#2406) vai pela Página.
+    base = channel.facebook_login? ? channel.graph_base_uri : 'https://graph.instagram.com/v22.0'
     HTTParty.post(
-      "#{channel.graph_base_uri}/#{channel.messages_node}/messages",
+      "#{base}/#{channel.messages_node}/messages",
       body: { recipient: { id: recipient_id }, sender_action: action },
       query: { access_token: channel.access_token },
       **{ timeout: timeout }.compact

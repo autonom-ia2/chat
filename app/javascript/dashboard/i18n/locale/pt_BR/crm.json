@@ -2572,8 +2572,10 @@
               "INSTAGRAM_CTA": "Ligar o Instagram",
               "INSTAGRAM_TEXT_PAGINA": "Ligue o {'@'}{username} com este mesmo login do Facebook. O Direct e os comentários chegam aqui.",
               "INSTAGRAM_CTA_PAGINA": "Ligar o Instagram",
+              "INSTAGRAM_LINKED": "O {'@'}{username} está ligado. O Direct e os comentários chegam aqui.",
               "INSTAGRAM_ERROR": {
                 "MISSING_PERMISSIONS": "O Instagram ficou desmarcado na janela do Facebook. Entre de novo e deixe o Instagram marcado.",
+                "NOT_OWN_TOKEN": "Os seus anúncios estão compartilhados com a parceira. Entre com o seu Facebook para ligar o Instagram aqui.",
                 "NO_INSTAGRAM": "Esta Página não tem Instagram ligado no Facebook. Ligue lá, ou use o login do Instagram.",
                 "NOT_GRANTED": "Esta Página ficou desmarcada na janela do Facebook. Entre de novo e marque a Página.",
                 "RECONNECT": "O seu acesso ao Facebook venceu. Entre de novo.",
