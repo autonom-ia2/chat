@@ -9,8 +9,8 @@
 #
 # Pula, com o motivo no registro:
 # - a caixa foi apagada ou deixou de ser de e-mail;
-# - contato sem e-mail, que pediu para não receber (o mesmo campo das campanhas) ou com o e-mail bloqueado na conta
-#   (devolução, reclamação, descadastro: EmailSuppression, a mesma régua das campanhas);
+# - contato sem e-mail, que pediu para não receber ou bloqueado (decisão 5: a regra das campanhas, RecusaDoContato) ou
+#   com o e-mail bloqueado na conta (devolução, reclamação, descadastro: EmailSuppression, a mesma régua das campanhas);
 # - valor vazio, ou assunto ou texto que ficou em branco.
 # Quem ligou precisa estar na caixa (ou ser administrador) e poder começar conversa, como no "Nova conversa": no EE, a
 # função só de leitura não começa. Sem isso a automação pausa, como na conversa (D1, D5).
@@ -34,7 +34,9 @@ class Autonomia::Automacao::PassoDeEmail
   def self.motivo_do_contato(conta, contato)
     email = contato&.email.to_s.strip
     return 'contato_sem_email' if email.empty?
-    return 'contato_nao_recebe' if Contact.opted_out.exists?(id: contato.id)
+
+    recusa = ::Autonomia::Automacao::RecusaDoContato.motivo(contato.id)
+    return recusa if recusa
 
     'email_bloqueado' if EmailSuppression.suppressed?(conta, email)
   end

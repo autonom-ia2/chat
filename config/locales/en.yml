@@ -561,6 +561,7 @@ en:
         valor_fora_do_formato: 'The calculated value does not fit this field (for example, it is not one of the options), so the action was skipped and nothing was saved.'
         canal_sem_resposta: "This channel does not accept replies (tweet). The message was not sent."
         contato_nao_recebe: "The contact asked not to receive messages. The message was not sent."
+        contato_bloqueado: "The contact is blocked and receives nothing from the automation. The message was not sent."
         caixa_de_email_indisponivel: 'The e-mail inbox of this step was deleted or is no longer an e-mail inbox. The e-mail was not sent.'
         contato_sem_email: 'The contact has no e-mail. The e-mail was not sent.'
         email_bloqueado: "The contact's e-mail is blocked in this account (bounce, complaint or unsubscribe). The e-mail was not sent."

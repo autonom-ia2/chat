@@ -1054,6 +1054,7 @@ pt_BR:
         valor_fora_do_formato: 'O valor calculado não cabe neste campo (por exemplo, não é uma das opções), e a ação foi pulada sem gravar nada.'
         canal_sem_resposta: "Este canal não aceita resposta (tweet). A mensagem não foi mandada."
         contato_nao_recebe: "O contato pediu para não receber mensagens. A mensagem não foi mandada."
+        contato_bloqueado: "O contato está bloqueado e não recebe nada da automação. A mensagem não foi mandada."
         caixa_de_email_indisponivel: 'A caixa de e-mail deste passo foi apagada ou não é mais de e-mail. O e-mail não foi mandado.'
         contato_sem_email: 'O contato não tem e-mail. O e-mail não foi mandado.'
         email_bloqueado: 'O e-mail do contato está bloqueado nesta conta (devolução, reclamação ou descadastro). O e-mail não foi mandado.'
