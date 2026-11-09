@@ -3420,11 +3420,12 @@
           "CHANGE_UNSURE": "Meta didn't answer in time. Open the ad again in a little while to see if the change went through.",
           "OPEN_MANAGER": "Open in Ads Manager",
           "SWAP_REFUSED": "Meta did not accept changing the photo on this ad. You can create a paused copy with the new photo.",
-          "COPY_UNCONFIRMED": "We could not confirm with Meta whether the copy was created. Check the Ads Manager. If it is not there, create it again.",
+          "COPY_UNCONFIRMED": "We could not confirm with Meta whether the copy was created. Look in the Ads Manager for an ad whose name ends in \"- Cópia\". If it is not there, create it again.",
           "RECREATE": "Not in the Ads Manager, create it again",
           "PAUSE_ORIGINAL_HINT": "You turned the copy on. Pause the original so you do not pay twice.",
           "PAUSE_ORIGINAL": "Pause the original",
-          "PAUSE_ORIGINAL_DONE": "Original paused. Now only the copy spends."
+          "PAUSE_ORIGINAL_DONE": "Original paused. Now only the copy spends.",
+          "COPY_FOUND": "The copy is there"
         }
       },
       "AD_DETAIL": {

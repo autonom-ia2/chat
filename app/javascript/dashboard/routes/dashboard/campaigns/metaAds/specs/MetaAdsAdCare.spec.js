@@ -27,7 +27,7 @@ const PickerStub = {
   template: '<div data-picker />',
 };
 const StatusStub = {
-  props: ['adId', 'gestao', 'budget', 'activateNote'],
+  props: ['adId', 'gestao', 'budget', 'activateNote', 'canManage'],
   emits: ['changed'],
   template: '<div data-copy-status />',
 };
@@ -56,7 +56,7 @@ const mountCare = (props = {}) =>
       budget: BUDGET,
       creativeKind: 'image',
       originalStatus: 'ACTIVE',
-      managerUrl: 'https://adsmanager.facebook.com/x',
+      managerUrl: 'https://adsmanager.facebook.com/x?act=99&selected_ad_ids=1',
       ...props,
     },
     global: {
@@ -216,8 +216,9 @@ describe('Anúncios da Meta · cuidar do anúncio (#2778)', () => {
     expect(wrapper.find('[data-ad-care-duplicate]').exists()).toBe(false);
     expect(wrapper.find('[data-ad-care-change]').exists()).toBe(false);
     expect(block.text()).toContain(`${KEY}.COPY_UNCONFIRMED`);
+    // A cópia é outra campanha: o link não marca o original.
     expect(block.find('a').attributes('href')).toBe(
-      'https://adsmanager.facebook.com/x'
+      'https://adsmanager.facebook.com/x?act=99'
     );
 
     await block.find('[data-ad-care-recreate]').trigger('click');
@@ -228,6 +229,21 @@ describe('Anúncios da Meta · cuidar do anúncio (#2778)', () => {
     });
     expect(wrapper.find('[data-ad-care-unconfirmed]').exists()).toBe(false);
     expect(wrapper.find('[data-ad-care-copy]').exists()).toBe(true);
+  });
+
+  it('an unconfirmed copy found in the Ads Manager: the card closes without calling Meta', async () => {
+    duplicarAnuncio.mockRejectedValueOnce(
+      refusal({ error: 'unconfirmed', nothing_created: false })
+    );
+    const wrapper = mountCare();
+    dialogs(wrapper)[0].vm.$emit('confirm');
+    await flushPromises();
+
+    await wrapper.find('[data-ad-care-copy-found]').trigger('click');
+
+    expect(wrapper.find('[data-ad-care-unconfirmed]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-care-duplicate]').exists()).toBe(true);
+    expect(duplicarAnuncio).toHaveBeenCalledTimes(1);
   });
 
   it('pause the original: only after the copy with the new photo goes live', async () => {
@@ -245,6 +261,8 @@ describe('Anúncios da Meta · cuidar do anúncio (#2778)', () => {
 
     const button = wrapper.find('[data-ad-care-pause-original]');
     expect(button.text()).toContain(`${KEY}.PAUSE_ORIGINAL`);
+    // A cópia fica só com o selo: o único botão é pausar o original.
+    expect(wrapper.findComponent(StatusStub).props('canManage')).toBe(false);
     dialogs(wrapper)[2].vm.$emit('confirm');
     await flushPromises();
 

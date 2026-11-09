@@ -170,8 +170,8 @@ Mais quatro pontos, que a tela já supõe:
 **Regra:** a gravação da Meta (vídeo do App Review) só mostra o que a chamada
 real confirmou. No protótipo, `?demo=so-confirmado` mostra o caso mínimo, só com
 o que a doc já garante: WhatsApp e site (Messenger e Direct entraram no #2560),
-WhatsApp só em "Automático" e "Trocar a foto (cria uma cópia)" no lugar de
-"Trocar foto ou texto". As outras cenas mostram tudo, como se a chamada real
+WhatsApp só em "Automático". A troca de foto ou texto no próprio anúncio foi
+ligada para todos em #2804, com a cópia pausada como saída. As outras cenas mostram tudo, como se a chamada real
 tivesse confirmado.
 
 ## Fluxo 1: anúncio novo
@@ -421,7 +421,9 @@ Na conta de teste, com os testadores do app:
    A doc oficial (Click to Instagram) diz `OUTCOME_ENGAGEMENT` com
    `CONVERSATIONS`; falta a chamada real (#2560).
 2. "Só Instagram" e "Só Facebook" com destino WhatsApp.
-3. `POST /{ad_id}` com `creative` novo, sem recriar o anúncio.
+3. `POST /{ad_id}` com `creative` novo, sem recriar o anúncio. Ligado para
+   todos em #2804 (decisão do Rodrigo, 09/11), pelo SDK oficial (Fluxo 5); a
+   recusa da Meta vira `swap_refused` e a tela oferece a cópia pausada.
 4. Subcampos de `boost_eligibility_info`.
 5. Limite de posts do Instagram por dia (100 ou 50).
 6. Carrossel com destino Messenger ou Direct (hoje a tela não oferece).
@@ -441,9 +443,9 @@ Na conta de teste, com os testadores do app:
 15. Campanha com orçamento no grupo: `is_adset_budget_sharing_enabled: false`.
 16. A Meta busca o vídeo pelo endereço assinado do S3 (`file_url`).
 
-Os itens 1, 2, 3 e 9 já viram dado: o que não passar fica fora de `destinations`,
-`placements_by_destination` ou `creative_kind` (pontos 12 e 13), e a tela
-não oferece. Nos outros, se algum não passar, a frase ou a opção da tela muda
+Os itens 1, 2 e 9 já viram dado: o que não passar fica fora de `destinations`
+ou `placements_by_destination` (ponto 12), e a tela não oferece. O item 3 tem
+saída na própria tela (ponto 13). Nos outros, se algum não passar, a frase ou a opção da tela muda
 antes da flag.
 
 ## Servidor do PR 1

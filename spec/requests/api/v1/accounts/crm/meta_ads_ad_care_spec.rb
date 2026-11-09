@@ -276,6 +276,16 @@ RSpec.describe 'CRM meta_ads_connection cuidar do anúncio (#2778)', type: :requ
         expect(response.parsed_body['error']).to eq('meta_refused')
       end
 
+      it 'o anúncio sumiu na Meta: ad_not_found, sem oferecer a cópia' do
+        stub_post(ad_id, meta_graph_error(100, subcode: 33), status: 400)
+        stub_request(:delete, meta_graph_url(new_creative)).to_return(status: 200, body: { success: true }.to_json, headers: json)
+
+        swap!
+
+        expect(response).to have_http_status(:not_found)
+        expect(response.parsed_body['error']).to eq('ad_not_found')
+      end
+
       it 'sem resposta ao criar o criativo novo: não diz que nada foi criado' do
         stub_request(:post, meta_graph_url("act_#{connection.ad_account_id}/adcreatives")).to_timeout
 
@@ -337,7 +347,8 @@ RSpec.describe 'CRM meta_ads_connection cuidar do anúncio (#2778)', type: :requ
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to include('ad_id' => copy_ad, 'status' => 'PAUSED')
       expect(Crm::MetaAdsCreatedObject.find_by(idempotency_key: key)).to have_attributes(kind: 'copy', status: 'created')
-      expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_create_recreated').count).to eq(1)
+      expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_create_recreated').sole.audited_changes)
+        .to include('kind' => 'copy', 'idempotency_key' => key)
     end
 
     it 'recriar sem uma tentativa não confirmada desta chave: invalid_params, sem chamar a Meta' do

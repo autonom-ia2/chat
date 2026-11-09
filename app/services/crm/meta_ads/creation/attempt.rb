@@ -136,7 +136,7 @@ class Crm::MetaAds::Creation::Attempt
   def audit_recreate!(record)
     Audited.audit_class.create!(
       auditable: @account, user: @user, action: RECREATED_ACTION,
-      audited_changes: { 'idempotency_key' => record.idempotency_key, 'name' => record.name,
+      audited_changes: { 'idempotency_key' => record.idempotency_key, 'kind' => record.kind, 'name' => record.name,
                          'mark' => Crm::MetaAds::Creation::CampaignUndo.mark(record),
                          'campaign_name' => Crm::MetaAds::Creation::CampaignUndo.name_for(record),
                          'campaign_id' => record.campaign_id, 'attempt_started_at' => record.created_at&.iso8601 }.compact

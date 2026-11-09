@@ -92,7 +92,7 @@ class Crm::MetaAds::Creation::CreativeSwap
 
   # Recusa clara: o criativo novo, que ninguém usa, é apagado (sem conseguir, fica solto na conta, sem gastar nada), e a
   # tela oferece a cópia (`swap_refused`). Token recusado ou sem permissão não é recusa deste anúncio: a cópia falharia
-  # igual, então a resposta é a recusa de sempre (`meta_refused`).
+  # igual, então a resposta é a recusa de sempre (`meta_refused`); anúncio apagado na Meta, `ad_not_found`.
   # Sem resposta (tempo esgotado, 5xx): a Meta pode ter trocado, então o criativo fica e a tela não diz "segue como
   # estava" (`nothing_created: false`).
   def put_on_ad!(record, creative_id, stored_key)
@@ -105,6 +105,8 @@ class Crm::MetaAds::Creation::CreativeSwap
     unless result.ok
       client.delete_object(creative_id)
       raise Crm::MetaAds::Creation::Error.from_result(result) if result.token_invalid? || result.scope_error?
+      # O anúncio sumiu na Meta (apagado): a cópia falharia igual.
+      raise Crm::MetaAds::Creation::Error, 'ad_not_found' if result.missing_object?
 
       raise Crm::MetaAds::Creation::Error, 'swap_refused'
     end

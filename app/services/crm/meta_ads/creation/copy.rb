@@ -1,7 +1,7 @@
 # Duplicar um anúncio criado aqui (#2778, Fluxo 5; opção a do Rodrigo, 09/11: só os criados pelo Chat2You). A cópia é
 # uma campanha nova, pausada, com o grupo e o orçamento próprios, iguais aos do original: copiar só o anúncio dividiria
-# o dinheiro do grupo. Com `creative` ({ text, media? }), a cópia já nasce com a foto ou o texto novos ("Trocar a foto
-# (cria uma cópia)"), e o original continua como está.
+# o dinheiro do grupo. Com `creative` ({ text, media? }), a cópia já nasce com a foto ou o texto novos (a saída quando a
+# Meta recusa a troca no próprio anúncio, `swap_refused`, #2804), e o original continua como está.
 #
 # As chamadas, todas com `status_option: PAUSED`:
 # 1. `POST /{campaign_id}/copies` sem os níveis de baixo (`deep_copy: false`). O nome da cópia termina com

@@ -106,6 +106,20 @@ const copyError = error => {
 
 // A cópia que ficou não confirmada: o pedido como foi (`creative` e se veio de "Trocar"), para o recriar mandar igual.
 const unconfirmed = ref(null);
+// A cópia é outra campanha: o Gerenciador abre na lista de anúncios da conta, sem marcar o original.
+const managerListUrl = computed(() => {
+  try {
+    const url = new URL(props.managerUrl);
+    url.searchParams.delete('selected_ad_ids');
+    return url.toString();
+  } catch {
+    return props.managerUrl;
+  }
+});
+// A pessoa achou a cópia no Gerenciador: o cartão fecha, sem chamar a Meta.
+const copyFound = () => {
+  unconfirmed.value = null;
+};
 
 // Duplicar, a cópia com a foto nova e o recriar passam por aqui. Não confirmada: no lugar do aviso que some, o cartão
 // diz para conferir no Gerenciador e oferece criar de novo.
@@ -313,7 +327,7 @@ const saveChange = async () => {
       </p>
       <a
         v-if="managerUrl"
-        :href="managerUrl"
+        :href="managerListUrl"
         target="_blank"
         rel="noopener noreferrer"
         class="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
@@ -330,6 +344,14 @@ const saveChange = async () => {
         class="w-full sm:w-auto"
         @click="recreate"
       />
+      <button
+        type="button"
+        data-ad-care-copy-found
+        class="inline-flex min-h-11 items-center self-start rounded-lg border-0 bg-transparent p-0 text-sm font-medium text-n-slate-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+        @click="copyFound"
+      >
+        {{ $t(`${KEY}.COPY_FOUND`) }}
+      </button>
     </div>
 
     <!-- A cópia recém-criada: pausada, com o "Ativar anúncio" dela à mão. -->
@@ -364,7 +386,7 @@ const saveChange = async () => {
         :budget="copy.budget"
         :activate-note="fromSwap ? $t(`${KEY}.SWAP_AS_COPY_ACTIVATE`) : ''"
         tone="light"
-        can-manage
+        :can-manage="!showPauseOriginal"
         @changed="copyChanged"
       />
       <!-- A cópia com a foto nova no ar: pausar o original para não gastar em dobro, ali mesmo. -->
@@ -376,9 +398,8 @@ const saveChange = async () => {
         <p class="m-0 text-sm text-n-slate-12">
           {{ $t(`${KEY}.PAUSE_ORIGINAL_HINT`) }}
         </p>
-        <!-- Contorno: o botão cheio do cartão já é o da própria cópia. -->
+        <!-- Enquanto isso, a cópia mostra só o selo: o único botão é este. -->
         <Button
-          outline
           icon="i-lucide-pause"
           :label="$t(`${KEY}.PAUSE_ORIGINAL`)"
           class="w-full sm:w-auto"
