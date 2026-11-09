@@ -23,7 +23,12 @@ class Meta::ConversionsApiClient
 
   # error_code: Meta's numeric error code (190 invalid token, 10/200-299 permission, …), nil on
   # success or network failure. Lets callers tell a dead token from a passing outage.
-  Result = Struct.new(:ok, :http_code, :body, :error, :error_code, keyword_init: true)
+  # error_subcode refines it (100 with 33: the dataset no longer exists or cannot be reached).
+  Result = Struct.new(:ok, :http_code, :body, :error, :error_code, :error_subcode, keyword_init: true) do
+    def dataset_gone?
+      error_code == 100 && error_subcode == 33
+    end
+  end
 
   def initialize(access_token:, dataset_id:, api_version: nil)
     @access_token = access_token
@@ -44,20 +49,23 @@ class Meta::ConversionsApiClient
     )
 
     body = sanitize(response.body)
-    Result.new(ok: response.success?, http_code: response.code, body: body, error: response.success? ? nil : body,
-               error_code: response.success? ? nil : meta_error_code(response.body))
+    return Result.new(ok: true, http_code: response.code, body: body) if response.success?
+
+    error = meta_error(response.body)
+    Result.new(ok: false, http_code: response.code, body: body, error: body, error_code: error['code'], error_subcode: error['error_subcode'])
   rescue StandardError => e
     Result.new(ok: false, http_code: nil, body: nil, error: sanitize(e.message))
   end
 
   private
 
-  def meta_error_code(raw_body)
+  # The `error` object of Meta's answer, or {} when the body has none it can read.
+  def meta_error(raw_body)
     error = JSON.parse(raw_body.to_s)
     error = error['error'] if error.is_a?(Hash)
-    error.is_a?(Hash) ? error['code'] : nil
+    error.is_a?(Hash) ? error : {}
   rescue JSON::ParserError
-    nil
+    {}
   end
 
   def sanitize(text)

@@ -17,7 +17,11 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
     create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false)
       .tap { |created| created.update_columns(provider_config: provider_config) } # rubocop:disable Rails/SkipsModelValidations
   end
-  let(:conversation) { create(:conversation, account: account, inbox: channel.inbox, additional_attributes: campaign_attributes) }
+  # Clicks without touched_at date from the conversation start, and only clicks made by the
+  # event count (#2738): the conversation starts before the events under test, as in real life.
+  let(:conversation) do
+    create(:conversation, account: account, inbox: channel.inbox, additional_attributes: campaign_attributes, created_at: 1.day.ago)
+  end
   let(:pipeline) { account.crm_pipelines.create!(name: 'P', created_by: user, status: :active, metadata: pipeline_metadata) }
   let(:stage) do
     account.crm_pipeline_stages.create!(pipeline: pipeline, name: 'S', position: 0, metadata: { 'funnel_stage_type' => 'qualified' })
@@ -349,6 +353,169 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
 
       expect(Meta::WabaDatasetClient).to have_received(:new).with(access_token: 'test_key', waba_id: '333')
       expect(Meta::ConversionsApiClient).to have_received(:new).with(access_token: 'test_key', dataset_id: 'DS333')
+    end
+  end
+
+  describe 'unexpected failure after claiming the row (#2738)' do
+    let(:client) { instance_double(Meta::ConversionsApiClient) }
+    let(:ok) { Meta::ConversionsApiClient::Result.new(ok: true, http_code: 200, body: 'ok') }
+
+    before do
+      allow(Meta::ConversionsApiClient).to receive(:new).and_return(client)
+      allow(client).to receive(:post_events).and_return(ok)
+    end
+
+    it 'turns the row into an error with the reason, so the retry claims it and posts once' do
+      calls = 0
+      allow(Crm::MetaCapi::PayloadBuilder).to receive(:build).and_wrap_original do |original, **args|
+        calls += 1
+        raise NoMethodError, 'boom' if calls == 1
+
+        original.call(**args)
+      end
+
+      expect { perform }.to raise_error(Crm::MetaCapi::DispatchJob::DispatchError)
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id))
+        .to have_attributes(status: 'error', error_message: 'unexpected: NoMethodError')
+      expect(client).not_to have_received(:post_events)
+
+      perform
+
+      expect(client).to have_received(:post_events).once
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id).status).to eq('accepted')
+    end
+
+    it 'keeps an event Meta already accepted as accepted, so the retry never posts it twice' do
+      allow_any_instance_of(Crm::MetaConversionEvent).to receive(:update!).and_wrap_original do |original, *args, **kwargs| # rubocop:disable RSpec/AnyInstance
+        raise ActiveRecord::ConnectionNotEstablished, 'db gone' if (args.first || kwargs)[:status] == :accepted
+
+        original.call(*args, **kwargs)
+      end
+
+      expect { perform }.to raise_error(Crm::MetaCapi::DispatchJob::DispatchError)
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id)).to have_attributes(status: 'accepted', http_code: 200)
+
+      perform
+
+      expect(client).to have_received(:post_events).once
+    end
+  end
+
+  describe 'only clicks made up to the event choose the inbox (#2738)' do
+    let(:client) { instance_double(Meta::ConversionsApiClient) }
+
+    def whatsapp_inbox(token:, waba:, dataset:)
+      created = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false)
+      config = { 'api_key' => token, 'business_account_id' => waba, 'meta_dataset' => { 'waba_id' => waba, 'id' => dataset } }.compact
+      created.update_columns(provider_config: config) # rubocop:disable Rails/SkipsModelValidations
+      created.inbox
+    end
+
+    def link_click(inbox, clid, at)
+      linked = create(:conversation, account: account, inbox: inbox,
+                                     additional_attributes: { 'campaign' => { 'ctwa_clid' => clid, 'touched_at' => at.iso8601 } })
+      Crm::CardConversation.create!(account: account, card: card, conversation: linked)
+    end
+
+    before do
+      allow(Meta::ConversionsApiClient).to receive(:new).and_return(client)
+      allow(client).to receive(:post_events).and_return(Meta::ConversionsApiClient::Result.new(ok: true, http_code: 200, body: 'ok'))
+      conversation.update!(additional_attributes: { 'campaign' => { 'ctwa_clid' => 'BEFORE_SALE', 'touched_at' => 5.days.ago.iso8601 } })
+      card.update_columns(closed_at: 2.days.ago) # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    it 'ignores a click made after the sale, even when it is the newest one' do
+      link_click(whatsapp_inbox(token: 'later_key', waba: '222', dataset: 'DS2'), 'AFTER_SALE', 1.day.ago)
+
+      perform
+
+      expect(Meta::ConversionsApiClient).to have_received(:new).with(access_token: 'test_key', dataset_id: 'DS123')
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id)).to have_attributes(ctwa_clid: 'BEFORE_SALE', dataset_id: 'DS123')
+    end
+
+    it 'does not send when every click came after the sale' do
+      conversation.update!(additional_attributes: { 'campaign' => { 'ctwa_clid' => 'AFTER_SALE', 'touched_at' => 1.day.ago.iso8601 } })
+
+      perform
+
+      expect(Meta::ConversionsApiClient).not_to have_received(:new)
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id)).to have_attributes(status: 'skipped', error_message: 'missing_ctwa_clid')
+    end
+
+    it 'uses the move instant of a moved event as the cutoff' do
+      activity = card.activities.create!(account: account, event_type: 'move', created_at: 3.days.ago,
+                                         payload: { 'to_stage_id' => stage.id })
+      link_click(whatsapp_inbox(token: 'later_key', waba: '222', dataset: 'DS2'), 'AFTER_MOVE', 2.days.ago)
+
+      described_class.perform_now(account.id, card.id, activity.id, 'moved')
+
+      expect(Crm::MetaConversionEvent.find_by(event_id: "crm-#{card.id}-moved-#{activity.id}").ctwa_clid).to eq('BEFORE_SALE')
+    end
+
+    it 'skips a newer click in an inbox without a token for an older one in an official inbox' do
+      link_click(whatsapp_inbox(token: nil, waba: '222', dataset: nil), 'NO_TOKEN', 3.days.ago)
+
+      perform
+
+      expect(Meta::ConversionsApiClient).to have_received(:new).with(access_token: 'test_key', dataset_id: 'DS123')
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id).ctwa_clid).to eq('BEFORE_SALE')
+    end
+  end
+
+  describe 'dataset that Meta no longer knows (#2738)' do
+    let(:client) { instance_double(Meta::ConversionsApiClient) }
+    let(:gone) do
+      Meta::ConversionsApiClient::Result.new(ok: false, http_code: 400, error: 'does not exist', error_code: 100, error_subcode: 33)
+    end
+
+    before { allow(Meta::ConversionsApiClient).to receive(:new).and_return(client) }
+
+    def dataset_lookup_returns(dataset_id)
+      dataset_client = instance_double(Meta::WabaDatasetClient, find_or_create: Meta::WabaDatasetClient::Result.new(dataset_id: dataset_id))
+      allow(Meta::WabaDatasetClient).to receive(:new).and_return(dataset_client)
+    end
+
+    it 'looks the WABA dataset up again once, keeps the new one and sends to it' do
+      allow(client).to receive(:post_events).and_return(gone, Meta::ConversionsApiClient::Result.new(ok: true, http_code: 200, body: 'ok'))
+      dataset_lookup_returns('DS_NEW')
+
+      perform
+
+      expect(Meta::WabaDatasetClient).to have_received(:new).with(access_token: 'test_key', waba_id: '111').once
+      expect(Meta::ConversionsApiClient).to have_received(:new).with(access_token: 'test_key', dataset_id: 'DS_NEW')
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id)).to have_attributes(status: 'accepted', dataset_id: 'DS_NEW')
+      expect(channel.reload.provider_config['meta_dataset']).to eq('waba_id' => '111', 'id' => 'DS_NEW')
+    end
+
+    it 'does not post again when Meta answers with the same dataset' do
+      allow(client).to receive(:post_events).and_return(gone)
+      dataset_lookup_returns('DS123')
+
+      expect { perform }.to raise_error(Crm::MetaCapi::DispatchJob::DispatchError)
+
+      expect(client).to have_received(:post_events).once
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id)).to have_attributes(status: 'error', http_code: 400)
+    end
+
+    it 'keeps the dataset for any other refusal' do
+      allow(client).to receive(:post_events)
+        .and_return(Meta::ConversionsApiClient::Result.new(ok: false, http_code: 400, error: 'bad', error_code: 100, error_subcode: 2804))
+      allow(Meta::WabaDatasetClient).to receive(:new)
+
+      expect { perform }.to raise_error(Crm::MetaCapi::DispatchJob::DispatchError)
+
+      expect(Meta::WabaDatasetClient).not_to have_received(:new)
+    end
+
+    it 'leaves the row as an error for the retry when the new lookup fails' do
+      allow(client).to receive(:post_events).and_return(gone)
+      result = Meta::WabaDatasetClient::Result.new(error: 'timeout', transient: true)
+      allow(Meta::WabaDatasetClient).to receive(:new).and_return(instance_double(Meta::WabaDatasetClient, find_or_create: result))
+
+      expect { perform }.to raise_error(Crm::MetaCapi::DispatchJob::DispatchError)
+
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id).status).to eq('error')
+      expect(channel.reload.provider_config['meta_dataset']).to eq('waba_id' => '111', 'id' => 'DS123')
     end
   end
 

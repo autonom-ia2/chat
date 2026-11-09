@@ -54,6 +54,14 @@ RSpec.describe Meta::ConversionsApiClient do
       end
     end
 
+    it "exposes Meta's error subcode, used to tell a dataset that no longer exists (#2738)" do
+      stub_request(:post, endpoint).to_return(status: 400, body: '{"error":{"code":100,"error_subcode":33,"message":"does not exist"}}')
+
+      result = client.post_events([event])
+
+      expect([result.error_code, result.error_subcode]).to eq([100, 33])
+    end
+
     it 'has no error code on success' do
       stub_request(:post, endpoint).to_return(status: 200, body: '{"events_received":1}')
 
