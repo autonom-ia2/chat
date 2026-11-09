@@ -176,6 +176,12 @@ const ALTURA = { 1440: 900, 390: 844 };
 let largura = 1440;
 let clipe = '';
 let foto = 0;
+let inicio = 0;
+// Segundo do vídeo em que a tela ficou pronta: o corte para o .mp4 começa aí (sem a carga em branco do painel).
+const prontos = {};
+const marcarPronto = () => {
+  prontos[clipe] = Math.max(0, (Date.now() - inicio) / 1000 - 0.4);
+};
 // Print da etapa, como os do kit: <clipe>/<NN>-<etapa>-light-<largura>.png.
 async function print(p, etapa) {
   foto += 1;
@@ -198,6 +204,7 @@ async function novoContexto(browser, nome) {
     storageState: estado,
   });
   await ctx.addInitScript(CURSOR);
+  inicio = Date.now();
   await ctx.addInitScript(() => {
     const css = document.createElement('style');
     css.textContent = '.profiler-results{display:none!important}';
@@ -209,22 +216,44 @@ async function novoContexto(browser, nome) {
 async function gravarAgente(browser, ag) {
   const ctx = await novoContexto(browser, ag.clipe);
   const p = await ctx.newPage();
+  const rede = [];
+  p.on('request', r => {
+    if (r.url().includes('/autonomia/')) rede.push(`${r.method()} ${r.url().split('/api/v1/accounts/')[1]}`);
+  });
+  try {
+    await roteiroDoAgente(p, ag);
+  } catch (e) {
+    await p.screenshot({ path: path.join(saida, `falha-${ag.clipe}-${largura}.png`) });
+    fs.writeFileSync(path.join(saida, `falha-${ag.clipe}-${largura}.txt`), rede.join('\n'));
+    throw e;
+  } finally {
+    await p.close();
+    await ctx.close();
+  }
+}
+
+async function roteiroDoAgente(p, ag) {
   await simularRede(p, ag);
   await p.goto(`${BASE}/app/accounts/${CONTA}/agents/new?modelo=custom`, { waitUntil: 'domcontentloaded' });
   await p.mouse.move(mouse.x, mouse.y);
-  await p.locator('[data-fala="agente"]').first().waitFor({ timeout: 60000 });
+  await p.locator('[data-fala="assistente"]').first().waitFor({ timeout: 60000 });
+  marcarPronto();
   await pausa(p, 2200);
   await print(p, 'construtor-abre');
   // (a) a pessoa conta o que ele faz
   await digitar(p, 'form textarea', ag.conta);
   await clicar(p, '[data-enviar]');
-  await p.locator(`[data-fala="agente"]:has-text("${ag.pergunta.slice(0, 20)}")`).first().waitFor({ timeout: 60000 });
+  await p.locator(`[data-fala="assistente"]:has-text("${ag.pergunta.slice(0, 20)}")`).first().waitFor({ timeout: 60000 });
   await pausa(p, 1800);
   await print(p, 'contou-o-que-faz');
   await digitar(p, 'form textarea', ag.jeito);
   await clicar(p, '[data-enviar]');
-  // (b) o Confira: "já vem com estas ferramentas"
-  await p.locator('[data-ja-vem]').waitFor({ timeout: 90000 });
+  // (b) o Confira: "já vem com estas ferramentas". No celular, Conte e Confira são telas separadas.
+  if (largura === 390) {
+    await pausa(p, 2500);
+    await clicar(p, 'button:has-text("Ver como")');
+  }
+  await p.locator('[data-ja-vem]').first().waitFor({ timeout: 90000 });
   await pausa(p, 1500);
   await print(p, 'confira-ja-vem-com');
   for (const id of ag.ferramentas) {
@@ -238,8 +267,6 @@ async function gravarAgente(browser, ag) {
   await pausa(p, 2500);
   await print(p, 'testar-resolve');
   await pausa(p, 2500);
-  await p.close();
-  await ctx.close();
 }
 
 // Clipe à parte: a vitrine e o "incluir pela vitrine" (Valor do carro para a Ana), e o cartão "pode ganhar".
@@ -248,7 +275,10 @@ async function gravarVitrine(browser) {
   const p = await ctx.newPage();
   await p.goto(`${BASE}/app/accounts/${CONTA}/agents/ferramentas-prontas`, { waitUntil: 'domcontentloaded' });
   await p.mouse.move(mouse.x, mouse.y);
-  await p.locator('[data-vitrine-cartao="FIPE"]').waitFor({ timeout: 60000 });
+  await p.locator('[data-vitrine-cartao="FIPE"]').first().waitFor({ timeout: 60000 });
+  await p.locator('text=Ensine coisas novas').first().waitFor({ timeout: 60000 });
+  await pausa(p, 600);
+  marcarPronto();
   await pausa(p, 2500);
   await irAte(p, '[data-vitrine-destaque]');
   await pausa(p, 1500);
@@ -315,5 +345,6 @@ async function gravarVitrine(browser) {
   } finally {
     await browser.close();
   }
+  fs.writeFileSync(path.join(saida, 'prontos.json'), JSON.stringify(prontos, null, 2));
   console.log(JSON.stringify(relato, null, 2));
 })();

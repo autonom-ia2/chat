@@ -22,12 +22,14 @@ const props = defineProps({
 const emit = defineEmits(['fechar', 'verAgente']);
 
 const NS = 'AGENTS.VITRINE';
-const { t, locale } = useI18n();
+const { t, te, locale } = useI18n();
 const vitrine = useVitrine();
 const quandoId = `quando-${useId()}`;
 
 const base = computed(() => `${NS}.FERRAMENTAS.${props.ferramenta.id}`);
-const texto = campo => t(`${base.value}.${campo}`);
+// APOIO e CONSULTAS são opcionais: sem a chave, vazio.
+const texto = campo =>
+  te(`${base.value}.${campo}`) ? t(`${base.value}.${campo}`) : '';
 
 const primeiroLivre = () =>
   props.agentes.find(agente => !vitrine.tem(agente.id, props.ferramenta.id))
@@ -39,7 +41,15 @@ const agenteId = ref(
     ? Number(props.agenteInicial)
     : primeiroLivre()
 );
-const quando = ref(texto('USE_QUANDO'));
+// A frase pronta acompanha o idioma e o pacote da conta, que podem chegar depois de a gaveta abrir; depois que a
+// pessoa mexe, vale o que ela escreveu.
+const quandoEditado = ref(null);
+const quando = computed({
+  get: () => quandoEditado.value ?? texto('USE_QUANDO'),
+  set: valor => {
+    quandoEditado.value = valor;
+  },
+});
 const erroQuando = ref('');
 const incluido = ref(null);
 const sucesso = ref(null);
@@ -185,7 +195,7 @@ const ensinar = async () => {
           rows="3"
           :aria-describedby="`${quandoId}-ajuda`"
           :aria-invalid="erroQuando ? 'true' : undefined"
-          class="w-full px-3 py-2.5 mb-0 text-base border-0 resize-y rounded-xl bg-n-solid-1 text-n-slate-12 ring-1 ring-inset ring-n-slate-7 focus:ring-2 focus:ring-n-blue-11"
+          class="w-full px-3 py-2.5 !mb-0 text-base border-0 resize-y rounded-xl bg-n-solid-1 text-n-slate-12 ring-1 ring-inset ring-n-slate-7 focus:ring-2 focus:ring-n-blue-11"
           @input="erroQuando = ''"
         />
         <p v-if="erroQuando" role="alert" class="m-0 text-sm text-n-ruby-11">

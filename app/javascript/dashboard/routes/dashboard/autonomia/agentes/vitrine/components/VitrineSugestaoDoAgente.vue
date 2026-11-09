@@ -34,14 +34,16 @@ const sugerida = computed(() => {
 
 const incluir = () => {
   const id = sugerida.value;
-  const ferramenta = t(`AGENTS.VITRINE.FERRAMENTAS.${id}.NOME`);
   vitrine.incluir(
     props.agenteId,
     id,
     t(`AGENTS.VITRINE.FERRAMENTAS.${id}.USE_QUANDO`)
   );
   useAlert(
-    t('AGENTS.VITRINE.SUGESTAO.INCLUIDA', { nome: props.nome, ferramenta })
+    t('AGENTS.VITRINE.SUGESTAO.INCLUIDA', {
+      nome: props.nome,
+      consegue: t(`AGENTS.VITRINE.FERRAMENTAS.${id}.CONSEGUE`),
+    })
   );
 };
 </script>

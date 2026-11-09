@@ -126,8 +126,8 @@ export const RESULTADOS = {
     ['Cidade', 'Campinas – SP'],
   ],
   CPF: [
-    ['Situação', 'Regular'],
-    ['Nome', 'Maria S. de Almeida'],
+    ['Número', 'Válido'],
+    ['Emitido em', 'Paraná ou Santa Catarina'],
   ],
   CEP: [
     ['Rua', 'Praça da Sé'],
@@ -136,8 +136,8 @@ export const RESULTADOS = {
   ],
   IBGE: [
     ['Cidade', 'Ribeirão Preto – SP'],
-    ['População', '711.825'],
-    ['Renda média', 'R$ 3.412'],
+    ['População', '711.825 (estimativa)'],
+    ['Estado', 'São Paulo'],
   ],
   LOCAL: [
     ['Cidade', 'Belo Horizonte – MG'],
@@ -168,7 +168,7 @@ export const RESULTADOS = {
   ANS: [
     ['Operadora', 'Vida Plena Saúde'],
     ['Situação', 'Ativa'],
-    ['Clientes', '182.400'],
+    ['Registro na ANS', '312345'],
   ],
   CHUVA: [
     ['Cidade', 'Londrina – PR'],
@@ -190,7 +190,7 @@ export const RESULTADOS = {
   ],
   FERIADOS: [
     ['Data', '20/11/2026'],
-    ['É feriado?', 'Sim, em São Paulo – SP'],
+    ['É feriado?', 'Sim, feriado nacional'],
     ['Próximo dia útil', '23/11/2026'],
   ],
   BANCOS: [
@@ -205,7 +205,7 @@ export const RESULTADOS = {
   TRANSPORTADORAS: [
     ['Empresa', 'TransRota Cargas Ltda'],
     ['Cidade', 'Cascavel – PR'],
-    ['Caminhões', '34'],
+    ['Registro na ANTT', 'Ativo'],
   ],
   SOLAR: [
     ['Instalações em 2026', '1.284'],

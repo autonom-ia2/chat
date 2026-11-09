@@ -17,13 +17,14 @@ const props = defineProps({
 const emit = defineEmits(['abrir']);
 
 const NS = 'AGENTS.VITRINE';
-const { t, locale } = useI18n();
+const { t, te, locale } = useI18n();
 
 const textos = computed(() => {
   const base = `${NS}.FERRAMENTAS.${props.ferramenta.id}`;
   return {
     nome: t(`${base}.NOME`),
-    apoio: t(`${base}.APOIO`),
+    // O apoio é opcional: ferramenta sem fonte para citar não tem a chave.
+    apoio: te(`${base}.APOIO`) ? t(`${base}.APOIO`) : '',
     faz: t(`${base}.FAZ`),
   };
 });
@@ -69,7 +70,7 @@ const selo = computed(() => {
   <button
     type="button"
     :data-vitrine-cartao="ferramenta.id"
-    class="flex flex-col h-full gap-3 p-5 text-start transition shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
+    class="flex flex-col w-full h-full gap-3 p-5 text-start transition shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
     :class="destaque ? 'ring-n-blue-6' : 'ring-n-weak hover:ring-n-blue-6'"
     @click="emit('abrir', ferramenta)"
   >

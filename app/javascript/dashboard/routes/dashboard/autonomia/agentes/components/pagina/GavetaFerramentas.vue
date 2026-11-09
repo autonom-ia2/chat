@@ -97,7 +97,8 @@ const temRodape = computed(() => {
   return (
     !api.carregando.value &&
     !api.erroAoCarregar.value &&
-    api.ferramentas.value.length > 0
+    // #2776: só com prontas a lista também tem rodapé (o Adicionar vai para lá).
+    (api.ferramentas.value.length > 0 || prontas.value.length > 0)
   );
 });
 
@@ -146,8 +147,10 @@ const adicionar = () => {
 };
 const alternarPronta = (item, ligar) =>
   vitrine.mudarLigada(props.agente.id, item.id, ligar);
-const pedirTirar = item => {
+const pedirTirar = async item => {
   prontaAlvo.value = item;
+  // O título leva o nome: abre depois que ele chegou ao diálogo.
+  await nextTick();
   dialogoTirar.value?.abrir();
 };
 const tirarPronta = async () => {

@@ -275,7 +275,7 @@
           "USE_QUANDO": "Use quando o cliente informar um CEP ou quando for preciso completar o endereço do segurado."
         },
         "CPF": {
-          "USE_QUANDO": "Use quando o cliente informar o CPF do segurado e for preciso saber se ele está regular."
+          "USE_QUANDO": "Use quando o cliente informar o CPF do segurado, para conferir se o número está certo."
         }
       }
     }

@@ -59,7 +59,7 @@ const icone = id => ferramentaPorId(id)?.icone || 'i-lucide-wrench';
           <span class="text-sm font-semibold text-n-slate-12">
             {{ texto(id, 'NOME') }}
           </span>
-          <span class="text-sm text-n-slate-11 line-clamp-1">
+          <span class="text-sm text-n-slate-11">
             {{ texto(id, 'CONSEGUE') }}
           </span>
         </span>

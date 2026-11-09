@@ -3115,71 +3115,64 @@
           "FAZ": "Descobre nome, situação e cidade de uma empresa.",
           "CONSEGUE": "conferir os dados de uma empresa",
           "CLIENTE": "Meu CNPJ é 12.345.678/0001-90, está tudo certo?",
-          "AGENTE": "Está sim! Padaria Pão de Ouro Ltda, ativa, em Campinas.",
+          "AGENTE": "Achei: Padaria Pão de Ouro Ltda, ativa na Receita, em Campinas – SP.",
           "USE_QUANDO": "Use quando o cliente informar um CNPJ ou pedir para conferir os dados de uma empresa.",
           "ROTULO": "CNPJ",
           "EXEMPLO": "12.345.678/0001-90",
           "CONSULTAS": "situação da empresa, sócios"
         },
         "CPF": {
-          "NOME": "Situação de um CPF",
-          "APOIO": "na Receita Federal",
-          "FAZ": "Confere se um CPF está regular.",
-          "CONSEGUE": "conferir se um CPF está regular",
-          "CLIENTE": "Pode ver se meu CPF está ok? 123.456.789-09",
-          "AGENTE": "Seu CPF está regular, Maria.",
-          "USE_QUANDO": "Use quando o cliente informar um CPF e for preciso saber se ele está regular.",
+          "NOME": "CPF válido",
+          "APOIO": "confere os dígitos",
+          "FAZ": "Confere se o número do CPF é válido e em que região foi emitido.",
+          "CONSEGUE": "conferir se um número de CPF é válido",
+          "CLIENTE": "Meu CPF é 123.456.789-09.",
+          "AGENTE": "O número está certo: é um CPF válido, emitido no Paraná ou em Santa Catarina.",
+          "USE_QUANDO": "Use quando o cliente informar um CPF e for preciso conferir se o número está certo.",
           "ROTULO": "CPF",
-          "EXEMPLO": "123.456.789-09",
-          "CONSULTAS": ""
+          "EXEMPLO": "123.456.789-09"
         },
         "CEP": {
           "NOME": "Endereço pelo CEP",
-          "APOIO": "",
           "FAZ": "Acha rua, bairro e cidade a partir do CEP.",
           "CONSEGUE": "achar um endereço pelo CEP",
           "CLIENTE": "Meu CEP é 01001-000.",
           "AGENTE": "Achei: Praça da Sé, bairro Sé, São Paulo. Qual o número?",
           "USE_QUANDO": "Use quando o cliente informar um CEP ou quando for preciso completar um endereço.",
           "ROTULO": "CEP",
-          "EXEMPLO": "01001-000",
-          "CONSULTAS": ""
+          "EXEMPLO": "01001-000"
         },
         "IBGE": {
           "NOME": "Cidades e população",
           "APOIO": "dados do IBGE",
-          "FAZ": "Conta quantas pessoas moram numa cidade e quanto ganham.",
-          "CONSEGUE": "falar da população e da renda de uma cidade",
+          "FAZ": "Diz quantas pessoas moram numa cidade e de que estado ela é.",
+          "CONSEGUE": "dizer a população de uma cidade",
           "CLIENTE": "Quantas pessoas moram em Ribeirão Preto?",
-          "AGENTE": "Cerca de 711 mil pessoas, com renda média de R$ 3.412.",
-          "USE_QUANDO": "Use quando a conversa precisar de dados de uma cidade, como população ou renda.",
+          "AGENTE": "Cerca de 711 mil pessoas, pela estimativa do IBGE.",
+          "USE_QUANDO": "Use quando a conversa precisar da população de uma cidade.",
           "ROTULO": "Cidade",
           "EXEMPLO": "Ribeirão Preto",
-          "CONSULTAS": "cidades de um estado, população, renda"
+          "CONSULTAS": "cidades de um estado, população"
         },
         "LOCAL": {
           "NOME": "Cidade pela localização",
-          "APOIO": "",
           "FAZ": "Diz em que cidade e bairro fica uma localização enviada.",
           "CONSEGUE": "dizer onde fica uma localização",
           "CLIENTE": "(enviou a localização)",
           "AGENTE": "Você está na Savassi, em Belo Horizonte. Já anotei!",
           "USE_QUANDO": "Use quando o cliente enviar a localização dele pelo WhatsApp.",
           "ROTULO": "Localização",
-          "EXEMPLO": "-19.9372, -43.9345",
-          "CONSULTAS": ""
+          "EXEMPLO": "-19.9372, -43.9345"
         },
         "DDD": {
           "NOME": "Cidade pelo DDD",
-          "APOIO": "",
           "FAZ": "Diz de que região é um telefone pelo DDD.",
           "CONSEGUE": "dizer de que região é um telefone",
           "CLIENTE": "Meu número é 19 99999-0000.",
           "AGENTE": "Anotado! O 19 é de Campinas e região.",
           "USE_QUANDO": "Use quando for útil saber a região de um telefone.",
           "ROTULO": "DDD",
-          "EXEMPLO": "19",
-          "CONSULTAS": ""
+          "EXEMPLO": "19"
         },
         "FIPE": {
           "NOME": "Valor do carro",
@@ -3196,14 +3189,13 @@
         "CNES": {
           "NOME": "Hospitais e clínicas",
           "APOIO": "cadastro do Ministério da Saúde",
-          "FAZ": "Acha hospitais e clínicas perto de um endereço.",
+          "FAZ": "Acha hospitais e clínicas de uma cidade e o que eles atendem.",
           "CONSEGUE": "achar hospitais e clínicas",
           "CLIENTE": "Tem hospital com maternidade em Curitiba?",
           "AGENTE": "Tem sim: o Hospital Santa Clara atende pronto-socorro e maternidade.",
           "USE_QUANDO": "Use quando o cliente procurar um hospital, uma clínica ou um pronto-socorro.",
           "ROTULO": "Cidade ou bairro",
-          "EXEMPLO": "Curitiba",
-          "CONSULTAS": ""
+          "EXEMPLO": "Curitiba"
         },
         "TUSS": {
           "NOME": "Nome de exames e procedimentos",
@@ -3214,8 +3206,7 @@
           "AGENTE": "É uma ressonância magnética de joelho.",
           "USE_QUANDO": "Use quando o cliente mandar o código de um exame ou procedimento.",
           "ROTULO": "Código ou nome",
-          "EXEMPLO": "41101170",
-          "CONSULTAS": ""
+          "EXEMPLO": "41101170"
         },
         "CID": {
           "NOME": "Nome de doenças",
@@ -3226,20 +3217,18 @@
           "AGENTE": "J45 é asma.",
           "USE_QUANDO": "Use quando o cliente mandar o código de uma doença, como num atestado.",
           "ROTULO": "Código",
-          "EXEMPLO": "J45",
-          "CONSULTAS": ""
+          "EXEMPLO": "J45"
         },
         "ANS": {
           "NOME": "Planos de saúde",
           "APOIO": "operadoras da ANS",
           "FAZ": "Confere se uma operadora de plano de saúde está ativa.",
           "CONSEGUE": "conferir uma operadora de plano de saúde",
-          "CLIENTE": "A Vida Plena Saúde é confiável?",
-          "AGENTE": "Ela está ativa na ANS e tem cerca de 182 mil clientes.",
+          "CLIENTE": "A Vida Plena Saúde está funcionando?",
+          "AGENTE": "Está sim: ela está ativa na ANS, com o registro 312345.",
           "USE_QUANDO": "Use quando o cliente perguntar sobre uma operadora de plano de saúde.",
           "ROTULO": "Operadora",
-          "EXEMPLO": "Vida Plena Saúde",
-          "CONSULTAS": ""
+          "EXEMPLO": "Vida Plena Saúde"
         },
         "CHUVA": {
           "NOME": "Quanto choveu",
@@ -3250,8 +3239,7 @@
           "AGENTE": "Choveu 168 mm em outubro. O dia mais chuvoso foi 21.",
           "USE_QUANDO": "Use quando a conversa precisar saber quanto choveu num lugar.",
           "ROTULO": "Cidade",
-          "EXEMPLO": "Londrina",
-          "CONSULTAS": ""
+          "EXEMPLO": "Londrina"
         },
         "ESTACOES": {
           "NOME": "Tempo agora",
@@ -3262,8 +3250,7 @@
           "AGENTE": "Está 31 °C e sem chuva em Sorriso.",
           "USE_QUANDO": "Use quando o cliente perguntar como está o tempo agora.",
           "ROTULO": "Cidade",
-          "EXEMPLO": "Sorriso",
-          "CONSULTAS": ""
+          "EXEMPLO": "Sorriso"
         },
         "QUEIMADAS": {
           "NOME": "Focos de queimada",
@@ -3274,8 +3261,7 @@
           "AGENTE": "Foram 12 focos nos últimos 7 dias perto de Sinop.",
           "USE_QUANDO": "Use quando a conversa precisar saber de queimadas numa região.",
           "ROTULO": "Cidade",
-          "EXEMPLO": "Sinop",
-          "CONSULTAS": ""
+          "EXEMPLO": "Sinop"
         },
         "BANCO_CENTRAL": {
           "NOME": "Dólar, juros e inflação",
@@ -3291,11 +3277,10 @@
         },
         "FERIADOS": {
           "NOME": "Feriados e dias úteis",
-          "APOIO": "",
-          "FAZ": "Diz se um dia é feriado e conta os dias úteis.",
-          "CONSEGUE": "contar dias úteis e achar feriados",
+          "FAZ": "Diz se um dia é feriado nacional e conta os dias úteis.",
+          "CONSEGUE": "contar dias úteis e achar feriados nacionais",
           "CLIENTE": "Dia 20 de novembro tem expediente?",
-          "AGENTE": "Dia 20 é feriado em São Paulo. Voltamos no dia 23.",
+          "AGENTE": "Dia 20 é feriado nacional, Dia da Consciência Negra. Voltamos no dia 23.",
           "USE_QUANDO": "Use quando for preciso saber se um dia é feriado ou contar um prazo em dias úteis.",
           "ROTULO": "Data e cidade",
           "EXEMPLO": "20/11 em São Paulo",
@@ -3310,8 +3295,7 @@
           "AGENTE": "O 341 é o Banco Exemplo.",
           "USE_QUANDO": "Use quando o cliente informar o código de um banco.",
           "ROTULO": "Código",
-          "EXEMPLO": "341",
-          "CONSULTAS": ""
+          "EXEMPLO": "341"
         },
         "LICITACOES": {
           "NOME": "Compras do governo",
@@ -3322,20 +3306,18 @@
           "AGENTE": "Uberlândia abriu uma compra de uniformes, com prazo até 28/11.",
           "USE_QUANDO": "Use quando a conversa for sobre vender para o governo.",
           "ROTULO": "O que procurar",
-          "EXEMPLO": "uniformes",
-          "CONSULTAS": ""
+          "EXEMPLO": "uniformes"
         },
         "TRANSPORTADORAS": {
           "NOME": "Transportadoras",
           "APOIO": "cadastro da ANTT",
-          "FAZ": "Acha transportadoras de uma cidade e o tamanho da frota.",
+          "FAZ": "Acha transportadoras com registro na ANTT numa cidade.",
           "CONSEGUE": "achar transportadoras",
-          "CLIENTE": "Quais transportadoras grandes tem em Cascavel?",
-          "AGENTE": "A TransRota Cargas tem 34 caminhões em Cascavel.",
+          "CLIENTE": "Quais transportadoras têm registro em Cascavel?",
+          "AGENTE": "A TransRota Cargas, de Cascavel, tem registro ativo na ANTT.",
           "USE_QUANDO": "Use quando a conversa precisar achar transportadoras de uma região.",
           "ROTULO": "Cidade",
-          "EXEMPLO": "Cascavel",
-          "CONSULTAS": ""
+          "EXEMPLO": "Cascavel"
         },
         "SOLAR": {
           "NOME": "Placas solares instaladas",
@@ -3346,8 +3328,7 @@
           "AGENTE": "Foram 1.284 instalações em Petrolina este ano.",
           "USE_QUANDO": "Use quando a conversa precisar saber de placas solares numa região.",
           "ROTULO": "Cidade",
-          "EXEMPLO": "Petrolina",
-          "CONSULTAS": ""
+          "EXEMPLO": "Petrolina"
         },
         "AERONAVES": {
           "NOME": "Aviões e helicópteros",
@@ -3358,8 +3339,7 @@
           "AGENTE": "É um Cessna 172 do Aeroclube Exemplo.",
           "USE_QUANDO": "Use quando o cliente informar a matrícula de um avião ou helicóptero.",
           "ROTULO": "Matrícula",
-          "EXEMPLO": "PR-ABC",
-          "CONSULTAS": ""
+          "EXEMPLO": "PR-ABC"
         },
         "SEGURADORAS": {
           "NOME": "Produtos das seguradoras",
@@ -3394,20 +3374,18 @@
           "AGENTE": "Notebook é 8471.30.12.",
           "USE_QUANDO": "Use quando a conversa precisar do código fiscal de uma mercadoria.",
           "ROTULO": "Mercadoria",
-          "EXEMPLO": "notebook",
-          "CONSULTAS": ""
+          "EXEMPLO": "notebook"
         },
         "DOMINIO": {
           "NOME": "Endereço de site",
           "APOIO": "domínios .br",
           "FAZ": "Diz se um endereço de site está registrado.",
           "CONSEGUE": "conferir um endereço de site",
-          "CLIENTE": "O site padariapaodeouro.com.br é meu?",
+          "CLIENTE": "O endereço padariapaodeouro.com.br está registrado?",
           "AGENTE": "Ele está registrado até março de 2027.",
           "USE_QUANDO": "Use quando o cliente perguntar sobre um endereço de site .br.",
           "ROTULO": "Site",
-          "EXEMPLO": "padariapaodeouro.com.br",
-          "CONSULTAS": ""
+          "EXEMPLO": "padariapaodeouro.com.br"
         }
       },
       "JA_VEM": {
@@ -3423,7 +3401,7 @@
         "TEXTO": "{nome} pode ganhar: {ferramenta}. Incluir?",
         "INCLUIR": "Incluir",
         "AGORA_NAO": "Agora não",
-        "INCLUIDA": "Pronto! {nome} já consulta {ferramenta}."
+        "INCLUIDA": "Pronto! {nome} já consegue {consegue}."
       }
     }
   }

@@ -53,7 +53,7 @@ const rodar = async () => {
           v-model="valor"
           data-experimente-valor
           type="text"
-          class="w-full px-3 mb-0 text-base border-0 rounded-xl min-h-11 bg-n-solid-1 text-n-slate-12 ring-1 ring-inset ring-n-slate-7 focus:ring-2 focus:ring-n-blue-11"
+          class="w-full px-3 !mb-0 text-base border-0 rounded-xl min-h-11 bg-n-solid-1 text-n-slate-12 ring-1 ring-inset ring-n-slate-7 focus:ring-2 focus:ring-n-blue-11"
         />
       </div>
       <AgenteBotao

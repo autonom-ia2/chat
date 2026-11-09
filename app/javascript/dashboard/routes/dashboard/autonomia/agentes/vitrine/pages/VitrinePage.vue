@@ -151,19 +151,24 @@ onMounted(async () => {
 
 <template>
   <div data-vitrine class="w-full h-full overflow-y-auto bg-n-background">
-    <div class="flex flex-col w-full max-w-6xl gap-8 px-4 py-6 mx-auto md:px-8">
+    <div
+      class="flex flex-col w-full max-w-6xl gap-8 px-4 pt-6 pb-24 mx-auto md:px-8 md:pb-6"
+    >
       <AgentesHeroi
         :titulo="t(`${NS}.HEROI.TITULO`)"
         :texto="t(`${NS}.HEROI.TEXTO`)"
       >
+        <label
+          for="vitrine-busca"
+          class="block mb-2 text-sm font-medium text-white/80"
+        >
+          {{ t(`${NS}.HEROI.BUSCA`) }}
+        </label>
         <form
           role="search"
-          class="relative flex items-center gap-2 p-2 bg-white shadow-2xl rounded-2xl dark:bg-n-solid-1"
+          class="relative flex items-center gap-2 p-2 bg-white shadow-2xl rounded-2xl dark:bg-n-solid-1 focus-within:ring-2 focus-within:ring-n-blue-9"
           @submit.prevent
         >
-          <label for="vitrine-busca" class="sr-only">
-            {{ t(`${NS}.HEROI.BUSCA`) }}
-          </label>
           <span
             aria-hidden="true"
             class="i-lucide-search size-5 ms-2 shrink-0 text-n-slate-11"
@@ -174,7 +179,7 @@ onMounted(async () => {
             data-vitrine-busca
             type="search"
             :placeholder="t(`${NS}.HEROI.BUSCA_EXEMPLO`)"
-            class="flex-1 min-w-0 px-2 mb-0 text-base bg-transparent border-0 min-h-12 text-n-slate-12 focus:ring-0"
+            class="flex-1 min-w-0 px-2 !mb-0 text-base !bg-transparent !border-0 !shadow-none !outline-none min-h-12 text-n-slate-12 focus:!ring-0 [&::-webkit-search-cancel-button]:appearance-none"
           />
           <button
             v-if="busca"
@@ -187,7 +192,6 @@ onMounted(async () => {
             <span class="i-lucide-x size-5" aria-hidden="true" />
           </button>
         </form>
-        <p class="m-0 text-sm text-white/75">{{ t(`${NS}.HEROI.BUSCA`) }}</p>
       </AgentesHeroi>
 
       <div
@@ -274,7 +278,7 @@ onMounted(async () => {
             {{ tituloDoDestaque }}
           </h2>
           <ul
-            class="grid gap-4 p-0 m-0 list-none sm:grid-cols-2 lg:grid-cols-4"
+            class="grid gap-4 p-0 m-0 list-none sm:grid-cols-2 lg:grid-cols-3"
           >
             <li v-for="ferramenta in destaque" :key="ferramenta.id">
               <VitrineCartao
