@@ -11,6 +11,7 @@ import { useCanManage } from 'dashboard/composables/useCanManage';
 import { useBranding } from 'shared/composables/useBranding';
 import {
   CONNECTION_STATES,
+  FAILURE_CAUSES,
   asksBrokerAction,
   buildConnection,
   failureMessageKey,
@@ -234,9 +235,16 @@ const verifiedLabel = (iso, evidence) => {
 };
 
 const failure = computed(() => connection.value.failure ?? null);
-// Só a causa `credential_rejected` chega aqui com `actor: 'broker'`. É a única que pode virar
-// pedido de senha — ver o comentário em insuranceContract.js.
+// `actor: 'broker'` pede ação do corretor (fundo âmbar). Duas causas chegam assim: senha recusada e
+// "Sessões lotadas". Só a primeira é pedido de senha, e só ela leva o ícone de chave — o texto de cada
+// causa diz o que fazer.
 const needsBrokerAction = computed(() => asksBrokerAction(failure.value));
+const failureIcon = computed(() => {
+  if (!needsBrokerAction.value) return 'i-lucide-info';
+  return failure.value?.cause === FAILURE_CAUSES.CREDENTIAL_REJECTED
+    ? 'i-lucide-key-round'
+    : 'i-lucide-users';
+});
 // Estados em que a tela DEVE explicar o que houve. `ready` sem falha não explica nada, e estado
 // transitório também não — dizer "não identificado" enquanto ainda está autenticando seria alarme
 // falso. Uma linha gravada por uma versão anterior chega sem `failure`, e cai no texto genérico:
@@ -698,12 +706,7 @@ onUnmounted(pararAcompanhamento);
                 : 'bg-n-alpha-2 text-n-slate-12'
             "
           >
-            <span
-              class="size-4 mt-0.5 shrink-0"
-              :class="
-                needsBrokerAction ? 'i-lucide-key-round' : 'i-lucide-info'
-              "
-            />
+            <span class="size-4 mt-0.5 shrink-0" :class="failureIcon" />
             <p>{{ failureText }}</p>
           </div>
 

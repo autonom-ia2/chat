@@ -47,7 +47,8 @@ class Autonomia::Automacao::PassoDeDecidir
     @motivo = resposta['motivo'].to_s.squish.first(MAX_MOTIVO)
     Resultado.new(tipo: :ok, dados: { 'ramo' => resposta['caminho'], 'ia' => custo })
   rescue Falha => e
-    falhou(e)
+    # O anexo que não pode ir à IA (G20): segue por "nenhum se aplica", com o motivo no histórico.
+    e.tipo == :pulado ? Resultado.new(tipo: :pulado, motivo: e.motivo, dados: { 'ramo' => nenhum }) : falhou(e)
   end
 
   # A nota do motivo, no caminho escolhido. nil quando não houve pergunta à IA ou quando ela escolheu "nenhum" (#2578):

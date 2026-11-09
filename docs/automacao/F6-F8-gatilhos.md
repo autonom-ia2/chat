@@ -71,7 +71,7 @@ Nada muda na Partida, no Executor nem na varredura.
 | `conversa.responsavel_trocado` | conversa | evento | `ASSIGNEE_CHANGED` | — | `responsavel:<conversa>:<timestamp>` |
 | `conversa.time_trocado` | conversa | evento | `TEAM_CHANGED` | — | `time:<conversa>:<timestamp>` |
 | `card.criado` | card | evento | atividade `create` (Creator e CardNaEtapa) | `funil_id` (opcional) | `atividade:<activity id>` |
-| `card.responsavel_mudou` (G9, #2707) | card | evento | o próprio card (`Crm::CardAvisaAutomacao`, `owner_id` mudou): a Lista do CRM grava a atividade `update` só com o dono novo, então a troca não sai da atividade | `funil_id` (opcional) | `card.responsavel_mudou:<card>:<anterior ou 0>:<instante µs>` |
+| `card.responsavel_mudou` / `card.time_mudou` (G9, #2707) | card | evento | o próprio card, no gancho único `Crm::CardAvisaAutomacao` (`owner_id` ou `team_id` mudou; `Autonomia::Automacao::TrocaNoCard`): a Lista do CRM grava a atividade `update` só com o dono novo, e a saída da triagem nem grava atividade | `funil_id` (opcional) | `<tipo>:<card>:<anterior ou 0>:<updated_at µs>` |
 | `conversa.etiqueta_posta` / `.etiqueta_tirada` | conversa | evento | `CONVERSATION_UPDATED` com `label_list` em `changed_attributes` | `etiqueta` | `etiqueta:<conversa>:<etiqueta>:<timestamp>` |
 | `contato.etiqueta_posta` / `.etiqueta_tirada` | contato | evento | `CONTACT_UPDATED` com as etiquetas mudando | `etiqueta` | `etiqueta:<contato>:<etiqueta>:<timestamp>` |
 | `card.entrou_na_etapa` | card | evento | atividade `move` (Mover) e `create` (CardNaEtapa) | `etapa_id` | `atividade:<activity id>` |
@@ -79,12 +79,12 @@ Nada muda na Partida, no Executor nem na varredura.
 | `card.ganho` / `card.perdido` | card | evento | atividade `won` / `lost` (Closer) | `funil_id` (opcional) | `atividade:<activity id>` |
 | `reuniao.marcada` / `.remarcada` / `.cancelada` | card | evento | atividades `meeting_scheduled` / `_rescheduled` / `_canceled` | — | `atividade:<activity id>` |
 | `card.parado` | card | tempo | `entered_stage_at` (índice `idx_crm_cards_entered_stage`) | `etapa_id`, `dias` | `parado:<card>:<entered_stage_at µs>` |
-| `card.data` / `contato.data` | card / contato | tempo | `custom_attributes` (atributo de tipo data) | `campo`, `dias`, `antes`/`depois`, `hora` | `data:<alvo>:<campo>:<data>` |
+| `card.data` / `contato.data` | card / contato | tempo | `custom_attributes` (atributo de tipo data) | `campo`, `dias`, `antes`/`depois`, `hora`, `repete` (opcional: `todo_ano`) | `data:<alvo>:<campo>:<data>` |
 | `recorrente` | card ou contato | tempo | relógio no fuso da conta | `frequencia`, `dia`, `hora`, `alvo`, filtros | `recorrente:<ocorrência local>:<alvo>` |
 
 **Valores do evento**, que só o filtro do gatilho lê:
-- troca de responsável do card (G9, feito): `gatilho.responsavel_anterior_id` e `gatilho.responsavel_anterior_nome`, lidos da marca e válidos em qualquer passo desse gatilho; quem cuida agora é `card.responsavel_id` e `card.responsavel_nome`;
-- troca de time: `evento.time_anterior_id` e `evento.time_novo_id`;
+- troca de dono do card (G9): `gatilho.responsavel_anterior_id`, `gatilho.responsavel_anterior_nome` e `gatilho.responsavel_anterior_ausente`, lidos da marca no filtro e em qualquer passo desse gatilho; quem cuida agora é `card.responsavel_id` e `card.responsavel_nome`;
+- troca de time do card (G9): `gatilho.time_anterior_id` e `gatilho.time_anterior_nome`; o time de agora é `card.time_id`. Na conversa (`conversa.responsavel_trocado`, `conversa.time_trocado`) ainda não: nenhum termo pede;
 - saiu da etapa: `evento.etapa_para_id`;
 - mensagem que falhou: `evento.erro`. É o código do canal, nunca o texto, que pode trazer dado do cliente.
 
@@ -165,6 +165,8 @@ A tela da etapa avisa o que não dispara. Ver a pergunta P5 sobre o upsert.
   - **parado:** `entered_stage_at` entre `agora − dias − janela` e `agora − dias`, na etapa escolhida, com o card aberto. Usa o índice `idx_crm_cards_entered_stage`.
     - O card que chegou ao prazo antes de a automação ser ligada **nunca dispara**: ligar não age no passado (`ligada_em`, ou a hora da versão ativa, o que for mais recente). A tela do gatilho diz isso.
   - **data:** a data-alvo é calculada no Ruby (hoje no fuso da conta ∓ `dias`) e entra no SQL como igualdade: `custom_attributes->>'<campo>' = '<AAAA-MM-DD>'`. Vale para card e contato.
+    - #2678: no card, entram o aberto e o que **deu certo**: ganho, resolvido (o ganho do funil que não conta como venda) e o arquivado depois de fechado assim (`Crm::Card.com_desfecho`). A festa, a revisão e a renovação vêm depois da venda. O perdido, o cancelado e o arquivado sem desfecho ficam de fora.
+    - #2678: com `repete: todo_ano`, compara só mês e dia (`substr(campo, 6, 5)`), com o formato ISO conferido antes. Em ano que não é bissexto, o dia 28/02 também pega quem tem 29/02. A marca leva o dia-alvo com o ano: uma vez por ano.
     - Só se lê data ISO (`AAAA-MM-DD`). O valor em outro formato não casa com a igualdade e é ignorado. A varredura conta quantos alvos da conta têm o campo em formato inválido e põe isso no histórico da automação, sem o valor.
     - "Já passou da `hora`" é conferido antes da consulta. A ocorrência anterior a ligar (ou a salvar a versão ligada) não roda: ligar às 8h um "às 9h" começa pela de hoje às 9h, nunca pela de ontem.
   - **recorrente:** a última ocorrência (`frequencia`, `dia`, `hora`, no fuso da conta) que é ≤ agora e cabe na janela. Age em cada card ou contato que passa nos filtros, uma vez cada (F8.6). Os filtros do recorrente vão no SQL.

@@ -19,11 +19,21 @@ class Autonomia::Automacao::AcoesDoMotor < Autonomia::Guide::Acoes
     end
   end
 
+  # Rotas que recusam o pedido sem a chave `Idempotency-Key` (Crm::IdempotentRequests). Só estas levam a chave: nas
+  # outras rotas do CRM ela é opcional, e mandá-la mudaria o que já roda (o pedido que falha no meio deixa a chave
+  # "em andamento", e a repetição do passo levaria 409).
+  PEDEM_CHAVE = ['POST crm/cards/:card_id/contact'].freeze
+
   attr_reader :codigo
 
   def initialize(execucao:, account_user:)
     @execucao = execucao
     super(account: execucao.account, user: execucao.automacao.ligada_por, account_user: account_user)
+  end
+
+  def executar(acao, dados)
+    @acao = acao.to_s
+    super
   end
 
   # A mesma conferência do executar, antes de montar o pedido: a chave que falta pausa a automação mesmo quando o passo
@@ -61,7 +71,20 @@ class Autonomia::Automacao::AcoesDoMotor < Autonomia::Guide::Acoes
 
   # O que o pedido mudar sai assinado pela automação (Ato, #2568 P7), não só por quem a ligou.
   def requisitar(verbo, caminho, corpo)
-    ::Autonomia::Automacao::Ato.da(@execucao.automacao_id) { super }.tap { |resposta| @codigo = resposta.codigo.to_i }
+    chamada = ::Autonomia::Guide::ChamadaInterna.new(user: @user)
+    resposta = ::Autonomia::Automacao::Ato.da(@execucao.automacao_id) do
+      chamada.chamar(verbo, caminho, corpo: corpo, cabecalhos: cabecalhos(caminho, corpo))
+    end
+    resposta.tap { @codigo = resposta.codigo.to_i }
+  end
+
+  # A chave é a mesma para a mesma execução, rota e corpo (D7, #2660): o passo repetido pelo executor recebe a resposta
+  # guardada da primeira vez, e o contato não sai em dobro.
+  def cabecalhos(caminho, corpo)
+    return {} unless PEDEM_CHAVE.include?(@acao)
+
+    pedido = Digest::SHA256.hexdigest(JSON.generate([caminho, corpo]))
+    { ::Crm::IdempotentRequests::IDEMPOTENCY_HEADER => "automacao:#{@execucao.id}:#{pedido}" }
   end
 
   def trilha

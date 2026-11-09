@@ -9,11 +9,11 @@ module Autonomia::Automacao::CatalogoDeValores
   # O que a receita lê do alvo, para o editor mostrar como chip. Os atributos entram pela base mais a chave. A `base`
   # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499). A resposta durante a espera
   # (G11) vem marcada `so_na_espera`: o editor só a oferece na condição do "esperar até". A reunião (G12) vem com
-  # `so_nos_gatilhos`: o editor só a oferece nos gatilhos de reunião. O responsável anterior (G9), só na troca de
-  # responsável.
+  # `so_nos_gatilhos`: o editor só a oferece nos gatilhos de reunião. O que era antes da troca (G9), só no gatilho da
+  # troca.
   def todos
     valores = ::Autonomia::Automacao::Valores
-    campos = (valores::CAMPOS.keys + valores::AGENDA.keys + valores::RESPOSTA.keys).map do |caminho|
+    campos = caminhos_dos_campos(valores).map do |caminho|
       { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho),
         **do_protegido(caminho), 'so_na_espera' => (true if valores.da_resposta?(caminho)),
         'so_nos_gatilhos' => valores.so_nos_gatilhos(caminho) }.compact
@@ -26,6 +26,12 @@ module Autonomia::Automacao::CatalogoDeValores
 
   # A mensagem do gatilho (#2496), com as opções e os operadores do valor fechado. A que só o Guia monta vem marcada:
   # a tela não a oferece, mas mostra a frase, abre a condição que já a usa e a tira do "Só se" quando o gatilho muda.
+  # Os valores de leitura direta: os campos, os que dependem de quem vê, a agenda, a resposta, o envio e a troca.
+  def caminhos_dos_campos(valores)
+    valores::CAMPOS.keys + valores::DO_QUE_QUEM_VE.keys + valores::AGENDA.keys + valores::RESPOSTA.keys + valores::ENVIO.keys +
+      valores::TROCA.keys
+  end
+
   def valores_do_gatilho
     so_guia = declarado['valores_so_guia'].keys
     (declarado['valores_do_gatilho'] + so_guia).map do |caminho|

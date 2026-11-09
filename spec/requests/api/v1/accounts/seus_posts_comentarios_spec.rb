@@ -87,6 +87,48 @@ RSpec.describe 'Seus posts: comentários de cada post', type: :request do
     expect(response.parsed_body['post']).to include('waiting' => 1, 'waiting_more' => true)
   end
 
+  # #2522: os comentários do anúncio que impulsionou o post por aqui ficam noutra mídia; o post leva ao anúncio.
+  describe 'anúncio criado aqui a partir do post' do
+    before do
+      stub_request(:get, %r{#{ig}/#{post_id}/comments}).to_return(status: 503, headers: json, body: { error: { code: 2 } }.to_json)
+      Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: SecureRandom.uuid, status: 'created', ad_id: '903',
+                                        name: 'Promoção', source_post_id: post_id, source_post_network: 'instagram',
+                                        activated_at: 1.day.ago)
+    end
+
+    it 'com Anúncios da Meta e os comentários do Instagram no anúncio ligados, traz o anúncio do post' do
+      account.enable_features!('meta_ads_hub', 'meta_ads_comentarios_instagram')
+
+      get base, params: { perfil: perfil }, headers: headers, as: :json
+
+      expect(response.parsed_body['ads'].map { |ad| ad.slice('id', 'name') }).to eq([{ 'id' => '903', 'name' => 'Promoção' }])
+    end
+
+    # #2739: impulsionado mais de uma vez; cada anúncio tem os próprios comentários.
+    it 'post impulsionado mais de uma vez: todos os anúncios, o mais novo primeiro' do
+      account.enable_features!('meta_ads_hub', 'meta_ads_comentarios_instagram')
+      Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: SecureRandom.uuid, status: 'created', ad_id: '904',
+                                        name: 'Promoção (2)', source_post_id: post_id, source_post_network: 'instagram',
+                                        activated_at: 1.hour.ago)
+
+      get base, params: { perfil: perfil }, headers: headers, as: :json
+
+      expect(response.parsed_body['ads'].pluck('id')).to eq(%w[904 903])
+    end
+
+    it 'com Anúncios da Meta ou os comentários do Instagram no anúncio desligados, nulo' do
+      [%w[meta_ads_hub], %w[meta_ads_comentarios_instagram]].each do |desligada|
+        account.enable_features!('meta_ads_hub', 'meta_ads_comentarios_instagram')
+        account.disable_features!(*desligada)
+
+        get base, params: { perfil: perfil }, headers: headers, as: :json
+
+        expect(response).to have_http_status(:ok)
+        expect(response.parsed_body['ads']).to eq([])
+      end
+    end
+  end
+
   it 'Meta fora ao conferir o comentário: 422 meta_unavailable, não 404' do
     stub_request(:get, %r{#{ig}/#{comment_id}\?}).to_return(status: 503, headers: json, body: { error: { code: 2 } }.to_json)
 

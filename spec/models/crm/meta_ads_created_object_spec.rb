@@ -26,4 +26,46 @@ RSpec.describe Crm::MetaAdsCreatedObject do
     expect { attempt('creating', account: create(:account)) }.not_to raise_error
     expect { attempt('creating', ad_account_id: '222') }.not_to raise_error
   end
+
+  # #2522: o post de origem do anúncio que impulsionou um post por aqui.
+  describe '.ads_by_post' do
+    def boosted(post_id, ad_id, **attributes)
+      described_class.create!({ account: account, idempotency_key: SecureRandom.uuid, status: 'created', ad_id: ad_id,
+                                source_post_id: post_id, source_post_network: 'instagram', activated_at: 1.day.ago }.merge(attributes))
+    end
+
+    it 'devolve os anúncios ativados de cada post, o mais novo primeiro' do
+      boosted('1790', '901', activated_at: 2.days.ago)
+      boosted('1790', '902', activated_at: 1.hour.ago)
+      boosted('1791', '903')
+
+      expect(described_class.ads_by_post(account.id, 'instagram', %w[1790 1791 1792]))
+        .to eq('1790' => %w[902 901], '1791' => %w[903])
+    end
+
+    it 'pausado sem nunca rodar, não criado, de outra rede ou de outra conta não conta' do
+      boosted('1790', '901', activated_at: nil)
+      boosted('1790', '902', status: 'rolled_back')
+      boosted('1790', '903', source_post_network: 'facebook')
+      boosted('1790', '904', account: create(:account))
+
+      expect(described_class.ads_by_post(account.id, 'instagram', ['1790'])).to eq({})
+    end
+
+    it 'sem posts, nem consulta' do
+      expect(described_class.ads_by_post(account.id, 'instagram', [])).to eq({})
+    end
+
+    # #2739: post impulsionado mais de uma vez. Cada anúncio tem os próprios comentários; o post leva a todos.
+    it '.ads_of_post: todos os anúncios ativados de um post, com o nome, o mais novo primeiro' do
+      boosted('1790', '901', activated_at: 2.days.ago, name: 'Promoção outubro')
+      boosted('1790', '902', activated_at: 1.hour.ago, name: 'Promoção outubro (2)')
+      boosted('1790', '903', activated_at: nil)
+      boosted('1791', '904')
+
+      expect(described_class.ads_of_post(account.id, 'instagram', '1790').map { |ad| ad.slice(:id, :name) })
+        .to eq([{ id: '902', name: 'Promoção outubro (2)' }, { id: '901', name: 'Promoção outubro' }])
+      expect(described_class.ads_of_post(account.id, 'instagram', '1790').first[:created_at]).to be_a(String)
+    end
+  end
 end

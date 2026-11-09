@@ -441,6 +441,49 @@ describe('InsuranceConnectionsTab (API)', () => {
     );
   });
 
+  // "SESSÕES LOTADAS" (auditoria da conexão, achado 4): a ação é da corretora, mas não é senha. A tela
+  // pede a vaga com texto próprio e o ícone de chave fica só para senha recusada.
+  it('pede uma vaga, e não a senha, quando o portal está com as sessões lotadas', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: {
+          ...blank,
+          status: 'offline',
+          failure: { cause: 'sessions_full', actor: 'broker' },
+          username_hint: 'x***@y.com',
+        },
+      },
+    });
+
+    const wrapper = await mountTab();
+
+    expect(wrapper.text()).toContain(
+      'INSURANCE.CONNECTION.FAILURES.SESSIONS_FULL'
+    );
+    expect(wrapper.text()).not.toContain(
+      'INSURANCE.CONNECTION.FAILURES.CREDENTIAL_REJECTED'
+    );
+    expect(wrapper.find('.i-lucide-key-round').exists()).toBe(false);
+    expect(wrapper.find('.i-lucide-users').exists()).toBe(true);
+  });
+
+  it('mantém o ícone de chave para senha recusada', async () => {
+    api.getConnection.mockResolvedValue({
+      data: {
+        payload: {
+          ...blank,
+          status: 'auth_required',
+          failure: { cause: 'credential_rejected', actor: 'broker' },
+          username_hint: 'x***@y.com',
+        },
+      },
+    });
+
+    const wrapper = await mountTab();
+
+    expect(wrapper.find('.i-lucide-key-round').exists()).toBe(true);
+  });
+
   // CRITÉRIO 1.2 — o que ninguém olhou aparece como não verificado, e não como vazio nem como ok.
   it('mostra as cinco camadas, com as não verificadas ditas por extenso', async () => {
     api.getConnection.mockResolvedValue({

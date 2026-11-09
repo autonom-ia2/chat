@@ -192,7 +192,8 @@ class Messages::Instagram::BaseMessageBuilder < Messages::Messenger::MessageBuil
   def find_message_by_source_id(source_id)
     return unless source_id
 
-    @message = Message.find_by(source_id: source_id)
+    # Na caixa (#2781): o mesmo Instagram em duas contas recebe o mesmo mid nas duas, e a primeira não pode calar a outra.
+    @message = @inbox.messages.find_by(source_id: source_id)
   end
 
   def all_unsupported_files?

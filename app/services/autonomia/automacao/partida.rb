@@ -43,7 +43,7 @@ class Autonomia::Automacao::Partida
 
   def pode_comecar?
     @definicao.ativa && @definicao.versao_ativa && ::Autonomia::Automacao::Gatilhos.disponivel?(@chave_gatilho, @account) &&
-      @alvo.account_id == @account.id && !contexto.no_spam?
+      contexto.conta_id == @account.id && !contexto.no_spam?
   end
 
   def gatilho = @definicao.versao_ativa.receita['gatilho'].to_h
@@ -73,7 +73,7 @@ class Autonomia::Automacao::Partida
   def ja_aberta
     execucao = execucao_aberta
     execucao.update_columns(repetiu_em: Time.current) # rubocop:disable Rails/SkipsModelValidations
-    ::Autonomia::Automacao::Escuta.acordar_execucao(execucao)
+    ::Autonomia::Automacao::Despertador.acordar(execucao)
     return if ::Autonomia::Automacao::Registro.exists?(execucao: execucao, resultado: 'pulado', motivo: 'ja_aberta')
 
     ::Autonomia::Automacao::Registro.create!(account: @account, automacao: @definicao, execucao: execucao, passo: 'inicio',
@@ -82,7 +82,8 @@ class Autonomia::Automacao::Partida
   end
 
   def no_filtro?
-    valores = ::Autonomia::Automacao::Valores.new(alvo: @alvo, mensagem: @mensagem, quem: @definicao.ligada_por)
+    alvo = ::Autonomia::Automacao::Contexto.de(@alvo, evento: @evento)
+    valores = ::Autonomia::Automacao::Valores.new(alvo: alvo, mensagem: @mensagem, quem: @definicao.ligada_por)
     Array(gatilho['filtros']).all? do |condicao|
       ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira?
     end

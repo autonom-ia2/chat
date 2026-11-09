@@ -1,14 +1,16 @@
 require 'rails_helper'
 
 # Fechamento do épico #2414, G9 (#2707): o gatilho "quando muda quem cuida do card", com quem cuidava antes. É o começo
-# e os passos 1 a 3 do exemplo 17 dos termos de aceite, "Vendedora de férias, cliente bem cuidado":
+# ("o responsável do card muda e a responsável anterior está marcada como ausente") e os passos 1 a 3 do exemplo 17 dos
+# termos de aceite, "Vendedora de férias, cliente bem cuidado", à risca, numa automação só:
 #
 # > "Quando alguém sai de férias eu passo os clientes para outra pessoa, mas o cliente fica perdido e a colega não sabe
 # > o que foi combinado." — Paula, gerente comercial
 #
-# Montado como a Paula montaria, pela API da tela, e disparado como ela dispara: troca todos os cards da Júlia para a
-# Renata de uma vez, pela Lista do CRM (o lote). A IA é o dublê; o WhatsApp oficial para no receptor de teste.
-# O resto do exemplo 17 espera a G23 (Júlia "ausente até") e a G7 (toda manhã): fica no pendentes_spec.
+# Montado como a Paula montaria, pela API da tela, e disparado como ela dispara: com a Júlia marcada "ausente até" (G23),
+# troca todos os cards dela para a Renata de uma vez, pela Lista do CRM (o lote). A IA é o dublê; o WhatsApp oficial
+# para no receptor de teste. O passo 4 ("a cada mensagem do cliente") espera a G63 (#2830); o 5 e o 6 (a original
+# volta), a G62 (#2829): ficam no pendentes_spec.
 RSpec.describe 'Fechamento #2414 · G9: troca de responsável do card (exemplo 17, passos 1 a 3)', :fechamento_automacao,
                type: :request do
   include ActiveJob::TestHelper
@@ -28,22 +30,29 @@ RSpec.describe 'Fechamento #2414 · G9: troca de responsável do card (exemplo 1
   let(:card_da_maria) { card_de(maria, conversa_da_maria, 'Proposta da Maria') }
 
   let(:receita) do
-    { gatilho: { tipo: 'card.responsavel_mudou', funil_id: funil_e_etapa.first.id }, passos: [
-      { id: 'resumo', tipo: 'resumir', le: %w[conversa], linhas: 4, destino: { avisar: { responsavel_do_card: true } } },
-      { id: 'aviso_ao_cliente', tipo: 'mensagem',
-        texto: ['Oi, ', valor('contato.nome'), '! A ', valor('gatilho.responsavel_anterior_nome'), ' está de férias e a ',
-                valor('card.responsavel_nome'), ' vai cuidar de você até ela voltar. Ela já está a par de tudo'] },
-      { id: 'original', tipo: 'acao', acao: 'PATCH crm/cards/:id', descricao: 'Guardar quem é a responsável original',
-        caminho: { id: valor('card.id') },
-        corpo: { card: { custom_attributes: { responsavel_original: valor('gatilho.responsavel_anterior_id') } } } },
-      { id: 'etiqueta', tipo: 'acao', acao: 'PATCH conversations/:conversation_id/labels/alterar',
-        descricao: 'Pôr a etiqueta cobertura de férias', caminho: { conversation_id: valor('conversa.id') },
-        corpo: { por: ['cobertura-de-ferias'] } }
-    ] }
+    { gatilho: { tipo: 'card.responsavel_mudou', funil_id: funil_e_etapa.first.id,
+                 filtros: [{ campo: valor('gatilho.responsavel_anterior_ausente'), op: 'igual', valor: true }] },
+      passos: passos_do_termo }
   end
   let(:automacao) { montar_automacao(paula, account, nome: 'Cobertura de férias', receita: receita) }
 
   def valor(caminho) = { '$valor' => caminho }
+
+  # Os passos 1 a 3 do termo, na ordem e com o texto dele.
+  def passos_do_termo
+    [
+      { id: 'resumo', tipo: 'resumir', le: %w[conversa], linhas: 4, destino: { avisar: { responsavel_do_card: true } } },
+      { id: 'aviso_ao_cliente', tipo: 'mensagem',
+        texto: ['Oi, ', valor('contato.nome'), '! A ', valor('gatilho.responsavel_anterior_nome'), ' está de férias e a ',
+                valor('card.responsavel_nome'), ' vai cuidar de você até ela voltar. Ela já está a par de tudo'] },
+      { id: 'original', tipo: 'acao', acao: 'PATCH crm/cards/:id', descricao: 'Gravar no card quem é a responsável original',
+        caminho: { id: valor('card.id') },
+        corpo: { card: { custom_attributes: { responsavel_original: valor('gatilho.responsavel_anterior_nome') } } } },
+      { id: 'etiqueta', tipo: 'acao', acao: 'PATCH conversations/:conversation_id/labels/alterar',
+        descricao: 'Pôr a etiqueta cobertura de férias', caminho: { conversation_id: valor('conversa.id') },
+        corpo: { por: ['cobertura-de-ferias'] } }
+    ]
+  end
 
   def conversa_de(contato, numero)
     contact_inbox = create(:contact_inbox, inbox: inbox, contact: contato, source_id: numero)
@@ -71,7 +80,7 @@ RSpec.describe 'Fechamento #2414 · G9: troca de responsável do card (exemplo 1
     rodar_jobs_do_card
   end
 
-  # O gatilho do card vem pelo EventoDoCardJob (Escuta.responsavel_mudou); depois, o motor e o envio, um job por vez.
+  # O gatilho do card vem pelo EventoDoCardJob (TrocaNoCard); depois, o motor e o envio, um job por vez.
   def rodar_jobs_do_card
     FechamentoAutomacao::LIMITE_DE_JOBS.times do
       job = enqueued_jobs.find { |item| item[:job] == Autonomia::Automacao::EventoDoCardJob }
@@ -94,7 +103,8 @@ RSpec.describe 'Fechamento #2414 · G9: troca de responsável do card (exemplo 1
     [julia, renata].each { |agente| create(:inbox_member, user: agente, inbox: inbox) }
     create(:label, account: account, title: 'cobertura-de-ferias', description: 'Cliente em cobertura de férias')
     create(:custom_attribute_definition, account: account, attribute_model: :card_attribute, attribute_key: 'responsavel_original',
-                                         attribute_display_name: 'Responsável original', attribute_display_type: :number)
+                                         attribute_display_name: 'Responsável original', attribute_display_type: :text)
+    AccountUser.find_by!(account: account, user: julia).update!(ausente_ate: 15.days.from_now)
     receptor_whatsapp_cloud
     cliente_escreveu(conversa_da_maria, 'Pode me mandar a proposta revisada até sexta?')
     card_da_maria
@@ -139,7 +149,7 @@ RSpec.describe 'Fechamento #2414 · G9: troca de responsável do card (exemplo 1
 
     it 'o card guarda quem é a responsável original e a conversa ganha a etiqueta cobertura de férias', :aggregate_failures do
       expect(card_da_maria.reload.owner).to eq(renata)
-      expect(card_da_maria.custom_attributes['responsavel_original']).to eq(julia.id)
+      expect(card_da_maria.custom_attributes['responsavel_original']).to eq('Júlia')
       expect(conversa_da_maria.reload.label_list).to include('cobertura-de-ferias')
     end
 
@@ -176,14 +186,21 @@ RSpec.describe 'Fechamento #2414 · G9: troca de responsável do card (exemplo 1
     expect(execucoes).to be_empty
   end
 
-  # A volta da Júlia (passo 5 do termo) é outra troca: um fato novo, com a Renata como anterior.
-  it 'a troca de volta é outro fato, com a Renata como quem cuidava antes', :aggregate_failures do
+  # "A responsável anterior está marcada como ausente": trocar o card de quem está trabalhando não começa nada.
+  it 'card de uma dona presente não começa nada' do
+    AccountUser.find_by!(account: account, user: julia).update!(ausente_ate: nil)
+    paula_passa_para(renata, [card_da_maria])
+
+    expect(execucoes).to be_empty
+  end
+
+  # A volta da Júlia é outra troca, com a Renata (presente) como anterior: para no filtro, sem laço.
+  it 'devolver o card à Júlia não começa outra cobertura', :aggregate_failures do
     paula_passa_para(renata, [card_da_maria])
     paula_passa_para(julia, [card_da_maria])
 
-    expect(execucoes.count).to eq(2)
-    anteriores = execucoes.order(:id).map { |execucao| Autonomia::Automacao::Gatilhos.anterior_da_marca(execucao.evento) }
-    expect(anteriores).to eq([julia.id, renata.id])
+    expect(execucoes.count).to eq(1)
+    expect(Autonomia::Automacao::TrocaNoCard.anterior_da_marca(execucoes.sole.evento, 'card.responsavel_mudou')).to eq(julia.id)
   end
 
   it 'card que fica sem ninguém também é troca; o nome de quem cuida vem vazio e a mensagem não sai', :aggregate_failures do

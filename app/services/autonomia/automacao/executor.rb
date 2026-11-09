@@ -27,7 +27,6 @@ class Autonomia::Automacao::Executor
 
   Cadeia = ::Autonomia::Automacao::Cadeia
   Execucao = ::Autonomia::Automacao::Execucao
-  Duracao = ::Autonomia::Automacao::Duracao
   # Passos que falam com gente (F4): só com a flag da F4.
   NATIVOS = { 'mensagem' => ::Autonomia::Automacao::PassoDeMensagem, 'avisar' => ::Autonomia::Automacao::PassoDeAviso,
               'email' => ::Autonomia::Automacao::PassoDeEmail, 'campanha' => ::Autonomia::Automacao::PassoDeCampanha }.freeze
@@ -35,6 +34,8 @@ class Autonomia::Automacao::Executor
   include ::Autonomia::Automacao::IaNoExecutor
   # O "criar card" (G4).
   include ::Autonomia::Automacao::CardNoExecutor
+  # O "esperar" e o "esperar até", com a reconferência depois de gravar a espera (lote 4).
+  include ::Autonomia::Automacao::EsperaNoExecutor
 
   # Chamado pelo AvancarJob com a marca de quem reservou a execução (Partida ou VarreduraJob). A execução lida antes
   # da troca guarda o `due_at` da espera, que o "esperar até" usa como prazo.
@@ -124,7 +125,7 @@ class Autonomia::Automacao::Executor
     ['parada', pausar(motivo)] if motivo
   end
 
-  def alvo_da_conta? = alvo.present? && alvo.account_id == @account.id
+  def alvo_da_conta? = alvo.present? && contexto.conta_id == @account.id
 
   def desta_rodada? = Execucao.exists?(id: @execucao.id, estado: 'andando', travada_em: @marca)
 
@@ -146,29 +147,6 @@ class Autonomia::Automacao::Executor
     @acesso = ::Autonomia::Automacao::Acesso.new(@definicao, chave_gatilho: @execucao.chave_gatilho)
     @alvo = @contexto = nil
   end
-
-  def esperar(passo)
-    return @roteiro.seguinte(passo['id']) if @retomando
-
-    aguardar(passo, Time.current + Duracao.de(passo['duracao']))
-  end
-
-  def esperar_ate(passo)
-    espera = janela_da_espera(passo)
-    return cumprida(passo) if condicao?(passo['condicao'], valores(espera: espera))
-    return aguardar(passo, espera.begin + Duracao.de(passo['prazo'])) unless @retomando
-    return aguardar(passo, @execucao.due_at, registrar: false) if @execucao.due_at&.future?
-
-    registrar(passo['id'], 'pulado', 'prazo_vencido')
-    @roteiro.entrar(passo, 'se_vencer')
-  end
-
-  # A janela do "esperar até", para a resposta que chegou durante ele (G11): na primeira conferência, de agora em diante;
-  # ao retomar, do começo (o prazo gravado menos a duração dele, na versão em que a execução entrou) até o prazo. A
-  # execução foi lida antes da troca, com o `due_at` da espera. Resposta depois do prazo não conta: o prazo venceu.
-  def janela_da_espera(passo) = Duracao.janela(passo['prazo'], (@execucao.due_at if @retomando))
-
-  def cumprida(passo) = registrar(passo['id'], 'ok').then { @roteiro.seguinte(passo['id']) }
 
   def se(passo)
     ramo = condicao?(passo['condicao']) ? 'entao' : 'senao'

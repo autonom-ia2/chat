@@ -65,6 +65,7 @@
       },
       "FAILURES": {
         "CREDENTIAL_REJECTED": "O AGGER recusou este acesso. Confira o usuário e a senha da corretora no portal e conecte de novo — a senha pode ter sido trocada ou o acesso revogado.",
+        "SESSIONS_FULL": "Todas as vagas de usuário da corretora no AGGER estão ocupadas. Entre no AGGER e desconecte um usuário que não esteja trabalhando. A conexão volta sozinha em até 1 hora e meia, ou na hora se você clicar em Reconectar.",
         "SESSION_LOST": "A sessão no AGGER caiu e estamos abrindo outra. Sua senha está certa e não precisa ser trocada.",
         "PORTAL_UNAVAILABLE": "O AGGER não respondeu. É indisponibilidade do portal, não do seu acesso; voltamos a tentar sozinhos.",
         "PORTAL_TIMEOUT": "O AGGER demorou demais para responder. Não é problema do seu acesso; voltamos a tentar sozinhos.",

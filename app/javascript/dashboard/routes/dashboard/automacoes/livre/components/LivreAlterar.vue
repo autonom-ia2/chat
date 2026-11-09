@@ -86,6 +86,14 @@ const escolhasDoCaminho = computed(() =>
     .filter(([, origem]) => origem.escolher)
     .map(([param, origem]) => ({ param, ...origem }))
 );
+// #2660 lote B: ação sem nada a preencher ("marcar como cliente") diz isso,
+// em vez de abrir o painel vazio.
+const acaoSemCampos = computed(
+  () =>
+    entrada.value?.tipo === 'acao' &&
+    !camposDaAcao.value.length &&
+    !escolhasDoCaminho.value.length
+);
 
 const titulo = computed(() =>
   alvo.value
@@ -107,10 +115,20 @@ const frase = computed(() => {
   return fraseDaCondicao(rascunho.value, props.catalogo, t);
 });
 
-// G9 (#2707): "quem cuida do card" só existe com gatilho de card.
+// G32: "quem atende a reunião" só nos gatilhos de reunião — os mesmos em que o
+// catálogo oferece os valores da reunião. Pela base: o que era antes da troca
+// (G9) também é `so_nos_gatilhos`.
+const deReuniao = computed(() =>
+  Boolean(
+    props.catalogo.valores
+      ?.find(item => item.base === 'reuniao' && item.so_nos_gatilhos)
+      ?.so_nos_gatilhos.includes(props.catalogo.gatilho)
+  )
+);
+// G9 (#2707): "quem cuida do card" só nos gatilhos de card.
 const doCard = computed(
   () =>
-    props.catalogo.gatilhos.find(item => item.tipo === alvo.value?.gatilho)
+    props.catalogo.gatilhos?.find(item => item.tipo === props.catalogo.gatilho)
       ?.alvo === 'Crm::Card'
 );
 const gatilhosDoSeletor = computed(
@@ -226,6 +244,7 @@ const nativoPronto = campo => {
   if (campo.peca === 'destinatarios')
     return Boolean(
       valor?.responsavel ||
+        valor?.da_reuniao ||
         valor?.responsavel_do_card ||
         valor?.times?.length ||
         valor?.pessoas?.length
@@ -268,7 +287,11 @@ const gatilhoPronto = gatilho =>
       ?.parametros || []
   )
     .filter(parametro => parametro.obrigatorio)
-    .every(parametro => !vazio(gatilho[parametro.nome]));
+    .every(parametro =>
+      parametro.peca === 'antes'
+        ? Number.isInteger(gatilho[parametro.nome]?.valor)
+        : !vazio(gatilho[parametro.nome])
+    );
 
 const podeSalvar = computed(() => {
   if (avancada.value || !rascunho.value) return false;
@@ -307,11 +330,20 @@ defineExpose({ abrir, fechar });
         {{ $t('AUTOMACAO_LIVRE.CONFIRA.AVANCADA_DICA') }}
       </p>
 
+      <p
+        v-if="acaoSemCampos"
+        data-sem-campos-dica
+        class="mb-0 text-[0.9375rem] text-n-slate-11"
+      >
+        {{ $t('AUTOMACAO_LIVRE.CONFIRA.SEM_CAMPOS_DICA') }}
+      </p>
+
       <LivreGatilho
         v-if="alvo.tipo === 'gatilho'"
         :model-value="rascunho"
         :gatilhos="gatilhosDoSeletor"
         :escolhas="escolhasDoGatilho"
+        :opcoes="opcoes"
         @update:model-value="novo => (rascunho = novo)"
       />
 
@@ -411,6 +443,7 @@ defineExpose({ abrir, fechar });
           :do-card="doCard"
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
+          :de-reuniao="deReuniao"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreCampanha

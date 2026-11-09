@@ -3,6 +3,7 @@ json.id resource.id
 json.account_id Current.account&.id
 json.availability_status resource.availability_status
 json.auto_offline resource.auto_offline
+json.ausente_ate resource.current_account_user&.ausente_ate
 json.confirmed resource.confirmed?
 json.email resource.email
 json.provider resource.provider

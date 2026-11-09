@@ -32,6 +32,12 @@
       }
     },
     {
+      "tipo": "mensagem.falhou",
+      "alvo": "Conversation",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.MENSAGEM_FALHOU",
+      "grupo": "conversa"
+    },
+    {
       "tipo": "card.criado",
       "alvo": "Crm::Card",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_CRIADO",
@@ -112,6 +118,22 @@
       ]
     },
     {
+      "tipo": "card.atualizado",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_ATUALIZADO",
+      "grupo": "card",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "mudanca",
+          "peca": "mudanca",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.MUDANCA"
+        }
+      ]
+    },
+    {
       "tipo": "card.reuniao_marcada",
       "alvo": "Crm::Card",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_REUNIAO_MARCADA",
@@ -125,6 +147,12 @@
           "peca": "funil",
           "obrigatorio": false,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
+        },
+        {
+          "nome": "pagina_id",
+          "peca": "pagina",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.PAGINA_ID"
         }
       ]
     },
@@ -142,6 +170,12 @@
           "peca": "funil",
           "obrigatorio": false,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
+        },
+        {
+          "nome": "pagina_id",
+          "peca": "pagina",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.PAGINA_ID"
         }
       ]
     },
@@ -159,6 +193,12 @@
           "peca": "funil",
           "obrigatorio": false,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
+        },
+        {
+          "nome": "pagina_id",
+          "peca": "pagina",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.PAGINA_ID"
         }
       ]
     },
@@ -166,6 +206,22 @@
       "tipo": "card.responsavel_mudou",
       "alvo": "Crm::Card",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_RESPONSAVEL_MUDOU",
+      "grupo": "card",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "funil_id",
+          "peca": "funil",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
+        }
+      ]
+    },
+    {
+      "tipo": "card.time_mudou",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_TIME_MUDOU",
       "grupo": "card",
       "requer": "automacao_gatilhos",
       "funil": true,
@@ -231,6 +287,12 @@
           "peca": "hora",
           "obrigatorio": true,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        },
+        {
+          "nome": "repete",
+          "peca": "repete",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.REPETE"
         }
       ]
     },
@@ -264,6 +326,147 @@
           "peca": "hora",
           "obrigatorio": true,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        },
+        {
+          "nome": "repete",
+          "peca": "repete",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.REPETE"
+        }
+      ]
+    },
+    {
+      "tipo": "card.recorrente",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_RECORRENTE",
+      "grupo": "tempo",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "frequencia",
+          "peca": "frequencia",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FREQUENCIA"
+        },
+        {
+          "nome": "dia_da_semana",
+          "peca": "dia_da_semana",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DA_SEMANA"
+        },
+        {
+          "nome": "dia_do_mes",
+          "peca": "dia_do_mes",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
+        },
+        {
+          "nome": "hora",
+          "peca": "hora",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        },
+        {
+          "nome": "selecao",
+          "peca": "selecao",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.SELECAO"
+        }
+      ]
+    },
+    {
+      "tipo": "contato.recorrente",
+      "alvo": "Contact",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONTATO_RECORRENTE",
+      "grupo": "tempo",
+      "requer": "automacao_gatilhos",
+      "parametros": [
+        {
+          "nome": "frequencia",
+          "peca": "frequencia",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FREQUENCIA"
+        },
+        {
+          "nome": "dia_da_semana",
+          "peca": "dia_da_semana",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DA_SEMANA"
+        },
+        {
+          "nome": "dia_do_mes",
+          "peca": "dia_do_mes",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
+        },
+        {
+          "nome": "hora",
+          "peca": "hora",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        },
+        {
+          "nome": "selecao",
+          "peca": "selecao",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.SELECAO"
+        }
+      ]
+    },
+    {
+      "tipo": "conta.recorrente",
+      "alvo": "Account",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONTA_RECORRENTE",
+      "grupo": "tempo",
+      "requer": "automacao_gatilhos",
+      "parametros": [
+        {
+          "nome": "frequencia",
+          "peca": "frequencia",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FREQUENCIA"
+        },
+        {
+          "nome": "dia_da_semana",
+          "peca": "dia_da_semana",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DA_SEMANA"
+        },
+        {
+          "nome": "dia_do_mes",
+          "peca": "dia_do_mes",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIA_DO_MES"
+        },
+        {
+          "nome": "hora",
+          "peca": "hora",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        }
+      ]
+    },
+    {
+      "tipo": "card.antes_da_reuniao",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_ANTES_DA_REUNIAO",
+      "grupo": "reuniao",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "reunioes": true,
+      "parametros": [
+        {
+          "nome": "antes",
+          "peca": "antes",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.ANTES"
+        },
+        {
+          "nome": "pagina_id",
+          "peca": "pagina",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.PAGINA_ID"
         }
       ]
     }
@@ -472,13 +675,39 @@
       "frase": "AUTOMACAO_LIVRE.VALORES.CARD_MOTIVO_DA_PERDA"
     },
     {
+      "caminho": "card.tem_reuniao_marcada",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_TEM_REUNIAO_MARCADA",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
       "caminho": "reuniao.inicio",
       "base": "reuniao",
       "frase": "AUTOMACAO_LIVRE.VALORES.REUNIAO_INICIO",
       "so_nos_gatilhos": [
         "card.reuniao_marcada",
         "card.reuniao_remarcada",
-        "card.reuniao_cancelada"
+        "card.reuniao_cancelada",
+        "card.antes_da_reuniao"
       ]
     },
     {
@@ -488,23 +717,83 @@
       "so_nos_gatilhos": [
         "card.reuniao_marcada",
         "card.reuniao_remarcada",
-        "card.reuniao_cancelada"
+        "card.reuniao_cancelada",
+        "card.antes_da_reuniao"
       ]
     },
     {
-      "caminho": "gatilho.responsavel_anterior_id",
-      "base": "gatilho",
-      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_RESPONSAVEL_ANTERIOR_ID",
-      "so_nos_gatilhos": [
-        "card.responsavel_mudou"
+      "caminho": "conversa.responsavel_ausente",
+      "base": "conversa",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_RESPONSAVEL_AUSENTE",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
       ]
     },
     {
-      "caminho": "gatilho.responsavel_anterior_nome",
-      "base": "gatilho",
-      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_RESPONSAVEL_ANTERIOR_NOME",
-      "so_nos_gatilhos": [
-        "card.responsavel_mudou"
+      "caminho": "card.responsavel_ausente",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_RESPONSAVEL_AUSENTE",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
+      "caminho": "contato.tem_reuniao_marcada",
+      "base": "contato",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_TEM_REUNIAO_MARCADA",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
       ]
     },
     {
@@ -622,6 +911,104 @@
       "so_na_espera": true
     },
     {
+      "caminho": "envio.texto",
+      "base": "envio",
+      "frase": "AUTOMACAO_LIVRE.VALORES.ENVIO_TEXTO"
+    },
+    {
+      "caminho": "envio.situacao",
+      "base": "envio",
+      "frase": "AUTOMACAO_LIVRE.VALORES.ENVIO_SITUACAO",
+      "opcoes": [
+        {
+          "valor": "saiu",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.SAIU"
+        },
+        {
+          "valor": "entregue",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.ENTREGUE"
+        },
+        {
+          "valor": "lida",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.LIDA"
+        },
+        {
+          "valor": "falhou",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALHOU"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
+      "caminho": "gatilho.responsavel_anterior_id",
+      "base": "gatilho",
+      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_RESPONSAVEL_ANTERIOR_ID",
+      "so_nos_gatilhos": [
+        "card.responsavel_mudou"
+      ]
+    },
+    {
+      "caminho": "gatilho.responsavel_anterior_nome",
+      "base": "gatilho",
+      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_RESPONSAVEL_ANTERIOR_NOME",
+      "so_nos_gatilhos": [
+        "card.responsavel_mudou"
+      ]
+    },
+    {
+      "caminho": "gatilho.responsavel_anterior_ausente",
+      "base": "gatilho",
+      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_RESPONSAVEL_ANTERIOR_AUSENTE",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ],
+      "so_nos_gatilhos": [
+        "card.responsavel_mudou"
+      ]
+    },
+    {
+      "caminho": "gatilho.time_anterior_id",
+      "base": "gatilho",
+      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_TIME_ANTERIOR_ID",
+      "so_nos_gatilhos": [
+        "card.time_mudou"
+      ]
+    },
+    {
+      "caminho": "gatilho.time_anterior_nome",
+      "base": "gatilho",
+      "frase": "AUTOMACAO_LIVRE.VALORES.GATILHO_TIME_ANTERIOR_NOME",
+      "so_nos_gatilhos": [
+        "card.time_mudou"
+      ]
+    },
+    {
       "caminho": "conversa.atributos",
       "base": "conversa",
       "atributos": "conversation_attribute",
@@ -724,6 +1111,7 @@
     "Conversation": [
       "conversa",
       "contato",
+      "envio",
       "gatilho"
     ],
     "Crm::Card": [
@@ -731,10 +1119,12 @@
       "conversa",
       "contato",
       "reuniao",
+      "envio",
       "gatilho"
     ],
     "Contact": [
       "contato",
+      "envio",
       "gatilho"
     ]
   },
@@ -1060,6 +1450,12 @@
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.LE"
         },
         {
+          "nome": "instrucao",
+          "peca": "instrucao",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.INSTRUCAO_DO_RESUMO"
+        },
+        {
           "nome": "linhas",
           "peca": "numero",
           "obrigatorio": false,
@@ -1333,6 +1729,27 @@
     },
     {
       "tipo": "acao",
+      "nome": "contato_nota",
+      "acao": "POST contacts/:contact_id/notes",
+      "grupo": "CONTATO",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONTATO_NOTA",
+      "caminho": {
+        "contact_id": {
+          "$valor": "contato.id"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "content",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CONTENT",
+          "obrigatorio": true
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
       "nome": "contato_alterar",
       "acao": "PATCH contacts/:id",
       "grupo": "CONTATO",
@@ -1413,6 +1830,138 @@
         {
           "nome": "custom_attributes",
           "peca": "atributos_da_empresa",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CUSTOM_ATTRIBUTES",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "contato_criar",
+      "acao": "POST contacts",
+      "grupo": "CONTATO",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONTATO_CRIAR",
+      "caminho": {},
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "name",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.NAME",
+          "obrigatorio": false
+        },
+        {
+          "nome": "email",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.EMAIL",
+          "obrigatorio": false
+        },
+        {
+          "nome": "phone_number",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PHONE_NUMBER",
+          "obrigatorio": false
+        },
+        {
+          "nome": "company_id",
+          "peca": "empresa",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.COMPANY_ID",
+          "obrigatorio": false
+        },
+        {
+          "nome": "custom_attributes",
+          "peca": "atributos_do_contato",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CUSTOM_ATTRIBUTES",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "empresa_criar",
+      "acao": "POST companies",
+      "grupo": "CONTATO",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.EMPRESA_CRIAR",
+      "caminho": {},
+      "envelope": "company",
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "name",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.NAME",
+          "obrigatorio": true,
+          "max_caracteres": 100
+        },
+        {
+          "nome": "description",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DESCRIPTION",
+          "obrigatorio": false,
+          "max_caracteres": 1000
+        },
+        {
+          "nome": "domain",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DOMAIN",
+          "obrigatorio": false
+        },
+        {
+          "nome": "custom_attributes",
+          "peca": "atributos_da_empresa",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CUSTOM_ATTRIBUTES",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "contato_cliente",
+      "acao": "POST contacts/:contact_id/customer",
+      "grupo": "CONTATO",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONTATO_CLIENTE",
+      "caminho": {
+        "contact_id": {
+          "$valor": "contato.id"
+        }
+      },
+      "fixos": {},
+      "campos": []
+    },
+    {
+      "tipo": "acao",
+      "nome": "card_contato_criar",
+      "acao": "POST crm/cards/:card_id/contact",
+      "grupo": "FUNIL",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CARD_CONTATO_CRIAR",
+      "caminho": {
+        "card_id": {
+          "$valor": "card.id"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "name",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.NAME",
+          "obrigatorio": false
+        },
+        {
+          "nome": "email",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.EMAIL",
+          "obrigatorio": false
+        },
+        {
+          "nome": "phone_number",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PHONE_NUMBER",
+          "obrigatorio": false
+        },
+        {
+          "nome": "custom_attributes",
+          "peca": "atributos_do_contato",
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CUSTOM_ATTRIBUTES",
           "obrigatorio": false
         }

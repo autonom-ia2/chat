@@ -57,6 +57,18 @@ export const agentesDasPortas = (portas = []) => {
     });
 };
 
+// #2522 — o que os comentários do cartão dizem: quantos esperam o dono e a rede que faltou no anúncio nas duas redes
+// (`network_status`). `esperando` é null quando não deu para ler, nunca um zero falso: a leitura que não ficou pronta,
+// e também a lista vazia com uma rede de fora (os dela podem estar esperando). `faltou`: a rede que ficou de fora.
+export const leituraDosComentarios = comentarios => {
+  if (comentarios?.status !== 'ready') return { esperando: null, faltou: null };
+  const [faltou = null] = Object.entries(comentarios.network_status || {})
+    .filter(([, status]) => status !== 'ready')
+    .map(([rede]) => rede);
+  const total = (comentarios.esperando || []).length;
+  return { esperando: faltou && !total ? null : total, faltou };
+};
+
 // #2487 — o motivo de verdade de cada porta que não escreve (o mesmo do recuo da Escrita), com a rede e o nome da
 // caixa: "No Instagram, a caixa X não tem agente atendendo.". Vazio quando todas escrevem. O motivo da conta inteira
 // (sem a chave, agentes desligados) sai uma vez só, mesmo no anúncio nas duas redes.

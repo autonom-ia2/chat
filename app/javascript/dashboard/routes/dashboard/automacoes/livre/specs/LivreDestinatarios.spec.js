@@ -61,7 +61,7 @@ describe('LivreDestinatarios, gatilho que não é de card', () => {
   });
 });
 
-describe('quem cuidava do card antes da troca, no catálogo', () => {
+describe('o que era antes da troca, no catálogo', () => {
   const caminhos = tipo =>
     doAlvoDoGatilho(catalogoGerado, tipo).valores.map(item => item.caminho);
 
@@ -70,8 +70,19 @@ describe('quem cuidava do card antes da troca, no catálogo', () => {
       expect.arrayContaining([
         'gatilho.responsavel_anterior_id',
         'gatilho.responsavel_anterior_nome',
+        'gatilho.responsavel_anterior_ausente',
         'card.responsavel_nome',
       ])
+    );
+  });
+
+  it('o time de antes só na troca de time, e quem cuidava antes só na de dono', () => {
+    expect(caminhos('card.time_mudou')).toContain('gatilho.time_anterior_nome');
+    expect(caminhos('card.time_mudou')).not.toContain(
+      'gatilho.responsavel_anterior_nome'
+    );
+    expect(caminhos('card.responsavel_mudou')).not.toContain(
+      'gatilho.time_anterior_nome'
     );
   });
 
