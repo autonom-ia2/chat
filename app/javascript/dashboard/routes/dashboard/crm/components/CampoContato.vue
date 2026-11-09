@@ -34,40 +34,61 @@ const opcaoDe = contato => ({
   hint: contato.phone_number || contato.email || undefined,
 });
 
-// O contato guardado, lido pelo id para mostrar o nome.
+// O contato guardado, lido pelo id para mostrar o nome. Só o 404 é "apagado";
+// outra falha (rede, servidor) diz que não deu para ler agora. A resposta de um
+// id antigo, que chega depois da troca, é descartada.
+const NAO_ACHADO = 404;
 const atual = ref(null);
-const sumiu = ref(false);
+const leitura = ref('ok');
 watch(
   idGuardado,
   async id => {
-    sumiu.value = false;
+    leitura.value = 'ok';
     if (!id || atual.value?.value === id) return;
     try {
       const { data } = await ContactAPI.show(id);
+      if (idGuardado.value !== id) return;
       atual.value = opcaoDe(data.payload);
-    } catch {
+    } catch (erro) {
+      if (idGuardado.value !== id) return;
       atual.value = null;
-      sumiu.value = true;
+      leitura.value =
+        erro?.response?.status === NAO_ACHADO ? 'sumiu' : 'falhou';
     }
   },
   { immediate: true }
 );
+const AVISO_DA_LEITURA = {
+  sumiu: `${C}.CONTATO_SUMIU`,
+  falhou: `${C}.CONTATO_NAO_CARREGOU`,
+};
+const avisoDaLeitura = computed(() => {
+  const chave = AVISO_DA_LEITURA[leitura.value];
+  return chave ? t(chave) : '';
+});
 
 const termo = ref('');
 const achados = ref([]);
 const buscando = ref(false);
+// A busca que falhou não é "nenhum contato": diz que não deu para buscar.
+const buscaFalhou = ref(false);
 const buscar = useDebounceFn(async texto => {
   try {
     const { data } = await ContactAPI.search(texto, 1, 'name');
-    if (termo.value.trim() === texto) achados.value = data.payload || [];
+    if (termo.value.trim() !== texto) return;
+    achados.value = data.payload || [];
+    buscaFalhou.value = false;
   } catch {
+    if (termo.value.trim() !== texto) return;
     achados.value = [];
+    buscaFalhou.value = true;
   } finally {
     buscando.value = false;
   }
 }, ESPERA_DA_BUSCA_MS);
 watch(termo, valor => {
   const texto = valor.trim();
+  buscaFalhou.value = false;
   if (texto.length < MINIMO_DA_BUSCA) {
     achados.value = [];
     return;
@@ -75,6 +96,13 @@ watch(termo, valor => {
   buscando.value = true;
   buscar(texto);
 });
+const semAchados = computed(
+  () =>
+    termo.value.trim().length >= MINIMO_DA_BUSCA &&
+    !buscando.value &&
+    !buscaFalhou.value &&
+    !achados.value.length
+);
 
 const opcoes = computed(() => {
   const lista = achados.value.map(opcaoDe);
@@ -85,8 +113,7 @@ const opcoes = computed(() => {
 });
 const nome = computed(() => {
   if (!idGuardado.value) return t('CRM_KANBAN.RELATIONSHIP.NOT_INFORMED');
-  if (sumiu.value) return t(`${C}.CONTATO_SUMIU`);
-  return atual.value?.label || '';
+  return avisoDaLeitura.value || atual.value?.label || '';
 });
 
 const escolhido = computed({
@@ -124,9 +151,7 @@ const escolhido = computed({
         v-model="escolhido"
         :options="opcoes"
         :aria-label="attribute.attributeDisplayName"
-        :placeholder="
-          sumiu ? t(`${C}.CONTATO_SUMIU`) : t(`${C}.ESCOLHER_CONTATO`)
-        "
+        :placeholder="avisoDaLeitura || t(`${C}.ESCOLHER_CONTATO`)"
         class="flex-1 min-w-0"
       />
       <Button
@@ -140,14 +165,16 @@ const escolhido = computed({
         @click="emit('delete')"
       />
     </div>
-    <p
-      v-if="
-        termo.trim().length >= MINIMO_DA_BUSCA && !buscando && !achados.length
-      "
-      class="mb-0 text-xs text-n-slate-11"
-      data-sem-contato
-    >
+    <p v-if="semAchados" class="mb-0 text-xs text-n-slate-11" data-sem-contato>
       {{ t(`${C}.NENHUM_CONTATO`) }}
+    </p>
+    <p
+      v-if="buscaFalhou"
+      class="mb-0 text-xs text-n-ruby-11"
+      role="alert"
+      data-busca-falhou
+    >
+      {{ t(`${C}.BUSCA_FALHOU`) }}
     </p>
   </div>
 </template>

@@ -164,6 +164,20 @@ RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_au
       expect(chamadas_para('graph.facebook.com')).to be_empty
     end
 
+    # O campo deixou de ser do tipo Contato depois de a automação ligar (a troca passou por fora da tela, direto no
+    # banco): o número que ele guarda pode ser de outra coisa. O passo pula com o motivo e nenhuma mensagem sai.
+    it 'o campo deixou de ser do tipo Contato depois de ligar: o passo pula com o motivo, sem filha', :aggregate_failures do
+      automacao = ligada(so_o_presente)
+      CustomAttributeDefinition.find_by!(account: account, attribute_key: 'indicado_por').update_column(:attribute_display_type, :number) # rubocop:disable Rails/SkipsModelValidations
+
+      Crm::Cards::Closer.new(card: card_do_joao, actor: dona, result: 'won').perform
+      drenar
+
+      expect(historico_de(automacao)).to eq([%w[outro pulado campo_nao_e_contato]])
+      expect(filhas(automacao)).to be_empty
+      expect(chamadas_para('graph.facebook.com')).to be_empty
+    end
+
     it 'quem indicou não tem conversa: nenhuma filha, e a mãe diz por quê', :aggregate_failures do
       sem_conversa = contato('Bia', '11900000013')
       card_do_joao.update!(custom_attributes: { 'indicado_por' => sem_conversa.id })

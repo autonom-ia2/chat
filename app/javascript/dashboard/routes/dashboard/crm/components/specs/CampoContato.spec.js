@@ -83,14 +83,52 @@ describe('CampoContato', () => {
     expect(wrapper.find('[data-sem-contato]').exists()).toBe(true);
   });
 
-  it('sem editar, mostra o nome; o contato apagado diz que sumiu', async () => {
+  it('sem editar, mostra o nome; só o 404 diz que o contato foi apagado', async () => {
     const leitura = montar(11, { editavel: false });
     await flushPromises();
     expect(leitura.text()).toBe('Maria');
 
-    ContactAPI.show.mockRejectedValue(new Error('404'));
+    ContactAPI.show.mockRejectedValue({ response: { status: 404 } });
     const apagado = montar(99, { editavel: false });
     await flushPromises();
     expect(apagado.text()).toBe('CRM_KANBAN.DRAWER.CARD_FIELDS.CONTATO_SUMIU');
+
+    ContactAPI.show.mockRejectedValue({ response: { status: 500 } });
+    const falhou = montar(98, { editavel: false });
+    await flushPromises();
+    expect(falhou.text()).toBe(
+      'CRM_KANBAN.DRAWER.CARD_FIELDS.CONTATO_NAO_CARREGOU'
+    );
+  });
+
+  it('a resposta de um id antigo que chega depois da troca é descartada', async () => {
+    let devolverMaria;
+    ContactAPI.show
+      .mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            devolverMaria = () => resolve({ data: { payload: MARIA } });
+          })
+      )
+      .mockResolvedValueOnce({ data: { payload: JOAO } });
+    const wrapper = montar(11, { editavel: false });
+    await wrapper.setProps({
+      attribute: { attributeDisplayName: 'Indicado por', value: 12 },
+    });
+    await flushPromises();
+    devolverMaria();
+    await flushPromises();
+
+    expect(wrapper.text()).toBe('João');
+  });
+
+  it('a busca que falha diz que não deu para buscar, e não "nenhum contato"', async () => {
+    ContactAPI.search.mockRejectedValue(new Error('rede'));
+    const wrapper = montar('');
+    await wrapper.find('[data-busca]').setValue('jo');
+    await flushPromises();
+
+    expect(wrapper.find('[data-busca-falhou]').exists()).toBe(true);
+    expect(wrapper.find('[data-sem-contato]').exists()).toBe(false);
   });
 });

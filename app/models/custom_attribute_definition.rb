@@ -44,6 +44,8 @@ class CustomAttributeDefinition < ApplicationRecord
   validates :attribute_model, presence: true
   validate :attribute_must_not_conflict, on: :create
   validate :contato_so_no_card
+  # O campo do tipo contato que uma automação ligada lê não muda de tipo nem é apagado (decisão 16).
+  include CampoContatoEmUso
 
   # card_attribute (#1146): campos próprios de cada card do CRM.
   enum attribute_model: { conversation_attribute: 0, contact_attribute: 1, company_attribute: 2, card_attribute: 3 }

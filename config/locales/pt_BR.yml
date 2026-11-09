@@ -202,6 +202,7 @@ pt_BR:
       attribute_key_format: deve conter apenas letras, números, sublinhados, hífens, e pontos
       key_conflict: A chave fornecida não é permitida pois pode entrar em conflito com os atributos padrão.
       contato_so_no_card: 'Campo do tipo Contato só existe no card.'
+      contato_em_uso: 'Este campo do tipo Contato está em uso pela automação %{automacoes} para achar o contato ligado. Desligue a automação, ou escolha outro campo nela, antes de mudar o tipo ou apagar este campo.'
     mfa:
       already_enabled: MFA já está habilitado
       not_enabled: MFA não está habilitado
@@ -1040,6 +1041,7 @@ pt_BR:
         ja_aberta: 'O gatilho aconteceu de novo, mas a automação já estava rodando aqui e não começou outra vez.'
         filhas_puladas: 'Alguns registros ligados ficaram sem estes passos: quem ligou a automação não alcança esses registros, ou a automação já estava rodando neles.'
         contato_ligado_sumiu: 'O contato guardado no campo escolhido não existe mais nesta conta (foi apagado). Os passos de dentro não rodaram em lugar nenhum.'
+        campo_nao_e_contato: 'O campo escolhido para achar o contato ligado deixou de ser do tipo Contato, e o número dele pode ser de outra coisa. Os passos de dentro não rodaram. Escolha um campo do tipo Contato no passo e salve de novo.'
         origem_fora_do_alcance: 'Este passo lê o registro de origem, e quem ligou a automação não tem mais acesso a ele. O passo foi pulado, e nenhum dado desse registro saiu.'
         contato_ligado_sem_conversa: 'O contato ligado ainda não tem conversa, e os passos de dentro não tiveram onde rodar.'
         nenhum_card_ligado: 'Este contato não tem outro card que combine com o passo, e os passos de dentro não rodaram.'

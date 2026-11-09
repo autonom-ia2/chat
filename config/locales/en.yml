@@ -222,6 +222,7 @@ en:
       attribute_key_format: must only contain letters, numbers, underscores, hyphens, and dots
       key_conflict: The provided key is not allowed as it might conflict with default attributes.
       contato_so_no_card: 'Contact fields exist only on cards.'
+      contato_em_uso: 'This Contact field is in use by the automation %{automacoes} to find the linked contact. Turn the automation off, or choose another field in it, before changing the type or deleting this field.'
     mfa:
       already_enabled: MFA is already enabled
       not_enabled: MFA is not enabled
@@ -547,6 +548,7 @@ en:
         ja_aberta: 'The trigger happened again, but the automation was already running here and did not start again.'
         filhas_puladas: 'Some linked records did not get these steps: the person who turned on the automation cannot reach them, or the automation was already running there.'
         contato_ligado_sumiu: 'The contact saved in the chosen field does not exist in this account anymore (it was deleted). The steps inside did not run anywhere.'
+        campo_nao_e_contato: 'The field chosen to find the linked contact is no longer of the Contact type, so the number in it may belong to something else. The steps inside did not run. Choose a Contact field in the step and save again.'
         origem_fora_do_alcance: 'This step reads the original record, and the person who turned on the automation no longer has access to it. The step was skipped, so no data from that record was sent.'
         contato_ligado_sem_conversa: 'The linked contact has no conversation yet, so the steps inside had nowhere to run.'
         nenhum_card_ligado: 'This contact has no other card that matches the step, so the steps inside did not run.'

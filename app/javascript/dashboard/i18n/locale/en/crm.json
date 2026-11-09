@@ -1388,6 +1388,8 @@
         "BUSCAR_CONTATO_DICA": "Type a name, phone or email",
         "NENHUM_CONTATO": "No contact found in this account.",
         "CONTATO_SUMIU": "Contact deleted",
+        "CONTATO_NAO_CARREGOU": "Could not load this contact now. Try again.",
+        "BUSCA_FALHOU": "Could not search contacts now. Try again.",
         "ORIGEM": {
           "CLIENTE": "customer said on {quando}",
           "EQUIPE": "team said on {quando}",

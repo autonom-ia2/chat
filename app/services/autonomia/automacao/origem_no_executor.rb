@@ -2,6 +2,9 @@
 # deixou de alcançá-lo entre a mãe e a filha (perdeu o funil do João, a conversa dele). O passo pula com o motivo
 # próprio, sem ler nada da origem, e a filha segue para o passo seguinte. A pergunta é a mesma do impedimento
 # (Acesso#alcanca?, pelo Contexto#origem_fora_do_alcance?); o Valores lê vazio do mesmo jeito (Contexto#origem).
+#
+# O "se" (e o "esperar até") cuja condição lê `origem.*` é pulado inteiro, com os ramos: sem a origem não dá para
+# decidir o ramo, e pular é o lado seguro (decisão da revisão do #2675).
 module Autonomia::Automacao::OrigemNoExecutor
   private
 

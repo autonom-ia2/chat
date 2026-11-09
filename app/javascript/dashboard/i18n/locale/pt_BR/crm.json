@@ -1388,6 +1388,8 @@
         "BUSCAR_CONTATO_DICA": "Digite nome, telefone ou e-mail",
         "NENHUM_CONTATO": "Nenhum contato encontrado nesta conta.",
         "CONTATO_SUMIU": "Contato apagado",
+        "CONTATO_NAO_CARREGOU": "Não deu para carregar este contato agora. Tente de novo.",
+        "BUSCA_FALHOU": "Não deu para buscar contatos agora. Tente de novo.",
         "ORIGEM": {
           "CLIENTE": "cliente informou em {quando}",
           "EQUIPE": "equipe informou em {quando}",

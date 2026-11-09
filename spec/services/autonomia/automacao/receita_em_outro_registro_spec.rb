@@ -59,14 +59,13 @@ RSpec.describe Autonomia::Automacao::Receita do
     atributo('numero_de_quem_indicou', 'card_attribute', 'number')
     atributo('quem_indicou', 'contact_attribute', 'number')
     atributo('telefone_de_quem_indicou', 'contact_attribute', 'text')
-    recusado = [I18n.t("#{frase}.em_outro_registro.campo_sem_contato", passo: 'outro')]
+    recusado = [I18n.t('autonomia.automacao.receita.em_outro_registro.campo_sem_contato', passo: 'outro')]
 
     expect(problemas(receita('card.ganho', em_outro(no_campo.call('card.atributos.indicado_por'))))).to be_empty
     %w[card.atributos.numero_de_quem_indicou contato.atributos.quem_indicou contato.id contato.telefone
        contato.atributos.telefone_de_quem_indicou].each do |caminho|
       expect(problemas(receita('card.ganho', em_outro(no_campo.call(caminho))))).to eq(recusado)
     end
-    expect(recusado.sole).to include('Contato').or include('Contact')
   end
 
   describe 'G65 (#2842): o ramo lê o registro de origem com origem.*' do

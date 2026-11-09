@@ -94,6 +94,17 @@ module Autonomia::Automacao::EmOutroRegistro
     campo_do_contato?(caminho, conta) ? [] : [texto(:campo_sem_contato, passo: id)]
   end
 
+  # As automações ligadas da conta cujo "em outro registro" acha o contato neste campo (`card.atributos.<chave>`). O campo
+  # do tipo contato não troca de tipo nem é apagado enquanto alguma delas o lê (CampoContatoEmUso).
+  def automacoes_que_leem(conta, caminho)
+    ::Autonomia::Automacao::Definicao.where(account_id: conta.id, ativa: true).includes(:versao_ativa).select do |automacao|
+      receita = automacao.versao_ativa&.receita
+      receita && ::Autonomia::Automacao::Receita.new(receita, conta: conta, account_user: nil).passos.any? do |passo|
+        passo['tipo'] == TIPO && passo.dig('registro', 'campo', '$valor') == caminho
+      end
+    end
+  end
+
   def campo_do_contato?(caminho, conta)
     atributos = ::Autonomia::Automacao::Valores::Atributos
     base, = atributos.do_caminho(caminho)
