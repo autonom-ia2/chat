@@ -5,9 +5,10 @@
 #
 # No recorrente (#2635, G7), a seleção: pelo menos uma condição (sem nenhuma, a automação pegaria a conta inteira por
 # engano), só as condições do alvo (card ou contato) e funil, etapa, responsável, etiqueta e atributo da conta. O da
-# conta não tem seleção (o esquema recusa) e roda sem conversa, card ou contato: só ficam o esperar e o disparar de
-# campanha (G14), que escolhe o público pela etiqueta. Recusar ao salvar é o que impede o passo de quebrar sem alvo ao
-# rodar. Na data única (G39, #2681), a data que já passou.
+# conta não tem seleção (o esquema recusa) e roda sem conversa, card ou contato: só ficam o esperar, o disparar de
+# campanha (G14), que escolhe o público pela etiqueta, e o buscar empresas da prospecção (G21, #2706), que cria os
+# cards. Recusar ao salvar é o que impede o passo de quebrar sem alvo ao rodar. Na data única (G39, #2681), a data que
+# já passou.
 #
 # No card atualizado (G27, #2661), a mudança: o campo personalizado é do card, desta conta, e a condição numérica
 # (maior que, passou de) tem número para comparar.
@@ -44,7 +45,14 @@ class Autonomia::Automacao::ProblemasDoGatilho
     @passos.reject { |passo| sem_alvo?(passo) }.map { |passo| texto(:passo_pede_alvo, passo: passo['id']) }
   end
 
-  def sem_alvo?(passo) = passo['tipo'] == 'esperar' || (passo['tipo'] == 'campanha' && passo['faz'] == 'disparar')
+  # O `faz` de cada passo que roda sem alvo; `nil` = o passo inteiro.
+  SEM_ALVO = { 'esperar' => nil, 'campanha' => 'disparar', 'prospeccao' => 'buscar' }.freeze
+
+  def sem_alvo?(passo)
+    return false unless SEM_ALVO.key?(passo['tipo'])
+
+    SEM_ALVO[passo['tipo']].nil? || SEM_ALVO[passo['tipo']] == passo['faz']
+  end
 
   # A data única (G39, #2681) que já passou nunca roda: salvar assim é engano, não escolha.
   def data_passada

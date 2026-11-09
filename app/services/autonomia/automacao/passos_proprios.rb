@@ -1,10 +1,11 @@
 # Os passos que se conferem sozinhos ao salvar, cada um na própria classe (saiu da Receita quando ela passou do tamanho,
 # no G18): o "Passar para a agente de IA" (G15), o "criar card" (G4), que confere também a pessoa, a campanha (G14), que
 # confere o gatilho, a pessoa e a campanha da tela, o "criar retorno" (G3), o "em outro registro" (G18) e o "passar a
-# conversa para o responsável do card" (G66), que confere o gatilho. Os caminhos que o retorno, o "em outro registro" e
-# o contato do "criar card" (G49) leem passam pela régua da Receita (o bloco `caminho`).
+# conversa para o responsável do card" (G66), que confere o gatilho, e a prospecção (G21, #2706), que confere o gatilho,
+# a pessoa, a busca, a etapa e as etiquetas. Os caminhos que o retorno, o "em outro registro" e o contato do "criar
+# card" (G49) leem passam pela régua da Receita (o bloco `caminho`).
 class Autonomia::Automacao::PassosProprios
-  TIPOS = %w[ia_assumir card campanha retorno em_outro_registro conversa_ao_responsavel].freeze
+  TIPOS = %w[ia_assumir card campanha retorno em_outro_registro conversa_ao_responsavel prospeccao].freeze
 
   def self.do_tipo?(passo) = TIPOS.include?(passo['tipo'])
 
@@ -25,6 +26,8 @@ class Autonomia::Automacao::PassosProprios
       ::Autonomia::Automacao::PassoDeCampanha.problemas_ao_salvar(passo, @receita, conta: @conta, account_user: @account_user)
     when 'retorno' then retorno(passo)
     when 'em_outro_registro' then outro_registro(passo)
+    when 'prospeccao'
+      ::Autonomia::Automacao::PassoDeProspeccao.problemas_ao_salvar(passo, @receita, conta: @conta, account_user: @account_user)
     when 'conversa_ao_responsavel' then ::Autonomia::Automacao::PassoDeConversaAoResponsavel.problemas_ao_salvar(passo, @receita)
     else ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo)
     end

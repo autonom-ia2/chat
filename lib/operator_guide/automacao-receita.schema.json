@@ -592,6 +592,27 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["id", "tipo", "faz"],
+          "description": "Prospecção (G21). faz=buscar: repete uma busca do histórico da Prospecção (busca_id) com quantas empresas, pelo provedor da Prospecção da conta e sem cache; espera a conferência de WhatsApp (até 2 h) e cria um card na etapa (etapa_id) para cada empresa com WhatsApp, pelo mesmo envio ao CRM da tela, pondo as etiquetas no contato que o card criou. Só em gatilho sem alvo (recorrente): num gatilho de conversa, card ou contato, cada execução faria uma busca paga. Pede a chave da Prospecção e a de criar card de quem salva e de quem liga. faz=recusar: o \"Não quer ser contatado\" da Prospecção no lead do contato do alvo; a recusa veta o número nas buscas e campanhas futuras.",
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "prospeccao" },
+            "faz": { "enum": ["buscar", "recusar"] },
+            "busca_id": { "type": "integer", "minimum": 1 },
+            "quantas": { "type": "integer", "minimum": 1, "maximum": 60 },
+            "etapa_id": { "type": "integer", "minimum": 1 },
+            "etiquetas": { "$ref": "#/definitions/ids" }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "faz": { "const": "buscar" } } },
+              "then": { "required": ["busca_id", "quantas", "etapa_id"] }
+            }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "description": "Passa a conversa à agente de IA pela Atribuição do CRM. Pessoa no nome vence: o passo pula.",
           "required": ["id", "tipo", "agente_id"],
           "properties": {

@@ -180,7 +180,7 @@ class Autonomia::Automacao::Executor
     when :ok, :pulado then seguir_depois_da_acao(passo, resultado)
     when :permanente then encerrar(passo['id'], 'falhou', resultado.motivo, 'falhou', resultado.dados)
     when :sem_acesso then encerrar(passo['id'], 'parada', pausar(resultado.motivo), 'falhou', resultado.dados)
-    else tentar_de_novo(passo, resultado)
+    else resultado.tipo == :esperar ? aguardar(passo, resultado.dados['ate'], registrar: false) : tentar_de_novo(passo, resultado)
     end
   end
 

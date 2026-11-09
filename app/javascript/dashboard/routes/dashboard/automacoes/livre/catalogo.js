@@ -93,6 +93,9 @@ export const novoPasso = (entrada, id, t) => {
   // G14: nasce no "não receber", que vale em qualquer gatilho.
   if (entrada.tipo === 'campanha')
     return { id, tipo: 'campanha', faz: 'nao_receber' };
+  // G21: nasce no "recusar", que vale em qualquer gatilho.
+  if (entrada.tipo === 'prospeccao')
+    return { id, tipo: 'prospeccao', faz: 'recusar' };
   // G2: a caixa de e-mail a escolher, o assunto e o texto a escrever.
   if (entrada.tipo === 'email')
     return { id, tipo: 'email', caixa_id: null, assunto: [], texto: [] };

@@ -4,6 +4,7 @@
 import { entradaDoPasso, lerCampo } from './catalogo';
 import { comColchetes } from './texto';
 import { fraseDaCampanha } from './campanha';
+import { fraseDaProspeccao } from './prospeccao';
 import { fraseDoRetorno } from './retorno';
 import { SEM_PRAZO } from './receita';
 import {
@@ -490,6 +491,7 @@ export const fraseDoPasso = (passo, catalogo, t) => {
   if (FRASE_DA_IA[passo.tipo])
     return FRASE_DA_IA[passo.tipo](passo, t, catalogo);
   if (passo.tipo === 'campanha') return fraseDaCampanha(passo, t);
+  if (passo.tipo === 'prospeccao') return fraseDaProspeccao(passo, t);
   if (passo.tipo === 'retorno')
     return fraseDoRetorno(passo, t, {
       quando: fraseDaDuracao(passo.daqui, catalogo, t),
