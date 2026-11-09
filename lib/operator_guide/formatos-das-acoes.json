@@ -16364,6 +16364,21 @@
     ],
     "sem_corpo": true
   },
+  "POST crm/meta_ads_connection/instagram": {
+    "campos": {
+      "page_id": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram#create",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_controller.rb:16",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_controller.rb:17"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/meta_ads_connection/media": {
     "campos": {
       "file": {}
