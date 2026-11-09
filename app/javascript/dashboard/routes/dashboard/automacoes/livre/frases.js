@@ -4,6 +4,7 @@
 import { entradaDoPasso, lerCampo } from './catalogo';
 import { comColchetes } from './texto';
 import { fraseDaCampanha } from './campanha';
+import { fraseDaListaDeEmail } from './listaDeEmail';
 import { fraseDoRetorno } from './retorno';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
@@ -384,6 +385,7 @@ export const fraseDoPasso = (passo, catalogo, t) => {
     });
   if (FRASE_DA_IA[passo.tipo]) return FRASE_DA_IA[passo.tipo](passo, t);
   if (passo.tipo === 'campanha') return fraseDaCampanha(passo, t);
+  if (passo.tipo === 'lista_de_email') return fraseDaListaDeEmail(passo, t);
   if (passo.tipo === 'retorno')
     return fraseDoRetorno(passo, t, {
       quando: fraseDaDuracao(passo.daqui, catalogo, t),

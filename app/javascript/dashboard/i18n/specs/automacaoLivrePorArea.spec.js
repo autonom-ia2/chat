@@ -67,6 +67,7 @@ const BLOCOS_POR_ARQUIVO = {
   'automacaoLivreEnsaio.json': ['ENSAIO', 'HISTORICO'],
   'automacaoLivreCampanha.json': ['CAMPANHA'],
   'automacaoLivreRetorno.json': ['RETORNO'],
+  'automacaoLivreListaDeEmail.json': ['LISTA_DE_EMAIL'],
 };
 
 const doIdioma = idioma =>

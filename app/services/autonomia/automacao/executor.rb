@@ -93,6 +93,8 @@ class Autonomia::Automacao::Executor
     when *NATIVOS.keys then passo_nativo(passo, NATIVOS.fetch(passo['tipo']))
     when *IA.keys then passo_de_ia(passo, IA.fetch(passo['tipo']))
     when 'ia_assumir' then passo_nativo(passo, ::Autonomia::Automacao::PassoDeIaAssumir, mensagem: false)
+    # G52: pôr o contato na lista de e-mail. Não manda mensagem: não depende da flag da F4.
+    when 'lista_de_email' then passo_nativo(passo, ::Autonomia::Automacao::PassoDeListaDeEmail, mensagem: false)
     when 'card' then passo_de_card(passo)
     when 'parar' then encerrar(passo['id'], 'concluida', nil, 'ok')
     # Tipo que este motor não conhece (versão salva por um código mais novo, defeito): falha com registro, nunca fecha

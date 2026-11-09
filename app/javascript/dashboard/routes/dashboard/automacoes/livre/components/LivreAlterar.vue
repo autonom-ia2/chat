@@ -243,6 +243,8 @@ const nativoPronto = campo => {
     );
   // G15: a agente de IA escolhida.
   if (campo.peca === 'agente_de_ia') return Number.isInteger(valor);
+  // G52: a lista de e-mail escolhida.
+  if (campo.peca === 'lista_de_email') return Number.isInteger(valor);
   // F7: a pergunta e a instrução escritas; cada caminho e cada dado com nome,
   // descrição e (no extrair) onde gravar; o destino escolhido.
   if (campo.peca === 'instrucao') return Boolean(valor?.trim());
@@ -479,6 +481,44 @@ defineExpose({ abrir, fechar });
             data-sem-agente-de-ia
           >
             {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.SEM_AGENTE_DE_IA') }}
+          </p>
+        </div>
+        <div
+          v-else-if="campo.peca === 'lista_de_email'"
+          class="flex flex-col gap-1.5"
+          data-peca="lista_de_email"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(campo.rotulo) }}
+          </span>
+          <ChoiceSelect
+            v-if="opcoes.listaDeEmail?.length"
+            :model-value="rascunho[campo.nome] ?? ''"
+            :aria-label="$t(campo.rotulo)"
+            :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
+            :options="opcoes.listaDeEmail"
+            @update:model-value="novo => mudarNativo(campo.nome, novo)"
+          />
+          <p
+            v-else-if="opcoes.listaDeEmailErro"
+            class="mb-0 text-sm text-n-ruby-11"
+            data-listas-de-email-erro
+          >
+            {{
+              opcoes.listaDeEmailErro === 'desligada'
+                ? $t('AUTOMACAO_LIVRE.LISTA_DE_EMAIL.DESLIGADA')
+                : $t('AUTOMACAO_LIVRE.LISTA_DE_EMAIL.FALHOU')
+            }}
+          </p>
+          <p
+            v-else-if="opcoes.listaDeEmail"
+            class="mb-0 text-sm text-n-slate-11"
+            data-sem-lista-de-email
+          >
+            {{ $t('AUTOMACAO_LIVRE.LISTA_DE_EMAIL.SEM_LISTA') }}
+          </p>
+          <p class="mb-0 text-sm text-n-slate-11" data-lista-de-email-dica>
+            {{ $t('AUTOMACAO_LIVRE.LISTA_DE_EMAIL.DICA') }}
           </p>
         </div>
         <LivreRetornoPara

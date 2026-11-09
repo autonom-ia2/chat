@@ -1,0 +1,15 @@
+# Free automation, "Add to e-mail list" step (G52, #2760). Own file so it does not compete for en.yml with the other
+# fronts.
+en:
+  autonomia:
+    automacao:
+      motivos:
+        quem_ligou_sem_permissao_lista: 'The person who turned on the automation can no longer manage campaigns. Take over and turn it back on.'
+        lista_de_email_desligada: 'E-mail campaigns are turned off. The contact was not added to the list.'
+        lista_de_email_sumiu: 'The chosen e-mail list no longer exists. Choose another list in the step.'
+        lista_contato_sem_email: 'The contact has no e-mail. They were not added to the list.'
+        ja_na_lista: 'The contact was already on the list.'
+      receita:
+        lista_de_email_desligada: 'Step %{passo}: e-mail campaigns are turned off.'
+        lista_de_email_sem_permissao: 'Step %{passo}: to use this step you need permission to manage campaigns.'
+        lista_de_email_de_fora: 'Step %{passo}: the e-mail list %{id} is not from this account.'

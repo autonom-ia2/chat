@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_870000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -3750,8 +3750,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
     t.bigint "reply_to_inbox_id"
     t.jsonb "brand_identity", default: {}, null: false
     t.jsonb "ai_quality_warnings", default: [], null: false
+    t.bigint "email_list_id"
     t.index ["account_id", "status", "scheduled_at"], name: "idx_email_campaigns_account_status_scheduled"
     t.index ["account_id"], name: "index_email_campaigns_on_account_id"
+    t.index ["email_list_id"], name: "index_email_campaigns_on_email_list_id"
     t.index ["reply_to_inbox_id"], name: "index_email_campaigns_on_reply_to_inbox_id"
     t.index ["sender_identity_id"], name: "index_email_campaigns_on_sender_identity_id"
     t.index ["sender_inbox_id"], name: "index_email_campaigns_on_sender_inbox_id"
@@ -3768,6 +3770,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
     t.index ["occurred_at"], name: "idx_email_events_occurred_at"
     t.index ["recipient_id", "event_type"], name: "idx_email_events_recipient_type"
     t.index ["recipient_id"], name: "index_email_events_on_recipient_id"
+  end
+
+  create_table "email_lists", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.bigint "label_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "name"], name: "index_email_lists_on_account_id_and_name", unique: true
+    t.index ["label_id"], name: "index_email_lists_on_label_id", unique: true
   end
 
   create_table "email_protection_maintenance_runs", force: :cascade do |t|
@@ -5003,10 +5015,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_850000) do
   add_foreign_key "email_campaign_template_imports", "email_campaign_templates", on_delete: :nullify
   add_foreign_key "email_campaign_templates", "accounts"
   add_foreign_key "email_campaigns", "accounts"
+  add_foreign_key "email_campaigns", "email_lists", on_delete: :nullify
   add_foreign_key "email_campaigns", "email_sender_identities", column: "sender_identity_id"
   add_foreign_key "email_campaigns", "inboxes", column: "reply_to_inbox_id", on_delete: :nullify, validate: false
   add_foreign_key "email_campaigns", "inboxes", column: "sender_inbox_id", on_delete: :nullify
   add_foreign_key "email_events", "email_campaign_recipients", column: "recipient_id"
+  add_foreign_key "email_lists", "accounts"
+  add_foreign_key "email_lists", "labels", on_delete: :cascade
   add_foreign_key "email_protection_maintenance_runs", "accounts", on_delete: :cascade
   add_foreign_key "email_reputation_states", "accounts", on_delete: :cascade
   add_foreign_key "email_sender_identities", "accounts"

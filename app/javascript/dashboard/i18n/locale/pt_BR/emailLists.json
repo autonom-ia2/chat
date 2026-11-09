@@ -1,0 +1,22 @@
+{
+  "EMAIL_LISTS": {
+    "QUEM_RECEBE": "Quem recebe",
+    "PLANILHA": "Planilha",
+    "LISTA": "Lista de e-mail",
+    "ESCOLHA": "Escolha a lista",
+    "ESCOLHA_ERRO": "Escolha uma lista.",
+    "CRIAR": "Criar lista",
+    "NOME": "Nome da nova lista",
+    "NOME_PLACEHOLDER": "Ex.: Dicas do mês",
+    "CRIAR_CONFIRMAR": "Criar",
+    "CANCELAR": "Cancelar",
+    "SEM_LISTA": "Ainda não há lista. Crie a primeira.",
+    "PESSOAS": "Ninguém na lista agora | 1 pessoa na lista agora | {n} pessoas na lista agora",
+    "COM_EMAIL": "nenhuma com e-mail | 1 com e-mail | {n} com e-mail",
+    "REGRA": "Vai para quem estiver na lista na hora do envio. Quem pediu para não receber fica de fora.",
+    "FALHOU_CARREGAR": "Não deu para carregar as listas. Recarregue a página.",
+    "FALHOU_CRIAR": "Não deu para criar a lista. Tente de novo.",
+    "NOME_REPETIDO": "Já existe uma lista com esse nome.",
+    "NOME_INVALIDO": "Use pelo menos uma letra ou número no nome."
+  }
+}

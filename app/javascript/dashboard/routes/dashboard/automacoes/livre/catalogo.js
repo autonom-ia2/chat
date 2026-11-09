@@ -132,6 +132,9 @@ export const novoPasso = (entrada, id, t) => {
   // G15: a agente nasce sem escolha; o "Salvar" do painel espera escolher.
   if (entrada.tipo === 'ia_assumir')
     return { id, tipo: 'ia_assumir', agente_id: null };
+  // G52: a lista nasce sem escolha; o "Salvar" do painel espera escolher.
+  if (entrada.tipo === 'lista_de_email')
+    return { id, tipo: 'lista_de_email', lista_id: null };
 
   const caminho = Object.fromEntries(
     Object.entries(entrada.caminho || {})

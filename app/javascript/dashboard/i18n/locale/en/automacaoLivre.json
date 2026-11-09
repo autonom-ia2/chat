@@ -106,7 +106,8 @@
       "RESUMIR": "AI summarizes the conversation",
       "IA_ASSUMIR": "Hand over to the AI agent",
       "EMAIL": "Send an e-mail to the customer",
-      "RETORNO": "Create a follow-up for the team"
+      "RETORNO": "Create a follow-up for the team",
+      "LISTA_DE_EMAIL": "Add to an e-mail list"
     },
     "ESCOLHER": {
       "ETIQUETA": "Which label",
@@ -168,7 +169,8 @@
       "AGENTE_ID": "Which AI agent",
       "CAIXA_ID": "From which e-mail inbox",
       "ASSUNTO": "Subject",
-      "MODELO": "If the 24-hour window is closed"
+      "MODELO": "If the 24-hour window is closed",
+      "LISTA_ID": "Which e-mail list"
     },
     "OPCOES": {
       "STATUS": {

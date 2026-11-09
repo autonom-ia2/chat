@@ -15,6 +15,9 @@ json.reply_to campaign.reply_to
 json.reply_to_inbox_id campaign.reply_to_inbox_id
 # #2237: o endereço de resposta que o envio de fato usa; a revisão e a jornada mostram este.
 json.reply_to_address EmailCampaigns::ReplyTo.for(campaign)
+# G52: a lista de e-mail da campanha, quando o público é uma lista.
+json.email_list_id campaign.email_list_id
+json.email_list_name campaign.email_list&.name
 json.status campaign.status
 json.scheduled_at campaign.scheduled_at
 json.sent_at campaign.sent_at

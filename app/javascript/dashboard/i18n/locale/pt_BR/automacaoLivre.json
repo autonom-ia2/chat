@@ -106,7 +106,8 @@
       "RESUMIR": "A IA resume a conversa",
       "IA_ASSUMIR": "Passar para a agente de IA",
       "EMAIL": "Mandar e-mail ao cliente",
-      "RETORNO": "Criar um retorno para a equipe"
+      "RETORNO": "Criar um retorno para a equipe",
+      "LISTA_DE_EMAIL": "Pôr na lista de e-mail"
     },
     "ESCOLHER": {
       "ETIQUETA": "Qual etiqueta",
@@ -168,7 +169,8 @@
       "AGENTE_ID": "Qual agente de IA",
       "CAIXA_ID": "Por qual caixa de e-mail",
       "ASSUNTO": "Assunto",
-      "MODELO": "Se a janela de 24 h estiver fechada"
+      "MODELO": "Se a janela de 24 h estiver fechada",
+      "LISTA_ID": "Qual lista de e-mail"
     },
     "OPCOES": {
       "STATUS": {

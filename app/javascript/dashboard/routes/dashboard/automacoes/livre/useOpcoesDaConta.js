@@ -1,6 +1,8 @@
 import { computed, ref } from 'vue';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
+import EmailListsAPI from 'dashboard/api/emailLists';
+import { guardarNomesDasListas } from './listaDeEmail';
 
 // #2414 F5 — as escolhas da conta que os campos do "Alterar" mostram: pessoas,
 // times, caixas, etiquetas e campos personalizados. Vêm das mesmas stores que o
@@ -46,6 +48,25 @@ export function useOpcoesDaConta() {
     }
   };
 
+  // G52: as listas de e-mail da conta, da API das campanhas de e-mail. `null`
+  // enquanto carrega; o erro diz se as campanhas de e-mail estão desligadas
+  // (a API responde email_campaign.disabled) ou se a lista não carregou.
+  const listasDeEmail = ref(null);
+  const listasDeEmailErro = ref(null);
+  const carregarListasDeEmail = async () => {
+    listasDeEmailErro.value = null;
+    try {
+      const { data } = await EmailListsAPI.index();
+      listasDeEmail.value = data || [];
+      guardarNomesDasListas(listasDeEmail.value);
+    } catch (error) {
+      listasDeEmailErro.value =
+        error?.response?.data?.error === 'email_campaign.disabled'
+          ? 'desligada'
+          : 'falhou';
+    }
+  };
+
   const carregarOpcoes = () => {
     [
       'agents/get',
@@ -55,6 +76,7 @@ export function useOpcoesDaConta() {
       'attributes/get',
     ].forEach(acao => store.dispatch(acao));
     carregarAgentesDeIa();
+    carregarListasDeEmail();
   };
 
   const opcoes = computed(() => ({
@@ -63,6 +85,8 @@ export function useOpcoesDaConta() {
     caixa: comNome(caixas.value),
     agenteDeIa: agentesDeIa.value && comNome(agentesDeIa.value),
     agenteDeIaFalhou: agentesDeIaFalhou.value,
+    listaDeEmail: listasDeEmail.value && comNome(listasDeEmail.value),
+    listaDeEmailErro: listasDeEmailErro.value,
     // #2680: as caixas que começam conversa pelo telefone (ou pela API), por
     // onde a mensagem abre a conversa de quem ainda não tem uma.
     caixaDaConversa: comNome(
