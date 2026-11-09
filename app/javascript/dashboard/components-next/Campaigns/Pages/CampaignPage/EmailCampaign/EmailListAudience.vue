@@ -39,8 +39,16 @@ const carregar = async () => {
 };
 onMounted(carregar);
 
+// Sem acesso aos contatos, a API não manda os números (null): a tela não mostra.
+const temNumeros = lista => lista.contatos_count != null;
 const pessoas = lista =>
-  t('EMAIL_LISTS.PESSOAS', { n: lista.contatos_count }, lista.contatos_count);
+  temNumeros(lista)
+    ? t(
+        'EMAIL_LISTS.PESSOAS',
+        { n: lista.contatos_count },
+        lista.contatos_count
+      )
+    : undefined;
 
 const opcoes = computed(() =>
   (listas.value || []).map(lista => ({
@@ -55,6 +63,7 @@ const escolhida = computed(() =>
 const semEmail = computed(
   () =>
     escolhida.value &&
+    temNumeros(escolhida.value) &&
     escolhida.value.recebem_count < escolhida.value.contatos_count
 );
 
@@ -213,7 +222,11 @@ const cancelar = () => {
         class="px-3 py-2 rounded-xl bg-n-alpha-2"
         data-lista-escolhida
       >
-        <p class="mb-1 text-sm font-medium text-n-slate-12">
+        <p
+          v-if="temNumeros(escolhida)"
+          class="mb-1 text-sm font-medium text-n-slate-12"
+          data-lista-numeros
+        >
           {{ pessoas(escolhida) }}
           <template v-if="semEmail">
             ·

@@ -17,6 +17,10 @@
     "FALHOU_CARREGAR": "Não deu para carregar as listas. Recarregue a página.",
     "FALHOU_CRIAR": "Não deu para criar a lista. Tente de novo.",
     "NOME_REPETIDO": "Já existe uma lista com esse nome.",
-    "NOME_INVALIDO": "Use pelo menos uma letra ou número no nome."
+    "NOME_INVALIDO": "Use pelo menos uma letra ou número no nome.",
+    "FALHA": {
+      "VAZIA": "Não enviada: na hora do envio, ninguém na lista podia receber (ninguém na lista, sem e-mail ou pediu para não receber).",
+      "TODOS_BLOQUEADOS": "Não enviada: na hora do envio, todos da lista tinham se descadastrado ou estavam com o endereço bloqueado."
+    }
   }
 }

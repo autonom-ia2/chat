@@ -40,4 +40,32 @@ RSpec.describe 'Email list permissions', :aggregate_failures, type: :request do
       expect(response).to have_http_status(:created)
     end
   end
+
+  # Contar quem tem a etiqueta da lista é ler a base de contatos: sem contact_view, a lista vem sem os números (a mesma
+  # regra do Autonomia::Automacao::Tempo::Selecao).
+  context 'with campaign_view, sem contact_view' do
+    let(:permissions) { %w[campaign_view campaign_manage] }
+
+    it 'vê as listas sem quantos estão nelas, nem ao renomear' do
+      create(:contact, account: account, email: 'ana@exemplo.com').update_labels([lista.label.title])
+
+      get path, headers: headers, as: :json
+      expect(response.parsed_body).to eq([{ 'id' => lista.id, 'name' => 'Dicas do mês', 'label_id' => lista.label_id,
+                                            'contatos_count' => nil, 'recebem_count' => nil }])
+      patch "#{path}/#{lista.id}", params: { email_list: { name: 'Novidades' } }, headers: headers, as: :json
+      expect(response.parsed_body).to include('contatos_count' => nil, 'recebem_count' => nil)
+    end
+  end
+
+  context 'with campaign_view e contact_view' do
+    let(:permissions) { %w[campaign_view contact_view] }
+
+    it 'vê quantos estão em cada lista' do
+      create(:contact, account: account, email: 'ana@exemplo.com').update_labels([lista.label.title])
+
+      get path, headers: headers, as: :json
+
+      expect(response.parsed_body.first).to include('contatos_count' => 1, 'recebem_count' => 1)
+    end
+  end
 end

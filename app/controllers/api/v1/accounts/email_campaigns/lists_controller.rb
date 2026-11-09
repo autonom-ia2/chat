@@ -3,16 +3,14 @@
 # para não receber).
 #
 # Apagar a lista não apaga a etiqueta (quem estava continua com ela) e é recusado enquanto uma campanha agendada, em
-# envio ou pausada usa a lista: ela ficaria sem lista no meio do caminho.
+# envio ou pausada usa a lista (EmailList::CAMPANHAS_EM_USO): ela ficaria sem lista no meio do caminho.
 class Api::V1::Accounts::EmailCampaigns::ListsController < Api::V1::Accounts::EmailCampaigns::BaseController
-  EM_USO = %i[scheduled sending paused].freeze
-
   before_action :fetch_list, only: [:update, :destroy]
 
   def index
     authorize EmailList
     listas = list_scope.includes(:label).order(:name).to_a
-    contagens = EmailList.contagens(Current.account, listas)
+    contagens = ve_contatos? ? EmailList.contagens(Current.account, listas) : {}
     render json: listas.map { |lista| list_json(lista, contagens[lista.id]) }
   end
 
@@ -30,18 +28,11 @@ class Api::V1::Accounts::EmailCampaigns::ListsController < Api::V1::Accounts::Em
     render json: list_json(@list)
   end
 
-  # A conferência e a exclusão rodam sob a trava de envio de cada campanha da lista: nenhuma é agendada ou sai entre as
-  # duas.
+  # A conferência e a exclusão rodam sob a trava de envio de cada campanha da lista (EmailList#sem_campanha_em_uso).
   def destroy
-    em_uso = @list.com_as_campanhas_travadas do
-      next true if @list.email_campaigns.exists?(status: EM_USO)
+    return head :no_content if @list.sem_campanha_em_uso { @list.destroy! }
 
-      @list.destroy!
-      false
-    end
-    return render json: { error: 'email_list.in_use' }, status: :unprocessable_entity if em_uso
-
-    head :no_content
+    render json: { error: 'email_list.in_use' }, status: :unprocessable_entity
   end
 
   private
@@ -59,9 +50,17 @@ class Api::V1::Accounts::EmailCampaigns::ListsController < Api::V1::Accounts::Em
     params.require(:email_list).permit(:name)
   end
 
-  def list_json(lista, contagem = EmailList.contagens(Current.account, [lista])[lista.id])
+  # Os números da lista só para quem vê os contatos (a mesma regra do Autonomia::Automacao::Tempo::Selecao): sem isso,
+  # quem só vê campanhas contaria quantos contatos têm uma etiqueta. Sem acesso, nil, e a tela não mostra o número.
+  def ve_contatos?
+    return @ve_contatos if defined?(@ve_contatos)
+
+    @ve_contatos = ContactPolicy.new(pundit_user, Contact).index?
+  end
+
+  def list_json(lista, contagem = (EmailList.contagens(Current.account, [lista])[lista.id] if ve_contatos?))
     { id: lista.id, name: lista.name, label_id: lista.label_id,
-      contatos_count: contagem[:contatos], recebem_count: contagem[:recebem] }
+      contatos_count: contagem&.dig(:contatos), recebem_count: contagem&.dig(:recebem) }
   end
 
   def render_invalid(lista)

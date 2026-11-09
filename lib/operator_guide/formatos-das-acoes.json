@@ -867,8 +867,8 @@
     "completo": true,
     "controller": "api/v1/accounts/email_campaigns/lists#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:35",
-      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:54"
+      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:32",
+      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:45"
     ],
     "sem_corpo": true
   },
@@ -1055,7 +1055,6 @@
     "controller": "api/v1/accounts/labels#destroy",
     "modelo": "Label",
     "origem": [
-      "app/controllers/api/v1/accounts/labels_controller.rb:19",
       "app/controllers/api/v1/accounts/labels_controller.rb:36"
     ],
     "sem_corpo": true
@@ -6762,9 +6761,9 @@
     "envelope": "email_list",
     "modelo": "EmailList",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:27",
-      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:59",
-      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:54"
+      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:25",
+      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:50",
+      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:45"
     ],
     "sem_corpo": false
   },
@@ -18000,8 +17999,8 @@
     "envelope": "email_list",
     "modelo": "EmailList",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:19",
-      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:59"
+      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:17",
+      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:50"
     ],
     "sem_corpo": false
   },
@@ -26412,9 +26411,9 @@
     "envelope": "email_list",
     "modelo": "EmailList",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:27",
-      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:59",
-      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:54"
+      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:25",
+      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:50",
+      "app/controllers/api/v1/accounts/email_campaigns/lists_controller.rb:45"
     ],
     "sem_corpo": false
   },

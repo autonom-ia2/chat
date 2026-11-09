@@ -129,6 +129,19 @@ RSpec.describe EmailLists::Recipients, :aggregate_failures do
       expect(emails).to be_empty
     end
 
+    it 'o agendador não manda para ninguém: a lista em que todos estão bloqueados falha com motivo próprio' do
+      campanha.update!(status: :scheduled, scheduled_at: 1.minute.ago)
+      EmailSuppression.create!(account: account, email: 'ana@exemplo.com', reason: 'unsubscribe')
+      campanha.email_campaign_recipients.update_all(status: EmailCampaignRecipient.statuses[:suppressed]) # rubocop:disable Rails/SkipsModelValidations
+
+      EmailCampaigns::Scheduler.new.perform
+
+      expect(campanha.reload).to be_failed
+      expect(campanha.last_error).to eq('email_list_all_suppressed')
+      expect(EmailCampaigns::Presentation::Errors.campaign_code(campanha.last_error)).to eq('email_list_all_suppressed')
+      expect(EmailCampaigns::Presentation::Errors.campaign_code('email_list_empty')).to eq('email_list_empty')
+    end
+
     it 'com a higiene em enforce, o agendador espera enquanto há pendente sem checagem' do
       campanha.update!(status: :scheduled, scheduled_at: 1.minute.ago)
 

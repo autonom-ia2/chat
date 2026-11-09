@@ -32,10 +32,13 @@ class EmailCampaigns::Presentation::Errors
 
   # AI generation codes the editor explains on its own (#1076).
   AI_CODES = %w[quality_gate_failed].freeze
+  # G52 (#2760): why a campaign with an e-mail list failed at send time (EmailLists::Gate::Scheduler); the status badge
+  # explains it.
+  EMAIL_LIST_CODES = %w[email_list_empty email_list_all_suppressed].freeze
 
   def self.campaign_code(value)
     return if value.blank?
-    return value if AI_CODES.include?(value)
+    return value if AI_CODES.include?(value) || EMAIL_LIST_CODES.include?(value)
 
     PROTECTION_CODES.key?(value) ? value : 'email_campaign.failed'
   end

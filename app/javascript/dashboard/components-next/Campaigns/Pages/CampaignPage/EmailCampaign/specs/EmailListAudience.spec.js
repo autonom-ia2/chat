@@ -59,6 +59,19 @@ describe('EmailListAudience', () => {
     );
   });
 
+  it('sem acesso aos contatos (números nulos), não mostra quantos estão na lista', async () => {
+    api.index.mockResolvedValue({
+      data: [{ ...DICAS, contatos_count: null, recebem_count: null }],
+    });
+    const wrapper = montar({ listaId: 5 });
+    await flushPromises();
+
+    expect(wrapper.find('[data-lista-numeros]').exists()).toBe(false);
+    expect(wrapper.find('[data-lista-escolhida]').text()).toBe(
+      'Vai para quem estiver na lista na hora do envio. Quem pediu para não receber fica de fora.'
+    );
+  });
+
   it('cria a lista pelo nome e já a escolhe', async () => {
     api.index.mockResolvedValue({ data: [] });
     api.create.mockResolvedValue({

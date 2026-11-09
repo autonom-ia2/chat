@@ -48,6 +48,7 @@ module EmailLists::Gate
   # a campanha); com a higiene em modo enforce, espera enquanto houver pendente sem checagem.
   module Scheduler
     LISTA_VAZIA = 'email_list_empty'.freeze
+    TODOS_BLOQUEADOS = 'email_list_all_suppressed'.freeze
 
     private
 
@@ -74,9 +75,10 @@ module EmailLists::Gate
       true
     end
 
-    # Quantos entraram, ou nil quando a campanha falhou: a lista que esvaziou entre o agendamento e a hora do envio
-    # (todos saíram, ou só sobrou quem está bloqueado) não sai com zero envios, e a campanha falha com o motivo gravado
-    # em vez de virar "enviada" para ninguém. Roda sob a trava de envio.
+    # Quantos entraram, ou nil quando a campanha falhou: a lista que esvaziou entre o agendamento e a hora do envio não
+    # sai com zero envios, e a campanha falha com o motivo gravado em vez de virar "enviada" para ninguém. Dois motivos:
+    # ninguém na lista pode receber (todos saíram, sem e-mail ou pediram para não receber) ou quem pode está todo
+    # descadastrado ou bloqueado (EmailSuppression, só `suppressed`). Roda sob a trava de envio.
     def montar_a_lista(campaign)
       campaign.reload
       return 0 unless campaign.scheduled?
@@ -84,7 +86,7 @@ module EmailLists::Gate
       added = EmailLists::Gate.sync!(campaign)[:added]
       return added if added.positive? || campaign.delivery_history? || campaign.email_campaign_recipients.pending.exists?
 
-      campaign.update!(status: :failed, last_error: LISTA_VAZIA)
+      campaign.update!(status: :failed, last_error: campaign.email_list.elegiveis.exists? ? TODOS_BLOQUEADOS : LISTA_VAZIA)
       nil
     end
 

@@ -16,6 +16,8 @@ Rails.application.config.to_prepare do
   prepend_once.call(EmailCampaign, EmailLists::Gate::Campaign)
   prepend_once.call(EmailCampaigns::Scheduler, EmailLists::Gate::Scheduler)
   prepend_once.call(EmailCampaigns::Presentation::SendReadiness, EmailLists::Gate::Readiness)
+  # A etiqueta de uma lista em uso não sai pela tela de etiquetas (apagar a etiqueta apagaria a lista).
+  prepend_once.call(Api::V1::Accounts::LabelsController, EmailLists::LabelDestroyGuard)
   # A campanha com lista não aceita planilha.
   prepend_once.call(Api::V1::Accounts::EmailCampaigns::RecipientsController, EmailLists::RecipientsGuard)
 end

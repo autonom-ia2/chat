@@ -1,6 +1,8 @@
 # Automação livre, passo "Pôr na lista de e-mail" (G52, #2760). Arquivo próprio para não disputar o pt_BR.yml com as
 # outras frentes.
 pt_BR:
+  email_lists:
+    label_in_use: 'Esta etiqueta é de uma lista de e-mail usada por uma campanha agendada, em envio ou pausada. Espere a campanha terminar ou cancele-a, e depois apague a etiqueta.'
   autonomia:
     automacao:
       motivos:

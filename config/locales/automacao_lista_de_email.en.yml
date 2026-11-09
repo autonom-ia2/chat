@@ -1,6 +1,8 @@
 # Free automation, "Add to e-mail list" step, and the e-mail list label (G52, #2760). Own file so it does not compete for en.yml with the other
 # fronts.
 en:
+  email_lists:
+    label_in_use: 'This label belongs to an e-mail list used by a scheduled, sending or paused campaign. Wait for the campaign to finish or cancel it, then delete the label.'
   autonomia:
     automacao:
       motivos:

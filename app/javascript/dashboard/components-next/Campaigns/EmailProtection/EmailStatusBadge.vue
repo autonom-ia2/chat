@@ -43,7 +43,16 @@ const visual = computed(
 );
 const label = computed(() => displayStatusLabel(t, key.value));
 
+// G52 (#2760): por que a campanha com lista de e-mail falhou na hora do envio.
+const EMAIL_LIST_ERRORS = {
+  email_list_empty: 'EMAIL_LISTS.FALHA.VAZIA',
+  email_list_all_suppressed: 'EMAIL_LISTS.FALHA.TODOS_BLOQUEADOS',
+};
+
 const hint = computed(() => {
+  const listError = props.record.last_error;
+  if (props.campaign && Object.hasOwn(EMAIL_LIST_ERRORS, listError))
+    return t(EMAIL_LIST_ERRORS[listError]);
   const reason =
     props.record.suppression_reason ||
     props.record.reason_code ||

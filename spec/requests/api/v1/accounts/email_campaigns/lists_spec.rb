@@ -96,6 +96,39 @@ RSpec.describe 'Email lists', :aggregate_failures, type: :request do
         .to eq([['Dicas do mês', 2, 1], ['Saudade', 1, 1]])
     end
 
+    it 'a etiqueta de uma lista em uso não sai pela tela de etiquetas; a de lista livre sai e leva a lista' do
+      lista = EmailList.criar(account: account, name: 'Dicas do mês')
+      campanha = create(:email_campaign, account: account)
+      campanha.update_columns(email_list_id: lista.id) # rubocop:disable Rails/SkipsModelValidations
+      allow(EmailCampaigns::Reputation::Admission).to receive(:new).and_call_original
+
+      EmailList::CAMPANHAS_EM_USO.each do |status|
+        campanha.update_columns(status: EmailCampaign.statuses[status]) # rubocop:disable Rails/SkipsModelValidations
+        delete "/api/v1/accounts/#{account.id}/labels/#{lista.label_id}", headers: admin.create_new_auth_token, as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body).to eq('error' => 'email_list.in_use', 'message' => I18n.t('email_lists.label_in_use'))
+        expect(Label.exists?(lista.label_id)).to be(true)
+      end
+
+      campanha.update_columns(status: EmailCampaign.statuses[:draft]) # rubocop:disable Rails/SkipsModelValidations
+      delete "/api/v1/accounts/#{account.id}/labels/#{lista.label_id}", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(EmailCampaigns::Reputation::Admission).to have_received(:new).with(having_attributes(id: campanha.id)).at_least(:once)
+      expect(EmailList.exists?(lista.id)).to be(false)
+      expect(campanha.reload.email_list_id).to be_nil
+    end
+
+    it 'etiqueta comum continua saindo pela tela de etiquetas' do
+      etiqueta = create(:label, account: account, title: 'vip')
+
+      delete "/api/v1/accounts/#{account.id}/labels/#{etiqueta.id}", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(Label.exists?(etiqueta.id)).to be(false)
+    end
+
     it 'a etiqueta da lista não troca de título pela tela de etiquetas' do
       lista = EmailList.criar(account: account, name: 'Dicas do mês')
 

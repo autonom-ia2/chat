@@ -13,11 +13,40 @@ RSpec.describe EmailList do
       expect(lista.label).to have_attributes(account_id: account.id, title: 'lista-email-dicas-do-mes')
     end
 
-    it 'reaproveita a etiqueta da lista apagada, com quem já estava nela' do
+    it 'não reaproveita a etiqueta da lista apagada: a lista nova ganha sufixo e nasce vazia' do
       etiqueta = described_class.criar(account: account, name: 'Dicas do mês').label
+      ana = create(:contact, account: account, email: 'ana@exemplo.com')
+      ana.update_labels([etiqueta.title])
       etiqueta.email_list.destroy!
 
-      expect(described_class.criar(account: account, name: 'Dicas do mês').label).to eq(etiqueta)
+      nova = described_class.criar(account: account, name: 'Dicas do mês')
+
+      expect(nova.label).not_to eq(etiqueta)
+      expect(nova.label.title).to eq('lista-email-dicas-do-mes-2')
+      expect(nova.contatos).to be_empty
+    end
+
+    it 'etiqueta "lista-email-x" posta em contato sem passar pela tela de etiquetas não põe ninguém na lista "x"' do
+      ana = create(:contact, account: account, email: 'ana@exemplo.com')
+      ana.update_labels(['lista-email-x'])
+      bia = create(:contact, account: account, email: 'bia@exemplo.com')
+      bia.update_labels(['Lista-Email-X-2'])
+      expect(account.labels.where('title LIKE ?', 'lista-email-%')).to be_empty
+
+      lista = described_class.criar(account: account, name: 'x')
+
+      expect(lista).to be_persisted
+      expect(lista.label.title).to eq('lista-email-x-3')
+      expect(lista.contatos).to be_empty
+      expect(described_class.contagens(account, [lista])[lista.id]).to eq(contatos: 0, recebem: 0)
+    end
+
+    it 'não reaproveita etiqueta da conta que não é de lista (criada antes da trava do prefixo)' do
+      antiga = build(:label, account: account, title: 'lista-email-x')
+      antiga.save!(validate: false)
+
+      expect(described_class.criar(account: account, name: 'x').label).to have_attributes(title: 'lista-email-x-2')
+      expect(antiga.reload.email_list).to be_nil
     end
 
     it 'não aceita o mesmo nome nem um nome que daria a mesma etiqueta, e não deixa etiqueta sobrando' do
@@ -90,6 +119,17 @@ RSpec.describe EmailList do
       expect(lista.contatos).to contain_exactly(ana, sem_email, recusou)
       expect(lista.elegiveis).to contain_exactly(ana)
       expect(lista.contatos).not_to include(fora)
+    end
+
+    it 'contatos e contagens usam o mesmo critério: a etiqueta com maiúscula conta, e o contato conta uma vez' do
+      ana = create(:contact, account: account, email: 'ana@exemplo.com')
+      bia = create(:contact, account: account, email: 'bia@exemplo.com')
+      ana.update_labels([lista.label.title])
+      maiuscula = ActsAsTaggableOn::Tag.create!(name: 'Lista-Email-Dicas-Do-Mes')
+      [ana, bia].each { |contato| ActsAsTaggableOn::Tagging.create!(tag: maiuscula, taggable: contato, context: 'labels') }
+
+      expect(lista.contatos).to contain_exactly(ana, bia)
+      expect(described_class.contagens(account, [lista])[lista.id]).to eq(contatos: 2, recebem: 2)
     end
   end
 
