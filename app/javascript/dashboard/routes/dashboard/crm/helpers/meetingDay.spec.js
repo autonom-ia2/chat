@@ -2,7 +2,6 @@ import {
   canCall,
   canRebook,
   canRemind,
-  formatClientPhone,
   meetingIdOf,
   refusalFrom,
 } from './meetingDay';
@@ -87,13 +86,6 @@ describe('meetingDay', () => {
       key: 'OTHER',
       url: '',
     });
-  });
-
-  it('formats the stored E.164 number for reading and keeps unknown text as it came', () => {
-    expect(formatClientPhone('+5511912345678')).toBe('+55 11 91234 5678');
-    expect(formatClientPhone('')).toBe('');
-    expect(formatClientPhone(null)).toBe('');
-    expect(formatClientPhone('abc')).toBe('abc');
   });
 
   it('reads the meeting id from a calendar event or from the meeting', () => {

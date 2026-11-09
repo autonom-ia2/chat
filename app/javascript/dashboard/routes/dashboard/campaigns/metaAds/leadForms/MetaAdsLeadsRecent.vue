@@ -2,7 +2,7 @@
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { relativeTime } from '../metaAdsHelpers';
-import { phoneLabel } from '../semLogin/anunciosSemLogin';
+import { telefoneParaLer } from 'dashboard/helper/telefoneParaLer';
 
 // Quem chegou pelos formulários (#2195): cada pessoa já virou card no funil escolhido, com o anúncio de origem.
 defineProps({
@@ -59,7 +59,9 @@ const cardLink = lead => ({
           </span>
           <span class="text-xs text-n-slate-11">
             {{
-              [phoneLabel(lead.phone), lead.email].filter(Boolean).join(' · ')
+              [telefoneParaLer(lead.phone), lead.email]
+                .filter(Boolean)
+                .join(' · ')
             }}
           </span>
           <span class="text-xs text-n-slate-11">
