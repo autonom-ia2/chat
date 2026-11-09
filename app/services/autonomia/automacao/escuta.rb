@@ -179,15 +179,10 @@ module Autonomia::Automacao::Escuta
   end
 
   def comecar_no_card(card, tipo, mudou, atividade_id)
-    return unless dispara?(tipo, card, atividade_id)
+    return unless ::Autonomia::Automacao::ReuniaoDaAtividade.comeca?(tipo, card, atividade_id)
 
     marca = ::Autonomia::Automacao::Gatilhos.marca_da_atividade(tipo, atividade_id)
     cada_automacao(card, tipo, dados_do_card(tipo, card, mudou, atividade_id)) { |definicao| partir(definicao, card, tipo, evento: marca) }
-  end
-
-  # G56: o resultado da reunião só começa a "reunião atendida" no primeiro "Aconteceu"; os outros só acordam a espera.
-  def dispara?(tipo, card, atividade_id)
-    tipo != ::Autonomia::Automacao::Gatilhos::ATENDIDA || ::Autonomia::Automacao::ReuniaoDaAtividade.atendida_agora?(card, atividade_id)
   end
 
   # A etapa de onde o card saiu ou para onde entrou, e o funil, para os parâmetros do gatilho. O card criado traz a

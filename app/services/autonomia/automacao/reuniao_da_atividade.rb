@@ -2,7 +2,8 @@
 # reunião no payload. Sempre presa ao card e à conta (parecer da Funções, G12), nunca só pelo id.
 #
 # Quem usa: o Contexto, para a reunião do gatilho que a receita lê (`reuniao.*`) e para quem atende ela (avisar); a
-# Escuta, para a página de agendamento em que ela foi marcada (o filtro `pagina_id` dos gatilhos de reunião, G32).
+# Escuta, para a página de agendamento em que ela foi marcada (o filtro `pagina_id` dos gatilhos de reunião, G32) e
+# para saber se o resultado da reunião começa a "reunião atendida" (G56).
 module Autonomia::Automacao::ReuniaoDaAtividade
   # A página de agendamento fica na reunião marcada por ela (Crm::BookingV2::Booker).
   PAGINA = 'booking_profile_id'.freeze
@@ -12,6 +13,12 @@ module Autonomia::Automacao::ReuniaoDaAtividade
   def de(card, atividade_id)
     reuniao_id = payload(card, atividade_id)['meeting_id']
     reuniao_id && card.account.crm_meetings.find_by(id: reuniao_id, card_id: card.id)
+  end
+
+  # G56: o resultado da reunião só começa a "reunião atendida" no primeiro "Aconteceu"; os outros só acordam a espera
+  # (Escuta#comecar_no_card). Os demais gatilhos do card começam sempre.
+  def comeca?(tipo, card, atividade_id)
+    tipo != ::Autonomia::Automacao::Gatilhos::ATENDIDA || atendida_agora?(card, atividade_id)
   end
 
   # G56: a atividade é o primeiro "Aconteceu" da reunião (Crm::Meetings::RecordOutcomeService grava `first_held`).
