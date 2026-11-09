@@ -23,10 +23,19 @@ class Autonomia::Automacao::PassosProprios
   def problemas(passo)
     case passo['tipo']
     when 'card' then card(passo)
-    when 'campanha'
-      ::Autonomia::Automacao::PassoDeCampanha.problemas_ao_salvar(passo, @receita, conta: @conta, account_user: @account_user)
     when 'retorno' then retorno(passo)
     when 'em_outro_registro' then outro_registro(passo)
+    else sem_caminho(passo)
+    end
+  end
+
+  private
+
+  # Os passos que se conferem sem ler caminho pela régua da Receita.
+  def sem_caminho(passo)
+    case passo['tipo']
+    when 'campanha'
+      ::Autonomia::Automacao::PassoDeCampanha.problemas_ao_salvar(passo, @receita, conta: @conta, account_user: @account_user)
     when 'para_cada' then ::Autonomia::Automacao::PassoParaCada.problemas_ao_salvar(@conta, passo, @account_user)
     when 'prospeccao'
       ::Autonomia::Automacao::PassoDeProspeccao.problemas_ao_salvar(passo, @receita, conta: @conta, account_user: @account_user)
@@ -34,8 +43,6 @@ class Autonomia::Automacao::PassosProprios
     else ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo)
     end
   end
-
-  private
 
   # G49: o contato em que o card nasce (`contato`) é lido como qualquer valor, e o registro criado tem de ser um contato.
   def card(passo)
