@@ -44,4 +44,14 @@ module ConversationAudience::Access
   def hides_contact_data?(account_user)
     !reads_contacts?(account_user)
   end
+
+  # The masks shown to who does not read contacts, the ones of the campaign result export (#1007): first name and the
+  # initial of the last one; e-mail with only its first letter and the domain.
+  def masked_name(name)
+    CampaignJourney::ResultExport.masked_name(name)
+  end
+
+  def masked_email(email)
+    email.present? ? EmailCampaigns::EmailNormalizer.mask(email.to_s.strip.downcase) : email
+  end
 end

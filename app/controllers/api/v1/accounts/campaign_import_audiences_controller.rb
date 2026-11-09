@@ -194,7 +194,13 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
     # #2277 / #2414 review: without contact reading, phone and e-mail as the audience keeps them (masked), never the
     # contact's own, for any origin.
     phone, email = masked_reach[contact.id]
-    payload.merge(email: email, phone_number: phone, company_name: nil)
+    payload.merge(name: listed_name(contact.name), email: email, phone_number: phone, company_name: nil)
+  end
+
+  # #2802: the name stays whole only where the viewer opens the person's conversation (an audience from the
+  # conversations, #2277); elsewhere it is masked like the contact base masks it without contact_view (#1849).
+  def listed_name(name)
+    named_contact_ids ? name : ConversationAudience::Access.masked_name(name)
   end
 
   # { contact_id => [raw_phone_masked, email_masked] } of this audience's rows.
@@ -220,7 +226,7 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   end
 
   def sample_payload(row)
-    name = (row.contact&.name.presence || row.normalized_name.presence || row.raw_name).to_s.squish
+    name = sample_name(row)
     payload = {
       name: name, first_name: name.split.first.to_s,
       company_name: row.contact.try(:company)&.name.presence || row.company_name,
@@ -228,6 +234,11 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
     }
     # #2277 / #2414 review: without contact reading, the columns are the contact's data, for any origin.
     contact_data_hidden? ? payload.merge(company_name: nil, extra_values: {}) : payload
+  end
+
+  def sample_name(row)
+    name = (row.contact&.name.presence || row.normalized_name.presence || row.raw_name).to_s.squish
+    contact_data_hidden? ? listed_name(name) : name
   end
 
   # Free-form maps keyed by template variable; the services check every key and value.

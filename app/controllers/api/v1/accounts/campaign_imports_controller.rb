@@ -110,6 +110,8 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
   end
 
   def download
+    return render json: { error: 'campaign_import.contacts_hidden' }, status: :forbidden unless policy(@campaign_import).download_file?(params[:file])
+
     attachment = attachment_for(params[:file])
     return render_bad_request('campaign_import.download_not_available') unless attachment&.attached?
 

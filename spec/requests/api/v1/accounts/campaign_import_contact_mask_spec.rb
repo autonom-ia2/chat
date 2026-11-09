@@ -40,9 +40,9 @@ RSpec.describe 'Campaign import audience contact mask', :aggregate_failures, typ
 
       expect(response).to have_http_status(:ok)
       hidden = response.parsed_body['payload'].sole
-      expect(hidden).to include('id' => contact.id, 'company_name' => nil)
+      expect(hidden).to include('id' => contact.id, 'name' => 'Ana L.', 'company_name' => nil)
       expect([hidden['phone_number'], hidden['email']]).to all(be_present)
-      expect(response.body).not_to include('987654321', 'ana@example.com', 'Alfa Seguros')
+      expect(response.body).not_to include('Ana Lima', '987654321', 'ana@example.com', 'Alfa Seguros')
     end
 
     it 'shows the contact data to a role with contact_view or contact_manage, and to the administrator' do
@@ -64,12 +64,45 @@ RSpec.describe 'Campaign import audience contact mask', :aggregate_failures, typ
       expect(response.headers['Content-Type']).to include('spreadsheetml.sheet')
     end
 
-    it 'hides the company of the message preview from a campaign_manage role without contact_view' do
+    it 'masks the name and hides the company of the message preview from a campaign_manage role without contact_view' do
       get "#{audience_path}/sample_contact", headers: headers(with_role(%w[campaign_manage]))
-      expect(response.parsed_body['payload']).to include('company_name' => nil, 'extra_values' => {})
+      expect(response.parsed_body['payload']).to include('name' => 'Ana L.', 'first_name' => 'Ana', 'company_name' => nil,
+                                                         'extra_values' => {})
 
       get "#{audience_path}/sample_contact", headers: headers(with_role(%w[campaign_manage contact_view]))
       expect(response.parsed_body['payload']).to include('company_name' => 'Alfa Seguros')
+    end
+  end
+
+  describe 'download of the audience files' do
+    let(:path) { "#{audience_path}/download" }
+
+    before do
+      audience.normalized_csv.attach(io: StringIO.new("nome,telefone\nAna Lima,+5511987654321\n"), filename: 'normalizado.csv',
+                                     content_type: 'text/csv')
+      audience.original_file.attach(io: StringIO.new("nome,telefone\nAna Lima,11987654321\n"), filename: 'publico.csv',
+                                    content_type: 'text/csv')
+    end
+
+    it 'refuses the normalized and the original file to a campaign_manage role without contact_view' do
+      manager = with_role(%w[campaign_manage])
+      %w[normalized_csv original].each do |file|
+        get path, params: { file: file }, headers: headers(manager)
+
+        expect(response).to have_http_status(:forbidden)
+        expect(response.parsed_body['error']).to eq('campaign_import.contacts_hidden')
+        expect(response.body).not_to include('987654321')
+      end
+    end
+
+    it 'gives both files to a campaign_manage role with contact_view' do
+      reader = with_role(%w[campaign_manage contact_view])
+      %w[normalized_csv original].each do |file|
+        get path, params: { file: file }, headers: headers(reader)
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include('987654321')
+      end
     end
   end
 
@@ -79,7 +112,8 @@ RSpec.describe 'Campaign import audience contact mask', :aggregate_failures, typ
 
     get "/api/v1/accounts/#{account.id}/campaign_imports/#{sheet.id}/contacts", headers: headers(with_role(%w[campaign_view]))
 
-    expect(response.parsed_body['payload'].sole).to include('phone_number' => '+55 11 9****-4321', 'email' => nil, 'company_name' => nil)
-    expect(response.body).not_to include('987654321', 'ana@example.com', 'Alfa Seguros')
+    expect(response.parsed_body['payload'].sole).to include('name' => 'Ana L.', 'phone_number' => '+55 11 9****-4321', 'email' => nil,
+                                                            'company_name' => nil)
+    expect(response.body).not_to include('Ana Lima', '987654321', 'ana@example.com', 'Alfa Seguros')
   end
 end

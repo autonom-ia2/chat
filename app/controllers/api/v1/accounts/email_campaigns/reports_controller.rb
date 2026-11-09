@@ -29,13 +29,15 @@ class Api::V1::Accounts::EmailCampaigns::ReportsController < Api::V1::Accounts::
   def recipients
     query = EmailCampaigns::RecipientQuery.new(@campaign, recipient_params)
     @meta = query.meta.merge(delivery_mode: @campaign.delivery_mode)
-    @recipients = EmailCampaigns::Presentation::Recipients.new(@campaign, query.paginated).call
+    @recipients = EmailCampaigns::Presentation::Recipients.new(@campaign, query.paginated, masked: contact_data_hidden?).call
   end
 
   def export
     query = EmailCampaigns::RecipientQuery.new(@campaign, recipient_params)
+    # Read now: the CSV streams after the action returns.
+    masked = contact_data_hidden?
     csv = EmailCampaigns::Reports::CsvExport.new(scope: -> { query.call }, columns: EmailCampaigns::Reports::CsvExport::RECIPIENT_COLUMNS) do |batch|
-      EmailCampaigns::Presentation::Recipients.new(@campaign, batch).call
+      EmailCampaigns::Presentation::Recipients.new(@campaign, batch, masked: masked).call
     end
     stream_csv(csv, 'recipients')
   end
@@ -61,6 +63,11 @@ class Api::V1::Accounts::EmailCampaigns::ReportsController < Api::V1::Accounts::
   def authorize_reports
     action = %w[export export_import_issues].include?(action_name) ? :export? : :view?
     authorize EmailCampaign, action, policy_class: EmailCampaignReportPolicy
+  end
+
+  # #2802: recipients' name and e-mail are contact data; who does not read contacts sees them masked.
+  def contact_data_hidden?
+    ConversationAudience::Access.hides_contact_data?(Current.account_user)
   end
 
   def fetch_campaign
