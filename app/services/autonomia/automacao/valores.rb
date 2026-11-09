@@ -129,9 +129,9 @@ class Autonomia::Automacao::Valores
     'card.valor' => ::Crm::ValorDeVenda
   }.freeze
 
-  # Decisão do Rodrigo (#2780, 09/11): o valor protegido só decide (filtro, condição, "Só se", o passo "decidir"), em
-  # qualquer automação, de conversa, de card ou de contato. Ele não vai para mensagem, texto, nota nem campo: o salvar
-  # recusa (`valor_protegido_so_decide`) e, na versão antiga que o tenha, a execução não o escreve (`ler_para_escrever`).
+  # Decisão 9 do Rodrigo (#2780, 09/11): o texto que a pessoa escreve (mensagem, e-mail, corpo) pode levar o valor
+  # protegido, em qualquer automação, com a permissão de quem salva e de quem ligou. A IA nunca o recebe para escrever
+  # (ComIa.leva_o_valor?): só o "decidir" o lê.
 
   # Os atributos personalizados (`contato.atributos.placa`) ficam em Valores::Atributos.
   MODELOS = ::Autonomia::Automacao::Valores::Atributos::MODELOS
@@ -182,10 +182,6 @@ class Autonomia::Automacao::Valores
       :valor_de_venda if account_user && !pode_ler?(caminho, account_user)
     end
 
-    # O caminho só pode decidir, nunca ir para um texto ou campo? Todo valor protegido, em qualquer gatilho: o ponto
-    # único do salvar (CardDaConversa.problema), da execução (`ler_para_escrever`) e dos passos de IA (ComIa.leva_o_valor?).
-    def so_decide?(caminho) = PROTEGIDOS.key?(caminho.to_s)
-
     # `account_user` pode ler o caminho? Sem pessoa (nil), o valor protegido fica fechado.
     def pode_ler?(caminho, account_user)
       regra = PROTEGIDOS[caminho.to_s]
@@ -220,15 +216,6 @@ class Autonomia::Automacao::Valores
     valor = self.class.da_ia?(caminho) ? @contexto.texto_da_ia(self.class.passo_da_ia(caminho)) : lido(caminho)
     @vazios << caminho.to_s if valor.blank?
     valor
-  end
-
-  # O valor que vai para um texto ou um campo (Texto, Corpo). O que só decide (`so_decide?`) lê vazio: o passo pula com
-  # `faltou_valor` em vez de escrever o valor. A condição continua com `ler`.
-  def ler_para_escrever(caminho)
-    return ler(caminho) unless self.class.so_decide?(caminho)
-
-    @vazios << caminho.to_s
-    nil
   end
 
   private

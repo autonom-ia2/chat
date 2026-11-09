@@ -19,8 +19,8 @@ module Autonomia::Automacao::ComIa
   VALOR = 'card.valor'.freeze
   DECIDE = 'decidir'.freeze
 
-  # O valor do card vai à IA? Só com a chave de quem lê (#2597, Valores.pode_ler?) e só no passo que decide (#2780,
-  # Valores.so_decide?), em qualquer automação: o que escreve (escrever, resumir, extrair) não o leva ao texto.
+  # O valor do card vai à IA? Só com a chave de quem lê (#2597, Valores.pode_ler?) e só no passo que decide (decisão 9,
+  # #2780): a IA nunca o recebe para escrever (escrever, resumir, extrair), em nenhuma automação.
   def self.leva_o_valor?(passo, account_user)
     ::Autonomia::Automacao::Valores.pode_ler?(VALOR, account_user) && passo['tipo'] == DECIDE
   end

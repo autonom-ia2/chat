@@ -42,7 +42,8 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
       expect(conversas_de_email.sole.additional_attributes['mail_subject']).to eq('Pedido de Carla')
     end
 
-    it 'com o valor da venda numa automação de conversa (versão antiga), não o leva: o passo pula', :aggregate_failures do
+    # #2780, decisão 9: o assunto escrito pela pessoa leva o valor da venda, com a chave de quem ligou.
+    it 'com o valor da venda numa automação de conversa, quem ligou com a chave: o assunto sai com o valor', :aggregate_failures do
       with_modified_env(CRM_KANBAN_ENABLED: 'true') do
         funil, etapa = create_crm_pipeline(account: account, user: admin)
         account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'Pedido', currency: 'BRL', value_cents: 250_000, status: :open,
@@ -56,8 +57,8 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
 
         perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(definicao, conversa) }
 
-        expect(registros(Autonomia::Automacao::Execucao.where(automacao: definicao).last)).to eq([%w[p1 pulado faltou_valor]])
-        expect(conversas_de_email).to be_empty
+        expect(registros(Autonomia::Automacao::Execucao.where(automacao: definicao).last)).to eq([['p1', 'ok', nil]])
+        expect(conversas_de_email.sole.additional_attributes['mail_subject']).to include('2500')
       end
     end
   end
