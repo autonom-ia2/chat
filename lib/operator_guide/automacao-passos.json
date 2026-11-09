@@ -1716,6 +1716,12 @@
           "peca": "etapa",
           "obrigatorio": true,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ETAPA_ID"
+        },
+        {
+          "nome": "contato",
+          "peca": "contato_criado",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CONTATO"
         }
       ]
     },
@@ -1747,6 +1753,25 @@
           "peca": "envio_do_retorno",
           "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ENVIO"
+        }
+      ]
+    },
+    {
+      "tipo": "em_outro_registro",
+      "grupo": "CONTROLE",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.EM_OUTRO_REGISTRO",
+      "campos": [
+        {
+          "nome": "registro",
+          "peca": "registro_ligado",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.REGISTRO"
+        },
+        {
+          "nome": "passos",
+          "peca": "passos",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PASSOS"
         }
       ]
     },

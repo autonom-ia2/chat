@@ -6,6 +6,10 @@ import { comColchetes } from './texto';
 import { fraseDaCampanha } from './campanha';
 import { fraseDoRetorno } from './retorno';
 import { SEM_PRAZO } from './receita';
+import {
+  TIPO as EM_OUTRO_REGISTRO,
+  fraseDoOutroRegistro,
+} from './outroRegistro';
 import { formatAttributeDate } from 'dashboard/helper/attributeDate';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
@@ -492,6 +496,17 @@ export const fraseDoPasso = (passo, catalogo, t) => {
       titulo: fraseDoTexto(passo.titulo, catalogo, t),
       mensagem: passo.envio && fraseDoTexto(passo.envio.mensagem, catalogo, t),
     });
+  if (passo.tipo === EM_OUTRO_REGISTRO) {
+    // G49: no `criado_no_passo`, o nome do registro criado (`criado.<passo>`).
+    const campo =
+      passo.registro?.campo?.$valor ||
+      (passo.registro?.passo && `criado.${passo.registro.passo}`);
+    return fraseDoOutroRegistro(
+      passo,
+      t,
+      campo && fraseDoValor(campo, catalogo, t)
+    );
+  }
   if (passo.tipo !== 'acao') return t(entrada.frase);
   if (ETIQUETAS_DE[entrada.nome])
     return fraseDasEtiquetas(passo, entrada, catalogo, t);

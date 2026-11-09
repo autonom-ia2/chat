@@ -11,6 +11,8 @@ export const RAMOS = {
   se: ['entao', 'senao'],
   esperar_ate: ['se_vencer', 'a_cada_mensagem'],
   decidir: ['nenhum'],
+  // G18 (#2671): os passos que rodam no outro registro.
+  em_outro_registro: ['passos'],
 };
 
 // G63 (#2830): o galho do "esperar até" que roda a cada mensagem do cliente
@@ -106,6 +108,17 @@ export const todosOsPassos = (passos = []) =>
     ...galhosDe(passo).flatMap(galho => todosOsPassos(galho.passos || [])),
   ]);
 
+// G18: os passos que rodam na mesma execução: o ramo do "em outro registro"
+// roda numa execução filha, no registro ligado.
+export const OUTRO_REGISTRO = 'em_outro_registro';
+export const naMesmaExecucao = (passos = []) =>
+  passos.flatMap(passo => [
+    passo,
+    ...(passo.tipo === OUTRO_REGISTRO
+      ? []
+      : galhosDe(passo).flatMap(galho => naMesmaExecucao(galho.passos || []))),
+  ]);
+
 export const acharPasso = (passos, id) =>
   todosOsPassos(passos).find(passo => passo.id === id) || null;
 
@@ -128,11 +141,25 @@ export const novoId = passos => {
 
 export const receitaVazia = () => ({ gatilho: null, passos: [] });
 
-// "Se" e "Esperar até" nascem sem condição, e o "Se" sem passo em "Então": o
-// esquema recusa os dois até a pessoa completar pelo próprio Confira.
-const incompleto = passo =>
-  (passo.tipo === 'se' || passo.tipo === 'esperar_ate') &&
-  (!passo.condicao || (passo.tipo === 'se' && !passo.entao?.length));
+// G18: o "em outro registro" diz onde rodar. O contato do campo pede o campo;
+// os cards do contato valem sem filtro.
+export const registroPronto = registro => {
+  if (registro?.de === 'cards_do_contato') return true;
+  if (registro?.de === 'criado_no_passo') return Boolean(registro.passo);
+  return registro?.de === 'contato_do_campo' && Boolean(registro.campo?.$valor);
+};
+
+// "Se" e "Esperar até" nascem sem condição, e o "Se" sem passo em "Então"; o
+// "Em outro registro" (G18), sem passo dentro: o esquema recusa até a pessoa
+// completar pelo próprio Confira.
+const incompleto = passo => {
+  if (passo.tipo === 'em_outro_registro')
+    return !passo.passos?.length || !registroPronto(passo.registro);
+  return (
+    (passo.tipo === 'se' || passo.tipo === 'esperar_ate') &&
+    (!passo.condicao || (passo.tipo === 'se' && !passo.entao?.length))
+  );
+};
 
 // Pronta para salvar: o esquema pede gatilho, pelo menos um passo e cada "Se"
 // e "Esperar até" completos.

@@ -51,13 +51,17 @@ module Autonomia::Automacao::Catalogo
                        'agente_de_ia' => 'agente_de_ia',
                        # G3 (#2629): o "criar retorno".
                        'para_do_retorno' => 'quem_recebe_retorno', 'envio_do_retorno' => 'envio_do_retorno',
+                       # G18 (#2671): onde roda o "em outro registro".
+                       'registro_ligado' => 'registro_ligado',
                        # G31: o "decidir" que espera a próxima resposta e decide de novo.
                        'de_novo' => 'de_novo' }.freeze
   # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2), a
-  # etapa do "card" (G4) e a hora da conferência do "esperar até" sem prazo (G64, mostrada pela peça do prazo).
-  # O "Cobrir a pessoa enquanto ela não responde" do "Passar para a agente de IA" (decisão 18) é um sim/não.
+  # etapa do "card" (G4) e o contato em que ele nasce (G49), e a hora da conferência do "esperar até" sem prazo (G64,
+  # mostrada pela peça do prazo). O "Cobrir a pessoa enquanto ela não responde" do "Passar para a agente de IA" (decisão
+  # 18) é um sim/não.
   PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email',
-                          'etapa_id' => 'etapa', 'conferir_as' => 'conferir_as', 'cobrir_pessoa' => 'sim_nao' }.freeze
+                          'etapa_id' => 'etapa', 'contato' => 'contato_criado', 'conferir_as' => 'conferir_as',
+                          'cobrir_pessoa' => 'sim_nao' }.freeze
 
   module_function
 

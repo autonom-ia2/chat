@@ -96,6 +96,10 @@ export const novoPasso = (entrada, id, t) => {
   // G2: a caixa de e-mail a escolher, o assunto e o texto a escrever.
   if (entrada.tipo === 'email')
     return { id, tipo: 'email', caixa_id: null, assunto: [], texto: [] };
+  // G18: o "em outro registro" nasce sem ligação e sem passo dentro; a pessoa
+  // escolhe onde no painel e põe os passos pelo próprio Confira.
+  if (entrada.tipo === 'em_outro_registro')
+    return { id, tipo: 'em_outro_registro', registro: {}, passos: [] };
   // G3: o retorno nasce para o responsável, daqui a um dia, só como lembrete.
   if (entrada.tipo === 'retorno')
     return { id, tipo: 'retorno', titulo: [], daqui: { ...DURACAO_PADRAO } };
@@ -183,33 +187,42 @@ export const comPermissoes = (dados, podeLer) => {
 // abre; e "o cliente respondeu" sai do contato, então vale onde há contato.
 // #2716: o card da conversa (gatilho de conversa) só para quem tem a chave de
 // funis (`podeLerCard`), a mesma pergunta que o salvar faz.
+// G18 (#2671): dentro do "em outro registro", vale o registro em que o ramo roda
+// (`alvoDoRamo`), não o alvo do gatilho; lá não há a reunião do gatilho nem a
+// conversa nova. `alvo` volta junto, para a peça que precisa saber de onde lê
+// (o campo do contato).
 const RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu';
 export const doAlvoDoGatilho = (
   dados,
   tipoDoGatilho,
   comConversaNova = false,
-  podeLerCard = false
+  podeLerCard = false,
+  alvoDoRamo = null
 ) => {
-  const alvo = dados?.gatilhos?.find(item => item.tipo === tipoDoGatilho)?.alvo;
+  const doGatilho = dados?.gatilhos?.find(
+    item => item.tipo === tipoDoGatilho
+  )?.alvo;
+  const alvo = alvoDoRamo || doGatilho;
   const doAlvo = alvo && dados.alvos?.[alvo];
   if (!doAlvo) return dados;
-  const bases = comConversaNova
-    ? [...new Set([...doAlvo, 'conversa'])]
-    : doAlvo;
+  const bases =
+    comConversaNova && !alvoDoRamo
+      ? [...new Set([...doAlvo, 'conversa'])]
+      : doAlvo;
   const semCard = alvo === 'Conversation' && !podeLerCard;
   const alcanca = item =>
     !(semCard && item.base === 'card') &&
     (!item.base ||
       bases.includes(item.base) ||
       (item.caminho === RESPOSTA_DO_CONTATO && bases.includes('contato')));
+  const daReuniao = item =>
+    !item.so_nos_gatilhos ||
+    (!alvoDoRamo && item.so_nos_gatilhos.includes(tipoDoGatilho));
   return {
     ...dados,
-    gatilho: tipoDoGatilho,
-    valores: dados.valores.filter(
-      item =>
-        alcanca(item) &&
-        (!item.so_nos_gatilhos || item.so_nos_gatilhos.includes(tipoDoGatilho))
-    ),
+    alvo,
+    gatilho: alvoDoRamo ? null : tipoDoGatilho,
+    valores: dados.valores.filter(item => alcanca(item) && daReuniao(item)),
   };
 };
 
@@ -258,14 +271,42 @@ export const comAgendas = (
   return { ...dados, valores: [...dados.valores, ...agendas] };
 };
 
-export const comTextosDaIa = (dados, passos, t) => {
+// G49 — o registro que um passo cria (o card do "criar card", o contato de uma
+// ação que cria contato) vira um dado dos passos seguintes: `criado.<id>`, o id
+// dele. `criado` diz o tipo, para a peça que só aceita contato. A mesma lista
+// fechada do servidor (RegistroCriado).
+const ACOES_QUE_CRIAM = {
+  'POST contacts': 'Contact',
+  'POST crm/cards/:card_id/contact': 'Contact',
+};
+export const tipoCriado = passo => {
+  if (passo?.tipo === 'card') return 'Crm::Card';
+  return (passo?.tipo === 'acao' && ACOES_QUE_CRIAM[passo.acao]) || null;
+};
+const ROTULO_DO_CRIADO = { Contact: 'CONTATO', 'Crm::Card': 'CARD' };
+
+// `achatar`: como a lista vira os passos de onde vêm os textos; o "Alterar"
+// passa a lista já pronta da execução do passo (passosDaExecucao, G18). Junto
+// com os textos da IA vêm os registros criados (G49): os dois ficam na execução.
+export const comTextosDaIa = (dados, passos, t, achatar = todosOsPassos) => {
   if (!dados?.valores) return dados;
-  const textos = todosOsPassos(passos)
+  const lista = achatar(passos);
+  const textos = lista
     .filter(passo => ['escrever', 'resumir'].includes(passo.tipo))
     .map(passo => ({
       caminho: `ia.${passo.id}`,
       chave: passo.id,
       rotulo: rotuloDoTexto(passo, t),
     }));
-  return { ...dados, valores: [...dados.valores, ...textos] };
+  const criados = lista
+    .filter(passo => tipoCriado(passo))
+    .map(passo => ({
+      caminho: `criado.${passo.id}`,
+      chave: passo.id,
+      criado: tipoCriado(passo),
+      rotulo: t(
+        `AUTOMACAO_LIVRE.CRIADO.${ROTULO_DO_CRIADO[tipoCriado(passo)]}`
+      ),
+    }));
+  return { ...dados, valores: [...dados.valores, ...textos, ...criados] };
 };

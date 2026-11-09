@@ -9,9 +9,10 @@
 module FechamentoAutomacao
   OPENAI = 'https://api.openai.com/v1/responses'.freeze
   # Os jobs que o caminho de produção enfileira entre o evento e a saída. Os do webhook de cada canal (FechamentoAutomacao::
-  # Canais) gravam a mensagem do cliente como em produção.
+  # Canais) gravam a mensagem do cliente como em produção. O EmOutroRegistroJob (G18) abre as execuções filhas do passo
+  # "em outro registro".
   JOBS = [Webhooks::WhatsappEventsJob, Webhooks::InstagramEventsJob, EventDispatcherJob, Autonomia::Automacao::AvancarJob,
-          SendReplyJob].freeze
+          Autonomia::Automacao::EmOutroRegistroJob, SendReplyJob].freeze
   LIMITE_DE_JOBS = 60
 
   Chamada = Data.define(:metodo, :host, :caminho, :corpo)
@@ -189,7 +190,7 @@ module FechamentoAutomacao::Lacunas
     'G15' => -> { passo?('ia_assumir') },
     'G16' => -> { valor_calculado_no_corpo? },
     'G17' => -> { acao?('POST contacts') },
-    'G18' => nil,
+    'G18' => -> { passo?('em_outro_registro') },
     'G19' => -> { acao?('POST contacts/:contact_id/notes') },
     # Os passos de IA leem a foto, o PDF e o áudio da conversa (`le: anexos`, #2669).
     'G20' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('anexos') },
@@ -252,6 +253,19 @@ module FechamentoAutomacao::Lacunas
     # G48 (do exemplo 12, passo 3): o campo do card preenchido acorda o "esperar até" na hora, pelo gancho único do card
     # (Crm::CardAvisaAutomacao, lote 4, #2682); prova ponta a ponta em spec/fechamento/automacao/g48_campo_do_card_spec.rb.
     'G48' => -> { FechamentoAutomacao::SondasDoExemplo12.campo_do_card_acorda_a_espera? },
+    # G49 (ex. 11, passo 3; ex. 6, passos 5 e 6): o registro que um passo criou vira valor (`criado.<passo>`) e alvo dos
+    # passos seguintes: o card nasce no contato criado e o "em outro registro" roda no registro criado. Prova ponta a
+    # ponta em spec/fechamento/automacao/exemplo_11_indicacao_spec.rb.
+    'G49' => lambda {
+      valor?('criado.p1') && campo_do_passo?('card', 'contato') &&
+        Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'registro_ligado', 'oneOf').any? do |forma|
+          forma.dig('properties', 'de', 'const') == 'criado_no_passo'
+        end
+    },
+    # Achada no #2675 (09/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
+    # G55 (ex. 16, passo 2): disparar a campanha da etiqueta a partir de um gatilho de card. A campanha só sai do
+    # conta.recorrente (`campanha_so_sem_alvo`), e o "para cada card perdido" é o card.recorrente.
+    'G55' => nil,
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
     # (passo 2, "manda por e-mail o mesmo conteúdo"): `falhou.texto`, prova em g53_conteudo_da_falha_spec.rb.
     'G53' => -> { valor?('falhou.texto') },
@@ -286,9 +300,6 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 6, passo 8 (G56): o gatilho "reunião atendida", o primeiro "Aconteceu" da reunião na Agenda; prova ponta
     # a ponta em spec/fechamento/automacao/g56_reuniao_atendida_spec.rb.
     'G56' => -> { gatilho?('card.reuniao_atendida') },
-    # G49: o registro que a automação criou vira alvo dos passos seguintes (ex. 6, passos 5 e 6: gravar no card criado;
-    # ex. 11). Em construção em outra frente; a dona troca o nil pela sonda.
-    'G49' => nil,
     # Do exemplo 6, passo 8, numa automação só (G59): esperar a reunião do contato acontecer, no meio da execução, e o
     # resultado da reunião acordar essa espera; prova em spec/fechamento/automacao/g59_reuniao_atendida_na_espera_spec.rb.
     'G59' => lambda {

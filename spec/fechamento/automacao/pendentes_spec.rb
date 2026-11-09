@@ -19,13 +19,17 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     9 => ['Prospecção que roda sozinha toda semana', 'G7 (segunda às 8h), G3, G4, G12, G14, G21'],
     # O 10 saiu com o lote 4 (#2682, G40) depois da G41 (#2759): o spec dele roda à risca, com a espera só pela Fernanda.
     # O 13 saiu com o lote 2 (#2679): o spec dele roda à risca, com o card ganho e a IA lendo o card.
-    11 => ['Indicação que vira presente', 'G4, G17, G18 (criar o contato e o card do amigo e agir no card dele), G1, G5, G12, G16'],
+    # O 11 saiu com a G49: o spec dele roda à risca (exemplo_11_indicacao_spec.rb).
     # O 12: a espera do passo 3 está provada à risca (g48_campo_do_card_spec.rb, passos 1 a 4 e 8); falta a G25 (passo 7).
     12 => ['Visita que aconteceu decide o próximo passo', 'G48 (o campo do card acorda a espera), G5, G2, G3, G11, G14, G25, G35'],
     # O 15 saiu com o G27 (#2661) sobre o lote 4 (#2687, G40): exemplo_15_cliente_grande_spec.rb roda à risca.
     # Os passos 1 a 6 têm spec próprio à risca, numa automação só (G46): exemplo_14_documentacao_spec.rb.
     14 => ['Documentação completa para emitir', 'G13 (passos 7 e 8: mandar à seguradora e gravar a proposta; a recusa avisa a Dona Cida)'],
-    16 => ['Reconquistar quem foi para o concorrente', 'G7 (todo dia 1º), G3, G4, G12, G14, G16, G18'],
+    # #2675 (09/11): o "Começa quando" monta (card.recorrente com fechado_entre_dias e o "Só se" no card.motivo_da_perda).
+    # Para no passo 2: a campanha só sai do conta.recorrente, e o gatilho do 16 roda em cada card; e no 3, a resposta à campanha.
+    16 => ['Reconquistar quem foi para o concorrente',
+           'G55 (passo 2: disparar a campanha da etiqueta num gatilho de card), G38 (passo 3: cada resposta à campanha), ' \
+           'G3, G4, G7, G12, G14, G16, G18'],
     # O 17 saiu com a G66 (#2843), a G67 (#2844) e a decisão 18: exemplo_17_ferias_spec.rb roda à risca numa automação
     # só, inteiro, sem pendente (a agente de IA cobre a Renata pela opção do passo, e a conversa volta quando ela escreve).
     18 => ['Seleção de candidatos sem planilha', 'G4, G20 (ler o currículo e criar o card), G1, G5, G6, G12, G15, G25'],

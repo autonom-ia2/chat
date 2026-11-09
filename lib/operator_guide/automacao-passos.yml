@@ -43,6 +43,9 @@ nativos:
   ia_assumir: { grupo: EQUIPE }
   # G3 (#2629): o retorno para a equipe. A mensagem ao cliente na hora pede a flag da F4; quem recusa é a Receita.
   retorno: { grupo: EQUIPE }
+  # G18 (#2671): os passos de dentro rodam no contato guardado num campo ou nos outros cards do contato. Os cards pedem a
+  # chave de funis: o painel só os oferece a quem pode mexer no funil, e quem recusa de verdade é a Receita.
+  em_outro_registro: { grupo: CONTROLE }
   # G4: criar card numa etapa, com a flag dos gatilhos de card (F6). `funil`: só para quem pode mexer no funil
   # (RegraDoFunil.chave?: crm_manage_pipelines ou crm_admin), como o gatilho de card; quem recusa de verdade é a API,
   # ao salvar e ao ligar.
@@ -51,8 +54,8 @@ nativos:
   # card (a Receita recusa nos outros), que já pede a chave de funis: por isso `funil` e a flag dos gatilhos de card.
   conversa_ao_responsavel: { grupo: EQUIPE, requer: automacao_gatilhos, funil: true }
 
-# Passos nativos do esquema que o editor ainda não mostra, com o motivo. A receita aceita e o motor roda; a tela só os
-# mostra quando tiver as peças.
+# Passos nativos do esquema que o editor ainda não mostra, com o motivo e a Issue que os leva para a tela. A receita
+# aceita e o motor roda; a tela só os mostra quando tiver as peças.
 nativos_fora_do_editor: {}
 
 # Os valores da mensagem que disparou o gatilho (#2496, Valores::MENSAGEM). Só existem no "Só se" do gatilho dela; o

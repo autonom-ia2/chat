@@ -105,6 +105,10 @@ class Autonomia::Automacao::Valores
   # G44: o link da agenda de uma página escolhida, `agenda.<id da página>` (AgendaDaPagina), em qualquer alvo.
   PAGINA = ::Autonomia::Automacao::AgendaDaPagina
 
+  # G49: o id do registro que um passo desta execução criou (`criado.<id do passo>`: o contato do `POST contacts`, o
+  # card do "criar card"). Como o texto da IA, vale em qualquer alvo e só na execução que criou (RegistroCriado).
+  CRIADO = ::Autonomia::Automacao::RegistroCriado
+
   # O que cada alvo alcança, pelas pontes do Contexto. O card da conversa (#2716) só para ler: CardDaConversa.
   # De onde cada base lê no contexto da execução. O `card` fica fora: na conversa, ele cai no card dela (#2716). O
   # `gatilho` (G9) lê o próprio contexto, que guarda a marca da troca.
@@ -166,8 +170,8 @@ class Autonomia::Automacao::Valores
 
     def da_ia?(caminho) = caminho.to_s.start_with?(IA) && caminho.to_s.length > IA.length
 
-    # O texto da IA e a página da agenda valem em qualquer alvo.
-    def livre?(caminho) = da_ia?(caminho) || PAGINA.caminho?(caminho)
+    # O texto da IA (#2679), a página da agenda (G44) e o registro criado (G49) valem em qualquer alvo.
+    def livre?(caminho) = da_ia?(caminho) || PAGINA.caminho?(caminho) || CRIADO.caminho?(caminho)
 
     # "ia.p3" => "p3".
     def passo_da_ia(caminho) = caminho.to_s.delete_prefix(IA)
@@ -228,12 +232,20 @@ class Autonomia::Automacao::Valores
   def falta_da_agenda = (@por_da_agenda if @vazios.any? && @vazios.all? { |caminho| AGENDA.key?(caminho) || PAGINA.caminho?(caminho) })
 
   def ler(caminho)
-    valor = self.class.da_ia?(caminho) ? @contexto.texto_da_ia(self.class.passo_da_ia(caminho)) : lido(caminho)
+    valor = do_passo(caminho)
     @vazios << caminho.to_s if valor.blank?
     valor
   end
 
   private
+
+  # O texto da IA e o registro criado ficam na execução; o resto, no alvo.
+  def do_passo(caminho)
+    return @contexto.texto_da_ia(self.class.passo_da_ia(caminho)) if self.class.da_ia?(caminho)
+    return @contexto.criado(CRIADO.passo_do(caminho)) if CRIADO.caminho?(caminho)
+
+    lido(caminho)
+  end
 
   def lido(caminho)
     return unless permitido?(caminho)

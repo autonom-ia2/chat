@@ -61,7 +61,7 @@ class Autonomia::Automacao::Executor
     @definicao = execucao.automacao
     @account = execucao.account
     @raiz = raiz || SecureRandom.uuid
-    @roteiro = ::Autonomia::Automacao::Roteiro.new(execucao.versao.receita)
+    @roteiro = ::Autonomia::Automacao::Roteiro.da(execucao)
     @acesso = ::Autonomia::Automacao::Acesso.new(@definicao, chave_gatilho: @execucao.chave_gatilho)
     @tentativas = execucao.tentativas
   end
@@ -97,7 +97,7 @@ class Autonomia::Automacao::Executor
     when 'esperar' then esperar(passo)
     when 'esperar_ate' then esperar_ate(passo)
     when 'se' then se(passo)
-    when 'acao', 'retorno', 'conversa_ao_responsavel' then acao(passo)
+    when *::Autonomia::Automacao::PassoDeAcao::TIPOS then acao(passo)
     when *NATIVOS.keys then passo_nativo(passo, NATIVOS.fetch(passo['tipo']))
     when *IA.keys then passo_de_ia(passo, IA.fetch(passo['tipo']))
     when 'ia_assumir' then passo_nativo(passo, ::Autonomia::Automacao::PassoDeIaAssumir, mensagem: false)
@@ -155,7 +155,7 @@ class Autonomia::Automacao::Executor
     Rails.logger.error("[automacao][motor] não registrou a quebra execucao=#{@execucao.id} #{e.class}: #{e.message}")
   end
 
-  def motivo_de_quem_ligou = @acesso.motivo || ('quem_ligou_sem_acesso' unless @acesso.alcanca?(alvo))
+  def motivo_de_quem_ligou = @acesso.motivo_no(alvo, @execucao)
 
   # Antes de cada ação: a automação, o motor, o alvo e quem ligou podem ter mudado desde o começo da rodada.
   def reconferir

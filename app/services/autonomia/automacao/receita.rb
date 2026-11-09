@@ -16,7 +16,8 @@
 #   só com cliente e fora de outro galho (EnquantoEspera).
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
-  RAMOS = %w[entao senao se_vencer a_cada_mensagem].freeze
+  # `passos`: o ramo do "em outro registro" (G18, #2671), que roda numa execução filha, no registro ligado.
+  RAMOS = %w[entao senao se_vencer a_cada_mensagem passos].freeze
   # O "decidir" (F7, #2500) abre um ramo por caminho (`caminhos[].passos`) e o de "nenhum se aplica" (`nenhum`).
   NENHUM = 'nenhum'.freeze
   # Os passos de IA (F7), só com a flag da F7.
@@ -46,24 +47,33 @@ class Autonomia::Automacao::Receita
   # `account_user`: quem salva ou liga, na conta. Com ele, o valor que pede permissão (Valores::PROTEGIDOS, #2597) só
   # entra se ele pode ler; `nil` explícito (o catálogo, a leitura sem pessoa) não aplica a regra aqui, e a execução
   # continua lendo vazio. Obrigatório, sem padrão: quem monta a Receita diz quem é, e o esquecimento quebra o spec.
-  def initialize(receita, conta:, account_user:)
+  # `alvo`: o tipo do registro em que a receita roda, quando não é o do gatilho: o ramo do "em outro registro" (G18) é
+  # conferido como uma receita própria, no registro ligado (EmOutroRegistro.problemas_ao_salvar).
+  def initialize(receita, conta:, account_user:, alvo: nil)
     @receita = receita
     @conta = conta
     @account_user = account_user
+    @alvo = alvo
   end
 
   # Frases para a pessoa (ou o Guia) corrigir. Vazio = pode salvar. Só roda com a receita já no esquema.
   def problemas
-    [*ids_repetidos, *gatilho_novo, *conversa_nova, *agenda_de_reserva, *filtros_do_gatilho,
-     *passos.flat_map { |passo| problemas_do_passo(passo) },
-     *::Autonomia::Automacao::Duracao.sem_prazo_que_vence(passos).map { |id| texto(:sem_prazo_com_se_vencer, passo: id) },
-     *::Autonomia::Automacao::EnquantoEspera.problemas_ao_salvar(@receita, passos)]
+    [*(@alvo ? [] : ids_repetidos), *gatilho_novo, *conversa_nova, *agenda_de_reserva, *filtros_do_gatilho,
+     *do_alvo.flat_map { |passo| problemas_do_passo(passo) },
+     *::Autonomia::Automacao::Duracao.sem_prazo_que_vence(do_alvo).map { |id| texto(:sem_prazo_com_se_vencer, passo: id) },
+     *::Autonomia::Automacao::EnquantoEspera.problemas_ao_salvar(@receita, do_alvo)]
   end
 
   # Todos os passos, inclusive os de dentro dos ramos, na ordem em que aparecem.
   def passos(lista = @receita['passos'])
     Array(lista).flat_map { |passo| [passo, *self.class.ramos(passo).flat_map { |ramo| passos(ramo) }] }
   end
+
+  # Os passos que rodam no alvo desta receita, na mesma execução: o ramo do "em outro registro" roda numa execução filha,
+  # no registro ligado, e é conferido lá. O texto da IA (#2679) também só passa entre passos da mesma execução.
+  def do_alvo(lista = @receita['passos']) = Array(lista).flat_map { |passo| [passo, *ramos_do_alvo(passo).flat_map { |ramo| do_alvo(ramo) }] }
+
+  def ramos_do_alvo(passo) = ::Autonomia::Automacao::EmOutroRegistro.do_tipo?(passo) ? [] : self.class.ramos(passo)
 
   private
 
@@ -75,8 +85,12 @@ class Autonomia::Automacao::Receita
     ::Autonomia::Automacao::ProblemasDoGatilho.new(@receita['gatilho'].to_h, @conta, passos: passos, account_user: @account_user).problemas
   end
 
-  # A caixa por onde abrir a conversa de quem não tem (#2680): da conta, e quem salva pode começar conversa nela.
-  def conversa_nova = ::Autonomia::Automacao::ConversaNova.problemas_ao_salvar(@conta, @receita['gatilho'].to_h, @account_user)
+  # A caixa por onde abrir a conversa de quem não tem (#2680): da conta, e quem salva pode começar conversa nela. O ramo
+  # do "em outro registro" no card ou contato que um passo criou também não tem conversa (G49).
+  def conversa_nova
+    ramos = ::Autonomia::Automacao::EmOutroRegistro.alvos_dos_criados(passos, @receita)
+    ::Autonomia::Automacao::ConversaNova.problemas_ao_salvar(@conta, @receita['gatilho'].to_h, @account_user, ramos: ramos)
+  end
 
   # G60: a página de agenda de reserva é da conta, e quem salva lê as páginas.
   def agenda_de_reserva = ::Autonomia::Automacao::AgendaDeReserva.problemas_ao_salvar(@conta, @receita['gatilho'].to_h, @account_user)
@@ -89,24 +103,18 @@ class Autonomia::Automacao::Receita
     return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
-    return problemas_do_retorno(passo) if passo['tipo'] == 'retorno'
-    return problemas_do_proprio_passo(passo) if %w[ia_assumir card campanha conversa_ao_responsavel].include?(passo['tipo'])
+    return passos_proprios.problemas(passo) if ::Autonomia::Automacao::PassosProprios.do_tipo?(passo)
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
   end
 
-  # Os passos que se conferem sozinhos ao salvar, na própria classe: o "Passar para a agente de IA" (G15), o "criar
-  # card" (G4), que confere também a pessoa, a campanha (G14), que confere o gatilho, a pessoa e a campanha da tela, e o
-  # "passar a conversa para o responsável do card" (G66), que confere o gatilho.
-  def problemas_do_proprio_passo(passo)
-    case passo['tipo']
-    when 'card' then ::Autonomia::Automacao::PassoDeCard.problemas_ao_salvar(@conta, passo, @account_user)
-    when 'conversa_ao_responsavel' then ::Autonomia::Automacao::PassoDeConversaAoResponsavel.problemas_ao_salvar(passo, @receita)
-    when 'campanha'
-      ::Autonomia::Automacao::PassoDeCampanha.problemas_ao_salvar(passo, @receita, conta: @conta, account_user: @account_user)
-    else ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo)
-    end
+  # Os passos com conferência própria (PassosProprios); os caminhos que eles leem passam pela régua daqui.
+  def passos_proprios
+    @passos_proprios ||= ::Autonomia::Automacao::PassosProprios.new(conta: @conta, account_user: @account_user, receita: @receita,
+                                                                    dentro: @alvo.present?) do |id, c, **opcoes|
+                                                                      problemas_do_caminho(id, c, **opcoes)
+                                                                    end
   end
 
   # "mensagem", "avisar" e "email" (F4, G2): só com a flag da F4, os valores do texto (do assunto do e-mail e de cada
@@ -133,11 +141,6 @@ class Autonomia::Automacao::Receita
      *repetidos(id, Array(passo['campos']).pluck('chave'), :campo_repetido),
      *Array(passo['campos']).flat_map { |campo| destino_invalido(id, campo['destino']) },
      *destinatarios_de_fora('id' => id, 'para' => avisar_do_resumir(passo))]
-  end
-
-  # "criar retorno" (G3): a conferência mora no PassoDeRetorno; os caminhos lidos, pela régua daqui.
-  def problemas_do_retorno(passo)
-    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @receita, @account_user, &no_texto(passo['id']))
   end
 
   # O destino do resumir é "nota" (texto) ou { avisar: ... }; o do escrever é sempre texto.
@@ -184,35 +187,49 @@ class Autonomia::Automacao::Receita
 
   # Caminho que a automação não sabe ler, ou atributo que a conta não tem. O atributo apagado depois de salvar chega
   # vazio no motor, com o motivo no registro. A resposta (G11) só existe na condição do "esperar até": fora dele não há
-  # o começo da espera, e ela leria sempre vazio. O texto da IA (#2679) só vem de um passo que escreve. A mensagem que
-  # falhou (G53) não vale no "Só se" do gatilho (`no_gatilho`): a Partida filtra sem ela. `onde`: :caminho ou :corpo da
-  # ação, :texto (mensagem, aviso, e-mail, retorno); nil é o que decide (filtro e condição). Na ação, a automação de
-  # conversa não usa o card para agir (#2716): nenhum `card.*` no caminho e nenhum `card.id` no corpo; copiar um campo
-  # do card é ler.
-  def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false, onde: nil)
+  # o começo da espera, e ela leria sempre vazio. O texto da IA (#2679) só vem de um passo que escreve; o registro criado
+  # (G49), de um passo que cria, e do `tipo` pedido quando o lugar só aceita um (o contato do "criar card"). A mensagem
+  # que falhou (G53) não vale no "Só se" do gatilho (`no_gatilho`): a Partida filtra sem ela. `lugar`: `tipo` (G49) e
+  # `onde`: :caminho ou :corpo da ação, :texto (mensagem, aviso, e-mail, retorno); sem `onde` é o que decide (filtro e
+  # condição). Na ação, a automação de conversa não usa o card para agir (#2716): nenhum `card.*` no caminho e nenhum
+  # `card.id` no corpo; copiar um campo do card é ler.
+  def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false, **lugar)
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
-    return ::Autonomia::Automacao::TextoDaIaNaReceita.new(self, @receita).problemas(id, caminho, no_gatilho: no_gatilho) if valores.da_ia?(caminho)
+
+    de_passo = de_outro_passo(id, caminho, no_gatilho, lugar[:tipo])
+    return de_passo if de_passo
 
     fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera,
                                           gatilho: @receita.dig('gatilho', 'tipo'), no_filtro: no_gatilho)
     return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
 
-    no_lugar = ::Autonomia::Automacao::CardDaConversa.problema(caminho, onde, @receita.dig('gatilho', 'tipo'))
+    no_lugar = ::Autonomia::Automacao::CardDaConversa.problema(caminho, lugar[:onde], alvo)
     return [texto(no_lugar, passo: id, caminho: caminho)] if no_lugar
 
     Array(valores.problema_de_leitura(caminho, conta: @conta, account_user: @account_user)).map { |chave| texto(chave, passo: id, caminho: caminho) }
   end
 
+  # O valor que vem de outro passo desta execução: o texto da IA (#2679) ou o registro criado (G49); nil nos outros.
+  def de_outro_passo(id, caminho, no_gatilho, tipo)
+    if ::Autonomia::Automacao::Valores.da_ia?(caminho)
+      ::Autonomia::Automacao::TextoDaIaNaReceita.new(self, @receita).problemas(id, caminho, no_gatilho: no_gatilho)
+    elsif ::Autonomia::Automacao::RegistroCriado.caminho?(caminho)
+      ::Autonomia::Automacao::RegistroCriadoNaReceita.new(self, @receita, tipo: tipo).problemas(id, caminho, no_gatilho: no_gatilho)
+    end
+  end
+
   # #2499: `card.*` num gatilho de conversa não tem de onde ler. Gatilho desconhecido o esquema já recusou.
   # A conversa nova (#2680) dá ao alvo sem conversa (o contato) a ponte para a que ela abre.
   def no_alvo_do_gatilho?(caminho)
-    alvo = ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
     return true if alvo.nil? || ::Autonomia::Automacao::Valores.no_alvo?(caminho, alvo)
 
     ::Autonomia::Automacao::ConversaNova.caixa_id(@receita).present? && caminho.to_s.start_with?('conversa.')
   end
+
+  # O tipo do registro em que a receita roda: o do ramo do "em outro registro" (G18), ou o do gatilho.
+  def alvo = @alvo || ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
 
   # A conferência do caminho que vai para um texto (mensagem, aviso, e-mail, retorno).
   def no_texto(id) = ->(caminho) { problemas_do_caminho(id, caminho, onde: :texto) }

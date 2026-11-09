@@ -46,7 +46,7 @@ class Autonomia::Automacao::Contexto
 
   def conversa
     return numero_novo || @alvo if @alvo.is_a?(::Conversation)
-    return @alvo.primary_conversation || conversa_nova if @alvo.is_a?(::Crm::Card)
+    return conversa_do_card || conversa_nova if @alvo.is_a?(::Crm::Card)
 
     numero_novo || conversa_nova
   end
@@ -75,6 +75,13 @@ class Autonomia::Automacao::Contexto
   end
 
   def card = (@alvo if @alvo.is_a?(::Crm::Card))
+
+  # A filha do "em outro registro" (G18) num card do mesmo contato age na conversa da mãe; o resto, na principal do card.
+  def conversa_do_card
+    return @conversa_do_card if defined?(@conversa_do_card)
+
+    @conversa_do_card = ::Autonomia::Automacao::EmOutroRegistro.conversa_da_mae(@execucao, @alvo) || @alvo.primary_conversation
+  end
 
   # A conta do alvo; no conta.recorrente, a própria.
   def conta = (@alvo.is_a?(::Account) ? @alvo : @alvo.account)
@@ -122,6 +129,9 @@ class Autonomia::Automacao::Contexto
   # #2679: o texto que o passo de IA `passo_id` produziu nesta execução (Execucao#guardar_texto!). Antes do passo rodar,
   # nil.
   def texto_da_ia(passo_id) = (@textos || @execucao&.textos).to_h[passo_id.to_s]
+
+  # G49: o id do registro que o passo `passo_id` criou nesta execução; sem execução (o ensaio) ou antes do passo, nil.
+  def criado(passo_id) = ::Autonomia::Automacao::RegistroCriado.da_execucao(@execucao, passo_id)&.dig('id')
 
   # "conversa", "card" ou "contato": a base dos caminhos do Valores que o alvo tem sem ponte.
   def base
