@@ -4,7 +4,8 @@
 #
 # - Lê os registros `ok` desta execução dos passos que criam card ou contato (TIPOS_QUE_CRIAM, achados na receita da
 #   versão em que a execução entrou), no mesmo padrão do EnviosDaExecucao. O card pulado com `card_ja_existe` não entra:
-#   a empresa não foi criada nesta vez.
+#   a empresa não foi criada nesta vez. A lista é a única: o salvar (PassoDeCampanha) e o editor (o catálogo marca o
+#   passo com `cria_contatos`) leem daqui.
 # - Contrato com a G21 (#2706) e o G4: os dados do registro trazem `card_id`/`card_ids` e `contato_id`/`contato_ids`. O
 #   card vira o contato dele (Crm::Card#contact_id), na conta.
 # - Quem ligou a automação precisa alcançar cada contato (Acesso#alcanca?, a mesma pergunta dos outros passos). Quem
@@ -13,8 +14,10 @@
 # - Fica `fora` quem não recebe no WhatsApp: pediu para não receber, ou não tem celular válido
 #   (ConversationAudience::Reach.phone). Quem só tem e-mail fica de fora: a campanha é de WhatsApp.
 class Autonomia::Automacao::ContatosDaExecucao
-  # `prospeccao` chega com a G21; até lá o esquema não tem esse passo, e a lista só casa com `card`.
-  TIPOS_QUE_CRIAM = %w[card prospeccao].freeze
+  # Só o passo que cria num gatilho da conta, o único em que a campanha dispara: o "card" pede alvo
+  # (ProblemasDoGatilho) e nunca salvaria antes dela. `prospeccao` chega com a G21 (#2706); até lá o esquema não tem esse
+  # passo, e nenhuma receita com `publico: desta_execucao` salva.
+  TIPOS_QUE_CRIAM = %w[prospeccao].freeze
   CHAVES_DE_CONTATO = %w[contato_id contato_ids].freeze
   CHAVES_DE_CARD = %w[card_id card_ids].freeze
 

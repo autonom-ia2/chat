@@ -13,6 +13,9 @@ require 'rails_helper'
 # alvo e o "prospeccao" ainda não entrou). O registro do passo que cria os cards é gravado aqui como o executor o
 # grava, com o contrato `card_ids` combinado com a G21, e a receita da versão vai direto ao banco, como fica com o passo
 # da G21. O exemplo 9 de ponta a ponta fica no pendentes_spec até lá.
+#
+# Pendente: o contrato `card_ids`/`contato_ids` com a G21 (#2706) só está provado com o registro montado aqui. Quando a
+# G21 entrar, um teste real precisa rodar o passo dela e ler o registro que ele grava de verdade.
 RSpec.describe 'Fechamento #2414 · G58: campanha só para quem a execução criou', :automacao_motor, :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 
@@ -27,7 +30,7 @@ RSpec.describe 'Fechamento #2414 · G58: campanha só para quem a execução cri
       'components' => [{ 'type' => 'BODY', 'text' => 'Olá! Somos o escritório {{1}}.' }] }
   end
   let(:segunda_8h) { { tipo: 'conta.recorrente', frequencia: 'semanal', dia_da_semana: 1, hora: 8 } }
-  let(:criar_cards) { { id: 'cards', tipo: 'card', etapa_id: funil.last.id } }
+  let(:criar_cards) { { id: 'cards', tipo: 'prospeccao' } }
   let(:campanha) do
     { id: 'apresentar', tipo: 'campanha', faz: 'disparar', publico: 'desta_execucao', titulo: 'Apresentação do escritório',
       caixa_id: inbox.id, modelo: { nome: 'apresentacao_do_escritorio', idioma: 'pt_BR', variaveis: [['Conta Certa']] } }
@@ -91,7 +94,7 @@ RSpec.describe 'Fechamento #2414 · G58: campanha só para quem a execução cri
   end
 
   it 'público desta execução não aceita etiquetas junto (o esquema recusa)' do
-    receita = { gatilho: segunda_8h, passos: [criar_cards, campanha.merge(etiquetas: [mes.id])] }
+    receita = { gatilho: segunda_8h, passos: [campanha.merge(etiquetas: [mes.id])] }
 
     expect(Autonomia::Automacao::Receita.esquema_valido?(receita)).to be(false)
   end

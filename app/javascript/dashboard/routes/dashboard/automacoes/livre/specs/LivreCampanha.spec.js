@@ -108,12 +108,18 @@ describe('campanha.js', () => {
   });
 
   it('a escolha do público só vem com um passo que cria num gatilho da conta', () => {
-    const passos = tipos => ({ passos: tipos.map(tipo => ({ tipo })) });
+    const passos = (...itens) => ({ passos: itens });
 
-    expect(publicoDaExecucaoNoCatalogo(passos(['card', 'campanha']))).toBe(
-      false
-    );
-    expect(publicoDaExecucaoNoCatalogo(passos(['prospeccao']))).toBe(true);
+    expect(
+      publicoDaExecucaoNoCatalogo(
+        passos({ tipo: 'card' }, { tipo: 'campanha' })
+      )
+    ).toBe(false);
+    expect(
+      publicoDaExecucaoNoCatalogo(
+        passos({ tipo: 'prospeccao', cria_contatos: true })
+      )
+    ).toBe(true);
     expect(publicoDaExecucaoNoCatalogo(undefined)).toBe(false);
   });
 

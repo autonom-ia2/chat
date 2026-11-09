@@ -116,10 +116,13 @@ module Autonomia::Automacao::Catalogo
       next if tipo == 'acao' || declarado['nativos_fora_do_editor'].to_h.key?(tipo)
 
       { 'tipo' => tipo, 'grupo' => declarado.dig('nativos', tipo, 'grupo'), 'requer' => declarado.dig('nativos', tipo, 'requer'),
-        'funil' => declarado.dig('nativos', tipo, 'funil'), 'frase' => chave('PASSOS', tipo),
+        'funil' => declarado.dig('nativos', tipo, 'funil'), 'frase' => chave('PASSOS', tipo), 'cria_contatos' => cria_contatos(tipo),
         'campos' => campos_nativos(forma, declarado.dig('nativos', tipo, 'peca'), declarado.dig('nativos', tipo, 'rotulos')) }.compact
     end
   end
+
+  # G58: o passo cria os contatos que a campanha com `publico: desta_execucao` lê (ContatosDaExecucao::TIPOS_QUE_CRIAM).
+  def cria_contatos(tipo) = (true if ::Autonomia::Automacao::ContatosDaExecucao::TIPOS_QUE_CRIAM.include?(tipo))
 
   # `peca` no yml (a campanha, G14): uma peça só mostra o passo inteiro. `rotulos` (G41): o rótulo próprio de um campo
   # neste passo.

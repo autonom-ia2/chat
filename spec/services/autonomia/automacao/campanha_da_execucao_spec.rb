@@ -14,14 +14,15 @@ RSpec.describe Autonomia::Automacao::CampanhaDaExecucao, :automacao_motor do
     { 'name' => 'apresentacao', 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'UTILITY',
       'components' => [{ 'type' => 'BODY', 'text' => 'Olá! Somos o escritório {{1}}.' }] }
   end
-  let(:card_antes) { { 'id' => 'cards', 'tipo' => 'card', 'etapa_id' => funil.last.id } }
+  let(:card_antes) { { 'id' => 'cards', 'tipo' => 'prospeccao' } }
   let(:campanha) do
     { 'id' => 'apresentar', 'tipo' => 'campanha', 'faz' => 'disparar', 'publico' => 'desta_execucao', 'titulo' => 'Apresentação',
       'caixa_id' => caixa.id, 'modelo' => { 'nome' => 'apresentacao', 'idioma' => 'pt_BR', 'variaveis' => [['Conta Certa']] } }
   end
   let(:gatilho) { { 'tipo' => 'conta.recorrente', 'frequencia' => 'semanal', 'dia_da_semana' => 1, 'hora' => 8 } }
-  # Até a G21 (#2706), nenhum passo que cria card ou contato salva num gatilho da conta (o "card" pede alvo). A versão
-  # ganha a receita direto no banco, como ela fica com o passo da G21, que grava `card_ids` no registro.
+  # Até a G21 (#2706), nenhum passo que cria card ou contato salva num gatilho da conta (o "card" pede alvo; o
+  # "prospeccao" não está no esquema). A versão ganha a receita direto no banco, como ela fica com o passo da G21, que
+  # grava `card_ids` no registro.
   let(:definicao) do
     automacao_ligada(account, dona, [esperar_passo('antes')], gatilho: gatilho).tap do |automacao|
       Autonomia::Automacao::Versao.where(id: automacao.versao_ativa_id)

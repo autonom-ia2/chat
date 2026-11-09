@@ -40,13 +40,12 @@ export const PUBLICO_DESTA_EXECUCAO = 'desta_execucao';
 export const publicoDaExecucao = passo =>
   passo?.publico === PUBLICO_DESTA_EXECUCAO;
 
-// A escolha só aparece quando o catálogo tem um passo que cria card ou contato
-// num gatilho da conta, o único em que a campanha dispara. O "card" pede alvo
-// (Autonomia::Automacao::ProblemasDoGatilho); o "prospeccao" chega com a G21
-// (#2706). Antes dele, a receita com esse público nunca salvaria.
-const CRIAM_SEM_ALVO = ['prospeccao'];
+// A escolha só aparece quando o catálogo tem um passo que cria contato num
+// gatilho da conta (`cria_contatos`, da lista do servidor:
+// Autonomia::Automacao::ContatosDaExecucao::TIPOS_QUE_CRIAM). Antes da G21
+// (#2706), nenhum passo vem marcado, e a receita com esse público não salva.
 export const publicoDaExecucaoNoCatalogo = catalogo =>
-  (catalogo?.passos || []).some(item => CRIAM_SEM_ALVO.includes(item.tipo));
+  (catalogo?.passos || []).some(item => item.cria_contatos);
 
 const sem = (passo, chave) =>
   Object.fromEntries(Object.entries(passo).filter(([nome]) => nome !== chave));
