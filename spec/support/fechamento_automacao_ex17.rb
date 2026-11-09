@@ -20,6 +20,34 @@ module FechamentoAutomacao::SondasDoExemplo17
     end
   end
 
+  # Decisão 18 (G66, ex. 17, passos 4 e 5): numa execução só, a conversa vai para a Renata, a agente de IA a assume
+  # mesmo com a Renata no nome (a opção do passo) e registra de quem tirou, e o passo G66 a devolve à Renata, como no
+  # começo do galho e depois da devolução do card.
+  def ia_assume_e_devolve?
+    ClimateControl.modify(CRM_KANBAN_ENABLED: 'true', AUTONOMIA_AGENTS_ENABLED: 'true') do
+      conta = FactoryBot.create(:account)
+      conta.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_gatilhos')
+      paula, julia, renata = %i[administrator agent agent].map { |papel| FactoryBot.create(:user, account: conta, role: papel) }
+      card = card_da_cobertura(conta, paula, julia, renata)
+      agente = agente_de_ia_na_caixa(conta, card.primary_conversation.inbox)
+      passos = [{ 'id' => 'conversa', 'tipo' => 'conversa_ao_responsavel' },
+                { 'id' => 'sofia', 'tipo' => 'ia_assumir', 'agente_id' => agente.id, 'mesmo_com_pessoa' => true },
+                { 'id' => 'de_volta', 'tipo' => 'conversa_ao_responsavel' }]
+      execucao = rodada_no_card(conta, paula, card, passos)
+      assumiu = Autonomia::Automacao::Registro.find_by(execucao: execucao, passo: 'sofia')&.dados.to_h['tirada_de'] == renata.id
+      assumiu && card.primary_conversation.reload.assignee_id == renata.id
+    end
+  end
+
+  # Os Agentes e as áreas de IA ligados na conta, e uma agente atendendo cliente na caixa.
+  def agente_de_ia_na_caixa(conta, caixa)
+    conta.update!(internal_attributes: conta.internal_attributes.to_h.merge(Autonomia::Agents::Config::INTERNAL_ATTR_KEY => true))
+    Autonomia::Agents::Fase2.ligar!(conta)
+    agente = Autonomia::Agents::Agent.create!(account: conta, name: 'Sofia', agent_type: 'custom', status: :active, enabled: true)
+    Autonomia::Agents::Areas.vincular!(agent: agente, inbox: caixa)
+    agente
+  end
+
   # O card já com a Renata e a conversa dele ainda com a Júlia, numa caixa das duas.
   def card_da_cobertura(conta, paula, julia, renata)
     caixa = create_crm_whatsapp_api_inbox(account: conta, members: [paula, julia, renata])

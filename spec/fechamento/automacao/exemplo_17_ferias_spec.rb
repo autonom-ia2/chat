@@ -8,15 +8,16 @@ require 'rails_helper'
 #
 # Começa quando o responsável do card muda e a anterior está ausente (G9): a Paula troca os cards da Júlia para a
 # Renata pela Lista do CRM. Passos 1 a 3 como no g9_troca_de_responsavel_spec.rb. A troca do dono do card não leva a
-# conversa (ela segue com a Júlia); pela decisão 14 do Rodrigo (G66), a receita põe depois da troca o passo "passar a
-# conversa para o responsável do card", o único passo a mais que o termo. O passo 4 é o galho "a cada mensagem do
-# cliente" (G63) do "esperar até" que espera a Júlia voltar, e "espera a Renata responder" lê quem atende a conversa,
-# agora a Renata; o passo 5, "toda manhã", é a conferência às 8h no fuso da conta (G64, decisão 12); o 6, o resumo para a
-# Júlia depois de devolver o card, que lê as férias inteiras (G67).
+# conversa (ela segue com a Júlia); pelas decisões 14 e 18 do Rodrigo (G66), a receita usa o passo "passar a conversa
+# para o responsável do card", o único passo a mais que o termo, em três lugares: depois da troca, no começo do galho
+# "a cada mensagem" (a conversa volta da agente de IA para a Renata) e depois de devolver o card à Júlia. O passo 4 é o
+# galho "a cada mensagem do cliente" (G63) do "esperar até" que espera a Júlia voltar: "espera a Renata responder" lê
+# quem atende a conversa, a Renata, e sem resposta a agente de IA assume a conversa dela (decisão 18: a opção "mesmo com
+# uma pessoa na conversa" do passo, desligada por padrão). O passo 5, "toda manhã", é a conferência às 8h no fuso da
+# conta (G64, decisão 12); o 6, o resumo para a Júlia depois de devolver o card, que lê as férias inteiras (G67).
 #
-# A IA é o dublê; o WhatsApp oficial para no receptor de teste. Fica pendente, com o motivo, o "passa a conversa para a
-# agente de IA" do passo 4: com a Renata no nome da conversa, o ia_assumir pula com `pessoa_atribuida` ("pessoa no nome
-# vence", D1). Pede decisão do Rodrigo, não lacuna de código.
+# A IA é o dublê; o WhatsApp oficial para no receptor de teste. O que a agente diz ao assumir ("A Renata já te
+# responde") é a instrução dela, não um passo da receita.
 RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa automação só', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 
@@ -71,20 +72,23 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
   # G66 (decisão 14): a conversa acompanha a troca do dono do card, por um passo da automação, logo depois da troca.
   def conversa_para_a_renata = { id: 'conversa', tipo: 'conversa_ao_responsavel' }
 
-  # Passos 4 e 5: espera a Júlia voltar, conferindo toda manhã às 8h; a cada mensagem do cliente, espera a Renata
-  # responder por até 2 horas e, sem resposta, passa para a agente de IA.
+  # Passos 4 e 5: espera a Júlia voltar, conferindo toda manhã às 8h; a cada mensagem do cliente, a conversa volta para
+  # a Renata (decisão 18), espera ela responder por até 2 horas e, sem resposta, a agente de IA assume, mesmo com a
+  # Renata no nome.
   def ferias
     { id: 'ferias', tipo: 'esperar_ate', prazo: 'sem_prazo', conferir_as: 8,
       condicao: { campo: valor('card.atributos.responsavel_original.ausente'), op: 'igual', valor: false },
-      a_cada_mensagem: [{ id: 'espera_a_renata', tipo: 'esperar_ate', prazo: { valor: 2, unidade: 'horas' },
+      a_cada_mensagem: [{ id: 'conversa_da_renata', tipo: 'conversa_ao_responsavel' },
+                        { id: 'espera_a_renata', tipo: 'esperar_ate', prazo: { valor: 2, unidade: 'horas' },
                           condicao: { campo: valor('conversa.responsavel_respondeu'), op: 'igual', valor: true },
-                          se_vencer: [{ id: 'sofia', tipo: 'ia_assumir', agente_id: sofia.id }] }] }
+                          se_vencer: [{ id: 'sofia', tipo: 'ia_assumir', agente_id: sofia.id, mesmo_com_pessoa: true }] }] }
   end
 
-  # Passos 5 (o resto) e 6: devolve o card, tira a etiqueta e a IA resume para a Júlia.
+  # Passos 5 (o resto) e 6: devolve o card, a conversa vai junto (decisão 18), tira a etiqueta e a IA resume para a Júlia.
   def passos_da_volta
     [{ id: 'devolve', tipo: 'acao', acao: 'PATCH crm/cards/:id', descricao: 'Devolver o card à responsável original',
        caminho: { id: valor('card.id') }, corpo: { card: { owner_id: valor('card.atributos.responsavel_original') } } },
+     { id: 'conversa_da_julia', tipo: 'conversa_ao_responsavel' },
      { id: 'tira', tipo: 'acao', acao: 'PATCH conversations/:conversation_id/labels/alterar',
        descricao: 'Tirar a etiqueta cobertura de férias', caminho: { conversation_id: valor('conversa.id') },
        corpo: { tirar: ['cobertura-de-ferias'] } },
@@ -192,16 +196,35 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
     expect(execucao).to have_attributes(estado: 'esperando', cursor: 'ferias', due_at: fuso.local(2026, 11, 5, 8))
   end
 
-  # A agente de IA não entra com uma pessoa no nome da conversa (PassoDeIaAssumir: "pessoa no nome vence", D1). Depois
-  # do G66 a pessoa no nome é a Renata, como o termo quer para "espera a Renata responder"; o "passa a conversa para a
-  # agente de IA" que vem depois pede decisão do Rodrigo sobre a D1 neste passo.
-  it 'ninguém responde em 2 h: a conversa passa para a agente de IA', :aggregate_failures do
-    pending 'D1: ia_assumir pula com pessoa_atribuida, porque a conversa está no nome da Renata (decisão do Rodrigo pendente)'
+  def robo_da_sofia = Autonomia::Agents::Areas.vincular!(agent: sofia, inbox: inbox).agent_bot
+
+  # Decisão 18: com a opção "mesmo com uma pessoa na conversa", a agente assume a conversa que está no nome da Renata, e
+  # o histórico guarda de quem ela foi tirada.
+  it 'ninguém responde em 2 h: a agente de IA assume a conversa da Renata', :aggregate_failures do
     escreve_em(fuso.local(2026, 11, 4, 10), 'Oi, alguém aí?')
     varrer_em(fuso.local(2026, 11, 4, 12, 1))
 
     expect(registros.where(passo: 'sofia').pluck(:resultado, :motivo)).to eq([['ok', nil]])
-    expect(conversa.reload.ai_assignee).to eq(Autonomia::Agents::Areas.vincular!(agent: sofia, inbox: inbox).agent_bot)
+    expect(registros.find_by!(passo: 'sofia').dados).to include('tirada_de' => renata.id, 'trocou' => true)
+    expect(conversa.reload).to have_attributes(assignee_id: nil, ai_assignee: robo_da_sofia)
+  end
+
+  # Decisão 18: na mensagem seguinte, o começo do galho devolve a conversa à Renata, e "espera a Renata" volta a ter por
+  # quem esperar: a resposta dela conta.
+  it 'a agente assumiu; na mensagem seguinte a conversa volta para a Renata, e a resposta dela conta', :aggregate_failures do
+    escreve_em(fuso.local(2026, 11, 4, 10), 'Oi, alguém aí?')
+    varrer_em(fuso.local(2026, 11, 4, 12, 1))
+    expect(conversa.reload.ai_assignee).to eq(robo_da_sofia)
+
+    escreve_em(fuso.local(2026, 11, 5, 10), 'E a proposta?')
+    expect(conversa.reload).to have_attributes(assignee_id: renata.id, ai_assignee_id: nil)
+    expect(registros.where(passo: 'conversa_da_renata').last.dados).to include('trocou' => true)
+    expect(execucao.cursor).to eq('espera_a_renata')
+
+    renata_responde_em(fuso.local(2026, 11, 5, 11))
+    varrer_em(fuso.local(2026, 11, 5, 12, 5))
+    expect(registros.where(passo: 'sofia').count).to eq(1)
+    expect(execucao).to have_attributes(estado: 'esperando', cursor: 'ferias')
   end
 
   it 'uma rajada de 3 mensagens vira uma volta só', :aggregate_failures do
@@ -231,9 +254,10 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
 
     varrer_em(fuso.local(2026, 11, 13, 8, 1))
     expect(card.reload.owner).to eq(julia)
-    expect(conversa.reload.label_list).not_to include('cobertura-de-ferias')
+    expect(conversa.reload).to have_attributes(assignee_id: julia.id, ai_assignee_id: nil)
+    expect(conversa.label_list).not_to include('cobertura-de-ferias')
     expect(execucao.estado).to eq('concluida')
-    expect(registros.last(3).pluck(:passo, :resultado)).to eq([%w[devolve ok], %w[tira ok], %w[conta ok]])
+    expect(registros.last(4).pluck(:passo, :resultado)).to eq([%w[devolve ok], %w[conversa_da_julia ok], %w[tira ok], %w[conta ok]])
     expect(mencoes_para(julia).count).to eq(1)
     expect(ia_recebeu.last.to_json).to include('Já voltou a Júlia?')
   end

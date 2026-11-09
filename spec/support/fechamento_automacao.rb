@@ -291,7 +291,10 @@ module FechamentoAutomacao::Lacunas
     },
     'G63' => -> { galho_a_cada_mensagem? },
     'G64' => -> { conferencia_marcada? },
-    'G66' => -> { FechamentoAutomacao::SondasDoExemplo17.conversa_acompanha_o_responsavel? },
+    # Com a decisão 18: a agente de IA assume mesmo com a Renata no nome (opção do passo), e o G66 devolve.
+    'G66' => lambda {
+      FechamentoAutomacao::SondasDoExemplo17.conversa_acompanha_o_responsavel? && FechamentoAutomacao::SondasDoExemplo17.ia_assume_e_devolve?
+    },
     'G67' => -> { FechamentoAutomacao::SondasDoExemplo17.resumo_le_o_periodo? },
     # Do exemplo 14, passo 5 (#2791): o laço dos documentos numa automação só. O "esperar até" lê o documento novo, e o
     # "decidir" volta a ele (`de_novo.desde`). Prova em spec/fechamento/automacao/exemplo_14_documentacao_spec.rb.

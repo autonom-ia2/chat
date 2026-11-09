@@ -61,6 +61,45 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
     expect(conversation.reload.assignee).to eq(pessoa)
   end
 
+  # Decisão 18 (exemplo 17): a opção "mesmo com uma pessoa na conversa", desligada por padrão, deixa a agente assumir
+  # a conversa de uma pessoa, pedida por quem ligou (como o "Passar para…" da tela). O histórico guarda de quem.
+  context 'with a opção mesmo com uma pessoa na conversa' do
+    let(:passo) { { 'id' => 'p1', 'tipo' => 'ia_assumir', 'agente_id' => area.id, 'mesmo_com_pessoa' => true } }
+
+    it 'tira a conversa da pessoa, pedida por quem ligou, e registra de quem foi tirada', :aggregate_failures do
+      conversation.update!(assignee: pessoa)
+
+      execucao = rodar
+
+      expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: espelho_area)
+      expect(registro(execucao)).to have_attributes(resultado: 'ok',
+                                                    dados: { 'agente_id' => area.id, 'tirada_de' => pessoa.id, 'trocou' => true })
+      expect(contrato).to have_received(:registrar_passagem!).with(hash_including(para: area, pedida_por: admin))
+    end
+
+    it 'sem pessoa no nome, passa como sempre, pelo CRM e sem tirada_de', :aggregate_failures do
+      execucao = rodar
+
+      expect(registro(execucao).dados).to eq('agente_id' => area.id, 'trocou' => true)
+      expect(contrato).to have_received(:registrar_passagem!).with(hash_including(para: area, pedida_por: nil))
+    end
+
+    it 'no ensaio, com pessoa no nome, diz que passaria' do
+      conversation.update!(assignee: pessoa)
+
+      expect(described_class.ensaiar(passo, conversation)).to eq(['ia_assumir', { agente: 'Área Suporte' }])
+    end
+  end
+
+  it 'a opção desligada (false) é o padrão: a pessoa fica', :aggregate_failures do
+    conversation.update!(assignee: pessoa)
+
+    execucao = rodar(automacao_ligada(account, admin, [passo.merge('mesmo_com_pessoa' => false)]))
+
+    expect(registro(execucao)).to have_attributes(resultado: 'pulado', motivo: 'pessoa_atribuida')
+    expect(conversation.reload.assignee).to eq(pessoa)
+  end
+
   it 'agente sem vínculo na caixa da conversa: pula com o código, nunca passa para outra' do
     automacao = automacao_ligada(account, admin, [passo])
     area_sumiu!
