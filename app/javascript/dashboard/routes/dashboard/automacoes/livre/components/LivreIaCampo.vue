@@ -34,6 +34,8 @@ const LEITURAS = [
   'empresa',
   // #2414 G20: a foto, o PDF e o áudio que o cliente mandou.
   'anexos',
+  // G46: só os que chegaram na espera de antes (o laço dos documentos).
+  'anexos_novos',
   // #2679: o card e as notas internas da conversa.
   'card',
   'notas',

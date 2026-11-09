@@ -20,7 +20,7 @@ import LivreIaCampo from './LivreIaCampo.vue';
 import LivreDecidirDeNovo from './LivreDecidirDeNovo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
-import { caminhosProntos, deNovoPronto } from '../ia';
+import { caminhosProntos, deNovoPronto, esperasAnteriores } from '../ia';
 import { campanhaPronta } from '../campanha';
 import { envioPronto, paraPronto } from '../retorno';
 import { faltaDaFrequencia } from '../recorrente';
@@ -28,6 +28,7 @@ import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { temDataIncompleta } from '../texto';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
 import { SEM_PRAZO, copiar, filtrosDoGatilho } from '../receita';
+import { custoPorMensagem } from '../custoDaIa';
 
 // #2414 F5 — o painel do "Alterar": os campos do item escolhido (o gatilho, uma
 // condição do "Só se" ou um passo), já preenchidos. Nada muda até "Salvar".
@@ -323,6 +324,17 @@ const receitaParaTestar = computed(() =>
     : null
 );
 
+// G46: os "esperar até" de antes do "decidir" para onde o caminho pode voltar,
+// com a frase de cada um, lidos do rascunho inteiro.
+const esperasDoDecidir = computed(() =>
+  esperasAnteriores(receitaParaTestar.value, rascunho.value?.id).map(
+    espera => ({
+      value: espera.id,
+      label: fraseDoPasso(espera, props.catalogo, t),
+    })
+  )
+);
+
 defineExpose({ abrir, fechar });
 </script>
 
@@ -410,8 +422,10 @@ defineExpose({ abrir, fechar });
           :rotulo="$t(campo.rotulo)"
           :model-value="rascunho[campo.nome]"
           :unidades="catalogo.unidades"
+          :conferir-as="rascunho.conferir_as ?? null"
           :tem-se-vencer="Boolean(rascunho.se_vencer?.length)"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
+          @update:conferir-as="novo => mudarNativo('conferir_as', novo)"
         />
         <LivreCondicao
           v-else-if="campo.peca === 'condicao'"
@@ -534,6 +548,7 @@ defineExpose({ abrir, fechar });
           :model-value="rascunho[campo.nome]"
           :passo="rascunho"
           :unidades="catalogo.unidades"
+          :esperas="esperasDoDecidir"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreIaCampo
@@ -583,6 +598,7 @@ defineExpose({ abrir, fechar });
         :receita="receitaParaTestar"
         :custo="custos.custos[rascunho.id]"
         :mostra-custo="custos.com_valores"
+        :por-mensagem="custoPorMensagem(receitaParaTestar, rascunho.id)"
         :pronto="podeSalvar"
         :automacao-id="automacaoId"
       />

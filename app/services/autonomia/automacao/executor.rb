@@ -89,7 +89,9 @@ class Autonomia::Automacao::Executor
   end
 
   # O próximo passo, ou nil quando a rodada parou (espera, fim, erro). Um tipo por linha: a complexidade é a lista.
+  # `@anterior`: o passo de antes nesta rodada; o "esperar até" sabe por ele que o galho "a cada mensagem" acabou (G63).
   def dar(passo) # rubocop:disable Metrics/CyclomaticComplexity
+    @anterior = @passo_atual
     @passo_atual = passo['id']
     case passo['tipo']
     when 'esperar' then esperar(passo)

@@ -134,9 +134,14 @@ describe('esperar até sem prazo', () => {
     expect(salvarDesligado(wrapper)).toBe(true);
   });
 
-  it('sem prazo, o passo não abre o galho "Se o prazo acabar"', () => {
-    expect(galhosDe(espera()).map(galho => galho.ramo)).toEqual(['se_vencer']);
-    expect(galhosDe(espera({ prazo: SEM_PRAZO }))).toEqual([]);
+  it('sem prazo, o passo não abre o galho "Se o prazo acabar"; o "a cada mensagem" fica (G63)', () => {
+    expect(galhosDe(espera()).map(galho => galho.ramo)).toEqual([
+      'se_vencer',
+      'a_cada_mensagem',
+    ]);
+    expect(
+      galhosDe(espera({ prazo: SEM_PRAZO })).map(galho => galho.ramo)
+    ).toEqual(['a_cada_mensagem']);
   });
 
   it('galho que ainda tem passo continua à vista, para a pessoa tirar', () => {
@@ -145,12 +150,82 @@ describe('esperar até sem prazo', () => {
       se_vencer: [{ id: 'p2', tipo: 'parar' }],
     });
 
-    expect(galhosDe(passo).map(galho => galho.ramo)).toEqual(['se_vencer']);
+    expect(galhosDe(passo).map(galho => galho.ramo)).toEqual([
+      'se_vencer',
+      'a_cada_mensagem',
+    ]);
   });
 
   it('a frase diz "sem prazo"', () => {
     expect(fraseDoPasso(espera({ prazo: SEM_PRAZO }), CATALOGO, t)).toMatch(
       /^AUTOMACAO_LIVRE\.FRASES\.ESPERAR_ATE_SEM_PRAZO /
     );
+  });
+});
+
+// G64 (#2839) — sem prazo, a conferência diária numa hora marcada, que nasce
+// às 8h (decisão 12) e a pessoa muda; "Assim que algo mudar" tira a hora.
+describe('esperar até sem prazo: a hora da conferência', () => {
+  const escolhaDaHora = wrapper =>
+    wrapper.find('[data-conferir-as]').findComponent({ name: 'ChoiceSelect' });
+  const salvo = async wrapper => {
+    await wrapper.find('[data-salvar]').trigger('click');
+    return wrapper.emitted('salvar').at(-1)[0].valor;
+  };
+
+  it('escolher "Sem prazo" já marca 8h e mostra a escolha da hora', async () => {
+    const wrapper = await montar(espera());
+
+    escolhaDoPrazo(wrapper).vm.$emit('update:modelValue', SEM_PRAZO);
+    await flushPromises();
+
+    expect(escolhaDaHora(wrapper).props('modelValue')).toBe(8);
+    expect(escolhaDaHora(wrapper).props('options')).toHaveLength(25);
+    expect(await salvo(wrapper)).toMatchObject({
+      prazo: SEM_PRAZO,
+      conferir_as: 8,
+    });
+  });
+
+  it('a pessoa troca a hora, ou volta a conferir a cada mudança', async () => {
+    const wrapper = await montar(espera({ prazo: SEM_PRAZO, conferir_as: 8 }));
+
+    escolhaDaHora(wrapper).vm.$emit('update:modelValue', 7);
+    await flushPromises();
+    expect((await salvo(wrapper)).conferir_as).toBe(7);
+
+    escolhaDaHora(wrapper).vm.$emit('update:modelValue', 'ao_mudar');
+    await flushPromises();
+    expect(await salvo(wrapper)).not.toHaveProperty('conferir_as');
+  });
+
+  it('a espera sem prazo antiga, sem hora, segue "a cada mudança" até a pessoa escolher', async () => {
+    const wrapper = await montar(espera({ prazo: SEM_PRAZO }));
+
+    expect(escolhaDaHora(wrapper).props('modelValue')).toBe('ao_mudar');
+    expect(await salvo(wrapper)).not.toHaveProperty('conferir_as');
+  });
+
+  it('voltar para "Até um prazo" tira a hora: ela só vale sem prazo', async () => {
+    const wrapper = await montar(espera({ prazo: SEM_PRAZO, conferir_as: 8 }));
+
+    escolhaDoPrazo(wrapper).vm.$emit('update:modelValue', 'com_prazo');
+    await flushPromises();
+
+    expect(wrapper.find('[data-conferir-as]').exists()).toBe(false);
+    expect(await salvo(wrapper)).not.toHaveProperty('conferir_as');
+  });
+
+  it('a frase diz a hora da conferência', () => {
+    const frase = fraseDoPasso(
+      espera({ prazo: SEM_PRAZO, conferir_as: 8 }),
+      CATALOGO,
+      t
+    );
+
+    expect(
+      frase.startsWith('AUTOMACAO_LIVRE.FRASES.ESPERAR_ATE_SEM_PRAZO_AS ')
+    ).toBe(true);
+    expect(frase).toContain('"hora":8');
   });
 });

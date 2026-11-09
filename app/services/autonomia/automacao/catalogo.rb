@@ -53,10 +53,10 @@ module Autonomia::Automacao::Catalogo
                        'para_do_retorno' => 'quem_recebe_retorno', 'envio_do_retorno' => 'envio_do_retorno',
                        # G31: o "decidir" que espera a próxima resposta e decide de novo.
                        'de_novo' => 'de_novo' }.freeze
-  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2) e a
-  # etapa do "card" (G4).
+  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2), a
+  # etapa do "card" (G4) e a hora da conferência do "esperar até" sem prazo (G64, mostrada pela peça do prazo).
   PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email',
-                          'etapa_id' => 'etapa' }.freeze
+                          'etapa_id' => 'etapa', 'conferir_as' => 'conferir_as' }.freeze
 
   module_function
 

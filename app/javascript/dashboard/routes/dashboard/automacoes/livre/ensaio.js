@@ -71,9 +71,16 @@ const comAnexos = (linha, no, t) => {
   };
 };
 
+// G63: o galho "a cada mensagem do cliente" acaba com a marca `volta`.
+const ROTULO_DA_ESPERA = {
+  chegou: 'SE_CHEGAR',
+  se_vencer: 'SE_VENCER',
+  a_cada_mensagem: 'A_CADA_MENSAGEM',
+};
+
 const rotuloDoCaminho = (no, ramo, t) => {
   if (no.tipo === 'esperar_ate')
-    return t(`${E}.${ramo.chave === 'chegou' ? 'SE_CHEGAR' : 'SE_VENCER'}`);
+    return t(`${E}.${ROTULO_DA_ESPERA[ramo.chave] || 'SE_VENCER'}`);
   // G31: o caminho que decide de novo espera a próxima resposta.
   const deNovo = ramo.de_novo ? '_DE_NOVO' : '';
   if (ramo.chave === 'nenhum') return t(`${E}.SE_NENHUM${deNovo}`);
@@ -136,5 +143,14 @@ export const linhasDoEnsaio = (nos, fraseDe, t, nivel = 0) =>
     ...(no.ramos || []).flatMap(ramo => [
       { nivel: nivel + 1, caminho: true, texto: rotuloDoCaminho(no, ramo, t) },
       ...linhasDoEnsaio(ramo.passos, fraseDe, t, nivel + 2),
+      // G46: o caminho que volta a um "esperar até" acaba dizendo para onde.
+      ...(ramo.volta
+        ? [
+            {
+              nivel: nivel + 2,
+              texto: t(`${E}.VOLTA`, { passo: fraseDe(ramo.volta) }),
+            },
+          ]
+        : []),
     ]),
   ]);

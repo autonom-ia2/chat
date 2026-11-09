@@ -420,8 +420,8 @@ ex.14 continua no `pendentes_spec`.
   (`file_content_type` junta image e sticker); a marca dela é `meta.is_sticker`, gravada no recebimento por
   `ConversaCanal::FigurinhaRecebida` (Cloud, 360dialog e Híbrido, com a flag `conversa_cara_do_canal`) e por
   `Waha::RichNative::Inbound::Media` (caixa WAHA, com `whatsapp_rich_native`). Sem a flag, a marca não é gravada e a
-  figurinha conta como foto. Mora em `Autonomia::Automacao::FotoOuPdf`, que a espera pelo próximo documento
-  (G46) reusa. Lê o anexo no instante do evento `mensagem.criada`. Valem os canais que gravam o anexo junto com a mensagem:
+  figurinha conta como foto. Mora em `Autonomia::Automacao::FotoOuPdf`; o valor `conversa.cliente_mandou_documento`
+  do "esperar até" (G46, o laço dos documentos) usa a mesma régua em SQL (`FotoOuPdf.escopo`). Lê o anexo no instante do evento `mensagem.criada`. Valem os canais que gravam o anexo junto com a mensagem:
   WhatsApp Cloud (`Whatsapp::IncomingMessageBaseService`), o conector WAHA/Híbrido e a API e o widget
   (`messages#create` → `Messages::MessageBuilder`). **Limite conhecido:** o e-mail cria a mensagem e só depois anexa os
   arquivos (`MailboxHelper`, `messages.create!` e depois `save!`), então ali o filtro lê `false`. Mudar a ordem do

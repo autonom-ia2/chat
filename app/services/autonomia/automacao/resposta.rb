@@ -10,6 +10,8 @@
 #   Fernanda", depois de passar a conversa para ela). O eco do celular não conta: ele não diz quem mandou.
 # - Gatilho repetiu (lote 4): o gatilho da execução aconteceu de novo durante a espera (a 2ª falta dentro dos 30 dias).
 #   A Partida grava a hora em `repetiu_em`; lida do banco, porque a execução em memória é de antes da repetição.
+# - Documento (G46, exemplo 14): mensagem recebida com foto ou PDF (FotoOuPdf, a régua do `mensagem.tem_anexo`), só na
+#   conversa da execução, a mesma que o `le: anexos` lê, e só se quem ligou a vê. Texto e áudio ("já mando") não contam.
 #
 # O eco de uma mensagem NOSSA (IA, automação, robô) não é a equipe respondendo. Normalmente ele nem vira mensagem: o
 # reconciliador o junta à bolha que já existe (WhatsappHybrid::EchoReconcilerExtension; na Cloud, o mesmo source_id).
@@ -35,7 +37,8 @@ module Autonomia::Automacao::Resposta
     'conversa.cliente_respondeu' => ->(contexto, espera, quem) { cliente?(contexto.contato, espera, quem) },
     'conversa.equipe_respondeu' => ->(contexto, espera, _quem) { equipe_na?(contexto.conversa, espera) },
     'conversa.responsavel_respondeu' => ->(contexto, espera, _quem) { responsavel?(contexto.conversa, espera) },
-    'gatilho.repetiu' => ->(contexto, espera, _quem) { repetiu?(contexto.execucao, espera) }
+    'gatilho.repetiu' => ->(contexto, espera, _quem) { repetiu?(contexto.execucao, espera) },
+    'conversa.cliente_mandou_documento' => ->(contexto, espera, quem) { documento?(contexto.conversa, espera, quem) }
   }.freeze
 
   # Em qualquer conversa do contato na conta que `quem` (quem ligou) vê, pelo filtro da lista de conversas (#2680): o
@@ -53,9 +56,15 @@ module Autonomia::Automacao::Resposta
     recebidas = do_cliente(contato, quem)
     return false if recebidas.nil?
 
-    na_margem = recebidas.where('messages.created_at > ?', inicio_da_margem(marco)).where.not(id: marco.fetch('lidas_na_margem'))
-    novas = recebidas.where('messages.id > ?', marco.fetch('lido_ate')).or(na_margem)
+    novas = novas_desde(recebidas, marco)
     (ate ? novas.where('messages.created_at <= ?', ate) : novas).exists?
+  end
+
+  # As mensagens de `escopo` que o `marco` não viu: id maior que o último lido, ou gravadas na margem antes dele sem
+  # estar entre as vistas. A régua do G31 e dos anexos novos do G46 (AnexosDaConversa), numa consulta só.
+  def novas_desde(escopo, marco)
+    na_margem = escopo.where('messages.created_at > ?', inicio_da_margem(marco)).where.not(id: marco.fetch('lidas_na_margem'))
+    escopo.where('messages.id > ?', marco.fetch('lido_ate')).or(na_margem)
   end
 
   # O marco da leitura do G31, como fica gravado no registro: o id da última mensagem do cliente visível agora (0 sem
@@ -79,8 +88,23 @@ module Autonomia::Automacao::Resposta
 
     conta = contato.account
     do_contato = ::Conversation.where(account_id: conta.id, contact_id: contato.id)
-    conversas = ::Conversations::PermissionFilterService.new(do_contato, quem, conta, for_reading: true).perform.select(:id)
+    conversas = conversas_que_ve(do_contato, quem, conta).select(:id)
     ::Message.incoming.where(account_id: conta.id, conversation_id: conversas)
+  end
+
+  # As conversas de `escopo` que `quem` vê, pelo filtro da lista de conversas (#2680). É a régua do "cliente
+  # respondeu" e do "cliente mandou documento" (G46).
+  def conversas_que_ve(escopo, quem, conta)
+    ::Conversations::PermissionFilterService.new(escopo, quem, conta, for_reading: true).perform
+  end
+
+  # Sem conversa (o card sem conversa principal) ou sem quem ligou, nenhum documento chegou.
+  def documento?(conversa, espera, quem)
+    return false if conversa.nil? || quem.nil?
+    return false unless conversas_que_ve(::Conversation.where(id: conversa.id), quem, conversa.account).exists?
+
+    recebidas = ::Message.incoming.where(account_id: conversa.account_id, conversation_id: conversa.id)
+    na_janela(::Autonomia::Automacao::FotoOuPdf.escopo(recebidas), espera).exists?
   end
 
   # Sem conversa (o card sem conversa principal, o contato antes da conversa nova), a equipe nunca respondeu.

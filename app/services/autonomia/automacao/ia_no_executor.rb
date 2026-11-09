@@ -27,7 +27,16 @@ module Autonomia::Automacao::IaNoExecutor
 
     executor = classe.new(execucao: @execucao, passo: passo, alvo: alvo, acesso: @acesso)
     marcar_leitura(passo)
-    depois_da_ia(passo, executor, executor.executar)
+    depois_da_ia(passo, executor, com_marco_dos_anexos(executor, executor.executar))
+  end
+
+  # G46: o passo que leu os anexos novos grava o marco no registro, e a próxima leitura parte dele. Só quando o passo
+  # andou (ok ou pulado): na nova tentativa de um erro passageiro, os mesmos anexos vão de novo.
+  def com_marco_dos_anexos(executor, resultado)
+    registro = executor.registro_dos_anexos
+    return resultado unless registro && %i[ok pulado].include?(resultado.tipo)
+
+    resultado.class.new(tipo: resultado.tipo, motivo: resultado.motivo, dados: resultado.dados.to_h.merge(registro))
   end
 
   # O "escrever" ao cliente com a janela fechada para antes de pagar a IA, como a mensagem (F4.4, #2573).
@@ -43,16 +52,20 @@ module Autonomia::Automacao::IaNoExecutor
   end
 
   # O registro com o caminho vem antes da nota do motivo: se a nota falhar, a automação segue pelo caminho, e o registro
-  # diz `nota_faltou`. A nota nunca fica duplicada. O caminho que decide de novo (G31) não deixa nota: "ainda
-  # conversando" deixaria uma por mensagem, como o "nenhum" (#2578).
+  # diz `nota_faltou`. A nota nunca fica duplicada. O caminho marcado no `de_novo` não deixa nota: "ainda conversando"
+  # (G31) e "falta algo" (G46) deixariam uma por mensagem, como o "nenhum" (#2578). Sem `desde`, espera a próxima
+  # resposta (G31); com ele, segue pelo caminho, que volta ao "esperar até" (Roteiro, G46).
   def seguir_pelo_caminho(passo, executor, resultado)
     @tentativas = 0
+    ramo = resultado.dados['ramo']
     registro = registrar(passo['id'], resultado.tipo == :pulado ? 'pulado' : 'ok', resultado.motivo, dados_do_caminho(passo, resultado.dados))
-    return esperar_resposta(passo) if ::Autonomia::Automacao::DecidirDeNovo.repete?(passo, resultado.dados['ramo'])
+    if ::Autonomia::Automacao::DecidirDeNovo.marcado?(passo, ramo)
+      return ::Autonomia::Automacao::DecidirDeNovo.espera?(passo) ? esperar_resposta(passo) : @roteiro.entrar_no_caminho(passo, ramo)
+    end
 
-    nota = anotar(executor, resultado.dados['ramo'])
+    nota = anotar(executor, ramo)
     registro.update!(dados: registro.dados.merge(nota ? { 'nota_id' => nota.id } : { 'nota_faltou' => true })) unless nota == false
-    @roteiro.entrar_no_caminho(passo, resultado.dados['ramo'])
+    @roteiro.entrar_no_caminho(passo, ramo)
   end
 
   # A nota do motivo; false quando não há nota a deixar (não houve pergunta à IA, ou a IA escolheu "nenhum"), nil quando

@@ -141,6 +141,7 @@ class Autonomia::Automacao::Valores
     'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'conversa.responsavel_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'gatilho.repetiu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'conversa.cliente_mandou_documento' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'card.origem' => { 'opcoes' => ::Autonomia::Automacao::OrigemDoCard::GRUPOS, 'operadores' => %w[igual diferente] },
     'card.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'contato.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
@@ -169,8 +170,7 @@ class Autonomia::Automacao::Valores
   class << self
     def caminho_valido?(caminho)
       [CAMPOS, DO_QUE_QUEM_VE, MENSAGEM, RESPOSTA, AGENDA, ENVIO, TROCA, FALHOU].any? { |lista| lista.key?(caminho.to_s) } ||
-        atributo(caminho).present? ||
-        da_ia?(caminho)
+        atributo(caminho).present? || da_ia?(caminho)
     end
 
     def da_ia?(caminho) = caminho.to_s.start_with?(IA) && caminho.to_s.length > IA.length
@@ -252,15 +252,13 @@ class Autonomia::Automacao::Valores
     do_objeto(caminho) { |objeto| ::Autonomia::Automacao::Valores::Atributos.ler(base, chave, objeto) }
   end
 
-  def campo?(chave)
-    [CAMPOS, AGENDA, ENVIO, FALHOU, DO_QUE_QUEM_VE, TROCA].any? { |lista| lista.key?(chave) }
-  end
+  def campo?(chave) = [CAMPOS, AGENDA, ENVIO, DO_QUE_QUEM_VE, TROCA, FALHOU].any? { |lista| lista.key?(chave) }
 
   def do_campo(chave)
     return do_objeto(chave) { |objeto| DO_QUE_QUEM_VE[chave].call(objeto, account_user) } if DO_QUE_QUEM_VE.key?(chave)
     return do_objeto(chave) { |objeto| link_da_agenda(objeto, AGENDA[chave].call(objeto)) } if AGENDA.key?(chave)
 
-    do_objeto(chave) { |objeto| (CAMPOS[chave] || ENVIO[chave] || FALHOU[chave] || TROCA[chave]).call(objeto) }
+    do_objeto(chave) { |objeto| (CAMPOS[chave] || ENVIO[chave] || TROCA[chave] || FALHOU[chave]).call(objeto) }
   end
 
   def link_da_agenda(objeto, pessoa)

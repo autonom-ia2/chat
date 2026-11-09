@@ -110,6 +110,11 @@ const ramoDe = (execucao, passo) => {
   return nomeDoCaminho(execucao, passo) || ramo;
 };
 
+// G63: a volta do galho "a cada mensagem" à espera não vira linha: cada volta
+// já tem a sua, a da mensagem do cliente, com a vez.
+const passosDe = execucao =>
+  execucao.passos.filter(passo => passo.dados.volta === undefined);
+
 const linkDa = (execucao, mensagemId) => {
   const url = frontendURL(
     conversationUrl({
@@ -261,7 +266,7 @@ onMounted(() => carregar());
           >
             <ol class="flex flex-col gap-2 p-0 m-0 list-none">
               <li
-                v-for="(passo, indice) in execucao.passos"
+                v-for="(passo, indice) in passosDe(execucao)"
                 :key="indice"
                 data-passo
                 class="flex items-start gap-2.5"
@@ -295,6 +300,28 @@ onMounted(() => carregar());
                     class="text-sm text-n-slate-11"
                   >
                     {{ $t('AUTOMACAO_LIVRE.HISTORICO.ESPERA_SEM_PRAZO') }}
+                  </span>
+                  <span
+                    v-if="passo.dados.conferir_as !== undefined"
+                    data-conferir-as
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{
+                      $t('AUTOMACAO_LIVRE.HISTORICO.CONFERE_AS', {
+                        hora: passo.dados.conferir_as,
+                      })
+                    }}
+                  </span>
+                  <span
+                    v-if="passo.dados.vez"
+                    data-vez
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{
+                      $t('AUTOMACAO_LIVRE.HISTORICO.VEZ', {
+                        n: passo.dados.vez,
+                      })
+                    }}
                   </span>
                   <span v-if="passo.dados.ate" class="text-sm text-n-slate-11">
                     {{

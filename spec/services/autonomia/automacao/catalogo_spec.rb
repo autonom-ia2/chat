@@ -163,8 +163,8 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     respostas = catalogo.gerado['valores'].select { |item| item['so_na_espera'] }
 
     expect(respostas.pluck('caminho')).to eq(%w[conversa.cliente_respondeu conversa.equipe_respondeu conversa.responsavel_respondeu
-                                                gatilho.repetiu])
-    expect(respostas.pluck('base')).to eq(%w[conversa conversa conversa gatilho])
+                                                gatilho.repetiu conversa.cliente_mandou_documento])
+    expect(respostas.pluck('base')).to eq(%w[conversa conversa conversa gatilho conversa])
     expect(catalogo.gerado['alvos'].values).to all(include('gatilho'))
     expect(respostas).to all(satisfy { |item| item['so_no_gatilho'].nil? && item['opcoes'].pluck('valor') == [true, false] })
   end

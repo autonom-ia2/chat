@@ -18,12 +18,14 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # O 13 saiu com o lote 2 (#2679): o spec dele roda à risca, com o card ganho e a IA lendo o card.
     11 => ['Indicação que vira presente', 'G4, G17, G18 (criar o contato e o card do amigo e agir no card dele), G1, G5, G12, G16'],
     12 => ['Visita que aconteceu decide o próximo passo', 'G5 (entrou em "Visita feita"), G2, G3, G11, G14, G25, G35'],
-    14 => ['Documentação completa para emitir', 'G5 (entrou em "Documentação"), G1, G3, G13, G20'],
     # O 15 saiu com o G27 (#2661) sobre o lote 4 (#2687, G40): exemplo_15_cliente_grande_spec.rb roda à risca.
+    # Os passos 1 a 6 têm spec próprio à risca, numa automação só (G46): exemplo_14_documentacao_spec.rb.
+    14 => ['Documentação completa para emitir', 'G13 (passos 7 e 8: mandar à seguradora e gravar a proposta; a recusa avisa a Dona Cida)'],
     16 => ['Reconquistar quem foi para o concorrente', 'G7 (todo dia 1º), G3, G4, G12, G14, G16, G18'],
-    # O 17 roda no começo e nos passos 1, 2, 3, 5 e 6 (g9_troca_de_responsavel_spec.rb), mas o 5 e o 6 ("toda manhã")
-    # rodam numa segunda automação: falta decidir se isso adapta o termo. O 4 espera a G63.
-    17 => ['Vendedora de férias, cliente bem cuidado', 'G63 (a cada mensagem do cliente), G7, G9, G15, G40, G62'],
+    # O 17 roda numa automação só (exemplo_17_ferias_spec.rb, G63 e G64), menos o passo 4 à risca (G66: a conversa segue
+    # com a antiga dona depois da troca do card, e "espera a Renata" e "passa para a agente de IA" leem quem atende a
+    # conversa) e a janela do passo 6 (G67: o resumo lê as 5 últimas mensagens, não as férias inteiras).
+    17 => ['Vendedora de férias, cliente bem cuidado', 'G66 (a conversa acompanha a troca do card), G67, G9, G15, G40, G62, G63, G64'],
     18 => ['Seleção de candidatos sem planilha', 'G4, G20 (ler o currículo e criar o card), G1, G5, G6, G12, G15, G25'],
     19 => ['Cliente que sumiu do WhatsApp', 'G43 (mandar ao número novo), G1, G2, G3, G8, G11, G19, G28, G34, G53'],
     20 => ['Venda fechada já entra no sistema da empresa', 'G5 (card ganho), G1, G2, G7, G11, G12, G13']

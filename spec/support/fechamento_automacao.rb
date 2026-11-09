@@ -259,10 +259,22 @@ module FechamentoAutomacao::Lacunas
     # liga ao card novo a conversa do contato na caixa da página, quando ela existe. A frente dona troca o nil pela sonda.
     'G47' => nil,
     # Do exemplo 17, achadas na G9 (#2707). G62 (#2829): o campo do card do tipo pessoa da equipe, com o nome e a
-    # ausência dela (passos 3, 5 e 6). G63 (#2830): repetir a espera a cada mensagem do cliente na mesma automação
-    # (passo 4); o laço do #2791 (G46) só volta pelo caminho de um "decidir", e o passo 4 não tem decisão.
+    # ausência dela (passos 3, 5 e 6). G63 (#2830): o galho "a cada mensagem do cliente" do "esperar até" (passo 4).
+    # G64 (#2839): a conferência toda manhã, numa hora marcada, na mesma automação (passo 5). Prova ponta a ponta em
+    # spec/fechamento/automacao/exemplo_17_ferias_spec.rb. G66: a troca do dono do card não leva a conversa, que segue
+    # com a antiga; "espera a Renata responder" e "passa para a agente de IA" (passo 4) leem quem atende a conversa. G67:
+    # o resumo da volta (passo 6) lê as últimas mensagens da conversa (5), não as das férias inteiras.
     'G62' => -> { FechamentoAutomacao::SondasDaTroca.campo_pessoa_le_na_conta? },
-    'G63' => nil
+    'G63' => -> { FechamentoAutomacao::Ex17.galho_a_cada_mensagem? },
+    'G64' => -> { FechamentoAutomacao::Ex17.conferencia_marcada? },
+    'G66' => nil,
+    'G67' => nil,
+    # Do exemplo 14, passo 5 (#2791): o laço dos documentos numa automação só. O "esperar até" lê o documento novo, e o
+    # "decidir" volta a ele (`de_novo.desde`). Prova em spec/fechamento/automacao/exemplo_14_documentacao_spec.rb.
+    'G46' => lambda {
+      opcoes = Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'de_novo', 'oneOf')
+      valor?('conversa.cliente_mandou_documento') && Array(opcoes).any? { |opcao| opcao.dig('properties', 'desde') }
+    }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".
