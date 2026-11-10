@@ -3024,6 +3024,304 @@
         "RESPONDEU": "Replied to the message",
         "VER_CONVERSA_DE": "See the conversation with {contato}"
       }
+    },
+    "VITRINE": {
+      "MENU": "Ready-made tools",
+      "CARREGANDO": "Loading the ready-made tools…",
+      "HEROI": {
+        "TITULO": "Teach your agents new things",
+        "TEXTO": "Choose what the agent can look up. The platform takes care of the rest.",
+        "BUSCA": "What do you want the agent to be able to do?",
+        "BUSCA_EXEMPLO": "E.g.: know how much a car is worth",
+        "LIMPAR": "Clear search"
+      },
+      "PARA": {
+        "TEXTO": "Choosing for {nome}",
+        "TROCAR": "Change agent"
+      },
+      "FILTRO": {
+        "ROTULO": "Show",
+        "TODAS": "All"
+      },
+      "DESTAQUE": {
+        "RAMO": "Most used in your field",
+        "GERAL": "Most chosen"
+      },
+      "CARTAO": {
+        "CONSULTAS": "Answers {n} kinds of question",
+        "JA_SABE": "{nome} already knows"
+      },
+      "BUSCA": {
+        "NADA": "Nothing with “{termo}” here yet.",
+        "NADA_LIBERADO": "No ready-made tools are available for this account yet.",
+        "VER_TODAS": "See all",
+        "ACHADAS": "Found {n} for “{termo}”"
+      },
+      "SEM_AGENTE": {
+        "TEXTO": "Create an agent first. Then just choose what it will know.",
+        "BOTAO": "Create agent"
+      },
+      "AVANCADO": {
+        "TEXTO": "Didn't find what you need?",
+        "BOTAO": "Create my own (advanced)"
+      },
+      "CRIAR_MINHA": {
+        "TITULO": "Which agent?",
+        "TEXTO": "Choose the agent that will use the tool. Then you describe what it looks up.",
+        "CONTINUAR": "Continue with {nome}",
+        "ESCOLHA": "Choose an agent above."
+      },
+      "GRUPOS": {
+        "PESSOAS": {
+          "NOME": "People and companies",
+          "TEXTO": "Check who is who."
+        },
+        "LUGAR": {
+          "NOME": "Address and place",
+          "TEXTO": "Find addresses, cities and regions."
+        },
+        "VEICULOS": {
+          "NOME": "Vehicles",
+          "TEXTO": "Car, motorcycle and truck values."
+        },
+        "SAUDE": {
+          "NOME": "Health",
+          "TEXTO": "Hospitals, exams, diseases and plans."
+        },
+        "CLIMA": {
+          "NOME": "Weather",
+          "TEXTO": "Rain, weather and fires."
+        },
+        "DINHEIRO": {
+          "NOME": "Money and deadlines",
+          "TEXTO": "Interest, inflation, dollar, holidays and banks."
+        },
+        "CLIENTES": {
+          "NOME": "Find new customers",
+          "TEXTO": "Who is buying and who could buy."
+        },
+        "SEGUROS": {
+          "NOME": "Insurance",
+          "TEXTO": "Coverages, brokers and insurers."
+        },
+        "OUTROS": {
+          "NOME": "Other",
+          "TEXTO": "Goods and websites."
+        }
+      },
+      "DETALHE": {
+        "CONSEGUE": "What the agent will be able to do",
+        "CLIENTE": "Customer",
+        "AGENTE": "Agent",
+        "CONSULTAS": "It picks what to ask on its own: {lista}.",
+        "EXPERIMENTE": "Try it",
+        "EXPERIMENTAR": "Try",
+        "EXPERIMENTANDO": "Looking up…",
+        "DEU_CERTO": "It worked. This is what the agent receives:",
+        "QUAL_AGENTE": "Which agent?",
+        "JA_TEM": "Already knows how to look this up",
+        "QUANDO": "When to use",
+        "QUANDO_AJUDA": "The agent decides from the conversation. Adjust the sentence if you want.",
+        "QUANDO_VAZIO": "Write when the agent should use it.",
+        "ENSINAR": "Teach {nome}",
+        "ENSINANDO": "Teaching…",
+        "ESCOLHA_AGENTE": "Choose an agent above.",
+        "SUCESSO_TITULO": "Done!",
+        "SUCESSO_TEXTO": "{agente} can now {consegue}.",
+        "SUCESSO_LIGADA": "The tool is already on. You can turn it off anytime.",
+        "VER_FERRAMENTAS": "See {nome}'s tools",
+        "OUTRA": "Choose another"
+      },
+      "MOTIVOS": {
+        "SEM_PERMISSAO": "You are not allowed to manage the agents' tools. Ask whoever manages the account.",
+        "DESLIGADA": "Ready-made tools are not available for this account right now.",
+        "NAO_ENCONTRADO": "I could not find this agent or this tool. Reload the page and try again.",
+        "COTACAO": "The quote agent comes with its own tools and does not take ready-made tools.",
+        "NOME_EM_USO": "This agent already has another tool with the same name. Talk to whoever manages the account's tools.",
+        "REDE": "No connection right now. Check the internet and try again.",
+        "GERAL": "That did not work right now. Try again in a moment."
+      },
+      "RESULTADO": {
+        "E_MAIS": "{nomes} and {n} more",
+        "SIM": "Yes",
+        "NAO": "No",
+        "ZERO_KM": "Brand new",
+        "NAO_ENCONTRADO": "The lookup found nothing for this value. Check it and try again.",
+        "NAO_CONSEGUI": "Could not look it up right now. Try again in a moment.",
+        "PEDIDO_INVALIDO": "This value is not in the right format. See the example and try again.",
+        "DESLIGADA": "This tool is not available for your account right now.",
+        "SEM_PERMISSAO": "You are not allowed to try the ready-made tools."
+      },
+      "CAMPOS": {
+        "CEP": "ZIP code",
+        "LOGRADOURO": "Street",
+        "BAIRRO": "District",
+        "CIDADE": "City",
+        "UF": "State",
+        "ESTADO": "State",
+        "CNPJ": "CNPJ",
+        "RAZAO_SOCIAL": "Legal name",
+        "NOME_FANTASIA": "Trade name",
+        "SITUACAO": "Status",
+        "DATA_DA_SITUACAO": "Status since",
+        "ABERTURA": "Opened on",
+        "NATUREZA_JURIDICA": "Company type",
+        "PORTE": "Size",
+        "ATIVIDADE_PRINCIPAL_DESCRICAO": "Main activity",
+        "VALIDO": "Valid number?",
+        "REGIAO_FISCAL": "Issuing region",
+        "ESTADOS": "States in the region",
+        "OBSERVACAO": "Note",
+        "VALOR": "Value",
+        "MARCA": "Make",
+        "MODELO": "Model",
+        "ANO_MODELO": "Year",
+        "COMBUSTIVEL": "Fuel",
+        "CODIGO_FIPE": "Table code",
+        "MES_DE_REFERENCIA": "Table of",
+        "PRECOS": "Years in the table",
+        "ANOS_DISPONIVEIS": "Years in the table",
+        "DE": "From",
+        "ATE": "Until",
+        "DIAS_UTEIS": "Business days",
+        "FERIADOS_NO_PERIODO": "Holidays in the period",
+        "COMPRA": "Buy",
+        "VENDA": "Sell",
+        "DATA": "Date",
+        "CIDADES": "Cities",
+        "DDD": "Area code",
+        "FONTE_DOS_DADOS": "Data from",
+        "CODIGO": "Code",
+        "NOME": "Bank",
+        "NOME_COMPLETO": "Full name"
+      },
+      "PRONTAS": {
+        "TITULO": "Ready-made",
+        "TIRAR": "Remove",
+        "TIRAR_SR": "Remove {ferramenta} from {agente}",
+        "CONFIRMA_TITULO": "Remove {ferramenta}?",
+        "CONFIRMA_TEXTO": "{agente} stops looking this up. You can add it again anytime.",
+        "CONFIRMA_SIM": "Remove",
+        "CONFIRMA_NAO": "Keep",
+        "TIRANDO": "Removing…",
+        "ERRO": "Could not remove the tool.",
+        "ERRO_GARANTIA": "Nothing changed in the agent.",
+        "TIRADA": "{ferramenta} was removed from {agente}.",
+        "CRIAR_MINHA": "Create my own (advanced)",
+        "VAZIO": "{nome} does not look anything up outside the conversation yet.",
+        "ESCOLHER": "Choose a ready-made tool"
+      },
+      "FERRAMENTAS": {
+        "CNPJ": {
+          "NOME": "Company details",
+          "APOIO": "by CNPJ",
+          "FAZ": "Shows a company's legal name, status with the Federal Revenue, activity and city.",
+          "CONSEGUE": "check a company's details",
+          "CLIENTE": "My CNPJ is 12.345.678/0001-90. Is the company active?",
+          "AGENTE": "Found it: Padaria Pão de Ouro Ltda, active with the Federal Revenue, a bakery in Campinas – SP.",
+          "USE_QUANDO": "Use when the customer gives a CNPJ or asks to check a company's details.",
+          "ROTULO": "CNPJ",
+          "EXEMPLO": "33.000.167/0001-01"
+        },
+        "CPF": {
+          "NOME": "Valid CPF",
+          "APOIO": "checks the digits",
+          "FAZ": "Checks whether a CPF number is valid and in which region it was issued. It does not show the name or the status with the Federal Revenue.",
+          "CONSEGUE": "check whether a CPF number is valid",
+          "CLIENTE": "My CPF is 111.444.777-35.",
+          "AGENTE": "The check digits match: the number is right, from a CPF issued in Espírito Santo or Rio de Janeiro.",
+          "USE_QUANDO": "Use when the customer gives a CPF and you need to check the number is right.",
+          "ROTULO": "CPF",
+          "EXEMPLO": "111.444.777-35"
+        },
+        "CEP": {
+          "NOME": "Address by ZIP code",
+          "FAZ": "Finds street, district, city and state from a ZIP code.",
+          "CONSEGUE": "find an address by ZIP code",
+          "CLIENTE": "My ZIP code is 01001-000.",
+          "AGENTE": "Found it: Praça da Sé, Sé district, São Paulo – SP. What number?",
+          "USE_QUANDO": "Use when the customer gives a ZIP code or an address needs completing.",
+          "ROTULO": "ZIP code",
+          "EXEMPLO": "01001-000"
+        },
+        "CIDADES": {
+          "NOME": "Cities in a state",
+          "APOIO": "official IBGE list",
+          "FAZ": "Lists Brazil's states and the cities of each state.",
+          "CONSEGUE": "tell the cities in a state",
+          "CLIENTE": "Is Brasiléia in Acre?",
+          "AGENTE": "Yes: Brasiléia is one of the 22 cities in Acre.",
+          "USE_QUANDO": "Use when the conversation needs to know whether a city is in a state or which cities a state has.",
+          "ROTULO": "State (e.g. AC)",
+          "EXEMPLO": "AC",
+          "CONSULTAS": "Brazil's states, cities in a state"
+        },
+        "LOCALIZACAO": {
+          "NOME": "City from a location",
+          "FAZ": "Tells which city and state a location sent by the customer is in.",
+          "CONSEGUE": "tell which city a location is in",
+          "CLIENTE": "(shared the location)",
+          "AGENTE": "You are in Campinas, São Paulo. Noted!",
+          "USE_QUANDO": "Use when the customer shares their location.",
+          "ROTULO": "Location (latitude, longitude)",
+          "EXEMPLO": "-22.9056, -47.0608"
+        },
+        "DDD": {
+          "NOME": "State from area code",
+          "FAZ": "Tells which state an area code belongs to and, when available, which cities use it.",
+          "CONSEGUE": "tell which state a phone is from",
+          "CLIENTE": "My number is 31 99999-0000.",
+          "AGENTE": "Noted! 31 is Minas Gerais, Belo Horizonte and region.",
+          "USE_QUANDO": "Use when it helps to know which state a phone number is from.",
+          "ROTULO": "Area code",
+          "EXEMPLO": "31"
+        },
+        "FIPE": {
+          "NOME": "Car value",
+          "APOIO": "FIPE table",
+          "FAZ": "Tells how much a car, motorcycle or truck is worth in this month's FIPE table.",
+          "CONSEGUE": "tell how much a car is worth",
+          "CLIENTE": "How much is my 2020 Onix worth?",
+          "AGENTE": "The 2020 Onix LT 1.0 is worth R$ 60,822 in this month's table.",
+          "USE_QUANDO": "Use when the customer wants to know how much a car, motorcycle or truck is worth.",
+          "ROTULO": "Vehicle code in the FIPE table",
+          "EXEMPLO": "004517-9",
+          "CONSULTAS": "makes, models of a make, this month's price"
+        },
+        "BANCO_CENTRAL": {
+          "NOME": "Interest, inflation and dollar",
+          "APOIO": "Central Bank",
+          "FAZ": "Brings the interest rate (Selic), official inflation (IPCA), today's dollar and the market forecast (Focus).",
+          "CONSEGUE": "tell the interest rate, inflation and the dollar",
+          "CLIENTE": "How much is the dollar today?",
+          "AGENTE": "Today's official dollar is R$ 5.51 to sell.",
+          "USE_QUANDO": "Use when the customer asks about interest, inflation, the dollar or the market forecast.",
+          "ROTULO": "Shows today's official dollar.",
+          "CONSULTAS": "interest, inflation, dollar, market forecast"
+        },
+        "FERIADOS": {
+          "NOME": "Holidays and business days",
+          "FAZ": "Tells the year's national holidays and counts business days until a date. Carnival and Corpus Christi count as days off. State and city holidays are not included.",
+          "CONSEGUE": "count business days and find national holidays",
+          "CLIENTE": "How many business days until November 30?",
+          "AGENTE": "From now until 11/30 there are 14 business days. The national holiday on 11/20 is in between.",
+          "USE_QUANDO": "Use when you need to know whether a day is a national holiday or to count a deadline in business days.",
+          "ROTULO": "Count business days from today until (day/month/year)",
+          "EXEMPLO": "30/11/2026",
+          "CONSULTAS": "the year's national holidays, business days until a date"
+        },
+        "BANCOS": {
+          "NOME": "Bank name",
+          "APOIO": "by code",
+          "FAZ": "Tells a bank's name from its code of up to three digits.",
+          "CONSEGUE": "name a bank by its code",
+          "CLIENTE": "My bank is 341.",
+          "AGENTE": "341 is Itaú Unibanco.",
+          "USE_QUANDO": "Use when the customer gives a bank code.",
+          "ROTULO": "Bank code",
+          "EXEMPLO": "341"
+        }
+      }
     }
   }
 }

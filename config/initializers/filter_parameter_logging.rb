@@ -27,7 +27,10 @@ Rails.application.config.filter_parameters += [
   :frase,
   # #1479 — o "Endereço e telefone" do agente (`agent.config.atendimento`) é dado do negócio que não vai para o log.
   # `telefone` e `endereco` não casam com outro parâmetro de entrada do app hoje (conferido em 09/11).
-  :telefone, :endereco
+  :telefone, :endereco,
+  # #2858 F2 — o valor digitado no "Experimente" da vitrine de ferramentas prontas (CPF, CNPJ, CEP) não vai para o log.
+  # O filtro casa qualquer chave que contenha "valor": num parâmetro de outro endpoint, só o log perde o número.
+  :valor
 ]
 
 # Regex to filter all occurrences of 'token' in keys except for 'website_token'

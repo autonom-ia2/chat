@@ -1,6 +1,7 @@
 import { frontendURL } from 'dashboard/helper/URLHelper.js';
 import {
   AUTONOMIA_PERMISSIONS,
+  AUTONOMIA_TOOLS_MANAGE_PERMISSION,
   DESEMPENHO_VIEW_PERMISSION,
   PROSPECTING_PERMISSIONS,
   INSURANCE_PERMISSIONS,
@@ -25,6 +26,8 @@ const AgentePaginaEntrada = () =>
   import('./agentes/entrada/AgentePaginaEntrada.vue');
 // #2226 — painel de desempenho do agente (PR 1: protótipo com dados inventados).
 const DesempenhoPage = () => import('./agentes/pages/DesempenhoPage.vue');
+// #2858 F2 — a vitrine de ferramentas prontas.
+const VitrinePage = () => import('./agentes/vitrine/pages/VitrinePage.vue');
 // #2469 (PR 3a do #2436) — a página do cartão de um post ou anúncio com o cuidado dos comentários.
 const AgenteDoPostPage = () => import('./agentes/pages/AgenteDoPostPage.vue');
 const ProspectingSearchPage = () =>
@@ -123,6 +126,24 @@ export const routes = [
     meta: agentsMeta,
     beforeEnter: ensureAutonomiaEnabled,
     component: AgentesListaEntrada,
+  },
+  {
+    // #2858 F2 — atrás das flags agente_ferramentas_prontas e agente_ferramentas_prontas_vitrine; quem vê é quem cuida
+    // das ferramentas (administrador ou a chave autonomia_tools_manage), a mesma regra do servidor.
+    path: frontendURL('accounts/:accountId/agents/ferramentas-prontas'),
+    name: 'autonomia_agents_vitrine',
+    meta: {
+      permissions: ['administrator', AUTONOMIA_TOOLS_MANAGE_PERMISSION],
+      featureFlag: FEATURE_FLAGS.AGENTE_FERRAMENTAS_PRONTAS_VITRINE,
+    },
+    beforeEnter: [
+      ensureAutonomiaEnabled,
+      comFlags(
+        FEATURE_FLAGS.AGENTE_FERRAMENTAS_PRONTAS,
+        FEATURE_FLAGS.AGENTE_FERRAMENTAS_PRONTAS_VITRINE
+      ),
+    ],
+    component: VitrinePage,
   },
   {
     path: frontendURL('accounts/:accountId/agents/new'),

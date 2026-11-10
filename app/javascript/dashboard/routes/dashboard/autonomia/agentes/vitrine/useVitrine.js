@@ -1,0 +1,158 @@
+import { computed, ref } from 'vue';
+import FerramentasProntasAPI from 'dashboard/api/autonomia/ferramentasProntas';
+
+// #2858 F2 — o estado da vitrine de ferramentas prontas, compartilhado entre a vitrine e a gaveta de ferramentas do
+// agente (um só estado por página: incluir na vitrine já aparece na gaveta). Tudo vem do servidor
+// (FerramentasProntasController): o catálogo liberado para a conta (`fontes`) e as prontas de cada agente
+// (`incluidas`). A lista é trocada inteira a cada mudança (nada de mutar o item). A chave interna da conta na fonte é
+// da plataforma e nunca chega aqui.
+//
+// Erros em categorias que a tela sabe dizer (AGENTS.VITRINE.MOTIVOS.<MOTIVO>):
+//   SEM_PERMISSAO (401/403), DESLIGADA (404 com o motivo "desligada": a vitrine saiu da conta; ou 422 "desligada"),
+//   NAO_ENCONTRADO (outro 404: o agente ou a ferramenta não existe mais), COTACAO (a Lia),
+//   NOME_EM_USO (o agente já tem uma ferramenta feita à mão com o mesmo nome), REDE (sem resposta) e GERAL.
+
+const STATUS_SEM_PERMISSAO = [401, 403];
+const STATUS_DESLIGADA = 404;
+const MOTIVOS_DO_INCLUIR = {
+  desligada: 'DESLIGADA',
+  agente_de_cotacao: 'COTACAO',
+  nome_em_uso: 'NOME_EM_USO',
+};
+
+export const motivoDoErro = erro => {
+  const resposta = erro?.response;
+  if (!resposta) return 'REDE';
+  if (STATUS_SEM_PERMISSAO.includes(resposta.status)) return 'SEM_PERMISSAO';
+  if (resposta.status === STATUS_DESLIGADA) {
+    return resposta.data?.motivo === 'desligada'
+      ? 'DESLIGADA'
+      : 'NAO_ENCONTRADO';
+  }
+  return MOTIVOS_DO_INCLUIR[resposta.data?.motivo] || 'GERAL';
+};
+
+const comMotivo = erro =>
+  Object.assign(new Error(motivoDoErro(erro)), {
+    motivo: motivoDoErro(erro),
+  });
+
+const fontes = ref([]);
+const incluidas = ref([]);
+const carregando = ref(false);
+const carregada = ref(false);
+const erro = ref('');
+let pedido = null;
+// Cada mudança (incluir, ligar, tirar) avança a versão: a lista que chega de um `carregar` pedido antes dela é velha e
+// não apaga a mudança.
+let versao = 0;
+
+// Lê de novo a cada abertura de tela (a conta pode ter mudado entre uma e outra); duas telas ao mesmo tempo dividem
+// o mesmo pedido.
+const carregar = () => {
+  if (pedido) return pedido;
+  carregando.value = true;
+  erro.value = '';
+  const versaoDoPedido = versao;
+  pedido = FerramentasProntasAPI.listar()
+    .then(({ data }) => {
+      fontes.value = (data?.fontes || []).map(item => item.chave);
+      if (versaoDoPedido === versao) incluidas.value = data?.incluidas || [];
+      carregada.value = true;
+    })
+    .catch(falha => {
+      erro.value = motivoDoErro(falha);
+    })
+    .finally(() => {
+      carregando.value = false;
+      pedido = null;
+    });
+  return pedido;
+};
+
+const doAgente = agenteId =>
+  incluidas.value.filter(item => item.agente_id === Number(agenteId));
+
+const tem = (agenteId, fonte) =>
+  doAgente(agenteId).some(item => item.fonte === fonte);
+
+const trocar = pronta => {
+  versao += 1;
+  const existe = incluidas.value.some(item => item.id === pronta.id);
+  incluidas.value = existe
+    ? incluidas.value.map(item => (item.id === pronta.id ? pronta : item))
+    : [...incluidas.value, pronta];
+  return pronta;
+};
+
+const chamar = async chamada => {
+  try {
+    return await chamada();
+  } catch (falha) {
+    throw comMotivo(falha);
+  }
+};
+
+// Incluir de novo a mesma fonte no mesmo agente não duplica: o servidor atualiza a frase e religa.
+const incluir = async ({ fonte, agenteId, usarQuando }) => {
+  const { data } = await chamar(() =>
+    FerramentasProntasAPI.incluir({
+      fonte,
+      agenteId: Number(agenteId),
+      usarQuando,
+    })
+  );
+  return trocar(data);
+};
+
+const mudarLigada = async (id, ligada) => {
+  const { data } = await chamar(() =>
+    FerramentasProntasAPI.mudarLigada(id, ligada)
+  );
+  return trocar(data);
+};
+
+const tirar = async id => {
+  await chamar(() => FerramentasProntasAPI.tirar(id));
+  versao += 1;
+  incluidas.value = incluidas.value.filter(item => item.id !== id);
+};
+
+// O "Experimente" responde sempre uma situação: a falha da chamada vira "sem_permissao" ou "nao_consegui_consultar",
+// para a tela dizer uma frase só.
+const experimentar = async (fonte, valor) => {
+  try {
+    const { data } = await FerramentasProntasAPI.experimentar(fonte, valor);
+    return data?.situacao ? data : { situacao: 'nao_consegui_consultar' };
+  } catch (falha) {
+    return motivoDoErro(falha) === 'SEM_PERMISSAO'
+      ? { situacao: 'sem_permissao' }
+      : { situacao: 'nao_consegui_consultar' };
+  }
+};
+
+// Medida da busca (não é ação da pessoa): falhar aqui não muda nada na tela, e a próxima busca tenta de novo.
+const registrarBuscaSemResultado = async termo => {
+  try {
+    await FerramentasProntasAPI.buscaSemResultado(termo);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const useVitrine = () => ({
+  carregar,
+  fontes: computed(() => fontes.value),
+  incluidas: computed(() => incluidas.value),
+  carregando: computed(() => carregando.value),
+  carregada: computed(() => carregada.value),
+  erro: computed(() => erro.value),
+  doAgente,
+  tem,
+  incluir,
+  mudarLigada,
+  tirar,
+  experimentar,
+  registrarBuscaSemResultado,
+});

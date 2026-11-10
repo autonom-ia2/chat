@@ -24,6 +24,7 @@ import {
   CRM_ADMIN_PERMISSION,
   CRM_MANAGE_AI_PERMISSION,
   AUTONOMIA_PERMISSIONS,
+  AUTONOMIA_TOOLS_MANAGE_PERMISSION,
   CAMPAIGN_PERMISSIONS,
   PROSPECTING_PERMISSIONS,
   INSURANCE_PERMISSIONS,
@@ -225,6 +226,22 @@ const autonomiaAgentsEnabled = computed(
   () =>
     autonomiaAgentsFlag.value &&
     (isAdministrator.value || hasAnyPermission(AUTONOMIA_PERMISSIONS))
+);
+// #2858 F2 — vitrine de ferramentas prontas: com as duas flags na conta (as prontas e a vitrine), para quem cuida das
+// ferramentas dos agentes (administrador ou a chave autonomia_tools_manage), a mesma regra do servidor.
+const vitrineOn = computed(
+  () =>
+    autonomiaAgentsFlag.value &&
+    isFeatureEnabledonAccount.value(
+      accountId.value,
+      FEATURE_FLAGS.AGENTE_FERRAMENTAS_PRONTAS
+    ) &&
+    isFeatureEnabledonAccount.value(
+      accountId.value,
+      FEATURE_FLAGS.AGENTE_FERRAMENTAS_PRONTAS_VITRINE
+    ) &&
+    (isAdministrator.value ||
+      hasAnyPermission([AUTONOMIA_TOOLS_MANAGE_PERMISSION]))
 );
 // Campaign Management (in the Campaigns group since #725) reads campaign reports and CTWA links,
 // gated by campaign_view (#452).
@@ -890,6 +907,17 @@ const menuItems = computed(() => {
       t,
       accountScopedRoute,
     }),
+    ...(vitrineOn.value
+      ? [
+          {
+            name: 'FerramentasProntas',
+            label: t('AGENTS.VITRINE.MENU'),
+            icon: 'i-lucide-package-open',
+            to: accountScopedRoute('autonomia_agents_vitrine'),
+            activeOn: ['autonomia_agents_vitrine'],
+          },
+        ]
+      : []),
     ...prospectingSidebarItems({
       isVisible: autonomiaProspectingEnabled.value,
       t,

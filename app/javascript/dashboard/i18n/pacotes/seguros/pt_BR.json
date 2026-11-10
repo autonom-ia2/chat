@@ -260,6 +260,24 @@
           "SO_PERDAS": "Só as que não fecharam por causa corrigível"
         }
       }
+    },
+    "VITRINE": {
+      "DESTAQUE": {
+        "RAMO": "Mais usadas por quem trabalha com seguro"
+      },
+      "FERRAMENTAS": {
+        "FIPE": {
+          "USE_QUANDO": "Use quando o cliente pedir cotação de seguro de carro, moto ou caminhão, ou quiser saber quanto o veículo vale.",
+          "CLIENTE": "Quero cotar o seguro do meu Onix 2020.",
+          "AGENTE": "O Onix LT 1.0 2020 vale R$ 60.822 na tabela deste mês. Vou usar esse valor na cotação."
+        },
+        "CEP": {
+          "USE_QUANDO": "Use quando o cliente informar um CEP ou quando for preciso completar o endereço do segurado."
+        },
+        "CPF": {
+          "USE_QUANDO": "Use quando o cliente informar o CPF do segurado, para conferir se o número está certo."
+        }
+      }
     }
   },
   "CRM_LISTA_ACAO": {

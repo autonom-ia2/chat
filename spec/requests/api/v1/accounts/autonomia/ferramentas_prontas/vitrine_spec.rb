@@ -21,6 +21,8 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
     account.enable_features!(flag_vitrine)
   end
 
+  after { Redis::Alfred.delete(Autonomia::FerramentasProntas::BuscasSemResultado.chave(account)) }
+
   def com_funcao(permissoes, conta: account)
     pessoa = create(:user, account: conta, role: :agent)
     pessoa.account_users.find_by(account: conta).update!(custom_role: create(:custom_role, account: conta, permissions: permissoes))
@@ -45,6 +47,19 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
       expect(agent.tools.count).to eq(0)
     end
 
+    it 'recusa também ligar, tirar e registrar busca sem a chave' do
+      pessoa = com_funcao(%w[autonomia_view autonomia_manage])
+      pronta = incluir_pronta('cep', conta: account, agente: agent)
+
+      patch "#{base}/#{pronta.id}", params: { ligada: false }, headers: pessoa.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unauthorized)
+      delete "#{base}/#{pronta.id}", headers: pessoa.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unauthorized)
+      post "#{base}/buscas_sem_resultado", params: { termo: 'avião' }, headers: pessoa.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unauthorized)
+      expect(pronta.reload.enabled).to be(true)
+    end
+
     it 'deixa quem tem só a chave das ferramentas incluir, e grava quem incluiu' do
       pessoa = com_funcao(%w[autonomia_tools_manage])
 
@@ -53,6 +68,17 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
       expect(response).to have_http_status(:created)
       ferramenta = agent.tools.sole
       expect(ferramenta).to have_attributes(fonte_pronta: 'cep', enabled: true, description: 'o cliente informar o CEP')
+      expect(Autonomia::FerramentasProntas::Acesso.sole.incluida_por_id).to eq(pessoa.id)
+    end
+
+    it 'grava quem incluiu mesmo quando o acesso nasceu no Experimente' do
+      pessoa = com_funcao(%w[autonomia_tools_manage])
+      fonte_responde('https://brasilapi.com.br/api/cep/v2/01001000', { cep: '01001000', state: 'SP', city: 'São Paulo' })
+      post "#{base}/experimentar", params: { fonte: 'cep', valor: '01001000' }, headers: pessoa.create_new_auth_token, as: :json
+      expect(Autonomia::FerramentasProntas::Acesso.sole.incluida_por_id).to be_nil
+
+      incluir(pessoa)
+
       expect(Autonomia::FerramentasProntas::Acesso.sole.incluida_por_id).to eq(pessoa.id)
     end
 
@@ -69,6 +95,7 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
 
       get base, headers: admin.create_new_auth_token, as: :json
       expect(response).to have_http_status(:not_found)
+      expect(response.parsed_body).to eq('motivo' => 'desligada')
       incluir(admin)
       expect(response).to have_http_status(:not_found)
     end
@@ -144,6 +171,24 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
       expect(Autonomia::Agents::Tool.exists?(ferramenta.id)).to be(false)
     end
 
+    it 'recusa ligada que não é verdadeiro nem falso' do
+      ['abc', [true], { x: 1 }, nil].each do |valor|
+        patch "#{base}/#{ferramenta.id}", params: { ligada: valor }, headers: admin.create_new_auth_token, as: :json
+        expect(response.status).to be_in([400, 422])
+      end
+      expect(ferramenta.reload.enabled).to be(true)
+    end
+
+    it 'não mexe na pronta da Lia' do
+      da_lia = Autonomia::Agents::Tool.create!(account: account, agent: lia, name: 'CEP', slug: 'pronta_cep', fonte_pronta: 'cep',
+                                               http_method: 'GET', endpoint_url: '', timeout_seconds: 5)
+
+      delete "#{base}/#{da_lia.id}", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:not_found)
+      expect(Autonomia::Agents::Tool.exists?(da_lia.id)).to be(true)
+    end
+
     it 'não mexe na ferramenta feita à mão nem na pronta de outra conta' do
       manual = Autonomia::Agents::Tool.create!(account: account, agent: agent, name: 'Frete', endpoint_url: 'https://api.loja.test/frete')
       outra = create(:account)
@@ -169,6 +214,24 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
       expect(response.parsed_body['situacao']).to eq('encontrado')
       expect(response.parsed_body['dados']).to include('logradouro' => 'Praça da Sé', 'cidade' => 'São Paulo')
       expect(Autonomia::FerramentasProntas::Uso.sole.consultas).to eq(1)
+    end
+
+    it 'conta no limite do dia: passou dele, não sai para a rede' do
+      cep = 'https://brasilapi.com.br/api/cep/v2/01001000'
+      fonte_responde(cep, { cep: '01001000', state: 'SP', city: 'São Paulo' })
+      Autonomia::FerramentasProntas::Acesso.create!(account: account, fonte: 'cep', limite_diario: 1)
+
+      2.times { post "#{base}/experimentar", params: { fonte: 'cep', valor: '01001000' }, headers: admin.create_new_auth_token, as: :json }
+
+      expect(response.parsed_body).to eq('situacao' => 'nao_consegui_consultar')
+      expect(a_request(:get, cep)).to have_been_made.once
+      expect(Autonomia::FerramentasProntas::Uso.sole).to have_attributes(consultas: 1, recusadas: 1)
+    end
+
+    it 'o valor digitado não vai para o log' do
+      filtro = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+
+      expect(filtro.filter('fonte' => 'cpf', 'valor' => '11144477735')).to eq('fonte' => 'cpf', 'valor' => '[FILTERED]')
     end
 
     it 'com a fonte fora, diz que não conseguiu' do
@@ -209,6 +272,21 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
 
       expect(response).to have_http_status(:no_content)
       expect(Autonomia::FerramentasProntas::BuscasSemResultado.da_conta(account)).to eq([['passagem de avião', 2]])
+    end
+
+    it 'não guarda termo com cara de documento ou telefone' do
+      post "#{base}/buscas_sem_resultado", params: { termo: '111.444.777-35' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:no_content)
+      expect(Autonomia::FerramentasProntas::BuscasSemResultado.da_conta(account)).to eq([])
+    end
+
+    it 'sem Redis, a busca segue sem erro' do
+      allow(Redis::Alfred).to receive(:with).and_raise(Redis::CannotConnectError)
+
+      post "#{base}/buscas_sem_resultado", params: { termo: 'avião' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:no_content)
     end
   end
 end

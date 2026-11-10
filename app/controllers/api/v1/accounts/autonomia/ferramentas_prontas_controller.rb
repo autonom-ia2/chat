@@ -37,8 +37,12 @@ class Api::V1::Accounts::Autonomia::FerramentasProntasController < Api::V1::Acco
     ).call
   end
 
+  # Só `true` ou `false`: qualquer outro valor (texto, lista) é recusado, nunca vira "ligada".
   def update
-    @pronta.update!(enabled: ActiveModel::Type::Boolean.new.cast(params.require(:ligada)))
+    ligada = params.require(:ligada)
+    return render json: { motivo: 'ligada_invalida' }, status: :unprocessable_entity unless [true, false].include?(ligada)
+
+    @pronta.update!(enabled: ligada)
     render :pronta
   end
 
@@ -55,7 +59,8 @@ class Api::V1::Accounts::Autonomia::FerramentasProntasController < Api::V1::Acco
   private
 
   def ensure_vitrine
-    head :not_found unless Autonomia::FerramentasProntas.vitrine?(Current.account)
+    # Com o motivo: a tela separa "a vitrine saiu da conta" de "este agente ou esta ferramenta não existe mais".
+    render json: { motivo: 'desligada' }, status: :not_found unless Autonomia::FerramentasProntas.vitrine?(Current.account)
   end
 
   def check_tools_permission

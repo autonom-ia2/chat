@@ -265,6 +265,10 @@
       "status"
     ]
   },
+  "autonomia/ferramentas_prontas": {
+    "controller": "api/v1/accounts/autonomia/ferramentas_prontas#index",
+    "parametros": []
+  },
   "autonomia/financial/billing_preview": {
     "controller": "api/v1/accounts/autonomia/financial#billing_preview",
     "parametros": []
