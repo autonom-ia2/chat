@@ -11,6 +11,7 @@ import PaginaHeroi from '../components/pagina/PaginaHeroi.vue';
 import PaginaBlocos from '../components/pagina/PaginaBlocos.vue';
 import AgenteSemana from '../components/pagina/AgenteSemana.vue';
 import AgenteSilencios from '../components/pagina/AgenteSilencios.vue';
+import VitrineSugestaoDoAgente from '../vitrine/components/VitrineSugestaoDoAgente.vue';
 import DialogoAcao from '../components/pagina/DialogoAcao.vue';
 import GavetaTestar from '../components/pagina/GavetaTestar.vue';
 import GavetaOQueSabe from '../components/pagina/GavetaOQueSabe.vue';
@@ -931,6 +932,11 @@ const tirarPergunta = id => {
           :nome="nome"
           :numeros="semana.numerosDe(agente.id)"
           :fala-com-cliente="mostraSilencios"
+        />
+        <VitrineSugestaoDoAgente
+          v-if="!cotacao && permitidas.includes(GAVETA.FERRAMENTAS)"
+          :agente-id="agente.id"
+          :nome="nome"
         />
         <PaginaBlocos
           :agente="agente"

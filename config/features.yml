@@ -1314,3 +1314,14 @@
   display_name: Agentes › ferramentas prontas (vitrine)
   enabled: false
   column: feature_flags_ext_2
+
+# Agentes: ferramentas prontas, F3 (#2858): o agente já nasce com as ferramentas. Ligada (junto com a vitrine): no
+# Construtor, o modelo escolhe as prontas que combinam com o agente ("nenhuma combina" também vale) e a Confira mostra
+# "Já vem com estas ferramentas", com "Tirar"; quem pode cuidar das ferramentas as inclui no "Começar". Em agente que já
+# existe, o cartão "pode ganhar" sugere a pronta que combina, e "Agora não" não volta para aquele agente. Desligada:
+# nada disso aparece. Sem migration. Rollback: desligar a flag na conta. Posição 40 (549755813888, 1 << 39), dada pela
+# Orquestração em 09/11 e remapeada em 10/11. Depois do NO AR, liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: agente_ferramentas_prontas_construtor
+  display_name: Agentes › ferramentas prontas (Construtor e sugestões)
+  enabled: false
+  column: feature_flags_ext_2

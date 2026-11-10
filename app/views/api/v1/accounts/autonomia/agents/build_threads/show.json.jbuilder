@@ -22,6 +22,9 @@ json.payload do
     json.applied @thread.state['applied']
     # #2490: o canal que o dono pediu na conversa (whatsapp, instagram… ou nenhum). Leitura do Construtor, não é IP.
     json.canal_pedido @thread.state['canal_pedido'] if @thread.state.key?('canal_pedido')
+    # #2858 F3: as ferramentas prontas do agente novo ("já vem com" e "também combina", chaves do catálogo). Não é IP.
+    json.ferramentas_sugeridas Array(@thread.state['ferramentas_sugeridas']) if @thread.state.key?('ferramentas_sugeridas')
+    json.ferramentas_tambem Array(@thread.state['ferramentas_tambem']) if @thread.state.key?('ferramentas_tambem')
     # #1428 (piloto): o ajuste aplicou parte e ainda falta algo ou pergunta. Só existe onde o piloto rodou.
     json.parcial @thread.state['parcial'] if @thread.state.key?('parcial')
     # #1428 (entrega C, piloto): as respostas prontas da pergunta aberta (do Construtor, ou os botões fixos do conflito).

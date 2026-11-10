@@ -98,6 +98,8 @@ export const FEATURE_FLAGS = {
   // #2858 — ferramentas prontas: as fontes do catálogo (F0/F1) e a vitrine (F2), que vale junto com a primeira.
   AGENTE_FERRAMENTAS_PRONTAS: 'agente_ferramentas_prontas',
   AGENTE_FERRAMENTAS_PRONTAS_VITRINE: 'agente_ferramentas_prontas_vitrine',
+  AGENTE_FERRAMENTAS_PRONTAS_CONSTRUTOR:
+    'agente_ferramentas_prontas_construtor',
   AGENTES_ENVIAR_LOCAL_E_CONTATO: 'agentes_enviar_local_e_contato',
   CAMPANHAS_PUBLICO_POR_CONVERSA: 'campanhas_publico_por_conversa',
   FUNCOES_GUIADAS: 'funcoes_guiadas',

@@ -36,9 +36,25 @@ const alerta = vi.hoisted(() => vi.fn());
 const permissao = vi.hoisted(() => ({ gerenciar: true }));
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
-  return { useCanManage: () => computed(() => permissao.gerenciar) };
+  return {
+    useCanManage: () => computed(() => permissao.gerenciar),
+    usePermissionGranted: () => computed(() => permissao.gerenciar),
+  };
 });
 vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
+// #2858 F3: o "Começar" inclui as prontas pela vitrine (a pessoa real, com a permissão dela).
+const vitrine = vi.hoisted(() => ({
+  carregar: vi.fn(),
+  tem: vi.fn(() => false),
+  incluir: vi.fn(),
+  fontes: { value: ['fipe', 'cep'] },
+  erro: { value: '' },
+}));
+vi.mock('../../vitrine/useVitrine', () => ({ useVitrine: () => vitrine }));
+const prontasApi = vi.hoisted(() => ({ dispensar: vi.fn() }));
+vi.mock('dashboard/api/autonomia/ferramentasProntas', () => ({
+  default: prontasApi,
+}));
 vi.mock('../../composables/usePermissoesDaJornada', async () => {
   const { computed } = await import('vue');
   return {
@@ -400,6 +416,81 @@ describe('AgenteCriarPage', () => {
       expect.anything()
     );
     wrapper.unmount();
+  });
+
+  describe('ready-made tools chosen by the Builder (#2858 F3)', () => {
+    const ligarConstrutor = () => {
+      store.state['accounts/getAccount'] = () => ({
+        id: 1,
+        name: 'Loja da Ana',
+        features: {
+          agente_ferramentas_prontas: true,
+          agente_ferramentas_prontas_vitrine: true,
+          agente_ferramentas_prontas_construtor: true,
+        },
+      });
+    };
+    const abrirRascunho = async () => {
+      prepararStore({
+        agente: {
+          ...AGENTE,
+          config: { ferramentas_sugeridas: ['fipe', 'cep'] },
+        },
+      });
+      ligarConstrutor();
+      return montar({ query: { agente: '90' } });
+    };
+
+    beforeEach(() => {
+      vitrine.carregar.mockReset().mockResolvedValue();
+      vitrine.incluir.mockReset().mockResolvedValue({});
+      prontasApi.dispensar.mockReset().mockResolvedValue({});
+    });
+    afterEach(() => {
+      permissao.gerenciar = true;
+    });
+
+    it('Confira shows them with "Remove", and Começar includes what stayed', async () => {
+      const wrapper = await abrirRascunho();
+
+      expect(wrapper.findAll('[data-ja-vem-item]')).toHaveLength(2);
+      await wrapper
+        .get('[data-ja-vem-item="fipe"] [data-ja-vem-tirar]')
+        .trigger('click');
+      await wrapper.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+
+      expect(vitrine.incluir).toHaveBeenCalledTimes(1);
+      expect(vitrine.incluir).toHaveBeenCalledWith(
+        expect.objectContaining({ fonte: 'cep', agenteId: 90 })
+      );
+      expect(prontasApi.dispensar).toHaveBeenCalledWith(90, 'fipe');
+      expect(rota.atual.query.etapa).toBe('comece');
+      wrapper.unmount();
+    });
+
+    it('a failed include is told and the start goes on', async () => {
+      vitrine.incluir.mockRejectedValue(new Error('GERAL'));
+      const wrapper = await abrirRascunho();
+
+      await wrapper.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+
+      expect(alerta).toHaveBeenCalledWith('AGENTS.VITRINE.JA_VEM.FALHOU');
+      expect(rota.atual.query.etapa).toBe('comece');
+      wrapper.unmount();
+    });
+
+    it('without the tools key: a plain sentence, and the agent starts without them', async () => {
+      permissao.gerenciar = false;
+      const wrapper = await abrirRascunho();
+
+      expect(wrapper.find('[data-ja-vem]').text()).toContain(
+        'AGENTS.VITRINE.JA_VEM.SEM_PERMISSAO'
+      );
+      expect(wrapper.find('[data-ja-vem-tirar]').exists()).toBe(false);
+      wrapper.unmount();
+    });
   });
 
   it('continues a draft with instruction straight in Confira, without opening a thread', async () => {

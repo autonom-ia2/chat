@@ -14,6 +14,12 @@ export const vitrineNaConta = conta =>
   conta?.features?.[FEATURE_FLAGS.AGENTE_FERRAMENTAS_PRONTAS] === true &&
   conta?.features?.[FEATURE_FLAGS.AGENTE_FERRAMENTAS_PRONTAS_VITRINE] === true;
 
+// #2858 F3 — o Construtor escolhe as prontas do agente novo, e o agente que já existe recebe o cartão "pode ganhar".
+export const construtorNaConta = conta =>
+  vitrineNaConta(conta) &&
+  conta?.features?.[FEATURE_FLAGS.AGENTE_FERRAMENTAS_PRONTAS_CONSTRUTOR] ===
+    true;
+
 export function useVitrineLigada() {
   const conta = useMapGetter('accounts/getAccount');
   const contaId = useMapGetter('getCurrentAccountId');
@@ -24,6 +30,11 @@ export function useVitrineLigada() {
   return {
     contaId,
     ligada: computed(() => vitrineNaConta(atual.value) && temChave.value),
+    // F3: a flag do Construtor na conta (`construtorNaConta`) e, para incluir, também a chave da pessoa (`construtor`).
+    construtorNaConta: computed(() => construtorNaConta(atual.value)),
+    construtor: computed(
+      () => construtorNaConta(atual.value) && temChave.value
+    ),
     // Camadas do pacote da conta (#1550): o ramo que põe cartões em destaque.
     camadas: computed(() => camadasDoPacote(atual.value?.autonomia_pacote)),
   };

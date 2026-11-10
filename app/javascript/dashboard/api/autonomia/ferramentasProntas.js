@@ -11,6 +11,8 @@ import ApiClient from '../ApiClient';
 //   experimentar  -> { situacao: 'encontrado' | 'nao_encontrado' | 'nao_consegui_consultar' | 'pedido_invalido' |
 //                    'desligada', dados? }
 //   buscaSemResultado -> 204
+//   sugestoes     -> { ferramentas: [chave] } (F3: o cartão "pode ganhar"; sem a flag do Construtor, 404)
+//   dispensar     -> 204 ("Agora não": aquela sugestão não volta para o agente)
 class AutonomiaFerramentasProntasAPI extends ApiClient {
   constructor() {
     super('autonomia/ferramentas_prontas', { accountScoped: true });
@@ -42,6 +44,16 @@ class AutonomiaFerramentasProntasAPI extends ApiClient {
 
   buscaSemResultado(termo) {
     return axios.post(`${this.url}/buscas_sem_resultado`, { termo });
+  }
+
+  sugestoes(agenteId) {
+    return axios.get(`${this.url}/sugestoes`, {
+      params: { agent_id: agenteId },
+    });
+  }
+
+  dispensar(agenteId, fonte) {
+    return axios.post(`${this.url}/dispensar`, { agent_id: agenteId, fonte });
   }
 }
 
