@@ -77,6 +77,10 @@ const clicarNoTexto = async (rotulo, raiz = document.body) => {
   await flushPromises();
 };
 
+// Cada gaveta montada é desmontada antes de limpar a página: limpar com ela viva deixa o Vue atualizando nós que já
+// saíram do documento (o "nextSibling" de null que aparece depois do teste).
+const montadas = [];
+
 const montar = async ({
   incluidas = [CEP, DE_OUTRO_AGENTE],
   cadastroManual = false,
@@ -100,6 +104,7 @@ const montar = async ({
     },
     attachTo: document.body,
   });
+  montadas.push(wrapper);
   await flushPromises();
   return wrapper;
 };
@@ -120,6 +125,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  montadas.splice(0).forEach(wrapper => wrapper.unmount());
   document.body.innerHTML = '';
 });
 
