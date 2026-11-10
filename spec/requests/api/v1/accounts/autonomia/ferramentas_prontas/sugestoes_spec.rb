@@ -73,7 +73,7 @@ RSpec.describe 'Sugestões de ferramentas prontas', type: :request do
     sugerir(%w[fipe])
     Autonomia::FerramentasProntas::SugestaoParaAgente.dispensar!(agent, 'cep')
     forjado = { 'prontas_sugestao' => { 'assinatura' => 'x', 'chaves' => %w[cpf] }, 'prontas_dispensadas' => [],
-                'ferramentas_sugeridas' => %w[cpf] }
+                'ferramentas_sugeridas' => %w[cpf], 'ferramentas_tambem' => %w[cnpj] }
 
     patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}",
           params: { agent: { config: forjado } }, headers: admin.create_new_auth_token, as: :json
@@ -82,7 +82,7 @@ RSpec.describe 'Sugestões de ferramentas prontas', type: :request do
     config = agent.reload.config
     expect(config['prontas_sugestao']['chaves']).to eq(%w[fipe])
     expect(config['prontas_dispensadas']).to eq(%w[cep])
-    expect(config['ferramentas_sugeridas']).to eq([])
+    expect(config.values_at('ferramentas_sugeridas', 'ferramentas_tambem')).to eq([[], []]) # o forjado (cnpj) não entra
   end
 
   it 'without the Construtor flag: 404 with the reason' do

@@ -3336,7 +3336,10 @@
         "VER_MAIS": "See more tools",
         "TAMBEM": "Also fits: {ferramentas}.",
         "INCLUIR_TAMBEM": "Add these too",
-        "INCLUIR_TAMBEM_SR": "Add {ferramentas} too"
+        "INCLUIR_TAMBEM_SR": "Add {ferramentas} too",
+        "TITULO_SO_TAMBEM": "Tools that fit {nome}",
+        "TEXTO_SO_TAMBEM": "We picked them from what you told us. Add them if you want.",
+        "VER_MAIS_SR": "See more tools (opens in a new tab)"
       },
       "SUGESTAO": {
         "ROTULO": "Tool suggestion",

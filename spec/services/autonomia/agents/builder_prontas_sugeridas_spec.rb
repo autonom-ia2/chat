@@ -119,6 +119,24 @@ RSpec.describe Autonomia::Agents::Builder do
     end
   end
 
+  context 'when a draft goes back to the creation after the person dismissed a tool' do
+    let(:rascunho) do
+      Autonomia::Agents::Agent.create!(account: account, name: 'Ana', agent_type: 'sdr', instruction: 'Rascunho.',
+                                       config: { 'prontas_dispensadas' => %w[cep] })
+    end
+    let(:escolhidas) { %w[fipe cep cpf cnpj feriados] }
+
+    before do
+      ligar_construtor
+      thread.update!(agent: rascunho)
+      allow(builder).to receive(:criacao?).and_return(true)
+    end
+
+    it 'does not offer the dismissed one again' do
+      expect(run_turn.state.values_at('ferramentas_sugeridas', 'ferramentas_tambem')).to eq([%w[fipe cpf cnpj feriados], []])
+    end
+  end
+
   context 'when an existing agent is adjusted' do
     let(:agente) do
       Autonomia::Agents::Agent.create!(account: account, name: 'Ana', agent_type: 'sdr', mode: :guided, status: :active,

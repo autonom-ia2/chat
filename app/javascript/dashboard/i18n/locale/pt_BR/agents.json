@@ -3336,7 +3336,10 @@
         "VER_MAIS": "Ver mais ferramentas",
         "TAMBEM": "Também combina: {ferramentas}.",
         "INCLUIR_TAMBEM": "Incluir também",
-        "INCLUIR_TAMBEM_SR": "Incluir também {ferramentas}"
+        "INCLUIR_TAMBEM_SR": "Incluir também {ferramentas}",
+        "TITULO_SO_TAMBEM": "Ferramentas que combinam com {nome}",
+        "TEXTO_SO_TAMBEM": "Escolhemos pelo que você contou. Inclua se quiser.",
+        "VER_MAIS_SR": "Ver mais ferramentas (abre em nova aba)"
       },
       "SUGESTAO": {
         "ROTULO": "Sugestão de ferramenta",

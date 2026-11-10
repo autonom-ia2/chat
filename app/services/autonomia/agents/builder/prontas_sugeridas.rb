@@ -43,12 +43,13 @@ module Autonomia::Agents::Builder::ProntasSugeridas
     [TITULO, *linhas].join("\n")
   end
 
-  # As chaves que o modelo escolheu, só as liberadas para a conta, sem repetir, na ordem dele (a mais usada primeiro):
-  # { sugeridas: as MAXIMO primeiras, tambem: as seguintes, até MAX_TAMBEM }.
-  def dividir(account, parsed)
+  # As chaves que o modelo escolheu, só as liberadas para a conta e fora das que a pessoa já dispensou (`fora`, de um
+  # rascunho que volta à criação), sem repetir, na ordem do array devolvido pelo modelo, que o campo pede da mais usada
+  # para a menos usada: { sugeridas: as MAXIMO primeiras, tambem: as seguintes, até MAX_TAMBEM }.
+  def dividir(account, parsed, fora: [])
     return { sugeridas: [], tambem: [] } unless ligado?(account)
 
-    liberadas = Autonomia::FerramentasProntas.disponiveis(account).map(&:chave)
+    liberadas = Autonomia::FerramentasProntas.disponiveis(account).map(&:chave) - Array(fora)
     chaves = Array(parsed.to_h[CAMPO]).map(&:to_s).uniq.select { |chave| liberadas.include?(chave) }
     { sugeridas: chaves.first(MAXIMO), tambem: chaves.drop(MAXIMO).first(MAX_TAMBEM) }
   end

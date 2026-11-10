@@ -90,15 +90,17 @@ RSpec.describe 'Ferramentas prontas escolhidas pelo modelo' do # rubocop:disable
   def da_sugestao(caso)
     nome, conta, = caso
     agente = Autonomia::Agents::Agent.create!(account: account, name: nome, agent_type: 'sdr', instruction: "Você é #{nome}. #{conta}")
-    chaves = Autonomia::FerramentasProntas::SugestaoParaAgente.new(agente).call || []
-    maximo = Autonomia::Agents::Builder::ProntasSugeridas::MAXIMO
-    { sugeridas: chaves.first(maximo), tambem: chaves.drop(maximo) }
+    chaves = Autonomia::FerramentasProntas::SugestaoParaAgente.new(agente).call
+    # O cartão mostra uma sugestão por vez, sem "já vem com": a lista inteira conta. nil (IA fora, sem resposta) é falha.
+    chaves && { sugeridas: chaves, tambem: [] }
   end
 
   def erros(caminho)
     casos.filter_map do |caso|
       nome, _, _, precisa, nao_pode, aceitas = caso
       escolha = send(caminho, caso)
+      next "#{caminho} #{nome}: sem resposta do modelo" if escolha.nil?
+
       ja_vem = escolha[:sugeridas]
       todas = ja_vem + escolha[:tambem]
       puts "[eval prontas] #{caminho} #{nome}: já vem #{ja_vem.inspect}, também combina #{escolha[:tambem].inspect}"

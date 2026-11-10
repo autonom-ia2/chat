@@ -1272,7 +1272,8 @@ module Autonomia
 
       # #2858 F3: o "já vem com" e o "também combina" da Confira, como o canal (no state e no config do agente).
       def prontas_do_turno(parsed)
-        divisao = ProntasSugeridas.dividir(@account, parsed)
+        dispensadas = @thread.agent&.config.to_h[Autonomia::FerramentasProntas::SugestaoParaAgente::DISPENSADAS]
+        divisao = ProntasSugeridas.dividir(@account, parsed, fora: dispensadas)
         { 'ferramentas_sugeridas' => divisao[:sugeridas], 'ferramentas_tambem' => divisao[:tambem] }
       end
 

@@ -1,4 +1,5 @@
 <script setup>
+import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgenteBotao from '../../components/AgenteBotao.vue';
 import { chaveDoTexto, ferramentaPorId } from '../catalogo';
@@ -26,6 +27,32 @@ const nomes = (lista = props.ids) =>
   new Intl.ListFormat(String(locale.value).replace('_', '-'), {
     type: 'conjunction',
   }).format(lista.map(id => texto(id, 'NOME')));
+
+// Sem nenhuma no "já vem com" (a pessoa tirou todas, ou o agente já tem), sobra só o "também combina": o quadro não
+// promete o que o agente não leva.
+const soTambem = computed(() => !props.ids.length && !props.semPermissao);
+const titulo = ref(null);
+
+// O "também" some ao incluir: o foco vai para o título do quadro, e não para o vazio.
+const incluirTambem = async () => {
+  emit('incluirTambem');
+  await nextTick();
+  titulo.value?.focus();
+};
+
+const tituloDoQuadro = () => {
+  if (props.semPermissao) return t(`${NS}.JA_VEM.TITULO_SEM_PERMISSAO`, { nome: props.nome });
+  if (soTambem.value) return t(`${NS}.JA_VEM.TITULO_SO_TAMBEM`, { nome: props.nome });
+  return t(`${NS}.JA_VEM.TITULO`, { nome: props.nome });
+};
+
+const textoDoQuadro = () => {
+  if (props.semPermissao) {
+    return t(`${NS}.JA_VEM.SEM_PERMISSAO`, { nome: props.nome, ferramentas: nomes() });
+  }
+  if (soTambem.value) return t(`${NS}.JA_VEM.TEXTO_SO_TAMBEM`);
+  return t(`${NS}.JA_VEM.TEXTO`);
+};
 </script>
 
 <template>
@@ -40,27 +67,24 @@ const nomes = (lista = props.ids) =>
       <div class="flex flex-col gap-0.5">
         <h3
           id="ja-vem-titulo"
-          class="flex items-center gap-2 m-0 text-base font-semibold text-n-slate-12"
+          ref="titulo"
+          tabindex="-1"
+          class="flex items-center gap-2 m-0 text-base font-semibold text-n-slate-12 focus:outline-none"
         >
           <span
             class="i-lucide-package-check size-5 text-n-blue-11"
             aria-hidden="true"
           />
-          {{
-            semPermissao
-              ? t(`${NS}.JA_VEM.TITULO_SEM_PERMISSAO`, { nome })
-              : t(`${NS}.JA_VEM.TITULO`, { nome })
-          }}
+          {{ tituloDoQuadro() }}
         </h3>
         <p class="m-0 text-sm text-n-slate-11">
-          {{
-            semPermissao
-              ? t(`${NS}.JA_VEM.SEM_PERMISSAO`, { nome, ferramentas: nomes() })
-              : t(`${NS}.JA_VEM.TEXTO`)
-          }}
+          {{ textoDoQuadro() }}
         </p>
       </div>
-      <ul v-if="!semPermissao" class="flex flex-col gap-1 p-0 m-0 list-none">
+      <ul
+        v-if="!semPermissao && ids.length"
+        class="flex flex-col gap-1 p-0 m-0 list-none"
+      >
         <li
           v-for="id in ids"
           :key="id"
@@ -110,7 +134,7 @@ const nomes = (lista = props.ids) =>
           :aria-label="
             t(`${NS}.JA_VEM.INCLUIR_TAMBEM_SR`, { ferramentas: nomes(tambem) })
           "
-          @click="emit('incluirTambem')"
+          @click="incluirTambem"
         >
           {{ t(`${NS}.JA_VEM.INCLUIR_TAMBEM`) }}
         </AgenteBotao>
@@ -121,6 +145,7 @@ const nomes = (lista = props.ids) =>
         variante="fantasma"
         icone="i-lucide-package-open"
         class="self-start"
+        :aria-label="t(`${NS}.JA_VEM.VER_MAIS_SR`)"
         @click="emit('verMais')"
       >
         {{ t(`${NS}.JA_VEM.VER_MAIS`) }}

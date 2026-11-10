@@ -67,6 +67,31 @@ describe('VitrineJaVem', () => {
     expect(wrapper.emitted('incluirTambem')).toHaveLength(1);
   });
 
+  it('with nothing left in "already comes with", it does not promise tools: own title and no empty list', () => {
+    const wrapper = montar({ ids: [], tambem: ['cnpj'] });
+
+    expect(wrapper.text()).toContain('Ferramentas que combinam com Ana');
+    expect(wrapper.text()).not.toContain('já vem com');
+    expect(wrapper.find('ul').exists()).toBe(false);
+    expect(wrapper.find('[data-ja-vem-tambem]').exists()).toBe(true);
+  });
+
+  it('after "Add these too", the focus goes to the box title', async () => {
+    const wrapper = montar({ ids: ['fipe'], tambem: ['cnpj'] });
+
+    await wrapper.find('[data-ja-vem-incluir-tambem]').trigger('click');
+
+    expect(document.activeElement).toBe(wrapper.find('#ja-vem-titulo').element);
+  });
+
+  it('"See more tools" tells screen readers it opens a new tab', () => {
+    expect(
+      montar({ ids: ['fipe'] })
+        .find('[data-ja-vem-mais]')
+        .attributes('aria-label')
+    ).toBe('Ver mais ferramentas (abre em nova aba)');
+  });
+
   it('without the tools key, "also fits" does not show', () => {
     const wrapper = montar({
       ids: ['fipe'],
