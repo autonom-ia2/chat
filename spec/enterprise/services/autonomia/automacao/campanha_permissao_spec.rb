@@ -51,7 +51,7 @@ RSpec.describe 'Automação livre: passo campanha com função personalizada (#2
   end
 
   describe 'disparar' do
-    before { allow(Autonomia::Automacao::PassoDeCampanha).to receive(:gatilho_da_conta?).and_return(true) }
+    before { allow(Autonomia::Automacao::PassoDeCampanha).to receive(:alvo_da_conta?).and_return(true) }
 
     it 'quem só monta campanha (sem campaign_send) não salva nem dispara' do
       so_monta = pessoa_com(base + %w[campaign_manage])

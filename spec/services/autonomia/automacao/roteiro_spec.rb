@@ -21,16 +21,85 @@ RSpec.describe Autonomia::Automacao::Roteiro do
 
   # F7 (#2500): os caminhos do "decidir" e o "nenhum se aplica" entram pela travessia única da Receita.
   it 'acha os passos dos caminhos e do nenhum e sai deles no passo depois do decidir', :aggregate_failures do
-    com_decidir = described_class.new(
-      'passos' => [{ 'id' => 'd1', 'tipo' => 'decidir',
-                     'caminhos' => [{ 'chave' => 'a', 'passos' => [{ 'id' => 'c1' }, { 'id' => 'c2' }] }],
-                     'nenhum' => [{ 'id' => 'n1' }] },
-                   { 'id' => 'fim' }]
-    )
+    decidir = { 'id' => 'd1', 'tipo' => 'decidir', 'caminhos' => [{ 'chave' => 'a', 'passos' => [{ 'id' => 'c1' }, { 'id' => 'c2' }] }],
+                'nenhum' => [{ 'id' => 'n1' }] }
+    com_decidir = described_class.new({ 'passos' => [decidir, { 'id' => 'fim' }] })
 
     expect(com_decidir.passo('c2')['id']).to eq('c2')
     expect(com_decidir.seguinte('c1')['id']).to eq('c2')
     expect(com_decidir.seguinte('c2')['id']).to eq('fim')
     expect(com_decidir.seguinte('n1')['id']).to eq('fim')
+  end
+
+  # G46 (o laço dos documentos): o caminho marcado no `de_novo` com `desde` volta ao "esperar até" de antes.
+  describe 'o de_novo com desde' do
+    let(:decide) do
+      { 'id' => 'decide', 'tipo' => 'decidir',
+        'caminhos' => [{ 'chave' => 'falta', 'passos' => [{ 'id' => 'pede' }] }, { 'chave' => 'ilegivel', 'passos' => [] },
+                       { 'chave' => 'ok', 'passos' => [{ 'id' => 'move' }] }],
+        'nenhum' => [], 'de_novo' => { 'caminhos' => %w[falta ilegivel nenhum], 'desde' => 'espera' } }
+    end
+    let(:receita) { { 'passos' => [{ 'id' => 'lista' }, { 'id' => 'espera', 'tipo' => 'esperar_ate' }, decide, { 'id' => 'fim' }] } }
+
+    it 'o fim do caminho marcado volta ao desde; o vazio e o "nenhum" voltam direto', :aggregate_failures do
+      expect(roteiro.seguinte('pede')['id']).to eq('espera')
+      expect(roteiro.entrar_no_caminho(decide, 'ilegivel')['id']).to eq('espera')
+      expect(roteiro.entrar_no_caminho(decide, 'nenhum')['id']).to eq('espera')
+      expect(roteiro.volta(decide, 'falta')).to eq('espera')
+    end
+
+    it 'o caminho que não está marcado segue depois do decidir', :aggregate_failures do
+      expect(roteiro.entrar_no_caminho(decide, 'ok')['id']).to eq('move')
+      expect(roteiro.seguinte('move')['id']).to eq('fim')
+      expect(roteiro.volta(decide, 'ok')).to be_nil
+    end
+
+    it 'no ensaio (voltar: false), o caminho marcado para no fim', :aggregate_failures do
+      ensaio = described_class.new(receita, voltar: false)
+
+      expect(ensaio.seguinte('pede')).to be_nil
+      expect(ensaio.entrar_no_caminho(decide, 'ilegivel')).to be_nil
+      expect(ensaio.seguinte('move')['id']).to eq('fim')
+    end
+
+    it 'sem desde (G31), o caminho marcado segue depois do decidir, como antes' do
+      g31 = decide.merge('de_novo' => { 'caminhos' => %w[ilegivel], 'prazo' => { 'valor' => 24, 'unidade' => 'horas' } })
+
+      expect(described_class.new({ 'passos' => [g31, { 'id' => 'fim' }] }).entrar_no_caminho(g31, 'ilegivel')['id']).to eq('fim')
+    end
+
+    it 'lista os irmãos anteriores do passo, do mais perto ao mais longe' do
+      expect(roteiro.anteriores('decide').pluck('id')).to eq(%w[espera lista])
+    end
+  end
+
+  # G63: o galho "a cada mensagem do cliente" do "esperar até" volta à própria espera quando acaba.
+  describe 'o galho a cada mensagem' do
+    let(:espera) do
+      { 'id' => 'espera', 'tipo' => 'esperar_ate', 'se_vencer' => [{ 'id' => 'venceu' }],
+        'a_cada_mensagem' => [{ 'id' => 'g1' }, { 'id' => 'g2', 'tipo' => 'se', 'entao' => [{ 'id' => 'g3' }] }] }
+    end
+    let(:receita) { { 'passos' => [espera, { 'id' => 'fim' }] } }
+
+    it 'entra no galho e, no fim dele (também de dentro de um ramo), volta ao esperar até', :aggregate_failures do
+      expect(roteiro.entrar(espera, 'a_cada_mensagem')['id']).to eq('g1')
+      expect(roteiro.seguinte('g1')['id']).to eq('g2')
+      expect(roteiro.seguinte('g2')['id']).to eq('espera')
+      expect(roteiro.seguinte('g3')['id']).to eq('espera')
+      expect(roteiro.seguinte('venceu')['id']).to eq('fim')
+      expect(roteiro.volta(espera, 'a_cada_mensagem')).to eq('espera')
+    end
+
+    it 'sabe o galho de cada passo, em qualquer nível', :aggregate_failures do
+      expect(roteiro.galho_de('g3')).to eq('espera')
+      expect(roteiro.galho_de('venceu')).to be_nil
+      expect(roteiro.no_galho?('g3', 'espera')).to be(true)
+      expect(roteiro.no_galho?('venceu', 'espera')).to be(false)
+      expect(roteiro.no_galho?('espera', 'espera')).to be(false)
+    end
+
+    it 'no ensaio (voltar: false), o galho para no fim' do
+      expect(described_class.new(receita, voltar: false).seguinte('g2')).to be_nil
+    end
   end
 end

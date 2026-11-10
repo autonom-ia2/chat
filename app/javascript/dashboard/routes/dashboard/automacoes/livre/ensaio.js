@@ -9,10 +9,15 @@ const E = 'AUTOMACAO_LIVRE.ENSAIO';
 const AVISO = {
   mensagens_desligadas: 'NAO_SAIRIA',
   faltou_valor: 'FALTOU_VALOR',
+  // G12/G44: o link da agenda vazio, e quem pede sem ver o agendamento.
+  faltou_link_da_agenda: 'FALTOU_LINK_DA_AGENDA',
+  sem_acesso_agenda: 'SEM_ACESSO_AGENDA',
   texto_vazio: 'TEXTO_VAZIO',
   // G2: o e-mail que não sairia para o contato desta conversa.
   contato_sem_email: 'CONTATO_SEM_EMAIL',
   contato_nao_recebe: 'CONTATO_NAO_RECEBE',
+  // Decisão 5 (#2414): o bloqueado não recebe nada da automação.
+  contato_bloqueado: 'CONTATO_BLOQUEADO',
   email_bloqueado: 'EMAIL_BLOQUEADO',
   caixa_de_email_indisponivel: 'CAIXA_DE_EMAIL_INDISPONIVEL',
   retorno_sem_responsavel: 'RETORNO_SEM_RESPONSAVEL',
@@ -54,6 +59,9 @@ const FARIA_DA_IA = {
     t(`${F}.IA_ESCREVER_${(dados.destino || 'sugestao').toUpperCase()}`),
   ia_resumir: (dados, t) =>
     t(`${F}.IA_RESUMIR_${dados.destino === 'avisar' ? 'AVISAR' : 'NOTA'}`),
+  // G24: um card por item da lista, até o máximo do passo.
+  ia_para_cada: (dados, t) =>
+    t(`${F}.IA_PARA_CADA`, { maximo: dados.maximo ?? '' }),
 };
 
 // #2414 G20 — o passo de IA que lê os anexos: quantos desta conversa a IA
@@ -71,9 +79,16 @@ const comAnexos = (linha, no, t) => {
   };
 };
 
+// G63: o galho "a cada mensagem do cliente" acaba com a marca `volta`.
+const ROTULO_DA_ESPERA = {
+  chegou: 'SE_CHEGAR',
+  se_vencer: 'SE_VENCER',
+  a_cada_mensagem: 'A_CADA_MENSAGEM',
+};
+
 const rotuloDoCaminho = (no, ramo, t) => {
   if (no.tipo === 'esperar_ate')
-    return t(`${E}.${ramo.chave === 'chegou' ? 'SE_CHEGAR' : 'SE_VENCER'}`);
+    return t(`${E}.${ROTULO_DA_ESPERA[ramo.chave] || 'SE_VENCER'}`);
   // G31: o caminho que decide de novo espera a próxima resposta.
   const deNovo = ramo.de_novo ? '_DE_NOVO' : '';
   if (ramo.chave === 'nenhum') return t(`${E}.SE_NENHUM${deNovo}`);
@@ -136,5 +151,14 @@ export const linhasDoEnsaio = (nos, fraseDe, t, nivel = 0) =>
     ...(no.ramos || []).flatMap(ramo => [
       { nivel: nivel + 1, caminho: true, texto: rotuloDoCaminho(no, ramo, t) },
       ...linhasDoEnsaio(ramo.passos, fraseDe, t, nivel + 2),
+      // G46: o caminho que volta a um "esperar até" acaba dizendo para onde.
+      ...(ramo.volta
+        ? [
+            {
+              nivel: nivel + 2,
+              texto: t(`${E}.VOLTA`, { passo: fraseDe(ramo.volta) }),
+            },
+          ]
+        : []),
     ]),
   ]);

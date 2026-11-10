@@ -3,8 +3,18 @@
 # tamanho, com a janela do "esperar até" que depende dela.
 module Autonomia::Automacao::Duracao
   UNIDADES = { 'minutos' => :minutes, 'horas' => :hours, 'dias' => :days }.freeze
+  # O prazo do "esperar até" que a pessoa escolheu não ter (#2750, definição `prazo_da_espera` do esquema): a espera só
+  # termina pela condição. Ver EsperaNoExecutor.
+  SEM_PRAZO = 'sem_prazo'.freeze
 
   module_function
+
+  def sem_prazo?(prazo) = prazo == SEM_PRAZO
+
+  # Os ids dos "esperar até" sem prazo com passos em "se vencer": esse caminho nunca rodaria. A Receita recusa ao salvar.
+  def sem_prazo_que_vence(passos)
+    passos.select { |passo| passo['tipo'] == 'esperar_ate' && sem_prazo?(passo['prazo']) && Array(passo['se_vencer']).any? }.pluck('id')
+  end
 
   def de(duracao) = duracao['valor'].to_i.public_send(UNIDADES.fetch(duracao['unidade']))
 

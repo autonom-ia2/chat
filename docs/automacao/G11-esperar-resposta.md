@@ -19,6 +19,13 @@ Um "esperar até" cuja condição lê a resposta, com o prazo e o caminho "se ve
 | `conversa.equipe_respondeu` | uma pessoa da equipe escreveu ao cliente, pela tela ou pelo app do celular (eco) |
 | `conversa.responsavel_respondeu` | a pessoa atribuída à conversa (na hora da conferência) escreveu ao cliente pela tela; o eco do celular não conta, porque não diz quem mandou (lote 4, #2682) |
 | `gatilho.repetiu` | o gatilho da execução aconteceu de novo (a Partida grava `repetiu_em` em vez de só descartar com `ja_aberta`) (lote 4) |
+| `conversa.cliente_mandou_documento` | chegou do cliente uma foto ou um PDF (`FotoOuPdf`: figurinha, áudio, vídeo, texto e outro arquivo não contam), só na conversa da execução, a mesma que o `le: anexos` lê, e só se quem ligou a vê (G46, exemplo 14). O passo de IA logo depois lê com `le: anexos_novos` só o que ele ainda não leu |
+
+G46 (o laço dos documentos, exemplo 14): o "decidir" com `de_novo.desde` volta ao "esperar até" que lê
+`conversa.cliente_mandou_documento` (ou `conversa.cliente_respondeu`). Na volta dentro da mesma rodada, a janela começa
+no instante em que esse "esperar até" foi cumprido, não agora: a 2ª e a 3ª foto que chegaram enquanto a IA lia a 1ª
+contam (`EsperaNoExecutor#janela_da_espera`). Texto e áudio ("já mando") acordam a espera, mas não a cumprem: o prazo
+não recomeça.
 
 Lote 4 (#2682): no "esperar até" de um card, a mudança do card numa coluna que a receita lê (título, etapa, funil,
 situação, valor, responsável, time, motivo da perda, atributos) acorda a espera na hora (`Crm::CardAvisaAutomacao` →

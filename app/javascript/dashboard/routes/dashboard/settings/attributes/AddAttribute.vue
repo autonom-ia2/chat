@@ -74,7 +74,11 @@ export default {
       }));
     },
     types() {
-      return ATTRIBUTE_TYPES.map(item => ({
+      return ATTRIBUTE_TYPES.filter(
+        item =>
+          item.soNoModelo === undefined ||
+          item.soNoModelo === this.attributeModel
+      ).map(item => ({
         ...item,
         option: this.$t(`ATTRIBUTES_MGMT.ATTRIBUTE_TYPES.${item.key}`),
       }));
@@ -133,6 +137,11 @@ export default {
     attributeType() {
       this.tagInputTouched = false;
       this.values = [];
+    },
+    // G62: trocar para um modelo sem o tipo escolhido volta ao texto.
+    attributeModel() {
+      if (!this.types.some(type => type.id === this.attributeType))
+        this.attributeType = 0;
     },
   },
 

@@ -6,30 +6,45 @@ import { frontendURL } from 'dashboard/helper/URLHelper';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 const ContactImportPage = () => import('./ContactImportPage.vue');
+const ContactImportsList = () => import('./ContactImportsList.vue');
 
 export const isContactImportJourneyEnabled = () =>
   window.globalConfig?.CAMPAIGN_JOURNEY_ENABLED === 'true' &&
   window.globalConfig?.CAMPAIGN_IMPORT_ENABLED === 'true';
 
 export const CONTACT_IMPORT_ROUTE = 'contacts_import_journey';
+// Contatos > Importações (#2771, decision 15): the contact imports, from a file or from the automation.
+export const CONTACT_IMPORTS_LIST_ROUTE = 'contacts_imports_list';
+
+// Same permission as Chatwoot's contact import (ContactPolicy#import?).
+const meta = {
+  featureFlag: FEATURE_FLAGS.CRM,
+  permissions: ['administrator', 'contact_manage'],
+};
+
+const onlyWithJourney = (to, _from, next) => {
+  if (isContactImportJourneyEnabled()) {
+    next();
+    return;
+  }
+  next({ name: 'contacts_dashboard_index', params: to.params });
+};
 
 export const contactImportRoutes = [
   {
-    path: frontendURL('accounts/:accountId/contacts/import'),
+    // With an id, the screen opens that import where it is (the result, for one already done).
+    path: frontendURL('accounts/:accountId/contacts/import/:importId?'),
     name: CONTACT_IMPORT_ROUTE,
     component: ContactImportPage,
-    // Same permission as Chatwoot's contact import (ContactPolicy#import?).
-    meta: {
-      featureFlag: FEATURE_FLAGS.CRM,
-      permissions: ['administrator', 'contact_manage'],
-    },
-    beforeEnter: (to, _from, next) => {
-      if (isContactImportJourneyEnabled()) {
-        next();
-        return;
-      }
-      next({ name: 'contacts_dashboard_index', params: to.params });
-    },
+    meta,
+    beforeEnter: onlyWithJourney,
+  },
+  {
+    path: frontendURL('accounts/:accountId/contacts/imports'),
+    name: CONTACT_IMPORTS_LIST_ROUTE,
+    component: ContactImportsList,
+    meta,
+    beforeEnter: onlyWithJourney,
   },
 ];
 

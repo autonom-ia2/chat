@@ -11,9 +11,13 @@
       "CARD_SAIU_DA_ETAPA": "When the card leaves a stage",
       "CARD_GANHO": "When the card is won",
       "CARD_PERDIDO": "When the card is lost",
+      "CARD_ATUALIZADO": "When a card is updated",
       "CARD_REUNIAO_MARCADA": "When a meeting is scheduled",
       "CARD_REUNIAO_REMARCADA": "When a meeting is rescheduled",
       "CARD_REUNIAO_CANCELADA": "When a meeting is canceled",
+      "CARD_RESPONSAVEL_MUDOU": "When the card owner changes",
+      "CARD_TIME_MUDOU": "When the card team changes",
+      "CARD_REUNIAO_ATENDIDA": "When a meeting is held",
       "CARD_PARADO": "When the card is stuck in a stage",
       "CARD_DATA": "Around a card date",
       "CONTATO_DATA": "Around a contact date",
@@ -32,6 +36,11 @@
       "NENHUMA": "None (with no conversation, the message is not sent)",
       "NA_FRASE": "{frase} (with no conversation, opens one in {caixa})",
       "AJUDA": "If the card or the contact has no conversation yet, the first message opens one in this inbox. On the official WhatsApp, it only goes out with an approved template."
+    },
+    "AGENDA_DE_RESERVA": {
+      "TITULO": "Backup booking page",
+      "NENHUMA": "None (with nobody attending, the booking link stays empty)",
+      "AJUDA": "Goes in the booking link when nobody attends the conversation, or the contact has no conversation yet. Whoever attends always sends their own page."
     },
     "VALOR_DA_MENSAGEM": {
       "RECEBIDA": "from the customer",
@@ -67,6 +76,7 @@
       "DIA_DO_MES": "Day of the month",
       "DATA": "Date",
       "SELECAO": "Which ones",
+      "MUDANCA": "Change",
       "REPETE": "Repeats",
       "PAGINA_ID": "Booking page",
       "ANTES": "How long before it starts"
@@ -86,6 +96,9 @@
       "CARD_REUNIAO_MARCADA": "When a meeting is scheduled on a {funil} card",
       "CARD_REUNIAO_REMARCADA": "When a meeting is rescheduled on a {funil} card",
       "CARD_REUNIAO_CANCELADA": "When a meeting is canceled on a {funil} card",
+      "CARD_RESPONSAVEL_MUDOU": "When the owner of a card in {funil} changes",
+      "CARD_TIME_MUDOU": "When the team of a card in {funil} changes",
+      "CARD_REUNIAO_ATENDIDA": "When a meeting is held on a {funil} card",
       "CARD_PARADO": "When the card is stuck in {etapa} for {dias} days",
       "CARD_DATA": "{dias} days {quando} the card {campo}, from {hora}h",
       "CONTATO_DATA": "{dias} days {quando} the contact {campo}, from {hora}h",
@@ -174,7 +187,35 @@
       "ETIQUETA": "Has the label",
       "SEM_ETIQUETA": "Does not have the label",
       "ATRIBUTO": "Contact field equal to",
-      "VALOR": "Value"
+      "VALOR": "Value",
+      "SOLICITANTE": {
+        "FUNIL": "Asked for a card in the pipeline",
+        "DICA": "Contacts who asked for a card in this pipeline that still has fields to check. One contact per company.",
+        "ETAPA": "Only cards in the stage",
+        "FALTANDO": "Still missing when any of these is unchecked"
+      }
+    },
+    "MUDANCA": {
+      "CAMPO": "Field",
+      "ESCOLHA_O_CAMPO": "Choose the field",
+      "VALOR_DE_VENDA": "Sale value",
+      "CONDICAO": "When it",
+      "VALOR": "Value",
+      "EM_REAIS": "In reais, e.g. 50000",
+      "CONDICOES": {
+        "MUDOU": "changes",
+        "IGUAL": "becomes exactly",
+        "MAIOR_QUE": "changes and is above",
+        "PASSOU_DE": "goes above"
+      },
+      "FRASE": {
+        "MUDOU": "When the card {campo} changes",
+        "IGUAL": "When the card {campo} becomes {valor}",
+        "MAIOR_QUE": "When the card {campo} changes and is above {valor}",
+        "PASSOU_DE": "When the card {campo} goes above {valor}"
+      },
+      "AVISO": "A new card counts too: a card created with R$ 80,000 \"goes above 50000\". A change made by this automation itself does not start it again.",
+      "ERRO_CAMPOS": "Could not load the card fields. Open the editor again to retry."
     }
   }
 }

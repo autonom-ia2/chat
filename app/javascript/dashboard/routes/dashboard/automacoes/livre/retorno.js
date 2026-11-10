@@ -22,6 +22,22 @@ export const fraseDoRetorno = (passo, t, { quando, titulo, mensagem }) =>
     mensagem,
   });
 
+// G57: o retorno vence daqui a um tempo ou hoje/amanhã (numa hora ou no fim do
+// dia). `daqui` já vem em palavras ("2 dias").
+export const quandoDoRetorno = (passo, t, daqui) => {
+  const quando = passo.quando;
+  if (!quando) return t(`${R}.QUANDO.FRASE_DAQUI`, { quando: daqui });
+  const dia = quando.dia === 'amanha' ? 'AMANHA' : 'HOJE';
+  return Number.isInteger(quando.hora)
+    ? t(`${R}.QUANDO.FRASE_${dia}_AS`, { hora: quando.hora })
+    : t(`${R}.QUANDO.FRASE_${dia}`);
+};
+
+export const quandoPronto = passo =>
+  passo.quando
+    ? ['hoje', 'amanha'].includes(passo.quando.dia)
+    : Number.isInteger(passo.daqui?.valor);
+
 // Sem `para`, vale o responsável; pessoas e time pedem a escolha.
 export const paraPronto = para => {
   if (!para || para.quem === 'responsavel') return true;

@@ -397,6 +397,14 @@ describe('catálogo do editor livre', () => {
     });
   });
 
+  // G66: sem escolha; a conversa vai para quem cuida do card na hora.
+  it('monta o "Passar a conversa para o responsável do card" só com id e tipo', () => {
+    expect(novoPasso({ tipo: 'conversa_ao_responsavel' }, 'p11', t)).toEqual({
+      id: 'p11',
+      tipo: 'conversa_ao_responsavel',
+    });
+  });
+
   it('mostra status pela opção, não pelo valor gravado', () => {
     const condicao = {
       campo: { $valor: 'conversa.status' },

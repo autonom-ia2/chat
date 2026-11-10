@@ -112,6 +112,71 @@ describe('passo "criar card" (G4)', () => {
     });
   });
 
+  // G49: o card nasce no contato do alvo ou no que um passo anterior criou.
+  it('escolhe o contato em que o card nasce: o do alvo ou o criado antes', async () => {
+    const comContato = {
+      ...CARD,
+      campos: [
+        ...CARD.campos,
+        {
+          nome: 'contato',
+          peca: 'contato_criado',
+          obrigatorio: false,
+          rotulo: 'AUTOMACAO_LIVRE.CAMPOS.CONTATO',
+        },
+      ],
+    };
+    const criado = {
+      caminho: 'criado.p1',
+      chave: 'p1',
+      criado: 'Contact',
+      rotulo: 'Contato criado',
+    };
+    const card = {
+      caminho: 'criado.p0',
+      chave: 'p0',
+      criado: 'Crm::Card',
+      rotulo: 'Card criado',
+    };
+    const wrapper = mount(LivreAlterar, {
+      props: {
+        catalogo: {
+          ...CATALOGO,
+          passos: [comContato],
+          valores: [criado, card],
+        },
+        opcoes: {},
+        atributosDaPeca: () => [],
+        atributosDo: () => [],
+        escolhasDoGatilho: { etapas: ETAPAS },
+      },
+      global,
+    });
+    wrapper.vm.abrir({
+      tipo: 'passo',
+      novo: true,
+      valor: { id: 'p2', tipo: 'card', etapa_id: 12 },
+    });
+    await flushPromises();
+
+    const escolha = wrapper
+      .find('[data-peca="contato_criado"]')
+      .findComponent({ name: 'ChoiceSelect' });
+    expect(escolha.props('options')).toEqual([
+      { value: '', label: 'AUTOMACAO_LIVRE.ALTERAR_PAINEL.CONTATO_DO_ALVO' },
+      { value: 'criado.p1', label: 'Contato criado' },
+    ]);
+    await escolha.vm.$emit('update:modelValue', 'criado.p1');
+    await flushPromises();
+    await wrapper.find('[data-salvar]').trigger('click');
+    expect(wrapper.emitted('salvar')[0][0].valor).toEqual({
+      id: 'p2',
+      tipo: 'card',
+      etapa_id: 12,
+      contato: { $valor: 'criado.p1' },
+    });
+  });
+
   it('o seletor só oferece o passo a quem pode mexer no funil', () => {
     const montar = () =>
       mount(LivreSeletorPasso, {

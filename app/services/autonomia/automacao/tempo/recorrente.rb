@@ -50,7 +50,7 @@ class Autonomia::Automacao::Tempo::Recorrente
     [hoje, hoje - 1]
   end
 
-  def instante(dia) = fuso.local(dia.year, dia.month, dia.day, @gatilho['hora'].to_i)
+  def instante(dia) = ::Autonomia::Automacao::Tempo.na_hora(fuso, dia, @gatilho['hora'])
 
   def dia?(dia)
     case @gatilho['frequencia']
