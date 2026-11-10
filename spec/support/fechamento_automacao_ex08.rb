@@ -1,5 +1,5 @@
-# As sondas da G24 e da G22, do exemplo 8 (#2414 F9): roda o código de verdade e confere o efeito. Fica fora do
-# FechamentoAutomacao::Lacunas, que já está no limite de tamanho; o SONDAS de lá chama a daqui.
+# As sondas da G24 e da G22, do exemplo 8 (#2414 F9): rodam o código de verdade e conferem o efeito. Ficam fora do
+# FechamentoAutomacao::Lacunas, que já está no limite de tamanho; o SONDAS de lá chama as daqui.
 module FechamentoAutomacao::SondasDoExemplo8
   extend CrmHelpers
 
@@ -53,33 +53,44 @@ module FechamentoAutomacao::SondasDoExemplo8
     end
   end
 
-  # G22 (exemplo 8, passo 9): o RH que pediu dois cards, um completo e um sem o CPF. A seleção do contato.recorrente
-  # pega o RH, e o valor lista só quem falta, com o que falta. Roda na transação do exemplo, que desfaz tudo. Fora do
-  # SONDAS enquanto a G22 está desligada: volta para lá quando o "para cada item" gravar o solicitante.
+  # G22 (exemplo 8, passo 9): o RH manda a lista e o "para cada item" do motor abre os cards da Ana e da Bia, cada um
+  # com o RH de solicitante. A Ana manda tudo e a Bia só o RG. A seleção do contato.recorrente pega o RH, e o valor
+  # lista só quem falta, com o que falta. Os jobs do caminho rodam um por vez, na transação do exemplo, que desfaz tudo.
   def rh_avisado_do_que_falta?
-    rh, contexto, selecao = rh_com_dois_pedidos
-    Autonomia::Automacao::Tempo::Selecao.new(rh.account, { 'tipo' => 'contato.recorrente', 'selecao' => selecao })
-                                        .escopo_para(contexto, pergunta: :update?)&.pluck(:id) == [rh.id] &&
-      Autonomia::Automacao::Valores::DA_SELECAO.fetch('contato.solicitados_faltando')
-                                               .call(rh, contexto[:account_user], selecao) == 'Bia (CPF)'
+    ClimateControl.modify(CRM_KANBAN_ENABLED: 'true', CRM_AI_ENABLED: 'true') do
+      account, admin, funil, etapa = conta_da_sonda_g24
+      rh = pedidos_do_rh(account, admin, etapa)
+      cards = funil.cards.order(:id).to_a
+      next false unless cards.map(&:solicitante_contact_id) == [rh.id, rh.id]
+
+      cards.first.update!(custom_attributes: { 'rg' => true, 'cpf' => true })
+      cards.last.update!(custom_attributes: { 'rg' => true })
+      lista_ao_rh(rh, admin, { 'solicitante_de' => { 'funil_id' => funil.id, 'faltando' => %w[rg cpf] } }) == 'Bia (CPF)'
+    end
   end
 
-  # O RH da Acme pediu os cards da Ana (RG e CPF marcados) e da Bia (só o RG), no funil "Inclusão de vidas".
-  def rh_com_dois_pedidos
-    account = FactoryBot.create(:account)
-    dona = FactoryBot.create(:user, account: account, role: :administrator)
-    funil = account.crm_pipelines.create!(name: 'Inclusão de vidas', created_by: dona, status: :active)
-    etapa = account.crm_pipeline_stages.create!(pipeline: funil, name: 'Documentos', position: 0)
+  # O RH da Acme manda a lista na conversa dele; a lista já guardada na execução não vai à IA.
+  def pedidos_do_rh(account, admin, etapa)
     %w[rg cpf].each do |chave|
       FactoryBot.create(:custom_attribute_definition, account: account, attribute_key: chave, attribute_display_name: chave.upcase,
                                                       attribute_model: 'card_attribute', attribute_display_type: 'checkbox')
     end
+    lista = automacao_da_sonda(account, admin, { 'tipo' => 'conversa.resolvida' }, [para_cada_da_sonda(etapa)])
     rh = FactoryBot.create(:contact, account: account, name: 'RH da Acme')
-    { 'Ana' => { 'rg' => true, 'cpf' => true }, 'Bia' => { 'rg' => true } }.each do |nome, marcados|
-      account.crm_cards.create!(pipeline: funil, stage: etapa, title: nome, currency: 'BRL', solicitante: rh, custom_attributes: marcados,
-                                contact: FactoryBot.create(:contact, account: account, name: nome))
-    end
-    [rh, { user: dona, account: account, account_user: account.account_users.find_by(user: dona) },
-     { 'solicitante_de' => { 'funil_id' => funil.id, 'faltando' => %w[rg cpf] } }]
+    conversa = FactoryBot.create(:conversation, account: account, contact: rh)
+    Autonomia::Automacao::Partida.new(definicao: lista, alvo: conversa, chave_gatilho: 'conversa.resolvida').call
+                                 &.guardar_texto!('lista.itens', [{ 'nome' => 'Ana' }, { 'nome' => 'Bia' }])
+    rodar_jobs_da_sonda
+    rh
+  end
+
+  # A seleção do contato.recorrente e o valor que vai ao RH, como quem ligou.
+  def lista_ao_rh(contato_do_rh, admin, selecao)
+    contexto = { user: admin, account: contato_do_rh.account, account_user: contato_do_rh.account.account_users.find_by(user: admin) }
+    escolhidos = Autonomia::Automacao::Tempo::Selecao.new(contato_do_rh.account, { 'tipo' => 'contato.recorrente', 'selecao' => selecao })
+                                                     .escopo_para(contexto, pergunta: :update?)&.pluck(:id)
+    return unless escolhidos == [contato_do_rh.id]
+
+    Autonomia::Automacao::Valores::DA_SELECAO.fetch('contato.solicitados_faltando').call(contato_do_rh, contexto[:account_user], selecao)
   end
 end

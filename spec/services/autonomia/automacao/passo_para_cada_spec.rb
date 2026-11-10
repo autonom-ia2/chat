@@ -69,6 +69,8 @@ RSpec.describe Autonomia::Automacao::PassoParaCada, :automacao_motor do
     cards = funil.cards.order(:id)
     expect(cards.map(&:contact_id)).to eq([joao.id, maria.id, pedro.id])
     expect(cards.map(&:conversation_id)).to all(be_nil)
+    # G22: cada card guarda quem pediu (o RH da conversa), para o aviso de sexta.
+    expect(cards.map(&:solicitante_contact_id)).to eq([rh.id] * 3)
     expect(dados_do(execucao)).to include('quantos' => 3, 'passou_do_limite' => 0, 'cards_criados' => 3, 'contatos_novos' => 2,
                                           'empresas_ligadas' => 3, 'pulados' => {}, 'card_ids' => cards.map(&:id))
     expect(execucao.textos).to eq({})
@@ -302,6 +304,7 @@ RSpec.describe Autonomia::Automacao::PassoParaCada, :automacao_motor do
     execucao = rodar
 
     expect(funil.cards.pluck(:id)).to eq([aberto.id])
+    expect(aberto.reload.solicitante_contact_id).to be_nil
     expect(dados_do(execucao)).to include('cards_criados' => 0, 'pulados' => { 'card_ja_existe' => 1, 'telefone_invalido' => 1 })
     expect(account.contacts.where(name: 'Zé')).to be_empty
   end

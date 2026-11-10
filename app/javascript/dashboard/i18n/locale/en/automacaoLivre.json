@@ -9,6 +9,7 @@
       "ETIQUETA": "Labels",
       "ATRIBUTO": "Custom fields",
       "EQUIPE": "Team",
+      "OUTRO_SISTEMA": "Other system",
       "CONTROLE": "Time and conditions"
     },
     "OPERADORES": {
@@ -81,6 +82,7 @@
       "MENSAGEM_TIPO": "Message type",
       "MENSAGEM_PRIVADA": "Private message",
       "MENSAGEM_PRIMEIRA": "First message of the conversation",
+      "MENSAGEM_CAMPANHA": "Name of the campaign the customer replied to",
       "MENSAGEM_TEM_ANEXO": "Message has a photo or PDF",
       "CARD_LINK_DA_AGENDA": "Booking link of the card owner (at step time)",
       "CONVERSA_LINK_DA_AGENDA": "Booking link of the conversation assignee (at step time)",
@@ -101,6 +103,7 @@
       "CONVERSA_PRIORIDADE": "Change the conversation priority",
       "CONVERSA_ATRIBUTOS": "Fill in a conversation field",
       "CONVERSA_ATRIBUIR": "Hand the conversation to someone",
+      "CARD_FECHAR": "Close the card as won or lost",
       "CAIXA_PESSOAS": "Add people to an inbox",
       "CONTATO_ETIQUETAS": "Add or remove a contact label",
       "CONTATO_ALTERAR": "Update the contact",
@@ -128,7 +131,8 @@
       "CONVERSA_AO_RESPONSAVEL": "Hand the conversation to the card owner",
       "EMAIL": "Send an e-mail to the customer",
       "RETORNO": "Create a follow-up for the team",
-      "EM_OUTRO_REGISTRO": "Do it on the linked contact or cards"
+      "EM_OUTRO_REGISTRO": "Do it on the linked contact or cards",
+      "WEBHOOK": "Send data to another system"
     },
     "ESCOLHER": {
       "ETIQUETA": "Which label",
@@ -162,6 +166,7 @@
       "CAIXA_ID": "WhatsApp inbox",
       "ETIQUETAS": "Who has these labels",
       "PUBLICO": "Who receives it",
+      "SEM_ETIQUETAS": "Except who has these labels",
       "NAME": "Name",
       "EMAIL": "Email",
       "PHONE_NUMBER": "Phone",
@@ -170,6 +175,8 @@
       "DESCRIPTION": "Description",
       "DOMAIN": "Website",
       "TITLE": "Label name",
+      "RESULT": "Won or lost?",
+      "LOST_REASON": "Reason for losing (optional)",
       "COLOR": "Color",
       "SHOW_ON_SIDEBAR": "Show in the menu",
       "ATTRIBUTE_DISPLAY_NAME": "Field name",
@@ -180,7 +187,7 @@
       "ATTRIBUTE_VALUES": "List options",
       "TEXTO": "What to say",
       "PARA": "Who to notify",
-      "TITULO": "What the team will do",
+      "TITULO_DO_RETORNO": "What the team will do",
       "DAQUI": "How long from now",
       "QUANDO": "When",
       "ENVIO": "Message to the customer",
@@ -197,12 +204,17 @@
       "ETAPA_ID": "In which stage the card starts",
       "AGENTE_ID": "Which AI agent",
       "COBRIR_PESSOA": "Cover for the person until they reply",
-      "CAIXA_ID": "From which e-mail inbox",
+      "CAIXA_ID_EMAIL": "From which e-mail inbox",
       "ASSUNTO": "Subject",
       "MODELO": "If the 24-hour window is closed",
       "REGISTRO": "Where to run the steps inside",
       "PASSOS": "Steps inside",
       "CONTATO": "In which contact the card starts",
+      "DESCRICAO_DO_WEBHOOK": "What this sending is for",
+      "URL": "Address of the other system",
+      "CORPO": "What to send",
+      "GRAVAR": "What to save from the answer",
+      "SE_RECUSAR": "If the other system refuses",
       "DE_NOVO": "At each reply, decide again"
     },
     "OPCOES": {
@@ -217,6 +229,10 @@
         "MEDIUM": "Medium",
         "HIGH": "High",
         "URGENT": "Urgent"
+      },
+      "RESULT": {
+        "WON": "Won",
+        "LOST": "Lost"
       },
       "ATTRIBUTE_MODEL": {
         "CONVERSATION_ATTRIBUTE": "Conversation",
@@ -233,7 +249,8 @@
         "DATE": "Date",
         "LIST": "List",
         "CHECKBOX": "Yes or no",
-        "PESSOA": "Team member"
+        "PESSOA": "Team member",
+        "CONTATO": "Contact"
       }
     },
     "LIGADA": "On",
@@ -373,7 +390,8 @@
       "A_CADA_MENSAGEM": "For each customer message while waiting",
       "NENHUM": "None applies",
       "CAMINHO": "Path {n}",
-      "PASSOS": "On each one"
+      "PASSOS": "On each one",
+      "SE_RECUSAR": "If the other system refuses"
     },
     "SELETOR": {
       "TITULO": "Choose the next step",
@@ -456,10 +474,10 @@
         "DICA": "On official WhatsApp, 24 hours after the customer's last message, free text can't be sent. Pick a Meta-approved template to send instead; Meta charges for each template sent. With the window open, the text above is sent.",
         "NENHUM": "Don't send anything (the automation stops in this conversation)",
         "OPCAO": "{nome} ({idioma})",
-        "SEM_MODELOS": "No official WhatsApp inbox you can see has an approved utility template. Create and approve one in Templates.",
+        "SEM_MODELOS": "No official WhatsApp inbox you can see has an approved utility or marketing template. Create and approve one in Templates.",
         "DIVERGENTE": "This template has different text in another inbox. Each conversation gets its own inbox's template; if it asks for other variables there, the message is not sent.",
         "MUDOU": "The template now asks for {quantas} variables. Fill in all of them before saving.",
-        "SUMIU": "The template {nome} is no longer approved as utility in the inboxes you can see. Pick another.",
+        "SUMIU": "The template {nome} is no longer approved as utility or marketing in the inboxes you can see. Pick another.",
         "VARIAVEL": "Template variable {numero}"
       },
       "SEM_AGENTE_DE_IA": "No AI agent receives conversations in this account yet. Add an agent to an inbox, in AI Agents, to use this step.",

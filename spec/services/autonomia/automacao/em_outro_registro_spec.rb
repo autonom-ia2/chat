@@ -12,17 +12,6 @@ RSpec.describe Autonomia::Automacao::EmOutroRegistro do
     expect(described_class.da(instance_double(Autonomia::Automacao::Execucao, evento: marca))).to eq([7, 'passo:um'])
   end
 
-  it 'o ramo na conversa que lê o card dela pede a chave de funis; no contato, ou sem ler o card, não', :aggregate_failures do
-    registro = ->(usar) { { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'contato.id' }, 'usar' => usar } }
-    le = [{ 'id' => 'm1', 'tipo' => 'mensagem', 'texto' => [{ '$valor' => 'card.titulo' }] }]
-    nao_le = [{ 'id' => 'm1', 'tipo' => 'mensagem', 'texto' => [{ '$valor' => 'contato.nome' }] }]
-    passo = ->(usar, passos) { { 'id' => 'outro', 'tipo' => 'em_outro_registro', 'registro' => registro.call(usar), 'passos' => passos } }
-
-    expect(described_class.le_card_da_conversa?(passo.call('conversa', le), {})).to be(true)
-    expect(described_class.le_card_da_conversa?(passo.call('conversa', nao_le), {})).to be(false)
-    expect(described_class.le_card_da_conversa?(passo.call('contato', le), {})).to be(false)
-  end
-
   it 'a execução que não é filha (evento de mensagem, de atividade, nenhum) não tem mãe', :aggregate_failures do
     ['mensagem:9', 'card.ganho:atividade:3', nil].each do |evento|
       expect(described_class.da(instance_double(Autonomia::Automacao::Execucao, evento: evento))).to be_nil
@@ -47,6 +36,122 @@ RSpec.describe Autonomia::Automacao::EmOutroRegistro do
     filha = instance_double(Autonomia::Automacao::Execucao, evento: 'em:7:card:42:outro', versao: versao)
 
     expect(Autonomia::Automacao::Roteiro.da(filha).primeiro).to be_nil
+  end
+
+  # Decisão 19 (#2716): o card da conversa só para ler, e ler pede a chave de funis. O ramo que roda numa conversa e lê o
+  # card dela pede a chave em qualquer gatilho (o de contato não passa pelo CardDaConversa.le? do controller).
+  describe 'a chave de funis' do
+    def passo(registro, *caminhos)
+      passos = caminhos.map { |caminho| { 'id' => 'm1', 'tipo' => 'mensagem', 'texto' => [{ '$valor' => caminho }] } }
+      { 'id' => 'outro', 'tipo' => 'em_outro_registro', 'registro' => registro, 'passos' => passos }
+    end
+
+    let(:na_conversa) { { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'card.atributos.indicado_por' }, 'usar' => 'conversa' } }
+    let(:no_contato) { na_conversa.merge('usar' => 'contato') }
+
+    it 'pede a chave nos cards do contato e no ramo que lê o card da conversa', :aggregate_failures do
+      expect(described_class.de_funil?(passo({ 'de' => 'cards_do_contato' }), {})).to be(true)
+      expect(described_class.de_funil?(passo(na_conversa, 'card.titulo'), {})).to be(true)
+      expect(described_class.de_funil?(passo(na_conversa, 'origem.card.titulo'), {})).to be(true)
+      expect(described_class.de_funil?(passo(na_conversa, 'contato.nome'), {})).to be(false)
+      expect(described_class.de_funil?(passo(no_contato, 'contato.nome'), {})).to be(false)
+      expect(described_class.de_funil?({ 'id' => 'm1', 'tipo' => 'mensagem', 'texto' => [{ '$valor' => 'card.titulo' }] }, {})).to be(false)
+    end
+
+    it 'o CardDaConversa.le? reconhece a âncora e origem.card.*, e não o resto', :aggregate_failures do
+      leitor = Autonomia::Automacao::CardDaConversa
+
+      expect(leitor.le?(passo(na_conversa))).to be(true)
+      expect(leitor.le?([{ '$valor' => 'origem.card.titulo' }])).to be(true)
+      expect(leitor.le?([{ '$valor' => 'origem.contato.nome' }, { '$valor' => 'contato.atributos.cartao' }])).to be(false)
+    end
+  end
+
+  # G65 (#2842): a filha lê o registro de origem (o alvo da mãe) na hora, com a permissão de quem ligou.
+  describe 'origem.* na filha' do
+    let(:account) { create(:account) }
+    let(:dona) { create(:user, account: account, role: :administrator) }
+    let(:joao) { create(:contact, account: account, name: 'João') }
+    let(:maria) { create(:contact, account: account, name: 'Maria') }
+    let(:versao) { create(:autonomia_automacao_versao, automacao: create(:autonomia_automacao, account: account, ligada_por: dona)) }
+    let(:card) do
+      funil, etapa = create_crm_pipeline(account: account, user: dona)
+      account.crm_cards.create!(pipeline: funil, stage: etapa, contact: joao, title: 'Banho do Rex', currency: 'BRL', value_cents: 15_000)
+    end
+    let(:mae) { create(:autonomia_automacao_execucao, versao: versao, alvo: card, chave_gatilho: 'card.ganho') }
+    let(:filha) do
+      create(:autonomia_automacao_execucao, versao: versao, alvo: maria, chave_gatilho: 'card.ganho',
+                                            evento: "em:#{mae.id}:contato:#{maria.id}:outro")
+    end
+
+    def ler(execucao, caminho, quem: dona)
+      contexto = Autonomia::Automacao::Contexto.de(execucao.alvo, execucao: execucao)
+      Autonomia::Automacao::Valores.new(alvo: contexto, quem: quem).ler(caminho)
+    end
+
+    it 'lê o alvo da mãe e as pontes dele, e o próprio registro segue sendo o da filha', :aggregate_failures do
+      expect(ler(filha, 'origem.contato.nome')).to eq('João')
+      expect(ler(filha, 'origem.card.titulo')).to eq('Banho do Rex')
+      expect(ler(filha, 'contato.nome')).to eq('Maria')
+    end
+
+    it 'lê na hora: o que mudou na origem depois de a filha abrir vale' do
+      filha
+      joao.update!(name: 'João Pedro')
+
+      expect(ler(filha, 'origem.contato.nome')).to eq('João Pedro')
+    end
+
+    it 'o valor protegido só com a permissão de quem ligou', :aggregate_failures do
+      expect(ler(filha, 'origem.card.valor')).to eq(150)
+      expect(ler(filha, 'origem.card.valor', quem: nil)).to be_nil
+    end
+
+    # Decisão 19: a mãe numa conversa; a filha lê o card dela (o assunto atual) pela origem, com a chave de funis de
+    # quem ligou. Sem a chave, lê vazio (o Acesso já pausa antes, com sem_permissao_funil).
+    it 'origem conversa: origem.card.* lê o card da conversa, e vazio para quem não tem a chave de funis', :aggregate_failures do
+      conversa = create(:conversation, account: account, contact: joao)
+      card.update!(primary_conversation: conversa, inbox: conversa.inbox)
+      da_conversa = create(:autonomia_automacao_execucao, versao: versao, alvo: conversa, chave_gatilho: 'mensagem.criada')
+      filha_da_conversa = create(:autonomia_automacao_execucao, versao: versao, alvo: maria, chave_gatilho: 'mensagem.criada',
+                                                                evento: "em:#{da_conversa.id}:contato:#{maria.id}:outro")
+      agente = create(:user, account: account, role: :agent)
+      create(:inbox_member, user: agente, inbox: conversa.inbox)
+
+      expect(ler(filha_da_conversa, 'origem.card.titulo')).to eq('Banho do Rex')
+      expect(ler(filha_da_conversa, 'origem.card.titulo', quem: agente)).to be_nil
+      expect(ler(filha_da_conversa, 'origem.contato.nome', quem: agente)).to eq('João')
+    end
+
+    it 'fora da filha, origem.* lê vazio' do
+      expect(ler(mae, 'origem.contato.nome')).to be_nil
+    end
+
+    # Quem ligou perdeu o funil do João entre a mãe e a filha: a filha não leva os dados dele à Maria.
+    it 'quem ligou deixou de alcançar o registro de origem: origem.* lê vazio, e o Contexto diz por quê', :aggregate_failures do
+      filha
+      allow(Crm::CardPolicy).to receive(:new).and_wrap_original do |original, contexto, registro|
+        politica = original.call(contexto, registro)
+        allow(politica).to receive(:show?).and_return(false) if registro == card
+        politica
+      end
+
+      expect(ler(filha, 'origem.contato.nome')).to be_nil
+      expect(ler(filha, 'origem.card.titulo')).to be_nil
+      expect(ler(filha, 'contato.nome')).to eq('Maria')
+      expect(Autonomia::Automacao::Contexto.de(filha.alvo, execucao: filha).origem_fora_do_alcance?).to be(true)
+      expect(Autonomia::Automacao::Contexto.de(mae.alvo, execucao: mae).origem_fora_do_alcance?).to be(false)
+    end
+
+    it 'o passo lê a origem pelo texto, corpo ou condição dele, nunca pelos passos dos ramos', :aggregate_failures do
+      origem = Autonomia::Automacao::Valores::Origem
+      com_origem = { 'id' => 'm1', 'tipo' => 'mensagem', 'texto' => ['O ', { '$valor' => 'origem.contato.nome' }] }
+
+      expect(origem.no_passo?(com_origem)).to be(true)
+      expect(origem.no_passo?({ 'id' => 'se', 'tipo' => 'se', 'condicao' => { 'campo' => { '$valor' => 'origem.card.status' } } })).to be(true)
+      expect(origem.no_passo?({ 'id' => 'se', 'tipo' => 'se', 'condicao' => { 'campo' => { '$valor' => 'contato.nome' } },
+                                'entao' => [com_origem] })).to be(false)
+    end
   end
 
   it 'a filha nunca abre neta: o passo dentro dela é pulado na rodada, sem procurar nada', :aggregate_failures do

@@ -107,6 +107,16 @@ export const novoPasso = (entrada, id, t) => {
   // G3: o retorno nasce para o responsável, daqui a um dia, só como lembrete.
   if (entrada.tipo === 'retorno')
     return { id, tipo: 'retorno', titulo: [], daqui: { ...DURACAO_PADRAO } };
+  // G13: o endereço, a frase, o que mandar e o que guardar, a preencher no painel.
+  if (entrada.tipo === 'webhook')
+    return {
+      id,
+      tipo: 'webhook',
+      descricao: '',
+      url: '',
+      corpo: {},
+      gravar: [],
+    };
   // G4: a etapa do card a escolher no painel.
   if (entrada.tipo === 'card') return { id, tipo: 'card', etapa_id: null };
   // F7: os passos de IA nascem com o que a IA lê por padrão; o decidir com dois
@@ -187,6 +197,17 @@ export const comPermissoes = (dados, podeLer) => {
   };
 };
 
+// G25: o mesmo vale para a ação que lê o alvo no caminho (`card.id` no fechar
+// o card): no gatilho de conversa, o seletor nem a oferece. O card da conversa
+// (#2716) é só para ler: para ação, ele não conta como base do alvo.
+const basesDaAcao = (alvo, bases) =>
+  alvo === 'Conversation' ? bases.filter(base => base !== 'card') : bases;
+
+const caminhoNoAlvo = (passo, bases) =>
+  Object.values(passo.caminho || {}).every(
+    origem => !origem.$valor || bases.includes(origem.$valor.split('.')[0])
+  );
+
 // G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião. G32: o tipo
 // do gatilho segue junto, para o "avisar" oferecer quem atende a reunião.
 // #2680: com a caixa da conversa nova, o contato alcança a conversa que ela
@@ -198,6 +219,26 @@ export const comPermissoes = (dados, podeLer) => {
 // conversa nova. `alvo` volta junto, para a peça que precisa saber de onde lê
 // (o campo do contato).
 const RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu';
+// G65 (#2842): dentro do ramo, também os valores do registro de origem (o alvo
+// do gatilho), com o prefixo `origem.`. O servidor marca quais (`na_origem`); a
+// permissão (`sem_permissao`) segue a do valor sem o prefixo. Decisão 19: o
+// card de uma origem que é conversa só para ler, e só com a chave de funis
+// (`semCard`), como fora do ramo.
+export const ORIGEM = 'origem.';
+const daOrigem = (valores, bases, semCard) =>
+  valores
+    .filter(
+      item =>
+        item.na_origem &&
+        bases.includes(item.base) &&
+        !(semCard && item.base === 'card')
+    )
+    .map(item => ({
+      ...item,
+      caminho: `${ORIGEM}${item.caminho}`,
+      base: null,
+      origem: true,
+    }));
 export const doAlvoDoGatilho = (
   dados,
   tipoDoGatilho,
@@ -228,7 +269,19 @@ export const doAlvoDoGatilho = (
     ...dados,
     alvo,
     gatilho: alvoDoRamo ? null : tipoDoGatilho,
-    valores: dados.valores.filter(item => alcanca(item) && daReuniao(item)),
+    valores: [
+      ...dados.valores.filter(item => alcanca(item) && daReuniao(item)),
+      ...(alvoDoRamo && dados.alvos?.[doGatilho]
+        ? daOrigem(
+            dados.valores,
+            dados.alvos[doGatilho],
+            doGatilho === 'Conversation' && !podeLerCard
+          )
+        : []),
+    ],
+    passos: (dados.passos || []).filter(passo =>
+      caminhoNoAlvo(passo, basesDaAcao(alvo, bases))
+    ),
   };
 };
 

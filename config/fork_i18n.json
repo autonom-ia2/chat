@@ -124,6 +124,9 @@
       "file": "automacaoLivreParaCada.json"
     },
     {
+      "file": "automacaoLivreWebhook.json"
+    },
+    {
       "file": "ausencia.json"
     },
     {

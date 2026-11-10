@@ -34,11 +34,13 @@ RSpec.describe Autonomia::Automacao::Valores do
     # `mensagem.primeira` e `conversa.iniciada_por` dependem das mensagens gravadas: primeira_mensagem_spec. A resposta
     # durante a espera (G11): resposta_spec. `card.tem_reuniao_marcada` (G32): g32_reuniao_spec.
     # `contato.tem_reuniao_marcada` (#2710): reuniao_lembrete_e_contato_spec. A situação do envio (#2680): envio_spec.
+    # O nome da campanha (#2681) é escrito, sem opções fechadas: resposta_da_campanha_spec.
     # Quem cuidava antes está ausente (G9): gatilho_troca_de_responsavel_spec. `card.origem` (G29): origem_do_card_spec.
     de_fora = %w[conversa.iniciada_por card.tem_reuniao_marcada contato.tem_reuniao_marcada envio.situacao card.origem
                  gatilho.responsavel_anterior_ausente]
     expect(described_class::FECHADOS.keys)
-      .to match_array(described_class::MENSAGEM.keys + described_class::RESPOSTA.keys + de_fora + Autonomia::Automacao::Ausencia::FECHADOS.keys)
+      .to match_array(described_class::MENSAGEM.keys - ['mensagem.campanha'] + described_class::RESPOSTA.keys + de_fora +
+                      Autonomia::Automacao::Ausencia::FECHADOS.keys)
     described_class::FECHADOS.slice('mensagem.tipo', 'mensagem.privada').each do |caminho, fechado|
       expect(formas.map { |forma| lido.call(caminho, *forma) }.uniq).to match_array(fechado['opcoes'])
     end

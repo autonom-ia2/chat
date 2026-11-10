@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { fraseDaCondicao, operadoresDoValor, opcoesDoValor } from '../frases';
-import { opcoesDosValores } from '../texto';
+import { nomeDoValor, opcoesDosValores } from '../texto';
 
 // #2414 F5 — uma condição: o que olhar, como comparar e com o quê. O que olhar
 // sai do catálogo (os valores que o motor lê) e, para campo personalizado, dos
@@ -50,7 +50,7 @@ const opcoesDeCampo = computed(() => {
     item => (item.so_guia || item.sem_permissao) && item.caminho === campo
   );
   return foraDaEscolha
-    ? [...lista, { value: campo, label: t(foraDaEscolha.frase) }]
+    ? [...lista, { value: campo, label: nomeDoValor(foraDaEscolha, t) }]
     : lista;
 });
 

@@ -416,6 +416,31 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       expect(response).to have_http_status(:created)
     end
 
+    # Decisão 19 (#2716): a âncora do "em outro registro" e origem.card.* no ramo leem o card da conversa: pedem a chave.
+    it 'automação de conversa cuja âncora ou ramo lê o card: recusa sem a chave de funis', :aggregate_failures do
+      ramo = lambda do |registro, passos|
+        [{ id: 'o1', tipo: 'em_outro_registro', registro: registro, passos: passos }]
+      end
+      ancora = { de: 'contato_do_campo', campo: { '$valor' => 'card.atributos.indicado_por' }, usar: 'contato' }
+      se_aberto = { id: 's1', tipo: 'se', condicao: { campo: { '$valor' => 'origem.card.status' }, op: 'igual', valor: 'open' },
+                    entao: [receita[:passos].first], senao: [] }
+      no_contato = { de: 'contato_do_campo', campo: { '$valor' => 'contato.atributos.x' }, usar: 'contato' }
+      receitas = [ramo.call(ancora, [receita[:passos].first]), ramo.call(no_contato, [se_aberto])]
+                 .map { |passos| { gatilho: { tipo: 'conversa.criada' }, passos: passos } }
+
+      receitas.each do |le_o_card|
+        post base, params: { nome: 'x', receita: le_o_card }, headers: montador.create_new_auth_token, as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
+      end
+      montador.account_users.find_by(account: account).custom_role.update!(permissions: %w[automation_manage crm_manage_pipelines])
+      receitas.each do |le_o_card|
+        post base, params: { nome: 'x', receita: le_o_card }, headers: montador.create_new_auth_token, as: :json
+        expect(response.parsed_body['error']).not_to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
+      end
+    end
+
     # G4: o passo "criar card" é passo de funil, como a ação de card.
     it 'recusa salvar o passo "criar card" pela API direta' do
       account.enable_features!('automacao_gatilhos')

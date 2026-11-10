@@ -21,7 +21,8 @@
       "DATE": "Data",
       "LIST": "Lista",
       "CHECKBOX": "Caixa de seleção",
-      "PESSOA": "Pessoa da equipe"
+      "PESSOA": "Pessoa da equipe",
+      "CONTATO": "Contato"
     },
     "ADD": {
       "TITLE": "Adicionar atributo personalizado",

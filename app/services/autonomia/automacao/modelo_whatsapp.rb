@@ -8,10 +8,10 @@
 # serve a todas que têm o modelo. Não cria, não pede aprovação e não troca de modelo sozinha: o que não serve vira
 # motivo no histórico.
 class Autonomia::Automacao::ModeloWhatsapp
-  # Só utilidade, por ora: propaganda custa mais e pede decisão do Rodrigo, a mesma regra do Followup
-  # (Crm::FollowUps::EnvioForaDaJanela::CATEGORIA_PERMITIDA). Ligar MARKETING é pôr a categoria aqui e o aviso de custo
-  # na tela.
-  CATEGORIAS = %w[UTILITY].freeze
+  # Utilidade e propaganda (decisão do Rodrigo, 07/11, lote 5 #2681: "3 sim"). Propaganda custa mais na Meta: o editor
+  # e o ensaio avisam o custo (propaganda?). O Followup segue só com utilidade (Crm::FollowUps::EnvioForaDaJanela).
+  CATEGORIAS = %w[UTILITY MARKETING].freeze
+  PROPAGANDA = 'MARKETING'.freeze
   # Só o número oficial (Cloud e 360dialog) tem modelo da Meta e janela de 24 h imposta por ela.
   CANAL = 'Channel::Whatsapp'.freeze
   ROTA = ::Crm::BookingV2::Notices::Route
@@ -60,6 +60,12 @@ class Autonomia::Automacao::ModeloWhatsapp
 
   def self.configurado(modelo) = { 'name' => modelo['nome'].to_s, 'language' => modelo['idioma'].to_s }
 
+  # O modelo da caixa é de propaganda (o ensaio avisa que custa mais).
+  def self.propaganda?(caixa, modelo)
+    item = caixa && modelo && ROTA.synced_template(caixa, configurado(modelo))
+    item.to_h['category'].to_s.casecmp?(PROPAGANDA)
+  end
+
   def initialize(modelo, conversa, valores)
     @modelo = modelo
     @conversa = conversa
@@ -86,7 +92,7 @@ class Autonomia::Automacao::ModeloWhatsapp
   def motivo_do_modelo(item)
     return 'modelo_fora_da_caixa' if item.nil?
     return 'modelo_nao_aprovado' unless self.class.aprovado?(item)
-    return 'modelo_de_propaganda' unless self.class.categoria_aceita?(item)
+    return 'modelo_de_categoria_fora' unless self.class.categoria_aceita?(item)
 
     'modelo_mudou' unless self.class.encaixa?(item, variaveis.size)
   end

@@ -60,10 +60,11 @@ module Autonomia::Automacao::Catalogo
   # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2), a
   # etapa do "card" (G4) e o contato em que ele nasce (G49), e a hora da conferência do "esperar até" sem prazo (G64,
   # mostrada pela peça do prazo). O "Cobrir a pessoa enquanto ela não responde" do "Passar para a agente de IA" (decisão
-  # 18) é um sim/não.
+  # 18) é um sim/não. G13 (#2670): o endereço, o que vai e o que volta do "webhook".
   PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email',
                           'etapa_id' => 'etapa', 'contato' => 'contato_criado', 'conferir_as' => 'conferir_as',
-                          'cobrir_pessoa' => 'sim_nao' }.freeze
+                          'cobrir_pessoa' => 'sim_nao', 'descricao' => 'descricao', 'url' => 'endereco_do_webhook',
+                          'corpo' => 'corpo_do_webhook', 'gravar' => 'resposta_do_webhook' }.freeze
 
   module_function
 
@@ -126,7 +127,8 @@ module Autonomia::Automacao::Catalogo
       next if tipo == 'acao' || declarado['nativos_fora_do_editor'].to_h.key?(tipo)
 
       { 'tipo' => tipo, 'grupo' => declarado.dig('nativos', tipo, 'grupo'), 'requer' => declarado.dig('nativos', tipo, 'requer'),
-        'funil' => declarado.dig('nativos', tipo, 'funil'), 'frase' => chave('PASSOS', tipo), 'cria_contatos' => cria_contatos(tipo),
+        'chave' => declarado.dig('nativos', tipo, 'chave'), 'funil' => declarado.dig('nativos', tipo, 'funil'),
+        'frase' => chave('PASSOS', tipo), 'cria_contatos' => cria_contatos(tipo),
         'campos' => campos_nativos(forma, declarado.dig('nativos', tipo, 'peca'), declarado.dig('nativos', tipo, 'rotulos')) }.compact
     end
   end
@@ -148,6 +150,7 @@ module Autonomia::Automacao::Catalogo
     declarado['acoes'].map do |nome, passo|
       formato = formato_da_acao(nome, passo['acao'])
       { 'tipo' => 'acao', 'nome' => nome, 'acao' => passo['acao'], 'grupo' => passo['grupo'], 'frase' => chave('PASSOS', nome),
+        'requer' => passo['requer'], 'funil' => passo['funil'],
         'caminho' => passo['caminho'].to_h.transform_values { |origem| origem_do_parametro(origem) },
         'envelope' => (formato['envelope'] unless formato['corpo_plano']),
         'fixos' => ::Autonomia::Automacao::AcoesPermitidas.fixos(passo['acao']),
@@ -170,12 +173,16 @@ module Autonomia::Automacao::Catalogo
     { 'escolher' => origem['escolher'], 'rotulo' => chave('ESCOLHER', origem['escolher']) }
   end
 
+  # A lista (`um_de` de automacao-recursos.yml) estreita as opções da plataforma e torna o campo obrigatório.
   def campo_da_acao(acao, formato, campo, peca)
     regra = formato_do_campo(formato, campo)
+    permitidas = ::Autonomia::Automacao::AcoesPermitidas
+    opcoes = permitidas.um_de(acao)[campo] || regra['um_de']
     {
       'nome' => campo, 'peca' => peca, 'rotulo' => chave('CAMPOS', campo.split('.').last),
-      'obrigatorio' => OBRIGATORIO.include?(regra['obrigatorio']) || ::Autonomia::Automacao::AcoesPermitidas.exige(acao).include?(campo),
-      'opcoes' => regra['um_de']&.map { |valor| { 'valor' => valor, 'frase' => chave('OPCOES', campo.split('.').last, valor) } },
+      'obrigatorio' => OBRIGATORIO.include?(regra['obrigatorio']) || permitidas.exige(acao).include?(campo) ||
+        permitidas.um_de(acao).key?(campo),
+      'opcoes' => opcoes&.map { |valor| { 'valor' => valor, 'frase' => chave('OPCOES', campo.split('.').last, valor) } },
       **regra.slice('padrao', 'min', 'max', 'max_caracteres')
     }.compact
   end

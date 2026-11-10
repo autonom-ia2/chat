@@ -23,7 +23,6 @@ RSpec.describe Autonomia::Automacao::ModeloWhatsapp do
     {
       'outra quantidade de variáveis' => [{}, 3],
       'pendente' => [{ 'status' => 'PENDING' }, 2],
-      'de propaganda' => [{ 'category' => 'MARKETING' }, 2],
       'variável fora da sequência' => [{ 'components' => [{ 'type' => 'BODY', 'text' => 'Oi {{1}}, {{3}}.' }] }, 2],
       'variável no topo' => [{ 'components' => [{ 'type' => 'HEADER', 'format' => 'TEXT', 'text' => 'Olá {{1}}' },
                                                 { 'type' => 'BODY', 'text' => 'Oi {{1}}, {{2}}.' }] }, 2],
@@ -35,8 +34,10 @@ RSpec.describe Autonomia::Automacao::ModeloWhatsapp do
       end
     end
 
-    it 'só aceita utilidade, por uma constante (marketing entra mudando uma linha)' do
-      expect(described_class::CATEGORIAS).to eq(%w[UTILITY])
+    # Lote 5 (#2681), decisão do Rodrigo de 07/11: propaganda liberada, com aviso de custo na tela.
+    it 'aceita utilidade e propaganda; autenticação não' do
+      expect(described_class.serve?(aprovado.merge('category' => 'MARKETING'), 2)).to be(true)
+      expect(described_class.serve?(aprovado.merge('category' => 'AUTHENTICATION'), 2)).to be(false)
     end
   end
 

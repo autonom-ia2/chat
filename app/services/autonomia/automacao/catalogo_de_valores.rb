@@ -11,7 +11,8 @@ module Autonomia::Automacao::CatalogoDeValores
   # (G11) vem marcada `so_na_espera`: o editor só a oferece na condição do "esperar até". A reunião (G12) vem com
   # `so_nos_gatilhos`: o editor só a oferece nos gatilhos de reunião. O que era antes da troca (G9), só no gatilho da
   # troca. A mensagem que falhou (G53), só no gatilho dela e com `so_nos_passos`: fora do "Só se" do gatilho, que a
-  # Partida confere sem ela.
+  # Partida confere sem ela. O que a filha do "em outro registro" lê do registro de origem (G65, `origem.<caminho>`) vem
+  # com `na_origem`: o editor o oferece dentro do ramo, com o prefixo.
   def todos
     valores = ::Autonomia::Automacao::Valores
     campos = caminhos_dos_campos(valores).map do |caminho|
@@ -20,7 +21,8 @@ module Autonomia::Automacao::CatalogoDeValores
     end
     atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
       { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base),
-        'da_pessoa' => (da_pessoa if base == ::Autonomia::Automacao::Valores::Atributos::CARD) }.compact
+        'da_pessoa' => (da_pessoa if base == ::Autonomia::Automacao::Valores::Atributos::CARD),
+        'na_origem' => (true if valores::Origem::BASES.include?(base.split('.').first)) }.compact
     end
     campos + atributos + valores_do_gatilho
   end
@@ -34,10 +36,10 @@ module Autonomia::Automacao::CatalogoDeValores
       valores::ENVIO.keys + valores::TROCA.keys + valores::FALHOU.keys
   end
 
-  # Onde a receita pode ler o valor: na espera, em certos gatilhos (LugarDoValor), só nos passos.
+  # Onde a receita pode ler o valor: na espera, em certos gatilhos (LugarDoValor), só nos passos, no registro de origem.
   def lugares(valores, caminho)
     { 'so_na_espera' => (true if valores.da_resposta?(caminho)), 'so_nos_gatilhos' => valores.so_nos_gatilhos(caminho),
-      'so_nos_passos' => (true if valores.da_falha?(caminho)) }
+      'so_nos_passos' => (true if valores.da_falha?(caminho)), 'na_origem' => (true if valores.na_origem?(caminho)) }
   end
 
   # O campo de pessoa da equipe do card (G62): além do campo (o id), o nome e a ausência, com as opções da G23.

@@ -3,7 +3,7 @@ import { useVuelidate } from '@vuelidate/core';
 import { useAlert } from 'dashboard/composables';
 import { required, minLength } from '@vuelidate/validators';
 import { getRegexp, normalizeRegexPattern } from 'shared/helpers/Validators';
-import { ATTRIBUTE_TYPES } from './constants';
+import { tiposDoModelo } from './constants';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import TagInput from 'dashboard/components-next/taginput/TagInput.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
@@ -55,10 +55,12 @@ export default {
   },
   computed: {
     types() {
-      return ATTRIBUTE_TYPES.map(item => ({
-        ...item,
-        option: this.$t(`ATTRIBUTES_MGMT.ATTRIBUTE_TYPES.${item.key}`),
-      }));
+      return tiposDoModelo(this.selectedAttribute.attribute_model).map(
+        item => ({
+          ...item,
+          option: this.$t(`ATTRIBUTES_MGMT.ATTRIBUTE_TYPES.${item.key}`),
+        })
+      );
     },
     typeChoices() {
       return this.types.map(type => ({ value: type.id, label: type.option }));

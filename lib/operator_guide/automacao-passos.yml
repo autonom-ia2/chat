@@ -17,7 +17,7 @@
 # `escondidos`: campos que a ação aceita e a tela não mostra, com o motivo no comentário.
 # `so_guia`: ação liberada no motor que o editor não mostra, com o motivo. O Guia continua montando com ela.
 
-grupos: [IA, MENSAGEM, CONVERSA, FUNIL, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, CONTROLE]
+grupos: [IA, MENSAGEM, CONVERSA, FUNIL, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, OUTRO_SISTEMA, CONTROLE]
 
 nativos:
   esperar: { grupo: CONTROLE }
@@ -30,8 +30,9 @@ nativos:
   avisar: { grupo: MENSAGEM, requer: automacao_mensagens }
   # G14 (#2630): disparar campanha e marcar "não recebe". `peca`: o passo inteiro numa peça só (LivreCampanha.vue).
   campanha: { grupo: MENSAGEM, requer: automacao_mensagens, peca: campanha }
-  # G2: e-mail ao contato pela caixa de e-mail da conta.
-  email: { grupo: MENSAGEM, requer: automacao_mensagens }
+  # G2: e-mail ao contato pela caixa de e-mail da conta. `rotulos`: a caixa de e-mail tem rótulo próprio (o "caixa_id" da
+  # campanha é a caixa do WhatsApp).
+  email: { grupo: MENSAGEM, requer: automacao_mensagens, rotulos: { caixa_id: caixa_id_email } }
   # F7: os passos de IA, na chave da própria conta. Quem recusa de verdade é a Receita, ao salvar (ia_desligada).
   decidir: { grupo: IA, requer: automacao_ia }
   extrair: { grupo: IA, requer: automacao_ia }
@@ -46,10 +47,15 @@ nativos:
   # que receba conversa, e o motor pula com o motivo.
   ia_assumir: { grupo: EQUIPE }
   # G3 (#2629): o retorno para a equipe. A mensagem ao cliente na hora pede a flag da F4; quem recusa é a Receita.
-  retorno: { grupo: EQUIPE }
+  # `rotulos`: o título da tarefa tem rótulo próprio (o "titulo" da campanha é o nome dela).
+  retorno: { grupo: EQUIPE, rotulos: { titulo: titulo_do_retorno } }
   # G18 (#2671): os passos de dentro rodam no contato guardado num campo ou nos outros cards do contato. Os cards pedem a
   # chave de funis: o painel só os oferece a quem pode mexer no funil, e quem recusa de verdade é a Receita.
   em_outro_registro: { grupo: CONTROLE }
+  # G13 (#2670): mandar os dados para outro sistema e gravar a resposta. Quem recusa é a Receita (webhook_desligado).
+  # `chave`: a permissão sem a qual o seletor não oferece o passo (mandar dados para fora é integração, #2027).
+  # `rotulos`: a descrição do webhook tem rótulo próprio (o "descricao" do "para cada item" é outro).
+  webhook: { grupo: OUTRO_SISTEMA, requer: automacao_gatilhos, chave: integration_manage, rotulos: { descricao: descricao_do_webhook } }
   # G4: criar card numa etapa, com a flag dos gatilhos de card (F6). `funil`: só para quem pode mexer no funil
   # (RegraDoFunil.chave?: crm_manage_pipelines ou crm_admin), como o gatilho de card; quem recusa de verdade é a API,
   # ao salvar e ao ligar.
@@ -67,8 +73,9 @@ nativos_fora_do_editor: {}
 
 # Os valores da mensagem que disparou o gatilho (#2496, Valores::MENSAGEM). Só existem no "Só se" do gatilho dela; o
 # editor não os oferece em outro gatilho nem nos passos (a Receita recusa: mensagem_so_no_gatilho). As opções e os
-# operadores vêm de Valores::FECHADOS, com a frase em VALOR_DA_MENSAGEM e OPERADOR_DA_MENSAGEM.
-valores_do_gatilho: [mensagem.tipo, mensagem.primeira, mensagem.tem_anexo]
+# operadores vêm de Valores::FECHADOS, com a frase em VALOR_DA_MENSAGEM e OPERADOR_DA_MENSAGEM. `mensagem.campanha` (#2681)
+# não é fechado: o valor é o nome da campanha, escrito.
+valores_do_gatilho: [mensagem.tipo, mensagem.primeira, mensagem.tem_anexo, mensagem.campanha]
 
 # Valor da mensagem que o editor não oferece para escolher, com o motivo. O Guia continua montando com ele, e o editor o
 # reconhece: mostra a frase e o tira do "Só se" quando o gatilho muda.
@@ -219,6 +226,17 @@ acoes:
       - custom_attribute_definition.attribute_display_type
       - custom_attribute_definition.regex_cue
       - custom_attribute_definition.regex_pattern
+  # G25 (#2650): fechar o card como ganho ou perdido, como na tela. Só com os gatilhos de card (F6), que dão o card ao
+  # passo, e só para quem pode mexer no funil (`funil`, como o passo "card" da G4); quem recusa de verdade é a API.
+  card_fechar:
+    acao: POST crm/cards/:id/close
+    grupo: FUNIL
+    requer: automacao_gatilhos
+    funil: true
+    caminho: { id: card.id }
+    campos: { result: escolha, lost_reason: texto }
+    # O ganho fica com o valor do card: o Closer só troca o valor (e a moeda) quando eles vêm.
+    escondidos: [value_cents, currency]
 
 so_guia:
   PUT labels/:id: Faz o mesmo que o PATCH, que o editor já mostra.
