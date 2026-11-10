@@ -401,7 +401,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       end
     end
 
-    # #2865 — o título logo antes de um parágrafo em negrito, no meio do bloco ("4.4. HIPOTESES" e o "4.4.1." recuado embaixo,
+    # #2865 — o título logo antes de um parágrafo em negrito, no meio do bloco ("4.1. HIPOTESES" e o "4.1.1." recuado embaixo,
     # tudo em negrito, com o espaço de parágrafo um pouco maior que o de linha): o bloco tinha mais de MAX_LINHAS_DO_TITULO
     # linhas e o título sumia, e a seção de cima engolia a de baixo.
     context 'with a title right before an indented bold paragraph' do
@@ -409,8 +409,8 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
         pdf_com([[[corpo1, topo, 'F1', 10], [corpo2, topo - linha, 'F1', 10],
                   [corpo1, topo - 40, 'F2', 10], ['pela seguradora.', topo - 40 - linha, 'F2', 10],
                   ['CLAUSULA 4 - DIREITOS', topo - 40 - linha - 19.2, 'F2', 10],
-                  ['4.4. HIPOTESES DE PERDA', topo - 40 - linha - 35.5, 'F2', 10],
-                  ['4.4.1. Alem dos casos previstos em lei o segurado perde o direito', topo - 40 - linha - 50.4, 'F2', 10, 80],
+                  ['4.1. HIPOTESES DE PERDA', topo - 40 - linha - 35.5, 'F2', 10],
+                  ['4.1.1. Alem dos casos previstos em lei o segurado perde o direito', topo - 40 - linha - 50.4, 'F2', 10, 80],
                   [corpo2, topo - 40 - (2 * linha) - 50.4, 'F2', 10, 100],
                   [corpo1, topo - 160, 'F1', 10], [corpo2, topo - 160 - linha, 'F1', 10], [corpo1, topo - 160 - (2 * linha), 'F1', 10],
                   *corpo_normal(300)]])
@@ -419,9 +419,9 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       it 'reads the titles and keeps the bold paragraphs as paragraphs', :aggregate_failures do
         blocos = blocos_gravados
 
-        expect(blocos.select { |bloco| bloco[:tipo] == :titulo }.pluck(:texto)).to eq(['CLAUSULA 4 - DIREITOS', '4.4. HIPOTESES DE PERDA'])
+        expect(blocos.select { |bloco| bloco[:tipo] == :titulo }.pluck(:texto)).to eq(['CLAUSULA 4 - DIREITOS', '4.1. HIPOTESES DE PERDA'])
         expect(blocos).to include(a_hash_including(tipo: :paragrafo, texto: "#{corpo1}\npela seguradora."))
-        item = "4.4.1. Alem dos casos previstos em lei o segurado perde o direito\n#{corpo2}"
+        item = "4.1.1. Alem dos casos previstos em lei o segurado perde o direito\n#{corpo2}"
         expect(blocos).to include(a_hash_including(tipo: :paragrafo, texto: item))
       end
     end
@@ -452,6 +452,25 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
                   [corpo1, topo - 40, 'F2', 10], ['as listas abaixo:', topo - 40 - linha, 'F2', 10],
                   ['1. Incendio;', topo - 40 - linha - 14.9, 'F2', 10],
                   ['2. Raio;', topo - 40 - linha - 29.8, 'F2', 10],
+                  ['4.5. SUB-ROGACAO', topo - 40 - linha - 44.7, 'F2', 10],
+                  ["4.5.1. #{corpo1}", topo - 40 - linha - 59.6, 'F2', 10, 80],
+                  [corpo2, topo - 40 - (2 * linha) - 59.6, 'F2', 10, 100],
+                  [corpo1, topo - 180, 'F1', 10], [corpo2, topo - 180 - linha, 'F1', 10], [corpo1, topo - 180 - (2 * linha), 'F1', 10],
+                  *corpo_normal(300)]])
+      end
+
+      it 'reads only the real title' do
+        expect(blocos_gravados.select { |bloco| bloco[:tipo] == :titulo }.pluck(:texto)).to eq(['4.5. SUB-ROGACAO'])
+      end
+    end
+
+    # #2865 — segunda revisão: a lista sem número ("- Incendio;"), também em negrito, logo antes do título não vira cadeia.
+    context 'with a bold list without numbers right before a real title' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], [corpo2, topo - linha, 'F1', 10],
+                  [corpo1, topo - 40, 'F2', 10], ['as listas abaixo:', topo - 40 - linha, 'F2', 10],
+                  ['- Incendio;', topo - 40 - linha - 14.9, 'F2', 10],
+                  ['- Raio;', topo - 40 - linha - 29.8, 'F2', 10],
                   ['4.5. SUB-ROGACAO', topo - 40 - linha - 44.7, 'F2', 10],
                   ["4.5.1. #{corpo1}", topo - 40 - linha - 59.6, 'F2', 10, 80],
                   [corpo2, topo - 40 - (2 * linha) - 59.6, 'F2', 10, 100],
