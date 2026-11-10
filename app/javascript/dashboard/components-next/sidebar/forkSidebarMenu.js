@@ -17,6 +17,7 @@ import {
 // Importação de contatos mora em Relacionamentos (ou em Contatos, sem a navegação nova).
 const IMPORTAR_CONTATOS = [
   'contacts_import_journey',
+  'contacts_imports_list',
   'contacts_campaign_imports',
 ];
 

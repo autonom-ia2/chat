@@ -5,7 +5,15 @@ import ptBR from 'dashboard/i18n/locale/pt_BR/contactImportJourney.json';
 import ContactImportPage from '../ContactImportPage.vue';
 
 const push = vi.fn();
-vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
+const replace = vi.fn();
+const route = vi.hoisted(() => ({
+  name: 'contacts_import_journey',
+  params: {},
+}));
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push, replace }),
+  useRoute: () => route,
+}));
 
 const api = vi.hoisted(() => ({
   upload: vi.fn(),
@@ -25,7 +33,10 @@ beforeAll(() => {
 afterAll(() => {
   config.global.plugins = defaultPlugins;
 });
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+  route.params = {};
+});
 
 const columns = [
   {
@@ -314,6 +325,135 @@ describe('ContactImportPage (#1006)', () => {
 
     expect(wrapper.get('[data-result="CREATED"]').text()).toContain('57');
     expect(wrapper.get('[data-result="ATTRIBUTES"]').text()).toContain('1');
+    expect(wrapper.find('[data-test="left-out"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  // Contatos > Importações (#2771): opened by id, an automation import shows its result and who was left out.
+  it('opens an automation import by id with the result and the rows left out', async () => {
+    route.params = { accountId: 1, importId: 42 };
+    api.show.mockResolvedValue({
+      data: {
+        payload: {
+          id: 42,
+          status: 'completed_with_failures',
+          flow: 'contacts',
+          origin: 'automation',
+          name: 'Lista do RH',
+          total_rows: 3,
+          imported_contacts_count: 2,
+          existing_contacts_count: 1,
+          failed_contacts_count: 0,
+          invalid_rows: 1,
+          downloads: { error_csv: false },
+          problem_rows: [
+            {
+              row_number: 3,
+              phone: '+55 •• •••••-0123',
+              email: null,
+              errors: ['invalid_brazilian_mobile_number'],
+            },
+          ],
+        },
+      },
+    });
+
+    const wrapper = mountPage();
+    await flushPromises();
+
+    expect(api.show).toHaveBeenCalledWith(42);
+    expect(wrapper.text()).toContain(
+      'List read by the automation Lista do RH.'
+    );
+    expect(wrapper.get('[data-result="IMPORTED"]').text()).toContain('2');
+    expect(wrapper.get('[data-result="FAILED"]').text()).toContain('1');
+    const leftOut = wrapper.get('[data-test="left-out"]');
+    expect(leftOut.text()).toContain('Left out: 1');
+    expect(leftOut.find('[data-test="left-out-more"]').exists()).toBe(false);
+    expect(leftOut.text()).toContain('+55 •• •••••-0123');
+    expect(leftOut.text()).toContain('Not a Brazilian mobile');
+    expect(wrapper.text()).not.toContain('Download');
+
+    await wrapper.get('[data-test="crumb-imports"]').trigger('click');
+    expect(push).toHaveBeenCalledWith({ name: 'contacts_imports_list' });
+    wrapper.unmount();
+  });
+
+  it('says how many more were left out than the rows the API sends', async () => {
+    route.params = { accountId: 1, importId: 43 };
+    const rows = Array.from({ length: 20 }, (_, index) => ({
+      row_number: index + 1,
+      phone: null,
+      email: null,
+      errors: ['invalid_brazilian_mobile_number'],
+    }));
+    api.show.mockResolvedValue({
+      data: {
+        payload: {
+          id: 43,
+          status: 'completed_with_failures',
+          flow: 'contacts',
+          origin: 'automation',
+          name: 'Lista do RH',
+          invalid_rows: 25,
+          downloads: { error_csv: false },
+          problem_rows: rows,
+        },
+      },
+    });
+
+    const wrapper = mountPage();
+    await flushPromises();
+
+    const leftOut = wrapper.get('[data-test="left-out"]');
+    expect(leftOut.text()).toContain('Left out: 25');
+    expect(leftOut.findAll('li')).toHaveLength(20);
+    expect(leftOut.get('[data-test="left-out-more"]').text()).toBe(
+      'and 5 more'
+    );
+    wrapper.unmount();
+  });
+
+  // Decision: an automation round that stopped midway shows "stopped" with who came in, never "importing".
+  it('an automation import that stopped shows how many came in, without counting what did not run', async () => {
+    route.params = { accountId: 1, importId: 44 };
+    api.show.mockResolvedValue({
+      data: {
+        payload: {
+          id: 44,
+          status: 'failed',
+          flow: 'contacts',
+          origin: 'automation',
+          name: 'Lista do RH',
+          total_rows: 3,
+          imported_contacts_count: 1,
+          failed_contacts_count: 0,
+          invalid_rows: 0,
+          problem_rows: [],
+        },
+      },
+    });
+
+    const wrapper = mountPage();
+    await flushPromises();
+
+    const stopped = wrapper.get('[data-test="failed"]');
+    expect(stopped.text()).toContain(
+      'It stopped before the end: 1 contacts came in up to there.'
+    );
+    expect(stopped.text()).not.toContain('Import another spreadsheet');
+    await stopped.get('button').trigger('click');
+    expect(push).toHaveBeenCalledWith({ name: 'contacts_dashboard_index' });
+    wrapper.unmount();
+  });
+
+  it('without an id, opens on the upload and does not fetch', async () => {
+    const wrapper = mountPage();
+    await flushPromises();
+
+    expect(api.show).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-test="drop-zone"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="crumb-imports"]').exists()).toBe(false);
     wrapper.unmount();
   });
 });

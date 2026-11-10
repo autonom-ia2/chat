@@ -18,6 +18,7 @@ module CampaignImports
     # Rows already imported are skipped, so a retried job does not duplicate work.
     def perform
       return unless transition_to_importing!
+      return refuse_without_permission! unless contact_row.allowed?
 
       with_suppressed_contact_events do
         label_records = ActiveRecord::Base.transaction { ensure_labels! } unless campaign_import.spreadsheet_flow?
@@ -75,13 +76,11 @@ module CampaignImports
 
     def import_one(row, import_row, label_records)
       ActiveRecord::Base.transaction(requires_new: true) do
-        contact = find_contact(row)
-        was_existing = contact.present?
-        contact ||= account.contacts.create!(name: row[:name], phone_number: row[:phone_number], email: row[:email])
-        ContactBlankFields.new(account).fill!(contact, row)
+        written = contact_row.write(row)
+        contact = written.contact
         contact_attributes&.merge!(contact, import_row.extra_values)
-        import_row.assign_attributes(import_companies.link(contact, row)) if import_companies
-        mark_row_imported!(import_row, row, contact, was_existing, label_records)
+        import_row.assign_attributes(import_companies.row_attributes(written.company)) if import_companies
+        mark_row_imported!(import_row, row, contact, written.existing, label_records)
         contact
       end
     rescue StandardError => e
@@ -98,14 +97,28 @@ module CampaignImports
       label_records ? [label_records[:base].title, label_records[:batches].fetch(row[:batch_index]).title] : []
     end
 
-    # Públicos rows may carry only an email: the phone (with or without the 9th digit) wins,
-    # then the email, compared without case. Never a duplicate contact.
-    def find_contact(row)
-      contact = find_existing_contact(row[:phone_number]) if row[:phone_number]
-      contact || (row[:email] && ContactBlankFields.new(account).contact_with_email(row[:email]))
+    # One row's contact and company (ContactRow, shared with the automation step "para_cada").
+    # Importar contatos asks the Contacts screen's question of who uploaded the file; Públicos and the
+    # campaign base flow keep their own (CampaignImportPolicy, at the controller).
+    def contact_row
+      @contact_row ||= ContactRow.new(account, account_user: importer_account_user, linker: import_companies&.linker)
     end
 
-    def find_existing_contact(phone_number) = (@contact_matcher ||= ContactMatcher.new(account)).find(phone_number)
+    def importer_account_user
+      return ContactRow::UNCHECKED unless campaign_import.contact_import?
+
+      account.account_users.find_by(user_id: campaign_import.user_id)
+    end
+
+    # Who uploaded lost the import permission (or left the account) before the job ran: nothing is
+    # written and the whole import fails with the reason, as an import that broke midway does.
+    def refuse_without_permission!
+      campaign_import.update!(
+        status: :failed, imported_contacts_count: 0, failed_contacts_count: campaign_import.valid_rows.to_i,
+        import_finished_at: Time.current,
+        validation_summary: campaign_import.validation_summary.to_h.merge(import_error: 'import_not_allowed')
+      )
+    end
 
     # Públicos and Importar contatos (#998, #1006): the old campaign base flow never touches companies.
     def import_companies = @import_companies ||= (ImportCompanies.new(campaign_import) if campaign_import.spreadsheet_flow?)

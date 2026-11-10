@@ -216,6 +216,15 @@
 - passos: 1. Abra Contatos; 2. No menu de três pontos, clique em Importar contatos; 3. Escolha a planilha; 4. Confira as Colunas encontradas e use Trocar se alguma estiver errada (ou Não tem); 5. Veja quais Outras colunas viram atributos do contato e quais são atributos novos; 6. Confira contatos prontos, linhas com problema e o bloco Empresas (Criar e ligar); 7. Clique em Importar e veja o resumo.
 - gotchas: com a jornada de campanhas desligada o menu abre a importação nativa do Chatwoot; quando o sistema não tem certeza das colunas, pede a escolha antes de seguir; contato que já existe (celular com ou sem o 9, ou e-mail) só ganha o que falta e não perde valores de atributos; contato que já tem outra empresa mantém a dele; atributos novos são criados como texto com o nome da coluna; nada entra na base antes de clicar em Importar; essa importação não vira público nem aparece em Campanhas.
 
+### ver_importacoes_de_contatos
+- titulo: Ver as importações de contatos (planilha e automação)
+- rota: contacts_imports_list
+- intent: Onde vejo as listas de contatos que importei?; A lista que a automação leu entrou nos contatos?; Quem ficou de fora da importação?; Onde vejo o resultado de uma importação antiga?
+- onde_fica: Contatos > Todos os contatos > menu de ações (três pontos) > Importações (com a jornada de campanhas ligada)
+- pre_requisitos: administrador ou função com gestão de contatos
+- passos: 1. Abra Contatos; 2. No menu de três pontos, clique em Importações; 3. Veja cada lista, a origem (Planilha ou Automação), a data, quem importou, quantos entraram e quantos ficaram de fora; 4. Clique numa importação para ver o resultado e quem ficou de fora.
+- gotchas: a origem Automação é a lista que o passo "Para cada item" leu na conversa, importada em nome de quem ligou a automação; quem ficou de fora aparece com o celular mascarado e o motivo; os públicos e as bases de campanha não aparecem aqui; uma planilha que ainda espera conferência abre na etapa em que parou.
+
 ### convidar_e_gerenciar_agentes
 - titulo: Convidar e gerenciar agentes
 - rota: agent_list

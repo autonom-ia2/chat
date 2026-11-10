@@ -297,6 +297,12 @@
       "CARD_GANHO": "When a card in {funil} closes the policy",
       "CARD_PERDIDO": "When a card in {funil} does not close"
     },
+    "OUTRO_REGISTRO": {
+      "SITUACOES": {
+        "WON": "That closed the policy",
+        "LOST": "That did not close"
+      }
+    },
     "SELECAO": {
       "SITUACOES": {
         "GANHO": "Closed the policy",

@@ -71,7 +71,7 @@ Nada muda na Partida, no Executor nem na varredura.
 | `conversa.responsavel_trocado` | conversa | evento | `ASSIGNEE_CHANGED` | — | `responsavel:<conversa>:<timestamp>` |
 | `conversa.time_trocado` | conversa | evento | `TEAM_CHANGED` | — | `time:<conversa>:<timestamp>` |
 | `card.criado` | card | evento | atividade `create` (Creator e CardNaEtapa) | `funil_id` (opcional) | `atividade:<activity id>` |
-| `card.responsavel_trocado` | card | evento | atividade `update` com `owner_id` (tipo próprio no `EVENT_MAP`) | — | `atividade:<activity id>` |
+| `card.responsavel_mudou` / `card.time_mudou` (G9, #2707) | card | evento | o próprio card, no gancho único `Crm::CardAvisaAutomacao` (`owner_id` ou `team_id` mudou; `Autonomia::Automacao::TrocaNoCard`): a Lista do CRM grava a atividade `update` só com o dono novo, e a saída da triagem nem grava atividade | `funil_id` (opcional) | `<tipo>:<card>:<anterior ou 0>:<updated_at µs>` |
 | `conversa.etiqueta_posta` / `.etiqueta_tirada` | conversa | evento | `CONVERSATION_UPDATED` com `label_list` em `changed_attributes` | `etiqueta` | `etiqueta:<conversa>:<etiqueta>:<timestamp>` |
 | `contato.etiqueta_posta` / `.etiqueta_tirada` | contato | evento | `CONTACT_UPDATED` com as etiquetas mudando | `etiqueta` | `etiqueta:<contato>:<etiqueta>:<timestamp>` |
 | `card.entrou_na_etapa` | card | evento | atividade `move` (Mover) e `create` (CardNaEtapa) | `etapa_id` | `atividade:<activity id>` |
@@ -83,8 +83,8 @@ Nada muda na Partida, no Executor nem na varredura.
 | `recorrente` | card ou contato | tempo | relógio no fuso da conta | `frequencia`, `dia`, `hora`, `alvo`, filtros | `recorrente:<ocorrência local>:<alvo>` |
 
 **Valores do evento**, que só o filtro do gatilho lê:
-- troca de responsável: `evento.responsavel_anterior_id` e `evento.responsavel_novo_id`;
-- troca de time: `evento.time_anterior_id` e `evento.time_novo_id`;
+- troca de dono do card (G9): `gatilho.responsavel_anterior_id`, `gatilho.responsavel_anterior_nome` e `gatilho.responsavel_anterior_ausente`, lidos da marca no filtro e em qualquer passo desse gatilho; quem cuida agora é `card.responsavel_id` e `card.responsavel_nome`;
+- troca de time do card (G9): `gatilho.time_anterior_id` e `gatilho.time_anterior_nome`; o time de agora é `card.time_id`. Na conversa (`conversa.responsavel_trocado`, `conversa.time_trocado`) ainda não: nenhum termo pede;
 - saiu da etapa: `evento.etapa_para_id`;
 - mensagem que falhou: `evento.erro`. É o código do canal, nunca o texto, que pode trazer dado do cliente.
 
@@ -420,8 +420,8 @@ ex.14 continua no `pendentes_spec`.
   (`file_content_type` junta image e sticker); a marca dela é `meta.is_sticker`, gravada no recebimento por
   `ConversaCanal::FigurinhaRecebida` (Cloud, 360dialog e Híbrido, com a flag `conversa_cara_do_canal`) e por
   `Waha::RichNative::Inbound::Media` (caixa WAHA, com `whatsapp_rich_native`). Sem a flag, a marca não é gravada e a
-  figurinha conta como foto. Mora em `Autonomia::Automacao::FotoOuPdf`, que a espera pelo próximo documento
-  (G46) reusa. Lê o anexo no instante do evento `mensagem.criada`. Valem os canais que gravam o anexo junto com a mensagem:
+  figurinha conta como foto. Mora em `Autonomia::Automacao::FotoOuPdf`; o valor `conversa.cliente_mandou_documento`
+  do "esperar até" (G46, o laço dos documentos) usa a mesma régua em SQL (`FotoOuPdf.escopo`). Lê o anexo no instante do evento `mensagem.criada`. Valem os canais que gravam o anexo junto com a mensagem:
   WhatsApp Cloud (`Whatsapp::IncomingMessageBaseService`), o conector WAHA/Híbrido e a API e o widget
   (`messages#create` → `Messages::MessageBuilder`). **Limite conhecido:** o e-mail cria a mensagem e só depois anexa os
   arquivos (`MailboxHelper`, `messages.create!` e depois `save!`), então ali o filtro lê `false`. Mudar a ordem do

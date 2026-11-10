@@ -28,16 +28,29 @@ class Autonomia::Automacao::Acesso
     'sem_permissao_funil' if !mexe_no_funil? && (gatilho_de_card? || le_o_card?)
   end
 
-  # O alvo é uma conversa, um card ou um contato (#2499). No card, valem o próprio card e a conversa principal dele, em
-  # que os passos agem: a pergunta vai a cada política, e quem não vê um dos dois pausa a automação em vez de quebrar a
-  # rodada. O contato pergunta à política do contato se pode mudá-lo (update?): o motor age, não só lê. A conta
+  # O motivo para não agir agora neste alvo, ou nil: quem ligou (`motivo`), a chave de funis na filha do "em outro
+  # registro" (G18) que roda num card (ela pode vir de um gatilho de conversa; no gatilho de card, `motivo` já pediu a
+  # mesma chave) e o alcance. A cada ação, no Executor.
+  def motivo_no(alvo, execucao)
+    return motivo if motivo
+    return 'sem_chave_de_funis' if filha_no_card?(alvo, execucao) && !::Autonomia::Automacao::RegraDoFunil.chave?(@account_user)
+
+    'quem_ligou_sem_acesso' unless alcanca?(alvo, execucao)
+  end
+
+  def filha_no_card?(alvo, execucao) = alvo.is_a?(::Crm::Card) && ::Autonomia::Automacao::EmOutroRegistro.da(execucao).present?
+
+  # O alvo é uma conversa, um card ou um contato (#2499). No card, valem o próprio card e a conversa em que os passos
+  # agem (a principal dele, ou a da mãe na filha do "em outro registro", G18: Contexto#conversa, a mesma que os passos
+  # usam): a pergunta vai a cada política, e quem não vê um dos dois pausa a automação em vez de quebrar a rodada. O
+  # contato pergunta à política do contato se pode mudá-lo (update?): o motor age, não só lê. A conta
   # (conta.recorrente, G7) é a da automação: quem ligou já passou pelo `motivo`.
-  def alcanca?(alvo)
+  def alcanca?(alvo, execucao = nil)
     return alvo.id == @account.id if alvo.is_a?(::Account)
     return ContactPolicy.new(contexto, alvo).update? if alvo.is_a?(::Contact)
     return ConversationPolicy.new(contexto, alvo).show? unless alvo.is_a?(::Crm::Card)
 
-    conversa = alvo.primary_conversation
+    conversa = ::Autonomia::Automacao::Contexto.de(alvo, execucao: execucao).conversa
     ::Crm::CardPolicy.new(contexto, alvo).show? && (conversa.nil? || ConversationPolicy.new(contexto, conversa).show?)
   end
 

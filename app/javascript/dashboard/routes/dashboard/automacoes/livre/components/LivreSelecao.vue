@@ -3,16 +3,20 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 
 // #2635 (G7) — a seleção do gatilho recorrente: quais cards ou contatos ele
 // pega. Lista fechada, igual à do servidor. Card: funil, etapa, situação,
 // responsável e "fechado entre N e M dias atrás". Contato: com a etiqueta, sem
 // a etiqueta e um campo personalizado igual a um valor. Condição em branco não
 // vai na receita; sem nenhuma, o servidor não salva (pegaria a conta inteira).
+// G22: contato que pediu card no funil com campo de marcar ainda em branco
+// (`solicitante_de`): o funil, a etapa (opcional) e os campos que contam.
 const props = defineProps({
   modelValue: { type: Object, default: () => ({}) },
   alvo: { type: String, default: '' },
-  // { funis, etapas } (useEscolhasDosGatilhos)
+  // { funis, etapas, etapasPorFunil, camposDeMarcar, solicitanteLigado }
+  // (useEscolhasDosGatilhos)
   escolhas: { type: Object, default: () => ({}) },
   // { pessoa, etiquetaPorNome, atributoDoContato } (useOpcoesDaConta)
   opcoes: { type: Object, default: () => ({}) },
@@ -86,6 +90,35 @@ const mudarAtributo = (parte, valor) => {
     'atributo',
     novo.chave ? { chave: novo.chave, valor: novo.valor || '' } : null
   );
+};
+
+// O "pediu card": sem o funil, não há condição. Trocar o funil tira a etapa,
+// que é de outro funil; os campos marcados ficam.
+const solicitante = computed(() => props.modelValue?.solicitante_de || {});
+const etapasDoFunil = computed(() =>
+  comQualquer(props.escolhas.etapasPorFunil?.[solicitante.value.funil_id])
+);
+const mudarSolicitante = mudanca => {
+  const novo = { ...solicitante.value, ...mudanca };
+  if (!novo.funil_id) {
+    mudar('solicitante_de', null);
+    return;
+  }
+  const { etapa_id: etapa, ...semEtapa } = novo;
+  mudar('solicitante_de', {
+    ...semEtapa,
+    faltando: novo.faltando || [],
+    ...(etapa ? { etapa_id: etapa } : {}),
+  });
+};
+const mudarFunilDoSolicitante = funil =>
+  mudarSolicitante({ funil_id: funil || null, etapa_id: null });
+const marcado = chave => (solicitante.value.faltando || []).includes(chave);
+const marcarFaltando = (chave, sim) => {
+  const outros = (solicitante.value.faltando || []).filter(
+    item => item !== chave
+  );
+  mudarSolicitante({ faltando: sim ? [...outros, chave] : outros });
 };
 </script>
 
@@ -208,6 +241,53 @@ const mudarAtributo = (parte, valor) => {
             @update:model-value="valor => mudarAtributo('valor', valor)"
           />
         </div>
+      </div>
+      <div
+        v-if="escolhas.solicitanteLigado"
+        class="flex flex-col gap-1.5"
+        data-condicao="solicitante_de"
+      >
+        <span class="text-sm text-n-slate-12">
+          {{ $t(`${S}.SOLICITANTE.FUNIL`) }}
+        </span>
+        <p class="mb-0 text-xs text-n-slate-11">
+          {{ $t(`${S}.SOLICITANTE.DICA`) }}
+        </p>
+        <ChoiceSelect
+          :model-value="solicitante.funil_id ?? ''"
+          :aria-label="$t(`${S}.SOLICITANTE.FUNIL`)"
+          :options="comQualquer(escolhas.funis)"
+          @update:model-value="mudarFunilDoSolicitante"
+        />
+        <template v-if="solicitante.funil_id">
+          <span class="text-sm text-n-slate-12">
+            {{ $t(`${S}.SOLICITANTE.ETAPA`) }}
+          </span>
+          <ChoiceSelect
+            :model-value="solicitante.etapa_id ?? ''"
+            :aria-label="$t(`${S}.SOLICITANTE.ETAPA`)"
+            :options="etapasDoFunil"
+            data-solicitante="etapa"
+            @update:model-value="valor => mudarSolicitante({ etapa_id: valor })"
+          />
+          <fieldset class="flex flex-col gap-1" data-solicitante="faltando">
+            <legend class="mb-1 text-sm text-n-slate-12">
+              {{ $t(`${S}.SOLICITANTE.FALTANDO`) }}
+            </legend>
+            <label
+              v-for="campo in escolhas.camposDeMarcar || []"
+              :key="campo.value"
+              class="flex items-center gap-2 min-h-11 text-sm text-n-slate-12 cursor-pointer"
+              :data-campo="campo.value"
+            >
+              <Checkbox
+                :model-value="marcado(campo.value)"
+                @update:model-value="sim => marcarFaltando(campo.value, sim)"
+              />
+              {{ campo.label }}
+            </label>
+          </fieldset>
+        </template>
       </div>
     </template>
   </div>

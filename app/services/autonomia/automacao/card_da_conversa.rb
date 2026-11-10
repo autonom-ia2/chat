@@ -22,10 +22,10 @@ module Autonomia::Automacao::CardDaConversa
   end
 
   # O que o salvar recusa no caminho, pelo lugar em que ele é lido (`onde`: :caminho ou :corpo da ação, :texto; nil é
-  # decidir), no gatilho da receita (`gatilho`: o tipo): a ação que apontaria para o card da conversa. Devolve a chave
-  # da frase, ou nil.
-  def problema(caminho, onde, gatilho)
-    :card_da_conversa_so_le if NA_ACAO.include?(onde) && age?(caminho, onde, ::Autonomia::Automacao::Gatilhos.alvo(gatilho))
+  # decidir), no registro em que a receita roda (`alvo_type`: o do gatilho, ou o do ramo do "em outro registro", G18): a
+  # ação que apontaria para o card da conversa. Devolve a chave da frase, ou nil.
+  def problema(caminho, onde, alvo_type)
+    :card_da_conversa_so_le if NA_ACAO.include?(onde) && age?(caminho, onde, alvo_type)
   end
 
   # Algum `$valor` da receita lê o card? Anda pela receita inteira (gatilho, filtros, condições, textos, caminhos e

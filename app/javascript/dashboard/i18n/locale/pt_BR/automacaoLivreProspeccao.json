@@ -1,0 +1,21 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "PROSPECCAO": {
+      "BUSCAR": "Buscar empresas na Prospecção",
+      "RECUSAR": "Marcar que não quer contato",
+      "RECUSAR_DICA": "A empresa do contato fica marcada na Prospecção como “não quer ser contatada”. O número dela sai das próximas buscas e campanhas. Dá para desfazer no lead.",
+      "SO_RECORRENTE": "Buscar empresas só vale numa automação que roda sozinha, num horário. Com gatilho de conversa ou de card, cada execução faria uma busca paga, então não dá para salvar.",
+      "BUSCA_DICA": "A busca roda de novo com o que você pediu naquela vez: o quê, onde e os filtros. Só as empresas com WhatsApp viram card.",
+      "BUSCA_DICA_OPCAO": "{onde} · {data}",
+      "SEM_LOCAL": "sem local",
+      "BUSCA_SUMIU": "A busca escolhida não está mais no seu histórico da Prospecção. Escolha outra.",
+      "ERRO_BUSCAS": "Não deu para carregar suas buscas da Prospecção. Feche e abra este painel de novo.",
+      "QUANTAS_DICA": "De 1 a {maximo}.",
+      "QUANTAS_FORA": "Escolha um número inteiro de 1 a {maximo}.",
+      "ETIQUETAS_ROTULO": "Etiquetas no contato de cada card novo",
+      "ETIQUETAS_DICA": "Estas etiquetas vão no contato de cada card novo. Use como público de uma campanha.",
+      "FRASE_BUSCAR": "Buscar {quantas} empresas e criar os cards",
+      "FRASE_RECUSAR": "Marcar que a empresa não quer ser contatada"
+    }
+  }
+}

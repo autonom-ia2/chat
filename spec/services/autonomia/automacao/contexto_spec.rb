@@ -39,4 +39,23 @@ RSpec.describe Autonomia::Automacao::Contexto do
     expect(described_class.de(conversa).visivel_para?(de_fora)).to be(false)
     expect(described_class.de(contato).visivel_para?(nil)).to be(false)
   end
+
+  # G43 x G53: depois do envio ao número novo, `conversa` é a do número novo, mas `falhou.*` continua lendo a mensagem
+  # que falhou na conversa do gatilho.
+  it 'a mensagem que falhou continua achada depois do envio ao número novo', :aggregate_failures do
+    falhou = create(:message, conversation: conversa, account: account, inbox: conversa.inbox, message_type: :outgoing,
+                              content: 'Seu boleto vence sexta', status: :failed)
+    nova = create(:conversation, account: account, inbox: conversa.inbox, contact: contato)
+    versao = create(:autonomia_automacao_versao, automacao: create(:autonomia_automacao, account: account))
+    execucao = create(:autonomia_automacao_execucao, versao: versao, alvo: conversa,
+                                                     chave_gatilho: Autonomia::Automacao::MensagemQueFalhou::TIPO,
+                                                     evento: "#{Autonomia::Automacao::MensagemQueFalhou::TIPO}:#{falhou.id}")
+    create(:autonomia_automacao_registro, execucao: execucao, passo: 'retomar',
+                                          dados: { 'numero_novo' => true, 'conversa_aberta' => nova.display_id })
+
+    contexto = described_class.de(conversa, execucao: execucao)
+
+    expect(contexto.conversa).to eq(nova)
+    expect(contexto.mensagem_que_falhou).to eq(falhou)
+  end
 end
