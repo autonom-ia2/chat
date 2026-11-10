@@ -810,8 +810,8 @@
     "controller": "api/v1/accounts/custom_attribute_definitions#destroy",
     "modelo": "CustomAttributeDefinition",
     "origem": [
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:21",
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:50"
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:22",
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:52"
     ],
     "sem_corpo": false
   },
@@ -6583,8 +6583,8 @@
     "modelo": "CustomAttributeDefinition",
     "origem": [
       "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:17",
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:37",
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:50"
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:39",
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:52"
     ],
     "sem_corpo": false
   },
@@ -11369,7 +11369,7 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:97",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:184",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:186",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:139",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:98",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:121"
@@ -11410,7 +11410,7 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:102",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:184",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:186",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:139"
     ],
     "sem_corpo": false
@@ -17539,7 +17539,8 @@
           "date",
           "list",
           "checkbox",
-          "pessoa"
+          "pessoa",
+          "contato"
         ]
       },
       "attribute_key": {
@@ -17576,7 +17577,7 @@
     "modelo": "CustomAttributeDefinition",
     "origem": [
       "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:11",
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:37"
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:39"
     ],
     "sem_corpo": false
   },
@@ -26375,8 +26376,8 @@
     "modelo": "CustomAttributeDefinition",
     "origem": [
       "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:17",
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:37",
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:50"
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:39",
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:52"
     ],
     "sem_corpo": false
   },
