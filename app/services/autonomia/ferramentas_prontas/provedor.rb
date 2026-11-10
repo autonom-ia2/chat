@@ -43,6 +43,12 @@ class Autonomia::FerramentasProntas::Provedor
     def validade
       const_defined?(:VALIDADE, false) ? self::VALIDADE : nil
     end
+
+    # Cabeçalhos próprios do provedor (a chave gratuita da parallelum). Só vão ao host dele: o redirecionamento para
+    # outra origem é recusado antes de sair (`ClienteHttp`).
+    def cabecalhos
+      {}
+    end
   end
 
   def initialize(cliente, prazo:)
@@ -53,11 +59,11 @@ class Autonomia::FerramentasProntas::Provedor
   private
 
   def get(caminho, max_bytes: Autonomia::FerramentasProntas::ClienteHttp::MAX_BYTES)
-    @cliente.get_json(self.class.host, caminho, prazo: @prazo, max_bytes: max_bytes)
+    @cliente.get_json(self.class.host, caminho, prazo: @prazo, max_bytes: max_bytes, cabecalhos: self.class.cabecalhos)
   end
 
   def get_csv(caminho)
-    @cliente.get_csv(self.class.host, caminho, prazo: @prazo)
+    @cliente.get_csv(self.class.host, caminho, prazo: @prazo, cabecalhos: self.class.cabecalhos)
   end
 
   # O parâmetro de texto que vai na URL, codificado (o resto do caminho é dígito ou opção da lista).

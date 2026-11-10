@@ -33,11 +33,16 @@ module Autonomia::FerramentasProntas::TetoDoProvedor
     'date.nager.at' => [[30, MINUTO]]
   }.freeze
   PADRAO = [[120, MINUTO]].freeze
+  # Com a chave gratuita da parallelum no ambiente, o termo sobe para 1.000 por dia.
+  PARALLELUM_COM_CHAVE = [[900, DIA]].freeze
 
   module_function
 
   def tetos(host)
-    TETOS.fetch(host.to_s.downcase, PADRAO)
+    host = host.to_s.downcase
+    return PARALLELUM_COM_CHAVE if host == 'parallelum.com.br' && Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum.chave
+
+    TETOS.fetch(host, PADRAO)
   end
 
   def fatia(pedidos)

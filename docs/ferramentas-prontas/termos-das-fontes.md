@@ -50,7 +50,9 @@ Limitações conhecidas, aceitas:
 - **FIPE (motivo técnico do provedor).** A fatia de 112 pedidos por dia na parallelum fica abaixo do limite diário da
   FIPE (500 por conta). Cada preço por marca e modelo gasta de 2 a 4 pedidos lá; marcas e preço pelo código vão
   primeiro à BrasilAPI, e o cache de 1 dia evita repetir. Uma conta muito ativa pode ouvir "não consegui" antes do
-  limite. A saída é a chave gratuita da parallelum (1.000 por dia), decisão em aberto.
+  limite. A saída é a chave gratuita da parallelum (1.000 por dia): o código lê da variável de ambiente opcional
+  `AUTONOMIA_PRONTAS_FIPE_TOKEN` e funciona sem ela. Com a chave, o teto global da parallelum sobe para 900 por dia
+  (fatia de 225 por conta). Criar a conta no serviço é decisão do Rodrigo.
 - **Localização (motivo técnico do provedor).** O Photon pede uso justo: a fatia de cada conta é 15 pedidos por minuto,
   e acima disso a reserva (a sede mais próxima, sem rede) responde. O limite diário segue 500.
 - **Janela fixa.** Na virada da janela (por exemplo, à meia-noite UTC no teto diário), saem até duas janelas de

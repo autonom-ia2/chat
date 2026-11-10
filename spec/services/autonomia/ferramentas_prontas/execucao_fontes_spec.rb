@@ -231,6 +231,21 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(Autonomia::FerramentasProntas::Uso.sole).to have_attributes(pela_reserva: 1, motivos: { 'brasilapi.erro_da_fonte' => 1 })
     end
 
+    it 'com a chave gratuita no ambiente, a parallelum recebe o cabecalho; sem ela, nada vai' do
+      anos = 'https://parallelum.com.br/fipe/api/v2/cars/brands/23/models/8949/years'
+      fonte_responde(anos, [{ code: '2020-5', name: '2020 Flex' }])
+      fonte_responde("#{anos}/2020-5", da_parallelum)
+      pedido = { 'consulta' => 'preco', 'tipo' => 'carros', 'marca' => '23', 'modelo' => '8949', 'ano' => 2020 }
+      com_chave = ->(req) { req.headers.key?('X-Subscription-Token') }
+
+      with_modified_env(AUTONOMIA_PRONTAS_FIPE_TOKEN: '') { executar_pronta(ferramenta, pedido) }
+      expect(a_request(:get, anos).with(&com_chave)).not_to have_been_made
+
+      with_modified_env(AUTONOMIA_PRONTAS_FIPE_TOKEN: 'chave-de-teste') { executar_pronta(ferramenta, pedido) }
+      expect(a_request(:get, anos).with(headers: { 'X-Subscription-Token' => 'chave-de-teste' })).to have_been_made.once
+      expect(a_request(:get, "#{anos}/2020-5").with(headers: { 'X-Subscription-Token' => 'chave-de-teste' })).to have_been_made.once
+    end
+
     it 'por marca e modelo vai direto a parallelum, que e a unica que atende' do
       fonte_responde('https://parallelum.com.br/fipe/api/v2/cars/brands/23/models/8949/years', [{ code: '2020-5', name: '2020 Flex' }])
       fonte_responde('https://parallelum.com.br/fipe/api/v2/cars/brands/23/models/8949/years/2020-5', da_parallelum)

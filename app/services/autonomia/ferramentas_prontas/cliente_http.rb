@@ -70,15 +70,17 @@ class Autonomia::FerramentasProntas::ClienteHttp
 
   # -> o JSON lido. `caminho` começa com "/" e é montado só com valores normalizados (`Parametro`). `max_bytes`: o teto
   # da resposta, quando a fonte oficial só entrega a lista inteira (os municípios de MG no IBGE passam de 256 KB).
-  def get_json(host, caminho, prazo:, max_bytes: MAX_BYTES)
-    JSON.parse(buscar(host, caminho, prazo: prazo, max_bytes: max_bytes, tipos: TIPOS))
+  # `cabecalhos`: os próprios do provedor (`Provedor.cabecalhos`), por baixo dos fixos daqui.
+  def get_json(host, caminho, prazo:, max_bytes: MAX_BYTES, cabecalhos: {})
+    JSON.parse(buscar(host, caminho, prazo: prazo, max_bytes: max_bytes, aceita: { tipos: TIPOS, cabecalhos: cabecalhos }))
   rescue JSON::ParserError, EncodingError => e
     raise traduzir(e)
   end
 
   # -> as linhas do CSV (com cabeçalho), em UTF-8.
-  def get_csv(host, caminho, prazo:, max_bytes: MAX_BYTES)
-    texto = buscar(host, caminho, prazo: prazo, max_bytes: max_bytes, tipos: TIPOS_CSV).force_encoding(Encoding::UTF_8)
+  def get_csv(host, caminho, prazo:, max_bytes: MAX_BYTES, cabecalhos: {})
+    texto = buscar(host, caminho, prazo: prazo, max_bytes: max_bytes, aceita: { tipos: TIPOS_CSV, cabecalhos: cabecalhos })
+            .force_encoding(Encoding::UTF_8)
     raise Falha, 'resposta_invalida' unless texto.valid_encoding?
 
     CSV.parse(texto.delete_prefix(BOM), headers: true)
@@ -88,12 +90,13 @@ class Autonomia::FerramentasProntas::ClienteHttp
 
   private
 
-  def buscar(host, caminho, prazo:, max_bytes:, tipos:)
+  # `aceita`: os tipos de resposta aceitos (`tipos`) e os cabeçalhos do provedor (`cabecalhos`).
+  def buscar(host, caminho, prazo:, max_bytes:, aceita:)
     url = endereco(host, caminho)
     segundos = prazo_da_chamada(prazo)
     liberar!(host)
     @chamadas += 1
-    SafeFetch.fetch(url, **opcoes(segundos, max_bytes, tipos)) { |resultado| return abrir(resultado.tempfile.read, max_bytes) }
+    SafeFetch.fetch(url, **opcoes(segundos, max_bytes, aceita)) { |resultado| return abrir(resultado.tempfile.read, max_bytes) }
   rescue SafeFetch::Error => e
     raise traduzir(e)
   rescue *TRANSPORTE
@@ -137,9 +140,10 @@ class Autonomia::FerramentasProntas::ClienteHttp
     [prazo, restante].min
   end
 
-  def opcoes(segundos, max_bytes, tipos)
+  def opcoes(segundos, max_bytes, aceita)
+    tipos = aceita.fetch(:tipos)
     {
-      method: :get, headers: CABECALHOS.merge('Accept' => tipos.first), max_bytes: max_bytes,
+      method: :get, headers: aceita.fetch(:cabecalhos).merge(CABECALHOS, 'Accept' => tipos.first), max_bytes: max_bytes,
       open_timeout: [ABERTURA, segundos].min, read_timeout: segundos, total_timeout: segundos,
       max_redirects: MAX_REDIRECTS, cross_origin_redirects: false, allowed_ports: [PORTA], schemes: %w[https],
       allowed_content_types: tipos, allowed_content_type_prefixes: [], validate_content_type: true
