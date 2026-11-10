@@ -225,7 +225,7 @@ RSpec.describe 'Automação livre: o card da conversa e o anexo da mensagem', :a
       create(:custom_attribute_definition, account: account, attribute_key: 'indicado_por', attribute_display_name: 'Indicado por',
                                            attribute_model: 'card_attribute', attribute_display_type: 'contato')
       aberto = { 'campo' => { '$valor' => 'origem.card.status' }, 'op' => 'igual', 'valor' => 'open' }
-      se_aberto = { 'id' => 's1', 'tipo' => 'se', 'condicao' => aberto, 'entao' => [], 'senao' => [] }
+      se_aberto = { 'id' => 's1', 'tipo' => 'se', 'condicao' => aberto, 'entao' => [esperar_passo('p2')], 'senao' => [] }
       ancora = { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'card.atributos.indicado_por' }, 'usar' => 'contato' }
       ramo = ->(id, registro, passos) { { 'id' => id, 'tipo' => 'em_outro_registro', 'registro' => registro, 'passos' => passos } }
       pela_ancora = automacao_ligada(account, agente, [ramo.call('o1', ancora, [esperar_passo('p1')])], gatilho: { 'tipo' => 'mensagem.criada' })

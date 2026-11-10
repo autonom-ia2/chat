@@ -423,7 +423,7 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       end
       ancora = { de: 'contato_do_campo', campo: { '$valor' => 'card.atributos.indicado_por' }, usar: 'contato' }
       se_aberto = { id: 's1', tipo: 'se', condicao: { campo: { '$valor' => 'origem.card.status' }, op: 'igual', valor: 'open' },
-                    entao: [], senao: [] }
+                    entao: [receita[:passos].first], senao: [] }
       no_contato = { de: 'contato_do_campo', campo: { '$valor' => 'contato.atributos.x' }, usar: 'contato' }
       receitas = [ramo.call(ancora, [receita[:passos].first]), ramo.call(no_contato, [se_aberto])]
                  .map { |passos| { gatilho: { tipo: 'conversa.criada' }, passos: passos } }
