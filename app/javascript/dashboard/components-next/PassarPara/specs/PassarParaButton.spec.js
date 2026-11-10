@@ -7,6 +7,7 @@ import enCrm from 'dashboard/i18n/locale/en/crm.json';
 // a recusa vira linguagem simples pelo código.
 const api = vi.hoisted(() => ({ quemPodeReceber: vi.fn(), passar: vi.fn() }));
 vi.mock('dashboard/api/passarPara', () => ({ default: api }));
+const setCurrentChatAssignee = vi.hoisted(() => vi.fn());
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/components-next/dialog/Dialog.vue', () => ({
   default: {
@@ -60,7 +61,7 @@ const montar = (
       'accounts/getAccount': () => () => ({ autonomia_agents_fase2: fase2 }),
     },
     actions: {
-      setCurrentChatAssignee: vi.fn(),
+      setCurrentChatAssignee,
     },
   });
   const i18n = createI18n({
@@ -314,5 +315,84 @@ describe('PassarParaButton', () => {
     // Assert
     expect(pessoas).toHaveLength(2);
     expect(wrapper.find('[data-falhou-ao-ler]').exists()).toBe(true);
+  });
+
+  // #2882: o robô de outro sistema ligado à caixa entra na lista da IA, e escolhê-lo devolve a conversa a ele.
+  describe('robô da caixa', () => {
+    const NINA = { id: 6, name: 'Nina', com_a_conversa: false };
+
+    it('aparece na lista da IA, mesmo sem agente de IA nosso', async () => {
+      // Arrange
+      api.quemPodeReceber.mockResolvedValue({
+        data: retrato({ agentes: [], robos: [NINA] }),
+      });
+      const wrapper = montar();
+
+      // Act
+      await wrapper.find('[data-passar-para]').trigger('click');
+      await flushPromises();
+
+      // Assert
+      const opcoes = wrapper.findAll('[data-opcao-ia]');
+      expect(opcoes).toHaveLength(1);
+      expect(opcoes[0].text()).toContain('Nina');
+      expect(opcoes[0].text()).toContain('External agent');
+    });
+
+    it('passa com tipo "robo" e põe o robô na conversa sem reler o servidor', async () => {
+      // Arrange
+      api.quemPodeReceber.mockResolvedValue({
+        data: retrato({ agentes: [], robos: [NINA] }),
+      });
+      api.passar.mockResolvedValue({
+        data: retrato({
+          agentes: [],
+          robos: [{ ...NINA, com_a_conversa: true }],
+        }),
+      });
+      const wrapper = montar();
+      await wrapper.find('[data-passar-para]').trigger('click');
+      await flushPromises();
+
+      // Act
+      await wrapper.find('[data-opcao-ia] input').setValue(true);
+      expect(wrapper.find('[data-confirmacao]').text()).toBe(
+        'Nina takes over the conversation and you leave it.'
+      );
+      await wrapper.find('[data-confirmar]').trigger('click');
+      await flushPromises();
+
+      // Assert
+      expect(api.passar).toHaveBeenCalledWith(31, { tipo: 'robo', id: 6 });
+      expect(setCurrentChatAssignee).toHaveBeenCalledWith(expect.anything(), {
+        conversationId: 31,
+        assignee: { id: 6, name: 'Nina' },
+        assigneeType: 'AgentBot',
+      });
+      expect(api.quemPodeReceber).toHaveBeenCalledTimes(1);
+    });
+
+    it('robô que saiu da caixa: a frase da recusa com o nome dele', async () => {
+      // Arrange
+      api.quemPodeReceber.mockResolvedValue({
+        data: retrato({ agentes: [], robos: [NINA] }),
+      });
+      api.passar.mockRejectedValue({
+        response: { data: { codigo: 'robo_fora_da_caixa' } },
+      });
+      const wrapper = montar();
+      await wrapper.find('[data-passar-para]').trigger('click');
+      await flushPromises();
+
+      // Act
+      await wrapper.find('[data-opcao-ia] input').setValue(true);
+      await wrapper.find('[data-confirmar]').trigger('click');
+      await flushPromises();
+
+      // Assert
+      expect(wrapper.find('[data-recusa]').text()).toBe(
+        'Nina is no longer connected to this inbox. Choose someone else.'
+      );
+    });
   });
 });

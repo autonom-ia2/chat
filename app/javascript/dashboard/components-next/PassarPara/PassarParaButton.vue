@@ -4,6 +4,8 @@
 // servidor aparece em linguagem simples. Só nas contas com a Fase 2 dos Agentes ligada (o piloto).
 // Com um agente de IA na conversa, o selo diz com quem ela está e quem passou (a origem, do registro de passagens do
 // CRM), e o topo da lista oferece "Devolver para …". O servidor só é consultado quando a pessoa abre o botão.
+// #2882 — o robô de outro sistema ligado à caixa (n8n…) entra na mesma lista dos agentes de IA: para quem atende, ele é
+// a IA da caixa, e escolhê-lo devolve a conversa a ele.
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'vuex';
@@ -23,6 +25,7 @@ const store = useStore();
 const fase2 = useFase2();
 const P = 'CRM_KANBAN.PASSAR_PARA';
 const PREFIXO_IA = 'ia:';
+const PREFIXO_ROBO = 'robo:';
 const DEVOLVER = 'devolver';
 // Códigos que o servidor devolve e a tela explica (Crm::PassarPara e Autonomia::Agents::PassarParaIa).
 const RECUSAS = [
@@ -34,12 +37,13 @@ const RECUSAS = [
   'pessoa_atribuida',
   'pessoa_fora_da_caixa',
   'destino_invalido',
+  'robo_fora_da_caixa',
 ];
 
 const dialogRef = ref(null);
 const carregando = ref(false);
 const passando = ref(false);
-// O que o servidor diz da conversa: { fase2, sem_robo, pessoas, agentes, com_ia, origem }.
+// O que o servidor diz da conversa: { fase2, sem_robo, pessoas, agentes, robos, com_ia, origem }.
 const retrato = ref(null);
 const escolhido = ref('');
 const recusa = ref('');
@@ -122,15 +126,17 @@ const pessoas = computed(() =>
       voce: pessoa.id === eu.value?.id,
     }))
 );
-const daIa = computed(() =>
-  (retrato.value?.agentes || []).map(agente => ({
-    valor: `${PREFIXO_IA}${agente.id}`,
-    id: agente.id,
-    tipo: 'ia',
-    nome: agente.name,
-    comEla: agente.com_a_conversa,
-  }))
-);
+const destinoDeIa = (prefixo, tipo) => item => ({
+  valor: `${prefixo}${item.id}`,
+  id: item.id,
+  tipo,
+  nome: item.name,
+  comEla: item.com_a_conversa,
+});
+const daIa = computed(() => [
+  ...(retrato.value?.agentes || []).map(destinoDeIa(PREFIXO_IA, 'ia')),
+  ...(retrato.value?.robos || []).map(destinoDeIa(PREFIXO_ROBO, 'robo')),
+]);
 const todos = computed(() => [
   ...(devolver.value ? [devolver.value] : []),
   ...pessoas.value,
@@ -180,10 +186,16 @@ const textoDaRecusa = codigo => {
   });
 };
 
-// Quem assumiu entra na conversa da lista na hora: a pessoa, ou o robô do agente de IA (o cabeçalho e o selo mudam
-// sem esperar o aviso do servidor).
-const atualizarConversa = (conversationId, data) => {
-  if (data.assignee) {
+// Quem assumiu entra na conversa da lista na hora: a pessoa, o robô do agente de IA ou o robô de outro sistema (o
+// cabeçalho e o selo mudam sem esperar o aviso do servidor).
+const atualizarConversa = (conversationId, data, destino) => {
+  if (destino.tipo === 'robo') {
+    store.dispatch('setCurrentChatAssignee', {
+      conversationId,
+      assignee: { id: destino.id, name: destino.nome },
+      assigneeType: 'AgentBot',
+    });
+  } else if (data.assignee) {
     store.dispatch('setCurrentChatAssignee', {
       conversationId,
       assignee: data.assignee,
@@ -208,11 +220,11 @@ const confirmar = async () => {
       tipo: destino.devolver ? 'pessoa' : destino.tipo,
       id: destino.id,
     });
-    atualizarConversa(pedido, data);
+    atualizarConversa(pedido, data, destino);
     if (pedido !== conversaId.value) return;
     retrato.value = data;
     // Passou para a IA mas o servidor ainda não mostra com quem está: lê de novo.
-    if (!data.assignee && !data.com_ia) lerRetrato();
+    if (destino.tipo === 'ia' && !data.com_ia) lerRetrato();
     dialogRef.value?.close();
     useAlert(t(`${P}.PRONTO`, { nome: destino.nome }));
   } catch (erro) {
@@ -445,7 +457,11 @@ const confirmar = async () => {
                 <span
                   class="rounded-md bg-n-iris-3 px-1.5 py-0.5 text-xs font-medium text-n-iris-11"
                 >
-                  {{ t('CRM_CAIXAS.PESSOAS.SELO_IA') }}
+                  {{
+                    item.tipo === 'robo'
+                      ? t(`${P}.SELO_EXTERNO`)
+                      : t('CRM_CAIXAS.PESSOAS.SELO_IA')
+                  }}
                 </span>
               </span>
               <span v-if="item.comEla" class="text-xs text-n-slate-11">
@@ -477,7 +493,9 @@ const confirmar = async () => {
             <span
               class="mt-1 size-4 shrink-0 text-n-slate-11"
               :class="
-                escolha.tipo === 'ia' ? 'i-lucide-bot' : 'i-lucide-user-round'
+                escolha.tipo === 'pessoa' || escolha.devolver
+                  ? 'i-lucide-user-round'
+                  : 'i-lucide-bot'
               "
               aria-hidden="true"
             />

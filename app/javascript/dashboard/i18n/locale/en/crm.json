@@ -4528,6 +4528,7 @@
       "CARREGANDO": "Loading who can receive…",
       "PESSOAS": "People in this inbox",
       "AGENTES": "AI agents in this inbox",
+      "SELO_EXTERNO": "External agent",
       "VOCE": "{nome} (you)",
       "COM_A_CONVERSA": "Has the conversation",
       "NINGUEM": "There is no one else in this inbox to receive right now.",
@@ -4548,6 +4549,7 @@
         "PESSOA_ATRIBUIDA": "Someone on the team already has this conversation. Open the list again.",
         "PESSOA_FORA_DA_CAIXA": "{nome} is not in this inbox anymore. Choose someone else.",
         "DESTINO_INVALIDO": "This option is no longer available. Close and open the list again.",
+        "ROBO_FORA_DA_CAIXA": "{nome} is no longer connected to this inbox. Choose someone else.",
         "ERRO": "Could not pass it right now. Try again."
       },
       "COM_IA_POR": "With {nome} · passed by {por}",
