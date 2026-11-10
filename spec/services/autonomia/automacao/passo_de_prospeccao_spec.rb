@@ -58,12 +58,21 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
     comecar(automacao_ligada(account, dona, passos), conversa)
   end
 
-  # Função com a Prospecção e o criar card, sem contact_manage: na tela, não põe etiqueta no contato.
-  def agente_sem_contato
+  def agente_com(permissoes)
     agente = create(:user, account: account, role: :agent)
-    funcao = create(:custom_role, account: account, permissions: %w[automation_manage prospecting_manage crm_view crm_manage_cards])
+    funcao = create(:custom_role, account: account, permissions: permissoes)
     account.account_users.find_by(user: agente).update!(custom_role: funcao)
     agente
+  end
+
+  # Função com a Prospecção, o criar card e a chave de funis, sem contact_manage: na tela, não põe etiqueta no contato.
+  def agente_sem_contato
+    agente_com(%w[automation_manage prospecting_manage crm_view crm_manage_cards crm_manage_pipelines])
+  end
+
+  # Função com tudo o que a Prospecção pede, menos a chave de funis (RegraDoFunil.chave?, parecer da Funções no #2859).
+  def agente_sem_funis
+    agente_com(%w[automation_manage prospecting_manage crm_view crm_manage_cards contact_manage])
   end
 
   def rodar(execucao, passo = buscar, por: dona)
@@ -101,6 +110,13 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
       Autonomia::Prospecting::Config.disable_for!(account)
 
       expect(problemas(recusar)).to eq([I18n.t('autonomia.automacao.receita.prospeccao_desligada', passo: 'r1')])
+    end
+
+    it 'recusa quem não tem a chave de funis, no recusar e no buscar', :aggregate_failures do
+      agente = agente_sem_funis
+
+      expect(problemas(recusar, quem: agente)).to eq([I18n.t('autonomia.automacao.receita.prospeccao_sem_permissao', passo: 'r1')])
+      expect(problemas(buscar, gatilho: conta_recorrente, quem: agente)).to include(frase(:prospeccao_sem_permissao))
     end
 
     it 'recusa quem não tem a chave da Prospecção' do
@@ -347,6 +363,17 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
       expect(buscas_da(execucao)).to be_empty
     end
 
+    it 'quem ligou sem a chave de funis pausa antes de buscar, com o motivo dos outros passos de funil', :aggregate_failures do
+      origem
+      agente = agente_sem_funis
+      execucao = execucao_da_conta(por: agente)
+
+      resultado = rodar(execucao, por: agente)
+
+      expect([resultado.tipo, resultado.motivo]).to eq([:sem_acesso, 'sem_chave_de_funis'])
+      expect(buscas_da(execucao)).to be_empty
+    end
+
     it 'quem ligou sem a chave da Prospecção pausa a automação' do
       agente = create(:user, account: account, role: :agent)
       execucao = execucao_da_conta(por: agente)
@@ -370,6 +397,19 @@ RSpec.describe Autonomia::Automacao::PassoDeProspeccao, :automacao_motor do
       expect(lead.reload.consent_refused_at).to be_present
       expect(lead.consent_refused_by).to eq(dona)
       expect(contato.reload).to be_opted_out
+    end
+
+    it 'quem ligou sem a chave de funis pausa sem recusar o lead', :aggregate_failures do
+      lead = conferir(origem, verificados: []).first
+      lead.update!(contact: contato)
+      agente = agente_sem_funis
+      execucao = execucao_na_conversa
+      execucao.automacao.update!(ligada_por: agente)
+
+      resultado = rodar(execucao, recusar, por: agente)
+
+      expect([resultado.tipo, resultado.motivo]).to eq([:sem_acesso, 'sem_chave_de_funis'])
+      expect(lead.reload.consent_refused_at).to be_nil
     end
 
     it 'contato que não veio da Prospecção pula, com o motivo' do

@@ -9,8 +9,9 @@
 class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::BaseController
   DEFINICAO = ::Autonomia::Automacao::Definicao
   FLAG = 'automacao_editor'.freeze
-  # Passos nativos de funil: o retorno (G3), que cria pelo crm/follow_ups, o "criar card" (G4) e o "para cada item" (G24).
-  PASSOS_DE_FUNIL = %w[retorno card para_cada].freeze
+  # Passos nativos de funil: o retorno (G3), que cria pelo crm/follow_ups, o "criar card" (G4), o "para cada item" (G24)
+  # e a prospecção (G21), que cria card ao buscar.
+  PASSOS_DE_FUNIL = %w[retorno card para_cada prospeccao].freeze
 
   wrap_parameters false
 

@@ -86,6 +86,8 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
     end
 
     it 'sem passo depois, a execução termina e a conversa volta para a pessoa (cobertura_encerrada)', :aggregate_failures do
+      # A volta confere que a pessoa ainda vê a conversa (#2859): a pessoa é da caixa, como quem atendia.
+      create(:inbox_member, user: pessoa, inbox: conversation.inbox)
       conversation.update!(assignee: pessoa)
 
       execucao = rodar

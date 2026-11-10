@@ -207,6 +207,71 @@ RSpec.describe Autonomia::Automacao::Cobertura do
     end
   end
 
+  # Parecer da Funções (#2859): a conversa só volta para quem ainda a vê (Acesso.alcanca?, a pergunta do passo "conversa
+  # ao responsável"). Sem acesso, fica com a agente de IA, e a cobertura termina com pessoa_sem_acesso.
+  describe 'a pessoa tirada não vê mais a conversa' do
+    def sem_acesso = registros(described_class::SEM_ACESSO)
+
+    def registro_sem_acesso(para) = [execucao.id, 'ok', { 'para' => para, 'pessoa_id' => renata.id, 'conversa_id' => conversa.id }]
+
+    def expect_com_a_ia(para)
+      expect(conversa.reload).to have_attributes(assignee_id: nil, ai_assignee: robo)
+      expect(sem_acesso.pluck(:execucao_id, :resultado, :dados)).to eq([registro_sem_acesso(para)])
+      expect(voltas + encerradas).to be_empty
+      expect(described_class.vigente(conversa)).to be_nil
+    end
+
+    it 'saiu da caixa e a execução fechou: a conversa fica com a IA, uma vez só', :aggregate_failures do
+      cobrir
+      InboxMember.find_by(user: renata, inbox: conversa.inbox).destroy!
+      execucao.update!(estado: 'concluida')
+
+      2.times { described_class.encerrar([execucao.id]) }
+
+      expect_com_a_ia(described_class::ENCERRADA)
+    end
+
+    it 'saiu da caixa e a automação foi desligada: a conversa fica com a IA', :aggregate_failures do
+      cobrir
+      InboxMember.find_by(user: renata, inbox: conversa.inbox).destroy!
+
+      execucao.automacao.desligar!
+
+      expect_com_a_ia(described_class::ENCERRADA)
+    end
+
+    it 'saiu da conta e o Motor saiu: a varredura deixa a conversa com a IA, uma vez só', :aggregate_failures do
+      cobrir
+      AccountUser.find_by(account: account, user: renata).destroy!
+      account.disable_features!(Autonomia::Automacao::Motor::FLAG)
+
+      2.times { Autonomia::Automacao::VarreduraJob.perform_now }
+
+      expect_com_a_ia(described_class::ENCERRADA)
+    end
+
+    it 'a mensagem dela, já sem a caixa, também não devolve a conversa', :aggregate_failures do
+      cobrir
+      escrita = mensagem
+      InboxMember.find_by(user: renata, inbox: conversa.inbox).destroy!
+
+      described_class.pessoa_escreveu(escrita)
+
+      expect_com_a_ia(described_class::VOLTOU)
+    end
+
+    it 'administradora vê toda conversa: a conversa volta para ela mesmo sem a caixa', :aggregate_failures do
+      cobrir
+      InboxMember.find_by(user: renata, inbox: conversa.inbox).destroy!
+      AccountUser.find_by(account: account, user: renata).update!(role: :administrator)
+
+      described_class.encerrar([execucao.id])
+
+      expect(conversa.reload.assignee_id).to eq(renata.id)
+      expect(sem_acesso).to be_empty
+    end
+  end
+
   describe 'a volta, sob a trava' do
     it 'trava a conversa e devolve uma vez só, mesmo chamada duas vezes com a cobertura já lida', :aggregate_failures do
       cobertura = cobrir

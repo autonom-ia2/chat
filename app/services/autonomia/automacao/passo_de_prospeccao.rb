@@ -11,7 +11,9 @@
 # Age como quem ligou, conferido a cada rodada, com a régua das telas da Prospecção: o módulo ligado na conta e a chave
 # dele (prospecting_manage); para buscar, também criar card (Crm::CardPolicy#create?), como o "Enviar ao CRM" da tela, e,
 # com etiquetas, mudar contato (ContactPolicy#update?, contact_manage na função), como pôr etiqueta na tela do contato.
-# Sem a chave, a automação pausa (`sem_acesso`), como nos outros passos. O lead segue o que quem ligou enxerga
+# Sem a chave, a automação pausa (`sem_acesso`), como nos outros passos. Por ser passo de funil (cria card, e o
+# controller o põe em PASSOS_DE_FUNIL), pede também a chave de funis (RegraDoFunil.chave?), de quem salva e de quem
+# ligou, como o "criar card" e o "para cada item": sem ela, pausa com `sem_chave_de_funis`. O lead segue o que quem ligou enxerga
 # (Visibility): o agente só alcança as buscas e os leads dele. O funil é o do envio da tela (CrmCardBatch: só funil que
 # quem ligou vê, com CardPolicy#create? como o Prospecting::BaseController#authorize_crm_card_create!).
 #
@@ -64,7 +66,7 @@ class Autonomia::Automacao::PassoDeProspeccao
   end
 
   def self.pode?(account_user, passo)
-    return false unless account_user&.permission_granted?(CHAVE)
+    return false unless account_user&.permission_granted?(CHAVE) && ::Autonomia::Automacao::RegraDoFunil.chave?(account_user)
     return true unless passo['faz'] == 'buscar'
 
     ::Autonomia::Automacao::PassoDeCard.cria_card?(account_user) && (Array(passo['etiquetas']).empty? || muda_contato?(account_user))
@@ -88,6 +90,8 @@ class Autonomia::Automacao::PassoDeProspeccao
 
   def executar
     return pulado('prospeccao_desligada') unless ::Autonomia::Prospecting::Config.enabled?(@conta)
+    return Resultado.new(tipo: :sem_acesso, motivo: 'sem_chave_de_funis', dados: {}) unless
+      ::Autonomia::Automacao::RegraDoFunil.chave?(@acesso.account_user)
 
     return Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_permissao_prospeccao', dados: {}) unless
       self.class.pode?(@acesso.account_user, @passo)

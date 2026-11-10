@@ -19,12 +19,17 @@
 #
 # A volta trava a conversa e confere de novo, dentro da trava, que a cobertura ainda vale: duas mensagens ou a mensagem
 # e o fim da execução ao mesmo tempo devolvem uma vez só. Se a volta falhar, a execução ganha um registro `falhou`.
+#
+# Também dentro da trava, a pessoa tirada ainda precisa ver a conversa (Acesso.alcanca?, a mesma pergunta do passo
+# "conversa ao responsável"): saiu da caixa ou da conta, a conversa não volta para ela. Fica com a agente de IA, que
+# segue respondendo, e a cobertura termina com `pessoa_sem_acesso` no histórico.
 module Autonomia::Automacao::Cobertura
   COMECOU = 'cobrindo_pessoa'.freeze
   VOLTOU = 'pessoa_voltou'.freeze
   ENCERRADA = 'cobertura_encerrada'.freeze
+  SEM_ACESSO = 'pessoa_sem_acesso'.freeze
   NAO_DEVOLVEU = 'devolver_falhou'.freeze
-  FIM = [VOLTOU, ENCERRADA].freeze
+  FIM = [VOLTOU, ENCERRADA, SEM_ACESSO].freeze
 
   module_function
 
@@ -104,11 +109,12 @@ module Autonomia::Automacao::Cobertura
   end
 
   # Sob a trava da conversa, confere de novo: a cobertura não terminou e a conversa segue com a IA, sem pessoa no nome.
-  # Se outra pessoa ficou com ela, nada muda.
+  # Se outra pessoa ficou com ela, nada muda. Se a pessoa tirada não vê mais a conversa, ela fica com a IA.
   def devolver(cobertura, conversa, motivo)
     pessoa_id = cobertura.dados['tirada_de']
     conversa.with_lock do
-      next if terminou?(cobertura) || conversa.assignee_id.present? || conversa.assignee_agent_bot_id.nil?
+      next unless ainda_com_a_ia?(cobertura, conversa)
+      next fica_com_a_ia(cobertura, conversa, motivo) unless ve_a_conversa?(pessoa_id, conversa)
 
       ::Autonomia::Automacao::Ato.da(cobertura.automacao_id) do
         ::Conversations::AssignmentService.new(conversation: conversa, assignee_id: pessoa_id).perform
@@ -118,6 +124,20 @@ module Autonomia::Automacao::Cobertura
   rescue StandardError => e
     Rails.logger.error("[automacao][cobertura] não devolveu conversa=#{conversa.id} motivo=#{motivo} #{e.class} em #{e.backtrace&.first}")
     registrar(cobertura, 'falhou', NAO_DEVOLVEU, 'para' => motivo, 'erro' => e.class.name, 'conversa_id' => conversa.id)
+  end
+
+  def ainda_com_a_ia?(cobertura, conversa)
+    !terminou?(cobertura) && conversa.assignee_id.nil? && conversa.assignee_agent_bot_id.present?
+  end
+
+  # A pessoa tirada não vê mais a conversa: ela fica com a IA, e a cobertura termina (SEM_ACESSO está em FIM).
+  def fica_com_a_ia(cobertura, conversa, motivo)
+    registrar(cobertura, 'ok', SEM_ACESSO, 'para' => motivo, 'pessoa_id' => cobertura.dados['tirada_de'], 'conversa_id' => conversa.id)
+  end
+
+  def ve_a_conversa?(pessoa_id, conversa)
+    pessoa = User.find_by(id: pessoa_id)
+    pessoa.present? && ::Autonomia::Automacao::Acesso.alcanca?(pessoa, conversa)
   end
 
   def registrar(cobertura, resultado, motivo, dados)

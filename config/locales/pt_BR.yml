@@ -1035,6 +1035,7 @@ pt_BR:
         cobrindo_pessoa: 'A agente de IA ficou com a conversa no lugar da pessoa, até ela escrever.'
         cobertura_encerrada: 'A automação terminou, e a conversa voltou para a pessoa que a agente de IA cobria.'
         devolver_falhou: 'Não deu para devolver a conversa à pessoa que a agente de IA cobria.'
+        pessoa_sem_acesso: 'A pessoa que a agente de IA cobria não vê mais esta conversa, e a conversa não voltou para ela. A agente de IA segue respondendo.'
         teto_a_cada: 'Os passos de cada mensagem do cliente já rodaram 200 vezes nesta execução. Daqui em diante a espera segue só pela condição.'
         quem_ligou_saiu_da_conta: 'Quem ligou a automação saiu da conta. Assuma e religue.'
         quem_ligou_sem_acesso: 'Quem ligou a automação não tem mais acesso aqui. Assuma e religue.'

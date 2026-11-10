@@ -542,6 +542,7 @@ en:
         cobrindo_pessoa: 'The AI agent took the conversation in place of the person, until they write.'
         cobertura_encerrada: 'The automation ended, and the conversation went back to the person the AI agent was covering.'
         devolver_falhou: 'Could not give the conversation back to the person the AI agent was covering.'
+        pessoa_sem_acesso: 'The person the AI agent was covering can no longer see this conversation, so it did not go back to them. The AI agent keeps answering.'
         teto_a_cada: 'The steps for each customer message already ran 200 times in this run. From now on the wait goes on only for the condition.'
         quem_ligou_saiu_da_conta: 'The person who turned on the automation left the account. Take over and turn it back on.'
         quem_ligou_sem_acesso: 'The person who turned on the automation has no access here anymore. Take over and turn it back on.'
