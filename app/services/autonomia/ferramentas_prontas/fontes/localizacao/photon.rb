@@ -11,7 +11,8 @@ class Autonomia::FerramentasProntas::Fontes::Localizacao::Photon < Autonomia::Fe
     raise Falha, 'sem_lugar' if lugar.nil?
 
     propriedades = objeto!(objeto!(lugar)['properties'])
-    raise NaoEncontrado unless propriedades['countrycode'].to_s.casecmp?('BR')
+    pais = exigir!(texto(propriedades['countrycode']))
+    raise NaoEncontrado unless pais.casecmp?('BR')
 
     uf = exigir!(Autonomia::FerramentasProntas::Ufs.sigla_pelo_nome(propriedades['state']))
     Autonomia::FerramentasProntas::Fontes::Localizacao.cidade(municipio(uf, propriedades), uf)

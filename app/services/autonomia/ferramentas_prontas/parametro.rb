@@ -32,9 +32,9 @@ class Autonomia::FerramentasProntas::Parametro
     @padrao&.call
   end
 
-  # -> o valor normalizado, ou nil quando não serve.
+  # -> o valor normalizado, ou nil quando não serve (lista e objeto nunca servem: o parâmetro é um valor só).
   def normalizar(valor)
-    return nil if valor.nil? || (valor.respond_to?(:empty?) && valor.empty?)
+    return nil if valor.nil? || valor.is_a?(Hash) || valor.is_a?(Array) || (valor.respond_to?(:empty?) && valor.empty?)
     return opcao(valor) if opcoes
 
     @normalizar.call(valor)

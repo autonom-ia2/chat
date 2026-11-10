@@ -44,12 +44,12 @@ class Autonomia::FerramentasProntas::Fonte
   end
 
   # Os argumentos com cada parâmetro conhecido já normalizado. O que veio e não normaliza (um telefone inteiro no DDD)
-  # vira `FORA_DO_FORMATO`, que também não normaliza: a `Execucao` responde que o pedido não serve, e o valor cru não
-  # fica em registro nenhum.
+  # vira `FORA_DO_FORMATO`, que nenhum normalizador de parâmetro que vai à fonte aceita: a `Execucao` responde que o
+  # pedido não serve, e o valor cru não fica em registro nenhum. Vazio é "não informado" (como no `Parametro`), e o
+  # parâmetro local (a busca) nunca recebe o marcador: ele filtraria pelo texto do marcador.
   def normalizar_argumentos(args)
     normalizados = consultas.flat_map(&:parametros).uniq(&:nome).to_h do |parametro|
-      bruto = args[parametro.nome]
-      [parametro.nome, bruto.nil? ? nil : (parametro.normalizar(bruto) || FORA_DO_FORMATO)]
+      [parametro.nome, argumento_normalizado(parametro, args[parametro.nome])]
     end
     args.merge(normalizados.compact)
   end
@@ -70,6 +70,12 @@ class Autonomia::FerramentasProntas::Fonte
   end
 
   private
+
+  def argumento_normalizado(parametro, bruto)
+    return nil if bruto.nil? || bruto.to_s.strip.empty?
+
+    parametro.normalizar(bruto) || (parametro.local? ? nil : FORA_DO_FORMATO)
+  end
 
   def descricao_para_o_modelo(usar_quando)
     partes = [descricao]

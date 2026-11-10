@@ -216,6 +216,21 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       expect(Autonomia::Agents::ToolRun.sole.arguments).to eq('ddd' => Autonomia::FerramentasProntas::Fonte::FORA_DO_FORMATO)
     end
 
+    it 'opcional vazio e "nao informado" tambem no registro: o padrao vale e a busca vazia nao filtra' do
+      account.enable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+      feriados = incluir_pronta('feriados', conta: account, agente: agent)
+      relogio_do_turno
+      entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 81)
+      argumentos = { consulta: 'feriados', ano: '', de: '  ' }.to_json
+
+      described_class.new(agent: agent, record: feriados)
+                     .disparar({ 'name' => 'pronta_feriados', 'call_id' => 'c6', 'arguments' => argumentos }, turno: entrega)
+
+      expect(Autonomia::Agents::ToolRun.sole.arguments.values).not_to include(Autonomia::FerramentasProntas::Fonte::FORA_DO_FORMATO)
+      expect(Autonomia::FerramentasProntas::Fontes::Cidades::FONTE.normalizar_argumentos('uf' => 'ac', 'busca' => ''))
+        .to eq('uf' => 'ac', 'busca' => '')
+    end
+
     it 'no job, com a flag das prontas desligada depois da abertura, nao consulta' do
       _saida, run = abrir_consulta
       account.disable_features!(Autonomia::FerramentasProntas::FLAG)

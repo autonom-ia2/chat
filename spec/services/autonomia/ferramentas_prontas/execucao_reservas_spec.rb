@@ -70,6 +70,18 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(saida).not_to have_key('dados')
     end
 
+    it 'o Photon sem o pais e falha (a sede responde), nao "nao encontrado"' do
+      photon_responde(city: 'Campinas', state: 'São Paulo')
+
+      dados = executar_pronta(ferramenta, 'latitude' => -22.9056, 'longitude' => -47.0608)['dados']
+
+      expect(dados).to include('cidade' => 'Campinas', 'observacao' => start_with('Aproximado'))
+    end
+
+    it 'lista ou objeto no lugar de um valor e pedido invalido' do
+      expect(executar_pronta(ferramenta, 'latitude' => [-22.9], 'longitude' => -47)['campo']).to eq('latitude')
+    end
+
     it 'coordenada fora da faixa e pedido invalido' do
       expect(executar_pronta(ferramenta, 'latitude' => 120, 'longitude' => -47)['campo']).to eq('latitude')
     end
