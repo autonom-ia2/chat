@@ -808,14 +808,14 @@ describe('LivreAlterar, extrair no card', () => {
     passos: [EXTRAIR],
   };
 
-  const comCard = async catalogo => {
+  const comCard = async (catalogo, podeLerCards = true) => {
     const wrapper = mount(LivreAlterar, {
       props: {
         catalogo,
         opcoes: {},
         atributosDaPeca: () => [],
         atributosDo: () => [],
-        podeLerCards: true,
+        podeLerCards,
       },
       global: {
         stubs: { SidePanel: PainelFalso },
@@ -841,5 +841,23 @@ describe('LivreAlterar, extrair no card', () => {
 
   it('no ramo que roda num card, com card', async () => {
     expect(await comCard({ ...NO_CONTATO, alvo: 'Crm::Card' })).toBe(true);
+  });
+
+  // O registro do ramo vale mais que o do gatilho: um ramo de contato dentro de
+  // um gatilho de card não grava no card.
+  it('no ramo que roda num contato, dentro de um gatilho de card, sem card', async () => {
+    const noCard = {
+      ...NO_CONTATO,
+      gatilho: 'card.ganho',
+      gatilhos: [{ tipo: 'card.ganho', alvo: 'Crm::Card' }],
+    };
+    expect(await comCard(noCard)).toBe(true);
+    expect(await comCard({ ...noCard, alvo: 'Contact' })).toBe(false);
+  });
+
+  it('sem poder ler cards, sem card mesmo num card', async () => {
+    expect(await comCard({ ...NO_CONTATO, alvo: 'Crm::Card' }, false)).toBe(
+      false
+    );
   });
 });

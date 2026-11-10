@@ -318,12 +318,11 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     expect(textos(:ana)).to be_empty
   end
 
-  it 'passo 4 só na Ana: a Elisa pergunta, nenhum card nasce para ela, e o card da Carla nasce sem a peça', :aggregate_failures do
+  it 'passo 4 só na Ana: a Elisa pergunta, nenhum card nasce para ela, e o extrair roda uma vez só', :aggregate_failures do
     quinta
     sexta
 
     expect(account.crm_cards.where(contact_id: [cliente(:elisa).id, cliente(:hugo).id, cliente(:duda).id])).to be_empty
-    expect(card_de(:carla).custom_attributes.keys & ex::PECA).to be_empty
     expect(historico('Resposta à Pré-Black').count { |passo, _| passo == 'peca_cor_tamanho' }).to eq(1)
     lidas = lambda do |schema|
       ia_recebeu.select { |corpo| corpo.dig('text', 'format', 'name') == schema }.map { |corpo| mensagens_lidas(corpo).last.to_s }

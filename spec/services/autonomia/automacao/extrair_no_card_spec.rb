@@ -121,13 +121,32 @@ RSpec.describe 'Automação livre · o extrair grava no card (G70)', :automacao_
   # Quem ligou sem a chave de funis: spec/enterprise/services/autonomia/automacao/extrair_no_card_chave_de_funis_spec.rb
   # (a função personalizada é EE; no OSS só o administrador gerencia automações).
 
-  it 'a conversa sem card: nada a gravar, os campos ficam ausentes e o passo pula com o motivo', :aggregate_failures do
+  it 'a conversa sem card: pula com o motivo, os campos ficam ausentes e a IA não é chamada', :aggregate_failures do
     definicao = automacao_ligada(account, admin, [extrair], gatilho: { 'tipo' => 'mensagem.criada' })
+
+    execucao = rodar(definicao, conversa, 'mensagem.criada')
+
+    registro = Autonomia::Automacao::Registro.find_by!(execucao: execucao, passo: 'p1')
+    expect(registro).to have_attributes(resultado: 'pulado', motivo: 'dado_ausente')
+    expect(registro.dados['campos']).to include('gravados' => [], 'ausentes' => %w[peca tamanho])
+    expect(a_request(:post, 'https://api.openai.com/v1/responses')).not_to have_been_made
+  end
+
+  # O card que quem ligou vê mas não pode mexer (o funil, no EE): fica sem destino, sem 403 e sem pausar a automação.
+  it 'card da conversa que quem ligou não pode editar: não grava, não chama a IA e a automação segue ligada', :aggregate_failures do
+    card
+    definicao = automacao_ligada(account, admin, [extrair], gatilho: { 'tipo' => 'mensagem.criada' })
+    allow(Crm::CardPolicy).to receive(:new).and_wrap_original do |original, *argumentos|
+      original.call(*argumentos).tap { |politica| allow(politica).to receive(:update?).and_return(false) }
+    end
 
     execucao = rodar(definicao, conversa, 'mensagem.criada')
 
     expect(Autonomia::Automacao::Registro.find_by!(execucao: execucao, passo: 'p1'))
       .to have_attributes(resultado: 'pulado', motivo: 'dado_ausente')
+    expect(card.reload.custom_attributes.keys & %w[peca tamanho]).to be_empty
+    expect(a_request(:post, 'https://api.openai.com/v1/responses')).not_to have_been_made
+    expect(definicao.reload.ativa).to be(true)
   end
 
   describe 'ao salvar' do

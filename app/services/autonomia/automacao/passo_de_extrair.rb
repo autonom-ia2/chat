@@ -51,6 +51,7 @@ class Autonomia::Automacao::PassoDeExtrair
     fuso = fuso_da_conta
     estado = leitura_da_execucao(fuso)
     return nada_para_ler if estado.vazio?
+    return sem_onde_gravar if campos.none? { |campo| dono(campo) }
 
     entrada = { hoje: Time.current.in_time_zone(fuso).to_date.iso8601, conversa: estado.conversa }
     resposta, custo = perguntar(modelo: MODELO, instrucoes: instrucoes, entrada: entrada, schema: schema)
@@ -128,7 +129,13 @@ class Autonomia::Automacao::PassoDeExtrair
     return @card if defined?(@card)
 
     @card = card_criado || (@alvo if @alvo.is_a?(::Crm::Card)) ||
-            ::Autonomia::Automacao::CardDaConversa.ler(@conversa, quem_ligou_na_conta)
+            ::Autonomia::Automacao::CardDaConversa.editavel(@conversa, quem_ligou_na_conta)
+  end
+
+  # Nenhum campo tem onde gravar (conversa sem card, contato sem empresa): pula sem pagar a IA.
+  def sem_onde_gravar
+    dados = { 'campos' => do_registro([], [], ausentes: campos, ja_tinha: []) }
+    Resultado.new(tipo: :pulado, motivo: 'dado_ausente', dados: dados)
   end
 
   # O último card que um passo desta execução criou e que ainda existe (RegistroCriado), ou nil.

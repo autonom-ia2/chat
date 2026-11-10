@@ -71,4 +71,14 @@ module Autonomia::Automacao::CardDaConversa
     card = ::Crm::Cards::ConversationCardFinder.new(account: conversa.account).all(conversa).where(id: visiveis).first
     card if card && ::Crm::CardPolicy.new(contexto, card).show?
   end
+
+  # O card da conversa só quando `account_user` pode mexer nele (Crm::CardPolicy#update?, o funil no EE), para o extrair
+  # (G70): o que ele só vê fica sem destino, em vez de a gravação dar 403 e pausar a automação.
+  def editavel(conversa, account_user)
+    card = ler(conversa, account_user)
+    return unless card
+
+    contexto = { user: account_user.user, account: conversa.account, account_user: account_user }
+    card if ::Crm::CardPolicy.new(contexto, card).update?
+  end
 end
