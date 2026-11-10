@@ -147,6 +147,23 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(result.answered_from_knowledge).to be(true)
     end
 
+    # #2850 — sem o vetor da pergunta, o Answerer pede os trechos só pela palavra (sem distância). A distância vazia não
+    # rebaixa a resposta que o modelo diz vir da base: `grounded_by_instruction` mantém a confiança declarada, e o
+    # atendimento ao cliente não tem portão de confiança. Quem decide se o trecho serve é o modelo.
+    it 'asks the words when the vector fails, and keeps the answer of the model over a piece without distance', :aggregate_failures do
+      sem_distancia = knowledge_snippet(125, 'O kit pode ser impresso em papel A4.', nil)
+      retriever = instance_double(Autonomia::Agents::Retriever, retrieve: [sem_distancia])
+      allow(Autonomia::Agents::Retriever).to receive(:new).and_return(retriever)
+      stub_model(reply: 'O kit pode ser impresso em papel A4.', confidence: 0.97, should_handoff: false, handoff_reason: nil,
+                 used_snippet_ids: [sem_distancia.id], answered_from_knowledge: true)
+
+      result = described_class.new(agent: agent, query: 'Posso imprimir o kit em A4?').answer
+
+      expect(retriever).to have_received(:retrieve).with('Posso imprimir o kit em A4?', top_k: anything, por_palavra_sem_vetor: true)
+      expect(result.reply).to eq('O kit pode ser impresso em papel A4.')
+      expect(result.handoff[:should]).to be(false)
+    end
+
     it 'keeps the handoff when the grounded answer is below the confidence threshold' do
       stub_retrieval([snippet])
       stub_model(reply: 'Talvez o kit possa ser impresso em A4.', confidence: 0.4,
@@ -206,7 +223,7 @@ RSpec.describe Autonomia::Agents::Answerer do
       retriever = instance_double(Autonomia::Agents::Retriever)
       allow(Autonomia::Agents::Retriever).to receive(:new).and_return(retriever)
       expect(retriever).to receive(:retrieve)
-        .with('qual o prazo de entrega?', top_k: Autonomia::Agents::Config::ANSWER_TOP_K)
+        .with('qual o prazo de entrega?', top_k: Autonomia::Agents::Config::ANSWER_TOP_K, por_palavra_sem_vetor: true)
         .and_return([])
 
       # Act
@@ -220,7 +237,7 @@ RSpec.describe Autonomia::Agents::Answerer do
       retriever = instance_double(Autonomia::Agents::Retriever)
       allow(Autonomia::Agents::Retriever).to receive(:new).and_return(retriever)
       expect(retriever).to receive(:retrieve)
-        .with('oi', top_k: Autonomia::Agents::Config::ANSWER_TOP_K).and_return([])
+        .with('oi', top_k: Autonomia::Agents::Config::ANSWER_TOP_K, por_palavra_sem_vetor: true).and_return([])
 
       # Act
       described_class.new(agent: agent, query: 'oi', trust_instruction: true).answer

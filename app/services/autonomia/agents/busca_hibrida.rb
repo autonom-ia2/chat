@@ -37,25 +37,33 @@ class Autonomia::Agents::BuscaHibrida
     trechos.values.select { |trecho| dentro_do_teto?(trecho) }.sort_by { |trecho| [-pontos[trecho.id], trecho.neighbor_distance.to_f, trecho.id] }
   end
 
+  # Os trechos que casam as palavras da pergunta, do mais forte ao mais fraco, com a distância do vetor e dentro do teto.
+  # #2850 — sem o vetor da pergunta (o embedding falhou), sem distância (nil) e sem o teto, que mede o vetor.
+  def por_palavra(limite)
+    return trechos_da_palavra.limit(limite).to_a if @vector.nil?
+
+    # O teto entra antes do LIMIT: trecho longe no sentido não ocupa a vaga de um que está dentro dele.
+    trechos_da_palavra(distancia)
+      .where(Arel.sql("#{distancia} <= #{Autonomia::Agents::Config::RETRIEVAL_HARD_CEILING.to_f}"))
+      .limit(limite)
+      .to_a
+  end
+
   private
 
   def dentro_do_teto?(trecho)
     !trecho.neighbor_distance.nil? && trecho.neighbor_distance.to_f <= Autonomia::Agents::Config::RETRIEVAL_HARD_CEILING
   end
 
-  def por_palavra(limite)
+  def trechos_da_palavra(distancia_do_trecho = 'NULL::float')
     # Os termos da pergunta, cada um entre aspas, ligados por OU. Montado termo a termo: o `&` de dentro de um termo
     # (um endereço, por exemplo) fica como está.
     consulta = sanitizar(["(SELECT string_agg(quote_literal(termo), ' | ') FROM unnest(tsvector_to_array(" \
                           "to_tsvector('portuguese', ?))) termo)::tsquery", @query])
-    # O teto entra antes do LIMIT: trecho longe no sentido não ocupa a vaga de um que está dentro dele.
     @escopo.where.not(coluna => nil)
            .where(Arel.sql("#{TEXTO} @@ #{consulta}"))
-           .where(Arel.sql("#{distancia} <= #{Autonomia::Agents::Config::RETRIEVAL_HARD_CEILING.to_f}"))
-           .select(Arel.sql("#{TABELA}.*, #{distancia} AS neighbor_distance"))
+           .select(Arel.sql("#{TABELA}.*, #{distancia_do_trecho} AS neighbor_distance"))
            .order(Arel.sql("ts_rank_cd(#{TEXTO}, #{consulta}) DESC, #{TABELA}.id ASC"))
-           .limit(limite)
-           .to_a
   end
 
   # A mesma escala do vetor (distância de cosseno), na coluna do modelo ativo.
