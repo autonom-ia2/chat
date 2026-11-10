@@ -90,9 +90,9 @@ module Autonomia::Automacao::EmOutroRegistro
 
   # Frases do salvar. `dentro`: o passo está no ramo de outro "em outro registro". O ramo é conferido como uma receita
   # cujo alvo é o registro (Receita com `alvo:`); o valor da âncora, pela régua do alvo da mãe (o bloco).
-  # `receita`: a receita inteira, de onde sai o tipo do registro criado (G49). `origem`: o tipo do alvo do gatilho da
-  # mãe, onde o ramo lê `origem.*` (G65).
-  def problemas_ao_salvar(passo, conta:, account_user:, dentro:, receita:, origem:, &)
+  # `receita`: a receita inteira, de onde sai o tipo do registro criado (G49) e o tipo do alvo do gatilho da mãe, onde o
+  # ramo lê `origem.*` (G65).
+  def problemas_ao_salvar(passo, conta:, account_user:, dentro:, receita:, &)
     id = passo['id']
     return [texto(:aninhado, passo: id)] if dentro
 
@@ -101,6 +101,7 @@ module Autonomia::Automacao::EmOutroRegistro
     return ligacao if alvo.nil?
 
     ramo = { 'gatilho' => {}, 'passos' => passo['passos'] }
+    origem = ::Autonomia::Automacao::Gatilhos.alvo(receita.to_h.dig('gatilho', 'tipo'))
     [*ligacao, *::Autonomia::Automacao::Receita.new(ramo, conta: conta, account_user: account_user, alvo: alvo, origem: origem).problemas]
   end
 

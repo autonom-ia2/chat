@@ -180,29 +180,8 @@ class Autonomia::Automacao::Ensaio
     pronto.merge(dados: pronto[:dados].merge(assunto: assunto.squish, caixa: caixa.name))
   end
 
-  # O retorno (G3): o título montado, ou por que pularia, como o motor. O ensaio só descreve; nada é criado.
-  def retorno(passo, valores)
-    return no(passo, 'mensagens_desligadas') if passo['envio'] && !::Autonomia::Automacao::Motor.mensagens?(@conta)
-
-    motivo = pulo_dos_textos(passo, valores)
-    return no(passo, motivo) if motivo
-    return no(passo, 'retorno_sem_responsavel') if [nil, 'responsavel'].include?(passo.dig('para', 'quem')) &&
-                                                   valores.ler('conversa.responsavel_id').blank?
-
-    no(passo, 'retorno', { texto: ::Autonomia::Automacao::Texto.new(passo['titulo'], valores).montar })
-  end
-
-  # O primeiro pulo do título e da mensagem do retorno, na ordem do motor: valor vazio ou texto só de espaços.
-  def pulo_dos_textos(passo, valores)
-    textos = passo['envio'] ? [passo['titulo'], passo.dig('envio', 'mensagem')] : [passo['titulo']]
-    textos.lazy.map { |partes| pulo_do_texto(::Autonomia::Automacao::Texto.new(partes, valores).montar) }.find(&:itself)
-  end
-
-  def pulo_do_texto(pronto)
-    return 'faltou_valor' if pronto.nil?
-
-    'texto_vazio' if pronto.strip.empty?
-  end
+  # O retorno (G3): o título montado, ou por que pularia, como o motor (PassoDeRetorno.ensaiar). Nada é criado.
+  def retorno(passo, valores) = no(passo, *::Autonomia::Automacao::PassoDeRetorno.ensaiar(passo, valores, @conta))
 
   # O valor calculado do corpo (G16) com os dados desta conversa e o "hoje" de agora: a data que daria se rodasse
   # agora. Pula como o motor: valor vazio, data que não é data, valor que não cabe no campo.
