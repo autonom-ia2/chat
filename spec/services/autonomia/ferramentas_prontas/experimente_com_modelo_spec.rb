@@ -69,9 +69,9 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente do
     experimentar('cidades', "Ribeirão Preto#{'x' * 300}")
 
     expect(Crm::Ai::ResponsesClient).to have_received(:new)
-      .with(credential: credencial, feature: 'agente_ferramenta_experimente', account: account)
+      .with(credential: credencial, feature: 'agente_ferramenta_experimente', account: account, max_retries: 0)
     expect(cliente).to have_received(:create_with_tool_executor) do |**kwargs|
-      expect(kwargs).to include(model: Crm::Ai::Config::MODEL_CLASSIFY, max_rodadas: 3, max_segundos: 15)
+      expect(kwargs).to include(model: Crm::Ai::Config::MODEL_CLASSIFY, max_rodadas: 3, max_segundos: 10, timeout: 6)
       expect(kwargs[:tools].pluck(:name)).to eq(['pronta_cidades'])
       expect(kwargs[:instructions]).not_to include('Ribeirão')
       expect(kwargs[:input]).to eq([{ role: 'user', content: "Ribeirão Preto#{'x' * 86}" }])
@@ -85,6 +85,46 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente do
     expect(experimentar('fipe', 'Onix 2020')).to eq('situacao' => 'sem_ia')
     expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
     expect(execucoes).to be_empty
+  end
+
+  it 'texto vazio: "não entendi", sem chamar o modelo' do
+    expect(experimentar('fipe', '   ')).to eq('situacao' => 'nao_entendi')
+    expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+  end
+
+  it 'limite do dia da fonte esgotado: nem chama o modelo' do
+    Autonomia::FerramentasProntas::Acesso.create!(account_id: account.id, fonte: 'fipe', limite_diario: 2)
+    2.times { Autonomia::FerramentasProntas::Uso.reservar!(account_id: account.id, fonte: 'fipe', limite: 2) }
+
+    expect(experimentar('fipe', 'Onix 2020')).to eq('situacao' => 'nao_consegui_consultar')
+    expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+  end
+
+  it 'o preço achado não some quando a última versão do lote é recusada (formato real da recusa)' do
+    resposta = Autonomia::FerramentasProntas::Resposta
+    allow(Autonomia::FerramentasProntas::Execucao).to receive(:new) do |params:, **|
+      saida = if params['modelo'] == '1'
+                resposta.encontrado(fipe, fipe.consulta('preco'), { 'valor' => 'R$ 60.822,00' })
+              else
+                resposta.pedido_invalido('ano')
+              end
+      instance_double(Autonomia::FerramentasProntas::Execucao, call: saida)
+    end
+    modelo_faz([chamada({ consulta: 'preco', tipo: 'carros', marca: '23', modelo: '1', ano: 2020 }, id: 'c1'),
+                chamada({ consulta: 'preco', tipo: 'carros', marca: '23', modelo: '2', ano: 1 }, id: 'c2')],
+               resposta: { mais_provavel: true })
+
+    resultado = experimentar('fipe', 'Onix 2020')
+
+    expect(resultado).to include('situacao' => 'encontrado', 'mais_provavel' => true)
+    expect(resultado['dados']).to include('valor' => 'R$ 60.822,00')
+  end
+
+  it 'mais_provavel só acompanha o que foi achado' do
+    fonte_devolve('preco' => { situacao: 'nao_encontrado' })
+    modelo_faz([chamada({ consulta: 'preco', tipo: 'carros', marca: '23', modelo: '1', ano: 2020 })], resposta: { mais_provavel: true })
+
+    expect(experimentar('fipe', 'Onix 2020')).to eq('situacao' => 'nao_encontrado')
   end
 
   it 'o modelo não consultou nada: "não entendi", sem inventar resultado' do

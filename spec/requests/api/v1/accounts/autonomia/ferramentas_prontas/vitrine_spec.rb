@@ -269,6 +269,30 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
       expect(response.parsed_body['dados']).to include('compra' => 5.514, 'venda' => 5.5146)
       expect(response.parsed_body['situacao']).to eq('encontrado')
     end
+
+    # "Onix 2020": a IA da conta (dublada) escolhe a consulta; a tela recebe só a saída da fonte, nunca o texto dela.
+    it 'a FIPE aceita "carro e ano" em texto livre, pela IA da conta' do
+      fonte_responde('https://brasilapi.com.br/api/fipe/preco/v1/004517-9',
+                     [{ valor: 'R$ 60.822,00', marca: 'GM - Chevrolet', modelo: 'Onix LT 1.0', anoModelo: 2020, combustivel: 'Flex',
+                        codigoFipe: '004517-9', mesReferencia: 'novembro de 2026', tipoVeiculo: 1 }])
+      cliente = instance_double(Crm::Ai::ResponsesClient)
+      allow(Crm::Ai::CredentialResolver).to receive(:new)
+        .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'chave-de-teste', source: :system }))
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(cliente)
+      allow(cliente).to receive(:create_with_tool_executor) do |**_kwargs, &executor|
+        executor.call([{ 'name' => 'pronta_fipe', 'call_id' => 'c1',
+                         'arguments' => { consulta: 'preco', tipo: 'carros', codigo_fipe: '004517-9' }.to_json }])
+        { text: '{"mais_provavel":false}' }
+      end
+
+      post "#{base}/experimentar", params: { fonte: 'fipe', valor: 'Onix 2020' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.keys).to contain_exactly('situacao', 'dados')
+      expect(response.parsed_body['situacao']).to eq('encontrado')
+      expect(response.parsed_body.to_json).to include('R$ 60.822,00')
+      expect(Autonomia::FerramentasProntas::Uso.find_by(account_id: account.id, fonte: 'fipe').consultas).to eq(1)
+    end
   end
 
   describe 'POST buscas_sem_resultado' do
