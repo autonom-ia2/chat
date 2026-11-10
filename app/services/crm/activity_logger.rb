@@ -17,20 +17,12 @@ module Crm
         account: @account,
         card: @card,
         conversation: @conversation,
-        actor_type: actor_type,
+        actor_type: Crm::Activity.actor_type_for(@actor),
         actor_id: @actor&.id,
         event_type: @event_type,
         payload: @payload,
         created_at: Time.current
       )
-    end
-
-    private
-
-    def actor_type
-      return 'system' if @actor.blank?
-
-      @actor.class.name.underscore
     end
   end
 end

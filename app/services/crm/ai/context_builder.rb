@@ -40,15 +40,19 @@ module Crm
 
       # janela (#1926): :avaliacao é a avaliação de etapa (Crm::Ai::Evaluator), que lê até MAX_MESSAGES_CAP mensagens
       # (#janela_por_conversa). Os outros leitores seguem com MAX_RECENT_MESSAGES por conversa.
-      def initialize(card:, fora: [], memoria: false, janela: :curta, pedido_anterior: false)
+      # ate (#1920): o card como estava no instante em que uma pessoa decidiu a etapa (evidência e raio-x das frases).
+      def initialize(card:, fora: [], memoria: false, janela: :curta, pedido_anterior: false, ate: nil) # rubocop:disable Metrics/ParameterLists
         @card = card
         @fora = fora
+        @ate = ate
         @numeracao = Crm::Memoria::ParaAvaliacao::Numeracao.new if memoria
         @janela = janela
         @pedido_anterior = pedido_anterior
       end
 
       def perform
+        return historico if @ate
+
         {
           summary: ai_metadata['summary'].to_s,
           recent_messages: recent_messages,
@@ -63,7 +67,19 @@ module Crm
         }.merge(memoria_payload).merge(pedido_anterior_payload)
       end
 
+      # #1920: só as mensagens públicas (até `ate`, quando há), no formato do recent_messages (o trecho da evidência).
+      def mensagens = recent_messages
+
       private
+
+      # #1920: o que dá para ver de como o card estava em `ate`: as mensagens até ali e a hora daquele instante. O resumo,
+      # os campos, a etapa, o estado do atendimento, as passagens e os outros pedidos são de AGORA (podem já dizer como terminou)
+      # e ficam vazios, para não vazar o desfecho na avaliação de uma decisão passada.
+      def historico
+        { summary: '', recent_messages: recent_messages,
+          known_attributes: { contact: {}, conversation: {}, card: {} }, conversation_state: {},
+          temporal: temporal_context(@ate), other_subjects: [] }
+      end
 
       # Card que renasce (#1925): o pedido encerrado sem sucesso antes deste, com as últimas mensagens da vida dele
       # (Crm::Ai::PedidoAnterior). Sem ids locais da memória: nada dali é prova de fato deste card.
@@ -195,9 +211,9 @@ module Crm
 
       # Âncora temporal para a IA resolver datas relativas ("amanhã", "terça que vem") em data real.
       # Fuso resolvido como nos follow-ups (contato → account.reporting_timezone → UTC).
-      def temporal_context
+      def temporal_context(agora = Time.current)
         tz = Config.resolved_timezone(account: @card.account, contact: @card.try(:contact))
-        now_local = Time.current.in_time_zone(tz)
+        now_local = agora.in_time_zone(tz)
         {
           timezone: tz,
           now_local: now_local.strftime('%Y-%m-%dT%H:%M'),
@@ -232,17 +248,25 @@ module Crm
       # Envio que falhou (#1923) não chegou ao cliente: sai do histórico, como no dos Agentes (PessoaDaEquipe). A falha
       # chega depois da criação (message_updated), quando a avaliação já foi agendada; é aqui que ela deixa de contar.
       # IS DISTINCT FROM: a coluna aceita nulo, e `status != 3` descartaria a mensagem sem status.
+      # Com `ate` (#1920) o status lido é o de agora, não o daquele instante (a coluna não guarda histórico): aceito,
+      # porque mensagem que falhou não chegou ao cliente e não serve de evidência do que ele disse.
       def latest_for(conversation_id)
-        Message.where(conversation_id: conversation_id, private: false)
-               .where.not(message_type: :activity)
-               .where('messages.status IS DISTINCT FROM ?', Message.statuses[:failed])
-               .includes(:attachments)
-               .reorder(id: :desc)
-               .limit(janela_por_conversa)
+        escopo = Message.where(conversation_id: conversation_id, private: false)
+        escopo = escopo.where(created_at: ..@ate) if @ate
+        escopo.where.not(message_type: :activity)
+              .where('messages.status IS DISTINCT FROM ?', Message.statuses[:failed])
+              .includes(:attachments)
+              .reorder(id: :desc)
+              .limit(janela_por_conversa)
       end
 
       def conversation_ids
-        @conversation_ids ||= ([@card.conversation_id] + @card.card_conversations.pluck(:conversation_id)).compact.uniq
+        @conversation_ids ||= ([@card.conversation_id] + vinculos.pluck(:conversation_id)).compact.uniq
+      end
+
+      # Com `ate` (#1920), só as conversas que já estavam ligadas ao card naquele instante.
+      def vinculos
+        @ate ? @card.card_conversations.where(created_at: ..@ate) : @card.card_conversations
       end
 
       def janela_por_conversa

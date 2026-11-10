@@ -67,8 +67,11 @@ class Crm::Cards::Mover
         to_stage_id: @card.stage_id,
         from_stage_name: @from_stage_name,
         to_stage_name: @target_stage.name,
-        **da_automacao
-      }
+        **da_automacao,
+        # #1920: a origem do movimento que não foi escolha direta de uma pessoa (Crm::Ai::EscolhaDePessoa).
+        source: @automation_context[:source],
+        automation_depth: @automation_context[:depth]
+      }.compact
     ).perform
   end
 
