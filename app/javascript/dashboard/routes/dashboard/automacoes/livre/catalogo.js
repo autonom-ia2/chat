@@ -187,6 +187,17 @@ export const comPermissoes = (dados, podeLer) => {
   };
 };
 
+// G25: o mesmo vale para a ação que lê o alvo no caminho (`card.id` no fechar
+// o card): no gatilho de conversa, o seletor nem a oferece. O card da conversa
+// (#2716) é só para ler: para ação, ele não conta como base do alvo.
+const basesDaAcao = (alvo, bases) =>
+  alvo === 'Conversation' ? bases.filter(base => base !== 'card') : bases;
+
+const caminhoNoAlvo = (passo, bases) =>
+  Object.values(passo.caminho || {}).every(
+    origem => !origem.$valor || bases.includes(origem.$valor.split('.')[0])
+  );
+
 // G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião. G32: o tipo
 // do gatilho segue junto, para o "avisar" oferecer quem atende a reunião.
 // #2680: com a caixa da conversa nova, o contato alcança a conversa que ela
@@ -229,6 +240,9 @@ export const doAlvoDoGatilho = (
     alvo,
     gatilho: alvoDoRamo ? null : tipoDoGatilho,
     valores: dados.valores.filter(item => alcanca(item) && daReuniao(item)),
+    passos: (dados.passos || []).filter(passo =>
+      caminhoNoAlvo(passo, basesDaAcao(alvo, bases))
+    ),
   };
 };
 

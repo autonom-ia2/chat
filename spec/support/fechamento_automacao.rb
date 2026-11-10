@@ -255,6 +255,12 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 10 (#2678, #2752): a instrução no resumir ("o que já foi prometido") e avisar o responsável quando a
     # agente de IA atende a conversa (o dono do card; sem ele, o passo pula com sem_responsavel).
     'G41' => -> { campo_do_passo?('resumir', 'instrucao') && I18n.exists?('autonomia.automacao.motivos.sem_responsavel', :pt_BR) },
+    # Da auditoria dos termos (07/11, #2716): a automação que começa pela conversa lê o card dela no "Só se" (exemplo 14,
+    # passo 2) e o filtro sabe se a mensagem tem anexo (exemplo 18, começo).
+    'G45' => -> { valor?('mensagem.tem_anexo') && Autonomia::Automacao::Valores::BASES_DO_ALVO['Conversation'].include?('card') },
+    # Do exemplo 4 (#2650): a etiqueta como contador de faltas. Com a execução da primeira falta esperando os 30 dias, a
+    # nova entrada em "Faltou" no mesmo card não abre outra (Partida, `ja_aberta`): o contador nunca chega a 2.
+    'G50' => nil,
     # Do exemplo 1, passo 12 (#2721, #2763): o resumo lê tudo o que a execução tentou, até o e-mail em conversa própria.
     'G42' => -> { Autonomia::Automacao::EnviosDaExecucao.method_defined?(:dados) },
     # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7),

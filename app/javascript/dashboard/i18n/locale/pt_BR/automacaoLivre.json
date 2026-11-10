@@ -102,6 +102,7 @@
       "CONVERSA_PRIORIDADE": "Mudar a prioridade da conversa",
       "CONVERSA_ATRIBUTOS": "Preencher campo da conversa",
       "CONVERSA_ATRIBUIR": "Passar a conversa para alguém",
+      "CARD_FECHAR": "Fechar o card como ganho ou perdido",
       "CAIXA_PESSOAS": "Pôr pessoas numa caixa",
       "CONTATO_ETIQUETAS": "Pôr ou tirar etiqueta do contato",
       "CONTATO_ALTERAR": "Atualizar o contato",
@@ -172,6 +173,8 @@
       "DESCRIPTION": "Descrição",
       "DOMAIN": "Site",
       "TITLE": "Nome da etiqueta",
+      "RESULT": "Ganho ou perdido?",
+      "LOST_REASON": "Motivo da perda (opcional)",
       "COLOR": "Cor",
       "SHOW_ON_SIDEBAR": "Mostrar no menu",
       "ATTRIBUTE_DISPLAY_NAME": "Nome do campo",
@@ -219,6 +222,10 @@
         "MEDIUM": "Média",
         "HIGH": "Alta",
         "URGENT": "Urgente"
+      },
+      "RESULT": {
+        "WON": "Ganho",
+        "LOST": "Perdido"
       },
       "ATTRIBUTE_MODEL": {
         "CONVERSATION_ATTRIBUTE": "Conversa",

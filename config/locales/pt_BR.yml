@@ -1162,6 +1162,7 @@ pt_BR:
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'
         valor_fora: 'Passo %{passo}: %{caminho} não tem o valor "%{valor}". Use um destes: %{opcoes}.'
         proibido: 'Passo %{passo}: a automação não muda %{campo}.'
+        um_de: 'Passo %{passo}: %{campo} tem de ser um destes: %{opcoes}.'
         passo_desligado: "Passo %{passo}: mensagem e aviso estão desligados nesta conta."
         agente_de_ia_invalido: 'Passo %{passo}: a agente de IA %{id} não é desta conta.'
         retorno_mensagem_sem_card: "Passo %{passo}: a mensagem do retorno só sai com gatilho de card. Use um gatilho de card ou desligue a mensagem."

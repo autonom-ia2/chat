@@ -669,6 +669,7 @@ en:
         operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'
         valor_fora: 'Step %{passo}: %{caminho} has no value "%{valor}". Use one of: %{opcoes}.'
         proibido: 'Step %{passo}: the automation cannot change %{campo}.'
+        um_de: 'Step %{passo}: %{campo} must be one of: %{opcoes}.'
         passo_desligado: "Step %{passo}: message and alert steps are off for this account."
         agente_de_ia_invalido: 'Step %{passo}: AI agent %{id} is not from this account.'
         retorno_mensagem_sem_card: "Step %{passo}: the follow-up message only goes out with a card trigger. Use a card trigger or turn the message off."

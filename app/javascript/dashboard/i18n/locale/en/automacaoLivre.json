@@ -102,6 +102,7 @@
       "CONVERSA_PRIORIDADE": "Change the conversation priority",
       "CONVERSA_ATRIBUTOS": "Fill in a conversation field",
       "CONVERSA_ATRIBUIR": "Hand the conversation to someone",
+      "CARD_FECHAR": "Close the card as won or lost",
       "CAIXA_PESSOAS": "Add people to an inbox",
       "CONTATO_ETIQUETAS": "Add or remove a contact label",
       "CONTATO_ALTERAR": "Update the contact",
@@ -172,6 +173,8 @@
       "DESCRIPTION": "Description",
       "DOMAIN": "Website",
       "TITLE": "Label name",
+      "RESULT": "Won or lost?",
+      "LOST_REASON": "Reason for losing (optional)",
       "COLOR": "Color",
       "SHOW_ON_SIDEBAR": "Show in the menu",
       "ATTRIBUTE_DISPLAY_NAME": "Field name",
@@ -219,6 +222,10 @@
         "MEDIUM": "Medium",
         "HIGH": "High",
         "URGENT": "Urgent"
+      },
+      "RESULT": {
+        "WON": "Won",
+        "LOST": "Lost"
       },
       "ATTRIBUTE_MODEL": {
         "CONVERSATION_ATTRIBUTE": "Conversation",

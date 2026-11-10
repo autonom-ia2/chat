@@ -143,17 +143,26 @@ const guarda = ref(null);
 const tudo = computed(() => route.query.tudo === '1');
 
 // G18: dentro do "em outro registro" não cabe outro (a filha nunca abre netas).
+// G25: só as ações que o alvo da lista alcança (o card da conversa é só para
+// ler, #2716), como no "Alterar".
 const catalogoDoSeletor = computed(() => {
+  if (!catalogo.value) return catalogo.value;
   const dentro = alvoDaLista(
     receita.value.passos,
     String(route.query.seletor || '').split('@')[0]
   );
-  if (!dentro || !catalogo.value) return catalogo.value;
+  const { passos } = doAlvoDoGatilho(
+    comPermissoes(catalogo.value, podeLerValor.value),
+    receita.value.gatilho?.tipo,
+    Boolean(receita.value.gatilho?.conversa_nova),
+    canManagePipelines.value,
+    dentro
+  );
   return {
     ...catalogo.value,
-    passos: catalogo.value.passos.filter(
-      passo => passo.tipo !== EM_OUTRO_REGISTRO
-    ),
+    passos: dentro
+      ? passos.filter(passo => passo.tipo !== EM_OUTRO_REGISTRO)
+      : passos,
   };
 });
 

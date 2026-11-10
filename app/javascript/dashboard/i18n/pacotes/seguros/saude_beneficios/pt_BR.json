@@ -1332,6 +1332,17 @@
         "WON": "Com o plano implantado"
       }
     },
+    "PASSOS": {
+      "CARD_FECHAR": "Marcar se o plano foi implantado"
+    },
+    "CAMPOS": {
+      "RESULT": "O plano foi implantado?"
+    },
+    "OPCOES": {
+      "RESULT": {
+        "WON": "Implantado"
+      }
+    },
     "SELECAO": {
       "SITUACOES": {
         "GANHO": "Plano implantado"
