@@ -214,8 +214,11 @@ RSpec.describe 'Automação livre: o gatilho que se repete (G50)', :automacao_mo
       expect(execucoes.where(automacao: definicao).count).to eq(2)
     end
 
+    # A espera que lê o card (`card.*`) acorda a cada mudança dele pelo Crm::CardAvisaAutomacao (lote 4); a que lê a
+    # resposta do cliente não acorda pela nova entrada na etapa.
     it 'não reserva a espera que lê outro valor no mesmo card' do
-      resposta = entrou_de_novo.merge('condicao' => { 'campo' => { '$valor' => 'card.status' }, 'op' => 'igual', 'valor' => 'won' })
+      resposta = entrou_de_novo.merge('condicao' => { 'campo' => { '$valor' => 'conversa.cliente_respondeu' }, 'op' => 'igual',
+                                                      'valor' => true })
       ligada([resposta, esperar_passo('p11')], se_repetir: 'comeca_outra')
       mover(faltou)
       primeira = execucoes.sole

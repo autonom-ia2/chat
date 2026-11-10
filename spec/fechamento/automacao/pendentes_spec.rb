@@ -7,10 +7,9 @@ require 'rails_helper'
 RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model do
   pendentes = {
     # O 2 saiu com o #2762 (G29), depois do #2773 (G30) e do #2800 (G32); o spec de ponta a ponta dele é o #2856.
-    # O 4 tem spec próprio à risca (exemplo_04_aluno_que_falta_spec.rb); a G50 (a segunda falta com a primeira ainda
-    # esperando) fechou com o g50_reentrada_spec.rb; esperam a G44 (passos 6 e 8, link de uma página escolhida) e a G18
-    # (passo 10, fechar o card de retenção).
-    4 => ['Aluno que começa a faltar', 'G50 (reentrada no mesmo card), G44, G18, G5, G1, G3, G4, G12, G15, G25, G28'],
+    # O 4 saiu com a G50 (#2682, a segunda falta com a primeira ainda esperando): exemplo_04_aluno_que_falta_spec.rb roda
+    # à risca, passos 1 a 10, com as páginas escolhidas dos passos 6 e 8 (G44) e o card de retenção criado no passo 2
+    # fechado no 10 (G49).
     # O 5 saiu com a G47 (#2766): o spec próprio (exemplo_05_revisao_do_carro_spec.rb) roda à risca, passos 1 a 8.
     # O 6 saiu na integração 2 do #2414: exemplo_06_aniversario_spec.rb roda à risca, passos 1 a 10, com o link da página
     # de reserva (G60), o card criado no passo 3 (G49), a reunião marcada (G32, G61) e a atendida (G56, G59).
@@ -62,6 +61,11 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
   # Os exemplos 6, 8, 14 e 18 saíram da lista na integração 2 do #2414: a prova das sondas que os seguravam fica aqui.
   it 'exemplos 6, 8, 14 e 18: as lacunas fechadas continuam fechadas' do
     expect(FechamentoAutomacao::Lacunas.abertas(%w[G13 G22 G24 G25 G27 G31 G32 G44 G45 G46 G49 G56 G59 G60 G61])).to be_empty
+  end
+
+  # Com o 4 fora da lista, a prova das sondas que o seguravam fica aqui.
+  it 'exemplo 4: as lacunas fechadas continuam fechadas' do
+    expect(FechamentoAutomacao::Lacunas.abertas(%w[G1 G3 G4 G5 G12 G15 G18 G25 G28 G44 G50])).to be_empty
   end
 
   # G21 (#2706) não segura nenhum pendente: a sonda roda aqui para que a prova de comportamento dela não fique sem dono.

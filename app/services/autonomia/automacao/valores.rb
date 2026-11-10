@@ -85,9 +85,8 @@ class Autonomia::Automacao::Valores
 
   # G50: o card entrou de novo na etapa do gatilho durante o "esperar até" (EsperaDaEntrada). Como a resposta, só existe
   # na condição dele, onde há a janela; e só no gatilho card.entrou_na_etapa, que tem a etapa. Sem a janela, lê false.
+  # As duas leem a janela da espera: Valores::DaEspera.
   ENTRADA = ::Autonomia::Automacao::EsperaDaEntrada::VALORES
-  # Os que leem a janela da espera: a resposta e a nova entrada.
-  DA_ESPERA = RESPOSTA.merge(ENTRADA).freeze
 
   # A última mensagem que a execução mandou ao cliente (#2680): o texto e a situação (Envio).
   ENVIO = ::Autonomia::Automacao::Envio::VALORES
@@ -257,7 +256,7 @@ class Autonomia::Automacao::Valores
   def lido(caminho)
     return unless permitido?(caminho)
     return @mensagem && MENSAGEM.fetch(caminho.to_s).call(@mensagem) if MENSAGEM.key?(caminho.to_s)
-    return da_espera(caminho) if DA_ESPERA.key?(caminho.to_s)
+    return DaEspera.ler(caminho, @contexto, @espera, @quem) if DaEspera.caminho?(caminho)
     return do_campo(caminho.to_s) if campo?(caminho.to_s)
 
     base, chave = self.class.atributo(caminho)
@@ -305,8 +304,6 @@ class Autonomia::Automacao::Valores
 
     @origem = (contexto = @contexto.origem) && self.class.new(alvo: contexto, quem: @quem)
   end
-
-  def da_espera(caminho) = !@espera.nil? && DA_ESPERA.fetch(caminho.to_s).call(@contexto, @espera, @quem) == true
 
   # A pessoa só é buscada quando o caminho pede permissão.
   def permitido?(caminho) = !PROTEGIDOS.key?(caminho.to_s) || self.class.pode_ler?(caminho, account_user)
