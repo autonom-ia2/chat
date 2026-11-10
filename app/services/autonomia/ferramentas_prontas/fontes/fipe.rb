@@ -66,7 +66,7 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
                    provedores: [BrasilApi, Parallelum], validade: 1.day, prazo_por_fonte: 4, prazo_total: 9,
                    regra: ->(params) { 'codigo_fipe' unless params['codigo_fipe'] || (params['marca'] && params['modelo']) })
     ],
-    limite_diario: 300,
+    limite_diario: 500,
     termos: 'BrasilAPI e parallelum: gratuitas; a parallelum sem chave tem teto diário por IP e fica só de reserva. ' \
             'Cache de 1 dia no preço e 7 dias nas listas.'
   )
