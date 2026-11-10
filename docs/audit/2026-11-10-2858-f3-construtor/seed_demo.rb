@@ -14,7 +14,8 @@ helena.assign_attributes(agent_type: 'support', mode: 'guided', status: 'draft',
                          tone: 'Simpático e direto.',
                          instruction: 'Você é Helena. Cota seguro auto: pede o modelo e o ano do carro e o CEP de onde ele dorme.',
                          human_card: 'A Helena cota seguro auto pelo WhatsApp.')
-helena.config = helena.config.to_h.merge('ferramentas_sugeridas' => %w[fipe cep cpf], 'response_window' => 'always')
+limpo = helena.config.to_h.except('prontas_dispensadas', 'prontas_sugestao')
+helena.config = limpo.merge('ferramentas_sugeridas' => %w[fipe cep cpf], 'response_window' => 'always')
 helena.save!
 helena.tools.where.not(fonte_pronta: nil).find_each(&:destroy!)
 

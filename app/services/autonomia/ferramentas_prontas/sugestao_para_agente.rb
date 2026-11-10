@@ -17,6 +17,7 @@ class Autonomia::FerramentasProntas::SugestaoParaAgente
   PRAZO_DO_MODELO = 30
   SUGESTAO = 'prontas_sugestao'.freeze
   DISPENSADAS = 'prontas_dispensadas'.freeze
+  CONSTRUTOR = 'ferramentas_sugeridas'.freeze
   MAX_DISPENSADAS = 50
   MAX_INSTRUCAO = 4000
   MAX_NOME = 120
@@ -50,7 +51,7 @@ class Autonomia::FerramentasProntas::SugestaoParaAgente
     def semear_do_construtor!(agent)
       return unless ligada?(agent)
 
-      escolha = Array(agent.config.to_h['ferramentas_sugeridas']).map(&:to_s) & Autonomia::FerramentasProntas::Catalogo.chaves
+      escolha = Array(agent.config.to_h[CONSTRUTOR]).map(&:to_s) & Autonomia::FerramentasProntas::Catalogo.chaves
       gravar(agent) { { SUGESTAO => { 'chaves' => escolha, 'assinatura' => assinatura(agent), 'em' => Time.current.iso8601 } } }
     end
 
@@ -64,8 +65,13 @@ class Autonomia::FerramentasProntas::SugestaoParaAgente
       Autonomia::FerramentasProntas.disponiveis(agent.account).map(&:chave) & (sugeridas - fora)
     end
 
+    # Também sai da escolha do Construtor (`ferramentas_sugeridas`): a Confira de um rascunho reaberto não oferece de
+    # volta o que a pessoa tirou.
     def dispensar!(agent, fonte)
-      gravar(agent) { |config| { DISPENSADAS => (Array(config[DISPENSADAS]) | [fonte]).last(MAX_DISPENSADAS) } }
+      gravar(agent) do |config|
+        { DISPENSADAS => (Array(config[DISPENSADAS]) | [fonte]).last(MAX_DISPENSADAS),
+          CONSTRUTOR => Array(config[CONSTRUTOR]) - [fonte] }
+      end
     end
 
     # Só as chaves devolvidas pelo bloco, calculadas sobre o config relido dentro da trava: outra escrita no meio (outro

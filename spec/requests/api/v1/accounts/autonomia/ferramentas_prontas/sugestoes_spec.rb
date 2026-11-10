@@ -82,7 +82,7 @@ RSpec.describe 'Sugestões de ferramentas prontas', type: :request do
     config = agent.reload.config
     expect(config['prontas_sugestao']['chaves']).to eq(%w[fipe])
     expect(config['prontas_dispensadas']).to eq(%w[cep])
-    expect(config).not_to have_key('ferramentas_sugeridas')
+    expect(config['ferramentas_sugeridas']).to eq([])
   end
 
   it 'without the Construtor flag: 404 with the reason' do

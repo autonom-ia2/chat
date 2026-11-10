@@ -79,6 +79,14 @@ RSpec.describe Autonomia::FerramentasProntas::SugestaoParaAgente do
     expect(agent.reload.config).to include('canal_pedido' => 'instagram', 'prontas_dispensadas' => %w[cep])
   end
 
+  it 'what was removed in the Confira leaves the Construtor choice too, so a reopened draft does not offer it again' do
+    agent.update!(config: { 'ferramentas_sugeridas' => %w[fipe cep cpf] })
+
+    described_class.dispensar!(agent, 'cpf')
+
+    expect(agent.reload.config['ferramentas_sugeridas']).to eq(%w[fipe cep])
+  end
+
   it 'becomes stale when the account gets a new source, so it is asked again' do
     account.disable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
     described_class.new(agent).call
