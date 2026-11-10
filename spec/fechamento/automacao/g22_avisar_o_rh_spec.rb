@@ -5,11 +5,10 @@ require 'rails_helper'
 #
 #   9. Toda sexta, para cada empresa com inclusão aberta, avisa o RH quem ainda não mandou documento.
 #
-# O exemplo inteiro segue pendente pelas outras lacunas (pendentes_spec.rb): a criação dos contatos e dos cards do passo
-# 3, que grava no card quem pediu (o RH, `solicitante`), é da G24; o "extrair e marcar no card" do passo 6, da G24/G20.
-# Enquanto a G24 não grava, o salvar recusa a condição (Solicitados::GRAVADORES, último exemplo); nos outros, o gravador
-# está ligado e o card já nasce com o solicitante. O documento que chega é marcado pela API do card, a mesma ação que a
-# automação usa (PATCH crm/cards/:id).
+# O exemplo inteiro segue pendente pelas outras lacunas (pendentes_spec.rb). A criação dos contatos e dos cards do passo
+# 3 é da G24: o "para cada item" grava no card quem pediu (o RH, `solicitante`); aqui o card nasce com ele à mão. Sem
+# gravador, o salvar recusa a condição (Solicitados::GRAVADORES, último exemplo). O documento que chega é marcado pela
+# API do card, a mesma ação que a automação usa (PATCH crm/cards/:id).
 #
 # A Luciana monta e liga pela API da tela, numa função com só a caixa do WhatsApp oficial dela: o card de outra caixa
 # não entra no texto ao RH. O RH é a pessoa da empresa que pediu (Marta, na Acme); a última mensagem dela foi há 4 dias,
@@ -19,10 +18,6 @@ RSpec.describe 'Fechamento #2414 · exemplo 8, passo 9: toda sexta o RH sabe que
   include ActiveJob::TestHelper
 
   around { |exemplo| with_modified_env(CRM_KANBAN_ENABLED: 'true') { exemplo.run } }
-
-  # O passo 3 (G24) ainda não grava o solicitante; até ele gravar, o salvar recusa a condição (último exemplo). Aqui ele
-  # já está ligado, como ficará com a G24, e o card nasce com o solicitante à mão.
-  before { stub_const('Autonomia::Automacao::Solicitados::GRAVADORES', %w[para_cada]) }
 
   let(:canal) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
   let(:account) { canal.account }
@@ -187,8 +182,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 8, passo 9: toda sexta o RH sabe que
     end
   end
 
-  # Revisão da G22: sem o passo 3 (G24) gravando quem pediu, card nenhum teria solicitante e toda sexta o aviso pularia
-  # sem mandar nada. Até a G24 entrar, a Luciana nem consegue salvar a automação de sexta.
+  # Sem o passo 3 (G24) gravando quem pediu, card nenhum teria solicitante e toda sexta o aviso pularia sem mandar nada:
+  # sem gravador, a Luciana nem consegue salvar a automação de sexta.
   it 'sem passo que grave o solicitante, o salvar recusa a automação de sexta', :aggregate_failures do
     stub_const('Autonomia::Automacao::Solicitados::GRAVADORES', [])
 

@@ -303,6 +303,19 @@
         "LOST": "Que não fecharam"
       }
     },
+    "PASSOS": {
+      "CARD_FECHAR": "Marcar se o card fechou o seguro"
+    },
+    "CAMPOS": {
+      "RESULT": "Fechou o seguro?",
+      "LOST_REASON": "Por que não fechou (opcional)"
+    },
+    "OPCOES": {
+      "RESULT": {
+        "WON": "Seguro ativo",
+        "LOST": "Não fechou"
+      }
+    },
     "SELECAO": {
       "SITUACOES": {
         "GANHO": "Fechou o seguro",

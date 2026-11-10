@@ -55,6 +55,8 @@ const RAMO = {
   senao: 'SENAO',
   se_vencer: 'SE_VENCER',
   nenhum: 'NENHUM',
+  // G13 (#2670): o outro sistema recusou.
+  se_recusar: 'SE_RECUSAR',
 };
 
 const hora = iso =>

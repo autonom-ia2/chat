@@ -1,10 +1,15 @@
 // #2468 F4b — o modelo aprovado da Meta do passo "mensagem", para quando a
 // janela de 24 h do número oficial estiver fechada. A régua é a do servidor
-// (Autonomia::Automacao::ModeloWhatsapp): aprovado, de utilidade, com o corpo
-// pedindo {{1}}..{{n}} e nada além do corpo para preencher.
+// (Autonomia::Automacao::ModeloWhatsapp): aprovado, de utilidade ou de
+// propaganda, com o corpo pedindo {{1}}..{{n}} e nada além do corpo para
+// preencher.
 
-// Só utilidade, por ora (a mesma constante do servidor).
-export const CATEGORIAS = ['UTILITY'];
+// A mesma constante do servidor. Propaganda (lote 5, #2681) custa mais: a tela
+// avisa (ehPropaganda).
+export const CATEGORIAS = ['UTILITY', 'MARKETING'];
+
+export const ehPropaganda = modelo =>
+  String(modelo?.category).toUpperCase() === 'MARKETING';
 const CANAL = 'Channel::Whatsapp';
 const TOPO_COM_MIDIA = ['IMAGE', 'VIDEO', 'DOCUMENT', 'LOCATION'];
 

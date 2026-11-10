@@ -50,6 +50,31 @@ class Autonomia::Automacao::PassoDeRetorno
       times.map { |time| frase(:time_de_fora, passo: passo['id'], id: time) }
   end
 
+  # O ensaio (Ensaio#retorno): [o que faria, dados], na ordem do #executar: o título montado, ou por que pularia. Só
+  # descreve; nada é criado.
+  def self.ensaiar(passo, valores, conta)
+    return ['mensagens_desligadas'] if passo['envio'] && !::Autonomia::Automacao::Motor.mensagens?(conta)
+
+    motivo = pulo_dos_textos(passo, valores)
+    return [motivo] if motivo
+    return ['retorno_sem_responsavel'] if [nil, 'responsavel'].include?(passo.dig('para', 'quem')) &&
+                                          valores.ler('conversa.responsavel_id').blank?
+
+    ['retorno', { texto: ::Autonomia::Automacao::Texto.new(passo['titulo'], valores).montar }]
+  end
+
+  # O primeiro pulo do título e da mensagem do retorno, na ordem do motor: valor vazio ou texto só de espaços.
+  def self.pulo_dos_textos(passo, valores)
+    textos = passo['envio'] ? [passo['titulo'], passo.dig('envio', 'mensagem')] : [passo['titulo']]
+    textos.lazy.map { |partes| pulo_do_texto(::Autonomia::Automacao::Texto.new(partes, valores).montar) }.find(&:itself)
+  end
+
+  def self.pulo_do_texto(pronto)
+    return 'faltou_valor' if pronto.nil?
+
+    'texto_vazio' if pronto.strip.empty?
+  end
+
   def self.frase(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", **valores)
 
   def initialize(execucao:, passo:, valores:, acesso:)

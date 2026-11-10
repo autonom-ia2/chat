@@ -26,11 +26,12 @@ const emit = defineEmits(['update:modelValue']);
 const { t } = useI18n();
 
 const O = 'AUTOMACAO_LIVRE.OUTRO_REGISTRO';
-const MODELO_DA_BASE = {
-  conversa: 'conversation_attribute',
-  contato: 'contact_attribute',
-  card: 'card_attribute',
-};
+// Decisão 16: só o campo do card do tipo contato guarda quem é a pessoa ligada
+// (a equipe escolhe o contato numa lista). Campo de número não serve: um engano
+// mandaria a mensagem a outro cliente, e o servidor o recusa
+// (CAMPOS_DO_CONTATO).
+const MODELO_DA_BASE = { card: 'card_attribute' };
+const TIPO_DO_CAMPO = 'contato';
 
 const registro = computed(() => props.modelValue || {});
 const de = computed(() => registro.value.de || null);
@@ -52,18 +53,21 @@ const opcoesDeLigacao = computed(() =>
   }))
 );
 
-// O id do contato fica num campo de número do alvo do gatilho.
-const bases = computed(
-  () =>
-    props.catalogo.alvos?.[props.catalogo.alvo] || Object.keys(MODELO_DA_BASE)
-);
+// O id do contato fica num campo do tipo contato do card do alvo do gatilho.
+// Decisão 19: na conversa, o card dela só para ler, e só com a chave de funis.
+const bases = computed(() => {
+  const doAlvo =
+    props.catalogo.alvos?.[props.catalogo.alvo] || Object.keys(MODELO_DA_BASE);
+  const semCard = props.catalogo.alvo === 'Conversation' && !props.podeLerCards;
+  return doAlvo.filter(base => !(semCard && base === 'card'));
+});
 const opcoesDeCampo = computed(() =>
   bases.value
     .filter(base => MODELO_DA_BASE[base])
     .flatMap(base =>
       props
         .atributosDo(MODELO_DA_BASE[base])
-        .filter(atributo => atributo.attribute_display_type === 'number')
+        .filter(atributo => atributo.attribute_display_type === TIPO_DO_CAMPO)
         .map(atributo => {
           const caminho = `${base}.atributos.${atributo.attribute_key}`;
           return {

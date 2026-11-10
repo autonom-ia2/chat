@@ -13,6 +13,8 @@ export const RAMOS = {
   decidir: ['nenhum'],
   // G18 (#2671): os passos que rodam no outro registro.
   em_outro_registro: ['passos'],
+  // G13 (#2670): o que fazer quando o outro sistema recusa.
+  webhook: ['se_recusar'],
 };
 
 // G63 (#2830): o galho do "esperar até" que roda a cada mensagem do cliente

@@ -9,6 +9,7 @@
       "ETIQUETA": "Etiquetas",
       "ATRIBUTO": "Campos personalizados",
       "EQUIPE": "Equipe",
+      "OUTRO_SISTEMA": "Outro sistema",
       "CONTROLE": "Tempo e condições"
     },
     "OPERADORES": {
@@ -81,6 +82,7 @@
       "MENSAGEM_TIPO": "Tipo da mensagem",
       "MENSAGEM_PRIVADA": "Mensagem interna",
       "MENSAGEM_PRIMEIRA": "Primeira mensagem da conversa",
+      "MENSAGEM_CAMPANHA": "Nome da campanha a que o cliente respondeu",
       "MENSAGEM_TEM_ANEXO": "A mensagem tem foto ou PDF",
       "CARD_LINK_DA_AGENDA": "Link da agenda do responsável pelo card (na hora do passo)",
       "CONVERSA_LINK_DA_AGENDA": "Link da agenda do responsável pela conversa (na hora do passo)",
@@ -101,6 +103,7 @@
       "CONVERSA_PRIORIDADE": "Mudar a prioridade da conversa",
       "CONVERSA_ATRIBUTOS": "Preencher campo da conversa",
       "CONVERSA_ATRIBUIR": "Passar a conversa para alguém",
+      "CARD_FECHAR": "Fechar o card como ganho ou perdido",
       "CAIXA_PESSOAS": "Pôr pessoas numa caixa",
       "CONTATO_ETIQUETAS": "Pôr ou tirar etiqueta do contato",
       "CONTATO_ALTERAR": "Atualizar o contato",
@@ -128,7 +131,8 @@
       "CONVERSA_AO_RESPONSAVEL": "Passar a conversa para o responsável do card",
       "EMAIL": "Mandar e-mail ao cliente",
       "RETORNO": "Criar um retorno para a equipe",
-      "EM_OUTRO_REGISTRO": "Fazer no contato ou nos cards ligados"
+      "EM_OUTRO_REGISTRO": "Fazer no contato ou nos cards ligados",
+      "WEBHOOK": "Mandar dados para outro sistema"
     },
     "ESCOLHER": {
       "ETIQUETA": "Qual etiqueta",
@@ -161,6 +165,7 @@
       "TITULO": "Nome da campanha",
       "CAIXA_ID": "Caixa do WhatsApp",
       "ETIQUETAS": "Para quem tem as etiquetas",
+      "SEM_ETIQUETAS": "Menos quem tem as etiquetas",
       "PUBLICO": "Quem recebe",
       "NAME": "Nome",
       "EMAIL": "E-mail",
@@ -170,6 +175,8 @@
       "DESCRIPTION": "Descrição",
       "DOMAIN": "Site",
       "TITLE": "Nome da etiqueta",
+      "RESULT": "Ganho ou perdido?",
+      "LOST_REASON": "Motivo da perda (opcional)",
       "COLOR": "Cor",
       "SHOW_ON_SIDEBAR": "Mostrar no menu",
       "ATTRIBUTE_DISPLAY_NAME": "Nome do campo",
@@ -180,7 +187,7 @@
       "ATTRIBUTE_VALUES": "Opções da lista",
       "TEXTO": "O que dizer",
       "PARA": "Quem avisar",
-      "TITULO": "O que a equipe vai fazer",
+      "TITULO_DO_RETORNO": "O que a equipe vai fazer",
       "DAQUI": "Daqui a quanto tempo",
       "QUANDO": "Quando",
       "ENVIO": "Mensagem ao cliente",
@@ -197,12 +204,17 @@
       "ETAPA_ID": "Em qual etapa o card nasce",
       "AGENTE_ID": "Qual agente de IA",
       "COBRIR_PESSOA": "Cobrir a pessoa enquanto ela não responde",
-      "CAIXA_ID": "Por qual caixa de e-mail",
+      "CAIXA_ID_EMAIL": "Por qual caixa de e-mail",
       "ASSUNTO": "Assunto",
       "MODELO": "Se a janela de 24 h estiver fechada",
       "REGISTRO": "Onde fazer os passos de dentro",
       "PASSOS": "Passos de dentro",
       "CONTATO": "Em qual contato o card nasce",
+      "DESCRICAO_DO_WEBHOOK": "Para que serve este envio",
+      "URL": "Endereço do outro sistema",
+      "CORPO": "O que mandar",
+      "GRAVAR": "O que gravar da resposta",
+      "SE_RECUSAR": "Se o outro sistema recusar",
       "DE_NOVO": "A cada resposta, decidir de novo"
     },
     "OPCOES": {
@@ -217,6 +229,10 @@
         "MEDIUM": "Média",
         "HIGH": "Alta",
         "URGENT": "Urgente"
+      },
+      "RESULT": {
+        "WON": "Ganho",
+        "LOST": "Perdido"
       },
       "ATTRIBUTE_MODEL": {
         "CONVERSATION_ATTRIBUTE": "Conversa",
@@ -233,7 +249,8 @@
         "DATE": "Data",
         "LIST": "Lista",
         "CHECKBOX": "Sim ou não",
-        "PESSOA": "Pessoa da equipe"
+        "PESSOA": "Pessoa da equipe",
+        "CONTATO": "Contato"
       }
     },
     "LIGADA": "Ligada",
@@ -373,7 +390,8 @@
       "A_CADA_MENSAGEM": "A cada mensagem do cliente enquanto espera",
       "NENHUM": "Nenhum se aplica",
       "CAMINHO": "Caminho {n}",
-      "PASSOS": "Em cada um"
+      "PASSOS": "Em cada um",
+      "SE_RECUSAR": "Se o outro sistema recusar"
     },
     "SELETOR": {
       "TITULO": "Escolha o próximo passo",
@@ -456,10 +474,10 @@
         "DICA": "No WhatsApp oficial, 24 h depois da última mensagem do cliente, texto livre não sai. Escolha um modelo aprovado na Meta para mandar no lugar; cada envio de modelo é cobrado pela Meta. Com a janela aberta, sai o texto acima.",
         "NENHUM": "Não mandar nada (a automação para nesta conversa)",
         "OPCAO": "{nome} ({idioma})",
-        "SEM_MODELOS": "Nenhuma caixa do WhatsApp oficial que você vê tem modelo de utilidade aprovado. Crie e aprove em Modelos.",
+        "SEM_MODELOS": "Nenhuma caixa do WhatsApp oficial que você vê tem modelo de utilidade ou de propaganda aprovado. Crie e aprove em Modelos.",
         "DIVERGENTE": "Este modelo tem texto diferente em outra caixa. Cada conversa recebe o modelo da própria caixa; se lá ele pedir outras variáveis, a mensagem não sai.",
         "MUDOU": "O modelo agora pede {quantas} variáveis. Preencha todas antes de salvar.",
-        "SUMIU": "O modelo {nome} não está mais aprovado, de utilidade, nas caixas que você vê. Escolha outro.",
+        "SUMIU": "O modelo {nome} não está mais aprovado, de utilidade ou de propaganda, nas caixas que você vê. Escolha outro.",
         "VARIAVEL": "Variável {numero} do modelo"
       },
       "SEM_AGENTE_DE_IA": "Nenhuma agente de IA recebe conversas nesta conta ainda. Ponha uma agente numa caixa, em Agentes de IA, para usar este passo.",

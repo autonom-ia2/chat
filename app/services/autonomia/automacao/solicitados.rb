@@ -15,11 +15,11 @@ class Autonomia::Automacao::Solicitados
   # A empresa do solicitante; sem empresa, ele mesmo.
   EMPRESA = 'solicitantes.company_id, (CASE WHEN solicitantes.company_id IS NULL THEN solicitantes.id END)'.freeze
   SEM_MARCAR = "(crm_cards.custom_attributes ->> ?) IS DISTINCT FROM 'true'".freeze
-  # Os passos que gravam o solicitante no card que criam. Nenhum ainda: o "para cada item" do passo 3 (G24) é quem grava,
-  # e põe o tipo dele aqui no mesmo commit em que passa a gravar. Sem gravador, card nenhum tem solicitante e o aviso de
-  # sexta nunca sairia (pularia toda semana com `faltou_valor`); por isso o salvar recusa a condição `solicitante_de`
-  # (ProblemasDoGatilho, `solicitante_sem_gravador`) e a tela não a oferece (useEscolhasDosGatilhos).
-  GRAVADORES = [].freeze
+  # Os passos que gravam o solicitante no card que criam: o "para cada item" do passo 3 (G24, ItemDoParaCada). Sem
+  # gravador, card nenhum teria solicitante e o aviso de sexta nunca sairia (pularia toda semana com `faltou_valor`); por
+  # isso, com a lista vazia, o salvar recusa a condição `solicitante_de` (ProblemasDoGatilho, `solicitante_sem_gravador`)
+  # e a tela não a oferece (useEscolhasDosGatilhos).
+  GRAVADORES = %w[para_cada].freeze
 
   def self.gravado? = GRAVADORES.any?
 

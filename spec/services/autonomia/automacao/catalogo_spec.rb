@@ -97,7 +97,8 @@ RSpec.describe Autonomia::Automacao::Catalogo do
 
     expect(nativos.pluck('tipo')).to contain_exactly('esperar', 'esperar_ate', 'se', 'parar', 'mensagem', 'avisar', 'email',
                                                      'campanha', 'decidir', 'extrair', 'escrever', 'resumir', 'ia_assumir', 'retorno',
-                                                     'card', 'em_outro_registro', 'prospeccao', 'conversa_ao_responsavel', 'para_cada')
+                                                     'card', 'em_outro_registro', 'prospeccao', 'conversa_ao_responsavel', 'para_cada',
+                                                     'webhook')
     expect(nativos.flat_map { |passo| passo['campos'] }.pluck('peca')).to all(be_present)
     expect(passos.pluck('grupo') - declarado['grupos']).to be_empty
   end
@@ -126,8 +127,7 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     fora = declarado['nativos_fora_do_editor'].to_h
 
     expect((declarado['nativos'].keys + fora.keys).sort).to eq(do_esquema.sort)
-    # Cada um com a Issue que o leva para a tela (o primeiro foi a #2486, de mensagem e avisar).
-    expect(fora.values).to all(include('(#'))
+    expect(fora.values).to all(include('#2486'))
   end
 
   # #2496: todo valor da mensagem do gatilho está no editor ou só no Guia, uma vez. O que fica de fora do catálogo
@@ -140,7 +140,10 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     expect(declarados).to match_array(valores::MENSAGEM.keys)
     expect(declarado['valores_so_guia'].values).to all(be_present)
     expect(da_mensagem.pluck('caminho')).to match_array(valores::MENSAGEM.keys)
-    da_mensagem.each do |valor|
+    # O nome da campanha (#2681) é escrito, sem opções: vai ao editor como texto.
+    escritos, fechados = da_mensagem.partition { |valor| valor['caminho'] == 'mensagem.campanha' }
+    expect(escritos.first).not_to include('opcoes', 'operadores')
+    fechados.each do |valor|
       expect(valor['opcoes'].pluck('valor')).to eq(valores.fechado(valor['caminho'])['opcoes'])
       expect(valor['operadores'].pluck('op')).to eq(valores.fechado(valor['caminho'])['operadores'])
     end

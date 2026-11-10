@@ -16,8 +16,9 @@
 #   só com cliente e fora de outro galho (EnquantoEspera).
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
-  # `passos`: o ramo do "em outro registro" (G18, #2671), que roda numa execução filha, no registro ligado.
-  RAMOS = %w[entao senao se_vencer a_cada_mensagem passos].freeze
+  # `passos`: o ramo do "em outro registro" (G18, #2671), que roda numa execução filha, no registro ligado. `se_recusar`:
+  # o do "webhook" (G13), quando o outro sistema recusa.
+  RAMOS = %w[entao senao se_vencer a_cada_mensagem se_recusar passos].freeze
   # O "decidir" (F7, #2500) abre um ramo por caminho (`caminhos[].passos`) e o de "nenhum se aplica" (`nenhum`).
   NENHUM = 'nenhum'.freeze
   # Os passos de IA (F7), só com a flag da F7.
@@ -48,12 +49,14 @@ class Autonomia::Automacao::Receita
   # entra se ele pode ler; `nil` explícito (o catálogo, a leitura sem pessoa) não aplica a regra aqui, e a execução
   # continua lendo vazio. Obrigatório, sem padrão: quem monta a Receita diz quem é, e o esquecimento quebra o spec.
   # `alvo`: o tipo do registro em que a receita roda, quando não é o do gatilho: o ramo do "em outro registro" (G18) é
-  # conferido como uma receita própria, no registro ligado (EmOutroRegistro.problemas_ao_salvar).
-  def initialize(receita, conta:, account_user:, alvo: nil)
+  # conferido como uma receita própria, no registro ligado (EmOutroRegistro.problemas_ao_salvar). `origem`: nesse ramo, o
+  # tipo do alvo do gatilho da mãe, que o ramo lê com `origem.*` (G65); fora dele, nil e `origem.*` é recusado.
+  def initialize(receita, conta:, account_user:, alvo: nil, origem: nil)
     @receita = receita
     @conta = conta
     @account_user = account_user
     @alvo = alvo
+    @origem = origem
   end
 
   # Frases para a pessoa (ou o Guia) corrigir. Vazio = pode salvar. Só roda com a receita já no esquema.
@@ -192,22 +195,41 @@ class Autonomia::Automacao::Receita
   # que falhou (G53) não vale no "Só se" do gatilho (`no_gatilho`): a Partida filtra sem ela. `lugar`: `tipo` (G49) e
   # `onde`: :caminho ou :corpo da ação, :texto (mensagem, aviso, e-mail, retorno); sem `onde` é o que decide (filtro e
   # condição). Na ação, a automação de conversa não usa o card para agir (#2716): nenhum `card.*` no caminho e nenhum
-  # `card.id` no corpo; copiar um campo do card é ler.
+  # `card.id` no corpo; copiar um campo do card é ler. Vale também no ramo do "em outro registro" que roda numa conversa
+  # (alvo) e na origem que é uma conversa (decisão 19).
   def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false, **lugar)
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
 
     de_passo = de_outro_passo(id, caminho, no_gatilho, lugar[:tipo])
     return de_passo if de_passo
+    return problemas_da_origem(id, caminho, lugar[:onde]) if valores.da_origem?(caminho)
 
     fora = ::Autonomia::Automacao::LugarDoValor.fora(caminho, gatilho: @receita['gatilho'], na_espera: na_espera, no_filtro: no_gatilho)
     return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
 
-    no_lugar = ::Autonomia::Automacao::CardDaConversa.problema(caminho, lugar[:onde], alvo)
+    lido_no(id, caminho, caminho, lugar[:onde], alvo)
+  end
+
+  # G65: `origem.*` só no ramo do "em outro registro" (a filha lê o alvo da mãe), com o caminho que o alvo do gatilho da
+  # mãe alcança e a régua de sempre (lido_no), no alvo da mãe.
+  def problemas_da_origem(id, caminho, onde)
+    lido = ::Autonomia::Automacao::Valores.caminho_da_origem(caminho)
+    return [texto(:origem_fora_do_ramo, passo: id, caminho: caminho)] unless @origem
+    return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless ::Autonomia::Automacao::Valores.no_alvo?(lido, @origem)
+
+    lido_no(id, caminho, lido, onde, @origem)
+  end
+
+  # O `lido` (sem o prefixo da origem) no registro `alvo_type`: o card da conversa só para ler (decisão 19), o atributo
+  # da conta e a permissão de quem salva. A frase leva o `caminho` como a pessoa escreveu.
+  def lido_no(id, caminho, lido, onde, alvo_type)
+    no_lugar = ::Autonomia::Automacao::CardDaConversa.problema(lido, onde, alvo_type)
     return [texto(no_lugar, passo: id, caminho: caminho)] if no_lugar
 
-    Array(valores.problema_de_leitura(caminho, conta: @conta, account_user: @account_user)).map { |chave| texto(chave, passo: id, caminho: caminho) }
+    leitura = ::Autonomia::Automacao::Valores.problema_de_leitura(lido, conta: @conta, account_user: @account_user)
+    Array(leitura).map { |chave| texto(chave, passo: id, caminho: caminho) }
   end
 
   # O valor que vem de outro passo desta execução: o texto da IA (#2679) ou o registro criado (G49); nil nos outros.

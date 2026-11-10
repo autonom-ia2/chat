@@ -89,6 +89,7 @@ en:
       invalid_contact_input: 'Provide a contact object with a non-empty name, optional email and phone strings, and valid attribute objects.'
       contact_conversation_conflict: 'cannot be changed while this card has conversations belonging to another contact. Review the conversation links first.'
       pessoa_de_fora: 'field %{chave}: the person is not on this account team.'
+      contato_de_fora: 'field %{chave}: the contact is not from this account.'
     account:
       not_authorized: You are not authorized to access this account
       email_limit_exceeded: The daily email limit for this account has been reached
@@ -222,6 +223,8 @@ en:
       attribute_key_format: must only contain letters, numbers, underscores, hyphens, and dots
       key_conflict: The provided key is not allowed as it might conflict with default attributes.
       pessoa_so_no_card: 'Team member fields exist only on cards.'
+      contato_so_no_card: 'Contact fields exist only on cards.'
+      contato_em_uso: 'This Contact field is in use by the automation %{automacoes} to find the linked contact. Turn the automation off, or choose another field in it, before changing the type or deleting this field.'
     mfa:
       already_enabled: MFA is already enabled
       not_enabled: MFA is not enabled
@@ -559,6 +562,12 @@ en:
         ja_aberta: 'The trigger happened again, but the automation was already running here and did not start again.'
         nao_acordou: 'An error kept the automation from checking this wait early. It keeps waiting until the deadline.'
         filhas_puladas: 'Some linked records did not get these steps: the person who turned on the automation cannot reach them, or the automation was already running there.'
+        contato_ligado_sumiu: 'The contact saved in the chosen field does not exist in this account anymore (it was deleted). The steps inside did not run anywhere.'
+        registro_criado_sumiu: 'The record the earlier step created does not exist in this account anymore (it was deleted). The steps inside did not run anywhere.'
+        campo_nao_e_contato: 'The field chosen to find the linked contact is no longer of the Contact type, so the number in it may belong to something else. The steps inside did not run. Choose a Contact field in the step and save again.'
+        origem_fora_do_alcance: 'This step reads the original record, and the person who turned on the automation no longer has access to it. The step was skipped, so no data from that record was sent.'
+        contato_ligado_sem_conversa: 'The linked contact has no conversation yet, so the steps inside had nowhere to run.'
+        nenhum_card_ligado: 'This contact has no other card that matches the step, so the steps inside did not run.'
         receita_com_problema: 'This version no longer runs as it was saved. Fix it and save again before turning it on.'
         sem_quem_ligou: 'Nobody turned this automation on. Take over and turn it back on.'
         sem_versao: 'This automation has no saved steps yet.'
@@ -575,7 +584,7 @@ en:
         limite_da_caixa: "The inbox has a reply time limit, set in its options, and the customer has not written within it. The message was not sent, and the automation stopped in this conversation."
         modelo_fora_da_caixa: "The window was closed, and this conversation's inbox doesn't have the chosen template. The message was not sent, and the automation stopped in this conversation."
         modelo_nao_aprovado: "The window was closed, and the chosen template isn't approved by Meta in this inbox. The message was not sent, and the automation stopped in this conversation."
-        modelo_de_propaganda: "The window was closed, and the chosen template is marketing. The automation only sends utility templates. The message was not sent, and the automation stopped in this conversation."
+        modelo_de_categoria_fora: "The window was closed, and the chosen template is neither utility nor marketing. The message was not sent, and the automation stopped in this conversation."
         modelo_mudou: "The window was closed, and this inbox's template asks for different variables than the step's. Choose the template again. The message was not sent, and the automation stopped in this conversation."
         modelo_faltou_valor: "The window was closed, and a value the template needs was empty in this conversation. The message was not sent, and the automation stopped in this conversation."
         modelo_texto_longo: "The window was closed, and the template with the values in place went over the 1024 characters WhatsApp accepts. The message was not sent, and the automation stopped in this conversation."
@@ -590,6 +599,16 @@ en:
         card_sem_responsavel: "The card has no owner. The conversation stayed with whoever had it."
         responsavel_nao_ve_a_conversa: "The card owner cannot see this conversation (they are not in its inbox). The conversation stayed with whoever had it."
         texto_vazio: "The text came out blank after it was built. The message was not sent."
+        webhook_desligado: 'Sending to another system is off for this account. Nothing was sent.'
+        webhook_so_https: 'The address of the other system must start with https://. Nothing was sent.'
+        webhook_sem_senha_no_endereco: 'The address of the other system cannot carry a user and password. Nothing was sent.'
+        webhook_endereco_interno: 'The address points to an internal network or to this platform, so it was blocked. Nothing was sent.'
+        webhook_sem_resposta: 'The other system did not answer in time or had an error; the automation will try again.'
+        webhook_redirecionou: 'The other system answered with a redirect, which is not followed. Use the final address.'
+        webhook_recusado: 'The other system refused the data.'
+        webhook_sem_permissao: 'Whoever turned this automation on can no longer send data to other systems. The automation was paused.'
+        webhook_gravar_falhou: 'The other system received the data, but saving its answer failed. It was not sent again.'
+        webhook_resposta_grande: 'The other system answered, but the answer was too big to read. Nothing was saved from it.'
         dado_ausente: 'The AI did not find any of the requested data in the conversation. Nothing was saved.'
         ia_chave_recusada: "The AI provider refused the account's key. Check the AI key in the integrations."
         ia_desligada: 'AI steps are off for this account. The AI was not called.'
@@ -626,6 +645,7 @@ en:
           sem_chave_de_funis: 'Step %{passo}: it reads cards from the pipeline, and you cannot edit pipelines.'
           funil_de_fora: 'Step %{passo}: the pipeline is not from this account.'
           etapa_de_fora: 'Step %{passo}: the stage is not from this account or not from the chosen pipeline.'
+          campo_sem_contato: 'Step %{passo}: the field that holds the contact must be a card field of the Contact type, where your team picks a contact from the list. A number field cannot point to a contact: a mistake would send the message to another customer.'
         sem_criar_card: 'Step %{passo}: you cannot create cards in the CRM, which the "Create card" step needs.'
         etapa_do_card_de_fora: 'Step %{passo}: stage %{id} is not from this account.'
         card_desligado: 'Step %{passo}: the "Create card" step is off for this account (card triggers or the CRM are off).'
@@ -640,6 +660,7 @@ en:
         acao_fora: 'Step %{passo}: %{acao} cannot be an automation step.'
         caminho_faltando: 'Step %{passo}: the action needs %{campo}.'
         valor_desconhecido: 'Step %{passo}: the automation cannot read %{caminho}.'
+        origem_fora_do_ramo: 'Step %{passo}: %{caminho} reads the original record, and only exists inside the step "Do it on the linked contact or cards". Use it in a step inside it.'
         texto_da_ia_no_gatilho: 'Step %{passo}: %{caminho} is the text of an AI step, and no step has run yet in the trigger "Only if". Use it in a step after that one.'
         texto_da_ia_sem_passo: 'Step %{passo}: %{caminho} must point to a "Write" or "Summarize" step of this automation, or to the count (.quantos) or the names (.nomes) of a "For each item" step.'
         texto_da_ia_depois: 'Step %{passo}: %{caminho} points to an AI step that never runs before this one (it comes later, or sits in another branch of the same step). Move the step that writes before the one that reads it.'
@@ -669,12 +690,13 @@ en:
         operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'
         valor_fora: 'Step %{passo}: %{caminho} has no value "%{valor}". Use one of: %{opcoes}.'
         proibido: 'Step %{passo}: the automation cannot change %{campo}.'
+        um_de: 'Step %{passo}: %{campo} must be one of: %{opcoes}.'
         passo_desligado: "Step %{passo}: message and alert steps are off for this account."
         agente_de_ia_invalido: 'Step %{passo}: AI agent %{id} is not from this account.'
         retorno_mensagem_sem_card: "Step %{passo}: the follow-up message only goes out with a card trigger. Use a card trigger or turn the message off."
         responsavel_so_com_card: "Step %{passo}: handing the conversation to the card owner only works with a card trigger."
         sem_criar_retorno: 'Step %{passo}: you cannot create follow-ups in the CRM, which the "Create follow-up" step needs.'
-        modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility and with these variables."
+        modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility or marketing, and with these variables."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
         responsavel_do_card_sem_card: 'Step %{passo}: "whoever owns the card" only works when the trigger is a card trigger.'
@@ -714,6 +736,14 @@ en:
         de_novo_desde_no_galho: "Step %{passo}: \"go back to wait\" can't point to a step inside \"For each customer message\" (%{desde}): the automation would never go back to waiting."
         caminho_nenhum: "None applies"
         destino_invalido: "Step %{passo}: %{destino} is not a place where the AI can save."
+        webhook_desligado: "Step %{passo}: sending to another system is off for this account."
+        webhook_so_https: "Step %{passo}: the address of the other system must start with https://."
+        webhook_sem_senha_no_endereco: "Step %{passo}: the address cannot carry a user and password. The signature already proves it is us."
+        webhook_endereco_interno: "Step %{passo}: the address points to an internal network or to this platform."
+        webhook_destino_invalido: "Step %{passo}: the answer can only be saved in a card, contact or conversation attribute (%{destino})."
+        webhook_destino_repetido: "Step %{passo}: two answers are saved in %{destino}."
+        webhook_sem_permissao: "Step %{passo}: only an administrator, or a role allowed to manage integrations, can send data to another system."
+        webhook_chave_invalida: "Step %{passo}: %{chave} does not point to anything in the answer."
         campo_repetido: "Step %{passo}: %{chave} appears twice."
       nota:
         laco: "Automation %{nome} stopped in this conversation: the other side replied in under %{segundos} seconds to %{trocas} automation messages, with no pause and no one from the team in between, like a bot. Check it before letting it continue here."
@@ -724,6 +754,8 @@ en:
         gravar: 'Save what the AI found in the conversation'
       descricoes:
         conversa_ao_responsavel: 'Hand the conversation to the card owner'
+      webhook:
+        gravar: 'Save what the other system answered'
     automacoes:
       ensaio:
         condicoes_invalidas: 'This automation has a condition the platform does not accept, so it cannot be tested. Fix it in manual mode.'

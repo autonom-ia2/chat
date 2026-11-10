@@ -15,9 +15,9 @@
 #   para o contato sem empresa; o de outra empresa fica como está (decisão e).
 # - O card nasce na etapa pelo "criar card" (PassoDeCard), ligado só ao contato. O card aberto do contato no mesmo funil
 #   já conta, e o item pula com `card_ja_existe`, sem duplicar.
-# - O solicitante ainda não é gravado no card: a coluna existe (crm_cards.solicitante_contact_id, G22), mas este passo
-#   não a preenche, e por isso a G22 segue desligada (Solicitados::GRAVADORES vazio). Por ora o histórico da execução
-#   liga a conversa dele aos cards (`card_ids`).
+# - G22: o card que o item cria guarda quem pediu (crm_cards.solicitante_contact_id, o contato da conversa que mandou a
+#   lista), para o aviso de sexta ao RH (Solicitados). O card que já existia (`card_ja_existe`) não é deste pedido e
+#   fica como está. O histórico da execução também liga a conversa aos cards (`card_ids`).
 class Autonomia::Automacao::ItemDoParaCada
   NOME = ::Autonomia::Automacao::PassoParaCada::NOME
   TELEFONE = 'telefone'.freeze
@@ -31,6 +31,7 @@ class Autonomia::Automacao::ItemDoParaCada
     @importacao = importacao
     @passo = passo
     @acesso = acesso
+    @solicitante = solicitante
     @empresa = solicitante.try(:company)&.name
     @contagem = { 'cards_criados' => 0, 'contatos_novos' => 0, 'empresas_ligadas' => 0, 'pulados' => {}, 'card_ids' => [] }
   end
@@ -83,7 +84,17 @@ class Autonomia::Automacao::ItemDoParaCada
 
     @contagem['cards_criados'] += 1
     @contagem['card_ids'] << resultado.dados['card_id']
+    gravar_solicitante(resultado.dados['card_id'])
     nil
+  end
+
+  # G22: quem pediu, no card que acabou de nascer. Direto na coluna, como a junção de contatos (ContactMergeAction): é
+  # parte da criação, não uma mudança do card que dispare os gatilhos de card atualizado.
+  def gravar_solicitante(card_id)
+    return unless @solicitante.is_a?(::Contact)
+
+    ::Crm::Card.where(id: card_id, account_id: @execucao.account_id)
+               .update_all(solicitante_contact_id: @solicitante.id) # rubocop:disable Rails/SkipsModelValidations
   end
 
   # O número no formato do import, nil sem telefone, false quando não é celular do Brasil.

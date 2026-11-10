@@ -155,8 +155,10 @@ class Autonomia::Automacao::Ensaio
     return no(passo, *::Autonomia::Automacao::AgendaDaPagina.do_vazio(valores.falta_da_agenda)) if pronto.nil?
     return no(passo, 'texto_vazio') if pronto.strip.empty?
 
-    # F4b (#2468): o nome do modelo, para a tela dizer o que sai se a janela de 24 h estiver fechada.
-    no(passo, passo['tipo'], { texto: pronto, modelo: passo.dig('modelo', 'nome') }.compact)
+    # F4b (#2468): o nome do modelo, para a tela dizer o que sai se a janela de 24 h estiver fechada; o de propaganda
+    # (lote 5, #2681) leva o aviso de custo.
+    propaganda = true if ::Autonomia::Automacao::ModeloWhatsapp.propaganda?(@conversa&.inbox, passo['modelo'])
+    no(passo, passo['tipo'], { texto: pronto, modelo: passo.dig('modelo', 'nome'), propaganda: propaganda }.compact)
   end
 
   # O e-mail (G2) com o assunto e o texto desta conversa e a caixa por onde sairia, ou o motivo de não sair para o
@@ -178,29 +180,8 @@ class Autonomia::Automacao::Ensaio
     pronto.merge(dados: pronto[:dados].merge(assunto: assunto.squish, caixa: caixa.name))
   end
 
-  # O retorno (G3): o título montado, ou por que pularia, como o motor. O ensaio só descreve; nada é criado.
-  def retorno(passo, valores)
-    return no(passo, 'mensagens_desligadas') if passo['envio'] && !::Autonomia::Automacao::Motor.mensagens?(@conta)
-
-    motivo = pulo_dos_textos(passo, valores)
-    return no(passo, motivo) if motivo
-    return no(passo, 'retorno_sem_responsavel') if [nil, 'responsavel'].include?(passo.dig('para', 'quem')) &&
-                                                   valores.ler('conversa.responsavel_id').blank?
-
-    no(passo, 'retorno', { texto: ::Autonomia::Automacao::Texto.new(passo['titulo'], valores).montar })
-  end
-
-  # O primeiro pulo do título e da mensagem do retorno, na ordem do motor: valor vazio ou texto só de espaços.
-  def pulo_dos_textos(passo, valores)
-    textos = passo['envio'] ? [passo['titulo'], passo.dig('envio', 'mensagem')] : [passo['titulo']]
-    textos.lazy.map { |partes| pulo_do_texto(::Autonomia::Automacao::Texto.new(partes, valores).montar) }.find(&:itself)
-  end
-
-  def pulo_do_texto(pronto)
-    return 'faltou_valor' if pronto.nil?
-
-    'texto_vazio' if pronto.strip.empty?
-  end
+  # O retorno (G3): o título montado, ou por que pularia, como o motor (PassoDeRetorno.ensaiar). Nada é criado.
+  def retorno(passo, valores) = no(passo, *::Autonomia::Automacao::PassoDeRetorno.ensaiar(passo, valores, @conta))
 
   # O valor calculado do corpo (G16) com os dados desta conversa e o "hoje" de agora: a data que daria se rodasse
   # agora. Pula como o motor: valor vazio, data que não é data, valor que não cabe no campo.

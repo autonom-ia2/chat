@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 725 |
-| Sem corpo | 208 |
+| No catálogo | 726 |
+| Sem corpo | 209 |
 | Com corpo | 517 |
-| Com corpo e formato completo | 426 (82,4%) |
-| Com corpo e formato incompleto | 91 |
+| Com corpo e formato completo | 427 (82,6%) |
+| Com corpo e formato incompleto | 90 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 217 |
-| Leituras cruas tipadas | 222 de 318 |
+| Leituras cruas tipadas | 223 de 318 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 77 |
+| leitura crua sem tipo | 76 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -82,7 +82,6 @@ Uma ação pode ter mais de um motivo.
 - `POST conversations/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/conversations_controller.rb:52); params inteiro repassado a ::Conversations::FilterService.new
 - `POST crm/booking_invites/:id/deliver` — leitura crua sem tipo: text (repassada a ::Crm::BookingV2::InviteDeliverer.new)
 - `POST crm/booking_pages/:id/test_invite` — leitura crua sem tipo: phone (repassada a ::Crm::BookingV2::TestInvite.new)
-- `POST crm/cards/:id/close` — leitura crua sem tipo: result (repassada a ::Crm::Cards::Closer.new)
 - `POST crm/cards/bulk` — leitura crua sem tipo: action_name, bulk_action
 - `POST crm/meetings/:id/sync` — leitura crua sem tipo: force
 - `POST crm/meetings/suggest_times` — leitura crua sem tipo: date, duration_minutes
@@ -177,7 +176,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/conversations#transcript` email — repassada a ConversationReplyMailer.with(account: @conversation.accou...
 - `api/v1/accounts/crm/booking_invites#deliver` text — repassada a ::Crm::BookingV2::InviteDeliverer.new
 - `api/v1/accounts/crm/booking_pages#test_invite` phone — repassada a ::Crm::BookingV2::TestInvite.new
-- `api/v1/accounts/crm/cards#close` result — repassada a ::Crm::Cards::Closer.new
 - `api/v1/accounts/crm/cards/bulk#create` action_name — o código não converte nem compara o valor
 - `api/v1/accounts/crm/cards/bulk#create` bulk_action — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meetings#suggest_times` date — o código não converte nem compara o valor
@@ -230,8 +228,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 444 |
-| Com parâmetros conhecidos | 393 |
+| No catálogo | 445 |
+| Com parâmetros conhecidos | 394 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

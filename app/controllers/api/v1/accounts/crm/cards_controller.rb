@@ -121,6 +121,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     return render_unprocessable('crm.invalid_payment_promise') if promessa == PROMESSA_INVALIDA
 
     ensure_new_owner_allowed!(attributes[:owner_id]) if attributes.key?(:owner_id)
+    ensure_contact_fields_attachable!(attributes[:custom_attributes], @card.custom_attributes) if attributes.key?(:custom_attributes)
     if attributes.present? || promessa != SEM_PROMESSA
       mark_value_source_human!(attributes) if attributes.key?(:value_cents)
       mark_score_source_manual!(attributes) if score_changed_by_hand?(attributes)
@@ -157,10 +158,12 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
       @card = ::Crm::Cards::Closer.new(
         card: @card,
         actor: Current.user,
-        result: params[:result],
+        result: params[:result].to_s,
         value_cents: params[:value_cents],
         currency: params[:currency],
-        lost_reason: params[:lost_reason]
+        lost_reason: params[:lost_reason],
+        # G25: pedido do passo da Automação livre (dentro da cadeia dela): o fechamento leva a automação, como o move.
+        automacao: ::Autonomia::Automacao::Cadeia.automacao_livre
       ).perform
       broadcast_card(::Events::Types::CRM_CARD_UPDATED)
       render :show
@@ -278,6 +281,20 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     Current.account.contacts.find(contact_id).tap { |contact| authorize contact, :attach? }
   end
 
+  # Campo do tipo contato (#2675): o card devolve o id gravado, e o passo "em outro registro" lê esse contato. Como no
+  # vínculo do contato (acima), só grava quem pode vincular o contato novo (ContactPolicy#attach?). O id que não é de um
+  # contato da conta recebe a mesma recusa, para a resposta não dizer se ele existe. Só o campo que mudou é conferido.
+  def ensure_contact_fields_attachable!(novos, antes = {})
+    chaves = Current.account.custom_attribute_definitions.where(attribute_model: :card_attribute, attribute_display_type: :contato)
+                    .pluck(:attribute_key)
+    novos.to_h.slice(*chaves).each do |chave, valor|
+      next if valor.blank? || valor.to_s == antes.to_h[chave].to_s
+
+      contato = Current.account.contacts.find_by(id: Integer(valor.to_s, 10, exception: false))
+      raise Pundit::NotAuthorizedError unless contato && policy(contato).attach?
+    end
+  end
+
   def upsert_existing_card!(card, permitted_params)
     @card = card
     authorize @card, :update?
@@ -287,6 +304,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     ensure_new_owner_allowed!(attributes['owner_id'], pipeline_id: upsert_pipeline_id(attributes) || @card.pipeline_id) if attributes.key?('owner_id')
     # Campos do card (#1146): o upsert junta com o que já está salvo, como o PATCH.
     if permitted_params[:custom_attributes].present?
+      ensure_contact_fields_attachable!(permitted_params[:custom_attributes], @card.custom_attributes)
       attributes['custom_attributes'] = @card.custom_attributes.to_h.merge(permitted_params[:custom_attributes].to_h).compact
     end
     if attributes.present?
@@ -435,6 +453,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
         existing = external_id && Current.account.crm_cards.find_by(external_id: external_id)
         next upsert_existing_card!(existing, permitted_params) if existing
 
+        ensure_contact_fields_attachable!(permitted_params[:custom_attributes])
         @card, created = create_authorized_card(permitted_params)
         authorize @card, :show?
         broadcast_card(::Events::Types::CRM_CARD_CREATED) if created
