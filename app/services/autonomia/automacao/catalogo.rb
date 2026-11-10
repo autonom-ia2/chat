@@ -54,7 +54,7 @@ module Autonomia::Automacao::Catalogo
                        # G18 (#2671): onde roda o "em outro registro".
                        'registro_ligado' => 'registro_ligado',
                        # G57 (#2769): hoje ou amanhã; a peça mostra também o `daqui`.
-                       'quando_do_retorno' => 'quando_do_retorno',
+                       'quando_do_retorno' => 'quando_do_retorno', 'daqui_do_retorno' => 'duracao',
                        # G31: o "decidir" que espera a próxima resposta e decide de novo.
                        'de_novo' => 'de_novo' }.freeze
   # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2), a
@@ -77,6 +77,8 @@ module Autonomia::Automacao::Catalogo
       'gatilhos' => gatilhos,
       'operadores' => operadores,
       'unidades' => unidades,
+      # G69: o "daqui" do retorno também em meses.
+      'unidades_do_retorno' => ::Autonomia::Automacao::CatalogoDoEsquema.unidades(esquema, 'daqui_do_retorno'),
       'valores' => ::Autonomia::Automacao::CatalogoDeValores.todos,
       # O que cada alvo de gatilho alcança (#2499): o editor só oferece o valor dessas bases.
       'alvos' => ::Autonomia::Automacao::Valores::BASES_DO_ALVO,

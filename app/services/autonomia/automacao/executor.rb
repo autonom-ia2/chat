@@ -210,6 +210,8 @@ class Autonomia::Automacao::Executor
     @tentativas = 0
     @alvo = @contexto = nil
     registrar(passo['id'], resultado.tipo == :ok ? 'ok' : 'pulado', resultado.motivo, resultado.dados)
+    # G55: com o registro gravado, esta execução já passou pela campanha da vez; confere se a vez fecha.
+    ::Autonomia::Automacao::CampanhaDaOcorrencia.conferir_execucao(@execucao) if passo['tipo'] == 'campanha'
     resultado.dados['ramo'] ? @roteiro.entrar(passo, resultado.dados['ramo']) : @roteiro.seguinte(passo['id'])
   end
 
@@ -238,8 +240,10 @@ class Autonomia::Automacao::Executor
   end
 
   # Fechou nesta rodada: a cobertura da agente de IA que ainda valer devolve a conversa à pessoa (decisão 18).
+  # G55: a execução que fecha deixa de segurar a campanha da vez do recorrente de card ou contato; confere se ela fecha.
   def finalizar(estado)
     ::Autonomia::Automacao::Cobertura.encerrar([@execucao.id]) if gravar(estado: estado, travada_em: nil)
+    ::Autonomia::Automacao::CampanhaDaOcorrencia.conferir_execucao(@execucao)
   end
 
   # Só grava na rodada que tomou a execução: se alguém a desligou no meio, nada muda e a rodada para do mesmo jeito.

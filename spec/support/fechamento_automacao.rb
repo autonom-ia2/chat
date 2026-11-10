@@ -81,13 +81,21 @@ module FechamentoAutomacao
     stub_request(:post, OPENAI).to_return do |pedido|
       corpo = JSON.parse(pedido.body)
       ia_recebeu << corpo
-      resposta = roteiro.fetch(corpo.dig('text', 'format', 'name'))
+      nome = corpo.dig('text', 'format', 'name')
+      # O roteiro que responde pelo que leu (um callable) recebe também o pedido; o Hash responde só pelo schema.
+      resposta = roteiro.respond_to?(:call) ? roteiro.call(nome, corpo) : roteiro.fetch(nome)
       payload = { id: "resp_#{ia_recebeu.size}", output_text: resposta.to_json, usage: { input_tokens: 800, output_tokens: 120 } }
       { status: 200, body: payload.to_json, headers: { 'Content-Type' => 'application/json' } }
     end
   end
 
   def ia_recebeu = (@ia_recebeu ||= [])
+
+  # As mensagens da conversa que o pedido levou à IA (`conversa.messages` da entrada), para o dublê responder pelo que leu.
+  def mensagens_lidas(corpo)
+    texto = corpo.dig('input', 0, 'content', 0, 'text')
+    texto ? Array(JSON.parse(texto).dig('conversa', 'messages')) : []
+  end
 
   def historico_de(automacao)
     Autonomia::Automacao::Registro.where(automacao_id: automacao['id']).order(:id).pluck(:passo, :resultado, :motivo)
@@ -340,15 +348,13 @@ module FechamentoAutomacao::Lacunas
     # A IA lê as notas internas da conversa (`le: notas`, #2679): exemplo 5, passo 1.
     'G36' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('notas') },
     # Achadas no exemplo 7 (auditoria dos termos, 07/11); G33 e G34 são do lote 3 (#2680), G35 e G36 da F7 (#2688).
-    # O lote 5 (#2686) traz as peças da G37 e da G38, com as sondas prontas em FechamentoAutomacao::SondasDaCampanha
-    # (spec/support/fechamento_automacao_campanha.rb). Elas ficam desligadas até o PR do spec de ponta a ponta do
-    # exemplo 7, que as liga; até lá o exemplo 7 segue em pendentes_spec.
+    # As peças da G37 e da G38 vieram no lote 5 (#2686); as sondas (FechamentoAutomacao::SondasDaCampanha, em
+    # spec/support/fechamento_automacao_campanha.rb) rodam o código da campanha e a Partida de verdade. Prova de ponta
+    # a ponta em spec/fechamento/automacao/exemplo_07_black_friday_spec.rb (lote 3 do #2414).
     # G37: o público da campanha com exclusão ("todos os outros", "perguntou e não comprou").
-    # Sonda: FechamentoAutomacao::SondasDaCampanha.campanha_para_todos_os_outros?
-    'G37' => nil,
+    'G37' => -> { FechamentoAutomacao::SondasDaCampanha.campanha_para_todos_os_outros? },
     # G38: o filtro "respondeu à campanha X" no gatilho da mensagem.
-    # Sonda: FechamentoAutomacao::SondasDaCampanha.filtro_da_campanha_filtra?
-    'G38' => nil,
+    'G38' => -> { FechamentoAutomacao::SondasDaCampanha.filtro_da_campanha_filtra? },
     # G39 (#2753): o gatilho que roda uma vez, numa data ("a quinta antes da Black Friday"), não toda semana.
     'G39' => lambda {
       gatilho = { 'tipo' => 'conta.recorrente', 'frequencia' => 'uma_vez', 'data' => '2030-11-28', 'hora' => 9 }
@@ -389,10 +395,16 @@ module FechamentoAutomacao::Lacunas
     },
     # G65 (#2842, ex. 11, passo 7): a filha lê o registro de origem (o João, no card ganho) com `origem.*`.
     'G65' => -> { FechamentoAutomacao::SondasDoRegistroLigado.filha_le_a_origem? },
-    # Achada no #2675 (09/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
-    # G55 (ex. 16, passo 2): disparar a campanha da etiqueta a partir de um gatilho de card. A campanha só sai do
-    # conta.recorrente (`campanha_so_sem_alvo`), e o "para cada card perdido" é o card.recorrente.
-    'G55' => nil,
+    # G55 (ex. 16, passo 2): disparar a campanha da etiqueta a partir de um gatilho de card. A sonda roda a vez de
+    # verdade (FechamentoAutomacao::SondasDaCampanhaDaVez): dois cards chegam, e a campanha sai uma vez, no último; prova
+    # ponta a ponta em spec/fechamento/automacao/g55_campanha_no_card_spec.rb.
+    'G55' => -> { FechamentoAutomacao::SondasDaCampanhaDaVez.uma_campanha_por_vez? },
+    # G69 (#2879, ex. 16, passo 6): o retorno "daqui a 11 meses" conta meses no calendário, no fuso da conta; a sonda cria
+    # o retorno de verdade (FechamentoAutomacao::SondasDoRetorno).
+    'G69' => -> { FechamentoAutomacao::SondasDoRetorno.retorno_em_meses_no_calendario_da_conta? },
+    # G70 (#2880, decisão 20, exemplos 2 e 7): o extrair grava direto num campo do card da conversa, nunca no valor
+    # protegido; a sonda salva e grava de verdade (FechamentoAutomacao::SondasDoExtrairNoCard).
+    'G70' => -> { FechamentoAutomacao::SondasDoExtrairNoCard.extrair_grava_no_card_da_conversa? },
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
     # (passo 2, "manda por e-mail o mesmo conteúdo"): `falhou.texto`, prova em g53_conteudo_da_falha_spec.rb.
     'G53' => -> { valor?('falhou.texto') },

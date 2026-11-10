@@ -790,3 +790,74 @@ describe('LivreAlterar', () => {
     });
   });
 });
+
+// G70 (#2880): o destino no card vale onde o passo roda num card ou numa
+// conversa. Dentro do "em outro registro", o alvo é o do ramo (`catalogo.alvo`),
+// não o do gatilho.
+describe('LivreAlterar, extrair no card', () => {
+  const EXTRAIR = {
+    tipo: 'extrair',
+    grupo: 'IA',
+    frase: 'EXTRAIR',
+    campos: [{ nome: 'campos', peca: 'campos_extrair', rotulo: 'CAMPOS' }],
+  };
+  const NO_CONTATO = {
+    ...CATALOGO,
+    gatilho: 'contato.criado',
+    gatilhos: [{ tipo: 'contato.criado', alvo: 'Contact' }],
+    passos: [EXTRAIR],
+  };
+
+  const comCard = async (catalogo, podeLerCards = true) => {
+    const wrapper = mount(LivreAlterar, {
+      props: {
+        catalogo,
+        opcoes: {},
+        atributosDaPeca: () => [],
+        atributosDo: () => [],
+        podeLerCards,
+      },
+      global: {
+        stubs: { SidePanel: PainelFalso },
+        mocks: { $t: chave => chave },
+      },
+    });
+    wrapper.vm.abrir({
+      tipo: 'passo',
+      valor: {
+        id: 'e1',
+        tipo: 'extrair',
+        le: ['mensagens_recentes'],
+        campos: [],
+      },
+    });
+    await flushPromises();
+    return wrapper.findComponent({ name: 'LivreIaCampo' }).props('comCard');
+  };
+
+  it('no gatilho de contato, sem card', async () => {
+    expect(await comCard(NO_CONTATO)).toBe(false);
+  });
+
+  it('no ramo que roda num card, com card', async () => {
+    expect(await comCard({ ...NO_CONTATO, alvo: 'Crm::Card' })).toBe(true);
+  });
+
+  // O registro do ramo vale mais que o do gatilho: um ramo de contato dentro de
+  // um gatilho de card não grava no card.
+  it('no ramo que roda num contato, dentro de um gatilho de card, sem card', async () => {
+    const noCard = {
+      ...NO_CONTATO,
+      gatilho: 'card.ganho',
+      gatilhos: [{ tipo: 'card.ganho', alvo: 'Crm::Card' }],
+    };
+    expect(await comCard(noCard)).toBe(true);
+    expect(await comCard({ ...noCard, alvo: 'Contact' })).toBe(false);
+  });
+
+  it('sem poder ler cards, sem card mesmo num card', async () => {
+    expect(await comCard({ ...NO_CONTATO, alvo: 'Crm::Card' }, false)).toBe(
+      false
+    );
+  });
+});

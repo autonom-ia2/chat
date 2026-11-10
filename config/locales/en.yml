@@ -735,6 +735,7 @@ en:
         a_cada_sem_contato: 'Step %{passo}: "For each customer message" needs a customer, and this trigger runs on the account, with no customer.'
         de_novo_desde_no_galho: "Step %{passo}: \"go back to wait\" can't point to a step inside \"For each customer message\" (%{desde}): the automation would never go back to waiting."
         caminho_nenhum: "None applies"
+        destino_card_sem_card: "Step %{passo}: the AI can only fill a card field in an automation that starts on a card or on a conversation."
         destino_invalido: "Step %{passo}: %{destino} is not a place where the AI can save."
         webhook_desligado: "Step %{passo}: sending to another system is off for this account."
         webhook_so_https: "Step %{passo}: the address of the other system must start with https://."

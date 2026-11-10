@@ -4,7 +4,7 @@
       "DISPARAR": "Send a WhatsApp campaign",
       "NAO_RECEBER": "Mark the contact as “does not receive”",
       "NAO_RECEBER_DICA": "The contact leaves every campaign and gets no more outbound messages. You can undo it on the contact.",
-      "SO_RECORRENTE": "Sending a campaign only works in an automation that runs on its own, on a schedule. With a conversation or card trigger, each run would send the same campaign again, so it can't be saved.",
+      "SO_RECORRENTE": "Sending a campaign only works in an automation that runs on its own, on a schedule. If it runs on each card or contact, a single campaign goes out per round, to everyone with the labels, once everyone in that round has passed this step or left another way. With a trigger on a conversation, card or contact that changes, each run would send the same campaign again, so it can't be saved.",
       "CAIXA_DICA": "Only official WhatsApp inboxes.",
       "SEM_CAIXA": "This account has no official WhatsApp inbox.",
       "MODELO": "Approved template",

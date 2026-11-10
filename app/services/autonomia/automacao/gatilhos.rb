@@ -176,7 +176,19 @@ module Autonomia::Automacao::Gatilhos
   # ambígua do horário de verão não repete nem pula. A do uma_vez (#2681) é a data, sem a hora: mudar só a hora depois
   # do disparo não manda de novo; mudar a data é outra ocorrência.
   def marca_do_recorrente(tipo, alvo_id, ocorrencia, data: nil)
-    marca = "recorrente:#{data || ocorrencia.utc.iso8601}:#{tipo}"
+    marca = marca_da_vez(tipo, ocorrencia, data: data)
     da_conta?(tipo) ? marca : "#{marca}:#{alvo_id}"
+  end
+
+  # A vez de um recorrente de card ou contato (G55): a marca do recorrente sem o alvo. No uma_vez, a data (#2681), como
+  # no marca_do_recorrente: mudar só a hora reaproveita a vez.
+  def marca_da_vez(tipo, ocorrencia, data: nil) = "recorrente:#{data || ocorrencia.utc.iso8601}:#{tipo}"
+
+  # A ocorrência de uma marca de marca_do_recorrente de card ou contato: a marca sem o alvo, a mesma para todos os
+  # alvos daquela vez (G55: a campanha da vez é uma só). nil em marca de outro formato.
+  def ocorrencia_da_marca(marca, alvo_id)
+    fim = ":#{alvo_id}"
+    texto = marca.to_s
+    texto.delete_suffix(fim) if texto.start_with?('recorrente:') && texto.end_with?(fim)
   end
 end
