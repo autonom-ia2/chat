@@ -44,7 +44,7 @@ RSpec.describe Autonomia::Automacao::Cobertura do
       cobrir
       described_class.pessoa_escreveu(mensagem)
 
-      expect(conversa.reload).to have_attributes(assignee_id: renata.id, ai_assignee_id: nil)
+      expect(conversa.reload).to have_attributes(assignee_id: renata.id, assignee_agent_bot_id: nil)
       expect(voltas.pluck(:execucao_id, :passo, :resultado, :dados))
         .to eq([[execucao.id, 'sofia', 'ok', { 'pessoa_id' => renata.id, 'conversa_id' => conversa.id }]])
       expect(described_class.vigente(conversa)).to be_nil
@@ -162,7 +162,7 @@ RSpec.describe Autonomia::Automacao::Cobertura do
 
       described_class.encerrar([execucao.id])
 
-      expect(conversa.reload).to have_attributes(assignee_id: renata.id, ai_assignee_id: nil)
+      expect(conversa.reload).to have_attributes(assignee_id: renata.id, assignee_agent_bot_id: nil)
       expect(encerradas.pluck(:execucao_id, :resultado, :dados))
         .to eq([[execucao.id, 'ok', { 'pessoa_id' => renata.id, 'conversa_id' => conversa.id }]])
     end
@@ -215,7 +215,8 @@ RSpec.describe Autonomia::Automacao::Cobertura do
 
       2.times { described_class.devolver(cobertura, conversa, described_class::VOLTOU) }
 
-      expect(conversa).to have_received(:with_lock).twice
+      # Uma trava por volta, mais a do próprio AssignmentService#assign_agent na única volta que devolve.
+      expect(conversa).to have_received(:with_lock).exactly(3).times
       expect(Conversations::AssignmentService).to have_received(:new).once
       expect(voltas.count).to eq(1)
     end

@@ -45,7 +45,7 @@ RSpec.describe Autonomia::Automacao::PassoDeConversaAoResponsavel, :automacao_mo
 
     execucao = rodar
 
-    expect(conversa.reload).to have_attributes(assignee_id: renata.id, ai_assignee_id: nil)
+    expect(conversa.reload).to have_attributes(assignee_id: renata.id, assignee_agent_bot_id: nil)
     expect(registros(execucao)).to eq([['conversa', 'ok', nil]])
     registro = Autonomia::Automacao::Registro.find_by!(execucao: execucao)
     expect(registro.dados).to include('responsavel_id' => renata.id, 'trocou' => true,
@@ -161,7 +161,7 @@ RSpec.describe Autonomia::Automacao::PassoDeConversaAoResponsavel, :automacao_mo
 
     rodar
 
-    expect(conversa.reload).to have_attributes(assignee_id: renata.id, ai_assignee_id: nil)
+    expect(conversa.reload).to have_attributes(assignee_id: renata.id, assignee_agent_bot_id: nil)
   end
 
   it 'quem ligou perde a chave no meio da rodada: a automação pausa e a conversa fica com a Júlia', :aggregate_failures do

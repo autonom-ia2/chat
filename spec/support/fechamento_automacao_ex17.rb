@@ -43,7 +43,7 @@ module FechamentoAutomacao::SondasDoExemplo17
   def cobre_e_devolve?(execucao, conversa, renata)
     cobertura = Autonomia::Automacao::Registro.find_by(execucao: execucao, motivo: Autonomia::Automacao::Cobertura::COMECOU)
     assumiu = cobertura&.dados.to_h['tirada_de'] == renata.id
-    com_a_ia = conversa.reload.assignee_id.nil? && conversa.ai_assignee_id.present?
+    com_a_ia = conversa.reload.assignee_id.nil? && conversa.assignee_agent_bot_id.present?
     renata_escreve(conversa, renata)
     voltou = Autonomia::Automacao::Registro.exists?(execucao: execucao, motivo: Autonomia::Automacao::Cobertura::VOLTOU)
     assumiu && com_a_ia && voltou && conversa.reload.assignee_id == renata.id
@@ -130,6 +130,7 @@ module FechamentoAutomacao::SondasDoExemplo17
   # desde então, inclusive a primeira, e não as 5 últimas só. Monta o que iria à IA, sem chamá-la.
   def resumo_le_o_periodo?
     conta = FactoryBot.create(:account)
+    conta.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_ia')
     conversa = FactoryBot.create(:conversation, account: conta)
     quem = FactoryBot.create(:user, account: conta, role: :administrator)
     passo = { 'id' => 'conta', 'tipo' => 'resumir', 'le' => %w[mensagens_com_respostas], 'destino' => 'nota' }

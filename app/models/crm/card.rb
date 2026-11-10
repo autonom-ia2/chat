@@ -50,7 +50,7 @@
 #  idx_crm_cards_last_message                    (account_id,last_message_at)
 #  idx_crm_cards_next_follow_up                  (account_id,next_follow_up_at)
 #  idx_crm_cards_owner                           (account_id,owner_id,status,id)
-#  idx_crm_cards_solicitante                     (account_id,solicitante_contact_id,status) WHERE (solicitante_contact_id IS NOT NULL)
+#  idx_crm_cards_solicitante                     (solicitante_contact_id,account_id,status) WHERE (solicitante_contact_id IS NOT NULL)
 #  idx_crm_cards_status_created                  (account_id,status,created_at)
 #  idx_crm_cards_title_trgm                      (lower((title)::text) gin_trgm_ops) USING gin
 #  idx_crm_cards_visible_inbox                   (account_id,inbox_id,status,id)

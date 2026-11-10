@@ -191,7 +191,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
 
     varrer_em(fuso.local(2026, 11, 4, 12, 1))
 
-    expect(registros.where(passo: 'sofia').count).to eq(1)
+    expect(assumiu.count).to eq(1)
     expect(registros.where(passo: 'ferias').last.motivo).to eq('voltou_a_esperar')
     expect(execucao).to have_attributes(estado: 'esperando', cursor: 'ferias', due_at: fuso.local(2026, 11, 5, 8))
   end
@@ -263,7 +263,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
 
     varrer_em(fuso.local(2026, 11, 13, 8, 1))
     expect(card.reload.owner).to eq(julia)
-    expect(conversa.reload).to have_attributes(assignee_id: julia.id, ai_assignee_id: nil)
+    expect(conversa.reload).to have_attributes(assignee_id: julia.id, assignee_agent_bot_id: nil)
     expect(conversa.label_list).not_to include('cobertura-de-ferias')
     expect(execucao.estado).to eq('concluida')
     expect(registros.last(4).pluck(:passo, :resultado)).to eq([%w[devolve ok], %w[conversa_da_julia ok], %w[tira ok], %w[conta ok]])

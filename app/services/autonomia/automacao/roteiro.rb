@@ -19,7 +19,8 @@ class Autonomia::Automacao::Roteiro
     _mae_id, passo_id = ::Autonomia::Automacao::EmOutroRegistro.da(execucao)
     return new(receita) unless passo_id
 
-    new('passos' => Array(new(receita).passo(passo_id)&.dig('passos')))
+    # Chaves explícitas: com o `voltar:` no initialize, o hash sem chaves viraria palavra-chave.
+    new({ 'passos' => Array(new(receita).passo(passo_id)&.dig('passos')) })
   end
 
   def initialize(receita, voltar: true)

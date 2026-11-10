@@ -44,6 +44,7 @@ const BLOCOS_POR_ARQUIVO = {
   'automacaoLivreGatilhos.json': [
     'GATILHOS',
     'ORIGEM',
+    'AGENDA_DE_RESERVA',
     'VALOR_DA_MENSAGEM',
     'OPERADOR_DA_MENSAGEM',
     'PARAMETROS_DO_GATILHO',

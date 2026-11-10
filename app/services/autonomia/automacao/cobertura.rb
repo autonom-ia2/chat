@@ -57,7 +57,7 @@ module Autonomia::Automacao::Cobertura
 
   # A IA cobre a conversa nesta execução e ainda pode atendê-la.
   def cobrindo?(conversa, execucao)
-    return false unless conversa.present? && conversa.assignee_id.nil? && conversa.ai_assignee_id.present?
+    return false unless conversa.present? && conversa.assignee_id.nil? && conversa.assignee_agent_bot_id.present?
 
     cobertura = vigente(conversa, execucao: execucao)
     cobertura.present? && ::Autonomia::Automacao::PassoDeIaAssumir.pode_cobrir?(conversa, cobertura.dados['agente_id'])
@@ -65,6 +65,8 @@ module Autonomia::Automacao::Cobertura
 
   # Chamada pela escuta da automação antes de acordar quem espera: a falha fica no log e não impede o resto da escuta.
   def pessoa_escreveu(mensagem)
+    return unless ::Autonomia::Automacao::Motor.ligado?(mensagem.account)
+
     conversa = mensagem.conversation
     return unless candidata?(mensagem, conversa)
 
@@ -74,11 +76,11 @@ module Autonomia::Automacao::Cobertura
     Rails.logger.error("[automacao][cobertura] não devolveu a conversa mensagem=#{mensagem&.id} #{e.class} em #{e.backtrace&.first}")
   end
 
-  # Barato antes de qualquer consulta de cobertura: a flag da conta e a conversa com a IA, sem pessoa no nome; depois,
-  # mensagem pública de uma pessoa da equipe.
+  # Barato antes de qualquer consulta de cobertura (a flag da conta já foi lida, antes de carregar a conversa): a
+  # conversa com a IA, sem pessoa no nome; depois, mensagem pública de uma pessoa da equipe.
   def candidata?(mensagem, conversa)
-    ::Autonomia::Automacao::Motor.ligado?(mensagem.account) && conversa.present? && conversa.ai_assignee_id.present? &&
-      conversa.assignee_id.nil? && ::Autonomia::Agents::Operate::PessoaDaEquipe.da_pessoa?(mensagem)
+    conversa.present? && conversa.assignee_agent_bot_id.present? && conversa.assignee_id.nil? &&
+      ::Autonomia::Agents::Operate::PessoaDaEquipe.da_pessoa?(mensagem)
   end
 
   # As execuções fecharam (ou o Motor saiu): cada cobertura delas que ainda vale devolve a conversa. Nunca levanta: quem
@@ -106,7 +108,7 @@ module Autonomia::Automacao::Cobertura
   def devolver(cobertura, conversa, motivo)
     pessoa_id = cobertura.dados['tirada_de']
     conversa.with_lock do
-      next if terminou?(cobertura) || conversa.assignee_id.present? || conversa.ai_assignee_id.nil?
+      next if terminou?(cobertura) || conversa.assignee_id.present? || conversa.assignee_agent_bot_id.nil?
 
       ::Autonomia::Automacao::Ato.da(cobertura.automacao_id) do
         ::Conversations::AssignmentService.new(conversation: conversa, assignee_id: pessoa_id).perform

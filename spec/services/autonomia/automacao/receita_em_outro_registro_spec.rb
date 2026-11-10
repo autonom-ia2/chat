@@ -35,10 +35,13 @@ RSpec.describe Autonomia::Automacao::Receita do
       .to eq([I18n.t("#{frase}.valor_fora_do_alvo", passo: 'm1', caminho: 'conversa.status')])
   end
 
-  it 'a âncora é conferida no alvo do gatilho: card.* num gatilho de conversa não tem de onde ler' do
+  # Desde o #2716 a conversa lê o card dela; o contato não tem card. A âncora num gatilho de contato não lê card.*, mesmo
+  # com o ramo rodando numa conversa (que leria).
+  it 'a âncora é conferida no alvo do gatilho: card.* num gatilho de contato não tem de onde ler' do
     do_card = { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'card.atributos.indicado_por' }, 'usar' => 'conversa' }
+    gatilho = { 'tipo' => 'contato.data', 'campo' => 'nascimento', 'quando' => 'antes', 'dias' => 1, 'hora' => 9 }
 
-    expect(problemas(receita('mensagem.criada', em_outro(do_card, mensagem('m1', 'contato.nome')))))
+    expect(problemas({ 'gatilho' => gatilho, 'passos' => [em_outro(do_card, mensagem('m1', 'contato.nome'))] }))
       .to include(I18n.t("#{frase}.valor_fora_do_alvo", passo: 'outro', caminho: 'card.atributos.indicado_por'))
   end
 

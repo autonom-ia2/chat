@@ -2503,7 +2503,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_922200) do
     t.index ["account_id", "pipeline_id", "stage_id", "status", "team_id", "id"], name: "idx_crm_cards_board_team"
     t.index ["account_id", "pipeline_id", "status", "closed_at"], name: "idx_crm_cards_account_pipeline_status_closed"
     t.index ["account_id", "score", "updated_at"], name: "index_crm_cards_on_account_score_updated"
-    t.index ["account_id", "solicitante_contact_id", "status"], name: "idx_crm_cards_solicitante", where: "(solicitante_contact_id IS NOT NULL)"
+    t.index ["solicitante_contact_id", "account_id", "status"], name: "idx_crm_cards_solicitante", where: "(solicitante_contact_id IS NOT NULL)"
     t.index ["account_id", "status", "created_at"], name: "idx_crm_cards_status_created"
     t.index ["account_id", "updated_at", "id"], name: "idx_crm_cards_account_updated"
     t.index ["account_id"], name: "index_crm_cards_on_account_id"
