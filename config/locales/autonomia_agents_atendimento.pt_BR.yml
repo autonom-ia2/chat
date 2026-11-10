@@ -1,0 +1,15 @@
+# #1479 / #2723 — "Endereço e telefone" do agente (`config['atendimento']`, Autonomia::Agents::DadosDoAtendimento).
+# Os erros do telefone e do endereço vão em atributos próprios, para o 422 dizer qual campo: a mensagem completa é o
+# nome do atributo seguido do texto abaixo.
+pt_BR:
+  activerecord:
+    attributes:
+      autonomia/agents/agent:
+        telefone: Telefone
+        endereco: Endereço
+  autonomia:
+    agents:
+      atendimento:
+        telefone_invalido: 'não parece certo. Confira o número ou deixe em branco.'
+        endereco_longo: 'está longo demais. Use até %{maximo} caracteres.'
+        invalido: 'Não deu para ler o endereço e o telefone. Nada foi salvo.'
