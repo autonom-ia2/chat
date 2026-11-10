@@ -25,7 +25,7 @@ module Autonomia::FerramentasProntas::Fontes::Bancos
         validade: 30.days, prazo_por_fonte: 3, prazo_total: 6
       )
     ],
-    limite_diario: 300,
+    limite_diario: 500,
     termos: 'BrasilAPI (uso de pessoa real) e a lista do STR do Banco Central (dado aberto) de reserva. Cache de 30 dias.'
   )
 end

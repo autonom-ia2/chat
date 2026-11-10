@@ -42,7 +42,7 @@ module Autonomia::FerramentasProntas::Fontes::Localizacao
         provedores: [Photon, Sedes], validade: 30.days, prazo_por_fonte: 3, prazo_total: 4
       )
     ],
-    limite_diario: 200,
+    limite_diario: 500,
     termos: 'Photon (uso justo, atribuição ODbL) e a sede mais próxima calculada aqui. Coordenada arredondada a ~110 m. ' \
             'Cache de 30 dias.'
   )

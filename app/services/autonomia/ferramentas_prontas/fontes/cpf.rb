@@ -44,7 +44,7 @@ module Autonomia::FerramentasProntas::Fontes::Cpf
         validade: nil, prazo_por_fonte: 1, prazo_total: 1
       )
     ],
-    limite_diario: 300,
+    limite_diario: 500,
     termos: 'Calculado na plataforma (regra pública da Receita para os dígitos e a região fiscal). Sem chamada externa ' \
             'e sem cache.'
   )

@@ -83,7 +83,7 @@ module Autonomia::FerramentasProntas::Fontes::Feriados
                    obrigatorios: [ATE], opcionais: [DE], provedores: [BrasilApi, Nager, Calendario], validade: 1.day,
                    prazo_por_fonte: 3, prazo_total: 6, regra: method(:periodo_invalido))
     ],
-    limite_diario: 300,
+    limite_diario: 500,
     termos: 'BrasilAPI (uso de pessoa real, sem robô de varredura) e Nager.Date (aberta, sem chave); o calendário ' \
             'calculado aqui é a última reserva. Cache de 30 dias por ano.'
   )

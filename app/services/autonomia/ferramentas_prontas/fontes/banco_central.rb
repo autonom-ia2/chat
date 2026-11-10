@@ -53,7 +53,7 @@ module Autonomia::FerramentasProntas::Fontes::BancoCentral
       Consulta.new(nome: 'focus', descricao: 'a expectativa do mercado (Boletim Focus); pede indicador',
                    obrigatorios: [INDICADOR], provedores: [Focus], validade: 6.hours, prazo_por_fonte: 4, prazo_total: 4)
     ],
-    limite_diario: 300,
+    limite_diario: 500,
     termos: 'Dados abertos do Banco Central (SGS, Olinda), sem chave e sem limite publicado; BrasilAPI de reserva. ' \
             'Cache de 1 a 6 horas.'
   )

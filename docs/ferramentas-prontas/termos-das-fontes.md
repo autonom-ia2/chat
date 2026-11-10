@@ -45,9 +45,14 @@ O teto de cada conta é 25% do global em todas as linhas: por exemplo, 112 pedid
 
 Limitações conhecidas, aceitas:
 
-- **FIPE.** A fatia de 112 pedidos por dia na parallelum fica abaixo do limite diário da FIPE (300 por conta). Cada
-  preço por marca e modelo gasta de 2 a 4 pedidos lá; marcas e preço pelo código vão primeiro à BrasilAPI. Uma conta
-  muito ativa pode ouvir "não consegui" antes do limite. O limite da FIPE é decisão do Rodrigo, no pacote final.
+- **Limite diário: 500 por conta e por fonte em todas as fontes** (decisão do Rodrigo, 10/11). Nenhum provedor da F1
+  pede valor menor. A proteção da cota de cada provedor fica no teto global e na fatia por conta, não no limite diário.
+- **FIPE (motivo técnico do provedor).** A fatia de 112 pedidos por dia na parallelum fica abaixo do limite diário da
+  FIPE (500 por conta). Cada preço por marca e modelo gasta de 2 a 4 pedidos lá; marcas e preço pelo código vão
+  primeiro à BrasilAPI, e o cache de 1 dia evita repetir. Uma conta muito ativa pode ouvir "não consegui" antes do
+  limite. A saída é a chave gratuita da parallelum (1.000 por dia), decisão em aberto.
+- **Localização (motivo técnico do provedor).** O Photon pede uso justo: a fatia de cada conta é 15 pedidos por minuto,
+  e acima disso a reserva (a sede mais próxima, sem rede) responde. O limite diário segue 500.
 - **Janela fixa.** Na virada da janela (por exemplo, à meia-noite UTC no teto diário), saem até duas janelas de
   pedidos em pouco tempo. Nenhum termo lido exige teto por segundo, então isso fica aceito.
 - **Redis fora.** O teto deixa o pedido passar, e a lista de hosts desligados cai para a variável de ambiente. Para

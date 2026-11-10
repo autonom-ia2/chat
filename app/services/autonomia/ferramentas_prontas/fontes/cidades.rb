@@ -56,7 +56,7 @@ module Autonomia::FerramentasProntas::Fontes::Cidades
                    obrigatorios: [UF], opcionais: [BUSCA], provedores: [Ibge, BrasilApi], validade: 30.days,
                    prazo_por_fonte: 4, prazo_total: 8, refinar: method(:refinar))
     ],
-    limite_diario: 300,
+    limite_diario: 500,
     termos: 'IBGE (serviço de dados aberto, sem chave) e BrasilAPI de reserva. Cache de 30 dias.'
   )
 end
