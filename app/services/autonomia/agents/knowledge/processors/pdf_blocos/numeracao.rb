@@ -23,21 +23,35 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos::Numeracao
   # profundidade do último numerado, irmão dele, para não virar pai das seções seguintes.
   def self.profundidades(textos)
     numeros = textos.map { |texto| primeiro_numero(texto) }
+    seguintes = proximos_numerados(textos, numeros)
     ultimo = nil
     textos.each_with_index.map do |texto, indice|
       profundidade = profundidade(texto)
-      profundidade = ultimo[:profundidade] if profundidade.zero? && ultimo && !abre_numeracao?(textos[indice + 1], numeros[indice + 1], ultimo)
+      profundidade = ultimo[:profundidade] if profundidade.zero? && ultimo && !abre_numeracao?(seguintes[indice], ultimo)
       ultimo = { profundidade: profundidade, numero: numeros[indice] } if numeros[indice]
       profundidade
     end
   end
 
-  # Abre numeração: o seguinte é de primeiro nível sem continuar a sequência ("1.", ou "2." depois de "4."), ou é mais
-  # fundo com outro primeiro número ("CLÁUSULA 3" antes do "3.1."). O seguinte que só continua a sequência ("3." depois
-  # de "2.1.") não abre. Sem título seguinte (fim do documento, um "ANEXO I"), o título sem número fica no topo.
-  def self.abre_numeracao?(seguinte, numero, ultimo)
+  # Para cada título, o texto do próximo título numerado depois dele (nil se não houver).
+  def self.proximos_numerados(textos, numeros)
+    proximo = nil
+    textos.each_index.reverse_each.map do |indice|
+      atual = proximo
+      proximo = textos[indice] if numeros[indice]
+      atual
+    end.reverse
+  end
+
+  # O seguinte é o próximo título numerado, pulando os sem número e os itens ("CLÁUSULA 3" e "COBERTURA" antes do
+  # "3.1." decidem pelo "3.1."). Abre numeração: o seguinte é de primeiro nível sem continuar a sequência ("1.", ou "2."
+  # depois de "4."), ou é mais fundo com outro primeiro número ("CLÁUSULA 3" antes do "3.1."). O seguinte que só continua
+  # a sequência ("3." depois de "2.1.") não abre. Sem título numerado depois (fim do documento, um "ANEXO I"), o título
+  # sem número fica no topo.
+  def self.abre_numeracao?(seguinte, ultimo)
     return true if seguinte.nil?
-    return false if numero.nil?
+
+    numero = primeiro_numero(seguinte)
     return numero != ultimo[:numero] if profundidade(seguinte) > 1
 
     numero.to_i != ultimo[:numero].to_i + 1
