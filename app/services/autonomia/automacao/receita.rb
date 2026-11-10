@@ -16,8 +16,9 @@
 #   só com cliente e fora de outro galho (EnquantoEspera).
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
-  # `passos`: o ramo do "em outro registro" (G18, #2671), que roda numa execução filha, no registro ligado.
-  RAMOS = %w[entao senao se_vencer a_cada_mensagem passos].freeze
+  # `passos`: o ramo do "em outro registro" (G18, #2671), que roda numa execução filha, no registro ligado. `se_recusar`:
+  # o do "webhook" (G13), quando o outro sistema recusa.
+  RAMOS = %w[entao senao se_vencer a_cada_mensagem se_recusar passos].freeze
   # O "decidir" (F7, #2500) abre um ramo por caminho (`caminhos[].passos`) e o de "nenhum se aplica" (`nenhum`).
   NENHUM = 'nenhum'.freeze
   # Os passos de IA (F7), só com a flag da F7.

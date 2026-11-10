@@ -210,7 +210,7 @@ class Autonomia::Automacao::Executor
     @tentativas = 0
     @alvo = @contexto = nil
     registrar(passo['id'], resultado.tipo == :ok ? 'ok' : 'pulado', resultado.motivo, resultado.dados)
-    @roteiro.seguinte(passo['id'])
+    resultado.dados['ramo'] ? @roteiro.entrar(passo, resultado.dados['ramo']) : @roteiro.seguinte(passo['id'])
   end
 
   def tentar_de_novo(passo, resultado)

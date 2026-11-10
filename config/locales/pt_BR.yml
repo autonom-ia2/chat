@@ -1092,6 +1092,16 @@ pt_BR:
         card_sem_responsavel: "O card não tem responsável. A conversa ficou com quem já estava."
         responsavel_nao_ve_a_conversa: "O responsável do card não enxerga esta conversa (não está na caixa dela). A conversa ficou com quem já estava."
         texto_vazio: "O texto ficou em branco depois de montado. A mensagem não foi mandada."
+        webhook_desligado: 'Mandar para outro sistema está desligado nesta conta. Nada foi mandado.'
+        webhook_so_https: 'O endereço do outro sistema precisa começar com https://. Nada foi mandado.'
+        webhook_sem_senha_no_endereco: 'O endereço do outro sistema não pode levar usuário e senha. Nada foi mandado.'
+        webhook_endereco_interno: 'O endereço aponta para uma rede interna ou para esta plataforma, por isso foi bloqueado. Nada foi mandado.'
+        webhook_sem_resposta: 'O outro sistema não respondeu a tempo ou deu erro; a automação vai tentar de novo.'
+        webhook_redirecionou: 'O outro sistema respondeu com um redirecionamento, que não é seguido. Use o endereço final.'
+        webhook_recusado: 'O outro sistema recusou os dados.'
+        webhook_sem_permissao: 'Quem ligou esta automação não pode mais mandar dados para outros sistemas. A automação foi pausada.'
+        webhook_gravar_falhou: 'O outro sistema recebeu os dados, mas gravar a resposta dele falhou. Nada foi mandado de novo.'
+        webhook_resposta_grande: 'O outro sistema respondeu, mas a resposta era grande demais para ler. Nada dela foi gravado.'
         dado_ausente: 'A IA não achou na conversa nenhum dos dados pedidos. Nada foi gravado.'
         ia_chave_recusada: 'O provedor de IA recusou a chave da conta. Confira a chave de IA nas integrações.'
         ia_desligada: 'Os passos de IA estão desligados nesta conta. A IA não foi chamada.'
@@ -1219,6 +1229,14 @@ pt_BR:
         de_novo_desde_no_galho: "Passo %{passo}: o \"voltar a esperar\" não pode apontar para um passo dentro de \"A cada mensagem do cliente\" (%{desde}): a automação nunca voltaria a esperar."
         caminho_nenhum: "Nenhum se aplica"
         destino_invalido: "Passo %{passo}: a IA não pode gravar em %{destino}."
+        webhook_desligado: "Passo %{passo}: mandar para outro sistema está desligado nesta conta."
+        webhook_so_https: "Passo %{passo}: o endereço do outro sistema precisa começar com https://."
+        webhook_sem_senha_no_endereco: "Passo %{passo}: o endereço não pode levar usuário e senha. A assinatura já prova que somos nós."
+        webhook_endereco_interno: "Passo %{passo}: o endereço aponta para uma rede interna ou para esta plataforma."
+        webhook_destino_invalido: "Passo %{passo}: a resposta só pode ser gravada em atributo do card, do contato ou da conversa (%{destino})."
+        webhook_destino_repetido: "Passo %{passo}: duas respostas são gravadas em %{destino}."
+        webhook_sem_permissao: "Passo %{passo}: só o administrador, ou uma função que cuida das integrações, pode mandar dados para outro sistema."
+        webhook_chave_invalida: "Passo %{passo}: %{chave} não aponta para nada na resposta."
         campo_repetido: "Passo %{passo}: %{chave} aparece duas vezes."
       nota:
         laco: "A automação %{nome} parou nesta conversa: o outro lado respondeu em menos de %{segundos} segundos a %{trocas} mensagens da automação, sem pausa e sem ninguém da equipe no meio, como um robô. Confira antes de deixar ela seguir aqui."
@@ -1229,6 +1247,8 @@ pt_BR:
         gravar: 'Gravar o que a IA achou na conversa'
       descricoes:
         conversa_ao_responsavel: 'Passar a conversa para o responsável do card'
+      webhook:
+        gravar: 'Gravar o que o outro sistema respondeu'
     automacoes:
       ensaio:
         condicoes_invalidas: 'Esta automação tem uma condição que a plataforma não aceita, então não dá para testar. Corrija no modo manual.'

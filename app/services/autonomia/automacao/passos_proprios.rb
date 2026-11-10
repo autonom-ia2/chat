@@ -3,10 +3,11 @@
 # confere o gatilho, a pessoa e a campanha da tela, o "criar retorno" (G3), o "em outro registro" (G18), o "passar a
 # conversa para o responsável do card" (G66), que confere o gatilho, a prospecção (G21, #2706), que confere o gatilho,
 # a pessoa, a busca, a etapa e as etiquetas, e o "para cada item" (G24, #2771), que confere as flags, os campos, a etapa
-# e a pessoa. Os caminhos que o retorno, o "em outro registro" e o contato do "criar card" (G49) leem passam pela régua
-# da Receita (o bloco `caminho`).
+# e a pessoa, e o "webhook" (G13, #2670), que confere a permissão de integração, o endereço e onde grava a resposta. Os
+# caminhos que o retorno, o "em outro registro", o webhook e o contato do "criar card" (G49) leem passam pela régua da
+# Receita (o bloco `caminho`).
 class Autonomia::Automacao::PassosProprios
-  TIPOS = %w[ia_assumir card campanha retorno em_outro_registro conversa_ao_responsavel prospeccao para_cada].freeze
+  TIPOS = %w[ia_assumir card campanha retorno em_outro_registro conversa_ao_responsavel prospeccao para_cada webhook].freeze
 
   def self.do_tipo?(passo) = TIPOS.include?(passo['tipo'])
 
@@ -27,6 +28,7 @@ class Autonomia::Automacao::PassosProprios
     when 'card' then card(passo)
     when 'retorno' then retorno(passo)
     when 'em_outro_registro' then outro_registro(passo)
+    when 'webhook' then webhook(passo)
     else sem_caminho(passo)
     end
   end
@@ -56,6 +58,14 @@ class Autonomia::Automacao::PassosProprios
   def retorno(passo)
     ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @alvo, @account_user) do |c|
       @caminho.call(passo['id'], c, onde: :texto)
+    end
+  end
+
+  # G13 (#2670): o corpo é lido como texto; o destino do "gravar", como caminho (é onde a ação grava, e o card da conversa
+  # é só para ler, #2716).
+  def webhook(passo)
+    ::Autonomia::Automacao::PassoDeWebhook.problemas_ao_salvar(@conta, passo, @account_user) do |c, onde = :texto|
+      @caminho.call(passo['id'], c, onde: onde)
     end
   end
 

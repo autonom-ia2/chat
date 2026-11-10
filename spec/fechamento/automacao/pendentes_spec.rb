@@ -48,7 +48,7 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
            'G68 (passo 3: o extrair lê a resposta do e-mail), ' \
            'G34 (passo 3: a resposta na conversa do e-mail), G28 (passo 3: extrair o número novo), G19 (passo 5: nota no contato), ' \
            'G3 (passo 6: retorno), G11 (passo 6: sem resposta em 3 dias), G53, G43, G8, G1, G2'],
-    20 => ['Venda fechada já entra no sistema da empresa', 'G5 (card ganho), G1, G2, G7, G11, G12, G13']
+    20 => ['Venda fechada já entra no sistema da empresa', 'G5 (card ganho), G1, G2, G7, G11, G12, G13, G44 (duas agendas), G52 (campanha de e-mail)']
   }
 
   it 'sonda quebrada é erro, nunca pendente' do

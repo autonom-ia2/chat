@@ -17,7 +17,7 @@
 # `escondidos`: campos que a ação aceita e a tela não mostra, com o motivo no comentário.
 # `so_guia`: ação liberada no motor que o editor não mostra, com o motivo. O Guia continua montando com ela.
 
-grupos: [IA, MENSAGEM, CONVERSA, FUNIL, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, CONTROLE]
+grupos: [IA, MENSAGEM, CONVERSA, FUNIL, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, OUTRO_SISTEMA, CONTROLE]
 
 nativos:
   esperar: { grupo: CONTROLE }
@@ -50,6 +50,10 @@ nativos:
   # G18 (#2671): os passos de dentro rodam no contato guardado num campo ou nos outros cards do contato. Os cards pedem a
   # chave de funis: o painel só os oferece a quem pode mexer no funil, e quem recusa de verdade é a Receita.
   em_outro_registro: { grupo: CONTROLE }
+  # G13 (#2670): mandar os dados para outro sistema e gravar a resposta. Quem recusa é a Receita (webhook_desligado).
+  # `chave`: a permissão sem a qual o seletor não oferece o passo (mandar dados para fora é integração, #2027).
+  # `rotulos`: a descrição do webhook tem rótulo próprio (o "descricao" do "para cada item" é outro).
+  webhook: { grupo: OUTRO_SISTEMA, requer: automacao_gatilhos, chave: integration_manage, rotulos: { descricao: descricao_do_webhook } }
   # G4: criar card numa etapa, com a flag dos gatilhos de card (F6). `funil`: só para quem pode mexer no funil
   # (RegraDoFunil.chave?: crm_manage_pipelines ou crm_admin), como o gatilho de card; quem recusa de verdade é a API,
   # ao salvar e ao ligar.

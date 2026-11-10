@@ -9,6 +9,7 @@
       "ETIQUETA": "Labels",
       "ATRIBUTO": "Custom fields",
       "EQUIPE": "Team",
+      "OUTRO_SISTEMA": "Other system",
       "CONTROLE": "Time and conditions"
     },
     "OPERADORES": {
@@ -130,7 +131,8 @@
       "CONVERSA_AO_RESPONSAVEL": "Hand the conversation to the card owner",
       "EMAIL": "Send an e-mail to the customer",
       "RETORNO": "Create a follow-up for the team",
-      "EM_OUTRO_REGISTRO": "Do it on the linked contact or cards"
+      "EM_OUTRO_REGISTRO": "Do it on the linked contact or cards",
+      "WEBHOOK": "Send data to another system"
     },
     "ESCOLHER": {
       "ETIQUETA": "Which label",
@@ -208,6 +210,11 @@
       "REGISTRO": "Where to run the steps inside",
       "PASSOS": "Steps inside",
       "CONTATO": "In which contact the card starts",
+      "DESCRICAO_DO_WEBHOOK": "What this sending is for",
+      "URL": "Address of the other system",
+      "CORPO": "What to send",
+      "GRAVAR": "What to save from the answer",
+      "SE_RECUSAR": "If the other system refuses",
       "DE_NOVO": "At each reply, decide again"
     },
     "OPCOES": {
@@ -383,7 +390,8 @@
       "A_CADA_MENSAGEM": "For each customer message while waiting",
       "NENHUM": "None applies",
       "CAMINHO": "Path {n}",
-      "PASSOS": "On each one"
+      "PASSOS": "On each one",
+      "SE_RECUSAR": "If the other system refuses"
     },
     "SELETOR": {
       "TITULO": "Choose the next step",

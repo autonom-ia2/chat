@@ -11386,6 +11386,15 @@
     ],
     "sem_corpo": true
   },
+  "POST autonomia/automacoes/:id/trocar_segredo_do_webhook": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/automacoes_webhook#trocar_segredo",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/automacoes_webhook_controller.rb:21",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_webhook_controller.rb:39"
+    ],
+    "sem_corpo": true
+  },
   "POST autonomia/automacoes/ensaio": {
     "campos": {
       "conversa_id": {

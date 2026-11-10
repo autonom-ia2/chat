@@ -12,6 +12,7 @@ import {
   TIPO as EM_OUTRO_REGISTRO,
   fraseDoOutroRegistro,
 } from './outroRegistro';
+import { fraseDoWebhook } from './webhook';
 import { formatAttributeDate } from 'dashboard/helper/attributeDate';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
@@ -515,6 +516,7 @@ export const fraseDoPasso = (passo, catalogo, t) => {
       campo && fraseDoValor(campo, catalogo, t)
     );
   }
+  if (passo.tipo === 'webhook') return fraseDoWebhook(passo, t);
   if (passo.tipo !== 'acao') return t(entrada.frase);
   if (ETIQUETAS_DE[entrada.nome])
     return fraseDasEtiquetas(passo, entrada, catalogo, t);
