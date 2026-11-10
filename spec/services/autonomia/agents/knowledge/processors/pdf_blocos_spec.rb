@@ -225,6 +225,33 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       end
     end
 
+    # #2862 — dois títulos seguidos, sem texto entre eles, com um pouco mais de espaço que o de linha: o de baixo caberia
+    # inteiro no fim da linha de cima, então não é a quebra de um título só.
+    context 'with two titles in sequence' do
+      let(:pdf) do
+        pdf_com([[['CLAUSULA 2 - CONTRATACAO', topo, 'F2', 10], ['2.1. ACEITACAO', topo - 16.4, 'F2', 10],
+                  [corpo1, topo - 30.9, 'F1', 10], [corpo2, topo - 30.9 - linha, 'F1', 10], [corpo1, topo - 30.9 - (2 * linha), 'F1', 10]]])
+      end
+
+      it 'reads two titles' do
+        expect(blocos_gravados.select { |bloco| bloco[:tipo] == :titulo }.pluck(:texto)).to eq(['CLAUSULA 2 - CONTRATACAO', '2.1. ACEITACAO'])
+      end
+    end
+
+    # #2862 — o título longo que quebra porque não cabe na linha continua um título só, mesmo com o mesmo espaço.
+    context 'with a long title that wraps' do
+      let(:pdf) do
+        pdf_com([[['COBERTURA ADICIONAL DE RESPONSABILIDADE CIVIL FAMILIAR E DANOS MORAIS A TERCEIROS', topo, 'F2', 10],
+                  ['DO IMOVEL', topo - 16.4, 'F2', 10],
+                  [corpo1, topo - 30.9, 'F1', 10], [corpo2, topo - 30.9 - linha, 'F1', 10], [corpo1, topo - 30.9 - (2 * linha), 'F1', 10]]])
+      end
+
+      it 'reads one title' do
+        expect(blocos_gravados.select { |bloco| bloco[:tipo] == :titulo }.pluck(:texto))
+          .to eq(['COBERTURA ADICIONAL DE RESPONSABILIDADE CIVIL FAMILIAR E DANOS MORAIS A TERCEIROS DO IMOVEL'])
+      end
+    end
+
     it 'gives no blocks to the protected agent (Lia)' do
       allow(bia).to receive(:instrucao_mantida?).and_return(true)
 

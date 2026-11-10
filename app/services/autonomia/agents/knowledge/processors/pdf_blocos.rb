@@ -2,7 +2,8 @@
 # Usa as mesmas linhas e parágrafos do Processors::PdfParagrafos (incluído junto, em Processors::Pdf), só pela geometria:
 # - título: parágrafo de até MAX_LINHAS_DO_TITULO linhas com a letra maior que a do corpo, ou todo fora da fonte do corpo
 #   e terminando antes da margem direita (o negrito curto). O título que quebra em duas linhas, com o espaço de linha
-#   normal entre elas, já é um parágrafo só e vira um título só;
+#   normal entre elas, já é um parágrafo só e vira um título só; dois títulos seguidos no mesmo parágrafo se separam
+#   (`partes_do_titulo`);
 # - nível: pelo tamanho da letra entre os títulos do documento, do maior (1) para o menor;
 # - parágrafo que continua na página seguinte (a mesma ligação do texto) é um bloco só, com a página onde começa;
 # - página de sumário sai inteira: a maioria das linhas termina no número da página, depois da linha de pontos
@@ -47,8 +48,25 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
     pedacos_da_pagina(pagina).flat_map do |pedaco|
       next [bloco_da_tabela(pedaco, pagina, numero)] if pedaco[:tabela]
 
-      grupos(pagina.merge(linhas: pedaco[:linhas])).map { |grupo| bloco_do_grupo(grupo, pagina, numero) }
+      grupos(pagina.merge(linhas: pedaco[:linhas])).flat_map do |grupo|
+        partes_do_titulo(grupo, pagina).map { |parte| bloco_do_grupo(parte, pagina, numero) }
+      end
     end
+  end
+
+  # #2862 — o grupo lido como título pode ser dois títulos seguidos ("CLÁUSULA 2 – CONTRATAÇÃO" e "2.1. ACEITAÇÃO"): o
+  # espaço entre eles fica abaixo do de parágrafo, e a fonte é a mesma. Separa onde as duas coisas valem: a linha de baixo
+  # caberia inteira no fim da de cima (quem quebra por falta de espaço não deixa caber) e o espaço passa do de linha.
+  def partes_do_titulo(grupo, pagina)
+    return [grupo] unless titulo?(grupo, pagina)
+
+    grupo.slice_when { |de_cima, de_baixo| titulos_seguidos?(de_cima, de_baixo, pagina) }.to_a
+  end
+
+  def titulos_seguidos?(de_cima, de_baixo, pagina)
+    largura = de_baixo[:direita] - de_baixo[:trechos].first[:x]
+    largura <= pagina[:corpo].pluck(:direita).max - de_cima[:direita] &&
+      de_cima[:y] - de_baixo[:y] > pagina[:normal] * (1 + Autonomia::Agents::Knowledge::Processors::PdfParagrafos::TROCA_DE_LETRA)
   end
 
   # O primeiro parágrafo da página que continua o último da anterior entra nele: fica a página onde começou e a do fim, e
