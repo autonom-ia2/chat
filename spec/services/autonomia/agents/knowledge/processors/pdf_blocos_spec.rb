@@ -289,6 +289,31 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       end
     end
 
+    # #2863 — a linha curta em negrito que termina a frase do parágrafo de cima (a linha de cima vai até a margem, com o
+    # espaço de linha normal) não é título: sem isso, o título sem número viraria pai de todas as seções seguintes.
+    context 'with a short bold line that ends the paragraph above' do
+      let(:pdf) do
+        pdf_com([[[corpo2, topo, 'F1', 10], [corpo1, topo - linha, 'F1', 10], ['contato.dados.exemplo.', topo - (2 * linha), 'F2', 10],
+                  ['1.2.', topo - (2 * linha) - 14.9, 'F2', 10], [corpo2, topo - (2 * linha) - 14.9, 'F1', 10, 100],
+                  [corpo1, topo - (3 * linha) - 14.9, 'F1', 10], [corpo2, topo - (4 * linha) - 14.9, 'F1', 10]]])
+      end
+
+      it 'reads no title' do
+        expect(blocos_gravados.pluck(:tipo)).not_to include(:titulo)
+      end
+    end
+
+    context 'with a bold title after a paragraph that ends before the margin' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], ['coberto pelo seguro.', topo - linha, 'F1', 10], ['2. EXCLUSOES', topo - (2 * linha), 'F2', 10],
+                  [corpo1, topo - (3 * linha), 'F1', 10], [corpo2, topo - (4 * linha), 'F1', 10]]])
+      end
+
+      it 'still reads the title' do
+        expect(blocos_gravados).to include(a_hash_including(tipo: :titulo, texto: '2. EXCLUSOES'))
+      end
+    end
+
     it 'gives no blocks to the protected agent (Lia)' do
       allow(bia).to receive(:instrucao_mantida?).and_return(true)
 

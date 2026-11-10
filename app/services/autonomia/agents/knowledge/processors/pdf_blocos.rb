@@ -49,19 +49,31 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
     pedacos_da_pagina(pagina).flat_map do |pedaco|
       next [bloco_da_tabela(pedaco, pagina, numero)] if pedaco[:tabela]
 
+      anterior = nil
       grupos(pagina.merge(linhas: pedaco[:linhas])).flat_map do |grupo|
-        partes_do_titulo(grupo, pagina).map { |parte| bloco_do_grupo(parte, pagina, numero) }
+        partes = fim_da_frase?(anterior, grupo.first, pagina) ? [[grupo, false]] : partes_do_titulo(grupo, pagina)
+        anterior = grupo.last
+        partes.map { |parte, titulo| bloco_do_grupo(parte, pagina, numero, titulo: titulo) }
       end
     end
+  end
+
+  # #2863 — a linha que vem logo depois de uma linha que vai até a margem, com o espaço de linha normal, termina a frase de
+  # cima (o endereço em negrito no fim do parágrafo): não é título, mesmo curta e em outra fonte. Sem isso, o título sem
+  # número viraria pai de todas as seções seguintes.
+  def fim_da_frase?(de_cima, de_baixo, pagina)
+    return false if de_cima.nil? || antes_da_margem?(de_cima, pagina)
+
+    de_cima[:y] - de_baixo[:y] <= pagina[:normal] * (1 + Autonomia::Agents::Knowledge::Processors::PdfParagrafos::TROCA_DE_LETRA)
   end
 
   # #2862 — o grupo lido como título pode ser dois títulos seguidos ("CLÁUSULA 2 – CONTRATAÇÃO" e "2.1. ACEITAÇÃO"): o
   # espaço entre eles fica abaixo do de parágrafo, e a fonte é a mesma. Separa onde as duas coisas valem: a linha de baixo
   # caberia inteira no fim da de cima (quem quebra por falta de espaço não deixa caber) e o espaço passa do de linha.
   def partes_do_titulo(grupo, pagina)
-    return [grupo] unless titulo?(grupo, pagina)
+    return [[grupo, false]] unless titulo?(grupo, pagina)
 
-    grupo.slice_when { |de_cima, de_baixo| titulos_seguidos?(de_cima, de_baixo, pagina) }.to_a
+    grupo.slice_when { |de_cima, de_baixo| titulos_seguidos?(de_cima, de_baixo, pagina) }.map { |parte| [parte, true] }
   end
 
   def titulos_seguidos?(de_cima, de_baixo, pagina)
@@ -80,8 +92,8 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
     blocos[-1] = anterior.merge(texto: "#{anterior[:texto]}\n#{bloco[:texto]}", itens: itens, pagina_fim: bloco[:pagina])
   end
 
-  def bloco_do_grupo(grupo, pagina, numero)
-    unless titulo?(grupo, pagina)
+  def bloco_do_grupo(grupo, pagina, numero, titulo:)
+    unless titulo && titulo?(grupo, pagina)
       return { tipo: :paragrafo, texto: grupo.pluck(:texto).join("\n"), itens: itens_do_grupo(grupo, pagina), pagina: numero }
     end
 
