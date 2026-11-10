@@ -57,6 +57,7 @@
         }
       },
       "MODELO_FORA_DA_JANELA": "Se a janela de 24 h estiver fechada, vai o modelo {modelo} (cobrado pela Meta).",
+      "MODELO_PROPAGANDA_FORA_DA_JANELA": "Se a janela de 24 h estiver fechada, vai o modelo de propaganda {modelo}, que custa mais na Meta.",
       "IA_ASSUMIR": "Passaria para {agente}",
       "NAO_PASSARIA": {
         "AGENTE_SUMIU": "Não passaria: a agente escolhida não existe mais.",

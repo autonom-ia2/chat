@@ -138,7 +138,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 11: indicação que vira presente', 
   def criar_campos
     %w[amigo_nome amigo_telefone pet].each { |chave| atributo(chave, 'conversation_attribute', 'text') }
     atributo('pet', 'contact_attribute', 'text')
-    atributo('indicado_por', 'card_attribute', 'number')
+    atributo('indicado_por', 'card_attribute', 'contato')
     atributo('quem_indicou', 'card_attribute', 'text')
   end
 

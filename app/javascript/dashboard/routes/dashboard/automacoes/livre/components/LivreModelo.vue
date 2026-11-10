@@ -7,6 +7,7 @@ import LivreTexto from './LivreTexto.vue';
 import {
   chaveDoModelo,
   corpoDoModelo,
+  ehPropaganda,
   modelosDasCaixas,
   variaveisDoCorpo,
 } from '../modeloWhatsapp';
@@ -115,6 +116,13 @@ const mudarVariavel = (indice, partes) => {
     </div>
 
     <template v-if="escolhido">
+      <p
+        v-if="ehPropaganda(escolhido)"
+        data-modelo-custo
+        class="px-4 py-3 mb-0 text-sm rounded-xl bg-n-alpha-1 text-n-slate-11"
+      >
+        {{ $t('AUTOMACAO_LIVRE.CAMPANHA.CUSTO_PROPAGANDA') }}
+      </p>
       <p
         v-if="escolhido.divergente"
         data-modelo-divergente

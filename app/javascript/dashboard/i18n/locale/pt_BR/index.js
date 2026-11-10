@@ -36,6 +36,7 @@ import automacaoLivreProspeccao from './automacaoLivreProspeccao.json';
 import automacaoLivreParaCada from './automacaoLivreParaCada.json';
 import automacaoLivreRetorno from './automacaoLivreRetorno.json';
 import automacaoLivreOutroRegistro from './automacaoLivreOutroRegistro.json';
+import automacaoLivreWebhook from './automacaoLivreWebhook.json';
 import ausencia from './ausencia.json';
 import brandKits from './brandKits.json';
 import booking from './booking.json';
@@ -130,6 +131,7 @@ export default {
     ...automacaoLivreParaCada.AUTOMACAO_LIVRE,
     ...automacaoLivreRetorno.AUTOMACAO_LIVRE,
     ...automacaoLivreOutroRegistro.AUTOMACAO_LIVRE,
+    ...automacaoLivreWebhook.AUTOMACAO_LIVRE,
   },
   ...ausencia,
   ...brandKits,

@@ -1350,6 +1350,17 @@
         "WON": "With the plan implemented"
       }
     },
+    "PASSOS": {
+      "CARD_FECHAR": "Mark whether the plan was implemented"
+    },
+    "CAMPOS": {
+      "RESULT": "Was the plan implemented?"
+    },
+    "OPCOES": {
+      "RESULT": {
+        "WON": "Implemented"
+      }
+    },
     "SELECAO": {
       "SITUACOES": {
         "GANHO": "Plan implemented"

@@ -3,8 +3,8 @@
 # A lista de caminhos é fechada: a receita só lê o que está aqui, e o salvar recusa caminho desconhecido. Não é Liquid
 # nem texto livre; cada caminho é um campo do modelo. Os atributos personalizados entram pela chave
 # (`contato.atributos.placa`). A mensagem do gatilho `mensagem.criada` só existe no filtro do gatilho
-# (`mensagem.tipo`: recebida, enviada ou nota; `mensagem.privada`; `mensagem.primeira`; `mensagem.tem_anexo`); nos
-# passos ela já passou, e o salvar recusa ler a mensagem fora dali.
+# (`mensagem.tipo`: recebida, enviada ou nota; `mensagem.privada`; `mensagem.primeira`; `mensagem.tem_anexo`;
+# `mensagem.campanha`, #2681); nos passos ela já passou, e o salvar recusa ler a mensagem fora dali.
 #
 # #2499 (F6): cada caminho começa pela base (`conversa`, `contato` ou `card`), lida do alvo pelas pontes do Contexto.
 # A base que o alvo não alcança (card num gatilho de contato) o salvar recusa; a ponte vazia ao rodar (card sem
@@ -128,19 +128,8 @@ class Autonomia::Automacao::Valores
     'Contact' => %w[contato envio gatilho]
   }.freeze
 
-  # A mensagem que disparou o gatilho, para o filtro separar a do cliente da resposta da equipe e da nota.
-  MENSAGEM = {
-    'mensagem.tipo' => lambda do |mensagem|
-      next 'nota' if mensagem.private?
-
-      mensagem.incoming? ? 'recebida' : 'enviada'
-    end,
-    'mensagem.privada' => ->(mensagem) { mensagem.private? },
-    # A mensagem é a primeira de verdade da conversa (#2527)? A nota e a atividade nunca são.
-    'mensagem.primeira' => ->(mensagem) { ::Autonomia::Automacao::PrimeiraMensagem.primeira?(mensagem) },
-    # A mensagem traz foto ou PDF (#2716, a régua do ex.14): FotoOuPdf. Áudio, figurinha e outro arquivo não contam.
-    'mensagem.tem_anexo' => ->(mensagem) { ::Autonomia::Automacao::FotoOuPdf.mensagem?(mensagem) }
-  }.freeze
+  # A mensagem que disparou o gatilho, para o filtro separar a do cliente da resposta da equipe e da nota: Valores::Mensagem.
+  MENSAGEM = ::Autonomia::Automacao::Valores::Mensagem::VALORES
 
   # O gatilho cuja mensagem o filtro lê.
   GATILHO_DA_MENSAGEM = 'mensagem.criada'.freeze
@@ -170,8 +159,13 @@ class Autonomia::Automacao::Valores
   class << self
     def caminho_valido?(caminho)
       [CAMPOS, DO_QUE_QUEM_VE, DA_SELECAO, MENSAGEM, RESPOSTA, AGENDA, ENVIO, TROCA, FALHOU].any? { |lista| lista.key?(caminho.to_s) } ||
-        atributo(caminho).present? || livre?(caminho)
+        atributo(caminho).present? || livre?(caminho) || (da_origem?(caminho) && na_origem?(caminho_da_origem(caminho)))
     end
+
+    # G65: o registro de origem da filha do "em outro registro" (Valores::Origem).
+    def da_origem?(caminho) = ::Autonomia::Automacao::Valores::Origem.do_caminho?(caminho)
+    def caminho_da_origem(caminho) = ::Autonomia::Automacao::Valores::Origem.sem_prefixo(caminho)
+    def na_origem?(caminho) = ::Autonomia::Automacao::Valores::Origem.le?(caminho)
 
     def da_ia?(caminho) = caminho.to_s.start_with?(IA) && caminho.to_s.length > IA.length
 
@@ -244,10 +238,12 @@ class Autonomia::Automacao::Valores
 
   private
 
-  # O texto da IA e o registro criado ficam na execução; o resto, no alvo.
+  # O texto da IA e o registro criado ficam na execução; o que a filha lê da origem (G65), no alvo da mãe; o resto, no
+  # alvo.
   def do_passo(caminho)
     return @contexto.texto_da_ia(self.class.passo_da_ia(caminho)) if self.class.da_ia?(caminho)
     return @contexto.criado(CRIADO.passo_do(caminho)) if CRIADO.caminho?(caminho)
+    return origem&.ler(self.class.caminho_da_origem(caminho)) if self.class.da_origem?(caminho)
 
     lido(caminho)
   end
@@ -295,6 +291,14 @@ class Autonomia::Automacao::Valores
 
   # A página de agendamento em que a reunião do gatilho foi marcada, quando veio de uma.
   def pagina_da_reuniao = @contexto.reuniao&.metadata.to_h['booking_profile_id']
+
+  # G65: o registro de origem (o alvo da mãe), lido com a mesma pessoa; fora da filha, ou com quem ligou sem alcançar mais
+  # esse registro (Contexto#origem), nil e o valor lê vazio.
+  def origem
+    return @origem if defined?(@origem)
+
+    @origem = (contexto = @contexto.origem) && self.class.new(alvo: contexto, quem: @quem)
+  end
 
   def resposta(caminho) = !@espera.nil? && RESPOSTA.fetch(caminho.to_s).call(@contexto, @espera, @quem) == true
 

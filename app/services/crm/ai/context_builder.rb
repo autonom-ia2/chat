@@ -120,8 +120,15 @@ module Crm
         {
           contact: attribute_values(@card.try(:contact)),
           conversation: attribute_values(@card.primary_conversation),
-          card: attribute_values(@card)
+          card: attribute_values(@card).except(*chaves_de_contato)
         }
+      end
+
+      # O campo do card do tipo contato (decisão 16) guarda o id de outro contato: não vai à IA, como no
+      # AttributeSchemaBuilder. Quem é o contato ligado a equipe escolhe.
+      def chaves_de_contato
+        @card.account.custom_attribute_definitions.where(attribute_model: :card_attribute, attribute_display_type: :contato)
+             .pluck(:attribute_key)
       end
 
       def attribute_values(record)

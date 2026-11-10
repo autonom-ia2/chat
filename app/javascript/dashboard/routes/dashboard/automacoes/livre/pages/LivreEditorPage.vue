@@ -2,7 +2,10 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
-import { useCanManage } from 'dashboard/composables/useCanManage';
+import {
+  useCanManage,
+  usePermissionGranted,
+} from 'dashboard/composables/useCanManage';
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -56,11 +59,16 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const podeMudar = useCanManage('automation_manage');
+// G13 (#2670): o passo que manda dados para fora pede a chave de integrações.
+const podeIntegrar = usePermissionGranted('integration_manage');
+const temChave = chave =>
+  chave === 'integration_manage' ? podeIntegrar.value : false;
 const { catalogo } = useCatalogo();
 const { opcoes, atributosDaPeca, atributosDo, carregarOpcoes } =
   useOpcoesDaConta();
 const { isCloudFeatureEnabled } = useAccount();
-// G18: os cards do contato, no "em outro registro", só para quem mexe no funil.
+// G18: os cards do contato, no "em outro registro", só para quem mexe no funil;
+// #2716: o card da conversa, só com a mesma chave.
 const { canManagePipelines } = useCrmPermissions();
 // #2499: os gatilhos que esta pessoa pode escolher, e os funis e as etapas.
 const { gatilhos, escolhasDoGatilho } = useGatilhosNovos(
@@ -143,17 +151,26 @@ const guarda = ref(null);
 const tudo = computed(() => route.query.tudo === '1');
 
 // G18: dentro do "em outro registro" não cabe outro (a filha nunca abre netas).
+// G25: só as ações que o alvo da lista alcança (o card da conversa é só para
+// ler, #2716), como no "Alterar".
 const catalogoDoSeletor = computed(() => {
+  if (!catalogo.value) return catalogo.value;
   const dentro = alvoDaLista(
     receita.value.passos,
     String(route.query.seletor || '').split('@')[0]
   );
-  if (!dentro || !catalogo.value) return catalogo.value;
+  const { passos } = doAlvoDoGatilho(
+    comPermissoes(catalogo.value, podeLerValor.value),
+    receita.value.gatilho?.tipo,
+    Boolean(receita.value.gatilho?.conversa_nova),
+    canManagePipelines.value,
+    dentro
+  );
   return {
     ...catalogo.value,
-    passos: catalogo.value.passos.filter(
-      passo => passo.tipo !== EM_OUTRO_REGISTRO
-    ),
+    passos: dentro
+      ? passos.filter(passo => passo.tipo !== EM_OUTRO_REGISTRO)
+      : passos,
   };
 });
 
@@ -635,6 +652,7 @@ onMounted(() => {
               ref="seletor"
               :catalogo="catalogoDoSeletor"
               :liberado="isCloudFeatureEnabled"
+              :tem-chave="temChave"
               @escolher="escolherPasso"
               @close="fecharPainel('seletor')"
             />

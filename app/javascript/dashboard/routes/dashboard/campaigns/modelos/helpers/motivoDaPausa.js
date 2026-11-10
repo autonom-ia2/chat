@@ -14,9 +14,14 @@ const MOTIVOS = {
   template_catalog_missing: 'sem_catalogo',
   // A flag dos produtos foi desligada depois de a campanha ser criada.
   template_products_disabled: 'produtos_desligados',
+  // #2686: a etiqueta que a campanha da automação deixaria de fora foi apagada.
+  audience_exclusion_label_missing: 'etiqueta_excluida_apagada',
 };
 // Do sistema, mas com motivo que a pessoa resolve (não é "não deu para conferir").
-const DO_SISTEMA_COM_MOTIVO = ['template_missing'];
+const DO_SISTEMA_COM_MOTIVO = [
+  'template_missing',
+  'audience_exclusion_label_missing',
+];
 
 export const motivoDaPausa = pausa => {
   if (pausa.reason_code === 'template_not_approved') {

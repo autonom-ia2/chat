@@ -210,14 +210,8 @@ RSpec.describe 'Texto da IA entre passos', :automacao_motor do # rubocop:disable
 
     # G18: o ramo do "em outro registro" roda numa execução filha, que não vê os textos da mãe, nem a mãe os dela.
     describe 'com o "em outro registro"' do
-      before do
-        create(:custom_attribute_definition, account: account, attribute_key: 'indicado_por', attribute_display_name: 'Indicado por',
-                                             attribute_display_type: 'number', attribute_model: 'contact_attribute')
-      end
-
       def em_outro(*passos)
-        { 'id' => 'outro', 'tipo' => 'em_outro_registro', 'passos' => passos,
-          'registro' => { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'contato.atributos.indicado_por' }, 'usar' => 'conversa' } }
+        { 'id' => 'outro', 'tipo' => 'em_outro_registro', 'passos' => passos, 'registro' => { 'de' => 'cards_do_contato' } }
       end
 
       it 'aceita o texto escrito e lido dentro do mesmo ramo' do

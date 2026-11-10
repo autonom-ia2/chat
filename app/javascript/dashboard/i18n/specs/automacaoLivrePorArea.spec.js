@@ -73,6 +73,7 @@ const BLOCOS_POR_ARQUIVO = {
   'automacaoLivreParaCada.json': ['PARA_CADA'],
   'automacaoLivreRetorno.json': ['RETORNO'],
   'automacaoLivreOutroRegistro.json': ['OUTRO_REGISTRO'],
+  'automacaoLivreWebhook.json': ['WEBHOOK'],
 };
 
 const doIdioma = idioma =>

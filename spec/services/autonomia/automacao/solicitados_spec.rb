@@ -132,8 +132,6 @@ RSpec.describe Autonomia::Automacao::Solicitados, :automacao_motor do
     let(:valores) { Autonomia::Automacao::Valores }
 
     it 'lê da seleção do gatilho da execução, sem quebra de linha; sem execução, vazio', :aggregate_failures do
-      # Com o passo que grava o solicitante (G24); sem ele, o salvar da versão recusa a condição.
-      stub_const('Autonomia::Automacao::Solicitados::GRAVADORES', %w[para_cada])
       pedido("Ana\nSouza", { 'rg' => true })
       pedido('Carla Dias')
       semanal = gatilho.merge('frequencia' => 'semanal', 'dia_da_semana' => 5, 'hora' => 9)
@@ -165,10 +163,11 @@ RSpec.describe Autonomia::Automacao::Solicitados, :automacao_motor do
         'passos' => [mensagem_passo('aviso', 'Faltam: ', { '$valor' => 'contato.solicitados_faltando' })] }
     end
 
-    # Revisão da G22: nada neste commit grava o solicitante (é o passo 3, G24). Sem gravador, card nenhum tem solicitante,
-    # a condição nunca pega ninguém e o aviso de sexta pularia toda semana sem mandar nada: o salvar recusa.
-    it 'sem passo que grave o solicitante, recusa a condição solicitante_de (e só ela)', :aggregate_failures do
-      expect(described_class::GRAVADORES).to be_empty
+    # Sem gravador, card nenhum teria solicitante, a condição nunca pegaria ninguém e o aviso de sexta pularia toda
+    # semana sem mandar nada: o salvar recusa. O "para cada item" (G24) é o gravador de hoje.
+    it 'o "para cada item" grava o solicitante; sem ele, recusa a condição solicitante_de (e só ela)', :aggregate_failures do
+      expect(described_class::GRAVADORES).to eq(%w[para_cada])
+      stub_const('Autonomia::Automacao::Solicitados::GRAVADORES', [])
       expect(described_class.gravado?).to be(false)
       frase = I18n.t('autonomia.automacao.receita.solicitante_sem_gravador')
 
@@ -177,8 +176,6 @@ RSpec.describe Autonomia::Automacao::Solicitados, :automacao_motor do
     end
 
     describe 'com o passo que grava o solicitante (o "para cada item" da G24)' do
-      before { stub_const('Autonomia::Automacao::Solicitados::GRAVADORES', %w[para_cada]) }
-
       it 'aceita o valor no contato.recorrente com solicitante_de' do
         expect(problemas(receita)).to be_empty
       end

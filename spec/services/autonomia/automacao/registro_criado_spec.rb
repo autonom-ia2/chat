@@ -104,10 +104,14 @@ RSpec.describe Autonomia::Automacao::RegistroCriado, :automacao_motor do
       expect(Autonomia::Automacao::EmOutroRegistro.de_funil?(ramo, conteudo)).to be(true)
     end
 
+    # O contato do campo só vem de um campo do card do tipo Contato (decisão 16); no gatilho de conversa, o card dela.
     it 'no gatilho de conversa, a caixa da conversa nova só vale com o ramo no registro criado, não no contato do campo' do
       caixa = create_crm_whatsapp_api_inbox(account: account, members: [admin])
+      create(:custom_attribute_definition, account: account, attribute_key: 'quem_indicou', attribute_display_name: 'Quem indicou',
+                                           attribute_model: :card_attribute, attribute_display_type: :contato)
+      campo = { '$valor' => 'card.atributos.quem_indicou' }
       ramo = { 'id' => 'outro', 'tipo' => 'em_outro_registro',
-               'registro' => { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'contato.id' }, 'usar' => 'contato' },
+               'registro' => { 'de' => 'contato_do_campo', 'campo' => campo, 'usar' => 'contato' },
                'passos' => [{ 'id' => 'oi', 'tipo' => 'mensagem', 'texto' => ['Oi'] }] }
       conteudo = receita({ 'tipo' => 'conversa.resolvida', 'conversa_nova' => { 'caixa_id' => caixa.id } }, ramo)
 

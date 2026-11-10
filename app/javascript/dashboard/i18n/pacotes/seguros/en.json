@@ -303,6 +303,19 @@
         "LOST": "That did not close"
       }
     },
+    "PASSOS": {
+      "CARD_FECHAR": "Mark whether the card closed the policy"
+    },
+    "CAMPOS": {
+      "RESULT": "Did it close the policy?",
+      "LOST_REASON": "Why it did not close (optional)"
+    },
+    "OPCOES": {
+      "RESULT": {
+        "WON": "Active policy",
+        "LOST": "Not closed"
+      }
+    },
     "SELECAO": {
       "SITUACOES": {
         "GANHO": "Closed the policy",

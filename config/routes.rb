@@ -761,6 +761,9 @@ Rails.application.routes.draw do
                 get :historico
                 post :ensaio
                 get :custos, to: 'automacoes_ia#custos_da_automacao'
+                # G13 (#2670): o segredo da assinatura do passo "webhook", só para o administrador.
+                get :segredo_do_webhook, to: 'automacoes_webhook#segredo'
+                post :trocar_segredo_do_webhook, to: 'automacoes_webhook#trocar_segredo'
               end
             end
             resources :avisos, only: [:index, :update]

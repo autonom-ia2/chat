@@ -101,6 +101,8 @@ class Crm::Card < ApplicationRecord
 
   # Memória das IAs (#1601): campo editado à mão e pedido encerrado.
   include Crm::CardMemoria
+  # Campo personalizado do tipo contato (decisão 16, ex. 11): só contato da conta.
+  include Crm::CardCampoContato
   # Automação livre (lote 4, #2682): o "esperar até" que espera neste card confere quando ele muda.
   include Crm::CardAvisaAutomacao
   # Campos personalizados do card: o tamanho, e o tipo pessoa (G62, #2829) só com gente da conta.

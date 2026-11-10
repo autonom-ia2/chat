@@ -33,14 +33,7 @@ module Autonomia::Automacao::AcaoNaReceita
   end
 
   def regras_da_lista(id, acao, valores)
-    permitidas = ::Autonomia::Automacao::AcoesPermitidas
-    exigidos = permitidas.exige(acao).select { |campo| valores[campo].blank? }
-    fixos = permitidas.fixos(acao).reject { |campo, valor| valores[campo] == valor }
-    proibidos = permitidas.proibidos(acao, valores)
-
-    exigidos.map { |campo| texto(:exige, passo: id, campo: campo) } +
-      fixos.map { |campo, valor| texto(:fixo, passo: id, campo: campo, valor: valor) } +
-      proibidos.map { |campo| texto(:proibido, passo: id, campo: campo) }
+    ::Autonomia::Automacao::AcoesPermitidas.fora_da_lista(acao, valores).map { |chave, dados| texto(chave, passo: id, **dados) }
   end
 
   def parametros(acao)

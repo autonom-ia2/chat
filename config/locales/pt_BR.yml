@@ -202,6 +202,8 @@ pt_BR:
       attribute_key_format: deve conter apenas letras, números, sublinhados, hífens, e pontos
       key_conflict: A chave fornecida não é permitida pois pode entrar em conflito com os atributos padrão.
       pessoa_so_no_card: 'O campo de pessoa da equipe só existe no card.'
+      contato_so_no_card: 'Campo do tipo Contato só existe no card.'
+      contato_em_uso: 'Este campo do tipo Contato está em uso pela automação %{automacoes} para achar o contato ligado. Desligue a automação, ou escolha outro campo nela, antes de mudar o tipo ou apagar este campo.'
     mfa:
       already_enabled: MFA já está habilitado
       not_enabled: MFA não está habilitado
@@ -232,6 +234,7 @@ pt_BR:
       invalid_contact_input: "Informe um contato com nome preenchido, e-mail e telefone opcionais em texto e atributos válidos."
       contact_conversation_conflict: "não pode ser alterado enquanto este card tiver conversas de outro contato. Revise primeiro os vínculos das conversas."
       pessoa_de_fora: 'campo %{chave}: a pessoa não é da equipe desta conta.'
+      contato_de_fora: "campo %{chave}: o contato não é desta conta."
   profile:
     mfa:
       enabled: MFA habilitado com sucesso
@@ -1052,6 +1055,12 @@ pt_BR:
         ja_aberta: 'O gatilho aconteceu de novo, mas a automação já estava rodando aqui e não começou outra vez.'
         nao_acordou: 'Um erro impediu a automação de conferir esta espera antes do prazo. Ela segue esperando até o fim do prazo.'
         filhas_puladas: 'Alguns registros ligados ficaram sem estes passos: quem ligou a automação não alcança esses registros, ou a automação já estava rodando neles.'
+        contato_ligado_sumiu: 'O contato guardado no campo escolhido não existe mais nesta conta (foi apagado). Os passos de dentro não rodaram em lugar nenhum.'
+        registro_criado_sumiu: 'O registro que o passo anterior criou não existe mais nesta conta (foi apagado). Os passos de dentro não rodaram em lugar nenhum.'
+        campo_nao_e_contato: 'O campo escolhido para achar o contato ligado deixou de ser do tipo Contato, e o número dele pode ser de outra coisa. Os passos de dentro não rodaram. Escolha um campo do tipo Contato no passo e salve de novo.'
+        origem_fora_do_alcance: 'Este passo lê o registro de origem, e quem ligou a automação não tem mais acesso a ele. O passo foi pulado, e nenhum dado desse registro saiu.'
+        contato_ligado_sem_conversa: 'O contato ligado ainda não tem conversa, e os passos de dentro não tiveram onde rodar.'
+        nenhum_card_ligado: 'Este contato não tem outro card que combine com o passo, e os passos de dentro não rodaram.'
         receita_com_problema: 'A receita desta versão não roda mais do jeito que foi salva. Corrija e salve de novo antes de ligar.'
         sem_quem_ligou: 'Ninguém ligou esta automação. Assuma e religue.'
         sem_versao: 'Esta automação ainda não tem passos salvos.'
@@ -1068,7 +1077,7 @@ pt_BR:
         limite_da_caixa: "A caixa tem um limite de horas para responder, configurado nas opções dela, e o cliente não escreve há mais tempo que isso. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_fora_da_caixa: "A janela estava fechada, e a caixa desta conversa não tem o modelo escolhido. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_nao_aprovado: "A janela estava fechada, e o modelo escolhido não está aprovado na Meta nesta caixa. A mensagem não foi mandada, e a automação parou nesta conversa."
-        modelo_de_propaganda: "A janela estava fechada, e o modelo escolhido é de propaganda. A automação só manda modelo de utilidade. A mensagem não foi mandada, e a automação parou nesta conversa."
+        modelo_de_categoria_fora: "A janela estava fechada, e o modelo escolhido não é de utilidade nem de propaganda. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_mudou: "A janela estava fechada, e o modelo desta caixa pede outras variáveis do que as do passo. Escolha o modelo de novo. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_faltou_valor: "A janela estava fechada, e um valor que o modelo pede estava vazio nesta conversa. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_texto_longo: "A janela estava fechada, e o modelo com os valores no lugar passou dos 1024 caracteres que o WhatsApp aceita. A mensagem não foi mandada, e a automação parou nesta conversa."
@@ -1083,6 +1092,16 @@ pt_BR:
         card_sem_responsavel: "O card não tem responsável. A conversa ficou com quem já estava."
         responsavel_nao_ve_a_conversa: "O responsável do card não enxerga esta conversa (não está na caixa dela). A conversa ficou com quem já estava."
         texto_vazio: "O texto ficou em branco depois de montado. A mensagem não foi mandada."
+        webhook_desligado: 'Mandar para outro sistema está desligado nesta conta. Nada foi mandado.'
+        webhook_so_https: 'O endereço do outro sistema precisa começar com https://. Nada foi mandado.'
+        webhook_sem_senha_no_endereco: 'O endereço do outro sistema não pode levar usuário e senha. Nada foi mandado.'
+        webhook_endereco_interno: 'O endereço aponta para uma rede interna ou para esta plataforma, por isso foi bloqueado. Nada foi mandado.'
+        webhook_sem_resposta: 'O outro sistema não respondeu a tempo ou deu erro; a automação vai tentar de novo.'
+        webhook_redirecionou: 'O outro sistema respondeu com um redirecionamento, que não é seguido. Use o endereço final.'
+        webhook_recusado: 'O outro sistema recusou os dados.'
+        webhook_sem_permissao: 'Quem ligou esta automação não pode mais mandar dados para outros sistemas. A automação foi pausada.'
+        webhook_gravar_falhou: 'O outro sistema recebeu os dados, mas gravar a resposta dele falhou. Nada foi mandado de novo.'
+        webhook_resposta_grande: 'O outro sistema respondeu, mas a resposta era grande demais para ler. Nada dela foi gravado.'
         dado_ausente: 'A IA não achou na conversa nenhum dos dados pedidos. Nada foi gravado.'
         ia_chave_recusada: 'O provedor de IA recusou a chave da conta. Confira a chave de IA nas integrações.'
         ia_desligada: 'Os passos de IA estão desligados nesta conta. A IA não foi chamada.'
@@ -1119,6 +1138,7 @@ pt_BR:
           sem_chave_de_funis: 'Passo %{passo}: ele lê cards do funil, e você não pode editar funis.'
           funil_de_fora: 'Passo %{passo}: o funil não é desta conta.'
           etapa_de_fora: 'Passo %{passo}: a etapa não é desta conta ou não é do funil escolhido.'
+          campo_sem_contato: 'Passo %{passo}: o campo que guarda o contato tem de ser um campo do card do tipo Contato, em que a equipe escolhe um contato da lista. Campo de número não serve para apontar contato: um engano mandaria a mensagem a outro cliente.'
         sem_criar_card: 'Passo %{passo}: você não pode criar card no CRM, e o passo "Criar card" pede isso.'
         etapa_do_card_de_fora: 'Passo %{passo}: a etapa %{id} não é desta conta.'
         card_desligado: 'Passo %{passo}: o passo "Criar card" está desligado nesta conta (gatilhos de card ou CRM desligados).'
@@ -1133,6 +1153,7 @@ pt_BR:
         acao_fora: 'Passo %{passo}: %{acao} não pode ser passo de automação.'
         caminho_faltando: 'Passo %{passo}: a ação precisa de %{campo}.'
         valor_desconhecido: 'Passo %{passo}: a automação não sabe ler %{caminho}.'
+        origem_fora_do_ramo: 'Passo %{passo}: %{caminho} lê o registro de origem, e só existe dentro do passo "Fazer no contato ou nos cards ligados". Use esse dado num passo de dentro dele.'
         texto_da_ia_no_gatilho: 'Passo %{passo}: %{caminho} é o texto de um passo de IA, e no "Só se" do gatilho nenhum passo rodou ainda. Use esse dado num passo depois dele.'
         texto_da_ia_sem_passo: 'Passo %{passo}: %{caminho} precisa apontar um passo "Escrever" ou "Resumir" desta automação, ou a quantidade (.quantos) ou os nomes (.nomes) de um passo "Para cada item".'
         texto_da_ia_depois: 'Passo %{passo}: %{caminho} aponta um passo de IA que nunca roda antes deste (vem depois, ou está noutro galho do mesmo passo). Ponha o passo que escreve antes do que lê.'
@@ -1162,12 +1183,13 @@ pt_BR:
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'
         valor_fora: 'Passo %{passo}: %{caminho} não tem o valor "%{valor}". Use um destes: %{opcoes}.'
         proibido: 'Passo %{passo}: a automação não muda %{campo}.'
+        um_de: 'Passo %{passo}: %{campo} tem de ser um destes: %{opcoes}.'
         passo_desligado: "Passo %{passo}: mensagem e aviso estão desligados nesta conta."
         agente_de_ia_invalido: 'Passo %{passo}: a agente de IA %{id} não é desta conta.'
         retorno_mensagem_sem_card: "Passo %{passo}: a mensagem do retorno só sai com gatilho de card. Use um gatilho de card ou desligue a mensagem."
         responsavel_so_com_card: "Passo %{passo}: passar a conversa para o responsável do card só vale com gatilho de card."
         sem_criar_retorno: 'Passo %{passo}: você não pode criar retorno no CRM, e o passo "Criar retorno" pede isso.'
-        modelo_indisponivel: "Passo %{passo}: nenhuma caixa do WhatsApp oficial tem o modelo %{nome} aprovado, de utilidade e com estas variáveis."
+        modelo_indisponivel: "Passo %{passo}: nenhuma caixa do WhatsApp oficial tem o modelo %{nome} aprovado, de utilidade ou de propaganda, e com estas variáveis."
         time_de_fora: "Passo %{passo}: o time %{id} não é desta conta."
         pessoa_de_fora: "Passo %{passo}: a pessoa %{id} não é desta conta."
         responsavel_do_card_sem_card: 'Passo %{passo}: "quem cuida do card" só vale quando o gatilho é de card.'
@@ -1207,6 +1229,14 @@ pt_BR:
         de_novo_desde_no_galho: "Passo %{passo}: o \"voltar a esperar\" não pode apontar para um passo dentro de \"A cada mensagem do cliente\" (%{desde}): a automação nunca voltaria a esperar."
         caminho_nenhum: "Nenhum se aplica"
         destino_invalido: "Passo %{passo}: a IA não pode gravar em %{destino}."
+        webhook_desligado: "Passo %{passo}: mandar para outro sistema está desligado nesta conta."
+        webhook_so_https: "Passo %{passo}: o endereço do outro sistema precisa começar com https://."
+        webhook_sem_senha_no_endereco: "Passo %{passo}: o endereço não pode levar usuário e senha. A assinatura já prova que somos nós."
+        webhook_endereco_interno: "Passo %{passo}: o endereço aponta para uma rede interna ou para esta plataforma."
+        webhook_destino_invalido: "Passo %{passo}: a resposta só pode ser gravada em atributo do card, do contato ou da conversa (%{destino})."
+        webhook_destino_repetido: "Passo %{passo}: duas respostas são gravadas em %{destino}."
+        webhook_sem_permissao: "Passo %{passo}: só o administrador, ou uma função que cuida das integrações, pode mandar dados para outro sistema."
+        webhook_chave_invalida: "Passo %{passo}: %{chave} não aponta para nada na resposta."
         campo_repetido: "Passo %{passo}: %{chave} aparece duas vezes."
       nota:
         laco: "A automação %{nome} parou nesta conversa: o outro lado respondeu em menos de %{segundos} segundos a %{trocas} mensagens da automação, sem pausa e sem ninguém da equipe no meio, como um robô. Confira antes de deixar ela seguir aqui."
@@ -1217,6 +1247,8 @@ pt_BR:
         gravar: 'Gravar o que a IA achou na conversa'
       descricoes:
         conversa_ao_responsavel: 'Passar a conversa para o responsável do card'
+      webhook:
+        gravar: 'Gravar o que o outro sistema respondeu'
     automacoes:
       ensaio:
         condicoes_invalidas: 'Esta automação tem uma condição que a plataforma não aceita, então não dá para testar. Corrija no modo manual.'

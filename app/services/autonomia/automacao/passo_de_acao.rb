@@ -16,18 +16,20 @@ class Autonomia::Automacao::PassoDeAcao
   # 4xx que passam: tempo esgotado, cedo demais e limite de pedidos.
   PASSAGEIROS = [408, 425, 429].freeze
 
-  # Os tipos de passo que o Executor entrega aqui (#2414 F3, G3, G18, G66, G21).
-  TIPOS = %w[acao retorno em_outro_registro conversa_ao_responsavel prospeccao].freeze
+  # Os tipos de passo que o Executor entrega aqui (#2414 F3, G3, G18, G66, G21, G13).
+  TIPOS = %w[acao retorno em_outro_registro conversa_ao_responsavel prospeccao webhook].freeze
 
   # O "criar retorno" (G3, #2629), o "em outro registro" (G18, #2671) e o "passar a conversa para o responsável do card"
   # (G66, #2843) têm objeto próprio, com o mesmo resultado; o retorno chega à mesma porta (AcoesDoRetorno). A
-  # "prospecção" (G21, #2706) também, e usa a espera e a nova tentativa da ação.
+  # "prospecção" (G21, #2706) também, e usa a espera e a nova tentativa da ação. O "webhook" (G13, #2670) também: manda
+  # para fora e grava a resposta por esta porta.
   # `alvo`: o alvo relido pelo executor; só o G66 o usa (o dono do card que um passo anterior trocou).
   def self.executar(passo:, alvo: nil, **)
     case passo['tipo']
     when 'retorno' then ::Autonomia::Automacao::PassoDeRetorno.new(passo: passo, **).executar
     when 'em_outro_registro' then ::Autonomia::Automacao::PassoEmOutroRegistro.new(passo: passo, **).executar
     when 'prospeccao' then ::Autonomia::Automacao::PassoDeProspeccao.new(passo: passo, **).executar
+    when 'webhook' then ::Autonomia::Automacao::PassoDeWebhook.new(passo: passo, **).executar
     when ::Autonomia::Automacao::PassoDeConversaAoResponsavel::TIPO
       ::Autonomia::Automacao::PassoDeConversaAoResponsavel.new(passo: passo, alvo: alvo, **).executar
     else new(passo: passo, **).executar

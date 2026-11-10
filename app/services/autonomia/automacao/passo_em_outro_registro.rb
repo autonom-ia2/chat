@@ -6,6 +6,8 @@
 # - :ok com a ligação nos dados (a procura e as filhas ficam com o job);
 # - :pulado `faltou_valor` sem âncora (o campo do card vazio, o alvo sem contato, o passo que devia criar o registro
 #   não criou: G49);
+# - :pulado `campo_nao_e_contato` quando o campo da ligação deixou de ser do tipo contato depois de a automação ligar
+#   (decisão 16): o número que ele guarda agora é de outra coisa, e a mensagem iria a outro cliente;
 # - :sem_acesso `sem_chave_de_funis` quando a ligação lê cards e quem ligou perdeu a chave de funis: pausa, como a ação
 #   de funil (#2633).
 class Autonomia::Automacao::PassoEmOutroRegistro
@@ -22,6 +24,7 @@ class Autonomia::Automacao::PassoEmOutroRegistro
     # A filha nunca abre netas: o salvar já recusa "em outro registro" dentro de outro, e a rodada confere de novo.
     return Resultado.new(tipo: :pulado, motivo: 'receita_com_problema', dados: {}) if ::Autonomia::Automacao::EmOutroRegistro.da(@execucao)
     return Resultado.new(tipo: :sem_acesso, motivo: 'sem_chave_de_funis', dados: {}) if sem_chave?
+    return Resultado.new(tipo: :pulado, motivo: 'campo_nao_e_contato', dados: {}) unless campo_de_contato?
 
     # Só um número inteiro de verdade: "12abc" não vira o contato 12.
     ancora_id = Integer(ancora.to_s, 10, exception: false).to_i
@@ -42,6 +45,13 @@ class Autonomia::Automacao::PassoEmOutroRegistro
   def sem_chave?
     ::Autonomia::Automacao::EmOutroRegistro.de_funil?(@passo, @execucao.versao.receita) &&
       !::Autonomia::Automacao::RegraDoFunil.chave?(@acesso.account_user)
+  end
+
+  # Conferido a cada rodada, não só ao salvar: o tipo do campo pode ter mudado depois de a automação ligar.
+  def campo_de_contato?
+    return true unless registro['de'] == 'contato_do_campo'
+
+    ::Autonomia::Automacao::EmOutroRegistro.campo_do_contato?(registro.dig('campo', '$valor').to_s, @execucao.account)
   end
 
   # O contato de onde a procura parte: o do campo (`contato_do_campo`) ou o do alvo (`cards_do_contato`). No

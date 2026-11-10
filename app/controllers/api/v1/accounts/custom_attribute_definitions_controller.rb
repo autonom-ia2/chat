@@ -18,9 +18,11 @@ class Api::V1::Accounts::CustomAttributeDefinitionsController < Api::V1::Account
     @custom_attribute_definition.update!(permitted_payload)
   end
 
+  # O campo do tipo contato que uma automação ligada lê não é apagado (CampoContatoEmUso): volta o motivo.
   def destroy
-    @custom_attribute_definition.destroy!
-    head :no_content
+    return head :no_content if @custom_attribute_definition.destroy
+
+    render json: { message: @custom_attribute_definition.errors.full_messages.to_sentence }, status: :unprocessable_entity
   end
 
   private
