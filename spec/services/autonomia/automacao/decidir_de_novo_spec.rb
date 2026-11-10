@@ -247,7 +247,7 @@ RSpec.describe Autonomia::Automacao::DecidirDeNovo, :automacao_motor do
   end
 
   it 'no ensaio, o caminho que decide de novo não roda passo nenhum: vencido o prazo, encerra' do
-    roteiro = Autonomia::Automacao::Roteiro.new('passos' => [decide, prioridade_passo('depois')])
+    roteiro = Autonomia::Automacao::Roteiro.new({ 'passos' => [decide, prioridade_passo('depois')] })
     ramos = described_class.ramos_do_ensaio(decide, roteiro) { |primeiro| [primeiro&.fetch('id')] }
 
     expect(ramos).to eq([{ chave: 'quer_visitar', nome: 'Quer visitar', passos: ['visita'] },

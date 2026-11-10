@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { entradaDoPasso } from '../catalogo';
 import { fraseDoPasso } from '../frases';
-import { galhosDe, idDaLista } from '../receita';
+import { A_CADA, galhosDe, idDaLista } from '../receita';
 
 // #2414 F5 — os passos do "Faça", numerados, com "Alterar" em cada um e um "+"
 // entre eles. "Se", "Esperar até" e "Decidir" mostram os galhos: o primeiro nível aberto,
@@ -188,6 +188,14 @@ const inserir = indice => emit('inserir', { listaId: props.listaId, indice });
                 @alterar="id => emit('alterar', id)"
                 @inserir="posicao => emit('inserir', posicao)"
               />
+              <p
+                v-if="galho.ramo === A_CADA && galho.passos.length"
+                data-galho-volta
+                class="flex items-center gap-2 mt-2 mb-0 text-sm text-n-slate-11"
+              >
+                <span class="i-lucide-undo-2 size-4" aria-hidden="true" />
+                {{ $t('AUTOMACAO_LIVRE.CONFIRA.VOLTA_A_ESPERAR') }}
+              </p>
             </div>
           </li>
         </ul>

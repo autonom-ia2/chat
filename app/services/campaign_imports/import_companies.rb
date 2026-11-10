@@ -11,13 +11,14 @@ class CampaignImports::ImportCompanies
     linker.prepare(block)
   end
 
-  # Inside the row savepoint, after the contact exists. Companies come only from the
-  # spreadsheet's company column: Enterprise's e-mail domain association is skipped for every
-  # audience row, so a switched-off import creates none (C5) and the preview stays true.
-  # Returns the attributes to keep on the import row.
-  def link(contact, row)
-    contact.skip_company_auto_association = true if contact.respond_to?(:skip_company_auto_association=)
-    result = linker.link(contact, company_name: row[:company_name], email: row[:email])
+  # The row's link is made by ContactRow, inside the row savepoint, after the contact exists.
+  # Companies come only from the spreadsheet's company column: Enterprise's e-mail domain
+  # association is skipped for every audience row, so a switched-off import creates none (C5) and
+  # the preview stays true.
+  attr_reader :linker
+
+  # The attributes to keep on the import row for the link's result.
+  def row_attributes(result)
     { company_id: result.company&.id, company_result: result.status.to_s }
   end
 
@@ -38,5 +39,5 @@ class CampaignImports::ImportCompanies
 
   private
 
-  attr_reader :campaign_import, :linker
+  attr_reader :campaign_import
 end

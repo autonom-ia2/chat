@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_910000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_09_922200) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2482,6 +2482,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_910000) do
     t.datetime "closed_at"
     t.string "external_id"
     t.jsonb "custom_attributes", default: {}, null: false
+    t.bigint "solicitante_contact_id"
     t.index "lower((title)::text) gin_trgm_ops", name: "idx_crm_cards_title_trgm", using: :gin
     t.index "lower(translate(NORMALIZE(title, NFD), '̧̨̀́̂̃̄̆̇̈̊̋̌'::text, ''::text)) gin_trgm_ops", name: "idx_crm_cards_titulo_sem_acento_trgm", using: :gin
     t.index ["account_id", "contact_id"], name: "idx_crm_cards_contact"
@@ -2511,6 +2512,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_910000) do
     t.index ["owner_id"], name: "index_crm_cards_on_owner_id"
     t.index ["pipeline_id", "status", "score"], name: "index_crm_cards_on_pipeline_status_score"
     t.index ["pipeline_id"], name: "index_crm_cards_on_pipeline_id"
+    t.index ["solicitante_contact_id", "account_id", "status"], name: "idx_crm_cards_solicitante", where: "(solicitante_contact_id IS NOT NULL)"
     t.index ["stage_id"], name: "index_crm_cards_on_stage_id"
     t.index ["team_id"], name: "index_crm_cards_on_team_id"
   end
@@ -4869,6 +4871,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_910000) do
   add_foreign_key "crm_card_conversations", "crm_cards", column: "card_id", on_delete: :cascade
   add_foreign_key "crm_card_conversations", "users", column: "linked_by_id"
   add_foreign_key "crm_cards", "accounts"
+  add_foreign_key "crm_cards", "contacts", column: "solicitante_contact_id", on_delete: :nullify
   add_foreign_key "crm_cards", "contacts", on_delete: :cascade
   add_foreign_key "crm_cards", "conversations", on_delete: :cascade
   add_foreign_key "crm_cards", "crm_pipeline_stages", column: "stage_id"

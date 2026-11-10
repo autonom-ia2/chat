@@ -30,6 +30,18 @@ RSpec.describe Crm::Meetings::RecordOutcomeService do
       expect(activity.payload).to include('meeting_id' => meeting.id, 'outcome' => 'no_show')
     end
 
+    # G56: o gatilho "reunião atendida" da Automação livre lê first_held; só o primeiro "Aconteceu" é true.
+    it 'marks first_held only on the first held, not on saving notes again nor on no-show and back to held' do
+      record('held')
+      record('held', notes: 'Pediu proposta')
+      record('no_show')
+      record('held')
+
+      payloads = world.card.activities.where(event_type: 'meeting_outcome_recorded').order(:id).map(&:payload)
+      expect(payloads.map { |payload| payload.values_at('outcome', 'first_held') })
+        .to eq([['held', true], ['held', false], ['no_show', false], ['held', false]])
+    end
+
     it 'refuses a meeting that has not finished yet' do
       meeting.update!(starts_at: 10.minutes.ago, ends_at: 20.minutes.from_now)
 

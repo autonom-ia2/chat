@@ -28,7 +28,7 @@ module Autonomia::Automacao::OrigemDoCard
     app/services/automation_rules/crm_actions.rb
     app/services/autonomia/automacao/card_novo.rb
     app/services/autonomia/prospecting/crm_card_converter.rb
-    app/services/crm/booking_v2/booker.rb
+    app/services/crm/booking_v2/booking_card.rb
     app/services/crm/booking_v2/contact_request.rb
     app/services/crm/calendar/public_booking_service.rb
     app/services/crm/cards/from_conversation_handler.rb

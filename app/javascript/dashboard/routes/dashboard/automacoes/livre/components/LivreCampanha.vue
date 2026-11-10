@@ -11,19 +11,26 @@ import {
   variaveisDoCorpo,
 } from '../modeloWhatsapp';
 import {
+  PUBLICO_DESTA_EXECUCAO,
   caixasDaCampanha,
   comFaz,
+  comPublico,
   ehPropaganda,
   modelosDaCaixa,
+  publicoDaExecucao,
 } from '../campanha';
 
 // #2414 G14 (#2630) — o passo "campanha" inteiro: o que fazer e, para mandar,
 // a caixa do WhatsApp oficial, o modelo aprovado com o texto fixo de cada
 // variável, o nome e as etiquetas de quem recebe. O servidor confere tudo de
-// novo ao salvar, inclusive que o gatilho roda sozinho.
+// novo ao salvar, inclusive que o gatilho roda sozinho. Quem recebe (G58):
+// quem tem as etiquetas, ou só quem esta automação criou nesta vez.
 const props = defineProps({
   modelValue: { type: Object, required: true },
   etiquetas: { type: Array, default: () => [] },
+  // G58: o catálogo tem um passo que cria contato num gatilho da conta
+  // (publicoDaExecucaoNoCatalogo). Sem ele, "Quem recebe" não aparece.
+  comPublicoDaExecucao: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -33,6 +40,7 @@ const C = 'AUTOMACAO_LIVRE.CAMPANHA';
 const idFaz = useId();
 const idCaixa = useId();
 const idModelo = useId();
+const idPublico = useId();
 
 const passo = computed(() => props.modelValue);
 const disparar = computed(() => passo.value.faz === 'disparar');
@@ -44,6 +52,19 @@ const opcoesDoFaz = computed(() => [
   { value: 'disparar', label: t(`${C}.DISPARAR`) },
 ]);
 const escolherFaz = faz => emit('update:modelValue', comFaz(passo.value, faz));
+
+// G58 (#2779): quem recebe. As etiquetas só aparecem na primeira opção.
+const opcoesDoPublico = computed(() => [
+  { value: 'etiquetas', label: t(`${C}.PUBLICO_ETIQUETAS`) },
+  { value: PUBLICO_DESTA_EXECUCAO, label: t(`${C}.PUBLICO_DESTA_EXECUCAO`) },
+]);
+const daExecucao = computed(() => publicoDaExecucao(passo.value));
+// Uma receita que já tem o público continua mostrando a escolha, para voltar.
+const escolheOPublico = computed(
+  () => props.comPublicoDaExecucao || daExecucao.value
+);
+const escolherPublico = publico =>
+  emit('update:modelValue', comPublico(passo.value, publico));
 
 const todasAsCaixas = useMapGetter('inboxes/getInboxes');
 const caixas = computed(() => caixasDaCampanha(todasAsCaixas.value));
@@ -207,7 +228,28 @@ const mudarVariavel = (indice, texto) => {
         />
       </template>
 
-      <div class="flex flex-col gap-1.5">
+      <div v-if="escolheOPublico" class="flex flex-col gap-1.5">
+        <label :for="idPublico" class="text-sm font-medium text-n-slate-12">
+          {{ $t('AUTOMACAO_LIVRE.CAMPOS.PUBLICO') }}
+        </label>
+        <ChoiceSelect
+          data-campanha-publico
+          :model-value="daExecucao ? PUBLICO_DESTA_EXECUCAO : 'etiquetas'"
+          :trigger-id="idPublico"
+          :aria-label="$t('AUTOMACAO_LIVRE.CAMPOS.PUBLICO')"
+          :options="opcoesDoPublico"
+          @update:model-value="escolherPublico"
+        />
+        <p
+          v-if="daExecucao"
+          data-campanha-publico-dica
+          class="mb-0 text-sm text-n-slate-11"
+        >
+          {{ $t(`${C}.PUBLICO_DESTA_EXECUCAO_DICA`) }}
+        </p>
+      </div>
+
+      <div v-if="!daExecucao" class="flex flex-col gap-1.5">
         <LivreMarcar
           :rotulo="$t('AUTOMACAO_LIVRE.CAMPOS.ETIQUETAS')"
           :opcoes="etiquetas"

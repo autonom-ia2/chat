@@ -38,18 +38,31 @@ nativos:
   escrever: { grupo: IA, requer: automacao_ia }
   # G41: `rotulos` troca o rótulo de um campo só neste passo (a instrução do resumo é opcional e diz o que mais trazer).
   resumir: { grupo: IA, requer: automacao_ia, rotulos: { instrucao: instrucao_do_resumo } }
+  # G24 (#2771): um card por item de uma lista que a IA acha na conversa. Cria card, então pede também a flag dos
+  # gatilhos de card e a chave de funis (`funil`), como o "criar card"; quem recusa de verdade é a Receita, ao salvar e ao
+  # ligar. `peca`: o passo inteiro numa peça só (LivreParaCada.vue).
+  para_cada: { grupo: IA, requer: automacao_ia, funil: true, peca: para_cada }
   # G15: passar a conversa à agente de IA, pela Atribuição. Sem flag própria: o painel diz quando a conta não tem agente
   # que receba conversa, e o motor pula com o motivo.
   ia_assumir: { grupo: EQUIPE }
   # G3 (#2629): o retorno para a equipe. A mensagem ao cliente na hora pede a flag da F4; quem recusa é a Receita.
   retorno: { grupo: EQUIPE }
+  # G18 (#2671): os passos de dentro rodam no contato guardado num campo ou nos outros cards do contato. Os cards pedem a
+  # chave de funis: o painel só os oferece a quem pode mexer no funil, e quem recusa de verdade é a Receita.
+  em_outro_registro: { grupo: CONTROLE }
   # G4: criar card numa etapa, com a flag dos gatilhos de card (F6). `funil`: só para quem pode mexer no funil
   # (RegraDoFunil.chave?: crm_manage_pipelines ou crm_admin), como o gatilho de card; quem recusa de verdade é a API,
   # ao salvar e ao ligar.
   card: { grupo: FUNIL, requer: automacao_gatilhos, funil: true }
+  # G66 (#2843, decisão 14): passar a conversa para o responsável do card, depois da troca do dono. Só com gatilho de
+  # card (a Receita recusa nos outros), que já pede a chave de funis: por isso `funil` e a flag dos gatilhos de card.
+  conversa_ao_responsavel: { grupo: EQUIPE, requer: automacao_gatilhos, funil: true }
+  # G21 (#2706): buscar empresas na Prospecção e marcar a recusa do lead. Sem flag própria: quem recusa é a Receita
+  # (Prospecção desligada, sem a chave dela). `peca`: o passo inteiro numa peça só (LivreProspeccao.vue).
+  prospeccao: { grupo: FUNIL, peca: prospeccao }
 
-# Passos nativos do esquema que o editor ainda não mostra, com o motivo. A receita aceita e o motor roda; a tela só os
-# mostra quando tiver as peças.
+# Passos nativos do esquema que o editor ainda não mostra, com o motivo e a Issue que os leva para a tela. A receita
+# aceita e o motor roda; a tela só os mostra quando tiver as peças.
 nativos_fora_do_editor: {}
 
 # Os valores da mensagem que disparou o gatilho (#2496, Valores::MENSAGEM). Só existem no "Só se" do gatilho dela; o

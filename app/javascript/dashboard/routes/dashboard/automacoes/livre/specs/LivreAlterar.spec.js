@@ -151,6 +151,55 @@ describe('LivreAlterar', () => {
     expect(salvarDesligado(wrapper)).toBe(false);
   });
 
+  // Decisão 18 — "Cobrir a pessoa enquanto ela não responde": um sim/não do design
+  // system (sem <select>), desligado por padrão; desligar tira a chave.
+  it('liga e desliga a opção "cobrir a pessoa"', async () => {
+    const COM_OPCAO = {
+      ...CATALOGO,
+      passos: [
+        ...CATALOGO.passos,
+        {
+          ...IA_ASSUMIR,
+          campos: [
+            ...IA_ASSUMIR.campos,
+            {
+              nome: 'cobrir_pessoa',
+              peca: 'sim_nao',
+              obrigatorio: false,
+              rotulo: 'COBRIR_PESSOA',
+            },
+          ],
+        },
+      ],
+    };
+    const wrapper = montar(COM_OPCAO, {
+      agenteDeIa: [{ value: 3, label: 'Área Suporte' }],
+    });
+    wrapper.vm.abrir({ tipo: 'passo', valor: { ...PASSO_IA, agente_id: 3 } });
+    await flushPromises();
+
+    const opcao = wrapper.find('[data-peca="cobrir_pessoa"]');
+    expect(opcao.exists()).toBe(true);
+    expect(wrapper.find('select').exists()).toBe(false);
+    const chave = opcao.findComponent({ name: 'Switch' });
+    expect(chave.props('modelValue')).toBe(false);
+
+    await chave.vm.$emit('update:modelValue', true);
+    await wrapper.find('[data-salvar]').trigger('click');
+    expect(wrapper.emitted('salvar')[0][0].valor).toEqual({
+      ...PASSO_IA,
+      agente_id: 3,
+      cobrir_pessoa: true,
+    });
+
+    await chave.vm.$emit('update:modelValue', false);
+    await wrapper.find('[data-salvar]').trigger('click');
+    expect(wrapper.emitted('salvar')[1][0].valor).toEqual({
+      ...PASSO_IA,
+      agente_id: 3,
+    });
+  });
+
   it('sem agente de IA na conta, diz isso e não salva', async () => {
     const wrapper = montar(COM_IA, { agenteDeIa: [] });
     wrapper.vm.abrir({ tipo: 'passo', valor: PASSO_IA });

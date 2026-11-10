@@ -252,12 +252,18 @@ RSpec.describe 'Fechamento #2414 · G32: reunião marcada no meio da execução'
       expect(execucao_de(lembra).estado).to eq('concluida')
     end
 
-    it '"quem atende a reunião" fora do gatilho de reunião é recusado ao salvar' do
+    # G61: fora do gatilho de reunião, "quem atende a reunião" é a próxima reunião marcada do contato; o salvar aceita.
+    # O reuniao.* segue só nos gatilhos de reunião.
+    it '"quem atende a reunião" fora do gatilho de reunião salva; reuniao.* não', :aggregate_failures do
+      sem_reuniao = { id: 'avisa', tipo: 'avisar', para: { da_reuniao: true }, texto: ['Hidratação de presente marcada'] }
+      receita = { gatilho: { tipo: 'card.entrou_na_etapa', etapa_id: revisao.id }, passos: [sem_reuniao] }
+      post api_automacoes(account), params: { nome: 'Certa', receita: receita }, headers: seu_ze.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:created)
+
       receita = { gatilho: { tipo: 'card.entrou_na_etapa', etapa_id: revisao.id }, passos: [aviso] }
       post api_automacoes(account), params: { nome: 'Errada', receita: receita }, headers: seu_ze.create_new_auth_token, as: :json
-
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.body).to include('avisar quem atende a reunião só vale nos gatilhos de reunião')
+      expect(response.body).to include('só existe nos gatilhos de reunião')
     end
   end
 end

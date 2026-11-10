@@ -428,6 +428,18 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
     end
 
+    # Parecer da Funções (#2859): a prospecção cria card, e é passo de funil como o "criar card".
+    it 'recusa salvar o passo "prospecção" sem a chave de funis, mesmo com a chave da Prospecção' do
+      Autonomia::Prospecting::Config.enable_for!(account)
+      montador.account_users.find_by(account: account).custom_role.update!(permissions: %w[automation_manage prospecting_manage])
+      prospeccao = { id: 'r1', tipo: 'prospeccao', faz: 'recusar' }
+
+      post base, params: { nome: 'x', receita: receita.merge(passos: [prospeccao]) }, headers: montador.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
+    end
+
     it 'recusa salvar por cima com passo de card, e confere a versão antes' do
       automacao = create(:autonomia_automacao, account: account)
       automacao.salvar_versao!(receita: receita.deep_stringify_keys, autor: admin)

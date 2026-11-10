@@ -35,7 +35,7 @@ class Autonomia::Automacao::PassoDeEscrever
     negado = impedido
     return negado if negado
 
-    mensagem = ::Autonomia::Automacao::PassoDeMensagem.new(execucao: @execucao, passo: @passo, alvo: @conversa) if mensagem?
+    mensagem = ::Autonomia::Automacao::PassoDeMensagem.new(execucao: @execucao, passo: @passo, alvo: @alvo) if mensagem?
     motivo = mensagem&.motivo_do_canal
     return ::Autonomia::Automacao::PassoDeMensagem.pulado(motivo) if motivo
 

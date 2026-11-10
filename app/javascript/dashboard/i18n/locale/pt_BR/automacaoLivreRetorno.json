@@ -1,8 +1,8 @@
 {
   "AUTOMACAO_LIVRE": {
     "RETORNO": {
-      "FRASE": "Criar retorno para {quem} daqui a {quando}: “{titulo}”",
-      "FRASE_COM_MENSAGEM": "Criar retorno para {quem} daqui a {quando}: “{titulo}”, e mandar ao cliente: “{mensagem}”",
+      "FRASE": "Criar retorno para {quem} {quando}: “{titulo}”",
+      "FRASE_COM_MENSAGEM": "Criar retorno para {quem} {quando}: “{titulo}”, e mandar ao cliente: “{mensagem}”",
       "QUEM": {
         "RESPONSAVEL": "quem cuida",
         "PESSOAS": "1 pessoa | {n} pessoas",
@@ -19,7 +19,24 @@
       "MANDAR": "Na hora do retorno, mandar uma mensagem ao cliente",
       "MANDAR_DICA": "Só vale quando a automação roda num card com conversa de WhatsApp. Fora da janela de 24 h, a mensagem só sai por um modelo aprovado; sem ele, a equipe é avisada.",
       "MENSAGEM": "O que mandar ao cliente",
-      "SO_LEMBRETE": "Sem a mensagem, a equipe recebe só o lembrete."
+      "SO_LEMBRETE": "Sem a mensagem, a equipe recebe só o lembrete.",
+      "QUANDO": {
+        "MODOS": {
+          "DAQUI": "Daqui a um tempo",
+          "HOJE": "Hoje",
+          "AMANHA": "Amanhã"
+        },
+        "DAQUI_QUANTO": "Daqui a quanto tempo",
+        "QUE_HORAS": "Que horas",
+        "FIM_DO_DIA": "Até o fim do dia",
+        "HORA_ITEM": "Às {hora}h",
+        "DICA": "Vale o horário da conta. Se a hora de hoje já tiver passado, o retorno fica para agora, nunca para amanhã.",
+        "FRASE_DAQUI": "daqui a {quando}",
+        "FRASE_HOJE": "com prazo hoje, até o fim do dia",
+        "FRASE_HOJE_AS": "com prazo hoje às {hora}h",
+        "FRASE_AMANHA": "com prazo amanhã, até o fim do dia",
+        "FRASE_AMANHA_AS": "com prazo amanhã às {hora}h"
+      }
     }
   }
 }
