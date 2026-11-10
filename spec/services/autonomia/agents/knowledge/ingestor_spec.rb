@@ -159,7 +159,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Ingestor do
       run!
 
       guincho = source.reload.knowledge_entries.order(:chunk_index).last
-      expect(guincho.content).to start_with("condicoes-gerais › ASSISTENCIA 24 HORAS\n\n")
+      expect(guincho.content).to start_with("ASSISTENCIA 24 HORAS\n\n")
       expect(guincho.metadata).to include('paginas_do_trecho' => [9, 9], 'section_heading' => 'ASSISTENCIA 24 HORAS',
                                           'material_type' => 'secao')
       expect(guincho.metadata['caminho']).to eq(['condicoes-gerais', 'ASSISTENCIA 24 HORAS'])

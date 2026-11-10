@@ -89,11 +89,12 @@ class Autonomia::Agents::Knowledge::CortePorSecao
     end
   end
 
-  # O trecho de item começa só pelo título da seção dele: o caminho inteiro, igual em todos os itens, pesava mais que o
-  # item curto na busca. O metadado leva o caminho inteiro nos dois.
+  # O trecho começa só pelo título da seção dele: o caminho inteiro, igual em todos os itens e nas seções vizinhas, pesava
+  # mais que o conteúdo na busca (#2854). O texto antes do primeiro título começa pelo nome do documento. O metadado leva
+  # o caminho inteiro, para mostrar e filtrar.
   def trecho(secao, corpo, paginas, tipo)
     caminho = [@documento.presence, *secao.caminho].compact
-    rotulo = tipo == 'item' ? secao.caminho.last : caminho.join(SEPARADOR)
+    rotulo = secao.caminho.last || (caminho.last if tipo == 'secao')
     { text: [rotulo.presence, corpo].compact.join("\n\n"), paginas: paginas,
       metadata: { section_heading: secao.caminho.last, material_type: tipo, char_span: corpo.length,
                   keywords: Autonomia::Agents::Knowledge::Chunker.keywords_for("#{secao.caminho.last} #{corpo}"),

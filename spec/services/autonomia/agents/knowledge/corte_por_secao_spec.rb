@@ -1,7 +1,8 @@
 require 'rails_helper'
 
 # #1431 (F1) — o corte por seção: os blocos que o formato entrega (título com nível, parágrafo, página) viram trechos de
-# uma seção só, cada um começando pelo caminho (Documento › Seção › Subseção), com as páginas de onde veio.
+# uma seção só, cada um começando pelo título da seção (#2854; o caminho Documento › Seção › Subseção fica no metadado),
+# com as páginas de onde veio.
 RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
   def titulo(texto, nivel, pagina = 1)
     { tipo: :titulo, nivel: nivel, texto: texto, pagina: pagina }
@@ -18,13 +19,15 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
   let(:franquia) { 'A franquia e o valor que o segurado paga em cada sinistro de dano parcial ao veiculo segurado.' * 3 }
   let(:reducao) { 'Quem contrata a franquia reduzida paga menos no sinistro e um premio maior na contratacao do seguro.' }
 
-  it 'starts every piece with the path of titles and keeps one section per piece', :aggregate_failures do
+  # #2854 — o trecho começa só pelo último título, como o de item: com o caminho inteiro, as seções vizinhas dividiam o
+  # mesmo prefixo, que pesava mais que o conteúdo na busca. O caminho inteiro fica no metadado.
+  it 'starts every piece with its own title, keeps the path in the metadata and one section per piece', :aggregate_failures do
     trechos = cortar([titulo('3. COBERTURAS', 1), titulo('3.1 Franquia', 2), paragrafo(franquia),
                       titulo('3.2 Guincho', 2), paragrafo('O guincho atende ate 200 km do local do evento, em todo o pais. ' * 4)])
 
     expect(trechos.size).to eq(2)
-    expect(trechos.first[:text]).to eq("Condicoes Gerais › 3. COBERTURAS › 3.1 Franquia\n\n#{franquia}")
-    expect(trechos.last[:text]).to start_with('Condicoes Gerais › 3. COBERTURAS › 3.2 Guincho')
+    expect(trechos.first[:text]).to eq("3.1 Franquia\n\n#{franquia}")
+    expect(trechos.last[:text]).to start_with("3.2 Guincho\n\n")
     expect(trechos.first[:metadata]).to include(caminho: ['Condicoes Gerais', '3. COBERTURAS', '3.1 Franquia'],
                                                 section_heading: '3.1 Franquia')
     expect(trechos.map { |trecho| trecho[:metadata][:secao_id] }.uniq.size).to eq(2)
@@ -34,7 +37,7 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
     trechos = cortar([titulo('3. COBERTURAS', 1), titulo('3.1 Franquia', 2), paragrafo(franquia),
                       titulo('4. EXCLUSOES', 1), paragrafo('Nao ha cobertura para o veiculo usado em competicao de qualquer tipo.')])
 
-    expect(trechos.last[:text]).to start_with("Condicoes Gerais › 4. EXCLUSOES\n\n")
+    expect(trechos.last[:text]).to start_with("4. EXCLUSOES\n\n")
   end
 
   it 'keeps the pages the piece came from' do
@@ -56,7 +59,7 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
     trechos = cortar([titulo('Regras', 1), *paragrafos], maximo: 700).select { |trecho| trecho[:metadata][:material_type] == 'secao' }
 
     expect(trechos.size).to be > 1
-    expect(trechos).to all(satisfy { |trecho| trecho[:text].start_with?('Condicoes Gerais › Regras') })
+    expect(trechos).to all(satisfy { |trecho| trecho[:text].start_with?('Regras') })
     ultimo_do_primeiro = trechos.first[:text].split("\n\n").last
     expect(trechos.second[:text].split("\n\n")[1]).to eq(ultimo_do_primeiro)
   end
@@ -65,7 +68,7 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
     longo = "#{'O segurado deve avisar a seguradora logo que souber do sinistro. ' * 30}Fim."
     trechos = cortar([titulo('Aviso', 1), paragrafo(longo)], maximo: 600)
 
-    corpo = trechos.map { |trecho| trecho[:text].delete_prefix("Condicoes Gerais › Aviso\n\n") }
+    corpo = trechos.map { |trecho| trecho[:text].delete_prefix("Aviso\n\n") }
     expect(corpo).to all(satisfy { |texto| texto.length <= 600 && longo.include?(texto) })
   end
 
@@ -89,7 +92,7 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
     texto = trechos.pluck(:text).join("\n")
 
     expect(texto).to include('j) Perdas durante competicoes de qualquer tipo', 'k) Acidentes por dirigir sem habilitacao')
-    expect(trechos.last[:text]).to start_with('Condicoes Gerais › 6. ACEITACAO')
+    expect(trechos.last[:text]).to start_with('6. ACEITACAO')
   end
 
   it 'keeps the last page of a paragraph that goes on to the next page' do
@@ -104,7 +107,7 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
     trechos = cortar([titulo('Glossario', 1), titulo('Franquia', 2), paragrafo('Valor que fica por conta do segurado.'),
                       titulo('Sinistro', 2), paragrafo('O acontecimento que causa o prejuizo coberto.')])
 
-    expect(trechos.first[:text]).to eq("Condicoes Gerais › Glossario › Sinistro\n\nFranquia\nValor que fica por conta do segurado." \
+    expect(trechos.first[:text]).to eq("Sinistro\n\nFranquia\nValor que fica por conta do segurado." \
                                        "\n\nSinistro\nO acontecimento que causa o prejuizo coberto.")
   end
 
@@ -112,7 +115,7 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
     trechos = cortar([titulo('5. EXCLUSOES', 1), titulo('j) Perdas em competicoes', 2), titulo('k) Dirigir sem habilitacao', 2),
                       titulo('6. ACEITACAO', 1), paragrafo(franquia)])
 
-    expect(trechos.first[:text]).to eq("Condicoes Gerais › 5. EXCLUSOES › k) Dirigir sem habilitacao\n\n" \
+    expect(trechos.first[:text]).to eq("k) Dirigir sem habilitacao\n\n" \
                                        "j) Perdas em competicoes\n\nk) Dirigir sem habilitacao")
   end
 
@@ -121,21 +124,21 @@ RSpec.describe Autonomia::Agents::Knowledge::CortePorSecao do
                       titulo('Bonus', 2), paragrafo('Desconto na renovacao.'), titulo('Franquia', 2), paragrafo(franquia)])
 
     avaria = trechos.find { |trecho| trecho[:text].include?('Dano ao veiculo.') }
-    expect(avaria[:text]).to start_with('Condicoes Gerais › Definicoes › Bonus')
-    expect(trechos.last[:text]).to start_with('Condicoes Gerais › Definicoes › Franquia')
+    expect(avaria[:text]).to start_with('Bonus')
+    expect(trechos.last[:text]).to start_with('Franquia')
     expect(trechos.last[:text]).not_to include('Dano ao veiculo.')
   end
 
   it 'keeps a small last section with no sibling after it' do
     trechos = cortar([titulo('Coberturas', 1), paragrafo(franquia), titulo('Ouvidoria', 1), paragrafo('Ligue 0800.')])
 
-    expect(trechos.last[:text]).to eq("Condicoes Gerais › Ouvidoria\n\nLigue 0800.")
+    expect(trechos.last[:text]).to eq("Ouvidoria\n\nLigue 0800.")
   end
 
   it 'does not join a small section into its own subsection' do
     trechos = cortar([titulo('Assistencia', 1), paragrafo('Servicos 24 horas.'), titulo('Guincho', 2), paragrafo(franquia)])
 
-    expect(trechos.first[:text]).to eq("Condicoes Gerais › Assistencia\n\nServicos 24 horas.")
+    expect(trechos.first[:text]).to eq("Assistencia\n\nServicos 24 horas.")
   end
 
   it 'loses no paragraph: every block text is in some piece' do
