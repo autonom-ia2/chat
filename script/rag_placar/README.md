@@ -28,14 +28,17 @@ TETO_USD=0.30 RESPOSTA=1 SAIDA=$TMPDIR/rag_placar/saida script/rag_placar/rodar.
   json:script/rag_placar/bases/json.json:docs/audit/2026-10-31-rag-v2-f0/gabaritos/json.yml
 ```
 
-- **Flags de produção.** A conta da rodada nasce com as flags de RAG ligadas em produção (`FLAGS_DE_PRODUCAO` em
-  `ingerir.rb`, hoje `rag_busca_hibrida` e `rag_corte_por_estrutura`). Sem a busca híbrida, a busca ordena pelo bônus
-  por metadado, um caminho que a produção não usa. Até 10/11/2026 a régua rodou assim, e os números medidos antes
-  disso não valem para comparar com a produção. Ao ligar ou desligar uma flag de RAG em produção, atualize a lista.
+- **Flags de produção.** A conta da rodada nasce com as flags de RAG e da resposta ligadas em produção
+  (`FLAGS_DE_PRODUCAO` em `ingerir.rb`, hoje `rag_busca_hibrida`, `rag_corte_por_estrutura`,
+  `agente_material_primeiro` e `agente_usa_o_trecho`). Sem a busca híbrida, a busca ordena pelo bônus por metadado,
+  um caminho que a produção não usa. Até 10/11/2026 a régua rodou assim, e os números medidos antes disso não valem
+  para comparar com a produção. Ao ligar ou desligar uma dessas flags em produção, atualize a lista.
 - **Com e sem a mudança.** `RAG_FLAGS=<flag_em_teste>` liga flags a mais na conta da rodada; sem ela, a rodada
   mede o caminho de hoje. As duas rodadas no mesmo código comparam a mudança contra a main.
 - **Segmento.** `RAG_SEGMENTO=seguros/corretora` faz o agente nascer com a marca de base desse segmento, como numa
-  conta de seguros em produção, e a resposta recebe o bloco do segmento. Sem ela, o agente fica sem base.
+  conta de seguros em produção, e a resposta recebe o bloco do segmento. Sem ela, o agente fica sem base. O segmento
+  depende da base, não é flag: nas bases de seguro (auto e residencial), passe `RAG_SEGMENTO=seguros/corretora` para
+  medir o caminho de produção; nas outras (json, planilha, site...), rode sem ele.
 - **IA paga.** A ingestão (classificador e embedding) e, com `RESPOSTA=1`, a resposta e o juiz usam a chave da
   OpenAI. Só rode com teto aprovado. `TETO_USD` vale para cada base da rodada.
 - **Uma rodada por vez.** Duas em paralelo disputam a mesma chave no mesmo banco.
