@@ -302,9 +302,9 @@ module FechamentoAutomacao::Lacunas
     # Fechada com prova (#2706): o passo roda e cria o card; o ponta a ponta do exemplo 9 está em
     # spec/fechamento/automacao/exemplo_09_prospeccao_semanal_spec.rb.
     'G21' => -> { FechamentoAutomacao::SondasDoExemplo9.prospeccao_cria_o_card? },
-    # G22 (exemplo 8, passo 9): desligada nesta entrega (Solicitados::GRAVADORES vazio). Liga quando o "para cada item"
-    # (G24) gravar o solicitante no card; aí a sonda volta a ser SondasDoExemplo8.rh_avisado_do_que_falta?.
-    'G22' => nil,
+    # Fechada com prova (G22, exemplo 8, passo 9): o "para cada item" (G24) grava no card quem pediu, e o aviso de sexta
+    # lista ao RH quem ainda falta. O ponta a ponta do passo 9 está em spec/fechamento/automacao/g22_avisar_o_rh_spec.rb.
+    'G22' => -> { FechamentoAutomacao::SondasDoExemplo8.rh_avisado_do_que_falta? },
     # G23 (#2737): o "ausente até" de quem cuida, como valor da condição.
     'G23' => -> { valor?('card.responsavel_ausente') && valor?('conversa.responsavel_ausente') },
     # Fechada com prova (#2771): o "para cada item" abre um card por item, cada um numa raiz própria da cadeia, e a

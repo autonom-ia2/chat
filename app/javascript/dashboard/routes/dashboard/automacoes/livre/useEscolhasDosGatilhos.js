@@ -44,10 +44,10 @@ const camposDeData = (definicoes, modelo) =>
       value: item.attribute_key,
       label: item.attribute_display_name,
     }));
-// G22: a condição "pediu card no funil" fica fora da tela até um passo gravar
-// quem pediu o card (o "para cada item" da G24). Sem isso ela nunca acha
-// ninguém, e o servidor recusa (Solicitados::GRAVADORES). A G24 liga os dois.
-const SOLICITANTE_LIGADO = false;
+// G22: a condição "pediu card no funil" aparece porque o "para cada item"
+// (G24) grava quem pediu o card. Sem gravador ela nunca acharia ninguém, e o
+// servidor a recusa (Solicitados::GRAVADORES): os dois andam juntos.
+const SOLICITANTE_LIGADO = true;
 // G22: os campos de marcar do card, que a seleção "pediu card no funil" usa
 // para saber o que ainda falta (o documento que o passo 6 marca).
 const camposDeMarcarDoCard = definicoes =>
