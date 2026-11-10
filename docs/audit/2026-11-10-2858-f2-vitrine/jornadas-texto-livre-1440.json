@@ -1,0 +1,81 @@
+{
+  "pasta": "docs/audit/2026-11-10-2858-f2-vitrine/prints-texto-livre/1440",
+  "conta": 1,
+  "usuario": "paula@acme.inc",
+  "larguras": [
+    1440
+  ],
+  "temas": [
+    "light"
+  ],
+  "jornadas": [
+    {
+      "nome": "j3b-experimente-texto-livre",
+      "etapas": [
+        {
+          "nome": "detalhe-fipe",
+          "url": "/app/accounts/{conta}/agents/ferramentas-prontas?ferramenta=fipe",
+          "esperar": "[data-experimentar]",
+          "pausa": 3500
+        },
+        {
+          "nome": "resultado-fipe",
+          "passos": [
+            {
+              "clicar": "[data-experimentar]"
+            },
+            {
+              "esperar": "[data-experimente-resultado], [data-experimente-aviso]"
+            },
+            {
+              "clicar": "[data-experimente-resultado], [data-experimente-aviso]"
+            }
+          ],
+          "pausa": 2000
+        },
+        {
+          "nome": "detalhe-cidades",
+          "url": "/app/accounts/{conta}/agents/ferramentas-prontas?ferramenta=cidades",
+          "esperar": "[data-experimentar]",
+          "pausa": 3500
+        },
+        {
+          "nome": "resultado-cidades",
+          "passos": [
+            {
+              "clicar": "[data-experimentar]"
+            },
+            {
+              "esperar": "[data-experimente-resultado], [data-experimente-aviso]"
+            },
+            {
+              "clicar": "[data-experimente-resultado], [data-experimente-aviso]"
+            }
+          ],
+          "pausa": 2000
+        },
+        {
+          "nome": "detalhe-feriados",
+          "url": "/app/accounts/{conta}/agents/ferramentas-prontas?ferramenta=feriados",
+          "esperar": "[data-experimentar]",
+          "pausa": 3500
+        },
+        {
+          "nome": "resultado-feriados",
+          "passos": [
+            {
+              "clicar": "[data-experimentar]"
+            },
+            {
+              "esperar": "[data-experimente-resultado], [data-experimente-aviso]"
+            },
+            {
+              "clicar": "[data-experimente-resultado], [data-experimente-aviso]"
+            }
+          ],
+          "pausa": 2000
+        }
+      ]
+    }
+  ]
+}

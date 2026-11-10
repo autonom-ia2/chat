@@ -1302,3 +1302,15 @@
   display_name: Agentes › ferramentas prontas (consultas mais usadas)
   enabled: false
   column: feature_flags_ext_2
+
+# Agentes: ferramentas prontas, F2 (#2858): a vitrine. Ligada (junto com `agente_ferramentas_prontas`): o menu
+# "Ferramentas prontas" em No automático, a vitrine (grupos, busca, destaque do ramo, detalhe com "Experimente",
+# escolha do agente, frase "Use quando…" e "Pronto!") e, na página do agente, as prontas com liga/desliga e "Tirar".
+# Quem inclui: o administrador e quem tem a chave "Ferramentas dos agentes". Desligada: tudo some da tela e a API da
+# vitrine responde 404; as prontas já incluídas seguem no turno pela flag da fundação. Sem migration.
+# Rollback: desligar a flag na conta. Posição 39 (274877906944, 1 << 38), dada pela Orquestração em 10/11. Depois do
+# NO AR, liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: agente_ferramentas_prontas_vitrine
+  display_name: Agentes › ferramentas prontas (vitrine)
+  enabled: false
+  column: feature_flags_ext_2

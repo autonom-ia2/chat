@@ -157,11 +157,16 @@ export const MODULE_GROUPS = [
         // Nenhum modelo pronto a inclui e "Editar" em Agentes não a liga. Só aparece com a flag da conta (o editor
         // filtra por `featureFlag`). O servidor grava autonomia_view junto (IMPLIED_VIEWS em custom_role.rb), porque
         // as ferramentas ficam na página do agente; por isso não há item próprio no menu (`menu: false`).
+        // #2858 F2: a mesma chave inclui as ferramentas prontas da vitrine, então a linha aparece com o cadastro livre
+        // ou com a vitrine (que só vale junto com a flag das prontas).
         key: 'AUTONOMIA_TOOLS',
         icon: 'i-lucide-wrench',
         sensitive: true,
         menu: false,
-        featureFlag: 'agente_ferramentas_delegadas',
+        featureFlag: [
+          'agente_ferramentas_delegadas',
+          ['agente_ferramentas_prontas', 'agente_ferramentas_prontas_vitrine'],
+        ],
         levelLabels: [LEVELS.MANAGE],
         levels: { manage: AUTONOMIA_TOOLS_MANAGE },
         impliedView: AUTONOMIA_VIEW,
@@ -347,10 +352,13 @@ export const MODULES = MODULE_GROUPS.flatMap(group => group.modules);
 
 export const moduleByKey = key => MODULES.find(module => module.key === key);
 
-// As áreas que a conta mostra: uma área com `featureFlag` só aparece com a flag ligada.
+// As áreas que a conta mostra: uma área com `featureFlag` só aparece com a flag ligada. Com uma lista, qualquer item
+// basta; um item que é lista pede todas as flags dele.
 export const listedModules = (modules, hasFeature) =>
   modules.filter(
-    module => !module.featureFlag || hasFeature(module.featureFlag)
+    module =>
+      !module.featureFlag ||
+      [module.featureFlag].flat().some(item => [item].flat().every(hasFeature))
   );
 
 // As chaves de uma área: as dos níveis e os ajustes.
