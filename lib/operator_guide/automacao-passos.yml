@@ -30,8 +30,9 @@ nativos:
   avisar: { grupo: MENSAGEM, requer: automacao_mensagens }
   # G14 (#2630): disparar campanha e marcar "não recebe". `peca`: o passo inteiro numa peça só (LivreCampanha.vue).
   campanha: { grupo: MENSAGEM, requer: automacao_mensagens, peca: campanha }
-  # G2: e-mail ao contato pela caixa de e-mail da conta.
-  email: { grupo: MENSAGEM, requer: automacao_mensagens }
+  # G2: e-mail ao contato pela caixa de e-mail da conta. `rotulos`: a caixa de e-mail tem rótulo próprio (o "caixa_id" da
+  # campanha é a caixa do WhatsApp).
+  email: { grupo: MENSAGEM, requer: automacao_mensagens, rotulos: { caixa_id: caixa_id_email } }
   # F7: os passos de IA, na chave da própria conta. Quem recusa de verdade é a Receita, ao salvar (ia_desligada).
   decidir: { grupo: IA, requer: automacao_ia }
   extrair: { grupo: IA, requer: automacao_ia }
@@ -46,7 +47,8 @@ nativos:
   # que receba conversa, e o motor pula com o motivo.
   ia_assumir: { grupo: EQUIPE }
   # G3 (#2629): o retorno para a equipe. A mensagem ao cliente na hora pede a flag da F4; quem recusa é a Receita.
-  retorno: { grupo: EQUIPE }
+  # `rotulos`: o título da tarefa tem rótulo próprio (o "titulo" da campanha é o nome dela).
+  retorno: { grupo: EQUIPE, rotulos: { titulo: titulo_do_retorno } }
   # G18 (#2671): os passos de dentro rodam no contato guardado num campo ou nos outros cards do contato. Os cards pedem a
   # chave de funis: o painel só os oferece a quem pode mexer no funil, e quem recusa de verdade é a Receita.
   em_outro_registro: { grupo: CONTROLE }

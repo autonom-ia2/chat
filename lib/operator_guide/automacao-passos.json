@@ -1531,7 +1531,7 @@
           "nome": "caixa_id",
           "peca": "caixa_de_email",
           "obrigatorio": true,
-          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CAIXA_ID"
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CAIXA_ID_EMAIL"
         },
         {
           "nome": "assunto",
@@ -1873,7 +1873,7 @@
           "nome": "titulo",
           "peca": "texto_com_valores",
           "obrigatorio": true,
-          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TITULO"
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TITULO_DO_RETORNO"
         },
         {
           "nome": "daqui",
