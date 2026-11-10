@@ -30,7 +30,7 @@ RSpec.describe 'Fechamento #2414 · G55: a campanha da vez num gatilho de card',
 
   def receita
     { gatilho: { tipo: 'card.recorrente', frequencia: 'mensal', dia_do_mes: 1, hora: 9,
-                 selecao: { funil_id: funil.id, situacao: 'perdido', fechado_entre_dias: { de: 330, ate: 345 } } },
+                 selecao: { funil_id: funil.id, situacao: 'perdido', fechado_entre_dias: { de: 330, ate: 360 } } },
       passos: [
         { id: 'etiqueta', tipo: 'acao', acao: 'PATCH contacts/:contact_id/labels/alterar', descricao: 'Pôr a etiqueta reconquista',
           caminho: { contact_id: { '$valor' => 'contato.id' } }, corpo: { por: ['reconquista'] } },

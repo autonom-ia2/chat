@@ -387,15 +387,10 @@ module FechamentoAutomacao::Lacunas
     },
     # G65 (#2842, ex. 11, passo 7): a filha lê o registro de origem (o João, no card ganho) com `origem.*`.
     'G65' => -> { FechamentoAutomacao::SondasDoRegistroLigado.filha_le_a_origem? },
-    # G55 (ex. 16, passo 2): disparar a campanha da etiqueta a partir de um gatilho de card. O card.recorrente aceita o
-    # disparar, e a campanha é uma só por vez, quando a vez fecha (CampanhaDaOcorrencia); prova ponta a ponta em
-    # spec/fechamento/automacao/g55_campanha_no_card_spec.rb.
-    'G55' => lambda {
-      passo = { 'id' => 'g55', 'faz' => 'disparar', 'modelo' => { 'variaveis' => [['texto fixo']] } }
-      receita = { 'gatilho' => { 'tipo' => 'card.recorrente' } }
-      Autonomia::Automacao::PassoDeCampanha.problemas_ao_salvar(passo, receita, alvo: 'Crm::Card', conta: nil, account_user: nil).empty? &&
-        Autonomia::Automacao::CampanhaDaVez.column_names.include?('lotes_feitos')
-    },
+    # G55 (ex. 16, passo 2): disparar a campanha da etiqueta a partir de um gatilho de card. A sonda roda a vez de
+    # verdade (FechamentoAutomacao::SondasDaCampanhaDaVez): dois cards chegam, e a campanha sai uma vez, no último; prova
+    # ponta a ponta em spec/fechamento/automacao/g55_campanha_no_card_spec.rb.
+    'G55' => -> { FechamentoAutomacao::SondasDaCampanhaDaVez.uma_campanha_por_vez? },
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
     # (passo 2, "manda por e-mail o mesmo conteúdo"): `falhou.texto`, prova em g53_conteudo_da_falha_spec.rb.
     'G53' => -> { valor?('falhou.texto') },
