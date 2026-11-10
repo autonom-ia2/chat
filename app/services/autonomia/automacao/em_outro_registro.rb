@@ -23,6 +23,10 @@ module Autonomia::Automacao::EmOutroRegistro
   MARCA = 'em'.freeze
   # A base de cada alvo possível da filha, para a marca (o nome da classe tem "::", que a marca usa como separador).
   BASES = { 'Contact' => 'contato', 'Conversation' => 'conversa', 'Crm::Card' => 'card' }.freeze
+  # Onde o `contato_do_campo` acha o id do contato: só um campo do card do tipo contato (decisão 16), que a equipe
+  # preenche escolhendo um contato da conta numa lista, e o card recusa contato de fora (Crm::CardCampoContato). Campo
+  # de número não serve: um engano (o número de um pedido, um protocolo) mandaria a mensagem a outro cliente da conta.
+  CAMPOS_DO_CONTATO = %w[card.atributos].freeze
 
   module_function
 
@@ -50,13 +54,14 @@ module Autonomia::Automacao::EmOutroRegistro
     passos.filter_map { |passo| alvo_do_ramo(passo, receita) if do_tipo?(passo) && passo.dig('registro', 'de') == CRIADO }
   end
 
-  # A ligação lê cards do CRM: pede a chave de funis, como o gatilho de card e a ação de funil (controller#de_funil?).
-  def de_funil?(passo, receita) = do_tipo?(passo) && alvo_do_ramo(passo, receita) == 'Crm::Card'
+  # Pede a chave de funis, como o gatilho de card e a ação de funil (controller#de_funil?), ao salvar e a cada rodada
+  # (PassoEmOutroRegistro): a ligação que lê cards do CRM, e o ramo que roda numa conversa e lê o card dela (#2716,
+  # decisão 19: só para ler), qualquer que seja o gatilho. Sem ela, a filha leria o card sempre vazio.
+  def de_funil?(passo, receita)
+    return false unless do_tipo?(passo)
 
-  # O ramo que roda numa conversa e lê o card dela (#2716): pede a chave de funis de quem salva, como a receita de
-  # conversa que lê o card (controller#de_funil?). Sem ela, a filha leria o card sempre vazio.
-  def le_card_da_conversa?(passo, receita)
-    do_tipo?(passo) && alvo_do_ramo(passo, receita) == 'Conversation' && ::Autonomia::Automacao::CardDaConversa.le?(passo['passos'])
+    alvo = alvo_do_ramo(passo, receita)
+    alvo == 'Crm::Card' || (alvo == 'Conversation' && ::Autonomia::Automacao::CardDaConversa.le?(passo['passos']))
   end
 
   def marca(mae, registro, passo_id) = [MARCA, mae.id, BASES.fetch(registro.class.name), registro.id, passo_id].join(':')
@@ -67,21 +72,27 @@ module Autonomia::Automacao::EmOutroRegistro
     [mae_id.to_i, passo_id] if prefixo == MARCA && passo_id.present?
   end
 
+  # A execução mãe da filha, sempre na conta dela; nil na execução que não é filha.
+  def mae(execucao)
+    mae_id, = da(execucao)
+    mae_id && ::Autonomia::Automacao::Execucao.find_by(id: mae_id, account_id: execucao.account_id)
+  end
+
   # A conversa em que a filha num card age (decisão da Automação, 07/11): a da mãe, quando o card é do mesmo contato
   # do alvo dela (a resposta do exemplo 16 sai na conversa em que o cliente escreveu); senão nil, e vale a do card.
   def conversa_da_mae(execucao, card)
-    mae_id, = da(execucao)
-    mae = mae_id && ::Autonomia::Automacao::Execucao.find_by(id: mae_id, account_id: card.account_id)
-    return unless mae&.alvo
+    alvo_da_mae = mae(execucao)&.alvo
+    return unless alvo_da_mae
 
-    contexto = ::Autonomia::Automacao::Contexto.de(mae.alvo)
+    contexto = ::Autonomia::Automacao::Contexto.de(alvo_da_mae)
     contexto.conversa if contexto.contato && contexto.contato.id == card.contact_id
   end
 
   # Frases do salvar. `dentro`: o passo está no ramo de outro "em outro registro". O ramo é conferido como uma receita
   # cujo alvo é o registro (Receita com `alvo:`); o valor da âncora, pela régua do alvo da mãe (o bloco).
-  # `receita`: a receita inteira, de onde sai o tipo do registro criado (G49).
-  def problemas_ao_salvar(passo, conta:, account_user:, dentro:, receita:, &)
+  # `receita`: a receita inteira, de onde sai o tipo do registro criado (G49). `origem`: o tipo do alvo do gatilho da
+  # mãe, onde o ramo lê `origem.*` (G65).
+  def problemas_ao_salvar(passo, conta:, account_user:, dentro:, receita:, origem:, &)
     id = passo['id']
     return [texto(:aninhado, passo: id)] if dentro
 
@@ -90,17 +101,44 @@ module Autonomia::Automacao::EmOutroRegistro
     return ligacao if alvo.nil?
 
     ramo = { 'gatilho' => {}, 'passos' => passo['passos'] }
-    [*ligacao, *::Autonomia::Automacao::Receita.new(ramo, conta: conta, account_user: account_user, alvo: alvo).problemas]
+    [*ligacao, *::Autonomia::Automacao::Receita.new(ramo, conta: conta, account_user: account_user, alvo: alvo, origem: origem).problemas]
   end
 
-  # O campo do contato só aceita o contato criado (G49); o `criado_no_passo` é conferido como o valor `criado.<passo>`.
+  # O campo do contato só aceita campo do card do tipo Contato (decisão 16, do_campo); o `criado_no_passo` (G49) é
+  # conferido como o valor `criado.<passo>`.
   def da_ligacao(id, registro, conta, account_user, &)
-    criado = ::Autonomia::Automacao::RegistroCriado
-    return [*yield(registro.dig('campo', '$valor'), tipo: criado::CONTATO)] if registro['de'] == 'contato_do_campo'
-    return [*yield("#{criado::PREFIXO}#{registro['passo']}")] if registro['de'] == CRIADO
+    return do_campo(id, registro.dig('campo', '$valor'), conta, &) if registro['de'] == 'contato_do_campo'
+    return [*yield("#{::Autonomia::Automacao::RegistroCriado::PREFIXO}#{registro['passo']}")] if registro['de'] == CRIADO
 
     chave = account_user && !::Autonomia::Automacao::RegraDoFunil.chave?(account_user) ? [texto(:sem_chave_de_funis, passo: id)] : []
     chave + do_funil(id, registro, conta)
+  end
+
+  # O campo guarda o id do contato: só um campo do card do tipo contato (CAMPOS_DO_CONTATO), como a tela oferece. O resto
+  # (um campo de número, o telefone, o nome, o próprio contato do alvo, o texto da IA) nunca é o contato ligado, e o
+  # passo pularia sempre ou acharia outro contato.
+  def do_campo(id, caminho, conta)
+    lidos = [*yield(caminho)]
+    return lidos if lidos.any?
+
+    campo_do_contato?(caminho, conta) ? [] : [texto(:campo_sem_contato, passo: id)]
+  end
+
+  # As automações ligadas da conta cujo "em outro registro" acha o contato neste campo (`card.atributos.<chave>`). O campo
+  # do tipo contato não troca de tipo nem é apagado enquanto alguma delas o lê (CampoContatoEmUso).
+  def automacoes_que_leem(conta, caminho)
+    ::Autonomia::Automacao::Definicao.where(account_id: conta.id, ativa: true).includes(:versao_ativa).select do |automacao|
+      receita = automacao.versao_ativa&.receita
+      receita && ::Autonomia::Automacao::Receita.new(receita, conta: conta, account_user: nil).passos.any? do |passo|
+        passo['tipo'] == TIPO && passo.dig('registro', 'campo', '$valor') == caminho
+      end
+    end
+  end
+
+  def campo_do_contato?(caminho, conta)
+    atributos = ::Autonomia::Automacao::Valores::Atributos
+    base, = atributos.do_caminho(caminho)
+    CAMPOS_DO_CONTATO.include?(base) && atributos.contato?(caminho, conta)
   end
 
   def do_funil(id, registro, conta)

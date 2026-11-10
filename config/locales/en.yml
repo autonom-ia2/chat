@@ -89,6 +89,7 @@ en:
       invalid_contact_input: 'Provide a contact object with a non-empty name, optional email and phone strings, and valid attribute objects.'
       contact_conversation_conflict: 'cannot be changed while this card has conversations belonging to another contact. Review the conversation links first.'
       pessoa_de_fora: 'field %{chave}: the person is not on this account team.'
+      contato_de_fora: 'field %{chave}: the contact is not from this account.'
     account:
       not_authorized: You are not authorized to access this account
       email_limit_exceeded: The daily email limit for this account has been reached
@@ -222,6 +223,8 @@ en:
       attribute_key_format: must only contain letters, numbers, underscores, hyphens, and dots
       key_conflict: The provided key is not allowed as it might conflict with default attributes.
       pessoa_so_no_card: 'Team member fields exist only on cards.'
+      contato_so_no_card: 'Contact fields exist only on cards.'
+      contato_em_uso: 'This Contact field is in use by the automation %{automacoes} to find the linked contact. Turn the automation off, or choose another field in it, before changing the type or deleting this field.'
     mfa:
       already_enabled: MFA is already enabled
       not_enabled: MFA is not enabled
@@ -559,6 +562,12 @@ en:
         ja_aberta: 'The trigger happened again, but the automation was already running here and did not start again.'
         nao_acordou: 'An error kept the automation from checking this wait early. It keeps waiting until the deadline.'
         filhas_puladas: 'Some linked records did not get these steps: the person who turned on the automation cannot reach them, or the automation was already running there.'
+        contato_ligado_sumiu: 'The contact saved in the chosen field does not exist in this account anymore (it was deleted). The steps inside did not run anywhere.'
+        registro_criado_sumiu: 'The record the earlier step created does not exist in this account anymore (it was deleted). The steps inside did not run anywhere.'
+        campo_nao_e_contato: 'The field chosen to find the linked contact is no longer of the Contact type, so the number in it may belong to something else. The steps inside did not run. Choose a Contact field in the step and save again.'
+        origem_fora_do_alcance: 'This step reads the original record, and the person who turned on the automation no longer has access to it. The step was skipped, so no data from that record was sent.'
+        contato_ligado_sem_conversa: 'The linked contact has no conversation yet, so the steps inside had nowhere to run.'
+        nenhum_card_ligado: 'This contact has no other card that matches the step, so the steps inside did not run.'
         receita_com_problema: 'This version no longer runs as it was saved. Fix it and save again before turning it on.'
         sem_quem_ligou: 'Nobody turned this automation on. Take over and turn it back on.'
         sem_versao: 'This automation has no saved steps yet.'
@@ -626,6 +635,7 @@ en:
           sem_chave_de_funis: 'Step %{passo}: it reads cards from the pipeline, and you cannot edit pipelines.'
           funil_de_fora: 'Step %{passo}: the pipeline is not from this account.'
           etapa_de_fora: 'Step %{passo}: the stage is not from this account or not from the chosen pipeline.'
+          campo_sem_contato: 'Step %{passo}: the field that holds the contact must be a card field of the Contact type, where your team picks a contact from the list. A number field cannot point to a contact: a mistake would send the message to another customer.'
         sem_criar_card: 'Step %{passo}: you cannot create cards in the CRM, which the "Create card" step needs.'
         etapa_do_card_de_fora: 'Step %{passo}: stage %{id} is not from this account.'
         card_desligado: 'Step %{passo}: the "Create card" step is off for this account (card triggers or the CRM are off).'
@@ -640,6 +650,7 @@ en:
         acao_fora: 'Step %{passo}: %{acao} cannot be an automation step.'
         caminho_faltando: 'Step %{passo}: the action needs %{campo}.'
         valor_desconhecido: 'Step %{passo}: the automation cannot read %{caminho}.'
+        origem_fora_do_ramo: 'Step %{passo}: %{caminho} reads the original record, and only exists inside the step "Do it on the linked contact or cards". Use it in a step inside it.'
         texto_da_ia_no_gatilho: 'Step %{passo}: %{caminho} is the text of an AI step, and no step has run yet in the trigger "Only if". Use it in a step after that one.'
         texto_da_ia_sem_passo: 'Step %{passo}: %{caminho} must point to a "Write" or "Summarize" step of this automation, or to the count (.quantos) or the names (.nomes) of a "For each item" step.'
         texto_da_ia_depois: 'Step %{passo}: %{caminho} points to an AI step that never runs before this one (it comes later, or sits in another branch of the same step). Move the step that writes before the one that reads it.'

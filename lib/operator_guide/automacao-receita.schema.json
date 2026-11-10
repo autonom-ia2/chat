@@ -207,7 +207,7 @@
       "oneOf": [{ "$ref": "#/definitions/duracao" }, { "const": "sem_prazo" }]
     },
     "valor": {
-      "description": "Um valor do alvo, da lista fechada. \"ia.<id>\" (#2679): o texto que o passo \"escrever\" ou \"resumir\" com esse id produziu nesta execução; antes dele rodar, vazio \"criado.<id>\" (G49): o id do contato ou do card que o passo com esse id criou nesta execução; antes dele rodar, vazio.",
+      "description": "Um valor do alvo, da lista fechada. \"ia.<id>\" (#2679): o texto que o passo \"escrever\" ou \"resumir\" com esse id produziu nesta execução; antes dele rodar, vazio. \"criado.<id>\" (G49): o id do contato ou do card que o passo com esse id criou nesta execução; antes dele rodar, vazio. \"origem.<caminho>\" (G65): só nos passos de dentro do \"em outro registro\", o valor do registro de origem (o alvo da automação, como \"origem.contato.nome\"), lido com a permissão de quem ligou.",
       "type": "object",
       "additionalProperties": false,
       "required": ["$valor"],

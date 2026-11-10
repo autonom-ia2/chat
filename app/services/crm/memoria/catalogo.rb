@@ -45,14 +45,17 @@ module Crm::Memoria::Catalogo
   end
 
   # O campo personalizado apagado sai do catálogo: a IA deixa de poder gravar fato nele (os fatos que existem ficam).
+  # O do tipo contato também sai (decisão 16): quem é o contato ligado a equipe escolhe, a IA não grava.
   def sem_campo!(account)
-    existentes = account.custom_attribute_definitions.where(attribute_model: MODELOS).pluck(:attribute_model, :attribute_key)
+    existentes = definicoes(account).pluck(:attribute_model, :attribute_key)
     Crm::MemoriaChave.where(account_id: account.id, attribute_model: MODELOS)
                      .reject { |linha| existentes.include?([linha.attribute_model, linha.chave]) }.each(&:destroy!)
   end
 
+  def definicoes(account) = account.custom_attribute_definitions.where(attribute_model: MODELOS).where.not(attribute_display_type: :contato)
+
   def dos_campos(account)
-    account.custom_attribute_definitions.where(attribute_model: MODELOS).map do |definicao|
+    definicoes(account).map do |definicao|
       modelo = definicao.attribute_model
       { attribute_model: modelo, chave: definicao.attribute_key, rotulo: definicao.attribute_display_name,
         nivel: Crm::MemoriaChave::MODELOS.fetch(modelo), cardinalidade: 1, validade_dias: nil,

@@ -41,6 +41,8 @@ class Autonomia::Automacao::Executor
   include ::Autonomia::Automacao::EsperaNoExecutor
   # O "decidir" que volta a esperar a próxima resposta e decide de novo (G31).
   include ::Autonomia::Automacao::DecidirDeNovo
+  # O passo da filha do "em outro registro" que lê o registro de origem fora do alcance de quem ligou (G65).
+  include ::Autonomia::Automacao::OrigemNoExecutor
 
   # Chamado pelo AvancarJob com a marca de quem reservou a execução (Partida ou VarreduraJob). A execução lida antes
   # da troca guarda o `due_at` da espera, que o "esperar até" usa como prazo.
@@ -82,7 +84,7 @@ class Autonomia::Automacao::Executor
     passo = @execucao.cursor.blank? ? @roteiro.primeiro : @roteiro.passo(@execucao.cursor)
     @retomando = @execucao.cursor.present?
     while passo && !@parou
-      passo = dar(passo)
+      passo = sem_origem?(passo) ? pular_sem_origem(passo) : dar(passo)
       @retomando = false
     end
     finalizar('concluida') unless @parou

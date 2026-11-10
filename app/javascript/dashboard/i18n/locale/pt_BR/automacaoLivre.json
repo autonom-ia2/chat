@@ -242,7 +242,8 @@
         "DATE": "Data",
         "LIST": "Lista",
         "CHECKBOX": "Sim ou não",
-        "PESSOA": "Pessoa da equipe"
+        "PESSOA": "Pessoa da equipe",
+        "CONTATO": "Contato"
       }
     },
     "LIGADA": "Ligada",

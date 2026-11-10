@@ -8,7 +8,7 @@
         "CRIADO_NO_PASSO": "No contato ou card que um passo criou"
       },
       "CAMPO": "Qual campo guarda o contato?",
-      "SEM_CAMPO": "Nenhum campo de número aqui pode guardar um contato. Crie um campo de número antes.",
+      "SEM_CAMPO": "Nenhum campo do card do tipo Contato aqui. Crie um em Configurações > Atributos Personalizados (no card, tipo Contato), para a equipe escolher o contato numa lista.",
       "AVISO_DO_CAMPO": "Se este campo é preenchido pelo que o cliente escreve (pela IA, por exemplo), o cliente pode apontar outro contato da conta. Prefira um campo que só a equipe preenche.",
       "USAR": "Fazer onde?",
       "USOS": {
@@ -42,7 +42,8 @@
         "NO_FUNIL": "no funil escolhido",
         "SEM_LIGACAO": "Em outro contato ou card: escolha onde",
         "CRIADO": "No {registro}"
-      }
+      },
+      "DA_ORIGEM": "{valor} (do registro de origem)"
     }
   }
 }

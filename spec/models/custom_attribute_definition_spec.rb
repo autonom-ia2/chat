@@ -131,4 +131,56 @@ RSpec.describe CustomAttributeDefinition do
       expect(definition).not_to be_valid
     end
   end
+
+  # Decisão 16 (ex. 11): o tipo Contato só existe no card, e o campo que uma automação ligada lê para achar o contato
+  # ligado não troca de tipo nem é apagado.
+  describe 'tipo contato' do
+    def campo(modelo = :card_attribute)
+      create(:custom_attribute_definition, account: account, attribute_key: 'indicado_por', attribute_model: modelo,
+                                           attribute_display_type: :contato)
+    end
+
+    def automacao_que_le(chave, ativa: true)
+      passo = { 'id' => 'outro', 'tipo' => 'em_outro_registro', 'passos' => [],
+                'registro' => { 'de' => 'contato_do_campo', 'campo' => { '$valor' => "card.atributos.#{chave}" }, 'usar' => 'conversa' } }
+      automacao = create(:autonomia_automacao, account: account, nome: 'Indicação', ativa: ativa)
+      versao = create(:autonomia_automacao_versao, automacao: automacao, receita: { 'gatilho' => { 'tipo' => 'card.ganho' }, 'passos' => [passo] })
+      automacao.update!(versao_ativa: versao)
+      automacao
+    end
+
+    let(:em_uso) { I18n.t('errors.custom_attribute_definition.contato_em_uso', automacoes: 'Indicação') }
+
+    it 'só no card: no contato, na conversa e na empresa é recusado', :aggregate_failures do
+      expect(build(:custom_attribute_definition, account: account, attribute_model: :card_attribute, attribute_display_type: :contato))
+        .to be_valid
+      %i[contact_attribute conversation_attribute company_attribute].each do |modelo|
+        definicao = build(:custom_attribute_definition, account: account, attribute_model: modelo, attribute_display_type: :contato)
+        expect(definicao).not_to be_valid
+        expect(definicao.errors[:attribute_display_type]).to eq([I18n.t('errors.custom_attribute_definition.contato_so_no_card')])
+      end
+    end
+
+    it 'lido por automação ligada: não troca de tipo, de chave, nem é apagado', :aggregate_failures do
+      definicao = campo
+      automacao_que_le('indicado_por')
+
+      expect(definicao.update(attribute_display_type: :number)).to be(false)
+      expect(definicao.errors[:base]).to eq([em_uso])
+      expect(definicao.reload.update(attribute_key: 'quem_indicou')).to be(false)
+      expect(definicao.reload.destroy).to be(false)
+      expect(definicao.errors[:base]).to eq([em_uso])
+      expect(described_class.exists?(definicao.id)).to be(true)
+      expect(definicao.reload.update(attribute_display_name: 'Quem indicou')).to be(true)
+    end
+
+    it 'com a automação desligada, ou lendo outro campo, troca e apaga', :aggregate_failures do
+      definicao = campo
+      automacao_que_le('indicado_por', ativa: false)
+      automacao_que_le('outro_campo')
+
+      expect(definicao.update(attribute_display_type: :number)).to be(true)
+      expect(definicao.destroy).to be_truthy
+    end
+  end
 end

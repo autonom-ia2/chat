@@ -60,7 +60,8 @@ const { catalogo } = useCatalogo();
 const { opcoes, atributosDaPeca, atributosDo, carregarOpcoes } =
   useOpcoesDaConta();
 const { isCloudFeatureEnabled } = useAccount();
-// G18: os cards do contato, no "em outro registro", só para quem mexe no funil.
+// G18: os cards do contato, no "em outro registro", só para quem mexe no funil;
+// #2716: o card da conversa, só com a mesma chave.
 const { canManagePipelines } = useCrmPermissions();
 // #2499: os gatilhos que esta pessoa pode escolher, e os funis e as etapas.
 const { gatilhos, escolhasDoGatilho } = useGatilhosNovos(

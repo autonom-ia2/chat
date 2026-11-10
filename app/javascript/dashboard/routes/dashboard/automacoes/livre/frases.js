@@ -2,7 +2,7 @@
 // passo é a chave do catálogo (AUTOMACAO_LIVRE.*). Das escolhas da conta, só a
 // etiqueta entra, porque vai pelo nome; pessoa, time e caixa ficam no "Alterar".
 import { entradaDoPasso, lerCampo } from './catalogo';
-import { comColchetes } from './texto';
+import { comColchetes, nomeDoValor } from './texto';
 import { fraseDaCampanha } from './campanha';
 import { fraseDaProspeccao } from './prospeccao';
 import { fraseDoParaCada } from './paraCada';
@@ -207,7 +207,7 @@ export const fraseDoValor = (caminho, catalogo, t) => {
     item => item.caminho === caminho && !item.atributos
   );
   // #2679: o texto da IA (comTextosDaIa) chega com o rótulo pronto, sem frase.
-  if (fixo) return fixo.rotulo || t(fixo.frase);
+  if (fixo) return fixo.rotulo || nomeDoValor(fixo, t);
   const pessoa = daPessoa(caminho, catalogo);
   if (pessoa) return t(pessoa.sufixo.frase, { campo: pessoa.campo });
   const base = valores.find(
@@ -215,7 +215,7 @@ export const fraseDoValor = (caminho, catalogo, t) => {
   );
   if (base)
     return t(`${P}.ATRIBUTO`, {
-      base: t(base.frase),
+      base: nomeDoValor(base, t),
       chave: caminho.slice(base.caminho.length + 1),
     });
   return caminho || '';

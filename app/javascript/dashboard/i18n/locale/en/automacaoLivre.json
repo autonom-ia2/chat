@@ -242,7 +242,8 @@
         "DATE": "Date",
         "LIST": "List",
         "CHECKBOX": "Yes or no",
-        "PESSOA": "Team member"
+        "PESSOA": "Team member",
+        "CONTATO": "Contact"
       }
     },
     "LIGADA": "On",
