@@ -116,6 +116,7 @@ RSpec.describe Autonomia::Agents::Retriever do
 
       expect(resultado.map(&:id)).to include(aviso.id)
       expect(sqls.size).to eq(1)
+      expect(pela_palavra('aviso de sinistro telefone ' * 300).map(&:id)).to eq([aviso.id])
     end
 
     it 'answers with the vector alone when the question has no searchable word' do

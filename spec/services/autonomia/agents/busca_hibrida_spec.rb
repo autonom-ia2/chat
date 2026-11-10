@@ -45,6 +45,10 @@ RSpec.describe Autonomia::Agents::BuscaHibrida do
     expect(fundir(vetor(3), [so_da_palavra])).to eq([1, 2, 3, 99])
   end
 
+  it 'gives back the word hits when the vector brings no candidate' do
+    expect(fundir([], [trecho.new(9, 0.4)])).to eq([9])
+  end
+
   it 'puts nothing in front when the first of the vector is beyond the distance ceiling' do
     longe = trecho.new(1, Autonomia::Agents::Config::RETRIEVAL_HARD_CEILING + 0.1)
 
