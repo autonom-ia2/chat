@@ -1,4 +1,8 @@
 class Whatsapp::OneoffCampaignService
+  # Fork: o público "todos os contatos" de uma campanha de automação é a conta inteira; anda em lotes, nunca a lista
+  # inteira na memória.
+  CONTACT_BATCH_SIZE = 1000
+
   pattr_initialize [:campaign!]
 
   def perform
@@ -87,7 +91,7 @@ class Whatsapp::OneoffCampaignService
     contacts = label_audience_contacts(audience_labels)
     Rails.logger.info "Processing #{contacts.count} contacts for campaign #{campaign.id}"
 
-    contacts.each { |contact| process_contact(contact) }
+    contacts.find_each(batch_size: CONTACT_BATCH_SIZE) { |contact| process_contact(contact) }
 
     Rails.logger.info "Campaign #{campaign.id} processing completed"
   end
