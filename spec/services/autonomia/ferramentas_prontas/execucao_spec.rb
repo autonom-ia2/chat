@@ -88,6 +88,14 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
     expect(usos.where(fonte: 'fipe')).to be_empty
   end
 
+  # Em job e request o ActiveRecord liga o cache de consultas: o RETURNING repetido não pode vir dele.
+  it 'a reserva do dia conta com o cache de consultas do ActiveRecord ligado (job, request)' do
+    reservas = ActiveRecord::Base.cache { Array.new(3) { usos.reservar!(account_id: account.id, fonte: 'cep', limite: 2) } }
+
+    expect(reservas).to eq([true, true, false])
+    expect(usos.sole.consultas).to eq(2)
+  end
+
   it 'usa o cache dentro da validade, sem chamar a fonte de novo, e conta do cache' do
     cache_em_memoria
     pedido = fonte_responde(brasilapi, endereco)
