@@ -57,7 +57,7 @@ describe('VitrineSugestaoDoAgente', () => {
 
     expect(api.sugestoes).toHaveBeenCalledWith(7);
     expect(wrapper.findAll('[data-vitrine-sugestao]')).toHaveLength(1);
-    expect(wrapper.text()).toContain('Ana também pode usar: Valor do carro.');
+    expect(wrapper.text()).toContain('Ana pode ganhar: Valor do carro.');
   });
 
   it('"Add" goes through the showcase with the "Use when" sentence and moves to the next one', async () => {

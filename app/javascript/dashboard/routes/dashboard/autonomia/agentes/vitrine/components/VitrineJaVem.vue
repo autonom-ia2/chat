@@ -1,5 +1,6 @@
 <script setup>
 import { useI18n } from 'vue-i18n';
+import AgenteBotao from '../../components/AgenteBotao.vue';
 import { chaveDoTexto, ferramentaPorId } from '../catalogo';
 
 // #2858 F3 — no Confira do Construtor: as ferramentas prontas que o Construtor escolheu, pelo sentido do que a pessoa
@@ -12,7 +13,7 @@ const props = defineProps({
   semPermissao: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['tirar']);
+const emit = defineEmits(['tirar', 'verMais']);
 
 const NS = 'AGENTS.VITRINE';
 const { t, locale } = useI18n();
@@ -75,7 +76,7 @@ const nomes = () =>
               {{ texto(id, 'NOME') }}
             </span>
             <span class="text-sm text-n-slate-11">
-              {{ texto(id, 'FAZ') }}
+              {{ texto(id, 'CONSEGUE') }}
             </span>
           </span>
           <button
@@ -91,6 +92,16 @@ const nomes = () =>
           </button>
         </li>
       </ul>
+      <AgenteBotao
+        v-if="!semPermissao"
+        data-ja-vem-mais
+        variante="fantasma"
+        icone="i-lucide-package-open"
+        class="self-start"
+        @click="emit('verMais')"
+      >
+        {{ t(`${NS}.JA_VEM.VER_MAIS`) }}
+      </AgenteBotao>
     </section>
   </div>
 </template>

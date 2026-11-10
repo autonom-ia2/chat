@@ -38,6 +38,17 @@ describe('VitrineJaVem', () => {
     expect(wrapper.emitted('tirar')).toEqual([['fipe']]);
   });
 
+  it('each tool says in one short line what the agent can do, and "See more tools" opens the showcase', async () => {
+    const wrapper = montar({ ids: ['fipe'] });
+
+    expect(wrapper.find('[data-ja-vem-item="fipe"]').text()).toContain(
+      'dizer quanto vale um carro'
+    );
+    expect(wrapper.text()).not.toContain('tabela FIPE');
+    await wrapper.find('[data-ja-vem-mais]').trigger('click');
+    expect(wrapper.emitted('verMais')).toHaveLength(1);
+  });
+
   it('"none fits": nothing on screen', () => {
     expect(montar({ ids: [] }).find('[data-ja-vem]').exists()).toBe(false);
   });
@@ -47,6 +58,7 @@ describe('VitrineJaVem', () => {
 
     expect(wrapper.find('[data-ja-vem]').exists()).toBe(true);
     expect(wrapper.findAll('[data-ja-vem-tirar]')).toHaveLength(0);
+    expect(wrapper.find('[data-ja-vem-mais]').exists()).toBe(false);
     expect(wrapper.text()).toContain('Ana se daria bem com: Valor do carro');
     expect(wrapper.text()).toContain('o agente começa sem elas');
   });

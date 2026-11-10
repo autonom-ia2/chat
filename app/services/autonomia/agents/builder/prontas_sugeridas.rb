@@ -10,9 +10,10 @@
 module Autonomia::Agents::Builder::ProntasSugeridas
   CAMPO = 'ferramentas_prontas'.freeze
   DESCRIPTION =
-    'Chaves das ferramentas prontas do bloco FERRAMENTAS PRONTAS que este agente precisa para atender bem: so as que ' \
-    'tem relacao direta com o que ele faz (ex.: o atendimento de seguro auto precisa do valor do carro; uma padaria ' \
-    'nao precisa de nenhuma). Na duvida, deixe de fora. Lista vazia quando nenhuma combina ou quando nao ha o bloco.'.freeze
+    'Chaves das ferramentas prontas do bloco FERRAMENTAS PRONTAS que este agente usa no atendimento descrito: inclua ' \
+    'cada uma que serve a algo que ele faz ou pergunta (ex.: quem cota seguro auto usa o valor do carro; quem pede ' \
+    'CEP usa o endereco pelo CEP). Deixe de fora as sem relacao com o atendimento (uma padaria nao usa nenhuma). ' \
+    'Lista vazia quando nenhuma combina ou quando nao ha o bloco.'.freeze
   TITULO = 'FERRAMENTAS PRONTAS (contexto interno da plataforma, nao e fala do usuario): consultas que o agente pode ' \
            'ganhar ja na criacao. Escolha no campo ferramentas_prontas so as que o agente precisa.'.freeze
 

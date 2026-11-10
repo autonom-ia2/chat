@@ -3332,11 +3332,12 @@
         "SEM_PERMISSAO": "{nome} se daria bem com: {ferramentas}. Só quem cuida das ferramentas dos agentes pode incluir, então o agente começa sem elas. Peça para incluírem depois.",
         "TIRAR": "Tirar",
         "TIRAR_SR": "Tirar {ferramenta}",
-        "FALHOU": "Não consegui incluir: {ferramentas}. Você pode incluir depois, nas ferramentas do agente."
+        "FALHOU": "Não consegui incluir: {ferramentas}. Você pode incluir depois, nas ferramentas do agente.",
+        "VER_MAIS": "Ver mais ferramentas"
       },
       "SUGESTAO": {
         "ROTULO": "Sugestão de ferramenta",
-        "TEXTO": "{nome} também pode usar: {ferramenta}. Incluir?",
+        "TEXTO": "{nome} pode ganhar: {ferramenta}. Incluir?",
         "INCLUIR": "Incluir",
         "AGORA_NAO": "Agora não",
         "INCLUIDA": "Pronto! {nome} já consegue {consegue}."

@@ -636,6 +636,15 @@ const incluirProntas = async () => {
   );
 };
 
+// "Ver mais ferramentas": a vitrine já com este agente escolhido, numa aba nova, para a Confira continuar onde está.
+const verMaisFerramentas = () => {
+  const { href } = router.resolve({
+    name: 'autonomia_agents_vitrine',
+    query: { agente: conversa.agenteId.value },
+  });
+  window.open(href, '_blank', 'noopener');
+};
+
 const abrirComece = async () => {
   // Um clique só: o segundo, enquanto as ferramentas entram, não começa de novo.
   if (incluindoProntas.value) return;
@@ -1113,6 +1122,7 @@ onMounted(() => {
               "
               :sem-permissao="prontas.semPermissao.value"
               @tirar="prontas.tirar"
+              @ver-mais="verMaisFerramentas"
             />
           </template>
         </EtapaConfira>

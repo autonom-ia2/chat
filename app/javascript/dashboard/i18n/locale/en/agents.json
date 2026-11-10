@@ -3332,11 +3332,12 @@
         "SEM_PERMISSAO": "{nome} would do well with: {ferramentas}. Only whoever manages the agents' tools can add them, so the agent starts without them. Ask them to add them later.",
         "TIRAR": "Remove",
         "TIRAR_SR": "Remove {ferramenta}",
-        "FALHOU": "Could not add: {ferramentas}. You can add them later in the agent's tools."
+        "FALHOU": "Could not add: {ferramentas}. You can add them later in the agent's tools.",
+        "VER_MAIS": "See more tools"
       },
       "SUGESTAO": {
         "ROTULO": "Tool suggestion",
-        "TEXTO": "{nome} could also use: {ferramenta}. Add it?",
+        "TEXTO": "{nome} could get: {ferramenta}. Add it?",
         "INCLUIR": "Add",
         "AGORA_NAO": "Not now",
         "INCLUIDA": "Done! {nome} can now {consegue}."
