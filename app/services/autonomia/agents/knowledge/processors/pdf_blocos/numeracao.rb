@@ -46,6 +46,19 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos::Numeracao
     texto.split.first.split('.').first
   end
 
+  # #2865 — o título de baixo é filho do de cima pela numeração: o de cima não tem número ("CLÁUSULA 4" sobre "4.1."), ou
+  # a numeração de baixo continua a de cima ("4." sobre "4.4."). Itens irmãos ("1." e "2.") e numerações sem relação
+  # ("2." sobre "4.5.") não são.
+  def self.filho?(de_cima, de_baixo)
+    acima = profundidade(de_cima)
+    return true if acima.zero?
+    return false if acima == ITEM || !primeiro_numero(de_baixo)
+
+    numeros_de_cima = de_cima.split.first.split('.')
+    numeros_de_baixo = de_baixo.split.first.split('.')
+    numeros_de_baixo.size > numeros_de_cima.size && numeros_de_baixo.first(numeros_de_cima.size) == numeros_de_cima
+  end
+
   def self.marcador?(pedaco)
     pedaco.length.between?(2, MARCADOR) && pedaco.end_with?(')')
   end

@@ -16,6 +16,7 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos::Separacao
   # #2862 — o grupo lido como título pode ser dois títulos seguidos ("CLÁUSULA 2 – CONTRATAÇÃO" e "2.1. ACEITAÇÃO"): o
   # espaço entre eles fica abaixo do de parágrafo, e a fonte é a mesma. Separa onde as duas coisas valem: a linha de baixo
   # caberia inteira no fim da de cima (quem quebra por falta de espaço não deixa caber) e o espaço passa do de linha.
+  # #2865 — o grupo que não é título pode terminar em títulos (titulos_no_fim) ou ter um título no meio (titulos_no_meio).
   def partes_do_titulo(grupo, pagina)
     partes = grupo.slice_when { |de_cima, de_baixo| titulos_seguidos?(de_cima, de_baixo, pagina) }.to_a
     return partes.map { |parte| [parte, true] } if titulo?(grupo, pagina)
@@ -26,8 +27,9 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos::Separacao
   # #2865 — o título no meio do bloco em negrito, logo antes de um parágrafo também em negrito ("4.4. HIPÓTESES DE PERDA"
   # e, embaixo, o "4.4.1. …" recuado): o bloco se parte onde a linha de cima para antes da margem e o espaço passa do de
   # linha (fim de parágrafo); é título a parte de uma linha só, título de seção, com o texto de baixo mais recuado que
-  # ela, ou com outro título logo embaixo ("CLÁUSULA 4" e "4.1."). A lista em negrito, um item por linha no mesmo recuo do
-  # texto de baixo, não muda. Sem título no meio, o bloco fica como estava.
+  # ela, ou com um título filho dela pela numeração logo embaixo ("CLÁUSULA 4" e "4.1."). A lista em negrito, um item por
+  # linha no mesmo recuo do texto de baixo, não muda, nem quando um título vem logo depois dela ("2." não é pai de
+  # "4.5."). Sem título no meio, o bloco fica como estava.
   def titulos_no_meio(grupo, pagina)
     partes = grupo.slice_when { |de_cima, de_baixo| paragrafo_acaba?(de_cima, de_baixo, pagina) }.to_a
     marcas = marcas_de_titulo(partes, pagina)
@@ -43,7 +45,7 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos::Separacao
     partes.each_index.reverse_each.with_object([]) do |indice, marcas|
       seguinte = partes[indice + 1]
       titulo = !seguinte.nil? && partes[indice].size == 1 && titulo_de_secao?(partes[indice], pagina) &&
-               (marcas.first || recuada?(seguinte.first, partes[indice].first))
+               (recuada?(seguinte.first, partes[indice].first) || (marcas.first && filho?(partes[indice], seguinte)))
       marcas.unshift(titulo)
     end
   end
@@ -59,13 +61,19 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos::Separacao
   end
 
   # #2865 — o parágrafo (todo em negrito, por exemplo) seguido, no mesmo bloco, de títulos com a mesma separação dos
-  # títulos seguidos: o começo continua parágrafo e o que vem depois é título, se cada parte depois do começo for título
-  # e não começar por marcador de item ("a)": a lista em negrito, um item por linha, continua no parágrafo). Senão, o
-  # bloco fica inteiro como estava.
+  # títulos seguidos: o começo continua parágrafo e o que vem depois é título, se cada parte depois do começo for título,
+  # não começar por marcador de item ("a)") e cada uma for filha da de cima pela numeração (Numeracao.filho?). A lista em
+  # negrito, um item por linha ("a)", ou "1." e "2." irmãos), continua no parágrafo. Senão, o bloco fica como estava.
   def titulos_no_fim(partes, pagina)
-    return if partes.size < 2 || !partes.drop(1).all? { |parte| titulo_de_secao?(parte, pagina) }
+    titulos = partes.drop(1)
+    return if titulos.empty? || !titulos.all? { |parte| titulo_de_secao?(parte, pagina) }
+    return unless titulos.each_cons(2).all? { |de_cima, de_baixo| filho?(de_cima, de_baixo) }
 
     [[partes.first, false], *partes.drop(1).map { |parte| [parte, true] }]
+  end
+
+  def filho?(de_cima, de_baixo)
+    Autonomia::Agents::Knowledge::Processors::PdfBlocos::Numeracao.filho?(de_cima.first[:texto], de_baixo.first[:texto])
   end
 
   def titulo_de_secao?(parte, pagina)

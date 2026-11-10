@@ -422,6 +422,44 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       end
     end
 
+    # #2865 — revisão: a lista em negrito, um item por linha, logo antes de um título de verdade não vira cadeia de
+    # títulos; a cadeia só sobe quando a numeração de baixo é mais funda.
+    context 'with a bold numbered list right before a real title' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], [corpo2, topo - linha, 'F1', 10],
+                  [corpo1, topo - 40, 'F2', 10], ['as listas abaixo:', topo - 40 - linha, 'F2', 10],
+                  ['1. Incendio;', topo - 40 - linha - 14.9, 'F2', 10],
+                  ['2. Raio;', topo - 40 - linha - 29.8, 'F2', 10],
+                  ['4.5. SUB-ROGACAO', topo - 40 - linha - 44.7, 'F2', 10],
+                  ["4.5.1. #{corpo1}", topo - 40 - linha - 59.6, 'F2', 10, 80],
+                  [corpo2, topo - 40 - (2 * linha) - 59.6, 'F2', 10, 100],
+                  [corpo1, topo - 180, 'F1', 10], [corpo2, topo - 180 - linha, 'F1', 10], [corpo1, topo - 180 - (2 * linha), 'F1', 10],
+                  *corpo_normal(300)]])
+      end
+
+      it 'reads only the real title' do
+        expect(blocos_gravados.select { |bloco| bloco[:tipo] == :titulo }.pluck(:texto)).to eq(['4.5. SUB-ROGACAO'])
+      end
+    end
+
+    # #2865 — revisão: o parágrafo em negrito seguido de itens "1.", "2.", "3." no espaço dos títulos seguidos continua
+    # parágrafo; títulos no fim do bloco só com a numeração cada vez mais funda.
+    context 'with a bold paragraph followed by a numbered list' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], [corpo2, topo - linha, 'F1', 10],
+                  [corpo1, topo - 40, 'F2', 10], [corpo2, topo - 40 - linha, 'F2', 10], ['os riscos:', topo - 40 - (2 * linha), 'F2', 10],
+                  ['1. Incendio', topo - 40 - (2 * linha) - 14.9, 'F2', 10],
+                  ['2. Raio', topo - 40 - (2 * linha) - 29.8, 'F2', 10],
+                  ['3. Explosao', topo - 40 - (2 * linha) - 44.7, 'F2', 10],
+                  [corpo1, topo - 180, 'F1', 10], [corpo2, topo - 180 - linha, 'F1', 10], [corpo1, topo - 180 - (2 * linha), 'F1', 10],
+                  *corpo_normal(300)]])
+      end
+
+      it 'reads no title' do
+        expect(blocos_gravados.pluck(:tipo)).not_to include(:titulo)
+      end
+    end
+
     it 'gives no blocks to the protected agent (Lia)' do
       allow(bia).to receive(:instrucao_mantida?).and_return(true)
 
