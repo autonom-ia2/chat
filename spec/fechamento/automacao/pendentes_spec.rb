@@ -62,9 +62,10 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     expect(FechamentoAutomacao::Lacunas.abertas(%w[G13 G22 G24 G25 G27 G31 G32 G44 G45 G46 G49 G56 G59 G60 G61])).to be_empty
   end
 
-  # Os exemplos 7 e 16 saíram da lista no lote 3 do #2414: a prova das sondas que os seguravam fica aqui.
-  it 'exemplos 7 e 16: as lacunas fechadas continuam fechadas' do
-    expect(FechamentoAutomacao::Lacunas.abertas(%w[G3 G4 G5 G7 G12 G14 G15 G16 G18 G37 G38 G39 G55 G69])).to be_empty
+  # Os exemplos 7 e 16 saíram da lista no lote 3 do #2414: a prova das sondas que os seguravam fica aqui. A G70 (#2880,
+  # decisão 20) é o "grava no card" direto dos exemplos 2 (passo 9) e 7 (passo 4), sem a cópia pela conversa.
+  it 'exemplos 2, 7 e 16: as lacunas fechadas continuam fechadas' do
+    expect(FechamentoAutomacao::Lacunas.abertas(%w[G3 G4 G5 G7 G12 G14 G15 G16 G18 G37 G38 G39 G55 G69 G70])).to be_empty
   end
 
   # G21 (#2706) não segura nenhum pendente: a sonda roda aqui para que a prova de comportamento dela não fique sem dono.

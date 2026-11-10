@@ -402,6 +402,9 @@ module FechamentoAutomacao::Lacunas
     # G69 (#2879, ex. 16, passo 6): o retorno "daqui a 11 meses" conta meses no calendário, no fuso da conta; a sonda cria
     # o retorno de verdade (FechamentoAutomacao::SondasDoRetorno).
     'G69' => -> { FechamentoAutomacao::SondasDoRetorno.retorno_em_meses_no_calendario_da_conta? },
+    # G70 (#2880, decisão 20, exemplos 2 e 7): o extrair grava direto num campo do card da conversa, nunca no valor
+    # protegido; a sonda salva e grava de verdade (FechamentoAutomacao::SondasDoExtrairNoCard).
+    'G70' => -> { FechamentoAutomacao::SondasDoExtrairNoCard.extrair_grava_no_card_da_conversa? },
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
     # (passo 2, "manda por e-mail o mesmo conteúdo"): `falhou.texto`, prova em g53_conteudo_da_falha_spec.rb.
     'G53' => -> { valor?('falhou.texto') },

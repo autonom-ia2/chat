@@ -21,9 +21,9 @@ require 'rails_helper'
 #   23 horas (sexta às 8h) e a mesma campanha, com o mesmo modelo e o mesmo nome, para todos menos quem tem "já comprou"
 #   (G37). A espera na mesma automação diz "a mesma campanha, depois": as duas saem da mesma receita;
 # - a resposta (passos 3 a 6): a mensagem recebida com o filtro "respondeu à campanha Pré-Black" (G38, o destinatário
-#   real que o disparo gravou). O passo 4 grava peça, cor e tamanho na conversa (o extrair só grava em contato e
-#   conversa) e o "em outro registro" no card aberto do contato copia campo a campo (G18, lendo a conversa da mãe pela
-#   origem, G65): o card da conversa é só para ler na automação de conversa (decisão 19);
+#   real que o disparo gravou). O passo 4 grava peça, cor e tamanho direto nos campos do card da conversa (G70, decisão
+#   20 do Rodrigo, "IA só anota campos": a única escrita no card da conversa), depois de uma espera curta que dá à IA de
+#   assunto o tempo de abrir o card;
 # - as Últimas horas (passo 7): o gatilho de data única no domingo às 18h, para "perguntou na Black" menos "comprou na
 #   Black 2026" (G37);
 # - o card ganho (passo 8, G5).
@@ -31,8 +31,9 @@ require 'rails_helper'
 # A campanha sai pelo caminho de produção (Campaigns::TriggerOneoffCampaignJob, OneoffCampaignService do EE), que grava
 # o destinatário e para no receptor da Graph (F9.7). O cliente responde pelo webhook real da Cloud. A IA é o dublê; o
 # extrair responde pelo texto que o pedido levou a ela.
-# O card de quem quer comprar é da IA de assunto ("Convive"): aqui ele já existe, criado pelo Crm::Cards::Creator, como
-# ela o criaria; a IA de assunto é paga e não roda no teste.
+# O card de quem pede uma peça nasce da IA de assunto ("Convive"), ligada na caixa em Automática, DEPOIS da resposta do
+# cliente: o Jev e o modelo maior são dublês, sem custo, que respondem o que o roteiro de cada resposta diz (pedido novo
+# no funil de vendas ou sem assunto). O resto do caminho (a decisão, o card, o vínculo com a conversa) é o de produção.
 # As etiquetas se escrevem como a plataforma aceita (minúsculas, sem espaço): `já_comprou`, `perguntou_na_black`,
 # `não_enviar_campanha`, `comprou_na_black_2026`.
 RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes antigos primeiro', :fechamento_automacao, type: :request do
@@ -75,10 +76,28 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     end
   end
 
-  def responde_as(hora, chave, texto, decide:)
+  # `pedido`: a IA de assunto vê um pedido novo no funil de vendas (abre o card); sem ele, "sem assunto".
+  def responde_as(hora, chave, texto, decide:, pedido: false)
     roteiro['automacao_decidir'] = { 'caminho' => decide, 'motivo' => 'o que o cliente respondeu' }
+    roteiro['assunto'] = pedido ? "novo_#{vendas.first.id}" : Crm::Subjects::Question::SEM_ASSUNTO
     nome, telefone, = clientes.fetch(chave)
     as(hora) { cliente_escreve_pela_cloud(canal, remetente: telefone, nome: nome, texto: texto) }
+  end
+
+  # A IA de assunto decide depois da espera dela (Crm::Subjects::DEBOUNCE): o job agendado pela mensagem roda na hora.
+  def assunto_decide_as(hora)
+    as(hora) do
+      perform_enqueued_jobs(only: Crm::Subjects::IdentifyJob)
+      drenar
+    end
+  end
+
+  # A resposta com tudo o que vem depois dela: a IA de assunto aos 20 s e a espera do passo 4 vencida.
+  def responde_e_segue(hora, chave, texto, decide:, pedido: false)
+    responde_as(hora, chave, texto, decide: decide, pedido: pedido)
+    inicio = fuso.parse(hora)
+    assunto_decide_as((inicio + 20.seconds).iso8601)
+    varrer_as((inicio + 65.seconds).iso8601)
   end
 
   def drenar
@@ -112,18 +131,51 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
 
   def parametro(chamada) = chamada.corpo.dig('template', 'components', 0, 'parameters', 0, 'text')
 
+  # O Jev da IA de assunto (dublê): escolhe o que o roteiro da resposta diz, com certeza alta.
+  def jev_responde
+    allow(TypesafeAi::Config).to receive_messages(configured?: true, api_key: 'ts_test_key_not_real', model: 'jev-1.13.0')
+    stub_request(:post, 'https://api.typesafe.ai/v1/systemone').to_return do
+      body = { model: 'jev-1.13.0', usage: { input_tokens: 300, output_tokens: 5 },
+               answers: { decisao: { type: 'choice', choice: roteiro.fetch('assunto'), confidence: 0.95 } } }
+      { status: 200, body: body.to_json }
+    end
+  end
+
+  # O modelo maior confirma o pedido novo e dá o nome do assunto pela peça que leu na conversa ("vestido", "calça").
+  def revisao_do_assunto(corpo)
+    conversa = JSON.parse(corpo.dig('input', 0, 'content', 0, 'text'))['conversation']
+    peca = peca_do_texto(Array(conversa['messages']).last)['peca']
+    { 'resposta' => roteiro.fetch('assunto'), 'titulo' => "Black: #{peca}", 'seguro' => true, 'motivo' => 'pedido de uma peça' }
+  end
+
+  def roteiro_da_ia(nome, corpo)
+    case nome
+    when 'automacao_extrair' then peca_do_texto(mensagens_lidas(corpo).last)
+    when 'assunto_revisao' then revisao_do_assunto(corpo)
+    else roteiro.fetch(nome)
+    end
+  end
+
   def preparar_conta
     account.update!(locale: 'pt_BR', reporting_timezone: fuso.name, custom_attributes: { 'timezone' => fuso.name })
     flags_do_piloto(account)
     account.enable_features!('automacao_gatilhos', 'whatsapp_campaign')
     canal.update!(message_templates: ex.modelos)
     ex::ETIQUETAS.each { |nome, descricao| create(:label, account: account, title: nome, description: descricao) }
+    # Os campos da peça existem só no card, onde a vendedora lê e o extrair grava (G70).
     ex::PECA.each do |chave|
-      ex::MODELOS_DE_ATRIBUTO.each do |modelo|
-        create(:custom_attribute_definition, account: account, attribute_key: chave, attribute_display_name: chave,
-                                             attribute_model: modelo, attribute_display_type: 'text')
-      end
+      create(:custom_attribute_definition, account: account, attribute_key: chave, attribute_display_name: chave,
+                                           attribute_model: 'card_attribute', attribute_display_type: 'text')
     end
+    ligar_a_ia_de_assunto
+  end
+
+  # O funil de vendas na caixa da loja, com a IA de assunto em Automática: ela abre o card do pedido novo. O card não
+  # nasce sozinho com a conversa (auto_create_card desligado): só a IA de assunto o abre.
+  def ligar_a_ia_de_assunto
+    account.crm_pipeline_inboxes.create!(pipeline: vendas.first, inbox: inbox, default_stage: vendas.last, auto_create_card: false,
+                                         created_by: vanessa)
+    account.crm_inbox_settings.create!(inbox: inbox, crm_enabled: true, auto_create_card: false, subject_ai_mode: :auto)
   end
 
   def cadastrar_clientes
@@ -131,12 +183,6 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
       create(:contact, account: account, name: nome, phone_number: "+#{telefone}").update!(label_list: etiquetas)
     end
     cliente(:gil).opt_out!(source: 'manual')
-    # Os cards de quem vai comprar (Ana e Carla), como a IA de assunto os cria: no funil de vendas, no contato.
-    %i[ana carla].each do |chave|
-      Crm::Cards::Creator.new(account: account, user: vanessa, params: { pipeline_id: vendas.first.id, stage_id: vendas.last.id,
-                                                                         contact_id: cliente(chave).id, title: "Black de #{cliente(chave).name}" })
-                         .perform
-    end
   end
 
   # A Bia, ligada na caixa da loja (Fase 2, como no CRM).
@@ -161,7 +207,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     stub_request(:get, ->(uri) { uri.host == 'graph.facebook.com' && uri.path.end_with?('/message_templates') })
       .to_return(status: 200, body: { data: ex.modelos.each_with_index.map { |modelo, i| modelo.merge('id' => "70#{i}") } }.to_json,
                  headers: { 'Content-Type' => 'application/json' })
-    ia_responde(account, ->(nome, corpo) { nome == 'automacao_extrair' ? peca_do_texto(mensagens_lidas(corpo).last) : roteiro.fetch(nome) })
+    ia_responde(account, method(:roteiro_da_ia))
+    jev_responde
     as('2026-11-20 10:00') do
       preparar_conta
       cadastrar_clientes
@@ -175,21 +222,21 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
   # Quinta às 9h; a Ana quer comprar e a Elisa pergunta.
   def quinta
     varrer_as('2026-11-26 09:05')
-    responde_as('2026-11-26 10:00', :ana, 'Quero o vestido azul no M, separa pra mim!', decide: 'quer_comprar')
-    responde_as('2026-11-26 10:30', :elisa, 'Até que horas a loja abre na sexta?', decide: 'so_duvida')
+    responde_e_segue('2026-11-26 10:00', :ana, 'Quero o vestido azul no M, separa pra mim!', decide: 'quer_comprar', pedido: true)
+    responde_e_segue('2026-11-26 10:30', :elisa, 'Até que horas a loja abre na sexta?', decide: 'so_duvida')
   end
 
   # Sexta às 8h; a Duda pede para sair, a Carla e o Hugo perguntam.
   def sexta
     varrer_as('2026-11-27 08:05')
-    responde_as('2026-11-27 09:00', :duda, 'Não quero receber essas promoções', decide: 'nao_quer_receber')
-    responde_as('2026-11-27 09:30', :carla, 'Tem a calça preta no G?', decide: 'so_duvida')
-    responde_as('2026-11-27 10:00', :hugo, 'Entregam em Campinas?', decide: 'so_duvida')
+    responde_e_segue('2026-11-27 09:00', :duda, 'Não quero receber essas promoções', decide: 'nao_quer_receber')
+    responde_e_segue('2026-11-27 09:30', :carla, 'Tem a calça preta no G?', decide: 'so_duvida', pedido: true)
+    responde_e_segue('2026-11-27 10:00', :hugo, 'Entregam em Campinas?', decide: 'so_duvida')
   end
 
   # Sábado: a Elisa, que perguntou na quinta, pede para sair; a Carla compra (card ganho).
   def sabado
-    responde_as('2026-11-28 11:00', :elisa, 'Pensei melhor, não me manda mais promoção', decide: 'nao_quer_receber')
+    responde_e_segue('2026-11-28 11:00', :elisa, 'Pensei melhor, não me manda mais promoção', decide: 'nao_quer_receber')
     as('2026-11-28 15:00') do
       Crm::Cards::Closer.new(card: card_de(:carla), actor: vanessa, result: 'won').perform
       drenar
@@ -227,22 +274,49 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     expect(historico('Pré-Black')).to eq([['ja_compraram', 'ok', nil], ['ate_sexta_8h', 'ok', nil], ['todos_os_outros', 'ok', nil]])
   end
 
-  it 'passos 3 e 4: a Ana quer comprar; a IA extrai peça, cor e tamanho, e o card dela fica com eles', :aggregate_failures do
-    quinta
+  it 'passos 3 e 4: a Ana quer comprar; o card nasce da IA de assunto depois da resposta e o extrair grava nele',
+     :aggregate_failures do
+    varrer_as('2026-11-26 09:05')
+    responde_as('2026-11-26 10:00', :ana, 'Quero o vestido azul no M, separa pra mim!', decide: 'quer_comprar', pedido: true)
+
+    # Na resposta, a Ana ainda não tem card: a automação decidiu e espera; a IA de assunto ainda não decidiu.
+    expect(account.crm_cards.where(contact_id: cliente(:ana).id)).to be_empty
+    expect(historico('Resposta à Pré-Black').map(&:first)).to eq(%w[o_que_quer espera_o_card])
+
+    assunto_decide_as('2026-11-26 10:00:20')
+
+    card = card_de(:ana)
+    expect(card.created_at).to be > fuso.parse('2026-11-26 10:00')
+    expect(card).to have_attributes(pipeline_id: vendas.first.id, title: 'Black: vestido')
+    decisao = Crm::SubjectDecision.find_by!(conversation: conversa_de(:ana))
+    expect(decisao).to have_attributes(action: 'create', state: 'applied', card_id: card.id)
+    expect(card.custom_attributes.keys & ex::PECA).to be_empty
+
+    varrer_as('2026-11-26 10:01:05')
 
     # O que o card guarda é o que o dublê tirou do texto que o pedido levou à IA, não um valor do teste.
     extrair = ia_recebeu.find { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_extrair' }
     expect(mensagens_lidas(extrair).last).to end_with('Quero o vestido azul no M, separa pra mim!')
-    expect(card_de(:ana).reload.custom_attributes).to include('peca' => 'vestido', 'cor' => 'azul', 'tamanho' => 'M')
-    expect(conversa_de(:ana).custom_attributes).to include('peca' => 'vestido', 'cor' => 'azul', 'tamanho' => 'M')
+    expect(card.reload.custom_attributes).to include('peca' => 'vestido', 'cor' => 'azul', 'tamanho' => 'M')
+    # Direto no card (G70): a conversa não guarda a peça, e nenhuma ação copia para o card.
+    expect(conversa_de(:ana).custom_attributes.keys & ex::PECA).to be_empty
+    gravou = Autonomia::Automacao::Registro.where(passo: 'peca_cor_tamanho').sole
+    expect(gravou.dados['campos']).to include('gravados' => ex::PECA, 'ausentes' => [])
+    expect(historico('Resposta à Pré-Black')).to eq(
+      [['o_que_quer', 'ok', nil], ['espera_o_card', 'ok', nil], ['peca_cor_tamanho', 'ok', nil]]
+    )
+    expect(textos(:ana)).to be_empty
+  end
+
+  it 'passo 4 só na Ana: a Elisa pergunta, nenhum card nasce para ela, e o card da Carla nasce sem a peça', :aggregate_failures do
+    quinta
+    sexta
+
+    expect(account.crm_cards.where(contact_id: [cliente(:elisa).id, cliente(:hugo).id, cliente(:duda).id])).to be_empty
+    expect(card_de(:carla).custom_attributes.keys & ex::PECA).to be_empty
+    expect(historico('Resposta à Pré-Black').count { |passo, _| passo == 'peca_cor_tamanho' }).to eq(1)
     decidir = ia_recebeu.find { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_decidir' }
     expect(decidir.to_json).to include('Quero o vestido azul no M')
-    expect(card_de(:carla).custom_attributes.keys & ex::PECA).to be_empty
-    expect(textos(:ana)).to be_empty
-    passos = historico('Resposta à Pré-Black')
-    expect(passos).to include(['peca_cor_tamanho', 'ok', nil], ['peca_no_card', 'ok', nil], ['cor_no_card', 'ok', nil],
-                              ['tamanho_no_card', 'ok', nil])
-    expect(passos.count { |passo, _| passo == 'o_que_quer' }).to eq(2) # a Ana e a Elisa, uma decisão cada
   end
 
   it 'passo 5: a Elisa só tem dúvida; ganha a etiqueta e a conversa passa para a Bia', :aggregate_failures do

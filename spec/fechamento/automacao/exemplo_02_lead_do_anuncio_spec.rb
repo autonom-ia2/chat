@@ -31,8 +31,8 @@ require 'rails_helper'
 #   1 do Rodrigo, 09/11). A Sofia (G15) responde pelo robô dela, que aqui é a mensagem de saída do espelho da agente.
 # - Passo 8: "Visita marcada" é o "esperar até" `card.tem_reuniao_marcada` (G32), sem prazo; a Ana marca pela página do
 #   corretor, pelo serviço real (Crm::BookingV2::Booker), que põe a reunião no card do lead.
-# - Passo 9, "grava no card": o extrair grava na conversa, e uma ação por campo copia para o card ($valor, G16), como no
-#   exemplo 1 (valor vazio pula a ação inteira).
+# - Passo 9, "grava no card": o extrair grava direto nos campos do card do lead (G70, decisão 20 do Rodrigo, "IA só anota
+#   campos"), como quem ligou a automação. Os campos só existem no card: não há cópia pela conversa.
 # - Passo 10, "coloca na campanha mensal de lançamentos": pôr alguém numa campanha é pôr a etiqueta do público dela
 #   (G14), aqui `lancamentos`; a campanha do mês, montada na tela de Campanhas com esse público, chega à Ana.
 RSpec.describe 'Fechamento #2414 · exemplo 2: lead do anúncio atendido em 5 minutos', :fechamento_automacao, type: :request do
@@ -122,16 +122,10 @@ RSpec.describe 'Fechamento #2414 · exemplo 2: lead do anúncio atendido em 5 mi
   # Passo 9.
   def quer_outro_imovel
     [{ id: 'o_que_procura', tipo: 'extrair', le: %w[mensagens_recentes], campos: %w[bairro quartos valor].map do |chave|
-      { chave: chave, descricao: "o #{chave} do imóvel que a Ana procura", destino: "conversa.atributos.#{chave}" }
+      { chave: chave, descricao: "o #{chave} do imóvel que a Ana procura", destino: "card.atributos.#{chave}" }
     end },
-     *%w[bairro quartos valor].map { |chave| para_o_card(chave) },
      { id: 'mandar_opcoes', tipo: 'retorno', titulo: ['Mandar opções de imóveis para ', nome], quando: { dia: 'hoje' },
        para: para_o_corretor }]
-  end
-
-  def para_o_card(chave)
-    { id: "#{chave}_no_card", tipo: 'acao', acao: 'PATCH crm/cards/:id', descricao: "Gravar #{chave} no card", caminho: { id: card_id },
-      corpo: { card: { custom_attributes: { chave => { '$valor' => "conversa.atributos.#{chave}" } } } } }
   end
 
   def modelo_aprovado
@@ -139,10 +133,11 @@ RSpec.describe 'Fechamento #2414 · exemplo 2: lead do anúncio atendido em 5 mi
       'components' => [{ 'type' => 'BODY', 'text' => 'Oi, {{1}}! Vi que você se interessou pelo apartamento do Jardim. Posso te ajudar?' }] }
   end
 
+  # Os campos do imóvel procurado existem só no card (G70): o extrair grava neles, sem passar pela conversa.
   def criar_campos
-    %w[bairro quartos valor].product(%w[card_attribute conversation_attribute]).each do |chave, modelo|
+    %w[bairro quartos valor].each do |chave|
       create(:custom_attribute_definition, account: account, attribute_key: chave, attribute_display_name: chave,
-                                           attribute_model: modelo, attribute_display_type: 'text')
+                                           attribute_model: 'card_attribute', attribute_display_type: 'text')
     end
   end
 
@@ -328,6 +323,12 @@ RSpec.describe 'Fechamento #2414 · exemplo 2: lead do anúncio atendido em 5 mi
     pedido = ia_recebeu.find { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_extrair' }
     expect(mensagens_lidas(pedido).last).to end_with('Esse não. Queria 3 quartos em Moema, até 900 mil.')
     expect(card.reload.custom_attributes).to include('bairro' => 'Moema', 'quartos' => '3', 'valor' => '900 mil')
+    # Direto no card (G70): a conversa não guarda os campos e nenhuma ação copia de lá; o registro do extrair diz o que gravou.
+    expect(conversa.reload.custom_attributes.keys & %w[bairro quartos valor]).to be_empty
+    expect(passos_feitos).not_to include('bairro_no_card', 'quartos_no_card', 'valor_no_card')
+    gravou = Autonomia::Automacao::Registro.where(execucao: execucao, passo: 'o_que_procura').sole
+    expect(gravou).to have_attributes(resultado: 'ok')
+    expect(gravou.dados['campos']).to include('gravados' => %w[bairro quartos valor], 'ausentes' => [])
     expect(Crm::FollowUp.sole).to have_attributes(title: 'Mandar opções de imóveis para Ana', card_id: card.id, recipient_mode: 'card_owner')
     expect(execucao.reload.estado).to eq('concluida')
   end

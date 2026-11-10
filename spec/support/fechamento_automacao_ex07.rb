@@ -9,8 +9,9 @@ module FechamentoAutomacao::Exemplo07
   ETIQUETAS = { JA_COMPROU => 'Já comprou na loja', PERGUNTOU => 'Perguntou na Black', NAO_ENVIAR => 'Não enviar campanha',
                 COMPROU_NA_BLACK => 'Comprou na Black 2026' }.freeze
   PECA = %w[peca cor tamanho].freeze
-  # Os campos da peça existem no card (onde a vendedora lê) e na conversa (onde o extrair grava).
-  MODELOS_DE_ATRIBUTO = %w[card_attribute conversation_attribute].freeze
+  # O tempo que o passo 4 dá à IA de assunto para abrir o card da conversa: ela decide depois de uma espera (15 s,
+  # Crm::Subjects::DEBOUNCE, ou 3 s na ordem do turno), e a automação chega ao extrair antes disso.
+  ESPERA_DO_CARD = { valor: 1, unidade: 'minutos' }.freeze
   MODELOS = { 'pre_black' => 'Oi! A Black começa {{1}}. Quem já comprou com a gente vê antes.',
               'ultimas_horas' => 'Últimas horas da Black! {{1}}' }.freeze
 
@@ -61,22 +62,14 @@ module FechamentoAutomacao::Exemplo07
     ] }
   end
 
-  # Passo 4: o extrair grava na conversa (o destino que ele aceita), e o "em outro registro" no card aberto do contato (o
-  # que a IA de assunto criou) copia campo a campo, lendo a conversa da mãe (G65). Uma ação por campo: valor vazio pula
-  # a ação inteira.
+  # Passo 4: o extrair grava peça, cor e tamanho direto nos campos do card da conversa (G70, decisão 20 do Rodrigo, "IA só
+  # anota campos"), o card que a IA de assunto abriu com o pedido. Antes, a espera dá a ela o tempo de abrir o card.
   def quer_comprar
-    campos = [{ chave: 'peca', descricao: 'a peça que o cliente quer', destino: 'conversa.atributos.peca' },
-              { chave: 'cor', descricao: 'a cor da peça', destino: 'conversa.atributos.cor' },
-              { chave: 'tamanho', descricao: 'o tamanho da peça', destino: 'conversa.atributos.tamanho' }]
-    [{ id: 'peca_cor_tamanho', tipo: 'extrair', le: %w[mensagens_recentes], campos: campos },
-     { id: 'no_card', tipo: 'em_outro_registro', registro: { de: 'cards_do_contato', situacao: ['open'], mais_recente: true },
-       passos: PECA.map { |chave| para_o_card(chave) } }]
-  end
-
-  def para_o_card(chave)
-    { id: "#{chave}_no_card", tipo: 'acao', acao: 'PATCH crm/cards/:id', descricao: "Gravar #{chave} no card",
-      caminho: { id: { '$valor' => 'card.id' } },
-      corpo: { card: { custom_attributes: { chave => { '$valor' => "origem.conversa.atributos.#{chave}" } } } } }
+    campos = [{ chave: 'peca', descricao: 'a peça que o cliente quer', destino: 'card.atributos.peca' },
+              { chave: 'cor', descricao: 'a cor da peça', destino: 'card.atributos.cor' },
+              { chave: 'tamanho', descricao: 'o tamanho da peça', destino: 'card.atributos.tamanho' }]
+    [{ id: 'espera_o_card', tipo: 'esperar', duracao: ESPERA_DO_CARD },
+     { id: 'peca_cor_tamanho', tipo: 'extrair', le: %w[mensagens_recentes], campos: campos }]
   end
 
   # Passo 6: confirma, põe a etiqueta e marca o contato como "não recebe" (a recusa de todas as campanhas).
