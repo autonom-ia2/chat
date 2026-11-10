@@ -9,28 +9,32 @@ require 'rails_helper'
 # - o Construtor, no fechamento da criação (mesma instrução-mãe, mesmo input montado pelo Builder com as prontas
 #   liberadas, mesmo schema e mesmo esforço de raciocínio);
 # - a sugestão para um agente que já existe (`SugestaoParaAgente`, modelo barato).
-# Seis agentes de seguro e um caso negativo (a padaria). A régua é fechada: o que o agente PRECISA ter e o que ele SÓ
-# PODE ter (fonte a mais reprova, tanto quanto fonte a menos). Conversas inventadas, sem dado de cliente.
+# A régua é a tabela "O que cada agente de seguro precisa ganhar no Construtor" do plano (#2858), só com as fontes
+# que já existem (F1), e o caso negativo da padaria. O que o dono conta é o roteiro do vídeo do protótipo (j6-construtor).
+# Passa quem tem tudo o que PRECISA, nada do que NÃO PODE e nenhuma fonte fora das que têm relação com o atendimento
+# (PRECISA + ACEITAS, com o motivo de cada aceita). Conversas inventadas, sem dado de cliente.
 module AvaliacaoDasProntas
   ABERTURA = 'Oi! Vamos montar seu agente. Me conta o que ele vai fazer e para quem.'.freeze
+  PERGUNTA = 'Como ele vai falar com os clientes?'.freeze
   FECHAR = 'Pode fechar assim mesmo.'.freeze
 
-  # [nome, o que o dono contou, precisa ter, só pode ter (nil = qualquer outra além das que precisa)]
+  # [nome, o que o dono contou, como ele fala, precisa, não pode, aceitas (relação direta com o que foi contado)]
   CASOS = [
-    ['Ana', 'Sou corretora. Quero a Ana cotando seguro auto: ela pede o modelo e o ano do carro e o CEP de onde ele dorme.',
-     %w[fipe], nil],
-    ['Beto', 'O Beto vai cotar seguro residencial: pergunta o endereço do imóvel pelo CEP e o tipo de casa.',
-     %w[cep], %w[cep]],
-    ['Carla', 'A Carla atende empresas que querem seguro empresarial. Ela confere os dados da empresa pelo CNPJ.',
-     %w[cnpj], %w[cnpj]],
-    ['Davi', 'O Davi tira dúvidas sobre seguro de vida: coberturas, carência e como incluir beneficiários.',
-     %w[], %w[]],
-    ['Eva', 'A Eva vende seguro viagem internacional e explica quanto custa a cobertura em dólar.',
-     %w[], %w[]],
-    ['Fabio', 'O Fabio cota seguro de frota para transportadoras: confere a empresa pelo CNPJ e o valor dos caminhões.',
-     %w[fipe cnpj], %w[fipe cnpj]],
+    ['Gael', 'Atender empresas que precisam de seguro garantia para licitação e contrato com o governo.',
+     'Formal, mas simpático. Ele se chama Gael.', %w[cnpj feriados], %w[fipe], %w[]],
+    ['Ana', 'Atender quem quer seguro de carro: tirar dúvidas e já começar a cotação.',
+     'Simpática e direta. Ela se chama Ana.', %w[fipe cep cpf], %w[], %w[]],
+    ['Rita', 'Cuidar do seguro residencial: cotação, dúvidas de cobertura e primeiro atendimento de sinistro.',
+     'Acolhedora e calma. Ela se chama Rita.', %w[cep banco_central], %w[], %w[]],
+    # Carga: as cidades de origem e destino da viagem têm relação com o seguro de cada viagem.
+    ['Caio', 'Atender transportadoras que precisam de seguro de carga para cada viagem.',
+     'Prático e rápido. Ele se chama Caio.', %w[cnpj], %w[], %w[cep cidades]],
+    ['Lívia', 'Atender clientes de plano de saúde e seguro de vida: cobertura de exames, hospitais e doenças.',
+     'Cuidadosa e clara. Ela se chama Lívia.', %w[], %w[fipe], %w[]],
+    ['Sol', 'Vender seguro para quem tem placas solares em casa ou na empresa.',
+     'Animado e direto. Ele se chama Sol.', %w[cep], %w[], %w[]],
     ['Gina', 'A Gina atende a padaria do bairro: fala o cardápio do dia, os preços dos pães e o horário de abrir.',
-     %w[], %w[]]
+     'Simpática. Ela se chama Gina.', %w[], %w[fipe cpf cnpj bancos], %w[]]
   ].freeze
 end
 
@@ -62,35 +66,41 @@ RSpec.describe 'Ferramentas prontas escolhidas pelo modelo' do # rubocop:disable
     end
   end
 
-  def do_construtor(nome, conta)
+  def do_construtor(caso)
+    _, conta, jeito = caso
     thread = Autonomia::Agents::BuildThread.create!(account: account)
     thread.persist_start_options!(type: 'custom', with_knowledge: false)
     thread.save!
     thread.append_message!('assistant', AvaliacaoDasProntas::ABERTURA)
     thread.append_message!('user', conta)
-    thread.append_message!('user', AvaliacaoDasProntas::FECHAR)
+    thread.append_message!('assistant', AvaliacaoDasProntas::PERGUNTA)
+    thread.append_message!('user', "#{jeito} #{AvaliacaoDasProntas::FECHAR}")
     builder = Autonomia::Agents::Builder.new(account: account, build_thread: thread)
     raw = Crm::Ai::ResponsesClient.new(credential: credencial, feature: 'eval_construtor').create(
       model: Autonomia::Agents::Config::BUILDER_MODEL, instructions: Autonomia::Agents::Builder::MOTHER_INSTRUCTION,
       input: builder.send(:build_input), schema: Autonomia::Agents::Builder::BUILDER_SCHEMA,
       reasoning_effort: Autonomia::Agents::Config::BUILDER_REASONING_EFFORT
     )
-    escolha = Autonomia::Agents::Builder::ProntasSugeridas.filtrar(account, JSON.parse(raw[:text]))
-    [nome, escolha]
+    Autonomia::Agents::Builder::ProntasSugeridas.filtrar(account, JSON.parse(raw[:text]))
   end
 
-  def da_sugestao(nome, conta)
+  def da_sugestao(caso)
+    nome, conta, = caso
     agente = Autonomia::Agents::Agent.create!(account: account, name: nome, agent_type: 'sdr', instruction: "Você é #{nome}. #{conta}")
-    [nome, Autonomia::FerramentasProntas::SugestaoParaAgente.new(agente).call]
+    Autonomia::FerramentasProntas::SugestaoParaAgente.new(agente).call
   end
 
   def erros(caminho)
-    AvaliacaoDasProntas::CASOS.filter_map do |nome, conta, precisa, so_pode|
-      _, escolha = send(caminho, nome, conta)
+    AvaliacaoDasProntas::CASOS.filter_map do |caso|
+      nome, _, _, precisa, nao_pode, aceitas = caso
+      escolha = Array(send(caminho, caso))
       puts "[eval prontas] #{caminho} #{nome}: #{escolha.inspect}"
-      faltou = precisa - Array(escolha)
-      sobrou = so_pode.nil? ? [] : Array(escolha) - so_pode
-      "#{caminho} #{nome}: escolheu #{escolha.inspect} (faltou #{faltou}, a mais #{sobrou})" if escolha.nil? || faltou.any? || sobrou.any?
+      faltou = precisa - escolha
+      proibida = escolha & nao_pode
+      sem_relacao = escolha - precisa - aceitas
+      next if faltou.empty? && proibida.empty? && sem_relacao.empty?
+
+      "#{caminho} #{nome}: #{escolha.inspect} (faltou #{faltou}, não pode #{proibida}, sem relação #{sem_relacao})"
     end
   end
 
