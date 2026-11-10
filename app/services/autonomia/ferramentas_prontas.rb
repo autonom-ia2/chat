@@ -12,12 +12,18 @@ module Autonomia::FerramentasProntas
   # A F1 (#2858): as consultas mais usadas além de CEP, CNPJ e FIPE (CPF, feriados, Banco Central, cidades, DDD,
   # localização, bancos). Vale junto com a FLAG.
   FLAG_CONSULTAS = 'agente_ferramentas_prontas_consultas'.freeze
+  # A F2 (#2858): a vitrine (a tela e a API dela). Vale junto com a FLAG.
+  FLAG_VITRINE = 'agente_ferramentas_prontas_vitrine'.freeze
   AGENTE_DE_COTACAO = 'insurance_quote'.freeze
 
   module_function
 
   def ligada?(account)
     account.present? && account.feature_enabled?(FLAG)
+  end
+
+  def vitrine?(account)
+    ligada?(account) && account.feature_enabled?(FLAG_VITRINE)
   end
 
   # A fonte está liberada para a conta: a flag das prontas e, na fonte de uma fase posterior, a flag dela.

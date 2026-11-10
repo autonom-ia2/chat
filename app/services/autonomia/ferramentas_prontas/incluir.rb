@@ -32,6 +32,8 @@ class Autonomia::FerramentasProntas::Incluir
       acesso = Autonomia::FerramentasProntas::Acesso.create_or_find_by!(account_id: @account.id, fonte: @fonte.chave) do |novo|
         novo.incluida_por_id = @user&.id
       end
+      # O acesso pode ter nascido no "Experimente" da vitrine (F2), sem quem incluiu: o primeiro "Incluir" grava.
+      acesso.update!(incluida_por_id: @user.id) if acesso.incluida_por_id.nil? && @user
       Resultado.new(ferramenta: ferramenta!, acesso: acesso)
     end
   end

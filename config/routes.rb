@@ -649,6 +649,14 @@ Rails.application.routes.draw do
             # autonomia_agente_ia_por_caixa (Autonomia::Agents::AgenteIaPorCaixa), 404.
             get 'inboxes/:inbox_id/quem_atende', to: 'quem_atende#show'
             put 'inboxes/:inbox_id/quem_atende', to: 'quem_atende#update'
+            # #2858 F2 — a vitrine de ferramentas prontas (flag agente_ferramentas_prontas_vitrine; sem ela, 404).
+            resources :ferramentas_prontas, only: [:index, :update, :destroy] do
+              collection do
+                post :incluir
+                post :experimentar
+                post :buscas_sem_resultado
+              end
+            end
             resources :agents, only: [:index, :show, :create, :update, :destroy] do
               member do
                 post :test,    to: 'agents/playground#test'
