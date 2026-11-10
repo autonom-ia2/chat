@@ -1,6 +1,7 @@
-# #2863 — a profundidade do título pela numeração no começo dele, para o nível entre títulos da mesma letra e da mesma
-# fonte (incluído em Processors::PdfBlocos). Lê só a forma do primeiro pedaço do título, nunca as palavras:
-# - sem número ("CLÁUSULA 2 – …", "COBERTURA ADICIONAL DE …"): 0, acima dos numerados;
+# #2863 — a profundidade do título pela numeração no começo dele, para o nível entre títulos da mesma letra (chamado pelo
+# nome em Processors::PdfBlocos#com_niveis). Lê só a forma do primeiro pedaço do título, nunca as palavras:
+# - sem número ("CLÁUSULA 2 – …", "COBERTURA ADICIONAL DE …"): 0, acima dos numerados quando abre uma numeração
+#   (profundidades);
 # - número com pontos ("1.", "1.3.", "1.3.1."): quantos números tem (1, 2, 3…);
 # - marcador de item curto fechado por parêntese ("a)", "1)"): abaixo de qualquer número.
 module Autonomia::Agents::Knowledge::Processors::PdfBlocos::Numeracao
@@ -15,6 +16,34 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos::Numeracao
 
     numeros = primeiro.split('.')
     numeros.any? && numeros.all? { |numero| numero?(numero) } ? numeros.size : 0
+  end
+
+  # A profundidade de cada título, na ordem do documento. O título sem número fica acima dos numerados (0) só quando
+  # abre uma numeração: o título seguinte é "1." ou começa por outro primeiro número que o do último numerado
+  # ("CLAUSULA 3" antes do "3.1."). No meio da seção (um rótulo entre "2.1." e "2.2."), fica na profundidade do último
+  # numerado, irmão dele, para não virar pai das seções seguintes.
+  def self.profundidades(textos)
+    numeros = textos.map { |texto| primeiro_numero(texto) }
+    ultimo = nil
+    textos.each_with_index.map do |texto, indice|
+      profundidade = profundidade(texto)
+      profundidade = ultimo[:profundidade] if profundidade.zero? && ultimo && !abre_numeracao?(textos[indice + 1], numeros[indice + 1], ultimo)
+      ultimo = { profundidade: profundidade, numero: numeros[indice] } if numeros[indice]
+      profundidade
+    end
+  end
+
+  def self.abre_numeracao?(seguinte, numero, ultimo)
+    return false if numero.nil?
+
+    profundidade(seguinte) == 1 || numero != ultimo[:numero]
+  end
+
+  # O primeiro número do título numerado ("2" de "2.1."); nil sem número ou com marcador de item.
+  def self.primeiro_numero(texto)
+    return unless profundidade(texto).between?(1, ITEM - 1)
+
+    texto.split.first.split('.').first
   end
 
   def self.marcador?(pedaco)

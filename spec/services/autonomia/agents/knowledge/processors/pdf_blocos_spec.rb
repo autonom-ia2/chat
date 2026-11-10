@@ -294,6 +294,32 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       end
     end
 
+    # #2863 — o título sem número no meio da seção (um rótulo entre "2.1." e "2.2.") fica no nível do último numerado: não
+    # vira pai das seções seguintes. O sem número que abre outra numeração ("CLAUSULA 3" antes do "3.1.") continua acima.
+    context 'with a title without a number between numbered titles' do
+      let(:pdf) do
+        pdf_com([[['2. EXCLUSOES', topo, 'F2', 10], *secao(topo - linha),
+                  ['2.1. DANOS AO JARDIM', topo - 70, 'F2', 10], *secao(topo - 70 - linha),
+                  ['OBSERVACAO IMPORTANTE', topo - 140, 'F2', 10], *secao(topo - 140 - linha),
+                  ['2.2. DANOS ELETRICOS', topo - 210, 'F2', 10], *secao(topo - 210 - linha),
+                  ['CLAUSULA 3 - PAGAMENTO', topo - 280, 'F2', 10], *secao(topo - 280 - linha),
+                  ['3.1. PRAZO CURTO', topo - 350, 'F2', 10], *secao(topo - 350 - linha)]])
+      end
+
+      def secao(inicio)
+        [[corpo1, inicio, 'F1', 10], [corpo2, inicio - linha, 'F1', 10], [corpo1, inicio - (2 * linha), 'F1', 10]]
+      end
+
+      it 'keeps the label as a sibling and the opening title above its numbers', :aggregate_failures do
+        trechos = Autonomia::Agents::Knowledge::CortePorSecao.new(blocos_gravados, documento: 'cg.pdf').trechos
+        caminhos = trechos.map { |trecho| trecho[:metadata][:caminho] }
+
+        expect(caminhos).to include(['cg.pdf', '2. EXCLUSOES', '2.2. DANOS ELETRICOS'],
+                                    ['cg.pdf', 'CLAUSULA 3 - PAGAMENTO', '3.1. PRAZO CURTO'])
+        expect(caminhos.flatten.count('OBSERVACAO IMPORTANTE')).to eq(1)
+      end
+    end
+
     # #2863 — a linha curta em negrito que termina a frase do parágrafo de cima (a linha de cima vai até a margem, com o
     # espaço de linha normal) não é título: sem isso, o título sem número viraria pai de todas as seções seguintes.
     context 'with a short bold line that ends the paragraph above' do
