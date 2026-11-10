@@ -33,8 +33,8 @@ require 'rails_helper'
 #   (o `card.responsavel_id` do card antigo). "Passa para o corretor" também passa a conversa a ele, e a espera do
 #   passo 8 é a dele (`conversa.responsavel_respondeu`, G40); vencida, o link é o da página dele
 #   (`conversa.link_da_agenda`, G12).
-# - Passo 6, "daqui a 11 meses": o retorno conta em minutos, horas ou dias; são 330 dias, como os 180 dias dos 6 meses do
-#   exemplo 9. Vai para a Juliana.
+# - Passo 6, "daqui a 11 meses": o retorno conta em meses (G69, #2879), no calendário e no fuso da conta: de 01/11/2026
+#   às 10h vence em 01/10/2027 às 10h. Vai para a Juliana.
 # - Passo 7: "registra e nunca mais manda" é o "não recebe" do contato (campanha `nao_receber`), que o envio de toda
 #   campanha relê; a campanha do mês seguinte o pula.
 RSpec.describe 'Fechamento #2414 · exemplo 16: reconquistar quem foi para o concorrente', :fechamento_automacao, type: :request do
@@ -128,7 +128,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 16: reconquistar quem foi para o con
   def satisfeito
     [{ id: 'agradece', tipo: 'mensagem', texto: ['Que bom, ', valor('contato.nome'), '! Obrigada pela atenção.'] },
      { id: 'daqui_a_11_meses', tipo: 'retorno', titulo: ['Reconquista: falar de novo com ', valor('contato.nome')],
-       daqui: { valor: 330, unidade: 'dias' }, para: { quem: 'pessoas', pessoas: [juliana.id] } }]
+       daqui: { valor: 11, unidade: 'meses' }, para: { quem: 'pessoas', pessoas: [juliana.id] } }]
   end
 
   # Passo 7.
@@ -284,7 +284,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 16: reconquistar quem foi para o con
       expect(textos_para(bruno)).to eq(['Que bom, Bruno! Obrigada pela atenção.'])
       expect(Crm::FollowUp.sole).to have_attributes(title: 'Reconquista: falar de novo com Bruno', status: 'pending',
                                                     recipient_mode: 'users', recipient_user_ids: [juliana.id], contact_id: bruno.id,
-                                                    due_at: dia_primeiro + 1.hour + 330.days)
+                                                    due_at: fuso.local(2027, 10, 1, 10))
       expect(account.crm_cards.where(contact: bruno, status: :open)).to be_empty
     end
 

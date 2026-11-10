@@ -202,6 +202,18 @@
         "unidade": { "enum": ["minutos", "horas", "dias"] }
       }
     },
+    "daqui_do_retorno": {
+      "description": "Daqui a quanto vence o retorno (G69). Minutos, horas e dias contam o tempo corrido, como a duração. Meses contam no calendário, no fuso da conta: 11 meses a partir de 15/01 vencem em 15/12, na mesma hora; o dia que não existe no mês do vencimento vira o último dia dele (31/01 mais 1 mês vence em 28/02, ou 29/02 no ano bissexto). Teto de 3650 em minutos, horas e dias e de 120 meses (10 anos): proteção contra erro de digitação, não limite de uso.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valor", "unidade"],
+      "properties": {
+        "valor": { "type": "integer", "minimum": 1, "maximum": 3650 },
+        "unidade": { "enum": ["minutos", "horas", "dias", "meses"] }
+      },
+      "if": { "properties": { "unidade": { "const": "meses" } } },
+      "then": { "properties": { "valor": { "maximum": 120 } } }
+    },
     "prazo_da_espera": {
       "description": "O prazo do esperar_ate: uma duração, ou \"sem_prazo\" quando a espera só termina pela condição (sem se_vencer: não vence). Sem prazo, a espera fecha sozinha, com o motivo no histórico, se o alvo for apagado, a automação desligada ou quem ligou perder o acesso.",
       "oneOf": [{ "$ref": "#/definitions/duracao" }, { "const": "sem_prazo" }]
@@ -777,7 +789,7 @@
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "retorno" },
             "titulo": { "$ref": "#/definitions/texto" },
-            "daqui": { "$ref": "#/definitions/duracao" },
+            "daqui": { "$ref": "#/definitions/daqui_do_retorno" },
             "quando": { "$ref": "#/definitions/quando_do_retorno" },
             "para": { "$ref": "#/definitions/para_do_retorno" },
             "envio": { "$ref": "#/definitions/envio_do_retorno" }

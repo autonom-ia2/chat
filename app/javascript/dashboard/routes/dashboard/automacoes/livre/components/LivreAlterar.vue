@@ -622,7 +622,7 @@ defineExpose({ abrir, fechar });
           :rotulo="$t(campo.rotulo)"
           :daqui="rascunho.daqui"
           :quando="rascunho.quando"
-          :unidades="catalogo.unidades"
+          :unidades="catalogo.unidades_do_retorno || catalogo.unidades"
           @update="
             novo => {
               mudarNativo('daqui', novo.daqui);

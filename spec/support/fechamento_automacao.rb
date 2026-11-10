@@ -391,6 +391,9 @@ module FechamentoAutomacao::Lacunas
     # verdade (FechamentoAutomacao::SondasDaCampanhaDaVez): dois cards chegam, e a campanha sai uma vez, no último; prova
     # ponta a ponta em spec/fechamento/automacao/g55_campanha_no_card_spec.rb.
     'G55' => -> { FechamentoAutomacao::SondasDaCampanhaDaVez.uma_campanha_por_vez? },
+    # G69 (#2879, ex. 16, passo 6): o retorno "daqui a 11 meses" conta meses no calendário, no fuso da conta; a sonda cria
+    # o retorno de verdade (FechamentoAutomacao::SondasDoRetorno).
+    'G69' => -> { FechamentoAutomacao::SondasDoRetorno.retorno_em_meses_no_calendario_da_conta? },
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
     # (passo 2, "manda por e-mail o mesmo conteúdo"): `falhou.texto`, prova em g53_conteudo_da_falha_spec.rb.
     'G53' => -> { valor?('falhou.texto') },
