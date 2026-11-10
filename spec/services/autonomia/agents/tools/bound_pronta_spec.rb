@@ -54,6 +54,12 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       expect(slugs_do_turno(lia)).not_to include('pronta_cep')
     end
 
+    it 'fonte que saiu do catalogo nao entra e nao derruba o turno' do
+      pronta.update_column(:fonte_pronta, 'fonte_que_saiu') # rubocop:disable Rails/SkipsModelValidations
+
+      expect(slugs_do_turno(agent.reload)).to be_empty
+    end
+
     it 'desligada no agente (enabled false) nao entra' do
       pronta.update!(enabled: false)
 
@@ -116,6 +122,19 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       expect(JSON.parse(run.resultado_da_consulta)).to include('situacao' => 'encontrado', 'dados' => include('cidade' => 'São Paulo'))
       expect(eventos_disparados(run)).to eq(['consulta_concluida'])
       expect(Autonomia::FerramentasProntas::Uso.sole.consultas).to eq(1)
+    end
+
+    it 'resposta perdida no meio (worker morreu) fecha como "nao consegui", sem incerteza nem aviso a quem atende' do
+      _saida, run = abrir_consulta
+      run.marcar_chamada!(passada: 'job-que-morreu')
+      allow(Autonomia::Agents::Operate::AvisoAoAtendente).to receive(:consulta_incerta)
+
+      Autonomia::Agents::Tools::HttpAssincronaJob.incerta(run.reload)
+
+      run.reload
+      expect(run.status).to eq('done')
+      expect(JSON.parse(run.resultado_da_consulta)['situacao']).to eq('nao_consegui_consultar')
+      expect(Autonomia::Agents::Operate::AvisoAoAtendente).not_to have_received(:consulta_incerta)
     end
 
     it 'no job, com a flag das prontas desligada depois da abertura, nao consulta' do

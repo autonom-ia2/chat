@@ -8,7 +8,9 @@
 #     ANTES de ir até lá, então nenhum pedido sai para fora do catálogo;
 #   - teto de tamanho da resposta (`MAX_BYTES`), conferido no anúncio e na leitura;
 #   - prazo TOTAL monotônico por chamada (`total_timeout`) e o prazo final da consulta: a chamada recebe o menor entre o
-#     prazo dela e o que sobra da consulta inteira, somada a reserva;
+#     prazo dela e o que sobra da consulta inteira, somada a reserva. Ressalva do `SafeFetch::Deadline`: o prazo total
+#     cobre conexão e corpo; DNS e cabeçalhos que gotejam abaixo do teto por leitura escapam dele (só uma fonte do
+#     catálogo comprometida faria isso);
 #   - só JSON.
 #
 # Erro vira `Provedor::Falha` com um motivo curto do código (`tempo_esgotado`, `erro_da_fonte`…): a mensagem de fora
@@ -23,7 +25,13 @@ class Autonomia::FerramentasProntas::ClienteHttp
   ABERTURA = 2
   # Menos que isto de prazo não dá para uma chamada: a consulta para por prazo, sem chamar.
   MINIMO = 0.3
-  CABECALHOS = { 'Accept' => 'application/json', 'User-Agent' => 'Autonomia-FerramentasProntas/1.0' }.freeze
+  # Sem compressão: o teto de tamanho vale sobre o que chega, e um gzip corrompido não vira erro fora da lista.
+  CABECALHOS = { 'Accept' => 'application/json', 'Accept-Encoding' => 'identity',
+                 'User-Agent' => 'Autonomia-FerramentasProntas/1.0' }.freeze
+  # O que o `SafeFetch` deixa passar do transporte (linha de status ou de bloco inválida, conexão quebrada no meio):
+  # falha da fonte, e a reserva tenta.
+  TRANSPORTE = [Net::ProtocolError, Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError, Zlib::Error, SystemCallError,
+                IOError, OpenSSL::SSL::SSLError, Resolv::ResolvError].freeze
   TIPOS = %w[application/json].freeze
   TEMPO = [Net::OpenTimeout, Net::ReadTimeout, Errno::ETIMEDOUT].freeze
   # O motivo de cada erro do `SafeFetch` (o primeiro que casa; a ordem importa: o prazo total é um `FetchError`).
@@ -59,6 +67,8 @@ class Autonomia::FerramentasProntas::ClienteHttp
     SafeFetch.fetch(url, **opcoes(segundos)) { |resultado| return JSON.parse(resultado.tempfile.read) }
   rescue SafeFetch::Error, JSON::ParserError, EncodingError => e
     raise traduzir(e)
+  rescue *TRANSPORTE
+    raise Falha, 'falha_de_rede'
   end
 
   private

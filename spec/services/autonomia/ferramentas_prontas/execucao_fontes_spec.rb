@@ -66,6 +66,43 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(Autonomia::FerramentasProntas::Uso.sole.nao_encontradas).to eq(1)
     end
 
+    it 'com uma dizendo que nao tem e a outra fora, nao afirma que o CEP nao existe' do
+      fonte_fora(brasilapi, status: 404)
+      fonte_fora(viacep, status: 503)
+
+      expect(executar_pronta(ferramenta, 'cep' => '01001000')['situacao']).to eq('nao_consegui_consultar')
+      expect(Autonomia::FerramentasProntas::Uso.sole).to have_attributes(sem_resposta: 1, nao_encontradas: 0)
+    end
+
+    it 'erro de transporte na principal (linha de status quebrada) cai na reserva' do
+      allow(SafeFetch).to receive(:fetch).and_call_original
+      allow(SafeFetch).to receive(:fetch).with(brasilapi, anything).and_raise(Net::HTTPBadResponse, 'wrong status line')
+      fonte_responde(viacep, do_viacep)
+
+      expect(executar_pronta(ferramenta, 'cep' => '01001000')['dados']).to eq(esperado)
+      expect(Autonomia::FerramentasProntas::Uso.sole.motivos).to eq('brasilapi.falha_de_rede' => 1)
+    end
+
+    it 'o nao encontrado fica uma hora no cache e nao gasta a fonte de novo' do
+      loja = cache_em_memoria
+      allow(loja).to receive(:write).and_call_original
+      fonte_fora(brasilapi, status: 404)
+      reserva = fonte_responde(viacep, { erro: true })
+
+      2.times { expect(executar_pronta(ferramenta, 'cep' => '01001000')['situacao']).to eq('nao_encontrado') }
+
+      expect(reserva).to have_been_requested.once
+      expect(loja).to have_received(:write).with(anything, { 'situacao' => 'nao_encontrado' }, expires_in: 1.hour)
+    end
+
+    it 'com o cache fora do ar, consulta a fonte do mesmo jeito' do
+      allow(Rails.cache).to receive(:read).and_raise(Redis::CannotConnectError)
+      allow(Rails.cache).to receive(:write).and_raise(Redis::CannotConnectError)
+      fonte_responde(brasilapi, da_brasilapi)
+
+      expect(executar_pronta(ferramenta, 'cep' => '01001000')['dados']).to eq(esperado)
+    end
+
     it 'com as duas fora, diz que nao conseguiu consultar e nao inventa' do
       fonte_lenta(brasilapi)
       fonte_fora(viacep, status: 503)
@@ -221,6 +258,39 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
 
       expect(saida['dados']).to eq('modelos' => [{ 'codigo' => '8949', 'nome' => 'ONIX HATCH LT 1.0 12V Flex 5p Mec.' }], 'total' => 1)
       expect(pedido).to have_been_requested.once
+    end
+
+    it 'guarda a lista inteira da marca: outra busca vem do cache, sem chamar a fonte' do
+      cache_em_memoria
+      modelos = [{ code: '8949', name: 'ONIX HATCH LT 1.0' }, { code: '1', name: 'CRUZE LT' }]
+      pedido = fonte_responde('https://parallelum.com.br/fipe/api/v2/cars/brands/23/models', modelos)
+      pedir = ->(busca) { executar_pronta(ferramenta, 'consulta' => 'modelos', 'tipo' => 'carros', 'marca' => '23', 'busca' => busca) }
+
+      expect(pedir.call('onix')['dados']['modelos'].pluck('codigo')).to eq(['8949'])
+      expect(pedir.call('cruze')['dados']['modelos'].pluck('codigo')).to eq(['1'])
+      expect(pedir.call('fusca')['situacao']).to eq('nao_encontrado')
+      expect(pedido).to have_been_requested.once
+    end
+
+    it 'lista que vem como objeto e falha da fonte, nao "nao encontrado", e a reserva responde' do
+      fonte_responde('https://brasilapi.com.br/api/fipe/marcas/v1/carros', { message: 'fora' })
+      fonte_responde('https://parallelum.com.br/fipe/api/v2/cars/brands', [{ code: '23', name: 'GM - Chevrolet' }])
+
+      saida = executar_pronta(ferramenta, 'consulta' => 'marcas', 'tipo' => 'carros')
+
+      expect(saida['dados']['marcas']).to eq([{ 'codigo' => '23', 'nome' => 'GM - Chevrolet' }])
+      expect(Autonomia::FerramentasProntas::Uso.sole.motivos).to eq('brasilapi.resposta_invalida' => 1)
+    end
+
+    it 'codigo de ano fora do formato, vindo da fonte, nunca volta ao caminho' do
+      fonte_responde('https://parallelum.com.br/fipe/api/v2/cars/brands/23/models/8949/years',
+                     [{ code: '2020-5/../../x', name: '2020' }, { code: '2020-5', name: '2020 Flex' }])
+      fonte_responde('https://parallelum.com.br/fipe/api/v2/cars/brands/23/models/8949/years/2020-5', da_parallelum)
+
+      saida = executar_pronta(ferramenta, 'consulta' => 'preco', 'tipo' => 'carros', 'marca' => '23', 'modelo' => '8949', 'ano' => 2020.0)
+
+      expect(saida['dados']['precos'].size).to eq(1)
+      expect(a_request(:get, /x$/)).not_to have_been_made
     end
 
     it 'preco sem codigo nem marca e modelo e pedido invalido' do

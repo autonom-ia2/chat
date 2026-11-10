@@ -81,9 +81,19 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
   # cliente ouve que não deu para confirmar (`Evento`, pelo código `INCERTA`). `vencida_antes_de`: o varredor. A
   # desistência é marcada no `fechar`, depois do fechamento (o turno que ainda espera lê a incerteza).
   def self.incerta(run, vencida_antes_de: nil)
+    return leitura_perdida(run, vencida_antes_de: vencida_antes_de) if run.ferramenta&.pronta?
     return false unless run.fechar_incerta!(Recusa.saida(ToolRun::INCERTA), vencida_antes_de: vencida_antes_de)
 
     Aviso.consulta_incerta(run)
+    fechar(run.reload)
+  end
+
+  # #2858: a ferramenta pronta só LÊ dado público; a resposta perdida não deixa nada registrado do lado de lá. Sem aviso
+  # a quem atende e sem a incerteza: o modelo lê "não consegui consultar agora", como em qualquer falha da fonte.
+  def self.leitura_perdida(run, vencida_antes_de:)
+    texto = ::Autonomia::FerramentasProntas::Resposta.nao_consegui
+    return false unless run.fechar_leitura_perdida!(texto, vencida_antes_de: vencida_antes_de)
+
     fechar(run.reload)
   end
 

@@ -40,17 +40,27 @@ class Autonomia::FerramentasProntas::Incluir
   def conferir!
     raise Recusado, 'desligada' unless Autonomia::FerramentasProntas.ligada?(@account)
     raise Recusado, 'agente_de_outra_conta' unless @agent.account_id == @account.id
+    raise Recusado, 'pessoa_de_outra_conta' unless pessoa_da_conta?
     raise Recusado, 'agente_de_cotacao' if @agent.agent_type == Autonomia::FerramentasProntas::AGENTE_DE_COTACAO
     raise Recusado, 'fonte_desconhecida' if @fonte.nil?
   end
 
-  def ferramenta!
+  def pessoa_da_conta?
+    @user.nil? || @user.accounts.include?(@account)
+  end
+
+  # Dois cliques ao mesmo tempo: o segundo perde para o índice único e relê a do primeiro.
+  def ferramenta!(tentativa: 1)
     tool = @agent.tools.find_or_initialize_by(slug: @fonte.slug)
     raise Recusado, 'nome_em_uso' if tool.persisted? && tool.fonte_pronta != @fonte.chave
 
     tool.assign_attributes(atributos)
-    tool.save!
+    ActiveRecord::Base.transaction(requires_new: true) { tool.save! }
     tool
+  rescue ActiveRecord::RecordNotUnique
+    raise if tentativa > 1
+
+    ferramenta!(tentativa: tentativa + 1)
   end
 
   def atributos

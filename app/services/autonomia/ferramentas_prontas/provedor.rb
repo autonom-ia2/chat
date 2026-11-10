@@ -56,6 +56,13 @@ class Autonomia::FerramentasProntas::Provedor
     valor
   end
 
+  # A fonte devolveu outra coisa que não uma lista JSON: falha (não "não encontrado"), e a reserva tenta.
+  def lista!(valor)
+    raise Falha, 'resposta_invalida' unless valor.is_a?(Array)
+
+    valor
+  end
+
   def texto(valor)
     valor.to_s.strip.presence
   end

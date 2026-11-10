@@ -16,14 +16,14 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::BrasilApi < Autonomia::Ferram
   private
 
   def marcas(params)
-    itens = Array(get("/api/fipe/marcas/v1/#{params['tipo']}")).filter_map do |item|
+    itens = lista!(get("/api/fipe/marcas/v1/#{params['tipo']}")).filter_map do |item|
       { 'codigo' => texto(item['valor']), 'nome' => texto(item['nome']) } if item.is_a?(Hash) && item['valor'].present?
     end
     Fipe.lista(exigir!(itens), 'marcas', Fipe::MAX_MARCAS)
   end
 
   def precos(params)
-    itens = Array(get("/api/fipe/preco/v1/#{params['codigo_fipe']}")).select { |item| item.is_a?(Hash) }
+    itens = lista!(get("/api/fipe/preco/v1/#{params['codigo_fipe']}")).select { |item| item.is_a?(Hash) }
     itens = itens.select { |item| item['anoModelo'].to_i == params['ano'] } if params['ano']
     raise NaoEncontrado if itens.empty?
 

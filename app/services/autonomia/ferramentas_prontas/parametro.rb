@@ -55,8 +55,9 @@ class Autonomia::FerramentasProntas::Parametro
       texto.length == tamanho ? texto : nil
     end
 
-    # Inteiro dentro da faixa: 2020, "2020" e 2020.0 passam; "2020a" não.
+    # Inteiro dentro da faixa: 2020, "2020" e 2020.0 passam; "2020a" e 2020.5 não.
     def inteiro(valor, faixa)
+      valor = valor.to_i if valor.is_a?(Float) && valor.finite? && valor == valor.to_i
       numero = valor.is_a?(Integer) ? valor : Integer(valor.to_s.strip, 10, exception: false)
       numero if numero && faixa.cover?(numero)
     end

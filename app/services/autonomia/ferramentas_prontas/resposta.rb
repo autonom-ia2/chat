@@ -15,11 +15,25 @@ module Autonomia::FerramentasProntas::Resposta
   PEDIDO_INVALIDO = 'O valor de "%<campo>s" não está no formato certo, e nada foi consultado. Confira com o cliente ' \
                     'antes de consultar de novo. Não invente.'.freeze
 
+  # Cada texto que vem da fonte vai com teto: um nome fantasia ou uma razão social é escolha de quem registrou a empresa,
+  # e um texto enorme ali seria instrução disfarçada de dado. O aviso vai ANTES dos dados: se o corte do turno
+  # (`Bound#cabendo`) pegar o fim, o aviso fica.
+  MAX_TEXTO = 160
+
   module_function
 
   def encontrado(fonte, consulta, dados)
-    { 'ferramenta' => fonte.nome, 'consulta' => consulta.nome, 'situacao' => 'encontrado', 'dados' => dados,
-      'aviso' => AVISO }.to_json
+    { 'aviso' => AVISO, 'ferramenta' => fonte.nome, 'consulta' => consulta.nome, 'situacao' => 'encontrado',
+      'dados' => enxugar(dados) }.to_json
+  end
+
+  def enxugar(valor)
+    case valor
+    when Hash then valor.transform_values { |item| enxugar(item) }
+    when Array then valor.map { |item| enxugar(item) }
+    when String then valor.length > MAX_TEXTO ? "#{valor[0, MAX_TEXTO]}…" : valor
+    else valor
+    end
   end
 
   def nao_encontrado(fonte, consulta)

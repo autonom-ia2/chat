@@ -64,6 +64,7 @@ RSpec.describe Autonomia::FerramentasProntas::Incluir do
     expect(recusa { incluir(agente: criar_agente(account, tipo: 'insurance_quote')) }).to eq('agente_de_cotacao')
     expect(recusa { incluir(agente: criar_agente(outra_conta)) }).to eq('agente_de_outra_conta')
     expect(recusa { incluir('placa') }).to eq('fonte_desconhecida')
+    expect(recusa { described_class.new(account: account, agent: agent, fonte: 'cep', user: create(:user)).call }).to eq('pessoa_de_outra_conta')
     expect(Autonomia::Agents::Tool.count).to eq(0)
     expect(Autonomia::FerramentasProntas::Acesso.count).to eq(0)
   end

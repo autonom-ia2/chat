@@ -17,11 +17,12 @@ module Autonomia::FerramentasProntas
     account.present? && account.feature_enabled?(FLAG)
   end
 
-  # A ferramenta entra no turno deste agente? A cadastrada, sempre; a pronta, só com a flag e fora da Lia.
+  # A ferramenta entra no turno deste agente? A cadastrada, sempre; a pronta, só com a flag, fora da Lia e com a fonte
+  # ainda no catálogo (uma fonte que saiu do código não derruba o turno de quem a tinha).
   def no_turno?(tool, agent)
     return true unless tool.pronta?
 
-    ligada?(tool.account) && agent&.agent_type != AGENTE_DE_COTACAO
+    tool.fonte_do_catalogo.present? && ligada?(agent.account) && agent.agent_type != AGENTE_DE_COTACAO
   end
 
   # Quem executa a chamada: a `Execucao` para a pronta, o `HttpExecutor` para a cadastrada. As opções do `HttpExecutor`

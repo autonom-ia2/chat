@@ -21,19 +21,14 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
   end
 
   def itens(caminho)
-    Array(get(caminho)).filter_map do |item|
+    lista!(get(caminho)).filter_map do |item|
       { 'codigo' => texto(item['code']), 'nome' => texto(item['name']) } if item.is_a?(Hash) && item['code'].present?
     end
   end
 
-  # A busca é um filtro sobre a lista que a fonte devolveu: todas as palavras da busca no nome do modelo.
+  # A lista inteira da marca: é ela que fica no cache. A busca pelo nome roda depois (`Fipe.refinar_modelos`).
   def modelos(params)
-    todos = exigir!(itens(base(params, "/brands/#{params['marca']}/models")))
-    palavras = params['busca'].to_s.downcase.split
-    achados = todos.select { |item| palavras.all? { |palavra| item['nome'].to_s.downcase.include?(palavra) } }
-    raise NaoEncontrado if achados.empty?
-
-    Fipe.lista(achados, 'modelos', Fipe::MAX_MODELOS)
+    { 'modelos' => exigir!(itens(base(params, "/brands/#{params['marca']}/models"))) }
   end
 
   # Sem o ano, os anos que existem; com ele, o preço de cada combustível daquele ano (até `MAX_ANOS_COM_PRECO`).
@@ -46,11 +41,18 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
     { 'precos' => do_ano(anos, params['ano']).map { |ano| preco_de(get(base(params, "#{do_veiculo}/years/#{ano['codigo']}"))) } }
   end
 
+  # O código do ano vem da própria fonte e volta ao caminho: só no formato "2020-5" (dígitos, hífen, dígitos).
   def do_ano(anos, ano)
-    escolhidos = anos.select { |item| item['codigo'].to_s.split('-').first.to_i == ano }.first(Fipe::MAX_ANOS_COM_PRECO)
+    validos = anos.select { |item| codigo_de_ano?(item['codigo']) }
+    escolhidos = validos.select { |item| item['codigo'].split('-').first.to_i == ano }.first(Fipe::MAX_ANOS_COM_PRECO)
     raise NaoEncontrado if escolhidos.empty?
 
     escolhidos
+  end
+
+  def codigo_de_ano?(codigo)
+    partes = codigo.to_s.split('-')
+    partes.size == 2 && partes.all? { |parte| Autonomia::FerramentasProntas::Parametro.codigo(parte) }
   end
 
   def preco_de(item)

@@ -24,6 +24,14 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
     { chave => itens.first(maximo), 'total' => itens.size }.merge(itens.size > maximo ? { 'mostrando' => maximo } : {})
   end
 
+  # A busca pelo nome do modelo, sobre a lista inteira da marca (da fonte ou do cache): todas as palavras no nome.
+  # Sem busca, a lista com o teto. -> nil quando nada sobrou.
+  def self.refinar_modelos(dados, params)
+    palavras = params['busca'].to_s.downcase.split
+    achados = Array(dados['modelos']).select { |item| palavras.all? { |palavra| item['nome'].to_s.downcase.include?(palavra) } }
+    lista(achados, 'modelos', MAX_MODELOS) if achados.any?
+  end
+
   # `campos`: valor, marca, modelo, ano_modelo, combustivel, codigo_fipe, mes_de_referencia. O vazio sai.
   def self.preco(campos)
     campos.transform_keys(&:to_s).transform_values { |valor| valor.is_a?(String) ? valor.strip.presence : valor }.compact
@@ -53,7 +61,7 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
                    provedores: [BrasilApi, Parallelum], validade: 7.days, prazo_por_fonte: 4, prazo_total: 8),
       Consulta.new(nome: 'modelos', descricao: 'os modelos de uma marca; pede tipo e marca, e aceita busca pelo nome',
                    obrigatorios: [TIPO, MARCA], opcionais: [BUSCA], provedores: [Parallelum], validade: 7.days,
-                   prazo_por_fonte: 5, prazo_total: 5),
+                   prazo_por_fonte: 5, prazo_total: 5, refinar: method(:refinar_modelos)),
       Consulta.new(nome: 'preco', descricao: 'o preço do mês; pede tipo e o código FIPE, ou marca e modelo, e o ano',
                    obrigatorios: [TIPO], opcionais: [CODIGO_FIPE, MARCA, MODELO, ANO],
                    provedores: [BrasilApi, Parallelum], validade: 1.day, prazo_por_fonte: 4, prazo_total: 9,

@@ -40,7 +40,7 @@ class Autonomia::FerramentasProntas::Acesso < ApplicationRecord
   end
 
   def limite_do_dia
-    limite_diario || Autonomia::FerramentasProntas::Catalogo.buscar(fonte)&.limite_diario.to_i
+    limite_diario || Autonomia::FerramentasProntas::Catalogo.buscar(fonte)&.limite_diario || 0
   end
 
   private

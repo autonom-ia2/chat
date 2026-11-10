@@ -7,10 +7,11 @@
 #   2. o acesso da conta (a chave do "Incluir") e o corte individual -> `recusadas`;
 #   3. a consulta e os parâmetros, normalizados; o que não serve -> `recusadas`, e nenhuma fonte é chamada;
 #   4. o limite do dia, por SQL atômico -> conta a consulta, ou `recusadas` (`limite_diario`);
-#   5. o cache (validade da consulta) -> `do_cache`;
+#   5. o cache (validade da consulta; o "não encontrado" por 1 hora) -> `do_cache`;
 #   6. os provedores em ordem, com o prazo total da consulta: o principal, depois a reserva. Cada falha vira motivo
 #      (`brasilapi.tempo_esgotado`). Responde quem vier primeiro; vindo da reserva -> `pela_reserva`. Sem resposta de
-#      ninguém -> `sem_resposta`, e o modelo lê "não consegui consultar agora".
+#      ninguém, ou uma dizendo "não tem" e outra fora -> `sem_resposta`, e o modelo lê "não consegui consultar agora".
+#   A consulta conta no limite do dia mesmo quando vem do cache ou quando a fonte falha: o limite é do uso da conta.
 #
 # NUNCA LEVANTA: um defeito nosso vai ao rastreador e vira o mesmo "não consegui". A consulta é leitura de dado público,
 # sem efeito do lado de lá: repetir não registra nada duas vezes, por isso não existe a consulta "incerta" aqui.
@@ -22,9 +23,9 @@ class Autonomia::FerramentasProntas::Execucao
   Resposta = Autonomia::FerramentasProntas::Resposta
   Provedor = Autonomia::FerramentasProntas::Provedor
   ClienteHttp = Autonomia::FerramentasProntas::ClienteHttp
+  Cache = Autonomia::FerramentasProntas::Cache
 
   PREFIXO = '[autonomia][pronta]'.freeze
-  VERSAO_DO_CACHE = 'v1'.freeze
 
   def initialize(tool:, params: {})
     @tool = tool
@@ -66,15 +67,18 @@ class Autonomia::FerramentasProntas::Execucao
     return recusar('pedido_invalido', Resposta.pedido_invalido(campo)) if params.nil?
     return recusar('limite_diario') unless Uso.reservar!(account_id: @tool.account_id, fonte: @fonte.chave, limite: acesso.limite_do_dia)
 
+    @cache = Autonomia::FerramentasProntas::Cache.new(@fonte, @consulta, params)
     do_cache(params) || consultar(params)
   end
 
   def do_cache(params)
-    dados = Rails.cache.read(chave_do_cache(params))
-    return if dados.nil?
+    guardado = @cache.ler
+    return if guardado.nil?
 
     @provedor = 'cache'
-    terminar(Resposta.encontrado(@fonte, @consulta, dados), desfecho: 'do_cache')
+    return terminar(Resposta.nao_encontrado(@fonte, @consulta), desfecho: 'do_cache') if guardado['situacao'] == Cache::NAO_ENCONTRADO
+
+    entregar(guardado['dados'], params, desfecho: 'do_cache')
   end
 
   def consultar(params)
@@ -83,7 +87,7 @@ class Autonomia::FerramentasProntas::Execucao
     falhas = []
     nao_encontrado = false
     aplicaveis.each do |provedor|
-      dados = provedor.new(@cliente, prazo: @consulta.prazo_por_fonte).consultar(@consulta, params)
+      dados = provedor.new(@cliente, prazo: @consulta.prazo_por_fonte).consultar(@consulta, @consulta.para_a_fonte(params))
       return achado(params, dados, provedor, reserva: provedor != aplicaveis.first, falhas: falhas)
     rescue Provedor::NaoEncontrado
       nao_encontrado = true
@@ -95,13 +99,27 @@ class Autonomia::FerramentasProntas::Execucao
   end
 
   def achado(params, dados, provedor, reserva:, falhas:)
-    Rails.cache.write(chave_do_cache(params), dados, expires_in: @consulta.validade)
+    @cache.encontrado(dados)
     @provedor = provedor.nome
-    terminar(Resposta.encontrado(@fonte, @consulta, dados), desfecho: reserva ? 'pela_reserva' : nil, motivos: falhas)
+    entregar(dados, params, desfecho: reserva ? 'pela_reserva' : nil, motivos: falhas)
   end
 
+  # O filtro local roda sobre o que veio da fonte ou do cache. Nada sobrou: não encontrado (sem cache: a lista guardada
+  # continua servindo a outras buscas).
+  def entregar(dados, params, desfecho:, motivos: [])
+    refinados = @consulta.refinar(dados, params)
+    return terminar(Resposta.encontrado(@fonte, @consulta, refinados), desfecho: desfecho, motivos: motivos) if refinados
+
+    terminar(Resposta.nao_encontrado(@fonte, @consulta), desfecho: 'nao_encontradas', motivos: motivos)
+  end
+
+  # "Não encontrado" só quando nenhuma fonte falhou: com uma que disse "não tem" e outra fora do ar, o certo é "não
+  # consegui consultar" (a que falhou podia ter o registro), e o agente não afirma ao cliente que o CEP não existe.
   def nada(nao_encontrado, falhas)
-    return terminar(Resposta.nao_encontrado(@fonte, @consulta), desfecho: 'nao_encontradas', motivos: falhas) if nao_encontrado
+    if nao_encontrado && falhas.empty?
+      @cache.nao_encontrado
+      return terminar(Resposta.nao_encontrado(@fonte, @consulta), desfecho: 'nao_encontradas')
+    end
 
     terminar(Resposta.nao_consegui, desfecho: 'sem_resposta', motivos: falhas.presence || ['sem_provedor'])
   end
@@ -129,6 +147,7 @@ class Autonomia::FerramentasProntas::Execucao
     Uso.anotar!(account_id: @tool.account_id, fonte: @fonte.chave, desfecho: desfecho, motivos: motivos)
   rescue StandardError => e
     Rails.logger.warn("#{PREFIXO} contador falhou conta=#{@tool.account_id} fonte=#{@fonte&.chave} #{e.class}")
+    ChatwootExceptionTracker.new(e, account: @tool.account).capture_exception
   end
 
   def registrar(desfecho, motivos)
@@ -136,12 +155,5 @@ class Autonomia::FerramentasProntas::Execucao
                consulta: @consulta&.nome, desfecho: desfecho, provedor: @provedor, chamadas: @cliente&.chamadas.to_i,
                ms: ((ClienteHttp.agora - @inicio) * 1000).round, motivos: motivos.presence&.join(',') }
     Rails.logger.info("#{PREFIXO} #{campos.map { |nome, valor| "#{nome}=#{valor.nil? ? '-' : valor}" }.join(' ')}")
-  end
-
-  # O cache é da fonte, não da conta: o dado é público e igual para todas (o mesmo CEP tem o mesmo endereço). A chave
-  # leva o resumo dos parâmetros, não o CEP ou o CNPJ em claro.
-  def chave_do_cache(params)
-    resumo = Digest::SHA256.hexdigest(@consulta.chave_do_cache(params).to_json)
-    "autonomia:prontas:#{VERSAO_DO_CACHE}:#{@fonte.chave}:#{@consulta.nome}:#{resumo}"
   end
 end
