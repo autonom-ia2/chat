@@ -29,7 +29,8 @@ require 'rails_helper'
 # - o card ganho (passo 8, G5).
 #
 # A campanha sai pelo caminho de produção (Campaigns::TriggerOneoffCampaignJob, OneoffCampaignService do EE), que grava
-# o destinatário e para no receptor da Graph (F9.7). O cliente responde pelo webhook real da Cloud. A IA é o dublê.
+# o destinatário e para no receptor da Graph (F9.7). O cliente responde pelo webhook real da Cloud. A IA é o dublê; o
+# extrair responde pelo texto que o pedido levou a ela.
 # O card de quem quer comprar é da IA de assunto ("Convive"): aqui ele já existe, criado pelo Crm::Cards::Creator, como
 # ela o criaria; a IA de assunto é paga e não roda no teste.
 # As etiquetas se escrevem como a plataforma aceita (minúsculas, sem espaço): `já_comprou`, `perguntou_na_black`,
@@ -100,6 +101,17 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
   def textos(chave) = conversa_de(chave).messages.outgoing.where(private: false).pluck(:content)
   def historico(nome) = historico_de('id' => Autonomia::Automacao::Definicao.find_by!(account: account, nome: nome).id)
 
+  # O extrair responde pelo que leu: "Quero o vestido azul no M, separa pra mim!" → peça, cor e tamanho, palavra a palavra
+  # do texto que o pedido levou à IA; sem o dado, nulo.
+  def peca_do_texto(mensagem)
+    palavras = mensagem.to_s.split('] ', 2).last.delete(',!').split
+    peca = palavras.index('o')
+    tamanho = palavras.index('no')
+    { 'peca' => peca && palavras[peca + 1], 'cor' => peca && palavras[peca + 2], 'tamanho' => tamanho && palavras[tamanho + 1] }
+  end
+
+  def parametro(chamada) = chamada.corpo.dig('template', 'components', 0, 'parameters', 0, 'text')
+
   def preparar_conta
     account.update!(locale: 'pt_BR', reporting_timezone: fuso.name, custom_attributes: { 'timezone' => fuso.name })
     flags_do_piloto(account)
@@ -149,7 +161,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     stub_request(:get, ->(uri) { uri.host == 'graph.facebook.com' && uri.path.end_with?('/message_templates') })
       .to_return(status: 200, body: { data: ex.modelos.each_with_index.map { |modelo, i| modelo.merge('id' => "70#{i}") } }.to_json,
                  headers: { 'Content-Type' => 'application/json' })
-    ia_responde(account, roteiro)
+    ia_responde(account, ->(nome, corpo) { nome == 'automacao_extrair' ? peca_do_texto(mensagens_lidas(corpo).last) : roteiro.fetch(nome) })
     as('2026-11-20 10:00') do
       preparar_conta
       cadastrar_clientes
@@ -163,7 +175,6 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
   # Quinta às 9h; a Ana quer comprar e a Elisa pergunta.
   def quinta
     varrer_as('2026-11-26 09:05')
-    roteiro['automacao_extrair'] = { 'peca' => 'vestido', 'cor' => 'azul', 'tamanho' => 'M' }
     responde_as('2026-11-26 10:00', :ana, 'Quero o vestido azul no M, separa pra mim!', decide: 'quer_comprar')
     responde_as('2026-11-26 10:30', :elisa, 'Até que horas a loja abre na sexta?', decide: 'so_duvida')
   end
@@ -209,12 +220,19 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     expect(para('pre_black')).to contain_exactly('+5511900000701', '+5511900000702', '+5511900000703', '+5511900000704',
                                                  '+5511900000705')
     expect(sexta_feira.campaign_recipients.find_by!(contact: cliente(:gil)).status).to eq('skipped')
+    # A da sexta sai com o texto fixo da sexta: "A Black começa hoje".
+    da_quinta = %w[+5511900000701 +5511900000702]
+    sexta_enviados = enviados('pre_black').reject { |chamada| da_quinta.include?(chamada.corpo['to']) }
+    expect(sexta_enviados.map { |chamada| parametro(chamada) }.uniq).to eq(['hoje'])
     expect(historico('Pré-Black')).to eq([['ja_compraram', 'ok', nil], ['ate_sexta_8h', 'ok', nil], ['todos_os_outros', 'ok', nil]])
   end
 
   it 'passos 3 e 4: a Ana quer comprar; a IA extrai peça, cor e tamanho, e o card dela fica com eles', :aggregate_failures do
     quinta
 
+    # O que o card guarda é o que o dublê tirou do texto que o pedido levou à IA, não um valor do teste.
+    extrair = ia_recebeu.find { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_extrair' }
+    expect(mensagens_lidas(extrair).last).to end_with('Quero o vestido azul no M, separa pra mim!')
     expect(card_de(:ana).reload.custom_attributes).to include('peca' => 'vestido', 'cor' => 'azul', 'tamanho' => 'M')
     expect(conversa_de(:ana).custom_attributes).to include('peca' => 'vestido', 'cor' => 'azul', 'tamanho' => 'M')
     decidir = ia_recebeu.find { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_decidir' }
@@ -242,14 +260,37 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     expect(textos(:duda)).to eq(['Pronto, você não recebe mais promoções'])
     expect(cliente(:duda).label_list).to include(ex::NAO_ENVIAR)
     expect(cliente(:duda)).to be_opted_out
+
+    # "Tira a pessoa de todas as campanhas": a campanha seguinte, para todos os contatos, pula a Duda.
+    seguinte = campanha_para_todos('2026-11-27 12:00')
+    expect(seguinte.campaign_recipients.find_by!(contact: cliente(:duda)).status).to eq('skipped')
+    expect(para('ultimas_horas')).not_to include('+5511900000705')
+    expect(para('ultimas_horas')).to include('+5511900000703')
+  end
+
+  # Uma campanha da tela para todos os contatos, disparada na hora.
+  def campanha_para_todos(hora)
+    as(hora) do
+      campanha = account.campaigns.create!(
+        title: 'Black: todos', inbox: inbox, sender: vanessa, scheduled_at: Time.current, message: 'Últimas horas da Black! Vem.',
+        template_params: { 'name' => 'ultimas_horas', 'language' => 'pt_BR', 'category' => 'MARKETING',
+                           'processed_params' => { 'body' => { '1' => 'Vem.' } } },
+        audience: Autonomia::Automacao::CampanhaSemEtiquetas.todos
+      )
+      Campaigns::TriggerOneoffCampaignJob.perform_now(campanha)
+      campanha
+    end
   end
 
   it 'mensagem que não responde à Pré-Black não abre a automação da resposta', :aggregate_failures do
     quinta
     as('2026-11-26 11:00') { cliente_escreve_pela_cloud(canal, remetente: '5511900000799', nome: 'Ivo', texto: 'Oi, quero comprar') }
 
+    da_conversa_de = ->(nome) { Autonomia::Automacao::Execucao.where(alvo: account.conversations.joins(:contact).where(contacts: { name: nome })) }
     expect(account.conversations.joins(:contact).where(contacts: { name: 'Ivo' })).to exist
-    expect(Autonomia::Automacao::Execucao.where(alvo: account.conversations.joins(:contact).where(contacts: { name: 'Ivo' }))).to be_empty
+    expect(da_conversa_de.call('Ivo')).to be_empty
+    # Controle: a mesma consulta acha a execução da Elisa, que respondeu à Pré-Black.
+    expect(da_conversa_de.call('Elisa')).to exist
   end
 
   it 'passo 8: o card da Carla ganho põe "comprou na Black 2026" e "já comprou"' do
@@ -271,6 +312,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
 
     ultimas = campanha('Últimas horas').sole
     expect(para('ultimas_horas')).to eq(['+5511900000704'])
+    expect(enviados('ultimas_horas').map { |chamada| parametro(chamada) }).to eq(['Corre que acaba hoje.'])
     # A Elisa perguntou e depois pediu para sair (passo 6): fica de fora pela recusa, como em toda campanha.
     expect(ultimas.campaign_recipients.find_by!(contact: cliente(:elisa)).status).to eq('skipped')
     expect(ultimas.campaign_recipients.where(contact: cliente(:carla))).to be_empty

@@ -34,7 +34,7 @@ require 'rails_helper'
 # - Passo 9, "grava no card": o extrair grava na conversa, e uma ação por campo copia para o card ($valor, G16), como no
 #   exemplo 1 (valor vazio pula a ação inteira).
 # - Passo 10, "coloca na campanha mensal de lançamentos": pôr alguém numa campanha é pôr a etiqueta do público dela
-#   (G14), aqui `lancamentos`.
+#   (G14), aqui `lancamentos`; a campanha do mês, montada na tela de Campanhas com esse público, chega à Ana.
 RSpec.describe 'Fechamento #2414 · exemplo 2: lead do anúncio atendido em 5 minutos', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
   include FechamentoAutomacao::Canais
@@ -47,6 +47,9 @@ RSpec.describe 'Fechamento #2414 · exemplo 2: lead do anúncio atendido em 5 mi
   let(:canal) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
   let(:account) { canal.account }
   let(:marcio) { create(:user, account: account, role: :administrator, name: 'Márcio Imóveis') }
+  # A outra corretora da caixa nasce antes do Paulo: sem a Atribuição do funil, a fila daria o lead a ela (menor id). O
+  # Paulo é o corretor deste anúncio pela pessoa fixa da Atribuição, não por ser o único da caixa.
+  let!(:outra_corretora) { create(:user, account: account, role: :agent, name: 'Bia Corretora') }
   let(:corretor) { create(:user, account: account, role: :agent, name: 'Paulo Corretor') }
   let(:funil_e_entrada) { create_crm_pipeline(account: account, user: marcio, name: 'Lançamentos') }
   let(:visita_marcada) { create_crm_stage(account: account, pipeline: funil, name: 'Visita marcada', position: 1) }
@@ -58,7 +61,6 @@ RSpec.describe 'Fechamento #2414 · exemplo 2: lead do anúncio atendido em 5 mi
                                      instruction: 'Você é a Sofia, da imobiliária. Tire dúvidas de preço, vaga e condomínio.')
   end
   let(:escolhas) { [] }
-  let(:extraido) { { 'bairro' => 'Moema', 'quartos' => '3', 'valor' => '900 mil' } }
   let(:automacao) { montar_automacao(marcio, account, nome: 'Lead do anúncio atendido em 5 minutos', receita: receita) }
 
   def fuso = ActiveSupport::TimeZone['America/Sao_Paulo']
@@ -144,27 +146,36 @@ RSpec.describe 'Fechamento #2414 · exemplo 2: lead do anúncio atendido em 5 mi
     end
   end
 
+  # O dublê da IA responde pelo que leu: o decidir segue a fila do exemplo; o extrair e o resumo saem do texto da Ana que
+  # o pedido levou (nada inventado aqui chega ao card ou ao aviso).
   def roteiro_da_ia
     fila = escolhas
-    dados = extraido
-    roteiro = Object.new
-    roteiro.define_singleton_method(:fetch) do |schema|
+    lambda do |schema, corpo|
       case schema
       when 'automacao_decidir' then { 'caminho' => fila.shift, 'motivo' => 'Pela conversa.' }
-      when 'automacao_extrair' then dados
-      else { 'resumo' => 'A Ana perguntou o condomínio (R$ 600) e a vaga; pode pagar até R$ 800 mil.' }
+      when 'automacao_extrair' then o_que_a_ana_procura(mensagens_lidas(corpo).last.to_s.split('] ', 2).last)
+      else { 'resumo' => "Perguntas da Ana: #{perguntas_da_ana(mensagens_lidas(corpo)).join(' ')}" }
       end
     end
-    roteiro
   end
+
+  # "Esse não. Queria 3 quartos em Moema, até 900 mil." → bairro, quartos e valor, palavra a palavra; sem o dado, nulo.
+  def o_que_a_ana_procura(texto)
+    palavras = texto.to_s.delete('.,').split
+    depois = ->(marca, passo = 1) { (indice = palavras.index(marca)) && palavras[indice + passo] }
+    { 'bairro' => depois.call('em'), 'quartos' => depois.call('quartos', -1),
+      'valor' => (indice = palavras.index('até')) && palavras[(indice + 1)..].join(' ') }
+  end
+
+  def perguntas_da_ana(mensagens) = mensagens.filter_map { |mensagem| mensagem.delete_prefix('Customer: ') if mensagem.start_with?('Customer: ') }
 
   before do
     account.update!(locale: 'pt_BR', reporting_timezone: fuso.name, custom_attributes: { 'timezone' => fuso.name })
     flags_do_piloto(account)
     account.enable_features!('automacao_gatilhos', 'crm_booking_v2')
-    create(:inbox_member, user: corretor, inbox: caixa)
+    [outra_corretora, corretor].each { |pessoa| create(:inbox_member, user: pessoa, inbox: caixa) }
     account.crm_pipeline_inboxes.create!(pipeline: funil, inbox: caixa)
-    funil.update!(metadata: { 'ai' => { 'handoff' => { 'enabled' => true } } })
+    funil.update!(metadata: { 'ai' => { 'handoff' => { 'enabled' => true, 'pool_type' => 'user', 'pool_id' => corretor.id } } })
     allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
     canal.update!(message_templates: [modelo_aprovado])
     %w[frio lancamentos].each { |titulo| create(:label, account: account, title: titulo) }
@@ -234,6 +245,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 2: lead do anúncio atendido em 5 mi
      :aggregate_failures do
     lead_chega
 
+    expect(Crm::Entrega::QuemCuida.na_caixa(inbox: caixa, pipeline_id: funil.id)).to include(outra_corretora, corretor)
     expect(card).to have_attributes(source: Crm::MetaAds::LeadForms::Importer::SOURCE, owner: corretor)
     expect(card.contact.label_list).to eq(['apartamento_jardim'])
     modelo = whatsapp.sole
@@ -295,9 +307,14 @@ RSpec.describe 'Fechamento #2414 · exemplo 2: lead do anúncio atendido em 5 mi
     expect(card.reload.stage).to eq(visita_marcada)
     expect(execucao.reload.estado).to eq('concluida')
     aviso = conversa.messages.where(private: true).find_by('content LIKE ?', "%mention://user/#{corretor.id}/%")
-    expect(aviso.content).to include('condomínio', 'R$ 800 mil')
+    # O resumo é o que a Ana escreveu à Sofia, lido do pedido à IA, que levou também a resposta da Sofia.
+    expect(aviso.content).to include('Perguntas da Ana: Qual o valor do condomínio? Quero visitar amanhã de manhã')
     pedido = ia_recebeu.find { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_resumir' }
     expect(pedido.to_json).to include('O condomínio é R$ 600,00')
+    # F4.5: o aviso chega no sino do corretor do anúncio, com o link da conversa; a outra corretora não é avisada.
+    sino = Notification.where(user: corretor, notification_type: 'conversation_mention').sole
+    expect(sino).to have_attributes(primary_actor: conversa)
+    expect(Notification.where(user: outra_corretora, notification_type: 'conversation_mention')).to be_empty
   end
 
   it 'passo 9: quer outro imóvel grava bairro, quartos e valor no card e o corretor ganha o retorno de mandar opções',
@@ -307,6 +324,9 @@ RSpec.describe 'Fechamento #2414 · exemplo 2: lead do anúncio atendido em 5 mi
 
     ana_escreve('2026-11-10 10:20', 'Esse não. Queria 3 quartos em Moema, até 900 mil.')
 
+    # O que o card guarda é o que o dublê tirou do texto que o pedido levou à IA, não um valor do teste.
+    pedido = ia_recebeu.find { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_extrair' }
+    expect(mensagens_lidas(pedido).last).to end_with('Esse não. Queria 3 quartos em Moema, até 900 mil.')
     expect(card.reload.custom_attributes).to include('bairro' => 'Moema', 'quartos' => '3', 'valor' => '900 mil')
     expect(Crm::FollowUp.sole).to have_attributes(title: 'Mandar opções de imóveis para Ana', card_id: card.id, recipient_mode: 'card_owner')
     expect(execucao.reload.estado).to eq('concluida')
@@ -321,5 +341,28 @@ RSpec.describe 'Fechamento #2414 · exemplo 2: lead do anúncio atendido em 5 mi
     expect(card.contact.reload.label_list).to contain_exactly('apartamento_jardim', 'frio', 'lancamentos')
     expect(Crm::FollowUp.count).to eq(0)
     expect(execucao.reload.estado).to eq('concluida')
+
+    # A campanha mensal de lançamentos, como o Márcio monta na tela de Campanhas, com o público "lancamentos": a Ana recebe.
+    campanha_de_lancamentos
+    lancamentos = whatsapp.select { |corpo| corpo.dig('template', 'name') == 'lancamentos' }
+    expect(lancamentos.map { |corpo| corpo['to'].delete('+') }).to eq(['5511987650002'])
+  end
+
+  def campanha_de_lancamentos
+    modelo = { 'name' => 'lancamentos', 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'MARKETING',
+               'components' => [{ 'type' => 'BODY', 'text' => 'Os lançamentos de {{1}} chegaram. Quer conhecer?' }] }
+    account.enable_features!('whatsapp_campaign')
+    canal.update!(message_templates: [modelo_aprovado, modelo])
+    stub_request(:get, ->(uri) { uri.host == 'graph.facebook.com' && uri.path.end_with?('/message_templates') })
+      .to_return(status: 200, body: { data: [modelo.merge('id' => '9002')] }.to_json, headers: { 'Content-Type' => 'application/json' })
+    as('2026-11-10 11:00') do
+      campanha = account.campaigns.create!(
+        title: 'Lançamentos do mês', inbox: caixa, sender: marcio, scheduled_at: Time.current, message: 'Os lançamentos de novembro chegaram.',
+        template_params: { 'name' => 'lancamentos', 'language' => 'pt_BR', 'category' => 'MARKETING',
+                           'processed_params' => { 'body' => { '1' => 'novembro' } } },
+        audience: [{ 'type' => 'Label', 'id' => account.labels.find_by!(title: 'lancamentos').id }]
+      )
+      Campaigns::TriggerOneoffCampaignJob.perform_now(campanha)
+    end
   end
 end

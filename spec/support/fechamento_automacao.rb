@@ -81,13 +81,21 @@ module FechamentoAutomacao
     stub_request(:post, OPENAI).to_return do |pedido|
       corpo = JSON.parse(pedido.body)
       ia_recebeu << corpo
-      resposta = roteiro.fetch(corpo.dig('text', 'format', 'name'))
+      nome = corpo.dig('text', 'format', 'name')
+      # O roteiro que responde pelo que leu (um callable) recebe também o pedido; o Hash responde só pelo schema.
+      resposta = roteiro.respond_to?(:call) ? roteiro.call(nome, corpo) : roteiro.fetch(nome)
       payload = { id: "resp_#{ia_recebeu.size}", output_text: resposta.to_json, usage: { input_tokens: 800, output_tokens: 120 } }
       { status: 200, body: payload.to_json, headers: { 'Content-Type' => 'application/json' } }
     end
   end
 
   def ia_recebeu = (@ia_recebeu ||= [])
+
+  # As mensagens da conversa que o pedido levou à IA (`conversa.messages` da entrada), para o dublê responder pelo que leu.
+  def mensagens_lidas(corpo)
+    texto = corpo.dig('input', 0, 'content', 0, 'text')
+    texto ? Array(JSON.parse(texto).dig('conversa', 'messages')) : []
+  end
 
   def historico_de(automacao)
     Autonomia::Automacao::Registro.where(automacao_id: automacao['id']).order(:id).pluck(:passo, :resultado, :motivo)

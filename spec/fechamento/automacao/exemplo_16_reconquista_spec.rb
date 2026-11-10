@@ -47,6 +47,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 16: reconquistar quem foi para o con
 
   let(:canal) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
   let(:juliana) { create(:user, account: account, role: :administrator, name: 'Juliana Corretora') }
+  # A Lia também atende a caixa: o corretor de antes é o dono do card antigo, não o único que poderia receber.
+  let!(:lia) { create(:user, account: account, role: :agent, name: 'Lia Corretora') }
   let(:rafael) { create(:user, account: account, role: :agent, name: 'Rafael Corretor') }
   let(:funil) { account.crm_pipelines.create!(name: 'Comercial', created_by: juliana, status: :active) }
   let(:proposta) { account.crm_pipeline_stages.create!(pipeline: funil, name: 'Proposta', position: 0) }
@@ -72,7 +74,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 16: reconquistar quem foi para o con
   def account = canal.account
   def caixa = canal.inbox
   def dia_primeiro = fuso.local(2026, 11, 1, 9)
-  def texto_da_ia = 'Ana, da outra vez o preço pesou; este ano consigo melhor. Posso cotar?'
+  # O que o dublê escreve a partir do motivo da perda que o pedido levou à IA (o card antigo da Ana: "achou caro").
+  def texto_da_ia = 'Da outra vez você achou caro; este ano consigo melhor. Posso cotar?'
   def do_dia_primeiro = automacoes.first
   def da_resposta = automacoes.last
   %i[ana bruno eva caio davi].each { |nome| define_method(nome) { perdidos.fetch(nome) } }
@@ -139,14 +142,15 @@ RSpec.describe 'Fechamento #2414 · exemplo 16: reconquistar quem foi para o con
       'components' => [{ 'type' => 'BODY', 'text' => 'Seu seguro está vencendo. {{1}}' }] }
   end
 
+  # O dublê responde pelo que leu: o escrever monta a frase com o motivo da perda do card que veio no pedido.
   def roteiro_da_ia
     fila = escolhas
-    escrito = texto_da_ia
-    roteiro = Object.new
-    roteiro.define_singleton_method(:fetch) do |schema|
-      schema == 'automacao_escrever' ? { 'texto' => escrito } : { 'caminho' => fila.shift, 'motivo' => 'Pela resposta.' }
+    lambda do |schema, corpo|
+      next { 'caminho' => fila.shift, 'motivo' => 'Pela resposta.' } unless schema == 'automacao_escrever'
+
+      motivo = JSON.parse(corpo.dig('input', 0, 'content', 0, 'text')).dig('conversa', 'card', 'lost_reason')
+      { 'texto' => "Da outra vez você #{motivo}; este ano consigo melhor. Posso cotar?" }
     end
-    roteiro
   end
 
   def perdido(nome, telefone, dias, motivo, dono: rafael)
@@ -185,7 +189,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 16: reconquistar quem foi para o con
     account.update!(locale: 'pt_BR', reporting_timezone: fuso.name, custom_attributes: { 'timezone' => fuso.name })
     flags_do_piloto(account)
     account.enable_features!('automacao_gatilhos', 'whatsapp_campaign', 'crm_booking_v2')
-    create(:inbox_member, user: rafael, inbox: caixa)
+    [lia, rafael].each { |pessoa| create(:inbox_member, user: pessoa, inbox: caixa) }
     account.crm_pipeline_inboxes.create!(pipeline: funil, inbox: caixa)
     agenda_do_rafael
     canal.update!(message_templates: [modelo_aprovado])
@@ -210,6 +214,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 16: reconquistar quem foi para o con
                                                       audience: [{ 'type' => 'Label', 'id' => reconquista.id }])
     expect(modelos_enviados.pluck('to')).to contain_exactly('+5511900001601', '+5511900001602', '+5511900001605')
     expect(modelos_enviados.map { |corpo| corpo.dig('template', 'name') }.uniq).to eq(['seguro_vencendo'])
+    expect(modelos_enviados.map { |corpo| corpo.dig('template', 'components', 0, 'parameters', 0, 'text') }.uniq)
+      .to eq(['Este ano consigo um preço melhor.'])
     expect(execucoes(do_dia_primeiro).map { |execucao| execucao.alvo.contact }).to contain_exactly(ana, bruno, eva)
   end
 
@@ -236,10 +242,13 @@ RSpec.describe 'Fechamento #2414 · exemplo 16: reconquistar quem foi para o con
       lido = JSON.parse(escrever['input'].sole.fetch('content').sole['text'])
       expect(lido.dig('conversa', 'card')).to include('status' => 'lost', 'lost_reason' => 'achou caro')
       expect(escrever['instructions']).to include('motivo da perda gravado no card antigo')
-      expect(textos_para(ana)).to eq([texto_da_ia])
+      # A resposta fala do motivo que o card antigo da Ana guarda, lido no pedido à IA.
+      expect(textos_para(ana)).to eq(['Da outra vez você achou caro; este ano consigo melhor. Posso cotar?'])
       card_novo = account.crm_cards.where(contact: ana, status: :open).sole
       expect(card_novo).to have_attributes(pipeline: funil, stage: novo, source: 'reconquista', owner: rafael)
+      expect(card_novo.contact).to eq(ana)
       expect(conversa_de(ana).reload.assignee).to eq(rafael)
+      expect(caixa.inbox_members.pluck(:user_id)).to contain_exactly(lia.id, rafael.id)
       filha = execucoes(da_resposta).where('evento LIKE ?', 'em:%').sole
       expect(filha).to have_attributes(alvo: account.crm_cards.find_by!(contact: ana, status: :lost), estado: 'esperando',
                                        cursor: 'corretor_responde')
@@ -293,8 +302,13 @@ RSpec.describe 'Fechamento #2414 · exemplo 16: reconquistar quem foi para o con
 
       responde(eva, dia_primeiro + 1.hour, 'Não quero mais contato, por favor.')
 
+      # O termo diz "registra" sem dizer o quê: fica a recusa no contato (origem manual, por quem ligou a automação, na
+      # hora da resposta) e o registro do passo no histórico, com o contato.
       expect(eva.reload).to be_opted_out
+      expect(eva).to have_attributes(opt_out_source: 'manual', opted_out_by_id: juliana.id, opted_out_at: dia_primeiro + 1.hour)
       expect(historico_de(da_resposta).last).to eq(['nunca_mais', 'ok', nil])
+      expect(Autonomia::Automacao::Registro.where(automacao_id: da_resposta['id'], passo: 'nunca_mais').sole.dados)
+        .to eq('contato_id' => eva.id)
       expect(textos_para(eva)).to be_empty
 
       # No mês seguinte um card novo entra na seleção, e a campanha vai a todos com a etiqueta, menos a Eva.
