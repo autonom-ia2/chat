@@ -41,14 +41,19 @@ const incluirTambem = async () => {
 };
 
 const tituloDoQuadro = () => {
-  if (props.semPermissao) return t(`${NS}.JA_VEM.TITULO_SEM_PERMISSAO`, { nome: props.nome });
-  if (soTambem.value) return t(`${NS}.JA_VEM.TITULO_SO_TAMBEM`, { nome: props.nome });
+  if (props.semPermissao)
+    return t(`${NS}.JA_VEM.TITULO_SEM_PERMISSAO`, { nome: props.nome });
+  if (soTambem.value)
+    return t(`${NS}.JA_VEM.TITULO_SO_TAMBEM`, { nome: props.nome });
   return t(`${NS}.JA_VEM.TITULO`, { nome: props.nome });
 };
 
 const textoDoQuadro = () => {
   if (props.semPermissao) {
-    return t(`${NS}.JA_VEM.SEM_PERMISSAO`, { nome: props.nome, ferramentas: nomes() });
+    return t(`${NS}.JA_VEM.SEM_PERMISSAO`, {
+      nome: props.nome,
+      ferramentas: nomes(),
+    });
   }
   if (soTambem.value) return t(`${NS}.JA_VEM.TEXTO_SO_TAMBEM`);
   return t(`${NS}.JA_VEM.TEXTO`);
