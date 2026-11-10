@@ -54,7 +54,9 @@ class Crm::BookingV2::PostMeeting
   end
 
   def move!(stage)
-    card = Crm::Cards::Mover.new(card: meeting.card, actor: actor, target_stage: stage).perform
+    # #1920: a etapa vem da configuração do agendamento, não de uma escolha de quem marcou "Aconteceu".
+    card = Crm::Cards::Mover.new(card: meeting.card, actor: actor, target_stage: stage,
+                                 automation_context: { source: 'booking_post_meeting' }).perform
     Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_MOVED)
     true
   end

@@ -289,7 +289,7 @@ class Crm::Pipelines::Archiver
 
   def move_activity(card, target, now)
     {
-      account_id: @pipeline.account_id, card_id: card.id, actor_type: @actor ? @actor.class.name.underscore : 'system',
+      account_id: @pipeline.account_id, card_id: card.id, actor_type: Crm::Activity.actor_type_for(@actor),
       actor_id: @actor&.id, event_type: 'move', created_at: now,
       payload: { from_pipeline_id: @pipeline.id, to_pipeline_id: target.pipeline_id,
                  from_stage_id: card.stage_id_before_last_save, to_stage_id: target.id,
