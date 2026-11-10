@@ -39,7 +39,9 @@ class Autonomia::FerramentasProntas::Uso < ApplicationRecord
         RETURNING consultas
       SQL
       comando = sanitize_sql_array([sql, { conta: account_id, fonte: fonte, dia: hoje, limite: limite.to_i }])
-      uncached { connection.select_value(comando) }.present?
+      contou = uncached { connection.select_value(comando) }.present?
+      connection.clear_query_cache # a escrita não passou pelo caminho que suja o cache: leitura seguinte relê a linha
+      contou
     end
 
     # Soma 1 no desfecho (`DESFECHOS`) e em cada motivo. Desfecho fora da lista é defeito nosso: levanta.
