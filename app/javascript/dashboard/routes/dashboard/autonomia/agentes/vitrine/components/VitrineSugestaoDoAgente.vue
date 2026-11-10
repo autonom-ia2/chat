@@ -95,12 +95,15 @@ watch(() => [props.agenteId, construtor.value], ler);
 </script>
 
 <template>
-  <VitrineSugestao
-    v-if="construtor && primeira"
-    :nome="nome"
-    :ferramenta-id="primeira"
-    :incluindo="incluindo"
-    @incluir="incluir"
-    @dispensar="dispensar"
-  />
+  <!-- display: contents: sem cartão, nada ocupa espaço na coluna da página. -->
+  <div class="contents">
+    <VitrineSugestao
+      v-if="construtor && primeira"
+      :nome="nome"
+      :ferramenta-id="primeira"
+      :incluindo="incluindo"
+      @incluir="incluir"
+      @dispensar="dispensar"
+    />
+  </div>
 </template>
