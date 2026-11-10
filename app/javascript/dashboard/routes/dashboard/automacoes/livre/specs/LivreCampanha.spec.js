@@ -286,9 +286,7 @@ describe('LivreCampanha', () => {
     );
 
     expect(daExecucao).not.toHaveProperty('sem_etiquetas');
-    expect(montar(daExecucao).find('[data-campanha-sem]').exists()).toBe(
-      false
-    );
+    expect(montar(daExecucao).find('[data-campanha-sem]').exists()).toBe(false);
   });
 
   it('escolher "só quem esta automação criou" emite o público sem etiquetas', () => {
