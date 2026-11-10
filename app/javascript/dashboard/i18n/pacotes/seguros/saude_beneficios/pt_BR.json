@@ -729,6 +729,24 @@
     },
     "TUNE": {
       "GREETING_PLACEHOLDER": "Olá! Tudo bem? Como posso ajudar com o seu plano de saúde?"
+    },
+    "VITRINE": {
+      "DESTAQUE": {
+        "RAMO": "Mais usadas por quem trabalha com plano de saúde"
+      },
+      "FERRAMENTAS": {
+        "FIPE": {
+          "USE_QUANDO": "Use quando o cliente quiser saber quanto vale um carro, moto ou caminhão.",
+          "CLIENTE": "Quanto vale meu Onix 2020?",
+          "AGENTE": "O Onix LT 1.0 2020 vale R$ 60.822 na tabela deste mês."
+        },
+        "CEP": {
+          "USE_QUANDO": "Use quando o cliente informar um CEP ou quando for preciso completar o endereço do titular do plano."
+        },
+        "CPF": {
+          "USE_QUANDO": "Use quando o cliente informar o CPF do titular ou de um dependente, para conferir se o número está certo."
+        }
+      }
     }
   },
   "RELATIONSHIPS": {

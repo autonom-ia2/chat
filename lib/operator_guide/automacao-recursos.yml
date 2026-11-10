@@ -194,6 +194,7 @@ fora:
       - autonomia/agents/playground
       - autonomia/agents/sources
       - autonomia/agents/tools
+      - autonomia/ferramentas_prontas
       - autonomia/quem_atende
       - autonomia/conversation_copilot
       - autonomia/text_copilot
