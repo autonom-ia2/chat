@@ -31,6 +31,8 @@
 # Página sem trecho de texto (escaneada) fica com o `page.text`, e o OCR segue como antes. Colunas e texto girado saem na
 # mesma ordem do `page.text`: a remontagem não melhora nem piora esses casos.
 module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
+  include Autonomia::Agents::Knowledge::Processors::PdfParagrafos::FontesDaLinha
+
   # Duas linhas na mesma altura: diferença de até metade do tamanho da letra.
   MESMA_LINHA = 0.5
   # Espaço entre linhas acima de 1,5 vez o normal do documento fecha o parágrafo.
@@ -93,18 +95,8 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
   def linha(trechos)
     texto = Autonomia::Agents::Knowledge::Processors::PdfTrechos.juntar(trechos, sobreposto: true).strip
     { y: trechos.first.y, direita: trechos.map { |trecho| trecho.x + trecho.width }.max, letra: letra_da_linha(trechos),
-      fonte: fonte_da_linha(trechos), texto: texto,
+      fonte: fonte_da_linha(trechos), fonte_principal: fonte_principal(trechos), texto: texto,
       trechos: trechos.map { |trecho| { x: trecho.x, fim: trecho.x + trecho.width, texto: texto_do(trecho).strip } } }
-  end
-
-  # A letra da linha é a que cobre mais texto nela: uma palavra maior no meio não faz da linha um título.
-  def letra_da_linha(trechos)
-    trechos.group_by { |trecho| letra_do(trecho) }.max_by { |_, mesmos| mesmos.sum { |trecho| texto_do(trecho).length } }.first
-  end
-
-  # As fontes da linha: a que cobre mais caracteres em cada trecho (o acento ou a pontuação noutra fonte não conta).
-  def fonte_da_linha(trechos)
-    trechos.to_set { |trecho| trecho.fontes.max_by(&:last).first }
   end
 
   def letra_do(trecho)
@@ -141,12 +133,22 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
     espacos.empty? ? 0 : espacos[(espacos.size - 1) / 2]
   end
 
-  # Fecha o parágrafo: espaço de parágrafo, outro tamanho de letra, ou outra fonte quando a linha de cima termina antes da
-  # margem direita (título, ou fim de parágrafo). Linha cheia até a margem com outra fonte (trecho em negrito no meio do
-  # parágrafo) continua.
+  # Fecha o parágrafo: espaço de parágrafo, outro tamanho de letra, outra fonte quando a linha de cima termina antes da
+  # margem direita (título, ou fim de parágrafo), ou o título curto em cima de uma linha de texto comum. Linha cheia até a
+  # margem com outra fonte (trecho em negrito no meio do parágrafo) continua.
   def quebra?(anterior, atual, pagina)
     separado?(anterior, atual, pagina[:normal]) || !mesmo_tamanho?(anterior, atual) ||
-      (!anterior[:fonte].intersect?(atual[:fonte]) && troca_de_bloco?(anterior, atual, pagina))
+      (!anterior[:fonte].intersect?(atual[:fonte]) && troca_de_bloco?(anterior, atual, pagina)) ||
+      titulo_sobre_o_texto?(anterior, atual, pagina)
+  end
+
+  # #2845 — o título curto fora da fonte do corpo, em cima da linha cujo texto é quase todo na fonte do corpo, mesmo que ela
+  # comece com o número do item na fonte do título ("1.3.1. As condições…"): o conjunto de fontes das duas linhas se cruza,
+  # mas a de baixo é texto comum. Só nesse sentido: a ênfase que termina numa linha curta toda em negrito continua. Limite
+  # conhecido: a linha curta toda em negrito que fecha uma frase (um e-mail, o fim de uma cláusula em negrito) em cima de um
+  # item numerado tem a mesma geometria de um título e sai como título (2 linhas no PDF residencial da #2845).
+  def titulo_sobre_o_texto?(anterior, atual, pagina)
+    atual[:fonte_principal] == pagina[:fonte_do_corpo] && titulo_curto?(anterior, pagina)
   end
 
   def mesmo_tamanho?(anterior, atual)

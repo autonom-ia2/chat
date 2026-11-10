@@ -1280,3 +1280,14 @@
   display_name: RAG › busca híbrida
   enabled: false
   column: feature_flags_ext_2
+
+# Agentes: ferramentas prontas, F0 (#2858): a fundação, sem tela. Ligada: a ferramenta pronta do agente (uma fonte do
+# catálogo, nunca um link digitado) entra no turno e consulta a fonte com prazo curto, reserva, cache, contador e limite
+# diário por conta e por fonte. Desligada: as prontas somem do turno e o "Incluir" recusa; o resto fica como antes. A
+# Lia fica de fora. Migration 20261109980000 (aditiva). Rollback: desligar a flag na conta.
+# Posição 37 (68719476736, 1 << 36), dada pela Orquestração em 10/11. Depois do NO AR, liga em todas as contas ativas
+# das 2 stacks (regra de 07/11).
+- name: agente_ferramentas_prontas
+  display_name: Agentes › ferramentas prontas (fundação)
+  enabled: false
+  column: feature_flags_ext_2

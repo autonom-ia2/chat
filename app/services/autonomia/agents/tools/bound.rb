@@ -24,8 +24,10 @@ class Autonomia::Agents::Tools::Bound
   # depois as nativas (na ordem do catálogo).
   # `especialista` é quem vai usar o catálogo, quando é um especialista (`Specialist#tools`); o
   # principal (`Answerer`) monta sem ele.
+  # #2858: a ferramenta pronta (uma fonte do catálogo) entra só com a flag dela e fora da Lia (`FerramentasProntas.no_turno?`).
   def self.for_agent(agent, especialista: nil)
-    records = agent.tools.enabled.order(:id).map { |record| new(record: record, agent: agent) }
+    records = agent.tools.enabled.order(:id).select { |record| ::Autonomia::FerramentasProntas.no_turno?(record, agent) }
+                   .map { |record| new(record: record, agent: agent) }
     natives = Autonomia::Agents::Tools::Registry.for_agent(agent)
                                                 .map { |klass| new(native: klass, agent: agent, especialista: especialista) }
     records + natives
@@ -280,7 +282,8 @@ class Autonomia::Agents::Tools::Bound
     entrega = turno || delivery
     return consulta_no_turno(args, entrega, call) if ::Autonomia::Agents::Tools::ConsultaNoTurno.aplica?(@record, entrega)
 
-    Autonomia::Agents::Tools::HttpExecutor.new(tool: @record, params: args, turno: entrega).call
+    # #2858: a pronta executa pela fonte do catálogo (`FerramentasProntas::Execucao`), que nunca levanta.
+    ::Autonomia::FerramentasProntas.executor_para(@record, params: args, turno: entrega).call
   rescue Autonomia::Agents::Tools::HttpExecutor::Error => e
     recusa_http(e, delivery)
   end
