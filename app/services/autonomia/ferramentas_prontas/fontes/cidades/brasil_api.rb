@@ -10,8 +10,9 @@ class Autonomia::FerramentasProntas::Fontes::Cidades::BrasilApi < Autonomia::Fer
 
     uf = params.fetch('uf').upcase
     lista = lista!(get("/api/ibge/municipios/v1/#{uf}?providers=dados-abertos-br,gov,wikipedia"))
-    sufixo = " (#{Autonomia::FerramentasProntas::Ufs.nome(uf).upcase})"
-    nomes = lista.map { |item| exigir!(texto(objeto!(item)['nome'])).delete_suffix(sufixo) }
+    estado = Autonomia::FerramentasProntas::Ufs.nome(uf)
+    sufixos = [estado.upcase, I18n.transliterate(estado).upcase].uniq.map { |nome| " (#{nome})" }
+    nomes = lista.map { |item| sufixos.reduce(exigir!(texto(objeto!(item)['nome']))) { |nome, sufixo| nome.delete_suffix(sufixo) } }
     Autonomia::FerramentasProntas::Fontes::Cidades.cidades(uf, exigir!(nomes))
   end
 

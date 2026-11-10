@@ -44,6 +44,6 @@ module Autonomia::FerramentasProntas::Fontes::Localizacao
     ],
     limite_diario: 200,
     termos: 'Photon (uso justo, atribuição ODbL) e a sede mais próxima calculada aqui. Coordenada arredondada a ~110 m. ' \
-            'Cache de 30 dias. Nominatim fora (política da OSMF).'
+            'Cache de 30 dias.'
   )
 end

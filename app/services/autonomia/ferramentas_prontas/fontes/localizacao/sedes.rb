@@ -1,13 +1,15 @@
-# A sede de município mais próxima (reserva, sem rede), pela tabela das 5.570 sedes com coordenada
+# A sede de município mais próxima (reserva, sem rede), pela tabela de todas as sedes municipais com coordenada
 # (`lib/ferramentas_prontas/sedes_municipais.csv`: base "municipios-brasileiros", licença MIT, montada sobre os códigos e
 # nomes do IBGE). É uma APROXIMAÇÃO: perto da divisa, o ponto pode ser do município vizinho. A resposta diz isso e não
-# vai ao cache (`VALIDADE = 0`), para o Photon responder de novo quando voltar.
+# vai ao cache (`VALIDADE = 0`), para o Photon responder de novo quando voltar. Só responde quando o Photon não respondeu:
+# se ele disse que o ponto é de outro país, a sede brasileira mais próxima seria uma cidade inventada (`SO_SEM_RESPOSTA`).
 # Também serve ao Photon: o nome que ele devolve só vale se for um município daquele estado (`municipio`), porque o
 # nome no OpenStreetMap é editável por qualquer pessoa.
 class Autonomia::FerramentasProntas::Fontes::Localizacao::Sedes < Autonomia::FerramentasProntas::Provedor
   NOME = 'sedes'.freeze
   HOST = nil
   VALIDADE = 0
+  SO_SEM_RESPOSTA = true
   ARQUIVO = Rails.root.join('lib/ferramentas_prontas/sedes_municipais.csv')
   # Mais longe que isto de qualquer sede é fora do Brasil (o maior município, Altamira, tem pontos a ~250 km da sede).
   MAX_KM = 300
@@ -25,10 +27,11 @@ class Autonomia::FerramentasProntas::Fontes::Localizacao::Sedes < Autonomia::Fer
 
     # O nome oficial do município daquela UF com o nome dado (sem acento e sem caixa), ou nil.
     def municipio(uf_sigla, nome)
-      alvo = Autonomia::FerramentasProntas::Lista.comparavel(nome)
-      return if alvo.empty?
+      indice[[uf_sigla, Autonomia::FerramentasProntas::Lista.comparavel(nome)]]
+    end
 
-      sedes.find { |sede| sede.uf == uf_sigla && Autonomia::FerramentasProntas::Lista.comparavel(sede.nome) == alvo }&.nome
+    def indice
+      @indice ||= sedes.to_h { |sede| [[sede.uf, Autonomia::FerramentasProntas::Lista.comparavel(sede.nome)], sede.nome] }.freeze
     end
 
     def mais_proxima(latitude, longitude)

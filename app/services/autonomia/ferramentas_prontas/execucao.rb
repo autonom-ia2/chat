@@ -36,10 +36,12 @@ class Autonomia::FerramentasProntas::Execucao
 
   # O "hoje" das consultas (dias úteis, o ano dos feriados e do Focus, o dia do contador) é o do fuso da conta.
   def call
-    Time.use_zone(fuso) { executar }
-  rescue StandardError => e
-    ChatwootExceptionTracker.new(e, account: @tool.account).capture_exception
-    terminar(Resposta.nao_consegui, desfecho: 'sem_resposta', motivos: ['defeito'])
+    Time.use_zone(fuso) do
+      executar
+    rescue StandardError => e
+      ChatwootExceptionTracker.new(e, account: @tool.account).capture_exception
+      terminar(Resposta.nao_consegui, desfecho: 'sem_resposta', motivos: ['defeito'])
+    end
   end
 
   # O desfecho de falha, para o registro da consulta em segundo plano (`pronta_sem_resposta`, `pronta_recusadas`); nil
@@ -96,8 +98,7 @@ class Autonomia::FerramentasProntas::Execucao
     falhas = []
     nao_encontrado = false
     aplicaveis.each do |provedor|
-      # Sem prazo para a rede, só o provedor calculado aqui (o calendário, o plano do DDD, as sedes) ainda responde.
-      next if provedor.host && falhas.any? { |falha| falha.end_with?('.prazo_total') }
+      next if pular?(provedor, falhas, nao_encontrado)
 
       dados = provedor.new(@cliente, prazo: @consulta.prazo_por_fonte).consultar(@consulta, @consulta.para_a_fonte(params))
       return achado(params, dados, provedor, reserva: provedor != aplicaveis.first, falhas: falhas)
@@ -107,6 +108,14 @@ class Autonomia::FerramentasProntas::Execucao
       falhas << "#{provedor.nome}.#{e.motivo}"
     end
     nada(nao_encontrado, falhas)
+  end
+
+  # Sem prazo para a rede, só o provedor calculado aqui (o calendário, o plano do DDD, as sedes) ainda responde; e a
+  # reserva aproximada não responde depois de um "não tem".
+  def pular?(provedor, falhas, nao_encontrado)
+    return true if nao_encontrado && !provedor.depois_de_nao_encontrado?
+
+    provedor.host.present? && falhas.any? { |falha| falha.end_with?('.prazo_total') }
   end
 
   def achado(params, dados, provedor, reserva:, falhas:)

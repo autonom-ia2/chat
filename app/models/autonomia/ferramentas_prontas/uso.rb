@@ -1,5 +1,5 @@
 # O CONTADOR DO DIA de cada conta em cada fonte do catálogo (#2858, F0). Uma linha por conta, fonte e dia (no fuso da
-# plataforma), atualizada por SQL atômico: dois turnos ao mesmo tempo nunca contam um só.
+# conta: a `Execucao` roda nele), atualizada por SQL atômico: dois turnos ao mesmo tempo nunca contam um só.
 #
 #   - `consultas`: as que passaram pelo limite diário (vindas do cache ou da fonte);
 #   - `do_cache`, `pela_reserva`, `nao_encontradas`, `sem_resposta` (nenhuma fonte respondeu): o desfecho de cada uma;

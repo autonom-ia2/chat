@@ -15,6 +15,8 @@ module Autonomia::FerramentasProntas::Fontes::Feriados
   ANOS = 2000..2100
   MAX_DIAS = 731
   # Até 160 caracteres (`Resposta::MAX_TEXTO`), senão o fim é cortado.
+  OBSERVACAO = 'Feriados nacionais, os pontos facultativos de Carnaval e Corpus Christi e a Páscoa (domingo). Sem feriado ' \
+               'estadual e municipal.'.freeze
   REGRA = 'Segunda a sexta, menos os feriados nacionais e os pontos facultativos de Carnaval e Corpus Christi, com as ' \
           'duas datas. Sem feriado estadual e municipal.'.freeze
 
@@ -57,7 +59,7 @@ module Autonomia::FerramentasProntas::Fontes::Feriados
   def responder(consulta, params, &por_ano)
     return dias_uteis(params['de'], params['ate'], por_ano) if consulta.nome == 'dias_uteis'
 
-    { 'ano' => params['ano'], 'feriados' => yield(params['ano']), 'observacao' => 'Só os feriados nacionais.' }
+    { 'ano' => params['ano'], 'feriados' => yield(params['ano']), 'observacao' => OBSERVACAO }
   end
 
   def periodo_invalido(params)

@@ -42,9 +42,8 @@ RSpec.describe Autonomia::FerramentasProntas::TetoDoProvedor do
   it 'passou do teto: o provedor e pulado sem chamar, com o motivo, e a reserva responde' do
     ferramenta = incluir_pronta('cidades', conta: account, agente: agent)
     fonte_responde(ibge, estados)
-    allow(described_class).to receive(:reservar!).and_call_original
-    allow(described_class).to receive(:reservar!).with('servicodados.ibge.gov.br', conta: account.id).and_return(false)
     fonte_responde('https://brasilapi.com.br/api/ibge/uf/v1', estados)
+    30.times { described_class.reservar!('servicodados.ibge.gov.br', conta: account.id) } # a fatia da conta: 30 de 120
 
     expect(executar_pronta(ferramenta, 'consulta' => 'estados')['dados']['estados']).to eq([{ 'uf' => 'AC', 'nome' => 'Acre', 'regiao' => 'Norte' }])
     expect(a_request(:get, ibge)).not_to have_been_made

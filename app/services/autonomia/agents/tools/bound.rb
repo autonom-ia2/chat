@@ -280,8 +280,7 @@ class Autonomia::Agents::Tools::Bound
   # A falha HTTP que chega na janela levanta o mesmo `HttpExecutor::Error` do síncrono: a mesma recusa, registrada.
   def run_http(args, delivery, turno, call = {})
     entrega = turno || delivery
-    args = ::Autonomia::FerramentasProntas.argumentos(@record, args)
-    return consulta_no_turno(args, entrega, call) if ::Autonomia::FerramentasProntas.em_segundo_plano?(@record, entrega)
+    return consulta_no_turno(args, entrega, call) if ::Autonomia::Agents::Tools::ConsultaNoTurno.aplica?(@record, entrega)
 
     # #2858: a pronta executa pela fonte do catálogo (`FerramentasProntas::Execucao`), que nunca levanta.
     ::Autonomia::FerramentasProntas.executor_para(@record, params: args, turno: entrega).call

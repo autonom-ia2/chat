@@ -32,6 +32,12 @@ class Autonomia::FerramentasProntas::Provedor
       true
     end
 
+    # A reserva aproximada (a sede mais próxima) não responde depois que uma fonte disse "não tem" (o ponto é de outro
+    # país): ela inventaria uma cidade. As outras respondem.
+    def depois_de_nao_encontrado?
+      !(const_defined?(:SO_SEM_RESPOSTA, false) && self::SO_SEM_RESPOSTA)
+    end
+
     # Quanto a resposta DESTE provedor vale no cache, quando difere da consulta: a reserva que responde só parte (o DDD
     # sem as cidades) declara `VALIDADE` curta, ou 0 (não grava). nil: a validade da consulta.
     def validade

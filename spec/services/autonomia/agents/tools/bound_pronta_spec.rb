@@ -200,6 +200,22 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       expect(Autonomia::Agents::ToolRun.sole.arguments).to eq('latitude' => -22.906, 'longitude' => -47.061)
     end
 
+    it 'o pre-disparo da rodada segue as mesmas regras: o CPF nao abre linha, e o telefone no DDD nao fica gravado' do
+      account.enable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+      cpf = incluir_pronta('cpf', conta: account, agente: agent)
+      ddd = incluir_pronta('ddd', conta: account, agente: agent)
+      relogio_do_turno
+      entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 80)
+
+      described_class.new(agent: agent, record: cpf)
+                     .disparar({ 'name' => 'pronta_cpf', 'call_id' => 'c4', 'arguments' => { cpf: '111.444.777-35' }.to_json }, turno: entrega)
+      expect(Autonomia::Agents::ToolRun.count).to eq(0)
+
+      described_class.new(agent: agent, record: ddd)
+                     .disparar({ 'name' => 'pronta_ddd', 'call_id' => 'c5', 'arguments' => { ddd: '(31) 98765-4321' }.to_json }, turno: entrega)
+      expect(Autonomia::Agents::ToolRun.sole.arguments).to eq('ddd' => Autonomia::FerramentasProntas::Fonte::FORA_DO_FORMATO)
+    end
+
     it 'no job, com a flag das prontas desligada depois da abertura, nao consulta' do
       _saida, run = abrir_consulta
       account.disable_features!(Autonomia::FerramentasProntas::FLAG)

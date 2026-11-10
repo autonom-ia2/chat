@@ -55,10 +55,19 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(executar_pronta(ferramenta, 'latitude' => -19.92, 'longitude' => -43.94)['dados']['cidade']).to eq('Belo Horizonte')
     end
 
-    it 'fora do Brasil e "nao encontrado" (o Photon e a tabela das sedes)' do
-      photon_responde(city: 'Lisboa', state: 'Lisboa', countrycode: 'PT')
+    it 'fora do Brasil e "nao encontrado", tambem perto da divisa (a sede brasileira mais proxima nao responde)' do
+      photon_responde(city: 'Ciudad del Este', state: 'Alto Paraná', countrycode: 'PY')
 
-      expect(executar_pronta(ferramenta, 'latitude' => 38.7, 'longitude' => -9.1)['situacao']).to eq('nao_encontrado')
+      expect(executar_pronta(ferramenta, 'latitude' => -25.516, 'longitude' => -54.611)['situacao']).to eq('nao_encontrado')
+    end
+
+    it 'longe de qualquer sede, com o Photon fora: "nao consegui" (o Photon podia saber), sem inventar cidade' do
+      stub_request(:get, photon).to_return(status: 503)
+
+      saida = executar_pronta(ferramenta, 'latitude' => 38.7, 'longitude' => -9.1)
+
+      expect(saida['situacao']).to eq('nao_consegui_consultar')
+      expect(saida).not_to have_key('dados')
     end
 
     it 'coordenada fora da faixa e pedido invalido' do

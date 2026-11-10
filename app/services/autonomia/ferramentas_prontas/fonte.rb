@@ -10,6 +10,7 @@
 # `flag`: a flag da fase que trouxe a fonte (a F1 tem a sua), conferida junto com a das prontas; nil nas da F0.
 class Autonomia::FerramentasProntas::Fonte
   PARAMETRO_DA_CONSULTA = 'consulta'.freeze
+  FORA_DO_FORMATO = '(fora do formato)'.freeze
 
   attr_reader :chave, :slug, :nome, :descricao, :consultas, :limite_diario, :termos, :flag
 
@@ -42,9 +43,14 @@ class Autonomia::FerramentasProntas::Fonte
     provedores.filter_map(&:host).uniq
   end
 
-  # Os argumentos com cada parâmetro conhecido já normalizado; o que não normaliza fica como veio.
+  # Os argumentos com cada parâmetro conhecido já normalizado. O que veio e não normaliza (um telefone inteiro no DDD)
+  # vira `FORA_DO_FORMATO`, que também não normaliza: a `Execucao` responde que o pedido não serve, e o valor cru não
+  # fica em registro nenhum.
   def normalizar_argumentos(args)
-    normalizados = consultas.flat_map(&:parametros).uniq(&:nome).to_h { |parametro| [parametro.nome, parametro.normalizar(args[parametro.nome])] }
+    normalizados = consultas.flat_map(&:parametros).uniq(&:nome).to_h do |parametro|
+      bruto = args[parametro.nome]
+      [parametro.nome, bruto.nil? ? nil : (parametro.normalizar(bruto) || FORA_DO_FORMATO)]
+    end
     args.merge(normalizados.compact)
   end
 

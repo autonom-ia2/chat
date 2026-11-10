@@ -43,6 +43,16 @@ Desligado, o provedor é pulado com o motivo `provedor_desligado`.
 O teto de cada conta é 25% do global em todas as linhas: por exemplo, 112 pedidos por dia à parallelum e 75 por minuto
 à BrasilAPI.
 
+Limitações conhecidas, aceitas:
+
+- **FIPE.** A fatia de 112 pedidos por dia na parallelum fica abaixo do limite diário da FIPE (300 por conta). Cada
+  preço por marca e modelo gasta de 2 a 4 pedidos lá; marcas e preço pelo código vão primeiro à BrasilAPI. Uma conta
+  muito ativa pode ouvir "não consegui" antes do limite. O limite da FIPE é decisão do Rodrigo, no pacote final.
+- **Janela fixa.** Na virada da janela (por exemplo, à meia-noite UTC no teto diário), saem até duas janelas de
+  pedidos em pouco tempo. Nenhum termo lido exige teto por segundo, então isso fica aceito.
+- **Redis fora.** O teto deixa o pedido passar, e a lista de hosts desligados cai para a variável de ambiente. Para
+  desligar um host de forma garantida, use as duas: a configuração da instalação e a variável de ambiente.
+
 ## Nominatim: fora
 
 O termo 12 do épico #2858 deixa o Nominatim fora, pela política de uso da OSMF (1 pedido por segundo, proibição de
