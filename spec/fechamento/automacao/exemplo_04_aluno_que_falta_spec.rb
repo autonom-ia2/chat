@@ -29,22 +29,24 @@ require 'rails_helper'
 # a pergunta da IA é o "escrever" que só guarda, e a "mensagem" com o modelo aprovado a leva (`ia.pergunta`, G28); a
 # Clara entra pelo "ia_assumir" (G15); a resposta do aluno é o "esperar até" `conversa.cliente_respondeu` (G11) antes do
 # "decidir". O termo não dá prazo para a resposta, e o esquema exige um: 7 dias. O retorno do passo 7 é do Rogério, que
-# avisado decide a condição (G3). "Não entrou de novo em Faltou" (passo 10) é a própria etiqueta como contador: a nova
-# entrada em "Faltou" acha o aluno sem `faltou-1x` (o passo 2 a trocou) e a põe de novo; no fim dos 30 dias, sem ela, o
-# aluno não faltou outra vez. A IA é o dublê. Desenho e lacunas: docs/automacao/F9-fechamento-20-exemplos.md.
+# avisado decide a condição (G3). A IA é o dublê. Desenho e lacunas: docs/automacao/F9-fechamento-20-exemplos.md.
 #
-# O que ainda não monta, cada um no exemplo do passo, escrito como o termo pede:
-# - Passo 2 pela segunda falta (G50, "reentrada"): a primeira execução fica aberta os 30 dias do passo 1, e a
-#   nova entrada em "Faltou" no mesmo card não abre outra (Partida: uma execução aberta por automação, alvo e gatilho;
-#   o histórico grava `inicio pulado ja_aberta`). O contador nunca chega a 2 dentro do mês. O passo 2 em si monta: com a
-#   etiqueta já posta antes, ele roda.
-# - Passos 6 e 8 (G44): "as turmas de outros horários" e "a agenda do professor" são páginas escolhidas; o
-#   `card.link_da_agenda` é a página do responsável do card (a recepção, que atende só em "Remarcar aula"), e o link sai,
-#   mas da página errada.
-# - Passo 10, fechar o card de retenção (G18): o alvo é o card do aluno; o "fechar" com `card.id` fecha o card do aluno,
-#   não o de retenção que o passo 2 criou. Por isso a receita dos outros passos vem sem o fechar.
-# - Passo 10, "não entrou de novo" (G50, reentrada): a nova falta dentro dos 30 dias não roda, a etiqueta-contador não volta,
-#   e as etiquetas de risco saem mesmo assim.
+# A segunda falta com a primeira ainda esperando (G50, #2682): o gatilho escolhe "começa outra vez" (`se_repetir:
+# comeca_outra`), e a nova entrada em "Faltou" abre outra execução no mesmo card, ao lado da que espera os 30 dias do
+# passo 1. Ela acha `faltou-1x` e vai ao passo 2. O passo 10 é o "esperar até" `card.entrou_de_novo` (o card entrou de
+# novo na etapa do gatilho durante a espera), com prazo de 30 dias: a nova entrada o acorda na hora e ele para; vencido
+# o prazo, segue pelo `se_vencer`, que tira as etiquetas de risco. A nova falta durante o passo 10 começa outra execução,
+# que não vê `faltou-1x` (o passo 2 a trocou) e volta ao passo 1, como o termo diz. Ponta a ponta da peça:
+# g50_reentrada_spec.rb.
+#
+# Os 30 dias do passo 1 são o mesmo "esperar até" `card.entrou_de_novo`, e não um "esperar" fixo: a etiqueta-contador só
+# sai se nesse tempo o aluno não faltou de novo. Se faltou, a nova execução achou `faltou-1x` e o passo 2 já a trocou; a
+# execução velha acorda e para sem tirar nada. Com o "esperar" fixo, ela acordava no dia 30 e tirava a `faltou-1x` que
+# uma falta mais nova tinha acabado de pôr, e a falta seguinte voltava ao passo 1 em vez de ir ao passo 2.
+#
+# Passos 6 e 8 (G44): "as turmas de outros horários" e "a agenda do professor" são páginas escolhidas na receita
+# (`agenda.<id>`); o passo 1 manda o `card.link_da_agenda`, a página de quem cuida do card (a recepção, "Remarcar aula").
+# Passo 10, fechar o card de retenção (G49): o card que o passo 2 criou (`criado.retencao`), não o do aluno, que é o alvo.
 RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 
@@ -91,8 +93,6 @@ RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fec
     { 'automacao_escrever' => { 'texto' => pergunta_escrita },
       'automacao_resumir' => { 'resumo' => 'Lucas diz que ficou sem dinheiro para a mensalidade deste mês.' } }
   end
-  # O fechar do card de retenção no passo 10 (G18), que fecha o card errado. Fora da receita dos outros passos.
-  let(:fecha_a_retencao) { false }
 
   def fuso = ActiveSupport::TimeZone['America/Sao_Paulo']
   def em_aula = alunos_e_em_aula.last
@@ -101,9 +101,10 @@ RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fec
   def reforco = paginas[:reforco]
   def escola = canal.inbox
   def espelho_da_clara = Autonomia::Agents::Areas.vincular!(agent: clara, inbox: escola).agent_bot
-  def card_id = { '$valor' => 'card.id' }
   def link_da_agenda = { '$valor' => 'card.link_da_agenda' }
+  def agenda(pagina) = { '$valor' => "agenda.#{pagina.id}" }
   def sem_faltou_1x = { campo: { '$valor' => 'contato.etiquetas' }, op: 'nao_contem', valor: 'faltou-1x' }
+  def entrou_de_novo = { campo: { '$valor' => 'card.entrou_de_novo' }, op: 'igual', valor: true }
 
   def etiquetas(id, descricao, por: [], tirar: [])
     { id: id, tipo: 'acao', acao: 'PATCH contacts/:contact_id/labels/alterar', descricao: descricao,
@@ -111,7 +112,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fec
   end
 
   def receita
-    { gatilho: { tipo: 'card.entrou_na_etapa', etapa_id: faltou.id }, passos: [
+    { gatilho: { tipo: 'card.entrou_na_etapa', etapa_id: faltou.id, se_repetir: 'comeca_outra' }, passos: [
       primeira_falta,
       etiquetas('risco', 'Trocar para risco de sair', por: ['risco-de-sair'], tirar: ['faltou-1x']),
       { id: 'retencao', tipo: 'card', etapa_id: em_risco.id },
@@ -123,21 +124,27 @@ RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fec
       { id: 'resposta', tipo: 'esperar_ate', condicao: { campo: { '$valor' => 'conversa.cliente_respondeu' }, op: 'igual', valor: true },
         prazo: { valor: 7, unidade: 'dias' } },
       decidir_o_motivo,
-      { id: 'trinta_dias_de_risco', tipo: 'esperar', duracao: { valor: 30, unidade: 'dias' } },
-      { id: 'nao_faltou_de_novo', tipo: 'se', condicao: sem_faltou_1x, entao: [
-        etiquetas('tira_risco', 'Tirar as etiquetas de risco', tirar: ['risco-de-sair']),
-        *([fechar_a_retencao] if fecha_a_retencao)
-      ] }
+      nao_entrou_de_novo
     ] }
   end
 
-  # Passo 1.
+  # Passo 10.
+  def nao_entrou_de_novo
+    { id: 'nao_entrou_de_novo', tipo: 'esperar_ate', condicao: entrou_de_novo, prazo: { valor: 30, unidade: 'dias' }, se_vencer: [
+      etiquetas('tira_risco', 'Tirar as etiquetas de risco', tirar: ['risco-de-sair']),
+      fechar_a_retencao
+    ] }
+  end
+
+  # Passo 1. A etiqueta sai em 30 dias só se o aluno não faltou de novo nesse tempo: se faltou, o passo 2 da nova
+  # execução já a trocou, e esta não tira a de uma falta mais nova.
   def primeira_falta
     { id: 'primeira_falta', tipo: 'se', condicao: sem_faltou_1x, entao: [
       etiquetas('faltou_1x', 'Pôr faltou 1x', por: ['faltou-1x']),
       { id: 'sentimos_sua_falta', tipo: 'mensagem', texto: ['Sentimos sua falta! Quer remarcar? ', link_da_agenda] },
-      { id: 'trinta_dias', tipo: 'esperar', duracao: { valor: 30, unidade: 'dias' } },
-      etiquetas('tira_faltou_1x', 'Tirar faltou 1x', tirar: ['faltou-1x']),
+      { id: 'trinta_dias', tipo: 'esperar_ate', condicao: entrou_de_novo, prazo: { valor: 30, unidade: 'dias' }, se_vencer: [
+        etiquetas('tira_faltou_1x', 'Tirar faltou 1x', tirar: ['faltou-1x'])
+      ] },
       { id: 'fim_da_primeira', tipo: 'parar' }
     ] }
   end
@@ -146,7 +153,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fec
   def decidir_o_motivo
     { id: 'motivo', tipo: 'decidir', le: %w[mensagens_recentes], pergunta: 'Por que o aluno está faltando às aulas?', caminhos: [
       { nome: 'Horário', chave: 'horario', descricao: 'o horário da turma não serve mais', passos: [
-        { id: 'outros_horarios', tipo: 'mensagem', texto: ['Temos turmas em outros horários. Escolha a sua: ', link_da_agenda] }
+        { id: 'outros_horarios', tipo: 'mensagem', texto: ['Temos turmas em outros horários. Escolha a sua: ', agenda(outros_horarios)] }
       ] },
       { nome: 'Dinheiro', chave: 'dinheiro', descricao: 'está sem dinheiro para a mensalidade', passos: [
         { id: 'resumo_rogerio', tipo: 'resumir', le: %w[mensagens_recentes], destino: { avisar: { pessoas: [rogerio.id] } } },
@@ -154,7 +161,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fec
           daqui: { valor: 1, unidade: 'dias' }, para: { quem: 'pessoas', pessoas: [rogerio.id] } }
       ] },
       { nome: 'Dificuldade', chave: 'dificuldade', descricao: 'está com dificuldade de acompanhar as aulas', passos: [
-        { id: 'reforco', tipo: 'mensagem', texto: ['Vamos marcar uma aula de reforço com o professor? Escolha o horário: ', link_da_agenda] }
+        { id: 'reforco', tipo: 'mensagem', texto: ['Vamos marcar uma aula de reforço com o professor? Escolha o horário: ', agenda(reforco)] }
       ] },
       { nome: 'Mudou de cidade', chave: 'mudou_de_cidade', descricao: 'mudou de cidade', passos: [
         { id: 'turma_online', tipo: 'mensagem', texto: ['Que tal continuar na nossa turma online? Você estuda de onde estiver.'] },
@@ -165,7 +172,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fec
 
   def fechar_a_retencao
     { id: 'fecha_retencao', tipo: 'acao', acao: 'POST crm/cards/:id/close', descricao: 'Fechar o card de retenção como resolvido',
-      caminho: { id: card_id }, corpo: { result: 'won' } }
+      caminho: { id: { '$valor' => 'criado.retencao' } }, corpo: { result: 'won' } }
   end
 
   def modelo_da_pergunta
@@ -295,12 +302,36 @@ RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fec
 
     # O contador da etiqueta: a segunda falta no mês acha `faltou-1x` e vai para o passo 2.
     it 'passo 2: a segunda falta no mês troca a etiqueta para risco-de-sair e cria o card de retenção', :aggregate_failures do
-      pending 'G50: com a execução da primeira falta esperando os 30 dias, a nova entrada em "Faltou" não roda'
       recepcao_move_as('2026-11-12 10:00', em_aula)
       recepcao_move_as('2026-11-17 19:00', faltou)
 
       expect(etiquetas_do_aluno).to eq(['risco-de-sair'])
       expect(card_de_retencao).to have_attributes(stage_id: em_risco.id, contact_id: aluno.id, status: 'open')
+    end
+
+    # Três faltas com as execuções lado a lado (dias 0, 5 e 10): a 3ª não acha `faltou-1x` (a 2ª a trocou) e a põe de
+    # novo. No dia 30 a execução da 1ª não tira essa etiqueta, que é da 3ª; a 4ª falta, no dia 32, vai ao passo 2. O
+    # passo 1 roda duas vezes (dias 0 e 10), o passo 2 duas (dias 5 e 32), e nenhuma execução tira a `faltou-1x`.
+    it 'passo 1: a etiqueta posta por uma falta mais nova não sai nos 30 dias da 1ª, e a 4ª falta vai ao passo 2',
+       :aggregate_failures do
+      roteiro['automacao_decidir'] = { 'caminho' => 'horario', 'motivo' => 'o que o aluno respondeu' }
+      [%w[2026-11-12 2026-11-15], %w[2026-11-17 2026-11-20]].each do |aula, falta|
+        recepcao_move_as("#{aula} 10:00", em_aula)
+        recepcao_move_as("#{falta} 19:00", faltou)
+      end
+      expect(etiquetas_do_aluno).to contain_exactly('risco-de-sair', 'faltou-1x')
+
+      varredura_as('2026-12-10 19:05')
+      expect(etiquetas_do_aluno).to include('faltou-1x')
+
+      recepcao_move_as('2026-12-11 10:00', em_aula)
+      recepcao_move_as('2026-12-12 19:00', faltou)
+
+      expect(etiquetas_do_aluno).to include('risco-de-sair')
+      expect(etiquetas_do_aluno).not_to include('faltou-1x')
+      expect(historico.count { |passo, resultado, _| passo == 'faltou_1x' && resultado == 'ok' }).to eq(2)
+      expect(historico.count { |passo, resultado, _| passo == 'risco' && resultado == 'ok' }).to eq(2)
+      expect(historico).not_to include(['tira_faltou_1x', 'ok', nil])
     end
   end
 
@@ -341,7 +372,6 @@ RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fec
   end
 
   it 'passo 6: horário; o aluno recebe o link da agenda das turmas de outros horários', :aggregate_failures do
-    pending 'G44: o link da agenda é o da página do responsável do card, não o de uma página escolhida'
     segunda_falta('horario')
 
     aluno_escreve_as('2026-11-11 10:00', 'Mudei de emprego e não consigo mais chegar às 19h.')
@@ -363,7 +393,6 @@ RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fec
   end
 
   it 'passo 8: dificuldade; o aluno recebe o link da agenda do professor para a aula de reforço', :aggregate_failures do
-    pending 'G44: o link da agenda é o da página do responsável do card, não o de uma página escolhida'
     segunda_falta('dificuldade')
 
     aluno_escreve_as('2026-11-11 10:00', 'Estou com dificuldade de acompanhar a turma.')
@@ -387,13 +416,11 @@ RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fec
     varredura_as('2026-12-11 10:05')
 
     expect(etiquetas_do_aluno).to eq(['online'])
-    expect(historico.last).to eq(['tira_risco', 'ok', nil])
+    expect(historico.last(2)).to eq([['tira_risco', 'ok', nil], ['fecha_retencao', 'ok', nil]])
   end
 
-  # "Não entrou de novo em Faltou": a nova falta acharia o aluno sem `faltou-1x` (o passo 2 a trocou) e a poria de novo,
-  # e o fim dos 30 dias, vendo a etiqueta, deixaria o risco e o card de retenção como estão.
+  # "Se nesse tempo não entrou de novo em Faltou": a nova falta acorda o passo 10 na hora, e ele para sem tirar nada.
   it 'passo 10: faltou de novo nos 30 dias; a etiqueta de risco fica e o card de retenção continua aberto', :aggregate_failures do
-    pending 'G50: com a execução esperando os 30 dias, a nova entrada em "Faltou" não roda'
     segunda_falta('horario')
     aluno_escreve_as('2026-11-11 10:00', 'Mudei de emprego e não consigo mais chegar às 19h.')
     recepcao_move_as('2026-11-16 10:00', em_aula)
@@ -405,19 +432,14 @@ RSpec.describe 'Fechamento #2414 · exemplo 4: aluno que começa a faltar', :fec
     expect(card_de_retencao.reload.status).to eq('open')
   end
 
-  context 'with o fechar do card de retenção no passo 10' do
-    let(:fecha_a_retencao) { true }
+  it 'passo 10: 30 dias sem faltar de novo, o card de retenção fecha como resolvido, e o do aluno continua aberto',
+     :aggregate_failures do
+    segunda_falta('mudou_de_cidade')
+    aluno_escreve_as('2026-11-11 10:00', 'Me mudei para Curitiba.')
 
-    it 'passo 10: 30 dias sem faltar de novo, o card de retenção fecha como resolvido, e o do aluno continua aberto',
-       :aggregate_failures do
-      pending 'G18: o "fechar" age no card do alvo (o do aluno), não no card de retenção que o passo 2 criou'
-      segunda_falta('mudou_de_cidade')
-      aluno_escreve_as('2026-11-11 10:00', 'Me mudei para Curitiba.')
+    varredura_as('2026-12-11 10:05')
 
-      varredura_as('2026-12-11 10:05')
-
-      expect(card_de_retencao.reload.status).to eq('won')
-      expect(card.reload.status).to eq('open')
-    end
+    expect(card_de_retencao.reload.status).to eq('won')
+    expect(card.reload.status).to eq('open')
   end
 end

@@ -91,6 +91,11 @@ module Autonomia::Automacao::Gatilhos
   # O pedaço da marca entre o tipo e o id da atividade (marca_da_atividade).
   ATIVIDADE = 'atividade'.freeze
 
+  # G50: o que fazer quando o gatilho acontece de novo com uma execução da mesma automação ainda aberta no alvo
+  # (`se_repetir` no esquema). Sem a escolha, vale "ignora" (uma aberta só, como sempre foi); "comeca_outra" abre outra
+  # execução, paralela.
+  COMECA_OUTRA = 'comeca_outra'.freeze
+
   module_function
 
   def tipos = LISTA.keys
@@ -147,6 +152,13 @@ module Autonomia::Automacao::Gatilhos
   end
 
   def de_reuniao?(tipo) = DE_REUNIAO.include?(tipo.to_s)
+
+  # G50: o gatilho aceita "começa outra vez"? Só os de evento, menos a mensagem nova: a mensagem numa conversa com a
+  # execução aberta é o caso comum, e uma execução por mensagem seria laço. Os da varredura já têm o fato na marca.
+  def pode_repetir?(tipo) = entrada(tipo)&.origem == :evento && tipo.to_s != 'mensagem.criada'
+
+  # A receita pede outra execução quando o gatilho se repete (`se_repetir`, G50)?
+  def comeca_outra?(gatilho) = gatilho.to_h['se_repetir'] == COMECA_OUTRA
 
   # O mesmo movimento dispara "saiu" e "entrou": o tipo entra na marca para cada um ter a sua.
   def marca_da_atividade(tipo, activity_id) = "#{tipo}:#{ATIVIDADE}:#{activity_id}"

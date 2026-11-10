@@ -652,9 +652,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_980000) do
     t.string "evento"
     t.jsonb "textos", default: {}, null: false
     t.datetime "repetiu_em"
+    t.boolean "paralela", default: false, null: false
     t.index ["account_id"], name: "index_autonomia_automacao_execucoes_on_account_id"
     t.index ["alvo_type", "alvo_id"], name: "index_autonomia_automacao_execucoes_on_alvo"
-    t.index ["automacao_id", "alvo_type", "alvo_id", "chave_gatilho"], name: "idx_autonomia_automacao_execucoes_abertas", unique: true, where: "(finalizada_em IS NULL)"
+    t.index ["automacao_id", "alvo_type", "alvo_id", "chave_gatilho"], name: "idx_autonomia_automacao_execucoes_abertas_unica", unique: true, where: "((finalizada_em IS NULL) AND (paralela = false))"
     t.index ["automacao_id", "evento"], name: "idx_autonomia_automacao_execucoes_evento", unique: true, where: "(evento IS NOT NULL)"
     t.index ["automacao_id", "evento"], name: "idx_autonomia_automacao_execucoes_vez", opclass: { evento: :text_pattern_ops }, where: "(evento IS NOT NULL)"
     t.index ["automacao_id"], name: "index_autonomia_automacao_execucoes_on_automacao_id"

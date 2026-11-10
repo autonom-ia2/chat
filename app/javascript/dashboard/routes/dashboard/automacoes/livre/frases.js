@@ -174,14 +174,24 @@ const fraseSemPagina = (gatilho, catalogo, t, nomes, idioma) => {
   );
 };
 
+// G50: o gatilho que começa outra vez quando se repete diz isso no fim.
+const comRepeticao = (frase, gatilho, t) =>
+  gatilho?.se_repetir === 'comeca_outra'
+    ? t('AUTOMACAO_LIVRE.SE_REPETIR.NA_FRASE', { frase })
+    : frase;
+
 // `idioma`: o locale do painel, para a data da frase ("pt_BR").
 export const fraseDoGatilho = (gatilho, catalogo, t, nomes, idioma) => {
   const daConta = nomes || {};
-  return comPagina(
-    fraseSemPagina(gatilho, catalogo, t, daConta, idioma),
+  return comRepeticao(
+    comPagina(
+      fraseSemPagina(gatilho, catalogo, t, daConta, idioma),
+      gatilho,
+      t,
+      daConta
+    ),
     gatilho,
-    t,
-    daConta
+    t
   );
 };
 

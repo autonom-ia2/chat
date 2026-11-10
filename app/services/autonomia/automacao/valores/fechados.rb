@@ -17,6 +17,7 @@ class Autonomia::Automacao::Valores::Fechados
     'card.origem' => { 'opcoes' => ::Autonomia::Automacao::OrigemDoCard::GRUPOS, 'operadores' => %w[igual diferente] },
     'card.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'contato.tem_reuniao_marcada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'card.entrou_de_novo' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'envio.situacao' => { 'opcoes' => ::Autonomia::Automacao::Envio::SITUACOES.values, 'operadores' => %w[igual diferente] }
   }.merge(::Autonomia::Automacao::Ausencia::FECHADOS, ::Autonomia::Automacao::TrocaNoCard::FECHADOS).freeze
 end

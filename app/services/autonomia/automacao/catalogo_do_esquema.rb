@@ -5,6 +5,7 @@
 # escolhe nele (a etapa, o funil), com a frase e se é obrigatório, pelas regras `allOf` do esquema. Os de tempo (PR3)
 # trazem também os dias, o campo de data, antes ou depois e a hora.
 # G12: o de reunião marca `reunioes` — o editor só oferece com as reuniões da instalação ligadas.
+# G50: o que aceita "começa outra vez" quando se repete marca `se_repetir` — só nele o editor pergunta.
 module Autonomia::Automacao::CatalogoDoEsquema
   module_function
 
@@ -15,6 +16,7 @@ module Autonomia::Automacao::CatalogoDoEsquema
       { 'tipo' => tipo, 'alvo' => ::Autonomia::Automacao::Gatilhos.alvo(tipo), 'frase' => chave('GATILHOS', tipo),
         'grupo' => grupo(tipo, card, tempo), 'requer' => (::Autonomia::Automacao::Motor::FLAG_GATILHOS if card || tempo),
         'funil' => (true if card), 'reunioes' => (true if ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo)),
+        'se_repetir' => (true if ::Autonomia::Automacao::Gatilhos.pode_repetir?(tipo)),
         'parametros' => parametros(esquema, tipo).presence,
         'filtro_sugerido' => declarado.dig('filtro_sugerido', tipo) }.compact
     end

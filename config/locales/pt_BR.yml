@@ -1177,6 +1177,8 @@ pt_BR:
         falhou_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no gatilho de mensagem que não chegou.'
         falhou_no_filtro: 'Passo %{passo}: %{caminho} só pode ser usado nos passos, não no "Só se" do gatilho.'
         resposta_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até".'
+        entrada_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até", numa automação que começa quando o card entra numa etapa.'
+        se_repetir_fora: 'Começar outra vez quando o gatilho se repete só vale nos gatilhos de evento, menos "mensagem criada" (uma execução por mensagem viraria laço) e os de tempo.'
         solicitados_so_no_recorrente: 'Passo %{passo}: %{caminho} só vale no gatilho recorrente de contato com a condição "pediu card no funil".'
         valor_fora_do_alvo: 'Passo %{passo}: %{caminho} não dá para ler naquilo em que este gatilho começa (conversa, card ou contato).'
         card_da_conversa_so_le: 'Passo %{passo}: a automação que começa numa conversa só lê o card (%{caminho}). Para mexer no card, use uma automação que começa no card.'

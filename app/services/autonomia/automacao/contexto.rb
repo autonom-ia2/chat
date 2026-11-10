@@ -130,6 +130,9 @@ class Autonomia::Automacao::Contexto
     @reuniao = (reuniao_da_atividade if card && @execucao && ::Autonomia::Automacao::Gatilhos.de_reuniao?(@execucao.chave_gatilho))
   end
 
+  # G50: a etapa escolhida no gatilho da versão em que a execução entrou (`card.entrou_de_novo`). Sem execução, nil.
+  def etapa_do_gatilho = @execucao&.versao&.receita.to_h.dig('gatilho', 'etapa_id')
+
   # A última mensagem que esta execução mandou ao cliente (#2680, `envio.*`), pelo `mensagem_id` dos registros dos
   # passos: o "mensagem", o "escrever" e o "email". A nota do "avisar" também leva o id, mas não é envio ao cliente.
   def ultimo_envio

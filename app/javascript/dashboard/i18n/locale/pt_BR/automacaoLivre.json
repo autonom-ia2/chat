@@ -74,6 +74,7 @@
       "CARD_DIAS_NA_ETAPA": "Dias na etapa",
       "CARD_MOTIVO_DA_PERDA": "Motivo da perda",
       "CARD_TEM_REUNIAO_MARCADA": "O card tem reunião marcada",
+      "CARD_ENTROU_DE_NOVO": "O card entrou de novo na etapa do gatilho durante a espera",
       "CONTATO_TEM_REUNIAO_MARCADA": "O contato tem reunião marcada (em qualquer card)",
       "CONTATO_SOLICITADOS_FALTANDO": "Quem ainda falta mandar documento (dos cards que este contato pediu)",
       "CARD_ORIGEM": "De onde o card veio",

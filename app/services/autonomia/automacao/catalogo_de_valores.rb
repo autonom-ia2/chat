@@ -12,7 +12,8 @@ module Autonomia::Automacao::CatalogoDeValores
   # `so_nos_gatilhos`: o editor só a oferece nos gatilhos de reunião. O que era antes da troca (G9), só no gatilho da
   # troca. A mensagem que falhou (G53), só no gatilho dela e com `so_nos_passos`: fora do "Só se" do gatilho, que a
   # Partida confere sem ela. O que a filha do "em outro registro" lê do registro de origem (G65, `origem.<caminho>`) vem
-  # com `na_origem`: o editor o oferece dentro do ramo, com o prefixo.
+  # com `na_origem`: o editor o oferece dentro do ramo, com o prefixo. A nova entrada na etapa (G50) vem com
+  # `so_na_espera` e `so_nos_gatilhos`: só na condição do "esperar até" e só no gatilho card.entrou_na_etapa.
   def todos
     valores = ::Autonomia::Automacao::Valores
     campos = caminhos_dos_campos(valores).map do |caminho|
@@ -29,17 +30,18 @@ module Autonomia::Automacao::CatalogoDeValores
 
   # A mensagem do gatilho (#2496), com as opções e os operadores do valor fechado. A que só o Guia monta vem marcada:
   # a tela não a oferece, mas mostra a frase, abre a condição que já a usa e a tira do "Só se" quando o gatilho muda.
-  # Os valores de leitura direta: os campos, os que dependem de quem vê, a agenda, a resposta, o envio, a troca e a
-  # mensagem que falhou.
+  # Os valores de leitura direta: os campos, os que dependem de quem vê, a agenda, a resposta, a nova entrada, o envio,
+  # a troca e a mensagem que falhou.
   def caminhos_dos_campos(valores)
     valores::CAMPOS.keys + valores::DO_QUE_QUEM_VE.keys + valores::DA_SELECAO.keys + valores::AGENDA.keys + valores::RESPOSTA.keys +
-      valores::ENVIO.keys + valores::TROCA.keys + valores::FALHOU.keys
+      valores::ENTRADA.keys + valores::ENVIO.keys + valores::TROCA.keys + valores::FALHOU.keys
   end
 
   # Onde a receita pode ler o valor: na espera, em certos gatilhos (LugarDoValor), só nos passos, no registro de origem.
   def lugares(valores, caminho)
-    { 'so_na_espera' => (true if valores.da_resposta?(caminho)), 'so_nos_gatilhos' => valores.so_nos_gatilhos(caminho),
-      'so_nos_passos' => (true if valores.da_falha?(caminho)), 'na_origem' => (true if valores.na_origem?(caminho)) }
+    { 'so_na_espera' => (true if valores.da_resposta?(caminho) || valores.da_entrada?(caminho)),
+      'so_nos_gatilhos' => valores.so_nos_gatilhos(caminho), 'so_nos_passos' => (true if valores.da_falha?(caminho)),
+      'na_origem' => (true if valores.na_origem?(caminho)) }
   end
 
   # O campo de pessoa da equipe do card (G62): além do campo (o id), o nome e a ausência, com as opções da G23.

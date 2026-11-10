@@ -83,6 +83,11 @@ class Autonomia::Automacao::Valores
   RESPOSTA = ::Autonomia::Automacao::Resposta::VALORES
   RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu'.freeze
 
+  # G50: o card entrou de novo na etapa do gatilho durante o "esperar até" (EsperaDaEntrada). Como a resposta, só existe
+  # na condição dele, onde há a janela; e só no gatilho card.entrou_na_etapa, que tem a etapa. Sem a janela, lê false.
+  # As duas leem a janela da espera: Valores::DaEspera.
+  ENTRADA = ::Autonomia::Automacao::EsperaDaEntrada::VALORES
+
   # A última mensagem que a execução mandou ao cliente (#2680): o texto e a situação (Envio).
   ENVIO = ::Autonomia::Automacao::Envio::VALORES
 
@@ -158,7 +163,7 @@ class Autonomia::Automacao::Valores
 
   class << self
     def caminho_valido?(caminho)
-      [CAMPOS, DO_QUE_QUEM_VE, DA_SELECAO, MENSAGEM, RESPOSTA, AGENDA, ENVIO, TROCA, FALHOU].any? { |lista| lista.key?(caminho.to_s) } ||
+      [CAMPOS, DO_QUE_QUEM_VE, DA_SELECAO, MENSAGEM, RESPOSTA, ENTRADA, AGENDA, ENVIO, TROCA, FALHOU].any? { |lista| lista.key?(caminho.to_s) } ||
         atributo(caminho).present? || livre?(caminho) || (da_origem?(caminho) && na_origem?(caminho_da_origem(caminho)))
     end
 
@@ -251,7 +256,7 @@ class Autonomia::Automacao::Valores
   def lido(caminho)
     return unless permitido?(caminho)
     return @mensagem && MENSAGEM.fetch(caminho.to_s).call(@mensagem) if MENSAGEM.key?(caminho.to_s)
-    return resposta(caminho) if RESPOSTA.key?(caminho.to_s)
+    return DaEspera.ler(caminho, @contexto, @espera, @quem) if DaEspera.caminho?(caminho)
     return do_campo(caminho.to_s) if campo?(caminho.to_s)
 
     base, chave = self.class.atributo(caminho)
@@ -299,8 +304,6 @@ class Autonomia::Automacao::Valores
 
     @origem = (contexto = @contexto.origem) && self.class.new(alvo: contexto, quem: @quem)
   end
-
-  def resposta(caminho) = !@espera.nil? && RESPOSTA.fetch(caminho.to_s).call(@contexto, @espera, @quem) == true
 
   # A pessoa só é buscada quando o caminho pede permissão.
   def permitido?(caminho) = !PROTEGIDOS.key?(caminho.to_s) || self.class.pode_ler?(caminho, account_user)

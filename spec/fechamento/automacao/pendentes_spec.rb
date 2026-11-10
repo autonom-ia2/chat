@@ -8,9 +8,9 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
   pendentes = {
     # O 2 saiu com o #2762 (G29), depois do #2773 (G30) e do #2800 (G32); o spec de ponta a ponta dele (#2856) é
     # exemplo_02_lead_do_anuncio_spec.rb, passos 1 a 10, no lote 3 do #2414.
-    # O 4 tem spec próprio à risca (exemplo_04_aluno_que_falta_spec.rb); esperam a G50 (a segunda falta com a primeira
-    # ainda esperando), a G44 (passos 6 e 8, link de uma página escolhida) e a G18 (passo 10, fechar o card de retenção).
-    4 => ['Aluno que começa a faltar', 'G50 (reentrada no mesmo card), G44, G18, G5, G1, G3, G4, G12, G15, G25, G28'],
+    # O 4 saiu com a G50 (#2682, a segunda falta com a primeira ainda esperando): exemplo_04_aluno_que_falta_spec.rb roda
+    # à risca, passos 1 a 10, com as páginas escolhidas dos passos 6 e 8 (G44) e o card de retenção criado no passo 2
+    # fechado no 10 (G49).
     # O 5 saiu com a G47 (#2766): o spec próprio (exemplo_05_revisao_do_carro_spec.rb) roda à risca, passos 1 a 8.
     # O 6 saiu na integração 2 do #2414: exemplo_06_aniversario_spec.rb roda à risca, passos 1 a 10, com o link da página
     # de reserva (G60), o card criado no passo 3 (G49), a reunião marcada (G32, G61) e a atendida (G56, G59).
@@ -60,6 +60,11 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
   # Os exemplos 6, 8, 14 e 18 saíram da lista na integração 2 do #2414: a prova das sondas que os seguravam fica aqui.
   it 'exemplos 6, 8, 14 e 18: as lacunas fechadas continuam fechadas' do
     expect(FechamentoAutomacao::Lacunas.abertas(%w[G13 G22 G24 G25 G27 G31 G32 G44 G45 G46 G49 G56 G59 G60 G61])).to be_empty
+  end
+
+  # Com o 4 fora da lista, a prova das sondas que o seguravam fica aqui.
+  it 'exemplo 4: as lacunas fechadas continuam fechadas' do
+    expect(FechamentoAutomacao::Lacunas.abertas(%w[G1 G3 G4 G5 G12 G15 G18 G25 G28 G44 G50])).to be_empty
   end
 
   # Os exemplos 7 e 16 saíram da lista no lote 3 do #2414: a prova das sondas que os seguravam fica aqui. A G70 (#2880,

@@ -370,8 +370,10 @@ module FechamentoAutomacao::Lacunas
     # passo 2) e o filtro sabe se a mensagem tem anexo (exemplo 18, começo).
     'G45' => -> { FechamentoAutomacao::Comportamento.so_se_da_conversa_le_o_card? },
     # Do exemplo 4 (#2650): a etiqueta como contador de faltas. Com a execução da primeira falta esperando os 30 dias, a
-    # nova entrada em "Faltou" no mesmo card não abre outra (Partida, `ja_aberta`): o contador nunca chega a 2.
-    'G50' => nil,
+    # nova entrada em "Faltou" no mesmo card não abria outra (Partida, `ja_aberta`): o contador nunca chegava a 2. G50
+    # (#2682): `se_repetir: comeca_outra` abre a 2ª, e a nova entrada acorda o "esperar até" que lê card.entrou_de_novo.
+    # Ponta a ponta em spec/fechamento/automacao/g50_reentrada_spec.rb.
+    'G50' => -> { FechamentoAutomacao::SondasDoExemplo04.nova_entrada_comeca_outra_e_acorda_a_espera? },
     # Do exemplo 20, passo 9 (termo à risca: "coloca o cliente na campanha de e-mail"): pôr o contato numa campanha de
     # e-mail. A G14 cobre só WhatsApp; etiqueta + G7 + G2 é adaptar, não conta.
     'G52' => nil,
