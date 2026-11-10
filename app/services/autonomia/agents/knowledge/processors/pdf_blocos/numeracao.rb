@@ -32,14 +32,15 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos::Numeracao
     end
   end
 
-  # Abre numeração: o seguinte é o "1." ou é mais fundo com outro primeiro número ("CLÁUSULA 3" antes do "3.1."). O
-  # seguinte que só continua a sequência ("3." depois de "2.1.") não abre. Sem título seguinte (fim do documento, um
-  # "ANEXO I"), o título sem número fica no topo.
+  # Abre numeração: o seguinte é de primeiro nível sem continuar a sequência ("1.", ou "2." depois de "4."), ou é mais
+  # fundo com outro primeiro número ("CLÁUSULA 3" antes do "3.1."). O seguinte que só continua a sequência ("3." depois
+  # de "2.1.") não abre. Sem título seguinte (fim do documento, um "ANEXO I"), o título sem número fica no topo.
   def self.abre_numeracao?(seguinte, numero, ultimo)
     return true if seguinte.nil?
     return false if numero.nil?
+    return numero != ultimo[:numero] if profundidade(seguinte) > 1
 
-    profundidade(seguinte) == 1 ? numero == '1' : numero != ultimo[:numero]
+    numero.to_i != ultimo[:numero].to_i + 1
   end
 
   # O primeiro número do título numerado ("2" de "2.1."); nil sem número ou com marcador de item.

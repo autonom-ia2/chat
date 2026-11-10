@@ -342,6 +342,26 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       end
     end
 
+    # #2863 — revisão: o título sem número antes de um número que não continua a sequência ("2." depois do "4." da
+    # cobertura anterior) abre a numeração da cobertura nova.
+    context 'with a title without a number that restarts the numbering' do
+      let(:pdf) do
+        pdf_com([[['4. DISPOSICOES GERAIS', topo, 'F2', 10], *secao(topo - linha),
+                  ['COBERTURA ADICIONAL DE VIDROS', topo - 70, 'F2', 10], *secao(topo - 70 - linha),
+                  ['2. EXCLUSOES', topo - 140, 'F2', 10], *secao(topo - 140 - linha)]])
+      end
+
+      def secao(inicio)
+        [[corpo1, inicio, 'F1', 10], [corpo2, inicio - linha, 'F1', 10], [corpo1, inicio - (2 * linha), 'F1', 10]]
+      end
+
+      it 'puts the new numbering under the title' do
+        trechos = Autonomia::Agents::Knowledge::CortePorSecao.new(blocos_gravados, documento: 'cg.pdf').trechos
+
+        expect(trechos.map { |trecho| trecho[:metadata][:caminho] }).to include(['cg.pdf', 'COBERTURA ADICIONAL DE VIDROS', '2. EXCLUSOES'])
+      end
+    end
+
     # #2863 — a linha curta em negrito que termina a frase do parágrafo de cima (a linha de cima vai até a margem, com o
     # espaço de linha normal) não é título: sem isso, o título sem número viraria pai de todas as seções seguintes.
     context 'with a short bold line that ends the paragraph above' do
