@@ -87,6 +87,11 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     montar(objetos)
   end
 
+  # Parágrafo comum (fonte do corpo) de 6 linhas a partir da altura dada, para o negrito não virar a fonte do corpo.
+  def corpo_normal(altura)
+    (0..5).map { |i| [i.even? ? corpo1 : corpo2, altura - (i * linha), 'F1', 10] }
+  end
+
   def montar(objetos)
     corpo = +"%PDF-1.4\n"
     posicoes = objetos.each_with_index.map { |objeto, i| corpo.bytesize.tap { corpo << "#{i + 1} 0 obj\n#{objeto}\nendobj\n" } }
@@ -195,6 +200,346 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
         it 'keeps the foot line once' do
           expect(blocos_gravados.pluck(:texto).join("\n").scan('Condicoes Gerais - Versao 3.0.').size).to eq(1)
         end
+      end
+    end
+
+    # #2845 — o título curto em negrito, seguido do item que começa com o número em negrito e segue no texto comum.
+    context 'with a bold title followed by an item that starts with a bold number' do
+      let(:pdf) do
+        pdf_com([[['1.3. AMBITO GEOGRAFICO DA COBERTURA', topo, 'F2', 10],
+                  ['1.3.1.', topo - linha, 'F2', 10], ['As condicoes desta cobertura valem em todo o territorio', topo - linha, 'F1', 10, 100],
+                  ['nacional, salvo quando a apolice disser outra coisa sobre o local do evento.', topo - (2 * linha), 'F1', 10]]])
+      end
+
+      it 'reads the title as a title, apart from the item' do
+        expect(blocos_gravados).to include(a_hash_including(tipo: :titulo, texto: '1.3. AMBITO GEOGRAFICO DA COBERTURA', pagina: 1))
+      end
+    end
+
+    # #2845 — a ênfase em negrito no fim do parágrafo, terminando numa linha curta toda em negrito, não é título.
+    context 'with a bold emphasis that ends the paragraph in a short line' do
+      let(:pdf) do
+        pdf_com([[['Se ficar comprovado na regulacao do sinistro que houve ma-fe na declaracao do risco, ou que foi', topo, 'F1', 10],
+                  ['o segurado que agravar o risco de forma intencional', topo - linha, 'F1', 10],
+                  ['O SEGURADO PERDERA O DIREITO', topo - linha, 'F2', 10, 320],
+                  ['A INDENIZACAO.', topo - (2 * linha), 'F2', 10]]])
+      end
+
+      it 'reads no title' do
+        expect(blocos_gravados.pluck(:tipo)).not_to include(:titulo)
+      end
+    end
+
+    # #2862 — dois títulos seguidos, sem texto entre eles, com um pouco mais de espaço que o de linha: o de baixo caberia
+    # inteiro no fim da linha de cima, então não é a quebra de um título só.
+    context 'with two titles in sequence' do
+      let(:pdf) do
+        pdf_com([[['CLAUSULA 2 - CONTRATACAO', topo, 'F2', 10], ['2.1. ACEITACAO', topo - 16.4, 'F2', 10],
+                  [corpo1, topo - 30.9, 'F1', 10], [corpo2, topo - 30.9 - linha, 'F1', 10], [corpo1, topo - 30.9 - (2 * linha), 'F1', 10]]])
+      end
+
+      it 'reads two titles' do
+        expect(blocos_gravados.select { |bloco| bloco[:tipo] == :titulo }.pluck(:texto)).to eq(['CLAUSULA 2 - CONTRATACAO', '2.1. ACEITACAO'])
+      end
+    end
+
+    # #2862 — o título longo que quebra porque não cabe na linha continua um título só, mesmo com o mesmo espaço.
+    context 'with a long title that wraps' do
+      let(:pdf) do
+        pdf_com([[['COBERTURA ADICIONAL DE RESPONSABILIDADE CIVIL FAMILIAR E DANOS MORAIS A TERCEIROS', topo, 'F2', 10],
+                  ['DO IMOVEL', topo - 16.4, 'F2', 10],
+                  [corpo1, topo - 30.9, 'F1', 10], [corpo2, topo - 30.9 - linha, 'F1', 10], [corpo1, topo - 30.9 - (2 * linha), 'F1', 10]]])
+      end
+
+      it 'reads one title' do
+        expect(blocos_gravados.select { |bloco| bloco[:tipo] == :titulo }.pluck(:texto))
+          .to eq(['COBERTURA ADICIONAL DE RESPONSABILIDADE CIVIL FAMILIAR E DANOS MORAIS A TERCEIROS DO IMOVEL'])
+      end
+    end
+
+    # #2863 — títulos da mesma letra e da mesma fonte: o nível vem da numeração (1., 2.1.) e o título sem número fica acima
+    # dos numerados; o marcador de item ("a)") fica abaixo deles.
+    context 'with titles of the same letter and font' do
+      let(:pdf) do
+        pdf_com([[['COBERTURA ADICIONAL DE ALAGAMENTO', topo, 'F2', 10], ['1. RISCOS COBERTOS', topo - 16.4, 'F2', 10],
+                  *secao(topo - 30.9), ['2. EXCLUSOES', topo - 90, 'F2', 10], *secao(topo - 90 - linha),
+                  ['2.1. DANOS AO JARDIM', topo - 160, 'F2', 10], *secao(topo - 160 - linha),
+                  ['a\\) Pessoa Fisica:', topo - 230, 'F2', 10], *secao(topo - 230 - linha)]])
+      end
+
+      # Três linhas de corpo: a seção curta (abaixo do PISO do corte) seria juntada à seguinte.
+      def secao(inicio)
+        [[corpo1, inicio, 'F1', 10], [corpo2, inicio - linha, 'F1', 10], [corpo1, inicio - (2 * linha), 'F1', 10]]
+      end
+
+      def niveis
+        blocos_gravados.select { |bloco| bloco[:tipo] == :titulo }.to_h { |bloco| [bloco[:texto], bloco[:nivel]] }
+      end
+
+      it 'puts the title without a number above the numbered ones, and the numbers by depth', :aggregate_failures do
+        nivel = niveis
+
+        expect(nivel['COBERTURA ADICIONAL DE ALAGAMENTO']).to be < nivel['1. RISCOS COBERTOS']
+        expect(nivel['1. RISCOS COBERTOS']).to eq(nivel['2. EXCLUSOES'])
+        expect(nivel['2. EXCLUSOES']).to be < nivel['2.1. DANOS AO JARDIM']
+        expect(nivel['2.1. DANOS AO JARDIM']).to be < nivel['a) Pessoa Fisica:']
+      end
+
+      it 'keeps the parent title in the path of the section' do
+        trechos = Autonomia::Agents::Knowledge::CortePorSecao.new(blocos_gravados, documento: 'cg.pdf').trechos
+
+        expect(trechos.map { |trecho| trecho[:metadata][:caminho] })
+          .to include(['cg.pdf', 'COBERTURA ADICIONAL DE ALAGAMENTO', '1. RISCOS COBERTOS'],
+                      ['cg.pdf', 'COBERTURA ADICIONAL DE ALAGAMENTO', '2. EXCLUSOES', '2.1. DANOS AO JARDIM'])
+      end
+    end
+
+    # #2863 — o título sem número no meio da seção (um rótulo entre "2.1." e "2.2.") fica no nível do último numerado: não
+    # vira pai das seções seguintes. O sem número que abre outra numeração ("CLAUSULA 3" antes do "3.1.") continua acima.
+    context 'with a title without a number between numbered titles' do
+      let(:pdf) do
+        pdf_com([[['2. EXCLUSOES', topo, 'F2', 10], *secao(topo - linha),
+                  ['2.1. DANOS AO JARDIM', topo - 70, 'F2', 10], *secao(topo - 70 - linha),
+                  ['OBSERVACAO IMPORTANTE', topo - 140, 'F2', 10], *secao(topo - 140 - linha),
+                  ['2.2. DANOS ELETRICOS', topo - 210, 'F2', 10], *secao(topo - 210 - linha),
+                  ['CLAUSULA 3 - PAGAMENTO', topo - 280, 'F2', 10], *secao(topo - 280 - linha),
+                  ['3.1. PRAZO CURTO', topo - 350, 'F2', 10], *secao(topo - 350 - linha)]])
+      end
+
+      def secao(inicio)
+        [[corpo1, inicio, 'F1', 10], [corpo2, inicio - linha, 'F1', 10], [corpo1, inicio - (2 * linha), 'F1', 10]]
+      end
+
+      it 'keeps the label as a sibling and the opening title above its numbers', :aggregate_failures do
+        trechos = Autonomia::Agents::Knowledge::CortePorSecao.new(blocos_gravados, documento: 'cg.pdf').trechos
+        caminhos = trechos.map { |trecho| trecho[:metadata][:caminho] }
+
+        expect(caminhos).to include(['cg.pdf', '2. EXCLUSOES', '2.2. DANOS ELETRICOS'],
+                                    ['cg.pdf', 'CLAUSULA 3 - PAGAMENTO', '3.1. PRAZO CURTO'])
+        expect(caminhos.flatten.count('OBSERVACAO IMPORTANTE')).to eq(1)
+      end
+    end
+
+    # #2863 — revisão: o rótulo antes do próximo número da sequência ("3." depois de "2.1.") também fica irmão, e o título
+    # sem número no fim do documento ("ANEXO I") fica no topo.
+    context 'with a label before the next number and a title without a number at the end' do
+      let(:pdf) do
+        pdf_com([[['2. COBERTURAS', topo, 'F2', 10], *secao(topo - linha),
+                  ['2.1. DANOS AO JARDIM', topo - 70, 'F2', 10], *secao(topo - 70 - linha),
+                  ['OBSERVACAO IMPORTANTE', topo - 140, 'F2', 10], *secao(topo - 140 - linha),
+                  ['3. EXCLUSOES', topo - 210, 'F2', 10], *secao(topo - 210 - linha),
+                  ['ANEXO I - TABELA', topo - 280, 'F2', 10], *secao(topo - 280 - linha)]])
+      end
+
+      def secao(inicio)
+        [[corpo1, inicio, 'F1', 10], [corpo2, inicio - linha, 'F1', 10], [corpo1, inicio - (2 * linha), 'F1', 10]]
+      end
+
+      it 'keeps the label out of the next section and the annex at the top' do
+        trechos = Autonomia::Agents::Knowledge::CortePorSecao.new(blocos_gravados, documento: 'cg.pdf').trechos
+
+        expect(trechos.map { |trecho| trecho[:metadata][:caminho] }).to include(['cg.pdf', '3. EXCLUSOES'], ['cg.pdf', 'ANEXO I - TABELA'])
+      end
+    end
+
+    # #2863 — revisão: o título sem número antes de um número que não continua a sequência ("2." depois do "4." da
+    # cobertura anterior) abre a numeração da cobertura nova.
+    context 'with a title without a number that restarts the numbering' do
+      let(:pdf) do
+        pdf_com([[['4. DISPOSICOES GERAIS', topo, 'F2', 10], *secao(topo - linha),
+                  ['COBERTURA ADICIONAL DE VIDROS', topo - 70, 'F2', 10], *secao(topo - 70 - linha),
+                  ['2. EXCLUSOES', topo - 140, 'F2', 10], *secao(topo - 140 - linha)]])
+      end
+
+      def secao(inicio)
+        [[corpo1, inicio, 'F1', 10], [corpo2, inicio - linha, 'F1', 10], [corpo1, inicio - (2 * linha), 'F1', 10]]
+      end
+
+      it 'puts the new numbering under the title' do
+        trechos = Autonomia::Agents::Knowledge::CortePorSecao.new(blocos_gravados, documento: 'cg.pdf').trechos
+
+        expect(trechos.map { |trecho| trecho[:metadata][:caminho] }).to include(['cg.pdf', 'COBERTURA ADICIONAL DE VIDROS', '2. EXCLUSOES'])
+      end
+    end
+
+    # #2863 — revisão: dois títulos sem número seguidos antes da numeração ("CLAUSULA 3" e "COBERTURA DE VIDROS" antes do
+    # "3.1."): a decisão olha o próximo título numerado, e os dois ficam acima dele.
+    context 'with two titles without a number before the numbering' do
+      let(:pdf) do
+        pdf_com([[['2. COBERTURAS', topo, 'F2', 10], *secao(topo - linha),
+                  ['2.1. DANOS AO JARDIM', topo - 70, 'F2', 10], *secao(topo - 70 - linha),
+                  ['CLAUSULA 3 - VIDROS', topo - 140, 'F2', 10], *secao(topo - 140 - linha),
+                  ['COBERTURA DE VIDROS', topo - 210, 'F2', 10], *secao(topo - 210 - linha),
+                  ['3.1. RISCOS COBERTOS', topo - 280, 'F2', 10], *secao(topo - 280 - linha)]])
+      end
+
+      def secao(inicio)
+        [[corpo1, inicio, 'F1', 10], [corpo2, inicio - linha, 'F1', 10], [corpo1, inicio - (2 * linha), 'F1', 10]]
+      end
+
+      it 'keeps both out of the previous section' do
+        trechos = Autonomia::Agents::Knowledge::CortePorSecao.new(blocos_gravados, documento: 'cg.pdf').trechos
+
+        expect(trechos.map { |trecho| trecho[:metadata][:caminho] }).to include(['cg.pdf', 'CLAUSULA 3 - VIDROS'], ['cg.pdf', 'COBERTURA DE VIDROS'])
+      end
+    end
+
+    # #2863 — a linha curta em negrito que termina a frase do parágrafo de cima (a linha de cima vai até a margem, com o
+    # espaço de linha normal) não é título: sem isso, o título sem número viraria pai de todas as seções seguintes.
+    context 'with a short bold line that ends the paragraph above' do
+      let(:pdf) do
+        pdf_com([[[corpo2, topo, 'F1', 10], [corpo1, topo - linha, 'F1', 10], ['contato.dados.exemplo.', topo - (2 * linha), 'F2', 10],
+                  ['1.2.', topo - (2 * linha) - 14.9, 'F2', 10], [corpo2, topo - (2 * linha) - 14.9, 'F1', 10, 100],
+                  [corpo1, topo - (3 * linha) - 14.9, 'F1', 10], [corpo2, topo - (4 * linha) - 14.9, 'F1', 10]]])
+      end
+
+      it 'reads no title' do
+        expect(blocos_gravados.pluck(:tipo)).not_to include(:titulo)
+      end
+    end
+
+    context 'with a bold title after a paragraph that ends before the margin' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], ['coberto pelo seguro.', topo - linha, 'F1', 10], ['2. EXCLUSOES', topo - (2 * linha), 'F2', 10],
+                  [corpo1, topo - (3 * linha), 'F1', 10], [corpo2, topo - (4 * linha), 'F1', 10]]])
+      end
+
+      it 'still reads the title' do
+        expect(blocos_gravados).to include(a_hash_including(tipo: :titulo, texto: '2. EXCLUSOES'))
+      end
+    end
+
+    # #2865 — o título logo depois de um parágrafo todo em negrito, com espaço abaixo do de parágrafo, entrava no bloco do
+    # parágrafo; com mais de MAX_LINHAS_DO_TITULO linhas, o bloco não era título e os títulos sumiam.
+    context 'with titles right after a bold paragraph' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], [corpo2, topo - linha, 'F1', 10],
+                  [corpo1, topo - 40, 'F2', 10], ['ou do beneficiario contra terceiros.', topo - 40 - linha, 'F2', 10],
+                  ['CLAUSULA 5 - PAGAMENTO', topo - 40 - linha - 19.2, 'F2', 10],
+                  ['5.1. PAGAMENTO DO PREMIO', topo - 40 - linha - 35.6, 'F2', 10],
+                  [corpo2, topo - 40 - linha - 50.5, 'F1', 10], [corpo1, topo - 40 - (2 * linha) - 50.5, 'F1', 10],
+                  [corpo2, topo - 40 - (3 * linha) - 50.5, 'F1', 10]]])
+      end
+
+      it 'reads the two titles and keeps the bold paragraph as a paragraph', :aggregate_failures do
+        blocos = blocos_gravados
+
+        expect(blocos.select { |bloco| bloco[:tipo] == :titulo }.pluck(:texto)).to eq(['CLAUSULA 5 - PAGAMENTO', '5.1. PAGAMENTO DO PREMIO'])
+        expect(blocos).to include(a_hash_including(tipo: :paragrafo, texto: "#{corpo1}\nou do beneficiario contra terceiros."))
+      end
+    end
+
+    # #2865 — a lista em negrito, um item por linha com um pouco mais de espaço, continua no parágrafo: item não é título.
+    context 'with a bold list after a bold paragraph' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], [corpo2, topo - linha, 'F1', 10],
+                  [corpo1, topo - 40, 'F2', 10], ['nos seguintes casos:', topo - 40 - linha, 'F2', 10],
+                  ['a\\) incendio ou explosao;', topo - 40 - linha - 16.4, 'F2', 10], ['b\\) muros de divisa.', topo - 40 - linha - 32.8, 'F2', 10],
+                  [corpo2, topo - 120, 'F1', 10], [corpo1, topo - 120 - linha, 'F1', 10], [corpo2, topo - 120 - (2 * linha), 'F1', 10]]])
+      end
+
+      it 'reads no title' do
+        expect(blocos_gravados.pluck(:tipo)).not_to include(:titulo)
+      end
+    end
+
+    # #2865 — o título logo antes de um parágrafo em negrito, no meio do bloco ("4.1. HIPOTESES" e o "4.1.1." recuado embaixo,
+    # tudo em negrito, com o espaço de parágrafo um pouco maior que o de linha): o bloco tinha mais de MAX_LINHAS_DO_TITULO
+    # linhas e o título sumia, e a seção de cima engolia a de baixo.
+    context 'with a title right before an indented bold paragraph' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], [corpo2, topo - linha, 'F1', 10],
+                  [corpo1, topo - 40, 'F2', 10], ['pela seguradora.', topo - 40 - linha, 'F2', 10],
+                  ['CLAUSULA 4 - DIREITOS', topo - 40 - linha - 19.2, 'F2', 10],
+                  ['4.1. HIPOTESES DE PERDA', topo - 40 - linha - 35.5, 'F2', 10],
+                  ['4.1.1. Alem dos casos previstos em lei o segurado perde o direito', topo - 40 - linha - 50.4, 'F2', 10, 80],
+                  [corpo2, topo - 40 - (2 * linha) - 50.4, 'F2', 10, 100],
+                  [corpo1, topo - 160, 'F1', 10], [corpo2, topo - 160 - linha, 'F1', 10], [corpo1, topo - 160 - (2 * linha), 'F1', 10],
+                  *corpo_normal(300)]])
+      end
+
+      it 'reads the titles and keeps the bold paragraphs as paragraphs', :aggregate_failures do
+        blocos = blocos_gravados
+
+        expect(blocos.select { |bloco| bloco[:tipo] == :titulo }.pluck(:texto)).to eq(['CLAUSULA 4 - DIREITOS', '4.1. HIPOTESES DE PERDA'])
+        expect(blocos).to include(a_hash_including(tipo: :paragrafo, texto: "#{corpo1}\npela seguradora."))
+        item = "4.1.1. Alem dos casos previstos em lei o segurado perde o direito\n#{corpo2}"
+        expect(blocos).to include(a_hash_including(tipo: :paragrafo, texto: item))
+      end
+    end
+
+    # #2865 — os itens numerados em negrito, um por linha e no mesmo recuo do texto de baixo ("3.8.2.1. ONU: …"), dentro do
+    # bloco em negrito, são lista, não título: o título tem o texto de baixo mais recuado que ele.
+    context 'with bold numbered items one per line at the same indent' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], [corpo2, topo - linha, 'F1', 10],
+                  [corpo1, topo - 40, 'F2', 10], ['as listas abaixo:', topo - 40 - linha, 'F2', 10],
+                  ['3.8.2.1. ONU: nacoes.org', topo - 40 - linha - 14.9, 'F2', 10],
+                  ['3.8.2.2. UNIAO EUROPEIA: europa.eu', topo - 40 - linha - 29.8, 'F2', 10],
+                  *(0..3).map { |i| [i == 3 ? corpo2 : corpo1, topo - 40 - linha - 44.7 - (i * linha), 'F2', 10] },
+                  [corpo1, topo - 180, 'F1', 10], [corpo2, topo - 180 - linha, 'F1', 10], [corpo1, topo - 180 - (2 * linha), 'F1', 10],
+                  *corpo_normal(300)]])
+      end
+
+      it 'reads no title' do
+        expect(blocos_gravados.pluck(:tipo)).not_to include(:titulo)
+      end
+    end
+
+    # #2865 — revisão: a lista em negrito, um item por linha, logo antes de um título de verdade não vira cadeia de
+    # títulos; a cadeia só sobe quando a numeração de baixo é mais funda.
+    context 'with a bold numbered list right before a real title' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], [corpo2, topo - linha, 'F1', 10],
+                  [corpo1, topo - 40, 'F2', 10], ['as listas abaixo:', topo - 40 - linha, 'F2', 10],
+                  ['1. Incendio;', topo - 40 - linha - 14.9, 'F2', 10],
+                  ['2. Raio;', topo - 40 - linha - 29.8, 'F2', 10],
+                  ['4.5. SUB-ROGACAO', topo - 40 - linha - 44.7, 'F2', 10],
+                  ["4.5.1. #{corpo1}", topo - 40 - linha - 59.6, 'F2', 10, 80],
+                  [corpo2, topo - 40 - (2 * linha) - 59.6, 'F2', 10, 100],
+                  [corpo1, topo - 180, 'F1', 10], [corpo2, topo - 180 - linha, 'F1', 10], [corpo1, topo - 180 - (2 * linha), 'F1', 10],
+                  *corpo_normal(300)]])
+      end
+
+      it 'reads only the real title' do
+        expect(blocos_gravados.select { |bloco| bloco[:tipo] == :titulo }.pluck(:texto)).to eq(['4.5. SUB-ROGACAO'])
+      end
+    end
+
+    # #2865 — segunda revisão: a lista sem número ("- Incendio;"), também em negrito, logo antes do título não vira cadeia.
+    context 'with a bold list without numbers right before a real title' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], [corpo2, topo - linha, 'F1', 10],
+                  [corpo1, topo - 40, 'F2', 10], ['as listas abaixo:', topo - 40 - linha, 'F2', 10],
+                  ['- Incendio;', topo - 40 - linha - 14.9, 'F2', 10],
+                  ['- Raio;', topo - 40 - linha - 29.8, 'F2', 10],
+                  ['4.5. SUB-ROGACAO', topo - 40 - linha - 44.7, 'F2', 10],
+                  ["4.5.1. #{corpo1}", topo - 40 - linha - 59.6, 'F2', 10, 80],
+                  [corpo2, topo - 40 - (2 * linha) - 59.6, 'F2', 10, 100],
+                  [corpo1, topo - 180, 'F1', 10], [corpo2, topo - 180 - linha, 'F1', 10], [corpo1, topo - 180 - (2 * linha), 'F1', 10],
+                  *corpo_normal(300)]])
+      end
+
+      it 'reads only the real title' do
+        expect(blocos_gravados.select { |bloco| bloco[:tipo] == :titulo }.pluck(:texto)).to eq(['4.5. SUB-ROGACAO'])
+      end
+    end
+
+    # #2865 — revisão: o parágrafo em negrito seguido de itens "1.", "2.", "3." no espaço dos títulos seguidos continua
+    # parágrafo; títulos no fim do bloco só com a numeração cada vez mais funda.
+    context 'with a bold paragraph followed by a numbered list' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], [corpo2, topo - linha, 'F1', 10],
+                  [corpo1, topo - 40, 'F2', 10], [corpo2, topo - 40 - linha, 'F2', 10], ['os riscos:', topo - 40 - (2 * linha), 'F2', 10],
+                  ['1. Incendio', topo - 40 - (2 * linha) - 14.9, 'F2', 10],
+                  ['2. Raio', topo - 40 - (2 * linha) - 29.8, 'F2', 10],
+                  ['3. Explosao', topo - 40 - (2 * linha) - 44.7, 'F2', 10],
+                  [corpo1, topo - 180, 'F1', 10], [corpo2, topo - 180 - linha, 'F1', 10], [corpo1, topo - 180 - (2 * linha), 'F1', 10],
+                  *corpo_normal(300)]])
+      end
+
+      it 'reads no title' do
+        expect(blocos_gravados.pluck(:tipo)).not_to include(:titulo)
       end
     end
 

@@ -279,6 +279,25 @@
       "CARD_GANHO": "Quando um card de {funil} fecha o seguro",
       "CARD_PERDIDO": "Quando um card de {funil} não fecha"
     },
+    "OUTRO_REGISTRO": {
+      "SITUACOES": {
+        "WON": "Que fecharam o seguro",
+        "LOST": "Que não fecharam"
+      }
+    },
+    "PASSOS": {
+      "CARD_FECHAR": "Marcar se o card fechou o seguro"
+    },
+    "CAMPOS": {
+      "RESULT": "Fechou o seguro?",
+      "LOST_REASON": "Por que não fechou (opcional)"
+    },
+    "OPCOES": {
+      "RESULT": {
+        "WON": "Seguro ativo",
+        "LOST": "Não fechou"
+      }
+    },
     "SELECAO": {
       "SITUACOES": {
         "GANHO": "Fechou o seguro",

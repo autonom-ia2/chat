@@ -1,0 +1,15 @@
+# #1479 / #2723 — "Address and phone" of the agent (`config['atendimento']`, Autonomia::Agents::DadosDoAtendimento).
+# The phone and address errors go on their own attributes, so the 422 says which field: the full message is the
+# attribute name followed by the text below.
+en:
+  activerecord:
+    attributes:
+      autonomia/agents/agent:
+        telefone: Phone
+        endereco: Address
+  autonomia:
+    agents:
+      atendimento:
+        telefone_invalido: 'does not look right. Check the number or leave it blank.'
+        endereco_longo: 'is too long. Use up to %{maximo} characters.'
+        invalido: 'The address and phone could not be read. Nothing was saved.'

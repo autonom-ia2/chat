@@ -54,8 +54,10 @@ export const caminhosProntos = caminhos =>
 export { NENHUM };
 
 // Os nomes dos caminhos marcados que ainda têm passos ("nenhum" pelo galho
-// dele), na ordem em que aparecem.
+// dele), na ordem em que aparecem. Com "voltar a esperar" (G46), o caminho
+// marcado roda os passos dele e volta: ter passos não é problema.
 export const marcadosComPassos = passo => {
+  if (passo.de_novo?.desde) return [];
   const marcados = passo.de_novo?.caminhos || [];
   const cheios = (passo.caminhos || [])
     .filter(caminho => marcados.includes(caminho.chave))
@@ -82,16 +84,63 @@ export const todosMarcados = passo => {
 };
 
 // Desligado (sem `de_novo`) está pronto; ligado, pede um caminho marcado, o
-// prazo e nenhum dos dois problemas acima.
+// prazo ou o "voltar a esperar" e nenhum dos problemas acima.
+const prazoPronto = prazo =>
+  Number.isInteger(prazo?.valor) && Boolean(prazo?.unidade);
 export const deNovoPronto = passo => {
   const deNovo = passo.de_novo;
   if (!deNovo) return true;
   return (
     (deNovo.caminhos || []).length > 0 &&
-    Number.isInteger(deNovo.prazo?.valor) &&
-    Boolean(deNovo.prazo?.unidade) &&
+    (Boolean(deNovo.desde) || prazoPronto(deNovo.prazo)) &&
     !marcadosDesconhecidos(passo).length &&
     !marcadosComPassos(passo).length &&
     !todosMarcados(passo)
   );
+};
+
+// G46 — para onde o caminho marcado pode voltar: os "esperar até" que vêm
+// antes do "decidir" `id`, na mesma lista, e esperam o cliente (a resposta ou
+// a foto ou PDF, igual a sim). A mesma regra a Receita confere no servidor
+// (DecidirDeNovo::Desde); o mais perto primeiro.
+const DO_CLIENTE = [
+  'conversa.cliente_respondeu',
+  'conversa.cliente_mandou_documento',
+];
+export const esperaOCliente = condicao => {
+  if (!condicao) return false;
+  if (condicao.todas) return condicao.todas.some(esperaOCliente);
+  if (condicao.alguma) return condicao.alguma.every(esperaOCliente);
+  return (
+    DO_CLIENTE.includes(condicao.campo?.$valor) &&
+    condicao.op === 'igual' &&
+    condicao.valor === true
+  );
+};
+
+const ramosDoPasso = passo => [
+  passo.entao,
+  passo.senao,
+  passo.se_vencer,
+  ...(passo.caminhos || []).map(caminho => caminho.passos),
+  passo.nenhum,
+];
+
+const listaCom = (lista, id) => {
+  if (!Array.isArray(lista)) return null;
+  if (lista.some(passo => passo.id === id)) return lista;
+  return lista
+    .flatMap(passo => ramosDoPasso(passo))
+    .reduce((achada, ramo) => achada || listaCom(ramo, id), null);
+};
+
+export const esperasAnteriores = (receita, id) => {
+  const lista = listaCom(receita?.passos, id) || [];
+  const indice = lista.findIndex(passo => passo.id === id);
+  return lista
+    .slice(0, Math.max(indice, 0))
+    .reverse()
+    .filter(
+      passo => passo.tipo === 'esperar_ate' && esperaOCliente(passo.condicao)
+    );
 };

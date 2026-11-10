@@ -13,7 +13,11 @@ class Autonomia::Automacao::Historico
   # As chaves de `dados` que a tela sabe dizer. Chave fora da lista não sai: o passo novo (os `campos` da F7, por
   # exemplo) declara a dele e a frase no próprio PR.
   # `conversa_principal_do_card` (#2680): a mensagem abriu a conversa e ela virou a principal do card.
-  CHAVES = %w[ramo ate tentativa ia conversa_principal_do_card conversas_fora].freeze
+  # `sem_prazo` (#2750): o "esperar até" sem prazo, que só termina pela condição. `conferir_as` (G64): a hora da
+  # conferência dele. `vez` e `volta` (G63): a vez do galho "a cada mensagem" e a volta dele à espera. O marco das
+  # mensagens não sai: são ids de mensagem.
+  # `numero_novo` (G43, #2700): a mensagem saiu no número novo do contato, em outra conversa da mesma caixa.
+  CHAVES = %w[ramo ate sem_prazo conferir_as vez volta tentativa ia conversa_principal_do_card conversas_fora numero_novo].freeze
   # Estas apontam para dentro da conversa: só saem para quem a enxerga.
   CHAVES_DA_CONVERSA = %w[mensagem_id nota_id conversa_aberta].freeze
   # Dentro de `ia`, só os números do custo: a razão da IA ou um trecho lido seriam texto da conversa.
@@ -84,10 +88,19 @@ class Autonomia::Automacao::Historico
     conversa = visiveis[execucao.alvo_id] if execucao.alvo_type == 'Conversation'
     {
       id: execucao.id, estado: execucao.estado, versao_id: execucao.versao_id, criada_em: execucao.created_at,
-      finalizada_em: execucao.finalizada_em, esperando_ate: (execucao.due_at if execucao.estado == 'esperando'),
+      finalizada_em: execucao.finalizada_em, **espera(execucao, registros),
       alvo: alvo(execucao, conversa),
       passos: registros.map { |registro| passo(registro, visivel: conversa.present?) }
     }
+  end
+
+  # Até quando espera. Sem prazo (#2750), o `due_at` é só a próxima conferência do motor, não uma hora para mostrar: sai
+  # `esperando_sem_prazo`. O registro da espera diz qual é (o da execução aberta não sai pela limpeza).
+  def espera(execucao, registros)
+    return { esperando_ate: nil } unless execucao.estado == 'esperando'
+    return { esperando_ate: nil, esperando_sem_prazo: true } if registros.any? { |r| r.passo == execucao.cursor && r.dados['sem_prazo'] }
+
+    { esperando_ate: execucao.due_at }
   end
 
   def alvo(execucao, conversa)

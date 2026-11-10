@@ -10,6 +10,10 @@
 #   gravar pausa a automação, como na ação.
 # - O registro diz as chaves gravadas, as ausentes e as que já tinham valor. Nunca os valores: eles ficam no contato e
 #   na conversa, onde o acesso de sempre vale.
+# - G68 (#2864, exemplo 19, passo 3): lê também as conversas da própria execução, como o "resumir" (G42,
+#   EnviosDaExecucao): a resposta do e-mail chega na conversa do e-mail, não na do alvo. As mesmas regras: só a conversa
+#   que quem ligou vê e que todos que veem a do alvo também veem; das outras, só mensagens (nunca nota privada) e nunca
+#   valor protegido (decisão 9). Lá, cada mensagem também vai com a data e a hora, no fuso da conta.
 class Autonomia::Automacao::PassoDeExtrair
   include ::Autonomia::Automacao::ComIa
 
@@ -22,6 +26,8 @@ class Autonomia::Automacao::PassoDeExtrair
     Mantenha o idioma original do valor. Data no formato AAAA-MM-DD.
     Cada mensagem começa pela data e hora em que foi escrita, no fuso da conta, e "hoje" diz a data de agora.
     Data relativa ("ontem", "sexta passada") conta a partir da data da mensagem em que aparece.
+    Em other_conversations estão as respostas do cliente em outras conversas desta automação (como o e-mail): valem como a conversa.
+    Em automation_sends está o que esta automação mandou ao cliente: nunca tire dado dali.
   TEXTO
 
   def self.fala_com_gente?(_passo) = false
@@ -36,7 +42,7 @@ class Autonomia::Automacao::PassoDeExtrair
     return negado if negado
 
     fuso = fuso_da_conta
-    estado = leitura(fuso: fuso)
+    estado = leitura_da_execucao(fuso)
     return nada_para_ler if estado.vazio?
 
     entrada = { hoje: Time.current.in_time_zone(fuso).to_date.iso8601, conversa: estado.conversa }
@@ -49,6 +55,12 @@ class Autonomia::Automacao::PassoDeExtrair
   private
 
   def campos = Array(@passo['campos'])
+
+  # G68: a leitura do passo com as conversas da execução (EnviosDaExecucao), como no "resumir".
+  def leitura_da_execucao(fuso)
+    @envios = ::Autonomia::Automacao::EnviosDaExecucao.new(execucao: @execucao, conversa: @conversa, leituras: @passo['le'], fuso: fuso)
+    ::Autonomia::Automacao::LeituraDaExecucao.new(leitura(fuso: fuso), @envios)
+  end
 
   def trocar? = @passo['trocar'] == true
 
@@ -65,7 +77,8 @@ class Autonomia::Automacao::PassoDeExtrair
   def gravar(achados, custo)
     ja_tinha, novos = achados.keys.partition { |campo| !trocar? && !vazio?(atual(campo)) }
     gravados, falha, recusados = achados.empty? ? [[], nil, []] : escrever(novos.index_with { |campo| achados[campo] })
-    dados = { 'campos' => do_registro(gravados, recusados, ausentes: campos - achados.keys, ja_tinha: ja_tinha), 'ia' => custo }
+    dados = { 'campos' => do_registro(gravados, recusados, ausentes: campos - achados.keys, ja_tinha: ja_tinha), 'ia' => custo,
+              'conversas_fora' => @envios.fora.presence }.compact
     return Resultado.new(tipo: :pulado, motivo: 'dado_ausente', dados: dados) if achados.empty?
 
     falha ? Resultado.new(tipo: falha.tipo, motivo: falha.motivo, dados: dados) : Resultado.new(tipo: :ok, dados: dados)

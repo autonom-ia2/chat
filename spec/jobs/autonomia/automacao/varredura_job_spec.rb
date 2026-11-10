@@ -53,12 +53,24 @@ RSpec.describe Autonomia::Automacao::VarreduraJob, :automacao_motor do
     expect(vencida.reload.estado).to eq('andando')
   end
 
-  it 'fecha como interrompida a aberta cujo alvo foi apagado' do
-    orfa = execucao(estado: 'esperando', due_at: 1.day.from_now)
+  it 'fecha como interrompida a aberta vencida cujo alvo foi apagado' do
+    orfa = execucao(estado: 'esperando', due_at: 1.minute.ago)
     conversa.delete
 
     described_class.perform_now
 
+    expect([orfa.reload.estado, motivo(orfa)]).to eq(%w[interrompida alvo_sumiu])
+  end
+
+  # #2750, revisão: a busca das órfãs não passa por todas as abertas a cada minuto, só pelas vencidas (índice do due_at).
+  it 'a órfã que ainda não venceu fica para quando vencer' do
+    orfa = execucao(estado: 'esperando', due_at: 1.day.from_now)
+    conversa.delete
+
+    described_class.perform_now
+    expect(orfa.reload.estado).to eq('esperando')
+
+    travel(1.day + 1.minute) { described_class.perform_now }
     expect([orfa.reload.estado, motivo(orfa)]).to eq(%w[interrompida alvo_sumiu])
   end
 

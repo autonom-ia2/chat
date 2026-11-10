@@ -136,6 +136,34 @@ describe('LivreHistorico', () => {
     );
   });
 
+  // #2750: a espera sem prazo não mostra hora (o due_at é só a conferência).
+  it('a espera sem prazo diz "sem prazo", sem hora', async () => {
+    responder([
+      execucao(1, {
+        estado: 'esperando',
+        esperando_ate: null,
+        esperando_sem_prazo: true,
+        passos: [
+          {
+            passo: 'p1',
+            resultado: 'ok',
+            motivo: null,
+            dados: { sem_prazo: true },
+          },
+        ],
+      }),
+    ]);
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.find('[data-estado]').text()).toBe(
+      'AUTOMACAO_LIVRE.HISTORICO.ESPERANDO_SEM_PRAZO'
+    );
+    expect(wrapper.find('[data-sem-prazo]').text()).toBe(
+      'AUTOMACAO_LIVRE.HISTORICO.ESPERA_SEM_PRAZO'
+    );
+  });
+
   it('o "se" diz por qual caminho seguiu', async () => {
     responder([
       execucao(1, {
@@ -199,6 +227,33 @@ describe('LivreHistorico', () => {
     await flushPromises();
 
     expect(wrapper.find('[data-ia]').text()).toBe(texto);
+  });
+
+  // G43 (#2700) — a mensagem que saiu no número novo do contato diz isso no
+  // passo; sem a marca, a linha não aparece.
+  it('o passo que mandou ao número novo diz isso', async () => {
+    const passo = dados => ({
+      passo: 'p1',
+      resultado: 'ok',
+      motivo: null,
+      dados,
+    });
+    const novo = { mensagem_id: 9, numero_novo: true, conversa_aberta: 77 };
+    responder([
+      execucao(1, { passos: [passo({ mensagem_id: 10 }), passo(novo)] }),
+    ]);
+    const wrapper = montar();
+    await flushPromises();
+
+    const linhas = wrapper.findAll('[data-numero-novo]');
+    expect(linhas).toHaveLength(1);
+    expect(linhas[0].text()).toBe('AUTOMACAO_LIVRE.HISTORICO.NUMERO_NOVO');
+    // A mensagem mora na conversa do número novo (77), não na do alvo (40).
+    const links = wrapper
+      .findAll('[data-ver-mensagem]')
+      .map(link => link.attributes('href'));
+    expect(links[0]).toContain('/conversations/40?messageId=10');
+    expect(links[1]).toContain('/conversations/77?messageId=9');
   });
 
   // #2500 — o caminho do "decidir" aparece pelo nome que tinha na versão que

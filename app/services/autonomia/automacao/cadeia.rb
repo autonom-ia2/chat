@@ -92,6 +92,15 @@ class Autonomia::Automacao::Cadeia
       restaurada(lista, account.id, raiz, &)
     end
 
+    # A mesma cadeia numa raiz nova (#2771, G24): cada item do "para_cada" é uma mudança própria. Na raiz da rodada, o
+    # card do 2º item em diante dispararia a automação seguinte como `:repetida`, e ela rodaria só no 1º card. O laço e a
+    # profundidade continuam valendo: as origens são as mesmas. Fora de uma cadeia (sem a flag), só roda o bloco.
+    def em_raiz_nova(&)
+      return yield unless ativa?
+
+      restaurada(origens, conta_id, SecureRandom.uuid, &)
+    end
+
     # Roda o bloco com esta cadeia e devolve a anterior no fim. Lista vazia ou nil = sem cadeia.
     def restaurada(lista, conta_id = nil, raiz = nil)
       anterior = [origens_atuais, conta_atual_id, raiz_atual]

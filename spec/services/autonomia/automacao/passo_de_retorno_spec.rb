@@ -92,6 +92,42 @@ RSpec.describe Autonomia::Automacao::PassoDeRetorno, :automacao_motor do
       end
     end
 
+    # G57 (#2769, ex. 1, passo 7): "para hoje" no fuso da conta, nunca "daqui a 1 hora" (que depois das 23h cai amanhã).
+    describe 'quando: hoje ou amanhã' do
+      let(:fuso) { ActiveSupport::TimeZone['America/Sao_Paulo'] }
+
+      before { account.update!(custom_attributes: { 'timezone' => 'America/Sao_Paulo' }) }
+
+      def quando(dia, hora = nil) = retorno('r1', daqui: nil, quando: { 'dia' => dia, 'hora' => hora }.compact).compact
+
+      def due_at_com(passo, agora)
+        travel_to(agora) { rodar([passo], card) }
+        Crm::FollowUp.last.due_at
+      end
+
+      it 'hoje sem hora vale o fim do dia, mesmo às 23h30' do
+        expect(due_at_com(quando('hoje'), fuso.local(2026, 11, 9, 23, 30))).to eq(fuso.local(2026, 11, 9, 23, 59, 59))
+      end
+
+      it 'hoje com hora que ainda vem vale essa hora; a que já passou vale em seguida, nunca amanhã', :aggregate_failures do
+        expect(due_at_com(quando('hoje', 14), fuso.local(2026, 11, 9, 10))).to eq(fuso.local(2026, 11, 9, 14))
+        expect(due_at_com(quando('hoje', 9), fuso.local(2026, 11, 9, 10))).to eq(fuso.local(2026, 11, 9, 10))
+      end
+
+      it 'amanhã sem hora vale o fim de amanhã; com hora, a hora de amanhã', :aggregate_failures do
+        expect(due_at_com(quando('amanha'), fuso.local(2026, 11, 9, 23, 30))).to eq(fuso.local(2026, 11, 10, 23, 59, 59))
+        expect(due_at_com(quando('amanha', 9), fuso.local(2026, 11, 9, 10))).to eq(fuso.local(2026, 11, 10, 9))
+      end
+
+      it '"hoje" é o dia no fuso da conta, não o do servidor', :aggregate_failures do
+        account.update!(custom_attributes: { 'timezone' => 'Asia/Tokyo' })
+        toquio = ActiveSupport::TimeZone['Asia/Tokyo']
+
+        expect(due_at_com(quando('hoje'), Time.utc(2026, 11, 9, 20))).to eq(toquio.local(2026, 11, 10, 23, 59, 59))
+        expect(Crm::FollowUp.last.timezone).to eq('Asia/Tokyo')
+      end
+    end
+
     it 'para pessoas escolhidas ou para um time', :aggregate_failures do
       time = create(:team, account: account)
       rodar([retorno('r1', para: { 'quem' => 'pessoas', 'pessoas' => [admin.id] }),
@@ -253,6 +289,18 @@ RSpec.describe Autonomia::Automacao::PassoDeRetorno, :automacao_motor do
       expect(Autonomia::Automacao::Receita.esquema_valido?(receita.call(retorno(para: { 'quem' => 'pessoas', 'pessoas' => [] }))))
         .to be(false)
       expect(Autonomia::Automacao::Receita.esquema_valido?(receita.call(retorno(envio: {})))).to be(false)
+    end
+
+    it 'o esquema pede daqui ou quando, nunca os dois, e confere o dia e a hora (G57)', :aggregate_failures do
+      valido = ->(passo) { Autonomia::Automacao::Receita.esquema_valido?({ 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [passo] }) }
+      sem_daqui = retorno.except('daqui')
+
+      expect(valido.call(sem_daqui.merge('quando' => { 'dia' => 'hoje' }))).to be(true)
+      expect(valido.call(sem_daqui.merge('quando' => { 'dia' => 'amanha', 'hora' => 23 }))).to be(true)
+      expect(valido.call(sem_daqui)).to be(false)
+      expect(valido.call(retorno.merge('quando' => { 'dia' => 'hoje' }))).to be(false)
+      expect(valido.call(sem_daqui.merge('quando' => { 'dia' => 'hoje', 'hora' => 24 }))).to be(false)
+      expect(valido.call(sem_daqui.merge('quando' => { 'dia' => 'ontem' }))).to be(false)
     end
   end
 end

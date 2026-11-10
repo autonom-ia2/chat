@@ -39,3 +39,11 @@ arquivo, preencha a coluna do projeto e mande o PR. Campo sem resposta conhecida
 - **Rollback.** Reverter o PR do #2103. A próxima green sobe sem o `daemon.json` e volta ao driver padrão (`json-file`).
   A instância que já está no ar não muda até o próximo deploy.
 - **Se a permissão faltar.** O container não sobe na green, o health check falha e a blue segue no ar.
+
+## Trocar o `SECRET_KEY_BASE` (#2670)
+
+Além das sessões e dos tokens assinados de sempre, o `SECRET_KEY_BASE` gera o segredo da assinatura do passo "webhook"
+da Automação livre (`Autonomia::Automacao::SegredoDoWebhook`, doc `docs/automacao/G13-webhook.md`). Trocar a chave
+troca o segredo de **todas** as automações com webhook, nas duas stacks: os sistemas de fora passam a recusar os
+envios até receberem o segredo novo. Antes de trocar, avisar os administradores das contas com o passo e combinar a
+janela; depois, cada administrador lê o segredo novo na tela do passo e atualiza o sistema de fora.

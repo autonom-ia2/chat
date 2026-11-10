@@ -1,0 +1,17 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "PARA_CADA": {
+      "DESCRICAO_DICA": "Diga o que é cada item da lista, por exemplo: cada funcionário novo da lista do RH.",
+      "CAMPO_DICA": "O que a IA tira de cada item. Ela preenche só o que está escrito na conversa. O \"nome\" está sempre: o contato e o card nascem dele.",
+      "SEM_TELEFONE": "Sem o WhatsApp de cada um, todo item vira um contato novo só com o nome, mesmo que a pessoa já esteja nos seus contatos.",
+      "POR_TELEFONE": "Achar o contato pelo WhatsApp",
+      "MAXIMO_DICA": "De 1 a {maximo}. O que passar disso não vira card, e o histórico diz quantos ficaram de fora.",
+      "MAXIMO_FORA": "Escolha um número inteiro de 1 a {maximo}.",
+      "CONTATO_DICA": "Cada item usa o contato com o mesmo WhatsApp, ou um contato novo é criado, como no Importar contatos. Contato que já existe só recebe o que falta: nome e telefone preenchidos nunca são trocados. Os outros dados, como a data de nascimento, vão para o contato como uma coluna a mais do Importar contatos, só se ele ainda não tem esse dado. Ele vai para a empresa de quem mandou a lista, a não ser que já tenha outra empresa.",
+      "FRASE": "Para cada item da lista ({item}): criar um card",
+      "FRASE_SEM_ITEM": "Para cada item de uma lista: criar um card",
+      "VALOR_QUANTOS": "Quantos itens a lista tinha",
+      "VALOR_NOMES": "Os nomes da lista"
+    }
+  }
+}

@@ -217,6 +217,10 @@
       "pagina"
     ]
   },
+  "autonomia/automacoes/:id/segredo_do_webhook": {
+    "controller": "api/v1/accounts/autonomia/automacoes_webhook#segredo",
+    "parametros": []
+  },
   "autonomia/automacoes/agentes_de_ia": {
     "controller": "api/v1/accounts/autonomia/automacoes_ia#agentes_de_ia",
     "parametros": []
@@ -945,6 +949,12 @@
   "conta/cache_keys": {
     "controller": "api/v1/accounts#cache_keys",
     "parametros": []
+  },
+  "contact_imports": {
+    "controller": "api/v1/accounts/contact_imports#index",
+    "parametros": [
+      "page"
+    ]
   },
   "contact_imports/:id": {
     "controller": "api/v1/accounts/contact_imports#show",

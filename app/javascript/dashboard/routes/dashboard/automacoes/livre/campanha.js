@@ -22,11 +22,19 @@ export const serveNaCampanha = serve;
 export const modelosDaCaixa = caixa =>
   (caixa?.message_templates || []).filter(serveNaCampanha);
 
-// Só o que cada escolha precisa: o "não receber" não leva os campos do disparo.
-export const comFaz = (passo, faz) =>
-  faz === 'disparar'
-    ? { ...passo, faz, etiquetas: passo.etiquetas || [] }
-    : { id: passo.id, tipo: passo.tipo, faz };
+// G58 (#2779): quem recebe. "desta_execucao" manda só a quem os passos
+// anteriores desta vez criaram, sem etiquetas nem etiquetas excluídas (o
+// servidor recusa juntas).
+export const PUBLICO_DESTA_EXECUCAO = 'desta_execucao';
+export const publicoDaExecucao = passo =>
+  passo?.publico === PUBLICO_DESTA_EXECUCAO;
+
+// A escolha só aparece quando o catálogo tem um passo que cria contato num
+// gatilho da conta (`cria_contatos`, da lista do servidor:
+// Autonomia::Automacao::ContatosDaExecucao::TIPOS_QUE_CRIAM). Antes da G21
+// (#2706), nenhum passo vem marcado, e a receita com esse público não salva.
+export const publicoDaExecucaoNoCatalogo = catalogo =>
+  (catalogo?.passos || []).some(item => item.cria_contatos);
 
 // Quem recebe (exemplo 7, passo 2): quem tem as etiquetas ou todos os contatos
 // da conta. "Todos" não leva etiqueta de público; o "menos quem tem" continua.
@@ -34,13 +42,26 @@ export const PARA_TODOS = 'todos';
 
 export const paraTodos = passo => passo?.publico === PARA_TODOS;
 
+const sem = (passo, ...chaves) =>
+  Object.fromEntries(
+    Object.entries(passo).filter(([nome]) => !chaves.includes(nome))
+  );
+
+// Só o que cada escolha precisa: o "não receber" não leva os campos do disparo.
+export const comFaz = (passo, faz) => {
+  if (faz !== 'disparar') return { id: passo.id, tipo: passo.tipo, faz };
+  if (publicoDaExecucao(passo)) return { ...sem(passo, 'etiquetas'), faz };
+  return { ...passo, faz, etiquetas: passo.etiquetas || [] };
+};
+
+// Trocar quem recebe: com as etiquetas, a lista volta (vazia se não havia);
+// desta execução, as etiquetas e as excluídas saem; todos, só as do público.
 export const comPublico = (passo, publico) => {
-  if (publico === PARA_TODOS) {
-    const { etiquetas, ...resto } = passo;
-    return { ...resto, publico: PARA_TODOS };
-  }
-  const { publico: _, ...resto } = passo;
-  return { ...resto, etiquetas: passo.etiquetas || [] };
+  if (publico === PUBLICO_DESTA_EXECUCAO)
+    return comFaz({ ...sem(passo, 'sem_etiquetas'), publico }, 'disparar');
+  if (publico === PARA_TODOS)
+    return { ...sem(passo, 'etiquetas'), publico: PARA_TODOS };
+  return comFaz(sem(passo, 'publico'), 'disparar');
 };
 
 const escrito = texto => typeof texto === 'string' && texto.trim() !== '';
@@ -68,7 +89,9 @@ export const campanhaPronta = (passo, caixas) => {
     (passo.modelo.variaveis || []).every(partes =>
       (partes || []).some(escrito)
     ) &&
-    (paraTodos(passo) || (passo.etiquetas || []).length > 0)
+    (publicoDaExecucao(passo) ||
+      paraTodos(passo) ||
+      (passo.etiquetas || []).length > 0)
   );
 };
 

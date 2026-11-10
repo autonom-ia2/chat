@@ -15,6 +15,8 @@
       "VARIAVEL": "Texto da variável {numero}",
       "VARIAVEL_DICA": "A campanha vai para muita gente de uma vez: escreva um texto fixo.",
       "PUBLICO_ETIQUETAS": "Quem tem as etiquetas",
+      "PUBLICO_DESTA_EXECUCAO": "Só quem esta automação criou nesta vez",
+      "PUBLICO_DESTA_EXECUCAO_DICA": "A cada vez que roda, vai só para as empresas e os contatos criados nos passos acima, nesta vez.",
       "PUBLICO_TODOS": "Todos os contatos",
       "PUBLICO_TODOS_DICA": "Todos os contatos da conta recebem, menos quem tiver uma das etiquetas abaixo e quem pediu para não receber. Ex.: a mesma campanha para todos os outros.",
       "ETIQUETAS_DICA": "Recebe quem tiver alguma destas etiquetas na hora do envio. Pôr ou tirar a etiqueta põe ou tira a pessoa da campanha.",

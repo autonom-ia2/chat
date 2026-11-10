@@ -12,22 +12,29 @@ import {
 } from '../modeloWhatsapp';
 import {
   PARA_TODOS,
+  PUBLICO_DESTA_EXECUCAO,
   caixasDaCampanha,
   comFaz,
   comPublico,
   ehPropaganda,
   modelosDaCaixa,
   paraTodos,
+  publicoDaExecucao,
 } from '../campanha';
 
 // #2414 G14 (#2630) — o passo "campanha" inteiro: o que fazer e, para mandar,
 // a caixa do WhatsApp oficial, o modelo aprovado com o texto fixo de cada
 // variável, o nome e quem recebe (as etiquetas ou todos os contatos, menos quem
-// tem as etiquetas excluídas). O servidor confere tudo de novo ao salvar,
-// inclusive que o gatilho roda sozinho.
+// tem as etiquetas excluídas; ou, G58, só quem esta automação criou nesta vez).
+// O servidor confere tudo de novo ao salvar, inclusive que o gatilho roda
+// sozinho.
 const props = defineProps({
   modelValue: { type: Object, required: true },
   etiquetas: { type: Array, default: () => [] },
+  // G58: o catálogo tem um passo que cria contato num gatilho da conta
+  // (publicoDaExecucaoNoCatalogo). Sem ele, "Quem recebe" não oferece "só quem
+  // esta automação criou".
+  comPublicoDaExecucao: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -50,11 +57,30 @@ const opcoesDoFaz = computed(() => [
 ]);
 const escolherFaz = faz => emit('update:modelValue', comFaz(passo.value, faz));
 
+// Quem recebe: as etiquetas, todos os contatos (exemplo 7) ou, G58 (#2779), só
+// quem esta automação criou nesta vez. As etiquetas só aparecem na primeira.
+const daExecucao = computed(() => publicoDaExecucao(passo.value));
 const todos = computed(() => paraTodos(passo.value));
+// Uma receita que já tem o público da execução continua com a opção, para voltar.
+const ofereceDaExecucao = computed(
+  () => props.comPublicoDaExecucao || daExecucao.value
+);
 const opcoesDoPublico = computed(() => [
   { value: 'etiquetas', label: t(`${C}.PUBLICO_ETIQUETAS`) },
   { value: PARA_TODOS, label: t(`${C}.PUBLICO_TODOS`) },
+  ...(ofereceDaExecucao.value
+    ? [
+        {
+          value: PUBLICO_DESTA_EXECUCAO,
+          label: t(`${C}.PUBLICO_DESTA_EXECUCAO`),
+        },
+      ]
+    : []),
 ]);
+const publicoEscolhido = computed(() => {
+  if (daExecucao.value) return PUBLICO_DESTA_EXECUCAO;
+  return todos.value ? PARA_TODOS : 'etiquetas';
+});
 const escolherPublico = publico =>
   emit('update:modelValue', comPublico(passo.value, publico));
 
@@ -226,18 +252,25 @@ const mudarVariavel = (indice, texto) => {
         </label>
         <ChoiceSelect
           data-campanha-publico
-          :model-value="todos ? PARA_TODOS : 'etiquetas'"
+          :model-value="publicoEscolhido"
           :trigger-id="idPublico"
           :aria-label="$t('AUTOMACAO_LIVRE.CAMPOS.PUBLICO')"
           :options="opcoesDoPublico"
           @update:model-value="escolherPublico"
         />
+        <p
+          v-if="daExecucao"
+          data-campanha-publico-dica
+          class="mb-0 text-sm text-n-slate-11"
+        >
+          {{ $t(`${C}.PUBLICO_DESTA_EXECUCAO_DICA`) }}
+        </p>
         <p v-if="todos" class="mb-0 text-sm text-n-slate-11">
           {{ $t(`${C}.PUBLICO_TODOS_DICA`) }}
         </p>
       </div>
 
-      <div v-if="!todos" class="flex flex-col gap-1.5">
+      <div v-if="!daExecucao && !todos" class="flex flex-col gap-1.5">
         <LivreMarcar
           :rotulo="$t('AUTOMACAO_LIVRE.CAMPOS.ETIQUETAS')"
           :opcoes="etiquetas"
@@ -254,7 +287,7 @@ const mudarVariavel = (indice, texto) => {
       </div>
 
       <div
-        v-if="etiquetas.length"
+        v-if="etiquetas.length && !daExecucao"
         class="flex flex-col gap-1.5"
         data-campanha-sem
       >

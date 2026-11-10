@@ -80,6 +80,14 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     expect(no[:ramos].map { |ramo| [ramo[:chave], ramo[:passos].pluck(:id)] }).to eq([['chegou', %w[r1]], ['se_vencer', %w[v1 r1]]])
   end
 
+  it 'o "esperar até" sem prazo que ainda não vale só abre o caminho de quando chegar (#2750)' do
+    espera = { 'id' => 'a1', 'tipo' => 'esperar_ate', 'condicao' => aberta, 'prazo' => 'sem_prazo' }
+
+    no = passos_de(receita(espera, esperar_passo('r1'))).first
+
+    expect(no[:ramos].map { |ramo| [ramo[:chave], ramo[:passos].pluck(:id)] }).to eq([['chegou', %w[r1]]])
+  end
+
   it 'o "esperar até" que já vale segue na hora' do
     espera = { 'id' => 'a1', 'tipo' => 'esperar_ate', 'condicao' => resolvida, 'prazo' => { 'valor' => 2, 'unidade' => 'horas' } }
 

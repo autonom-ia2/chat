@@ -11,9 +11,13 @@
       "CARD_SAIU_DA_ETAPA": "Quando o card sai de uma etapa",
       "CARD_GANHO": "Quando o card é ganho",
       "CARD_PERDIDO": "Quando o card é perdido",
+      "CARD_ATUALIZADO": "Quando o card é atualizado",
       "CARD_REUNIAO_MARCADA": "Quando uma reunião é marcada",
       "CARD_REUNIAO_REMARCADA": "Quando uma reunião é remarcada",
       "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada",
+      "CARD_RESPONSAVEL_MUDOU": "Quando muda quem cuida do card",
+      "CARD_TIME_MUDOU": "Quando muda o time do card",
+      "CARD_REUNIAO_ATENDIDA": "Quando uma reunião acontece",
       "CARD_PARADO": "Quando o card fica parado numa etapa",
       "CARD_DATA": "Perto de uma data do card",
       "CONTATO_DATA": "Perto de uma data do contato",
@@ -32,6 +36,11 @@
       "NENHUMA": "Nenhuma (sem conversa, a mensagem não sai)",
       "NA_FRASE": "{frase} (sem conversa, abre uma em {caixa})",
       "AJUDA": "Se o card ou o contato ainda não tem conversa, a primeira mensagem abre uma nesta caixa. No WhatsApp oficial, ela só sai com um modelo aprovado."
+    },
+    "AGENDA_DE_RESERVA": {
+      "TITULO": "Página de agenda de reserva",
+      "NENHUMA": "Nenhuma (sem ninguém atendendo, o link da agenda fica vazio)",
+      "AJUDA": "Vai no link da agenda quando ninguém atende a conversa, ou o contato ainda não tem conversa. Quem atende sempre manda a própria página."
     },
     "VALOR_DA_MENSAGEM": {
       "RECEBIDA": "do cliente",
@@ -67,6 +76,7 @@
       "DIA_DO_MES": "Dia do mês",
       "DATA": "Data",
       "SELECAO": "Quais",
+      "MUDANCA": "Mudança",
       "REPETE": "Repete",
       "PAGINA_ID": "Página de agendamento",
       "ANTES": "Quanto tempo antes do início"
@@ -86,6 +96,9 @@
       "CARD_REUNIAO_MARCADA": "Quando uma reunião é marcada num card de {funil}",
       "CARD_REUNIAO_REMARCADA": "Quando uma reunião é remarcada num card de {funil}",
       "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada num card de {funil}",
+      "CARD_RESPONSAVEL_MUDOU": "Quando muda quem cuida de um card de {funil}",
+      "CARD_TIME_MUDOU": "Quando muda o time de um card de {funil}",
+      "CARD_REUNIAO_ATENDIDA": "Quando uma reunião acontece num card de {funil}",
       "CARD_PARADO": "Quando o card fica {dias} dias parado em {etapa}",
       "CARD_DATA": "{dias} dias {quando} de {campo} do card, a partir das {hora}h",
       "CONTATO_DATA": "{dias} dias {quando} de {campo} do contato, a partir das {hora}h",
@@ -174,7 +187,35 @@
       "ETIQUETA": "Com a etiqueta",
       "SEM_ETIQUETA": "Sem a etiqueta",
       "ATRIBUTO": "Campo do contato igual a",
-      "VALOR": "Valor"
+      "VALOR": "Valor",
+      "SOLICITANTE": {
+        "FUNIL": "Pediu card no funil",
+        "DICA": "Contatos que pediram um card neste funil e ainda faltam campos marcados. Um contato por empresa.",
+        "ETAPA": "Só os cards na etapa",
+        "FALTANDO": "Falta quando algum destes não está marcado"
+      }
+    },
+    "MUDANCA": {
+      "CAMPO": "Campo",
+      "ESCOLHA_O_CAMPO": "Escolha o campo",
+      "VALOR_DE_VENDA": "Valor de venda",
+      "CONDICAO": "Quando ele",
+      "VALOR": "Valor",
+      "EM_REAIS": "Em reais, ex.: 50000",
+      "CONDICOES": {
+        "MUDOU": "mudar",
+        "IGUAL": "ficar igual a",
+        "MAIOR_QUE": "mudar e ficar acima de",
+        "PASSOU_DE": "passar de"
+      },
+      "FRASE": {
+        "MUDOU": "Quando o campo {campo} do card muda",
+        "IGUAL": "Quando o campo {campo} do card fica igual a {valor}",
+        "MAIOR_QUE": "Quando o campo {campo} do card muda e fica acima de {valor}",
+        "PASSOU_DE": "Quando o campo {campo} do card passa de {valor}"
+      },
+      "AVISO": "O card novo também conta: o card criado com R$ 80 mil \"passa de 50000\". Uma mudança feita por esta própria automação não a dispara de novo.",
+      "ERRO_CAMPOS": "Não consegui carregar os campos do card. Abra o editor de novo para tentar outra vez."
     }
   }
 }

@@ -39,7 +39,8 @@ module Autonomia::Automacao::Catalogo
   ESCOLHAS = %w[etiqueta atributo].freeze
 
   # As peças dos passos nativos: a definição do esquema que cada propriedade usa.
-  PECAS_DO_ESQUEMA = { 'duracao' => 'duracao', 'condicao' => 'condicao', 'passos' => 'passos',
+  # `prazo_da_espera` (#2750): a duração ou "sem prazo", do "esperar até".
+  PECAS_DO_ESQUEMA = { 'duracao' => 'duracao', 'prazo_da_espera' => 'prazo', 'condicao' => 'condicao', 'passos' => 'passos',
                        'passos_opcionais' => 'passos', 'texto' => 'texto_com_valores', 'linha' => 'linha_com_valores',
                        # F7: os passos de IA.
                        'leituras' => 'leituras', 'instrucao' => 'instrucao', 'caminhos' => 'caminhos',
@@ -50,12 +51,20 @@ module Autonomia::Automacao::Catalogo
                        'agente_de_ia' => 'agente_de_ia',
                        # G3 (#2629): o "criar retorno".
                        'para_do_retorno' => 'quem_recebe_retorno', 'envio_do_retorno' => 'envio_do_retorno',
+                       # G18 (#2671): onde roda o "em outro registro".
+                       'registro_ligado' => 'registro_ligado',
+                       # G57 (#2769): hoje ou amanhã; a peça mostra também o `daqui`.
+                       'quando_do_retorno' => 'quando_do_retorno',
                        # G31: o "decidir" que espera a próxima resposta e decide de novo.
                        'de_novo' => 'de_novo' }.freeze
-  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2) e a
-  # etapa do "card" (G4).
+  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2), a
+  # etapa do "card" (G4) e o contato em que ele nasce (G49), e a hora da conferência do "esperar até" sem prazo (G64,
+  # mostrada pela peça do prazo). O "Cobrir a pessoa enquanto ela não responde" do "Passar para a agente de IA" (decisão
+  # 18) é um sim/não. G13 (#2670): o endereço, o que vai e o que volta do "webhook".
   PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email',
-                          'etapa_id' => 'etapa' }.freeze
+                          'etapa_id' => 'etapa', 'contato' => 'contato_criado', 'conferir_as' => 'conferir_as',
+                          'cobrir_pessoa' => 'sim_nao', 'descricao' => 'descricao', 'url' => 'endereco_do_webhook',
+                          'corpo' => 'corpo_do_webhook', 'gravar' => 'resposta_do_webhook' }.freeze
 
   module_function
 
@@ -118,10 +127,14 @@ module Autonomia::Automacao::Catalogo
       next if tipo == 'acao' || declarado['nativos_fora_do_editor'].to_h.key?(tipo)
 
       { 'tipo' => tipo, 'grupo' => declarado.dig('nativos', tipo, 'grupo'), 'requer' => declarado.dig('nativos', tipo, 'requer'),
-        'funil' => declarado.dig('nativos', tipo, 'funil'), 'frase' => chave('PASSOS', tipo),
+        'chave' => declarado.dig('nativos', tipo, 'chave'), 'funil' => declarado.dig('nativos', tipo, 'funil'),
+        'frase' => chave('PASSOS', tipo), 'cria_contatos' => cria_contatos(tipo),
         'campos' => campos_nativos(forma, declarado.dig('nativos', tipo, 'peca'), declarado.dig('nativos', tipo, 'rotulos')) }.compact
     end
   end
+
+  # G58: o passo cria os contatos que a campanha com `publico: desta_execucao` lê (ContatosDaExecucao::TIPOS_QUE_CRIAM).
+  def cria_contatos(tipo) = (true if ::Autonomia::Automacao::ContatosDaExecucao::TIPOS_QUE_CRIAM.include?(tipo))
 
   # `peca` no yml (a campanha, G14): uma peça só mostra o passo inteiro. `rotulos` (G41): o rótulo próprio de um campo
   # neste passo.
@@ -137,6 +150,7 @@ module Autonomia::Automacao::Catalogo
     declarado['acoes'].map do |nome, passo|
       formato = formato_da_acao(nome, passo['acao'])
       { 'tipo' => 'acao', 'nome' => nome, 'acao' => passo['acao'], 'grupo' => passo['grupo'], 'frase' => chave('PASSOS', nome),
+        'requer' => passo['requer'], 'funil' => passo['funil'],
         'caminho' => passo['caminho'].to_h.transform_values { |origem| origem_do_parametro(origem) },
         'envelope' => (formato['envelope'] unless formato['corpo_plano']),
         'fixos' => ::Autonomia::Automacao::AcoesPermitidas.fixos(passo['acao']),
@@ -159,12 +173,16 @@ module Autonomia::Automacao::Catalogo
     { 'escolher' => origem['escolher'], 'rotulo' => chave('ESCOLHER', origem['escolher']) }
   end
 
+  # A lista (`um_de` de automacao-recursos.yml) estreita as opções da plataforma e torna o campo obrigatório.
   def campo_da_acao(acao, formato, campo, peca)
     regra = formato_do_campo(formato, campo)
+    permitidas = ::Autonomia::Automacao::AcoesPermitidas
+    opcoes = permitidas.um_de(acao)[campo] || regra['um_de']
     {
       'nome' => campo, 'peca' => peca, 'rotulo' => chave('CAMPOS', campo.split('.').last),
-      'obrigatorio' => OBRIGATORIO.include?(regra['obrigatorio']) || ::Autonomia::Automacao::AcoesPermitidas.exige(acao).include?(campo),
-      'opcoes' => regra['um_de']&.map { |valor| { 'valor' => valor, 'frase' => chave('OPCOES', campo.split('.').last, valor) } },
+      'obrigatorio' => OBRIGATORIO.include?(regra['obrigatorio']) || permitidas.exige(acao).include?(campo) ||
+        permitidas.um_de(acao).key?(campo),
+      'opcoes' => opcoes&.map { |valor| { 'valor' => valor, 'frase' => chave('OPCOES', campo.split('.').last, valor) } },
       **regra.slice('padrao', 'min', 'max', 'max_caracteres')
     }.compact
   end

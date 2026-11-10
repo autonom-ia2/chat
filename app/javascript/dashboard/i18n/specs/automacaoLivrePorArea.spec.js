@@ -39,10 +39,12 @@ const BLOCOS_POR_ARQUIVO = {
     'SELETOR',
     'ALTERAR_PAINEL',
     'LIGAR',
+    'CRIADO',
   ],
   'automacaoLivreGatilhos.json': [
     'GATILHOS',
     'ORIGEM',
+    'AGENDA_DE_RESERVA',
     'VALOR_DA_MENSAGEM',
     'OPERADOR_DA_MENSAGEM',
     'PARAMETROS_DO_GATILHO',
@@ -61,12 +63,17 @@ const BLOCOS_POR_ARQUIVO = {
     'CONVERSA_NOVA',
     'GATILHO_RECORRENTE',
     'SELECAO',
+    'MUDANCA',
   ],
   'automacaoLivreIa.json': ['IA'],
   'automacaoLivreReceitas.json': ['RECEITAS'],
   'automacaoLivreEnsaio.json': ['ENSAIO', 'HISTORICO'],
   'automacaoLivreCampanha.json': ['CAMPANHA'],
+  'automacaoLivreProspeccao.json': ['PROSPECCAO'],
+  'automacaoLivreParaCada.json': ['PARA_CADA'],
   'automacaoLivreRetorno.json': ['RETORNO'],
+  'automacaoLivreOutroRegistro.json': ['OUTRO_REGISTRO'],
+  'automacaoLivreWebhook.json': ['WEBHOOK'],
 };
 
 const doIdioma = idioma =>

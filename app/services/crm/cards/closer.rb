@@ -27,9 +27,12 @@ module Crm
 
       # payload_extra: o que mais vai na atividade do fechamento (IA entende a conversa F3: o fechamento da IA leva
       # `by: 'ai'`, o motivo e a confiança, Crm::Ai::FecharCard). Sem ele, a atividade é a de sempre.
-      def initialize(card:, actor:, result:, value_cents: nil, currency: nil, lost_reason: nil, payload_extra: {})
+      # automacao: quem fechou foi uma automação (`{ origem: 'livre', id: }`, G25), como no Mover (#2428): a atividade
+      # grava `by: 'automacao'`, a origem e o id.
+      def initialize(card:, actor:, result:, value_cents: nil, currency: nil, lost_reason: nil, payload_extra: {}, automacao: nil)
         @card = card
         @payload_extra = payload_extra.to_h
+        @automacao = automacao
         @actor = actor
         @result = VERB_ALIASES.fetch(result.to_s, result.to_s)
         @value_cents = value_cents
@@ -108,7 +111,13 @@ module Crm
       end
 
       def activity_payload
-        @payload_extra.merge(outcome_payload).merge(closed_with_payload)
+        @payload_extra.merge(outcome_payload).merge(closed_with_payload).merge(da_automacao)
+      end
+
+      def da_automacao
+        return {} if @automacao.blank?
+
+        { by: 'automacao', origem: @automacao[:origem], automacao_id: @automacao[:id] }
       end
 
       def outcome_payload

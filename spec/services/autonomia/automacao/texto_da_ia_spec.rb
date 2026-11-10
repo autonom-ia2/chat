@@ -208,6 +208,25 @@ RSpec.describe 'Texto da IA entre passos', :automacao_motor do # rubocop:disable
       expect(problemas(so_se_for('Ana', escrever), mensagem_do_texto('p2'))).to be_empty
     end
 
+    # G18: o ramo do "em outro registro" roda numa execução filha, que não vê os textos da mãe, nem a mãe os dela.
+    describe 'com o "em outro registro"' do
+      def em_outro(*passos)
+        { 'id' => 'outro', 'tipo' => 'em_outro_registro', 'passos' => passos, 'registro' => { 'de' => 'cards_do_contato' } }
+      end
+
+      it 'aceita o texto escrito e lido dentro do mesmo ramo' do
+        expect(problemas(em_outro(escrever, mensagem_do_texto))).to be_empty
+      end
+
+      it 'recusa ler na mãe o texto escrito dentro do ramo' do
+        expect(problemas(em_outro(escrever), mensagem_do_texto).join).to include('p2', 'ia.p1')
+      end
+
+      it 'recusa ler dentro do ramo o texto escrito na mãe' do
+        expect(problemas(escrever, em_outro(mensagem_do_texto)).join).to include('p2', 'ia.p1')
+      end
+    end
+
     it 'recusa o id que não é de um passo que escreve', :aggregate_failures do
       passo = mensagem_passo('p2', { '$valor' => 'ia.p9' })
 

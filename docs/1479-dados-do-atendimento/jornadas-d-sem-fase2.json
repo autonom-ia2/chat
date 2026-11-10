@@ -1,0 +1,20 @@
+{
+  "pasta": "docs/1479-dados-do-atendimento/prints-d",
+  "conta": 1,
+  "larguras": [1440, 390],
+  "temas": ["light"],
+  "jornadas": [
+    {
+      "nome": "sem-fase2",
+      "etapas": [
+        {
+          "nome": "pagina-sem-bloco",
+          "url": "/app/accounts/{conta}/agents/1",
+          "esperar": "text=Quando passa para a equipe",
+          "passos": [{ "clicar": "text=Quando passa para a equipe" }],
+          "pausa": 3000
+        }
+      ]
+    }
+  ]
+}

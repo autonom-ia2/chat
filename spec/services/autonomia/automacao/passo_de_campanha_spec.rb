@@ -55,7 +55,7 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
     end
 
     context 'with o gatilho da conta (conta.recorrente, G7)' do
-      before { allow(described_class).to receive(:gatilho_da_conta?).and_return(true) }
+      before { allow(described_class).to receive(:alvo_da_conta?).and_return(true) }
 
       it 'aceita a campanha pronta, com modelo de utilidade aprovado' do
         expect(problemas(disparar)).to be_empty
@@ -116,6 +116,8 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
         expect(valido.call(disparar.merge('publico' => 'etiquetas', 'etiquetas' => []))).to be(false)
         expect(valido.call(disparar.except('etiquetas').merge('publico' => 'todos'))).to be(true)
         expect(valido.call(disparar.merge('publico' => 'todos'))).to be(false)
+        # Integração 2 do #2414: o público desta execução (G58) não leva etiqueta excluída, que ele não leria.
+        expect(valido.call(disparar.except('etiquetas').merge('publico' => 'desta_execucao', 'sem_etiquetas' => [etiqueta.id]))).to be(false)
       end
 
       it 'recusa com as campanhas de WhatsApp desligadas na conta' do
@@ -199,13 +201,12 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
       expect(%i[en pt_BR].map { |locale| I18n.exists?('autonomia.automacao.motivos.campanha_exclusao_apagada', locale) }).to eq([true, true])
     end
 
-    it 'o gatilho da conta é o de alvo Account (contrato com a G7), não o de conversa ou card' do
-      allow(Autonomia::Automacao::Gatilhos).to receive(:alvo).and_call_original
-      allow(Autonomia::Automacao::Gatilhos).to receive(:alvo).with('conta.recorrente').and_return('Account')
+    it 'o alvo da conta é o Account do gatilho da conta (contrato com a G7), não o de conversa ou card' do
+      alvo = ->(tipo) { Autonomia::Automacao::Gatilhos.alvo(tipo) }
 
-      expect(described_class.gatilho_da_conta?('conta.recorrente')).to be(true)
-      expect(described_class.gatilho_da_conta?('conversa.criada')).to be(false)
-      expect(described_class.gatilho_da_conta?('card.ganho')).to be(false)
+      expect(described_class.alvo_da_conta?(alvo.call('conta.recorrente'))).to be(true)
+      expect(described_class.alvo_da_conta?(alvo.call('conversa.criada'))).to be(false)
+      expect(described_class.alvo_da_conta?(alvo.call('card.ganho'))).to be(false)
     end
 
     it 'receita antiga com alvo pula com o motivo e não cria campanha' do
@@ -299,9 +300,9 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
     it 'o disparar que chegar num gatilho de conversa pula com o motivo e a execução segue' do
       conversa = create(:conversation, account: account, inbox: caixa, status: :resolved)
       # Salva como se fosse o gatilho da conta; ao rodar, a regra de hoje vale.
-      allow(described_class).to receive(:gatilho_da_conta?).and_return(true)
+      allow(described_class).to receive(:alvo_da_conta?).and_return(true)
       definicao = automacao_ligada(account, dona, [disparar])
-      allow(described_class).to receive(:gatilho_da_conta?).and_call_original
+      allow(described_class).to receive(:alvo_da_conta?).and_call_original
 
       perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(definicao, conversa) }
 

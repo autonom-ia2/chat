@@ -9,8 +9,10 @@ module Autonomia::Automacao::CatalogoDeValores
   # O que a receita lê do alvo, para o editor mostrar como chip. Os atributos entram pela base mais a chave. A `base`
   # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499). A resposta durante a espera
   # (G11) vem marcada `so_na_espera`: o editor só a oferece na condição do "esperar até". A reunião (G12) vem com
-  # `so_nos_gatilhos`: o editor só a oferece nos gatilhos de reunião; a mensagem que falhou (G53), só no gatilho dela e
-  # com `so_nos_passos`: fora do "Só se" do gatilho, que a Partida confere sem ela.
+  # `so_nos_gatilhos`: o editor só a oferece nos gatilhos de reunião. O que era antes da troca (G9), só no gatilho da
+  # troca. A mensagem que falhou (G53), só no gatilho dela e com `so_nos_passos`: fora do "Só se" do gatilho, que a
+  # Partida confere sem ela. O que a filha do "em outro registro" lê do registro de origem (G65, `origem.<caminho>`) vem
+  # com `na_origem`: o editor o oferece dentro do ramo, com o prefixo.
   def todos
     valores = ::Autonomia::Automacao::Valores
     campos = caminhos_dos_campos(valores).map do |caminho|
@@ -18,30 +20,33 @@ module Autonomia::Automacao::CatalogoDeValores
         **do_protegido(caminho), **lugares(valores, caminho) }.compact
     end
     atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
-      { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base) }
+      { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base),
+        'da_pessoa' => (da_pessoa if base == ::Autonomia::Automacao::Valores::Atributos::CARD),
+        'na_origem' => (true if valores::Origem::BASES.include?(base.split('.').first)) }.compact
     end
     campos + atributos + valores_do_gatilho
   end
 
   # A mensagem do gatilho (#2496), com as opções e os operadores do valor fechado. A que só o Guia monta vem marcada:
   # a tela não a oferece, mas mostra a frase, abre a condição que já a usa e a tira do "Só se" quando o gatilho muda.
-  # Os valores de leitura direta: os campos, os que dependem de quem vê, a agenda, a resposta, o envio e a mensagem que
-  # falhou.
+  # Os valores de leitura direta: os campos, os que dependem de quem vê, a agenda, a resposta, o envio, a troca e a
+  # mensagem que falhou.
   def caminhos_dos_campos(valores)
-    valores::CAMPOS.keys + valores::DO_QUE_QUEM_VE.keys + valores::AGENDA.keys + valores::RESPOSTA.keys + valores::ENVIO.keys +
-      valores::FALHOU.keys
+    valores::CAMPOS.keys + valores::DO_QUE_QUEM_VE.keys + valores::DA_SELECAO.keys + valores::AGENDA.keys + valores::RESPOSTA.keys +
+      valores::ENVIO.keys + valores::TROCA.keys + valores::FALHOU.keys
   end
 
-  # Onde a receita pode ler o valor: na espera, em certos gatilhos, só nos passos.
+  # Onde a receita pode ler o valor: na espera, em certos gatilhos (LugarDoValor), só nos passos, no registro de origem.
   def lugares(valores, caminho)
-    { 'so_na_espera' => (true if valores.da_resposta?(caminho)), 'so_nos_gatilhos' => so_nos_gatilhos(valores, caminho),
-      'so_nos_passos' => (true if valores.da_falha?(caminho)) }
+    { 'so_na_espera' => (true if valores.da_resposta?(caminho)), 'so_nos_gatilhos' => valores.so_nos_gatilhos(caminho),
+      'so_nos_passos' => (true if valores.da_falha?(caminho)), 'na_origem' => (true if valores.na_origem?(caminho)) }
   end
 
-  def so_nos_gatilhos(valores, caminho)
-    return ::Autonomia::Automacao::Gatilhos::DE_REUNIAO if valores.da_reuniao?(caminho)
-
-    [::Autonomia::Automacao::MensagemQueFalhou::TIPO] if valores.da_falha?(caminho)
+  # O campo de pessoa da equipe do card (G62): além do campo (o id), o nome e a ausência, com as opções da G23.
+  def da_pessoa
+    ::Autonomia::Automacao::Valores::Atributos::SUFIXOS_DA_PESSOA.map do |sufixo|
+      { 'sufixo' => sufixo, 'frase' => chave('VALORES', "pessoa.#{sufixo}"), **do_fechado("card.atributos.x.#{sufixo}") }
+    end
   end
 
   def valores_do_gatilho
