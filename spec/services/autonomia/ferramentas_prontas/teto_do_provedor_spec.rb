@@ -48,6 +48,17 @@ RSpec.describe Autonomia::FerramentasProntas::TetoDoProvedor do
     end
   end
 
+  it 'a chave colada com quebra de linha no fim vale sem ela; com quebra no meio, a fonte segue sem chave' do
+    parallelum = Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum
+    with_modified_env(AUTONOMIA_PRONTAS_FIPE_TOKEN: " chave-de-teste\n") do
+      expect(parallelum.cabecalhos).to eq('X-Subscription-Token' => 'chave-de-teste')
+    end
+    with_modified_env(AUTONOMIA_PRONTAS_FIPE_TOKEN: "chave\r\nX-Outro: 1") do
+      expect(parallelum.cabecalhos).to eq({})
+      expect(described_class.tetos('parallelum.com.br')).to eq([[450, 86_400]])
+    end
+  end
+
   it 'passou do teto: o provedor e pulado sem chamar, com o motivo, e a reserva responde' do
     ferramenta = incluir_pronta('cidades', conta: account, agente: agent)
     fonte_responde(ibge, estados)

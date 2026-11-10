@@ -146,7 +146,8 @@ class Autonomia::FerramentasProntas::ClienteHttp
       method: :get, headers: aceita.fetch(:cabecalhos).merge(CABECALHOS, 'Accept' => tipos.first), max_bytes: max_bytes,
       open_timeout: [ABERTURA, segundos].min, read_timeout: segundos, total_timeout: segundos,
       max_redirects: MAX_REDIRECTS, cross_origin_redirects: false, allowed_ports: [PORTA], schemes: %w[https],
-      allowed_content_types: tipos, allowed_content_type_prefixes: [], validate_content_type: true
+      allowed_content_types: tipos, allowed_content_type_prefixes: [], validate_content_type: true,
+      sensitive_headers: aceita.fetch(:cabecalhos).keys # se um dia o salto para outra origem for aceito, a chave cai antes
     }
   end
 
