@@ -232,6 +232,22 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     end
   end
 
+  # #2845 — o espelho do caso acima: a linha de texto comum que termina em negrito, seguida da última linha curta toda em
+  # negrito. É ênfase no fim do parágrafo, não título: o parágrafo continua.
+  describe 'a ênfase em negrito que começa no fim de uma linha e termina numa linha curta' do
+    let(:pdf) do
+      enfase = 'BT /F1 10 Tf 54 766.8 Td (o segurado que agravar o risco de forma intencional) Tj ET ' \
+               'BT /F2 10 Tf 320 766.8 Td (O SEGURADO PERDERA O DIREITO) Tj ET'
+      pdf_com([[['Se ficar comprovado na regulacao do sinistro que houve ma-fe na declaracao do risco, ou que foi', topo],
+                ['', topo - linha, 54, nil, enfase],
+                ['', topo - (2 * linha), 54, nil, 'BT /F2 10 Tf 54 753.6 Td (A INDENIZACAO.) Tj ET']]])
+    end
+
+    it 'continua o parágrafo (a linha de cima também tem o negrito)' do
+      expect(extrair).to include("O SEGURADO PERDERA O DIREITO\nA INDENIZACAO.")
+    end
+  end
+
   describe 'os números de tabela posicionados sem espaço (folga entre 10% e 20% da letra)' do
     let(:pdf) { pdf_com([[['', topo, 54, '[(1) -180 (2) -180 (3) -180 (4) -180 (5)] TJ']]]) }
 

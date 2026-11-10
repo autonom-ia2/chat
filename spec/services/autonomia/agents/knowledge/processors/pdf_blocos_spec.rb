@@ -211,6 +211,20 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       end
     end
 
+    # #2845 — a ênfase em negrito no fim do parágrafo, terminando numa linha curta toda em negrito, não é título.
+    context 'with a bold emphasis that ends the paragraph in a short line' do
+      let(:pdf) do
+        pdf_com([[['Se ficar comprovado na regulacao do sinistro que houve ma-fe na declaracao do risco, ou que foi', topo, 'F1', 10],
+                  ['o segurado que agravar o risco de forma intencional', topo - linha, 'F1', 10],
+                  ['O SEGURADO PERDERA O DIREITO', topo - linha, 'F2', 10, 320],
+                  ['A INDENIZACAO.', topo - (2 * linha), 'F2', 10]]])
+      end
+
+      it 'reads no title' do
+        expect(blocos_gravados.pluck(:tipo)).not_to include(:titulo)
+      end
+    end
+
     it 'gives no blocks to the protected agent (Lia)' do
       allow(bia).to receive(:instrucao_mantida?).and_return(true)
 
