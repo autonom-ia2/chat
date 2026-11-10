@@ -20,7 +20,42 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos::Separacao
     partes = grupo.slice_when { |de_cima, de_baixo| titulos_seguidos?(de_cima, de_baixo, pagina) }.to_a
     return partes.map { |parte| [parte, true] } if titulo?(grupo, pagina)
 
-    titulos_no_fim(partes, pagina) || [[grupo, false]]
+    titulos_no_fim(partes, pagina) || titulos_no_meio(grupo, pagina) || [[grupo, false]]
+  end
+
+  # #2865 — o título no meio do bloco em negrito, logo antes de um parágrafo também em negrito ("4.4. HIPÓTESES DE PERDA"
+  # e, embaixo, o "4.4.1. …" recuado): o bloco se parte onde a linha de cima para antes da margem e o espaço passa do de
+  # linha (fim de parágrafo); é título a parte de uma linha só, título de seção, com o texto de baixo mais recuado que
+  # ela, ou com outro título logo embaixo ("CLÁUSULA 4" e "4.1."). A lista em negrito, um item por linha no mesmo recuo do
+  # texto de baixo, não muda. Sem título no meio, o bloco fica como estava.
+  def titulos_no_meio(grupo, pagina)
+    partes = grupo.slice_when { |de_cima, de_baixo| paragrafo_acaba?(de_cima, de_baixo, pagina) }.to_a
+    marcas = marcas_de_titulo(partes, pagina)
+    return unless marcas.any?
+
+    partes.zip(marcas).slice_when { |(_, titulo), (_, seguinte)| titulo || seguinte }.map do |pedaco|
+      [pedaco.flat_map(&:first), pedaco.first.last]
+    end
+  end
+
+  # De baixo para cima: a última parte nunca é título (o título tem texto embaixo).
+  def marcas_de_titulo(partes, pagina)
+    partes.each_index.reverse_each.with_object([]) do |indice, marcas|
+      seguinte = partes[indice + 1]
+      titulo = !seguinte.nil? && partes[indice].size == 1 && titulo_de_secao?(partes[indice], pagina) &&
+               (marcas.first || recuada?(seguinte.first, partes[indice].first))
+      marcas.unshift(titulo)
+    end
+  end
+
+  def paragrafo_acaba?(de_cima, de_baixo, pagina)
+    antes_da_margem?(de_cima, pagina) &&
+      de_cima[:y] - de_baixo[:y] > pagina[:normal] * (1 + Autonomia::Agents::Knowledge::Processors::PdfParagrafos::TROCA_DE_LETRA)
+  end
+
+  # A linha de baixo começa mais à direita que a de cima, por mais de uma letra.
+  def recuada?(de_baixo, de_cima)
+    de_baixo[:trechos].first[:x] > de_cima[:trechos].first[:x] + de_cima[:letra]
   end
 
   # #2865 — o parágrafo (todo em negrito, por exemplo) seguido, no mesmo bloco, de títulos com a mesma separação dos

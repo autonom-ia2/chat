@@ -87,6 +87,11 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     montar(objetos)
   end
 
+  # Parágrafo comum (fonte do corpo) de 6 linhas a partir da altura dada, para o negrito não virar a fonte do corpo.
+  def corpo_normal(altura)
+    (0..5).map { |i| [i.even? ? corpo1 : corpo2, altura - (i * linha), 'F1', 10] }
+  end
+
   def montar(objetos)
     corpo = +"%PDF-1.4\n"
     posicoes = objetos.each_with_index.map { |objeto, i| corpo.bytesize.tap { corpo << "#{i + 1} 0 obj\n#{objeto}\nendobj\n" } }
@@ -341,6 +346,49 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
                   [corpo1, topo - 40, 'F2', 10], ['nos seguintes casos:', topo - 40 - linha, 'F2', 10],
                   ['a\\) incendio ou explosao;', topo - 40 - linha - 16.4, 'F2', 10], ['b\\) muros de divisa.', topo - 40 - linha - 32.8, 'F2', 10],
                   [corpo2, topo - 120, 'F1', 10], [corpo1, topo - 120 - linha, 'F1', 10], [corpo2, topo - 120 - (2 * linha), 'F1', 10]]])
+      end
+
+      it 'reads no title' do
+        expect(blocos_gravados.pluck(:tipo)).not_to include(:titulo)
+      end
+    end
+
+    # #2865 — o título logo antes de um parágrafo em negrito, no meio do bloco ("4.4. HIPOTESES" e o "4.4.1." recuado embaixo,
+    # tudo em negrito, com o espaço de parágrafo um pouco maior que o de linha): o bloco tinha mais de MAX_LINHAS_DO_TITULO
+    # linhas e o título sumia, e a seção de cima engolia a de baixo.
+    context 'with a title right before an indented bold paragraph' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], [corpo2, topo - linha, 'F1', 10],
+                  [corpo1, topo - 40, 'F2', 10], ['pela seguradora.', topo - 40 - linha, 'F2', 10],
+                  ['CLAUSULA 4 - DIREITOS', topo - 40 - linha - 19.2, 'F2', 10],
+                  ['4.4. HIPOTESES DE PERDA', topo - 40 - linha - 35.5, 'F2', 10],
+                  ['4.4.1. Alem dos casos previstos em lei o segurado perde o direito', topo - 40 - linha - 50.4, 'F2', 10, 80],
+                  [corpo2, topo - 40 - (2 * linha) - 50.4, 'F2', 10, 100],
+                  [corpo1, topo - 160, 'F1', 10], [corpo2, topo - 160 - linha, 'F1', 10], [corpo1, topo - 160 - (2 * linha), 'F1', 10],
+                  *corpo_normal(300)]])
+      end
+
+      it 'reads the titles and keeps the bold paragraphs as paragraphs', :aggregate_failures do
+        blocos = blocos_gravados
+
+        expect(blocos.select { |bloco| bloco[:tipo] == :titulo }.pluck(:texto)).to eq(['CLAUSULA 4 - DIREITOS', '4.4. HIPOTESES DE PERDA'])
+        expect(blocos).to include(a_hash_including(tipo: :paragrafo, texto: "#{corpo1}\npela seguradora."))
+        item = "4.4.1. Alem dos casos previstos em lei o segurado perde o direito\n#{corpo2}"
+        expect(blocos).to include(a_hash_including(tipo: :paragrafo, texto: item))
+      end
+    end
+
+    # #2865 — os itens numerados em negrito, um por linha e no mesmo recuo do texto de baixo ("3.8.2.1. ONU: …"), dentro do
+    # bloco em negrito, são lista, não título: o título tem o texto de baixo mais recuado que ele.
+    context 'with bold numbered items one per line at the same indent' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], [corpo2, topo - linha, 'F1', 10],
+                  [corpo1, topo - 40, 'F2', 10], ['as listas abaixo:', topo - 40 - linha, 'F2', 10],
+                  ['3.8.2.1. ONU: nacoes.org', topo - 40 - linha - 14.9, 'F2', 10],
+                  ['3.8.2.2. UNIAO EUROPEIA: europa.eu', topo - 40 - linha - 29.8, 'F2', 10],
+                  *(0..3).map { |i| [i == 3 ? corpo2 : corpo1, topo - 40 - linha - 44.7 - (i * linha), 'F2', 10] },
+                  [corpo1, topo - 180, 'F1', 10], [corpo2, topo - 180 - linha, 'F1', 10], [corpo1, topo - 180 - (2 * linha), 'F1', 10],
+                  *corpo_normal(300)]])
       end
 
       it 'reads no title' do
