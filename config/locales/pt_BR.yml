@@ -1068,7 +1068,7 @@ pt_BR:
         limite_da_caixa: "A caixa tem um limite de horas para responder, configurado nas opções dela, e o cliente não escreve há mais tempo que isso. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_fora_da_caixa: "A janela estava fechada, e a caixa desta conversa não tem o modelo escolhido. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_nao_aprovado: "A janela estava fechada, e o modelo escolhido não está aprovado na Meta nesta caixa. A mensagem não foi mandada, e a automação parou nesta conversa."
-        modelo_de_propaganda: "A janela estava fechada, e o modelo escolhido é de propaganda. A automação só manda modelo de utilidade. A mensagem não foi mandada, e a automação parou nesta conversa."
+        modelo_de_categoria_fora: "A janela estava fechada, e o modelo escolhido não é de utilidade nem de propaganda. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_mudou: "A janela estava fechada, e o modelo desta caixa pede outras variáveis do que as do passo. Escolha o modelo de novo. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_faltou_valor: "A janela estava fechada, e um valor que o modelo pede estava vazio nesta conversa. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_texto_longo: "A janela estava fechada, e o modelo com os valores no lugar passou dos 1024 caracteres que o WhatsApp aceita. A mensagem não foi mandada, e a automação parou nesta conversa."
@@ -1167,7 +1167,7 @@ pt_BR:
         retorno_mensagem_sem_card: "Passo %{passo}: a mensagem do retorno só sai com gatilho de card. Use um gatilho de card ou desligue a mensagem."
         responsavel_so_com_card: "Passo %{passo}: passar a conversa para o responsável do card só vale com gatilho de card."
         sem_criar_retorno: 'Passo %{passo}: você não pode criar retorno no CRM, e o passo "Criar retorno" pede isso.'
-        modelo_indisponivel: "Passo %{passo}: nenhuma caixa do WhatsApp oficial tem o modelo %{nome} aprovado, de utilidade e com estas variáveis."
+        modelo_indisponivel: "Passo %{passo}: nenhuma caixa do WhatsApp oficial tem o modelo %{nome} aprovado, de utilidade ou de propaganda, e com estas variáveis."
         time_de_fora: "Passo %{passo}: o time %{id} não é desta conta."
         pessoa_de_fora: "Passo %{passo}: a pessoa %{id} não é desta conta."
         responsavel_do_card_sem_card: 'Passo %{passo}: "quem cuida do card" só vale quando o gatilho é de card.'

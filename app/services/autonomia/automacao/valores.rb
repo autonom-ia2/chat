@@ -3,8 +3,8 @@
 # A lista de caminhos é fechada: a receita só lê o que está aqui, e o salvar recusa caminho desconhecido. Não é Liquid
 # nem texto livre; cada caminho é um campo do modelo. Os atributos personalizados entram pela chave
 # (`contato.atributos.placa`). A mensagem do gatilho `mensagem.criada` só existe no filtro do gatilho
-# (`mensagem.tipo`: recebida, enviada ou nota; `mensagem.privada`; `mensagem.primeira`; `mensagem.tem_anexo`); nos
-# passos ela já passou, e o salvar recusa ler a mensagem fora dali.
+# (`mensagem.tipo`: recebida, enviada ou nota; `mensagem.privada`; `mensagem.primeira`; `mensagem.tem_anexo`;
+# `mensagem.campanha`, #2681); nos passos ela já passou, e o salvar recusa ler a mensagem fora dali.
 #
 # #2499 (F6): cada caminho começa pela base (`conversa`, `contato` ou `card`), lida do alvo pelas pontes do Contexto.
 # A base que o alvo não alcança (card num gatilho de contato) o salvar recusa; a ponte vazia ao rodar (card sem
@@ -128,19 +128,8 @@ class Autonomia::Automacao::Valores
     'Contact' => %w[contato envio gatilho]
   }.freeze
 
-  # A mensagem que disparou o gatilho, para o filtro separar a do cliente da resposta da equipe e da nota.
-  MENSAGEM = {
-    'mensagem.tipo' => lambda do |mensagem|
-      next 'nota' if mensagem.private?
-
-      mensagem.incoming? ? 'recebida' : 'enviada'
-    end,
-    'mensagem.privada' => ->(mensagem) { mensagem.private? },
-    # A mensagem é a primeira de verdade da conversa (#2527)? A nota e a atividade nunca são.
-    'mensagem.primeira' => ->(mensagem) { ::Autonomia::Automacao::PrimeiraMensagem.primeira?(mensagem) },
-    # A mensagem traz foto ou PDF (#2716, a régua do ex.14): FotoOuPdf. Áudio, figurinha e outro arquivo não contam.
-    'mensagem.tem_anexo' => ->(mensagem) { ::Autonomia::Automacao::FotoOuPdf.mensagem?(mensagem) }
-  }.freeze
+  # A mensagem que disparou o gatilho, para o filtro separar a do cliente da resposta da equipe e da nota: Valores::Mensagem.
+  MENSAGEM = ::Autonomia::Automacao::Valores::Mensagem::VALORES
 
   # O gatilho cuja mensagem o filtro lê.
   GATILHO_DA_MENSAGEM = 'mensagem.criada'.freeze

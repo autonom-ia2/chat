@@ -145,6 +145,22 @@ describe('linhasDoEnsaio', () => {
     });
   });
 
+  it('a mensagem diz qual modelo sai com a janela fechada; o de propaganda avisa o custo', () => {
+    const no = propaganda => ({
+      id: 'm1',
+      tipo: 'mensagem',
+      faria: 'mensagem',
+      dados: { texto: 'Oi', modelo: 'pre_black', propaganda },
+    });
+
+    expect(linhasDoEnsaio([no()], fraseDe, t)[0].destaque).toBe(
+      'AUTOMACAO_LIVRE.ENSAIO.MODELO_FORA_DA_JANELA(pre_black)'
+    );
+    expect(linhasDoEnsaio([no(true)], fraseDe, t)[0].destaque).toBe(
+      'AUTOMACAO_LIVRE.ENSAIO.MODELO_PROPAGANDA_FORA_DA_JANELA(pre_black)'
+    );
+  });
+
   it('o "esperar até" abre os dois caminhos, cada um um nível adentro', () => {
     const linhas = linhasDoEnsaio(
       [

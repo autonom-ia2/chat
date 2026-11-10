@@ -35,6 +35,20 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     expect(passos).to eq([{ id: 'p1', tipo: 'mensagem', faria: 'mensagem', dados: { texto: 'Oi Maria, obrigado.' } }])
   end
 
+  # Lote 5 (#2681): o modelo de propaganda sai fora da janela, e a tela avisa que custa mais.
+  it 'diz o modelo que sai com a janela fechada e marca o de propaganda' do
+    canal = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
+    modelo = { 'name' => 'pre_black', 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'MARKETING',
+               'components' => [{ 'type' => 'BODY', 'text' => 'Oi! A Black começa na quinta.' }] }
+    canal.update!(message_templates: [modelo])
+    conversa.update!(inbox: canal.inbox)
+    passo = mensagem_passo('p1', 'Oi.').merge('modelo' => { 'nome' => 'pre_black', 'idioma' => 'pt_BR', 'variaveis' => [] })
+
+    expect(passos_de(receita(passo)).first[:dados]).to eq(texto: 'Oi.', modelo: 'pre_black', propaganda: true)
+    canal.update!(message_templates: [modelo.merge('category' => 'UTILITY')])
+    expect(passos_de(receita(passo)).first[:dados]).to eq(texto: 'Oi.', modelo: 'pre_black')
+  end
+
   it 'sem a mensagem automática, diz que não sairia' do
     account.disable_features!('automacao_mensagens')
 

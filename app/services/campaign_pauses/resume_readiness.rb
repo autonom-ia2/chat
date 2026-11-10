@@ -12,6 +12,8 @@ class CampaignPauses::ResumeReadiness
   end
 
   def ready?(campaign)
+    # #2686: a campanha da automação com etiqueta excluída apagada pararia de novo no disparo; "Retomar" não aparece.
+    return false if Autonomia::Automacao::CampanhaSemEtiquetas.etiquetas_apagadas(campaign).any?
     # Campanha sem modelo não parou por modelo: nada a conferir.
     return true if campaign.template_params.blank?
 

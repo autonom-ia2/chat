@@ -121,6 +121,28 @@ describe('CampanhasParadas', () => {
     );
   });
 
+  // #2686: a etiqueta excluída apagada não volta; Retomar pararia de novo.
+  it('hides "Resume" when an excluded label of the automation campaign was deleted', () => {
+    const wrapper = montar(CampanhasParadas, {
+      props: {
+        campanhas: [
+          {
+            ...PARADA,
+            motivo: 'etiqueta_excluida_apagada',
+            podeRetomar: false,
+          },
+        ],
+      },
+    });
+    expect(wrapper.find('[data-retomar]').exists()).toBe(false);
+    expect(wrapper.text()).toContain(
+      en.MODELOS_WHATSAPP.PARADAS.MOTIVOS.etiqueta_excluida_apagada
+    );
+    expect(wrapper.find('[data-corrija-primeiro]').text()).toBe(
+      en.MODELOS_WHATSAPP.PARADAS.EDITE_AUTOMACAO
+    );
+  });
+
   it('hides "Resume" from who cannot manage campaigns', () => {
     const wrapper = montar(CampanhasParadas, {
       props: { campanhas: [PARADA] },

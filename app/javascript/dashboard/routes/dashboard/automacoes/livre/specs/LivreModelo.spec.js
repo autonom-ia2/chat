@@ -5,8 +5,8 @@ import LivreModelo from '../components/LivreModelo.vue';
 import LivreTexto from '../components/LivreTexto.vue';
 import { modelosDasCaixas, serve, variaveisDoCorpo } from '../modeloWhatsapp';
 
-// #2468 F4b — o modelo aprovado do passo "mensagem": só os de utilidade
-// aprovados e preenchíveis das caixas oficiais, um por nome e idioma; cada
+// #2468 F4b — o modelo aprovado do passo "mensagem": só os de utilidade ou de
+// propaganda (lote 5, #2681) aprovados e preenchíveis das caixas oficiais, um por nome e idioma; cada
 // variável vira uma caixa de texto; "não mandar nada" tira o modelo.
 const caixas = ref([]);
 vi.mock('dashboard/composables/store', () => ({
@@ -57,9 +57,10 @@ describe('modeloWhatsapp', () => {
     expect(variaveisDoCorpo('Oi {{1}}, {{2}} e {{1}}')).toEqual(['1', '2']);
   });
 
-  it('serve: aprovado, de utilidade, {{1}}..{{n}} e sem mídia no topo', () => {
+  it('serve: aprovado, de utilidade ou propaganda, {{1}}..{{n}} e sem mídia no topo', () => {
     expect(serve(APROVADO)).toBe(true);
-    expect(serve({ ...APROVADO, category: 'MARKETING' })).toBe(false);
+    expect(serve({ ...APROVADO, category: 'MARKETING' })).toBe(true);
+    expect(serve({ ...APROVADO, category: 'AUTHENTICATION' })).toBe(false);
     expect(serve({ ...APROVADO, status: 'PENDING' })).toBe(false);
     expect(
       serve({
@@ -145,6 +146,23 @@ describe('LivreModelo', () => {
       'AUTOMACAO_LIVRE.ALTERAR_PAINEL.MODELO.VARIAVEL(1)',
       'AUTOMACAO_LIVRE.ALTERAR_PAINEL.MODELO.VARIAVEL(2)',
     ]);
+  });
+
+  it('modelo de utilidade não avisa custo; o de propaganda avisa', () => {
+    const escolha = {
+      modelValue: { nome: 'pedido_saiu', idioma: 'pt_BR', variaveis: [[], []] },
+    };
+    expect(montar(escolha).find('[data-modelo-custo]').exists()).toBe(false);
+
+    caixas.value = [
+      {
+        ...OFICIAL,
+        message_templates: [{ ...APROVADO, category: 'MARKETING' }],
+      },
+    ];
+    expect(montar(escolha).find('[data-modelo-custo]').text()).toBe(
+      'AUTOMACAO_LIVRE.CAMPANHA.CUSTO_PROPAGANDA'
+    );
   });
 
   it('corpo diferente em outra caixa: avisa', () => {
