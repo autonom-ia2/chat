@@ -269,6 +269,12 @@
     "controller": "api/v1/accounts/autonomia/ferramentas_prontas#index",
     "parametros": []
   },
+  "autonomia/ferramentas_prontas/sugestoes": {
+    "controller": "api/v1/accounts/autonomia/ferramentas_prontas#sugestoes",
+    "parametros": [
+      "agent_id"
+    ]
+  },
   "autonomia/financial/billing_preview": {
     "controller": "api/v1/accounts/autonomia/financial#billing_preview",
     "parametros": []

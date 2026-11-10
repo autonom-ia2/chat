@@ -79,11 +79,13 @@ module Autonomia
             # Leitura do MODELO sobre a última fala do usuário (substitui a antiga lista de palavras
             # CLOSE_INTENT_PATTERNS). Consumido por close_intent?; false é a saída "não se aplica".
             user_asked_to_close: { type: 'boolean', description: USER_ASKED_TO_CLOSE_DESCRIPTION },
-            canal_pedido: { type: 'string', enum: CANAIS_PEDIDOS + [SEM_CANAL_PEDIDO], description: CANAL_PEDIDO_DESCRIPTION }
+            canal_pedido: { type: 'string', enum: CANAIS_PEDIDOS + [SEM_CANAL_PEDIDO], description: CANAL_PEDIDO_DESCRIPTION },
+            # #2858 F3: as ferramentas prontas que o agente novo precisa (lista vazia = nenhuma combina).
+            ferramentas_prontas: ProntasSugeridas.schema
           },
           required: %w[name agent_type instruction scaffold human_card greeting fallback_message
                        handoff_rule starter_questions tone guardrails voice needs_more_info next_question
-                       user_asked_to_close canal_pedido],
+                       user_asked_to_close canal_pedido ferramentas_prontas],
           additionalProperties: false
         }
       }.freeze
@@ -105,7 +107,7 @@ module Autonomia
         COLETA ENXUTA (aviso da plataforma, só nesta chamada): decida e pergunte, sem redigir a configuração.
         Preencha needs_more_info, next_question, user_asked_to_close, canal_pedido, name (só se o usuário já disse) e agent_type.
         Devolva instruction, scaffold, human_card, greeting, fallback_message, handoff_rule e tone como string vazia,
-        starter_questions e guardrails como lista vazia, e voice com qualquer valor (é descartado). Se for hora de
+        starter_questions, guardrails e ferramentas_prontas como lista vazia, e voice com qualquer valor (é descartado). Se for hora de
         fechar, devolva needs_more_info=false e next_question vazio: a plataforma pede a configuração completa em seguida.
       NOTE
 
@@ -638,9 +640,15 @@ module Autonomia
       # O segmento da conta (#1429) vem antes de todos: só depende da conta, então o prefixo segue igual entre os turnos
       # e entre as duas chamadas do turno. nil (Fase 2 desligada ou sem bloco) some no compact_blank.
       def context_blocks
-        [segmento_context, actuation_context, knowledge_intent_context, skeleton_context, booking_context, adjust_context, knowledge_context,
+        [segmento_context, actuation_context, knowledge_intent_context, skeleton_context, prontas_context, booking_context, adjust_context,
+         knowledge_context,
          send_media_context, materials_status_context, opening_context, turn_budget_context,
          pending_request_context].compact_blank
+      end
+
+      # #2858 F3: as ferramentas prontas liberadas para a conta, só na criação (o ajuste não troca as ferramentas).
+      def prontas_context
+        ProntasSugeridas.contexto(@account) if criacao?
       end
 
       # SEGMENTO (tema 8, #1429): orientação e vocabulário do ramo, como DADO. Moldura em PromptParts. Com agente na
@@ -1259,7 +1267,8 @@ module Autonomia
         estado = self.class.state_for(parsed)
         return estado unless criacao?
 
-        estado.merge('canal_pedido' => self.class.canal_pedido_for(parsed['canal_pedido']))
+        estado.merge('canal_pedido' => self.class.canal_pedido_for(parsed['canal_pedido']),
+                     'ferramentas_sugeridas' => ProntasSugeridas.filtrar(@account, parsed))
       end
 
       # Cria (ou atualiza) o Agent e aplica a config gerada de forma guardada pelo token. instruction/
@@ -1293,7 +1302,10 @@ module Autonomia
         attrs[:config] = (attrs[:config] || {}).merge('with_knowledge' => effective_with_knowledge)
         # #2490: o canal pedido também fica no agente, para a Confira de um rascunho reaberto (sem a thread na tela). Só na
         # criação: a conversa de um ajuste não fala de canal e apagaria o pedido (o merge do config preserva o que já existe).
-        attrs[:config]['canal_pedido'] = self.class.canal_pedido_for(parsed['canal_pedido']) if criacao?
+        if criacao?
+          attrs[:config]['canal_pedido'] = self.class.canal_pedido_for(parsed['canal_pedido'])
+          attrs[:config]['ferramentas_sugeridas'] = ProntasSugeridas.filtrar(@account, parsed) # #2858 F3, como o canal
+        end
         attrs
       end
 

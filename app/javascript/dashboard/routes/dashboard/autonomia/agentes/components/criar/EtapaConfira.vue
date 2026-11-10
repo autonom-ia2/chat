@@ -247,6 +247,8 @@ const respondeuErrado = () => {
       </p>
     </div>
 
+    <slot name="ferramentas" />
+
     <CelularConversa
       :mensagens="celularMensagens"
       :digitando="digitando"

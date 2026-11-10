@@ -61,6 +61,9 @@ import BaseDaCriacao from '../components/criar/BaseDaCriacao.vue';
 import EquipeCanais from '../components/onde/EquipeCanais.vue';
 import ResumoOndeTrabalha from '../components/onde/ResumoOndeTrabalha.vue';
 import AjudanteNaCriacao from '../components/onde/AjudanteNaCriacao.vue';
+import { chaveDoTexto } from '../vitrine/catalogo';
+import VitrineJaVem from '../vitrine/components/VitrineJaVem.vue';
+import { useProntasDoConstrutor } from '../vitrine/useProntasDoConstrutor';
 
 // #1181 PR2 — criar agente: Conte · Confira · Comece · Pronto (protótipo T03–T06), atrás da flag
 // autonomia_agents_journey (o seletor da rota decide). A etapa vem da query (`?etapa=`), e só vale
@@ -296,6 +299,16 @@ const canalPedido = computed(
     agente.value?.config?.canal_pedido ||
     null
 );
+// #2858 F3: as ferramentas prontas que o Construtor escolheu (lista vazia = nenhuma combina). Mesma leitura do canal.
+const prontas = useProntasDoConstrutor({
+  agenteId: computed(() => conversa.agenteId.value),
+  sugeridas: computed(
+    () =>
+      estadoDaConversa.value?.ferramentas_sugeridas ??
+      agente.value?.config?.ferramentas_sugeridas ??
+      []
+  ),
+});
 const sugerido = computed(() =>
   canalSugerido(canais.value, conversa.agenteId.value, canalPedido.value)
 );
@@ -605,7 +618,22 @@ const comecarNaEquipe = async () => {
   }
 };
 
-const abrirComece = () => {
+// As que ficaram no "Já vem com" entram antes de o agente começar; a que falhar é avisada e a pessoa inclui depois
+// pela gaveta de ferramentas.
+const incluirProntas = async () => {
+  const falharam = await prontas.incluirTodas();
+  if (!falharam.length) return;
+  useAlert(
+    t('AGENTS.VITRINE.JA_VEM.FALHOU', {
+      ferramentas: falharam
+        .map(id => t(`AGENTS.VITRINE.FERRAMENTAS.${chaveDoTexto(id)}.NOME`))
+        .join(', '),
+    })
+  );
+};
+
+const abrirComece = async () => {
+  await incluirProntas();
   if (ajudante.value) {
     ajudanteNaCriacao.comecar();
     return;
@@ -1068,7 +1096,20 @@ onMounted(() => {
           @respondeu-errado="respondeuErrado"
           @comecar="abrirComece"
           @ajustes="fazerAjustesAvancados"
-        />
+        >
+          <template #ferramentas>
+            <VitrineJaVem
+              :nome="nome"
+              :ids="
+                prontas.semPermissao.value
+                  ? prontas.escolhidas.value
+                  : prontas.visiveis.value
+              "
+              :sem-permissao="prontas.semPermissao.value"
+              @tirar="prontas.tirar"
+            />
+          </template>
+        </EtapaConfira>
 
         <aside
           v-else-if="!celular"

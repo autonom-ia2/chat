@@ -655,6 +655,8 @@ Rails.application.routes.draw do
                 post :incluir
                 post :experimentar
                 post :buscas_sem_resultado
+                get :sugestoes
+                post :dispensar
               end
             end
             resources :agents, only: [:index, :show, :create, :update, :destroy] do

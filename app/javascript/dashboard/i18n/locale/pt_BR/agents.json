@@ -3324,6 +3324,22 @@
           "ROTULO": "Código do banco",
           "EXEMPLO": "341"
         }
+      },
+      "JA_VEM": {
+        "TITULO": "{nome} já vem com estas ferramentas",
+        "TEXTO": "Escolhemos pelo que você contou. Tire o que não quiser.",
+        "TITULO_SEM_PERMISSAO": "Ferramentas que combinam com {nome}",
+        "SEM_PERMISSAO": "{nome} se daria bem com: {ferramentas}. Só quem cuida das ferramentas dos agentes pode incluir, então o agente começa sem elas. Peça para incluírem depois.",
+        "TIRAR": "Tirar",
+        "TIRAR_SR": "Tirar {ferramenta}",
+        "FALHOU": "Não consegui incluir: {ferramentas}. Você pode incluir depois, nas ferramentas do agente."
+      },
+      "SUGESTAO": {
+        "ROTULO": "Sugestão de ferramenta",
+        "TEXTO": "{nome} também pode usar: {ferramenta}. Incluir?",
+        "INCLUIR": "Incluir",
+        "AGORA_NAO": "Agora não",
+        "INCLUIDA": "Pronto! {nome} já consegue {consegue}."
       }
     }
   }
