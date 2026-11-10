@@ -65,13 +65,15 @@ class Autonomia::Automacao::EnviosDaExecucao
     @quem_ve_o_alvo ||= outras.empty? ? [] : @conversa.account.account_users.includes(:user).select { |membro| membro_ve?(membro, @conversa) }
   end
 
-  # A mesma política da conversa (ConversationPolicy#show?, como no Acesso.alcanca?), com o vínculo da pessoa já lido.
-  # Quem não é administrador só alcança pela caixa ou pelo time: quem não está em nenhum dos dois nem chega à política.
-  # Os membros das caixas e dos times saem numa leitura para todas as conversas, não uma por pessoa e conversa.
+  # A leitura da conversa (ConversationPolicy#view?), com o vínculo da pessoa já lido: quem só lê (conversation_view, no EE)
+  # também abre a conversa do alvo e lê o resumo, então conta em "quem vê o alvo" (parecer de Funções no #2876). No OSS,
+  # view? é o mesmo que show?. Quem não é administrador só alcança pela caixa ou pelo time, nas duas perguntas: quem não
+  # está em nenhum dos dois nem chega à política. Os membros das caixas e dos times saem numa leitura para todas as
+  # conversas, não uma por pessoa e conversa.
   def membro_ve?(membro, conversa)
     return false unless membro.administrator? || na_caixa_ou_no_time?(membro.user_id, conversa)
 
-    ConversationPolicy.new({ user: membro.user, account: @conversa.account, account_user: membro }, conversa).show?
+    ConversationPolicy.new({ user: membro.user, account: @conversa.account, account_user: membro }, conversa).view?
   end
 
   def na_caixa_ou_no_time?(user_id, conversa)
