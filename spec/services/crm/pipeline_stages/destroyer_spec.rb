@@ -40,4 +40,14 @@ RSpec.describe Crm::PipelineStages::Destroyer do
     expect(Crm::Activity.where(account_id: account.id, event_type: 'move').count).to eq(3)
     expect(consultas).to be <= 6
   end
+
+  it 'super admin que apaga a etapa aparece como pessoa na movimentação dos cards' do
+    account.crm_cards.create!(pipeline: funil.first, stage: etapa, title: 'Card')
+    super_admin = create(:super_admin)
+
+    described_class.new(stage: etapa, target_stage_id: funil.last.id, actor: super_admin).perform
+
+    expect(Crm::Activity.where(account_id: account.id, event_type: 'move').pluck(:actor_type, :actor_id))
+      .to eq([['user', super_admin.id]])
+  end
 end

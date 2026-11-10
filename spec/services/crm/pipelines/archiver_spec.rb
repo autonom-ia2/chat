@@ -235,4 +235,12 @@ RSpec.describe Crm::Pipelines::Archiver do
     expect([card.pipeline_id, card.owner_id]).to eq([target_stage.pipeline_id, nil])
     expect(card.activities.find_by!(event_type: 'move').payload).to include('dono_que_saiu_id' => host.id)
   end
+
+  it 'super admin que arquiva o funil aparece como pessoa na movimentação dos cards (#2114)' do
+    super_admin = create(:super_admin)
+
+    described_class.new(pipeline: pipeline, actor: super_admin, target_stage: target_stage).perform
+
+    expect(card.activities.where(event_type: 'move').pluck(:actor_type, :actor_id)).to eq([['user', super_admin.id]])
+  end
 end

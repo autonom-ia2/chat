@@ -128,6 +128,7 @@ class Autonomia::Agents::Faq::Extractor
     return false if @agent.knowledge_disabled?
 
     hits = Autonomia::Agents::Retriever.new(agent: @agent).retrieve(question, top_k: 3)
-    hits.any? { |entry| entry.neighbor_distance.to_f <= Autonomia::Agents::Config::RETRIEVAL_STRONG_MATCH }
+    # #2850 — trecho sem distância (a busca só pela palavra) não é acerto forte: o vetor não o mediu.
+    hits.any? { |entry| !entry.neighbor_distance.nil? && entry.neighbor_distance.to_f <= Autonomia::Agents::Config::RETRIEVAL_STRONG_MATCH }
   end
 end

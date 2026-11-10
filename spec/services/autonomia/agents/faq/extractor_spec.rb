@@ -82,4 +82,15 @@ RSpec.describe Autonomia::Agents::Faq::Extractor do
 
     expect(described_class.new(agent: agent, conversation: conversation).call).to eq([])
   end
+
+  # #2850 — sem o vetor da pergunta, o Retriever devolve trechos só pela palavra, sem distância: não é acerto forte.
+  it 'does not take a piece without distance (search by words only) as known knowledge' do
+    agent.update!(config: {})
+    human_reply('Resposta.')
+    hit = Struct.new(:neighbor_distance).new(nil)
+    allow(Autonomia::Agents::Retriever).to receive(:new).and_return(instance_double(Autonomia::Agents::Retriever, retrieve: [hit]))
+    stub_llm([{ question: 'Qual o prazo?', answer: 'Até 5 dias.', source_message_ids: [] }])
+
+    expect(described_class.new(agent: agent, conversation: conversation).call.size).to eq(1)
+  end
 end
