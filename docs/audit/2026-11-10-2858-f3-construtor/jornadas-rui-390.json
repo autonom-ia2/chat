@@ -1,0 +1,29 @@
+{
+  "pasta": "docs/audit/2026-11-10-2858-f3-construtor/prints/390",
+  "conta": 1,
+  "usuario": "rui@acme.inc",
+  "larguras": [
+    390
+  ],
+  "temas": [
+    "light"
+  ],
+  "jornadas": [
+    {
+      "nome": "j1-sem-a-chave",
+      "etapas": [
+        {
+          "nome": "confira-sem-a-chave",
+          "url": "/app/accounts/{conta}/agents/new?agente=3&etapa=confira",
+          "esperar": "[data-ja-vem]",
+          "pausa": 3500,
+          "passos": [
+            {
+              "clicar": "[data-ja-vem]"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
