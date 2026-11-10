@@ -144,7 +144,9 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
 
   # #2845 — o título curto fora da fonte do corpo, em cima da linha cujo texto é quase todo na fonte do corpo, mesmo que ela
   # comece com o número do item na fonte do título ("1.3.1. As condições…"): o conjunto de fontes das duas linhas se cruza,
-  # mas a de baixo é texto comum. Só nesse sentido: a ênfase que termina numa linha curta toda em negrito continua.
+  # mas a de baixo é texto comum. Só nesse sentido: a ênfase que termina numa linha curta toda em negrito continua. Limite
+  # conhecido: a linha curta toda em negrito que fecha uma frase (um e-mail, o fim de uma cláusula em negrito) em cima de um
+  # item numerado tem a mesma geometria de um título e sai como título (2 linhas no PDF residencial da #2845).
   def titulo_sobre_o_texto?(anterior, atual, pagina)
     atual[:fonte_principal] == pagina[:fonte_do_corpo] && titulo_curto?(anterior, pagina)
   end
