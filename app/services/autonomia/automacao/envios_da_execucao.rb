@@ -58,12 +58,35 @@ class Autonomia::Automacao::EnviosDaExecucao
   def outras = visiveis - [@conversa]
 
   def lidas
-    @lidas ||= outras.select { |conversa| quem_ve_o_alvo.all? { |pessoa| ve?(pessoa, conversa) } }
+    @lidas ||= outras.select { |conversa| quem_ve_o_alvo.all? { |membro| membro_ve?(membro, conversa) } }
   end
 
   def quem_ve_o_alvo
-    @quem_ve_o_alvo ||= outras.empty? ? [] : @conversa.account.users.select { |pessoa| ve?(pessoa, @conversa) }
+    @quem_ve_o_alvo ||= outras.empty? ? [] : @conversa.account.account_users.includes(:user).select { |membro| membro_ve?(membro, @conversa) }
   end
+
+  # A mesma política da conversa (ConversationPolicy#show?, como no Acesso.alcanca?), com o vínculo da pessoa já lido.
+  # Quem não é administrador só alcança pela caixa ou pelo time: quem não está em nenhum dos dois nem chega à política.
+  # Os membros das caixas e dos times saem numa leitura para todas as conversas, não uma por pessoa e conversa.
+  def membro_ve?(membro, conversa)
+    return false unless membro.administrator? || na_caixa_ou_no_time?(membro.user_id, conversa)
+
+    ConversationPolicy.new({ user: membro.user, account: @conversa.account, account_user: membro }, conversa).show?
+  end
+
+  def na_caixa_ou_no_time?(user_id, conversa)
+    membros_das_caixas[conversa.inbox_id].to_a.include?(user_id) || membros_dos_times[conversa.team_id].to_a.include?(user_id)
+  end
+
+  def membros_das_caixas
+    @membros_das_caixas ||= agrupados(InboxMember.where(inbox_id: [@conversa, *outras].map(&:inbox_id)).pluck(:inbox_id, :user_id))
+  end
+
+  def membros_dos_times
+    @membros_dos_times ||= agrupados(TeamMember.where(team_id: [@conversa, *outras].filter_map(&:team_id)).pluck(:team_id, :user_id))
+  end
+
+  def agrupados(pares) = pares.group_by(&:first).transform_values { |lista| lista.map(&:last) }
 
   def envio(mensagem)
     conversa = mensagem.conversation
