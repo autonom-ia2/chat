@@ -164,6 +164,15 @@
     ],
     "sem_corpo": true
   },
+  "DELETE autonomia/ferramentas_prontas/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/ferramentas_prontas#destroy",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:51",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:81"
+    ],
+    "sem_corpo": true
+  },
   "DELETE autonomia/insurance/connection": {
     "campos": {
       "provider": {
@@ -3815,6 +3824,23 @@
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:30",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:79",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:75"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH autonomia/ferramentas_prontas/:id": {
+    "campos": {
+      "ligada": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/ferramentas_prontas#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:44",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:47",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:45",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:81"
     ],
     "sem_corpo": false
   },
@@ -11791,6 +11817,69 @@
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:94",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:93",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:75"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/ferramentas_prontas/buscas_sem_resultado": {
+    "campos": {
+      "termo": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/ferramentas_prontas#buscas_sem_resultado",
+    "motivos": [
+      "leitura crua sem tipo: termo (repassada a Autonomia::FerramentasProntas::BuscasSemResultado.registrar)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:56",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:57"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/ferramentas_prontas/experimentar": {
+    "campos": {
+      "fonte": {
+        "obrigatorio": true,
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "valor": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/ferramentas_prontas#experimentar",
+    "motivos": [
+      "leitura crua sem tipo: valor (repassada a Autonomia::FerramentasProntas::Experimente.new)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:34",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:36"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/ferramentas_prontas/incluir": {
+    "campos": {
+      "agent_id": {
+        "obrigatorio": true,
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "fonte": {
+        "obrigatorio": true,
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "usar_quando": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/ferramentas_prontas#incluir",
+    "modelo": "Autonomia::Agents::Agent",
+    "motivos": [
+      "leitura crua sem tipo: usar_quando (repassada a Autonomia::FerramentasProntas::Incluir.new)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:22",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:26",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:25",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:23"
     ],
     "sem_corpo": false
   },
@@ -23659,6 +23748,23 @@
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:30",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:79",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:75"
+    ],
+    "sem_corpo": false
+  },
+  "PUT autonomia/ferramentas_prontas/:id": {
+    "campos": {
+      "ligada": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/ferramentas_prontas#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:44",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:47",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:45",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:81"
     ],
     "sem_corpo": false
   },

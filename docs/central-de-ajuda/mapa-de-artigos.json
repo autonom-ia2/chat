@@ -3123,6 +3123,28 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "11.14",
+     "titulo": "Ensinar o agente a consultar CEP, CNPJ, valor do carro e mais",
+     "para_que_serve": "Achar na vitrine uma ferramenta pronta, experimentar antes, ensinar ao agente e depois desligar ou tirar.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_agents_vitrine"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_vitrine",
+      "destaque": null
+     },
+     "requer": "agente_ferramentas_prontas_vitrine",
+     "prints": [],
+     "fontes": [
+      "porques: Ensinar uma ferramenta pronta ao agente"
+     ],
+     "revisar": false,
+     "nota": "Épico #2858 F2. requer = portão da tela em GUIDE_ROUTE_FEATURES; a tela também pede agente_ferramentas_prontas."
     }
    ]
   },

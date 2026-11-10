@@ -439,6 +439,7 @@ const montar = ({
   funcao = null,
   chaves = [],
   prospeccaoNova = false,
+  vitrine = false,
 }) => {
   estado.relacionamentos = relacionamentos;
   window.globalConfig = {
@@ -469,8 +470,10 @@ const montar = ({
     // Todas as flags de conta ligadas, menos a jornada dos agentes quando a variante pede o menu antigo. A Prospecção
     // nova (prospeccao_nova, #2692) fica desligada: o retrato abaixo é o menu de hoje no main, com a Prospecção de
     // antes; o menu dela com a flag tem spec próprio (prospecting/achar/specs/acharMenu.spec.js).
+    // A vitrine de ferramentas prontas (#2858 F2) também fica fora do retrato; a variante `vitrine` liga.
     'accounts/isFeatureEnabledonAccount': ref(
       (_id, flag) =>
+        (vitrine || flag !== 'agente_ferramentas_prontas_vitrine') &&
         (prospeccaoNova || flag !== 'prospeccao_nova') &&
         (jornadas || flag !== 'autonomia_agents_journey')
     ),
@@ -636,6 +639,7 @@ const VARIANTES = [
     chaves: ['crm_manage_ai', 'crm_view', 'agendamento_view'],
   },
   { prospeccaoNova: true },
+  { vitrine: true },
 ];
 
 describe('camada do fork contra o Sidebar.vue de verdade', () => {
@@ -691,6 +695,33 @@ describe('camada do fork contra o Sidebar.vue de verdade', () => {
       })
     );
     expect([...new Set(semLugar)]).toEqual([]);
+  });
+
+  it('com a vitrine ligada (#2858 F2), Ferramentas prontas fica em No automático, depois de Agentes', () => {
+    const menu = organizeForkMenu(montar({ vitrine: true }), ctx);
+    const automatico = menu.grupos.find(grupo => grupo.id === 'AUTOMATICO');
+    expect(nomes(automatico.itens)).toEqual([
+      'Agents',
+      'FerramentasProntas',
+      'Automacoes',
+    ]);
+  });
+
+  it('a vitrine é de quem cuida das ferramentas: o agente sem a chave não vê o item', () => {
+    const semChave = montar({
+      vitrine: true,
+      papel: 'agent',
+      funcao: 7,
+      chaves: ['autonomia_view'],
+    });
+    expect(semChave.map(item => item.name)).not.toContain('FerramentasProntas');
+    const comChave = montar({
+      vitrine: true,
+      papel: 'agent',
+      funcao: 7,
+      chaves: ['autonomia_view', 'autonomia_tools_manage'],
+    });
+    expect(comChave.map(item => item.name)).toContain('FerramentasProntas');
   });
 
   it('todo nome citado no layout ainda existe no upstream', () => {

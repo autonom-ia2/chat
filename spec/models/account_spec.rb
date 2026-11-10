@@ -335,7 +335,7 @@ RSpec.describe Account do
         feature_instagram_login_unico: 4_294_967_296, feature_agente_material_primeiro: 8_589_934_592,
         feature_agente_usa_o_trecho: 17_179_869_184,
         feature_rag_busca_hibrida: 34_359_738_368, feature_agente_ferramentas_prontas: 68_719_476_736,
-        feature_agente_ferramentas_prontas_consultas: 137_438_953_472
+        feature_agente_ferramentas_prontas_consultas: 137_438_953_472, feature_agente_ferramentas_prontas_vitrine: 274_877_906_944
       )
     end
 
