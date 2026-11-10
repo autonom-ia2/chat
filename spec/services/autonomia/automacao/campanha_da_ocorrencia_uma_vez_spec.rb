@@ -97,4 +97,22 @@ RSpec.describe Autonomia::Automacao::CampanhaDaOcorrencia, :automacao_motor do
     expect(execucoes.size).to eq(2)
     expect(account.campaigns.count).to eq(1)
   end
+
+  # B6 do lote 3: a marca da janela no Redis é gravada antes de abrir a vez. Se abrir falhar, a marca sai e o erro sobe:
+  # a rodada seguinte da janela abre a vez e enfileira os lotes, em vez de achar a marca e nunca rodar.
+  it 'abrir a vez que falha apaga a marca da janela, e a rodada seguinte roda', :aggregate_failures do
+    definicao
+    allow(described_class).to receive(:abrir).and_raise(ActiveRecord::ConnectionTimeoutError, 'banco ocupado')
+    travel_to(fuso.local(2026, 11, 26, 9, 5)) do
+      Autonomia::Automacao::TempoJob.perform_now
+      expect { perform_enqueued_jobs(only: Autonomia::Automacao::TempoDaAutomacaoJob) }.to raise_error(ActiveRecord::ConnectionTimeoutError)
+    end
+    expect(execucoes).to be_empty
+
+    allow(described_class).to receive(:abrir).and_call_original
+    varrer_em(fuso.local(2026, 11, 26, 9, 20))
+
+    expect(Autonomia::Automacao::CampanhaDaVez.sole.lotes_feitos).to eq([0])
+    expect(execucoes.size).to eq(2)
+  end
 end

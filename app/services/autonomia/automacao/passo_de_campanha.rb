@@ -16,7 +16,10 @@
 #   com `campanha_so_sem_alvo`. Não é teto de uso, é a regra de não repetir o mesmo envio.
 #   `publico: desta_execucao` (G58, #2779) troca as etiquetas pelos contatos que os passos anteriores desta execução
 #   criaram (Autonomia::Automacao::CampanhaDaExecucao): a campanha da 2ª segunda não volta a quem recebeu na 1ª só por
-#   ter a etiqueta do mês.
+#   ter a etiqueta do mês. Só no `conta.recorrente`, em que a execução é a vez inteira: no recorrente de card ou contato
+#   cada execução é um card, e a campanha "desta execução" sairia uma por card, fora da campanha da vez (G55). A Receita
+#   recusa ao salvar (`campanha_desta_execucao_so_na_conta`) e a receita que chegar assim mesmo pula, também ao fechar a
+#   vez (o registro da vez diz por quê).
 # - `nao_receber`: marca o contato do alvo como "não recebe" (a recusa das campanhas e mensagens ativas), como o botão
 #   do contato (Contacts::OptOutsController): origem manual, feita por quem ligou, desfeita pelo mesmo botão.
 #
@@ -46,12 +49,14 @@ class Autonomia::Automacao::PassoDeCampanha
     desligado = conta && !::Autonomia::Automacao::Motor.mensagens?(conta) ? [frase(:passo_desligado, passo: id)] : []
     return desligado unless passo['faz'] == 'disparar'
 
-    desligado + problemas_do_disparo(passo, receita, conta, alvo, account_user) + problemas_do_publico(passo, receita)
+    desligado + problemas_do_disparo(passo, receita, conta, alvo, account_user) + problemas_do_publico(passo, receita, alvo)
   end
 
   # G58: o público desta execução precisa de um passo antes dele que crie card ou contato; sem ele, sairia sempre vazio.
-  def self.problemas_do_publico(passo, receita)
+  # E só vale no gatilho da conta (a execução é a vez inteira).
+  def self.problemas_do_publico(passo, receita, alvo)
     return [] unless desta_execucao?(passo)
+    return [frase(:campanha_desta_execucao_so_na_conta, passo: passo['id'])] unless alvo_da_conta?(alvo)
 
     receita_obj = ::Autonomia::Automacao::Receita.new(receita, conta: nil, account_user: nil)
     antes = ::Autonomia::Automacao::TextoDaIaNaReceita.new(receita_obj, receita).rodam_antes(passo['id'])
@@ -180,6 +185,9 @@ class Autonomia::Automacao::PassoDeCampanha
   # Quem recebe: quem tem as etiquetas (G14) ou só quem os passos anteriores desta execução criaram (G58).
   def publico_escolhido(caixa, template_params)
     return criar_e_disparar(caixa, template_params) unless self.class.desta_execucao?(@passo)
+    # A execução da conta, não a do alvo em que o passo roda: ao fechar a vez (montar), o alvo é a conta, mas a execução
+    # é a de um card.
+    return pulado('campanha_desta_execucao_so_na_conta') unless self.class.alvo_da_conta?(@execucao.alvo_type)
 
     ::Autonomia::Automacao::CampanhaDaExecucao.new(execucao: @execucao, passo: @passo, caixa: caixa, template_params: template_params).disparar
   end

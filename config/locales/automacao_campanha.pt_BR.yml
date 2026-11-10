@@ -25,6 +25,7 @@ pt_BR:
         campanha_modelo_de_categoria_fora: 'O modelo escolhido não é de utilidade nem de propaganda. A campanha não foi criada.'
         campanha_modelo_mudou: 'O modelo pede outras variáveis que as do passo. Escolha o modelo de novo. A campanha não foi criada.'
         campanha_variavel_vazia: 'Uma variável do modelo está sem texto. Escreva o texto fixo de cada variável. A campanha não foi criada.'
+        campanha_desta_execucao_so_na_conta: 'Este público (só quem esta automação criou) só vale na automação que roda uma vez para a conta inteira. Aqui cada card ou contato tem a sua execução, e a campanha sairia uma vez por card. Nada foi mandado.'
         campanha_execucao_sem_contatos: 'Os passos anteriores não criaram nenhuma empresa ou contato que possa receber nesta vez. A campanha não foi criada.'
         sem_contato: 'Aqui não há contato para marcar.'
         contato_ja_nao_recebe: 'O contato já estava marcado como "não recebe".'
@@ -37,5 +38,6 @@ pt_BR:
         campanha_modelo: 'Passo %{passo}: a caixa escolhida não tem o modelo %{nome} aprovado e pronto.'
         campanha_etiqueta_de_fora: 'Passo %{passo}: a etiqueta %{id} não é desta conta.'
         campanha_publico_sem_origem: 'Passo %{passo}: para mandar só a quem esta automação criou, ponha antes um passo que crie card ou contato.'
+        campanha_desta_execucao_so_na_conta: 'Passo %{passo}: "só quem esta automação criou" só vale numa automação recorrente da conta inteira. No recorrente de card ou contato, a campanha sairia uma vez por card; use as etiquetas.'
       # G58: a data no nome do Público da execução ("<campanha> · <data>").
       data_do_publico: '%d/%m/%Y'

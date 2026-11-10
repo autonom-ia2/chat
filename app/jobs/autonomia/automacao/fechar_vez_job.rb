@@ -5,7 +5,7 @@
 class Autonomia::Automacao::FecharVezJob < ApplicationJob
   queue_as :scheduled_jobs
 
-  def perform(vez_id)
-    ::Autonomia::Automacao::CampanhaDaOcorrencia.conferencia_marcada(vez_id)
+  def perform(vez_id, account_id)
+    ::Autonomia::Automacao::CampanhaDaOcorrencia.conferencia_marcada(vez_id, account_id)
   end
 end

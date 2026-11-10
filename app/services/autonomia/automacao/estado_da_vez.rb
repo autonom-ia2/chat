@@ -8,11 +8,24 @@
 # vez abrir; daí em diante também conta como fora (a espera sem prazo renova o `due_at` e seguraria a vez para sempre).
 #
 # As execuções da vez são achadas pelo começo da marca (`evento LIKE`), pelo índice idx_autonomia_automacao_execucoes_vez
-# (text_pattern_ops), sem ler as das outras vezes da automação.
+# (text_pattern_ops), sem ler as das outras vezes da automação. Tudo na conta da vez.
+#
+# Custo (B5 do lote 3): cada chegada e cada fechamento confere a vez. "Passou pelo passo" é um NOT EXISTS por execução
+# (o índice do registro por execução), não a lista inteira de quem passou; e a pergunta "alguém segura?" procura uma só,
+# do fim da marca para o começo (os lotes rodam em ordem, então quem ainda não chegou está no fim): com a vez cheia, acha
+# na primeira linha, em vez de ler a vez inteira a cada chegada.
 class Autonomia::Automacao::EstadoDaVez
   Execucao = ::Autonomia::Automacao::Execucao
   Registro = ::Autonomia::Automacao::Registro
   Ocorrencia = ::Autonomia::Automacao::CampanhaDaOcorrencia
+
+  # Passou pelo passo quem tem o registro dele gravado pelo Executor (inclusive o pulado que segue adiante). Os registros
+  # que a própria vez grava na execução dona (Ocorrencia::DA_VEZ) não contam: ela pode nem ter chegado ao passo ainda.
+  NAO_PASSOU = <<~SQL.squish.freeze
+    NOT EXISTS (SELECT 1 FROM autonomia_automacao_registros registro
+                WHERE registro.execucao_id = autonomia_automacao_execucoes.id AND registro.account_id = :conta
+                  AND registro.passo = :passo AND (registro.motivo IS NULL OR registro.motivo NOT IN (:da_vez)))
+  SQL
 
   def initialize(vez, rede: false)
     @vez = vez
@@ -21,14 +34,14 @@ class Autonomia::Automacao::EstadoDaVez
   end
 
   # A vez pode fechar: os lotes rodaram (ou, na rede, passou REDE) e ninguém aberto segura antes do passo.
-  def pronta? = lotes_ok? && !seguram.exists?
+  def pronta? = lotes_ok? && !alguem_segura?
 
   # A primeira execução que chegou ao passo (onde fica o registro da vez), ou nil.
   def primeira
     return @primeira if defined?(@primeira)
 
-    id = Registro.where(execucao_id: execucoes.select(:id), passo: @vez.passo, motivo: Ocorrencia::AGUARDANDO).order(:id).pick(:execucao_id)
-    @primeira = id && Execucao.find_by(id: id)
+    id = registros.where(execucao_id: execucoes.select(:id), motivo: Ocorrencia::AGUARDANDO).order(:id).pick(:execucao_id)
+    @primeira = id && Execucao.find_by(id: id, account_id: @vez.account_id)
   end
 
   # Onde fica o registro da vez: a primeira que chegou; sem chegada, a primeira execução da vez; sem nenhuma, nil.
@@ -51,18 +64,17 @@ class Autonomia::Automacao::EstadoDaVez
 
   def execucoes
     padrao = "#{ActiveRecord::Base.sanitize_sql_like(@vez.ocorrencia)}:%"
-    Execucao.where(automacao_id: @vez.automacao_id).where('autonomia_automacao_execucoes.evento LIKE ?', padrao)
+    Execucao.where(account_id: @vez.account_id, automacao_id: @vez.automacao_id).where('autonomia_automacao_execucoes.evento LIKE ?', padrao)
   end
 
-  # Passou pelo passo quem tem o registro dele gravado pelo Executor (inclusive o pulado que segue adiante). Os registros
-  # que a própria vez grava na execução dona (Ocorrencia::DA_VEZ) não contam: ela pode nem ter chegado ao passo ainda.
-  def passaram
-    Registro.where(execucao_id: execucoes.select(:id), passo: @vez.passo)
-            .where('autonomia_automacao_registros.motivo IS NULL OR autonomia_automacao_registros.motivo NOT IN (?)', Ocorrencia::DA_VEZ)
-            .select(:execucao_id)
-  end
+  def registros = Registro.where(account_id: @vez.account_id, passo: @vez.passo)
 
-  def abertas_antes = execucoes.where(finalizada_em: nil).where.not(id: passaram)
+  def sem_passar(relacao) = relacao.where(NAO_PASSOU, conta: @vez.account_id, passo: @vez.passo, da_vez: Ocorrencia::DA_VEZ)
+
+  def abertas_antes = sem_passar(execucoes.where(finalizada_em: nil))
+
+  # Uma só que segura basta: procurada do fim da marca para o começo (veja o custo, no alto).
+  def alguem_segura? = seguram.reorder(evento: :desc).limit(1).pluck(:id).any?
 
   # As travadas: abertas, sem espera e sem andar há mais de REDE.
   def travadas = abertas_antes.where.not(estado: 'esperando').where(updated_at: ...@limite)
@@ -77,10 +89,10 @@ class Autonomia::Automacao::EstadoDaVez
   def lotes_ok? = @vez.lotes_rodaram? || (@rede && @vez.created_at <= @limite)
 
   def chegaram
-    Registro.where(execucao_id: execucoes.select(:id), passo: @vez.passo, motivo: Ocorrencia::AGUARDANDO).distinct.count(:execucao_id)
+    registros.where(execucao_id: execucoes.select(:id), motivo: Ocorrencia::AGUARDANDO).distinct.count(:execucao_id)
   end
 
-  def sairam = execucoes.where.not(finalizada_em: nil).where.not(id: passaram).count
+  def sairam = sem_passar(execucoes.where.not(finalizada_em: nil)).count
 
   def fora = @rede ? travadas.count : 0
 

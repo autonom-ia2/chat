@@ -57,8 +57,8 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
     # A varredura, depois de enfileirar: quantos lotes a vez espera.
     def lotes(linhas, total)
       linhas.each do |linha|
-        travado(linha.id) { |vez| vez.update!(lotes: total) }
-        conferir(linha.id)
+        travado(linha.id, linha.account_id) { |vez| vez.update!(lotes: total) }
+        conferir(linha.id, linha.account_id)
       end
     end
 
@@ -66,9 +66,9 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
     def lote_feito(definicao, tipo, ocorrencia, indice)
       return if indice.nil? || !por_alvo?(tipo)
 
-      abertas(definicao.id, marca_da_vez(definicao, tipo, ocorrencia)).each do |id|
-        travado(id) { |vez| vez.update!(lotes_feitos: (vez.lotes_feitos | [indice])) }
-        conferir(id)
+      abertas(definicao, marca_da_vez(definicao, tipo, ocorrencia)).each do |id|
+        travado(id, definicao.account_id) { |vez| vez.update!(lotes_feitos: (vez.lotes_feitos | [indice])) }
+        conferir(id, definicao.account_id)
       end
     end
 
@@ -78,36 +78,36 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
     # Confere as vezes abertas da execução (depois do registro do passo campanha, ou ao fechá-la).
     def conferir_execucao(execucao)
       vez = vez_da(execucao)
-      abertas(execucao.automacao_id, vez).each { |id| conferir(id) } if vez
+      abertas(execucao.automacao, vez).each { |id| conferir(id, execucao.account_id) } if vez
     end
 
     # Confere as vezes abertas da automação (o desligar fecha as execuções em lote).
     def conferir_automacao(definicao)
-      Vez.where(automacao_id: definicao.id, fechada_em: nil).ids.each { |id| conferir(id) }
+      Vez.where(account_id: definicao.account_id, automacao_id: definicao.id, fechada_em: nil).ids.each { |id| conferir(id, definicao.account_id) }
     end
 
     # Fecha a vez quando o estado deixa. Devolve :fechada, :aberta (ainda há quem segure) ou :falhou (a nova tentativa
     # já está marcada, ou a vez desistiu).
-    def conferir(id, rede: false)
-      situacao, posterior = travado(id) { |vez| fechar_se_puder(vez, rede).tap { zerar_tentativas(vez) } }
+    def conferir(id, conta_id, rede: false)
+      situacao, posterior = travado(id, conta_id) { |vez| fechar_se_puder(vez, rede).tap { zerar_tentativas(vez) } }
       posterior&.call
       situacao
     rescue StandardError => e
-      falhou(id, e)
+      falhou(id, conta_id, e)
       :falhou
     end
 
     # A conferência marcada (FecharVezJob), com a regra da rede. Fora da hora marcada (outra mais cedo já rodou e marcou
     # a próxima) ou com a vez fechada, nada. Na hora: a próxima já fica marcada em REDE antes de conferir (se este job
     # morrer no meio, a vez não fica sem rede), e a vez que fecha deixa a marca sem efeito.
-    def conferencia_marcada(id)
-      return unless Vez.exists?(id: id)
+    def conferencia_marcada(id, conta_id)
+      return unless Vez.exists?(id: id, account_id: conta_id)
 
-      na_hora = travado(id) { |vez| vez.fechada_em.nil? && vez.conferir_em.present? && !vez.conferir_em.future? }
+      na_hora = travado(id, conta_id) { |vez| vez.fechada_em.nil? && vez.conferir_em.present? && !vez.conferir_em.future? }
       return unless na_hora
 
-      marcar_a_rede(id)
-      conferir(id, rede: true)
+      marcar_a_rede(id, conta_id)
+      conferir(id, conta_id, rede: true)
     end
 
     # A vez da execução de um recorrente de card ou contato, ou nil.
@@ -136,31 +136,31 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
       linha = Vez.create_or_find_by!(automacao_id: definicao.id, ocorrencia: ocorrencia, passo: passo_id) do |nova|
         nova.account_id = definicao.account_id
       end
-      marcar(linha.id, REDE) if linha.previously_new_record?
+      marcar(linha.id, linha.account_id, REDE) if linha.previously_new_record?
       linha
     end
 
     # Marca a conferência da vez daqui a `espera`, se não houver outra marcada até lá (`trocar`: a que acabou de vencer,
     # no próprio FecharVezJob, dá lugar à próxima). O job vai para a fila depois do
     # commit, para nunca acordar antes de a marca existir.
-    def marcar(id, espera, trocar: false)
+    def marcar(id, conta_id, espera, trocar: false)
       quando = Time.current + espera
-      marcou = travado(id) do |vez|
+      marcou = travado(id, conta_id) do |vez|
         next false if vez.fechada_em || (!trocar && marcada_ate?(vez, quando))
 
         vez.update!(conferir_em: quando)
       end
-      ::Autonomia::Automacao::FecharVezJob.set(wait_until: quando).perform_later(id) if marcou
+      ::Autonomia::Automacao::FecharVezJob.set(wait_until: quando).perform_later(id, conta_id) if marcou
     end
 
     # A próxima conferência da rede, no FecharVezJob. Se marcar falhar (erro passageiro no banco), a vez não pode ficar
     # sem rede: o job da próxima vai para a fila em TENTAR_DE_NOVO sem mexer na marca vencida (ele a acha na hora e
     # confere), e o erro sobe para o log e para o Sidekiq.
-    def marcar_a_rede(id)
-      marcar(id, REDE, trocar: true)
+    def marcar_a_rede(id, conta_id)
+      marcar(id, conta_id, REDE, trocar: true)
     rescue StandardError => e
       Rails.logger.error("[automacao][campanha_da_vez] não marcou a rede vez=#{id} #{e.class} em #{e.backtrace&.first}")
-      ::Autonomia::Automacao::FecharVezJob.set(wait: TENTAR_DE_NOVO).perform_later(id)
+      ::Autonomia::Automacao::FecharVezJob.set(wait: TENTAR_DE_NOVO).perform_later(id, conta_id)
       raise
     end
 
@@ -175,13 +175,16 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
       vez.conferir_em.present? && vez.conferir_em > Time.current - TENTAR_DE_NOVO && vez.conferir_em <= quando
     end
 
-    def abertas(automacao_id, ocorrencia) = Vez.where(automacao_id: automacao_id, ocorrencia: ocorrencia, fechada_em: nil).ids
+    def abertas(definicao, ocorrencia)
+      Vez.where(account_id: definicao.account_id, automacao_id: definicao.id, ocorrencia: ocorrencia, fechada_em: nil).ids
+    end
 
-    def travado(id)
+    # Sob a trava da vez, sempre na conta dela.
+    def travado(id, conta_id)
       Vez.transaction do
         sql = ActiveRecord::Base.sanitize_sql_array(['SELECT pg_advisory_xact_lock(hashtext(?))', "automacao:campanha_da_vez:#{id}"])
         ActiveRecord::Base.connection.execute(sql)
-        yield Vez.find(id)
+        yield Vez.find_by!(id: id, account_id: conta_id)
       end
     end
 
@@ -243,12 +246,12 @@ class Autonomia::Automacao::CampanhaDaOcorrencia
     # O erro fica no log. Com uma nova tentativa já marcada até TENTAR_DE_NOVO, é a mesma tentativa: nada mais. Senão,
     # conta a tentativa: o registro do erro e a nova tentativa em TENTAR_DE_NOVO, ou, na TENTATIVAS-ésima, a vez fecha
     # sem campanha com o registro final.
-    def falhou(id, erro)
+    def falhou(id, conta_id, erro)
       Rails.logger.error("[automacao][campanha_da_vez] falhou vez=#{id} #{erro.class} em #{erro.backtrace&.first}")
-      return unless Vez.exists?(id: id)
+      return unless Vez.exists?(id: id, account_id: conta_id)
 
-      quando = travado(id) { |vez| contar_tentativa(vez, erro) }
-      ::Autonomia::Automacao::FecharVezJob.set(wait_until: quando).perform_later(id) if quando
+      quando = travado(id, conta_id) { |vez| contar_tentativa(vez, erro) }
+      ::Autonomia::Automacao::FecharVezJob.set(wait_until: quando).perform_later(id, conta_id) if quando
     end
 
     # Sob a trava da vez: conta a tentativa e grava a marca da nova (o erro que chega em paralelo já a vê). Devolve a hora

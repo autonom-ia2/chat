@@ -118,11 +118,14 @@ class Autonomia::Automacao::Historico
   end
 
   # Os números do registro para o texto do motivo (G55: quantos chegaram e quantos ficaram de fora da campanha da vez) e,
-  # em `por`, o texto de outro motivo (a campanha da vez que não saiu diz por quê).
+  # em `por`, o texto de outro motivo (a campanha da vez que não saiu diz por quê). O registro com `por` sem motivo
+  # escrito mostra o texto sem o porquê, em vez de derrubar o histórico.
   def contagens(dados)
     numeros = dados.select { |_, valor| valor.is_a?(Integer) }.transform_keys(&:to_sym).except(*I18n::RESERVED_KEYS)
+    return numeros unless dados.key?('por')
+
     por = dados['por']
-    por.is_a?(String) ? numeros.merge(por: I18n.t("autonomia.automacao.motivos.#{por}", default: '')) : numeros
+    numeros.merge(por: por.is_a?(String) ? I18n.t("autonomia.automacao.motivos.#{por}", default: '') : '')
   end
 
   def passo(registro, visivel:)

@@ -168,7 +168,7 @@ RSpec.describe Autonomia::Automacao::CampanhaDaExecucao, :automacao_motor do
   describe 'ao salvar' do
     def problemas(passos)
       receita = { 'gatilho' => gatilho, 'passos' => passos }
-      Autonomia::Automacao::PassoDeCampanha.problemas_do_publico(passos.last, receita)
+      Autonomia::Automacao::PassoDeCampanha.problemas_do_publico(passos.last, receita, 'Account')
     end
 
     let(:sem_origem) { I18n.t('autonomia.automacao.receita.campanha_publico_sem_origem', passo: 'apresentar') }
@@ -182,7 +182,7 @@ RSpec.describe Autonomia::Automacao::CampanhaDaExecucao, :automacao_motor do
       se = { 'id' => 'se1', 'tipo' => 'se', 'condicao' => { 'campo' => { '$valor' => 'conta.id' }, 'op' => 'existe' },
              'entao' => [card_antes], 'senao' => [campanha] }
 
-      expect(Autonomia::Automacao::PassoDeCampanha.problemas_do_publico(campanha, { 'gatilho' => gatilho, 'passos' => [se] }))
+      expect(Autonomia::Automacao::PassoDeCampanha.problemas_do_publico(campanha, { 'gatilho' => gatilho, 'passos' => [se] }, 'Account'))
         .to eq([sem_origem])
     end
 

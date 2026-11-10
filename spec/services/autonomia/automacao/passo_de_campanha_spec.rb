@@ -54,6 +54,16 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
       expect(problemas(disparar, gatilho: 'card.parado')).to include(frase(:campanha_so_sem_alvo))
     end
 
+    # B1 do lote 3: no recorrente de card ou contato cada execução é um card, e "só quem esta automação criou" mandaria
+    # uma campanha por card, fora da campanha da vez (G55). Só vale na conta.
+    it 'recusa o público "desta execução" no recorrente de card e de contato', :aggregate_failures do
+      desta = disparar.except('etiquetas').merge('publico' => 'desta_execucao')
+
+      expect(problemas(desta, gatilho: 'card.recorrente')).to include(frase(:campanha_desta_execucao_so_na_conta))
+      expect(problemas(desta, gatilho: 'contato.recorrente')).to include(frase(:campanha_desta_execucao_so_na_conta))
+      expect(problemas(disparar, gatilho: 'card.recorrente')).not_to include(frase(:campanha_desta_execucao_so_na_conta))
+    end
+
     context 'with o gatilho da conta (conta.recorrente, G7)' do
       before { allow(described_class).to receive(:alvo_da_conta?).and_return(true) }
 

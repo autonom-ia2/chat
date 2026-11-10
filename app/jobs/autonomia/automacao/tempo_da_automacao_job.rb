@@ -61,8 +61,7 @@ class Autonomia::Automacao::TempoDaAutomacaoJob < ApplicationJob
     chave = "automacao:recorrente:#{definicao.id}:#{ocorrencia.utc.iso8601}"
     return unless Redis::Alfred.set(chave, 1, nx: true, ex: ::Autonomia::Automacao::Tempo::JANELA.to_i)
 
-    # G55: a campanha da vez espera os lotes enfileirados rodarem (cada um com o seu índice).
-    vezes = ::Autonomia::Automacao::CampanhaDaOcorrencia.abrir(definicao, ocorrencia)
+    vezes = abrir_as_vezes(definicao, ocorrencia, chave)
     total = 0
     busca.lotes do |ids, instante|
       ::Autonomia::Automacao::RecorrenteLoteJob.perform_later(definicao.id, ids, instante.utc.iso8601, total)
@@ -70,6 +69,15 @@ class Autonomia::Automacao::TempoDaAutomacaoJob < ApplicationJob
     end
     ::Autonomia::Automacao::CampanhaDaOcorrencia.lotes(vezes, total)
     nil
+  end
+
+  # G55: a campanha da vez espera os lotes enfileirados rodarem (cada um com o seu índice). Se abrir falhar, a marca da
+  # janela sai antes de o erro subir: senão as próximas rodadas da janela achariam a marca e a vez nunca rodaria.
+  def abrir_as_vezes(definicao, ocorrencia, chave)
+    ::Autonomia::Automacao::CampanhaDaOcorrencia.abrir(definicao, ocorrencia)
+  rescue StandardError
+    Redis::Alfred.delete(chave)
+    raise
   end
 
   # O primeiro erro dos alvos, ou nil. O recorrente só enfileira os lotes: os erros ficam em cada lote.
