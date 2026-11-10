@@ -620,8 +620,12 @@ const comecarNaEquipe = async () => {
 
 // As que ficaram no "Já vem com" entram antes de o agente começar; a que falhar é avisada e a pessoa inclui depois
 // pela gaveta de ferramentas.
+const incluindoProntas = ref(false);
 const incluirProntas = async () => {
-  const falharam = await prontas.incluirTodas();
+  incluindoProntas.value = true;
+  const falharam = await prontas.incluirTodas().finally(() => {
+    incluindoProntas.value = false;
+  });
   if (!falharam.length) return;
   useAlert(
     t('AGENTS.VITRINE.JA_VEM.FALHOU', {
@@ -633,6 +637,8 @@ const incluirProntas = async () => {
 };
 
 const abrirComece = async () => {
+  // Um clique só: o segundo, enquanto as ferramentas entram, não começa de novo.
+  if (incluindoProntas.value) return;
   await incluirProntas();
   if (ajudante.value) {
     ajudanteNaCriacao.comecar();
@@ -1089,7 +1095,7 @@ onMounted(() => {
           :link-conectar-canal="linkConectarCanal"
           :celular="celular"
           :abrindo-ajustes="abrindoAjustes"
-          :carregando-canais="carregandoComecar"
+          :carregando-canais="carregandoComecar || incluindoProntas"
           @perguntar="perguntarNoTeste"
           @tentar-de-novo="teste.tentarDeNovo"
           @limpar="teste.limpar"

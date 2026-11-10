@@ -69,6 +69,7 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(thread.state['ferramentas_sugeridas']).to eq(%w[cep fipe cpf])
       expect(thread.agent.config['ferramentas_sugeridas']).to eq(%w[cep fipe cpf])
       expect(thread.agent.tools).to be_empty # quem inclui é a Confira, com a pessoa real
+      expect(thread.agent.config.dig('prontas_sugestao', 'chaves')).to eq(%w[cep fipe cpf]) # o cartão não paga outra chamada
     end
 
     context 'when the model says none fits' do

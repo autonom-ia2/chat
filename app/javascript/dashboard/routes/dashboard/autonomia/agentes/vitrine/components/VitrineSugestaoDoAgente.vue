@@ -35,16 +35,22 @@ const sair = id => {
   sugeridas.value = sugeridas.value.filter(item => item !== id);
 };
 
+// A resposta de um pedido antigo (outro agente, ou a flag mudou no meio) não vale.
+let pedido = 0;
 const ler = async () => {
+  pedido += 1;
+  const este = pedido;
   sugeridas.value = [];
   if (!construtor.value) return;
   vitrine.carregar();
+  let lidas = [];
   try {
     const { data } = await FerramentasProntasAPI.sugestoes(props.agenteId);
-    sugeridas.value = data?.ferramentas || [];
+    lidas = data?.ferramentas || [];
   } catch {
-    sugeridas.value = [];
+    lidas = [];
   }
+  if (este === pedido) sugeridas.value = lidas;
 };
 
 const incluir = async () => {

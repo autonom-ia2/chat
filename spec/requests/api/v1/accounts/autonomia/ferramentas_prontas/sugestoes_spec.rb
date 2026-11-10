@@ -21,9 +21,10 @@ RSpec.describe 'Sugestões de ferramentas prontas', type: :request do
   after { Redis::Alfred.delete("#{Autonomia::FerramentasProntas::SugestaoJob::TRAVA}:#{agent.id}") }
 
   def sugerir(chaves)
-    Autonomia::FerramentasProntas::SugestaoParaAgente.gravar(
-      agent, 'prontas_sugestao' => { 'chaves' => chaves, 'assinatura' => Autonomia::FerramentasProntas::SugestaoParaAgente.assinatura(account) }
-    )
+    assinatura = Autonomia::FerramentasProntas::SugestaoParaAgente.assinatura(agent)
+    Autonomia::FerramentasProntas::SugestaoParaAgente.gravar(agent) do
+      { 'prontas_sugestao' => { 'chaves' => chaves, 'assinatura' => assinatura } }
+    end
   end
 
   it 'answers the stored suggestion right away and asks for a new one in the background when missing' do
@@ -57,6 +58,31 @@ RSpec.describe 'Sugestões de ferramentas prontas', type: :request do
     post "#{base}/dispensar", params: { agent_id: agent.id, fonte: 'inventada' }, headers: admin.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:unprocessable_entity)
+  end
+
+  it 'the quote agent (Lia) has no suggestion to dismiss' do
+    lia = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'insurance_quote')
+
+    post "#{base}/dispensar", params: { agent_id: lia.id, fonte: 'fipe' }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:not_found)
+    expect(lia.reload.config).not_to have_key('prontas_dispensadas')
+  end
+
+  it 'the agent PATCH cannot forge the suggestion nor clear the dismissed ones' do
+    sugerir(%w[fipe])
+    Autonomia::FerramentasProntas::SugestaoParaAgente.dispensar!(agent, 'cep')
+    forjado = { 'prontas_sugestao' => { 'assinatura' => 'x', 'chaves' => %w[cpf] }, 'prontas_dispensadas' => [],
+                'ferramentas_sugeridas' => %w[cpf] }
+
+    patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}",
+          params: { agent: { config: forjado } }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    config = agent.reload.config
+    expect(config['prontas_sugestao']['chaves']).to eq(%w[fipe])
+    expect(config['prontas_dispensadas']).to eq(%w[cep])
+    expect(config).not_to have_key('ferramentas_sugeridas')
   end
 
   it 'without the Construtor flag: 404 with the reason' do

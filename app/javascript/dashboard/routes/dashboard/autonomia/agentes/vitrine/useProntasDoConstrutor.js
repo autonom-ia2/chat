@@ -1,5 +1,6 @@
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import FerramentasProntasAPI from 'dashboard/api/autonomia/ferramentasProntas';
 import { chaveDoTexto, ferramentaPorId } from './catalogo';
 import { useVitrine } from './useVitrine';
 import { useVitrineLigada } from './useVitrineLigada';
@@ -7,8 +8,10 @@ import { useVitrineLigada } from './useVitrineLigada';
 // #2858 F3 — as ferramentas prontas com que o agente novo nasce. Quem escolhe é o Construtor (`ferramentas_sugeridas`
 // da conversa, ou do agente num rascunho reaberto); lista vazia = "nenhuma combina". A Confira mostra "Já vem com
 // estas ferramentas" com "Tirar", e o "Começar" inclui as que ficaram pelo endpoint da vitrine: a pessoa real e a
-// permissão dela (o administrador ou a chave "Ferramentas dos agentes"). Quem não tem a chave vê uma frase dizendo que
-// as ferramentas ficam para quem cuida delas, e o agente nasce sem elas.
+// permissão dela (o administrador ou a chave "Ferramentas dos agentes"). O que a pessoa tirou vira "Agora não" (o
+// cartão da página do agente não oferece de volta). Quem não tem a chave vê uma frase dizendo que as ferramentas
+// ficam para quem cuida delas, e o agente nasce sem elas. O que o agente já tem (rascunho reaberto depois do
+// "Começar") não aparece de novo.
 //   agenteId, sugeridas: refs (ou computeds) da página.
 export function useProntasDoConstrutor({ agenteId, sugeridas }) {
   const { t } = useI18n();
@@ -19,7 +22,10 @@ export function useProntasDoConstrutor({ agenteId, sugeridas }) {
   const escolhidas = computed(() =>
     construtorNaConta.value
       ? (sugeridas.value || []).filter(
-          id => ferramentaPorId(id) && !tiradas.value.includes(id)
+          id =>
+            ferramentaPorId(id) &&
+            !tiradas.value.includes(id) &&
+            !vitrine.tem(agenteId.value, id)
         )
       : []
   );
@@ -33,29 +39,49 @@ export function useProntasDoConstrutor({ agenteId, sugeridas }) {
     tiradas.value = [...tiradas.value, id];
   };
 
-  // Inclui as que ficaram e o agente ainda não tem. -> as que falharam (a tela avisa; a pessoa inclui depois).
+  const dispensarTiradas = () =>
+    Promise.allSettled(
+      tiradas.value.map(id =>
+        FerramentasProntasAPI.dispensar(agenteId.value, id)
+      )
+    );
+
+  const incluir = id =>
+    vitrine.incluir({
+      fonte: id,
+      agenteId: agenteId.value,
+      usarQuando: t(
+        `AGENTS.VITRINE.FERRAMENTAS.${chaveDoTexto(id)}.USE_QUANDO`
+      ),
+    });
+
+  // Inclui as que ficaram e o agente ainda não tem. -> as que não entraram (a tela avisa; a pessoa inclui depois). Sem
+  // o agente ou sem a lista da vitrine, nenhuma entrou: a tela avisa em vez de seguir calada.
   const incluirTodas = async () => {
-    if (!construtor.value || !agenteId.value) return [];
+    if (!construtor.value) return [];
+    const queria = [...visiveis.value];
+    if (!queria.length) return [];
+    if (!agenteId.value) return queria;
     await vitrine.carregar();
-    const faltam = visiveis.value.filter(
+    if (vitrine.erro.value) return queria;
+    dispensarTiradas();
+    const faltam = queria.filter(
       id =>
         vitrine.fontes.value.includes(id) && !vitrine.tem(agenteId.value, id)
     );
-    const resultados = await Promise.allSettled(
-      faltam.map(id =>
-        vitrine.incluir({
-          fonte: id,
-          agenteId: agenteId.value,
-          usarQuando: t(
-            `AGENTS.VITRINE.FERRAMENTAS.${chaveDoTexto(id)}.USE_QUANDO`
-          ),
-        })
-      )
+    const resultados = await Promise.allSettled(faltam.map(incluir));
+    const naoLiberadas = queria.filter(
+      id => !vitrine.fontes.value.includes(id)
     );
-    return faltam.filter(
-      (_, indice) => resultados[indice].status === 'rejected'
-    );
+    return [
+      ...naoLiberadas,
+      ...faltam.filter((_, indice) => resultados[indice].status === 'rejected'),
+    ];
   };
+
+  onMounted(() => {
+    if (construtor.value) vitrine.carregar();
+  });
 
   return { visiveis, semPermissao, escolhidas, tirar, incluirTodas };
 }

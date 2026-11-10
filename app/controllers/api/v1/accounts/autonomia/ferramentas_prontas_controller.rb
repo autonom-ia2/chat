@@ -66,6 +66,7 @@ class Api::V1::Accounts::Autonomia::FerramentasProntasController < Api::V1::Acco
   def dispensar
     fonte = Autonomia::FerramentasProntas::Catalogo.buscar(params.require(:fonte).to_s)
     return render json: { motivo: 'fonte_invalida' }, status: :unprocessable_entity if fonte.nil?
+    return head :not_found unless Autonomia::FerramentasProntas::SugestaoParaAgente.ligada?(@agente)
 
     Autonomia::FerramentasProntas::SugestaoParaAgente.dispensar!(@agente, fonte.chave)
     head :no_content

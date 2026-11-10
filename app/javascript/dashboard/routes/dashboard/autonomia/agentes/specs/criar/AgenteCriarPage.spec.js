@@ -48,8 +48,13 @@ const vitrine = vi.hoisted(() => ({
   tem: vi.fn(() => false),
   incluir: vi.fn(),
   fontes: { value: ['fipe', 'cep'] },
+  erro: { value: '' },
 }));
 vi.mock('../../vitrine/useVitrine', () => ({ useVitrine: () => vitrine }));
+const prontasApi = vi.hoisted(() => ({ dispensar: vi.fn() }));
+vi.mock('dashboard/api/autonomia/ferramentasProntas', () => ({
+  default: prontasApi,
+}));
 vi.mock('../../composables/usePermissoesDaJornada', async () => {
   const { computed } = await import('vue');
   return {
@@ -439,6 +444,7 @@ describe('AgenteCriarPage', () => {
     beforeEach(() => {
       vitrine.carregar.mockReset().mockResolvedValue();
       vitrine.incluir.mockReset().mockResolvedValue({});
+      prontasApi.dispensar.mockReset().mockResolvedValue({});
     });
     afterEach(() => {
       permissao.gerenciar = true;
@@ -458,6 +464,7 @@ describe('AgenteCriarPage', () => {
       expect(vitrine.incluir).toHaveBeenCalledWith(
         expect.objectContaining({ fonte: 'cep', agenteId: 90 })
       );
+      expect(prontasApi.dispensar).toHaveBeenCalledWith(90, 'fipe');
       expect(rota.atual.query.etapa).toBe('comece');
       wrapper.unmount();
     });

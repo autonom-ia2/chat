@@ -63,9 +63,12 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   # (`QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA`) — só o Builder as escreve, sempre as quatro; uma
   # escrita parcial por aqui pararia o agente com `EscolhasIncompletas`.
   # `canal_pedido` (#2490): o canal que o dono pediu ao Construtor na criação; só o Builder o escreve.
+  # `ferramentas_sugeridas`, `prontas_sugestao` e `prontas_dispensadas` (#2858 F3): só o Builder e a sugestão de prontas
+  # escrevem; pelo PATCH, forjar a assinatura forçaria uma nova chamada paga.
   PROTECTED_CONFIG_KEYS = (%w[
     topic_map knowledge_confidence knowledge_summary knowledge_refresh_token
     with_knowledge system_key builder_active_thread_id canal_pedido
+    ferramentas_sugeridas prontas_sugestao prontas_dispensadas
   ] + [::Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA]).freeze
 
   # #1366 — status, enabled ou actuation mudando: tudo (assign + save!) com o AGENTE TRAVADO (with_lock relê o agente),

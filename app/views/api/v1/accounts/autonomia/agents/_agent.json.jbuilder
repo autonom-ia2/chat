@@ -25,12 +25,14 @@ json.tone agent.tone
 # `booking_page_id` (#1196): a página de agendamento que liga a agenda da IA (PanelTune).
 # `canal_pedido` (#2490): o canal que o dono pediu ao Construtor na criação (whatsapp, instagram… ou nenhum); a Confira
 # de um rascunho reaberto sugere só a caixa desse canal.
+# `ferramentas_sugeridas` (#2858 F3): as prontas que o Construtor escolheu na criação; a Confira de um rascunho reaberto
+# mostra "já vem com" a partir delas.
 # `atendimento` (#1479): o endereço e o telefone do bloco "Endereço e telefone" da página do agente.
 json.config agent.config.to_h.slice('handoff_strategy', 'handoff_target_id',
                                     'with_knowledge', 'knowledge_confidence', 'knowledge_summary',
                                     'audience', 'response_window', 'audience_unknown_contact',
                                     'faq_suggestions', 'booking_page_id', 'booking_agent_ids', 'canal_pedido',
-                                    'atendimento')
+                                    'ferramentas_sugeridas', 'atendimento')
 # #1196: o agente recebe a agenda da IA (o Agente de Cotação, de ferramentas mantidas, não). O PanelTune esconde a
 # escolha da página quando é false.
 json.booking_available Autonomia::Agents::Tools::Native::Agenda.aceita?(agent)

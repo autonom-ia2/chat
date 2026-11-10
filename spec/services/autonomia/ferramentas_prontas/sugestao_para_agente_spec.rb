@@ -8,7 +8,7 @@ RSpec.describe Autonomia::FerramentasProntas::SugestaoParaAgente do
 
   let(:account) { create(:account) }
   let(:agent) do
-    Autonomia::Agents::Agent.create!(account: account, name: 'Ana', agent_type: 'sdr', instruction: 'Você cota seguro auto.')
+    Autonomia::Agents::Agent.create!(account: account, name: "Ana#{'A' * 200}", agent_type: 'sdr', instruction: 'Você cota seguro auto.')
   end
   let(:cliente) { instance_double(Crm::Ai::ResponsesClient) }
   let(:credencial) { { api_key: 'chave-de-teste', source: :system } }
@@ -35,11 +35,19 @@ RSpec.describe Autonomia::FerramentasProntas::SugestaoParaAgente do
     end
   end
 
+  it 'sends at most 120 characters of the agent name' do
+    described_class.new(agent).call
+
+    expect(cliente).to have_received(:create) do |**kwargs|
+      expect(kwargs[:input].sole[:content]).to include("AGENTE: #{agent.name.first(120)} (tipo")
+    end
+  end
+
   it 'keeps the choice with the date and the catalog signature' do
     described_class.new(agent).call
 
     sugestao = agent.reload.config['prontas_sugestao']
-    expect(sugestao).to include('chaves' => %w[fipe cpf], 'assinatura' => described_class.assinatura(account))
+    expect(sugestao).to include('chaves' => %w[fipe cpf], 'assinatura' => described_class.assinatura(agent))
     expect(sugestao['em']).to be_present
     expect(described_class.atual?(agent)).to be(true)
   end
@@ -78,6 +86,37 @@ RSpec.describe Autonomia::FerramentasProntas::SugestaoParaAgente do
 
     account.enable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
     expect(described_class.atual?(agent.reload)).to be(false)
+  end
+
+  it 'becomes stale when what the agent is changes (instruction)' do
+    described_class.new(agent).call
+    agent.reload.update!(instruction: 'Você vende pão.')
+
+    expect(described_class.atual?(agent)).to be(false)
+  end
+
+  it 'a draft without instruction is not asked' do
+    agent.update!(instruction: '')
+
+    expect(described_class.new(agent).call).to be_nil
+    expect(cliente).not_to have_received(:create)
+  end
+
+  it 'the agent created by the Construtor gets its choice as the suggestion, without a new call' do
+    agent.update!(config: { 'ferramentas_sugeridas' => %w[fipe inventada] })
+
+    described_class.semear_do_construtor!(agent)
+
+    expect(described_class.atual?(agent.reload)).to be(true)
+    expect(described_class.para_tela(agent)).to eq(%w[fipe])
+    expect(cliente).not_to have_received(:create)
+  end
+
+  it 'a broken stored value does not break the reading' do
+    agent.update!(config: { 'prontas_sugestao' => 'texto' })
+
+    expect(described_class.atual?(agent)).to be(false)
+    expect(described_class.para_tela(agent)).to eq([])
   end
 
   it 'never suggests to the quote agent (Lia)' do

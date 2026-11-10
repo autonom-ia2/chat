@@ -13,6 +13,11 @@ const vitrine = vi.hoisted(() => ({
   tem: vi.fn(),
   incluir: vi.fn(),
   fontes: null,
+  erro: null,
+}));
+const api = vi.hoisted(() => ({ dispensar: vi.fn() }));
+vi.mock('dashboard/api/autonomia/ferramentasProntas', () => ({
+  default: api,
 }));
 vi.mock('../../vitrine/useVitrine', () => ({ useVitrine: () => vitrine }));
 const ligada = vi.hoisted(() => ({ construtor: null, naConta: null }));
@@ -48,6 +53,8 @@ beforeEach(() => {
   ligada.construtor = ref(true);
   ligada.naConta = ref(true);
   vitrine.fontes = ref(['fipe', 'cep', 'cpf']);
+  vitrine.erro = ref('');
+  api.dispensar.mockReset().mockResolvedValue({});
   vitrine.carregar.mockReset().mockResolvedValue();
   vitrine.tem.mockReset().mockReturnValue(false);
   vitrine.incluir.mockReset().mockResolvedValue({});
@@ -60,6 +67,7 @@ describe('useProntasDoConstrutor', () => {
 
     expect(prontas.visiveis.value).toEqual(['fipe', 'cpf']);
     expect(await prontas.incluirTodas()).toEqual([]);
+    expect(api.dispensar).toHaveBeenCalledWith(7, 'cep');
     expect(vitrine.incluir).toHaveBeenCalledTimes(2);
     expect(vitrine.incluir).toHaveBeenCalledWith({
       fonte: 'fipe',
@@ -69,14 +77,31 @@ describe('useProntasDoConstrutor', () => {
     });
   });
 
-  it('skips what the agent already has and what the account no longer releases; reports failures', async () => {
-    vitrine.fontes = ref(['fipe', 'cep']);
+  it('does not show again what the agent already has', () => {
     vitrine.tem.mockImplementation((_, id) => id === 'fipe');
-    vitrine.incluir.mockRejectedValue(new Error('GERAL'));
+
+    expect(usar().visiveis.value).toEqual(['cep', 'cpf']);
+  });
+
+  it('reports what did not go in: a failed include and a source the account no longer releases', async () => {
+    vitrine.fontes = ref(['fipe', 'cep']);
+    vitrine.incluir.mockImplementation(({ fonte }) =>
+      fonte === 'cep' ? Promise.reject(new Error('GERAL')) : Promise.resolve()
+    );
     const prontas = usar();
 
-    expect(await prontas.incluirTodas()).toEqual(['cep']);
-    expect(vitrine.incluir).toHaveBeenCalledTimes(1);
+    expect(await prontas.incluirTodas()).toEqual(['cpf', 'cep']);
+    expect(vitrine.incluir).toHaveBeenCalledTimes(2);
+  });
+
+  it('when the showcase cannot be read, nothing silent: every shown tool is reported', async () => {
+    vitrine.carregar.mockImplementation(async () => {
+      vitrine.erro.value = 'REDE';
+    });
+    const prontas = usar();
+
+    expect(await prontas.incluirTodas()).toEqual(['fipe', 'cep', 'cpf']);
+    expect(vitrine.incluir).not.toHaveBeenCalled();
   });
 
   it('ignores unknown keys and an empty list ("none fits")', () => {
