@@ -196,6 +196,11 @@ module Autonomia
       #   - MAX_HISTORY_TOTAL_CHARS: orçamento TOTAL do histórico; preserva as mensagens MAIS RECENTES
       #     (as antigas saem primeiro quando o orçamento estoura).
       MAX_QUERY_CHARS = 6_000
+      # #2850 — prazo do embedding da PERGUNTA (Retriever), que trava o turno do cliente enquanto espera. Sem ele, o
+      # RubyLLM usa 300 s por tentativa e até 3 repetições. PRAZO_DO_EMBEDDING_S vale por tentativa; uma nova tentativa,
+      # no máximo, só se couber inteira no ORCAMENTO_DO_EMBEDDING_S. A ingestão em lote (fora do turno) não muda.
+      PRAZO_DO_EMBEDDING_S = 2.0
+      ORCAMENTO_DO_EMBEDDING_S = 4.5
       MAX_COMPOSED_QUERY_CHARS = 16_000
       MAX_HISTORY_ITEM_CHARS = 4_000
       MAX_HISTORY_TOTAL_CHARS = 40_000 # Bloco A: 24k→40k (janela ampla do modelo; conversa longa preserva mais contexto)

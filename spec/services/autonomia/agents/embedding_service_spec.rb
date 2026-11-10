@@ -64,4 +64,110 @@ RSpec.describe Autonomia::Agents::EmbeddingService do
       expect(service.embed_batch(['', nil])).to eq([[], []])
     end
   end
+
+  # #2850 (Refs #1431) — o embedding da pergunta tem prazo próprio, sem as novas tentativas do RubyLLM (300 s e até 3
+  # repetições por padrão). Quem decide se tenta de novo é o Retriever, que conhece o orçamento do turno.
+  describe 'deadline of the question (#2850)' do
+    let(:credencial) { instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'chave-de-teste' }) }
+
+    before { allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(credencial) }
+
+    it 'sets the deadline per attempt and turns off the retries of RubyLLM', :aggregate_failures do
+      config = described_class.new(account: account, prazo: 2.0).send(:context).config
+
+      expect(config.request_timeout).to eq(2.0)
+      expect(config.max_retries).to eq(0)
+    end
+
+    it 'keeps the defaults of RubyLLM without a deadline (the ingestion in background)' do
+      expect(described_class.new(account: account).send(:context).config.request_timeout).to eq(RubyLLM.config.request_timeout)
+    end
+
+    # A credencial fica fora do prazo: relê-la no log da falha somaria outra consulta ao banco depois do prazo estourado.
+    it 'reads the credential once, even when the attempt fails and is logged', :aggregate_failures do
+      allow(RubyLLM).to receive(:context).and_wrap_original do |original, &bloco|
+        original.call(&bloco).tap { |ctx| allow(ctx).to receive(:embed).and_raise(Faraday::TimeoutError.new('execution expired')) }
+      end
+      allow(Rails.logger).to receive(:error)
+
+      expect { described_class.new(account: account, prazo: 2.0).embed('pergunta') }.to raise_error(described_class::Passageira)
+      expect(Crm::Ai::CredentialResolver).to have_received(:new).once
+      expect(Rails.logger).to have_received(:error).with(include('api_host=api.openai.com'))
+    end
+  end
+
+  describe 'passing failures (#2850)' do
+    let(:ctx) { instance_double(RubyLLM::Context) }
+
+    before { allow(service).to receive(:context).and_return(ctx) } # rubocop:disable RSpec/SubjectStub
+
+    {
+      Faraday::TimeoutError.new('execution expired') => 'prazo',
+      Faraday::ConnectionFailed.new('connection refused') => 'conexao',
+      RubyLLM::ServerError.new(nil, 'bad gateway') => 'provedor',
+      RubyLLM::ServiceUnavailableError.new(nil, 'unavailable') => 'provedor',
+      RubyLLM::OverloadedError.new(nil, 'overloaded') => 'provedor',
+      RubyLLM::RateLimitError.new(nil, 'slow down') => 'limite_de_taxa'
+    }.each do |erro, motivo|
+      it "turns #{erro.class.name} into a passing failure with the reason #{motivo}", :aggregate_failures do
+        allow(ctx).to receive(:embed).and_raise(erro)
+        allow(Rails.logger).to receive(:error)
+
+        expect { service.embed('pergunta') }.to raise_error(described_class::Passageira) { |falha| expect(falha.motivo).to eq(motivo) }
+        expect(Rails.logger).to have_received(:error).with(include('operation=autonomia.embedding', "error_type=#{erro.class.name}"))
+      end
+    end
+
+    it 'turns Faraday::SSLError into a passing failure with the reason conexao' do
+      allow(ctx).to receive(:embed).and_raise(Faraday::SSLError.new('handshake'))
+
+      expect { service.embed('pergunta') }.to raise_error(described_class::Passageira) { |falha| expect(falha.motivo).to eq('conexao') }
+    end
+
+    it 'keeps any other network failure as a plain embedding error, with log, never loose', :aggregate_failures do
+      allow(ctx).to receive(:embed).and_raise(Faraday::ParsingError.new('cut'))
+      allow(Rails.logger).to receive(:error)
+
+      expect { service.embed('pergunta') }
+        .to raise_error(described_class::EmbeddingError) do |falha|
+          expect([falha.class, falha.motivo]).to eq([described_class::EmbeddingError, 'rede'])
+        end
+      expect(Rails.logger).to have_received(:error).with(include('error_type=Faraday::ParsingError'))
+    end
+
+    it 'cuts the whole attempt at the deadline, even when the network keeps trickling' do
+      lento = described_class.new(account: account, prazo: 0.2)
+      allow(lento).to receive(:context).and_return(ctx)
+      allow(ctx).to receive(:embed) { sleep 2 }
+
+      inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      expect { lento.embed('pergunta') }.to raise_error(described_class::Passageira) { |falha| expect(falha.motivo).to eq('prazo') }
+      expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio).to be < 1
+    end
+
+    # A credencial (banco) e o guarda do api_base (DNS) ficam fora do prazo: interromper uma consulta no meio deixaria a
+    # conexão do banco quebrada pelo resto do job.
+    it 'reads the credential before the deadline starts counting' do
+      lento = described_class.new(account: account, prazo: 0.2)
+      allow(lento).to receive(:context) do
+        sleep 0.4
+        ctx
+      end
+      allow(ctx).to receive(:embed).and_return(instance_double(RubyLLM::Embedding, vectors: [1.0]))
+
+      expect(lento.embed('pergunta')).to eq([1.0])
+    end
+
+    it 'gives the label of a lasting failure without the message of the provider', :aggregate_failures do
+      expect(described_class::EmbeddingError.new('ai_not_configured').motivo).to eq('ai_not_configured')
+      expect(described_class::EmbeddingError.new('Failed to create an embedding: Incorrect API key sk-xx').motivo).to eq('provedor_recusou')
+    end
+
+    it 'keeps a lasting failure (wrong key) as a plain embedding error' do
+      allow(ctx).to receive(:embed).and_raise(RubyLLM::UnauthorizedError.new(nil, 'bad key'))
+
+      expect { service.embed('pergunta') }
+        .to raise_error(described_class::EmbeddingError) { |falha| expect(falha).not_to be_a(described_class::Passageira) }
+    end
+  end
 end
