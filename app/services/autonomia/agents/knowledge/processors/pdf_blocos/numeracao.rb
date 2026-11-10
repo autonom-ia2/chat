@@ -19,9 +19,8 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos::Numeracao
   end
 
   # A profundidade de cada título, na ordem do documento. O título sem número fica acima dos numerados (0) só quando
-  # abre uma numeração: o título seguinte é "1." ou começa por outro primeiro número que o do último numerado
-  # ("CLAUSULA 3" antes do "3.1."). No meio da seção (um rótulo entre "2.1." e "2.2."), fica na profundidade do último
-  # numerado, irmão dele, para não virar pai das seções seguintes.
+  # abre uma numeração (abre_numeracao?). No meio da seção (um rótulo entre "2.1." e "2.2.", ou antes do "3."), fica na
+  # profundidade do último numerado, irmão dele, para não virar pai das seções seguintes.
   def self.profundidades(textos)
     numeros = textos.map { |texto| primeiro_numero(texto) }
     ultimo = nil
@@ -33,10 +32,14 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos::Numeracao
     end
   end
 
+  # Abre numeração: o seguinte é o "1." ou é mais fundo com outro primeiro número ("CLÁUSULA 3" antes do "3.1."). O
+  # seguinte que só continua a sequência ("3." depois de "2.1.") não abre. Sem título seguinte (fim do documento, um
+  # "ANEXO I"), o título sem número fica no topo.
   def self.abre_numeracao?(seguinte, numero, ultimo)
+    return true if seguinte.nil?
     return false if numero.nil?
 
-    profundidade(seguinte) == 1 || numero != ultimo[:numero]
+    profundidade(seguinte) == 1 ? numero == '1' : numero != ultimo[:numero]
   end
 
   # O primeiro número do título numerado ("2" de "2.1."); nil sem número ou com marcador de item.

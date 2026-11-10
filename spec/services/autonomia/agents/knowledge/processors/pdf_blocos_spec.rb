@@ -315,6 +315,28 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       end
     end
 
+    # #2863 — revisão: o rótulo antes do próximo número da sequência ("3." depois de "2.1.") também fica irmão, e o título
+    # sem número no fim do documento ("ANEXO I") fica no topo.
+    context 'with a label before the next number and a title without a number at the end' do
+      let(:pdf) do
+        pdf_com([[['2. COBERTURAS', topo, 'F2', 10], *secao(topo - linha),
+                  ['2.1. DANOS AO JARDIM', topo - 70, 'F2', 10], *secao(topo - 70 - linha),
+                  ['OBSERVACAO IMPORTANTE', topo - 140, 'F2', 10], *secao(topo - 140 - linha),
+                  ['3. EXCLUSOES', topo - 210, 'F2', 10], *secao(topo - 210 - linha),
+                  ['ANEXO I - TABELA', topo - 280, 'F2', 10], *secao(topo - 280 - linha)]])
+      end
+
+      def secao(inicio)
+        [[corpo1, inicio, 'F1', 10], [corpo2, inicio - linha, 'F1', 10], [corpo1, inicio - (2 * linha), 'F1', 10]]
+      end
+
+      it 'keeps the label out of the next section and the annex at the top' do
+        trechos = Autonomia::Agents::Knowledge::CortePorSecao.new(blocos_gravados, documento: 'cg.pdf').trechos
+
+        expect(trechos.map { |trecho| trecho[:metadata][:caminho] }).to include(['cg.pdf', '3. EXCLUSOES'], ['cg.pdf', 'ANEXO I - TABELA'])
+      end
+    end
+
     # #2863 — a linha curta em negrito que termina a frase do parágrafo de cima (a linha de cima vai até a margem, com o
     # espaço de linha normal) não é título: sem isso, o título sem número viraria pai de todas as seções seguintes.
     context 'with a short bold line that ends the paragraph above' do
