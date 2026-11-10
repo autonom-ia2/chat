@@ -193,7 +193,8 @@ RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_au
 
     # Decisão 16: o "indicado por Maria" é um campo do card do tipo Contato, gravado pela tela (a API do card). A equipe
     # escolhe a Maria numa lista; o card guarda o id dela e recusa contato de outra conta, para um engano nunca mandar a
-    # mensagem do passo 7 a outro cliente.
+    # mensagem do passo 7 a outro cliente. A API recusa como a quem não pode vincular o contato (#2675), sem dizer se o
+    # id existe; o modelo segue recusando nos outros caminhos (Crm::CardCampoContato).
     it 'passo 3: "indicado por Maria" fica gravado no card do João num campo do tipo Contato, só com contato da conta',
        :aggregate_failures do
       card_do_joao.update!(custom_attributes: {})
@@ -205,7 +206,7 @@ RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_au
       expect(card_do_joao.reload.custom_attributes).to eq('indicado_por' => maria.id)
 
       patch url, params: { card: { custom_attributes: { indicado_por: de_outra_conta.id } } }, headers: dona.create_new_auth_token, as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unauthorized)
       expect(card_do_joao.reload.custom_attributes).to eq('indicado_por' => maria.id)
     end
 
