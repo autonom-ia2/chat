@@ -252,6 +252,43 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       end
     end
 
+    # #2863 — títulos da mesma letra e da mesma fonte: o nível vem da numeração (1., 2.1.) e o título sem número fica acima
+    # dos numerados; o marcador de item ("a)") fica abaixo deles.
+    context 'with titles of the same letter and font' do
+      let(:pdf) do
+        pdf_com([[['COBERTURA ADICIONAL DE ALAGAMENTO', topo, 'F2', 10], ['1. RISCOS COBERTOS', topo - 16.4, 'F2', 10],
+                  *secao(topo - 30.9), ['2. EXCLUSOES', topo - 90, 'F2', 10], *secao(topo - 90 - linha),
+                  ['2.1. DANOS AO JARDIM', topo - 160, 'F2', 10], *secao(topo - 160 - linha),
+                  ['a\\) Pessoa Fisica:', topo - 230, 'F2', 10], *secao(topo - 230 - linha)]])
+      end
+
+      # Três linhas de corpo: a seção curta (abaixo do PISO do corte) seria juntada à seguinte.
+      def secao(inicio)
+        [[corpo1, inicio, 'F1', 10], [corpo2, inicio - linha, 'F1', 10], [corpo1, inicio - (2 * linha), 'F1', 10]]
+      end
+
+      def niveis
+        blocos_gravados.select { |bloco| bloco[:tipo] == :titulo }.to_h { |bloco| [bloco[:texto], bloco[:nivel]] }
+      end
+
+      it 'puts the title without a number above the numbered ones, and the numbers by depth', :aggregate_failures do
+        nivel = niveis
+
+        expect(nivel['COBERTURA ADICIONAL DE ALAGAMENTO']).to be < nivel['1. RISCOS COBERTOS']
+        expect(nivel['1. RISCOS COBERTOS']).to eq(nivel['2. EXCLUSOES'])
+        expect(nivel['2. EXCLUSOES']).to be < nivel['2.1. DANOS AO JARDIM']
+        expect(nivel['2.1. DANOS AO JARDIM']).to be < nivel['a) Pessoa Fisica:']
+      end
+
+      it 'keeps the parent title in the path of the section' do
+        trechos = Autonomia::Agents::Knowledge::CortePorSecao.new(blocos_gravados, documento: 'cg.pdf').trechos
+
+        expect(trechos.map { |trecho| trecho[:metadata][:caminho] })
+          .to include(['cg.pdf', 'COBERTURA ADICIONAL DE ALAGAMENTO', '1. RISCOS COBERTOS'],
+                      ['cg.pdf', 'COBERTURA ADICIONAL DE ALAGAMENTO', '2. EXCLUSOES', '2.1. DANOS AO JARDIM'])
+      end
+    end
+
     it 'gives no blocks to the protected agent (Lia)' do
       allow(bia).to receive(:instrucao_mantida?).and_return(true)
 

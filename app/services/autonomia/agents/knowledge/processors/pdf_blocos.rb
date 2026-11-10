@@ -4,7 +4,8 @@
 #   e terminando antes da margem direita (o negrito curto). O título que quebra em duas linhas, com o espaço de linha
 #   normal entre elas, já é um parágrafo só e vira um título só; dois títulos seguidos no mesmo parágrafo se separam
 #   (`partes_do_titulo`);
-# - nível: pelo tamanho da letra entre os títulos do documento, do maior (1) para o menor;
+# - nível: pelo tamanho da letra entre os títulos do documento, do maior (1) para o menor, e na mesma letra pela
+#   numeração (Numeracao);
 # - parágrafo que continua na página seguinte (a mesma ligação do texto) é um bloco só, com a página onde começa;
 # - página de sumário sai inteira: a maioria das linhas termina no número da página, depois da linha de pontos
 #   ("3. FRANQUIA ........ 7"). Sem a linha de pontos a página fica: perder uma tabela custa mais que guardar um sumário.
@@ -107,14 +108,18 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
     linha[:letra] > pagina[:letra_do_corpo] * (1 + Autonomia::Agents::Knowledge::Processors::PdfParagrafos::TROCA_DE_LETRA)
   end
 
-  # O nível de cada título: a posição da letra dele entre as letras de título do documento, da maior para a menor. Letras
-  # que diferem menos que TROCA_DE_LETRA (11,98 e 12) são o mesmo nível, como no corte dos parágrafos.
+  # O nível de cada título: primeiro a posição da letra dele entre as letras de título do documento, da maior para a
+  # menor (letras que diferem menos que TROCA_DE_LETRA, 11,98 e 12, são a mesma); depois, na mesma letra, a numeração
+  # (#2863, Numeracao). Os pares viram níveis seguidos, 1, 2, 3…
   def com_niveis(blocos)
-    niveis = niveis_das_letras(blocos.select { |bloco| bloco[:tipo] == :titulo }.pluck(:letra))
+    titulos = blocos.select { |bloco| bloco[:tipo] == :titulo }
+    letras = niveis_das_letras(titulos.pluck(:letra))
+    chave = ->(bloco) { [letras[bloco[:letra]], Autonomia::Agents::Knowledge::Processors::PdfBlocos::Numeracao.profundidade(bloco[:texto])] }
+    niveis = titulos.map(&chave).uniq.sort.each_with_index.to_h { |par, indice| [par, indice + 1] }
     blocos.map do |bloco|
       next bloco unless bloco[:tipo] == :titulo
 
-      { tipo: :titulo, nivel: niveis[bloco[:letra]], texto: bloco[:texto], pagina: bloco[:pagina] }
+      { tipo: :titulo, nivel: niveis[chave.call(bloco)], texto: bloco[:texto], pagina: bloco[:pagina] }
     end
   end
 
