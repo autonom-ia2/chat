@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_09_922200) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_09_980000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -564,6 +564,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_922200) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "timeout_seconds", default: 30, null: false
+    t.string "fonte_pronta"
     t.index ["account_id", "enabled"], name: "index_autonomia_agent_tools_on_account_id_and_enabled"
     t.index ["account_id"], name: "index_autonomia_agent_tools_on_account_id"
     t.index ["autonomia_agent_id", "slug"], name: "idx_autonomia_agent_tools_agent_slug", unique: true
@@ -840,6 +841,36 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_922200) do
     t.index ["account_id", "sujeito_id", "iniciada_em"], name: "idx_autonomia_desempenho_rodadas_inicio"
     t.check_constraint "status::text = ANY ('{rodando,ok,teto,sem_ia,chave_recusada,erro}'::text[])", name: "autonomia_desempenho_rodadas_status"
     t.check_constraint "sujeito_type::text = ANY ('{agente,robo}'::text[])", name: "autonomia_desempenho_rodadas_sujeito"
+  end
+
+  create_table "autonomia_ferramentas_prontas_acessos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "fonte", null: false
+    t.string "chave", null: false
+    t.integer "limite_diario"
+    t.datetime "cortada_em"
+    t.string "motivo_do_corte"
+    t.bigint "incluida_por_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "fonte"], name: "idx_prontas_acessos_conta_fonte", unique: true
+    t.index ["chave"], name: "idx_prontas_acessos_chave", unique: true
+  end
+
+  create_table "autonomia_ferramentas_prontas_usos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "fonte", null: false
+    t.date "dia", null: false
+    t.integer "consultas", default: 0, null: false
+    t.integer "do_cache", default: 0, null: false
+    t.integer "pela_reserva", default: 0, null: false
+    t.integer "nao_encontradas", default: 0, null: false
+    t.integer "sem_resposta", default: 0, null: false
+    t.integer "recusadas", default: 0, null: false
+    t.jsonb "motivos", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "fonte", "dia"], name: "idx_prontas_usos_conta_fonte_dia", unique: true
   end
 
   create_table "autonomia_guide_avisos", force: :cascade do |t|
@@ -4755,6 +4786,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_922200) do
   add_foreign_key "autonomia_desempenho_procuras", "conversations", on_delete: :cascade
   add_foreign_key "autonomia_desempenho_recomendacoes", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_desempenho_rodadas", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_ferramentas_prontas_acessos", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_ferramentas_prontas_usos", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_avisos", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_avisos", "autonomia_guide_turns", column: "turno_id", on_delete: :nullify
   add_foreign_key "autonomia_guide_avisos", "users", on_delete: :cascade

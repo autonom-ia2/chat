@@ -202,6 +202,15 @@ module Autonomia::Agents::ToolRun::ConsultaHttp
                ::Autonomia::Agents::ToolRun::POSSIVELMENTE_DUPLICADA => true })
   end
 
+  # #2858: a ferramenta pronta cuja resposta se perdeu (o worker morreu no meio da leitura). Fecha como resposta da
+  # ferramenta ("não consegui consultar agora"), sem a incerteza: ler de novo não registra nada duas vezes lá. Mesmo
+  # escopo do `fechar_incerta!`.
+  def fechar_leitura_perdida!(texto, vencida_antes_de: nil)
+    escopo = sem_chave(vencida_antes_de ? vencida(vencida_antes_de) : vivas, RESULTADO_DA_CONSULTA)
+    escrever(escopo.where('(handle->>?) IS NOT NULL', CHAMADA_FEITA),
+             { RESULTADO_DA_CONSULTA => texto.to_s, RESULTADO_OK => true, CODIGO_DA_CONSULTA => 'leitura_perdida' })
+  end
+
   private
 
   def vencida(limite)
