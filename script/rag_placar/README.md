@@ -28,7 +28,11 @@ TETO_USD=0.30 RESPOSTA=1 SAIDA=$TMPDIR/rag_placar/saida script/rag_placar/rodar.
   json:script/rag_placar/bases/json.json:docs/audit/2026-10-31-rag-v2-f0/gabaritos/json.yml
 ```
 
-- **Com e sem a mudança.** `RAG_FLAGS=rag_corte_por_estrutura` liga as flags na conta da rodada; sem ela, a rodada
+- **Flags de produção.** A conta da rodada nasce com as flags de RAG ligadas em produção (`FLAGS_DE_PRODUCAO` em
+  `ingerir.rb`, hoje `rag_busca_hibrida`). Sem a busca híbrida, a busca ordena pelo bônus por metadado, um caminho que
+  a produção não usa. Até 10/11/2026 a régua rodou assim, e os números medidos antes disso não valem para comparar
+  com a produção. Ao ligar ou desligar uma flag de RAG em produção, atualize a lista.
+- **Com e sem a mudança.** `RAG_FLAGS=rag_corte_por_estrutura` liga flags a mais na conta da rodada; sem ela, a rodada
   mede o caminho de hoje. As duas rodadas no mesmo código comparam a mudança contra a main.
 - **Segmento.** `RAG_SEGMENTO=seguros/corretora` faz o agente nascer com a marca de base desse segmento, como numa
   conta de seguros em produção, e a resposta recebe o bloco do segmento. Sem ela, o agente fica sem base.
