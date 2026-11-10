@@ -22,7 +22,7 @@ module Autonomia::FerramentasProntas::Fontes::Cep
         validade: 30.days, prazo_por_fonte: 3, prazo_total: 6
       )
     ],
-    limite_diario: 300,
+    limite_diario: 500,
     termos: 'BrasilAPI e ViaCEP: gratuitas, sem chave; o ViaCEP bloqueia uso abusivo. Cache de 30 dias.'
   )
 end

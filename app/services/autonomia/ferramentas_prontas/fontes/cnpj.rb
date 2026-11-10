@@ -32,7 +32,7 @@ module Autonomia::FerramentasProntas::Fontes::Cnpj
         provedores: [BrasilApi, MinhaReceita, OpenCnpj], validade: 1.day, prazo_por_fonte: 4, prazo_total: 9
       )
     ],
-    limite_diario: 200,
+    limite_diario: 500,
     termos: 'BrasilAPI, Minha Receita e OpenCNPJ: gratuitas, sem chave, dados abertos da Receita. Cache de 1 dia.'
   )
 end

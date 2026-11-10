@@ -126,7 +126,7 @@ RSpec.describe Autonomia::FerramentasProntas::Incluir do
       da_b = Autonomia::FerramentasProntas::RelatorioDeUso.da_conta(outra_conta)
 
       expect(da_a.map { |linha| linha['fonte'] }).to eq(['cep'])
-      expect(da_a.sole).to include('consultas' => 1, 'sem_resposta' => 0, 'motivos' => {}, 'limite_do_dia' => 300, 'cortada' => false)
+      expect(da_a.sole).to include('consultas' => 1, 'sem_resposta' => 0, 'motivos' => {}, 'limite_do_dia' => 500, 'cortada' => false)
       expect(da_b.sole).to include('fonte' => 'cnpj', 'sem_resposta' => 1, 'motivos' => { 'brasilapi.erro_da_fonte' => 1 })
     end
   end
