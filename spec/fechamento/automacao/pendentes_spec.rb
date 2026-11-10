@@ -38,9 +38,8 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
            'G3, G4, G7, G12, G14, G16, G18'],
     # O 17 saiu com a G66 (#2843), a G67 (#2844) e a decisão 18: exemplo_17_ferias_spec.rb roda à risca numa automação
     # só, inteiro, sem pendente (a agente de IA cobre a Renata pela opção do passo, e a conversa volta quando ela escreve).
-    # O 18 tem spec próprio à risca (exemplo_18_selecao_de_candidatos_spec.rb); esperam a G45 (gatilho), a G18 (passos
-    # 4 e 6, no card da seleção) e a G32 (passo 8, antes da reunião).
-    18 => ['Seleção de candidatos sem planilha', 'G45 (mensagem com anexo), G18, G32, G4, G20, G1, G5, G6, G12, G15, G25'],
+    # O 18 saiu na integração 2 do #2414: exemplo_18_selecao_de_candidatos_spec.rb roda à risca, passos 1 a 9, com o
+    # currículo no filtro da mensagem (G45), o link da página "Entrevistas" (G44) e o card criado no passo 2 fechado no 6 (G49).
     # O 19 saiu com a G68 (#2864) na integração 2 do #2414: exemplo_19_cliente_sumiu_spec.rb roda à risca, passos 1 a 7
     # (por partes também em g53_conteudo_da_falha_spec.rb e g43_numero_novo_spec.rb).
     20 => ['Venda fechada já entra no sistema da empresa', 'G5 (card ganho), G1, G2, G7, G11, G12, G13, G44 (duas agendas), G52 (campanha de e-mail)']

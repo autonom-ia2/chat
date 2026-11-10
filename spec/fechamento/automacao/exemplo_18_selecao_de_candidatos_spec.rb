@@ -26,14 +26,11 @@ require 'rails_helper'
 # "card" (G4). A IA é o dublê, que responde a cada "decidir" pela pergunta dele. Desenho e lacunas:
 # docs/automacao/F9-fechamento-20-exemplos.md.
 #
-# O que ainda não monta, cada um no exemplo do passo, escrito como o termo pede:
-# - Gatilho (G45): o filtro da mensagem só lê tipo, privada e primeira; "com currículo" (com anexo) não existe, e cada
-#   mensagem da candidata roda a seleção de novo.
-# - Passo 4 (G18): o link da agenda que a receita lê na conversa é o da pessoa dela (`conversa.link_da_agenda`). A conversa
-#   da caixa de vagas não tem pessoa: quem atende é a agente de IA (passo 7, que pula com uma pessoa no nome). O link de
-#   quem entrevista é o do card da seleção, e o card não é o alvo da automação da mensagem.
-# - Passo 6 (G18): fechar o card criado no passo 2 é agir no card a partir da conversa; o salvar recusa `card.id`, e a
-#   receita inteira não salva com ele. Por isso a receita dos outros passos vem sem o fechar.
+# - Gatilho (G45): "mensagem com currículo" é o filtro `mensagem.tem_anexo`; a pergunta em texto não roda a seleção.
+# - Passo 4 (G44): o link é o da página "Entrevistas", escolhida na receita (`agenda.<id>`). A conversa da caixa de vagas
+#   não tem pessoa: quem atende é a agente de IA (passo 7).
+# - Passo 6 (G49): o card que a automação criou no passo 2 é alvo dos passos seguintes (`criado.card_da_selecao`). O card
+#   que já era da conversa segue só para ler (decisão 19); o criado nesta execução, não.
 RSpec.describe 'Fechamento #2414 · exemplo 18: seleção de candidatos sem planilha', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 
@@ -95,14 +92,16 @@ RSpec.describe 'Fechamento #2414 · exemplo 18: seleção de candidatos sem plan
       caminho: { conversation_id: conversa_id }, corpo: { por: [nome] } }
   end
 
-  def fechar(id, motivo)
-    { id: id, tipo: 'acao', acao: 'POST crm/cards/:id/close', descricao: 'Fechar o card', caminho: { id: card_id },
+  def com_curriculo = { campo: { '$valor' => 'mensagem.tem_anexo' }, op: 'igual', valor: true }
+
+  def fechar(id, motivo, card = card_id)
+    { id: id, tipo: 'acao', acao: 'POST crm/cards/:id/close', descricao: 'Fechar o card', caminho: { id: card },
       corpo: { result: 'lost', lost_reason: motivo } }
   end
 
-  # Passos 1 a 6. `fecha_o_card`: o fechar do passo 6 (G18), que faz o salvar recusar a receita inteira.
-  def receita_da_selecao(fecha_o_card: false)
-    { gatilho: { tipo: 'mensagem.criada', filtros: [recebida, da_caixa_de_vagas] }, passos: [
+  # Passos 1 a 6.
+  def receita_da_selecao
+    { gatilho: { tipo: 'mensagem.criada', filtros: [recebida, da_caixa_de_vagas, com_curriculo] }, passos: [
       { id: 'curriculo', tipo: 'extrair', le: %w[mensagens_recentes anexos], campos: [
         { chave: 'nome', descricao: 'o nome completo da candidata, como está no currículo', destino: 'contato.nome' },
         { chave: 'bairro', descricao: 'o bairro onde ela mora', destino: 'contato.atributos.bairro' },
@@ -111,11 +110,11 @@ RSpec.describe 'Fechamento #2414 · exemplo 18: seleção de candidatos sem plan
           destino: 'contato.atributos.curso_de_atendimento' }
       ] },
       { id: 'card_da_selecao', tipo: 'card', etapa_id: triagem.id },
-      decidir_o_perfil(fecha_o_card)
+      decidir_o_perfil
     ] }
   end
 
-  def decidir_o_perfil(fecha_o_card)
+  def decidir_o_perfil
     agradece = { id: 'agradece', tipo: 'mensagem',
                  texto: ['Obrigada pelo interesse, ', { '$valor' => 'contato.nome' },
                          '! Desta vez seguimos com outro perfil, mas guardamos seu currículo. Boa sorte!'] }
@@ -123,7 +122,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 18: seleção de candidatos sem plan
       { nome: 'Atende o perfil', chave: 'atende', descricao: 'cumpre os requisitos da doutora', passos: [
         { id: 'link_da_entrevista', tipo: 'mensagem',
           texto: ['Oi, ', { '$valor' => 'contato.nome' }, '! Gostamos do seu currículo. Escolha o horário da entrevista: ',
-                  { '$valor' => 'conversa.link_da_agenda' }] },
+                  { '$valor' => "agenda.#{entrevistas.id}" }] },
         etiqueta('etiqueta_entrevista', 'entrevista')
       ] },
       { nome: 'Talvez', chave: 'talvez', descricao: 'cumpre parte dos requisitos; a doutora decide', passos: [
@@ -131,7 +130,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 18: seleção de candidatos sem plan
           destino: { avisar: { pessoas: [patricia.id] } } }
       ] },
       { nome: 'Não atende', chave: 'nao_atende', descricao: 'não cumpre os requisitos', passos: [
-        agradece, *([fechar('fecha_o_card', 'Não atende o perfil')] if fecha_o_card)
+        agradece, fechar('fecha_o_card', 'Não atende o perfil', { '$valor' => 'criado.card_da_selecao' })
       ] }
     ], nenhum: [] }
   end
@@ -316,7 +315,6 @@ RSpec.describe 'Fechamento #2414 · exemplo 18: seleção de candidatos sem plan
   end
 
   it 'passo 4: atende o perfil; a candidata recebe o link da agenda de entrevistas', :aggregate_failures do
-    pending 'G18: o link da agenda de quem entrevista é o do card da seleção, e a conversa da caixa de vagas não tem pessoa'
     perfil('atende', 'mora na Vila Mariana e tem curso')
     candidata_manda_o_curriculo
 
@@ -345,9 +343,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 18: seleção de candidatos sem plan
   end
 
   it 'passo 6: não atende; o card da seleção é fechado' do
-    pending 'G18: fechar o card criado no passo 2 é agir no card a partir da conversa'
     perfil('nao_atende', 'mora longe e não tem experiência')
-    ligada('Seleção completa', receita_da_selecao(fecha_o_card: true))
     candidata_manda_o_curriculo
 
     expect(card_da_selecao).to have_attributes(status: 'lost', lost_reason: 'Não atende o perfil')
@@ -366,7 +362,6 @@ RSpec.describe 'Fechamento #2414 · exemplo 18: seleção de candidatos sem plan
 
   # O gatilho é "mensagem com currículo": a pergunta depois do currículo não é currículo, e a seleção não roda de novo.
   it 'gatilho: a pergunta depois do currículo não roda a seleção outra vez', :aggregate_failures do
-    pending 'G45: o filtro da mensagem não sabe se ela tem anexo'
     perfil('nao_atende', 'mora longe')
     candidata_manda_o_curriculo
 
