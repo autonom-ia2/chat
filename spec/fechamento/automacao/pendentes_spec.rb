@@ -29,8 +29,8 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # O 12 saiu na integração 2 do #2414, com a G25 (#2654) sobre a G48 da main: exemplo_12_visita_feita_spec.rb roda à
     # risca, passos 1 a 8.
     # O 15 saiu com o G27 (#2661) sobre o lote 4 (#2687, G40): exemplo_15_cliente_grande_spec.rb roda à risca.
-    # Os passos 1 a 6 têm spec próprio à risca, numa automação só (G46): exemplo_14_documentacao_spec.rb.
-    14 => ['Documentação completa para emitir', 'G13 (passos 7 e 8: mandar à seguradora e gravar a proposta; a recusa avisa a Dona Cida)'],
+    # O 14 saiu com a G13 (#2676) na integração 2 do #2414: exemplo_14_documentacao_spec.rb roda à risca, passos 1 a 8, numa
+    # automação só (G46), com a seguradora pelo passo "webhook".
     # #2675 (09/11): o "Começa quando" monta (card.recorrente com fechado_entre_dias e o "Só se" no card.motivo_da_perda).
     # Para no passo 2: a campanha só sai do conta.recorrente, e o gatilho do 16 roda em cada card; e no 3, a resposta à campanha.
     16 => ['Reconquistar quem foi para o concorrente',
