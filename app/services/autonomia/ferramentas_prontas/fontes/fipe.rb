@@ -21,7 +21,8 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
   ZERO_KM = 32_000
 
   def self.lista(itens, chave, maximo)
-    { chave => itens.first(maximo), 'total' => itens.size }.merge(itens.size > maximo ? { 'mostrando' => maximo } : {})
+    # A contagem antes da lista: se o corte do turno pegar o fim, o modelo ainda sabe quantos eram.
+    { 'total' => itens.size }.merge(itens.size > maximo ? { 'mostrando' => maximo } : {}).merge(chave => itens.first(maximo))
   end
 
   # A busca pelo nome do modelo, sobre a lista inteira da marca (da fonte ou do cache): todas as palavras no nome.

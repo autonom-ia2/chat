@@ -8,12 +8,12 @@ module Autonomia::FerramentasProntas::Fontes::Cnpj
   end
 
   # `campos`: o nosso nome -> o nome do campo na resposta da fonte. Sem razão social, a resposta não serve (a fonte
-  # mudou o formato): falha, e a reserva tenta. A situação vai em maiúsculas em todas as fontes.
+  # mudou o formato): falha, e a reserva tenta. Situação e porte vão em maiúsculas em todas as fontes.
   def self.enxuto(cnpj, dado, campos:, atividade:)
     valores = campos.to_h { |nosso, deles| [nosso.to_s, dado[deles].to_s.strip.presence] }
     raise Autonomia::FerramentasProntas::Provedor::Falha, 'resposta_invalida' if valores['razao_social'].nil?
 
-    valores['situacao'] = valores['situacao']&.upcase
+    %w[situacao porte].each { |campo| valores[campo] = valores[campo]&.upcase }
     principal = atividade.transform_values { |valor| valor.to_s.strip.presence }.compact.presence
     { 'cnpj' => formatado(cnpj) }.merge(valores.compact).merge({ 'atividade_principal' => principal }.compact)
   end

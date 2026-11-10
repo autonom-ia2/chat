@@ -41,6 +41,10 @@ class Autonomia::FerramentasProntas::Execucao
     terminar(Resposta.nao_consegui, desfecho: 'sem_resposta', motivos: ['defeito'])
   end
 
+  # O desfecho de falha, para o registro da consulta em segundo plano (`pronta_sem_resposta`, `pronta_recusadas`); nil
+  # quando a fonte respondeu (encontrado ou não encontrado).
+  attr_reader :codigo
+
   # O pedido saiu para alguma fonte? (O contrato do `HttpExecutor`, que o job da consulta em segundo plano lê.)
   def enviada?
     @cliente.present? && @cliente.chamadas.positive?
@@ -105,10 +109,11 @@ class Autonomia::FerramentasProntas::Execucao
   end
 
   # O filtro local roda sobre o que veio da fonte ou do cache. Nada sobrou: não encontrado (sem cache: a lista guardada
-  # continua servindo a outras buscas).
+  # continua servindo a outras buscas). Se uma fonte falhou antes, a que respondeu pode estar incompleta: "não consegui".
   def entregar(dados, params, desfecho:, motivos: [])
     refinados = @consulta.refinar(dados, params)
     return terminar(Resposta.encontrado(@fonte, @consulta, refinados), desfecho: desfecho, motivos: motivos) if refinados
+    return terminar(Resposta.nao_consegui, desfecho: 'sem_resposta', motivos: motivos) if motivos.any?
 
     terminar(Resposta.nao_encontrado(@fonte, @consulta), desfecho: 'nao_encontradas', motivos: motivos)
   end
@@ -126,6 +131,7 @@ class Autonomia::FerramentasProntas::Execucao
 
   # Sem a flag (desligada depois de a consulta abrir) ou com a fonte fora do catálogo: nada é gravado.
   def desligada
+    @codigo = 'pronta_desligada'
     registrar('desligada', [])
     Resposta.nao_consegui
   end
@@ -135,6 +141,7 @@ class Autonomia::FerramentasProntas::Execucao
   end
 
   def terminar(texto, desfecho:, motivos: [])
+    @codigo = "pronta_#{desfecho}" if %w[sem_resposta recusadas].include?(desfecho)
     anotar(desfecho, motivos)
     registrar(desfecho || 'encontrado', motivos)
     texto

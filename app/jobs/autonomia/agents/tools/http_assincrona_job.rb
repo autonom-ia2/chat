@@ -204,9 +204,9 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
     ::Autonomia::Agents::Tools::ConexaoDoBanco.soltar
     saida, codigo, api_ms = chamar(run, tool, agente, chave)
     depois = agora
-    run.gravar_resultado!(saida, sucesso: codigo.nil?, codigo: codigo, api_ms: api_ms)
+    run.gravar_resultado!(saida, sucesso: codigo.nil?, codigo: codigo || @desfecho_da_pronta, api_ms: api_ms)
     run.reload
-    run.running? ? self.class.fechar(run) : fora_do_turno(run, saida, codigo)
+    run.running? ? self.class.fechar(run) : fora_do_turno(run, saida, codigo, tool)
     log(run, "fim fila_ms=#{run.handle[ToolRun::FILA_MS]} api_ms=#{api_ms} banco_antes_ms=#{banco_antes_ms} " \
              "banco_depois_ms=#{ms_desde(depois)}")
     raise @defeito if @defeito
@@ -221,7 +221,11 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
     bound = ::Autonomia::Agents::Tools::Bound.new(agent: agente, record: tool)
     comeco = agora
     chamada = executor(run, tool, chave)
-    [bound.cabendo(chamada.call), nil, ms_desde(comeco)]
+    texto = chamada.call
+    # #2858: a pronta responde sempre ao modelo (até o "não consegui consultar agora", que é o texto que ele precisa
+    # ler); o desfecho de falha dela vai só para o registro da linha (`CODIGO_DA_CONSULTA`).
+    @desfecho_da_pronta = chamada.try(:codigo)
+    [bound.cabendo(texto), nil, ms_desde(comeco)]
   rescue ::Autonomia::Agents::Tools::HttpExecutor::Error => e
     [bound.texto_da_recusa_http(e), bound.categoria_da_recusa_http(e), ms_desde(comeco)]
   rescue StandardError => e
@@ -240,8 +244,10 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
 
   # A linha deixou de ser desta passada enquanto ela chamava: trocada por um pedido mais novo, ou fechada pelo varredor.
   # O resultado não é falado; se o sistema de fora fez o pedido (2xx), quem atende fica sabendo, com a resposta.
-  def fora_do_turno(run, saida, codigo)
+  # #2858: a pronta só leu dado público; não há pedido do lado de lá para quem atende conferir.
+  def fora_do_turno(run, saida, codigo, tool)
     return unless codigo.nil?
+    return if tool.pronta?
     return unless run.status == 'superseded' || ToolRun::FECHADAS_SEM_RESPOSTA.include?(run.handle.to_h[ToolRun::CODIGO_DA_CONSULTA])
 
     Aviso.consulta_antiga(run, run.status == 'superseded' ? 'consulta_antiga' : 'consulta_fechada_concluiu', resultado: saida)

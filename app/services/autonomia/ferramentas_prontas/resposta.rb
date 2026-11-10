@@ -12,8 +12,8 @@ module Autonomia::FerramentasProntas::Resposta
                    'confira o dado com ele. Não invente.'.freeze
   NAO_CONSEGUI = 'Não consegui consultar agora. Diga ao cliente que não deu para consultar neste momento e siga a ' \
                  'conversa sem esse dado. Não invente o dado e não tente de novo nesta resposta.'.freeze
-  PEDIDO_INVALIDO = 'O valor de "%<campo>s" não está no formato certo, e nada foi consultado. Confira com o cliente ' \
-                    'antes de consultar de novo. Não invente.'.freeze
+  PEDIDO_INVALIDO = 'Faltou "%<campo>s" ou o valor não está no formato certo, e nada foi consultado. Confira com o ' \
+                    'cliente antes de consultar de novo. Não invente.'.freeze
 
   # Cada texto que vem da fonte vai com teto: um nome fantasia ou uma razão social é escolha de quem registrou a empresa,
   # e um texto enorme ali seria instrução disfarçada de dado. O aviso vai ANTES dos dados: se o corte do turno

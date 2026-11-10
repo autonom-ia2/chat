@@ -137,6 +137,33 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       expect(Autonomia::Agents::Operate::AvisoAoAtendente).not_to have_received(:consulta_incerta)
     end
 
+    it 'com as fontes fora, o modelo le "nao consegui" e a linha guarda o desfecho da pronta' do
+      fonte_fora(brasilapi)
+      fonte_fora('https://viacep.com.br/ws/01001000/json/')
+      _saida, run = abrir_consulta
+
+      rodar_consultas
+
+      run.reload
+      expect(run.status).to eq('done')
+      expect(JSON.parse(run.resultado_da_consulta)['situacao']).to eq('nao_consegui_consultar')
+      expect(run.handle[Autonomia::Agents::ToolRun::CODIGO_DA_CONSULTA]).to eq('pronta_sem_resposta')
+    end
+
+    it 'a pronta superada no meio grava o resultado e nao avisa quem atende' do
+      _saida, run = abrir_consulta
+      stub_request(:get, brasilapi).to_return do
+        Autonomia::Agents::ToolRun.where(id: run.id).update_all(status: 'superseded') # rubocop:disable Rails/SkipsModelValidations
+        { status: 200, body: endereco.to_json, headers: { 'Content-Type' => 'application/json' } }
+      end
+
+      rodar_consultas
+
+      expect(run.reload.status).to eq('superseded')
+      expect(JSON.parse(run.resultado_da_consulta)['situacao']).to eq('encontrado')
+      expect(conversation.messages.where(private: true)).to be_empty
+    end
+
     it 'no job, com a flag das prontas desligada depois da abertura, nao consulta' do
       _saida, run = abrir_consulta
       account.disable_features!(Autonomia::FerramentasProntas::FLAG)
