@@ -25,6 +25,8 @@ class Autonomia::FerramentasProntas::Uso < ApplicationRecord
 
     # Conta uma consulta, só se o dia ainda está abaixo do limite. -> true quando contou; false quando o limite já foi
     # atingido (nada muda). Uma instrução só: o INSERT do primeiro uso do dia ou o UPDATE condicional.
+    # Fora do cache de consultas do ActiveRecord (`uncached`): ligado em todo job e request, ele devolveria o RETURNING da
+    # primeira chamada às seguintes do mesmo job, sem executar o INSERT, e o limite deixaria de contar.
     def reservar!(account_id:, fonte:, limite:)
       return false if limite.to_i <= 0
 
@@ -36,7 +38,8 @@ class Autonomia::FerramentasProntas::Uso < ApplicationRecord
           WHERE #{table_name}.consultas < :limite
         RETURNING consultas
       SQL
-      connection.select_value(sanitize_sql_array([sql, { conta: account_id, fonte: fonte, dia: hoje, limite: limite.to_i }])).present?
+      comando = sanitize_sql_array([sql, { conta: account_id, fonte: fonte, dia: hoje, limite: limite.to_i }])
+      uncached { connection.select_value(comando) }.present?
     end
 
     # Soma 1 no desfecho (`DESFECHOS`) e em cada motivo. Desfecho fora da lista é defeito nosso: levanta.
