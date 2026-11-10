@@ -31,6 +31,12 @@ class Autonomia::FerramentasProntas::Provedor
     def aplica?(_consulta, _params)
       true
     end
+
+    # Quanto a resposta DESTE provedor vale no cache, quando difere da consulta: a reserva que responde só parte (o DDD
+    # sem as cidades) declara `VALIDADE` curta, ou 0 (não grava). nil: a validade da consulta.
+    def validade
+      const_defined?(:VALIDADE, false) ? self::VALIDADE : nil
+    end
   end
 
   def initialize(cliente, prazo:)

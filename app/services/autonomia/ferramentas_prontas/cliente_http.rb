@@ -56,7 +56,9 @@ class Autonomia::FerramentasProntas::ClienteHttp
   attr_reader :chamadas
 
   # `hosts`: os do catálogo para esta fonte. `prazo_final`: o instante (relógio monotônico) em que a consulta acaba.
-  def initialize(hosts:, prazo_final:)
+  # `conta`: para a fatia de cada conta no teto global (`TetoDoProvedor`).
+  def initialize(hosts:, prazo_final:, conta: nil)
+    @conta = conta
     @hosts = hosts.map(&:downcase)
     @prazo_final = prazo_final
     @chamadas = 0
@@ -102,7 +104,7 @@ class Autonomia::FerramentasProntas::ClienteHttp
   def abrir(corpo, max_bytes)
     return corpo unless corpo.b.start_with?(GZIP)
 
-    aberto = Zlib::GzipReader.new(StringIO.new(corpo)).read(max_bytes + 1).to_s
+    aberto = Zlib::GzipReader.wrap(StringIO.new(corpo)) { |gzip| gzip.read(max_bytes + 1) }.to_s
     raise Falha, 'resposta_grande_demais' if aberto.bytesize > max_bytes
 
     aberto
@@ -112,7 +114,7 @@ class Autonomia::FerramentasProntas::ClienteHttp
 
   def liberar!(host)
     raise Falha, 'provedor_desligado' if Autonomia::FerramentasProntas::TetoDoProvedor.desligado?(host)
-    raise Falha, 'teto_do_provedor' unless Autonomia::FerramentasProntas::TetoDoProvedor.reservar!(host)
+    raise Falha, 'teto_do_provedor' unless Autonomia::FerramentasProntas::TetoDoProvedor.reservar!(host, conta: @conta)
   end
 
   def endereco(host, caminho)

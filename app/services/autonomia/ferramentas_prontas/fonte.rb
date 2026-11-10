@@ -42,6 +42,12 @@ class Autonomia::FerramentasProntas::Fonte
     provedores.filter_map(&:host).uniq
   end
 
+  # Os argumentos com cada parâmetro conhecido já normalizado; o que não normaliza fica como veio.
+  def normalizar_argumentos(args)
+    normalizados = consultas.flat_map(&:parametros).uniq(&:nome).to_h { |parametro| [parametro.nome, parametro.normalizar(args[parametro.nome])] }
+    args.merge(normalizados.compact)
+  end
+
   # O maior prazo total entre as consultas: o tempo que a consulta em segundo plano espera por esta ferramenta.
   def prazo_maximo
     consultas.map(&:prazo_total).max

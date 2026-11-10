@@ -31,8 +31,11 @@ class Autonomia::FerramentasProntas::Cache
     nil
   end
 
-  def encontrado(dados)
-    gravar({ 'situacao' => ENCONTRADO, 'dados' => dados }, @consulta.validade)
+  # `validade`: a do provedor que respondeu, quando ele declara a sua (a reserva incompleta fica pouco ou nada); senão,
+  # a da consulta.
+  def encontrado(dados, validade: nil)
+    tempo = validade || @consulta.validade
+    gravar({ 'situacao' => ENCONTRADO, 'dados' => dados }, tempo) if tempo.nil? || tempo.positive?
   end
 
   def nao_encontrado

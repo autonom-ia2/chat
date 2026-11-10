@@ -3,6 +3,8 @@
 class Autonomia::FerramentasProntas::Fontes::Ddd::Plano < Autonomia::FerramentasProntas::Provedor
   NOME = 'plano'.freeze
   HOST = nil
+  # Resposta incompleta (só o estado): não vai ao cache, para a BrasilAPI dar as cidades quando voltar.
+  VALIDADE = 0
   ESTADOS = {
     'SP' => %w[11 12 13 14 15 16 17 18 19], 'RJ' => %w[21 22 24], 'ES' => %w[27 28], 'MG' => %w[31 32 33 34 35 37 38],
     'PR' => %w[41 42 43 44 45 46], 'SC' => %w[47 48 49], 'RS' => %w[51 53 54 55], 'DF' => %w[61], 'GO' => %w[62 64],

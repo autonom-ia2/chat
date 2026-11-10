@@ -4,17 +4,22 @@
 module Autonomia::FerramentasProntas::Lista
   module_function
 
+  # O nome sem acento, sem caixa e sem espaço sobrando, para comparar nome com nome ("São Paulo" e "SAO PAULO").
+  def comparavel(texto)
+    I18n.transliterate(texto.to_s).downcase.squish
+  end
+
   def cortar(itens, chave, maximo)
     { 'total' => itens.size }.merge(itens.size > maximo ? { 'mostrando' => maximo } : {}).merge(chave => itens.first(maximo))
   end
 
   # -> os itens com todas as palavras da busca no nome (`nome`: o texto de cada item). Sem busca, todos.
   def filtrar(itens, busca)
-    palavras = Autonomia::FerramentasProntas::Ufs.comparavel(busca).split
+    palavras = comparavel(busca).split
     return itens if palavras.empty?
 
     itens.select do |item|
-      texto = Autonomia::FerramentasProntas::Ufs.comparavel(yield(item))
+      texto = comparavel(yield(item))
       palavras.all? { |palavra| texto.include?(palavra) }
     end
   end

@@ -1,7 +1,9 @@
-# As taxas na BrasilAPI (reserva da Selic e do IPCA). Do IPCA ela só tem o acumulado de 12 meses.
+# As taxas na BrasilAPI (reserva da Selic e do IPCA). Do IPCA ela só tem o acumulado de 12 meses: a resposta da reserva
+# fica pouco no cache (`VALIDADE`), para a principal completar quando voltar.
 class Autonomia::FerramentasProntas::Fontes::BancoCentral::BrasilApi < Autonomia::FerramentasProntas::Provedor
   NOME = 'brasilapi'.freeze
   HOST = 'brasilapi.com.br'.freeze
+  VALIDADE = 30.minutes
   SIGLAS = { 'selic' => 'selic', 'ipca' => 'ipca' }.freeze
 
   def consultar(consulta, _params)

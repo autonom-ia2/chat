@@ -20,12 +20,8 @@ module Autonomia::FerramentasProntas::Ufs
   # O nome do estado como a fonte escreveu ("São Paulo", "SAO PAULO") -> "SP"; nil quando não é um estado do Brasil.
   # Comparação exata do nome sem acento e sem caixa: não é interpretação de texto de pessoa, é o nome oficial.
   def sigla_pelo_nome(nome)
-    alvo = comparavel(nome)
-    NOMES.find { |_sigla, oficial| comparavel(oficial) == alvo }&.first
-  end
-
-  def comparavel(texto)
-    I18n.transliterate(texto.to_s).downcase.squish
+    alvo = Autonomia::FerramentasProntas::Lista.comparavel(nome)
+    NOMES.find { |_sigla, oficial| Autonomia::FerramentasProntas::Lista.comparavel(oficial) == alvo }&.first
   end
 
   # "AC" -> { 'uf' => 'AC', 'estado' => 'Acre' }

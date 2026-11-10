@@ -9,7 +9,7 @@ class Autonomia::FerramentasProntas::Fontes::Ddd::BrasilApi < Autonomia::Ferrame
     uf = exigir!(texto(dado['state']))&.upcase
     raise Falha, 'resposta_invalida' unless Autonomia::FerramentasProntas::Ufs.nome(uf)
 
-    cidades = lista!(dado['cities']).filter_map { |nome| texto(nome) }.sort_by { |nome| Autonomia::FerramentasProntas::Ufs.comparavel(nome) }
+    cidades = lista!(dado['cities']).filter_map { |nome| texto(nome) }.sort_by { |nome| Autonomia::FerramentasProntas::Lista.comparavel(nome) }
     Autonomia::FerramentasProntas::Fontes::Ddd.resposta(ddd, uf, cidades: exigir!(cidades))
   end
 end

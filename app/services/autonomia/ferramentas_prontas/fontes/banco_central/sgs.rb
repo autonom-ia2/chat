@@ -28,7 +28,11 @@ class Autonomia::FerramentasProntas::Fontes::BancoCentral::Sgs < Autonomia::Ferr
 
   def dolar(banco)
     data, venda = ultimo(DOLAR_VENDA)
-    banco.dolar(compra: ultimo(DOLAR_COMPRA).last, venda: venda, data: Date.strptime(data, '%d/%m/%Y').iso8601)
+    data_da_compra, compra = ultimo(DOLAR_COMPRA)
+    # Compra e venda do mesmo boletim; de dias diferentes, o par não serve.
+    raise Falha, 'resposta_invalida' unless data_da_compra == data
+
+    banco.dolar(compra: compra, venda: venda, data: Date.strptime(data, '%d/%m/%Y').iso8601)
   end
 
   # -> [data "dd/mm/aaaa", valor]. Data fora do formato: `Date::Error`, que vira falha da fonte (`consultar`).

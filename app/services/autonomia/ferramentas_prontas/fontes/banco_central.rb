@@ -20,7 +20,8 @@ module Autonomia::FerramentasProntas::Fontes::BancoCentral
   def numero(valor)
     return valor.to_f if valor.is_a?(Numeric)
 
-    Float(valor.to_s.strip, exception: false)
+    texto = valor.to_s.strip
+    Float(texto, exception: false) if texto.present? && texto.delete('0-9.-').empty?
   end
 
   def selic(valor)

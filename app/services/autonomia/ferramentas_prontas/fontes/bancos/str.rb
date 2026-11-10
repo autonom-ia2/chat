@@ -13,7 +13,8 @@ class Autonomia::FerramentasProntas::Fontes::Bancos::Str < Autonomia::Ferramenta
     linhas = get_csv('/content/estabilidadefinanceira/str1/ParticipantesSTR.csv')
     raise Falha, 'resposta_invalida' if linhas.empty?
 
-    linha = linhas.find { |item| item[CODIGO].to_s.strip == codigo }
+    numero = codigo.to_i
+    linha = linhas.find { |item| Integer(item[CODIGO].to_s.strip, 10, exception: false) == numero }
     raise NaoEncontrado if linha.nil?
 
     Autonomia::FerramentasProntas::Fontes::Bancos.banco(

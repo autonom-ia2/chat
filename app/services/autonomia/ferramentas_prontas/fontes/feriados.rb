@@ -2,8 +2,9 @@
 #   - principal: BrasilAPI; reserva: Nager.Date (só os de alcance nacional, `global`); última reserva: o calendário
 #     calculado aqui (datas fixas da lei e as móveis pela Páscoa), que não depende de rede. As três dão o mesmo
 #     conjunto de datas (conferido em 10/11/2026 com 2026).
-#   - dia útil: segunda a sexta que não é feriado nacional, contando as duas pontas. Carnaval e Corpus Christi entram
-#     como feriado, como na lista da BrasilAPI e no calendário bancário. Feriado estadual e municipal não entra: a
+#   - dia útil: segunda a sexta que não é feriado nacional, contando as duas pontas. Carnaval e Corpus Christi são ponto
+#     facultativo, não feriado: entram como dia não útil, como na lista da BrasilAPI e no calendário bancário, e a
+#     resposta diz isso. Feriado estadual e municipal não entra: a
 #     resposta diz isso, para o agente não prometer prazo errado.
 # Termos: BrasilAPI pede uso com "natureza de uma pessoa real"; Nager.Date é aberta e sem chave. Cache de 30 dias por
 # ano (o calendário não muda no ano) e de 1 dia na contagem (a data "de" padrão é hoje).
@@ -14,8 +15,8 @@ module Autonomia::FerramentasProntas::Fontes::Feriados
   ANOS = 2000..2100
   MAX_DIAS = 731
   # Até 160 caracteres (`Resposta::MAX_TEXTO`), senão o fim é cortado.
-  REGRA = 'Segunda a sexta, menos feriados nacionais (Carnaval e Corpus Christi inclusos), contando as duas datas. ' \
-          'Feriados estaduais e municipais não entram.'.freeze
+  REGRA = 'Segunda a sexta, menos os feriados nacionais e os pontos facultativos de Carnaval e Corpus Christi, com as ' \
+          'duas datas. Sem feriado estadual e municipal.'.freeze
 
   module_function
 

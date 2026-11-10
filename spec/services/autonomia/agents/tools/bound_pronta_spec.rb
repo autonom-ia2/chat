@@ -174,6 +174,32 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       expect(conversation.messages.where(private: true)).to be_empty
     end
 
+    it 'o CPF (calculado aqui) responde na hora e nao abre a linha da consulta, que guardaria o numero' do
+      account.enable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+      cpf = incluir_pronta('cpf', conta: account, agente: agent)
+      relogio_do_turno
+      entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 78)
+      chamada_cpf = { 'name' => 'pronta_cpf', 'call_id' => 'c2', 'arguments' => { cpf: '111.444.777-35' }.to_json }
+
+      saida = JSON.parse(described_class.new(agent: agent, record: cpf).execute(chamada_cpf, delivery: entrega))
+
+      expect(saida['dados']).to include('valido' => true)
+      expect(Autonomia::Agents::ToolRun.count).to eq(0)
+    end
+
+    it 'a localizacao vai ao segundo plano com a coordenada ja arredondada no registro' do
+      account.enable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+      local = incluir_pronta('localizacao', conta: account, agente: agent)
+      relogio_do_turno
+      entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 79)
+      chamada_local = { 'name' => 'pronta_localizacao', 'call_id' => 'c3',
+                        'arguments' => { latitude: -22.905612, longitude: -47.060831 }.to_json }
+
+      described_class.new(agent: agent, record: local).execute(chamada_local, delivery: entrega)
+
+      expect(Autonomia::Agents::ToolRun.sole.arguments).to eq('latitude' => -22.906, 'longitude' => -47.061)
+    end
+
     it 'no job, com a flag das prontas desligada depois da abertura, nao consulta' do
       _saida, run = abrir_consulta
       account.disable_features!(Autonomia::FerramentasProntas::FLAG)

@@ -1,4 +1,6 @@
-# Estados e municípios na BrasilAPI (reserva; ela repassa o IBGE).
+# Estados e municípios na BrasilAPI (reserva; ela repassa o IBGE). Os municípios só respondem, em 10/11/2026, com os três
+# provedores dela no pedido (com um só, 504); o da Wikipédia põe o estado entre parênteses em alguns nomes
+# ("CAPIXABA (ACRE)"), e esse sufixo sai.
 class Autonomia::FerramentasProntas::Fontes::Cidades::BrasilApi < Autonomia::FerramentasProntas::Provedor
   NOME = 'brasilapi'.freeze
   HOST = 'brasilapi.com.br'.freeze
@@ -7,18 +9,15 @@ class Autonomia::FerramentasProntas::Fontes::Cidades::BrasilApi < Autonomia::Fer
     return estados if consulta.nome == 'estados'
 
     uf = params.fetch('uf').upcase
-    lista = lista!(get("/api/ibge/municipios/v1/#{uf}?providers=dados-abertos-br,gov"))
-    nomes = lista.map { |item| exigir!(texto(objeto!(item)['nome'])) }
+    lista = lista!(get("/api/ibge/municipios/v1/#{uf}?providers=dados-abertos-br,gov,wikipedia"))
+    sufixo = " (#{Autonomia::FerramentasProntas::Ufs.nome(uf).upcase})"
+    nomes = lista.map { |item| exigir!(texto(objeto!(item)['nome'])).delete_suffix(sufixo) }
     Autonomia::FerramentasProntas::Fontes::Cidades.cidades(uf, exigir!(nomes))
   end
 
   private
 
   def estados
-    itens = lista!(get('/api/ibge/uf/v1')).map do |item|
-      { 'uf' => exigir!(texto(objeto!(item)['sigla'])), 'nome' => exigir!(texto(item['nome'])),
-        'regiao' => texto(item.dig('regiao', 'nome')) }.compact
-    end
-    { 'estados' => exigir!(itens.sort_by { |item| Autonomia::FerramentasProntas::Ufs.comparavel(item['nome']) }) }
+    Autonomia::FerramentasProntas::Fontes::Cidades.estados(exigir!(lista!(get('/api/ibge/uf/v1'))))
   end
 end

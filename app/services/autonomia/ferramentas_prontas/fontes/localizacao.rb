@@ -1,12 +1,12 @@
 # LOCALIZAÇÃO VIRA CIDADE (#2858, F1): a localização que o cliente mandou vira cidade e estado.
-#   - principal: Photon (komoot); reserva: Nominatim (OpenStreetMap Foundation). Os dois são o OpenStreetMap: a
-#     resposta leva a atribuição que a licença (ODbL) pede.
+#   - principal: Photon (komoot, dados do OpenStreetMap: a resposta leva a atribuição que a licença ODbL pede); o nome
+#     só vale se for um município daquele estado;
+#   - reserva: a sede de município mais próxima, calculada aqui (`localizacao/sedes.rb`), aproximada e sem cache.
+#   O Nominatim fica fora (termo 12 do épico #2858: a política de uso da OSMF).
 #   - a coordenada sai ARREDONDADA a 3 casas (~110 m): basta para a cidade e não manda a posição exata do cliente a
 #     terceiros. É também a chave do cache (30 dias).
 #   - fora do Brasil: "não encontrado".
-# Termos: Photon pede uso justo ("uso extenso é limitado"); o Nominatim exige no máximo 1 pedido por segundo, um
-# User-Agent que identifique a aplicação, cache, atribuição e poder desligar sem atualizar o software
-# (`TetoDoProvedor`: 1 por segundo e a configuração `AUTONOMIA_PRONTAS_HOSTS_DESLIGADOS`). Detalhes e decisão em
+# Termos: Photon pede uso justo ("uso extenso é limitado"): teto global e cache. Detalhes em
 # `docs/ferramentas-prontas/termos-das-fontes.md`.
 module Autonomia::FerramentasProntas::Fontes::Localizacao
   Parametro = Autonomia::FerramentasProntas::Parametro
@@ -22,8 +22,6 @@ module Autonomia::FerramentasProntas::Fontes::Localizacao
   end
 
   def cidade(cidade, sigla)
-    raise Autonomia::FerramentasProntas::Provedor::NaoEncontrado if cidade.blank? || sigla.blank?
-
     { 'cidade' => cidade }.merge(Autonomia::FerramentasProntas::Ufs.com_nome(sigla)).merge('fonte_dos_dados' => ATRIBUICAO)
   end
 
@@ -41,11 +39,11 @@ module Autonomia::FerramentasProntas::Fontes::Localizacao
     consultas: [
       Autonomia::FerramentasProntas::Consulta.new(
         nome: 'cidade', descricao: 'a cidade e o estado da localização', obrigatorios: [LATITUDE, LONGITUDE],
-        provedores: [Photon, Nominatim], validade: 30.days, prazo_por_fonte: 3, prazo_total: 6
+        provedores: [Photon, Sedes], validade: 30.days, prazo_por_fonte: 3, prazo_total: 4
       )
     ],
     limite_diario: 200,
-    termos: 'Photon (uso justo) e Nominatim (1 pedido por segundo, identificação, cache, atribuição, desligável). ' \
-            'Coordenada arredondada a ~110 m. Cache de 30 dias.'
+    termos: 'Photon (uso justo, atribuição ODbL) e a sede mais próxima calculada aqui. Coordenada arredondada a ~110 m. ' \
+            'Cache de 30 dias. Nominatim fora (política da OSMF).'
   )
 end

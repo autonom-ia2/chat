@@ -33,6 +33,24 @@ module Autonomia::FerramentasProntas
     disponivel?(agent.account, tool.fonte_do_catalogo) && agent.agent_type != AGENTE_DE_COTACAO
   end
 
+  # A consulta vai pelo caminho em segundo plano do #2749? A cadastrada e a pronta que chama a rede, como antes; a pronta
+  # calculada aqui (o CPF: sem host) responde na hora e não abre a linha da consulta, que guardaria o argumento.
+  def em_segundo_plano?(tool, entrega)
+    return false if tool.pronta? && tool.fonte_do_catalogo&.hosts&.empty?
+
+    ::Autonomia::Agents::Tools::ConsultaNoTurno.aplica?(tool, entrega)
+  end
+
+  # Os argumentos da pronta já normalizados, antes de qualquer registro (a linha da consulta em segundo plano grava os
+  # argumentos): a coordenada vai arredondada, o documento só com os dígitos. O que não normaliza fica como veio, e a
+  # `Execucao` responde que o pedido não serve. A cadastrada: como veio.
+  def argumentos(tool, args)
+    fonte = tool.pronta? ? tool.fonte_do_catalogo : nil
+    return args if fonte.nil? || !args.is_a?(Hash)
+
+    fonte.normalizar_argumentos(args.deep_stringify_keys)
+  end
+
   # Quem executa a chamada: a `Execucao` para a pronta, o `HttpExecutor` para a cadastrada. As opções do `HttpExecutor`
   # (`turno`, `segundos`, `chave`, `higienizar`) não valem para a pronta: ela não manda cabeçalho nem chave a ninguém, e
   # o prazo dela é o do catálogo.

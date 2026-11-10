@@ -13,10 +13,23 @@ module Autonomia::FerramentasProntas::Fontes::Cidades
 
   module_function
 
-  # `cidades`: os nomes na ordem da fonte.
+  # Os nomes em ordem alfabética (sem acento e sem caixa).
   def cidades(sigla, nomes)
-    ordem = nomes.sort_by { |nome| Autonomia::FerramentasProntas::Ufs.comparavel(nome) }
+    ordem = nomes.sort_by { |nome| Autonomia::FerramentasProntas::Lista.comparavel(nome) }
     Autonomia::FerramentasProntas::Ufs.com_nome(sigla).merge('cidades' => ordem)
+  end
+
+  # Um estado da lista da fonte (IBGE e BrasilAPI têm o mesmo formato). Fora do formato: falha, e a reserva tenta.
+  def estado(item)
+    falha = Autonomia::FerramentasProntas::Provedor::Falha
+    raise falha, 'resposta_invalida' unless item.is_a?(Hash) && item['sigla'].present? && item['nome'].present?
+
+    regiao = item['regiao']
+    { 'uf' => item['sigla'].to_s.strip, 'nome' => item['nome'].to_s.strip, 'regiao' => regiao.is_a?(Hash) ? regiao['nome'] : nil }.compact
+  end
+
+  def estados(itens)
+    { 'estados' => itens.map { |item| estado(item) }.sort_by { |item| Autonomia::FerramentasProntas::Lista.comparavel(item['nome']) } }
   end
 
   def refinar(dados, params)

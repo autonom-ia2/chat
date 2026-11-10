@@ -15,10 +15,6 @@ class Autonomia::FerramentasProntas::Fontes::Cidades::Ibge < Autonomia::Ferramen
   private
 
   def estados
-    itens = lista!(get('/api/v1/localidades/estados?orderBy=nome')).map do |item|
-      { 'uf' => exigir!(texto(objeto!(item)['sigla'])), 'nome' => exigir!(texto(item['nome'])),
-        'regiao' => texto(item.dig('regiao', 'nome')) }.compact
-    end
-    { 'estados' => exigir!(itens) }
+    Autonomia::FerramentasProntas::Fontes::Cidades.estados(exigir!(lista!(get('/api/v1/localidades/estados?orderBy=nome'))))
   end
 end

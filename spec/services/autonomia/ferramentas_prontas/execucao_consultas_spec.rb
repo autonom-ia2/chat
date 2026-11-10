@@ -1,7 +1,8 @@
 require 'rails_helper'
 
 # #2858 (F1): as consultas mais usadas — CPF, feriados e dias úteis, Banco Central, cidades e estados, DDD, localização
-# e bancos. Cada uma pelo caminho real (a `Execucao` da ferramenta pronta de um agente), com o WebMock no lugar da
+# e bancos (a localização e as reservas calculadas aqui em `execucao_reservas_spec`). Cada uma pelo caminho real (a
+# `Execucao` da ferramenta pronta de um agente), com o WebMock no lugar da
 # fonte: a resposta boa (a pergunta de aceite do plano), a reserva com a principal fora e "não consegui" com todas fora.
 RSpec.describe Autonomia::FerramentasProntas::Execucao do
   let(:account) { create(:account) }
@@ -89,7 +90,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
 
       expect(dados).to include('de' => '2026-11-10', 'ate' => '2026-11-30', 'dias_uteis' => 14)
       expect(dados['feriados_no_periodo']).to eq([{ 'data' => '2026-11-20', 'nome' => 'Dia da consciência negra' }])
-      expect(dados['regra']).to end_with('estaduais e municipais não entram.')
+      expect(dados['regra']).to include('pontos facultativos de Carnaval e Corpus Christi').and end_with('estadual e municipal.')
     end
 
     it 'com a principal fora, a Nager responde so com os feriados nacionais' do
@@ -139,9 +140,8 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(uso.pela_reserva).to eq(1)
     end
 
-    it '"E o dolar?": a PTAX do ultimo boletim; com a Olinda fora, as series do SGS' do
-      boletins = [{ cotacaoCompra: 5.49, cotacaoVenda: 5.50, dataHoraCotacao: '2026-11-06 13:05:00' },
-                  { cotacaoCompra: 5.514, cotacaoVenda: 5.5146, dataHoraCotacao: '2026-11-09 13:06:31' }]
+    it '"E o dolar?": a PTAX do ultimo boletim' do
+      boletins = [{ cotacaoCompra: 5.514, cotacaoVenda: 5.5146, dataHoraCotacao: '2026-11-09 13:06:31' }]
       stub_request(:get, ptax).to_return(status: 200, body: { value: boletins }.to_json,
                                          headers: { 'Content-Type' => 'application/json;charset=UTF-8;odata.metadata=minimal' })
 
@@ -186,7 +186,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
   describe 'Cidades e estados (IBGE, reserva BrasilAPI)' do
     let(:ferramenta) { incluir_pronta('cidades', conta: account, agente: agent) }
     let(:ibge) { 'https://servicodados.ibge.gov.br/api/v1/localidades/estados/AC/municipios' }
-    let(:brasilapi) { 'https://brasilapi.com.br/api/ibge/municipios/v1/AC?providers=dados-abertos-br,gov' }
+    let(:brasilapi) { 'https://brasilapi.com.br/api/ibge/municipios/v1/AC?providers=dados-abertos-br,gov,wikipedia' }
     let(:municipios) { %w[Xapuri Acrelândia Tarauacá].map { |nome| { id: 1, nome: nome } } }
 
     it '"Quais cidades tem no Acre?": a lista do IBGE, em ordem, com o total (o IBGE manda gzip)' do
@@ -208,9 +208,9 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
 
     it 'com o IBGE fora, a BrasilAPI responde; com as duas fora, "nao consegui"' do
       fonte_fora(ibge)
-      fonte_responde(brasilapi, [{ nome: 'XAPURI', codigo_ibge: '1200708' }])
+      fonte_responde(brasilapi, [{ nome: 'XAPURI', codigo_ibge: '1200708' }, { nome: 'CAPIXABA (ACRE)', codigo_ibge: '1201707' }])
 
-      expect(executar_pronta(ferramenta, 'consulta' => 'cidades', 'uf' => 'ac')['dados']['cidades']).to eq(['XAPURI'])
+      expect(executar_pronta(ferramenta, 'consulta' => 'cidades', 'uf' => 'ac')['dados']['cidades']).to eq(%w[CAPIXABA XAPURI])
 
       fonte_fora(brasilapi)
       expect(nao_consegui?(executar_pronta(ferramenta, 'consulta' => 'cidades', 'uf' => 'ac'))).to be(true)
@@ -241,41 +241,6 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
     it 'DDD que nao existe e pedido invalido, sem chamada' do
       expect(executar_pronta(ferramenta, 'ddd' => '20')).to include('situacao' => 'pedido_invalido', 'campo' => 'ddd')
       expect(a_request(:get, /brasilapi/)).not_to have_been_made
-    end
-  end
-
-  describe 'Localizacao vira cidade (Photon, reserva Nominatim)' do
-    let(:ferramenta) { incluir_pronta('localizacao', conta: account, agente: agent) }
-    let(:photon) { %r{\Ahttps://photon\.komoot\.io/reverse} }
-    let(:nominatim) { %r{\Ahttps://nominatim\.openstreetmap\.org/reverse} }
-    let(:do_photon) { { features: [{ properties: { city: 'Campinas', state: 'São Paulo', countrycode: 'BR' } }] } }
-    let(:do_nominatim) { { 'address' => { 'municipality' => 'Campinas', 'ISO3166-2-lvl4' => 'BR-SP', 'country_code' => 'br' } } }
-
-    it 'manda a coordenada arredondada e responde cidade e estado, com a atribuicao do OpenStreetMap' do
-      stub_request(:get, photon).to_return(status: 200, body: do_photon.to_json, headers: { 'Content-Type' => 'application/json' })
-
-      dados = executar_pronta(ferramenta, 'latitude' => -22.905612, 'longitude' => -47.060831)['dados']
-
-      expect(dados).to include('cidade' => 'Campinas', 'uf' => 'SP', 'estado' => 'São Paulo', 'fonte_dos_dados' => include('OpenStreetMap'))
-      expect(a_request(:get, 'https://photon.komoot.io/reverse?lat=-22.906&lon=-47.061&lang=default&limit=1')).to have_been_made
-    end
-
-    it 'com o Photon fora, o Nominatim responde; fora do Brasil e "nao encontrado"' do
-      stub_request(:get, photon).to_return(status: 503)
-      stub_request(:get, nominatim).to_return(status: 200, body: do_nominatim.to_json, headers: { 'Content-Type' => 'application/json' })
-
-      expect(executar_pronta(ferramenta, 'latitude' => '-22.9', 'longitude' => '-47.06')['dados']).to include('cidade' => 'Campinas', 'uf' => 'SP')
-
-      zerar_tetos_das_prontas # o Nominatim aceita 1 pedido por segundo, e o relógio do exemplo está parado
-      fora = { features: [{ properties: { city: 'Lisboa', state: 'Lisboa', countrycode: 'PT' } }] }
-      stub_request(:get, photon).to_return(status: 200, body: fora.to_json, headers: { 'Content-Type' => 'application/json' })
-      stub_request(:get, nominatim).to_return(status: 200, body: { address: { city: 'Lisboa', country_code: 'pt' } }.to_json,
-                                              headers: { 'Content-Type' => 'application/json' })
-      expect(executar_pronta(ferramenta, 'latitude' => 38.7, 'longitude' => -9.1)['situacao']).to eq('nao_encontrado')
-    end
-
-    it 'coordenada fora da faixa e pedido invalido' do
-      expect(executar_pronta(ferramenta, 'latitude' => 120, 'longitude' => -47)['campo']).to eq('latitude')
     end
   end
 

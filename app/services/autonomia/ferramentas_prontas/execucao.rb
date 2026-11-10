@@ -34,8 +34,9 @@ class Autonomia::FerramentasProntas::Execucao
     @inicio = ClienteHttp.agora
   end
 
+  # O "hoje" das consultas (dias úteis, o ano dos feriados e do Focus, o dia do contador) é o do fuso da conta.
   def call
-    executar
+    Time.use_zone(fuso) { executar }
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: @tool.account).capture_exception
     terminar(Resposta.nao_consegui, desfecho: 'sem_resposta', motivos: ['defeito'])
@@ -51,6 +52,10 @@ class Autonomia::FerramentasProntas::Execucao
   end
 
   private
+
+  def fuso
+    ActiveSupport::TimeZone[Crm::Timezone::Resolver.new(account: @tool.account).name_or_default.to_s] || Time.zone
+  end
 
   def executar
     return desligada unless Autonomia::FerramentasProntas.disponivel?(@tool.account, @fonte)
@@ -86,24 +91,26 @@ class Autonomia::FerramentasProntas::Execucao
   end
 
   def consultar(params)
-    @cliente = ClienteHttp.new(hosts: @fonte.hosts, prazo_final: @inicio + @consulta.prazo_total)
+    @cliente = ClienteHttp.new(hosts: @fonte.hosts, prazo_final: @inicio + @consulta.prazo_total, conta: @tool.account_id)
     aplicaveis = @consulta.provedores.select { |provedor| provedor.aplica?(@consulta, params) }
     falhas = []
     nao_encontrado = false
     aplicaveis.each do |provedor|
+      # Sem prazo para a rede, só o provedor calculado aqui (o calendário, o plano do DDD, as sedes) ainda responde.
+      next if provedor.host && falhas.any? { |falha| falha.end_with?('.prazo_total') }
+
       dados = provedor.new(@cliente, prazo: @consulta.prazo_por_fonte).consultar(@consulta, @consulta.para_a_fonte(params))
       return achado(params, dados, provedor, reserva: provedor != aplicaveis.first, falhas: falhas)
     rescue Provedor::NaoEncontrado
       nao_encontrado = true
     rescue Provedor::Falha => e
       falhas << "#{provedor.nome}.#{e.motivo}"
-      break if e.motivo == 'prazo_total'
     end
     nada(nao_encontrado, falhas)
   end
 
   def achado(params, dados, provedor, reserva:, falhas:)
-    @cache.encontrado(dados)
+    @cache.encontrado(dados, validade: provedor.validade)
     @provedor = provedor.nome
     entregar(dados, params, desfecho: reserva ? 'pela_reserva' : nil, motivos: falhas)
   end
