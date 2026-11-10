@@ -4,6 +4,7 @@ require 'rails_helper'
 # (texto em português, com ranking) entram juntos e a ordem sai da fusão por posição (RRF, k = 60), no lugar do bônus
 # por metadado. O trecho que repete as palavras da pergunta sobe mesmo quando o vetor o deixou atrás. O teto de
 # distância, as seções dos itens, o material reprovado e o isolamento por agente continuam valendo.
+# #2867 — o 1º do vetor fica na frente e a palavra pesa menos que o vetor (a conta está no busca_hibrida_spec).
 RSpec.describe Autonomia::Agents::Retriever do
   let(:account) { create(:account) }
   let(:agent) do
@@ -14,6 +15,8 @@ RSpec.describe Autonomia::Agents::Retriever do
   let(:perto) { Array.new(1536) { 0.01 } }
   # cosseno 664/1536 com `perto`: distância ~0,57, dentro do teto de 0,75
   let(:meio) { Array.new(1536) { |indice| indice < 1100 ? 0.01 : -0.01 } }
+  # cosseno 538/1536 com `perto`: distância ~0,65, dentro do teto e atrás de `meio`
+  let(:mais_longe) { Array.new(1536) { |indice| indice < 1037 ? 0.01 : -0.01 } }
   # cosseno 0 com `perto`: distância 1,0, acima do teto
   let(:longe) { Array.new(1536) { |indice| indice.even? ? 0.01 : -0.01 } }
   let(:source) { agent.sources.create!(account: account, source_type: 'pdf', status: :ready, reference: 'cg.pdf') }
@@ -31,6 +34,13 @@ RSpec.describe Autonomia::Agents::Retriever do
     described_class.new(agent: agent.reload).retrieve(pergunta, top_k: top_k)
   end
 
+  # Só a busca por palavra, com a distância do vetor `perto` e o teto.
+  def pela_palavra(texto = pergunta, limite: 8)
+    Autonomia::Agents::BuscaHibrida.new(escopo: agent.knowledge_entries.ready, vector: perto,
+                                        model: Autonomia::Agents::Config.active_embedding_model, query: texto)
+                                   .por_palavra(limite)
+  end
+
   before do
     allow(embedding_service).to receive(:embed).and_return(perto)
     allow(Autonomia::Agents::EmbeddingService).to receive(:new).and_return(embedding_service)
@@ -39,32 +49,40 @@ RSpec.describe Autonomia::Agents::Retriever do
   context 'with the flag on' do
     before { account.enable_features!('rag_busca_hibrida') }
 
-    it 'puts first the piece that repeats the words of the question, even behind in the vector' do
-      entry(0, 'Reboque e chaveiro em todo o Brasil.', perto)
-      aviso = entry(1, 'Aviso de sinistro: comunique a seguradora pelo telefone 0800 000 0000.', meio)
+    it 'puts the piece that repeats the words of the question above a nearer piece that does not', :aggregate_failures do
+      reboque = entry(0, 'Reboque e chaveiro em todo o Brasil.', perto)
+      chaveiro = entry(1, 'Chaveiro e troca de pneu em todo o Brasil.', meio)
+      aviso = entry(2, 'Aviso de sinistro: comunique a seguradora pelo telefone 0800 000 0000.', mais_longe)
 
-      expect(buscar.map(&:id).first).to eq(aviso.id)
+      expect(buscar.map(&:id)).to eq([reboque.id, aviso.id, chaveiro.id])
     end
 
-    # top_k 2: o vetor traz 8 candidatos, todos os 9 trechos perto; o aviso só chega pela busca por palavra.
-    it 'brings a piece the vector left out of its candidates, with its real distance', :aggregate_failures do
+    # #2867: o 1º do vetor fica na frente mesmo quando não casa a palavra (com peso igual, caía para o 5º–11º lugar).
+    it 'keeps the first of the vector in front when it does not match the words' do
+      reboque = entry(0, 'Reboque e chaveiro em todo o Brasil.', perto)
+      aviso = entry(1, 'Aviso de sinistro: comunique a seguradora pelo telefone 0800 000 0000.', meio)
+
+      expect(buscar.map(&:id)).to eq([reboque.id, aviso.id])
+    end
+
+    # top_k 2: o vetor traz 8 candidatos, todos os 9 trechos perto; o aviso só chega pela busca por palavra, com a
+    # distância real, e fica atrás dos do vetor (#2867).
+    it 'finds by the words a piece the vector left out, with its real distance, behind the vector ones', :aggregate_failures do
       9.times { |indice| entry(indice, "Assistência #{indice}: reboque e chaveiro.", perto) }
       aviso = entry(20, 'Aviso de sinistro: comunique a seguradora pelo telefone 0800 000 0000.', meio)
 
-      resultado = buscar(top_k: 2)
-
-      expect(resultado.map(&:id)).to include(aviso.id)
-      expect(resultado.find { |trecho| trecho.id == aviso.id }.neighbor_distance.to_f).to be_between(0.5, 0.65)
+      expect(pela_palavra.map(&:id)).to eq([aviso.id])
+      expect(pela_palavra.first.neighbor_distance.to_f).to be_between(0.5, 0.65)
+      expect(buscar(top_k: 2).map(&:id)).not_to include(aviso.id)
     end
 
     # Os trechos longe que repetem mais as palavras não podem ocupar as vagas da busca por palavra: o teto vem antes do
     # limite.
     it 'applies the distance ceiling before the limit of the word search' do
-      9.times { |indice| entry(indice, "Assistência #{indice}: reboque e chaveiro.", perto) }
       9.times { |indice| entry(30 + indice, 'Aviso de sinistro: telefone do aviso de sinistro, telefone, aviso, carro.', longe) }
       aviso = entry(20, 'Aviso de sinistro: comunique a seguradora pelo telefone 0800 000 0000.', meio)
 
-      expect(buscar(top_k: 2).map(&:id)).to include(aviso.id)
+      expect(pela_palavra(limite: 1).map(&:id)).to eq([aviso.id])
     end
 
     # O OU entre os termos não pode mexer dentro de um termo: o `&` de um endereço faz parte da palavra.
@@ -72,19 +90,17 @@ RSpec.describe Autonomia::Agents::Retriever do
       entry(0, 'Reboque e chaveiro em todo o Brasil.', perto)
       boleto = entry(1, 'Segunda via em https://outro.com/2via?cpf=1&tipo=2', meio)
 
-      resultado = described_class.new(agent: agent.reload).retrieve('https://pagar.com/2via?cpf=1&tipo=2')
-
-      expect(resultado.map(&:id).first).to eq(boleto.id)
+      expect(pela_palavra('https://pagar.com/2via?cpf=1&tipo=2').map(&:id)).to eq([boleto.id])
     end
 
     # O Guia e o Ajudante passam texto que não foi gravado antes; o Postgres não aceita o byte nulo num literal.
-    it 'searches a question with a null byte like the same question without it' do
-      entry(0, 'Reboque e chaveiro em todo o Brasil.', perto)
+    it 'searches a question with a null byte like the same question without it', :aggregate_failures do
+      reboque = entry(0, 'Reboque e chaveiro em todo o Brasil.', perto)
       aviso = entry(1, 'Aviso de sinistro: comunique a seguradora pelo telefone 0800 000 0000.', meio)
 
-      resultado = described_class.new(agent: agent.reload).retrieve("aviso de sinistro\u0000telefone")
-
-      expect(resultado.map(&:id).first).to eq(aviso.id)
+      expect(pela_palavra("aviso de sinistro\u0000telefone").map(&:id)).to eq([aviso.id])
+      expect(described_class.new(agent: agent.reload).retrieve("aviso de sinistro\u0000telefone").map(&:id))
+        .to eq([reboque.id, aviso.id])
     end
 
     # Cliente que cola a apólice: termo repetido entra uma vez só no OU (repetido, o OU de 1.500 nós levava segundos).
@@ -98,7 +114,7 @@ RSpec.describe Autonomia::Agents::Retriever do
         described_class.new(agent: agent.reload).retrieve('aviso de sinistro telefone ' * 300)
       end
 
-      expect(resultado.map(&:id).first).to eq(aviso.id)
+      expect(resultado.map(&:id)).to include(aviso.id)
       expect(sqls.size).to eq(1)
     end
 
