@@ -3,12 +3,27 @@
 module FerramentasProntasHelper
   HOSTS_DAS_PRONTAS = {
     'brasilapi.com.br' => '93.184.216.40', 'viacep.com.br' => '93.184.216.41', 'minhareceita.org' => '93.184.216.42',
-    'api.opencnpj.org' => '93.184.216.43', 'parallelum.com.br' => '93.184.216.44', 'fora.exemplo.test' => '93.184.216.45'
+    'api.opencnpj.org' => '93.184.216.43', 'parallelum.com.br' => '93.184.216.44', 'fora.exemplo.test' => '93.184.216.45',
+    'date.nager.at' => '93.184.216.46', 'api.bcb.gov.br' => '93.184.216.47', 'olinda.bcb.gov.br' => '93.184.216.48',
+    'servicodados.ibge.gov.br' => '93.184.216.49', 'photon.komoot.io' => '93.184.216.50',
+    'www.bcb.gov.br' => '93.184.216.52'
   }.freeze
 
+  # Também zera o teto global por provedor (#2858 F1): ele vive no Redis e passaria de um exemplo para o outro.
   def resolver_hosts_das_prontas
     allow(Resolv).to receive(:getaddresses).and_call_original
     HOSTS_DAS_PRONTAS.each { |host, ip| allow(Resolv).to receive(:getaddresses).with(host).and_return([ip]) }
+    zerar_tetos_das_prontas
+  end
+
+  def zerar_tetos_das_prontas
+    chaves = []
+    Redis::Alfred.scan_each(match: "#{Autonomia::FerramentasProntas::TetoDoProvedor::CHAVE}:*") { |chave| chaves << chave }
+    chaves.each { |chave| Redis::Alfred.delete(chave) }
+  end
+
+  def ligar_consultas(conta)
+    conta.enable_features!(Autonomia::FerramentasProntas::FLAG, Autonomia::FerramentasProntas::FLAG_CONSULTAS)
   end
 
   def fonte_responde(url, corpo, status: 200, tipo: 'application/json; charset=utf-8')

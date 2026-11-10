@@ -5,6 +5,20 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
   NOME = 'parallelum'.freeze
   HOST = 'parallelum.com.br'.freeze
   TIPO_NA_FONTE = { 'carros' => 'cars', 'motos' => 'motorcycles', 'caminhoes' => 'trucks' }.freeze
+  # A chave gratuita (1.000 pedidos por dia em vez de 500), opcional: sem ela, a fonte funciona igual. Só o nome da
+  # variável fica no código. O teto global acompanha (`TetoDoProvedor.tetos`).
+  CHAVE = 'AUTONOMIA_PRONTAS_FIPE_TOKEN'.freeze
+
+  # Colada com quebra de linha no fim, vale sem ela; com quebra no meio, não vale (seria outro cabeçalho), e a fonte
+  # segue sem chave.
+  def self.chave
+    valor = ENV.fetch(CHAVE, nil).to_s.strip
+    valor.presence unless valor.include?("\r") || valor.include?("\n")
+  end
+
+  def self.cabecalhos
+    chave ? { 'X-Subscription-Token' => chave } : {}
+  end
 
   def consultar(consulta, params)
     case consulta.nome

@@ -9,6 +9,9 @@
 # era. A Lia (`insurance_quote`) fica de fora: as ferramentas dela são as do deploy.
 module Autonomia::FerramentasProntas
   FLAG = 'agente_ferramentas_prontas'.freeze
+  # A F1 (#2858): as consultas mais usadas além de CEP, CNPJ e FIPE (CPF, feriados, Banco Central, cidades, DDD,
+  # localização, bancos). Vale junto com a FLAG.
+  FLAG_CONSULTAS = 'agente_ferramentas_prontas_consultas'.freeze
   AGENTE_DE_COTACAO = 'insurance_quote'.freeze
 
   module_function
@@ -17,12 +20,33 @@ module Autonomia::FerramentasProntas
     account.present? && account.feature_enabled?(FLAG)
   end
 
+  # A fonte está liberada para a conta: a flag das prontas e, na fonte de uma fase posterior, a flag dela.
+  def disponivel?(account, fonte)
+    fonte.present? && ligada?(account) && (fonte.flag.nil? || account.feature_enabled?(fonte.flag))
+  end
+
   # A ferramenta entra no turno deste agente? A cadastrada, sempre; a pronta, só com a flag, fora da Lia e com a fonte
   # ainda no catálogo (uma fonte que saiu do código não derruba o turno de quem a tinha).
   def no_turno?(tool, agent)
     return true unless tool.pronta?
 
-    tool.fonte_do_catalogo.present? && ligada?(agent.account) && agent.agent_type != AGENTE_DE_COTACAO
+    disponivel?(agent.account, tool.fonte_do_catalogo) && agent.agent_type != AGENTE_DE_COTACAO
+  end
+
+  # A pronta calculada aqui (o CPF: nenhum host) não vai ao caminho em segundo plano do #2749 (`ConsultaNoTurno.aplica?`):
+  # responde na hora e não abre a linha da consulta, que guardaria o argumento.
+  def calculada_aqui?(tool)
+    tool.pronta? && tool.fonte_do_catalogo.present? && tool.fonte_do_catalogo.hosts.empty?
+  end
+
+  # Os argumentos da pronta já normalizados, antes de qualquer registro (a linha da consulta em segundo plano grava os
+  # argumentos): a coordenada vai arredondada, o documento só com os dígitos, e o que não normaliza vira
+  # `Fonte::FORA_DO_FORMATO` (a `Execucao` responde que o pedido não serve). A cadastrada: como veio.
+  def argumentos(tool, args)
+    fonte = tool.pronta? ? tool.fonte_do_catalogo : nil
+    return args if fonte.nil? || !args.is_a?(Hash)
+
+    fonte.normalizar_argumentos(args.deep_stringify_keys)
   end
 
   # Quem executa a chamada: a `Execucao` para a pronta, o `HttpExecutor` para a cadastrada. As opções do `HttpExecutor`

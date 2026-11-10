@@ -7,12 +7,15 @@
 # `limite_diario`: o padrão por conta nesta fonte (o acesso da conta pode ter o seu). Decisão do Rodrigo (10/11): 500
 # por conta e por fonte, salvo motivo técnico do provedor, documentado na fonte.
 # `termos`: o que a fonte pede de quem usa (limite, cache), para a revisão de cada lote. Não vai ao modelo.
+# `flag`: a flag da fase que trouxe a fonte (a F1 tem a sua), conferida junto com a das prontas; nil nas da F0.
 class Autonomia::FerramentasProntas::Fonte
   PARAMETRO_DA_CONSULTA = 'consulta'.freeze
+  FORA_DO_FORMATO = '(fora do formato)'.freeze
 
-  attr_reader :chave, :slug, :nome, :descricao, :consultas, :limite_diario, :termos
+  attr_reader :chave, :slug, :nome, :descricao, :consultas, :limite_diario, :termos, :flag
 
-  def initialize(chave:, slug:, nome:, descricao:, consultas:, limite_diario:, termos:) # rubocop:disable Metrics/ParameterLists
+  def initialize(chave:, slug:, nome:, descricao:, consultas:, limite_diario:, termos:, flag: nil) # rubocop:disable Metrics/ParameterLists
+    @flag = flag
     @chave = chave
     @slug = slug
     @nome = nome
@@ -37,7 +40,18 @@ class Autonomia::FerramentasProntas::Fonte
   end
 
   def hosts
-    provedores.map(&:host).uniq
+    provedores.filter_map(&:host).uniq
+  end
+
+  # Os argumentos com cada parâmetro conhecido já normalizado. O que veio e não normaliza (um telefone inteiro no DDD)
+  # vira `FORA_DO_FORMATO`, que nenhum normalizador de parâmetro que vai à fonte aceita: a `Execucao` responde que o
+  # pedido não serve, e o valor cru não fica em registro nenhum. Vazio é "não informado" (como no `Parametro`), e o
+  # parâmetro local (a busca) nunca recebe o marcador: ele filtraria pelo texto do marcador.
+  def normalizar_argumentos(args)
+    normalizados = consultas.flat_map(&:parametros).uniq(&:nome).to_h do |parametro|
+      [parametro.nome, argumento_normalizado(parametro, args[parametro.nome])]
+    end
+    args.merge(normalizados.compact)
   end
 
   # O maior prazo total entre as consultas: o tempo que a consulta em segundo plano espera por esta ferramenta.
@@ -56,6 +70,12 @@ class Autonomia::FerramentasProntas::Fonte
   end
 
   private
+
+  def argumento_normalizado(parametro, bruto)
+    return nil if bruto.nil? || bruto.to_s.strip.empty?
+
+    parametro.normalizar(bruto) || (parametro.local? ? nil : FORA_DO_FORMATO)
+  end
 
   def descricao_para_o_modelo(usar_quando)
     partes = [descricao]

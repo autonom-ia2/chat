@@ -36,8 +36,9 @@ class Autonomia::FerramentasProntas::Consulta
       valor = parametro.normalizar(argumentos[parametro.nome])
       return [nil, parametro.nome] if valor.nil? && exigido?(parametro, argumentos)
 
-      normalizados[parametro.nome] = valor unless valor.nil?
+      normalizados[parametro.nome] = valor.nil? ? parametro.padrao : valor
     end
+    normalizados.compact!
     faltando = @regra&.call(normalizados)
     faltando ? [nil, faltando] : [normalizados, nil]
   end

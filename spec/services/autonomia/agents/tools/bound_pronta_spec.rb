@@ -67,6 +67,16 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
     end
   end
 
+  it 'a fonte da F1 entra so com a flag das consultas, e as da F0 ficam' do
+    account.enable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+    pronta
+    incluir_pronta('ddd', conta: account, agente: agent)
+    expect(slugs_do_turno).to eq(%w[pronta_cep pronta_ddd])
+
+    account.disable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+    expect(slugs_do_turno).to eq(%w[pronta_cep])
+  end
+
   describe 'no turno sincrono' do
     it 'consulta a fonte do catalogo e o modelo le o dado enxuto' do
       fonte_responde(brasilapi, endereco)
@@ -162,6 +172,63 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       expect(run.reload.status).to eq('superseded')
       expect(JSON.parse(run.resultado_da_consulta)['situacao']).to eq('encontrado')
       expect(conversation.messages.where(private: true)).to be_empty
+    end
+
+    it 'o CPF (calculado aqui) responde na hora e nao abre a linha da consulta, que guardaria o numero' do
+      account.enable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+      cpf = incluir_pronta('cpf', conta: account, agente: agent)
+      relogio_do_turno
+      entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 78)
+      chamada_cpf = { 'name' => 'pronta_cpf', 'call_id' => 'c2', 'arguments' => { cpf: '111.444.777-35' }.to_json }
+
+      saida = JSON.parse(described_class.new(agent: agent, record: cpf).execute(chamada_cpf, delivery: entrega))
+
+      expect(saida['dados']).to include('valido' => true)
+      expect(Autonomia::Agents::ToolRun.count).to eq(0)
+    end
+
+    it 'a localizacao vai ao segundo plano com a coordenada ja arredondada no registro' do
+      account.enable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+      local = incluir_pronta('localizacao', conta: account, agente: agent)
+      relogio_do_turno
+      entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 79)
+      chamada_local = { 'name' => 'pronta_localizacao', 'call_id' => 'c3',
+                        'arguments' => { latitude: -22.905612, longitude: -47.060831 }.to_json }
+
+      described_class.new(agent: agent, record: local).execute(chamada_local, delivery: entrega)
+
+      expect(Autonomia::Agents::ToolRun.sole.arguments).to eq('latitude' => -22.906, 'longitude' => -47.061)
+    end
+
+    it 'o pre-disparo da rodada segue as mesmas regras: o CPF nao abre linha, e o telefone no DDD nao fica gravado' do
+      account.enable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+      cpf = incluir_pronta('cpf', conta: account, agente: agent)
+      ddd = incluir_pronta('ddd', conta: account, agente: agent)
+      relogio_do_turno
+      entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 80)
+
+      described_class.new(agent: agent, record: cpf)
+                     .disparar({ 'name' => 'pronta_cpf', 'call_id' => 'c4', 'arguments' => { cpf: '111.444.777-35' }.to_json }, turno: entrega)
+      expect(Autonomia::Agents::ToolRun.count).to eq(0)
+
+      described_class.new(agent: agent, record: ddd)
+                     .disparar({ 'name' => 'pronta_ddd', 'call_id' => 'c5', 'arguments' => { ddd: '(31) 98765-4321' }.to_json }, turno: entrega)
+      expect(Autonomia::Agents::ToolRun.sole.arguments).to eq('ddd' => Autonomia::FerramentasProntas::Fonte::FORA_DO_FORMATO)
+    end
+
+    it 'opcional vazio e "nao informado" tambem no registro: o padrao vale e a busca vazia nao filtra' do
+      account.enable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+      feriados = incluir_pronta('feriados', conta: account, agente: agent)
+      relogio_do_turno
+      entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 81)
+      argumentos = { consulta: 'feriados', ano: '', de: '  ' }.to_json
+
+      described_class.new(agent: agent, record: feriados)
+                     .disparar({ 'name' => 'pronta_feriados', 'call_id' => 'c6', 'arguments' => argumentos }, turno: entrega)
+
+      expect(Autonomia::Agents::ToolRun.sole.arguments.values).not_to include(Autonomia::FerramentasProntas::Fonte::FORA_DO_FORMATO)
+      expect(Autonomia::FerramentasProntas::Fontes::Cidades::FONTE.normalizar_argumentos('uf' => 'ac', 'busca' => ''))
+        .to eq('uf' => 'ac', 'busca' => '')
     end
 
     it 'no job, com a flag das prontas desligada depois da abertura, nao consulta' do
