@@ -11,14 +11,16 @@
 #   só entra se toda pessoa da conta que vê a conversa do alvo também a vê (a mesma política, com caixa, time e função).
 #   As que ficam de fora vão em `fora` (os ids), e o histórico diz quantas.
 # - A conversa do alvo já vai na leitura do passo. Das outras, a mesma leitura de mensagens do passo (o Estado).
+# - G68 (#2864): o "extrair" usa a mesma leitura; com `fuso`, cada mensagem das outras conversas vai com a data e a hora.
 class Autonomia::Automacao::EnviosDaExecucao
   LEITURAS_DE_MENSAGEM = %w[mensagens_recentes mensagens_com_respostas ultima_mensagem].freeze
   MAX_CARACTERES = ::Autonomia::Decisores::Estado::MAX_CARACTERES
 
-  def initialize(execucao:, conversa:, leituras:)
+  def initialize(execucao:, conversa:, leituras:, fuso: nil)
     @execucao = execucao
     @conversa = conversa
     @leituras = Array(leituras) & LEITURAS_DE_MENSAGEM
+    @fuso = fuso
   end
 
   # O que vai à IA junto da leitura do passo. Vazio quando a execução ainda não mandou nada.
@@ -72,6 +74,6 @@ class Autonomia::Automacao::EnviosDaExecucao
 
   def leitura(conversa)
     leituras = @leituras.presence || ::Autonomia::Decisor::LEITURAS_PADRAO
-    ::Autonomia::Decisores::Estado.new(conversation: conversa, leituras: leituras).conversa
+    ::Autonomia::Decisores::Estado.new(conversation: conversa, leituras: leituras, fuso: @fuso).conversa
   end
 end

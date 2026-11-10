@@ -41,12 +41,8 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # O 18 tem spec próprio à risca (exemplo_18_selecao_de_candidatos_spec.rb); esperam a G45 (gatilho), a G18 (passos
     # 4 e 6, no card da seleção) e a G32 (passo 8, antes da reunião).
     18 => ['Seleção de candidatos sem planilha', 'G45 (mensagem com anexo), G18, G32, G4, G20, G1, G5, G6, G12, G15, G25'],
-    # O 19 fica até a G68 (#2864): no passo 3 o extrair não lê a resposta que chegou por e-mail. Por partes:
-    # g53_conteudo_da_falha_spec.rb (passos 1 e 2) e g43_numero_novo_spec.rb (4 e 7).
-    19 => ['Cliente que sumiu do WhatsApp',
-           'G68 (passo 3: o extrair lê a resposta do e-mail), ' \
-           'G34 (passo 3: a resposta na conversa do e-mail), G28 (passo 3: extrair o número novo), G19 (passo 5: nota no contato), ' \
-           'G3 (passo 6: retorno), G11 (passo 6: sem resposta em 3 dias), G53, G43, G8, G1, G2'],
+    # O 19 saiu com a G68 (#2864) na integração 2 do #2414: exemplo_19_cliente_sumiu_spec.rb roda à risca, passos 1 a 7
+    # (por partes também em g53_conteudo_da_falha_spec.rb e g43_numero_novo_spec.rb).
     20 => ['Venda fechada já entra no sistema da empresa', 'G5 (card ganho), G1, G2, G7, G11, G12, G13, G44 (duas agendas), G52 (campanha de e-mail)']
   }
 
@@ -59,6 +55,11 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
   # As sondas do 17 rodam o código de verdade; com o exemplo fora da lista, a prova delas fica aqui.
   it 'exemplo 17: as lacunas fechadas por comportamento continuam fechadas' do
     expect(FechamentoAutomacao::Lacunas.abertas(%w[G63 G64 G66 G67])).to be_empty
+  end
+
+  # Com o 19 fora da lista, a prova das sondas dele fica aqui: a G43 manda ao número novo e a G68 lê a resposta do e-mail.
+  it 'exemplo 19: as lacunas fechadas por comportamento continuam fechadas' do
+    expect(FechamentoAutomacao::Lacunas.abertas(%w[G43 G68])).to be_empty
   end
 
   # G21 (#2706) não segura nenhum pendente: a sonda roda aqui para que a prova de comportamento dela não fique sem dono.

@@ -250,66 +250,6 @@ module FechamentoAutomacao::Lacunas
       montado.corpo&.dig('custom_attributes', 'revisao') == Time.current.utc.to_date.advance(months: 6).iso8601
   end
 
-  # G18: o passo "em outro registro" da mãe lê no alvo dela o contato guardado no campo, e o job abre a execução filha no
-  # contato ligado, que anda só no ramo do passo (nunca nos passos da mãe). Roda na transação do exemplo, que desfaz
-  # tudo; a primeira rodada da filha só fica na fila.
-  def filha_anda_no_registro_ligado?
-    filha = filha_na_maria
-    roteiro = filha && Autonomia::Automacao::Roteiro.da(filha)
-    roteiro.present? && roteiro.primeiro['id'] == 'na_maria' && roteiro.seguinte('na_maria').nil?
-  end
-
-  # G65: a filha, na Maria, lê o nome do João no registro de origem, como o Executor lê.
-  def filha_le_a_origem?
-    filha = filha_na_maria
-    contexto = filha && Autonomia::Automacao::Contexto.de(filha.alvo, execucao: filha)
-    lido = contexto && Autonomia::Automacao::Valores.new(alvo: contexto, quem: filha.automacao.ligada_por).ler('origem.contato.nome')
-    lido == 'João'
-  end
-
-  # A execução filha aberta na Maria pelo passo da mãe, que roda no card do João (quem ela indicou). A Maria fica no
-  # campo do card do tipo contato (decisão 16). O gatilho de card pede a flag dos gatilhos e o CRM ligado.
-  def filha_na_maria
-    ClimateControl.modify(CRM_KANBAN_ENABLED: 'true') do
-      account = FactoryBot.create(:account)
-      account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_gatilhos')
-      FactoryBot.create(:custom_attribute_definition, account: account, attribute_key: 'indicado_por', attribute_display_name: 'Indicado por',
-                                                      attribute_model: 'card_attribute', attribute_display_type: 'contato')
-      maria = account.contacts.create!(name: 'Maria')
-      dona = FactoryBot.create(:user, account: account, role: :administrator)
-      mae = mae_com_passo_em_outro(account, card_do_joao(account, dona, maria), dona)
-      abrir_filhas(mae) && Autonomia::Automacao::Execucao.find_by(automacao_id: mae.automacao_id, alvo: maria)
-    end
-  end
-
-  def card_do_joao(account, dona, maria)
-    funil, etapa = create_crm_pipeline(account: account, user: dona)
-    account.crm_cards.create!(pipeline: funil, stage: etapa, contact: account.contacts.create!(name: 'João'), title: 'Banho do Rex',
-                              currency: 'BRL', custom_attributes: { 'indicado_por' => maria.id })
-  end
-
-  def mae_com_passo_em_outro(account, card, dona)
-    ramo = { 'id' => 'na_maria', 'tipo' => 'esperar', 'duracao' => { 'valor' => 1, 'unidade' => 'dias' } }
-    passo = { 'id' => 'outro', 'tipo' => 'em_outro_registro', 'passos' => [ramo],
-              'registro' => { 'de' => 'contato_do_campo', 'campo' => { '$valor' => 'card.atributos.indicado_por' }, 'usar' => 'contato' } }
-    receita = { 'gatilho' => { 'tipo' => 'card.ganho' }, 'passos' => [passo, { 'id' => 'na_mae', 'tipo' => 'parar' }] }
-    automacao = FactoryBot.create(:autonomia_automacao, account: account, ativa: true, ligada_por: dona)
-    versao = FactoryBot.create(:autonomia_automacao_versao, automacao: automacao, receita: receita)
-    FactoryBot.create(:autonomia_automacao_execucao, versao: versao, alvo: card)
-  end
-
-  # O passo da mãe como o Executor o roda, e o job que ele enfileira, com o contato que o passo leu.
-  def abrir_filhas(mae)
-    passo = Autonomia::Automacao::Roteiro.da(mae).passo('outro')
-    valores = Autonomia::Automacao::Valores.new(alvo: mae.alvo, quem: mae.automacao.ligada_por)
-    acesso = Autonomia::Automacao::Acesso.new(mae.automacao, chave_gatilho: mae.chave_gatilho)
-    lido = Autonomia::Automacao::PassoEmOutroRegistro.new(execucao: mae, passo: passo, valores: valores, acesso: acesso).executar
-    return false unless lido.tipo == :ok
-
-    Autonomia::Automacao::EmOutroRegistroJob.perform_now(mae.account_id, mae.id, 'outro', lido.dados['contato_id'])
-    true
-  end
-
   # G30: o lead do formulário entra pelo Importer, como no webhook, num funil com a Atribuição ligada e um corretor que
   # cuida dele; o card nasce com esse corretor de dono. Roda na transação do exemplo, que desfaz tudo.
   def lead_ganha_dono_pela_atribuicao?
@@ -355,7 +295,7 @@ module FechamentoAutomacao::Lacunas
     'G15' => -> { passo?('ia_assumir') },
     'G16' => -> { valor_calculado_no_corpo? },
     'G17' => -> { acao?('POST contacts') },
-    'G18' => -> { filha_anda_no_registro_ligado? },
+    'G18' => -> { FechamentoAutomacao::SondasDoRegistroLigado.filha_anda_no_registro_ligado? },
     'G19' => -> { acao?('POST contacts/:contact_id/notes') },
     # Os passos de IA leem a foto, o PDF e o áudio da conversa (`le: anexos`, #2669).
     'G20' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('anexos') },
@@ -447,7 +387,7 @@ module FechamentoAutomacao::Lacunas
         end
     },
     # G65 (#2842, ex. 11, passo 7): a filha lê o registro de origem (o João, no card ganho) com `origem.*`.
-    'G65' => -> { filha_le_a_origem? },
+    'G65' => -> { FechamentoAutomacao::SondasDoRegistroLigado.filha_le_a_origem? },
     # Achada no #2675 (09/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
     # G55 (ex. 16, passo 2): disparar a campanha da etiqueta a partir de um gatilho de card. A campanha só sai do
     # conta.recorrente (`campanha_so_sem_alvo`), e o "para cada card perdido" é o card.recorrente.
@@ -472,8 +412,9 @@ module FechamentoAutomacao::Lacunas
       FechamentoAutomacao::SondasDoExemplo17.conversa_acompanha_o_responsavel? && FechamentoAutomacao::SondasDoExemplo17.ia_assume_e_devolve?
     },
     'G67' => -> { FechamentoAutomacao::SondasDoExemplo17.resumo_le_o_periodo? },
-    # Do exemplo 19, passo 3 (#2864): o extrair lê só a conversa da execução; a resposta do e-mail fica fora. Aberta.
-    'G68' => nil,
+    # Fechada com prova (#2864, exemplo 19, passo 3): o extrair lê a resposta que chegou na conversa do e-mail, como o
+    # resumir (G42). O ponta a ponta está em spec/fechamento/automacao/exemplo_19_cliente_sumiu_spec.rb.
+    'G68' => -> { FechamentoAutomacao::SondasDoExemplo19.extrair_le_a_resposta_do_email? },
     # Do exemplo 14, passo 5 (#2791): o laço dos documentos numa automação só. O "esperar até" lê o documento novo, e o
     # "decidir" volta a ele (`de_novo.desde`). Prova em spec/fechamento/automacao/exemplo_14_documentacao_spec.rb.
     'G46' => lambda {
