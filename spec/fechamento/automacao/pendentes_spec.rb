@@ -37,9 +37,10 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # O 17 saiu com a G66 (#2843), a G67 (#2844) e a decisão 18: exemplo_17_ferias_spec.rb roda à risca numa automação
     # só, inteiro, sem pendente (a agente de IA cobre a Renata pela opção do passo, e a conversa volta quando ela escreve).
     18 => ['Seleção de candidatos sem planilha', 'G4, G20 (ler o currículo e criar o card), G1, G5, G6, G12, G15, G25'],
-    # O 19 fica até ter o spec de ponta a ponta (#2570). Por partes: g53_conteudo_da_falha_spec.rb (passos 1 e 2) e
-    # g43_numero_novo_spec.rb (4 e 7); sem prova, os passos 3, 5 e 6.
+    # O 19 fica até a G68 (#2864): no passo 3 o extrair não lê a resposta que chegou por e-mail. Por partes:
+    # g53_conteudo_da_falha_spec.rb (passos 1 e 2) e g43_numero_novo_spec.rb (4 e 7).
     19 => ['Cliente que sumiu do WhatsApp',
+           'G68 (passo 3: o extrair lê a resposta do e-mail), ' \
            'G34 (passo 3: a resposta na conversa do e-mail), G28 (passo 3: extrair o número novo), G19 (passo 5: nota no contato), ' \
            'G3 (passo 6: retorno), G11 (passo 6: sem resposta em 3 dias), G53, G43, G8, G1, G2'],
     20 => ['Venda fechada já entra no sistema da empresa', 'G5 (card ganho), G1, G2, G7, G11, G12, G13']
