@@ -3150,7 +3150,10 @@
         "NAO_CONSEGUI": "Não deu para consultar agora. Tente de novo daqui a pouco.",
         "PEDIDO_INVALIDO": "Esse valor não está no formato certo. Veja o exemplo e tente de novo.",
         "DESLIGADA": "Esta ferramenta não está liberada para a sua conta agora.",
-        "SEM_PERMISSAO": "Você não tem permissão para experimentar as ferramentas prontas."
+        "SEM_PERMISSAO": "Você não tem permissão para experimentar as ferramentas prontas.",
+        "SEM_IA": "Para experimentar esta ferramenta, a conta precisa ter a IA ligada. Peça a quem administra a conta.",
+        "NAO_ENTENDI": "Não deu para entender o que consultar. Escreva como no exemplo e tente de novo.",
+        "MAIS_PROVAVEL": "Havia mais de uma opção, e mostrei a mais provável. Na conversa, o agente pergunta ao cliente quando tiver dúvida."
       },
       "CAMPOS": {
         "CEP": "CEP",
@@ -3252,8 +3255,8 @@
           "CLIENTE": "Brasiléia fica no Acre?",
           "AGENTE": "Fica sim: Brasiléia é uma das 22 cidades do Acre.",
           "USE_QUANDO": "Use quando a conversa precisar saber se uma cidade existe num estado ou quais cidades um estado tem.",
-          "ROTULO": "Estado (ex.: AC)",
-          "EXEMPLO": "AC",
+          "ROTULO": "Cidade",
+          "EXEMPLO": "Ribeirão Preto",
           "CONSULTAS": "estados do Brasil, cidades de um estado"
         },
         "LOCALIZACAO": {
@@ -3284,8 +3287,8 @@
           "CLIENTE": "Quanto vale meu Onix 2020?",
           "AGENTE": "O Onix LT 1.0 2020 vale R$ 60.822 na tabela deste mês.",
           "USE_QUANDO": "Use quando o cliente quiser saber quanto vale um carro, moto ou caminhão.",
-          "ROTULO": "Código do veículo na tabela FIPE",
-          "EXEMPLO": "004517-9",
+          "ROTULO": "Carro e ano",
+          "EXEMPLO": "Onix 2020",
           "CONSULTAS": "marcas, modelos de uma marca, preço do mês"
         },
         "BANCO_CENTRAL": {
@@ -3306,8 +3309,8 @@
           "CLIENTE": "Quantos dias úteis faltam até 30 de novembro?",
           "AGENTE": "Daqui até 30/11 são 14 dias úteis. No meio tem o feriado nacional de 20/11.",
           "USE_QUANDO": "Use quando for preciso saber se um dia é feriado nacional ou contar um prazo em dias úteis.",
-          "ROTULO": "Contar dias úteis de hoje até (dia/mês/ano)",
-          "EXEMPLO": "30/11/2026",
+          "ROTULO": "Data ou prazo",
+          "EXEMPLO": "dias úteis até {data}",
           "CONSULTAS": "feriados nacionais do ano, dias úteis até uma data"
         },
         "BANCOS": {

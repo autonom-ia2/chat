@@ -8,19 +8,20 @@
 #
 # `EXEMPLOS`: a consulta de cada fonte e em qual parâmetro entra o valor digitado. Fonte sem campo (o Banco Central)
 # responde a cotação do dólar. A localização recebe "latitude, longitude" num campo só.
+#
+# `COM_TEXTO_LIVRE`: a fonte em que a pessoa escreve como falaria ("Onix 2020", "Ribeirão Preto", "dias úteis até
+# 30/11"). Quem entende o texto é o modelo, pela IA da conta (`Experimente::ComModelo`), como o agente faria.
 class Autonomia::FerramentasProntas::Experimente
   EXEMPLOS = {
     'cep' => { 'consulta' => 'endereco', 'campo' => 'cep' },
     'cnpj' => { 'consulta' => 'empresa', 'campo' => 'cnpj' },
     'cpf' => { 'consulta' => 'conferir', 'campo' => 'cpf' },
-    'fipe' => { 'consulta' => 'preco', 'campo' => 'codigo_fipe', 'fixos' => { 'tipo' => 'carros' } },
-    'feriados' => { 'consulta' => 'dias_uteis', 'campo' => 'ate' },
     'banco_central' => { 'consulta' => 'dolar' },
-    'cidades' => { 'consulta' => 'cidades', 'campo' => 'uf' },
     'ddd' => { 'consulta' => 'ddd', 'campo' => 'ddd' },
     'localizacao' => { 'consulta' => 'cidade', 'campos' => %w[latitude longitude] },
     'bancos' => { 'consulta' => 'banco', 'campo' => 'codigo' }
   }.freeze
+  COM_TEXTO_LIVRE = %w[fipe cidades feriados].freeze
   MAX_VALOR = 100
 
   def initialize(account:, fonte:, valor:)
@@ -34,6 +35,8 @@ class Autonomia::FerramentasProntas::Experimente
     return { 'situacao' => 'desligada' } unless Autonomia::FerramentasProntas.disponivel?(@account, @fonte)
 
     Autonomia::FerramentasProntas::Acesso.create_or_find_by!(account_id: @account.id, fonte: @fonte.chave)
+    return ComModelo.new(account: @account, fonte: @fonte, valor: @valor).call if COM_TEXTO_LIVRE.include?(@fonte.chave)
+
     resposta = JSON.parse(Autonomia::FerramentasProntas::Execucao.new(tool: ferramenta, params: argumentos).call)
     resposta.slice('situacao', 'dados')
   end

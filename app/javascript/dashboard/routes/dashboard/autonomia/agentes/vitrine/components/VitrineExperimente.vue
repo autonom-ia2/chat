@@ -10,6 +10,8 @@ import { useVitrine } from '../useVitrine';
 // #2858 F2 — testar antes de incluir: um valor de exemplo já preenchido, um botão, e o resultado em linhas legíveis,
 // como o agente recebe. A consulta é de verdade (FerramentasProntasController#experimentar) e conta no limite do dia
 // da conta. Fonte sem campo (Banco Central) só tem o botão. Cada situação sem resultado tem uma frase só.
+// Na FIPE, nas cidades e nos feriados a pessoa escreve como falaria ("Onix 2020"): quem entende é a IA da conta, e
+// quando havia mais de uma opção (`mais_provavel`) a tela avisa que mostrou a mais provável.
 const props = defineProps({
   ferramenta: { type: Object, required: true },
 });
@@ -25,10 +27,18 @@ const base = computed(
 const rotulo = computed(() => t(`${base.value}.ROTULO`));
 const exemplo = () =>
   props.ferramenta.exemplo
-    ? props.ferramenta.exemplo(new Date())
+    ? t(`${base.value}.EXEMPLO`, { data: props.ferramenta.exemplo(new Date()) })
     : t(`${base.value}.EXEMPLO`);
 
 const valor = ref(props.ferramenta.semCampo ? '' : exemplo());
+// As mensagens do idioma da pessoa podem chegar depois de a tela abrir: o exemplo ainda intacto acompanha a troca
+// (no pt_BR, "dias úteis até…" e não o texto da reserva em inglês). O que a pessoa digitou não muda.
+const exemploAtual = computed(() =>
+  props.ferramenta.semCampo ? '' : exemplo()
+);
+watch(exemploAtual, (novo, velho) => {
+  if (valor.value === velho) valor.value = novo;
+});
 const consultando = ref(false);
 const resposta = ref(null);
 
@@ -46,6 +56,8 @@ const SITUACOES = {
   pedido_invalido: 'PEDIDO_INVALIDO',
   desligada: 'DESLIGADA',
   sem_permissao: 'SEM_PERMISSAO',
+  sem_ia: 'SEM_IA',
+  nao_entendi: 'NAO_ENTENDI',
 };
 
 const textosDoResultado = computed(() => ({
@@ -61,6 +73,9 @@ const textosDoResultado = computed(() => ({
 }));
 
 const encontrado = computed(() => resposta.value?.situacao === 'encontrado');
+const maisProvavel = computed(
+  () => encontrado.value && resposta.value.mais_provavel === true
+);
 const linhas = computed(() =>
   encontrado.value
     ? linhasDoResultado(resposta.value.dados, textosDoResultado.value)
@@ -144,6 +159,13 @@ const rodar = async () => {
             </dd>
           </template>
         </dl>
+        <p
+          v-if="maisProvavel"
+          data-experimente-mais-provavel
+          class="m-0 text-sm text-n-slate-11"
+        >
+          {{ t(`${NS}.RESULTADO.MAIS_PROVAVEL`) }}
+        </p>
       </div>
       <p
         v-else-if="aviso"
