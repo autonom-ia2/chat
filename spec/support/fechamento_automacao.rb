@@ -340,15 +340,13 @@ module FechamentoAutomacao::Lacunas
     # A IA lê as notas internas da conversa (`le: notas`, #2679): exemplo 5, passo 1.
     'G36' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('notas') },
     # Achadas no exemplo 7 (auditoria dos termos, 07/11); G33 e G34 são do lote 3 (#2680), G35 e G36 da F7 (#2688).
-    # O lote 5 (#2686) traz as peças da G37 e da G38, com as sondas prontas em FechamentoAutomacao::SondasDaCampanha
-    # (spec/support/fechamento_automacao_campanha.rb). Elas ficam desligadas até o PR do spec de ponta a ponta do
-    # exemplo 7, que as liga; até lá o exemplo 7 segue em pendentes_spec.
+    # As peças da G37 e da G38 vieram no lote 5 (#2686); as sondas (FechamentoAutomacao::SondasDaCampanha, em
+    # spec/support/fechamento_automacao_campanha.rb) rodam o código da campanha e a Partida de verdade. Prova de ponta
+    # a ponta em spec/fechamento/automacao/exemplo_07_black_friday_spec.rb (lote 3 do #2414).
     # G37: o público da campanha com exclusão ("todos os outros", "perguntou e não comprou").
-    # Sonda: FechamentoAutomacao::SondasDaCampanha.campanha_para_todos_os_outros?
-    'G37' => nil,
+    'G37' => -> { FechamentoAutomacao::SondasDaCampanha.campanha_para_todos_os_outros? },
     # G38: o filtro "respondeu à campanha X" no gatilho da mensagem.
-    # Sonda: FechamentoAutomacao::SondasDaCampanha.filtro_da_campanha_filtra?
-    'G38' => nil,
+    'G38' => -> { FechamentoAutomacao::SondasDaCampanha.filtro_da_campanha_filtra? },
     # G39 (#2753): o gatilho que roda uma vez, numa data ("a quinta antes da Black Friday"), não toda semana.
     'G39' => lambda {
       gatilho = { 'tipo' => 'conta.recorrente', 'frequencia' => 'uma_vez', 'data' => '2030-11-28', 'hora' => 9 }
