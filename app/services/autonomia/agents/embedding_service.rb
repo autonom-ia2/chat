@@ -1,5 +1,39 @@
 class Autonomia::Agents::EmbeddingService
-  class EmbeddingError < StandardError; end
+  class EmbeddingError < StandardError
+    ROTULOS = %w[ai_not_configured invalid_api_base rede].freeze
+
+    # #2850 — rótulo curto para log e telemetria. Nunca a mensagem do provedor, que pode trazer um pedaço da chave.
+    def motivo
+      ROTULOS.include?(message) ? message : 'provedor_recusou'
+    end
+  end
+
+  # #2850 — o prazo TOTAL de uma tentativa estourou (o do Faraday vale por operação: abrir, escrever, cada leitura). É um
+  # Timeout::Error: se estourar dentro do Net::HTTP, o Faraday o converte em Faraday::TimeoutError, motivo `prazo` também.
+  class PrazoTotal < Timeout::Error; end
+
+  # #2850 — falha que pode passar numa nova tentativa (prazo, conexão, provedor fora, limite de taxa). `motivo` é um
+  # rótulo curto para log e telemetria. O Retriever decide se tenta de novo; quem não trata recebe um EmbeddingError.
+  class Passageira < EmbeddingError
+    attr_reader :motivo
+
+    def initialize(motivo)
+      @motivo = motivo
+      super("Failed to create an embedding: #{motivo}")
+    end
+  end
+
+  # O erro de prazo e de conexão vem do Faraday, sem passar pelo RubyLLM::Error.
+  PASSAGEIRAS = {
+    PrazoTotal => 'prazo',
+    Faraday::TimeoutError => 'prazo',
+    Faraday::ConnectionFailed => 'conexao',
+    Faraday::SSLError => 'conexao',
+    RubyLLM::ServerError => 'provedor',
+    RubyLLM::ServiceUnavailableError => 'provedor',
+    RubyLLM::OverloadedError => 'provedor',
+    RubyLLM::RateLimitError => 'limite_de_taxa'
+  }.freeze
 
   # api_base padrão da OpenAI. O RubyLLM já tem o seu próprio default (com o path correto), então
   # quando a credencial da conta vem com este host "pelado" (sem /v1) NÃO repassamos o base — senão
@@ -14,10 +48,13 @@ class Autonomia::Agents::EmbeddingService
   # `model:` explícito (opcional) trava o modelo p/ TODA a operação (Ingestor/Retriever resolvem 1x e
   # passam aqui) — evita que uma troca de config no meio de embed/retrieve/write compare/grave vetor de
   # dimensão diferente na coluna errada. Também habilita o backfill (força 3-large sem virar o global).
-  def initialize(account:, model: nil)
+  # `prazo:` (segundos, opcional) — #2850: prazo por tentativa, sem as repetições do RubyLLM. Sem ele (ingestão em
+  # lote, fora do turno do cliente), ficam os padrões do RubyLLM.
+  def initialize(account:, model: nil, prazo: nil)
     Llm::Config.initialize!
     @account = account
     @model = model.presence || Autonomia::Agents::Config.active_embedding_model
+    @prazo = prazo
   end
 
   # text -> Array<Float> (dim do modelo: 1536 no 3-small, 3072 no 3-large). Retorna [] se vazio.
@@ -27,7 +64,17 @@ class Autonomia::Agents::EmbeddingService
     return [] if text.blank?
 
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    context.embed(text, model: @model).vectors
+    # A credencial (banco) e o guarda do api_base (DNS) ficam fora do prazo: interromper uma consulta no meio deixaria a
+    # conexão do banco quebrada pelo resto do job.
+    contexto = context
+    dentro_do_prazo { contexto.embed(text, model: @model).vectors }
+  rescue *PASSAGEIRAS.keys => e
+    log_failure(e, started_at: started_at)
+    raise Passageira, PASSAGEIRAS.find { |classe, _motivo| e.is_a?(classe) }.last
+  rescue Faraday::Error => e
+    # O resto do Faraday (resposta cortada, por exemplo) não é RubyLLM::Error: sem isto escaparia sem log nem motivo.
+    log_failure(e, started_at: started_at)
+    raise EmbeddingError, 'rede'
   rescue RubyLLM::Error => e
     log_failure(e, started_at: started_at)
     raise EmbeddingError, "Failed to create an embedding: #{e.message}"
@@ -68,6 +115,7 @@ class Autonomia::Agents::EmbeddingService
       cred = Crm::Ai::CredentialResolver.new(account: @account).resolve
       raise EmbeddingError, 'ai_not_configured' if cred.blank?
 
+      @api_host = host_da(cred)
       base = cred[:api_base].to_s.chomp('/')
       base = nil if base.blank? || base == OPENAI_DEFAULT_BASE
       # SSRF: api_base custom controlado pela conta é validado (HTTPS + bloqueio de host/IP
@@ -83,8 +131,23 @@ class Autonomia::Agents::EmbeddingService
       RubyLLM.context do |config|
         config.openai_api_key = cred[:api_key]
         config.openai_api_base = base if base.present?
+        com_prazo(config)
       end
     end
+  end
+
+  # #2850 — com prazo, a tentativa inteira cabe nele (o Timeout, como no `total_timeout` do Crm::Ai::ResponsesClient).
+  def dentro_do_prazo(&)
+    return yield if @prazo.nil?
+
+    Timeout.timeout(@prazo, PrazoTotal, &)
+  end
+
+  def com_prazo(config)
+    return if @prazo.nil?
+
+    config.request_timeout = @prazo
+    config.max_retries = 0
   end
 
   def log_failure(error, started_at:)
@@ -96,11 +159,14 @@ class Autonomia::Agents::EmbeddingService
     )
   end
 
-  def api_host
-    cred = Crm::Ai::CredentialResolver.new(account: @account).resolve
+  # #2850 — o host do log sai da credencial já lida pelo `context`. Relê-la aqui somaria outra consulta ao banco depois do
+  # prazo estourado, fora do orçamento do turno.
+  attr_reader :api_host
+
+  def host_da(cred)
     base = cred.to_h[:api_base].to_s.strip.presence || OPENAI_DEFAULT_BASE
     URI.parse(base).host
-  rescue StandardError
+  rescue URI::InvalidURIError
     nil
   end
 end

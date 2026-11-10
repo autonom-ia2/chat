@@ -9,9 +9,10 @@
 module FechamentoAutomacao
   OPENAI = 'https://api.openai.com/v1/responses'.freeze
   # Os jobs que o caminho de produção enfileira entre o evento e a saída. Os do webhook de cada canal (FechamentoAutomacao::
-  # Canais) gravam a mensagem do cliente como em produção.
+  # Canais) gravam a mensagem do cliente como em produção. O EmOutroRegistroJob (G18) abre as execuções filhas do passo
+  # "em outro registro".
   JOBS = [Webhooks::WhatsappEventsJob, Webhooks::InstagramEventsJob, EventDispatcherJob, Autonomia::Automacao::AvancarJob,
-          SendReplyJob].freeze
+          Autonomia::Automacao::EmOutroRegistroJob, SendReplyJob].freeze
   LIMITE_DE_JOBS = 60
 
   Chamada = Data.define(:metodo, :host, :caminho, :corpo)
@@ -90,6 +91,109 @@ module FechamentoAutomacao
 
   def historico_de(automacao)
     Autonomia::Automacao::Registro.where(automacao_id: automacao['id']).order(:id).pluck(:passo, :resultado, :motivo)
+  end
+end
+
+# As sondas de comportamento do placar: cada uma monta o cenário mínimo, roda o caminho de produção e confere o efeito,
+# em vez de só procurar o nome no esquema. Lacuna aberta responde false, nunca erro.
+module FechamentoAutomacao::Comportamento
+  extend CrmHelpers
+
+  module_function
+
+  # A automação ligada como a tela liga: a receita passa pela conferência do salvar. A receita que o salvar recusa
+  # devolve nil (a lacuna segue aberta), nunca erro.
+  def ligada(account, dono, gatilho, passos)
+    definicao = FactoryBot.create(:autonomia_automacao, account: account, ligada_por: dono)
+    versao = definicao.versoes.create(account: account, numero: 1, receita: { 'gatilho' => gatilho, 'passos' => passos }, autor: dono)
+    return unless versao.persisted?
+
+    definicao.update!(versao_ativa: versao, ativa: true)
+    definicao
+  end
+
+  # A rodada que a Partida enfileirou, um job por vez, como no Sidekiq.
+  def rodar_as_rodadas
+    fila = ActiveJob::Base.queue_adapter.enqueued_jobs
+    FechamentoAutomacao::LIMITE_DE_JOBS.times do
+      job = fila.find { |item| item[:job] == Autonomia::Automacao::AvancarJob }
+      return unless job
+
+      fila.delete(job)
+      job[:job].perform_now(*ActiveJob::Arguments.deserialize(job[:args]))
+    end
+  end
+
+  WEBHOOK_DA_SONDA = 'https://93.184.216.34/sonda-g13'.freeze
+
+  # G13: a conversa resolvida dispara a automação, o passo "webhook" manda o corpo ao outro sistema (um receptor WebMock
+  # num IP público, sem DNS, que grava o pedido) e o histórico registra o envio com o host e o código. Roda na transação
+  # do exemplo, que desfaz tudo.
+  def webhook_envia_e_registra?
+    recebidos = receptor_da_sonda
+    account = FactoryBot.create(:account)
+    account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_gatilhos')
+    dono = FactoryBot.create(:user, account: account, role: :administrator)
+    conversa = FactoryBot.create(:conversation, account: account)
+    conversa.contact.update!(name: 'Sonda G13')
+    passo = { 'id' => 'sonda', 'tipo' => 'webhook', 'descricao' => 'Sonda', 'url' => WEBHOOK_DA_SONDA,
+              'corpo' => { 'nome' => { '$valor' => 'contato.nome' } } }
+    definicao = ligada(account, dono, { 'tipo' => 'conversa.resolvida' }, [passo])
+    return false unless definicao
+
+    Autonomia::Automacao::Partida.new(definicao: definicao, alvo: conversa, chave_gatilho: 'conversa.resolvida').call
+    rodar_as_rodadas
+    registro = Autonomia::Automacao::Registro.find_by(automacao_id: definicao.id, passo: 'sonda')
+    recebidos == [{ 'nome' => 'Sonda G13' }] && registro&.resultado == 'ok' &&
+      registro.dados.slice('host', 'codigo') == { 'host' => '93.184.216.34', 'codigo' => 200 }
+  ensure
+    Current.reset
+  end
+
+  # O outro sistema da sonda G13: grava o corpo de cada pedido e responde 200.
+  def receptor_da_sonda
+    [].tap do |recebidos|
+      WebMock::API.stub_request(:post, WEBHOOK_DA_SONDA).to_return do |pedido|
+        recebidos << JSON.parse(pedido.body)
+        { status: 200, body: { ok: true }.to_json, headers: { 'Content-Type' => 'application/json' } }
+      end
+    end
+  end
+
+  # G45: a automação que começa pela mensagem da conversa tem no "Só se" a etapa do card da conversa e a foto ou PDF. O
+  # texto não a começa; a foto, com o card na etapa, começa. A receita que o salvar recusa (o card fora do alcance da
+  # conversa) é lacuna aberta. Roda na transação do exemplo, que desfaz tudo; a rodada só fica na fila.
+  def so_se_da_conversa_le_o_card?
+    ClimateControl.modify(CRM_KANBAN_ENABLED: 'true') do
+      account = FactoryBot.create(:account)
+      account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_gatilhos')
+      dona = FactoryBot.create(:user, account: account, role: :administrator)
+      funil, etapa = create_crm_pipeline(account: account, user: dona)
+      conversa = FactoryBot.create(:conversation, account: account)
+      account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'Sonda G45', currency: 'BRL', primary_conversation: conversa,
+                                contact: conversa.contact, inbox: conversa.inbox)
+      espera = { 'id' => 'p1', 'tipo' => 'esperar', 'duracao' => { 'valor' => 1, 'unidade' => 'dias' } }
+      definicao = ligada(account, dona, filtro_do_card_e_do_anexo(etapa), [espera])
+      definicao.present? && [nil, 'sample.png'].map { |arquivo| comecou?(definicao, conversa, arquivo) } == [false, true]
+    end
+  end
+
+  def filtro_do_card_e_do_anexo(etapa)
+    { 'tipo' => 'mensagem.criada', 'filtros' => [{ 'campo' => { '$valor' => 'mensagem.tem_anexo' }, 'op' => 'igual', 'valor' => true },
+                                                 { 'campo' => { '$valor' => 'card.etapa_id' }, 'op' => 'igual', 'valor' => etapa.id }] }
+  end
+
+  # A mensagem do cliente (só texto, ou a foto `arquivo`) passa pela Partida: a execução abriu?
+  def comecou?(definicao, conversa, arquivo)
+    mensagem = conversa.messages.new(account: conversa.account, inbox: conversa.inbox, message_type: :incoming, sender: conversa.contact,
+                                     content: arquivo ? nil : 'Já mando')
+    if arquivo
+      anexo = mensagem.attachments.new(account_id: conversa.account_id, file_type: :image)
+      anexo.file.attach(io: Rails.root.join('spec/assets', arquivo).open, filename: arquivo, content_type: 'image/png')
+    end
+    mensagem.save!
+    Autonomia::Automacao::Partida.new(definicao: definicao, alvo: conversa, chave_gatilho: 'mensagem.criada', mensagem: mensagem).call
+    Autonomia::Automacao::Execucao.exists?(automacao_id: definicao.id)
   end
 end
 
@@ -210,14 +314,17 @@ module FechamentoAutomacao::Lacunas
     'G6' => -> { gatilho_de?(:tempo) },
     'G7' => -> { gatilho_de?(:recorrente) },
     'G8' => -> { gatilho?('mensagem.falhou') },
-    'G9' => -> { gatilho?('card.responsavel_mudou', 'conversa.responsavel_mudou') },
+    # A troca de dono e a de time do card: a receita do ex. 17 (quem cuidava antes ausente) dispara e lê os nomes.
+    'G9' => -> { FechamentoAutomacao::SondasDaTroca.troca_de_responsavel_dispara? && gatilho?('card.time_mudou') },
     'G10' => -> { gatilho?('etiqueta.posta', 'conversa.etiqueta_posta', 'contato.etiqueta_posta') },
     'G11' => -> { valor?('conversa.equipe_respondeu') && valor?('conversa.cliente_respondeu') },
     'G12' => lambda {
       gatilho?('card.reuniao_marcada') && gatilho?('card.reuniao_cancelada') &&
         %w[card.link_da_agenda conversa.link_da_agenda].any? { |caminho| valor?(caminho) }
     },
-    'G13' => -> { passo?('webhook') },
+    # G13 (#2670): o passo manda de verdade e o histórico registra; o ponta a ponta está em
+    # spec/fechamento/automacao/g13_webhook_spec.rb.
+    'G13' => -> { FechamentoAutomacao::Comportamento.webhook_envia_e_registra? },
     # Fechada com prova (#2630): o passo existe no esquema e o motor o roda; o ponta a ponta está em
     # spec/fechamento/automacao/g14_campanhas_spec.rb.
     'G14' => -> { passo?('campanha') && Autonomia::Automacao::Executor::NATIVOS.key?('campanha') },
@@ -227,15 +334,22 @@ module FechamentoAutomacao::Lacunas
     'G15' => -> { passo?('ia_assumir') },
     'G16' => -> { valor_calculado_no_corpo? },
     'G17' => -> { acao?('POST contacts') },
-    'G18' => nil,
+    'G18' => -> { FechamentoAutomacao::SondasDoRegistroLigado.filha_anda_no_registro_ligado? },
     'G19' => -> { acao?('POST contacts/:contact_id/notes') },
     # Os passos de IA leem a foto, o PDF e o áudio da conversa (`le: anexos`, #2669).
     'G20' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('anexos') },
-    'G21' => -> { passo?('prospeccao') },
-    'G22' => nil,
+    # Fechada com prova (#2706): o passo roda e cria o card; o ponta a ponta do exemplo 9 está em
+    # spec/fechamento/automacao/exemplo_09_prospeccao_semanal_spec.rb.
+    'G21' => -> { FechamentoAutomacao::SondasDoExemplo9.prospeccao_cria_o_card? },
+    # Fechada com prova (G22, exemplo 8, passo 9): o "para cada item" (G24) grava no card quem pediu, e o aviso de sexta
+    # lista ao RH quem ainda falta. O ponta a ponta do passo 9 está em spec/fechamento/automacao/g22_avisar_o_rh_spec.rb.
+    'G22' => -> { FechamentoAutomacao::SondasDoExemplo8.rh_avisado_do_que_falta? },
     # G23 (#2737): o "ausente até" de quem cuida, como valor da condição.
     'G23' => -> { valor?('card.responsavel_ausente') && valor?('conversa.responsavel_ausente') },
-    'G24' => nil,
+    # Fechada com prova (#2771): o "para cada item" abre um card por item, cada um numa raiz própria da cadeia, e a
+    # automação de card criado roda em todos (spec/services/autonomia/automacao/para_cada_cadeia_spec.rb; exemplo 8,
+    # passos 1 a 5, em spec/fechamento/automacao/exemplo_08_funcionario_novo_spec.rb).
+    'G24' => -> { FechamentoAutomacao::SondasDoExemplo8.segunda_automacao_em_cada_card? },
     'G25' => -> { acao?('POST crm/cards/:id/close') },
     'G26' => -> { passo?('sla') },
     # "Card criado ou atualizado com valor acima de R$ 50 mil" (15) e "card completo" (8, passo 8): só o card criado é a G5.
@@ -265,11 +379,14 @@ module FechamentoAutomacao::Lacunas
     # A IA lê as notas internas da conversa (`le: notas`, #2679): exemplo 5, passo 1.
     'G36' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('notas') },
     # Achadas no exemplo 7 (auditoria dos termos, 07/11); G33 e G34 são do lote 3 (#2680), G35 e G36 da F7 (#2688).
-    # Fecham com o lote 5 (#2686: a exclusão e o "respondeu à campanha") e com o PR do exemplo 7 da G14 (#2681, parte 4:
-    # a data única); a G14 liga as sondas e o spec do exemplo 7 no PR dela.
+    # O lote 5 (#2686) traz as peças da G37 e da G38, com as sondas prontas em FechamentoAutomacao::SondasDaCampanha
+    # (spec/support/fechamento_automacao_campanha.rb). Elas ficam desligadas até o PR do spec de ponta a ponta do
+    # exemplo 7, que as liga; até lá o exemplo 7 segue em pendentes_spec.
     # G37: o público da campanha com exclusão ("todos os outros", "perguntou e não comprou").
+    # Sonda: FechamentoAutomacao::SondasDaCampanha.campanha_para_todos_os_outros?
     'G37' => nil,
     # G38: o filtro "respondeu à campanha X" no gatilho da mensagem.
+    # Sonda: FechamentoAutomacao::SondasDaCampanha.filtro_da_campanha_filtra?
     'G38' => nil,
     # G39 (#2753): o gatilho que roda uma vez, numa data ("a quinta antes da Black Friday"), não toda semana.
     'G39' => lambda {
@@ -284,35 +401,94 @@ module FechamentoAutomacao::Lacunas
     'G41' => -> { campo_do_passo?('resumir', 'instrucao') && I18n.exists?('autonomia.automacao.motivos.sem_responsavel', :pt_BR) },
     # Da auditoria dos termos (07/11, #2716): a automação que começa pela conversa lê o card dela no "Só se" (exemplo 14,
     # passo 2) e o filtro sabe se a mensagem tem anexo (exemplo 18, começo).
-    'G45' => -> { valor?('mensagem.tem_anexo') && Autonomia::Automacao::Valores::BASES_DO_ALVO['Conversation'].include?('card') },
-    # Do exemplo 20 (#2703) e do exemplo 4 (#2650): o link da agenda de uma página escolhida (implantação e treinamento;
-    # turmas de outros horários e o professor). Hoje é a página do responsável do card ou da pessoa da conversa.
-    'G44' => nil,
-    # Do exemplo 12, passo 3 (#2650): "espera até a Ana responder ou o campo ser preenchido". O "esperar até" acorda com a
-    # conversa, o contato e a reunião; o campo do card preenchido só conta quando o prazo vence.
-    'G48' => nil,
+    'G45' => -> { FechamentoAutomacao::Comportamento.so_se_da_conversa_le_o_card? },
     # Do exemplo 4 (#2650): a etiqueta como contador de faltas. Com a execução da primeira falta esperando os 30 dias, a
     # nova entrada em "Faltou" no mesmo card não abria outra (Partida, `ja_aberta`): o contador nunca chegava a 2. G50
     # (#2682): `se_repetir: comeca_outra` abre a 2ª, e a nova entrada acorda o "esperar até" que lê card.entrou_de_novo.
     # Ponta a ponta em spec/fechamento/automacao/g50_reentrada_spec.rb.
     'G50' => -> { nova_entrada_comeca_outra_e_acorda_a_espera? },
-    # Do exemplo 6, passos 8 e 9 (#2650): a reunião registrada como atendida ("Aconteceu", outcome held) não gera evento
-    # nem gatilho; a etapa "Atendida" no lugar dela adaptaria o termo.
-    'G56' => nil,
+    # Do exemplo 20, passo 9 (termo à risca: "coloca o cliente na campanha de e-mail"): pôr o contato numa campanha de
+    # e-mail. A G14 cobre só WhatsApp; etiqueta + G7 + G2 é adaptar, não conta.
+    'G52' => nil,
     # Do exemplo 1, passo 12 (#2721, #2763): o resumo lê tudo o que a execução tentou, até o e-mail em conversa própria.
-    'G42' => -> { Autonomia::Automacao::EnviosDaExecucao.method_defined?(:dados) },
-    # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7). Fica
-    # com a Gatilhos, depois do lote 3 (#2689), que traz a porta da frente da conversa nova.
-    'G43' => nil,
+    # A sonda monta a falha do modelo e a do e-mail e confere que o resumir recebe os envios dos dois canais.
+    'G42' => -> { FechamentoAutomacao::SondasDoExemplo19.resumir_le_os_envios_dos_dois_canais? },
+    # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7),
+    # só quando o número da conversa morreu (a última mensagem da empresa nela falhou).
+    'G43' => -> { FechamentoAutomacao::SondasDoExemplo19.mensagem_vai_ao_numero_novo? },
+    # G48 (do exemplo 12, passo 3): o campo do card preenchido acorda o "esperar até" na hora, pelo gancho único do card
+    # (Crm::CardAvisaAutomacao, lote 4, #2682); prova ponta a ponta em spec/fechamento/automacao/g48_campo_do_card_spec.rb.
+    'G48' => -> { FechamentoAutomacao::SondasDoExemplo12.campo_do_card_acorda_a_espera? },
+    # G49 (ex. 11, passo 3; ex. 6, passos 5 e 6): o registro que um passo criou vira valor (`criado.<passo>`) e alvo dos
+    # passos seguintes: o card nasce no contato criado e o "em outro registro" roda no registro criado. Prova ponta a
+    # ponta em spec/fechamento/automacao/exemplo_11_indicacao_spec.rb.
+    'G49' => lambda {
+      valor?('criado.p1') && campo_do_passo?('card', 'contato') &&
+        Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'registro_ligado', 'oneOf').any? do |forma|
+          forma.dig('properties', 'de', 'const') == 'criado_no_passo'
+        end
+    },
+    # G65 (#2842, ex. 11, passo 7): a filha lê o registro de origem (o João, no card ganho) com `origem.*`.
+    'G65' => -> { FechamentoAutomacao::SondasDoRegistroLigado.filha_le_a_origem? },
+    # Achada no #2675 (09/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
+    # G55 (ex. 16, passo 2): disparar a campanha da etiqueta a partir de um gatilho de card. A campanha só sai do
+    # conta.recorrente (`campanha_so_sem_alvo`), e o "para cada card perdido" é o card.recorrente.
+    'G55' => nil,
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
     # (passo 2, "manda por e-mail o mesmo conteúdo"): `falhou.texto`, prova em g53_conteudo_da_falha_spec.rb.
     'G53' => -> { valor?('falhou.texto') },
     # G54: esperar a entrega da mensagem (passo 5, "Chegou: tira a etiqueta e grava uma nota"); fechada pela G34.
     'G54' => -> { valor?('envio.situacao') },
-    # Do exemplo 5, passo 8 (#2703): o card que a página de agendamento cria para a reunião (card do serviço já ganho)
-    # nasce sem conversa, e a mensagem do gatilho de reunião nele pula com `sem_conversa`. Caminho escolhido: o Booker
-    # liga ao card novo a conversa do contato na caixa da página, quando ela existe. A frente dona troca o nil pela sonda.
-    'G47' => nil
+    # Do exemplo 17, achadas na G9 (#2707). G62 (#2829): o campo do card do tipo pessoa da equipe, com o nome e a
+    # ausência dela (passos 3, 5 e 6). G63 (#2830): o galho "a cada mensagem do cliente" do "esperar até" (passo 4).
+    # G64 (#2839): a conferência toda manhã, numa hora marcada, na mesma automação (passo 5). Prova ponta a ponta em
+    # spec/fechamento/automacao/exemplo_17_ferias_spec.rb. G66 (#2843, decisão 14): o passo "passar a conversa para o
+    # responsável do card" leva a conversa da antiga dona à nova, e "espera a Renata responder" (passo 4) lê a Renata.
+    # G67 (#2844): o resumo da volta (passo 6) lê as mensagens desde o começo da execução (as férias), com teto.
+    'G62' => -> { FechamentoAutomacao::SondasDaTroca.campo_pessoa_le_na_conta? },
+    'G63' => -> { FechamentoAutomacao::SondasDoExemplo17.galho_a_cada_mensagem? },
+    'G64' => -> { FechamentoAutomacao::SondasDoExemplo17.conferencia_marcada? },
+    # Com a decisão 18, corrigida: a agente de IA cobre a Renata (opção do passo) e, quando ela escreve, a conversa volta
+    # sozinha para ela.
+    'G66' => lambda {
+      FechamentoAutomacao::SondasDoExemplo17.conversa_acompanha_o_responsavel? && FechamentoAutomacao::SondasDoExemplo17.ia_assume_e_devolve?
+    },
+    'G67' => -> { FechamentoAutomacao::SondasDoExemplo17.resumo_le_o_periodo? },
+    # Fechada com prova (#2864, exemplo 19, passo 3): o extrair lê a resposta que chegou na conversa do e-mail, como o
+    # resumir (G42). O ponta a ponta está em spec/fechamento/automacao/exemplo_19_cliente_sumiu_spec.rb.
+    'G68' => -> { FechamentoAutomacao::SondasDoExemplo19.extrair_le_a_resposta_do_email? },
+    # Do exemplo 14, passo 5 (#2791): o laço dos documentos numa automação só. O "esperar até" lê o documento novo, e o
+    # "decidir" volta a ele (`de_novo.desde`). Prova em spec/fechamento/automacao/exemplo_14_documentacao_spec.rb.
+    'G46' => lambda {
+      opcoes = Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'de_novo', 'oneOf')
+      valor?('conversa.cliente_mandou_documento') && Array(opcoes).any? { |opcao| opcao.dig('properties', 'desde') }
+    },
+    # Do exemplo 20, passos 5 e 8 (#2756): o link da agenda de uma página escolhida na receita, não só o do responsável.
+    'G44' => -> { FechamentoAutomacao::SondasDaAgenda.link_da_pagina_escolhida? },
+    # Do exemplo 5, passo 8 (#2755): o card em que a página põe a reunião ganha a conversa do contato no WhatsApp dos
+    # avisos da página; prova ponta a ponta no passo 8 de spec/fechamento/automacao/exemplo_05_revisao_do_carro_spec.rb.
+    'G47' => -> { FechamentoAutomacao::SondasDaAgenda.card_da_pagina_ganha_a_conversa? },
+    # Do exemplo 6, passo 8 (G56): o gatilho "reunião atendida", o primeiro "Aconteceu" da reunião na Agenda; prova ponta
+    # a ponta em spec/fechamento/automacao/g56_reuniao_atendida_spec.rb.
+    'G56' => -> { gatilho?('card.reuniao_atendida') },
+    # Do exemplo 6, passo 8, numa automação só (G59): esperar a reunião do contato acontecer, no meio da execução, e o
+    # resultado da reunião acordar essa espera; prova em spec/fechamento/automacao/g59_reuniao_atendida_na_espera_spec.rb.
+    'G59' => lambda {
+      valor?('contato.reuniao_atendida') && Autonomia::Automacao::EsperaDaReuniao::VALORES.include?('contato.reuniao_atendida')
+    },
+    # Do exemplo 6, passo 2 (G60): o link da agenda numa automação que roda no contato, pela ponte da conversa nova
+    # (#2680) até a conversa dele na caixa escolhida; prova no mesmo spec da G59. A sonda passa pelo salvar
+    # (Receita#problemas): a receita com a página de reserva da conta no gatilho sai sem problema.
+    'G60' => -> { valor?('conversa.link_da_agenda') && FechamentoAutomacao::SondasDaAgenda.reserva_no_gatilho_salva? },
+    # Do exemplo 6, passo 6 (G61): avisar quem atende a reunião fora dos gatilhos de reunião (a próxima marcada do contato,
+    # em card que quem ligou vê); prova no mesmo spec da G59. A sonda passa pelo salvar (Receita#problemas): o "quem atende
+    # a reunião" num gatilho de conversa sai sem problema (antes da G61, recusava com da_reuniao_so_no_gatilho).
+    'G61' => -> { FechamentoAutomacao::SondasDaAgenda.da_reuniao_em_qualquer_gatilho_salva? },
+    # Do exemplo 9, passo 4 (#2779): a campanha vai só a quem os passos anteriores desta execução criaram
+    # (`publico: desta_execucao`), não a todo contato com a etiqueta do mês. Prova em g58_publico_da_execucao_spec.rb.
+    'G58' => -> { FechamentoAutomacao::SondasDoExemplo9.publico_so_dos_criados? },
+    # G57 (#2769, ex. 1, passo 7): o retorno "para hoje" (ou amanhã), numa hora ou no fim do dia, no fuso da conta.
+    'G57' => -> { FechamentoAutomacao::SondasDoExemplo1.hora_de_hoje_que_passou_vence_agora? }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

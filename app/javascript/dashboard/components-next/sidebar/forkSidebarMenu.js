@@ -17,6 +17,7 @@ import {
 // Importação de contatos mora em Relacionamentos (ou em Contatos, sem a navegação nova).
 const IMPORTAR_CONTATOS = [
   'contacts_import_journey',
+  'contacts_imports_list',
   'contacts_campaign_imports',
 ];
 
@@ -96,7 +97,12 @@ export const FORK_LAYOUT = {
     },
     {
       id: 'AUTOMATICO',
-      itens: [{ pega: 'Agents', rotulo: 'AGENTES' }, { pega: 'Automacoes' }],
+      itens: [
+        { pega: 'Agents', rotulo: 'AGENTES' },
+        // #2858 F2 — só com a vitrine de ferramentas prontas ligada.
+        { pega: 'FerramentasProntas' },
+        { pega: 'Automacoes' },
+      ],
     },
     {
       id: 'RESULTADOS',

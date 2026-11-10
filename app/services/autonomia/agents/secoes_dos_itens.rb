@@ -41,10 +41,11 @@ class Autonomia::Agents::SecoesDosItens
            .index_by { |secao| [secao.source_id, secao.chunk_index] }
   end
 
-  # CASE com a distância de cada trecho de seção (a menor entre a dele, se veio, e a dos itens dele), sanitizado.
+  # CASE com a distância de cada trecho de seção (a menor entre a dele, se veio, e a dos itens dele), sanitizado. Sem
+  # distância nenhuma (#2850: a busca só pela palavra), NULL, nunca 0.
   def distancia_por_trecho(pais, entries)
     distancias = entries.group_by { |entry| chave_da_secao(entry) }
-                        .transform_values { |mesma_secao| mesma_secao.map { |entry| entry.neighbor_distance.to_f }.min }
+                        .transform_values { |mesma_secao| mesma_secao.filter_map { |entry| entry.neighbor_distance&.to_f }.min }
     casos = pais.map do |source_id, chunk_index|
       Autonomia::Agents::KnowledgeEntry.sanitize_sql_array(['WHEN source_id = ? AND chunk_index = ? THEN ?', source_id, chunk_index,
                                                             distancias[[source_id, chunk_index]]])

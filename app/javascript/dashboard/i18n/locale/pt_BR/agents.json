@@ -1697,6 +1697,33 @@
             "AMOSTRA": "O teste é uma amostra; confira as respostas."
           },
           "TUDO_CERTO": "Tudo certo. {nome} usa todo o material com seus clientes."
+        },
+        "ATENDIMENTO": {
+          "TITULO": "Endereço e telefone",
+          "TEXTO": "{nome} já sabe estes dados e passa ao cliente quando ele pedir.",
+          "VAZIO": "{nome} ainda não tem endereço nem telefone para mandar ao cliente.",
+          "ENDERECO": "Endereço: {endereco}",
+          "TELEFONE": "Telefone: {telefone}",
+          "ADICIONAR": "Adicionar",
+          "ALTERAR_ARIA": "Alterar endereço e telefone",
+          "GAVETA_TITULO": "Endereço e telefone de {nome}",
+          "GAVETA_DICA": "{nome} passa estes dados ao cliente quando ele pedir. Pode deixar em branco.",
+          "SALVAR": "Salvar",
+          "SALVANDO": "Salvando…",
+          "SALVO": "Salvo.",
+          "ERRO": "Não deu para salvar.",
+          "ERRO_GARANTIA": "Nada mudou.",
+          "CAMPOS": {
+            "ENDERECO": "Endereço do atendimento",
+            "ENDERECO_EXEMPLO": "Ex.: Rua das Flores, 120, Centro, Campinas",
+            "ENDERECO_DICA": "{nome} escreve este endereço na conversa quando o cliente perguntar onde fica. Não vai mapa dele.",
+            "TELEFONE": "Telefone de contato",
+            "PAIS": "País do telefone",
+            "TELEFONE_DICA": "{nome} manda este número como contato quando o cliente pedir um telefone.",
+            "TELEFONE_INCOMPLETO": "O número está incompleto. Confira os dígitos ou apague o campo.",
+            "TELEFONE_RECUSADO": "Este telefone não parece certo. Confira o número ou deixe em branco.",
+            "ENDERECO_RECUSADO": "Este endereço está longo demais. Deixe mais curto."
+          }
         }
       },
       "CRIAR": {
@@ -2996,6 +3023,307 @@
         "SEM_LEITURA": "Não consegui ler os comentários agora. Tente de novo daqui a pouco.",
         "RESPONDEU": "Respondeu a mensagem",
         "VER_CONVERSA_DE": "Ver a conversa com {contato}"
+      }
+    },
+    "VITRINE": {
+      "MENU": "Ferramentas prontas",
+      "CARREGANDO": "Carregando as ferramentas prontas…",
+      "HEROI": {
+        "TITULO": "Ensine coisas novas aos seus agentes",
+        "TEXTO": "Escolha o que o agente passa a saber consultar. A plataforma cuida do resto.",
+        "BUSCA": "O que você quer que o agente consiga fazer?",
+        "BUSCA_EXEMPLO": "Ex.: saber quanto vale um carro",
+        "LIMPAR": "Limpar a busca"
+      },
+      "PARA": {
+        "TEXTO": "Escolhendo para {nome}",
+        "TROCAR": "Trocar de agente"
+      },
+      "FILTRO": {
+        "ROTULO": "Mostrar",
+        "TODAS": "Todas"
+      },
+      "DESTAQUE": {
+        "RAMO": "Mais usadas no seu ramo",
+        "GERAL": "Mais escolhidas"
+      },
+      "CARTAO": {
+        "CONSULTAS": "Responde {n} tipos de pergunta",
+        "JA_SABE": "{nome} já sabe"
+      },
+      "BUSCA": {
+        "NADA": "Nada com “{termo}” por aqui ainda.",
+        "NADA_LIBERADO": "Ainda não há ferramentas prontas liberadas para esta conta.",
+        "VER_TODAS": "Ver todas",
+        "ACHADAS": "Achamos {n} para “{termo}”"
+      },
+      "SEM_AGENTE": {
+        "TEXTO": "Crie um agente primeiro. Depois é só escolher o que ele vai saber.",
+        "BOTAO": "Criar agente"
+      },
+      "AVANCADO": {
+        "TEXTO": "Não achou o que precisa?",
+        "BOTAO": "Criar a minha (avançado)"
+      },
+      "CRIAR_MINHA": {
+        "TITULO": "Em qual agente?",
+        "TEXTO": "Escolha o agente que vai usar a ferramenta. Depois você conta o que ela consulta.",
+        "CONTINUAR": "Continuar com {nome}",
+        "ESCOLHA": "Escolha um agente acima."
+      },
+      "GRUPOS": {
+        "PESSOAS": {
+          "NOME": "Pessoas e empresas",
+          "TEXTO": "Conferir quem é quem."
+        },
+        "LUGAR": {
+          "NOME": "Endereço e lugar",
+          "TEXTO": "Achar endereço, cidade e região."
+        },
+        "VEICULOS": {
+          "NOME": "Veículos",
+          "TEXTO": "Valor de carro, moto e caminhão."
+        },
+        "SAUDE": {
+          "NOME": "Saúde",
+          "TEXTO": "Hospitais, exames, doenças e planos."
+        },
+        "CLIMA": {
+          "NOME": "Clima",
+          "TEXTO": "Chuva, tempo e queimadas."
+        },
+        "DINHEIRO": {
+          "NOME": "Dinheiro e prazos",
+          "TEXTO": "Juros, inflação, dólar, feriados e bancos."
+        },
+        "CLIENTES": {
+          "NOME": "Encontrar novos clientes",
+          "TEXTO": "Quem está comprando e quem pode comprar."
+        },
+        "SEGUROS": {
+          "NOME": "Seguros",
+          "TEXTO": "Coberturas, corretores e seguradoras."
+        },
+        "OUTROS": {
+          "NOME": "Outros",
+          "TEXTO": "Mercadorias e sites."
+        }
+      },
+      "DETALHE": {
+        "CONSEGUE": "O que o agente passa a conseguir",
+        "CLIENTE": "Cliente",
+        "AGENTE": "Agente",
+        "CONSULTAS": "Ele escolhe sozinho o que perguntar: {lista}.",
+        "EXPERIMENTE": "Experimente",
+        "EXPERIMENTAR": "Experimentar",
+        "EXPERIMENTANDO": "Consultando…",
+        "DEU_CERTO": "Deu certo. É isto que o agente recebe:",
+        "QUAL_AGENTE": "Em qual agente?",
+        "JA_TEM": "Já sabe consultar isto",
+        "QUANDO": "Quando usar",
+        "QUANDO_AJUDA": "O agente decide pela conversa. Ajuste a frase se quiser.",
+        "QUANDO_VAZIO": "Escreva quando o agente deve usar.",
+        "ENSINAR": "Ensinar para {nome}",
+        "ENSINANDO": "Ensinando…",
+        "ESCOLHA_AGENTE": "Escolha um agente acima.",
+        "SUCESSO_TITULO": "Pronto!",
+        "SUCESSO_TEXTO": "{agente} já consegue {consegue}.",
+        "SUCESSO_LIGADA": "A ferramenta já está ligada. Você pode desligar quando quiser.",
+        "VER_FERRAMENTAS": "Ver ferramentas de {nome}",
+        "OUTRA": "Escolher outra"
+      },
+      "MOTIVOS": {
+        "SEM_PERMISSAO": "Você não tem permissão para cuidar das ferramentas dos agentes. Peça a quem administra a conta.",
+        "DESLIGADA": "As ferramentas prontas não estão liberadas para esta conta agora.",
+        "NAO_ENCONTRADO": "Não achei este agente ou esta ferramenta. Recarregue a página e tente de novo.",
+        "COTACAO": "O agente de cotação já vem com as ferramentas dele e não recebe ferramentas prontas.",
+        "NOME_EM_USO": "Este agente já tem outra ferramenta com o mesmo nome. Fale com quem cuida das ferramentas da conta.",
+        "REDE": "Sem conexão agora. Confira a internet e tente de novo.",
+        "GERAL": "Não deu certo agora. Tente de novo daqui a pouco."
+      },
+      "RESULTADO": {
+        "E_MAIS": "{nomes} e mais {n}",
+        "SIM": "Sim",
+        "NAO": "Não",
+        "ZERO_KM": "Zero quilômetro",
+        "NAO_ENCONTRADO": "A consulta não achou nada para esse valor. Confira e tente de novo.",
+        "NAO_CONSEGUI": "Não deu para consultar agora. Tente de novo daqui a pouco.",
+        "PEDIDO_INVALIDO": "Esse valor não está no formato certo. Veja o exemplo e tente de novo.",
+        "DESLIGADA": "Esta ferramenta não está liberada para a sua conta agora.",
+        "SEM_PERMISSAO": "Você não tem permissão para experimentar as ferramentas prontas.",
+        "SEM_IA": "Para experimentar esta ferramenta, a conta precisa ter a IA ligada. Peça a quem administra a conta.",
+        "NAO_ENTENDI": "Não deu para entender o que consultar. Escreva como no exemplo e tente de novo.",
+        "MAIS_PROVAVEL": "Havia mais de uma opção, e mostrei a mais provável. Na conversa, o agente pergunta ao cliente quando tiver dúvida."
+      },
+      "CAMPOS": {
+        "CEP": "CEP",
+        "LOGRADOURO": "Rua",
+        "BAIRRO": "Bairro",
+        "CIDADE": "Cidade",
+        "UF": "Estado",
+        "ESTADO": "Estado",
+        "CNPJ": "CNPJ",
+        "RAZAO_SOCIAL": "Razão social",
+        "NOME_FANTASIA": "Nome fantasia",
+        "SITUACAO": "Situação",
+        "DATA_DA_SITUACAO": "Situação desde",
+        "ABERTURA": "Aberta em",
+        "NATUREZA_JURIDICA": "Tipo de empresa",
+        "PORTE": "Porte",
+        "ATIVIDADE_PRINCIPAL_DESCRICAO": "Atividade principal",
+        "VALIDO": "Número válido?",
+        "REGIAO_FISCAL": "Região de emissão",
+        "ESTADOS": "Estados da região",
+        "OBSERVACAO": "Observação",
+        "VALOR": "Valor",
+        "MARCA": "Marca",
+        "MODELO": "Modelo",
+        "ANO_MODELO": "Ano",
+        "COMBUSTIVEL": "Combustível",
+        "CODIGO_FIPE": "Código na tabela",
+        "MES_DE_REFERENCIA": "Tabela de",
+        "PRECOS": "Anos na tabela",
+        "ANOS_DISPONIVEIS": "Anos na tabela",
+        "DE": "De",
+        "ATE": "Até",
+        "DIAS_UTEIS": "Dias úteis",
+        "FERIADOS_NO_PERIODO": "Feriados no período",
+        "COMPRA": "Compra",
+        "VENDA": "Venda",
+        "DATA": "Data",
+        "CIDADES": "Cidades",
+        "DDD": "DDD",
+        "FONTE_DOS_DADOS": "Dados de",
+        "CODIGO": "Código",
+        "NOME": "Banco",
+        "NOME_COMPLETO": "Nome completo"
+      },
+      "PRONTAS": {
+        "TITULO": "Prontas",
+        "TIRAR": "Tirar",
+        "TIRAR_SR": "Tirar {ferramenta} de {agente}",
+        "CONFIRMA_TITULO": "Tirar {ferramenta}?",
+        "CONFIRMA_TEXTO": "{agente} para de consultar isto. Dá para incluir de novo quando quiser.",
+        "CONFIRMA_SIM": "Tirar",
+        "CONFIRMA_NAO": "Manter",
+        "TIRANDO": "Tirando…",
+        "ERRO": "Não consegui tirar a ferramenta.",
+        "ERRO_GARANTIA": "Nada mudou no agente.",
+        "TIRADA": "{ferramenta} saiu de {agente}.",
+        "CRIAR_MINHA": "Criar a minha (avançado)",
+        "VAZIO": "{nome} ainda não consulta nada fora da conversa.",
+        "ESCOLHER": "Escolher ferramenta pronta"
+      },
+      "FERRAMENTAS": {
+        "CNPJ": {
+          "NOME": "Dados de uma empresa",
+          "APOIO": "pelo CNPJ",
+          "FAZ": "Mostra a razão social, a situação na Receita, a atividade e a cidade de uma empresa.",
+          "CONSEGUE": "conferir os dados de uma empresa",
+          "CLIENTE": "Meu CNPJ é 12.345.678/0001-90. A empresa está ativa?",
+          "AGENTE": "Achei: Padaria Pão de Ouro Ltda, ativa na Receita, padaria em Campinas – SP.",
+          "USE_QUANDO": "Use quando o cliente informar um CNPJ ou pedir para conferir os dados de uma empresa.",
+          "ROTULO": "CNPJ",
+          "EXEMPLO": "33.000.167/0001-01"
+        },
+        "CPF": {
+          "NOME": "CPF válido",
+          "APOIO": "confere os dígitos",
+          "FAZ": "Confere se o número do CPF é válido e em que região foi emitido. Não mostra nome nem situação na Receita.",
+          "CONSEGUE": "conferir se um número de CPF é válido",
+          "CLIENTE": "Meu CPF é 111.444.777-35.",
+          "AGENTE": "Os dígitos conferem: o número está certo, de um CPF emitido no Espírito Santo ou no Rio de Janeiro.",
+          "USE_QUANDO": "Use quando o cliente informar um CPF e for preciso conferir se o número está certo.",
+          "ROTULO": "CPF",
+          "EXEMPLO": "111.444.777-35"
+        },
+        "CEP": {
+          "NOME": "Endereço pelo CEP",
+          "FAZ": "Acha rua, bairro, cidade e estado a partir do CEP.",
+          "CONSEGUE": "achar um endereço pelo CEP",
+          "CLIENTE": "Meu CEP é 01001-000.",
+          "AGENTE": "Achei: Praça da Sé, bairro Sé, São Paulo – SP. Qual o número?",
+          "USE_QUANDO": "Use quando o cliente informar um CEP ou quando for preciso completar um endereço.",
+          "ROTULO": "CEP",
+          "EXEMPLO": "01001-000"
+        },
+        "CIDADES": {
+          "NOME": "Cidades de um estado",
+          "APOIO": "lista oficial do IBGE",
+          "FAZ": "Lista os estados do Brasil e as cidades de cada estado.",
+          "CONSEGUE": "dizer as cidades de um estado",
+          "CLIENTE": "Brasiléia fica no Acre?",
+          "AGENTE": "Fica sim: Brasiléia é uma das 22 cidades do Acre.",
+          "USE_QUANDO": "Use quando a conversa precisar saber se uma cidade existe num estado ou quais cidades um estado tem.",
+          "ROTULO": "Cidade",
+          "EXEMPLO": "Ribeirão Preto",
+          "CONSULTAS": "estados do Brasil, cidades de um estado"
+        },
+        "LOCALIZACAO": {
+          "NOME": "Cidade pela localização",
+          "FAZ": "Diz em que cidade e estado fica uma localização enviada pelo cliente.",
+          "CONSEGUE": "dizer em que cidade fica uma localização",
+          "CLIENTE": "(enviou a localização)",
+          "AGENTE": "Você está em Campinas, São Paulo. Já anotei!",
+          "USE_QUANDO": "Use quando o cliente enviar a localização dele.",
+          "ROTULO": "Localização (latitude, longitude)",
+          "EXEMPLO": "-22.9056, -47.0608"
+        },
+        "DDD": {
+          "NOME": "Estado pelo DDD",
+          "FAZ": "Diz de que estado é um DDD e, quando der, quais cidades usam esse DDD.",
+          "CONSEGUE": "dizer de que estado é um telefone",
+          "CLIENTE": "Meu número é 31 99999-0000.",
+          "AGENTE": "Anotado! O 31 é de Minas Gerais, de Belo Horizonte e região.",
+          "USE_QUANDO": "Use quando for útil saber de que estado é um telefone.",
+          "ROTULO": "DDD",
+          "EXEMPLO": "31"
+        },
+        "FIPE": {
+          "NOME": "Valor do carro",
+          "APOIO": "tabela FIPE",
+          "FAZ": "Diz quanto vale um carro, uma moto ou um caminhão na tabela FIPE do mês.",
+          "CONSEGUE": "dizer quanto vale um carro",
+          "CLIENTE": "Quanto vale meu Onix 2020?",
+          "AGENTE": "O Onix LT 1.0 2020 vale R$ 60.822 na tabela deste mês.",
+          "USE_QUANDO": "Use quando o cliente quiser saber quanto vale um carro, moto ou caminhão.",
+          "ROTULO": "Carro e ano",
+          "EXEMPLO": "Onix 2020",
+          "CONSULTAS": "marcas, modelos de uma marca, preço do mês"
+        },
+        "BANCO_CENTRAL": {
+          "NOME": "Juros, inflação e dólar",
+          "APOIO": "Banco Central",
+          "FAZ": "Traz os juros (Selic), a inflação oficial (IPCA), o dólar do dia e a previsão do mercado (Focus).",
+          "CONSEGUE": "dizer os juros, a inflação e o dólar",
+          "CLIENTE": "Quanto está o dólar hoje?",
+          "AGENTE": "O dólar oficial de hoje está R$ 5,51 na venda.",
+          "USE_QUANDO": "Use quando o cliente perguntar sobre juros, inflação, dólar ou a previsão do mercado.",
+          "ROTULO": "Mostra o dólar oficial do dia.",
+          "CONSULTAS": "juros, inflação, dólar, previsão do mercado"
+        },
+        "FERIADOS": {
+          "NOME": "Feriados e dias úteis",
+          "FAZ": "Diz os feriados nacionais do ano e conta os dias úteis até uma data. Carnaval e Corpus Christi contam como folga. Feriado de estado e de cidade não entra.",
+          "CONSEGUE": "contar dias úteis e achar feriados nacionais",
+          "CLIENTE": "Quantos dias úteis faltam até 30 de novembro?",
+          "AGENTE": "Daqui até 30/11 são 14 dias úteis. No meio tem o feriado nacional de 20/11.",
+          "USE_QUANDO": "Use quando for preciso saber se um dia é feriado nacional ou contar um prazo em dias úteis.",
+          "ROTULO": "Data ou prazo",
+          "EXEMPLO": "dias úteis até {data}",
+          "CONSULTAS": "feriados nacionais do ano, dias úteis até uma data"
+        },
+        "BANCOS": {
+          "NOME": "Nome do banco",
+          "APOIO": "pelo código",
+          "FAZ": "Diz o nome de um banco pelo código de até três números.",
+          "CONSEGUE": "dizer o nome de um banco pelo código",
+          "CLIENTE": "Meu banco é o 341.",
+          "AGENTE": "O 341 é o Itaú Unibanco.",
+          "USE_QUANDO": "Use quando o cliente informar o código de um banco.",
+          "ROTULO": "Código do banco",
+          "EXEMPLO": "341"
+        }
       }
     }
   }

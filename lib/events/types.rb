@@ -80,6 +80,8 @@ module Events::Types
   CRM_MEETING_SCHEDULED = 'crm.meeting.scheduled'
   CRM_MEETING_RESCHEDULED = 'crm.meeting.rescheduled'
   CRM_MEETING_CANCELED = 'crm.meeting.canceled'
+  # o primeiro "Aconteceu" da reunião do card (G56): também só a Automação livre ouve
+  CRM_MEETING_OUTCOME_RECORDED = 'crm.meeting.outcome_recorded'
   # leitura do gasto de hoje dos anúncios da Meta terminou (#1073) — a tela troca os números
   CRM_META_ADS_INSIGHTS_UPDATED = 'crm.meta_ads.insights_updated'
   # comentário novo num post da Meta, Instagram (#2196) ou Página (#2197), para quem cuida dos comentários (#2212).

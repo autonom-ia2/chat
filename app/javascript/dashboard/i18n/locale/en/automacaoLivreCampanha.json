@@ -14,8 +14,14 @@
       "CUSTO_PROPAGANDA": "Marketing templates cost more on Meta, charged per message.",
       "VARIAVEL": "Text for variable {numero}",
       "VARIAVEL_DICA": "The campaign goes to many people at once, so write fixed text.",
+      "PUBLICO_ETIQUETAS": "Whoever has the labels",
+      "PUBLICO_DESTA_EXECUCAO": "Only who this automation created this time",
+      "PUBLICO_DESTA_EXECUCAO_DICA": "Each time it runs, it goes only to the companies and contacts created in the steps above, this time.",
+      "PUBLICO_TODOS": "All contacts",
+      "PUBLICO_TODOS_DICA": "Every contact of the account gets it, except who has one of the labels below and who asked not to receive. E.g.: the same campaign for everyone else.",
       "ETIQUETAS_DICA": "Whoever has one of these labels when it sends gets it. Adding or removing the label puts the person in or out of the campaign.",
       "SEM_ETIQUETAS": "This account has no labels yet.",
+      "SEM_ETIQUETAS_DICA": "Optional. Anyone with one of these labels is left out, even with an audience label. E.g.: everyone except who already bought.",
       "FRASE_DISPARAR": "Send the WhatsApp campaign “{titulo}”",
       "FRASE_NAO_RECEBER": "Mark the contact as “does not receive”"
     }

@@ -165,6 +165,12 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
       expect(conversas_de_email).to be_empty
     end
 
+    it 'contato bloqueado não recebe e-mail (decisão 5)' do
+      contato.update!(blocked: true)
+      expect(registros(rodar(conversa))).to eq([%w[p1 pulado contato_bloqueado]])
+      expect(conversas_de_email).to be_empty
+    end
+
     it 'e-mail bloqueado na conta (devolução, reclamação, descadastro)' do
       EmailSuppression.create!(account: account, email: 'Cliente@Exemplo.com', reason: 'hard_bounce')
       expect(registros(rodar(conversa))).to eq([%w[p1 pulado email_bloqueado]])
@@ -364,12 +370,40 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
       expect(ensaio({ 'tipo' => 'conversa.criada' }, conversa)[:passos].sole).to include(faria: 'caixa_de_email_indisponivel')
     end
 
+    it 'diz que não sairia ao contato bloqueado (decisão 5)' do
+      contato.update!(blocked: true)
+      expect(ensaio({ 'tipo' => 'conversa.criada' }, conversa)[:passos].sole).to include(faria: 'contato_bloqueado')
+    end
+
     it 'a conversa de e-mail cuja última mensagem é resposta automática não entraria' do
       de_email = create(:conversation, account: account, contact: contato, inbox: caixa)
       create(:message, conversation: de_email, account: account, inbox: caixa, message_type: :incoming, sender: contato,
                        content: 'Estou de férias.', content_attributes: { email: { auto_reply: true } })
 
       expect(ensaio({ 'tipo' => 'mensagem.criada' }, de_email)).to include(entraria: false, motivo: 'resposta_automatica')
+    end
+  end
+
+  # G65 (#2842): o e-mail dentro do "em outro registro" lê o registro de origem (o alvo da mãe) no assunto e no texto,
+  # como a mensagem: os valores saem do Contexto com a execução, não do registro cru.
+  describe 'na filha do "em outro registro"' do
+    let(:joao) { create(:contact, account: account, name: 'João') }
+    let(:versao) { create(:autonomia_automacao_versao, automacao: create(:autonomia_automacao, account: account, ligada_por: admin)) }
+    let(:mae) { create(:autonomia_automacao_execucao, versao: versao, alvo: create(:conversation, account: account, contact: joao)) }
+    let(:filha) do
+      create(:autonomia_automacao_execucao, versao: versao, alvo: contato, evento: "em:#{mae.id}:contato:#{contato.id}:outro")
+    end
+
+    it 'o assunto e o texto leem origem.*', :aggregate_failures do
+      passo = email_passo('p1', assunto: ['O ', { '$valor' => 'origem.contato.nome' }, ' virou cliente'],
+                                texto: ['Oi ', { '$valor' => 'contato.nome' }, ', obrigada por indicar o ', { '$valor' => 'origem.contato.nome' }])
+
+      resultado = described_class.new(execucao: filha, passo: passo, alvo: contato).executar
+
+      expect(resultado.tipo).to eq(:ok)
+      nova = conversas_de_email.sole
+      expect(nova.additional_attributes['mail_subject']).to eq('O João virou cliente')
+      expect(nova.messages.outgoing.sole.content).to eq('Oi Carla, obrigada por indicar o João')
     end
   end
 end

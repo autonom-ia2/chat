@@ -5,21 +5,28 @@
 #
 # No recorrente (#2635, G7), a seleção: pelo menos uma condição (sem nenhuma, a automação pegaria a conta inteira por
 # engano), só as condições do alvo (card ou contato) e funil, etapa, responsável, etiqueta e atributo da conta. O da
-# conta não tem seleção (o esquema recusa) e roda sem conversa, card ou contato: só ficam o esperar e o disparar de
-# campanha (G14), que escolhe o público pela etiqueta. Recusar ao salvar é o que impede o passo de quebrar sem alvo ao
-# rodar. Na data única (G39, #2681), a data que já passou.
+# conta não tem seleção (o esquema recusa) e roda sem conversa, card ou contato: só ficam o esperar, o disparar de
+# campanha (G14), que escolhe o público pela etiqueta, e o buscar empresas da prospecção (G21, #2706), que cria os
+# cards. Recusar ao salvar é o que impede o passo de quebrar sem alvo ao rodar. Na data única (G39, #2681), a data que
+# já passou.
+#
+# No card atualizado (G27, #2661), a mudança: o campo personalizado é do card, desta conta, e a condição numérica
+# (maior que, passou de) tem número para comparar.
 #
 # G50: "começa outra vez" (`se_repetir: comeca_outra`) só nos gatilhos de evento que aceitam (Gatilhos.pode_repetir?).
 # Na mensagem nova seria uma execução por mensagem; nos da varredura, a marca já é o fato.
 class Autonomia::Automacao::ProblemasDoGatilho
   Gatilhos = ::Autonomia::Automacao::Gatilhos
+  MudancaDoCard = ::Autonomia::Automacao::MudancaDoCard
 
-  # `passos`: todos os passos da receita, inclusive os dos ramos (Receita#passos).
-  def initialize(gatilho, conta, passos: [])
+  # `passos`: todos os passos da receita, inclusive os dos ramos (Receita#passos). `account_user`: quem salva, para o
+  # valor de venda na mudança.
+  def initialize(gatilho, conta, passos: [], account_user: nil)
     @gatilho = gatilho
     @tipo = gatilho['tipo']
     @conta = conta
     @passos = passos
+    @account_user = account_user
   end
 
   # Frases para a pessoa corrigir; vazio = pode salvar.
@@ -40,14 +47,21 @@ class Autonomia::Automacao::ProblemasDoGatilho
     return [*data_passada, *passos_que_pedem_alvo] if Gatilhos.da_conta?(@tipo)
     return [*data_passada, *selecao] if Gatilhos.recorrente?(@tipo)
 
-    [*etapa_de_fora, *funil_de_fora, *pagina_de_fora, *parado_sem_dias, *campo_de_fora]
+    [*etapa_de_fora, *funil_de_fora, *pagina_de_fora, *parado_sem_dias, *campo_de_fora, *da_mudanca]
   end
 
   def passos_que_pedem_alvo
     @passos.reject { |passo| sem_alvo?(passo) }.map { |passo| texto(:passo_pede_alvo, passo: passo['id']) }
   end
 
-  def sem_alvo?(passo) = passo['tipo'] == 'esperar' || (passo['tipo'] == 'campanha' && passo['faz'] == 'disparar')
+  # O `faz` de cada passo que roda sem alvo; `nil` = o passo inteiro.
+  SEM_ALVO = { 'esperar' => nil, 'campanha' => 'disparar', 'prospeccao' => 'buscar' }.freeze
+
+  def sem_alvo?(passo)
+    return false unless SEM_ALVO.key?(passo['tipo'])
+
+    SEM_ALVO[passo['tipo']].nil? || SEM_ALVO[passo['tipo']] == passo['faz']
+  end
 
   # A data única (G39, #2681) que já passou nunca roda: salvar assim é engano, não escolha.
   def data_passada
@@ -90,6 +104,34 @@ class Autonomia::Automacao::ProblemasDoGatilho
     [texto(:campo_de_fora, campo: campo)]
   end
 
+  def da_mudanca
+    mudanca = @gatilho['mudanca']
+    return [] if mudanca.nil?
+
+    [*campo_do_card_de_fora(mudanca['chave']), *valor_de_venda_escondido(mudanca),
+     *(texto(:mudanca_sem_numero) if mudanca_numerica?(mudanca) && !MudancaDoCard.numero?(mudanca['valor']))]
+  end
+
+  # "O valor passou de R$ 50 mil" lê o valor de venda, com a mesma permissão do `card.valor` (#2597): quem não vê os
+  # valores não monta um gatilho que descobre o valor dos cards pelo disparo.
+  def valor_de_venda_escondido(mudanca)
+    return [] unless mudanca['campo'] == MudancaDoCard::VALOR
+    return [] unless ::Autonomia::Automacao::Valores.problema_de_leitura('card.valor', conta: @conta, account_user: @account_user)
+
+    [texto(:gatilho_valor_de_venda)]
+  end
+
+  def campo_do_card_de_fora(chave)
+    return [] if chave.nil? || @conta.custom_attribute_definitions.exists?(attribute_key: chave, attribute_model: :card_attribute)
+
+    [texto(:campo_do_card_de_fora, campo: chave)]
+  end
+
+  # O valor de venda é número em qualquer condição com valor; o campo personalizado, só em maior que e passou de.
+  def mudanca_numerica?(mudanca)
+    mudanca.key?('valor') && (mudanca['campo'] == MudancaDoCard::VALOR || MudancaDoCard::NUMERICAS.include?(mudanca['condicao']))
+  end
+
   def selecao
     escolha = ::Autonomia::Automacao::Tempo::Selecao.new(@conta, @gatilho)
     return [texto(:selecao_vazia)] if escolha.condicoes.empty?
@@ -97,7 +139,7 @@ class Autonomia::Automacao::ProblemasDoGatilho
     outras = @gatilho['selecao'].to_h.keys - escolha.condicoes.keys
     return [texto(:selecao_de_outro_alvo, condicoes: outras.join(', '))] if outras.any?
 
-    da_selecao_de_fora(@gatilho['selecao'])
+    [*da_selecao_de_fora(@gatilho['selecao']), *solicitante_de_fora(@gatilho['selecao']['solicitante_de'])]
   end
 
   def da_selecao_de_fora(selecao)
@@ -105,6 +147,26 @@ class Autonomia::Automacao::ProblemasDoGatilho
      *(texto(:etapa_de_fora, id: selecao['etapa_id']) if selecao['etapa_id'] && !@conta.crm_pipeline_stages.exists?(id: selecao['etapa_id'])),
      *(texto(:responsavel_de_fora) if selecao['responsavel_id'] && !@conta.account_users.exists?(user_id: selecao['responsavel_id'])),
      *etiquetas_de_fora(selecao), *atributo_de_fora(selecao['atributo']), *faixa_invertida(selecao['fechado_entre_dias'])]
+  end
+
+  # G22: o "pediu card no funil" pede o funil da conta, a etapa desse funil e, em cada campo que falta, um campo de
+  # marcar do card desta conta (é o que o passo 6 marca). Campo de contato ou de outro tipo nunca casaria. Enquanto nenhum
+  # passo grava o solicitante (Solicitados::GRAVADORES, G24), a condição não pega ninguém, nunca: o salvar recusa.
+  def solicitante_de_fora(condicao)
+    return [] if condicao.nil?
+    return [texto(:solicitante_sem_gravador)] unless ::Autonomia::Automacao::Solicitados.gravado?
+
+    funil = condicao['funil_id']
+    etapa = condicao['etapa_id']
+    [*(texto(:funil_de_fora, id: funil) unless @conta.crm_pipelines.exists?(id: funil)),
+     *(texto(:etapa_de_fora, id: etapa) if etapa && !@conta.crm_pipeline_stages.exists?(id: etapa, pipeline_id: funil)),
+     *faltando_de_fora(condicao['faltando'])]
+  end
+
+  def faltando_de_fora(chaves)
+    marcar = @conta.custom_attribute_definitions.where(attribute_model: :card_attribute, attribute_display_type: :checkbox,
+                                                       attribute_key: chaves).pluck(:attribute_key)
+    (Array(chaves) - marcar).map { |chave| texto(:faltando_de_fora, campo: chave) }
   end
 
   # "Fechado entre 360 e 330 dias" não pega ninguém, nunca: a pessoa trocou as pontas.

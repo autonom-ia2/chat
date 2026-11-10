@@ -5,7 +5,7 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import { convertToAttributeSlug } from 'dashboard/helper/commons.js';
 import { normalizeRegexPattern } from 'shared/helpers/Validators';
-import { ATTRIBUTE_MODELS, ATTRIBUTE_TYPES } from './constants';
+import { ATTRIBUTE_MODELS, tiposDoModelo } from './constants';
 
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import TagInput from 'dashboard/components-next/taginput/TagInput.vue';
@@ -74,7 +74,7 @@ export default {
       }));
     },
     types() {
-      return ATTRIBUTE_TYPES.map(item => ({
+      return tiposDoModelo(this.attributeModel).map(item => ({
         ...item,
         option: this.$t(`ATTRIBUTES_MGMT.ATTRIBUTE_TYPES.${item.key}`),
       }));
@@ -133,6 +133,11 @@ export default {
     attributeType() {
       this.tagInputTouched = false;
       this.values = [];
+    },
+    // G62: trocar para um modelo sem o tipo escolhido volta ao texto.
+    attributeModel() {
+      if (!this.types.some(type => type.id === this.attributeType))
+        this.attributeType = 0;
     },
   },
 

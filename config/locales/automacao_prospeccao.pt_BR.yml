@@ -1,0 +1,24 @@
+# Automação livre, passo "prospecção" (#2414 G21, #2706). Arquivo próprio para não disputar o pt_BR.yml com as outras frentes.
+pt_BR:
+  autonomia:
+    automacao:
+      motivos:
+        prospeccao_desligada: 'A Prospecção está desligada nesta conta. Nada foi feito.'
+        quem_ligou_sem_permissao_prospeccao: 'Quem ligou a automação não pode mais usar a Prospecção, criar card no CRM ou, com etiquetas, editar contato. Assuma e religue.'
+        prospeccao_so_sem_alvo: 'Esta automação roda em cada conversa, card ou contato, então faria uma busca paga a cada vez. Buscar empresas só vale numa automação recorrente. Nada foi buscado.'
+        sem_lead_da_prospeccao: 'Este contato não veio da Prospecção. Não há empresa para marcar como "não quer ser contatada".'
+        busca_sumiu: 'A busca escolhida não existe mais no histórico da Prospecção. Nada foi buscado.'
+        prospeccao_sem_whatsapp: 'A conta não tem WhatsApp ligado para conferir os números. Nada foi buscado.'
+        prospeccao_sem_chave_google: 'A busca pelo Google não está configurada na Prospecção desta conta. Nada foi buscado.'
+        busca_falhou_paga: 'A busca desta execução falhou depois de chamar o Google. Para não pagar de novo, ela não foi repetida.'
+        busca_interrompida: 'A busca desta execução parou no meio da chamada ao Google. Para não pagar de novo, ela não foi repetida.'
+        busca_sem_resposta: 'A busca de empresas não respondeu. A automação tenta de novo.'
+        busca_recusada: 'A Prospecção recusou a busca como ela está salva. Abra a busca na Prospecção e confira.'
+        conferencia_no_prazo: 'Passaram 2 horas e alguns números não foram conferidos. Os cards saíram só para quem já tinha WhatsApp conferido.'
+        etapa_fora_do_alcance: 'Quem ligou a automação não alcança mais o funil escolhido, ou o CRM está desligado. Nenhum card foi criado.'
+      receita:
+        prospeccao_desligada: 'Passo %{passo}: a Prospecção está desligada nesta conta.'
+        prospeccao_sem_permissao: 'Passo %{passo}: para usar este passo você precisa da permissão de usar a Prospecção e, para buscar, da de criar card no CRM e, com etiquetas, da de editar contato.'
+        prospeccao_so_sem_alvo: 'Passo %{passo}: buscar empresas só vale numa automação recorrente. Num gatilho de conversa, card ou contato, cada execução faria uma busca paga.'
+        prospeccao_busca_de_fora: 'Passo %{passo}: a busca %{id} não está no histórico da Prospecção que você vê.'
+        prospeccao_etapa_de_funil_fechado: 'Passo %{passo}: a etapa %{id} está num funil do CRM que você não vê.'

@@ -216,6 +216,15 @@
 - passos: 1. Abra Contatos; 2. No menu de três pontos, clique em Importar contatos; 3. Escolha a planilha; 4. Confira as Colunas encontradas e use Trocar se alguma estiver errada (ou Não tem); 5. Veja quais Outras colunas viram atributos do contato e quais são atributos novos; 6. Confira contatos prontos, linhas com problema e o bloco Empresas (Criar e ligar); 7. Clique em Importar e veja o resumo.
 - gotchas: com a jornada de campanhas desligada o menu abre a importação nativa do Chatwoot; quando o sistema não tem certeza das colunas, pede a escolha antes de seguir; contato que já existe (celular com ou sem o 9, ou e-mail) só ganha o que falta e não perde valores de atributos; contato que já tem outra empresa mantém a dele; atributos novos são criados como texto com o nome da coluna; nada entra na base antes de clicar em Importar; essa importação não vira público nem aparece em Campanhas.
 
+### ver_importacoes_de_contatos
+- titulo: Ver as importações de contatos (planilha e automação)
+- rota: contacts_imports_list
+- intent: Onde vejo as listas de contatos que importei?; A lista que a automação leu entrou nos contatos?; Quem ficou de fora da importação?; Onde vejo o resultado de uma importação antiga?
+- onde_fica: Contatos > Todos os contatos > menu de ações (três pontos) > Importações (com a jornada de campanhas ligada)
+- pre_requisitos: administrador ou função com gestão de contatos
+- passos: 1. Abra Contatos; 2. No menu de três pontos, clique em Importações; 3. Veja cada lista, a origem (Planilha ou Automação), a data, quem importou, quantos entraram e quantos ficaram de fora; 4. Clique numa importação para ver o resultado e quem ficou de fora.
+- gotchas: a origem Automação é a lista que o passo "Para cada item" leu na conversa, importada em nome de quem ligou a automação; quem ficou de fora aparece com o celular mascarado e o motivo; os públicos e as bases de campanha não aparecem aqui; uma planilha que ainda espera conferência abre na etapa em que parou.
+
 ### convidar_e_gerenciar_agentes
 - titulo: Convidar e gerenciar agentes
 - rota: agent_list
@@ -1058,6 +1067,15 @@
 - passos: Abra Agentes; revise os cards existentes; clique em Criar com IA; para abrir um agente existente, clique no card; use a aba Testar como entrada padrão do painel.
 - gotchas: o menu Agentes aparece assim que a chave da OpenAI é conectada em Integracoes, sem precisar recarregar a pagina; backend de agentes é admin-only e retorna 404 quando o gate está off; a sidebar também esconde o grupo para não admins; o card mostra apenas `human_card`, não a instrução interna.
 - highlight: `agents-create`
+
+### ensinar_ferramenta_pronta_ao_agente
+- titulo: Ensinar uma ferramenta pronta ao agente
+- rota: autonomia_agents_vitrine
+- intent: "Como faço o agente consultar um CEP?"; "O agente consegue saber quanto vale um carro?"; "Como o agente confere um CNPJ ou um CPF?"; "Onde ficam as ferramentas prontas?"; "Como tiro uma ferramenta do agente?"; "Como crio uma ferramenta minha?"
+- onde_fica: Menu lateral > No automático > Ferramentas prontas. Também pela página do agente: Mais opções > Ferramentas > Adicionar ferramenta.
+- pre_requisitos: ferramentas prontas liberadas na conta (flags agente_ferramentas_prontas e agente_ferramentas_prontas_vitrine); ser administrador ou ter a função personalizada com "Ferramentas dos agentes" (autonomia_tools_manage); ter ao menos um agente que não seja o de cotação.
+- passos: 1. Abra Ferramentas prontas; 2. Procure pelo que o agente precisa saber (por exemplo "carro" ou "CEP") ou escolha um assunto; 3. Clique no cartão para ver o que ele faz e uma conversa de exemplo; 4. Em Experimente, clique em Experimentar para ver o que o agente recebe; 5. Escolha o agente e ajuste a frase "Quando usar" se quiser; 6. Clique em "Ensinar para {nome}"; 7. Para ver, desligar ou tirar, use "Ver ferramentas de {nome}".
+- gotchas: a ferramenta já entra ligada; o agente decide quando usar pela conversa, e a frase só orienta; o Experimente faz uma consulta de verdade e conta no limite do dia da conta naquela ferramenta; no valor do carro, nas cidades e nos feriados a pessoa escreve como falaria ("Onix 2020") e quem entende é a IA da conta, a mesma do Testar do agente, com até 6 consultas por clique, todas no limite do dia; sem IA ligada, o Experimente avisa; feriados são só os nacionais; o CPF só confere os dígitos e a região de emissão, sem nome nem situação; o agente de cotação não recebe ferramentas prontas; agente que já tem a ferramenta aparece como "já sabe"; tirar pede confirmação e dá para incluir de novo depois; "Criar a minha (avançado)" pergunta o agente e abre o cadastro manual, e só aparece para quem pode usar o cadastro manual (flag agente_ferramentas_delegadas com a mesma chave).
 
 ### criar_agente_externo_com_base_de_conhecimento
 - titulo: Criar agente externo com base de conhecimento

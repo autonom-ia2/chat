@@ -8,12 +8,14 @@ en:
         campanha_sem_caixa: 'The chosen inbox no longer exists or is not an official WhatsApp inbox. The campaign was not created.'
         campanha_desligada: 'WhatsApp campaigns are off for this account. The campaign was not created.'
         campanha_sem_etiqueta: 'None of the chosen labels exist anymore. The campaign was not created.'
+        campanha_exclusao_apagada: 'A label this campaign leaves out no longer exists. Nothing was sent, so none of those people got it. Edit the automation and choose the labels again.'
         campanha_recusada: 'The platform refused the campaign as it was set up. Nothing was sent.'
         campanha_modelo_fora_da_caixa: "The chosen inbox doesn't have the chosen template. The campaign was not created."
         campanha_modelo_nao_aprovado: "The chosen template isn't approved by Meta in this inbox. The campaign was not created."
         campanha_modelo_de_categoria_fora: 'The chosen template is not a utility or marketing template. The campaign was not created.'
         campanha_modelo_mudou: "The template asks for different variables than the step's. Choose the template again. The campaign was not created."
         campanha_variavel_vazia: "A template variable has no text. Write the fixed text of each variable. The campaign was not created."
+        campanha_execucao_sem_contatos: 'The previous steps did not create any company or contact that can receive this time. The campaign was not created.'
         sem_contato: 'There is no contact here to mark.'
         contato_ja_nao_recebe: 'The contact was already marked as not receiving messages.'
       receita:
@@ -24,3 +26,6 @@ en:
         campanha_sem_caixa: 'Step %{passo}: choose an official WhatsApp inbox of this account.'
         campanha_modelo: 'Step %{passo}: the chosen inbox does not have the template %{nome} approved and ready.'
         campanha_etiqueta_de_fora: 'Step %{passo}: the label %{id} is not from this account.'
+        campanha_publico_sem_origem: 'Step %{passo}: to send only to who this automation created, add a step that creates a card or contact before it.'
+      # G58: the date in the name of the run's audience ("<campaign> · <date>").
+      data_do_publico: '%m/%d/%Y'

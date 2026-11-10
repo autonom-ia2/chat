@@ -73,7 +73,7 @@ class Crm::Pipelines::Excluidor
     primeira_etapa = destino.stages.order(:position, :id).first
     cards.map do |card|
       Crm::Cards::Mover.new(card: card, actor: @actor, target_stage: etapa_para(card, destino, primeira_etapa),
-                            automation_context: { skip_automations: true }).perform
+                            automation_context: { skip_automations: true, source: 'funil_excluido' }).perform
     end
   end
 

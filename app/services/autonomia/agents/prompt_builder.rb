@@ -184,6 +184,8 @@ module Autonomia
           @agent.scaffold,
           @agent.instrucao_do_sistema,
           ::Autonomia::Agents::Tools::Native::Agenda.instrucao(@agent),
+          # #1479 / #2723: o endereço e o telefone do atendimento, em texto (só com a flag; sem ela, nil).
+          ::Autonomia::Agents::Tools::Native::EnderecoETelefone.instrucao(@agent),
           persona_block,
           guardrails_block,
           handoff_block,

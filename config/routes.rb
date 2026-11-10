@@ -297,7 +297,7 @@ Rails.application.routes.draw do
             end
           end
           # Importar contatos (#1006): the journey's contact import (fork controller).
-          resources :contact_imports, only: [:create, :show, :destroy] do
+          resources :contact_imports, only: [:index, :create, :show, :destroy] do
             member do
               patch :columns
               patch :companies
@@ -328,6 +328,9 @@ Rails.application.routes.draw do
               resources :inboxes, controller: 'pipeline_inboxes', only: [:index, :create, :destroy], param: :inbox_id
               resource :ai_settings, only: [:show, :update], controller: 'ai_settings' do
                 post :improve_criteria
+                # #1920: raio-x das frases antes de salvar e "Melhorar com IA" do "quando usar".
+                post :criteria_xray
+                post :improve_when_to_use
               end
               # Funil arquivado (#2095): restaurar e a prévia do arquivamento.
               member do
@@ -646,6 +649,14 @@ Rails.application.routes.draw do
             # autonomia_agente_ia_por_caixa (Autonomia::Agents::AgenteIaPorCaixa), 404.
             get 'inboxes/:inbox_id/quem_atende', to: 'quem_atende#show'
             put 'inboxes/:inbox_id/quem_atende', to: 'quem_atende#update'
+            # #2858 F2 — a vitrine de ferramentas prontas (flag agente_ferramentas_prontas_vitrine; sem ela, 404).
+            resources :ferramentas_prontas, only: [:index, :update, :destroy] do
+              collection do
+                post :incluir
+                post :experimentar
+                post :buscas_sem_resultado
+              end
+            end
             resources :agents, only: [:index, :show, :create, :update, :destroy] do
               member do
                 post :test,    to: 'agents/playground#test'
@@ -750,6 +761,9 @@ Rails.application.routes.draw do
                 get :historico
                 post :ensaio
                 get :custos, to: 'automacoes_ia#custos_da_automacao'
+                # G13 (#2670): o segredo da assinatura do passo "webhook", só para o administrador.
+                get :segredo_do_webhook, to: 'automacoes_webhook#segredo'
+                post :trocar_segredo_do_webhook, to: 'automacoes_webhook#trocar_segredo'
               end
             end
             resources :avisos, only: [:index, :update]

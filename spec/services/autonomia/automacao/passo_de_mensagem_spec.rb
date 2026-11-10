@@ -66,6 +66,30 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
     end
   end
 
+  # Decisão 5 (#2414): o contato bloqueado não recebe nada da automação, na conversa que já existe. Canal API sem limite
+  # de horas: a janela não interfere.
+  describe 'contato bloqueado' do
+    let(:canal) { create(:channel_api, account: account) }
+    let(:contato) { create(:contact, account: account) }
+    let(:conversa) { create(:conversation, account: account, contact: contato, inbox: canal.inbox) }
+
+    it 'contato normal recebe a mensagem', :aggregate_failures do
+      execucao = rodar(conversa)
+
+      expect(registros(execucao)).to eq([['p1', 'ok', nil]])
+      expect(mandada(conversa).content).to eq('Seu pedido saiu.')
+    end
+
+    it 'contato bloqueado não recebe: pula com contato_bloqueado e a automação segue', :aggregate_failures do
+      contato.update!(blocked: true)
+      execucao = rodar(conversa)
+
+      expect(mandada(conversa)).to be_nil
+      expect(registros(execucao)).to eq([%w[p1 pulado contato_bloqueado]])
+      expect(execucao.reload.estado).to eq('concluida')
+    end
+  end
+
   # O canal API só tem janela quando o dono da caixa põe um limite de horas (agent_reply_time_window); sem ele, responde
   # a qualquer hora. Ele não tem modelo da Meta: com o limite vencido, o modelo do passo não se aplica, e o histórico diz
   # que o limite é da caixa, para não parecer defeito (#2468).
@@ -274,7 +298,7 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
       {
         'a caixa não tem o modelo' => [{ 'name' => 'outro' }, 'modelo_fora_da_caixa'],
         'o modelo não está aprovado' => [{ 'status' => 'PENDING' }, 'modelo_nao_aprovado'],
-        'o modelo é de propaganda' => [{ 'category' => 'MARKETING' }, 'modelo_de_propaganda'],
+        'o modelo é de autenticação' => [{ 'category' => 'AUTHENTICATION' }, 'modelo_de_categoria_fora'],
         'o modelo pede outras variáveis' => [{ 'components' => [{ 'type' => 'BODY', 'text' => 'Oi {{1}}.' }] }, 'modelo_mudou'],
         'o modelo pede imagem no topo' => [{ 'components' => [{ 'type' => 'HEADER', 'format' => 'IMAGE' },
                                                               { 'type' => 'BODY', 'text' => 'Oi {{1}}, {{2}}.' }] }, 'modelo_mudou']

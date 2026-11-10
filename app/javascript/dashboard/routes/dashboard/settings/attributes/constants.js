@@ -12,4 +12,25 @@ export const ATTRIBUTE_TYPES = [
   { id: 5, key: 'DATE' },
   { id: 6, key: 'LIST' },
   { id: 7, key: 'CHECKBOX' },
+  // G62 (#2829): uma pessoa da equipe; só no card (CARD_MODEL_ID).
+  { id: 8, key: 'PESSOA', soNoModelo: 3 },
+  // Decisão 16 (ex. 11): um contato da conta; só no card (CARD_MODEL_ID).
+  { id: 9, key: 'CONTATO', soNoModelo: 3 },
 ];
+
+// O id de cada modelo, como a API devolve o nome (`card_attribute`).
+const ID_DO_MODELO = {
+  conversation_attribute: 0,
+  contact_attribute: 1,
+  company_attribute: 2,
+  card_attribute: 3,
+};
+
+// Os tipos que o modelo aceita (pelo id ou pelo nome): o tipo com `soNoModelo`
+// só aparece no modelo dele. Usado ao criar e ao editar o campo.
+export const tiposDoModelo = modelo => {
+  const id = typeof modelo === 'string' ? ID_DO_MODELO[modelo] : modelo;
+  return ATTRIBUTE_TYPES.filter(
+    item => item.soNoModelo === undefined || item.soNoModelo === id
+  );
+};

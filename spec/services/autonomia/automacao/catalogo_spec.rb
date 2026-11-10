@@ -97,7 +97,8 @@ RSpec.describe Autonomia::Automacao::Catalogo do
 
     expect(nativos.pluck('tipo')).to contain_exactly('esperar', 'esperar_ate', 'se', 'parar', 'mensagem', 'avisar', 'email',
                                                      'campanha', 'decidir', 'extrair', 'escrever', 'resumir', 'ia_assumir', 'retorno',
-                                                     'card')
+                                                     'card', 'em_outro_registro', 'prospeccao', 'conversa_ao_responsavel', 'para_cada',
+                                                     'webhook')
     expect(nativos.flat_map { |passo| passo['campos'] }.pluck('peca')).to all(be_present)
     expect(passos.pluck('grupo') - declarado['grupos']).to be_empty
   end
@@ -139,7 +140,10 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     expect(declarados).to match_array(valores::MENSAGEM.keys)
     expect(declarado['valores_so_guia'].values).to all(be_present)
     expect(da_mensagem.pluck('caminho')).to match_array(valores::MENSAGEM.keys)
-    da_mensagem.each do |valor|
+    # O nome da campanha (#2681) é escrito, sem opções: vai ao editor como texto.
+    escritos, fechados = da_mensagem.partition { |valor| valor['caminho'] == 'mensagem.campanha' }
+    expect(escritos.first).not_to include('opcoes', 'operadores')
+    fechados.each do |valor|
       expect(valor['opcoes'].pluck('valor')).to eq(valores.fechado(valor['caminho'])['opcoes'])
       expect(valor['operadores'].pluck('op')).to eq(valores.fechado(valor['caminho'])['operadores'])
     end
@@ -165,8 +169,8 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     entrada, respostas = na_espera.partition { |item| item['base'] == 'card' }
 
     expect(respostas.pluck('caminho')).to eq(%w[conversa.cliente_respondeu conversa.equipe_respondeu conversa.responsavel_respondeu
-                                                gatilho.repetiu])
-    expect(respostas.pluck('base')).to eq(%w[conversa conversa conversa gatilho])
+                                                gatilho.repetiu conversa.cliente_mandou_documento contato.reuniao_atendida])
+    expect(respostas.pluck('base')).to eq(%w[conversa conversa conversa gatilho conversa contato])
     expect(catalogo.gerado['alvos'].values).to all(include('gatilho'))
     expect(entrada).to contain_exactly(include('caminho' => 'card.entrou_de_novo', 'base' => 'card',
                                                'so_nos_gatilhos' => ['card.entrou_na_etapa']))

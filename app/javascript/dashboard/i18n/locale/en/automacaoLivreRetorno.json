@@ -1,8 +1,8 @@
 {
   "AUTOMACAO_LIVRE": {
     "RETORNO": {
-      "FRASE": "Create a follow-up for {quem} in {quando}: “{titulo}”",
-      "FRASE_COM_MENSAGEM": "Create a follow-up for {quem} in {quando}: “{titulo}”, and send the customer: “{mensagem}”",
+      "FRASE": "Create a follow-up for {quem} {quando}: “{titulo}”",
+      "FRASE_COM_MENSAGEM": "Create a follow-up for {quem} {quando}: “{titulo}”, and send the customer: “{mensagem}”",
       "QUEM": {
         "RESPONSAVEL": "whoever handles it",
         "PESSOAS": "1 person | {n} people",
@@ -19,7 +19,24 @@
       "MANDAR": "At follow-up time, send the customer a message",
       "MANDAR_DICA": "Only works when the automation runs on a card with a WhatsApp conversation. Outside the 24-hour window, the message only goes out with an approved template; without one, the team is alerted.",
       "MENSAGEM": "What to send the customer",
-      "SO_LEMBRETE": "Without the message, the team only gets the reminder."
+      "SO_LEMBRETE": "Without the message, the team only gets the reminder.",
+      "QUANDO": {
+        "MODOS": {
+          "DAQUI": "In some time",
+          "HOJE": "Today",
+          "AMANHA": "Tomorrow"
+        },
+        "DAQUI_QUANTO": "How long from now",
+        "QUE_HORAS": "What time",
+        "FIM_DO_DIA": "By the end of the day",
+        "HORA_ITEM": "At {hora}:00",
+        "DICA": "Uses the account time zone. If today’s time has already passed, the follow-up is due right away, never tomorrow.",
+        "FRASE_DAQUI": "in {quando}",
+        "FRASE_HOJE": "due today, by the end of the day",
+        "FRASE_HOJE_AS": "due today at {hora}:00",
+        "FRASE_AMANHA": "due tomorrow, by the end of the day",
+        "FRASE_AMANHA_AS": "due tomorrow at {hora}:00"
+      }
     }
   }
 }

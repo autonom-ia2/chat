@@ -164,6 +164,15 @@
     ],
     "sem_corpo": true
   },
+  "DELETE autonomia/ferramentas_prontas/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/ferramentas_prontas#destroy",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:51",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:81"
+    ],
+    "sem_corpo": true
+  },
   "DELETE autonomia/insurance/connection": {
     "campos": {
       "provider": {
@@ -422,8 +431,8 @@
     "completo": true,
     "controller": "api/v1/accounts/contact_imports#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:70",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:92"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:80",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:102"
     ],
     "sem_corpo": true
   },
@@ -597,8 +606,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:133",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:410"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:134",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:426"
     ],
     "sem_corpo": true
   },
@@ -810,8 +819,8 @@
     "controller": "api/v1/accounts/custom_attribute_definitions#destroy",
     "modelo": "CustomAttributeDefinition",
     "origem": [
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:21",
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:50"
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:22",
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:52"
     ],
     "sem_corpo": false
   },
@@ -3549,7 +3558,7 @@
       },
       "endpoint_url": {
         "max_caracteres": 2048,
-        "nao_pode_ficar_vazio": true,
+        "obrigatorio": "condicional",
         "tipo": "string"
       },
       "headers_config": {
@@ -3609,7 +3618,7 @@
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:31",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:102",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:103",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
     ],
@@ -3741,13 +3750,13 @@
       "leitura crua sem tipo: receita"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:58",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:138",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:64",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:63",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:60",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:59",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:120"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:139",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:65",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:64",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:61",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:60",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:121"
     ],
     "sem_corpo": false
   },
@@ -3815,6 +3824,23 @@
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:30",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:79",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:75"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH autonomia/ferramentas_prontas/:id": {
+    "campos": {
+      "ligada": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/ferramentas_prontas#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:44",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:47",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:45",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:81"
     ],
     "sem_corpo": false
   },
@@ -4778,9 +4804,9 @@
     "completo": true,
     "controller": "api/v1/accounts/contact_imports#columns",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:30",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:32",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:92"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:40",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:42",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:102"
     ],
     "sem_corpo": false
   },
@@ -4791,9 +4817,9 @@
     "completo": true,
     "controller": "api/v1/accounts/contact_imports#companies",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:43",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:44",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:92"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:53",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:54",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:102"
     ],
     "sem_corpo": false
   },
@@ -5373,8 +5399,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:117",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:643",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:410"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:660",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:426"
     ],
     "sem_corpo": false
   },
@@ -5893,14 +5919,14 @@
       }
     },
     "motivos": [
-      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)"
+      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:90)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:12",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:43",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:39",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:63",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59"
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:74",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:70",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:94",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:90"
     ],
     "sem_corpo": false
   },
@@ -6583,8 +6609,8 @@
     "modelo": "CustomAttributeDefinition",
     "origem": [
       "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:17",
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:37",
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:50"
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:39",
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:52"
     ],
     "sem_corpo": false
   },
@@ -11222,7 +11248,7 @@
     "envelope": "tool",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:19",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:102",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:103",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90"
     ],
     "sem_corpo": false
@@ -11238,7 +11264,7 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:50",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:135",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:136",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
     ],
@@ -11339,9 +11365,9 @@
       "leitura crua sem tipo: receita"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:45",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:138",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:48"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:46",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:139",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:49"
     ],
     "sem_corpo": false
   },
@@ -11349,8 +11375,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/automacoes#desligar",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:82",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:120"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:83",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:121"
     ],
     "sem_corpo": true
   },
@@ -11368,11 +11394,11 @@
       "leitura crua sem tipo: receita"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:96",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:175",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:138",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:97",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:120"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:186",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:139",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:98",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:121"
     ],
     "sem_corpo": false
   },
@@ -11381,8 +11407,17 @@
     "controller": "api/v1/accounts/autonomia/automacoes#ligar",
     "modelo": "Autonomia::Automacao::Definicao",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:71",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:120"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:72",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:121"
+    ],
+    "sem_corpo": true
+  },
+  "POST autonomia/automacoes/:id/trocar_segredo_do_webhook": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/automacoes_webhook#trocar_segredo",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/automacoes_webhook_controller.rb:21",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_webhook_controller.rb:39"
     ],
     "sem_corpo": true
   },
@@ -11400,9 +11435,9 @@
       "leitura crua sem tipo: receita"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:101",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:175",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:138"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:102",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:186",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:139"
     ],
     "sem_corpo": false
   },
@@ -11782,6 +11817,69 @@
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:94",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:93",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:75"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/ferramentas_prontas/buscas_sem_resultado": {
+    "campos": {
+      "termo": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/ferramentas_prontas#buscas_sem_resultado",
+    "motivos": [
+      "leitura crua sem tipo: termo (repassada a Autonomia::FerramentasProntas::BuscasSemResultado.registrar)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:56",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:57"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/ferramentas_prontas/experimentar": {
+    "campos": {
+      "fonte": {
+        "obrigatorio": true,
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "valor": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/ferramentas_prontas#experimentar",
+    "motivos": [
+      "leitura crua sem tipo: valor (repassada a Autonomia::FerramentasProntas::Experimente.new)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:34",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:36"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/ferramentas_prontas/incluir": {
+    "campos": {
+      "agent_id": {
+        "obrigatorio": true,
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "fonte": {
+        "obrigatorio": true,
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "usar_quando": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/ferramentas_prontas#incluir",
+    "modelo": "Autonomia::Agents::Agent",
+    "motivos": [
+      "leitura crua sem tipo: usar_quando (repassada a Autonomia::FerramentasProntas::Incluir.new)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:22",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:26",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:25",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:23"
     ],
     "sem_corpo": false
   },
@@ -13913,9 +14011,9 @@
     "controller": "api/v1/accounts/contact_imports#create",
     "modelo": "CampaignImport",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:18",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:98",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:19"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:28",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:108",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:29"
     ],
     "sem_corpo": false
   },
@@ -13923,8 +14021,8 @@
     "completo": true,
     "controller": "api/v1/accounts/contact_imports#confirm",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:54",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:92"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:64",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:102"
     ],
     "sem_corpo": true
   },
@@ -15266,8 +15364,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:84",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:579",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:475",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:596",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:492",
       "app/controllers/concerns/crm/opportunity_registration.rb:7"
     ],
     "sem_corpo": false
@@ -15339,14 +15437,14 @@
     "controller": "api/v1/accounts/crm/cards#close",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:153",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:154",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:164",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:163",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:162",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:161",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:160",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:178",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:422",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:410"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:179",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:438",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:426"
     ],
     "sem_corpo": false
   },
@@ -15354,8 +15452,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#evaluate_ai",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:229",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:410"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:230",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:426"
     ],
     "sem_corpo": true
   },
@@ -15369,9 +15467,9 @@
     "controller": "api/v1/accounts/crm/cards#link_contact",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:211",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:212",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:410"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:213",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:426"
     ],
     "sem_corpo": false
   },
@@ -15389,10 +15487,10 @@
     "controller": "api/v1/accounts/crm/cards#link_conversation",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:186",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:197",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:187",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:410"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:198",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:188",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:426"
     ],
     "sem_corpo": false
   },
@@ -15407,9 +15505,9 @@
     "controller": "api/v1/accounts/crm/cards#move",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:138",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:140",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:410"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:139",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:141",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:426"
     ],
     "sem_corpo": false
   },
@@ -15417,8 +15515,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#reset_auto_followup",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:253",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:410"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:254",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:426"
     ],
     "sem_corpo": true
   },
@@ -15432,9 +15530,9 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#restore",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:177",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:178",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:410"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:179",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:426"
     ],
     "sem_corpo": false
   },
@@ -15442,8 +15540,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#summarize",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:233",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:410"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:234",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:426"
     ],
     "sem_corpo": true
   },
@@ -15451,8 +15549,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#unlink_contact",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:218",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:410"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:219",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:426"
     ],
     "sem_corpo": true
   },
@@ -15466,9 +15564,9 @@
     "controller": "api/v1/accounts/crm/cards#unlink_conversation",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:203",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:204",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:410"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:205",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:426"
     ],
     "sem_corpo": false
   },
@@ -15618,10 +15716,10 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:106",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:579",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:553",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:430",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:428"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:596",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:570",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:446",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:444"
     ],
     "sem_corpo": false
   },
@@ -16741,12 +16839,40 @@
     ],
     "sem_corpo": true
   },
+  "POST crm/pipelines/:pipeline_id/ai_settings/criteria_xray": {
+    "campos": {
+      "stages": {
+        "campos": {
+          "description": {},
+          "id": {},
+          "name": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/ai_settings#criteria_xray",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:38",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:45",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:70"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/pipelines/:pipeline_id/ai_settings/improve_criteria": {
     "campos": {
+      "funil": {
+        "campos": {
+          "counts_as_sale": {},
+          "when_to_use": {}
+        },
+        "tipo": "objeto"
+      },
       "stage_index": {},
       "stages": {
         "campos": {
           "description": {},
+          "id": {},
           "name": {}
         },
         "tipo": "objeto"
@@ -16756,8 +16882,28 @@
     "controller": "api/v1/accounts/crm/ai_settings#improve_criteria",
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:24",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:66",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:26",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:39"
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:70"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/pipelines/:pipeline_id/ai_settings/improve_when_to_use": {
+    "campos": {
+      "funil": {
+        "campos": {
+          "counts_as_sale": {},
+          "when_to_use": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/ai_settings#improve_when_to_use",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:50",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:66",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:70"
     ],
     "sem_corpo": false
   },
@@ -17156,6 +17302,13 @@
   },
   "POST crm/stage_criteria/improve": {
     "campos": {
+      "funil": {
+        "campos": {
+          "counts_as_sale": {},
+          "when_to_use": {}
+        },
+        "tipo": "objeto"
+      },
       "pipeline_name": {},
       "stage_index": {},
       "stages": {
@@ -17170,7 +17323,8 @@
     "controller": "api/v1/accounts/crm/stage_criteria#improve",
     "origem": [
       "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:24",
-      "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:28"
+      "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:43",
+      "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:29"
     ],
     "sem_corpo": false
   },
@@ -17473,7 +17627,9 @@
           "link",
           "date",
           "list",
-          "checkbox"
+          "checkbox",
+          "pessoa",
+          "contato"
         ]
       },
       "attribute_key": {
@@ -17510,7 +17666,7 @@
     "modelo": "CustomAttributeDefinition",
     "origem": [
       "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:11",
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:37"
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:39"
     ],
     "sem_corpo": false
   },
@@ -23343,7 +23499,7 @@
       },
       "endpoint_url": {
         "max_caracteres": 2048,
-        "nao_pode_ficar_vazio": true,
+        "obrigatorio": "condicional",
         "tipo": "string"
       },
       "headers_config": {
@@ -23403,7 +23559,7 @@
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:31",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:102",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:103",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
     ],
@@ -23518,13 +23674,13 @@
       "leitura crua sem tipo: receita"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:58",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:138",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:64",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:63",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:60",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:59",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:120"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:139",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:65",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:64",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:61",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:60",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:121"
     ],
     "sem_corpo": false
   },
@@ -23592,6 +23748,23 @@
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:30",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:79",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:75"
+    ],
+    "sem_corpo": false
+  },
+  "PUT autonomia/ferramentas_prontas/:id": {
+    "campos": {
+      "ligada": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/ferramentas_prontas#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:44",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:47",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:45",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:81"
     ],
     "sem_corpo": false
   },
@@ -25109,8 +25282,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:117",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:643",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:410"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:660",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:426"
     ],
     "sem_corpo": false
   },
@@ -25635,14 +25808,14 @@
       }
     },
     "motivos": [
-      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)"
+      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:90)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:12",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:43",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:39",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:63",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59"
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:74",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:70",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:94",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:90"
     ],
     "sem_corpo": false
   },
@@ -26309,8 +26482,8 @@
     "modelo": "CustomAttributeDefinition",
     "origem": [
       "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:17",
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:37",
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:50"
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:39",
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:52"
     ],
     "sem_corpo": false
   },

@@ -18,7 +18,8 @@
 #
 # O cursor é o passo onde a execução parou (uma espera ou a ação que vai ser tentada de novo). Ao retomar:
 # - o "esperar" já cumpriu o tempo e segue;
-# - o "esperar até" confere a condição de novo e, vencido o prazo, segue pelo caminho "se vencer";
+# - o "esperar até" confere a condição de novo e, vencido o prazo, segue pelo caminho "se vencer" (sem prazo, volta a
+#   esperar: ver EsperaNoExecutor);
 # - a ação roda de novo;
 # - o "decidir" que decide a cada resposta (G31) decide de novo se ela chegou, ou segue esperando até o prazo; vencido,
 #   a execução acaba sem mandar nada.
@@ -40,6 +41,8 @@ class Autonomia::Automacao::Executor
   include ::Autonomia::Automacao::EsperaNoExecutor
   # O "decidir" que volta a esperar a próxima resposta e decide de novo (G31).
   include ::Autonomia::Automacao::DecidirDeNovo
+  # O passo da filha do "em outro registro" que lê o registro de origem fora do alcance de quem ligou (G65).
+  include ::Autonomia::Automacao::OrigemNoExecutor
 
   # Chamado pelo AvancarJob com a marca de quem reservou a execução (Partida ou VarreduraJob). A execução lida antes
   # da troca guarda o `due_at` da espera, que o "esperar até" usa como prazo.
@@ -60,7 +63,7 @@ class Autonomia::Automacao::Executor
     @definicao = execucao.automacao
     @account = execucao.account
     @raiz = raiz || SecureRandom.uuid
-    @roteiro = ::Autonomia::Automacao::Roteiro.new(execucao.versao.receita)
+    @roteiro = ::Autonomia::Automacao::Roteiro.da(execucao)
     @acesso = ::Autonomia::Automacao::Acesso.new(@definicao, chave_gatilho: @execucao.chave_gatilho)
     @tentativas = execucao.tentativas
   end
@@ -81,20 +84,22 @@ class Autonomia::Automacao::Executor
     passo = @execucao.cursor.blank? ? @roteiro.primeiro : @roteiro.passo(@execucao.cursor)
     @retomando = @execucao.cursor.present?
     while passo && !@parou
-      passo = dar(passo)
+      passo = sem_origem?(passo) ? pular_sem_origem(passo) : dar(passo)
       @retomando = false
     end
     finalizar('concluida') unless @parou
   end
 
   # O próximo passo, ou nil quando a rodada parou (espera, fim, erro). Um tipo por linha: a complexidade é a lista.
+  # `@anterior`: o passo de antes nesta rodada; o "esperar até" sabe por ele que o galho "a cada mensagem" acabou (G63).
   def dar(passo) # rubocop:disable Metrics/CyclomaticComplexity
+    @anterior = @passo_atual
     @passo_atual = passo['id']
     case passo['tipo']
     when 'esperar' then esperar(passo)
     when 'esperar_ate' then esperar_ate(passo)
     when 'se' then se(passo)
-    when 'acao', 'retorno' then acao(passo)
+    when *::Autonomia::Automacao::PassoDeAcao::TIPOS then acao(passo)
     when *NATIVOS.keys then passo_nativo(passo, NATIVOS.fetch(passo['tipo']))
     when *IA.keys then passo_de_ia(passo, IA.fetch(passo['tipo']))
     when 'ia_assumir' then passo_nativo(passo, ::Autonomia::Automacao::PassoDeIaAssumir, mensagem: false)
@@ -107,13 +112,23 @@ class Autonomia::Automacao::Executor
   end
 
   # Fecha a execução e devolve true quando ela não pode andar agora. A execução que já não é desta rodada (a varredura a
-  # fechou como travada, alguém a desligou) só para, sem gravar nada por cima.
+  # fechou como travada, alguém a desligou) para sem gravar nada na execução.
   def impedida?(passo_id)
-    return @parou = true unless desta_rodada?
+    return parou_por_fora(passo_id) unless desta_rodada?
 
     estado, motivo = impedimento
     encerrar(passo_id, estado, motivo) if estado
     estado.present?
+  end
+
+  # Desligada no meio da rodada: o desligar não registra a execução que está andando (o cursor dela não diz o passo,
+  # Definicao#desligar!), então o porquê fica aqui, no passo em que a rodada ia (#2750, revisão). A varredura que a
+  # fechou como travada já deixou o registro dela.
+  def parou_por_fora(passo_id)
+    @parou = true
+    desligada = Execucao.exists?(id: @execucao.id, estado: 'parada') && !@definicao.class.exists?(id: @definicao.id, ativa: true)
+    registrar(passo_id, 'pulado', 'desligada') if desligada
+    true
   end
 
   # [estado final, motivo] quando a execução não pode andar agora; nil quando pode.
@@ -142,7 +157,7 @@ class Autonomia::Automacao::Executor
     Rails.logger.error("[automacao][motor] não registrou a quebra execucao=#{@execucao.id} #{e.class}: #{e.message}")
   end
 
-  def motivo_de_quem_ligou = @acesso.motivo || ('quem_ligou_sem_acesso' unless @acesso.alcanca?(alvo))
+  def motivo_de_quem_ligou = @acesso.motivo_no(alvo, @execucao)
 
   # Antes de cada ação: a automação, o motor, o alvo e quem ligou podem ter mudado desde o começo da rodada.
   def reconferir
@@ -162,12 +177,12 @@ class Autonomia::Automacao::Executor
     reconferir
     return if impedida?(passo['id'])
 
-    resultado = ::Autonomia::Automacao::PassoDeAcao.executar(execucao: @execucao, passo: passo, valores: valores, acesso: @acesso)
+    resultado = ::Autonomia::Automacao::PassoDeAcao.executar(execucao: @execucao, passo: passo, valores: valores, acesso: @acesso, alvo: alvo)
     case resultado.tipo
     when :ok, :pulado then seguir_depois_da_acao(passo, resultado)
     when :permanente then encerrar(passo['id'], 'falhou', resultado.motivo, 'falhou', resultado.dados)
     when :sem_acesso then encerrar(passo['id'], 'parada', pausar(resultado.motivo), 'falhou', resultado.dados)
-    else tentar_de_novo(passo, resultado)
+    else resultado.tipo == :esperar ? aguardar(passo, resultado.dados['ate'], registrar: false) : tentar_de_novo(passo, resultado)
     end
   end
 
@@ -195,7 +210,7 @@ class Autonomia::Automacao::Executor
     @tentativas = 0
     @alvo = @contexto = nil
     registrar(passo['id'], resultado.tipo == :ok ? 'ok' : 'pulado', resultado.motivo, resultado.dados)
-    @roteiro.seguinte(passo['id'])
+    resultado.dados['ramo'] ? @roteiro.entrar(passo, resultado.dados['ramo']) : @roteiro.seguinte(passo['id'])
   end
 
   def tentar_de_novo(passo, resultado)
@@ -208,8 +223,9 @@ class Autonomia::Automacao::Executor
     aguardar(passo, Time.current + INTERVALOS[tentativa - 1], registrar: false)
   end
 
-  def aguardar(passo, ate, registrar: true)
-    registrar(passo['id'], 'ok', nil, 'ate' => ate.iso8601) if registrar
+  # `dados`: o que fica no registro da espera; sem eles, o prazo (o "esperar até" sem prazo grava o começo, EsperaNoExecutor).
+  def aguardar(passo, ate, registrar: true, dados: nil)
+    registrar(passo['id'], 'ok', nil, dados || { 'ate' => ate.iso8601 }) if registrar
     gravar(estado: 'esperando', cursor: passo['id'], due_at: ate, travada_em: nil, tentativas: @tentativas)
     nil
   end
@@ -221,14 +237,17 @@ class Autonomia::Automacao::Executor
     nil
   end
 
+  # Fechou nesta rodada: a cobertura da agente de IA que ainda valer devolve a conversa à pessoa (decisão 18).
   def finalizar(estado)
-    gravar(estado: estado, travada_em: nil)
+    ::Autonomia::Automacao::Cobertura.encerrar([@execucao.id]) if gravar(estado: estado, travada_em: nil)
   end
 
   # Só grava na rodada que tomou a execução: se alguém a desligou no meio, nada muda e a rodada para do mesmo jeito.
+  # Devolve se gravou.
   def gravar(**atributos)
-    Execucao.gravar_na_rodada(@execucao.id, @marca, **atributos)
+    gravou = Execucao.gravar_na_rodada(@execucao.id, @marca, **atributos)
     @parou = true
+    gravou
   end
 
   # Quem ligou não pode mais agir: a automação desliga até alguém assumir e religar (F3.7). Devolve o motivo.

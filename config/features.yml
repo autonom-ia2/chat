@@ -1150,8 +1150,11 @@
 # Fase 2): o agente que tem página de agendamento ganha, sem configuração, `enviar_localizacao` (o mapa de um local
 # presencial da página, quando o endereço já tem coordenada) e `enviar_contato` (o cartão com o telefone de contato da
 # página); o cartão sai numa mensagem própria, logo depois da resposta. O endereço novo ou mudado da página é
-# convertido em coordenada por um job (Google Places), sem travar o salvar. A Lia fica fora. Desligada: nada muda, nem
-# o catálogo nem a página. Rollback: desligar a flag na conta. Sem migration. Fim da feature_flags_ext_2, depois de
+# convertido em coordenada por um job (Google Places), sem travar o salvar. A Lia fica fora. #1479/#2723: com ela, a
+# página do agente mostra o bloco "Endereço e telefone" (com a Fase 2; fora da cotação, do interno e do ajudante); o
+# agente diz em TEXTO, pela instrução, esse endereço e telefone e o endereço dos locais presenciais da página (sem
+# mapa do endereço do agente); `enviar_contato` leva o telefone do agente antes do da página, e o agente sem página mas
+# com telefone também o ganha. Desligada: nada muda, nem o catálogo, nem a instrução, nem a página. Rollback: desligar a flag na conta. Sem migration. Fim da feature_flags_ext_2, depois de
 # automacao_ia: posição 25 (valor 16777216, 1 << 24), dada pela Orquestração em 04/11. Nasce ligada no piloto (contas
 # 1, 16 e 18).
 - name: agentes_enviar_local_e_contato
@@ -1275,5 +1278,39 @@
 # contas é decisão do Rodrigo (o RESULTADO do #2810 diz por quê), não a regra C automática.
 - name: rag_busca_hibrida
   display_name: RAG › busca híbrida
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: ferramentas prontas, F0 (#2858): a fundação, sem tela. Ligada: a ferramenta pronta do agente (uma fonte do
+# catálogo, nunca um link digitado) entra no turno e consulta a fonte com prazo curto, reserva, cache, contador e limite
+# diário por conta e por fonte. Desligada: as prontas somem do turno e o "Incluir" recusa; o resto fica como antes. A
+# Lia fica de fora. Migration 20261109980000 (aditiva). Rollback: desligar a flag na conta.
+# Posição 37 (68719476736, 1 << 36), dada pela Orquestração em 10/11. Depois do NO AR, liga em todas as contas ativas
+# das 2 stacks (regra de 07/11).
+- name: agente_ferramentas_prontas
+  display_name: Agentes › ferramentas prontas (fundação)
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: ferramentas prontas, F1 (#2858): as consultas mais usadas além de CEP, CNPJ e FIPE — CPF válido (só o
+# cálculo), feriados e dias úteis, Banco Central (Selic, IPCA, dólar e Focus), cidades e estados (IBGE), DDD,
+# localização vira cidade e bancos. Vale junto com `agente_ferramentas_prontas`: desligada, essas fontes somem do turno
+# e o "Incluir" recusa; CEP, CNPJ e FIPE seguem. Sem migration. Rollback: desligar a flag na conta.
+# Posição 38 (137438953472, 1 << 37), dada pela Orquestração em 10/11. Depois do NO AR, liga em todas as contas ativas
+# das 2 stacks (regra de 07/11).
+- name: agente_ferramentas_prontas_consultas
+  display_name: Agentes › ferramentas prontas (consultas mais usadas)
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: ferramentas prontas, F2 (#2858): a vitrine. Ligada (junto com `agente_ferramentas_prontas`): o menu
+# "Ferramentas prontas" em No automático, a vitrine (grupos, busca, destaque do ramo, detalhe com "Experimente",
+# escolha do agente, frase "Use quando…" e "Pronto!") e, na página do agente, as prontas com liga/desliga e "Tirar".
+# Quem inclui: o administrador e quem tem a chave "Ferramentas dos agentes". Desligada: tudo some da tela e a API da
+# vitrine responde 404; as prontas já incluídas seguem no turno pela flag da fundação. Sem migration.
+# Rollback: desligar a flag na conta. Posição 39 (274877906944, 1 << 38), dada pela Orquestração em 10/11. Depois do
+# NO AR, liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: agente_ferramentas_prontas_vitrine
+  display_name: Agentes › ferramentas prontas (vitrine)
   enabled: false
   column: feature_flags_ext_2

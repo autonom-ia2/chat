@@ -44,6 +44,23 @@ const camposDeData = (definicoes, modelo) =>
       value: item.attribute_key,
       label: item.attribute_display_name,
     }));
+// G22: a condição "pediu card no funil" aparece porque o "para cada item"
+// (G24) grava quem pediu o card. Sem gravador ela nunca acharia ninguém, e o
+// servidor a recusa (Solicitados::GRAVADORES): os dois andam juntos.
+const SOLICITANTE_LIGADO = true;
+// G22: os campos de marcar do card, que a seleção "pediu card no funil" usa
+// para saber o que ainda falta (o documento que o passo 6 marca).
+const camposDeMarcarDoCard = definicoes =>
+  definicoes
+    .filter(
+      item =>
+        item.attribute_model === 'card_attribute' &&
+        item.attribute_display_type === 'checkbox'
+    )
+    .map(item => ({
+      value: item.attribute_key,
+      label: item.attribute_display_name,
+    }));
 const porAlvo = (definicoes, montar) =>
   Object.fromEntries(
     Object.entries(MODELO_DO_ALVO).map(([alvo, modelo]) => [
@@ -52,8 +69,20 @@ const porAlvo = (definicoes, montar) =>
     ])
   );
 
-// As peças que pedem os funis e as etapas; "campo" pede os campos de data.
+// G27 (#2661): o "card atualizado" escolhe qualquer campo personalizado do
+// card, de qualquer tipo.
+const camposDoCard = definicoes =>
+  definicoes
+    .filter(item => item.attribute_model === 'card_attribute')
+    .map(item => ({
+      value: item.attribute_key,
+      label: item.attribute_display_name,
+    }));
+
+// As peças que pedem os funis e as etapas; "campo" pede os campos de data e
+// "mudanca", os campos do card.
 const PECAS_DO_FUNIL = ['etapa', 'funil'];
+const PECAS_DOS_CAMPOS = ['campo', 'mudanca'];
 
 export function useEscolhasDosGatilhos() {
   const funis = ref([]);
@@ -90,7 +119,8 @@ export function useEscolhasDosGatilhos() {
     const leituras = [];
     if (pecas.some(peca => PECAS_DO_FUNIL.includes(peca)))
       leituras.push(carregarFunis());
-    if (pecas.includes('campo')) leituras.push(carregarCampos());
+    if (pecas.some(peca => PECAS_DOS_CAMPOS.includes(peca)))
+      leituras.push(carregarCampos());
     if (pecas.includes('pagina')) leituras.push(carregarPaginas());
     await Promise.all(leituras);
   };
@@ -102,13 +132,26 @@ export function useEscolhasDosGatilhos() {
       label: funil.name,
       options: comNome(etapasPorFunil.value[funil.id]),
     })),
+    // As etapas de cada funil, pelo id do funil (G22: a etapa do "pediu card").
+    etapasPorFunil: Object.fromEntries(
+      funis.value.map(funil => [
+        funil.id,
+        comNome(etapasPorFunil.value[funil.id]),
+      ])
+    ),
+    camposDeMarcar: camposDeMarcarDoCard(definicoes.value),
+    solicitanteLigado: SOLICITANTE_LIGADO,
     // Os campos de data, pelo alvo do gatilho: { 'Crm::Card': [...], Contact }.
     campos: porAlvo(definicoes.value, lista => lista),
+    camposDoCard: camposDoCard(definicoes.value),
     // Pela peça do parâmetro (etapa, funil): o id escolhido e o nome dele. O
     // campo vai também pelo alvo, porque card e contato podem ter a mesma chave.
     nomes: {
       campo: porAlvo(definicoes.value, lista =>
         Object.fromEntries(lista.map(item => [item.value, item.label]))
+      ),
+      campoDoCard: Object.fromEntries(
+        camposDoCard(definicoes.value).map(item => [item.value, item.label])
       ),
       funil: porId(funis.value),
       pagina: porId(paginas.value, 'title'),

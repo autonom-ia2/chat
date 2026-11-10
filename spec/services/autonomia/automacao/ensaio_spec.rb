@@ -35,6 +35,20 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     expect(passos).to eq([{ id: 'p1', tipo: 'mensagem', faria: 'mensagem', dados: { texto: 'Oi Maria, obrigado.' } }])
   end
 
+  # Lote 5 (#2681): o modelo de propaganda sai fora da janela, e a tela avisa que custa mais.
+  it 'diz o modelo que sai com a janela fechada e marca o de propaganda' do
+    canal = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
+    modelo = { 'name' => 'pre_black', 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'MARKETING',
+               'components' => [{ 'type' => 'BODY', 'text' => 'Oi! A Black começa na quinta.' }] }
+    canal.update!(message_templates: [modelo])
+    conversa.update!(inbox: canal.inbox)
+    passo = mensagem_passo('p1', 'Oi.').merge('modelo' => { 'nome' => 'pre_black', 'idioma' => 'pt_BR', 'variaveis' => [] })
+
+    expect(passos_de(receita(passo)).first[:dados]).to eq(texto: 'Oi.', modelo: 'pre_black', propaganda: true)
+    canal.update!(message_templates: [modelo.merge('category' => 'UTILITY')])
+    expect(passos_de(receita(passo)).first[:dados]).to eq(texto: 'Oi.', modelo: 'pre_black')
+  end
+
   it 'sem a mensagem automática, diz que não sairia' do
     account.disable_features!('automacao_mensagens')
 
@@ -64,6 +78,14 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
 
     expect(no[:faria]).to eq('esperar_ate')
     expect(no[:ramos].map { |ramo| [ramo[:chave], ramo[:passos].pluck(:id)] }).to eq([['chegou', %w[r1]], ['se_vencer', %w[v1 r1]]])
+  end
+
+  it 'o "esperar até" sem prazo que ainda não vale só abre o caminho de quando chegar (#2750)' do
+    espera = { 'id' => 'a1', 'tipo' => 'esperar_ate', 'condicao' => aberta, 'prazo' => 'sem_prazo' }
+
+    no = passos_de(receita(espera, esperar_passo('r1'))).first
+
+    expect(no[:ramos].map { |ramo| [ramo[:chave], ramo[:passos].pluck(:id)] }).to eq([['chegou', %w[r1]]])
   end
 
   it 'o "esperar até" que já vale segue na hora' do

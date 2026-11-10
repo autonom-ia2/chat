@@ -31,4 +31,16 @@ RSpec.describe Crm::Cards::ActivityPayloadBuilder do
       [{ 'from_stage_id' => 'Novo Lead', 'to_stage_id' => 'Proposta' }, { 'from_stage_id' => 'Proposta', 'to_stage_id' => 'Novo Lead' }]
     )
   end
+
+  # #2114: SuperAdmin é subclasse de User; a ação dele aparece com o nome, como a de qualquer pessoa.
+  it 'mostra o nome do super admin que mexeu no card' do
+    super_admin = create(:super_admin, name: 'Admin da Plataforma')
+    create(:account_user, account: account, user: super_admin, role: :administrator)
+    Crm::ActivityLogger.new(card: world.card, actor: super_admin, event_type: 'archive').perform
+
+    payload = described_class.new(account: account, user: admin, account_user: admin.account_users.first,
+                                  activities: world.card.activities.where(event_type: 'archive').to_a).perform
+
+    expect(payload.first).to include(actor_type: 'user', actor_id: super_admin.id, actor_name: 'Admin da Plataforma')
+  end
 end

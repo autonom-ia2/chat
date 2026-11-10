@@ -126,6 +126,32 @@ RSpec.describe 'Automação livre: gatilho recorrente', :automacao_motor do # ru
       expect(execucoes.pluck(:alvo_type, :alvo_id)).to eq([['Crm::Card', perdido.id]])
     end
 
+    # Ex. 16, "Começa quando" (#2675): perdido há 11 meses com o motivo "fechou com outro" ou "achou caro". O motivo é o
+    # "Só se" do gatilho (card.motivo_da_perda), que a Partida confere em cada card da seleção.
+    it 'card: o "Só se" do gatilho filtra a seleção pelo motivo da perda', :aggregate_failures do
+      funil, etapa = create_crm_pipeline(account: account, user: admin)
+      varredura = fuso.local(2026, 10, 1, 8, 5)
+      card = lambda do |motivo|
+        account.crm_cards.create!(pipeline: funil, stage: etapa, title: motivo, currency: 'BRL', status: :lost, lost_reason: motivo)
+               .tap { |item| item.update_columns(closed_at: varredura - 340.days) } # rubocop:disable Rails/SkipsModelValidations
+      end
+      fechou_com_outro = card.call('fechou com outro')
+      achou_caro = card.call('achou caro')
+      card.call('desistiu da viagem')
+      motivo = ->(texto) { { 'campo' => { '$valor' => 'card.motivo_da_perda' }, 'op' => 'igual', 'valor' => texto } }
+      filtros = [{ 'alguma' => [motivo.call('fechou com outro'), motivo.call('achou caro')] }]
+      selecao = { 'situacao' => 'perdido', 'fechado_entre_dias' => { 'de' => 330, 'ate' => 360 } }
+      receita = { 'gatilho' => { 'tipo' => 'card.recorrente', 'frequencia' => 'mensal', 'dia_do_mes' => 1, 'hora' => 8,
+                                 'selecao' => selecao, 'filtros' => filtros },
+                  'passos' => [esperar_passo('p1')] }
+
+      expect(Autonomia::Automacao::Receita.new(receita, conta: account, account_user: nil).problemas).to be_empty
+      recorrente(tipo: 'card.recorrente', selecao: selecao, frequencia: 'mensal', dia_do_mes: 1, filtros: filtros)
+      varrer_em(varredura)
+
+      expect(execucoes.order(:alvo_id).pluck(:alvo_id)).to eq([fechou_com_outro.id, achou_caro.id])
+    end
+
     # Ex. 17 (vendedora de férias): os cards abertos de uma pessoa; o fechado dela e o aberto de outra ficam de fora.
     it 'card: aberto e do responsável' do
       funil, etapa = create_crm_pipeline(account: account, user: admin)

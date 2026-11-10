@@ -24,6 +24,13 @@ const comChaveSeRepetido = opcoes => {
   );
 };
 
+// O nome do valor no catálogo. O do registro de origem (G65, `origem`) leva a
+// marca, para não confundir com o mesmo valor do registro em que o ramo roda.
+export const nomeDoValor = (item, t) =>
+  item.origem
+    ? t('AUTOMACAO_LIVRE.OUTRO_REGISTRO.DA_ORIGEM', { valor: t(item.frase) })
+    : t(item.frase);
+
 // O valor da mensagem (#2496) só aparece no "Só se" do gatilho dela; no texto
 // e nos passos, `gatilho` não vem e ele fica de fora. O que só o Guia monta
 // (`so_guia`) e o que a pessoa não pode ler (`sem_permissao`, #2597) nunca
@@ -50,15 +57,29 @@ export const opcoesDosValores = (
       if (item.rotulo)
         return [{ value: item.caminho, chave: item.chave, label: item.rotulo }];
       if (!item.atributos)
-        return [{ value: item.caminho, label: t(item.frase) }];
-      return atributosDo(item.atributos).map(atributo => ({
-        value: `${item.caminho}.${atributo.attribute_key}`,
-        chave: atributo.attribute_key,
-        label: t('AUTOMACAO_LIVRE.FRASES.ATRIBUTO', {
-          base: t(item.frase),
-          chave: atributo.attribute_display_name,
-        }),
-      }));
+        return [{ value: item.caminho, label: nomeDoValor(item, t) }];
+      return atributosDo(item.atributos).flatMap(atributo => {
+        const valor = `${item.caminho}.${atributo.attribute_key}`;
+        const campo = {
+          value: valor,
+          chave: atributo.attribute_key,
+          label: t('AUTOMACAO_LIVRE.FRASES.ATRIBUTO', {
+            base: nomeDoValor(item, t),
+            chave: atributo.attribute_display_name,
+          }),
+        };
+        // G62: o campo de pessoa da equipe dá também o nome e a ausência dela.
+        if (atributo.attribute_display_type !== 'pessoa' || !item.da_pessoa)
+          return [campo];
+        return [
+          campo,
+          ...item.da_pessoa.map(sufixo => ({
+            value: `${valor}.${sufixo.sufixo}`,
+            chave: `${atributo.attribute_key}.${sufixo.sufixo}`,
+            label: t(sufixo.frase, { campo: atributo.attribute_display_name }),
+          })),
+        ];
+      });
     })
   );
 
@@ -119,7 +140,7 @@ export const valoresSemPermissao = (catalogo, t, partes = []) => {
     .map(parte => parte.$valor);
   return (catalogo?.valores || [])
     .filter(item => item.sem_permissao && usados.includes(item.caminho))
-    .map(item => ({ value: item.caminho, label: t(item.frase) }));
+    .map(item => ({ value: item.caminho, label: nomeDoValor(item, t) }));
 };
 
 export const comColchetes = rotulo => `${ABRE}${rotulo}${FECHA}`;

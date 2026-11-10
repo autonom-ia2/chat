@@ -7,11 +7,14 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import LivreMarcar from './LivreMarcar.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
 import { chaveDoNome, problemaDoCaminho } from '../ia';
+import { CHAVE_DO_NOME } from '../paraCada';
 
 // #2500 F7 — os campos dos passos de IA no "Alterar": o que a IA lê, a pergunta
 // e os caminhos do "decidir", o que o "extrair" procura e onde grava, a
 // instrução e o destino do "escrever" e do "resumir". Os passos de dentro de
-// cada caminho ficam na lista do Confira, como os galhos do "se".
+// cada caminho ficam na lista do Confira, como os galhos do "se". Os campos de
+// cada item do "para cada item" (G24) são os do "extrair" sem o "onde gravar",
+// e o primeiro, "nome", não muda de chave nem sai.
 const props = defineProps({
   campo: { type: Object, required: true },
   modelValue: { type: [Array, Object, String, Number, Boolean], default: null },
@@ -34,6 +37,8 @@ const LEITURAS = [
   'empresa',
   // #2414 G20: a foto, o PDF e o áudio que o cliente mandou.
   'anexos',
+  // G46: só os que chegaram na espera de antes (o laço dos documentos).
+  'anexos_novos',
   // #2679: o card e as notas internas da conversa.
   'card',
   'notas',
@@ -102,11 +107,16 @@ const novoCaminho = () =>
     ...lista.value,
     { chave: '', descricao: '', passos: [] },
   ]);
+const doParaCada = computed(() => props.campo.peca === 'campos_para_cada');
 const novoCampo = () =>
   emit('update:modelValue', [
     ...lista.value,
-    { chave: '', descricao: '', destino: '' },
+    doParaCada.value
+      ? { chave: '', descricao: '' }
+      : { chave: '', descricao: '', destino: '' },
   ]);
+// O "nome" do "para cada item": é dele que o contato e o card nascem.
+const fixo = item => doParaCada.value && item.chave === CHAVE_DO_NOME;
 
 const destinoDoResumir = computed(() =>
   props.modelValue && typeof props.modelValue === 'object'
@@ -218,14 +228,22 @@ const ROTULO_DA_CAIXA =
   </fieldset>
 
   <fieldset
-    v-else-if="campo.peca === 'campos_extrair'"
+    v-else-if="['campos_extrair', 'campos_para_cada'].includes(campo.peca)"
     class="flex flex-col gap-3"
-    data-peca="campos_extrair"
+    :data-peca="campo.peca"
   >
     <legend class="mb-1.5 text-sm font-medium text-n-slate-12">
       {{ $t(campo.rotulo) }}
     </legend>
-    <p class="mb-0 text-sm text-n-slate-11">{{ $t(`${I}.CAMPO.DICA`) }}</p>
+    <p class="mb-0 text-sm text-n-slate-11">
+      {{
+        $t(
+          doParaCada
+            ? 'AUTOMACAO_LIVRE.PARA_CADA.CAMPO_DICA'
+            : `${I}.CAMPO.DICA`
+        )
+      }}
+    </p>
     <div
       v-for="(item, indice) in lista"
       :key="indice"
@@ -238,6 +256,7 @@ const ROTULO_DA_CAIXA =
           maxlength="40"
           :class="ROTULO_DA_CAIXA"
           :value="item.chave"
+          :readonly="fixo(item)"
           @input="evento => trocarItem(indice, 'chave', evento.target.value)"
         />
       </label>
@@ -252,7 +271,7 @@ const ROTULO_DA_CAIXA =
           "
         />
       </label>
-      <div :class="ROTULO_DO_ITEM">
+      <div v-if="!doParaCada" :class="ROTULO_DO_ITEM">
         <span aria-hidden="true">{{ $t(`${I}.CAMPO.DESTINO`) }}</span>
         <ChoiceSelect
           :model-value="item.destino || ''"
@@ -263,7 +282,7 @@ const ROTULO_DA_CAIXA =
         />
       </div>
       <Button
-        v-if="lista.length > 1"
+        v-if="lista.length > 1 && !fixo(item)"
         :label="$t(`${I}.CAMPO.TIRAR`)"
         icon="i-lucide-trash-2"
         ruby

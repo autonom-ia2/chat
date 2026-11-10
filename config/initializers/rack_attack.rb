@@ -91,6 +91,12 @@ class Rack::Attack
     req.ip if req.post? && req.path.include?('/autonomia/prospecting/searches/interpret')
   end
 
+  # Experimente da vitrine de ferramentas prontas (#2858): na FIPE, nas cidades e nos feriados cada clique chama a IA da
+  # conta e faz até 6 consultas. Contra script, não contra uso: uma pessoa experimentando não chega a isso.
+  throttle('ferramentas_prontas_experimente/ip', limit: 30, period: 1.minute) do |req|
+    req.ip if req.post? && req.path.include?('/autonomia/ferramentas_prontas/experimentar')
+  end
+
   # Abrir um modelo de e-mail (#1786) pode chamar a IA da conta para sugerir os campos. A prévia (miniatura) não chama.
   throttle('conversa_canal_modelos_de_email/ip', limit: 30, period: 1.minute) do |req|
     req.ip if req.get? && req.path.include?('/conversa_canal/modelos_de_email/') && !req.path.end_with?('/previa')

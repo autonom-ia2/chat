@@ -6,9 +6,12 @@ module Autonomia::Automacao::EsperaDoCard
 
   module_function
 
-  # O passo em que a execução espera lê um valor do card? O caminho fica em `{"$valor": "..."}` dentro da condição.
+  # O passo em que a execução espera lê um valor do card? O caminho fica em `{"$valor": "..."}` dentro da condição. A
+  # espera com hora marcada (G64, `conferir_as`) só confere nela: a mudança do card não a acorda.
   def le_o_card?(execucao)
     passo = ::Autonomia::Automacao::Roteiro.new(execucao.versao.receita).passo(execucao.cursor)
+    return false if ::Autonomia::Automacao::EnquantoEspera.conferir_as?(passo)
+
     caminhos = ::Autonomia::Automacao::EsperaDaReuniao.caminhos_da(passo.to_h['condicao'])
     caminhos.any? { |caminho| caminho.to_s.start_with?(PREFIXO) }
   end

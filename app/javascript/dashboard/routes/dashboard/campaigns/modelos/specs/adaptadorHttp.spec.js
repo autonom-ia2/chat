@@ -342,6 +342,13 @@ describe('adaptador HTTP de Modelos', () => {
     expect(motivo('template_product_unavailable')).toBe('produto_indisponivel');
     expect(motivo('template_catalog_missing')).toBe('sem_catalogo');
     expect(motivo('template_products_disabled')).toBe('produtos_desligados');
+    // #2686: a etiqueta excluída da campanha da automação foi apagada (pausa do sistema, com motivo).
+    expect(
+      motivoDaPausa({
+        source: 'system',
+        reason_code: 'audience_exclusion_label_missing',
+      })
+    ).toBe('etiqueta_excluida_apagada');
   });
 
   it('shows usage the person can see and only a notice for the rest', () => {

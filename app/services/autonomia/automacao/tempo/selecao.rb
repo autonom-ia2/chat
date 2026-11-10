@@ -4,10 +4,14 @@
 # Card: funil, etapa, situação (aberto, ganho, perdido), responsável e "fechado entre N e M dias atrás" (closed_at, no
 # índice da conta, funil, situação e fechamento). Contato: tem a etiqueta, não tem a etiqueta, atributo igual a um
 # valor. A Receita recusa a seleção vazia: sem condição nenhuma, a automação pegaria a conta inteira por engano.
+#
+# G22 (exemplo 8, passo 9): contato que pediu card aberto no funil com campo de marcar ainda em branco
+# (`solicitante_de`, Autonomia::Automacao::Solicitados), um por empresa. Os cards contados são só os que a pessoa do
+# contexto vê; sem contexto (a seleção inteira, quando quem ligou perdeu o acesso), todos.
 class Autonomia::Automacao::Tempo::Selecao
   SITUACOES = { 'aberto' => :open, 'ganho' => :won, 'perdido' => :lost }.freeze
   DO_CARD = %w[funil_id etapa_id situacao responsavel_id fechado_entre_dias].freeze
-  DO_CONTATO = %w[etiqueta sem_etiqueta atributo].freeze
+  DO_CONTATO = %w[etiqueta sem_etiqueta atributo solicitante_de].freeze
 
   def initialize(conta, gatilho, agora: Time.current)
     @conta = conta
@@ -31,9 +35,10 @@ class Autonomia::Automacao::Tempo::Selecao
   # a base de contatos aberta para ela (nil sem ela). Registro que a pessoa não vê fica fora, sem pausar a automação.
   # `pergunta`: index? para quem vê (o ensaio); update? para quem age (a execução, a mesma do Acesso#alcanca?).
   def escopo_para(contexto, pergunta: :index?)
-    return escopo.where(id: Pundit.policy_scope!(contexto, ::Crm::Card).select(:id)) if @card
+    return escopo.where(id: cards_de(contexto).select(:id)) if @card
+    return unless ContactPolicy.new(contexto, ::Contact).public_send(pergunta)
 
-    escopo if ContactPolicy.new(contexto, ::Contact).public_send(pergunta)
+    solicitante_de? ? do_contato(cards_de(contexto)) : escopo
   end
 
   # A seleção da execução: só o que quem ligou vê. Sem acesso para agir (saiu da conta, perdeu a permissão), vai a
@@ -66,12 +71,21 @@ class Autonomia::Automacao::Tempo::Selecao
     escopo.where(closed_at: (@agora - faixa['ate'].to_i.days)..(@agora - faixa['de'].to_i.days))
   end
 
-  def do_contato
+  def do_contato(cards_visiveis = nil)
     escopo = ::Contact.where(account_id: @conta.id)
+    escopo = escopo.where(id: solicitantes(cards_visiveis)) if solicitante_de?
     escopo = escopo.tagged_with(@selecao['etiqueta'], on: :labels) if @selecao['etiqueta']
     escopo = escopo.where.not(id: com_etiqueta(@selecao['sem_etiqueta'])) if @selecao['sem_etiqueta']
     atributo = @selecao['atributo']
     atributo ? escopo.where('contacts.custom_attributes ->> ? = ?', atributo['chave'], atributo['valor'].to_s) : escopo
+  end
+
+  def cards_de(contexto) = Pundit.policy_scope!(contexto, ::Crm::Card)
+
+  def solicitante_de? = condicoes.key?('solicitante_de')
+
+  def solicitantes(cards_visiveis)
+    ::Autonomia::Automacao::Solicitados.new(@conta, @selecao['solicitante_de'], visiveis: cards_visiveis).representantes
   end
 
   def com_etiqueta(etiqueta) = ::Contact.where(account_id: @conta.id).tagged_with(etiqueta, on: :labels).select(:id)

@@ -11,14 +11,16 @@
 #   só entra se toda pessoa da conta que vê a conversa do alvo também a vê (a mesma política, com caixa, time e função).
 #   As que ficam de fora vão em `fora` (os ids), e o histórico diz quantas.
 # - A conversa do alvo já vai na leitura do passo. Das outras, a mesma leitura de mensagens do passo (o Estado).
+# - G68 (#2864): o "extrair" usa a mesma leitura; com `fuso`, cada mensagem das outras conversas vai com a data e a hora.
 class Autonomia::Automacao::EnviosDaExecucao
   LEITURAS_DE_MENSAGEM = %w[mensagens_recentes mensagens_com_respostas ultima_mensagem].freeze
   MAX_CARACTERES = ::Autonomia::Decisores::Estado::MAX_CARACTERES
 
-  def initialize(execucao:, conversa:, leituras:)
+  def initialize(execucao:, conversa:, leituras:, fuso: nil)
     @execucao = execucao
     @conversa = conversa
     @leituras = Array(leituras) & LEITURAS_DE_MENSAGEM
+    @fuso = fuso
   end
 
   # O que vai à IA junto da leitura do passo. Vazio quando a execução ainda não mandou nada.
@@ -56,12 +58,37 @@ class Autonomia::Automacao::EnviosDaExecucao
   def outras = visiveis - [@conversa]
 
   def lidas
-    @lidas ||= outras.select { |conversa| quem_ve_o_alvo.all? { |pessoa| ve?(pessoa, conversa) } }
+    @lidas ||= outras.select { |conversa| quem_ve_o_alvo.all? { |membro| membro_ve?(membro, conversa) } }
   end
 
   def quem_ve_o_alvo
-    @quem_ve_o_alvo ||= outras.empty? ? [] : @conversa.account.users.select { |pessoa| ve?(pessoa, @conversa) }
+    @quem_ve_o_alvo ||= outras.empty? ? [] : @conversa.account.account_users.includes(:user).select { |membro| membro_ve?(membro, @conversa) }
   end
+
+  # A leitura da conversa (ConversationPolicy#view?), com o vínculo da pessoa já lido: quem só lê (conversation_view, no EE)
+  # também abre a conversa do alvo e lê o resumo, então conta em "quem vê o alvo" (parecer de Funções no #2876). No OSS,
+  # view? é o mesmo que show?. Quem não é administrador só alcança pela caixa ou pelo time, nas duas perguntas: quem não
+  # está em nenhum dos dois nem chega à política. Os membros das caixas e dos times saem numa leitura para todas as
+  # conversas, não uma por pessoa e conversa.
+  def membro_ve?(membro, conversa)
+    return false unless membro.administrator? || na_caixa_ou_no_time?(membro.user_id, conversa)
+
+    ConversationPolicy.new({ user: membro.user, account: @conversa.account, account_user: membro }, conversa).view?
+  end
+
+  def na_caixa_ou_no_time?(user_id, conversa)
+    membros_das_caixas[conversa.inbox_id].to_a.include?(user_id) || membros_dos_times[conversa.team_id].to_a.include?(user_id)
+  end
+
+  def membros_das_caixas
+    @membros_das_caixas ||= agrupados(InboxMember.where(inbox_id: [@conversa, *outras].map(&:inbox_id)).pluck(:inbox_id, :user_id))
+  end
+
+  def membros_dos_times
+    @membros_dos_times ||= agrupados(TeamMember.where(team_id: [@conversa, *outras].filter_map(&:team_id)).pluck(:team_id, :user_id))
+  end
+
+  def agrupados(pares) = pares.group_by(&:first).transform_values { |lista| lista.map(&:last) }
 
   def envio(mensagem)
     conversa = mensagem.conversation
@@ -72,6 +99,6 @@ class Autonomia::Automacao::EnviosDaExecucao
 
   def leitura(conversa)
     leituras = @leituras.presence || ::Autonomia::Decisor::LEITURAS_PADRAO
-    ::Autonomia::Decisores::Estado.new(conversation: conversa, leituras: leituras).conversa
+    ::Autonomia::Decisores::Estado.new(conversation: conversa, leituras: leituras, fuso: @fuso).conversa
   end
 end

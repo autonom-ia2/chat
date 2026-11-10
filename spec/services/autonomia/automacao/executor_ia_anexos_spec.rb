@@ -33,6 +33,10 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
     perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(automacao_ligada(account, admin, passos), conversa) }
   end
 
+  def rodar_como(quem, *passos)
+    perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(automacao_ligada(account, quem, passos), conversa) }
+  end
+
   def registros(execucao) = Autonomia::Automacao::Registro.where(execucao: execucao).order(:id).pluck(:passo, :resultado, :motivo)
 
   def mensagem_com(arquivo, tipo, content_type, texto: nil)
@@ -49,6 +53,41 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       'caminhos' => [{ 'nome' => 'Tem o perfil', 'chave' => 'perfil', 'descricao' => 'experiência na área', 'passos' => [prioridade_passo('p2')] },
                      { 'nome' => 'Sem o perfil', 'chave' => 'sem_perfil', 'descricao' => 'sem experiência', 'passos' => [] }],
       'nenhum' => [] }
+  end
+
+  # G46: `anexos_novos` passa pelo mesmo portão de `anexos` (NaConversa#sem_acesso, Acesso.alcanca?) antes de ler.
+  it 'com anexos_novos, quem ligou sem acesso à conversa não manda anexo nenhum à IA; a automação pausa', :aggregate_failures do
+    agente = create(:user, account: account, role: :agent)
+    funcao = create(:custom_role, account: account, permissions: %w[automation_manage conversation_manage])
+    account.account_users.find_by(user: agente).update!(custom_role: funcao)
+    create(:inbox_member, user: agente, inbox: conversa.inbox)
+    openai_devolve('caminho' => 'perfil', 'motivo' => 'tem experiência')
+    execucao = rodar_como(agente, esperar_passo('espera'), decidir(%w[anexos_novos]))
+    mensagem_com('sample.pdf', :file, 'application/pdf')
+    InboxMember.find_by(user: agente, inbox: conversa.inbox).destroy!
+
+    travel(1.day + 1.minute) { varrer }
+
+    expect(corpos).to be_empty
+    expect([execucao.reload.estado, registros(execucao).last.last]).to eq(%w[parada quem_ligou_sem_acesso])
+  end
+
+  # G46: o que sai da leitura para sempre fica no histórico da execução, com qual anexo e por quê.
+  it 'com anexos_novos, o registro do passo lista o anexo que ficou de fora e guarda o marco', :aggregate_failures do
+    openai_devolve('caminho' => 'perfil', 'motivo' => 'tem experiência')
+    execucao = rodar_como(admin, esperar_passo('espera'), decidir(%w[anexos_novos]))
+    mensagem_com('sample.pdf', :file, 'application/pdf')
+    audio = create(:message, conversation: conversa, account: account, message_type: :incoming, content: nil)
+    fora = audio.attachments.new(account_id: account.id, file_type: :audio)
+    fora.file.attach(io: Rails.root.join('spec/assets/sample.ogg').open, filename: 'sample.ogg', content_type: 'audio/ogg')
+    fora.save!
+
+    travel(1.day + 1.minute) { varrer }
+
+    expect(conteudo(corpos.sole).pluck('type')).to include('input_file')
+    dados = Autonomia::Automacao::Registro.find_by(execucao: execucao, passo: 'p1').dados
+    expect(dados['anexos_fora']).to eq([{ 'message_id' => audio.id, 'attachment_id' => fora.id, 'motivo' => 'nao_e_foto_nem_pdf' }])
+    expect(dados['marco_dos_anexos']).to include('lido_ate')
   end
 
   it 'o currículo em PDF, sem uma palavra, vai inteiro à IA e decide o caminho', :aggregate_failures do

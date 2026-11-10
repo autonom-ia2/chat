@@ -4,7 +4,9 @@ import {
   campanhaPronta,
   caixasDaCampanha,
   comFaz,
+  comPublico,
   fraseDaCampanha,
+  publicoDaExecucaoNoCatalogo,
   serveNaCampanha,
 } from '../campanha';
 
@@ -81,6 +83,25 @@ describe('campanha.js', () => {
     ).toBe(true);
   });
 
+  // Exemplo 7, passo 2: "a mesma campanha para todos os outros contatos".
+  it('"todos os contatos" fica pronta sem etiqueta de público', () => {
+    const todos = comPublico(PRONTA, 'todos');
+
+    expect(todos.publico).toBe('todos');
+    expect(todos).not.toHaveProperty('etiquetas');
+    expect(campanhaPronta({ ...todos, sem_etiquetas: [7] }, CAIXAS)).toBe(true);
+  });
+
+  it('voltar para "quem tem as etiquetas" tira o "todos"', () => {
+    const volta = comPublico({ ...PRONTA, publico: 'todos' }, 'etiquetas');
+
+    expect(volta).not.toHaveProperty('publico');
+    expect(volta.etiquetas).toEqual([7]);
+    expect(
+      campanhaPronta(comPublico({ ...PRONTA, etiquetas: [] }, 'etiquetas'))
+    ).toBe(false);
+  });
+
   it('modelo que sumiu da caixa, ou caixa que não é a oficial, não salva', () => {
     const sumiu = { ...PRONTA, modelo: { ...PRONTA.modelo, nome: 'antigo' } };
     expect(campanhaPronta(sumiu, CAIXAS)).toBe(false);
@@ -96,6 +117,42 @@ describe('campanha.js', () => {
     });
   });
 
+  // G58 (#2779): só quem esta automação criou nesta vez, sem etiquetas.
+  it('público desta execução fica pronto sem etiquetas e as tira', () => {
+    const daExecucao = comPublico(PRONTA, 'desta_execucao');
+
+    expect(daExecucao.publico).toBe('desta_execucao');
+    expect(daExecucao).not.toHaveProperty('etiquetas');
+    expect(campanhaPronta(daExecucao, CAIXAS)).toBe(true);
+  });
+
+  it('a escolha do público só vem com um passo que cria num gatilho da conta', () => {
+    const passos = (...itens) => ({ passos: itens });
+
+    expect(
+      publicoDaExecucaoNoCatalogo(
+        passos({ tipo: 'card' }, { tipo: 'campanha' })
+      )
+    ).toBe(false);
+    expect(
+      publicoDaExecucaoNoCatalogo(
+        passos({ tipo: 'prospeccao', cria_contatos: true })
+      )
+    ).toBe(true);
+    expect(publicoDaExecucaoNoCatalogo(undefined)).toBe(false);
+  });
+
+  it('voltar para as etiquetas tira o público e pede etiqueta de novo', () => {
+    const deVolta = comPublico(
+      comPublico(PRONTA, 'desta_execucao'),
+      'etiquetas'
+    );
+
+    expect(deVolta).not.toHaveProperty('publico');
+    expect(deVolta.etiquetas).toEqual([]);
+    expect(campanhaPronta(deVolta, CAIXAS)).toBe(false);
+  });
+
   it('frase da linha', () => {
     const t = (chave, valores) =>
       `${chave}${valores ? JSON.stringify(valores) : ''}`;
@@ -109,9 +166,13 @@ describe('campanha.js', () => {
 });
 
 describe('LivreCampanha', () => {
-  const montar = modelValue =>
+  const montar = (modelValue, comPublicoDaExecucao = true) =>
     mount(LivreCampanha, {
-      props: { modelValue, etiquetas: [{ value: 7, label: 'ja_comprou' }] },
+      props: {
+        modelValue,
+        etiquetas: [{ value: 7, label: 'ja_comprou' }],
+        comPublicoDaExecucao,
+      },
     });
 
   it('"não receber" mostra só a explicação, sem os campos do disparo', () => {
@@ -139,8 +200,106 @@ describe('LivreCampanha', () => {
     expect(tela.findAllComponents({ name: 'Input' })).toHaveLength(2);
   });
 
+  it('"menos quem tem" grava as etiquetas excluídas, sem tirar as do público', async () => {
+    const tela = montar(PRONTA);
+
+    const [, sem] = tela.findAllComponents({ name: 'LivreMarcar' });
+    sem.vm.$emit('update:modelValue', [7]);
+
+    const [[emitido]] = tela.emitted('update:modelValue');
+    expect(emitido).toMatchObject({ etiquetas: [7], sem_etiquetas: [7] });
+    expect(tela.text()).toContain(
+      'AUTOMACAO_LIVRE.CAMPANHA.SEM_ETIQUETAS_DICA'
+    );
+  });
+
+  it('"não receber" deixa as etiquetas excluídas de fora', () => {
+    expect(
+      comFaz({ ...PRONTA, sem_etiquetas: [7] }, 'nao_receber')
+    ).not.toHaveProperty('sem_etiquetas');
+  });
+
+  it('escolher "todos os contatos" esconde as etiquetas do público e mantém o "menos quem tem"', async () => {
+    const tela = montar(PRONTA);
+
+    const publico = tela
+      .findAllComponents({ name: 'ChoiceSelect' })
+      .find(item => item.attributes('data-campanha-publico') !== undefined);
+    publico.vm.$emit('update:modelValue', 'todos');
+
+    const [[emitido]] = tela.emitted('update:modelValue');
+    expect(emitido.publico).toBe('todos');
+    expect(emitido).not.toHaveProperty('etiquetas');
+
+    await tela.setProps({ modelValue: { ...emitido, sem_etiquetas: [7] } });
+    expect(tela.findAllComponents({ name: 'LivreMarcar' })).toHaveLength(1);
+    expect(tela.find('[data-campanha-sem]').exists()).toBe(true);
+    expect(tela.text()).toContain(
+      'AUTOMACAO_LIVRE.CAMPANHA.PUBLICO_TODOS_DICA'
+    );
+  });
+
   it('nenhum <select> nativo', () => {
     expect(montar(PRONTA).find('select').exists()).toBe(false);
+  });
+
+  it('"Quem recebe": com as etiquetas mostra a lista; desta execução, a dica sem a lista', () => {
+    const comEtiquetas = montar(PRONTA);
+    expect(comEtiquetas.find('[data-campanha-publico]').exists()).toBe(true);
+    expect(comEtiquetas.findComponent({ name: 'LivreMarcar' }).exists()).toBe(
+      true
+    );
+    expect(comEtiquetas.find('[data-campanha-publico-dica]').exists()).toBe(
+      false
+    );
+
+    const daExecucao = montar(comPublico(PRONTA, 'desta_execucao'));
+    expect(daExecucao.findComponent({ name: 'LivreMarcar' }).exists()).toBe(
+      false
+    );
+    expect(daExecucao.text()).toContain(
+      'AUTOMACAO_LIVRE.CAMPANHA.PUBLICO_DESTA_EXECUCAO_DICA'
+    );
+  });
+
+  it('sem passo que crie no catálogo, "Quem recebe" não oferece "desta execução" e ficam as etiquetas', () => {
+    const opcoes = tela =>
+      tela
+        .findAllComponents({ name: 'ChoiceSelect' })
+        .find(item => item.attributes('data-campanha-publico') !== undefined)
+        .props('options')
+        .map(opcao => opcao.value);
+    const tela = montar(PRONTA, false);
+
+    expect(opcoes(tela)).toEqual(['etiquetas', 'todos']);
+    expect(tela.findComponent({ name: 'LivreMarcar' }).exists()).toBe(true);
+    // A receita que já tem o público mantém a opção, para poder voltar.
+    expect(opcoes(montar(comPublico(PRONTA, 'desta_execucao'), false))).toEqual(
+      ['etiquetas', 'todos', 'desta_execucao']
+    );
+  });
+
+  it('desta execução tira as etiquetas excluídas e esconde o "menos quem tem"', () => {
+    const daExecucao = comPublico(
+      { ...PRONTA, sem_etiquetas: [7] },
+      'desta_execucao'
+    );
+
+    expect(daExecucao).not.toHaveProperty('sem_etiquetas');
+    expect(montar(daExecucao).find('[data-campanha-sem]').exists()).toBe(false);
+  });
+
+  it('escolher "só quem esta automação criou" emite o público sem etiquetas', () => {
+    const tela = montar(PRONTA);
+
+    const publico = tela
+      .findAllComponents({ name: 'ChoiceSelect' })
+      .find(item => item.attributes('data-campanha-publico') !== undefined);
+    publico.vm.$emit('update:modelValue', 'desta_execucao');
+
+    const [[emitido]] = tela.emitted('update:modelValue');
+    expect(emitido.publico).toBe('desta_execucao');
+    expect(emitido).not.toHaveProperty('etiquetas');
   });
 
   it('trocar a caixa limpa o modelo escolhido', async () => {

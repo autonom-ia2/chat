@@ -1,6 +1,6 @@
 # "Se nesse tempo não entrou de novo na etapa" (G50, exemplo 4, passo 10): o card do alvo entrou de novo na etapa do
 # gatilho durante o "esperar até"? É o valor `card.entrou_de_novo`, que só vale na condição do "esperar até" e só no
-# gatilho card.entrou_na_etapa (Valores.fora_do_lugar), onde a etapa é obrigatória.
+# gatilho card.entrou_na_etapa (LugarDoValor), onde a etapa é obrigatória.
 #
 # Lê o histórico do card (Crm::Activity "move" com `to_stage_id` = a etapa do gatilho da versão em que a execução
 # entrou), dentro da janela da espera (Duracao.janela, a mesma da resposta, G11). Não usa `entered_stage_at`: o aluno

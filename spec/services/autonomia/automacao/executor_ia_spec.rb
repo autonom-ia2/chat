@@ -353,7 +353,7 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
 
     it 'o contato que pediu para não receber pula antes de pagar a IA', :aggregate_failures do
       ligar_mensagens(account)
-      allow(Contact).to receive(:opted_out).and_return(Contact.where(id: contato.id))
+      contato.update!(opted_out_at: 1.day.ago)
       openai_devolve({ 'texto' => 'oi' })
 
       execucao = comecar_e_rodar(automacao_ligada(account, admin, [escrever('mensagem')]))

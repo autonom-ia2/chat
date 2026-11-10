@@ -71,6 +71,8 @@ class Contact < ApplicationRecord
   has_many :conversations, dependent: :destroy_async
   has_many :contact_inboxes, dependent: :destroy_async
   has_many :crm_cards, class_name: 'Crm::Card', dependent: :nullify
+  # G22: os cards que este contato pediu (o RH da empresa); apagado, o card fica sem solicitante.
+  has_many :cards_solicitados, class_name: 'Crm::Card', foreign_key: :solicitante_contact_id, dependent: :nullify, inverse_of: :solicitante
   has_many :csat_survey_responses, dependent: :destroy_async
   has_many :inboxes, through: :contact_inboxes
   has_many :messages, as: :sender, dependent: :destroy_async
