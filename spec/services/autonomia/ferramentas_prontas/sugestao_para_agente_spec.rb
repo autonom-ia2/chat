@@ -80,11 +80,12 @@ RSpec.describe Autonomia::FerramentasProntas::SugestaoParaAgente do
   end
 
   it 'what was removed in the Confira leaves the Construtor choice too, so a reopened draft does not offer it again' do
-    agent.update!(config: { 'ferramentas_sugeridas' => %w[fipe cep cpf] })
+    agent.update!(config: { 'ferramentas_sugeridas' => %w[fipe cep cpf], 'ferramentas_tambem' => %w[cnpj ddd] })
 
     described_class.dispensar!(agent, 'cpf')
+    described_class.dispensar!(agent, 'ddd')
 
-    expect(agent.reload.config['ferramentas_sugeridas']).to eq(%w[fipe cep])
+    expect(agent.reload.config.values_at('ferramentas_sugeridas', 'ferramentas_tambem')).to eq([%w[fipe cep], %w[cnpj]])
   end
 
   it 'becomes stale when the account gets a new source, so it is asked again' do
@@ -111,12 +112,12 @@ RSpec.describe Autonomia::FerramentasProntas::SugestaoParaAgente do
   end
 
   it 'the agent created by the Construtor gets its choice as the suggestion, without a new call' do
-    agent.update!(config: { 'ferramentas_sugeridas' => %w[fipe inventada] })
+    agent.update!(config: { 'ferramentas_sugeridas' => %w[fipe inventada], 'ferramentas_tambem' => %w[cep] })
 
     described_class.semear_do_construtor!(agent)
 
     expect(described_class.atual?(agent.reload)).to be(true)
-    expect(described_class.para_tela(agent)).to eq(%w[fipe])
+    expect(described_class.para_tela(agent)).to eq(%w[cep fipe]) # na ordem do catálogo
     expect(cliente).not_to have_received(:create)
   end
 

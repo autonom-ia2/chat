@@ -1267,8 +1267,13 @@ module Autonomia
         estado = self.class.state_for(parsed)
         return estado unless criacao?
 
-        estado.merge('canal_pedido' => self.class.canal_pedido_for(parsed['canal_pedido']),
-                     'ferramentas_sugeridas' => ProntasSugeridas.filtrar(@account, parsed))
+        estado.merge('canal_pedido' => self.class.canal_pedido_for(parsed['canal_pedido'])).merge(prontas_do_turno(parsed))
+      end
+
+      # #2858 F3: o "já vem com" e o "também combina" da Confira, como o canal (no state e no config do agente).
+      def prontas_do_turno(parsed)
+        divisao = ProntasSugeridas.dividir(@account, parsed)
+        { 'ferramentas_sugeridas' => divisao[:sugeridas], 'ferramentas_tambem' => divisao[:tambem] }
       end
 
       # Cria (ou atualiza) o Agent e aplica a config gerada de forma guardada pelo token. instruction/
@@ -1306,7 +1311,7 @@ module Autonomia
         # criação: a conversa de um ajuste não fala de canal e apagaria o pedido (o merge do config preserva o que já existe).
         if criacao?
           attrs[:config]['canal_pedido'] = self.class.canal_pedido_for(parsed['canal_pedido'])
-          attrs[:config]['ferramentas_sugeridas'] = ProntasSugeridas.filtrar(@account, parsed) # #2858 F3, como o canal
+          attrs[:config].merge!(prontas_do_turno(parsed))
         end
         attrs
       end

@@ -3333,7 +3333,10 @@
         "TIRAR": "Tirar",
         "TIRAR_SR": "Tirar {ferramenta}",
         "FALHOU": "Não consegui incluir: {ferramentas}. Você pode incluir depois, nas ferramentas do agente.",
-        "VER_MAIS": "Ver mais ferramentas"
+        "VER_MAIS": "Ver mais ferramentas",
+        "TAMBEM": "Também combina: {ferramentas}.",
+        "INCLUIR_TAMBEM": "Incluir também",
+        "INCLUIR_TAMBEM_SR": "Incluir também {ferramentas}"
       },
       "SUGESTAO": {
         "ROTULO": "Sugestão de ferramenta",

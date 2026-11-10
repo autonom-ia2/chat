@@ -49,6 +49,34 @@ describe('VitrineJaVem', () => {
     expect(wrapper.emitted('verMais')).toHaveLength(1);
   });
 
+  it('"also fits" comes in one line with one "Add these too", without a long list', async () => {
+    const wrapper = montar({ ids: ['fipe'], tambem: ['cnpj', 'feriados'] });
+
+    const linha = wrapper.find('[data-ja-vem-tambem]');
+    expect(linha.text()).toContain(
+      'Também combina: Dados de uma empresa e Feriados e dias úteis'
+    );
+    expect(wrapper.findAll('[data-ja-vem-item]')).toHaveLength(1);
+    const botao = wrapper.find('[data-ja-vem-incluir-tambem]');
+    expect(botao.text()).toBe('Incluir também');
+    expect(botao.attributes('aria-label')).toContain(
+      'Incluir também Dados de uma empresa'
+    );
+
+    await botao.trigger('click');
+    expect(wrapper.emitted('incluirTambem')).toHaveLength(1);
+  });
+
+  it('without the tools key, "also fits" does not show', () => {
+    const wrapper = montar({
+      ids: ['fipe'],
+      tambem: ['cnpj'],
+      semPermissao: true,
+    });
+
+    expect(wrapper.find('[data-ja-vem-tambem]').exists()).toBe(false);
+  });
+
   it('"none fits": nothing on screen', () => {
     expect(montar({ ids: [] }).find('[data-ja-vem]').exists()).toBe(false);
   });

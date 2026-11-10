@@ -5,18 +5,20 @@
 #
 # O campo é o mesmo em todas as contas (o schema é estrito e fica no prefixo em cache): o enum leva todas as chaves do
 # catálogo, e sem a flag do Construtor nada é guardado. As escolhidas vão para o state da thread e para o config do
-# agente (`ferramentas_sugeridas`); quem inclui é a Confira, no "Começar", pelo endpoint da vitrine (pessoa real e
-# permissão dela). A Lia (`insurance_quote`) nunca recebe pronta.
+# agente: as MAXIMO primeiras em `ferramentas_sugeridas` (o "já vem com" da Confira), as seguintes, até MAX_TAMBEM, em
+# `ferramentas_tambem` (a linha "Também combina", com "Incluir também"). Quem inclui é a Confira, no "Começar", pelo
+# endpoint da vitrine (pessoa real e permissão dela). A Lia (`insurance_quote`) nunca recebe pronta.
 module Autonomia::Agents::Builder::ProntasSugeridas
   CAMPO = 'ferramentas_prontas'.freeze
   # Teto de prontas no nascimento: o Confira mostra uma linha por ferramenta, e mais que isso vira lista longa para
-  # quem nao e de tecnologia. As demais ficam para o cartao "pode ganhar" e a vitrine.
+  # quem nao e de tecnologia. As seguintes, ate MAX_TAMBEM, ficam numa linha so ("Tambem combina"), a um toque.
   MAXIMO = 4
+  MAX_TAMBEM = 4
   DESCRIPTION =
     'Chaves das ferramentas prontas do bloco FERRAMENTAS PRONTAS que um atendente experiente deste ramo usaria no ' \
     'processo inteiro do atendimento descrito: entender o pedido, cotar, conferir os dados e documentos de quem ' \
     'contrata, localizar o endereco do risco e calcular prazos. Pense no passo a passo real desse atendimento, alem do ' \
-    "que o dono citou. Escolha no maximo #{MAXIMO}, da mais usada para a menos usada, e deixe de fora as que nao " \
+    "que o dono citou. Escolha no maximo #{MAXIMO + MAX_TAMBEM}, da mais usada para a menos usada, e deixe de fora as que nao " \
     'servem a nenhum passo desse atendimento. Lista vazia quando nenhuma serve ou quando nao ha o bloco.'.freeze
   TITULO = 'FERRAMENTAS PRONTAS (contexto interno da plataforma, nao e fala do usuario): consultas que o agente pode ' \
            'ganhar ja na criacao. Escolha no campo ferramentas_prontas so as que o agente precisa.'.freeze
@@ -41,12 +43,13 @@ module Autonomia::Agents::Builder::ProntasSugeridas
     [TITULO, *linhas].join("\n")
   end
 
-  # As chaves que o modelo escolheu, só as liberadas para a conta, sem repetir, na ordem dele (a mais usada primeiro),
-  # até o MAXIMO.
-  def filtrar(account, parsed)
-    return [] unless ligado?(account)
+  # As chaves que o modelo escolheu, só as liberadas para a conta, sem repetir, na ordem dele (a mais usada primeiro):
+  # { sugeridas: as MAXIMO primeiras, tambem: as seguintes, até MAX_TAMBEM }.
+  def dividir(account, parsed)
+    return { sugeridas: [], tambem: [] } unless ligado?(account)
 
     liberadas = Autonomia::FerramentasProntas.disponiveis(account).map(&:chave)
-    Array(parsed.to_h[CAMPO]).map(&:to_s).uniq.select { |chave| liberadas.include?(chave) }.first(MAXIMO)
+    chaves = Array(parsed.to_h[CAMPO]).map(&:to_s).uniq.select { |chave| liberadas.include?(chave) }
+    { sugeridas: chaves.first(MAXIMO), tambem: chaves.drop(MAXIMO).first(MAX_TAMBEM) }
   end
 end

@@ -6,31 +6,33 @@ import { chaveDoTexto, ferramentaPorId } from '../catalogo';
 // #2858 F3 — no Confira do Construtor: as ferramentas prontas que o Construtor escolheu, pelo sentido do que a pessoa
 // contou, para o agente já nascer com elas. Mostrar antes de fazer: cada uma com ícone, uma linha e "Tirar"; elas
 // entram no "Começar". Lista vazia ("nenhuma combina"): o bloco não aparece. Sem a chave das ferramentas
-// (`semPermissao`), uma frase diz que elas ficam para quem cuida das ferramentas, sem "Tirar".
+// (`semPermissao`), uma frase diz que elas ficam para quem cuida das ferramentas, sem "Tirar". As que também combinam
+// (depois das 4 primeiras) vêm numa linha só, "Também combina: X e Y", com "Incluir também": um toque, sem lista longa.
 const props = defineProps({
   nome: { type: String, required: true },
   ids: { type: Array, required: true },
   semPermissao: { type: Boolean, default: false },
+  tambem: { type: Array, default: () => [] },
 });
 
-const emit = defineEmits(['tirar', 'verMais']);
+const emit = defineEmits(['tirar', 'verMais', 'incluirTambem']);
 
 const NS = 'AGENTS.VITRINE';
 const { t, locale } = useI18n();
 const texto = (id, campo) =>
   t(`${NS}.FERRAMENTAS.${chaveDoTexto(id)}.${campo}`);
 const icone = id => ferramentaPorId(id)?.icone || 'i-lucide-wrench';
-const nomes = () =>
+const nomes = (lista = props.ids) =>
   new Intl.ListFormat(String(locale.value).replace('_', '-'), {
     type: 'conjunction',
-  }).format(props.ids.map(id => texto(id, 'NOME')));
+  }).format(lista.map(id => texto(id, 'NOME')));
 </script>
 
 <template>
   <!-- display: contents: sem caixa própria, o vazio não ocupa espaço nem cria gap na coluna da página. -->
   <div class="contents">
     <section
-      v-if="ids.length"
+      v-if="ids.length || (tambem.length && !semPermissao)"
       data-ja-vem
       aria-labelledby="ja-vem-titulo"
       class="flex flex-col gap-3 p-4 rounded-2xl bg-n-solid-2 ring-1 ring-inset ring-n-weak"
@@ -92,6 +94,27 @@ const nomes = () =>
           </button>
         </li>
       </ul>
+      <div
+        v-if="!semPermissao && tambem.length"
+        data-ja-vem-tambem
+        class="flex flex-col gap-2 p-3 rounded-xl bg-n-alpha-1 sm:flex-row sm:items-center"
+      >
+        <p class="flex-1 m-0 text-sm text-n-slate-11">
+          {{ t(`${NS}.JA_VEM.TAMBEM`, { ferramentas: nomes(tambem) }) }}
+        </p>
+        <AgenteBotao
+          data-ja-vem-incluir-tambem
+          variante="contorno"
+          icone="i-lucide-plus"
+          class="self-start sm:self-auto"
+          :aria-label="
+            t(`${NS}.JA_VEM.INCLUIR_TAMBEM_SR`, { ferramentas: nomes(tambem) })
+          "
+          @click="emit('incluirTambem')"
+        >
+          {{ t(`${NS}.JA_VEM.INCLUIR_TAMBEM`) }}
+        </AgenteBotao>
+      </div>
       <AgenteBotao
         v-if="!semPermissao"
         data-ja-vem-mais

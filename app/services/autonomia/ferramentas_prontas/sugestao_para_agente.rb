@@ -5,7 +5,7 @@
 # - Uma chamada por agente, em segundo plano (`SugestaoJob`): a página nunca espera o modelo. O resultado fica em
 #   `agent.config['prontas_sugestao']` com a data e a assinatura; só refaz quando muda o catálogo liberado para a conta
 #   (fonte nova) ou o que o agente é (nome, tipo, instrução). Sem instrução (rascunho), não pergunta.
-# - O agente que nasce pelo Construtor já traz a escolha (`ferramentas_sugeridas`) e não paga outra chamada: ela vale
+# - O agente que nasce pelo Construtor já traz a escolha (`ferramentas_sugeridas` e `ferramentas_tambem`) e não paga outra chamada: ela vale
 #   como sugestão com a assinatura atual (`semear_do_construtor!`). O que a pessoa tira na Confira o front dispensa.
 # - A tela recebe só as chaves que ainda servem: liberadas, que o agente ainda não tem e que a pessoa não dispensou.
 # - "Agora não" grava a fonte em `agent.config['prontas_dispensadas']` (sem repetir, até `MAX_DISPENSADAS`): aquela
@@ -18,6 +18,7 @@ class Autonomia::FerramentasProntas::SugestaoParaAgente
   SUGESTAO = 'prontas_sugestao'.freeze
   DISPENSADAS = 'prontas_dispensadas'.freeze
   CONSTRUTOR = 'ferramentas_sugeridas'.freeze
+  TAMBEM = 'ferramentas_tambem'.freeze
   MAX_DISPENSADAS = 50
   MAX_INSTRUCAO = 4000
   MAX_NOME = 120
@@ -51,7 +52,8 @@ class Autonomia::FerramentasProntas::SugestaoParaAgente
     def semear_do_construtor!(agent)
       return unless ligada?(agent)
 
-      escolha = Array(agent.config.to_h[CONSTRUTOR]).map(&:to_s) & Autonomia::FerramentasProntas::Catalogo.chaves
+      config = agent.config.to_h
+      escolha = (Array(config[CONSTRUTOR]) + Array(config[TAMBEM])).map(&:to_s) & Autonomia::FerramentasProntas::Catalogo.chaves
       gravar(agent) { { SUGESTAO => { 'chaves' => escolha, 'assinatura' => assinatura(agent), 'em' => Time.current.iso8601 } } }
     end
 
@@ -65,12 +67,12 @@ class Autonomia::FerramentasProntas::SugestaoParaAgente
       Autonomia::FerramentasProntas.disponiveis(agent.account).map(&:chave) & (sugeridas - fora)
     end
 
-    # Também sai da escolha do Construtor (`ferramentas_sugeridas`): a Confira de um rascunho reaberto não oferece de
+    # Também sai da escolha do Construtor (`ferramentas_sugeridas` e `ferramentas_tambem`): a Confira de um rascunho reaberto não oferece de
     # volta o que a pessoa tirou.
     def dispensar!(agent, fonte)
       gravar(agent) do |config|
         { DISPENSADAS => (Array(config[DISPENSADAS]) | [fonte]).last(MAX_DISPENSADAS),
-          CONSTRUTOR => Array(config[CONSTRUTOR]) - [fonte] }
+          CONSTRUTOR => Array(config[CONSTRUTOR]) - [fonte], TAMBEM => Array(config[TAMBEM]) - [fonte] }
       end
     end
 

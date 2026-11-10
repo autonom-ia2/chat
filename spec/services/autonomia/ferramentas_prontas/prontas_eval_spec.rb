@@ -7,13 +7,15 @@ require 'rails_helper'
 # #2858 F3: quais ferramentas prontas combinam com um agente é leitura do MODELO, sem lista de palavras. Só se prova com
 # o modelo, nos dois caminhos da produção:
 # - o Construtor, no fechamento da criação (mesma instrução-mãe, mesmo input montado pelo Builder com as prontas
-#   liberadas, mesmo schema e mesmo esforço de raciocínio);
+#   liberadas, mesmo schema e mesmo esforço de raciocínio): as 4 primeiras são o "já vem com", as seguintes o "também
+#   combina";
 # - a sugestão para um agente que já existe (`SugestaoParaAgente`, modelo barato).
 # A régua é a tabela "O que cada agente de seguro precisa ganhar no Construtor" do plano (#2858), só com as fontes
 # que já existem (F1), e o caso negativo da padaria. O que o dono conta é o roteiro do vídeo do protótipo (j6-construtor).
-# Passa quem tem tudo o que PRECISA e nada do que NÃO PODE, como diz o plano (decisão do Rodrigo, 10/11). O que vier
-# além da régua (fora de PRECISA + ACEITAS) é impresso para leitura, sem reprovar: o Construtor corta em
-# ProntasSugeridas::MAXIMO e a Confira deixa tirar. Conversas inventadas, sem dado de cliente.
+# Passa quem recebe tudo o que PRECISA no "já vem com" ou no "também combina" (a um toque na Confira) e nada do que NÃO
+# PODE, como diz o plano (decisões do Rodrigo, 10/11: régua inteira, 7 de 7, o mais completo dentro da regra QI 70). O que
+# vier além da régua é impresso para leitura, sem reprovar: a Confira deixa tirar. Conversas inventadas, sem dado de
+# cliente. `AUTONOMIA_EVAL_CASOS=Rita,Gina` roda só esses agentes.
 module AvaliacaoDasProntas
   ABERTURA = 'Oi! Vamos montar seu agente. Me conta o que ele vai fazer e para quem.'.freeze
   PERGUNTA = 'Como ele vai falar com os clientes?'.freeze
@@ -82,28 +84,37 @@ RSpec.describe 'Ferramentas prontas escolhidas pelo modelo' do # rubocop:disable
       input: builder.send(:build_input), schema: Autonomia::Agents::Builder::BUILDER_SCHEMA,
       reasoning_effort: Autonomia::Agents::Config::BUILDER_REASONING_EFFORT
     )
-    Autonomia::Agents::Builder::ProntasSugeridas.filtrar(account, JSON.parse(raw[:text]))
+    Autonomia::Agents::Builder::ProntasSugeridas.dividir(account, JSON.parse(raw[:text]))
   end
 
   def da_sugestao(caso)
     nome, conta, = caso
     agente = Autonomia::Agents::Agent.create!(account: account, name: nome, agent_type: 'sdr', instruction: "Você é #{nome}. #{conta}")
-    Autonomia::FerramentasProntas::SugestaoParaAgente.new(agente).call
+    chaves = Autonomia::FerramentasProntas::SugestaoParaAgente.new(agente).call || []
+    maximo = Autonomia::Agents::Builder::ProntasSugeridas::MAXIMO
+    { sugeridas: chaves.first(maximo), tambem: chaves.drop(maximo) }
   end
 
   def erros(caminho)
-    AvaliacaoDasProntas::CASOS.filter_map do |caso|
+    casos.filter_map do |caso|
       nome, _, _, precisa, nao_pode, aceitas = caso
-      escolha = Array(send(caminho, caso))
-      puts "[eval prontas] #{caminho} #{nome}: #{escolha.inspect}"
-      faltou = precisa - escolha
-      proibida = escolha & nao_pode
-      extras = escolha - precisa - aceitas
+      escolha = send(caminho, caso)
+      ja_vem = escolha[:sugeridas]
+      todas = ja_vem + escolha[:tambem]
+      puts "[eval prontas] #{caminho} #{nome}: já vem #{ja_vem.inspect}, também combina #{escolha[:tambem].inspect}"
+      faltou = precisa - todas
+      proibida = todas & nao_pode
+      extras = todas - precisa - aceitas
       puts "[eval prontas] #{caminho} #{nome}: além da régua #{extras.inspect}" if extras.any?
       next if faltou.empty? && proibida.empty?
 
-      "#{caminho} #{nome}: #{escolha.inspect} (faltou #{faltou}, não pode #{proibida})"
+      "#{caminho} #{nome}: #{todas.inspect} (faltou #{faltou}, não pode #{proibida})"
     end
+  end
+
+  def casos
+    nomes = ENV.fetch('AUTONOMIA_EVAL_CASOS', '').split(',').map(&:strip).compact_blank
+    nomes.empty? ? AvaliacaoDasProntas::CASOS : AvaliacaoDasProntas::CASOS.select { |caso| nomes.include?(caso.first) }
   end
 
   # `AUTONOMIA_EVAL_CAMINHO=construtor` (ou `sugestao`) roda só um dos dois caminhos.
@@ -116,7 +127,7 @@ RSpec.describe 'Ferramentas prontas escolhidas pelo modelo' do # rubocop:disable
     skip 'avaliação paga: rode com AUTONOMIA_EVAL_PAGO=1 e OPENAI_API_KEY' unless ligada
 
     falhas = caminhos.flat_map { |caminho| erros(caminho) }
-    puts "[eval prontas] #{AvaliacaoDasProntas::CASOS.size * caminhos.size} chamadas, gasto US$ #{gasto[:usd].round(4)}"
+    puts "[eval prontas] #{casos.size * caminhos.size} chamadas, gasto US$ #{gasto[:usd].round(4)}"
 
     expect(falhas).to be_empty, "escolhas erradas:\n#{falhas.join("\n")}"
   end

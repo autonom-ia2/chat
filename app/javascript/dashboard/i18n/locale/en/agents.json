@@ -3333,7 +3333,10 @@
         "TIRAR": "Remove",
         "TIRAR_SR": "Remove {ferramenta}",
         "FALHOU": "Could not add: {ferramentas}. You can add them later in the agent's tools.",
-        "VER_MAIS": "See more tools"
+        "VER_MAIS": "See more tools",
+        "TAMBEM": "Also fits: {ferramentas}.",
+        "INCLUIR_TAMBEM": "Add these too",
+        "INCLUIR_TAMBEM_SR": "Add {ferramentas} too"
       },
       "SUGESTAO": {
         "ROTULO": "Tool suggestion",

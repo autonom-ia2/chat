@@ -11,22 +11,32 @@ import { useVitrineLigada } from './useVitrineLigada';
 // permissão dela (o administrador ou a chave "Ferramentas dos agentes"). O que a pessoa tirou vira "Agora não" (o
 // cartão da página do agente não oferece de volta). Quem não tem a chave vê uma frase dizendo que as ferramentas
 // ficam para quem cuida delas, e o agente nasce sem elas. O que o agente já tem (rascunho reaberto depois do
-// "Começar") não aparece de novo.
-//   agenteId, sugeridas: refs (ou computeds) da página.
-export function useProntasDoConstrutor({ agenteId, sugeridas }) {
+// "Começar") não aparece de novo. As que vieram depois das 4 primeiras (`ferramentas_tambem`) ficam na linha "Também
+// combina": "Incluir também" as junta ao "Já vem com", num toque, e elas entram no "Começar" como as outras.
+//   agenteId, sugeridas, tambem: refs (ou computeds) da página.
+export function useProntasDoConstrutor({ agenteId, sugeridas, tambem }) {
   const { t } = useI18n();
   const vitrine = useVitrine();
   const { construtor, construtorNaConta } = useVitrineLigada();
   const tiradas = ref([]);
+  const adicionadas = ref([]);
 
-  const escolhidas = computed(() =>
+  const servem = lista =>
     construtorNaConta.value
-      ? (sugeridas.value || []).filter(
+      ? (lista || []).filter(
           id =>
             ferramentaPorId(id) &&
             !tiradas.value.includes(id) &&
             !vitrine.tem(agenteId.value, id)
         )
+      : [];
+
+  const escolhidas = computed(() => [
+    ...new Set(servem([...(sugeridas.value || []), ...adicionadas.value])),
+  ]);
+  const combinaTambem = computed(() =>
+    construtor.value
+      ? servem(tambem?.value).filter(id => !escolhidas.value.includes(id))
       : []
   );
 
@@ -37,6 +47,10 @@ export function useProntasDoConstrutor({ agenteId, sugeridas }) {
 
   const tirar = id => {
     tiradas.value = [...tiradas.value, id];
+  };
+
+  const incluirTambem = () => {
+    adicionadas.value = [...adicionadas.value, ...combinaTambem.value];
   };
 
   const dispensarTiradas = () =>
@@ -83,5 +97,13 @@ export function useProntasDoConstrutor({ agenteId, sugeridas }) {
     if (construtor.value) vitrine.carregar();
   });
 
-  return { visiveis, semPermissao, escolhidas, tirar, incluirTodas };
+  return {
+    visiveis,
+    semPermissao,
+    escolhidas,
+    combinaTambem,
+    tirar,
+    incluirTambem,
+    incluirTodas,
+  };
 }

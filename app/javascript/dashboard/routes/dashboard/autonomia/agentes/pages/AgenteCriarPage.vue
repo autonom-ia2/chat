@@ -308,6 +308,12 @@ const prontas = useProntasDoConstrutor({
       agente.value?.config?.ferramentas_sugeridas ??
       []
   ),
+  tambem: computed(
+    () =>
+      estadoDaConversa.value?.ferramentas_tambem ??
+      agente.value?.config?.ferramentas_tambem ??
+      []
+  ),
 });
 const sugerido = computed(() =>
   canalSugerido(canais.value, conversa.agenteId.value, canalPedido.value)
@@ -1121,7 +1127,9 @@ onMounted(() => {
                   : prontas.visiveis.value
               "
               :sem-permissao="prontas.semPermissao.value"
+              :tambem="prontas.combinaTambem.value"
               @tirar="prontas.tirar"
+              @incluir-tambem="prontas.incluirTambem"
               @ver-mais="verMaisFerramentas"
             />
           </template>

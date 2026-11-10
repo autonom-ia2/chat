@@ -83,9 +83,13 @@ RSpec.describe Autonomia::Agents::Builder do
     context 'when the model picks more than the limit' do
       let(:escolhidas) { %w[fipe cep cpf fipe cnpj feriados ddd] }
 
-      it 'keeps the first ones in its order, without repeating, up to the limit' do
-        expect(run_turn.state['ferramentas_sugeridas']).to eq(%w[fipe cep cpf cnpj])
-        expect(Autonomia::Agents::Builder::ProntasSugeridas::MAXIMO).to eq(4)
+      it 'keeps the first 4 in its order, without repeating, and the next ones as "also fits"' do
+        run_turn
+
+        expect(thread.state['ferramentas_sugeridas']).to eq(%w[fipe cep cpf cnpj])
+        expect(thread.state['ferramentas_tambem']).to eq(%w[feriados ddd]) # o "também combina", a um toque
+        expect(thread.agent.config['ferramentas_tambem']).to eq(%w[feriados ddd])
+        expect(thread.agent.config.dig('prontas_sugestao', 'chaves')).to eq(%w[fipe cep cpf cnpj feriados ddd])
       end
     end
 

@@ -30,7 +30,7 @@ vi.mock('../../vitrine/useVitrineLigada', () => ({
 
 const montadas = [];
 // useI18n pede um componente: o composable roda no setup de um componente vazio.
-const usar = (sugeridas = ['fipe', 'cep', 'cpf']) => {
+const usar = (sugeridas = ['fipe', 'cep', 'cpf'], tambem = []) => {
   let prontas;
   const wrapper = mount(
     defineComponent({
@@ -38,6 +38,7 @@ const usar = (sugeridas = ['fipe', 'cep', 'cpf']) => {
         prontas = useProntasDoConstrutor({
           agenteId: computed(() => 7),
           sugeridas: ref(sugeridas),
+          tambem: ref(tambem),
         });
         return () => null;
       },
@@ -118,6 +119,35 @@ describe('useProntasDoConstrutor', () => {
     expect(prontas.escolhidas.value).toEqual(['fipe', 'cep', 'cpf']);
     expect(await prontas.incluirTodas()).toEqual([]);
     expect(vitrine.incluir).not.toHaveBeenCalled();
+  });
+
+  it('"Add these too" joins the "also fits" tools to the list, and the "Start" includes them', async () => {
+    vitrine.fontes = ref(['fipe', 'cep', 'cpf', 'cnpj', 'feriados']);
+    const prontas = usar(['fipe', 'cep'], ['cnpj', 'fipe', 'feriados']);
+
+    expect(prontas.combinaTambem.value).toEqual(['cnpj', 'feriados']);
+    prontas.incluirTambem();
+
+    expect(prontas.visiveis.value).toEqual(['fipe', 'cep', 'cnpj', 'feriados']);
+    expect(prontas.combinaTambem.value).toEqual([]);
+    expect(await prontas.incluirTodas()).toEqual([]);
+    expect(vitrine.incluir).toHaveBeenCalledTimes(4);
+  });
+
+  it('"also fits" leaves out what the agent already has and what the person removed', () => {
+    vitrine.tem.mockImplementation((_, id) => id === 'cnpj');
+    const prontas = usar(['fipe'], ['cnpj', 'feriados']);
+    prontas.incluirTambem();
+    prontas.tirar('feriados');
+
+    expect(prontas.visiveis.value).toEqual(['fipe']);
+    expect(prontas.combinaTambem.value).toEqual([]);
+  });
+
+  it('without the tools key: no "also fits"', () => {
+    ligada.construtor = ref(false);
+
+    expect(usar(['fipe'], ['cnpj']).combinaTambem.value).toEqual([]);
   });
 
   it('without the Construtor flag on the account: nothing at all', () => {
