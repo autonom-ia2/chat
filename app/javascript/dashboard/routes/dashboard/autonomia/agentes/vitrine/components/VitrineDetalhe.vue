@@ -192,6 +192,7 @@ const ensinar = async () => {
           v-model="quando"
           data-vitrine-quando
           rows="3"
+          maxlength="500"
           :aria-describedby="`${quandoId}-ajuda`"
           :aria-invalid="erroQuando ? 'true' : undefined"
           class="w-full px-3 py-2.5 !mb-0 text-base border-0 resize-y rounded-xl bg-n-solid-1 text-n-slate-12 ring-1 ring-inset ring-n-slate-7 focus:ring-2 focus:ring-n-blue-11"

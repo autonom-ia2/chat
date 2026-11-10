@@ -168,8 +168,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/ferramentas_prontas#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:45",
-      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:74"
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:51",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:81"
     ],
     "sem_corpo": true
   },
@@ -3830,7 +3830,6 @@
   "PATCH autonomia/ferramentas_prontas/:id": {
     "campos": {
       "ligada": {
-        "obrigatorio": true,
         "tipo": "booleano",
         "tipo_pela_leitura": "uso"
       }
@@ -3838,9 +3837,10 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/ferramentas_prontas#update",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:40",
-      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:41",
-      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:74"
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:44",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:47",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:45",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:81"
     ],
     "sem_corpo": false
   },
@@ -11821,8 +11821,8 @@
       "leitura crua sem tipo: termo (repassada a Autonomia::FerramentasProntas::BuscasSemResultado.registrar)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:50",
-      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:51"
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:56",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:57"
     ],
     "sem_corpo": false
   },
@@ -23743,7 +23743,6 @@
   "PUT autonomia/ferramentas_prontas/:id": {
     "campos": {
       "ligada": {
-        "obrigatorio": true,
         "tipo": "booleano",
         "tipo_pela_leitura": "uso"
       }
@@ -23751,9 +23750,10 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/ferramentas_prontas#update",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:40",
-      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:41",
-      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:74"
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:44",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:47",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:45",
+      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:81"
     ],
     "sem_corpo": false
   },

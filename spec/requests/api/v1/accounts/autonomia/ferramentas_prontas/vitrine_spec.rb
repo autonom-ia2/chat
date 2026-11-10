@@ -171,6 +171,13 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
       expect(Autonomia::Agents::Tool.exists?(ferramenta.id)).to be(false)
     end
 
+    it 'aceita verdadeiro e falso também como texto, que é como o Guia manda' do
+      patch "#{base}/#{ferramenta.id}", params: { ligada: 'false' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(ferramenta.reload.enabled).to be(false)
+    end
+
     it 'recusa ligada que não é verdadeiro nem falso' do
       ['abc', [true], { x: 1 }, nil].each do |valor|
         patch "#{base}/#{ferramenta.id}", params: { ligada: valor }, headers: admin.create_new_auth_token, as: :json
@@ -274,8 +281,9 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
       expect(Autonomia::FerramentasProntas::BuscasSemResultado.da_conta(account)).to eq([['passagem de avião', 2]])
     end
 
-    it 'não guarda termo com cara de documento ou telefone' do
+    it 'não guarda termo com cara de documento, telefone ou e-mail' do
       post "#{base}/buscas_sem_resultado", params: { termo: '111.444.777-35' }, headers: admin.create_new_auth_token, as: :json
+      post "#{base}/buscas_sem_resultado", params: { termo: 'ana@exemplo.test' }, headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:no_content)
       expect(Autonomia::FerramentasProntas::BuscasSemResultado.da_conta(account)).to eq([])

@@ -49,9 +49,12 @@ const carregando = computed(
   () => carregandoAgentes.value || vitrine.carregando.value
 );
 // O erro da vitrine (sem permissão, desligada, sem rede) vence; a falha na lista de agentes vira o erro geral.
-const erro = computed(
-  () => vitrine.erro.value || (erroAgentes.value ? 'GERAL' : '')
-);
+// Na lista, um 404 sem motivo não é "este agente sumiu": vira o erro geral.
+const erro = computed(() => {
+  const daVitrine =
+    vitrine.erro.value === 'NAO_ENCONTRADO' ? 'GERAL' : vitrine.erro.value;
+  return daVitrine || (erroAgentes.value ? 'GERAL' : '');
+});
 
 const agenteDaRota = computed(() => {
   const id = Number(route.query.agente);

@@ -43,8 +43,8 @@ const carregando = ref(false);
 const carregada = ref(false);
 const erro = ref('');
 let pedido = null;
-// Cada mudança (incluir, ligar, tirar) avança a versão: a lista que chega de um `carregar` pedido antes dela é velha e
-// não apaga a mudança.
+// Cada mudança (incluir, ligar, tirar) avança a versão: a lista que chega de um `carregar` pedido antes dela é velha.
+// Ela não é usada (apagaria a mudança) e a lista é pedida de novo, já com a mudança.
 let versao = 0;
 
 // Lê de novo a cada abertura de tela (a conta pode ter mudado entre uma e outra); duas telas ao mesmo tempo dividem
@@ -54,10 +54,13 @@ const carregar = () => {
   carregando.value = true;
   erro.value = '';
   const versaoDoPedido = versao;
+  let velha = false;
   pedido = FerramentasProntasAPI.listar()
     .then(({ data }) => {
+      velha = versaoDoPedido !== versao;
+      if (velha) return;
       fontes.value = (data?.fontes || []).map(item => item.chave);
-      if (versaoDoPedido === versao) incluidas.value = data?.incluidas || [];
+      incluidas.value = data?.incluidas || [];
       carregada.value = true;
     })
     .catch(falha => {
@@ -66,7 +69,8 @@ const carregar = () => {
     .finally(() => {
       carregando.value = false;
       pedido = null;
-    });
+    })
+    .then(() => (velha ? carregar() : undefined));
   return pedido;
 };
 
@@ -125,9 +129,10 @@ const experimentar = async (fonte, valor) => {
     const { data } = await FerramentasProntasAPI.experimentar(fonte, valor);
     return data?.situacao ? data : { situacao: 'nao_consegui_consultar' };
   } catch (falha) {
-    return motivoDoErro(falha) === 'SEM_PERMISSAO'
-      ? { situacao: 'sem_permissao' }
-      : { situacao: 'nao_consegui_consultar' };
+    const motivo = motivoDoErro(falha);
+    if (motivo === 'SEM_PERMISSAO') return { situacao: 'sem_permissao' };
+    if (motivo === 'DESLIGADA') return { situacao: 'desligada' };
+    return { situacao: 'nao_consegui_consultar' };
   }
 };
 

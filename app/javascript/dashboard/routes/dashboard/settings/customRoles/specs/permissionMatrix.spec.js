@@ -475,19 +475,31 @@ describe('permissionMatrix', () => {
       expect(tools.sensitive).toBe(true);
       expect(tools.featureFlag).toEqual([
         'agente_ferramentas_delegadas',
-        'agente_ferramentas_prontas_vitrine',
+        ['agente_ferramentas_prontas', 'agente_ferramentas_prontas_vitrine'],
       ]);
       expect(levelOptions(tools)).toEqual([LEVELS.NONE, LEVELS.MANAGE]);
     });
 
     it('shows the row with either the free-form tools or the ready-made tools showcase (#2858 F2)', () => {
-      const comFlag = ligada => flag => flag === ligada;
+      const comFlags =
+        (...ligadas) =>
+        flag =>
+          ligadas.includes(flag);
       expect(
-        listedModules([tools], comFlag('agente_ferramentas_delegadas'))
+        listedModules([tools], comFlags('agente_ferramentas_delegadas'))
       ).toEqual([tools]);
       expect(
-        listedModules([tools], comFlag('agente_ferramentas_prontas_vitrine'))
+        listedModules(
+          [tools],
+          comFlags(
+            'agente_ferramentas_prontas',
+            'agente_ferramentas_prontas_vitrine'
+          )
+        )
       ).toEqual([tools]);
+      expect(
+        listedModules([tools], comFlags('agente_ferramentas_prontas_vitrine'))
+      ).toEqual([]);
       expect(listedModules([tools], () => false)).toEqual([]);
     });
 

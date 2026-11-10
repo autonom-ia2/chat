@@ -37,12 +37,14 @@ class Api::V1::Accounts::Autonomia::FerramentasProntasController < Api::V1::Acco
     ).call
   end
 
-  # Só `true` ou `false`: qualquer outro valor (texto, lista) é recusado, nunca vira "ligada".
-  def update
-    ligada = params.require(:ligada)
-    return render json: { motivo: 'ligada_invalida' }, status: :unprocessable_entity unless [true, false].include?(ligada)
+  # Só verdadeiro ou falso (`true`/`false`, também como texto, que é como o Guia manda): qualquer outro valor (lista,
+  # objeto, "abc") é recusado e nunca vira "ligada".
+  VALORES_DE_LIGADA = [true, false, 'true', 'false'].freeze
 
-    @pronta.update!(enabled: ligada)
+  def update
+    return render json: { motivo: 'ligada_invalida' }, status: :unprocessable_entity unless VALORES_DE_LIGADA.include?(params[:ligada])
+
+    @pronta.update!(enabled: ActiveModel::Type::Boolean.new.cast(params[:ligada]))
     render :pronta
   end
 

@@ -53,23 +53,27 @@ describe('useVitrine · carregar', () => {
     expect(vitrine.erro.value).toBe('');
   });
 
-  it('an older list does not wipe out a change made while it was on the way', async () => {
+  it('an older list does not wipe out a change made while it was on the way: it asks again', async () => {
     let responder;
-    api.listar.mockReturnValue(
-      new Promise(resolve => {
-        responder = resolve;
-      })
-    );
-    api.incluir.mockResolvedValue({
-      data: { id: 9, agente_id: 1, fonte: 'cep', ligada: true },
-    });
+    const antiga = { id: 3, agente_id: 2, fonte: 'cnpj', ligada: true };
+    const nova = { id: 9, agente_id: 1, fonte: 'cep', ligada: true };
+    api.listar
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          responder = resolve;
+        })
+      )
+      .mockResolvedValueOnce({
+        data: { fontes: [{ chave: 'cep' }], incluidas: [antiga, nova] },
+      });
+    api.incluir.mockResolvedValue({ data: nova });
     const vitrine = await novoEstado();
     const carga = vitrine.carregar();
     await vitrine.incluir({ fonte: 'cep', agenteId: 1, usarQuando: 'x' });
-    responder({ data: { fontes: [{ chave: 'cep' }], incluidas: [] } });
+    responder({ data: { fontes: [{ chave: 'cep' }], incluidas: [antiga] } });
     await carga;
-    expect(vitrine.incluidas.value.map(item => item.id)).toEqual([9]);
-    expect(vitrine.fontes.value).toEqual(['cep']);
+    expect(api.listar).toHaveBeenCalledTimes(2);
+    expect(vitrine.incluidas.value.map(item => item.id)).toEqual([3, 9]);
   });
 
   it('two screens at the same time share one request', async () => {
@@ -199,6 +203,10 @@ describe('useVitrine · experimentar e busca', () => {
     api.experimentar.mockRejectedValueOnce(falha(500));
     expect(await vitrine.experimentar('cep', '1')).toEqual({
       situacao: 'nao_consegui_consultar',
+    });
+    api.experimentar.mockRejectedValueOnce(falha(404, { motivo: 'desligada' }));
+    expect(await vitrine.experimentar('cep', '1')).toEqual({
+      situacao: 'desligada',
     });
   });
 

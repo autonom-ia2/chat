@@ -3,7 +3,7 @@
 # de negócio, é sinal de produto, e fica fora do banco (sem migration). O termo vai em minúsculas, sem espaço sobrando
 # e cortado em `MAX_TERMO`; no máximo `MAX_TERMOS` diferentes por conta (os de menor contagem saem antes de o novo
 # entrar, para o novo não ser o cortado). Termo com `MAX_DIGITOS` dígitos ou mais não é guardado: pode ser um CPF, um
-# CEP ou um telefone digitado na busca, e não é sinal de produto.
+# CEP ou um telefone digitado na busca, e não é sinal de produto. Termo com "@" (um e-mail) também não.
 #
 # Leitura: `BuscasSemResultado.da_conta(account)` -> [[termo, vezes], ...], do mais buscado para o menos.
 module Autonomia::FerramentasProntas::BuscasSemResultado
@@ -18,7 +18,7 @@ module Autonomia::FerramentasProntas::BuscasSemResultado
 
   def registrar(account, termo)
     texto = termo.to_s.squish.downcase.first(MAX_TERMO)
-    return if texto.blank? || texto.count('0-9') >= MAX_DIGITOS
+    return if texto.blank? || texto.count('0-9') >= MAX_DIGITOS || texto.include?('@')
 
     Redis::Alfred.with do |conn|
       conn.multi do |fila|

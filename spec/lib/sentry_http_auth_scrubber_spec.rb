@@ -275,6 +275,15 @@ RSpec.describe SentryHttpAuthScrubber do
     expect(filtered).to eq('frase' => '[FILTERED]', 'hidden' => true)
   end
 
+  # #2858 F2 — o valor do "Experimente" (CPF, CNPJ, CEP) e o texto da busca da vitrine de ferramentas prontas.
+  it 'filters the ready-made tools test value (valor) and search text (termo) from a JSON body' do
+    data = { body: JSON.generate(fonte: 'cpf', valor: '11144477735', termo: 'carro do joão', hidden: true) }
+
+    filtered = JSON.parse(described_class.scrub(data)[:body])
+
+    expect(filtered).to eq('fonte' => 'cpf', 'valor' => '[FILTERED]', 'termo' => '[FILTERED]', 'hidden' => true)
+  end
+
   %i[before_send before_send_transaction].each do |callback_name|
     it "preserves #{callback_name} behavior and sanitizes its returned event" do
       hint = { background: false }
