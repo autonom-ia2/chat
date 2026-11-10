@@ -41,21 +41,16 @@ require 'rails_helper'
 # conversa antiga no WhatsApp oficial, com a janela de 24 h fechada. A IA é o dublê. Desenho e lacunas:
 # docs/automacao/F9-fechamento-20-exemplos.md.
 #
-# O que ainda não monta, cada um no exemplo do passo, escrito como o termo pede:
-# - Passo 2 (G44): o link da agenda é do responsável do card ou da pessoa da conversa; no contato não há nenhum dos
-#   dois, e uma página escolhida (a do salão) não existe. O salvar recusa `card.link_da_agenda` no gatilho do contato, e o
-#   modelo de 4 variáveis não salva com 3. Por isso a receita dos outros passos vem sem o passo 2.
-# - Passos 5 e 6, "grava no card" (G18): o card é o do passo 3, outro registro; o salvar recusa `card.id` no gatilho do
-#   contato. Por isso a receita dos outros passos vem sem eles.
-# - Passos 8 e 9 (G56, "reunião atendida gera evento", lacuna nova): o "Aconteceu" grava `outcome: held` na reunião, mas
-#   nenhum evento sai dele, e não há gatilho de reunião atendida; o salvar recusa `card.reuniao_atendida`. A etapa
-#   "Atendida" no lugar da reunião adaptaria o termo.
-# - Passos 6 e 7 (G32): a reunião marcada como condição do "esperar até" (`contato.tem_reuniao_marcada`) não existe
-#   nesta base, nem o aviso a quem atende a reunião (`para.da_reuniao`: o esquema recusa; mesmo com a G32 ele só vale
-#   nos gatilhos de reunião, e o "avisar" sem conversa pula, G22).
-# Cada pendente monta só o passo dele por cima da receita dos outros passos, para falhar pelo motivo do passo.
-# - Passo 10, "sem marcar" (G32): sem o valor da reunião marcada, a automação da data fecha o card de quem marcou também;
-#   a receita dos outros passos vem sem o "se". "Fim do mês seguinte, se adiou" espera o passo 5 (G18).
+# Como cada passo monta na integração 2 do #2414:
+# - Passo 2 (G60, decisão 10): o link é `conversa.link_da_agenda`, a página de quem atende a conversa nova do contato na
+#   caixa do salão; sem ninguém atendendo, a página de reserva escolhida no gatilho (`agenda_de_reserva`).
+# - Passos 5 e 6, "grava no card" (G49): o card é o que o passo 3 criou (`criado.card_do_aniversario`).
+# - Passos 6 e 7 (G32, G61): a reunião marcada é condição do "esperar até" (`contato.tem_reuniao_marcada`), e o aviso
+#   vai a quem atende a reunião (`para.da_reuniao`).
+# - Passos 8 e 9 (G56): o "Aconteceu" da reunião dispara a automação da cliente atendida.
+# - Passo 10, "sem marcar": o card sem a "hidratação de presente" que o passo 6 grava. "Fim do mês seguinte, se adiou" é
+#   a data que o passo 5 estende.
+# Cada exemplo de passo monta a receita do aniversário com os passos dele, para falhar pelo motivo do passo.
 RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário marcado', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 
@@ -88,7 +83,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
       'automacao_decidir' => { 'caminho' => 'vai_marcar', 'motivo' => 'disse que vai marcar' },
       'automacao_extrair' => { 'pode_postar' => true } }
   end
-  # O exemplo monta a receita do aniversário com o passo que o salvar recusa (2, 4, 5, 6 e 7); sem ele, a dos outros passos.
+  # O exemplo monta a receita do aniversário com os passos dele (2, 4, 5, 6 e 7); sem eles, a dos outros passos.
   let(:receita_no_exemplo) { false }
   # A data do presente com o "sem marcar" (G32). Sem ele, a dos outros passos.
   let(:sem_marcar) { false }
@@ -98,6 +93,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
   def nome = { '$valor' => 'contato.nome' }
   def contato_id = { '$valor' => 'contato.id' }
   def card_id = { '$valor' => 'card.id' }
+  def criado = { '$valor' => 'criado.card_do_aniversario' }
   def modelo(nome_do_modelo, *variaveis) = { nome: nome_do_modelo, idioma: 'pt_BR', variaveis: [[nome], *variaveis] }
   def reuniao_marcada = { campo: { '$valor' => 'contato.tem_reuniao_marcada' }, op: 'igual', valor: true }
 
@@ -106,8 +102,9 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
       caminho: { contact_id: contato_id }, corpo: { por: [nome_da_etiqueta] } }
   end
 
-  def no_card(id, descricao, atributos)
-    { id: id, tipo: 'acao', acao: 'PATCH crm/cards/:id', descricao: descricao, caminho: { id: card_id },
+  # `card`: o do alvo (no gatilho de card) ou o que o passo 3 criou (`criado.card_do_aniversario`, G49).
+  def no_card(id, descricao, atributos, card: card_id)
+    { id: id, tipo: 'acao', acao: 'PATCH crm/cards/:id', descricao: descricao, caminho: { id: card },
       corpo: { card: { custom_attributes: atributos } } }
   end
 
@@ -116,11 +113,11 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
       prazo: { valor: 7, unidade: 'dias' } }
   end
 
-  # Passos 1 a 7, no aniversário gravado no contato. `extras`: os passos que o salvar recusa (:parabens, :resposta,
+  # Passos 1 a 7, no aniversário gravado no contato. `extras`: os passos de cada exemplo (:parabens, :resposta,
   # :estende, :marcou); sem eles, a receita dos outros passos.
   def gatilho_do_aniversario
     { tipo: 'contato.data', campo: 'data_de_nascimento', dias: 0, quando: 'antes', repete: 'todo_ano', hora: 9,
-      conversa_nova: { caixa_id: salao.id } }
+      conversa_nova: { caixa_id: salao.id }, agenda_de_reserva: { pagina_id: agenda.id } }
   end
 
   def receita_do_aniversario(extras = [])
@@ -138,16 +135,16 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
 
   # Passo 2.
   def manda_o_parabens
-    link = { '$valor' => 'card.link_da_agenda' }
+    link = { '$valor' => 'conversa.link_da_agenda' }
     { id: 'manda_parabens', tipo: 'mensagem', texto: [{ '$valor' => 'ia.parabens' }, " De presente: #{presente}. Marque seu horário: ", link],
       modelo: modelo('aniversario', [{ '$valor' => 'ia.parabens' }], [presente], [link]) }
   end
 
   # Passos 4 e 5.
   def decidir_a_resposta(extras)
-    estende = no_card('estende', 'Estender o presente até o fim do mês que vem', presente_ate: {
+    estende = no_card('estende', 'Estender o presente até o fim do mês que vem', { presente_ate: {
                         '$data' => { de: 'hoje', mais: { valor: 1, unidade: 'meses' }, fim_do: 'mes' }
-                      })
+                      } }, card: criado)
     { id: 'resposta_da_cliente', tipo: 'decidir', le: %w[mensagens_recentes], pergunta: 'O que a cliente respondeu ao parabéns?', caminhos: [
       { nome: 'Vai marcar', chave: 'vai_marcar', descricao: 'vai marcar o horário da hidratação', passos: [] },
       { nome: 'Agradeceu', chave: 'agradeceu', descricao: 'só agradeceu o parabéns', passos: [] },
@@ -164,14 +161,14 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
     ] },
      { id: 'se_marcou', tipo: 'se', condicao: reuniao_marcada, entao: [
        { id: 'avisa_profissional', tipo: 'avisar', texto: [nome, ' marcou a hidratação de presente de aniversário.'], para: { da_reuniao: true } },
-       no_card('hidratacao', 'Gravar a hidratação de presente', presente: 'hidratação de presente')
+       no_card('hidratacao', 'Gravar a hidratação de presente', { presente: 'hidratação de presente' }, card: criado)
      ] }]
   end
 
   # A data do presente, no card novo do quadro "Aniversário": o fim deste mês.
   def receita_do_card_novo
     { gatilho: { tipo: 'card.criado', funil_id: aniversario.id }, passos: [
-      no_card('presente_do_mes', 'Gravar o presente até o fim do mês', presente_ate: { '$data' => { de: 'hoje', fim_do: 'mes' } })
+      no_card('presente_do_mes', 'Gravar o presente até o fim do mês', { presente_ate: { '$data' => { de: 'hoje', fim_do: 'mes' } } })
     ] }
   end
 
@@ -182,8 +179,9 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
         corpo: { result: 'lost', lost_reason: 'Não marcou o presente de aniversário' } },
       etiqueta('saudade', 'saudade')
     ]
-    sem_reuniao = { campo: { '$valor' => 'card.tem_reuniao_marcada' }, op: 'diferente', valor: true }
-    passos = sem_marcar ? [{ id: 'sem_marcar', tipo: 'se', condicao: sem_reuniao, entao: fecha_e_saudade }] : fecha_e_saudade
+    # "Sem marcar": o card não tem a "hidratação de presente" que o passo 6 grava quando ela marca.
+    sem_presente = { campo: { '$valor' => 'card.atributos.presente' }, op: 'vazio' }
+    passos = sem_marcar ? [{ id: 'sem_marcar', tipo: 'se', condicao: sem_presente, entao: fecha_e_saudade }] : fecha_e_saudade
     { gatilho: { tipo: 'card.data', campo: 'presente_ate', dias: 0, quando: 'antes', hora: 9 }, passos: passos }
   end
 
@@ -325,7 +323,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
     end
   end
 
-  # Passos 8 e 9: a automação da cliente atendida, que o salvar ainda recusa (G56).
+  # Passos 8 e 9: a automação da cliente atendida (G56).
   def atendida_e_dia_seguinte
     as('2026-11-01 10:00') { ligada('Aniversário: cliente atendida', receita_da_atendida) }
     cliente_marca_as('2026-11-10 10:00')
@@ -375,14 +373,13 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
     expect(historico('Aniversário').first).to eq(['parabens', 'ok', nil])
   end
 
-  context 'with o passo que o salvar recusa na receita do aniversário (passos 2, 4, 5, 6 e 7)' do
+  context 'with os passos 2, 4, 5, 6 e 7 na receita do aniversário' do
     let(:receita_no_exemplo) { true }
 
     # A receita dos outros passos com os passos `extras`, cada pendente com os do passo dele.
     def ligar_com(*extras) = as('2026-11-01 10:00') { ligada('Aniversário', receita_do_aniversario(extras)) }
 
     it 'passo 2: manda pelo modelo aprovado "Aniversário" o parabéns, o presente e o link da agenda', :aggregate_failures do
-      pending 'G44: o contato não tem link da agenda; o salvar recusa card.link_da_agenda no gatilho do contato'
       ligar_com(:parabens)
       aniversario_dela
 
@@ -403,19 +400,17 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
     end
 
     it 'passo 5: não pode este mês; o presente vai até o fim do mês seguinte, gravado no card', :aggregate_failures do
-      pending 'G18: o card do passo 3 é outro registro; o salvar recusa card.id no gatilho do contato'
       resposta('nao_pode', 'viaja este mês')
-      ligar_com(:estende)
+      ligar_com(:resposta, :estende)
       aniversario_dela
 
       cliente_escreve_as('2026-11-12 11:00', 'Obrigada! Este mês estou viajando, não consigo ir.')
 
       expect(card_do_aniversario.reload.custom_attributes).to include('presente_ate' => '2026-12-31')
-      expect(historico('Aniversário').last(2)).to eq([['estende', 'ok', nil], ['adiou', 'ok', nil]])
+      expect(historico('Aniversário').last(3)).to eq([['resposta_da_cliente', 'ok', nil], ['estende', 'ok', nil], ['adiou', 'ok', nil]])
     end
 
     it 'passo 6: marcou; a profissional é avisada e o card grava "hidratação de presente"', :aggregate_failures do
-      pending 'G32: a reunião marcada não é condição do "esperar até" nesta base (contato.tem_reuniao_marcada)'
       ligar_com(:marcou)
       aniversario_dela
       cliente_escreve_as('2026-11-12 11:00', 'Que amor, obrigada! Vou marcar sim.')
@@ -427,7 +422,6 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
     end
 
     it 'passo 7: não marcou em 10 dias; lembra uma vez, pelo modelo aprovado', :aggregate_failures do
-      pending 'G32: a reunião marcada não é condição do "esperar até" nesta base (contato.tem_reuniao_marcada)'
       ligar_com(:marcou)
       aniversario_dela
       cliente_escreve_as('2026-11-12 11:00', 'Que amor, obrigada!')
@@ -439,9 +433,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
     end
 
     it 'passo 10: adiou; o card fecha no fim do mês seguinte, não no deste mês', :aggregate_failures do
-      pending 'G18: estender o presente (passo 5) é gravar no card a partir do contato'
       resposta('nao_pode', 'viaja este mês')
-      ligar_com(:estende)
+      ligar_com(:resposta, :estende)
       aniversario_dela
       cliente_escreve_as('2026-11-12 11:00', 'Obrigada! Este mês estou viajando, não consigo ir.')
 
@@ -501,10 +494,13 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
 
   context 'with o "sem marcar" no fim do presente (passo 10)' do
     let(:sem_marcar) { true }
+    let(:receita_no_exemplo) { true }
 
     it 'passo 10: fim do mês com horário marcado; o card fica aberto e a cliente fora da campanha', :aggregate_failures do
-      pending 'G32: a reunião marcada não é valor da receita nesta base (card.tem_reuniao_marcada)'
-      as('2026-11-01 10:00') { ligada('Aniversário: fim do presente', receita_do_fim_do_presente) }
+      as('2026-11-01 10:00') do
+        ligada('Aniversário', receita_do_aniversario([:marcou]))
+        ligada('Aniversário: fim do presente', receita_do_fim_do_presente)
+      end
       aniversario_dela
       cliente_marca_as('2026-11-13 10:00')
 

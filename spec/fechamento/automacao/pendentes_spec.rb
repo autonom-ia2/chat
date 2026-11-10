@@ -11,11 +11,8 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # ainda esperando), a G44 (passos 6 e 8, link de uma página escolhida) e a G18 (passo 10, fechar o card de retenção).
     4 => ['Aluno que começa a faltar', 'G50 (reentrada no mesmo card), G44, G18, G5, G1, G3, G4, G12, G15, G25, G28'],
     # O 5 saiu com a G47 (#2766): o spec próprio (exemplo_05_revisao_do_carro_spec.rb) roda à risca, passos 1 a 8.
-    # Numa automação só (no contato, pelo aniversário), os passos 2, 3, 7 a 9 e o aviso do 6 rodam
-    # (g59_reuniao_atendida_na_espera_spec.rb: G56, G59, G60, G61); a G47 não segura o passo 8, porque a espera lê a
-    # reunião de qualquer card do contato. Faltam a G49 (gravar no card que a automação criou, passos 5 e 6) e a G25
-    # (fechar o card, passo 10).
-    6 => ['Aniversário que vira horário marcado', 'G49 (gravar no card criado), G25, G1, G4, G6, G12, G14, G16, G33, G56, G59, G60, G61'],
+    # O 6 saiu na integração 2 do #2414: exemplo_06_aniversario_spec.rb roda à risca, passos 1 a 10, com o link da página
+    # de reserva (G60), o card criado no passo 3 (G49), a reunião marcada (G32, G61) e a atendida (G56, G59).
     7 => ['Black Friday para os clientes antigos primeiro', 'G37 (público com exclusão), G38, G39, G5, G7, G14, G15'],
     # O 8 tem spec próprio dos passos 1 a 5 (exemplo_08_funcionario_novo_spec.rb, G24 #2771); faltam os passos 6 a 9.
     8 => ['Funcionário novo no plano da empresa',
@@ -59,6 +56,11 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
   # Com o 19 fora da lista, a prova das sondas dele fica aqui: a G43 manda ao número novo e a G68 lê a resposta do e-mail.
   it 'exemplo 19: as lacunas fechadas por comportamento continuam fechadas' do
     expect(FechamentoAutomacao::Lacunas.abertas(%w[G43 G68])).to be_empty
+  end
+
+  # Os exemplos 6, 14 e 18 saíram da lista na integração 2 do #2414: a prova das sondas que os seguravam fica aqui.
+  it 'exemplos 6, 14 e 18: as lacunas fechadas continuam fechadas' do
+    expect(FechamentoAutomacao::Lacunas.abertas(%w[G13 G25 G32 G44 G45 G46 G49 G56 G59 G60 G61])).to be_empty
   end
 
   # G21 (#2706) não segura nenhum pendente: a sonda roda aqui para que a prova de comportamento dela não fique sem dono.
