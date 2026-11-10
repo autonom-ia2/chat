@@ -222,9 +222,10 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
     [Recusa.saida(DEFEITO_ANTES_DO_ENVIO), DEFEITO_ANTES_DO_ENVIO, ms_desde(comeco)]
   end
 
+  # #2858: a ferramenta pronta executa pela fonte do catálogo (`FerramentasProntas::Execucao`), com o prazo dela.
   def executor(run, tool, chave)
-    ::Autonomia::Agents::Tools::HttpExecutor.new(tool: tool, params: run.arguments, chave: chave, higienizar: true,
-                                                 segundos: self.class.tempo(run))
+    ::Autonomia::FerramentasProntas.executor_para(tool, params: run.arguments, chave: chave, higienizar: true,
+                                                        segundos: self.class.tempo(run))
   end
 
   # A linha deixou de ser desta passada enquanto ela chamava: trocada por um pedido mais novo, ou fechada pelo varredor.

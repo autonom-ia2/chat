@@ -110,6 +110,9 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Crm::MetaAdsCommentCare', :por_conta],
     ['Autonomia::Agents::Specialist', :por_conta],
     ['Autonomia::Agents::Tool', :por_conta],
+    # Ferramentas prontas (#2858): a chave da conta em cada fonte e o contador do dia.
+    ['Autonomia::FerramentasProntas::Uso', :por_conta],
+    ['Autonomia::FerramentasProntas::Acesso', :por_conta],
     ['Autonomia::Agents::BuildThread', :por_conta],
     ['Autonomia::Agents::AgentInbox', :por_conta],
     ['Autonomia::Agents::Agent', :por_conta],

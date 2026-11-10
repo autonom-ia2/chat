@@ -94,8 +94,9 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
     @tool = tools_scope.find(params[:id])
   end
 
+  # #2858: a ferramenta pronta (fonte do catálogo) não é do cadastro manual: quem a inclui e tira é a vitrine.
   def tools_scope
-    @agent.tools.where(account: Current.account)
+    @agent.tools.manuais.where(account: Current.account)
   end
 
   def tool_params

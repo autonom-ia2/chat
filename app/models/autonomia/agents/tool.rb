@@ -6,6 +6,7 @@
 #  description           :text
 #  enabled               :boolean          default(TRUE), not null
 #  endpoint_url          :text             not null
+#  fonte_pronta          :string
 #  headers_config        :jsonb            not null
 #  http_method           :string           default("POST"), not null
 #  name                  :string           not null
@@ -34,6 +35,7 @@
 class Autonomia::Agents::Tool < ApplicationRecord
   include Autonomia::Agents::CabecalhosDaFerramenta
   include Autonomia::Agents::SegredoDaFerramenta
+  include Autonomia::Agents::FerramentaPronta
 
   self.table_name = 'autonomia_agent_tools'
 
@@ -66,11 +68,11 @@ class Autonomia::Agents::Tool < ApplicationRecord
   validates :slug, presence: true, uniqueness: { scope: :autonomia_agent_id },
                    length: { maximum: MAX_SLUG_LENGTH }, format: { with: SLUG_FORMAT }
   validates :http_method, inclusion: { in: HTTP_METHODS }
-  validates :endpoint_url, presence: true, length: { maximum: MAX_ENDPOINT_URL }
+  validates :endpoint_url, presence: true, length: { maximum: MAX_ENDPOINT_URL }, unless: :pronta?
   # #1430: quanto o agente espera pela resposta. Sem máximo (decisão do Rodrigo, 31/10); zero ou negativo é defeito. O
   # alcance da coluna `integer` não é teto: acima dele o save estouraria com 500.
   validates :timeout_seconds, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: ALCANCE_DO_INTEIRO }
-  validate :validate_endpoint_url
+  validate :validate_endpoint_url, unless: :pronta?
   validate :validate_faixas
   validate :validate_param_schema
   validate :validate_slug_livre, if: :will_save_change_to_slug?
@@ -82,6 +84,8 @@ class Autonomia::Agents::Tool < ApplicationRecord
   end
 
   def openai_schema
+    return schema_da_pronta if pronta?
+
     {
       type: 'function',
       name: slug,

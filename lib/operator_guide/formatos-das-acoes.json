@@ -3549,7 +3549,7 @@
       },
       "endpoint_url": {
         "max_caracteres": 2048,
-        "nao_pode_ficar_vazio": true,
+        "obrigatorio": "condicional",
         "tipo": "string"
       },
       "headers_config": {
@@ -3609,7 +3609,7 @@
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:31",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:102",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:103",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
     ],
@@ -11222,7 +11222,7 @@
     "envelope": "tool",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:19",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:102",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:103",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90"
     ],
     "sem_corpo": false
@@ -11238,7 +11238,7 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:50",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:135",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:136",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
     ],
@@ -23343,7 +23343,7 @@
       },
       "endpoint_url": {
         "max_caracteres": 2048,
-        "nao_pode_ficar_vazio": true,
+        "obrigatorio": "condicional",
         "tipo": "string"
       },
       "headers_config": {
@@ -23403,7 +23403,7 @@
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:31",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:102",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:103",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:90",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94"
     ],
