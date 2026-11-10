@@ -1285,12 +1285,8 @@
 # catálogo, nunca um link digitado) entra no turno e consulta a fonte com prazo curto, reserva, cache, contador e limite
 # diário por conta e por fonte. Desligada: as prontas somem do turno e o "Incluir" recusa; o resto fica como antes. A
 # Lia fica de fora. Migration 20261109980000 (aditiva). Rollback: desligar a flag na conta.
-# Posição 38 (137438953472, 1 << 37), dada pela Orquestração em 09/11. A posição 37 é do #2840
-# (`rag_reescrita_reordenacao`), que ainda não está na main: a posição na lista é o bit, e sobre a main de hoje esta
-# linha cai na 37 (1 << 36, o que o spec do Account confere). Por isso este PR só entra na fila depois do #2840 na main
-# (o mesmo combinado de `agente_usa_o_trecho` com o #2801): o merge da main põe a 37 dele antes desta, e o spec passa a
-# 137_438_953_472. Nunca ligar esta flag em produção antes disso. Depois do NO AR, liga em todas as contas ativas das 2
-# stacks (regra de 07/11).
+# Posição 37 (68719476736, 1 << 36), dada pela Orquestração em 10/11. Depois do NO AR, liga em todas as contas ativas
+# das 2 stacks (regra de 07/11).
 - name: agente_ferramentas_prontas
   display_name: Agentes › ferramentas prontas (fundação)
   enabled: false
