@@ -124,15 +124,21 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
   # menor (letras que diferem menos que TROCA_DE_LETRA, 11,98 e 12, são a mesma); depois, na mesma letra, a numeração
   # (#2863, Numeracao). Os pares viram níveis seguidos, 1, 2, 3…
   def com_niveis(blocos)
-    titulos = blocos.select { |bloco| bloco[:tipo] == :titulo }
-    letras = niveis_das_letras(titulos.pluck(:letra))
-    chave = ->(bloco) { [letras[bloco[:letra]], Autonomia::Agents::Knowledge::Processors::PdfBlocos::Numeracao.profundidade(bloco[:texto])] }
-    niveis = titulos.map(&chave).uniq.sort.each_with_index.to_h { |par, indice| [par, indice + 1] }
+    chaves = chaves_dos_niveis(blocos.select { |bloco| bloco[:tipo] == :titulo })
+    niveis = chaves.uniq.sort.each_with_index.to_h { |par, indice| [par, indice + 1] }
+    proximo = chaves.each
     blocos.map do |bloco|
       next bloco unless bloco[:tipo] == :titulo
 
-      { tipo: :titulo, nivel: niveis[chave.call(bloco)], texto: bloco[:texto], pagina: bloco[:pagina] }
+      { tipo: :titulo, nivel: niveis[proximo.next], texto: bloco[:texto], pagina: bloco[:pagina] }
     end
+  end
+
+  # [posição da letra, profundidade da numeração] de cada título, na ordem do documento.
+  def chaves_dos_niveis(titulos)
+    letras = niveis_das_letras(titulos.pluck(:letra))
+    profundidades = Autonomia::Agents::Knowledge::Processors::PdfBlocos::Numeracao.profundidades(titulos.pluck(:texto))
+    titulos.zip(profundidades).map { |titulo, profundidade| [letras[titulo[:letra]], profundidade] }
   end
 
   # { letra => nível }: da maior para a menor, a letra perto da anterior fica no mesmo nível.
