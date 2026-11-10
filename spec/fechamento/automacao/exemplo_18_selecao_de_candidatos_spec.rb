@@ -248,6 +248,33 @@ RSpec.describe 'Fechamento #2414 · exemplo 18: seleção de candidatos sem plan
     end
   end
 
+  # O schema da resposta da agente na conversa do WhatsApp com a Fase 2 (PromptBuilder::ANSWER_SCHEMA_COM_INTERACAO).
+  def schema_da_agente = Autonomia::Agents::PromptBuilder::ANSWER_SCHEMA_COM_INTERACAO[:name]
+
+  def resposta_da_agente
+    { 'reply' => 'O horário é de segunda a sexta, das 8h às 17h, e o salário é de R$ 2.200 mais vale-transporte.',
+      'confidence' => 0.9, 'should_handoff' => false, 'handoff_reason' => nil, 'used_snippet_ids' => [],
+      'answered_from_knowledge' => false, 'interacao' => nil }
+  end
+
+  # O turno da agente, como o Sidekiq roda: o ReplyJob (gatilho e settle, na hora marcada) e a entrega. A busca na base
+  # da agente pede o vetor da pergunta, que o dublê devolve zerado (a agente não tem base: a vaga está na instrução).
+  def turno_da_agente
+    vetor = { data: [{ embedding: Array.new(1536, 0.0), index: 0 }], usage: { prompt_tokens: 8, total_tokens: 8 } }
+    stub_request(:post, 'https://api.openai.com/v1/embeddings')
+      .to_return(status: 200, body: vetor.to_json, headers: { 'Content-Type' => 'application/json' })
+    turno = [Autonomia::Agents::Operate::ReplyJob, Autonomia::Agents::Operate::ChunkedDeliveryJob, SendReplyJob]
+    FechamentoAutomacao::LIMITE_DE_JOBS.times do
+      job = enqueued_jobs.find { |item| turno.include?(item[:job]) }
+      return unless job
+
+      enqueued_jobs.delete(job)
+      travel_to(Time.zone.at(job[:at])) if job[:at] && Time.zone.at(job[:at]) > Time.current
+      job[:job].perform_now(*ActiveJob::Arguments.deserialize(job[:args]))
+    end
+    raise "o turno da agente não terminou em #{FechamentoAutomacao::LIMITE_DE_JOBS} jobs"
+  end
+
   def perfil(caminho, motivo) = respostas[pergunta_do_perfil] = { 'caminho' => caminho, 'motivo' => motivo }
 
   def textos_enviados = chamadas_para('graph.facebook.com').filter_map { |chamada| chamada.corpo.dig('text', 'body') }
@@ -349,15 +376,21 @@ RSpec.describe 'Fechamento #2414 · exemplo 18: seleção de candidatos sem plan
     expect(card_da_selecao).to have_attributes(status: 'lost', lost_reason: 'Não atende o perfil')
   end
 
-  it 'passo 7: a candidata pergunta do salário; a conversa passa para a agente de IA da vaga', :aggregate_failures do
+  # A agente responde no turno dela (Operate::ReplyJob), com a IA de verdade dublada: o pedido leva o texto da vaga e a
+  # pergunta da candidata, e o que a IA devolve sai pelo WhatsApp.
+  it 'passo 7: a candidata pergunta do salário; a agente de IA da vaga responde com o texto da vaga', :aggregate_failures do
     candidata_manda_o_curriculo
     respostas[pergunta_da_vaga] = { 'caminho' => 'salario_horario', 'motivo' => 'pergunta o salário' }
+    respostas[schema_da_agente] = resposta_da_agente
 
     candidata_escreve_as('2026-11-10 10:30', 'Qual é o salário e o horário?')
+    as('2026-11-10 10:30') { turno_da_agente }
 
     expect(conversa.reload).to have_attributes(ai_assignee: espelho_da_agente, assignee: nil)
     expect(historico('Perguntas da vaga')).to include(['agente_da_vaga', 'ok', nil])
-    expect(agente_da_vaga.instruction).to include(texto_da_vaga)
+    pedido = pedidos_da_ia(schema_da_agente).sole.to_json
+    expect(pedido).to include(texto_da_vaga.to_json[1..-2], 'Qual é o salário e o horário?')
+    expect(textos_enviados.last).to eq(resposta_da_agente['reply'])
   end
 
   # O gatilho é "mensagem com currículo": a pergunta depois do currículo não é currículo, e a seleção não roda de novo.

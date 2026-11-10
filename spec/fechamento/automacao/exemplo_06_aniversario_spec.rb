@@ -399,6 +399,25 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
       expect(historico('Aniversário').map(&:first)).to include('resposta_da_cliente')
     end
 
+    # "Agradeceu" não pede nada: o fluxo para sem ação. O presente fica no fim deste mês, nada sai à cliente e ninguém é
+    # avisado.
+    it 'passo 4: agradeceu; o fluxo para sem ação', :aggregate_failures do
+      resposta('agradeceu', 'só agradeceu o parabéns')
+      ligar_com(:resposta, :estende)
+      aniversario_dela
+
+      cliente_escreve_as('2026-11-12 11:00', 'Que amor, obrigada!')
+
+      expect(pedidos_da_ia('automacao_decidir').sole.to_json).to include('Que amor, obrigada!')
+      decisao = Autonomia::Automacao::Registro.where(automacao_id: automacao_id('Aniversário'), passo: 'resposta_da_cliente').sole
+      expect(decisao.dados).to include('ramo' => 'agradeceu')
+      expect(historico('Aniversário').last).to eq(['resposta_da_cliente', 'ok', nil])
+      expect(Autonomia::Automacao::Execucao.where(automacao_id: automacao_id('Aniversário')).sole.estado).to eq('concluida')
+      expect(card_do_aniversario.reload.custom_attributes).to include('presente_ate' => '2026-11-30')
+      expect(whatsapp).to be_empty
+      expect(Notification.where(notification_type: 'conversation_mention')).to be_empty
+    end
+
     it 'passo 5: não pode este mês; o presente vai até o fim do mês seguinte, gravado no card', :aggregate_failures do
       resposta('nao_pode', 'viaja este mês')
       ligar_com(:resposta, :estende)
@@ -486,9 +505,22 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
 
       cliente_escreve_as('2026-11-19 18:00', 'Ficou lindo! Pode postar sim.')
 
+      expect(pedidos_da_ia('automacao_extrair').sole.to_json).to include('Pode postar sim.')
       expect(cliente_do_banco.custom_attributes).to include('pode_postar' => true)
       expect(etiquetas_da_cliente).to include('pode-postar')
       expect(mencoes_para(jessica).count).to eq(1)
+    end
+
+    it 'passo 9: não autorizou; sem a etiqueta pode-postar e sem aviso à Jéssica', :aggregate_failures do
+      roteiro['automacao_extrair'] = { 'pode_postar' => false }
+      atendida_e_dia_seguinte
+
+      cliente_escreve_as('2026-11-19 18:00', 'Ficou lindo! Mas prefiro que não poste, tá?')
+
+      expect(pedidos_da_ia('automacao_extrair').sole.to_json).to include('prefiro que não poste')
+      expect(cliente_do_banco.custom_attributes).to include('pode_postar' => false)
+      expect(etiquetas_da_cliente).not_to include('pode-postar')
+      expect(mencoes_para(jessica)).to be_empty
     end
   end
 

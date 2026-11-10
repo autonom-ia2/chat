@@ -27,8 +27,6 @@ module FechamentoAutomacao::SondasDaCampanha
   # G38 (exemplo 7, passo 3): a automação ligada com o filtro "respondeu à campanha Pré-Black" no gatilho da mensagem
   # começa, pela Partida de verdade, na resposta de quem recebeu a Pré-Black e não na de quem recebeu outra campanha.
   def filtro_da_campanha_filtra?
-    return false unless defined?(::CampaignRecipient)
-
     canal = FactoryBot.create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
     automacao = automacao_com_filtro(canal.account)
     comecou = %w[Pré-Black Outra].map do |titulo|

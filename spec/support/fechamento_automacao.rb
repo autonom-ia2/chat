@@ -370,7 +370,8 @@ module FechamentoAutomacao::Lacunas
     # e-mail. A G14 cobre só WhatsApp; etiqueta + G7 + G2 é adaptar, não conta.
     'G52' => nil,
     # Do exemplo 1, passo 12 (#2721, #2763): o resumo lê tudo o que a execução tentou, até o e-mail em conversa própria.
-    'G42' => -> { Autonomia::Automacao::EnviosDaExecucao.method_defined?(:dados) },
+    # A sonda monta a falha do modelo e a do e-mail e confere que o resumir recebe os envios dos dois canais.
+    'G42' => -> { FechamentoAutomacao::SondasDoExemplo19.resumir_le_os_envios_dos_dois_canais? },
     # G43 (#2700): a mensagem vai ao número novo do contato depois que a automação o atualiza (ex. 19, passos 4 e 7),
     # só quando o número da conversa morreu (a última mensagem da empresa nela falhou).
     'G43' => -> { FechamentoAutomacao::SondasDoExemplo19.mensagem_vai_ao_numero_novo? },

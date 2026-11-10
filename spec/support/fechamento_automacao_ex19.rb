@@ -1,5 +1,5 @@
-# As sondas da G43 e da G68, do exemplo 19 (#2414 F9): rodam o código de verdade e conferem o efeito. Ficam fora do
-# FechamentoAutomacao::Lacunas, que já está no limite de tamanho; o SONDAS de lá chama as daqui.
+# As sondas da G42, da G43 e da G68, dos exemplos 1 e 19 (#2414 F9): rodam o código de verdade e conferem o efeito. Ficam
+# fora do FechamentoAutomacao::Lacunas, que já está no limite de tamanho; o SONDAS de lá chama as daqui.
 module FechamentoAutomacao::SondasDoExemplo19
   module_function
 
@@ -47,6 +47,45 @@ module FechamentoAutomacao::SondasDoExemplo19
     execucao = execucao_com_email(conta, quem, conversa, passo)
     outras = o_que_o_extrair_le(execucao, passo, conversa)[:other_conversations]
     outras.to_json.include?(RESPOSTA)
+  end
+
+  # G42 (#2721, exemplo 1, passo 12; exemplo 19, passo 7): a execução tentou o modelo no WhatsApp e o e-mail, e os dois
+  # falharam. O "resumir" recebe os envios dos dois canais, cada um marcado como não entregue, pela mesma leitura que vai
+  # à IA. Roda na transação do exemplo, que desfaz tudo.
+  def resumir_le_os_envios_dos_dois_canais?
+    conta = FactoryBot.create(:account)
+    conta.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_ia')
+    quem = FactoryBot.create(:user, account: conta, role: :administrator)
+    whatsapp = FactoryBot.create(:channel_whatsapp, account: conta, sync_templates: false, validate_provider_config: false)
+    conversa = FactoryBot.create(:conversation, account: conta, inbox: whatsapp.inbox)
+    passo = { 'id' => 'resumo', 'tipo' => 'resumir', 'le' => %w[mensagens_recentes], 'destino' => 'nota' }
+    execucao = execucao_com_falhas(conta, quem, conversa, passo)
+    envios = o_que_o_resumir_le(execucao, passo, conversa)[:automation_sends].to_a
+    envios.map { |envio| [envio[:channel], envio[:not_delivered]] }.sort == [['email', true], ['whatsapp', true]]
+  end
+
+  # A execução com o modelo (na conversa do alvo) e o e-mail (em conversa própria), os dois falhos, nos registros ok com
+  # `mensagem_id`, como os passos "mensagem" e "email" gravam.
+  def execucao_com_falhas(conta, quem, conversa, passo)
+    definicao = FactoryBot.create(:autonomia_automacao, account: conta, ligada_por: quem)
+    versao = definicao.salvar_versao!(receita: { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [passo] }, autor: nil)
+    execucao = FactoryBot.create(:autonomia_automacao_execucao, versao: versao, alvo: conversa, chave_gatilho: 'conversa.resolvida')
+    do_email = FactoryBot.create(:conversation, account: conta, contact: conversa.contact,
+                                                inbox: FactoryBot.create(:channel_email, account: conta).inbox)
+    [[conversa, 'modelo'], [do_email, 'email']].each do |onde, passo_id|
+      enviado = FactoryBot.create(:message, conversation: onde, account: conta, inbox: onde.inbox, message_type: :outgoing,
+                                            content: "Sonda G42, #{passo_id}", status: :failed)
+      Autonomia::Automacao::Registro.create!(account: conta, automacao: definicao, execucao: execucao, passo: passo_id, resultado: 'ok',
+                                             dados: { 'mensagem_id' => enviado.id })
+    end
+    execucao
+  end
+
+  # A leitura do passo, a mesma que vai à IA na execução (PassoDeResumir#leitura_da_execucao, privada).
+  def o_que_o_resumir_le(execucao, passo, conversa)
+    acesso = Autonomia::Automacao::Acesso.new(execucao.automacao, chave_gatilho: execucao.chave_gatilho)
+    resumir = Autonomia::Automacao::PassoDeResumir.new(execucao: execucao, passo: passo, alvo: conversa, acesso: acesso)
+    resumir.send(:leitura_da_execucao).conversa
   end
 
   # A execução do passo, com o e-mail que ela mandou (registro ok com `mensagem_id`) e a resposta do cliente.

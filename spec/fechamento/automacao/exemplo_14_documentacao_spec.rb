@@ -50,7 +50,10 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
   def seguradora = 'https://propostas.seguradora.test/auto'
   def card_id = { '$valor' => 'card.id' }
 
-  def modelo(nome) = { nome: nome, idioma: 'pt_BR', variaveis: [[{ '$valor' => 'contato.nome' }]] }
+  def modelo(nome, *variaveis) = { nome: nome, idioma: 'pt_BR', variaveis: [[{ '$valor' => 'contato.nome' }], *variaveis] }
+
+  # A lista do ramo (seguro auto) que o passo 1 manda, na variável do modelo aprovado.
+  def lista_do_auto = 'CNH, documento do carro e comprovante de endereço'
 
   def chegou_documento(id, se_vencer)
     { id: id, tipo: 'esperar_ate', prazo: { valor: 2, unidade: 'dias' }, se_vencer: se_vencer,
@@ -78,8 +81,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
 
   def receita
     { gatilho: { tipo: 'card.entrou_na_etapa', etapa_id: documentacao.id }, passos: [
-      { id: 'lista', tipo: 'mensagem', texto: ['Para emitir o seguro auto: CNH, documento do carro e comprovante de endereço.'],
-        modelo: modelo('lista_documentos') },
+      { id: 'lista', tipo: 'mensagem', texto: ["Para emitir o seguro auto: #{lista_do_auto}."],
+        modelo: modelo('lista_documentos', [lista_do_auto]) },
       espera_lembra_e_liga, extrai, *no_card, decide
     ] }
   end
@@ -244,9 +247,10 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
     allow(Resolv).to receive(:getaddresses).with('propostas.seguradora.test').and_return(['93.184.216.34'])
     seguradora_responde(201, { proposta: { numero: 'PR-2026-0714' } })
     create(:label, account: account, title: 'docs-ok', description: 'Documentos conferidos')
-    corpo = { 'type' => 'BODY', 'text' => 'Oi {{1}}, documentos.' }
-    canal.update!(message_templates: %w[lista_documentos lembrete_documentos].map do |nome|
-      { 'name' => nome, 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'UTILITY', 'components' => [corpo] }
+    corpos = { 'lista_documentos' => 'Oi {{1}}, para emitir o seu seguro auto, mande: {{2}}.', 'lembrete_documentos' => 'Oi {{1}}, documentos.' }
+    canal.update!(message_templates: corpos.map do |nome, corpo|
+      { 'name' => nome, 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'UTILITY',
+        'components' => [{ 'type' => 'BODY', 'text' => corpo }] }
     end)
     receptor_whatsapp_cloud
     # O "fechado" foi há 2 dias: a janela de 24 h está fechada, e a lista sai pelo modelo aprovado, como o termo diz.
@@ -264,8 +268,10 @@ RSpec.describe 'Fechamento #2414 · exemplo 14: o laço dos documentos', :fecham
 
   def entrada = card.reload.entered_stage_at
 
-  it 'passo 1: a lista sai pelo modelo, e a automação espera o primeiro documento por 2 dias', :aggregate_failures do
+  it 'passo 1: a lista do ramo sai pelo modelo, e a automação espera o primeiro documento por 2 dias', :aggregate_failures do
     expect(modelos('lista_documentos')).to eq(1)
+    lista = chamadas_para('graph.facebook.com').find { |chamada| chamada.corpo.dig('template', 'name') == 'lista_documentos' }
+    expect(lista.corpo.dig('template', 'components', 0, 'parameters').pluck('text')).to eq(['Marcos', lista_do_auto])
     expect([execucao.estado, execucao.cursor]).to eq(%w[esperando espera_doc])
     expect(execucao.due_at).to be_within(1.minute).of(entrada + 2.days)
     expect(ia_recebeu).to be_empty

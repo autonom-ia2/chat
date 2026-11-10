@@ -267,6 +267,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 19: cliente que sumiu do WhatsApp', 
     entrada = JSON.parse(pedidos_da_ia('automacao_resumir').sole['input'].first['content'].first['text'])['conversa']
     expect(entrada['automation_sends'].pluck('channel')).to eq(%w[email whatsapp])
     expect(Notification.where(user: fernanda, notification_type: 'conversation_mention')).to exist
+    aviso = Message.where(account: account, private: true).where('content LIKE ?', "%mention://user/#{fernanda.id}/%").sole
+    expect(aviso.content).to include(resumo)
     expect(historico.last(3)).to eq([['entregue', 'ok', nil], ['falhou_de_novo', 'ok', nil], ['tudo_que_tentou', 'ok', nil]])
   end
 end

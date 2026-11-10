@@ -52,9 +52,10 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     expect(FechamentoAutomacao::Lacunas.abertas(%w[G63 G64 G66 G67])).to be_empty
   end
 
-  # Com o 19 fora da lista, a prova das sondas dele fica aqui: a G43 manda ao número novo e a G68 lê a resposta do e-mail.
+  # Com o 19 fora da lista, a prova das sondas dele fica aqui: a G42 leva ao resumo os envios falhos do modelo e do
+  # e-mail, a G43 manda ao número novo e a G68 lê a resposta do e-mail.
   it 'exemplo 19: as lacunas fechadas por comportamento continuam fechadas' do
-    expect(FechamentoAutomacao::Lacunas.abertas(%w[G43 G68])).to be_empty
+    expect(FechamentoAutomacao::Lacunas.abertas(%w[G42 G43 G68])).to be_empty
   end
 
   # Os exemplos 6, 8, 14 e 18 saíram da lista na integração 2 do #2414: a prova das sondas que os seguravam fica aqui.
