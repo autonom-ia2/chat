@@ -5,7 +5,10 @@
 #   1. um arquivo em `fontes/<nome>.rb` com o módulo `Fontes::<Nome>`: os provedores (subclasses de `Provedor`, com
 #      `NOME`, `HOST` e `consultar`), os parâmetros (`Parametro`, sempre normalizados) e a `FONTE` com as consultas;
 #   2. a fonte nesta lista;
-#   3. o spec do adaptador: resposta boa, prazo, reserva e erro (ver `spec/services/autonomia/ferramentas_prontas`).
+#   3. o spec do adaptador: resposta boa, prazo, reserva e erro (ver `spec/services/autonomia/ferramentas_prontas`);
+#   4. o host novo no teto global (`TetoDoProvedor::TETOS`, se o termo da fonte der número) e os termos em
+#      `docs/ferramentas-prontas/termos-das-fontes.md`. Fonte de fase nova: `flag:` com a flag da fase.
+# Parâmetro de texto livre que vai na URL: `codificar` (o resto é dígito ou opção da lista). Provedor sem rede: `HOST = nil`.
 # A execução, o cache, o contador, o limite, o corte, o log e o caminho em segundo plano já valem para ela.
 module Autonomia::FerramentasProntas::Catalogo
   module_function
@@ -14,7 +17,15 @@ module Autonomia::FerramentasProntas::Catalogo
     [
       Autonomia::FerramentasProntas::Fontes::Cep::FONTE,
       Autonomia::FerramentasProntas::Fontes::Cnpj::FONTE,
-      Autonomia::FerramentasProntas::Fontes::Fipe::FONTE
+      Autonomia::FerramentasProntas::Fontes::Fipe::FONTE,
+      # F1 (flag `agente_ferramentas_prontas_consultas`)
+      Autonomia::FerramentasProntas::Fontes::Cpf::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Feriados::FONTE,
+      Autonomia::FerramentasProntas::Fontes::BancoCentral::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Cidades::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Ddd::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Localizacao::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Bancos::FONTE
     ]
   end
 

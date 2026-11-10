@@ -67,6 +67,16 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
     end
   end
 
+  it 'a fonte da F1 entra so com a flag das consultas, e as da F0 ficam' do
+    account.enable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+    pronta
+    incluir_pronta('ddd', conta: account, agente: agent)
+    expect(slugs_do_turno).to eq(%w[pronta_cep pronta_ddd])
+
+    account.disable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+    expect(slugs_do_turno).to eq(%w[pronta_cep])
+  end
+
   describe 'no turno sincrono' do
     it 'consulta a fonte do catalogo e o modelo le o dado enxuto' do
       fonte_responde(brasilapi, endereco)

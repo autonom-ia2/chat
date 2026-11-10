@@ -3,6 +3,8 @@
 #   - `NOME` (curto, minúsculo: entra na chave do motivo, `brasilapi.tempo_esgotado`) e `HOST` (o único que ele chama);
 #   - `consultar(consulta, params)`: monta o caminho só com os `params` já normalizados, chama `get` e devolve os dados
 #     JÁ ENXUTOS (só o que o agente precisa), ou levanta `NaoEncontrado`/`Falha`;
+#   - provedor LOCAL (`HOST = nil`): calcula aqui, sem rede (o CPF, o calendário dos feriados, o plano de numeração do
+#     DDD). Não chama `get`, e o teto e o cliente HTTP não valem para ele;
 #   - `aplica?(consulta, params)`, quando o provedor não atende todo pedido da consulta (ex.: a BrasilAPI só dá o preço
 #     da FIPE pelo código). O que não se aplica é pulado sem contar como falha.
 class Autonomia::FerramentasProntas::Provedor
@@ -38,8 +40,17 @@ class Autonomia::FerramentasProntas::Provedor
 
   private
 
-  def get(caminho)
-    @cliente.get_json(self.class.host, caminho, prazo: @prazo)
+  def get(caminho, max_bytes: Autonomia::FerramentasProntas::ClienteHttp::MAX_BYTES)
+    @cliente.get_json(self.class.host, caminho, prazo: @prazo, max_bytes: max_bytes)
+  end
+
+  def get_csv(caminho)
+    @cliente.get_csv(self.class.host, caminho, prazo: @prazo)
+  end
+
+  # O parâmetro de texto que vai na URL, codificado (o resto do caminho é dígito ou opção da lista).
+  def codificar(valor)
+    ERB::Util.url_encode(valor.to_s)
   end
 
   # O dado veio, mas sem o que faz dele uma resposta (a fonte mudou o formato): falha, e a reserva tenta.

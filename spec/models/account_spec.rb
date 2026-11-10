@@ -317,6 +317,7 @@ RSpec.describe Account do
       # #2807: agente_usa_o_trecho depois dela, 35 (1 << 34 = 17179869184), dada pela Orquestração (09/11).
       # #2810: rag_busca_hibrida depois dela, 36 (1 << 35 = 34359738368), dada pela Orquestração (09/11).
       # #2858 (F0): agente_ferramentas_prontas depois dela, 37 (1 << 36 = 68719476736), dada pela Orquestração (10/11).
+      # #2858 (F1): agente_ferramentas_prontas_consultas depois dela, 38 (1 << 37 = 137438953472), Orquestração (10/11).
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
         feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,
@@ -333,7 +334,8 @@ RSpec.describe Account do
         feature_agente_ferramentas_delegadas: 1_073_741_824, feature_agente_ferramenta_em_segundo_plano: 2_147_483_648,
         feature_instagram_login_unico: 4_294_967_296, feature_agente_material_primeiro: 8_589_934_592,
         feature_agente_usa_o_trecho: 17_179_869_184,
-        feature_rag_busca_hibrida: 34_359_738_368, feature_agente_ferramentas_prontas: 68_719_476_736
+        feature_rag_busca_hibrida: 34_359_738_368, feature_agente_ferramentas_prontas: 68_719_476_736,
+        feature_agente_ferramentas_prontas_consultas: 137_438_953_472
       )
     end
 

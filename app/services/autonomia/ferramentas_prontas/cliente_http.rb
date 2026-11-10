@@ -11,7 +11,9 @@
 #     prazo dela e o que sobra da consulta inteira, somada a reserva. Ressalva do `SafeFetch::Deadline`: o prazo total
 #     cobre conexão e corpo; DNS e cabeçalhos que gotejam abaixo do teto por leitura escapam dele (só uma fonte do
 #     catálogo comprometida faria isso);
-#   - só JSON.
+#   - só JSON (ou CSV, onde a fonte oficial só publica CSV: `get_csv`);
+#   - teto global por host (`TetoDoProvedor`), contado só no pedido que sai, e o host desligado pela configuração
+#     (`TetoDoProvedor.desligado?`): nenhum dos dois chega à rede.
 #
 # Erro vira `Provedor::Falha` com um motivo curto do código (`tempo_esgotado`, `erro_da_fonte`…): a mensagem de fora
 # (que pode trazer o endereço, com o CEP ou o CNPJ) nunca vai a log nem ao modelo.
@@ -25,7 +27,8 @@ class Autonomia::FerramentasProntas::ClienteHttp
   ABERTURA = 2
   # Menos que isto de prazo não dá para uma chamada: a consulta para por prazo, sem chamar.
   MINIMO = 0.3
-  # Sem compressão: o teto de tamanho vale sobre o que chega, e um gzip corrompido não vira erro fora da lista.
+  # Sem compressão pedida: o teto de tamanho vale sobre o que chega. Fonte que comprime mesmo assim (o IBGE manda gzip
+  # com `identity`): o corpo é aberto aqui com o mesmo teto sobre o tamanho aberto (`abrir`), contra bomba de gzip.
   CABECALHOS = { 'Accept' => 'application/json', 'Accept-Encoding' => 'identity',
                  'User-Agent' => 'Autonomia-FerramentasProntas/1.0' }.freeze
   # O que o `SafeFetch` deixa passar do transporte (linha de status ou de bloco inválida, conexão quebrada no meio):
@@ -33,6 +36,10 @@ class Autonomia::FerramentasProntas::ClienteHttp
   TRANSPORTE = [Net::ProtocolError, Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError, Zlib::Error, SystemCallError,
                 IOError, OpenSSL::SSL::SSLError, Resolv::ResolvError].freeze
   TIPOS = %w[application/json].freeze
+  # O CSV do Banco Central sai como `application/octet-stream`.
+  TIPOS_CSV = %w[text/csv application/octet-stream text/plain].freeze
+  BOM = "\uFEFF".freeze
+  GZIP = "\x1F\x8B".b.freeze
   TEMPO = [Net::OpenTimeout, Net::ReadTimeout, Errno::ETIMEDOUT].freeze
   # O motivo de cada erro do `SafeFetch` (o primeiro que casa; a ordem importa: o prazo total é um `FetchError`).
   MOTIVOS = [
@@ -59,19 +66,54 @@ class Autonomia::FerramentasProntas::ClienteHttp
     Process.clock_gettime(Process::CLOCK_MONOTONIC)
   end
 
-  # -> o JSON lido. `caminho` começa com "/" e é montado só com valores normalizados (`Parametro`).
-  def get_json(host, caminho, prazo:)
+  # -> o JSON lido. `caminho` começa com "/" e é montado só com valores normalizados (`Parametro`). `max_bytes`: o teto
+  # da resposta, quando a fonte oficial só entrega a lista inteira (os municípios de MG no IBGE passam de 256 KB).
+  def get_json(host, caminho, prazo:, max_bytes: MAX_BYTES)
+    JSON.parse(buscar(host, caminho, prazo: prazo, max_bytes: max_bytes, tipos: TIPOS))
+  rescue JSON::ParserError, EncodingError => e
+    raise traduzir(e)
+  end
+
+  # -> as linhas do CSV (com cabeçalho), em UTF-8.
+  def get_csv(host, caminho, prazo:, max_bytes: MAX_BYTES)
+    texto = buscar(host, caminho, prazo: prazo, max_bytes: max_bytes, tipos: TIPOS_CSV).force_encoding(Encoding::UTF_8)
+    raise Falha, 'resposta_invalida' unless texto.valid_encoding?
+
+    CSV.parse(texto.delete_prefix(BOM), headers: true)
+  rescue CSV::MalformedCSVError
+    raise Falha, 'resposta_invalida'
+  end
+
+  private
+
+  def buscar(host, caminho, prazo:, max_bytes:, tipos:)
     url = endereco(host, caminho)
     segundos = prazo_da_chamada(prazo)
+    liberar!(host)
     @chamadas += 1
-    SafeFetch.fetch(url, **opcoes(segundos)) { |resultado| return JSON.parse(resultado.tempfile.read) }
-  rescue SafeFetch::Error, JSON::ParserError, EncodingError => e
+    SafeFetch.fetch(url, **opcoes(segundos, max_bytes, tipos)) { |resultado| return abrir(resultado.tempfile.read, max_bytes) }
+  rescue SafeFetch::Error => e
     raise traduzir(e)
   rescue *TRANSPORTE
     raise Falha, 'falha_de_rede'
   end
 
-  private
+  # O corpo em gzip (pelos dois primeiros bytes, não pelo cabeçalho, que a fonte pode omitir) é aberto até `max_bytes`.
+  def abrir(corpo, max_bytes)
+    return corpo unless corpo.b.start_with?(GZIP)
+
+    aberto = Zlib::GzipReader.new(StringIO.new(corpo)).read(max_bytes + 1).to_s
+    raise Falha, 'resposta_grande_demais' if aberto.bytesize > max_bytes
+
+    aberto
+  rescue Zlib::Error
+    raise Falha, 'resposta_invalida'
+  end
+
+  def liberar!(host)
+    raise Falha, 'provedor_desligado' if Autonomia::FerramentasProntas::TetoDoProvedor.desligado?(host)
+    raise Falha, 'teto_do_provedor' unless Autonomia::FerramentasProntas::TetoDoProvedor.reservar!(host)
+  end
 
   def endereco(host, caminho)
     raise Falha, 'host_fora_do_catalogo' unless @hosts.include?(host.to_s.downcase)
@@ -93,12 +135,12 @@ class Autonomia::FerramentasProntas::ClienteHttp
     [prazo, restante].min
   end
 
-  def opcoes(segundos)
+  def opcoes(segundos, max_bytes, tipos)
     {
-      method: :get, headers: CABECALHOS, max_bytes: MAX_BYTES,
+      method: :get, headers: CABECALHOS.merge('Accept' => tipos.first), max_bytes: max_bytes,
       open_timeout: [ABERTURA, segundos].min, read_timeout: segundos, total_timeout: segundos,
       max_redirects: MAX_REDIRECTS, cross_origin_redirects: false, allowed_ports: [PORTA], schemes: %w[https],
-      allowed_content_types: TIPOS, allowed_content_type_prefixes: [], validate_content_type: true
+      allowed_content_types: tipos, allowed_content_type_prefixes: [], validate_content_type: true
     }
   end
 

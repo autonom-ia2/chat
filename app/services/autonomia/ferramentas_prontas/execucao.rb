@@ -53,7 +53,7 @@ class Autonomia::FerramentasProntas::Execucao
   private
 
   def executar
-    return desligada unless @fonte && Autonomia::FerramentasProntas.ligada?(@tool.account)
+    return desligada unless Autonomia::FerramentasProntas.disponivel?(@tool.account, @fonte)
 
     acesso = Acesso.find_by(account_id: @tool.account_id, fonte: @fonte.chave)
     return recusar('sem_acesso') if acesso.nil?

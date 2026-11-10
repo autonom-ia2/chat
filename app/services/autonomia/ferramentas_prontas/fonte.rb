@@ -7,12 +7,14 @@
 # `limite_diario`: o padrão por conta nesta fonte (o acesso da conta pode ter o seu). Decisão do Rodrigo: a proposta
 # está no PR da F0.
 # `termos`: o que a fonte pede de quem usa (limite, cache), para a revisão de cada lote. Não vai ao modelo.
+# `flag`: a flag da fase que trouxe a fonte (a F1 tem a sua), conferida junto com a das prontas; nil nas da F0.
 class Autonomia::FerramentasProntas::Fonte
   PARAMETRO_DA_CONSULTA = 'consulta'.freeze
 
-  attr_reader :chave, :slug, :nome, :descricao, :consultas, :limite_diario, :termos
+  attr_reader :chave, :slug, :nome, :descricao, :consultas, :limite_diario, :termos, :flag
 
-  def initialize(chave:, slug:, nome:, descricao:, consultas:, limite_diario:, termos:) # rubocop:disable Metrics/ParameterLists
+  def initialize(chave:, slug:, nome:, descricao:, consultas:, limite_diario:, termos:, flag: nil) # rubocop:disable Metrics/ParameterLists
+    @flag = flag
     @chave = chave
     @slug = slug
     @nome = nome
@@ -37,7 +39,7 @@ class Autonomia::FerramentasProntas::Fonte
   end
 
   def hosts
-    provedores.map(&:host).uniq
+    provedores.filter_map(&:host).uniq
   end
 
   # O maior prazo total entre as consultas: o tempo que a consulta em segundo plano espera por esta ferramenta.

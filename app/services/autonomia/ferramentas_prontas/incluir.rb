@@ -4,7 +4,8 @@
 # Incluir de novo não duplica nada: atualiza a frase e religa. Quem pode incluir (administrador ou a chave
 # "Ferramentas dos agentes") é conferido por quem chama, na tela da F2.
 #
-# Recusa (`Recusado#motivo`): flag desligada, agente de outra conta, a Lia, fonte fora do catálogo, ou o nome da função
+# Recusa (`Recusado#motivo`): flag desligada (a das prontas ou a da fase da fonte),
+# agente de outra conta, a Lia, fonte fora do catálogo, ou o nome da função
 # já usado por uma ferramenta cadastrada à mão no mesmo agente.
 class Autonomia::FerramentasProntas::Incluir
   MAX_USAR_QUANDO = 500
@@ -43,6 +44,7 @@ class Autonomia::FerramentasProntas::Incluir
     raise Recusado, 'pessoa_de_outra_conta' unless pessoa_da_conta?
     raise Recusado, 'agente_de_cotacao' if @agent.agent_type == Autonomia::FerramentasProntas::AGENTE_DE_COTACAO
     raise Recusado, 'fonte_desconhecida' if @fonte.nil?
+    raise Recusado, 'desligada' unless Autonomia::FerramentasProntas.disponivel?(@account, @fonte)
   end
 
   def pessoa_da_conta?

@@ -3,7 +3,8 @@
 #   - a resposta encontrada, pela validade da consulta (`Consulta#validade`);
 #   - o "não encontrado", por pouco tempo (`VALIDADE_DO_NAO_ENCONTRADO`), para o mesmo CEP inexistente repetido não gastar
 #     a cota das fontes de novo.
-# A falha nunca entra: a consulta seguinte tenta a fonte.
+# A falha nunca entra: a consulta seguinte tenta a fonte. A consulta sem validade (`nil`: o CPF, que é dado pessoal e
+# calculado aqui) não passa pelo cache.
 #
 # A chave leva um HMAC dos parâmetros com segredo da plataforma: quem lê o Redis não reverte o CEP ou o CNPJ por força
 # bruta. O filtro local (`Parametro#local?`) não entra na chave: a lista guardada é a da fonte, e o filtro roda depois.
@@ -22,6 +23,8 @@ class Autonomia::FerramentasProntas::Cache
 
   # -> { 'situacao' => 'encontrado', 'dados' => … }, { 'situacao' => 'nao_encontrado' } ou nil.
   def ler
+    return if @consulta.validade.nil?
+
     Rails.cache.read(chave)
   rescue StandardError => e
     avisar('leitura', e)
@@ -48,6 +51,8 @@ class Autonomia::FerramentasProntas::Cache
   private
 
   def gravar(valor, validade)
+    return if @consulta.validade.nil?
+
     Rails.cache.write(chave, valor, expires_in: validade)
   rescue StandardError => e
     avisar('escrita', e)
