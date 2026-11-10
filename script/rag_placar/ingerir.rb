@@ -28,11 +28,14 @@ conta = Account.create!(name: "Placar #{tipo} #{Time.current.to_i}")
 Autonomia::Agents::Fase2.ligar!(conta)
 # A conta da rodada nasce com as flags de RAG que estão ligadas em produção: sem elas, o placar mede um caminho que o
 # cliente não usa (até 10/11/2026 a régua rodou sem a busca híbrida, e a comparação mediu o bônus por metadado, que a
-# produção não usa). Ao ligar ou desligar uma flag de RAG em produção, atualize esta lista.
-FLAGS_DE_PRODUCAO = %w[rag_busca_hibrida].freeze
-# RAG_FLAGS=rag_corte_por_estrutura,... liga flags a mais na conta da rodada: mede o mesmo código com e sem a mudança.
+# produção não usa). O corte por estrutura liga em todas as contas das 2 stacks (config/features.yml). Ao ligar ou
+# desligar uma flag de RAG em produção, atualize esta lista.
+FLAGS_DE_PRODUCAO = [Autonomia::Agents::BuscaHibrida::FLAG, 'rag_corte_por_estrutura'].freeze
+# RAG_FLAGS=<flag_em_teste>,... liga flags a mais na conta da rodada: mede o mesmo código com e sem a mudança.
 flags = FLAGS_DE_PRODUCAO + ENV.fetch('RAG_FLAGS', '').split(',').map(&:strip).reject(&:empty?)
-conta.enable_features!(*flags.uniq)
+# save!: se a gravação falhar, a rodada para em vez de medir sem as flags.
+conta.enable_features(*flags.uniq)
+conta.save!
 agente = Autonomia::Agents::Agent.create!(account: conta, name: 'Placar', agent_type: 'support', status: :active,
                                           human_card: "Agente da régua do RAG (#{tipo}).")
 agente.update!(config: agente.config.to_h.merge('base' => base)) if base
