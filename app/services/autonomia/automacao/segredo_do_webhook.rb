@@ -20,7 +20,7 @@ class Autonomia::Automacao::SegredoDoWebhook
 
   # Sobe a geração num UPDATE só: duas trocas ao mesmo tempo somam as duas, sem ler e depois gravar.
   def trocar!
-    tabela.update_counters(@automacao.id, segredo_geracao: 1) # rubocop:disable Rails/SkipsModelValidations
+    da_automacao.update_counters(segredo_geracao: 1) # rubocop:disable Rails/SkipsModelValidations
     valor
   end
 
@@ -28,8 +28,9 @@ class Autonomia::Automacao::SegredoDoWebhook
 
   private
 
-  def tabela = ::Autonomia::Automacao::Definicao
+  # A automação pela conta dela também, como toda leitura do motor.
+  def da_automacao = ::Autonomia::Automacao::Definicao.where(account_id: @automacao.account_id, id: @automacao.id)
 
   # Lida direto do banco: a automação carregada pela execução pode ser de antes da troca.
-  def geracao = tabela.where(id: @automacao.id).pick(:segredo_geracao).to_i
+  def geracao = da_automacao.pick(:segredo_geracao).to_i
 end

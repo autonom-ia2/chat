@@ -87,7 +87,7 @@ class Autonomia::Automacao::FilhasDoPasso
   def abrir_para(alvo)
     marca = Time.current.floor(6)
     filha = montar(alvo, marca)
-    return retomar(filha.evento) if Execucao.exists?(automacao_id: @mae.automacao_id, evento: filha.evento)
+    return retomar(filha.evento) if Execucao.exists?(account_id: @mae.account_id, automacao_id: @mae.automacao_id, evento: filha.evento)
     return 'fora_do_alcance' unless @acesso.alcanca?(alvo, filha)
 
     Execucao.transaction do
@@ -104,7 +104,7 @@ class Autonomia::Automacao::FilhasDoPasso
   # primeira rodada zera o due_at ao tomar a reserva). Vai para a fila de novo: a tomada atômica do Executor faz a rodada
   # acontecer uma vez só, mesmo que a primeira tentativa tenha enfileirado.
   def retomar(evento)
-    filha = Execucao.find_by(automacao_id: @mae.automacao_id, evento: evento)
+    filha = Execucao.find_by(account_id: @mae.account_id, automacao_id: @mae.automacao_id, evento: evento)
     if filha.estado == 'andando' && filha.due_at.present? && filha.due_at == filha.travada_em
       ::Autonomia::Automacao::AvancarJob.perform_later(filha.id, filha.travada_em.iso8601(6))
     end
