@@ -138,15 +138,23 @@ class Autonomia::Automacao::PassoDeWebhook
   def gravar(resposta)
     achados = achados_na(resposta)
     ausentes = Array(@passo['gravar']).pluck('chave') - achados.map { |item, _valor| item['chave'] }
+    com_lugar, sem_lugar = achados.partition { |item, _valor| dono_do(base_do(item['destino'])) }
+    recusa, gravados = gravar_por_lugar(com_lugar)
+    dados = registro(gravados, ausentes, sem_lugar)
+    recusa ? Resultado.new(tipo: recusa.tipo, motivo: recusa.motivo, dados: dados) : Resultado.new(tipo: :ok, dados: dados)
+  end
+
+  # [a recusa ou nil, as chaves gravadas]: a primeira recusa interrompe os lugares seguintes.
+  def gravar_por_lugar(achados)
     gravados = []
     pedidos(achados).each do |acao, id, corpo, chaves|
       resultado = ::Autonomia::Automacao::PassoDeAcao.new(execucao: @execucao, passo: passo_da_acao(acao, id, corpo), valores: nil,
                                                           acesso: @acesso).executar
-      return Resultado.new(tipo: resultado.tipo, motivo: resultado.motivo, dados: registro(gravados, ausentes)) unless resultado.tipo == :ok
+      return [resultado, gravados] unless resultado.tipo == :ok
 
       gravados.concat(chaves)
     end
-    Resultado.new(tipo: :ok, dados: registro(gravados, ausentes))
+    [nil, gravados]
   end
 
   # [item, valor] de cada chave que a resposta trouxe com valor simples.
@@ -172,15 +180,21 @@ class Autonomia::Automacao::PassoDeWebhook
 
   def simples?(valor) = valor.is_a?(String) || valor.is_a?(Numeric) || [true, false].include?(valor)
 
-  def registro(gravados, ausentes) = { 'gravados' => gravados, 'ausentes' => ausentes }
+  # `sem_lugar`: as chaves que a resposta trouxe para um lugar que o alvo não tem (o card sem conversa). Não gravam, e o
+  # histórico diz quais, em vez de sumirem.
+  def registro(gravados, ausentes, sem_lugar)
+    { 'gravados' => gravados, 'ausentes' => ausentes,
+      'sem_lugar' => sem_lugar.map { |item, _valor| item['chave'] }.presence }.compact
+  end
 
-  # [ação, id, corpo, chaves] por lugar; o lugar que o alvo não tem (card sem conversa) fica de fora.
+  # O card, o contato ou a conversa do alvo onde a base grava; nil quando o alvo não tem esse lugar.
+  def dono_do(base) = contexto.public_send(DESTINOS.fetch(base).last)
+
+  # [ação, id, corpo, chaves] por lugar, só dos lugares que o alvo tem.
   def pedidos(achados)
-    achados.group_by { |item, _valor| base_do(item['destino']) }.filter_map do |base, lista|
+    achados.group_by { |item, _valor| base_do(item['destino']) }.map do |base, lista|
       acao, lugar = DESTINOS.fetch(base)
-      dono = contexto.public_send(lugar)
-      next unless dono
-
+      dono = dono_do(base)
       atributos = lista.to_h.transform_keys { |item| item['destino'].delete_prefix("#{base}.") }
       [acao, lugar == :conversa ? dono.display_id : dono.id, corpo_do_lugar(lugar, atributos), lista.map { |item, _valor| item['chave'] }]
     end

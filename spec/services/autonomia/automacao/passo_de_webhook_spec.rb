@@ -86,6 +86,32 @@ RSpec.describe Autonomia::Automacao::PassoDeWebhook, :automacao_motor do
     expect(registro.to_json).not_to include('token', 'abc', '12.345.678', 'C-1042', 'Bom Preço')
   end
 
+  # O card sem conversa não tem onde gravar o que vai para a conversa: a chave não some em silêncio, o histórico diz
+  # quais ficaram sem lugar, e o que tem lugar (o card) grava.
+  describe 'resposta para um lugar que o alvo não tem' do
+    let(:card) do
+      account.crm_cards.create!(pipeline: funil_e_etapa.first, stage: funil_e_etapa.last, inbox: inbox, contact: contato,
+                                title: 'Plano anual', owner: admin, custom_attributes: { 'cnpj' => '12.345.678/0001-90' })
+    end
+
+    before do
+      create(:custom_attribute_definition, account: account, attribute_model: 'conversation_attribute', attribute_key: 'protocolo',
+                                           attribute_display_name: 'protocolo', attribute_display_type: 'text')
+    end
+
+    it 'registra as chaves sem lugar e grava as outras', :aggregate_failures do
+      responder(200, { cliente: { numero: 'C-1042' }, protocolo: 'P-77' })
+      gravar = [{ 'chave' => 'cliente.numero', 'destino' => 'card.atributos.numero_cliente' },
+                { 'chave' => 'protocolo', 'destino' => 'conversa.atributos.protocolo' }]
+
+      execucao = rodar([webhook(gravar: gravar)])
+
+      expect(registros(execucao)).to eq([['cobranca', 'ok', nil]])
+      expect(dados(execucao, 'cobranca')).to include('gravados' => ['cliente.numero'], 'ausentes' => [], 'sem_lugar' => ['protocolo'])
+      expect(card.reload.custom_attributes).to include('numero_cliente' => 'C-1042')
+    end
+  end
+
   it 'recusa (4xx): grava o motivo da resposta e segue pelo se_recusar', :aggregate_failures do
     responder(422, { motivo: 'CNPJ com pendência na Receita' })
     avisar = { 'id' => 'avisa', 'tipo' => 'parar' }
