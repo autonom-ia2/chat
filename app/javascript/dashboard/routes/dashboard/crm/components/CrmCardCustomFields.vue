@@ -15,6 +15,7 @@ import ListAttribute from 'dashboard/components-next/CustomAttributes/ListAttrib
 import CheckboxAttribute from 'dashboard/components-next/CustomAttributes/CheckboxAttribute.vue';
 import DateAttribute from 'dashboard/components-next/CustomAttributes/DateAttribute.vue';
 import OtherAttribute from 'dashboard/components-next/CustomAttributes/OtherAttribute.vue';
+import CampoPessoa from './CampoPessoa.vue';
 
 const props = defineProps({
   card: { type: Object, required: true },
@@ -55,7 +56,12 @@ const componentMap = {
   list: ListAttribute,
   checkbox: CheckboxAttribute,
   date: DateAttribute,
+  pessoa: CampoPessoa,
 };
+// G62: as pessoas da conta, para o campo do tipo pessoa da equipe.
+const pessoas = computed(() => store.getters['agents/getAgents'] || []);
+const nomeDaPessoa = id =>
+  pessoas.value.find(pessoa => pessoa.id === Number(id))?.name;
 
 const values = ref({ ...(props.card.custom_attributes || {}) });
 watch(
@@ -98,6 +104,10 @@ const settingsRoute = computed(() => ({
 }));
 
 const readOnlyValue = field => {
+  if (field.attributeDisplayType === 'pessoa' && field.value !== '')
+    return (
+      nomeDaPessoa(field.value) || t('CRM_KANBAN.RELATIONSHIP.NOT_INFORMED')
+    );
   if (typeof field.value === 'boolean')
     return field.value
       ? t('CRM_KANBAN.RELATIONSHIP.VALUE_YES')
@@ -141,6 +151,14 @@ const clearField = field =>
   });
 
 watch(() => props.card.id, carregarFatos);
+// Só busca a equipe quando a conta tem campo de pessoa e a lista ainda não veio.
+watch(
+  () => definitions.value.some(item => item.attributeDisplayType === 'pessoa'),
+  temPessoa => {
+    if (temPessoa && !pessoas.value.length) store.dispatch('agents/get');
+  },
+  { immediate: true }
+);
 
 onMounted(() => {
   store.dispatch('attributes/get');
@@ -187,6 +205,9 @@ onMounted(() => {
           :is="componentMap[field.attributeDisplayType] || OtherAttribute"
           v-if="canManage"
           :attribute="field"
+          :pessoas="
+            field.attributeDisplayType === 'pessoa' ? pessoas : undefined
+          "
           is-editing-view
           @update="value => updateField(field, value)"
           @delete="clearField(field)"

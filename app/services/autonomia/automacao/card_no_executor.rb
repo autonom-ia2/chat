@@ -10,7 +10,7 @@ module Autonomia::Automacao::CardNoExecutor
     return if impedida?(passo['id'])
     return encerrar(passo['id'], 'parada', 'card_desligado') unless ::Autonomia::Automacao::PassoDeCard.ligado?(@account)
 
-    resultado = ::Autonomia::Automacao::PassoDeCard.new(execucao: @execucao, passo: passo, alvo: alvo, acesso: @acesso).executar
+    resultado = ::Autonomia::Automacao::PassoDeCard.new(execucao: @execucao, passo: passo, alvo: alvo, acesso: @acesso, valores: valores).executar
     return encerrar(passo['id'], 'parada', pausar(resultado.motivo), 'falhou') if resultado.tipo == :sem_acesso
 
     seguir_depois_da_acao(passo, resultado)

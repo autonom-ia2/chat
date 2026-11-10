@@ -5,7 +5,8 @@
 # na tela. O que a plataforma recusa vira motivo no histórico.
 #
 # - título e mensagem: pedaços e valores do alvo, como o texto da mensagem; valor vazio pula o passo;
-# - quando: daqui a N minutos, horas ou dias, no fuso da conta;
+# - quando: daqui a N minutos, horas ou dias; ou (G57) hoje ou amanhã, numa hora ou no fim do dia, no fuso da conta. A
+#   hora de hoje que já passou vale em seguida, nunca amanhã;
 # - para: o responsável (no card, quem cuida do cliente; na conversa, o responsável dela), pessoas ou um time; sem
 #   responsável, o passo pula;
 # - no card, o retorno é dele (e da conversa principal); na conversa e no contato, é do contato, só como lembrete. Por
@@ -15,18 +16,19 @@ class Autonomia::Automacao::PassoDeRetorno
   Resultado = ::Autonomia::Automacao::PassoDeAcao::Resultado
 
   # Ao salvar: os valores do título e da mensagem lidos pelo bloco de quem confere a receita (Receita#problemas_do_caminho),
-  # a mensagem só com a flag da F4 e só com gatilho de card, as pessoas e o time da própria conta e, com a pessoa, poder
-  # criar retorno (FollowUpPolicy#create?, como o "criar card" do G4). `account_user` nil (o catálogo) não confere a pessoa.
-  def self.problemas_ao_salvar(conta, passo, receita, account_user, &)
+  # a mensagem só com a flag da F4 e só no card (`alvo`, Receita#alvo: o gatilho de card ou o ramo nos cards do contato),
+  # as pessoas e o time da própria conta e, com a pessoa, poder criar retorno (FollowUpPolicy#create?, como o "criar
+  # card" do G4). `account_user` nil (o catálogo) não confere a pessoa.
+  def self.problemas_ao_salvar(conta, passo, alvo, account_user, &)
     textos = [passo['titulo'], passo.dig('envio', 'mensagem')].compact
     lidos = textos.flat_map { |partes| ::Autonomia::Automacao::Texto.caminhos(partes) }.flat_map(&)
-    da_mensagem(conta, passo, receita.dig('gatilho', 'tipo')) + de_quem_salva(passo, account_user) + lidos + de_fora(conta, passo)
+    da_mensagem(conta, passo, alvo) + de_quem_salva(passo, account_user) + lidos + de_fora(conta, passo)
   end
 
-  def self.da_mensagem(conta, passo, gatilho)
+  def self.da_mensagem(conta, passo, alvo)
     return [] unless passo['envio']
     return [frase(:passo_desligado, passo: passo['id'])] unless ::Autonomia::Automacao::Motor.mensagens?(conta)
-    return [] if ::Autonomia::Automacao::Gatilhos.do_card?(gatilho)
+    return [] if alvo == ::Autonomia::Automacao::Gatilhos::CARD
 
     [frase(:retorno_mensagem_sem_card, passo: passo['id'])]
   end
@@ -128,7 +130,19 @@ class Autonomia::Automacao::PassoDeRetorno
   end
 
   def quando
-    Time.current + ::Autonomia::Automacao::Duracao.de(@passo['daqui'])
+    return Time.current + ::Autonomia::Automacao::Duracao.de(@passo['daqui']) if @passo['daqui']
+
+    no_dia(@passo['quando'])
+  end
+
+  # G57: o dia no fuso da conta; sem hora, o fim dele; hora que já passou, agora.
+  def no_dia(quando)
+    agora = Time.current.in_time_zone(fuso)
+    dia = quando['dia'] == 'amanha' ? agora.to_date.tomorrow : agora.to_date
+    hora = quando['hora']
+    return fuso.local(dia.year, dia.month, dia.day).end_of_day if hora.nil?
+
+    [fuso.local(dia.year, dia.month, dia.day, hora), agora].max
   end
 
   # O fuso que a tela grava na conta (#954), o mesmo do extrair e do Guia.

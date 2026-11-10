@@ -13,6 +13,21 @@ class Autonomia::Automacao::LinkDaAgenda
 
   def self.resultado(conta, pessoa, pagina_id: nil) = new(conta, pessoa, pagina_id).resultado
 
+  # G44 (#2756): a página escolhida na receita. A fixa dá o link dela, com quem a página diz (o responsável ainda
+  # elegível: a página usável já confere); a por pessoa, só o link próprio de `pessoa` (o responsável do alvo). Sem
+  # página usável, ou sem link de `pessoa` nela: vazio, nunca o link de outra pessoa.
+  def self.da_pagina(conta, pessoa, pagina_id) = new(conta, pessoa, pagina_id).da_pagina
+
+  # A página nova, publicada e com quem atenda, desta conta (o escopo das páginas da tela), ou nil.
+  def self.pagina_usavel(conta, pagina_id) = ::Crm::BookingV2::InvitePages.new(conta).usable.find { |pagina| pagina.id == pagina_id }
+
+  # O motivo do passo que pulou só sem o link: a página de reserva fora do ar (G60) e quem ligou sem acesso às páginas
+  # (G44) têm o próprio; o resto é o faltou_link_da_agenda (G12).
+  def self.motivo(por)
+    proprios = [::Autonomia::Automacao::AgendaDaPagina::SEM_ACESSO, ::Autonomia::Automacao::AgendaDeReserva::INDISPONIVEL]
+    proprios.include?(por) ? por : 'faltou_link_da_agenda'
+  end
+
   def initialize(conta, pessoa, pagina_id)
     @conta = conta
     @pessoa = pessoa
@@ -28,6 +43,18 @@ class Autonomia::Automacao::LinkDaAgenda
     return vazio(onde_atende.many? ? 'varias_paginas' : 'sem_pagina') unless pagina
 
     Resultado.new(url: ::Crm::BookingV2::ShortLink.url_for(pagina, link: link_proprio(pagina)), por: nil)
+  end
+
+  def da_pagina
+    return vazio('sem_pagina') unless ::Crm::Config.booking_v2_enabled?(@conta)
+
+    pagina = paginas.usable.find { |usavel| usavel.id == @pagina_id }
+    return vazio('sem_pagina') unless pagina
+    return Resultado.new(url: ::Crm::BookingV2::ShortLink.url_for(pagina), por: nil) if pagina.assignment_mode_fixed?
+    return vazio('sem_responsavel') if @pessoa.nil?
+
+    link = link_proprio(pagina)
+    link ? Resultado.new(url: ::Crm::BookingV2::ShortLink.url_for(pagina, link: link), por: nil) : vazio('sem_pagina')
   end
 
   private

@@ -97,7 +97,7 @@ RSpec.describe Autonomia::Automacao::Catalogo do
 
     expect(nativos.pluck('tipo')).to contain_exactly('esperar', 'esperar_ate', 'se', 'parar', 'mensagem', 'avisar', 'email',
                                                      'campanha', 'decidir', 'extrair', 'escrever', 'resumir', 'ia_assumir', 'retorno',
-                                                     'card')
+                                                     'card', 'em_outro_registro', 'prospeccao', 'conversa_ao_responsavel', 'para_cada')
     expect(nativos.flat_map { |passo| passo['campos'] }.pluck('peca')).to all(be_present)
     expect(passos.pluck('grupo') - declarado['grupos']).to be_empty
   end
@@ -126,7 +126,8 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     fora = declarado['nativos_fora_do_editor'].to_h
 
     expect((declarado['nativos'].keys + fora.keys).sort).to eq(do_esquema.sort)
-    expect(fora.values).to all(include('#2486'))
+    # Cada um com a Issue que o leva para a tela (o primeiro foi a #2486, de mensagem e avisar).
+    expect(fora.values).to all(include('(#'))
   end
 
   # #2496: todo valor da mensagem do gatilho está no editor ou só no Guia, uma vez. O que fica de fora do catálogo
@@ -163,8 +164,8 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     respostas = catalogo.gerado['valores'].select { |item| item['so_na_espera'] }
 
     expect(respostas.pluck('caminho')).to eq(%w[conversa.cliente_respondeu conversa.equipe_respondeu conversa.responsavel_respondeu
-                                                gatilho.repetiu])
-    expect(respostas.pluck('base')).to eq(%w[conversa conversa conversa gatilho])
+                                                gatilho.repetiu conversa.cliente_mandou_documento contato.reuniao_atendida])
+    expect(respostas.pluck('base')).to eq(%w[conversa conversa conversa gatilho conversa contato])
     expect(catalogo.gerado['alvos'].values).to all(include('gatilho'))
     expect(respostas).to all(satisfy { |item| item['so_no_gatilho'].nil? && item['opcoes'].pluck('valor') == [true, false] })
   end

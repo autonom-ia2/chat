@@ -5,6 +5,7 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import LivreDuracao from './LivreDuracao.vue';
 import LivreSelecao from './LivreSelecao.vue';
+import LivreMudanca from './LivreMudanca.vue';
 import { mostraNaFrequencia } from '../recorrente';
 
 // #2499 — o gatilho no "Alterar": o seletor, agrupado quando há mais de um
@@ -15,8 +16,10 @@ import { mostraNaFrequencia } from '../recorrente';
 // antes ou depois e a hora. O lembrete antes da reunião (#2709) pede quanto
 // tempo antes. O recorrente (#2635, G7) pede a frequência, o dia (da semana ou
 // do mês, conforme a frequência), a hora e a seleção dos cards ou contatos
-// (LivreSelecao). #2680: no gatilho de card ou de contato, a caixa por onde a
-// mensagem abre a conversa de quem ainda não tem uma.
+// (LivreSelecao). O "card atualizado" (G27, #2661) pede a mudança: o campo do
+// card, a condição e o valor (LivreMudanca). #2680: no gatilho de card ou de
+// contato, a caixa por onde a mensagem abre a conversa de quem ainda não tem uma.
+// G60: a página de agenda de reserva, para o link da agenda quando ninguém atende.
 const props = defineProps({
   modelValue: { type: Object, default: null },
   gatilhos: { type: Array, required: true },
@@ -33,6 +36,7 @@ const emit = defineEmits(['update:modelValue']);
 const { t } = useI18n();
 const idTipo = useId();
 const idCaixa = useId();
+const idAgenda = useId();
 
 const opcao = item => ({ value: item.tipo, label: t(item.frase) });
 const grupos = computed(() => {
@@ -75,6 +79,7 @@ const avisoDeTempo = computed(() => {
   }
   if (pede('campo')) return 'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_DATA';
   if (pede('dias')) return 'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_PARADO';
+  if (pede('mudanca')) return 'AUTOMACAO_LIVRE.MUDANCA.AVISO';
   return null;
 });
 
@@ -144,6 +149,8 @@ const PADRAO_DO_LEMBRETE = { antes: { valor: 1, unidade: 'dias' } };
 const PADRAO_DO_RECORRENTE = { frequencia: 'diaria', hora: 8, selecao: {} };
 // O da conta não tem seleção: roda uma vez por ocorrência.
 const PADRAO_DA_CONTA = { frequencia: 'diaria', hora: 8 };
+// O card atualizado começa em "mudou"; o campo, a pessoa escolhe.
+const PADRAO_DA_MUDANCA = { mudanca: { condicao: 'mudou' } };
 const padraoDo = tipo => {
   const item = entradaDo(tipo);
   if (pedePeca(item, 'antes')) return PADRAO_DO_LEMBRETE;
@@ -151,6 +158,7 @@ const padraoDo = tipo => {
     return pedePeca(item, 'selecao') ? PADRAO_DO_RECORRENTE : PADRAO_DA_CONTA;
   if (pedePeca(item, 'campo')) return PADRAO_DA_DATA;
   if (pedePeca(item, 'dias')) return PADRAO_DO_PARADO;
+  if (pedePeca(item, 'mudanca')) return PADRAO_DA_MUDANCA;
   return {};
 };
 
@@ -183,16 +191,40 @@ const caixasDaConversa = computed(() => [
   ...(props.escolhas.caixas || []),
 ]);
 
+// G60 (decisão 10): a página fixa do link da agenda quando ninguém atende.
+// Vale onde há conversa, card ou contato; só aparece para quem lê as páginas
+// (a lista vem vazia para quem não lê).
+const ALVOS_DA_AGENDA = ['Conversation', 'Crm::Card', 'Contact'];
+const temAgenda = tipo => ALVOS_DA_AGENDA.includes(entradaDo(tipo)?.alvo);
+const pedeAgendaDeReserva = computed(
+  () =>
+    temAgenda(props.modelValue?.tipo) &&
+    ((props.escolhas.paginas || []).length > 0 ||
+      Boolean(props.modelValue?.agenda_de_reserva))
+);
+const paginasDeReserva = computed(() => [
+  { value: '', label: t('AUTOMACAO_LIVRE.AGENDA_DE_RESERVA.NENHUMA') },
+  ...(props.escolhas.paginas || []),
+]);
+
 // Trocar o tipo apaga o que o anterior pedia (etapa, funil), mas mantém os
 // filtros: o painel mostra o que entra e o que sai deles. A caixa da conversa
-// nova fica enquanto o novo gatilho também pode não ter conversa.
+// nova fica enquanto o novo gatilho também pode não ter conversa; a página de
+// reserva, enquanto ele tem conversa, card ou contato.
 const trocarTipo = tipo => {
-  const { filtros, conversa_nova: conversaNova } = props.modelValue || {};
+  const {
+    filtros,
+    conversa_nova: conversaNova,
+    agenda_de_reserva: agendaDeReserva,
+  } = props.modelValue || {};
   const novo = {
     tipo,
     ...padraoDo(tipo),
     ...(conversaNova && podeNaoTerConversa(tipo)
       ? { conversa_nova: conversaNova }
+      : {}),
+    ...(agendaDeReserva && temAgenda(tipo)
+      ? { agenda_de_reserva: agendaDeReserva }
       : {}),
   };
   emit('update:modelValue', filtros ? { ...novo, filtros } : novo);
@@ -319,6 +351,12 @@ const mudar = (nome, valor) => {
         :opcoes="opcoes"
         @update:model-value="valor => mudar(parametro.nome, valor)"
       />
+      <LivreMudanca
+        v-else-if="parametro.peca === 'mudanca'"
+        :model-value="modelValue?.mudanca || {}"
+        :campos="escolhas.camposDoCard || []"
+        @update:model-value="valor => mudar(parametro.nome, valor)"
+      />
       <ChoiceSelect
         v-else-if="parametro.peca === 'hora'"
         :model-value="modelValue?.[parametro.nome] ?? ''"
@@ -398,6 +436,32 @@ const mudar = (nome, valor) => {
       />
       <p class="mb-0 text-sm text-n-slate-11">
         {{ $t('AUTOMACAO_LIVRE.CONVERSA_NOVA.AJUDA') }}
+      </p>
+    </div>
+
+    <div
+      v-if="pedeAgendaDeReserva"
+      class="flex flex-col gap-1.5"
+      data-parametro="agenda_de_reserva"
+    >
+      <label :for="idAgenda" class="text-sm font-medium text-n-slate-12">
+        {{ $t('AUTOMACAO_LIVRE.AGENDA_DE_RESERVA.TITULO') }}
+      </label>
+      <ChoiceSelect
+        :model-value="modelValue?.agenda_de_reserva?.pagina_id ?? ''"
+        :trigger-id="idAgenda"
+        :aria-label="$t('AUTOMACAO_LIVRE.AGENDA_DE_RESERVA.TITULO')"
+        :options="paginasDeReserva"
+        @update:model-value="
+          valor =>
+            mudar(
+              'agenda_de_reserva',
+              valor === '' ? null : { pagina_id: valor }
+            )
+        "
+      />
+      <p class="mb-0 text-sm text-n-slate-11">
+        {{ $t('AUTOMACAO_LIVRE.AGENDA_DE_RESERVA.AJUDA') }}
       </p>
     </div>
 

@@ -7,12 +7,24 @@
 #
 # Como: os candidatos do vetor (já ordenados por distância) e os da busca por palavra (texto em português, `ts_rank_cd`,
 # pelo índice GIN de expressão da migration do #2810) entram juntos, e a ordem sai da fusão por posição (RRF): cada
-# lista dá 1 / (60 + posição) a cada trecho. Os termos da pergunta entram com OU (a pergunta do cliente não repete todas
-# as palavras do trecho). Todo candidato leva a distância real do vetor, também o que veio só pela palavra, e o teto de
-# distância continua valendo: trecho que só casa a palavra e está longe no sentido fica fora (isolamento de assunto).
+# lista dá peso / (60 + posição) a cada trecho (o vetor com peso 1, a palavra com PESO_DA_PALAVRA). Os termos da
+# pergunta entram com OU (a pergunta do cliente não repete todas as palavras do trecho). Todo candidato leva a
+# distância real do vetor, também o que veio só pela palavra, e o teto de distância continua valendo: trecho que só
+# casa a palavra e está longe no sentido fica fora (isolamento de assunto).
+#
+# #2867 — com peso igual nas duas listas, todo trecho presente nas duas (mesmo no 48º lugar de cada: 2/108) passava na
+# frente do 1º do vetor que não casava a palavra (1/61): o trecho certo caía para o 5º–11º lugar e o MRR do placar da
+# F0 caiu de 0,58 para 0,39. Agora o 1º do vetor fica na frente, e a palavra vale um quarto do vetor: sobe o trecho que
+# casa a palavra e está perto no sentido; o que casa a palavra e está longe sobe pouco (o 30º do vetor com a palavra em
+# 1º fica atrás dos 5 primeiros do vetor). O trecho que só a palavra achou (fora dos candidatos do vetor) fica atrás de
+# todos eles, 0,25/61 contra 1/108; o dedup por fonte do Retriever ainda o traz quando a fonte dele não está entre os
+# candidatos do vetor. Uma vaga reservada a ele foi medida e não acertou nenhuma pergunta a mais no top 12, e no top 3 do Guia
+# derrubou o acerto. O peso saiu do placar das 2 bases nos 2 gabaritos (0,2 a 0,3 cumprem o critério do #2867; 0,1 e
+# 0,35 não).
 class Autonomia::Agents::BuscaHibrida
   FLAG = 'rag_busca_hibrida'.freeze
   RRF_K = 60
+  PESO_DA_PALAVRA = 0.25
   TABELA = Autonomia::Agents::KnowledgeEntry.table_name
   TEXTO = "to_tsvector('portuguese', #{TABELA}.content)".freeze
 
@@ -24,17 +36,20 @@ class Autonomia::Agents::BuscaHibrida
     @query = query.to_s.tr("\u0000", ' ')
   end
 
-  # vetoriais: os candidatos do vetor, na ordem do vetor. Devolve a fusão, dentro do teto, do mais forte ao mais fraco.
+  # vetoriais: os candidatos do vetor, na ordem do vetor. Devolve a fusão, dentro do teto, com o 1º do vetor na frente e
+  # o resto do mais forte ao mais fraco.
   def fundir(vetoriais, limite)
     pontos = Hash.new(0.0)
     trechos = {}
-    [vetoriais, por_palavra(limite)].each do |lista|
+    [[vetoriais, 1.0], [por_palavra(limite), PESO_DA_PALAVRA]].each do |lista, peso|
       lista.each_with_index do |trecho, posicao|
-        pontos[trecho.id] += 1.0 / (RRF_K + posicao + 1)
+        pontos[trecho.id] += peso / (RRF_K + posicao + 1)
         trechos[trecho.id] ||= trecho
       end
     end
-    trechos.values.select { |trecho| dentro_do_teto?(trecho) }.sort_by { |trecho| [-pontos[trecho.id], trecho.neighbor_distance.to_f, trecho.id] }
+    ordenados = trechos.values.select { |trecho| dentro_do_teto?(trecho) }
+                       .sort_by { |trecho| [-pontos[trecho.id], trecho.neighbor_distance.to_f, trecho.id] }
+    primeiro_do_vetor_na_frente(ordenados, vetoriais)
   end
 
   # Os trechos que casam as palavras da pergunta, do mais forte ao mais fraco, com a distância do vetor e dentro do teto.
@@ -50,6 +65,13 @@ class Autonomia::Agents::BuscaHibrida
   end
 
   private
+
+  def primeiro_do_vetor_na_frente(ordenados, vetoriais)
+    primeiro = vetoriais.find { |trecho| dentro_do_teto?(trecho) }
+    return ordenados if primeiro.nil?
+
+    [primeiro] + ordenados.reject { |trecho| trecho.id == primeiro.id }
+  end
 
   def dentro_do_teto?(trecho)
     !trecho.neighbor_distance.nil? && trecho.neighbor_distance.to_f <= Autonomia::Agents::Config::RETRIEVAL_HARD_CEILING

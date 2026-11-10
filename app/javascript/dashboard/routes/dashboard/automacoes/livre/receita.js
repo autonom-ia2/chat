@@ -9,9 +9,26 @@ export const copiar = valor => JSON.parse(JSON.stringify(valor));
 // "decidir" (F7, #2500) abre ainda um galho por caminho, antes do "nenhum".
 export const RAMOS = {
   se: ['entao', 'senao'],
-  esperar_ate: ['se_vencer'],
+  esperar_ate: ['se_vencer', 'a_cada_mensagem'],
   decidir: ['nenhum'],
+  // G18 (#2671): os passos que rodam no outro registro.
+  em_outro_registro: ['passos'],
 };
+
+// G63 (#2830): o galho do "esperar até" que roda a cada mensagem do cliente
+// enquanto espera e, no fim, volta à mesma espera. G64 (#2839): sem prazo, a
+// hora cheia da conferência diária (no fuso da conta); nasce às 8h (decisão
+// 12 do Rodrigo, 09/11).
+export const A_CADA = 'a_cada_mensagem';
+export const HORA_DA_CONFERENCIA = 8;
+
+// #2750: o "esperar até" sem prazo só termina pela condição (o esquema:
+// `prazo_da_espera`). Não vence, então não tem "se o prazo acabar".
+export const SEM_PRAZO = 'sem_prazo';
+const semSeVencer = passo =>
+  passo.tipo === 'esperar_ate' &&
+  passo.prazo === SEM_PRAZO &&
+  !passo.se_vencer?.length;
 
 // Lista raiz: 'raiz'. Lista de um galho: '<id do passo>:<ramo>'.
 export const RAIZ = 'raiz';
@@ -40,7 +57,9 @@ const galhoDoCaminho = (caminho, indice) => ({
 // que devolve o passo com o galho trocado. É a única travessia da árvore no
 // editor; o servidor tem a sua em Autonomia::Automacao::Receita.ramos.
 export const galhosDe = passo => {
-  const fixos = RAMOS[passo.tipo] || [];
+  const fixos = (RAMOS[passo.tipo] || []).filter(
+    ramo => ramo !== 'se_vencer' || !semSeVencer(passo)
+  );
   return [
     ...fixos.filter(ramo => ramo !== 'nenhum').map(r => galhoFixo(passo, r)),
     ...(passo.caminhos || []).map((caminho, i) =>
@@ -89,8 +108,28 @@ export const todosOsPassos = (passos = []) =>
     ...galhosDe(passo).flatMap(galho => todosOsPassos(galho.passos || [])),
   ]);
 
+// G18: os passos que rodam na mesma execução: o ramo do "em outro registro"
+// roda numa execução filha, no registro ligado.
+export const OUTRO_REGISTRO = 'em_outro_registro';
+export const naMesmaExecucao = (passos = []) =>
+  passos.flatMap(passo => [
+    passo,
+    ...(passo.tipo === OUTRO_REGISTRO
+      ? []
+      : galhosDe(passo).flatMap(galho => naMesmaExecucao(galho.passos || []))),
+  ]);
+
 export const acharPasso = (passos, id) =>
   todosOsPassos(passos).find(passo => passo.id === id) || null;
+
+// O passo `id` está dentro do galho "a cada mensagem" de algum "esperar até"
+// (em qualquer nível)? Ele roda uma vez por mensagem do cliente.
+export const noGalhoACada = (passos, id) =>
+  todosOsPassos(passos).some(
+    passo =>
+      passo.tipo === 'esperar_ate' &&
+      todosOsPassos(passo[A_CADA] || []).some(dentro => dentro.id === id)
+  );
 
 // Id curto e único na receita: o cursor da execução aponta para ele.
 export const novoId = passos => {
@@ -102,11 +141,25 @@ export const novoId = passos => {
 
 export const receitaVazia = () => ({ gatilho: null, passos: [] });
 
-// "Se" e "Esperar até" nascem sem condição, e o "Se" sem passo em "Então": o
-// esquema recusa os dois até a pessoa completar pelo próprio Confira.
-const incompleto = passo =>
-  (passo.tipo === 'se' || passo.tipo === 'esperar_ate') &&
-  (!passo.condicao || (passo.tipo === 'se' && !passo.entao?.length));
+// G18: o "em outro registro" diz onde rodar. O contato do campo pede o campo;
+// os cards do contato valem sem filtro.
+export const registroPronto = registro => {
+  if (registro?.de === 'cards_do_contato') return true;
+  if (registro?.de === 'criado_no_passo') return Boolean(registro.passo);
+  return registro?.de === 'contato_do_campo' && Boolean(registro.campo?.$valor);
+};
+
+// "Se" e "Esperar até" nascem sem condição, e o "Se" sem passo em "Então"; o
+// "Em outro registro" (G18), sem passo dentro: o esquema recusa até a pessoa
+// completar pelo próprio Confira.
+const incompleto = passo => {
+  if (passo.tipo === 'em_outro_registro')
+    return !passo.passos?.length || !registroPronto(passo.registro);
+  return (
+    (passo.tipo === 'se' || passo.tipo === 'esperar_ate') &&
+    (!passo.condicao || (passo.tipo === 'se' && !passo.entao?.length))
+  );
+};
 
 // Pronta para salvar: o esquema pede gatilho, pelo menos um passo e cada "Se"
 // e "Esperar até" completos.

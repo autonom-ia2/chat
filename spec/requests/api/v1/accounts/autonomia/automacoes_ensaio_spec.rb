@@ -79,6 +79,20 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes ensaio', type: :request
     expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.ensaio.gatilho_de_card'))
   end
 
+  # G27 (#2661): o card atualizado também não ensaia, e a recusa não traz nada do card nem do valor de antes.
+  it 'card atualizado no valor de venda: recusa em frase, sem dado de card', :aggregate_failures, :automacao_motor do
+    with_modified_env(CRM_KANBAN_ENABLED: 'true') do
+      ligar_motor(account)
+      account.enable_features!('automacao_gatilhos')
+      gatilho = { tipo: 'card.atualizado', mudanca: { campo: 'valor', condicao: 'passou_de', valor: '50000' } }
+
+      ensaiar('ensaio', receita: receita.merge(gatilho: gatilho))
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => I18n.t('autonomia.automacao.ensaio.gatilho_de_card'), 'problemas' => [])
+    end
+  end
+
   # #2635 (G7): o recorrente não ensaia passos; mostra quantos a seleção pegaria agora, só entre os que quem pede vê.
   describe 'recorrente', :automacao_motor do
     let(:contatos) { create_list(:contact, 2, account: account) }

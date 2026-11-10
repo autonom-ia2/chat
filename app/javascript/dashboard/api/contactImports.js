@@ -7,6 +7,11 @@ class ContactImportsAPI extends ApiClient {
     super('contact_imports', { accountScoped: true });
   }
 
+  // Contatos > Importações (#2771): the account's contact imports, 25 per page, newest first.
+  list(page = 1) {
+    return axios.get(this.url, { params: { page } });
+  }
+
   upload(file, { createCompanies = true } = {}) {
     const formData = new FormData();
     formData.append('import_file', file);

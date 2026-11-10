@@ -12,4 +12,6 @@ export const ATTRIBUTE_TYPES = [
   { id: 5, key: 'DATE' },
   { id: 6, key: 'LIST' },
   { id: 7, key: 'CHECKBOX' },
+  // G62 (#2829): uma pessoa da equipe; só no card (CARD_MODEL_ID).
+  { id: 8, key: 'PESSOA', soNoModelo: 3 },
 ];

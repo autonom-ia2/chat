@@ -18,8 +18,9 @@ module Autonomia::Agents::PassarParaIa
   CODIGOS = %i[passou ja_e_o_dono fase2_desligada nao_atende_cliente sem_vinculo_na_caixa outra_conta
                conversa_resolvida pessoa_atribuida].freeze
 
-  # `ok?` também é verdadeiro quando o agente já era o dono (`ja_e_o_dono`, nada troca).
-  Resultado = Struct.new(:ok, :trocou, :codigo, keyword_init: true) do
+  # `ok?` também é verdadeiro quando o agente já era o dono (`ja_e_o_dono`, nada troca). `pessoa_tirada_id`: a pessoa que
+  # estava no nome, lida sob a trava, quando a troca a tirou (só `por: :pessoa` chega lá com pessoa); senão nil.
+  Resultado = Struct.new(:ok, :trocou, :codigo, :pessoa_tirada_id, keyword_init: true) do
     def self.passou = new(ok: true, trocou: true, codigo: :passou)
     def self.ja_e_o_dono = new(ok: true, trocou: false, codigo: :ja_e_o_dono)
     def self.recusa(codigo) = new(ok: false, trocou: false, codigo: codigo)
@@ -110,6 +111,7 @@ module Autonomia::Agents::PassarParaIa
       resultado = decidir(conversation, vinculo, pedido[:por])
       if resultado.trocou?
         de = conversation.ai_assignee
+        resultado.pessoa_tirada_id = conversation.assignee_id
         trocar_e_registrar!(conversation, vinculo, pedido)
       end
     end

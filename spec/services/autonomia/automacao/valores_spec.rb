@@ -34,8 +34,9 @@ RSpec.describe Autonomia::Automacao::Valores do
     # `mensagem.primeira` e `conversa.iniciada_por` dependem das mensagens gravadas: primeira_mensagem_spec. A resposta
     # durante a espera (G11): resposta_spec. `card.tem_reuniao_marcada` (G32): g32_reuniao_spec.
     # `contato.tem_reuniao_marcada` (#2710): reuniao_lembrete_e_contato_spec. A situação do envio (#2680): envio_spec.
-    # `card.origem` (G29): origem_do_card_spec.
-    de_fora = %w[conversa.iniciada_por card.tem_reuniao_marcada contato.tem_reuniao_marcada envio.situacao card.origem]
+    # Quem cuidava antes está ausente (G9): gatilho_troca_de_responsavel_spec. `card.origem` (G29): origem_do_card_spec.
+    de_fora = %w[conversa.iniciada_por card.tem_reuniao_marcada contato.tem_reuniao_marcada envio.situacao card.origem
+                 gatilho.responsavel_anterior_ausente]
     expect(described_class::FECHADOS.keys)
       .to match_array(described_class::MENSAGEM.keys + described_class::RESPOSTA.keys + de_fora + Autonomia::Automacao::Ausencia::FECHADOS.keys)
     described_class::FECHADOS.slice('mensagem.tipo', 'mensagem.privada').each do |caminho, fechado|
@@ -179,13 +180,11 @@ RSpec.describe Autonomia::Automacao::Valores do
     end
 
     it 'só vale no gatilho dela, e só no alvo conversa', :aggregate_failures do
-      expect(described_class.fora_do_lugar('falhou.texto', mensagem: false, na_espera: false, gatilho: 'mensagem.falhou')).to be_nil
-      expect(described_class.fora_do_lugar('falhou.texto', mensagem: false, na_espera: false, gatilho: 'mensagem.criada'))
-        .to eq(:falhou_so_no_gatilho)
-      expect(described_class.fora_do_lugar('falhou.texto', mensagem: false, na_espera: false, gatilho: 'mensagem.falhou', no_filtro: true))
-        .to eq(:falhou_no_filtro)
-      expect(described_class.fora_do_lugar('falhou.texto', mensagem: false, na_espera: false, gatilho: 'mensagem.criada', no_filtro: true))
-        .to eq(:falhou_so_no_gatilho)
+      lugar = Autonomia::Automacao::LugarDoValor
+      expect(lugar.fora('falhou.texto', gatilho: { 'tipo' => 'mensagem.falhou' })).to be_nil
+      expect(lugar.fora('falhou.texto', gatilho: { 'tipo' => 'mensagem.criada' })).to eq(:falhou_so_no_gatilho)
+      expect(lugar.fora('falhou.texto', gatilho: { 'tipo' => 'mensagem.falhou' }, no_filtro: true)).to eq(:falhou_no_filtro)
+      expect(lugar.fora('falhou.texto', gatilho: { 'tipo' => 'mensagem.criada' }, no_filtro: true)).to eq(:falhou_so_no_gatilho)
       expect(described_class.no_alvo?('falhou.texto', 'Conversation')).to be(true)
       expect(described_class.no_alvo?('falhou.texto', 'Crm::Card')).to be(false)
     end
