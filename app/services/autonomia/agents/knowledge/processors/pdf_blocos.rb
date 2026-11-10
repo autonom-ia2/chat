@@ -2,8 +2,10 @@
 # Usa as mesmas linhas e parágrafos do Processors::PdfParagrafos (incluído junto, em Processors::Pdf), só pela geometria:
 # - título: parágrafo de até MAX_LINHAS_DO_TITULO linhas com a letra maior que a do corpo, ou todo fora da fonte do corpo
 #   e terminando antes da margem direita (o negrito curto). O título que quebra em duas linhas, com o espaço de linha
-#   normal entre elas, já é um parágrafo só e vira um título só;
-# - nível: pelo tamanho da letra entre os títulos do documento, do maior (1) para o menor;
+#   normal entre elas, já é um parágrafo só e vira um título só; dois títulos seguidos no mesmo parágrafo se separam
+#   (`partes_do_titulo`);
+# - nível: pelo tamanho da letra entre os títulos do documento, do maior (1) para o menor, e na mesma letra pela
+#   numeração (Numeracao);
 # - parágrafo que continua na página seguinte (a mesma ligação do texto) é um bloco só, com a página onde começa;
 # - página de sumário sai inteira: a maioria das linhas termina no número da página, depois da linha de pontos
 #   ("3. FRANQUIA ........ 7"). Sem a linha de pontos a página fica: perder uma tabela custa mais que guardar um sumário.
@@ -13,6 +15,8 @@
 # - a linha que se repete no alto ou no pé das páginas fica só na primeira vez, também com o número da página no fim.
 # Rodapé corrido e número de página já saem no PdfParagrafos.
 module Autonomia::Agents::Knowledge::Processors::PdfBlocos
+  include Autonomia::Agents::Knowledge::Processors::PdfBlocos::Separacao
+
   MAX_LINHAS_DO_TITULO = 3
   # Página de sumário: pelo menos MIN_LINHAS_DO_SUMARIO linhas, e pelo menos FRACAO_DO_SUMARIO delas terminam num número.
   MIN_LINHAS_DO_SUMARIO = 4
@@ -47,7 +51,12 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
     pedacos_da_pagina(pagina).flat_map do |pedaco|
       next [bloco_da_tabela(pedaco, pagina, numero)] if pedaco[:tabela]
 
-      grupos(pagina.merge(linhas: pedaco[:linhas])).map { |grupo| bloco_do_grupo(grupo, pagina, numero) }
+      anterior = nil
+      grupos(pagina.merge(linhas: pedaco[:linhas])).flat_map do |grupo|
+        partes = fim_da_frase?(anterior, grupo.first, pagina) ? [[grupo, false]] : partes_do_titulo(grupo, pagina)
+        anterior = grupo.last
+        partes.map { |parte, titulo| bloco_do_grupo(parte, pagina, numero, titulo: titulo) }
+      end
     end
   end
 
@@ -61,8 +70,8 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
     blocos[-1] = anterior.merge(texto: "#{anterior[:texto]}\n#{bloco[:texto]}", itens: itens, pagina_fim: bloco[:pagina])
   end
 
-  def bloco_do_grupo(grupo, pagina, numero)
-    unless titulo?(grupo, pagina)
+  def bloco_do_grupo(grupo, pagina, numero, titulo:)
+    unless titulo && titulo?(grupo, pagina)
       return { tipo: :paragrafo, texto: grupo.pluck(:texto).join("\n"), itens: itens_do_grupo(grupo, pagina), pagina: numero }
     end
 
@@ -89,15 +98,25 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
     linha[:letra] > pagina[:letra_do_corpo] * (1 + Autonomia::Agents::Knowledge::Processors::PdfParagrafos::TROCA_DE_LETRA)
   end
 
-  # O nível de cada título: a posição da letra dele entre as letras de título do documento, da maior para a menor. Letras
-  # que diferem menos que TROCA_DE_LETRA (11,98 e 12) são o mesmo nível, como no corte dos parágrafos.
+  # O nível de cada título: primeiro a posição da letra dele entre as letras de título do documento, da maior para a
+  # menor (letras que diferem menos que TROCA_DE_LETRA, 11,98 e 12, são a mesma); depois, na mesma letra, a numeração
+  # (#2863, Numeracao). Os pares viram níveis seguidos, 1, 2, 3…
   def com_niveis(blocos)
-    niveis = niveis_das_letras(blocos.select { |bloco| bloco[:tipo] == :titulo }.pluck(:letra))
+    chaves = chaves_dos_niveis(blocos.select { |bloco| bloco[:tipo] == :titulo })
+    niveis = chaves.uniq.sort.each_with_index.to_h { |par, indice| [par, indice + 1] }
+    proximo = chaves.each
     blocos.map do |bloco|
       next bloco unless bloco[:tipo] == :titulo
 
-      { tipo: :titulo, nivel: niveis[bloco[:letra]], texto: bloco[:texto], pagina: bloco[:pagina] }
+      { tipo: :titulo, nivel: niveis[proximo.next], texto: bloco[:texto], pagina: bloco[:pagina] }
     end
+  end
+
+  # [posição da letra, profundidade da numeração] de cada título, na ordem do documento.
+  def chaves_dos_niveis(titulos)
+    letras = niveis_das_letras(titulos.pluck(:letra))
+    profundidades = Autonomia::Agents::Knowledge::Processors::PdfBlocos::Numeracao.profundidades(titulos.pluck(:texto))
+    titulos.zip(profundidades).map { |titulo, profundidade| [letras[titulo[:letra]], profundidade] }
   end
 
   # { letra => nível }: da maior para a menor, a letra perto da anterior fica no mesmo nível.
