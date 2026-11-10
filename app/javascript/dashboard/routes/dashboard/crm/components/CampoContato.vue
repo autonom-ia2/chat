@@ -159,8 +159,8 @@ const escolhido = computed({
         variant="faded"
         color="ruby"
         icon="i-lucide-trash"
-        size="xs"
-        class="flex-shrink-0 opacity-0 group-hover/attribute:opacity-100 focus-visible:opacity-100 hover:no-underline"
+        size="sm"
+        class="flex-shrink-0 !size-11 opacity-0 group-hover/attribute:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 hover:no-underline"
         :aria-label="t(`${C}.LIMPAR_CONTATO`)"
         @click="emit('delete')"
       />
