@@ -11,8 +11,9 @@ require 'rails_helper'
 # - a sugestão para um agente que já existe (`SugestaoParaAgente`, modelo barato).
 # A régua é a tabela "O que cada agente de seguro precisa ganhar no Construtor" do plano (#2858), só com as fontes
 # que já existem (F1), e o caso negativo da padaria. O que o dono conta é o roteiro do vídeo do protótipo (j6-construtor).
-# Passa quem tem tudo o que PRECISA, nada do que NÃO PODE e nenhuma fonte fora das que têm relação com o atendimento
-# (PRECISA + ACEITAS, com o motivo de cada aceita). Conversas inventadas, sem dado de cliente.
+# Passa quem tem tudo o que PRECISA e nada do que NÃO PODE, como diz o plano (decisão do Rodrigo, 10/11). O que vier
+# além da régua (fora de PRECISA + ACEITAS) é impresso para leitura, sem reprovar: o Construtor corta em
+# ProntasSugeridas::MAXIMO e a Confira deixa tirar. Conversas inventadas, sem dado de cliente.
 module AvaliacaoDasProntas
   ABERTURA = 'Oi! Vamos montar seu agente. Me conta o que ele vai fazer e para quem.'.freeze
   PERGUNTA = 'Como ele vai falar com os clientes?'.freeze
@@ -97,10 +98,11 @@ RSpec.describe 'Ferramentas prontas escolhidas pelo modelo' do # rubocop:disable
       puts "[eval prontas] #{caminho} #{nome}: #{escolha.inspect}"
       faltou = precisa - escolha
       proibida = escolha & nao_pode
-      sem_relacao = escolha - precisa - aceitas
-      next if faltou.empty? && proibida.empty? && sem_relacao.empty?
+      extras = escolha - precisa - aceitas
+      puts "[eval prontas] #{caminho} #{nome}: além da régua #{extras.inspect}" if extras.any?
+      next if faltou.empty? && proibida.empty?
 
-      "#{caminho} #{nome}: #{escolha.inspect} (faltou #{faltou}, não pode #{proibida}, sem relação #{sem_relacao})"
+      "#{caminho} #{nome}: #{escolha.inspect} (faltou #{faltou}, não pode #{proibida})"
     end
   end
 

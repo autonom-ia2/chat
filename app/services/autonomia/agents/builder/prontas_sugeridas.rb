@@ -9,11 +9,15 @@
 # permissão dela). A Lia (`insurance_quote`) nunca recebe pronta.
 module Autonomia::Agents::Builder::ProntasSugeridas
   CAMPO = 'ferramentas_prontas'.freeze
+  # Teto de prontas no nascimento: o Confira mostra uma linha por ferramenta, e mais que isso vira lista longa para
+  # quem nao e de tecnologia. As demais ficam para o cartao "pode ganhar" e a vitrine.
+  MAXIMO = 4
   DESCRIPTION =
-    'Chaves das ferramentas prontas do bloco FERRAMENTAS PRONTAS que este agente usa no atendimento descrito: inclua ' \
-    'cada uma que serve a algo que ele faz ou pergunta (ex.: quem cota seguro auto usa o valor do carro; quem pede ' \
-    'CEP usa o endereco pelo CEP). Deixe de fora as sem relacao com o atendimento (uma padaria nao usa nenhuma). ' \
-    'Lista vazia quando nenhuma combina ou quando nao ha o bloco.'.freeze
+    'Chaves das ferramentas prontas do bloco FERRAMENTAS PRONTAS que um atendente experiente deste ramo usaria no ' \
+    'processo inteiro do atendimento descrito: entender o pedido, cotar, conferir os dados e documentos de quem ' \
+    'contrata, localizar o endereco do risco e calcular prazos. Pense no passo a passo real desse atendimento, alem do ' \
+    "que o dono citou. Escolha no maximo #{MAXIMO}, da mais usada para a menos usada, e deixe de fora as que nao " \
+    'servem a nenhum passo desse atendimento. Lista vazia quando nenhuma serve ou quando nao ha o bloco.'.freeze
   TITULO = 'FERRAMENTAS PRONTAS (contexto interno da plataforma, nao e fala do usuario): consultas que o agente pode ' \
            'ganhar ja na criacao. Escolha no campo ferramentas_prontas so as que o agente precisa.'.freeze
 
@@ -37,11 +41,12 @@ module Autonomia::Agents::Builder::ProntasSugeridas
     [TITULO, *linhas].join("\n")
   end
 
-  # As chaves que o modelo escolheu, só as liberadas para a conta, sem repetir, na ordem do catálogo.
+  # As chaves que o modelo escolheu, só as liberadas para a conta, sem repetir, na ordem dele (a mais usada primeiro),
+  # até o MAXIMO.
   def filtrar(account, parsed)
     return [] unless ligado?(account)
 
-    escolhidas = Array(parsed.to_h[CAMPO]).map(&:to_s)
-    Autonomia::FerramentasProntas.disponiveis(account).map(&:chave) & escolhidas
+    liberadas = Autonomia::FerramentasProntas.disponiveis(account).map(&:chave)
+    Array(parsed.to_h[CAMPO]).map(&:to_s).uniq.select { |chave| liberadas.include?(chave) }.first(MAXIMO)
   end
 end

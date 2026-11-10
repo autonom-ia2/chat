@@ -54,7 +54,7 @@ RSpec.describe Autonomia::Agents::Builder do
     campo = described_class::BUILDER_SCHEMA[:schema][:properties][:ferramentas_prontas]
 
     expect(campo[:items][:enum]).to match_array(Autonomia::FerramentasProntas::Catalogo.chaves)
-    expect(campo[:description]).to include('Lista vazia quando nenhuma combina')
+    expect(campo[:description]).to include('Lista vazia quando nenhuma serve')
     expect(described_class::BUILDER_SCHEMA[:schema][:required]).to include('ferramentas_prontas')
     expect(described_class::LEAN_TURN_NOTE).to include('ferramentas_prontas como lista vazia')
   end
@@ -66,10 +66,10 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
 
       expect(contexto_enviado).to include('- fipe: Valor do carro (FIPE).', '- cep:', '- bancos:')
-      expect(thread.state['ferramentas_sugeridas']).to eq(%w[cep fipe cpf])
-      expect(thread.agent.config['ferramentas_sugeridas']).to eq(%w[cep fipe cpf])
+      expect(thread.state['ferramentas_sugeridas']).to eq(%w[fipe cep cpf]) # na ordem do modelo, a mais usada primeiro
+      expect(thread.agent.config['ferramentas_sugeridas']).to eq(%w[fipe cep cpf])
       expect(thread.agent.tools).to be_empty # quem inclui é a Confira, com a pessoa real
-      expect(thread.agent.config.dig('prontas_sugestao', 'chaves')).to eq(%w[cep fipe cpf]) # o cartão não paga outra chamada
+      expect(thread.agent.config.dig('prontas_sugestao', 'chaves')).to eq(%w[fipe cep cpf]) # o cartão não paga outra chamada
     end
 
     context 'when the model says none fits' do
@@ -77,6 +77,15 @@ RSpec.describe Autonomia::Agents::Builder do
 
       it 'keeps an empty list' do
         expect(run_turn.state['ferramentas_sugeridas']).to eq([])
+      end
+    end
+
+    context 'when the model picks more than the limit' do
+      let(:escolhidas) { %w[fipe cep cpf fipe cnpj feriados ddd] }
+
+      it 'keeps the first ones in its order, without repeating, up to the limit' do
+        expect(run_turn.state['ferramentas_sugeridas']).to eq(%w[fipe cep cpf cnpj])
+        expect(Autonomia::Agents::Builder::ProntasSugeridas::MAXIMO).to eq(4)
       end
     end
 
