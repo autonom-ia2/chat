@@ -70,15 +70,16 @@ export function useProntasDoConstrutor({ agenteId, sugeridas, tambem }) {
     });
 
   // Inclui as que ficaram e o agente ainda não tem. -> as que não entraram (a tela avisa; a pessoa inclui depois). Sem
-  // o agente ou sem a lista da vitrine, nenhuma entrou: a tela avisa em vez de seguir calada.
+  // o agente ou sem a lista da vitrine, nenhuma entrou: a tela avisa em vez de seguir calada. O que a pessoa tirou é
+  // dispensado antes de tudo, inclusive quando ela tirou todas ou a lista da vitrine falhou.
   const incluirTodas = async () => {
     if (!construtor.value) return [];
     const queria = [...visiveis.value];
-    if (!queria.length) return [];
     if (!agenteId.value) return queria;
+    dispensarTiradas();
+    if (!queria.length) return [];
     await vitrine.carregar();
     if (vitrine.erro.value) return queria;
-    dispensarTiradas();
     const faltam = queria.filter(
       id =>
         vitrine.fontes.value.includes(id) && !vitrine.tem(agenteId.value, id)

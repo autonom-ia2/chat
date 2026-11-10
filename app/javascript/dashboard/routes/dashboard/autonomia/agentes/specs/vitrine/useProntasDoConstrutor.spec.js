@@ -78,6 +78,28 @@ describe('useProntasDoConstrutor', () => {
     });
   });
 
+  it('removing every tool still records each removal on "Start"', async () => {
+    const prontas = usar(['fipe', 'cep']);
+    prontas.tirar('fipe');
+    prontas.tirar('cep');
+
+    expect(await prontas.incluirTodas()).toEqual([]);
+    expect(api.dispensar).toHaveBeenCalledWith(7, 'fipe');
+    expect(api.dispensar).toHaveBeenCalledWith(7, 'cep');
+    expect(vitrine.incluir).not.toHaveBeenCalled();
+  });
+
+  it('records the removals even when the showcase cannot be read', async () => {
+    vitrine.carregar.mockImplementation(async () => {
+      vitrine.erro.value = 'REDE';
+    });
+    const prontas = usar();
+    prontas.tirar('cep');
+
+    expect(await prontas.incluirTodas()).toEqual(['fipe', 'cpf']);
+    expect(api.dispensar).toHaveBeenCalledWith(7, 'cep');
+  });
+
   it('does not show again what the agent already has', () => {
     vitrine.tem.mockImplementation((_, id) => id === 'fipe');
 
