@@ -141,3 +141,31 @@ describe('LivreIaCampo, destino no card', () => {
     );
   });
 });
+
+// G70: a ajuda diz qual card recebe o campo do card.
+describe('LivreIaCampo, ajuda do destino no card', () => {
+  const montarCampos = comCard =>
+    mount(LivreIaCampo, {
+      props: {
+        campo: { peca: 'campos_extrair', rotulo: 'CAMPOS' },
+        modelValue: [{ chave: 'peca', descricao: 'a peça', destino: '' }],
+        opcoes: {},
+        atributosDo: () => [],
+        comCard,
+      },
+      global: {
+        mocks: { $t: chave => chave },
+        stubs: { Button: true, ChoiceSelect: true, Switch: true },
+      },
+    });
+
+  it('com card, explica qual card recebe', () => {
+    expect(montarCampos(true).find('[data-dica-card]').text()).toBe(
+      'AUTOMACAO_LIVRE.IA.CAMPO.DICA_CARD'
+    );
+  });
+
+  it('sem card, não mostra', () => {
+    expect(montarCampos(false).find('[data-dica-card]').exists()).toBe(false);
+  });
+});

@@ -2,10 +2,12 @@
 # mandou: atributo do contato, da conversa ou do card (G70, termo F7: "grava no contato ou no card"), o nome do contato
 # ou o da empresa. E-mail e telefone não são destino (D4 A).
 #
-# - G70 (decisão 20 do Rodrigo, 10/11, "IA só anota campos"): o card é o alvo (gatilho de card, ou o ramo do "em outro
-#   registro" num card) ou, numa conversa, o card dela (CardDaConversa.ler, com o que quem ligou vê; o card que a própria
-#   execução criou já é o da conversa). Só campo personalizado, nunca o valor protegido (decisão 9). Sem card que quem
-#   ligou veja, o campo não tem onde gravar e conta como ausente. A gravação é o PATCH do card, como quem ligou.
+# - G70 (decisão 20 do Rodrigo, 10/11, "IA só anota campos"): grava no card que esta execução criou antes (o passo
+#   "criar card", RegistroCriado: o card novo não vira o assunto da conversa, PassoDeCard); senão, no alvo (gatilho de
+#   card, ou o ramo do "em outro registro" num card); senão, numa conversa, no card dela que quem ligou vê
+#   (CardDaConversa.ler). Só campo personalizado, nunca o valor protegido (decisão 9) nem o que guarda gente: o tipo é
+#   conferido de novo aqui, porque muda depois de salvo (Receita::CAMPOS_DE_GENTE). Sem card, ou com o campo que virou
+#   gente, o campo não tem onde gravar e conta como ausente. A gravação é o PATCH do card, como quem ligou.
 #
 # - A resposta tem um campo por chave, do tipo do atributo da conta: número para número, moeda e porcentagem, sim/não
 #   para caixa de seleção, uma das opções para lista, data no formato AAAA-MM-DD. Nulo quando o dado não está escrito.
@@ -121,11 +123,25 @@ class Autonomia::Automacao::PassoDeExtrair
     ['PATCH crm/cards/:id', card.id, { 'card' => { 'custom_attributes' => atributos } }, chaves(valores.keys)]
   end
 
-  # G70: o card do alvo, ou o da conversa que quem ligou vê; nil sem card.
+  # G70: o card que esta execução criou, senão o alvo, senão o da conversa que quem ligou vê; nil sem card.
   def card
     return @card if defined?(@card)
 
-    @card = @alvo.is_a?(::Crm::Card) ? @alvo : ::Autonomia::Automacao::CardDaConversa.ler(@conversa, quem_ligou_na_conta)
+    @card = card_criado || (@alvo if @alvo.is_a?(::Crm::Card)) ||
+            ::Autonomia::Automacao::CardDaConversa.ler(@conversa, quem_ligou_na_conta)
+  end
+
+  # O último card que um passo desta execução criou e que ainda existe (RegistroCriado), ou nil.
+  def card_criado
+    criados = @execucao.registros.where(resultado: 'ok').where("dados -> 'criado' ->> 'tipo' = ?", ::Autonomia::Automacao::RegistroCriado::CARD)
+    id = criados.reorder(id: :desc).pick(Arel.sql("dados -> 'criado' ->> 'id'"))
+    id && @execucao.account.crm_cards.find_by(id: id)
+  end
+
+  # O campo do card que ainda existe e não guarda gente (o tipo muda depois de salvo).
+  def campo_do_card?(campo)
+    tipo = tipo(campo)
+    tipo.present? && ::Autonomia::Automacao::Receita::CAMPOS_DE_GENTE.exclude?(tipo)
   end
 
   def do_contato(valores)
@@ -163,7 +179,7 @@ class Autonomia::Automacao::PassoDeExtrair
     case lugar(campo)
     when :empresa then @conversa.contact&.company
     when :conversa then @conversa
-    when :card then card
+    when :card then card if campo_do_card?(campo)
     else @conversa.contact
     end
   end

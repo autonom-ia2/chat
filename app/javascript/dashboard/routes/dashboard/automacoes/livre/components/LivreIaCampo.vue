@@ -266,6 +266,13 @@ const ROTULO_DA_CAIXA =
         )
       }}
     </p>
+    <p
+      v-if="comCard && !doParaCada"
+      data-dica-card
+      class="mb-0 text-sm text-n-slate-11"
+    >
+      {{ $t(`${I}.CAMPO.DICA_CARD`) }}
+    </p>
     <div
       v-for="(item, indice) in lista"
       :key="indice"

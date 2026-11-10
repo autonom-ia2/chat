@@ -8,6 +8,11 @@ RSpec.describe 'Automação livre · o extrair grava no card (G70)', :automacao_
 
   around { |exemplo| with_modified_env(CRM_KANBAN_ENABLED: 'true') { exemplo.run } }
 
+  # O que a IA devolve (o dublê) não aparece em nenhum outro lugar do teste: nem na mensagem, nem no card. O que chega ao
+  # card só pode ter vindo da resposta dela, pelo passo.
+  let(:peca_da_ia) { 'saia plissada 7731' }
+  let(:tamanho_da_ia) { 'GG-44' }
+
   let(:account) { create(:account, locale: 'pt_BR') }
   let(:admin) { create(:user, account: account, role: :administrator, name: 'Vanessa') }
   let(:contato) { create(:contact, account: account, name: 'Ana', phone_number: '+5511999990070') }
@@ -36,7 +41,8 @@ RSpec.describe 'Automação livre · o extrair grava no card (G70)', :automacao_
     create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'Quero o vestido no M')
     stub_request(:post, 'https://api.openai.com/v1/responses').to_return(
       status: 200, headers: { 'Content-Type' => 'application/json' },
-      body: { id: 'r1', output_text: { 'peca' => 'vestido', 'tamanho' => 'M' }.to_json, usage: { input_tokens: 10, output_tokens: 5 } }.to_json
+      body: { id: 'r1', output_text: { 'peca' => peca_da_ia, 'tamanho' => tamanho_da_ia }.to_json,
+              usage: { input_tokens: 10, output_tokens: 5 } }.to_json
     )
   end
 
@@ -67,7 +73,7 @@ RSpec.describe 'Automação livre · o extrair grava no card (G70)', :automacao_
 
     execucao = rodar(definicao, conversa, 'mensagem.criada')
 
-    expect(card.reload.custom_attributes).to include('peca' => 'vestido', 'tamanho' => 'M')
+    expect(card.reload.custom_attributes).to include('peca' => peca_da_ia, 'tamanho' => tamanho_da_ia)
     expect(Autonomia::Automacao::Registro.find_by!(execucao: execucao, passo: 'p1').dados['campos'])
       .to include('gravados' => %w[peca tamanho], 'ausentes' => [])
   end
@@ -77,8 +83,43 @@ RSpec.describe 'Automação livre · o extrair grava no card (G70)', :automacao_
 
     rodar(definicao, card, 'card.ganho')
 
-    expect(card.reload.custom_attributes).to include('peca' => 'vestido', 'tamanho' => 'M')
+    expect(card.reload.custom_attributes).to include('peca' => peca_da_ia, 'tamanho' => tamanho_da_ia)
   end
+
+  # A ordem (G70): o card que esta execução criou vem antes do card da conversa. O novo não vira o assunto (PassoDeCard),
+  # então o da conversa continua sendo o antigo, que fica intacto.
+  it 'com um card criado pela execução, grava nele e não no card antigo da conversa', :aggregate_failures do
+    antigo = card
+    outro_funil, etapa = create_crm_pipeline(account: account, user: admin, name: 'Pós-venda')
+    criar = { 'id' => 'novo', 'tipo' => 'card', 'etapa_id' => etapa.id }
+    definicao = automacao_ligada(account, admin, [criar, extrair], gatilho: { 'tipo' => 'mensagem.criada' })
+
+    execucao = rodar(definicao, conversa, 'mensagem.criada')
+
+    criado = Autonomia::Automacao::RegistroCriado.registro(execucao, 'novo')
+    expect(criado).to have_attributes(pipeline_id: outro_funil.id)
+    expect(criado.custom_attributes).to include('peca' => peca_da_ia, 'tamanho' => tamanho_da_ia)
+    expect(antigo.reload.custom_attributes.keys & %w[peca tamanho]).to be_empty
+    expect(Autonomia::Automacao::CardDaConversa.ler(conversa, AccountUser.find_by(account: account, user: admin))).to eq(antigo)
+  end
+
+  # O tipo do campo muda depois de salvo: o que virou gente (pessoa) fica sem gravar, como ausente.
+  it 'campo do card que virou pessoa depois de ligar não grava; o resto grava', :aggregate_failures do
+    card
+    definicao = automacao_ligada(account, admin, [extrair], gatilho: { 'tipo' => 'mensagem.criada' })
+    account.custom_attribute_definitions.find_by!(attribute_key: 'tamanho', attribute_model: 'card_attribute')
+           .update!(attribute_display_type: 'pessoa')
+
+    execucao = rodar(definicao, conversa, 'mensagem.criada')
+
+    expect(card.reload.custom_attributes).to include('peca' => peca_da_ia)
+    expect(card.custom_attributes).not_to have_key('tamanho')
+    expect(Autonomia::Automacao::Registro.find_by!(execucao: execucao, passo: 'p1').dados['campos'])
+      .to include('gravados' => %w[peca], 'ausentes' => %w[tamanho])
+  end
+
+  # Quem ligou sem a chave de funis: spec/enterprise/services/autonomia/automacao/extrair_no_card_chave_de_funis_spec.rb
+  # (a função personalizada é EE; no OSS só o administrador gerencia automações).
 
   it 'a conversa sem card: nada a gravar, os campos ficam ausentes e o passo pula com o motivo', :aggregate_failures do
     definicao = automacao_ligada(account, admin, [extrair], gatilho: { 'tipo' => 'mensagem.criada' })

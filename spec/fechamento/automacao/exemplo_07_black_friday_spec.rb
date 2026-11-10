@@ -274,34 +274,44 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     expect(historico('Pré-Black')).to eq([['ja_compraram', 'ok', nil], ['ate_sexta_8h', 'ok', nil], ['todos_os_outros', 'ok', nil]])
   end
 
+  # A peça desta resposta (macacão verde, P) não está em nenhum outro lugar do exemplo: o que chega ao card só pode ter
+  # vindo do texto que o pedido levou à IA, pelo dublê que lê.
   it 'passos 3 e 4: a Ana quer comprar; o card nasce da IA de assunto depois da resposta e o extrair grava nele',
      :aggregate_failures do
     varrer_as('2026-11-26 09:05')
-    responde_as('2026-11-26 10:00', :ana, 'Quero o vestido azul no M, separa pra mim!', decide: 'quer_comprar', pedido: true)
+    responde_as('2026-11-26 10:00', :ana, 'Quero o macacão verde no P, separa pra mim!', decide: 'quer_comprar', pedido: true)
+    recebida = conversa_de(:ana).messages.incoming.sole
 
-    # Na resposta, a Ana ainda não tem card: a automação decidiu e espera; a IA de assunto ainda não decidiu.
+    # Na resposta, a Ana ainda não tem card: a automação decidiu e espera; a IA de assunto está agendada para depois da
+    # espera dela (DEBOUNCE, ou DEBOUNCE_ORDEM na ordem do turno), a contar da mensagem.
     expect(account.crm_cards.where(contact_id: cliente(:ana).id)).to be_empty
     expect(historico('Resposta à Pré-Black').map(&:first)).to eq(%w[o_que_quer espera_o_card])
+    agendado = enqueued_jobs.find { |job| job[:job] == Crm::Subjects::IdentifyJob }
+    _conversa, mensagem, ordem = ActiveJob::Arguments.deserialize(agendado[:args])
+    espera = ordem ? Crm::Subjects::DEBOUNCE_ORDEM : Crm::Subjects::DEBOUNCE
+    expect(mensagem).to eq(recebida.id)
+    expect(Time.zone.at(agendado[:at])).to be_within(1.second).of(recebida.created_at + espera)
 
     assunto_decide_as('2026-11-26 10:00:20')
 
     card = card_de(:ana)
-    expect(card.created_at).to be > fuso.parse('2026-11-26 10:00')
-    expect(card).to have_attributes(pipeline_id: vendas.first.id, title: 'Black: vestido')
     decisao = Crm::SubjectDecision.find_by!(conversation: conversa_de(:ana))
-    expect(decisao).to have_attributes(action: 'create', state: 'applied', card_id: card.id)
+    expect(decisao).to have_attributes(action: 'create', state: 'applied', card_id: card.id, message_id: recebida.id)
+    expect(card.created_at).to be > recebida.created_at
+    expect(card).to have_attributes(pipeline_id: vendas.first.id, title: 'Black: macacão')
     expect(card.custom_attributes.keys & ex::PECA).to be_empty
 
     varrer_as('2026-11-26 10:01:05')
 
-    # O que o card guarda é o que o dublê tirou do texto que o pedido levou à IA, não um valor do teste.
-    extrair = ia_recebeu.find { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_extrair' }
-    expect(mensagens_lidas(extrair).last).to end_with('Quero o vestido azul no M, separa pra mim!')
-    expect(card.reload.custom_attributes).to include('peca' => 'vestido', 'cor' => 'azul', 'tamanho' => 'M')
+    extrair = ia_recebeu.select { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_extrair' }.sole
+    expect(mensagens_lidas(extrair).last).to end_with('Quero o macacão verde no P, separa pra mim!')
+    expect(card.reload.custom_attributes).to include('peca' => 'macacão', 'cor' => 'verde', 'tamanho' => 'P')
     # Direto no card (G70): a conversa não guarda a peça, e nenhuma ação copia para o card.
     expect(conversa_de(:ana).custom_attributes.keys & ex::PECA).to be_empty
     gravou = Autonomia::Automacao::Registro.where(passo: 'peca_cor_tamanho').sole
     expect(gravou.dados['campos']).to include('gravados' => ex::PECA, 'ausentes' => [])
+    # A decisão de assunto (o card) veio antes do extrair que gravou nele.
+    expect(decisao.updated_at).to be < gravou.created_at
     expect(historico('Resposta à Pré-Black')).to eq(
       [['o_que_quer', 'ok', nil], ['espera_o_card', 'ok', nil], ['peca_cor_tamanho', 'ok', nil]]
     )
@@ -315,8 +325,12 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     expect(account.crm_cards.where(contact_id: [cliente(:elisa).id, cliente(:hugo).id, cliente(:duda).id])).to be_empty
     expect(card_de(:carla).custom_attributes.keys & ex::PECA).to be_empty
     expect(historico('Resposta à Pré-Black').count { |passo, _| passo == 'peca_cor_tamanho' }).to eq(1)
-    decidir = ia_recebeu.find { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_decidir' }
-    expect(decidir.to_json).to include('Quero o vestido azul no M')
+    lidas = lambda do |schema|
+      ia_recebeu.select { |corpo| corpo.dig('text', 'format', 'name') == schema }.map { |corpo| mensagens_lidas(corpo).last.to_s }
+    end
+    # A Elisa passou pelo decidir com a mensagem dela, e o extrair só leu a da Ana.
+    expect(lidas.call('automacao_decidir').count { |texto| texto.end_with?('Até que horas a loja abre na sexta?') }).to eq(1)
+    expect(lidas.call('automacao_extrair').map { |texto| texto.split('] ', 2).last }).to eq(['Quero o vestido azul no M, separa pra mim!'])
   end
 
   it 'passo 5: a Elisa só tem dúvida; ganha a etiqueta e a conversa passa para a Bia', :aggregate_failures do

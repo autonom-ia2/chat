@@ -790,3 +790,56 @@ describe('LivreAlterar', () => {
     });
   });
 });
+
+// G70 (#2880): o destino no card vale onde o passo roda num card ou numa
+// conversa. Dentro do "em outro registro", o alvo é o do ramo (`catalogo.alvo`),
+// não o do gatilho.
+describe('LivreAlterar, extrair no card', () => {
+  const EXTRAIR = {
+    tipo: 'extrair',
+    grupo: 'IA',
+    frase: 'EXTRAIR',
+    campos: [{ nome: 'campos', peca: 'campos_extrair', rotulo: 'CAMPOS' }],
+  };
+  const NO_CONTATO = {
+    ...CATALOGO,
+    gatilho: 'contato.criado',
+    gatilhos: [{ tipo: 'contato.criado', alvo: 'Contact' }],
+    passos: [EXTRAIR],
+  };
+
+  const comCard = async catalogo => {
+    const wrapper = mount(LivreAlterar, {
+      props: {
+        catalogo,
+        opcoes: {},
+        atributosDaPeca: () => [],
+        atributosDo: () => [],
+        podeLerCards: true,
+      },
+      global: {
+        stubs: { SidePanel: PainelFalso },
+        mocks: { $t: chave => chave },
+      },
+    });
+    wrapper.vm.abrir({
+      tipo: 'passo',
+      valor: {
+        id: 'e1',
+        tipo: 'extrair',
+        le: ['mensagens_recentes'],
+        campos: [],
+      },
+    });
+    await flushPromises();
+    return wrapper.findComponent({ name: 'LivreIaCampo' }).props('comCard');
+  };
+
+  it('no gatilho de contato, sem card', async () => {
+    expect(await comCard(NO_CONTATO)).toBe(false);
+  });
+
+  it('no ramo que roda num card, com card', async () => {
+    expect(await comCard({ ...NO_CONTATO, alvo: 'Crm::Card' })).toBe(true);
+  });
+});

@@ -41,7 +41,8 @@
         "DESTINO": "Onde gravar",
         "NOVO": "Procurar mais um dado",
         "TIRAR": "Tirar",
-        "DICA": "A IA preenche só o que está escrito na conversa. Se o dado não aparecer, o campo fica vazio e o histórico avisa."
+        "DICA": "A IA preenche só o que está escrito na conversa. Se o dado não aparecer, o campo fica vazio e o histórico avisa.",
+        "DICA_CARD": "O card que recebe um campo “Card:”: o que esta automação criou; se ela não criou, o card que a começou ou o card da conversa."
       },
       "DESTINOS": {
         "MENSAGEM": "Mandar ao cliente",

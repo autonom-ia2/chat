@@ -325,7 +325,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 2: lead do anúncio atendido em 5 mi
     expect(card.reload.custom_attributes).to include('bairro' => 'Moema', 'quartos' => '3', 'valor' => '900 mil')
     # Direto no card (G70): a conversa não guarda os campos e nenhuma ação copia de lá; o registro do extrair diz o que gravou.
     expect(conversa.reload.custom_attributes.keys & %w[bairro quartos valor]).to be_empty
-    expect(passos_feitos).not_to include('bairro_no_card', 'quartos_no_card', 'valor_no_card')
+    expect(passos_feitos).to eq(%w[anuncio oi resposta resposta sofia o_que_quer o_que_procura mandar_opcoes])
     gravou = Autonomia::Automacao::Registro.where(execucao: execucao, passo: 'o_que_procura').sole
     expect(gravou).to have_attributes(resultado: 'ok')
     expect(gravou.dados['campos']).to include('gravados' => %w[bairro quartos valor], 'ausentes' => [])

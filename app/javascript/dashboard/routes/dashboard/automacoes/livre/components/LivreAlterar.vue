@@ -157,12 +157,16 @@ const alvoDoGatilho = computed(
       ?.alvo
 );
 const doCard = computed(() => alvoDoGatilho.value === 'Crm::Card');
-// G70 (decisão 20): o "extrair" preenche campo do card no gatilho de card ou de
-// conversa (o card dela), só para quem pode ler cards (a chave de funis).
+// G70 (decisão 20): o "extrair" preenche campo do card onde o passo roda num
+// card ou numa conversa (o card dela), só para quem pode ler cards (a chave de
+// funis). Dentro do "em outro registro", vale o registro do ramo
+// (`catalogo.alvo`, doAlvoDoGatilho), não o do gatilho.
 const extrairNoCard = computed(
   () =>
     props.podeLerCards &&
-    ['Crm::Card', 'Conversation'].includes(alvoDoGatilho.value)
+    ['Crm::Card', 'Conversation'].includes(
+      props.catalogo.alvo || alvoDoGatilho.value
+    )
 );
 const gatilhosDoSeletor = computed(
   () => props.gatilhos || props.catalogo.gatilhos
