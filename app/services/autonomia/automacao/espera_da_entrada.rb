@@ -7,9 +7,10 @@
 # pode entrar em "Faltou" e sair antes de a espera conferir, e o instante da etapa atual perde isso. A atividade de
 # criação não entra: o card da espera já existia quando ela começou.
 #
-# O despertar: a nova entrada na etapa (Escuta.evento_do_card) reserva a execução do próprio card parada num "esperar
-# até" que lê este valor, e ela confere agora, em vez de no fim do prazo. O filtro é o mesmo da reunião
-# (EsperaDaReuniao.caminhos_da): a espera pela resposta do cliente no mesmo card não é reservada à toa.
+# O despertar: a atividade "move" só nasce no Crm::Cards::Mover, na mesma transação da troca de etapa. No commit do
+# card, o Despertador.card_mudou reserva a execução do próprio card parada num "esperar até" que lê `card.*`
+# (EsperaDoCard.le_o_card?), e ela confere agora, com a atividade já gravada, em vez de no fim do prazo. A espera com
+# hora marcada (G64, `conferir_as`) e a que lê a resposta do cliente no mesmo card não são reservadas.
 module Autonomia::Automacao::EsperaDaEntrada
   VALOR = 'card.entrou_de_novo'.freeze
   GATILHO = 'card.entrou_na_etapa'.freeze
@@ -27,13 +28,4 @@ module Autonomia::Automacao::EsperaDaEntrada
                               .where('created_at > ?', espera.begin)
     (espera.end ? entradas.where('created_at <= ?', espera.end) : entradas).exists?
   end
-
-  # O passo em que a execução espera lê `card.entrou_de_novo`?
-  def le_entrada?(execucao)
-    passo = ::Autonomia::Automacao::Roteiro.new(execucao.versao.receita).passo(execucao.cursor)
-    ::Autonomia::Automacao::EsperaDaReuniao.caminhos_da(passo.to_h['condicao']).include?(VALOR)
-  end
-
-  # As execuções esperando no próprio card, presas à conta.
-  def de(card) = ::Autonomia::Automacao::Execucao.where(account_id: card.account_id, estado: 'esperando', alvo: card)
 end

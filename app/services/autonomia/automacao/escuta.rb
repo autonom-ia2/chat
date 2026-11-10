@@ -177,16 +177,7 @@ module Autonomia::Automacao::Escuta
     mudou = dados[:changed_attributes].to_h.with_indifferent_access
     tipos = ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD.fetch(evento, [])
     tipos.each { |tipo| partir_do_evento(card, tipo, mudou, dados) }
-    acordar_pelo_evento(card, tipos)
-  end
-
-  # Depois das partidas: a reunião (G32) e a nova entrada na etapa (G50) acordam quem espera por elas. G50: quem espera
-  # no próprio card ("se nesse tempo não entrou de novo em Faltou", que lê `card.entrou_de_novo`) confere agora, depois
-  # da partida da nova entrada: a 2ª falta corta a espera na hora.
-  def acordar_pelo_evento(card, tipos)
     acordar_o_card(card) if tipos.any? { |tipo| ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo) }
-    entrada = ::Autonomia::Automacao::EsperaDaEntrada
-    acordar_quem_espera(entrada.de(card), filtro: entrada.method(:le_entrada?)) if tipos.include?(entrada::GATILHO)
   end
 
   # Cada automação do gatilho começa no card, com a marca da atividade. G27: o "card atualizado" vem do próprio card

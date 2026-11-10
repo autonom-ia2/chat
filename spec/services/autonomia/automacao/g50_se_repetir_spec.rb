@@ -38,6 +38,14 @@ RSpec.describe 'Automação livre: o gatilho que se repete (G50)', :automacao_mo
     raise 'a fila não esvaziou em 40 jobs'
   end
 
+  # Só o despacho (EventDispatcherJob) e o evento do card, sem o AvancarJob: a reserva fica visível na fila.
+  def despachar_ate_o_evento_do_card
+    while (job = enqueued_jobs.find { |item| [EventDispatcherJob, Autonomia::Automacao::EventoDoCardJob].include?(item[:job]) })
+      enqueued_jobs.delete(job)
+      job[:job].perform_now(*ActiveJob::Arguments.deserialize(job[:args]))
+    end
+  end
+
   def mover(etapa)
     Crm::Cards::Mover.new(card: card.reload, actor: admin, target_stage: etapa).perform
     drenar
@@ -212,6 +220,50 @@ RSpec.describe 'Automação livre: o gatilho que se repete (G50)', :automacao_mo
       expect(Autonomia::Automacao::Registro.where(execucao: primeira, passo: 'p10').order(:id).pluck(:resultado, :motivo))
         .to eq([['ok', nil], ['ok', nil]])
       expect(execucoes.where(automacao: definicao).count).to eq(2)
+    end
+
+    # Quem acorda é o commit do card (Despertador.card_mudou), com a atividade "move" gravada na mesma transação; o
+    # evento da entrada, que chega depois pelo despacho, só abre a 2ª execução e não reserva a 1ª de novo.
+    it 'a nova entrada reserva a espera uma vez só, no commit do card', :aggregate_failures do
+      ligada([entrou_de_novo, esperar_passo('p11')], se_repetir: 'comeca_outra')
+      mover(faltou)
+      primeira = execucoes.sole
+      avancar_da_primeira = -> { enqueued_jobs.count { |job| job[:job] == Autonomia::Automacao::AvancarJob && job[:args].first == primeira.id } }
+
+      travel(2.days) do
+        mover(ativo)
+        Crm::Cards::Mover.new(card: card.reload, actor: admin, target_stage: faltou).perform
+        expect(primeira.reload.estado).to eq('andando')
+        expect(avancar_da_primeira.call).to eq(1)
+
+        despachar_ate_o_evento_do_card
+        expect(avancar_da_primeira.call).to eq(1)
+        drenar
+      end
+
+      expect(primeira.reload.cursor).to eq('p11')
+      expect(execucoes.count).to eq(2)
+    end
+
+    # G64: a espera com hora marcada só confere nela. A nova entrada na etapa não a acorda, mesmo lendo card.entrou_de_novo.
+    it 'não acorda a espera sem prazo com hora marcada (conferir_as) que lê card.entrou_de_novo', :aggregate_failures do
+      com_hora = entrou_de_novo.merge('prazo' => 'sem_prazo', 'conferir_as' => 8)
+      ligada([com_hora, esperar_passo('p11')], se_repetir: 'comeca_outra')
+      mover(faltou)
+      primeira = execucoes.sole
+      expect(primeira).to have_attributes(estado: 'esperando', cursor: 'p10')
+
+      travel(2.hours) do
+        [ativo, faltou].each { |etapa| Crm::Cards::Mover.new(card: card.reload, actor: admin, target_stage: etapa).perform }
+        despachar_ate_o_evento_do_card
+        expect(primeira.reload.estado).to eq('esperando')
+        expect(enqueued_jobs.count { |job| job[:job] == Autonomia::Automacao::AvancarJob && job[:args].first == primeira.id }).to eq(0)
+        drenar
+      end
+
+      expect(primeira.reload).to have_attributes(estado: 'esperando', cursor: 'p10')
+      expect(Autonomia::Automacao::Registro.where(execucao: primeira, passo: 'p10').count).to eq(1)
+      expect(execucoes.count).to eq(2)
     end
 
     # A espera que lê o card (`card.*`) acorda a cada mudança dele pelo Crm::CardAvisaAutomacao (lote 4); a que lê a

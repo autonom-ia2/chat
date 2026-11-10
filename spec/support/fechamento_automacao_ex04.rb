@@ -5,42 +5,65 @@ module FechamentoAutomacao::SondasDoExemplo04
 
   module_function
 
-  # G50: o card entra de novo em "Faltou" com a 1ª execução esperando "não entrou de novo em 30 dias". A sonda pergunta
-  # o comportamento, pelo caminho real (Mover grava a atividade; a Escuta recebe o evento dela): nasce a 2ª execução no
-  # mesmo card, e a 1ª é reservada para conferir a condição agora.
+  # G50: o card entra de novo em "Faltou" com a 1ª execução esperando "não entrou de novo em 30 dias". Tudo pelo caminho
+  # real (o Crm::Cards::Mover grava a atividade, o emissor do CRM despacha, a Partida começa e o Despertador acorda), com
+  # os jobs rodando um por vez. Na nova entrada, o evento roda antes da rodada da 1ª, que segue aberta (o Despertador já
+  # a reservou no commit do card): sem `se_repetir`, a Partida não abriria outra. Nasce a 2ª execução no mesmo card,
+  # esperando; e a 1ª acha a nova entrada e conclui, com o segundo "ok" no passo da espera (o primeiro é o começo dela).
   def nova_entrada_comeca_outra_e_acorda_a_espera?
     ClimateControl.modify(CRM_KANBAN_ENABLED: 'true') do
-      account = FactoryBot.create(:account)
-      account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_gatilhos')
-      admin = FactoryBot.create(:user, account: account, role: :administrator)
-      funil, ativo = create_crm_pipeline(account: account, user: admin)
-      faltou = create_crm_stage(account: account, pipeline: funil, name: 'Faltou')
-      card = account.crm_cards.create!(pipeline: funil, stage: ativo, title: 'Sonda G50', currency: 'BRL')
-      primeira = esperando_a_nova_entrada(card, faltou, admin)
-      Crm::Cards::Mover.new(card: card, actor: admin, target_stage: faltou).perform
-      entregar_a_entrada(card)
-      Autonomia::Automacao::Execucao.where(alvo: card).count == 2 && primeira.reload.estado != 'esperando'
+      card, faltou, ativo, admin = card_da_sonda
+      automacao_da_sonda(card, faltou, admin)
+      [faltou, ativo].each { |etapa| mover_e_rodar(card, etapa, admin) }
+      mover_e_rodar(card, faltou, admin, evento_antes: true)
+      comecou_outra_e_a_primeira_concluiu?(card)
     end
-  # Sem a G50, o esquema recusa o `se_repetir` ao salvar: a lacuna está aberta.
-  rescue ActiveRecord::RecordInvalid
+  # Sem a G50, o esquema da versão recusa `se_repetir` no gatilho: a lacuna está aberta. Qualquer outro erro sobe: sonda
+  # quebrada não vira pendente.
+  rescue ActiveRecord::RecordInvalid => e
+    raise unless e.record.is_a?(Autonomia::Automacao::Versao) && e.record.errors.attribute_names.include?(:'gatilho/se_repetir')
+
     false
   end
 
-  def esperando_a_nova_entrada(card, etapa, quem)
+  def comecou_outra_e_a_primeira_concluiu?(card)
+    primeira, segunda = Autonomia::Automacao::Execucao.where(alvo: card).order(:id).to_a
+    passos_da_primeira = Autonomia::Automacao::Registro.where(execucao: primeira, passo: 'espera').order(:id).pluck(:resultado, :motivo)
+    segunda&.estado == 'esperando' && primeira&.estado == 'concluida' && passos_da_primeira == [['ok', nil], ['ok', nil]]
+  end
+
+  def card_da_sonda
+    account = FactoryBot.create(:account)
+    account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_gatilhos')
+    admin = FactoryBot.create(:user, account: account, role: :administrator)
+    funil, ativo = create_crm_pipeline(account: account, user: admin)
+    faltou = create_crm_stage(account: account, pipeline: funil, name: 'Faltou')
+    [account.crm_cards.create!(pipeline: funil, stage: ativo, title: 'Sonda G50', currency: 'BRL'), faltou, ativo, admin]
+  end
+
+  def automacao_da_sonda(card, etapa, quem)
     espera = { 'id' => 'espera', 'tipo' => 'esperar_ate', 'prazo' => { 'valor' => 30, 'unidade' => 'dias' },
                'condicao' => { 'campo' => { '$valor' => 'card.entrou_de_novo' }, 'op' => 'igual', 'valor' => true } }
     gatilho = { 'tipo' => 'card.entrou_na_etapa', 'etapa_id' => etapa.id, 'se_repetir' => 'comeca_outra' }
     automacao = FactoryBot.create(:autonomia_automacao, account: card.account, ligada_por: quem)
     automacao.salvar_versao!(receita: { 'gatilho' => gatilho, 'passos' => [espera] }, autor: quem)
     automacao.update!(ativa: true)
-    FactoryBot.create(:autonomia_automacao_execucao, versao: automacao.versao_ativa, alvo: card, chave_gatilho: gatilho['tipo'],
-                                                     estado: 'esperando', cursor: 'espera', due_at: 30.days.from_now - 1.minute)
   end
 
-  # O evento que o emissor do CRM despacha para a atividade do movimento, entregue à Escuta como o EventoDoCardJob faz.
-  def entregar_a_entrada(card)
-    atividade = Crm::Activity.where(card_id: card.id, event_type: 'move').order(:id).last
-    dados = { account_id: card.account_id, card_id: card.id, activity_id: atividade.id, changed_attributes: atividade.payload }
-    Autonomia::Automacao::Escuta.evento_do_card(dados, Events::Types::CRM_CARD_MOVED)
+  # `evento_antes`: o despacho e o evento do card rodam antes da rodada (AvancarJob) que o Despertador enfileirou.
+  def mover_e_rodar(card, etapa, quem, evento_antes: false)
+    Crm::Cards::Mover.new(card: card.reload, actor: quem, target_stage: etapa).perform
+    rodar_o_evento if evento_antes
+    FechamentoAutomacao::SondasDoExemplo8.rodar_jobs_da_sonda
+  end
+
+  JOBS_DO_EVENTO = %w[EventDispatcherJob Autonomia::Automacao::EventoDoCardJob].freeze
+
+  def rodar_o_evento
+    fila = ActiveJob::Base.queue_adapter.enqueued_jobs
+    while (job = fila.find { |item| JOBS_DO_EVENTO.include?(item[:job].to_s) })
+      fila.delete(job)
+      job[:job].perform_now(*ActiveJob::Arguments.deserialize(job[:args]))
+    end
   end
 end
