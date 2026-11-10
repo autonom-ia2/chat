@@ -127,6 +127,7 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     # versão com SET NULL, então as versões saem antes sem esbarrar nela.
     ['Autonomia::Automacao::Conversao', :por_conta],
     ['Autonomia::Automacao::Registro', :por_conta],
+    ['Autonomia::Automacao::CampanhaDaVez', :por_conta],
     ['Autonomia::Automacao::Execucao', :por_conta],
     ['Autonomia::Automacao::Versao', :por_conta],
     ['Autonomia::Automacao::Definicao', :por_conta],

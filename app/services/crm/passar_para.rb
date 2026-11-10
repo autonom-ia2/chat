@@ -9,12 +9,15 @@
 #   registro carimba a devolução quando a pessoa é a origem da passagem aberta.
 # - Agente de IA: o serviço dos Agentes (Crm::Entrega::ParaIa.passar!), que troca o dono, solta a pessoa e grava a
 #   passagem ele mesmo. A recusa volta com o código, e a tela diz o porquê em linguagem simples.
+# - Robô de outro sistema ligado à caixa (#2882, Crm::PassarPara::RobosDaCaixa): a atribuição de robô de hoje
+#   (Conversations::AssignmentService com AgentBot), a mesma do "Devolver para". A pessoa sai, e o listener do #1606
+#   grava a passagem dela para o robô com o motivo passar_para.
 #
 # A origem (quem passou para o agente que está com a conversa) vem da última passagem aberta: é o selo "Com Lia ·
 # passada por Ana" e o "Devolver para Ana" no topo da lista.
 class Crm::PassarPara
   Resultado = Struct.new(:ok, :codigo, :assignee, keyword_init: true)
-  TIPOS = %w[pessoa ia].freeze
+  TIPOS = %w[pessoa ia robo].freeze
   MOTIVO = 'passar_para'.freeze
   # O agente já estava com a conversa: nada muda, e a tela só fecha.
   OK_DA_IA = [Crm::Entrega::ParaIa::PASSOU, 'ja_e_o_dono'].freeze
@@ -30,9 +33,10 @@ class Crm::PassarPara
     dono = ligado ? Crm::AgentesIa.dono(@conversation) : nil
     {
       fase2: ligado,
-      sem_robo: ligado && ::Autonomia::Agents::QuemResponde.porta_da_caixa(@inbox).blank?,
+      sem_robo: ligado && sem_robo?,
       pessoas: pessoas_da_caixa.map { |user| pessoa(user) },
       agentes: Crm::AgentesIa.destinos(@conversation).map { |agente| item(agente, dono) },
+      robos: robos,
       com_ia: dono && { id: dono.id, name: dono.name, bot_id: @conversation.assignee_agent_bot_id },
       origem: dono && origem_de(dono)
     }
@@ -41,10 +45,23 @@ class Crm::PassarPara
   def passar!(tipo:, id:)
     return recusa('destino_invalido') unless TIPOS.include?(tipo.to_s) && id.to_i.positive?
 
-    tipo.to_s == 'ia' ? para_ia(id.to_i) : para_pessoa(id.to_i)
+    case tipo.to_s
+    when 'ia' then para_ia(id.to_i)
+    when 'robo' then para_robo(id.to_i)
+    else para_pessoa(id.to_i)
+    end
   end
 
   private
+
+  def robos
+    robos_da_caixa.map { |robo| { id: robo.id, name: robo.name, com_a_conversa: com_o_robo?(robo) } }
+  end
+
+  # Ninguém atende a caixa primeiro: nem a porta de um agente nosso nem um robô de outro sistema (#2882).
+  def sem_robo?
+    ::Autonomia::Agents::QuemResponde.porta_da_caixa(@inbox).blank? && robos_da_caixa.empty?
+  end
 
   def item(agente, dono)
     { id: agente.id, name: agente.name, com_a_conversa: dono&.id == agente.id }
@@ -89,6 +106,46 @@ class Crm::PassarPara
     codigo = Crm::Entrega::ParaIa.passar!(conversation: @conversation, agent: agente, por: :pessoa, motivo: MOTIVO,
                                           origem: quem_esta_agora, pedida_por: @usuario)
     OK_DA_IA.include?(codigo) ? Resultado.new(ok: true) : recusa(codigo)
+  end
+
+  # Só robô oferecido na lista (ativo na caixa, não espelho de agente nosso). Conversa resolvida não recebe ninguém, como
+  # na IA; o robô que já está com ela não muda nada, e a tela só fecha. O AssignmentService devolve nil quando o robô
+  # deixou de existir entre a lista e o clique: a tela recebe a recusa, nunca um "pronto" sem troca.
+  def para_robo(robo_id)
+    robo = robos_da_caixa.find { |item| item.id == robo_id }
+    return recusa('robo_fora_da_caixa') if robo.nil?
+    return recusa('conversa_resolvida') if @conversation.resolved?
+    return Resultado.new(ok: true) if com_o_robo?(robo)
+
+    antes = quem_esta_agora
+    # A troca e a passagem valem juntas: uma falha no registro desfaz a troca, e a tela recebe o erro.
+    atribuido = ActiveRecord::Base.transaction do
+      feito = Crm::Passagens.com_motivo(MOTIVO) do
+        Conversations::AssignmentService.new(conversation: @conversation, assignee_id: robo.id, assignee_type: 'AgentBot').perform
+      end
+      registrar_sem_pessoa!(antes, robo) if feito == robo
+      feito
+    end
+    atribuido == robo ? Resultado.new(ok: true) : recusa('robo_fora_da_caixa')
+  end
+
+  # Com uma pessoa na conversa, quem grava a passagem dela para o robô é o listener do #1606 (a troca de pessoa). Sem
+  # pessoa (um agente de IA nosso, outro robô ou ninguém), não há troca de pessoa e o listener não grava: a passagem de
+  # quem estava para o robô sai daqui, e a passagem aberta de antes (Ana → Lia) fica devolvida.
+  # Ponta que o registro não conhece (outro tipo de dono, como o Captain::Assistant) vira "ninguém".
+  def registrar_sem_pessoa!(antes, robo)
+    return if antes.is_a?(User)
+
+    de = antes if antes.is_a?(AgentBot) || antes.is_a?(::Autonomia::Agents::Agent)
+    Crm::Passagens.registrar!(conversation: @conversation, de: de, para: robo, pedida_por: @usuario, motivo: MOTIVO)
+  end
+
+  def robos_da_caixa
+    @robos_da_caixa ||= Crm::PassarPara::RobosDaCaixa.de(@conversation)
+  end
+
+  def com_o_robo?(robo)
+    @conversation.ai_assignee_type == 'AgentBot' && @conversation.assignee_agent_bot_id == robo.id
   end
 
   # Quem pode ser atribuído na caixa (membros dela e administradores da conta, Inbox#assignable_agents) e vê a conversa

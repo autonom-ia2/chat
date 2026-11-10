@@ -3,6 +3,9 @@
 # desfaz tudo. Ficam fora de FechamentoAutomacao::Lacunas, que já está no teto de linhas do módulo.
 module FechamentoAutomacao::SondasDaCampanha
   extend WebMock::API
+  # O dublê do envio passa pela verificação do RSpec (verify_partial_doubles): se o método que fala com a Meta mudar de
+  # nome ou de argumentos, a sonda quebra em vez de seguir com um método inventado.
+  extend RSpec::Mocks::ExampleMethods
 
   module_function
 
@@ -72,7 +75,7 @@ module FechamentoAutomacao::SondasDaCampanha
     stub_request(:get, WhatsappTemplateLookupHelpers::TEMPLATE_LOOKUP).to_return(status: 503)
     enviados = []
     envio = Whatsapp::OneoffCampaignService.new(campaign: campanha)
-    envio.define_singleton_method(:send_whatsapp_template_message) { |to:, **| enviados << to }
+    allow(envio).to receive(:send_whatsapp_template_message) { |to:, **| enviados << to }
     envio.perform
     enviados
   end

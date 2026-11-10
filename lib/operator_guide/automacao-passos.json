@@ -584,6 +584,24 @@
       "frase": "AUTOMACAO_LIVRE.UNIDADES.DIAS"
     }
   ],
+  "unidades_do_retorno": [
+    {
+      "valor": "minutos",
+      "frase": "AUTOMACAO_LIVRE.UNIDADES.MINUTOS"
+    },
+    {
+      "valor": "horas",
+      "frase": "AUTOMACAO_LIVRE.UNIDADES.HORAS"
+    },
+    {
+      "valor": "dias",
+      "frase": "AUTOMACAO_LIVRE.UNIDADES.DIAS"
+    },
+    {
+      "valor": "meses",
+      "frase": "AUTOMACAO_LIVRE.UNIDADES.MESES"
+    }
+  ],
   "valores": [
     {
       "caminho": "conversa.id",

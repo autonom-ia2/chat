@@ -3324,6 +3324,29 @@
           "ROTULO": "Bank code",
           "EXEMPLO": "341"
         }
+      },
+      "JA_VEM": {
+        "TITULO": "{nome} already comes with these tools",
+        "TEXTO": "We picked them from what you told us. Remove what you do not want.",
+        "TITULO_SEM_PERMISSAO": "Tools that fit {nome}",
+        "SEM_PERMISSAO": "{nome} would do well with: {ferramentas}. Only whoever manages the agents' tools can add them, so the agent starts without them. Ask them to add them later.",
+        "TIRAR": "Remove",
+        "TIRAR_SR": "Remove {ferramenta}",
+        "FALHOU": "Could not add: {ferramentas}. You can add them later in the agent's tools.",
+        "VER_MAIS": "See more tools",
+        "TAMBEM": "Also fits: {ferramentas}.",
+        "INCLUIR_TAMBEM": "Add these too",
+        "INCLUIR_TAMBEM_SR": "Add {ferramentas} too",
+        "TITULO_SO_TAMBEM": "Tools that fit {nome}",
+        "TEXTO_SO_TAMBEM": "We picked them from what you told us. Add them if you want.",
+        "VER_MAIS_SR": "See more tools (opens in a new tab)"
+      },
+      "SUGESTAO": {
+        "ROTULO": "Tool suggestion",
+        "TEXTO": "{nome} could get: {ferramenta}. Add it?",
+        "INCLUIR": "Add",
+        "AGORA_NAO": "Not now",
+        "INCLUIDA": "Done! {nome} can now {consegue}."
       }
     }
   }

@@ -208,4 +208,146 @@ RSpec.describe 'Conversation Passar para API', type: :request do
       expect(response.parsed_body).to eq('codigo' => 'destino_invalido')
     end
   end
+
+  # #2882 — o robô de outro sistema ligado à caixa (n8n): o "Passar para…" o oferece e devolve a conversa a ele pela
+  # atribuição de robô. O espelho de agente nosso não entra (é agente, com as regras dos Agentes).
+  describe 'robô da caixa' do
+    let(:nina) { create(:agent_bot, account: account, name: 'Nina') }
+
+    before do
+      create(:agent_bot_inbox, inbox: inbox, agent_bot: nina)
+      create(:agent_bot_inbox, inbox: inbox, agent_bot: espelho_area)
+    end
+
+    # Pega: o robô externo ausente da lista (o caso da conta 40), o espelho de agente aparecendo como robô, robô
+    # desligado na caixa ou de outra caixa sendo oferecido, e o aviso "nenhum agente atende primeiro" com robô na caixa.
+    it 'GET: lista só o robô externo ativo nesta caixa', :aggregate_failures do
+      desligado = create(:agent_bot, account: account, name: 'Desligado')
+      create(:agent_bot_inbox, inbox: inbox, agent_bot: desligado, status: :inactive)
+      create(:agent_bot_inbox, inbox: create(:inbox, account: account), agent_bot: create(:agent_bot, account: account, name: 'Outra'))
+      Autonomia::Agents::AgentInbox.where(agent_bot: porta).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+
+      get url, headers: ana.create_new_auth_token
+
+      expect(response.parsed_body['robos']).to eq([{ 'id' => nina.id, 'name' => 'Nina', 'com_a_conversa' => false }])
+      expect(response.parsed_body['sem_robo']).to be(false)
+    end
+
+    it 'GET: com o robô na conversa, marcado como quem está com ela' do
+      conversation.update!(assignee: nil, ai_assignee: nina)
+
+      get url, headers: ana.create_new_auth_token
+
+      expect(response.parsed_body['robos']).to eq([{ 'id' => nina.id, 'name' => 'Nina', 'com_a_conversa' => true }])
+    end
+
+    # Pega: a pessoa continuar na conversa junto do robô, a conversa ficar pendente, ou a volta não ir para o registro
+    # de passagens (o histórico mostraria a ida para a pessoa e nunca a volta).
+    it 'POST: a pessoa sai, o robô assume, e uma passagem da pessoa para o robô', :aggregate_failures do
+      conversation.update!(status: :pending)
+
+      expect { passar({ tipo: 'robo', id: nina.id }) }.to change(Crm::Passagem, :count).by(1)
+
+      expect(response).to have_http_status(:ok)
+      expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: nina, status: 'open')
+      expect(servico).not_to have_received(:call)
+      passagem = Crm::Passagens.ultima_aberta(conversation)
+      expect([passagem.de.id, passagem.para.classe, passagem.para.id, passagem.motivo]).to eq([ana.id, 'AgentBot', nina.id, 'passar_para'])
+    end
+
+    # Pega: sem pessoa na conversa, a troca de dono não passa pelo listener (que só vê troca de pessoa): a volta ao robô
+    # ficava sem registro, e a passagem Ana → Área seguia "não devolvida" com o robô na conversa.
+    it 'POST: com o agente de IA nosso na conversa, passagem da área para o robô e a de antes devolvida', :aggregate_failures do
+      area_com_a_conversa!
+      anterior = passagem!(ana, area)
+
+      expect { passar({ tipo: 'robo', id: nina.id }) }.to change(Crm::Passagem, :count).by(1)
+
+      expect(response).to have_http_status(:ok)
+      expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: nina)
+      passagem = Crm::Passagens.ultima_aberta(conversation)
+      expect([passagem.de.classe, passagem.de.id, passagem.para.id, passagem.pedida_por.id])
+        .to eq(['Autonomia::Agents::Agent', area.id, nina.id, ana.id])
+      expect(anterior.reload.devolvida_em).to be_present
+    end
+
+    # Pega: sem pessoa na conversa, a volta de outro robô (ou de ninguém) para este ficar sem registro.
+    it 'POST: de outro robô externo para este: passagem de um robô para o outro', :aggregate_failures do
+      n8n = robo_ligado(inbox)
+      conversation.update!(assignee: nil, ai_assignee: n8n)
+
+      expect { passar({ tipo: 'robo', id: nina.id }) }.to change(Crm::Passagem, :count).by(1)
+
+      passagem = Crm::Passagens.ultima_aberta(conversation)
+      expect([passagem.de.classe, passagem.de.id, passagem.para.id]).to eq(['AgentBot', n8n.id, nina.id])
+    end
+
+    it 'POST: conversa sem ninguém: passagem sem origem para o robô', :aggregate_failures do
+      conversation.update!(assignee: nil, ai_assignee: nil)
+
+      expect { passar({ tipo: 'robo', id: nina.id }) }.to change(Crm::Passagem, :count).by(1)
+
+      expect(Crm::Passagens.ultima_aberta(conversation)).to have_attributes(de_type: nil, para_id: nina.id)
+    end
+
+    # Pega: o registro falhar depois da troca e o robô ficar com a conversa sem passagem (a troca tem de ser desfeita).
+    it 'POST: o registro falha: a troca é desfeita', :aggregate_failures do
+      area_com_a_conversa!
+      allow(Crm::Passagens).to receive(:registrar!).and_raise(ActiveRecord::RecordInvalid)
+
+      passar({ tipo: 'robo', id: nina.id })
+
+      expect(response).not_to be_successful
+      expect(conversation.reload.ai_assignee).to eq(espelho_area)
+    end
+
+    # Pega: a tela dizer "pronto" quando o robô sumiu entre a lista e o clique (o AssignmentService não atribui e devolve nil).
+    it 'POST: o robô sumiu antes de atribuir: 422 robo_fora_da_caixa' do
+      allow(Conversations::AssignmentService).to receive(:new).and_return(instance_double(Conversations::AssignmentService, perform: nil))
+
+      passar({ tipo: 'robo', id: nina.id })
+
+      expect(response.parsed_body).to eq('codigo' => 'robo_fora_da_caixa')
+    end
+
+    it 'POST: o robô já está com a conversa: ok, sem passagem nova' do
+      conversation.update!(assignee: nil, ai_assignee: nina)
+
+      expect { passar({ tipo: 'robo', id: nina.id }) }.not_to change(Crm::Passagem, :count)
+      expect(response).to have_http_status(:ok)
+    end
+
+    # Pega: pela API, o tipo "robo" pular a regra dos Agentes com o id do espelho, entregar a robô desligado, de outra
+    # caixa ou de outra conta.
+    def robo_ligado(caixa, status: :active, conta: account)
+      create(:agent_bot_inbox, inbox: caixa, status: status, agent_bot: create(:agent_bot, account: conta)).agent_bot
+    end
+
+    {
+      'espelho de agente nosso' => -> { espelho_area },
+      'desligado na caixa' => -> { robo_ligado(inbox, status: :inactive) },
+      'de outra caixa' => -> { robo_ligado(create(:inbox, account: account)) },
+      'de outra conta ligado a esta caixa' => -> { robo_ligado(inbox, conta: create(:account)) }
+    }.each do |caso, robo|
+      it "POST: robô #{caso}: 422 robo_fora_da_caixa, e nada muda", :aggregate_failures do
+        alvo = instance_exec(&robo)
+
+        expect { passar({ tipo: 'robo', id: alvo.id }) }.not_to change(Crm::Passagem, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body).to eq('codigo' => 'robo_fora_da_caixa')
+        expect(conversation.reload).to have_attributes(assignee_id: ana.id, ai_assignee: nil)
+      end
+    end
+
+    # Pega: devolver ao robô uma conversa resolvida a reabre (o AssignmentService reabre para robô).
+    it 'POST: conversa resolvida: 422 conversa_resolvida, e ela continua resolvida', :aggregate_failures do
+      conversation.update!(status: :resolved)
+
+      passar({ tipo: 'robo', id: nina.id })
+
+      expect(response.parsed_body).to eq('codigo' => 'conversa_resolvida')
+      expect(conversation.reload.status).to eq('resolved')
+    end
+  end
 end

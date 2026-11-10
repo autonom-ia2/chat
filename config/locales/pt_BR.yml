@@ -1230,6 +1230,7 @@ pt_BR:
         a_cada_sem_contato: 'Passo %{passo}: "A cada mensagem do cliente" precisa de um cliente, e este gatilho roda na conta, sem cliente.'
         de_novo_desde_no_galho: "Passo %{passo}: o \"voltar a esperar\" não pode apontar para um passo dentro de \"A cada mensagem do cliente\" (%{desde}): a automação nunca voltaria a esperar."
         caminho_nenhum: "Nenhum se aplica"
+        destino_card_sem_card: "Passo %{passo}: a IA só preenche campo do card numa automação que começa num card ou numa conversa."
         destino_invalido: "Passo %{passo}: a IA não pode gravar em %{destino}."
         webhook_desligado: "Passo %{passo}: mandar para outro sistema está desligado nesta conta."
         webhook_so_https: "Passo %{passo}: o endereço do outro sistema precisa começar com https://."

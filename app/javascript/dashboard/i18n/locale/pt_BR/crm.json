@@ -4529,6 +4529,7 @@
       "CARREGANDO": "Carregando quem pode receber…",
       "PESSOAS": "Pessoas desta caixa",
       "AGENTES": "Agentes de IA desta caixa",
+      "SELO_EXTERNO": "Agente externo",
       "VOCE": "{nome} (você)",
       "COM_A_CONVERSA": "Está com a conversa",
       "NINGUEM": "Não há mais ninguém nesta caixa para receber agora.",
@@ -4549,6 +4550,7 @@
         "PESSOA_ATRIBUIDA": "Uma pessoa da equipe já está com esta conversa. Abra a lista de novo.",
         "PESSOA_FORA_DA_CAIXA": "{nome} não está mais nesta caixa. Escolha outra pessoa.",
         "DESTINO_INVALIDO": "Esta opção não está mais disponível. Feche e abra a lista de novo.",
+        "ROBO_FORA_DA_CAIXA": "{nome} não está mais ligado a esta caixa. Escolha outra pessoa ou outro agente.",
         "ERRO": "Não deu para passar agora. Tente de novo."
       },
       "COM_IA_POR": "Com {nome} · passada por {por}",

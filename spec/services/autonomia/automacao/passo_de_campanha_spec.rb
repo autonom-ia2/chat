@@ -1,6 +1,7 @@
 require 'rails_helper'
 
-# O passo "campanha" (#2414 G14, #2630): disparar pela Campanha da tela, só em gatilho da conta, e marcar "não recebe".
+# O passo "campanha" (#2414 G14, #2630): disparar pela Campanha da tela, só em gatilho recorrente (no de card ou
+# contato, uma campanha por vez: G55), e marcar "não recebe".
 RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
   include ActiveJob::TestHelper
 
@@ -44,6 +45,23 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
     it 'recusa o disparar em gatilho de conversa ou de card: cada execução mandaria a mesma campanha de novo' do
       expect(problemas(disparar)).to eq([frase(:campanha_so_sem_alvo)])
       expect(problemas(disparar, gatilho: 'card.ganho')).to include(frase(:campanha_so_sem_alvo))
+    end
+
+    # G55 (exemplo 16): "para cada card perdido" é o card.recorrente; a campanha sai uma vez para a vez inteira.
+    it 'aceita o disparar no recorrente de card e de contato' do
+      expect(problemas(disparar, gatilho: 'card.recorrente')).not_to include(frase(:campanha_so_sem_alvo))
+      expect(problemas(disparar, gatilho: 'contato.recorrente')).not_to include(frase(:campanha_so_sem_alvo))
+      expect(problemas(disparar, gatilho: 'card.parado')).to include(frase(:campanha_so_sem_alvo))
+    end
+
+    # B1 do lote 3: no recorrente de card ou contato cada execução é um card, e "só quem esta automação criou" mandaria
+    # uma campanha por card, fora da campanha da vez (G55). Só vale na conta.
+    it 'recusa o público "desta execução" no recorrente de card e de contato', :aggregate_failures do
+      desta = disparar.except('etiquetas').merge('publico' => 'desta_execucao')
+
+      expect(problemas(desta, gatilho: 'card.recorrente')).to include(frase(:campanha_desta_execucao_so_na_conta))
+      expect(problemas(desta, gatilho: 'contato.recorrente')).to include(frase(:campanha_desta_execucao_so_na_conta))
+      expect(problemas(disparar, gatilho: 'card.recorrente')).not_to include(frase(:campanha_desta_execucao_so_na_conta))
     end
 
     context 'with o gatilho da conta (conta.recorrente, G7)' do

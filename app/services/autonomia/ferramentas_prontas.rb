@@ -14,6 +14,9 @@ module Autonomia::FerramentasProntas
   FLAG_CONSULTAS = 'agente_ferramentas_prontas_consultas'.freeze
   # A F2 (#2858): a vitrine (a tela e a API dela). Vale junto com a FLAG.
   FLAG_VITRINE = 'agente_ferramentas_prontas_vitrine'.freeze
+  # A F3 (#2858): o Construtor escolhe as prontas do agente novo, e o agente que já existe recebe a sugestão. Vale junto
+  # com a vitrine: quem inclui é o mesmo endpoint dela.
+  FLAG_CONSTRUTOR = 'agente_ferramentas_prontas_construtor'.freeze
   AGENTE_DE_COTACAO = 'insurance_quote'.freeze
 
   module_function
@@ -24,6 +27,15 @@ module Autonomia::FerramentasProntas
 
   def vitrine?(account)
     ligada?(account) && account.feature_enabled?(FLAG_VITRINE)
+  end
+
+  def construtor?(account)
+    vitrine?(account) && account.feature_enabled?(FLAG_CONSTRUTOR)
+  end
+
+  # As fontes do catálogo liberadas para a conta, na ordem do catálogo.
+  def disponiveis(account)
+    Catalogo.todas.select { |fonte| disponivel?(account, fonte) }
   end
 
   # A fonte está liberada para a conta: a flag das prontas e, na fonte de uma fase posterior, a flag dela.

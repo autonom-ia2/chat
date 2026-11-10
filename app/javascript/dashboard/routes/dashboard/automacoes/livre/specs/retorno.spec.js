@@ -2,6 +2,8 @@ import { mount } from '@vue/test-utils';
 import LivreRetornoPara from '../components/LivreRetornoPara.vue';
 import LivreRetornoEnvio from '../components/LivreRetornoEnvio.vue';
 import LivreRetornoQuando from '../components/LivreRetornoQuando.vue';
+import LivreDuracao from '../components/LivreDuracao.vue';
+import { fraseDoPasso } from '../frases';
 import {
   envioPronto,
   fraseDoRetorno,
@@ -199,6 +201,65 @@ describe('quando do retorno', () => {
 
     expect(wrapper.emitted('update')).toEqual([
       [{ daqui: { valor: 1, unidade: 'dias' }, quando: null }],
+    ]);
+  });
+});
+
+// G69 (#2879): o "daqui" do retorno conta também em meses, no calendário. A
+// frase diz "11 meses" e o número tem o teto de 120 meses, como no esquema.
+describe('retorno em meses', () => {
+  const unidades = [
+    { valor: 'dias', frase: 'AUTOMACAO_LIVRE.UNIDADES.DIAS' },
+    { valor: 'meses', frase: 'AUTOMACAO_LIVRE.UNIDADES.MESES' },
+  ];
+
+  it('a frase do passo lê a unidade das do retorno', () => {
+    const passo = {
+      tipo: 'retorno',
+      titulo: ['Ligar'],
+      daqui: { valor: 11, unidade: 'meses' },
+    };
+    const catalogo = {
+      unidades: [],
+      unidades_do_retorno: unidades,
+      valores: [],
+      passos: [{ tipo: 'retorno', campos: [] }],
+    };
+
+    expect(fraseDoPasso(passo, catalogo, t)).toContain(
+      'AUTOMACAO_LIVRE.UNIDADES.MESES'
+    );
+  });
+
+  const montar = modelValue =>
+    mount(LivreDuracao, {
+      props: { rotulo: 'DAQUI', unidades, modelValue },
+      global,
+    });
+
+  it('em meses, o número para em 120; em dias, em 3650', () => {
+    const meses = montar({ valor: 11, unidade: 'meses' });
+    meses.findComponent({ name: 'Input' }).vm.$emit('update:modelValue', '500');
+    const dias = montar({ valor: 11, unidade: 'dias' });
+    dias.findComponent({ name: 'Input' }).vm.$emit('update:modelValue', '500');
+
+    expect(meses.emitted('update:modelValue')).toEqual([
+      [{ valor: 120, unidade: 'meses' }],
+    ]);
+    expect(dias.emitted('update:modelValue')).toEqual([
+      [{ valor: 500, unidade: 'dias' }],
+    ]);
+  });
+
+  it('trocar para meses traz o número para dentro do teto', () => {
+    const wrapper = montar({ valor: 330, unidade: 'dias' });
+
+    wrapper
+      .findComponent({ name: 'ChoiceSelect' })
+      .vm.$emit('update:modelValue', 'meses');
+
+    expect(wrapper.emitted('update:modelValue')).toEqual([
+      [{ valor: 120, unidade: 'meses' }],
     ]);
   });
 });

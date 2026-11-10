@@ -151,10 +151,22 @@ const frase = computed(() => {
 });
 
 // G9 (#2707): "quem cuida do card" só nos gatilhos de card.
-const doCard = computed(
+const alvoDoGatilho = computed(
   () =>
     props.catalogo.gatilhos?.find(item => item.tipo === props.catalogo.gatilho)
-      ?.alvo === 'Crm::Card'
+      ?.alvo
+);
+const doCard = computed(() => alvoDoGatilho.value === 'Crm::Card');
+// G70 (decisão 20): o "extrair" preenche campo do card onde o passo roda num
+// card ou numa conversa (o card dela), só para quem pode ler cards (a chave de
+// funis). Dentro do "em outro registro", vale o registro do ramo
+// (`catalogo.alvo`, doAlvoDoGatilho), não o do gatilho.
+const extrairNoCard = computed(
+  () =>
+    props.podeLerCards &&
+    ['Crm::Card', 'Conversation'].includes(
+      props.catalogo.alvo || alvoDoGatilho.value
+    )
 );
 const gatilhosDoSeletor = computed(
   () => props.gatilhos || props.catalogo.gatilhos
@@ -622,7 +634,7 @@ defineExpose({ abrir, fechar });
           :rotulo="$t(campo.rotulo)"
           :daqui="rascunho.daqui"
           :quando="rascunho.quando"
-          :unidades="catalogo.unidades"
+          :unidades="catalogo.unidades_do_retorno || catalogo.unidades"
           @update="
             novo => {
               mudarNativo('daqui', novo.daqui);
@@ -735,6 +747,7 @@ defineExpose({ abrir, fechar });
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
           :atributos-do="atributosDo"
+          :com-card="extrairNoCard"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
       </template>

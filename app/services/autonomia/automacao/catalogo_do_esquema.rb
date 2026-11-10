@@ -41,8 +41,9 @@ module Autonomia::Automacao::CatalogoDoEsquema
     end
   end
 
-  def unidades(esquema)
-    esquema.dig('definitions', 'duracao', 'properties', 'unidade', 'enum').map do |unidade|
+  # As unidades da duração; com `definicao`, as de outra (G69: o `daqui_do_retorno` conta também em meses).
+  def unidades(esquema, definicao = 'duracao')
+    esquema.dig('definitions', definicao, 'properties', 'unidade', 'enum').map do |unidade|
       { 'valor' => unidade, 'frase' => chave('UNIDADES', unidade) }
     end
   end

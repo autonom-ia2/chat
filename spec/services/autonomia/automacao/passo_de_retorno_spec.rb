@@ -128,6 +128,45 @@ RSpec.describe Autonomia::Automacao::PassoDeRetorno, :automacao_motor do
       end
     end
 
+    # G69 (#2879, ex. 16, passo 6: "grava um retorno para daqui a 11 meses"): meses contam no calendário, no fuso da conta.
+    describe 'daqui em meses' do
+      let(:fuso) { ActiveSupport::TimeZone['America/Sao_Paulo'] }
+
+      before { account.update!(custom_attributes: { 'timezone' => 'America/Sao_Paulo' }) }
+
+      def meses(valor) = retorno('r1', daqui: { 'valor' => valor, 'unidade' => 'meses' })
+
+      def due_at_com(passo, agora)
+        travel_to(agora) { rodar([passo], card) }
+        Crm::FollowUp.last.due_at
+      end
+
+      it '11 meses a partir de 15/01 vencem em 15/12, na mesma hora' do
+        expect(due_at_com(meses(11), fuso.local(2026, 1, 15, 10))).to eq(fuso.local(2026, 12, 15, 10))
+      end
+
+      it 'o dia que o mês não tem vira o último dia dele', :aggregate_failures do
+        expect(due_at_com(meses(1), fuso.local(2026, 1, 31, 10))).to eq(fuso.local(2026, 2, 28, 10))
+        expect(due_at_com(meses(1), fuso.local(2028, 1, 31, 10))).to eq(fuso.local(2028, 2, 29, 10))
+      end
+
+      it 'o calendário é o da conta, não o do servidor' do
+        account.update!(custom_attributes: { 'timezone' => 'Asia/Tokyo' })
+        toquio = ActiveSupport::TimeZone['Asia/Tokyo']
+
+        # 31/01 às 8h em Tóquio é 30/01 no UTC: pelo UTC, venceria em 01/03 em Tóquio.
+        expect(due_at_com(meses(1), toquio.local(2026, 1, 31, 8))).to eq(toquio.local(2026, 2, 28, 8))
+      end
+
+      it 'o esquema aceita meses só no retorno, até 120', :aggregate_failures do
+        valido = ->(passo) { Autonomia::Automacao::Receita.esquema_valido?({ 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [passo] }) }
+
+        expect(valido.call(meses(120))).to be(true)
+        expect(valido.call(meses(121))).to be(false)
+        expect(valido.call({ 'id' => 'e1', 'tipo' => 'esperar', 'duracao' => { 'valor' => 1, 'unidade' => 'meses' } })).to be(false)
+      end
+    end
+
     it 'para pessoas escolhidas ou para um time', :aggregate_failures do
       time = create(:team, account: account)
       rodar([retorno('r1', para: { 'quem' => 'pessoas', 'pessoas' => [admin.id] }),

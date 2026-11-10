@@ -96,10 +96,12 @@ module Autonomia::Automacao::ComIa
   # #2597: a leitura "card" leva o valor só se quem ligou a automação pode lê-lo, a mesma regra do Valores; #2780: só no
   # "decidir", em qualquer automação (ComIa.leva_o_valor?). Quem saiu da conta não lê. O anúncio de origem (#2558)
   # nunca vai: todo passo de IA escreve texto livre (nota, mensagem, resumo).
-  def ve_o_valor_do_card?
+  def ve_o_valor_do_card? = ::Autonomia::Automacao::ComIa.leva_o_valor?(@passo, quem_ligou_na_conta)
+
+  # Quem ligou a automação, na conta da conversa; nil quando saiu dela.
+  def quem_ligou_na_conta
     quem = @execucao.automacao.ligada_por
-    na_conta = quem && @conversa.account.account_users.find_by(user_id: quem.id)
-    ::Autonomia::Automacao::ComIa.leva_o_valor?(@passo, na_conta)
+    quem && @conversa.account.account_users.find_by(user_id: quem.id)
   end
 
   # O fuso que a tela grava na conta (#954, o mesmo do Guia); sem ele, o padrão da plataforma (Crm::Timezone::Resolver).

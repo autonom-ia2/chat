@@ -45,6 +45,8 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
       ids
     end
     ::Autonomia::Automacao::Cobertura.encerrar(fechadas) if fechadas.any?
+    # G55: as execuções fecharam em lote; a campanha da vez confere de novo (desligada, nada sai).
+    ::Autonomia::Automacao::CampanhaDaOcorrencia.conferir_automacao(self)
   end
 
   # A versão que a pessoa viu na tela já não é a ativa: outra pessoa salvou no meio. A tela (F5) responde 409 e mostra

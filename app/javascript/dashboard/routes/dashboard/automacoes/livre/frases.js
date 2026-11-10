@@ -507,10 +507,17 @@ export const fraseDoPasso = (passo, catalogo, t) => {
   if (passo.tipo === 'para_cada') return fraseDoParaCada(passo, t);
   if (passo.tipo === 'retorno')
     return fraseDoRetorno(passo, t, {
+      // G69: o "daqui" do retorno conta também em meses.
       quando: quandoDoRetorno(
         passo,
         t,
-        fraseDaDuracao(passo.daqui, catalogo, t)
+        fraseDaDuracao(
+          passo.daqui,
+          catalogo && {
+            unidades: catalogo.unidades_do_retorno || catalogo.unidades,
+          },
+          t
+        )
       ),
       titulo: fraseDoTexto(passo.titulo, catalogo, t),
       mensagem: passo.envio && fraseDoTexto(passo.envio.mensagem, catalogo, t),

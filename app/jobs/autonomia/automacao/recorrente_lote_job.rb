@@ -10,7 +10,8 @@ class Autonomia::Automacao::RecorrenteLoteJob < ApplicationJob
   queue_as :scheduled_jobs
   sidekiq_options retry: false
 
-  def perform(automacao_id, ids, ocorrencia)
+  # `indice`: o lugar do lote na varredura (G55: a campanha da vez espera todos rodarem); nil no lote enfileirado antes dele.
+  def perform(automacao_id, ids, ocorrencia, indice = nil)
     definicao = ligada_com_recorrente(automacao_id)
     return unless definicao
 
@@ -19,6 +20,7 @@ class Autonomia::Automacao::RecorrenteLoteJob < ApplicationJob
     return if outra_ocorrencia?(definicao, instante)
 
     erro = alvos(definicao, instante, ids).filter_map { |alvo| comecar(definicao, alvo, tipo, instante) }.first
+    ::Autonomia::Automacao::CampanhaDaOcorrencia.lote_feito(definicao, tipo, instante, indice)
     raise erro if erro
   end
 

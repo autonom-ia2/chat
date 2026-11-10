@@ -41,7 +41,8 @@
         "DESTINO": "Where to save",
         "NOVO": "Look for one more item",
         "TIRAR": "Remove",
-        "DICA": "The AI fills in only what is written in the conversation. If it is not there, the field stays empty and the history says so."
+        "DICA": "The AI fills in only what is written in the conversation. If it is not there, the field stays empty and the history says so.",
+        "DICA_CARD": "The card that gets a “Card:” field: the one this automation created; if it created none, the card that started it or the conversation’s card."
       },
       "DESTINOS": {
         "MENSAGEM": "Send to the customer",
@@ -59,7 +60,8 @@
         "CONTATO_NOME": "Contact name",
         "EMPRESA_NOME": "Company name",
         "CONTATO_ATRIBUTO": "Contact: {nome}",
-        "CONVERSA_ATRIBUTO": "Conversation: {nome}"
+        "CONVERSA_ATRIBUTO": "Conversation: {nome}",
+        "CARD_ATRIBUTO": "Card: {nome}"
       },
       "CUSTO": {
         "VALOR": "US$ {valor}",

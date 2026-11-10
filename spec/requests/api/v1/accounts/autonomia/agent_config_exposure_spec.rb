@@ -66,6 +66,18 @@ RSpec.describe 'Autonomia agent config exposure', type: :request do
 
       expect(response.parsed_body['config']['canal_pedido']).to eq('instagram')
     end
+
+    # #2858 F3: a Confira de um rascunho reaberto mostra "já vem com" a partir da escolha do Construtor; a sugestão
+    # guardada e as dispensadas ficam só no servidor.
+    it 'exposes the tools the Builder chose, not the stored suggestion' do
+      agent.update!(config: agent.config.merge('ferramentas_sugeridas' => %w[fipe], 'ferramentas_tambem' => %w[cnpj],
+                                               'prontas_sugestao' => { 'chaves' => %w[cep] }))
+
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}", headers: administrator.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['config']).to include('ferramentas_sugeridas' => %w[fipe], 'ferramentas_tambem' => %w[cnpj])
+      expect(response.parsed_body['config']).not_to have_key('prontas_sugestao')
+    end
   end
 
   describe 'PATCH /api/v1/accounts/:account_id/autonomia/agents/:id' do
