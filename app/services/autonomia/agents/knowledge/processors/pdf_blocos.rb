@@ -15,6 +15,8 @@
 # - a linha que se repete no alto ou no pé das páginas fica só na primeira vez, também com o número da página no fim.
 # Rodapé corrido e número de página já saem no PdfParagrafos.
 module Autonomia::Agents::Knowledge::Processors::PdfBlocos
+  include Autonomia::Agents::Knowledge::Processors::PdfBlocos::Separacao
+
   MAX_LINHAS_DO_TITULO = 3
   # Página de sumário: pelo menos MIN_LINHAS_DO_SUMARIO linhas, e pelo menos FRACAO_DO_SUMARIO delas terminam num número.
   MIN_LINHAS_DO_SUMARIO = 4
@@ -56,30 +58,6 @@ module Autonomia::Agents::Knowledge::Processors::PdfBlocos
         partes.map { |parte, titulo| bloco_do_grupo(parte, pagina, numero, titulo: titulo) }
       end
     end
-  end
-
-  # #2863 — a linha que vem logo depois de uma linha que vai até a margem, com o espaço de linha normal, termina a frase de
-  # cima (o endereço em negrito no fim do parágrafo): não é título, mesmo curta e em outra fonte. Sem isso, o título sem
-  # número viraria pai de todas as seções seguintes.
-  def fim_da_frase?(de_cima, de_baixo, pagina)
-    return false if de_cima.nil? || antes_da_margem?(de_cima, pagina)
-
-    de_cima[:y] - de_baixo[:y] <= pagina[:normal] * (1 + Autonomia::Agents::Knowledge::Processors::PdfParagrafos::TROCA_DE_LETRA)
-  end
-
-  # #2862 — o grupo lido como título pode ser dois títulos seguidos ("CLÁUSULA 2 – CONTRATAÇÃO" e "2.1. ACEITAÇÃO"): o
-  # espaço entre eles fica abaixo do de parágrafo, e a fonte é a mesma. Separa onde as duas coisas valem: a linha de baixo
-  # caberia inteira no fim da de cima (quem quebra por falta de espaço não deixa caber) e o espaço passa do de linha.
-  def partes_do_titulo(grupo, pagina)
-    return [[grupo, false]] unless titulo?(grupo, pagina)
-
-    grupo.slice_when { |de_cima, de_baixo| titulos_seguidos?(de_cima, de_baixo, pagina) }.map { |parte| [parte, true] }
-  end
-
-  def titulos_seguidos?(de_cima, de_baixo, pagina)
-    largura = de_baixo[:direita] - de_baixo[:trechos].first[:x]
-    largura <= pagina[:corpo].pluck(:direita).max - de_cima[:direita] &&
-      de_cima[:y] - de_baixo[:y] > pagina[:normal] * (1 + Autonomia::Agents::Knowledge::Processors::PdfParagrafos::TROCA_DE_LETRA)
   end
 
   # O primeiro parágrafo da página que continua o último da anterior entra nele: fica a página onde começou e a do fim, e

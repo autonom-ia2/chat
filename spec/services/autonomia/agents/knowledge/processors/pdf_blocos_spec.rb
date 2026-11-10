@@ -314,6 +314,40 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       end
     end
 
+    # #2865 — o título logo depois de um parágrafo todo em negrito, com espaço abaixo do de parágrafo, entrava no bloco do
+    # parágrafo; com mais de MAX_LINHAS_DO_TITULO linhas, o bloco não era título e os títulos sumiam.
+    context 'with titles right after a bold paragraph' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], [corpo2, topo - linha, 'F1', 10],
+                  [corpo1, topo - 40, 'F2', 10], ['ou do beneficiario contra terceiros.', topo - 40 - linha, 'F2', 10],
+                  ['CLAUSULA 5 - PAGAMENTO', topo - 40 - linha - 19.2, 'F2', 10],
+                  ['5.1. PAGAMENTO DO PREMIO', topo - 40 - linha - 35.6, 'F2', 10],
+                  [corpo2, topo - 40 - linha - 50.5, 'F1', 10], [corpo1, topo - 40 - (2 * linha) - 50.5, 'F1', 10],
+                  [corpo2, topo - 40 - (3 * linha) - 50.5, 'F1', 10]]])
+      end
+
+      it 'reads the two titles and keeps the bold paragraph as a paragraph', :aggregate_failures do
+        blocos = blocos_gravados
+
+        expect(blocos.select { |bloco| bloco[:tipo] == :titulo }.pluck(:texto)).to eq(['CLAUSULA 5 - PAGAMENTO', '5.1. PAGAMENTO DO PREMIO'])
+        expect(blocos).to include(a_hash_including(tipo: :paragrafo, texto: "#{corpo1}\nou do beneficiario contra terceiros."))
+      end
+    end
+
+    # #2865 — a lista em negrito, um item por linha com um pouco mais de espaço, continua no parágrafo: item não é título.
+    context 'with a bold list after a bold paragraph' do
+      let(:pdf) do
+        pdf_com([[[corpo1, topo, 'F1', 10], [corpo2, topo - linha, 'F1', 10],
+                  [corpo1, topo - 40, 'F2', 10], ['nos seguintes casos:', topo - 40 - linha, 'F2', 10],
+                  ['a\\) incendio ou explosao;', topo - 40 - linha - 16.4, 'F2', 10], ['b\\) muros de divisa.', topo - 40 - linha - 32.8, 'F2', 10],
+                  [corpo2, topo - 120, 'F1', 10], [corpo1, topo - 120 - linha, 'F1', 10], [corpo2, topo - 120 - (2 * linha), 'F1', 10]]])
+      end
+
+      it 'reads no title' do
+        expect(blocos_gravados.pluck(:tipo)).not_to include(:titulo)
+      end
+    end
+
     it 'gives no blocks to the protected agent (Lia)' do
       allow(bia).to receive(:instrucao_mantida?).and_return(true)
 
