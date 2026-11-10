@@ -21,15 +21,13 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
   ZERO_KM = 32_000
 
   def self.lista(itens, chave, maximo)
-    # A contagem antes da lista: se o corte do turno pegar o fim, o modelo ainda sabe quantos eram.
-    { 'total' => itens.size }.merge(itens.size > maximo ? { 'mostrando' => maximo } : {}).merge(chave => itens.first(maximo))
+    Autonomia::FerramentasProntas::Lista.cortar(itens, chave, maximo)
   end
 
-  # A busca pelo nome do modelo, sobre a lista inteira da marca (da fonte ou do cache): todas as palavras no nome.
-  # Sem busca, a lista com o teto. -> nil quando nada sobrou.
+  # A busca pelo nome do modelo, sobre a lista inteira da marca (da fonte ou do cache). Sem busca, a lista com o teto.
+  # -> nil quando nada sobrou.
   def self.refinar_modelos(dados, params)
-    palavras = params['busca'].to_s.downcase.split
-    achados = Array(dados['modelos']).select { |item| palavras.all? { |palavra| item['nome'].to_s.downcase.include?(palavra) } }
+    achados = Autonomia::FerramentasProntas::Lista.filtrar(Array(dados['modelos']), params['busca']) { |item| item['nome'] }
     lista(achados, 'modelos', MAX_MODELOS) if achados.any?
   end
 

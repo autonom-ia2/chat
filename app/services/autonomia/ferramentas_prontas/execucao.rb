@@ -34,11 +34,14 @@ class Autonomia::FerramentasProntas::Execucao
     @inicio = ClienteHttp.agora
   end
 
+  # O "hoje" das consultas (dias úteis, o ano dos feriados e do Focus, o dia do contador) é o do fuso da conta.
   def call
-    executar
-  rescue StandardError => e
-    ChatwootExceptionTracker.new(e, account: @tool.account).capture_exception
-    terminar(Resposta.nao_consegui, desfecho: 'sem_resposta', motivos: ['defeito'])
+    Time.use_zone(fuso) do
+      executar
+    rescue StandardError => e
+      ChatwootExceptionTracker.new(e, account: @tool.account).capture_exception
+      terminar(Resposta.nao_consegui, desfecho: 'sem_resposta', motivos: ['defeito'])
+    end
   end
 
   # O desfecho de falha, para o registro da consulta em segundo plano (`pronta_sem_resposta`, `pronta_recusadas`); nil
@@ -52,8 +55,16 @@ class Autonomia::FerramentasProntas::Execucao
 
   private
 
+  # O fuso da conta; sem ele (defeito ao ler a conta), o da plataforma: a execução nunca levanta.
+  def fuso
+    ActiveSupport::TimeZone[Crm::Timezone::Resolver.new(account: @tool.account).name_or_default.to_s] || Time.zone
+  rescue StandardError => e
+    Rails.logger.warn("#{PREFIXO} fuso da conta indisponível conta=#{@tool.account_id} #{e.class}")
+    Time.zone
+  end
+
   def executar
-    return desligada unless @fonte && Autonomia::FerramentasProntas.ligada?(@tool.account)
+    return desligada unless Autonomia::FerramentasProntas.disponivel?(@tool.account, @fonte)
 
     acesso = Acesso.find_by(account_id: @tool.account_id, fonte: @fonte.chave)
     return recusar('sem_acesso') if acesso.nil?
@@ -86,24 +97,33 @@ class Autonomia::FerramentasProntas::Execucao
   end
 
   def consultar(params)
-    @cliente = ClienteHttp.new(hosts: @fonte.hosts, prazo_final: @inicio + @consulta.prazo_total)
+    @cliente = ClienteHttp.new(hosts: @fonte.hosts, prazo_final: @inicio + @consulta.prazo_total, conta: @tool.account_id)
     aplicaveis = @consulta.provedores.select { |provedor| provedor.aplica?(@consulta, params) }
     falhas = []
     nao_encontrado = false
     aplicaveis.each do |provedor|
+      next if pular?(provedor, falhas, nao_encontrado)
+
       dados = provedor.new(@cliente, prazo: @consulta.prazo_por_fonte).consultar(@consulta, @consulta.para_a_fonte(params))
       return achado(params, dados, provedor, reserva: provedor != aplicaveis.first, falhas: falhas)
     rescue Provedor::NaoEncontrado
       nao_encontrado = true
     rescue Provedor::Falha => e
       falhas << "#{provedor.nome}.#{e.motivo}"
-      break if e.motivo == 'prazo_total'
     end
     nada(nao_encontrado, falhas)
   end
 
+  # Sem prazo para a rede, só o provedor calculado aqui (o calendário, o plano do DDD, as sedes) ainda responde; e a
+  # reserva aproximada não responde depois de um "não tem".
+  def pular?(provedor, falhas, nao_encontrado)
+    return true if nao_encontrado && !provedor.depois_de_nao_encontrado?
+
+    provedor.host.present? && falhas.any? { |falha| falha.end_with?('.prazo_total') }
+  end
+
   def achado(params, dados, provedor, reserva:, falhas:)
-    @cache.encontrado(dados)
+    @cache.encontrado(dados, validade: provedor.validade)
     @provedor = provedor.nome
     entregar(dados, params, desfecho: reserva ? 'pela_reserva' : nil, motivos: falhas)
   end

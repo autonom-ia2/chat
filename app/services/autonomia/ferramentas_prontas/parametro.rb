@@ -3,6 +3,8 @@
 # letra maiúscula ou uma opção da lista, e nada do que o modelo escreveu entra cru. Valor que não normaliza é pedido
 # inválido (o agente confere com o cliente), e nenhuma fonte é chamada.
 #
+# `padrao`: o valor quando o modelo não informa (ex.: "de hoje" na contagem de dias úteis), calculado na hora, antes do
+# cache: a chave do cache leva o valor efetivo.
 # `local: true`: o valor só filtra a resposta aqui dentro e nunca vai à fonte (ex.: a busca por nome de modelo da FIPE).
 # Sem regex: método de string (`delete`, `count`) e a regra de cada documento.
 class Autonomia::FerramentasProntas::Parametro
@@ -12,7 +14,8 @@ class Autonomia::FerramentasProntas::Parametro
 
   attr_reader :nome, :tipo, :descricao, :opcoes
 
-  def initialize(nome:, descricao:, tipo: 'string', opcoes: nil, local: false, &normalizar)
+  def initialize(nome:, descricao:, tipo: 'string', opcoes: nil, local: false, padrao: nil, &normalizar) # rubocop:disable Metrics/ParameterLists
+    @padrao = padrao
     @nome = nome
     @tipo = tipo
     @descricao = descricao
@@ -25,9 +28,13 @@ class Autonomia::FerramentasProntas::Parametro
     @local
   end
 
-  # -> o valor normalizado, ou nil quando não serve.
+  def padrao
+    @padrao&.call
+  end
+
+  # -> o valor normalizado, ou nil quando não serve (lista e objeto nunca servem: o parâmetro é um valor só).
   def normalizar(valor)
-    return nil if valor.nil? || (valor.respond_to?(:empty?) && valor.empty?)
+    return nil if valor.nil? || valor.is_a?(Hash) || valor.is_a?(Array) || (valor.respond_to?(:empty?) && valor.empty?)
     return opcao(valor) if opcoes
 
     @normalizar.call(valor)

@@ -69,6 +69,7 @@ class Autonomia::Agents::Tools::ConsultaNoTurno
     return false unless turno.respond_to?(:conversation) && turno.conversation.present?
     return false if turno.try(:turno_de_evento?)
     return false if do_agente_de_cotacao?(tool, turno)
+    return false if ::Autonomia::FerramentasProntas.calculada_aqui?(tool) # #2858: o CPF responde na hora, sem linha
 
     ligada?(tool.account)
   end
@@ -103,7 +104,9 @@ class Autonomia::Agents::Tools::ConsultaNoTurno
     @agente = agente
     @turno = turno
     @chamada = chamada.presence
-    @params = ::Autonomia::Agents::Tools::ParamsTipados.converter(args.to_h.deep_stringify_keys, tool.param_schema)
+    # #2858: a pronta grava os argumentos já normalizados (a coordenada arredondada; o valor fora do formato, nunca cru).
+    args = ::Autonomia::FerramentasProntas.argumentos(tool, args.to_h.deep_stringify_keys)
+    @params = ::Autonomia::Agents::Tools::ParamsTipados.converter(args, tool.param_schema)
     @pedido = Chave.pedido(tool, turno, @params)
   end
 
