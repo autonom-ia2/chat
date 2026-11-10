@@ -23,8 +23,13 @@ require 'rails_helper'
 #   (CampaignImports::ContactRow) e a lista fica registrada como importação de contatos (CampaignImport, flow "contacts",
 #   origem "automacao"), que aparece em Contatos > Importações com o rótulo "Automação", quem ligou e quantos entraram.
 #
-# Passos 6 a 9 em aberto (pendentes_spec): a 2ª automação não volta a esperar a cada documento (G31: a receita não tem
-# laço), não há gatilho de card completo (G27) e o aviso de sexta ao RH, que não está na conversa do card, é a G22.
+# - Passos 6 a 8, o laço dos documentos na 2ª automação, como no exemplo 14 (G46): espera 3 dias o funcionário mandar
+#   foto ou PDF; a IA extrai, só dos anexos novos, qual documento é, e cada um é marcado no campo de marcar do card; a IA
+#   decide pelo card se está completo e, faltando, volta a esperar (`de_novo`). Em 3 dias sem documento, a IA escreve o
+#   pedido só do que falta. Completo: move para "Enviar à operadora" e manda os dados ao sistema da operadora (G13,
+#   `webhook`, num receptor WebMock com IP público).
+# - Passo 9, uma 3ª automação, toda sexta (G22): o "para cada item" gravou o RH como quem pediu cada card, e o aviso de
+#   sexta lista ao RH quem ainda falta, pelo modelo aprovado.
 RSpec.describe 'Fechamento #2414 · exemplo 8: funcionário novo no plano da empresa', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 
@@ -45,6 +50,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 8: funcionário novo no plano da emp
     contact_inbox = create(:contact_inbox, inbox: canal.inbox, contact: rh, source_id: '5511900000008')
     create(:conversation, account: account, inbox: canal.inbox, contact: rh, contact_inbox: contact_inbox, status: :open)
   end
+  let(:enviar_a_operadora) { create_crm_stage(account: account, pipeline: funil, name: 'Enviar à operadora', position: 2) }
+  let(:pedidos_a_operadora) { [] }
   let(:roteiro) { { 'automacao_decidir' => { 'caminho' => 'inclusao', 'motivo' => 'lista de funcionários novos' } } }
 
   # Os 4 funcionários da lista. O Bruno já é contato, sem empresa.
@@ -55,6 +62,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 8: funcionário novo no plano da emp
      { 'nome' => 'Diego Melo', 'data_nascimento' => '30/01/2001', 'telefone' => '+55 11 98888-0004' }]
   end
 
+  def operadora = 'https://inclusoes.operadora.test/vidas'
+  def fuso = ActiveSupport::TimeZone['America/Sao_Paulo']
   def numeros = %w[+5511988880001 +5511988880002 +5511988880003 +5511988880004]
 
   def documentos
@@ -84,23 +93,83 @@ RSpec.describe 'Fechamento #2414 · exemplo 8: funcionário novo no plano da emp
        texto: ['Recebi os ', { '$valor' => 'ia.funcionarios.quantos' }, ' nomes. Já vou pedir os documentos a cada um'] }]
   end
 
-  # Passo 5: em cada card novo do quadro, a lista de documentos pelo modelo aprovado.
+  # Passo 5: em cada card novo do quadro, a lista de documentos pelo modelo aprovado. Passos 6 a 8: o laço dos documentos.
   def receita_de_cada_card
     nome = { '$valor' => 'contato.nome' }
     { gatilho: { tipo: 'card.criado', funil_id: funil.id, conversa_nova: { caixa_id: canal.inbox.id } }, passos: [
       { id: 'documentos', tipo: 'mensagem',
         texto: ['Olá, ', nome, '! Para a sua inclusão no plano, mande: RG, CPF e comprovante de residência.'],
-        modelo: { nome: 'documentos_da_inclusao', idioma: 'pt_BR', variaveis: [[nome]] } }
+        modelo: { nome: 'documentos_da_inclusao', idioma: 'pt_BR', variaveis: [[nome]] } },
+      espera_o_documento, extrai_o_documento, *marca_no_card, completo?
     ] }
   end
 
+  def tipos_de_documento = { 'rg' => 'o RG', 'cpf' => 'o CPF', 'comprovante' => 'o comprovante de residência' }
+
+  # Passo 7: 3 dias sem documento novo, a IA escreve o pedido só do que falta e espera mais 3; sem nada, a automação encerra.
+  # Depois de 3 dias a janela de 24 h fechou: o pedido que a IA escreveu sai dentro do modelo aprovado.
+  def espera_o_documento(id = 'espera_doc', se_vencer = nil)
+    nome = { '$valor' => 'contato.nome' }
+    se_vencer ||= [{ id: 'pede_o_resto', tipo: 'escrever', le: %w[card], destino: 'guardar',
+                     instrucao: 'Peça ao funcionário só os documentos da inclusão que ainda não estão marcados no card.' },
+                   { id: 'manda_o_pedido', tipo: 'mensagem', texto: ['Olá, ', nome, '. ', { '$valor' => 'ia.pede_o_resto' }],
+                     modelo: { nome: 'documentos_faltando', idioma: 'pt_BR', variaveis: [[nome], [{ '$valor' => 'ia.pede_o_resto' }]] } },
+                   espera_o_documento('espera_doc2', [{ id: 'sem_documento', tipo: 'parar' }])]
+    { id: id, tipo: 'esperar_ate', prazo: { valor: 3, unidade: 'dias' }, se_vencer: se_vencer,
+      condicao: { campo: { '$valor' => 'conversa.cliente_mandou_documento' }, op: 'igual', valor: true } }
+  end
+
+  # Passo 6: a IA extrai, só dos anexos que ainda não leu, quais documentos chegaram.
+  def extrai_o_documento
+    campos = tipos_de_documento.map do |chave, nome_do_documento|
+      { chave: chave, descricao: "true se chegou #{nome_do_documento} e dá para ler; null se não chegou", destino: "conversa.atributos.#{chave}" }
+    end
+    { id: 'extrai', tipo: 'extrair', le: %w[anexos_novos], trocar: true, campos: campos }
+  end
+
+  # Passo 6, "marca no card": um passo por documento; o que não chegou nesta leitura pula sem desmarcar.
+  def marca_no_card
+    tipos_de_documento.map do |chave, nome_do_documento|
+      { id: "marca_#{chave}", tipo: 'acao', acao: 'PATCH crm/cards/:id', descricao: "Marcar #{nome_do_documento} no card",
+        caminho: { id: { '$valor' => 'card.id' } },
+        corpo: { card: { custom_attributes: { chave => { '$valor' => "conversa.atributos.#{chave}" } } } } }
+    end
+  end
+
+  # Passo 8: completo, move para "Enviar à operadora" e manda os dados à operadora. Faltando, volta a esperar.
+  def completo?
+    completo = [{ id: 'para_operadora', tipo: 'acao', acao: 'POST crm/cards/:id/move', descricao: 'Levar para Enviar à operadora',
+                  caminho: { id: { '$valor' => 'card.id' } }, corpo: { stage_id: enviar_a_operadora.id } },
+                { id: 'operadora', tipo: 'webhook', descricao: 'Mandar à operadora', url: operadora,
+                  corpo: { nome: { '$valor' => 'contato.nome' }, telefone: { '$valor' => 'contato.telefone' },
+                           nascimento: { '$valor' => 'contato.atributos.data_nascimento' } } }]
+    { id: 'completo', tipo: 'decidir', le: %w[card], pergunta: 'O card da inclusão já tem RG, CPF e comprovante marcados?',
+      caminhos: [{ nome: 'Completo', chave: 'completo', descricao: 'RG, CPF e comprovante marcados no card', passos: completo },
+                 { nome: 'Falta algo', chave: 'falta', descricao: 'algum documento ainda não está marcado', passos: [] }],
+      nenhum: [], de_novo: { caminhos: %w[falta nenhum], desde: 'espera_doc' } }
+  end
+
+  # Passo 9: toda sexta, o RH de cada empresa com inclusão aberta sabe quem ainda não mandou documento.
+  def receita_de_sexta
+    faltam = { '$valor' => 'contato.solicitados_faltando' }
+    { gatilho: { tipo: 'contato.recorrente', frequencia: 'semanal', dia_da_semana: 5, hora: 9,
+                 selecao: { solicitante_de: { funil_id: funil.id, faltando: tipos_de_documento.keys } },
+                 conversa_nova: { caixa_id: canal.inbox.id } },
+      passos: [{ id: 'aviso_ao_rh', tipo: 'mensagem', texto: ['Oi! Ainda faltam documentos de: ', faltam],
+                 modelo: { nome: 'documentos_pendentes', idioma: 'pt_BR', variaveis: [[faltam]] } }] }
+  end
+
   def ligar_tudo
-    { 'Lista do RH' => receita_do_rh, 'Documentos de cada vida' => receita_de_cada_card }.each do |nome, receita|
+    { 'Lista do RH' => receita_do_rh, 'Documentos de cada vida' => receita_de_cada_card,
+      'Documentos pendentes ao RH' => receita_de_sexta }.each do |nome, receita|
       ligar_automacao(luciana, account, montar_automacao(luciana, account, nome: nome, receita: receita))
     end
   end
 
-  def drenados = [*FechamentoAutomacao::JOBS, Autonomia::Automacao::EventoDoCardJob]
+  def drenados
+    [*FechamentoAutomacao::JOBS, Autonomia::Automacao::EventoDoCardJob, Autonomia::Automacao::TempoDaAutomacaoJob,
+     Autonomia::Automacao::RecorrenteLoteJob]
+  end
 
   # Um job por vez, como no Sidekiq.
   def drenar
@@ -140,7 +209,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 8: funcionário novo no plano da emp
     flags_do_piloto(account)
     account.enable_features!('automacao_gatilhos', 'companies')
     create(:inbox_member, user: luciana, inbox: canal.inbox)
-    canal.update!(message_templates: [documentos])
+    canal.update!(message_templates: [documentos, pendentes_ao_rh, documentos_faltando])
+    preparar_os_documentos
     create(:contact, account: account, name: 'Bruno', phone_number: '+5511988880002', email: nil)
     conversa_do_rh
     receptor_whatsapp_cloud
@@ -151,6 +221,66 @@ RSpec.describe 'Fechamento #2414 · exemplo 8: funcionário novo no plano da emp
   end
 
   after { Current.reset }
+
+  def documentos_faltando
+    { 'name' => 'documentos_faltando', 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'UTILITY',
+      'components' => [{ 'type' => 'BODY', 'text' => 'Olá, {{1}}. {{2}}' }] }
+  end
+
+  def pendentes_ao_rh
+    { 'name' => 'documentos_pendentes', 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'UTILITY',
+      'components' => [{ 'type' => 'BODY', 'text' => 'Oi! Ainda faltam documentos de: {{1}}' }] }
+  end
+
+  # Os campos de marcar do card e os da conversa, onde o extrair grava; a etapa "Enviar à operadora"; o sistema da operadora.
+  def preparar_os_documentos
+    account.update!(reporting_timezone: fuso.name, custom_attributes: { 'timezone' => fuso.name })
+    %w[card_attribute conversation_attribute].product(tipos_de_documento.keys).each do |modelo, chave|
+      create(:custom_attribute_definition, account: account, attribute_key: chave, attribute_display_name: chave.upcase,
+                                           attribute_model: modelo, attribute_display_type: 'checkbox')
+    end
+    # A data de nascimento que vai à operadora: o atributo da coluna do Importar contatos, criado antes para o salvar conferir.
+    create(:custom_attribute_definition, account: account, attribute_key: 'data_nascimento', attribute_display_name: 'data_nascimento',
+                                         attribute_model: 'contact_attribute', attribute_display_type: 'text')
+    enviar_a_operadora
+    receptor_da_operadora
+  end
+
+  # O sistema da operadora: um nome que resolve para um IP público, e cada pedido guardado.
+  def receptor_da_operadora
+    allow(Resolv).to receive(:getaddresses).and_call_original
+    allow(Resolv).to receive(:getaddresses).with('inclusoes.operadora.test').and_return(['93.184.216.34'])
+    stub_request(:post, operadora).to_return do |pedido|
+      pedidos_a_operadora << JSON.parse(pedido.body)
+      { status: 201, body: { protocolo: 'OP-1' }.to_json, headers: { 'Content-Type' => 'application/json' } }
+    end
+  end
+
+  def lista_do_rh
+    rh_manda('Oi Luciana! Seguem os novos para incluir no plano: Ana Prado 12/03/1990 11 98888-0001; Bruno Reis 05/07/1985 ' \
+             '(11) 98888-0002; Carla Dias 23/11/1998 11988880003; Diego Melo 30/01/2001 +55 11 98888-0004')
+  end
+
+  def card_da(nome) = funil.cards.joins(:contact).find_by!(contacts: { name: nome })
+  def conversa_da(nome) = Conversation.where(inbox: canal.inbox, contact: card_da(nome).contact).order(:id).last
+
+  # O funcionário manda a foto ou o PDF de um documento, como o canal grava a mídia.
+  def manda_documento(nome, arquivo)
+    conversa = conversa_da(nome)
+    mensagem = conversa.messages.new(account: account, inbox: canal.inbox, message_type: :incoming, sender: conversa.contact, content: nil)
+    anexo = mensagem.attachments.new(account_id: account.id, file_type: :file)
+    anexo.file.attach(io: Rails.root.join('spec/assets/sample.pdf').open, filename: arquivo, content_type: 'application/pdf', identify: false)
+    mensagem.save!
+    drenar
+  end
+
+  def varre(instante)
+    travel_to(instante) do
+      Autonomia::Automacao::TempoJob.perform_now
+      Autonomia::Automacao::VarreduraJob.perform_now
+      drenar
+    end
+  end
 
   it 'passos 1 a 5: a lista do RH vira 4 contatos da empresa e 4 cards, o RH recebe a contagem e cada um, o pedido dos documentos',
      :aggregate_failures do
@@ -190,7 +320,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 8: funcionário novo no plano da emp
       expect(modelo['name']).to eq('documentos_da_inclusao')
       expect(modelo.dig('components', 0, 'parameters', 0, 'text')).to eq(contato.name)
     end
-    expect(historico('Documentos de cada vida')).to eq([['documentos', 'ok', nil]] * 4)
+    expect(historico('Documentos de cada vida')).to eq([['documentos', 'ok', nil], ['espera_doc', 'ok', nil]] * 4)
   end
 
   it 'passo 2: a lista que chega em foto vai à IA, e os cards nascem dela', :aggregate_failures do
@@ -211,5 +341,64 @@ RSpec.describe 'Fechamento #2414 · exemplo 8: funcionário novo no plano da emp
     expect(account.contacts.where(phone_number: numeros)).to contain_exactly(account.contacts.find_by!(name: 'Bruno'))
     expect(saidas).to be_empty
     expect(execucoes('Documentos de cada vida')).to be_empty
+  end
+
+  it 'passo 6: cada documento que chega vai à IA, e o card marca o que chegou', :aggregate_failures do
+    lista_do_rh
+    roteiro['automacao_extrair'] = { 'rg' => true, 'cpf' => nil, 'comprovante' => nil }
+    roteiro['automacao_decidir'] = { 'caminho' => 'falta', 'motivo' => 'faltam CPF e comprovante' }
+
+    manda_documento('Ana Prado', 'rg-ana.pdf')
+
+    expect(pedidos_a_ia('automacao_extrair').sole['input'].first['content'].pluck('filename')).to include('rg-ana.pdf')
+    expect(card_da('Ana Prado').custom_attributes).to eq('rg' => true)
+    expect(card_da('Ana Prado').stage_id).to eq(etapa.id)
+    expect(pedidos_a_operadora).to be_empty
+  end
+
+  it 'passo 7: 3 dias sem documento novo, a IA escreve o pedido só do que falta, lendo o card', :aggregate_failures do
+    lista_do_rh
+    roteiro['automacao_extrair'] = { 'rg' => true, 'cpf' => nil, 'comprovante' => nil }
+    roteiro['automacao_decidir'] = { 'caminho' => 'falta', 'motivo' => 'faltam CPF e comprovante' }
+    roteiro['automacao_escrever'] = { 'texto' => 'Ana, recebi o RG. Falta mandar o CPF e o comprovante de residência.' }
+    manda_documento('Ana Prado', 'rg-ana.pdf')
+
+    varre(3.days.from_now + 5.minutes)
+
+    # A IA leu o card de cada funcionário; o da Ana, com o RG marcado.
+    expect(pedidos_a_ia('automacao_escrever').map(&:to_json)).to include(a_string_including('\\"rg\\":true'))
+    pedido = para(numeros.first).select { |corpo| corpo.dig('template', 'name') == 'documentos_faltando' }.sole
+    expect(pedido.dig('template', 'components', 0, 'parameters').pluck('text'))
+      .to eq(['Ana Prado', 'Ana, recebi o RG. Falta mandar o CPF e o comprovante de residência.'])
+  end
+
+  it 'passo 8: card completo vai para "Enviar à operadora" e os dados seguem ao sistema da operadora', :aggregate_failures do
+    lista_do_rh
+    roteiro['automacao_extrair'] = { 'rg' => true, 'cpf' => true, 'comprovante' => true }
+    roteiro['automacao_decidir'] = { 'caminho' => 'completo', 'motivo' => 'os três marcados' }
+
+    manda_documento('Ana Prado', 'documentos-ana.pdf')
+
+    expect(card_da('Ana Prado')).to have_attributes(stage_id: enviar_a_operadora.id,
+                                                    custom_attributes: { 'rg' => true, 'cpf' => true, 'comprovante' => true })
+    expect(pedidos_a_operadora.sole).to eq('nome' => 'Ana Prado', 'telefone' => '+5511988880001', 'nascimento' => '12/03/1990')
+  end
+
+  it 'passo 9: na sexta, o RH recebe quem ainda falta mandar documento', :aggregate_failures do
+    lista_do_rh
+    roteiro['automacao_extrair'] = { 'rg' => true, 'cpf' => true, 'comprovante' => true }
+    roteiro['automacao_decidir'] = { 'caminho' => 'completo', 'motivo' => 'os três marcados' }
+    # Na sexta vencem também os 3 dias dos outros: o pedido do que falta sai para eles.
+    roteiro['automacao_escrever'] = { 'texto' => 'Ainda faltam o RG, o CPF e o comprovante.' }
+    manda_documento('Ana Prado', 'documentos-ana.pdf')
+
+    expect(funil.cards.pluck(:solicitante_contact_id).uniq).to eq([rh.id])
+    sexta = Time.current.in_time_zone(fuso).next_occurring(:friday).change(hour: 9, min: 5)
+    varre(sexta)
+
+    aviso = para(rh.phone_number).find { |corpo| corpo.dig('template', 'name') == 'documentos_pendentes' }
+    texto = aviso.dig('template', 'components', 0, 'parameters', 0, 'text')
+    expect(texto).to include('Bruno', 'Carla Dias', 'Diego Melo')
+    expect(texto).not_to include('Ana Prado')
   end
 end
