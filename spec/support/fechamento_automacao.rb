@@ -268,16 +268,18 @@ module FechamentoAutomacao::Lacunas
   end
 
   # A execução filha aberta na Maria pelo passo da mãe, que roda no card do João (quem ela indicou). A Maria fica no
-  # campo do card do tipo contato (decisão 16).
+  # campo do card do tipo contato (decisão 16). O gatilho de card pede a flag dos gatilhos e o CRM ligado.
   def filha_na_maria
-    account = FactoryBot.create(:account)
-    account.enable_features!('automacao_fundacao', 'automacao_motor')
-    FactoryBot.create(:custom_attribute_definition, account: account, attribute_key: 'indicado_por', attribute_display_name: 'Indicado por',
-                                                    attribute_model: 'card_attribute', attribute_display_type: 'contato')
-    maria = account.contacts.create!(name: 'Maria')
-    dona = FactoryBot.create(:user, account: account, role: :administrator)
-    mae = mae_com_passo_em_outro(account, card_do_joao(account, dona, maria), dona)
-    abrir_filhas(mae) && Autonomia::Automacao::Execucao.find_by(automacao_id: mae.automacao_id, alvo: maria)
+    ClimateControl.modify(CRM_KANBAN_ENABLED: 'true') do
+      account = FactoryBot.create(:account)
+      account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_gatilhos')
+      FactoryBot.create(:custom_attribute_definition, account: account, attribute_key: 'indicado_por', attribute_display_name: 'Indicado por',
+                                                      attribute_model: 'card_attribute', attribute_display_type: 'contato')
+      maria = account.contacts.create!(name: 'Maria')
+      dona = FactoryBot.create(:user, account: account, role: :administrator)
+      mae = mae_com_passo_em_outro(account, card_do_joao(account, dona, maria), dona)
+      abrir_filhas(mae) && Autonomia::Automacao::Execucao.find_by(automacao_id: mae.automacao_id, alvo: maria)
+    end
   end
 
   def card_do_joao(account, dona, maria)

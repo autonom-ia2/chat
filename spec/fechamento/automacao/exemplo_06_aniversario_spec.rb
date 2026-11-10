@@ -482,7 +482,6 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
     end
 
     it 'passos 8 e 9: atendida; no dia seguinte, pede pelo modelo aprovado a foto e a autorização para postar', :aggregate_failures do
-      pending 'G56: a reunião atendida não gera evento nem gatilho'
       atendida_e_dia_seguinte
 
       expect(modelos_enviados).to eq(%w[aniversario_foto])
@@ -490,7 +489,6 @@ RSpec.describe 'Fechamento #2414 · exemplo 6: aniversário que vira horário ma
     end
 
     it 'passo 9: autorizou; a cliente ganha a etiqueta pode-postar e a Jéssica é avisada', :aggregate_failures do
-      pending 'G56: a reunião atendida não gera evento nem gatilho'
       atendida_e_dia_seguinte
 
       cliente_escreve_as('2026-11-19 18:00', 'Ficou lindo! Pode postar sim.')

@@ -216,10 +216,9 @@ RSpec.describe 'Fechamento #2414 · exemplo 12: visita que aconteceu decide o pr
                                              due_at: fuso.parse('2026-11-12 17:00'))
   end
 
-  # "Pelo que os dois disseram": a frase do corretor no card também decide, sem a Ana responder. G48: o "esperar até" só
-  # acorda com a conversa, o contato ou a reunião; o campo do card preenchido espera o prazo de 24 horas vencer.
+  # "Pelo que os dois disseram": a frase do corretor no card também decide, sem a Ana responder. G48: o campo do card
+  # preenchido acorda o "esperar até" na hora (Crm::CardAvisaAutomacao), sem esperar o prazo de 24 horas.
   it 'passos 3 e 4: o corretor escreve no campo do card; a decisão vem na hora, lendo o que ele escreveu', :aggregate_failures do
-    pending 'G48: o campo do card preenchido ainda não acorda o "esperar até"'
     roteiro['automacao_decidir'] = { 'caminho' => 'gostou', 'motivo' => 'o corretor disse que ela gostou' }
     visita_feita_as('2026-11-10 15:00')
 

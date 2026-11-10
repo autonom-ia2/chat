@@ -26,9 +26,8 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # O 10 saiu com o lote 4 (#2682, G40) depois da G41 (#2759): o spec dele roda à risca, com a espera só pela Fernanda.
     # O 13 saiu com o lote 2 (#2679): o spec dele roda à risca, com o card ganho e a IA lendo o card.
     # O 11 saiu com a G49: o spec dele roda à risca (exemplo_11_indicacao_spec.rb).
-    # O 12 tem spec próprio à risca (exemplo_12_visita_feita_spec.rb); a espera do passo 3 está provada à risca
-    # (g48_campo_do_card_spec.rb, passos 1 a 4 e 8); falta a G25 (passo 7).
-    12 => ['Visita que aconteceu decide o próximo passo', 'G48 (o campo do card acorda a espera), G5, G2, G3, G11, G14, G25, G35'],
+    # O 12 saiu na integração 2 do #2414, com a G25 (#2654) sobre a G48 da main: exemplo_12_visita_feita_spec.rb roda à
+    # risca, passos 1 a 8.
     # O 15 saiu com o G27 (#2661) sobre o lote 4 (#2687, G40): exemplo_15_cliente_grande_spec.rb roda à risca.
     # Os passos 1 a 6 têm spec próprio à risca, numa automação só (G46): exemplo_14_documentacao_spec.rb.
     14 => ['Documentação completa para emitir', 'G13 (passos 7 e 8: mandar à seguradora e gravar a proposta; a recusa avisa a Dona Cida)'],
