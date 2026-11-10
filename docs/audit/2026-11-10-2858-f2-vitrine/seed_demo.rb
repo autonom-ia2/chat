@@ -6,7 +6,8 @@ abort 'banco errado' unless ActiveRecord::Base.connection.current_database.start
 
 conta = Account.find(1)
 PROD = { feature_flags: 9_094_241_222_486_130_663, feature_flags_ext_1: 9_223_372_036_854_742_007 }.freeze
-conta.update_columns(feature_flags: PROD[:feature_flags], feature_flags_ext_1: PROD[:feature_flags_ext_1],
+# Bits crus das flags, como em produção: sem callbacks nem validação de propósito (só a demo).
+conta.update_columns(feature_flags: PROD[:feature_flags], feature_flags_ext_1: PROD[:feature_flags_ext_1], # rubocop:disable Rails/SkipsModelValidations
                      feature_flags_ext_2: (1 << 39) - 1)
 conta.reload
 conta.internal_attributes = conta.internal_attributes.to_h.merge(
@@ -36,10 +37,10 @@ sistemas.update!(description: 'Liga os agentes aos sistemas da empresa.',
 
 paula = User.find_or_initialize_by(email: 'paula@acme.inc')
 paula.assign_attributes(name: 'Paula Lima', display_name: 'Paula', confirmed_at: Time.current)
-paula.password = SecureRandom.hex(16) + 'aA1!' if paula.new_record?
+paula.password = "#{SecureRandom.hex(16)}aA1!" if paula.new_record?
 paula.save!
 # Mesma senha do John (a do db/seeds.rb), sem passar a senha por aqui: o kit loga com ela.
-paula.update_column(:encrypted_password, john.encrypted_password)
+paula.update_column(:encrypted_password, john.encrypted_password) # rubocop:disable Rails/SkipsModelValidations
 AccountUser.find_or_initialize_by(account: conta, user: paula).update!(role: :agent, custom_role: sistemas)
 
 puts "vitrine=#{conta.feature_enabled?('agente_ferramentas_prontas_vitrine')} pacote=#{Autonomia::Segmentos::Pacotes.nome(conta).inspect} " \
