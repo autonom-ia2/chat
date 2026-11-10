@@ -151,10 +151,18 @@ const frase = computed(() => {
 });
 
 // G9 (#2707): "quem cuida do card" só nos gatilhos de card.
-const doCard = computed(
+const alvoDoGatilho = computed(
   () =>
     props.catalogo.gatilhos?.find(item => item.tipo === props.catalogo.gatilho)
-      ?.alvo === 'Crm::Card'
+      ?.alvo
+);
+const doCard = computed(() => alvoDoGatilho.value === 'Crm::Card');
+// G70 (decisão 20): o "extrair" preenche campo do card no gatilho de card ou de
+// conversa (o card dela), só para quem pode ler cards (a chave de funis).
+const extrairNoCard = computed(
+  () =>
+    props.podeLerCards &&
+    ['Crm::Card', 'Conversation'].includes(alvoDoGatilho.value)
 );
 const gatilhosDoSeletor = computed(
   () => props.gatilhos || props.catalogo.gatilhos
@@ -735,6 +743,7 @@ defineExpose({ abrir, fechar });
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
           :atributos-do="atributosDo"
+          :com-card="extrairNoCard"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
       </template>

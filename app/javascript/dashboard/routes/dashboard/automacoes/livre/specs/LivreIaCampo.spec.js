@@ -80,3 +80,64 @@ describe('LivreIaCampo, instrução', () => {
     expect(wrapper.emitted('update:modelValue').at(-1)).toEqual([null]);
   });
 });
+
+// G70 (#2880, decisão 20): o "extrair" grava também em campo do card, só onde há
+// card (comCard) e nunca no campo que guarda gente (pessoa da equipe, contato).
+describe('LivreIaCampo, destino no card', () => {
+  const ATRIBUTOS = {
+    contact_attribute: [
+      { attribute_key: 'cpf', attribute_display_name: 'CPF' },
+    ],
+    conversation_attribute: [],
+    card_attribute: [
+      {
+        attribute_key: 'peca',
+        attribute_display_name: 'Peça',
+        attribute_display_type: 'text',
+      },
+      {
+        attribute_key: 'vendedora',
+        attribute_display_name: 'Vendedora',
+        attribute_display_type: 'pessoa',
+      },
+      {
+        attribute_key: 'indicado_por',
+        attribute_display_name: 'Indicado por',
+        attribute_display_type: 'contato',
+      },
+    ],
+  };
+
+  const destinos = comCard =>
+    mount(LivreIaCampo, {
+      props: {
+        campo: { peca: 'campos_extrair', rotulo: 'CAMPOS' },
+        modelValue: [{ chave: 'peca', descricao: 'a peça', destino: '' }],
+        opcoes: {},
+        atributosDo: modelo => ATRIBUTOS[modelo] || [],
+        comCard,
+      },
+      global: {
+        mocks: { $t: chave => chave },
+        stubs: { Button: true, ChoiceSelect: true, Switch: true },
+      },
+    })
+      .findComponent({ name: 'ChoiceSelect' })
+      .props('options')
+      .map(opcao => opcao.value);
+
+  it('com card, oferece o campo do card, sem o de gente', () => {
+    const valores = destinos(true);
+
+    expect(valores).toContain('card.atributos.peca');
+    expect(valores).not.toContain('card.atributos.vendedora');
+    expect(valores).not.toContain('card.atributos.indicado_por');
+    expect(valores).toContain('contato.atributos.cpf');
+  });
+
+  it('sem card, não oferece campo do card', () => {
+    expect(destinos(false).some(valor => valor.startsWith('card.'))).toBe(
+      false
+    );
+  });
+});

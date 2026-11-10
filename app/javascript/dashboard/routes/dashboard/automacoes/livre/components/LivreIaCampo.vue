@@ -20,6 +20,9 @@ const props = defineProps({
   modelValue: { type: [Array, Object, String, Number, Boolean], default: null },
   opcoes: { type: Object, required: true },
   atributosDo: { type: Function, required: true },
+  // G70: o "extrair" também grava em campo do card (gatilho de card ou de
+  // conversa, para quem pode ler cards).
+  comCard: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -51,7 +54,25 @@ const opcoesDeLeitura = computed(() =>
 );
 
 // Onde o "extrair" grava: o nome do contato e da empresa, e os campos
-// personalizados que a conta tem no contato e na conversa.
+// personalizados que a conta tem no contato, na conversa e (G70) no card. O
+// campo do card que guarda gente (pessoa da equipe, contato) fica de fora: a
+// IA não escolhe gente.
+const CAMPOS_DE_GENTE = ['pessoa', 'contato'];
+const camposDoCard = computed(() =>
+  props.comCard
+    ? props
+        .atributosDo('card_attribute')
+        .filter(
+          atributo => !CAMPOS_DE_GENTE.includes(atributo.attribute_display_type)
+        )
+        .map(atributo => ({
+          value: `card.atributos.${atributo.attribute_key}`,
+          label: t(`${I}.DESTINO_GRAVAR.CARD_ATRIBUTO`, {
+            nome: atributo.attribute_display_name,
+          }),
+        }))
+    : []
+);
 const destinosDeGravar = computed(() => [
   { value: 'contato.nome', label: t(`${I}.DESTINO_GRAVAR.CONTATO_NOME`) },
   { value: 'empresa.nome', label: t(`${I}.DESTINO_GRAVAR.EMPRESA_NOME`) },
@@ -67,6 +88,7 @@ const destinosDeGravar = computed(() => [
       nome: atributo.attribute_display_name,
     }),
   })),
+  ...camposDoCard.value,
 ]);
 
 // Computados: o pt_BR chega depois do setup, e uma lista montada antes fica em inglês.

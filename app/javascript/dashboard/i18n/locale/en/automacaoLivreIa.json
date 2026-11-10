@@ -59,7 +59,8 @@
         "CONTATO_NOME": "Contact name",
         "EMPRESA_NOME": "Company name",
         "CONTATO_ATRIBUTO": "Contact: {nome}",
-        "CONVERSA_ATRIBUTO": "Conversation: {nome}"
+        "CONVERSA_ATRIBUTO": "Conversation: {nome}",
+        "CARD_ATRIBUTO": "Card: {nome}"
       },
       "CUSTO": {
         "VALOR": "US$ {valor}",

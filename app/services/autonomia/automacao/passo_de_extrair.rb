@@ -1,6 +1,11 @@
 # O passo "extrair" (#2500 F7): a IA tira dados da conversa (placa, data, valor) e o passo grava onde quem montou
-# mandou: atributo do contato ou da conversa, o nome do contato ou o da empresa. E-mail e telefone não são destino
-# (D4 A).
+# mandou: atributo do contato, da conversa ou do card (G70, termo F7: "grava no contato ou no card"), o nome do contato
+# ou o da empresa. E-mail e telefone não são destino (D4 A).
+#
+# - G70 (decisão 20 do Rodrigo, 10/11, "IA só anota campos"): o card é o alvo (gatilho de card, ou o ramo do "em outro
+#   registro" num card) ou, numa conversa, o card dela (CardDaConversa.ler, com o que quem ligou vê; o card que a própria
+#   execução criou já é o da conversa). Só campo personalizado, nunca o valor protegido (decisão 9). Sem card que quem
+#   ligou veja, o campo não tem onde gravar e conta como ausente. A gravação é o PATCH do card, como quem ligou.
 #
 # - A resposta tem um campo por chave, do tipo do atributo da conta: número para número, moeda e porcentagem, sim/não
 #   para caixa de seleção, uma das opções para lista, data no formato AAAA-MM-DD. Nulo quando o dado não está escrito.
@@ -106,7 +111,21 @@ class Autonomia::Automacao::PassoDeExtrair
   # [ação, id, corpo, chaves dos campos] por lugar.
   def pedidos(valores)
     por_lugar = valores.group_by { |campo, _valor| lugar(campo) }.transform_values(&:to_h)
-    [do_contato(por_lugar[:contato]), da_conversa(por_lugar[:conversa]), da_empresa(por_lugar[:empresa])].compact
+    [do_contato(por_lugar[:contato]), da_conversa(por_lugar[:conversa]), do_card(por_lugar[:card]), da_empresa(por_lugar[:empresa])].compact
+  end
+
+  def do_card(valores)
+    return unless valores
+
+    atributos = valores.transform_keys { |campo| chave_do_atributo(campo) }
+    ['PATCH crm/cards/:id', card.id, { 'card' => { 'custom_attributes' => atributos } }, chaves(valores.keys)]
+  end
+
+  # G70: o card do alvo, ou o da conversa que quem ligou vê; nil sem card.
+  def card
+    return @card if defined?(@card)
+
+    @card = @alvo.is_a?(::Crm::Card) ? @alvo : ::Autonomia::Automacao::CardDaConversa.ler(@conversa, quem_ligou_na_conta)
   end
 
   def do_contato(valores)
@@ -134,6 +153,7 @@ class Autonomia::Automacao::PassoDeExtrair
   def lugar(campo)
     destino = campo['destino']
     return :empresa if destino == 'empresa.nome'
+    return :card if ::Autonomia::Automacao::CardDaConversa.destino_do_card?(destino)
 
     destino.start_with?('conversa.') ? :conversa : :contato
   end
@@ -143,6 +163,7 @@ class Autonomia::Automacao::PassoDeExtrair
     case lugar(campo)
     when :empresa then @conversa.contact&.company
     when :conversa then @conversa
+    when :card then card
     else @conversa.contact
     end
   end
