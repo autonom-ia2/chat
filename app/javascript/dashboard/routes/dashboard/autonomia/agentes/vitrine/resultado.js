@@ -41,9 +41,18 @@ const ehDataIso = texto =>
   texto[7] === '-' &&
   [...texto.split('-').join('')].every(ehDigito);
 
+// O Date empurra a data impossível para outra ("2026-02-31" vira 03/03): se ano, mês e dia não batem com o texto, a
+// data não existe.
+const bateComODia = (data, ano, mes, dia) =>
+  data.getFullYear() === ano &&
+  data.getMonth() === mes - 1 &&
+  data.getDate() === dia;
+
 const dataLegivel = (texto, idioma) => {
   const [ano, mes, dia] = texto.split('-').map(Number);
-  return new Date(ano, mes - 1, dia).toLocaleDateString(idioma);
+  const data = new Date(ano, mes - 1, dia);
+  if (!bateComODia(data, ano, mes, dia)) return texto;
+  return data.toLocaleDateString(idioma);
 };
 
 // "AAAA-MM-DD HH:MM", com ":ss" e fração opcionais, com espaço ou "T" no meio; hora até 23, minuto e segundo até 59.
@@ -78,6 +87,7 @@ const dataComHoraLegivel = (texto, idioma) => {
     .map(Number);
   const [hora, minuto] = [texto.slice(11, 13), texto.slice(14, 16)].map(Number);
   const data = new Date(ano, mes - 1, dia, hora, minuto);
+  if (!bateComODia(data, ano, mes, dia)) return texto;
   const horario = data.toLocaleTimeString(idioma, {
     hour: '2-digit',
     minute: '2-digit',
@@ -262,10 +272,9 @@ const linhaDosIdentificadores = (itens, total, textos) => {
 
 // Uma lista dentro do item aberto: os nomes, os identificadores ou só quantos são (não abre de novo).
 const resumoDentro = (chave, itens, rotulo, total, textos) => {
-  if (!itens.length) return [];
+  if (!rotulo || !itens.length) return [];
   const doIdentificador = linhaDosIdentificadores(itens, total, textos);
   if (doIdentificador) return [doIdentificador];
-  if (!rotulo) return [];
   const legiveis = legiveisDaLista(chave, itens, textos);
   const valor = legiveis
     ? resumoDaLista(legiveis, total, textos)
@@ -333,8 +342,10 @@ const valorDoPar = (item, campo, textos) =>
 // o primeiro faria os campos dele parecerem valer para todos).
 const SEPARADOR_DE_PARES = ' · ';
 const listaSemNome = (rotulo, itens, total, textos) => {
+  // Lista sem rótulo não aparece (coberturas, condicoes), nem pelo identificador nem pelos pares.
+  if (!rotulo) return [];
   const id = campoIdentificador(itens, textos);
-  if (!id) return rotulo ? [[rotulo, quantosSao(itens, total, textos)]] : [];
+  if (!id) return [[rotulo, quantosSao(itens, total, textos)]];
   const ids = identificadores(itens, id, textos);
   const campo = campoDosPares(itens, id, textos);
   if (campo) {

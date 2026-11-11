@@ -63,6 +63,7 @@ const ROTULOS = {
   mm: 'Chuva no dia (mm)',
   observacao: 'Observação',
   ano: 'Ano',
+  dias: 'Dias',
 };
 const dataPt = (ano, mes, dia) =>
   new Date(ano, mes - 1, dia).toLocaleDateString('pt-BR');
@@ -492,6 +493,45 @@ describe('linhasDoResultado', () => {
     expect(em('2026-11-11 03:10', 'en-US')).toEqual([
       ['Data', `${local.toLocaleDateString('en-US')} ${hora}`],
     ]);
+  });
+
+  // Revisão do 99654ff88f: lista sem rótulo não aparece, nem pelo identificador (coberturas fica de fora de propósito).
+  it('a list without a label shows nothing, not even by its identifier', () => {
+    const coberturas = [
+      { ano: 2020, valor: 'R$ 1,00', modelo: 'A' },
+      { ano: 2021, valor: 'R$ 2,00', modelo: 'B' },
+    ];
+    const rotulo = chave =>
+      chave === 'coberturas' ? '' : ROTULOS[chave] || '';
+    expect(linhasDoResultado({ coberturas }, { ...textos, rotulo })).toEqual(
+      []
+    );
+    expect(
+      linhasDoResultado(
+        { coberturas: coberturas.map(({ ano, valor }) => ({ ano, valor })) },
+        { ...textos, rotulo }
+      )
+    ).toEqual([]);
+    expect(
+      linhasDoResultado(
+        { corretores: [{ nome: 'Corretora A', coberturas }] },
+        { ...textos, rotulo }
+      )
+    ).toEqual([['Corretores', 'Corretora A']]);
+    expect(
+      linhasDoResultado({ plano: { coberturas } }, { ...textos, rotulo })
+    ).toEqual([]);
+  });
+
+  it('an impossible date comes as it was sent, with or without the hour', () => {
+    const rotulo = chave => (chave === 'data' ? 'Data' : '');
+    const em = data => linhasDoResultado({ data }, { ...textos, rotulo });
+    [
+      '2026-02-31',
+      '2026-00-10',
+      '2026-02-31 10:00',
+      '2026-00-10 10:00',
+    ].forEach(texto => expect(em(texto)).toEqual([['Data', texto]]));
   });
 
   it('a date with time out of the exact format comes as it was sent', () => {
