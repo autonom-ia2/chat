@@ -314,9 +314,10 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     expect(valor('geracao_solar', 'cidade', 'Potência total (kW)')).toBe(
       '143.834,24'
     );
-    // Cada tipo de consumidor com os sistemas dele, numa linha só. O par de número leva o rótulo do campo (revisão do
-    // #2891, c: é ele que diz a unidade).
-    expect(valor('geracao_solar', 'cidade', 'Sistemas instalados')).toBe(
+    // Cada tipo de consumidor com os sistemas dele, numa linha só.
+    expect(
+      valor('geracao_solar', 'cidade', 'Sistemas por tipo de consumidor')
+    ).toBe(
       'Residencial: 16.577 · Comercial: 1.332 · Industrial: 107 · e mais 5'
     );
     // Cada rótulo aparece uma vez: o total não se repete no detalhe (só solar: sem a linha por tipo de geração).
@@ -336,9 +337,9 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     expect(valor('geracao_solar', 'cep', 'Potência total (kW)')).toBe(
       '54.977,7'
     );
-    expect(valor('geracao_solar', 'cep', 'Sistemas instalados')).toBe(
-      'Comercial: 1.478 · Residencial: 691 · Industrial: 92 · e mais 3'
-    );
+    expect(
+      valor('geracao_solar', 'cep', 'Sistemas por tipo de consumidor')
+    ).toBe('Comercial: 1.478 · Residencial: 691 · Industrial: 92 · e mais 3');
     expect(valor('geracao_solar', 'cep', 'Base atualizada em')).toBe(
       diaF5(2026, 11, 11)
     );

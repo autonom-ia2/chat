@@ -1211,8 +1211,10 @@ describe('linhasDoResultado', () => {
   });
 
   // Revisão do #2891 (c): o par de número na lista com nome levava o rótulo da lista, e o número ficava sem a
-  // unidade ("Estações: A: 12,3"). Com número, a linha leva o rótulo do campo, que diz a unidade (regra B).
-  it('a pair with a number takes the label of the field, which carries the unit', () => {
+  // unidade ("Estações: A: 12,3"). Com número, a linha leva o rótulo do campo quando ele diz a unidade (regra B):
+  // "Distância (km)". Sem unidade no rótulo do campo, fica o da lista, que diz o que é (revisão do #2917: a ANEEL
+  // mostrava "Sistemas instalados" no lugar de "Sistemas por tipo de consumidor").
+  it('a pair with a number takes the label of the field only when it carries the unit', () => {
     expect(
       linhasDoResultado(
         {
@@ -1224,6 +1226,17 @@ describe('linhasDoResultado', () => {
         textos
       )
     ).toEqual([['Distância (km)', 'A: 12,3 · B: 40']]);
+    expect(
+      linhasDoResultado(
+        {
+          cidades: [
+            { nome: 'A', dias_uteis: 20 },
+            { nome: 'B', dias_uteis: 21 },
+          ],
+        },
+        textos
+      )
+    ).toEqual([['Cidades', 'A: 20 · B: 21']]);
     expect(
       linhasDoResultado(
         {

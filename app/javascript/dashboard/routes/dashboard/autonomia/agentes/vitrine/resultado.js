@@ -494,6 +494,9 @@ const listaSemNome = (rotulo, itens, total, textos) => {
 
 // Lista sem rótulo não aparece (coberturas, condicoes) por nenhum caminho: nem o item único, nem o primeiro da lista
 // com nome, nem os identificadores ou os pares.
+// O rótulo que traz a unidade no fim, entre parênteses: "Distância (km)", "Potência total (kW)".
+const rotuloComUnidade = rotulo =>
+  rotulo.endsWith(')') && rotulo.includes(' (');
 const linhasDaLista = (chave, itens, total, textos) => {
   const rotulo = textos.rotulo(chave);
   if (!rotulo || !itens.length) return [];
@@ -508,13 +511,16 @@ const linhasDaLista = (chave, itens, total, textos) => {
     // Varredura P03/P04: cada item com o nome e um só campo com rótulo (a data do feriado), o mesmo em todos: os pares
     // "nome: valor" com o rótulo da lista, de um item ou de vários ("Feriados: Carnaval: 16/02/2026 · …"). Chave de
     // identificação (o código da marca, o CID, a UF) não vira par: a lista mostra só os nomes.
-    // Par de número leva o rótulo do campo, que diz a unidade (revisão do #2891: "Estações: A: 12,3" não dizia km).
+    // Par de número leva o rótulo do campo quando ele diz a unidade (revisão do #2891: "Estações: A: 12,3" não dizia
+    // km). Sem unidade no rótulo do campo, fica o da lista, que diz o que é (revisão do #2917).
     const doPar = campoDosPares(itens, campo, textos);
     if (doPar && !identificaNoPar(doPar)) {
       const pares = paresDoCampo(itens, nomes, doPar, textos);
-      const daLinha = itens.some(item => typeof item[doPar] === 'number')
-        ? textos.rotulo(doPar)
-        : rotulo;
+      const daLinha =
+        itens.some(item => typeof item[doPar] === 'number') &&
+        rotuloComUnidade(textos.rotulo(doPar))
+          ? textos.rotulo(doPar)
+          : rotulo;
       return [
         [daLinha, resumoDaLista(pares, total, textos, SEPARADOR_DE_PARES)],
       ];
