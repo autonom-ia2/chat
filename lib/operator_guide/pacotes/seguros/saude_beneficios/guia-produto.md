@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (255 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (259 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -2704,3 +2704,43 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Abra Mídias na lateral da empresa; 2. Busque pelo nome e combine contato, tipo e período; 3. Abra Visualizar tudo para a tabela; 4. Agrupe por contato e navegue nas páginas; 5. Use Visualizar, Baixar original ou Ir à mensagem.
 - gotchas: considera o vínculo atual do contato com a empresa; mudar esse vínculo move a visualização do histórico permitido; ocorrências repetidas continuam separadas; previews são gerados sob demanda e podem ficar indisponíveis sem impedir o original; a lateral mostra cinco recentes; o catálogo cobre arquivos armazenados, incluindo notas autorizadas, e anexos externos ficam na conversa de origem; o período usa o fuso de relatórios da conta, UTC quando não configurado.
 - nav_target: `relationships_company_media`
+
+### Ver a lista de pessoas e empresas (Relacionamentos novo)
+- intent: Onde vejo meus clientes?; Quem parou de falar comigo?; Como acho uma pessoa pelo nome, telefone ou CPF?; Como mando mensagem para várias pessoas de uma vez?; Onde ficam as empresas?; Quem não quer receber mensagem?
+- onde_fica: Menu lateral > Relacionamentos. Com as telas novas ligadas na conta, o menu abre direto na lista, com as abas Pessoas e Empresas.
+- rota: `relationships_home` - `/app/accounts/:accountId/relationships`
+- gate: feature flag `relationships_navigation`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage` ou `attribute_manage`
+- pre_requisitos: telas novas de Relacionamentos ligadas na conta (relacionamentos_novo) e a navegação de Relacionamentos; poder ver contatos
+- passos: 1. Abra Relacionamentos; 2. Leia a frase do topo e clique no botão dela para ver o grupo de que ela fala (por exemplo Ver quem sumiu); 3. Ou escolha um grupo pronto: Todos, Clientes, Falou há pouco, Sumiu há 1 a 3 meses, Sumiu há mais de 3 meses, Nunca conversou, Não quer mensagens; 4. Procure pelo nome, telefone, e-mail, empresa ou CPF, ou abra Mais filtros (Empresa, Etiqueta, Cidade, Chegou em); 5. Clique em Conversar na linha da pessoa, ou no nome para abrir a ficha; 6. Para agir com várias de uma vez, marque as pessoas e use a barra que aparece: Mandar mensagem, Criar cards, Etiqueta ou Apagar.
+- gotchas: "Falou há pouco" e "Sumiu" contam só mensagem que a pessoa mandou, campanha enviada não conta; o número de cada grupo acompanha a busca e os filtros; ao mandar mensagem em grupo, a tela diz antes quem recebe e quem fica de fora e por quê (sem telefone ou pediu para não receber); quem está em Não quer mensagens não entra em campanha nem recebe mensagem automática, mas dá para conversar um a um; na aba Empresas os grupos são Todas, Com clientes, Sem pessoas e Sem conversa há 3 meses; com as telas novas desligadas, o menu abre a página antiga.
+- nav_target: `relationships_home`
+
+### Abrir a ficha da pessoa (Relacionamentos novo)
+- intent: Onde vejo tudo de um cliente?; Como marco alguém como cliente?; Como mudo o telefone ou o e-mail de uma pessoa?; Onde vejo as conversas e os cards dela?; Como libero quem pediu para não receber mensagem?; De onde essa pessoa veio?
+- onde_fica: Relacionamentos > aba Pessoas > clicar no nome da pessoa
+- rota: `relacionamentos_pessoa` - `/app/accounts/:accountId/relacionamentos/pessoas/:contactId`
+- gate: feature flag `relacionamentos_novo`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage` ou `attribute_manage`
+- pre_requisitos: telas novas de Relacionamentos ligadas na conta; poder ver contatos (alterar exige poder gerenciar contatos)
+- passos: 1. Abra Relacionamentos e clique no nome da pessoa; 2. No topo, use Conversar, Novo card ou Lembrete; 3. Se ela já comprou, clique em Marcar como cliente; 4. Para mudar os dados, clique em Alterar no cartão Informações; 5. Role para ver Conversas, Cards, Notas, Arquivos e De onde veio.
+- gotchas: telefone e e-mail aparecem só no topo; quem pediu para não receber mostra uma faixa amarela dizendo o que acontece e, quando dá, o botão Liberar (pede confirmação); recusa que veio de cancelamento de e-mail ou de prospecção não é liberada pela ficha; a ficha mostra só as conversas e os cards que você pode ver; valor de card aparece só para quem pode ver valores.
+- nav_target: `relacionamentos_pessoa`
+
+### Abrir a ficha da empresa (Relacionamentos novo)
+- intent: Onde vejo as pessoas de uma empresa?; Como mando mensagem para todo mundo de uma empresa?; Como mudo o CNPJ ou o site da empresa?; Onde vejo as conversas e os cards da empresa?
+- onde_fica: Relacionamentos > aba Empresas > clicar no nome da empresa (ou no nome da empresa na ficha de uma pessoa)
+- rota: `relacionamentos_empresa` - `/app/accounts/:accountId/relacionamentos/empresas/:companyId`
+- gate: feature flag `relacionamentos_novo`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage` ou `attribute_manage`
+- pre_requisitos: telas novas de Relacionamentos ligadas na conta; Empresas habilitadas na conta; poder ver contatos
+- passos: 1. Abra Relacionamentos, vá à aba Empresas e clique no nome; 2. Use Mandar mensagem para falar com as pessoas da empresa; 3. Clique em Alterar para mudar nome, CNPJ ou site; 4. Role para ver as pessoas, as conversas e os cards da empresa.
+- gotchas: Mandar mensagem abre sempre e diz quem recebe e quem fica de fora e por quê; as conversas e os cards são os das pessoas ligadas à empresa hoje; quem pediu para não receber aparece marcado na lista de pessoas da empresa.
+- nav_target: `relacionamentos_empresa`
+
+### Trazer minha lista de pessoas (planilha)
+- intent: Como importo meus contatos?; Como subo uma planilha de clientes?; Tenho uma lista no Excel, como coloco aqui?; Trouxe a lista errada, como desfaço?; Onde vejo as listas que já trouxe?
+- onde_fica: Relacionamentos > botão Trazer minha lista (no topo da lista de pessoas)
+- rota: `relacionamentos_trazer` - `/app/accounts/:accountId/relacionamentos/trazer`
+- gate: feature flag `relacionamentos_novo`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage` ou `attribute_manage`
+- pre_requisitos: telas novas de Relacionamentos ligadas na conta; poder trazer contatos; uma planilha Excel ou CSV com nome e telefone ou e-mail
+- passos: 1. Abra Relacionamentos e clique em Trazer minha lista; 2. Envie a planilha (Excel ou CSV); 3. Responda às perguntas, uma por vez (por exemplo, se essas pessoas já são clientes e de quem é o telefone); 4. Confira: quantas pessoas achei, as linhas que precisam de você e o que vou guardar de cada coluna; 5. Conserte ou deixe de fora as linhas com problema; 6. Clique em Trazer e acompanhe a barra até o Pronto; 7. Para voltar atrás, use Desfazer na lista que aparece embaixo da tela.
+- gotchas: quem já estava aqui não é duplicado, só ganha o que faltava; nada entra antes do Trazer; a prévia do Desfazer mostra quem sai, quem fica e o que volta ao valor de antes; Desfazer não tem prazo; pessoa nova que já conversou ou recebeu campanha não é apagada no Desfazer; planilha sem nome e sem telefone ou e-mail não é aceita e a tela diz o que falta.
+- nav_target: `relacionamentos_trazer`
