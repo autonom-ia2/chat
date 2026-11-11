@@ -205,7 +205,7 @@
       "etapas": [
         {
           "nome": "enviar",
-          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=fora-do-segmento",
           "esperar": "[data-relacionamentos=\"historico\"] [data-lista]",
           "pausa": 1500,
           "pagina_inteira": true
@@ -307,7 +307,7 @@
         },
         {
           "nome": "desfazer",
-          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=fora-do-segmento",
           "passos": [
             {
               "esperar": "[data-relacionamentos=\"historico\"] [data-lista]"
@@ -323,25 +323,25 @@
         },
         {
           "nome": "erro-nao-e-planilha",
-          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio&planilha=nao_e_planilha",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=fora-do-segmento&planilha=nao_e_planilha",
           "esperar": "[data-relacionamentos=\"erro-da-planilha\"]",
           "pausa": 800
         },
         {
           "nome": "erro-planilha-vazia",
-          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio&planilha=vazia",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=fora-do-segmento&planilha=vazia",
           "esperar": "[data-relacionamentos=\"erro-da-planilha\"]",
           "pausa": 800
         },
         {
           "nome": "erro-sem-contato",
-          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio&planilha=sem_contato",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=fora-do-segmento&planilha=sem_contato",
           "esperar": "[data-relacionamentos=\"erro-da-planilha\"]",
           "pausa": 800
         },
         {
           "nome": "lendo-planilha",
-          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio&planilha=lendo",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=fora-do-segmento&planilha=lendo",
           "esperar": "[data-relacionamentos=\"lendo-planilha\"]",
           "pausa": 800
         },
@@ -360,7 +360,7 @@
         },
         {
           "nome": "continuar-sem-responder",
-          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=fora-do-segmento",
           "passos": [
             {
               "esperar": "[data-relacionamentos=\"historico\"] [data-lista]"

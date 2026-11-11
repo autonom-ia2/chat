@@ -377,9 +377,17 @@
         },
         {
           "nome": "painel-da-conversa",
-          "url": "/app/accounts/{conta}/conversations/1?demo=cheio",
+          "url": "/app/accounts/{conta}/conversations/2?demo=cheio",
           "esperar": "[data-carteira=\"painel-seguro\"]",
-          "pausa": 2500
+          "pausa": 2500,
+          "passos": [
+            {
+              "esperar": "button:has(.i-ph-user-bold)"
+            },
+            {
+              "clicar": "button:has(.i-ph-user-bold)"
+            }
+          ]
         },
         {
           "nome": "painel-gaveta",
@@ -395,21 +403,45 @@
         },
         {
           "nome": "painel-sem-seguro",
-          "url": "/app/accounts/{conta}/conversations/1?demo=cheio&demo-carteira=vazio",
+          "url": "/app/accounts/{conta}/conversations/2?demo=cheio&demo-carteira=vazio",
           "esperar": "[data-carteira=\"painel-guardar-de-fora\"]",
-          "pausa": 2000
+          "pausa": 2000,
+          "passos": [
+            {
+              "esperar": "button:has(.i-ph-user-bold)"
+            },
+            {
+              "clicar": "button:has(.i-ph-user-bold)"
+            }
+          ]
         },
         {
           "nome": "painel-carregando",
-          "url": "/app/accounts/{conta}/conversations/1?demo=cheio&demo-carteira=carregando",
+          "url": "/app/accounts/{conta}/conversations/2?demo=cheio&demo-carteira=carregando",
           "esperar": "[data-carteira=\"painel-carregando\"]",
-          "pausa": 1000
+          "pausa": 1000,
+          "passos": [
+            {
+              "esperar": "button:has(.i-ph-user-bold)"
+            },
+            {
+              "clicar": "button:has(.i-ph-user-bold)"
+            }
+          ]
         },
         {
           "nome": "painel-erro",
-          "url": "/app/accounts/{conta}/conversations/1?demo=cheio&demo-carteira=erro",
+          "url": "/app/accounts/{conta}/conversations/2?demo=cheio&demo-carteira=erro",
           "esperar": "[data-carteira=\"painel-erro\"]",
-          "pausa": 1000
+          "pausa": 1000,
+          "passos": [
+            {
+              "esperar": "button:has(.i-ph-user-bold)"
+            },
+            {
+              "clicar": "button:has(.i-ph-user-bold)"
+            }
+          ]
         }
       ]
     },
@@ -1039,8 +1071,14 @@
         },
         {
           "nome": "de-fora",
-          "url": "/app/accounts/{conta}/conversations/1?demo=cheio",
+          "url": "/app/accounts/{conta}/conversations/2?demo=cheio",
           "passos": [
+            {
+              "esperar": "button:has(.i-ph-user-bold)"
+            },
+            {
+              "clicar": "button:has(.i-ph-user-bold)"
+            },
             {
               "esperar": "[data-carteira=\"painel-guardar-de-fora\"]"
             },
@@ -1142,8 +1180,14 @@
         },
         {
           "nome": "nao-achei-a-data",
-          "url": "/app/accounts/{conta}/conversations/1?demo=cheio",
+          "url": "/app/accounts/{conta}/conversations/2?demo=cheio",
           "passos": [
+            {
+              "esperar": "button:has(.i-ph-user-bold)"
+            },
+            {
+              "clicar": "button:has(.i-ph-user-bold)"
+            },
             {
               "esperar": "[data-carteira=\"painel-guardar-de-fora\"]"
             },
@@ -1164,8 +1208,14 @@
         },
         {
           "nome": "vazio",
-          "url": "/app/accounts/{conta}/conversations/1?demo=cheio&caso=de_fora_sem_arquivos",
+          "url": "/app/accounts/{conta}/conversations/2?demo=cheio&caso=de_fora_sem_arquivos",
           "passos": [
+            {
+              "esperar": "button:has(.i-ph-user-bold)"
+            },
+            {
+              "clicar": "button:has(.i-ph-user-bold)"
+            },
             {
               "esperar": "[data-carteira=\"painel-guardar-de-fora\"]"
             },
@@ -1180,8 +1230,14 @@
         },
         {
           "nome": "carregando",
-          "url": "/app/accounts/{conta}/conversations/1?demo=cheio&caso=de_fora_carregando",
+          "url": "/app/accounts/{conta}/conversations/2?demo=cheio&caso=de_fora_carregando",
           "passos": [
+            {
+              "esperar": "button:has(.i-ph-user-bold)"
+            },
+            {
+              "clicar": "button:has(.i-ph-user-bold)"
+            },
             {
               "esperar": "[data-carteira=\"painel-guardar-de-fora\"]"
             },
@@ -1196,8 +1252,14 @@
         },
         {
           "nome": "erro",
-          "url": "/app/accounts/{conta}/conversations/1?demo=cheio&caso=de_fora_erro",
+          "url": "/app/accounts/{conta}/conversations/2?demo=cheio&caso=de_fora_erro",
           "passos": [
+            {
+              "esperar": "button:has(.i-ph-user-bold)"
+            },
+            {
+              "clicar": "button:has(.i-ph-user-bold)"
+            },
             {
               "esperar": "[data-carteira=\"painel-guardar-de-fora\"]"
             },
@@ -1212,8 +1274,14 @@
         },
         {
           "nome": "painel-sem-seguro",
-          "url": "/app/accounts/{conta}/conversations/1?demo=cheio&demo-carteira=vazio",
+          "url": "/app/accounts/{conta}/conversations/2?demo=cheio&demo-carteira=vazio",
           "passos": [
+            {
+              "esperar": "button:has(.i-ph-user-bold)"
+            },
+            {
+              "clicar": "button:has(.i-ph-user-bold)"
+            },
             {
               "esperar": "[data-carteira=\"painel-guardar-de-fora\"]"
             },
