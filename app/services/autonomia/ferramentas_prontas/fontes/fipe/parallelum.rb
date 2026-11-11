@@ -20,6 +20,7 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
   end
 
   # A lista parcial dos modelos do ano (o prazo acabou no meio dos códigos) não vai ao cache: a próxima consulta lê todos.
+  # `parcial` guarda o motivo do corte ("parallelum.prazo_total"), que `PeloNome` repassa quando nada serve.
   def self.validade_da_resposta(dados)
     dados['parcial'] ? 0 : validade
   end
@@ -53,8 +54,8 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
   # Os modelos da marca que têm o ano-modelo: os códigos de ano da marca (um por combustível, "2020-1", "2020-5") e os
   # modelos de TODOS eles (revisão do #2906: só os 3 primeiros deixavam de fora a versão de outro combustível). A lista
   # fica no cache da consulta (`MODELOS_DO_ANO`), e o preço de outra versão do mesmo ano não lê os códigos de novo.
-  # O prazo que acaba depois de ao menos um código lido: o que veio serve, marcado `parcial` (sem cache; e `PeloNome` não
-  # diz que o ano não existe por ela).
+  # O prazo que acaba depois de ao menos um código lido: o que veio serve, com `parcial` = o motivo do corte (sem cache;
+  # e `PeloNome` não diz que o ano não existe por ela, nem que uma versão lida é a única).
   def modelos_do_ano(params)
     lidos = []
     codigos_do_ano(params).each do |ano|
@@ -64,7 +65,7 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
   rescue Falha => e
     raise unless lidos.any? && SEM_TEMPO.include?(e.motivo)
 
-    { 'modelos' => lidos.uniq { |item| item['codigo'] }, 'parcial' => true }
+    { 'modelos' => lidos.uniq { |item| item['codigo'] }, 'parcial' => "#{NOME}.#{e.motivo}" }
   end
 
   # Os códigos de ano da marca naquele ano-modelo, um por combustível ("2020-1", "2020-5").
@@ -74,9 +75,9 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
   end
 
   # Sem o ano, os anos que existem e a faixa; com ele, o preço de cada combustível daquele ano (até `MAX_ANOS_COM_PRECO`).
-  # Vários modelos (as versões do ano, `PeloNome`): o preço de cada um, do mais barato ao mais caro.
+  # Várias versões do ano (`PeloNome`, o modelo vem com os `exemplos`): o preço de cada um, do mais barato ao mais caro.
   def precos(params)
-    return versoes(params) if params['modelo'].is_a?(Array)
+    return versoes(params) if params['modelo'].is_a?(Hash)
 
     do_veiculo = params['codigo_fipe'] ? "/#{params['codigo_fipe']}" : "/brands/#{params['marca']}/models/#{params['modelo']}"
     anos = anos_do_veiculo(params, do_veiculo)
@@ -89,10 +90,9 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
     { 'precos' => escolhidos.map { |ano| preco_do_ano(params, do_veiculo, ano) } }
   end
 
-  # `params['modelo']`: as duas versões de exemplo primeiro, e depois as outras do ano (`PeloNome#do_ano`), só para
-  # saber se há outras.
+  # `params['modelo']`: as versões de exemplo (até `MAX_VERSOES`) e se há outras no ano (`PeloNome#do_ano`).
   def versoes(params)
-    precos = params['modelo'].first(Fipe::MAX_VERSOES).filter_map do |modelo|
+    precos = params['modelo']['exemplos'].first(Fipe::MAX_VERSOES).filter_map do |modelo|
       um = params.merge('modelo' => modelo)
       do_veiculo = "/brands/#{params['marca']}/models/#{modelo}"
       ano = do_ano(anos_do_veiculo(um, do_veiculo), params['ano']).first
@@ -101,16 +101,15 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
     raise NaoEncontrado if precos.empty?
 
     ordenados = { 'precos' => precos.sort_by { |preco| preco['valor'].to_f } }
-    return ordenados unless params['modelo'].many?
-
-    ordenados.merge('observacao' => observacao_das_versoes(params['modelo'].size, precos.size))
+    ordenados.merge('observacao' => observacao_das_versoes(params['modelo']['ha_outras'], precos.size))
   end
 
-  # Sempre que há mais de uma versão no ano: um preço só é o de uma delas; dois, das 2 (e "há outras" com mais de 2).
-  def observacao_das_versoes(versoes, precos)
+  # Sempre há mais de uma versão aqui (ou a lista parcial, que pode ter outras): um preço só é o de uma delas; dois, das 2,
+  # e "há outras" quando há.
+  def observacao_das_versoes(ha_outras, precos)
     return Fipe::UMA_DAS_VERSOES if precos == 1
 
-    versoes > Fipe::MAX_VERSOES ? Fipe::VERSOES_E_OUTRAS : Fipe::VERSOES
+    ha_outras ? Fipe::VERSOES_E_OUTRAS : Fipe::VERSOES
   end
 
   # O ano que o veículo não tem: os anos que ele tem, para o agente dizer ao cliente (varredura F13).

@@ -83,26 +83,29 @@ module Autonomia::FerramentasProntas::Fontes::Fipe::PeloNome
 
   # As versões que têm o ano. Várias: duas delas de exemplo, a de nome mais curto e a de nome mais longo, e o preço das
   # duas (`Parallelum#versoes`), com o aviso de que o exato depende da versão. Não é o mínimo e o máximo garantidos: isso
-  # pediria o preço de cada versão, uma chamada por versão à reserva de teto diário (decisão do Rodrigo, #2906). Os
-  # códigos vão com as duas primeiro e as outras depois, só para o texto dizer "há outras" quando há.
+  # pediria o preço de cada versão, uma chamada por versão à reserva de teto diário (decisão do Rodrigo, #2906). O modelo
+  # vai como `{ 'exemplos' => [códigos], 'ha_outras' => bool }`, para o texto dizer "há outras" quando há.
+  # A lista parcial (o prazo acabou no meio dos códigos do ano) segue sempre como várias versões, com "há outras": a
+  # versão lida pode não ser a única, e as outras podem estar no que não foi lido (revisão do #2906).
   def do_ano(achados, params, apoio)
-    no_ano = versoes_no_ano(achados, params, apoio)
+    no_ano, parcial = versoes_no_ano(achados, params, apoio)
     return [nil, Falta.new(campo: 'ano', orientacao: format(ANO_QUE_NAO_EXISTE, ano: params['ano']))] if no_ano.empty?
-    return [no_ano.first['codigo'], nil] if no_ano.one?
+    return [no_ano.first['codigo'], nil] if no_ano.one? && !parcial
 
     exemplos = no_ano.minmax_by { |item| item['nome'].to_s.length }.pluck('codigo').uniq
-    [exemplos + (no_ano.pluck('codigo') - exemplos), nil]
+    [{ 'exemplos' => exemplos, 'ha_outras' => parcial || no_ano.size > exemplos.size }, nil]
   end
 
-  # As versões achadas que têm o ano. A lista parcial (o prazo acabou no meio dos códigos do ano) sem nenhuma delas: a
-  # versão pode estar no que não foi lido, então é "não consegui", nunca "o ano não existe".
+  # As versões achadas que têm o ano, e se a lista é parcial. A lista parcial sem nenhuma delas: a versão pode estar no
+  # que não foi lido, então é "não consegui" (com o motivo real do corte), nunca "o ano não existe".
   def versoes_no_ano(achados, params, apoio)
     lidos = apoio.dados(Fipe::MODELOS_DO_ANO, params.slice('tipo', 'marca', 'ano')) || {}
     codigos = Array(lidos['modelos']).pluck('codigo')
     no_ano = achados.select { |item| codigos.include?(item['codigo']) }
-    raise Autonomia::FerramentasProntas::Apoio::SemResposta, ['parallelum.tempo_esgotado'] if no_ano.empty? && lidos['parcial']
+    parcial = lidos['parcial'].present?
+    raise Autonomia::FerramentasProntas::Apoio::SemResposta, [lidos['parcial']] if no_ano.empty? && parcial
 
-    no_ano
+    [no_ano, parcial]
   end
 
   def pelo_nome(lista, nome)

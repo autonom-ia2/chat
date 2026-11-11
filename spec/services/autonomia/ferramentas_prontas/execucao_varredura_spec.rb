@@ -209,7 +209,22 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
 
         expect(saida['situacao']).to eq('encontrado')
         expect(saida['dados']['precos'].sole).to include('modelo' => 'Gol 1.6 Power')
+        # Uma versão lida numa lista parcial não é "a versão única": pode haver outras no que não foi lido.
+        expect(saida['dados']['observacao']).to eq(Autonomia::FerramentasProntas::Fontes::Fipe::UMA_DAS_VERSOES)
         expect(loja).not_to have_received(:write).with(a_string_including(':modelos_do_ano:'), anything, anything)
+      end
+
+      it 'F12: duas versoes lidas numa lista parcial: o texto diz que ha outras' do
+        fonte_responde("#{vw}/years/2020-1/models", [{ code: '2', name: 'Gol 1.6 Power' }, { code: '1', name: 'Gol 1.0 Mi Total Flex 8V 4p' }])
+        fonte_responde("#{vw}/models/2/years", [{ code: '2020-1', name: '2020 Gasolina' }])
+        fonte_responde("#{vw}/models/2/years/2020-1", preco_de('Gol 1.6 Power', 'R$ 52.500,50'))
+        fonte_responde("#{vw}/models/1/years", [{ code: '2020-1', name: '2020 Gasolina' }])
+        fonte_responde("#{vw}/models/1/years/2020-1", preco_de('Gol 1.0 Mi Total Flex 8V 4p', 'R$ 41.000,00'))
+
+        dados = preco('modelo' => 'Gol', 'ano' => 2020)['dados']
+
+        expect(dados['precos'].pluck('modelo')).to eq(['Gol 1.0 Mi Total Flex 8V 4p', 'Gol 1.6 Power'])
+        expect(dados['observacao']).to eq(Autonomia::FerramentasProntas::Fontes::Fipe::VERSOES_E_OUTRAS)
       end
 
       it 'F12: a versao que so estaria nos codigos nao lidos vira "nao consegui", nunca "o ano nao existe"' do
@@ -218,6 +233,24 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
         saida = preco('modelo' => 'Gol', 'ano' => 2020)
 
         expect(saida['situacao']).to eq('nao_consegui_consultar')
+        expect(Autonomia::FerramentasProntas::Uso.sole.motivos).to eq('parallelum.tempo_esgotado' => 1)
+      end
+
+      # O motivo que vai ao registro é o que aconteceu, não um fixo: aqui o prazo da consulta inteira.
+      it 'F12: sem nenhuma versao na lista parcial, o motivo registrado e o real (prazo_total)' do
+        fonte_responde("#{vw}/years/2020-1/models", [{ code: '2380', name: 'Fusca 1300' }])
+        allow(Autonomia::FerramentasProntas::ClienteHttp).to receive(:new).and_wrap_original do |novo, *args, **opcoes|
+          novo.call(*args, **opcoes).tap do |cliente|
+            allow(cliente).to receive(:get_json).and_wrap_original do |get, host, caminho, **resto|
+              raise Autonomia::FerramentasProntas::Provedor::Falha, 'prazo_total' if caminho.include?('/years/2020-5/models')
+
+              get.call(host, caminho, **resto)
+            end
+          end
+        end
+
+        expect(preco('modelo' => 'Gol', 'ano' => 2020)['situacao']).to eq('nao_consegui_consultar')
+        expect(Autonomia::FerramentasProntas::Uso.sole.motivos).to eq('parallelum.prazo_total' => 1)
       end
     end
 
