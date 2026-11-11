@@ -4,9 +4,14 @@
 setor, Reclame Aqui). Nenhum cadastro, login ou formulário. O que não foi achado está escrito como "não achei".
 Frases marcadas **inferência** são leitura nossa, não fato visto na página.
 
-Limites: não abrimos a central de ajuda do Quiver nem o manual do Agger; não há nota de loja de app nem avaliação
-independente para Segura, Flui e Ikaros; das ferramentas internacionais, parte veio de resumo de busca e só as páginas
-marcadas "reaberta" foram lidas inteiras.
+Foram duas rodadas. A primeira leu sites e imprensa e ficou rasa. A segunda (seção 8) abriu centrais de ajuda, notas de
+versão, o manual do Agger Gestor, os termos de uso e a política de privacidade da Segura, e testou dez hipóteses de
+lacuna.
+
+Limites que continuam: nenhum produto foi usado por dentro (não temos login em nenhum); nenhum vídeo de demonstração
+pôde ser lido; o Reclame Aqui bloqueou a abertura das páginas, então as queixas vêm de títulos e trechos de busca; não
+há voz independente de corretor sobre Segura, Flui e Ikaros. "Não achei" não prova "não existe": fornecedor brasileiro
+publica mais propaganda do que documentação.
 
 ## 1. Quem faz o quê
 
@@ -16,7 +21,7 @@ marcadas "reaberta" foram lidas inteiras.
 | Planilha | sim | layout de vidas | sim, "em até 7 dias" | sim | não achei | não achei | não achei | não achei |
 | PDF de apólice | sim, com IA | não achei | não achei | sim, seguradoras reconhecidas | sim, por seguradora | sim | não achei | importa documentos (CRMSeguros) |
 | Direto das seguradoras | parceiras | operadoras (plano Pro) | não achei | 26 integradas | "mais de 34" | robôs de importação | sim (plano Enterprise) | depende de terceiros (TW) |
-| Ficha com apólices e linha do tempo | não achei | não achei | não achei | não achei | não achei | cliente e apólices numa tela | não achei | não achei |
+| Ficha com apólices e linha do tempo | diz ter "visão 360°"; tela não mostrada | não achei | não achei | não achei | histórico de conversa no cadastro (Quiver Zap) | ficha por cliente, sem linha do tempo única | não achei | TW alega histórico único |
 | Aviso de renovação | sim, no WhatsApp do corretor | sim, aviso e BI | não achei | filtro de pendentes | e-mail e SMS | fim de vigência e última parcela | distribui por produtor | 30, 15 e 7 dias |
 | Funil de renovação | sim | não | não | não achei | não achei | não achei | não achei | sim |
 | Cotação na renovação | sim, com aprovação do corretor | não | não | multicálculo à parte | multicálculo à parte | multicálculo | multicálculo | não |
@@ -36,8 +41,9 @@ marcadas "reaberta" foram lidas inteiras.
 
 ## 3. Onde todos falham (nosso espaço)
 
-1. **Ninguém mostra a ficha do cliente com os seguros e a história dele.** Só o Agger descreve cliente e apólices na
-   mesma tela. É exatamente a ficha nova deste épico.
+1. **Ninguém mostra como é a ficha do cliente com os seguros e a história dele.** A Segura diz ter "visão 360°" e o
+   Agger tem ficha por cliente, mas nenhuma fonte mostra uma linha do tempo única (conversa, proposta, renovação). É a
+   ficha nova deste épico.
 2. **A importação cobre "as principais seguradoras".** Fora delas, cadastro à mão (Segfy). Ler o PDF de qualquer
    seguradora e dizer o que não entendeu é diferencial.
 3. **Renovação é relatório, não trabalho andando.** No Segfy é um filtro com vínculo manual. Funil com cotação e
@@ -102,3 +108,63 @@ CRMs: knowledge.hubspot.com (saved views; restore CRM changes) · intercom.help/
 attio.com/help (CSV imports) · help.folk.app (file imports).
 Leitores leigos: nngroup.com (writing for lower-literacy users) · design-system.service.gov.uk (question pages; check
 answers).
+
+## 8. Segunda rodada (11/11/2026, tarde)
+
+### 8.1 Segura e Helena, mais fundo
+
+- **Para o corretor:** a Helena lê apólices, interpreta cláusulas e responde sobre "oportunidades na carteira e perfis
+  de clientes", no portal e no WhatsApp. Não achamos um exemplo literal de pergunta ("quem vence este mês").
+- **Para o segurado:** conversa pelo WhatsApp com base na apólice. O corretor escolhe quais clientes recebem resposta
+  automática; nos outros, ela sugere e o corretor envia. Se envia o arquivo da apólice: não achei.
+- **Proposta:** "somente é enviada após revisão e aprovação do corretor". Não há modo automático descrito.
+- **Carteira:** planilha, PDF ou importação das seguradoras parceiras (15 na página inicial). O acesso completo exige
+  que a Segura seja a corretora cadastrada na seguradora. — é a maior amarra do modelo.
+- **Negócio:** grátis para o corretor; a seguradora paga sobre a venda. O módulo de WhatsApp é assinatura à parte, sem
+  valor público. Número de corretores varia entre fontes (3 mil, 4 mil, 9 mil). Rodada semente de R$ 45 milhões.
+- **Limites dos próprios termos:** a IA pode errar e a responsabilidade pela resposta é do corretor.
+
+### 8.2 Como é uma renovação nos sistemas de gestão (documentação de uso)
+
+- **Segfy:** relatório de renovação em PDF ou Excel, depois o corretor "pode começar a preparar cotações". Renovação
+  manual cria um registro novo e o corretor digita. Para algumas seguradoras a cotação de renovação sai só no portal
+  delas. Nenhum artigo mostra a mensagem indo ao segurado.
+- **Agger:** abrir o contrato, "Renovar apólice", revisar, gravar. Ao importar o PDF novo com os campos-chave iguais, o
+  vencido vira "renovado". "Seguro perdido" vira prospecção. WhatsApp é link para o WhatsApp Web, não API oficial.
+- **Quiver:** renovação automática só para auto vindo do multicálculo do ano anterior, rodando à noite. Distribuição
+  de renovações entre produtores e "renovações não tratadas" com Perder/Agendar. Quiver Zap é pacote à parte.
+- **Em todos:** motivo de não renovação não é campo; não há relatório de retenção; não há boas-vindas automáticas;
+  cobrança de parcela atrasada é relatório ou alerta alegado, sem régua mostrada.
+- **Queixas:** são de contrato e suporte (multa, cobrança, lentidão), não de renovação. Não temos voz de usuário sobre
+  renovação.
+
+### 8.3 Novos nomes achados
+
+- **SegZap:** lê PDF de apólice, responde sobre cobertura e lista vencimentos de 30 dias, para o corretor. Barato.
+- **Segia:** lista quase tudo (leitura de apólice, sinistro, boleto, família, indicação), só pelos nomes. Promessa não
+  verificada.
+
+### 8.4 Dez hipóteses de lacuna
+
+| # | Hipótese | Quem faz | Veredito | Certeza |
+|---|---|---|---|---|
+| H1 | Lead manda a apólice que já tem (de outra corretora); o sistema guarda o vencimento e chama na hora | Canopy Connect, nos EUA | lacuna no Brasil | média |
+| H2 | Apólice explicada ao segurado em palavras simples, logo após a emissão | Helena e SegZap respondem quando perguntam; ninguém envia sozinho | parcial | média |
+| H3 | Segurado confirma o que mudou antes da renovação, no WhatsApp | não achei | lacuna | média |
+| H4 | Aviso de sinistro pelo WhatsApp | TW Seguros | já existe | alta |
+| H5 | Parcela atrasada com aviso antes de o seguro cair | Quiver alega; ninguém mostra | parcial | média |
+| H6 | Família e empresa como unidade | InsuredMine, fora | lacuna provável, dor sem número | baixa |
+| H7 | Sinal de risco de não renovar | AgencyZoom, por regra fixa | parcial | média |
+| H8 | Pedir indicação na hora certa | Segia lista | evidência fraca | baixa |
+| H9 | Dono pergunta sobre a carteira e age a partir da resposta | SegZap e Segura respondem; ação direta não achei | parcial | média |
+| H10 | Prova de atendimento junto da apólice | Segia lista | lacuna provável | média |
+
+Dores com fonte: pesquisa do Sincor-SP com cerca de 900 corretores mostra que só 44% oferecem outro seguro sempre.
+Atraso de parcela não cancela sozinho: a seguradora precisa notificar (Súmula 616 do STJ). O corretor responde por
+falha no dever de informar, e guardar o registro do atendimento é a proteção principal. Não há número público de
+taxa de renovação por ramo no Brasil.
+
+Fontes da segunda rodada: revistaapolice.com.br · cqcs.com.br · sincor.org.br · startups.com.br · sonhoseguro.com.br ·
+cnnbrasil.com.br · termos de uso e política de privacidade da Segura · ajuda.segfy.com (renovação manual, pendentes,
+relatório) · manual do Agger Gestor · helponline.quiverpro.net.br (notas de versão, renovação automática) ·
+segbox.com/plataformas/segzap · segiaoficial.com · usecanopy.com · insuredmine.com · segs.com.br · migalhas.com.br.
