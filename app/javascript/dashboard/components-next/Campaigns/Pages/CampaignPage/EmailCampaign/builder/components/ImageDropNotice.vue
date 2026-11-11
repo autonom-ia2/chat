@@ -28,15 +28,15 @@ const uploadingMessage = computed(() =>
 </script>
 
 <template>
-  <!-- Always mounted (and empty when idle): a live region already in the page announces the lines
-       that appear inside it. -->
+  <!-- The one live region of the notice, always mounted (empty when idle): a screen reader announces
+       only changes inside a region that already existed, so the lines inside have no role of their own
+       (a second role would announce them twice). -->
   <div
     aria-live="polite"
     class="pointer-events-none absolute inset-x-0 top-3 z-10 flex flex-col items-center gap-2 px-4"
   >
     <p
       v-if="uploadingCount > 0"
-      role="status"
       class="pointer-events-auto m-0 flex items-center gap-2 rounded-xl border border-n-weak bg-n-solid-1 px-4 py-2.5 text-sm text-n-slate-12 shadow-md"
     >
       <span class="i-lucide-loader-circle size-4 animate-spin" />
@@ -44,7 +44,6 @@ const uploadingMessage = computed(() =>
     </p>
     <div
       v-if="notice"
-      role="alert"
       class="pointer-events-auto flex max-w-xl flex-wrap items-center gap-3 rounded-xl border border-n-amber-6 bg-n-amber-3 px-4 py-2.5 text-sm text-n-amber-12 shadow-md"
     >
       <span class="i-lucide-circle-alert size-4 shrink-0" />
