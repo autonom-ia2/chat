@@ -2,9 +2,9 @@
   "empresa": {
     "provedor": "brasilapi",
     "dados": {
-      "cnpj": "33.000.167/0001-01",
-      "razao_social": "PETROLEO BRASILEIRO S A PETROBRAS",
-      "nome_fantasia": "PETROBRAS - EDISE",
+      "cnpj": "11.222.333/0001-81",
+      "razao_social": "EMPRESA EXEMPLO LTDA",
+      "nome_fantasia": "EXEMPLO",
       "situacao": "ATIVA",
       "data_da_situacao": "2005-11-03",
       "abertura": "1966-09-28",

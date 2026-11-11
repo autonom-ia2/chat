@@ -81,7 +81,9 @@ module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
     valor.to_s.squish.presence
   end
 
-  # O PNCP manda 0 quando o valor estimado é sigiloso: zero não é o valor da compra, e o campo sai.
+  # O PNCP manda 0 quando o valor estimado é sigiloso ou não foi informado: zero não é o valor da compra, e o campo sai.
+  # A consulta de contratações não traz o indicador de sigilo (conferido em 11/11/2026 na resposta real de Uberlândia:
+  # nenhum campo `orcamentoSigiloso*`); ele só existe por item, em outra chamada, e não é pedido aqui.
   def valor(numero)
     numero.to_f.round(2) if numero.is_a?(Numeric) && numero.positive?
   end

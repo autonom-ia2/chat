@@ -40,14 +40,16 @@ const dataLegivel = (texto, idioma) => {
   return new Date(ano, mes - 1, dia).toLocaleDateString(idioma);
 };
 
-// Dinheiro (a unidade "R$", ou o campo valor_*: o valor estimado da compra) tem separador de milhar; ano e código não.
+// Dinheiro (a unidade "R$", ou o campo valor_*: o valor estimado da compra) tem separador de milhar e de 2 a 4 casas
+// (a PTAX tem 4); ano e código não.
 const ehDinheiro = (chave, unidade) =>
   unidade.startsWith('R$') || String(chave).startsWith('valor_');
 
-const numeroLegivel = (numero, idioma, unidade, comMilhar = false) => {
+const numeroLegivel = (numero, idioma, unidade, dinheiro = false) => {
   const texto = new Intl.NumberFormat(idioma, {
+    minimumFractionDigits: dinheiro ? 2 : 0,
     maximumFractionDigits: 4,
-    useGrouping: comMilhar,
+    useGrouping: dinheiro,
   }).format(numero);
   if (!unidade) return texto;
   return unidade.startsWith('R$')
@@ -55,7 +57,8 @@ const numeroLegivel = (numero, idioma, unidade, comMilhar = false) => {
     : `${texto} ${unidade}`;
 };
 
-// "-- Parafusos autoperfurantes" (o recuo da tabela da NCM) -> "Parafusos autoperfurantes".
+// "-- Parafusos autoperfurantes" (o recuo da tabela da NCM) -> "Parafusos autoperfurantes". Só no nome do item e na
+// descrição: em outro texto o traço pode ser o sinal ("-0,5").
 const semTracoInicial = texto => {
   let resto = texto;
   while (resto.startsWith('-') || resto.startsWith(' ')) resto = resto.slice(1);
@@ -78,7 +81,7 @@ const valorLegivel = (chave, valor, textos, unidade) => {
     );
   }
   if (ehDataIso(valor)) return dataLegivel(valor, textos.idioma);
-  return semTracoInicial(String(valor));
+  return chave === 'descricao' ? semTracoInicial(String(valor)) : String(valor);
 };
 
 const resumoDaLista = (nomes, total, textos) => {
@@ -141,12 +144,13 @@ const linhasSimples = (objeto, rotuloDe, textos, omitir = '') => {
   });
 };
 
-// O primeiro item de uma lista com nome. Item único: os detalhes dele (o nome já está na lista). Mais de um: só com
-// MINIMO_PARA_ABRIR campos com rótulo além do nome, e com o nome dele na primeira linha.
+// O primeiro item de uma lista com nome. Item único (a lista inteira tem um só, contado pelo total da fonte): os
+// detalhes dele (o nome já está na lista). Mais de um: só com MINIMO_PARA_ABRIR campos com rótulo além do nome, e com o
+// nome dele na primeira linha.
 const MINIMO_PARA_ABRIR = 2;
-const primeiroAberto = (itens, campo, textos) => {
+const primeiroAberto = (itens, campo, total, textos) => {
   const detalhes = linhasSimples(itens[0], textos.rotulo, textos, campo);
-  if (itens.length === 1) return detalhes;
+  if (Math.max(total ?? 0, itens.length) === 1) return detalhes;
   if (detalhes.length < MINIMO_PARA_ABRIR) return [];
   const nome = semTracoInicial(itens[0][campo]);
   return [[textos.rotulo('primeiro_da_lista'), nome], ...detalhes];
@@ -166,7 +170,7 @@ const linhasDaLista = (chave, itens, total, textos) => {
     const resumo = rotulo
       ? [[rotulo, resumoDaLista(nomes, total, textos)]]
       : [];
-    return [...resumo, ...primeiroAberto(itens, campo, textos)];
+    return [...resumo, ...primeiroAberto(itens, campo, total, textos)];
   }
   // Lista de objetos sem nome (os preços de cada ano na tabela do carro): o primeiro aberto e quantos são.
   const primeiro = ehObjeto(itens[0])

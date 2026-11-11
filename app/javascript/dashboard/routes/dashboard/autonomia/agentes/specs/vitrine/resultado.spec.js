@@ -295,13 +295,52 @@ describe('linhasDoResultado', () => {
     ]);
   });
 
+  it('the dash is taken only from names and descriptions, never from another text', () => {
+    expect(
+      linhasDoResultado(
+        { observacao: '-0,5 ponto no mês', descricao: '- Tachas e pregos' },
+        {
+          ...textos,
+          rotulo: chave =>
+            ({ observacao: 'Observação', descricao: 'Descrição' })[chave] || '',
+        }
+      )
+    ).toEqual([
+      ['Observação', '-0,5 ponto no mês'],
+      ['Descrição', 'Tachas e pregos'],
+    ]);
+  });
+
+  // "1 item" é a lista inteira de um só: com o total maior (a fonte mandou 1 de 5), é o primeiro de muitos.
+  it('one item sent out of a bigger total follows the rule of many', () => {
+    expect(
+      linhasDoResultado(
+        {
+          total: 5,
+          corretores: [{ nome: 'CORRETORA EXEMPLO LTDA', situacao: 'Ativo' }],
+        },
+        textos
+      )
+    ).toEqual([['Corretores', 'CORRETORA EXEMPLO LTDA e mais 4']]);
+  });
+
   it('money has the thousands separator; the full name equal to the name does not repeat', () => {
     expect(
       linhasDoResultado({ compras: [{ valor_estimado: 1789431.34 }] }, textos)
     ).toEqual([['Valor estimado (R$)', '1.789.431,34']]);
     expect(
+      linhasDoResultado({ compras: [{ valor_estimado: 52224 }] }, textos)
+    ).toEqual([['Valor estimado (R$)', '52.224,00']]);
+    expect(
       linhasDoResultado({ venda: 12345.5, unidade: 'R$' }, textos)
-    ).toEqual([['Venda', 'R$ 12.345,5']]);
+    ).toEqual([['Venda', 'R$ 12.345,50']]);
+    // A PTAX tem 4 casas: dinheiro mostra no mínimo 2 e no máximo 4.
+    expect(
+      linhasDoResultado({ compra: 5.5834, venda: 5.5, unidade: 'R$' }, textos)
+    ).toEqual([
+      ['Compra', 'R$ 5,5834'],
+      ['Venda', 'R$ 5,50'],
+    ]);
     expect(
       linhasDoResultado(
         {

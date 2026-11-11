@@ -54,6 +54,19 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     ).toEqual([]);
   });
 
+  it('todo arquivo de dado real tem ao menos uma consulta (chave sem "_")', () => {
+    const semConsulta = Object.entries(porFonte)
+      .filter(
+        ([, consultas]) =>
+          !Object.keys(consultas).some(chave => !chave.startsWith('_'))
+      )
+      .map(([fonte]) => fonte);
+    expect(
+      semConsulta,
+      'Arquivo de dado real sem consulta: grave ao menos uma pelo script (ver README.md)'
+    ).toEqual([]);
+  });
+
   it.each(CONSULTAS)(
     '%s / %s: mostra linhas em pt_BR e em en',
     (fonte, consulta) => {
@@ -64,7 +77,12 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
 
   it('F1–F3: endereço, empresa, CPF, carro, feriados, Banco Central, cidades, DDD, localização e banco', () => {
     expect(valor('cep', 'endereco', 'Rua')).toBe('Praça da Sé');
-    expect(valor('cnpj', 'empresa', 'Razão social')).toContain('PETROBRAS');
+    // CNPJ anonimizado pelo script (a razão social do MEI traz o nome da pessoa).
+    expect(valor('cnpj', 'empresa', 'CNPJ')).toBe('11.222.333/0001-81');
+    expect(valor('cnpj', 'empresa', 'Razão social')).toBe(
+      'EMPRESA EXEMPLO LTDA'
+    );
+    expect(valor('cnpj', 'empresa', 'Situação')).toBe('ATIVA');
     expect(valor('cpf', 'conferir', 'Número válido?')).toBe('S');
     expect(valor('fipe', 'marcas', 'Marcas')).toContain('Acura');
     expect(valor('fipe', 'modelos', 'Modelos')).toContain('ONIX');

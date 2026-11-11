@@ -154,8 +154,9 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(saida.to_json).not_to include('Fulana', 'outro.exemplo')
     end
 
-    # Item real do PNCP (Uberlândia, 05/11/2026; em spec/javascript/.../dados-reais/compras_governo.json): o valor
-    # sigiloso vem como 0. Zero não é o valor da compra, então o campo sai e o agente não diz "R$ 0".
+    # Item real do PNCP (Uberlândia, 05/11/2026; em
+    # app/javascript/dashboard/routes/dashboard/autonomia/agentes/specs/vitrine/dados-reais/compras_governo.json): o valor
+    # sigiloso ou não informado vem como 0. Zero não é o valor da compra, então o campo sai e o agente não diz "R$ 0".
     it 'valor estimado sigiloso (0 no PNCP): o campo nao vai ao agente' do
       sigilosa = { orgaoEntidade: { cnpj: '15126437000305', razaoSocial: 'EMPRESA BRASILEIRA DE SERVICOS HOSPITALARES - EBSERH' },
                    unidadeOrgao: { nomeUnidade: 'HOSPITAL DAS CLIN DA UNIV FED DE UBERLÂNDIA' }, anoCompra: 2026, sequencialCompra: 4546,

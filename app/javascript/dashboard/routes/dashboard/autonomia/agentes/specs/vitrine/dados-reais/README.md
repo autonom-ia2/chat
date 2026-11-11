@@ -6,17 +6,18 @@ Como foi feito, em 11/11/2026: uma chamada real por consulta, pelo próprio adap
 `app/services/autonomia/ferramentas_prontas/fontes`, depois o `refinar` da consulta e o `Resposta.enxugar`), sem cache.
 Cada arquivo guarda, por consulta, o provedor que respondeu e o `dados`. Sem IA e sem fonte paga.
 
-O script está versionado: `script/ferramentas_prontas/gravar_dados_reais.rb` (a lista de pedidos é o `CASOS` dele). Ele
-desliga o cache (`Rails.cache` vira NullStore), não usa conta nem contador e anonimiza o corretor. Para gravar de novo,
-no ambiente de teste e nunca no de produção:
+O script está versionado: `script/ferramentas_prontas/gravar_dados_reais.rb`, que roda `dados_reais.rb` ao lado (os
+pedidos ficam no `CASOS`, a anonimização no `ANONIMIZACAO`). Ele desliga o cache (`Rails.cache` vira NullStore), não usa
+conta nem contador e só roda no ambiente de teste. Cada fonte está no `ANONIMIZACAO`, como `:sem_pessoa_fisica` (com o
+motivo) ou com o anonimizador dela; fonte fora da lista aborta antes de qualquer chamada. Para gravar de novo:
 
 ```sh
 RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais.rb            # todas
 RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais.rb ncm chuva  # só essas
 ```
 
-Fonte nova: ponha os pedidos dela no `CASOS`, rode só ela, confira o arquivo (pessoa física anonimizada, CNPJ de
-exemplo onde for empresa privada) e ponha no spec uma asserção do essencial. O spec falha enquanto uma fonte do
+Fonte nova: ponha os pedidos dela no `CASOS` e a decisão dela no `ANONIMIZACAO`, rode só ela, confira o arquivo e ponha
+no spec uma asserção do essencial. O spec falha enquanto uma fonte do
 catálogo da vitrine não tiver arquivo aqui.
 
 Fonte paga (a BigDataCorp, na F7): não se chama a fonte para gravar a fixture. O arquivo é feito à mão a partir da
@@ -29,7 +30,7 @@ adaptador: a ordem da NCM (o código de 8 dígitos antes do de 4) e a compra de 
 | Arquivo | Consulta e pedido | Provedor que respondeu |
 |---|---|---|
 | cep.json | endereco: 01001-000 | BrasilAPI |
-| cnpj.json | empresa: Petrobras (sociedade de economia mista, dado público) | BrasilAPI |
+| cnpj.json | empresa: consultado com o CNPJ da Petrobras, gravado anonimizado | BrasilAPI |
 | cpf.json | conferir: 111.444.777-35 (número de exemplo; conta local, sem rede) | cálculo local |
 | fipe.json | marcas e modelos (carros, GM, "onix"); preco 004517-9 2020 | BrasilAPI; Parallelum (a BrasilAPI deu erro no preço) |
 | feriados.json | feriados de 2026; dias úteis até 30/11/2026 | BrasilAPI |
@@ -48,6 +49,11 @@ adaptador: a ordem da NCM (o código de 8 dígitos antes do de 4) e a compra de 
 | produtos_seguradoras.json | seguradoras "Allianz"; produtos Allianz, riscos cibernéticos | Open Insurance Brasil |
 | corretor_susep.json | por_nome "corretora de seguros", pessoa jurídica | SUSEP |
 
-Anonimizado: no `corretor_susep.json`, o nome e o registro de cada corretora foram trocados por "CORRETORA EXEMPLO N
-LTDA" e um número fictício (situação e ramos são os reais). O resto é dado público de órgão, empresa pública,
-seguradora ou tabela oficial; nenhum CPF real e nenhum nome de pessoa física.
+Anonimizado pelo script:
+- `corretor_susep.json`: o nome e o registro de cada corretor viram "CORRETORA EXEMPLO N LTDA" e um número fictício
+  (situação e ramos são os reais);
+- `cnpj.json`: número, razão social e nome fantasia de exemplo (11.222.333/0001-81, "EMPRESA EXEMPLO LTDA"). O CNPJ do
+  MEI traz o nome da pessoa na razão social, e a fonte não diz de antemão se é MEI: todo CNPJ gravado sai assim.
+
+O resto é dado público de órgão, empresa pública, seguradora ou tabela oficial; nenhum CPF real e nenhum nome de pessoa
+física.
