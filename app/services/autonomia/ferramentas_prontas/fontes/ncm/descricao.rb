@@ -85,12 +85,17 @@ module Autonomia::FerramentasProntas::Fontes::Ncm::Descricao
     (ncm::POSICAO...nivel.digitos.length).filter_map { |tamanho| indice[nivel.digitos.first(tamanho)] }
   end
 
-  # Vieram os níveis de cima: um até a subposição (6 dígitos), que diz o que é a mercadoria, e tantos quantos os traços
-  # do nível ("-- Parafusos autoperfurantes" fica abaixo da posição e de uma subposição). O item regional (os dois
-  # últimos dígitos, sem traço: "De parafuso") pede ao menos o de cima.
+  # Vieram os níveis de cima: a posição, que diz o que é a mercadoria ("Animais vivos da espécie bovina"), e tantos
+  # quantos os traços do nível ("-- Parafusos autoperfurantes" fica abaixo da posição e de uma subposição). Na tabela
+  # sem a posição de 4 dígitos (o 95.03 não existe na BrasilAPI), a subposição "9503.00" faz o papel dela (revisão do
+  # #2917: "0102.29.19 Outros" sem o 01.02 contava como inteira).
   def inteira?(nivel, indice)
     pais = acima(nivel, indice)
-    pais.size >= nivel.tracos && pais.any? { |pai| pai.digitos.length <= ncm::SUBPOSICAO }
+    pais.size >= nivel.tracos && pais.any? { |pai| posicao?(pai) }
+  end
+
+  def posicao?(nivel)
+    nivel.digitos.length == ncm::POSICAO || (nivel.digitos.length == ncm::SUBPOSICAO && nivel.digitos.end_with?('00'))
   end
 
   def minuscula(texto)

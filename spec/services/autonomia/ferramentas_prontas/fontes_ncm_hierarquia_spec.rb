@@ -134,6 +134,32 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     end
   end
 
+  # Revisão do #2917 (B): "0102.29.19 | Outros" com a subposição 0102.29 e sem a posição 01.02 contava como inteira, e o
+  # "bovino" da posição sumia. A posição tem de ter vindo; na tabela sem a posição de 4 dígitos (95.03 não existe na
+  # BrasilAPI, 404), a subposição "9503.00" faz o papel dela.
+  describe 'a descricao inteira pede a posicao' do
+    it '"0102.29.19 Outros" real sem o 01.02: vai marcado' do
+      vieram = %w[0102.29 0102.29.1 0102.29.19]
+      sem_a_posicao = real('ncm_busca_0102.json').select { |dado| vieram.include?(dado['codigo']) }
+      fonte_responde("#{api}?search=outros", sem_a_posicao)
+
+      item = buscar('outros')['dados']['itens'].find { |achado| achado['codigo'] == '0102.29.19' }
+
+      expect(item['observacao']).to eq(ncm::CONFIRA)
+    end
+
+    it 'com a posicao 01.02, nao; e o 9503.00 vale como posicao' do
+      fonte_responde("#{api}?search=outros", fixture('ncm_busca_0102.json'))
+      fonte_responde("#{api}?search=brinquedos", fixture('ncm_busca_brinquedos.json'))
+
+      bovinos = buscar('outros')['dados']['itens'].find { |achado| achado['codigo'] == '0102.29.19' }
+      brinquedos = buscar('brinquedos')['dados']['itens'].select { |achado| ncm.digitos(achado['codigo']).length == 8 }
+
+      expect(bovinos).not_to have_key('observacao')
+      expect(brinquedos).to all(satisfy { |achado| !achado.key?('observacao') })
+    end
+  end
+
   # O modelo escolheu o grupo: UMA chamada, pela posição dele (a BrasilAPI não acha "9503.00.3", e "0901.2" vem sem o
   # 09.01, que diz o material), e só os códigos da nota de dentro do grupo.
   describe 'buscar pelo codigo do grupo' do
