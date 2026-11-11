@@ -172,27 +172,36 @@ const numeroLegivel = (
 
 // O dinheiro do mesmo item com as mesmas casas (varredura P12: "R$ 5,5834" e "R$ 5,5840" na compra e na venda): a
 // maior entre os valores de dinheiro dele, de 2 a 4. `unidadeDaChave` dá a unidade de cada campo.
+// As casas contam depois do arredondamento a MAX_CASAS: o resto da conta (0,1 + 0,2 = 0,30000000000000004) não é casa
+// (revisão do #2891). O inteiro, por grande que seja (1e21), não tem casa.
 const casasDecimais = numero => {
-  const texto = String(Math.abs(numero));
-  if (texto.includes('e')) return MAX_CASAS;
-  const [, fracao = ''] = texto.split('.');
+  if (Number.isInteger(numero)) return 0;
+  const arredondado = Number(Math.abs(numero).toFixed(MAX_CASAS));
+  const [, fracao = ''] = String(arredondado).split('.');
   return fracao.length;
 };
-const casasDoDinheiro = (objeto, unidadeDaChave) =>
+const casasDosValores = valores =>
   Math.min(
     MAX_CASAS,
     Math.max(
       MIN_CASAS_DO_DINHEIRO,
-      ...Object.entries(objeto)
-        .filter(
-          ([chave, valor]) =>
-            typeof valor === 'number' &&
-            !ehIdentificacao(chave) &&
-            ehDinheiro(chave, unidadeDaChave(chave))
-        )
-        .map(([, valor]) => casasDecimais(valor))
+      ...valores.filter(valor => typeof valor === 'number').map(casasDecimais)
     )
   );
+const casasDoDinheiro = (objeto, unidadeDaChave) =>
+  casasDosValores(
+    Object.entries(objeto)
+      .filter(
+        ([chave]) =>
+          !ehIdentificacao(chave) && ehDinheiro(chave, unidadeDaChave(chave))
+      )
+      .map(([, valor]) => valor)
+  );
+// O mesmo campo numa linha de pares, com as mesmas casas em todos os itens (revisão do #2891: "R$ 5,3512 · R$ 5,40").
+const textosDoCampo = (itens, campo, textos) => ({
+  ...textos,
+  casas: casasDosValores(itens.map(item => item[campo])),
+});
 
 // "-- Parafusos autoperfurantes" (o recuo da tabela da NCM) -> "Parafusos autoperfurantes". Só no nome do item e na
 // descrição: em outro texto o traço pode ser o sinal ("-0,5").
@@ -386,10 +395,16 @@ const SEPARADOR_DE_PARES = ' · ';
 
 // O campo da linha de pares: o único campo com rótulo além do identificador, o mesmo em todos os itens, com valor
 // simples. Item sem o campo, ou com ele nulo, entra com "—". '' quando os itens têm campos diferentes ou mais de um.
+// O campo que só repete o nome (o nome completo igual ao nome) não conta (revisão do #2891: "Itaú: Itaú").
 const campoDosPares = (itens, id, textos) => {
   const campos = new Set(
     itens.flatMap(item =>
-      Object.keys(item).filter(chave => chave !== id && textos.rotulo(chave))
+      Object.keys(item).filter(
+        chave =>
+          chave !== id &&
+          textos.rotulo(chave) &&
+          !repete(item, chave, item[chave])
+      )
     )
   );
   if (campos.size !== 1) return '';
@@ -408,9 +423,19 @@ const valorDoPar = (item, campo, textos) =>
     ? textos.nenhumValor
     : legivel(campo, item[campo], textos);
 
+// Os pares "nome: valor" de um campo, com as mesmas casas em todos os itens.
+const paresDoCampo = (itens, nomes, campo, textos) => {
+  const doCampo = textosDoCampo(itens, campo, textos);
+  return itens.map(
+    (item, i) => `${nomes[i]}: ${valorDoPar(item, campo, doCampo)}`
+  );
+};
+
 // Varredura P13: lista identificada de até MAXIMO_PARA_PARES itens mostra, para cada campo com rótulo que todos têm (até
 // MAXIMO_DE_CAMPOS, na ordem do primeiro item), uma linha de pares ("Previsão do mercado (mediana): 2026: 5,2195 % ·
 // 2027: 4,9005 %"), em vez de abrir só o primeiro: sem isso, a previsão de 2027 sumia.
+// Um rótulo aparece uma vez só (revisão do #2891): o campo com o rótulo do identificador ou de um campo anterior (estado
+// e uf, ano e ano_modelo) fica de fora.
 const MAXIMO_PARA_PARES = 5;
 const MAXIMO_DE_CAMPOS = 4;
 const camposComuns = (itens, id, textos) =>
@@ -419,15 +444,20 @@ const camposComuns = (itens, id, textos) =>
       chave =>
         chave !== id &&
         textos.rotulo(chave) &&
+        textos.rotulo(chave) !== textos.rotulo(id) &&
         itens.every(item => ehPrimitivo(item[chave]))
+    )
+    .filter(
+      (chave, indice, campos) =>
+        campos.findIndex(
+          outro => textos.rotulo(outro) === textos.rotulo(chave)
+        ) === indice
     )
     .slice(0, MAXIMO_DE_CAMPOS);
 const linhasDePares = (itens, ids, id, textos) =>
   camposComuns(itens, id, textos).map(campo => [
     textos.rotulo(campo),
-    itens
-      .map((item, i) => `${ids[i]}: ${legivel(campo, item[campo], textos)}`)
-      .join(SEPARADOR_DE_PARES),
+    paresDoCampo(itens, ids, campo, textos).join(SEPARADOR_DE_PARES),
   ]);
 
 // Lista sem nome e com mais de um item. Todos com o mesmo único campo além do identificador (a chuva de cada dia): os
@@ -441,9 +471,7 @@ const listaSemNome = (rotulo, itens, total, textos) => {
   const ids = identificadores(itens, id, textos);
   const campo = campoDosPares(itens, id, textos);
   if (campo) {
-    const pares = itens.map(
-      (item, i) => `${ids[i]}: ${valorDoPar(item, campo, textos)}`
-    );
+    const pares = paresDoCampo(itens, ids, campo, textos);
     return [
       [
         textos.rotulo(campo),
@@ -476,13 +504,15 @@ const linhasDaLista = (chave, itens, total, textos) => {
     // Varredura P03/P04: cada item com o nome e um só campo com rótulo (a data do feriado), o mesmo em todos: os pares
     // "nome: valor" com o rótulo da lista, de um item ou de vários ("Feriados: Carnaval: 16/02/2026 · …"). Chave de
     // identificação (o código da marca, o CID, a UF) não vira par: a lista mostra só os nomes.
+    // Par de número leva o rótulo do campo, que diz a unidade (revisão do #2891: "Estações: A: 12,3" não dizia km).
     const doPar = campoDosPares(itens, campo, textos);
     if (doPar && !identificaNoPar(doPar)) {
-      const pares = itens.map(
-        (item, i) => `${nomes[i]}: ${valorDoPar(item, doPar, textos)}`
-      );
+      const pares = paresDoCampo(itens, nomes, doPar, textos);
+      const daLinha = itens.some(item => typeof item[doPar] === 'number')
+        ? textos.rotulo(doPar)
+        : rotulo;
       return [
-        [rotulo, resumoDaLista(pares, total, textos, SEPARADOR_DE_PARES)],
+        [daLinha, resumoDaLista(pares, total, textos, SEPARADOR_DE_PARES)],
       ];
     }
     return [
