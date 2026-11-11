@@ -177,6 +177,50 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(a_request(:get, "#{vw}/models/2/years")).not_to have_been_made
     end
 
+    # Revisão do #2906 (BAIXO): mais de uma versão no ano e só um preço respondendo. Sem a observação, o agente dava o preço
+    # de uma versão como o do modelo.
+    it 'F12: com varias versoes e so um preco, a observacao diz que e o de uma das versoes' do
+      fonte_responde("#{vw}/years/2020-5/models", [{ code: '1', name: 'Gol 1.0 Mi Total Flex 8V 4p' }, { code: '9', name: 'Gol GTi 2.0' }])
+      fonte_responde("#{vw}/models/9/years", [{ code: '2019-1', name: '2019 Gasolina' }])
+      fonte_responde("#{vw}/models/1/years", [{ code: '2020-5', name: '2020 Flex' }])
+      fonte_responde("#{vw}/models/1/years/2020-5", preco_de('Gol 1.0 Mi Total Flex 8V 4p', 'R$ 41.000,00'))
+
+      dados = preco('modelo' => 'Gol', 'ano' => 2020)['dados']
+
+      expect(dados['precos'].sole).to include('modelo' => 'Gol 1.0 Mi Total Flex 8V 4p')
+      expect(dados['observacao']).to include('uma das versões', 'pergunte a versão')
+    end
+
+    # Revisão do #2906 (BAIXO): o prazo acabou depois de ler parte dos códigos do ano. O que veio serve, sem cache, em vez
+    # de "não consegui"; a versão que estaria nos códigos não lidos não vira "o ano não existe".
+    context 'when the deadline ends in the middle of the year codes (o prazo acaba no meio dos codigos do ano)' do
+      before do
+        fonte_responde("#{vw}/years/2020-1/models", [{ code: '2', name: 'Gol 1.6 Power' }])
+        fonte_lenta("#{vw}/years/2020-5/models")
+      end
+
+      it 'F12: devolve o preco com os modelos ja lidos, e a lista parcial nao vai ao cache' do
+        loja = cache_em_memoria
+        allow(loja).to receive(:write).and_call_original
+        fonte_responde("#{vw}/models/2/years", [{ code: '2020-1', name: '2020 Gasolina' }])
+        fonte_responde("#{vw}/models/2/years/2020-1", preco_de('Gol 1.6 Power', 'R$ 52.500,50'))
+
+        saida = preco('modelo' => 'Gol', 'ano' => 2020)
+
+        expect(saida['situacao']).to eq('encontrado')
+        expect(saida['dados']['precos'].sole).to include('modelo' => 'Gol 1.6 Power')
+        expect(loja).not_to have_received(:write).with(a_string_including(':modelos_do_ano:'), anything, anything)
+      end
+
+      it 'F12: a versao que so estaria nos codigos nao lidos vira "nao consegui", nunca "o ano nao existe"' do
+        fonte_responde("#{vw}/years/2020-1/models", [{ code: '2380', name: 'Fusca 1300' }])
+
+        saida = preco('modelo' => 'Gol', 'ano' => 2020)
+
+        expect(saida['situacao']).to eq('nao_consegui_consultar')
+      end
+    end
+
     # Revisão do #2906: cada combustível tem o seu código de ano, e só os 3 primeiros eram lidos.
     it 'F12: o ano com 4 ou mais combustiveis le todos os codigos do ano' do
       fonte_responde("#{vw}/years", %w[1 2 3 4 5].map { |codigo| { code: "2020-#{codigo}", name: "2020 #{codigo}" } })

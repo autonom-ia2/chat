@@ -86,13 +86,23 @@ module Autonomia::FerramentasProntas::Fontes::Fipe::PeloNome
   # pediria o preço de cada versão, uma chamada por versão à reserva de teto diário (decisão do Rodrigo, #2906). Os
   # códigos vão com as duas primeiro e as outras depois, só para o texto dizer "há outras" quando há.
   def do_ano(achados, params, apoio)
-    do_ano = Array(apoio.dados(Fipe::MODELOS_DO_ANO, params.slice('tipo', 'marca', 'ano'))&.dig('modelos')).pluck('codigo')
-    no_ano = achados.select { |item| do_ano.include?(item['codigo']) }
+    no_ano = versoes_no_ano(achados, params, apoio)
     return [nil, Falta.new(campo: 'ano', orientacao: format(ANO_QUE_NAO_EXISTE, ano: params['ano']))] if no_ano.empty?
     return [no_ano.first['codigo'], nil] if no_ano.one?
 
     exemplos = no_ano.minmax_by { |item| item['nome'].to_s.length }.pluck('codigo').uniq
     [exemplos + (no_ano.pluck('codigo') - exemplos), nil]
+  end
+
+  # As versões achadas que têm o ano. A lista parcial (o prazo acabou no meio dos códigos do ano) sem nenhuma delas: a
+  # versão pode estar no que não foi lido, então é "não consegui", nunca "o ano não existe".
+  def versoes_no_ano(achados, params, apoio)
+    lidos = apoio.dados(Fipe::MODELOS_DO_ANO, params.slice('tipo', 'marca', 'ano')) || {}
+    codigos = Array(lidos['modelos']).pluck('codigo')
+    no_ano = achados.select { |item| codigos.include?(item['codigo']) }
+    raise Autonomia::FerramentasProntas::Apoio::SemResposta, ['parallelum.tempo_esgotado'] if no_ano.empty? && lidos['parcial']
+
+    no_ano
   end
 
   def pelo_nome(lista, nome)

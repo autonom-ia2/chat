@@ -8,6 +8,8 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
   # A chave gratuita (1.000 pedidos por dia em vez de 500), opcional: sem ela, a fonte funciona igual. Só o nome da
   # variável fica no código. O teto global acompanha (`TetoDoProvedor.tetos`).
   CHAVE = 'AUTONOMIA_PRONTAS_FIPE_TOKEN'.freeze
+  # Os motivos do cliente HTTP que querem dizer "acabou o tempo": a chamada ou a consulta inteira.
+  SEM_TEMPO = %w[tempo_esgotado prazo_total].freeze
 
   def self.chave
     chave_do_ambiente(CHAVE)
@@ -15,6 +17,11 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
 
   def self.cabecalhos
     chave ? { 'X-Subscription-Token' => chave } : {}
+  end
+
+  # A lista parcial dos modelos do ano (o prazo acabou no meio dos códigos) não vai ao cache: a próxima consulta lê todos.
+  def self.validade_da_resposta(dados)
+    dados['parcial'] ? 0 : validade
   end
 
   def consultar(consulta, params)
@@ -46,13 +53,24 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
   # Os modelos da marca que têm o ano-modelo: os códigos de ano da marca (um por combustível, "2020-1", "2020-5") e os
   # modelos de TODOS eles (revisão do #2906: só os 3 primeiros deixavam de fora a versão de outro combustível). A lista
   # fica no cache da consulta (`MODELOS_DO_ANO`), e o preço de outra versão do mesmo ano não lê os códigos de novo.
+  # O prazo que acaba depois de ao menos um código lido: o que veio serve, marcado `parcial` (sem cache; e `PeloNome` não
+  # diz que o ano não existe por ela).
   def modelos_do_ano(params)
-    anos = itens(base(params, "/brands/#{params['marca']}/years"))
-    codigos = anos.select { |item| codigo_de_ano?(item['codigo']) && item['codigo'].split('-').first.to_i == params['ano'] }
-    modelos = codigos.flat_map do |ano|
-      itens(base(params, "/brands/#{params['marca']}/years/#{ano['codigo']}/models"))
+    lidos = []
+    codigos_do_ano(params).each do |ano|
+      lidos.concat(itens(base(params, "/brands/#{params['marca']}/years/#{ano['codigo']}/models")))
     end
-    { 'modelos' => modelos.uniq { |item| item['codigo'] } }
+    { 'modelos' => lidos.uniq { |item| item['codigo'] } }
+  rescue Falha => e
+    raise unless lidos.any? && SEM_TEMPO.include?(e.motivo)
+
+    { 'modelos' => lidos.uniq { |item| item['codigo'] }, 'parcial' => true }
+  end
+
+  # Os códigos de ano da marca naquele ano-modelo, um por combustível ("2020-1", "2020-5").
+  def codigos_do_ano(params)
+    anos = itens(base(params, "/brands/#{params['marca']}/years"))
+    anos.select { |item| codigo_de_ano?(item['codigo']) && item['codigo'].split('-').first.to_i == params['ano'] }
   end
 
   # Sem o ano, os anos que existem e a faixa; com ele, o preço de cada combustível daquele ano (até `MAX_ANOS_COM_PRECO`).
@@ -83,9 +101,16 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
     raise NaoEncontrado if precos.empty?
 
     ordenados = { 'precos' => precos.sort_by { |preco| preco['valor'].to_f } }
-    return ordenados unless precos.many?
+    return ordenados unless params['modelo'].many?
 
-    ordenados.merge('observacao' => params['modelo'].size > Fipe::MAX_VERSOES ? Fipe::VERSOES_E_OUTRAS : Fipe::VERSOES)
+    ordenados.merge('observacao' => observacao_das_versoes(params['modelo'].size, precos.size))
+  end
+
+  # Sempre que há mais de uma versão no ano: um preço só é o de uma delas; dois, das 2 (e "há outras" com mais de 2).
+  def observacao_das_versoes(versoes, precos)
+    return Fipe::UMA_DAS_VERSOES if precos == 1
+
+    versoes > Fipe::MAX_VERSOES ? Fipe::VERSOES_E_OUTRAS : Fipe::VERSOES
   end
 
   # O ano que o veículo não tem: os anos que ele tem, para o agente dizer ao cliente (varredura F13).

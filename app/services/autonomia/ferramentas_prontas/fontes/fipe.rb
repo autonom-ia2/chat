@@ -30,6 +30,9 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
   # Os textos que vão nos dados cabem em `Resposta::MAX_TEXTO` (160): o resto seria cortado.
   VERSOES = 'Preço das 2 versões desse modelo no ano: o exato depende da versão. Se o cliente quiser o exato, pergunte a ' \
             'versão.'.freeze
+  # Várias versões no ano e só um preço respondeu (a outra versão não tem preço naquele ano): o preço é de uma delas.
+  UMA_DAS_VERSOES = 'Preço de uma das versões desse modelo no ano, como exemplo (há outras): o exato depende da versão. ' \
+                    'Se o cliente quiser o exato, pergunte a versão.'.freeze
   # Mais de 2 versões no ano: "há outras" só aqui.
   VERSOES_E_OUTRAS = 'Preço de 2 versões desse modelo no ano, como exemplo (há outras): não é o mínimo nem o máximo da ' \
                      'tabela. Para o exato, pergunte a versão.'.freeze
