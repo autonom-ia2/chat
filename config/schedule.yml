@@ -20,6 +20,12 @@ campaign_journey_stalled_campaigns_job:
   class: 'CampaignJourney::StalledCampaignsJob'
   queue: scheduled_jobs
 
+# #2921: puts back in the queue a contact, audience or campaign base import whose worker died midway (fork job)
+campaign_imports_stalled_imports_job:
+  cron: '*/5 * * * *'
+  class: 'CampaignImports::StalledImportsJob'
+  queue: scheduled_jobs
+
 # executed hourly for scheduled jobs that do not need minute-level cadence
 trigger_hourly_scheduled_items_job:
   cron: '0 * * * *'

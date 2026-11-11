@@ -16,10 +16,11 @@ class ContactImports::CustomAttributes
     @extra_columns = extra_columns
   end
 
-  # Returns how many attributes it created.
+  # Returns how many attributes it created. The import keeps the total: when it goes on after a failure (#2921),
+  # this pass finds the attributes the earlier one created and adds none.
   def prepare!
     created = columns.reject(&:existing).count { |column| create_definition(column) }
-    @campaign_import&.update!(validation_summary: @campaign_import.validation_summary.to_h.merge('contact_attributes_created' => created))
+    record_created(created) if @campaign_import
     created
   end
 
@@ -40,6 +41,11 @@ class ContactImports::CustomAttributes
   end
 
   private
+
+  def record_created(created)
+    summary = @campaign_import.validation_summary.to_h
+    @campaign_import.update!(validation_summary: summary.merge('contact_attributes_created' => summary['contact_attributes_created'].to_i + created))
+  end
 
   def additions(current, extra_values)
     extra_values.to_h.each_with_object({}) do |(header, raw), found|

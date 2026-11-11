@@ -129,6 +129,13 @@ class CampaignImport < ApplicationRecord
     options.to_h['origem'] == AUTOMATION_ORIGIN
   end
 
+  # #2921: the Importer began writing this import's file and it ended `failed`. Confirming it again goes on from
+  # where it stopped, while the normalized file is still there (it goes away after
+  # CampaignImports::Config.generated_file_retention). The "Parou" of an automation step is not this: it has no file.
+  def import_resumable?
+    failed? && import_started_at.present? && !from_automation? && normalized_csv.attached?
+  end
+
   # Públicos and Importar contatos read name, phone, email, company and extra columns through
   # SpreadsheetReader and save contacts and companies without any label.
   def spreadsheet_flow?
