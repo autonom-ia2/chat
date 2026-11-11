@@ -25,9 +25,11 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   MAX_ITENS = 20
   MAX_BYTES_BUSCA = 1.megabyte
   TAMANHOS_DO_CODIGO = [2, 4, 8].freeze
-  # O código da nota fiscal: 8 dígitos. A posição (4) é onde se procuram os filhos de um grupo.
+  # O código da nota fiscal: 8 dígitos. A posição (4) é onde se procuram os filhos de um grupo; até a subposição (6), o
+  # nível de cima diz o que é a mercadoria.
   DA_NOTA = 8
   POSICAO = 4
+  SUBPOSICAO = 6
   # O formato do que a NCM guarda no cache (`Consulta#versao_do_cache`): 2 desde os códigos da nota do grupo com a
   # descrição completa (#2858). Só o cache da NCM deixa de valer; o das outras prontas continua.
   VERSAO_DO_CACHE = 2
@@ -83,10 +85,16 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   # itens, a orientação para buscar pelo código dele, com o primeiro de exemplo.
   def lista(busca, niveis)
     indice = Descricao.indice(niveis)
-    itens = em_ordem(busca, niveis, indice).map(&:first)
+    itens = em_ordem(busca, niveis, indice).map { |item, nivel| confira(item, nivel, indice) }
     resposta = { 'busca' => busca }.merge(Autonomia::FerramentasProntas::Lista.cortar(itens, 'itens', MAX_ITENS))
     grupo = resposta['itens'].find { |item| Nivel.grupo?(digitos(item['codigo'])) }
     grupo ? resposta.merge('observacao' => format(BUSQUE_O_GRUPO, grupo: grupo['codigo'])) : resposta
+  end
+
+  # O código da nota que veio sem os níveis de cima tem a descrição relativa ("De parafuso", do 8414.40.20): vai marcado
+  # (revisão do #2917).
+  def confira(item, nivel, indice)
+    nivel.da_nota? && !Descricao.inteira?(nivel, indice) ? item.merge('observacao' => CONFIRA) : item
   end
 
   # -> [[item, nivel], ...] na ordem de relevância, pelo texto do próprio nível: a descrição completa começa pela
@@ -158,6 +166,7 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   # capítulo. Cada texto cabe inteiro no que vai ao modelo (`Resposta::MAX_TEXTO`).
   BUSQUE_O_GRUPO = 'Código com menos de 8 dígitos é grupo e não vai na nota. Para ver os da nota, faça a consulta buscar ' \
                    'com o código do grupo (ex.: %<grupo>s).'.freeze
+  CONFIRA = 'Descrição sem os níveis de cima: confira com a consulta codigo.'.freeze
 
   # A descrição de um código. Abaixo de 8 dígitos, com a observação de que ainda não é o da nota.
   def self.do_codigo(item, codigo)

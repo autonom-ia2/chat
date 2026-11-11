@@ -101,7 +101,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     end
 
     it 'as observacoes cabem inteiras no texto que vai ao modelo' do
-      textos = [format(ncm::BUSQUE_O_GRUPO, grupo: '8517.62.6')]
+      textos = [format(ncm::BUSQUE_O_GRUPO, grupo: '8517.62.6'), ncm::CONFIRA]
 
       expect(textos.map(&:length)).to all(be <= Autonomia::FerramentasProntas::Resposta::MAX_TEXTO)
     end
@@ -117,6 +117,20 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(primeiros.second['descricao']).to include('de cobre').and end_with('parafusos; pinos ou pernos e porcas')
       expect(dados['itens'].pluck('descricao').join).not_to include(' -', ':')
       expect(pela_palavra).to have_been_made.once
+    end
+
+    # Revisão do #2917 (7): o código da nota que veio sem os níveis de cima tem a descrição relativa ("De parafuso",
+    # do 8414.40.20, compressor). Vai marcado, para o modelo conferir com a consulta codigo.
+    it 'o codigo da nota sem todos os niveis de cima vai marcado; com eles, nao' do
+      fonte_responde("#{api}?search=parafuso", fixture('ncm_busca_parafuso.json'))
+      fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
+
+      por_codigo = buscar('parafuso')['dados']['itens'].index_by { |item| item['codigo'] }
+      completos = buscar('0901')['dados']['itens']
+
+      expect(por_codigo.values_at('8414.40.20', '7318.14.00', '7415.33.00').pluck('observacao')).to all(eq(ncm::CONFIRA))
+      expect(por_codigo['73.18']).not_to have_key('observacao')
+      expect(completos).to all(satisfy { |item| !item.key?('observacao') })
     end
   end
 

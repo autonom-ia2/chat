@@ -85,6 +85,14 @@ module Autonomia::FerramentasProntas::Fontes::Ncm::Descricao
     (ncm::POSICAO...nivel.digitos.length).filter_map { |tamanho| indice[nivel.digitos.first(tamanho)] }
   end
 
+  # Vieram os níveis de cima: um até a subposição (6 dígitos), que diz o que é a mercadoria, e tantos quantos os traços
+  # do nível ("-- Parafusos autoperfurantes" fica abaixo da posição e de uma subposição). O item regional (os dois
+  # últimos dígitos, sem traço: "De parafuso") pede ao menos o de cima.
+  def inteira?(nivel, indice)
+    pais = acima(nivel, indice)
+    pais.size >= nivel.tracos && pais.any? { |pai| pai.digitos.length <= ncm::SUBPOSICAO }
+  end
+
   def minuscula(texto)
     segunda = texto[1].to_s
     segunda == segunda.downcase ? "#{texto[0].downcase}#{texto[1..]}" : texto

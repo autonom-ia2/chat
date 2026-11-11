@@ -56,7 +56,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
 
       expect(dados).to eq('busca' => 'parafuso de aço', 'total' => 1,
                           'itens' => [{ 'codigo' => '7318.15.00', 'descricao' => 'Outros parafusos e pinos ou pernos',
-                                        'vigente_desde' => '2022-04-01' }])
+                                        'vigente_desde' => '2022-04-01',
+                                        'observacao' => Autonomia::FerramentasProntas::Fontes::Ncm::CONFIRA }])
     end
 
     # A BrasilAPI devolve na ordem do código: a palavra no meio da descrição de outro capítulo (34.03, lubrificantes
