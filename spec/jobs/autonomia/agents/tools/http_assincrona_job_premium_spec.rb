@@ -53,11 +53,14 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob do
   describe 'a linha já gravada pela execução (o worker morreu entre a telemetria e o resultado)' do
     let(:registros) { Autonomia::FerramentasProntas::Premium::Registro }
     let(:saldos) { Autonomia::FerramentasProntas::Premium::Saldo }
+    let(:logs) { StringIO.new }
 
     before do
       cache_em_memoria
       token_da_bigdatacorp
       bigdatacorp_responde('/ondemand', 'ondemand_pgfn_company', 'OnlineCertificates', [{ 'BaseStatus' => 'NEGATIVA' }])
+      allow(Rails).to receive(:logger).and_return(ActiveSupport::Logger.new(logs))
+      allow(ChatwootExceptionTracker).to receive(:new).and_call_original
     end
 
     # A execução em segundo plano até a telemetria; depois, o SIGKILL: o resultado nunca chega à linha.
@@ -97,6 +100,26 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob do
       expect(saldos.sole.contadas).to eq(21)
     end
 
+    it 'a execução viva que grava entre a busca e a inserção da entrega incerta: a linha dela vira sem cobrança e a grátis volta' do
+      run = abrir_consulta
+      run.marcar_chamada!(passada: 'job-que-morreu')
+      allow(registros).to receive(:lock).and_wrap_original do |original, *args|
+        relacao = original.call(*args)
+        allow(relacao).to receive(:find_by).and_wrap_original do |busca, *criterios|
+          achada = busca.call(*criterios)
+          Autonomia::FerramentasProntas.executor_para(certidoes, params: run.arguments, tool_run_id: run.id).call if achada.nil?
+          achada
+        end
+        relacao
+      end
+
+      described_class.incerta(run.reload)
+
+      expect(registros.sole).to have_attributes(tool_run_id: run.id, resultado: 'encontrado', cobranca: 'sem_cobranca', numero: nil,
+                                                preco: 0, custo: BigDecimal('0.10'), motivo: 'entrega_incerta')
+      expect(saldos.sole.contadas).to eq(0)
+    end
+
     it 'a execução que grava depois da entrega incerta não duplica: a linha dela não entra e o saldo volta atrás' do
       run = abrir_consulta
       run.marcar_chamada!(passada: 'job-que-morreu')
@@ -106,6 +129,8 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob do
 
       expect(registros.sole).to have_attributes(motivo: 'entrega_incerta', cobranca: 'sem_cobranca')
       expect(saldos.sum(:contadas)).to eq(0)
+      expect(logs.string).to include('já fechada como entrega incerta')
+      expect(ChatwootExceptionTracker).not_to have_received(:new)
     end
   end
 

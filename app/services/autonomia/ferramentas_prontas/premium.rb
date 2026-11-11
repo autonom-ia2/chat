@@ -27,7 +27,7 @@ module Autonomia::FerramentasProntas::Premium
 
   # O dia de hoje no fuso da conta (o mesmo da `Execucao`, com a volta para o da plataforma).
   def hoje_da_conta(account)
-    Time.current.in_time_zone(Autonomia::FerramentasProntas.fuso_da_conta(account)).to_date
+    Autonomia::FerramentasProntas.fuso_da_conta(account).today
   end
 
   # O 1º dia do mês corrente no fuso da conta: a chave do saldo das grátis.

@@ -58,6 +58,10 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
   # rastreador e ao log (o contador volta atrás junto, na mesma transação). Outro erro é defeito nosso: levanta.
   def cobrar(resultado, **)
     Premium::Cobranca.registrar!(tool: @tool, fonte: @fonte, consulta: @consulta, resultado: resultado, tool_run_id: @tool_run_id, **)
+  rescue ActiveRecord::RecordNotUnique
+    # A linha desta execução já existe: o varredor a fechou como entrega incerta (`Cobranca.entrega_incerta!`). Não é
+    # defeito; a transação desfez a posição no saldo.
+    Rails.logger.info("#{PREFIXO} telemetria premium já fechada como entrega incerta conta=#{@tool.account_id} fonte=#{@fonte.chave}")
   rescue ActiveRecord::ActiveRecordError => e
     Rails.logger.error("#{PREFIXO} telemetria premium falhou conta=#{@tool.account_id} fonte=#{@fonte.chave} #{e.class}")
     ChatwootExceptionTracker.new(e, account: @tool.account).capture_exception

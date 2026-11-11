@@ -107,6 +107,18 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente do
     end
   end
 
+  it 'o dia do contador vem do fuso único da conta (FerramentasProntas.fuso_da_conta), sem cálculo próprio' do
+    travel_to(Time.find_zone('UTC').parse('2026-11-10 01:00 UTC'))
+    allow(Autonomia::FerramentasProntas).to receive(:fuso_da_conta).and_call_original
+    allow(Crm::Timezone::Resolver).to receive(:new).and_raise(ActiveRecord::ConnectionNotEstablished)
+    Autonomia::FerramentasProntas::Acesso.create!(account_id: account.id, fonte: 'fipe', limite_diario: 2)
+    Autonomia::FerramentasProntas::Uso.create!(account_id: account.id, fonte: 'fipe', dia: Time.zone.today, consultas: 2)
+
+    expect(experimentar('fipe', 'Onix 2020')).to eq('situacao' => 'nao_consegui_consultar')
+    expect(Autonomia::FerramentasProntas).to have_received(:fuso_da_conta).with(account).at_least(:once)
+    expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+  end
+
   it 'o preço achado não some quando a última versão do lote é recusada (formato real da recusa)' do
     resposta = Autonomia::FerramentasProntas::Resposta
     allow(Autonomia::FerramentasProntas::Execucao).to receive(:new) do |params:, **|

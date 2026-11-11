@@ -16,7 +16,8 @@ require 'net/http'
 #
 # Opções da F7 do #2858 (as ferramentas Premium), todas desligadas no padrão (a Prospecção segue igual):
 #   - `token_timeout`: o prazo do pedido de token; nil usa o `timeout`;
-#   - `token_cache`: onde guardar o token entre instâncias (`read`/`write`); nil guarda só nesta instância;
+#   - `token_cache`: onde guardar o token entre instâncias (`read`, `write` e `forget(token)`, que só apaga se o
+#     guardado ainda for aquele); nil guarda só nesta instância;
 #   - `resend_after_unauthorized`: depois de um 401, um reenvio com token novo mesmo na última tentativa (a BigDataCorp
 #     não cobra o 401). Desligado, o 401 da última tentativa levanta, como antes.
 # Todo 401 apaga o token recusado (desta instância e do `token_cache`): a consulta seguinte gera outro.
@@ -203,8 +204,9 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
   end
 
   def forget_token
+    recusado = @token
     @token = nil
-    @options[:token_cache]&.write(nil)
+    @options[:token_cache]&.forget(recusado)
   end
 
   def wait_and_retry(status, attempts)

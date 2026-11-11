@@ -41,7 +41,12 @@ module Autonomia::FerramentasProntas::Premium::Cobranca
 
     ActiveRecord::Base.transaction(requires_new: true) do
       gravada = Premium::Registro.lock.find_by(tool_run_id: run.id)
-      gravada ? desfazer_cobranca!(gravada) : registrar_incerta!(run, tool, fonte, consulta)
+      next desfazer_cobranca!(gravada) if gravada
+      # A execução viva pode gravar a linha dela entre a busca e a inserção: ON CONFLICT não insere, e a linha dela é
+      # desfeita como a de cima.
+      next if registrar_incerta!(run, tool, fonte, consulta)
+
+      desfazer_cobranca!(Premium::Registro.lock.find_by!(tool_run_id: run.id))
     end
   rescue ActiveRecord::ActiveRecordError => e
     Rails.logger.error("[autonomia][premium] telemetria da entrega incerta falhou run=#{run.id} #{e.class}")
@@ -60,10 +65,14 @@ module Autonomia::FerramentasProntas::Premium::Cobranca
     saldo.update!(contadas: saldo.contadas - 1) if saldo&.contadas&.positive?
   end
 
+  # INSERT ... ON CONFLICT (tool_run_id) DO NOTHING. -> true quando inseriu. Os valores são fixos daqui (resultado,
+  # cobrança e motivo das listas do `Registro`), por isso sem as validações do modelo.
   def registrar_incerta!(run, tool, fonte, consulta)
-    Premium::Registro.create!(**origem(tool, fonte, consulta, Premium.hoje_da_conta(tool.account)),
-                              resultado: 'falha', motivo: 'entrega_incerta', do_cache: false, numero: nil, tool_run_id: run.id,
-                              cobranca: 'sem_cobranca', custo: consulta.dataset.custo, preco: 0)
+    linha = origem(tool, fonte, consulta, Premium.hoje_da_conta(tool.account)).merge(
+      resultado: 'falha', motivo: 'entrega_incerta', do_cache: false, numero: nil, tool_run_id: run.id, cobranca: 'sem_cobranca',
+      custo: consulta.dataset.custo, preco: 0
+    )
+    Premium::Registro.insert_all([linha], unique_by: :idx_premium_consultas_tool_run, returning: [:id]).rows.any? # rubocop:disable Rails/SkipsModelValidations
   end
 
   def origem(tool, fonte, consulta, dia)

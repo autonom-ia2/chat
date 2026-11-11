@@ -65,6 +65,32 @@ RSpec.describe Autonomia::Prospecting::Research::BigDataCorpClient do
       expect(a_request(:post, "#{base}/empresas")).to have_been_made.twice
     end
 
+    it 'o 401 não apaga do token_cache um token novo que outra consulta já guardou' do
+      velho = described_class::Token.new(access_token: 'token-exemplo', token_id: 'id-exemplo', expires_at: Float::INFINITY)
+      novo = described_class::Token.new(access_token: 'token-novo-exemplo', token_id: 'id-novo', expires_at: Float::INFINITY)
+      cache = Autonomia::FerramentasProntas::Premium::Tokens.new
+      cache.write(velho)
+      cliente = described_class.new(credentials: credentials, sleeper: ->(_) {}, max_provider_attempts: 1, token_cache: cache)
+      stub_request(:post, "#{base}/empresas").to_return(lambda { |_pedido|
+        cache.write(novo) # outra consulta do processo trocou o token no meio
+        { status: 401, body: '' }
+      })
+
+      expect { cliente.query_route('/empresas', query: 'doc{11222333000181}', datasets: 'kyc') }.to raise_error(described_class::Error)
+      expect(cache.read).to equal(novo)
+    end
+
+    it 'Tokens#forget apaga só o token recusado' do
+      cache = Autonomia::FerramentasProntas::Premium::Tokens.new
+      guardado = described_class::Token.new(access_token: 'a', token_id: 'b', expires_at: 1)
+      cache.write(guardado)
+
+      cache.forget(described_class::Token.new(access_token: 'c', token_id: 'd', expires_at: 1))
+      expect(cache.read).to equal(guardado)
+      cache.forget(guardado)
+      expect(cache.read).to be_nil
+    end
+
     it 'a Prospecção com 3 tentativas segue igual: 401, token novo e a consulta responde' do
       prospeccao = described_class.new(credentials: credentials, sleeper: ->(_) {})
       stub_request(:post, "#{base}/empresas").to_return({ status: 401, body: '' }, { status: 200, body: { Result: [] }.to_json })

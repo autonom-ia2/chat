@@ -124,15 +124,12 @@ class Autonomia::FerramentasProntas::Experimente::ComModelo
     acesso = Autonomia::FerramentasProntas::Acesso.find_by(account_id: @account.id, fonte: @fonte.chave)
     return false if acesso.nil?
 
-    usadas = Autonomia::FerramentasProntas::Uso.where(account_id: @account.id, fonte: @fonte.chave, dia: hoje_na_conta).pick(:consultas)
-    usadas.to_i >= acesso.limite_do_dia
-  end
+    limite = acesso.limite_do_dia
+    return false if limite.nil? # sem limite do dia (as Premium, que nem chegam aqui)
 
-  def hoje_na_conta
-    fuso = ActiveSupport::TimeZone[Crm::Timezone::Resolver.new(account: @account).name_or_default.to_s] || Time.zone
-    fuso.today
-  rescue StandardError
-    Time.zone.today
+    hoje = Autonomia::FerramentasProntas.fuso_da_conta(@account).today
+    usadas = Autonomia::FerramentasProntas::Uso.where(account_id: @account.id, fonte: @fonte.chave, dia: hoje).pick(:consultas)
+    usadas.to_i >= limite
   end
 
   def ferramenta
