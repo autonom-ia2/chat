@@ -352,16 +352,27 @@ watch([isReady, contentVersion, showWelcome], () => {
 });
 onBeforeUnmount(() => clearTimeout(contentTimer));
 
-// Leaving while an image uploads loses it (#2908): ask first, in the app and when closing the tab.
+// Leaving while an image uploads loses it (#2908): ask first with the app's own dialog; closing the
+// tab can only use the browser's warning.
 const { isUploadingImages } = useImageDrop();
-onBeforeRouteLeave(
-  () =>
-    !isUploadingImages.value ||
-    // eslint-disable-next-line no-alert
-    window.confirm(
-      t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.IMAGE_DROP.LEAVE_CONFIRM')
-    )
-);
+const leaveDialog = ref(null);
+const leaveTarget = ref(null);
+let leaveConfirmed = false;
+onBeforeRouteLeave(to => {
+  if (!isUploadingImages.value || leaveConfirmed) return true;
+  leaveTarget.value = to.fullPath;
+  leaveDialog.value?.open();
+  return false;
+});
+const leaveAnyway = () => {
+  leaveDialog.value?.close();
+  if (!leaveTarget.value) return;
+  leaveConfirmed = true;
+  router.push(leaveTarget.value);
+};
+watch(isUploadingImages, uploading => {
+  if (!uploading) leaveDialog.value?.close();
+});
 const warnBeforeUnload = event => {
   if (!isUploadingImages.value) return;
   event.preventDefault();
@@ -1192,6 +1203,22 @@ const insertPlaceholder = key => {
           </p>
         </aside>
       </div>
+      <Dialog
+        ref="leaveDialog"
+        type="alert"
+        width="md"
+        :title="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.IMAGE_DROP.LEAVE_TITLE')"
+        :description="
+          t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.IMAGE_DROP.LEAVE_CONFIRM')
+        "
+        :cancel-button-label="
+          t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.IMAGE_DROP.LEAVE_WAIT')
+        "
+        :confirm-button-label="
+          t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.IMAGE_DROP.LEAVE_ANYWAY')
+        "
+        @confirm="leaveAnyway"
+      />
       <Dialog
         ref="previewDialog"
         :title="t(`${UX}.PREVIEW`)"

@@ -751,7 +751,10 @@
           "MISSING_PUBLIC": "1 image did not come along. Click the \"Clique para subir sua imagem\" frame and upload the file. | {count} images did not come along. Click each \"Clique para subir sua imagem\" frame and upload the file.",
           "RETRY": "Try again",
           "CLOSE": "Close",
-          "LEAVE_CONFIRM": "An image is still uploading. If you leave now, it will not be in the e-mail. Leave anyway?"
+          "LEAVE_TITLE": "An image is still uploading",
+          "LEAVE_CONFIRM": "If you leave now, it will not be in the e-mail.",
+          "LEAVE_WAIT": "Wait for the image",
+          "LEAVE_ANYWAY": "Leave anyway"
         }
       },
       "AI": {
