@@ -4,10 +4,11 @@
 # `pelo_endereco: true` (regra "QI 70"): sem o CEP, ele vem da cidade, ou da rua e da cidade (`Premium::Endereco.cep`). A
 # UF é opcional: sai da cidade (`Municipios`); a cidade homônima sem UF é recusada na `uf`, com as candidatas, e a que
 # não existe, na `cidade`. O bairro e o número escolhem entre os CEPs da rua (`Fontes::Cep::Referencia.cep`). Sem CEP
-# achado, o pedido é inválido no `cep`; com mais de um CEP sobrando, no que falta (o `bairro`, se ele não veio e os CEPs
-# estão em bairros diferentes; senão o `numero`), com os CEPs em `candidatos`. A recusa é uma `Falta`, como nas grátis.
+# achado, o pedido é inválido no `cep`; com mais de um CEP sobrando, no que falta (com o `numero` já dito, o `bairro`;
+# sem ele, o `bairro` se ele não veio e os CEPs estão em bairros diferentes, senão o `numero`), com os CEPs em
+# `candidatos`. A recusa é uma `Falta`, como nas grátis.
 # `exige_rua: true` (empresas na região): o dado é da região do CEP, e o CEP geral da cidade daria a conta de outra
-# região. Sem o CEP, só a cidade não serve: pede a rua.
+# região. Sem o CEP, a falta da rua vem antes de tudo: só a cidade não serve, e sem a cidade também se pede a rua.
 class Autonomia::FerramentasProntas::Premium::ConsultaPaga < Autonomia::FerramentasProntas::Consulta
   Falta = Autonomia::FerramentasProntas::Falta
   FOLGA = 2
@@ -49,10 +50,11 @@ class Autonomia::FerramentasProntas::Premium::ConsultaPaga < Autonomia::Ferramen
     achado&.dig('cep') ? [params.merge('cep' => achado['cep']), nil] : [nil, falta_do_endereco(achado)]
   end
 
-  # Sem a cidade: o CEP. Empresas na região sem a rua: a rua. A cidade homônima sem UF ou que não existe (`Municipios`).
+  # Empresas na região sem a rua: a rua, antes de tudo (sem a cidade também; o CEP geral não serve a ela). Sem a cidade:
+  # o CEP. A cidade homônima sem UF ou que não existe (`Municipios`).
   def falta_antes_de_procurar(params)
-    return Falta.new(campo: 'cep') if params['cidade'].nil?
     return Falta.new(campo: 'rua', orientacao: Autonomia::FerramentasProntas::Resposta.pergunte('rua', SEM_RUA)) if @exige_rua && params['rua'].nil?
+    return Falta.new(campo: 'cep') if params['cidade'].nil?
 
     Autonomia::FerramentasProntas::Municipios.falta(params['uf'], params['cidade'])
   end

@@ -307,6 +307,19 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
       expect(chamou_a_bigdatacorp?).to be(false)
     end
 
+    # Revisor (lote 3): sem a cidade e sem a rua, a recusa caía no `cep` com "deduza"; o que falta é a rua.
+    it 'empresas na região sem nada (nem cidade, nem rua, nem CEP): pede a rua, não o CEP' do
+      contato = incluir_pronta('contato_empresa', conta: account, agente: agent)
+      allow(described_class).to receive(:cep)
+
+      resposta = executar_premium(contato, 'consulta' => 'empresas_na_regiao')
+
+      expect(resposta).to include('situacao' => 'pedido_invalido', 'campo' => 'rua')
+      expect(resposta['orientacao']).to include('pergunte ao cliente a rua')
+      expect(described_class).not_to have_received(:cep)
+      expect(chamou_a_bigdatacorp?).to be(false)
+    end
+
     it 'empresas na região com o CEP segue direto, sem procurar' do
       contato = incluir_pronta('contato_empresa', conta: account, agente: agent)
       allow(described_class).to receive(:cep)
