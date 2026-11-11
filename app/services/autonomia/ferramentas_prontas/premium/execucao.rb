@@ -64,18 +64,19 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
     raise
   end
 
+  # O cache do dia é gravado DEPOIS de montar: a montagem que levanta não deixa no cache um resultado que o cliente não
+  # recebeu (a segunda consulta o leria como "do cache", sem cobrança; revisor, lote 3).
   def responder(leitura, params)
     case leitura.situacao
     when 'encontrado'
-      @cache.encontrado(leitura.dados)
-      entregar(leitura.dados, params, desfecho: nil)
+      entregar(leitura.dados, params, desfecho: nil).tap { @cache.encontrado(leitura.dados) }
     when 'sem_registro'
-      @cache.nao_encontrado
       terminar(Autonomia::FerramentasProntas::Resposta.nao_encontrado(@fonte, @consulta), desfecho: 'nao_encontradas')
+        .tap { @cache.nao_encontrado }
     when 'documento_invalido'
-      @cache.documento_invalido
       terminar(Autonomia::FerramentasProntas::Resposta.documento_invalido(@fonte, @consulta), desfecho: 'nao_encontradas',
                                                                                               motivos: ["#{@provedor}.documento_invalido"])
+        .tap { @cache.documento_invalido }
     else
       terminar(Autonomia::FerramentasProntas::Resposta.nao_consegui, desfecho: 'sem_resposta', motivos: ["#{@provedor}.#{leitura.motivo}"])
     end

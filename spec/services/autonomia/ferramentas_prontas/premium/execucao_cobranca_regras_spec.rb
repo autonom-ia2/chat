@@ -175,6 +175,31 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
       expect(saldos.count).to eq(0)
     end
 
+    # Revisor (lote 3, execucao.rb:70): o cache era gravado antes de montar. A montagem que levantava deixava o resultado
+    # no cache do dia, e a segunda consulta lia dali como "do cache" (sem cobrança), sem nunca ter sido entregue.
+    it 'depois da montagem que levanta, a segunda consulta vai à BigDataCorp e conta (o cache não guardou o que não saiu)' do
+      pgfn_responde([{ 'Origin' => 'PGFN', 'BaseStatus' => 'NEGATIVA' }])
+      allow(Autonomia::FerramentasProntas::Resposta).to receive(:encontrado).and_raise(NoMethodError)
+      executar_premium(certidoes, pgfn)
+      allow(Autonomia::FerramentasProntas::Resposta).to receive(:encontrado).and_call_original
+
+      expect(executar_premium(certidoes, pgfn)['situacao']).to eq('encontrado')
+      expect(a_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand")).to have_been_made.twice
+      expect(registros_premium.map { |registro| [registro.resultado, registro.cobranca] }).to eq([%w[falha sem_cobranca], %w[encontrado gratis]])
+    end
+
+    it 'o mesmo com o documento inválido: a segunda consulta vai à BigDataCorp e conta' do
+      pgfn_responde(nil, code: -114, message: 'INVALID DOC PARAMETER')
+      allow(Autonomia::FerramentasProntas::Resposta).to receive(:documento_invalido).and_raise(NoMethodError)
+      executar_premium(certidoes, pgfn)
+      allow(Autonomia::FerramentasProntas::Resposta).to receive(:documento_invalido).and_call_original
+
+      expect(executar_premium(certidoes, pgfn)['situacao']).to eq('documento_invalido')
+      expect(a_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand")).to have_been_made.twice
+      expect(registros_premium.map { |registro| [registro.resultado, registro.cobranca] })
+        .to eq([%w[falha sem_cobranca], %w[documento_invalido gratis]])
+    end
+
     it 'a resposta montada é cobrada uma vez só' do
       pgfn_responde([{ 'Origin' => 'PGFN', 'BaseStatus' => 'NEGATIVA' }])
 
