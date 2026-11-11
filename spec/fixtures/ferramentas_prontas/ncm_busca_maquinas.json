@@ -1,0 +1,3233 @@
+[
+ {
+  "codigo": "4011.70",
+  "descricao": "- Do tipo utilizado em veículos e máquinas agrícolas ou florestais",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "4011.80",
+  "descricao": "- Do tipo utilizado em veículos e máquinas para a construção civil, de mineração e de manutenção industrial",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "4016.10.10",
+  "descricao": "Partes de veículos automóveis ou tratores e de máquinas ou aparelhos, não domésticos, dos Capítulos 84, 85 ou 90",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "4911.10.10",
+  "descricao": "Que contenham informações relativas ao funcionamento, manutenção, reparo ou utilização de máquinas, aparelhos, veículos e outras mercadorias de origem extrazona",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "5911.3",
+  "descricao": "- Tecidos e feltros, sem fim ou com dispositivos de união, do tipo utilizado nas máquinas para fabricação de papel ou máquinas semelhantes (por exemplo, para pasta ou fibrocimento):",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7314.12.00",
+  "descricao": "-- Telas metálicas, contínuas ou sem fim, para máquinas, de aço inoxidável",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7317.00.30",
+  "descricao": "Pontas ou dentes para máquinas têxteis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "82.05",
+  "descricao": "Ferramentas manuais (incluindo os corta-vidros (diamantes de vidraceiro)) não especificadas nem compreendidas noutras posições; lâmpadas ou lamparinas de soldar (maçaricos) e semelhantes; tornos de apertar, sargentos e semelhantes, exceto os acessórios ou partes de máquinas-ferramentas ou de máquinas de corte a jato de água; bigornas; forjas portáteis; mós com armação, manuais ou de pedal.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "82.07",
+  "descricao": "Ferramentas intercambiáveis para ferramentas manuais, mesmo mecânicas, ou para máquinas-ferramentas (por exemplo, de embutir, estampar, puncionar, roscar (incluindo atarraxar), furar, escarear, mandrilar, brochar, fresar, tornear, aparafusar), incluindo as fieiras de estiramento ou de extrusão, para metais, e as ferramentas de perfuração ou de sondagem.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "82.08",
+  "descricao": "Facas e lâminas cortantes, para máquinas ou para aparelhos mecânicos.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8208.30.00",
+  "descricao": "- Para aparelhos de cozinha ou para máquinas das indústrias alimentares",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8208.40.00",
+  "descricao": "- Para máquinas de agricultura, horticultura ou silvicultura",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "82.14",
+  "descricao": "Outros artigos de cutelaria (por exemplo, máquinas de cortar o cabelo ou tosquiar, fendeleiras, cutelos, incluindo os de açougue (talho) e de cozinha, e espátulas (corta-papéis)); utensílios e sortidos de utensílios de manicuros ou de pedicuros (incluindo as limas para unhas).",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8214.90.10",
+  "descricao": "Máquinas de tosquiar e suas partes",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84",
+  "descricao": "Reatores nucleares, caldeiras, máquinas, aparelhos e instrumentos mecânicos, e suas partes.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.01",
+  "descricao": "Reatores nucleares; elementos combustíveis (cartuchos) não irradiados, para reatores nucleares; máquinas e aparelhos para a separação de isótopos.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8401.20.00",
+  "descricao": "- Máquinas e aparelhos para a separação de isótopos, e suas partes",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.04",
+  "descricao": "Aparelhos auxiliares para caldeiras das posições 84.02 ou 84.03 (por exemplo, economizadores, superaquecedores, aparelhos de limpeza de tubos ou de recuperação de gás); condensadores para máquinas a vapor.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8404.20.00",
+  "descricao": "- Condensadores para máquinas a vapor",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.12",
+  "descricao": "Outros motores e máquinas motrizes.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8412.90.20",
+  "descricao": "De máquinas a vapor de movimento retilíneo (cilindros)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8412.90.80",
+  "descricao": "Outras, de máquinas das subposições 8412.21 ou 8412.31",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.15",
+  "descricao": "Máquinas e aparelhos de ar-condicionado que contenham um ventilador motorizado e dispositivos próprios para modificar a temperatura e a umidade, incluindo as máquinas e aparelhos em que a umidade não seja regulável separadamente.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.18",
+  "descricao": "Refrigeradores, congeladores (<i>freezers</i>) e outros materiais, máquinas e aparelhos, para a produção de frio, com equipamento elétrico ou outro; bombas de calor, exceto as máquinas e aparelhos de ar-condicionado da posição 84.15.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8418.6",
+  "descricao": "- Outros materiais, máquinas e aparelhos, para a produção de frio; bombas de calor:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8418.61.00",
+  "descricao": "-- Bombas de calor, exceto as máquinas e aparelhos de ar-condicionado da posição 84.15",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8418.69.10",
+  "descricao": "Máquinas não domésticas para preparação de sorvetes",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.22",
+  "descricao": "Máquinas de lavar louça; máquinas e aparelhos para limpar ou secar garrafas ou outros recipientes; máquinas e aparelhos para encher, fechar, arrolhar ou rotular garrafas, caixas, latas, sacos ou outros recipientes; máquinas e aparelhos para capsular garrafas, vasos, tubos e recipientes semelhantes; outras máquinas e aparelhos para empacotar ou embalar mercadorias (incluindo as máquinas e aparelhos para embalar com película termorretrátil); máquinas e aparelhos para gaseificar bebidas.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8422.1",
+  "descricao": "- Máquinas de lavar louça:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8422.20.00",
+  "descricao": "- Máquinas e aparelhos para limpar ou secar garrafas ou outros recipientes",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8422.30",
+  "descricao": "- Máquinas e aparelhos para encher, fechar, arrolhar ou rotular garrafas, caixas, latas, sacos ou outros recipientes; máquinas e aparelhos para capsular garrafas, vasos, tubos e recipientes semelhantes; máquinas e aparelhos para gaseificar bebidas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8422.30.10",
+  "descricao": "Máquinas e aparelhos para encher, fechar, arrolhar, capsular ou rotular garrafas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8422.30.2",
+  "descricao": "Máquinas e aparelhos para encher, fechar, arrolhar ou rotular caixas, latas, sacos ou outros recipientes; Máquinas e aparelhos para capsular vasos, tubos e recipientes semelhantes",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8422.40",
+  "descricao": "- Outras máquinas e aparelhos para empacotar ou embalar mercadorias (incluindo as máquinas e aparelhos para embalar com película termorretrátil)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8422.90.10",
+  "descricao": "De máquinas de lavar louça, de uso doméstico",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.24",
+  "descricao": "Aparelhos mecânicos (mesmo manuais) para projetar, dispersar ou pulverizar líquidos ou pós; extintores, mesmo carregados; pistolas aerográficas e aparelhos semelhantes; máquinas e aparelhos de jato de areia, de jato de vapor e aparelhos de jato semelhantes.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8424.30",
+  "descricao": "- Máquinas e aparelhos de jato de areia, de jato de vapor e aparelhos de jato semelhantes",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8424.30.10",
+  "descricao": "Máquinas e aparelhos de desobstrução de tubulação ou de limpeza, por jato de água",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8426.4",
+  "descricao": "- Outras máquinas e aparelhos, autopropulsados:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8426.9",
+  "descricao": "- Outras máquinas e aparelhos:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.28",
+  "descricao": "Outras máquinas e aparelhos de elevação, de carga, de descarga ou de movimentação (por exemplo, elevadores, escadas rolantes, transportadores, teleféricos).",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8428.90",
+  "descricao": "- Outras máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8429.52",
+  "descricao": "-- Máquinas cuja superestrutura é capaz de efetuar uma rotação de 360°",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.30",
+  "descricao": "Outras máquinas e aparelhos de terraplenagem, nivelamento, raspagem, escavação, compactação, extração ou perfuração da terra, de minerais ou minérios; bate-estacas e arranca-estacas; limpa-neves.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8430.3",
+  "descricao": "- Cortadores de carvão ou de rocha e máquinas para perfuração de túneis ou de galerias:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8430.4",
+  "descricao": "- Outras máquinas de sondagem ou de perfuração:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8430.41.30",
+  "descricao": "Máquinas de sondagem, rotativas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8430.49.20",
+  "descricao": "Máquinas de sondagem, rotativas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8430.50.00",
+  "descricao": "- Outras máquinas e aparelhos, autopropulsados",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8430.6",
+  "descricao": "- Outras máquinas e aparelhos, exceto autopropulsados:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8430.61.00",
+  "descricao": "-- Máquinas de comprimir ou de compactar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.31",
+  "descricao": "Partes reconhecíveis como exclusiva ou principalmente destinadas às máquinas e aparelhos das posições 84.25 a 84.30.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8431.10",
+  "descricao": "- De máquinas ou aparelhos da posição 84.25",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8431.20",
+  "descricao": "- De máquinas ou aparelhos da posição 84.27",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8431.3",
+  "descricao": "- De máquinas ou aparelhos da posição 84.28:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8431.4",
+  "descricao": "- De máquinas ou aparelhos das posições 84.26, 84.29 ou 84.30:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8431.43",
+  "descricao": "-- Partes de máquinas de sondagem ou de perfuração das subposições 8430.41 ou 8430.49",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8431.43.10",
+  "descricao": "De máquinas de sondagem rotativas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8431.49.10",
+  "descricao": "De máquinas ou aparelhos da posição 84.26",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8431.49.2",
+  "descricao": "De máquinas ou aparelhos das posições 84.29 ou 84.30",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.32",
+  "descricao": "Máquinas e aparelhos de uso agrícola, hortícola ou florestal, para preparação ou trabalho do solo ou para cultura; rolos para gramados (relvados) ou para campos de esporte.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8432.80.00",
+  "descricao": "- Outras máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.33",
+  "descricao": "Máquinas e aparelhos para colheita ou debulha de produtos agrícolas, incluindo as enfardadeiras de palha ou forragem; cortadores de grama (relva) e ceifeiras; máquinas para limpar ou selecionar ovos, fruta ou outros produtos agrícolas, exceto as da posição 84.37.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8433.30.00",
+  "descricao": "- Outras máquinas e aparelhos para colher e dispor o feno",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8433.5",
+  "descricao": "- Outras máquinas e aparelhos para colheita; máquinas e aparelhos para debulha:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8433.52.00",
+  "descricao": "-- Outras máquinas e aparelhos para debulha",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8433.53.00",
+  "descricao": "-- Máquinas para colheita de raízes ou tubérculos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8433.60",
+  "descricao": "- Máquinas para limpar ou selecionar ovos, fruta ou outros produtos agrícolas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.34",
+  "descricao": "Máquinas de ordenhar e máquinas e aparelhos para a indústria de laticínios.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8434.10.00",
+  "descricao": "- Máquinas de ordenhar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8434.20",
+  "descricao": "- Máquinas e aparelhos para a indústria de laticínios",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.35",
+  "descricao": "Prensas, esmagadores e máquinas e aparelhos semelhantes, para fabricação de vinho, sidra, sucos (sumos) de fruta ou bebidas semelhantes.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8435.10.00",
+  "descricao": "- Máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.36",
+  "descricao": "Outras máquinas e aparelhos para agricultura, horticultura, silvicultura, avicultura ou apicultura, incluindo os germinadores equipados com dispositivos mecânicos ou térmicos e as chocadeiras e criadeiras para avicultura.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8436.10.00",
+  "descricao": "- Máquinas e aparelhos para preparação de alimentos ou rações para animais",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8436.2",
+  "descricao": "- Máquinas e aparelhos para avicultura, incluindo as chocadeiras e criadeiras:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8436.80.00",
+  "descricao": "- Outras máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8436.91.00",
+  "descricao": "-- De máquinas ou aparelhos para avicultura",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.37",
+  "descricao": "Máquinas para limpeza, seleção ou peneiração de grãos ou de produtos hortícolas secos; máquinas e aparelhos para a indústria de moagem ou tratamento de cereais ou de produtos hortícolas secos, exceto do tipo utilizado em fazendas.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8437.10.00",
+  "descricao": "- Máquinas para limpeza, seleção ou peneiração de grãos ou de produtos hortícolas secos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8437.80",
+  "descricao": "- Outras máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.38",
+  "descricao": "Máquinas e aparelhos não especificados nem compreendidos noutras posições do presente Capítulo, para preparação ou fabricação industrial de alimentos ou de bebidas, exceto as máquinas e aparelhos para extração ou preparação de óleos ou gorduras vegetais ou de origem microbiana, fixos, ou de animais.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8438.10.00",
+  "descricao": "- Máquinas e aparelhos para as indústrias de panificação, pastelaria, bolachas e biscoitos e de massas alimentícias",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8438.20",
+  "descricao": "- Máquinas e aparelhos para as indústrias de confeitaria e de cacau ou de chocolate",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8438.30.00",
+  "descricao": "- Máquinas e aparelhos para a indústria de açúcar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8438.40.00",
+  "descricao": "- Máquinas e aparelhos para a indústria cervejeira",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8438.50.00",
+  "descricao": "- Máquinas e aparelhos para preparação de carnes",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8438.60.00",
+  "descricao": "- Máquinas e aparelhos para preparação de fruta ou de produtos hortícolas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8438.80",
+  "descricao": "- Outras máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8438.80.10",
+  "descricao": "Máquinas para extração de óleo essencial de citros",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.39",
+  "descricao": "Máquinas e aparelhos para fabricação de pasta de matérias fibrosas celulósicas ou para fabricação ou acabamento de papel ou cartão.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8439.10",
+  "descricao": "- Máquinas e aparelhos para fabricação de pasta de matérias fibrosas celulósicas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8439.20.00",
+  "descricao": "- Máquinas e aparelhos para fabricação de papel ou cartão",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8439.30",
+  "descricao": "- Máquinas e aparelhos para acabamento de papel ou cartão",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8439.91.00",
+  "descricao": "-- De máquinas ou aparelhos para fabricação de pasta de matérias fibrosas celulósicas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8439.99.10",
+  "descricao": "Rolos, corrugadores ou de pressão, de máquinas para ondular, com largura útil igual ou superior a 2.500 mm",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.40",
+  "descricao": "Máquinas e aparelhos para brochura ou encadernação, incluindo as máquinas de costurar cadernos.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8440.10",
+  "descricao": "- Máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8440.10.20",
+  "descricao": "Máquinas para fabricar capas de papelão, com dispositivo de colagem e capacidade de produção superior a 60 unidades por minuto",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.41",
+  "descricao": "Outras máquinas e aparelhos para o trabalho de pasta de papel, papel ou cartão, incluindo as cortadeiras de qualquer tipo.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8441.20.00",
+  "descricao": "- Máquinas para fabricação de sacos de quaisquer dimensões ou de envelopes",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8441.30",
+  "descricao": "- Máquinas para fabricação de caixas, tubos, tambores ou de recipientes semelhantes, por qualquer processo, exceto moldagem",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8441.40.00",
+  "descricao": "- Máquinas de moldar artigos de pasta de papel, papel ou cartão",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8441.80.00",
+  "descricao": "- Outras máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.42",
+  "descricao": "Máquinas, aparelhos e equipamentos (exceto as máquinas das posições 84.56 a 84.65), para preparação ou fabricação de clichês, placas, cilindros ou outros elementos de impressão; clichês, placas, cilindros e outros elementos de impressão; pedras litográficas, placas e cilindros, preparados para impressão (por exemplo, aplainados, granulados ou polidos).",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8442.30",
+  "descricao": "- Máquinas, aparelhos e equipamentos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8442.40",
+  "descricao": "- Partes dessas máquinas, aparelhos e equipamentos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8442.40.10",
+  "descricao": "De máquinas do item 8442.30.10",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8442.40.20",
+  "descricao": "De máquinas do item 8442.30.20",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.43",
+  "descricao": "Máquinas e aparelhos de impressão por meio de placas, cilindros e outros elementos de impressão da posição 84.42; outras impressoras, aparelhos de copiar e aparelhos de telecopiar (fax), mesmo combinados entre si; partes e acessórios.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8443.1",
+  "descricao": "- Máquinas e aparelhos de impressão por meio de placas, cilindros e outros elementos de impressão da posição 84.42:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8443.11",
+  "descricao": "-- Máquinas e aparelhos de impressão, por ofsete, alimentados por bobinas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8443.12.00",
+  "descricao": "-- Máquinas e aparelhos de impressão, por ofsete, do tipo utilizado em escritórios, alimentados por folhas em que um lado não seja superior a 22 cm e que o outro não seja superior a 36 cm, quando não dobradas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8443.13",
+  "descricao": "-- Outras máquinas e aparelhos de impressão, por ofsete",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8443.14.00",
+  "descricao": "-- Máquinas e aparelhos de impressão, tipográficos, alimentados por bobinas, excluindo as máquinas e aparelhos flexográficos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8443.15.00",
+  "descricao": "-- Máquinas e aparelhos de impressão, tipográficos, não alimentados por bobinas, excluindo as máquinas e aparelhos flexográficos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8443.16.00",
+  "descricao": "-- Máquinas e aparelhos de impressão, flexográficos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8443.17",
+  "descricao": "-- Máquinas e aparelhos de impressão, heliográficos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8443.31",
+  "descricao": "-- Máquinas que executem pelo menos duas das seguintes funções: impressão, cópia ou transmissão de telecópia (fax), capazes de ser conectadas a uma máquina automática para processamento de dados ou a uma rede",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8443.39.10",
+  "descricao": "Máquinas de impressão por jato de tinta",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8443.39.2",
+  "descricao": "Máquinas copiadoras eletrostáticas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8443.39.30",
+  "descricao": "Outras máquinas copiadoras",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8443.91",
+  "descricao": "-- Partes e acessórios de máquinas e aparelhos de impressão por meio de blocos, cilindros e outros elementos de impressão da posição 84.42",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8443.91.10",
+  "descricao": "De máquinas e aparelhos da subposição 8443.12",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8444.00",
+  "descricao": "Máquinas para extrudar, estirar, texturizar ou cortar matérias têxteis sintéticas ou artificiais.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.45",
+  "descricao": "Máquinas para preparação de matérias têxteis; máquinas para fiação, dobragem ou torção, de matérias têxteis e outras máquinas e aparelhos para fabricação de fios têxteis; máquinas de bobinar (incluindo as bobinadoras de trama) ou de dobar matérias têxteis e máquinas para preparação de fios têxteis para a sua utilização nas máquinas das posições 84.46 ou 84.47.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8445.1",
+  "descricao": "- Máquinas para preparação de matérias têxteis:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8445.19.10",
+  "descricao": "Máquinas para a preparação da seda",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8445.19.2",
+  "descricao": "Máquinas para a preparação de outras matérias têxteis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8445.19.26",
+  "descricao": "Máquinas de carbonizar a lã",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8445.20.00",
+  "descricao": "- Máquinas para fiação de matérias têxteis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8445.30",
+  "descricao": "- Máquinas para dobragem ou torção, de matérias têxteis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8445.40",
+  "descricao": "- Máquinas de bobinar (incluindo as bobinadoras de trama) ou de dobar matérias têxteis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.47",
+  "descricao": "Teares para fabricar malhas, máquinas de costura por entrelaçamento (<i>couture-tricotage</i>), máquinas para fabricar guipuras, tules, rendas, bordados, passamanarias, galões ou redes e máquinas para inserir tufos.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8447.20",
+  "descricao": "- Teares retilíneos para malhas; máquinas de costura por entrelaçamento (<i>couture-tricotage</i>)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8447.20.30",
+  "descricao": "Máquinas de costura por entrelaçamento (<i>couture-tricotage</i>)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8447.90.10",
+  "descricao": "Máquinas para fabricação de redes, tules ou filós",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8447.90.20",
+  "descricao": "Máquinas automáticas para bordar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.48",
+  "descricao": "Máquinas e aparelhos auxiliares para as máquinas das posições 84.44, 84.45, 84.46 ou 84.47 (por exemplo, ratieras (maquinetas*), mecanismos Jacquard, quebra-urdiduras e quebra-tramas, mecanismos troca-lançadeiras); partes e acessórios reconhecíveis como exclusiva ou principalmente destinados às máquinas da presente posição ou das posições 84.44, 84.45, 84.46 ou 84.47 (por exemplo, fusos, aletas, guarnições de cardas, pentes, barras, fieiras, lançadeiras, liços e quadros de liços, agulhas, platinas, ganchos).",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.1",
+  "descricao": "- Máquinas e aparelhos auxiliares para as máquinas das posições 84.44, 84.45, 84.46 ou 84.47:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.11",
+  "descricao": "-- Ratieras (Maquinetas*) e mecanismos Jacquard; redutores, perfuradores e copiadores de cartões; máquinas para enlaçar cartões após perfuração",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.20",
+  "descricao": "- Partes e acessórios das máquinas da posição 84.44 ou das suas máquinas e aparelhos auxiliares",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.20.20",
+  "descricao": "Outras partes e acessórios de máquinas para a extrusão",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.20.30",
+  "descricao": "De máquinas para corte ou ruptura de fibras",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.3",
+  "descricao": "- Partes e acessórios das máquinas da posição 84.45 ou das suas máquinas e aparelhos auxiliares:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.32",
+  "descricao": "-- De máquinas para preparação de matérias têxteis, exceto as guarnições de cardas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.32.40",
+  "descricao": "De máquinas para a preparação da seda",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.32.50",
+  "descricao": "De máquinas para carbonizar lã",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.39.1",
+  "descricao": "De máquinas para fiação, dobragem ou torção",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.39.12",
+  "descricao": "De máquinas do tipo <i>tow-to-yarn</i>",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.39.2",
+  "descricao": "De máquinas de bobinar ou de dobar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.4",
+  "descricao": "- Partes e acessórios de teares para tecidos ou das suas máquinas e aparelhos auxiliares:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.49.10",
+  "descricao": "De máquinas ou aparelhos auxiliares de teares",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.5",
+  "descricao": "- Partes e acessórios dos teares, máquinas ou aparelhos, da posição 84.47 ou das suas máquinas e aparelhos auxiliares:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.59.30",
+  "descricao": "De máquinas para fabricação de redes, tules ou filós, ou automáticas para bordar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8448.59.40",
+  "descricao": "De máquinas do item 8447.90.90",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8449.00",
+  "descricao": "Máquinas e aparelhos para fabricação ou acabamento de feltro ou de falsos tecidos (tecidos não tecidos), em peça ou em forma determinada, incluindo as máquinas e aparelhos para fabricação de chapéus de feltro; formas para chapelaria.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8449.00.10",
+  "descricao": "Máquinas e aparelhos para fabricação ou acabamento de feltros",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8449.00.20",
+  "descricao": "Máquinas e aparelhos para fabricação de falsos tecidos (tecidos não tecidos)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8449.00.91",
+  "descricao": "De máquinas ou aparelhos para fabricação de falsos tecidos (tecidos não tecidos)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.50",
+  "descricao": "Máquinas de lavar roupa, mesmo com dispositivos de secagem.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8450.1",
+  "descricao": "- Máquinas de capacidade, expressa em peso de roupa seca, não superior a 10 kg:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8450.11.00",
+  "descricao": "-- Máquinas inteiramente automáticas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8450.12.00",
+  "descricao": "-- Outras máquinas, com secador centrífugo incorporado",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8450.20",
+  "descricao": "- Máquinas de capacidade, expressa em peso de roupa seca, superior a 10 kg",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8450.90.10",
+  "descricao": "De máquinas da subposição 8450.20",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.51",
+  "descricao": "Máquinas e aparelhos (exceto as máquinas da posição 84.50) para lavar, limpar, espremer, secar, passar, prensar (incluindo as prensas de transferência térmica ou de fusão), branquear, tingir, para apresto e acabamento, para revestir ou impregnar fios, tecidos ou obras de matérias têxteis e máquinas para revestir tecidos-base ou outros suportes utilizados na fabricação de revestimentos para pisos (pavimentos), tais como linóleo; máquinas para enrolar, desenrolar, dobrar, cortar ou dentear tecidos.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8451.10.00",
+  "descricao": "- Máquinas para lavar a seco",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8451.2",
+  "descricao": "- Máquinas de secar:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8451.30",
+  "descricao": "- Máquinas e prensas para passar, incluindo as prensas de transferência térmica ou de fusão",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8451.40",
+  "descricao": "- Máquinas para lavar, branquear ou tingir",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8451.50",
+  "descricao": "- Máquinas para enrolar, desenrolar, dobrar, cortar ou dentear tecidos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8451.80.00",
+  "descricao": "- Outras máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8451.90.10",
+  "descricao": "Para as máquinas da subposição 8451.21",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.52",
+  "descricao": "Máquinas de costura, exceto as de costurar cadernos da posição 84.40; móveis, bases e tampas, próprios para máquinas de costura; agulhas para máquinas de costura.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8452.10.00",
+  "descricao": "- Máquinas de costura de uso doméstico",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8452.2",
+  "descricao": "- Outras máquinas de costura:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8452.30.00",
+  "descricao": "- Agulhas para máquinas de costura",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8452.90",
+  "descricao": "- Móveis, bases e tampas, para máquinas de costura, e suas partes; outras partes de máquinas de costura",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8452.90.20",
+  "descricao": "Móveis, bases e tampas, para máquinas de costura, e suas partes",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8452.90.8",
+  "descricao": "Outras partes de máquinas de costura de uso doméstico",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.53",
+  "descricao": "Máquinas e aparelhos para preparar, curtir ou trabalhar couros ou peles, ou para fabricar ou consertar calçado e outras obras de couro ou de pele, exceto máquinas de costura.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8453.10",
+  "descricao": "- Máquinas e aparelhos para preparar, curtir ou trabalhar couros ou peles",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8453.10.10",
+  "descricao": "Máquinas para dividir couros com largura útil inferior ou igual a 3.000 mm, com lâmina sem fim, com controle eletrônico programável",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8453.20.00",
+  "descricao": "- Máquinas e aparelhos para fabricar ou consertar calçado",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8453.80.00",
+  "descricao": "- Outras máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.54",
+  "descricao": "Conversores, cadinhos ou colheres de fundição, lingoteiras e máquinas de vazar (moldar), para metalurgia, aciaria ou fundição.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8454.30",
+  "descricao": "- Máquinas de vazar (moldar)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8454.90.10",
+  "descricao": "De máquinas de vazar (moldar) por centrifugação",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.56",
+  "descricao": "Máquinas-ferramentas que trabalhem por eliminação de qualquer matéria, que operem por laser ou por outro feixe de luz ou de fótons, por ultrassom, por eletroerosão, por processos eletroquímicos, por feixes de elétrons, por feixes iônicos ou por jato de plasma; máquinas de corte a jato de água.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8456.50.00",
+  "descricao": "- Máquinas de corte a jato de água",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.57",
+  "descricao": "Centros de usinagem (fabricação*), máquinas de sistema monostático (<i>single station</i>) e máquinas de estações múltiplas, para trabalhar metais.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8457.20",
+  "descricao": "- Máquinas de sistema monostático (<i>sin</i><i>gle station</i>)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8457.30",
+  "descricao": "- Máquinas de estações múltiplas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.59",
+  "descricao": "Máquinas-ferramentas (incluindo as unidades com cabeça deslizante) para furar, mandrilar, fresar, roscar interior ou exteriormente metais, por eliminação de matéria, exceto os tornos (incluindo os centros de torneamento) da posição 84.58.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8459.2",
+  "descricao": "- Outras máquinas para furar:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8459.4",
+  "descricao": "- Outras máquinas para mandrilar:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8459.5",
+  "descricao": "- Máquinas para fresar, de console:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8459.6",
+  "descricao": "- Outras máquinas para fresar:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8459.70.00",
+  "descricao": "- Outras máquinas para roscar interior ou exteriormente",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.60",
+  "descricao": "Máquinas-ferramentas para rebarbar, afiar, amolar, retificar, brunir, polir ou realizar outras operações de acabamento em metais ou <i>cermets</i> por meio de mós, de abrasivos ou de produtos polidores, exceto as máquinas de cortar ou acabar engrenagens da posição 84.61.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8460.1",
+  "descricao": "- Máquinas para retificar superfícies planas:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8460.2",
+  "descricao": "- Outras máquinas para retificar:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8460.22.00",
+  "descricao": "-- Máquinas para retificar sem centro, de comando numérico",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8460.23.00",
+  "descricao": "-- Outras máquinas para retificar superfícies cilíndricas, de comando numérico",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8460.3",
+  "descricao": "- Máquinas para afiar:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8460.40",
+  "descricao": "- Máquinas para brunir",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.61",
+  "descricao": "Máquinas-ferramentas para aplainar, plainas-limadoras, máquinas-ferramentas para escatelar, brochar, cortar ou acabar engrenagens, serrar, seccionar e outras máquinas-ferramentas que trabalhem por eliminação de metal ou de <i>cermets</i>, não especificadas nem compreendidas noutras posições.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8461.20",
+  "descricao": "- Plainas-limadoras e máquinas para escatelar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8461.30",
+  "descricao": "- Máquinas para brochar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8461.40",
+  "descricao": "- Máquinas para cortar ou acabar engrenagens",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8461.50",
+  "descricao": "- Máquinas para serrar ou seccionar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.62",
+  "descricao": "Máquinas-ferramentas (incluindo as prensas) para forjar ou estampar, martelos, martelos-pilões e martinetes, para trabalhar metais (excluindo os laminadores); máquinas-ferramentas (incluindo as prensas, as linhas de corte longitudinal e as linhas de corte transversal) para enrolar, arquear, dobrar, endireitar, aplanar, cisalhar, puncionar, chanfrar ou mordiscar metais (excluindo as bancas para estirar); prensas para trabalhar metais ou carbonetos metálicos, não especificadas acima.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8462.1",
+  "descricao": "- Máquinas para trabalhar a quente (incluindo as prensas) para forjar por matrizagem ou de forjamento livre ou de estampar, martelos, martelos-pilões e martinetes:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8462.11.00",
+  "descricao": "-- Máquinas para forjamento em matriz fechada",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8462.2",
+  "descricao": "- Máquinas (incluindo as prensas dobradeiras) para enrolar, arquear, dobrar, endireitar ou aplanar, para produtos planos:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8462.22.00",
+  "descricao": "-- Máquinas para formação de perfis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8462.25.00",
+  "descricao": "-- Máquinas de conformação por rolos, de comando numérico",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8462.26.00",
+  "descricao": "-- Outras máquinas para enrolar, arquear, dobrar, endireitar ou aplanar, de comando numérico",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8462.3",
+  "descricao": "- Linhas de corte longitudinal, linhas de corte transversal e outras máquinas (excluindo as prensas) para cisalhar, para produtos planos, exceto as máquinas combinadas de puncionar e cisalhar:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8462.33.00",
+  "descricao": "-- Máquinas para cisalhar, de comando numérico",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8462.4",
+  "descricao": "- Máquinas (excluindo as prensas) para puncionar, chanfrar ou mordiscar, para produtos planos, incluindo as máquinas combinadas de puncionar e cisalhar:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8462.5",
+  "descricao": "- Máquinas (excluindo as prensas) para trabalhar tubos, perfis ocos, perfis e barras:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.63",
+  "descricao": "Outras máquinas-ferramentas para trabalhar metais ou <i>cermets</i>, que trabalhem sem eliminação de matéria.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8463.20",
+  "descricao": "- Máquinas para fazer roscas internas ou externas por laminagem",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8463.30.00",
+  "descricao": "- Máquinas para trabalhar arames e fios de metal",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.64",
+  "descricao": "Máquinas-ferramentas para trabalhar pedra, produtos cerâmicos, concreto (betão), fibrocimento ou matérias minerais semelhantes, ou para o trabalho a frio do vidro.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8464.10.00",
+  "descricao": "- Máquinas para serrar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8464.20",
+  "descricao": "- Máquinas para esmerilar ou polir",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.65",
+  "descricao": "Máquinas-ferramentas (incluindo as máquinas para pregar, grampear, colar ou reunir por qualquer outro modo) para trabalhar madeira, cortiça, osso, borracha endurecida, plástico duro ou matérias duras semelhantes.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8465.10.00",
+  "descricao": "- Máquinas-ferramentas capazes de efetuar diferentes tipos de operações sem troca de ferramentas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8465.91",
+  "descricao": "-- Máquinas de serrar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8465.92",
+  "descricao": "-- Máquinas para desbastar ou aplainar; máquinas para fresar ou moldurar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8465.93",
+  "descricao": "-- Máquinas para esmerilar, lixar ou polir",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8465.94.00",
+  "descricao": "-- Máquinas para arquear ou reunir",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8465.95",
+  "descricao": "-- Máquinas para furar ou escatelar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8465.96.00",
+  "descricao": "-- Máquinas para fender, seccionar ou desenrolar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.66",
+  "descricao": "Partes e acessórios reconhecíveis como exclusiva ou principalmente destinados às máquinas das posições 84.56 a 84.65, incluindo os porta-peças e porta-ferramentas, as fieiras de abertura automática, os dispositivos divisores e outros dispositivos especiais, para estas máquinas; porta-ferramentas para ferramentas manuais de qualquer tipo.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8466.30.00",
+  "descricao": "- Dispositivos divisores e outros dispositivos especiais, para máquinas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8466.91.00",
+  "descricao": "-- Para máquinas da posição 84.64",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8466.92.00",
+  "descricao": "-- Para máquinas da posição 84.65",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8466.93",
+  "descricao": "-- Para máquinas das posições 84.56 a 84.61",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8466.93.1",
+  "descricao": "Para máquinas da posição 84.56",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8466.93.11",
+  "descricao": "Para máquinas da subposição 8456.20",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8466.93.20",
+  "descricao": "Para máquinas da posição 84.57",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8466.93.30",
+  "descricao": "Para máquinas da posição 84.58",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8466.93.40",
+  "descricao": "Para máquinas da posição 84.59",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8466.93.50",
+  "descricao": "Para máquinas da posição 84.60",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8466.93.60",
+  "descricao": "Para máquinas da posição 84.61",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8466.94",
+  "descricao": "-- Para máquinas das posições 84.62 ou 84.63",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8466.94.10",
+  "descricao": "Para máquinas das subposições 8462.11 ou 8462.19",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8466.94.20",
+  "descricao": "Para máquinas das subposições 8462.22 a 8462.29",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.68",
+  "descricao": "Máquinas e aparelhos para soldar, mesmo de corte, exceto os da posição 85.15; máquinas e aparelhos a gás, para têmpera superficial.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8468.20.00",
+  "descricao": "- Outras máquinas e aparelhos a gás",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8468.80",
+  "descricao": "- Outras máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8468.90.20",
+  "descricao": "De máquinas ou aparelhos para soldar por fricção",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.70",
+  "descricao": "Máquinas de calcular e máquinas de bolso que permitam gravar, reproduzir e visualizar informações, com função de cálculo incorporada; máquinas de contabilidade, máquinas de franquear, de emitir bilhetes e máquinas semelhantes, com dispositivo de cálculo incorporado; caixas registradoras.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8470.10.00",
+  "descricao": "- Calculadoras eletrônicas capazes de funcionar sem fonte externa de energia elétrica e máquinas de bolso com função de cálculo incorporada que permitam gravar, reproduzir e visualizar informações",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8470.2",
+  "descricao": "- Outras máquinas de calcular, eletrônicas:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8470.30.00",
+  "descricao": "- Outras máquinas de calcular",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8470.90.10",
+  "descricao": "Máquinas de franquear correspondência",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.71",
+  "descricao": "Máquinas automáticas para processamento de dados e suas unidades; leitores magnéticos ou ópticos, máquinas para registrar dados em suporte sob forma codificada, e máquinas para processamento desses dados, não especificadas nem compreendidas noutras posições.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8471.30",
+  "descricao": "- Máquinas automáticas para processamento de dados, portáteis, de peso não superior a 10 kg, que contenham pelo menos uma unidade central de processamento, um teclado e uma tela (ecrã*)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8471.4",
+  "descricao": "- Outras máquinas automáticas para processamento de dados:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8471.80.00",
+  "descricao": "- Outras unidades de máquinas automáticas para processamento de dados",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.72",
+  "descricao": "Outras máquinas e aparelhos de escritório (por exemplo, duplicadores hectográficos ou a estêncil, máquinas para imprimir endereços, distribuidores automáticos de notas (papéis-moeda), máquinas para selecionar, contar ou empacotar moedas, máquinas apontadoras de lápis (apara-lápis), perfuradores ou grampeadores (agrafadores*)).",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8472.30",
+  "descricao": "- Máquinas para selecionar, dobrar, envelopar ou cintar correspondência, máquinas para abrir, fechar ou lacrar correspondência e máquinas para colar ou obliterar selos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8472.30.10",
+  "descricao": "Máquinas automáticas para obliterar selos postais",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8472.30.20",
+  "descricao": "Máquinas automáticas para seleção de correspondência por formato e classificação e distribuição da mesma por leitura óptica do código postal",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8472.30.30",
+  "descricao": "Máquinas automáticas para seleção e distribuição de encomendas, por leitura óptica do código postal",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8472.90.20",
+  "descricao": "Máquinas do tipo utilizado em caixas de banco, com dispositivo para autenticar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8472.90.30",
+  "descricao": "Máquinas para selecionar e contar moedas ou notas (papéis-moeda)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8472.90.40",
+  "descricao": "Máquinas apontadoras de lápis (apara-lápis), perfuradores, grampeadores e desgrampeadores",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8472.90.91",
+  "descricao": "Máquinas para imprimir endereços ou para estampar placas de endereços",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.73",
+  "descricao": "Partes e acessórios (exceto estojos, capas e semelhantes) reconhecíveis como exclusiva ou principalmente destinados às máquinas ou aparelhos das posições 84.70 a 84.72.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8473.2",
+  "descricao": "- Partes e acessórios das máquinas da posição 84.70:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8473.29.20",
+  "descricao": "De máquinas da subposição 8470.30",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8473.30",
+  "descricao": "- Partes e acessórios das máquinas da posição 84.71",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8473.40",
+  "descricao": "- Partes e acessórios das máquinas da posição 84.72",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8473.40.70",
+  "descricao": "Outras partes e acessórios das máquinas dos itens 8472.90.10 ou 8472.90.20",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8473.50",
+  "descricao": "- Partes e acessórios que possam ser utilizados indiferentemente com as máquinas ou aparelhos de duas ou mais das posições 84.70 a 84.72",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.74",
+  "descricao": "Máquinas e aparelhos para selecionar, peneirar, separar, lavar, esmagar, moer, misturar ou amassar terras, pedras, minérios ou outras substâncias minerais sólidas (incluindo os pós e pastas); máquinas para aglomerar ou moldar combustíveis minerais sólidos, pastas cerâmicas, cimento, gesso ou outras matérias minerais em pó ou em pasta; máquinas para fazer moldes de areia para fundição.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8474.10.00",
+  "descricao": "- Máquinas e aparelhos para selecionar, peneirar, separar ou lavar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8474.20",
+  "descricao": "- Máquinas e aparelhos para esmagar, moer ou pulverizar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8474.3",
+  "descricao": "- Máquinas e aparelhos para misturar ou amassar:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8474.32.00",
+  "descricao": "-- Máquinas para misturar matérias minerais com betume",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8474.80",
+  "descricao": "- Outras máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.75",
+  "descricao": "Máquinas para montagem de lâmpadas, tubos ou válvulas, elétricos ou eletrônicos, ou de lâmpadas de luz relâmpago (<i>flash</i>), que tenham invólucro de vidro; máquinas para fabricação ou trabalho a quente do vidro ou das suas obras.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8475.10.00",
+  "descricao": "- Máquinas para montagem de lâmpadas, tubos ou válvulas, elétricos ou eletrônicos, ou de lâmpadas de luz relâmpago (<i>flash</i>), que tenham invólucro de vidro",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8475.2",
+  "descricao": "- Máquinas para fabricação ou trabalho a quente do vidro ou das suas obras:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8475.21.00",
+  "descricao": "-- Máquinas para fabricação de fibras ópticas e de seus esboços",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.76",
+  "descricao": "Máquinas automáticas de venda de produtos (por exemplo, selos, cigarros, alimentos ou bebidas), incluindo as máquinas de trocar dinheiro.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8476.2",
+  "descricao": "- Máquinas automáticas de venda de bebidas:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8476.8",
+  "descricao": "- Outras máquinas:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8476.89.10",
+  "descricao": "Máquinas automáticas de venda de selos postais",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.77",
+  "descricao": "Máquinas e aparelhos para trabalhar borracha ou plástico ou para fabricação de produtos dessas matérias, não especificados nem compreendidos noutras posições deste Capítulo.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8477.10",
+  "descricao": "- Máquinas de moldar por injeção",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8477.30",
+  "descricao": "- Máquinas de moldar por insuflação",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8477.40",
+  "descricao": "- Máquinas de moldar a vácuo e outras máquinas de termoformar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8477.5",
+  "descricao": "- Outras máquinas e aparelhos para moldar ou dar forma:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8477.80",
+  "descricao": "- Outras máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.78",
+  "descricao": "Máquinas e aparelhos para preparar ou transformar tabaco, não especificados nem compreendidos noutras posições deste Capítulo.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8478.10",
+  "descricao": "- Máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.79",
+  "descricao": "Máquinas e aparelhos mecânicos com função própria, não especificados nem compreendidos noutras posições deste Capítulo.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8479.10",
+  "descricao": "- Máquinas e aparelhos para obras públicas, construção civil ou trabalhos semelhantes",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8479.20.00",
+  "descricao": "- Máquinas e aparelhos para extração ou preparação de óleos ou gorduras vegetais ou de origem microbiana, fixos, ou de animais",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8479.30.00",
+  "descricao": "- Prensas para fabricação de painéis de partículas, de fibras de madeira ou de outras matérias lenhosas, e outras máquinas e aparelhos para tratamento de madeira ou de cortiça",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8479.40.00",
+  "descricao": "- Máquinas para fabricação de cordas ou cabos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8479.8",
+  "descricao": "- Outras máquinas e aparelhos:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8479.89.2",
+  "descricao": "Máquinas e aparelhos para cestaria ou espartaria; máquinas e aparelhos para fabricação de pincéis, brochas e escovas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8479.89.21",
+  "descricao": "Máquinas e aparelhos para cestaria ou espartaria",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8479.89.22",
+  "descricao": "Máquinas e aparelhos para fabricação de pincéis, brochas ou escovas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8479.89.92",
+  "descricao": "Máquinas de leme para embarcações",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.85",
+  "descricao": "Máquinas para fabricação aditiva.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.86",
+  "descricao": "Máquinas e aparelhos do tipo utilizado exclusiva ou principalmente na fabricação de <i>boules</i> ou <i>wafers</i> de material semicondutor, dispositivos semicondutores, circuitos integrados eletrônicos ou de dispositivos de visualização de tela (ecrã*) plana; máquinas e aparelhos especificados na Nota 11 C) do presente Capítulo; partes e acessórios.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8486.10.00",
+  "descricao": "- Máquinas e aparelhos para fabricação de <i>boules</i> ou <i>wa</i><i>fers</i>",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8486.20.00",
+  "descricao": "- Máquinas e aparelhos para fabricação de dispositivos semicondutores ou de circuitos integrados eletrônicos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8486.30.00",
+  "descricao": "- Máquinas e aparelhos para fabricação de dispositivos de visualização de tela (ecrã*) plana",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8486.40.00",
+  "descricao": "- Máquinas e aparelhos especificados na Nota 11 C) do presente Capítulo",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.87",
+  "descricao": "Partes de máquinas ou de aparelhos, não especificadas nem compreendidas noutras posições do presente Capítulo, que não contenham conexões elétricas, partes isoladas eletricamente, bobinas, contatos nem quaisquer outros elementos com características elétricas.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "85",
+  "descricao": "Máquinas, aparelhos e materiais elétricos, e suas partes; aparelhos de gravação ou de reprodução de som, aparelhos de gravação ou de reprodução de imagens e de som em televisão, e suas partes e acessórios.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8503.00",
+  "descricao": "Partes reconhecíveis como exclusiva ou principalmente destinadas às máquinas das posições 85.01 ou 85.02.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "85.10",
+  "descricao": "Aparelhos ou máquinas de barbear, máquinas de cortar o cabelo ou de tosquiar e aparelhos de depilar, com motor elétrico incorporado.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8510.10.00",
+  "descricao": "- Aparelhos ou máquinas de barbear",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8510.20.00",
+  "descricao": "- Máquinas de cortar o cabelo ou de tosquiar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8510.90.1",
+  "descricao": "De aparelhos ou máquinas de barbear",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8510.90.20",
+  "descricao": "Pentes e contrapentes para máquinas de tosquiar",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "85.15",
+  "descricao": "Máquinas e aparelhos para soldar (mesmo de corte) elétricos (incluindo os a gás aquecido eletricamente), a laser ou outros feixes de luz ou de fótons, a ultrassom, a feixes de elétrons, a impulsos magnéticos ou a jato de plasma; máquinas e aparelhos elétricos para projeção a quente de metais ou de <i>cermets</i>.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8515.1",
+  "descricao": "- Máquinas e aparelhos para soldadura forte ou fraca:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8515.2",
+  "descricao": "- Máquinas e aparelhos para soldar metais por resistência:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8515.3",
+  "descricao": "- Máquinas e aparelhos para soldar metais por arco ou jato de plasma:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8515.80",
+  "descricao": "- Outras máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "85.43",
+  "descricao": "Máquinas e aparelhos elétricos com função própria, não especificados nem compreendidos noutras posições do presente Capítulo.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8543.30",
+  "descricao": "- Máquinas e aparelhos de galvanoplastia, eletrólise ou eletroforese",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8543.70",
+  "descricao": "- Outras máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8543.70.3",
+  "descricao": "Máquinas e aparelhos auxiliares para vídeo",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8543.90.10",
+  "descricao": "Das máquinas ou aparelhos da subposição 8543.70",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "85.47",
+  "descricao": "Peças isolantes inteiramente de matérias isolantes, ou com simples peças metálicas de montagem (suportes roscados, por exemplo) incorporadas na massa, para máquinas, aparelhos e instalações elétricas, exceto os isoladores da posição 85.46; tubos isoladores e suas peças de ligação, de metais comuns, isolados interiormente.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8548.00",
+  "descricao": "Partes elétricas de máquinas ou aparelhos, não especificadas nem compreendidas noutras posições do presente Capítulo.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9013.10",
+  "descricao": "- Miras telescópicas para armas; periscópios; lunetas para máquinas, aparelhos ou instrumentos do presente Capítulo ou da Seção XVI",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "90.17",
+  "descricao": "Instrumentos de desenho, de traçado ou de cálculo (por exemplo, máquinas de desenhar, pantógrafos, transferidores, estojos de desenho, réguas de cálculo e discos de cálculo); instrumentos de medida de distâncias de uso manual (por exemplo, metros, micrômetros, paquímetros e calibres), não especificados nem compreendidos noutras posições do presente Capítulo.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9017.10",
+  "descricao": "- Mesas e máquinas de desenhar, mesmo automáticas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9017.90.10",
+  "descricao": "De mesas ou máquinas de desenhar, automáticas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "90.24",
+  "descricao": "Máquinas e aparelhos para ensaios de dureza, tração, compressão, elasticidade ou de outras propriedades mecânicas de materiais (por exemplo, metais, madeira, têxteis, papel, plástico).",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9024.10",
+  "descricao": "- Máquinas e aparelhos para ensaios de metais",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9024.80",
+  "descricao": "- Outras máquinas e aparelhos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9024.80.1",
+  "descricao": "Máquinas e aparelhos para ensaios de têxteis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9024.80.2",
+  "descricao": "Máquinas e aparelhos para ensaios de papel, cartão, linóleo e plástico ou borracha flexíveis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9024.80.21",
+  "descricao": "Máquinas para ensaios de pneumáticos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "90.31",
+  "descricao": "Instrumentos, aparelhos e máquinas de medida ou controle, não especificados nem compreendidos noutras posições do presente Capítulo; projetores de perfis.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9031.10.00",
+  "descricao": "- Máquinas de balancear (equilibrar) peças mecânicas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9031.80",
+  "descricao": "- Outros instrumentos, aparelhos e máquinas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9031.80.20",
+  "descricao": "Máquinas para medição tridimensional",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9033.00.00",
+  "descricao": "Partes e acessórios não especificados nem compreendidos noutras posições do presente Capítulo, para máquinas, aparelhos, instrumentos ou artigos do Capítulo 90.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "95.04",
+  "descricao": "Consoles e máquinas de jogos de vídeo, jogos de salão, incluindo os jogos com motor ou outro mecanismo, os bilhares, as mesas especiais para jogos de cassino e os jogos de balizas (pinos) automáticos (boliche), os jogos que funcionem por introdução de moedas, notas (papéis-moeda), cartões de banco, fichas ou por outros meios de pagamento.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9504.50.00",
+  "descricao": "- Consoles e máquinas de jogos de vídeo, exceto os classificados na subposição 9504.30",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "96.03",
+  "descricao": "Vassouras e escovas, mesmo que constituam partes de máquinas, de aparelhos ou de veículos, vassouras mecânicas de uso manual não motorizadas, pincéis e espanadores; cabeças preparadas para escovas, pincéis e artigos semelhantes; <i>pads</i> (talochas) e rolos para pintura; rodos de borracha ou de matérias flexíveis semelhantes.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9603.50.00",
+  "descricao": "- Outras escovas que constituam partes de máquinas, de aparelhos ou de veículos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "96.12",
+  "descricao": "Fitas impressoras para máquinas de escrever e fitas impressoras semelhantes, tintadas ou preparadas de outra forma para imprimir, montadas ou não em carretéis ou cartuchos; almofadas de carimbo, impregnadas ou não, mesmo com caixa.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ }
+]

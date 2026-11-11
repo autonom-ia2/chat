@@ -82,12 +82,13 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
                      [item.call('73', 'Parafusos de ferro'), item.call('73.18', 'Parafusos, pinos ou pernos'),
                       item.call('7318.14.00', '-- Parafusos autoperfurantes'), item.call('34.03', 'Preparações de porcas e parafusos'),
                       item.call('7318.15.00', '-- Outros parafusos e pinos')])
-      # O grupo que abre é o mais largo dos mais relevantes: o capítulo 73.
-      fonte_responde('https://brasilapi.com.br/api/ncm/v1?search=73', [])
+      # O capítulo (73) nunca abre: abre a posição 73.18, pela busca da posição (revisão do #2917).
+      pela_posicao = fonte_responde(posicao, [])
 
       dados = executar_pronta(ferramenta, 'consulta' => 'buscar', 'busca' => 'parafuso')['dados']
 
       expect(dados['itens'].pluck('codigo')).to eq(%w[7318.14.00 73.18 73 7318.15.00 34.03])
+      expect(pela_posicao).to have_been_made.once
     end
 
     it 'as descricoes dizem ao modelo que so o codigo de 8 digitos vai na nota e que pergunte o material' do

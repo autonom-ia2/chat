@@ -34,6 +34,11 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     WebMock::RequestRegistry.instance.requested_signatures.hash.keys.map { |assinatura| assinatura.uri.to_s }
   end
 
+  # O texto de cada busca feita à fonte ("café torrado", "0901").
+  def buscas_feitas
+    pedidos.map { |uri| CGI.unescape(URI(uri).query.to_s.delete_prefix('search=')) }
+  end
+
   def buscar(busca)
     executar_pronta(ferramenta, 'consulta' => 'buscar', 'busca' => busca)
   end
@@ -82,6 +87,18 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       dados = buscar('café torrado')['dados']
 
       expect(dados['itens'].pluck('codigo')).to eq(%w[0901.21.00 0901.22.00])
+    end
+
+    # Revisão do #2917 (2): o capítulo (2 dígitos) nunca abre. "veículos" abria o 86 (ferrovia) e "máquinas" o 85 (980
+    # itens, 206 KB, 2,2 s). Os candidatos a abrir são os grupos de 4 a 7 dígitos.
+    it 'o capitulo nunca abre: "veiculos" e "maquinas" reais' do
+      stub_request(:get, api).with(query: hash_including({})).to_return(body: '[]', headers: { 'Content-Type' => 'application/json' })
+      fonte_responde("#{api}?search=ve%C3%ADculos", fixture('ncm_busca_veiculos.json'))
+      fonte_responde("#{api}?search=m%C3%A1quinas", fixture('ncm_busca_maquinas.json'))
+
+      expect(buscar('veículos')['situacao']).to eq('encontrado')
+      expect(buscar('máquinas')['situacao']).to eq('encontrado')
+      expect(buscas_feitas.select { |termo| termo.length < ncm::POSICAO }).to eq([])
     end
 
     it '"parafuso" continua bom: os parafusos primeiro, com a descricao completa, e a posicao 73.18 aberta' do

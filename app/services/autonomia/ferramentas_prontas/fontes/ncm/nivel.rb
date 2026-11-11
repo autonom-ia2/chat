@@ -28,6 +28,11 @@ class Autonomia::FerramentasProntas::Fontes::Ncm::Nivel
     @vigente_desde = dado['data_inicio'].presence
   end
 
+  # O grupo que pode abrir nos códigos da nota: posição, subposição ou item (4 a 7 dígitos). O capítulo, não.
+  def abre?
+    digitos.length >= Autonomia::FerramentasProntas::Fontes::Ncm::POSICAO && !da_nota?
+  end
+
   def da_nota?
     digitos.length == Autonomia::FerramentasProntas::Fontes::Ncm::DA_NOTA
   end

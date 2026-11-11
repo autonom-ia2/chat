@@ -91,11 +91,12 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     end
   end
 
-  # O grupo (menos de 8 dígitos) mais relevante que a busca trouxe: é ele que abre. No mesmo grupo de relevância, o mais
-  # largo (a posição antes da subposição: abre mais códigos da nota). nil quando só veio código da nota.
+  # O grupo mais relevante que a busca trouxe: é ele que abre. Só a posição, a subposição e o item (4 a 7 dígitos): o
+  # capítulo nunca abre ("veículos" abria o 86, a ferrovia; "máquinas" o 85, 980 itens). No mesmo grupo de relevância,
+  # o mais largo (a posição antes da subposição: abre mais códigos da nota). nil quando não veio grupo que abra.
   def grupo_a_abrir(busca, niveis)
     indice = Descricao.indice(niveis)
-    grupos = niveis.reject(&:da_nota?)
+    grupos = niveis.select(&:abre?)
     Autonomia::FerramentasProntas::Lista.em_ordem(grupos, busca, desempate: ->(nivel) { nivel.digitos.length }) do |nivel|
       [Descricao.completa(nivel, indice), nivel.propria]
     end.first
