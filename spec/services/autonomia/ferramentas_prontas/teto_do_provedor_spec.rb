@@ -48,6 +48,15 @@ RSpec.describe Autonomia::FerramentasProntas::TetoDoProvedor do
     end
   end
 
+  it 'a AwesomeAPI sem chave: teto conservador (o limite nao e publicado); com a chave gratuita (100 mil por mes), sobe' do
+    with_modified_env(AUTONOMIA_AWESOMEAPI_CHAVE: '') do
+      expect(described_class.tetos('cep.awesomeapi.com.br')).to eq([[30, 60], [1_000, 86_400]])
+    end
+    with_modified_env(AUTONOMIA_AWESOMEAPI_CHAVE: 'chave-de-teste') do
+      expect(described_class.tetos('cep.awesomeapi.com.br')).to eq([[120, 60], [3_000, 86_400]])
+    end
+  end
+
   it 'a chave colada com quebra de linha no fim vale sem ela; com quebra no meio, a fonte segue sem chave' do
     parallelum = Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum
     with_modified_env(AUTONOMIA_PRONTAS_FIPE_TOKEN: " chave-de-teste\n") do

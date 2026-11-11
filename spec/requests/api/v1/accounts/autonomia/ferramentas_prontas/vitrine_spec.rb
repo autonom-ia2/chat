@@ -73,7 +73,7 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
 
     it 'grava quem incluiu mesmo quando o acesso nasceu no Experimente' do
       pessoa = com_funcao(%w[autonomia_tools_manage])
-      fonte_responde('https://brasilapi.com.br/api/cep/v2/01001000', { cep: '01001000', state: 'SP', city: 'São Paulo' })
+      fonte_responde('https://viacep.com.br/ws/01001000/json/', { cep: '01001-000', localidade: 'São Paulo', uf: 'SP' })
       post "#{base}/experimentar", params: { fonte: 'cep', valor: '01001000' }, headers: pessoa.create_new_auth_token, as: :json
       expect(Autonomia::FerramentasProntas::Acesso.sole.incluida_por_id).to be_nil
 
@@ -212,8 +212,8 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
 
   describe 'POST experimentar' do
     it 'consulta a fonte e devolve os dados, contando no limite do dia da conta' do
-      fonte_responde('https://brasilapi.com.br/api/cep/v2/01001000',
-                     { cep: '01001000', state: 'SP', city: 'São Paulo', neighborhood: 'Sé', street: 'Praça da Sé' })
+      fonte_responde('https://viacep.com.br/ws/01001000/json/',
+                     { cep: '01001-000', localidade: 'São Paulo', uf: 'SP', bairro: 'Sé', logradouro: 'Praça da Sé' })
 
       post "#{base}/experimentar", params: { fonte: 'cep', valor: '01001-000' }, headers: admin.create_new_auth_token, as: :json
 
@@ -224,8 +224,8 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
     end
 
     it 'conta no limite do dia: passou dele, não sai para a rede' do
-      cep = 'https://brasilapi.com.br/api/cep/v2/01001000'
-      fonte_responde(cep, { cep: '01001000', state: 'SP', city: 'São Paulo' })
+      cep = 'https://viacep.com.br/ws/01001000/json/'
+      fonte_responde(cep, { cep: '01001-000', localidade: 'São Paulo', uf: 'SP' })
       Autonomia::FerramentasProntas::Acesso.create!(account: account, fonte: 'cep', limite_diario: 1)
 
       2.times { post "#{base}/experimentar", params: { fonte: 'cep', valor: '01001000' }, headers: admin.create_new_auth_token, as: :json }
@@ -242,8 +242,9 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
     end
 
     it 'com a fonte fora, diz que não conseguiu' do
-      fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
       fonte_fora('https://viacep.com.br/ws/01001000/json/')
+      fonte_fora('https://cep.awesomeapi.com.br/json/01001000')
+      fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
 
       post "#{base}/experimentar", params: { fonte: 'cep', valor: '01001000' }, headers: admin.create_new_auth_token, as: :json
 

@@ -9,11 +9,8 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
   # variável fica no código. O teto global acompanha (`TetoDoProvedor.tetos`).
   CHAVE = 'AUTONOMIA_PRONTAS_FIPE_TOKEN'.freeze
 
-  # Colada com quebra de linha no fim, vale sem ela; com quebra no meio, não vale (seria outro cabeçalho), e a fonte
-  # segue sem chave.
   def self.chave
-    valor = ENV.fetch(CHAVE, nil).to_s.strip
-    valor.presence unless valor.include?("\r") || valor.include?("\n")
+    chave_do_ambiente(CHAVE)
   end
 
   def self.cabecalhos

@@ -27,8 +27,9 @@ Desligado, o provedor é pulado com o motivo `provedor_desligado`.
 
 | Host | Fontes | O que o termo pede | Teto global | Cache |
 |---|---|---|---|---|
-| `brasilapi.com.br` | CEP, CNPJ, FIPE, feriados, Banco Central (reserva), cidades (reserva), DDD, bancos, código de mercadoria (NCM, F4) | Volume com "natureza de uma pessoa real"; proíbe varredura automatizada (README do projeto, "Termos de Uso"). Não publica número. | 300 por minuto | por consulta |
-| `viacep.com.br` | CEP (reserva do endereço; única do CEP pela rua, `por_endereco`, e do CEP de referência da cidade, `Cep::Referencia`, uma chamada por cidade a cada 30 dias) | Uso moderado; bloqueia uso abusivo. Não publica número. | 60 por minuto | 30 dias |
+| `brasilapi.com.br` | CEP (última reserva do endereço, só quando nenhuma anterior disse "não tem"), CNPJ, FIPE, feriados, Banco Central (reserva), cidades (reserva), DDD, bancos, código de mercadoria (NCM, F4) | Volume com "natureza de uma pessoa real"; proíbe varredura automatizada (README do projeto, "Termos de Uso"). Não publica número. | 300 por minuto | por consulta |
+| `viacep.com.br` | CEP (principal do endereço; única do CEP pela rua, `por_endereco`, e do CEP de referência da cidade, `Cep::Referencia`, uma chamada por cidade a cada 30 dias) | Uso moderado; bloqueia uso abusivo. Não publica número. | 60 por minuto | 30 dias |
+| `cep.awesomeapi.com.br` | CEP (1ª reserva do endereço; não busca o CEP pela rua) | Sem chave: **limite não publicado**. Com a chave gratuita (cabeçalho `x-api-key`): **100 mil pedidos por mês** ([docs.awesomeapi.com.br/instrucoes-api-key.md](https://docs.awesomeapi.com.br/instrucoes-api-key.md), consultado em 11/11/2026). | Sem chave: 30 por minuto e 1.000 por dia (conservador). Com chave: 120 por minuto e 3.000 por dia (~90% de 100 mil ÷ 30) | 30 dias |
 | `minhareceita.org` | CNPJ (reserva) | Não achamos número publicado. | 120 por minuto (padrão) | 1 dia |
 | `api.opencnpj.org` | CNPJ (2ª reserva) | Não achamos número publicado na página de documentação. | 120 por minuto (padrão) | 1 dia |
 | `parallelum.com.br` | FIPE | **500 pedidos por dia por IP sem chave**; 1.000 com chave gratuita (documentação da API FIPE v2). | **450 por dia** | 1 dia (preço), 7 dias (listas) |
@@ -60,6 +61,13 @@ Limitações conhecidas, aceitas:
   limite. A saída é a chave gratuita da parallelum (1.000 por dia): o código lê da variável de ambiente opcional
   `AUTONOMIA_PRONTAS_FIPE_TOKEN` e funciona sem ela. Com a chave, o teto global da parallelum sobe para 900 por dia
   (fatia de 225 por conta). Criar a conta no serviço é decisão do Rodrigo.
+- **CEP: três fontes, e a BrasilAPI por último (#2906, decisão do Rodrigo 11/11/2026: "bom ter os dois ou mais,
+  para termos margem de rate limit").** A ordem do endereço pelo CEP é ViaCEP, AwesomeAPI e BrasilAPI. Medido em
+  11/11/2026: a BrasilAPI responde todo CEP pelo `open-cep`, um espelho do ViaCEP que inventa endereço para o CEP que
+  não existe (99999-999 vira "Avenida das Torres, Sarandi-PR"). Por isso ela só responde quando nenhuma fonte anterior
+  disse "não tem". **Risco residual, aceito:** com o ViaCEP e a AwesomeAPI fora do ar ao mesmo tempo, um CEP que não
+  existe pode receber um endereço inventado da BrasilAPI. A chave gratuita da AwesomeAPI é opcional: o código lê da
+  variável de ambiente `AUTONOMIA_AWESOMEAPI_CHAVE` e funciona sem ela. Criar a conta no serviço é decisão do Rodrigo.
 - **Localização (motivo técnico do provedor).** O Photon pede uso justo: a fatia de cada conta é 15 pedidos por minuto,
   e acima disso a reserva (a sede mais próxima, sem rede) responde. O limite diário segue 500.
 - **Janela fixa.** Na virada da janela (por exemplo, à meia-noite UTC no teto diário), saem até duas janelas de

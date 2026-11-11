@@ -1,7 +1,9 @@
-# ENDEREÇO PELO CEP, E O CEP PELO ENDEREÇO (#2858): BrasilAPI, com o ViaCEP de reserva (`cep/brasil_api.rb`,
-# `cep/via_cep.rb`). O endereço de um CEP muda pouco: 30 dias de cache. Termos: as duas são gratuitas e sem chave; o
-# ViaCEP pede uso moderado e bloqueia por abuso, e o cache e o limite por conta são a moderação. Só o endereço vai ao
-# agente (sem coordenada nem código de serviço).
+# ENDEREÇO PELO CEP, E O CEP PELO ENDEREÇO (#2858): o ViaCEP, com a AwesomeAPI de reserva e a BrasilAPI por último
+# (`cep/via_cep.rb`, `cep/awesome_api.rb`, `cep/brasil_api.rb`; #2906, decisão do Rodrigo 11/11/2026: mais de uma fonte,
+# para ter margem no limite de pedidos). A BrasilAPI só responde quando nenhuma das anteriores disse "não tem": ela
+# inventa endereço para o CEP que não existe (ver `cep/brasil_api.rb`). O endereço de um CEP muda pouco: 30 dias de
+# cache. Termos: as três são gratuitas; o ViaCEP pede uso moderado e bloqueia por abuso, e o cache, o teto global e o
+# limite por conta são a moderação. Só o endereço vai ao agente (sem coordenada, DDD nem código de serviço).
 #
 # Regra "QI 70" do Rodrigo (11/11/2026): o cliente diz a rua, não o CEP.
 #   - por_endereco: o CEP pela rua e pela cidade (a UF sai dela, `Municipios`), no ViaCEP (`/ws/UF/cidade/rua/json/`,
@@ -80,7 +82,7 @@ module Autonomia::FerramentasProntas::Fontes::Cep
     descricao: 'Consulta oficial e gratuita do endereço de um CEP (rua, bairro, cidade e UF), e do CEP de uma rua.',
     consultas: [
       Autonomia::FerramentasProntas::Consulta.new(
-        nome: 'endereco', descricao: 'o endereço do CEP; pede cep', obrigatorios: [CEP], provedores: [BrasilApi, ViaCep],
+        nome: 'endereco', descricao: 'o endereço do CEP; pede cep', obrigatorios: [CEP], provedores: [ViaCep, AwesomeApi, BrasilApi],
         validade: 30.days, prazo_por_fonte: 3, prazo_total: 6
       ),
       Autonomia::FerramentasProntas::Consulta.new(
@@ -90,7 +92,7 @@ module Autonomia::FerramentasProntas::Fontes::Cep
       )
     ],
     limite_diario: 500,
-    termos: 'BrasilAPI e ViaCEP: gratuitas, sem chave; o ViaCEP bloqueia uso abusivo. Só o ViaCEP acha o CEP pela rua. ' \
+    termos: 'ViaCEP, AwesomeAPI e BrasilAPI: gratuitas; o ViaCEP bloqueia uso abusivo. Só o ViaCEP acha o CEP pela rua. ' \
             'Cache de 30 dias.'
   )
 end

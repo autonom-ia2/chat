@@ -15,8 +15,9 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
                                     endpoint_url: 'https://erp.exemplo.test/estoque')
   end
   let(:pronta) { incluir_pronta('cep', conta: account, agente: agent) }
-  let(:brasilapi) { 'https://brasilapi.com.br/api/cep/v2/01001000' }
-  let(:endereco) { { cep: '01001000', state: 'SP', city: 'São Paulo', neighborhood: 'Sé', street: 'Praça da Sé' } }
+  # A principal do endereço pelo CEP (#2906): o ViaCEP. As reservas: AwesomeAPI e BrasilAPI.
+  let(:principal) { 'https://viacep.com.br/ws/01001000/json/' }
+  let(:endereco) { { cep: '01001-000', logradouro: 'Praça da Sé', bairro: 'Sé', localidade: 'São Paulo', uf: 'SP' } }
   let(:chamada) { { 'name' => 'pronta_cep', 'call_id' => 'c1', 'arguments' => { cep: '01001-000' }.to_json } }
 
   around { |example| with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true') { example.run } }
@@ -79,7 +80,7 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
 
   describe 'no turno sincrono' do
     it 'consulta a fonte do catalogo e o modelo le o dado enxuto' do
-      fonte_responde(brasilapi, endereco)
+      fonte_responde(principal, endereco)
       entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 7)
 
       saida = JSON.parse(described_class.new(agent: agent, record: pronta).execute(chamada, delivery: entrega))
@@ -88,8 +89,9 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
     end
 
     it 'com as fontes fora, o modelo le "nao consegui consultar" e o turno segue' do
-      fonte_lenta(brasilapi)
-      fonte_fora('https://viacep.com.br/ws/01001000/json/')
+      fonte_lenta(principal)
+      fonte_fora('https://cep.awesomeapi.com.br/json/01001000')
+      fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
 
       saida = JSON.parse(described_class.new(agent: agent, record: pronta).execute(chamada))
 
@@ -112,7 +114,7 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
     end
 
     it 'a consulta lenta sai do turno: o modelo le "em andamento" e a execucao fica na fila agent_tools' do
-      fonte_responde(brasilapi, endereco)
+      fonte_responde(principal, endereco)
 
       saida, run = abrir_consulta
 
@@ -122,7 +124,7 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
     end
 
     it 'o job consulta a fonte do catalogo, grava o resultado e o evento fala' do
-      fonte_responde(brasilapi, endereco)
+      fonte_responde(principal, endereco)
       _saida, run = abrir_consulta
 
       expect(rodar_consultas).to eq(1)
@@ -148,8 +150,9 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
     end
 
     it 'com as fontes fora, o modelo le "nao consegui" e a linha guarda o desfecho da pronta' do
-      fonte_fora(brasilapi)
-      fonte_fora('https://viacep.com.br/ws/01001000/json/')
+      fonte_fora(principal)
+      fonte_fora('https://cep.awesomeapi.com.br/json/01001000')
+      fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
       _saida, run = abrir_consulta
 
       rodar_consultas
@@ -162,7 +165,7 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
 
     it 'a pronta superada no meio grava o resultado e nao avisa quem atende' do
       _saida, run = abrir_consulta
-      stub_request(:get, brasilapi).to_return do
+      stub_request(:get, principal).to_return do
         Autonomia::Agents::ToolRun.where(id: run.id).update_all(status: 'superseded') # rubocop:disable Rails/SkipsModelValidations
         { status: 200, body: endereco.to_json, headers: { 'Content-Type' => 'application/json' } }
       end
@@ -238,7 +241,7 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       rodar_consultas
 
       expect(JSON.parse(run.reload.resultado_da_consulta)['situacao']).to eq('nao_consegui_consultar')
-      expect(a_request(:get, /brasilapi/)).not_to have_been_made
+      expect(a_request(:get, /brasilapi|viacep|awesomeapi/)).not_to have_been_made
     end
   end
 

@@ -81,7 +81,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
   end
 
   it 'a consulta pelo CEP continua igual' do
-    fonte_responde('https://brasilapi.com.br/api/cep/v2/01001000', { cep: '01001000', state: 'SP', city: 'São Paulo', street: 'Praça da Sé' })
+    fonte_responde('https://viacep.com.br/ws/01001000/json/', { cep: '01001-000', localidade: 'São Paulo', uf: 'SP', logradouro: 'Praça da Sé' })
 
     expect(executar_pronta(ferramenta, 'consulta' => 'endereco', 'cep' => '01001-000')['dados']).to include('cep' => '01001-000')
   end

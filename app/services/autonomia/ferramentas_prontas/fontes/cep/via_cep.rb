@@ -1,4 +1,4 @@
-# O CEP no ViaCEP: a reserva do endereço pelo CEP e a única fonte do CEP pela rua. CEP que não existe: 200 com
+# O CEP no ViaCEP: o principal do endereço pelo CEP e a única fonte do CEP pela rua. CEP que não existe: 200 com
 # `{"erro": true}` (ou "true"). Rua que não existe: lista vazia.
 class Autonomia::FerramentasProntas::Fontes::Cep::ViaCep < Autonomia::FerramentasProntas::Provedor
   NOME = 'viacep'.freeze

@@ -29,19 +29,23 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
   describe 'CEP' do
     let(:brasil_api) { 'https://brasilapi.com.br/api/cep/v2/99999999' }
     let(:via_cep) { 'https://viacep.com.br/ws/99999999/json/' }
+    let(:awesome_api) { 'https://cep.awesomeapi.com.br/json/99999999' }
 
-    it 'F01 (cep/endereco/07): endereco que a BrasilAPI tirou do open-cep nao vale; o ViaCEP sem o CEP: nao encontrado' do
-      fonte_responde(brasil_api, { cep: '99999999', state: 'PR', city: 'Sarandi', street: 'Rua X', service: 'open-cep' })
+    it 'F01 (cep/endereco/07): o ViaCEP e a AwesomeAPI sem o CEP: nao encontrado, sem ir ao open-cep da BrasilAPI' do
+      inventado = fonte_responde(brasil_api, { cep: '99999999', state: 'PR', city: 'Sarandi', street: 'Rua X', service: 'open-cep' })
       fonte_responde(via_cep, { erro: 'true' })
+      fonte_responde(awesome_api, { code: 'not_found' }, status: 404)
 
       expect(turno('cep', 'consulta' => 'endereco', 'cep' => '99999-999')['situacao']).to eq('nao_encontrado')
+      expect(inventado).not_to have_been_requested
     end
 
-    it 'F01: do open-cep, vale o que o ViaCEP disser' do
+    it 'F01: com o ViaCEP e a AwesomeAPI fora do ar, vale a BrasilAPI, ainda que pelo open-cep (risco aceito)' do
+      fonte_fora(via_cep, status: 503)
+      fonte_fora(awesome_api, status: 503)
       fonte_responde(brasil_api, { cep: '99999999', state: 'PR', city: 'Sarandi', service: 'open-cep' })
-      fonte_responde(via_cep, { cep: '99999-999', logradouro: 'Rua Oficial', bairro: 'Centro', localidade: 'Maringá', uf: 'PR' })
 
-      expect(turno('cep', 'consulta' => 'endereco', 'cep' => '99999999')['dados']).to include('cidade' => 'Maringá')
+      expect(turno('cep', 'consulta' => 'endereco', 'cep' => '99999999')['dados']).to include('cidade' => 'Sarandi')
     end
 
     it 'F02 (cep/por_endereco/09,10): "Av. Brasil" vai ao ViaCEP sem o ponto' do
