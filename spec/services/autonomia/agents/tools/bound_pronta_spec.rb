@@ -216,7 +216,8 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
 
       described_class.new(agent: agent, record: ddd)
                      .disparar({ 'name' => 'pronta_ddd', 'call_id' => 'c5', 'arguments' => { ddd: '(31) 98765-4321' }.to_json }, turno: entrega)
-      expect(Autonomia::Agents::ToolRun.sole.arguments).to eq('ddd' => Autonomia::FerramentasProntas::Fonte::FORA_DO_FORMATO)
+      # Desde 19a834a98e o DDD sai do telefone: grava só o "31", nunca o número.
+      expect(Autonomia::Agents::ToolRun.sole.arguments).to eq('ddd' => '31')
     end
 
     it 'opcional vazio e "nao informado" tambem no registro: o padrao vale e a busca vazia nao filtra' do

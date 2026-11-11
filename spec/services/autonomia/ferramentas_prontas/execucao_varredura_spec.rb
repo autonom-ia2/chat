@@ -447,6 +447,17 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(consulta.prazo_total - consulta.prazo_por_fonte).to be >= Autonomia::FerramentasProntas::ClienteHttp::ABERTURA + 1
     end
 
+    # Decisão do Rodrigo (11/11): CEP com três fontes. Com as duas primeiras estourando o prazo, a BrasilAPI ainda tem
+    # tempo de abrir a conexão e responder, e tudo cabe na janela do turno.
+    it 'CEP com tres fontes: a terceira tem prazo depois das duas primeiras estourarem, dentro da janela do turno' do
+      consulta = Autonomia::FerramentasProntas::Fontes::Cep::FONTE.consulta('endereco')
+      antes_da_ultima = consulta.prazo_por_fonte * (consulta.provedores.size - 1)
+
+      expect(consulta.provedores.size).to eq(3)
+      expect(consulta.prazo_total).to be <= Autonomia::Agents::Tools::ConsultaNoTurno::ESPERA_DO_TURNO
+      expect(consulta.prazo_total - antes_da_ultima).to be >= Autonomia::FerramentasProntas::ClienteHttp::ABERTURA + 1
+    end
+
     it 'F32/F33: o ultimo dia sem compra nao vira "nao encontrado" do periodo inteiro no cache: parcial, sem cache' do
       loja = cache_em_memoria
       allow(loja).to receive(:write).and_call_original

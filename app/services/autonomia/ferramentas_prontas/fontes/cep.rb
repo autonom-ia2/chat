@@ -83,7 +83,7 @@ module Autonomia::FerramentasProntas::Fontes::Cep
     consultas: [
       Autonomia::FerramentasProntas::Consulta.new(
         nome: 'endereco', descricao: 'o endereço do CEP; pede cep', obrigatorios: [CEP], provedores: [ViaCep, AwesomeApi, BrasilApi],
-        validade: 30.days, prazo_por_fonte: 3, prazo_total: 6
+        validade: 30.days, prazo_por_fonte: 2, prazo_total: 7
       ),
       Autonomia::FerramentasProntas::Consulta.new(
         nome: 'por_endereco', descricao: POR_ENDERECO, obrigatorios: [LOGRADOURO, CIDADE], opcionais: [UF], provedores: [ViaCep],
