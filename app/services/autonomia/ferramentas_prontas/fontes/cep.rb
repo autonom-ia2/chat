@@ -10,7 +10,8 @@ module Autonomia::FerramentasProntas::Fontes::Cep
   end
 
   CEP = Autonomia::FerramentasProntas::Parametro.new(
-    nome: 'cep', descricao: 'O CEP como o cliente escreveu (8 dígitos, com ou sem traço).'
+    nome: 'cep', descricao: 'O CEP como o cliente escreveu (8 dígitos, com ou sem traço).',
+    pergunte: 'o CEP, com 8 dígitos'
   ) { |valor| Autonomia::FerramentasProntas::Parametro.digitos(valor, 8) }
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(

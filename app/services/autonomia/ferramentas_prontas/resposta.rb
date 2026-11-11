@@ -12,8 +12,17 @@ module Autonomia::FerramentasProntas::Resposta
                    'confira o dado com ele. Não invente.'.freeze
   NAO_CONSEGUI = 'Não consegui consultar agora. Diga ao cliente que não deu para consultar neste momento e siga a ' \
                  'conversa sem esse dado. Não invente o dado e não tente de novo nesta resposta.'.freeze
+  # O padrão, para o parâmetro sem orientação própria (`Parametro#orientacao`).
   PEDIDO_INVALIDO = 'Faltou "%<campo>s" ou o valor não está no formato certo, e nada foi consultado. Confira com o ' \
                     'cliente antes de consultar de novo. Não invente.'.freeze
+  # Regra "QI 70" do Rodrigo (11/11/2026): o dado técnico que dá para deduzir do que o cliente disse, o agente deduz.
+  DEDUZA = 'Faltou "%<campo>s" ou o valor não serve, e nada foi consultado. Não pergunte ao cliente: %<como>s ' \
+           'Depois consulte de novo.'.freeze
+  # E pergunta só o que muda o resultado e não dá para deduzir.
+  PERGUNTE = 'Faltou "%<campo>s" ou o valor não serve, e nada foi consultado. Isso não dá para deduzir: pergunte ao ' \
+             'cliente %<o_que>s. Não invente.'.freeze
+  # Com `candidatos`: o que a plataforma achou para o dado ambíguo.
+  CANDIDATOS = 'As opções estão em "candidatos".'.freeze
 
   # Cada texto que vem da fonte vai com teto: um nome fantasia ou uma razão social é escolha de quem registrou a empresa,
   # e um texto enorme ali seria instrução disfarçada de dado. O aviso vai ANTES dos dados: se o corte do turno
@@ -41,8 +50,23 @@ module Autonomia::FerramentasProntas::Resposta
       'orientacao' => NAO_ENCONTRADO }.to_json
   end
 
-  def pedido_invalido(campo)
-    { 'situacao' => 'pedido_invalido', 'campo' => campo, 'orientacao' => format(PEDIDO_INVALIDO, campo: campo) }.to_json
+  # `falta`: o nome do campo ou a `Falta` (com candidatos e a orientação da regra). `parametro`: o do campo, de onde vem
+  # a orientação própria; sem ela, o texto genérico.
+  def pedido_invalido(falta, parametro = nil)
+    falta = Autonomia::FerramentasProntas::Falta.de(falta)
+    orientacao = falta.orientacao || parametro&.orientacao || format(PEDIDO_INVALIDO, campo: falta.campo)
+    resposta = { 'situacao' => 'pedido_invalido', 'campo' => falta.campo, 'orientacao' => orientacao }
+    return resposta.to_json if falta.candidatos.blank?
+
+    resposta.merge('orientacao' => "#{orientacao} #{CANDIDATOS}", 'candidatos' => enxugar(falta.candidatos)).to_json
+  end
+
+  def deduza(campo, como)
+    format(DEDUZA, campo: campo, como: como)
+  end
+
+  def pergunte(campo, o_que)
+    format(PERGUNTE, campo: campo, o_que: o_que)
   end
 
   def nao_consegui

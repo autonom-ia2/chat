@@ -5,6 +5,7 @@
 # acento e sem caixa: é o nome oficial do município, não interpretação de texto.
 module Autonomia::FerramentasProntas::Municipios
   DIGITOS_CNES = 6
+  DEDUZA_UF = 'a UF sai da cidade: mande só a cidade, ou a sigla de 2 letras do estado dela.'.freeze
 
   Municipio = Data.define(:codigo, :uf, :nome, :latitude, :longitude) do
     def codigo_cnes
@@ -17,6 +18,14 @@ module Autonomia::FerramentasProntas::Municipios
   end
 
   module_function
+
+  # O parâmetro `uf` das fontes que pedem a cidade: opcional, porque sai da cidade (`buscar`). `local`: só filtra aqui.
+  def parametro_uf(local: false)
+    Autonomia::FerramentasProntas::Parametro.new(
+      nome: 'uf', local: local, descricao: 'A sigla do estado da cidade. Opcional: sai da cidade.',
+      opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase), deduza: DEDUZA_UF
+    )
+  end
 
   # "3170206" -> o município, ou nil.
   def por_codigo(codigo)

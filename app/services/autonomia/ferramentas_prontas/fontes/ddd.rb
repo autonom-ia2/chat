@@ -17,7 +17,9 @@ module Autonomia::FerramentasProntas::Fontes::Ddd
     base.merge(Autonomia::FerramentasProntas::Lista.cortar(cidades, 'cidades', MAX_CIDADES))
   end
 
-  DDD = Parametro.new(nome: 'ddd', descricao: 'Os 2 dígitos do código de área (ex.: 31). Só o DDD, nunca o telefone.') do |valor|
+  DDD = Parametro.new(nome: 'ddd', descricao: 'Os 2 dígitos do código de área (ex.: 31). Só o DDD, nunca o telefone.',
+                      deduza: 'tire o DDD do telefone do cliente (os 2 dígitos do código de área). Se o número não é do ' \
+                              'Brasil, diga isso a ele.') do |valor|
     digitos = Parametro.digitos(valor, 2)
     digitos if digitos && Plano::ESTADOS.key?(digitos)
   end

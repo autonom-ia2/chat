@@ -70,19 +70,24 @@ module Autonomia::FerramentasProntas::Fontes::Chuva
       'observacao' => observacao, 'fonte_dos_dados' => ATRIBUICAO }
   end
 
-  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade (com uf). Sem cidade: latitude e longitude.') do |valor|
+  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade. Sem cidade: latitude e longitude.', pergunte: 'a cidade') do |valor|
     Parametro.texto_curto(valor)
   end
-  UF = Parametro.new(nome: 'uf', descricao: 'A sigla do estado da cidade.', opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase))
-  LATITUDE = Parametro.new(nome: 'latitude', tipo: 'number', descricao: 'A latitude da localização que o cliente mandou.') do |valor|
+  UF = Municipios.parametro_uf
+  LATITUDE = Parametro.new(nome: 'latitude', tipo: 'number', descricao: 'A latitude da localização que o cliente mandou.',
+                           deduza: 'mande latitude e longitude juntas, ou só a cidade.') do |valor|
     coordenada(valor, 90)
   end
-  LONGITUDE = Parametro.new(nome: 'longitude', tipo: 'number', descricao: 'A longitude da localização que o cliente mandou.') do |valor|
+  LONGITUDE = Parametro.new(nome: 'longitude', tipo: 'number', descricao: 'A longitude da localização que o cliente mandou.',
+                            deduza: 'mande latitude e longitude juntas, ou só a cidade.') do |valor|
     coordenada(valor, 180)
   end
   DE = Parametro.new(nome: 'de', descricao: 'O dia, AAAA-MM-DD (ou o primeiro dia do período). Sem data: ontem.',
+                     deduza: 'converta o dia que o cliente disse ("ontem", "sábado") para AAAA-MM-DD, até hoje.',
                      padrao: -> { Time.zone.yesterday.iso8601 }) { |valor| data(valor) }
-  ATE = Parametro.new(nome: 'ate', descricao: "O último dia do período, AAAA-MM-DD (até #{MAX_DIAS} dias). Sem data: só o dia de.") do |valor|
+  ATE = Parametro.new(nome: 'ate', descricao: "O último dia do período, AAAA-MM-DD (até #{MAX_DIAS} dias). Sem data: só o dia de.",
+                      deduza: "mande o último dia, até hoje e no máximo #{MAX_DIAS} dias depois de de; período maior, consulte " \
+                              'em partes.') do |valor|
     data(valor)
   end
 

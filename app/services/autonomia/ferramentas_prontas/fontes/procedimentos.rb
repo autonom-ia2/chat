@@ -8,10 +8,12 @@ module Autonomia::FerramentasProntas::Fontes::Procedimentos
   Parametro = Autonomia::FerramentasProntas::Parametro
   Consulta = Autonomia::FerramentasProntas::Consulta
 
-  CODIGO = Parametro.new(nome: 'codigo', descricao: 'O código TUSS do procedimento, 8 dígitos (ex.: 10101012).') do |valor|
+  CODIGO = Parametro.new(nome: 'codigo', descricao: 'O código TUSS do procedimento, 8 dígitos (ex.: 10101012).',
+                         deduza: 'se o cliente disse o nome do exame, use a consulta busca; o código tem 8 dígitos.') do |valor|
     Parametro.digitos(valor, 8)
   end
-  BUSCA = Parametro.new(nome: 'busca', descricao: 'Parte do nome do exame ou procedimento (ex.: hemograma).') do |valor|
+  BUSCA = Parametro.new(nome: 'busca', descricao: 'Parte do nome do exame ou procedimento (ex.: hemograma).',
+                        pergunte: 'o nome do exame ou procedimento') do |valor|
     Parametro.texto_curto(valor)
   end
 

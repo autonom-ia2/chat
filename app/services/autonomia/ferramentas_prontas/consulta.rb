@@ -4,7 +4,7 @@
 # `prazo_por_fonte`: o teto de UMA chamada a um provedor (conexão, cabeçalhos e corpo). `prazo_total`: o teto da
 # consulta inteira, somando a reserva; o provedor seguinte só recebe o que sobrou dele.
 # `regra`: a conferência entre parâmetros que o schema não expressa (ex.: preço da FIPE pede o código OU marca e
-# modelo). Recebe os parâmetros normalizados e devolve o nome do que falta, ou nil.
+# modelo). Recebe os parâmetros normalizados e devolve o nome do que falta (ou uma `Falta`, com candidatos), ou nil.
 # `refinar`: o que roda sobre os dados da fonte (ou do cache) antes de irem ao modelo, com os parâmetros locais (ex.:
 # a busca pelo nome do modelo da FIPE). Devolve os dados enxutos, ou nil quando nada sobrou (não encontrado).
 class Autonomia::FerramentasProntas::Consulta
@@ -28,19 +28,23 @@ class Autonomia::FerramentasProntas::Consulta
     obrigatorios + opcionais
   end
 
-  # Os argumentos do modelo, normalizados. -> [params, nil] ou [nil, nome do parâmetro que não serve].
+  # Os argumentos do modelo, normalizados. -> [params, nil] ou [nil, a `Falta` do parâmetro que não serve].
   # O obrigatório que falta e o opcional informado fora do formato são o mesmo erro: nada é consultado.
   def conferir(argumentos)
     normalizados = {}
     parametros.each do |parametro|
       valor = parametro.normalizar(argumentos[parametro.nome])
-      return [nil, parametro.nome] if valor.nil? && exigido?(parametro, argumentos)
+      return [nil, Autonomia::FerramentasProntas::Falta.de(parametro.nome)] if valor.nil? && exigido?(parametro, argumentos)
 
       normalizados[parametro.nome] = valor.nil? ? parametro.padrao : valor
     end
     normalizados.compact!
     faltando = @regra&.call(normalizados)
-    faltando ? [nil, faltando] : [normalizados, nil]
+    faltando ? [nil, Autonomia::FerramentasProntas::Falta.de(faltando)] : [normalizados, nil]
+  end
+
+  def parametro(nome)
+    parametros.find { |parametro| parametro.nome == nome.to_s }
   end
 
   # O que vai à fonte e identifica o pedido no cache: os parâmetros que não são locais.

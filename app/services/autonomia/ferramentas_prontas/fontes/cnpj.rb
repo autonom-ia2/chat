@@ -19,7 +19,8 @@ module Autonomia::FerramentasProntas::Fontes::Cnpj
   end
 
   CNPJ = Autonomia::FerramentasProntas::Parametro.new(
-    nome: 'cnpj', descricao: 'O CNPJ como o cliente escreveu (14 posições, com ou sem pontuação).'
+    nome: 'cnpj', descricao: 'O CNPJ como o cliente escreveu (14 posições, com ou sem pontuação).',
+    pergunte: 'o CNPJ completo, com as 14 posições'
   ) { |valor| Autonomia::FerramentasProntas::Parametro.cnpj(valor) }
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(

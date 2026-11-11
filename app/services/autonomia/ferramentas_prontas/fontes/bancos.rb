@@ -11,7 +11,8 @@ module Autonomia::FerramentasProntas::Fontes::Bancos
   end
 
   # "341", "1", "001" -> "341", "001", "001".
-  CODIGO = Parametro.new(nome: 'codigo', descricao: 'O código do banco, de 1 a 3 dígitos (ex.: 341).') do |valor|
+  CODIGO = Parametro.new(nome: 'codigo', descricao: 'O código do banco, de 1 a 3 dígitos (ex.: 341).',
+                         deduza: 'o código tem de 1 a 3 dígitos.') do |valor|
     texto = valor.to_s.strip
     texto.rjust(3, '0') if texto.present? && texto.length <= 3 && texto.delete(Parametro::DIGITOS).empty?
   end

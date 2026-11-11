@@ -40,15 +40,18 @@ module Autonomia::FerramentasProntas::Fontes::Hospitais
     dados.except('estabelecimentos').merge(Autonomia::FerramentasProntas::Lista.cortar(achados, 'estabelecimentos', MAX_ESTABELECIMENTOS))
   end
 
-  CODIGO_IBGE = Parametro.new(nome: 'codigo_ibge', descricao: 'O código IBGE da cidade (7 dígitos), se já souber. Opcional.') do |valor|
+  CODIGO_IBGE = Parametro.new(nome: 'codigo_ibge', descricao: 'O código IBGE da cidade (7 dígitos), se já souber. Opcional.',
+                              deduza: 'deixe o código vazio e mande o nome da cidade.') do |valor|
     digitos = valor.to_s.delete("^#{Parametro::DIGITOS}")
     codigo = digitos.length == 7 ? digitos[0, 6] : digitos
     codigo if codigo.length == Municipios::DIGITOS_CNES && Municipios.por_codigo_cnes(codigo)
   end
-  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade (ex.: Campinas). Vai com a uf.') { |valor| Parametro.texto_curto(valor) }
-  UF = Parametro.new(nome: 'uf', descricao: 'A sigla do estado da cidade (ex.: sp).',
-                     opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase))
-  TIPO = Parametro.new(nome: 'tipo', descricao: 'O tipo de unidade, se o cliente pediu um. Opcional.', opcoes: TIPOS.keys)
+  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade (ex.: Campinas).', pergunte: 'a cidade') do |valor|
+    Parametro.texto_curto(valor)
+  end
+  UF = Municipios.parametro_uf
+  TIPO = Parametro.new(nome: 'tipo', descricao: 'O tipo de unidade, se o cliente pediu um. Opcional.', opcoes: TIPOS.keys,
+                       deduza: 'escolha da lista o tipo que o cliente pediu, ou deixe vazio.')
   BUSCA = Parametro.new(nome: 'busca', local: true, descricao: 'Parte do nome do estabelecimento. Opcional.') do |valor|
     Parametro.texto_curto(valor)
   end

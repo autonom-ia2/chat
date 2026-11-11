@@ -66,8 +66,7 @@ module Autonomia::FerramentasProntas::Fontes::Estacoes
   CIDADE = Parametro.new(nome: 'cidade', local: true, descricao: 'O nome da cidade (com uf). Sem cidade: latitude e longitude.') do |valor|
     Parametro.texto_curto(valor)
   end
-  UF = Parametro.new(nome: 'uf', local: true, descricao: 'A sigla do estado da cidade.',
-                     opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase))
+  UF = Municipios.parametro_uf(local: true)
   LATITUDE = Parametro.new(nome: 'latitude', tipo: 'number', local: true, descricao: 'A latitude da localização que o cliente mandou.') do |valor|
     Autonomia::FerramentasProntas::Fontes::Localizacao.coordenada(valor, 90)
   end

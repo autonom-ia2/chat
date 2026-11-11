@@ -18,8 +18,12 @@ module Autonomia::FerramentasProntas::Fontes::Doencas
     texto if [3, 4].include?(texto.length) && LETRAS.cover?(texto[0]) && texto[1..].delete(Parametro::DIGITOS).empty?
   end
 
-  CODIGO = Parametro.new(nome: 'codigo', descricao: 'O código CID-10 da doença (ex.: J45 ou J45.0).') { |valor| codigo(valor) }
-  BUSCA = Parametro.new(nome: 'busca', descricao: 'Parte do nome da doença (ex.: asma).') { |valor| Parametro.texto_curto(valor) }
+  CODIGO = Parametro.new(nome: 'codigo', descricao: 'O código CID-10 da doença (ex.: J45 ou J45.0).',
+                         deduza: 'se o cliente disse o nome da doença, use a consulta busca; o código é letra e dígitos.') do |valor|
+    codigo(valor)
+  end
+  BUSCA = Parametro.new(nome: 'busca', descricao: 'Parte do nome da doença (ex.: asma).',
+                        pergunte: 'o nome da doença') { |valor| Parametro.texto_curto(valor) }
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'doencas', slug: 'pronta_doencas', nome: 'Nome de doenças',

@@ -37,7 +37,8 @@ module Autonomia::FerramentasProntas::Fontes::BancoCentral
     { 'indicador' => 'Dólar PTAX (Banco Central)', 'compra' => compra, 'venda' => venda, 'data' => data, 'unidade' => 'R$' }
   end
 
-  INDICADOR = Parametro.new(nome: 'indicador', descricao: 'Na consulta focus: qual expectativa.', opcoes: INDICADORES.keys)
+  INDICADOR = Parametro.new(nome: 'indicador', descricao: 'Na consulta focus: qual expectativa.', opcoes: INDICADORES.keys,
+                            deduza: 'escolha da lista o indicador do que o cliente perguntou.')
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'banco_central', slug: 'pronta_banco_central', nome: 'Banco Central',

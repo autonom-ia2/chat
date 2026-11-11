@@ -93,11 +93,13 @@ module Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras
     nome: 'busca', local: true,
     descricao: 'Parte do nome: da seguradora, na consulta seguradoras; do produto, na consulta produtos. Opcional.'
   ) { |valor| Parametro.texto_curto(valor) }
-  SEGURADORA = Parametro.new(nome: 'seguradora', descricao: 'O nome da seguradora como o cliente disse (ex.: Allianz).') do |valor|
+  SEGURADORA = Parametro.new(nome: 'seguradora', descricao: 'O nome da seguradora como o cliente disse (ex.: Allianz).',
+                             pergunte: 'de qual seguradora') do |valor|
     texto = Parametro.texto_curto(valor)
     texto if texto && texto.length >= 2
   end
-  RAMO = Parametro.new(nome: 'ramo', descricao: 'O ramo do seguro, da lista.', opcoes: RAMOS.keys)
+  RAMO = Parametro.new(nome: 'ramo', descricao: 'O ramo do seguro, da lista.', opcoes: RAMOS.keys,
+                       deduza: 'escolha da lista o ramo do tipo de seguro que o cliente disse.')
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'produtos_seguradoras', slug: 'pronta_produtos_seguradoras', nome: 'Produtos das seguradoras', flag: FLAG,

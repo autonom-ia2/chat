@@ -106,19 +106,23 @@ module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
     resposta.merge('observacao' => format(SO_A_PRIMEIRA_PAGINA, total: dados['total_no_periodo'], pagina: POR_PAGINA))
   end
 
-  CODIGO_IBGE = Parametro.new(nome: 'codigo_ibge', descricao: 'O código IBGE da cidade, 7 dígitos. Sem ele: cidade e uf.') do |valor|
+  CODIGO_IBGE = Parametro.new(nome: 'codigo_ibge', descricao: 'O código IBGE da cidade, 7 dígitos. Sem ele: a cidade.',
+                              deduza: 'deixe o código vazio e mande o nome da cidade.') do |valor|
     codigo = Parametro.digitos(valor, 7)
     codigo if codigo && Municipios.por_codigo(codigo)
   end
-  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade (com uf), quando não há o código IBGE.') do |valor|
+  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade, quando não há o código IBGE.', pergunte: 'a cidade') do |valor|
     Parametro.texto_curto(valor)
   end
-  UF = Parametro.new(nome: 'uf', descricao: 'A sigla do estado da cidade.', opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase))
+  UF = Municipios.parametro_uf
   DE = Parametro.new(nome: 'de', descricao: "A data inicial, AAAA-MM-DD. Sem data: #{DIAS_PADRAO} dias atrás.",
+                     deduza: 'converta o dia que o cliente disse para AAAA-MM-DD, ou deixe vazio.',
                      padrao: -> { (hoje - (DIAS_PADRAO - 1)).iso8601 }) { |valor| data(valor) }
   ATE = Parametro.new(nome: 'ate', descricao: "A data final, AAAA-MM-DD (até #{MAX_DIAS} dias depois da inicial). Sem data: hoje.",
+                      deduza: "mande a data final até #{MAX_DIAS} dias depois da inicial; período maior, consulte em partes.",
                       padrao: -> { hoje.iso8601 }) { |valor| data(valor) }
   MODALIDADE = Parametro.new(nome: 'modalidade', descricao: 'O tipo de compra. Sem ele: pregão eletrônico, o mais comum.',
+                             deduza: 'escolha da lista, ou deixe vazio para o pregão eletrônico.',
                              opcoes: MODALIDADES.keys, padrao: -> { 'pregao_eletronico' })
   BUSCA = Parametro.new(nome: 'busca', local: true, descricao: 'Uma palavra do que o órgão vai comprar (ex.: limpeza). Opcional.') do |valor|
     Parametro.texto_curto(valor)

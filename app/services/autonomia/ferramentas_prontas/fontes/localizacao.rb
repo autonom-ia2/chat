@@ -25,10 +25,12 @@ module Autonomia::FerramentasProntas::Fontes::Localizacao
     { 'cidade' => cidade }.merge(Autonomia::FerramentasProntas::Ufs.com_nome(sigla)).merge('fonte_dos_dados' => ATRIBUICAO)
   end
 
-  LATITUDE = Parametro.new(nome: 'latitude', tipo: 'number', descricao: 'A latitude da localização que o cliente mandou.') do |valor|
+  LATITUDE = Parametro.new(nome: 'latitude', tipo: 'number', descricao: 'A latitude da localização que o cliente mandou.',
+                           deduza: 'mande latitude e longitude juntas, em número, como vieram na localização que o cliente mandou.') do |valor|
     coordenada(valor, 90)
   end
-  LONGITUDE = Parametro.new(nome: 'longitude', tipo: 'number', descricao: 'A longitude da localização que o cliente mandou.') do |valor|
+  LONGITUDE = Parametro.new(nome: 'longitude', tipo: 'number', descricao: 'A longitude da localização que o cliente mandou.',
+                            deduza: 'mande latitude e longitude juntas, em número, como vieram na localização que o cliente mandou.') do |valor|
     coordenada(valor, 180)
   end
 

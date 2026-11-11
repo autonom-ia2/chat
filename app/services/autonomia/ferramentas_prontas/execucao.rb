@@ -76,10 +76,10 @@ class Autonomia::FerramentasProntas::Execucao
   # A consulta e os parâmetros (nada é contado no limite quando o pedido não serve), o limite, o cache e as fontes.
   def pedido(acesso)
     @consulta = @fonte.consulta(@argumentos[Autonomia::FerramentasProntas::Fonte::PARAMETRO_DA_CONSULTA])
-    return recusar('pedido_invalido', Resposta.pedido_invalido('consulta')) if @consulta.nil?
+    return recusar('pedido_invalido', Resposta.pedido_invalido('consulta', @fonte.parametro_da_consulta)) if @consulta.nil?
 
-    params, campo = @consulta.conferir(@argumentos)
-    return recusar('pedido_invalido', Resposta.pedido_invalido(campo)) if params.nil?
+    params, falta = @consulta.conferir(@argumentos)
+    return recusar('pedido_invalido', Resposta.pedido_invalido(falta, @consulta.parametro(falta.campo))) if params.nil?
     return recusar('limite_diario') unless Uso.reservar!(account_id: @tool.account_id, fonte: @fonte.chave, limite: acesso.limite_do_dia)
 
     @cache = Autonomia::FerramentasProntas::Cache.new(@fonte, @consulta, params)

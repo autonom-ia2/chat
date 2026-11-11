@@ -41,7 +41,8 @@ module Autonomia::FerramentasProntas::Fontes::Cidades
     dados.except('cidades').merge(Autonomia::FerramentasProntas::Lista.cortar(achadas, 'cidades', MAX_CIDADES))
   end
 
-  UF = Parametro.new(nome: 'uf', descricao: 'A sigla do estado (ex.: ac, sp).', opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase))
+  UF = Parametro.new(nome: 'uf', descricao: 'A sigla do estado (ex.: ac, sp).', opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase),
+                     deduza: 'mande a sigla de 2 letras do estado, que sai do nome do estado ou da cidade que o cliente disse.')
   BUSCA = Parametro.new(nome: 'busca', local: true, descricao: 'Parte do nome da cidade, para conferir se ela existe no estado. Opcional.') do |valor|
     Parametro.texto_curto(valor)
   end

@@ -35,6 +35,14 @@ class Autonomia::FerramentasProntas::Fonte
     consultas.size > 1
   end
 
+  # O parâmetro `consulta`, só para a orientação da recusa: a consulta sai do sentido da conversa, nunca do cliente.
+  def parametro_da_consulta
+    @parametro_da_consulta ||= Autonomia::FerramentasProntas::Parametro.new(
+      nome: PARAMETRO_DA_CONSULTA, descricao: 'Qual consulta fazer.',
+      deduza: "escolha pelo sentido da conversa uma destas consultas: #{consultas.map(&:nome).join(', ')}."
+    )
+  end
+
   def provedores
     consultas.flat_map(&:provedores).uniq
   end

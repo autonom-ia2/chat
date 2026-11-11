@@ -6,6 +6,9 @@
 # `padrao`: o valor quando o modelo não informa (ex.: "de hoje" na contagem de dias úteis), calculado na hora, antes do
 # cache: a chave do cache leva o valor efetivo.
 # `local: true`: o valor só filtra a resposta aqui dentro e nunca vai à fonte (ex.: a busca por nome de modelo da FIPE).
+# `deduza:` / `pergunte:` (regra "QI 70" do Rodrigo, 11/11/2026): o que o agente faz quando o valor falta ou não serve.
+# Dado que dá para deduzir da conversa (a UF pela cidade, o DDD pelo telefone): `deduza:` diz como, e o agente corrige
+# sem perguntar. Dado que muda o resultado e não dá para deduzir (o CPF, o ano do carro): `pergunte:` diz o quê.
 # Sem regex: método de string (`delete`, `count`) e a regra de cada documento.
 class Autonomia::FerramentasProntas::Parametro
   DIGITOS = '0-9'.freeze
@@ -14,7 +17,10 @@ class Autonomia::FerramentasProntas::Parametro
 
   attr_reader :nome, :tipo, :descricao, :opcoes
 
-  def initialize(nome:, descricao:, tipo: 'string', opcoes: nil, local: false, padrao: nil, &normalizar) # rubocop:disable Metrics/ParameterLists
+  def initialize(nome:, descricao:, tipo: 'string', opcoes: nil, local: false, padrao: nil, deduza: nil, pergunte: nil, # rubocop:disable Metrics/ParameterLists
+                 &normalizar)
+    @deduza = deduza
+    @pergunte = pergunte
     @padrao = padrao
     @nome = nome
     @tipo = tipo
@@ -30,6 +36,13 @@ class Autonomia::FerramentasProntas::Parametro
 
   def padrao
     @padrao&.call
+  end
+
+  # O texto da recusa deste parâmetro, ou nil (vale o genérico da `Resposta`).
+  def orientacao
+    return Autonomia::FerramentasProntas::Resposta.deduza(nome, @deduza) if @deduza
+
+    Autonomia::FerramentasProntas::Resposta.pergunte(nome, @pergunte) if @pergunte
   end
 
   # -> o valor normalizado, ou nil quando não serve (lista e objeto nunca servem: o parâmetro é um valor só).

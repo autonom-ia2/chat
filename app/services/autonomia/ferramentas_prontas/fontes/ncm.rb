@@ -63,8 +63,10 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
 
   DESCRICAO_DA_BUSCA = "Na consulta buscar: uma palavra da mercadoria (ex.: parafuso) ou parte do código; ao menos #{MIN_BUSCA} " \
                        'letras.'.freeze
-  BUSCA = Parametro.new(nome: 'busca', descricao: DESCRICAO_DA_BUSCA) { |valor| busca(valor) }
-  CODIGO = Parametro.new(nome: 'codigo', descricao: 'Na consulta codigo: o código NCM, com ou sem pontos (ex.: 7318.15.00).') do |valor|
+  BUSCA = Parametro.new(nome: 'busca', descricao: DESCRICAO_DA_BUSCA,
+                        deduza: "mande uma palavra do produto, com ao menos #{MIN_BUSCA} letras (ex.: parafuso).") { |valor| busca(valor) }
+  CODIGO = Parametro.new(nome: 'codigo', descricao: 'Na consulta codigo: o código NCM, com ou sem pontos (ex.: 7318.15.00).',
+                         deduza: 'o código tem 2, 4 ou 8 dígitos; se o cliente disse o produto, use a consulta buscar.') do |valor|
     codigo(valor)
   end
 

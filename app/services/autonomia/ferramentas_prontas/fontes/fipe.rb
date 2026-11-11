@@ -36,18 +36,23 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
     campos.transform_keys(&:to_s).transform_values { |valor| valor.is_a?(String) ? valor.strip.presence : valor }.compact
   end
 
-  TIPO = Parametro.new(nome: 'tipo', descricao: 'O tipo de veículo.', opcoes: TIPOS)
-  MARCA = Parametro.new(nome: 'marca', descricao: 'O código da marca, como veio na consulta marcas.') { |valor| Parametro.codigo(valor) }
-  MODELO = Parametro.new(nome: 'modelo', descricao: 'O código do modelo, como veio na consulta modelos.') { |valor| Parametro.codigo(valor) }
+  TIPO = Parametro.new(nome: 'tipo', descricao: 'O tipo de veículo.', opcoes: TIPOS,
+                       deduza: 'escolha carros, motos ou caminhoes pelo veículo de que o cliente falou.')
+  MARCA = Parametro.new(nome: 'marca', descricao: 'O código da marca, como veio na consulta marcas.',
+                        deduza: 'pegue o código na consulta marcas, pelo nome da marca.') { |valor| Parametro.codigo(valor) }
+  MODELO = Parametro.new(nome: 'modelo', descricao: 'O código do modelo, como veio na consulta modelos.',
+                         pergunte: 'o modelo do veículo') { |valor| Parametro.codigo(valor) }
   BUSCA = Parametro.new(nome: 'busca', local: true,
                         descricao: 'Parte do nome do modelo para filtrar a lista (ex.: "onix lt 1.0"). Opcional.') do |valor|
     Parametro.texto_curto(valor)
   end
-  CODIGO_FIPE = Parametro.new(nome: 'codigo_fipe', descricao: 'O código FIPE do veículo (ex.: 004517-9), se o cliente informou.') do |valor|
+  CODIGO_FIPE = Parametro.new(nome: 'codigo_fipe', descricao: 'O código FIPE do veículo (ex.: 004517-9), se o cliente informou.',
+                              deduza: 'deixe o código FIPE vazio e mande marca e modelo.') do |valor|
     digitos = Parametro.digitos(valor, 7)
     "#{digitos[0, 6]}-#{digitos[6]}" if digitos
   end
-  ANO = Parametro.new(nome: 'ano', tipo: 'integer', descricao: 'O ano-modelo (ex.: 2020; 32000 é zero km).') do |valor|
+  ANO = Parametro.new(nome: 'ano', tipo: 'integer', descricao: 'O ano-modelo (ex.: 2020; 32000 é zero km).',
+                      pergunte: 'o ano-modelo do veículo') do |valor|
     Parametro.inteiro(valor, 1950..2100) || Parametro.inteiro(valor, ZERO_KM..ZERO_KM)
   end
 
