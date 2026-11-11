@@ -219,12 +219,12 @@ describe('da planilha de exemplo até Pronto', () => {
     w.unmount();
   });
 
-  it('consertar o telefone no campo de telefone libera o Guardar', async () => {
+  it('consertar o telefone no campo de telefone libera o Salvar', async () => {
     const w = await abrir();
     await irAteConferir(w);
     const linha = w.get('[data-linha="14"]');
     const guardar = () =>
-      linha.findAll('button').find(b => b.text() === 'Guardar');
+      linha.findAll('button').find(b => b.text() === 'Salvar');
     expect(guardar().attributes('disabled')).toBeDefined();
     await linha.get('input').setValue('11973800014');
     expect(guardar().attributes('disabled')).toBeUndefined();

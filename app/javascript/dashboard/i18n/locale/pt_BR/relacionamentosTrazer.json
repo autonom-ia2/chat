@@ -49,7 +49,7 @@
       "RESOLVIDO": "Tudo resolvido",
       "PRONTO": "Pronto",
       "DEIXADA": "Deixada de fora",
-      "GUARDAR": "Guardar",
+      "GUARDAR": "Salvar",
       "DEIXAR_DE_FORA": "Deixar de fora",
       "NA_PLANILHA": "Na planilha: {valor}",
       "FICAR_COM": "Ficar com a linha {linha}",
@@ -124,7 +124,7 @@
       "ERRO_PREVIA": "Não consegui ver o que sai. Tente de novo."
     },
     "ERROS": {
-      "GUARDAR": "Não consegui guardar. Tente de novo.",
+      "GUARDAR": "Não consegui salvar. Tente de novo.",
       "DESFAZER": "Não consegui desfazer. Tente de novo.",
       "TRAZER": "Não consegui trazer a lista. Tente de novo.",
       "ANDAMENTO": "Não consegui ver como está indo. Tente de novo.",

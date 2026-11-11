@@ -77,40 +77,40 @@ describe('ProblemaDaLinha', () => {
     expect(montar(linha).text()).toContain(frase);
   });
 
-  it('e-mail: Guardar só vale com um e-mail de verdade e emite a linha e o valor', async () => {
+  it('e-mail: Salvar só vale com um e-mail de verdade e emite a linha e o valor', async () => {
     const w = montar(37);
-    const guardar = botao(w, 'Guardar');
+    const guardar = botao(w, 'Salvar');
     expect(guardar.attributes('disabled')).toBeDefined();
     await w.get('input').setValue('rita@exemplo');
-    expect(botao(w, 'Guardar').attributes('disabled')).toBeDefined();
+    expect(botao(w, 'Salvar').attributes('disabled')).toBeDefined();
     await w.get('input').setValue(' rita.nogueira@exemplo.com.br ');
-    expect(botao(w, 'Guardar').attributes('disabled')).toBeUndefined();
+    expect(botao(w, 'Salvar').attributes('disabled')).toBeUndefined();
     await w.get('form').trigger('submit');
     expect(w.emitted('guardar')).toEqual([
       [37, 'rita.nogueira@exemplo.com.br'],
     ]);
   });
 
-  it('nome: Guardar só com algum texto', async () => {
+  it('nome: Salvar só com algum texto', async () => {
     const w = montar(62);
-    expect(botao(w, 'Guardar').attributes('disabled')).toBeDefined();
+    expect(botao(w, 'Salvar').attributes('disabled')).toBeDefined();
     await w.get('input').setValue('Ana Lima');
-    await botao(w, 'Guardar').trigger('click');
+    await botao(w, 'Salvar').trigger('click');
     await w.get('form').trigger('submit');
     expect(w.emitted('guardar')[0]).toEqual([62, 'Ana Lima']);
   });
 
-  it('telefone: usa o campo de telefone e Guardar espera o número ficar completo', () => {
+  it('telefone: usa o campo de telefone e Salvar espera o número ficar completo', () => {
     const w = montar(14);
     expect(w.text()).toContain('Telefone certo');
     expect(w.findComponent(CampoDeTelefone).exists()).toBe(true);
-    expect(botao(w, 'Guardar').attributes('disabled')).toBeDefined();
+    expect(botao(w, 'Salvar').attributes('disabled')).toBeDefined();
   });
 
   it('duplicada: escolhe qual linha fica, sem campo de texto', async () => {
     const w = montar(143);
     expect(w.find('input').exists()).toBe(false);
-    expect(botao(w, 'Guardar')).toBeUndefined();
+    expect(botao(w, 'Salvar')).toBeUndefined();
     await botao(w, 'Ficar com a linha 88').trigger('click');
     await botao(w, 'Ficar com a linha 143').trigger('click');
     expect(w.emitted('guardar')).toEqual([
