@@ -44,7 +44,7 @@ describe('VitrineDetalhe · Premium', () => {
       'Quanto custa'
     );
     expect(wrapper.find('[data-vitrine-detalhe-premium]').text()).toContain(
-      'Restam 3 grátis'
+      'Restam 3 grátis no mês'
     );
     expect(wrapper.find('[data-stub-experimente]').exists()).toBe(false);
   });

@@ -3521,13 +3521,13 @@
       },
       "PREMIUM": {
         "SELO": "Premium",
-        "PRECO": "{gratis} free, then {preco}",
+        "PRECO": "{gratis} free per month, then {preco}",
         "FAIXA": "from {min} to {max}",
-        "RESTAM": "{n} free left",
-        "RESTA_UMA": "1 free left",
-        "ACABARAM": "No free lookups left",
+        "RESTAM": "{n} free left this month",
+        "RESTA_UMA": "1 free left this month",
+        "ACABARAM": "No free lookups left this month",
         "TITULO": "How much it costs",
-        "COMO_FUNCIONA": "Every answered question counts, even when there is no record. After the free ones, the amount goes on your monthly bill. The same question on the same day is not charged again."
+        "COMO_FUNCIONA": "Every answered question counts, even when there is no record. After the free ones, the amount goes on your monthly bill. The free ones come back at the start of every month. The same question on the same day is not charged again."
       }
     }
   }

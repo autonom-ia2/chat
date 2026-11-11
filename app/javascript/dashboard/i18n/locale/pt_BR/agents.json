@@ -3521,13 +3521,13 @@
       },
       "PREMIUM": {
         "SELO": "Premium",
-        "PRECO": "{gratis} grátis, depois {preco}",
+        "PRECO": "{gratis} grátis por mês, depois {preco}",
         "FAIXA": "de {min} a {max}",
-        "RESTAM": "Restam {n} grátis",
-        "RESTA_UMA": "Resta 1 grátis",
-        "ACABARAM": "As grátis acabaram",
+        "RESTAM": "Restam {n} grátis no mês",
+        "RESTA_UMA": "Resta 1 grátis no mês",
+        "ACABARAM": "As grátis do mês acabaram",
         "TITULO": "Quanto custa",
-        "COMO_FUNCIONA": "Cada pergunta respondida conta, mesmo quando não há registro. Depois das grátis, o valor entra na sua fatura do mês. A mesma pergunta no mesmo dia não paga de novo."
+        "COMO_FUNCIONA": "Cada pergunta respondida conta, mesmo quando não há registro. Depois das grátis, o valor entra na sua fatura do mês. As grátis voltam no começo de cada mês. A mesma pergunta no mesmo dia não paga de novo."
       }
     }
   }

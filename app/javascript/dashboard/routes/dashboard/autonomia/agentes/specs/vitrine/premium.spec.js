@@ -13,8 +13,9 @@ describe('premium · faixaDePreco', () => {
     expect(faixa.max).toContain('0,15');
   });
 
-  it('keeps the third decimal of the IBAMA embargo (R$ 0,225)', () => {
-    expect(faixaDePreco(['0.15', '0.225']).max).toContain('0,225');
+  it('every price closes in whole cents (the IBAMA embargo is R$ 0,23)', () => {
+    expect(faixaDePreco(['0.15', '0.23']).max).toContain('0,23');
+    expect(emReais('0.23')).not.toContain('0,230');
   });
 
   it('nothing without a price', () => {
