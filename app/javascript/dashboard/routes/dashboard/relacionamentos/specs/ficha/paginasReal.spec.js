@@ -19,7 +19,7 @@ vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
   default: (await import('../lista/dialogoFalso')).DialogoFalso,
 }));
 vi.mock('dashboard/components-next/TeleportWithDirection.vue', async () => ({
-  default: (await import('../lista/dialogoFalso')).TeleportFalso,
+  default: (await import('../lista/teleportFalso')).TeleportFalso,
 }));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ query: {}, params: contexto.params }),

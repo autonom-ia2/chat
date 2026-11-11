@@ -24,7 +24,7 @@ vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
   default: (await import('./dialogoFalso')).DialogoFalso,
 }));
 vi.mock('dashboard/components-next/TeleportWithDirection.vue', async () => ({
-  default: (await import('./dialogoFalso')).TeleportFalso,
+  default: (await import('./teleportFalso')).TeleportFalso,
 }));
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
