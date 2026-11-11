@@ -179,9 +179,9 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
               'dizer o código.'.freeze
   # Na consulta codigo, só quando o código ainda não é o da nota (regra "QI 70": o de 8 dígitos já está certo, e
   # perguntar o material ali seria pergunta à toa).
-  NAO_E_O_DA_NOTA = 'Este código tem %<digitos>s dígitos: é o capítulo ou a posição, e não serve na nota fiscal (lá vai o de ' \
-                    '8 dígitos). Para chegar ao da nota, pergunte ao cliente o material (aço, cobre, plástico…) e use a ' \
-                    'consulta buscar.'.freeze
+  # Cabe inteira no teto de `Resposta::MAX_TEXTO` (revisão do #2917: com 209 letras, perdia "e use a consulta buscar").
+  NAO_E_O_DA_NOTA = 'Código de %<digitos>s dígitos não vai na nota fiscal, que leva o de 8 dígitos. Pergunte ao cliente o ' \
+                    'material (aço, cobre, plástico…) e use a consulta buscar.'.freeze
 
   # A orientação da busca por palavra com grupo entre os itens. O grupo tem de 4 a 7 dígitos: nunca manda buscar um
   # capítulo. Cada texto cabe inteiro no que vai ao modelo (`Resposta::MAX_TEXTO`).
