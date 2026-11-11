@@ -1,5 +1,6 @@
 import {
   GRUPOS,
+  camadaDoDestaque,
   MODELOS,
   emDestaque,
   modeloNaConta,
@@ -60,6 +61,10 @@ describe('modelos da porta de Automações', () => {
     expect(ids(SAUDE)).toEqual(['M01', 'M03', 'M05', 'M08', 'M10', 'M14']);
     // Seguros sem perfil conhecido cai no geral.
     expect(ids(['seguros'])).toEqual(ids([]));
+    // Seguradora e insurtech ainda não têm versão própria dos modelos: destaque e título gerais.
+    expect(ids(['seguros', 'seguros/seguradora'])).toEqual(ids([]));
+    expect(camadaDoDestaque(['seguros', 'seguros/insurtech'])).toBeNull();
+    expect(camadaDoDestaque(CORRETORA)).toBe('seguros/corretora');
   });
 
   it('o tom vem do grupo e grupo desconhecido fica cinza', () => {
