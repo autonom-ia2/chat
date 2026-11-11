@@ -215,6 +215,56 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
 
   // A saída inteira das listas que já enganaram: o detalhe do primeiro item parecia valer para todos ("Situação:
   // Suspenso" depois dos corretores, "Código: 1" depois das marcas, "Estado: AC" depois dos estados).
+  // C27: lista sem rótulo não aparece. As listas do banco por nome e do CEP por endereço precisam do rótulo no i18n,
+  // senão o banco e o endereço de um resultado só sumiam da tela (varredura: bancos/por_nome, cep/por_endereco).
+  it('o banco por nome e o CEP por endereço de um resultado só aparecem com o rótulo da lista', () => {
+    const banco = linhasDoResultado(
+      {
+        total: 1,
+        bancos: [
+          {
+            codigo: '341',
+            nome: 'ITAÚ UNIBANCO S.A.',
+            nome_completo: 'ITAÚ UNIBANCO S.A.',
+            ispb: '60701190',
+          },
+        ],
+      },
+      PT
+    );
+    expect(banco).toEqual([
+      ['Bancos', 'ITAÚ UNIBANCO S.A.'],
+      ['Código', '341'],
+    ]);
+    const endereco = linhasDoResultado(
+      {
+        cidade: 'São José',
+        uf: 'SC',
+        total: 1,
+        ceps: [
+          { cep: '88104-480', logradouro: 'Rua das Flores', bairro: 'Centro' },
+        ],
+      },
+      PT
+    );
+    expect(endereco).toEqual([
+      ['Cidade', 'São José'],
+      ['Estado', 'SC'],
+      ['CEP', '88104-480'],
+      ['Rua', 'Rua das Flores'],
+      ['Bairro', 'Centro'],
+    ]);
+    expect(
+      linhasDoResultado({ bancos: [{ nome: 'X', codigo: '1' }] }, EN)[0][0]
+    ).toBe('Banks');
+    expect(
+      linhasDoResultado({ ceps: [{ cep: '1', logradouro: 'R' }] }, EN)
+    ).toEqual([
+      ['ZIP code', '1'],
+      ['Street', 'R'],
+    ]);
+  });
+
   it('saída completa: corretores, marcas, estados e feriados', () => {
     const dia = (ano, mes, d) =>
       new Date(ano, mes - 1, d).toLocaleDateString('pt-BR');
@@ -227,12 +277,12 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
       ['Situação', 'Suspenso'],
       ['Registro na SUSEP', '100000001'],
     ]);
-    // Varredura P03/P04: nome e um só campo com rótulo (o código da marca) vira par "nome: valor".
+    // O código da marca é chave de identificação: não vira par, a lista mostra só os nomes.
     expect(linhas('fipe', 'marcas')).toEqual([
-      ['Marcas', 'Acura: 1 · Agrale: 2 · Alfa Romeo: 3 · e mais 105'],
+      ['Marcas', 'Acura, Agrale, Alfa Romeo e mais 105'],
     ]);
     expect(linhas('cidades', 'estados')).toEqual([
-      ['Estados', 'Acre: AC · Alagoas: AL · Amapá: AP · e mais 24'],
+      ['Estados', 'Acre, Alagoas, Amapá e mais 24'],
     ]);
     expect(linhas('feriados', 'feriados')).toEqual([
       ['Ano', '2026'],

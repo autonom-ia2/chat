@@ -3216,6 +3216,8 @@
         "DESCRICAO": "Description",
         "VIGENTE_DESDE": "In force since",
         "ITENS": "Results",
+        "BANCOS": "Banks",
+        "CEPS": "ZIP codes",
         "ESTABELECIMENTOS": "Health facilities",
         "TIPO": "Type",
         "ENDERECO": "Address",
