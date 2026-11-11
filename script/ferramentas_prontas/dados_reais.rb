@@ -12,6 +12,7 @@ module DadosReaisDasProntas
   DESTINO = Rails.root.join('app/javascript/dashboard/routes/dashboard/autonomia/agentes/specs/vitrine/dados-reais')
 
   class SemDecisao < StandardError; end
+  class PedidoDesconhecido < StandardError; end
 
   CASOS = [
     ['cep', 'endereco', { 'cep' => '01001-000' }],
@@ -42,7 +43,8 @@ module DadosReaisDasProntas
     ['ncm', 'codigo', { 'codigo' => '7318.15.00' }],
     ['compras_governo', 'compras', { 'cidade' => 'Uberlândia', 'uf' => 'mg' }],
     ['estacoes', 'estacoes', { 'cidade' => 'Uberlândia', 'uf' => 'mg' }],
-    ['chuva', 'chuva', { 'cidade' => 'Uberlândia', 'uf' => 'mg' }],
+    # Vários dias: a lista de itens sem nome (identificados pela data) passa pelo spec de cobertura.
+    ['chuva', 'chuva', { 'cidade' => 'Uberlândia', 'uf' => 'mg', 'de' => '2026-11-04', 'ate' => '2026-11-10' }],
     ['produtos_seguradoras', 'seguradoras', { 'busca' => 'Allianz' }],
     ['produtos_seguradoras', 'produtos', { 'seguradora' => 'Allianz', 'ramo' => 'riscos_ciberneticos' }],
     ['corretor_susep', 'por_nome', { 'nome' => 'corretora de seguros', 'tipo_pessoa' => 'pj' }]
@@ -120,8 +122,13 @@ module DadosReaisDasProntas
     File.write(arquivo, "#{JSON.pretty_generate(atual.merge(nome => { 'provedor' => provedor, 'dados' => limpo }))}\n")
   end
 
-  # Os pedidos escolhidos: todos, os de uma fonte ("ncm") ou uma consulta só ("banco_central.focus").
+  # Os pedidos escolhidos: todos, os de uma fonte ("ncm") ou uma consulta só ("banco_central.focus"). Pedido que não
+  # está no CASOS aborta (sem isso, um nome errado gravava nada e parecia ter dado certo).
   def casos(escolhidas)
+    conhecidos = CASOS.flat_map { |chave, nome, _argumentos| [chave, "#{chave}.#{nome}"] }
+    desconhecidos = Array(escolhidas) - conhecidos
+    raise PedidoDesconhecido, "#{desconhecidos.join(', ')}: não está no CASOS (fonte ou fonte.consulta)." if desconhecidos.any?
+
     CASOS.select do |chave, nome, _argumentos|
       escolhidas.blank? || escolhidas.include?(chave) || escolhidas.include?("#{chave}.#{nome}")
     end

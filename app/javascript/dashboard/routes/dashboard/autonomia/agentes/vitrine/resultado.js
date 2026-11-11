@@ -42,8 +42,41 @@ const dataLegivel = (texto, idioma) => {
   return new Date(ano, mes - 1, dia).toLocaleDateString(idioma);
 };
 
-// Dinheiro (a unidade "R$", ou o campo valor_*: o valor estimado da compra) tem separador de milhar e de 2 a 4 casas
-// (a PTAX tem 4); ano e código não.
+// "2026-11-11 03:10" ou "2026-11-11T03:10:00" (com ou sem fuso no fim), conferido caractere a caractere.
+const TAMANHO_DA_DATA_COM_HORA = 16;
+const ehDataComHora = texto =>
+  typeof texto === 'string' &&
+  texto.length >= TAMANHO_DA_DATA_COM_HORA &&
+  ehDataIso(texto.slice(0, TAMANHO_DA_DATA)) &&
+  [' ', 'T'].includes(texto[TAMANHO_DA_DATA]) &&
+  texto[13] === ':' &&
+  [...`${texto.slice(11, 13)}${texto.slice(14, 16)}`].every(ehDigito);
+
+// Com fuso ("Z", "-03:00"), a hora vai para o fuso de quem olha; sem fuso, fica a hora que veio.
+const temFuso = texto => {
+  const resto = texto.slice(TAMANHO_DA_DATA_COM_HORA);
+  return resto.endsWith('Z') || resto.includes('+') || resto.includes('-');
+};
+
+const dataComHoraLegivel = (texto, idioma) => {
+  const [ano, mes, dia] = texto
+    .slice(0, TAMANHO_DA_DATA)
+    .split('-')
+    .map(Number);
+  const [hora, minuto] = [texto.slice(11, 13), texto.slice(14, 16)].map(Number);
+  const data = temFuso(texto)
+    ? new Date(`${texto.slice(0, TAMANHO_DA_DATA)}T${texto.slice(11)}`)
+    : new Date(ano, mes - 1, dia, hora, minuto);
+  if (Number.isNaN(data.getTime())) return texto;
+  const horario = data.toLocaleTimeString(idioma, {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return `${data.toLocaleDateString(idioma)} ${horario}`;
+};
+
+// Dinheiro (a unidade "R$", ou o campo valor_*: o valor estimado da compra) tem de 2 a 4 casas (a PTAX tem 4). Número
+// com unidade (kW, ha, mm, R$) ou dinheiro tem separador de milhar; sem unidade (ano, código, CEP, registro) não.
 const ehDinheiro = (chave, unidade) =>
   unidade.startsWith('R$') || String(chave).startsWith('valor_');
 
@@ -51,7 +84,7 @@ const numeroLegivel = (numero, idioma, unidade, dinheiro = false) => {
   const texto = new Intl.NumberFormat(idioma, {
     minimumFractionDigits: dinheiro ? 2 : 0,
     maximumFractionDigits: 4,
-    useGrouping: dinheiro,
+    useGrouping: dinheiro || Boolean(unidade),
   }).format(numero);
   if (!unidade) return texto;
   return unidade.startsWith('R$')
@@ -83,17 +116,20 @@ const valorLegivel = (chave, valor, textos, unidade) => {
     );
   }
   if (ehDataIso(valor)) return dataLegivel(valor, textos.idioma);
+  if (ehDataComHora(valor)) return dataComHoraLegivel(valor, textos.idioma);
   return chave === 'descricao' ? semTracoInicial(String(valor)) : String(valor);
 };
 
-// A lista curta: os três primeiros (já legíveis) e quantos faltam.
-const resumoDaLista = (legiveis, total, textos) => {
+// A lista curta: os três primeiros (já legíveis) e quantos faltam. Com `separador` (os pares "data: valor"), ele
+// separa os itens, porque a vírgula se confundiria com a do número.
+const resumoDaLista = (legiveis, total, textos, separador = '') => {
   const quantos = Math.max(total ?? 0, legiveis.length);
   const primeiros = legiveis.slice(0, PRIMEIROS);
   const resto = quantos - primeiros.length;
   if (resto > 0) {
-    return textos.maisN({ nomes: primeiros.join(', '), n: resto });
+    return textos.maisN({ nomes: primeiros.join(separador || ', '), n: resto });
   }
+  if (separador) return primeiros.join(separador);
   return new Intl.ListFormat(textos.idioma, { type: 'conjunction' }).format(
     primeiros
   );
@@ -110,7 +146,8 @@ const CAMPOS_DE_NOME = [
   'cep',
 ];
 // #2858 F7 — sem nome, o que identifica cada item (o número do telefone, a placa, o ano do preço), na ordem de
-// preferência. Sem nenhum deles, a lista de mais de um item é só contada.
+// preferência. Só identifica o campo que tem valor diferente em cada item: dois combustíveis do mesmo ano pulam o
+// ano. `tipo` fica fora: é categoria ("Hospital geral" em vários). Sem nenhum, a lista de mais de um item é contada.
 const CAMPOS_IDENTIFICADORES = [
   'numero',
   'telefone',
@@ -118,9 +155,9 @@ const CAMPOS_IDENTIFICADORES = [
   'placa',
   'cno',
   'conselho',
-  'tipo',
   'ano',
   'ano_modelo',
+  'combustivel',
   'data',
 ];
 // Campos que ficam sem rótulo de propósito (não aparecem): `ispb` (código interno do banco, sem uso para o dono),
@@ -134,13 +171,24 @@ const campoComum = (itens, campos, aceita) =>
   );
 const campoDeNome = itens =>
   campoComum(itens, CAMPOS_DE_NOME, valor => typeof valor === 'string');
+const todosDiferentes = (itens, campo) =>
+  new Set(itens.map(item => item[campo])).size === itens.length;
 const campoIdentificador = itens =>
-  campoComum(itens, CAMPOS_IDENTIFICADORES, valor =>
-    ['string', 'number'].includes(typeof valor)
-  );
+  CAMPOS_IDENTIFICADORES.filter(campo =>
+    campoComum(itens, [campo], valor =>
+      ['string', 'number'].includes(typeof valor)
+    )
+  ).find(campo => todosDiferentes(itens, campo));
 
 // A unidade de um campo: `unidades` (campo -> unidade), mandada no nível de cima (a mediana do Focus).
-const unidadeDe = (textos, chave) => textos.unidades?.[chave] || '';
+const unidadeDe = (textos, chave) => {
+  const { unidades } = textos;
+  return unidades &&
+    Object.hasOwn(unidades, chave) &&
+    typeof unidades[chave] === 'string'
+    ? unidades[chave]
+    : '';
+};
 
 const legivel = (chave, valor, textos) =>
   valorLegivel(chave, valor, textos, unidadeDe(textos, chave));
@@ -202,18 +250,26 @@ const primeiroAberto = (itens, campo, umSo, textos) => {
   return [[textos.rotulo('primeiro_da_lista'), nome], ...detalhes];
 };
 
-// Lista sem nome e com mais de um item: os identificadores e o primeiro sob "Primeiro da lista"; sem identificador,
-// só quantos são (abrir o primeiro faria os campos dele parecerem valer para todos).
+// Lista sem nome e com mais de um item. Cada item com 1 campo com rótulo além do identificador (os focos de cada dia):
+// os pares numa linha só ("10/11/2026: 5 · 11/11/2026: 3"). Senão, os identificadores e, com MINIMO_PARA_ABRIR campos
+// com rótulo (a mesma regra da lista com nome), o primeiro sob "Primeiro da lista". Sem identificador, só quantos são
+// (abrir o primeiro faria os campos dele parecerem valer para todos).
+const SEPARADOR_DE_PARES = ' · ';
 const listaSemNome = (rotulo, itens, total, textos) => {
   const id = campoIdentificador(itens);
   if (!id) return rotulo ? [[rotulo, quantosSao(itens, total, textos)]] : [];
   const ids = identificadores(itens, id, textos);
+  const detalhesDeCada = itens.map(item =>
+    linhasSimples(item, textos.rotulo, textos, id)
+  );
+  if (rotulo && detalhesDeCada.every(linhas => linhas.length === 1)) {
+    const pares = ids.map((nome, i) => `${nome}: ${detalhesDeCada[i][0][1]}`);
+    return [[rotulo, resumoDaLista(pares, total, textos, SEPARADOR_DE_PARES)]];
+  }
   const resumo = rotulo ? [[rotulo, resumoDaLista(ids, total, textos)]] : [];
-  return [
-    ...resumo,
-    [textos.rotulo('primeiro_da_lista'), ids[0]],
-    ...linhasSimples(itens[0], textos.rotulo, textos, id),
-  ];
+  const [detalhes] = detalhesDeCada;
+  if (detalhes.length < MINIMO_PARA_ABRIR) return resumo;
+  return [...resumo, [textos.rotulo('primeiro_da_lista'), ids[0]], ...detalhes];
 };
 
 const linhasDaLista = (chave, itens, total, textos) => {

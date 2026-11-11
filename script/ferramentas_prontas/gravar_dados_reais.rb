@@ -13,6 +13,6 @@ Rails.cache = ActiveSupport::Cache::NullStore.new
 
 begin
   Time.use_zone('America/Sao_Paulo') { DadosReaisDasProntas.rodar(ARGV) }
-rescue DadosReaisDasProntas::SemDecisao => e
+rescue DadosReaisDasProntas::SemDecisao, DadosReaisDasProntas::PedidoDesconhecido => e
   abort(e.message)
 end

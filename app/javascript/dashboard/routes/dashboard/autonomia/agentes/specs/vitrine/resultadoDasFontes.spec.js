@@ -170,7 +170,13 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     expect(valor('estacoes', 'estacoes', 'Estações')).toContain('UBERLANDIA');
     expect(valor('estacoes', 'estacoes', 'Distância (km)')).toBe('2');
     expect(valor('estacoes', 'estacoes', 'Situação')).toBe('Operante');
-    expect(valor('chuva', 'chuva', 'Chuva no período (mm)')).toBe('1,8');
+    expect(valor('chuva', 'chuva', 'Chuva no período (mm)')).toBe('64,4');
+    // Vários dias (lista sem nome, um campo só além da data): cada dia com a chuva dele, numa linha.
+    const dia = d => new Date(2026, 10, d).toLocaleDateString('pt-BR');
+    expect(valor('chuva', 'chuva', 'Dias')).toBe(
+      `${dia(4)}: 0,9 · ${dia(5)}: 6,2 · ${dia(6)}: 0,9 e mais 4`
+    );
+    expect(valor('chuva', 'chuva', 'Primeiro da lista')).toBeUndefined();
     expect(valor('chuva', 'chuva', 'Lugar')).toBe('Uberlândia (MG)');
   });
 
