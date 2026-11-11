@@ -3,26 +3,22 @@
     "provedor": "brasilapi",
     "dados": {
       "busca": "café torrado",
-      "total": 2,
+      "total": 1,
       "itens": [
         {
-          "codigo": "0901.21.00",
-          "descricao": "Café torrado, não descafeinado",
-          "vigente_desde": "2022-04-01"
-        },
-        {
-          "codigo": "0901.22.00",
-          "descricao": "Café torrado, descafeinado",
+          "codigo": "0901.2",
+          "descricao": "Café torrado",
           "vigente_desde": "2022-04-01"
         }
-      ]
+      ],
+      "observacao": "Código com menos de 8 dígitos é grupo e não vai na nota. Para ver os da nota, faça a consulta buscar com o código do grupo (ex.: 0901.2)."
     }
   },
   "codigo": {
     "provedor": "brasilapi",
     "dados": {
       "codigo": "0901.21.00",
-      "descricao": "Café torrado, não descafeinado",
+      "descricao": "Café, mesmo torrado ou descafeinado; cascas e películas de café; sucedâneos do café que contenham café em qualquer proporção, café torrado, não descafeinado",
       "vigente_desde": "2022-04-01"
     }
   }

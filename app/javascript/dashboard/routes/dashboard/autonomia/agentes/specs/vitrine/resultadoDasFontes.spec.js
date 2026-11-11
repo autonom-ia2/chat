@@ -162,21 +162,25 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
   });
 
   // O caso real do teste em produção (11/11/2026): "café torrado" achava só o grupo 0901.2, e a tela mostrava "Café
-  // torrado:" com o código 0901.2. Agora vêm os códigos da nota (8 dígitos), com a descrição completa.
-  it('F4: NCM com o código da nota e a descrição completa, sem traço nem dois-pontos', () => {
+  // torrado:" com o código 0901.2. Agora o grupo vem sem traço nem dois-pontos, com a orientação para o modelo buscar
+  // pelo código dele (revisão do #2917: quem escolhe o grupo é o modelo); o código da nota, com a descrição completa.
+  it('F4: NCM com o grupo e a orientação, e o código da nota com a descrição completa', () => {
     expect(linhas('ncm', 'buscar')).toEqual([
       ['Busca', 'café torrado'],
-      [
-        'Resultados',
-        'Café torrado, não descafeinado e Café torrado, descafeinado',
-      ],
-      ['Primeiro da lista', 'Café torrado, não descafeinado'],
-      ['Código', '0901.21.00'],
+      ['Resultados', 'Café torrado'],
+      ['Código', '0901.2'],
       ['Em vigor desde', '01/04/2022'],
+      [
+        'Observação',
+        'Código com menos de 8 dígitos é grupo e não vai na nota. Para ver os da nota, faça a consulta buscar com o código do grupo (ex.: 0901.2).',
+      ],
     ]);
     expect(linhas('ncm', 'codigo')).toEqual([
       ['Código', '0901.21.00'],
-      ['Descrição', 'Café torrado, não descafeinado'],
+      [
+        'Descrição',
+        'Café, mesmo torrado ou descafeinado; cascas e películas de café; sucedâneos do café que contenham café em qualquer proporção, café torrado, não descafeinado',
+      ],
       ['Em vigor desde', '01/04/2022'],
     ]);
   });

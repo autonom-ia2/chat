@@ -43,7 +43,9 @@ cibernéticos saiu) e ganhou o filtro de servidor de teste e de link de exemplo.
 `ncm.json` foi gravado de novo em 11/11/2026, à noite, com o caso real do teste em produção ("café torrado", que achava
 só o grupo 0901.2): o grupo abre nos códigos de 8 dígitos dele, com a descrição completa ("Café torrado, não
 descafeinado"). Gravado pelo código do script (`DadosReaisDasProntas.rodar(['ncm'])`) num spec temporário, fora do
-commit, porque o `rails runner` estava vedado naquela tarefa.
+commit, porque o `rails runner` estava vedado naquela tarefa. Gravado de novo no mesmo dia, do mesmo jeito, depois
+da revisão do #2917: a busca por palavra não abre mais o grupo (vem o grupo com a orientação para o modelo buscar pelo
+código dele), e a descrição completa leva a posição, que diz o material.
 
 | Arquivo | Consulta e pedido | Provedor que respondeu |
 |---|---|---|

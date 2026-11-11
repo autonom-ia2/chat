@@ -39,7 +39,8 @@ module DadosReaisDasProntas
     ['procedimentos', 'busca', { 'busca' => 'hemograma' }],
     ['doencas', 'codigo', { 'codigo' => 'J45' }],
     ['doencas', 'busca', { 'busca' => 'asma' }],
-    # O caso real do teste em produção (11/11/2026): a busca acha o grupo 0901.2, que abre nos códigos da nota.
+    # O caso real do teste em produção (11/11/2026): a busca acha o grupo 0901.2, que vem com a orientação para o modelo
+    # buscar pelo código dele (revisão do #2917: quem escolhe o grupo é o modelo).
     ['ncm', 'buscar', { 'busca' => 'café torrado' }],
     ['ncm', 'codigo', { 'codigo' => '0901.21.00' }],
     ['compras_governo', 'compras', { 'cidade' => 'Uberlândia', 'uf' => 'mg' }],
