@@ -10,7 +10,8 @@
 # Tudo por método de string, sem expressão regular.
 module Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras::Sujeira
   # O rótulo inteiro do host que marca servidor de teste.
-  ROTULOS_DE_TESTE = %w[dev desenv uat qa stg stage staging test teste tst mock preprod hom].freeze
+  # "apihm": o servidor de homologação da Caixa no diretório (MEDICAO.md), fora dos 3 ramos hoje.
+  ROTULOS_DE_TESTE = %w[dev desenv uat qa stg stage staging test teste tst mock preprod hom apihm].freeze
   # O pedaço que, em qualquer ponto do rótulo, marca servidor de teste ("apihml", "homologacao").
   PEDACOS_DE_TESTE = %w[hml homolog sandbox].freeze
   # O domínio de exemplo (ele e os subdomínios dele): o da especificação, o genérico e o do próprio Open Insurance.

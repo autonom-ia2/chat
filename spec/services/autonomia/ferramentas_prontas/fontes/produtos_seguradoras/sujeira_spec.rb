@@ -14,7 +14,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras::Sujei
     it 'acha as outras marcas de teste, em qualquer rotulo do host' do
       %w[homolog.seguradora.com.br api.uat.seguradora.com.br dev.seguradora.com.br apihml.seguradora.com.br
          api-homologacao.seguradora.com.br mock.seguradora.com.br api.stg.seguradora.com.br api-qa.seguradora.com.br
-         API-HML.SEGURADORA.COM.BR].each do |host|
+         API-HML.SEGURADORA.COM.BR apihm.caixaseguradora.com.br].each do |host|
         expect(described_class.servidor_de_teste?(host)).to be(true), host
       end
     end
