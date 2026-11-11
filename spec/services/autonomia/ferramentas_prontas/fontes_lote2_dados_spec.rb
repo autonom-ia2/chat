@@ -98,6 +98,14 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
         .to eq('codigo' => '7318.15.00', 'descricao' => '-- Outros parafusos e pinos ou pernos', 'vigente_desde' => '2022-04-01')
     end
 
+    # Varredura P11: a tabela do Siscomex traz HTML na descrição ("600 g/m<sup>2</sup>", "<i>badminton</i>").
+    it 'a descricao vai sem as tags HTML, com o texto delas e as entidades decodificadas' do
+      fonte_responde(codigo, vigente.merge(descricao: 'De peso igual ou superior a 600 g/m<sup>2</sup>, de <i>badminton</i> &amp; outros'))
+
+      expect(executar_pronta(ferramenta, 'consulta' => 'codigo', 'codigo' => '7318.15.00')['dados']['descricao'])
+        .to eq('De peso igual ou superior a 600 g/m2, de badminton & outros')
+    end
+
     it 'codigo que nao existe (404) e busca sem resultado: "nao encontrado"' do
       fonte_fora('https://brasilapi.com.br/api/ncm/v1/99999999', status: 404)
       fonte_responde('https://brasilapi.com.br/api/ncm/v1?search=xyzqwk', [])
