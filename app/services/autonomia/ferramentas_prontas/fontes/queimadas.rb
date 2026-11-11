@@ -1,7 +1,7 @@
 # FOCOS DE QUEIMADA (#2858, F5): "teve queimada perto de Sorriso ontem?". Os focos de calor que os satélites do
 # Programa Queimadas do INPE detectaram numa cidade (o município inteiro) ou num raio em volta de um ponto (a sede da
-# cidade, ou a localização que o cliente mandou), de `dias` atrás até agora: o total, quantos em cada dia e os mais
-# recentes, com a distância. Foco é detecção de satélite, não confirmação de incêndio no chão; o mesmo fogo pode ser
+# cidade, ou a localização que o cliente mandou), de `dias` atrás até agora: o total, quantos em cada dia, quando foi o
+# último e a distância do mais perto. Foco é detecção de satélite, não confirmação de incêndio no chão; o mesmo fogo pode ser
 # visto por mais de um satélite. A base guarda os últimos 8 dias e é baixada pela plataforma todo dia (`Bases::Queimadas`).
 module Autonomia::FerramentasProntas::Fontes::Queimadas
   Parametro = Autonomia::FerramentasProntas::Parametro
@@ -54,8 +54,8 @@ module Autonomia::FerramentasProntas::Fontes::Queimadas
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'queimadas', slug: 'pronta_queimadas', nome: 'Focos de queimada', flag: Autonomia::FerramentasProntas::Bases::FLAG,
     descricao: 'Os focos de queimada que os satélites do INPE detectaram numa cidade ou perto de uma localização, nos últimos ' \
-               'dias (até 7): o total, quantos por dia e os mais recentes, com a distância. Foco é detecção de satélite, não ' \
-               'incêndio confirmado. atualizado_em diz de quando é a base.',
+               'dias (até 7): o total, quantos por dia, quando foi o último e a distância do mais perto (da sede da cidade, ou ' \
+               'da localização). Foco é detecção de satélite, não incêndio confirmado. atualizado_em diz de quando é a base.',
     consultas: [
       Autonomia::FerramentasProntas::Consulta.new(
         nome: 'focos', descricao: 'os focos detectados; pede cidade (e uf, se houver outra com o mesmo nome), ou latitude e longitude',

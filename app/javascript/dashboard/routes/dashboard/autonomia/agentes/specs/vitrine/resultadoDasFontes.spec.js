@@ -318,14 +318,27 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     ).toBe('TRANSPORTADORA EXEMPLO 1 LTDA');
   });
 
-  it('F5 INPE: focos de queimada no lugar, no período e por dia', () => {
+  it('F5 INPE: focos de queimada no lugar, no período, por dia, o último e o mais perto', () => {
     expect(valor('queimadas', 'focos', 'Onde')).toBe('Almeirim (PA)');
-    expect(valor('queimadas', 'focos', 'Focos no período')).toBe('1.250');
+    expect(valor('queimadas', 'focos', 'Focos no período')).toBe('1.258');
     // Regra B: cada dia com os focos dele, numa linha com o rótulo do campo; o rótulo da lista não aparece.
     expect(valor('queimadas', 'focos', 'Focos no dia')).toBe(
-      `${diaF5(2026, 11, 11)}: 377 · ${diaF5(2026, 11, 10)}: 873`
+      `${diaF5(2026, 11, 11)}: 385 · ${diaF5(2026, 11, 10)}: 873`
     );
     expect(valor('queimadas', 'focos', 'Dias com focos')).toBeUndefined();
+    // Data com hora, sem conversão de fuso (regra C).
+    const horario = new Date(2026, 10, 11, 11, 10).toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    expect(valor('queimadas', 'focos', 'Último foco detectado em')).toBe(
+      `${diaF5(2026, 11, 11)} ${horario}`
+    );
+    expect(
+      valor('queimadas', 'focos', 'Distância do foco mais perto (km)')
+    ).toBe('6,4');
+    // A lista dos últimos focos (coordenada e bioma) não vai: na tela ela era só a contagem.
+    expect(valor('queimadas', 'focos', 'Focos mais recentes')).toBeUndefined();
     expect(valor('queimadas', 'focos', 'Base atualizada em')).toBe(
       diaF5(2026, 11, 11)
     );

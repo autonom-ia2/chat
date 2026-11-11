@@ -92,3 +92,6 @@ reais. Planos de saúde, placas solares e focos não têm pessoa física.
 
 `geracao_solar.json` foi gravado de novo em 11/11/2026, pelo script, depois que o total passou a ter nome de total
 (`total_de_sistemas`, `potencia_total_kw`) e o detalhe por tipo de geração passou a vir só com mais de um tipo.
+
+`queimadas.json` foi gravado de novo em 11/11/2026, pelo script, depois que a lista dos últimos focos (coordenada e
+bioma) deu lugar a `ultimo_foco_em` e `distancia_do_foco_mais_perto_km`.

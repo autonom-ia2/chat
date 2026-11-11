@@ -215,19 +215,22 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       importar('queimadas')
     end
 
-    it '"Queimada em Sorriso ontem?": os do município, por dia, no fuso da conta' do
+    it '"Queimada em Sorriso ontem?": os do município, por dia, no fuso da conta, o último e o mais perto da sede' do
       saida = executar_pronta(ferramenta, 'cidade' => 'Sorriso', 'uf' => 'MT', 'dias' => 1)
 
       expect(saida['dados']).to include('onde' => 'Sorriso (MT)', 'desde' => '2026-11-10', 'focos_no_periodo' => 4,
-                                        'por_dia' => [{ 'data' => '2026-11-11', 'focos' => 2 }, { 'data' => '2026-11-10', 'focos' => 2 }])
-      expect(saida['dados']['mais_recentes'].first).to include('data' => '2026-11-11 11:00', 'bioma' => 'Amazônia')
+                                        'por_dia' => [{ 'data' => '2026-11-11', 'focos' => 2 }, { 'data' => '2026-11-10', 'focos' => 2 }],
+                                        'ultimo_foco_em' => '2026-11-11 11:00')
+      expect(saida['dados']['distancia_do_foco_mais_perto_km']).to be_between(0, 2)
+      # A lista com coordenada e bioma não vai: nenhum leigo lê latitude, e na tela ela virava só a contagem.
+      expect(saida['dados'].keys).not_to include('mais_recentes')
     end
 
-    it 'num raio em volta da sede, com a distância; o foco mais longe que o raio fica de fora' do
+    it 'num raio em volta da sede, com a distância do mais perto; o foco mais longe que o raio fica de fora' do
       saida = executar_pronta(ferramenta, 'cidade' => 'Sorriso', 'uf' => 'MT', 'raio_km' => 20, 'dias' => 7)
 
       expect(saida['dados']).to include('onde' => 'até 20 km de Sorriso (MT)', 'focos_no_periodo' => 8)
-      expect(saida['dados']['mais_recentes'].first['distancia_km']).to be < 20
+      expect(saida['dados']['distancia_do_foco_mais_perto_km']).to be < 20
     end
 
     it 'pela localização que o cliente mandou, 10 km por padrão' do
@@ -259,7 +262,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       saida = executar_pronta(ferramenta, 'cidade' => 'Campinas', 'uf' => 'SP')
 
       expect(saida['situacao']).to eq('encontrado')
-      expect(saida['dados']).to include('onde' => 'Campinas (SP)', 'focos_no_periodo' => 0, 'atualizado_em' => '2026-11-11', 'mais_recentes' => [])
+      expect(saida['dados']).to include('onde' => 'Campinas (SP)', 'focos_no_periodo' => 0, 'atualizado_em' => '2026-11-11', 'por_dia' => [])
+      expect(saida['dados'].keys).not_to include('ultimo_foco_em', 'distancia_do_foco_mais_perto_km', 'mais_recentes')
     end
 
     it 'base de focos com mais de 1 dia: "não consegui", nunca "nenhum foco"' do
