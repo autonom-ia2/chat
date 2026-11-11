@@ -57,6 +57,21 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
                                         'vigente_desde' => '2022-04-01' }])
     end
 
+    # A BrasilAPI devolve na ordem do código: a palavra no meio da descrição de outro capítulo (34.03, lubrificantes
+    # "antiaderentes de porcas e parafusos") vinha antes do 73.18. A ordem por relevância vem antes do corte.
+    it '"Qual a NCM de parafuso?": primeiro a descricao que comeca pela palavra, e o corte vem depois da ordem' do
+      item = ->(codigo, descricao) { vigente.merge(codigo: codigo, descricao: descricao) }
+      outros = (1..20).map { |n| item.call(format('34.%02d', n), "Preparações antiaderentes de porcas e parafusos #{n}") }
+      fonte_responde('https://brasilapi.com.br/api/ncm/v1?search=parafuso',
+                     outros + [item.call('73.18', 'Parafusos, pinos ou pernos')])
+
+      dados = executar_pronta(ferramenta, 'consulta' => 'buscar', 'busca' => 'parafuso')['dados']
+
+      expect(dados).to include('total' => 21, 'mostrando' => 20)
+      expect(dados['itens'].first(3).pluck('codigo')).to eq(%w[73.18 34.01 34.02])
+      expect(dados['itens'].pluck('codigo')).not_to include('34.20')
+    end
+
     it '"O que e a NCM 7318.15.00?": a descricao oficial, pelo codigo sem os pontos' do
       fonte_responde(codigo, vigente)
 

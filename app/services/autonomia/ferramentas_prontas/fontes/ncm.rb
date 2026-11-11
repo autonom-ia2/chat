@@ -1,6 +1,7 @@
 # CÓDIGO DE MERCADORIA (#2858, F4): a NCM (Nomenclatura Comum do Mercosul), o código fiscal que classifica a
 # mercadoria na nota, na importação e no imposto. Duas consultas:
-#   - buscar: os códigos vigentes com uma palavra (ou parte do código) na descrição; vão ao modelo no máximo MAX_ITENS;
+#   - buscar: os códigos vigentes com uma palavra (ou parte do código) na descrição, por relevância; vão ao modelo no
+#     máximo MAX_ITENS;
 #   - codigo: a descrição oficial de um código (2, 4 ou 8 dígitos: capítulo, posição ou o código completo).
 #   - fonte única: a BrasilAPI, que repassa a tabela vigente do Siscomex. Sem reserva: o Portal Único (Siscomex) só
 #     publica a tabela inteira para baixar (3 MB, `classif/api/publico/nomenclatura/download/json`), não uma consulta.
@@ -47,8 +48,11 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     fim.empty? || fim == SEM_FIM || fim >= Time.zone.today.iso8601
   end
 
+  # A BrasilAPI devolve na ordem do código: a ordem por relevância vem antes do corte (sem ela, "parafuso" mostrava
+  # primeiro o 34.03, lubrificantes "antiaderentes de porcas e parafusos", e o 73.18 vinha depois).
   def lista(busca, itens)
-    { 'busca' => busca }.merge(Autonomia::FerramentasProntas::Lista.cortar(itens, 'itens', MAX_ITENS))
+    lista = Autonomia::FerramentasProntas::Lista
+    { 'busca' => busca }.merge(lista.cortar(lista.em_ordem(itens, busca) { |item| item['descricao'] }, 'itens', MAX_ITENS))
   end
 
   DESCRICAO_DA_BUSCA = "Na consulta buscar: uma palavra da mercadoria (ex.: parafuso) ou parte do código; ao menos #{MIN_BUSCA} " \
