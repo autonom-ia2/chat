@@ -88,7 +88,8 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
   # contador do dia (`autonomia_ferramentas_prontas_usos.motivos`, por conta, card e dia). A conferência do dia lê ali:
   #   SELECT account_id, fonte, dia, motivos->>'premium.telemetria_falhou' AS falhas
   #   FROM autonomia_ferramentas_prontas_usos WHERE dia = CURRENT_DATE AND motivos ? 'premium.telemetria_falhou';
-  # Com o banco inteiro fora, a marca também não grava: aí sobram o log e o rastreador.
+  # Com o banco inteiro fora, a marca também não grava: aí sobram o log e o rastreador. Só o erro do banco é engolido na
+  # marca; outro erro é defeito nosso e levanta.
   def cobrar(resultado, **)
     Premium::Cobranca.registrar!(tool: @tool, fonte: @fonte, consulta: @consulta, resultado: resultado, tool_run_id: @tool_run_id, **)
   rescue ActiveRecord::RecordNotUnique => e
@@ -105,7 +106,7 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
 
   def marcar_telemetria_falhou
     Autonomia::FerramentasProntas::Uso.anotar!(account_id: @tool.account_id, fonte: @fonte.chave, motivos: [TELEMETRIA_FALHOU])
-  rescue StandardError => e
+  rescue ActiveRecord::ActiveRecordError => e
     Rails.logger.error("#{PREFIXO} marca da telemetria premium falhou conta=#{@tool.account_id} fonte=#{@fonte.chave} #{e.class}")
   end
 end

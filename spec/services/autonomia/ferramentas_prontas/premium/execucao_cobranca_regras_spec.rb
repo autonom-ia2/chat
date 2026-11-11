@@ -256,5 +256,19 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
 
       expect(executar_premium(certidoes, pgfn)['situacao']).to eq('encontrado')
     end
+
+    # Revisor (lote 3, execucao.rb:107): o `rescue StandardError` da marca escondia defeito nosso. Só o erro do banco é
+    # engolido ali; o resto sobe ao rastreador pela `Execucao#call`, como qualquer defeito.
+    it 'defeito nosso na marca (não é erro do banco) não é engolido: a consulta vira "não consegui"' do
+      pgfn_responde([{ 'Origin' => 'PGFN', 'BaseStatus' => 'NEGATIVA' }])
+      allow(Autonomia::FerramentasProntas::Premium::Registro).to receive(:create!).and_raise(ActiveRecord::ConnectionNotEstablished)
+      allow(Autonomia::FerramentasProntas::Uso).to receive(:anotar!).and_call_original
+      allow(Autonomia::FerramentasProntas::Uso).to receive(:anotar!).with(hash_including(motivos: ['premium.telemetria_falhou']))
+                                                                    .and_raise(NoMethodError)
+      allow(Rails.logger).to receive(:error)
+
+      expect(executar_premium(certidoes, pgfn)['situacao']).to eq('nao_consegui_consultar')
+      expect(Rails.logger).not_to have_received(:error).with(include('marca da telemetria premium falhou'))
+    end
   end
 end
