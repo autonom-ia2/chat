@@ -2329,6 +2329,10 @@
       "pagina"
     ]
   },
+  "relacionamentos/funis": {
+    "controller": "api/v1/accounts/relacionamentos/funis#index",
+    "parametros": []
+  },
   "relacionamentos/opcoes_de_filtro": {
     "controller": "api/v1/accounts/relacionamentos/opcoes_de_filtro#show",
     "parametros": []

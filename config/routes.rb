@@ -1116,6 +1116,11 @@ Rails.application.routes.draw do
             end
             get :resumo, to: 'resumo#show'
             get :opcoes_de_filtro, to: 'opcoes_de_filtro#show'
+            # As ações em grupo da lista: os funis com as etapas, criar cards, etiquetar e apagar as pessoas marcadas.
+            get :funis, to: 'funis#index'
+            post :cards, to: 'cards#create'
+            post :etiqueta, to: 'etiqueta#create'
+            post :apagar, to: 'apagar#create'
           end
           resources :custom_attribute_definitions, only: [:index, :show, :create, :update, :destroy]
           resources :custom_filters, only: [:index, :show, :create, :update, :destroy]
