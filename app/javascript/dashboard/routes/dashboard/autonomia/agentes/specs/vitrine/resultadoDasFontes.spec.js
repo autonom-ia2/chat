@@ -344,8 +344,13 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     expect(valor('queimadas', 'focos', 'Último foco detectado em')).toBe(
       `${diaF5(2026, 11, 11)} ${horario}`
     );
+    // O rótulo diz de onde a distância é medida.
     expect(
-      valor('queimadas', 'focos', 'Distância do foco mais perto (km)')
+      valor(
+        'queimadas',
+        'focos',
+        'Distância do foco mais perto da cidade ou do ponto (km)'
+      )
     ).toBe('6,4');
     // A lista dos últimos focos (coordenada e bioma) não vai: na tela ela era só a contagem.
     expect(valor('queimadas', 'focos', 'Focos mais recentes')).toBeUndefined();

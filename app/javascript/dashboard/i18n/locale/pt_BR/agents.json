@@ -3203,7 +3203,7 @@
         "POR_DIA": "Dias com focos",
         "FOCOS": "Focos no dia",
         "ULTIMO_FOCO_EM": "Último foco detectado em",
-        "DISTANCIA_DO_FOCO_MAIS_PERTO_KM": "Distância do foco mais perto (km)",
+        "DISTANCIA_DO_FOCO_MAIS_PERTO_KM": "Distância do foco mais perto da cidade ou do ponto (km)",
         "CEP": "CEP",
         "LOGRADOURO": "Rua",
         "BAIRRO": "Bairro",

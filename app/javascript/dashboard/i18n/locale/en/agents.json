@@ -3203,7 +3203,7 @@
         "POR_DIA": "Days with hotspots",
         "FOCOS": "Hotspots that day",
         "ULTIMO_FOCO_EM": "Latest hotspot detected at",
-        "DISTANCIA_DO_FOCO_MAIS_PERTO_KM": "Distance to the nearest hotspot (km)",
+        "DISTANCIA_DO_FOCO_MAIS_PERTO_KM": "Distance from the city or point to the nearest hotspot (km)",
         "CEP": "ZIP code",
         "LOGRADOURO": "Street",
         "BAIRRO": "District",
