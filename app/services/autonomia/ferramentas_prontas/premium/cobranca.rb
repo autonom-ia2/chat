@@ -74,9 +74,23 @@ module Autonomia::FerramentasProntas::Premium::Cobranca
     saldo.update!(contadas: saldo.contadas - 1)
   end
 
+  # O `FOR UPDATE` com ORDER BY e LIMIT volta vazio quando a linha que ele esperava muda de estado enquanto espera (outra
+  # entrega incerta desfazendo aquela cobrada): o Postgres reavalia a linha travada e não busca a seguinte. Com o mês
+  # acima das 20, vazio é essa corrida; cada busca nova roda num retrato novo (READ COMMITTED) e acha a seguinte. Sem
+  # nenhuma cobrada depois das tentativas, o contador baixa assim mesmo e o caso vai ao log.
+  TENTATIVAS_DA_CONVERSAO = 3
+
   def converter_cobrada_mais_antiga!(registro, mes)
+    TENTATIVAS_DA_CONVERSAO.times do
+      cobrada = cobrada_mais_antiga(registro, mes)
+      return cobrada.update!(cobranca: 'gratis', preco: 0) if cobrada
+    end
+    Rails.logger.warn("[autonomia][premium] sem cobrada para converter na grátis devolvida conta=#{registro.account_id} fonte=#{registro.fonte}")
+  end
+
+  def cobrada_mais_antiga(registro, mes)
     Premium::Registro.lock.where(account_id: registro.account_id, fonte: registro.fonte, dia: mes..mes.end_of_month, cobranca: 'cobrada')
-                     .order(:numero, :id).first&.update!(cobranca: 'gratis', preco: 0)
+                     .order(:numero, :id).first
   end
 
   # INSERT ... ON CONFLICT (tool_run_id) DO NOTHING. -> true quando inseriu. Os valores são fixos daqui (resultado,

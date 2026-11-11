@@ -70,4 +70,34 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Cobranca do
     expect(registros[20].reload.cobranca).to eq('cobrada')
     expect(premium::Saldo.sole.contadas).to eq(20)
   end
+
+  # Revisor (lote 3, cobranca.rb:78): o `FOR UPDATE` da cobrada mais antiga pode voltar vazio quando outra transação a
+  # muda enquanto ele espera a trava (o Postgres reavalia a linha e não busca a seguinte). Com o mês acima das 20, vazio
+  # quer dizer corrida: a busca se repete, num retrato novo do banco.
+  it 'saldo 25 e a busca da cobrada mais antiga volta vazia uma vez (corrida): repete e converte a seguinte' do
+    registros = mes_com(25)
+    chamadas = 0
+    allow(described_class).to receive(:cobrada_mais_antiga).and_wrap_original do |original, *argumentos|
+      chamadas += 1
+      chamadas == 1 ? nil : original.call(*argumentos)
+    end
+
+    described_class.desfazer_cobranca!(registros[4])
+
+    expect(chamadas).to eq(2)
+    expect(premium::Registro.where(cobranca: 'gratis').count).to eq(20)
+    expect(premium::Saldo.sole.contadas).to eq(24)
+  end
+
+  it 'sem cobrada nenhuma depois das tentativas: o contador baixa e o caso vai ao log' do
+    registros = mes_com(25)
+    allow(described_class).to receive(:cobrada_mais_antiga).and_return(nil)
+    allow(Rails.logger).to receive(:warn)
+
+    described_class.desfazer_cobranca!(registros[4])
+
+    expect(described_class).to have_received(:cobrada_mais_antiga).exactly(described_class::TENTATIVAS_DA_CONVERSAO).times
+    expect(Rails.logger).to have_received(:warn).with(include('cobrada para converter'))
+    expect(premium::Saldo.sole.contadas).to eq(24)
+  end
 end
