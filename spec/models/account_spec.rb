@@ -318,8 +318,9 @@ RSpec.describe Account do
       # #2810: rag_busca_hibrida depois dela, 36 (1 << 35 = 34359738368), dada pela Orquestração (09/11).
       # #2858 (F0): agente_ferramentas_prontas depois dela, 37 (1 << 36 = 68719476736), dada pela Orquestração (10/11).
       # #2858 (F1): agente_ferramentas_prontas_consultas depois dela, 38 (1 << 37 = 137438953472), Orquestração (10/11).
-      # #2894: relacionamentos_novo no fim da main de hoje, 42 (1 << 41 = 2199023255552), PROVISÓRIA: a Orquestração reservou
-      # 45; a posição real segue a ordem de chegada à main e ela confirma antes do OK.
+      # #2858 (F5): agente_ferramentas_prontas_bases, 43 (1 << 42 = 4398046511104), depois da automacao_porta (#2890), Orquestração (11/11).
+      # #2894: relacionamentos_novo depois dela, 44 (1 << 43 = 8796093022208) nesta base; a posição real segue a ordem de
+      # chegada à main e a Orquestração confirma antes do OK.
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
         feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,
@@ -341,8 +342,9 @@ RSpec.describe Account do
         feature_agente_ferramentas_prontas_construtor: 549_755_813_888, feature_agente_ferramentas_prontas_lote2: 1_099_511_627_776,
         # #2889: automacao_porta no fim, pela ordem do arquivo (42 nesta base); a Orquestração confirma o bit no OK.
         feature_automacao_porta: 2_199_023_255_552,
-        # #2894: relacionamentos_novo depois da automacao_porta (43 nesta base); a Orquestração confirma o bit no OK.
-        feature_relacionamentos_novo: 4_398_046_511_104
+        feature_agente_ferramentas_prontas_bases: 4_398_046_511_104,
+        # #2894: relacionamentos_novo depois dela (44 nesta base); a Orquestração confirma o bit no OK.
+        feature_relacionamentos_novo: 8_796_093_022_208
       )
     end
 

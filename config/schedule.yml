@@ -438,3 +438,13 @@ autonomia_desempenho_leitura_automatica_job:
   cron: '0 7 * * *'
   class: 'Autonomia::Desempenho::LeituraAutomaticaJob'
   queue: scheduled_jobs
+
+# Ferramentas prontas F5 (#2858): as bases que a plataforma baixa (planos de saúde da ANS, aeronaves da ANAC, placas
+# solares da ANEEL, transportadoras da ANTT e focos de queimada do INPE). A cada 5 minutos, mas só age depois do
+# horário da stack (AUTONOMIA_PRONTAS_BASES_HORARIO_UTC; sem ele, um horário entre 10:00 e 11:55 UTC tirado do
+# FRONTEND_URL, diferente em cada stack): enfileira UMA base vencida que não tentou hoje, e a próxima entra quando ela
+# termina. Sem nenhuma conta com a flag agente_ferramentas_prontas_bases, não baixa nada.
+autonomia_ferramentas_prontas_atualizar_bases_job:
+  cron: '*/5 * * * *'
+  class: 'Autonomia::FerramentasProntas::AtualizarBasesJob'
+  queue: scheduled_jobs

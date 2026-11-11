@@ -1,0 +1,95 @@
+{
+  "cep": {
+    "provedor": "aneel",
+    "dados": {
+      "cep": "41300400",
+      "total_de_sistemas": 2373,
+      "potencia_total_kw": 54977.7,
+      "por_classe": [
+        {
+          "nome": "Comercial",
+          "sistemas": 1478,
+          "potencia_kw": 33161.04
+        },
+        {
+          "nome": "Residencial",
+          "sistemas": 691,
+          "potencia_kw": 11549.68
+        },
+        {
+          "nome": "Industrial",
+          "sistemas": 92,
+          "potencia_kw": 3377.77
+        },
+        {
+          "nome": "Poder Público",
+          "sistemas": 74,
+          "potencia_kw": 3279.22
+        },
+        {
+          "nome": "Rural",
+          "sistemas": 37,
+          "potencia_kw": 3573.99
+        },
+        {
+          "nome": "Iluminação pública",
+          "sistemas": 1,
+          "potencia_kw": 36.0
+        }
+      ],
+      "atualizado_em": "2026-11-11"
+    }
+  },
+  "cidade": {
+    "provedor": "aneel",
+    "dados": {
+      "cidade": "Campinas",
+      "uf": "SP",
+      "total_de_sistemas": 18164,
+      "potencia_total_kw": 143834.24,
+      "por_classe": [
+        {
+          "nome": "Residencial",
+          "sistemas": 16577,
+          "potencia_kw": 102727.04
+        },
+        {
+          "nome": "Comercial",
+          "sistemas": 1332,
+          "potencia_kw": 34727.94
+        },
+        {
+          "nome": "Industrial",
+          "sistemas": 107,
+          "potencia_kw": 3122.21
+        },
+        {
+          "nome": "Rural",
+          "sistemas": 87,
+          "potencia_kw": 1639.53
+        },
+        {
+          "nome": "REBR",
+          "sistemas": 38,
+          "potencia_kw": 225.52
+        },
+        {
+          "nome": "Poder Público",
+          "sistemas": 21,
+          "potencia_kw": 1329.0
+        },
+        {
+          "nome": "Serviço Público",
+          "sistemas": 1,
+          "potencia_kw": 25.0
+        },
+        {
+          "nome": "Consumo Próprio",
+          "sistemas": 1,
+          "potencia_kw": 38.0
+        }
+      ],
+      "atualizado_em": "2026-11-11"
+    }
+  }
+}

@@ -115,6 +115,64 @@ em segundo plano (responde na hora).
 Fora da F4, à espera do advogado: **Domínio .br** (RDAP do Registro.br). O aviso da resposta proíbe "distribution,
 commercialization, reproduction"; o código está guardado para um PR próprio depois do parecer (decisão do Rodrigo, 10/11/2026).
 
+## Bases baixadas pela plataforma (F5)
+
+Leitura das fontes em 11/11/2026: endereço, formato e tamanho conferidos com um download de cada arquivo real; as
+licenças, no catálogo de dados abertos de cada órgão. Download de dado aberto é permitido; a plataforma baixa **uma
+vez por rodada** (diária ou mensal), no job `AtualizarBasesJob`, e **só quando alguma conta tem a flag
+`agente_ferramentas_prontas_bases`**. A consulta do agente é no nosso banco: nenhum pedido do cliente sai para a fonte,
+então o teto global por host não se aplica aqui.
+
+Quando roda: o job passa a cada 5 minutos (`config/schedule.yml`) e só age depois do horário da stack, em UTC, na
+variável **`AUTONOMIA_PRONTAS_BASES_HORARIO_UTC`** (`"HH:MM"`). Sem ela, cada stack tira o seu do próprio endereço
+(`FRONTEND_URL`), entre 10:00 e 11:55 UTC, para as duas stacks não baixarem no mesmo minuto. Valor fora de `HH:MM`
+(hora 0–23, minuto 0–59): alerta uma vez por dia (log e Sentry) e vale o horário da stack. Uma base por vez em toda a
+plataforma, as diárias pequenas primeiro (focos de queimada, planos de saúde, aeronaves; depois placas solares e
+transportadoras): a próxima entra quando a anterior termina. A que falhou no dia espera o dia seguinte, menos os focos
+de queimada, que tentam de novo 3 horas depois da última tentativa. A rodada que morreu no meio (nem atualizou nem
+registrou falha) também tenta de novo 3 horas depois: as travas de quem morreu vencem antes (2h30). A mensal vence
+pela data, do 28º dia em diante.
+
+| Base | Endereço | Formato e tamanho real | Licença e termos | Frequência | O que fica (e o que não fica) |
+|---|---|---|---|---|---|
+| Planos de saúde (ANS) | `dadosabertos.ans.gov.br/FTP/PDA/operadoras_de_plano_de_saude_ativas/Relatorio_cadop.csv` e `.../operadoras_de_plano_de_saude_canceladas/Relatorio_cadop_canceladas.csv` | CSV `;`, UTF-8; 345.634 B (ativas) + 1.039.052 B (canceladas); 4.186 operadoras | Dados abertos da ANS (PDA), Decreto 8.777/2016. **A licença do conjunto não está escrita na página**; parte das publicações da ANS usa CC BY-NC-SA (mesma ressalva da TUSS na F4). | diária | Registro, CNPJ, razão social, fantasia, modalidade, cidade, UF, datas e motivo do cancelamento. **Não fica**: representante (pessoa física), e-mail, telefone, endereço. |
+| Aeronaves (RAB da ANAC) | `sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/dados_aeronaves.csv` | CSV `;`, UTF-8 com BOM e uma linha "Atualizado em" antes do cabeçalho; 24.353.159 B; 35.150 matrículas (74 repetidas no arquivo) | Dados abertos da ANAC, Decreto 8.777/2016. A página do conjunto não traz licença escrita. | diária | Fabricante, modelo, ano, assentos, peso, situação, cancelamento, validade do certificado, gravames e **só as empresas** (CNPJ válido) donas e operadoras, com o nome sem nenhum CPF (o MEI leva o do dono no nome). **Pessoa física nunca entra**: o arquivo traz ~29 mil CPFs e nomes de donos; viram só a contagem `outros_proprietarios`, sem nome, CPF ou UF. |
+| Placas solares (geração distribuída da ANEEL) | `dadosabertos.aneel.gov.br/dataset/5e0fafd2-…/resource/b1bd71e7-…/download/empreendimento-geracao-distribuida.zip` | ZIP de 113.020.800 B com um CSV `;`, UTF-8, de 1.556.562.996 B e 4.735.908 linhas | **ODbL** (Open Database License), no catálogo da ANEEL: uso livre com atribuição e compartilhamento pela mesma licença do banco derivado. | mensal (a ANEEL publica todo dia; o plano pediu mensal) | Só a **soma** por CEP, município, tipo e classe de consumo (~158 mil linhas). **Não fica**: titular (nome ou CPF/CNPJ tarjado), código do empreendimento, coordenada. O ZIP é lido do disco; o CSV, por streaming de dentro dele, com teto de 4 GB aberto. |
+| Transportadoras (RNTRC da ANTT) | descoberto a cada rodada no catálogo `dados.antt.gov.br/api/3/action/package_show?id=rntrc` (o arquivo do mês muda de endereço); hoje `.../transportadores_rntrc_10_2026.csv` | CSV `;`, ISO-8859-1; 164.851.598 B; 1.201.583 registros (853 mil autônomos, 348 mil empresas, 548 cooperativas), só ATIVO e PENDENTE | **Creative Commons Atribuição**, no catálogo da ANTT. | mensal (a ANTT publica perto do dia 10) | **Todos os registros ficam** (decisão do Rodrigo, 11/11/2026). Nome e CNPJ só da empresa e da cooperativa **com CNPJ válido**, e o nome sem nenhum CPF (o MEI leva o do dono no fim da razão social, às vezes colado por um hífen). A busca pelo nome é no começo de cada palavra, sem acento e sem caixa; o autônomo não tem nome, e só se acha pelo RNTRC. **Autônomo (pessoa física)**, documento que é CPF ou categoria desconhecida: só RNTRC, categoria, situação, município, UF e datas; nome e CPF (que vem parcialmente mascarado) não ficam. |
+| Focos de queimada (INPE) | `dataserver-coids.inpe.br/queimadas/queimadas/focos/csv/diario/Brasil/focos_diario_br_AAAAMMDD.csv` (link "Diários" da página de dados abertos do Programa Queimadas) | CSV `,`, UTF-8; ~1,2 MB e ~8.300 focos num dia de novembro | Dado aberto do INPE. **A página não traz licença escrita**; vale a política de dados abertos federal. | diária (janela de 8 dias baixada de novo a cada rodada, ~10 MB) | Quando, coordenada (3 casas), código IBGE do município, bioma e satélite. Nada de pessoa. |
+
+Ressalvas:
+
+- **Tetos do download** (`MAX_BYTES` de cada importador): 20 MB (ANS), 100 MB (RAB), 400 MB (ZIP da ANEEL; 4 GB
+  aberto), 400 MB (ANTT), 30 MB por dia (INPE). Prazo total de 2 a 30 minutos. Só HTTPS na 443, só o host do
+  importador, redirecionamento só para a mesma origem (`Bases::Download`, sobre o `SafeFetch`).
+- **Arquivo quebrado não troca a base**: coluna esperada que sumiu ou campo acima de 64 KB (`formato_mudou`), menos
+  linhas que o mínimo da base ou menos da metade da rodada anterior (`base_encolheu`; os focos de queimada não têm essa
+  fração, porque variam de verdade). Nesses casos e em qualquer falha do download, a cópia anterior continua valendo.
+- **Alerta = log e Sentry** (decisão do Rodrigo, 11/11/2026: "Deixa no log"). Toda falha grava o log
+  `[autonomia][pronta] ALERTA base=… motivo=… vale_a_copia_de=…` e, quando a instalação tem `SENTRY_DSN`, vai ao
+  Sentry. Nada vai para o Guia, para o sino ou por e-mail, e nada para conta de cliente. Falha depois da troca (ao
+  apagar a geração antiga) registra `limpeza_pendente`: a nova já vale, e a rodada, 3 horas depois, só apaga a sobra
+  (sem baixar de novo). Os DELETEs rodam com o mesmo prazo longo do COPY (2 h).
+- **Licença não escrita em ANS, ANAC e INPE: sobem assim** (decisão do Rodrigo, 11/11/2026: "Sobe tudo"). A página de
+  cada conjunto não traz licença escrita; o uso se apoia na política de dados abertos federal (Decreto 8.777/2016).
+- **Focos de queimada com mais de 1 dia** (a rodada diária falhou; 26 h de folga): a ferramenta responde "não consegui
+  consultar", nunca "nenhum foco". Sem nenhum foco no lugar, a resposta é `focos_no_periodo` zero, com o dia da base.
+- **Espaço no banco**: a maior tabela é a das transportadoras (~1,2 milhão de linhas). Durante a troca, a geração nova
+  e a antiga convivem até a antiga ser apagada. Medido em 11/11/2026, no banco de teste, com o arquivo oficial do dia
+  (tabela e índices, uma geração):
+
+  | Base | Linhas | Espaço | Tempo da importação |
+  |---|---|---|---|
+  | Planos de saúde (ANS) | 4.186 | 3,3 MB | |
+  | Focos de queimada (INPE) | 136.711 | 45 a 58 MB | |
+  | Aeronaves (ANAC) | 35.150 | 27 a 29 MB | |
+  | Placas solares (ANEEL) | 158.110 | 124 MB | ~10,9 min |
+  | Transportadoras (ANTT) | 1.201.583 | 689 MB; passa de ~1,4 GB durante a troca, com as duas gerações | ~2,5 min |
+
+  Os dois tempos medidos ficam dentro da trava de 2h30 da rodada. O espaço não é guardado pela importação: o `Estado`
+  guarda as linhas, e guardar o tamanho pediria coluna nova sem servir ao alerta, que só olha a falha.
+
 ## FIPE pelo nome: quantas chamadas uma pergunta gasta (regra "QI 70", #2858)
 
 O agente manda a marca e o modelo pelo nome; o servidor tira o código das listas (`fontes/fipe/pelo_nome.rb`). O que fica
