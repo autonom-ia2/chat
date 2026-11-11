@@ -1,0 +1,11 @@
+{
+  "banco": {
+    "provedor": "brasilapi",
+    "dados": {
+      "codigo": "341",
+      "nome": "ITAÚ UNIBANCO S.A.",
+      "nome_completo": "ITAÚ UNIBANCO S.A.",
+      "ispb": "60701190"
+    }
+  }
+}

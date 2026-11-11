@@ -91,6 +91,32 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteProposal do
       expect(ao_modelo).not_to include('http', 'R$', '—')
     end
 
+    # O PORTAL SEM O DOCUMENTO DA SEGURADORA (chat#2886): o adapter imprime o resumo da cotação e avisa com
+    # `official: false`; o arquivo e o texto ao modelo dizem resumo, nunca proposta.
+    it 'sem o documento oficial, publica o resumo da cotação com esse nome e avisa o modelo' do
+      cotacao_da_conversa
+      allow(connector).to receive(:quote_proposal)
+        .and_return({ 'quote_id' => 'q-1:1', 'url' => 'https://exemplo.test/proposta-44-mock.pdf', 'official' => false })
+
+      ao_modelo = pedir('Usebens')
+
+      expect(mensagens_do_bot.sole.attachments.sole.file.filename.to_s).to eq('Resumo da cotação Usebens, placa HIK9383.pdf')
+      expect(ao_modelo).to eq(format(described_class::ENVIADO_RESUMO, nome: 'Usebens'))
+      expect(ao_modelo).to include('resumo da cotação', 'não trouxe a proposta oficial da Usebens')
+      expect(ao_modelo).not_to include('A proposta da Usebens foi enviada', 'http', 'R$', '—')
+    end
+
+    it 'resposta sem o campo official segue como proposta, como antes' do
+      cotacao_da_conversa
+      allow(connector).to receive(:quote_proposal)
+        .and_return({ 'quote_id' => 'q-1:1', 'url' => 'https://exemplo.test/proposta-44-mock.pdf' })
+
+      ao_modelo = pedir('Usebens')
+
+      expect(mensagens_do_bot.sole.attachments.sole.file.filename.to_s).to eq('Proposta Usebens, placa HIK9383.pdf')
+      expect(ao_modelo).to eq(format(described_class::ENVIADA, nome: 'Usebens'))
+    end
+
     it 'pelo nome da lista, sem diferença de caixa nem de espaço' do
       cotacao_da_conversa
 

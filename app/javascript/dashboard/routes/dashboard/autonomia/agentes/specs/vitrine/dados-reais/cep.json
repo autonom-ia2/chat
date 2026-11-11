@@ -1,0 +1,12 @@
+{
+  "endereco": {
+    "provedor": "brasilapi",
+    "dados": {
+      "cep": "01001-000",
+      "logradouro": "Praça da Sé",
+      "bairro": "Sé",
+      "cidade": "São Paulo",
+      "uf": "SP"
+    }
+  }
+}

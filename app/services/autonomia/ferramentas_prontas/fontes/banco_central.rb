@@ -13,6 +13,8 @@ module Autonomia::FerramentasProntas::Fontes::BancoCentral
 
   # indicador -> o nome no Focus.
   INDICADORES = { 'ipca' => 'IPCA', 'selic' => 'Selic', 'cambio' => 'Câmbio', 'pib' => 'PIB Total' }.freeze
+  # A unidade da mediana do Focus em cada indicador: a variação do IPCA e do PIB no ano, a Selic ao ano e o dólar em reais.
+  UNIDADES_DO_FOCUS = { 'ipca' => '%', 'selic' => '% ao ano', 'cambio' => 'R$', 'pib' => '%' }.freeze
 
   module_function
 

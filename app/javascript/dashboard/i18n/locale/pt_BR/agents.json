@@ -3109,7 +3109,7 @@
         },
         "OUTROS": {
           "NOME": "Outros",
-          "TEXTO": "Mercadorias e sites."
+          "TEXTO": "Mercadorias."
         }
       },
       "DETALHE": {
@@ -3149,6 +3149,7 @@
         "SIM": "Sim",
         "NAO": "Não",
         "ZERO_KM": "Zero quilômetro",
+        "NENHUM_VALOR": "—",
         "NAO_ENCONTRADO": "A consulta não achou nada para esse valor. Confira e tente de novo.",
         "NAO_CONSEGUI": "Não deu para consultar agora. Tente de novo daqui a pouco.",
         "PEDIDO_INVALIDO": "Esse valor não está no formato certo. Veja o exemplo e tente de novo.",
@@ -3156,7 +3157,8 @@
         "SEM_PERMISSAO": "Você não tem permissão para experimentar as ferramentas prontas.",
         "SEM_IA": "Para experimentar esta ferramenta, a conta precisa ter a IA ligada. Peça a quem administra a conta.",
         "NAO_ENTENDI": "Não deu para entender o que consultar. Escreva como no exemplo e tente de novo.",
-        "MAIS_PROVAVEL": "Havia mais de uma opção, e mostrei a mais provável. Na conversa, o agente pergunta ao cliente quando tiver dúvida."
+        "MAIS_PROVAVEL": "Havia mais de uma opção, e mostrei a mais provável. Na conversa, o agente pergunta ao cliente quando tiver dúvida.",
+        "SEM_LINHAS": "A consulta respondeu, mas não consigo mostrar aqui."
       },
       "CAMPOS": {
         "ATUALIZADO_EM": "Base atualizada em",
@@ -3220,7 +3222,7 @@
         "ATIVIDADE_PRINCIPAL_DESCRICAO": "Atividade principal",
         "VALIDO": "Número válido?",
         "REGIAO_FISCAL": "Região de emissão",
-        "ESTADOS": "Estados da região",
+        "ESTADOS": "Estados",
         "OBSERVACAO": "Observação",
         "VALOR": "Valor",
         "MARCA": "Marca",
@@ -3228,8 +3230,8 @@
         "ANO_MODELO": "Ano",
         "COMBUSTIVEL": "Combustível",
         "CODIGO_FIPE": "Código na tabela",
-        "MES_DE_REFERENCIA": "Tabela de",
-        "PRECOS": "Anos na tabela",
+        "MES_DE_REFERENCIA": "Mês de referência",
+        "PRECOS": "Preços na tabela",
         "ANOS_DISPONIVEIS": "Anos na tabela",
         "DE": "De",
         "ATE": "Até",
@@ -3242,8 +3244,55 @@
         "DDD": "DDD",
         "FONTE_DOS_DADOS": "Dados de",
         "CODIGO": "Código",
-        "NOME": "Banco",
-        "NOME_COMPLETO": "Nome completo"
+        "NOME": "Nome",
+        "NOME_COMPLETO": "Nome completo",
+        "INDICADOR": "Indicador",
+        "VARIACAO_NO_MES": "Variação no mês",
+        "ACUMULADO_12_MESES": "Acumulado em 12 meses",
+        "EXPECTATIVAS": "Anos com previsão",
+        "ANO": "Ano",
+        "MEDIANA": "Previsão do mercado (mediana)",
+        "DATA_DO_BOLETIM": "Boletim de",
+        "FERIADOS": "Feriados",
+        "MARCAS": "Marcas",
+        "MODELOS": "Modelos",
+        "BUSCA": "Busca",
+        "DESCRICAO": "Descrição",
+        "VIGENTE_DESDE": "Em vigor desde",
+        "ITENS": "Resultados",
+        "BANCOS": "Bancos",
+        "CEPS": "CEPs",
+        "ESTABELECIMENTOS": "Locais de saúde",
+        "TIPO": "Tipo",
+        "ENDERECO": "Endereço",
+        "TELEFONE": "Telefone",
+        "COMPRAS": "Compras",
+        "TOTAL_NO_PERIODO": "Compras no período",
+        "MODALIDADE": "Tipo de compra",
+        "ORGAO": "Órgão",
+        "OBJETO": "O que vai comprar",
+        "VALOR_ESTIMADO": "Valor estimado (R$)",
+        "PUBLICADA_EM": "Publicada em",
+        "LINK": "Link",
+        "PERTO_DE": "Perto de",
+        "ESTACOES": "Estações",
+        "DISTANCIA_KM": "Distância (km)",
+        "LOCAL": "Lugar",
+        "TOTAL_MM": "Chuva no período (mm)",
+        "DIAS": "Dias",
+        "MM": "Chuva no dia (mm)",
+        "RAMO": "Ramo",
+        "SEGURADORAS": "Seguradoras",
+        "SEGURADORA": "Seguradora",
+        "PRODUTOS": "Produtos",
+        "RAMOS": "Ramos",
+        "NAO_RESPONDERAM": "Não responderam",
+        "OUTRAS_COM_O_NOME": "Outras com esse nome",
+        "RAMOS_PUBLICADOS": "Ramos que ela publica",
+        "ENCONTRADAS": "Seguradoras achadas",
+        "CORRETORES": "Corretores",
+        "REGISTRO_SUSEP": "Registro na SUSEP",
+        "PRIMEIRO_DA_LISTA": "Primeiro da lista"
       },
       "PRONTAS": {
         "TITULO": "Prontas",
@@ -3379,8 +3428,8 @@
           "CLIENTE": "Tem hospital em Campinas?",
           "AGENTE": "Tem sim! O Hospital Samaritano fica na Vila João Jorge. Quer o endereço completo e o telefone?",
           "USE_QUANDO": "Use quando o cliente perguntar onde tem hospital, clínica, pronto-socorro ou posto de saúde numa cidade.",
-          "ROTULO": "Cidade",
-          "EXEMPLO": "Campinas"
+          "ROTULO": "Cidade e estado",
+          "EXEMPLO": "Campinas SP"
         },
         "PROCEDIMENTOS": {
           "NOME": "Exames e procedimentos",
@@ -3454,8 +3503,8 @@
           "CLIENTE": "Que seguro cyber a Allianz tem?",
           "AGENTE": "A Allianz tem o seguro de Riscos Cibernéticos, que cobre danos causados a outras pessoas. As condições estão no site dela.",
           "USE_QUANDO": "Use quando o cliente perguntar que seguros ou coberturas uma seguradora oferece.",
-          "ROTULO": "Seguradora",
-          "EXEMPLO": "Allianz",
+          "ROTULO": "Seguradora e tipo de seguro",
+          "EXEMPLO": "seguro cyber da Allianz",
           "CONSULTAS": "achar a seguradora, ver os produtos de um ramo"
         },
         "CORRETOR_SUSEP": {
@@ -3465,8 +3514,8 @@
           "CLIENTE": "Esse corretor que me ligou é de verdade?",
           "AGENTE": "Conferi na SUSEP: ele está ativo, com registro, e pode vender seguro de pessoas e de danos.",
           "USE_QUANDO": "Use quando o cliente quiser saber se um corretor ou uma corretora está liberado para vender seguro.",
-          "ROTULO": "CPF, CNPJ ou nome",
-          "EXEMPLO": "11.222.333/0001-81",
+          "ROTULO": "Nome, CPF ou CNPJ do corretor",
+          "EXEMPLO": "corretora de seguros",
           "CONSULTAS": "pelo CPF ou CNPJ, pelo nome"
         },
         "PLANOS_DE_SAUDE": {

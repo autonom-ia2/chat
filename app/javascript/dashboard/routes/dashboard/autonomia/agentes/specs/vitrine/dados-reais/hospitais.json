@@ -1,0 +1,191 @@
+{
+  "estabelecimentos": {
+    "provedor": "cnes",
+    "dados": {
+      "cidade": "Campinas",
+      "uf": "SP",
+      "estado": "São Paulo",
+      "total": 20,
+      "estabelecimentos": [
+        {
+          "nome": "HOSPITAL SAMARITANO UNIDADE II",
+          "tipo": "Hospital geral",
+          "endereco": "SAO JOSE DOS CAMPOS, 256",
+          "bairro": "JARDIM NOVA EUROPA",
+          "cep": "13040145",
+          "telefone": "19 37361199",
+          "cnes": "9806342"
+        },
+        {
+          "nome": "HOSPITAL E MATERNIDADE DE CAMPINAS",
+          "tipo": "Hospital geral",
+          "endereco": "OROSIMBO MAIA, 165",
+          "bairro": "CENTRO",
+          "cep": "13023910",
+          "cnes": "2022621"
+        },
+        {
+          "nome": "HOSPITAL SANTA TEREZA",
+          "tipo": "Hospital geral",
+          "endereco": "RUA BERNARDINO DE CAMPOS, 804",
+          "bairro": "CENTRO",
+          "cep": "13010151",
+          "telefone": "19-37334333",
+          "cnes": "2081938"
+        },
+        {
+          "nome": "CAMPINAS DAY HOSPITAL",
+          "tipo": "Hospital geral",
+          "endereco": "AV BENJAMIN CONSTANT, 1991",
+          "bairro": "CAMBUI",
+          "cep": "13025005",
+          "telefone": "(19) 2127-2900",
+          "cnes": "3109216"
+        },
+        {
+          "nome": "IOU INSTITUTO DE OTORRINOLARINGOLOGIA CABECA E PESCOCO",
+          "tipo": "Hospital geral",
+          "endereco": "AV PREFEITO JOSE MAGALHAES TEIXEIRA, 150",
+          "bairro": "CIDADE UNIVERSITARIA",
+          "cep": "13083891",
+          "telefone": "(19) 3289-0394",
+          "cnes": "4285514"
+        },
+        {
+          "nome": "CENTRO MEDICO DE CAMPINAS",
+          "tipo": "Hospital geral",
+          "endereco": "RUA DR EDILBERTO LUIZ PEREIRA DA SILVA, 929",
+          "bairro": "CIDADE UNIVERSITARIA",
+          "cep": "13083190",
+          "telefone": "(19) 3789-5300",
+          "cnes": "2079666"
+        },
+        {
+          "nome": "CASA DE SAUDE HOSPITAL SAO LEOPOLDO MANDIC",
+          "tipo": "Hospital geral",
+          "endereco": "RUA DUQUE DE CAXIAS, 706",
+          "bairro": "CENTRO",
+          "cep": "13015311",
+          "telefone": "(19) 35423211",
+          "cnes": "8161402"
+        },
+        {
+          "nome": "HOSPITAL IRMAOS PENTEADO E SANTA CASA DE CAMPINAS",
+          "tipo": "Hospital geral",
+          "endereco": "BENJAMIN CONSTANT, 1657",
+          "bairro": "CENTRO",
+          "cep": "13010142",
+          "cnes": "2022648"
+        },
+        {
+          "nome": "HOSPITAL SAMARITANO DE CAMPINAS",
+          "tipo": "Hospital geral",
+          "endereco": "ENGENHEIRO MONLEVADE, 206",
+          "bairro": "VILA JOAO JORGE",
+          "cep": "13041304",
+          "telefone": "(19) 3736-1000",
+          "cnes": "2023148"
+        },
+        {
+          "nome": "HOSPITAL SANTA SOFIA",
+          "tipo": "Hospital geral",
+          "endereco": "ANDRADE NEVES, 611",
+          "bairro": "BOTAFOGO",
+          "cep": "13013161",
+          "telefone": "1937378015",
+          "cnes": "2023512"
+        },
+        {
+          "nome": "HOSPITAL VERA CRUZ",
+          "tipo": "Hospital geral",
+          "endereco": "ANDRADE NEVES, 402",
+          "bairro": "BAIRRO CENTRO",
+          "cep": "13013900",
+          "telefone": "19 37343288",
+          "cnes": "2078376"
+        },
+        {
+          "nome": "REAL SOCIEDADE PORTUGUESA DE BENEFICENCIA",
+          "tipo": "Hospital geral",
+          "endereco": "ONZE DE AGOSTO, 557",
+          "bairro": "BOTAFOGO",
+          "cep": "13013101",
+          "telefone": "(19) 3231-2411",
+          "cnes": "2078465"
+        },
+        {
+          "nome": "HOSPITAL MADRE THEODORA CAMPINAS",
+          "tipo": "Hospital geral",
+          "endereco": "RUA JOSE GERALDO CEREBINO CHRISTOFARO, 175",
+          "bairro": "PARQUE RURAL FAZENDA",
+          "cep": "13087567",
+          "telefone": "(19) 3756-3025",
+          "cnes": "2078678"
+        },
+        {
+          "nome": "HOSPITAL DAS CLINICAS DA UNICAMP DE CAMPINAS",
+          "tipo": "Hospital geral",
+          "endereco": "RUA VITAL BRASIL, 251",
+          "bairro": "BARAO GERALDO",
+          "cep": "13024500",
+          "telefone": "(19)37888008",
+          "cnes": "2079798"
+        },
+        {
+          "nome": "HOSPITAL MUNICIPAL DR MARIO GATTI CAMPINAS",
+          "tipo": "Hospital geral",
+          "endereco": "AV PREFEITO FARIA LIMA, 340",
+          "bairro": "PQ ITALIA",
+          "cep": "13036902",
+          "telefone": "(19) 3772-5700",
+          "cnes": "2081490"
+        },
+        {
+          "nome": "CASA DE SAUDE",
+          "tipo": "Hospital geral",
+          "endereco": "PRACA DR TOFFOLI, 28",
+          "bairro": "BOSQUE",
+          "cep": "13015240",
+          "telefone": "(19)37343288",
+          "cnes": "2081946"
+        },
+        {
+          "nome": "HOSPITAL E MATERNIDADE CELSO PIERRO",
+          "tipo": "Hospital geral",
+          "endereco": "AV JOHN BOYD DUNLOP, S/N",
+          "bairro": "JD IPAUSSURAMA",
+          "cep": "13060904",
+          "telefone": "(19)33438441",
+          "cnes": "2082128"
+        },
+        {
+          "nome": "HOSPITAL SAO LUIZ CAMPINAS",
+          "tipo": "Hospital geral",
+          "endereco": "AV ANDRADE NEVES, 863",
+          "bairro": "CENTRO",
+          "cep": "13013161",
+          "telefone": "(19) 3014-3000",
+          "cnes": "4135059"
+        },
+        {
+          "nome": "COMPLEXO HOSPITALAR PREFEITO EDIVALDO ORSI",
+          "tipo": "Hospital geral",
+          "endereco": "AV RUY RODRIGUES, 3434",
+          "bairro": "JARDIM YEDA",
+          "cep": "13060646",
+          "telefone": "(19) 3770-0000",
+          "cnes": "6053858"
+        },
+        {
+          "nome": "HOSPITAL RENASCENCA CAMPINAS",
+          "tipo": "Hospital geral",
+          "endereco": "BARAO DE ITAPURA, 1444",
+          "bairro": "BOTAFOGO",
+          "cep": "13020432",
+          "telefone": "11 31552000",
+          "cnes": "7044666"
+        }
+      ]
+    }
+  }
+}

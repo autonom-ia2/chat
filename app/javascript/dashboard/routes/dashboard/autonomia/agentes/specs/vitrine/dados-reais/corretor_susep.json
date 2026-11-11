@@ -1,0 +1,111 @@
+{
+  "por_nome": {
+    "provedor": "susep",
+    "dados": {
+      "total": 228,
+      "mostrando": 10,
+      "corretores": [
+        {
+          "nome": "CORRETORA EXEMPLO 1 LTDA",
+          "situacao": "Suspenso",
+          "registro_susep": "100000001",
+          "ramos": []
+        },
+        {
+          "nome": "CORRETORA EXEMPLO 2 LTDA",
+          "situacao": "Ativo",
+          "registro_susep": "100000002",
+          "ramos": [
+            "Seguros de Danos",
+            "Microsseguros",
+            "Seguros de Pessoas",
+            "Planos de Capitalização",
+            "Planos de Previdência Complementar"
+          ]
+        },
+        {
+          "nome": "CORRETORA EXEMPLO 3 LTDA",
+          "situacao": "Ativo",
+          "registro_susep": "100000003",
+          "ramos": [
+            "Microsseguros",
+            "Planos de Capitalização",
+            "Seguros de Pessoas",
+            "Planos de Previdência Complementar"
+          ]
+        },
+        {
+          "nome": "CORRETORA EXEMPLO 4 LTDA",
+          "situacao": "Ativo",
+          "registro_susep": "100000004",
+          "ramos": [
+            "Seguros de Danos",
+            "Microsseguros",
+            "Planos de Previdência Complementar",
+            "Planos de Capitalização",
+            "Seguros de Pessoas"
+          ]
+        },
+        {
+          "nome": "CORRETORA EXEMPLO 5 LTDA",
+          "situacao": "Ativo",
+          "registro_susep": "100000005",
+          "ramos": [
+            "Planos de Previdência Complementar",
+            "Seguros de Pessoas",
+            "Planos de Capitalização",
+            "Seguros de Danos",
+            "Microsseguros"
+          ]
+        },
+        {
+          "nome": "CORRETORA EXEMPLO 6 LTDA",
+          "situacao": "Suspenso",
+          "registro_susep": "100000006",
+          "ramos": []
+        },
+        {
+          "nome": "CORRETORA EXEMPLO 7 LTDA",
+          "situacao": "Ativo",
+          "registro_susep": "100000007",
+          "ramos": [
+            "Seguros de Pessoas",
+            "Planos de Previdência Complementar",
+            "Planos de Capitalização",
+            "Microsseguros"
+          ]
+        },
+        {
+          "nome": "CORRETORA EXEMPLO 8 LTDA",
+          "situacao": "Ativo",
+          "registro_susep": "100000008",
+          "ramos": [
+            "Seguros de Pessoas",
+            "Planos de Capitalização",
+            "Seguros de Danos",
+            "Microsseguros",
+            "Planos de Previdência Complementar"
+          ]
+        },
+        {
+          "nome": "CORRETORA EXEMPLO 9 LTDA",
+          "situacao": "Ativo",
+          "registro_susep": "100000009",
+          "ramos": []
+        },
+        {
+          "nome": "CORRETORA EXEMPLO 10 LTDA",
+          "situacao": "Ativo",
+          "registro_susep": "100000010",
+          "ramos": [
+            "Planos de Capitalização",
+            "Planos de Previdência Complementar",
+            "Microsseguros",
+            "Seguros de Pessoas",
+            "Seguros de Danos"
+          ]
+        }
+      ]
+    }
+  }
+}
