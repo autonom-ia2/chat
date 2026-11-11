@@ -14,13 +14,15 @@
       "SOLTAR": "Drag the spreadsheet here or click to choose",
       "APOIO": "Excel or CSV. It needs a name and a phone or e-mail.",
       "ERRO_TIPO": "This file is not a spreadsheet. Use Excel or CSV.",
-      "ERRO_LEITURA": "I couldn't read this spreadsheet. Try again.",
+      "ERRO_LEITURA": "I couldn't read this spreadsheet.",
       "ERRO_VAZIA": "This spreadsheet is empty.",
       "ERRO_SEM_CONTATO": "I couldn't find a name and a phone or e-mail in this spreadsheet.",
       "LENDO": "Reading your spreadsheet…",
       "USAR_EXEMPLO": "Use a sample spreadsheet"
     },
     "PERGUNTAS": {
+      "ERRO_ESCOLHA": "Choose one of the answers.",
+      "ERRO_COLUNA": "Choose the column.",
       "CLIENTES": {
         "TITULO": "Are these people already customers?",
         "SIM_TODAS": "Yes, all of them",
@@ -48,6 +50,8 @@
       },
       "EXEMPLOS": "How they will look",
       "SOSSEGO": "You can undo this whenever you want.",
+      "NINGUEM": "There is no one left to bring in.",
+      "ESCOLHER_OUTRA": "Choose another spreadsheet",
       "TRAZER": "Bring in {count} person | Bring in {count} people"
     },
     "PRECISAM": {
@@ -58,6 +62,8 @@
       "QUEM_SEM_NOME": "Line {linha}",
       "SEM_TELEFONE": "no phone",
       "SEM_EMAIL": "no e-mail",
+      "ERRO_PREENCHER": "Write the {campo} to save.",
+      "QUE_FALTA": { "NOME": "name", "TELEFONE": "phone number", "EMAIL": "email" },
       "RESOLVIDO": "All sorted",
       "PRONTO": "Done",
       "DEIXADA": "Left out",
@@ -90,7 +96,8 @@
     "GUARDAR": {
       "TITULO": "What I will keep",
       "APOIO": "Each column of your spreadsheet and where it goes.",
-      "VAI_PARA": "goes to",
+      "FICA_COMO": "“{coluna}” is saved as {destino}.",
+      "FICA_COMO_INFORMACAO": "“{coluna}” is saved as new information.",
       "NAO_VOU_GUARDAR": "I won't keep “{coluna}”",
       "TROCAR": "Change",
       "ROTULO_TROCAR": "Where the “{coluna}” column goes",
@@ -115,9 +122,12 @@
     },
     "PRONTO": {
       "CHEGARAM": "{count} person arrived. | {count} people arrived.",
+      "CHEGARAM_E": "{count} person arrived | {count} people arrived",
+      "E_COMPLETADAS": "and {count} was completed. | and {count} were completed.",
+      "COMPLETADAS": "{count} person was completed. | {count} people were completed.",
       "VER": "See the people",
       "OUTRA": "Bring in another list",
-      "SOSSEGO": "You can undo this whenever you want, in “Lists you’ve already brought in”."
+      "SOSSEGO": "You can undo this whenever you want, right below."
     },
     "HISTORICO": {
       "TITULO": "Lists you've already brought in",
@@ -136,20 +146,19 @@
     "DESFAZER": {
       "TITULO": "Undo this list?",
       "TITULO_ARQUIVO": "Undo “{arquivo}”?",
-      "TIRA": "This removes the person who came with this list. | This removes the {count} people who came with this list.",
+      "TIRA": "This removes the person who came with this list and hasn't talked with you yet. | This removes the {count} people who came with this list and haven't talked with you yet.",
+      "FICAM": "{count} stays here, because they already talked with you or already got a campaign. | {count} stay here, because they already talked with you or already got a campaign.",
       "DEVOLVE": "The person who was already here goes back to how they were. | The {count} who were already here go back to how they were.",
-      "CONVERSAS": "Conversations that already happened stay.",
       "NAO_RECEBER": "People who asked not to get messages stay that way.",
-      "CAMPANHA": "{count} person already got a campaign. The message that was sent can't be taken back. | {count} people already got a campaign. The message that was sent can't be taken back.",
       "CONFIRMAR": "Undo",
-      "ERRO_PREVIA": "I couldn't see what will be removed. Try again."
+      "ERRO_PREVIA": "I couldn't see what will be removed."
     },
     "ERROS": {
       "GUARDAR": "I couldn't save this. Try again.",
       "DESFAZER": "I couldn't undo this. Try again.",
-      "TRAZER": "I couldn't bring in the list. Try again.",
-      "ANDAMENTO": "I couldn't check how it's going. Try again.",
-      "HISTORICO": "I couldn't show what you already brought in. Try again."
+      "TRAZER": "I couldn't bring in the list.",
+      "ANDAMENTO": "I couldn't check how it's going.",
+      "HISTORICO": "I couldn't show what you already brought in."
     }
   }
 }

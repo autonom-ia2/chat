@@ -1,12 +1,12 @@
 <script setup>
-import { computed, useId } from 'vue';
+import { computed, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CartoesDeEscolha from './CartoesDeEscolha.vue';
 
 // #2894 — UMA pergunta por tela, só quando a leitura pede. Cada pergunta tem
-// Continuar (preenchido, só depois de escolher) e Voltar.
+// Continuar (sempre ligado: sem resposta, o clique diz o que falta) e Voltar.
 const props = defineProps({
   pergunta: { type: Object, required: true },
   respostas: { type: Object, required: true },
@@ -23,6 +23,8 @@ const emit = defineEmits([
 
 const { t } = useI18n();
 const id = useId();
+const raiz = ref(null);
+const erro = ref('');
 
 const CLIENTES = 'clientes';
 const RESPOSTA_ALGUMAS = 'algumas';
@@ -61,10 +63,32 @@ const pedeColuna = computed(
 const opcoesDeColuna = computed(() =>
   props.colunas.map(coluna => ({ value: coluna.nome, label: coluna.nome }))
 );
+
+// Nada de botão desligado por falta de preenchimento: o clique diz o que falta
+// e leva o foco até lá.
+const tentarContinuar = () => {
+  if (props.podeContinuar) {
+    erro.value = '';
+    emit('continuar');
+    return;
+  }
+  if (!respostaAtual.value) {
+    erro.value = t('RELACIONAMENTOS_TRAZER.PERGUNTAS.ERRO_ESCOLHA');
+    raiz.value?.querySelector('[data-relacionamentos="resposta"]')?.focus();
+    return;
+  }
+  erro.value = t('RELACIONAMENTOS_TRAZER.PERGUNTAS.ERRO_COLUNA');
+  document.getElementById(`${id}-coluna`)?.focus();
+};
+
+watch([respostaAtual, () => props.respostas.colunaCliente], () => {
+  erro.value = '';
+});
 </script>
 
 <template>
   <section
+    ref="raiz"
     data-relacionamentos="pergunta"
     :data-pergunta="pergunta.id"
     class="flex flex-col gap-8"
@@ -95,20 +119,27 @@ const opcoesDeColuna = computed(() =>
         @update:model-value="emit('escolherColuna', $event)"
       />
     </div>
+    <p
+      v-if="erro"
+      data-relacionamentos="erro-da-pergunta"
+      role="alert"
+      class="m-0 text-base font-medium text-n-ruby-11"
+    >
+      {{ erro }}
+    </p>
     <div class="flex flex-wrap items-center gap-3">
       <Button
         data-relacionamentos="continuar"
         :label="t('RELACIONAMENTOS.COMUM.CONTINUAR')"
         size="lg"
-        class="!min-h-12 !rounded-xl"
-        :disabled="!podeContinuar || ocupado"
+        :disabled="ocupado"
         :is-loading="ocupado"
-        @click="emit('continuar')"
+        @click="tentarContinuar"
       />
       <Button
         slate
         faded
-        class="min-h-11"
+        size="lg"
         :label="t('RELACIONAMENTOS.COMUM.VOLTAR')"
         @click="emit('voltar')"
       />

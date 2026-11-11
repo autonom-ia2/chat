@@ -141,9 +141,9 @@ describe('5. um só emailValido', () => {
       props: { problema: problemaDe(leitura, 37) },
     });
     await w.get('input').setValue('a@b..com');
-    expect(botao(w, 'Salvar').attributes('disabled')).toBeDefined();
+    await w.get('form').trigger('submit');
+    expect(w.emitted('guardar')).toBeUndefined();
     await w.get('input').setValue('  ana@exemplo.com.br ');
-    expect(botao(w, 'Salvar').attributes('disabled')).toBeUndefined();
     await w.get('form').trigger('submit');
     expect(w.emitted('guardar')).toEqual([[37, 'ana@exemplo.com.br']]);
   });
@@ -641,16 +641,17 @@ describe('rodada 3', () => {
   });
 
   it('3. Pronto: linha de sossego abaixo do herói e "Trazer outra lista" discreta', () => {
-    const w = mount(TelaPronto, { props: { total: 195 } });
+    const w = mount(TelaPronto, { props: { novas: 180, completadas: 15 } });
     expect(marca(w, 'pronto').exists()).toBe(true);
     expect(marca(w, 'pronto-sossego').text()).toBe(
-      'Você pode desfazer quando quiser, em “Listas que você já trouxe”.'
+      'Você pode desfazer quando quiser, aqui embaixo.'
     );
     expect(marca(w, 'trazer-outra').text()).toBe('Trazer outra lista');
-    expect(marca(w, 'trazer-outra').classes()).toContain('bg-white/10');
+    expect(marca(w, 'trazer-outra').classes()).toContain('!bg-white/10');
+    expect(marca(w, 'trazer-outra').classes()).toContain('rounded-lg');
   });
 
-  it('4. Salvar é discreto: só "Trazer N pessoas" é preenchido na tela', () => {
+  it('4. o Salvar da pessoa é o mesmo Button azul sólido da casa, como o "Trazer N pessoas"', () => {
     const w = mount(TelaConferir, {
       props: {
         leitura,
@@ -661,7 +662,7 @@ describe('rodada 3', () => {
     const salvar = w.findAll('button').filter(b => b.text() === 'Salvar');
     expect(salvar.length).toBeGreaterThan(0);
     salvar.forEach(b => {
-      expect(b.classes().join(' ')).not.toContain('bg-n-blue-11');
+      expect(b.classes().join(' ')).toContain('bg-n-blue-11');
     });
     expect(marca(w, 'trazer-confirmar').classes().join(' ')).toContain(
       'bg-n-blue-11'

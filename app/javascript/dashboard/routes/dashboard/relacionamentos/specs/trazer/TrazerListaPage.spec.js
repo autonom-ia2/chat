@@ -184,10 +184,17 @@ describe('Perguntas', () => {
     const w = await abrir();
     await marca(w, 'usar-exemplo').trigger('click');
     await aparece(w, 'pergunta');
-    expect(marca(w, 'continuar').attributes('disabled')).toBeDefined();
+    // Continuar nunca nasce desligado: sem resposta, o clique diz o que falta.
+    expect(marca(w, 'continuar').attributes('disabled')).toBeUndefined();
+    await marca(w, 'continuar').trigger('click');
+    expect(marca(w, 'pergunta').exists()).toBe(true);
+    expect(w.get('[role="alert"]').text()).toBe('Escolha uma das respostas.');
     await escolher(w, 'algumas');
-    expect(marca(w, 'continuar').attributes('disabled')).toBeDefined();
+    expect(w.find('[role="alert"]').exists()).toBe(false);
     expect(w.text()).toContain('Qual coluna diz quem é cliente?');
+    await marca(w, 'continuar').trigger('click');
+    expect(w.get('[role="alert"]').text()).toBe('Escolha a coluna.');
+    expect(marca(w, 'pergunta').attributes('data-pergunta')).toBe('clientes');
     await botao(w, 'Voltar').trigger('click');
     await aparece(w, 'enviar');
     w.unmount();
@@ -230,15 +237,20 @@ describe('da planilha de exemplo até Pronto', () => {
     w.unmount();
   });
 
-  it('consertar o telefone no campo de telefone libera o Salvar', async () => {
+  it('consertar o telefone no campo de telefone permite salvar; sem consertar, o clique diz o que falta', async () => {
     const w = await abrir();
     await irAteConferir(w);
     const linha = w.get('[data-linha="14"]');
     const guardar = () =>
       linha.findAll('button').find(b => b.text() === 'Salvar');
-    expect(guardar().attributes('disabled')).toBeDefined();
-    await linha.get('input').setValue('11973800014');
     expect(guardar().attributes('disabled')).toBeUndefined();
+    await linha.get('form').trigger('submit');
+    expect(linha.get('[role="alert"]').text()).toBe(
+      'Escreva o telefone para salvar.'
+    );
+    expect(document.activeElement).toBe(linha.get('input').element);
+    await linha.get('input').setValue('11973800014');
+    expect(linha.find('[role="alert"]').exists()).toBe(false);
     await linha.get('form').trigger('submit');
     await esperarPor(() =>
       expect(w.get('[data-linha="14"]').text()).toContain('Pronto')
@@ -285,7 +297,19 @@ describe('da planilha de exemplo até Pronto', () => {
     );
     await vi.advanceTimersByTimeAsync(3300);
     await aparece(w, 'pronto');
-    expect(marca(w, 'pronto').text()).toContain('195 pessoas chegaram.');
+    expect(marca(w, 'pronto').text()).toContain(
+      '180 pessoas chegaram e 15 foram completadas.'
+    );
+    // S2: o histórico aparece abaixo, com a lista recém-trazida no topo.
+    await esperarPor(() =>
+      expect(w.findAll('[data-lista]').length).toBeGreaterThan(3)
+    );
+    const [primeira] = w.findAll('[data-lista]');
+    expect(primeira.text()).toContain('Clientes 2025.xlsx');
+    expect(primeira.text()).toContain('195 pessoas');
+    expect(primeira.find('[data-relacionamentos="desfazer"]').exists()).toBe(
+      true
+    );
     await marca(w, 'ver-as-pessoas').trigger('click');
     expect(empurrar).toHaveBeenCalledWith({ name: 'relationships_home' });
     w.unmount();
@@ -301,9 +325,7 @@ describe('da planilha de exemplo até Pronto', () => {
     await botao(w, 'Trazer outra lista').trigger('click');
     await aparece(w, 'enviar');
     await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(4));
-    expect(w.findAll('[data-lista]')[0].text()).toContain(
-      'Planilha de exemplo.xlsx'
-    );
+    expect(w.findAll('[data-lista]')[0].text()).toContain('Clientes 2025.xlsx');
     expect(w.findAll('[data-lista]')[0].get('[data-situacao]').text()).toBe(
       'Pronto'
     );
@@ -350,10 +372,48 @@ describe('da planilha de exemplo até Pronto', () => {
     esquecerMemoriaDaDemo();
     await marca(w, 'trazer-confirmar').trigger('click');
     await aparece(w, 'erro');
-    expect(marca(w, 'erro').text()).toContain(
-      'Não consegui trazer a lista. Tente de novo.'
-    );
+    expect(marca(w, 'erro').text()).toContain('Não consegui trazer a lista.');
     expect(marca(w, 'conferir').exists()).toBe(true);
+    w.unmount();
+  });
+});
+
+describe('?demo=vazio', () => {
+  it('a tela Enviar mostra o histórico vazio, sem lista nenhuma', async () => {
+    estado.demo = 'vazio';
+    const w = await abrir();
+    await aparece(w, 'vazio');
+    expect(marca(w, 'vazio').text()).toBe(
+      'Você ainda não trouxe nenhuma lista.'
+    );
+    expect(w.findAll('[data-lista]')).toHaveLength(0);
+    w.unmount();
+  });
+});
+
+describe('Desfazer a lista recém-trazida, ali mesmo no Pronto', () => {
+  it('abre o mesmo diálogo, com a prévia da planilha de exemplo', async () => {
+    const w = await abrir();
+    await irAteConferir(w);
+    await marca(w, 'trazer-confirmar').trigger('click');
+    await aparece(w, 'andamento');
+    await vi.advanceTimersByTimeAsync(6500);
+    await aparece(w, 'pronto');
+    await esperarPor(() =>
+      expect(w.findAll('[data-lista]').length).toBeGreaterThan(3)
+    );
+    await w
+      .get('[data-lista]:first-child [data-relacionamentos="desfazer"]')
+      .trigger('click');
+    await aparece(w, 'dialogo-desfazer');
+    await esperarPor(() =>
+      expect(marca(w, 'dialogo-desfazer').text()).toContain(
+        'Isto tira as 162 pessoas'
+      )
+    );
+    expect(marca(w, 'dialogo-desfazer').text()).toContain(
+      '18 ficam aqui, porque já conversaram com você ou já receberam campanha.'
+    );
     w.unmount();
   });
 });
@@ -369,24 +429,24 @@ describe('Desfazer', () => {
     return w;
   };
 
-  it('mostra antes o que sai, o que volta e quem já recebeu campanha', async () => {
+  it('mostra antes o que sai, quem fica aqui e o que volta', async () => {
     const w = await abrirDialogoDaLista();
     await esperarPor(() =>
       expect(marca(w, 'dialogo-desfazer').text()).toContain(
-        'Isto tira as 180 pessoas'
+        'Isto tira as 104 pessoas'
       )
     );
     const texto = marca(w, 'dialogo-desfazer').text();
     expect(texto).toContain(
-      'As 15 que já estavam aqui voltam a ser como eram.'
+      'As 12 que já estavam aqui voltam a ser como eram.'
     );
-    expect(texto).toContain('As conversas que já aconteceram ficam.');
     expect(texto).toContain(
-      '3 pessoas já receberam uma campanha. A mensagem enviada não volta.'
+      '16 ficam aqui, porque já conversaram com você ou já receberam campanha.'
     );
+    expect(texto).not.toContain('As conversas que já aconteceram ficam.');
     expect(
       w.get('[data-dialog] [data-relacionamentos="titulo-do-dialogo"]').text()
-    ).toBe('Desfazer “Clientes 2025.xlsx”?');
+    ).toBe('Desfazer “Clientes de setembro.xlsx”?');
     w.unmount();
   });
 

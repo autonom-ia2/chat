@@ -169,7 +169,7 @@ const empresa = computed(
       <Button
         data-relacionamentos="conversar"
         size="lg"
-        class="w-full lg:w-auto !min-h-12 !rounded-xl whitespace-nowrap shrink-0"
+        class="w-full lg:w-auto whitespace-nowrap shrink-0"
         icon="i-lucide-message-circle"
         :label="t('RELACIONAMENTOS.COMUM.CONVERSAR')"
         @click="emit('conversar')"

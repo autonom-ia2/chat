@@ -72,7 +72,6 @@ const salvar = () => {
       <Button
         data-relacionamentos="salvar-empresa"
         size="lg"
-        class="!min-h-12 !rounded-xl"
         :is-loading="salvando"
         :label="ra('SALVAR')"
         @click="salvar"
@@ -81,7 +80,6 @@ const salvar = () => {
         slate
         faded
         size="lg"
-        class="!min-h-12 !rounded-xl"
         :label="t('RELACIONAMENTOS.COMUM.CANCELAR')"
         @click="emit('fechar')"
       />

@@ -41,11 +41,10 @@ const extrasDaConta = pessoa =>
 export const linhasDaPessoa = pessoa => {
   const adicionais = pessoa.additional_attributes ?? {};
   const cpf = pessoa.custom_attributes?.[CHAVE_DO_CPF];
-  // Telefone e e-mail ficam só no cabeçalho (com copiar); a gaveta os edita.
+  // Telefone, e-mail e empresa ficam só no cabeçalho; a gaveta os edita.
   const fixas = [
     { chave: 'cpf', valor: cpf ? formatarCpf(cpf) : '', copiar: true },
     { chave: 'cidade', valor: adicionais.city },
-    { chave: 'empresa', valor: adicionais.company_name },
   ];
   const daConta = extrasDaConta(pessoa).map(([chave, valor]) => ({
     chave: `conta:${chave}`,

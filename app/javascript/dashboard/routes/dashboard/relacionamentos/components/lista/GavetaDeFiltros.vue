@@ -163,14 +163,13 @@ const aoTeclar = evento => {
         <footer class="flex flex-col gap-3 px-6 py-5 border-t border-n-weak">
           <Button
             size="lg"
-            class="!min-h-12 !rounded-xl"
             :label="t('RELACIONAMENTOS.LISTA.FILTROS.VER_RESULTADO')"
             @click="emit('aplicar', { ...rascunho })"
           />
           <Button
             slate
             ghost
-            class="min-h-11"
+            size="lg"
             :label="t('RELACIONAMENTOS.LISTA.FILTROS.LIMPAR')"
             @click="emit('limpar')"
           />

@@ -87,41 +87,58 @@ describe('ProblemaDaLinha', () => {
     expect(montar(linha).text()).toContain(frase);
   });
 
-  it('e-mail: Salvar só vale com um e-mail de verdade e emite a linha e o valor', async () => {
+  it('e-mail: Salvar só salva com um e-mail de verdade; senão diz o que falta e emite a linha e o valor', async () => {
     const w = montar(37);
-    const guardar = botao(w, 'Salvar');
-    expect(guardar.attributes('disabled')).toBeDefined();
-    await w.get('input').setValue('rita@exemplo');
-    expect(botao(w, 'Salvar').attributes('disabled')).toBeDefined();
-    await w.get('input').setValue(' rita.carvalhedo@exemplo.com.br ');
     expect(botao(w, 'Salvar').attributes('disabled')).toBeUndefined();
+    await botao(w, 'Salvar').trigger('click');
+    await w.get('form').trigger('submit');
+    expect(w.get('[role="alert"]').text()).toBe(
+      'Escreva o e-mail para salvar.'
+    );
+    expect(w.emitted('guardar')).toBeUndefined();
+    await w.get('input').setValue('rita@exemplo');
+    await w.get('form').trigger('submit');
+    expect(w.emitted('guardar')).toBeUndefined();
+    await w.get('input').setValue(' rita.carvalhedo@exemplo.com.br ');
+    expect(w.find('[role="alert"]').exists()).toBe(false);
     await w.get('form').trigger('submit');
     expect(w.emitted('guardar')).toEqual([
       [37, 'rita.carvalhedo@exemplo.com.br'],
     ]);
   });
 
-  it('nome: Salvar só com algum texto', async () => {
+  it('nome: Salvar só com algum texto; vazio diz o que falta', async () => {
     const w = montar(62);
-    expect(botao(w, 'Salvar').attributes('disabled')).toBeDefined();
+    expect(botao(w, 'Salvar').attributes('disabled')).toBeUndefined();
+    await w.get('input').setValue('');
+    await w.get('form').trigger('submit');
+    expect(w.get('[role="alert"]').text()).toBe('Escreva o nome para salvar.');
+    expect(w.emitted('guardar')).toBeUndefined();
     await w.get('input').setValue('Ana Brandolim');
     await botao(w, 'Salvar').trigger('click');
     await w.get('form').trigger('submit');
     expect(w.emitted('guardar')[0]).toEqual([62, 'Ana Brandolim']);
   });
 
-  it('telefone: usa o campo de telefone e Salvar espera o número ficar completo', () => {
+  it('telefone: usa o campo de telefone e Salvar, ligado, diz que falta o telefone', async () => {
     const w = montar(14);
     expect(w.text()).toContain('Telefone certo');
     expect(w.findComponent(CampoDeTelefone).exists()).toBe(true);
-    expect(botao(w, 'Salvar').attributes('disabled')).toBeDefined();
+    expect(botao(w, 'Salvar').attributes('disabled')).toBeUndefined();
+    await w.get('form').trigger('submit');
+    expect(w.get('[role="alert"]').text()).toBe(
+      'Escreva o telefone para salvar.'
+    );
+    expect(w.emitted('guardar')).toBeUndefined();
   });
 
   it('duplicada: escolhe qual linha fica, sem campo de texto', async () => {
     const w = montar(143);
     expect(w.find('input').exists()).toBe(false);
     expect(botao(w, 'Salvar')).toBeUndefined();
-    expect(w.get('[data-opcao="88"]').text()).toContain('Ficar com a linha 88');
+    expect(w.get('[data-opcao="88"]').attributes('aria-label')).toBe(
+      'Ficar com a linha 88'
+    );
     await w.get('[data-opcao="88"]').trigger('click');
     await w.get('[data-opcao="143"]').trigger('click');
     expect(w.emitted('guardar')).toEqual([
@@ -175,13 +192,11 @@ describe('OQueVouGuardar', () => {
 
   it('mostra para onde cada coluna vai e o que é desconhecido vira informação', () => {
     const w = montar();
-    expect(w.get('[data-coluna="Cel"]').text()).toContain('Cel');
-    expect(w.get('[data-coluna="Cel"]').text()).toContain('Telefone');
-    expect(w.get('[data-coluna="Aniversário"]').text()).toContain(
-      'Aniversário'
+    expect(w.get('[data-coluna="Cel"]').text()).toContain(
+      '“Cel” fica como Telefone.'
     );
     expect(w.get('[data-coluna="Aniversário"]').text()).toContain(
-      'Informação nova'
+      '“Aniversário” fica como informação nova.'
     );
   });
 
@@ -315,24 +330,29 @@ describe('TelaConferir', () => {
     expect(w.emitted('voltar')).toHaveLength(1);
   });
 
-  it('com 0 pessoas o botão fica desabilitado', () => {
+  it('com 0 pessoas o botão principal vira "Escolher outra planilha" e a frase diz que não sobrou ninguém', async () => {
     const base = leituraDeExemplo('l1');
     const leitura = {
       ...base,
       resumo: { total: 0, novas: 0, completadas: 0, comProblema: 0 },
       problemas: [],
     };
-    expect(
-      marca(conferir(leitura), 'trazer-confirmar').attributes('disabled')
-    ).toBeDefined();
+    const w = conferir(leitura);
+    expect(marca(w, 'trazer-confirmar').exists()).toBe(false);
+    expect(marca(w, 'ninguem-para-trazer').text()).toBe(
+      'Não sobrou ninguém para trazer.'
+    );
+    const outra = marca(w, 'escolher-outra');
+    expect(outra.text()).toBe('Escolher outra planilha');
+    expect(outra.attributes('disabled')).toBeUndefined();
+    await outra.trigger('click');
+    expect(w.emitted('escolherOutra')).toHaveLength(1);
   });
 
   it('erro ao trazer: frase e botão que emite "tentar"', async () => {
     const w = conferir(leituraDeExemplo('l1'), { comErro: true });
     const erro = marca(w, 'erro');
-    expect(erro.text()).toContain(
-      'Não consegui trazer a lista. Tente de novo.'
-    );
+    expect(erro.text()).toContain('Não consegui trazer a lista.');
     await erro.get('button').trigger('click');
     expect(w.emitted('tentar')).toHaveLength(1);
   });
@@ -359,7 +379,7 @@ describe('TelaConferir', () => {
 describe('TelaPronto', () => {
   it('andamento: barra com role progressbar, a frase e o aviso de que pode fechar', () => {
     const w = mount(TelaPronto, {
-      props: { trazendo: true, porcentagem: 40, total: 195 },
+      props: { trazendo: true, porcentagem: 40 },
     });
     const andamento = marca(w, 'andamento');
     expect(w.get('h1').text()).toBe('Trazendo… 40%.');
@@ -377,16 +397,18 @@ describe('TelaPronto', () => {
   it('andamento com erro mostra a frase e o botão que emite "tentar"', async () => {
     const w = mount(TelaPronto, { props: { trazendo: true, comErro: true } });
     const erro = marca(w, 'erro');
-    expect(erro.text()).toContain(
-      'Não consegui ver como está indo. Tente de novo.'
-    );
+    expect(erro.text()).toContain('Não consegui ver como está indo.');
     await erro.get('button').trigger('click');
     expect(w.emitted('tentar')).toHaveLength(1);
   });
 
-  it('pronto: "195 pessoas chegaram." com a ação principal e a discreta', async () => {
-    const w = mount(TelaPronto, { props: { trazendo: false, total: 195 } });
-    expect(marca(w, 'pronto').text()).toContain('195 pessoas chegaram.');
+  it('pronto: "180 pessoas chegaram e 15 foram completadas." com a ação principal e a discreta', async () => {
+    const w = mount(TelaPronto, {
+      props: { trazendo: false, novas: 180, completadas: 15 },
+    });
+    expect(w.get('[role="heading"]').text()).toBe(
+      '180 pessoas chegaram e 15 foram completadas.'
+    );
     expect(w.get('[role="heading"]').attributes('aria-level')).toBe('1');
     const ver = marca(w, 'ver-as-pessoas');
     expect(ver.text()).toBe('Ver as pessoas');
@@ -397,9 +419,25 @@ describe('TelaPronto', () => {
     expect(marca(w, 'andamento').exists()).toBe(false);
   });
 
-  it('singular: "1 pessoa chegou."', () => {
-    const w = mount(TelaPronto, { props: { total: 1 } });
-    expect(w.text()).toContain('1 pessoa chegou.');
+  const fraseDoPronto = props =>
+    mount(TelaPronto, { props }).get('[role="heading"]').text();
+
+  it('diz a verdade: só novas, só completadas, singular e plural', () => {
+    expect(fraseDoPronto({ novas: 180, completadas: 0 })).toBe(
+      '180 pessoas chegaram.'
+    );
+    expect(fraseDoPronto({ novas: 0, completadas: 15 })).toBe(
+      '15 pessoas foram completadas.'
+    );
+    expect(fraseDoPronto({ novas: 1, completadas: 0 })).toBe(
+      '1 pessoa chegou.'
+    );
+    expect(fraseDoPronto({ novas: 0, completadas: 1 })).toBe(
+      '1 pessoa foi completada.'
+    );
+    expect(fraseDoPronto({ novas: 1, completadas: 1 })).toBe(
+      '1 pessoa chegou e 1 foi completada.'
+    );
   });
 });
 
@@ -481,9 +519,7 @@ describe('HistoricoDeListas', () => {
   it('erro: frase e botão que emite "tentar"', async () => {
     const w = montar({ comErro: true });
     const erro = marca(w, 'erro');
-    expect(erro.text()).toContain(
-      'Não consegui mostrar o que você já trouxe. Tente de novo.'
-    );
+    expect(erro.text()).toContain('Não consegui mostrar o que você já trouxe.');
     await erro.get('button').trigger('click');
     expect(w.emitted('tentar')).toHaveLength(1);
   });
@@ -510,46 +546,42 @@ describe('DialogoDesfazer', () => {
       global: { stubs: { Dialog: DialogFalso } },
     });
 
-  it('mostra ANTES o que sai e o que volta ao que era', () => {
+  it('mostra ANTES o que sai, quem fica aqui e o que volta ao que era, nesta ordem', () => {
     const w = montar({
-      previa: { tira: 180, devolve: 15, receberamCampanha: 0 },
+      previa: { tira: 162, ficam: 18, devolve: 15 },
     });
     const texto = marca(w, 'dialogo-desfazer').text();
     expect(texto).toContain(
-      'Isto tira as 180 pessoas que vieram nesta lista. As 15 que já estavam aqui voltam a ser como eram.'
+      'Isto tira as 162 pessoas que vieram nesta lista e ainda não conversaram com você. 18 ficam aqui, porque já conversaram com você ou já receberam campanha. As 15 que já estavam aqui voltam a ser como eram.'
     );
     expect(texto).toContain(
       'Quem pediu para não receber mensagens continua assim.'
     );
-    expect(texto).toContain('As conversas que já aconteceram ficam.');
-    expect(texto).not.toContain('campanha');
   });
 
-  it('avisa quem já recebeu campanha', () => {
-    const w = montar({
-      previa: { tira: 180, devolve: 15, receberamCampanha: 3 },
-    });
-    expect(marca(w, 'dialogo-desfazer').text()).toContain(
-      '3 pessoas já receberam uma campanha. A mensagem enviada não volta.'
-    );
+  it('nenhuma frase promete conversa ou campanha que fica para quem sai', () => {
+    const w = montar({ previa: { tira: 162, ficam: 18, devolve: 15 } });
+    const texto = marca(w, 'dialogo-desfazer').text();
+    expect(texto).not.toContain('As conversas que já aconteceram ficam');
+    expect(texto).not.toContain('A mensagem enviada não volta');
   });
 
-  it('singular e casos sem pessoas que saem ou que voltam', () => {
-    const um = montar({
-      previa: { tira: 1, devolve: 0, receberamCampanha: 1 },
-    });
-    expect(marca(um, 'dialogo-desfazer').text()).toContain(
-      'Isto tira a pessoa que veio nesta lista.'
+  it('singular e casos sem pessoas em cada grupo', () => {
+    const um = montar({ previa: { tira: 1, ficam: 1, devolve: 0 } });
+    const textoUm = marca(um, 'dialogo-desfazer').text();
+    expect(textoUm).toContain(
+      'Isto tira a pessoa que veio nesta lista e ainda não conversou com você.'
     );
-    expect(marca(um, 'dialogo-desfazer').text()).toContain(
-      '1 pessoa já recebeu uma campanha.'
+    expect(textoUm).toContain(
+      '1 fica aqui, porque já conversou com você ou já recebeu campanha.'
     );
-    const so = montar({
-      previa: { tira: 0, devolve: 15, receberamCampanha: 0 },
-    });
-    expect(marca(so, 'dialogo-desfazer').text()).toContain(
+    const so = montar({ previa: { tira: 0, ficam: 0, devolve: 15 } });
+    const textoSo = marca(so, 'dialogo-desfazer').text();
+    expect(textoSo).toContain(
       'As 15 que já estavam aqui voltam a ser como eram.'
     );
+    expect(textoSo).not.toContain('Isto tira');
+    expect(textoSo).not.toContain('aqui, porque');
   });
 
   it('enquanto não sabe o que sai: esqueleto e Desfazer desabilitado', () => {
@@ -560,13 +592,13 @@ describe('DialogoDesfazer', () => {
 
   it('erro na prévia: frase e botão que emite "tentar"', async () => {
     const w = montar({ previa: null, comErroNaPrevia: true });
-    expect(w.text()).toContain('Não consegui ver o que sai. Tente de novo.');
+    expect(w.text()).toContain('Não consegui ver o que sai.');
     await marca(w, 'dialogo-desfazer').get('button').trigger('click');
     expect(w.emitted('tentar')).toHaveLength(1);
   });
 
   it('Desfazer (destrutivo) confirma e Cancelar fecha', async () => {
-    const w = montar({ previa: { tira: 1, devolve: 0, receberamCampanha: 0 } });
+    const w = montar({ previa: { tira: 1, ficam: 0, devolve: 0 } });
     const confirmar = marca(w, 'desfazer-confirmar');
     expect(confirmar.text()).toBe('Desfazer');
     expect(confirmar.classes().join(' ')).toContain('ruby');
@@ -576,7 +608,7 @@ describe('DialogoDesfazer', () => {
 
   it('o botão mostra o carregando enquanto desfaz e fica desabilitado', () => {
     const w = montar({
-      previa: { tira: 1, devolve: 0, receberamCampanha: 0 },
+      previa: { tira: 1, ficam: 0, devolve: 0 },
       desfazendo: true,
     });
     expect(marca(w, 'desfazer-confirmar').attributes('disabled')).toBeDefined();

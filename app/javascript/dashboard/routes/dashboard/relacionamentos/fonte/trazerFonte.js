@@ -174,6 +174,7 @@ const fonteDemo = ({
       const dadosDaDemo = await dados();
       const leitura = leituraDe(dadosDaDemo, leituraId);
       const id = proximoId('trazida', dadosDaDemo.memoria);
+      const novas = resumoAoVivo(leitura).novas;
       dadosDaDemo.memoria.listas = [
         {
           id,
@@ -182,9 +183,9 @@ const fonteDemo = ({
           quem: dadosDaDemo.demo.quemTrouxeNaDemo(),
           situacao: SITUACOES_DA_LISTA.TRAZENDO,
           total: totalDaLeitura(leitura),
-          novas: resumoAoVivo(leitura).novas,
+          novas,
           completadas: leitura.resumo.completadas,
-          receberamCampanha: 0,
+          ficam: dadosDaDemo.demo.ficamNaTrazida(novas),
         },
         ...dadosDaDemo.memoria.listas,
       ];
@@ -192,15 +193,14 @@ const fonteDemo = ({
     },
     async andamento(trazidaId) {
       const dadosDaDemo = await dados();
-      const vista = vistaDaLista(
-        listaDe(dadosDaDemo, trazidaId),
-        agora(),
-        dadosDaDemo.demo
-      );
+      const lista = listaDe(dadosDaDemo, trazidaId);
+      const vista = vistaDaLista(lista, agora(), dadosDaDemo.demo);
       return {
         porcentagem: vista.porcentagem,
         situacao: vista.situacao,
         total: vista.total,
+        novas: lista.novas,
+        completadas: lista.completadas,
       };
     },
     async historico() {
@@ -217,9 +217,9 @@ const fonteDemo = ({
       await esperar(atraso);
       const lista = listaDe(await dados(), trazidaId);
       return {
-        tira: lista.novas,
+        tira: lista.novas - lista.ficam,
+        ficam: lista.ficam,
         devolve: lista.completadas,
-        receberamCampanha: lista.receberamCampanha,
       };
     },
     async desfazer(trazidaId) {

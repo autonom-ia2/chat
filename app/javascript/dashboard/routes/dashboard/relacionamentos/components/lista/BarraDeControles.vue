@@ -65,8 +65,7 @@ const rotuloDosFiltros = computed(() =>
           :options="opcoesDeOrdem"
           :trigger-id="idDaOrdem"
           :aria-label="t('RELACIONAMENTOS.LISTA.ORDENAR.ROTULO')"
-          compact
-          class="flex-1 min-w-0 md:flex-none [&>button]:h-11 [&>button]:min-h-11"
+          class="flex-1 min-w-0 md:flex-none"
           @update:model-value="emit('update:ordem', $event)"
         />
       </div>
@@ -74,7 +73,7 @@ const rotuloDosFiltros = computed(() =>
         v-if="comFiltros"
         slate
         faded
-        class="min-h-11 shrink-0 whitespace-nowrap"
+        class="shrink-0 whitespace-nowrap"
         icon="i-lucide-sliders-horizontal"
         data-relacionamentos="mais-filtros"
         aria-haspopup="dialog"

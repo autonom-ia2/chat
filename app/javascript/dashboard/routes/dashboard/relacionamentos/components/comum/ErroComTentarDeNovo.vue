@@ -25,10 +25,10 @@ const { t } = useI18n();
       <span class="i-lucide-triangle-alert size-6" />
     </span>
     <p class="m-0 text-base text-n-slate-12">
-      {{ mensagem || t('RELACIONAMENTOS.COMUM.ERRO_GENERICO') }}
+      {{ mensagem || t('RELACIONAMENTOS.COMUM.ERRO_DA_TELA') }}
     </p>
     <Button
-      class="min-h-11"
+      size="lg"
       :label="t('RELACIONAMENTOS.COMUM.TENTAR_DE_NOVO')"
       @click="emit('tentar')"
     />

@@ -88,14 +88,42 @@ describe('EsqueletoDeLista', () => {
     expect(w.findAll('.animate-pulse')).toHaveLength(4);
     expect(w.get('.sr-only').text()).toBe('RELACIONAMENTOS.COMUM.CARREGANDO');
   });
+
+  it('tem linha visível "Carregando…" sem repetir o anúncio do leitor de tela', () => {
+    const w = mount(EsqueletoDeLista);
+    const visivel = w.get('p');
+    expect(visivel.text()).toBe('RELACIONAMENTOS.COMUM.CARREGANDO…');
+    expect(visivel.attributes('aria-hidden')).toBe('true');
+    expect(visivel.classes()).toEqual(
+      expect.arrayContaining(['text-sm', 'text-n-slate-11'])
+    );
+    expect(w.findAll('[role="status"]')).toHaveLength(1);
+  });
+
+  it('cada linha é um círculo e duas barras, com contraste e sem animar para quem pede calma', () => {
+    const w = mount(EsqueletoDeLista, { props: { linhas: 2 } });
+    const linhas = w.findAll('[data-esqueleto-linha]');
+    expect(linhas).toHaveLength(2);
+    expect(linhas[0].classes()).toContain('motion-reduce:animate-none');
+    expect(linhas[0].findAll('.bg-n-slate-3')).toHaveLength(3);
+    expect(linhas[0].find('.rounded-full').exists()).toBe(true);
+    expect(w.find('[data-esqueleto-topo]').exists()).toBe(false);
+  });
+
+  it('com topo, desenha o bloco alto e a fileira de grupos antes das linhas', () => {
+    const w = mount(EsqueletoDeLista, { props: { linhas: 3, comTopo: true } });
+    expect(w.get('[data-esqueleto-topo]').classes()).toContain('bg-n-slate-3');
+    expect(w.findAll('[data-esqueleto-grupos] > span')).toHaveLength(5);
+    expect(w.findAll('[data-esqueleto-linha]')).toHaveLength(3);
+  });
 });
 
 describe('ErroComTentarDeNovo: botão principal', () => {
-  it('"Tentar de novo" é o botão principal (sólido, azul), com 44 px', () => {
+  it('"Tentar de novo" é o botão principal (sólido, azul), no tamanho lg da casa', () => {
     const w = mount(ErroComTentarDeNovo);
     const botao = w.get('button');
     expect(botao.classes()).toEqual(
-      expect.arrayContaining(['bg-n-blue-11', 'text-white', 'min-h-11'])
+      expect.arrayContaining(['bg-n-blue-11', 'text-white', 'h-12'])
     );
     expect(botao.classes().join(' ')).not.toContain('bg-n-brand/10');
     expect(botao.classes().join(' ')).not.toContain('bg-n-alpha');
@@ -106,7 +134,7 @@ describe('ErroComTentarDeNovo', () => {
   it('mostra a frase genérica e emite "tentar" no botão', async () => {
     const w = mount(ErroComTentarDeNovo);
     expect(w.attributes('role')).toBe('alert');
-    expect(w.text()).toContain('RELACIONAMENTOS.COMUM.ERRO_GENERICO');
+    expect(w.text()).toContain('RELACIONAMENTOS.COMUM.ERRO_DA_TELA');
     await w.get('button').trigger('click');
     expect(w.emitted('tentar')).toHaveLength(1);
   });

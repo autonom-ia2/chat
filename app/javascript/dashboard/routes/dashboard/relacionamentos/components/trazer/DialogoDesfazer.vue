@@ -7,8 +7,8 @@ import EsqueletoDeLista from '../comum/EsqueletoDeLista.vue';
 import ErroComTentarDeNovo from '../comum/ErroComTentarDeNovo.vue';
 import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 
-// #2894 — o diálogo de Desfazer: mostra ANTES o que sai e o que volta ao que
-// era, e se alguém já recebeu campanha. Destrutivo: tocar fora não fecha.
+// #2894 — o diálogo de Desfazer: mostra ANTES quem sai, quem fica aqui (já
+// conversou ou recebeu campanha) e o que volta ao que era. Destrutivo: tocar fora não fecha.
 const props = defineProps({
   // O nome da lista que vai ser desfeita, no título.
   arquivo: { type: String, default: '' },
@@ -23,13 +23,18 @@ const dialogo = ref(null);
 
 const SEM_PESSOAS = 0;
 
-// Uma frase para quem sai e outra para quem volta ao que era; some a que é zero.
+// Uma frase para quem sai, quem fica e quem volta ao que era; some a que é zero.
 const fraseDoQueSai = computed(() => {
-  const { tira, devolve } = props.previa;
+  const { tira, ficam, devolve } = props.previa;
   const frases = [];
   if (tira > SEM_PESSOAS) {
     frases.push(
       t('RELACIONAMENTOS_TRAZER.DESFAZER.TIRA', { count: tira }, tira)
+    );
+  }
+  if (ficam > SEM_PESSOAS) {
+    frases.push(
+      t('RELACIONAMENTOS_TRAZER.DESFAZER.FICAM', { count: ficam }, ficam)
     );
   }
   if (devolve > SEM_PESSOAS) {
@@ -71,21 +76,8 @@ defineExpose({
       <TituloDoDialogo :titulo="titulo" />
       <template v-if="previa">
         <p class="m-0 text-n-slate-12">{{ fraseDoQueSai }}</p>
-        <p class="m-0">{{ t('RELACIONAMENTOS_TRAZER.DESFAZER.CONVERSAS') }}</p>
         <p class="m-0">
           {{ t('RELACIONAMENTOS_TRAZER.DESFAZER.NAO_RECEBER') }}
-        </p>
-        <p
-          v-if="previa.receberamCampanha"
-          class="p-3 m-0 font-medium rounded-lg bg-n-amber-3 text-n-amber-12"
-        >
-          {{
-            t(
-              'RELACIONAMENTOS_TRAZER.DESFAZER.CAMPANHA',
-              { count: previa.receberamCampanha },
-              previa.receberamCampanha
-            )
-          }}
         </p>
       </template>
       <ErroComTentarDeNovo

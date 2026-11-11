@@ -138,19 +138,18 @@ describe('B3. textos', () => {
   });
 
   it('Pronto cita o título novo', () => {
-    const w = mount(TelaPronto, { props: { total: 195 } });
+    const w = mount(TelaPronto, { props: { novas: 180, completadas: 15 } });
     expect(marca(w, 'pronto-sossego').text()).toBe(
-      'Você pode desfazer quando quiser, em “Listas que você já trouxe”.'
+      'Você pode desfazer quando quiser, aqui embaixo.'
     );
   });
 
-  it('coluna extra no mesmo formato: coluna, seta, "Informação nova"', () => {
+  it('coluna extra vira frase, sem seta: “Situação” fica como informação nova', () => {
     const w = mount(LinhaDeColuna, {
       props: { coluna: { nome: 'Situação', destino: 'informacao' } },
     });
-    expect(w.text()).toContain('Situação');
-    expect(w.text()).toContain('Informação nova');
-    expect(w.find('.i-lucide-arrow-right').exists()).toBe(true);
+    expect(w.get('p').text()).toBe('“Situação” fica como informação nova.');
+    expect(w.find('.i-lucide-arrow-right').exists()).toBe(false);
     expect(w.text()).not.toContain('Vira uma informação');
   });
 });
@@ -308,7 +307,7 @@ describe('B4. ?demo=carregando no histórico', () => {
 });
 
 describe('B5. pergunta de clientes nasce sem resposta', () => {
-  it('nenhuma opção marcada e Continuar desligado', () => {
+  it('nenhuma opção marcada e Continuar ligado, que diz o que falta', async () => {
     const w = mount(PerguntaDaVez, {
       props: {
         pergunta: { id: 'clientes' },
@@ -319,7 +318,10 @@ describe('B5. pergunta de clientes nasce sem resposta', () => {
     });
     expect(w.findAll('[aria-checked="true"]')).toHaveLength(0);
     expect(w.findAll('[role="radio"]').length).toBe(3);
-    expect(marca(w, 'continuar').attributes('disabled')).toBeDefined();
+    expect(marca(w, 'continuar').attributes('disabled')).toBeUndefined();
+    await marca(w, 'continuar').trigger('click');
+    expect(w.emitted('continuar')).toBeUndefined();
+    expect(w.get('[role="alert"]').text()).toBe('Escolha uma das respostas.');
   });
 
   it('na tela, depois de ler a planilha, nada vem marcado e o composable não deixa continuar', async () => {
@@ -422,15 +424,17 @@ describe('B7. problemas com o nome da pessoa', () => {
     expect(w.text()).toContain('Linhas 88 e 143 da planilha');
     const a = w.get('[data-opcao="88"]');
     const b = w.get('[data-opcao="143"]');
-    expect(a.text()).toContain('Ficar com a linha 88');
-    // Telefone e e-mail em linhas separadas; o e-mail só quebra no "@".
+    // O título do cartão é o que diferencia (o telefone); a linha vai de apoio.
+    expect(a.get('[data-relacionamentos="titulo-do-cartao"]').text()).toBe(
+      '+55 11 94410-0088'
+    );
     const linhasDeA = a.findAll('span').map(s => s.text());
-    expect(linhasDeA).toContain('+55 11 94410-0088');
+    expect(linhasDeA).toContain('Linha 88 da planilha');
+    // O e-mail só quebra no "@".
     expect(a.html()).toContain('paulo.hortencio<wbr>@exemplo.com.br');
     expect(b.findAll('span').map(s => s.text())).toEqual([
-      'Ficar com a linha 143',
       '+55 11 94410-0143',
-      'sem e-mail',
+      'Linha 143 da planilha',
       'Ficar com esta',
       '',
     ]);
@@ -450,19 +454,23 @@ describe('B7. problemas com o nome da pessoa', () => {
     expect(w.emitted('guardar')).toEqual([[143, 143]]);
   });
 
-  it('as duas ações são botões da casa de 44 px, alinhados', () => {
+  it('as duas ações são botões da casa (h-12, rounded-lg), alinhados', () => {
     const w = montar(37);
     const salvar = w.findAll('button').find(b => b.text() === 'Salvar');
     const deixar = marca(w, 'deixar-de-fora');
-    [salvar, deixar].forEach(b => expect(b.classes()).toContain('min-h-11'));
+    [salvar, deixar].forEach(b => {
+      expect(b.classes()).toContain('h-12');
+      expect(b.classes()).toContain('rounded-lg');
+      expect(b.classes().join(' ')).not.toContain('rounded-xl');
+    });
     expect(deixar.classes().join(' ')).toContain('bg-n-slate-9/10');
     expect(salvar.element.parentElement).toBe(deixar.element.parentElement);
   });
 
-  it('B10. Salvar não ganha opacidade extra: só o desligado padrão do Button', () => {
+  it('B10. Salvar não ganha opacidade extra e nunca fica desligado por falta de preenchimento', () => {
     const w = montar(37);
     const salvar = w.findAll('button').find(b => b.text() === 'Salvar');
-    expect(salvar.attributes('disabled')).toBeDefined();
+    expect(salvar.attributes('disabled')).toBeUndefined();
     const extras = salvar.classes().filter(c => c.startsWith('opacity-'));
     expect(extras).toEqual([]);
     expect(salvar.classes().join(' ')).not.toContain('faded');
@@ -494,7 +502,7 @@ describe('B9. diálogo Desfazer', () => {
   it('o título diz o nome da lista', () => {
     const w = montar({
       arquivo: 'Clientes 2025.xlsx',
-      previa: { tira: 1, devolve: 0, receberamCampanha: 0 },
+      previa: { tira: 1, ficam: 0, devolve: 0 },
     });
     expect(w.get('[data-relacionamentos="titulo-do-dialogo"]').text()).toBe(
       'Desfazer “Clientes 2025.xlsx”?'
@@ -508,18 +516,21 @@ describe('B9. diálogo Desfazer', () => {
     );
   });
 
-  it('o aviso da campanha usa o tom de aviso legível, claro e escuro', () => {
-    const w = montar({
+  it('a frase de quem fica aparece só com ficam > 0, e ninguém sai prometendo conversa', () => {
+    const com = montar({
       arquivo: 'a.xlsx',
-      previa: { tira: 1, devolve: 0, receberamCampanha: 3 },
+      previa: { tira: 162, ficam: 18, devolve: 15 },
     });
-    const aviso = w
-      .findAll('p')
-      .find(p => p.text().includes('já receberam uma campanha'));
-    expect(aviso.classes()).toEqual(
-      expect.arrayContaining(['text-n-amber-12', 'bg-n-amber-3'])
+    const texto = marca(com, 'dialogo-desfazer').text();
+    expect(texto).toContain(
+      '18 ficam aqui, porque já conversaram com você ou já receberam campanha.'
     );
-    expect(aviso.classes()).not.toContain('text-n-amber-11');
+    const sem = montar({
+      arquivo: 'a.xlsx',
+      previa: { tira: 5, ficam: 0, devolve: 0 },
+    });
+    expect(marca(sem, 'dialogo-desfazer').text()).not.toContain('ficam aqui');
+    expect(marca(sem, 'dialogo-desfazer').text()).not.toContain(' fica aqui');
   });
 });
 

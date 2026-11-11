@@ -98,6 +98,39 @@ afterEach(() => {
 });
 
 describe('FichaDaPessoaPage', () => {
+  it('a empresa aparece só no cabeçalho, não em Informações', async () => {
+    const w = await abrirPessoa(ID_CLIENTE_COMPLETO);
+    expect(w.find('[data-contato="empresa"]').exists()).toBe(true);
+    expect(
+      marca(w, 'informacoes').find('[data-informacao="empresa"]').exists()
+    ).toBe(false);
+  });
+
+  it('o esqueleto tem contraste, formato da ficha e "Carregando…" visível sem duplicar o anúncio', () => {
+    contexto.demo = 'cheio';
+    contexto.params = { contactId: String(ID_CLIENTE_COMPLETO) };
+    const w = mount(FichaDaPessoaPage, { global: { stubs } });
+    const esqueleto = marca(w, 'carregando');
+    const texto = esqueleto.get('[data-relacionamentos="carregando-texto"]');
+    expect(texto.text()).toContain('COMUM.CARREGANDO');
+    // O leitor de tela já ouve pela região viva: o texto visível não repete.
+    expect(texto.attributes('aria-hidden')).toBe('true');
+    const blocos = esqueleto.findAll('[data-bloco]');
+    expect(blocos.length).toBeGreaterThanOrEqual(5);
+    blocos.forEach(bloco =>
+      expect(bloco.classes()).toEqual(
+        expect.arrayContaining([
+          'bg-n-alpha-2',
+          'animate-pulse',
+          'motion-reduce:animate-none',
+        ])
+      )
+    );
+    expect(esqueleto.find('[data-bloco="circulo"]').classes()).toContain(
+      'rounded-full'
+    );
+  });
+
   it('mostra o esqueleto enquanto carrega', () => {
     contexto.demo = 'cheio';
     contexto.params = { contactId: String(ID_CLIENTE_COMPLETO) };

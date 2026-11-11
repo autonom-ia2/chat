@@ -23,7 +23,7 @@ const emit = defineEmits(['acao']);
       v-if="botao"
       slate
       faded
-      class="min-h-11"
+      size="lg"
       :label="botao"
       @click="emit('acao')"
     />

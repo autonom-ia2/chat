@@ -1,7 +1,14 @@
 <script setup>
-// #2894 — "carregando" da ficha: a forma dela em cinza que pulsa (cabeçalho,
-// coluna principal e coluna do lado). O leitor de tela ouve "Carregando" pela
-// região viva da página (`AvisoVivo`), que não nasce junto com o esqueleto.
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+// #2894 — "carregando" da ficha: a forma dela em cinza que pulsa (cabeçalho com
+// círculo e barras, e dois cartões por coluna). O leitor de tela ouve "Carregando"
+// pela região viva da página (`AvisoVivo`), que não nasce junto com o esqueleto:
+// por isso o texto visível é `aria-hidden`, para não anunciar duas vezes.
+const { t } = useI18n();
+const texto = computed(() => `${t('RELACIONAMENTOS.COMUM.CARREGANDO')}…`);
+const BLOCO = 'bg-n-alpha-2 animate-pulse motion-reduce:animate-none';
 </script>
 
 <template>
@@ -10,19 +17,35 @@
     aria-busy="true"
     class="flex flex-col gap-6"
   >
+    <p
+      data-relacionamentos="carregando-texto"
+      aria-hidden="true"
+      class="m-0 text-base text-n-slate-11"
+    >
+      {{ texto }}
+    </p>
     <div
       aria-hidden="true"
-      class="h-48 rounded-2xl bg-n-alpha-2 animate-pulse"
-    />
+      class="flex items-center gap-4 p-5 border rounded-2xl border-n-weak bg-n-solid-1 md:p-8"
+    >
+      <div
+        data-bloco="circulo"
+        class="rounded-full size-16 shrink-0 md:size-20"
+        :class="BLOCO"
+      />
+      <div class="flex flex-col flex-1 min-w-0 gap-3">
+        <div data-bloco="barra" class="w-2/3 h-6 rounded-lg" :class="BLOCO" />
+        <div data-bloco="barra" class="w-1/2 h-4 rounded-lg" :class="BLOCO" />
+        <div data-bloco="barra" class="w-1/3 h-4 rounded-lg" :class="BLOCO" />
+      </div>
+    </div>
     <div aria-hidden="true" class="grid gap-6 lg:grid-cols-3">
-      <div class="flex flex-col gap-6 lg:col-span-2">
-        <div class="h-56 rounded-2xl bg-n-alpha-2 animate-pulse" />
-        <div class="h-40 rounded-2xl bg-n-alpha-2 animate-pulse" />
-      </div>
-      <div class="flex flex-col gap-6">
-        <div class="h-72 rounded-2xl bg-n-alpha-2 animate-pulse" />
-        <div class="h-24 rounded-2xl bg-n-alpha-2 animate-pulse" />
-      </div>
+      <div
+        data-bloco="cartao"
+        class="h-56 rounded-2xl lg:col-span-2"
+        :class="BLOCO"
+      />
+      <div data-bloco="cartao" class="h-56 rounded-2xl" :class="BLOCO" />
     </div>
   </div>
 </template>

@@ -16,11 +16,6 @@ const emit = defineEmits(['acao']);
     class="flex flex-col items-center gap-5 p-10 text-center border rounded-2xl border-n-weak bg-n-solid-1"
   >
     <p class="m-0 text-lg text-n-slate-12">{{ frase }}</p>
-    <Button
-      :label="botao"
-      size="lg"
-      class="!min-h-12 !rounded-xl"
-      @click="emit('acao')"
-    />
+    <Button :label="botao" size="lg" @click="emit('acao')" />
   </div>
 </template>

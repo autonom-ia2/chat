@@ -1,21 +1,43 @@
 <script setup>
+import { computed } from 'vue';
+import Button from 'dashboard/components-next/button/Button.vue';
 import { useI18n } from 'vue-i18n';
 import ErroComTentarDeNovo from '../comum/ErroComTentarDeNovo.vue';
 import HeroiEscuro from '../comum/HeroiEscuro.vue';
 import { larguraDaBarra } from '../../trazer/larguraDaBarra';
 
 // #2894 — o fim. Enquanto a lista está sendo trazida: o andamento, com barra e
-// a frase "pode fechar esta tela". Quando termina: "195 pessoas chegaram.", a
-// ação principal (Ver as pessoas) e a discreta (Trazer outra lista).
-defineProps({
+// a frase "pode fechar esta tela". Quando termina: "180 pessoas chegaram e 15
+// foram completadas." (a verdade, não o total), a ação principal (Ver as
+// pessoas) e a discreta (Trazer outra lista).
+const props = defineProps({
   trazendo: { type: Boolean, default: false },
   porcentagem: { type: Number, default: 0 },
-  total: { type: Number, default: 0 },
+  novas: { type: Number, default: 0 },
+  completadas: { type: Number, default: 0 },
   comErro: { type: Boolean, default: false },
 });
 const emit = defineEmits(['ver', 'outra', 'tentar']);
 
 const { t } = useI18n();
+
+const SEM_PESSOAS = 0;
+const NOVAS = 'RELACIONAMENTOS_TRAZER.PRONTO';
+
+// Cada parte é uma frase curta; a frase quebra só entre elas, depois de "chegaram".
+const partes = computed(() => {
+  const { novas, completadas } = props;
+  if (novas > SEM_PESSOAS && completadas > SEM_PESSOAS) {
+    return [
+      t(`${NOVAS}.CHEGARAM_E`, { count: novas }, novas),
+      t(`${NOVAS}.E_COMPLETADAS`, { count: completadas }, completadas),
+    ];
+  }
+  if (completadas > SEM_PESSOAS) {
+    return [t(`${NOVAS}.COMPLETADAS`, { count: completadas }, completadas)];
+  }
+  return [t(`${NOVAS}.CHEGARAM`, { count: novas }, novas)];
+});
 </script>
 
 <template>
@@ -63,30 +85,32 @@ const { t } = useI18n();
           aria-level="1"
           data-titulo-da-tela
           tabindex="-1"
-          class="outline-none tabular-nums md:whitespace-nowrap"
+          class="outline-none tabular-nums"
         >
-          {{
-            t('RELACIONAMENTOS_TRAZER.PRONTO.CHEGARAM', { count: total }, total)
-          }}
+          <span
+            v-for="parte in partes"
+            :key="parte"
+            data-parte
+            class="md:whitespace-nowrap"
+            >{{ parte }}{{ ' ' }}</span
+          >
         </span>
       </template>
       <template #acao>
-        <button
-          type="button"
+        <Button
+          size="lg"
           data-relacionamentos="ver-as-pessoas"
-          class="inline-flex items-center px-6 text-base font-semibold bg-white min-h-12 rounded-xl text-n-heroi hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-white"
+          class="!bg-white !text-n-heroi font-semibold hover:enabled:!bg-white/90 focus-visible:!outline-white"
+          :label="t('RELACIONAMENTOS_TRAZER.PRONTO.VER')"
           @click="emit('ver')"
-        >
-          {{ t('RELACIONAMENTOS_TRAZER.PRONTO.VER') }}
-        </button>
-        <button
-          type="button"
+        />
+        <Button
+          size="lg"
           data-relacionamentos="trazer-outra"
-          class="px-4 py-2 text-sm min-h-11 rounded-xl bg-white/10 text-white/90 ring-1 ring-inset ring-white/20 hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-white"
+          class="!bg-white/10 !text-white/90 !outline-white/20 hover:enabled:!bg-white/20 focus-visible:!outline-white"
+          :label="t('RELACIONAMENTOS_TRAZER.PRONTO.OUTRA')"
           @click="emit('outra')"
-        >
-          {{ t('RELACIONAMENTOS_TRAZER.PRONTO.OUTRA') }}
-        </button>
+        />
       </template>
     </HeroiEscuro>
     <p

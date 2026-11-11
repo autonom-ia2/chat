@@ -50,6 +50,9 @@
         "VER_RESULTADO": "See results",
         "LIMPAR": "Clear"
       },
+      "EXEMPLO": {
+        "LEGENDA": "Your list will look like this:"
+      },
       "LINHA": {
         "SEM_TELEFONE": "No phone",
         "FALOU_HOJE": "Talked today",
@@ -112,7 +115,8 @@
         "ESCOLHA": "Choose a label",
         "APLICAR": "Add label",
         "APLICADA": "Label “{etiqueta}” added to {count} person. | Label “{etiqueta}” added to {count} people.",
-        "ERRO": "I couldn't add the label. Try again."
+        "ERRO": "I couldn't add the label. Try again.",
+        "FALTA_ESCOLHER": "Choose a label."
       },
       "APAGAR": {
         "TITULO": "Delete {count} person? | Delete {count} people?",
@@ -130,7 +134,8 @@
         "LIMPAR_BUSCA": "Clear search",
         "FILTROS_SEM_RESULTADO": "I couldn't find anyone with these filters.",
         "LIMPAR_FILTROS": "Clear filters"
-      }
+      },
+      "ERRO_DA_TELA": "I couldn't show the people."
     },
     "COMUM": {
       "TENTAR_DE_NOVO": "Try again",
@@ -144,7 +149,9 @@
       "NAO_INFORMADO": "Not provided",
       "TRAZER_MINHA_LISTA": "Bring in my list",
       "CONVERSAR": "Chat",
-      "GRUPOS": "Groups"
+      "GRUPOS": "Groups",
+      "ERRO_DA_TELA": "I couldn't load this.",
+      "ENTENDI": "Got it"
     },
     "GRUPOS": {
       "TODOS": {

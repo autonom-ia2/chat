@@ -61,9 +61,9 @@ const TEXTOS_DE_NOTA = [
 ];
 const IDADE_DAS_NOTAS_EM_DIAS = [3, 35, 125, 200];
 const AUTORES_DE_NOTA = [
-  'Sônia Guedelha',
-  'Tiago Brandolim',
-  'Marina Esteveira',
+  'Sônia Valtorini',
+  'Tiago Zanquetta',
+  'Marina Pavanelli',
 ];
 const ARQUIVOS = [
   { nome: 'foto-da-fachada.jpg', tipo: 'imagem' },
@@ -123,11 +123,11 @@ const informacoesDaConta = pessoa => {
   );
 };
 
-// Rede social não tem acento. Instagram: "@fabio.23"; LinkedIn, em outro
-// formato: "fabio-figueirao".
+// Rede social não tem acento. Instagram: "@fabio.figueirao" (sem número de id);
+// LinkedIn, em outro formato: "fabio-figueirao".
 const USUARIO_DA_REDE = {
   instagram: pessoa =>
-    `@${semAcento(pessoa.name.split(' ')[0]).toLowerCase()}.${pessoa.id}`,
+    `@${semAcento(pessoa.name).toLowerCase().split(' ').filter(Boolean).join('.')}`,
   linkedin: pessoa =>
     semAcento(pessoa.name).toLowerCase().split(' ').filter(Boolean).join('-'),
 };

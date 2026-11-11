@@ -50,6 +50,9 @@
         "VER_RESULTADO": "Ver resultado",
         "LIMPAR": "Limpar"
       },
+      "EXEMPLO": {
+        "LEGENDA": "Sua lista vai ficar assim:"
+      },
       "LINHA": {
         "SEM_TELEFONE": "Sem telefone",
         "FALOU_HOJE": "Falou hoje",
@@ -112,7 +115,8 @@
         "ESCOLHA": "Escolha uma etiqueta",
         "APLICAR": "Colocar etiqueta",
         "APLICADA": "Etiqueta “{etiqueta}” colocada em {count} pessoa. | Etiqueta “{etiqueta}” colocada em {count} pessoas.",
-        "ERRO": "Não consegui colocar a etiqueta. Tente de novo."
+        "ERRO": "Não consegui colocar a etiqueta. Tente de novo.",
+        "FALTA_ESCOLHER": "Escolha uma etiqueta."
       },
       "APAGAR": {
         "TITULO": "Apagar {count} pessoa? | Apagar {count} pessoas?",
@@ -130,7 +134,8 @@
         "LIMPAR_BUSCA": "Limpar busca",
         "FILTROS_SEM_RESULTADO": "Não achei ninguém com esses filtros.",
         "LIMPAR_FILTROS": "Limpar filtros"
-      }
+      },
+      "ERRO_DA_TELA": "Não consegui mostrar as pessoas."
     },
     "COMUM": {
       "TENTAR_DE_NOVO": "Tentar de novo",
@@ -144,7 +149,9 @@
       "NAO_INFORMADO": "Não informado",
       "TRAZER_MINHA_LISTA": "Trazer minha lista",
       "CONVERSAR": "Conversar",
-      "GRUPOS": "Grupos"
+      "GRUPOS": "Grupos",
+      "ERRO_DA_TELA": "Não consegui carregar.",
+      "ENTENDI": "Entendi"
     },
     "GRUPOS": {
       "TODOS": {

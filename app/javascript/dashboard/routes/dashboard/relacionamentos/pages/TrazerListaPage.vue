@@ -40,6 +40,8 @@ const noFim = computed(() =>
   [ETAPAS.TRAZENDO, ETAPAS.PRONTO].includes(tela.etapa.value)
 );
 
+const chegou = computed(() => tela.etapa.value === ETAPAS.PRONTO);
+
 onMounted(() => {
   historico.carregar();
   // `?planilha=` (só em demonstração) já cai no estado pedido, sem clique.
@@ -54,6 +56,11 @@ watch(
     raiz.value?.querySelector('[data-titulo-da-tela]')?.focus();
   }
 );
+
+// Ao chegar no Pronto o histórico já traz a lista recém-trazida no topo.
+watch(chegou, agora => {
+  if (agora) historico.carregar({ silencioso: true });
+});
 
 const verAsPessoas = () => router.push({ name: 'relationships_home' });
 
@@ -145,6 +152,7 @@ const confirmarDesfazer = async () => {
           @reabrir="tela.reabrir"
           @trocar="tela.trocarDestino"
           @trazer="tela.trazer"
+          @escolher-outra="trazerOutra"
           @voltar="tela.voltar"
           @tentar="tela.tentarDeNovo"
         />
@@ -153,11 +161,21 @@ const confirmarDesfazer = async () => {
           v-else-if="noFim"
           :trazendo="trazendo"
           :porcentagem="tela.porcentagem.value"
-          :total="tela.totalTrazido.value"
+          :novas="tela.novasTrazidas.value"
+          :completadas="tela.completadasTrazidas.value"
           :com-erro="tela.erro.value === ERROS.ANDAMENTO"
           @ver="verAsPessoas"
           @outra="trazerOutra"
           @tentar="tela.tentarDeNovo"
+        />
+
+        <HistoricoDeListas
+          v-if="chegou"
+          :listas="historico.listas.value"
+          :carregando="historico.carregando.value"
+          :com-erro="historico.erro.value"
+          @desfazer="abrirDesfazer"
+          @tentar="historico.carregar"
         />
       </div>
     </main>

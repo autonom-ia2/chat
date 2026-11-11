@@ -309,7 +309,7 @@ describe('CampoDeBusca', () => {
     const w = mount(CampoDeBusca, { props: { placeholder: 'Buscar' } });
     const classes = w.get('input').classes();
     expect(classes).toEqual(
-      expect.arrayContaining(['!pl-12', '!pr-12', '!mb-0', 'h-11', 'min-h-11'])
+      expect.arrayContaining(['!pl-12', '!pr-12', '!mb-0', 'h-10'])
     );
   });
 });
@@ -329,13 +329,17 @@ describe('BarraDeControles', () => {
     );
   });
 
-  it('o campo de ordenar tem 44 px de altura, como os outros controles', () => {
+  it('a barra toda tem a altura de campo da casa (h-10), sem forçar 44 px', () => {
     const w = mount(BarraDeControles, {
       props: { ordem: 'ultima_conversa', placeholder: 'Buscar' },
     });
     const campo = w.getComponent(ChoiceSelect);
-    expect(campo.classes()).toContain('[&>button]:min-h-11');
-    expect(campo.classes()).toContain('[&>button]:h-11');
+    expect(campo.props('compact')).toBe(false);
+    expect(campo.classes().join(' ')).not.toContain('min-h-11');
+    const filtros = w.get('[data-relacionamentos="mais-filtros"]');
+    expect(filtros.classes()).toContain('h-10');
+    expect(filtros.classes()).not.toContain('min-h-11');
+    expect(w.get('input').classes()).not.toContain('min-h-11');
   });
 
   it('a busca ocupa a linha inteira no celular; ordem e filtros ficam juntos na de baixo', () => {
@@ -1045,7 +1049,7 @@ describe('DialogoMandarMensagem', () => {
     ).toBe('Você escreve a mensagem no próximo passo.');
   });
 
-  it('quando ninguém pode receber, diz o motivo, sem prometer envio, e desliga o botão', async () => {
+  it('quando ninguém pode receber, diz o motivo, sem prometer envio, e tem um botão só: "Entendi"', async () => {
     const w = await abrir([
       pessoa({ id: 1, opted_out_at: diasAtras(1) }),
       pessoa({ id: 2, opted_out_at: diasAtras(1) }),
@@ -1054,10 +1058,15 @@ describe('DialogoMandarMensagem', () => {
     expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
       'Ninguém aqui pode receber: 2 pediram para não receber, 1 sem telefone.'
     );
-    expect(w.get('[data-confirmar]').attributes('disabled')).toBeDefined();
+    expect(w.get('[data-confirmar]').attributes('disabled')).toBeUndefined();
+    expect(w.get('[data-confirmar]').text()).toBe('Entendi');
+    expect(w.find('[data-cancelar]').exists()).toBe(false);
     expect(
       w.find('[data-relacionamentos="dialogo-mensagem-proximo"]').exists()
     ).toBe(false);
+    await w.get('[data-confirmar]').trigger('click');
+    expect(w.emitted('continuar')).toBeUndefined();
+    expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
   });
 });
 
@@ -1189,14 +1198,32 @@ describe('DialogoEtiqueta', () => {
     await assentar();
   };
 
-  it('só deixa colocar depois de escolher uma etiqueta', async () => {
-    const w = montar();
+  it('sem etiqueta escolhida o botão não fica desligado: o clique diz o que falta e não fecha', async () => {
+    const aplicarEtiqueta = vi.fn();
+    const w = mount(DialogoEtiqueta, {
+      attachTo: document.body,
+      props: {
+        pessoas: lote(3),
+        acoes: { etiquetas: async () => ['feira'], aplicarEtiqueta },
+      },
+    });
     await abrir(w);
-    expect(w.get('[data-confirmar]').attributes('disabled')).toBeDefined();
+    expect(w.get('[data-confirmar]').attributes('disabled')).toBeUndefined();
     expect(w.get('label').text()).toBe('Qual etiqueta?');
+    const aviso = w.get('[data-relacionamentos="etiqueta-falta"]');
+    expect(aviso.attributes('role')).toBe('alert');
+    expect(aviso.text()).toBe('');
+    await w.get('[data-confirmar]').trigger('click');
+    await assentar();
+    expect(aviso.text()).toBe('Escolha uma etiqueta.');
+    expect(aplicarEtiqueta).not.toHaveBeenCalled();
+    expect(w.find('[data-dialogo-falso]').exists()).toBe(true);
+    expect(w.emitted('concluido')).toBeUndefined();
+    expect(document.activeElement).toBe(w.get('button[aria-haspopup]').element);
     w.getComponent(ChoiceSelect).vm.$emit('update:modelValue', 'feira');
     await w.vm.$nextTick();
-    expect(w.get('[data-confirmar]').attributes('disabled')).toBeUndefined();
+    expect(aviso.text()).toBe('');
+    w.unmount();
   });
 
   it('coloca a etiqueta, avisa com a contagem, fecha e conclui', async () => {

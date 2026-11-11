@@ -6,8 +6,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import SeloDeEstado from '../comum/SeloDeEstado.vue';
 import SegundaLinha from './SegundaLinha.vue';
-import { formatarTelefone } from '../../lista/telefone';
-import { falouHa } from '../../lista/tempoRelativo';
+import { segundaLinhaDaPessoa } from '../../lista/segundaLinhaDaPessoa';
 
 // #2894 — uma pessoa na lista. Clicar no nome (ou Enter) abre a ficha: o botão
 // do nome estica a área de clique pela linha toda; a caixa de marcar e o
@@ -23,20 +22,8 @@ const emit = defineEmits(['abrir', 'alternar', 'conversar']);
 
 const { t } = useI18n();
 
-const quandoFalou = computed(() => {
-  const quando = falouHa(props.pessoa.last_activity_at, props.agora);
-  return quando.count === undefined
-    ? t(quando.chave)
-    : t(quando.chave, { count: quando.count }, quando.count);
-});
-
 const partes = computed(() =>
-  [
-    formatarTelefone(props.pessoa.phone_number) ||
-      t('RELACIONAMENTOS.LISTA.LINHA.SEM_TELEFONE'),
-    props.pessoa.additional_attributes?.company_name,
-    quandoFalou.value,
-  ].filter(Boolean)
+  segundaLinhaDaPessoa(props.pessoa, props.agora, t)
 );
 
 const ehCliente = computed(() => props.pessoa.contact_type === 'customer');

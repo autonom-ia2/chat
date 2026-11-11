@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { quandoRelativo } from '../../ficha/formatos';
@@ -19,11 +19,26 @@ const emit = defineEmits(['guardar']);
 const { t } = useI18n();
 const idioma = useIdioma();
 const texto = ref('');
+const erro = ref('');
+const caixa = ref(null);
+const idDoErro = useId();
 
+// Salvar nunca fica desligado por falta de texto: o clique diz o que falta e
+// leva o foco à caixa. Quem trabalha (`guardando`) é o único motivo de espera.
 const guardar = () => {
+  if (props.guardando) return;
   const limpo = texto.value.trim();
-  if (limpo && !props.guardando) emit('guardar', limpo);
+  if (!limpo) {
+    erro.value = t('RELACIONAMENTOS_FICHA.NOTAS.ESCREVA_ANTES');
+    caixa.value?.focus();
+    return;
+  }
+  erro.value = '';
+  emit('guardar', limpo);
 };
+watch(texto, () => {
+  erro.value = '';
+});
 
 // A tela chama depois de guardar com sucesso.
 const limpar = () => {
@@ -39,13 +54,26 @@ const ra = (chave, valores) =>
   <CartaoDaSecao :titulo="ra('TITULO')" data-relacionamentos="notas">
     <form class="flex flex-col gap-3 mb-5" @submit.prevent="guardar">
       <textarea
+        ref="caixa"
         v-model="texto"
         data-relacionamentos="nota-caixa"
+        :aria-invalid="erro ? 'true' : undefined"
+        :aria-describedby="idDoErro"
         rows="3"
         :aria-label="ra('CAMPO')"
         :placeholder="ra('CAMPO')"
         class="w-full p-3 text-base border-0 resize-y rounded-xl bg-n-alpha-black2 text-n-slate-12 outline outline-1 outline-n-weak placeholder:text-n-slate-10 focus:outline-n-brand"
       />
+      <!-- Região de alerta fixa: nasce vazia e recebe o texto depois. -->
+      <p
+        :id="idDoErro"
+        role="alert"
+        data-relacionamentos="nota-erro"
+        class="m-0 -mt-1 text-sm break-words text-n-ruby-11"
+        :class="{ hidden: !erro }"
+      >
+        {{ erro }}
+      </p>
       <Button
         data-relacionamentos="guardar-nota"
         type="submit"
@@ -53,7 +81,6 @@ const ra = (chave, valores) =>
         faded
         class="self-end min-h-11"
         :is-loading="guardando"
-        :disabled="!texto.trim()"
         :label="ra('GUARDAR')"
       />
     </form>

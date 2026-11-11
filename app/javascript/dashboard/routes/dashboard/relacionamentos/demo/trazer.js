@@ -14,8 +14,8 @@ import { SITUACOES_DA_LISTA } from '../trazer/prazo';
 
 export const DURACAO_DA_TRAZIDA_MS = 6000;
 const PORCENTAGEM_TOTAL = 100;
-const NOME_DO_ARQUIVO_DE_EXEMPLO = 'Planilha de exemplo.xlsx';
-const QUEM_TROUXE = 'Marina Dornelaz';
+const NOME_DO_ARQUIVO_DE_EXEMPLO = 'Clientes 2025.xlsx';
+const QUEM_TROUXE = 'Marina Pavanelli';
 
 const RESUMO = { total: 200, novas: 180, completadas: 15, comProblema: 5 };
 
@@ -196,14 +196,14 @@ export const historicoInicial = (agora, estado = 'cheio') =>
     : [
         {
           id: 'trazida-antiga-1',
-          arquivo: 'Clientes 2025.xlsx',
+          arquivo: 'Clientes de setembro.xlsx',
           quando: agora - 3 * DIA_EM_MS,
           quem: QUEM_TROUXE,
           situacao: SITUACOES_DA_LISTA.PRONTO,
-          total: 195,
-          novas: 180,
-          completadas: 15,
-          receberamCampanha: 3,
+          total: 132,
+          novas: 120,
+          completadas: 12,
+          ficam: 16,
         },
         {
           id: 'trazida-antiga-2',
@@ -214,7 +214,7 @@ export const historicoInicial = (agora, estado = 'cheio') =>
           total: 48,
           novas: 48,
           completadas: 0,
-          receberamCampanha: 0,
+          ficam: 0,
         },
         {
           id: 'trazida-antiga-3',
@@ -225,11 +225,16 @@ export const historicoInicial = (agora, estado = 'cheio') =>
           total: 62,
           novas: 55,
           completadas: 7,
-          receberamCampanha: 2,
+          ficam: 14,
         },
       ];
 
 export const quemTrouxeNaDemo = () => QUEM_TROUXE;
+
+// Na demonstração, 1 de cada 10 pessoas novas já tinha conversado: "Clientes
+// 2025.xlsx" (180 novas) fica com 18 que ficam ao desfazer.
+const UMA_EM_DEZ = 10;
+export const ficamNaTrazida = novas => Math.floor(novas / UMA_EM_DEZ);
 
 // De 0 a 100 em DURACAO_DA_TRAZIDA_MS, sempre igual para o mesmo relógio.
 export const porcentagemDaTrazida = (inicio, agora) =>

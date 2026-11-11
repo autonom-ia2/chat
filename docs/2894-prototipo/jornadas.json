@@ -350,6 +350,35 @@
           "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=carregando",
           "esperar": "[data-relacionamentos=\"carregando\"]",
           "pausa": 800
+        },
+        {
+          "nome": "nunca-trouxe",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=vazio",
+          "esperar": "[data-relacionamentos=\"historico\"] [data-relacionamentos=\"vazio\"]",
+          "pausa": 1000,
+          "pagina_inteira": true
+        },
+        {
+          "nome": "continuar-sem-responder",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio",
+          "passos": [
+            {
+              "esperar": "[data-relacionamentos=\"historico\"] [data-lista]"
+            },
+            {
+              "clicar": "[data-relacionamentos=\"usar-exemplo\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"pergunta\"][data-pergunta=\"clientes\"]"
+            },
+            {
+              "clicar": "[data-relacionamentos=\"continuar\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"erro-da-pergunta\"]"
+            }
+          ],
+          "pausa": 800
         }
       ]
     }

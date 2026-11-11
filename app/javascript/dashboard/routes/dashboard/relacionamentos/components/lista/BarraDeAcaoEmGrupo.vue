@@ -90,7 +90,8 @@ const itensDoMenu = computed(() => [
       {{ frase }}
     </p>
     <Button
-      class="order-3 flex-1 min-h-11 min-w-0 whitespace-nowrap sm:order-2 sm:flex-none"
+      size="lg"
+      class="order-3 flex-1 min-w-0 whitespace-nowrap sm:order-2 sm:flex-none"
       icon="i-lucide-send"
       data-relacionamentos="mandar-mensagem"
       :label="t('RELACIONAMENTOS.LISTA.BARRA.MANDAR_MENSAGEM')"
@@ -99,7 +100,8 @@ const itensDoMenu = computed(() => [
     <Button
       slate
       faded
-      class="hidden min-h-11 sm:order-3 sm:inline-flex"
+      size="lg"
+      class="hidden sm:order-3 sm:inline-flex"
       icon="i-lucide-kanban"
       data-relacionamentos="criar-cards"
       :label="t('RELACIONAMENTOS.LISTA.BARRA.CRIAR_CARDS')"
@@ -108,7 +110,8 @@ const itensDoMenu = computed(() => [
     <Button
       slate
       faded
-      class="hidden min-h-11 sm:order-4 sm:inline-flex"
+      size="lg"
+      class="hidden sm:order-4 sm:inline-flex"
       icon="i-lucide-tag"
       data-relacionamentos="etiqueta"
       :label="t('RELACIONAMENTOS.LISTA.BARRA.ETIQUETA')"
@@ -122,7 +125,8 @@ const itensDoMenu = computed(() => [
     <Button
       ghost
       slate
-      class="order-2 size-11 sm:order-6 sm:ms-auto"
+      size="lg"
+      class="order-2 sm:order-6 sm:ms-auto"
       icon="i-lucide-x"
       :aria-label="t('RELACIONAMENTOS.LISTA.MARCADAS.DESMARCAR')"
       @click="emit('fechar')"

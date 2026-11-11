@@ -45,7 +45,6 @@ const linhas = computed(() => {
       <Button
         data-foco
         size="lg"
-        class="!min-h-12 !rounded-xl"
         icon="i-lucide-external-link"
         :label="ra('ABRIR_NO_CRM')"
         @click="emit('abrirNoCrm')"

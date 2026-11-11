@@ -26,7 +26,7 @@ const { t } = useI18n();
       v-if="temMais"
       slate
       faded
-      class="min-h-11"
+      size="lg"
       data-relacionamentos="mostrar-mais"
       :is-loading="carregando"
       :label="t('RELACIONAMENTOS.LISTA.MOSTRAR_MAIS.BOTAO')"

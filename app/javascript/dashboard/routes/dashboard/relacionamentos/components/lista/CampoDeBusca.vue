@@ -75,7 +75,7 @@ onBeforeUnmount(parar);
       autocomplete="off"
       :placeholder="textoDoCampo"
       :aria-label="t('RELACIONAMENTOS.LISTA.BUSCA.ROTULO')"
-      class="w-full h-11 min-h-11 !mb-0 rounded-xl border-0 bg-n-alpha-black2 text-base text-n-slate-12 outline outline-1 -outline-offset-1 outline-n-weak placeholder:text-n-slate-10 focus:outline-2 focus:outline-n-brand !pl-12 !pr-12 [&::-webkit-search-cancel-button]:hidden"
+      class="w-full h-10 !mb-0 rounded-xl border-0 bg-n-alpha-black2 text-base text-n-slate-12 outline outline-1 -outline-offset-1 outline-n-weak placeholder:text-n-slate-10 focus:outline-2 focus:outline-n-brand !pl-12 !pr-12 [&::-webkit-search-cancel-button]:hidden"
       @input="aoDigitar"
       @keydown.enter.prevent="avisar"
       @keydown.esc="limpar"

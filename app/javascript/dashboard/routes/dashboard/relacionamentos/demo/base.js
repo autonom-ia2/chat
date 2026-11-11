@@ -70,7 +70,8 @@ const NOMES = [
   'Tiago',
   'Vânia',
 ];
-// Sobrenomes inventados: não são de família nenhuma.
+// Sobrenomes inventados: não são de família nenhuma. São 48 para a primeira
+// tela não repetir; os da equipe (Valtorini, Zanquetta, Pavanelli) ficam de fora.
 const SOBRENOMES = [
   'Albuquerino',
   'Brandolim',
@@ -86,27 +87,82 @@ const SOBRENOMES = [
   'Mendonzela',
   'Nogueirão',
   'Ourivesco',
+  'Abreuzal',
+  'Bandeirol',
+  'Cantarelli',
+  'Dantasco',
+  'Evangelisti',
+  'Ferragudo',
+  'Galvanini',
+  'Hermesto',
+  'Ipanemo',
+  'Jaguaribo',
+  'Kalinoski',
+  'Lacerdino',
+  'Maranhão',
+  'Nascimbene',
+  'Orsolini',
+  'Pimenteira',
+  'Quaresmo',
+  'Ribamar',
+  'Saldanhão',
+  'Tavolari',
+  'Urbanelli',
+  'Vilaverde',
+  'Xavantino',
+  'Zambelli',
+  'Aguiardo',
+  'Bragantino',
+  'Cordeiral',
+  'Domingueiro',
+  'Estrelino',
+  'Fontanelli',
+  'Gusmaral',
+  'Heitorato',
+  'Itapemirim',
+  'Juncalho',
 ];
-const TIPOS_DE_EMPRESA = [
-  'Padaria',
-  'Oficina',
-  'Clínica',
-  'Escritório',
-  'Mercearia',
-  'Estúdio',
-  'Transportes',
-  'Construtora',
-  'Ótica',
-  'Papelaria',
-  'Farmácia',
-  'Gráfica',
-  'Escola',
-  'Consultoria',
-  'Pet Shop',
-  'Marcenaria',
-  'Lavanderia',
-  'Floricultura',
-  'Academia',
+// Empresas: metade com sobrenome (um por empresa, nunca repetido) e metade com
+// nome de fantasia. A ordem sorteada (`tiposDeEmpresa`) espalha as duas.
+const NOMES_DE_EMPRESA = [
+  'Mercearia Ourivesco',
+  'Padaria Bom Dia',
+  'Oficina Carvalhedo',
+  'Café Bem-Te-Vi',
+  'Clínica Esteveira',
+  'Oficina do Centro',
+  'Escritório Lourenzatto',
+  'Costura Fina',
+  'Transportes Dornelaz',
+  'Mercado da Esquina',
+  'Construtora Figueirão',
+  'Papelaria Ponto Certo',
+  'Ótica Hortêncio',
+  'Clínica Bem Viver',
+  'Farmácia Imbirussu',
+  'Floricultura Primavera',
+  'Gráfica Jacobelli',
+  'Academia Movimento',
+  'Estúdio Mendonzela',
+  'Lavanderia Brilho',
+  'Papelaria Guedelha',
+  'Pet Shop Amigo Fiel',
+  'Padaria Abreuzal',
+  'Ótica Visão Clara',
+  'Consultoria Cantarelli',
+  'Marcenaria Pé de Ipê',
+  'Escola Evangelisti',
+  'Escola Pequeno Passo',
+  'Lavanderia Galvanini',
+  'Gráfica Rápida Cor',
+  'Academia Jaguaribo',
+  'Consultoria Norte Sul',
+  'Marcenaria Nascimbene',
+  'Floricultura Orsolini',
+  'Pet Shop Tavolari',
+  'Clínica Urbanelli',
+  'Oficina Vilaverde',
+  'Padaria Zambelli',
 ];
 const CIDADES = [
   'São Paulo',
@@ -144,8 +200,15 @@ const apelido = (texto, ligacao) =>
     .filter(Boolean)
     .join(ligacao);
 
-const nomeDaPessoa = ordem =>
-  `${NOMES[ordem % NOMES.length]} ${SOBRENOMES[Math.floor(ordem / NOMES.length)]}`;
+// Nome + sobrenome sem repetir o par: o sobrenome anda `PASSO_DO_SOBRENOME`
+// casas a cada volta pelos nomes, e assim as 280 pessoas usam os 48 sobrenomes.
+const PASSO_DO_SOBRENOME = 3;
+const nomeDaPessoa = ordem => {
+  const volta = Math.floor(ordem / NOMES.length);
+  const sobrenome =
+    SOBRENOMES[(ordem + volta * PASSO_DO_SOBRENOME) % SOBRENOMES.length];
+  return `${NOMES[ordem % NOMES.length]} ${sobrenome}`;
+};
 
 const telefoneFalso = i => {
   const bloco = PRIMEIRO_BLOCO_FICTICIO + i * PASSO_DO_BLOCO;
@@ -271,8 +334,7 @@ const papeisDasEmpresas = () =>
     return 'vazia';
   });
 
-const nomeDaEmpresa = k =>
-  `${TIPOS_DE_EMPRESA[k % TIPOS_DE_EMPRESA.length]} ${SOBRENOMES[(k * 3) % SOBRENOMES.length]}`;
+const nomeDaEmpresa = k => NOMES_DE_EMPRESA[k];
 
 const esqueletoDasEmpresas = agora => {
   const papeis = papeisDasEmpresas();

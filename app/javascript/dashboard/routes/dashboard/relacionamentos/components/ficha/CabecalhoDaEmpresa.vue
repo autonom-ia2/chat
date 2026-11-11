@@ -79,7 +79,7 @@ const { t } = useI18n();
         <Button
           data-relacionamentos="mandar-mensagem"
           size="lg"
-          class="w-full sm:w-auto !min-h-12 !rounded-xl whitespace-nowrap shrink-0"
+          class="w-full sm:w-auto whitespace-nowrap shrink-0"
           icon="i-lucide-send"
           :label="t('RELACIONAMENTOS_FICHA.EMPRESA.MANDAR')"
           @click="emit('mandarMensagem')"

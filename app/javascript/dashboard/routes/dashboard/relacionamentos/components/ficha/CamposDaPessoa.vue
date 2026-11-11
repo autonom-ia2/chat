@@ -7,7 +7,8 @@ import CampoDeTexto from './CampoDeTexto.vue';
 
 // #2894 — os campos da gaveta "Alterar informações". Não altera nada: cada
 // mudança sobe por um evento e quem usa cria o formulário novo. As redes sociais
-// ficam recolhidas atrás de um botão.
+// ficam recolhidas atrás de um botão (rótulo na mesma margem dos campos; a seta
+// vai depois do texto).
 defineProps({
   formulario: { type: Object, required: true },
   erros: { type: Object, default: () => ({}) },
@@ -56,15 +57,15 @@ const CAMPOS_DE_TEXTO = [
         data-relacionamentos="redes-sociais"
         :aria-expanded="redesAbertas ? 'true' : 'false'"
         :aria-controls="idDasRedes"
-        class="inline-flex items-center gap-2 text-base font-medium text-start min-h-11 text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        class="inline-flex items-center gap-2 p-0 text-base font-medium bg-transparent border-0 text-start min-h-11 text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
         @click="redesAbertas = !redesAbertas"
       >
+        {{ ra('REDES') }}
         <span
           class="size-4 i-lucide-chevron-right rtl:rotate-180"
           :class="{ 'rotate-90 rtl:rotate-90': redesAbertas }"
           aria-hidden="true"
         />
-        {{ ra('REDES') }}
       </button>
       <div v-show="redesAbertas" :id="idDasRedes" class="flex flex-col gap-4">
         <CampoDeTexto

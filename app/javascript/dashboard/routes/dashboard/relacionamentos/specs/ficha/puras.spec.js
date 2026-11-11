@@ -178,19 +178,30 @@ describe('informações da pessoa', () => {
     const linhas = linhasDaPessoa(pessoa);
     const por = chave => linhas.find(l => l.chave === chave);
     expect(por('cpf')).toMatchObject({ valor: '529.982.247-25', copiar: true });
-    expect(por('empresa').valor).toBe('');
+    // A empresa fica só no cabeçalho.
+    expect(por('empresa')).toBeUndefined();
     expect(por('conta:melhor_horario')).toMatchObject({
       rotulo: 'Melhor horário',
       valor: 'Tarde',
     });
     // Telefone e e-mail ficam só no cabeçalho.
-    expect(linhas.map(l => l.chave).slice(0, 3)).toEqual([
-      'cpf',
-      'cidade',
-      'empresa',
-    ]);
+    expect(linhas.map(l => l.chave).slice(0, 2)).toEqual(['cpf', 'cidade']);
     expect(por('telefone')).toBeUndefined();
     expect(por('email')).toBeUndefined();
+  });
+
+  it('mesmo com empresa preenchida, Informações não a repete', () => {
+    const comEmpresa = {
+      ...pessoa,
+      additional_attributes: {
+        ...pessoa.additional_attributes,
+        company_name: 'Padaria Dornelaz',
+      },
+    };
+    expect(linhasDaPessoa(comEmpresa).map(l => l.chave)).not.toContain(
+      'empresa'
+    );
+    expect(formularioDaPessoa(comEmpresa).empresa).toBe('Padaria Dornelaz');
   });
 
   it('o nome das informações da conta leva acento', () => {
@@ -318,6 +329,17 @@ describe('texto da ficha não supõe gênero', () => {
       folhas(catalogo).forEach(frase =>
         expect(palavrasDe(frase).filter(p => proibidas.includes(p))).toEqual([])
       );
+    }
+  );
+
+  it.each(['en', 'pt_BR'])(
+    'em %s o erro de tela inteira não repete "tente de novo" (o botão já diz)',
+    lingua => {
+      const { ESTADOS } = JSON.parse(
+        ler(`${raiz}/i18n/locale/${lingua}/relacionamentosFicha.json`)
+      ).RELACIONAMENTOS_FICHA;
+      expect(ESTADOS.ERRO.toLowerCase()).not.toContain('tente de novo');
+      expect(ESTADOS.ERRO.toLowerCase()).not.toContain('try again');
     }
   );
 

@@ -7,7 +7,7 @@ import DialogoDaFicha from './DialogoDaFicha.vue';
 // #2894 — "Mandar mensagem" da empresa: o mesmo que o diálogo da lista (quem
 // recebe pelo nome, quem fica de fora com o motivo; mesma regra e mesmas
 // frases). O botão do cabeçalho abre sempre este diálogo: se ninguém pode
-// receber, ele diz quem e por quê e só o Continuar fica desligado. Quem escreve a
+// receber (ou a empresa não tem pessoas), ele só explica e traz um botão "Entendi". Quem escreve a
 // mensagem é o passo seguinte, que no protótipo só avisa.
 const props = defineProps({
   pessoas: { type: Array, required: true },
@@ -32,7 +32,8 @@ defineExpose({
     :titulo="t('RELACIONAMENTOS.LISTA.MENSAGEM.TITULO')"
     :confirmar="t('RELACIONAMENTOS.COMUM.CONTINUAR')"
     :cancelar="t('RELACIONAMENTOS.COMUM.CANCELAR')"
-    :desligado="conta.recebem === 0"
+    :so-entendi="conta.recebem === 0"
+    :entendi="t('RELACIONAMENTOS_FICHA.EMPRESA.MENSAGEM.ENTENDI')"
     marca-confirmar="mandar-mensagem-continuar"
     @confirm="emit('continuar')"
   >

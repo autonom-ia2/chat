@@ -163,14 +163,24 @@ describe('ListaPage: largura e respiro', () => {
 
   it('deixa respiro embaixo para a última linha não ficar atrás da barra nem do botão do app', async () => {
     const w = await montar();
-    expect(w.get('main > div').classes()).toContain('pb-24');
+    expect(w.get('main > div').classes()).toEqual(
+      expect.arrayContaining(['pb-24', 'md:pb-10'])
+    );
+  });
+
+  it('com gente marcada a lista ganha folga extra do tamanho da barra', async () => {
+    const w = await montar();
+    await w.get(`${marca('marcar')} input`).setValue(true);
+    const classes = w.get('main > div').classes();
+    expect(classes).toEqual(expect.arrayContaining(['pb-48', 'md:pb-28']));
+    expect(classes).not.toContain('pb-24');
   });
 
   it('a barra de ação deixa livre o canto do botão do menu do app no celular', async () => {
     const w = await montar();
     await w.get(`${marca('marcar')} input`).setValue(true);
     expect(w.get(marca('barra')).classes()).toEqual(
-      expect.arrayContaining(['ms-[72px]', 'sm:ms-0'])
+      expect.arrayContaining(['ms-20', 'md:ms-0'])
     );
   });
 });
@@ -320,7 +330,7 @@ describe('ListaPage: cheia', () => {
   it('?demo=desligado mostra o erro com "Tentar de novo" e o marcador do robô', async () => {
     const w = await montar({ demo: null });
     expect(textoDe(w, marca('erro'))).toContain(
-      'Não consegui carregar. Tente de novo.'
+      'Não consegui mostrar as pessoas.'
     );
     expect(w.get(`${marca('erro')} button`).exists()).toBe(true);
   });
@@ -581,7 +591,10 @@ describe('ListaPage: marcar e agir em grupo', () => {
     expect(textoDe(w, marca('dialogo-mensagem'))).toBe(
       'Ninguém aqui pode receber: 3 pediram para não receber.'
     );
-    await w.get('[data-cancelar]').trigger('click');
+    expect(w.get('[data-confirmar]').text()).toBe('Entendi');
+    expect(w.find('[data-cancelar]').exists()).toBe(false);
+    await w.get('[data-confirmar]').trigger('click');
+    expect(useAlert).not.toHaveBeenCalled();
     await pilula(w, 'clientes').trigger('click');
     await assentar();
     await marcar(w, 2);
@@ -763,6 +776,25 @@ describe('ListaPage: conta vazia, erro', () => {
     expect(linhas(w)).toHaveLength(0);
   });
 
+  it('abaixo do convite, a conta vazia mostra a lista de exemplo apagada, sem nada para clicar', async () => {
+    const w = await montar({ demo: 'vazio' });
+    const exemplo = w.get(marca('linhas-de-exemplo'));
+    expect(exemplo.attributes('aria-hidden')).toBe('true');
+    expect(exemplo.findAll('[data-linha-de-exemplo]')).toHaveLength(5);
+    expect(exemplo.text()).toContain('Sua lista vai ficar assim:');
+    expect(exemplo.find('button, a, input').exists()).toBe(false);
+    expect(w.findAll('button')).toHaveLength(1);
+    const html = w.html();
+    expect(html.indexOf('data-heroi-frase')).toBeLessThan(
+      html.indexOf('linhas-de-exemplo')
+    );
+  });
+
+  it('com gente na conta não há lista de exemplo', async () => {
+    const w = await montar();
+    expect(w.find(marca('linhas-de-exemplo')).exists()).toBe(false);
+  });
+
   it('a conta vazia tem um botão só, "Trazer minha lista", e ele leva a trazer', async () => {
     const w = await montar({ demo: 'vazio' });
     const botoes = w
@@ -790,7 +822,7 @@ describe('ListaPage: conta vazia, erro', () => {
     const w = await montar({ demo: null });
     expect(w.find(marca('carregando')).exists()).toBe(false);
     expect(textoDe(w, marca('erro'))).toContain(
-      'Não consegui carregar. Tente de novo.'
+      'Não consegui mostrar as pessoas.'
     );
     expect(w.get(marca('erro')).attributes('role')).toBe('alert');
     await w.get(`${marca('erro')} button`).trigger('click');

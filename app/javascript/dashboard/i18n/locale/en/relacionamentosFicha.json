@@ -21,7 +21,8 @@
       "CONVERSAR_COM": "Chat with {nome}",
       "MENSAGEM": {
         "AVISO": "I will open the message for these people.",
-        "SEM_PESSOAS": "This company has no people yet."
+        "SEM_PESSOAS": "This company has no people yet.",
+        "ENTENDI": "Got it"
       }
     },
     "VOLTAR": {
@@ -34,7 +35,7 @@
       "NAO_ACHEI_PESSOA": "I could not find this person.",
       "NAO_ACHEI_EMPRESA": "I could not find this company.",
       "VOLTAR_PARA_LISTA": "Back to the list",
-      "ERRO": "I could not open this profile. Try again."
+      "ERRO": "I could not open this profile."
     },
     "CABECALHO": {
       "CLIENTE_DESDE": "Customer since {data}",
@@ -128,7 +129,8 @@
       "GUARDADA": "Note saved.",
       "ERRO": "I could not save the note. Try again.",
       "VAZIO": "No notes yet.",
-      "POR": "{autor} · {quando}"
+      "POR": "{autor} · {quando}",
+      "ESCREVA_ANTES": "Write the note before saving."
     },
     "ARQUIVOS": {
       "TITULO": "Files",
@@ -146,7 +148,6 @@
       "VAZIO": "There is no more information yet.",
       "CPF": "Personal tax ID",
       "CIDADE": "City",
-      "EMPRESA": "Company",
       "REDES": "Social networks",
       "CNPJ": "Company tax ID",
       "SITE": "Website",

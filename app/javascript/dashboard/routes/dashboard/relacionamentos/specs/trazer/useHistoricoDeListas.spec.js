@@ -27,7 +27,7 @@ const montar = fonteParcial => {
     previaDoDesfazer: vi.fn(async () => ({
       tira: 180,
       devolve: 15,
-      receberamCampanha: 3,
+      ficam: 18,
     })),
     desfazer: vi.fn(async () => ({})),
     ...fonteParcial,
@@ -108,7 +108,7 @@ describe('desfazer', () => {
     expect(historico.previa.value).toEqual({
       tira: 180,
       devolve: 15,
-      receberamCampanha: 3,
+      ficam: 18,
     });
   });
 

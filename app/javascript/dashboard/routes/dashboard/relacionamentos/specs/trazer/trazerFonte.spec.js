@@ -78,7 +78,7 @@ describe('ler', () => {
 
   it('a planilha de exemplo (sem arquivo) tem nome próprio', async () => {
     const { fonte } = fonteComRelogio();
-    expect((await fonte.ler(null)).arquivo).toBe('Planilha de exemplo.xlsx');
+    expect((await fonte.ler(null)).arquivo).toBe('Clientes 2025.xlsx');
   });
 
   it('é sempre a mesma leitura', async () => {
@@ -192,9 +192,10 @@ describe('historico', () => {
       'pronto',
     ]);
     expect(listas[0]).toMatchObject({
-      arquivo: 'Clientes 2025.xlsx',
-      total: 195,
+      arquivo: 'Clientes de setembro.xlsx',
+      total: 132,
     });
+    expect(listas.map(l => l.arquivo)).not.toContain('Clientes 2025.xlsx');
     expect(listas[0].quando).toBe(AGORA - 3 * DIA);
   });
 
@@ -203,14 +204,13 @@ describe('historico', () => {
     expect(await fonte.historico()).toEqual([]);
   });
 
-  it('a lista antiga pronta sabe quantos saem, voltam e já receberam campanha', async () => {
+  it('a lista antiga pronta sabe quantos saem, quantos ficam aqui e quantos voltam ao que eram', async () => {
     const { fonte } = fonteComRelogio();
     const [pronta] = await fonte.historico();
-    expect(await fonte.previaDoDesfazer(pronta.id)).toEqual({
-      tira: 180,
-      devolve: 15,
-      receberamCampanha: 3,
-    });
+    const previa = await fonte.previaDoDesfazer(pronta.id);
+    expect(previa).toEqual({ tira: 104, ficam: 16, devolve: 12 });
+    expect(previa.tira + previa.ficam + previa.devolve).toBe(pronta.total);
+    expect(previa.receberamCampanha).toBeUndefined();
   });
 });
 
@@ -220,6 +220,22 @@ describe('trazer e andamento', () => {
     return fonte.trazer(id);
   };
 
+  it('a lista recém-trazida entra no topo, com a prévia da planilha de exemplo', async () => {
+    const { fonte } = fonteComRelogio();
+    const { trazidaId } = await trazerUma(fonte);
+    const [nova] = await fonte.historico();
+    expect(nova).toMatchObject({
+      id: trazidaId,
+      arquivo: 'Clientes 2025.xlsx',
+      total: 195,
+    });
+    expect(await fonte.previaDoDesfazer(trazidaId)).toEqual({
+      tira: 162,
+      ficam: 18,
+      devolve: 15,
+    });
+  });
+
   it('sobe de 0 a 100 em cerca de 6 segundos e termina pronto', async () => {
     const { fonte, relogio } = fonteComRelogio();
     const { trazidaId } = await trazerUma(fonte);
@@ -227,6 +243,8 @@ describe('trazer e andamento', () => {
       porcentagem: 0,
       situacao: 'trazendo',
       total: 195,
+      novas: 180,
+      completadas: 15,
     });
     relogio.agora = AGORA + DURACAO_DA_TRAZIDA_MS * 0.4;
     expect(await fonte.andamento(trazidaId)).toMatchObject({
@@ -285,9 +303,9 @@ describe('desfazer', () => {
     expect(antiga.situacao).toBe('pronto');
     const previa = await fonte.previaDoDesfazer(antiga.id);
     const primeira = await fonte.previaDoDesfazer('trazida-antiga-1');
-    expect(previa).toEqual({ tira: 55, devolve: 7, receberamCampanha: 2 });
+    expect(previa).toEqual({ tira: 41, ficam: 14, devolve: 7 });
     expect(previa).not.toEqual(primeira);
-    expect(previa.tira + previa.devolve).toBe(antiga.total);
+    expect(previa.tira + previa.ficam + previa.devolve).toBe(antiga.total);
     await fonte.desfazer(antiga.id);
     const depois = (await fonte.historico()).find(l => l.id === antiga.id);
     expect(depois.situacao).toBe('desfeito');

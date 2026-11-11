@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
@@ -56,8 +56,28 @@ const preenchido = computed(() => {
   return nomeValido(valor.value);
 });
 
+const formulario = ref(null);
+const erro = ref('');
+const QUE_FALTA = {
+  telefone: 'RELACIONAMENTOS_TRAZER.PRECISAM.QUE_FALTA.TELEFONE',
+  email: 'RELACIONAMENTOS_TRAZER.PRECISAM.QUE_FALTA.EMAIL',
+  nome: 'RELACIONAMENTOS_TRAZER.PRECISAM.QUE_FALTA.NOME',
+};
+watch(valor, () => {
+  erro.value = '';
+});
+
+// Salvar fica sempre ligado: campo sem o que falta não salva, diz o que falta
+// e leva o foco ao campo.
 const guardar = () => {
-  if (!preenchido.value || props.ocupado) return;
+  if (props.ocupado) return;
+  if (!preenchido.value) {
+    erro.value = t('RELACIONAMENTOS_TRAZER.PRECISAM.ERRO_PREENCHER', {
+      campo: t(QUE_FALTA[campo.value]),
+    });
+    formulario.value?.querySelector('input')?.focus();
+    return;
+  }
   const texto = campo.value === 'telefone' ? valor.value : valor.value.trim();
   emit('guardar', props.problema.linha, texto);
 };
@@ -86,16 +106,23 @@ const apoioDaLinha = computed(() =>
       })
 );
 
-// Cada linha repetida mostra o que a distingue da outra: telefone e e-mail.
+// Cada linha repetida mostra o que a distingue da outra: o telefone (ou, sem
+// telefone, o e-mail) é o título do cartão; o e-mail vem logo abaixo.
 const detalheDaLinha = linha => {
   const dados = props.problema.duplicadas?.find(item => item.linha === linha);
   if (!dados) return null;
+  if (dados.telefone) {
+    return {
+      titulo: dados.telefone,
+      email: dados.email ? partesDoEmail(dados.email) : [],
+    };
+  }
   return {
-    telefone:
-      dados.telefone || t('RELACIONAMENTOS_TRAZER.PRECISAM.SEM_TELEFONE'),
-    email: dados.email
+    titulo: '',
+    emailNoTitulo: dados.email
       ? partesDoEmail(dados.email)
-      : [t('RELACIONAMENTOS_TRAZER.PRECISAM.SEM_EMAIL')],
+      : [t('RELACIONAMENTOS_TRAZER.PRECISAM.SEM_TELEFONE')],
+    email: [],
   };
 };
 const naPlanilha = computed(() =>
@@ -121,7 +148,12 @@ const doTexto = computed(
     class="flex flex-col gap-4 p-5 border rounded-2xl border-n-weak bg-n-solid-1"
   >
     <template v-if="aberto">
-      <form class="flex flex-col gap-4" novalidate @submit.prevent="guardar">
+      <form
+        ref="formulario"
+        class="flex flex-col gap-4"
+        novalidate
+        @submit.prevent="guardar"
+      >
         <div class="flex flex-col gap-1">
           <p class="m-0 text-lg font-semibold text-n-slate-12">
             {{ textoDoProblema }}
@@ -161,14 +193,28 @@ const doTexto = computed(
             :disabled="ocupado"
             @click="emit('guardar', problema.linha, linha)"
           >
-            <span class="text-base font-medium text-n-slate-12">
-              {{ t('RELACIONAMENTOS_TRAZER.PRECISAM.FICAR_COM', { linha }) }}
-            </span>
             <template v-if="detalheDaLinha(linha)">
-              <span class="text-sm text-n-slate-11 tabular-nums">
-                {{ detalheDaLinha(linha).telefone }}
+              <span
+                data-relacionamentos="titulo-do-cartao"
+                class="text-base font-medium break-words text-n-slate-12 tabular-nums"
+              >
+                <template v-if="detalheDaLinha(linha).titulo">
+                  {{ detalheDaLinha(linha).titulo }}
+                </template>
+                <template v-else>
+                  <template
+                    v-for="(parte, posicao) in detalheDaLinha(linha)
+                      .emailNoTitulo"
+                    :key="posicao"
+                  >
+                    <wbr v-if="posicao" />{{ parte }}
+                  </template>
+                </template>
               </span>
-              <span class="text-sm break-words text-n-slate-11">
+              <span
+                v-if="detalheDaLinha(linha).email.length"
+                class="text-sm break-words text-n-slate-11"
+              >
                 <template
                   v-for="(parte, posicao) in detalheDaLinha(linha).email"
                   :key="posicao"
@@ -177,6 +223,20 @@ const doTexto = computed(
                 </template>
               </span>
             </template>
+            <span
+              v-else
+              data-relacionamentos="titulo-do-cartao"
+              class="text-base font-medium text-n-slate-12"
+            >
+              {{ t('RELACIONAMENTOS_TRAZER.PRECISAM.FICAR_COM', { linha }) }}
+            </span>
+            <span class="text-xs text-n-slate-11">
+              {{
+                t('RELACIONAMENTOS_TRAZER.PRECISAM.LINHA_DA_PLANILHA', {
+                  linha,
+                })
+              }}
+            </span>
             <span
               data-relacionamentos="ficar-com-esta"
               class="flex items-center gap-1 mt-1 text-sm font-medium text-n-blue-11"
@@ -189,21 +249,28 @@ const doTexto = computed(
             </span>
           </button>
         </div>
+        <p
+          v-if="erro"
+          data-relacionamentos="erro-do-campo"
+          role="alert"
+          class="m-0 text-sm font-medium text-n-ruby-11"
+        >
+          {{ erro }}
+        </p>
         <div class="flex flex-wrap items-center gap-3">
           <Button
             v-if="campo"
             type="submit"
-            slate
-            class="min-h-11"
+            size="lg"
             :label="t('RELACIONAMENTOS_TRAZER.PRECISAM.GUARDAR')"
-            :disabled="!preenchido || ocupado"
+            :disabled="ocupado"
           />
           <Button
             slate
             faded
             type="button"
+            size="lg"
             data-relacionamentos="deixar-de-fora"
-            class="min-h-11"
             :label="t('RELACIONAMENTOS_TRAZER.PRECISAM.DEIXAR_DE_FORA')"
             :disabled="ocupado"
             @click="emit('deixarDeFora', problema.linha)"

@@ -21,8 +21,10 @@ const { conta, frases, alguemRecebe } = useFrasesDaMensagem(
   () => props.pessoas
 );
 
-const continuar = () => {
-  emit('continuar', conta.value.recebem);
+// Sem ninguém para receber não há o que continuar: o diálogo só explica, e o
+// único botão ("Entendi") fecha.
+const confirmar = () => {
+  if (alguemRecebe.value) emit('continuar', conta.value.recebem);
   dialogo.value?.close();
 };
 
@@ -34,10 +36,16 @@ defineExpose({ abrir: () => dialogo.value?.open() });
     ref="dialogo"
     type="edit"
     width="md"
-    :confirm-button-label="t('RELACIONAMENTOS.COMUM.CONTINUAR')"
+    :confirm-button-label="
+      t(
+        alguemRecebe
+          ? 'RELACIONAMENTOS.COMUM.CONTINUAR'
+          : 'RELACIONAMENTOS.COMUM.ENTENDI'
+      )
+    "
     :cancel-button-label="t('RELACIONAMENTOS.COMUM.CANCELAR')"
-    :disable-confirm-button="conta.recebem === 0"
-    @confirm="continuar"
+    :show-cancel-button="alguemRecebe"
+    @confirm="confirmar"
   >
     <TituloDoDialogo :titulo="t('RELACIONAMENTOS.LISTA.MENSAGEM.TITULO')" />
     <div class="flex flex-col gap-2">

@@ -114,9 +114,7 @@ describe('TelaEnviar', () => {
   it('erro de leitura: frase e botão que emite "tentar"', async () => {
     const w = mount(TelaEnviar, { props: { erro: 'leitura' } });
     const erro = marca(w, 'erro');
-    expect(erro.text()).toContain(
-      'Não consegui ler esta planilha. Tente de novo.'
-    );
+    expect(erro.text()).toContain('Não consegui ler esta planilha.');
     await erro.get('button').trigger('click');
     expect(w.emitted('tentar')).toHaveLength(1);
     expect(marca(w, 'soltar-arquivo').exists()).toBe(true);
@@ -238,9 +236,12 @@ describe('PerguntaDaVez', () => {
     ).toEqual(['Da pessoa', 'Da empresa', 'Não usar']);
   });
 
-  it('Continuar fica desabilitado até escolher e emite ao clicar', async () => {
+  it('Continuar nunca fica desligado por falta de resposta: o clique diz o que falta e emite só depois de escolher', async () => {
     const w = montar({ id: 'clientes' });
-    expect(marca(w, 'continuar').attributes('disabled')).toBeDefined();
+    expect(marca(w, 'continuar').attributes('disabled')).toBeUndefined();
+    await marca(w, 'continuar').trigger('click');
+    expect(w.emitted('continuar')).toBeUndefined();
+    expect(w.get('[role="alert"]').text()).toBe('Escolha uma das respostas.');
     await w.setProps({
       podeContinuar: true,
       respostas: { clientes: 'sim_todas' },

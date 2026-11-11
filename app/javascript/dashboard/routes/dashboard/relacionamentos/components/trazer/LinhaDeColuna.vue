@@ -5,8 +5,8 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { DESTINOS, LISTA_DE_DESTINOS } from '../../trazer/destinos';
 
-// #2894 — uma coluna da planilha e para onde ela vai ("Cel" → Telefone), com
-// Trocar. Coluna que o sistema não conhecia vira "informação da pessoa" e
+// #2894 — uma coluna da planilha e para onde ela vai (“Cel” fica como
+// Telefone), com Trocar. Coluna que o sistema não conhecia vira "informação da pessoa" e
 // ganha também Não guardar.
 const props = defineProps({
   coluna: { type: Object, required: true },
@@ -114,16 +114,20 @@ onBeforeUnmount(() => observador?.disconnect());
           })
         }}
       </template>
+      <template v-else-if="virouInformacao">
+        {{
+          t('RELACIONAMENTOS_TRAZER.GUARDAR.FICA_COMO_INFORMACAO', {
+            coluna: coluna.nome,
+          })
+        }}
+      </template>
       <template v-else>
-        <span class="font-medium">{{ coluna.nome }}</span>
-        <span class="sr-only">{{
-          t('RELACIONAMENTOS_TRAZER.GUARDAR.VAI_PARA')
-        }}</span>
-        <span
-          class="i-lucide-arrow-right size-4 text-n-slate-10 rtl:rotate-180"
-          aria-hidden="true"
-        />
-        <span>{{ nomeDoDestino(coluna.destino) }}</span>
+        {{
+          t('RELACIONAMENTOS_TRAZER.GUARDAR.FICA_COMO', {
+            coluna: coluna.nome,
+            destino: nomeDoDestino(coluna.destino),
+          })
+        }}
       </template>
     </p>
     <div class="flex flex-wrap items-center gap-2">

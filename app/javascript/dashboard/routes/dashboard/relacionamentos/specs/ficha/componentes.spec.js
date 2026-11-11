@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import CabecalhoDaPessoa from '../../components/ficha/CabecalhoDaPessoa.vue';
 import MenuMais from '../../components/ficha/MenuMais.vue';
+import Banner from 'dashboard/components-next/banner/Banner.vue';
 import FaixaNaoQuer from '../../components/ficha/FaixaNaoQuer.vue';
 import SecaoConversas from '../../components/ficha/SecaoConversas.vue';
 import SecaoCards from '../../components/ficha/SecaoCards.vue';
@@ -224,6 +225,36 @@ describe('CabecalhoDaPessoa: quem não quer mensagens', () => {
   });
 });
 
+describe('botões de ação usam o Button da casa', () => {
+  it('sem rounded-xl nem min-h-12 nos botões de ação do cabeçalho e das gavetas', () => {
+    const pessoaW = mount(CabecalhoDaPessoa, {
+      props: { pessoa: pessoa() },
+      global: { stubs },
+    });
+    const empresaW = mount(CabecalhoDaEmpresa, {
+      props: { empresa: { id: 1, name: 'Padaria Dornelaz' } },
+    });
+    const gaveta = mount(GavetaDaEmpresa, {
+      props: {
+        aberta: true,
+        empresa: { id: 1, name: 'Padaria Dornelaz' },
+      },
+      global: { stubs },
+    });
+    const botoes = [
+      pessoaW.get('[data-relacionamentos="conversar"]').element,
+      empresaW.get('[data-relacionamentos="mandar-mensagem"]').element,
+      empresaW.get('[data-relacionamentos="alterar-empresa"]').element,
+      ...gaveta.findAll('footer button').map(b => b.element),
+    ];
+    expect(botoes).toHaveLength(5);
+    const classes = botoes.flatMap(b => [...b.classList]);
+    expect(classes).not.toContain('rounded-xl');
+    expect(classes.filter(c => c.includes('min-h-12'))).toEqual([]);
+    gaveta.unmount();
+  });
+});
+
 describe('ficha da empresa: ações', () => {
   const empresa = { id: 1, name: 'Padaria Dornelaz', cnpj: '11222333000181' };
   const quemPodeReceber = pessoa({ id: 1 });
@@ -282,24 +313,47 @@ describe('ficha da empresa: ações', () => {
     expect(w.emitted('continuar')).toHaveLength(1);
   });
 
-  it('ninguém pode receber: o diálogo abre, diz quem e por quê, e Continuar fica desligado', () => {
-    const w = montarDialogo([quemPediuSilencio]);
+  it('ninguém pode receber: o diálogo explica e traz um botão só, "Entendi", que fecha', async () => {
+    const fechar = vi.fn();
+    const w = mount(DialogoMandarMensagem, {
+      props: { pessoas: [quemPediuSilencio] },
+      global: {
+        stubs: {
+          ...stubs,
+          Dialog: {
+            template: '<div data-dialog><slot /><slot name="footer" /></div>',
+            methods: { open() {}, close: fechar },
+          },
+        },
+      },
+    });
     expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toContain(
       'NINGUEM_PODE'
     );
-    expect(w.findComponent(DialogoDaFicha).props('desligado')).toBe(true);
-    expect(continuar(w).attributes('disabled')).toBeDefined();
+    expect(w.findComponent(DialogoDaFicha).props('soEntendi')).toBe(true);
+    expect(
+      w.find('[data-relacionamentos="mandar-mensagem-continuar"]').exists()
+    ).toBe(false);
+    expect(w.findAll('button')).toHaveLength(1);
+    const entendi = w.get('[data-relacionamentos="entendi"]');
+    expect(entendi.attributes('disabled')).toBeUndefined();
+    expect(entendi.text()).toContain('MENSAGEM.ENTENDI');
+    await entendi.trigger('click');
+    expect(fechar).toHaveBeenCalledTimes(1);
     expect(
       w.find('[data-relacionamentos="dialogo-mensagem-proximo"]').exists()
     ).toBe(false);
   });
 
-  it('empresa sem pessoas: uma frase simples e Continuar desligado', () => {
+  it('empresa sem pessoas: uma frase simples e só "Entendi"', () => {
     const w = montarDialogo([]);
     expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toContain(
       'SEM_PESSOAS'
     );
-    expect(continuar(w).attributes('disabled')).toBeDefined();
+    expect(w.find('[data-relacionamentos="entendi"]').exists()).toBe(true);
+    expect(
+      w.find('[data-relacionamentos="mandar-mensagem-continuar"]').exists()
+    ).toBe(false);
   });
 
   it('cada pessoa da lista tem o botão de conversar, com nome para o leitor de tela', async () => {
@@ -443,11 +497,16 @@ describe('FaixaNaoQuer', () => {
     expect(texto).not.toContain('Prado');
   });
 
-  it('Liberar tem contraste próprio e 44 px', () => {
-    const botao = montar('manual').get('[data-relacionamentos="liberar"]');
-    expect(botao.classes()).toEqual(
-      expect.arrayContaining(['min-h-11', 'bg-n-solid-1', 'ring-1'])
-    );
+  it('a faixa é o Banner da casa, em âmbar; Liberar é um botão da casa (o do Banner é pequeno para o dedo)', () => {
+    const w = montar('manual');
+    const banner = w.findComponent(Banner);
+    expect(banner.props('color')).toBe('amber');
+    expect(banner.props('actionLabel')).toBeNull();
+    const liberar = w.get('[data-relacionamentos="liberar"]');
+    expect(liberar.text()).toContain('FAIXA.LIBERAR');
+    expect(liberar.classes()).toContain('h-10');
+    expect(banner.findAll('button')).toHaveLength(1);
+    expect(w.html()).not.toContain('bg-n-amber-3 text-n-amber-11 sm:flex-row');
   });
 
   it('um clique em Liberar NUNCA libera sem passar pelo diálogo', async () => {
@@ -471,8 +530,9 @@ describe('FaixaNaoQuer', () => {
         },
       },
     });
-    await w.get('[data-relacionamentos="liberar"]').trigger('click');
-    await w.get('[data-relacionamentos="liberar"]').trigger('click');
+    const liberar = () => w.get('[data-relacionamentos="liberar"]');
+    await liberar().trigger('click');
+    await liberar().trigger('click');
     expect(abrir).toHaveBeenCalledTimes(2);
     expect(w.emitted('liberar')).toBeUndefined();
     expect(
@@ -506,9 +566,7 @@ describe('FaixaNaoQuer', () => {
 
   it('não tem Liberar nas outras origens', () => {
     expect(
-      montar('email_unsubscribe')
-        .find('[data-relacionamentos="liberar"]')
-        .exists()
+      montar('email_unsubscribe').findComponent(Banner).find('button').exists()
     ).toBe(false);
   });
 });
@@ -610,10 +668,30 @@ describe('SecaoNotas', () => {
     expect(w.text()).toContain('"autor":"Sônia"');
   });
 
-  it('Guardar fica parado sem texto e emite o texto limpo', async () => {
-    const w = mount(SecaoNotas, { props: { notas: [], agora: AGORA } });
+  it('Salvar nunca fica desligado: vazio, o clique diz o que falta e leva o foco à caixa', async () => {
+    const w = mount(SecaoNotas, {
+      props: { notas: [], agora: AGORA },
+      attachTo: document.body,
+    });
     const guardar = w.get('[data-relacionamentos="guardar-nota"]');
-    expect(guardar.attributes('disabled')).toBeDefined();
+    const erro = w.get('[data-relacionamentos="nota-erro"]');
+    expect(guardar.attributes('disabled')).toBeUndefined();
+    expect(erro.attributes('role')).toBe('alert');
+    expect(erro.text()).toBe('');
+    await guardar.trigger('click');
+    await w.get('form').trigger('submit');
+    expect(w.emitted('guardar')).toBeUndefined();
+    expect(erro.text()).toContain('NOTAS.ESCREVA_ANTES');
+    expect(document.activeElement).toBe(
+      w.get('[data-relacionamentos="nota-caixa"]').element
+    );
+    await w.get('[data-relacionamentos="nota-caixa"]').setValue('Oi');
+    expect(erro.text()).toBe('');
+    w.unmount();
+  });
+
+  it('Guardar emite o texto limpo', async () => {
+    const w = mount(SecaoNotas, { props: { notas: [], agora: AGORA } });
     await w
       .get('[data-relacionamentos="nota-caixa"]')
       .setValue('  Ligar amanhã  ');
@@ -706,6 +784,16 @@ describe('GavetaDeInformacoes', () => {
     await botao.trigger('click');
     expect(botao.attributes('aria-expanded')).toBe('true');
     expect(painel.isVisible()).toBe(true);
+  });
+
+  it('o rótulo de Redes sociais fica na mesma margem dos campos, com a seta depois', () => {
+    const w = montar();
+    const botao = w.get('[data-relacionamentos="redes-sociais"]');
+    expect(botao.classes()).toContain('p-0');
+    expect(botao.element.firstChild.nodeType).toBe(Node.TEXT_NODE);
+    expect(botao.element.lastElementChild.className).toContain(
+      'i-lucide-chevron-right'
+    );
   });
 
   it('e-mail errado barra o Salvar e mostra a mensagem embaixo do campo', async () => {

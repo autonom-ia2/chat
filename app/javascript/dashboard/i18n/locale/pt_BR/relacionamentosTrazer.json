@@ -14,13 +14,15 @@
       "SOLTAR": "Arraste a planilha aqui ou clique para escolher",
       "APOIO": "Excel ou CSV. Precisa ter nome e telefone ou e-mail.",
       "ERRO_TIPO": "Este arquivo não é uma planilha. Use Excel ou CSV.",
-      "ERRO_LEITURA": "Não consegui ler esta planilha. Tente de novo.",
+      "ERRO_LEITURA": "Não consegui ler esta planilha.",
       "ERRO_VAZIA": "Esta planilha está vazia.",
       "ERRO_SEM_CONTATO": "Não achei nome e telefone ou e-mail nesta planilha.",
       "LENDO": "Lendo sua planilha…",
       "USAR_EXEMPLO": "Usar uma planilha de exemplo"
     },
     "PERGUNTAS": {
+      "ERRO_ESCOLHA": "Escolha uma das respostas.",
+      "ERRO_COLUNA": "Escolha a coluna.",
       "CLIENTES": {
         "TITULO": "Essas pessoas já são clientes?",
         "SIM_TODAS": "Sim, todas",
@@ -48,6 +50,8 @@
       },
       "EXEMPLOS": "Como vão ficar",
       "SOSSEGO": "Você pode desfazer quando quiser.",
+      "NINGUEM": "Não sobrou ninguém para trazer.",
+      "ESCOLHER_OUTRA": "Escolher outra planilha",
       "TRAZER": "Trazer {count} pessoa | Trazer {count} pessoas"
     },
     "PRECISAM": {
@@ -58,6 +62,8 @@
       "QUEM_SEM_NOME": "Linha {linha}",
       "SEM_TELEFONE": "sem telefone",
       "SEM_EMAIL": "sem e-mail",
+      "ERRO_PREENCHER": "Escreva o {campo} para salvar.",
+      "QUE_FALTA": { "NOME": "nome", "TELEFONE": "telefone", "EMAIL": "e-mail" },
       "RESOLVIDO": "Tudo resolvido",
       "PRONTO": "Pronto",
       "DEIXADA": "Deixada de fora",
@@ -90,7 +96,8 @@
     "GUARDAR": {
       "TITULO": "O que vou guardar",
       "APOIO": "Cada coluna da sua planilha e para onde ela vai.",
-      "VAI_PARA": "vai para",
+      "FICA_COMO": "“{coluna}” fica como {destino}.",
+      "FICA_COMO_INFORMACAO": "“{coluna}” fica como informação nova.",
       "NAO_VOU_GUARDAR": "Não vou guardar “{coluna}”",
       "TROCAR": "Mudar",
       "ROTULO_TROCAR": "Para onde vai a coluna “{coluna}”",
@@ -115,9 +122,12 @@
     },
     "PRONTO": {
       "CHEGARAM": "{count} pessoa chegou. | {count} pessoas chegaram.",
+      "CHEGARAM_E": "{count} pessoa chegou | {count} pessoas chegaram",
+      "E_COMPLETADAS": "e {count} foi completada. | e {count} foram completadas.",
+      "COMPLETADAS": "{count} pessoa foi completada. | {count} pessoas foram completadas.",
       "VER": "Ver as pessoas",
       "OUTRA": "Trazer outra lista",
-      "SOSSEGO": "Você pode desfazer quando quiser, em “Listas que você já trouxe”."
+      "SOSSEGO": "Você pode desfazer quando quiser, aqui embaixo."
     },
     "HISTORICO": {
       "TITULO": "Listas que você já trouxe",
@@ -136,20 +146,19 @@
     "DESFAZER": {
       "TITULO": "Desfazer esta lista?",
       "TITULO_ARQUIVO": "Desfazer “{arquivo}”?",
-      "TIRA": "Isto tira a pessoa que veio nesta lista. | Isto tira as {count} pessoas que vieram nesta lista.",
+      "TIRA": "Isto tira a pessoa que veio nesta lista e ainda não conversou com você. | Isto tira as {count} pessoas que vieram nesta lista e ainda não conversaram com você.",
+      "FICAM": "{count} fica aqui, porque já conversou com você ou já recebeu campanha. | {count} ficam aqui, porque já conversaram com você ou já receberam campanha.",
       "DEVOLVE": "A pessoa que já estava aqui volta a ser como era. | As {count} que já estavam aqui voltam a ser como eram.",
-      "CONVERSAS": "As conversas que já aconteceram ficam.",
       "NAO_RECEBER": "Quem pediu para não receber mensagens continua assim.",
-      "CAMPANHA": "{count} pessoa já recebeu uma campanha. A mensagem enviada não volta. | {count} pessoas já receberam uma campanha. A mensagem enviada não volta.",
       "CONFIRMAR": "Desfazer",
-      "ERRO_PREVIA": "Não consegui ver o que sai. Tente de novo."
+      "ERRO_PREVIA": "Não consegui ver o que sai."
     },
     "ERROS": {
       "GUARDAR": "Não consegui salvar. Tente de novo.",
       "DESFAZER": "Não consegui desfazer. Tente de novo.",
-      "TRAZER": "Não consegui trazer a lista. Tente de novo.",
-      "ANDAMENTO": "Não consegui ver como está indo. Tente de novo.",
-      "HISTORICO": "Não consegui mostrar o que você já trouxe. Tente de novo."
+      "TRAZER": "Não consegui trazer a lista.",
+      "ANDAMENTO": "Não consegui ver como está indo.",
+      "HISTORICO": "Não consegui mostrar o que você já trouxe."
     }
   }
 }

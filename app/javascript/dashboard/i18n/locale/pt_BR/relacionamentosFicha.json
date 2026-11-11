@@ -21,7 +21,8 @@
       "CONVERSAR_COM": "Conversar com {nome}",
       "MENSAGEM": {
         "AVISO": "Vou abrir a mensagem para essas pessoas.",
-        "SEM_PESSOAS": "Esta empresa ainda não tem pessoas."
+        "SEM_PESSOAS": "Esta empresa ainda não tem pessoas.",
+        "ENTENDI": "Entendi"
       }
     },
     "VOLTAR": {
@@ -34,7 +35,7 @@
       "NAO_ACHEI_PESSOA": "Não achei esta pessoa.",
       "NAO_ACHEI_EMPRESA": "Não achei esta empresa.",
       "VOLTAR_PARA_LISTA": "Voltar para a lista",
-      "ERRO": "Não consegui abrir esta ficha. Tente de novo."
+      "ERRO": "Não consegui abrir esta ficha."
     },
     "CABECALHO": {
       "CLIENTE_DESDE": "Cliente desde {data}",
@@ -128,7 +129,8 @@
       "GUARDADA": "Nota salva.",
       "ERRO": "Não consegui salvar a nota. Tente de novo.",
       "VAZIO": "Nenhuma nota ainda.",
-      "POR": "{autor} · {quando}"
+      "POR": "{autor} · {quando}",
+      "ESCREVA_ANTES": "Escreva a nota antes de salvar."
     },
     "ARQUIVOS": {
       "TITULO": "Arquivos",
@@ -146,7 +148,6 @@
       "VAZIO": "Ainda não há mais informações.",
       "CPF": "CPF",
       "CIDADE": "Cidade",
-      "EMPRESA": "Empresa",
       "REDES": "Redes sociais",
       "CNPJ": "CNPJ",
       "SITE": "Site",

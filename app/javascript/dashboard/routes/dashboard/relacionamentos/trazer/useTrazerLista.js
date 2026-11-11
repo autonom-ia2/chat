@@ -59,6 +59,8 @@ export const useTrazerLista = ({
   const erro = ref(ERROS.NENHUM);
   const porcentagem = ref(0);
   const totalTrazido = ref(0);
+  const novasTrazidas = ref(0);
+  const completadasTrazidas = ref(0);
   let ultimaEntrada = null;
   let trazidaId = null;
   let relogio = null;
@@ -174,6 +176,8 @@ export const useTrazerLista = ({
       if (!valeAinda()) return;
       porcentagem.value = andamento.porcentagem;
       totalTrazido.value = andamento.total;
+      novasTrazidas.value = andamento.novas;
+      completadasTrazidas.value = andamento.completadas;
       if (andamento.situacao !== SITUACOES_DA_LISTA.TRAZENDO) {
         ir(EVENTOS.TERMINOU);
         return;
@@ -241,6 +245,8 @@ export const useTrazerLista = ({
     erro,
     porcentagem,
     totalTrazido,
+    novasTrazidas,
+    completadasTrazidas,
     perguntaAtual,
     podeContinuar,
     resumo,

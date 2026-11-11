@@ -14,6 +14,7 @@ import DialogoCriarCards from '../components/lista/DialogoCriarCards.vue';
 import DialogoEtiqueta from '../components/lista/DialogoEtiqueta.vue';
 import DialogoMandarMensagem from '../components/lista/DialogoMandarMensagem.vue';
 import EstadoSemResultado from '../components/lista/EstadoSemResultado.vue';
+import LinhasDeExemplo from '../components/lista/LinhasDeExemplo.vue';
 import GavetaDeFiltros from '../components/lista/GavetaDeFiltros.vue';
 import HeroiDaLista from '../components/lista/HeroiDaLista.vue';
 import LinhaDeEmpresa from '../components/lista/LinhaDeEmpresa.vue';
@@ -185,6 +186,12 @@ const limparFiltros = () => {
   lista.limparFiltros();
 };
 
+// Com gente marcada a barra de ação fica colada no rodapé: a lista ganha folga
+// do tamanho dela, e abaixo de `md` a barra deixa livre o canto do botão ☰.
+const barraVisivel = computed(
+  () => marcados.quantos.value > 0 && !ehEmpresas.value
+);
+
 const raiz = useTemplateRef('raiz');
 useRolarPilula(raiz, lista.grupo);
 
@@ -199,7 +206,8 @@ onMounted(lista.iniciar);
   >
     <main class="flex-1 min-w-0 overflow-y-auto">
       <div
-        class="flex flex-col w-full min-w-0 max-w-6xl min-h-full gap-6 px-5 pt-8 pb-24 mx-auto md:px-8 md:pt-10"
+        class="flex flex-col w-full min-w-0 max-w-6xl min-h-full gap-6 px-5 pt-8 mx-auto md:px-8 md:pt-10"
+        :class="barraVisivel ? 'pb-48 md:pb-28' : 'pb-24 md:pb-10'"
       >
         <h1 class="sr-only">{{ t('RELACIONAMENTOS.LISTA.TITULO') }}</h1>
         <p role="status" class="sr-only" data-relacionamentos="aviso-da-lista">
@@ -208,11 +216,13 @@ onMounted(lista.iniciar);
 
         <ErroComTentarDeNovo
           v-if="lista.erro.value && !lista.resumo.value"
+          :mensagem="t('RELACIONAMENTOS.LISTA.ERRO_DA_TELA')"
           data-relacionamentos="erro"
           @tentar="lista.recarregar"
         />
         <EsqueletoDeLista
           v-else-if="!lista.resumo.value"
+          com-topo
           data-relacionamentos="carregando"
         />
         <template v-else>
@@ -223,7 +233,8 @@ onMounted(lista.iniciar);
             @trazer="trazer"
             @ver-grupo="verGrupo"
           />
-          <template v-if="!contaVazia">
+          <LinhasDeExemplo v-if="contaVazia" />
+          <template v-else>
             <AbasDaLista :model-value="aba" @update:model-value="trocarAba" />
             <div
               :id="PAINEL_DAS_ABAS"
@@ -259,6 +270,7 @@ onMounted(lista.iniciar);
               />
               <ErroComTentarDeNovo
                 v-if="lista.erro.value"
+                :mensagem="t('RELACIONAMENTOS.LISTA.ERRO_DA_TELA')"
                 data-relacionamentos="erro"
                 @tentar="lista.recarregar"
               />
@@ -319,8 +331,8 @@ onMounted(lista.iniciar);
           leave-to-class="translate-y-4 opacity-0"
         >
           <BarraDeAcaoEmGrupo
-            v-if="marcados.quantos.value > 0 && !ehEmpresas"
-            class="sticky z-30 mt-auto bottom-4 ms-[72px] sm:ms-0"
+            v-if="barraVisivel"
+            class="sticky z-30 mt-auto bottom-4 ms-20 md:ms-0"
             :quantas="marcados.quantos.value"
             :conta="contaDeMarcados"
             @mandar-mensagem="dialogoDeMensagem.abrir()"

@@ -25,6 +25,7 @@ const emit = defineEmits([
   'trazer',
   'voltar',
   'tentar',
+  'escolherOutra',
 ]);
 
 const { t } = useI18n();
@@ -164,7 +165,14 @@ const irParaPrecisam = () => {
     />
 
     <div class="flex flex-col gap-4">
-      <p class="flex items-center gap-2 m-0 text-base text-n-slate-11">
+      <p
+        v-if="total === 0"
+        data-relacionamentos="ninguem-para-trazer"
+        class="m-0 text-base font-medium text-n-slate-12"
+      >
+        {{ t('RELACIONAMENTOS_TRAZER.CONFERIR.NINGUEM') }}
+      </p>
+      <p v-else class="flex items-center gap-2 m-0 text-base text-n-slate-11">
         <span class="i-lucide-undo-2 size-5" aria-hidden="true" />
         {{ t('RELACIONAMENTOS_TRAZER.CONFERIR.SOSSEGO') }}
       </p>
@@ -176,19 +184,27 @@ const irParaPrecisam = () => {
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <Button
+          v-if="total === 0"
+          data-relacionamentos="escolher-outra"
+          size="lg"
+          :label="t('RELACIONAMENTOS_TRAZER.CONFERIR.ESCOLHER_OUTRA')"
+          :disabled="ocupado"
+          @click="emit('escolherOutra')"
+        />
+        <Button
+          v-else
           data-relacionamentos="trazer-confirmar"
           size="lg"
-          class="!min-h-12 !rounded-xl"
           :label="
             t('RELACIONAMENTOS_TRAZER.CONFERIR.TRAZER', { count: total }, total)
           "
-          :disabled="total === 0 || ocupado"
+          :disabled="ocupado"
           @click="emit('trazer')"
         />
         <Button
           slate
           faded
-          class="min-h-11"
+          size="lg"
           :label="t('RELACIONAMENTOS.COMUM.VOLTAR')"
           @click="emit('voltar')"
         />
