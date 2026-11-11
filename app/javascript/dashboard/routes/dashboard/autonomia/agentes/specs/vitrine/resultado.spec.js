@@ -562,6 +562,65 @@ describe('linhasDoResultado', () => {
     ]);
   });
 
+  // Decisão sobre a varredura: na lista com nome, chave de identificação (código, registro, UF, sigla…) não vira o valor
+  // do par; a lista mostra só os nomes. A data do feriado continua em par.
+  it('a named list does not pair its names with an identification key', () => {
+    const rotulo = chave =>
+      ({
+        uf: 'Estado',
+        sigla: 'Sigla',
+        codigo: 'Código',
+        registro_ans: 'Registro',
+      })[chave] ||
+      ROTULOS[chave] ||
+      '';
+    const em = dados => linhasDoResultado(dados, { ...textos, rotulo });
+    expect(
+      em({
+        itens: [
+          { nome: 'Asma', codigo: 'J45' },
+          { nome: 'Asma não-alérgica', codigo: 'J45.1' },
+        ],
+      })
+    ).toEqual([['Resultados', 'Asma e Asma não-alérgica']]);
+    expect(
+      em({
+        estados: [
+          { nome: 'Acre', uf: 'AC' },
+          { nome: 'Alagoas', uf: 'AL' },
+        ],
+      })
+    ).toEqual([['Estados da região', 'Acre e Alagoas']]);
+    expect(
+      em({
+        estados: [
+          { nome: 'Acre', sigla: 'AC' },
+          { nome: 'Alagoas', sigla: 'AL' },
+        ],
+      })
+    ).toEqual([['Estados da região', 'Acre e Alagoas']]);
+    expect(
+      em({
+        itens: [
+          { nome: 'Plano A', registro_ans: 123456 },
+          { nome: 'Plano B', registro_ans: 654321 },
+        ],
+      })
+    ).toEqual([['Resultados', 'Plano A e Plano B']]);
+    expect(
+      em({
+        feriados_no_periodo: [
+          { data: '2026-11-20', nome: 'Dia da consciência negra' },
+        ],
+      })
+    ).toEqual([
+      [
+        'Feriados no período',
+        `Dia da consciência negra: ${dataPt(2026, 11, 20)}`,
+      ],
+    ]);
+  });
+
   // Varredura P13: lista identificada de até 5 itens mostra cada campo comum (até 4) em pares, em vez de abrir só o
   // primeiro; com mais de 5, a regra de sempre.
   it('an identified list of up to five items shows each common field in pairs', () => {
@@ -620,10 +679,7 @@ describe('linhasDoResultado', () => {
         },
         textos
       )[0]
-    ).toEqual([
-      'Resultados',
-      'Outros: 0101.29.00 · Outros: 0101.90.00 · Outros: 0102.21.90 · e mais 3.393',
-    ]);
+    ).toEqual(['Resultados', 'Outros, Outros, Outros e mais 3.393']);
   });
 
   // Varredura P12: o dinheiro do mesmo item com as mesmas casas (a maior entre eles, até 4).

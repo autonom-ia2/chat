@@ -212,12 +212,12 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
       ['Situação', 'Suspenso'],
       ['Registro na SUSEP', '100000001'],
     ]);
-    // Varredura P03/P04: nome e um só campo com rótulo (o código da marca) vira par "nome: valor".
+    // O código da marca é chave de identificação: não vira par, a lista mostra só os nomes.
     expect(linhas('fipe', 'marcas')).toEqual([
-      ['Marcas', 'Acura: 1 · Agrale: 2 · Alfa Romeo: 3 · e mais 105'],
+      ['Marcas', 'Acura, Agrale, Alfa Romeo e mais 105'],
     ]);
     expect(linhas('cidades', 'estados')).toEqual([
-      ['Estados', 'Acre: AC · Alagoas: AL · Amapá: AP · e mais 24'],
+      ['Estados', 'Acre, Alagoas, Amapá e mais 24'],
     ]);
     expect(linhas('feriados', 'feriados')).toEqual([
       ['Ano', '2026'],

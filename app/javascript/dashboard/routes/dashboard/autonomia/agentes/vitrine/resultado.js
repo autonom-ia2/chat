@@ -118,6 +118,10 @@ const PREFIXOS_DE_IDENTIFICACAO = ['codigo', 'registro'];
 const ehIdentificacao = chave =>
   CHAVES_DE_IDENTIFICACAO.includes(chave) ||
   PREFIXOS_DE_IDENTIFICACAO.some(prefixo => String(chave).startsWith(prefixo));
+// Na linha de pares da lista com nome, a UF e a sigla também identificam ("Acre: AC" não diz nada a mais).
+const SO_NOS_PARES = ['uf', 'sigla'];
+const identificaNoPar = chave =>
+  ehIdentificacao(chave) || SO_NOS_PARES.includes(chave);
 
 const MIN_CASAS_DO_DINHEIRO = 2;
 const MAX_CASAS = 4;
@@ -434,9 +438,10 @@ const linhasDaLista = (chave, itens, total, textos) => {
   if (campo) {
     const nomes = nomesLegiveis(itens, campo);
     // Varredura P03/P04: cada item com o nome e um só campo com rótulo (a data do feriado), o mesmo em todos: os pares
-    // "nome: valor" com o rótulo da lista, de um item ou de vários ("Feriados: Carnaval: 16/02/2026 · …").
+    // "nome: valor" com o rótulo da lista, de um item ou de vários ("Feriados: Carnaval: 16/02/2026 · …"). Chave de
+    // identificação (o código da marca, o CID, a UF) não vira par: a lista mostra só os nomes.
     const doPar = rotulo ? campoDosPares(itens, campo, textos) : '';
-    if (doPar) {
+    if (doPar && !identificaNoPar(doPar)) {
       const pares = itens.map(
         (item, i) => `${nomes[i]}: ${valorDoPar(item, doPar, textos)}`
       );
