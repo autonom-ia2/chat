@@ -1,8 +1,8 @@
 import { listaFonte, POR_PAGINA } from '../fonte/listaFonte';
 import { GRUPOS_DE_EMPRESAS, GRUPOS_DE_PESSOAS } from '../fonte/grupos';
 
-// A fonte da lista de Relacionamentos (#2894). Em demonstração responde com a
-// base fictícia; fora dela, por enquanto, diz que a fonte real ainda não existe.
+// A fonte da lista de Relacionamentos (#2894) em demonstração: responde com a
+// base fictícia. A fonte real (servidor) está em listaFonteReal.spec.js.
 const cheia = () => listaFonte({ demo: 'cheio', atraso: 0 });
 const vazia = () => listaFonte({ demo: 'vazio', atraso: 0 });
 
@@ -370,25 +370,6 @@ describe('demonstração "vazio"', () => {
   });
 });
 
-describe('fonte real', () => {
-  it.each(['resumo', 'contagens', 'listar'])(
-    '%s diz que a fonte real ainda não existe',
-    async metodo => {
-      const fonte = listaFonte({ demo: null });
-      await expect(fonte[metodo]('pessoas')).rejects.toMatchObject({
-        name: 'FONTE_REAL_PENDENTE',
-      });
-    }
-  );
-
-  it('não usa a demonstração quando o módulo de demonstração não carrega', async () => {
-    const fonte = listaFonte({ demo: 'cheio', carregarDemo: null });
-    await expect(fonte.resumo()).rejects.toMatchObject({
-      name: 'FONTE_REAL_PENDENTE',
-    });
-  });
-});
-
 describe('listar: filtros de "Mais filtros" (#2894)', () => {
   const pessoas = () => todasAsPaginas(cheia(), { aba: 'pessoas' });
 
@@ -496,15 +477,6 @@ describe('opcoesDeFiltro', () => {
       etiquetas: [],
       cidades: [],
     });
-  });
-
-  it('diz que a fonte real ainda não existe', async () => {
-    await expect(
-      listaFonte({ demo: null }).opcoesDeFiltro()
-    ).rejects.toMatchObject({ name: 'FONTE_REAL_PENDENTE' });
-    await expect(
-      listaFonte({ demo: null }).listarTodos({})
-    ).rejects.toMatchObject({ name: 'FONTE_REAL_PENDENTE' });
   });
 });
 

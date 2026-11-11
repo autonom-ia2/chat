@@ -21,7 +21,7 @@ const DIAS_DO_PERIODO = {
   [PERIODOS_DE_CHEGADA.ULTIMOS_90]: 90,
 };
 
-const preenchido = valor =>
+export const preenchido = valor =>
   valor !== '' && valor !== null && valor !== undefined;
 
 export const contarFiltros = (filtros = {}) =>

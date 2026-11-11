@@ -22,6 +22,34 @@ const montar = ({
   return { aba, lista, parar: () => escopo.stop() };
 };
 
+// Uma fonte em que as leituras de `quais` são recusadas pelo servidor até
+// `voltar()`; as outras respondem como a demonstração.
+const fonteQueFalha = quais => {
+  const recusado = Object.assign(
+    new Error('Request failed with status code 500'),
+    { response: { status: 500 } }
+  );
+  const boa = demo();
+  let falhando = true;
+  const leitura = metodo =>
+    quais.includes(metodo)
+      ? (...args) =>
+          falhando ? Promise.reject(recusado) : boa[metodo](...args)
+      : boa[metodo];
+  return {
+    recusado,
+    voltar: () => {
+      falhando = false;
+    },
+    fonte: {
+      ...boa,
+      resumo: leitura('resumo'),
+      contagens: leitura('contagens'),
+      listar: leitura('listar'),
+    },
+  };
+};
+
 // A fonte de demonstração espera num setTimeout (atraso 0): em vez de dormir,
 // cada teste espera pela condição que lhe interessa.
 const ate = verificacao => vi.waitFor(verificacao, { timeout: 5000 });
@@ -116,13 +144,49 @@ describe('useLista', () => {
   });
 
   it('guarda o erro da fonte e limpa quando recarrega com sucesso', async () => {
-    const falha = Object.assign(new Error('x'), {
-      name: 'FONTE_REAL_PENDENTE',
-    });
-    const { lista } = montar({ fonte: listaFonte({ demo: null }) });
+    const servidor = fonteQueFalha(['resumo', 'contagens', 'listar']);
+    const { lista } = montar({ fonte: servidor.fonte });
     await lista.iniciar();
-    expect(lista.erro.value).toMatchObject({ name: falha.name });
+    expect(lista.erro.value).toBe(servidor.recusado);
     expect(lista.resumo.value).toBeNull();
+
+    servidor.voltar();
+    await lista.recarregar();
+    expect(lista.erro.value).toBeNull();
+    expect(lista.resumo.value.total).toBe(280);
+    expect(lista.itens.value).toHaveLength(25);
+  });
+
+  // Fora da demonstração as três leituras são pedidos separados: uma pode
+  // falhar e as outras responderem. O erro de uma não some com o sucesso da outra.
+  it.each(['resumo', 'contagens'])(
+    'o erro de %s continua de pé quando a lista responde',
+    async leitura => {
+      const servidor = fonteQueFalha([leitura]);
+      const { lista } = montar({ fonte: servidor.fonte });
+      await lista.iniciar();
+      expect(lista.itens.value).toHaveLength(25);
+      expect(lista.erro.value).toBe(servidor.recusado);
+
+      await lista.escolherGrupo('clientes');
+      expect(lista.erro.value).toBe(servidor.recusado);
+
+      servidor.voltar();
+      await lista.recarregar();
+      expect(lista.erro.value).toBeNull();
+    }
+  );
+
+  it('o erro da lista some quando o pedido seguinte da lista responde', async () => {
+    const servidor = fonteQueFalha(['listar']);
+    const { lista } = montar({ fonte: servidor.fonte });
+    await lista.iniciar();
+    expect(lista.erro.value).toBe(servidor.recusado);
+
+    servidor.voltar();
+    await lista.escolherGrupo('clientes');
+    expect(lista.erro.value).toBeNull();
+    expect(lista.total.value).toBe(120);
   });
 
   it('"mostrar mais" atropelado por um pedido da página 1 não deixa carregandoMais preso', async () => {

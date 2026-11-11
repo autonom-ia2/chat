@@ -5,15 +5,17 @@ import {
   gruposDaAba,
   pertenceAoGrupo,
 } from './grupos';
+import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { normalizado, soDigitos } from './texto';
 import { DEMO_CARREGANDO, esperarParaSempre } from './modoDemo';
-import { pessoaPassaNosFiltros } from '../lista/filtros';
+import { pessoaPassaNosFiltros, preenchido } from '../lista/filtros';
 
 // #2894 — de onde a lista de Relacionamentos lê (molde:
 // autonomia/prospecting/achar/utils/acharFonte.js). A tela recebe sempre o mesmo
 // formato, venha de onde vier:
-//   1. fonte real: ainda não existe; entra na entrega de construção. Por ora
-//      todo método diz `FONTE_REAL_PENDENTE`;
+//   1. fonte real: as leituras do servidor (dashboard/api/relacionamentos.js).
+//      Erro do servidor (422, 403, 500) sobe como veio: a tela mostra o erro
+//      com "tentar de novo";
 //   2. demonstração: com `?demo=<estado>` (modoDemo.js) e só no ambiente de
 //      desenvolvimento. Os dados são inventados (demo/base.js) e nada é gravado.
 // O `import.meta.env.DEV` vira `false` no build de produção: o ramo some e a
@@ -235,21 +237,65 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
   };
 };
 
-// ---- fonte real (pendente) -------------------------------------------------
+// ---- fonte real ------------------------------------------------------------
 
-const fonteReal = () => {
-  const pendente = async () => {
-    throw erroFonteRealPendente();
-  };
-  return {
-    usaDemo: false,
-    resumo: pendente,
-    contagens: pendente,
-    listar: pendente,
-    listarTodos: pendente,
-    opcoesDeFiltro: pendente,
-  };
+// Grupo, ordem e período de chegada têm o mesmo nome na tela e no servidor. Só
+// este filtro muda: a tela diz `chegouEm`, o servidor `chegou_em`.
+const FILTRO_NO_SERVIDOR = {
+  empresa: 'empresa',
+  etiqueta: 'etiqueta',
+  cidade: 'cidade',
+  chegouEm: 'chegou_em',
 };
+
+const filtrosDoPedido = (filtros = {}) =>
+  Object.entries(FILTRO_NO_SERVIDOR).map(([daTela, doServidor]) => [
+    `filtros[${doServidor}]`,
+    filtros[daTela],
+  ]);
+
+// O que vai na URL: só o que está preenchido. `filtros` é só de Pessoas: em
+// Empresas o servidor responde 422 para qualquer filtro, então nunca vai.
+const paramsDoPedido = ({ aba, grupo, busca, ordem, pagina, filtros }) =>
+  Object.fromEntries(
+    [
+      ['grupo', grupo],
+      ['busca', busca],
+      ['ordem', ordem],
+      ['pagina', pagina],
+      ...(aba === ABAS.EMPRESAS ? [] : filtrosDoPedido(filtros)),
+    ].filter(([, valor]) => preenchido(valor))
+  );
+
+const fonteReal = () => ({
+  usaDemo: false,
+  async resumo() {
+    return (await RelacionamentosAPI.resumo()).data;
+  },
+  async contagens(aba, { busca, filtros } = {}) {
+    const params = paramsDoPedido({ aba, busca, filtros });
+    const resposta = await (aba === ABAS.EMPRESAS
+      ? RelacionamentosAPI.contagensDeEmpresas(params)
+      : RelacionamentosAPI.contagensDePessoas(params));
+    return resposta.data;
+  },
+  async listar(pedido = {}) {
+    const params = paramsDoPedido(pedido);
+    const { data } = await (pedido.aba === ABAS.EMPRESAS
+      ? RelacionamentosAPI.empresas(params)
+      : RelacionamentosAPI.pessoas(params));
+    return { itens: data.itens, total: data.total, temMais: data.tem_mais };
+  },
+  // "Marcar todas as N" só existe em Pessoas. De cada uma vem só o que as ações
+  // em grupo leem: id, nome, telefone, bloqueio e se pediu para não receber.
+  async listarTodos(pedido = {}) {
+    const params = paramsDoPedido({ ...pedido, pagina: undefined });
+    return (await RelacionamentosAPI.todasAsPessoas(params)).data;
+  },
+  async opcoesDeFiltro() {
+    return (await RelacionamentosAPI.opcoesDeFiltro()).data;
+  },
+});
 
 export const listaFonte = ({
   demo = null,

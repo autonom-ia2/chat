@@ -19,6 +19,29 @@ vi.mock('../../fonte/modoDemo', async importOriginal => ({
   ...(await importOriginal()),
   usarDemo: vi.fn(),
 }));
+// A conta dos testes não tem a chave `companies`: a demonstração inventa as
+// empresas e mostra a aba mesmo assim.
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({ isCloudFeatureEnabled: () => false }),
+}));
+// Fora da demonstração a lista lê do servidor; aqui ele recusa todo pedido (a
+// lista com respostas de verdade está em ListaPageReal.spec.js).
+vi.mock('dashboard/api/relacionamentos', () => {
+  const recusar = () =>
+    Promise.reject(new Error('Request failed with status code 500'));
+  const leituras = [
+    'pessoas',
+    'contagensDePessoas',
+    'todasAsPessoas',
+    'empresas',
+    'contagensDeEmpresas',
+    'resumo',
+    'opcoesDeFiltro',
+  ];
+  return {
+    default: Object.fromEntries(leituras.map(nome => [nome, recusar])),
+  };
+});
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
   const rota = reactive({ query: {}, name: 'relationships_home' });
@@ -327,7 +350,7 @@ describe('ListaPage: cheia', () => {
     );
   });
 
-  it('?demo=desligado mostra o erro com "Tentar de novo" e o marcador do robô', async () => {
+  it('fora da demonstração, com o servidor recusando, mostra o erro com "Tentar de novo" e o marcador do robô', async () => {
     const w = await montar({ demo: null });
     expect(textoDe(w, marca('erro'))).toContain(
       'Não consegui mostrar as pessoas.'

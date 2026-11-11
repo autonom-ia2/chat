@@ -3,6 +3,8 @@ import { computed, onMounted, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import EsqueletoDeLista from '../components/comum/EsqueletoDeLista.vue';
 import PilulasDeGrupo from '../components/comum/PilulasDeGrupo.vue';
@@ -37,20 +39,32 @@ import { useMarcados } from '../lista/useMarcados';
 // Pessoas · Empresas (na URL, `?aba=empresas`), grupos, busca, ordem, "Mais
 // filtros", a lista com ações em grupo e os estados (vazio, carregando, erro).
 // Fala só com `listaFonte` e `acoesDaListaFonte`; em `?demo=` tudo é inventado
-// e as escritas só simulam.
+// e as escritas só simulam. Fora da demonstração a lista lê do servidor.
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const demo = usarDemo(route.query);
 const acoes = acoesDaListaFonte({ demo });
 
+// Empresas é de quem tem a chave `companies` na conta (sem ela o servidor
+// responde 403): a aba some e `?aba=empresas` abre Pessoas. A demonstração
+// inventa as empresas e mostra sempre.
+const { isCloudFeatureEnabled } = useAccount();
+const temEmpresas = computed(
+  () => Boolean(demo) || isCloudFeatureEnabled(FEATURE_FLAGS.COMPANIES)
+);
+
 // A aba vem da URL, mas só enquanto a rota ainda é a da lista: ao sair para uma
 // ficha a query perde o `aba` e, sem isto, a lista dispararia uma carga à toa.
 const ROTA_DA_LISTA = 'relationships_home';
-let abaDaUrl = route.query.aba === ABAS.EMPRESAS ? ABAS.EMPRESAS : ABAS.PESSOAS;
+const abaPedida = () =>
+  temEmpresas.value && route.query.aba === ABAS.EMPRESAS
+    ? ABAS.EMPRESAS
+    : ABAS.PESSOAS;
+let abaDaUrl = abaPedida();
 const aba = computed(() => {
   if (route.name && route.name !== ROTA_DA_LISTA) return abaDaUrl;
-  abaDaUrl = route.query.aba === ABAS.EMPRESAS ? ABAS.EMPRESAS : ABAS.PESSOAS;
+  abaDaUrl = abaPedida();
   return abaDaUrl;
 });
 const ehEmpresas = computed(() => aba.value === ABAS.EMPRESAS);
@@ -235,11 +249,15 @@ onMounted(lista.iniciar);
           />
           <LinhasDeExemplo v-if="contaVazia" />
           <template v-else>
-            <AbasDaLista :model-value="aba" @update:model-value="trocarAba" />
+            <AbasDaLista
+              v-if="temEmpresas"
+              :model-value="aba"
+              @update:model-value="trocarAba"
+            />
             <div
               :id="PAINEL_DAS_ABAS"
-              role="tabpanel"
-              :aria-labelledby="idDaAba(aba)"
+              :role="temEmpresas ? 'tabpanel' : undefined"
+              :aria-labelledby="temEmpresas ? idDaAba(aba) : undefined"
               class="flex flex-col min-w-0 gap-5"
             >
               <div class="flex flex-col">
