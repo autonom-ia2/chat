@@ -8,7 +8,7 @@
 #   capabilities      -> { platform:, scanned_at:, products: [...] }
 #   quote_start       -> { quote_id:, status: queued|running }
 #   quote_result      -> { quote_id:, product:, status: running|partial|completed|failed, offers: [...] }
-#   quote_proposal    -> { quote_id:, url: }
+#   quote_proposal    -> { quote_id:, url:, official: }  (official false = resumo impresso, não o documento da seguradora)
 #
 # CREDENCIAL SÓ EM `open_session`. As demais operações viajam com a sessão que ela devolveu, porque
 # cada login novo é uma chamada cara ao portal para receber de volta exatamente a mesma sessão.

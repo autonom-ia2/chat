@@ -54,9 +54,17 @@ export const FERRAMENTAS = [
     grupo: 'DINHEIRO',
     icone: 'i-lucide-calendar-days',
     consultas: 2,
-    exemplo: hoje => {
+    // Em inglês o mês vai por extenso ("November 30, 2026"): "01/12/2026" se lê 12 de janeiro.
+    exemplo: (hoje, idioma = 'pt_BR') => {
       const data = new Date(hoje);
       data.setDate(data.getDate() + DIAS_DO_EXEMPLO);
+      if (idioma.startsWith('en')) {
+        return data.toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        });
+      }
       const doisDigitos = numero => String(numero).padStart(2, '0');
       const dia = doisDigitos(data.getDate());
       const mes = doisDigitos(data.getMonth() + 1);

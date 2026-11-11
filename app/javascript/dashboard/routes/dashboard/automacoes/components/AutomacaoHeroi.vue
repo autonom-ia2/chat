@@ -150,7 +150,7 @@ const aoTeclar = evento => {
           :maxlength="MAX_CARACTERES"
           :disabled="desabilitado"
           :placeholder="$t('AUTOMACOES.HEROI.EXEMPLO')"
-          class="w-full px-3 pt-3 pb-1 text-base leading-relaxed bg-transparent border-0 outline-none resize-none min-h-[3rem] max-h-60 overflow-y-auto text-n-slate-12 placeholder:text-n-slate-10 disabled:cursor-not-allowed !mb-0"
+          class="w-full px-3 pt-3 pb-1 text-base leading-relaxed bg-transparent border-0 outline-none resize-none min-h-[4.5rem] sm:min-h-[3rem] max-h-60 overflow-y-auto text-n-slate-12 placeholder:text-n-slate-10 disabled:cursor-not-allowed !mb-0"
           @keydown="aoTeclar"
           @paste="aoColar"
         />
@@ -190,12 +190,13 @@ const aoTeclar = evento => {
             </button>
           </li>
         </ul>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <button
             type="button"
             data-anexar
             :disabled="desabilitado || !cabeMais"
             :title="$t('AUTOMACOES.HEROI.ANEXAR')"
+            :aria-label="$t('AUTOMACOES.HEROI.ANEXAR')"
             class="inline-flex items-center gap-2 px-3 text-sm font-medium transition min-h-11 rounded-xl text-n-slate-11 hover:bg-n-slate-2 hover:text-[#0D2344] dark:hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:cursor-not-allowed disabled:opacity-40"
             @click="seletor?.click()"
           >
@@ -229,7 +230,7 @@ const aoTeclar = evento => {
             type="submit"
             data-montar
             :disabled="desabilitado || !temAlgo"
-            class="inline-flex items-center justify-center gap-2 px-5 text-base font-semibold text-white whitespace-nowrap transition min-h-12 rounded-xl bg-n-brand hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand disabled:cursor-not-allowed disabled:opacity-50"
+            class="inline-flex items-center justify-center gap-2 px-5 text-base font-semibold text-white whitespace-nowrap max-sm:w-full transition min-h-12 rounded-xl bg-n-brand hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand disabled:cursor-not-allowed disabled:bg-n-slate-3 disabled:text-n-slate-10 disabled:hover:brightness-100"
           >
             {{ $t('AUTOMACOES.HEROI.MONTAR') }}
             <span
@@ -252,7 +253,7 @@ const aoTeclar = evento => {
           type="button"
           data-ideia
           :disabled="desabilitado"
-          class="px-4 py-2 text-sm transition rounded-xl min-h-11 ring-1 ring-inset ring-white/20 bg-white/10 text-white/90 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white disabled:cursor-not-allowed"
+          class="px-4 py-2 text-sm transition rounded-xl min-h-11 ring-1 ring-inset ring-white/20 bg-white/10 text-white/90 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50"
           @click="pedido = ideia"
         >
           {{ ideia }}

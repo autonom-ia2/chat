@@ -3106,7 +3106,7 @@
         },
         "OUTROS": {
           "NOME": "Other",
-          "TEXTO": "Goods and websites."
+          "TEXTO": "Goods."
         }
       },
       "DETALHE": {
@@ -3146,6 +3146,7 @@
         "SIM": "Yes",
         "NAO": "No",
         "ZERO_KM": "Brand new",
+        "NENHUM_VALOR": "—",
         "NAO_ENCONTRADO": "The lookup found nothing for this value. Check it and try again.",
         "NAO_CONSEGUI": "Could not look it up right now. Try again in a moment.",
         "PEDIDO_INVALIDO": "This value is not in the right format. See the example and try again.",
@@ -3153,7 +3154,8 @@
         "SEM_PERMISSAO": "You are not allowed to try the ready-made tools.",
         "SEM_IA": "To try this tool, the account needs AI turned on. Ask whoever manages the account.",
         "NAO_ENTENDI": "Couldn't tell what to look up. Write it like the example and try again.",
-        "MAIS_PROVAVEL": "There was more than one option, so this shows the most likely one. In the conversation, the agent asks the customer when unsure."
+        "MAIS_PROVAVEL": "There was more than one option, so this shows the most likely one. In the conversation, the agent asks the customer when unsure.",
+        "SEM_LINHAS": "The lookup answered, but it can't be shown here."
       },
       "CAMPOS": {
         "CEP": "ZIP code",
@@ -3173,7 +3175,7 @@
         "ATIVIDADE_PRINCIPAL_DESCRICAO": "Main activity",
         "VALIDO": "Valid number?",
         "REGIAO_FISCAL": "Issuing region",
-        "ESTADOS": "States in the region",
+        "ESTADOS": "States",
         "OBSERVACAO": "Note",
         "VALOR": "Value",
         "MARCA": "Make",
@@ -3181,8 +3183,8 @@
         "ANO_MODELO": "Year",
         "COMBUSTIVEL": "Fuel",
         "CODIGO_FIPE": "Table code",
-        "MES_DE_REFERENCIA": "Table of",
-        "PRECOS": "Years in the table",
+        "MES_DE_REFERENCIA": "Reference month",
+        "PRECOS": "Prices in the table",
         "ANOS_DISPONIVEIS": "Years in the table",
         "DE": "From",
         "ATE": "Until",
@@ -3195,8 +3197,55 @@
         "DDD": "Area code",
         "FONTE_DOS_DADOS": "Data from",
         "CODIGO": "Code",
-        "NOME": "Bank",
-        "NOME_COMPLETO": "Full name"
+        "NOME": "Name",
+        "NOME_COMPLETO": "Full name",
+        "INDICADOR": "Indicator",
+        "VARIACAO_NO_MES": "Change in the month",
+        "ACUMULADO_12_MESES": "Last 12 months",
+        "EXPECTATIVAS": "Years forecast",
+        "ANO": "Year",
+        "MEDIANA": "Median forecast",
+        "DATA_DO_BOLETIM": "Report of",
+        "FERIADOS": "Holidays",
+        "MARCAS": "Makes",
+        "MODELOS": "Models",
+        "BUSCA": "Search",
+        "DESCRICAO": "Description",
+        "VIGENTE_DESDE": "In force since",
+        "ITENS": "Results",
+        "BANCOS": "Banks",
+        "CEPS": "ZIP codes",
+        "ESTABELECIMENTOS": "Health facilities",
+        "TIPO": "Type",
+        "ENDERECO": "Address",
+        "TELEFONE": "Phone",
+        "COMPRAS": "Purchases",
+        "TOTAL_NO_PERIODO": "Purchases in the period",
+        "MODALIDADE": "Purchase type",
+        "ORGAO": "Public body",
+        "OBJETO": "What it is buying",
+        "VALOR_ESTIMADO": "Estimated value (R$)",
+        "PUBLICADA_EM": "Published on",
+        "LINK": "Link",
+        "PERTO_DE": "Near",
+        "ESTACOES": "Stations",
+        "DISTANCIA_KM": "Distance (km)",
+        "LOCAL": "Place",
+        "TOTAL_MM": "Rain in the period (mm)",
+        "DIAS": "Days",
+        "MM": "Rain that day (mm)",
+        "RAMO": "Line of insurance",
+        "SEGURADORAS": "Insurers",
+        "SEGURADORA": "Insurer",
+        "PRODUTOS": "Products",
+        "RAMOS": "Lines of insurance",
+        "NAO_RESPONDERAM": "Did not answer",
+        "OUTRAS_COM_O_NOME": "Others with this name",
+        "RAMOS_PUBLICADOS": "Lines it publishes",
+        "ENCONTRADAS": "Insurers found",
+        "CORRETORES": "Brokers",
+        "REGISTRO_SUSEP": "SUSEP registration",
+        "PRIMEIRO_DA_LISTA": "First on the list"
       },
       "PRONTAS": {
         "TITULO": "Ready-made",
@@ -3332,8 +3381,8 @@
           "CLIENTE": "Is there a hospital in Campinas?",
           "AGENTE": "Yes! Hospital Samaritano is in Vila João Jorge. Want the full address and phone?",
           "USE_QUANDO": "Use when the customer asks where there is a hospital, clinic, emergency room or health center in a city.",
-          "ROTULO": "City",
-          "EXEMPLO": "Campinas"
+          "ROTULO": "City and state",
+          "EXEMPLO": "Campinas SP"
         },
         "PROCEDIMENTOS": {
           "NOME": "Exams and procedures",
@@ -3407,8 +3456,8 @@
           "CLIENTE": "What cyber insurance does Allianz have?",
           "AGENTE": "Allianz has Cyber Risk insurance, which covers damage caused to other people. The terms are on its website.",
           "USE_QUANDO": "Use when the customer asks which insurance or coverages an insurer offers.",
-          "ROTULO": "Insurer",
-          "EXEMPLO": "Allianz",
+          "ROTULO": "Insurer and type of insurance",
+          "EXEMPLO": "Allianz cyber insurance",
           "CONSULTAS": "find the insurer, see the products of a line"
         },
         "CORRETOR_SUSEP": {
@@ -3418,8 +3467,8 @@
           "CLIENTE": "Is the broker who called me for real?",
           "AGENTE": "I checked SUSEP: they are active, registered, and can sell life and property insurance.",
           "USE_QUANDO": "Use when the customer wants to know whether a broker or brokerage is licensed to sell insurance.",
-          "ROTULO": "CPF, CNPJ or name",
-          "EXEMPLO": "11.222.333/0001-81",
+          "ROTULO": "Broker's name, CPF or CNPJ",
+          "EXEMPLO": "corretora de seguros",
           "CONSULTAS": "by CPF or CNPJ, by name"
         }
       },

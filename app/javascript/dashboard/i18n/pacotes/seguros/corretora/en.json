@@ -1233,5 +1233,81 @@
   },
   "CRM_LISTA_ACAO": {
     "NOVO_CLIENTE": "New quote"
+  },
+  "AUTOMACAO_MODELOS": {
+    "ITENS": {
+      "M01": {
+        "TITULO": "Renewals without missing anyone",
+        "TEXTO": "30 days before the policy ends, the customer gets the renewal notice. If they changed car, you are told. If they don't reply, they get a link to book with you."
+      },
+      "M02": {
+        "TITULO": "Ad quote requests answered in 5 minutes",
+        "TEXTO": "Whoever asks for a quote through the ad gets a message right away asking for what is missing to quote."
+      },
+      "M03": {
+        "TITULO": "Policy welcome",
+        "TEXTO": "After issuing, the customer gets the policy, the 24-hour assistance number and is asked if anything is unclear."
+      },
+      "M04": {
+        "TITULO": "Late instalment",
+        "TEXTO": "On the first late instalment, the customer gets a reminder with the payment slip. On the second, you are warned about the risk of cancellation."
+      },
+      "M05": {
+        "TITULO": "Mid-term policy check",
+        "TEXTO": "Six months after closing, the customer is asked if they changed car, address or driver."
+      },
+      "M06": {
+        "TITULO": "Birthday wishes with a policy review",
+        "TEXTO": "On their birthday, the customer gets a message and an invitation to review their policies."
+      },
+      "M07": {
+        "TITULO": "New cover first for current customers",
+        "TEXTO": "Customers who already have a policy with you get the offer for another line (home, life) before everyone else."
+      },
+      "M08": {
+        "TITULO": "Company sends the group life list",
+        "TEXTO": "HR sends the employee list. Each person becomes a card in the pipeline and gets the document request."
+      },
+      "M09": {
+        "TITULO": "Find companies every week",
+        "TEXTO": "Every Monday, the system finds new companies in your area, offers business or fleet insurance and only brings you the interested ones."
+      },
+      "M10": {
+        "TITULO": "Claims or angry customers go straight to you",
+        "TEXTO": "When the customer mentions a claim or is very upset, the chat leaves the automatic service and you get a summary right away."
+      },
+      "M11": {
+        "TITULO": "Referrals that bring a discount",
+        "TEXTO": "Whoever refers a friend gets a renewal discount when the friend buys."
+      },
+      "M12": {
+        "TITULO": "A sent quote decides the next step",
+        "TEXTO": "After the quote is sent, the customer is asked what they thought. With no reply in 2 days, you get a reminder to call."
+      },
+      "M13": {
+        "TITULO": "From closing to inspection",
+        "TEXTO": "After closing, the customer gets the proposal to sign and the inspection reminder. At the end, they are invited to rate the service."
+      },
+      "M14": {
+        "TITULO": "Complete documents to issue",
+        "TEXTO": "Asks for the documents for that line, checks each photo or PDF, asks only for what is missing and tells you when you can issue."
+      },
+      "M15": {
+        "TITULO": "Fleets and big companies get you",
+        "TEXTO": "Quotes above the amount you choose go straight to you, marked as a priority."
+      },
+      "M16": {
+        "TITULO": "Bring back those who switched insurer",
+        "TEXTO": "Anyone who went with another broker or found it too expensive gets a better offer when renewal comes round again."
+      },
+      "M17": {
+        "TITULO": "Broker on holiday, customers looked after",
+        "TEXTO": "When someone goes on holiday, whoever covers gets a summary of each customer. When they're back, the customers go back to them."
+      },
+      "M20": {
+        "TITULO": "Issued policies go into your system",
+        "TEXTO": "When a policy is issued, the system gets the missing details, sends them to your management system and sends a welcome message."
+      }
+    }
   }
 }

@@ -9,7 +9,7 @@ import {
   ref,
   watch,
 } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
@@ -38,6 +38,11 @@ import BlocksPanel from 'dashboard/components-next/Campaigns/Pages/CampaignPage/
 import PropertiesPanel from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/PropertiesPanel.vue';
 import WelcomeChooser from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/WelcomeChooser.vue';
 import { useEmailEditor } from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/composables/useEmailEditor';
+import {
+  useImageDrop,
+  waitForImageUploads,
+} from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/composables/useImageDrop';
+import { usePageFileDrop } from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/composables/usePageFileDrop';
 import { STARTER_MJML } from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/starterMjml';
 import EmailCampaignTemplatesAPI from 'dashboard/api/emailCampaignTemplates';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
@@ -225,7 +230,10 @@ const reportSaveError = error => {
   useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
 };
 
+// An image dropped/pasted on the canvas may still be uploading (#2908): every save waits for it, so
+// the saved e-mail has the real image, never a half-done one.
 const persist = async extra => {
+  await waitForImageUploads();
   await store.dispatch('emailCampaigns/update', {
     id: campaignId.value,
     ...getEditorBodyPayload(),
@@ -344,6 +352,48 @@ watch([isReady, contentVersion, showWelcome], () => {
   contentTimer = setTimeout(refreshCanvasContent, CONTENT_CHECK_MS);
 });
 onBeforeUnmount(() => clearTimeout(contentTimer));
+
+// Leaving while an image uploads loses it (#2908): ask first with the app's own dialog; closing the
+// tab can only use the browser's warning.
+const { isUploadingImages } = useImageDrop();
+const leaveDialog = ref(null);
+const leaveTarget = ref(null);
+let leaveConfirmed = false;
+onBeforeRouteLeave(to => {
+  if (!isUploadingImages.value || leaveConfirmed) return true;
+  leaveTarget.value = to.fullPath;
+  leaveDialog.value?.open();
+  return false;
+});
+const leaveAnyway = () => {
+  leaveDialog.value?.close();
+  if (!leaveTarget.value) return;
+  leaveConfirmed = true;
+  // The page lives in keep-alive: the next visit must ask again.
+  router.push(leaveTarget.value).finally(() => {
+    leaveConfirmed = false;
+  });
+};
+watch(isUploadingImages, uploading => {
+  if (uploading) return;
+  leaveConfirmed = false;
+  leaveDialog.value?.close();
+});
+// A file dropped anywhere on the page outside the canvas never makes the browser open it (#2908).
+usePageFileDrop({
+  isEditorOpen: () => isReady.value && !showWelcome.value,
+  onNotReady: () =>
+    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.IMAGE_DROP.CHOOSE_FIRST')),
+});
+const warnBeforeUnload = event => {
+  if (!isUploadingImages.value) return;
+  event.preventDefault();
+  event.returnValue = '';
+};
+window.addEventListener('beforeunload', warnBeforeUnload);
+onBeforeUnmount(() =>
+  window.removeEventListener('beforeunload', warnBeforeUnload)
+);
 const aiButtonLabel = computed(() =>
   canvasHasContent.value
     ? t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.AI_ADJUST')
@@ -1165,6 +1215,22 @@ const insertPlaceholder = key => {
           </p>
         </aside>
       </div>
+      <Dialog
+        ref="leaveDialog"
+        type="alert"
+        width="md"
+        :title="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.IMAGE_DROP.LEAVE_TITLE')"
+        :description="
+          t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.IMAGE_DROP.LEAVE_CONFIRM')
+        "
+        :cancel-button-label="
+          t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.IMAGE_DROP.LEAVE_WAIT')
+        "
+        :confirm-button-label="
+          t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.IMAGE_DROP.LEAVE_ANYWAY')
+        "
+        @confirm="leaveAnyway"
+      />
       <Dialog
         ref="previewDialog"
         :title="t(`${UX}.PREVIEW`)"

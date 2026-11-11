@@ -1337,10 +1337,25 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Automação: porta única e modelos por segmento (#2889, épico #2414). Ligada (junto com automacao_editor): a lista de
+# Automações abre com "O que você quer que aconteça sozinho?" (o pedido vai para o Guia) e os 20 modelos prontos, com
+# os do segmento da conta em destaque (pacote #1550: geral, seguros/corretora, seguros/saude_beneficios); o pedido e
+# os modelos levam ao Guia, e "Montar do zero" fica como segunda opção. Só com o Guia na conta e para quem pode montar.
+# Desligada: a lista de hoje (o herói compartilhado ganhou ajustes de celular e acessibilidade nas duas telas). Sem
+# migration. Rollback: desligar a flag na conta. A posição vale pela ordem neste arquivo: nesta branch, sobre a main
+# de 11/11 (41 flags na ext_2), cai na 42 (bit 1 << 41). A Orquestração reservou a 44 (1 << 43) para ela, depois da F5
+# e da F7 da vitrine #2858 (42 e 43), que ainda não entraram; quem entrar antes fica com o número menor. O bit que vale
+# é o que a Orquestração confirmar na hora do OK; o spec/models/account_spec.rb cita o bit e acompanha essa confirmação.
+- name: automacao_porta
+  display_name: Automação › porta única e modelos por segmento
+  enabled: false
+  column: feature_flags_ext_2
+
 # Relacionamentos: as telas novas (#2894, épico #1240). Ligada: o menu Relacionamentos abre a lista nova de pessoas e
 # empresas, a ficha nova da pessoa e da empresa e "Trazer minha lista". Desligada: as telas atuais, sem mudança nenhuma.
 # Sem migration. Rollback: desligar a flag na conta. Posição reservada pela Orquestração: 45; a posição real segue a
-# ordem de chegada à main e é confirmada por ela antes do OK (hoje 42, 1 << 41 = 2199023255552).
+# ordem de chegada à main e é confirmada por ela antes do OK (hoje 43, 1 << 42 = 4398046511104, depois da
+# automacao_porta do #2889, que chegou antes).
 - name: relacionamentos_novo
   display_name: Relacionamentos › telas novas
   enabled: false
