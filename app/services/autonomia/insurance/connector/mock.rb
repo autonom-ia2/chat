@@ -192,7 +192,8 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
     require_provider!(provider)
     require_session!(session)
     nome = insurer_code.present? ? "proposta-#{insurer_code}" : 'comparativo'
-    { 'quote_id' => quote_id, 'url' => "https://exemplo.test/#{nome}-mock.pdf" }
+    # `official` como o adapter (chat#2886): o documento da seguradora só existe com `insurer_code`.
+    { 'quote_id' => quote_id, 'url' => "https://exemplo.test/#{nome}-mock.pdf", 'official' => insurer_code.present? }
   end
 
   private
