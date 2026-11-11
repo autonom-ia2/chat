@@ -1,0 +1,108 @@
+{
+  "AUTOMACAO_MODELOS": {
+    "TITULO": "Comece por um modelo",
+    "TEXTO": "Toque num modelo para ver como ele funciona. O Guia monta com você e nada liga sem você mandar.",
+    "TODOS": "Todos",
+    "DESTAQUE_GERAL": "Mais usados",
+    "DESTAQUE_RAMO": "Mais usados no seu ramo",
+    "USA_IA": "Usa IA",
+    "USAR": "Usar este modelo",
+    "COMO_TITULO": "Como fica pronto",
+    "COMO_1": "Você toca em Usar este modelo.",
+    "COMO_2": "O Guia pergunta só o que é da sua conta, como a etapa do funil e quem recebe o aviso.",
+    "COMO_3": "Você vê o que ela faria numa conversa de verdade e só então liga.",
+    "PEDIDO": "Quero uma automação assim: {titulo}. {texto}",
+    "GRUPOS_ARIA": "Tipo de modelo",
+    "SUAS": "Suas automações",
+    "DO_ZERO": "Montar do zero",
+    "GRUPOS": {
+      "VENDAS": "Vender mais",
+      "ATENDIMENTO": "Atender melhor",
+      "POS_VENDA": "Depois da venda",
+      "RELACIONAMENTO": "Manter o cliente",
+      "EQUIPE": "Equipe"
+    },
+    "ITENS": {
+      "M01": {
+        "TITULO": "Lembrar antes do vencimento",
+        "TEXTO": "Um mês antes de vencer, o cliente recebe um aviso. Se não responder, recebe o link para marcar um horário."
+      },
+      "M02": {
+        "TITULO": "Atender quem veio do anúncio na hora",
+        "TEXTO": "Quem preenche o formulário do anúncio recebe uma mensagem em minutos e já pode marcar uma conversa."
+      },
+      "M03": {
+        "TITULO": "Cuidar do cliente depois do atendimento",
+        "TEXTO": "Manda os cuidados, pergunta se ficou tudo bem e lembra da volta. Se der problema, você fica sabendo na hora."
+      },
+      "M04": {
+        "TITULO": "Segurar quem começa a sumir",
+        "TEXTO": "Na primeira falta, o cliente é convidado a remarcar. Na segunda, a equipe é avisada para ligar."
+      },
+      "M05": {
+        "TITULO": "Lembrar a próxima visita no tempo certo",
+        "TEXTO": "Depois do serviço, o sistema anota o que ficou para a próxima vez e lembra o cliente na data. Se ele enrolar, oferece um agrado."
+      },
+      "M06": {
+        "TITULO": "Parabéns que vira horário marcado",
+        "TEXTO": "No aniversário, o cliente recebe um parabéns com um presente e o link para marcar."
+      },
+      "M07": {
+        "TITULO": "Promoção primeiro para quem já comprou",
+        "TEXTO": "Quem já comprou recebe a promoção um dia antes. Quem pede para não receber, não recebe mais."
+      },
+      "M08": {
+        "TITULO": "Lista do cliente vira um pedido por pessoa",
+        "TEXTO": "O cliente manda uma lista de nomes. Cada pessoa vira um cartão no funil e recebe o pedido de documentos."
+      },
+      "M09": {
+        "TITULO": "Procurar clientes novos toda semana",
+        "TEXTO": "Toda segunda, o sistema acha empresas novas, manda uma apresentação e só traz para você quem tiver interesse."
+      },
+      "M10": {
+        "TITULO": "Cliente bravo vai direto para a gerente",
+        "TEXTO": "Quando o cliente está muito irritado, a conversa sai do atendimento automático e a gerente recebe um resumo na hora."
+      },
+      "M11": {
+        "TITULO": "Indicação que vira presente",
+        "TEXTO": "Quem indica um amigo recebe um presente quando o amigo fecha. O amigo recebe um desconto."
+      },
+      "M12": {
+        "TITULO": "Depois da visita, o próximo passo",
+        "TEXTO": "Depois da visita, o cliente é perguntado sobre o que achou e o vendedor é lembrado de anotar e mandar a proposta."
+      },
+      "M13": {
+        "TITULO": "Do contrato até a avaliação",
+        "TEXTO": "Depois de fechar, o sistema confirma os detalhes, lembra a equipe antes do dia e pede uma avaliação depois."
+      },
+      "M14": {
+        "TITULO": "Documentos completos sem correria",
+        "TEXTO": "Pede os documentos, confere cada foto ou PDF, pede só o que falta e avisa você quando estiver tudo certo."
+      },
+      "M15": {
+        "TITULO": "Cliente grande com atendimento do dono",
+        "TEXTO": "Pedido acima do valor que você escolher vai direto para você, marcado como prioridade."
+      },
+      "M16": {
+        "TITULO": "Chamar de volta quem foi para outro",
+        "TEXTO": "Quem fechou com outro há quase um ano recebe uma oferta melhor."
+      },
+      "M17": {
+        "TITULO": "Férias sem cliente esquecido",
+        "TEXTO": "Quando alguém sai de férias, quem cobre recebe o resumo de cada cliente. Na volta, os clientes voltam para a pessoa."
+      },
+      "M18": {
+        "TITULO": "Escolher candidatos sem planilha",
+        "TEXTO": "Currículo que chega pelo WhatsApp vira um cartão com os dados principais, e os melhores recebem o convite para entrevista."
+      },
+      "M19": {
+        "TITULO": "Cliente que trocou de número",
+        "TEXTO": "Se o WhatsApp não entrega, o sistema tenta por e-mail e pede o número novo."
+      },
+      "M20": {
+        "TITULO": "Venda fechada entra no seu sistema",
+        "TEXTO": "Ao fechar, o sistema pega os dados que faltam, envia ao seu sistema de cobrança e manda as boas-vindas."
+      }
+    }
+  }
+}

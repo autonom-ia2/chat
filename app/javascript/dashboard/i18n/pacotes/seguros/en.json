@@ -323,5 +323,8 @@
       },
       "FECHADO_ENTRE": "Closed or did not close between"
     }
+  },
+  "AUTOMACAO_MODELOS": {
+    "DESTAQUE_RAMO": "Most used by insurance professionals"
   }
 }

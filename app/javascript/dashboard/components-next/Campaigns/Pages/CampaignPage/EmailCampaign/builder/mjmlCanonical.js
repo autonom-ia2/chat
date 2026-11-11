@@ -17,6 +17,7 @@
 // other) are read flat first, so their defaults come back too.
 
 import { collectHeadDefaults, resolveAttributes } from './mjmlHeadDefaults';
+import { serializeColumnChildren } from './looseColumnContent';
 
 // Tags whose content is HTML/text for MJML, never MJML children.
 const ENDING_TAGS = new Set([
@@ -119,6 +120,34 @@ const cutEndingContent = (src, nonce) => {
   return { skeleton: out, slots };
 };
 
+// ---- void HTML elements left loose in the skeleton (#2908) ----
+
+// <br>, <img>, <hr> written the HTML way never close, so the XML parse failed and the whole e-mail
+// loaded unrepaired. They are closed the XML way first (content of ending tags is already cut out).
+const VOID_TAGS = new Set(['br', 'img', 'hr', 'wbr']);
+
+const closedLater = (src, from, name) =>
+  src.slice(from).trimStart().toLowerCase().startsWith(`</${name}`);
+
+const closeVoidElements = src => {
+  let out = '';
+  let pos = 0;
+  for (;;) {
+    const lt = src.indexOf('<', pos);
+    if (lt === -1) return out + src.slice(pos);
+    const tagEnd = findTagEnd(src, lt);
+    if (tagEnd === -1) return out + src.slice(pos);
+    const tag = src.slice(lt, tagEnd + 1);
+    const name = readTagName(src, lt + 1).toLowerCase();
+    const open =
+      VOID_TAGS.has(name) &&
+      !isSelfClosing(tag) &&
+      !closedLater(src, tagEnd + 1, name);
+    out += src.slice(pos, lt) + (open ? `${tag.slice(0, -1)}/>` : tag);
+    pos = tagEnd + 1;
+  }
+};
+
 const restoreEndingContent = (xml, slots, nonce) =>
   slots.reduce(
     (acc, slot, index) => acc.split(slotToken(nonce, index)).join(slot.content),
@@ -205,6 +234,10 @@ let serializeNode;
 // ctx: { defaults (null when the MJML has no <mj-attributes>), inHead, inheritedClasses }
 const serializeElement = (el, ctx) => {
   const tag = el.tagName;
+  // A void element never gets a close tag: the HTML parser reads </br> as a second <br>.
+  if (VOID_TAGS.has(tag.toLowerCase()) && !el.childNodes.length) {
+    return `${openTag(tag, plainAttributes(el)).slice(0, -1)}/>`;
+  }
   // Resolved into the body below, and grapesjs-mjml would render its children as blocks.
   if (ctx.defaults && tag === 'mj-attributes') return '';
   const resolve = ctx.defaults && !ctx.inHead;
@@ -216,10 +249,21 @@ const serializeElement = (el, ctx) => {
     inHead: ctx.inHead || tag === 'mj-head',
     inheritedClasses: el.getAttribute('mj-class') ?? ctx.inheritedClasses,
   };
-  const inner = Array.from(el.childNodes, node =>
-    serializeNode(node, childCtx)
-  );
-  return openTag(tag, attrs) + inner.join('') + `</${tag}>`;
+  // Loose <img>/text in a column become mj-image/mj-text (#2908, looseColumnContent.js).
+  const inner =
+    tag === 'mj-column' && !ctx.inHead
+      ? serializeColumnChildren(Array.from(el.childNodes), {
+          serialize: (node, { plain }) =>
+            serializeNode(
+              node,
+              plain ? { ...childCtx, defaults: null } : childCtx
+            ),
+          slotPrefix: ctx.slotPrefix,
+        })
+      : Array.from(el.childNodes, node => serializeNode(node, childCtx)).join(
+          ''
+        );
+  return openTag(tag, attrs) + inner + `</${tag}>`;
 };
 
 serializeNode = (node, ctx) => {
@@ -237,12 +281,13 @@ serializeNode = (node, ctx) => {
   }
 };
 
-const rootContext = root => {
+const rootContext = (root, nonce) => {
   const attributesEls = Array.from(root.getElementsByTagName('mj-attributes'));
   return {
     defaults: attributesEls.length ? collectHeadDefaults(attributesEls) : null,
     inHead: false,
     inheritedClasses: null,
+    slotPrefix: `MJSLOT${nonce}N`,
   };
 };
 
@@ -268,7 +313,9 @@ export const canonicalizeMjml = (mjml = '') => {
   if (!mjml) return mjml || '';
   const nonce = Math.random().toString(36).slice(2);
   const { skeleton, slots } = cutEndingContent(mjml, nonce);
-  const { root, error } = parseXml(normalizeEntities(skeleton));
+  const { root, error } = parseXml(
+    normalizeEntities(closeVoidElements(skeleton))
+  );
   if (!root) {
     // eslint-disable-next-line no-console
     console.warn(
@@ -276,7 +323,7 @@ export const canonicalizeMjml = (mjml = '') => {
     );
     return mjml;
   }
-  const ctx = rootContext(root);
+  const ctx = rootContext(root, nonce);
   const xml = Array.from(root.childNodes, node =>
     serializeNode(node, ctx)
   ).join('');

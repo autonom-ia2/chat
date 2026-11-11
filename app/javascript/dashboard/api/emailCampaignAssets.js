@@ -11,11 +11,13 @@ class EmailCampaignAssetsAPI extends ApiClient {
   }
 
   // Sobe imagem ou PDF via builder_assets. Retorna { url, signed_id? }.
-  upload(campaignId, file) {
+  // timeout (ms) opcional: o arrastar/colar no editor não pode esperar para sempre (#2908).
+  upload(campaignId, file, { timeout } = {}) {
     const formData = new FormData();
     formData.append('file', file);
     return axios.post(`${this.url}/${campaignId}/assets`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      ...(timeout ? { timeout } : {}),
     });
   }
 
