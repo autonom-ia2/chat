@@ -22,6 +22,14 @@ RSpec.describe Autonomia::FerramentasProntas::Lista do
       expect(ordem(nomes, 'asma bronquica')).to eq(['Asma brônquica alérgica', 'Crise brônquica na asma', 'Estado de mal asmático', 'Asma'])
     end
 
+    it 'o desempate (opcional) vale dentro de cada grupo, antes da ordem da fonte' do
+      nomes = ['Outros parafusos', 'Parafusos curtos', 'Parafusos longos e grossos']
+      maior_primeiro = ->(nome) { -nome.length }
+
+      expect(described_class.em_ordem(nomes, 'parafuso', desempate: maior_primeiro, &:itself))
+        .to eq(['Parafusos longos e grossos', 'Parafusos curtos', 'Outros parafusos'])
+    end
+
     it 'busca vazia: a ordem da fonte' do
       expect(ordem(%w[b a c], '  ')).to eq(%w[b a c])
     end

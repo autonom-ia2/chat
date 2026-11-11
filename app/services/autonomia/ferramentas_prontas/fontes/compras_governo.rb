@@ -81,8 +81,9 @@ module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
     valor.to_s.squish.presence
   end
 
+  # O PNCP manda 0 quando o valor estimado é sigiloso: zero não é o valor da compra, e o campo sai.
   def valor(numero)
-    numero.to_f.round(2) if numero.is_a?(Numeric)
+    numero.to_f.round(2) if numero.is_a?(Numeric) && numero.positive?
   end
 
   # Só com o CNPJ de 14 dígitos e números inteiros: o resto não entra no endereço.

@@ -30,9 +30,12 @@ module Autonomia::FerramentasProntas::Lista
   #   0. o texto começa pelas palavras da busca ("parafuso" em "-- Parafusos autoperfurantes");
   #   1. cada palavra da busca começa uma palavra do texto ("Outros parafusos para madeira");
   #   2. o resto (a palavra no meio de outra: "asma" em "Histoplasmose").
-  def em_ordem(itens, busca)
+  # `desempate` (opcional): um número por item, menor primeiro, dentro de cada grupo e antes da ordem da fonte.
+  def em_ordem(itens, busca, desempate: ->(_item) { 0 })
     procuradas = palavras(busca)
-    itens.each_with_index.sort_by { |item, posicao| [grupo(palavras(yield(item)), procuradas), posicao] }.map(&:first)
+    itens.each_with_index.sort_by do |item, posicao|
+      [grupo(palavras(yield(item)), procuradas), desempate.call(item), posicao]
+    end.map(&:first)
   end
 
   # As palavras comparáveis, só com letras e números ("-- Parafusos," -> ["parafusos"]).

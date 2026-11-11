@@ -49,10 +49,16 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   end
 
   # A BrasilAPI devolve na ordem do código: a ordem por relevância vem antes do corte (sem ela, "parafuso" mostrava
-  # primeiro o 34.03, lubrificantes "antiaderentes de porcas e parafusos", e o 73.18 vinha depois).
+  # primeiro o 34.03, lubrificantes "antiaderentes de porcas e parafusos", e o 73.18 vinha depois). No mesmo grupo, o
+  # código completo (8 dígitos, o da nota) antes da posição (4) e do capítulo (2).
   def lista(busca, itens)
     lista = Autonomia::FerramentasProntas::Lista
-    { 'busca' => busca }.merge(lista.cortar(lista.em_ordem(itens, busca) { |item| item['descricao'] }, 'itens', MAX_ITENS))
+    ordem = lista.em_ordem(itens, busca, desempate: ->(item) { -digitos(item['codigo']).length }) { |item| item['descricao'] }
+    { 'busca' => busca }.merge(lista.cortar(ordem, 'itens', MAX_ITENS))
+  end
+
+  def digitos(codigo)
+    codigo.to_s.delete("^#{Parametro::DIGITOS}")
   end
 
   DESCRICAO_DA_BUSCA = "Na consulta buscar: uma palavra da mercadoria (ex.: parafuso) ou parte do código; ao menos #{MIN_BUSCA} " \
@@ -62,13 +68,17 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     codigo(valor)
   end
 
+  SO_O_DE_8 = 'Na nota fiscal vai só o código de 8 dígitos; 2 dígitos é o capítulo e 4 é a posição, não servem na nota. ' \
+              'Com mais de uma opção de 8 dígitos, pergunte ao cliente o material (aço, cobre, plástico…) antes de ' \
+              'dizer o código.'.freeze
+
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'ncm', slug: 'pronta_ncm', nome: 'Código de mercadoria', flag: FLAG,
     descricao: 'A NCM, o código fiscal da mercadoria: procura o código pelo nome do produto ou diz o que um código é.',
     consultas: [
-      Consulta.new(nome: 'buscar', descricao: 'os códigos de uma mercadoria; pede busca', obrigatorios: [BUSCA],
+      Consulta.new(nome: 'buscar', descricao: "os códigos de uma mercadoria; pede busca. #{SO_O_DE_8}", obrigatorios: [BUSCA],
                    provedores: [BrasilApi], validade: 7.days, prazo_por_fonte: 4, prazo_total: 4),
-      Consulta.new(nome: 'codigo', descricao: 'a descrição oficial de um código; pede codigo', obrigatorios: [CODIGO],
+      Consulta.new(nome: 'codigo', descricao: "a descrição oficial de um código; pede codigo. #{SO_O_DE_8}", obrigatorios: [CODIGO],
                    provedores: [BrasilApi], validade: 7.days, prazo_por_fonte: 4, prazo_total: 4)
     ],
     limite_diario: 500,

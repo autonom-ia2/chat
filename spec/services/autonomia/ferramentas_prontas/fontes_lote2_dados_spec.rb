@@ -72,6 +72,25 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(dados['itens'].pluck('codigo')).not_to include('34.20')
     end
 
+    # Só o código de 8 dígitos vai na nota: no mesmo grupo de relevância, ele vem antes da posição (4) e do capítulo (2).
+    it 'no mesmo grupo, o codigo de 8 digitos antes do de 4 e do de 2' do
+      item = ->(codigo, descricao) { vigente.merge(codigo: codigo, descricao: descricao) }
+      fonte_responde('https://brasilapi.com.br/api/ncm/v1?search=parafuso',
+                     [item.call('73', 'Parafusos de ferro'), item.call('73.18', 'Parafusos, pinos ou pernos'),
+                      item.call('7318.14.00', '-- Parafusos autoperfurantes'), item.call('34.03', 'Preparações de porcas e parafusos'),
+                      item.call('7318.15.00', '-- Outros parafusos e pinos')])
+
+      dados = executar_pronta(ferramenta, 'consulta' => 'buscar', 'busca' => 'parafuso')['dados']
+
+      expect(dados['itens'].pluck('codigo')).to eq(%w[7318.14.00 73.18 73 7318.15.00 34.03])
+    end
+
+    it 'as descricoes dizem ao modelo que so o codigo de 8 digitos vai na nota e que pergunte o material' do
+      textos = Autonomia::FerramentasProntas::Catalogo.buscar('ncm').consultas.map(&:descricao).join(' ')
+
+      expect(textos).to include('8 dígitos', 'nota', 'capítulo', 'posição', 'material')
+    end
+
     it '"O que e a NCM 7318.15.00?": a descricao oficial, pelo codigo sem os pontos' do
       fonte_responde(codigo, vigente)
 
@@ -133,6 +152,21 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
         'publicada_em' => '2026-11-03', 'situacao' => 'Divulgada no PNCP', 'link' => 'https://pncp.gov.br/app/editais/25769548000121/2026/235'
       )
       expect(saida.to_json).not_to include('Fulana', 'outro.exemplo')
+    end
+
+    # Item real do PNCP (Uberlândia, 05/11/2026; em spec/javascript/.../dados-reais/compras_governo.json): o valor
+    # sigiloso vem como 0. Zero não é o valor da compra, então o campo sai e o agente não diz "R$ 0".
+    it 'valor estimado sigiloso (0 no PNCP): o campo nao vai ao agente' do
+      sigilosa = { orgaoEntidade: { cnpj: '15126437000305', razaoSocial: 'EMPRESA BRASILEIRA DE SERVICOS HOSPITALARES - EBSERH' },
+                   unidadeOrgao: { nomeUnidade: 'HOSPITAL DAS CLIN DA UNIV FED DE UBERLÂNDIA' }, anoCompra: 2026, sequencialCompra: 4546,
+                   objetoCompra: 'PRODUTOS PARA SAÚDE - UROLOGIA - DIAGNÓSTICO POR IMAGEM E GINECOLOGIA - REEDIÇÃO',
+                   valorTotalEstimado: 0, dataPublicacaoPncp: '2026-11-05T09:12:00', situacaoCompraNome: 'Divulgada no PNCP' }
+      fonte_responde(pncp, { data: [sigilosa], totalRegistros: 1 })
+
+      dados = executar_pronta(ferramenta, 'cidade' => 'uberlandia', 'uf' => 'MG', 'de' => '2026-11-01', 'ate' => '2026-11-05')['dados']
+
+      expect(dados['compras'].first).not_to have_key('valor_estimado')
+      expect(dados['compras'].first).to include('orgao' => 'EMPRESA BRASILEIRA DE SERVICOS HOSPITALARES - EBSERH')
     end
 
     it 'pelo codigo IBGE, com modalidade e busca local no objeto; acima de uma pagina, avisa que olhou so as primeiras' do
