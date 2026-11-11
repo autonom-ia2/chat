@@ -147,4 +147,16 @@ Ressalvas:
 - **Focos de queimada com mais de 1 dia** (a rodada diária falhou; 26 h de folga): a ferramenta responde "não consegui
   consultar", nunca "nenhum foco". Sem nenhum foco no lugar, a resposta é `focos_no_periodo` zero, com o dia da base.
 - **Espaço no banco**: a maior tabela é a das transportadoras (~1,2 milhão de linhas). Durante a troca, a geração nova
-  e a antiga convivem até a antiga ser apagada.
+  e a antiga convivem até a antiga ser apagada. Medido em 11/11/2026, no banco de teste, com o arquivo oficial do dia
+  (tabela e índices, uma geração):
+
+  | Base | Linhas | Espaço | Tempo da importação |
+  |---|---|---|---|
+  | Planos de saúde (ANS) | 4.186 | 3,3 MB | |
+  | Focos de queimada (INPE) | 136.711 | 45 a 58 MB | |
+  | Aeronaves (ANAC) | 35.150 | 27 a 29 MB | |
+  | Placas solares (ANEEL) | 158.110 | 124 MB | ~10,9 min |
+  | Transportadoras (ANTT) | 1.201.583 | 689 MB; passa de ~1,4 GB durante a troca, com as duas gerações | ~2,5 min |
+
+  Os dois tempos medidos ficam dentro da trava de 2h30 da rodada. O espaço não é guardado pela importação: o `Estado`
+  guarda as linhas, e guardar o tamanho pediria coluna nova sem servir ao alerta, que só olha a falha.
