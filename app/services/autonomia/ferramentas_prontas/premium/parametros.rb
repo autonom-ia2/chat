@@ -28,7 +28,8 @@ module Autonomia::FerramentasProntas::Premium::Parametros
     'numero' => { pergunte: 'o número do imóvel no endereço (só o número)' },
     'codigo_car' => { pergunte: 'o código do imóvel no CAR, que está no recibo do CAR' },
     'cep' => { deduza: 'no risco do endereço, mande a cidade (criminalidade) ou a rua, o número e a cidade (área de risco e ' \
-                       'vistoria), e o CEP sai daí; em empresas na região, pergunte a rua ou o bairro.' },
+                       'vistoria), e o CEP sai daí; em empresas na região, mande a rua e a cidade (o CEP geral da cidade ' \
+                       'não serve).' },
     'uf' => { deduza: Autonomia::FerramentasProntas::Municipios::DEDUZA_UF },
     'cidade' => { pergunte: 'a cidade do endereço' },
     'rua' => { pergunte: 'a rua do endereço' },

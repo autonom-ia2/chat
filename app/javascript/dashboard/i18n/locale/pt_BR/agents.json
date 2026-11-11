@@ -3609,7 +3609,7 @@
         },
         "RISCO_ENDERECO": {
           "NOME": "Risco do endereço",
-          "APOIO": "pelo CEP e número",
+          "APOIO": "pelo endereço ou pelo CEP",
           "FAZ": "Mostra se o endereço fica em área de risco, os crimes na cidade e a vistoria do imóvel.",
           "CONSEGUE": "ver o risco de um endereço",
           "CLIENTE": "Minha casa fica no CEP 01001-000, número 10. É área de risco?",
@@ -3629,7 +3629,7 @@
         },
         "CONTATO_EMPRESA": {
           "NOME": "Contato e mercado de empresas",
-          "APOIO": "pelo CNPJ ou pelo CEP",
+          "APOIO": "pelo CNPJ ou pelo endereço",
           "FAZ": "Mostra o telefone e o e-mail de uma empresa e quantas empresas há numa região. Não busca contato de pessoas.",
           "CONSEGUE": "achar o contato de uma empresa",
           "CLIENTE": "Qual o telefone da empresa 11.222.333/0001-81?",

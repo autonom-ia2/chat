@@ -99,12 +99,15 @@ RSpec.describe Autonomia::FerramentasProntas::Catalogo, '.premium' do
   it 'nenhum card tem parâmetro de contato, endereço ou parente de pessoa física (recusa por desenho do schema)' do
     parametros = catalogo.premium.flat_map { |card| card.consultas.flat_map(&:parametros).map(&:nome) }.uniq
     expect(parametros).to contain_exactly('cnpj', 'cpf', 'placa', 'cep', 'numero', 'codigo_car', 'cidade', 'uf', 'rua', 'bairro')
-    # O endereço (QI 70) só no risco do endereço, para achar o CEP: nunca para achar quem mora lá.
-    fora_do_risco = catalogo.premium.reject { |card| card.chave == 'risco_endereco' }
-    expect(fora_do_risco.flat_map { |card| card.consultas.flat_map(&:parametros).map(&:nome) }).not_to include('cidade', 'uf', 'rua', 'bairro')
+    # O endereço (QI 70) só para achar o CEP, no risco do endereço e nas empresas da região: nunca para achar quem mora lá.
+    # Ele é local (não vai à BigDataCorp) e não existe no telefone nem no e-mail, que só aceitam o CNPJ.
+    pelo_endereco = catalogo.premium.flat_map(&:consultas).select { |consulta| consulta.parametro('rua') }
+    expect(pelo_endereco.map(&:nome)).to contain_exactly('area_de_risco', 'vistoria', 'empresas_na_regiao')
+    expect(catalogo.premium.flat_map(&:consultas).flat_map(&:parametros).select { |parametro| %w[cidade uf rua bairro].include?(parametro.nome) })
+      .to all(be_local)
 
     contato = catalogo.buscar('contato_empresa')
-    expect(contato.consultas.flat_map(&:parametros).map(&:nome).uniq).to contain_exactly('cnpj', 'cep')
+    expect(%w[telefone email].map { |nome| contato.consulta(nome).parametros.map(&:nome) }).to eq([['cnpj'], ['cnpj']])
     pessoa = catalogo.buscar('conferir_pessoa')
     expect(pessoa.consultas.map { |consulta| consulta.dataset.nome })
       .to contain_exactly('ondemand_rf_status_person', 'basic_data', 'class_organization')

@@ -3609,7 +3609,7 @@
         },
         "RISCO_ENDERECO": {
           "NOME": "Address risk",
-          "APOIO": "by ZIP code and number",
+          "APOIO": "by address or ZIP code",
           "FAZ": "Shows whether the address is in a risk area, the crimes in the city and the property's inspection.",
           "CONSEGUE": "see the risk of an address",
           "CLIENTE": "My house is at ZIP code 01001-000, number 10. Is it a risk area?",
@@ -3629,7 +3629,7 @@
         },
         "CONTATO_EMPRESA": {
           "NOME": "Company contacts and market",
-          "APOIO": "by CNPJ or ZIP code",
+          "APOIO": "by CNPJ or address",
           "FAZ": "Shows a company's phone and email and how many companies there are in a region. It doesn't look up people's contacts.",
           "CONSEGUE": "find a company's contact",
           "CLIENTE": "What's the phone number of the company 11.222.333/0001-81?",

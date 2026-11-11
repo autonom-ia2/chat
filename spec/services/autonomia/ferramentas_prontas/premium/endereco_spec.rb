@@ -272,15 +272,60 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
       expect(resposta['situacao']).to eq('encontrado')
       expect(pediu('/enderecos', 'zipcode{01304000},addressnumber{100}')).to have_been_made.once
     end
+
+    it 'empresas na região na Rua Augusta, Consolação, sem número: pede o NÚMERO, não o bairro, e não chama a BigDataCorp' do
+      contato = incluir_pronta('contato_empresa', conta: account, agente: agent)
+
+      resposta = executar_premium(contato, 'consulta' => 'empresas_na_regiao', 'rua' => 'Rua Augusta', 'bairro' => 'Consolação',
+                                           'cidade' => 'São Paulo')
+
+      expect(resposta).to include('situacao' => 'pedido_invalido', 'campo' => 'numero')
+      expect(resposta['orientacao']).to include('pergunte ao cliente o número do imóvel')
+      expect(chamou_a_bigdatacorp?).to be(false)
+    end
+
+    it 'empresas na região pela rua, o bairro e o número: consulta pelo CEP da faixa (QI 70, sem pedir o CEP)' do
+      contato = incluir_pronta('contato_empresa', conta: account, agente: agent)
+      bigdatacorp_responde('/enderecos', 'companies_statistics', 'CompaniesStatistics', { 'TotalCompanies' => 1200 })
+
+      resposta = executar_premium(contato, 'consulta' => 'empresas_na_regiao', 'rua' => 'Rua Augusta', 'numero' => '100',
+                                           'bairro' => 'Consolação', 'cidade' => 'São Paulo')
+
+      expect(resposta['situacao']).to eq('encontrado')
+      expect(pediu('/enderecos', 'zipcode{01304000}')).to have_been_made.once
+    end
+
+    it 'empresas na região só com a cidade: pede a rua (a contagem é da região do CEP, não da cidade inteira)' do
+      contato = incluir_pronta('contato_empresa', conta: account, agente: agent)
+      allow(described_class).to receive(:cep)
+
+      resposta = executar_premium(contato, 'consulta' => 'empresas_na_regiao', 'cidade' => 'São Paulo')
+
+      expect(resposta).to include('situacao' => 'pedido_invalido', 'campo' => 'rua')
+      expect(resposta['orientacao']).to include('pergunte ao cliente a rua', 'região do CEP')
+      expect(described_class).not_to have_received(:cep)
+      expect(chamou_a_bigdatacorp?).to be(false)
+    end
+
+    it 'empresas na região com o CEP segue direto, sem procurar' do
+      contato = incluir_pronta('contato_empresa', conta: account, agente: agent)
+      allow(described_class).to receive(:cep)
+      bigdatacorp_responde('/enderecos', 'companies_statistics', 'CompaniesStatistics', { 'TotalCompanies' => 1200 })
+
+      expect(executar_premium(contato, 'consulta' => 'empresas_na_regiao', 'cep' => '01304-000')['situacao']).to eq('encontrado')
+      expect(described_class).not_to have_received(:cep)
+    end
   end
 
   describe 'o que a instrução diz ao agente' do
     let(:catalogo) { Autonomia::FerramentasProntas::Catalogo }
 
-    it 'empresas na região: o número é da região do CEP; pede a rua ou o bairro, sem usar o CEP geral da cidade sem avisar' do
-      descricao = catalogo.buscar('contato_empresa').consulta('empresas_na_regiao').descricao
+    it 'empresas na região: o número é da região do CEP; sem o CEP, manda a rua e a cidade, e o CEP geral da cidade não serve' do
+      consulta = catalogo.buscar('contato_empresa').consulta('empresas_na_regiao')
 
-      expect(descricao).to include('da região do CEP', 'peça a rua ou o bairro', 'CEP geral da cidade')
+      expect(consulta.descricao).to include('da região do CEP', 'mande a rua e a cidade', 'CEP geral da cidade')
+      expect(consulta.obrigatorios).to be_empty
+      expect(consulta.parametros.map(&:nome)).to contain_exactly('cep', 'rua', 'numero', 'bairro', 'cidade', 'uf')
     end
 
     it 'imóvel rural: diz onde achar o código, no recibo do CAR' do

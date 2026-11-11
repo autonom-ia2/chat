@@ -1,5 +1,6 @@
 # CONTATO E MERCADO DE EMPRESAS (#2858, F7, Premium): telefone e e-mail de uma EMPRESA pelo CNPJ (`phones_extended`,
-# `emails_extended`) e quantas empresas há numa região pelo CEP (`companies_statistics`, só números, sem a lista).
+# `emails_extended`) e quantas empresas há numa região pelo CEP (`companies_statistics`, só números, sem a lista). Regra
+# "QI 70": o CEP da região sai da rua e da cidade (`pelo_endereco`), como no risco do endereço; só a cidade não basta.
 # Contato de pessoa física fica de fora por desenho: o único documento aceito é o CNPJ (um CPF não passa no dígito do
 # CNPJ, e a BigDataCorp nem é chamada). Telefone na lista "não perturbe" e e-mail marcado como pessoal não saem.
 module Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa
@@ -49,9 +50,11 @@ module Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa
       ),
       Premium::ConsultaPaga.new(
         nome: 'empresas_na_regiao',
-        descricao: 'quantas empresas há na região do CEP (só números). O número é da região do CEP, não da cidade inteira: ' \
-                   'sem o CEP, peça a rua ou o bairro, e não use o CEP geral da cidade sem avisar o cliente',
-        obrigatorios: [Premium::Parametros::CEP],
+        descricao: 'quantas empresas há na região do CEP (só números). O número é da região do CEP, não da cidade inteira. ' \
+                   'O cliente não precisa saber o CEP: sem ele, mande a rua e a cidade (o bairro e o número ajudam a ' \
+                   'escolher o CEP da rua); o CEP geral da cidade não serve',
+        obrigatorios: [], opcionais: [Premium::Parametros::NUMERO, *Premium::Parametros::PELO_ENDERECO], pelo_endereco: true,
+        exige_rua: true,
         dataset: Premium::Dataset.new(nome: 'companies_statistics', rota: '/enderecos', resposta: 'CompaniesStatistics', custo: '0.06',
                                       preco: '0.09', busca: ->(params) { "zipcode{#{params['cep']}}" }, extrair: REGIAO)
       )
