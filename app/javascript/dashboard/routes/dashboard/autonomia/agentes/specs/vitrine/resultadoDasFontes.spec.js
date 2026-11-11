@@ -161,22 +161,24 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     expect(valor('doencas', 'busca', 'Resultados')).toContain('Asma');
   });
 
-  it('F4: NCM com código e descrição, a busca já na ordem de relevância', () => {
-    expect(valor('ncm', 'codigo', 'Código')).toBe('7318.15.00');
-    expect(valor('ncm', 'codigo', 'Descrição')).toContain('parafusos');
-    // Sem os traços da tabela, e o código de 8 dígitos (o da nota) antes da posição de 4.
-    expect(
-      valor('ncm', 'buscar', 'Resultados').startsWith(
-        'Parafusos autoperfurantes, '
-      )
-    ).toBe(true);
-    expect(valor('ncm', 'buscar', 'Primeiro da lista')).toBe(
-      'Parafusos autoperfurantes'
-    );
-    expect(valor('ncm', 'buscar', 'Código')).toBe('7318.14.00');
-    expect(
-      valor('ncm', 'codigo', 'Descrição').startsWith('Outros parafusos')
-    ).toBe(true);
+  // O caso real do teste em produção (11/11/2026): "café torrado" achava só o grupo 0901.2, e a tela mostrava "Café
+  // torrado:" com o código 0901.2. Agora vêm os códigos da nota (8 dígitos), com a descrição completa.
+  it('F4: NCM com o código da nota e a descrição completa, sem traço nem dois-pontos', () => {
+    expect(linhas('ncm', 'buscar')).toEqual([
+      ['Busca', 'café torrado'],
+      [
+        'Resultados',
+        'Café torrado, não descafeinado e Café torrado, descafeinado',
+      ],
+      ['Primeiro da lista', 'Café torrado, não descafeinado'],
+      ['Código', '0901.21.00'],
+      ['Em vigor desde', '01/04/2022'],
+    ]);
+    expect(linhas('ncm', 'codigo')).toEqual([
+      ['Código', '0901.21.00'],
+      ['Descrição', 'Café torrado, não descafeinado'],
+      ['Em vigor desde', '01/04/2022'],
+    ]);
   });
 
   it('F4: compras, estações e chuva com os valores', () => {

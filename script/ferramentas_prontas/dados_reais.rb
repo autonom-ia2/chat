@@ -39,8 +39,9 @@ module DadosReaisDasProntas
     ['procedimentos', 'busca', { 'busca' => 'hemograma' }],
     ['doencas', 'codigo', { 'codigo' => 'J45' }],
     ['doencas', 'busca', { 'busca' => 'asma' }],
-    ['ncm', 'buscar', { 'busca' => 'parafuso' }],
-    ['ncm', 'codigo', { 'codigo' => '7318.15.00' }],
+    # O caso real do teste em produção (11/11/2026): a busca acha o grupo 0901.2, que abre nos códigos da nota.
+    ['ncm', 'buscar', { 'busca' => 'café torrado' }],
+    ['ncm', 'codigo', { 'codigo' => '0901.21.00' }],
     ['compras_governo', 'compras', { 'cidade' => 'Uberlândia', 'uf' => 'mg' }],
     ['estacoes', 'estacoes', { 'cidade' => 'Uberlândia', 'uf' => 'mg' }],
     # Vários dias: a lista de itens sem nome (identificados pela data) passa pelo spec de cobertura.
