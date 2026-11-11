@@ -66,12 +66,13 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
   # Ligada agora ou alguma vez (alguém assumiu e ligou).
   def ja_ligada? = ativa || ligada_em.present?
 
-  # O desfazer nunca deixa a automação ligada de novo (#2889): ligar é só na tela (assumir_e_religar!). Nem troca a
-  # versão de uma automação ligada: ela rodaria uma versão que quem ligou não viu.
+  # O desfazer nunca deixa a automação ligada de novo (#2889): ligar é "assumir" (assumir_e_religar!), com a versão que
+  # a pessoa viu e a confirmação dela. Nem troca a versão de uma automação ligada: ela rodaria uma versão que quem ligou
+  # não viu.
   def self.recusa_ao_restaurar(antes, atual)
     antes = antes.to_h
     ligada = atual.to_h['ativa'] == true
-    return 'ligar_na_tela' if antes['ativa'] == true && !ligada
+    return 'ficou_desligada' if antes['ativa'] == true && !ligada
 
     'automacao_ja_ligada' if ligada && antes.key?('versao_ativa_id')
   end

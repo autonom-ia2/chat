@@ -1,8 +1,9 @@
 require 'rails_helper'
 
 # #2889 parte 2: com a porta da Automação (automacao_porta + automacao_editor), o Guia monta automação no motor novo
-# (autonomia/automacoes). Cria e ajusta desligada, com a origem 'guia'; não liga (só a pessoa, na tela); vê o formato
-# da receita; e quem tem a chave de automações faz isso sem ser administrador, como em automation_rules.
+# (autonomia/automacoes). Cria e ajusta desligada, com a origem 'guia'; liga só quando a pessoa pede, pelo cartão de
+# confirmação e na versão que ela viu; vê o formato da receita; e quem tem a chave de automações faz isso sem ser
+# administrador, como em automation_rules.
 RSpec.describe Autonomia::Guide::Acoes do
   let(:account_and_admin) { create_account_and_user }
   let(:account) { account_and_admin.first }
@@ -168,19 +169,65 @@ RSpec.describe Autonomia::Guide::Acoes do
 
       relatorio = desfazer
 
-      expect(relatorio['conflitos'].pluck('motivo')).to eq(['ligar_na_tela'])
-      expect(relatorio['conflitos'].first['texto']).to eq(I18n.t('autonomia.guide.undo.conflitos.ligar_na_tela'))
+      expect(relatorio['conflitos'].pluck('motivo')).to eq(['ficou_desligada'])
+      expect(relatorio['conflitos'].first['texto']).to eq(I18n.t('autonomia.guide.undo.conflitos.ficou_desligada'))
       expect(automacao.reload.ativa).to be(false)
     end
   end
 
   describe 'ligar' do
-    it 'o Guia não liga, nem para o administrador: a resposta diz onde ligar na tela', :aggregate_failures do
-      automacao = Autonomia::Automacao::Definicao.find(criar.registro)
-      ligar = -> { para(admin).executar('POST autonomia/automacoes/:id/ligar', { caminho: { id: automacao.id }, corpo: {} }) }
+    let(:ligar) { 'POST autonomia/automacoes/:id/ligar' }
 
-      expect { ligar.call }.to raise_error(described_class::Recusada, I18n.t('autonomia.guide.only_on_screen.automacao_ligar'))
-      expect(para(admin).catalogo).not_to include('POST autonomia/automacoes/:id/ligar')
+    def dados_de_ligar(automacao, versao_id = automacao.versao_ativa_id)
+      { caminho: { id: automacao.id }, corpo: { 'versao_id' => versao_id }, descricao: 'Ligar o lembrete' }
+    end
+
+    # Ligar não tem desfazer: o executar_acao recusa e só o cartão (propor_acao) liga, com o aviso de como parar.
+    it 'o Guia liga só pelo cartão, na versão que a pessoa viu, e em nome de quem confirmou', :aggregate_failures do
+      automacao = Autonomia::Automacao::Definicao.find(criar.registro)
+      dados = dados_de_ligar(automacao)
+
+      expect(para(admin).catalogo).to include(ligar)
+      expect { para(admin).conferir!(ligar, dados) }
+        .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.needs_confirmation'))
+      expect(automacao.reload.ativa).to be(false)
+      expect(para(admin).descrever(ligar, dados)[:aviso]).to eq(I18n.t('autonomia.guide.automacao_ligar_vale_agora'))
+
+      expect(para(admin).executar(ligar, dados).ok).to be(true)
+      expect(automacao.reload.ativa).to be(true)
+      expect(automacao.ligada_por).to eq(admin)
+    end
+
+    it 'a versão velha não liga: volta "outra pessoa salvou"', :aggregate_failures do
+      automacao = Autonomia::Automacao::Definicao.find(criar.registro)
+      vista = automacao.versao_ativa_id
+      automacao.salvar_versao!(receita: outra_receita, autor: admin, base: vista)
+
+      resultado = para(admin).executar(ligar, dados_de_ligar(automacao, vista))
+
+      expect(resultado.ok).to be(false)
+      expect(resultado.mensagem).to eq(I18n.t('autonomia.automacao.editor.versao_mudou'))
+      expect(automacao.reload.ativa).to be(false)
+    end
+
+    it 'sem a chave de mexer em automações, ligar é recusado', :aggregate_failures do
+      automacao = Autonomia::Automacao::Definicao.find(criar.registro)
+      so_ve = com_funcao(%w[automation_view])
+
+      expect { para(so_ve).descrever(ligar, dados_de_ligar(automacao)) }
+        .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.automation_manage_only'))
+      expect { para(so_ve).executar(ligar, dados_de_ligar(automacao)) }
+        .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.automation_manage_only'))
+      expect(para(com_funcao(%w[automation_view automation_manage])).executar(ligar, dados_de_ligar(automacao)).ok).to be(true)
+      expect(automacao.reload.ativa).to be(true)
+    end
+
+    it 'sem a porta, nem o administrador liga pelo Guia', :aggregate_failures do
+      automacao = Autonomia::Automacao::Definicao.find(criar.registro)
+      account.disable_features!('automacao_porta')
+
+      expect { para(admin).executar(ligar, dados_de_ligar(automacao)) }
+        .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.automacao_sem_porta'))
       expect(automacao.reload.ativa).to be(false)
     end
 

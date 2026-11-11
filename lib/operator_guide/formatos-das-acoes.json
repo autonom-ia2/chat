@@ -11437,6 +11437,24 @@
     ],
     "sem_corpo": false
   },
+  "POST autonomia/automacoes/:id/ligar": {
+    "campos": {
+      "versao_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/automacoes#ligar",
+    "modelo": "Autonomia::Automacao::Definicao",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:72",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:76",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:73",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:121"
+    ],
+    "sem_corpo": false
+  },
   "POST autonomia/automacoes/:id/trocar_segredo_do_webhook": {
     "completo": true,
     "controller": "api/v1/accounts/autonomia/automacoes_webhook#trocar_segredo",

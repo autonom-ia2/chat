@@ -80,9 +80,11 @@ const props = defineProps({
   automacaoDoMotor: { type: Boolean, default: false },
 });
 // O que o Guia fez no turno (#855), para a tela que o embute reagir; e o aviso de
-// que o pedido inicial saiu, para a tela gastá-lo (#859).
+// que o pedido inicial saiu, para a tela gastá-lo (#859). #2889: e o nome da
+// ação que a pessoa confirmou no cartão, para a tela ler de novo o que mudou.
 const emit = defineEmits([
   'execucao',
+  'acaoConfirmada',
   'pedidoInicialEnviado',
   'respostaRapida',
 ]);
@@ -381,6 +383,7 @@ const confirmarAcao = async item => {
       resultado: data.mensagem,
       avisoSeSumiu: t('AUTONOMIA_GUIDE.ACTION.LOST'),
     });
+    emit('acaoConfirmada', item.acao.nome);
   } catch (error) {
     // #861 — já foi feita em outra aba ou aparelho: o servidor não repete e
     // devolve o resultado guardado. O cartão mostra feita, sem botões.

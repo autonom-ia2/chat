@@ -74,7 +74,12 @@ const GuiaFalso = {
     automacaoId: { type: Number, default: null },
     automacaoDoMotor: Boolean,
   },
-  emits: ['execucao', 'pedidoInicialEnviado', 'respostaRapida'],
+  emits: [
+    'execucao',
+    'acaoConfirmada',
+    'pedidoInicialEnviado',
+    'respostaRapida',
+  ],
   template: '<div data-guia-falso />',
 };
 
@@ -194,6 +199,36 @@ describe('AutomacaoConversaPage no motor novo', () => {
     });
     await flushPromises();
     expect(AutomacoesAPI.show).toHaveBeenCalledTimes(2);
+  });
+
+  it('a pessoa confirmou no cartão o ligar do Guia: a tela lê de novo', async () => {
+    abrirNoMotor(7);
+    AutomacoesAPI.show
+      .mockResolvedValueOnce({ data: automacao() })
+      .mockResolvedValueOnce({ data: automacao({ ativa: true }) });
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-ligada]').exists()).toBe(false);
+    wrapper
+      .findComponent(GuiaFalso)
+      .vm.$emit('acaoConfirmada', 'POST autonomia/automacoes/:id/ligar');
+    await flushPromises();
+    expect(AutomacoesAPI.show).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-ligada]').exists()).toBe(true);
+  });
+
+  it('confirmar ação de outro recurso não relê a automação', async () => {
+    abrirNoMotor(7);
+    const wrapper = montar();
+    await flushPromises();
+    wrapper
+      .findComponent(GuiaFalso)
+      .vm.$emit(
+        'acaoConfirmada',
+        'POST automation_rules/:automation_rule_id/clone'
+      );
+    await flushPromises();
+    expect(AutomacoesAPI.show).toHaveBeenCalledTimes(1);
   });
 
   it('o modo manual abre esta automação no editor', async () => {

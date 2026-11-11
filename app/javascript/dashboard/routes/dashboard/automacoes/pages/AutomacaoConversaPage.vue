@@ -206,6 +206,14 @@ const aoExecutar = execucao => {
   if (motorId.value && passos.some(passoMexeuNoMotor)) motor.carregar();
 };
 
+// #2889: ligar, desligar ou ajustar a ligada passam pelo cartão; confirmado,
+// o resumo e o botão Ligar/Desligar são lidos de novo.
+const aoConfirmarAcao = nome => {
+  if (motorId.value && passoMexeuNoMotor({ ok: true, acao: nome })) {
+    motor.carregar();
+  }
+};
+
 // Respostas de um toque depois da fala do Guia, enquanto a automação está
 // montada e desligada. "Está ótima" não gasta pergunta: leva ao botão Ligar.
 const ligarRef = ref(null);
@@ -398,6 +406,7 @@ const mudarLigada = async ligar => {
                   :anexos-iniciais="anexosIniciais"
                   @resposta-rapida="aoResponderRapido"
                   @execucao="aoExecutar"
+                  @acao-confirmada="aoConfirmarAcao"
                   @pedido-inicial-enviado="gastarModelo"
                 />
               </div>

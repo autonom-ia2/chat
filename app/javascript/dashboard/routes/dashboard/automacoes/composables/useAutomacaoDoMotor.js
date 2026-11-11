@@ -6,7 +6,8 @@ import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 // #2889 — a automação do motor novo que o Guia monta na tela da conversa:
 // carregar, ligar e desligar. Ligar leva a versão que a tela mostrou; se outra
 // pessoa salvou no meio (409), a tela mostra a versão nova antes de deixar
-// ligar. O Guia não liga: quem liga é a pessoa, por aqui.
+// ligar. O Guia também liga, quando a pessoa pede, e sempre pelo cartão de
+// confirmação.
 const CONFLITO = 409;
 
 export function useAutomacaoDoMotor(id) {

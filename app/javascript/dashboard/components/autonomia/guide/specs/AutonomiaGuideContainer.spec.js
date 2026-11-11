@@ -385,6 +385,39 @@ describe('AutonomiaGuideContainer', () => {
     expect(AutonomiaGuideAPI.executarAcao).toHaveBeenCalledOnce();
   });
 
+  // #2889: a tela que embute o Guia lê de novo o que a ação confirmada mudou.
+  it('tells the host screen which action the person confirmed', async () => {
+    comAcaoProposta();
+    AutonomiaGuideAPI.executarAcao.mockResolvedValue({
+      data: { mensagem: 'Pronto, feito.' },
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM').trigger(
+      'click'
+    );
+    await flushPromises();
+
+    expect(wrapper.emitted('acaoConfirmada')).toEqual([[ACAO.nome]]);
+  });
+
+  it('does not tell the host screen when the action failed', async () => {
+    comAcaoProposta();
+    AutonomiaGuideAPI.executarAcao.mockRejectedValue({
+      response: { data: { error: 'Este funil não existe mais.' } },
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM').trigger(
+      'click'
+    );
+    await flushPromises();
+
+    expect(wrapper.emitted('acaoConfirmada')).toBeUndefined();
+  });
+
   it('warns instead of losing the outcome when the record is gone', async () => {
     const store = comAcaoProposta();
     let resolverAcao;

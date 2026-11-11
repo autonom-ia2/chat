@@ -70,8 +70,10 @@ class Autonomia::Guide::Acoes
     'POST agent_bots/:id/reset_access_token',
     'POST agent_bots/:id/reset_secret',
     'POST inboxes/:id/reset_secret',
-    # #2889 — desfazer o desligar religaria a automação sem "assumir e religar": ligar é só na tela.
+    # #2889 — desfazer o desligar religaria a automação sem "assumir e religar". Ligar é "assumir": ela passa a agir
+    # com os direitos de quem ligou, na versão que a pessoa viu (versao_id); por isso o Guia só liga com o cartão.
     'POST autonomia/automacoes/:id/trocar_segredo_do_webhook', 'POST autonomia/automacoes/:id/desligar',
+    'POST autonomia/automacoes/:id/ligar',
     'POST inboxes/:id/rotate_hmac_token',
     'PUT inboxes/:id/whatsapp_business_management_token',
     'POST contacts/import',
@@ -112,11 +114,7 @@ class Autonomia::Guide::Acoes
   # #2096: excluir de vez (card, funil e os cards do contato) exige que a pessoa digite a confirmação; uma proposta do Guia
   # a preencheria sozinha. Excluir o contato também só na tela (decisão do Rodrigo, 23/10): com a flag crm_arquivados,
   # ela anonimiza os cards dele e cancela as reuniões futuras, com aviso ao cliente.
-  # #2889: ligar a automação da Automação livre também só na tela. Ligar é "assumir": ela passa a agir com os direitos
-  # de quem ligou, na versão que essa pessoa viu (Definicao#assumir_e_religar!). O Guia cria e ajusta desligada; quem
-  # liga é a pessoa, no botão Ligar. Desligar segue com o Guia.
-  SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent', 'DELETE contacts/:id' => 'contact_delete',
-                 'POST autonomia/automacoes/:id/ligar' => 'automacao_ligar' }
+  SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent', 'DELETE contacts/:id' => 'contact_delete' }
                .merge(['POST crm/cards/permanent_delete', 'POST crm/pipelines/:id/permanent_delete',
                        'POST crm/contacts/:contact_id/permanent_delete'].index_with('crm_permanent_delete')).freeze
 

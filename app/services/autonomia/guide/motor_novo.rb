@@ -4,11 +4,15 @@
 #   A recusa vale no servidor, não só na instrução.
 # - Ajustar uma automação LIGADA vale na hora (quem salva segue sendo quem ligou, Definicao#salvar_versao!). Por isso
 #   o ajuste dela não tem desfazer e passa pela confirmação da pessoa (`Acoes#desfazivel?`), como o Decisor ligado.
-# - Desligar não tem desfazer (Acoes::SEM_DESFAZER): ligar de novo é só na tela. O aviso da confirmação diz isso.
+# - Ligar e desligar não têm desfazer (Acoes::SEM_DESFAZER): o Guia só faz pelo cartão de confirmação, com o aviso.
+#   Ligar é "assumir": ela age com os direitos de quem confirmou, na versão que a pessoa viu (versao_id). O Guia liga
+#   só quando a pessoa pede, nunca por conta própria.
 class Autonomia::Guide::MotorNovo
   RECURSO = 'autonomia/automacoes'.freeze
   AJUSTES = ['PATCH autonomia/automacoes/:id', 'PUT autonomia/automacoes/:id'].freeze
   DESLIGAR = 'POST autonomia/automacoes/:id/desligar'.freeze
+  LIGAR = 'POST autonomia/automacoes/:id/ligar'.freeze
+  AVISOS = { DESLIGAR => 'automacao_desligar_sem_desfazer', LIGAR => 'automacao_ligar_vale_agora' }.freeze
 
   def initialize(account)
     @account = account
@@ -35,6 +39,7 @@ class Autonomia::Guide::MotorNovo
   def aviso(acao, dados)
     return I18n.t('autonomia.guide.automacao_ligada_vale_na_hora') if ajusta_ligada?(acao, dados)
 
-    I18n.t('autonomia.guide.automacao_desligar_sem_desfazer') if acao.to_s == DESLIGAR
+    chave = AVISOS[acao.to_s]
+    I18n.t("autonomia.guide.#{chave}") if chave
   end
 end
