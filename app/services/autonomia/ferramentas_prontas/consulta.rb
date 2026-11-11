@@ -7,11 +7,12 @@
 # modelo). Recebe os parâmetros normalizados e devolve o nome do que falta, ou nil.
 # `refinar`: o que roda sobre os dados da fonte (ou do cache) antes de irem ao modelo, com os parâmetros locais (ex.:
 # a busca pelo nome do modelo da FIPE). Devolve os dados enxutos, ou nil quando nada sobrou (não encontrado).
+# `versao_do_cache`: muda quando muda o formato do que a consulta guarda (o que estava no cache deixa de ser lido).
 class Autonomia::FerramentasProntas::Consulta
   attr_reader :nome, :descricao, :obrigatorios, :opcionais, :provedores, :validade, :prazo_por_fonte, :prazo_total
 
   def initialize(nome:, descricao:, provedores:, validade:, prazo_por_fonte:, prazo_total:, obrigatorios: [], opcionais: [], # rubocop:disable Metrics/ParameterLists
-                 regra: nil, refinar: nil)
+                 regra: nil, refinar: nil, versao_do_cache: nil)
     @nome = nome
     @descricao = descricao
     @obrigatorios = obrigatorios
@@ -22,6 +23,7 @@ class Autonomia::FerramentasProntas::Consulta
     @prazo_total = prazo_total
     @regra = regra
     @refinar = refinar
+    @versao_do_cache = versao_do_cache
   end
 
   def parametros
@@ -49,7 +51,8 @@ class Autonomia::FerramentasProntas::Consulta
   end
 
   def chave_do_cache(params)
-    para_a_fonte(params).sort.to_h
+    chave = para_a_fonte(params).sort.to_h
+    @versao_do_cache ? chave.merge('versao_do_cache' => @versao_do_cache) : chave
   end
 
   def refinar(dados, params)

@@ -1,12 +1,18 @@
-# PRODUTOS DAS SEGURADORAS (#2858, F4): os produtos e as coberturas que cada seguradora publica no Open Insurance Brasil
-# (a fase 1, de dados abertos, sem token). O agente escolhe a consulta pelo sentido:
+# PRODUTOS DAS SEGURADORAS (#2858, F4): os produtos e as coberturas que as seguradoras publicam no Open Insurance Brasil
+# (a fase 1, de dados abertos, sem token), só em seguro garantia (setor público e privado) e transporte. O agente
+# escolhe a consulta pelo sentido:
 #   - seguradoras: quem publica produtos, com busca pelo nome (e, achada a seguradora, os ramos que ela publica);
-#   - produtos: os produtos de uma seguradora num ramo (o modelo escolhe o ramo da lista), com busca pelo nome do produto.
+#   - produtos: os produtos de uma seguradora num ramo (o modelo escolhe o ramo da lista), com busca pelo nome do
+#     produto ou pelas coberturas ("carga" acha o RCF-DC, que só diz "carga" na cobertura).
+# Decisão do Rodrigo (11/11/2026): a fonte fica no catálogo para os agentes de seguro garantia e de transporte (#2881),
+# mas sai da vitrine como card avulso (`na_vitrine: false`). Só os três ramos em que a medição deu catálogo bom
+# (`docs/audit/2026-11-11-open-insurance-estudo/MEDICAO.md`); os outros 24 saíram. O mercado está incompleto: parte das
+# seguradoras de garantia não publica, e o texto ao agente diz isso.
 # O endereço de cada seguradora sai SEMPRE do diretório oficial (`produtos_seguradoras/diretorio.rb`), nunca do código:
 # o diretório é baixado inteiro (2 MB), resumido e guardado por horas; a seguradora é chamada no endereço que ele dá
-# (`produtos_seguradoras/seguradora.rb`), com prazo curto, e a que não responde sai citada em `nao_responderam`.
-# Auto, residencial e condomínio ficam de fora: o endereço deles pede o CEP de pernoite, o código FIPE e o ano (ou a
-# área de comercialização), que esta consulta não tem.
+# (`produtos_seguradoras/seguradora.rb`), com prazo curto, e a que não responde sai citada em `nao_responderam`. O
+# servidor de teste, o link de exemplo e o produto de sandbox saem antes de chegar ao agente
+# (`produtos_seguradoras/sujeira.rb`).
 # Termos: Open Insurance Brasil, dados abertos da fase 1, sem chave; sem limite publicado. Cache de 6 horas no diretório
 # e de 3 horas nos produtos (a seguradora que falhou numa resposta parcial volta em até 3 horas).
 module Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras
@@ -20,34 +26,12 @@ module Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras
   MAX_COBERTURAS = 6
   # O ramo que o modelo escolhe -> a família `products-services_<família>` do Open Insurance e o rótulo da resposta.
   RAMOS = {
-    'pessoas' => ['person', 'Pessoas (vida, acidentes pessoais, viagem, funeral)'],
-    'vida_e_previdencia' => ['life-pension', 'Vida com previdência'],
-    'previdencia' => %w[pension-plan Previdência],
-    'capitalizacao' => %w[capitalization-title Capitalização],
-    'empresarial' => %w[business Empresarial],
-    'rural' => %w[rural Rural],
-    'habitacional' => %w[housing Habitacional],
-    'riscos_ciberneticos' => ['cyber-risk', 'Riscos cibernéticos'],
-    'responsabilidade_civil_geral' => ['general-liability', 'Responsabilidade civil geral'],
-    'rc_administradores' => ['directors-officers-liability', 'RC de administradores (D&O)'],
-    'rc_profissional' => ['errors-omissions-liability', 'RC profissional (E&O)'],
-    'rc_ambiental' => ['environmental-liability', 'RC ambiental'],
-    'transporte' => %w[transport Transportes],
-    'engenharia' => ['engineering', 'Riscos de engenharia'],
-    'quebra_de_maquinas' => ['equipment-breakdown', 'Quebra de máquinas e equipamentos'],
     'garantia_publica' => ['public-guarantee', 'Seguro garantia (setor público)'],
     'garantia_privada' => ['private-guarantee', 'Seguro garantia (setor privado)'],
-    'fianca_locaticia' => ['rent-guarantee', 'Fiança locatícia'],
-    'garantia_estendida' => ['extended-warranty', 'Garantia estendida'],
-    'garantia_estendida_auto' => ['auto-extended-warranty', 'Garantia estendida de auto'],
-    'lucros_cessantes' => ['lost-profit', 'Lucros cessantes'],
-    'riscos_financeiros' => ['financial-risk', 'Riscos financeiros'],
-    'credito_interno' => ['domestic-credit', 'Crédito interno'],
-    'credito_a_exportacao' => ['export-credit', 'Crédito à exportação'],
-    'riscos_nomeados' => ['named-operational-risks', 'Riscos nomeados e operacionais'],
-    'global_de_bancos' => ['global-banking', 'Global de bancos'],
-    'assistencia_a_bens' => ['assistance-general-assets', 'Assistência a bens em geral']
+    'transporte' => %w[transport Transportes]
   }.freeze
+  # O que o cache guardava antes (v1: 27 ramos, sem o filtro de sujeira) deixa de ser lido.
+  VERSAO_DO_CACHE = 2
 
   module_function
 
@@ -76,12 +60,13 @@ module Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras
     Lista.cortar(itens, 'seguradoras', MAX_SEGURADORAS)
   end
 
-  # A busca pelo nome do produto roda sobre o que veio (ou o cache), e cada seguradora mostra no máximo MAX_PRODUTOS.
+  # A busca roda sobre o que veio (ou o cache), no nome do produto e nas coberturas, e cada seguradora mostra no máximo
+  # MAX_PRODUTOS.
   def refinar_produtos(dados, params)
     return dados if dados['seguradoras'].blank?
 
     seguradoras = dados['seguradoras'].map do |item|
-      achados = Lista.filtrar(item['produtos'], params['busca']) { |produto| produto['nome'] }
+      achados = Lista.filtrar(item['produtos'], params['busca']) { |produto| [produto['nome'], *produto['coberturas']].join(' ') }
       item.except('produtos').merge(Lista.cortar(achados, 'produtos', MAX_PRODUTOS))
     end
     return if seguradoras.all? { |item| item['total'].zero? } && params['busca']
@@ -91,7 +76,8 @@ module Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras
 
   BUSCA = Parametro.new(
     nome: 'busca', local: true,
-    descricao: 'Parte do nome: da seguradora, na consulta seguradoras; do produto, na consulta produtos. Opcional.'
+    descricao: 'Parte do nome: da seguradora, na consulta seguradoras; do produto ou da cobertura (ex.: carga), na consulta ' \
+               'produtos. Opcional.'
   ) { |valor| Parametro.texto_curto(valor) }
   SEGURADORA = Parametro.new(nome: 'seguradora', descricao: 'O nome da seguradora como o cliente disse (ex.: Allianz).') do |valor|
     texto = Parametro.texto_curto(valor)
@@ -101,15 +87,18 @@ module Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'produtos_seguradoras', slug: 'pronta_produtos_seguradoras', nome: 'Produtos das seguradoras', flag: FLAG,
-    descricao: 'Os produtos e as coberturas que as seguradoras publicam no Open Insurance Brasil (dado oficial e aberto). ' \
-               'Não tem preço nem cotação, nem seguro auto, residencial e condomínio.',
+    na_vitrine: false,
+    descricao: 'Os produtos e as coberturas de seguro garantia (setor público e privado) e de transporte, entre as ' \
+               'seguradoras que publicam no Open Insurance Brasil (dado oficial e aberto). O mercado não está todo aí: ' \
+               'Junto, Pottencial, Akad e Fairfax, entre outras, não publicam; nunca diga que só essas fazem o seguro. ' \
+               'Não tem preço nem cotação.',
     consultas: [
       Consulta.new(nome: 'seguradoras', descricao: 'as seguradoras que publicam produtos; com busca, os ramos de cada uma',
                    opcionais: [BUSCA], provedores: [OpenInsurance], validade: 6.hours, prazo_por_fonte: 5, prazo_total: 5,
-                   refinar: method(:refinar_seguradoras)),
+                   refinar: method(:refinar_seguradoras), versao_do_cache: VERSAO_DO_CACHE),
       Consulta.new(nome: 'produtos', descricao: 'os produtos de uma seguradora num ramo; pede seguradora e ramo',
                    obrigatorios: [SEGURADORA, RAMO], opcionais: [BUSCA], provedores: [OpenInsurance], validade: 3.hours,
-                   prazo_por_fonte: 4, prazo_total: 10, refinar: method(:refinar_produtos))
+                   prazo_por_fonte: 4, prazo_total: 10, refinar: method(:refinar_produtos), versao_do_cache: VERSAO_DO_CACHE)
     ],
     limite_diario: 500,
     termos: 'Open Insurance Brasil (dados abertos da fase 1, sem chave e sem limite publicado). Endereço de cada ' \

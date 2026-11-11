@@ -46,80 +46,154 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     end
   end
 
-  describe 'Produtos das seguradoras (Open Insurance Brasil)' do
-    let(:ferramenta) { incluir_pronta('produtos_seguradoras', conta: account, agente: agent) }
+  describe 'Produtos das seguradoras (Open Insurance Brasil, so garantia e transporte)' do
+    # A fonte saiu da vitrine (decisao do Rodrigo, 11/11): o agente que ja a tem continua consultando.
+    let(:ferramenta) { pronta_ja_incluida('produtos_seguradoras', conta: account, agente: agent) }
     let(:diretorio) { 'https://data.directory.opinbrasil.com.br/participants' }
-    let(:allianz) { 'https://api.opin.allianz.com.br/open-insurance/products-services/v2/cyber-risk' }
-    let(:tokio_pessoas) { 'https://auth.tokiomarine.com.br/open-insurance/products-services/v2/person' }
-    let(:hdi_global) { 'https://api.hdiglobal.opinb3.com.br/open-insurance/products-services/v3/cyber-risk' }
+    let(:allianz) { 'https://api.opin.allianz.com.br/open-insurance/products-services/v2/transport' }
+    let(:tokio_publica) { 'https://auth.tokiomarine.com.br/open-insurance/products-services/v2/public-guarantee' }
+    let(:tokio_privada) { 'https://auth.tokiomarine.com.br/open-insurance/products-services/v1/private-guarantee' }
+    let(:hdi_global) { 'https://api.hdiglobal.opinb3.com.br/open-insurance/products-services/v3/transport' }
 
-    def cyber(seguradora, busca: nil)
-      executar_pronta(ferramenta, 'consulta' => 'produtos', 'seguradora' => seguradora, 'ramo' => 'riscos_ciberneticos', 'busca' => busca)
+    def transporte(seguradora, busca: nil)
+      executar_pronta(ferramenta, 'consulta' => 'produtos', 'seguradora' => seguradora, 'ramo' => 'transporte', 'busca' => busca)
+    end
+
+    def allianz_com(**por_produto)
+      corpo = JSON.parse(fixture('opin_allianz_transporte.json'))
+      corpo['data']['brand']['companies'].first['products'].each do |produto|
+        por_produto.fetch(produto['name'].tr('-', '_').to_sym, {}).each { |campo, valor| produto[campo.to_s] = valor }
+      end
+      corpo
     end
 
     before { fonte_responde(diretorio, fixture('opin_diretorio.json'), tipo: 'application/json') }
 
-    it 'lista as seguradoras ativas pelo diretorio; com busca, os ramos que cada uma publica (sem auto e sem endereco)' do
+    it 'so tres ramos: garantia publica, garantia privada e transporte' do
+      expect(produtos::RAMOS.keys).to eq(%w[garantia_publica garantia_privada transporte])
+      expect(executar_pronta(ferramenta, 'consulta' => 'produtos', 'seguradora' => 'Allianz', 'ramo' => 'riscos_ciberneticos'))
+        .to include('situacao' => 'pedido_invalido', 'campo' => 'ramo')
+    end
+
+    it 'o cache de antes (27 ramos, sem o filtro) nao e lido: a chave muda com a versao' do
+      produtos::FONTE.consultas.each do |consulta|
+        expect(consulta.chave_do_cache({})).to include('versao_do_cache' => 2)
+      end
+      expect(produtos::Diretorio::CHAVE).to include(':v2:')
+    end
+
+    it 'diz ao agente que e entre as que publicam no Open Insurance, e quem nao publica' do
+      expect(produtos::FONTE.descricao).to include('entre as seguradoras que publicam no Open Insurance', 'Junto', 'Pottencial', 'Akad',
+                                                   'Fairfax')
+      expect(produtos::FONTE.descricao).not_to include('as seguradoras que fazem')
+    end
+
+    it 'lista as seguradoras ativas pelo diretorio; com busca, os ramos de cada uma (sem auto e sem servidor de teste)' do
       todas = executar_pronta(ferramenta, 'consulta' => 'seguradoras')
       tokio = executar_pronta(ferramenta, 'consulta' => 'seguradoras', 'busca' => 'tokio marine')
 
       expect(todas['dados']).to eq('total' => 4, 'seguradoras' => ['ALLIANZ SEGUROS', 'HDI Global', 'HDI Seguros', 'Tokio Marine Seguradora S/A'])
       expect(tokio['dados']['seguradoras']).to eq([{ 'nome' => 'Tokio Marine Seguradora S/A',
-                                                     'ramos' => ['Pessoas (vida, acidentes pessoais, viagem, funeral)',
-                                                                 'Riscos cibernéticos'] }])
+                                                     'ramos' => ['Seguro garantia (setor privado)', 'Seguro garantia (setor público)',
+                                                                 'Transportes'] }])
       expect(tokio.to_json).not_to include('https://', 'Inativa')
     end
 
+    it 'servidor de teste no diretorio de producao: a marca so com ele some, e a versao de teste perde para a de producao' do
+      fonte_responde(tokio_privada, { data: { brand: { name: 'Tokio Marine', companies: [] } }, meta: { totalRecords: 0 } })
+
+      porto = executar_pronta(ferramenta, 'consulta' => 'seguradoras', 'busca' => 'porto')
+      privada = executar_pronta(ferramenta, 'consulta' => 'produtos', 'seguradora' => 'tokio', 'ramo' => 'garantia_privada')
+
+      expect(porto['situacao']).to eq('nao_encontrado')
+      expect(transporte('btg')['situacao']).to eq('nao_encontrado')
+      expect(privada['dados']['seguradoras'].pluck('seguradora')).to eq(['Tokio Marine Seguradora S/A'])
+      expect(a_request(:get, tokio_privada)).to have_been_made.once
+      expect(a_request(:get, /sandbox|openinsurance-dev|api-hml/)).not_to have_been_made
+    end
+
     it 'resume os produtos da seguradora no endereco da maior versao do diretorio: nome, coberturas e condicoes' do
-      fonte_responde(allianz, fixture('opin_allianz_cyber.json'))
+      fonte_responde(allianz, fixture('opin_allianz_transporte.json'))
 
-      saida = cyber('allianz')
+      saida = transporte('allianz')
 
-      expect(saida['dados']).to eq(
-        'ramo' => 'Riscos cibernéticos',
-        'seguradoras' => [{
-          'seguradora' => 'ALLIANZ SEGUROS', 'total' => 1,
-          'produtos' => [{ 'nome' => 'Responsabilidade Civil de Riscos Cibernéticos', 'coberturas' => ['RC perante terceiros'],
-                           'condicoes' => 'https://www.allianz.com.br/seguros/veja-outros-seguros/responsabilidade-civil/riscos-ciberneticos.html' }]
-        }]
-      )
-      expect(saida.to_json).not_to include('2035', '00000000000000', 'maxLMI')
+      seguradora = saida['dados']['seguradoras'].sole
+      expect(saida['dados']['ramo']).to eq('Transportes')
+      expect(seguradora).to include('seguradora' => 'ALLIANZ SEGUROS', 'total' => 3)
+      expect(seguradora['produtos'].pluck('nome')).to eq(['RCTR-C', 'RCF-DC', 'Transporte Nacional'])
+      expect(seguradora['produtos'].first['condicoes'])
+        .to eq('https://www.allianz.com.br/seguros/veja-outros-seguros/transportes/responsabilidade-civil-transporte/documentos.html')
+      expect(saida.to_json).not_to include('maxLMG', '00000000000000', 'RESPONSABILIDADE_CIVIL_DO_TRANSPORTADOR')
       expect(a_request(:get, allianz).with(headers: { 'Cache-Control' => 'no-cache' })).to have_been_made.once
+    end
+
+    it 'busca pelo nome do produto e tambem pelas coberturas ("carga" acha o RCF-DC da Allianz)' do
+      fonte_responde(allianz, fixture('opin_allianz_transporte.json'))
+
+      carga = transporte('allianz', busca: 'carga')
+
+      expect(carga['dados']['seguradoras'].sole['produtos'].pluck('nome')).to eq(['RCF-DC'])
+      expect(transporte('allianz', busca: 'rctr')['dados']['seguradoras'].sole['produtos'].pluck('nome')).to eq(['RCTR-C'])
+      expect(transporte('allianz', busca: 'fianca')['situacao']).to eq('nao_encontrado')
+    end
+
+    it 'link de exemplo, link sem pontuacao e link do proprio Open Insurance: o produto fica, sem as condicoes' do
+      corpo = allianz_com(
+        RCTR_C: { termsAndConditions: { definition: 'https://www.seguradora.com.br/produto/tradicional/pdf/condicoes_gerais.pdf' } },
+        RCF_DC: { termsAndConditions: [{ definition: 'HTTPSWWWBRADESCOSEGUROSCOMBRCONDICOESGERAIS' },
+                                       { definition: 'https://exemplo.com.br/condicoes.pdf' }, { definition: 'https://example.com/cg' }] },
+        'Transporte Nacional': { termsAndConditions: { definition: 'https://openinsurance.com.br/aaa' } }
+      )
+      fonte_responde(allianz, corpo)
+
+      produtos_da_allianz = transporte('allianz')['dados']['seguradoras'].sole['produtos']
+
+      expect(produtos_da_allianz.pluck('nome')).to eq(['RCTR-C', 'RCF-DC', 'Transporte Nacional'])
+      expect(produtos_da_allianz.pluck('condicoes')).to eq([nil, nil, nil])
+    end
+
+    it 'resposta de sandbox num host de producao ("Produto de Seguro", cobertura "string"): nenhum produto' do
+      fonte_responde(allianz, fixture('opin_sandbox_produto_de_exemplo.json'))
+
+      saida = transporte('allianz')
+
+      expect(saida['dados']['seguradoras']).to eq([{ 'seguradora' => 'ALLIANZ SEGUROS', 'total' => 0, 'produtos' => [] }])
+      expect(saida.to_json).not_to include('Produto de Seguro', '"string"', 'seguradora.com.br')
+    end
+
+    it 'cobertura "string" sai do produto de verdade' do
+      coberturas = [{ coverage: 'X', coverageDescription: 'string' }, { coverage: 'Y', coverageDescription: 'Colisao' }]
+      fonte_responde(allianz, allianz_com(RCTR_C: { coverages: coberturas }))
+
+      expect(transporte('allianz', busca: 'rctr')['dados']['seguradoras'].sole['produtos'].sole['coberturas']).to eq(['Colisao'])
     end
 
     it 'guarda o diretorio: a segunda seguradora nao baixa o diretorio de novo' do
       cache_em_memoria
-      fonte_responde(allianz, fixture('opin_allianz_cyber.json'))
-      fonte_responde(hdi_global, fixture('opin_tokio_cyber.json'))
+      fonte_responde(allianz, fixture('opin_allianz_transporte.json'))
+      fonte_responde(hdi_global, fixture('opin_allianz_transporte.json'))
 
-      cyber('allianz')
-      cyber('hdi global')
+      transporte('allianz')
+      transporte('hdi global')
 
       expect(a_request(:get, diretorio)).to have_been_made.once
       expect(a_request(:get, hdi_global)).to have_been_made.once
     end
 
     it 'duas seguradoras com o nome: a que nao responde no prazo sai em nao_responderam, e a outra responde' do
-      fonte_responde(allianz, fixture('opin_allianz_cyber.json'))
+      fonte_responde(allianz, fixture('opin_allianz_transporte.json'))
       fonte_lenta(hdi_global)
 
-      saida = cyber('seguros')
+      saida = transporte('seguros')
 
       expect(saida['dados']['seguradoras'].pluck('seguradora')).to eq(['ALLIANZ SEGUROS'])
       expect(saida['dados']['nao_responderam']).to eq(['HDI Global'])
     end
 
-    it 'filtra pelo nome do produto; nada com o nome: nao encontrado' do
-      fonte_responde(allianz, fixture('opin_allianz_cyber.json'))
-
-      expect(cyber('allianz', busca: 'ciberneticos')['dados']['seguradoras'].first['total']).to eq(1)
-      expect(cyber('allianz', busca: 'garantia')['situacao']).to eq('nao_encontrado')
-    end
-
     it 'diretorio fora do prazo: "nao consegui", sem chamar seguradora nenhuma' do
       fonte_lenta(diretorio)
 
-      expect(nao_consegui?(cyber('allianz'))).to be(true)
+      expect(nao_consegui?(transporte('allianz'))).to be(true)
       expect(uso.motivos).to eq('openinsurance.tempo_esgotado' => 1)
       expect(a_request(:get, allianz)).not_to have_been_made
     end
@@ -128,7 +202,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       fonte_fora(allianz)
       allow(Rails.logger).to receive(:warn).and_call_original
 
-      expect(nao_consegui?(cyber('allianz'))).to be(true)
+      expect(nao_consegui?(transporte('allianz'))).to be(true)
       expect(uso.motivos).to eq('openinsurance.seguradora_nao_respondeu' => 1)
       expect(Rails.logger).to have_received(:warn).with(include('marca=ALLIANZ SEGUROS motivo=erro_da_fonte'))
     end
@@ -136,45 +210,45 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     it 'formato mudado: diretorio que nao e lista e seguradora fora do formato viram "nao consegui"' do
       fonte_responde(allianz, { data: [] })
 
-      expect(nao_consegui?(cyber('allianz'))).to be(true)
+      expect(nao_consegui?(transporte('allianz'))).to be(true)
 
       fonte_responde(diretorio, { participants: [] })
-      expect(nao_consegui?(cyber('allianz'))).to be(true)
+      expect(nao_consegui?(transporte('allianz'))).to be(true)
       expect(uso.motivos).to eq('openinsurance.seguradora_nao_respondeu' => 1, 'openinsurance.resposta_invalida' => 1)
     end
 
     it 'endereco do diretorio fora do HTTPS, com porta ou com marcador: o ramo nem aparece' do
       participantes = JSON.parse(fixture('opin_diretorio.json'))
       recursos = participantes.find { |item| item['OrganisationName'].start_with?('ALLIANZ') }['AuthorisationServers'].first['ApiResources']
-      fora = ['http://api.opin.allianz.com.br/cyber', 'https://api.opin.allianz.com.br:8443/cyber']
-      recursos.select { |item| item['ApiFamilyType'] == 'products-services_cyber-risk' }.each_with_index do |item, indice|
+      fora = ['http://api.opin.allianz.com.br/transport', 'https://api.opin.allianz.com.br:8443/transport']
+      recursos.select { |item| item['ApiFamilyType'] == 'products-services_transport' }.each_with_index do |item, indice|
         item['ApiDiscoveryEndpoints'] = [{ 'ApiEndpoint' => fora[indice] }]
       end
       fonte_responde(diretorio, participantes)
 
-      saida = cyber('allianz')
+      saida = transporte('allianz')
 
-      expect(saida['dados']).to include('seguradoras' => [], 'ramos_publicados' => ['Pessoas (vida, acidentes pessoais, viagem, funeral)'])
+      expect(saida['dados']).to include('seguradoras' => [], 'ramos_publicados' => ['Seguro garantia (setor público)'])
       expect(a_request(:get, /allianz/)).not_to have_been_made
     end
 
     it 'entrada fora do formato: ramo fora da lista ou seguradora de uma letra, sem consultar' do
       expect(executar_pronta(ferramenta, 'consulta' => 'produtos', 'seguradora' => 'Allianz', 'ramo' => 'auto'))
         .to include('situacao' => 'pedido_invalido', 'campo' => 'ramo')
-      expect(executar_pronta(ferramenta, 'consulta' => 'produtos', 'seguradora' => 'A', 'ramo' => 'pessoas'))
+      expect(executar_pronta(ferramenta, 'consulta' => 'produtos', 'seguradora' => 'A', 'ramo' => 'transporte'))
         .to include('situacao' => 'pedido_invalido', 'campo' => 'seguradora')
       expect(a_request(:get, diretorio)).not_to have_been_made
     end
 
     it 'lista vazia: seguradora que nao esta no diretorio, a que nao publica o ramo e a que publica zero produtos' do
-      fonte_responde(tokio_pessoas, { data: { brand: { name: 'Tokio Marine', companies: [] } }, meta: { totalRecords: 0 } })
+      fonte_responde(tokio_publica, { data: { brand: { name: 'Tokio Marine', companies: [] } }, meta: { totalRecords: 0 } })
 
-      sem_ramo = executar_pronta(ferramenta, 'consulta' => 'produtos', 'seguradora' => 'tokio', 'ramo' => 'rc_ambiental')
-      vazia = executar_pronta(ferramenta, 'consulta' => 'produtos', 'seguradora' => 'tokio', 'ramo' => 'pessoas')
+      sem_ramo = executar_pronta(ferramenta, 'consulta' => 'produtos', 'seguradora' => 'allianz', 'ramo' => 'garantia_privada')
+      vazia = executar_pronta(ferramenta, 'consulta' => 'produtos', 'seguradora' => 'tokio', 'ramo' => 'garantia_publica')
 
-      expect(cyber('seguradora que nao existe')['situacao']).to eq('nao_encontrado')
-      expect(sem_ramo['dados']).to include('seguradoras' => [], 'encontradas' => ['Tokio Marine Seguradora S/A'],
-                                           'ramos_publicados' => ['Pessoas (vida, acidentes pessoais, viagem, funeral)', 'Riscos cibernéticos'])
+      expect(transporte('seguradora que nao existe')['situacao']).to eq('nao_encontrado')
+      expect(sem_ramo['dados']).to include('seguradoras' => [], 'encontradas' => ['ALLIANZ SEGUROS'],
+                                           'ramos_publicados' => ['Seguro garantia (setor público)', 'Transportes'])
       expect(vazia['dados']['seguradoras']).to eq([{ 'seguradora' => 'Tokio Marine Seguradora S/A', 'total' => 0, 'produtos' => [] }])
     end
   end

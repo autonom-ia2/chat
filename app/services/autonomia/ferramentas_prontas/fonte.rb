@@ -8,14 +8,17 @@
 # por conta e por fonte, salvo motivo técnico do provedor, documentado na fonte.
 # `termos`: o que a fonte pede de quem usa (limite, cache), para a revisão de cada lote. Não vai ao modelo.
 # `flag`: a flag da fase que trouxe a fonte (a F1 tem a sua), conferida junto com a das prontas; nil nas da F0.
+# `na_vitrine`: falso na fonte que fica no catálogo para uso interno (os agentes de um ramo), sem card avulso: a vitrine,
+# o "Incluir", o Experimente e as sugestões não a oferecem; o agente que já a tem continua consultando.
 class Autonomia::FerramentasProntas::Fonte
   PARAMETRO_DA_CONSULTA = 'consulta'.freeze
   FORA_DO_FORMATO = '(fora do formato)'.freeze
 
   attr_reader :chave, :slug, :nome, :descricao, :consultas, :limite_diario, :termos, :flag
 
-  def initialize(chave:, slug:, nome:, descricao:, consultas:, limite_diario:, termos:, flag: nil) # rubocop:disable Metrics/ParameterLists
+  def initialize(chave:, slug:, nome:, descricao:, consultas:, limite_diario:, termos:, flag: nil, na_vitrine: true) # rubocop:disable Metrics/ParameterLists
     @flag = flag
+    @na_vitrine = na_vitrine
     @chave = chave
     @slug = slug
     @nome = nome
@@ -23,6 +26,10 @@ class Autonomia::FerramentasProntas::Fonte
     @consultas = consultas
     @limite_diario = limite_diario
     @termos = termos
+  end
+
+  def na_vitrine?
+    @na_vitrine
   end
 
   def consulta(nome)
