@@ -16,6 +16,13 @@ RSpec.describe DadosReaisDasProntas do
     expect(described_class.casos([]).size).to eq(described_class::CASOS.size)
   end
 
+  it 'pedido que nao esta no CASOS (fonte ou fonte.consulta): aborta antes de chamar' do
+    %w[banco_central.nao_existe fonte_nova].each do |pedido|
+      expect { described_class.casos([pedido]) }
+        .to raise_error(described_class::PedidoDesconhecido) { |erro| expect(erro.message).to include(pedido, 'CASOS') }
+    end
+  end
+
   it 'fonte sem a decisao: aborta, com o que fazer' do
     expect { described_class.anonimizar('fonte_nova', { 'nome' => 'Fulano' }) }
       .to raise_error(described_class::SemDecisao) { |erro| expect(erro.message).to include('fonte_nova', 'ANONIMIZACAO') }
