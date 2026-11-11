@@ -1,0 +1,107 @@
+{
+  "compras": {
+    "provedor": "pncp",
+    "dados": {
+      "cidade": "Uberlândia",
+      "uf": "MG",
+      "de": "2026-11-05",
+      "ate": "2026-11-11",
+      "modalidade": "Pregão eletrônico",
+      "total_no_periodo": 27,
+      "total": 27,
+      "mostrando": 10,
+      "compras": [
+        {
+          "orgao": "EMPRESA BRASILEIRA DE SERVICOS HOSPITALARES - EBSERH",
+          "unidade": "HOSPITAL DAS CLIN DA UNIV FED DE UBERLÂNDIA",
+          "objeto": "PRODUTOS PARA SAÚDE - UROLOGIA - DIAGNÓSTICO POR IMAGEM E GINECOLOGIA - REEDIÇÃO",
+          "valor_estimado": 0.0,
+          "publicada_em": "2026-11-05",
+          "situacao": "Divulgada no PNCP",
+          "link": "https://pncp.gov.br/app/editais/15126437000305/2026/4546"
+        },
+        {
+          "orgao": "UNIVERSIDADE FEDERAL DE UBERLANDIA",
+          "unidade": "FUNDACAO UNIVERSIDADE FEDERAL DE UBERLANDIA",
+          "objeto": "Contratação de serviços comuns de engenharia para substituição de equipamentos de transporte vertical (elevadores e plataforma elevatória), com desmontagem dos …",
+          "valor_estimado": 1789431.34,
+          "publicada_em": "2026-11-05",
+          "situacao": "Divulgada no PNCP",
+          "link": "https://pncp.gov.br/app/editais/25648387000118/2026/240"
+        },
+        {
+          "orgao": "MUNICIPIO DE UBERLANDIA",
+          "unidade": "MMG-SECRETARIA MUN. DE ADMINIS. DE UBERLÂNDIA",
+          "objeto": "Futura e eventual aquisição de materiais médicos hospitalares (cateter para terapia renal, coletor de urina com cordão, fira adesiva e outros), de uso humano, q…",
+          "valor_estimado": 439352.5,
+          "publicada_em": "2026-11-05",
+          "situacao": "Divulgada no PNCP",
+          "link": "https://pncp.gov.br/app/editais/18431312000620/2026/522"
+        },
+        {
+          "orgao": "POLICIA MILITAR DO ESTADO DE MINAS GERAIS",
+          "unidade": "EM9RPM/9 RPM",
+          "objeto": "CADEIRAS GIRATÓRIAS PARA A 9ª RPM - UBERLÂNDIA/MG",
+          "valor_estimado": 100335.78,
+          "publicada_em": "2026-11-05",
+          "situacao": "Divulgada no PNCP",
+          "link": "https://pncp.gov.br/app/editais/16695025000197/2026/1218"
+        },
+        {
+          "orgao": "MUNICIPIO DE UBERLANDIA",
+          "unidade": "MMG-SECRETARIA MUN. DE ADMINIS. DE UBERLÂNDIA",
+          "objeto": "Futura e eventual aquisição de medicamentos de uso humano, que serão utilizados pelos pacientes atendidos na Rede Municipal de Saúde de Uberlândia.",
+          "valor_estimado": 35382.0,
+          "publicada_em": "2026-11-05",
+          "situacao": "Divulgada no PNCP",
+          "link": "https://pncp.gov.br/app/editais/18431312000620/2026/523"
+        },
+        {
+          "orgao": "MUNICIPIO DE UBERLANDIA",
+          "unidade": "MMG-SECRETARIA MUN. DE ADMINIS. DE UBERLÂNDIA",
+          "objeto": "Aquisição de Salas Multissensoriais, Playground e Brinquedos Diversos, em atendimento à Emenda Parlamentar Individual (Transferência Especial nº 144224/EMG/SEE)…",
+          "valor_estimado": 305006.34,
+          "publicada_em": "2026-11-05",
+          "situacao": "Divulgada no PNCP",
+          "link": "https://pncp.gov.br/app/editais/18431312000620/2026/524"
+        },
+        {
+          "orgao": "MUNICIPIO DE UBERLANDIA",
+          "unidade": "MMG-SECRETARIA MUN. DE ADMINIS. DE UBERLÂNDIA",
+          "objeto": "Aquisição de um carro sedan.",
+          "valor_estimado": 111990.79,
+          "publicada_em": "2026-11-05",
+          "situacao": "Divulgada no PNCP",
+          "link": "https://pncp.gov.br/app/editais/18431312000620/2026/525"
+        },
+        {
+          "orgao": "CONSORCIO PUBLICO INTERMUNICIPAL DE SAUDE DO TRIANGULO MINEIRO",
+          "unidade": "CONSÓRCIO PÚBLICO INTERMUNICIPAL DE SAÚDE DO TRIÂNGULO MINEIRO - AMVAP SAÚDE",
+          "objeto": "[LICITANET] - Aquisição de bens permanentes para estruturação das Centrais de Distribuição de Amostras Laboratoriais de Ituiutaba e Uberlândia/MG, com entrega p…",
+          "valor_estimado": 0.0,
+          "publicada_em": "2026-11-06",
+          "situacao": "Divulgada no PNCP",
+          "link": "https://pncp.gov.br/app/editais/18151467000106/2026/87"
+        },
+        {
+          "orgao": "CORPO DE BOMBEIROS MILITAR DE MINAS GERAIS",
+          "unidade": "2 COB SECAO ORCAMENTARIA E FINANCEIRA",
+          "objeto": "Aquisição de Materiais e Equipamentos Operacionais e Administrativos para as Unidades Apoiadas pelo 2º COB, nas cidades de Uberlândia, Uberaba e Patos de Minas.",
+          "valor_estimado": 131852.25,
+          "publicada_em": "2026-11-06",
+          "situacao": "Divulgada no PNCP",
+          "link": "https://pncp.gov.br/app/editais/03389126000198/2026/133"
+        },
+        {
+          "orgao": "EMPRESA BRASILEIRA DE SERVICOS HOSPITALARES - EBSERH",
+          "unidade": "HOSPITAL DAS CLIN DA UNIV FED DE UBERLÂNDIA",
+          "objeto": "AQUISIÇÃO DE PRODUTOS PARA SAÚDE (DISPOSITIVOS MÉDICOS EM UROLOGIA, ENDOSCOPIA, HEMODIÁLISE E DIAGNÓSTICO POR IMAGEM) PARA ATENDER ÀS NECESSIDADES DO HOSPITAL D…",
+          "valor_estimado": 0.0,
+          "publicada_em": "2026-11-09",
+          "situacao": "Divulgada no PNCP",
+          "link": "https://pncp.gov.br/app/editais/15126437000305/2026/4596"
+        }
+      ]
+    }
+  }
+}

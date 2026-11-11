@@ -1,0 +1,19 @@
+{
+  "chuva": {
+    "provedor": "openmeteo",
+    "dados": {
+      "local": "Uberlândia (MG)",
+      "de": "2026-11-10",
+      "ate": "2026-11-10",
+      "total_mm": 1.8,
+      "dias": [
+        {
+          "data": "2026-11-10",
+          "mm": 1.8
+        }
+      ],
+      "observacao": "Estimativa de modelo para a região (grade de ~10 km), não a medição de um pluviômetro.",
+      "fonte_dos_dados": "Dados do tempo por Open-Meteo.com (CC BY 4.0)"
+    }
+  }
+}

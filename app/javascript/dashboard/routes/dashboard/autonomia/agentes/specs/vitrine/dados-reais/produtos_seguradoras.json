@@ -1,0 +1,48 @@
+{
+  "seguradoras": {
+    "provedor": "openinsurance",
+    "dados": {
+      "total": 1,
+      "seguradoras": [
+        {
+          "nome": "ALLIANZ SEGUROS",
+          "ramos": [
+            "Empresarial",
+            "Riscos de engenharia",
+            "Habitacional",
+            "Pessoas (vida, acidentes pessoais, viagem, funeral)",
+            "Quebra de máquinas e equipamentos",
+            "RC de administradores (D&O)",
+            "RC ambiental",
+            "RC profissional (E&O)",
+            "Responsabilidade civil geral",
+            "Riscos cibernéticos",
+            "Rural",
+            "Transportes"
+          ]
+        }
+      ]
+    }
+  },
+  "produtos": {
+    "provedor": "openinsurance",
+    "dados": {
+      "ramo": "Riscos cibernéticos",
+      "seguradoras": [
+        {
+          "seguradora": "ALLIANZ SEGUROS",
+          "total": 1,
+          "produtos": [
+            {
+              "nome": "Responsabilidade Civil de Riscos Cibernéticos",
+              "coberturas": [
+                "RC perante terceiros"
+              ],
+              "condicoes": "https://www.allianz.com.br/seguros/veja-outros-seguros/responsabilidade-civil/riscos-ciberneticos.html"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

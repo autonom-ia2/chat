@@ -2,6 +2,10 @@
 // [rótulo, valor]. Só aparece o campo que tem rótulo no i18n (AGENTS.VITRINE.CAMPOS.<CAMPO>): nunca a chave crua
 // do servidor. Uma lista vira os três primeiros nomes e a contagem ("Acrelândia, Assis Brasil, Brasiléia e mais
 // 19"); um objeto dentro de outro abre um nível só, com o rótulo <PAI>_<CAMPO>.
+// #2858 F4 — lista de objetos: o nome de cada um vem do primeiro campo de CAMPOS_DE_NOME que todos têm (a seguradora,
+// a descrição da NCM, o objeto da compra). Depois dos nomes, o primeiro item aberto (a situação do corretor, a
+// distância da estação), e as listas dentro dele viram nomes também, um nível só. Lista sem campo de nome: o primeiro
+// aberto e quantos são.
 //
 // `textos`:
 //   rotulo(chave)          -> o rótulo do campo, ou '' quando não tem (o campo não aparece);
@@ -68,16 +72,51 @@ const resumoDaLista = (nomes, total, textos) => {
   );
 };
 
-// Os campos simples de um objeto, cada um com o rótulo de `rotuloDe`.
-const linhasSimples = (objeto, rotuloDe, textos) => {
-  const unidade = typeof objeto.unidade === 'string' ? objeto.unidade : '';
+// O campo que dá nome aos objetos de uma lista, na ordem de preferência.
+const CAMPOS_DE_NOME = [
+  'nome',
+  'seguradora',
+  'descricao',
+  'objeto',
+  'razao_social',
+];
+
+const campoDeNome = itens =>
+  CAMPOS_DE_NOME.find(campo =>
+    itens.every(item => ehObjeto(item) && typeof item[campo] === 'string')
+  );
+
+const quantosSao = (itens, total, textos) =>
+  numeroLegivel(Math.max(total ?? 0, itens.length), textos.idioma);
+
+// Uma lista dentro do item aberto: os nomes, ou só quantos são (não abre de novo).
+const resumoDentro = (itens, rotulo, total, textos) => {
+  if (!rotulo || !itens.length) return [];
+  if (itens.every(ehPrimitivo)) {
+    return [[rotulo, resumoDaLista(itens.map(String), total, textos)]];
+  }
+  const campo = campoDeNome(itens);
+  const nomes = campo ? itens.map(item => item[campo]) : null;
+  const valor = nomes
+    ? resumoDaLista(nomes, total, textos)
+    : quantosSao(itens, total, textos);
+  return [[rotulo, valor]];
+};
+
+// Os campos de um objeto, cada um com o rótulo de `rotuloDe`; `omitir`, o campo que já apareceu (o nome do item).
+// A unidade de medida vale só no nível de cima (o "R$" do dólar): dentro de um item, `unidade` é outra coisa (a
+// unidade do órgão na compra do governo).
+const linhasSimples = (objeto, rotuloDe, textos, omitir = '') => {
   const comNomeDoEstado = typeof objeto.estado === 'string';
+  const total = Number.isInteger(objeto.total) ? objeto.total : null;
   return Object.entries(objeto).flatMap(([chave, valor]) => {
+    if (chave === omitir) return [];
     if (chave === 'uf' && comNomeDoEstado) return [];
+    if (Array.isArray(valor)) {
+      return resumoDentro(valor, rotuloDe(chave), total, textos);
+    }
     const rotulo = ehPrimitivo(valor) ? rotuloDe(chave) : '';
-    return rotulo
-      ? [[rotulo, valorLegivel(chave, valor, textos, unidade)]]
-      : [];
+    return rotulo ? [[rotulo, valorLegivel(chave, valor, textos, '')]] : [];
   });
 };
 
@@ -89,9 +128,16 @@ const linhasDaLista = (chave, itens, total, textos) => {
       ? [[rotulo, resumoDaLista(itens.map(String), total, textos)]]
       : [];
   }
-  if (itens.every(item => ehObjeto(item) && typeof item.nome === 'string')) {
-    const nomes = itens.map(item => item.nome);
-    return rotulo ? [[rotulo, resumoDaLista(nomes, total, textos)]] : [];
+  const campo = campoDeNome(itens);
+  if (campo) {
+    const nomes = itens.map(item => item[campo]);
+    const resumo = rotulo
+      ? [[rotulo, resumoDaLista(nomes, total, textos)]]
+      : [];
+    return [
+      ...resumo,
+      ...linhasSimples(itens[0], textos.rotulo, textos, campo),
+    ];
   }
   // Lista de objetos sem nome (os preços de cada ano na tabela do carro): o primeiro aberto e quantos são.
   const primeiro = ehObjeto(itens[0])
@@ -99,7 +145,7 @@ const linhasDaLista = (chave, itens, total, textos) => {
     : [];
   const quantos =
     itens.length > 1 && rotulo
-      ? [[rotulo, numeroLegivel(itens.length, textos.idioma)]]
+      ? [[rotulo, quantosSao(itens, total, textos)]]
       : [];
   return [...primeiro, ...quantos];
 };

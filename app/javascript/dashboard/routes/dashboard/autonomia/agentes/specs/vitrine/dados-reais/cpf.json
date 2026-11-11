@@ -1,0 +1,14 @@
+{
+  "conferir": {
+    "provedor": "calculo",
+    "dados": {
+      "valido": true,
+      "regiao_fiscal": "7ª região fiscal",
+      "estados": [
+        "Espírito Santo",
+        "Rio de Janeiro"
+      ],
+      "observacao": "Só o número foi conferido: nome e situação na Receita não fazem parte."
+    }
+  }
+}

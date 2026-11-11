@@ -1,0 +1,79 @@
+{
+  "buscar": {
+    "provedor": "brasilapi",
+    "dados": {
+      "busca": "parafuso",
+      "total": 12,
+      "itens": [
+        {
+          "codigo": "73.18",
+          "descricao": "Parafusos, pinos ou pernos, roscados, porcas, tira-fundos, ganchos roscados, rebites, chavetas, contrapinos ou troços, arruelas (anilhas) (incluindo as de press…",
+          "vigente_desde": "2022-04-01"
+        },
+        {
+          "codigo": "7318.14.00",
+          "descricao": "-- Parafusos autoperfurantes",
+          "vigente_desde": "2022-04-01"
+        },
+        {
+          "codigo": "7415.33.00",
+          "descricao": "-- Parafusos; pinos ou pernos e porcas",
+          "vigente_desde": "2022-04-01"
+        },
+        {
+          "codigo": "34.03",
+          "descricao": "Preparações lubrificantes (incluindo os óleos de corte, as preparações antiaderentes de porcas e parafusos, as preparações antiferrugem ou anticorrosão e as pre…",
+          "vigente_desde": "2022-04-01"
+        },
+        {
+          "codigo": "64.01",
+          "descricao": "Calçado impermeável de sola exterior e parte superior de borracha ou plástico, em que a parte superior não tenha sido reunida à sola exterior por costura ou por…",
+          "vigente_desde": "2022-04-01"
+        },
+        {
+          "codigo": "7318.12.00",
+          "descricao": "-- Outros parafusos para madeira",
+          "vigente_desde": "2022-04-01"
+        },
+        {
+          "codigo": "7318.15.00",
+          "descricao": "-- Outros parafusos e pinos ou pernos, mesmo com as porcas e arruelas (anilhas)",
+          "vigente_desde": "2022-04-01"
+        },
+        {
+          "codigo": "74.15",
+          "descricao": "Tachas, pregos, percevejos, escápulas (pregos para tacos) e artigos semelhantes, de cobre ou de ferro ou aço com cabeça de cobre; parafusos, pinos ou pernos, ro…",
+          "vigente_desde": "2022-04-01"
+        },
+        {
+          "codigo": "7616.10.00",
+          "descricao": "- Tachas, pregos, escápulas (pregos para tacos), parafusos, pinos ou pernos roscados, porcas, ganchos roscados, rebites, chavetas, cavilhas, contrapinos ou troç…",
+          "vigente_desde": "2022-04-01"
+        },
+        {
+          "codigo": "8414.40.20",
+          "descricao": "De parafuso",
+          "vigente_desde": "2022-04-01"
+        },
+        {
+          "codigo": "8414.80.12",
+          "descricao": "De parafuso",
+          "vigente_desde": "2022-04-01"
+        },
+        {
+          "codigo": "8414.80.32",
+          "descricao": "De parafuso",
+          "vigente_desde": "2022-04-01"
+        }
+      ]
+    }
+  },
+  "codigo": {
+    "provedor": "brasilapi",
+    "dados": {
+      "codigo": "7318.15.00",
+      "descricao": "-- Outros parafusos e pinos ou pernos, mesmo com as porcas e arruelas (anilhas)",
+      "vigente_desde": "2022-04-01"
+    }
+  }
+}

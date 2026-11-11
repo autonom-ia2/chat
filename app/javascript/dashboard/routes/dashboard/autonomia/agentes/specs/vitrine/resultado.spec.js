@@ -24,6 +24,17 @@ const ROTULOS = {
   venda: 'Venda',
   dias_uteis: 'Dias úteis',
   feriados_no_periodo: 'Feriados no período',
+  busca: 'Busca',
+  codigo: 'Código',
+  descricao: 'Descrição',
+  vigente_desde: 'Em vigor desde',
+  itens: 'Resultados',
+  corretores: 'Corretores',
+  registro_susep: 'Registro na SUSEP',
+  ramos: 'Ramos',
+  seguradoras: 'Seguradoras',
+  seguradora: 'Seguradora',
+  produtos: 'Produtos',
 };
 const textos = {
   rotulo: chave => ROTULOS[chave] || '',
@@ -59,7 +70,6 @@ describe('linhasDoResultado', () => {
   it('a field without a label never shows (no raw key)', () => {
     const linhas = linhasDoResultado(
       {
-        codigo: '341',
         ispb: '60701190',
         fonte_dos_dados: 'algo',
         cidade: 'Campinas',
@@ -155,6 +165,93 @@ describe('linhasDoResultado', () => {
       ['Modelo', 'ONIX LT'],
       ['Ano', '2020'],
       ['Anos na tabela', '2'],
+    ]);
+  });
+
+  // #2858 F4 — a busca da NCM: o nome de cada item é a descrição; depois, o primeiro aberto (o código).
+  it('a list named by another field (descricao) shows the names, then the first one', () => {
+    expect(
+      linhasDoResultado(
+        {
+          busca: 'parafuso',
+          total: 12,
+          mostrando: 2,
+          itens: [
+            {
+              codigo: '73.18',
+              descricao: 'Parafusos, pinos ou pernos',
+              vigente_desde: '2022-04-01',
+            },
+            { codigo: '7318.14.00', descricao: '-- Parafusos autoperfurantes' },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      ['Busca', 'parafuso'],
+      [
+        'Resultados',
+        'Parafusos, pinos ou pernos, -- Parafusos autoperfurantes e mais 10',
+      ],
+      ['Código', '73.18'],
+      ['Em vigor desde', new Date(2022, 3, 1).toLocaleDateString('pt-BR')],
+    ]);
+  });
+
+  it('a list of named items also opens the details of the first one', () => {
+    expect(
+      linhasDoResultado(
+        {
+          total: 1,
+          corretores: [
+            {
+              nome: 'CORRETORA EXEMPLO LTDA',
+              situacao: 'Ativo',
+              registro_susep: '100000000',
+              ramos: ['Pessoas', 'Danos', 'Capitalização', 'Previdência'],
+            },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      ['Corretores', 'CORRETORA EXEMPLO LTDA'],
+      ['Situação', 'Ativo'],
+      ['Registro na SUSEP', '100000000'],
+      ['Ramos', 'Pessoas, Danos, Capitalização e mais 1'],
+    ]);
+  });
+
+  it('a list inside the first item becomes its names, counted by that item', () => {
+    const produtos = ['Cyber A', 'Cyber B', 'Cyber C', 'Cyber D'].map(nome => ({
+      nome,
+      coberturas: ['Danos a terceiros'],
+    }));
+    expect(
+      linhasDoResultado(
+        {
+          seguradoras: [
+            { seguradora: 'Seguradora Exemplo', total: 10, produtos },
+            { seguradora: 'Outra Exemplo', total: 0, produtos: [] },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      ['Seguradoras', 'Seguradora Exemplo e Outra Exemplo'],
+      ['Produtos', 'Cyber A, Cyber B, Cyber C e mais 7'],
+    ]);
+  });
+
+  it('the count of an unnamed list is the total, not just the ones sent', () => {
+    expect(
+      linhasDoResultado(
+        { total: 37, precos: [{ valor: 'R$ 1,00' }, { valor: 'R$ 2,00' }] },
+        textos
+      )
+    ).toEqual([
+      ['Valor', 'R$ 1,00'],
+      ['Anos na tabela', '37'],
     ]);
   });
 
