@@ -14,6 +14,7 @@ import AutomacaoEnsaio from '../components/AutomacaoEnsaio.vue';
 import AutomacaoEtapas from '../components/AutomacaoEtapas.vue';
 import { MODELOS, modeloExiste } from '../modelos';
 import { useNomesDaConta } from '../composables/useNomesDaConta';
+import { usePorta } from '../porta/usePorta';
 import {
   passoCriouAutomacao,
   passoMexeuEmAutomacao,
@@ -229,12 +230,19 @@ const voltar = () =>
     params: { accountId: accountId.value },
   });
 
+// #2889: com a porta ligada, o modo manual é o editor da Automação livre, e não a tela antiga do Chatwoot.
+const { ligada: portaLigada } = usePorta();
 const modoManual = () =>
-  router.push({
-    name: 'automation_list',
-    params: { accountId: accountId.value },
-    query: regraId.value ? { editar: regraId.value } : {},
-  });
+  portaLigada.value
+    ? router.push({
+        name: 'automacoes_livre_nova',
+        params: { accountId: accountId.value },
+      })
+    : router.push({
+        name: 'automation_list',
+        params: { accountId: accountId.value },
+        query: regraId.value ? { editar: regraId.value } : {},
+      });
 
 const mudarLigada = async ligar => {
   if (!regra.value || ligando.value) return;

@@ -1336,3 +1336,14 @@
   display_name: Agentes › ferramentas prontas (lote 2 de consultas)
   enabled: false
   column: feature_flags_ext_2
+
+# Automação: porta única e modelos por segmento (#2889, épico #2414). Ligada (junto com automacao_editor): a lista de
+# Automações abre com "O que você quer que aconteça sozinho?" (o pedido vai para o Guia) e os 20 modelos prontos, com
+# os do segmento da conta em destaque (pacote #1550: geral, seguros/corretora, seguros/saude_beneficios); "Nova
+# automação" leva ao Guia, e "Montar do zero" fica como segunda opção. Desligada: a lista de hoje, sem mudança. Sem
+# migration. Rollback: desligar a flag na conta. Posição na feature_flags_ext_2 a confirmar com a Orquestração (a 42 e a
+# 43 estão com a F5 e a F7 da vitrine #2858).
+- name: automacao_porta
+  display_name: Automação › porta única e modelos por segmento
+  enabled: false
+  column: feature_flags_ext_2

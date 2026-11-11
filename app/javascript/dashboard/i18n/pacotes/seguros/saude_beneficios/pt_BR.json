@@ -1366,5 +1366,77 @@
         "GANHO": "Plano implantado"
       }
     }
+  },
+  "AUTOMACAO_MODELOS": {
+    "ITENS": {
+      "M01": {
+        "TITULO": "Aniversário do contrato sem surpresa",
+        "TEXTO": "30 dias antes do aniversário do plano, o cliente recebe o aviso do reajuste e o convite para revisar. Se não responder, recebe o link para marcar com você."
+      },
+      "M02": {
+        "TITULO": "Cotação do anúncio respondida em 5 minutos",
+        "TEXTO": "Quem pede cotação pelo anúncio recebe mensagem na hora perguntando quantas pessoas e as idades."
+      },
+      "M03": {
+        "TITULO": "Boas-vindas ao plano",
+        "TEXTO": "Depois da implantação, o cliente recebe a carteirinha, as carências e como usar o plano."
+      },
+      "M04": {
+        "TITULO": "Boleto em atraso",
+        "TEXTO": "No primeiro boleto atrasado, o cliente recebe um lembrete. No segundo, você é avisado do risco de suspensão."
+      },
+      "M05": {
+        "TITULO": "Fim da carência",
+        "TEXTO": "Quando a carência acaba, o cliente recebe a boa notícia de que já pode usar tudo."
+      },
+      "M06": {
+        "TITULO": "Parabéns com revisão do plano",
+        "TEXTO": "No aniversário, o cliente recebe um parabéns e o convite para revisar o plano da família."
+      },
+      "M07": {
+        "TITULO": "Odonto primeiro para quem já é cliente",
+        "TEXTO": "Quem já tem plano com você recebe a oferta do plano odontológico antes de todo mundo."
+      },
+      "M08": {
+        "TITULO": "Funcionário novo no plano da empresa",
+        "TEXTO": "O RH manda a lista de funcionários novos. Cada um vira um cartão no funil e recebe o pedido de documentos."
+      },
+      "M09": {
+        "TITULO": "Procurar empresas toda semana",
+        "TEXTO": "Toda segunda, o sistema acha empresas novas da sua região, oferece plano empresarial e só traz quem tiver interesse."
+      },
+      "M10": {
+        "TITULO": "Reclamação ou urgência vai direto para você",
+        "TEXTO": "Quando o cliente reclama de atendimento negado ou fala de urgência, a conversa sai do atendimento automático e você recebe um resumo na hora."
+      },
+      "M12": {
+        "TITULO": "Cotação enviada decide o próximo passo",
+        "TEXTO": "Depois de mandar a cotação, o cliente é perguntado o que achou. Sem resposta em 2 dias, você recebe um lembrete para ligar."
+      },
+      "M13": {
+        "TITULO": "Da assinatura à implantação",
+        "TEXTO": "Depois de fechar, o cliente recebe a proposta para assinar e o lembrete da declaração de saúde. No fim, é convidado a avaliar o atendimento."
+      },
+      "M14": {
+        "TITULO": "Documentos completos para implantar",
+        "TEXTO": "Pede os documentos de cada pessoa, confere cada foto ou PDF, pede só o que falta e avisa você quando der para implantar."
+      },
+      "M15": {
+        "TITULO": "Empresa grande com atendimento seu",
+        "TEXTO": "Cotação com mais vidas do que você escolher vai direto para você, marcada como prioridade."
+      },
+      "M16": {
+        "TITULO": "Reconquistar quem foi para outra operadora",
+        "TEXTO": "Quem foi para outra operadora ou achou caro, perto do aniversário do contrato, recebe uma oferta melhor."
+      },
+      "M17": {
+        "TITULO": "Consultor de férias, cliente bem cuidado",
+        "TEXTO": "Quando alguém sai de férias, quem cobre recebe o resumo de cada cliente. Na volta, os clientes voltam para a pessoa."
+      },
+      "M20": {
+        "TITULO": "Contrato implantado entra no seu sistema",
+        "TEXTO": "Ao implantar, o sistema pega os dados que faltam, envia ao seu sistema de gestão e manda as boas-vindas."
+      }
+    }
   }
 }
