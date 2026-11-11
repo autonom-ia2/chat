@@ -275,6 +275,17 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(a_request(:get, "#{api}/09012100")).not_to have_been_made
     end
 
+    # Revisão do #2917 (testador): o 7616.10.00 tem 200 letras de texto próprio, e a posição (76.16, "Outras obras de
+    # alumínio") saía para caber: o corte de 160 deixava o modelo sem o material. O material vem primeiro.
+    it '7616.10.00 real, texto proprio longo: o material vem primeiro e chega ao modelo' do
+      fonte_responde("#{api}?search=7616", fixture('ncm_busca_7616.json'))
+
+      descricao = codigo('7616.10.00')['dados']['descricao']
+
+      expect(descricao).to start_with('Outras obras de alumínio, tachas, pregos')
+      expect(descricao.length).to be <= Autonomia::FerramentasProntas::Resposta::MAX_TEXTO + 1
+    end
+
     it 'codigo de 8 digitos que nao esta na posicao: nao encontrado' do
       fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
 

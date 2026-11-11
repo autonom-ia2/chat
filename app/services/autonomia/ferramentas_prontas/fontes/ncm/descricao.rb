@@ -32,11 +32,14 @@ module Autonomia::FerramentasProntas::Fontes::Ncm::Descricao
   # `indice`: o que `indice` monta. Os textos de cima perdem o ponto final; os de baixo começam com minúscula, menos a
   # sigla ("PVC"). Cabe no texto que vai ao modelo (`Resposta::MAX_TEXTO`), e o texto do próprio código vai sempre
   # inteiro, no fim: é ele que separa um código do irmão (revisão do #2917: o corte do fim deixava "brinquedos" com 20
-  # códigos e 3 descrições). Quem encurta são os pais (`no_limite`).
+  # códigos e 3 descrições). Quem encurta são os pais (`no_limite`). O texto próprio longo demais (o 7616.10.00 tem 200
+  # letras) não tira os pais: eles ficam com ao menos `MINIMO`, porque a posição diz o material ("Outras obras de
+  # alumínio"), e o fim do texto próprio é que fica no corte do `Resposta`.
   def completa(nivel, indice)
     propria = nivel.propria
     pais = acima(nivel, indice).map { |pai| pai.propria.delete_suffix('.') }.reject(&:empty?).uniq - [propria]
-    junta(no_limite(pais, Autonomia::FerramentasProntas::Resposta::MAX_TEXTO - propria.length) + [propria])
+    espaco = [Autonomia::FerramentasProntas::Resposta::MAX_TEXTO - propria.length, MINIMO + SEPARADOR.length].max
+    junta(no_limite(pais, espaco) + [propria])
   end
 
   def junta(partes)
