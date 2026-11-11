@@ -53,8 +53,8 @@ RSpec.describe Autonomia::Agents::Builder do
   it 'asks every call for a closed list of catalog keys, with "none fits" as the empty list' do
     campo = described_class::BUILDER_SCHEMA[:schema][:properties][:ferramentas_prontas]
 
-    expect(campo[:items][:enum]).to match_array(Autonomia::FerramentasProntas::Catalogo.chaves_da_vitrine)
-    expect(campo[:items][:enum]).not_to include('produtos_seguradoras')
+    expect(campo[:items][:enum]).to match_array(Autonomia::FerramentasProntas::Catalogo.chaves_sugeriveis)
+    expect(campo[:items][:enum]).not_to include('produtos_seguradoras', 'historico_placa')
     expect(campo[:description]).to include('Lista vazia quando nenhuma serve')
     expect(described_class::BUILDER_SCHEMA[:schema][:required]).to include('ferramentas_prontas')
     expect(described_class::LEAN_TURN_NOTE).to include('ferramentas_prontas como lista vazia')

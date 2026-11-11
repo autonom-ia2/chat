@@ -65,9 +65,11 @@ module Autonomia::FerramentasProntas::Catalogo
     todas.map(&:chave)
   end
 
-  # As chaves que a vitrine e o Construtor podem oferecer (fora as de uso interno).
-  def chaves_da_vitrine
-    todas.select(&:na_vitrine?).map(&:chave)
+  # As chaves que o Construtor e o cartão "pode ganhar" podem sugerir, iguais para todas as contas (o enum do schema
+  # estrito do Construtor fica no prefixo em cache): os dois filtros de `FerramentasProntas.sugeriveis` já na entrada,
+  # fora as de uso interno (`Fonte#na_vitrine?` falso, #2909) e as Premium (F7). O modelo nem as vê.
+  def chaves_sugeriveis
+    todas.select(&:na_vitrine?).reject(&:premium?).map(&:chave)
   end
 
   def buscar(chave)

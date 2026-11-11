@@ -53,7 +53,7 @@ class Autonomia::FerramentasProntas::SugestaoParaAgente
       return unless ligada?(agent)
 
       config = agent.config.to_h
-      escolha = (Array(config[CONSTRUTOR]) + Array(config[TAMBEM])).map(&:to_s) & Autonomia::FerramentasProntas::Catalogo.chaves_da_vitrine
+      escolha = (Array(config[CONSTRUTOR]) + Array(config[TAMBEM])).map(&:to_s) & Autonomia::FerramentasProntas::Catalogo.chaves_sugeriveis
       gravar(agent) { { SUGESTAO => { 'chaves' => escolha, 'assinatura' => assinatura(agent), 'em' => Time.current.iso8601 } } }
     end
 

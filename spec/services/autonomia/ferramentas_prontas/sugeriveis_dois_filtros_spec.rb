@@ -3,7 +3,9 @@ require 'rails_helper'
 # #2858: o que o Construtor e o cartão "pode ganhar" sugerem passa por DOIS filtros, que valem juntos (nota de merge da
 # Funções, 11/11/2026): a fonte de uso interno não é sugerida (#2909, `Fonte#na_vitrine?` falso: Produtos das
 # seguradoras), e a Premium também não (F7: consulta paga só entra no agente pela escolha de uma pessoa, na vitrine).
-# A vitrine segue mostrando a Premium. O modelo é dublado: nenhuma chamada paga.
+# A vitrine segue mostrando a Premium. Os dois filtros valem também na ENTRADA (observação do testador): o enum do
+# Construtor e a escolha guardada pelo `semear_do_construtor!` já vêm sem as duas, e o modelo nem as vê. O modelo é
+# dublado: nenhuma chamada paga.
 RSpec.describe Autonomia::FerramentasProntas, '.sugeriveis' do
   include FerramentasProntasHelper
 
@@ -44,6 +46,14 @@ RSpec.describe Autonomia::FerramentasProntas, '.sugeriveis' do
     expect(sugeriveis).to eq(described_class.da_vitrine(account).reject(&:premium?).map(&:chave))
   end
 
+  it 'o enum do Construtor (o mesmo em todas as contas) já vem sem as duas: o modelo nem as vê' do
+    enum = Autonomia::Agents::Builder::ProntasSugeridas.schema[:items][:enum]
+
+    expect(enum).not_to include(interna, *premium)
+    expect(enum).to include('cep', 'corretor_susep')
+    expect(enum).to eq(Autonomia::FerramentasProntas::Catalogo.chaves_sugeriveis)
+  end
+
   it 'o Construtor não oferece nem guarda nenhuma das duas' do
     sugeridas = Autonomia::Agents::Builder::ProntasSugeridas
 
@@ -71,6 +81,7 @@ RSpec.describe Autonomia::FerramentasProntas, '.sugeriveis' do
 
     agent.update!(config: { 'ferramentas_sugeridas' => escolha_do_modelo })
     Autonomia::FerramentasProntas::SugestaoParaAgente.semear_do_construtor!(agent)
-    expect(Autonomia::FerramentasProntas::SugestaoParaAgente.para_tela(agent.reload)).to eq(%w[cep corretor_susep])
+    expect(agent.reload.config.dig('prontas_sugestao', 'chaves')).to eq(%w[cep corretor_susep])
+    expect(Autonomia::FerramentasProntas::SugestaoParaAgente.para_tela(agent)).to eq(%w[cep corretor_susep])
   end
 end
