@@ -80,6 +80,19 @@ RSpec.describe Autonomia::Prospecting::Research::BigDataCorpClient do
       expect(cache.read).to equal(novo)
     end
 
+    # Revisor (big_data_corp_client.rb:161): a consulta recusada com 401 não foi cobrada. Se o token novo não chega
+    # (falha ou corte do prazo por fora), nenhuma consulta saiu com token válido: `query_dispatched?` volta a falso, e a
+    # telemetria não grava custo possível.
+    it 'depois do 401, com o token novo falhando, a consulta não conta como enviada' do
+      cliente = described_class.new(credentials: credentials, sleeper: ->(_) {}, max_provider_attempts: 1, resend_after_unauthorized: true)
+      token_bom = { status: 200, body: { token: 'token-exemplo', tokenID: 'id-exemplo' }.to_json }
+      stub_request(:post, "#{base}/tokens/gerar").to_return(token_bom, { status: 503, body: '' })
+      stub_request(:post, "#{base}/empresas").to_return(status: 401, body: '')
+
+      expect { cliente.query_route('/empresas', query: 'doc{11222333000181}', datasets: 'kyc') }.to raise_error(described_class::Error)
+      expect(cliente.query_dispatched?).to be(false)
+    end
+
     it 'Tokens#forget apaga só o token recusado' do
       cache = Autonomia::FerramentasProntas::Premium::Tokens.new
       guardado = described_class::Token.new(access_token: 'a', token_id: 'b', expires_at: 1)

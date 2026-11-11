@@ -199,7 +199,10 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
     raise failure('BIGDATACORP_HTTP_ERROR', 401, state[:attempts])
   end
 
+  # A consulta recusada com 401 não foi cobrada: até o reenvio sair com o token novo, nada foi enviado de verdade (o corte
+  # por fora, ainda no token, não tem custo possível; #2858 F7, revisor).
   def refresh_after_unauthorized(state)
+    @query_dispatched = false
     forget_token
     if state[:attempts] >= @options[:max_provider_attempts]
       raise failure('BIGDATACORP_HTTP_ERROR', 401, state[:attempts]) unless @options[:resend_after_unauthorized]
