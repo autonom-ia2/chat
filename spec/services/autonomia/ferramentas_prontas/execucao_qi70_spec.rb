@@ -92,6 +92,14 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(a_request(:get, /9999|3333/)).not_to have_been_made
     end
 
+    it 'telefone de fora do Brasil ("+1 212 555 0100"): pedido invalido, com a orientacao de que nao e do Brasil' do
+      saida = executar_pronta(pronta('ddd'), 'ddd' => '+1 212 555 0100')
+
+      expect(saida).to include('situacao' => 'pedido_invalido', 'campo' => 'ddd')
+      expect(saida['orientacao']).to include('não é do Brasil')
+      expect(a_request(:get, /brasilapi/)).not_to have_been_made
+    end
+
     it 'telefone sem DDD ou de fora do plano: pedido invalido, sem chamar a fonte' do
       expect(executar_pronta(pronta('ddd'), 'ddd' => '99999-0000')['campo']).to eq('ddd')
       expect(executar_pronta(pronta('ddd'), 'ddd' => '20 99999-0000')['campo']).to eq('ddd')

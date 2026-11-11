@@ -4,7 +4,7 @@
 # começo de palavra, sem acento e sem caixa.
 #   - um só: segue com o código, e o agente nem fica sabendo;
 #   - mais de um (as versões do Gol): pedido inválido no campo, com os candidatos (código e nome) e a orientação de
-#     escolher pelo que o cliente disse ou mostrar a faixa;
+#     escolher a mais provável pelo que o cliente disse (uma consulta de preço só) ou mostrar as versões e perguntar;
 #   - nenhum: pedido inválido no campo (marca ou modelo, nunca o código FIPE), com o que fazer.
 module Autonomia::FerramentasProntas::Fontes::Fipe::PeloNome
   Lista = Autonomia::FerramentasProntas::Lista
@@ -18,8 +18,8 @@ module Autonomia::FerramentasProntas::Fontes::Fipe::PeloNome
   SEM_MODELO = 'Não há modelo com esse nome nesta marca da tabela FIPE. Confira a marca (Gol é Volkswagen) e o nome do ' \
                'modelo; se não dá para saber, pergunte ao cliente o modelo. Não invente.'.freeze
   VARIOS_MODELOS = 'Há %<total>s versões com esse nome. Escolha a mais provável pelo que o cliente disse e consulte o preco ' \
-                   'com o codigo dela em modelo; se nada indica a versão, consulte até 3 versões no mesmo ano, mostre a ' \
-                   'faixa de preço e só então pergunte a versão.'.freeze
+                   'dela, uma consulta só, com o codigo dela em modelo; se nada indica a versão, mostre ao cliente as ' \
+                   'versões de candidatos e pergunte qual é.'.freeze
 
   module_function
 
@@ -38,15 +38,22 @@ module Autonomia::FerramentasProntas::Fontes::Fipe::PeloNome
   def codigo_da_marca(params, apoio)
     return [params['marca'], nil] if Autonomia::FerramentasProntas::Parametro.codigo(params['marca'])
 
-    lista = Array(apoio.dados('marcas', 'tipo' => params['tipo'])&.dig('marcas'))
+    lista = validos(Array(apoio.dados('marcas', 'tipo' => params['tipo'])&.dig('marcas')))
     escolher(lista, params['marca'], campo: 'marca', nenhum: SEM_MARCA, varios: VARIAS_MARCAS)
   end
 
+  # O modelo que é só número ("208", "500", "3008") é nome, salvo quando está na lista da marca como código: o código
+  # só vale se veio dela.
   def codigo_do_modelo(params, apoio)
-    return [params['modelo'], nil] if Autonomia::FerramentasProntas::Parametro.codigo(params['modelo'])
+    lista = validos(Array(apoio.dados('modelos', params.slice('tipo', 'marca'))&.dig('modelos')))
+    return [params['modelo'], nil] if lista.any? { |item| item['codigo'] == params['modelo'].to_s }
 
-    lista = Array(apoio.dados('modelos', params.slice('tipo', 'marca'))&.dig('modelos'))
     escolher(lista, params['modelo'], campo: 'modelo', nenhum: SEM_MODELO, varios: VARIOS_MODELOS)
+  end
+
+  # Só o item com código no formato (dígitos): o código vai ao caminho do pedido seguinte, e veio de fora.
+  def validos(lista)
+    lista.select { |item| item.is_a?(Hash) && Autonomia::FerramentasProntas::Parametro.codigo(item['codigo']) }
   end
 
   # -> [o código, nil] com um achado só; senão [nil, a `Falta`]. Os candidatos vão na ordem de relevância.

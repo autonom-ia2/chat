@@ -220,7 +220,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     end
 
     it 'cidade que nao existe no estado, homonima sem uf, codigo de 6 digitos ou periodo longo: pedido invalido, sem chamar a fonte' do
-      expect(executar_pronta(ferramenta, 'cidade' => 'Uberlândia', 'uf' => 'SP')['campo']).to eq('cidade')
+      expect(executar_pronta(ferramenta, 'cidade' => 'Uberlândia', 'uf' => 'SP')).to include('campo' => 'uf', 'candidatos' => ['MG'])
       expect(executar_pronta(ferramenta, 'cidade' => 'Bom Jesus')).to include('campo' => 'uf', 'candidatos' => %w[PB PI RN RS SC])
       expect(executar_pronta(ferramenta, 'codigo_ibge' => '317020')['campo']).to eq('codigo_ibge')
       expect(executar_pronta(ferramenta, 'codigo_ibge' => '3170206', 'de' => '2026-09-01', 'ate' => '2026-11-05')['campo']).to eq('ate')
@@ -295,7 +295,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     it 'sem lugar, cidade homonima sem uf, cidade de outro estado ou so a latitude: pedido invalido, sem chamar a fonte' do
       expect(executar_pronta(ferramenta, {})['campo']).to eq('cidade')
       expect(executar_pronta(ferramenta, 'cidade' => 'Palmas')).to include('campo' => 'uf', 'candidatos' => %w[PR TO])
-      expect(executar_pronta(ferramenta, 'cidade' => 'Uberlândia', 'uf' => 'RJ')['campo']).to eq('cidade')
+      expect(executar_pronta(ferramenta, 'cidade' => 'Uberlândia', 'uf' => 'RJ')).to include('campo' => 'uf', 'candidatos' => ['MG'])
       expect(executar_pronta(ferramenta, 'latitude' => -18.9)['campo']).to eq('longitude')
       expect(executar_pronta(ferramenta, 'latitude' => 'perto', 'longitude' => -48.2)['campo']).to eq('latitude')
       expect(nenhum_pedido_saiu?).to be(true)

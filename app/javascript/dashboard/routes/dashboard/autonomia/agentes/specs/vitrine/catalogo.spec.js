@@ -64,6 +64,9 @@ describe('catálogo da vitrine', () => {
     );
     expect(t('AGENTS.VITRINE.FERRAMENTAS.DOENCAS.EXEMPLO')).toBe('asma');
     expect(t('AGENTS.VITRINE.FERRAMENTAS.BANCOS.EXEMPLO')).toBe('Itaú');
+    expect(t('AGENTS.VITRINE.FERRAMENTAS.BANCOS.USE_QUANDO')).toContain(
+      'o nome ou o código de um banco'
+    );
   });
 
   it('shows only what the server released, in the showcase order', () => {

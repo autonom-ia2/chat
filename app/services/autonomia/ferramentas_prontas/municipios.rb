@@ -10,6 +10,8 @@
 module Autonomia::FerramentasProntas::Municipios
   DIGITOS_CNES = 6
   DEDUZA_UF = 'a UF sai da cidade: mande só a cidade, ou a sigla de 2 letras do estado dela.'.freeze
+  UF_ERRADA = 'Não há %<cidade>s nesse estado: há em %<ufs>s. Corrija você a uf (ou mande só a cidade), sem perguntar ' \
+              'ao cliente, salvo se a conversa disser outra cidade.'.freeze
   HOMONIMA = 'Há cidade com esse nome em mais de um estado (%<ufs>s). Se a conversa já diz qual (o endereço, o DDD do ' \
              'telefone), mande a uf; senão, pergunte ao cliente o estado. Não invente.'.freeze
 
@@ -56,16 +58,19 @@ module Autonomia::FerramentasProntas::Municipios
   end
 
   # A regra das fontes que pedem a cidade. -> nil quando acha o município; senão a `Falta`: a UF com as candidatas
-  # (homônima sem UF), ou a cidade (não informada, ou que não existe no estado ou no Brasil).
+  # (homônima sem UF, ou UF errada para a cidade que existe em outro estado), ou a cidade (não informada, ou que não
+  # existe no Brasil).
   def falta(uf_sigla, nome)
     falta = Autonomia::FerramentasProntas::Falta
     return falta.new(campo: 'cidade') if nome.blank?
     return if buscar(uf_sigla, nome)
 
-    ufs = uf_sigla.blank? ? homonimas(nome).map(&:uf).sort : []
-    return falta.new(campo: 'cidade') if ufs.size < 2
+    # Sem a UF, `buscar` só falha com nenhuma ou com mais de uma: a de uma só nunca chega aqui.
+    ufs = homonimas(nome).map(&:uf).sort
+    return falta.new(campo: 'cidade') if ufs.empty?
 
-    falta.new(campo: 'uf', candidatos: ufs, orientacao: format(HOMONIMA, ufs: ufs.join(', ')))
+    texto = uf_sigla.present? ? format(UF_ERRADA, cidade: nome, ufs: ufs.join(', ')) : format(HOMONIMA, ufs: ufs.join(', '))
+    falta.new(campo: 'uf', candidatos: ufs, orientacao: texto)
   end
 
   def municipios

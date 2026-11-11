@@ -3369,7 +3369,7 @@
           "CONSEGUE": "name a bank by its code",
           "CLIENTE": "What is Itaú's bank code?",
           "AGENTE": "Itaú Unibanco's code is 341.",
-          "USE_QUANDO": "Use when the customer gives a bank code.",
+          "USE_QUANDO": "Use when the customer gives the name or the code of a bank.",
           "ROTULO": "Bank name or code",
           "EXEMPLO": "Itaú"
         },

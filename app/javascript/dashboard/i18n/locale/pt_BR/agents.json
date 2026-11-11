@@ -3369,7 +3369,7 @@
           "CONSEGUE": "dizer o nome de um banco pelo código",
           "CLIENTE": "Qual o código do Itaú?",
           "AGENTE": "O código do Itaú Unibanco é 341.",
-          "USE_QUANDO": "Use quando o cliente informar o código de um banco.",
+          "USE_QUANDO": "Use quando o cliente informar o nome ou o código de um banco.",
           "ROTULO": "Nome ou código do banco",
           "EXEMPLO": "Itaú"
         },

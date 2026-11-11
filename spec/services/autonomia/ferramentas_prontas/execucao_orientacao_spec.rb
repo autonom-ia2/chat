@@ -46,12 +46,19 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
     expect(saida['orientacao']).to include('Não pergunte ao cliente', 'marcas', 'modelos', 'preco')
   end
 
-  it 'todo parametro do catalogo que vai a fonte tem orientacao propria (deduza ou pergunte)' do
+  it 'todo parametro do catalogo que vai a fonte, ou que e obrigatorio mesmo local, tem orientacao propria' do
     sem = Autonomia::FerramentasProntas::Catalogo.todas.flat_map do |fonte|
-      fonte.consultas.flat_map(&:parametros).uniq(&:nome).reject(&:local?).reject(&:orientacao).map { |param| "#{fonte.chave}.#{param.nome}" }
+      obrigatorios = fonte.consultas.flat_map(&:obrigatorios)
+      fonte.consultas.flat_map(&:parametros).uniq(&:nome)
+           .select { |param| !param.local? || obrigatorios.include?(param) }
+           .reject(&:orientacao).map { |param| "#{fonte.chave}.#{param.nome}" }
     end
 
     expect(sem).to eq([])
+  end
+
+  it 'a cidade das estacoes (local, mas e ela que acha o ponto) tambem tem orientacao' do
+    expect(Autonomia::FerramentasProntas::Fontes::Estacoes::CIDADE.orientacao).to include('pergunte ao cliente')
   end
 
   it 'o texto generico fica so como padrao do que nao tem orientacao' do

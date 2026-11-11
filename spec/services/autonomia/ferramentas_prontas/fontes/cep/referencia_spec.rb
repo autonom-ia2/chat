@@ -44,6 +44,27 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes::Cep::Referencia do
     expect(a_request(:get, /Bom|Nao/)).not_to have_been_made
   end
 
+  it 'CEP especial (sufixo 900 a 999) fica de fora do menor, mesmo com prefixo menor; so vale se nao houver outro' do
+    fonte_responde(uberlandia, [rua('38400-263', 'Tabajaras'), rua('38400-901', 'Centro'), rua('38100-950', 'Centro')])
+
+    expect(described_class.cep_da_cidade(cidade: 'Uberlândia')).to eq('38400-263')
+  end
+
+  it 'so CEP especial na cidade: usa o especial' do
+    fonte_responde(uberlandia, [rua('38400-901', 'Centro')])
+
+    expect(described_class.cep_da_cidade(cidade: 'Uberlândia')).to eq('38400-901')
+  end
+
+  it 'cache fora do ar (erro de conexao): consulta a fonte e loga a classe do erro' do
+    fonte_responde(uberlandia, [rua('38400-263', 'Tabajaras')])
+    allow(Rails.cache).to receive(:read).and_raise(Redis::CannotConnectError)
+    allow(Rails.logger).to receive(:warn)
+
+    expect(described_class.cep_da_cidade(cidade: 'Uberlândia')).to eq('38400-263')
+    expect(Rails.logger).to have_received(:warn).with(include('Redis::CannotConnectError')).at_least(:once)
+  end
+
   describe '.cep (o que a F7 chama em Premium::Endereco.cep)' do
     let(:paulista) { 'https://viacep.com.br/ws/SP/Sao%20Paulo/Avenida%20Paulista/json/' }
     let(:de_sp) { { logradouro: 'Avenida Paulista', localidade: 'São Paulo', uf: 'SP', ibge: '3550308' } }
@@ -64,6 +85,26 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes::Cep::Referencia do
       expect(candidatos.pluck('cep')).to eq(%w[01310-100 01311-000 01311-921])
       expect(candidatos.first).to include('bairro' => 'Bela Vista', 'complemento' => 'de 1 a 609 - lado ímpar')
       expect(described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Avenida Paulista', bairro: 'cerqueira')).to eq('cep' => '01311-000')
+    end
+
+    it 'bairro que esvazia a lista ("Jardim America" contra "Jd America"): os candidatos da rua, sem o filtro' do
+      fonte_responde(paulista, [de_sp.merge(cep: '01310-100', bairro: 'Jd America'), de_sp.merge(cep: '01311-000', bairro: 'Bela Vista')])
+
+      resultado = described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Avenida Paulista', bairro: 'Jardim America')
+
+      expect(resultado['candidatos'].pluck('cep')).to eq(%w[01310-100 01311-000])
+    end
+
+    it 'a busca pela rua usa o cache da consulta por_endereco (mesma chave): a segunda nao chama a fonte' do
+      pedido = fonte_responde(paulista, [de_sp.merge(cep: '01310-100', bairro: 'Bela Vista')])
+      fonte = Autonomia::FerramentasProntas::Fontes::Cep::FONTE
+      consulta = fonte.consulta('por_endereco')
+      params, = consulta.conferir('logradouro' => 'Avenida Paulista', 'cidade' => 'São Paulo', 'uf' => 'SP')
+
+      2.times { described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Avenida Paulista') }
+
+      expect(pedido).to have_been_requested.once
+      expect(Autonomia::FerramentasProntas::Cache.new(fonte, consulta, params).ler).to include('situacao' => 'encontrado')
     end
 
     it 'rua que nao existe, cidade que nao existe ou fonte fora: nil' do

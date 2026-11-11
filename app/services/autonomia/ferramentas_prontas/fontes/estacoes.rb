@@ -63,7 +63,8 @@ module Autonomia::FerramentasProntas::Fontes::Estacoes
     Autonomia::FerramentasProntas::Fontes::Localizacao::Sedes.distancia_km(latitude, longitude, item['latitude'], item['longitude'])
   end
 
-  CIDADE = Parametro.new(nome: 'cidade', local: true, descricao: 'O nome da cidade. Sem cidade: latitude e longitude.') do |valor|
+  CIDADE = Parametro.new(nome: 'cidade', local: true, descricao: 'O nome da cidade. Sem cidade: latitude e longitude.',
+                         pergunte: 'a cidade (ou peça a localização)') do |valor|
     Parametro.texto_curto(valor)
   end
   UF = Municipios.parametro_uf(local: true)

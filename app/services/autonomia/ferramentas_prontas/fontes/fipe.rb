@@ -60,7 +60,8 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
                         deduza: 'mande o nome da marca; se o cliente disse só o modelo, a marca sai dele (Gol é Volkswagen).') do |valor|
     codigo_ou_nome(valor)
   end
-  MODELO = Parametro.new(nome: 'modelo', descricao: 'O nome do modelo como o cliente disse (ex.: Gol, Onix LT), ou o código dele.',
+  MODELO = Parametro.new(nome: 'modelo', descricao: 'O nome do modelo como o cliente disse (ex.: Gol, 208), ou o código como veio ' \
+                                                    'na consulta modelos.',
                          pergunte: 'o modelo do veículo') { |valor| codigo_ou_nome(valor) }
   BUSCA = Parametro.new(nome: 'busca', local: true,
                         descricao: 'Parte do nome do modelo para filtrar a lista (ex.: "onix lt 1.0"). Opcional.') do |valor|
@@ -75,6 +76,10 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
                       pergunte: 'o ano-modelo do veículo') do |valor|
     Parametro.inteiro(valor, 1950..2100) || Parametro.inteiro(valor, ZERO_KM..ZERO_KM)
   end
+
+  # Interna, fora da lista que o modelo vê: os anos de um veículo, guardados no cache da fonte pela parallelum.
+  ANOS = Consulta.new(nome: 'anos', descricao: 'os anos de um veículo (interna)', obrigatorios: [TIPO],
+                      opcionais: [CODIGO_FIPE, MARCA, MODELO], provedores: [], validade: 7.days, prazo_por_fonte: 5, prazo_total: 5)
 
   PRECO = 'o preço do mês; pede tipo, marca e modelo pelo nome, como o cliente disse (o código sai das listas aqui), e o ' \
           'ano; ou o código FIPE. Sem o ano, vem a faixa e os anos que existem'.freeze

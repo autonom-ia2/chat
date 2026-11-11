@@ -48,15 +48,25 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
   # Sem o ano, os anos que existem e a faixa; com ele, o preço de cada combustível daquele ano (até `MAX_ANOS_COM_PRECO`).
   def precos(params)
     do_veiculo = params['codigo_fipe'] ? "/#{params['codigo_fipe']}" : "/brands/#{params['marca']}/models/#{params['modelo']}"
-    anos = itens(base(params, "#{do_veiculo}/years"))
+    anos = anos_do_veiculo(params, do_veiculo)
     raise NaoEncontrado if anos.empty?
     return faixa(params, do_veiculo, anos) if params['ano'].nil?
 
     { 'precos' => do_ano(anos, params['ano']).map { |ano| preco_do_ano(params, do_veiculo, ano) } }
   end
 
-  # O preço do ano mais antigo e do mais novo (o zero km, 32000, é o mais novo): duas chamadas, não uma por ano. Se elas
-  # falharem, os anos ainda servem ao agente.
+  # Os anos de um veículo mudam uma vez por mês: ficam no cache da fonte por 7 dias (`Fipe::ANOS`), e o preço de outro
+  # ano do mesmo carro gasta só a chamada do preço.
+  def anos_do_veiculo(params, do_veiculo)
+    cache = Autonomia::FerramentasProntas::Cache.new(Fipe::FONTE, Fipe::ANOS, params)
+    guardado = cache.ler
+    return guardado['dados'] if guardado && guardado['situacao'] == Autonomia::FerramentasProntas::Cache::ENCONTRADO
+
+    itens(base(params, "#{do_veiculo}/years")).tap { |anos| cache.encontrado(anos) if anos.any? }
+  end
+
+  # O preço do ano mais antigo e do mais novo da lista de anos (do cache), o zero km (32000) sendo o mais novo: duas
+  # chamadas, não uma por ano. Se elas falharem, os anos ainda servem ao agente.
   def faixa(params, do_veiculo, anos)
     so_os_anos = { 'anos_disponiveis' => anos.pluck('nome') }
     validos = anos.select { |item| codigo_de_ano?(item['codigo']) }

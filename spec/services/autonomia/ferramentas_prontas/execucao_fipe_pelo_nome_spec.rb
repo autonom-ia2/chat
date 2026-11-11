@@ -46,8 +46,55 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
 
     expect(saida).to include('situacao' => 'pedido_invalido', 'campo' => 'modelo')
     expect(saida['candidatos']).to eq([{ 'codigo' => '1', 'nome' => 'Gol 1.0 Mi Total Flex 8V 4p' }, { 'codigo' => '2', 'nome' => 'Gol 1.6 Power' }])
-    expect(saida['orientacao']).to include('2 versões', 'codigo', 'faixa')
+    expect(saida['orientacao']).to include('2 versões', 'codigo', 'uma consulta só')
+    expect(saida['orientacao']).not_to include('até 3')
     expect(saida['orientacao']).not_to include('Confira com o cliente')
+  end
+
+  it 'a recusa do resolver (candidatos, marca que nao existe) nao gasta o limite do dia' do
+    preco('marca' => 'VW', 'modelo' => 'Gol', 'ano' => 2020)
+    preco('marca' => 'Gurgel Motors Ltda', 'modelo' => 'X', 'ano' => 2020)
+
+    expect(Autonomia::FerramentasProntas::Uso.sole).to have_attributes(consultas: 0, recusadas: 2)
+  end
+
+  it '"Peugeot 208": modelo que e so numero e nome, nao codigo, quando nao esta na lista como codigo' do
+    fonte_responde(marcas, [{ nome: 'Peugeot', valor: '41' }])
+    peugeot = 'https://parallelum.com.br/fipe/api/v2/cars/brands/41/models'
+    fonte_responde(peugeot, [{ code: '5985', name: '208 Active 1.6 Flex 16V 5p Mec.' }, { code: '7001', name: '2008 Allure 1.6' }])
+    fonte_responde("#{peugeot}/5985/years", [{ code: '2020-1', name: '2020 Gasolina' }])
+    fonte_responde("#{peugeot}/5985/years/2020-1", preco_voyage.merge(brand: 'Peugeot', model: '208 Active 1.6 Flex 16V 5p Mec.'))
+
+    saida = preco('marca' => 'Peugeot', 'modelo' => '208', 'ano' => 2020)
+
+    expect(saida['dados']['precos'].first).to include('modelo' => '208 Active 1.6 Flex 16V 5p Mec.')
+    expect(a_request(:get, "#{peugeot}/208/years")).not_to have_been_made
+  end
+
+  it 'o codigo que veio na lista continua aceito' do
+    fonte_responde("#{modelos_vw}/4/years", [{ code: '2020-1', name: '2020 Gasolina' }])
+    fonte_responde("#{modelos_vw}/4/years/2020-1", preco_voyage)
+
+    expect(preco('marca' => '59', 'modelo' => '4', 'ano' => 2020)['situacao']).to eq('encontrado')
+  end
+
+  it 'codigo torto vindo da lista da fonte nunca vai a URL: o modelo nao e achado' do
+    fonte_responde(modelos_vw, [{ code: '../9', name: 'Up 1.0' }])
+
+    expect(preco('marca' => 'Volkswagen', 'modelo' => 'Up', 'ano' => 2020)).to include('situacao' => 'pedido_invalido', 'campo' => 'modelo')
+    expect(a_request(:get, %r{models/\.\.})).not_to have_been_made
+  end
+
+  it 'os anos do veiculo ficam no cache: outro ano do mesmo carro so busca o preco' do
+    cache_em_memoria
+    anos = fonte_responde("#{modelos_vw}/4/years", [{ code: '2021-1', name: '2021 Gasolina' }, { code: '2020-1', name: '2020 Gasolina' }])
+    fonte_responde("#{modelos_vw}/4/years/2020-1", preco_voyage)
+    fonte_responde("#{modelos_vw}/4/years/2021-1", preco_voyage.merge(modelYear: 2021))
+
+    preco('marca' => 'Volkswagen', 'modelo' => 'Voyage', 'ano' => 2020)
+    preco('marca' => 'Volkswagen', 'modelo' => 'Voyage', 'ano' => 2021)
+
+    expect(anos).to have_been_requested.once
   end
 
   it 'o nome igual ao da lista escolhe direto, mesmo com outros que comecam igual' do

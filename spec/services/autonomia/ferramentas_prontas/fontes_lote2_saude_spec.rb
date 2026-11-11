@@ -115,7 +115,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     end
 
     it 'entrada fora do formato: cidade que nao e daquele estado, sem cidade, homonima sem uf, codigo que nao existe e tipo fora da lista' do
-      expect(executar_pronta(ferramenta, 'cidade' => 'Campinas', 'uf' => 'rj')).to include('situacao' => 'pedido_invalido', 'campo' => 'cidade')
+      expect(executar_pronta(ferramenta, 'cidade' => 'Campinas', 'uf' => 'rj'))
+        .to include('situacao' => 'pedido_invalido', 'campo' => 'uf', 'candidatos' => ['SP'])
       expect(executar_pronta(ferramenta, 'uf' => 'sp')['campo']).to eq('cidade')
       expect(executar_pronta(ferramenta, 'cidade' => 'Santa Helena')).to include('campo' => 'uf', 'candidatos' => %w[MA PB PR SC])
       expect(executar_pronta(ferramenta, 'codigo_ibge' => '999999')['campo']).to eq('codigo_ibge')

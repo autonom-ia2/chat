@@ -13,15 +13,26 @@ module Autonomia::FerramentasProntas::Fontes::Ddd
   module_function
 
   # O DDD de "34", "(34) 3333-4444", "+55 34 99999-0000" ou "5534999990000": pelo tamanho do número (2 dígitos; 10 ou 11
-  # com o DDD na frente; 12 ou 13 com o 55 do país antes). -> os 2 dígitos, ou nil (sem DDD, ou fora do plano).
+  # com o DDD na frente; 12 ou 13 com o 55 do país antes). -> os 2 dígitos, ou nil (sem DDD, fora do plano, ou telefone
+  # de outro país: com "+" e sem o "+55").
   def ddd_do_telefone(valor)
-    digitos = valor.to_s.delete("^#{Parametro::DIGITOS}")
-    ddd = case digitos.length
-          when 2 then digitos
-          when 10, 11 then digitos[0, 2]
-          when 12, 13 then digitos[2, 2] if digitos.start_with?(PAIS)
-          end
+    texto = valor.to_s.strip
+    return if de_outro_pais?(texto)
+
+    ddd = ddd_dos_digitos(texto.delete("^#{Parametro::DIGITOS}"))
     ddd if Plano::ESTADOS.key?(ddd)
+  end
+
+  def de_outro_pais?(texto)
+    texto.start_with?('+') && !texto.start_with?("+#{PAIS}")
+  end
+
+  def ddd_dos_digitos(digitos)
+    case digitos.length
+    when 2 then digitos
+    when 10, 11 then digitos[0, 2]
+    when 12, 13 then digitos[2, 2] if digitos.start_with?(PAIS)
+    end
   end
 
   def resposta(ddd, sigla, cidades: nil)
@@ -32,8 +43,8 @@ module Autonomia::FerramentasProntas::Fontes::Ddd
   end
 
   DDD = Parametro.new(nome: 'ddd', descricao: 'O DDD (ex.: 31) ou o telefone inteiro do cliente: só o DDD sai daqui.',
-                      deduza: 'tire o DDD do telefone do cliente (os 2 dígitos do código de área). Se o número não é do ' \
-                              'Brasil, diga isso a ele.') do |valor|
+                      deduza: 'tire o DDD do telefone do cliente (os 2 dígitos do código de área). Telefone com + e ' \
+                              'código de outro país não é do Brasil: diga isso a ele, sem consultar.') do |valor|
     ddd_do_telefone(valor)
   end
 

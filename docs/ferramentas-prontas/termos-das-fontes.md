@@ -102,3 +102,19 @@ em segundo plano (responde na hora).
 
 Fora da F4, à espera do advogado: **Domínio .br** (RDAP do Registro.br). O aviso da resposta proíbe "distribution,
 commercialization, reproduction"; o código está guardado para um PR próprio depois do parecer (decisão do Rodrigo, 10/11/2026).
+
+## FIPE pelo nome: quantas chamadas uma pergunta gasta (regra "QI 70", #2858)
+
+O agente manda a marca e o modelo pelo nome; o servidor tira o código das listas (`fontes/fipe/pelo_nome.rb`). O que fica
+no cache: lista de marcas e lista de modelos da marca por 7 dias, anos de um veículo por 7 dias (`Fipe::ANOS`), preço
+por 1 dia. "Cache frio" é a primeira pergunta sobre aquela marca e carro; "quente", a repetição dentro da validade.
+
+| Pergunta | Cache frio | Cache quente |
+|---|---|---|
+| Marca + modelo com uma versão só + ano ("Voyage 2020") | 4: marcas (BrasilAPI), modelos, anos e preço (parallelum) | 0 (preço do dia) ou 1 (preço de outro ano) |
+| Marca + modelo com várias versões ("Gol 2020") | 2 na recusa com os candidatos (marcas, modelos), que não gasta o limite da conta; depois 2 no preço da versão escolhida (anos e preço): 4 | 0 na recusa; 0 ou 1 no preço |
+| Sem o ano ("quanto vale um Voyage?") | 5: marcas, modelos, anos e o preço do ano mais antigo e do mais novo (a faixa) | 0 (a faixa do dia) |
+| Pelo código FIPE, com ou sem ano | 1 (BrasilAPI); com ela fora, 2 ou 3 na parallelum | 0 |
+
+Um ano com mais de um combustível soma uma chamada por combustível, até 3 (`MAX_ANOS_COM_PRECO`). Na parallelum sem
+chave (teto de 450 por dia na plataforma, 112 por conta), o cache frio de uma pergunta gasta 3 ou 4 desses pedidos.

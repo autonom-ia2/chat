@@ -199,6 +199,11 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
         'ano_modelo' => 2020, 'combustivel' => 'Flex', 'codigo_fipe' => '004517-9', 'mes_de_referencia' => 'novembro de 2026' }
     end
 
+    # O código do modelo só vale se está na lista da marca (o "208" da Peugeot é nome): a lista da GM, com o 8949.
+    before do
+      fonte_responde('https://parallelum.com.br/fipe/api/v2/cars/brands/23/models', [{ code: '8949', name: 'ONIX HATCH LT 1.0 12V Flex 5p Mec.' }])
+    end
+
     it 'lista as marcas pela principal' do
       fonte_responde('https://brasilapi.com.br/api/fipe/marcas/v1/carros', [{ nome: 'Acura', valor: '1' }, { nome: 'GM - Chevrolet', valor: '23' }])
 

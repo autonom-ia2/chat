@@ -8,7 +8,8 @@
 #   3. a consulta e os parâmetros, normalizados; o que não serve -> `recusadas`, e nenhuma fonte é chamada;
 #   4. o limite do dia, por SQL atômico -> conta a consulta, ou `recusadas` (`limite_diario`);
 #   4b. o dado que o cliente diz trocado pelo que a fonte pede (`Consulta#resolver`, regra "QI 70": a marca da FIPE pelo
-#      nome), com outras consultas da mesma fonte (`Apoio`); o que não resolve -> `recusadas`, com os candidatos;
+#      nome), com outras consultas da mesma fonte (`Apoio`); o que não resolve devolve a reserva do limite e vai a
+#      `recusadas`, com os candidatos;
 #   5. o cache (validade da consulta; o "não encontrado" por 1 hora) -> `do_cache`;
 #   6. os provedores em ordem, com o prazo total da consulta: o principal, depois a reserva. Cada falha vira motivo
 #      (`brasilapi.tempo_esgotado`). Responde quem vier primeiro; vindo da reserva -> `pela_reserva`. Sem resposta de
@@ -75,7 +76,8 @@ class Autonomia::FerramentasProntas::Execucao
     pedido(acesso)
   end
 
-  # A consulta e os parâmetros (nada é contado no limite quando o pedido não serve), o limite, o cache e as fontes.
+  # A consulta e os parâmetros (nada é contado no limite quando o pedido não serve, nem quando o resolver o recusa), o
+  # limite, o cache e as fontes.
   def pedido(acesso)
     @consulta = @fonte.consulta(@argumentos[Autonomia::FerramentasProntas::Fonte::PARAMETRO_DA_CONSULTA])
     return recusar('pedido_invalido', Resposta.pedido_invalido('consulta', @fonte.parametro_da_consulta)) if @consulta.nil?
@@ -90,12 +92,18 @@ class Autonomia::FerramentasProntas::Execucao
   # Depois do limite: o dado do cliente trocado pelo da fonte (o nome da marca pelo código), o cache e as fontes.
   def resolvido(params)
     params, falta = resolver(params)
-    return recusar_pedido(falta) if falta
+    return devolver_e_recusar(falta) if falta
 
     @cache = Autonomia::FerramentasProntas::Cache.new(@fonte, @consulta, params)
     do_cache(params) || consultar(params)
   rescue Autonomia::FerramentasProntas::Apoio::SemResposta => e
     terminar(Resposta.nao_consegui, desfecho: 'sem_resposta', motivos: e.motivos)
+  end
+
+  # O resolver olhou só listas (do cache, quase sempre) e recusou: a reserva do limite volta.
+  def devolver_e_recusar(falta)
+    Uso.devolver!(account_id: @tool.account_id, fonte: @fonte.chave)
+    recusar_pedido(falta)
   end
 
   def recusar_pedido(falta)
