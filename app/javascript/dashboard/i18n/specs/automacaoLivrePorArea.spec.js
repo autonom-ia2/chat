@@ -73,6 +73,7 @@ const BLOCOS_POR_ARQUIVO = {
   'automacaoLivreProspeccao.json': ['PROSPECCAO'],
   'automacaoLivreParaCada.json': ['PARA_CADA'],
   'automacaoLivreRetorno.json': ['RETORNO'],
+  'automacaoLivreListaDeEmail.json': ['LISTA_DE_EMAIL'],
   'automacaoLivreOutroRegistro.json': ['OUTRO_REGISTRO'],
   'automacaoLivreWebhook.json': ['WEBHOOK'],
 };

@@ -102,5 +102,13 @@ describe('#actions', () => {
         [types.default.SET_LABEL_UI_FLAG, { isDeleting: false }],
       ]);
     });
+    it('passes on the message the server gives when it refuses', async () => {
+      axios.delete.mockRejectedValue({
+        response: { data: { message: 'Label of an e-mail list in use' } },
+      });
+      await expect(
+        actions.delete({ commit }, labelsList[0].id)
+      ).rejects.toThrow('Label of an e-mail list in use');
+    });
   });
 });

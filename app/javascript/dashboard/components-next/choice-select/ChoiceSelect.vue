@@ -46,6 +46,9 @@ const props = defineProps({
   compact: { type: Boolean, default: false },
   // id do botão, para um <label for> visível de quem usa apontar para o campo.
   triggerId: { type: String, default: undefined },
+  // id do aviso de erro (ou ajuda) visível que fala deste campo; o botão o
+  // anuncia por aria-describedby, como o Input faz com a mensagem dele.
+  describedBy: { type: String, default: undefined },
   // Largura só do texto mostrado agora, em vez da maior opção, e a lista se
   // alinha pela direita do botão quando à direita não cabe (#2202: "Recentes ▾"
   // e "Filtrar ▾" no topo estreito da lista de conversas). Sem a prop, nada muda.
@@ -379,6 +382,7 @@ defineExpose({ abrir });
         isOpen && active >= 0 ? optionId(active) : undefined
       "
       :aria-invalid="invalid || undefined"
+      :aria-describedby="describedBy"
       :disabled="disabled"
       class="relative flex items-center justify-between w-full gap-2 [grid-area:1/1] rounded-lg text-start font-normal bg-n-alpha-black2 text-n-slate-12 outline outline-1 -outline-offset-1 focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60 before:absolute before:inset-x-0"
       :class="[

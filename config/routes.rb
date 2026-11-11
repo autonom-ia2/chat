@@ -889,6 +889,8 @@ Rails.application.routes.draw do
                 post :dns_check
               end
             end
+            # Listas de e-mail (G52, #2760): o público "lista X" da campanha e do passo da Automação livre.
+            resources :lists, only: [:index, :create, :update, :destroy]
             resources :campaigns, only: [:index, :create, :show, :update, :destroy] do
               member do
                 post :send_now

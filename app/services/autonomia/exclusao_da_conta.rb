@@ -160,6 +160,8 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['EmailCampaignRecipient', :por_campanha_de_email],
     ['EmailCampaignImport', :por_campanha_de_email],
     ['EmailCampaign', :por_conta],
+    # Lista de e-mail (G52): a campanha aponta para ela com SET NULL; ela aponta para a etiqueta, que sai depois.
+    ['EmailList', :por_conta],
     ['EmailCampaignTemplateImport', :por_conta],
     ['EmailCampaignTemplate', :por_conta],
     ['EmailTemplateImportAiQuota', :por_conta],
