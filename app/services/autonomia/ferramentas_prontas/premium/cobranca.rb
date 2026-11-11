@@ -76,13 +76,22 @@ module Autonomia::FerramentasProntas::Premium::Cobranca
   # desfeita volta ao cliente; com o mês já acima das 20, só baixar não basta: a próxima seguiria cobrada e o mês
   # fecharia com 19 grátis. Então a cobrada mais antiga do mês, no mesmo card e na mesma conta, vira a grátis que faltou
   # (preço zero; o custo nosso fica). Tudo sob a trava do saldo.
+  # A linha de um mês anterior (a entrega incerta que chega depois da virada): aquele mês já fechou, e a fatura sai da
+  # telemetria. Nada se converte nem o saldo dele muda; o caso vai ao log (revisor, cobranca.rb:73).
   def devolver!(registro)
     mes = registro.dia.beginning_of_month
+    return avisar_mes_anterior(registro) if mes < Premium.mes_da_conta(registro.account)
+
     saldo = Premium::Saldo.lock.find_by(account_id: registro.account_id, fonte: registro.fonte, mes: mes)
     return unless saldo&.contadas&.positive?
 
     converter_cobrada_mais_antiga!(registro, mes) if registro.cobranca == 'gratis' && saldo.contadas > Premium::GRATIS
     saldo.update!(contadas: saldo.contadas - 1)
+  end
+
+  def avisar_mes_anterior(registro)
+    Rails.logger.warn("[autonomia][premium] entrega incerta de mês anterior, sem conversão conta=#{registro.account_id} " \
+                      "fonte=#{registro.fonte} dia=#{registro.dia} cobranca=#{registro.cobranca}")
   end
 
   # O Saldo do mês da linha desta execução (ou, sem linha ainda, o do mês de hoje da conta), travado antes do Registro.

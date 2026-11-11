@@ -6,7 +6,8 @@ require 'rails_helper'
 RSpec.describe Autonomia::FerramentasProntas::Premium::Cobranca do
   let(:account) { create(:account) }
   let(:premium) { Autonomia::FerramentasProntas::Premium }
-  let(:mes) { Date.new(2026, 11, 1) }
+  # O mês corrente da conta: a entrega incerta de um mês anterior tem regra própria.
+  let(:mes) { premium.mes_da_conta(account) }
 
   def registro!(numero)
     cobrada = numero > premium::GRATIS
@@ -96,6 +97,20 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Cobranca do
     expect(ordem.first).to eq(:saldo)
     expect(registros[2].reload.cobranca).to eq('sem_cobranca')
     expect(premium::Saldo.sole.contadas).to eq(2)
+  end
+
+  # Revisor (cobranca.rb:73): o mês anterior já fechou (a fatura sai da telemetria). A entrega incerta que chega depois
+  # não converte cobrada nem mexe no saldo daquele mês: a linha dela fica sem cobrança, e o caso vai ao log.
+  it 'entrega incerta de um mês anterior: não converte cobrada nem mexe no saldo; só registra no log' do
+    registros = mes_com(25)
+    allow(Rails.logger).to receive(:warn)
+
+    travel_to(mes.next_month.in_time_zone + 4.days) { described_class.desfazer_cobranca!(registros[4]) }
+
+    expect(registros[4].reload.cobranca).to eq('sem_cobranca')
+    expect(registros[20].reload.cobranca).to eq('cobrada')
+    expect(premium::Saldo.sole.contadas).to eq(25)
+    expect(Rails.logger).to have_received(:warn).with(include('mês anterior'))
   end
 
   it 'a cobrada de outro card ou de outro mês nunca vira a grátis devolvida' do
