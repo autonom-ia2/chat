@@ -70,25 +70,25 @@ class Autonomia::FerramentasProntas::Premium::Leitura
     status['Code'] == LENTA || status['Message'].to_s.upcase.start_with?(MENSAGEM_DA_LENTA)
   end
 
+  # A forma do dado é conferida ANTES de extrair (`Dataset#forma`): a forma errada é a BigDataCorp que mudou o formato, não
+  # conta para o cliente e vai ao rastreador. Erro dentro do `extrair` é defeito nosso e sobe (a `Execucao` o leva ao
+  # rastreador e responde "não consegui"; revisor, leitura.rb:82).
   def self.extrair(dataset, payload)
     resultado = Array(payload['Result']).first
     return nil unless resultado.is_a?(Hash)
 
     bruto = resultado[dataset.resposta]
     return nil if bruto.blank?
-    raise TypeError, 'dado do dataset não é objeto nem lista' unless bruto.is_a?(Hash) || bruto.is_a?(Array)
+    return avisar_formato(dataset, bruto) unless bruto.is_a?(dataset.forma)
 
     dataset.extrair.call(bruto)
-  rescue NoMethodError, TypeError, ArgumentError => e
-    # A BigDataCorp mudou o formato: não conta para o cliente, e o motivo fica no contador.
-    avisar_formato(dataset, e)
-    :invalida
   end
 
-  # Ao rastreador e ao log: a classe do erro e o dataset. Nunca o valor consultado nem o dado de lá (a mensagem do erro
-  # original pode citar o dado; ao rastreador vai um erro novo, só com a classe e o dataset).
-  def self.avisar_formato(dataset, erro)
-    Rails.logger.warn("[autonomia][premium] resposta_invalida dataset=#{dataset.nome} erro=#{erro.class}")
-    ChatwootExceptionTracker.new(TypeError.new("premium resposta_invalida dataset=#{dataset.nome} erro=#{erro.class}")).capture_exception
+  # Ao rastreador e ao log: a forma que veio e o dataset. Nunca o valor consultado nem o dado de lá. -> :invalida
+  def self.avisar_formato(dataset, bruto)
+    texto = "resposta_invalida dataset=#{dataset.nome} veio=#{bruto.class} esperado=#{dataset.forma}"
+    Rails.logger.warn("[autonomia][premium] #{texto}")
+    ChatwootExceptionTracker.new(TypeError.new("premium #{texto}")).capture_exception
+    :invalida
   end
 end

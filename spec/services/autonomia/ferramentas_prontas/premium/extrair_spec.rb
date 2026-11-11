@@ -181,6 +181,23 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Extrair do
     expect(quebrado.motivo).to eq('resposta_invalida')
   end
 
+  # Revisor (leitura.rb:82): o `rescue NoMethodError, TypeError, ArgumentError` escondia defeito nosso como "a BigDataCorp
+  # mudou o formato". A forma do dado é conferida antes (lista nas consultas sob demanda, objeto nas outras); o defeito
+  # dentro do `extrair` sobe.
+  it 'a forma errada do dado (lista no lugar do objeto, objeto no lugar da lista) é resposta inválida' do
+    expect(ler('historico_placa', 'placa', [{ 'VehicleInfo' => [] }])).to have_attributes(situacao: 'falha', motivo: 'resposta_invalida')
+    expect(ler('certidoes_empresa', 'divida_uniao', { 'BaseStatus' => 'NEGATIVA' }))
+      .to have_attributes(situacao: 'falha', motivo: 'resposta_invalida')
+  end
+
+  it 'defeito nosso dentro do extrair sobe, em vez de virar resposta inválida' do
+    alvo = dataset('raio_x_empresa', 'processos')
+    allow(alvo).to receive(:extrair).and_return(->(_dado) { raise NoMethodError, 'defeito nosso' })
+
+    expect { leitura.de(alvo, corpo_da_bigdatacorp(alvo.nome, alvo.resposta, { 'Lawsuits' => [] })) }
+      .to raise_error(NoMethodError, 'defeito nosso')
+  end
+
   it 'outro código negativo da BigDataCorp é falha com o código, e a fonte lenta pela mensagem também' do
     expect(ler('raio_x_empresa', 'sancoes', nil, code: -1203, message: 'DATASET TEMPORARILY DISABLED').motivo).to eq('status_1203')
     expect(ler('raio_x_empresa', 'sancoes', nil, code: -9999, message: 'DATASET IS TOO SLOW').motivo).to eq('fonte_lenta')

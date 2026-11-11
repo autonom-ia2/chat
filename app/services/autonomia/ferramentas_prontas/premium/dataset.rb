@@ -12,7 +12,10 @@
 # `prazo`: o teto da chamada. As consultas sob demanda (`/ondemand`) buscam na fonte oficial na hora, e a documentação
 #   mostra 30 a 40 segundos; as da base, segundos.
 # `cobra_sem_registro`: a BigDataCorp cobra a consulta que volta vazia? Só a vistoria não cobra (doc da Rede Vistorias).
+# `forma`: o que vem em `Result[0][resposta]`. As consultas sob demanda (`OnlineCertificates`, `OnlineQuery`) mandam uma
+#   lista; as da base, um objeto. A `Leitura` confere a forma antes de extrair: forma errada é a BigDataCorp que mudou.
 class Autonomia::FerramentasProntas::Premium::Dataset
+  RESPOSTAS_EM_LISTA = %w[OnlineCertificates OnlineQuery].freeze
   PRAZO_DA_BASE = 20
   PRAZO_SOB_DEMANDA = 55
   ROTA_SOB_DEMANDA = '/ondemand'.freeze
@@ -43,6 +46,10 @@ class Autonomia::FerramentasProntas::Premium::Dataset
     return BigDecimal(0) if resultado == 'sem_registro' && !@cobra_sem_registro
 
     custo
+  end
+
+  def forma
+    RESPOSTAS_EM_LISTA.include?(resposta) ? Array : Hash
   end
 
   def preco_confere?
