@@ -4,10 +4,11 @@
 # Quem decide é o modelo, pelo sentido do agente; o código só filtra pelo que a conta tem liberado.
 #
 # O campo é o mesmo em todas as contas (o schema é estrito e fica no prefixo em cache): o enum leva todas as chaves do
-# catálogo, e sem a flag do Construtor nada é guardado. As escolhidas vão para o state da thread e para o config do
-# agente: as MAXIMO primeiras em `ferramentas_sugeridas` (o "já vem com" da Confira), as seguintes, até MAX_TAMBEM, em
-# `ferramentas_tambem` (a linha "Também combina", com "Incluir também"). Quem inclui é a Confira, no "Começar", pelo
-# endpoint da vitrine (pessoa real e permissão dela). A Lia (`insurance_quote`) nunca recebe pronta.
+# catálogo que a vitrine oferece (fora as de uso interno), e sem a flag do Construtor nada é guardado. As escolhidas
+# vão para o state da thread e para o config do agente: as MAXIMO primeiras em `ferramentas_sugeridas` (o "já vem com"
+# da Confira), as seguintes, até MAX_TAMBEM, em `ferramentas_tambem` (a linha "Também combina", com "Incluir também").
+# Quem inclui é a Confira, no "Começar", pelo endpoint da vitrine (pessoa real e permissão dela). A Lia
+# (`insurance_quote`) nunca recebe pronta.
 module Autonomia::Agents::Builder::ProntasSugeridas
   CAMPO = 'ferramentas_prontas'.freeze
   # Teto de prontas no nascimento: o Confira mostra uma linha por ferramenta, e mais que isso vira lista longa para
@@ -26,7 +27,7 @@ module Autonomia::Agents::Builder::ProntasSugeridas
   module_function
 
   def schema
-    { type: 'array', items: { type: 'string', enum: Autonomia::FerramentasProntas::Catalogo.chaves }, description: DESCRIPTION }
+    { type: 'array', items: { type: 'string', enum: Autonomia::FerramentasProntas::Catalogo.chaves_da_vitrine }, description: DESCRIPTION }
   end
 
   def ligado?(account)

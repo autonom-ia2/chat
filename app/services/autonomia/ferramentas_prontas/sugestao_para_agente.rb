@@ -10,7 +10,7 @@
 # - A tela recebe só as chaves que ainda servem: liberadas, que o agente ainda não tem e que a pessoa não dispensou.
 # - "Agora não" grava a fonte em `agent.config['prontas_dispensadas']` (sem repetir, até `MAX_DISPENSADAS`): aquela
 #   sugestão não volta para aquele agente.
-# - A Lia (`insurance_quote`) nunca recebe sugestão.
+# - A Lia (`insurance_quote`) nunca recebe sugestão, e a fonte de uso interno (`Fonte#na_vitrine?` falso) nunca é sugerida.
 class Autonomia::FerramentasProntas::SugestaoParaAgente
   FEATURE = 'agente_ferramenta_sugestao'.freeze
   MODELO = Crm::Ai::Config::MODEL_CLASSIFY
@@ -53,7 +53,7 @@ class Autonomia::FerramentasProntas::SugestaoParaAgente
       return unless ligada?(agent)
 
       config = agent.config.to_h
-      escolha = (Array(config[CONSTRUTOR]) + Array(config[TAMBEM])).map(&:to_s) & Autonomia::FerramentasProntas::Catalogo.chaves
+      escolha = (Array(config[CONSTRUTOR]) + Array(config[TAMBEM])).map(&:to_s) & Autonomia::FerramentasProntas::Catalogo.chaves_da_vitrine
       gravar(agent) { { SUGESTAO => { 'chaves' => escolha, 'assinatura' => assinatura(agent), 'em' => Time.current.iso8601 } } }
     end
 

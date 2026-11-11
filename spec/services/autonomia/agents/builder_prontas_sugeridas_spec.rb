@@ -53,7 +53,8 @@ RSpec.describe Autonomia::Agents::Builder do
   it 'asks every call for a closed list of catalog keys, with "none fits" as the empty list' do
     campo = described_class::BUILDER_SCHEMA[:schema][:properties][:ferramentas_prontas]
 
-    expect(campo[:items][:enum]).to match_array(Autonomia::FerramentasProntas::Catalogo.chaves)
+    expect(campo[:items][:enum]).to match_array(Autonomia::FerramentasProntas::Catalogo.chaves_da_vitrine)
+    expect(campo[:items][:enum]).not_to include('produtos_seguradoras')
     expect(campo[:description]).to include('Lista vazia quando nenhuma serve')
     expect(described_class::BUILDER_SCHEMA[:schema][:required]).to include('ferramentas_prontas')
     expect(described_class::LEAN_TURN_NOTE).to include('ferramentas_prontas como lista vazia')
@@ -100,6 +101,20 @@ RSpec.describe Autonomia::Agents::Builder do
 
       it 'keeps only the released ones' do
         expect(run_turn.state['ferramentas_sugeridas']).to eq(%w[fipe])
+      end
+    end
+
+    context 'when the model picks a source that left the showcase (Produtos das seguradoras)' do
+      let(:escolhidas) { %w[fipe produtos_seguradoras corretor_susep] }
+
+      before { account.enable_features!('agente_ferramentas_prontas_lote2') }
+
+      it 'does not list it as data nor keep it' do
+        run_turn
+
+        expect(contexto_enviado).to include('- corretor_susep:')
+        expect(contexto_enviado).not_to include('produtos_seguradoras')
+        expect(thread.state['ferramentas_sugeridas']).to eq(%w[fipe corretor_susep])
       end
     end
   end

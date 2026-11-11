@@ -3548,13 +3548,13 @@
         },
         "PRODUTOS_SEGURADORAS": {
           "NOME": "Insurers' products",
-          "FAZ": "Shows the insurance each insurer offers, with coverages and the link to the terms, straight from the official source.",
-          "CONSEGUE": "tell which insurance an insurer offers",
-          "CLIENTE": "What cyber insurance does Allianz have?",
-          "AGENTE": "Allianz has Cyber Risk insurance, which covers damage caused to other people. The terms are on its website.",
-          "USE_QUANDO": "Use when the customer asks which insurance or coverages an insurer offers.",
+          "FAZ": "Shows the surety and cargo insurance that insurers publish on Open Insurance, with coverages and the link to the terms. Junto, Pottencial, Akad and Fairfax do not publish.",
+          "CONSEGUE": "tell which surety or cargo insurance an insurer publishes",
+          "CLIENTE": "Does Allianz have insurance for stolen cargo?",
+          "AGENTE": "Among the insurers that publish on Open Insurance, Allianz has RCF-DC, which covers the cargo disappearing along with the truck. The terms are on its website.",
+          "USE_QUANDO": "Use when the customer asks which surety or cargo insurance an insurer offers.",
           "ROTULO": "Insurer and type of insurance",
-          "EXEMPLO": "Allianz cyber insurance",
+          "EXEMPLO": "Allianz cargo insurance",
           "CONSULTAS": "find the insurer, see the products of a line"
         },
         "CORRETOR_SUSEP": {

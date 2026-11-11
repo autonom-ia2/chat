@@ -38,10 +38,11 @@ module Autonomia::FerramentasProntas
     Catalogo.todas.select { |fonte| disponivel?(account, fonte) }
   end
 
-  # As que o Construtor e o cartão "pode ganhar" (F3) podem sugerir: as liberadas, menos as Premium (F7). Consulta paga
-  # só entra no agente pela escolha de uma pessoa, na vitrine.
+  # As que o Construtor e o cartão "pode ganhar" (F3) podem sugerir. Os dois filtros valem juntos: só as da vitrine
+  # (`da_vitrine`: fora as de uso interno, #2909) e, delas, nenhuma Premium (F7): consulta paga só entra no agente pela
+  # escolha de uma pessoa, na vitrine.
   def sugeriveis(account)
-    disponiveis(account).reject(&:premium?)
+    da_vitrine(account).reject(&:premium?)
   end
 
   # A fonte está liberada para a conta: a flag das prontas e, na fonte de uma fase posterior, a flag dela.
@@ -49,8 +50,18 @@ module Autonomia::FerramentasProntas
     fonte.present? && ligada?(account) && (fonte.flag.nil? || account.feature_enabled?(fonte.flag))
   end
 
+  # As liberadas que a conta vê na vitrine e nas sugestões: fora as de uso interno (`Fonte#na_vitrine?` falso).
+  def da_vitrine(account)
+    disponiveis(account).select(&:na_vitrine?)
+  end
+
+  # A fonte pode ser oferecida e incluída pela vitrine (o "Incluir", o Experimente, a sugestão e o Construtor).
+  def na_vitrine?(account, fonte)
+    disponivel?(account, fonte) && fonte.na_vitrine?
+  end
+
   # A ferramenta entra no turno deste agente? A cadastrada, sempre; a pronta, só com a flag, fora da Lia e com a fonte
-  # ainda no catálogo (uma fonte que saiu do código não derruba o turno de quem a tinha).
+  # ainda no catálogo (uma fonte que saiu do código não derruba o turno de quem a tinha). A que saiu da vitrine continua.
   def no_turno?(tool, agent)
     return true unless tool.pronta?
 

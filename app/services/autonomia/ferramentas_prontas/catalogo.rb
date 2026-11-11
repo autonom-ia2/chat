@@ -65,6 +65,11 @@ module Autonomia::FerramentasProntas::Catalogo
     todas.map(&:chave)
   end
 
+  # As chaves que a vitrine e o Construtor podem oferecer (fora as de uso interno).
+  def chaves_da_vitrine
+    todas.select(&:na_vitrine?).map(&:chave)
+  end
+
   def buscar(chave)
     todas.find { |fonte| fonte.chave == chave.to_s }
   end

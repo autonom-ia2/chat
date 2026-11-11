@@ -46,7 +46,7 @@ module DadosReaisDasProntas
     # Vários dias: a lista de itens sem nome (identificados pela data) passa pelo spec de cobertura.
     ['chuva', 'chuva', { 'cidade' => 'Uberlândia', 'uf' => 'mg', 'de' => '2026-11-04', 'ate' => '2026-11-10' }],
     ['produtos_seguradoras', 'seguradoras', { 'busca' => 'Allianz' }],
-    ['produtos_seguradoras', 'produtos', { 'seguradora' => 'Allianz', 'ramo' => 'riscos_ciberneticos' }],
+    ['produtos_seguradoras', 'produtos', { 'seguradora' => 'Allianz', 'ramo' => 'transporte' }],
     ['corretor_susep', 'por_nome', { 'nome' => 'corretora de seguros', 'tipo_pessoa' => 'pj' }]
   ].freeze
 

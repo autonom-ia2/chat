@@ -15,9 +15,7 @@ class Api::V1::Accounts::Autonomia::FerramentasProntasController < Api::V1::Acco
   before_action :ensure_construtor, :fetch_agente, only: %i[sugestoes dispensar]
 
   def index
-    @fontes = Autonomia::FerramentasProntas::Catalogo.todas.select do |fonte|
-      Autonomia::FerramentasProntas.disponivel?(Current.account, fonte)
-    end
+    @fontes = Autonomia::FerramentasProntas.da_vitrine(Current.account)
     @incluidas = prontas_scope.order(:id)
     # F7: nos cards Premium, quantas grátis restam à conta e os preços depois delas.
     @premium = Autonomia::FerramentasProntas::Premium.para_tela(Current.account, @fontes)
