@@ -3323,6 +3323,104 @@
           "USE_QUANDO": "Use quando o cliente informar o código de um banco.",
           "ROTULO": "Código do banco",
           "EXEMPLO": "341"
+        },
+        "HOSPITAIS": {
+          "NOME": "Hospitais e clínicas",
+          "APOIO": "cadastro oficial do Ministério da Saúde",
+          "FAZ": "Mostra hospitais, clínicas, prontos-socorros e postos de saúde de uma cidade, com endereço e telefone.",
+          "CONSEGUE": "dizer onde tem hospital ou clínica na cidade",
+          "CLIENTE": "Tem hospital em Campinas?",
+          "AGENTE": "Tem sim! O Hospital Samaritano fica na Vila João Jorge. Quer o endereço completo e o telefone?",
+          "USE_QUANDO": "Use quando o cliente perguntar onde tem hospital, clínica, pronto-socorro ou posto de saúde numa cidade.",
+          "ROTULO": "Cidade",
+          "EXEMPLO": "Campinas"
+        },
+        "PROCEDIMENTOS": {
+          "NOME": "Exames e procedimentos",
+          "APOIO": "tabela oficial da ANS",
+          "FAZ": "Diz o nome de um exame ou procedimento pelo código que vem na guia do plano de saúde, e acha o código pelo nome.",
+          "CONSEGUE": "explicar o código da guia do plano",
+          "CLIENTE": "O que é o código 10101012?",
+          "AGENTE": "Esse código é de consulta em consultório, no horário normal.",
+          "USE_QUANDO": "Use quando o cliente mandar um código de exame ou procedimento do plano de saúde, ou quiser saber o código de um exame.",
+          "ROTULO": "Código ou nome do exame",
+          "EXEMPLO": "10101012",
+          "CONSULTAS": "nome pelo código, código pelo nome"
+        },
+        "DOENCAS": {
+          "NOME": "Nome de doenças",
+          "APOIO": "tabela oficial do Ministério da Saúde",
+          "FAZ": "Diz o nome da doença pelo código que vem no atestado ou na guia (o CID), e acha o código pelo nome.",
+          "CONSEGUE": "dizer o que quer dizer o CID do atestado",
+          "CLIENTE": "O que é CID J45?",
+          "AGENTE": "O J45 é asma.",
+          "USE_QUANDO": "Use quando o cliente mandar um código de doença (CID) de atestado ou guia, ou quiser saber o código de uma doença.",
+          "ROTULO": "Código ou nome da doença",
+          "EXEMPLO": "J45",
+          "CONSULTAS": "nome pelo código, código pelo nome"
+        },
+        "NCM": {
+          "NOME": "Código de mercadoria",
+          "FAZ": "Acha o código fiscal (NCM) de um produto pelo nome, ou diz o que um código quer dizer.",
+          "CONSEGUE": "achar o código fiscal de um produto",
+          "CLIENTE": "Qual a NCM de parafuso?",
+          "AGENTE": "Parafuso de aço é a NCM 7318.15.00.",
+          "USE_QUANDO": "Use quando o cliente precisar do código fiscal de um produto para nota ou importação.",
+          "ROTULO": "Produto ou código",
+          "EXEMPLO": "parafuso",
+          "CONSULTAS": "procurar pelo nome, conferir um código"
+        },
+        "COMPRAS_GOVERNO": {
+          "NOME": "Compras do governo",
+          "FAZ": "Mostra as compras e licitações que a prefeitura e outros órgãos de uma cidade publicaram.",
+          "CONSEGUE": "achar licitações de uma cidade",
+          "CLIENTE": "Tem licitação de limpeza em Uberlândia esta semana?",
+          "AGENTE": "Tem uma: o DMAE vai contratar limpeza, valor estimado de R$ 11 mil.",
+          "USE_QUANDO": "Use quando o cliente quiser saber de licitações ou compras públicas de uma cidade.",
+          "ROTULO": "Cidade e estado",
+          "EXEMPLO": "Uberlândia MG"
+        },
+        "ESTACOES": {
+          "NOME": "Estações do tempo",
+          "FAZ": "Diz qual é a estação oficial do tempo (INMET) mais perto de uma cidade e se ela está funcionando.",
+          "CONSEGUE": "achar a estação do tempo mais perto",
+          "CLIENTE": "Qual estação do INMET fica perto da minha fazenda em Uberlândia?",
+          "AGENTE": "A mais perto é a de Uberlândia (A507), a 2 km, e está funcionando.",
+          "USE_QUANDO": "Use quando o cliente precisar da estação oficial do tempo mais perto de um lugar.",
+          "ROTULO": "Cidade e estado",
+          "EXEMPLO": "Uberlândia MG"
+        },
+        "CHUVA": {
+          "NOME": "Quanto choveu",
+          "FAZ": "Diz quantos milímetros choveu num dia, ou em poucos dias, numa cidade.",
+          "CONSEGUE": "dizer quanto choveu num dia",
+          "CLIENTE": "Quanto choveu ontem em Uberlândia?",
+          "AGENTE": "Ontem choveu cerca de 9 mm em Uberlândia, pela estimativa da região.",
+          "USE_QUANDO": "Use quando o cliente perguntar quanto choveu num dia ou num lugar.",
+          "ROTULO": "Cidade e estado",
+          "EXEMPLO": "Uberlândia MG"
+        },
+        "PRODUTOS_SEGURADORAS": {
+          "NOME": "Produtos das seguradoras",
+          "FAZ": "Mostra os seguros que cada seguradora oferece, com as coberturas e o link das condições, direto da fonte oficial.",
+          "CONSEGUE": "dizer que seguros uma seguradora tem",
+          "CLIENTE": "Que seguro cyber a Allianz tem?",
+          "AGENTE": "A Allianz tem o seguro de Riscos Cibernéticos, que cobre danos causados a outras pessoas. As condições estão no site dela.",
+          "USE_QUANDO": "Use quando o cliente perguntar que seguros ou coberturas uma seguradora oferece.",
+          "ROTULO": "Seguradora",
+          "EXEMPLO": "Allianz",
+          "CONSULTAS": "achar a seguradora, ver os produtos de um ramo"
+        },
+        "CORRETOR_SUSEP": {
+          "NOME": "Corretor na SUSEP",
+          "FAZ": "Confere se um corretor ou uma corretora está liberado na SUSEP para vender seguro, e em quais ramos.",
+          "CONSEGUE": "dizer se um corretor está liberado",
+          "CLIENTE": "Esse corretor que me ligou é de verdade?",
+          "AGENTE": "Conferi na SUSEP: ele está ativo, com registro, e pode vender seguro de pessoas e de danos.",
+          "USE_QUANDO": "Use quando o cliente quiser saber se um corretor ou uma corretora está liberado para vender seguro.",
+          "ROTULO": "CPF, CNPJ ou nome",
+          "EXEMPLO": "11.222.333/0001-81",
+          "CONSULTAS": "pelo CPF ou CNPJ, pelo nome"
         }
       },
       "JA_VEM": {

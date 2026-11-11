@@ -3323,6 +3323,104 @@
           "USE_QUANDO": "Use when the customer gives a bank code.",
           "ROTULO": "Bank code",
           "EXEMPLO": "341"
+        },
+        "HOSPITAIS": {
+          "NOME": "Hospitals and clinics",
+          "APOIO": "official Ministry of Health registry",
+          "FAZ": "Shows hospitals, clinics, emergency rooms and health centers in a city, with address and phone.",
+          "CONSEGUE": "tell where there is a hospital or clinic in the city",
+          "CLIENTE": "Is there a hospital in Campinas?",
+          "AGENTE": "Yes! Hospital Samaritano is in Vila João Jorge. Want the full address and phone?",
+          "USE_QUANDO": "Use when the customer asks where there is a hospital, clinic, emergency room or health center in a city.",
+          "ROTULO": "City",
+          "EXEMPLO": "Campinas"
+        },
+        "PROCEDIMENTOS": {
+          "NOME": "Exams and procedures",
+          "APOIO": "official ANS table",
+          "FAZ": "Tells the name of an exam or procedure from the code on the health plan form, and finds the code by name.",
+          "CONSEGUE": "explain the code on the health plan form",
+          "CLIENTE": "What is code 10101012?",
+          "AGENTE": "That code is an office visit during regular hours.",
+          "USE_QUANDO": "Use when the customer sends an exam or procedure code from the health plan, or wants the code of an exam.",
+          "ROTULO": "Exam code or name",
+          "EXEMPLO": "10101012",
+          "CONSULTAS": "name by code, code by name"
+        },
+        "DOENCAS": {
+          "NOME": "Disease names",
+          "APOIO": "official Ministry of Health table",
+          "FAZ": "Tells the disease name from the code on a medical certificate or form (the ICD code), and finds the code by name.",
+          "CONSEGUE": "tell what the ICD code on a certificate means",
+          "CLIENTE": "What is ICD J45?",
+          "AGENTE": "J45 is asthma.",
+          "USE_QUANDO": "Use when the customer sends a disease code (ICD) from a certificate or form, or wants the code of a disease.",
+          "ROTULO": "Disease code or name",
+          "EXEMPLO": "J45",
+          "CONSULTAS": "name by code, code by name"
+        },
+        "NCM": {
+          "NOME": "Product tax code",
+          "FAZ": "Finds a product's tax code (NCM) by name, or tells what a code means.",
+          "CONSEGUE": "find a product's tax code",
+          "CLIENTE": "What is the NCM for screws?",
+          "AGENTE": "Steel screws are NCM 7318.15.00.",
+          "USE_QUANDO": "Use when the customer needs a product's tax code for an invoice or import.",
+          "ROTULO": "Product or code",
+          "EXEMPLO": "parafuso",
+          "CONSULTAS": "search by name, check a code"
+        },
+        "COMPRAS_GOVERNO": {
+          "NOME": "Government purchases",
+          "FAZ": "Shows the purchases and public tenders that a city's government bodies published.",
+          "CONSEGUE": "find a city's public tenders",
+          "CLIENTE": "Is there a cleaning tender in Uberlândia this week?",
+          "AGENTE": "There is one: DMAE will hire cleaning, estimated at R$ 11 thousand.",
+          "USE_QUANDO": "Use when the customer wants to know about public tenders or purchases in a city.",
+          "ROTULO": "City and state",
+          "EXEMPLO": "Uberlândia MG"
+        },
+        "ESTACOES": {
+          "NOME": "Weather stations",
+          "FAZ": "Tells which official weather station (INMET) is closest to a city and whether it is working.",
+          "CONSEGUE": "find the closest weather station",
+          "CLIENTE": "Which INMET station is close to my farm in Uberlândia?",
+          "AGENTE": "The closest is Uberlândia (A507), 2 km away, and it is working.",
+          "USE_QUANDO": "Use when the customer needs the official weather station closest to a place.",
+          "ROTULO": "City and state",
+          "EXEMPLO": "Uberlândia MG"
+        },
+        "CHUVA": {
+          "NOME": "How much it rained",
+          "FAZ": "Tells how many millimeters it rained on a day, or over a few days, in a city.",
+          "CONSEGUE": "tell how much it rained on a day",
+          "CLIENTE": "How much did it rain yesterday in Uberlândia?",
+          "AGENTE": "Yesterday it rained about 9 mm in Uberlândia, by the regional estimate.",
+          "USE_QUANDO": "Use when the customer asks how much it rained on a day or in a place.",
+          "ROTULO": "City and state",
+          "EXEMPLO": "Uberlândia MG"
+        },
+        "PRODUTOS_SEGURADORAS": {
+          "NOME": "Insurers' products",
+          "FAZ": "Shows the insurance each insurer offers, with coverages and the link to the terms, straight from the official source.",
+          "CONSEGUE": "tell which insurance an insurer offers",
+          "CLIENTE": "What cyber insurance does Allianz have?",
+          "AGENTE": "Allianz has Cyber Risk insurance, which covers damage caused to other people. The terms are on its website.",
+          "USE_QUANDO": "Use when the customer asks which insurance or coverages an insurer offers.",
+          "ROTULO": "Insurer",
+          "EXEMPLO": "Allianz",
+          "CONSULTAS": "find the insurer, see the products of a line"
+        },
+        "CORRETOR_SUSEP": {
+          "NOME": "Broker at SUSEP",
+          "FAZ": "Checks whether a broker or brokerage is licensed by SUSEP to sell insurance, and in which lines.",
+          "CONSEGUE": "tell whether a broker is licensed",
+          "CLIENTE": "Is the broker who called me for real?",
+          "AGENTE": "I checked SUSEP: they are active, registered, and can sell life and property insurance.",
+          "USE_QUANDO": "Use when the customer wants to know whether a broker or brokerage is licensed to sell insurance.",
+          "ROTULO": "CPF, CNPJ or name",
+          "EXEMPLO": "11.222.333/0001-81",
+          "CONSULTAS": "by CPF or CNPJ, by name"
         }
       },
       "JA_VEM": {

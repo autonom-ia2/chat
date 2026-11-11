@@ -64,6 +64,33 @@ export const FERRAMENTAS = [
     },
   },
   { id: 'bancos', grupo: 'DINHEIRO', icone: 'i-lucide-banknote' },
+  // F4 (flag `agente_ferramentas_prontas_lote2`)
+  { id: 'hospitais', grupo: 'SAUDE', icone: 'i-lucide-hospital' },
+  {
+    id: 'procedimentos',
+    grupo: 'SAUDE',
+    icone: 'i-lucide-stethoscope',
+    consultas: 2,
+  },
+  { id: 'doencas', grupo: 'SAUDE', icone: 'i-lucide-book-open', consultas: 2 },
+  { id: 'estacoes', grupo: 'CLIMA', icone: 'i-lucide-radio-tower' },
+  { id: 'chuva', grupo: 'CLIMA', icone: 'i-lucide-cloud-rain' },
+  { id: 'compras_governo', grupo: 'CLIENTES', icone: 'i-lucide-landmark' },
+  {
+    id: 'produtos_seguradoras',
+    grupo: 'SEGUROS',
+    icone: 'i-lucide-file-search',
+    consultas: 2,
+    ramos: ['seguros'],
+  },
+  {
+    id: 'corretor_susep',
+    grupo: 'SEGUROS',
+    icone: 'i-lucide-badge-check',
+    consultas: 2,
+    ramos: ['seguros'],
+  },
+  { id: 'ncm', grupo: 'OUTROS', icone: 'i-lucide-barcode', consultas: 2 },
 ];
 
 // Sem pacote na conta: as que servem a quase todo negócio.

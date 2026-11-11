@@ -27,7 +27,7 @@ Desligado, o provedor é pulado com o motivo `provedor_desligado`.
 
 | Host | Fontes | O que o termo pede | Teto global | Cache |
 |---|---|---|---|---|
-| `brasilapi.com.br` | CEP, CNPJ, FIPE, feriados, Banco Central (reserva), cidades (reserva), DDD, bancos | Volume com "natureza de uma pessoa real"; proíbe varredura automatizada (README do projeto, "Termos de Uso"). Não publica número. | 300 por minuto | por consulta |
+| `brasilapi.com.br` | CEP, CNPJ, FIPE, feriados, Banco Central (reserva), cidades (reserva), DDD, bancos, código de mercadoria (NCM, F4) | Volume com "natureza de uma pessoa real"; proíbe varredura automatizada (README do projeto, "Termos de Uso"). Não publica número. | 300 por minuto | por consulta |
 | `viacep.com.br` | CEP (reserva) | Uso moderado; bloqueia uso abusivo. Não publica número. | 60 por minuto | 30 dias |
 | `minhareceita.org` | CNPJ (reserva) | Não achamos número publicado. | 120 por minuto (padrão) | 1 dia |
 | `api.opencnpj.org` | CNPJ (2ª reserva) | Não achamos número publicado na página de documentação. | 120 por minuto (padrão) | 1 dia |
@@ -38,6 +38,13 @@ Desligado, o provedor é pulado com o motivo `provedor_desligado`.
 | `www.bcb.gov.br` | Bancos (reserva: CSV do STR) | Arquivo de dados abertos. | 120 por minuto (padrão) | 30 dias |
 | `servicodados.ibge.gov.br` | Cidades e estados | Serviço de dados do IBGE, aberto e sem chave. Sem limite publicado. | 120 por minuto (padrão) | 30 dias |
 | `photon.komoot.io` | Localização | "Seja justo: uso extenso é limitado"; disponibilidade sem garantia. Sem número. | 60 por minuto | 30 dias |
+| `apidadosabertos.saude.gov.br` | Hospitais e clínicas (CNES, F4) | API de dados abertos do Ministério da Saúde, sem chave; o swagger diz licença MIT. Sem limite publicado. No máximo 20 por pedido. Estabelecimento em nome de pessoa física sai da resposta. | 120 por minuto (padrão) | 7 dias |
+| `pncp.gov.br` | Compras do governo (F4) | Dado aberto por lei (art. 174 da Lei 14.133/2021), sem chave e sem número publicado. Modalidade obrigatória; página de 10 a 50. Lento na 1ª chamada (até 6 s). | 60 por minuto | 1 hora |
+| `apitempo.inmet.gov.br` | Estações do tempo (F4) | Dado aberto do INMET, sem chave e sem número publicado. Só a lista das estações (os dados delas exigem token, que não usamos). | 30 por minuto | 1 dia (lista inteira) |
+| `archive-api.open-meteo.com` | Quanto choveu (F4) | **Plano gratuito só para uso não comercial**: menos de 10.000 por dia, 5.000 por hora e 600 por minuto. Uso comercial pede plano pago (chave, `customer-api.open-meteo.com`). Dados CC BY 4.0, com atribuição. **Sobe com o plano gratuito por decisão do Rodrigo (10/11/2026), risco aceito.** | 540 por minuto, 4.500 por hora, 9.000 por dia | 6 horas |
+| `data.directory.opinbrasil.com.br` e o host de cada seguradora | Produtos das seguradoras (Open Insurance, F4) | Dados abertos da fase 1 do Open Insurance Brasil, sem chave e sem número publicado. O endereço de cada seguradora sai sempre do diretório, nunca fixo no código; no máximo 2 seguradoras por consulta, com prazo curto. | 30 por minuto (diretório); 120 por minuto (padrão) em cada seguradora | 6 horas (diretório), 3 horas (produtos) |
+| `www2.susep.gov.br` | Corretor na SUSEP (F4) | Consulta pública de corretores. **Endpoint sem documentação**, sem chave, sem termo nem limite publicado: o formato é conferido a cada resposta e, se mudar, a fonte responde "não consegui" e deixa `ALERTA corretor_susep` no log. Só nome, situação, registro e ramos vão ao modelo. | 30 por minuto | 12 horas |
+| (sem rede) | Exames e procedimentos (TUSS, F4); nome de doenças (CID-10, F4) | Tabelas oficiais no repositório (`lib/ferramentas_prontas/`, origem e termos ao lado): a TUSS 22 da ANS (dados abertos, PDA-049; **licença do conjunto não confirmada**, parte das publicações da ANS é CC BY-NC-SA; uso autorizado pelo Rodrigo em 10/11/2026) e a CID-10 do DATASUS. Um robô diário no GitHub (`ferramentas-prontas-tabelas.yml`) baixa as duas e abre PR quando mudam; nada é baixado em produção. | — | sem cache |
 | (sem rede) | CPF válido; feriados (última reserva); DDD (reserva, só o estado); localização (reserva: a sede mais próxima) | Calculado na plataforma. A tabela das sedes vem da base "municipios-brasileiros" (licença MIT, sobre os códigos e nomes do IBGE). | — | CPF, DDD só com o estado e sede aproximada: sem cache |
 
 O teto de cada conta é 25% do global em todas as linhas: por exemplo, 112 pedidos por dia à parallelum e 75 por minuto
@@ -92,3 +99,6 @@ em segundo plano (responde na hora).
 | DDD | BrasilAPI | plano de numeração local (só o estado) |
 | Localização vira cidade | Photon | a sede de município mais próxima, calculada aqui (aproximada) |
 | Bancos | BrasilAPI | CSV do STR (Banco Central) |
+
+Fora da F4, à espera do advogado: **Domínio .br** (RDAP do Registro.br). O aviso da resposta proíbe "distribution,
+commercialization, reproduction"; o código está guardado para um PR próprio depois do parecer (decisão do Rodrigo, 10/11/2026).

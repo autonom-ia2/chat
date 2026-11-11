@@ -89,4 +89,69 @@ RSpec.describe Autonomia::FerramentasProntas::ClienteHttp do
     expect(motivo_de { vencido.get_json('brasilapi.com.br', '/x', prazo: 3) }).to eq('prazo_total')
     expect(vencido.chamadas).to eq(0)
   end
+
+  it 'o vazio do PNCP vira "nao encontrado", com ou sem Content-Type no 204' do
+    stub_request(:get, 'https://brasilapi.com.br/sem-tipo').to_return(status: 204, body: '', headers: {})
+    fonte_responde('https://brasilapi.com.br/com-tipo', '', status: 204)
+    fonte_responde('https://brasilapi.com.br/html', '<html>oi</html>', tipo: 'text/html')
+
+    %w[/sem-tipo /com-tipo].each do |caminho|
+      expect { cliente.get_json_vazio_e_nao_encontrado('brasilapi.com.br', caminho, prazo: 3) }
+        .to raise_error(Autonomia::FerramentasProntas::Provedor::NaoEncontrado)
+    end
+    expect(motivo_de { cliente.get_json_vazio_e_nao_encontrado('brasilapi.com.br', '/html', prazo: 3) }).to eq('resposta_invalida')
+  end
+
+  # #2858 (F4): o host de cada seguradora vem do diretório do Open Insurance, de fora.
+  describe 'host que veio de fora (permitir_host!)' do
+    let(:conta) { 42 }
+    let(:cliente) { described_class.new(hosts: hosts, prazo_final: described_class.agora + 5, conta: conta) }
+    let(:seguradora) { 'api.seguradora-exemplo.test' }
+
+    before { cliente.permitir_host!(seguradora) }
+
+    it 'consulta o host publico conectando so no IP conferido, com a fatia da conta no teto' do
+      allow(Resolv).to receive(:getaddresses).with(seguradora).and_return(['200.200.200.10'])
+      allow(Autonomia::FerramentasProntas::TetoDoProvedor).to receive(:reservar!).and_call_original
+      fonte_responde("https://#{seguradora}/produtos", { ok: true })
+      allow(SafeFetch).to receive(:fetch).and_call_original
+
+      expect(cliente.get_json(seguradora, '/produtos', prazo: 3)).to eq('ok' => true)
+      expect(Autonomia::FerramentasProntas::TetoDoProvedor).to have_received(:reservar!).with(seguradora, conta: conta)
+      expect(SafeFetch).to have_received(:fetch) do |_url, **opcoes|
+        expect(opcoes[:resolver].call(seguradora)).to eq([IPAddr.new('200.200.200.10')])
+      end
+      expect(cliente.chamadas).to eq(1)
+    end
+
+    it 'recusa o host que resolve para rede interna, mesmo com SAFE_FETCH_ALLOW_PRIVATE_NETWORK ligado' do
+      with_modified_env SAFE_FETCH_ALLOW_PRIVATE_NETWORK: 'true' do
+        ['10.0.0.5', '127.0.0.1', '169.254.169.254', '::1', '::ffff:10.0.0.5'].each do |ip|
+          allow(Resolv).to receive(:getaddresses).with(seguradora).and_return(['200.200.200.10', ip])
+
+          expect(motivo_de { cliente.get_json(seguradora, '/produtos', prazo: 3) }).to eq('endereco_recusado')
+        end
+      end
+      expect(a_request(:any, /seguradora-exemplo/)).not_to have_been_made
+      expect(cliente.chamadas).to eq(0)
+    end
+
+    it 'respeita o host desligado pela configuracao, sem pedido' do
+      allow(Resolv).to receive(:getaddresses).with(seguradora).and_return(['200.200.200.10'])
+
+      with_modified_env AUTONOMIA_PRONTAS_HOSTS_DESLIGADOS: seguradora do
+        expect(motivo_de { cliente.get_json(seguradora, '/produtos', prazo: 3) }).to eq('provedor_desligado')
+      end
+      expect(a_request(:any, /seguradora-exemplo/)).not_to have_been_made
+    end
+
+    it 'os hosts fixos do catalogo seguem sem resolucao presa' do
+      fonte_responde('https://brasilapi.com.br/x', { ok: true })
+      allow(SafeFetch).to receive(:fetch).and_call_original
+
+      cliente.get_json('brasilapi.com.br', '/x', prazo: 3)
+
+      expect(SafeFetch).to have_received(:fetch) { |_url, **opcoes| expect(opcoes).not_to have_key(:resolver) }
+    end
+  end
 end
