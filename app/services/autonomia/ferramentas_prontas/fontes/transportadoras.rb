@@ -8,12 +8,13 @@ module Autonomia::FerramentasProntas::Fontes::Transportadoras
 
   RNTRC = Parametro.new(nome: 'rntrc', descricao: 'O número do RNTRC, até 9 dígitos (ex.: 050085788).',
                         deduza: 'se o cliente disse o CNPJ ou o nome da transportadora, deixe o RNTRC vazio e mande um deles; o ' \
-                                'RNTRC tem até 9 dígitos.') do |valor|
+                                'RNTRC tem até 9 dígitos; senão, pergunte ao cliente o nome da transportadora.') do |valor|
     texto = valor.to_s.strip
     Autonomia::FerramentasProntas::Bases::Transportadoras.rntrc(texto) if texto.delete('0-9 .-').empty?
   end
   CNPJ = Parametro.new(nome: 'cnpj', descricao: 'O CNPJ da transportadora, com ou sem pontuação.',
-                       pergunte: 'o CNPJ completo da transportadora, com as 14 posições (ou mande só o nome dela)') { |valor| Parametro.cnpj(valor) }
+                       deduza: 'se o cliente disse o nome da transportadora, deixe o CNPJ vazio e mande o nome; senão, pergunte ' \
+                               'a ele o CNPJ completo (14 posições) ou o nome da transportadora.') { |valor| Parametro.cnpj(valor) }
   NOME = Parametro.new(nome: 'nome', descricao: 'Parte do nome da empresa ou cooperativa (ex.: transportes exemplo).',
                        pergunte: 'o nome da transportadora (ou o CNPJ ou o número do RNTRC dela)') do |valor|
     Parametro.texto_curto(valor)

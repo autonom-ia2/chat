@@ -6,10 +6,11 @@ module Autonomia::FerramentasProntas::Fontes::PlanosDeSaude
   Parametro = Autonomia::FerramentasProntas::Parametro
 
   CNPJ = Parametro.new(nome: 'cnpj', descricao: 'O CNPJ da operadora, com ou sem pontuação.',
-                       pergunte: 'o CNPJ completo da operadora, com as 14 posições (ou mande só o nome dela)') { |valor| Parametro.cnpj(valor) }
+                       deduza: 'se o cliente disse o nome da operadora, deixe o CNPJ vazio e mande o nome; senão, pergunte a ' \
+                               'ele o CNPJ completo (14 posições) ou o nome da operadora.') { |valor| Parametro.cnpj(valor) }
   REGISTRO = Parametro.new(nome: 'registro_ans', descricao: 'O número do registro da operadora na ANS, 6 dígitos (ex.: 326305).',
                            deduza: 'se o cliente disse o nome da operadora, deixe o registro vazio e mande o nome; o registro ' \
-                                   'tem 6 dígitos.') do |valor|
+                                   'tem 6 dígitos; senão, pergunte ao cliente o nome da operadora.') do |valor|
     Parametro.digitos(valor, 6)
   end
   NOME = Parametro.new(nome: 'nome', descricao: 'Parte do nome da operadora (ex.: unimed campinas).',

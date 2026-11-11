@@ -36,7 +36,8 @@ module Autonomia::FerramentasProntas::Fontes::Queimadas
   DIAS = Parametro.new(nome: 'dias', tipo: 'integer',
                        descricao: "De quantos dias atrás até agora (1 = desde ontem; até #{MAX_DIAS}). Sem valor: 1.",
                        deduza: "converta o período que o cliente disse em dias, de 1 a #{MAX_DIAS} (\"ontem\" é 1, \"na última " \
-                               "semana\" é #{MAX_DIAS}), ou deixe vazio para 1. Mais de #{MAX_DIAS} dias não há: mande #{MAX_DIAS}.") do |valor|
+                               "semana\" é #{MAX_DIAS}), ou deixe vazio para 1. Mais de #{MAX_DIAS} dias não há: mande #{MAX_DIAS} e diga ao " \
+                               "cliente que a base guarda só os últimos #{MAX_DIAS} dias.") do |valor|
     Parametro.inteiro(valor, 1..MAX_DIAS)
   end
 

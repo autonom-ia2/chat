@@ -67,6 +67,21 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
     expect(uf_errada['orientacao']).to include('sem perguntar')
   end
 
+  it 'queimadas e placas solares: cidade que não existe pede a cidade, não a UF' do
+    queimadas = recusa('queimadas', 'cidade' => 'Cidadeinexistente')
+    solar = recusa('geracao_solar', 'consulta' => 'cidade', 'cidade' => 'Cidadeinexistente')
+
+    expect([queimadas, solar]).to all(include('situacao' => 'pedido_invalido', 'campo' => 'cidade'))
+    expect(queimadas['orientacao']).to include('pergunte ao cliente')
+  end
+
+  it 'planos de saúde e transportadoras: CNPJ errado manda o nome se houver, senão pergunta' do
+    saidas = [recusa('planos_de_saude', 'cnpj' => '123'), recusa('transportadoras', 'cnpj' => '123')]
+
+    expect(saidas).to all(include('campo' => 'cnpj'))
+    expect(saidas.map { |saida| saida['orientacao'] }).to all(include('Não pergunte ao cliente', 'mande o nome', 'senão, pergunte'))
+  end
+
   it 'queimadas e placas solares: a UF vale pelo nome do estado' do
     fontes = Autonomia::FerramentasProntas::Fontes
     queimadas, = fontes::Queimadas::FONTE.consulta('focos').conferir('cidade' => 'Sorriso', 'uf' => 'Mato Grosso')

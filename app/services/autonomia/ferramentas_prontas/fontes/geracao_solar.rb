@@ -7,7 +7,8 @@ module Autonomia::FerramentasProntas::Fontes::GeracaoSolar
   Parametro = Autonomia::FerramentasProntas::Parametro
 
   CEP = Parametro.new(nome: 'cep', descricao: 'O CEP, 8 dígitos.',
-                      deduza: 'o CEP tem 8 dígitos; se o cliente disse só a cidade, use a consulta cidade.') { |valor| Parametro.digitos(valor, 8) }
+                      deduza: 'o CEP tem 8 dígitos; se o cliente disse só a cidade, use a consulta cidade; senão, pergunte a ' \
+                              'ele o CEP ou a cidade.') { |valor| Parametro.digitos(valor, 8) }
   CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade.', pergunte: 'a cidade') { |valor| Parametro.texto_curto(valor) }
   # Regra "QI 70": a UF sai da cidade e também vale pelo nome do estado ("mato grosso").
   UF = Autonomia::FerramentasProntas::Municipios.parametro_uf
