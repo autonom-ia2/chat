@@ -53,7 +53,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa
         descricao: 'quantas empresas há na região do CEP (só números). O número é da região do CEP, não da cidade inteira. ' \
                    'O cliente não precisa saber o CEP: sem ele, mande a rua e a cidade (o bairro e o número ajudam a ' \
                    'escolher o CEP da rua); o CEP geral da cidade não serve',
-        obrigatorios: [], opcionais: [Premium::Parametros::NUMERO, *Premium::Parametros::PELO_ENDERECO], pelo_endereco: true,
+        obrigatorios: [], opcionais: [Premium::Parametros::NUMERO_LOCAL, *Premium::Parametros::PELO_ENDERECO], pelo_endereco: true,
         exige_rua: true,
         dataset: Premium::Dataset.new(nome: 'companies_statistics', rota: '/enderecos', resposta: 'CompaniesStatistics', custo: '0.06',
                                       preco: '0.09', busca: ->(params) { "zipcode{#{params['cep']}}" }, extrair: REGIAO)

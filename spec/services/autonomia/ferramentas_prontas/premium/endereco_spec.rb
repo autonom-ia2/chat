@@ -341,6 +341,18 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
       expect(consulta.parametros.map(&:nome)).to contain_exactly('cep', 'rua', 'numero', 'bairro', 'cidade', 'uf')
     end
 
+    # Revisor (contato_empresa.rb:56): o número só ajuda a escolher o CEP da rua; a BigDataCorp recebe só o CEP. Sem ser
+    # local, o número entrava na chave do cache, e a mesma região com outro número pagava de novo no mesmo dia.
+    it 'empresas na região: o número é local, não vai à BigDataCorp nem entra na chave do cache' do
+      consulta = catalogo.buscar('contato_empresa').consulta('empresas_na_regiao')
+
+      expect(consulta.parametro('numero')).to be_local
+      expect(consulta.para_a_fonte('cep' => '01001000', 'numero' => '10')).to eq('cep' => '01001000')
+      expect(consulta.chave_do_cache('cep' => '01001000', 'numero' => '10')).to eq(consulta.chave_do_cache('cep' => '01001000', 'numero' => '20'))
+      # Na área de risco e na vistoria o número vai à BigDataCorp (cep e número): continua não local.
+      expect(catalogo.buscar('risco_endereco').consulta('area_de_risco').parametro('numero')).not_to be_local
+    end
+
     it 'imóvel rural: diz onde achar o código, no recibo do CAR' do
       expect(catalogo.buscar('imovel_rural').consulta('car').descricao).to include('no recibo do CAR')
     end

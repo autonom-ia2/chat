@@ -63,6 +63,12 @@ module Autonomia::FerramentasProntas::Premium::Parametros
   NUMERO = Parametro.new(
     nome: 'numero', descricao: 'O número do imóvel no endereço (só o número, sem complemento).', **ORIENTACOES['numero']
   ) { |valor| Autonomia::FerramentasProntas::Premium::Parametros.numero(valor) }
+  # O mesmo número quando ele só escolhe o CEP da rua (empresas na região): local, não vai à BigDataCorp nem entra na
+  # chave do cache (a mesma região com outro número não paga de novo no dia).
+  NUMERO_LOCAL = Parametro.new(
+    nome: 'numero', local: true, descricao: 'O número do imóvel no endereço (só o número), para achar o CEP da rua.',
+    **ORIENTACOES['numero']
+  ) { |valor| Autonomia::FerramentasProntas::Premium::Parametros.numero(valor) }
 
   # QI 70: pergunte (está no recibo do CAR).
   CODIGO_CAR = Parametro.new(

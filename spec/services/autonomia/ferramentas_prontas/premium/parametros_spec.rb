@@ -42,7 +42,8 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Parametros do
     let(:orientacoes) { described_class::ORIENTACOES }
 
     it 'todo parâmetro Premium tem uma orientação só, deduza ou pergunte, com texto' do
-      expect(orientacoes.keys).to match_array(parametros.map(&:nome))
+      # `NUMERO` e `NUMERO_LOCAL` (empresas na região) são o mesmo número, com a mesma orientação.
+      expect(orientacoes.keys).to match_array(parametros.map(&:nome).uniq)
       orientacoes.each_value do |orientacao|
         expect(orientacao.keys).to contain_exactly(:deduza).or contain_exactly(:pergunte)
         expect(orientacao.values.first).to be_present
