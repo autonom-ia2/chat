@@ -381,7 +381,7 @@ describe('image pasted on the canvas (#2908)', () => {
     expect(classesOf()).toEqual(['topo', 'novo', 'foto', 'footer-locked']);
   });
 
-  it('pastes Word text formatted inside the text and its images as blocks below', () => {
+  it('pastes Word text formatted inside the text and its images as blocks below', async () => {
     const execCommand = vi.fn();
     const target = document.createElement('div');
     target.setAttribute('contenteditable', 'true');
@@ -389,6 +389,15 @@ describe('image pasted on the canvas (#2908)', () => {
       value: { execCommand },
     });
     editor.select(blockText(0));
+    // Blocks added while the text is still being edited are swallowed by it when the edit closes:
+    // the edit must close before any block goes in.
+    const blocksWhenEditClosed = [];
+    const disableEditing = vi.fn(async () => {
+      blocksWhenEditClosed.push(...classesOf());
+    });
+    const editingText = blockText(0);
+    editingText.view = { disableEditing };
+    vi.spyOn(editor, 'getEditing').mockReturnValue(editingText);
     const event = pasteEvent({
       // Word also puts a picture of the copied text on the clipboard: the text must win.
       files: [fileOf('image.png', 'image/png')],
@@ -396,7 +405,7 @@ describe('image pasted on the canvas (#2908)', () => {
       target,
     });
 
-    handlePaste(editor, event, CAMPAIGN);
+    await handlePaste(editor, event, CAMPAIGN);
 
     expect(event.preventDefault).toHaveBeenCalled();
     expect(execCommand).toHaveBeenCalledWith(
@@ -405,6 +414,8 @@ describe('image pasted on the canvas (#2908)', () => {
       '<p>Olá <strong>cliente</strong></p>'
     );
     expect(EmailCampaignAssetsAPI.upload).not.toHaveBeenCalled();
+    expect(disableEditing).toHaveBeenCalledTimes(1);
+    expect(blocksWhenEditClosed).toEqual(['topo', 'foto', 'footer-locked']);
     expect(classesOf()).toEqual(['topo', 'novo', 'foto', 'footer-locked']);
     expect(blockImage(1).get('src')).toBe(UPLOAD_PLACEHOLDER_SRC);
   });

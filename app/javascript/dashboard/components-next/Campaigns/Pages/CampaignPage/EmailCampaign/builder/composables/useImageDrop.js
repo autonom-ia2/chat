@@ -268,16 +268,26 @@ const isEditableTarget = target =>
 const grapesPastesBlocks = editor =>
   Boolean(editor.getModel().get('clipboard')?.length && editor.getSelected());
 
-const pasteInText = (editor, event, segments, anchor) => {
+// Blocks added while a text is being edited are swallowed by it: closing the edit rereads the edited
+// element from the canvas, which the re-render filled with the new blocks. So the edit closes first.
+const closeTextEditing = async editor => {
+  const editing = editor.getEditing?.();
+  await editing?.view?.disableEditing?.();
+};
+
+const pasteInText = async (editor, event, segments, anchor) => {
   event.preventDefault();
   const [first, ...rest] = segments;
   // The text before the first image goes where the cursor is; what follows enters as blocks, in order.
+  const blocks = first.type === 'text' ? rest : segments;
   if (first.type === 'text') {
     event.target.ownerDocument.execCommand('insertHTML', false, first.html);
-    insertSegments(editor, rest, anchor);
-  } else {
-    insertSegments(editor, segments, anchor);
   }
+  if (!blocks.length) return;
+  const startedIn = generation;
+  await closeTextEditing(editor);
+  if (startedIn !== generation) return;
+  insertSegments(editor, blocks, anchor);
 };
 
 // A paste never replaces an image: it goes below the selected block (replacing is for a drop aimed
@@ -293,8 +303,9 @@ export const handlePaste = (editor, event, campaignId) => {
     : { html: '', segments: [], images: [] };
   const anchor = anchorFor(editor.getEditing?.() || editor.getSelected?.());
   if (cleaned.html && inText) {
-    pasteInText(editor, event, cleaned.segments, anchor);
-    return;
+    // Returned so a caller (the spec) can wait for the blocks after the edit closes.
+    // eslint-disable-next-line consistent-return
+    return pasteInText(editor, event, cleaned.segments, anchor);
   }
   if (cleaned.html) {
     // Outside a text, a text paste is ours only when GrapesJS is not pasting copied blocks.
