@@ -4,9 +4,11 @@
 #   - o cache é da conta, até o fim do dia (`Premium::Cache`);
 #   - a fonte é uma só, a BigDataCorp, sem reserva (`Premium::BigDataCorp`);
 #   - cada desfecho vira uma linha de telemetria (`Premium::Cobranca`): encontrado, sem registro ("não havia
-#     registro"), falha (não conta) ou do cache (sem custo novo).
-# O pedido que não serve (parâmetro fora do formato, um CPF no lugar do CNPJ) é recusado antes: a BigDataCorp não é
-# chamada e nada vai à telemetria (o contador do dia, `Uso`, guarda o motivo).
+#     registro"), documento inválido recusado pela BigDataCorp (conta), falha (não conta) ou do cache (sem custo novo).
+# O pedido que não serve (parâmetro fora do formato, um CPF no lugar do CNPJ, o CPF ou o CNPJ com dígito errado) é
+# recusado antes: a BigDataCorp não é chamada, nada vai à telemetria e NÃO conta como consulta do cliente (decisão do
+# Rodrigo, 11/11: "A, não conta"; o contador do dia, `Uso`, guarda o motivo). O documento que só a BigDataCorp recusa
+# (-114) conta e é cobrado (`Leitura`).
 class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasProntas::Execucao
   Premium = Autonomia::FerramentasProntas::Premium
   INDICE_DA_EXECUCAO = 'idx_premium_consultas_tool_run'.freeze
@@ -28,10 +30,18 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
     Premium::Cache.new(@fonte, @consulta, params, conta: @tool.account_id)
   end
 
+  # O documento inválido guardado no dia responde aqui; o encontrado e o sem registro, como nas grátis.
   def do_cache(params)
-    texto = super
-    cobrar(@cache.lido_sem_registro? ? 'sem_registro' : 'encontrado', do_cache: true) if texto
+    texto = documento_invalido_do_cache || super
+    cobrar(@cache.resultado_lido, do_cache: true) if texto
     texto
+  end
+
+  def documento_invalido_do_cache
+    return unless @cache.ler.is_a?(Hash) && @cache.lido['situacao'] == Premium::Cache::DOCUMENTO_INVALIDO
+
+    @provedor = 'cache'
+    terminar(Autonomia::FerramentasProntas::Resposta.documento_invalido(@fonte, @consulta), desfecho: 'do_cache')
   end
 
   def consultar(params)
@@ -50,6 +60,10 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
     when 'sem_registro'
       @cache.nao_encontrado
       terminar(Autonomia::FerramentasProntas::Resposta.nao_encontrado(@fonte, @consulta), desfecho: 'nao_encontradas')
+    when 'documento_invalido'
+      @cache.documento_invalido
+      terminar(Autonomia::FerramentasProntas::Resposta.documento_invalido(@fonte, @consulta), desfecho: 'nao_encontradas',
+                                                                                              motivos: ["#{@provedor}.documento_invalido"])
     else
       terminar(Autonomia::FerramentasProntas::Resposta.nao_consegui, desfecho: 'sem_resposta', motivos: ["#{@provedor}.#{leitura.motivo}"])
     end

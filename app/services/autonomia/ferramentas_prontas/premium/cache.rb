@@ -5,6 +5,8 @@
 #     também foi contado.
 # A chave continua com o HMAC dos parâmetros: quem lê o Redis não reverte o CNPJ, o CPF ou a placa.
 class Autonomia::FerramentasProntas::Premium::Cache < Autonomia::FerramentasProntas::Cache
+  DOCUMENTO_INVALIDO = 'documento_invalido'.freeze
+
   attr_reader :lido
 
   def initialize(fonte, consulta, params, conta:)
@@ -12,7 +14,11 @@ class Autonomia::FerramentasProntas::Premium::Cache < Autonomia::FerramentasPron
     @conta = conta
   end
 
+  # Uma leitura por execução (o objeto é de uma consulta só): o documento inválido e o resto do cache leem o mesmo valor.
   def ler
+    return @lido if @ja_lido
+
+    @ja_lido = true
     @lido = super
   end
 
@@ -24,13 +30,22 @@ class Autonomia::FerramentasProntas::Premium::Cache < Autonomia::FerramentasPron
     gravar({ 'situacao' => NAO_ENCONTRADO }, ate_o_fim_do_dia)
   end
 
+  # O documento que a BigDataCorp recusou: contou uma vez, e o mesmo documento no mesmo dia não conta de novo.
+  def documento_invalido
+    gravar({ 'situacao' => DOCUMENTO_INVALIDO }, ate_o_fim_do_dia)
+  end
+
   def chave
     "#{super.sub(':prontas:', ':premium:')}:conta-#{@conta.to_i}"
   end
 
-  # O que veio do cache era "sem registro"?
-  def lido_sem_registro?
-    @lido.is_a?(Hash) && @lido['situacao'] == NAO_ENCONTRADO
+  # O resultado da telemetria do que veio do cache: encontrado, sem_registro ou documento_invalido.
+  def resultado_lido
+    case @lido.is_a?(Hash) && @lido['situacao']
+    when NAO_ENCONTRADO then 'sem_registro'
+    when DOCUMENTO_INVALIDO then DOCUMENTO_INVALIDO
+    else 'encontrado'
+    end
   end
 
   private

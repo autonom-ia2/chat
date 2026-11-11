@@ -13,6 +13,9 @@ module Autonomia::FerramentasProntas::Resposta
   # A consulta paga (F7) sem registro: conta para o cliente, e o agente diz que não havia registro.
   NAO_HAVIA_REGISTRO = 'A consulta foi feita e não havia registro para o que foi pedido. Diga ao cliente que não havia ' \
                        'registro e confira o dado com ele. Não invente.'.freeze
+  # O documento que a BigDataCorp recusou (F7): conta para o cliente, e o agente confere o documento antes de repetir.
+  DOCUMENTO_INVALIDO = 'A fonte recusou o documento como inválido, e a consulta foi contada. Não repita com o mesmo ' \
+                       'documento: confira com o cliente o número completo e só então consulte de novo. Não invente.'.freeze
   NAO_CONSEGUI = 'Não consegui consultar agora. Diga ao cliente que não deu para consultar neste momento e siga a ' \
                  'conversa sem esse dado. Não invente o dado e não tente de novo nesta resposta.'.freeze
   # O padrão, para o parâmetro sem orientação própria (`Parametro#orientacao`).
@@ -51,6 +54,11 @@ module Autonomia::FerramentasProntas::Resposta
   def nao_encontrado(fonte, consulta)
     { 'ferramenta' => fonte.nome, 'consulta' => consulta.nome, 'situacao' => 'nao_encontrado',
       'orientacao' => consulta.nao_encontrado || (fonte.premium? ? NAO_HAVIA_REGISTRO : NAO_ENCONTRADO) }.to_json
+  end
+
+  def documento_invalido(fonte, consulta)
+    { 'ferramenta' => fonte.nome, 'consulta' => consulta.nome, 'situacao' => 'documento_invalido',
+      'orientacao' => DOCUMENTO_INVALIDO }.to_json
   end
 
   # `falta`: o nome do campo ou a `Falta` (com candidatos e a orientação da regra). `parametro`: o do campo, de onde vem

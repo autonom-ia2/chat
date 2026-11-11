@@ -1,5 +1,7 @@
 # OS PARÂMETROS DOS CARDS PREMIUM (#2858, F7). Todos normalizados antes de qualquer gasto: o que não normaliza é pedido
-# inválido, e a BigDataCorp não é chamada. É aqui que a recusa acontece por desenho: o card de contato só aceita CNPJ
+# inválido, e a BigDataCorp não é chamada. O CPF e o CNPJ com dígito verificador errado caem aqui e NÃO contam como
+# consulta do cliente (decisão do Rodrigo, 11/11: "A, não conta"); o documento que só a BigDataCorp recusa conta
+# (`Premium::Leitura::DOCUMENTO_INVALIDO`). É aqui que a recusa acontece por desenho: o card de contato só aceita CNPJ
 # (um CPF não passa no dígito do CNPJ), e nenhum card tem parâmetro de telefone, e-mail, endereço ou parente de pessoa.
 # Sem regex: método de string e a regra de cada documento.
 #

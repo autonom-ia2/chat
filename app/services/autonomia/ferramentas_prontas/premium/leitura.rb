@@ -1,6 +1,10 @@
 # O QUE A BIGDATACORP RESPONDEU a uma consulta Premium (#2858, F7), já classificado para a cobrança:
 #   - `encontrado`: veio o dado; conta (grátis ou cobrada);
 #   - `sem_registro`: a BigDataCorp respondeu e não havia registro; conta, e o agente diz "não havia registro";
+#   - `documento_invalido`: a BigDataCorp recebeu o pedido e recusou o documento (-114 "INVALID DOC PARAMETER", -155
+#     "INVALID CAR NUMBER PARAMETER"); conta e é cobrado como o sem registro (decisão do Rodrigo), e o agente confere o
+#     documento com o cliente. O documento com dígito errado que NÓS recusamos antes (`Premium::Parametros`) nem chega
+#     aqui: não chama a BigDataCorp e não conta ("A, não conta", Rodrigo, 11/11);
 #   - `falha`: não conta para o cliente. Inclui a fonte lenta (`DATASET IS TOO SLOW`, código -1201), o 504 e toda falha
 #     de rede, token ou status da BigDataCorp.
 # O `Status` vem por dataset (`{"kyc": [{"Code": 0, "Message": "OK"}]}`): os códigos são os da documentação pública
@@ -11,6 +15,9 @@ class Autonomia::FerramentasProntas::Premium::Leitura
   MENSAGEM_DA_LENTA = 'DATASET IS TOO SLOW'.freeze
   # -204 "no results found", -1209 "could not find a name for this document", -2008 "not enough data to generate output".
   SEM_REGISTRO = [-204, -1209, -2008].freeze
+  # "Códigos e descrições de status", grupo "Dados de entrada": -114 "INVALID DOC PARAMETER" (CPF, CNPJ) e -155 "INVALID
+  # CAR NUMBER PARAMETER" (o código do imóvel no CAR, o documento do card de imóvel rural).
+  DOCUMENTO_INVALIDO = [-114, -155].freeze
   OK = [0, 1].freeze
 
   attr_reader :situacao, :dados, :motivo, :id_na_fonte
@@ -45,6 +52,7 @@ class Autonomia::FerramentasProntas::Premium::Leitura
   def self.pelo_status(status, id_na_fonte)
     return falha('fonte_lenta', id_na_fonte: id_na_fonte) if lenta?(status)
     return new(situacao: 'sem_registro', id_na_fonte: id_na_fonte) if SEM_REGISTRO.include?(status['Code'])
+    return new(situacao: 'documento_invalido', id_na_fonte: id_na_fonte) if DOCUMENTO_INVALIDO.include?(status['Code'])
     return if status.empty? || OK.include?(status['Code'])
 
     falha("status_#{status['Code'].to_i.abs}", id_na_fonte: id_na_fonte)
