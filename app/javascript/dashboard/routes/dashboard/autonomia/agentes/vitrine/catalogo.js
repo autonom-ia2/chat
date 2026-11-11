@@ -3,6 +3,10 @@
 // AGENTS.VITRINE.FERRAMENTAS.<ID EM MAIÚSCULAS>. Aqui só o que não é frase: ícone, grupo, quantas perguntas a mesma
 // ferramenta responde (o agente escolhe a consulta pela conversa) e os ramos em que o cartão fica em destaque. A
 // vitrine mostra só os cartões cujas chaves o servidor mandou em `fontes` (as flags da conta decidem).
+//
+// `naVitrine: false`: a fonte de uso interno (Fonte#na_vitrine? no servidor), que fica no catálogo para os agentes de um
+// ramo, sem card avulso. A tela não a oferece (vitrine, sugestão, Construtor), mas a reconhece na gaveta do agente que
+// já a tem, com o nome e o ícone.
 
 export const GRUPOS = [
   { id: 'PESSOAS', icone: 'i-lucide-users', tom: 'azul' },
@@ -84,12 +88,13 @@ export const FERRAMENTAS = [
   { id: 'estacoes', grupo: 'CLIMA', icone: 'i-lucide-radio-tower' },
   { id: 'chuva', grupo: 'CLIMA', icone: 'i-lucide-cloud-rain' },
   { id: 'compras_governo', grupo: 'CLIENTES', icone: 'i-lucide-landmark' },
+  // Decisão do Rodrigo (11/11/2026): só dentro dos agentes de seguro garantia e de transporte (#2881).
   {
     id: 'produtos_seguradoras',
     grupo: 'SEGUROS',
     icone: 'i-lucide-file-search',
     consultas: 2,
-    ramos: ['seguros'],
+    naVitrine: false,
   },
   {
     id: 'corretor_susep',
@@ -109,9 +114,15 @@ export const chaveDoTexto = id => String(id).toUpperCase();
 
 export const ferramentaPorId = id => FERRAMENTAS.find(item => item.id === id);
 
-// As do catálogo que o servidor liberou para a conta, na ordem da vitrine.
+// A tela pode oferecer a fonte: ela está no catálogo e não é de uso interno.
+export const oferecida = id => {
+  const ferramenta = ferramentaPorId(id);
+  return Boolean(ferramenta) && ferramenta.naVitrine !== false;
+};
+
+// As do catálogo que o servidor liberou para a conta, na ordem da vitrine, fora as de uso interno.
 export const liberadas = chaves =>
-  FERRAMENTAS.filter(item => chaves.includes(item.id));
+  FERRAMENTAS.filter(item => chaves.includes(item.id) && oferecida(item.id));
 
 // Destaque pelo ramo da conta (camadas do pacote, #1550): a conta de corretora vê o que vale para "seguros".
 export const emDestaque = (ferramentas, camadas) => {

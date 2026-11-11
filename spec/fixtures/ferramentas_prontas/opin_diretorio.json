@@ -22,12 +22,12 @@
       ]
      },
      {
-      "ApiFamilyType": "products-services_person",
+      "ApiFamilyType": "products-services_public-guarantee",
       "ApiVersion": "2.0.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://api.hdiseguros.opinb3.com.br/open-insurance/products-services/v2/person"
+        "ApiEndpoint": "https://api.hdiseguros.opinb3.com.br/open-insurance/products-services/v2/public-guarantee"
        }
       ]
      },
@@ -42,22 +42,22 @@
       ]
      },
      {
-      "ApiFamilyType": "products-services_person",
+      "ApiFamilyType": "products-services_public-guarantee",
       "ApiVersion": "1.7.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://api.hdiseguros.opinb3.com.br/open-insurance/products-services/v1/person"
+        "ApiEndpoint": "https://api.hdiseguros.opinb3.com.br/open-insurance/products-services/v1/public-guarantee"
        }
       ]
      },
      {
-      "ApiFamilyType": "products-services_person",
+      "ApiFamilyType": "products-services_public-guarantee",
       "ApiVersion": "1.6.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://api.hdiseguros.opinb3.com.br/open-insurance/products-services/v1/person"
+        "ApiEndpoint": "https://api.hdiseguros.opinb3.com.br/open-insurance/products-services/v1/public-guarantee"
        }
       ]
      },
@@ -107,22 +107,22 @@
       ]
      },
      {
-      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiFamilyType": "products-services_transport",
       "ApiVersion": "3.0.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://api.hdiglobal.opinb3.com.br/open-insurance/products-services/v3/cyber-risk"
+        "ApiEndpoint": "https://api.hdiglobal.opinb3.com.br/open-insurance/products-services/v3/transport"
        }
       ]
      },
      {
-      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiFamilyType": "products-services_transport",
       "ApiVersion": "2.0.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://api.hdiglobal.opinb3.com.br/open-insurance/products-services/v2/cyber-risk"
+        "ApiEndpoint": "https://api.hdiglobal.opinb3.com.br/open-insurance/products-services/v2/transport"
        }
       ]
      },
@@ -140,22 +140,22 @@
       ]
      },
      {
-      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiFamilyType": "products-services_transport",
       "ApiVersion": "1.4.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://api.hdiglobal.opinb3.com.br/open-insurance/products-services/v1/cyber-risk"
+        "ApiEndpoint": "https://api.hdiglobal.opinb3.com.br/open-insurance/products-services/v1/transport"
        }
       ]
      },
      {
-      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiFamilyType": "products-services_transport",
       "ApiVersion": "1.3.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://api.hdiglobal.opinb3.com.br/open-insurance/products-services/v1/cyber-risk"
+        "ApiEndpoint": "https://api.hdiglobal.opinb3.com.br/open-insurance/products-services/v1/transport"
        }
       ]
      },
@@ -202,12 +202,12 @@
       ]
      },
      {
-      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiFamilyType": "products-services_transport",
       "ApiVersion": "2.0.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://auth.tokiomarine.com.br/open-insurance/products-services/v2/cyber-risk"
+        "ApiEndpoint": "https://auth.tokiomarine.com.br/open-insurance/products-services/v2/transport"
        }
       ]
      },
@@ -222,22 +222,46 @@
       ]
      },
      {
-      "ApiFamilyType": "products-services_person",
+      "ApiFamilyType": "products-services_public-guarantee",
       "ApiVersion": "2.0.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://auth.tokiomarine.com.br/open-insurance/products-services/v2/person"
+        "ApiEndpoint": "https://auth.tokiomarine.com.br/open-insurance/products-services/v2/public-guarantee"
        }
       ]
      },
      {
-      "ApiFamilyType": "products-services_person",
+      "ApiFamilyType": "products-services_public-guarantee",
       "ApiVersion": "1.7.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://auth.tokiomarine.com.br/open-insurance/products-services/v1/person"
+        "ApiEndpoint": "https://auth.tokiomarine.com.br/open-insurance/products-services/v1/public-guarantee"
+       }
+      ]
+     },
+     {
+      "ApiResourceId": "tokio-pg-2.0.0",
+      "ApiFamilyType": "products-services_private-guarantee",
+      "ApiVersion": "2.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiDiscoveryId": "tokio-pg-2.0.0",
+        "ApiEndpoint": "https://api-hml.tokiomarine.com.br/open-insurance/products-services/v2/private-guarantee"
+       }
+      ]
+     },
+     {
+      "ApiResourceId": "tokio-pg-1.3.0",
+      "ApiFamilyType": "products-services_private-guarantee",
+      "ApiVersion": "1.3.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiDiscoveryId": "tokio-pg-1.3.0",
+        "ApiEndpoint": "https://auth.tokiomarine.com.br/open-insurance/products-services/v1/private-guarantee"
        }
       ]
      }
@@ -278,32 +302,32 @@
       ]
      },
      {
-      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiFamilyType": "products-services_transport",
       "ApiVersion": "2.0.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v2/cyber-risk"
+        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v2/transport"
        }
       ]
      },
      {
-      "ApiFamilyType": "products-services_person",
+      "ApiFamilyType": "products-services_public-guarantee",
       "ApiVersion": "2.0.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v2/person"
+        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v2/public-guarantee"
        }
       ]
      },
      {
-      "ApiFamilyType": "products-services_person",
+      "ApiFamilyType": "products-services_public-guarantee",
       "ApiVersion": "1.7.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v1/person"
+        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v1/public-guarantee"
        }
       ]
      },
@@ -328,22 +352,74 @@
       ]
      },
      {
-      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiFamilyType": "products-services_transport",
       "ApiVersion": "1.4.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v1/cyber-risk"
+        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v1/transport"
        }
       ]
      },
      {
-      "ApiFamilyType": "products-services_person",
+      "ApiFamilyType": "products-services_public-guarantee",
       "ApiVersion": "1.6.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v1/person"
+        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v1/public-guarantee"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "OrganisationId": "teste-Porto Seguro",
+  "OrganisationName": "PORTO SEGURO CIA DE SEGUROS GERAIS",
+  "Status": "Active",
+  "AuthorisationServers": [
+   {
+    "AuthorisationServerId": "as-Porto Seguro",
+    "CustomerFriendlyName": "Porto Seguro",
+    "Status": "Active",
+    "ApiResources": [
+     {
+      "ApiResourceId": "r-Porto Seguro",
+      "ApiFamilyType": "products-services_transport",
+      "ApiVersion": "2.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiDiscoveryId": "d-Porto Seguro",
+        "ApiEndpoint": "https://open-api-sandbox.portoseguro.com.br/open-insurance/products-services/v2/transport"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "OrganisationId": "teste-BTG PACTUAL SEGUROS",
+  "OrganisationName": "BTG PACTUAL SEGUROS S.A.",
+  "Status": "Active",
+  "AuthorisationServers": [
+   {
+    "AuthorisationServerId": "as-BTG PACTUAL SEGUROS",
+    "CustomerFriendlyName": "BTG PACTUAL SEGUROS",
+    "Status": "Active",
+    "ApiResources": [
+     {
+      "ApiResourceId": "r-BTG PACTUAL SEGUROS",
+      "ApiFamilyType": "products-services_transport",
+      "ApiVersion": "2.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiDiscoveryId": "d-BTG PACTUAL SEGUROS",
+        "ApiEndpoint": "https://btgseguros.openinsurance-dev.btgpactual.com/open-insurance/products-services/v2/transport"
        }
       ]
      }
@@ -361,12 +437,12 @@
     "Status": "Active",
     "ApiResources": [
      {
-      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiFamilyType": "products-services_transport",
       "ApiVersion": "2.0.0",
       "Status": "Active",
       "ApiDiscoveryEndpoints": [
        {
-        "ApiEndpoint": "https://api.inativa.exemplo.test/open-insurance/products-services/v2/cyber-risk"
+        "ApiEndpoint": "https://api.inativa.exemplo.test/open-insurance/products-services/v2/transport"
        }
       ]
      }

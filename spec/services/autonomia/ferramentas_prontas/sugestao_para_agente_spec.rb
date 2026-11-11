@@ -121,6 +121,25 @@ RSpec.describe Autonomia::FerramentasProntas::SugestaoParaAgente do
     expect(cliente).not_to have_received(:create)
   end
 
+  context 'with a source that left the showcase (Produtos das seguradoras)' do
+    let(:escolha) { %w[produtos_seguradoras corretor_susep] }
+
+    before { account.enable_features!('agente_ferramentas_prontas_lote2') }
+
+    it 'is neither offered to the model nor shown, even when stored by the Construtor' do
+      expect(described_class.new(agent).call).to eq(%w[corretor_susep])
+
+      expect(cliente).to have_received(:create) do |**kwargs|
+        expect(kwargs[:input].sole[:content]).not_to include('produtos_seguradoras')
+        expect(kwargs[:schema][:schema][:properties][:ferramentas][:items][:enum]).not_to include('produtos_seguradoras')
+      end
+
+      agent.update!(config: { 'ferramentas_sugeridas' => %w[produtos_seguradoras corretor_susep] })
+      described_class.semear_do_construtor!(agent)
+      expect(described_class.para_tela(agent.reload)).to eq(%w[corretor_susep])
+    end
+  end
+
   it 'a broken stored value does not break the reading' do
     agent.update!(config: { 'prontas_sugestao' => 'texto' })
 

@@ -217,10 +217,10 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
       'ALLIANZ SEGUROS'
     );
     expect(valor('produtos_seguradoras', 'produtos', 'Produtos')).toBe(
-      'Responsabilidade Civil de Riscos Cibernéticos'
+      'RCTR-C, RCF-DC, RCTR-VI e mais 3'
     );
     expect(valor('produtos_seguradoras', 'produtos', 'Ramo')).toBe(
-      'Riscos cibernéticos'
+      'Transportes'
     );
     expect(valor('corretor_susep', 'por_nome', 'Corretores')).toContain(
       'CORRETORA EXEMPLO 1 LTDA'

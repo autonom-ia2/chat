@@ -16,6 +16,8 @@ const STATUS_SEM_PERMISSAO = [401, 403];
 const STATUS_DESLIGADA = 404;
 const MOTIVOS_DO_INCLUIR = {
   desligada: 'DESLIGADA',
+  // A fonte que saiu da vitrine (Produtos das seguradoras): para quem está na tela, é o mesmo que desligada.
+  fora_da_vitrine: 'DESLIGADA',
   agente_de_cotacao: 'COTACAO',
   nome_em_uso: 'NOME_EM_USO',
 };
