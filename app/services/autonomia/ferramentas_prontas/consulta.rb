@@ -7,11 +7,15 @@
 # modelo). Recebe os parâmetros normalizados e devolve o nome do que falta (ou uma `Falta`, com candidatos), ou nil.
 # `refinar`: o que roda sobre os dados da fonte (ou do cache) antes de irem ao modelo, com os parâmetros locais (ex.:
 # a busca pelo nome do modelo da FIPE). Devolve os dados enxutos, ou nil quando nada sobrou (não encontrado).
+# `resolver` (regra "QI 70"): roda depois do limite do dia e antes do cache, e troca o dado que o cliente diz pelo que a
+# fonte pede (o nome da marca pelo código dela), com outras consultas da mesma fonte (`Apoio`). Recebe os parâmetros e o
+# apoio; devolve [params, nil] ou [nil, a `Falta`] (com os candidatos, quando há mais de um).
 class Autonomia::FerramentasProntas::Consulta
   attr_reader :nome, :descricao, :obrigatorios, :opcionais, :provedores, :validade, :prazo_por_fonte, :prazo_total
 
   def initialize(nome:, descricao:, provedores:, validade:, prazo_por_fonte:, prazo_total:, obrigatorios: [], opcionais: [], # rubocop:disable Metrics/ParameterLists
-                 regra: nil, refinar: nil)
+                 regra: nil, refinar: nil, resolver: nil)
+    @resolver = resolver
     @nome = nome
     @descricao = descricao
     @obrigatorios = obrigatorios
@@ -54,6 +58,14 @@ class Autonomia::FerramentasProntas::Consulta
 
   def chave_do_cache(params)
     para_a_fonte(params).sort.to_h
+  end
+
+  def resolve?
+    @resolver.present?
+  end
+
+  def resolver(params, apoio)
+    @resolver.call(params, apoio)
   end
 
   def refinar(dados, params)

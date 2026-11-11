@@ -7,6 +7,8 @@
 #   2. o acesso da conta (a chave do "Incluir") e o corte individual -> `recusadas`;
 #   3. a consulta e os parâmetros, normalizados; o que não serve -> `recusadas`, e nenhuma fonte é chamada;
 #   4. o limite do dia, por SQL atômico -> conta a consulta, ou `recusadas` (`limite_diario`);
+#   4b. o dado que o cliente diz trocado pelo que a fonte pede (`Consulta#resolver`, regra "QI 70": a marca da FIPE pelo
+#      nome), com outras consultas da mesma fonte (`Apoio`); o que não resolve -> `recusadas`, com os candidatos;
 #   5. o cache (validade da consulta; o "não encontrado" por 1 hora) -> `do_cache`;
 #   6. os provedores em ordem, com o prazo total da consulta: o principal, depois a reserva. Cada falha vira motivo
 #      (`brasilapi.tempo_esgotado`). Responde quem vier primeiro; vindo da reserva -> `pela_reserva`. Sem resposta de
@@ -79,11 +81,35 @@ class Autonomia::FerramentasProntas::Execucao
     return recusar('pedido_invalido', Resposta.pedido_invalido('consulta', @fonte.parametro_da_consulta)) if @consulta.nil?
 
     params, falta = @consulta.conferir(@argumentos)
-    return recusar('pedido_invalido', Resposta.pedido_invalido(falta, @consulta.parametro(falta.campo))) if params.nil?
+    return recusar_pedido(falta) if params.nil?
     return recusar('limite_diario') unless Uso.reservar!(account_id: @tool.account_id, fonte: @fonte.chave, limite: acesso.limite_do_dia)
+
+    resolvido(params)
+  end
+
+  # Depois do limite: o dado do cliente trocado pelo da fonte (o nome da marca pelo código), o cache e as fontes.
+  def resolvido(params)
+    params, falta = resolver(params)
+    return recusar_pedido(falta) if falta
 
     @cache = Autonomia::FerramentasProntas::Cache.new(@fonte, @consulta, params)
     do_cache(params) || consultar(params)
+  rescue Autonomia::FerramentasProntas::Apoio::SemResposta => e
+    terminar(Resposta.nao_consegui, desfecho: 'sem_resposta', motivos: e.motivos)
+  end
+
+  def recusar_pedido(falta)
+    recusar('pedido_invalido', Resposta.pedido_invalido(falta, @consulta.parametro(falta.campo)))
+  end
+
+  def resolver(params)
+    return [params, nil] unless @consulta.resolve?
+
+    @consulta.resolver(params, Autonomia::FerramentasProntas::Apoio.new(@fonte, cliente))
+  end
+
+  def cliente
+    @cliente ||= ClienteHttp.new(hosts: @fonte.hosts, prazo_final: @inicio + @consulta.prazo_total, conta: @tool.account_id)
   end
 
   def do_cache(params)
@@ -97,14 +123,13 @@ class Autonomia::FerramentasProntas::Execucao
   end
 
   def consultar(params)
-    @cliente = ClienteHttp.new(hosts: @fonte.hosts, prazo_final: @inicio + @consulta.prazo_total, conta: @tool.account_id)
     aplicaveis = @consulta.provedores.select { |provedor| provedor.aplica?(@consulta, params) }
     falhas = []
     nao_encontrado = false
     aplicaveis.each do |provedor|
       next if pular?(provedor, falhas, nao_encontrado)
 
-      dados = provedor.new(@cliente, prazo: @consulta.prazo_por_fonte).consultar(@consulta, @consulta.para_a_fonte(params))
+      dados = provedor.new(cliente, prazo: @consulta.prazo_por_fonte).consultar(@consulta, @consulta.para_a_fonte(params))
       return achado(params, dados, provedor, reserva: provedor != aplicaveis.first, falhas: falhas)
     rescue Provedor::NaoEncontrado
       nao_encontrado = true

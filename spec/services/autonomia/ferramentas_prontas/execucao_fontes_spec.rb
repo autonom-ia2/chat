@@ -257,12 +257,13 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(Autonomia::FerramentasProntas::Uso.sole.pela_reserva).to eq(0)
     end
 
-    it 'sem o ano, devolve os anos que existem' do
+    it 'sem o ano, devolve os anos que existem e o preco de um ano so quando so ha um' do
       fonte_responde('https://parallelum.com.br/fipe/api/v2/cars/brands/23/models/8949/years', [{ code: '2020-5', name: '2020 Flex' }])
+      fonte_responde('https://parallelum.com.br/fipe/api/v2/cars/brands/23/models/8949/years/2020-5', da_parallelum)
 
       saida = executar_pronta(ferramenta, 'consulta' => 'preco', 'tipo' => 'carros', 'marca' => '23', 'modelo' => '8949')
 
-      expect(saida['dados']).to eq('anos_disponiveis' => ['2020 Flex'])
+      expect(saida['dados']).to include('anos_disponiveis' => ['2020 Flex'], 'precos' => [preco_esperado])
     end
 
     it 'filtra os modelos pela busca, que nunca vai a fonte' do
@@ -308,9 +309,9 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(a_request(:get, /x$/)).not_to have_been_made
     end
 
-    it 'preco sem codigo nem marca e modelo e pedido invalido' do
+    it 'preco sem codigo nem marca e modelo e pedido invalido na marca (nunca no codigo FIPE)' do
       expect(executar_pronta(ferramenta, 'consulta' => 'preco', 'tipo' => 'carros', 'ano' => 2020))
-        .to include('situacao' => 'pedido_invalido', 'campo' => 'codigo_fipe')
+        .to include('situacao' => 'pedido_invalido', 'campo' => 'marca')
     end
 
     it 'consulta fora da lista e pedido invalido' do

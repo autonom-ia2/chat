@@ -45,14 +45,31 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
     { 'modelos' => exigir!(itens(base(params, "/brands/#{params['marca']}/models"))) }
   end
 
-  # Sem o ano, os anos que existem; com ele, o preço de cada combustível daquele ano (até `MAX_ANOS_COM_PRECO`).
+  # Sem o ano, os anos que existem e a faixa; com ele, o preço de cada combustível daquele ano (até `MAX_ANOS_COM_PRECO`).
   def precos(params)
     do_veiculo = params['codigo_fipe'] ? "/#{params['codigo_fipe']}" : "/brands/#{params['marca']}/models/#{params['modelo']}"
     anos = itens(base(params, "#{do_veiculo}/years"))
     raise NaoEncontrado if anos.empty?
-    return { 'anos_disponiveis' => anos.pluck('nome') } if params['ano'].nil?
+    return faixa(params, do_veiculo, anos) if params['ano'].nil?
 
-    { 'precos' => do_ano(anos, params['ano']).map { |ano| preco_de(get(base(params, "#{do_veiculo}/years/#{ano['codigo']}"))) } }
+    { 'precos' => do_ano(anos, params['ano']).map { |ano| preco_do_ano(params, do_veiculo, ano) } }
+  end
+
+  # O preço do ano mais antigo e do mais novo (o zero km, 32000, é o mais novo): duas chamadas, não uma por ano. Se elas
+  # falharem, os anos ainda servem ao agente.
+  def faixa(params, do_veiculo, anos)
+    so_os_anos = { 'anos_disponiveis' => anos.pluck('nome') }
+    validos = anos.select { |item| codigo_de_ano?(item['codigo']) }
+    return so_os_anos if validos.empty?
+
+    extremos = validos.minmax_by { |item| item['codigo'].split('-').first.to_i }.uniq
+    { 'precos' => extremos.map { |ano| preco_do_ano(params, do_veiculo, ano) } }.merge(so_os_anos, 'observacao' => Fipe::FAIXA)
+  rescue Falha
+    so_os_anos
+  end
+
+  def preco_do_ano(params, do_veiculo, ano)
+    preco_de(get(base(params, "#{do_veiculo}/years/#{ano['codigo']}")))
   end
 
   # O código do ano vem da própria fonte e volta ao caminho: só no formato "2020-5" (dígitos, hífen, dígitos).
