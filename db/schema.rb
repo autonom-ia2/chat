@@ -1087,6 +1087,87 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
     t.index ["account_id", "provider"], name: "idx_autonomia_insurance_connections_account_provider", unique: true
   end
 
+  create_table "autonomia_prontas_aeronaves", force: :cascade do |t|
+    t.integer "geracao", null: false
+    t.string "matricula", null: false
+    t.jsonb "dados", default: {}, null: false
+    t.index ["geracao", "matricula"], name: "idx_prontas_aeronaves_matricula"
+  end
+
+  create_table "autonomia_prontas_bases", force: :cascade do |t|
+    t.string "base", null: false
+    t.integer "geracao_ativa"
+    t.datetime "atualizado_em"
+    t.integer "linhas", default: 0, null: false
+    t.datetime "tentado_em"
+    t.datetime "falhou_em"
+    t.string "motivo_da_falha"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["base"], name: "idx_prontas_bases_base", unique: true
+  end
+
+  create_table "autonomia_prontas_focos_queimada", force: :cascade do |t|
+    t.integer "geracao", null: false
+    t.datetime "detectado_em", null: false
+    t.decimal "latitude", precision: 9, scale: 5, null: false
+    t.decimal "longitude", precision: 9, scale: 5, null: false
+    t.string "codigo_municipio"
+    t.string "bioma"
+    t.string "satelite"
+    t.index ["geracao", "codigo_municipio", "detectado_em"], name: "idx_prontas_focos_municipio"
+    t.index ["geracao", "latitude"], name: "idx_prontas_focos_latitude"
+  end
+
+  create_table "autonomia_prontas_geracao_distribuida", force: :cascade do |t|
+    t.integer "geracao", null: false
+    t.string "cep"
+    t.string "codigo_municipio"
+    t.string "uf"
+    t.string "tipo", null: false
+    t.string "classe"
+    t.integer "quantidade", default: 0, null: false
+    t.decimal "potencia_kw", precision: 14, scale: 2, default: "0.0", null: false
+    t.index ["geracao", "cep"], name: "idx_prontas_gd_cep"
+    t.index ["geracao", "codigo_municipio"], name: "idx_prontas_gd_municipio"
+  end
+
+  create_table "autonomia_prontas_operadoras_ans", force: :cascade do |t|
+    t.integer "geracao", null: false
+    t.string "registro_ans", null: false
+    t.string "cnpj"
+    t.string "razao_social"
+    t.string "nome_fantasia"
+    t.string "nome_busca"
+    t.string "modalidade"
+    t.string "cidade"
+    t.string "uf"
+    t.date "registrada_em"
+    t.boolean "ativa", default: true, null: false
+    t.date "cancelada_em"
+    t.string "motivo_do_cancelamento"
+    t.index ["geracao", "cnpj"], name: "idx_prontas_operadoras_cnpj"
+    t.index ["geracao", "registro_ans"], name: "idx_prontas_operadoras_registro"
+  end
+
+  create_table "autonomia_prontas_transportadores", force: :cascade do |t|
+    t.integer "geracao", null: false
+    t.string "rntrc", null: false
+    t.string "cnpj"
+    t.string "nome"
+    t.string "nome_busca"
+    t.string "categoria", null: false
+    t.string "situacao", null: false
+    t.string "municipio"
+    t.string "uf"
+    t.date "cadastrado_em"
+    t.date "situacao_desde"
+    t.boolean "equiparado"
+    t.index ["geracao", "cnpj"], name: "idx_prontas_transportadores_cnpj", where: "(cnpj IS NOT NULL)"
+    t.index ["geracao", "rntrc"], name: "idx_prontas_transportadores_rntrc"
+    t.index ["nome_busca"], name: "idx_prontas_transportadores_nome", opclass: :gin_trgm_ops, where: "(nome_busca IS NOT NULL)", using: :gin
+  end
+
   create_table "autonomia_prospecting_company_profiles", force: :cascade do |t|
     t.string "cnpj", limit: 14, null: false
     t.string "legal_name"

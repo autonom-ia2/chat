@@ -11,7 +11,11 @@ module FerramentasProntasHelper
     'apidadosabertos.saude.gov.br' => '93.184.216.53', 'pncp.gov.br' => '93.184.216.55',
     'apitempo.inmet.gov.br' => '93.184.216.56', 'archive-api.open-meteo.com' => '93.184.216.57',
     'data.directory.opinbrasil.com.br' => '93.184.216.58', 'www2.susep.gov.br' => '93.184.216.59',
-    'cep.awesomeapi.com.br' => '93.184.216.60'
+    'cep.awesomeapi.com.br' => '93.184.216.60',
+    # F5 (bases baixadas)
+    'dadosabertos.ans.gov.br' => '93.184.216.65', 'sistemas.anac.gov.br' => '93.184.216.61',
+    'dadosabertos.aneel.gov.br' => '93.184.216.62', 'dados.antt.gov.br' => '93.184.216.63',
+    'dataserver-coids.inpe.br' => '93.184.216.64'
   }.freeze
 
   # Também zera o teto global por provedor (#2858 F1): ele vive no Redis e passaria de um exemplo para o outro.
