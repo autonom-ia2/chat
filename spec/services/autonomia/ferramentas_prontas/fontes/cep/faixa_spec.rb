@@ -36,4 +36,14 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes::Cep::Faixa do
     expect(described_class.cobre?('2766 Anexo 2770', '2766')).to be_nil
     expect(described_class.cobre?('até 698 - lado par', 's/n')).to be_nil
   end
+
+  it '.exato?: só o CEP de prédio cujo complemento é o próprio número' do
+    expect(described_class.exato?('1260', '1260')).to be(true)
+    expect(described_class.exato?(' 1260 ', 1260)).to be(true)
+    expect(described_class.exato?('1260', '1262')).to be(false)
+    expect(described_class.exato?('de 700 a 1680 - lado par', '1260')).to be(false)
+    expect(described_class.exato?('1159/1160', '1159')).to be(false)
+    expect(described_class.exato?('', '1260')).to be(false)
+    expect(described_class.exato?('1260', 's/n')).to be(false)
+  end
 end

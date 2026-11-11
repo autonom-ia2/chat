@@ -95,16 +95,19 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes::Cep::Referencia do
       expect(resultado['candidatos'].pluck('cep')).to eq(%w[01310-100 01311-000])
     end
 
-    it 'a busca pela rua usa o cache da consulta por_endereco (mesma chave): a segunda nao chama a fonte' do
+    it 'a busca pela rua guarda a lista inteira por 30 dias: a segunda nao chama a fonte' do
       pedido = fonte_responde(paulista, [de_sp.merge(cep: '01310-100', bairro: 'Bela Vista')])
-      fonte = Autonomia::FerramentasProntas::Fontes::Cep::FONTE
-      consulta = fonte.consulta('por_endereco')
-      params, = consulta.conferir('logradouro' => 'Avenida Paulista', 'cidade' => 'São Paulo', 'uf' => 'SP')
 
       2.times { described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Avenida Paulista') }
 
       expect(pedido).to have_been_requested.once
-      expect(Autonomia::FerramentasProntas::Cache.new(fonte, consulta, params).ler).to include('situacao' => 'encontrado')
+    end
+
+    it 'fonte fora: nil, sem guardar (a próxima tenta de novo)' do
+      fonte_fora(paulista)
+
+      2.times { expect(described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Avenida Paulista')).to be_nil }
+      expect(a_request(:get, paulista)).to have_been_made.twice
     end
 
     it 'rua que nao existe, cidade que nao existe ou fonte fora: nil' do
@@ -159,6 +162,37 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes::Cep::Referencia do
         .to eq('cep' => '13035-350')
       expect(described_class.cep(cidade: 'Campinas', uf: 'SP', rua: 'Rua Sete de Setembro', bairro: 'Vila Industrial', numero: '189'))
         .to eq('cep' => '13035-901')
+    end
+
+    # Revisor (lote 3, ALTO): com o número dito, pedir o número de novo era o mesmo laço. O CEP do prédio (complemento
+    # igual ao número) vale mais que a faixa que também cobre o número.
+    it 'Rua Augusta, Consolação, nº de prédio: o CEP do prédio, não a faixa que também cobre o número' do
+      { '1260' => '01304-971', '129' => '01305-900', '1626' => '01304-902', '1029' => '01305-904', '257' => '01305-901',
+        '1371' => '01305-902', '1600' => '01304-901', '1118' => '01304-900', '1611' => '01305-903' }.each do |numero, cep|
+        resultado = described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua Augusta', bairro: 'Consolação', numero: numero)
+        expect(resultado).to eq('cep' => cep), "nº #{numero}: #{resultado.inspect[0, 120]}"
+      end
+    end
+
+    it 'Rua Augusta, Consolação, nº 1682 (nenhuma faixa da Consolação cobre): pede o bairro, com os candidatos' do
+      resultado = described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua Augusta', bairro: 'Consolação', numero: '1682')
+
+      expect(resultado['falta']).to eq('bairro')
+      expect(resultado['candidatos']).to be_present
+    end
+
+    it 'com o número dito, nunca pede o número de novo' do
+      %w[1 100 698 699 1260 1682 2438 2766 5000].product(['Consolação', 'Cerqueira César', nil]).each do |numero, bairro|
+        resultado = described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua Augusta', bairro: bairro, numero: numero)
+        expect(resultado['falta']).not_to eq('numero'), "nº #{numero}, bairro #{bairro.inspect}"
+      end
+    end
+
+    it 'a escolha olha TODOS os CEPs da rua, não só os 10 que a consulta por_endereco mostra ao agente' do
+      resultado = described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua Augusta', bairro: 'Consolação', numero: '1260')
+
+      expect(resultado).to eq('cep' => '01304-971')
+      expect(resultado.to_s).not_to include('01304-001')
     end
 
     it 'Rua Sete de Setembro sem o bairro, em Sousas e na Vila Industrial: pede o bairro' do

@@ -28,6 +28,12 @@ module Autonomia::FerramentasProntas::Fontes::Cep::Faixa
     alvo.between?(minimo, maximo)
   end
 
+  # O CEP de um prédio: o `complemento` é o próprio número ("1260"), sem faixa nem lado.
+  def exato?(complemento, numero)
+    alvo = Integer(numero.to_s.strip, 10, exception: false)
+    !alvo.nil? && numeros(Autonomia::FerramentasProntas::Lista.comparavel(complemento)) == [alvo]
+  end
+
   # "até 698 - lado par" -> ["até 698", "lado par"]; "lado par" -> [nil, "lado par"].
   def separar(texto)
     return [nil, texto] if texto.start_with?(LADO)
