@@ -438,12 +438,18 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(consulta.prazo_por_fonte + Autonomia::FerramentasProntas::ClienteHttp::ABERTURA).to be <= consulta.prazo_total
     end
 
+    # A janela do turno conta do pré-disparo; o prazo da consulta começa depois, no job. O que cabe é a janela menos a
+    # folga da fila (`Consulta::FOLGA_DO_TURNO`), não a janela inteira.
+    def no_turno
+      Autonomia::Agents::Tools::ConsultaNoTurno::ESPERA_DO_TURNO - Autonomia::FerramentasProntas::Consulta::FOLGA_DO_TURNO
+    end
+
     # Revisão do #2906: 7 s por chamada e 11 s no total passavam da janela do turno; a tentativa do último dia vinha
     # depois que o turno já tinha desistido.
     it 'F32/F33: o periodo inteiro e a tentativa do ultimo dia cabem na janela do turno, e sobra prazo para o ultimo dia' do
       consulta = Autonomia::FerramentasProntas::Fontes::ComprasGoverno::FONTE.consulta('compras')
 
-      expect(consulta.prazo_total).to be <= Autonomia::Agents::Tools::ConsultaNoTurno::ESPERA_DO_TURNO
+      expect(consulta.prazo_total).to be <= no_turno
       expect(consulta.prazo_total - consulta.prazo_por_fonte).to be >= Autonomia::FerramentasProntas::ClienteHttp::ABERTURA + 1
     end
 
@@ -454,7 +460,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       antes_da_ultima = consulta.prazo_por_fonte * (consulta.provedores.size - 1)
 
       expect(consulta.provedores.size).to eq(3)
-      expect(consulta.prazo_total).to be <= Autonomia::Agents::Tools::ConsultaNoTurno::ESPERA_DO_TURNO
+      expect(consulta.prazo_total).to be <= no_turno
       expect(consulta.prazo_total - antes_da_ultima).to be >= Autonomia::FerramentasProntas::ClienteHttp::ABERTURA + 1
     end
 

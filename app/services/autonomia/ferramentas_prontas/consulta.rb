@@ -11,6 +11,13 @@
 # fonte pede (o nome da marca pelo código dela), com outras consultas da mesma fonte (`Apoio`). Recebe os parâmetros e o
 # apoio; devolve [params, nil] ou [nil, a `Falta`] (com os candidatos, quando há mais de um).
 class Autonomia::FerramentasProntas::Consulta
+  # A folga entre a janela do turno e o prazo da consulta (#2906). O turno espera `ConsultaNoTurno::ESPERA_DO_TURNO`
+  # contados do pré-disparo da rodada; o prazo da consulta (`prazo_total`) só começa depois, no job: a fila
+  # `agent_tools` e a carga da execução e da ferramenta. A consulta que tem de responder no mesmo turno usa
+  # `prazo_total <= ESPERA_DO_TURNO - FOLGA_DO_TURNO`. Estimativa, não medida em produção: a fila parada ou cheia come
+  # mais que isso, e aí o turno lê "em andamento" e o resultado chega no turno seguinte (#2749).
+  FOLGA_DO_TURNO = 1
+
   attr_reader :nome, :descricao, :obrigatorios, :opcionais, :provedores, :validade, :prazo_por_fonte, :prazo_total
 
   def initialize(nome:, descricao:, provedores:, validade:, prazo_por_fonte:, prazo_total:, obrigatorios: [], opcionais: [], # rubocop:disable Metrics/ParameterLists
