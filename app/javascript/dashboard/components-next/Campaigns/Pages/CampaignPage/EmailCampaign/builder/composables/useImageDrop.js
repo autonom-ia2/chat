@@ -28,6 +28,7 @@ import {
   prepareImageFile,
 } from '../imageFile';
 import { plainTextToHtml, sanitizePastedHtml } from '../pastedHtml';
+import { endFileDrag, noteFileDrag } from './fileDragState';
 import {
   imageSectionMjml,
   isPublicImageSrc,
@@ -256,6 +257,21 @@ export const handleDrop = (
   if (html) insertBlock(editor, anchor, textSectionMjml(html));
 };
 
+// The canvas attached right now (attachImageDrop), for files dropped on the page outside it.
+let attached = null;
+
+// A file dropped on the page outside the canvas (usePageFileDrop): end of the e-mail, above the footer.
+// Returns false when no canvas is attached.
+export const dropFilesAtEnd = files => {
+  if (!attached) return false;
+  handleDrop(
+    attached.editor,
+    { payload: { files }, component: null, clientY: 0 },
+    attached.getCampaignId()
+  );
+  return true;
+};
+
 // ---- paste ----
 
 const isEditableTarget = target =>
@@ -337,6 +353,7 @@ export const attachImageDrop = (editor, getCampaignId) => {
   let dragFromFrame = false;
   const attachedIn = generation;
   const isAlive = () => attachedIn === generation;
+  attached = { editor, getCampaignId };
 
   const onDragStart = () => {
     dragFromFrame = true;
@@ -345,8 +362,10 @@ export const attachImageDrop = (editor, getCampaignId) => {
     dragFromFrame = false;
   };
   // Capture phase on the frame: runs before GrapesJS reads the drop, while the data is readable.
+  const onDragOver = event => noteFileDrag(event.dataTransfer);
   const onDrop = event => {
     lastDrop = null;
+    endFileDrag();
     // A block dragged from our panel: GrapesJS places it.
     if (editor.getModel().get('dragSource')?.content) return;
     if (dragFromFrame) {
@@ -378,6 +397,7 @@ export const attachImageDrop = (editor, getCampaignId) => {
   const LISTENERS = [
     ['dragstart', onDragStart],
     ['dragend', onDragEnd],
+    ['dragover', onDragOver],
     ['drop', onDrop],
     ['paste', onPaste],
   ];
@@ -401,6 +421,7 @@ export const attachImageDrop = (editor, getCampaignId) => {
   return () => {
     unbindFrame();
     lastDrop = null;
+    if (attached?.editor === editor) attached = null;
     editor.off('canvas:dragdata', onDragData);
     editor.off('canvas:frame:load', bindFrame);
     generation += 1;

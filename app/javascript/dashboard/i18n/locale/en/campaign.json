@@ -755,7 +755,9 @@
           "LEAVE_TITLE": "An image is still uploading",
           "LEAVE_CONFIRM": "If you leave now, it will not be in the e-mail.",
           "LEAVE_WAIT": "Wait for the image",
-          "LEAVE_ANYWAY": "Leave anyway"
+          "LEAVE_ANYWAY": "Leave anyway",
+          "DROP_HERE": "Drop the image to put it in the e-mail",
+          "CHOOSE_FIRST": "First choose how to start. Then just drag the image into the e-mail."
         }
       },
       "AI": {

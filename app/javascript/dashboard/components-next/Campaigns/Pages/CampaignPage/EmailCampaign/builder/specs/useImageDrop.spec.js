@@ -4,6 +4,7 @@ import EmailCampaignAssetsAPI from 'dashboard/api/emailCampaignAssets';
 import {
   UPLOAD_TIMEOUT_MS,
   attachImageDrop,
+  dropFilesAtEnd,
   handleDrop,
   handlePaste,
   useImageDrop,
@@ -515,5 +516,39 @@ describe('drop wiring on the canvas frame (#2908)', () => {
     await tick();
 
     expect(classesOf()).toEqual(['topo', 'foto', 'footer-locked']);
+  });
+});
+
+describe('file dropped on the page outside the canvas (#2908)', () => {
+  it('goes to the end of the e-mail, above the locked footer', async () => {
+    EmailCampaignAssetsAPI.upload.mockResolvedValue(
+      uploaded('https://app.exemplo.com.br/fora.jpg')
+    );
+    const detach = attachImageDrop(editor, () => CAMPAIGN);
+
+    expect(dropFilesAtEnd([fileOf('fora.jpg')])).toBe(true);
+    await waitForImageUploads();
+    detach();
+
+    expect(classesOf()).toEqual(['topo', 'foto', 'novo', 'footer-locked']);
+    expect(blockImage(2).get('src')).toBe(
+      'https://app.exemplo.com.br/fora.jpg'
+    );
+  });
+
+  it('gives a PDF the same notice as the canvas', () => {
+    const detach = attachImageDrop(editor, () => CAMPAIGN);
+
+    dropFilesAtEnd([fileOf('contrato.pdf', 'application/pdf')]);
+
+    expect(useImageDrop().notice.value).toEqual({ key: 'ONLY_IMAGES' });
+    detach();
+  });
+
+  it('reports that there is no canvas once it was closed', () => {
+    attachImageDrop(editor, () => CAMPAIGN)();
+
+    expect(dropFilesAtEnd([fileOf('a.jpg')])).toBe(false);
+    expect(EmailCampaignAssetsAPI.upload).not.toHaveBeenCalled();
   });
 });

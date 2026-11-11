@@ -17,6 +17,7 @@ import { useEmailEditor } from './composables/useEmailEditor';
 // Images/text dropped or pasted on the canvas become blocks, never loose HTML (#2908).
 import { attachImageDrop } from './composables/useImageDrop';
 import ImageDropNotice from './components/ImageDropNotice.vue';
+import ImageDropArea from './components/ImageDropArea.vue';
 // Builder-scoped GrapesJS canvas theming (third-party chrome re-skin only).
 import './grapes-theme.css';
 
@@ -95,6 +96,7 @@ onActivated(() => {
 <template>
   <div class="relative h-full min-h-0">
     <div ref="containerRef" class="email-builder-canvas h-full min-h-0" />
+    <ImageDropArea />
     <ImageDropNotice />
   </div>
 </template>

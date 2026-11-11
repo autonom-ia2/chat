@@ -773,7 +773,9 @@
           "LEAVE_TITLE": "Uma imagem ainda está subindo",
           "LEAVE_CONFIRM": "Se sair agora, ela não entra no e-mail.",
           "LEAVE_WAIT": "Esperar a imagem",
-          "LEAVE_ANYWAY": "Sair mesmo assim"
+          "LEAVE_ANYWAY": "Sair mesmo assim",
+          "DROP_HERE": "Solte a imagem para pôr no e-mail",
+          "CHOOSE_FIRST": "Primeiro escolha como começar. Depois é só arrastar a imagem para o e-mail."
         }
       },
       "AI": {

@@ -42,6 +42,7 @@ import {
   useImageDrop,
   waitForImageUploads,
 } from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/composables/useImageDrop';
+import { usePageFileDrop } from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/composables/usePageFileDrop';
 import { STARTER_MJML } from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/starterMjml';
 import EmailCampaignTemplatesAPI from 'dashboard/api/emailCampaignTemplates';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
@@ -377,6 +378,12 @@ watch(isUploadingImages, uploading => {
   if (uploading) return;
   leaveConfirmed = false;
   leaveDialog.value?.close();
+});
+// A file dropped anywhere on the page outside the canvas never makes the browser open it (#2908).
+usePageFileDrop({
+  isEditorOpen: () => isReady.value && !showWelcome.value,
+  onNotReady: () =>
+    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.IMAGE_DROP.CHOOSE_FIRST')),
 });
 const warnBeforeUnload = event => {
   if (!isUploadingImages.value) return;
