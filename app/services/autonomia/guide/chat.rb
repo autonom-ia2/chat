@@ -136,7 +136,8 @@ module Autonomia
       # Perfil, tela, registro aberto e fuso como CONTEXTO (dado, não fala) — ver Cabecalho.
       def role_scoped_query(diagnostics = nil)
         ctx = ::Autonomia::Guide::Cabecalho.call(account: @account, role: @account_user&.role.presence || 'agent',
-                                                 route_context: @route_context, route_params: @route_params)
+                                                 route_context: @route_context, route_params: @route_params,
+                                                 account_user: @account_user)
         ::Autonomia::Guide::PerguntaMontada.call("#{ctx}#{bloco_tela}#{catalogos}#{bloco_memoria}#{diagnostic_block(diagnostics)}", @message)
       end
 

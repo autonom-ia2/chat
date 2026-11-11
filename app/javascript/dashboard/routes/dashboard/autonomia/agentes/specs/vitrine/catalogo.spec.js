@@ -9,7 +9,7 @@ import {
   oferecida,
 } from '../../vitrine/catalogo';
 
-// #2858 F2 — o catálogo da tela: só as fontes que o servidor tem (F0 + F1 + F4), com as chaves dele, os textos no i18n e o
+// #2858 F2 — o catálogo da tela: só as fontes que o servidor tem (F0 + F1 + F4 + F5 + F7), com as chaves dele, os textos no i18n e o
 // destaque pelo ramo da conta.
 const i18n = withFullI18n('pt_BR');
 const { te } = i18n.global;
@@ -34,6 +34,12 @@ const CHAVES_DO_SERVIDOR = [
   'chuva',
   'produtos_seguradoras',
   'corretor_susep',
+  // F5 (bases baixadas)
+  'planos_de_saude',
+  'aeronaves',
+  'geracao_solar',
+  'transportadoras',
+  'queimadas',
   // F7 (Premium)
   'certidoes_empresa',
   'raio_x_empresa',
@@ -107,6 +113,8 @@ describe('catálogo da vitrine', () => {
       'cep',
       'fipe',
       'corretor_susep',
+      'planos_de_saude',
+      'transportadoras',
     ]);
     expect(emDestaque(todas, []).map(i => i.id)).toEqual([
       'cnpj',

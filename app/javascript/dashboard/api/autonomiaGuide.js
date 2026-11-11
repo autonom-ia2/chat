@@ -106,8 +106,12 @@ class AutonomiaGuideAPI extends ApiClient {
   }
 
   // A conversa em que a automação foi montada ou mexida por último; `{}` se nenhuma.
-  conversaDaAutomacao(id) {
-    return axios.get(`${this.url}/conversas/da_automacao/${id}`);
+  // #2889: `motor` = automação do motor novo (os ids não são os das regras).
+  conversaDaAutomacao(id, { motor = false } = {}) {
+    const caminho = `${this.url}/conversas/da_automacao/${id}`;
+    return motor
+      ? axios.get(caminho, { params: { motor: 'novo' } })
+      : axios.get(caminho);
   }
 
   conversa(id) {

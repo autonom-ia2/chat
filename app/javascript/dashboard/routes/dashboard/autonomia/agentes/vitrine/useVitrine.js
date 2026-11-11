@@ -40,6 +40,9 @@ const comMotivo = erro =>
   });
 
 const fontes = ref([]);
+// #2858 F5: chave da base baixada -> o dia em que a cópia que vale entrou ("2026-11-11"), ou null antes de baixar.
+const atualizacoes = ref({});
+const emPreparacao = ref([]);
 // F7: { chave: { gratis, restantes, precos } } dos cards Premium liberados para a conta.
 const premium = ref({});
 const incluidas = ref([]);
@@ -64,6 +67,14 @@ const carregar = () => {
       velha = versaoDoPedido !== versao;
       if (velha) return;
       fontes.value = (data?.fontes || []).map(item => item.chave);
+      atualizacoes.value = Object.fromEntries(
+        (data?.fontes || [])
+          .filter(item => 'atualizado_em' in item)
+          .map(item => [item.chave, item.atualizado_em || null])
+      );
+      emPreparacao.value = (data?.fontes || [])
+        .filter(item => item.em_preparacao)
+        .map(item => item.chave);
       premium.value = Object.fromEntries(
         (data?.fontes || [])
           .filter(item => item.premium)
@@ -158,9 +169,15 @@ const registrarBuscaSemResultado = async termo => {
   }
 };
 
+// O dia da cópia de uma base baixada; null antes de baixar; undefined para quem não é base.
+const atualizadoEm = fonte => atualizacoes.value[fonte];
+const estaEmPreparacao = fonte => emPreparacao.value.includes(fonte);
+
 export const useVitrine = () => ({
   carregar,
   fontes: computed(() => fontes.value),
+  atualizadoEm,
+  estaEmPreparacao,
   incluidas: computed(() => incluidas.value),
   carregando: computed(() => carregando.value),
   carregada: computed(() => carregada.value),

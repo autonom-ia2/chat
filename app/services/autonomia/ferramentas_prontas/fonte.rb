@@ -9,10 +9,10 @@
 # decisão do Rodrigo, 11/11), que o cache do dia e a telemetria seguram. Fonte grátis com nil nem nasce (ArgumentError).
 # `termos`: o que a fonte pede de quem usa (limite, cache), para a revisão de cada lote. Não vai ao modelo.
 # `flag`: a flag da fase que trouxe a fonte (a F1 tem a sua), conferida junto com a das prontas; nil nas da F0.
-# `consulta_padrao`: a consulta de quando o modelo não diz qual, na fonte que ganhou uma segunda consulta depois (o CEP
-# ganhou `por_endereco`): a ferramenta que já estava num agente continua respondendo sem o parâmetro `consulta`.
 # `na_vitrine`: falso na fonte que fica no catálogo para uso interno (os agentes de um ramo), sem card avulso: a vitrine,
 # o "Incluir", o Experimente e as sugestões não a oferecem; o agente que já a tem continua consultando.
+# `consulta_padrao`: a consulta de quando o modelo não diz qual, na fonte que ganhou uma segunda consulta depois (o CEP
+# ganhou `por_endereco`): a ferramenta que já estava num agente continua respondendo sem o parâmetro `consulta`.
 class Autonomia::FerramentasProntas::Fonte
   PARAMETRO_DA_CONSULTA = 'consulta'.freeze
   # Regra "QI 70" do Rodrigo (11/11/2026), num texto só: vai em toda ferramenta pronta, no turno real e no Experimente

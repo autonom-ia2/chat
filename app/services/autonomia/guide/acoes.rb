@@ -70,7 +70,10 @@ class Autonomia::Guide::Acoes
     'POST agent_bots/:id/reset_access_token',
     'POST agent_bots/:id/reset_secret',
     'POST inboxes/:id/reset_secret',
-    'POST autonomia/automacoes/:id/trocar_segredo_do_webhook',
+    # #2889 — desfazer o desligar religaria a automação sem "assumir e religar". Ligar é "assumir": ela passa a agir
+    # com os direitos de quem ligou, na versão que a pessoa viu (versao_id); por isso o Guia só liga com o cartão.
+    'POST autonomia/automacoes/:id/trocar_segredo_do_webhook', 'POST autonomia/automacoes/:id/desligar',
+    'POST autonomia/automacoes/:id/ligar',
     'POST inboxes/:id/rotate_hmac_token',
     'PUT inboxes/:id/whatsapp_business_management_token',
     'POST contacts/import',
@@ -169,8 +172,9 @@ class Autonomia::Guide::Acoes
   # ação só (o formato da ação não tem corpo); com eles, também pelo que o corpo faz.
   # O corpo também conta pelo esquema: o que cai num nó `x-sem-volta` (regra que manda mensagem) confirma.
   def desfazivel?(acao, dados = nil)
+    # #2889: ajuste numa automação do motor novo ligada vale na hora, como o Decisor ligado: a pessoa confirma.
     SEM_DESFAZER.exclude?(acao.to_s) && !::Autonomia::Guide::RegraComDecisor.new(@account).fica_ligada?(acao.to_s, dados) &&
-      !(dados && conferencia(acao, dados).sem_volta?)
+      !::Autonomia::Guide::MotorNovo.new(@account).ajusta_ligada?(acao.to_s, dados) && !(dados && conferencia(acao, dados).sem_volta?)
   end
 
   # O texto que a pessoa lê ANTES de confirmar. Sem isso não há confirmação
@@ -197,7 +201,7 @@ class Autonomia::Guide::Acoes
 
     { frase: dados[:descricao],
       **::Autonomia::Guide::ValoresLegiveis.new(account: @account, acao: acao, dados: dados, conferencia: conferencia).para_tela,
-      aviso: (verbo_de(acao) == DESTRUTIVO ? traduzir('irreversible') : nil) }
+      aviso: (verbo_de(acao) == DESTRUTIVO ? traduzir('irreversible') : ::Autonomia::Guide::MotorNovo.new(@account, @user).aviso(acao, dados)) }
   end
 
   # Executa pela API da conta, como o usuário: se a
@@ -244,7 +248,9 @@ class Autonomia::Guide::Acoes
     raise Recusada, traduzir('unknown_action') unless catalogo.include?(acao.to_s)
 
     # #2414 F1.3: quem não administra ainda monta automação com automation_manage (Autonomia::Guide::PorteiroDaAutomacao).
-    recusa = ::Autonomia::Guide::PorteiroDaAutomacao.recusa(acao, @account_user, dados ? corpo_de(dados) : {}) unless administrador?
+    # #2889: sem a porta da Automação, ninguém mexe no motor novo pelo Guia (MotorNovo#recusa), nem quem administra.
+    recusa = ::Autonomia::Guide::MotorNovo.new(@account).recusa(acao) ||
+             (::Autonomia::Guide::PorteiroDaAutomacao.recusa(acao, @account_user, dados ? corpo_de(dados) : {}) unless administrador?)
     raise Recusada, traduzir(recusa) if recusa
   end
 
@@ -272,9 +278,7 @@ class Autonomia::Guide::Acoes
     ::Autonomia::Guide::Rotas.caminho(@account.id, segmentos)
   end
 
-  def corpo_de(dados)
-    (dados[:corpo] || {}).to_h
-  end
+  def corpo_de(dados) = (dados[:corpo] || {}).to_h
 
   def so_na_tela(acao) = self.class.so_na_tela(acao)
 
@@ -282,8 +286,9 @@ class Autonomia::Guide::Acoes
     I18n.t("autonomia.guide.#{chave}", **valores)
   end
 
+  # #2889: com o sinal PeloGuia, a automação que nasce deste pedido grava origem 'guia'.
   def requisitar(verbo, caminho, corpo)
-    ::Autonomia::Guide::ChamadaInterna.new(user: @user).chamar(verbo, caminho, corpo: corpo)
+    ::Autonomia::Guide::PeloGuia.durante { ::Autonomia::Guide::ChamadaInterna.new(user: @user).chamar(verbo, caminho, corpo: corpo) }
   end
 
   def sucesso?(resposta)

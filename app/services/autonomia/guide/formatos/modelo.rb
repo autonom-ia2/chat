@@ -58,11 +58,15 @@ module Autonomia::Guide::Formatos::Modelo
   def anotar(modelo, nome, campo, criando:)
     return {} unless modelo
 
-    esquema = Autonomia::Guide::Formatos::Esquemas.da_coluna(modelo, nome)
+    esquemas = Autonomia::Guide::Formatos::Esquemas
+    esquema = esquemas.da_coluna(modelo, nome)
+    referencia = esquemas.referencia_associada(modelo, nome) unless esquema
     {
-      'tipo' => (esquema && Autonomia::Guide::Formatos::Esquemas.tipo(esquema)) || tipo(modelo, nome, campo),
+      'tipo' => (esquema && esquemas.tipo(esquema)) || (referencia && esquemas.tipo(esquemas.da_referencia(referencia))) ||
+        tipo(modelo, nome, campo),
       'padrao' => padrao(modelo, nome),
-      'esquema' => esquema
+      'esquema' => esquema,
+      'esquema_de' => referencia
     }.compact.merge(validacoes(modelo, nome, criando)).compact
   end
 

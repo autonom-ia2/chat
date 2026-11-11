@@ -35,6 +35,7 @@ import automacaoLivreParaCada from './automacaoLivreParaCada.json';
 import automacaoLivreRetorno from './automacaoLivreRetorno.json';
 import automacaoLivreListaDeEmail from './automacaoLivreListaDeEmail.json';
 import emailLists from './emailLists.json';
+import automacaoModelos from './automacaoModelos.json';
 import automacaoLivreOutroRegistro from './automacaoLivreOutroRegistro.json';
 import automacaoLivreWebhook from './automacaoLivreWebhook.json';
 import ausencia from './ausencia.json';
@@ -134,6 +135,7 @@ export default {
     ...automacaoLivreWebhook.AUTOMACAO_LIVRE,
   },
   ...emailLists,
+  ...automacaoModelos,
   ...ausencia,
   ...brandKits,
   ...booking,

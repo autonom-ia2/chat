@@ -7,10 +7,10 @@
 # modelo). Recebe os parâmetros normalizados e devolve o nome do que falta (ou uma `Falta`, com candidatos), ou nil.
 # `refinar`: o que roda sobre os dados da fonte (ou do cache) antes de irem ao modelo, com os parâmetros locais (ex.:
 # a busca pelo nome do modelo da FIPE). Devolve os dados enxutos, ou nil quando nada sobrou (não encontrado).
+# `versao_do_cache`: muda quando muda o formato do que a consulta guarda (o que estava no cache deixa de ser lido).
 # `resolver` (regra "QI 70"): roda depois do limite do dia e antes do cache, e troca o dado que o cliente diz pelo que a
 # fonte pede (o nome da marca pelo código dela), com outras consultas da mesma fonte (`Apoio`). Recebe os parâmetros e o
 # apoio; devolve [params, nil] ou [nil, a `Falta`] (com os candidatos, quando há mais de um).
-# `versao_do_cache`: muda quando muda o formato do que a consulta guarda (o que estava no cache deixa de ser lido).
 class Autonomia::FerramentasProntas::Consulta
   # A folga entre a janela do turno e o prazo da consulta (#2906). O turno espera `ConsultaNoTurno::ESPERA_DO_TURNO`
   # contados do pré-disparo da rodada; o prazo da consulta (`prazo_total`) só começa depois, no job. E o prazo vale POR

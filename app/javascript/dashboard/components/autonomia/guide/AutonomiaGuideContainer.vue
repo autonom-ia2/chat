@@ -76,11 +76,15 @@ const props = defineProps({
   // Tela de uma automação que já existe: a conversa em que ela foi montada ou
   // mexida por último volta, em vez de começar em branco.
   automacaoId: { type: Number, default: null },
+  // #2889: a automação aberta é do motor novo (autonomia/automacoes).
+  automacaoDoMotor: { type: Boolean, default: false },
 });
 // O que o Guia fez no turno (#855), para a tela que o embute reagir; e o aviso de
-// que o pedido inicial saiu, para a tela gastá-lo (#859).
+// que o pedido inicial saiu, para a tela gastá-lo (#859). #2889: e o nome da
+// ação que a pessoa confirmou no cartão, para a tela ler de novo o que mudou.
 const emit = defineEmits([
   'execucao',
+  'acaoConfirmada',
   'pedidoInicialEnviado',
   'respostaRapida',
 ]);
@@ -379,6 +383,7 @@ const confirmarAcao = async item => {
       resultado: data.mensagem,
       avisoSeSumiu: t('AUTONOMIA_GUIDE.ACTION.LOST'),
     });
+    emit('acaoConfirmada', item.acao.nome);
   } catch (error) {
     // #861 — já foi feita em outra aba ou aparelho: o servidor não repete e
     // devolve o resultado guardado. O cartão mostra feita, sem botões.
@@ -391,6 +396,8 @@ const confirmarAcao = async item => {
         resultado: corpo.mensagem,
         avisoSeSumiu: t('AUTONOMIA_GUIDE.ACTION.LOST'),
       });
+      // Feita em outra aba também mudou o registro: a tela que o mostra relê.
+      emit('acaoConfirmada', item.acao.nome);
       return;
     }
     const texto =
@@ -987,13 +994,15 @@ watch(
 // ou mexida por último. Não interrompe pergunta em curso, e a conversa que já
 // está na tela (a mesma que acabou de criar a automação) fica como está.
 watch(
-  () => [isEnabled.value, props.automacaoId],
+  () => [isEnabled.value, props.automacaoId, props.automacaoDoMotor],
   ([ligado, id]) => {
     if (!props.embutido || !ligado || !id) return;
     if (isSending.value || store.pendente()) return;
     abrirConversa(
       async () => {
-        const resposta = await AutonomiaGuideAPI.conversaDaAutomacao(id);
+        const resposta = props.automacaoDoMotor
+          ? await AutonomiaGuideAPI.conversaDaAutomacao(id, { motor: true })
+          : await AutonomiaGuideAPI.conversaDaAutomacao(id);
         const mesma =
           resposta.data?.id && resposta.data.id === store.conversaAtual();
         return mesma ? { data: {} } : resposta;

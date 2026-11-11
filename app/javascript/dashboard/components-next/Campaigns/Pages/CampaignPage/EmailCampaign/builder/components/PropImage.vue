@@ -6,6 +6,8 @@ import { useRoute } from 'vue-router';
 import EmailCampaignAssetsAPI from 'dashboard/api/emailCampaignAssets';
 
 import { useEmailEditor } from '../composables/useEmailEditor';
+// Same reduction/conversion as an image dropped on the canvas (#2908).
+import { ImageFileError, UNREADABLE, prepareImageFile } from '../imageFile';
 
 const props = defineProps({
   // bumped on selection/style change -> forces attribute re-read
@@ -127,6 +129,9 @@ const uploadErrorMessage = code => {
   if (code === 'email_campaign.asset_unsupported_type') {
     return t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.PROPS.IMAGE.UPLOAD_UNSUPPORTED');
   }
+  if (code === UNREADABLE) {
+    return t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.IMAGE_DROP.UNREADABLE');
+  }
   return t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.PROPS.IMAGE.UPLOAD_ERROR');
 };
 
@@ -143,12 +148,14 @@ const onFile = async event => {
   try {
     const { data } = await EmailCampaignAssetsAPI.upload(
       campaignId.value,
-      file
+      await prepareImageFile(file)
     );
     srcModel.value = data.url;
     setSelectedAttribute('src', data.url);
   } catch (e) {
-    error.value = uploadErrorMessage(e?.response?.data?.error);
+    error.value = uploadErrorMessage(
+      e instanceof ImageFileError ? e.code : e?.response?.data?.error
+    );
   } finally {
     isUploading.value = false;
     // allow re-selecting the same file

@@ -29,6 +29,7 @@ const DIAS_DO_EXEMPLO = 20;
 // `ramos`: camadas do pacote da conta (#1550) em que o cartão aparece em destaque.
 // `semCampo`: o "Experimente" não pede valor (o servidor responde o dólar do dia).
 // `exemplo`: o valor de exemplo que muda com o tempo (a data final da contagem de dias úteis); sem ele, o do i18n.
+// `base`: a fonte é uma base que a plataforma baixa (F5); o cartão diz de quando é a cópia.
 // `premium`: consulta paga (F7). Não tem "Experimente" e não entra no destaque; o preço e as grátis que restam vêm do
 // servidor (`premium` de cada fonte em `listar`).
 export const FERRAMENTAS = [
@@ -108,6 +109,31 @@ export const FERRAMENTAS = [
     ramos: ['seguros'],
   },
   { id: 'ncm', grupo: 'OUTROS', icone: 'i-lucide-barcode', consultas: 2 },
+  // F5 (flag `agente_ferramentas_prontas_bases`): bases que a plataforma baixa e mantém atualizadas. `base`: o cartão
+  // mostra o "atualizado em…" que o servidor manda.
+  {
+    id: 'planos_de_saude',
+    grupo: 'SAUDE',
+    icone: 'i-lucide-heart-handshake',
+    ramos: ['seguros'],
+    base: true,
+  },
+  { id: 'aeronaves', grupo: 'VEICULOS', icone: 'i-lucide-plane', base: true },
+  {
+    id: 'transportadoras',
+    grupo: 'VEICULOS',
+    icone: 'i-lucide-truck',
+    ramos: ['seguros'],
+    base: true,
+  },
+  {
+    id: 'geracao_solar',
+    grupo: 'LUGAR',
+    icone: 'i-lucide-sun',
+    consultas: 2,
+    base: true,
+  },
+  { id: 'queimadas', grupo: 'CLIMA', icone: 'i-lucide-flame', base: true },
   // F7 (flag `agente_ferramentas_prontas_premium`)
   {
     id: 'certidoes_empresa',

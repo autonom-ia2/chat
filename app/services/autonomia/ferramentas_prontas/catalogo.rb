@@ -14,7 +14,7 @@ module Autonomia::FerramentasProntas::Catalogo
   module_function
 
   def todas
-    [*fundacao_e_lote1, *lote2, *premium]
+    [*fundacao_e_lote1, *lote2, *bases, *premium]
   end
 
   def fundacao_e_lote1
@@ -45,6 +45,17 @@ module Autonomia::FerramentasProntas::Catalogo
       Autonomia::FerramentasProntas::Fontes::Chuva::FONTE,
       Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras::FONTE,
       Autonomia::FerramentasProntas::Fontes::CorretorSusep::FONTE
+    ]
+  end
+
+  # F5 (flag `agente_ferramentas_prontas_bases`): as bases que a plataforma baixa e mantém atualizadas (`Bases`).
+  def bases
+    [
+      Autonomia::FerramentasProntas::Fontes::PlanosDeSaude::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Aeronaves::FONTE,
+      Autonomia::FerramentasProntas::Fontes::GeracaoSolar::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Transportadoras::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Queimadas::FONTE
     ]
   end
 

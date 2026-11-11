@@ -1,0 +1,980 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plano do épico · Relacionamentos e carteira</title>
+<!--
+  COMO ATUALIZAR ESTE ARQUIVO (para qualquer sessão):
+  1. A cada entrega que muda de estado, edite a linha dela no "Placar" (#placar) e o selo no cartão da entrega.
+     Estados válidos: nao-comecou · desenho · construcao · revisao · no-ar · aceito
+  2. Marque os aceites cumpridos trocando ☐ por ☑ no cartão da entrega.
+  3. Acrescente uma linha no "Registro de mudanças" (#registro), a mais nova em cima.
+  4. Decisão nova do Rodrigo entra em "Decisões fechadas" (#decisoes) com data. Nunca apague decisão antiga: risque.
+  5. O repositório é PÚBLICO: nada de endpoint ou formato do Agger, nome de corretora, nome de cliente, CPF, telefone.
+-->
+<style>
+  :root{
+    --bg:#f6f8fb; --card:#ffffff; --ink:#0f1b2d; --soft:#51607a; --line:#dfe5ee; --navy:#0D2344; --navy-ink:#e9f0fb;
+    --blue:#1f73f1; --blue-bg:#e8f1ff; --green:#127a4b; --green-bg:#e3f6ec; --amber:#8a5a00; --amber-bg:#fff1d0;
+    --red:#b3261e; --red-bg:#fde8e6; --gray-bg:#eceff4; --violet:#5b3fc4; --violet-bg:#eeeaff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0a1220; --card:#111c2e; --ink:#e8eef8; --soft:#9db0cc; --line:#22324c; --navy:#0D2344; --navy-ink:#e9f0fb;
+      --blue:#7fb2ff; --blue-bg:#14294a; --green:#6fdba5; --green-bg:#0f2f22; --amber:#ffcf70; --amber-bg:#3a2b08;
+      --red:#ff9c94; --red-bg:#3b1512; --gray-bg:#1a2740; --violet:#b9a6ff; --violet-bg:#231c45;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 16px 80px}
+  header.hero{background:var(--navy);color:var(--navy-ink);border-radius:0 0 24px 24px;padding:36px 28px 28px;margin:0 -16px 20px}
+  header.hero .in{max-width:1008px;margin:0 auto}
+  .eyebrow{font-size:13px;letter-spacing:.04em;opacity:.75}
+  h1{font-size:32px;line-height:1.15;margin:6px 0 10px;letter-spacing:-.01em}
+  .hero p{margin:0;max-width:760px;opacity:.9}
+  .facts{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+  .fact{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 14px;font-size:14px}
+  .fact b{display:block;font-size:20px}
+  nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
+  nav.toc a{font-size:13px;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+  nav.toc a:hover{border-color:var(--blue);color:var(--blue)}
+  section{margin-top:36px}
+  h2{font-size:22px;margin:0 0 4px;letter-spacing:-.01em}
+  h3{font-size:17px;margin:0 0 6px}
+  .lead{color:var(--soft);margin:0 0 16px;max-width:780px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:14px}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+  .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+  ul,ol{margin:6px 0 0;padding-left:20px}
+  li{margin:3px 0}
+  .tbl{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+  table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:620px}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12.5px;color:var(--soft);font-weight:600;background:var(--gray-bg)}
+  tr:last-child td{border-bottom:0}
+  .chip{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px;white-space:nowrap}
+  .s-nao-comecou{background:var(--gray-bg);color:var(--soft)}
+  .s-desenho{background:var(--violet-bg);color:var(--violet)}
+  .s-construcao{background:var(--blue-bg);color:var(--blue)}
+  .s-revisao{background:var(--amber-bg);color:var(--amber)}
+  .s-no-ar{background:var(--green-bg);color:var(--green)}
+  .s-aceito{background:var(--green);color:#fff}
+  .tag{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:1px 7px;color:var(--soft);margin-right:4px}
+  .gold{border:1px solid var(--blue);background:var(--blue-bg)}
+  .warn{border-color:var(--amber);background:var(--amber-bg)}
+  .ent{border-left:5px solid var(--blue)}
+  .ent header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:8px}
+  .ent .num{font-weight:700;color:var(--blue);font-size:14px}
+  .ent h3{margin:0;flex:1 1 260px}
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:6px 28px}
+  .lbl{font-size:12.5px;font-weight:700;color:var(--soft);margin:12px 0 2px;text-transform:none}
+  .aceite li{list-style:none;margin-left:-20px;padding-left:26px;position:relative}
+  .aceite li::before{content:"☐";position:absolute;left:0;color:var(--soft)}
+  .aceite li.ok::before{content:"☑";color:var(--green)}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin-top:8px}
+  .step{flex:1 1 150px;background:var(--gray-bg);border-radius:12px;padding:10px 12px;font-size:14px}
+  .step b{display:block;font-size:13px;color:var(--blue)}
+  code{font:13px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--gray-bg);padding:1px 5px;border-radius:5px}
+  .muted{color:var(--soft);font-size:14px}
+  footer{margin-top:40px;color:var(--soft);font-size:13px}
+  @media (max-width:560px){h1{font-size:26px}header.hero{padding:28px 18px 22px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero"><div class="in">
+  <div class="eyebrow">Chat2You · épico autonom-ia2/chat#1240 · dono: chat “Base de Clientes” · maestro: “Orquestração Deploy”</div>
+  <h1>Relacionamentos novo, com a carteira de clientes dentro</h1>
+  <p>A empresa traz quem já é cliente dela, vê cada pessoa com tudo o que tem, e o sistema puxa a próxima venda na hora certa. Para corretora de seguros: a apólice entra, o seguro aparece na ficha e a renovação chega pronta antes de vencer.</p>
+  <div class="facts">
+    <div class="fact"><b>10</b>entregas (E0 a E9)</div>
+    <div class="fact"><b>0</b>no ar</div>
+    <div class="fact"><b>11/11/2026</b>plano escrito</div>
+    <div class="fact"><b>Em execução</b>meta dada pelo Rodrigo em 11/11: tudo pronto para merge e deploy, verde</div>
+  </div>
+</div></header>
+
+<nav class="toc">
+  <a href="#placar">Placar</a><a href="#regra">Regra de ouro</a><a href="#hoje">Como está hoje</a><a href="#mercado">Mercado</a><a href="#decisoes">Decisões</a>
+  <a href="#jornadas">Jornadas</a><a href="#layout">Telas</a><a href="#acoes">Ações</a><a href="#integracoes">Integrações</a>
+  <a href="#dados">Dados sensíveis</a><a href="#entregas">Entregas e aceites</a><a href="#ciclo">Como cada entrega anda</a>
+  <a href="#banca">Banca dos mockups</a><a href="#chats">Outros chats</a><a href="#modelos">Modelos e esforço</a>
+  <a href="#qualidade">Revisão e teste</a><a href="#rodrigo">O que depende do Rodrigo</a><a href="#registro">Registro</a>
+</nav>
+
+<!-- ============================================================ PLACAR -->
+<section id="placar">
+  <h2>Placar</h2>
+  <p class="lead">Atualizado a cada entrega. É a primeira coisa a olhar.</p>
+  <div class="tbl"><table>
+    <tr><th>Entrega</th><th>Estado</th><th>Issue · PR</th><th>SHA no ar</th><th>Banca (nota)</th><th>Tokens gastos</th><th>Atualizado</th></tr>
+    <tr><td>E0 · Preparo e protótipo</td><td><span class="chip s-construcao">Em construção</span></td><td>#2893 · PR #2892 (docs) · protótipo do bloco A na branch <code>feat/2894-relacionamentos-novo</code></td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
+    <tr><td>E1 · Início e lista de pessoas</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2894</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
+    <tr><td>E2 · Ficha da pessoa e da empresa</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2895</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
+    <tr><td>E3 · Trazer minha lista (planilha)</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2896</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
+    <tr><td>E4 · Carteira: seguros na ficha</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2897</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
+    <tr><td>E5 · Renovação no funil</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2898</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
+    <tr><td>E6 · Trazer por PDFs</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2899</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
+    <tr><td>E7 · Trazer pelo Agger</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2900</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
+    <tr><td>E8 · Cotação da renovação</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2901</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
+    <tr><td>E9 · Fecho do épico</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2902</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
+  </table></div>
+  <p class="muted">Estados: <span class="chip s-nao-comecou">Não começou</span> <span class="chip s-desenho">Em desenho</span> <span class="chip s-construcao">Em construção</span> <span class="chip s-revisao">Em revisão</span> <span class="chip s-no-ar">No ar</span> <span class="chip s-aceito">Aceito</span></p>
+</section>
+
+<!-- ============================================================ REGRA -->
+<section id="regra">
+  <h2>Regra de ouro e regras da casa</h2>
+  <div class="card gold">
+    <h3>UI-UX e design premium, com uma jornada tão simples que uma pessoa de QI 70, sem conhecimento de tecnologia, consegue usar.</h3>
+    <p style="margin:6px 0 0">Tudo o que este épico entregar passa por ela: tela, texto, e-mail, aviso, mensagem de erro. Não passou, não sobe.</p>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>Como a regra vira tela</h3>
+      <ul>
+        <li>Uma frase e uma ação principal por tela.</li>
+        <li>Palavra do dia a dia do cliente. Sem sigla, sem termo técnico, sem citar “IA” como tecnologia.</li>
+        <li>Tela vazia: uma frase e um botão.</li>
+        <li>Mostrar antes de fazer (Conferir) e poder desfazer.</li>
+        <li>Visual no padrão novo da casa: herói escuro, cartão-frase, etapas curtas.</li>
+        <li>Funciona em 390 px, no teclado e no leitor de tela. Alvo de toque de 44 px.</li>
+        <li>Sem <code>&lt;select&gt;</code> nativo: <code>ChoiceSelect</code>. Telefone: <code>CampoDeTelefone</code>.</li>
+        <li>Texto geral sem palavra de seguro. Vocabulário de seguro só no pacote da conta.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Regras da casa que valem aqui</h3>
+      <ul>
+        <li>Quem entende linguagem é o modelo. Sem regex, sem lista de palavras.</li>
+        <li>Sem freio no uso do cliente: nada de “no máximo N”. Custo à vista, escolha dele.</li>
+        <li>Construção aditiva: arquivo próprio do fork, tabela própria, toque mínimo no Chatwoot.</li>
+        <li>Causa raiz, não remendo.</li>
+        <li>Flag nova liga em todas as contas ao entrar no ar (decisão de 07/11).</li>
+        <li>IA paga fora do Claude Code: orçamento aprovado antes de rodar.</li>
+        <li>Repositório público: dado de cliente e detalhe do Agger ficam fora dele.</li>
+        <li>Merge, deploy e escrita em produção: só com OK explícito do Rodrigo.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ HOJE -->
+<section id="hoje">
+  <h2>Como está hoje</h2>
+  <p class="lead">Visto em 11/11/2026 no painel real (conta de teste interna) e no código da <code>origin/main</code> (<code>f62b83afcb</code>).</p>
+  <div class="grid2">
+    <div class="card">
+      <h3>O que a pessoa encontra</h3>
+      <ul>
+        <li><b>Início de Relacionamentos:</b> três cartões de explicação (Contatos, Empresas, Atributos). É um clique a mais e nenhuma informação.</li>
+        <li><b>Lista:</b> quatro números gerais e cartões com nome, e-mail e telefone. Não mostra quem é cliente nem quem pediu para não receber mensagem.</li>
+        <li><b>Visões prontas:</b> só “Todos” e “Ativo” (que quer dizer “online agora”).</li>
+        <li><b>Ações em lote:</b> só etiqueta e apagar.</li>
+        <li><b>Ficha:</b> abre num formulário de edição, com oito botões de rede social. O que importa (conversas, cards, cliente desde) fica em abas ao lado.</li>
+        <li><b>Importar:</b> quatro caminhos com quatro nomes (“Importar contatos”, “Importações”, “Base Campanha”, “Histórico de bases”).</li>
+        <li><b>Empresas:</b> lista sem filtro, sem grupo, sem importação.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>O que o sistema já sabe e a tela não usa</h3>
+      <ul>
+        <li>Cliente com data (<code>contact_type</code>, <code>customer_since</code>) e o selo pronto (<code>CustomerBadge</code>), usados na conversa e no CRM.</li>
+        <li>Pedido de parar com origem (<code>contact_opt_out</code>).</li>
+        <li>Leitura de planilha que entende colunas sozinha (bateria F0: 0 erro silencioso em 5.716 linhas).</li>
+        <li>Funis de Vender e de Atender, com o modelo “Renovação” pronto para corretora.</li>
+        <li>Automação com gatilho de card e de data, mensagem por modelo do WhatsApp e passagem ao agente.</li>
+        <li>Conexão com o Agger e cotação (Lia), com senha guardada cifrada.</li>
+        <li>Leitor de PDF com OCR local.</li>
+      </ul>
+      <p class="muted" style="margin-top:10px">Não existe: tabela de apólice, campo de CPF no contato, grupos prontos, filtro por cliente, criar card ou campanha a partir da lista.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Números de produção que guiam o desenho <span class="tag">medidos em 11/10</span></h3>
+    <ul>
+      <li>98% dos contatos têm telefone e 1% tem e-mail: a lista é de WhatsApp, não de e-mail.</li>
+      <li>55% nunca conversaram: “Nunca conversou” é um grupo de trabalho real.</li>
+      <li>4 contatos marcados como cliente em 13.870: a base de clientes está vazia. Este épico é o que a enche.</li>
+      <li>Só uma conta usa etiqueta: grupo pronto vale mais do que etiqueta.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================ MERCADO -->
+<section id="mercado">
+  <h2>Mercado: o que existe e onde fazemos melhor</h2>
+  <p class="lead">Pesquisa de 11/11/2026 em material público de 16 produtos, em duas rodadas: sites e imprensa, depois centrais de ajuda, manuais e termos de uso. Nenhum produto foi usado por dentro. Detalhe, limites e fontes em <code>BENCHMARK.md</code>, nesta pasta.</p>
+  <div class="tbl"><table>
+    <tr><th>Quem</th><th>O que faz bem</th><th>Onde para</th></tr>
+    <tr><td><b>Segura</b></td><td>Carteira por planilha, PDF e seguradora. Renovação vira card, a IA cota e o corretor aprova antes de enviar. WhatsApp oficial.</td><td>O acesso completo exige que ela seja a corretora cadastrada na seguradora. A proposta só sai com aprovação, sem modo automático.</td></tr>
+    <tr><td><b>Flui</b></td><td>Números de “a vencer” e “venceu e não renovou”. Teste grátis sem vendedor.</td><td>É administração de contrato coletivo. Renovação é só aviso. Sem WhatsApp à vista.</td></tr>
+    <tr><td><b>Ikaros</b></td><td>Entrada em três verbos: migrar, conectar, treinar. Preço público.</td><td>Migração leva até 7 dias. Não cota nem age na renovação.</td></tr>
+    <tr><td><b>Segfy · Quiver · Agger · Teleport</b></td><td>Trazem apólice direto de dezenas de seguradoras. Multicálculo. Relatório de renovação.</td><td>Renovação é relatório, não trabalho andando. WhatsApp é módulo à parte. Queixas repetidas de tela confusa e lenta. Sem API pública.</td></tr>
+    <tr><td><b>CRMSeguros · TW · CRM Corretor</b></td><td>Funil de renovação por urgência, avisos em 30, 15 e 7 dias, WhatsApp.</td><td>Não provam trazer a carteira sozinhos: dependem de terceiros.</td></tr>
+    <tr><td><b>Fora do Brasil</b> (AgencyZoom, HawkSoft, EZLynx)</td><td>Mensagens em passos antes do vencimento. “O que mudou” lado a lado. Aviso de aumento na renovação.</td><td>Recurso de renovação preso no plano caro.</td></tr>
+  </table></div>
+  <div class="grid2" style="margin-top:14px">
+    <div class="card gold">
+      <h3>Onde ganhamos</h3>
+      <ul>
+        <li><b>A ficha.</b> Ninguém mostra como é a pessoa com os seguros e a história dela num lugar só. A Segura diz ter; não mostra.</li>
+        <li><b>Carteira de qualquer origem.</b> Qualquer planilha, PDF de qualquer seguradora, ou o Agger. Sem depender de parceria.</li>
+        <li><b>Carteira e conversa juntas.</b> A renovação anda no funil e no WhatsApp oficial, no mesmo sistema.</li>
+        <li><b>Simples de verdade.</b> Tarefa do dia em uma frase, contra telas densas por módulo.</li>
+        <li><b>Desfazer por 7 dias</b>, por quem importou. O mercado dá 48 horas ou exige administrador.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>O que trouxemos para o plano</h3>
+      <ul>
+        <li>Grupos por urgência: Vencido · Vence em 7 dias · em 30 dias · em 90 dias. <span class="tag">E4</span></li>
+        <li>Números do dia: “vencem este mês” e “renovou X de Y”. <span class="tag">E5</span></li>
+        <li>Receita pronta com mensagens em 30, 15 e 7 dias. <span class="tag">E5</span></li>
+        <li>Apólice nova ligada à anterior por segurado, ramo, item e vigência, não pelo número. <span class="tag">E5</span></li>
+        <li>“O que mudou” lado a lado quando o dado chega de novo. <span class="tag">E4 · E6 · E7</span></li>
+        <li>Importação segue se fechar a tela; erro corrigido no próprio Conferir; desfazer mostra antes o que sai. <span class="tag">E3</span></li>
+        <li>Proposta sai depois de uma pessoa conferir; automático é escolha da corretora. <span class="tag">E8</span></li>
+        <li>“Subiu X% em relação ao ano passado” no card. Na conversa, só “o que mudou?”. <span class="tag">E8</span></li>
+        <li>Seguros no painel da conversa e grupo “Só tem um seguro”. <span class="tag">E4</span></li>
+        <li>O Guia enxerga a carteira e responde ao dono; o agente manda a apólice ao cliente. <span class="tag">E5</span></li>
+        <li>Motivo de “Não renovou” em um toque. <span class="tag">E5</span></li>
+        <li>Parcela atrasada, com dado do Agger. <span class="tag">E7</span></li>
+        <li><b>Lacunas de todos:</b> seguro de fora vira lembrete; seu seguro em palavras simples. <span class="tag">E6</span></li>
+        <li><b>Lacunas de todos:</b> história da apólice com exportar; painel de retenção. <span class="tag">E5</span></li>
+        <li><b>Lacuna de todos:</b> “Algo mudou?” em um minuto, por botões. <span class="tag">E8</span></li>
+      </ul>
+      <p class="muted">Fora, de propósito: comissão, cobrança, sinistro como dado, multicálculo próprio, app do segurado, IA de voz. Para depois: resumo da manhã no WhatsApp do corretor.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ DECISÕES -->
+<section id="decisoes">
+  <h2>Decisões fechadas</h2>
+  <p class="lead">Do Rodrigo. Só mudam com nova decisão dele, que entra aqui com data.</p>
+  <div class="tbl"><table>
+    <tr><th>#</th><th>Decisão</th><th>Quando</th></tr>
+    <tr><td>1</td><td>O menu continua “Relacionamentos”. Contato é todo mundo; Cliente é quem comprou. Nunca “ex-cliente”.</td><td>15/10 · 11/11</td></tr>
+    <tr><td>2</td><td>A reformulação de Relacionamentos entra neste épico.</td><td>11/11</td></tr>
+    <tr><td>3</td><td>Carteira é para contas do segmento Seguros. Perfil Corretora primeiro; Saúde e benefícios depois.</td><td>11/11</td></tr>
+    <tr><td>4</td><td>A apólice tem tabela própria, com o PDF guardado.</td><td>11/11</td></tr>
+    <tr><td>5</td><td>Três entradas: planilha, PDFs e Agger (a mesma conexão da Lia).</td><td>11/11</td></tr>
+    <tr><td>6</td><td>O cliente vem da apólice: vira cliente desde o início da vigência.</td><td>11/11</td></tr>
+    <tr><td>7</td><td>O card de renovação só nasce N dias antes do vencimento, pela rotina diária. Nada vira card na hora da importação. Apólice vencida entra sem card.</td><td>11/11</td></tr>
+    <tr><td>8</td><td>Um card por apólice.</td><td>11/11</td></tr>
+    <tr><td>9</td><td>Selo por apólice, calculado pela data de hoje: Ativo, Em renovação, Renovado, Vencido, Cancelado. Na lista, a pessoa mostra o mais urgente.</td><td>11/11</td></tr>
+    <tr><td>10</td><td>A corretora escolhe onde ficam as renovações: cria o funil Renovação pelo modelo ou usa funil e etapa que já tem. Escolhe os dias antes.</td><td>11/11</td></tr>
+    <tr><td>11</td><td>Mesma apólice = mesma seguradora e mesmo número. Vale Agger, depois PDF, depois planilha. O que a pessoa corrigiu à mão não é sobrescrito. Endosso atualiza a apólice, não cria outra.</td><td>11/11</td></tr>
+    <tr><td>12</td><td>CPF e CNPJ são dado do negócio: ficam à mão para cotar, protegidos sem travar a operação.</td><td>11/11</td></tr>
+    <tr><td>13</td><td>Agger: a primeira busca pega apólices de vigência longa também (36 meses); depois, todo dia, os últimos 7 dias.</td><td>11/11</td></tr>
+    <tr><td>14</td><td>Cotação de renovação tem chave própria no Super Admin, por conta (pode ser vendida à parte).</td><td>11/11</td></tr>
+    <tr><td>15</td><td>Sem Agger (PDF ou planilha): não há cotação automática; a equipe recebe o aviso.</td><td>11/11</td></tr>
+    <tr><td>16</td><td>Telefone do segurado sai do PDF: acha a página pelo CPF/CNPJ e só ela vai ao modelo.</td><td>11/11</td></tr>
+    <tr><td>17</td><td>Mockup não passa pelo Rodrigo: é avaliado por outros chats do projeto contra a regra de ouro. Aprovado, segue.</td><td>11/11</td></tr>
+    <tr><td>18</td><td>Banca: meta de nota acima de 8,5 em até 3 rodadas. Não chegou: parar e ver o que falta. Mínimo 7,5, e entre 7,5 e 8,5 só o chat Base de Clientes aprova.</td><td>11/11</td></tr>
+    <tr><td>19</td><td>Chat que não responde (arquivado, outra conta): o Base de Clientes pesquisa por conta própria no código e nos documentos, e segue.</td><td>11/11</td></tr>
+    <tr><td>20</td><td>Meta: o plano inteiro pronto para merge e deploy, com tudo verde. Merge e deploy seguem com OK do Rodrigo.</td><td>11/11</td></tr>
+    <tr><td>21</td><td>Melhorias vindas do mercado: aprovadas as 13 primeiras (ver seção Mercado). Só o Base de Clientes propõe melhoria ao plano, e mostra antes para aprovação.</td><td>11/11</td></tr>
+    <tr><td>22</td><td>Envio automático da proposta: se a corretora escolheu, sai automático, sem conferência escondida.</td><td>11/11</td></tr>
+    <tr><td>24</td><td>Cinco lacunas de mercado aprovadas: seguro de fora vira lembrete; história da apólice; “Algo mudou?” em um minuto; seu seguro em palavras simples; painel de retenção.</td><td>11/11</td></tr>
+    <tr><td>23</td><td>Quem responde ao dono da corretora sobre a carteira é o Guia da Plataforma (o papel que a concorrência dá à assistente dela).</td><td>11/11</td></tr>
+  </table></div>
+  <div class="card warn" style="margin-top:14px">
+    <h3>Assumidas por mim, a vetar se discordar</h3>
+    <ul>
+      <li>Cai o “teto mensal de cotação” que estava no desenho: fere a regra “sem freio”. Fica o custo à vista e a escolha da corretora de cotar sozinho ou não.</li>
+      <li>Importar pessoa que já existe: completa o que falta, não sobrescreve o que já está preenchido.</li>
+      <li>Desfazer uma importação: por 7 dias, por quem importou ou por quem pode gerir contatos.</li>
+      <li>Conflito de telefone na importação não trava nada: o sistema casa pelo CPF/CNPJ e segue; a diferença fica anotada na ficha.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================ JORNADAS -->
+<section id="jornadas">
+  <h2>Jornadas</h2>
+  <p class="lead">Quatro papéis usam a área: quem manda na empresa, quem vende, quem atende e o agente que conversa sozinho. Cada jornada é uma frase e um caminho.</p>
+
+  <div class="card">
+    <h3>J1 · “Quero trazer meus clientes” <span class="tag">dono ou gestor</span> <span class="tag">uma vez</span></h3>
+    <div class="flow">
+      <div class="step"><b>1 · Escolher</b>Planilha, PDFs ou Agger. Três cartões, um clique.</div>
+      <div class="step"><b>2 · Enviar</b>Arrasta o arquivo ou entra com o login do Agger.</div>
+      <div class="step"><b>3 · Renovações</b>Só em conta de seguros, só na primeira vez: onde ficam e quantos dias antes.</div>
+      <div class="step"><b>4 · Conferir</b>“312 seguros · 280 pessoas · 24 sem telefone.” Exemplos e o que precisa de olho.</div>
+      <div class="step"><b>5 · Pronto</b>Confirma. Pode desfazer por 7 dias.</div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>J2 · “Quem é esta pessoa?” <span class="tag">quem vende e quem atende</span> <span class="tag">todo dia</span></h3>
+    <div class="flow">
+      <div class="step"><b>1 · Achar</b>Busca por nome, telefone ou documento. Aceita erro de digitação.</div>
+      <div class="step"><b>2 · Ver</b>Ficha: nome, “Cliente desde”, o que ela tem (seguros com selo), conversas, cards.</div>
+      <div class="step"><b>3 · Agir</b>Um botão principal: Conversar. Ao lado: Novo card, Lembrete.</div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>J3 · “Com quem eu falo hoje?” <span class="tag">gestor e quem vende</span> <span class="tag">toda semana</span></h3>
+    <div class="flow">
+      <div class="step"><b>1 · Abrir</b>Relacionamentos já abre na lista, com a frase do dia.</div>
+      <div class="step"><b>2 · Escolher o grupo</b>Clientes · Vence em breve · Sumiu há 1 a 3 meses · Nunca conversou…</div>
+      <div class="step"><b>3 · Selecionar</b>Marca todos ou alguns.</div>
+      <div class="step"><b>4 · Agir em grupo</b>Mandar mensagem, pôr numa campanha, criar cards, etiqueta.</div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>J4 · “O seguro vai vencer” <span class="tag">o sistema começa</span> <span class="tag">seguros</span></h3>
+    <div class="flow">
+      <div class="step"><b>1 · Card nasce</b>N dias antes, no funil escolhido, com a apólice e o PDF à vista.</div>
+      <div class="step"><b>2 · Cotação</b>Com Agger e a chave ligada: chega pronta. Sem isso: a equipe é avisada.</div>
+      <div class="step"><b>3 · Proposta</b>Vai pela campanha ou por uma pessoa.</div>
+      <div class="step"><b>4 · Conversa</b>O agente ou a equipe responde.</div>
+      <div class="step"><b>5 · Renovou</b>Card fecha. A apólice antiga vira Renovado, a nova entra. Recomeça.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ LAYOUT -->
+<section id="layout">
+  <h2>Telas</h2>
+  <p class="lead">O que aparece em cada tela, de cima para baixo. O desenho fino é feito no protótipo de tela real (E0) e julgado pela banca.</p>
+  <div class="grid2">
+    <div class="card">
+      <h3>Relacionamentos (início = lista)</h3>
+      <ol>
+        <li>Herói escuro com a frase do dia e um botão. Ex.: “Você tem 280 clientes. 18 seguros vencem nos próximos 60 dias.” → <b>Ver quem vence</b>.</li>
+        <li>Abas: <b>Pessoas</b> · <b>Empresas</b> · <b>Seguros</b> (só em conta de seguros).</li>
+        <li>Grupos prontos em pílulas, cada um com o número real.</li>
+        <li>Busca. “Mais filtros” recolhido.</li>
+        <li>Lista: nome, selo Cliente, telefone, última conversa e, em seguros, o selo mais urgente.</li>
+        <li>Botão <b>Trazer minha lista</b> no topo.</li>
+      </ol>
+      <p class="muted">Somem: a página de três cartões, “Ativo” como visão, os quatro números gerais. “Atributos personalizados” passa a morar só em Configurações.</p>
+    </div>
+    <div class="card">
+      <h3>Ficha da pessoa</h3>
+      <ol>
+        <li>Cabeçalho: nome, selo “Cliente desde”, telefone, quem cuida.</li>
+        <li>Ações: <b>Conversar</b> (principal) · Novo card · Lembrete · mais.</li>
+        <li><b>Seguros</b> (conta de seguros): um por linha, com ramo, seguradora, vencimento, selo e PDF.</li>
+        <li>Conversas e cards no centro. O card abre em gaveta.</li>
+        <li><b>Informações</b>: um lugar só, leitura primeiro, botão <b>Alterar</b>. Campo vazio mostra “Não informado”.</li>
+        <li>“Não quer mensagens” e origem da lista, quando houver.</li>
+      </ol>
+      <p class="muted">Somem: o formulário como primeira coisa, os oito botões de rede social soltos, a aba “Atributos” separada. A ficha da empresa segue a mesma ordem, com as pessoas dela.</p>
+    </div>
+    <div class="card">
+      <h3>Trazer minha lista</h3>
+      <ol>
+        <li>Uma pergunta: “Como você quer trazer?” com cartões (Planilha · PDFs · Agger). Sem seguros: só Planilha.</li>
+        <li>Etapas curtas no topo: Enviar → Conferir → Pronto.</li>
+        <li>Conferir: uma frase com os totais, três fichas de exemplo, e só os problemas que pedem uma decisão, cada um com um botão.</li>
+        <li>Histórico: “O que eu já trouxe”, com <b>Desfazer</b> enquanto der.</li>
+      </ol>
+      <p class="muted">Substitui os quatro caminhos de importação de hoje. As rotas antigas redirecionam para cá.</p>
+    </div>
+    <div class="card">
+      <h3>Seguros (aba) e a apólice</h3>
+      <ol>
+        <li>Grupos prontos por urgência: Vencido · Vence em 7 dias · em 30 dias · em 90 dias · Em renovação · Sem telefone.</li>
+        <li>Lista por apólice: pessoa, ramo, seguradora, vence em, selo.</li>
+        <li>Gaveta da apólice: dados, PDF, histórico (endossos, renovações), card da renovação, <b>Anexar PDF</b>.</li>
+        <li>“Onde ficam as renovações” em Configurar, uma tela, três perguntas.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ AÇÕES -->
+<section id="acoes">
+  <h2>Ações</h2>
+  <div class="tbl"><table>
+    <tr><th>Onde</th><th>Ação</th><th>Hoje</th><th>Entrega</th></tr>
+    <tr><td>Lista</td><td>Abrir grupo pronto com um clique</td><td>Não existe</td><td>E1</td></tr>
+    <tr><td>Lista</td><td>Filtrar por cliente e por “não quer mensagens”</td><td>Não existe</td><td>E1</td></tr>
+    <tr><td>Lista, em grupo</td><td>Mandar mensagem (modelo do WhatsApp quando a janela fechou)</td><td>Só um por vez</td><td>E1</td></tr>
+    <tr><td>Lista, em grupo</td><td>Pôr numa campanha</td><td>Não existe</td><td>E1</td></tr>
+    <tr><td>Lista, em grupo</td><td>Criar cards num funil</td><td>Não existe</td><td>E1</td></tr>
+    <tr><td>Lista, em grupo</td><td>Etiqueta · Apagar</td><td>Existe</td><td>mantém</td></tr>
+    <tr><td>Ficha</td><td>Conversar · Novo card · Lembrete</td><td>Existe, espalhado</td><td>E2</td></tr>
+    <tr><td>Ficha</td><td>Marcar e desmarcar cliente; liberar “não quer mensagens”</td><td>Existe, escondido</td><td>E2</td></tr>
+    <tr><td>Ficha</td><td>Alterar informações num lugar só</td><td>Três editores</td><td>E2</td></tr>
+    <tr><td>Trazer</td><td>Trazer por planilha · Conferir · Desfazer</td><td>Parcial</td><td>E3</td></tr>
+    <tr><td>Apólice</td><td>Ver PDF · Anexar PDF · Corrigir campo · Marcar cancelada</td><td>Não existe</td><td>E4 · E6</td></tr>
+    <tr><td>Apólice</td><td>Abrir o card da renovação · Cotar agora</td><td>Não existe</td><td>E5 · E8</td></tr>
+    <tr><td>Card</td><td>Renovou · Não renovou, com o motivo em um toque</td><td>Desfecho existe, sem apólice</td><td>E5</td></tr>
+    <tr><td>Apólice</td><td>Ver a história · Exportar a história</td><td>Não existe</td><td>E5</td></tr>
+    <tr><td>Conversa</td><td>Ver os seguros da pessoa no painel ao lado</td><td>Não existe</td><td>E4</td></tr>
+    <tr><td>Conversa</td><td>Guardar o seguro que a pessoa tem em outra corretora</td><td>Não existe</td><td>E6</td></tr>
+    <tr><td>Guia</td><td>Perguntar sobre a carteira e ir direto à ação</td><td>Não existe</td><td>E5</td></tr>
+  </table></div>
+</section>
+
+<!-- ============================================================ INTEGRAÇÕES -->
+<section id="integracoes">
+  <h2>Integrações</h2>
+  <div class="tbl"><table>
+    <tr><th>Com o quê</th><th>O que usamos</th><th>O que é novo</th><th>Chat dono</th></tr>
+    <tr><td>Cliente</td><td><code>contact_type</code>, <code>customer_since</code>, <code>CustomerBadge</code></td><td><code>become_customer!(since:)</code>: a data mais antiga vence</td><td>Multifunnel</td></tr>
+    <tr><td>CRM</td><td>Funis, modelo Renovação, desfechos, <code>Crm::Access::*</code>, mídias do card</td><td>Card ligado à apólice; fechar o card atualiza a apólice</td><td>Multifunnel</td></tr>
+    <tr><td>Automação</td><td>Gatilhos <code>card.criado</code> e <code>card.entrou_na_etapa</code>, mensagem, campanha, agente</td><td>Receita pronta “Renovação de seguro”; nada no motor</td><td>Automação</td></tr>
+    <tr><td>Campanhas e modelos</td><td>Público, campanha, modelo aprovado do WhatsApp</td><td>Grupo da lista vira público; modelo com PDF da proposta</td><td>Campanhas · Modelos Whatsapp</td></tr>
+    <tr><td>Cotação e Lia</td><td><code>Insurance::Connection</code>, <code>quote_validate</code>, renovação no auto e nos ramos</td><td>Cotar a partir da apólice anterior; chave própria</td><td>Cotação · Agentes IA</td></tr>
+    <tr><td>Agger</td><td>Conector por Lambda (repositório privado <code>autonomia-adapters</code>)</td><td>Operações de carteira no adapter: pedir, acompanhar, ler, baixar PDF</td><td>Cotação</td></tr>
+    <tr><td>Planilha</td><td><code>campaign_imports</code>: leitura, tipos de coluna, lote</td><td>“Esta planilha tem seguros?”; lote guarda valor anterior para desfazer</td><td>Campanhas</td></tr>
+    <tr><td>PDF</td><td><code>processors/pdf.rb</code>, OCR local</td><td>Extração dos campos da apólice e do telefone do segurado</td><td>Agentes IA</td></tr>
+    <tr><td>Avisos</td><td><code>Notification</code> (sino e caixa)</td><td>Tipo novo para aviso da carteira</td><td>Orquestração</td></tr>
+    <tr><td>Funções personalizadas</td><td><code>contact_view/manage</code>, <code>insurance_view/manage</code></td><td>Só o que faltar; parecer da Funções em todo PR com rota ou policy</td><td>Funções personalizadas</td></tr>
+    <tr><td>Segmento</td><td>Nicho e perfil da conta, pacotes <code>seguros/corretora</code></td><td>Aba Seguros e entradas PDF/Agger só para o segmento</td><td>Segmentação seguros</td></tr>
+    <tr><td>Guia da Plataforma</td><td>“Pergunte ao Guia”, leitura e ações do Guia</td><td>O Guia lê a carteira: perguntas do dono sobre seguros, vencimentos e clientes</td><td>Agentes IA</td></tr>
+    <tr><td>Guia e Central (gerados)</td><td><code>porques.md</code>, formatos, mapa de artigos</td><td>Um bloco e um artigo por tela nova, no mesmo PR</td><td>—</td></tr>
+    <tr><td>Super Admin</td><td>Botões de seguros por conta</td><td>Chave “cotação de renovação”</td><td>Cotação</td></tr>
+  </table></div>
+</section>
+
+<!-- ============================================================ DADOS -->
+<section id="dados">
+  <h2>Dados sensíveis: seguro sem atrapalhar o negócio</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>O que a equipe vê</h3>
+      <ul>
+        <li>CPF na ficha da pessoa e CNPJ na ficha da empresa, como qualquer informação: à vista, com copiar.</li>
+        <li>Busca por documento funciona.</li>
+        <li>A cotação e os agentes leem o documento direto, sem pedir de novo ao cliente.</li>
+        <li>Nenhum bloqueio, nenhuma tela de “dado protegido”.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>O que protege, por baixo</h3>
+      <ul>
+        <li>Documento em tabela própria do fork, cifrado no banco de um jeito que ainda permite achar por valor exato.</li>
+        <li>Quem vê é quem já pode ver contatos (<code>contact_view</code>). Exportar segue <code>contact_export</code>.</li>
+        <li>Fora de log, de erro, de Step Summary e de Issue. <code>cpf</code>, <code>cnpj</code> e <code>documento</code> entram no filtro de parâmetros.</li>
+        <li>PDF da apólice no armazenamento de arquivos da conta, com link que expira.</li>
+        <li>À IA de leitura vão só as páginas escolhidas do PDF.</li>
+        <li>Desfazer a importação apaga o que ela trouxe, inclusive o documento e o PDF.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ ENTREGAS -->
+<section id="entregas">
+  <h2>Entregas e termos de aceite</h2>
+  <p class="lead">Cada entrega é uma Issue filha do #1240 e um PR (ou um trem curto de PRs). Só é “aceita” com todos os aceites dela e os aceites comuns marcados.</p>
+
+  <div class="card gold">
+    <h3>Aceites comuns a toda entrega</h3>
+    <ul class="aceite cols">
+      <li>Banca aprovou o mockup de tela real antes do código (meta acima de 8,5; entre 7,5 e 8,5 só com aprovação escrita do Base de Clientes; nenhum item que trava).</li>
+      <li>Tela no ar igual ao mockup aprovado, texto por texto, conferida pelo dono do épico no navegador.</li>
+      <li>Funciona em 390 px, no teclado e com leitor de tela. Sem <code>&lt;select&gt;</code> nativo.</li>
+      <li>Textos em <code>pt_BR</code> e <code>en</code>, catálogo do fork. Pacote de seguros quando o texto é de seguro.</li>
+      <li>CI verde: RSpec, Vitest, trava do Guia, Central, i18n do fork, Rubocop, ESLint.</li>
+      <li>Guia, formatos e Central regenerados no próprio PR.</li>
+      <li>Revisão independente sem achado alto ou médio. Parecer da Funções quando há rota, controller ou policy.</li>
+      <li>Com a flag desligada, tudo igual à <code>main</code>. Com ela ligada, passa em todas as contas.</li>
+      <li>Teste no ar com cenários listados antes, sem “passou mais ou menos”.</li>
+      <li>Nenhum dado de cliente em log, PR, Issue ou neste plano.</li>
+      <li>“ok SHA” do Rodrigo, depois limpeza: branch, worktree, snapshot, demo.</li>
+      <li>Placar e registro deste plano atualizados; Project “Autonom.ia Dev” atualizado.</li>
+    </ul>
+  </div>
+
+  <article class="card ent" id="e0">
+    <header><span class="num">E0</span><h3>Preparo e protótipo da jornada inteira</h3><span class="chip s-construcao">Em construção</span></header>
+    <p>Combinar com os outros chats, reservar o que é compartilhado e construir o protótipo navegável em tela real, que a banca julga antes de qualquer código de produto.</p>
+    <div class="cols">
+      <div><div class="lbl">Escopo</div><ul>
+        <li>PR de documentos: este plano e o desenho. PR #1321 resolvido (entra ou fecha).</li>
+        <li>Issues filhas E1 a E9 abertas e no Project.</li>
+        <li>Intenção de três linhas à Orquestração; reserva de flags e de versões de migration.</li>
+        <li>Contratos escritos com Multifunnel, Cotação, Automação, Campanhas e Funções, um por Issue.</li>
+        <li>Protótipo em dois blocos, com <code>bin/demo</code>: A = Relacionamentos (E1 a E3); B = Carteira e renovação (E4 a E8).</li>
+      </ul></div>
+      <div><div class="lbl">Aceite</div><ul class="aceite">
+        <li>Orquestração confirmou as reservas e não há outra frente no mesmo arquivo.</li>
+        <li>Cada jornada (J1 a J4) é clicável do início ao fim no protótipo, com dados fictícios realistas.</li>
+        <li>Prints de todas as etapas em 1440 e 390 px, olhados um a um.</li>
+        <li>Bloco A aprovado pela banca. Bloco B aprovado pela banca.</li>
+        <li>Nenhuma tabela, rota de produção ou flag ligada.</li>
+      </ul></div>
+    </div>
+  </article>
+
+  <article class="card ent" id="e1">
+    <header><span class="num">E1</span><h3>Início e lista de pessoas</h3><span class="chip s-nao-comecou">Não começou</span></header>
+    <p>Relacionamentos passa a abrir direto na lista, com a frase do dia, os grupos prontos e ações em grupo. Vale para toda conta.</p>
+    <div class="cols">
+      <div><div class="lbl">Escopo</div><ul>
+        <li>Tela nova (arquivos do fork); a antiga fica intacta atrás da flag.</li>
+        <li>Grupos: Todos · Clientes · Falou com você há pouco · Sumiu há 1 a 3 meses · Sumiu há mais de 3 meses · Nunca conversou · Não quer mensagens.</li>
+        <li>Filtros de cliente e de “não quer mensagens” no resumo e na busca.</li>
+        <li>Selo Cliente na linha. Busca tolerante a erro.</li>
+        <li>Em grupo: mandar mensagem, pôr em campanha, criar cards, etiqueta.</li>
+        <li>Aba Empresas com o mesmo padrão.</li>
+      </ul></div>
+      <div><div class="lbl">Aceite</div><ul class="aceite">
+        <li>Um clique no menu leva à lista; não existe mais a página de três cartões.</li>
+        <li>O número de cada grupo bate com a contagem feita direto no banco da demo.</li>
+        <li>“Sumiu” e “Falou há pouco” estão certos também em conta com agenda sincronizada (depende do #1306).</li>
+        <li>Selecionar 50 pessoas e criar 50 cards num funil funciona, respeitando quem pode o quê (<code>Crm::Access</code>).</li>
+        <li>Mensagem em grupo nunca chega a quem pediu para parar.</li>
+        <li>Conta sem ninguém: uma frase e o botão Trazer minha lista.</li>
+        <li>Lista com 10 mil pessoas abre e rola sem travar.</li>
+      </ul></div>
+    </div>
+    <p class="muted">Depende de: E0 · #1306 (última atividade) · Multifunnel, Campanhas, Funções.</p>
+  </article>
+
+  <article class="card ent" id="e2">
+    <header><span class="num">E2</span><h3>Ficha da pessoa e da empresa</h3><span class="chip s-nao-comecou">Não começou</span></header>
+    <p>A ficha passa a responder “quem é e o que tem comigo” antes de oferecer edição.</p>
+    <div class="cols">
+      <div><div class="lbl">Escopo</div><ul>
+        <li>Cabeçalho com selo “Cliente desde”, ações e quem cuida.</li>
+        <li>Conversas e cards no centro; card em gaveta.</li>
+        <li>“Informações” como lugar único, com Alterar. Todos os campos aparecem.</li>
+        <li>CPF na pessoa e CNPJ na empresa, guardados como em “Dados sensíveis”.</li>
+        <li>Ficha da empresa no mesmo desenho, com as pessoas dela.</li>
+      </ul></div>
+      <div><div class="lbl">Aceite</div><ul class="aceite">
+        <li>A ficha abre em leitura. Editar exige um clique em Alterar.</li>
+        <li>Existe um editor só para cada informação (hoje são três).</li>
+        <li>Campo criado por uma importação aparece em Informações sem configuração extra.</li>
+        <li>Buscar por CPF ou CNPJ exato acha a pessoa ou a empresa.</li>
+        <li>O documento não aparece em nenhum log de uma jornada completa (conferido no log da demo).</li>
+        <li>Marcar e desmarcar cliente e liberar “não quer mensagens” estão a um clique, com a regra de origem atual.</li>
+      </ul></div>
+    </div>
+    <p class="muted">Depende de: E0 · Multifunnel (cards na ficha) · Funções.</p>
+  </article>
+
+  <article class="card ent" id="e3">
+    <header><span class="num">E3</span><h3>Trazer minha lista (planilha)</h3><span class="chip s-nao-comecou">Não começou</span></header>
+    <p>Um caminho só para trazer pessoas, com conferência e desfazer. É a F1 do PRD, dentro da tela nova.</p>
+    <div class="cols">
+      <div><div class="lbl">Escopo</div><ul>
+        <li>Jornada Enviar → Conferir → Pronto. Histórico com Desfazer.</li>
+        <li>DDD e número em colunas separadas; mesma pessoa em várias linhas.</li>
+        <li>“São clientes?” marca cliente com data.</li>
+        <li>Coluna extra pergunta “fala de quem?”. Campo novo nasce com nome e “Para que serve?”.</li>
+        <li>Cada linha guarda o valor anterior, para o desfazer.</li>
+        <li>As quatro entradas antigas redirecionam para cá.</li>
+        <li>A importação continua se a pessoa fechar a tela; o histórico mostra o andamento.</li>
+        <li>Problema de uma linha é corrigido ali mesmo, no Conferir.</li>
+      </ul></div>
+      <div><div class="lbl">Aceite</div><ul class="aceite">
+        <li>Bateria F0 (68 planilhas) continua com 0 erro silencioso.</li>
+        <li>Desfazer mostra antes o que vai sair e devolve a conta ao estado anterior, conferido por contagem antes e depois.</li>
+        <li>Fechar o navegador no meio não perde nem duplica a importação.</li>
+        <li>Pessoa que já existia é completada, nunca sobrescrita.</li>
+        <li>Existe um único ponto de entrada de importação no painel.</li>
+        <li>Uma pessoa que nunca usou o sistema traz uma planilha de 200 linhas sem ajuda (teste da banca).</li>
+        <li>Uma planilha real, na conta de teste interna, importada e conferida.</li>
+      </ul></div>
+    </div>
+    <p class="muted">Depende de: E1 · Campanhas (lote e tipos de coluna) · Multifunnel (<code>become_customer!(since:)</code>).</p>
+  </article>
+
+  <article class="card ent" id="e4">
+    <header><span class="num">E4</span><h3>Carteira: seguros na ficha</h3><span class="chip s-nao-comecou">Não começou</span> <span class="tag">só Seguros</span></header>
+    <p>Nasce a apólice. A planilha passa a trazer seguros, e eles aparecem na ficha e na aba Seguros.</p>
+    <div class="cols">
+      <div><div class="lbl">Escopo</div><ul>
+        <li>Tabelas do fork: apólice, histórico, configuração de renovação. Só aditivas.</li>
+        <li>“Esta planilha tem seguros?” e o mapa das colunas de apólice.</li>
+        <li>Bloco Seguros na ficha, aba Seguros, gaveta da apólice.</li>
+        <li>Selos pela data de hoje. Selo mais urgente na lista de pessoas.</li>
+        <li>Grupos por urgência: Vencido · Vence em 7 dias · Vence em 30 dias · Vence em 90 dias · Em renovação · Sem telefone.</li>
+        <li>Importar de novo mostra “o que mudou”, lado a lado, na história da apólice.</li>
+        <li>Seguros no painel da conversa: quem atende vê os seguros da pessoa sem sair do chat.</li>
+        <li>Grupo “Só tem um seguro”, para oferecer o que falta.</li>
+        <li>Cliente desde o início da vigência.</li>
+      </ul></div>
+      <div><div class="lbl">Aceite</div><ul class="aceite">
+        <li>Pessoa em três linhas da planilha vira um contato com três seguros.</li>
+        <li>Importar a mesma planilha duas vezes não duplica apólice.</li>
+        <li>Tabela de estados do selo coberta por teste, incluindo o dia do vencimento e o fuso da conta.</li>
+        <li>Conta fora do segmento Seguros não vê aba, bloco nem pergunta de seguro.</li>
+        <li>Numa conversa com um cliente, os seguros dele aparecem no painel ao lado, com selo e PDF, a um clique.</li>
+        <li>Campo corrigido à mão sobrevive a uma nova importação.</li>
+        <li>Desfazer a importação tira as apólices dela e devolve o tipo do contato.</li>
+      </ul></div>
+    </div>
+    <p class="muted">Depende de: E2, E3 · migration aditiva na fila · Segmentação seguros (palavras do pacote).</p>
+  </article>
+
+  <article class="card ent" id="e5">
+    <header><span class="num">E5</span><h3>Renovação no funil</h3><span class="chip s-nao-comecou">Não começou</span> <span class="tag">só Seguros</span></header>
+    <p>O sistema passa a puxar a renovação sozinho, no funil que a corretora escolheu.</p>
+    <div class="cols">
+      <div><div class="lbl">Escopo</div><ul>
+        <li>“Onde ficam as renovações”: criar o funil pelo modelo ou escolher funil e etapa; dias antes (padrão 60).</li>
+        <li>Rotina diária: cria um card por apólice que entrou na janela.</li>
+        <li>Card mostra a apólice e o PDF. Renovou e Não renovou atualizam a apólice.</li>
+        <li>Aviso à equipe quando não há cotação automática.</li>
+        <li>Receita pronta de Automação “Renovação de seguro”, com mensagens em 30, 15 e 7 dias.</li>
+        <li><b>Painel de retenção</b> na aba Seguros: “vencem este mês”, “renovou X de Y”, por tipo de seguro, seguradora e quem cuida, com os motivos de perda.</li>
+        <li><b>História da apólice:</b> tudo o que foi oferecido, enviado, respondido e recusado fica junto do seguro, numa linha do tempo, com Exportar.</li>
+        <li>Quem cuida do card segue a regra de atribuição do funil.</li>
+        <li><b>O Guia enxerga a carteira.</b> O dono pergunta “quem vence este mês?”, “quais seguros a Maria tem?”, “quem só tem auto?” e o Guia responde e leva à tela ou à ação.</li>
+        <li>O agente que conversa com o cliente também enxerga os seguros dele: manda a apólice e diz o vencimento quando pedem.</li>
+        <li>“Não renovou” pede o motivo em um toque (preço, foi para outra, vendeu o bem, não respondeu) e vira resumo do mês.</li>
+      </ul></div>
+      <div><div class="lbl">Aceite</div><ul class="aceite">
+        <li>Nenhum card nasce no momento da importação.</li>
+        <li>Rodar a rotina duas vezes no mesmo dia não cria card repetido.</li>
+        <li>Apólice já vencida não gera card e aparece como Vencido.</li>
+        <li>O card nasce no funil e na etapa escolhidos, visível só para quem pode ver aquele funil.</li>
+        <li>Apólice nova de outra seguradora, com outro número, se liga à anterior pelo segurado, ramo, item e vigência. Tabela de casos coberta por teste.</li>
+        <li>Renovou: apólice antiga vira Renovado e o card pede a apólice nova. Não renovou: vira Vencido no fim da vigência; a pessoa continua cliente.</li>
+        <li>Carteira de 2 mil apólices: a rotina termina e o quadro não recebe card fora da janela.</li>
+        <li>A receita pronta manda a mensagem só com modelo aprovado quando a janela de 24 h fechou.</li>
+        <li>O Guia acerta 20 perguntas de carteira de uma lista escrita antes, com o número conferido no banco da demo. Nunca inventa: sem dado, diz que não achou.</li>
+        <li>Cliente pede a apólice na conversa e recebe o PDF certo. Pessoa com dois seguros: o agente pergunta qual.</li>
+        <li>O agente só enxerga os seguros do contato daquela conversa.</li>
+        <li>A história da apólice mostra, em ordem, proposta enviada, resposta do cliente, desfecho e motivo. O arquivo exportado traz data, hora e quem fez.</li>
+        <li>O painel de retenção bate com a contagem feita no banco da demo, em cada recorte.</li>
+      </ul></div>
+    </div>
+    <p class="muted">Depende de: E4 · Multifunnel · Automação · Agentes IA e Guia (ferramenta de leitura da carteira) · Orquestração (tipo novo de aviso, agenda da rotina).</p>
+  </article>
+
+  <article class="card ent" id="e6">
+    <header><span class="num">E6</span><h3>Trazer por PDFs</h3><span class="chip s-nao-comecou">Não começou</span> <span class="tag">só Seguros</span> <span class="tag">IA paga</span></header>
+    <p>A corretora arrasta os PDFs das apólices e o sistema lê.</p>
+    <div class="cols">
+      <div><div class="lbl">Escopo</div><ul>
+        <li>Envio de vários PDFs. Leitura dos campos da apólice, cada um com “não achei”.</li>
+        <li>Telefone e e-mail do segurado pela página do CPF/CNPJ.</li>
+        <li>OCR local só em página sem texto.</li>
+        <li>“Anexar PDF” na apólice vinda da planilha, mostrando “o que mudou” lado a lado.</li>
+        <li>PDF de qualquer seguradora, não só das conhecidas.</li>
+        <li>Segundo PR: <b>seguro de fora vira lembrete.</b> Quem ainda não é cliente manda a foto ou o PDF do seguro que já tem; o sistema guarda o vencimento e chama na hora certa.</li>
+        <li>Terceiro PR: <b>seu seguro em palavras simples.</b> Depois da emissão, o cliente recebe o que o seguro cobre e o que fazer se precisar. O corretor confere o texto, ou escolhe que saia sozinho.</li>
+        <li>Custo estimado à vista antes de começar.</li>
+      </ul></div>
+      <div><div class="lbl">Aceite</div><ul class="aceite">
+        <li>Bateria de PDFs de várias seguradoras, com gabarito: 0 campo errado calado (errado sem aviso) e 0 telefone que não é do segurado.</li>
+        <li>Campo sem certeza chega aberto no Conferir, em palavras simples.</li>
+        <li>PDF de 160 páginas não manda 160 páginas ao modelo.</li>
+        <li>Custo real da bateria informado e dentro do orçamento aprovado.</li>
+        <li>PDF que não é apólice é recusado com uma frase clara.</li>
+        <li>Seguro de fora: só entra depois de a pessoa dizer que quer o lembrete, e isso fica registrado. Aparece como “seguro em outra corretora”, não conta como cliente, e gera o card N dias antes.</li>
+        <li>Foto de celular torta ou escura: lê, ou diz em uma frase o que faltou.</li>
+        <li>Palavras simples: o texto nunca promete cobertura que não está no PDF e sempre diz que vale o que está na apólice. Bateria com gabarito, zero promessa inventada.</li>
+        <li>Escolhido “sai sozinho”, sai sozinho; escolhido “eu confiro”, nada sai antes do Enviar.</li>
+      </ul></div>
+    </div>
+    <p class="muted">Depende de: E4 · orçamento de IA aprovado pelo Rodrigo · Agentes IA (leitor de PDF).</p>
+  </article>
+
+  <article class="card ent" id="e7">
+    <header><span class="num">E7</span><h3>Trazer pelo Agger</h3><span class="chip s-nao-comecou">Não começou</span> <span class="tag">só Seguros</span> <span class="tag">dois repositórios</span></header>
+    <p>A corretora conecta uma vez e a carteira se mantém sozinha.</p>
+    <div class="cols">
+      <div><div class="lbl">Escopo</div><ul>
+        <li>Adapter no repositório privado: pedir sincronização, acompanhar, ler apólices, baixar PDF.</li>
+        <li>Conector do chat ganha as operações, sem conhecer o portal.</li>
+        <li>Primeira busca de 36 meses; depois, todo dia, 7 dias.</li>
+        <li>Tela que acompanha sem prometer tempo e avisa por seguradora sem senha.</li>
+        <li>Telefone pelo PDF (E6).</li>
+        <li>Segundo PR, com o Agger estável: <b>parcela atrasada</b>, com selo na apólice e grupo pronto, para avisar antes de o seguro cair.</li>
+      </ul></div>
+      <div><div class="lbl">Aceite</div><ul class="aceite">
+        <li>Numa corretora real com o módulo ativo, o total trazido bate com o total que o portal mostra.</li>
+        <li>Sincronizar de novo não duplica; endosso atualiza a apólice existente.</li>
+        <li>Seguradora sem senha gera um aviso claro, com o que fazer.</li>
+        <li>Queda do portal ou fila lenta não quebra a tela nem perde o que já veio.</li>
+        <li>Nenhum endereço ou formato do portal no repositório público.</li>
+        <li>Renovação feita fora do sistema aparece na sincronização seguinte e fecha o card.</li>
+        <li>Parcela atrasada vinda do Agger aparece com selo e no grupo; parcela paga some na sincronização seguinte.</li>
+      </ul></div>
+    </div>
+    <p class="muted">Depende de: E4, E6 · Cotação (dona do conector) · deploy do Lambda com OK do Rodrigo · corretora real para o teste.</p>
+  </article>
+
+  <article class="card ent" id="e8">
+    <header><span class="num">E8</span><h3>Cotação da renovação</h3><span class="chip s-nao-comecou">Não começou</span> <span class="tag">só Seguros</span> <span class="tag">chave no Super Admin</span></header>
+    <p>O card de renovação chega com a proposta pronta.</p>
+    <div class="cols">
+      <div><div class="lbl">Escopo</div><ul>
+        <li>Chave por conta no Super Admin.</li>
+        <li>Três escolhas da corretora: quem cota (robô, Lia, ninguém), quem envia (campanha, pessoa), quem responde (Lia, equipe).</li>
+        <li>Cotar a partir da apólice anterior, conferindo a entrada antes de gastar a consulta.</li>
+        <li>Proposta nas mídias do card. Faltou dado: Lia pergunta; sem agente, avisa a equipe.</li>
+        <li>Custo das consultas à vista para a corretora.</li>
+        <li>A corretora escolhe uma vez: uma pessoa confere e aperta Enviar (valor inicial), ou sai sozinho. Escolheu sozinho, sai sozinho.</li>
+        <li>No card: “Subiu X% em relação ao ano passado”.</li>
+        <li><b>“Algo mudou?” em um minuto:</b> antes de renovar, o segurado confirma por botões no WhatsApp. Funciona com ou sem agente, e a resposta entra na história da apólice.</li>
+      </ul></div>
+      <div><div class="lbl">Aceite</div><ul class="aceite">
+        <li>Com a chave desligada, nada cota e nada muda em relação à E5.</li>
+        <li>Card que entra na etapa recebe a proposta sem ação humana.</li>
+        <li>Com o envio automático escolhido, a proposta chega ao segurado sem nenhum clique e sem conferência escondida. Teste do começo ao fim.</li>
+        <li>Com “uma pessoa confere” escolhido, nada sai antes do Enviar.</li>
+        <li>Nenhuma consulta paga sai com entrada incompleta.</li>
+        <li>As seis combinações de quem cota e quem envia funcionam, cada uma com teste.</li>
+        <li>Proposta chega ao segurado por modelo aprovado, com o PDF legível no WhatsApp.</li>
+        <li>A corretora vê quanto consumiu. Não há teto imposto por nós.</li>
+        <li>A instrução da Lia não foi alterada sem o chat Cotação.</li>
+        <li>“Nada mudou” segue direto para a cotação. “Mudou” abre só a pergunta do que mudou, e a resposta chega à cotação e à história.</li>
+      </ul></div>
+    </div>
+    <p class="muted">Depende de: E5, E7 · Cotação · Agentes IA · Modelos Whatsapp · orçamento de consultas para o teste.</p>
+  </article>
+
+  <article class="card ent" id="e9">
+    <header><span class="num">E9</span><h3>Fecho do épico</h3><span class="chip s-nao-comecou">Não começou</span></header>
+    <div class="cols">
+      <div><div class="lbl">Escopo</div><ul>
+        <li>Telas antigas de contatos e as importações antigas saem (rota redireciona).</li>
+        <li>Flags que viraram padrão são removidas do código.</li>
+        <li>Medição de uso em produção, só contagens.</li>
+        <li>Issue de Saúde e benefícios aberta, com o que reaproveita.</li>
+      </ul></div>
+      <div><div class="lbl">Aceite</div><ul class="aceite">
+        <li>Uma corretora real trouxe a carteira e fechou pelo menos uma renovação pelo sistema.</li>
+        <li>Não sobra worktree, branch, snapshot, demo nem flag órfã do épico.</li>
+        <li>Guia e Central cobrem todas as telas novas.</li>
+        <li>#1240 fechado pelo Rodrigo.</li>
+      </ul></div>
+    </div>
+  </article>
+</section>
+
+<!-- ============================================================ CICLO -->
+<section id="ciclo">
+  <h2>Como cada entrega anda</h2>
+  <p class="lead">O mesmo caminho para todas. Quem faz está em cada passo.</p>
+  <div class="tbl"><table>
+    <tr><th>#</th><th>Passo</th><th>Quem</th><th>Saída</th></tr>
+    <tr><td>1</td><td>Issue filha com escopo, aceite e contrato com os chats donos</td><td>Base de Clientes</td><td>Issue no Project</td></tr>
+    <tr><td>2</td><td>Intenção de três linhas: o quê, quais arquivos, conceito novo. Reserva de flag e de migration</td><td>Base de Clientes → Orquestração</td><td>Reserva confirmada</td></tr>
+    <tr><td>3</td><td>Worktree em <code>dev/worktrees/chat2you/</code>. Um snapshot por entrega</td><td>Base de Clientes</td><td>Branch</td></tr>
+    <tr><td>4</td><td>Mockup de tela real (já vem do E0; ajuste se o escopo mudou)</td><td>subagente de tela</td><td>Prints 1440 e 390</td></tr>
+    <tr><td>5</td><td>Banca julga contra a regra de ouro. Até 3 rodadas</td><td>chats da banca</td><td>Notas na Issue</td></tr>
+    <tr><td>6</td><td>Construção, teste antes do código. Back e front em paralelo quando não tocam o mesmo arquivo</td><td>subagentes construtores</td><td>Commits</td></tr>
+    <tr><td>7</td><td>Suíte do escopo e gerados. Suíte ampla na CI do GitHub, em rascunho</td><td>autor</td><td>CI verde</td></tr>
+    <tr><td>8</td><td>Revisão independente, o diff inteiro, com régua escrita. Correção por classe de erro</td><td>subagente revisor</td><td>Zero alto e médio</td></tr>
+    <tr><td>9</td><td>O dono abre a tela na demo e compara com o mockup, texto por texto</td><td>Base de Clientes</td><td>Prints no PR</td></tr>
+    <tr><td>10</td><td>Parecer da Funções. Trazer a main, regerar. Pedido de vaga</td><td>Base de Clientes → Orquestração</td><td>PR na fila</td></tr>
+    <tr><td>11</td><td>OK de merge</td><td>Rodrigo</td><td>Merge e deploy nas duas stacks</td></tr>
+    <tr><td>12</td><td>Flag ligada em todas, com backup. Teste no ar</td><td>Orquestração · subagente testador</td><td>Relatório de cenários</td></tr>
+    <tr><td>13</td><td>“ok SHA” do dia</td><td>Rodrigo</td><td>Entrega aceita</td></tr>
+    <tr><td>14</td><td>Limpeza: branch, worktree, snapshot, demo. Atualizar este plano</td><td>Base de Clientes</td><td>Placar em dia</td></tr>
+  </table></div>
+  <p class="muted">Paralelo: E1 e E2 podem andar juntas depois do E0 (arquivos diferentes). E6 e E7 também, depois da E4. Migration vai sozinha ou só com aditivas, como a fila manda.</p>
+</section>
+
+<!-- ============================================================ BANCA -->
+<section id="banca">
+  <h2>Banca dos mockups</h2>
+  <p class="lead">O Rodrigo não aprova mockup. Outros chats do projeto julgam, com a regra de ouro como régua. Aprovado, segue.</p>
+  <div class="grid2">
+    <div class="card">
+      <h3>Quem julga</h3>
+      <ul>
+        <li><b>Frontend geral</b>: padrão visual da casa. Sempre.</li>
+        <li><b>O chat dono da área que a tela toca</b>: Multifunnel (lista, ficha, cards), Campanhas (trazer lista), Cotação (carteira, renovação).</li>
+        <li><b>Orquestração Deploy</b>: terceiro voto e registro. Desempata.</li>
+      </ul>
+      <div class="lbl">Como julga</div>
+      <ul>
+        <li>Abre a tela na demo e clica a jornada. Print não substitui.</li>
+        <li>Faz o “teste do leigo”: sem ler instrução, diz em uma frase o que a tela pede. Se errar, a tela reprova.</li>
+        <li>Dá nota de 0 a 10 em cada item da régua, com o motivo em uma linha.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Régua (a mesma em toda rodada)</h3>
+      <ol>
+        <li>Dá para dizer em uma frase para que serve a tela.</li>
+        <li>Há uma ação principal, e ela é óbvia.</li>
+        <li>Toda palavra é do dia a dia do cliente.</li>
+        <li>Nada que explica mecanismo ou cita tecnologia.</li>
+        <li>Tela vazia, carregando e erro existem e são claros.</li>
+        <li>Mostra antes de fazer e deixa desfazer.</li>
+        <li>Visual premium, no padrão da casa.</li>
+        <li>Igual em 390 px; alvo de toque de 44 px.</li>
+        <li>Teclado e leitor de tela.</li>
+        <li>Usa dado realista, sem texto repetido nem coluna espremida.</li>
+      </ol>
+      <div class="lbl">Aprovação</div>
+      <ul>
+        <li>Meta: média acima de 8,5, em até 3 rodadas.</li>
+        <li>Itens 1 a 4 abaixo de 7 travam, seja qual for a média.</li>
+        <li>Da segunda rodada em diante, lista fechada de correções.</li>
+        <li>Não chegou a 8,5 em 3 rodadas: para, e o Base de Clientes verifica o que falta.</li>
+        <li>Entre 7,5 e 8,5: só o Base de Clientes pode aprovar, com o motivo escrito. Abaixo de 7,5 não sobe.</li>
+        <li>Jurado que não responde: o Base de Clientes pesquisa por conta própria e registra que o voto faltou.</li>
+        <li>Notas e prints ficam na Issue da entrega.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ CHATS -->
+<section id="chats">
+  <h2>Outros chats</h2>
+  <p class="lead">Antes de cada etapa (começo, push, PR, vaga, no ar) aviso os dois lados. Mensagem pelo <code>SendMessage</code>, com o nome exato do <code>ListAgents</code>.</p>
+  <div class="tbl"><table>
+    <tr><th>Chat</th><th>Papel</th><th>O que combino</th><th>Quando</th></tr>
+    <tr><td>Orquestração Deploy</td><td>Maestro: fila, flags, migrations, deploy, produção</td><td>Intenção de três linhas; bit de flag; versão de migration; vaga; ligar flag; consulta de produção</td><td>Toda entrega</td></tr>
+    <tr><td>Multifunnel</td><td>Dono do CRM, do “Cliente” e de quem vê o quê</td><td><code>become_customer!(since:)</code>; card ligado à apólice; cards na ficha; criar cards em grupo</td><td>E1, E2, E4, E5</td></tr>
+    <tr><td>Cotação</td><td>Dono do conector do Agger e da Lia</td><td>Operações de carteira no adapter; cotar pela apólice anterior; chave no Super Admin</td><td>E7, E8</td></tr>
+    <tr><td>Agentes IA</td><td>Dono dos agentes e do leitor de PDF</td><td>Leitura de PDF fora da base do agente; Lia pergunta dado que falta</td><td>E6, E8</td></tr>
+    <tr><td>Automação</td><td>Dono do motor e das receitas</td><td>Receita “Renovação de seguro”; nenhum gatilho novo sem ela</td><td>E5</td></tr>
+    <tr><td>Campanhas · Modelos Whatsapp</td><td>Donos de importação, público e modelo</td><td>Lote que guarda valor anterior; grupo vira público; modelo com PDF</td><td>E1, E3, E8</td></tr>
+    <tr><td>Funções personalizadas</td><td>Dono das permissões</td><td>Parecer em todo PR com rota, controller ou policy</td><td>Toda entrega com tela</td></tr>
+    <tr><td>Frontend geral</td><td>Padrão visual; banca</td><td>Componentes novos compartilhados; julgamento dos mockups</td><td>E0 e ajustes</td></tr>
+    <tr><td>Segmentação seguros</td><td>Dono dos pacotes de palavras</td><td>Palavras de seguro das telas novas</td><td>E4 a E8</td></tr>
+  </table></div>
+  <div class="card" style="margin-top:14px">
+    <h3>Reservas dadas pela maestro <span class="tag">11/11</span></h3>
+    <ul>
+      <li>Flags na <code>feature_flags_ext_2</code>: posição <b>45</b> = <code>relacionamentos_novo</code>; posição <b>46</b> = <code>carteira_seguros</code>. O número que vale é confirmado por ela antes do OK; acertar <code>spec/models/account_spec.rb</code> (mapa da ext_2).</li>
+      <li>Migrations, uma por PR: E2 <code>20261110020000</code> · E3 <code>20261110030000</code> · E4 <code>20261110040000</code> · E5 <code>20261110050000</code>. Cada uma sobe em cadeia separada.</li>
+      <li>Outras frentes perto: #2890 (Automação) mexe em <code>features.yml</code> e no mapa da ext_2; #2742 (Campanhas) tem migration própria, sem <code>campaign_imports</code>.</li>
+      <li>Regras valendo: main atual e gerados antes do OK; parecer da Funções no head final; “ok SHA” uma vez por dia; sem janela fixa. Flag liga em todas depois do no ar, com OK do Rodrigo no chat dela.</li>
+      <li>Ela aceita ser o terceiro voto da banca.</li>
+    </ul>
+  </div>
+  <p class="muted">Maestro ativa em 11/11: “Orquestração Deploy Rodrigo”. Chat que não responde (arquivado, outra conta, mensagem retida): pesquiso eu mesmo no código e nos documentos da frente, registro e sigo.</p>
+</section>
+
+<!-- ============================================================ MODELOS -->
+<section id="modelos">
+  <h2>Modelos e esforço: gastar o modelo caro só onde ele paga</h2>
+  <p class="lead">Este chat (Fable 5.2) decide, divide e confere. Quem lê muito código, escreve o óbvio e roda teste são subagentes em modelo menor. Qualidade continua com peso maior que economia: tarefa crítica nunca desce de modelo.</p>
+  <div class="tbl"><table>
+    <tr><th>Tipo de trabalho</th><th>Modelo</th><th>Esforço</th><th>Por quê</th></tr>
+    <tr><td>Achar código, mapear pasta, listar usos</td><td>Haiku 5.5</td><td>baixo</td><td>É busca. Volta só a conclusão.</td></tr>
+    <tr><td>Ler várias áreas e resumir (como o mapa deste plano)</td><td>Sonnet 5.5</td><td>médio</td><td>Precisa juntar, não decidir.</td></tr>
+    <tr><td>Mecânico: textos i18n, gerados, renomear, spec de caso simples</td><td>Haiku 5.5</td><td>baixo</td><td>Regra clara, resultado conferível por comando.</td></tr>
+    <tr><td>Tela a partir do mockup aprovado; CRUD; job simples</td><td>Sonnet 5.5</td><td>médio a alto</td><td>O desenho já está decidido.</td></tr>
+    <tr><td>Tabela de estados, casar contato, desfazer, não duplicar, rotina diária</td><td>Opus 5.5</td><td>alto</td><td>Erro aqui é dado errado calado.</td></tr>
+    <tr><td>Migration, cifragem do documento, quem vê o quê</td><td>Opus 5.5</td><td>alto</td><td>Dado pessoal e acesso.</td></tr>
+    <tr><td>Revisão de PR pequeno, sem dado nem dinheiro</td><td>Sonnet 5.5</td><td>médio</td><td>Um olhar de banco basta.</td></tr>
+    <tr><td>Revisão de PR com dado pessoal, exclusão, dinheiro ou concorrência</td><td>Opus 5.5</td><td>alto</td><td>Olhar de banco e adversarial no mesmo agente.</td></tr>
+    <tr><td>Teste no ar, cenários duros</td><td>Sonnet 5.5</td><td>médio</td><td>Executa lista pronta; falha é falha.</td></tr>
+    <tr><td>Decisão de arquitetura, empate entre revisor e autor, contrato entre chats, este plano</td><td>Fable 5.2</td><td>alto</td><td>Poucas vezes, onde errar custa a entrega.</td></tr>
+  </table></div>
+  <div class="grid2" style="margin-top:14px">
+    <div class="card">
+      <h3>Regras de roteamento</h3>
+      <ul>
+        <li>Cada subagente recebe: objetivo, arquivos, o que já foi descartado e o formato da resposta. Volta conclusão curta, não o arquivo.</li>
+        <li>Falhou duas vezes no mesmo ponto: sobe um degrau de modelo. Nunca desce em tarefa crítica.</li>
+        <li>Modelo exigido indisponível em tarefa crítica: para com <code>BLOCKED_MODEL_TIER</code>. Não troca calado.</li>
+        <li>Revisor nunca é o mesmo modelo e contexto do autor.</li>
+        <li>Uma revisão por PR. Revisão de novo só do que mudou.</li>
+        <li>Revisor roda só os specs tocados. Suíte ampla é do autor, na CI.</li>
+        <li>Notificação “aguardando” de subagente não gera resposta.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Orquestração por entrega</h3>
+      <ul>
+        <li>Uma esteira por entrega, com até 10 agentes: construir (back e front em paralelo) → revisar → corrigir por classe → testar. Cada estágio com o modelo e o esforço da tabela.</li>
+        <li>Este chat só entra entre os estágios: confere a saída, decide, segue.</li>
+        <li>Tokens de cada entrega entram no placar, por modelo. Estourou o esperado, paro e revejo a divisão antes de continuar.</li>
+        <li>Máquinas: conferir <code>maccluster status</code> antes de teste local. Suíte ampla vai para a CI do GitHub.</li>
+      </ul>
+      <p class="muted">Medida de hoje: o mapa do produto para este plano foi feito por três subagentes em Sonnet, cerca de 600 mil tokens, fora do Fable.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ QUALIDADE -->
+<section id="qualidade">
+  <h2>Revisão e teste</h2>
+  <div class="grid3">
+    <div class="card">
+      <h3>Revisão</h3>
+      <ul>
+        <li>Régua escrita antes: aceites da entrega, tabela de estados, regras da casa.</li>
+        <li><b>Alto:</b> resultado errado, dado ou acesso no fluxo normal.</li>
+        <li><b>Médio:</b> a tela engana num caso plausível.</li>
+        <li><b>Baixo:</b> corrida rara, higiene, estilo. Não bloqueia; vai anotado.</li>
+        <li>Para em zero alto e médio. Teto de 3 rodadas.</li>
+        <li>Achado vem com a classe; a correção cobre a classe inteira, com teste.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Teste</h3>
+      <ul>
+        <li>Teste antes do código nas regras: selo, casar contato, não duplicar, desfazer, rotina.</li>
+        <li>Jornada clicada na demo antes do PR.</li>
+        <li>No ar: 18 cenários ou mais, listados antes com o motivo de cada um. Tempo esgotado é falha.</li>
+        <li>Sempre incluem: flag desligada, conta fora do segmento, função parcial, quem pediu para parar, isolamento entre contas.</li>
+        <li>Produção: só leitura, por contagem, pela Orquestração.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Baterias</h3>
+      <ul>
+        <li><b>Planilhas:</b> a F0 (68 arquivos) roda em toda mudança da leitura.</li>
+        <li><b>PDFs (E6):</b> conjunto com gabarito de várias seguradoras, mais um conjunto de controle que não participa do ajuste.</li>
+        <li><b>Selos e rotina:</b> tabela de estados com datas de borda.</li>
+        <li>Medida que importa: erro calado. Meta: zero.</li>
+        <li>Bateria com IA paga só roda com orçamento aprovado e informa o custo real.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ RODRIGO -->
+<section id="rodrigo">
+  <h2>O que depende do Rodrigo</h2>
+  <div class="tbl"><table>
+    <tr><th>O quê</th><th>Quando</th><th>Sem isso</th></tr>
+    <tr><td><s>OK para começar</s> · dado em 11/11, como meta</td><td>—</td><td>—</td></tr>
+    <tr><td>PR #1321 (pesquisa e PRD da F1): entra ou fecha</td><td>E0</td><td>Fica aberto desde 15/10</td></tr>
+    <tr><td>OK de merge de cada PR</td><td>Toda entrega</td><td>Não sobe</td></tr>
+    <tr><td>“ok SHA” do dia</td><td>Toda entrega</td><td>Não limpa, não conta como aceita</td></tr>
+    <tr><td>Orçamento de IA para a bateria de PDFs (peço com volume e custo estimado)</td><td>Antes da E6</td><td>E6 não mede</td></tr>
+    <tr><td>Uma corretora real com o módulo de apólices ativo no Agger, e OK para ler a carteira dela</td><td>E7</td><td>E7 não tem aceite</td></tr>
+    <tr><td>Deploy do adapter (Lambda) e qualquer escrita em produção</td><td>E7, E8</td><td>Fica em demo</td></tr>
+    <tr><td>Orçamento de consultas de cotação para o teste</td><td>E8</td><td>E8 testa só no simulado</td></tr>
+    <tr><td>Fechar o #1240</td><td>E9</td><td>Épico segue aberto</td></tr>
+  </table></div>
+  <div class="card" style="margin-top:14px">
+    <h3>Riscos abertos</h3>
+    <ul>
+      <li><b>Portal do Agger não é API pública.</b> Pode mudar sem aviso. Fica isolado no adapter.</li>
+      <li><b>Robô do Agger lento.</b> No teste, pedidos ficaram 12 minutos parados. A tela não promete tempo.</li>
+      <li><b>#1306.</b> Sem a última atividade certa, os grupos “Sumiu” erram em contas com agenda sincronizada. Entra antes ou junto da E1.</li>
+      <li><b>Muitos chats no mesmo repositório.</b> Lista e ficha tocam área do Multifunnel. Contrato antes do código.</li>
+      <li><b>Flag liga em todas.</b> Relacionamentos novo aparece para todo cliente no dia em que sobe. Por isso a banca e o teste no ar pesam.</li>
+      <li><b>Máquinas.</b> M2 e M4 estão com memória apertada. Demo e teste amplo dependem de conferir antes.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================ REGISTRO -->
+<section id="registro">
+  <h2>Registro de mudanças</h2>
+  <div class="tbl"><table>
+    <tr><th>Data</th><th>O que mudou</th><th>Quem</th></tr>
+    <tr><td>11/11/2026</td><td>E0 andando: contratos fechados com Cotação, Multifunnel, Campanhas, Automação e Agentes IA (registro em <code>docs/audit/2026-11-11-1240-execucao.md</code>). Especificação das três telas do bloco A em <code>prototipo/BLOCO-A.md</code>. Base do protótipo construída na branch <code>feat/2894-relacionamentos-novo</code> (flag, rotas, textos, dados fictícios); as três telas estão em construção.</td><td>Base de Clientes</td></tr>
+    <tr><td>11/11/2026</td><td>Segunda rodada do benchmark (ajuda, manuais, termos de uso). Rodrigo aprovou 5 lacunas de mercado; entraram em E5, E6 e E8. Maestro reservou flags e migrations. PR de documentos #2892.</td><td>Base de Clientes</td></tr>
+    <tr><td>11/11/2026</td><td>Rodrigo aprovou 13 melhorias vindas do mercado. Entraram: seguros no painel da conversa, grupo “Só tem um seguro”, Guia e agente enxergando a carteira, motivo de “Não renovou”, parcela atrasada, e a garantia do envio automático.</td><td>Base de Clientes</td></tr>
+    <tr><td>11/11/2026</td><td>Meta dada pelo Rodrigo: plano inteiro pronto para merge e deploy. Benchmark de mercado incluído (seção Mercado e <code>BENCHMARK.md</code>); entregas E3 a E8 ganharam itens vindos dele. Regra da banca: meta 8,5 em 3 rodadas, mínimo 7,5 só com o Base de Clientes. Intenção enviada à maestro.</td><td>Base de Clientes</td></tr>
+    <tr><td>11/11/2026</td><td>Plano escrito, com as decisões do Rodrigo do dia. Nenhuma entrega começada.</td><td>Base de Clientes</td></tr>
+  </table></div>
+</section>
+
+<footer>
+  Documentos irmãos nesta pasta: <code>DESENHO-CARTEIRA-SEGUROS.md</code> (detalhe da carteira), <code>PRD.md</code>, <code>BATERIA-F0.md</code>. Detalhe do Agger: repositório privado <code>autonomia-adapters</code>.
+</footer>
+
+</div>
+</body>
+</html>
