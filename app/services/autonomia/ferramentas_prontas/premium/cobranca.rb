@@ -55,6 +55,10 @@ module Autonomia::FerramentasProntas::Premium::Cobranca
     ChatwootExceptionTracker.new(e, account: run.account).capture_exception
   end
 
+  # A FATURA LÊ `cobranca` ('cobrada' e o `preco` dela), NUNCA o `numero`. O número é a posição da consulta no mês na
+  # hora em que contou, e deixa de ser único: a grátis desfeita baixa o contador, e a próxima consulta recebe de novo um
+  # número que já existe; a cobrada convertida em grátis fica com o número acima de 20. Contar "numero > 20" erra a
+  # fatura nos dois sentidos.
   def desfazer_cobranca!(registro)
     return if registro.cobranca == 'sem_cobranca'
 

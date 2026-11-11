@@ -140,7 +140,8 @@ Decisões do Rodrigo de 11/11/2026, registradas aqui porque o comportamento é a
   recusado) segue a mesma regra por ser o documento inválido do imóvel rural, e isso fica para conferir no painel da
   BigDataCorp (BDC Center) na primeira consulta real.
 - **A grátis devolvida acima de 20 não se perde**: quando a entrega incerta desfaz uma grátis num mês que já passou das
-  20, a cobrada mais antiga do mês no mesmo card vira grátis.
+  20, a cobrada mais antiga do mês no mesmo card vira grátis. Por isso a fatura lê a coluna `cobranca` (`cobrada`, com o
+  `preco`), nunca o `numero`: depois da conversão o número se repete e a grátis convertida fica com número acima de 20.
 - **A telemetria que falha no banco deixa marca** no contador do dia: o motivo `premium.telemetria_falhou` em
   `autonomia_ferramentas_prontas_usos.motivos` (por conta, card e dia). A conferência do dia lê ali (consulta no
   comentário de `Premium::Execucao#cobrar`), porque o log some e o rastreador está desligado em produção.
