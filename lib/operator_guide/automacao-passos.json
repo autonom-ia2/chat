@@ -1719,6 +1719,19 @@
       ]
     },
     {
+      "tipo": "lista_de_email",
+      "grupo": "CONTATO",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.LISTA_DE_EMAIL",
+      "campos": [
+        {
+          "nome": "lista_id",
+          "peca": "lista_de_email",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.LISTA_ID"
+        }
+      ]
+    },
+    {
       "tipo": "ia_assumir",
       "grupo": "EQUIPE",
       "frase": "AUTOMACAO_LIVRE.PASSOS.IA_ASSUMIR",

@@ -246,6 +246,8 @@ fora:
       - email_campaigns/ai
       - email_campaigns/assets
       - email_campaigns/campaigns
+      # G52: criar e mudar a lista é da tela de campanhas; a automação põe o contato na lista pelo passo próprio.
+      - email_campaigns/lists
       - email_campaigns/maintenance
       - email_campaigns/recipients
       - email_campaigns/reputations

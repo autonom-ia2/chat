@@ -1,0 +1,25 @@
+# Automação livre, passo "Pôr na lista de e-mail" (G52, #2760). Arquivo próprio para não disputar o pt_BR.yml com as
+# outras frentes.
+pt_BR:
+  email_lists:
+    label_in_use: 'Esta etiqueta é de uma lista de e-mail usada por uma campanha agendada, em envio ou pausada. Espere a campanha terminar ou cancele-a, e depois apague a etiqueta.'
+  autonomia:
+    automacao:
+      motivos:
+        quem_ligou_sem_permissao_lista: 'Quem ligou a automação não pode mais mexer nas campanhas. Assuma e religue.'
+        lista_de_email_desligada: 'As campanhas de e-mail estão desligadas. O contato não foi posto na lista.'
+        lista_de_email_sumiu: 'A lista de e-mail escolhida não existe mais. Escolha outra lista no passo.'
+        lista_contato_sem_email: 'O contato não tem e-mail. Ele não foi posto na lista.'
+        ja_na_lista: 'O contato já estava na lista.'
+      receita:
+        lista_de_email_desligada: 'Passo %{passo}: as campanhas de e-mail estão desligadas.'
+        lista_de_email_sem_permissao: 'Passo %{passo}: para usar este passo você precisa da permissão de gerenciar campanhas.'
+        lista_de_email_de_fora: 'Passo %{passo}: a lista de e-mail %{id} não é desta conta.'
+  activerecord:
+    errors:
+      models:
+        label:
+          attributes:
+            title:
+              email_list_locked: 'é de uma lista de e-mail e não pode ser renomeada. Renomeie a lista.'
+              email_list_reserved: 'não pode começar com "lista-email-": esse nome é das listas de e-mail.'

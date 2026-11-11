@@ -1,0 +1,11 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "LISTA_DE_EMAIL": {
+      "FRASE": "Add to the e-mail list “{nome}”",
+      "SEM_LISTA": "This account has no e-mail list yet. Create one in an e-mail campaign, under “Who receives it”.",
+      "DESLIGADA": "E-mail campaigns are turned off in this account.",
+      "FALHOU": "Could not load the e-mail lists. Reload the page to try again.",
+      "DICA": "People who asked not to receive messages join the list but do not get the e-mails."
+    }
+  }
+}

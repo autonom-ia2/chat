@@ -12,7 +12,7 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
     authorize EmailCampaign
     query = EmailCampaigns::CampaignQuery.new(account: Current.account, params: report_filter_params(%w[status campaign_status q since until]))
     @campaigns = query.call.includes({ sender_identity: { reply_to_inbox: :channel } }, { reply_to_inbox: :channel },
-                                     latest_recipient_import: :source_file_attachment)
+                                     :email_list, latest_recipient_import: :source_file_attachment)
     @campaign_presenter = EmailCampaigns::Presentation::Campaign.new(account: Current.account, actor: Current.user, campaigns: @campaigns.to_a)
   end
 
@@ -123,7 +123,8 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
       sender_identity: source.sender_identity,
       sender_inbox: source.sender_inbox,
       body_mjml: source.body_mjml,
-      body_html: source.body_html,
+      # G52: a cópia vai para a mesma lista de e-mail (cada edição é uma campanha nova).
+      body_html: source.body_html, email_list_id: source.email_list_id,
       status: :draft
     )
     authorize @campaign, :create?
@@ -153,7 +154,7 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
   def campaign_params
     params.require(:email_campaign)
           .permit(:name, :subject, :from_name, :body_html, :reply_to, :sender_identity_id,
-                  :body_mjml, :preheader, :from_email, :delivery_mode, :sender_inbox_id, :reply_to_inbox_id)
+                  :body_mjml, :preheader, :from_email, :delivery_mode, :sender_inbox_id, :reply_to_inbox_id, :email_list_id)
   end
 
   def render_unprocessable(code)

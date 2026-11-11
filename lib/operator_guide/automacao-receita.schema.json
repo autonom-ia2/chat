@@ -686,6 +686,17 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["id", "tipo", "lista_id"],
+          "description": "Lista de e-mail (G52). Põe o contato do alvo (conversa, card ou contato) na lista de e-mail escolhida, que é pôr nele a etiqueta da lista. A campanha de e-mail com a lista vai para quem está nela na hora do envio; quem pediu para não receber fica de fora no envio. Pede a permissão de gerenciar campanhas.",
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "lista_de_email" },
+            "lista_id": { "type": "integer", "minimum": 1, "description": "A lista de e-mail da conta (id em email_campaigns/lists)." }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "description": "Passa a conversa à agente de IA pela Atribuição do CRM. Pessoa no nome vence: o passo pula.",
           "required": ["id", "tipo", "agente_id"],
           "properties": {

@@ -1,0 +1,11 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "LISTA_DE_EMAIL": {
+      "FRASE": "Pôr na lista de e-mail “{nome}”",
+      "SEM_LISTA": "Esta conta ainda não tem lista de e-mail. Crie uma na campanha de e-mail, em “Quem recebe”.",
+      "DESLIGADA": "As campanhas de e-mail estão desligadas nesta conta.",
+      "FALHOU": "Não deu para carregar as listas de e-mail. Recarregue a página para tentar de novo.",
+      "DICA": "Quem pediu para não receber entra na lista, mas não recebe os e-mails."
+    }
+  }
+}

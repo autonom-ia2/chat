@@ -374,9 +374,6 @@ module FechamentoAutomacao::Lacunas
     # (#2682): `se_repetir: comeca_outra` abre a 2ª, e a nova entrada acorda o "esperar até" que lê card.entrou_de_novo.
     # Ponta a ponta em spec/fechamento/automacao/g50_reentrada_spec.rb.
     'G50' => -> { FechamentoAutomacao::SondasDoExemplo04.nova_entrada_comeca_outra_e_acorda_a_espera? },
-    # Do exemplo 20, passo 9 (termo à risca: "coloca o cliente na campanha de e-mail"): pôr o contato numa campanha de
-    # e-mail. A G14 cobre só WhatsApp; etiqueta + G7 + G2 é adaptar, não conta.
-    'G52' => nil,
     # Do exemplo 1, passo 12 (#2721, #2763): o resumo lê tudo o que a execução tentou, até o e-mail em conversa própria.
     # A sonda monta a falha do modelo e a do e-mail e confere que o resumir recebe os envios dos dois canais.
     'G42' => -> { FechamentoAutomacao::SondasDoExemplo19.resumir_le_os_envios_dos_dois_canais? },
@@ -410,6 +407,9 @@ module FechamentoAutomacao::Lacunas
     # Do exemplo 19, também da Gatilhos (#2637, 08/11). G53: o conteúdo da mensagem que falhou como valor da receita
     # (passo 2, "manda por e-mail o mesmo conteúdo"): `falhou.texto`, prova em g53_conteudo_da_falha_spec.rb.
     'G53' => -> { valor?('falhou.texto') },
+    # G52 (#2760): pôr o contato na lista de e-mail; a campanha de e-mail com a lista vai para quem está nela na hora do
+    # envio (exemplo 20, passo 9: "Dicas do mês"; exemplo 6, passo 10: "Saudade").
+    'G52' => -> { passo?('lista_de_email') && EmailCampaign.reflect_on_association(:email_list).present? },
     # G54: esperar a entrega da mensagem (passo 5, "Chegou: tira a etiqueta e grava uma nota"); fechada pela G34.
     'G54' => -> { valor?('envio.situacao') },
     # Do exemplo 17, achadas na G9 (#2707). G62 (#2829): o campo do card do tipo pessoa da equipe, com o nome e a

@@ -232,6 +232,60 @@ describe('LivreAlterar', () => {
     expect(falhou.find('[data-sem-agente-de-ia]').exists()).toBe(false);
   });
 
+  // G52 — a lista de e-mail é escolhida nas listas da conta; sem nenhuma, o
+  // painel diz isso; com as campanhas de e-mail desligadas, diz isso também.
+  const LISTA_DE_EMAIL = {
+    tipo: 'lista_de_email',
+    grupo: 'CONTATO',
+    frase: 'LISTA_DE_EMAIL',
+    campos: [
+      {
+        nome: 'lista_id',
+        peca: 'lista_de_email',
+        obrigatorio: true,
+        rotulo: 'LISTA_ID',
+      },
+    ],
+  };
+  const COM_LISTA = {
+    ...CATALOGO,
+    passos: [...CATALOGO.passos, LISTA_DE_EMAIL],
+  };
+  const PASSO_LISTA = { id: 'l1', tipo: 'lista_de_email', lista_id: null };
+
+  it('espera escolher a lista de e-mail antes de salvar', async () => {
+    const wrapper = montar(COM_LISTA, {
+      listaDeEmail: [{ value: 5, label: 'Dicas do mês' }],
+    });
+    wrapper.vm.abrir({ tipo: 'passo', valor: PASSO_LISTA });
+    await flushPromises();
+    expect(wrapper.find('[data-peca="lista_de_email"]').exists()).toBe(true);
+    expect(wrapper.find('[data-lista-de-email-dica]').exists()).toBe(true);
+    expect(salvarDesligado(wrapper)).toBe(true);
+
+    wrapper.vm.abrir({ tipo: 'passo', valor: { ...PASSO_LISTA, lista_id: 5 } });
+    await flushPromises();
+    expect(salvarDesligado(wrapper)).toBe(false);
+  });
+
+  it('sem lista na conta diz isso; com as campanhas de e-mail desligadas, diz que estão desligadas', async () => {
+    const sem = montar(COM_LISTA, { listaDeEmail: [] });
+    sem.vm.abrir({ tipo: 'passo', valor: PASSO_LISTA });
+    await flushPromises();
+    expect(sem.find('[data-sem-lista-de-email]').exists()).toBe(true);
+    expect(salvarDesligado(sem)).toBe(true);
+
+    const desligada = montar(COM_LISTA, {
+      listaDeEmail: null,
+      listaDeEmailErro: 'desligada',
+    });
+    desligada.vm.abrir({ tipo: 'passo', valor: PASSO_LISTA });
+    await flushPromises();
+    expect(desligada.find('[data-listas-de-email-erro]').text()).toBe(
+      'AUTOMACAO_LIVRE.LISTA_DE_EMAIL.DESLIGADA'
+    );
+  });
+
   it('espera o alvo e o campo obrigatório antes de salvar', async () => {
     const wrapper = montar();
     const passo = {

@@ -1,0 +1,28 @@
+{
+  "EMAIL_LISTS": {
+    "QUEM_RECEBE": "Who receives it",
+    "PLANILHA": "Spreadsheet",
+    "LISTA": "E-mail list",
+    "ESCOLHA": "Choose the list",
+    "ESCOLHA_ERRO": "Choose a list.",
+    "CRIAR": "Create list",
+    "NOME": "Name of the new list",
+    "NOME_PLACEHOLDER": "E.g.: Tips of the month",
+    "CRIAR_CONFIRMAR": "Create",
+    "CANCELAR": "Cancel",
+    "SEM_LISTA": "There is no list yet. Create the first one.",
+    "PESSOAS": "Nobody on the list now | 1 person on the list now | {n} people on the list now",
+    "COM_EMAIL": "none with e-mail | 1 with e-mail | {n} with e-mail",
+    "PESSOAS_E_EMAIL": "{pessoas} · {comEmail}",
+    "REGRA": "It goes to whoever is on the list when it is sent. People who asked not to receive messages are left out.",
+    "FALHOU_CARREGAR": "Could not load the lists. Reload the page.",
+    "FALHOU_CRIAR": "Could not create the list. Try again.",
+    "NOME_REPETIDO": "There is already a list with this name.",
+    "NOME_INVALIDO": "Use at least one letter or number in the name.",
+    "TEM_PLANILHA": "This campaign already has people from a spreadsheet. To send to a list, create a new campaign.",
+    "FALHA": {
+      "VAZIA": "Not sent: when it was time to send, nobody on the list could receive it (no one left on the list, no e-mail, or they asked not to receive messages).",
+      "TODOS_BLOQUEADOS": "Not sent: when it was time to send, everyone on the list had unsubscribed or their address was blocked."
+    }
+  }
+}

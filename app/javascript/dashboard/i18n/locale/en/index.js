@@ -33,6 +33,8 @@ import automacaoLivreCampanha from './automacaoLivreCampanha.json';
 import automacaoLivreProspeccao from './automacaoLivreProspeccao.json';
 import automacaoLivreParaCada from './automacaoLivreParaCada.json';
 import automacaoLivreRetorno from './automacaoLivreRetorno.json';
+import automacaoLivreListaDeEmail from './automacaoLivreListaDeEmail.json';
+import emailLists from './emailLists.json';
 import automacaoLivreOutroRegistro from './automacaoLivreOutroRegistro.json';
 import automacaoLivreWebhook from './automacaoLivreWebhook.json';
 import ausencia from './ausencia.json';
@@ -127,9 +129,11 @@ export default {
     ...automacaoLivreProspeccao.AUTOMACAO_LIVRE,
     ...automacaoLivreParaCada.AUTOMACAO_LIVRE,
     ...automacaoLivreRetorno.AUTOMACAO_LIVRE,
+    ...automacaoLivreListaDeEmail.AUTOMACAO_LIVRE,
     ...automacaoLivreOutroRegistro.AUTOMACAO_LIVRE,
     ...automacaoLivreWebhook.AUTOMACAO_LIVRE,
   },
+  ...emailLists,
   ...ausencia,
   ...brandKits,
   ...booking,

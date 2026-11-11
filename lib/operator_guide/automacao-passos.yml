@@ -60,6 +60,10 @@ nativos:
   # (RegraDoFunil.chave?: crm_manage_pipelines ou crm_admin), como o gatilho de card; quem recusa de verdade é a API,
   # ao salvar e ao ligar.
   card: { grupo: FUNIL, requer: automacao_gatilhos, funil: true }
+  # G52: pôr o contato na lista de e-mail; a campanha de e-mail com a lista vai para quem está nela na hora do envio.
+  # Sem flag de conta: as campanhas de e-mail ligam pela instalação, e quem recusa de verdade é a Receita, ao salvar.
+  # `peca`: a escolha da lista, carregada das listas da conta.
+  lista_de_email: { grupo: CONTATO, peca: lista_de_email }
   # G66 (#2843, decisão 14): passar a conversa para o responsável do card, depois da troca do dono. Só com gatilho de
   # card (a Receita recusa nos outros), que já pede a chave de funis: por isso `funil` e a flag dos gatilhos de card.
   conversa_ao_responsavel: { grupo: EQUIPE, requer: automacao_gatilhos, funil: true }

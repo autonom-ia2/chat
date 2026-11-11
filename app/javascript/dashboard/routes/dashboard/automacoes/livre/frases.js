@@ -4,6 +4,7 @@
 import { entradaDoPasso, lerCampo } from './catalogo';
 import { comColchetes, nomeDoValor } from './texto';
 import { fraseDaCampanha } from './campanha';
+import { fraseDaListaDeEmail } from './listaDeEmail';
 import { fraseDaProspeccao } from './prospeccao';
 import { fraseDoParaCada } from './paraCada';
 import { fraseDoRetorno, quandoDoRetorno } from './retorno';
@@ -503,6 +504,7 @@ export const fraseDoPasso = (passo, catalogo, t) => {
   if (FRASE_DA_IA[passo.tipo])
     return FRASE_DA_IA[passo.tipo](passo, t, catalogo);
   if (passo.tipo === 'campanha') return fraseDaCampanha(passo, t);
+  if (passo.tipo === 'lista_de_email') return fraseDaListaDeEmail(passo, t);
   if (passo.tipo === 'prospeccao') return fraseDaProspeccao(passo, t);
   if (passo.tipo === 'para_cada') return fraseDoParaCada(passo, t);
   if (passo.tipo === 'retorno')
