@@ -1126,8 +1126,9 @@ describe('linhasDoResultado', () => {
   });
 
   // Revisão do #2891 (a): na linha de pares, dois campos com o mesmo rótulo (estado e uf, ano e ano_modelo) ou com o
-  // rótulo do identificador viravam duas linhas iguais. Fica o primeiro.
-  it('the pairs of an identified list never repeat a label', () => {
+  // rótulo do identificador viravam duas linhas iguais. Fica o primeiro, só quando o valor também é igual em todos os
+  // itens (revisão do #2917): com valor diferente, os dois aparecem, senão um some.
+  it('the pairs of an identified list never repeat a label with the same values', () => {
     expect(
       linhasDoResultado(
         {
@@ -1141,6 +1142,22 @@ describe('linhasDoResultado', () => {
     ).toEqual([
       ['Ano', '2026 e 2027'],
       ['Estado', '2026: São Paulo · 2027: Rio'],
+      ['Estado', '2026: SP · 2027: RJ'],
+    ]);
+    expect(
+      linhasDoResultado(
+        {
+          precos: [
+            { combustivel: 'Gasolina', ano_modelo: 2020, ano: 2019 },
+            { combustivel: 'Flex', ano_modelo: 2021, ano: 2021 },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      ['Ano', '2019 e 2021'],
+      ['Combustível', '2019: Gasolina · 2021: Flex'],
+      ['Ano', '2019: 2020 · 2021: 2021'],
     ]);
     expect(
       linhasDoResultado(

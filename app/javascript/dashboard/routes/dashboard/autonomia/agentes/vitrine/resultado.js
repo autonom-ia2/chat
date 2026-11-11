@@ -434,24 +434,28 @@ const paresDoCampo = (itens, nomes, campo, textos) => {
 // Varredura P13: lista identificada de até MAXIMO_PARA_PARES itens mostra, para cada campo com rótulo que todos têm (até
 // MAXIMO_DE_CAMPOS, na ordem do primeiro item), uma linha de pares ("Previsão do mercado (mediana): 2026: 5,2195 % ·
 // 2027: 4,9005 %"), em vez de abrir só o primeiro: sem isso, a previsão de 2027 sumia.
-// Um rótulo aparece uma vez só (revisão do #2891): o campo com o rótulo do identificador ou de um campo anterior (estado
-// e uf, ano e ano_modelo) fica de fora.
+// O campo com o rótulo do identificador ou de um campo anterior (estado e uf, ano e ano_modelo) fica de fora quando o
+// valor também é igual em todos os itens (revisões do #2891 e do #2917): seria a mesma linha duas vezes. Com valor
+// diferente, os dois aparecem.
 const MAXIMO_PARA_PARES = 5;
 const MAXIMO_DE_CAMPOS = 4;
+const repeteOCampo = (itens, chave, outro, textos) =>
+  textos.rotulo(chave) === textos.rotulo(outro) &&
+  itens.every(item => item[chave] === item[outro]);
 const camposComuns = (itens, id, textos) =>
   Object.keys(itens[0])
     .filter(
       chave =>
         chave !== id &&
         textos.rotulo(chave) &&
-        textos.rotulo(chave) !== textos.rotulo(id) &&
+        !repeteOCampo(itens, chave, id, textos) &&
         itens.every(item => ehPrimitivo(item[chave]))
     )
     .filter(
       (chave, indice, campos) =>
-        campos.findIndex(
-          outro => textos.rotulo(outro) === textos.rotulo(chave)
-        ) === indice
+        !campos
+          .slice(0, indice)
+          .some(outro => repeteOCampo(itens, chave, outro, textos))
     )
     .slice(0, MAXIMO_DE_CAMPOS);
 const linhasDePares = (itens, ids, id, textos) =>
