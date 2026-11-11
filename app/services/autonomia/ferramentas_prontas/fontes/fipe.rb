@@ -1,10 +1,12 @@
 # VALOR DO CARRO PELA TABELA FIPE (#2858): BrasilAPI, com a parallelum de reserva (`fipe/*.rb`). Uma fonte, três
-# consultas; o agente escolhe a consulta pelo sentido da conversa e encadeia: marcas -> modelos (com a busca pelo nome)
-# -> preço.
+# consultas; o agente escolhe a consulta pelo sentido da conversa. Regra "QI 70": o preço aceita a marca e o modelo pelo
+# NOME, como o cliente disse, e a plataforma tira o código das listas (`fipe/pelo_nome.rb`); a cadeia marcas -> modelos
+# -> preço fica com o servidor, não com o modelo.
 #   - marcas: BrasilAPI, reserva parallelum;
 #   - modelos: só a parallelum tem a lista de modelos de uma marca;
 #   - preço: pelo código FIPE (BrasilAPI, reserva parallelum) ou por marca e modelo (parallelum). Sem o ano, a
-#     parallelum devolve os anos que existem, para o agente perguntar ou escolher.
+#     parallelum devolve os anos que existem e a faixa (o preço do ano mais antigo e do mais novo), para o agente mostrar
+#     a faixa antes de perguntar o ano.
 # Termos: as duas são gratuitas; a parallelum sem chave aceita poucas centenas de pedidos por dia por IP, por isso ela
 # é só reserva e o cache segura o resto. A tabela muda uma vez por mês: preço com 1 dia de cache, listas com 7.
 module Autonomia::FerramentasProntas::Fontes::Fipe
@@ -19,6 +21,28 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
   MAX_ANOS_COM_PRECO = 3
   # Na FIPE, 32000 é o "zero km".
   ZERO_KM = 32_000
+  FAIXA = 'Sem o ano: o preço do ano mais antigo e do mais novo (a faixa). Mostre a faixa ao cliente e só então pergunte ' \
+          'o ano-modelo.'.freeze
+  # Várias versões do modelo no ano (o Gol 2020): o preço de duas delas, sem exigir a escolha (varredura F12). De
+  # propósito (decisão do Rodrigo, #2906): duas versões de exemplo, a de nome mais curto e a de nome mais longo, não o
+  # mínimo e o máximo da tabela; o texto não as apresenta como "entre X e Y".
+  MAX_VERSOES = 2
+  # Os textos que vão nos dados cabem em `Resposta::MAX_TEXTO` (160): o resto seria cortado.
+  VERSOES = 'Preço das 2 versões desse modelo no ano: o exato depende da versão. Se o cliente quiser o exato, pergunte a ' \
+            'versão.'.freeze
+  # Várias versões no ano e só um preço respondeu (a outra versão não tem preço naquele ano): o preço é de uma delas.
+  UMA_DAS_VERSOES = 'Preço de uma das versões desse modelo no ano, como exemplo (há outras): o exato depende da versão. ' \
+                    'Se o cliente quiser o exato, pergunte a versão.'.freeze
+  # Mais de 2 versões no ano: "há outras" só aqui.
+  VERSOES_E_OUTRAS = 'Preço de 2 versões desse modelo no ano, como exemplo (há outras): não é o mínimo nem o máximo da ' \
+                     'tabela. Para o exato, pergunte a versão.'.freeze
+  SEM_O_ANO = 'Não há o ano-modelo %<ano>s deste veículo na tabela FIPE. Os anos que existem vêm na resposta: diga isso ao ' \
+              'cliente e confirme o ano.'.freeze
+  # O preço vai em número e o mês em AAAA-MM (varredura P09): quem formata é a tela, no idioma dela, e o agente lê o
+  # número igual. A moeda vai em `unidades`.
+  UNIDADES = { 'valor' => 'R$' }.freeze
+  MESES = %w[janeiro fevereiro março abril maio junho julho agosto setembro outubro novembro dezembro].freeze
+  TAMANHO_DO_ANO = 4
 
   def self.lista(itens, chave, maximo)
     Autonomia::FerramentasProntas::Lista.cortar(itens, chave, maximo)
@@ -33,23 +57,81 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
 
   # `campos`: valor, marca, modelo, ano_modelo, combustivel, codigo_fipe, mes_de_referencia. O vazio sai.
   def self.preco(campos)
-    campos.transform_keys(&:to_s).transform_values { |valor| valor.is_a?(String) ? valor.strip.presence : valor }.compact
+    limpos = campos.transform_keys(&:to_s).transform_values { |valor| valor.is_a?(String) ? valor.strip.presence : valor }.compact
+    limpos.merge('valor' => valor(limpos['valor']), 'mes_de_referencia' => mes(limpos['mes_de_referencia'])).compact
   end
 
-  TIPO = Parametro.new(nome: 'tipo', descricao: 'O tipo de veículo.', opcoes: TIPOS)
-  MARCA = Parametro.new(nome: 'marca', descricao: 'O código da marca, como veio na consulta marcas.') { |valor| Parametro.codigo(valor) }
-  MODELO = Parametro.new(nome: 'modelo', descricao: 'O código do modelo, como veio na consulta modelos.') { |valor| Parametro.codigo(valor) }
+  # "R$ 56.043,00" (o formato das duas fontes) -> 56043.0. Fora dele, nil: o preço sem valor não serve.
+  def self.valor(texto)
+    return texto.to_f if texto.is_a?(Numeric)
+
+    Float(texto.to_s.delete('^0-9,').tr(',', '.'), exception: false)
+  end
+
+  # "novembro de 2026" (o formato das duas fontes, não texto de pessoa) -> "2026-11". Fora dele, como veio.
+  def self.mes(texto)
+    return if texto.nil?
+
+    partes = Autonomia::FerramentasProntas::Lista.comparavel(texto).split
+    numero = MESES.index { |nome| Autonomia::FerramentasProntas::Lista.comparavel(nome) == partes.first }
+    ano = partes.last.to_s
+    return texto unless numero && ano.length == TAMANHO_DO_ANO && ano.delete(Parametro::DIGITOS).empty?
+
+    format('%<ano>s-%<mes>02d', ano: ano, mes: numero + 1)
+  end
+
+  def self.refinar_preco(dados, _params)
+    dados['precos'] ? dados.merge('unidades' => UNIDADES) : dados
+  end
+
+  # O preço pede o código FIPE, ou a marca e o modelo. Falta: a marca ou o modelo (o código é dado técnico: o agente
+  # nunca o pede ao cliente).
+  def self.regra_do_preco(params)
+    return if params['codigo_fipe']
+    return 'marca' unless params['marca']
+
+    'modelo' unless params['modelo']
+  end
+
+  # O código (como veio de uma lista) ou o nome que o cliente disse.
+  def self.codigo_ou_nome(valor)
+    Parametro.codigo(valor) || Parametro.texto_curto(valor)
+  end
+
+  TIPO = Parametro.new(nome: 'tipo', descricao: 'O tipo de veículo.', opcoes: TIPOS,
+                       deduza: 'escolha carros, motos ou caminhoes pelo veículo de que o cliente falou.')
+  MARCA = Parametro.new(nome: 'marca', descricao: 'O nome da marca como o cliente disse (ex.: Volkswagen), ou o código dela.',
+                        deduza: 'mande o nome da marca; se o cliente disse só o modelo, a marca sai dele (Gol é Volkswagen).') do |valor|
+    codigo_ou_nome(valor)
+  end
+  MODELO = Parametro.new(nome: 'modelo', descricao: 'O nome do modelo como o cliente disse (ex.: Gol, 208), ou o código como veio ' \
+                                                    'na consulta modelos.',
+                         pergunte: 'o modelo do veículo') { |valor| codigo_ou_nome(valor) }
   BUSCA = Parametro.new(nome: 'busca', local: true,
                         descricao: 'Parte do nome do modelo para filtrar a lista (ex.: "onix lt 1.0"). Opcional.') do |valor|
     Parametro.texto_curto(valor)
   end
-  CODIGO_FIPE = Parametro.new(nome: 'codigo_fipe', descricao: 'O código FIPE do veículo (ex.: 004517-9), se o cliente informou.') do |valor|
+  CODIGO_FIPE = Parametro.new(nome: 'codigo_fipe', descricao: 'O código FIPE do veículo (ex.: 004517-9), se o cliente informou.',
+                              deduza: 'deixe o código FIPE vazio e mande marca e modelo.') do |valor|
     digitos = Parametro.digitos(valor, 7)
     "#{digitos[0, 6]}-#{digitos[6]}" if digitos
   end
-  ANO = Parametro.new(nome: 'ano', tipo: 'integer', descricao: 'O ano-modelo (ex.: 2020; 32000 é zero km).') do |valor|
-    Parametro.inteiro(valor, 1950..2100) || Parametro.inteiro(valor, ZERO_KM..ZERO_KM)
+  # Qualquer ano de 4 dígitos passa: se ele existe para o veículo, quem diz é a tabela (varredura F13, "Gol 1850").
+  ANO = Parametro.new(nome: 'ano', tipo: 'integer', descricao: 'O ano-modelo (ex.: 2020; 32000 é zero km).',
+                      pergunte: 'o ano-modelo do veículo') do |valor|
+    Parametro.inteiro(valor, 1000..2100) || Parametro.inteiro(valor, ZERO_KM..ZERO_KM)
   end
+
+  # Interna, fora da lista que o modelo vê: os anos de um veículo, guardados no cache da fonte pela parallelum.
+  ANOS = Consulta.new(nome: 'anos', descricao: 'os anos de um veículo (interna)', obrigatorios: [TIPO],
+                      opcionais: [CODIGO_FIPE, MARCA, MODELO], provedores: [], validade: 7.days, prazo_por_fonte: 5, prazo_total: 5)
+  # Interna: os modelos de uma marca que têm o ano-modelo (`PeloNome`, para estreitar as versões pelo ano).
+  MODELOS_DO_ANO = Consulta.new(nome: 'modelos_do_ano', descricao: 'os modelos de uma marca num ano (interna)',
+                                obrigatorios: [TIPO, MARCA, ANO], provedores: [Parallelum], validade: 7.days,
+                                prazo_por_fonte: 5, prazo_total: 5)
+
+  PRECO = 'o preço do mês; pede tipo, marca e modelo pelo nome, como o cliente disse (o código sai das listas aqui), e o ' \
+          'ano; ou o código FIPE. Sem o ano, vem a faixa e os anos que existem'.freeze
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'fipe', slug: 'pronta_fipe', nome: 'Valor do carro (FIPE)',
@@ -60,11 +142,10 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
                    provedores: [BrasilApi, Parallelum], validade: 7.days, prazo_por_fonte: 4, prazo_total: 8),
       Consulta.new(nome: 'modelos', descricao: 'os modelos de uma marca; pede tipo e marca, e aceita busca pelo nome',
                    obrigatorios: [TIPO, MARCA], opcionais: [BUSCA], provedores: [Parallelum], validade: 7.days,
-                   prazo_por_fonte: 5, prazo_total: 5, refinar: method(:refinar_modelos)),
-      Consulta.new(nome: 'preco', descricao: 'o preço do mês; pede tipo e o código FIPE, ou marca e modelo, e o ano',
-                   obrigatorios: [TIPO], opcionais: [CODIGO_FIPE, MARCA, MODELO, ANO],
-                   provedores: [BrasilApi, Parallelum], validade: 1.day, prazo_por_fonte: 4, prazo_total: 9,
-                   regra: ->(params) { 'codigo_fipe' unless params['codigo_fipe'] || (params['marca'] && params['modelo']) })
+                   prazo_por_fonte: 5, prazo_total: 9, refinar: method(:refinar_modelos), resolver: PeloNome.method(:resolver)),
+      Consulta.new(nome: 'preco', descricao: PRECO, obrigatorios: [TIPO], opcionais: [CODIGO_FIPE, MARCA, MODELO, ANO],
+                   provedores: [BrasilApi, Parallelum], validade: 1.day, prazo_por_fonte: 4, prazo_total: 12,
+                   regra: method(:regra_do_preco), resolver: PeloNome.method(:resolver), refinar: method(:refinar_preco))
     ],
     limite_diario: 500,
     termos: 'BrasilAPI e parallelum: gratuitas; a parallelum sem chave tem teto diário por IP e fica só de reserva. ' \

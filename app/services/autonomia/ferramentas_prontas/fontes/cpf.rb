@@ -31,7 +31,8 @@ module Autonomia::FerramentasProntas::Fontes::Cpf
       'estados' => REGIOES.fetch(numero).map { |sigla| Autonomia::FerramentasProntas::Ufs.nome(sigla) } }
   end
 
-  CPF = Parametro.new(nome: 'cpf', descricao: 'O CPF como o cliente escreveu (11 dígitos, com ou sem pontos e traço).') do |valor|
+  CPF = Parametro.new(nome: 'cpf', descricao: 'O CPF como o cliente escreveu (11 dígitos, com ou sem pontos e traço).',
+                      pergunte: 'o CPF completo, com os 11 dígitos') do |valor|
     Parametro.digitos(valor, 11)
   end
 

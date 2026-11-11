@@ -73,7 +73,7 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
 
     it 'grava quem incluiu mesmo quando o acesso nasceu no Experimente' do
       pessoa = com_funcao(%w[autonomia_tools_manage])
-      fonte_responde('https://brasilapi.com.br/api/cep/v2/01001000', { cep: '01001000', state: 'SP', city: 'São Paulo' })
+      fonte_responde('https://viacep.com.br/ws/01001000/json/', { cep: '01001-000', localidade: 'São Paulo', uf: 'SP' })
       post "#{base}/experimentar", params: { fonte: 'cep', valor: '01001000' }, headers: pessoa.create_new_auth_token, as: :json
       expect(Autonomia::FerramentasProntas::Acesso.sole.incluida_por_id).to be_nil
 
@@ -212,8 +212,8 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
 
   describe 'POST experimentar' do
     it 'consulta a fonte e devolve os dados, contando no limite do dia da conta' do
-      fonte_responde('https://brasilapi.com.br/api/cep/v2/01001000',
-                     { cep: '01001000', state: 'SP', city: 'São Paulo', neighborhood: 'Sé', street: 'Praça da Sé' })
+      fonte_responde('https://viacep.com.br/ws/01001000/json/',
+                     { cep: '01001-000', localidade: 'São Paulo', uf: 'SP', bairro: 'Sé', logradouro: 'Praça da Sé' })
 
       post "#{base}/experimentar", params: { fonte: 'cep', valor: '01001-000' }, headers: admin.create_new_auth_token, as: :json
 
@@ -224,8 +224,8 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
     end
 
     it 'conta no limite do dia: passou dele, não sai para a rede' do
-      cep = 'https://brasilapi.com.br/api/cep/v2/01001000'
-      fonte_responde(cep, { cep: '01001000', state: 'SP', city: 'São Paulo' })
+      cep = 'https://viacep.com.br/ws/01001000/json/'
+      fonte_responde(cep, { cep: '01001-000', localidade: 'São Paulo', uf: 'SP' })
       Autonomia::FerramentasProntas::Acesso.create!(account: account, fonte: 'cep', limite_diario: 1)
 
       2.times { post "#{base}/experimentar", params: { fonte: 'cep', valor: '01001000' }, headers: admin.create_new_auth_token, as: :json }
@@ -242,8 +242,9 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
     end
 
     it 'com a fonte fora, diz que não conseguiu' do
-      fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
       fonte_fora('https://viacep.com.br/ws/01001000/json/')
+      fonte_fora('https://cep.awesomeapi.com.br/json/01001000')
+      fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
 
       post "#{base}/experimentar", params: { fonte: 'cep', valor: '01001000' }, headers: admin.create_new_auth_token, as: :json
 
@@ -256,6 +257,29 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
 
       expect(response.parsed_body).to eq('situacao' => 'pedido_invalido')
       expect(a_request(:get, ->(uri) { uri.host == 'brasilapi.com.br' })).not_to have_been_made
+    end
+
+    it 'Bancos: o exemplo é o nome ("Itaú"), e o código digitado continua valendo' do
+      account.enable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+      itau = { ispb: '60701190', name: 'ITAÚ UNIBANCO S.A.', code: 341, fullName: 'ITAÚ UNIBANCO S.A.' }
+      fonte_responde('https://brasilapi.com.br/api/banks/v1', [itau])
+      fonte_responde('https://brasilapi.com.br/api/banks/v1/341', { ispb: '60701190', name: 'ITAÚ UNIBANCO S.A.', code: 341 })
+
+      post "#{base}/experimentar", params: { fonte: 'bancos', valor: 'Itaú' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['dados']['bancos']).to eq([{ 'codigo' => '341', 'nome' => 'ITAÚ UNIBANCO S.A.',
+                                                               'nome_completo' => 'ITAÚ UNIBANCO S.A.', 'ispb' => '60701190' }])
+
+      post "#{base}/experimentar", params: { fonte: 'bancos', valor: '341' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['dados']).to include('codigo' => '341', 'nome' => 'ITAÚ UNIBANCO S.A.')
+    end
+
+    it 'DDD: o telefone inteiro serve no Experimente' do
+      account.enable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+      fonte_responde('https://brasilapi.com.br/api/ddd/v1/34', { state: 'MG', cities: %w[UBERLANDIA] })
+
+      post "#{base}/experimentar", params: { fonte: 'ddd', valor: '34 99999-0000' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['dados']).to include('ddd' => '34', 'uf' => 'MG')
     end
 
     it 'o Banco Central não pede valor: dá o dólar' do
@@ -290,7 +314,7 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.keys).to contain_exactly('situacao', 'dados')
       expect(response.parsed_body['situacao']).to eq('encontrado')
-      expect(response.parsed_body.to_json).to include('R$ 60.822,00')
+      expect(response.parsed_body.to_json).to include('60822.0')
       expect(Autonomia::FerramentasProntas::Uso.find_by(account_id: account.id, fonte: 'fipe').consultas).to eq(1)
     end
   end

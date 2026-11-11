@@ -10,7 +10,9 @@
 # bruta. O filtro local (`Parametro#local?`) não entra na chave: a lista guardada é a da fonte, e o filtro roda depois.
 # O cache fora do ar é só um cache a menos: a leitura vira "não tem", a escrita é pulada, e a consulta segue.
 class Autonomia::FerramentasProntas::Cache
-  VERSAO = 'v1'.freeze
+  # Sobe quando muda o formato do que a fonte guarda (o que é montado antes do cache): a resposta antiga não chega ao
+  # agente sem o campo novo. v2 (#2906): o `nome` dos CEPs da rua e o formato novo dos hospitais.
+  VERSAO = 'v2'.freeze
   VALIDADE_DO_NAO_ENCONTRADO = 1.hour
   NAO_ENCONTRADO = 'nao_encontrado'.freeze
   ENCONTRADO = 'encontrado'.freeze

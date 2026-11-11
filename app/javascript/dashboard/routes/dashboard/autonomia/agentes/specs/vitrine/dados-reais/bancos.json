@@ -7,5 +7,19 @@
       "nome_completo": "ITAÚ UNIBANCO S.A.",
       "ispb": "60701190"
     }
+  },
+  "por_nome": {
+    "provedor": "brasilapi",
+    "dados": {
+      "total": 1,
+      "bancos": [
+        {
+          "codigo": "341",
+          "nome": "ITAÚ UNIBANCO S.A.",
+          "nome_completo": "ITAÚ UNIBANCO S.A.",
+          "ispb": "60701190"
+        }
+      ]
+    }
   }
 }

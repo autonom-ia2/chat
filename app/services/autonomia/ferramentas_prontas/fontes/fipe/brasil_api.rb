@@ -30,8 +30,11 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::BrasilApi < Autonomia::Ferram
     { 'precos' => itens.first(Fipe::MAX_PRECOS).map { |item| preco_de(item) } }
   end
 
+  # O preço sem valor que se leia (`Fipe.valor` devolve nil) não serve: falha, e a reserva tenta (revisão do #2906).
   def preco_de(item)
-    Fipe.preco(valor: item['valor'], marca: item['marca'], modelo: item['modelo'], ano_modelo: item['anoModelo'],
-               combustivel: item['combustivel'], codigo_fipe: item['codigoFipe'], mes_de_referencia: item['mesReferencia'])
+    preco = Fipe.preco(valor: item['valor'], marca: item['marca'], modelo: item['modelo'], ano_modelo: item['anoModelo'],
+                       combustivel: item['combustivel'], codigo_fipe: item['codigoFipe'], mes_de_referencia: item['mesReferencia'])
+    exigir!(preco['valor'])
+    preco
   end
 end

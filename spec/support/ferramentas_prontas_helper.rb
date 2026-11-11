@@ -10,7 +10,8 @@ module FerramentasProntasHelper
     # F4
     'apidadosabertos.saude.gov.br' => '93.184.216.53', 'pncp.gov.br' => '93.184.216.55',
     'apitempo.inmet.gov.br' => '93.184.216.56', 'archive-api.open-meteo.com' => '93.184.216.57',
-    'data.directory.opinbrasil.com.br' => '93.184.216.58', 'www2.susep.gov.br' => '93.184.216.59'
+    'data.directory.opinbrasil.com.br' => '93.184.216.58', 'www2.susep.gov.br' => '93.184.216.59',
+    'cep.awesomeapi.com.br' => '93.184.216.60'
   }.freeze
 
   # Também zera o teto global por provedor (#2858 F1): ele vive no Redis e passaria de um exemplo para o outro.
