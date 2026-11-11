@@ -44,7 +44,7 @@ Desligado, o provedor é pulado com o motivo `provedor_desligado`.
 | `archive-api.open-meteo.com` | Quanto choveu (F4) | **Plano gratuito só para uso não comercial**: menos de 10.000 por dia, 5.000 por hora e 600 por minuto. Uso comercial pede plano pago (chave, `customer-api.open-meteo.com`). Dados CC BY 4.0, com atribuição. **Sobe com o plano gratuito por decisão do Rodrigo (10/11/2026), risco aceito.** | 540 por minuto, 4.500 por hora, 9.000 por dia | 6 horas |
 | `data.directory.opinbrasil.com.br` e o host de cada seguradora | Produtos das seguradoras (Open Insurance, F4) | Dados abertos da fase 1 do Open Insurance Brasil, sem chave e sem número publicado. O endereço de cada seguradora sai sempre do diretório, nunca fixo no código; no máximo 2 seguradoras por consulta, com prazo curto. | 30 por minuto (diretório); 120 por minuto (padrão) em cada seguradora | 6 horas (diretório), 3 horas (produtos) |
 | `www2.susep.gov.br` | Corretor na SUSEP (F4) | Consulta pública de corretores. **Endpoint sem documentação**, sem chave, sem termo nem limite publicado: o formato é conferido a cada resposta e, se mudar, a fonte responde "não consegui" e deixa `ALERTA corretor_susep` no log. Só nome, situação, registro e ramos vão ao modelo. | 30 por minuto | 12 horas |
-| `plataforma.bigdatacorp.com.br` | Os 7 cards Premium (F7): certidões da empresa, raio-X da empresa, conferir a pessoa, histórico da placa, risco do endereço, imóvel rural, contato e mercado de empresas | **Paga, por contrato** (o mesmo da Cotação e da Prospecção, credencial `BIGDATACORP_USER`/`BIGDATACORP_PASSWORD`, só no ambiente). O repasse ao cliente foi liberado pelo advogado (plano aprovado). Cobra por dataset, inclusive a consulta sem registro (a vistoria da Rede Vistorias vazia não é cobrada). Preços da 1ª faixa da documentação pública (até 10 mil consultas por mês), lidos em 11/11/2026. Ficam fora, por desenho: score e restrição de crédito, contato e endereço de pessoa física, parentes, antecedentes, política, apostas, SUS e TSE. | Sem teto por host: o freio é o limite diário por conta e card (100) e o orçamento do mês (`AUTONOMIA_PREMIUM_ORCAMENTO_MENSAL`, alerta em 80%). Uma tentativa por consulta (nada de repetir consulta paga). | Por conta, até o fim do dia |
+| `plataforma.bigdatacorp.com.br` | Os 7 cards Premium (F7): certidões da empresa, raio-X da empresa, conferir a pessoa, histórico da placa, risco do endereço, imóvel rural, contato e mercado de empresas | **Paga, por contrato** (o mesmo da Cotação e da Prospecção, credencial `BIGDATACORP_USER`/`BIGDATACORP_PASSWORD`, só no ambiente). O repasse ao cliente foi liberado pelo advogado (plano aprovado). Cobra por dataset, inclusive a consulta sem registro (a vistoria da Rede Vistorias vazia não é cobrada). Preços da 1ª faixa da documentação pública (até 10 mil consultas por mês), lidos em 11/11/2026. Ficam fora, por desenho: score e restrição de crédito, contato e endereço de pessoa física, parentes, antecedentes, política, apostas, SUS e TSE. | Sem teto por host e sem limite diário por conta e card; sem alerta de orçamento (decisões do Rodrigo, 11/11). O freio é o cache do dia e a telemetria (`Premium::Registro`). 20 grátis por card e por conta a cada mês. Uma tentativa por consulta e uma de token, com teto da chamada inteira no prazo do dataset (nada de repetir consulta paga). | Por conta, até o fim do dia |
 | (sem rede) | Exames e procedimentos (TUSS, F4); nome de doenças (CID-10, F4) | Tabelas oficiais no repositório (`lib/ferramentas_prontas/`, origem e termos ao lado): a TUSS 22 da ANS (dados abertos, PDA-049; **licença do conjunto não confirmada**, parte das publicações da ANS é CC BY-NC-SA; uso autorizado pelo Rodrigo em 10/11/2026) e a CID-10 do DATASUS. Um robô diário no GitHub (`ferramentas-prontas-tabelas.yml`) baixa as duas e abre PR quando mudam; nada é baixado em produção. | — | sem cache |
 | (sem rede) | CPF válido; feriados (última reserva); DDD (reserva, só o estado); localização (reserva: a sede mais próxima) | Calculado na plataforma. A tabela das sedes vem da base "municipios-brasileiros" (licença MIT, sobre os códigos e nomes do IBGE). | — | CPF, DDD só com o estado e sede aproximada: sem cache |
 
@@ -86,6 +86,26 @@ sede de município mais próxima, calculada aqui, sem rede.
 
 Calculado aqui: nenhum pedido sai, a resposta não traz o número, e a consulta não vai ao cache nem à linha da consulta
 em segundo plano (responde na hora).
+
+## Premium (BigDataCorp): o que fica guardado e o que conta
+
+Decisões do Rodrigo de 11/11/2026, registradas aqui porque o comportamento é aceito, não um defeito:
+
+- **O documento consultado fica na linha da consulta em segundo plano.** Quando a consulta Premium sai do turno
+  (`agente_ferramenta_em_segundo_plano`), os argumentos já normalizados ficam em `autonomia_agent_tool_runs.arguments`,
+  como em qualquer ferramenta em segundo plano: o CPF de "Conferir a pessoa", o CNPJ, a placa. A telemetria
+  (`autonomia_ferramentas_premium_consultas`) nunca guarda o valor consultado. A linha da consulta segue a retenção e a
+  exclusão da conta.
+- **A vistoria sem registro conta para o cliente, com custo zero.** A Rede Vistorias não cobra a consulta vazia, mas a
+  regra do cliente é uma só: a consulta respondida conta, mesmo sem registro. Da 21ª do mês em diante, ela entra na
+  fatura pelo preço da vistoria, e a telemetria registra custo 0 para nós.
+- **Conferir a pessoa devolve nome e data de nascimento**, e o resultado fica no cache da conta até o fim do dia.
+- **Telefone de MEI e de empresário individual sai sempre.** O CNPJ é de empresa, mesmo quando o telefone é o da pessoa
+  dona. O telefone na lista "não perturbe" continua de fora.
+- **A resposta que se perde depois de a chamada sair** (o worker morreu) não conta para o cliente. A telemetria ganha
+  uma linha de falha (`entrega_incerta`) com o custo do dataset, porque a BigDataCorp pode ter cobrado.
+- **Preço em centavos inteiros:** custo × 1,5, arredondado para cima ao centavo (o embargo do IBAMA, R$ 0,225, é
+  R$ 0,23).
 
 ## Reserva de cada fonte da F1
 
