@@ -28,8 +28,8 @@ const uploadingMessage = computed(() =>
 </script>
 
 <template>
+  <!-- Always mounted (and empty when idle) so the status/alert lines inside are announced. -->
   <div
-    v-if="uploadingCount > 0 || notice"
     class="pointer-events-none absolute inset-x-0 top-3 z-10 flex flex-col items-center gap-2 px-4"
   >
     <p
