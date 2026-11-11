@@ -73,6 +73,18 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   SO_O_DE_8 = 'Na nota fiscal vai só o código de 8 dígitos; 2 dígitos é o capítulo e 4 é a posição, não servem na nota. ' \
               'Com mais de uma opção de 8 dígitos, pergunte ao cliente o material (aço, cobre, plástico…) antes de ' \
               'dizer o código.'.freeze
+  # Na consulta codigo, só quando o código ainda não é o da nota (regra "QI 70": o de 8 dígitos já está certo, e
+  # perguntar o material ali seria pergunta à toa).
+  NAO_E_O_DA_NOTA = 'Este código tem %<digitos>s dígitos: é o capítulo ou a posição, e não serve na nota fiscal (lá vai o de ' \
+                    '8 dígitos). Para chegar ao da nota, pergunte ao cliente o material (aço, cobre, plástico…) e use a ' \
+                    'consulta buscar.'.freeze
+
+  # A descrição de um código. Abaixo de 8 dígitos, com a observação de que ainda não é o da nota.
+  def self.do_codigo(item, codigo)
+    return item if codigo.length == 8
+
+    item.merge('observacao' => format(NAO_E_O_DA_NOTA, digitos: codigo.length))
+  end
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'ncm', slug: 'pronta_ncm', nome: 'Código de mercadoria', flag: FLAG,
@@ -80,7 +92,7 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     consultas: [
       Consulta.new(nome: 'buscar', descricao: "os códigos de uma mercadoria; pede busca. #{SO_O_DE_8}", obrigatorios: [BUSCA],
                    provedores: [BrasilApi], validade: 7.days, prazo_por_fonte: 4, prazo_total: 4),
-      Consulta.new(nome: 'codigo', descricao: "a descrição oficial de um código; pede codigo. #{SO_O_DE_8}", obrigatorios: [CODIGO],
+      Consulta.new(nome: 'codigo', descricao: 'a descrição oficial de um código; pede codigo', obrigatorios: [CODIGO],
                    provedores: [BrasilApi], validade: 7.days, prazo_por_fonte: 4, prazo_total: 4)
     ],
     limite_diario: 500,

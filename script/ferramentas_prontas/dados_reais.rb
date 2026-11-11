@@ -32,6 +32,7 @@ module DadosReaisDasProntas
     ['ddd', 'ddd', { 'ddd' => '34' }],
     ['localizacao', 'cidade', { 'latitude' => -18.9186, 'longitude' => -48.2772 }],
     ['bancos', 'banco', { 'codigo' => '341' }],
+    ['bancos', 'por_nome', { 'nome' => 'Itaú' }],
     ['hospitais', 'estabelecimentos', { 'cidade' => 'Campinas', 'uf' => 'sp', 'tipo' => 'hospital' }],
     ['procedimentos', 'codigo', { 'codigo' => '10101012' }],
     ['procedimentos', 'busca', { 'busca' => 'hemograma' }],

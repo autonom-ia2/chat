@@ -14,7 +14,8 @@ class Autonomia::FerramentasProntas::Consulta
   attr_reader :nome, :descricao, :obrigatorios, :opcionais, :provedores, :validade, :prazo_por_fonte, :prazo_total
 
   def initialize(nome:, descricao:, provedores:, validade:, prazo_por_fonte:, prazo_total:, obrigatorios: [], opcionais: [], # rubocop:disable Metrics/ParameterLists
-                 regra: nil, refinar: nil, resolver: nil)
+                 regra: nil, refinar: nil, resolver: nil, nao_encontrado: nil)
+    @nao_encontrado = nao_encontrado
     @resolver = resolver
     @nome = nome
     @descricao = descricao
@@ -59,6 +60,9 @@ class Autonomia::FerramentasProntas::Consulta
   def chave_do_cache(params)
     para_a_fonte(params).sort.to_h
   end
+
+  # A orientação própria do "não encontrado" (o banco pelo nome comercial), ou nil (vale a da `Resposta`).
+  attr_reader :nao_encontrado
 
   def resolve?
     @resolver.present?

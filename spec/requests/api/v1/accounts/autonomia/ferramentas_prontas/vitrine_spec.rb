@@ -258,6 +258,29 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
       expect(a_request(:get, ->(uri) { uri.host == 'brasilapi.com.br' })).not_to have_been_made
     end
 
+    it 'Bancos: o exemplo é o nome ("Itaú"), e o código digitado continua valendo' do
+      account.enable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+      itau = { ispb: '60701190', name: 'ITAÚ UNIBANCO S.A.', code: 341, fullName: 'ITAÚ UNIBANCO S.A.' }
+      fonte_responde('https://brasilapi.com.br/api/banks/v1', [itau])
+      fonte_responde('https://brasilapi.com.br/api/banks/v1/341', { ispb: '60701190', name: 'ITAÚ UNIBANCO S.A.', code: 341 })
+
+      post "#{base}/experimentar", params: { fonte: 'bancos', valor: 'Itaú' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['dados']['bancos']).to eq([{ 'codigo' => '341', 'nome' => 'ITAÚ UNIBANCO S.A.',
+                                                               'nome_completo' => 'ITAÚ UNIBANCO S.A.', 'ispb' => '60701190' }])
+
+      post "#{base}/experimentar", params: { fonte: 'bancos', valor: '341' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['dados']).to include('codigo' => '341', 'nome' => 'ITAÚ UNIBANCO S.A.')
+    end
+
+    it 'DDD: o telefone inteiro serve no Experimente' do
+      account.enable_features!(Autonomia::FerramentasProntas::FLAG_CONSULTAS)
+      fonte_responde('https://brasilapi.com.br/api/ddd/v1/34', { state: 'MG', cities: %w[UBERLANDIA] })
+
+      post "#{base}/experimentar", params: { fonte: 'ddd', valor: '34 99999-0000' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['dados']).to include('ddd' => '34', 'uf' => 'MG')
+    end
+
     it 'o Banco Central não pede valor: dá o dólar' do
       do_bcb = ->(uri) { uri.host == 'olinda.bcb.gov.br' }
       boletins = [{ cotacaoCompra: 5.514, cotacaoVenda: 5.5146, dataHoraCotacao: '2026-11-09 13:06:31' }]

@@ -47,7 +47,7 @@ module Autonomia::FerramentasProntas::Resposta
 
   def nao_encontrado(fonte, consulta)
     { 'ferramenta' => fonte.nome, 'consulta' => consulta.nome, 'situacao' => 'nao_encontrado',
-      'orientacao' => NAO_ENCONTRADO }.to_json
+      'orientacao' => consulta.nao_encontrado || NAO_ENCONTRADO }.to_json
   end
 
   # `falta`: o nome do campo ou a `Falta` (com candidatos e a orientação da regra). `parametro`: o do campo, de onde vem

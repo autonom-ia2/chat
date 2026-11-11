@@ -42,7 +42,7 @@ adaptador: a ordem da NCM (o código de 8 dígitos antes do de 4) e a compra de 
 | cidades.json | estados; cidades do AC | IBGE |
 | ddd.json | ddd 34 | BrasilAPI |
 | localizacao.json | cidade de -18.9186, -48.2772 | sedes (tabela local; o Photon não conferiu o município) |
-| bancos.json | banco 341 | BrasilAPI |
+| bancos.json | banco 341; por_nome "Itaú" (11/11/2026, regra QI 70) | BrasilAPI |
 | hospitais.json | Campinas SP, hospital | CNES (Ministério da Saúde) |
 | procedimentos.json | codigo 10101012; busca "hemograma" | TUSS (tabela no repositório) |
 | doencas.json | codigo J45; busca "asma" | CID-10 (tabela no repositório) |

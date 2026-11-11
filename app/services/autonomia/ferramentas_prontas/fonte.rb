@@ -12,6 +12,11 @@
 # ganhou `por_endereco`): a ferramenta que já estava num agente continua respondendo sem o parâmetro `consulta`.
 class Autonomia::FerramentasProntas::Fonte
   PARAMETRO_DA_CONSULTA = 'consulta'.freeze
+  # Regra "QI 70" do Rodrigo (11/11/2026), num texto só: vai em toda ferramenta pronta, no turno real e no Experimente
+  # (que usa o mesmo `openai_schema`). O que cada fonte resolve sozinha está na descrição dela e das consultas.
+  DEDUZIR = 'Dado técnico que dá para tirar da conversa (a cidade em vez da UF, o telefone em vez do DDD, o nome em ' \
+            'vez do código) você manda como o cliente disse, e a plataforma resolve. Pergunte ao cliente só o que muda ' \
+            'o resultado e não dá para deduzir. Em pedido_invalido, siga a orientacao e consulte de novo.'.freeze
   FORA_DO_FORMATO = '(fora do formato)'.freeze
 
   attr_reader :chave, :slug, :nome, :descricao, :consultas, :limite_diario, :termos, :flag
@@ -92,6 +97,7 @@ class Autonomia::FerramentasProntas::Fonte
   def descricao_para_o_modelo(usar_quando)
     partes = [descricao]
     partes << "Consultas: #{consultas.map { |consulta| "#{consulta.nome} (#{consulta.descricao})" }.join('; ')}." if varias_consultas?
+    partes << DEDUZIR
     partes << "Use quando: #{usar_quando.to_s.strip}" if usar_quando.present?
     partes.join(' ')
   end
