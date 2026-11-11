@@ -115,7 +115,7 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   end
 
   # Os códigos da nota de dentro do grupo, na resposta da posição dele, na ordem do código. Nenhum: não encontrado.
-  # Mais de MAX_ITENS: os filhos diretos do grupo (`para_estreitar`).
+  # Mais de MAX_ITENS: os filhos diretos do grupo (`para_estreitar`). Mais de um: com a regra do caso comum.
   def do_grupo(busca, grupo, achados)
     niveis = validos(achados)
     indice = Descricao.indice(niveis)
@@ -124,7 +124,8 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     return para_estreitar(busca, grupo, niveis, indice) if da_nota.size > MAX_ITENS
 
     itens = da_nota.map { |nivel| item(nivel, indice) }
-    { 'busca' => busca }.merge(Autonomia::FerramentasProntas::Lista.cortar(itens, 'itens', MAX_ITENS))
+    resposta = { 'busca' => busca }.merge(Autonomia::FerramentasProntas::Lista.cortar(itens, 'itens', MAX_ITENS))
+    itens.size > 1 ? resposta.merge('observacao' => CASO_COMUM) : resposta
   end
 
   # O grupo grande demais para ir inteiro (a posição 30.04 tem 153 códigos da nota; o corte pela ordem do código
@@ -174,9 +175,13 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     codigo(valor)
   end
 
+  # Regra QI 70 (decisão de 11/11/2026, depois da eval paga): com códigos que diferem por um detalhe que o cliente não
+  # disse, o agente deduz o caso comum e cita o outro, sem travar a conversa com pergunta. Vai na descrição da consulta
+  # e no resultado do grupo com mais de um código; cabe inteira no teto de `Resposta::MAX_TEXTO`.
+  CASO_COMUM = 'Se os códigos diferem por um detalhe que o cliente não disse, responda com o do caso mais comum e cite o ' \
+               'outro; pergunte só quando não há caso comum.'.freeze
   SO_O_DE_8 = 'Na nota fiscal vai só o código de 8 dígitos; 2 dígitos é o capítulo e 4 é a posição, não servem na nota. ' \
-              'Com mais de uma opção de 8 dígitos, pergunte ao cliente o material (aço, cobre, plástico…) antes de ' \
-              'dizer o código.'.freeze
+              "#{CASO_COMUM}".freeze
   # Na consulta codigo, só quando o código ainda não é o da nota (regra "QI 70": o de 8 dígitos já está certo, e
   # perguntar o material ali seria pergunta à toa).
   # Cabe inteira no teto de `Resposta::MAX_TEXTO` (revisão do #2917: com 209 letras, perdia "e use a consulta buscar").

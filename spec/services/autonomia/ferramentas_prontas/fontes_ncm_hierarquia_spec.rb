@@ -171,7 +171,9 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(dados).to eq(
         'busca' => '0901.2', 'total' => 2,
         'itens' => [{ 'codigo' => '0901.21.00', 'descricao' => "#{cafe}, café torrado, não descafeinado", 'vigente_desde' => '2022-04-01' },
-                    { 'codigo' => '0901.22.00', 'descricao' => "#{cafe}, café torrado, descafeinado", 'vigente_desde' => '2022-04-01' }]
+                    { 'codigo' => '0901.22.00', 'descricao' => "#{cafe}, café torrado, descafeinado", 'vigente_desde' => '2022-04-01' }],
+        # Regra QI 70 (decisão de 11/11/2026): com mais de um código, o do caso comum, citando o outro.
+        'observacao' => ncm::CASO_COMUM
       )
       expect(pela_posicao).to have_been_made.once
       expect(buscas_feitas).to eq(['0901'])

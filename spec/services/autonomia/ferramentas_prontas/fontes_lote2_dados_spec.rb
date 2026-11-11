@@ -90,10 +90,13 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(a_request(:get, posicao)).not_to have_been_made
     end
 
-    it 'as descricoes dizem ao modelo que so o codigo de 8 digitos vai na nota e que pergunte o material' do
+    # Regra QI 70 (decisão de 11/11/2026): com códigos que diferem por um detalhe que o cliente não disse, o agente
+    # responde o do caso comum e cita o outro, em vez de travar a conversa perguntando.
+    it 'as descricoes dizem ao modelo que so o codigo de 8 digitos vai na nota e que responda o caso comum' do
       textos = Autonomia::FerramentasProntas::Catalogo.buscar('ncm').consultas.map(&:descricao).join(' ')
 
-      expect(textos).to include('8 dígitos', 'nota', 'capítulo', 'posição', 'material')
+      expect(textos).to include('8 dígitos', 'nota', 'capítulo', 'posição', Autonomia::FerramentasProntas::Fontes::Ncm::CASO_COMUM)
+      expect(textos).not_to include('antes de dizer o código')
     end
 
     it '"O que e a NCM 7318.15.00?": a descricao oficial, pelo codigo sem os pontos e sem os tracos do nivel' do
