@@ -286,6 +286,18 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(descricao.length).to be <= Autonomia::FerramentasProntas::Resposta::MAX_TEXTO + 1
     end
 
+    # Revisão do #2917: o mínimo dos pais vale só quando o texto próprio sozinho passa do teto. O 3004.39.91 (139 letras)
+    # cabia inteiro e, com o mínimo sempre, perdia o fim ("prostaglandina F2-alfa").
+    it '3004.39.91 real: o texto proprio que cabe sozinho vai inteiro, sem corte' do
+      fonte_responde("#{api}?search=3004", fixture('ncm_busca_3004.json'))
+      proprio = ncm::Descricao.limpa(ncm.texto(real('ncm_busca_3004.json').find { |dado| dado['codigo'] == '3004.39.91' }['descricao']))
+
+      descricao = codigo('3004.39.91')['dados']['descricao']
+
+      expect(descricao).to end_with(proprio)
+      expect(descricao).not_to include('…')
+    end
+
     it 'codigo de 8 digitos que nao esta na posicao: nao encontrado' do
       fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
 
