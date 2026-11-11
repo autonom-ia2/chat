@@ -10,6 +10,10 @@ import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { descreverAutomacao } from 'dashboard/helper/automacaoEmPortugues';
 import LivreLinha from '../components/LivreLinha.vue';
+import AutomacaoHeroi from '../../components/AutomacaoHeroi.vue';
+import AutomacaoPorta from '../../porta/components/AutomacaoPorta.vue';
+import { usePorta } from '../../porta/usePorta';
+import { useIrAoGuia } from '../../porta/useIrAoGuia';
 import { useNomesDaConta } from '../../composables/useNomesDaConta';
 import { carregarCatalogo, useCatalogo } from '../catalogo';
 import { fraseDoGatilho, fraseDoPasso } from '../frases';
@@ -24,6 +28,11 @@ const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const podeMudar = useCanManage('automation_manage');
+// #2889: com automacao_porta, a tela abre com a pergunta e os modelos; a lista vira "Suas automações".
+// Só para quem pode montar: quem só vê fica com a lista, sem uma porta que não abre.
+const { ligada: portaLigada } = usePorta();
+const porta = computed(() => portaLigada.value && podeMudar.value);
+const { pedir, falar } = useIrAoGuia();
 const { catalogo } = useCatalogo();
 const { nomes, carregarNomes } = useNomesDaConta();
 const { escolhas: escolhasDoGatilho, carregar: carregarFunis } =
@@ -220,6 +229,13 @@ const alternar = async linha => {
       <div
         class="flex flex-col w-full max-w-6xl gap-8 px-5 py-8 mx-auto md:px-8 md:py-10"
       >
+        <AutomacaoHeroi
+          v-if="porta"
+          data-pergunta
+          @pedir="pedir"
+          @falar="falar"
+        />
+
         <div
           v-if="estado === 'carregando'"
           data-carregando
@@ -256,7 +272,7 @@ const alternar = async linha => {
         </div>
 
         <div
-          v-else-if="!linhas.length"
+          v-else-if="!linhas.length && !porta"
           data-vazio
           class="flex flex-col items-center gap-5 px-6 py-16 text-center border rounded-3xl border-n-weak bg-n-solid-1"
         >
@@ -279,8 +295,28 @@ const alternar = async linha => {
           />
         </div>
 
-        <template v-else>
-          <header class="flex flex-wrap items-end justify-between gap-5">
+        <template v-else-if="linhas.length">
+          <header
+            v-if="porta"
+            data-suas
+            class="flex flex-wrap items-end justify-between gap-5"
+          >
+            <h2
+              class="mb-0 text-2xl font-semibold tracking-tight text-n-slate-12"
+            >
+              {{ $t('AUTOMACAO_MODELOS.SUAS') }}
+            </h2>
+            <Button
+              data-do-zero
+              :label="$t('AUTOMACAO_MODELOS.DO_ZERO')"
+              icon="i-lucide-list-plus"
+              slate
+              faded
+              class="!min-h-11 !rounded-xl"
+              @click="ir('automacoes_livre_nova')"
+            />
+          </header>
+          <header v-else class="flex flex-wrap items-end justify-between gap-5">
             <div class="min-w-0">
               <h1
                 class="text-3xl font-bold tracking-tight md:text-4xl text-n-slate-12"
@@ -369,6 +405,25 @@ const alternar = async linha => {
             @click="ir('crm_kanban_index')"
           />
         </div>
+
+        <div
+          v-if="porta && estado === 'pronto' && !linhas.length"
+          data-do-zero-vazio
+          class="flex justify-end"
+        >
+          <Button
+            data-do-zero
+            :label="$t('AUTOMACAO_MODELOS.DO_ZERO')"
+            icon="i-lucide-list-plus"
+            slate
+            faded
+            class="!min-h-11 !rounded-xl"
+            @click="ir('automacoes_livre_nova')"
+          />
+        </div>
+
+        <!-- #2889: com a porta, os modelos vêm depois das automações da pessoa, para ela achar as dela primeiro. -->
+        <AutomacaoPorta v-if="porta" />
       </div>
     </main>
   </section>

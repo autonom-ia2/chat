@@ -104,6 +104,7 @@ export const FEATURE_FLAGS = {
   CAMPANHAS_PUBLICO_POR_CONVERSA: 'campanhas_publico_por_conversa',
   FUNCOES_GUIADAS: 'funcoes_guiadas',
   AUTOMACAO_EDITOR: 'automacao_editor',
+  AUTOMACAO_PORTA: 'automacao_porta',
   AUTOMACAO_MENSAGENS: 'automacao_mensagens',
   AUTOMACAO_GATILHOS: 'automacao_gatilhos',
   CHANNEL_TIKTOK: 'channel_tiktok',

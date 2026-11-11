@@ -1366,5 +1366,77 @@
         "GANHO": "Plan implemented"
       }
     }
+  },
+  "AUTOMACAO_MODELOS": {
+    "ITENS": {
+      "M01": {
+        "TITULO": "Contract anniversary without surprises",
+        "TEXTO": "30 days before the plan anniversary, the customer gets the price adjustment notice and an invitation to review. If they don't reply, they get a link to book with you."
+      },
+      "M02": {
+        "TITULO": "Ad quote requests answered in 5 minutes",
+        "TEXTO": "Whoever asks for a quote through the ad gets a message right away asking how many people and their ages."
+      },
+      "M03": {
+        "TITULO": "Plan welcome",
+        "TEXTO": "After the plan starts, the customer gets the member card, the waiting periods and how to use the plan."
+      },
+      "M04": {
+        "TITULO": "Late payment",
+        "TEXTO": "On the first late payment, the customer gets a reminder. On the second, you are warned about the risk of suspension."
+      },
+      "M05": {
+        "TITULO": "End of waiting period",
+        "TEXTO": "When the waiting period ends, the customer gets the good news that they can now use everything."
+      },
+      "M06": {
+        "TITULO": "Birthday wishes with a plan review",
+        "TEXTO": "On their birthday, the customer gets a message and an invitation to review the family plan."
+      },
+      "M07": {
+        "TITULO": "Dental first for current customers",
+        "TEXTO": "Customers who already have a plan with you get the dental plan offer before everyone else."
+      },
+      "M08": {
+        "TITULO": "New employee on the company plan",
+        "TEXTO": "HR sends the list of new employees. Each person becomes a card in the pipeline and gets the document request."
+      },
+      "M09": {
+        "TITULO": "Find companies every week",
+        "TEXTO": "Every Monday, the system finds new companies in your area, offers a company plan and only brings you the interested ones."
+      },
+      "M10": {
+        "TITULO": "Complaints or emergencies go straight to you",
+        "TEXTO": "When the customer complains about a denied service or mentions an emergency, the chat leaves the automatic service and you get a summary right away."
+      },
+      "M12": {
+        "TITULO": "A sent quote decides the next step",
+        "TEXTO": "After the quote is sent, the customer is asked what they thought. With no reply in 2 days, you get a reminder to call."
+      },
+      "M13": {
+        "TITULO": "From signing to plan start",
+        "TEXTO": "After closing, the customer gets the proposal to sign and the health declaration reminder. At the end, they are invited to rate the service."
+      },
+      "M14": {
+        "TITULO": "Complete documents to start the plan",
+        "TEXTO": "Asks for each person's documents, checks each photo or PDF, asks only for what is missing and tells you when the plan can start."
+      },
+      "M15": {
+        "TITULO": "Big companies get you",
+        "TEXTO": "Quotes with more people than you choose go straight to you, marked as a priority."
+      },
+      "M16": {
+        "TITULO": "Bring back those who switched provider",
+        "TEXTO": "Anyone who moved to another provider or found it too expensive gets a better offer near the contract anniversary."
+      },
+      "M17": {
+        "TITULO": "Consultant on holiday, customers looked after",
+        "TEXTO": "When someone goes on holiday, whoever covers gets a summary of each customer. When they're back, the customers go back to them."
+      },
+      "M20": {
+        "TITULO": "Started contracts go into your system",
+        "TEXTO": "When a plan starts, the system gets the missing details, sends them to your management system and sends a welcome message."
+      }
+    }
   }
 }
