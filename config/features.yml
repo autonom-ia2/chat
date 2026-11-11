@@ -1337,9 +1337,9 @@
   enabled: false
   column: feature_flags_ext_2
 
-# RESERVA da F5 do #2858 (bases importadas), posição 42 (2199023255552, 1 << 41), dada pela Orquestração em 10/11.
-# Fica aqui só para a F7 (abaixo) cair na posição 43 enquanto a F5 não sobe: o PR da F5 troca este bloco pelo dela (nome
-# e texto definitivos). Nada lê esta flag.
+# RESERVA da F5 do #2858 (bases importadas). Fica aqui só para a F7 (abaixo) não cair na posição da F5 enquanto a F5 não
+# sobe: o PR da F5 troca este bloco pelo dela (nome e texto definitivos). Nada lê esta flag. Posição definitiva da F5: 43
+# (4398046511104, 1 << 42), depois da `automacao_porta` do #2890 (42); a troca é no merge da main.
 - name: agente_ferramentas_prontas_bases
   display_name: Agentes › ferramentas prontas (bases importadas)
   enabled: false
@@ -1351,9 +1351,10 @@
 # selo "Premium", "20 grátis, depois R$ X" e as grátis que restam; o turno consulta a BigDataCorp com a credencial da
 # plataforma e grava a telemetria de cada consulta para a fatura (sem cobrança automática). Desligada: os 7 cards somem
 # da vitrine, do turno e do "Incluir" de uma vez; a Cotação e a Prospecção não leem esta flag. Migration 20261110000000
-# (telemetria e saldo das grátis). Rollback: desligar a flag. Posição 43 (4398046511104, 1 << 42), dada pela
-# Orquestração em 10/11; entra depois da F5 (posição 42). Ligar em todas só depois da conferência em produção com OK do
-# Rodrigo (consulta paga).
+# (telemetria e saldo das grátis). Rollback: desligar a flag. Posição 44 (8796093022208, 1 << 43) depois do #2890 e da
+# F5 (Orquestração, 11/11: 42 é a `automacao_porta` do #2890 e 43 é a F5). A posição é a ordem neste arquivo: enquanto a
+# main não tem as duas, esta cai uma antes; a troca é no merge da main, sem renumerar antes. Ligar em todas só depois da
+# conferência em produção com OK do Rodrigo (consulta paga).
 - name: agente_ferramentas_prontas_premium
   display_name: Agentes › ferramentas prontas (Premium, BigDataCorp)
   enabled: false

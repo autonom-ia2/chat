@@ -318,8 +318,9 @@ RSpec.describe Account do
       # #2810: rag_busca_hibrida depois dela, 36 (1 << 35 = 34359738368), dada pela Orquestração (09/11).
       # #2858 (F0): agente_ferramentas_prontas depois dela, 37 (1 << 36 = 68719476736), dada pela Orquestração (10/11).
       # #2858 (F1): agente_ferramentas_prontas_consultas depois dela, 38 (1 << 37 = 137438953472), Orquestração (10/11).
-      # #2858 (F5 reservada, F7): agente_ferramentas_prontas_bases 42 (1 << 41) e agente_ferramentas_prontas_premium 43
-      # (1 << 42 = 4398046511104), Orquestração (10/11).
+      # #2858 (F5 reservada, F7): hoje bases 42 (1 << 41) e premium 43 (1 << 42), pela ordem do features.yml. Definitivo
+      # (Orquestração, 11/11): a F7 vai à posição 44 (1 << 43) depois do #2890 (automacao_porta, 42) e da F5 (43); a troca
+      # é no merge da main, quando as duas estiverem nela.
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
         feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,
