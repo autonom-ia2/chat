@@ -29,16 +29,18 @@ class Autonomia::FerramentasProntas::Premium::BigDataCorp < Autonomia::Ferrament
   def ler(dataset, params)
     return falha('nao_configurada') unless Cliente.configured?
 
+    @cliente = novo_cliente
     resposta = Timeout.timeout(@prazo) do
-      cliente.query_route(dataset.rota, query: dataset.busca.call(params), datasets: dataset.nome)
+      @cliente.query_route(dataset.rota, query: dataset.busca.call(params), datasets: dataset.nome)
     end
     Autonomia::FerramentasProntas::Premium::Leitura.de(dataset, resposta.payload, id_na_fonte: resposta.metadata[:provider_request_id])
   rescue Cliente::Error => e
     falha(self.class.motivo_do_erro(e), custo_possivel: self.class.pedido_saiu?(e))
   rescue Timeout::Error
-    # O teto da chamada inteira: o token tem prazo próprio e curto (`PRAZO_DO_TOKEN`, que levanta antes como
-    # `Cliente::Error` da fase do token), então quando este teto estoura a consulta já estava no ar.
-    falha('tempo_esgotado', custo_possivel: true)
+    # O teto da chamada inteira (token e consulta somados). O `PRAZO_DO_TOKEN` vale POR OPERAÇÃO (abrir, SSL, enviar e
+    # ler: até 4 x 5 s, mais o token de novo depois do 401), e o teto pode estourar ainda no token: só custa se a
+    # consulta já tinha saído dele (`query_dispatched?`).
+    falha('tempo_esgotado', custo_possivel: @cliente.query_dispatched?)
   end
 
   # A rede que falhou antes de o pedido sair (a causa do `BIGDATACORP_DELIVERY_UNKNOWN` do cliente): o nome que não
@@ -81,7 +83,7 @@ class Autonomia::FerramentasProntas::Premium::BigDataCorp < Autonomia::Ferrament
     Autonomia::FerramentasProntas::Premium::Leitura.falha(motivo, custo_possivel: custo_possivel)
   end
 
-  def cliente
+  def novo_cliente
     Cliente.new(timeout: @prazo, token_timeout: PRAZO_DO_TOKEN, max_provider_attempts: 1, max_token_attempts: 1, token_cache: TOKENS,
                 resend_after_unauthorized: true)
   end

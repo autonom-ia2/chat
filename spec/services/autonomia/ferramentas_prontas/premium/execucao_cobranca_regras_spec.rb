@@ -84,6 +84,23 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
   # Aceite 11: a telemetria bate com o painel da BigDataCorp. A falha em que o pedido já saiu pode ter sido cobrada lá:
   # o custo do dataset fica na linha, sem contar para o cliente (o padrão do `entrega_incerta!`).
   describe 'o custo da falha depois de o pedido sair' do
+    # O teto da chamada inteira (`Timeout.timeout` do prazo do dataset) estourando no meio de um pedido: o pedido levanta
+    # um erro fora de StandardError (como o `Timeout::ExitException`, que o cliente não apanha), e o teto o troca pelo
+    # `Timeout::Error`, como o de verdade.
+    let(:teto_estourou) { Class.new(Exception) } # rubocop:disable Lint/InheritException
+
+    def teto_estoura_no(caminho)
+      estourou = teto_estourou
+      stub_request(:post, "#{FerramentasPremiumHelper::BDC}#{caminho}").to_raise(estourou)
+      allow(Timeout).to receive(:timeout).and_call_original
+      allow(Timeout).to receive(:timeout).with(Autonomia::FerramentasProntas::Premium::Dataset::PRAZO_SOB_DEMANDA)
+                                         .and_wrap_original do |_original, _prazo, &bloco|
+        bloco.call
+      rescue estourou
+        raise Timeout::Error
+      end
+    end
+
     def falha_registrada
       registros_premium.sole.tap do |registro|
         expect(registro).to have_attributes(resultado: 'falha', cobranca: 'sem_cobranca', numero: nil, preco: 0)
@@ -107,14 +124,23 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
       expect(falha_registrada).to have_attributes(motivo: 'tempo_esgotado', custo: BigDecimal('0.10'))
     end
 
-    it 'o teto da chamada inteira (o token já veio, a consulta estava no ar): custo do dataset, sem contar' do
-      pgfn_responde([])
-      allow(Timeout).to receive(:timeout).and_call_original
-      allow(Timeout).to receive(:timeout).with(Autonomia::FerramentasProntas::Premium::Dataset::PRAZO_SOB_DEMANDA).and_raise(Timeout::Error)
+    it 'o teto da chamada inteira com a consulta no ar (o token já veio): custo do dataset, sem contar' do
+      teto_estoura_no('/ondemand')
 
       executar_premium(certidoes, pgfn)
 
       expect(falha_registrada).to have_attributes(motivo: 'tempo_esgotado', custo: BigDecimal('0.10'))
+    end
+
+    # Revisor (lote 3, big_data_corp.rb:41): o token tem até 4 prazos de 5 s; o teto pode estourar ainda nele, e aí a
+    # consulta não saiu.
+    it 'o teto da chamada inteira ainda no token (a consulta não saiu): sem custo' do
+      teto_estoura_no('/tokens/gerar')
+
+      executar_premium(certidoes, pgfn)
+
+      expect(falha_registrada).to have_attributes(motivo: 'tempo_esgotado', custo: 0)
+      expect(a_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand")).not_to have_been_made
     end
 
     it 'a entrega incerta (a conexão caiu com o pedido no ar, ou 200 sem JSON): custo do dataset, sem contar' do

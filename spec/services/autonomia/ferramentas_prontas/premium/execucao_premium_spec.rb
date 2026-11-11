@@ -339,7 +339,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
     end
 
     it 'o prazo total da chamada cabe no prazo da consulta (e no da ferramenta)' do
-      cliente = Autonomia::FerramentasProntas::Premium::BigDataCorp.new(nil, prazo: 20).send(:cliente)
+      cliente = Autonomia::FerramentasProntas::Premium::BigDataCorp.new(nil, prazo: 20).send(:novo_cliente)
       opcoes = cliente.instance_variable_get(:@options)
 
       expect(opcoes).to include(max_provider_attempts: 1, max_token_attempts: 1,

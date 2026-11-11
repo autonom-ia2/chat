@@ -101,7 +101,14 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
     raise ArgumentError, 'rota da BigDataCorp fora da lista' unless ROUTES.include?(path)
 
     @token_generations = 0
+    @query_dispatched = false
     dispatch_with_retries(path, { Datasets: datasets, q: query, Limit: limit }.to_json)
+  end
+
+  # O último `query_route` passou do token e chegou a enviar a consulta? Para quem corta a chamada por fora (o teto das
+  # prontas Premium, #2858): cortada ainda no token, a consulta não saiu e não pode ter sido cobrada.
+  def query_dispatched?
+    @query_dispatched == true
   end
 
   # Transporte, usado também pelo BigDataCorpTokenIssuer.
@@ -151,6 +158,7 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
     state = { attempts: 0, refreshed: false, force_refresh: false, extra: 0 }
     while state[:attempts] < @options[:max_provider_attempts] + state[:extra]
       credential = provider_credential(state)
+      @query_dispatched = true
       state[:attempts] += 1
       outcome = classify(post_query(path, body, credential, state[:attempts]), state)
       return outcome if outcome
