@@ -11,6 +11,8 @@
 #     não com o endereço que vem do sistema de origem.
 # Fonte única: o PNCP é o portal oficial; não há reserva. Termos: dado aberto por lei (art. 174 da Lei 14.133), sem
 # chave e sem limite publicado. Cache de 1 hora.
+# Prazo: o período inteiro e a tentativa do último dia (`Pncp#consultar`) cabem na janela do turno
+# (`ConsultaNoTurno::ESPERA_DO_TURNO`, 8 s): 5 s por chamada, 8 s no total.
 module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
   Parametro = Autonomia::FerramentasProntas::Parametro
   Municipios = Autonomia::FerramentasProntas::Municipios
@@ -25,6 +27,10 @@ module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
                          'outras, encurte o período.'.freeze
   PARCIAL = 'Parcial: o portal demorou, e só deu para ler as compras do último dia do período. Para o resto, consulte de ' \
             'novo com um período menor.'.freeze
+  # A resposta parcial em que nada serve (o último dia sem compra, ou nenhuma com a palavra): o resto do período ficou sem
+  # resposta, então não é "não há compra no período".
+  PARCIAL_SEM_COMPRAS = 'Parcial: o portal demorou, e só deu para ler o último dia do período, sem compra que sirva. ' \
+                        'Para o resto, consulte de novo com um período menor.'.freeze
   LINK = 'https://pncp.gov.br/app/editais/%<cnpj>s/%<ano>d/%<sequencial>d'.freeze
   # A modalidade que o modelo escolhe -> o código e o nome no PNCP (`/api/pncp/v1/modalidades`).
   MODALIDADES = {
@@ -99,6 +105,7 @@ module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
 
   def refinar(dados, params)
     achadas = Autonomia::FerramentasProntas::Lista.filtrar(Array(dados['compras']), params['busca']) { |item| item['objeto'] }
+    return dados.except('compras', 'parcial').merge('observacao' => PARCIAL_SEM_COMPRAS) if achadas.empty? && dados['parcial']
     return if achadas.empty?
 
     resposta = dados.except('compras', 'parcial').merge(Autonomia::FerramentasProntas::Lista.cortar(achadas, 'compras', MAX_COMPRAS))
@@ -138,7 +145,7 @@ module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
       Autonomia::FerramentasProntas::Consulta.new(
         nome: 'compras', descricao: 'as compras publicadas numa cidade e num período',
         opcionais: [CODIGO_IBGE, CIDADE, UF, DE, ATE, MODALIDADE, BUSCA], provedores: [Pncp], validade: 1.hour,
-        prazo_por_fonte: 7, prazo_total: 11, regra: method(:regra), refinar: method(:refinar)
+        prazo_por_fonte: 5, prazo_total: 8, regra: method(:regra), refinar: method(:refinar)
       )
     ],
     limite_diario: 500,

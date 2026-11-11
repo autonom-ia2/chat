@@ -369,6 +369,43 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(consulta.prazo_por_fonte + Autonomia::FerramentasProntas::ClienteHttp::ABERTURA).to be <= consulta.prazo_total
     end
 
+    # Revisão do #2906: 7 s por chamada e 11 s no total passavam da janela do turno; a tentativa do último dia vinha
+    # depois que o turno já tinha desistido.
+    it 'F32/F33: o periodo inteiro e a tentativa do ultimo dia cabem na janela do turno, e sobra prazo para o ultimo dia' do
+      consulta = Autonomia::FerramentasProntas::Fontes::ComprasGoverno::FONTE.consulta('compras')
+
+      expect(consulta.prazo_total).to be <= Autonomia::Agents::Tools::ConsultaNoTurno::ESPERA_DO_TURNO
+      expect(consulta.prazo_total - consulta.prazo_por_fonte).to be >= Autonomia::FerramentasProntas::ClienteHttp::ABERTURA + 1
+    end
+
+    it 'F32/F33: o ultimo dia sem compra nao vira "nao encontrado" do periodo inteiro no cache: parcial, sem cache' do
+      loja = cache_em_memoria
+      allow(loja).to receive(:write).and_call_original
+      stub_request(:get, pncp.call('20261101')).to_timeout
+      stub_request(:get, pncp.call('20261105')).to_return(status: 204, body: '')
+
+      saida = compras
+
+      expect(saida['situacao']).to eq('encontrado')
+      expect(saida['dados']).to include('de' => '2026-11-05', 'ate' => '2026-11-05', 'cidade' => 'Uberlândia')
+      expect(saida['dados']).not_to have_key('compras')
+      expect(saida['dados']['observacao']).to include('último dia')
+      expect(loja).not_to have_received(:write)
+      expect(compras['situacao']).to eq('encontrado')
+      expect(a_request(:get, pncp.call('20261101'))).to have_been_made.twice
+    end
+
+    it 'F32/F33: com a busca, a resposta parcial sem nada que bata diz que e parcial, e nao "nao encontrado" no periodo' do
+      stub_request(:get, pncp.call('20261101')).to_timeout
+      fonte_responde(pncp.call('20261105'), { data: [compra], totalRegistros: 1 })
+
+      saida = turno('compras_governo', 'cidade' => 'Uberlândia', 'de' => '2026-11-01', 'ate' => '2026-11-05', 'busca' => 'limpeza')
+
+      expect(saida['situacao']).to eq('encontrado')
+      expect(saida['dados']).not_to have_key('compras')
+      expect(saida['dados']['observacao']).to include('último dia')
+    end
+
     it 'F32/F33: o periodo inteiro estoura o prazo; vem o ultimo dia, como parcial e sem cache, em vez de "nao consegui"' do
       stub_request(:get, pncp.call('20261101')).to_timeout
       fonte_responde(pncp.call('20261105'), { data: [compra], totalRegistros: 1 })
