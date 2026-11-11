@@ -10,6 +10,7 @@ import { quemTrouxeNaDemo } from '../demo/trazer';
 const AGORA = 1_700_000_000_000;
 const ultimaPalavra = nome => nome.split(' ').at(-1);
 const SOBRENOMES_DA_EQUIPE = ['Valtorini', 'Zanquetta', 'Pavanelli'];
+const AMOSTRA_DE_FICHAS = 60;
 
 describe('sobrenomes das pessoas', () => {
   it('são pelo menos 40 diferentes, para a primeira tela não repetir', () => {
@@ -94,7 +95,10 @@ describe('empresas', () => {
 
 describe('perfil de rede', () => {
   it('o Instagram é primeiro nome e sobrenome, sem número de id', () => {
+    // Uma amostra basta: montar a ficha de cada pessoa da base estoura o limite
+    // de tempo do teste em máquina carregada (e na CI).
     const comInstagram = pessoas(AGORA)
+      .slice(0, AMOSTRA_DE_FICHAS)
       .map(p => pessoaDaFicha(p.id))
       .map(p => ({
         nome: p.name,

@@ -61,14 +61,15 @@ describe('R2. cartão da pessoa repetida', () => {
   });
 });
 
-describe('R3. "N pessoas chegaram." numa linha a partir de md', () => {
-  it('a frase não quebra em md+ e a ação discreta não reserva a coluna do canto', () => {
+describe('R3. a frase do Pronto nunca sai cortada', () => {
+  it('é um texto só, que desce de linha equilibrado; a ação discreta não reserva a coluna do canto', () => {
     const w = mount(TelaPronto, { props: { novas: 180, completadas: 15 } });
-    const partes = w.findAll('[data-titulo-da-tela] [data-parte]');
-    expect(partes).toHaveLength(2);
-    partes.forEach(parte =>
-      expect(parte.classes()).toContain('md:whitespace-nowrap')
-    );
+    const titulo = w.get('[data-titulo-da-tela]');
+    expect(titulo.text()).toBe('180 pessoas chegaram e 15 foram completadas.');
+    expect(titulo.classes()).toContain('text-balance');
+    // Nada dentro do título proíbe a quebra de linha (era o que cortava a frase).
+    expect(titulo.html()).not.toContain('whitespace-nowrap');
+    expect(titulo.findAll('*')).toHaveLength(0);
     expect(w.find('[data-heroi-discreta]').exists()).toBe(false);
     expect(
       marca(w, 'trazer-outra').element.closest('[data-heroi-acao]')

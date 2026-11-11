@@ -24,19 +24,20 @@ const { t } = useI18n();
 const SEM_PESSOAS = 0;
 const NOVAS = 'RELACIONAMENTOS_TRAZER.PRONTO';
 
-// Cada parte é uma frase curta; a frase quebra só entre elas, depois de "chegaram".
-const partes = computed(() => {
+// A frase inteira num texto só. Quando não cabe numa linha ela desce, com as
+// linhas equilibradas (`text-balance`); nunca fica presa numa linha e cortada.
+const frase = computed(() => {
   const { novas, completadas } = props;
   if (novas > SEM_PESSOAS && completadas > SEM_PESSOAS) {
     return [
       t(`${NOVAS}.CHEGARAM_E`, { count: novas }, novas),
       t(`${NOVAS}.E_COMPLETADAS`, { count: completadas }, completadas),
-    ];
+    ].join(' ');
   }
   if (completadas > SEM_PESSOAS) {
-    return [t(`${NOVAS}.COMPLETADAS`, { count: completadas }, completadas)];
+    return t(`${NOVAS}.COMPLETADAS`, { count: completadas }, completadas);
   }
-  return [t(`${NOVAS}.CHEGARAM`, { count: novas }, novas)];
+  return t(`${NOVAS}.CHEGARAM`, { count: novas }, novas);
 });
 </script>
 
@@ -85,15 +86,9 @@ const partes = computed(() => {
           aria-level="1"
           data-titulo-da-tela
           tabindex="-1"
-          class="outline-none tabular-nums"
+          class="outline-none tabular-nums text-balance"
         >
-          <span
-            v-for="parte in partes"
-            :key="parte"
-            data-parte
-            class="md:whitespace-nowrap"
-            >{{ parte }}{{ ' ' }}</span
-          >
+          {{ frase }}
         </span>
       </template>
       <template #acao>
