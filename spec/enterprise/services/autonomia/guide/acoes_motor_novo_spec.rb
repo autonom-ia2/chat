@@ -79,6 +79,23 @@ RSpec.describe Autonomia::Guide::Acoes do
         .to eq(I18n.t('autonomia.guide.automacao_ligada_vale_na_hora'))
     end
 
+    # Salvar mantém ligada só se quem salva é quem ligou (Definicao#salvar_versao!); de outra pessoa, ela pausa.
+    it 'o aviso do ajuste na ligada depende de quem confirma: quem ligou vale na hora; outra pessoa pausa', :aggregate_failures do
+      automacao = Autonomia::Automacao::Definicao.find(criar.registro)
+      automacao.assumir_e_religar!(admin, versao_id: automacao.versao_ativa_id)
+      dados = { caminho: { id: automacao.id }, corpo: { 'receita' => outra_receita, 'base_versao_id' => automacao.versao_ativa_id },
+                descricao: 'Esperar dois dias' }
+      outra_pessoa = com_funcao(%w[automation_view automation_manage])
+
+      expect(para(admin).descrever('PATCH autonomia/automacoes/:id', dados)[:aviso])
+        .to eq(I18n.t('autonomia.guide.automacao_ligada_vale_na_hora'))
+      expect(para(outra_pessoa).descrever('PATCH autonomia/automacoes/:id', dados)[:aviso])
+        .to eq(I18n.t('autonomia.guide.automacao_ligada_ajuste_pausa'))
+
+      automacao.salvar_versao!(receita: outra_receita, autor: outra_pessoa, base: automacao.versao_ativa_id)
+      expect(automacao.reload.ativa).to be(false)
+    end
+
     it 'o sinal do Guia volta a desligado mesmo quando o pedido levanta', :aggregate_failures do
       expect { Autonomia::Guide::PeloGuia.durante { raise ArgumentError, 'falhou' } }.to raise_error(ArgumentError)
       expect(Autonomia::Guide::PeloGuia.agora?).to be(false)
@@ -161,6 +178,23 @@ RSpec.describe Autonomia::Guide::Acoes do
       expect(automacao.ativa).to be(true)
     end
 
+    it 'desfazer o ajuste depois que a pessoa ligou: a versão que ela ligou fica', :aggregate_failures do
+      automacao = Autonomia::Automacao::Definicao.find(criar.registro)
+      gravando(0) do
+        para(admin).executar('PATCH autonomia/automacoes/:id',
+                             { caminho: { id: automacao.id }, corpo: { 'receita' => outra_receita, 'base_versao_id' => automacao.versao_ativa_id } })
+      end
+      ligada = automacao.reload.versao_ativa_id
+      automacao.assumir_e_religar!(admin, versao_id: ligada)
+
+      relatorio = desfazer
+
+      expect(relatorio['conflitos'].pluck('motivo')).to include('automacao_ja_ligada')
+      expect(relatorio['conflitos'].pluck('texto')).to include(I18n.t('autonomia.guide.undo.conflitos.automacao_ja_ligada'))
+      expect(automacao.reload.versao_ativa_id).to eq(ligada)
+      expect(automacao.ativa).to be(true)
+    end
+
     # Defesa em profundidade: mesmo que um desligar entre no caderno, o desfazer não religa.
     it 'o desfazer nunca religa: a automação desligada continua desligada', :aggregate_failures do
       automacao = Autonomia::Automacao::Definicao.find(criar.registro)
@@ -196,6 +230,38 @@ RSpec.describe Autonomia::Guide::Acoes do
       expect(para(admin).executar(ligar, dados).ok).to be(true)
       expect(automacao.reload.ativa).to be(true)
       expect(automacao.ligada_por).to eq(admin)
+    end
+
+    it 'o cartão de ligar diz qual automação', :aggregate_failures do
+      automacao = Autonomia::Automacao::Definicao.find(criar.registro)
+
+      expect(para(admin).descrever(ligar, dados_de_ligar(automacao))[:detalhe]).to include('Lembrete')
+    end
+
+    # Quem liga assume os passos da versão: se outra pessoa salvou, o cartão diz quem e quando, no fuso da conta.
+    it 'versão salva por outra pessoa: o aviso de ligar diz quem salvou e quando', :aggregate_failures do
+      account.update!(custom_attributes: account.custom_attributes.to_h.merge('timezone' => 'America/Cuiaba'))
+      automacao = Autonomia::Automacao::Definicao.find(criar.registro)
+      outra_pessoa = com_funcao(%w[automation_view automation_manage])
+      travel_to(Time.utc(2026, 11, 10, 15, 30)) do
+        automacao.salvar_versao!(receita: outra_receita, autor: admin, base: automacao.versao_ativa_id)
+      end
+      dados = dados_de_ligar(automacao.reload)
+
+      esperado = "#{I18n.t('autonomia.guide.automacao_ligar_vale_agora')} " \
+                 "#{I18n.t('autonomia.guide.automacao_versao_de_outra_pessoa', nome: admin.name, quando: '10/11/2026 11:30')}"
+      expect(para(outra_pessoa).descrever(ligar, dados)[:aviso]).to eq(esperado)
+      expect(para(admin).descrever(ligar, dados)[:aviso]).to eq(I18n.t('autonomia.guide.automacao_ligar_vale_agora'))
+    end
+
+    it 'pela ferramenta do Guia (sem o cartão), ligar é recusado e nada liga', :aggregate_failures do
+      automacao = Autonomia::Automacao::Definicao.find(criar.registro)
+      contexto = Autonomia::Guide::Contexto.new(account: account, user: admin)
+
+      expect { contexto.executar(ligar, dados_de_ligar(automacao)) }
+        .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.needs_confirmation'))
+      expect(contexto.execucao).to be_nil
+      expect(automacao.reload.ativa).to be(false)
     end
 
     it 'a versão velha não liga: volta "outra pessoa salvou"', :aggregate_failures do
@@ -247,8 +313,9 @@ RSpec.describe Autonomia::Guide::Acoes do
   end
 
   describe 'cabeçalho' do
-    def cabecalho(rota, parametros = {})
-      Autonomia::Guide::Cabecalho.call(account: account.reload, role: 'administrator', route_context: rota, route_params: parametros)
+    def cabecalho(rota, parametros = {}, account_user: account.account_users.find_by(user: admin))
+      Autonomia::Guide::Cabecalho.call(account: account.reload, role: account_user&.role || 'agent', route_context: rota,
+                                       route_params: parametros, account_user: account_user)
     end
 
     it 'com as flags, diz o motor e, na tela da automação, a versão atual', :aggregate_failures do
@@ -257,6 +324,17 @@ RSpec.describe Autonomia::Guide::Acoes do
       expect(cabecalho('automacoes_nova')).to include('Motor das automações desta conta: novo')
       expect(cabecalho('automacoes_guia_editar', { 'id' => automacao.id }))
         .to include("Registro aberto na tela: automação id=#{automacao.id}, versão atual id=#{automacao.versao_ativa_id}.")
+    end
+
+    it 'quem não pode ver automações não recebe a versão nem se está ligada', :aggregate_failures do
+      automacao = Autonomia::Automacao::Definicao.find(criar.registro)
+      _agente, sem_chave = create_crm_agent(account: account, name: 'Agente sem chave')
+
+      texto = cabecalho('automacoes_guia_editar', { 'id' => automacao.id }, account_user: sem_chave)
+
+      expect(texto).not_to include('versão atual')
+      expect(texto).to include("Registro aberto na tela: id=#{automacao.id}.")
+      expect(cabecalho('automacoes_guia_editar', { 'id' => automacao.id }, account_user: nil)).not_to include('versão atual')
     end
 
     it 'sem a porta, o cabeçalho é o de antes' do

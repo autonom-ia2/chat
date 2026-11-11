@@ -188,6 +188,53 @@ describe('AutomacaoConversaPage no motor novo', () => {
     );
   });
 
+  it('Desligar desliga e avisa', async () => {
+    abrirNoMotor(7);
+    AutomacoesAPI.show.mockResolvedValue({ data: automacao({ ativa: true }) });
+    AutomacoesAPI.desligar.mockResolvedValue({ data: { id: 7, ativa: false } });
+    const wrapper = montar();
+    await flushPromises();
+    await wrapper.find('[data-desligar]').trigger('click');
+    await flushPromises();
+    expect(AutomacoesAPI.desligar).toHaveBeenCalledWith(7);
+    expect(AutomacoesAPI.ligar).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-ligada]').exists()).toBe(false);
+    expect(wrapper.find('[data-ligar]').exists()).toBe(true);
+    expect(useAlert).toHaveBeenCalledWith('AUTOMACOES.LISTA.DESLIGOU');
+  });
+
+  it('ligar recusado sem conflito: mostra o motivo e não relê', async () => {
+    abrirNoMotor(7);
+    AutomacoesAPI.ligar.mockRejectedValue({
+      response: { status: 422, data: { error: 'A receita tem um problema.' } },
+    });
+    const wrapper = montar();
+    await flushPromises();
+    await wrapper.find('[data-ligar]').trigger('click');
+    await flushPromises();
+    expect(useAlert).toHaveBeenCalledWith('A receita tem um problema.');
+    expect(AutomacoesAPI.show).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-ligada]').exists()).toBe(false);
+  });
+
+  it('não conseguiu ler a automação: mostra o erro', async () => {
+    abrirNoMotor(7);
+    AutomacoesAPI.show.mockRejectedValue({ response: { status: 500 } });
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-erro]').exists()).toBe(true);
+    expect(wrapper.find('[data-motor-novo]').exists()).toBe(false);
+  });
+
+  it('automação sem versão: mostra o aviso de erro, sem carregar para sempre', async () => {
+    abrirNoMotor(7);
+    AutomacoesAPI.show.mockResolvedValue({ data: automacao({ versao: null }) });
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-erro-catalogo]').exists()).toBe(true);
+    expect(wrapper.find('[aria-busy="true"]').exists()).toBe(false);
+  });
+
   it('o Guia ajustou: o resumo é lido de novo', async () => {
     abrirNoMotor(7);
     const wrapper = montar();

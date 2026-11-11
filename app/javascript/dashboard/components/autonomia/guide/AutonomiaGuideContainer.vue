@@ -396,6 +396,8 @@ const confirmarAcao = async item => {
         resultado: corpo.mensagem,
         avisoSeSumiu: t('AUTONOMIA_GUIDE.ACTION.LOST'),
       });
+      // Feita em outra aba também mudou o registro: a tela que o mostra relê.
+      emit('acaoConfirmada', item.acao.nome);
       return;
     }
     const texto =
@@ -992,7 +994,7 @@ watch(
 // ou mexida por último. Não interrompe pergunta em curso, e a conversa que já
 // está na tela (a mesma que acabou de criar a automação) fica como está.
 watch(
-  () => [isEnabled.value, props.automacaoId],
+  () => [isEnabled.value, props.automacaoId, props.automacaoDoMotor],
   ([ligado, id]) => {
     if (!props.embutido || !ligado || !id) return;
     if (isSending.value || store.pendente()) return;

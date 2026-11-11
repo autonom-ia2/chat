@@ -201,7 +201,7 @@ class Autonomia::Guide::Acoes
 
     { frase: dados[:descricao],
       **::Autonomia::Guide::ValoresLegiveis.new(account: @account, acao: acao, dados: dados, conferencia: conferencia).para_tela,
-      aviso: (verbo_de(acao) == DESTRUTIVO ? traduzir('irreversible') : ::Autonomia::Guide::MotorNovo.new(@account).aviso(acao, dados)) }
+      aviso: (verbo_de(acao) == DESTRUTIVO ? traduzir('irreversible') : ::Autonomia::Guide::MotorNovo.new(@account, @user).aviso(acao, dados)) }
   end
 
   # Executa pela API da conta, como o usuário: se a

@@ -4,10 +4,12 @@
 # nunca confia nisso para autorizar — é só para a redação; o backend real (endpoints de domínio) é
 # que aplica Pundit.
 module Autonomia::Guide::Cabecalho
-  def self.call(account:, role:, route_context:, route_params:)
+  # `account_user` é quem pergunta: o bloco da automação do motor novo só vai para quem pode vê-la.
+  def self.call(account:, role:, route_context:, route_params:, account_user: nil)
+    aberto = (automacao_do_motor(account, route_context, route_params) if ve_automacoes?(account_user))
     "[CONTEXTO INTERNO (não é fala do usuário). Perfil do usuário: #{role}. " \
       "Tela atual: #{route_context.presence || 'não informada'}." \
-      "#{automacao_do_motor(account, route_context, route_params) || registro_aberto(route_params)}#{fuso(account)}" \
+      "#{aberto || registro_aberto(route_params)}#{fuso(account)}" \
       "#{motor_das_automacoes(account)} " \
       'Adapte a resposta a este perfil e oriente apenas o que ele pode fazer; se a ação for de administrador e o ' \
       "perfil não for administrator, explique que é feito pelo administrador da conta#{quem_mais_monta_automacao(account)}.]"
@@ -31,6 +33,9 @@ module Autonomia::Guide::Cabecalho
   TELA_DO_MOTOR_NOVO = 'automacoes_guia_editar'.freeze
 
   def self.motor_novo?(account) = ::Autonomia::Automacao.porta?(account)
+
+  # A mesma chave que a DefinicaoPolicy pede para ver a automação.
+  def self.ve_automacoes?(account_user) = account_user&.permission_granted?('automation_view') == true
 
   def self.motor_das_automacoes(account)
     motor_novo?(account) ? ' Motor das automações desta conta: novo (autonomia/automacoes).' : ''

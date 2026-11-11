@@ -503,6 +503,26 @@ describe('AutonomiaGuideContainer', () => {
     expect(findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM')).toBeFalsy();
   });
 
+  // #2889: feita em outra aba também mudou o registro; quem embute relê.
+  it('tells the host screen when the action was already done in another tab', async () => {
+    comAcaoProposta();
+    AutonomiaGuideAPI.executarAcao.mockRejectedValue({
+      response: {
+        status: 409,
+        data: { acao_estado: 'feita', mensagem: 'Pronto, feito.' },
+      },
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM').trigger(
+      'click'
+    );
+    await flushPromises();
+
+    expect(wrapper.emitted('acaoConfirmada')).toEqual([[ACAO.nome]]);
+  });
+
   // Revisão da #861: a conversa aberta foi apagada (em outra aba ou pelo próprio
   // Guia). A pergunta abre uma conversa nova em vez de falhar.
   it('starts a new conversation when the open one no longer exists', async () => {

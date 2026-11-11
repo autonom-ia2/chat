@@ -31,6 +31,9 @@ const catalogoComTextos = computed(() =>
   comTextosDaIa(catalogo.value, receita.value?.passos || [], t)
 );
 const testando = ref(false);
+// Sem receita (versão ausente) não há o que esperar: cai no aviso de erro, em
+// vez de ficar carregando para sempre.
+const semResumo = computed(() => falhouCatalogo.value || !receita.value);
 
 const ligarRef = ref(null);
 // "Está ótima" leva ao botão Ligar.
@@ -48,7 +51,7 @@ defineExpose({ focarLigar });
       class="flex flex-col gap-5 p-5 border shadow-sm rounded-3xl border-n-weak bg-n-solid-1"
     >
       <p
-        v-if="falhouCatalogo"
+        v-if="semResumo"
         data-erro-catalogo
         role="alert"
         class="mb-0 text-base text-n-slate-12"
@@ -56,7 +59,7 @@ defineExpose({ focarLigar });
         {{ $t('AUTOMACAO_MODELOS.GUIA.ERRO_RESUMO') }}
       </p>
       <div
-        v-else-if="!catalogo || !receita"
+        v-else-if="!catalogo"
         aria-busy="true"
         class="h-48 rounded-2xl bg-n-alpha-2 animate-pulse"
       />
