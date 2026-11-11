@@ -19,13 +19,17 @@ const emit = defineEmits(['abrir']);
 
 const NS = 'AGENTS.VITRINE';
 const { t, te, locale } = useI18n();
-const { atualizadoEm } = useVitrine();
+const { atualizadoEm, estaEmPreparacao } = useVitrine();
 
 // #2858 F5 — a base que a plataforma baixa diz de quando é a cópia ("Atualizado em 11/11/2026"); antes da primeira
-// cópia, que os dados chegam logo. O dia vem do servidor ("2026-11-11") e é mostrado no formato do idioma da tela.
+// cópia, que os dados chegam logo; se a primeira cópia já falhou, "em preparação" (sem prometer prazo). O dia vem do
+// servidor ("2026-11-11") e é mostrado no formato do idioma da tela.
 const atualizacao = computed(() => {
   if (!props.ferramenta.base) return '';
   const dia = atualizadoEm(props.ferramenta.id);
+  if (!dia && estaEmPreparacao(props.ferramenta.id)) {
+    return t(`${NS}.CARTAO.EM_PREPARACAO`);
+  }
   if (!dia) return t(`${NS}.CARTAO.PREPARANDO`);
   const [ano, mes, diaDoMes] = dia.split('-').map(Number);
   const texto = new Date(ano, mes - 1, diaDoMes).toLocaleDateString(

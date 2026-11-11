@@ -3051,7 +3051,8 @@
         "CONSULTAS": "Answers {n} kinds of question",
         "JA_SABE": "{nome} already knows",
         "ATUALIZADO_EM": "Updated on {data}",
-        "PREPARANDO": "Data arrives within 1 day"
+        "PREPARANDO": "Data arrives within 1 day",
+        "EM_PREPARACAO": "In preparation"
       },
       "BUSCA": {
         "NADA": "Nothing with “{termo}” here yet.",

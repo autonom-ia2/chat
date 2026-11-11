@@ -3,7 +3,7 @@ import { withFullI18n } from 'test-i18n';
 import { ferramentaPorId } from '../../vitrine/catalogo';
 
 // #2858 F5 — o cartão da base que a plataforma baixa diz de quando é a cópia ("Atualizado em…"), com o dia que o
-// servidor manda; antes da primeira cópia, que os dados chegam logo. A fonte que não é base não mostra nada disso.
+// servidor manda; antes da primeira cópia, que os dados chegam logo, ou "em preparação" se ela já falhou. A fonte que não é base não mostra nada disso.
 const api = vi.hoisted(() => ({ listar: vi.fn() }));
 vi.mock('dashboard/api/autonomia/ferramentasProntas', () => ({ default: api }));
 
@@ -38,6 +38,26 @@ describe('VitrineCartao · atualizado em', () => {
 
     expect(wrapper.find('[data-vitrine-atualizado]').text()).toBe(
       'Os dados chegam em até 1 dia'
+    );
+  });
+
+  it('says it is in preparation when the first copy already failed', async () => {
+    const wrapper = await montar('geracao_solar', [
+      { chave: 'geracao_solar', atualizado_em: null, em_preparacao: true },
+    ]);
+
+    expect(wrapper.find('[data-vitrine-atualizado]').text()).toBe(
+      'Em preparação'
+    );
+  });
+
+  it('keeps the day of the copy even if a later round failed', async () => {
+    const wrapper = await montar('aeronaves', [
+      { chave: 'aeronaves', atualizado_em: '2026-11-11', em_preparacao: false },
+    ]);
+
+    expect(wrapper.find('[data-vitrine-atualizado]').text()).toBe(
+      'Atualizado em 11/11/2026'
     );
   });
 

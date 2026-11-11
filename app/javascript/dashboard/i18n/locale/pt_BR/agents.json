@@ -3051,7 +3051,8 @@
         "CONSULTAS": "Responde {n} tipos de pergunta",
         "JA_SABE": "{nome} já sabe",
         "ATUALIZADO_EM": "Atualizado em {data}",
-        "PREPARANDO": "Os dados chegam em até 1 dia"
+        "PREPARANDO": "Os dados chegam em até 1 dia",
+        "EM_PREPARACAO": "Em preparação"
       },
       "BUSCA": {
         "NADA": "Nada com “{termo}” por aqui ainda.",
