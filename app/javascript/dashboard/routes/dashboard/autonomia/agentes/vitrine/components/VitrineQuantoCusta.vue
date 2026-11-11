@@ -20,7 +20,10 @@ const acabaram = computed(() => estado.value === 'ACABARAM');
 
 const regras = computed(() => [
   { chave: 'SEM_RESULTADO', icone: 'i-lucide-search-x' },
-  { chave: 'NUMERO_ERRADO', icone: 'i-lucide-circle-slash' },
+  // Só no card que recebe CPF ou CNPJ (`confere_documento`, do servidor): a placa e o endereço não têm documento.
+  ...(props.premium.confere_documento
+    ? [{ chave: 'NUMERO_ERRADO', icone: 'i-lucide-circle-slash' }]
+    : []),
   { chave: 'MESMO_DIA', icone: 'i-lucide-repeat' },
   // A faixa de preço só existe quando o card tem perguntas de valores diferentes.
   ...(faixa.value?.min ? [{ chave: 'FAIXA', icone: 'i-lucide-tags' }] : []),

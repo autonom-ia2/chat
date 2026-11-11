@@ -60,7 +60,12 @@ describe('VitrineQuantoCusta (detalhe)', () => {
   const montar = premium => mount(VitrineQuantoCusta, { props: { premium } });
 
   it('says what counts, what does not, when they come back and the bill', () => {
-    const wrapper = montar({ gratis: 20, restantes: 20, precos: ['0.39'] });
+    const wrapper = montar({
+      gratis: 20,
+      restantes: 20,
+      precos: ['0.39'],
+      confere_documento: true,
+    });
     const texto = wrapper.text();
     expect(texto).toContain('Quanto custa');
     expect(lido(wrapper.find('[data-vitrine-restantes]'))).toBe(
@@ -76,6 +81,26 @@ describe('VitrineQuantoCusta (detalhe)', () => {
     // Preço único: sem a explicação da faixa.
     expect(texto).not.toContain('O preço muda');
     PROIBIDAS.forEach(palavra => expect(texto).not.toContain(palavra));
+  });
+
+  // A regra do número errado só vale no card que recebe CPF ou CNPJ (`confere_documento`, do servidor): a placa e o
+  // endereço não têm documento para errar.
+  it('the wrong CPF or CNPJ rule only in the cards that take one', () => {
+    const REGRA = 'CPF ou CNPJ com número errado não conta.';
+    const doServidor = {
+      historico_placa: { precos: ['0.09'], confere_documento: false },
+      risco_endereco: { precos: ['0.06', '0.15'], confere_documento: false },
+      conferir_pessoa: { precos: ['0.06', '0.09'], confere_documento: true },
+      certidoes_empresa: { precos: ['0.06', '0.15'], confere_documento: true },
+    };
+    const comARegra = Object.entries(doServidor)
+      .filter(([, premium]) =>
+        montar({ gratis: 20, restantes: 20, ...premium })
+          .text()
+          .includes(REGRA)
+      )
+      .map(([card]) => card);
+    expect(comARegra).toEqual(['conferir_pessoa', 'certidoes_empresa']);
   });
 
   it('one left and none left; the range explains why the price changes', () => {

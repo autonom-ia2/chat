@@ -34,12 +34,26 @@ RSpec.describe 'Vitrine de ferramentas prontas: Premium', type: :request do
     lista = fontes
 
     expect(lista.keys).to include(*premium)
-    expect(lista['certidoes_empresa']['premium']).to eq('gratis' => 20, 'restantes' => 15, 'precos' => %w[0.06 0.15])
-    expect(lista['raio_x_empresa']['premium']).to eq('gratis' => 20, 'restantes' => 20, 'precos' => %w[0.09 0.12])
-    expect(lista['historico_placa']['premium']).to eq('gratis' => 20, 'restantes' => 20, 'precos' => %w[0.09])
+    expect(lista['certidoes_empresa']['premium']).to eq('gratis' => 20, 'restantes' => 15, 'precos' => %w[0.06 0.15],
+                                                        'confere_documento' => true)
+    expect(lista['raio_x_empresa']['premium']).to eq('gratis' => 20, 'restantes' => 20, 'precos' => %w[0.09 0.12],
+                                                     'confere_documento' => true)
+    expect(lista['historico_placa']['premium']).to eq('gratis' => 20, 'restantes' => 20, 'precos' => %w[0.09],
+                                                      'confere_documento' => false)
     expect(lista['imovel_rural']['premium']['precos']).to eq(%w[0.15 0.23])
     expect(lista['cep']).not_to have_key('premium')
     expect(response.body).not_to include('ondemand', 'bigdatacorp', 'custo')
+  end
+
+  # A regra "CPF ou CNPJ com número errado não conta" do "Quanto custa" só vale no card que recebe CPF ou CNPJ: é o
+  # dígito verificador desses parâmetros que recusa o pedido antes da BigDataCorp. Placa e endereço não têm documento.
+  it 'diz em cada card se ele confere CPF ou CNPJ (a regra do número errado só vale nele)' do
+    lista = fontes
+
+    confere = premium.index_with { |chave| lista[chave]['premium']['confere_documento'] }
+    expect(confere).to eq('certidoes_empresa' => true, 'raio_x_empresa' => true, 'conferir_pessoa' => true,
+                          'historico_placa' => false, 'risco_endereco' => false, 'imovel_rural' => true,
+                          'contato_empresa' => true)
   end
 
   it 'passadas as 20, restam 0 (nunca negativo)' do

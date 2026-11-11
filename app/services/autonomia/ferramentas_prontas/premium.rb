@@ -35,12 +35,22 @@ module Autonomia::FerramentasProntas::Premium
     hoje_da_conta(account).beginning_of_month
   end
 
-  # O que a tela mostra de cada card Premium liberado para a conta: quantas grátis restam no mês e os preços depois delas.
+  # O que a tela mostra de cada card Premium liberado para a conta: quantas grátis restam no mês, os preços depois delas e
+  # se o card confere CPF ou CNPJ (o "Quanto custa" só diz que número errado não conta nesse card).
   def para_tela(account, fontes)
     usadas = Saldo.da_conta_por_fonte(account, mes: mes_da_conta(account))
     fontes.select(&:premium?).to_h do |fonte|
       [fonte.chave, { 'gratis' => GRATIS, 'restantes' => [GRATIS - usadas.fetch(fonte.chave, 0), 0].max,
-                      'precos' => fonte.consultas.map { |consulta| consulta.dataset.preco.to_s('F') }.uniq.sort_by(&:to_d) }]
+                      'precos' => fonte.consultas.map { |consulta| consulta.dataset.preco.to_s('F') }.uniq.sort_by(&:to_d),
+                      'confere_documento' => confere_documento?(fonte) }]
     end
+  end
+
+  # Alguma consulta do card recebe CPF ou CNPJ. São esses parâmetros (`Premium::Parametros::CPF` e `CNPJ`) que recusam o
+  # dígito verificador errado antes da BigDataCorp, e por isso o número errado não conta; a placa, o endereço e o código
+  # do CAR não têm essa conferência.
+  def confere_documento?(fonte)
+    documentos = [Parametros::CPF, Parametros::CNPJ]
+    fonte.consultas.any? { |consulta| consulta.parametros.any? { |parametro| documentos.include?(parametro) } }
   end
 end
