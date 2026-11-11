@@ -7,7 +7,8 @@
 # No fim, as tabelas das bases e as travas são limpas (o banco de teste volta vazio). Sem IA, sem conta, sem contador.
 #
 # O repositório é público: pessoa física nunca entra (a base já não guarda), e o nome e o documento de quem pode ser
-# MEI (a empresa dona da aeronave, a transportadora) saem trocados por exemplos fictícios (ANONIMIZACAO).
+# MEI (a empresa dona da aeronave, a transportadora) saem trocados por exemplos fictícios (ANONIMIZACAO), assim como a
+# matrícula e o número de série da aeronave, que levam ao dono pelo RAB.
 #
 # Uso (só no ambiente de teste; baixa ~300 MB das fontes oficiais e leva uns 10 minutos):
 #   RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais_das_bases.rb [base ...]
@@ -33,9 +34,18 @@ module DadosReaisDasBases
     dados.merge(chave_da_lista => lista)
   end
   LISTAS_DE_EMPRESAS = %w[proprietarios_empresas operadores_empresas].freeze
+  # A matrícula e o número de série levam à aeronave (e ao dono) pelo RAB público: saem trocados por exemplos. A
+  # matrícula de exemplo começa por Q depois do prefixo, combinação que o Anexo 7 da OACI não deixa registrar (confunde
+  # com o código Q), e é conferida na base importada: se existir, a gravação para.
+  MATRICULA_DE_EXEMPLO = 'PPQZZ'.freeze
+  SERIE_DE_EXEMPLO = 'EXEMPLO-0001'.freeze
   AERONAVE = lambda do |dados|
+    abort("a matrícula de exemplo #{MATRICULA_DE_EXEMPLO} existe no RAB: troque") if Bases::Aeronave.exists?(matricula: MATRICULA_DE_EXEMPLO)
+
     aeronaves = dados['aeronaves'].map do |aeronave|
-      LISTAS_DE_EMPRESAS.reduce(aeronave) do |atual, chave|
+      exemplo = aeronave.merge({ 'matricula' => MATRICULA_DE_EXEMPLO,
+                                 'numero_de_serie' => (SERIE_DE_EXEMPLO if aeronave.key?('numero_de_serie')) }.compact)
+      LISTAS_DE_EMPRESAS.reduce(exemplo) do |atual, chave|
         atual.key?(chave) ? EMPRESAS.call(atual, chave, 'AVIACAO') : atual
       end
     end

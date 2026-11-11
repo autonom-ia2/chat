@@ -87,8 +87,9 @@ RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_
 | queimadas.json | focos: a cidade com mais focos desde ontem | INPE (focos de queimada) |
 
 Anonimizado pelo script: o nome, o CNPJ e o RNTRC das empresas de aeronave e das transportadoras viram exemplos
-("AVIACAO EXEMPLO N LTDA", "TRANSPORTADORA EXEMPLO N LTDA"), porque podem ser MEI. Situação, datas e lugar são os
-reais. Planos de saúde, placas solares e focos não têm pessoa física.
+("AVIACAO EXEMPLO N LTDA", "TRANSPORTADORA EXEMPLO N LTDA"), porque podem ser MEI. A matrícula e o número de série
+da aeronave também (PPQZZ, que o RAB não registra, e "EXEMPLO-0001"): as reais levam ao dono pelo RAB público.
+Situação, datas e lugar são os reais. Planos de saúde, placas solares e focos não têm pessoa física.
 
 `geracao_solar.json` foi gravado de novo em 11/11/2026, pelo script, depois que o total passou a ter nome de total
 (`total_de_sistemas`, `potencia_total_kw`) e o detalhe por tipo de geração passou a vir só com mais de um tipo.

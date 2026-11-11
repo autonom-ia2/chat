@@ -5,12 +5,12 @@
       "total": 1,
       "aeronaves": [
         {
-          "matricula": "PPAAD",
+          "matricula": "PPQZZ",
           "fabricante": "CESSNA AIRCRAFT",
           "modelo": "680",
           "tipo_icao": "C680",
           "ano_de_fabricacao": "2009",
-          "numero_de_serie": "680-0260",
+          "numero_de_serie": "EXEMPLO-0001",
           "categoria": "TRANSPORTE",
           "operacao": "PRIVADO",
           "motor": "MOTOR JATO/TURBOFAN",

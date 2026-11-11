@@ -237,7 +237,11 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
   });
 
   it('F5 ANAC: aeronave pela matrícula, com situação, certificado, gravames e empresas', () => {
-    expect(valor('aeronaves', 'aeronave', 'Matrícula')).toBe('PPAAD');
+    // Matrícula e número de série de exemplo: as reais levam ao dono pelo RAB público.
+    expect(valor('aeronaves', 'aeronave', 'Matrícula')).toBe('PPQZZ');
+    expect(valor('aeronaves', 'aeronave', 'Número de série')).toBe(
+      'EXEMPLO-0001'
+    );
     expect(valor('aeronaves', 'aeronave', 'Fabricante')).toBe(
       'CESSNA AIRCRAFT'
     );
