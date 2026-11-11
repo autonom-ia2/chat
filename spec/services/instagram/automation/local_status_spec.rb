@@ -22,7 +22,7 @@ RSpec.describe Instagram::Automation::LocalStatus do
       'INSTAGRAM_TESTER_PROXY_PORT' => '8080', 'INSTAGRAM_TESTER_PROXY_AUTH_MODE' => 'ip',
       'INSTAGRAM_TESTER_PROXY_IDENTITY' => '192.0.2.10:8080',
       'INSTAGRAM_TESTER_PROXY_USERNAME' => '', 'INSTAGRAM_TESTER_PROXY_PASSWORD' => '',
-      'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL' => 'https://gateway.invalid/hub2you/',
+      'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL' => 'https://gateway.invalid:8443/hub2you/',
       'INSTAGRAM_TESTER_RUNTIME_STACK' => 'hub2you', 'FRONTEND_URL' => 'https://hub.invalid',
       'INSTAGRAM_TESTER_OPERATOR_BROWSER_SIGNING_KEY' => 'a' * 64,
       'INSTAGRAM_TESTER_COORDINATION_REDIS_URL' => 'rediss://:synthetic-password@redis.invalid:6379/0',

@@ -41,7 +41,9 @@ Requisitos Linux ainda não verificados no host nesta entrega:
   manifest/lockfile e da preparação das dependências.
 - Tailscale existente com HTTPS/certificado e ACL privada aprovados; o contrato
   informa `srv707880-claudete.tail0c0b18.ts.net`, Serve vazio e certificado não
-  confirmado. Isso não foi verificado ao vivo nesta entrega.
+  confirmado. Isso não foi verificado ao vivo nesta entrega. O Serve do operador
+  publica na porta **8443** (`https://srv707880-claudete.tail0c0b18.ts.net:8443/STACK/`);
+  a 443 é do Traefik do Easypanel e o preflight a recusa (#1751).
 - Proxy da stack e identidade AWS de serviço precisam de provisionamento aprovado
   separado. O pacote não escolhe identidade, cria tags, lê AWS ou testa Meta.
 
