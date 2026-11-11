@@ -37,7 +37,10 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     # currículo no filtro da mensagem (G45), o link da página "Entrevistas" (G44) e o card criado no passo 2 fechado no 6 (G49).
     # O 19 saiu com a G68 (#2864) na integração 2 do #2414: exemplo_19_cliente_sumiu_spec.rb roda à risca, passos 1 a 7
     # (por partes também em g53_conteudo_da_falha_spec.rb e g43_numero_novo_spec.rb).
-    20 => ['Venda fechada já entra no sistema da empresa', 'G5 (card ganho), G1, G2, G7, G11, G12, G13, G44 (duas agendas), G52 (campanha de e-mail)']
+    # O 20 saiu com a G52 (#2787, a lista de e-mail "Dicas do mês"): exemplo_20_venda_fechada_spec.rb roda à risca, passos
+    # 1 a 9, numa automação só, com o extrair gravando no card (G70), a cobrança pelo "webhook" (G13) e as páginas
+    # "Implantação" e "Treinamento" (G44). Com ele, os 20 rodam: a lista fica vazia, e a regra continua valendo para o
+    # exemplo que voltar a quebrar.
   }
 
   it 'sonda quebrada é erro, nunca pendente' do
@@ -71,6 +74,11 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
   # decisão 20) é o "grava no card" direto dos exemplos 2 (passo 9) e 7 (passo 4), sem a cópia pela conversa.
   it 'exemplos 2, 7 e 16: as lacunas fechadas continuam fechadas' do
     expect(FechamentoAutomacao::Lacunas.abertas(%w[G3 G4 G5 G7 G12 G14 G15 G16 G18 G37 G38 G39 G55 G69 G70])).to be_empty
+  end
+
+  # Com o 20 fora da lista, a prova das sondas que o seguravam fica aqui.
+  it 'exemplo 20: as lacunas fechadas continuam fechadas' do
+    expect(FechamentoAutomacao::Lacunas.abertas(%w[G1 G2 G5 G7 G11 G12 G13 G44 G52])).to be_empty
   end
 
   # G21 (#2706) não segura nenhum pendente: a sonda roda aqui para que a prova de comportamento dela não fique sem dono.

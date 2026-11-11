@@ -12,6 +12,7 @@ import {
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import EmailListAudience from './EmailListAudience.vue';
 
 const props = defineProps({
   template: { type: Object, default: null },
@@ -108,7 +109,11 @@ const state = reactive({
   fromEmail: props.campaign?.from_email || '',
   preheader: props.campaign?.preheader || '',
   replyTo: props.campaign?.reply_to || '',
+  // G52: "Quem recebe" — a planilha ou uma lista de e-mail da conta.
+  audience: props.campaign?.email_list_id ? 'lista' : 'planilha',
+  emailListId: props.campaign?.email_list_id || null,
 });
+const usesList = computed(() => state.audience === 'lista');
 
 const isDirectMode = computed(() => state.sender.startsWith('inbox:'));
 const selectedInbox = computed(() =>
@@ -131,6 +136,7 @@ const errors = reactive({
   fromName: false,
   fromEmail: false,
   replyTo: false,
+  emailList: false,
 });
 
 // Ao escolher uma caixa de envio direto, o "De:" é a própria caixa (campo travado).
@@ -177,7 +183,9 @@ const validate = () => {
   errors.fromName = state.fromName.trim().length === 0;
   errors.fromEmail = !fromEmailValid();
   errors.replyTo = !EMAIL_RE.test(state.replyTo.trim());
+  errors.emailList = usesList.value && !state.emailListId;
   return (
+    !errors.emailList &&
     !errors.name &&
     !errors.sender &&
     !errors.fromName &&
@@ -235,6 +243,7 @@ const buildPayload = () => {
     from_name: state.fromName.trim(),
     preheader: state.preheader.trim() || null,
     reply_to: state.replyTo.trim(),
+    email_list_id: usesList.value ? state.emailListId : null,
   };
   if (isDirectMode.value) {
     return {
@@ -269,7 +278,7 @@ const submit = async ({ openEditor = false } = {}) => {
     const currentCampaignId = saved?.id || savedCampaignId.value;
     savedCampaignId.value = currentCampaignId;
 
-    if (baseFile.value && currentCampaignId) {
+    if (baseFile.value && currentCampaignId && !usesList.value) {
       await importBase(currentCampaignId);
     }
 
@@ -288,9 +297,13 @@ const submit = async ({ openEditor = false } = {}) => {
       close();
     }
   } catch (error) {
-    if (error?.message !== 'base_import_failed') {
-      useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.ERROR'));
-    }
+    if (error?.message === 'base_import_failed') return;
+    const codigo = error?.response?.data?.message || '';
+    useAlert(
+      codigo.includes('spreadsheet_recipients')
+        ? t('EMAIL_LISTS.TEM_PLANILHA')
+        : t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.ERROR')
+    );
   }
 };
 </script>
@@ -392,7 +405,15 @@ const submit = async ({ openEditor = false } = {}) => {
         @input="errors.replyTo = false"
       />
 
-      <div class="flex flex-col gap-2">
+      <EmailListAudience
+        v-model:modo="state.audience"
+        v-model:lista-id="state.emailListId"
+        :invalid="errors.emailList"
+        :disabled="isSaving || isRecipientImportActive(campaign)"
+        @update:lista-id="errors.emailList = false"
+      />
+
+      <div v-if="!usesList" class="flex flex-col gap-2">
         <label class="text-sm font-medium text-n-slate-12">
           {{ t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.BASE_LABEL') }}
         </label>

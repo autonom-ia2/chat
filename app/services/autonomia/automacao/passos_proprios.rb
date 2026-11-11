@@ -3,11 +3,12 @@
 # confere o gatilho, a pessoa e a campanha da tela, o "criar retorno" (G3), o "em outro registro" (G18), o "passar a
 # conversa para o responsável do card" (G66), que confere o gatilho, a prospecção (G21, #2706), que confere o gatilho,
 # a pessoa, a busca, a etapa e as etiquetas, e o "para cada item" (G24, #2771), que confere as flags, os campos, a etapa
-# e a pessoa, e o "webhook" (G13, #2670), que confere a permissão de integração, o endereço e onde grava a resposta. Os
+# e a pessoa, o "webhook" (G13, #2670), que confere a permissão de integração, o endereço e onde grava a resposta, e a
+# lista de e-mail (G52, #2760), que confere a lista e a pessoa. Os
 # caminhos que o retorno, o "em outro registro", o webhook e o contato do "criar card" (G49) leem passam pela régua da
 # Receita (o bloco `caminho`).
 class Autonomia::Automacao::PassosProprios
-  TIPOS = %w[ia_assumir card campanha retorno em_outro_registro conversa_ao_responsavel prospeccao para_cada webhook].freeze
+  TIPOS = %w[ia_assumir card campanha retorno em_outro_registro conversa_ao_responsavel prospeccao para_cada webhook lista_de_email].freeze
 
   def self.do_tipo?(passo) = TIPOS.include?(passo['tipo'])
 
@@ -44,6 +45,7 @@ class Autonomia::Automacao::PassosProprios
     when 'prospeccao'
       ::Autonomia::Automacao::PassoDeProspeccao.problemas_ao_salvar(passo, @alvo, conta: @conta, account_user: @account_user)
     when 'conversa_ao_responsavel' then ::Autonomia::Automacao::PassoDeConversaAoResponsavel.problemas_ao_salvar(passo, @alvo)
+    when 'lista_de_email' then ::Autonomia::Automacao::PassoDeListaDeEmail.problemas_ao_salvar(@conta, passo, @account_user)
     else ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo)
     end
   end

@@ -93,7 +93,8 @@ export const actions = {
       AnalyticsHelper.track(LABEL_EVENTS.DELETED);
       commit(types.DELETE_LABEL, id);
     } catch (error) {
-      throw new Error(error);
+      // G52: the server explains why it refused (label of an e-mail list in use), like create.
+      throw new Error(error?.response?.data?.message || error);
     } finally {
       commit(types.SET_LABEL_UI_FLAG, { isDeleting: false });
     }

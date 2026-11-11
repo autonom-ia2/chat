@@ -132,6 +132,7 @@
       "CONVERSA_AO_RESPONSAVEL": "Hand the conversation to the card owner",
       "EMAIL": "Send an e-mail to the customer",
       "RETORNO": "Create a follow-up for the team",
+      "LISTA_DE_EMAIL": "Add to an e-mail list",
       "EM_OUTRO_REGISTRO": "Do it on the linked contact or cards",
       "WEBHOOK": "Send data to another system"
     },
@@ -208,6 +209,7 @@
       "CAIXA_ID_EMAIL": "From which e-mail inbox",
       "ASSUNTO": "Subject",
       "MODELO": "If the 24-hour window is closed",
+      "LISTA_ID": "Which e-mail list",
       "REGISTRO": "Where to run the steps inside",
       "PASSOS": "Steps inside",
       "CONTATO": "In which contact the card starts",

@@ -1912,6 +1912,10 @@
     "controller": "api/v1/accounts/email_campaigns/template_tools#validate",
     "parametros": []
   },
+  "email_campaigns/lists": {
+    "controller": "api/v1/accounts/email_campaigns/lists#index",
+    "parametros": []
+  },
   "email_campaigns/maintenance/backfills/:id": {
     "controller": "api/v1/accounts/email_campaigns/maintenance#show",
     "parametros": []

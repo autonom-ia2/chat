@@ -152,6 +152,9 @@ export const novoPasso = (entrada, id, t) => {
   // G15: a agente nasce sem escolha; o "Salvar" do painel espera escolher.
   if (entrada.tipo === 'ia_assumir')
     return { id, tipo: 'ia_assumir', agente_id: null };
+  // G52: a lista nasce sem escolha; o "Salvar" do painel espera escolher.
+  if (entrada.tipo === 'lista_de_email')
+    return { id, tipo: 'lista_de_email', lista_id: null };
   // G66: sem escolha; a conversa vai para quem cuida do card na hora.
   if (entrada.tipo === 'conversa_ao_responsavel')
     return { id, tipo: 'conversa_ao_responsavel' };

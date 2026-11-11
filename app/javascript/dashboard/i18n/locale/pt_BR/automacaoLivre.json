@@ -132,6 +132,7 @@
       "CONVERSA_AO_RESPONSAVEL": "Passar a conversa para o responsável do card",
       "EMAIL": "Mandar e-mail ao cliente",
       "RETORNO": "Criar um retorno para a equipe",
+      "LISTA_DE_EMAIL": "Pôr na lista de e-mail",
       "EM_OUTRO_REGISTRO": "Fazer no contato ou nos cards ligados",
       "WEBHOOK": "Mandar dados para outro sistema"
     },
@@ -208,6 +209,7 @@
       "CAIXA_ID_EMAIL": "Por qual caixa de e-mail",
       "ASSUNTO": "Assunto",
       "MODELO": "Se a janela de 24 h estiver fechada",
+      "LISTA_ID": "Qual lista de e-mail",
       "REGISTRO": "Onde fazer os passos de dentro",
       "PASSOS": "Passos de dentro",
       "CONTATO": "Em qual contato o card nasce",
