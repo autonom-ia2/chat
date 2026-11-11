@@ -37,17 +37,16 @@ module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
 
   module_function
 
-  # O município do pedido (pelo código ou pelo nome e a UF), ou nil.
+  # O município do pedido (pelo código, ou pelo nome: a UF sai dele), ou nil.
   def municipio(params)
     return Municipios.por_codigo(params['codigo_ibge']) if params['codigo_ibge']
 
-    Municipios.buscar(params['uf'], params['cidade']) if params['cidade'] && params['uf']
+    Municipios.buscar(params['uf'], params['cidade']) if params['cidade']
   end
 
-  # A cidade e o período. -> o nome do parâmetro que não serve, ou nil.
+  # A cidade e o período. -> o nome do parâmetro que não serve (ou a `Falta` da homônima), ou nil.
   def regra(params)
-    return 'uf' if params['codigo_ibge'].nil? && params['cidade'] && params['uf'].nil?
-    return 'cidade' if municipio(params).nil?
+    return Municipios.falta(params['uf'], params['cidade']) if municipio(params).nil?
 
     de = Date.iso8601(params['de'])
     ate = Date.iso8601(params['ate'])

@@ -3,7 +3,7 @@
 #     fuso do próprio ponto (`timezone=auto`: o dia do Acre e do Amazonas não é o de Brasília);
 #   - é ESTIMATIVA de modelo (reanálise ERA5 e afins, grade de ~10 km), não a medição de um pluviômetro: a resposta diz
 #     isso, e o dia de hoje ainda não fechou;
-#   - a cidade vira a coordenada da sede do município (`compras_governo/municipios.rb`); a coordenada que o cliente
+#   - a cidade (a UF sai dela, `Municipios.buscar`) vira a coordenada da sede do município; a coordenada que o cliente
 #     mandou vai arredondada a 2 casas (~1 km: a grade da fonte é maior que isso);
 #   - período de até MAX_DIAS dias (acima de 14 dias o Open-Meteo cobra mais de uma chamada), de 1940 até hoje.
 # Fonte única, sem reserva (o INMET só entrega os dados das estações com token). Termos: o plano gratuito do Open-Meteo é
@@ -37,11 +37,12 @@ module Autonomia::FerramentasProntas::Fontes::Chuva
   def ponto(params)
     return [params['latitude'], params['longitude'], 'a localização informada'] if params['latitude'] && params['longitude']
 
-    municipio = params['cidade'] && params['uf'] && Municipios.buscar(params['uf'], params['cidade'])
+    municipio = params['cidade'] && Municipios.buscar(params['uf'], params['cidade'])
     [municipio.latitude, municipio.longitude, municipio.rotulo] if municipio
   end
 
-  # O lugar e o período (até hoje, no máximo MAX_DIAS dias). -> o nome do parâmetro que não serve, ou nil.
+  # O lugar e o período (até hoje, no máximo MAX_DIAS dias). -> o nome do parâmetro que não serve (ou a `Falta` da
+  # cidade homônima), ou nil.
   def regra(params)
     return lugar_que_falta(params) if ponto(params).nil?
 
@@ -56,7 +57,7 @@ module Autonomia::FerramentasProntas::Fontes::Chuva
     return 'longitude' if params['latitude']
     return 'latitude' if params['longitude']
 
-    params['cidade'] && params['uf'].nil? ? 'uf' : 'cidade'
+    Municipios.falta(params['uf'], params['cidade'])
   end
 
   # Os dias da fonte -> o total e cada dia. Dia sem valor (a fonte ainda não tem) fica sem número, fora do total.

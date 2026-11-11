@@ -1,7 +1,8 @@
 # HOSPITAIS E CLÍNICAS (#2858, F4): os estabelecimentos de saúde de uma cidade, do CNES (Cadastro Nacional de
 # Estabelecimentos de Saúde, Ministério da Saúde), com filtro opcional pelo tipo de unidade e pelo nome.
-#   - a cidade vem pelo código IBGE (7 dígitos, ou os 6 que o CNES usa) ou pelo nome e a UF, conferidos na tabela das
-#     sedes municipais (`Municipios`): a cidade que não existe naquele estado é pedido inválido, e nada é consultado;
+#   - a cidade vem pelo código IBGE (7 dígitos, ou os 6 que o CNES usa) ou pelo nome (a UF sai dele; só a homônima a
+#     pede), conferidos na tabela das sedes municipais (`Municipios`): a cidade que não existe é pedido inválido, e nada
+#     é consultado;
 #   - fonte única: a API de dados abertos do Ministério da Saúde (`hospitais/cnes.rb`). Não há outra API aberta e
 #     documentada do CNES para servir de reserva;
 #   - a API devolve no máximo 20 por pedido: o tipo vai à fonte, e a busca pelo nome filtra esses 20 aqui;
@@ -24,13 +25,11 @@ module Autonomia::FerramentasProntas::Fontes::Hospitais
 
   module_function
 
-  # Cidade obrigatória: o código IBGE, ou o nome com a UF (e o nome tem de ser um município daquela UF).
+  # Cidade obrigatória: o código IBGE, ou o nome (com a UF só quando o nome existe em mais de um estado).
   def regra(params)
     return if params['codigo_ibge']
-    return 'cidade' if params['cidade'].nil?
-    return 'uf' if params['uf'].nil?
 
-    'cidade' if Municipios.buscar(params['uf'], params['cidade']).nil?
+    Municipios.falta(params['uf'], params['cidade'])
   end
 
   def refinar(dados, params)

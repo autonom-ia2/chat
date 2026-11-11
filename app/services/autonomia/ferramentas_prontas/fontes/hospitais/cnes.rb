@@ -36,7 +36,7 @@ class Autonomia::FerramentasProntas::Fontes::Hospitais::Cnes < Autonomia::Ferram
 
   def municipio(params)
     municipios = Autonomia::FerramentasProntas::Municipios
-    achado = params['codigo_ibge'] ? municipios.por_codigo_cnes(params['codigo_ibge']) : municipios.buscar(params.fetch('uf'), params.fetch('cidade'))
+    achado = params['codigo_ibge'] ? municipios.por_codigo_cnes(params['codigo_ibge']) : municipios.buscar(params['uf'], params.fetch('cidade'))
     achado || raise(Falha, 'municipio_desconhecido')
   end
 

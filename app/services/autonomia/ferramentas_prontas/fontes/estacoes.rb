@@ -24,17 +24,17 @@ module Autonomia::FerramentasProntas::Fontes::Estacoes
   def ponto(params)
     return [params['latitude'], params['longitude'], 'a localização informada'] if params['latitude'] && params['longitude']
 
-    municipio = params['cidade'] && params['uf'] && Municipios.buscar(params['uf'], params['cidade'])
+    municipio = params['cidade'] && Municipios.buscar(params['uf'], params['cidade'])
     [municipio.latitude, municipio.longitude, municipio.rotulo] if municipio
   end
 
-  # A cidade com a UF, ou a coordenada inteira. -> o nome do parâmetro que falta, ou nil.
+  # A cidade (a UF sai dela), ou a coordenada inteira. -> o nome do parâmetro que falta (ou a `Falta` da homônima), ou nil.
   def regra(params)
     return if ponto(params)
     return 'longitude' if params['latitude']
     return 'latitude' if params['longitude']
 
-    params['cidade'] && params['uf'].nil? ? 'uf' : 'cidade'
+    Municipios.falta(params['uf'], params['cidade'])
   end
 
   # Uma estação da lista do INMET, enxuta. Sem código, nome ou coordenada: fica de fora.
@@ -63,7 +63,7 @@ module Autonomia::FerramentasProntas::Fontes::Estacoes
     Autonomia::FerramentasProntas::Fontes::Localizacao::Sedes.distancia_km(latitude, longitude, item['latitude'], item['longitude'])
   end
 
-  CIDADE = Parametro.new(nome: 'cidade', local: true, descricao: 'O nome da cidade (com uf). Sem cidade: latitude e longitude.') do |valor|
+  CIDADE = Parametro.new(nome: 'cidade', local: true, descricao: 'O nome da cidade. Sem cidade: latitude e longitude.') do |valor|
     Parametro.texto_curto(valor)
   end
   UF = Municipios.parametro_uf(local: true)

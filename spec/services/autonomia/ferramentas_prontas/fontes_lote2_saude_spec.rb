@@ -108,10 +108,16 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(uso.motivos).to eq('cnes.resposta_invalida' => 1)
     end
 
-    it 'entrada fora do formato: cidade que nao e daquele estado, sem cidade, codigo que nao existe e tipo fora da lista' do
+    it '"Tem hospital em Campinas?": so a cidade, unica no Brasil, basta (regra QI 70)' do
+      fonte_responde(hospitais, { estabelecimentos: [hospital] })
+
+      expect(executar_pronta(ferramenta, 'cidade' => 'Campinas', 'tipo' => 'hospital')['dados']).to include('cidade' => 'Campinas', 'uf' => 'SP')
+    end
+
+    it 'entrada fora do formato: cidade que nao e daquele estado, sem cidade, homonima sem uf, codigo que nao existe e tipo fora da lista' do
       expect(executar_pronta(ferramenta, 'cidade' => 'Campinas', 'uf' => 'rj')).to include('situacao' => 'pedido_invalido', 'campo' => 'cidade')
       expect(executar_pronta(ferramenta, 'uf' => 'sp')['campo']).to eq('cidade')
-      expect(executar_pronta(ferramenta, 'cidade' => 'Campinas')['campo']).to eq('uf')
+      expect(executar_pronta(ferramenta, 'cidade' => 'Santa Helena')).to include('campo' => 'uf', 'candidatos' => %w[MA PB PR SC])
       expect(executar_pronta(ferramenta, 'codigo_ibge' => '999999')['campo']).to eq('codigo_ibge')
       expect(executar_pronta(ferramenta, 'cidade' => 'Campinas', 'uf' => 'sp', 'tipo' => 'spa')['campo']).to eq('tipo')
       expect(a_request(:get, /saude\.gov\.br/)).not_to have_been_made
