@@ -24,7 +24,7 @@ class Autonomia::FerramentasProntas::Fontes::Transportadoras::Antt < Autonomia::
   def registro(item)
     {
       'rntrc' => item.rntrc, 'situacao' => item.situacao, 'categoria' => item.categoria, 'nome' => item.nome,
-      'cnpj' => item.cnpj, 'municipio' => item.municipio, 'uf' => item.uf, 'cadastrado_em' => item.cadastrado_em&.iso8601,
+      'cnpj' => cnpj_formatado(item.cnpj), 'municipio' => item.municipio, 'uf' => item.uf, 'cadastrado_em' => item.cadastrado_em&.iso8601,
       'situacao_desde' => item.situacao_desde&.iso8601, 'equiparado' => item.equiparado
     }.compact
   end

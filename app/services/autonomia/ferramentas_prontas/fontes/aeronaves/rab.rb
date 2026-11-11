@@ -9,6 +9,7 @@ class Autonomia::FerramentasProntas::Fontes::Aeronaves::Rab < Autonomia::Ferrame
              passageiros_no_maximo peso_maximo_de_decolagem_kg situacao cancelada_em motivo_do_cancelamento
              certificado_de_aeronavegabilidade_valido_ate gravames proprietarios_empresas outros_proprietarios
              operadores_empresas outros_operadores].freeze
+  EMPRESAS = %w[proprietarios_empresas operadores_empresas].freeze
 
   def buscar(_consulta, params)
     escopo = da_base(Autonomia::FerramentasProntas::Bases::Aeronave).where(matricula: params.fetch('matricula')).order(:id)
@@ -17,9 +18,15 @@ class Autonomia::FerramentasProntas::Fontes::Aeronaves::Rab < Autonomia::Ferrame
 
   private
 
-  # A ficha na `ORDEM`; campo novo que não está nela vai no fim, sem sumir.
+  # A ficha na `ORDEM`; campo novo que não está nela vai no fim, sem sumir. O CNPJ das empresas sai com a máscara.
   def ficha(item)
     dados = { 'matricula' => item.matricula }.merge(item.dados)
-    dados.slice(*ORDEM).merge(dados.except(*ORDEM))
+    dados.slice(*ORDEM).merge(dados.except(*ORDEM)).merge(empresas(dados))
+  end
+
+  def empresas(dados)
+    dados.slice(*EMPRESAS).transform_values do |lista|
+      lista.map { |empresa| empresa.key?('cnpj') ? empresa.merge('cnpj' => cnpj_formatado(empresa['cnpj'])) : empresa }
+    end
   end
 end

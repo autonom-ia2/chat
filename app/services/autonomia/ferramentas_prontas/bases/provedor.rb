@@ -74,6 +74,13 @@ class Autonomia::FerramentasProntas::Bases::Provedor < Autonomia::FerramentasPro
     { 'total' => total }.merge(total > maximo ? { 'mostrando' => maximo } : {}).merge(chave => itens)
   end
 
+  # O CNPJ guardado só com os dígitos sai com a máscara, pelo mesmo `Fontes::Cnpj.formatado` do card Dados da empresa.
+  # O que não confere como CNPJ sai como veio.
+  def cnpj_formatado(valor)
+    cnpj = Autonomia::FerramentasProntas::Parametro.cnpj(valor)
+    cnpj ? Autonomia::FerramentasProntas::Fontes::Cnpj.formatado(cnpj) : valor
+  end
+
   def like(palavra)
     "%#{ActiveRecord::Base.sanitize_sql_like(palavra)}%"
   end

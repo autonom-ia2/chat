@@ -24,7 +24,7 @@ class Autonomia::FerramentasProntas::Fontes::PlanosDeSaude::Ans < Autonomia::Fer
   def operadora(item)
     {
       'razao_social' => item.razao_social, 'nome_fantasia' => item.nome_fantasia, 'registro_ans' => item.registro_ans,
-      'cnpj' => item.cnpj, 'situacao' => item.ativa ? 'ativa' : 'cancelada', 'tipo_de_operadora' => item.modalidade,
+      'cnpj' => cnpj_formatado(item.cnpj), 'situacao' => item.ativa ? 'ativa' : 'cancelada', 'tipo_de_operadora' => item.modalidade,
       'cidade' => item.cidade, 'uf' => item.uf, 'registrada_em' => item.registrada_em&.iso8601,
       'cancelada_em' => item.cancelada_em&.iso8601, 'motivo_do_cancelamento' => item.motivo_do_cancelamento
     }.compact

@@ -211,6 +211,13 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     expect(valor('planos_de_saude', 'operadora', 'Registro na ANS')).toBe(
       '335690'
     );
+    // CNPJ com a máscara, como no card Dados da empresa (e sem milhar: é chave de identificação).
+    expect(valor('planos_de_saude', 'operadora', 'CNPJ')).toBe(
+      '46.124.624/0001-11'
+    );
+    expect(valor('planos_de_saude', 'operadora_cancelada', 'CNPJ')).toBe(
+      '22.869.997/0001-53'
+    );
     expect(valor('planos_de_saude', 'operadora', 'Situação')).toBe('ativa');
     expect(valor('planos_de_saude', 'operadora', 'Tipo de operadora')).toBe(
       'Cooperativa Médica'
@@ -302,6 +309,9 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     expect(valor('transportadoras', 'registro', 'RNTRC')).toBe('000000001');
     expect(valor('transportadoras', 'registro', 'Registros')).toBe(
       'TRANSPORTADORA EXEMPLO 1 LTDA'
+    );
+    expect(valor('transportadoras', 'registro', 'CNPJ')).toBe(
+      '11.222.333/0001-81'
     );
     expect(valor('transportadoras', 'registro', 'Situação')).toBe('ativo');
     expect(

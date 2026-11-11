@@ -19,7 +19,9 @@ module DadosReaisDasBases
   Bases = Autonomia::FerramentasProntas::Bases
   TABELAS = %w[autonomia_prontas_bases autonomia_prontas_operadoras_ans autonomia_prontas_aeronaves
                autonomia_prontas_geracao_distribuida autonomia_prontas_transportadores autonomia_prontas_focos_queimada].freeze
-  CNPJS_DE_EXEMPLO = %w[11222333000181 11444777000161 33444555000181].freeze
+  # Com a máscara, como a fonte devolve.
+  CNPJS_DE_EXEMPLO = %w[11222333000181 11444777000161 33444555000181]
+                     .map { |cnpj| Autonomia::FerramentasProntas::Fontes::Cnpj.formatado(cnpj) }.freeze
 
   # Empresa que pode ser MEI (o nome é o da pessoa): nome, CNPJ e registro viram exemplo; situação, datas e lugar ficam.
   EMPRESAS = lambda do |dados, chave_da_lista, rotulo|

@@ -95,3 +95,6 @@ reais. Planos de saúde, placas solares e focos não têm pessoa física.
 
 `queimadas.json` foi gravado de novo em 11/11/2026, pelo script, depois que a lista dos últimos focos (coordenada e
 bioma) deu lugar a `ultimo_foco_em` e `distancia_do_foco_mais_perto_km`.
+
+`planos_de_saude.json`, `aeronaves.json` e `transportadoras.json` foram gravados de novo em 11/11/2026, pelo script,
+depois que o CNPJ passou a sair com a máscara (00.000.000/0000-00), como no card Dados da empresa.

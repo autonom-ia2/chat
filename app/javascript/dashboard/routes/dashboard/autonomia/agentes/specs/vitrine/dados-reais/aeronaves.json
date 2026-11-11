@@ -23,7 +23,7 @@
           "proprietarios_empresas": [
             {
               "uf": "SP",
-              "cnpj": "11222333000181",
+              "cnpj": "11.222.333/0001-81",
               "nome": "AVIACAO EXEMPLO 1 LTDA"
             }
           ],
@@ -31,12 +31,12 @@
           "operadores_empresas": [
             {
               "uf": "SP",
-              "cnpj": "11222333000181",
+              "cnpj": "11.222.333/0001-81",
               "nome": "AVIACAO EXEMPLO 1 LTDA"
             },
             {
               "uf": "SP",
-              "cnpj": "11444777000161",
+              "cnpj": "11.444.777/0001-61",
               "nome": "AVIACAO EXEMPLO 2 LTDA"
             }
           ],

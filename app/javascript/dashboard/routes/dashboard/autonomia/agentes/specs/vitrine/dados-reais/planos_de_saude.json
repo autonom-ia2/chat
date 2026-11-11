@@ -8,7 +8,7 @@
           "razao_social": "UNIMED CAMPINAS - COOPERATIVA DE TRABALHO MÉDICO",
           "nome_fantasia": "UNIMED CAMPINAS",
           "registro_ans": "335690",
-          "cnpj": "46124624000111",
+          "cnpj": "46.124.624/0001-11",
           "situacao": "ativa",
           "tipo_de_operadora": "Cooperativa Médica",
           "cidade": "Campinas",
@@ -27,7 +27,7 @@
         {
           "razao_social": "2B ODONTOLOGIA OPERADORA DE PLANOS ODONTOLÓGICOS LTDA",
           "registro_ans": "421545",
-          "cnpj": "22869997000153",
+          "cnpj": "22.869.997/0001-53",
           "situacao": "cancelada",
           "tipo_de_operadora": "Odontologia de Grupo",
           "cidade": "São Paulo",

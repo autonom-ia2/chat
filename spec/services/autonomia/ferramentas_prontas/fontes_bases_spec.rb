@@ -65,7 +65,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(saida['situacao']).to eq('encontrado')
       expect(saida['dados']).to include('total' => 1, 'atualizado_em' => '2026-11-11')
       expect(saida['dados']['operadoras']).to eq([{ 'razao_social' => 'SAÚDE EXEMPLO 1 LTDA', 'nome_fantasia' => 'PLANO EXEMPLO 1',
-                                                    'registro_ans' => '300001', 'cnpj' => '11222333000181', 'situacao' => 'ativa',
+                                                    'registro_ans' => '300001', 'cnpj' => '11.222.333/0001-81', 'situacao' => 'ativa',
                                                     'tipo_de_operadora' => 'Medicina de Grupo', 'cidade' => 'Campinas', 'uf' => 'SP',
                                                     'registrada_em' => '2015-05-19' }])
     end
@@ -99,7 +99,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       aeronave = saida['dados']['aeronaves'].sole
       expect(aeronave).to include('matricula' => 'PRXYZ', 'modelo' => 'R66', 'situacao' => 'registrada',
                                   'certificado_de_aeronavegabilidade_valido_ate' => '2027-11-03', 'outros_operadores' => 1)
-      expect(aeronave['proprietarios_empresas'].sole).to include('nome' => 'AVIACAO EXEMPLO S.A')
+      # O CNPJ sai com a máscara, como no card Dados da empresa.
+      expect(aeronave['proprietarios_empresas'].sole).to include('nome' => 'AVIACAO EXEMPLO S.A', 'cnpj' => '11.222.333/0001-81')
       expect(saida.to_json).not_to include('FULANO', FerramentasProntasBasesHelper::CPF_PESSOA)
       expect(aeronave.keys.first(6)).to eq(%w[matricula fabricante modelo tipo_icao ano_de_fabricacao numero_de_serie])
       expect(aeronave.keys.last(3)).to eq(%w[proprietarios_empresas outros_proprietarios outros_operadores])
@@ -170,7 +171,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       saida = executar_pronta(ferramenta, 'cnpj' => '11.222.333/0001-81')
 
       expect(saida['dados']['registros']).to eq([{ 'rntrc' => '050085788', 'situacao' => 'ativo', 'categoria' => 'empresa',
-                                                   'nome' => 'TRANSPORTES EXEMPLO LTDA', 'cnpj' => '11222333000181',
+                                                   'nome' => 'TRANSPORTES EXEMPLO LTDA', 'cnpj' => '11.222.333/0001-81',
                                                    'municipio' => 'RIBEIRÃO PRETO', 'uf' => 'SP', 'cadastrado_em' => '2017-05-23',
                                                    'situacao_desde' => '2026-08-27', 'equiparado' => true }])
     end
