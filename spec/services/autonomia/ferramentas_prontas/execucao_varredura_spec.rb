@@ -149,6 +149,22 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(a_request(:get, "#{vw}/models/9/years")).not_to have_been_made
     end
 
+    # Revisão do #2906: cada combustível tem o seu código de ano, e só os 3 primeiros eram lidos.
+    it 'F12: o ano com 4 ou mais combustiveis le todos os codigos do ano' do
+      fonte_responde("#{vw}/years", %w[1 2 3 4 5].map { |codigo| { code: "2020-#{codigo}", name: "2020 #{codigo}" } })
+      %w[2 3 4].each { |codigo| fonte_responde("#{vw}/years/2020-#{codigo}/models", []) }
+      fonte_responde("#{vw}/years/2020-5/models", [{ code: '9', name: 'Gol GTi 2.0' }])
+      fonte_responde("#{vw}/models/9/years", [{ code: '2020-5', name: '2020 Flex' }])
+      fonte_responde("#{vw}/models/9/years/2020-5", preco_de('Gol GTi 2.0', 'R$ 90.000,00'))
+      fonte_responde("#{vw}/models/2/years", [{ code: '2020-1', name: '2020 Gasolina' }])
+      fonte_responde("#{vw}/models/2/years/2020-1", preco_de('Gol 1.6 Power', 'R$ 52.500,50'))
+
+      saida = preco('modelo' => 'Gol', 'ano' => 2020)
+
+      expect(saida['dados']['precos'].pluck('modelo')).to contain_exactly('Gol GTi 2.0', 'Gol 1.6 Power')
+      expect(a_request(:get, "#{vw}/years/2020-5/models")).to have_been_made.once
+    end
+
     it 'F12: com uma versao so no ano, vai direto ao preco dela' do
       fonte_responde("#{vw}/years/2020-1/models", [])
       fonte_responde("#{vw}/models/1/years", [{ code: '2020-5', name: '2020 Flex' }])

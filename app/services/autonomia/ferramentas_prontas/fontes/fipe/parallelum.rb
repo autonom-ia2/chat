@@ -44,11 +44,12 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
   end
 
   # Os modelos da marca que têm o ano-modelo: os códigos de ano da marca (um por combustível, "2020-1", "2020-5") e os
-  # modelos de cada um, até `MAX_ANOS_COM_PRECO` códigos.
+  # modelos de TODOS eles (revisão do #2906: só os 3 primeiros deixavam de fora a versão de outro combustível). A lista
+  # fica no cache da consulta (`MODELOS_DO_ANO`), e o preço de outra versão do mesmo ano não lê os códigos de novo.
   def modelos_do_ano(params)
     anos = itens(base(params, "/brands/#{params['marca']}/years"))
     codigos = anos.select { |item| codigo_de_ano?(item['codigo']) && item['codigo'].split('-').first.to_i == params['ano'] }
-    modelos = codigos.first(Fipe::MAX_ANOS_COM_PRECO).flat_map do |ano|
+    modelos = codigos.flat_map do |ano|
       itens(base(params, "/brands/#{params['marca']}/years/#{ano['codigo']}/models"))
     end
     { 'modelos' => modelos.uniq { |item| item['codigo'] } }
