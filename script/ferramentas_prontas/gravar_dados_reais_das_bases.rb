@@ -43,7 +43,8 @@ module DadosReaisDasBases
     abort("a matrícula de exemplo #{MATRICULA_DE_EXEMPLO} existe no RAB: troque") if Bases::Aeronave.exists?(matricula: MATRICULA_DE_EXEMPLO)
 
     aeronaves = dados['aeronaves'].map do |aeronave|
-      exemplo = aeronave.merge({ 'matricula' => MATRICULA_DE_EXEMPLO,
+      matricula = Autonomia::FerramentasProntas::Fontes::Aeronaves.matricula_legivel(MATRICULA_DE_EXEMPLO)
+      exemplo = aeronave.merge({ 'matricula' => matricula,
                                  'numero_de_serie' => (SERIE_DE_EXEMPLO if aeronave.key?('numero_de_serie')) }.compact)
       LISTAS_DE_EMPRESAS.reduce(exemplo) do |atual, chave|
         atual.key?(chave) ? EMPRESAS.call(atual, chave, 'AVIACAO') : atual

@@ -107,7 +107,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       saida = executar_pronta(ferramenta, 'matricula' => 'pr-xyz')
 
       aeronave = saida['dados']['aeronaves'].sole
-      expect(aeronave).to include('matricula' => 'PRXYZ', 'modelo' => 'R66', 'situacao' => 'registrada',
+      # A matrícula com o hífen depois do prefixo de 2 letras, como o leigo reconhece.
+      expect(aeronave).to include('matricula' => 'PR-XYZ', 'modelo' => 'R66', 'situacao' => 'registrada',
                                   'certificado_de_aeronavegabilidade_valido_ate' => '2027-11-03', 'outros_operadores' => 1)
       # O CNPJ sai com a máscara, como no card Dados da empresa.
       expect(aeronave['proprietarios_empresas'].sole).to include('nome' => 'AVIACAO EXEMPLO S.A', 'cnpj' => '11.222.333/0001-81')

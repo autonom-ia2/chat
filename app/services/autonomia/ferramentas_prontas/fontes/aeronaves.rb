@@ -9,6 +9,13 @@ module Autonomia::FerramentasProntas::Fontes::Aeronaves
     Autonomia::FerramentasProntas::Bases::Aeronaves.matricula(valor)
   end
 
+  PREFIXO = 2
+
+  # "PRXYZ" -> "PR-XYZ": as marcas do Brasil são o prefixo de nacionalidade (2 letras: PP, PR, PS, PT, PU) e mais 3.
+  def self.matricula_legivel(matricula)
+    "#{matricula[0, PREFIXO]}-#{matricula[PREFIXO..]}"
+  end
+
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'aeronaves', slug: 'pronta_aeronaves', nome: 'Aeronaves', flag: Autonomia::FerramentasProntas::Bases::FLAG,
     descricao: 'O que o registro aeronáutico da ANAC diz de uma aeronave pela matrícula: fabricante, modelo, ano, assentos, ' \

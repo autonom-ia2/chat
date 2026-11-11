@@ -18,9 +18,10 @@ class Autonomia::FerramentasProntas::Fontes::Aeronaves::Rab < Autonomia::Ferrame
 
   private
 
-  # A ficha na `ORDEM`; campo novo que não está nela vai no fim, sem sumir. O CNPJ das empresas sai com a máscara.
+  # A ficha na `ORDEM`; campo novo que não está nela vai no fim, sem sumir. A matrícula sai com o hífen ("PR-XYZ") e o
+  # CNPJ das empresas, com a máscara.
   def ficha(item)
-    dados = { 'matricula' => item.matricula }.merge(item.dados)
+    dados = { 'matricula' => Autonomia::FerramentasProntas::Fontes::Aeronaves.matricula_legivel(item.matricula) }.merge(item.dados)
     dados.slice(*ORDEM).merge(dados.except(*ORDEM)).merge(empresas(dados))
   end
 
