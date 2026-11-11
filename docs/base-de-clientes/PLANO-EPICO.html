@@ -111,7 +111,7 @@
   <p class="lead">Atualizado a cada entrega. É a primeira coisa a olhar.</p>
   <div class="tbl"><table>
     <tr><th>Entrega</th><th>Estado</th><th>Issue · PR</th><th>SHA no ar</th><th>Banca (nota)</th><th>Tokens gastos</th><th>Atualizado</th></tr>
-    <tr><td>E0 · Preparo e protótipo</td><td><span class="chip s-construcao">Em construção</span></td><td>#2893 · PR #2892 (docs) · protótipo do bloco A na branch <code>feat/2894-relacionamentos-novo</code></td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
+    <tr><td>E0 · Preparo e protótipo</td><td><span class="chip s-construcao">Em construção</span></td><td>#2893 · PR #2892 (docs) · protótipo do bloco A na branch <code>feat/2894-relacionamentos-novo</code> (PR #2910, rascunho)</td><td>—</td><td>Bloco A: <b>8,58</b>, aprovado na rodada 2 (Multifunnel 8,8 · Campanhas 8,8 · Orquestração Deploy 8,6 · Frontend geral 8,1). Bloco B: falta</td><td>—</td><td>11/11</td></tr>
     <tr><td>E1 · Início e lista de pessoas</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2894</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
     <tr><td>E2 · Ficha da pessoa e da empresa</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2895</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
     <tr><td>E3 · Trazer minha lista (planilha)</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2896</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
@@ -225,7 +225,7 @@
         <li><b>Carteira de qualquer origem.</b> Qualquer planilha, PDF de qualquer seguradora, ou o Agger. Sem depender de parceria.</li>
         <li><b>Carteira e conversa juntas.</b> A renovação anda no funil e no WhatsApp oficial, no mesmo sistema.</li>
         <li><b>Simples de verdade.</b> Tarefa do dia em uma frase, contra telas densas por módulo.</li>
-        <li><b>Desfazer por 7 dias</b>, por quem importou. O mercado dá 48 horas ou exige administrador.</li>
+        <li><b>Desfazer sem prazo</b>, por quem importou. O mercado dá 48 horas ou exige administrador.</li>
       </ul>
     </div>
     <div class="card">
@@ -288,7 +288,9 @@
     <ul>
       <li>Cai o “teto mensal de cotação” que estava no desenho: fere a regra “sem freio”. Fica o custo à vista e a escolha da corretora de cotar sozinho ou não.</li>
       <li>Importar pessoa que já existe: completa o que falta, não sobrescreve o que já está preenchido.</li>
-      <li>Desfazer uma importação: por 7 dias, por quem importou ou por quem pode gerir contatos.</li>
+      <li>Desfazer uma importação: sem prazo, por quem importou ou por quem pode gerir contatos. A tela mostra antes o que sai e o que volta. O prazo de 7 dias caiu em 11/11: prazo é freio.</li>
+      <li>Trazer lista: qualquer atendente que vê Relacionamentos pode. Hoje a casa só deixa o administrador ou a função com “gerir contatos”. Quem tem a planilha é quem atende, e o Desfazer é a rede. Parecer de Funções no PR da E3.</li>
+      <li>Botão desligado é beco sem saída. Nenhum botão fica desligado por falta de preenchimento: o clique diz o que falta e leva até lá. Quando não dá para fazer, a tela diz por quê e o que resolve. Desligado só enquanto o sistema está trabalhando.</li>
       <li>Conflito de telefone na importação não trava nada: o sistema casa pelo CPF/CNPJ e segue; a diferença fica anotada na ficha.</li>
     </ul>
   </div>
@@ -306,7 +308,7 @@
       <div class="step"><b>2 · Enviar</b>Arrasta o arquivo ou entra com o login do Agger.</div>
       <div class="step"><b>3 · Renovações</b>Só em conta de seguros, só na primeira vez: onde ficam e quantos dias antes.</div>
       <div class="step"><b>4 · Conferir</b>“312 seguros · 280 pessoas · 24 sem telefone.” Exemplos e o que precisa de olho.</div>
-      <div class="step"><b>5 · Pronto</b>Confirma. Pode desfazer por 7 dias.</div>
+      <div class="step"><b>5 · Pronto</b>Confirma. Pode desfazer quando quiser.</div>
     </div>
   </div>
   <div class="card">
@@ -373,7 +375,7 @@
         <li>Uma pergunta: “Como você quer trazer?” com cartões (Planilha · PDFs · Agger). Sem seguros: só Planilha.</li>
         <li>Etapas curtas no topo: Enviar → Conferir → Pronto.</li>
         <li>Conferir: uma frase com os totais, três fichas de exemplo, e só os problemas que pedem uma decisão, cada um com um botão.</li>
-        <li>Histórico: “O que eu já trouxe”, com <b>Desfazer</b> enquanto der.</li>
+        <li>Histórico: “O que eu já trouxe”, com <b>Desfazer</b>, sem prazo.</li>
       </ol>
       <p class="muted">Substitui os quatro caminhos de importação de hoje. As rotas antigas redirecionam para cá.</p>
     </div>
@@ -810,6 +812,8 @@
       <ul>
         <li>Meta: média acima de 8,5, em até 3 rodadas.</li>
         <li>Itens 1 a 4 abaixo de 7 travam, seja qual for a média.</li>
+        <li>Nota é insumo, não sentença (Rodrigo, 11/11). O Base de Clientes é o dono do épico e avalia o motivo de cada nota. Acata o que é conhecimento da área do jurado, conferido no código. Contesta com evidência a opinião de motivo fraco e pede nova nota. Nota contestada e não sustentada não trava.</li>
+        <li>Pedido de jurado que cria trava, limite, confirmação a mais ou botão desligado não entra.</li>
         <li>Da segunda rodada em diante, lista fechada de correções.</li>
         <li>Não chegou a 8,5 em 3 rodadas: para, e o Base de Clientes verifica o que falta.</li>
         <li>Entre 7,5 e 8,5: só o Base de Clientes pode aprovar, com o motivo escrito. Abaixo de 7,5 não sobe.</li>
@@ -937,12 +941,12 @@
     <tr><th>O quê</th><th>Quando</th><th>Sem isso</th></tr>
     <tr><td><s>OK para começar</s> · dado em 11/11, como meta</td><td>—</td><td>—</td></tr>
     <tr><td>PR #1321 (pesquisa e PRD da F1): entra ou fecha</td><td>E0</td><td>Fica aberto desde 15/10</td></tr>
-    <tr><td>OK de merge de cada PR</td><td>Toda entrega</td><td>Não sobe</td></tr>
+    <tr><td>OK de merge <b>geral</b>: com tudo verde e pronto, o Base de Clientes manda o pacote inteiro para o Rodrigo analisar e dar um OK só (Rodrigo, 11/11)</td><td>No fim</td><td>Não sobe</td></tr>
     <tr><td>“ok SHA” do dia</td><td>Toda entrega</td><td>Não limpa, não conta como aceita</td></tr>
-    <tr><td>Orçamento de IA para a bateria de PDFs (peço com volume e custo estimado)</td><td>Antes da E6</td><td>E6 não mede</td></tr>
-    <tr><td>Uma corretora real com o módulo de apólices ativo no Agger, e OK para ler a carteira dela</td><td>E7</td><td>E7 não tem aceite</td></tr>
-    <tr><td>Deploy do adapter (Lambda) e qualquer escrita em produção</td><td>E7, E8</td><td>Fica em demo</td></tr>
-    <tr><td>Orçamento de consultas de cotação para o teste</td><td>E8</td><td>E8 testa só no simulado</td></tr>
+    <tr><td><s>Orçamento de IA para a bateria de PDFs</s> · dado em 11/11: <b>US$ 2</b></td><td>E6</td><td>—</td></tr>
+    <tr><td><s>Corretora real para o teste do Agger</s> · dado em 11/11: usar as credenciais da <b>corretora do próprio Rodrigo</b></td><td>E7</td><td>—</td></tr>
+    <tr><td><s>Deploy do adapter (Lambda)</s> · OK dado em 11/11. Escrita em banco de produção e os outros deploys seguem pedindo OK</td><td>E7, E8</td><td>—</td></tr>
+    <tr><td><s>Orçamento de consultas de cotação para o teste</s> · dado em 11/11: <b>US$ 2</b></td><td>E8</td><td>—</td></tr>
     <tr><td>Fechar o #1240</td><td>E9</td><td>Épico segue aberto</td></tr>
   </table></div>
   <div class="card" style="margin-top:14px">
@@ -963,6 +967,10 @@
   <h2>Registro de mudanças</h2>
   <div class="tbl"><table>
     <tr><th>Data</th><th>O que mudou</th><th>Quem</th></tr>
+    <tr><td>11/11/2026</td><td>Rodrigo liberou o que faltava dele: US$ 2 de IA para a bateria de PDFs (E6); a corretora dele como corretora real do teste do Agger (E7); deploy do Lambda; US$ 2 de consultas de cotação (E8). E mudou o rito do merge: com tudo verde, recebe o pacote inteiro, analisa e dá um OK geral.</td><td>Rodrigo</td></tr>
+    <tr><td>11/11/2026</td><td>Banca do bloco A aprovou o protótipo na rodada 2, com média 8,58 (meta: acima de 8,5) e nenhum item de 1 a 4 abaixo de 7: Multifunnel 8,8, Campanhas 8,8, Orquestração Deploy 8,6, Frontend geral 8,1. Versão julgada: commit <code>e6782b0791</code>, 1009 testes, 74 prints claros e 14 em tema escuro. Entrou nesta rodada: nenhum botão desligado por falta de preenchimento; Desfazer mostra quem sai, quem fica e o que volta; Pronto diz quantas chegaram e quantas foram completadas; conta vazia com lista de exemplo apagada; botões, faixa e carregando com os componentes da casa. Recusado com motivo aceito pelos jurados: esconder grupo para não quebrar linha, cortar nome comprido, aumentar a base fictícia. Sugestões para a casa, fora do épico: botão do Banner, tamanho do ChoiceSelect e erro do CampoDeTelefone. Levantamento do que o backend já tem para a E1 em <code>docs/audit/2026-11-11-2894-e1-backend-existente.md</code>.</td><td>Base de Clientes</td></tr>
+    <tr><td>11/11/2026</td><td>Rodrigo: soltar o cliente, ser questionador, e o Base de Clientes avalia a banca como dono do épico. Pente de travas no plano e no protótipo: caiu o prazo de 7 dias do Desfazer; trazer lista abre para qualquer atendente (parecer de Funções na E3); botão desligado vira botão que explica. Regra da banca: nota é insumo, contestável com evidência. Rodada 1 da banca: média 7,2, não subiu; rodada 2 em preparo.</td><td>Rodrigo · Base de Clientes</td></tr>
+    <tr><td>11/11/2026</td><td>Protótipo do bloco A (PR #2910, draft) passou por 4 rodadas de correção em tela real, com prints de 1440 e 390 px conferidos um a um. Banca convidada para a rodada 1: Frontend geral, Multifunnel, Campanhas e Orquestração Deploy; fecha às 17h UTC. CI parada por falha externa na instalação de pacotes, em vários PRs.</td><td>Base de Clientes</td></tr>
     <tr><td>11/11/2026</td><td>E0 andando: contratos fechados com Cotação, Multifunnel, Campanhas, Automação e Agentes IA (registro em <code>docs/audit/2026-11-11-1240-execucao.md</code>). Especificação das três telas do bloco A em <code>prototipo/BLOCO-A.md</code>. Base do protótipo construída na branch <code>feat/2894-relacionamentos-novo</code> (flag, rotas, textos, dados fictícios); as três telas estão em construção.</td><td>Base de Clientes</td></tr>
     <tr><td>11/11/2026</td><td>Segunda rodada do benchmark (ajuda, manuais, termos de uso). Rodrigo aprovou 5 lacunas de mercado; entraram em E5, E6 e E8. Maestro reservou flags e migrations. PR de documentos #2892.</td><td>Base de Clientes</td></tr>
     <tr><td>11/11/2026</td><td>Rodrigo aprovou 13 melhorias vindas do mercado. Entraram: seguros no painel da conversa, grupo “Só tem um seguro”, Guia e agente enxergando a carteira, motivo de “Não renovou”, parcela atrasada, e a garantia do envio automático.</td><td>Base de Clientes</td></tr>
