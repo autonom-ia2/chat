@@ -23,15 +23,23 @@ import {
   idValido,
 } from '../ficha/useEstadoDaFicha';
 import { useFichaDaPessoa } from '../ficha/useFichaDaPessoa';
+import { usePermissoesDaFicha } from '../ficha/usePermissoesDaFicha';
 
 // #2894 — a ficha da pessoa: primeiro "quem é e o que tem comigo". Editar é um
 // passo a mais, de propósito (a gaveta "Alterar informações"). Em 390 px a ordem é
 // cabeçalho, faixa, Conversas, Cards, Informações, Notas, Arquivos, De onde veio
-// (o DOM segue essa ordem; ver `CorpoDaFichaDaPessoa`).
+// (o DOM segue essa ordem; ver `CorpoDaFichaDaPessoa`). Fora da demonstração lê e
+// grava no servidor (#2895), e quem só pode ver não tem os botões de escrita.
 const { t } = useI18n();
 const route = useRoute();
 const acoes = useAcoesDaFicha();
+const permissoes = usePermissoesDaFicha();
 const fonte = fichaFonte({ demo: usarDemo(route.query) });
+// Na demonstração tudo aparece, como na lista: é o desenho inteiro da tela.
+const podeEditar = computed(() => fonte.usaDemo || permissoes.podeEditar.value);
+const podeCriarCards = computed(
+  () => fonte.usaDemo || permissoes.podeCriarCards.value
+);
 const id = computed(() => Number(route.params?.contactId));
 const ficha = useFichaDaPessoa(fonte, id);
 const agora = Date.now();
@@ -65,7 +73,7 @@ const marcarCliente = async () =>
     { nome: nome.value }
   );
 
-// Na entrega real o backend grava quem liberou.
+// Quem liberou fica só no log do servidor; gravar isso é da fatia B do #2895.
 const liberar = async () =>
   resultado(
     await ficha.liberar(),
@@ -106,9 +114,25 @@ const escolherNoMais = escolha => {
   else avisar(AVISO_DO_MAIS[escolha]);
 };
 
+// As saídas que têm rota real. Na demonstração as pessoas, as conversas e os
+// cards são inventados: lá o clique só avisa (ou abre o quadro do CRM, sem card).
+// "Conversar" abre a conversa mais recente; com quem nunca conversou ainda só
+// avisa (começar conversa nova não é só uma rota).
+const conversar = () => {
+  const [maisRecente] = ficha.conversas.value;
+  if (fonte.usaDemo || !maisRecente) avisar('CONVERSAR');
+  else acoes.abrirConversa(maisRecente.id);
+};
+
+const novoCard = () => {
+  if (fonte.usaDemo) avisar('NOVO_CARD');
+  else acoes.novoCardNoCrm(id.value);
+};
+
 const abrirNoCrm = () => {
+  const cardId = fonte.usaDemo ? undefined : cardAberto.value?.id;
   cardAberto.value = null;
-  acoes.abrirNoCrm();
+  acoes.abrirNoCrm(cardId);
 };
 
 onMounted(ficha.carregar);
@@ -166,6 +190,17 @@ watch(
         </div>
 
         <div
+          v-else-if="ficha.estado.value === ESTADOS.SEM_ACESSO"
+          data-relacionamentos="sem-acesso"
+        >
+          <VazioComUmBotao
+            :frase="t('RELACIONAMENTOS_FICHA.ESTADOS.SEM_ACESSO')"
+            :botao="t('RELACIONAMENTOS_FICHA.ESTADOS.VOLTAR_PARA_LISTA')"
+            @acao="acoes.voltarParaLista()"
+          />
+        </div>
+
+        <div
           v-else
           data-relacionamentos="ficha-pessoa"
           class="flex flex-col min-w-0 gap-6"
@@ -173,8 +208,10 @@ watch(
           <CabecalhoDaPessoa
             :pessoa="ficha.pessoa.value"
             :marcando-cliente="ficha.ocupado.value === 'marcarCliente'"
-            @conversar="avisar('CONVERSAR')"
-            @novo-card="avisar('NOVO_CARD')"
+            :pode-editar="podeEditar"
+            :pode-criar-cards="podeCriarCards"
+            @conversar="conversar"
+            @novo-card="novoCard"
             @lembrete="avisar('LEMBRETE')"
             @mais-acao="escolherNoMais"
             @marcar-cliente="marcarCliente"
@@ -186,6 +223,7 @@ watch(
             :pessoa="ficha.pessoa.value"
             :liberando="ficha.ocupado.value === 'liberar'"
             :agora="agora"
+            :pode-liberar="podeEditar"
             @liberar="liberar"
           />
 
@@ -200,6 +238,9 @@ watch(
             :redes="redes"
             :agora="agora"
             :guardando-nota="ficha.ocupado.value === 'guardarNota'"
+            :falhas="ficha.falhas.value"
+            :pode-editar="podeEditar"
+            @tentar="ficha.relerParte"
             @ver-todas="avisar('VER_TODAS')"
             @abrir-card="card => (cardAberto = card)"
             @guardar-nota="guardarNota"

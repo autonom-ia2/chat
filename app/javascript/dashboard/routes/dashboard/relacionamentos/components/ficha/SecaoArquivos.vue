@@ -3,12 +3,16 @@ import { useI18n } from 'vue-i18n';
 import { quandoRelativo } from '../../ficha/formatos';
 import { useIdioma } from '../../ficha/idioma';
 import CartaoDaSecao from './CartaoDaSecao.vue';
+import FalhaDaParte from './FalhaDaParte.vue';
 
 // #2894 — o que foi trocado nas conversas: um ícone pelo tipo, o nome e quando.
+// `falhou`: a leitura não veio.
 defineProps({
   arquivos: { type: Array, required: true },
   agora: { type: Number, default: () => Date.now() },
+  falhou: { type: Boolean, default: false },
 });
+const emit = defineEmits(['tentar']);
 
 const ICONES = {
   imagem: 'i-lucide-image',
@@ -24,7 +28,8 @@ const ra = chave => t(`RELACIONAMENTOS_FICHA.ARQUIVOS.${chave}`);
 
 <template>
   <CartaoDaSecao :titulo="ra('TITULO')" data-relacionamentos="arquivos">
-    <p v-if="!arquivos.length" class="m-0 text-base text-n-slate-11">
+    <FalhaDaParte v-if="falhou" @tentar="emit('tentar')" />
+    <p v-else-if="!arquivos.length" class="m-0 text-base text-n-slate-11">
       {{ ra('VAZIO') }}
     </p>
     <ul v-else class="flex flex-col gap-3 p-0 m-0 list-none">

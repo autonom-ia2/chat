@@ -4,9 +4,11 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { formatarReais } from '../../ficha/formatos';
 import { useIdioma } from '../../ficha/idioma';
+import { situacaoDeCardConhecida } from '../../ficha/rotulos';
 import GavetaLateral from './GavetaLateral.vue';
 
 // #2894 — o resumo do card numa gaveta, com "Abrir no CRM". `card` nulo = fechada.
+// Sem valor (`null`, de quem não pode ver valor) a linha do valor não existe.
 const props = defineProps({
   card: { type: Object, default: null },
 });
@@ -19,11 +21,14 @@ const ra = chave => t(`RELACIONAMENTOS_FICHA.CARDS.GAVETA.${chave}`);
 const linhas = computed(() => {
   const { card } = props;
   if (!card) return [];
+  const situacao = situacaoDeCardConhecida(card.situacao);
   return [
     ['FUNIL', card.funil],
     ['ETAPA', card.etapa],
-    ['VALOR', formatarReais(card.valor, idioma.value)],
-    ['SITUACAO', t(`RELACIONAMENTOS_FICHA.CARDS.SITUACAO.${card.situacao}`)],
+    ...(card.valor === null
+      ? []
+      : [['VALOR', formatarReais(card.valor, idioma.value)]]),
+    ['SITUACAO', t(`RELACIONAMENTOS_FICHA.CARDS.SITUACAO.${situacao}`)],
   ];
 });
 </script>

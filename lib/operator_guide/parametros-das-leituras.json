@@ -2320,6 +2320,22 @@
       "pagina"
     ]
   },
+  "relacionamentos/empresas/:id": {
+    "controller": "api/v1/accounts/relacionamentos/empresas#show",
+    "parametros": []
+  },
+  "relacionamentos/empresas/:id/cards": {
+    "controller": "api/v1/accounts/relacionamentos/empresas#cards",
+    "parametros": []
+  },
+  "relacionamentos/empresas/:id/conversas": {
+    "controller": "api/v1/accounts/relacionamentos/empresas#conversas",
+    "parametros": []
+  },
+  "relacionamentos/empresas/:id/pessoas": {
+    "controller": "api/v1/accounts/relacionamentos/empresas#pessoas",
+    "parametros": []
+  },
   "relacionamentos/empresas/contagens": {
     "controller": "api/v1/accounts/relacionamentos/empresas#contagens",
     "parametros": [
@@ -2346,6 +2362,30 @@
       "ordem",
       "pagina"
     ]
+  },
+  "relacionamentos/pessoas/:id": {
+    "controller": "api/v1/accounts/relacionamentos/pessoas#show",
+    "parametros": []
+  },
+  "relacionamentos/pessoas/:id/arquivos": {
+    "controller": "api/v1/accounts/relacionamentos/pessoas#arquivos",
+    "parametros": []
+  },
+  "relacionamentos/pessoas/:id/cards": {
+    "controller": "api/v1/accounts/relacionamentos/pessoas#cards",
+    "parametros": []
+  },
+  "relacionamentos/pessoas/:id/conversas": {
+    "controller": "api/v1/accounts/relacionamentos/pessoas#conversas",
+    "parametros": []
+  },
+  "relacionamentos/pessoas/:id/notas": {
+    "controller": "api/v1/accounts/relacionamentos/pessoas#notas",
+    "parametros": []
+  },
+  "relacionamentos/pessoas/:id/origem": {
+    "controller": "api/v1/accounts/relacionamentos/pessoas#origem",
+    "parametros": []
   },
   "relacionamentos/pessoas/contagens": {
     "controller": "api/v1/accounts/relacionamentos/pessoas#contagens",

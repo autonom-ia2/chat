@@ -19,6 +19,7 @@ import CampoDeTexto from '../../components/ficha/CampoDeTexto.vue';
 import DeOndeVeio from '../../components/ficha/DeOndeVeio.vue';
 import CabecalhoDaEmpresa from '../../components/ficha/CabecalhoDaEmpresa.vue';
 import SecaoPessoasDaEmpresa from '../../components/ficha/SecaoPessoasDaEmpresa.vue';
+import CorpoDaFichaDaPessoa from '../../components/ficha/CorpoDaFichaDaPessoa.vue';
 
 // Os blocos da ficha (#2894): cada um cheio, vazio e com a ação principal.
 vi.mock('vue-i18n', () => ({
@@ -367,6 +368,27 @@ describe('ficha da empresa: ações', () => {
     expect(w.emitted('conversar')[0][0]).toMatchObject({ id: 1 });
     expect(w.emitted('abrir')).toBeUndefined();
   });
+
+  // #2895 — a ficha traz as primeiras pessoas da empresa. Quando a empresa tem
+  // mais gente do que veio, a tela diz quantas está mostrando.
+  it('diz quantas mostra quando a empresa tem mais gente do que veio', () => {
+    const w = mount(SecaoPessoasDaEmpresa, {
+      props: { pessoas: [quemPodeReceber], total: 250 },
+    });
+    const aviso = w.get('[data-relacionamentos="mostrando-parte"]');
+    expect(aviso.text()).toContain('MOSTRANDO_PARTE');
+    expect(aviso.text()).toContain('"mostradas":1');
+    expect(aviso.text()).toContain('"total":250');
+  });
+
+  it('não diz nada quando todas as pessoas vieram', () => {
+    const w = mount(SecaoPessoasDaEmpresa, {
+      props: { pessoas: [quemPodeReceber], total: 1 },
+    });
+    expect(w.find('[data-relacionamentos="mostrando-parte"]').exists()).toBe(
+      false
+    );
+  });
 });
 
 describe('CabecalhoDaPessoa: terceira rodada', () => {
@@ -706,6 +728,20 @@ describe('SecaoNotas', () => {
     w.vm.limpar();
     await w.vm.$nextTick();
     expect(caixa.element.value).toBe('');
+  });
+
+  it('nota de quem já saiu da plataforma (sem autor) mostra só quando', () => {
+    const w = mount(SecaoNotas, {
+      props: {
+        notas: [{ id: 'a', autor: null, quando: SEGUNDOS, texto: 'Antiga.' }],
+        agora: AGORA,
+      },
+    });
+    const nota = w.get('[data-relacionamentos="nota"]');
+    expect(nota.text()).toContain('Antiga.');
+    expect(nota.text()).toContain('há 10 dias');
+    expect(nota.text()).not.toContain('NOTAS.POR');
+    expect(nota.text()).not.toContain('null');
   });
 
   it('sem notas, uma frase', () => {
@@ -1119,5 +1155,261 @@ describe('gavetas: não apagam o que a pessoa digitou', () => {
     await w.setProps({ pessoa: pessoa({ contact_type: 'customer' }) });
     expect(campo().value).toBe('Digitei isto');
     w.unmount();
+  });
+});
+
+// #2895 — o que o servidor manda e a demonstração não tinha.
+describe('valores novos do servidor', () => {
+  const linha = props =>
+    mount(SecaoConversas, { props: { agora: AGORA, ...props } }).get('li');
+
+  it('canal `outro` (ou desconhecido) tem ícone neutro e nome para o leitor de tela', () => {
+    ['outro', 'telegram'].forEach(canal => {
+      const icone = linha({ conversas: [conversa(1, { canal })] }).get(
+        '[role="img"]'
+      );
+      expect(icone.classes()).toContain('i-lucide-messages-square');
+      expect(icone.attributes('aria-label')).toContain('CANAL.outro');
+    });
+  });
+
+  it('conversa adiada diz que está adiada; situação desconhecida, o rótulo neutro', () => {
+    expect(
+      linha({ conversas: [conversa(1, { situacao: 'adiada' })] }).text()
+    ).toContain('SITUACAO.adiada');
+    expect(
+      linha({ conversas: [conversa(1, { situacao: 'nova' })] }).text()
+    ).toContain('SITUACAO.outra');
+  });
+
+  it('conversa sem trecho diz que não tem texto, na pessoa e na empresa', () => {
+    const daPessoa = linha({ conversas: [conversa(1, { trecho: null })] });
+    expect(daPessoa.text()).toContain('CONVERSAS.SEM_TRECHO');
+    const daEmpresa = linha({
+      conversas: [conversa(1, { trecho: null, pessoa: 'Bruno' })],
+    });
+    expect(daEmpresa.text()).toContain('"pessoa":"Bruno"');
+    expect(daEmpresa.text()).toContain('CONVERSAS.SEM_TRECHO');
+    expect(daEmpresa.text()).not.toContain('null');
+  });
+
+  it('card sem valor (quem não pode ver valor) não mostra valor nenhum', () => {
+    const w = mount(SecaoCards, {
+      props: { cards: [card(1, { valor: null })] },
+    });
+    const item = w.get('[data-relacionamentos="card"]');
+    expect(item.find('[data-relacionamentos="card-valor"]').exists()).toBe(
+      false
+    );
+    expect(item.text()).not.toContain('R$');
+    expect(item.text()).toContain('SITUACAO.aberto');
+  });
+
+  it('card com valor zero mostra o zero', () => {
+    const w = mount(SecaoCards, { props: { cards: [card(1, { valor: 0 })] } });
+    expect(w.get('[data-relacionamentos="card-valor"]').text()).toContain('R$');
+  });
+
+  it('card em outro estado do CRM tem rótulo; estado desconhecido, o neutro', () => {
+    const w = mount(SecaoCards, {
+      props: {
+        cards: [
+          card(1, { situacao: 'cancelado' }),
+          card(2, { situacao: 'estado_novo' }),
+        ],
+      },
+    });
+    const itens = w.findAll('[data-relacionamentos="card"]');
+    expect(itens[0].text()).toContain('SITUACAO.cancelado');
+    expect(itens[1].text()).toContain('SITUACAO.outra');
+    expect(itens[1].text()).not.toContain('estado_novo');
+  });
+
+  it('a gaveta do card sem valor não tem a linha de valor, e o estado desconhecido é neutro', () => {
+    const w = mount(GavetaDoCard, {
+      props: { card: card(5, { valor: null, situacao: 'estado_novo' }) },
+      global: { stubs },
+    });
+    expect(w.text()).not.toContain('GAVETA.VALOR');
+    expect(w.text()).toContain('SITUACAO.outra');
+    const comValor = mount(GavetaDoCard, {
+      props: { card: card(5) },
+      global: { stubs },
+    });
+    expect(comValor.text()).toContain('GAVETA.VALOR');
+  });
+});
+
+describe('parte da ficha que não carregou', () => {
+  const FALHA = '[data-relacionamentos="falha-da-parte"]';
+
+  it.each([
+    ['SecaoConversas', SecaoConversas, { conversas: [] }],
+    ['SecaoCards', SecaoCards, { cards: [] }],
+    ['SecaoNotas', SecaoNotas, { notas: [] }],
+    ['SecaoArquivos', SecaoArquivos, { arquivos: [] }],
+    ['SecaoPessoasDaEmpresa', SecaoPessoasDaEmpresa, { pessoas: [] }],
+    ['DeOndeVeio', DeOndeVeio, { origem: null }],
+  ])(
+    '%s diz que não conseguiu, sem a frase de vazio, e "Tentar de novo" emite',
+    async (_nome, Peca, props) => {
+      const w = mount(Peca, {
+        props: { ...props, falhou: true, agora: AGORA },
+      });
+      const falha = w.get(FALHA);
+      expect(falha.attributes('role')).toBe('alert');
+      expect(falha.text()).toContain('ESTADOS.ERRO_DA_PARTE');
+      expect(w.text()).not.toContain('VAZIO');
+      await falha.get('button').trigger('click');
+      expect(w.emitted('tentar')).toHaveLength(1);
+    }
+  );
+
+  it('sem falha nenhuma peça mostra o aviso', () => {
+    expect(
+      mount(SecaoCards, { props: { cards: [] } })
+        .find(FALHA)
+        .exists()
+    ).toBe(false);
+    expect(
+      mount(DeOndeVeio, { props: { origem: null } })
+        .find('[data-relacionamentos="de-onde-veio"]')
+        .exists()
+    ).toBe(false);
+  });
+});
+
+describe('quem só pode ver não tem os botões de escrita', () => {
+  it('cabeçalho da pessoa: sem Marcar como cliente e sem "Alterar informações" no ⋯', async () => {
+    const w = mount(CabecalhoDaPessoa, {
+      props: { pessoa: pessoa(), podeEditar: false },
+      global: { stubs },
+    });
+    expect(w.find('[data-relacionamentos="marcar-cliente"]').exists()).toBe(
+      false
+    );
+    await w.get('[data-relacionamentos="mais-acoes"]').trigger('click');
+    const itens = w.findAll('.n-dropdown-item button');
+    expect(itens).toHaveLength(3);
+    await itens[0].trigger('click');
+    expect(w.emitted('maisAcao')[0]).toEqual(['juntar']);
+  });
+
+  it('cabeçalho da pessoa: quem é cliente continua com o selo', () => {
+    const w = mount(CabecalhoDaPessoa, {
+      props: {
+        pessoa: pessoa({ contact_type: 'customer' }),
+        podeEditar: false,
+      },
+      global: { stubs },
+    });
+    expect(w.find('[data-selo="cliente"]').exists()).toBe(true);
+  });
+
+  it('Novo card some para quem não pode criar card, e as duas ações que sobram dividem a linha', () => {
+    const montar = podeCriarCards =>
+      mount(CabecalhoDaPessoa, {
+        props: { pessoa: pessoa(), podeCriarCards },
+        global: { stubs },
+      });
+    const com = montar(true);
+    expect(com.find('[data-relacionamentos="novo-card"]').exists()).toBe(true);
+    expect(
+      com.get('[data-relacionamentos="acoes-secundarias"]').classes()
+    ).toContain('grid-cols-[1fr_1fr_auto]');
+    const sem = montar(false);
+    expect(sem.find('[data-relacionamentos="novo-card"]').exists()).toBe(false);
+    expect(
+      sem.get('[data-relacionamentos="acoes-secundarias"]').classes()
+    ).toContain('grid-cols-[1fr_auto]');
+  });
+
+  it('a faixa de quem não quer mensagens fica sem Liberar', () => {
+    const w = mount(FaixaNaoQuer, {
+      props: {
+        pessoa: pessoa({ opted_out_at: SEGUNDOS, opt_out_source: 'manual' }),
+        agora: AGORA,
+        podeLiberar: false,
+      },
+      global: { stubs },
+    });
+    expect(w.find('[data-relacionamentos="liberar"]').exists()).toBe(false);
+    expect(w.text()).toContain('FAIXA.TEXTO');
+  });
+
+  it('as notas ficam sem a caixa de escrever, mas mostram a lista', () => {
+    const w = mount(SecaoNotas, {
+      props: {
+        notas: [{ id: 'a', autor: 'Sônia', quando: SEGUNDOS, texto: 'Oi.' }],
+        agora: AGORA,
+        podeEscrever: false,
+      },
+    });
+    expect(w.find('form').exists()).toBe(false);
+    expect(w.find('[data-relacionamentos="guardar-nota"]').exists()).toBe(
+      false
+    );
+    expect(w.get('[data-relacionamentos="nota"]').text()).toContain('Oi.');
+  });
+
+  it('o corpo da ficha fica sem Alterar', () => {
+    const montar = podeEditar =>
+      mount(CorpoDaFichaDaPessoa, {
+        props: {
+          conversas: [],
+          cards: [],
+          notas: [],
+          arquivos: [],
+          linhas: [],
+          redes: [],
+          agora: AGORA,
+          podeEditar,
+        },
+        global: { stubs },
+      });
+    expect(montar(true).find('[data-relacionamentos="alterar"]').exists()).toBe(
+      true
+    );
+    const semEditar = montar(false);
+    expect(semEditar.find('[data-relacionamentos="alterar"]').exists()).toBe(
+      false
+    );
+    expect(semEditar.find('form').exists()).toBe(false);
+  });
+
+  it('o corpo esconde a parte que a pessoa não pode ver e repassa o "tentar de novo" da que falhou', async () => {
+    const w = mount(CorpoDaFichaDaPessoa, {
+      props: {
+        conversas: [],
+        cards: [],
+        notas: [],
+        arquivos: [],
+        linhas: [],
+        redes: [],
+        agora: AGORA,
+        falhas: { cards: 'semAcesso', conversas: 'erro' },
+      },
+      global: { stubs },
+    });
+    expect(w.find('[data-relacionamentos="cards"]').exists()).toBe(false);
+    expect(w.find('[data-relacionamentos="notas"]').exists()).toBe(true);
+    await w
+      .get(
+        '[data-relacionamentos="conversas"] [data-relacionamentos="falha-da-parte"] button'
+      )
+      .trigger('click');
+    expect(w.emitted('tentar')[0]).toEqual(['conversas']);
+  });
+
+  it('cabeçalho da empresa: sem Alterar, com Mandar mensagem', () => {
+    const w = mount(CabecalhoDaEmpresa, {
+      props: { empresa: { id: 1, name: 'Padaria' }, podeEditar: false },
+    });
+    expect(w.find('[data-relacionamentos="alterar-empresa"]').exists()).toBe(
+      false
+    );
+    expect(w.find('[data-relacionamentos="mandar-mensagem"]').exists()).toBe(
+      true
+    );
   });
 });

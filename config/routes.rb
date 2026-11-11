@@ -1103,15 +1103,28 @@ Rails.application.routes.draw do
           end
           # #2894 — leituras da Lista nova de Relacionamentos (chave relacionamentos_novo). Empresa é do Enterprise.
           namespace :relacionamentos do
-            resources :pessoas, only: [:index] do
+            # #2895 — as leituras da ficha (show e as de `member`), cada uma no formato que a tela lê.
+            resources :pessoas, only: [:index, :show] do
               collection do
                 get :contagens
                 get :todas
               end
+              member do
+                get :conversas
+                get :cards
+                get :notas
+                get :arquivos
+                get :origem
+              end
             end
             if ChatwootApp.enterprise?
-              resources :empresas, only: [:index] do
+              resources :empresas, only: [:index, :show] do
                 get :contagens, on: :collection
+                member do
+                  get :pessoas
+                  get :conversas
+                  get :cards
+                end
               end
             end
             get :resumo, to: 'resumo#show'

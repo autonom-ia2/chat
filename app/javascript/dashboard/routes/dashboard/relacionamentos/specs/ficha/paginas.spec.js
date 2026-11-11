@@ -37,6 +37,33 @@ vi.mock('../../fonte/modoDemo', async importOriginal => ({
   usarDemo: () => contexto.demo,
   demoCarregando: () => contexto.demo === 'carregando',
 }));
+// Aqui todo mundo pode tudo: quem só pode ver está em paginasReal.spec.js.
+vi.mock('../../ficha/usePermissoesDaFicha', () => ({
+  usePermissoesDaFicha: () => ({
+    podeEditar: { value: true },
+    podeCriarCards: { value: true },
+  }),
+}));
+// Fora da demonstração (`demo` nulo) a ficha lê do servidor: aqui ele não
+// responde, para os testes do estado de erro.
+vi.mock('dashboard/api/relacionamentos', () => {
+  const semServidor = () => Promise.reject(new Error('sem servidor'));
+  const leituras = [
+    'pessoa',
+    'conversasDaPessoa',
+    'cardsDaPessoa',
+    'notasDaPessoa',
+    'arquivosDaPessoa',
+    'origemDaPessoa',
+    'empresa',
+    'pessoasDaEmpresa',
+    'conversasDaEmpresa',
+    'cardsDaEmpresa',
+  ];
+  return {
+    default: Object.fromEntries(leituras.map(nome => [nome, semServidor])),
+  };
+});
 vi.mock('../../fonte/fichaFonte', async importOriginal => {
   const original = await importOriginal();
   return {

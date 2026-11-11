@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   DropdownBody,
@@ -10,7 +10,11 @@ import {
 // #2894 — o "⋯" da ficha: Alterar informações, Juntar com outra pessoa, Bloquear
 // e Apagar. É o menu suspenso da casa; os itens são botões, então Tab e Enter
 // funcionam, e Esc fecha e devolve o foco ao "⋯". Emite `acao` com o nome da
-// escolha: alterar, juntar, bloquear ou apagar.
+// escolha: alterar, juntar, bloquear ou apagar. Quem só pode ver o contato
+// (`podeAlterar` falso) não tem "Alterar informações".
+const props = defineProps({
+  podeAlterar: { type: Boolean, default: true },
+});
 const emit = defineEmits(['acao']);
 
 const { t } = useI18n();
@@ -22,6 +26,9 @@ const ITENS = [
   { evento: 'bloquear', chave: 'BLOQUEAR', icone: 'i-lucide-ban' },
   { evento: 'apagar', chave: 'APAGAR', icone: 'i-lucide-trash-2' },
 ];
+const itensDoMenu = computed(() =>
+  ITENS.filter(item => props.podeAlterar || item.evento !== 'alterar')
+);
 
 const botaoDoMenu = () =>
   raizDoMenu.value?.querySelector('[data-relacionamentos="mais-acoes"]');
@@ -92,7 +99,7 @@ const aoTeclar = evento => {
       </template>
       <DropdownBody class="top-12 ltr:right-0 rtl:left-0 min-w-64 z-50">
         <DropdownItem
-          v-for="item in ITENS"
+          v-for="item in itensDoMenu"
           :key="item.evento"
           :icon="item.icone"
           :label="t(`RELACIONAMENTOS_FICHA.ACOES.${item.chave}`)"

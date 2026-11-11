@@ -7,6 +7,7 @@
       "TITULO": "Company profile",
       "PESSOAS": "People",
       "PESSOAS_VAZIO": "Nobody in this company yet.",
+      "MOSTRANDO_PARTE": "Showing {mostradas} of {total} people.",
       "INFORMACOES": {
         "PESSOAS": "People",
         "CLIENTES": "Customers"
@@ -35,7 +36,9 @@
       "NAO_ACHEI_PESSOA": "I could not find this person.",
       "NAO_ACHEI_EMPRESA": "I could not find this company.",
       "VOLTAR_PARA_LISTA": "Back to the list",
-      "ERRO": "I could not open this profile."
+      "ERRO": "I could not open this profile.",
+      "SEM_ACESSO": "You do not have access to this profile.",
+      "ERRO_DA_PARTE": "I could not show this part."
     },
     "CABECALHO": {
       "CLIENTE_DESDE": "Customer since {data}",
@@ -91,16 +94,20 @@
       "VER_TODAS": "See all",
       "VAZIO": "They have not talked yet.",
       "DE": "{pessoa}: {trecho}",
+      "SEM_TRECHO": "Conversation without text",
       "CANAL": {
         "whatsapp": "WhatsApp",
         "email": "E-mail",
         "instagram": "Instagram",
-        "site": "Website"
+        "site": "Website",
+        "outro": "Other channel"
       },
       "SITUACAO": {
         "aberta": "In progress",
         "pendente": "Waiting for a reply",
-        "resolvida": "Resolved"
+        "resolvida": "Resolved",
+        "adiada": "Snoozed",
+        "outra": "Other status"
       }
     },
     "CARDS": {
@@ -112,7 +119,10 @@
       "SITUACAO": {
         "aberto": "Open",
         "ganho": "Closed",
-        "perdido": "Not closed"
+        "perdido": "Not closed",
+        "resolvido": "Resolved",
+        "cancelado": "Cancelled",
+        "outra": "Other status"
       },
       "GAVETA": {
         "FUNIL": "Pipeline",

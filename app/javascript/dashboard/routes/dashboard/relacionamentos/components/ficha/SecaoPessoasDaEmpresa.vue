@@ -4,13 +4,17 @@ import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import SeloDeEstado from '../comum/SeloDeEstado.vue';
 import { partesDoEmail } from '../../trazer/emailEmPartes';
 import CartaoDaSecao from './CartaoDaSecao.vue';
+import FalhaDaParte from './FalhaDaParte.vue';
 
 // #2894 — as pessoas da empresa: cada linha leva à ficha da pessoa. Vazio é uma
-// frase.
+// frase. `falhou`: a leitura não veio. `total` é quantas pessoas a empresa tem:
+// a ficha traz as primeiras, e quando há mais a lista diz quantas está mostrando.
 defineProps({
   pessoas: { type: Array, required: true },
+  falhou: { type: Boolean, default: false },
+  total: { type: Number, default: 0 },
 });
-const emit = defineEmits(['abrir', 'conversar']);
+const emit = defineEmits(['abrir', 'conversar', 'tentar']);
 
 const { t } = useI18n();
 
@@ -24,8 +28,9 @@ const contato = pessoa =>
     :titulo="t('RELACIONAMENTOS_FICHA.EMPRESA.PESSOAS')"
     data-relacionamentos="pessoas-da-empresa"
   >
+    <FalhaDaParte v-if="falhou" @tentar="emit('tentar')" />
     <p
-      v-if="!pessoas.length"
+      v-else-if="!pessoas.length"
       data-relacionamentos="vazio"
       class="m-0 text-base text-n-slate-11"
     >
@@ -97,5 +102,17 @@ const contato = pessoa =>
         </button>
       </li>
     </ul>
+    <p
+      v-if="!falhou && pessoas.length && total > pessoas.length"
+      data-relacionamentos="mostrando-parte"
+      class="m-0 mt-3 text-sm text-n-slate-11"
+    >
+      {{
+        t('RELACIONAMENTOS_FICHA.EMPRESA.MOSTRANDO_PARTE', {
+          mostradas: pessoas.length,
+          total,
+        })
+      }}
+    </p>
   </CartaoDaSecao>
 </template>

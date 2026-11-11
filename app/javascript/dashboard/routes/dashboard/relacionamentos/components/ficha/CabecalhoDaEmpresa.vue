@@ -6,9 +6,11 @@ import { formatarCnpj } from '../../ficha/formatos';
 import BotaoCopiar from './BotaoCopiar.vue';
 
 // #2894 — o cabeçalho da ficha da empresa: nome, CNPJ com copiar e o site, e as
-// ações: "Mandar mensagem" (a única preenchida) e "Alterar" (discreta).
+// ações: "Mandar mensagem" (a única preenchida) e "Alterar" (discreta). Quem só
+// pode ver (`podeEditar` falso) não tem "Alterar".
 defineProps({
   empresa: { type: Object, required: true },
+  podeEditar: { type: Boolean, default: true },
 });
 const emit = defineEmits(['mandarMensagem', 'alterar']);
 
@@ -85,6 +87,7 @@ const { t } = useI18n();
           @click="emit('mandarMensagem')"
         />
         <Button
+          v-if="podeEditar"
           data-relacionamentos="alterar-empresa"
           slate
           faded

@@ -7,7 +7,7 @@ import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/us
 // (contacts/components/ContactsBulkActionBar.vue) e do servidor (ContactPolicy):
 // etiquetar é de quem edita contato; apagar, do administrador ou da chave
 // `contact_delete`.
-const QUEM_EDITA_CONTATO = ['administrator', 'agent', 'contact_manage'];
+export const QUEM_EDITA_CONTATO = ['administrator', 'agent', 'contact_manage'];
 const QUEM_APAGA_CONTATO = ['administrator', 'contact_delete'];
 
 // #2894 — quem vê "Criar cards", "Etiqueta" e "Apagar" na barra de ação em

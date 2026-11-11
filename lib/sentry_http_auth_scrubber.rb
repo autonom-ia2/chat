@@ -11,11 +11,14 @@ module SentryHttpAuthScrubber
   # `frase` (#2696): o pedido em uma frase da Prospecção (POST searches/interpret), texto livre de quem busca.
   # `valor` e `termo` (#2858 F2): o CPF, o CNPJ ou o CEP do "Experimente" da vitrine de ferramentas prontas e o texto
   # da busca dela, que o log do Rails já filtra.
+  # `cpf`, `cnpj`, `documento` e `busca` (#2895): o documento da pessoa e da empresa no salvar da ficha de Relacionamentos e
+  # o texto buscado na lista, que o log do Rails já filtra.
   SECRET_KEYS = %w[
     access_token refresh_token id_token client_secret app_secret appsecret_proof
     password token secret authorization proxy_authorization cookie set_cookie x_api_key
     fb_dtsg lsd x_fb_lsd signed_request session_json
     images content frase valor termo
+    cpf cnpj documento busca
   ].freeze
   OAUTH_KEYS = %w[code state].freeze
   QUERY_KEYS = %w[query query_string http.query].freeze

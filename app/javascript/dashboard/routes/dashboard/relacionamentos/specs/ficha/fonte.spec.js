@@ -15,15 +15,9 @@ const fonte = fichaFonte({ demo: 'cheio', atraso: 0 });
 beforeEach(esquecerEscritas);
 
 describe('fichaFonte sem demonstração', () => {
-  it('diz FONTE_REAL_PENDENTE em todo método', async () => {
-    const real = fichaFonte({ demo: null });
-    expect(real.usaDemo).toBe(false);
-    await expect(real.pessoa(1)).rejects.toMatchObject({
-      name: 'FONTE_REAL_PENDENTE',
-    });
-    await expect(real.guardarNota(1, 'x')).rejects.toMatchObject({
-      name: 'FONTE_REAL_PENDENTE',
-    });
+  // O que a fonte real faz está em fonteReal.spec.js.
+  it('é a fonte real', () => {
+    expect(fichaFonte({ demo: null }).usaDemo).toBe(false);
   });
 
   it('ignora a demonstração quando o módulo não existe (produção)', async () => {

@@ -1,29 +1,35 @@
 // #2894 — tudo que a ficha da empresa mostra: ela, as pessoas dela, as conversas
-// e os cards. Só leitura.
-import { ref } from 'vue';
+// e os cards. Só a leitura da empresa decide o estado da ficha; as outras partes
+// falham sozinhas (`falhas`).
+import { computed, ref } from 'vue';
 import { useEstadoDaFicha } from './useEstadoDaFicha';
+import { usePartesDaFicha } from './usePartesDaFicha';
+
+const PARTES_VAZIAS = { pessoas: [], conversas: [], cards: [] };
 
 export const useFichaDaEmpresa = (fonte, id) => {
   const { estado, carregar, geracao } = useEstadoDaFicha();
   const empresa = ref(null);
-  const pessoas = ref([]);
-  const conversas = ref([]);
-  const cards = ref([]);
   const ocupado = ref('');
+  const partes = usePartesDaFicha({
+    leitores: {
+      pessoas: () => fonte.pessoasDaEmpresa(id.value),
+      conversas: () => fonte.conversasDaEmpresa(id.value),
+      cards: () => fonte.cardsDaEmpresa(id.value),
+    },
+    vazias: PARTES_VAZIAS,
+    geracao,
+  });
 
   const buscar = async aindaVale => {
-    const [achada, gente, cc, kk] = await Promise.all([
+    const [achada, lidas] = await Promise.all([
       fonte.empresa(id.value),
-      fonte.pessoasDaEmpresa(id.value),
-      fonte.conversasDaEmpresa(id.value),
-      fonte.cardsDaEmpresa(id.value),
+      partes.lerTodas(),
     ]);
     if (!aindaVale()) return false;
     if (!achada) return false;
     empresa.value = achada;
-    pessoas.value = gente;
-    conversas.value = cc;
-    cards.value = kk;
+    partes.guardarTodas(lidas);
     return true;
   };
 
@@ -49,9 +55,11 @@ export const useFichaDaEmpresa = (fonte, id) => {
     salvar,
     estado,
     empresa,
-    pessoas,
-    conversas,
-    cards,
+    pessoas: computed(() => partes.valores.value.pessoas),
+    conversas: computed(() => partes.valores.value.conversas),
+    cards: computed(() => partes.valores.value.cards),
+    falhas: partes.falhas,
     carregar: () => carregar(buscar),
+    relerParte: partes.reler,
   };
 };

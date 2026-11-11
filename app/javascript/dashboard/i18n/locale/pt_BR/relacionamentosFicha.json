@@ -7,6 +7,7 @@
       "TITULO": "Ficha da empresa",
       "PESSOAS": "Pessoas",
       "PESSOAS_VAZIO": "Ninguém nesta empresa ainda.",
+      "MOSTRANDO_PARTE": "Mostrando {mostradas} de {total} pessoas.",
       "INFORMACOES": {
         "PESSOAS": "Pessoas",
         "CLIENTES": "Clientes"
@@ -35,7 +36,9 @@
       "NAO_ACHEI_PESSOA": "Não achei esta pessoa.",
       "NAO_ACHEI_EMPRESA": "Não achei esta empresa.",
       "VOLTAR_PARA_LISTA": "Voltar para a lista",
-      "ERRO": "Não consegui abrir esta ficha."
+      "ERRO": "Não consegui abrir esta ficha.",
+      "SEM_ACESSO": "Você não tem acesso a esta ficha.",
+      "ERRO_DA_PARTE": "Não consegui mostrar esta parte."
     },
     "CABECALHO": {
       "CLIENTE_DESDE": "Cliente desde {data}",
@@ -91,16 +94,20 @@
       "VER_TODAS": "Ver todas",
       "VAZIO": "Ainda não conversaram.",
       "DE": "{pessoa}: {trecho}",
+      "SEM_TRECHO": "Conversa sem texto",
       "CANAL": {
         "whatsapp": "WhatsApp",
         "email": "E-mail",
         "instagram": "Instagram",
-        "site": "Site"
+        "site": "Site",
+        "outro": "Outro canal"
       },
       "SITUACAO": {
         "aberta": "Em andamento",
         "pendente": "Esperando resposta",
-        "resolvida": "Resolvida"
+        "resolvida": "Resolvida",
+        "adiada": "Adiada",
+        "outra": "Outra situação"
       }
     },
     "CARDS": {
@@ -112,7 +119,10 @@
       "SITUACAO": {
         "aberto": "Em aberto",
         "ganho": "Fechou",
-        "perdido": "Não fechou"
+        "perdido": "Não fechou",
+        "resolvido": "Resolvido",
+        "cancelado": "Cancelado",
+        "outra": "Outra situação"
       },
       "GAVETA": {
         "FUNIL": "Funil",

@@ -1,15 +1,23 @@
-// #2894 — o estado de carregamento de uma ficha: carregando, pronto, erro ou
-// "não achei". `carregar` recebe a função que busca e devolve `false` quando a
-// pessoa (ou empresa) não existe. Cada pedido recebe `aindaVale()`: se saiu um
-// pedido mais novo, a resposta velha é descartada e não mexe em nada.
+// #2894 — o estado de carregamento de uma ficha: carregando, pronto, erro, "não
+// achei" ou "sem acesso". `carregar` recebe a função que busca e devolve `false`
+// quando a pessoa (ou empresa) não existe. Cada pedido recebe `aindaVale()`: se
+// saiu um pedido mais novo, a resposta velha é descartada e não mexe em nada.
+// Quando a busca falha, o nome do erro (ficha/falhas.js) escolhe o estado.
 import { ref } from 'vue';
+import { NAO_ACHEI, SEM_ACESSO } from './falhas';
 
 export const ESTADOS_DA_FICHA = {
   CARREGANDO: 'carregando',
   PRONTO: 'pronto',
   ERRO: 'erro',
   NAO_ACHEI: 'naoAchei',
+  SEM_ACESSO: 'semAcesso',
 };
+
+const ESTADO_DA_FALHA = new Map([
+  [NAO_ACHEI, ESTADOS_DA_FICHA.NAO_ACHEI],
+  [SEM_ACESSO, ESTADOS_DA_FICHA.SEM_ACESSO],
+]);
 
 // Ao sair da ficha o parâmetro da rota some e o id vira NaN: não é pedido.
 export const idValido = id => Number.isInteger(id) && id > 0;
@@ -29,8 +37,9 @@ export const useEstadoDaFicha = () => {
       estado.value = achou
         ? ESTADOS_DA_FICHA.PRONTO
         : ESTADOS_DA_FICHA.NAO_ACHEI;
-    } catch {
-      if (aindaVale()) estado.value = ESTADOS_DA_FICHA.ERRO;
+    } catch (falha) {
+      if (!aindaVale()) return;
+      estado.value = ESTADO_DA_FALHA.get(falha?.name) ?? ESTADOS_DA_FICHA.ERRO;
     }
   };
 
