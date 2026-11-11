@@ -6,6 +6,10 @@ import ApiClient from './ApiClient';
 // Pessoas, filtros[…]): quem traduz o pedido da tela é fonte/listaFonte.js.
 // Pedido que o servidor não conhece responde 422; Empresas sem a chave
 // `companies` responde 403.
+//
+// As ações em grupo (funis, criar cards, etiquetar, apagar) vão com o corpo
+// que fonte/acoesDaListaFonte.js monta: `pessoa_ids` e o que a ação pede. Chave
+// que o servidor não conhece responde 422.
 class RelacionamentosAPI extends ApiClient {
   constructor() {
     super('relacionamentos', { accountScoped: true });
@@ -37,6 +41,22 @@ class RelacionamentosAPI extends ApiClient {
 
   opcoesDeFiltro() {
     return axios.get(`${this.url}/opcoes_de_filtro`);
+  }
+
+  funis() {
+    return axios.get(`${this.url}/funis`);
+  }
+
+  criarCards(corpo) {
+    return axios.post(`${this.url}/cards`, corpo);
+  }
+
+  aplicarEtiqueta(corpo) {
+    return axios.post(`${this.url}/etiqueta`, corpo);
+  }
+
+  apagar(corpo) {
+    return axios.post(`${this.url}/apagar`, corpo);
   }
 }
 

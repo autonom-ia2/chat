@@ -127,4 +127,12 @@ describe('depoisDeAgir', () => {
     expect(marcados.quantos.value).toBe(0);
     expect(lista.recarregar).toHaveBeenCalledTimes(1);
   });
+
+  it('se a ação parou no meio, só quem ela não tentou continua marcada', async () => {
+    const { acoes, marcados, lista } = montar();
+    marcados.marcarVarias(PESSOAS);
+    await acoes.depoisDeAgir([PESSOAS[2]]);
+    expect(marcados.pessoas.value).toEqual([PESSOAS[2]]);
+    expect(lista.recarregar).toHaveBeenCalledTimes(1);
+  });
 });

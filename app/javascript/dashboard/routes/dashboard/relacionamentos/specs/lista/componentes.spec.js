@@ -19,6 +19,7 @@ import LinhaDePessoa from '../../components/lista/LinhaDePessoa.vue';
 import MenuMaisAcoes from '../../components/lista/MenuMaisAcoes.vue';
 import EstadoSemResultado from '../../components/lista/EstadoSemResultado.vue';
 import MostrarMais from '../../components/lista/MostrarMais.vue';
+import ResultadoDaAcao from '../../components/lista/ResultadoDaAcao.vue';
 
 // As peças da lista de Relacionamentos (#2894), com o texto de verdade em pt_BR.
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -71,6 +72,28 @@ const comRelogioFalso = () => {
     vi.useRealTimers();
   });
 };
+
+// Respostas das ações em grupo, no formato das fontes (real e demonstração).
+const adiada = () => {
+  let resolver;
+  const promessa = new Promise(resolve => {
+    resolver = resolve;
+  });
+  return { promessa, resolver };
+};
+const FALHA = new Error('Network Error');
+const inteiro = (contagem, quantas, deFora = []) => ({
+  [contagem]: quantas,
+  deFora,
+  faltam: [],
+  erro: null,
+});
+const parouNoMeio = (contagem, quantas, faltam, deFora = []) => ({
+  [contagem]: quantas,
+  deFora,
+  faltam,
+  erro: FALHA,
+});
 
 // Com a máquina carregada, o primeiro mount do arquivo passa dos 5 s padrão.
 vi.setConfig({ testTimeout: 30000 });
@@ -800,6 +823,58 @@ describe('BarraDeAcaoEmGrupo', () => {
     });
   });
 
+  it('quem não pode ver o CRM não vê "Criar cards", nem na barra nem no menu', async () => {
+    const w = mount(BarraDeAcaoEmGrupo, {
+      props: { quantas: 3, podeCriarCards: false },
+    });
+    expect(w.find('[data-relacionamentos="criar-cards"]').exists()).toBe(false);
+    expect(w.find('[data-acao="criarCards"]').exists()).toBe(false);
+    expect(w.find('[data-relacionamentos="etiqueta"]').exists()).toBe(true);
+    expect(w.find('[data-acao="apagar"]').exists()).toBe(true);
+  });
+
+  it('quem não pode apagar não vê "Apagar"; o "⋯" fica só para o celular, que ainda guarda Criar cards e Etiqueta', async () => {
+    const w = mount(BarraDeAcaoEmGrupo, {
+      props: { quantas: 3, podeApagar: false },
+    });
+    expect(w.find('[data-acao="apagar"]').exists()).toBe(false);
+    expect(w.find('[data-acao="etiqueta"]').exists()).toBe(true);
+    expect(w.getComponent(MenuMaisAcoes).classes()).toContain('sm:hidden');
+  });
+
+  it('quem não pode editar contato não vê "Etiqueta", nem na barra nem no menu', () => {
+    const w = mount(BarraDeAcaoEmGrupo, {
+      props: { quantas: 3, podeEtiquetar: false },
+    });
+    expect(w.find('[data-relacionamentos="etiqueta"]').exists()).toBe(false);
+    expect(w.find('[data-acao="etiqueta"]').exists()).toBe(false);
+    expect(w.find('[data-relacionamentos="criar-cards"]').exists()).toBe(true);
+    expect(w.find('[data-acao="apagar"]').exists()).toBe(true);
+  });
+
+  it('sem nenhuma das três, sobra "Mandar mensagem" e não há menu "⋯" vazio', () => {
+    const w = mount(BarraDeAcaoEmGrupo, {
+      props: {
+        quantas: 3,
+        podeCriarCards: false,
+        podeEtiquetar: false,
+        podeApagar: false,
+      },
+    });
+    expect(w.find('[data-relacionamentos="mandar-mensagem"]').exists()).toBe(
+      true
+    );
+    expect(w.find('[data-relacionamentos="mais-acoes"]').exists()).toBe(false);
+    expect(w.find('[role="menu"]').exists()).toBe(false);
+    expect(w.get('p').text()).toBe('3 marcadas');
+    expect(w.find('button[aria-label="Desmarcar todas"]').exists()).toBe(true);
+  });
+
+  it('com Apagar no menu, o "⋯" aparece em toda largura', () => {
+    const w = mount(BarraDeAcaoEmGrupo, { props: { quantas: 3 } });
+    expect(w.getComponent(MenuMaisAcoes).classes()).not.toContain('sm:hidden');
+  });
+
   it('no celular o menu também leva Criar cards e Etiqueta', async () => {
     const w = montar(3);
     await w.get('[data-relacionamentos="mais-acoes"]').trigger('click');
@@ -871,6 +946,15 @@ describe('GavetaDeFiltros', () => {
       'Nos últimos 7 dias',
       'Nos últimos 30 dias',
       'Nos últimos 90 dias',
+    ]);
+    w.unmount();
+  });
+
+  it('campo que só teria "Todas" não aparece', () => {
+    const w = montar({ opcoes: { ...opcoes, empresas: [], cidades: [] } });
+    expect(w.findAll('label').map(l => l.text())).toEqual([
+      'Etiqueta',
+      'Chegou em',
     ]);
     w.unmount();
   });
@@ -1080,8 +1164,60 @@ describe('DialogoMandarMensagem', () => {
   });
 });
 
+describe('ResultadoDaAcao', () => {
+  const montar = props =>
+    mount(ResultadoDaAcao, {
+      props: { frase: feitas => `${feitas} feitas.`, ...props },
+    });
+
+  it('sem andamento nem resultado é a região viva vazia', () => {
+    const w = montar();
+    expect(w.attributes('role')).toBe('status');
+    expect(w.text()).toBe('');
+  });
+
+  it('diz o motivo de cada pessoa em frase de gente; sem nome vira "Pessoa sem nome"', () => {
+    const deFora = [
+      { id: 1, nome: 'Ana', motivo: 'ja_tem_card' },
+      { id: 2, nome: 'Bia', motivo: 'nao_apagada' },
+      { id: 3, nome: null, motivo: 'nao_existe_mais' },
+      { id: 4, nome: 'Caio', motivo: 'dados_invalidos' },
+      { id: 5, nome: 'Dani', motivo: 'erro' },
+    ];
+    const w = montar({
+      resultado: { feitas: 7, deFora, faltam: [], erro: null },
+    });
+    expect(w.get('p').text()).toBe('7 feitas.');
+    expect(w.text()).toContain('Ficaram de fora:');
+    expect(w.findAll('li').map(li => li.text())).toEqual([
+      'Ana · Já tem card aberto neste funil',
+      'Bia · Não foi possível apagar',
+      'Pessoa sem nome · Não existe mais',
+      'Caio · Faltam nome e contato',
+      'Dani · Deu erro, tente de novo',
+    ]);
+    expect(w.find('[data-relacionamentos="ainda-nao"]').exists()).toBe(false);
+  });
+
+  it('com erro, diz quantas ainda não; rodando de novo, mostra só o andamento', async () => {
+    const resultado = {
+      feitas: 50,
+      deFora: [],
+      faltam: lote(70),
+      erro: FALHA,
+    };
+    const w = montar({ resultado });
+    expect(w.text()).toBe(
+      '50 feitas.70 ainda não. Deu erro no meio do caminho.'
+    );
+    await w.setProps({ andamento: { feitas: 50, total: 70 } });
+    expect(w.text()).toBe('50 de 70');
+  });
+});
+
 describe('DialogoCriarCards', () => {
   comRelogioFalso();
+  const FUNIS = [{ id: 1, nome: 'Vendas', etapas: [{ id: 11, nome: 'Novo' }] }];
   const montar = (pessoas = lote(12)) =>
     mount(DialogoCriarCards, {
       props: {
@@ -1143,7 +1279,7 @@ describe('DialogoCriarCards', () => {
     const resultado = w.get('[data-relacionamentos="dialogo-cards"]').text();
     expect(resultado).toContain('11 cards criados.');
     expect(resultado).toContain('Ficaram de fora:');
-    expect(resultado).toContain('Pessoa 9 · Já tem um card neste funil');
+    expect(resultado).toContain('Pessoa 9 · Já tem card aberto neste funil');
     expect(w.find('[data-cancelar]').exists()).toBe(false);
     expect(w.get('[data-confirmar]').text()).toBe('Pronto');
   });
@@ -1156,7 +1292,158 @@ describe('DialogoCriarCards', () => {
     const resultado = w.get('[data-relacionamentos="dialogo-cards"]').text();
     expect(resultado).toBe('2 cards criados.');
     await w.get('[data-confirmar]').trigger('click');
-    expect(w.emitted('concluido')).toHaveLength(1);
+    expect(w.emitted('concluido')).toEqual([[[]]]);
+  });
+
+  it('enquanto cria, diz "50 de 120" e o botão fica ocupado', async () => {
+    const espera = adiada();
+    let andar;
+    const acoes = {
+      funis: async () => FUNIS,
+      criarCards: ({ aoAndar }) => {
+        andar = aoAndar;
+        return espera.promessa;
+      },
+    };
+    const w = mount(DialogoCriarCards, {
+      props: { pessoas: lote(120), acoes },
+    });
+    await abrir(w);
+    await w.get('[data-confirmar]').trigger('click');
+    expect(w.get('[data-relacionamentos="andamento"]').text()).toBe('0 de 120');
+    andar({ feitas: 50, total: 120 });
+    await w.vm.$nextTick();
+    expect(w.get('[data-relacionamentos="andamento"]').text()).toBe(
+      '50 de 120'
+    );
+    expect(w.get('[data-dialogo-falso]').attributes('data-carregando')).toBe(
+      'true'
+    );
+    espera.resolver(inteiro('criados', 120));
+    await assentar();
+    expect(w.find('[data-relacionamentos="andamento"]').exists()).toBe(false);
+    expect(w.get('[role="status"]').text()).toBe('120 cards criados.');
+    expect(w.get('[data-dialogo-falso]').attributes('data-carregando')).toBe(
+      'false'
+    );
+  });
+
+  describe('quando para no meio', () => {
+    const todas = lote(120);
+    const jaTem = [{ id: 9, nome: 'Pessoa 9', motivo: 'ja_tem_card' }];
+    const montarParcial = async () => {
+      const criarCards = vi
+        .fn()
+        .mockResolvedValueOnce(
+          parouNoMeio('criados', 49, todas.slice(50), jaTem)
+        )
+        .mockResolvedValueOnce(inteiro('criados', 70));
+      const w = mount(DialogoCriarCards, {
+        props: {
+          pessoas: todas,
+          acoes: { funis: async () => FUNIS, criarCards },
+        },
+      });
+      await abrir(w);
+      await w.get('[data-confirmar]').trigger('click');
+      await assentar();
+      return { w, criarCards };
+    };
+    const texto = w => w.get('[data-relacionamentos="dialogo-cards"]').text();
+
+    it('diz quantos fez e quantas ainda não, sem fingir que terminou', async () => {
+      const { w } = await montarParcial();
+      expect(texto(w)).toContain('49 cards criados.');
+      expect(texto(w)).toContain('Pessoa 9 · Já tem card aberto neste funil');
+      expect(w.get('[data-relacionamentos="ainda-nao"]').text()).toBe(
+        '70 ainda não. Deu erro no meio do caminho.'
+      );
+      expect(w.get('[data-confirmar]').text()).toBe(
+        'Tentar de novo com as que faltam'
+      );
+      expect(w.get('[data-cancelar]').text()).toBe('Fechar');
+      expect(w.emitted('concluido')).toBeUndefined();
+    });
+
+    it('"Tentar de novo com as que faltam" manda só elas, no mesmo funil, e soma', async () => {
+      const { w, criarCards } = await montarParcial();
+      await w.get('[data-confirmar]').trigger('click');
+      await assentar();
+      expect(criarCards).toHaveBeenCalledTimes(2);
+      expect(criarCards.mock.calls[1][0]).toMatchObject({
+        pessoas: todas.slice(50),
+        funilId: 1,
+        etapaId: 11,
+      });
+      expect(texto(w)).toContain('119 cards criados.');
+      expect(texto(w)).toContain('Pessoa 9 · Já tem card aberto neste funil');
+      expect(w.find('[data-relacionamentos="ainda-nao"]').exists()).toBe(false);
+      expect(w.find('[data-cancelar]').exists()).toBe(false);
+      expect(w.get('[data-confirmar]').text()).toBe('Pronto');
+      await w.get('[data-confirmar]').trigger('click');
+      expect(w.emitted('concluido')).toEqual([[[]]]);
+    });
+
+    it('"Fechar" conclui dizendo quem ainda falta', async () => {
+      const { w } = await montarParcial();
+      await w.get('[data-cancelar]').trigger('click');
+      expect(w.emitted('concluido')).toEqual([[todas.slice(50)]]);
+    });
+  });
+
+  describe('sem nenhum funil que a pessoa veja', () => {
+    const montarSemFunil = async criarCards => {
+      const w = mount(DialogoCriarCards, {
+        props: {
+          pessoas: lote(2),
+          acoes: { funis: async () => [], criarCards },
+        },
+      });
+      await abrir(w);
+      return w;
+    };
+
+    it('abre e diz que não há funil, no lugar dos campos', async () => {
+      const w = await montarSemFunil(vi.fn());
+      expect(w.get('[data-relacionamentos="sem-funil"]').text()).toBe(
+        'Você ainda não tem um funil para receber os cards.'
+      );
+      expect(w.find('label').exists()).toBe(false);
+      expect(w.findComponent(ChoiceSelect).exists()).toBe(false);
+      expect(w.get('[data-confirmar]').text()).toBe('Abrir o CRM');
+      expect(w.get('[data-confirmar]').attributes('disabled')).toBeUndefined();
+      expect(w.get('[data-cancelar]').text()).toBe('Fechar');
+    });
+
+    it('"Abrir o CRM" fecha, pede o CRM e não escreve nada', async () => {
+      const criarCards = vi.fn();
+      const w = await montarSemFunil(criarCards);
+      await w.get('[data-confirmar]').trigger('click');
+      expect(w.emitted('abrirCrm')).toHaveLength(1);
+      expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
+      expect(criarCards).not.toHaveBeenCalled();
+      expect(w.emitted('concluido')).toBeUndefined();
+    });
+
+    it('"Fechar" só fecha', async () => {
+      const w = await montarSemFunil(vi.fn());
+      await w.get('[data-cancelar]').trigger('click');
+      expect(w.emitted('abrirCrm')).toBeUndefined();
+      expect(w.emitted('concluido')).toBeUndefined();
+    });
+  });
+
+  it('se o servidor recusa os funis (401 de quem não vê o CRM), avisa e não quebra', async () => {
+    const recusado = Object.assign(new Error('Request failed'), {
+      response: { status: 401 },
+    });
+    const acoes = { funis: vi.fn().mockRejectedValue(recusado) };
+    const w = mount(DialogoCriarCards, { props: { pessoas: lote(2), acoes } });
+    await abrir(w);
+    expect(useAlert).toHaveBeenCalledWith(
+      'Não consegui carregar. Tente de novo.'
+    );
+    expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
   });
 
   it('cancelar antes de criar não avisa que concluiu', async () => {
@@ -1250,6 +1537,87 @@ describe('DialogoEtiqueta', () => {
     expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
   });
 
+  describe('com gente de fora ou parando no meio', () => {
+    const todas = lote(120);
+    const escolherEAplicar = async aplicarEtiqueta => {
+      const w = mount(DialogoEtiqueta, {
+        props: {
+          pessoas: todas,
+          acoes: { etiquetas: async () => ['feira'], aplicarEtiqueta },
+        },
+      });
+      await abrir(w);
+      w.getComponent(ChoiceSelect).vm.$emit('update:modelValue', 'feira');
+      await w.vm.$nextTick();
+      await w.get('[data-confirmar]').trigger('click');
+      await assentar();
+      return w;
+    };
+    const texto = w =>
+      w.get('[data-relacionamentos="dialogo-etiqueta"]').text();
+
+    it('quem ficou de fora aparece no diálogo, com o motivo; "Pronto" fecha e conclui', async () => {
+      const w = await escolherEAplicar(
+        vi
+          .fn()
+          .mockResolvedValue(
+            inteiro('aplicadas', 119, [
+              { id: 3, nome: null, motivo: 'nao_existe_mais' },
+            ])
+          )
+      );
+      expect(useAlert).not.toHaveBeenCalled();
+      expect(texto(w)).toContain('Etiqueta “feira” colocada em 119 pessoas.');
+      expect(texto(w)).toContain('Pessoa sem nome · Não existe mais');
+      expect(texto(w)).not.toContain('Qual etiqueta?');
+      expect(w.find('[data-cancelar]').exists()).toBe(false);
+      expect(w.get('[data-confirmar]').text()).toBe('Pronto');
+      await w.get('[data-confirmar]').trigger('click');
+      expect(w.emitted('concluido')).toEqual([[[]]]);
+      expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
+    });
+
+    it('parou no meio: diz o que fez e o que falta; tentar de novo manda só quem falta, com a mesma etiqueta', async () => {
+      const aplicarEtiqueta = vi
+        .fn()
+        .mockResolvedValueOnce(parouNoMeio('aplicadas', 50, todas.slice(50)))
+        .mockResolvedValueOnce(inteiro('aplicadas', 70));
+      const w = await escolherEAplicar(aplicarEtiqueta);
+      expect(texto(w)).toContain('Etiqueta “feira” colocada em 50 pessoas.');
+      expect(w.get('[data-relacionamentos="ainda-nao"]').text()).toBe(
+        '70 ainda não. Deu erro no meio do caminho.'
+      );
+      expect(w.get('[data-confirmar]').text()).toBe(
+        'Tentar de novo com as que faltam'
+      );
+      expect(w.emitted('concluido')).toBeUndefined();
+      await w.get('[data-confirmar]').trigger('click');
+      await assentar();
+      expect(aplicarEtiqueta.mock.calls[1][0]).toMatchObject({
+        pessoas: todas.slice(50),
+        etiqueta: 'feira',
+      });
+      expect(useAlert).toHaveBeenCalledWith(
+        'Etiqueta “feira” colocada em 120 pessoas.'
+      );
+      expect(w.emitted('concluido')).toEqual([[[]]]);
+      expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
+    });
+
+    it('enquanto coloca, diz o andamento', async () => {
+      const espera = adiada();
+      const w = await escolherEAplicar(({ aoAndar }) => {
+        aoAndar({ feitas: 50, total: 120 });
+        return espera.promessa;
+      });
+      expect(w.get('[data-relacionamentos="andamento"]').text()).toBe(
+        '50 de 120'
+      );
+      espera.resolver(inteiro('aplicadas', 120));
+      await assentar();
+    });
+  });
+
   it('se a fonte falha, avisa e não conclui', async () => {
     const acoes = {
       etiquetas: async () => ['feira'],
@@ -1305,6 +1673,95 @@ describe('DialogoApagar', () => {
     await w.get('[data-confirmar]').trigger('click');
     await assentar();
     expect(useAlert).toHaveBeenCalledWith('2 pessoas apagadas.');
-    expect(w.emitted('concluido')).toHaveLength(1);
+    expect(w.emitted('concluido')).toEqual([[[]]]);
+  });
+
+  describe('com gente de fora ou parando no meio', () => {
+    const todas = lote(120);
+    const confirmar = async apagar => {
+      const w = mount(DialogoApagar, {
+        props: { pessoas: todas, acoes: { apagar } },
+      });
+      w.vm.abrir();
+      await w.vm.$nextTick();
+      await w.get('[data-confirmar]').trigger('click');
+      await assentar();
+      return w;
+    };
+    const texto = w => w.get('[data-relacionamentos="dialogo-apagar"]').text();
+
+    it('quem não saiu aparece no diálogo, com o motivo; "Pronto" fecha e conclui', async () => {
+      const w = await confirmar(
+        vi
+          .fn()
+          .mockResolvedValue(
+            inteiro('apagadas', 119, [
+              { id: 2, nome: 'Pessoa 2', motivo: 'nao_apagada' },
+            ])
+          )
+      );
+      expect(useAlert).not.toHaveBeenCalled();
+      expect(texto(w)).toContain('119 pessoas apagadas.');
+      expect(texto(w)).toContain('Pessoa 2 · Não foi possível apagar');
+      expect(texto(w)).not.toContain('Isto não volta.');
+      expect(w.get('[data-confirmar]').text()).toBe('Pronto');
+      expect(w.find('[data-cancelar]').exists()).toBe(false);
+      await w.get('[data-confirmar]').trigger('click');
+      expect(w.emitted('concluido')).toEqual([[[]]]);
+    });
+
+    it('parou no meio: diz o que apagou e o que falta; tentar de novo manda só quem falta', async () => {
+      const apagar = vi
+        .fn()
+        .mockResolvedValueOnce(parouNoMeio('apagadas', 50, todas.slice(50)))
+        .mockResolvedValueOnce(inteiro('apagadas', 70));
+      const w = await confirmar(apagar);
+      expect(texto(w)).toContain('50 pessoas apagadas.');
+      expect(w.get('[data-relacionamentos="ainda-nao"]').text()).toBe(
+        '70 ainda não. Deu erro no meio do caminho.'
+      );
+      expect(w.get('[data-confirmar]').text()).toBe(
+        'Tentar de novo com as que faltam'
+      );
+      expect(w.get('[data-cancelar]').text()).toBe('Fechar');
+      await w.get('[data-confirmar]').trigger('click');
+      await assentar();
+      expect(apagar.mock.calls[1][0].pessoas).toEqual(todas.slice(50));
+      expect(useAlert).toHaveBeenCalledWith('120 pessoas apagadas.');
+      expect(w.emitted('concluido')).toEqual([[[]]]);
+    });
+
+    it('"Fechar" no meio conclui com quem ainda falta: a lista recarrega o que já saiu', async () => {
+      const w = await confirmar(
+        vi.fn().mockResolvedValue(parouNoMeio('apagadas', 50, todas.slice(50)))
+      );
+      await w.get('[data-cancelar]').trigger('click');
+      expect(w.emitted('concluido')).toEqual([[todas.slice(50)]]);
+    });
+
+    it('enquanto apaga, diz o andamento; cancelar no meio pede para parar', async () => {
+      const espera = adiada();
+      let parar;
+      const w = await confirmar(({ aoAndar, deveParar }) => {
+        aoAndar({ feitas: 50, total: 120 });
+        parar = deveParar;
+        return espera.promessa;
+      });
+      expect(w.get('[data-relacionamentos="andamento"]').text()).toBe(
+        '50 de 120'
+      );
+      expect(parar()).toBe(false);
+      await w.get('[data-cancelar]').trigger('click');
+      expect(parar()).toBe(true);
+      expect(w.emitted('concluido')).toBeUndefined();
+      espera.resolver({
+        apagadas: 50,
+        deFora: [],
+        faltam: todas.slice(50),
+        erro: null,
+      });
+      await assentar();
+      expect(w.emitted('concluido')).toEqual([[todas.slice(50)]]);
+    });
   });
 });

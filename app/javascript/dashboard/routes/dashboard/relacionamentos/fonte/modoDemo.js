@@ -5,7 +5,8 @@
 //
 // Estados: `cheio`, `vazio`, `carregando` (a fonte nunca responde: esqueleto) e,
 // sem `?demo=` válido ou com `?demo=desligado`, a fonte real (a lista lê do
-// servidor; ficha, trazer e ações em grupo ainda respondem erro).
+// servidor e as ações em grupo escrevem nele; ficha e trazer ainda respondem
+// erro).
 //
 // O estado "gruda": depois que uma URL trouxe `?demo=`, as telas seguintes
 // continuam em demonstração mesmo sem o parâmetro, porque a navegação interna

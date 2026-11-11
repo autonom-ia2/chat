@@ -6,6 +6,8 @@ import { ref } from 'vue';
 //    durante a espera (marcaria gente de outra consulta);
 //  - `depoisDeAgir`: apagar, etiquetar ou criar cards mudam a base. Desmarca e
 //    recarrega lista, contagens e resumo, para não sobrar gente que já se foi.
+//    Se a ação parou no meio, `faltam` são as pessoas que ela não tentou: só
+//    elas continuam marcadas, para a pessoa poder mandar de novo.
 export const useAcoesEmGrupo = ({ lista, marcados, aba, aoFalhar }) => {
   const marcandoTodas = ref(false);
 
@@ -33,8 +35,8 @@ export const useAcoesEmGrupo = ({ lista, marcados, aba, aoFalhar }) => {
     }
   };
 
-  const depoisDeAgir = () => {
-    marcados.limpar();
+  const depoisDeAgir = (faltam = []) => {
+    marcados.marcarVarias(faltam);
     return lista.recarregar();
   };
 

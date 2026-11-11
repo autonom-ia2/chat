@@ -1,14 +1,23 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { withFullI18n } from 'test-i18n';
 import { useRoute, useRouter } from 'vue-router';
+import { useAlert } from 'dashboard/composables';
+import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import ListaPage from '../../pages/ListaPage.vue';
 
 // A lista de Relacionamentos fora da demonstração (#2894): lê do servidor pelo
 // cliente de API, esconde Empresas de quem não tem a chave `companies` e mostra
-// o erro com "Tentar de novo" quando o servidor recusa.
+// o erro com "Tentar de novo" quando o servidor recusa. As ações em grupo
+// escrevem no servidor, somem para quem não tem a permissão e recarregam a
+// lista depois.
 const flagsLigadas = vi.hoisted(() => new Set());
+const pode = vi.hoisted(() => ({
+  criarCards: true,
+  etiquetar: true,
+  apagar: true,
+}));
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
@@ -22,6 +31,26 @@ vi.mock('dashboard/composables/useAccount', () => ({
     isCloudFeatureEnabled: flag => flagsLigadas.has(flag),
   }),
 }));
+vi.mock('../../lista/usePermissoesDaLista', () => ({
+  usePermissoesDaLista: () => ({
+    podeCriarCards: {
+      get value() {
+        return pode.criarCards;
+      },
+    },
+    podeEtiquetar: {
+      get value() {
+        return pode.etiquetar;
+      },
+    },
+    podeApagar: {
+      get value() {
+        return pode.apagar;
+      },
+    },
+  }),
+}));
+vi.mock('dashboard/api/labels', () => ({ default: { get: vi.fn() } }));
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
   const rota = reactive({ query: {}, name: 'relationships_home' });
@@ -41,6 +70,10 @@ vi.mock('dashboard/api/relacionamentos', () => ({
     contagensDeEmpresas: vi.fn(),
     resumo: vi.fn(),
     opcoesDeFiltro: vi.fn(),
+    funis: vi.fn(),
+    criarCards: vi.fn(),
+    aplicarEtiqueta: vi.fn(),
+    apagar: vi.fn(),
   },
 }));
 
@@ -119,6 +152,9 @@ const comFiltros = params =>
 
 beforeEach(() => {
   flagsLigadas.clear();
+  pode.criarCards = true;
+  pode.etiquetar = true;
+  pode.apagar = true;
   servidorResponde();
 });
 
@@ -215,5 +251,189 @@ describe('erro do servidor', () => {
     const w = await abrir({ query: { aba: 'empresas' } });
     expect(w.get(marca('erro')).attributes('role')).toBe('alert');
     expect(w.find(marca('linha')).exists()).toBe(false);
+  });
+});
+
+describe('ações em grupo: quem vê o quê', () => {
+  const marcarAna = async w => {
+    await w.get(`${marca('marcar')} input`).setValue(true);
+  };
+
+  it('com as permissões, a barra tem Criar cards e o menu tem Apagar', async () => {
+    const w = await abrir();
+    await marcarAna(w);
+    expect(w.find(marca('criar-cards')).exists()).toBe(true);
+    expect(w.find('[data-acao="apagar"]').exists()).toBe(true);
+  });
+
+  it('quem não pode ver o CRM não vê "Criar cards"', async () => {
+    pode.criarCards = false;
+    const w = await abrir();
+    await marcarAna(w);
+    expect(w.find(marca('criar-cards')).exists()).toBe(false);
+    expect(w.find('[data-acao="criarCards"]').exists()).toBe(false);
+    expect(w.find(marca('etiqueta')).exists()).toBe(true);
+  });
+
+  it('quem não pode editar contato não vê "Etiqueta"', async () => {
+    pode.etiquetar = false;
+    const w = await abrir();
+    await marcarAna(w);
+    expect(w.find(marca('etiqueta')).exists()).toBe(false);
+    expect(w.find('[data-acao="etiqueta"]').exists()).toBe(false);
+    expect(w.find(marca('criar-cards')).exists()).toBe(true);
+  });
+
+  it('sem nenhuma das três, a barra fica só com "Mandar mensagem"', async () => {
+    pode.criarCards = false;
+    pode.etiquetar = false;
+    pode.apagar = false;
+    const w = await abrir();
+    await marcarAna(w);
+    expect(w.find(marca('mandar-mensagem')).exists()).toBe(true);
+    expect(w.find(marca('mais-acoes')).exists()).toBe(false);
+  });
+
+  it('quem não pode apagar contato não vê "Apagar"', async () => {
+    pode.apagar = false;
+    const w = await abrir();
+    await marcarAna(w);
+    expect(w.find('[data-acao="apagar"]').exists()).toBe(false);
+    expect(w.find(marca('criar-cards')).exists()).toBe(true);
+  });
+});
+
+describe('ações em grupo: escrevem no servidor e a lista recarrega', () => {
+  const leituras = () =>
+    ['resumo', 'contagensDePessoas', 'pessoas'].map(
+      metodo => RelacionamentosAPI[metodo].mock.calls.length
+    );
+  const marcarAna = async w => {
+    await w.get(`${marca('marcar')} input`).setValue(true);
+  };
+  const abrirApagar = async w => {
+    await w.get(marca('mais-acoes')).trigger('click');
+    await w.get('[data-acao="apagar"]').trigger('click');
+  };
+
+  it('apagar: manda os ids, avisa, recarrega lista, contagens e resumo e desmarca quem saiu', async () => {
+    RelacionamentosAPI.apagar.mockResolvedValue({
+      data: { apagadas: 1, de_fora: [] },
+    });
+    const w = await abrir();
+    await marcarAna(w);
+    await abrirApagar(w);
+    await w.get('[data-confirmar]').trigger('click');
+    await flushPromises();
+    expect(RelacionamentosAPI.apagar).toHaveBeenCalledWith({ pessoa_ids: [1] });
+    expect(useAlert).toHaveBeenCalledWith('1 pessoa apagada.');
+    expect(leituras()).toEqual([2, 2, 2]);
+    expect(w.find(marca('barra')).exists()).toBe(false);
+  });
+
+  it('etiquetar: lê as etiquetas da conta, manda a escolhida e recarrega', async () => {
+    LabelsAPI.get.mockResolvedValue({
+      data: { payload: [{ title: 'feira' }] },
+    });
+    RelacionamentosAPI.aplicarEtiqueta.mockResolvedValue({
+      data: { aplicadas: 1, de_fora: [] },
+    });
+    const w = await abrir();
+    await marcarAna(w);
+    await w.get(marca('etiqueta')).trigger('click');
+    await flushPromises();
+    w.getComponent({ name: 'DialogoEtiqueta' })
+      .getComponent({ name: 'ChoiceSelect' })
+      .vm.$emit('update:modelValue', 'feira');
+    await flushPromises();
+    await w.get('[data-confirmar]').trigger('click');
+    await flushPromises();
+    expect(RelacionamentosAPI.aplicarEtiqueta).toHaveBeenCalledWith({
+      pessoa_ids: [1],
+      etiqueta: 'feira',
+    });
+    expect(leituras()).toEqual([2, 2, 2]);
+    expect(w.find(marca('barra')).exists()).toBe(false);
+  });
+
+  it('criar cards: lê os funis do servidor e manda funil e etapa escolhidos', async () => {
+    RelacionamentosAPI.funis.mockResolvedValue({
+      data: [{ id: 3, nome: 'Vendas', etapas: [{ id: 4, nome: 'Novo' }] }],
+    });
+    RelacionamentosAPI.criarCards.mockResolvedValue({
+      data: {
+        criados: 0,
+        de_fora: [{ id: 1, nome: 'Ana Albuquerino', motivo: 'ja_tem_card' }],
+      },
+    });
+    const w = await abrir();
+    await marcarAna(w);
+    await w.get(marca('criar-cards')).trigger('click');
+    await flushPromises();
+    await w.get('[data-confirmar]').trigger('click');
+    await flushPromises();
+    expect(RelacionamentosAPI.criarCards).toHaveBeenCalledWith({
+      pessoa_ids: [1],
+      funil_id: 3,
+      etapa_id: 4,
+    });
+    expect(w.get(marca('dialogo-cards')).text()).toContain(
+      'Ana Albuquerino · Já tem card aberto neste funil'
+    );
+  });
+
+  it('criar cards sem nenhum funil: diz que não há funil e "Abrir o CRM" leva ao CRM do menu', async () => {
+    RelacionamentosAPI.funis.mockResolvedValue({ data: [] });
+    const w = await abrir();
+    await marcarAna(w);
+    await w.get(marca('criar-cards')).trigger('click');
+    await flushPromises();
+    expect(w.get(marca('sem-funil')).text()).toBe(
+      'Você ainda não tem um funil para receber os cards.'
+    );
+    await w.get('[data-confirmar]').trigger('click');
+    await flushPromises();
+    expect(roteador.push).toHaveBeenCalledWith({ name: 'crm_kanban_index' });
+    expect(RelacionamentosAPI.criarCards).not.toHaveBeenCalled();
+    expect(w.find(marca('barra')).exists()).toBe(true);
+  });
+
+  it('apagar que para no meio: "Fechar" recarrega e deixa marcado só quem ainda falta', async () => {
+    const muitas = Array.from({ length: 60 }, (_, i) => ({
+      ...ANA,
+      id: i + 1,
+      name: `Pessoa ${i + 1}`,
+    }));
+    RelacionamentosAPI.pessoas.mockResolvedValue({
+      data: { itens: muitas.slice(0, 25), total: 60, tem_mais: true },
+    });
+    RelacionamentosAPI.todasAsPessoas.mockResolvedValue({
+      data: { itens: muitas, total: 60 },
+    });
+    RelacionamentosAPI.apagar
+      .mockResolvedValueOnce({ data: { apagadas: 50, de_fora: [] } })
+      .mockRejectedValueOnce(erroHttp(500));
+    const w = await abrir();
+    await marcarAna(w);
+    await w
+      .findAll('button')
+      .find(b => b.text().startsWith('Marcar todas'))
+      .trigger('click');
+    await flushPromises();
+    await abrirApagar(w);
+    await w.get('[data-confirmar]').trigger('click');
+    await flushPromises();
+    expect(RelacionamentosAPI.apagar).toHaveBeenCalledTimes(2);
+    expect(w.get(marca('dialogo-apagar')).text()).toContain(
+      '50 pessoas apagadas.'
+    );
+    expect(w.get(marca('ainda-nao')).text()).toBe(
+      '10 ainda não. Deu erro no meio do caminho.'
+    );
+    const antes = leituras();
+    await w.get('[data-cancelar]').trigger('click');
+    await flushPromises();
+    expect(leituras()).toEqual(antes.map(vezes => vezes + 1));
+    expect(w.get(`${marca('barra')} p`).text()).toBe('10 marcadas');
   });
 });

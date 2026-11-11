@@ -98,16 +98,28 @@
         "NINGUEM_PODE": "Ninguém aqui pode receber: {motivos}.",
         "ABRINDO_CAMPANHA": "Abrindo a campanha com {count} pessoa. | Abrindo a campanha com {count} pessoas."
       },
+      "ACAO": {
+        "ANDAMENTO": "{feitas} de {total}",
+        "FICARAM_DE_FORA": "Ficaram de fora:",
+        "SEM_NOME": "Pessoa sem nome",
+        "MOTIVO_JA_TEM_CARD": "Já tem card aberto neste funil",
+        "MOTIVO_NAO_APAGADA": "Não foi possível apagar",
+        "MOTIVO_NAO_EXISTE_MAIS": "Não existe mais",
+        "MOTIVO_DADOS_INVALIDOS": "Faltam nome e contato",
+        "MOTIVO_ERRO": "Deu erro, tente de novo",
+        "AINDA_NAO": "{count} ainda não. Deu erro no meio do caminho.",
+        "TENTAR_COM_AS_QUE_FALTAM": "Tentar de novo com as que faltam",
+        "PRONTO": "Pronto"
+      },
       "CARDS": {
         "TITULO": "Criar cards",
         "FUNIL": "Em qual funil?",
         "ETAPA": "Em qual etapa?",
         "CRIAR": "Criar {count} card | Criar {count} cards",
         "CRIADOS": "{count} card criado. | {count} cards criados.",
-        "FICARAM_DE_FORA": "Ficaram de fora:",
-        "MOTIVO_JA_TEM_CARD": "Já tem um card neste funil",
-        "PRONTO": "Pronto",
-        "ERRO": "Não consegui criar os cards. Tente de novo."
+        "ERRO": "Não consegui criar os cards. Tente de novo.",
+        "SEM_FUNIL": "Você ainda não tem um funil para receber os cards.",
+        "ABRIR_CRM": "Abrir o CRM"
       },
       "ETIQUETA": {
         "TITULO": "Colocar etiqueta",
@@ -143,6 +155,7 @@
       "CARREGANDO": "Carregando",
       "VOLTAR": "Voltar",
       "CANCELAR": "Cancelar",
+      "FECHAR": "Fechar",
       "CONTINUAR": "Continuar",
       "SELO_CLIENTE": "Cliente",
       "SELO_NAO_QUER_MENSAGENS": "Não quer mensagens",

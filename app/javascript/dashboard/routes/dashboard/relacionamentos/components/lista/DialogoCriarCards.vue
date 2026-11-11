@@ -5,17 +5,25 @@ import { useAlert } from 'dashboard/composables';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
-import { useEnvio } from '../../lista/useEnvio';
+import ResultadoDaAcao from './ResultadoDaAcao.vue';
+import {
+  rotuloDeCancelar,
+  rotuloDeConfirmar,
+  useEnvioEmFatias,
+} from '../../lista/useEnvioEmFatias';
 
 // #2894 — "Em qual funil?" e "Em qual etapa?" (o primeiro de cada já vem
-// escolhido) e "Criar 12 cards". Depois: "12 cards criados." e, se alguém ficou
-// de fora, a lista com o motivo. Fechar o diálogo depois de criar avisa
-// (`concluido`) para a tela desmarcar a turma.
+// escolhido) e "Criar 12 cards". Enquanto cria: "50 de 120". Depois: "12 cards
+// criados." e, se alguém ficou de fora, a lista com o motivo. Se parou no meio,
+// diz quantas ainda não foram e oferece tentar de novo só com elas. Fechar o
+// diálogo depois de criar avisa (`concluido`, com quem ainda falta) para a tela
+// recarregar e desmarcar. Sem nenhum funil que a pessoa veja, não há campo nem
+// escrita: uma frase e "Abrir o CRM" (`abrirCrm`).
 const props = defineProps({
   pessoas: { type: Array, required: true },
   acoes: { type: Object, required: true },
 });
-const emit = defineEmits(['concluido']);
+const emit = defineEmits(['concluido', 'abrirCrm']);
 
 const { t } = useI18n();
 const dialogo = useTemplateRef('dialogo');
@@ -25,11 +33,21 @@ const idDaEtapa = useId();
 const funis = ref([]);
 const funilId = ref('');
 const etapaId = ref('');
-const resultado = ref(null);
-const { enviando, enviar } = useEnvio(() =>
-  t('RELACIONAMENTOS.LISTA.CARDS.ERRO')
-);
+const {
+  enviando,
+  andamento,
+  resultado,
+  terminou,
+  enviarOQueFalta,
+  fechar,
+  recomecar,
+} = useEnvioEmFatias({
+  contagem: 'criados',
+  mensagemDeErro: () => t('RELACIONAMENTOS.LISTA.CARDS.ERRO'),
+  aoConcluir: faltam => emit('concluido', faltam),
+});
 
+const semFunil = computed(() => funis.value.length === 0);
 const opcoesDeFunil = computed(() =>
   funis.value.map(({ id, nome }) => ({ value: id, label: nome }))
 );
@@ -45,7 +63,7 @@ const escolherFunil = id => {
 };
 
 const abrir = async () => {
-  resultado.value = null;
+  recomecar();
   try {
     funis.value = await props.acoes.funis();
   } catch {
@@ -56,30 +74,41 @@ const abrir = async () => {
   dialogo.value?.open();
 };
 
-const criar = async () => {
-  const feito = await enviar(() =>
-    props.acoes.criarCards({
-      pessoas: props.pessoas,
-      funilId: funilId.value,
-      etapaId: etapaId.value,
-    })
-  );
-  if (feito) resultado.value = feito;
+const criar = lote =>
+  props.acoes.criarCards({
+    ...lote,
+    funilId: funilId.value,
+    etapaId: etapaId.value,
+  });
+
+const irAoCrm = () => {
+  dialogo.value?.close();
+  emit('abrirCrm');
 };
 
-const aoConfirmar = () => (resultado.value ? dialogo.value?.close() : criar());
-const aoFechar = () => {
-  if (resultado.value) emit('concluido');
+const aoConfirmar = () => {
+  if (semFunil.value) return irAoCrm();
+  if (terminou.value) return dialogo.value?.close();
+  return enviarOQueFalta(props.pessoas, criar);
 };
 
 const rotuloDoBotao = computed(() => {
-  if (resultado.value) return t('RELACIONAMENTOS.LISTA.CARDS.PRONTO');
+  if (semFunil.value) return t('RELACIONAMENTOS.LISTA.CARDS.ABRIR_CRM');
   const count = props.pessoas.length;
-  return t('RELACIONAMENTOS.LISTA.CARDS.CRIAR', { count }, count);
+  return rotuloDeConfirmar(
+    t,
+    resultado.value,
+    t('RELACIONAMENTOS.LISTA.CARDS.CRIAR', { count }, count)
+  );
 });
+const rotuloDeSair = computed(() =>
+  semFunil.value
+    ? t('RELACIONAMENTOS.COMUM.FECHAR')
+    : rotuloDeCancelar(t, resultado.value)
+);
 
-const motivoEmPalavras = motivo =>
-  t(`RELACIONAMENTOS.LISTA.CARDS.MOTIVO_${motivo.toUpperCase()}`);
+const criados = count =>
+  t('RELACIONAMENTOS.LISTA.CARDS.CRIADOS', { count }, count);
 
 defineExpose({ abrir });
 </script>
@@ -90,42 +119,28 @@ defineExpose({ abrir });
     type="edit"
     width="md"
     :confirm-button-label="rotuloDoBotao"
-    :cancel-button-label="t('RELACIONAMENTOS.COMUM.CANCELAR')"
-    :show-cancel-button="!resultado"
+    :cancel-button-label="rotuloDeSair"
+    :show-cancel-button="!terminou"
     :is-loading="enviando"
     :close-on-outside-click="!resultado"
     @confirm="aoConfirmar"
-    @close="aoFechar"
+    @close="fechar"
   >
     <TituloDoDialogo :titulo="t('RELACIONAMENTOS.LISTA.CARDS.TITULO')" />
     <div data-relacionamentos="dialogo-cards">
-      <!-- Região viva permanente: já está aqui, vazia, quando o resultado chega. -->
-      <div role="status" class="flex flex-col gap-3">
-        <template v-if="resultado">
-          <p class="m-0 text-base font-medium text-n-slate-12">
-            {{
-              t(
-                'RELACIONAMENTOS.LISTA.CARDS.CRIADOS',
-                { count: resultado.criados },
-                resultado.criados
-              )
-            }}
-          </p>
-          <template v-if="resultado.deFora.length">
-            <p class="m-0 text-sm text-n-slate-11">
-              {{ t('RELACIONAMENTOS.LISTA.CARDS.FICARAM_DE_FORA') }}
-            </p>
-            <ul
-              class="flex flex-col gap-1 p-0 m-0 text-sm list-none text-n-slate-12"
-            >
-              <li v-for="item in resultado.deFora" :key="item.id">
-                {{ item.nome }} · {{ motivoEmPalavras(item.motivo) }}
-              </li>
-            </ul>
-          </template>
-        </template>
-      </div>
-      <div v-if="!resultado" class="flex flex-col gap-5">
+      <ResultadoDaAcao
+        :andamento="andamento"
+        :resultado="resultado"
+        :frase="criados"
+      />
+      <p
+        v-if="semFunil"
+        data-relacionamentos="sem-funil"
+        class="m-0 text-base text-n-slate-12"
+      >
+        {{ t('RELACIONAMENTOS.LISTA.CARDS.SEM_FUNIL') }}
+      </p>
+      <div v-else-if="!resultado" class="flex flex-col gap-5">
         <div class="flex flex-col gap-2">
           <label :for="idDoFunil" class="text-sm font-medium text-n-slate-12">
             {{ t('RELACIONAMENTOS.LISTA.CARDS.FUNIL') }}

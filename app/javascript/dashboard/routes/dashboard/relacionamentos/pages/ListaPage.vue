@@ -32,6 +32,7 @@ import { PAINEL_DAS_ABAS, idDaAba } from '../lista/idsDasAbas';
 import { contaDaMensagem } from '../lista/quemFicaDeFora';
 import { useRolarPilula } from '../lista/useRolarPilula';
 import { useAcoesEmGrupo } from '../lista/useAcoesEmGrupo';
+import { usePermissoesDaLista } from '../lista/usePermissoesDaLista';
 import { useLista } from '../lista/useLista';
 import { useMarcados } from '../lista/useMarcados';
 
@@ -39,7 +40,8 @@ import { useMarcados } from '../lista/useMarcados';
 // Pessoas · Empresas (na URL, `?aba=empresas`), grupos, busca, ordem, "Mais
 // filtros", a lista com ações em grupo e os estados (vazio, carregando, erro).
 // Fala só com `listaFonte` e `acoesDaListaFonte`; em `?demo=` tudo é inventado
-// e as escritas só simulam. Fora da demonstração a lista lê do servidor.
+// e as escritas só simulam. Fora da demonstração a lista lê do servidor e as
+// ações em grupo escrevem nele.
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -68,6 +70,17 @@ const aba = computed(() => {
   return abaDaUrl;
 });
 const ehEmpresas = computed(() => aba.value === ABAS.EMPRESAS);
+
+// "Criar cards", "Etiqueta" e "Apagar" são de quem pode (usePermissoesDaLista);
+// a demonstração só simula e mostra as três sempre.
+const permissoes = usePermissoesDaLista();
+const podeCriarCards = computed(
+  () => Boolean(demo) || permissoes.podeCriarCards.value
+);
+const podeEtiquetar = computed(
+  () => Boolean(demo) || permissoes.podeEtiquetar.value
+);
+const podeApagar = computed(() => Boolean(demo) || permissoes.podeApagar.value);
 
 const marcados = useMarcados();
 const lista = useLista({
@@ -153,6 +166,8 @@ const avisoDaLista = computed(() =>
 );
 
 const trazer = () => router.push({ name: 'relacionamentos_trazer' });
+// O quadro do CRM, a mesma rota do item do menu (Sidebar.vue).
+const abrirCrm = () => router.push({ name: 'crm_kanban_index' });
 const abrirPessoa = ({ id }) =>
   router.push({ name: 'relacionamentos_pessoa', params: { contactId: id } });
 const abrirEmpresa = ({ id }) =>
@@ -353,6 +368,9 @@ onMounted(lista.iniciar);
             class="sticky z-30 mt-auto bottom-4 ms-20 md:ms-0"
             :quantas="marcados.quantos.value"
             :conta="contaDeMarcados"
+            :pode-criar-cards="podeCriarCards"
+            :pode-etiquetar="podeEtiquetar"
+            :pode-apagar="podeApagar"
             @mandar-mensagem="dialogoDeMensagem.abrir()"
             @criar-cards="dialogoDeCards.abrir()"
             @etiqueta="dialogoDeEtiqueta.abrir()"
@@ -381,6 +399,7 @@ onMounted(lista.iniciar);
       :pessoas="marcados.pessoas.value"
       :acoes="acoes"
       @concluido="acoesEmGrupo.depoisDeAgir"
+      @abrir-crm="abrirCrm"
     />
     <DialogoEtiqueta
       ref="dialogoDeEtiqueta"

@@ -24,6 +24,16 @@ vi.mock('../../fonte/modoDemo', async importOriginal => ({
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({ isCloudFeatureEnabled: () => false }),
 }));
+// A pessoa dos testes não pode criar card, etiquetar nem apagar: a demonstração
+// mostra as três ações mesmo assim (as permissões de verdade estão em
+// ListaPageReal).
+vi.mock('../../lista/usePermissoesDaLista', () => ({
+  usePermissoesDaLista: () => ({
+    podeCriarCards: { value: false },
+    podeEtiquetar: { value: false },
+    podeApagar: { value: false },
+  }),
+}));
 // Fora da demonstração a lista lê do servidor; aqui ele recusa todo pedido (a
 // lista com respostas de verdade está em ListaPageReal.spec.js).
 vi.mock('dashboard/api/relacionamentos', () => {

@@ -315,24 +315,55 @@ describe('acoesDaListaFonte', () => {
     ]);
   });
 
-  it('simula etiqueta e apagar: só conta, não grava', async () => {
+  it('as três escritas devolvem o mesmo formato da fonte real', async () => {
+    const semNinguemDeFora = { deFora: [], faltam: [], erro: null };
     expect(
       await acoes().aplicarEtiqueta({
         pessoas: pessoas([1, 2]),
         etiqueta: 'feira',
       })
-    ).toEqual({ aplicadas: 2 });
+    ).toEqual({ aplicadas: 2, ...semNinguemDeFora });
     expect(await acoes().apagar({ pessoas: pessoas([1]) })).toEqual({
       apagadas: 1,
+      ...semNinguemDeFora,
+    });
+    expect(
+      await acoes().criarCards({
+        pessoas: pessoas([1, 2]),
+        funilId: 'vendas',
+        etapaId: 'primeira-conversa',
+      })
+    ).toEqual({ criados: 2, ...semNinguemDeFora });
+  });
+
+  it('simula o andamento em fatias de 50, como a fonte real', async () => {
+    const aoAndar = vi.fn();
+    const muitas = pessoas(Array.from({ length: 120 }, (_, i) => i + 1));
+    await acoes().apagar({ pessoas: muitas, aoAndar });
+    expect(aoAndar.mock.calls.map(([passo]) => passo)).toEqual([
+      { feitas: 50, total: 120 },
+      { feitas: 100, total: 120 },
+      { feitas: 120, total: 120 },
+    ]);
+  });
+
+  it('para antes da próxima fatia quando pedem para parar', async () => {
+    const muitas = pessoas(Array.from({ length: 120 }, (_, i) => i + 1));
+    const aoAndar = vi.fn();
+    const resultado = await acoes().apagar({
+      pessoas: muitas,
+      aoAndar,
+      deveParar: () => aoAndar.mock.calls.length >= 1,
+    });
+    expect(resultado).toEqual({
+      apagadas: 50,
+      deFora: [],
+      faltam: muitas.slice(50),
+      erro: null,
     });
   });
 
-  it.each(['funis', 'etiquetas', 'criarCards', 'aplicarEtiqueta', 'apagar'])(
-    '%s diz que a fonte real ainda não existe',
-    async metodo => {
-      await expect(
-        acoesDaListaFonte({ demo: null })[metodo]({})
-      ).rejects.toMatchObject({ name: 'FONTE_REAL_PENDENTE' });
-    }
-  );
+  it('sem `?demo=` é a fonte real', () => {
+    expect(acoesDaListaFonte({ demo: null }).usaDemo).toBe(false);
+  });
 });

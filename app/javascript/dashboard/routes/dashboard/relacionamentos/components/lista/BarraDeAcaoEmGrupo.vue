@@ -8,10 +8,15 @@ import MenuMaisAcoes from './MenuMaisAcoes.vue';
 // #2894 — a barra que aparece embaixo ao marcar alguém: "12 marcadas", a ação
 // principal (Mandar mensagem) e as outras. Em 390 px só o principal fica à
 // vista; Criar cards e Etiqueta vão para o menu "⋯" junto com Apagar.
+// "Criar cards", "Etiqueta" e "Apagar" só aparecem para quem pode (quem decide
+// é a página). Sem nenhuma das três, fica só "Mandar mensagem", sem o "⋯".
 const props = defineProps({
   quantas: { type: Number, required: true },
   // A conta de quem recebe (`contaDaMensagem`); sem ela, só "N marcadas".
   conta: { type: Object, default: null },
+  podeCriarCards: { type: Boolean, default: true },
+  podeEtiquetar: { type: Boolean, default: true },
+  podeApagar: { type: Boolean, default: true },
 });
 const emit = defineEmits([
   'mandarMensagem',
@@ -54,26 +59,36 @@ const frase = computed(() => {
   return [marcadas, ...receber, ...motivosEmPalavras(t, conta)].join(' · ');
 });
 
-const itensDoMenu = computed(() => [
-  {
-    id: 'criarCards',
-    rotulo: t('RELACIONAMENTOS.LISTA.BARRA.CRIAR_CARDS'),
-    icone: 'i-lucide-kanban',
-    soNoCelular: true,
-  },
-  {
-    id: 'etiqueta',
-    rotulo: t('RELACIONAMENTOS.LISTA.BARRA.ETIQUETA'),
-    icone: 'i-lucide-tag',
-    soNoCelular: true,
-  },
-  {
-    id: 'apagar',
-    rotulo: t('RELACIONAMENTOS.LISTA.BARRA.APAGAR'),
-    icone: 'i-lucide-trash-2',
-    destrutivo: true,
-  },
-]);
+const itensDoMenu = computed(() =>
+  [
+    {
+      id: 'criarCards',
+      rotulo: t('RELACIONAMENTOS.LISTA.BARRA.CRIAR_CARDS'),
+      icone: 'i-lucide-kanban',
+      soNoCelular: true,
+      pode: props.podeCriarCards,
+    },
+    {
+      id: 'etiqueta',
+      rotulo: t('RELACIONAMENTOS.LISTA.BARRA.ETIQUETA'),
+      icone: 'i-lucide-tag',
+      soNoCelular: true,
+      pode: props.podeEtiquetar,
+    },
+    {
+      id: 'apagar',
+      rotulo: t('RELACIONAMENTOS.LISTA.BARRA.APAGAR'),
+      icone: 'i-lucide-trash-2',
+      destrutivo: true,
+      pode: props.podeApagar,
+    },
+  ].filter(item => item.pode)
+);
+// Sem "Apagar", o que sobra no menu só existe no celular: de `sm` para cima o
+// "⋯" abriria vazio, então some junto.
+const menuSoNoCelular = computed(() =>
+  itensDoMenu.value.every(item => item.soNoCelular)
+);
 </script>
 
 <template>
@@ -98,6 +113,7 @@ const itensDoMenu = computed(() => [
       @click="emit('mandarMensagem')"
     />
     <Button
+      v-if="podeCriarCards"
       slate
       faded
       size="lg"
@@ -108,6 +124,7 @@ const itensDoMenu = computed(() => [
       @click="emit('criarCards')"
     />
     <Button
+      v-if="podeEtiquetar"
       slate
       faded
       size="lg"
@@ -118,7 +135,9 @@ const itensDoMenu = computed(() => [
       @click="emit('etiqueta')"
     />
     <MenuMaisAcoes
+      v-if="itensDoMenu.length"
       class="order-2 sm:order-5"
+      :class="{ 'sm:hidden': menuSoNoCelular }"
       :itens="itensDoMenu"
       @escolher="aoEscolherNoMenu"
     />
