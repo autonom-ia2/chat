@@ -1,0 +1,108 @@
+{
+  "AUTOMACAO_MODELOS": {
+    "TITULO": "Start from a template",
+    "TEXTO": "Tap a template to see how it works. The Guide builds it with you and nothing turns on until you say so.",
+    "TODOS": "All",
+    "DESTAQUE_GERAL": "Most used",
+    "DESTAQUE_RAMO": "Most used in your field",
+    "USA_IA": "Uses AI",
+    "USAR": "Use this template",
+    "COMO_TITULO": "How it gets ready",
+    "COMO_1": "You tap Use this template.",
+    "COMO_2": "The Guide only asks what belongs to your account, such as the pipeline stage and who gets the alert.",
+    "COMO_3": "You see what it would do in a real conversation, and only then turn it on.",
+    "PEDIDO": "I want an automation like this: {titulo}. {texto}",
+    "GRUPOS_ARIA": "Template type",
+    "SUAS": "Your automations",
+    "DO_ZERO": "Build from scratch",
+    "GRUPOS": {
+      "VENDAS": "Sell more",
+      "ATENDIMENTO": "Serve better",
+      "POS_VENDA": "After the sale",
+      "RELACIONAMENTO": "Keep customers",
+      "EQUIPE": "Team"
+    },
+    "ITENS": {
+      "M01": {
+        "TITULO": "Remind before it expires",
+        "TEXTO": "A month before it expires, the customer gets a reminder. If they don't reply, they get a link to book a time."
+      },
+      "M02": {
+        "TITULO": "Answer ad leads right away",
+        "TEXTO": "Whoever fills in the ad form gets a message within minutes and can book a call."
+      },
+      "M03": {
+        "TITULO": "Look after the customer afterwards",
+        "TEXTO": "Sends the care tips, asks if everything went well and reminds them to come back. If something goes wrong, you know right away."
+      },
+      "M04": {
+        "TITULO": "Keep customers who start to drift",
+        "TEXTO": "On the first missed visit, the customer is invited to reschedule. On the second, the team is told to call."
+      },
+      "M05": {
+        "TITULO": "Remind the next visit at the right time",
+        "TEXTO": "After the service, the system notes what is left for next time and reminds the customer on the date. If they put it off, it offers a treat."
+      },
+      "M06": {
+        "TITULO": "Birthday wishes that become a booking",
+        "TEXTO": "On their birthday, the customer gets a message with a gift and a link to book."
+      },
+      "M07": {
+        "TITULO": "Deals first for past buyers",
+        "TEXTO": "Past buyers get the deal a day early. Anyone who asks to stop never gets it again."
+      },
+      "M08": {
+        "TITULO": "A customer's list becomes one request per person",
+        "TEXTO": "The customer sends a list of names. Each person becomes a card in the pipeline and gets the document request."
+      },
+      "M09": {
+        "TITULO": "Find new customers every week",
+        "TEXTO": "Every Monday, the system finds new companies, sends an introduction and only brings you the ones who are interested."
+      },
+      "M10": {
+        "TITULO": "Angry customers go straight to the manager",
+        "TEXTO": "When a customer is very upset, the chat leaves the automatic service and the manager gets a summary right away."
+      },
+      "M11": {
+        "TITULO": "Referrals that bring a gift",
+        "TEXTO": "Whoever refers a friend gets a gift when the friend buys. The friend gets a discount."
+      },
+      "M12": {
+        "TITULO": "After the visit, the next step",
+        "TEXTO": "After the visit, the customer is asked what they thought and the salesperson is reminded to take notes and send the proposal."
+      },
+      "M13": {
+        "TITULO": "From contract to review",
+        "TEXTO": "After closing, the system confirms the details, reminds the team before the day and asks for a review afterwards."
+      },
+      "M14": {
+        "TITULO": "Complete documents without the rush",
+        "TEXTO": "Asks for the documents, checks each photo or PDF, asks only for what is missing and tells you when everything is ready."
+      },
+      "M15": {
+        "TITULO": "Big customers get the owner",
+        "TEXTO": "Orders above the amount you choose go straight to you, marked as a priority."
+      },
+      "M16": {
+        "TITULO": "Bring back those who left",
+        "TEXTO": "Anyone who went with someone else almost a year ago gets a better offer."
+      },
+      "M17": {
+        "TITULO": "Holidays without forgotten customers",
+        "TEXTO": "When someone goes on holiday, whoever covers gets a summary of each customer. When they're back, the customers go back to them."
+      },
+      "M18": {
+        "TITULO": "Pick candidates without a spreadsheet",
+        "TEXTO": "A CV that arrives on WhatsApp becomes a card with the main details, and the best ones get an interview invitation."
+      },
+      "M19": {
+        "TITULO": "Customer who changed number",
+        "TEXTO": "If WhatsApp can't deliver, the system tries by email and asks for the new number."
+      },
+      "M20": {
+        "TITULO": "Closed sales go into your system",
+        "TEXTO": "When a sale closes, the system gets the missing details, sends them to your billing system and sends a welcome message."
+      }
+    }
+  }
+}
