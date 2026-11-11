@@ -63,6 +63,27 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(pedidos.size).to eq(2)
     end
 
+    # Revisão do #2917 (5): cada item passa uma vez só pelo Nokogiri (antes eram umas 10 passagens por item).
+    it 'cada item da resposta e lido uma vez so' do
+      allow(Nokogiri::HTML5).to receive(:fragment).and_call_original
+      fonte_responde("#{api}?search=caf%C3%A9%20torrado", fixture('ncm_busca_cafe_torrado.json'))
+      fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
+
+      buscar('café torrado')
+
+      expect(Nokogiri::HTML5).to have_received(:fragment).exactly(1 + real('ncm_busca_0901.json').size).times
+    end
+
+    # Revisão do #2917 (BAIXO): o item fora do formato na chamada a mais fica de lado, e a consulta segue.
+    it 'item sem descricao valida na chamada a mais nao derruba a consulta' do
+      fonte_responde("#{api}?search=caf%C3%A9%20torrado", fixture('ncm_busca_cafe_torrado.json'))
+      fonte_responde("#{api}?search=0901", real('ncm_busca_0901.json') + [{ 'codigo' => '0901.23.00', 'descricao' => '<br>' }])
+
+      dados = buscar('café torrado')['dados']
+
+      expect(dados['itens'].pluck('codigo')).to eq(%w[0901.21.00 0901.22.00])
+    end
+
     it '"parafuso" continua bom: os parafusos primeiro, com a descricao completa, e a posicao 73.18 aberta' do
       fonte_responde("#{api}?search=parafuso", fixture('ncm_busca_parafuso.json'))
       fonte_responde("#{api}?search=7318", fixture('ncm_busca_7318.json'))

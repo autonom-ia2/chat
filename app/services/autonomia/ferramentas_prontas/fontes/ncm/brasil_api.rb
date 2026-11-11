@@ -25,21 +25,22 @@ class Autonomia::FerramentasProntas::Fontes::Ncm::BrasilApi < Autonomia::Ferrame
     achados = procurar(busca)
     raise NaoEncontrado if achados.empty?
 
-    grupo = ncm.grupo_a_abrir(busca, achados)
-    return ncm.lista(busca, achados) unless grupo
+    niveis = ncm.niveis(achados)
+    grupo = ncm.grupo_a_abrir(busca, niveis)
+    return ncm.lista(busca, niveis) unless grupo
 
-    ncm.aberta(busca, achados, grupo, descendentes(busca, grupo, achados))
+    ncm.aberta(busca, niveis, grupo, descendentes(busca, grupo, achados))
   end
 
   # O de 8 dígitos sobe pela hierarquia da posição dele; o de 2 e o de 4 já têm o texto inteiro.
   def codigo(codigo)
-    dado = objeto!(get("/api/ncm/v1/#{codigo}"))
-    return ncm.do_codigo(ncm.item(dado), codigo) unless codigo.length == ncm::DA_NOTA
+    nivel = ncm::Nivel.de(objeto!(get("/api/ncm/v1/#{codigo}")))
+    return ncm.do_codigo(ncm.item(nivel), codigo) unless codigo.length == ncm::DA_NOTA
 
     hierarquia = a_tempo { procurar(ncm.prefixo_da_busca(codigo)) }
-    return ncm.item(dado).merge('observacao' => ncm::SO_O_ULTIMO_NIVEL) if hierarquia.nil?
+    return ncm.item(nivel).merge('observacao' => ncm::SO_O_ULTIMO_NIVEL) if hierarquia.nil?
 
-    ncm.item(dado, ncm::Descricao.indice(hierarquia))
+    ncm.item(nivel, ncm::Descricao.indice(ncm.validos(hierarquia)))
   end
 
   # Os itens vigentes de uma busca na fonte (palavra ou parte do código).
@@ -49,7 +50,7 @@ class Autonomia::FerramentasProntas::Fontes::Ncm::BrasilApi < Autonomia::Ferrame
 
   # A busca que já foi pela posição do grupo ("0901") já trouxe os filhos dele: sem chamada a mais.
   def descendentes(busca, grupo, achados)
-    prefixo = ncm.prefixo_da_busca(grupo['codigo'])
+    prefixo = ncm.prefixo_da_busca(grupo.codigo)
     return achados if busca == prefixo
 
     a_tempo { procurar(prefixo) }

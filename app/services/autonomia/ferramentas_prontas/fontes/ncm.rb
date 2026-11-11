@@ -44,16 +44,19 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     texto if texto && texto.delete(' ').length >= MIN_BUSCA
   end
 
-  # Um item da tabela, enxuto, com a descrição completa (`indice`: os itens da mesma resposta, `Descricao.indice`). Sem
-  # código ou descrição: falha, e o agente ouve "não consegui". A descrição feita só de tags ("<br>") também (revisão
-  # do #2891).
-  def item(dado, indice = {})
-    falha = Autonomia::FerramentasProntas::Provedor::Falha
-    raise falha, 'resposta_invalida' unless dado.is_a?(Hash) && dado['codigo'].present? && dado['descricao'].present?
-    raise falha, 'resposta_invalida' if Descricao.propria(dado).empty?
+  # Os níveis de uma resposta (`Nivel`: cada item lido uma vez). O item fora do formato falha a consulta inteira.
+  def niveis(dados)
+    dados.map { |dado| Nivel.de(dado) }
+  end
 
-    { 'codigo' => dado['codigo'].to_s.strip, 'descricao' => Descricao.completa(dado, indice),
-      'vigente_desde' => dado['data_inicio'].presence }.compact
+  # Os da chamada a mais: o item fora do formato fica de lado, sem derrubar a consulta (revisão do #2917).
+  def validos(dados)
+    dados.filter_map { |dado| Nivel.ou_nil(dado) }
+  end
+
+  # Um item da tabela, enxuto, com a descrição completa (`indice`: os níveis da mesma resposta, `Descricao.indice`).
+  def item(nivel, indice = {})
+    { 'codigo' => nivel.codigo, 'descricao' => Descricao.completa(nivel, indice), 'vigente_desde' => nivel.vigente_desde }.compact
   end
 
   # A tabela do Siscomex traz HTML na descrição ("600 g/m<sup>2</sup>", "<i>badminton</i>"): fica o texto, com as
@@ -74,29 +77,27 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   # A BrasilAPI devolve na ordem do código: a ordem por relevância vem antes do corte (sem ela, "parafuso" mostrava
   # primeiro o 34.03, lubrificantes "antiaderentes de porcas e parafusos", e o 73.18 vinha depois). No mesmo grupo, o
   # código completo (8 dígitos, o da nota) antes da posição (4) e do capítulo (2).
-  def lista(busca, dados, hierarquia = dados)
-    itens = em_ordem(busca, dados, Descricao.indice(hierarquia)).map(&:first)
+  def lista(busca, niveis, indice = Descricao.indice(niveis))
+    itens = em_ordem(busca, niveis, indice).map(&:first)
     { 'busca' => busca }.merge(Autonomia::FerramentasProntas::Lista.cortar(itens, 'itens', MAX_ITENS))
   end
 
-  # -> [[item, dado], ...] na ordem de relevância. Vale o melhor entre a descrição completa e a do próprio nível:
+  # -> [[item, nivel], ...] na ordem de relevância. Vale o melhor entre a descrição completa e a do próprio nível:
   # "Parafusos autoperfurantes" começa pela palavra, "Artigos roscados, parafusos autoperfurantes" não.
-  def em_ordem(busca, dados, indice)
-    pares = dados.map { |dado| [item(dado, indice), dado] }
-    Autonomia::FerramentasProntas::Lista.em_ordem(pares, busca, desempate: ->(par) { -digitos(par.first['codigo']).length }) do |item, dado|
-      [item['descricao'], Descricao.propria(dado)]
+  def em_ordem(busca, niveis, indice)
+    pares = niveis.map { |nivel| [item(nivel, indice), nivel] }
+    Autonomia::FerramentasProntas::Lista.em_ordem(pares, busca, desempate: ->(par) { -par.last.digitos.length }) do |item, nivel|
+      [item['descricao'], nivel.propria]
     end
   end
 
   # O grupo (menos de 8 dígitos) mais relevante que a busca trouxe: é ele que abre. No mesmo grupo de relevância, o mais
-  # largo (a posição antes da subposição: abre mais códigos da nota). nil quando só veio código da nota. O item fora do
-  # formato falha antes (`item`), sem chamada a mais.
-  def grupo_a_abrir(busca, dados)
-    dados.each { |dado| item(dado) }
-    indice = Descricao.indice(dados)
-    grupos = dados.select { |dado| digitos(dado['codigo']).length < DA_NOTA }
-    Autonomia::FerramentasProntas::Lista.em_ordem(grupos, busca, desempate: ->(dado) { digitos(dado['codigo']).length }) do |dado|
-      [Descricao.completa(dado, indice), Descricao.propria(dado)]
+  # largo (a posição antes da subposição: abre mais códigos da nota). nil quando só veio código da nota.
+  def grupo_a_abrir(busca, niveis)
+    indice = Descricao.indice(niveis)
+    grupos = niveis.reject(&:da_nota?)
+    Autonomia::FerramentasProntas::Lista.em_ordem(grupos, busca, desempate: ->(nivel) { nivel.digitos.length }) do |nivel|
+      [Descricao.completa(nivel, indice), nivel.propria]
     end.first
   end
 
@@ -108,29 +109,23 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   # O grupo aberto: no lugar dele, os códigos da nota que ele tem (`descendentes`: o que a chamada a mais trouxe), com a
   # descrição completa. Grupo sem código da nota embaixo: fica o grupo. `descendentes` nil (a chamada a mais não veio a
   # tempo): a busca como veio, com a observação.
-  def aberta(busca, dados, grupo, descendentes)
-    return lista(busca, dados).merge('observacao' => SEM_OS_DA_NOTA) if descendentes.nil?
+  def aberta(busca, niveis, grupo, descendentes)
+    return lista(busca, niveis).merge('observacao' => SEM_OS_DA_NOTA) if descendentes.nil?
 
-    hierarquia = dados + descendentes
-    da_nota = da_nota_do_grupo(descendentes, digitos(grupo['codigo']))
-    return lista(busca, dados, hierarquia) if da_nota.empty?
+    de_baixo = validos(descendentes)
+    indice = Descricao.indice(niveis + de_baixo)
+    da_nota = de_baixo.select { |nivel| nivel.da_nota? && nivel.digitos.start_with?(grupo.digitos) }
+    return lista(busca, niveis, indice) if da_nota.empty?
 
-    lista(busca, no_lugar_do_grupo(dados, grupo, da_nota), hierarquia)
-  end
-
-  def da_nota_do_grupo(descendentes, do_grupo)
-    descendentes.select do |dado|
-      dado.is_a?(Hash) && digitos(dado['codigo']).length == DA_NOTA && digitos(dado['codigo']).start_with?(do_grupo)
-    end
+    lista(busca, no_lugar_do_grupo(niveis, grupo, da_nota), indice)
   end
 
   # No lugar do grupo, os códigos da nota dele. O que mais era do grupo sai (volta entre os da nota, se for da nota).
-  def no_lugar_do_grupo(dados, grupo, da_nota)
-    do_grupo = digitos(grupo['codigo'])
-    dados.flat_map do |dado|
-      next da_nota if dado.equal?(grupo)
+  def no_lugar_do_grupo(niveis, grupo, da_nota)
+    niveis.flat_map do |nivel|
+      next da_nota if nivel.equal?(grupo)
 
-      digitos(dado['codigo']).start_with?(do_grupo) ? [] : [dado]
+      nivel.digitos.start_with?(grupo.digitos) ? [] : [nivel]
     end
   end
 
