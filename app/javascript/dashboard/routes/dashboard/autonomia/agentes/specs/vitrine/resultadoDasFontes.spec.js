@@ -122,14 +122,17 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
 
   it('QI 70: o CEP pela rua e o banco pelo nome', () => {
     // A Paulista tem 50 CEPs: cada um vira nome da lista (rua, faixa e bairro, #2906), e o primeiro abre com o CEP.
+    // O CEP da rua (faixa de número) vem antes do CEP especial de prédio ou órgão (resposta real de 11/11/2026).
     expect(valor('cep', 'por_endereco', 'CEPs')).toBe(
-      'Avenida Paulista (1159) – Bela Vista, Avenida Paulista (1294) – Bela Vista, Avenida Paulista (1415) – Bela Vista e mais 47'
+      'Avenida Paulista (até 610 - lado par) – Bela Vista, Avenida Paulista (de 1867 ao fim - lado ímpar) – Bela Vista, Avenida Paulista (de 1047 a 1865 - lado ímpar) – Bela Vista e mais 47'
     );
     expect(valor('cep', 'por_endereco', 'Primeiro da lista')).toBe(
-      'Avenida Paulista (1159) – Bela Vista'
+      'Avenida Paulista (até 610 - lado par) – Bela Vista'
     );
-    expect(valor('cep', 'por_endereco', 'CEP')).toBe('01311-921');
-    expect(valor('cep', 'por_endereco', 'Complemento')).toBe('1159');
+    expect(valor('cep', 'por_endereco', 'CEP')).toBe('01310-000');
+    expect(valor('cep', 'por_endereco', 'Complemento')).toBe(
+      'até 610 - lado par'
+    );
     expect(valor('bancos', 'por_nome', 'Bancos')).toBe('ITAÚ UNIBANCO S.A.');
     expect(valor('bancos', 'por_nome', 'Código')).toBe('341');
   });

@@ -1,6 +1,6 @@
 {
   "endereco": {
-    "provedor": "brasilapi",
+    "provedor": "viacep",
     "dados": {
       "cep": "01001-000",
       "logradouro": "Praça da Sé",
@@ -17,6 +17,34 @@
       "total": 50,
       "mostrando": 10,
       "ceps": [
+        {
+          "nome": "Avenida Paulista (até 610 - lado par) – Bela Vista",
+          "cep": "01310-000",
+          "logradouro": "Avenida Paulista",
+          "complemento": "até 610 - lado par",
+          "bairro": "Bela Vista"
+        },
+        {
+          "nome": "Avenida Paulista (de 1867 ao fim - lado ímpar) – Bela Vista",
+          "cep": "01311-300",
+          "logradouro": "Avenida Paulista",
+          "complemento": "de 1867 ao fim - lado ímpar",
+          "bairro": "Bela Vista"
+        },
+        {
+          "nome": "Avenida Paulista (de 1047 a 1865 - lado ímpar) – Bela Vista",
+          "cep": "01311-200",
+          "logradouro": "Avenida Paulista",
+          "complemento": "de 1047 a 1865 - lado ímpar",
+          "bairro": "Bela Vista"
+        },
+        {
+          "nome": "Avenida Paulista (de 611 a 1045 - lado ímpar) – Bela Vista",
+          "cep": "01311-100",
+          "logradouro": "Avenida Paulista",
+          "complemento": "de 611 a 1045 - lado ímpar",
+          "bairro": "Bela Vista"
+        },
         {
           "nome": "Avenida Paulista (1159) – Bela Vista",
           "cep": "01311-921",
@@ -39,13 +67,6 @@
           "bairro": "Bela Vista"
         },
         {
-          "nome": "Avenida Paulista (até 610 - lado par) – Bela Vista",
-          "cep": "01310-000",
-          "logradouro": "Avenida Paulista",
-          "complemento": "até 610 - lado par",
-          "bairro": "Bela Vista"
-        },
-        {
           "nome": "Avenida Paulista (1111) – Bela Vista",
           "cep": "01311-920",
           "logradouro": "Avenida Paulista",
@@ -64,27 +85,6 @@
           "cep": "01310-908",
           "logradouro": "Avenida Paulista",
           "complemento": "750",
-          "bairro": "Bela Vista"
-        },
-        {
-          "nome": "Avenida Paulista (1106) – Bela Vista",
-          "cep": "01310-914",
-          "logradouro": "Avenida Paulista",
-          "complemento": "1106",
-          "bairro": "Bela Vista"
-        },
-        {
-          "nome": "Avenida Paulista (1842) – Bela Vista",
-          "cep": "01310-941",
-          "logradouro": "Avenida Paulista",
-          "complemento": "1842",
-          "bairro": "Bela Vista"
-        },
-        {
-          "nome": "Avenida Paulista (2006) – Bela Vista",
-          "cep": "01310-926",
-          "logradouro": "Avenida Paulista",
-          "complemento": "2006",
           "bairro": "Bela Vista"
         }
       ]
