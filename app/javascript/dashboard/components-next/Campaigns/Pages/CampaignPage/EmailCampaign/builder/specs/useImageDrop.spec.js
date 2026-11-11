@@ -158,12 +158,21 @@ describe('image dropped on the canvas (#2908)', () => {
     expect(blocks()[3].toHTML()).toBe(footerBefore);
   });
 
-  it('refuses a PDF or video with a notice and changes nothing', async () => {
+  it('refuses a PDF with the images-only notice and changes nothing', async () => {
     drop({ files: [fileOf('contrato.pdf', 'application/pdf')] });
     await waitForImageUploads();
 
     expect(EmailCampaignAssetsAPI.upload).not.toHaveBeenCalled();
-    expect(useImageDrop().notice.value).toMatchObject({ key: 'ONLY_IMAGES' });
+    expect(useImageDrop().notice.value).toEqual({ key: 'ONLY_IMAGES' });
+    expect(classesOf()).toEqual(['topo', 'foto', 'footer-locked']);
+  });
+
+  it('points a dropped video to the Video block', async () => {
+    drop({ files: [fileOf('apresentacao.mp4', 'video/mp4')] });
+    await waitForImageUploads();
+
+    expect(EmailCampaignAssetsAPI.upload).not.toHaveBeenCalled();
+    expect(useImageDrop().notice.value).toEqual({ key: 'ONLY_IMAGES_VIDEO' });
     expect(classesOf()).toEqual(['topo', 'foto', 'footer-locked']);
   });
 
@@ -428,7 +437,7 @@ describe('drop wiring on the canvas frame (#2908)', () => {
     getData: type => (type === 'text/plain' ? text : ''),
   });
   const frameEvent = (name, dt) => {
-    const event = new Event(name);
+    const event = new Event(name, { cancelable: true });
     Object.defineProperty(event, 'dataTransfer', { value: dt });
     return event;
   };
@@ -462,12 +471,17 @@ describe('drop wiring on the canvas frame (#2908)', () => {
     expect(classesOf()).toEqual(['topo', 'foto', 'novo', 'footer-locked']);
   });
 
-  it('ignores a drag that started inside the canvas (moving selected text): no new block', async () => {
+  it('leaves a drag that started inside the canvas (moving selected text) untouched', async () => {
     frame.dispatchEvent(new Event('dragstart'));
-    const result = dropOnFrame('texto movido');
+    const dt = transfer('texto movido');
+    const event = frameEvent('drop', dt);
+    frame.dispatchEvent(event);
+    const result = { setContent: vi.fn() };
+    editor.trigger('canvas:dragdata', dt, result);
     await tick();
 
-    expect(result.setContent).toHaveBeenCalledWith('');
+    expect(event.defaultPrevented).toBe(false);
+    expect(result.setContent).not.toHaveBeenCalled();
     expect(classesOf()).toEqual(['topo', 'foto', 'footer-locked']);
   });
 

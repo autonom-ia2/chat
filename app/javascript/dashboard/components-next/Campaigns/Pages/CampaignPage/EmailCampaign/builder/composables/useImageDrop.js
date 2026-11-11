@@ -228,8 +228,13 @@ export const handleDrop = (
   const replace = component ? imageAt(component) : null;
   if (payload.files) {
     const images = payload.files.filter(isImageFile);
-    if (images.length < payload.files.length) {
-      notice.value = { key: 'ONLY_IMAGES' };
+    const others = payload.files.filter(file => !isImageFile(file));
+    if (others.length) {
+      // The Video block is mentioned only to someone who dropped a video.
+      const isVideo = others.some(file =>
+        String(file.type || '').startsWith('video/')
+      );
+      notice.value = { key: isVideo ? 'ONLY_IMAGES_VIDEO' : 'ONLY_IMAGES' };
     }
     if (images.length) {
       uploadFiles(editor, dropItems(images, { anchor, replace }), {
@@ -316,7 +321,8 @@ export const handlePaste = (editor, event, campaignId) => {
 export const attachImageDrop = (editor, getCampaignId) => {
   let lastDrop = null;
   let frameWindow = null;
-  // A drag that started inside the canvas (moving selected text): never a new block.
+  // A drag that started inside the canvas (moving selected text) is not ours: the browser and
+  // GrapesJS handle it exactly as before.
   let dragFromFrame = false;
   const attachedIn = generation;
   const isAlive = () => attachedIn === generation;
@@ -334,7 +340,6 @@ export const attachImageDrop = (editor, getCampaignId) => {
     if (editor.getModel().get('dragSource')?.content) return;
     if (dragFromFrame) {
       dragFromFrame = false;
-      lastDrop = { ignore: true };
       return;
     }
     const payload = readTransfer(event.dataTransfer);
@@ -352,7 +357,6 @@ export const attachImageDrop = (editor, getCampaignId) => {
     if (!drop || !isAlive()) return;
     if (editor.getModel().get('dragSource')?.content) return;
     result.setContent('');
-    if (drop.ignore) return;
     const campaignId = getCampaignId();
     setTimeout(() => {
       if (isAlive()) handleDrop(editor, drop, campaignId);
