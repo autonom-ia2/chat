@@ -101,7 +101,6 @@ const NOMES = {
             slate
             faded
             data-relacionamentos="desfazer"
-            class="min-h-11"
             :label="t('RELACIONAMENTOS_TRAZER.HISTORICO.DESFAZER')"
             :aria-label="
               t('RELACIONAMENTOS_TRAZER.HISTORICO.ROTULO_DESFAZER', {

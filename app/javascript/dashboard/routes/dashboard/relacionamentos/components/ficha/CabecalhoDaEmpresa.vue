@@ -88,7 +88,8 @@ const { t } = useI18n();
           data-relacionamentos="alterar-empresa"
           slate
           faded
-          class="w-full sm:w-auto min-h-11 whitespace-nowrap shrink-0"
+          size="lg"
+          class="w-full sm:w-auto whitespace-nowrap shrink-0"
           :label="t('RELACIONAMENTOS_FICHA.EMPRESA.ALTERAR')"
           @click="emit('alterar')"
         />

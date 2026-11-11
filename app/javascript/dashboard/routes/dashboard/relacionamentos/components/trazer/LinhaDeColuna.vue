@@ -149,7 +149,6 @@ onBeforeUnmount(() => observador?.disconnect());
         faded
         slate
         data-relacionamentos="trocar-coluna"
-        class="min-h-11"
         :label="t('RELACIONAMENTOS_TRAZER.GUARDAR.TROCAR')"
         :aria-label="
           t('RELACIONAMENTOS_TRAZER.GUARDAR.ROTULO_MUDAR', {
@@ -163,7 +162,6 @@ onBeforeUnmount(() => observador?.disconnect());
         v-if="virouInformacao && !trocando"
         faded
         slate
-        class="min-h-11"
         :label="t('RELACIONAMENTOS_TRAZER.GUARDAR.NAO_GUARDAR')"
         :disabled="ocupado"
         @click="escolher(DESTINOS.NAO_GUARDAR)"

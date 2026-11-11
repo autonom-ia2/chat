@@ -164,12 +164,15 @@ describe('B8. O que vou guardar', () => {
     expect(w.get('ul').attributes('style')).toContain('display: none');
   });
 
-  it('Mudar e Não guardar são botões da casa de 44 px, com rótulo claro', () => {
+  it('Mudar e Não guardar são botões da casa, no tamanho da casa, com rótulo claro', () => {
     const w = montar();
     const linha = w.get('[data-coluna="Aniversário"]');
     const botoes = linha.findAll('button');
     expect(botoes.map(b => b.text())).toEqual(['Mudar', 'Não guardar']);
-    botoes.forEach(b => expect(b.classes()).toContain('min-h-11'));
+    botoes.forEach(b => {
+      expect(b.classes()).toContain('h-10');
+      expect(b.classes()).not.toContain('min-h-11');
+    });
     botoes.forEach(b =>
       expect(b.classes().join(' ')).toContain('bg-n-slate-9/10')
     );

@@ -92,14 +92,16 @@ defineExpose({
         <Button
           variant="faded"
           color="slate"
-          class="w-full min-h-11"
+          size="lg"
+          class="w-full"
           type="button"
           :label="t('RELACIONAMENTOS.COMUM.CANCELAR')"
           @click="dialogo?.close()"
         />
         <Button
           color="ruby"
-          class="w-full min-h-11"
+          size="lg"
+          class="w-full"
           type="submit"
           data-relacionamentos="desfazer-confirmar"
           :label="t('RELACIONAMENTOS_TRAZER.DESFAZER.CONFIRMAR')"

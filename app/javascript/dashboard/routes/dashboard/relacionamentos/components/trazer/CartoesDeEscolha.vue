@@ -9,6 +9,9 @@ const props = defineProps({
   opcoes: { type: Array, required: true },
   modelValue: { type: String, default: '' },
   rotuloId: { type: String, required: true },
+  // Faltou escolher: o grupo fica marcado como inválido e aponta para o aviso.
+  invalido: { type: Boolean, default: false },
+  descritoPor: { type: String, default: undefined },
 });
 const emit = defineEmits(['update:modelValue']);
 
@@ -47,6 +50,8 @@ const aoTecla = (evento, indice) => {
   <div
     role="radiogroup"
     :aria-labelledby="rotuloId"
+    :aria-invalid="invalido ? 'true' : undefined"
+    :aria-describedby="descritoPor"
     class="grid gap-3 sm:grid-cols-3"
   >
     <button

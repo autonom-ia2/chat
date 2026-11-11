@@ -35,7 +35,7 @@ const textoVisivel = computed(
       <div
         data-esqueleto-topo
         aria-hidden="true"
-        class="h-48 mb-3 rounded-3xl bg-n-slate-3 animate-pulse motion-reduce:animate-none md:h-56"
+        class="h-48 mb-3 rounded-3xl bg-n-slate-3 dark:bg-n-slate-5 animate-pulse motion-reduce:animate-none md:h-56"
       />
       <div
         data-esqueleto-grupos
@@ -45,7 +45,7 @@ const textoVisivel = computed(
         <span
           v-for="grupo in GRUPOS_NA_FILEIRA"
           :key="grupo"
-          class="h-11 rounded-full w-28 shrink-0 bg-n-slate-3"
+          class="h-11 rounded-full w-28 shrink-0 bg-n-slate-3 dark:bg-n-slate-5"
         />
       </div>
     </template>
@@ -56,10 +56,12 @@ const textoVisivel = computed(
       aria-hidden="true"
       class="flex items-center h-16 gap-4 px-2 animate-pulse motion-reduce:animate-none"
     >
-      <span class="rounded-full size-10 shrink-0 bg-n-slate-3" />
+      <span
+        class="rounded-full size-10 shrink-0 bg-n-slate-3 dark:bg-n-slate-5"
+      />
       <span class="flex flex-col flex-1 min-w-0 gap-2">
-        <span class="w-1/2 h-3.5 rounded-md bg-n-slate-3" />
-        <span class="w-1/3 h-3 rounded-md bg-n-slate-3" />
+        <span class="w-1/2 h-3.5 rounded-md bg-n-slate-3 dark:bg-n-slate-5" />
+        <span class="w-1/3 h-3 rounded-md bg-n-slate-3 dark:bg-n-slate-5" />
       </span>
     </div>
   </div>

@@ -75,7 +75,7 @@ const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
     <Button
       slate
       faded
-      class="relative z-10 hidden min-h-11 sm:inline-flex"
+      class="relative z-10 hidden sm:inline-flex"
       :label="t('RELACIONAMENTOS.COMUM.CONVERSAR')"
       @click="emit('conversar', pessoa)"
     />

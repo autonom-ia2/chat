@@ -105,6 +105,8 @@ watch([respostaAtual, () => props.respostas.colunaCliente], () => {
       :opcoes="opcoes"
       :model-value="respostaAtual"
       :rotulo-id="`${id}-titulo`"
+      :invalido="Boolean(erro) && !respostaAtual"
+      :descrito-por="erro ? `${id}-erro` : undefined"
       @update:model-value="emit('responder', pergunta.id, $event)"
     />
     <div v-if="pedeColuna" class="flex flex-col gap-2 max-w-sm">
@@ -116,11 +118,14 @@ watch([respostaAtual, () => props.respostas.colunaCliente], () => {
         :model-value="respostas.colunaCliente || ''"
         :options="opcoesDeColuna"
         :aria-label="t('RELACIONAMENTOS_TRAZER.PERGUNTAS.CLIENTES.QUAL_COLUNA')"
+        :invalid="Boolean(erro) && Boolean(respostaAtual)"
+        :described-by="erro ? `${id}-erro` : undefined"
         @update:model-value="emit('escolherColuna', $event)"
       />
     </div>
     <p
       v-if="erro"
+      :id="`${id}-erro`"
       data-relacionamentos="erro-da-pergunta"
       role="alert"
       class="m-0 text-base font-medium text-n-ruby-11"

@@ -161,6 +161,14 @@ describe('HeroiDaLista', () => {
     expect(w.find('[data-relacionamentos="heroi-trazer"]').exists()).toBe(true);
   });
 
+  it('"Trazer minha lista" discreto fica ao lado da ação principal, não num canto', () => {
+    const w = montar({ total: 280, clientes: 120, sumiu_1_a_3_meses: 42 });
+    const acoes = w.get('[data-heroi-acao]');
+    expect(
+      acoes.findAll('button').map(b => b.attributes('data-relacionamentos'))
+    ).toEqual(['heroi-acao', 'heroi-trazer']);
+  });
+
   it('usa o singular quando é uma pessoa só', () => {
     expect(frase(montar({ total: 1, clientes: 1, sumiu_1_a_3_meses: 0 }))).toBe(
       'Você tem 1 pessoa aqui. 1 já é cliente.'
@@ -693,7 +701,7 @@ describe('BarraDeAcaoEmGrupo', () => {
     );
   });
 
-  it('no celular são duas linhas: marcadas e × em cima, o botão inteiro e o "⋯" embaixo', () => {
+  it('no celular são duas linhas: marcadas, "⋯" e × em cima; "Mandar mensagem" com a linha inteira embaixo', () => {
     const w = montar(3);
     const [quantas, fechar, quebra, mandar, menu] = [
       w.get('p'),
@@ -719,8 +727,10 @@ describe('BarraDeAcaoEmGrupo', () => {
         'whitespace-nowrap',
       ])
     );
+    // O "⋯" sobe para a primeira linha: ao lado dele o botão principal saía
+    // cortado ("Mandar mensa…") em 390 px.
     expect([...menu.classList]).toEqual(
-      expect.arrayContaining(['order-4', 'sm:order-5'])
+      expect.arrayContaining(['order-2', 'sm:order-5'])
     );
     w.unmount();
   });

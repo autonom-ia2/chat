@@ -17,7 +17,6 @@ const { t } = useI18n();
   <div>
     <Button
       link
-      class="min-h-11"
       :is-loading="carregando"
       :label="
         t('RELACIONAMENTOS.LISTA.MARCADAS.MARCAR_TODAS', { count: total })

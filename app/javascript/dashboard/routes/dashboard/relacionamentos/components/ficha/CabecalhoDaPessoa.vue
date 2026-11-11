@@ -79,9 +79,8 @@ const empresa = computed(
           data-relacionamentos="marcar-cliente"
           slate
           faded
-          size="sm"
           icon="i-lucide-badge-check"
-          class="min-h-11 whitespace-nowrap shrink-0"
+          class="whitespace-nowrap shrink-0"
           :is-loading="marcandoCliente"
           :label="t('RELACIONAMENTOS_FICHA.CABECALHO.MARCAR_CLIENTE')"
           @click="emit('marcarCliente')"
@@ -181,14 +180,16 @@ const empresa = computed(
         <Button
           slate
           faded
-          class="w-full min-h-11 whitespace-nowrap shrink-0 lg:w-auto"
+          size="lg"
+          class="w-full whitespace-nowrap shrink-0 lg:w-auto"
           :label="t('RELACIONAMENTOS_FICHA.ACOES.NOVO_CARD')"
           @click="emit('novoCard')"
         />
         <Button
           slate
           faded
-          class="w-full min-h-11 whitespace-nowrap shrink-0 lg:w-auto"
+          size="lg"
+          class="w-full whitespace-nowrap shrink-0 lg:w-auto"
           :label="t('RELACIONAMENTOS_FICHA.ACOES.LEMBRETE')"
           @click="emit('lembrete')"
         />

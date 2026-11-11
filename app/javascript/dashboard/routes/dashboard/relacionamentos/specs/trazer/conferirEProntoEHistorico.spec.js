@@ -113,6 +113,10 @@ describe('ProblemaDaLinha', () => {
     await w.get('input').setValue('');
     await w.get('form').trigger('submit');
     expect(w.get('[role="alert"]').text()).toBe('Escreva o nome para salvar.');
+    expect(w.get('input').attributes('aria-invalid')).toBe('true');
+    expect(w.get('input').attributes('aria-describedby')).toBe(
+      w.get('[role="alert"]').attributes('id')
+    );
     expect(w.emitted('guardar')).toBeUndefined();
     await w.get('input').setValue('Ana Brandolim');
     await botao(w, 'Salvar').trigger('click');

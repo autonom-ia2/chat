@@ -79,7 +79,8 @@ const ra = (chave, valores) =>
         type="submit"
         slate
         faded
-        class="self-end min-h-11"
+        size="lg"
+        class="self-end"
         :is-loading="guardando"
         :label="ra('GUARDAR')"
       />

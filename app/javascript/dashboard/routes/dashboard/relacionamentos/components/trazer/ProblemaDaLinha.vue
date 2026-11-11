@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
@@ -58,6 +58,7 @@ const preenchido = computed(() => {
 
 const formulario = ref(null);
 const erro = ref('');
+const idDoErro = useId();
 const QUE_FALTA = {
   telefone: 'RELACIONAMENTOS_TRAZER.PRECISAM.QUE_FALTA.TELEFONE',
   email: 'RELACIONAMENTOS_TRAZER.PRECISAM.QUE_FALTA.EMAIL',
@@ -172,6 +173,8 @@ const doTexto = computed(
         <Input
           v-else-if="doTexto"
           v-model="valor"
+          :aria-invalid="erro ? 'true' : undefined"
+          :aria-describedby="erro ? idDoErro : undefined"
           :label="
             t(
               campo === 'email'
@@ -251,6 +254,7 @@ const doTexto = computed(
         </div>
         <p
           v-if="erro"
+          :id="idDoErro"
           data-relacionamentos="erro-do-campo"
           role="alert"
           class="m-0 text-sm font-medium text-n-ruby-11"
@@ -305,7 +309,6 @@ const doTexto = computed(
         slate
         type="button"
         data-relacionamentos="voltar-atras"
-        class="min-h-11"
         :label="t('RELACIONAMENTOS_TRAZER.PRECISAM.VOLTAR_ATRAS')"
         :aria-label="
           t('RELACIONAMENTOS_TRAZER.PRECISAM.VOLTAR_ATRAS_LINHA', {

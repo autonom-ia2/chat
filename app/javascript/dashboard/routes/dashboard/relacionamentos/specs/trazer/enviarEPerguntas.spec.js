@@ -242,6 +242,12 @@ describe('PerguntaDaVez', () => {
     await marca(w, 'continuar').trigger('click');
     expect(w.emitted('continuar')).toBeUndefined();
     expect(w.get('[role="alert"]').text()).toBe('Escolha uma das respostas.');
+    // O grupo de respostas fica marcado como inválido e aponta para o aviso.
+    const grupo = w.get('[role="radiogroup"]');
+    expect(grupo.attributes('aria-invalid')).toBe('true');
+    expect(grupo.attributes('aria-describedby')).toBe(
+      w.get('[role="alert"]').attributes('id')
+    );
     await w.setProps({
       podeContinuar: true,
       respostas: { clientes: 'sim_todas' },

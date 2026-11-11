@@ -69,7 +69,6 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
             data-relacionamentos="alterar"
             slate
             faded
-            class="min-h-11"
             :label="t('RELACIONAMENTOS_FICHA.INFORMACOES.ALTERAR')"
             @click="emit('alterar')"
           />

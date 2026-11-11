@@ -41,14 +41,7 @@ const trechoDa = conversa =>
 <template>
   <CartaoDaSecao :titulo="ra('TITULO')" data-relacionamentos="conversas">
     <template v-if="conversas.length" #acao>
-      <Button
-        slate
-        ghost
-        size="sm"
-        class="min-h-11"
-        :label="ra('VER_TODAS')"
-        @click="emit('verTodas')"
-      />
+      <Button slate ghost :label="ra('VER_TODAS')" @click="emit('verTodas')" />
     </template>
     <p
       v-if="!conversas.length"

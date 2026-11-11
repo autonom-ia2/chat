@@ -44,24 +44,22 @@ vi.mock('../../relationships/RelationshipsHome.vue', () => ({
 vi.setConfig({ testTimeout: 30000 });
 
 describe('HeroiEscuro', () => {
-  it('mostra a frase, a ação principal e a discreta', () => {
+  it('mostra a frase e as ações, todas no mesmo lugar (nenhuma solta no canto)', () => {
     const w = mount(HeroiEscuro, {
       slots: {
         frase: 'Uma frase',
-        acao: '<b>Principal</b>',
-        discreta: '<i>Discreta</i>',
+        acao: '<b>Principal</b><i>Discreta</i>',
       },
     });
     expect(w.get('[data-heroi-frase]').text()).toBe('Uma frase');
-    expect(w.get('[data-heroi-acao]').text()).toBe('Principal');
-    expect(w.get('[data-heroi-discreta]').text()).toBe('Discreta');
+    expect(w.get('[data-heroi-acao]').text()).toBe('PrincipalDiscreta');
+    expect(w.find('[data-heroi-discreta]').exists()).toBe(false);
     expect(w.classes()).toContain('bg-n-heroi');
   });
 
   it('não desenha ação que não veio', () => {
     const w = mount(HeroiEscuro, { slots: { frase: 'Só a frase' } });
     expect(w.find('[data-heroi-acao]').exists()).toBe(false);
-    expect(w.find('[data-heroi-discreta]').exists()).toBe(false);
   });
 });
 

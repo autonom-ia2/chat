@@ -118,7 +118,7 @@ const itensDoMenu = computed(() => [
       @click="emit('etiqueta')"
     />
     <MenuMaisAcoes
-      class="order-4 sm:order-5"
+      class="order-2 sm:order-5"
       :itens="itensDoMenu"
       @escolher="aoEscolherNoMenu"
     />
@@ -131,7 +131,8 @@ const itensDoMenu = computed(() => [
       :aria-label="t('RELACIONAMENTOS.LISTA.MARCADAS.DESMARCAR')"
       @click="emit('fechar')"
     />
-    <!-- Celular: quebra a linha entre "marcadas ×" e "Mandar mensagem ⋯". -->
+    <!-- Celular: quebra a linha entre "marcadas ⋯ ×" e "Mandar mensagem", que
+         fica com a linha inteira (ao lado do "⋯" o texto saía cortado). -->
     <span
       data-quebra-de-linha
       class="order-2 h-0 basis-full sm:hidden"
