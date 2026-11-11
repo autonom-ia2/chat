@@ -118,9 +118,16 @@ module DadosReaisDasProntas
     File.write(arquivo, "#{JSON.pretty_generate(atual.merge(nome => { 'provedor' => provedor, 'dados' => limpo }))}\n")
   end
 
+  # Os pedidos escolhidos: todos, os de uma fonte ("ncm") ou uma consulta só ("banco_central.focus").
+  def casos(escolhidas)
+    CASOS.select do |chave, nome, _argumentos|
+      escolhidas.blank? || escolhidas.include?(chave) || escolhidas.include?("#{chave}.#{nome}")
+    end
+  end
+
   # Confere a decisão de todas as fontes pedidas ANTES de chamar qualquer uma.
   def rodar(escolhidas)
-    casos = CASOS.select { |chave, _nome, _argumentos| escolhidas.blank? || escolhidas.include?(chave) }
+    casos = casos(escolhidas)
     casos.map(&:first).uniq.each { |chave| anonimizar(chave, {}) unless ANONIMIZACAO[chave] }
     casos.each { |chave, nome, argumentos| rodar_um(chave, nome, argumentos) }
   end

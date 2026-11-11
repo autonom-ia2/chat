@@ -3464,8 +3464,8 @@
           "CLIENTE": "Esse corretor que me ligou é de verdade?",
           "AGENTE": "Conferi na SUSEP: ele está ativo, com registro, e pode vender seguro de pessoas e de danos.",
           "USE_QUANDO": "Use quando o cliente quiser saber se um corretor ou uma corretora está liberado para vender seguro.",
-          "ROTULO": "CPF, CNPJ ou nome",
-          "EXEMPLO": "11.222.333/0001-81",
+          "ROTULO": "Nome, CPF ou CNPJ do corretor",
+          "EXEMPLO": "corretora de seguros",
           "CONSULTAS": "pelo CPF ou CNPJ, pelo nome"
         }
       },

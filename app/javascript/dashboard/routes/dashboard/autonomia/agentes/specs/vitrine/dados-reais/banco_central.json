@@ -31,6 +31,9 @@
     "provedor": "focus",
     "dados": {
       "indicador": "Focus: IPCA",
+      "unidades": {
+        "mediana": "%"
+      },
       "expectativas": [
         {
           "ano": 2026,

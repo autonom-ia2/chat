@@ -10,6 +10,12 @@ RSpec.describe DadosReaisDasProntas do
     expect(fontes - described_class::ANONIMIZACAO.keys).to eq([])
   end
 
+  it 'escolhe por fonte ou por fonte.consulta (para gravar uma consulta so)' do
+    expect(described_class.casos(['banco_central.focus']).map { |chave, nome, _| "#{chave}.#{nome}" }).to eq(['banco_central.focus'])
+    expect(described_class.casos(['ncm']).map { |_, nome, _| nome }).to eq(%w[buscar codigo])
+    expect(described_class.casos([]).size).to eq(described_class::CASOS.size)
+  end
+
   it 'fonte sem a decisao: aborta, com o que fazer' do
     expect { described_class.anonimizar('fonte_nova', { 'nome' => 'Fulano' }) }
       .to raise_error(described_class::SemDecisao) { |erro| expect(erro.message).to include('fonte_nova', 'ANONIMIZACAO') }

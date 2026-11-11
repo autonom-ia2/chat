@@ -6,7 +6,9 @@
 // a descrição da NCM, o objeto da compra). Depois dos nomes, o primeiro item aberto (a situação do corretor, a
 // distância da estação), e as listas dentro dele viram nomes também, um nível só. Com mais de um item, o primeiro só
 // abre com 2 campos com rótulo além do nome, e a primeira linha diz de qual item se trata ("Primeiro da lista"):
-// sem isso, o endereço de um hospital parecia valer para todos. Lista sem campo de nome: o primeiro aberto e quantos são.
+// sem isso, o endereço de um hospital parecia valer para todos. Lista sem campo de nome (#2858 F7): um item só abre
+// inteiro; com mais de um, o item é identificado por CAMPOS_IDENTIFICADORES e o primeiro vai sob "Primeiro da lista";
+// sem identificador, só a contagem. Uma unidade de campo pode vir em `unidades` (campo -> unidade), no nível de cima.
 //
 // `textos`:
 //   rotulo(chave)          -> o rótulo do campo, ou '' quando não tem (o campo não aparece);
@@ -84,9 +86,10 @@ const valorLegivel = (chave, valor, textos, unidade) => {
   return chave === 'descricao' ? semTracoInicial(String(valor)) : String(valor);
 };
 
-const resumoDaLista = (nomes, total, textos) => {
-  const quantos = Math.max(total ?? 0, nomes.length);
-  const primeiros = nomes.slice(0, PRIMEIROS).map(semTracoInicial);
+// A lista curta: os três primeiros (já legíveis) e quantos faltam.
+const resumoDaLista = (legiveis, total, textos) => {
+  const quantos = Math.max(total ?? 0, legiveis.length);
+  const primeiros = legiveis.slice(0, PRIMEIROS);
   const resto = quantos - primeiros.length;
   if (resto > 0) {
     return textos.maisN({ nomes: primeiros.join(', '), n: resto });
@@ -104,32 +107,73 @@ const CAMPOS_DE_NOME = [
   'objeto',
   'razao_social',
 ];
+// #2858 F7 — sem nome, o que identifica cada item (o número do telefone, a placa, o ano do preço), na ordem de
+// preferência. Sem nenhum deles, a lista de mais de um item é só contada.
+const CAMPOS_IDENTIFICADORES = [
+  'numero',
+  'telefone',
+  'email',
+  'placa',
+  'cno',
+  'conselho',
+  'tipo',
+  'ano',
+  'ano_modelo',
+  'data',
+];
+// Campos que ficam sem rótulo de propósito (não aparecem): `ispb` (código interno do banco, sem uso para o dono),
+// `cnes` (o cadastro do estabelecimento no Ministério da Saúde; o nome e o endereço dizem mais), `regiao` (só na lista
+// de estados, onde abrir o primeiro estado não ajuda), `coberturas` e `condicoes` (ficam dentro de cada produto, um
+// nível abaixo do que a tela abre: a lista de produtos mostra os nomes).
 
-const campoDeNome = itens =>
-  CAMPOS_DE_NOME.find(campo =>
-    itens.every(item => ehObjeto(item) && typeof item[campo] === 'string')
+const campoComum = (itens, campos, aceita) =>
+  campos.find(campo =>
+    itens.every(item => ehObjeto(item) && aceita(item[campo]))
   );
+const campoDeNome = itens =>
+  campoComum(itens, CAMPOS_DE_NOME, valor => typeof valor === 'string');
+const campoIdentificador = itens =>
+  campoComum(itens, CAMPOS_IDENTIFICADORES, valor =>
+    ['string', 'number'].includes(typeof valor)
+  );
+
+// A unidade de um campo: `unidades` (campo -> unidade), mandada no nível de cima (a mediana do Focus).
+const unidadeDe = (textos, chave) => textos.unidades?.[chave] || '';
+
+const legivel = (chave, valor, textos) =>
+  valorLegivel(chave, valor, textos, unidadeDe(textos, chave));
+const nomesLegiveis = (itens, campo) =>
+  itens.map(item => semTracoInicial(String(item[campo])));
+const identificadores = (itens, campo, textos) =>
+  itens.map(item => legivel(campo, item[campo], textos));
 
 const quantosSao = (itens, total, textos) =>
   numeroLegivel(Math.max(total ?? 0, itens.length), textos.idioma);
 
-// Uma lista dentro do item aberto: os nomes, ou só quantos são (não abre de novo).
-const resumoDentro = (itens, rotulo, total, textos) => {
-  if (!rotulo || !itens.length) return [];
+// Os itens de uma lista, legíveis, na ordem: valores simples, nomes ou identificadores; null quando não há nenhum.
+const legiveisDaLista = (chave, itens, textos) => {
   if (itens.every(ehPrimitivo)) {
-    return [[rotulo, resumoDaLista(itens.map(String), total, textos)]];
+    return itens.map(item => legivel(chave, item, textos));
   }
-  const campo = campoDeNome(itens);
-  const nomes = campo ? itens.map(item => item[campo]) : null;
-  const valor = nomes
-    ? resumoDaLista(nomes, total, textos)
+  const nome = campoDeNome(itens);
+  if (nome) return nomesLegiveis(itens, nome);
+  const id = campoIdentificador(itens);
+  return id ? identificadores(itens, id, textos) : null;
+};
+
+// Uma lista dentro do item aberto: os nomes, os identificadores ou só quantos são (não abre de novo).
+const resumoDentro = (chave, itens, rotulo, total, textos) => {
+  if (!rotulo || !itens.length) return [];
+  const legiveis = legiveisDaLista(chave, itens, textos);
+  const valor = legiveis
+    ? resumoDaLista(legiveis, total, textos)
     : quantosSao(itens, total, textos);
   return [[rotulo, valor]];
 };
 
 // Os campos de um objeto, cada um com o rótulo de `rotuloDe`; `omitir`, o campo que já apareceu (o nome do item).
-// A unidade de medida vale só no nível de cima (o "R$" do dólar): dentro de um item, `unidade` é outra coisa (a
-// unidade do órgão na compra do governo).
+// A unidade de medida vale só no nível de cima (o "R$" do dólar) ou por `unidades`: dentro de um item, `unidade` é
+// outra coisa (a unidade do órgão na compra do governo).
 const linhasSimples = (objeto, rotuloDe, textos, omitir = '') => {
   const comNomeDoEstado = typeof objeto.estado === 'string';
   const total = Number.isInteger(objeto.total) ? objeto.total : null;
@@ -137,10 +181,10 @@ const linhasSimples = (objeto, rotuloDe, textos, omitir = '') => {
     if (chave === omitir || repete(objeto, chave, valor)) return [];
     if (chave === 'uf' && comNomeDoEstado) return [];
     if (Array.isArray(valor)) {
-      return resumoDentro(valor, rotuloDe(chave), total, textos);
+      return resumoDentro(chave, valor, rotuloDe(chave), total, textos);
     }
     const rotulo = ehPrimitivo(valor) ? rotuloDe(chave) : '';
-    return rotulo ? [[rotulo, valorLegivel(chave, valor, textos, '')]] : [];
+    return rotulo ? [[rotulo, legivel(chave, valor, textos)]] : [];
   });
 };
 
@@ -148,49 +192,65 @@ const linhasSimples = (objeto, rotuloDe, textos, omitir = '') => {
 // detalhes dele (o nome já está na lista). Mais de um: só com MINIMO_PARA_ABRIR campos com rótulo além do nome, e com o
 // nome dele na primeira linha.
 const MINIMO_PARA_ABRIR = 2;
-const primeiroAberto = (itens, campo, total, textos) => {
+const primeiroAberto = (itens, campo, umSo, textos) => {
   const detalhes = linhasSimples(itens[0], textos.rotulo, textos, campo);
-  if (Math.max(total ?? 0, itens.length) === 1) return detalhes;
+  if (umSo) return detalhes;
   if (detalhes.length < MINIMO_PARA_ABRIR) return [];
-  const nome = semTracoInicial(itens[0][campo]);
+  const [nome] = nomesLegiveis(itens, campo);
   return [[textos.rotulo('primeiro_da_lista'), nome], ...detalhes];
+};
+
+// Lista sem nome e com mais de um item: os identificadores e o primeiro sob "Primeiro da lista"; sem identificador,
+// só quantos são (abrir o primeiro faria os campos dele parecerem valer para todos).
+const listaSemNome = (rotulo, itens, total, textos) => {
+  const id = campoIdentificador(itens);
+  if (!id) return rotulo ? [[rotulo, quantosSao(itens, total, textos)]] : [];
+  const ids = identificadores(itens, id, textos);
+  const resumo = rotulo ? [[rotulo, resumoDaLista(ids, total, textos)]] : [];
+  return [
+    ...resumo,
+    [textos.rotulo('primeiro_da_lista'), ids[0]],
+    ...linhasSimples(itens[0], textos.rotulo, textos, id),
+  ];
 };
 
 const linhasDaLista = (chave, itens, total, textos) => {
   if (!itens.length) return [];
   const rotulo = textos.rotulo(chave);
   if (itens.every(ehPrimitivo)) {
-    return rotulo
-      ? [[rotulo, resumoDaLista(itens.map(String), total, textos)]]
-      : [];
+    const valores = itens.map(item => legivel(chave, item, textos));
+    return rotulo ? [[rotulo, resumoDaLista(valores, total, textos)]] : [];
   }
+  const umSo = Math.max(total ?? 0, itens.length) === 1;
   const campo = campoDeNome(itens);
   if (campo) {
-    const nomes = itens.map(item => item[campo]);
+    const nomes = nomesLegiveis(itens, campo);
     const resumo = rotulo
       ? [[rotulo, resumoDaLista(nomes, total, textos)]]
       : [];
-    return [...resumo, ...primeiroAberto(itens, campo, total, textos)];
+    return [...resumo, ...primeiroAberto(itens, campo, umSo, textos)];
   }
-  // Lista de objetos sem nome (os preços de cada ano na tabela do carro): o primeiro aberto e quantos são.
-  const primeiro = ehObjeto(itens[0])
-    ? linhasSimples(itens[0], textos.rotulo, textos)
-    : [];
-  const quantos =
-    itens.length > 1 && rotulo
-      ? [[rotulo, quantosSao(itens, total, textos)]]
+  // Um item só sem nome (o preço do carro de um ano): ele inteiro.
+  if (umSo) {
+    return ehObjeto(itens[0])
+      ? linhasSimples(itens[0], textos.rotulo, textos)
       : [];
-  return [...primeiro, ...quantos];
+  }
+  return listaSemNome(rotulo, itens, total, textos);
 };
 
-export const linhasDoResultado = (dados, textos) => {
+export const linhasDoResultado = (dados, textosDaTela) => {
   if (!ehObjeto(dados)) return [];
+  const unidades = ehObjeto(dados.unidades) ? dados.unidades : {};
+  const textos = { ...textosDaTela, unidades };
   const total = Number.isInteger(dados.total) ? dados.total : null;
   const unidade = typeof dados.unidade === 'string' ? dados.unidade : '';
   // A sigla do estado só aparece quando o nome dele não veio junto.
   const comNomeDoEstado = typeof dados.estado === 'string';
   return Object.entries(dados).flatMap(([chave, valor]) => {
-    if (valor === null || valor === undefined) return [];
+    if (valor === null || valor === undefined || chave === 'unidades') {
+      return [];
+    }
     if (chave === 'uf' && comNomeDoEstado) return [];
     if (repete(dados, chave, valor)) return [];
     if (Array.isArray(valor)) return linhasDaLista(chave, valor, total, textos);
@@ -203,8 +263,9 @@ export const linhasDoResultado = (dados, textos) => {
       );
     }
     const rotulo = textos.rotulo(chave);
+    const daLinha = unidade || unidadeDe(textos, chave);
     return rotulo
-      ? [[rotulo, valorLegivel(chave, valor, textos, unidade)]]
+      ? [[rotulo, valorLegivel(chave, valor, textos, daLinha)]]
       : [];
   });
 };

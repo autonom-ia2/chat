@@ -3,7 +3,8 @@
 #
 # Uso (só no ambiente de teste):
 #   RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais.rb [fonte ...]
-# Sem fonte: todas as do CASOS. Com fonte (ex.: ncm compras_governo): só elas. Cada arquivo é reescrito por consulta.
+# Sem fonte: todas as do CASOS. Com fonte (ex.: ncm compras_governo): só elas. Com fonte.consulta
+# (ex.: banco_central.focus): só essa consulta. Cada arquivo é reescrito por consulta.
 # Fonte sem decisão de anonimização: aborta antes de chamar qualquer fonte.
 require_relative 'dados_reais'
 
