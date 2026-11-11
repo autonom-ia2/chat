@@ -21,6 +21,39 @@ module Autonomia::Guide::Formatos::Esquemas
     validador&.esquema
   end
 
+  # #2889: o campo que não é coluna do modelo e que a action grava num modelo ligado a ele (a `receita` da automação
+  # mora na versão). Vale o esquema da coluna de mesmo nome no modelo associado, citado no formato pela referência
+  # ("Modelo#coluna", ver `da_referencia`): o esquema inteiro, repetido em cada ação, incharia o JSON versionado.
+  def referencia_associada(modelo, nome)
+    return if modelo.nil? || modelo.columns_hash.key?(nome.to_s)
+
+    modelo.reflect_on_all_associations.each do |associacao|
+      next if associacao.polymorphic?
+
+      return "#{associacao.klass.name}##{nome}" if da_coluna(associacao.klass, nome)
+    end
+    nil
+  rescue NameError
+    nil
+  end
+
+  # O esquema de uma referência "Modelo#coluna", lido do validador do modelo na hora (o formato só guarda o nome).
+  def da_referencia(referencia)
+    modelo, coluna = referencia.to_s.split('#', 2)
+    da_coluna(modelo.safe_constantize, coluna) if coluna.present?
+  end
+
+  # Troca cada `esquema_de` do formato pelo esquema que ele cita. Chamado ao ler o arquivo (`Formatos.todos`).
+  def resolver_referencias(valor)
+    case valor
+    when Hash
+      resolvido = valor.transform_values { |item| resolver_referencias(item) }
+      valor.key?('esquema_de') ? resolvido.merge('esquema' => da_referencia(valor['esquema_de'])).compact : resolvido
+    when Array then valor.map { |item| resolver_referencias(item) }
+    else valor
+    end
+  end
+
   def validador(esquema)
     JSONSchemer.schema(esquema, formats: JsonSchemaFormatos::TODOS)
   end

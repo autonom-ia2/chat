@@ -47,8 +47,20 @@ class Autonomia::Guide::Desfazer
     classe = mudanca.record_type.safe_constantize
     return conflito(mudanca, 'unknown_type') if classe.nil?
 
-    classe.unscoped.find_by(classe.primary_key => mudanca.record_id)&.destroy!
+    registro = classe.unscoped.find_by(classe.primary_key => mudanca.record_id)
+    motivo = apagar(registro)
+    return conflito(mudanca, motivo) if motivo
+
     @relatorio['desfeitas'] += 1
+  end
+
+  # O registro que sabe como sair no desfazer responde por si (#2889: a versão da automação é só-leitura e não sai por
+  # `destroy!`); devolve o motivo do conflito quando não pode sair. Os outros saem por `destroy!`, como sempre.
+  def apagar(registro)
+    return registro.apagar_ao_desfazer if registro.respond_to?(:apagar_ao_desfazer)
+
+    registro&.destroy!
+    nil
   end
 
   def restaurar_alterado(mudanca)

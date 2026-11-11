@@ -11,6 +11,13 @@ class Autonomia::Guide::PorteiroDaAutomacao
     'POST autonomia/decisores/:id/teste', 'POST autonomia/decisores/:id/exemplos', 'POST autonomia/decisoes/:id/resolver'
   ].freeze
 
+  # #2889: as automações do motor novo, pelas mesmas chaves da Autonomia::Automacao::DefinicaoPolicy. Ligar não está
+  # aqui: só a pessoa liga, na tela (Acoes::SO_NA_TELA). Não há rota de apagar. O passo de funil (chave de funis) quem
+  # confere é o controller, que olha a receita inteira.
+  MOTOR_NOVO = ['POST autonomia/automacoes', 'PATCH autonomia/automacoes/:id', 'PUT autonomia/automacoes/:id',
+                'POST autonomia/automacoes/:id/desligar'].freeze
+  ENSAIO = ['POST automation_rules/:id/ensaio', 'POST autonomia/automacoes/ensaio', 'POST autonomia/automacoes/:id/ensaio'].freeze
+
   ETAPA = [
     'POST crm/stages/:stage_id/stage_automations', 'PATCH crm/stage_automations/:id', 'PUT crm/stage_automations/:id',
     'DELETE crm/stage_automations/:id', 'POST crm/stage_automations/:stage_automation_id/steps',
@@ -28,8 +35,9 @@ class Autonomia::Guide::PorteiroDaAutomacao
   }.freeze
 
   RECUSA_POR_ACAO = REGRAS.index_with('automation_manage_only')
+                          .merge(MOTOR_NOVO.index_with('automation_manage_only'))
                           .merge(ETAPA.index_with('stage_automation_manage_only'))
-                          .merge('POST automation_rules/:id/ensaio' => 'automation_view_only').freeze
+                          .merge(ENSAIO.index_with('automation_view_only')).freeze
 
   # Criar e mudar regra: com ação ou condição de funil, pede também a chave de funis (RegraDoFunil). A cópia e a
   # mudança sem as ações no corpo ficam com o controller, que olha a regra gravada.

@@ -770,6 +770,7 @@ en:
         whatsapp_template_consent: 'This is only done on screen: Templates › Permission.'
         crm_permanent_delete: 'Permanent deletion is only done on screen, typing the confirmation: CRM › Archived, or when deleting the contact.'
         contact_delete: 'Deleting a contact is only done on screen: Contacts › open the contact › Delete contact.'
+        automacao_ligar: 'Turning an automation on is only done on screen, by the person: Automations › open the automation › Turn on. It starts acting with the rights of whoever turns it on.'
       admin_only: 'Only an account admin can do this.'
       automation_manage_only: 'For this you need the automatic rules permission in your role.'
       stage_automation_manage_only: 'For this you need the automatic rules and the pipeline settings permissions in your role.'

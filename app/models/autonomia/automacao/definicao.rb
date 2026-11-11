@@ -49,6 +49,15 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
     ::Autonomia::Automacao::CampanhaDaOcorrencia.conferir_automacao(self)
   end
 
+  # O desfazer do Guia (#2889): a automação que o Guia criou sai com o desfazer se ainda não rodou nenhuma vez. Já
+  # rodou (ligaram e ela agiu), fica: o histórico aponta para ela, e o desfazer avisa o conflito.
+  def apagar_ao_desfazer
+    return 'in_use' if execucoes.exists? || versoes.exists?
+
+    destroy!
+    nil
+  end
+
   # A versão que a pessoa viu na tela já não é a ativa: outra pessoa salvou no meio. A tela (F5) responde 409 e mostra
   # a versão nova antes de deixar ligar ou salvar.
   class VersaoMudou < StandardError; end

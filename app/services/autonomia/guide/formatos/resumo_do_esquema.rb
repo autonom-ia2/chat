@@ -13,12 +13,14 @@ class Autonomia::Guide::Formatos::ResumoDoEsquema
 
   # As linhas de dentro do campo, no resumo da ação.
   def linhas(limite)
+    return [navegacao.dica] if navegacao.referencias?
+
     [*valores_fechados(limite), *ramos_em_linha]
   end
 
   # O campo inteiro: o que ele é, as chaves com valores fechados e o que cada ramo faz.
   def texto(teto)
-    linhas = ["Campo #{@caminho}:", @esquema['description'], *propriedades, *valores_fechados(nil), *ramos_descritos].compact
+    linhas = ["Campo #{@caminho}:", @esquema['description'], *propriedades, *valores_fechados(nil), *ramos_ou_navegacao].compact
     passa = linhas.each_index.find { |indice| linhas[0..indice].join("\n").size > teto }
     return linhas.join("\n") unless passa
 
@@ -27,6 +29,8 @@ class Autonomia::Guide::Formatos::ResumoDoEsquema
 
   # Só o ramo pedido ('send_email_to_team'), com a descrição do que o motor faz. Nil se não há.
   def ramo(nome, teto)
+    return navegacao.texto(nome) if navegacao.referencias?
+
     achado = Esquemas.ramo(@esquema, nome)
     return propriedade(nome, teto) unless achado
 
@@ -35,6 +39,11 @@ class Autonomia::Guide::Formatos::ResumoDoEsquema
   end
 
   private
+
+  # #2889: esquema montado por referências (a receita da Automação livre) se percorre pelo caminho.
+  def navegacao = @navegacao ||= Autonomia::Guide::Formatos::NavegacaoDoEsquema.new(@caminho, @esquema)
+
+  def ramos_ou_navegacao = navegacao.referencias? ? [navegacao.dica] : ramos_descritos
 
   # O objeto que cada item é (lista de objetos) ou o próprio objeto.
   def alvo

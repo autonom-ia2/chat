@@ -111,7 +111,11 @@ class Autonomia::Guide::Acoes
   # #2096: excluir de vez (card, funil e os cards do contato) exige que a pessoa digite a confirmação; uma proposta do Guia
   # a preencheria sozinha. Excluir o contato também só na tela (decisão do Rodrigo, 23/10): com a flag crm_arquivados,
   # ela anonimiza os cards dele e cancela as reuniões futuras, com aviso ao cliente.
-  SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent', 'DELETE contacts/:id' => 'contact_delete' }
+  # #2889: ligar a automação da Automação livre também só na tela. Ligar é "assumir": ela passa a agir com os direitos
+  # de quem ligou, na versão que essa pessoa viu (Definicao#assumir_e_religar!). O Guia cria e ajusta desligada; quem
+  # liga é a pessoa, no botão Ligar. Desligar segue com o Guia.
+  SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent', 'DELETE contacts/:id' => 'contact_delete',
+                 'POST autonomia/automacoes/:id/ligar' => 'automacao_ligar' }
                .merge(['POST crm/cards/permanent_delete', 'POST crm/pipelines/:id/permanent_delete',
                        'POST crm/contacts/:contact_id/permanent_delete'].index_with('crm_permanent_delete')).freeze
 
@@ -282,8 +286,9 @@ class Autonomia::Guide::Acoes
     I18n.t("autonomia.guide.#{chave}", **valores)
   end
 
+  # #2889: com o sinal PeloGuia, a automação que nasce deste pedido grava origem 'guia'.
   def requisitar(verbo, caminho, corpo)
-    ::Autonomia::Guide::ChamadaInterna.new(user: @user).chamar(verbo, caminho, corpo: corpo)
+    ::Autonomia::Guide::PeloGuia.durante { ::Autonomia::Guide::ChamadaInterna.new(user: @user).chamar(verbo, caminho, corpo: corpo) }
   end
 
   def sucesso?(resposta)
