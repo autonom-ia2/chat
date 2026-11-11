@@ -75,7 +75,7 @@ const erroDoArquivo = computed(() =>
         v-if="mostrarExemplo"
         type="button"
         data-relacionamentos="usar-exemplo"
-        class="self-start text-sm underline min-h-11 rounded-lg text-n-slate-11 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        class="self-start p-0 text-sm bg-transparent border-0 underline min-h-11 rounded-lg text-n-slate-11 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
         @click="emit('exemplo')"
       >
         {{ t('RELACIONAMENTOS_TRAZER.ENVIAR.USAR_EXEMPLO') }}

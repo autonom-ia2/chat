@@ -66,7 +66,7 @@ const rotuloDosFiltros = computed(() =>
           :trigger-id="idDaOrdem"
           :aria-label="t('RELACIONAMENTOS.LISTA.ORDENAR.ROTULO')"
           compact
-          class="flex-1 min-w-0 md:flex-none"
+          class="flex-1 min-w-0 md:flex-none [&>button]:h-11 [&>button]:min-h-11"
           @update:model-value="emit('update:ordem', $event)"
         />
       </div>

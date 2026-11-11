@@ -22,7 +22,7 @@
     },
     "PERGUNTAS": {
       "CLIENTES": {
-        "TITULO": "Essas pessoas já são suas clientes?",
+        "TITULO": "Essas pessoas já são clientes?",
         "SIM_TODAS": "Sim, todas",
         "AINDA_NAO": "Ainda não",
         "ALGUMAS": "Algumas",
@@ -65,6 +65,7 @@
       "DEIXAR_DE_FORA": "Deixar de fora",
       "NA_PLANILHA": "Na planilha: {valor}",
       "FICAR_COM": "Ficar com a linha {linha}",
+      "FICAR_COM_ESTA": "Ficar com esta",
       "VOLTAR_ATRAS": "Voltar atrás",
       "VOLTAR_ATRAS_LINHA": "Voltar atrás na linha {linha}",
       "ANUNCIO": {

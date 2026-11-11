@@ -231,7 +231,7 @@ onMounted(lista.iniciar);
               :aria-labelledby="idDaAba(aba)"
               class="flex flex-col min-w-0 gap-5"
             >
-              <div class="flex flex-col gap-3">
+              <div class="flex flex-col">
                 <PilulasDeGrupo
                   :grupos="grupos"
                   :model-value="lista.grupo.value"
@@ -239,7 +239,8 @@ onMounted(lista.iniciar);
                 />
                 <p
                   aria-live="polite"
-                  class="m-0 text-sm min-h-5 text-n-slate-11"
+                  class="m-0 text-sm text-n-slate-11"
+                  :class="{ 'mt-3': explicacao }"
                   data-relacionamentos="explicacao-do-grupo"
                 >
                   {{ explicacao }}

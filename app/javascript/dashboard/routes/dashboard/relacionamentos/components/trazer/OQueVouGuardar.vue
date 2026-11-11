@@ -21,7 +21,7 @@ const aberto = ref(false);
     <h2 class="m-0 text-2xl font-semibold tracking-tight text-n-slate-12">
       <button
         type="button"
-        class="flex items-center gap-2 text-2xl font-semibold tracking-tight text-start min-h-11 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        class="flex items-center gap-2 p-0 text-2xl font-semibold tracking-tight bg-transparent border-0 text-start min-h-11 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
         :aria-expanded="aberto ? 'true' : 'false'"
         :aria-controls="`${id}-colunas`"
         @click="aberto = !aberto"

@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import SeloDeEstado from '../comum/SeloDeEstado.vue';
+import { partesDoEmail } from '../../trazer/emailEmPartes';
 import CartaoDaSecao from './CartaoDaSecao.vue';
 
 // #2894 — as pessoas da empresa: cada linha leva à ficha da pessoa. Vazio é uma
@@ -12,6 +13,10 @@ defineProps({
 const emit = defineEmits(['abrir', 'conversar']);
 
 const { t } = useI18n();
+
+// Só o e-mail quebra de linha, e só no "@"; telefone vem inteiro.
+const contato = pessoa =>
+  pessoa.email ? partesDoEmail(pessoa.email) : [pessoa.phone_number];
 </script>
 
 <template>
@@ -39,29 +44,42 @@ const { t } = useI18n();
           @click="emit('abrir', pessoa.id)"
         >
           <Avatar
-            class="md:row-span-2"
+            class="row-span-3 self-start md:row-span-2 md:self-center"
             :name="pessoa.name"
             :src="pessoa.thumbnail"
             :size="40"
             rounded-full
           />
           <span
-            class="min-w-0 text-base font-medium break-words line-clamp-2 md:truncate text-n-slate-12"
+            class="col-start-2 min-w-0 text-base font-medium break-words line-clamp-2 md:truncate text-n-slate-12"
           >
             {{ pessoa.name }}
           </span>
-          <SeloDeEstado
-            v-if="pessoa.contact_type === 'customer'"
-            tom="cliente"
-            class="col-start-2 justify-self-start md:col-start-3 md:row-start-1 md:row-span-2 md:justify-self-end"
+          <span
+            v-if="pessoa.contact_type === 'customer' || pessoa.opted_out_at"
+            data-relacionamentos="selos-da-pessoa"
+            class="flex flex-wrap col-start-2 gap-1 justify-self-start md:col-start-3 md:row-start-1 md:row-span-2 md:justify-self-end"
           >
-            {{ t('RELACIONAMENTOS.COMUM.SELO_CLIENTE') }}
-          </SeloDeEstado>
+            <SeloDeEstado
+              v-if="pessoa.contact_type === 'customer'"
+              tom="cliente"
+            >
+              {{ t('RELACIONAMENTOS.COMUM.SELO_CLIENTE') }}
+            </SeloDeEstado>
+            <SeloDeEstado v-if="pessoa.opted_out_at" tom="alerta">
+              {{ t('RELACIONAMENTOS.COMUM.SELO_NAO_QUER_MENSAGENS') }}
+            </SeloDeEstado>
+          </span>
           <span
             data-relacionamentos="email-da-pessoa"
-            class="min-w-0 col-span-2 col-start-1 text-sm break-words text-n-slate-11 md:col-span-1 md:col-start-2 md:truncate"
+            class="col-start-2 min-w-0 text-sm break-words text-n-slate-11 md:truncate"
           >
-            {{ pessoa.email || pessoa.phone_number }}
+            <template
+              v-for="(parte, posicao) in contato(pessoa)"
+              :key="posicao"
+            >
+              <wbr v-if="posicao" />{{ parte }}
+            </template>
           </span>
         </button>
         <button

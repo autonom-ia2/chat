@@ -213,10 +213,10 @@ describe('PerguntaDaVez', () => {
       props: { pergunta, respostas: {}, colunas, ...extra },
     });
 
-  it('"Essas pessoas já são suas clientes?" tem três cartões', () => {
+  it('"Essas pessoas já são clientes?" tem três cartões', () => {
     const w = montar({ id: 'clientes' });
     expect(marca(w, 'pergunta').attributes('data-pergunta')).toBe('clientes');
-    expect(w.get('h1').text()).toBe('Essas pessoas já são suas clientes?');
+    expect(w.get('h1').text()).toBe('Essas pessoas já são clientes?');
     const cartoes = w.findAll('[data-relacionamentos="resposta"]');
     expect(cartoes.map(c => c.attributes('data-resposta'))).toEqual([
       'sim_todas',

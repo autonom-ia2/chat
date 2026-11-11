@@ -174,7 +174,7 @@ describe('Enviar', () => {
     await entrada.trigger('change');
     expect(w.text()).toContain('Lendo sua planilha…');
     await aparece(w, 'pergunta');
-    expect(w.get('h1').text()).toBe('Essas pessoas já são suas clientes?');
+    expect(w.get('h1').text()).toBe('Essas pessoas já são clientes?');
     w.unmount();
   });
 });

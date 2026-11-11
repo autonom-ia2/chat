@@ -127,47 +127,59 @@ describe('FichaDaPessoaPage', () => {
     expect(marca(w, 'carregando').exists()).toBe(false);
   });
 
-  it('a ordem do DOM é a do celular, sem order-* nem contents', async () => {
+  const classesDe = (w, nome) => marca(w, nome).classes();
+
+  it('no celular a ordem da tela é a do documento: nenhum cartão é reordenado por classe', async () => {
     const w = await abrirPessoa(ID_CLIENTE_COMPLETO);
     const nomes = [
       'conversas',
       'cards',
-      'informacoes',
       'notas',
       'arquivos',
+      'informacoes',
       'de-onde-veio',
     ];
-    const noDom = [...w.element.querySelectorAll('[data-relacionamentos]')].map(
-      el => el.getAttribute('data-relacionamentos')
+    const naTela = w
+      .findAll('[data-relacionamentos]')
+      .map(no => no.attributes('data-relacionamentos'))
+      .filter(nome => nomes.includes(nome));
+    expect(naTela).toEqual(nomes);
+    nomes.forEach(nome =>
+      expect(
+        classesDe(w, nome).some(
+          c => c.startsWith('order-') || c.includes(':order-')
+        )
+      ).toBe(false)
     );
-    const posicoes = nomes.map(nome => noDom.indexOf(nome));
-    expect(posicoes.every(p => p >= 0)).toBe(true);
-    expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b));
+  });
+
+  it('no desktop são duas colunas independentes, cada cartão do tamanho do conteúdo', async () => {
+    const w = await abrirPessoa(ID_CLIENTE_COMPLETO);
+    const principal = marca(w, 'coluna-principal');
+    const lado = marca(w, 'coluna-lado');
+    ['conversas', 'cards', 'notas', 'arquivos'].forEach(nome =>
+      expect(principal.find(`[data-relacionamentos="${nome}"]`).exists()).toBe(
+        true
+      )
+    );
+    ['informacoes', 'de-onde-veio'].forEach(nome =>
+      expect(lado.find(`[data-relacionamentos="${nome}"]`).exists()).toBe(true)
+    );
+    [principal, lado].forEach(coluna =>
+      expect(coluna.classes()).toEqual(
+        expect.arrayContaining(['flex', 'flex-col', 'gap-6'])
+      )
+    );
+    expect(principal.classes()).toContain('lg:col-span-2');
+    // Sem linha compartilhada: nenhuma classe de linha, folga ou span de linha.
     const classes = [...w.element.querySelectorAll('[class]')].flatMap(el => [
       ...el.classList,
     ]);
-    expect(
-      classes.filter(c => c.includes('order-') && !c.includes('border'))
-    ).toEqual([]);
-    expect(w.find('.contents').exists()).toBe(false);
-  });
-
-  it('no desktop as seções do lado ocupam a coluna 3 e a principal as colunas 1 e 2', async () => {
-    const w = await abrirPessoa(ID_CLIENTE_COMPLETO);
-    ['conversas', 'cards', 'notas', 'arquivos'].forEach(nome =>
-      expect(marca(w, nome).classes()).toContain('lg:col-span-2')
+    ['lg:row-span-3', 'lg:mb-6', 'lg:gap-y-0'].forEach(c =>
+      expect(classes).not.toContain(c)
     );
-    ['informacoes', 'de-onde-veio'].forEach(nome =>
-      expect(marca(w, nome).classes()).toContain('lg:col-start-3')
-    );
-    // Informações atravessa a linha-folga (1fr): a altura dela nunca estica as
-    // seções vazias da coluna principal.
-    expect(marca(w, 'informacoes').classes()).toContain('lg:row-span-3');
-    expect(
-      w.get('[data-relacionamentos="ficha-pessoa"] > div:last-child').classes()
-    ).toEqual(
-      expect.arrayContaining(['lg:grid-rows-[auto_auto_1fr_auto_auto]'])
-    );
+    expect(classes.filter(c => c.includes('grid-rows'))).toEqual([]);
+    expect(classes.filter(c => c.includes('row-start'))).toEqual([]);
   });
 
   it('sair da ficha (parâmetro some) não dispara carga nem mostra "não achei"', async () => {

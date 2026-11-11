@@ -22,7 +22,7 @@
     },
     "PERGUNTAS": {
       "CLIENTES": {
-        "TITULO": "Are these people already your customers?",
+        "TITULO": "Are these people already customers?",
         "SIM_TODAS": "Yes, all of them",
         "AINDA_NAO": "Not yet",
         "ALGUMAS": "Some of them",
@@ -65,6 +65,7 @@
       "DEIXAR_DE_FORA": "Leave out",
       "NA_PLANILHA": "In the spreadsheet: {valor}",
       "FICAR_COM": "Keep line {linha}",
+      "FICAR_COM_ESTA": "Keep this one",
       "VOLTAR_ATRAS": "Go back",
       "VOLTAR_ATRAS_LINHA": "Go back on line {linha}",
       "ANUNCIO": {

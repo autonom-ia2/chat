@@ -1,9 +1,9 @@
 import { quemRecebe } from './quemFicaDeFora';
 
-// #2894 — "Vânia, Nádia e Bruno vão receber." Até 3 nomes; acima disso, dois
+// #2894 — "Vânia, Nádia e Bruno vão receber." Até 5 nomes; de 6 em diante, dois
 // nomes e o resto em número ("Vânia, Nádia e mais 40"). A lista usa o jeito de
 // juntar do idioma da tela (`Intl.ListFormat`).
-const NOMES_A_MOSTRAR = 3;
+const NOMES_A_MOSTRAR = 5;
 const NOMES_DEPOIS_DE_CORTAR = 2;
 
 const primeiroNome = nome =>

@@ -5,9 +5,13 @@ import { nextTick, watch } from 'vue';
 // da fila. `nearest` nos dois eixos: só mexe no que for preciso e não leva a
 // rolagem vertical da página junto. Acha a pílula pelo `data-grupo` que a peça
 // comum já põe.
+const DESKTOP = '(min-width: 768px)';
+
 export const useRolarPilula = (raiz, grupo) => {
   watch(grupo, async id => {
     await nextTick();
+    // De `md` em diante a fileira quebra em linhas: nada para rolar de lado.
+    if (window.matchMedia?.(DESKTOP)?.matches) return;
     const pilula = [
       ...(raiz.value?.querySelectorAll('[data-grupo]') ?? []),
     ].find(el => el.dataset.grupo === id);

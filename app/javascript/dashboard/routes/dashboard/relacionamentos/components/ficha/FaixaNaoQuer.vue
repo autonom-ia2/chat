@@ -38,6 +38,12 @@ const frase = computed(() => {
     origem: t(`RELACIONAMENTOS_FICHA.FAIXA.ORIGEM.${chave}`),
   });
 });
+const primeiroNome = computed(
+  () =>
+    String(props.pessoa.name ?? '')
+      .trim()
+      .split(' ')[0]
+);
 const liberavel = computed(() => podeLiberar(props.pessoa.opt_out_source));
 </script>
 
@@ -54,7 +60,7 @@ const liberavel = computed(() => podeLiberar(props.pessoa.opt_out_source));
       <div class="flex flex-col min-w-0 gap-1">
         <p class="m-0 text-base font-medium">{{ frase }}</p>
         <p data-relacionamentos="faixa-apoio" class="m-0 text-sm">
-          {{ t('RELACIONAMENTOS_FICHA.FAIXA.APOIO') }}
+          {{ t('RELACIONAMENTOS_FICHA.FAIXA.APOIO', { nome: primeiroNome }) }}
         </p>
       </div>
     </div>
@@ -72,7 +78,9 @@ const liberavel = computed(() => podeLiberar(props.pessoa.opt_out_source));
       :titulo="
         t('RELACIONAMENTOS_FICHA.FAIXA.CONFIRMA_TITULO', { nome: pessoa.name })
       "
-      :texto="t('RELACIONAMENTOS_FICHA.FAIXA.CONFIRMA_TEXTO')"
+      :texto="
+        t('RELACIONAMENTOS_FICHA.FAIXA.CONFIRMA_TEXTO', { nome: primeiroNome })
+      "
       :confirmar="t('RELACIONAMENTOS_FICHA.FAIXA.CONFIRMA_BOTAO')"
       :cancelar="t('RELACIONAMENTOS.COMUM.CANCELAR')"
       marca-confirmar="liberar-confirmar"

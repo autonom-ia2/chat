@@ -431,6 +431,8 @@ describe('B7. problemas com o nome da pessoa', () => {
       'Ficar com a linha 143',
       '+55 11 94410-0143',
       'sem e-mail',
+      'Ficar com esta',
+      '',
     ]);
     expect(a.classes()).toEqual(
       expect.arrayContaining([

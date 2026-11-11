@@ -2,7 +2,7 @@
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 
-// #2894 — erro de carregamento: uma frase e um botão. Quem usa recarrega ao
+// #2894 — erro de carregamento: uma frase e um botão (o principal: sólido, azul). Quem usa recarrega ao
 // ouvir `tentar`. Sem `mensagem`, a frase é a genérica do catálogo.
 defineProps({
   mensagem: { type: String, default: '' },
@@ -28,8 +28,6 @@ const { t } = useI18n();
       {{ mensagem || t('RELACIONAMENTOS.COMUM.ERRO_GENERICO') }}
     </p>
     <Button
-      slate
-      faded
       class="min-h-11"
       :label="t('RELACIONAMENTOS.COMUM.TENTAR_DE_NOVO')"
       @click="emit('tentar')"

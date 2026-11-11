@@ -154,6 +154,9 @@ const doTexto = computed(
             :key="linha"
             type="button"
             :data-opcao="linha"
+            :aria-label="
+              t('RELACIONAMENTOS_TRAZER.PRECISAM.FICAR_COM', { linha })
+            "
             class="flex flex-col items-start w-full gap-1 p-4 border min-h-11 text-start rounded-xl border-n-weak bg-n-alpha-1 hover:enabled:bg-n-alpha-2 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand"
             :disabled="ocupado"
             @click="emit('guardar', problema.linha, linha)"
@@ -174,6 +177,16 @@ const doTexto = computed(
                 </template>
               </span>
             </template>
+            <span
+              data-relacionamentos="ficar-com-esta"
+              class="flex items-center gap-1 mt-1 text-sm font-medium text-n-blue-11"
+            >
+              {{ t('RELACIONAMENTOS_TRAZER.PRECISAM.FICAR_COM_ESTA') }}
+              <span
+                class="i-lucide-arrow-right size-4 rtl:rotate-180"
+                aria-hidden="true"
+              />
+            </span>
           </button>
         </div>
         <div class="flex flex-wrap items-center gap-3">

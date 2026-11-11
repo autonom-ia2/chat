@@ -72,9 +72,9 @@
       "TEXTO_SIMPLES": "Não quer receber mensagens desde {data}.",
       "LIBERAR": "Liberar",
       "CONFIRMA_TITULO": "{nome} pediu para voltar a receber?",
-      "CONFIRMA_TEXTO": "Só libere se a própria pessoa pediu. Ela volta a entrar em campanhas e mensagens automáticas.",
+      "CONFIRMA_TEXTO": "Só libere se a própria pessoa pediu. {nome} volta a entrar em campanhas e mensagens automáticas.",
       "CONFIRMA_BOTAO": "Sim, liberar",
-      "APOIO": "Não entra em campanha nem recebe mensagem automática. Você ainda pode conversar com ela.",
+      "APOIO": "Não entra em campanha nem recebe mensagem automática. Você ainda pode conversar com {nome}.",
       "LIBERADO": "Pronto. {nome} pode receber mensagens de novo.",
       "ERRO": "Não consegui liberar. Tente de novo.",
       "ORIGEM": {
@@ -183,8 +183,8 @@
       "ERRO": {
         "NOME": "Escreva o nome.",
         "EMAIL": "Confira o e-mail. Parece que falta algo.",
-        "CPF": "Confira o CPF. Ele tem 11 números.",
-        "CNPJ": "Confira o CNPJ. Ele tem 14 números."
+        "CPF": "Confira o CPF. São 11 números.",
+        "CNPJ": "Confira o CNPJ. São 14 números."
       },
       "REDE": {
         "linkedin": "LinkedIn",

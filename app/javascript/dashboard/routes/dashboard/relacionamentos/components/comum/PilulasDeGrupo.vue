@@ -5,7 +5,8 @@ import { useI18n } from 'vue-i18n';
 
 // #2894 — os grupos em pílulas, cada um com o seu número. A escolhida fica
 // preenchida (aria-pressed, como a vitrine de ferramentas). No celular a fila
-// rola para o lado; cada pílula tem 44 px de altura.
+// rola para o lado (com degradê quando continua); de `md` em diante ela quebra
+// em linhas, sem rolagem; cada pílula tem 44 px de altura.
 //   grupos: [{ id, nome, total }]    v-model: o id do grupo escolhido
 const props = defineProps({
   grupos: { type: Array, required: true },
@@ -45,7 +46,7 @@ watch(
   >
     <ul
       ref="fila"
-      class="flex gap-2 p-0 pb-1 m-0 overflow-x-auto list-none snap-x scroll-px-12"
+      class="flex gap-2 p-0 pb-1 m-0 overflow-x-auto list-none snap-x scroll-px-12 md:flex-wrap md:overflow-visible"
       @scroll.passive="medir"
     >
       <li v-for="grupo in grupos" :key="grupo.id" class="snap-start">
@@ -75,13 +76,13 @@ watch(
       v-if="maisAEsquerda"
       data-degrade="esquerda"
       aria-hidden="true"
-      class="absolute inset-y-0 start-0 w-10 pointer-events-none bg-gradient-to-r from-n-surface-1 to-transparent rtl:bg-gradient-to-l"
+      class="absolute inset-y-0 start-0 w-10 pointer-events-none md:hidden bg-gradient-to-r from-n-surface-1 to-transparent rtl:bg-gradient-to-l"
     />
     <span
       v-if="maisADireita"
       data-degrade="direita"
       aria-hidden="true"
-      class="absolute inset-y-0 end-0 w-10 pointer-events-none bg-gradient-to-l from-n-surface-1 to-transparent rtl:bg-gradient-to-r"
+      class="absolute inset-y-0 end-0 w-10 pointer-events-none md:hidden bg-gradient-to-l from-n-surface-1 to-transparent rtl:bg-gradient-to-r"
     />
   </nav>
 </template>

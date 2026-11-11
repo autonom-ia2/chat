@@ -56,6 +56,7 @@ const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
       </span>
       <Checkbox
         data-relacionamentos="marcar"
+        class="[&_input:checked:hover]:bg-n-brand"
         :model-value="marcada"
         @change="emit('alternar', pessoa)"
       />

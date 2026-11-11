@@ -276,14 +276,17 @@ describe('ListaPage: cheia', () => {
     expect(w.text()).toContain('Mostrando 25 de 42');
   });
 
-  it('"Todos" e "Todas" não explicam nada; a linha reserva a altura para a tela não pular', async () => {
+  it('"Todos" e "Todas" não explicam nada; a linha só ocupa espaço quando tem texto', async () => {
     const w = await montar();
     const linha = w.get(marca('explicacao-do-grupo'));
     expect(linha.text()).toBe('');
-    expect(linha.classes()).toContain('min-h-5');
+    // Vazia, a linha não reserva altura nem margem (nada de faixa em branco).
+    expect(linha.classes()).not.toContain('min-h-5');
+    expect(linha.classes()).not.toContain('mt-3');
     await pilula(w, 'clientes').trigger('click');
     await assentar();
     expect(linha.text()).toBe('Quem já comprou de você.');
+    expect(linha.classes()).toContain('mt-3');
     await w.get(marca('aba-empresas')).trigger('click');
     await assentar();
     expect(w.get(marca('explicacao-do-grupo')).text()).toBe('');
@@ -349,6 +352,24 @@ describe('ListaPage: cheia', () => {
       grupo: 'sumiu_1_a_3_meses',
       opcoes: { inline: 'nearest', block: 'nearest' },
     });
+  });
+
+  it('de md em diante a fileira quebra em linhas: não há o que rolar', async () => {
+    const rolou = vi.fn();
+    const original = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = rolou;
+    window.matchMedia = vi.fn().mockImplementation(consulta => ({
+      matches: true,
+      media: consulta,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    const w = await montar();
+    await w.get(marca('heroi-acao')).trigger('click');
+    await assentar();
+    HTMLElement.prototype.scrollIntoView = original;
+    delete window.matchMedia;
+    expect(rolou).not.toHaveBeenCalled();
   });
 
   it('"Trazer minha lista" discreto leva à tela de trazer', async () => {

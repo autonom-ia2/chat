@@ -284,6 +284,63 @@ describe('dadosParaSalvar: campos esvaziados', () => {
   });
 });
 
+describe('texto da ficha não supõe gênero', () => {
+  const PALAVRAS_COM_GENERO = [
+    'ela',
+    'ele',
+    'dela',
+    'dele',
+    'obrigada',
+    'obrigado',
+  ];
+  const ehLetra = char => char.toLowerCase() !== char.toUpperCase();
+  const palavrasDe = texto =>
+    texto
+      .split(' ')
+      .map(palavra => [...palavra].filter(ehLetra).join('').toLowerCase());
+  const folhas = objeto =>
+    Object.values(objeto).flatMap(valor =>
+      typeof valor === 'object' ? folhas(valor) : [valor]
+    );
+  const ler = caminho => readFileSync(caminho, 'utf8');
+  const raiz = 'app/javascript/dashboard';
+
+  it.each(['en', 'pt_BR'])(
+    'o catálogo %s não tem pronome nem adjetivo de gênero',
+    lingua => {
+      const catalogo = JSON.parse(
+        ler(`${raiz}/i18n/locale/${lingua}/relacionamentosFicha.json`)
+      );
+      const proibidas =
+        lingua === 'pt_BR'
+          ? PALAVRAS_COM_GENERO
+          : ['she', 'he', 'her', 'his', 'him'];
+      folhas(catalogo).forEach(frase =>
+        expect(palavrasDe(frase).filter(p => proibidas.includes(p))).toEqual([])
+      );
+    }
+  );
+
+  it('a frase de apoio e o texto do Liberar usam {nome}', () => {
+    ['en', 'pt_BR'].forEach(lingua => {
+      const { FAIXA } = JSON.parse(
+        ler(`${raiz}/i18n/locale/${lingua}/relacionamentosFicha.json`)
+      ).RELACIONAMENTOS_FICHA;
+      expect(FAIXA.APOIO).toContain('{nome}');
+      expect(FAIXA.CONFIRMA_TEXTO).toContain('{nome}');
+    });
+  });
+
+  it('as falas de exemplo da demo não marcam gênero', () => {
+    const fonte = ler(`${raiz}/routes/dashboard/relacionamentos/demo/ficha.js`);
+    expect(
+      palavrasDe(fonte.split('\n').join(' ')).filter(p =>
+        PALAVRAS_COM_GENERO.includes(p)
+      )
+    ).toEqual([]);
+  });
+});
+
 describe('texto da faixa de quem não quer mensagens', () => {
   const catalogo = lingua =>
     JSON.parse(

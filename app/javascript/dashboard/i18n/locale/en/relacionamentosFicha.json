@@ -72,9 +72,9 @@
       "TEXTO_SIMPLES": "Does not want messages since {data}.",
       "LIBERAR": "Allow again",
       "CONFIRMA_TITULO": "Did {nome} ask to receive messages again?",
-      "CONFIRMA_TEXTO": "Only allow it if the person asked. They go back into campaigns and automatic messages.",
+      "CONFIRMA_TEXTO": "Only allow it if the person asked. {nome} goes back into campaigns and automatic messages.",
       "CONFIRMA_BOTAO": "Yes, allow",
-      "APOIO": "Not included in campaigns and gets no automatic messages. You can still chat with them.",
+      "APOIO": "Not included in campaigns and gets no automatic messages. You can still chat with {nome}.",
       "LIBERADO": "Done. {nome} can receive messages again.",
       "ERRO": "I could not allow it. Try again.",
       "ORIGEM": {

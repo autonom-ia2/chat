@@ -90,6 +90,18 @@ describe('EsqueletoDeLista', () => {
   });
 });
 
+describe('ErroComTentarDeNovo: botão principal', () => {
+  it('"Tentar de novo" é o botão principal (sólido, azul), com 44 px', () => {
+    const w = mount(ErroComTentarDeNovo);
+    const botao = w.get('button');
+    expect(botao.classes()).toEqual(
+      expect.arrayContaining(['bg-n-blue-11', 'text-white', 'min-h-11'])
+    );
+    expect(botao.classes().join(' ')).not.toContain('bg-n-brand/10');
+    expect(botao.classes().join(' ')).not.toContain('bg-n-alpha');
+  });
+});
+
 describe('ErroComTentarDeNovo', () => {
   it('mostra a frase genérica e emite "tentar" no botão', async () => {
     const w = mount(ErroComTentarDeNovo);
@@ -164,6 +176,17 @@ describe('PilulasDeGrupo: sinal de que a fila continua', () => {
     expect(degrades(w)).toEqual({ direita: true, esquerda: true });
     await medir(fila, { largura: 300, conteudo: 900, rolou: 600 });
     expect(degrades(w)).toEqual({ direita: false, esquerda: true });
+  });
+
+  it('a partir de md a fileira quebra em linhas, sem rolagem e sem degradê', async () => {
+    const w = mount(PilulasDeGrupo, { props: { grupos, modelValue: 'a' } });
+    expect(w.get('ul').classes()).toEqual(
+      expect.arrayContaining(['md:flex-wrap', 'md:overflow-visible'])
+    );
+    await medir(w.get('ul'), { largura: 300, conteudo: 900, rolou: 300 });
+    ['direita', 'esquerda'].forEach(lado =>
+      expect(w.get(`[data-degrade="${lado}"]`).classes()).toContain('md:hidden')
+    );
   });
 
   it('a pílula focada rola para longe da borda com degradê', () => {

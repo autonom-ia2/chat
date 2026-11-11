@@ -329,6 +329,15 @@ describe('BarraDeControles', () => {
     );
   });
 
+  it('o campo de ordenar tem 44 px de altura, como os outros controles', () => {
+    const w = mount(BarraDeControles, {
+      props: { ordem: 'ultima_conversa', placeholder: 'Buscar' },
+    });
+    const campo = w.getComponent(ChoiceSelect);
+    expect(campo.classes()).toContain('[&>button]:min-h-11');
+    expect(campo.classes()).toContain('[&>button]:h-11');
+  });
+
   it('a busca ocupa a linha inteira no celular; ordem e filtros ficam juntos na de baixo', () => {
     const w = mount(BarraDeControles, {
       props: { ordem: 'ultima_conversa', placeholder: 'Buscar' },
@@ -491,6 +500,21 @@ describe('LinhaDePessoa', () => {
     expect(w.get('[data-relacionamentos="marcar"] input').element.checked).toBe(
       true
     );
+  });
+
+  it('a caixa marcada não clareia ao passar o mouse: mesma cor de marcada em toda linha', () => {
+    const w = mount(LinhaDePessoa, {
+      props: {
+        pessoa: pessoa({ opted_out_at: diasAtras(2) }),
+        marcada: true,
+        agora: AGORA,
+      },
+    });
+    const caixa = w.get('[data-relacionamentos="marcar"]');
+    expect(caixa.classes()).toContain('[&_input:checked:hover]:bg-n-brand');
+    expect(
+      w.get('[data-relacionamentos="marcar"] input').element.disabled
+    ).toBe(false);
   });
 
   it('a caixa de marcar tem área de toque de 44 px: o label em volta é size-11', () => {
@@ -932,6 +956,24 @@ describe('DialogoMandarMensagem', () => {
     );
     expect(muitos.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
       'Vânia, Nádia e mais 41 vão receber.'
+    );
+  });
+
+  it('mostra até 5 nomes inteiros; "e mais N" só de 6 em diante', async () => {
+    const gente = ['Vânia', 'Nádia', 'Bruno', 'Ana', 'Hugo', 'Elisa'].map(
+      (nome, i) => pessoa({ id: i + 1, name: `${nome} Souza` })
+    );
+    const quatro = await abrir(gente.slice(0, 4));
+    expect(quatro.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
+      'Vânia, Nádia, Bruno e Ana vão receber.'
+    );
+    const cinco = await abrir(gente.slice(0, 5));
+    expect(cinco.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
+      'Vânia, Nádia, Bruno, Ana e Hugo vão receber.'
+    );
+    const seis = await abrir(gente);
+    expect(seis.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
+      'Vânia, Nádia e mais 4 vão receber.'
     );
   });
 

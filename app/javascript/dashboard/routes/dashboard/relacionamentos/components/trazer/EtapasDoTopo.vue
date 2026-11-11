@@ -34,14 +34,14 @@ const itens = computed(() => {
   <ol
     data-relacionamentos="etapas"
     :aria-label="t('RELACIONAMENTOS_TRAZER.ETAPAS.LISTA')"
-    class="flex items-center gap-3 p-0 m-0 text-sm list-none"
+    class="flex items-center min-w-0 max-w-full gap-2 p-0 m-0 text-sm list-none md:gap-3"
   >
     <li
       v-for="(item, posicao) in itens"
       :key="item.id"
       :data-etapa="item.id"
       :aria-current="item.atual ? 'step' : undefined"
-      class="flex items-center gap-3"
+      class="flex items-center gap-2 md:gap-3"
       :class="item.atual ? 'text-n-slate-12 font-semibold' : 'text-n-slate-11'"
     >
       <span
@@ -70,7 +70,7 @@ const itens = computed(() => {
       </span>
       <span
         v-if="posicao < itens.length - 1"
-        class="w-6 h-px bg-n-weak md:w-12"
+        class="w-3 h-px bg-n-weak sm:w-6 md:w-12"
         aria-hidden="true"
       />
     </li>

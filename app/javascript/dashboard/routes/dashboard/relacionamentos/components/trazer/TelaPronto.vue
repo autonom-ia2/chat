@@ -63,7 +63,7 @@ const { t } = useI18n();
           aria-level="1"
           data-titulo-da-tela
           tabindex="-1"
-          class="outline-none tabular-nums"
+          class="outline-none tabular-nums md:whitespace-nowrap"
         >
           {{
             t('RELACIONAMENTOS_TRAZER.PRONTO.CHEGARAM', { count: total }, total)
@@ -79,8 +79,6 @@ const { t } = useI18n();
         >
           {{ t('RELACIONAMENTOS_TRAZER.PRONTO.VER') }}
         </button>
-      </template>
-      <template #discreta>
         <button
           type="button"
           data-relacionamentos="trazer-outra"

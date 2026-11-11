@@ -28,7 +28,7 @@ const NOME_DE_QUEM_ESCREVE = 'Você';
 const CANAIS = ['whatsapp', 'whatsapp', 'email', 'instagram', 'site'];
 const TRECHOS = [
   'Oi, tudo bem? Queria saber os horários de atendimento.',
-  'Obrigado pelo retorno! Vou olhar e te aviso.',
+  'Valeu pelo retorno! Vou olhar e te aviso.',
   'Pode me mandar o endereço de novo, por favor?',
   'Combinado, então fico no aguardo.',
   'Consegue me ligar amanhã de manhã?',
@@ -36,7 +36,7 @@ const TRECHOS = [
   'Posso trocar a data que a gente combinou?',
   'Já resolvi aqui, pode fechar o assunto.',
   'Bom dia! Chegou o que eu pedi?',
-  'Perfeito, muito obrigada pela ajuda.',
+  'Perfeito, ajudou muito.',
 ];
 const SITUACOES_DA_ULTIMA = ['aberta', 'pendente', 'resolvida'];
 const TITULOS_DE_CARD = [

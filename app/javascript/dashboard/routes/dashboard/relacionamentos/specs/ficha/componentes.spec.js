@@ -423,6 +423,26 @@ describe('FaixaNaoQuer', () => {
     ).toContain('FAIXA.APOIO');
   });
 
+  it('não supõe gênero: a frase de apoio e o diálogo usam o primeiro nome', () => {
+    const w = mount(FaixaNaoQuer, {
+      props: {
+        pessoa: pessoa({
+          name: 'Otávio Prado',
+          opted_out_at: Date.UTC(2026, 8, 12, 12) / 1000,
+          opt_out_source: 'manual',
+        }),
+      },
+      global: { stubs },
+    });
+    const apoio = w.get('[data-relacionamentos="faixa-apoio"]').text();
+    expect(apoio).toContain('"nome":"Otávio"');
+    expect(apoio).not.toContain('Prado');
+    const texto = w.findComponent(DialogoDaFicha).props('texto');
+    expect(texto).toContain('CONFIRMA_TEXTO');
+    expect(texto).toContain('"nome":"Otávio"');
+    expect(texto).not.toContain('Prado');
+  });
+
   it('Liberar tem contraste próprio e 44 px', () => {
     const botao = montar('manual').get('[data-relacionamentos="liberar"]');
     expect(botao.classes()).toEqual(
@@ -835,12 +855,17 @@ describe('ficha da empresa: celular', () => {
       props: { pessoas: [pessoa({ contact_type: 'customer' })] },
     });
     const email = w.get('[data-relacionamentos="email-da-pessoa"]');
-    expect(email.classes()).toContain('col-span-2');
+    // O e-mail começa na mesma coluna do nome, nunca debaixo do avatar.
+    expect(email.classes()).toContain('col-start-2');
+    expect(email.classes()).not.toContain('col-span-2');
+    expect(email.classes()).not.toContain('col-start-1');
     const linha = w.get('[data-relacionamentos="pessoa-da-empresa"]');
     // Celular: nome em até 2 linhas (sem reticências) e o selo desce para
     // baixo do nome; o botão de conversar fica na primeira linha.
     expect(linha.get('span.line-clamp-2').classes()).toContain('md:truncate');
-    expect(w.get('[data-selo="cliente"]').classes()).toContain('col-start-2');
+    expect(
+      w.get('[data-relacionamentos="selos-da-pessoa"]').classes()
+    ).toContain('col-start-2');
     expect(
       w.get('[data-relacionamentos="conversar-com-pessoa"]').classes()
     ).toContain('absolute');
@@ -849,6 +874,51 @@ describe('ficha da empresa: celular', () => {
       expect.arrayContaining(['break-words', 'md:truncate'])
     );
     expect(w.get('[data-selo="cliente"]').exists()).toBe(true);
+  });
+});
+
+describe('SecaoPessoasDaEmpresa: quem não quer mensagens', () => {
+  it('a linha de quem tem opted_out_at leva o selo "Não quer mensagens"', () => {
+    const w = mount(SecaoPessoasDaEmpresa, {
+      props: {
+        pessoas: [
+          pessoa({ id: 1, opted_out_at: Date.UTC(2026, 8, 12) / 1000 }),
+          pessoa({ id: 2, name: 'Bruno Lima', opted_out_at: null }),
+        ],
+      },
+    });
+    const linhas = w.findAll('li');
+    const selo = linhas[0].get('[data-selo="alerta"]');
+    expect(selo.text()).toContain('SELO_NAO_QUER_MENSAGENS');
+    expect(linhas[1].find('[data-selo="alerta"]').exists()).toBe(false);
+  });
+
+  it('o e-mail só quebra no @ (wbr), sem partir "com." de "br"', () => {
+    const w = mount(SecaoPessoasDaEmpresa, {
+      props: { pessoas: [pessoa({ email: 'ana@padaria.com.br' })] },
+    });
+    const email = w.get('[data-relacionamentos="email-da-pessoa"]');
+    expect(email.text()).toBe('ana@padaria.com.br');
+    expect(email.findAll('wbr')).toHaveLength(1);
+    expect(email.html()).toContain('ana<wbr>@padaria.com.br');
+  });
+
+  it('sem e-mail, mostra o telefone inteiro', () => {
+    const w = mount(SecaoPessoasDaEmpresa, {
+      props: {
+        pessoas: [pessoa({ email: '', phone_number: '+5511999990000' })],
+      },
+    });
+    const email = w.get('[data-relacionamentos="email-da-pessoa"]');
+    expect(email.text()).toBe('+5511999990000');
+    expect(email.find('wbr').exists()).toBe(false);
+  });
+
+  it('o botão de conversar tem alvo de 44 px e não encolhe', () => {
+    const w = mount(SecaoPessoasDaEmpresa, { props: { pessoas: [pessoa()] } });
+    expect(
+      w.get('[data-relacionamentos="conversar-com-pessoa"]').classes()
+    ).toEqual(expect.arrayContaining(['size-11', 'shrink-0']));
   });
 });
 
