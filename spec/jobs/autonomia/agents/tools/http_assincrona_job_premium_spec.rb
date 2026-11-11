@@ -50,6 +50,65 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob do
     expect(chamou_a_bigdatacorp?).to be(false)
   end
 
+  describe 'a linha já gravada pela execução (o worker morreu entre a telemetria e o resultado)' do
+    let(:registros) { Autonomia::FerramentasProntas::Premium::Registro }
+    let(:saldos) { Autonomia::FerramentasProntas::Premium::Saldo }
+
+    before do
+      cache_em_memoria
+      token_da_bigdatacorp
+      bigdatacorp_responde('/ondemand', 'ondemand_pgfn_company', 'OnlineCertificates', [{ 'BaseStatus' => 'NEGATIVA' }])
+    end
+
+    # A execução em segundo plano até a telemetria; depois, o SIGKILL: o resultado nunca chega à linha.
+    def executar_e_morrer(run)
+      Autonomia::FerramentasProntas.executor_para(certidoes, params: run.arguments, tool_run_id: run.id).call
+      run.marcar_chamada!(passada: 'job-que-morreu')
+    end
+
+    it 'o job em segundo plano grava a execução na telemetria' do
+      run = abrir_consulta
+
+      rodar_consultas
+
+      expect(registros.sole).to have_attributes(tool_run_id: run.id, resultado: 'encontrado', cobranca: 'gratis')
+    end
+
+    it 'a grátis vira sem cobrança e volta ao saldo, sem linha nova; o custo nosso fica' do
+      run = abrir_consulta
+      executar_e_morrer(run)
+      expect(saldos.sole.contadas).to eq(1)
+
+      described_class.incerta(run.reload)
+
+      expect(registros.sole).to have_attributes(tool_run_id: run.id, resultado: 'encontrado', cobranca: 'sem_cobranca', numero: nil,
+                                                preco: 0, custo: BigDecimal('0.10'), motivo: 'entrega_incerta')
+      expect(saldos.sole.contadas).to eq(0)
+    end
+
+    it 'a cobrada vira sem cobrança com preço zero; o saldo não muda e o custo nosso fica' do
+      saldo_premium!(account, 'certidoes_empresa', 20)
+      run = abrir_consulta
+      executar_e_morrer(run)
+
+      described_class.incerta(run.reload)
+
+      expect(registros.sole).to have_attributes(cobranca: 'sem_cobranca', preco: 0, custo: BigDecimal('0.10'), motivo: 'entrega_incerta')
+      expect(saldos.sole.contadas).to eq(21)
+    end
+
+    it 'a execução que grava depois da entrega incerta não duplica: a linha dela não entra e o saldo volta atrás' do
+      run = abrir_consulta
+      run.marcar_chamada!(passada: 'job-que-morreu')
+      described_class.incerta(run.reload)
+
+      Autonomia::FerramentasProntas.executor_para(certidoes, params: run.arguments, tool_run_id: run.id).call
+
+      expect(registros.sole).to have_attributes(motivo: 'entrega_incerta', cobranca: 'sem_cobranca')
+      expect(saldos.sum(:contadas)).to eq(0)
+    end
+  end
+
   it 'a falha do banco ao gravar a telemetria não segura o fechamento da linha' do
     run = abrir_consulta
     run.marcar_chamada!(passada: 'job-que-morreu')

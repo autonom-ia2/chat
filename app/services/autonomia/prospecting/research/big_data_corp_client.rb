@@ -16,7 +16,10 @@ require 'net/http'
 #
 # Opções da F7 do #2858 (as ferramentas Premium), todas desligadas no padrão (a Prospecção segue igual):
 #   - `token_timeout`: o prazo do pedido de token; nil usa o `timeout`;
-#   - `token_cache`: onde guardar o token entre instâncias (`read`/`write`); nil guarda só nesta instância.
+#   - `token_cache`: onde guardar o token entre instâncias (`read`/`write`); nil guarda só nesta instância;
+#   - `resend_after_unauthorized`: depois de um 401, um reenvio com token novo mesmo na última tentativa (a BigDataCorp
+#     não cobra o 401). Desligado, o 401 da última tentativa levanta, como antes.
+# Todo 401 apaga o token recusado (desta instância e do `token_cache`): a consulta seguinte gera outro.
 class Autonomia::Prospecting::Research::BigDataCorpClient
   BASE_URI = URI('https://plataforma.bigdatacorp.com.br').freeze
   COMPANIES_PATH = '/empresas'.freeze
@@ -35,7 +38,8 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
     max_provider_attempts: 3,
     max_token_attempts: 3,
     token_timeout: nil,
-    token_cache: nil
+    token_cache: nil,
+    resend_after_unauthorized: false
   }.freeze
 
   # Segredo que não aparece em inspect, to_s nem pretty print.
@@ -143,8 +147,8 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
   private
 
   def dispatch_with_retries(path, body)
-    state = { attempts: 0, refreshed: false, force_refresh: false }
-    while state[:attempts] < @options[:max_provider_attempts]
+    state = { attempts: 0, refreshed: false, force_refresh: false, extra: 0 }
+    while state[:attempts] < @options[:max_provider_attempts] + state[:extra]
       credential = provider_credential(state)
       state[:attempts] += 1
       outcome = classify(post_query(path, body, credential, state[:attempts]), state)
@@ -168,7 +172,7 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
   def classify(response, state)
     status = response.code.to_i
     attempts = state[:attempts]
-    return refresh_after_unauthorized(state) if status == 401 && !state[:refreshed]
+    return unauthorized(state) if status == 401
     return wait_and_retry(status, attempts) if retryable?(status) && attempts < @options[:max_provider_attempts]
     raise failure('BIGDATACORP_HTTP_ERROR', status, attempts) unless status.between?(200, 299)
 
@@ -178,14 +182,29 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
     Response.new(payload: payload, metadata: metadata(payload, attempts))
   end
 
-  def refresh_after_unauthorized(state)
-    raise failure('BIGDATACORP_HTTP_ERROR', 401, state[:attempts]) if state[:attempts] >= @options[:max_provider_attempts]
+  # O primeiro 401 gera token novo e tenta de novo; o segundo levanta. Os dois apagam o token recusado.
+  def unauthorized(state)
+    return refresh_after_unauthorized(state) unless state[:refreshed]
 
-    @token = nil
-    @options[:token_cache]&.write(nil)
+    forget_token
+    raise failure('BIGDATACORP_HTTP_ERROR', 401, state[:attempts])
+  end
+
+  def refresh_after_unauthorized(state)
+    forget_token
+    if state[:attempts] >= @options[:max_provider_attempts]
+      raise failure('BIGDATACORP_HTTP_ERROR', 401, state[:attempts]) unless @options[:resend_after_unauthorized]
+
+      state[:extra] = 1
+    end
     state[:refreshed] = true
     state[:force_refresh] = true
     nil
+  end
+
+  def forget_token
+    @token = nil
+    @options[:token_cache]&.write(nil)
   end
 
   def wait_and_retry(status, attempts)

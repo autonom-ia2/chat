@@ -25,10 +25,9 @@ module Autonomia::FerramentasProntas::Premium
     fonte.present? && fonte.premium?
   end
 
-  # O dia de hoje no fuso da conta. Sem fuso legível, o da plataforma.
+  # O dia de hoje no fuso da conta (o mesmo da `Execucao`, com a volta para o da plataforma).
   def hoje_da_conta(account)
-    fuso = ActiveSupport::TimeZone[Crm::Timezone::Resolver.new(account: account).name_or_default.to_s] || Time.zone
-    Time.current.in_time_zone(fuso).to_date
+    Time.current.in_time_zone(Autonomia::FerramentasProntas.fuso_da_conta(account)).to_date
   end
 
   # O 1º dia do mês corrente no fuso da conta: a chave do saldo das grátis.

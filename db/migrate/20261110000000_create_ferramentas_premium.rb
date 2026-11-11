@@ -2,6 +2,9 @@
 # - `autonomia_ferramentas_premium_consultas`: a telemetria de cada consulta, para gerar a cobrança na fatura (decisão
 #   do Rodrigo, 10/11: sem crédito pré-pago e sem cobrança automática). Uma linha por consulta: conta, card, dataset,
 #   custo, preço, grátis ou cobrada, resultado, dia e se veio do cache. Nunca o valor consultado (CNPJ, CPF, placa).
+#   `tool_run_id`: a execução em segundo plano que fez a consulta (nula no turno). Única: a execução que morre depois da
+#   telemetria não ganha uma segunda linha (`Premium::Cobranca.entrega_incerta!`). Sem chave estrangeira: a linha da
+#   execução pode ser apagada antes da telemetria.
 # - `autonomia_ferramentas_premium_saldos`: quantas consultas cada conta já usou em cada card NO MÊS, para as 20 grátis
 #   que renovam todo mês (decisão do Rodrigo, 11/11). Uma linha por conta, card e mês (o 1º dia do mês, no fuso da conta),
 #   somada por SQL atômico.
@@ -30,10 +33,16 @@ class CreateFerramentasPremium < ActiveRecord::Migration[7.2]
       t.decimal :preco, precision: 10, scale: 4, null: false, default: 0
       t.string :motivo
       t.string :id_na_fonte
+      t.bigint :tool_run_id
       t.timestamps
     end
+    indexar_consultas
+  end
+
+  def indexar_consultas
     add_index :autonomia_ferramentas_premium_consultas, %i[account_id fonte dia], name: 'idx_premium_consultas_conta_fonte_dia'
     add_index :autonomia_ferramentas_premium_consultas, :dia, name: 'idx_premium_consultas_dia'
+    add_index :autonomia_ferramentas_premium_consultas, :tool_run_id, unique: true, name: 'idx_premium_consultas_tool_run'
   end
 
   def criar_saldos

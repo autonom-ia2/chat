@@ -878,10 +878,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
     t.decimal "preco", precision: 10, scale: 4, default: "0.0", null: false
     t.string "motivo"
     t.string "id_na_fonte"
+    t.bigint "tool_run_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "fonte", "dia"], name: "idx_premium_consultas_conta_fonte_dia"
     t.index ["dia"], name: "idx_premium_consultas_dia"
+    t.index ["tool_run_id"], name: "idx_premium_consultas_tool_run", unique: true
   end
 
   create_table "autonomia_ferramentas_premium_saldos", force: :cascade do |t|

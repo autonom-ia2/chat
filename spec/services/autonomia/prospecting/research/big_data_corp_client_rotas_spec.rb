@@ -43,6 +43,46 @@ RSpec.describe Autonomia::Prospecting::Research::BigDataCorpClient do
     expect(client.search_companies(query: 'name{EXEMPLO}').payload).to eq('Result' => [])
   end
 
+  describe 'o 401 com uma tentativa só' do
+    it 'sem o reenvio (a Prospecção), levanta como antes, mas apaga o token: a consulta seguinte gera outro' do
+      stub_request(:post, "#{base}/empresas").to_return({ status: 401, body: '' }, { status: 200, body: { Result: [] }.to_json })
+
+      expect { client.query_route('/empresas', query: 'doc{11222333000181}', datasets: 'kyc') }
+        .to raise_error(described_class::Error) { |erro| expect([erro.code, erro.status]).to eq(['BIGDATACORP_HTTP_ERROR', 401]) }
+      expect(client.query_route('/empresas', query: 'doc{11222333000181}', datasets: 'kyc').payload).to eq('Result' => [])
+      expect(a_request(:post, "#{base}/tokens/gerar")).to have_been_made.twice
+      expect(a_request(:post, "#{base}/empresas")).to have_been_made.twice
+    end
+
+    it 'com resend_after_unauthorized, um reenvio com token novo; o token recusado sai do token_cache' do
+      cache = Autonomia::FerramentasProntas::Premium::Tokens.new
+      cliente = described_class.new(credentials: credentials, sleeper: ->(_) {}, max_provider_attempts: 1, token_cache: cache,
+                                    resend_after_unauthorized: true)
+      stub_request(:post, "#{base}/empresas").to_return({ status: 401, body: '' }, { status: 200, body: { Result: [] }.to_json })
+
+      expect(cliente.query_route('/empresas', query: 'doc{11222333000181}', datasets: 'kyc').metadata)
+        .to include(provider_attempts: 2, token_generations: 2)
+      expect(a_request(:post, "#{base}/empresas")).to have_been_made.twice
+    end
+
+    it 'a Prospecção com 3 tentativas segue igual: 401, token novo e a consulta responde' do
+      prospeccao = described_class.new(credentials: credentials, sleeper: ->(_) {})
+      stub_request(:post, "#{base}/empresas").to_return({ status: 401, body: '' }, { status: 200, body: { Result: [] }.to_json })
+
+      expect(prospeccao.search_companies(query: 'name{EXEMPLO}').metadata).to include(provider_attempts: 2, token_generations: 2)
+      expect(described_class::DEFAULTS[:resend_after_unauthorized]).to be(false)
+    end
+
+    it 'a Prospecção não reenvia além das 3 tentativas quando o 401 vem na última' do
+      prospeccao = described_class.new(credentials: credentials, sleeper: ->(_) {})
+      stub_request(:post, "#{base}/empresas").to_return({ status: 503, body: '' }, { status: 503, body: '' }, { status: 401, body: '' })
+
+      expect { prospeccao.search_companies(query: 'name{EXEMPLO}') }
+        .to raise_error(described_class::Error) { |erro| expect(erro.status).to eq(401) }
+      expect(a_request(:post, "#{base}/empresas")).to have_been_made.times(3)
+    end
+  end
+
   describe 'as opções da F7 (token_timeout e token_cache)' do
     before { stub_request(:post, "#{base}/empresas").to_return(status: 200, body: { Result: [] }.to_json) }
 

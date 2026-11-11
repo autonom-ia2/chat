@@ -102,8 +102,12 @@ Decisões do Rodrigo de 11/11/2026, registradas aqui porque o comportamento é a
 - **Conferir a pessoa devolve nome e data de nascimento**, e o resultado fica no cache da conta até o fim do dia.
 - **Telefone de MEI e de empresário individual sai sempre.** O CNPJ é de empresa, mesmo quando o telefone é o da pessoa
   dona. O telefone na lista "não perturbe" continua de fora.
-- **A resposta que se perde depois de a chamada sair** (o worker morreu) não conta para o cliente. A telemetria ganha
-  uma linha de falha (`entrega_incerta`) com o custo do dataset, porque a BigDataCorp pode ter cobrado.
+- **A resposta que se perde depois de a chamada sair** (o worker morreu) não conta para o cliente, e a execução fica com
+  uma linha só na telemetria (`tool_run_id` único). Se a execução já tinha gravado a linha dela, a linha vira
+  `sem_cobranca` com motivo `entrega_incerta`: a grátis volta ao saldo do mês e o preço zera; o custo nosso fica. Se não
+  tinha, entra uma linha de falha `entrega_incerta` com o custo do dataset, porque a BigDataCorp pode ter cobrado.
+- **O 401 da BigDataCorp** apaga o token guardado e permite um reenvio com token novo (o 401 não é cobrado). A
+  Prospecção não ganha o reenvio extra; só passa a apagar o token recusado.
 - **Preço em centavos inteiros:** custo × 1,5, arredondado para cima ao centavo (o embargo do IBAMA, R$ 0,225, é
   R$ 0,23).
 

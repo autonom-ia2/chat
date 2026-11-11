@@ -85,6 +85,14 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
     expect(saldos.order(:mes).pluck(:contadas)).to eq([35, 1])
   end
 
+  it 'o fuso da conta é um só, o mesmo da execução, com a volta para a plataforma quando não dá para ler' do
+    allow(Crm::Timezone::Resolver).to receive(:new).and_raise(ActiveRecord::ConnectionNotEstablished)
+
+    expect(Autonomia::FerramentasProntas.fuso_da_conta(account)).to eq(Time.zone)
+    expect(Autonomia::FerramentasProntas::Premium.hoje_da_conta(account)).to eq(Time.current.in_time_zone(Time.zone).to_date)
+    expect(logs.string).to include('fuso da conta indisponível')
+  end
+
   it 'o mês das grátis é o do fuso da conta' do
     account.update!(custom_attributes: { 'timezone' => 'America/Sao_Paulo' })
     travel_to(Time.utc(2026, 12, 1, 2, 0, 0)) do
@@ -281,6 +289,32 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
 
       expect(a_request(:post, "#{FerramentasPremiumHelper::BDC}/tokens/gerar")).to have_been_made.once
       expect(a_bigdatacorp).to have_been_made.twice
+    end
+
+    it 'o token guardado que a BigDataCorp recusa (401) é apagado, e um reenvio com token novo responde' do
+      Autonomia::FerramentasProntas::Premium::BigDataCorp::TOKENS.write(
+        Autonomia::Prospecting::Research::BigDataCorpClient::Token.new(access_token: 'token-velho', token_id: 'id-velho', expires_at: Float::INFINITY)
+      )
+      stub_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand")
+        .with(headers: { 'AccessToken' => 'token-velho' }).to_return(status: 401, body: '')
+      corpo = corpo_da_bigdatacorp('ondemand_pgfn_company', 'OnlineCertificates', certidao_negativa).to_json
+      stub_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand")
+        .with(headers: { 'AccessToken' => FerramentasPremiumHelper::TOKEN_FALSO }).to_return(status: 200, body: corpo)
+
+      expect(executar_premium(certidoes, pgfn)['situacao']).to eq('encontrado')
+      expect(a_request(:post, "#{FerramentasPremiumHelper::BDC}/tokens/gerar")).to have_been_made.once
+      expect(a_bigdatacorp).to have_been_made.twice
+      expect(Autonomia::FerramentasProntas::Premium::BigDataCorp::TOKENS.read.access_token).to eq(FerramentasPremiumHelper::TOKEN_FALSO)
+      expect(registros_premium.sole).to have_attributes(resultado: 'encontrado', numero: 1)
+    end
+
+    it 'o 401 depois do reenvio é falha que não conta, e o token recusado não fica guardado' do
+      stub_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand").to_return(status: 401, body: '')
+
+      expect(executar_premium(certidoes, pgfn)['situacao']).to eq('nao_consegui_consultar')
+      expect(a_bigdatacorp).to have_been_made.twice
+      expect(Autonomia::FerramentasProntas::Premium::BigDataCorp::TOKENS.read).to be_nil
+      expect(registros_premium.sole).to have_attributes(resultado: 'falha', motivo: 'http_401', cobranca: 'sem_cobranca')
     end
 
     it 'o token que não chega no prazo curto tem uma tentativa só, e a consulta não sai' do

@@ -8,8 +8,9 @@
 #     duas vezes;
 #   - uma tentativa de token, com prazo curto (`PRAZO_DO_TOKEN`);
 #   - um teto da chamada inteira, token e consulta somados: o prazo do dataset (`Timeout.timeout`).
-# O token vale para o processo enquanto não vence (`TOKENS`): a consulta seguinte não gera outro. A Prospecção segue
-# com o token por instância do cliente (ela não passa `token_cache`).
+# O token vale para o processo enquanto não vence (`TOKENS`): a consulta seguinte não gera outro. O 401 apaga o token
+# guardado e permite um reenvio com token novo (a BigDataCorp não cobra o 401). A Prospecção segue com o token por
+# instância do cliente e sem o reenvio extra (ela não passa `token_cache` nem `resend_after_unauthorized`).
 # A resposta vira `Leitura` (encontrado, sem registro ou falha com motivo curto).
 class Autonomia::FerramentasProntas::Premium::BigDataCorp < Autonomia::FerramentasProntas::Provedor
   NOME = 'bigdatacorp'.freeze
@@ -57,6 +58,7 @@ class Autonomia::FerramentasProntas::Premium::BigDataCorp < Autonomia::Ferrament
   end
 
   def cliente
-    Cliente.new(timeout: @prazo, token_timeout: PRAZO_DO_TOKEN, max_provider_attempts: 1, max_token_attempts: 1, token_cache: TOKENS)
+    Cliente.new(timeout: @prazo, token_timeout: PRAZO_DO_TOKEN, max_provider_attempts: 1, max_token_attempts: 1, token_cache: TOKENS,
+                resend_after_unauthorized: true)
   end
 end

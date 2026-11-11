@@ -6,7 +6,7 @@
 # `slug`: o nome da função que o modelo vê. Começa com `pronta_` para não colidir com as nativas (`Registry`).
 # `limite_diario`: o padrão por conta nesta fonte (o acesso da conta pode ter o seu). Decisão do Rodrigo (10/11): 500
 # por conta e por fonte, salvo motivo técnico do provedor, documentado na fonte. nil é sem limite: só as Premium (F7,
-# decisão do Rodrigo, 11/11), que o cache do dia e a telemetria seguram.
+# decisão do Rodrigo, 11/11), que o cache do dia e a telemetria seguram. Fonte grátis com nil nem nasce (ArgumentError).
 # `termos`: o que a fonte pede de quem usa (limite, cache), para a revisão de cada lote. Não vai ao modelo.
 # `flag`: a flag da fase que trouxe a fonte (a F1 tem a sua), conferida junto com a das prontas; nil nas da F0.
 class Autonomia::FerramentasProntas::Fonte
@@ -24,6 +24,7 @@ class Autonomia::FerramentasProntas::Fonte
     @consultas = consultas
     @limite_diario = limite_diario
     @termos = termos
+    raise ArgumentError, "fonte #{chave}: sem limite diário só no card Premium" if limite_diario.nil? && !premium?
   end
 
   def consulta(nome)

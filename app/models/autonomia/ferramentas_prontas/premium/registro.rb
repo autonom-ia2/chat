@@ -7,7 +7,9 @@
 #     falha). `numero` é a posição da consulta contada no card da conta (1, 2, ... 21);
 #   - `custo`: o que a BigDataCorp cobra de nós (0 no cache e na falha); `preco`: o que vai à fatura (custo × 1,5, só na
 #     cobrada);
-#   - `id_na_fonte`: o `QueryId` da BigDataCorp, para conferir com o painel dela. Nunca o valor consultado.
+#   - `id_na_fonte`: o `QueryId` da BigDataCorp, para conferir com o painel dela. Nunca o valor consultado;
+#   - `tool_run_id`: a execução em segundo plano (`autonomia_agent_tool_runs`) que fez a consulta; nil no turno. Uma
+#     linha por execução (índice único).
 class Autonomia::FerramentasProntas::Premium::Registro < ApplicationRecord
   self.table_name = 'autonomia_ferramentas_premium_consultas'
 

@@ -10,6 +10,12 @@
 class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasProntas::Execucao
   Premium = Autonomia::FerramentasProntas::Premium
 
+  # `tool_run_id`: a execução em segundo plano (`HttpAssincronaJob`), que vai à telemetria; nil no turno.
+  def initialize(tool:, params: {}, tool_run_id: nil)
+    super(tool: tool, params: params)
+    @tool_run_id = tool_run_id
+  end
+
   # O pedido saiu para a BigDataCorp? (O contrato do `HttpExecutor`, lido pela consulta em segundo plano.)
   def enviada?
     @chamou == true
@@ -51,7 +57,7 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
   # A telemetria é a base da fatura, mas a resposta ao cliente não depende dela: a falha do banco ao gravar vai ao
   # rastreador e ao log (o contador volta atrás junto, na mesma transação). Outro erro é defeito nosso: levanta.
   def cobrar(resultado, **)
-    Premium::Cobranca.registrar!(tool: @tool, fonte: @fonte, consulta: @consulta, resultado: resultado, **)
+    Premium::Cobranca.registrar!(tool: @tool, fonte: @fonte, consulta: @consulta, resultado: resultado, tool_run_id: @tool_run_id, **)
   rescue ActiveRecord::ActiveRecordError => e
     Rails.logger.error("#{PREFIXO} telemetria premium falhou conta=#{@tool.account_id} fonte=#{@fonte.chave} #{e.class}")
     ChatwootExceptionTracker.new(e, account: @tool.account).capture_exception

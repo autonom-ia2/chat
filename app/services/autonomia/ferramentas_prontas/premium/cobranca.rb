@@ -6,41 +6,64 @@
 #   - a contada recebe a posição no card da conta no mês (`Saldo.contar!`): até 20, grátis; da 21ª do mês em diante,
 #     cobrada pelo preço do dataset. As 20 grátis renovam todo mês (decisão do Rodrigo, 11/11). Um card não mexe no
 #     contador do outro.
-# O contador e a linha da telemetria andam juntos (uma transação): se a linha não grava, a posição volta atrás.
+# O contador e a linha da telemetria andam juntos (uma transação): se a linha não grava, a posição volta atrás. Na
+# execução em segundo plano a linha leva o `tool_run_id`, único: uma linha por execução.
 module Autonomia::FerramentasProntas::Premium::Cobranca
   Premium = Autonomia::FerramentasProntas::Premium
 
   module_function
 
   # `resultado`: encontrado | sem_registro | falha. Roda no fuso da conta (a `Execucao`). -> o `Registro` gravado.
-  def registrar!(tool:, fonte:, consulta:, resultado:, do_cache: false, motivo: nil, id_na_fonte: nil) # rubocop:disable Metrics/ParameterLists
+  def registrar!(tool:, fonte:, consulta:, resultado:, do_cache: false, motivo: nil, id_na_fonte: nil, tool_run_id: nil) # rubocop:disable Metrics/ParameterLists
     contada = !do_cache && resultado != 'falha'
     hoje = Time.zone.today
-    ActiveRecord::Base.transaction do
+    ActiveRecord::Base.transaction(requires_new: true) do
       numero = contada ? Premium::Saldo.contar!(account_id: tool.account_id, fonte: fonte.chave, mes: hoje.beginning_of_month) : nil
       Premium::Registro.create!(
         **origem(tool, fonte, consulta, hoje), resultado: resultado, do_cache: do_cache, numero: numero, motivo: motivo,
-                                               id_na_fonte: id_na_fonte, **valores(consulta.dataset, resultado, numero)
+                                               id_na_fonte: id_na_fonte, tool_run_id: tool_run_id, **valores(consulta.dataset, resultado, numero)
       )
     end
   end
 
   # A consulta em segundo plano que morreu depois de a chamada sair (`HttpAssincronaJob.leitura_perdida`, com o
-  # `ToolRun`): a BigDataCorp pode ter cobrado. Não conta para o cliente; o custo do dataset fica na telemetria, para a
-  # conta bater com a fatura de lá. Pronta grátis: nada. A telemetria não segura o fechamento da linha: a falha do banco
-  # vai ao rastreador e ao log.
+  # `ToolRun`): a BigDataCorp pode ter cobrado, e o cliente não recebeu a resposta. Nada conta para o cliente; o custo
+  # nosso fica na telemetria, para a conta bater com a fatura de lá. Numa transação:
+  #   - a execução já gravou a linha dela (morreu entre a telemetria e o resultado): a linha vira `sem_cobranca`, a
+  #     grátis volta ao saldo do mês e o preço zera; o custo fica. Nenhuma linha nova;
+  #   - não gravou: uma linha de falha `entrega_incerta`, com o custo do dataset.
+  # Pronta grátis: nada. A telemetria não segura o fechamento da linha: a falha do banco vai ao rastreador e ao log.
   def entrega_incerta!(run)
     tool = run.ferramenta
     fonte = tool&.fonte_do_catalogo
     consulta = Premium.fonte?(fonte) && fonte.consulta(run.arguments.to_h['consulta'])
     return unless consulta
 
-    Premium::Registro.create!(**origem(tool, fonte, consulta, Premium.hoje_da_conta(tool.account)),
-                              resultado: 'falha', motivo: 'entrega_incerta', do_cache: false, numero: nil,
-                              cobranca: 'sem_cobranca', custo: consulta.dataset.custo, preco: 0)
+    ActiveRecord::Base.transaction(requires_new: true) do
+      gravada = Premium::Registro.lock.find_by(tool_run_id: run.id)
+      gravada ? desfazer_cobranca!(gravada) : registrar_incerta!(run, tool, fonte, consulta)
+    end
   rescue ActiveRecord::ActiveRecordError => e
     Rails.logger.error("[autonomia][premium] telemetria da entrega incerta falhou run=#{run.id} #{e.class}")
     ChatwootExceptionTracker.new(e, account: run.account).capture_exception
+  end
+
+  def desfazer_cobranca!(registro)
+    return if registro.cobranca == 'sem_cobranca'
+
+    devolver_gratis!(registro) if registro.cobranca == 'gratis'
+    registro.update!(cobranca: 'sem_cobranca', numero: nil, preco: 0, motivo: 'entrega_incerta')
+  end
+
+  def devolver_gratis!(registro)
+    saldo = Premium::Saldo.lock.find_by(account_id: registro.account_id, fonte: registro.fonte, mes: registro.dia.beginning_of_month)
+    saldo.update!(contadas: saldo.contadas - 1) if saldo&.contadas&.positive?
+  end
+
+  def registrar_incerta!(run, tool, fonte, consulta)
+    Premium::Registro.create!(**origem(tool, fonte, consulta, Premium.hoje_da_conta(tool.account)),
+                              resultado: 'falha', motivo: 'entrega_incerta', do_cache: false, numero: nil, tool_run_id: run.id,
+                              cobranca: 'sem_cobranca', custo: consulta.dataset.custo, preco: 0)
   end
 
   def origem(tool, fonte, consulta, dia)

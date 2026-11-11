@@ -73,6 +73,13 @@ RSpec.describe Autonomia::FerramentasProntas::Catalogo, '.premium' do
     end
   end
 
+  it 'sem limite diário só vale para card Premium: fonte grátis sem limite nem nasce' do
+    atributos = { chave: 'exemplo', slug: 'pronta_exemplo', nome: 'EXEMPLO', descricao: 'EXEMPLO', termos: 'EXEMPLO',
+                  consultas: described_class.buscar('cep').consultas, limite_diario: nil }
+
+    expect { Autonomia::FerramentasProntas::Fonte.new(**atributos) }.to raise_error(ArgumentError)
+  end
+
   it 'todo card é Premium, da flag da F7, sem limite diário (decisão do Rodrigo) e com a BigDataCorp como host' do
     catalogo.premium.each do |card|
       expect(card).to be_premium

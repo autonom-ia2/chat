@@ -241,7 +241,7 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
   # #2858: a ferramenta pronta executa pela fonte do catálogo (`FerramentasProntas::Execucao`), com o prazo dela.
   def executor(run, tool, chave)
     ::Autonomia::FerramentasProntas.executor_para(tool, params: run.arguments, chave: chave, higienizar: true,
-                                                        segundos: self.class.tempo(run))
+                                                        segundos: self.class.tempo(run), tool_run_id: run.id)
   end
 
   # A linha deixou de ser desta passada enquanto ela chamava: trocada por um pedido mais novo, ou fechada pelo varredor.

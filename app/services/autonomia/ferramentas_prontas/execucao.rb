@@ -55,12 +55,9 @@ class Autonomia::FerramentasProntas::Execucao
 
   private
 
-  # O fuso da conta; sem ele (defeito ao ler a conta), o da plataforma: a execução nunca levanta.
+  # O fuso da conta (`FerramentasProntas.fuso_da_conta`); sem ele, o da plataforma: a execução nunca levanta.
   def fuso
-    ActiveSupport::TimeZone[Crm::Timezone::Resolver.new(account: @tool.account).name_or_default.to_s] || Time.zone
-  rescue StandardError => e
-    Rails.logger.warn("#{PREFIXO} fuso da conta indisponível conta=#{@tool.account_id} #{e.class}")
-    Time.zone
+    Autonomia::FerramentasProntas.fuso_da_conta(@tool.account)
   end
 
   def executar

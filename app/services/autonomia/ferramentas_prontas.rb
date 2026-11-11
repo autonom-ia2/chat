@@ -76,10 +76,20 @@ module Autonomia::FerramentasProntas
   # Quem executa a chamada: a `Execucao` para a pronta, o `HttpExecutor` para a cadastrada. As opções do `HttpExecutor`
   # (`turno`, `segundos`, `chave`, `higienizar`) não valem para a pronta: ela não manda cabeçalho nem chave a ninguém, e
   # o prazo dela é o do catálogo.
-  def executor_para(tool, params:, **opcoes)
-    return Premium::Execucao.new(tool: tool, params: params) if tool.pronta? && Premium.fonte?(tool.fonte_do_catalogo)
+  # `tool_run_id` (a execução em segundo plano) só vale para a Premium, que o leva à telemetria.
+  def executor_para(tool, params:, tool_run_id: nil, **opcoes)
+    return Premium::Execucao.new(tool: tool, params: params, tool_run_id: tool_run_id) if tool.pronta? && Premium.fonte?(tool.fonte_do_catalogo)
     return Execucao.new(tool: tool, params: params) if tool.pronta?
 
     ::Autonomia::Agents::Tools::HttpExecutor.new(tool: tool, params: params, **opcoes)
+  end
+
+  # O fuso da conta, para o "hoje" das prontas e o mês das grátis Premium. Sem ele (defeito ao ler a conta), o da
+  # plataforma: quem pergunta nunca levanta.
+  def fuso_da_conta(account)
+    ActiveSupport::TimeZone[Crm::Timezone::Resolver.new(account: account).name_or_default.to_s] || Time.zone
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][pronta] fuso da conta indisponível conta=#{account&.id} #{e.class}")
+    Time.zone
   end
 end
